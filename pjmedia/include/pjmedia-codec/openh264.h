@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2014 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_OPENH264_H__
 #define __PJMEDIA_CODEC_OPENH264_H__
@@ -26,7 +25,6 @@
  * @file pjmedia-codec/openh264.h
  * @brief Open H.264 codec
  */
-
 
 PJ_BEGIN_DECL
 
@@ -47,8 +45,9 @@ PJ_BEGIN_DECL
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_openh264_vid_init(pjmedia_vid_codec_mgr *mgr,
-                                                     pj_pool_factory *pf);
+PJ_DECL(pj_status_t)
+pjmedia_codec_openh264_vid_init(pjmedia_vid_codec_mgr* mgr,
+                                pj_pool_factory* pf);
 
 /**
  * Unregister OpenH264 video codecs factory from the video codec manager and
@@ -58,12 +57,10 @@ PJ_DECL(pj_status_t) pjmedia_codec_openh264_vid_init(pjmedia_vid_codec_mgr *mgr,
  */
 PJ_DECL(pj_status_t) pjmedia_codec_openh264_vid_deinit(void);
 
-
 /**
  * @}  PJMEDIA_CODEC_OPENH264
  */
 
-
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_CODEC_OPENH264_H__ */
+#endif /* __PJMEDIA_CODEC_OPENH264_H__ */

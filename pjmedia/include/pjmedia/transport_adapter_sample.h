@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TRANSPORT_ADAPTER_SAMPLE_H__
 #define __PJMEDIA_TRANSPORT_ADAPTER_SAMPLE_H__
-
 
 /**
  * @file transport_adapter_sample.h
@@ -27,7 +25,6 @@
  */
 
 #include <pjmedia/transport.h>
-
 
 /**
  * @defgroup PJMEDIA_TRANSPORT_ADAPTER_SAMPLE Sample Transport Adapter
@@ -40,7 +37,6 @@
  */
 
 PJ_BEGIN_DECL
-
 
 /**
  * Create the transport adapter, specifying the underlying transport to be
@@ -57,20 +53,15 @@ PJ_BEGIN_DECL
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_tp_adapter_create( pjmedia_endpt *endpt,
-					        const char *name,
-					        pjmedia_transport *base_tp,
-					        pj_bool_t del_base,
-						pjmedia_transport **p_tp);
+PJ_DECL(pj_status_t)
+pjmedia_tp_adapter_create(pjmedia_endpt* endpt, const char* name,
+                          pjmedia_transport* base_tp, pj_bool_t del_base,
+                          pjmedia_transport** p_tp);
 
 PJ_END_DECL
-
 
 /**
  * @}
  */
 
-
-#endif	/* __PJMEDIA_TRANSPORT_ADAPTER_SAMPLE_H__ */
-
-
+#endif /* __PJMEDIA_TRANSPORT_ADAPTER_SAMPLE_H__ */

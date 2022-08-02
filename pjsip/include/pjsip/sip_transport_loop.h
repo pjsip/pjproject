@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,18 +14,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_TRANSPORT_LOOP_H__
 #define __PJSIP_TRANSPORT_LOOP_H__
 
-
 /**
  * @file sip_transport_loop.h
- * @brief 
+ * @brief
  * Loopback transport (for debugging)
  */
-
 
 #include <pjsip/sip_transport.h>
 
@@ -50,9 +47,8 @@ PJ_BEGIN_DECL
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
-				       pjsip_transport **transport);
-
+PJ_DECL(pj_status_t)
+pjsip_loop_start(pjsip_endpoint* endpt, pjsip_transport** transport);
 
 /**
  * Enable/disable flag to discard any packets sent using the specified
@@ -65,10 +61,9 @@ PJ_DECL(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_loop_set_discard( pjsip_transport *tp,
-					     pj_bool_t discard,
-					     pj_bool_t *prev_value );
-
+PJ_DECL(pj_status_t)
+pjsip_loop_set_discard(pjsip_transport* tp, pj_bool_t discard,
+                       pj_bool_t* prev_value);
 
 /**
  * Enable/disable flag to simulate network error. When this flag is set,
@@ -87,14 +82,12 @@ PJ_DECL(pj_status_t) pjsip_loop_set_discard( pjsip_transport *tp,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_loop_set_failure( pjsip_transport *tp,
-					     int fail_flag,
-					     int *prev_value );
-
+PJ_DECL(pj_status_t)
+pjsip_loop_set_failure(pjsip_transport* tp, int fail_flag, int* prev_value);
 
 /**
  * Set delay (in miliseconds) before packet is received by the other end
- * of the loop transport. This will also 
+ * of the loop transport. This will also
  * control the delay for error notification callback.
  *
  * @param tp		The loop transport.
@@ -104,10 +97,9 @@ PJ_DECL(pj_status_t) pjsip_loop_set_failure( pjsip_transport *tp,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_loop_set_recv_delay( pjsip_transport *tp,
-						unsigned delay,
-						unsigned *prev_value);
-
+PJ_DECL(pj_status_t)
+pjsip_loop_set_recv_delay(pjsip_transport* tp, unsigned delay,
+                          unsigned* prev_value);
 
 /**
  * Set delay (in miliseconds) before send notification is delivered to sender.
@@ -120,10 +112,9 @@ PJ_DECL(pj_status_t) pjsip_loop_set_recv_delay( pjsip_transport *tp,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_loop_set_send_callback_delay( pjsip_transport *tp,
-							 unsigned delay,
-							 unsigned *prev_value);
-
+PJ_DECL(pj_status_t)
+pjsip_loop_set_send_callback_delay(pjsip_transport* tp, unsigned delay,
+                                   unsigned* prev_value);
 
 /**
  * Set both receive and send notification delay.
@@ -133,9 +124,7 @@ PJ_DECL(pj_status_t) pjsip_loop_set_send_callback_delay( pjsip_transport *tp,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_loop_set_delay( pjsip_transport *tp,
-					   unsigned delay );
-
+PJ_DECL(pj_status_t) pjsip_loop_set_delay(pjsip_transport* tp, unsigned delay);
 
 PJ_END_DECL
 
@@ -143,5 +132,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJSIP_TRANSPORT_LOOP_H__ */
-
+#endif /* __PJSIP_TRANSPORT_LOOP_H__ */

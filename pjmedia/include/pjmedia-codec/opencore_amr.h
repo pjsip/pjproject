@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2011-2013 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2011 Dan Arrhenius <dan@keystream.se>
@@ -36,8 +35,8 @@ PJ_BEGIN_DECL
  */
 enum pjmedia_amr_options
 {
-    PJMEDIA_AMR_NO_NB	    = 1,    /**< Disable narrowband mode.	*/
-    PJMEDIA_AMR_NO_WB	    = 2,    /**< Disable wideband mode.		*/
+    PJMEDIA_AMR_NO_NB = 1, /**< Disable narrowband mode.	*/
+    PJMEDIA_AMR_NO_WB = 2, /**< Disable wideband mode.		*/
 };
 
 /**
@@ -69,8 +68,8 @@ typedef pjmedia_codec_amr_config pjmedia_codec_amrwb_config;
  *
  * @return          PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_opencore_amr_init(pjmedia_endpt* endpt,
-                                                     unsigned options);
+PJ_DECL(pj_status_t)
+pjmedia_codec_opencore_amr_init(pjmedia_endpt* endpt, unsigned options);
 
 /**
  * Initialize and register AMR codec factory using default settings to
@@ -113,7 +112,6 @@ PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_init(pjmedia_endpt* endpt);
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_deinit(void);
 
-
 /**
  * Set AMR-NB parameters.
  *
@@ -121,9 +119,8 @@ PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_deinit(void);
  *
  * @return	PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_set_config(
-				const pjmedia_codec_amrnb_config* cfg);
-
+PJ_DECL(pj_status_t)
+pjmedia_codec_opencore_amrnb_set_config(const pjmedia_codec_amrnb_config* cfg);
 
 /**
  * Set AMR-WB parameters.
@@ -132,15 +129,13 @@ PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_set_config(
  *
  * @return	PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrwb_set_config(
-                                        const pjmedia_codec_amrwb_config* cfg);
+PJ_DECL(pj_status_t)
+pjmedia_codec_opencore_amrwb_set_config(const pjmedia_codec_amrwb_config* cfg);
 
 PJ_END_DECL
-
 
 /**
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_OPENCORE_AMRNB_H__ */
-
+#endif /* __PJMEDIA_CODEC_OPENCORE_AMRNB_H__ */

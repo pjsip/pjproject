@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,12 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_RESAMPLE_H__
 #define __PJMEDIA_RESAMPLE_H__
-
-
 
 /**
  * @file resample.h
@@ -46,14 +43,13 @@ PJ_BEGIN_DECL
  * This file declares two types of API:
  *
  * Application can use #pjmedia_resample_create() and #pjmedia_resample_run()
- * to convert a frame from source rate to destination rate. The inpuit frame 
+ * to convert a frame from source rate to destination rate. The inpuit frame
  * must have a constant length.
  *
  * Alternatively, application can create a resampling port with
  * #pjmedia_resample_port_create() and connect the port to other ports to
  * change the sampling rate of the samples.
  */
-
 
 /**
  * Opaque resample session.
@@ -76,15 +72,12 @@ typedef struct pjmedia_resample pjmedia_resample;
  *
  * @return PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_resample_create(pj_pool_t *pool,
-					     pj_bool_t high_quality,
-					     pj_bool_t large_filter,
-					     unsigned channel_count,
-					     unsigned rate_in,
-					     unsigned rate_out,
-					     unsigned samples_per_frame,
-					     pjmedia_resample **p_resample);
-
+PJ_DECL(pj_status_t)
+pjmedia_resample_create(pj_pool_t* pool, pj_bool_t high_quality,
+                        pj_bool_t large_filter, unsigned channel_count,
+                        unsigned rate_in, unsigned rate_out,
+                        unsigned samples_per_frame,
+                        pjmedia_resample** p_resample);
 
 /**
  * Use the resample session to resample a frame. The frame must have the
@@ -95,10 +88,9 @@ PJ_DECL(pj_status_t) pjmedia_resample_create(pj_pool_t *pool,
  * @param input			Buffer containing the input samples.
  * @param output		Buffer to store the output samples.
  */
-PJ_DECL(void) pjmedia_resample_run( pjmedia_resample *resample,
-				    const pj_int16_t *input,
-				    pj_int16_t *output );
-
+PJ_DECL(void)
+pjmedia_resample_run(pjmedia_resample* resample, const pj_int16_t* input,
+                     pj_int16_t* output);
 
 /**
  * Get the input frame size of a resample session.
@@ -107,15 +99,14 @@ PJ_DECL(void) pjmedia_resample_run( pjmedia_resample *resample,
  *
  * @return			The frame size, in number of samples.
  */
-PJ_DECL(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample);
-
+PJ_DECL(unsigned) pjmedia_resample_get_input_size(pjmedia_resample* resample);
 
 /**
  * Destroy the resample.
  *
  * @param resample		The resample session.
  */
-PJ_DECL(void) pjmedia_resample_destroy(pjmedia_resample *resample);
+PJ_DECL(void) pjmedia_resample_destroy(pjmedia_resample* resample);
 
 /**
  * @}
@@ -129,7 +120,6 @@ PJ_DECL(void) pjmedia_resample_destroy(pjmedia_resample *resample);
  *
  * This section describes media port abstraction for @ref PJMEDIA_RESAMPLE.
  */
-
 
 /**
  * Option flags that can be specified when creating resample port.
@@ -153,8 +143,6 @@ enum pjmedia_resample_port_options
      */
     PJMEDIA_RESAMPLE_DONT_DESTROY_DN = 4
 };
-
-
 
 /**
  * Create a resample port. This creates a bidirectional resample session,
@@ -182,12 +170,10 @@ enum pjmedia_resample_port_options
  *
  * @return PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
-						   pjmedia_port *dn_port,
-						   unsigned clock_rate,
-						   unsigned options,
-						   pjmedia_port **p_port );
-
+PJ_DECL(pj_status_t)
+pjmedia_resample_port_create(pj_pool_t* pool, pjmedia_port* dn_port,
+                             unsigned clock_rate, unsigned options,
+                             pjmedia_port** p_port);
 
 PJ_END_DECL
 
@@ -195,6 +181,4 @@ PJ_END_DECL
  * @}
  */
 
-
-#endif	/* __PJMEDIA_RESAMPLE_H__ */
-
+#endif /* __PJMEDIA_RESAMPLE_H__ */

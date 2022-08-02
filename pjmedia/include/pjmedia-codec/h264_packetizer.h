@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_H264_PACKETIZER_H__
 #define __PJMEDIA_H264_PACKETIZER_H__
@@ -33,7 +32,6 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_h264_packetizer pjmedia_h264_packetizer;
 
-
 /**
  * Enumeration of H.264 packetization modes.
  */
@@ -46,7 +44,7 @@ typedef enum
      * network environments with MTU size limitation.
      */
     PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL,
-    
+
     /**
      * Non-interleaved packetization mode will generate payloads with the
      * following possible formats:
@@ -67,7 +65,6 @@ typedef enum
     PJMEDIA_H264_PACKETIZER_MODE_INTERLEAVED,
 } pjmedia_h264_packetizer_mode;
 
-
 /**
  * H.264 packetizer setting.
  */
@@ -77,7 +74,7 @@ typedef struct pjmedia_h264_packetizer_cfg
      * Maximum payload length.
      * Default: PJMEDIA_MAX_MTU
      */
-    int	mtu;
+    int mtu;
 
     /**
      * Packetization mode.
@@ -91,9 +88,7 @@ typedef struct pjmedia_h264_packetizer_cfg
      * Default: 3 (0, 0, 1)
      */
     unsigned unpack_nal_start;
-}
-pjmedia_h264_packetizer_cfg;
-
+} pjmedia_h264_packetizer_cfg;
 
 /**
  * Create H.264 packetizer.
@@ -105,11 +100,10 @@ pjmedia_h264_packetizer_cfg;
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h264_packetizer_create(
-				    pj_pool_t *pool,
-				    const pjmedia_h264_packetizer_cfg *cfg,
-				    pjmedia_h264_packetizer **p_pktz);
-
+PJ_DECL(pj_status_t)
+pjmedia_h264_packetizer_create(pj_pool_t* pool,
+                               const pjmedia_h264_packetizer_cfg* cfg,
+                               pjmedia_h264_packetizer** p_pktz);
 
 /**
  * Generate an RTP payload from a H.264 picture bitstream. Note that this
@@ -125,13 +119,10 @@ PJ_DECL(pj_status_t) pjmedia_h264_packetizer_create(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
-					    pj_uint8_t *bits,
-                                            pj_size_t bits_len,
-                                            unsigned *bits_pos,
-                                            const pj_uint8_t **payload,
-                                            pj_size_t *payload_len);
-
+PJ_DECL(pj_status_t)
+pjmedia_h264_packetize(pjmedia_h264_packetizer* pktz, pj_uint8_t* bits,
+                       pj_size_t bits_len, unsigned* bits_pos,
+                       const pj_uint8_t** payload, pj_size_t* payload_len);
 
 /**
  * Append an RTP payload to an H.264 picture bitstream. Note that in case of
@@ -151,14 +142,12 @@ PJ_DECL(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
-					      const pj_uint8_t *payload,
-                                              pj_size_t   payload_len,
-                                              pj_uint8_t *bits,
-                                              pj_size_t   bits_len,
-					      unsigned   *bits_pos);
-
+PJ_DECL(pj_status_t)
+pjmedia_h264_unpacketize(pjmedia_h264_packetizer* pktz,
+                         const pj_uint8_t* payload, pj_size_t payload_len,
+                         pj_uint8_t* bits, pj_size_t bits_len,
+                         unsigned* bits_pos);
 
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_H264_PACKETIZER_H__ */
+#endif /* __PJMEDIA_H264_PACKETIZER_H__ */

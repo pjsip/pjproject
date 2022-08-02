@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_TYPES_H__
 #define __PJ_TYPES_H__
-
 
 /**
  * @file types.h
@@ -38,72 +36,72 @@ PJ_BEGIN_DECL
 /* ************************************************************************* */
 
 /** Signed 32bit integer. */
-typedef int		pj_int32_t;
+typedef int pj_int32_t;
 
 /** Unsigned 32bit integer. */
-typedef unsigned int	pj_uint32_t;
+typedef unsigned int pj_uint32_t;
 
 /** Signed 16bit integer. */
-typedef short		pj_int16_t;
+typedef short pj_int16_t;
 
 /** Unsigned 16bit integer. */
-typedef unsigned short	pj_uint16_t;
+typedef unsigned short pj_uint16_t;
 
 /** Signed 8bit integer. */
-typedef signed char	pj_int8_t;
+typedef signed char pj_int8_t;
 
 /** Unsigned 8bit integer. */
-typedef unsigned char	pj_uint8_t;
+typedef unsigned char pj_uint8_t;
 
 /** Large unsigned integer. */
-typedef size_t		pj_size_t;
+typedef size_t pj_size_t;
 
 /** Large signed integer. */
-#if defined(PJ_WIN64) && PJ_WIN64!=0
-    typedef pj_int64_t     pj_ssize_t;
+#if defined(PJ_WIN64) && PJ_WIN64 != 0
+typedef pj_int64_t pj_ssize_t;
 #else
-    typedef long           pj_ssize_t;
+typedef long pj_ssize_t;
 #endif
 
 /** Status code. */
-typedef int		pj_status_t;
+typedef int pj_status_t;
 
 /** Boolean. */
-typedef int		pj_bool_t;
+typedef int pj_bool_t;
 
 /** Native char type, which will be equal to wchar_t for Unicode
  * and char for ANSI. */
-#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
-    typedef wchar_t pj_char_t;
+#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE != 0
+typedef wchar_t pj_char_t;
 #else
-    typedef char pj_char_t;
+typedef char pj_char_t;
 #endif
 
 /** This macro creates Unicode or ANSI literal string depending whether
  *  native platform string is Unicode or ANSI. */
-#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
-#   define PJ_T(literal_str)	L##literal_str
+#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE != 0
+#    define PJ_T(literal_str) L##literal_str
 #else
-#   define PJ_T(literal_str)	literal_str
+#    define PJ_T(literal_str) literal_str
 #endif
 
 /** Some constants */
 enum pj_constants_
 {
     /** Status is OK. */
-    PJ_SUCCESS=0,
+    PJ_SUCCESS = 0,
 
     /** True value. */
-    PJ_TRUE=1,
+    PJ_TRUE = 1,
 
     /** False value. */
-    PJ_FALSE=0
+    PJ_FALSE = 0
 };
 
 /**
  * File offset type.
  */
-#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+#if defined(PJ_HAS_INT64) && PJ_HAS_INT64 != 0
 typedef pj_int64_t pj_off_t;
 #else
 typedef pj_ssize_t pj_off_t;
@@ -120,10 +118,10 @@ typedef pj_ssize_t pj_off_t;
 struct pj_str_t
 {
     /** Buffer pointer, which is by convention NOT null terminated. */
-    char       *ptr;
+    char* ptr;
 
     /** The length of the string. */
-    pj_ssize_t  slen;
+    pj_ssize_t slen;
 };
 
 /**
@@ -135,21 +133,19 @@ typedef union pj_timestamp
 {
     struct
     {
-#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
-	pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
-	pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN != 0
+        pj_uint32_t lo; /**< Low 32-bit value of the 64-bit value. */
+        pj_uint32_t hi; /**< high 32-bit value of the 64-bit value. */
 #else
-	pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
-	pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
+        pj_uint32_t hi; /**< high 32-bit value of the 64-bit value. */
+        pj_uint32_t lo; /**< Low 32-bit value of the 64-bit value. */
 #endif
-    } u32;                  /**< The 64-bit value as two 32-bit values. */
+    } u32; /**< The 64-bit value as two 32-bit values. */
 
 #if PJ_HAS_INT64
-    pj_uint64_t u64;        /**< The whole 64-bit value, where available. */
+    pj_uint64_t u64; /**< The whole 64-bit value, where available. */
 #endif
 } pj_timestamp;
-
-
 
 /**
  * The opaque data type for linked list, which is used as arguments throughout
@@ -157,7 +153,7 @@ typedef union pj_timestamp
  */
 typedef void pj_list_type;
 
-/** 
+/**
  * List.
  */
 typedef struct pj_list pj_list;
@@ -179,10 +175,9 @@ typedef struct pj_hash_entry pj_hash_entry;
  */
 typedef struct pj_hash_iterator_t
 {
-    pj_uint32_t	     index;     /**< Internal index.     */
-    pj_hash_entry   *entry;     /**< Internal entry.     */
+    pj_uint32_t index;    /**< Internal index.     */
+    pj_hash_entry* entry; /**< Internal entry.     */
 } pj_hash_iterator_t;
-
 
 /**
  * Forward declaration for memory pool factory.
@@ -221,7 +216,7 @@ typedef struct pj_ioqueue_key_t pj_ioqueue_key_t;
  */
 typedef struct pj_timer_heap_t pj_timer_heap_t;
 
-/** 
+/**
  * Opaque data type for atomic operations.
  */
 typedef struct pj_atomic_t pj_atomic_t;
@@ -230,7 +225,7 @@ typedef struct pj_atomic_t pj_atomic_t;
  * Value type of an atomic variable.
  */
 typedef PJ_ATOMIC_VALUE_TYPE pj_atomic_value_t;
- 
+
 /* ************************************************************************* */
 
 /** Thread handle. */
@@ -255,13 +250,13 @@ typedef struct pj_event_t pj_event_t;
 typedef struct pj_pipe_t pj_pipe_t;
 
 /** Operating system handle. */
-typedef void *pj_oshandle_t;
+typedef void* pj_oshandle_t;
 
 /** Socket handle. */
-#if defined(PJ_WIN64) && PJ_WIN64!=0
-    typedef pj_int64_t pj_sock_t;
+#if defined(PJ_WIN64) && PJ_WIN64 != 0
+typedef pj_int64_t pj_sock_t;
 #else
-    typedef long pj_sock_t;
+typedef long pj_sock_t;
 #endif
 
 /** Generic socket address. */
@@ -279,12 +274,12 @@ typedef int pj_exception_id_t;
 /* ************************************************************************* */
 
 /** Utility macro to compute the number of elements in static array. */
-#define PJ_ARRAY_SIZE(a)    (sizeof(a)/sizeof(a[0]))
+#define PJ_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 /**
  * Length of object names.
  */
-#define PJ_MAX_OBJ_NAME	32
+#define PJ_MAX_OBJ_NAME  32
 
 /* ************************************************************************* */
 /*
@@ -304,7 +299,6 @@ typedef int pj_exception_id_t;
  */
 PJ_DECL(pj_status_t) pj_init(void);
 
-
 /**
  * Shutdown PJLIB.
  */
@@ -316,7 +310,7 @@ PJ_DECL(void) pj_shutdown(void);
 typedef void (*pj_exit_callback)(void);
 
 /**
- * Register cleanup function to be called by PJLIB when pj_shutdown() is 
+ * Register cleanup function to be called by PJLIB when pj_shutdown() is
  * called.
  *
  * @param func	    The function to be registered.
@@ -324,8 +318,6 @@ typedef void (*pj_exit_callback)(void);
  * @return PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pj_atexit(pj_exit_callback func);
-
-
 
 /**
  * Swap the byte order of an 16bit data.
@@ -336,10 +328,10 @@ PJ_DECL(pj_status_t) pj_atexit(pj_exit_callback func);
  */
 PJ_INLINE(pj_int16_t) pj_swap16(pj_int16_t val16)
 {
-    pj_uint8_t *p = (pj_uint8_t*)&val16;
+    pj_uint8_t* p = (pj_uint8_t*)&val16;
     pj_uint8_t tmp = *p;
-    *p = *(p+1);
-    *(p+1) = tmp;
+    *p = *(p + 1);
+    *(p + 1) = tmp;
     return val16;
 }
 
@@ -352,33 +344,31 @@ PJ_INLINE(pj_int16_t) pj_swap16(pj_int16_t val16)
  */
 PJ_INLINE(pj_int32_t) pj_swap32(pj_int32_t val32)
 {
-    pj_uint8_t *p = (pj_uint8_t*)&val32;
+    pj_uint8_t* p = (pj_uint8_t*)&val32;
     pj_uint8_t tmp = *p;
-    *p = *(p+3);
-    *(p+3) = tmp;
-    tmp = *(p+1);
-    *(p+1) = *(p+2);
-    *(p+2) = tmp;
+    *p = *(p + 3);
+    *(p + 3) = tmp;
+    tmp = *(p + 1);
+    *(p + 1) = *(p + 2);
+    *(p + 2) = tmp;
     return val32;
 }
-
 
 /**
  * Utility macro to check if uint32 var will overflow if converted to
  * signed long.
  */
 #if (PJ_MAXLONG <= 2147483647L)
-#  define PJ_CHECK_OVERFLOW_UINT32_TO_LONG(uint32_var, exec_on_overflow) \
-     do { \
-       if (uint32_var > PJ_MAXLONG) { \
-         exec_on_overflow; \
-       } \
-     } while (0)
+#    define PJ_CHECK_OVERFLOW_UINT32_TO_LONG(uint32_var, exec_on_overflow) \
+        do { \
+            if (uint32_var > PJ_MAXLONG) { \
+                exec_on_overflow; \
+            } \
+        } while (0)
 #else
 /* 'long' is longer than 32bit, uint32_var should never overflow */
-#  define PJ_CHECK_OVERFLOW_UINT32_TO_LONG(uint32_var, exec_on_overflow)
+#    define PJ_CHECK_OVERFLOW_UINT32_TO_LONG(uint32_var, exec_on_overflow)
 #endif
-
 
 /**
  * @}
@@ -392,15 +382,15 @@ PJ_INLINE(pj_int32_t) pj_swap32(pj_int32_t val32)
 /**
  * Representation of time value in this library.
  * This type can be used to represent either an interval or a specific time
- * or date. 
+ * or date.
  */
 typedef struct pj_time_val
 {
     /** The seconds part of the time. */
-    long    sec;
+    long sec;
 
     /** The miliseconds fraction of the time. */
-    long    msec;
+    long msec;
 
 } pj_time_val;
 
@@ -408,7 +398,7 @@ typedef struct pj_time_val
  * Normalize the value in time value.
  * @param t     Time value to be normalized.
  */
-PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
+PJ_DECL(void) pj_time_val_normalize(pj_time_val* t);
 
 /**
  * Get the total time value in miliseconds. This is the same as
@@ -419,7 +409,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Total time in miliseconds.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_MSEC(t)	((t).sec * 1000 + (t).msec)
+#define PJ_TIME_VAL_MSEC(t)    ((t).sec * 1000 + (t).msec)
 
 /**
  * This macro will check if \a t1 is equal to \a t2.
@@ -429,7 +419,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if both time values are equal.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_EQ(t1, t2)	((t1).sec==(t2).sec && (t1).msec==(t2).msec)
+#define PJ_TIME_VAL_EQ(t1, t2) ((t1).sec == (t2).sec && (t1).msec == (t2).msec)
 
 /**
  * This macro will check if \a t1 is greater than \a t2
@@ -439,8 +429,8 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if t1 is greater than t2.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_GT(t1, t2)	((t1).sec>(t2).sec || \
-                                ((t1).sec==(t2).sec && (t1).msec>(t2).msec))
+#define PJ_TIME_VAL_GT(t1, t2) \
+    ((t1).sec > (t2).sec || ((t1).sec == (t2).sec && (t1).msec > (t2).msec))
 
 /**
  * This macro will check if \a t1 is greater than or equal to \a t2
@@ -450,8 +440,8 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if t1 is greater than or equal to t2.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_GTE(t1, t2)	(PJ_TIME_VAL_GT(t1,t2) || \
-                                 PJ_TIME_VAL_EQ(t1,t2))
+#define PJ_TIME_VAL_GTE(t1, t2) \
+    (PJ_TIME_VAL_GT(t1, t2) || PJ_TIME_VAL_EQ(t1, t2))
 
 /**
  * This macro will check if \a t1 is less than \a t2
@@ -461,7 +451,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if t1 is less than t2.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_LT(t1, t2)	(!(PJ_TIME_VAL_GTE(t1,t2)))
+#define PJ_TIME_VAL_LT(t1, t2)  (!(PJ_TIME_VAL_GTE(t1, t2)))
 
 /**
  * This macro will check if \a t1 is less than or equal to \a t2.
@@ -471,7 +461,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if t1 is less than or equal to t2.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_LTE(t1, t2)	(!PJ_TIME_VAL_GT(t1, t2))
+#define PJ_TIME_VAL_LTE(t1, t2) (!PJ_TIME_VAL_GT(t1, t2))
 
 /**
  * Add \a t2 to \a t1 and store the result in \a t1. Effectively
@@ -481,12 +471,12 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @param t2    The time value to be added to \a t1.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_ADD(t1, t2)	    do {			    \
-					(t1).sec += (t2).sec;	    \
-					(t1).msec += (t2).msec;	    \
-					pj_time_val_normalize(&(t1)); \
-				    } while (0)
-
+#define PJ_TIME_VAL_ADD(t1, t2) \
+    do { \
+        (t1).sec += (t2).sec; \
+        (t1).msec += (t2).msec; \
+        pj_time_val_normalize(&(t1)); \
+    } while (0)
 
 /**
  * Substract \a t2 from \a t1 and store the result in \a t1. Effectively
@@ -496,12 +486,12 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @param t2    The time value to be substracted from \a t1.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_SUB(t1, t2)	    do {			    \
-					(t1).sec -= (t2).sec;	    \
-					(t1).msec -= (t2).msec;	    \
-					pj_time_val_normalize(&(t1)); \
-				    } while (0)
-
+#define PJ_TIME_VAL_SUB(t1, t2) \
+    do { \
+        (t1).sec -= (t2).sec; \
+        (t1).msec -= (t2).msec; \
+        pj_time_val_normalize(&(t1)); \
+    } while (0)
 
 /**
  * This structure represent the parsed representation of time.
@@ -542,7 +532,6 @@ typedef struct pj_parsed_time
 
 } pj_parsed_time;
 
-
 /**
  * @}	// Time Management
  */
@@ -554,18 +543,14 @@ typedef struct pj_parsed_time
 /**
  * Color code combination.
  */
-enum {
-    PJ_TERM_COLOR_R	= 2,    /**< Red            */
-    PJ_TERM_COLOR_G	= 4,    /**< Green          */
-    PJ_TERM_COLOR_B	= 1,    /**< Blue.          */
-    PJ_TERM_COLOR_BRIGHT = 8    /**< Bright mask.   */
+enum
+{
+    PJ_TERM_COLOR_R = 2,     /**< Red            */
+    PJ_TERM_COLOR_G = 4,     /**< Green          */
+    PJ_TERM_COLOR_B = 1,     /**< Blue.          */
+    PJ_TERM_COLOR_BRIGHT = 8 /**< Bright mask.   */
 };
-
-
-
 
 PJ_END_DECL
 
-
 #endif /* __PJ_TYPES_H__ */
-

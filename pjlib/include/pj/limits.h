@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2017 George Joseph <gjoseph@digium.com>
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_LIMITS_H__
 #define __PJ_LIMITS_H__
@@ -28,24 +27,24 @@
 #include <pj/compat/limits.h>
 
 /** Maximum value for signed 32-bit integer. */
-#define PJ_MAXINT32	0x7fffffff
+#define PJ_MAXINT32  0x7fffffff
 
 /** Minimum value for signed 32-bit integer. */
-#define PJ_MININT32	0x80000000
+#define PJ_MININT32  0x80000000
 
 /** Maximum value for unsigned 16-bit integer. */
-#define PJ_MAXUINT16	0xffff
+#define PJ_MAXUINT16 0xffff
 
 /** Maximum value for unsigned char. */
-#define PJ_MAXUINT8	0xff
+#define PJ_MAXUINT8  0xff
 
 /** Maximum value for long. */
-#define PJ_MAXLONG	LONG_MAX
+#define PJ_MAXLONG   LONG_MAX
 
 /** Minimum value for long. */
-#define PJ_MINLONG	LONG_MIN
+#define PJ_MINLONG   LONG_MIN
 
 /** Minimum value for unsigned long. */
-#define PJ_MAXULONG	ULONG_MAX
+#define PJ_MAXULONG  ULONG_MAX
 
-#endif  /* __PJ_LIMITS_H__ */
+#endif /* __PJ_LIMITS_H__ */

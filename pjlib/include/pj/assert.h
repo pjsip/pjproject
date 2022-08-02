@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_ASSERT_H__
 #define __PJ_ASSERT_H__
@@ -46,9 +45,8 @@
  * @param expr	    The expression to be evaluated.
  */
 #ifndef pj_assert
-#   define pj_assert(expr)   assert(expr)
+#    define pj_assert(expr) assert(expr)
 #endif
-
 
 /**
  * @hideinitializer
@@ -56,10 +54,13 @@
  * and the current function will return with the specified return value.
  */
 // #if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK != 0
-#define PJ_ASSERT_RETURN(expr,retval)    \
-	    do { \
-		if (!(expr)) { pj_assert(expr); return retval; } \
-	    } while (0)
+#define PJ_ASSERT_RETURN(expr, retval) \
+    do { \
+        if (!(expr)) { \
+            pj_assert(expr); \
+            return retval; \
+        } \
+    } while (0)
 //#else
 //#   define PJ_ASSERT_RETURN(expr,retval)    pj_assert(expr)
 //#endif
@@ -70,16 +71,16 @@
  * and @a exec_on_fail will be executed.
  */
 //#if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK != 0
-#define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    \
-	    do { \
-		pj_assert(expr); \
-		if (!(expr)) exec_on_fail; \
-	    } while (0)
+#define PJ_ASSERT_ON_FAIL(expr, exec_on_fail) \
+    do { \
+        pj_assert(expr); \
+        if (!(expr)) \
+            exec_on_fail; \
+    } while (0)
 //#else
 //#   define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    pj_assert(expr)
 //#endif
 
 /** @} */
 
-#endif	/* __PJ_ASSERT_H__ */
-
+#endif /* __PJ_ASSERT_H__ */

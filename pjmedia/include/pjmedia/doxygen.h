@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_DOXYGEN_H__
 #define __PJMEDIA_DOXYGEN_H__
@@ -25,10 +24,9 @@
  * @brief Doxygen's mainpage.
  */
 
-
 /*////////////////////////////////////////////////////////////////////////// */
 /*
-	INTRODUCTION PAGE
+        INTRODUCTION PAGE
  */
 
 /**
@@ -129,7 +127,7 @@ TOTAL                          55,232   268    2,020    57,520
  * @subsubsection libpjmediacodec PJMEDIA Codec
  * PJMEDIA-CODEC is a static library containing various codec implementations,
  * wrapped into PJMEDIA codec framework. The static library is designed as
- * such so that only codecs that are explicitly initialized are linked with 
+ * such so that only codecs that are explicitly initialized are linked with
  * the application, therefore keeping the application size in control.
  *
  * Please see @ref PJMEDIA_CODEC for more info.
@@ -146,7 +144,6 @@ TOTAL                          55,232   268    2,020    57,520
  *  - @ref PJMEDIA_TRANSPORT
  *  - @ref PJMEDIA_SESSION
  */
-
 
 /**
   @page page_pjmedia_samples PJMEDIA and PJMEDIA-CODEC Examples
@@ -165,7 +162,8 @@ TOTAL                          55,232   268    2,020    57,520
   - @ref page_pjmedia_samples_playfile_c\n
     This example shows that when application connects a media port (in this
     case a @ref PJMEDIA_FILE_PLAY) to @ref PJMED_SND_PORT, media will flow
-    automatically since the @ref PJMED_SND_PORT provides @ref PJMEDIA_PORT_CLOCK.
+    automatically since the @ref PJMED_SND_PORT provides @ref
+  PJMEDIA_PORT_CLOCK.
 
   - @ref page_pjmedia_samples_recfile_c\n
     Demonstrates how to capture audio from microphone to WAV file.
@@ -175,7 +173,7 @@ TOTAL                          55,232   268    2,020    57,520
     case a sine wave generator) and integrate it to PJMEDIA.
 
   - @ref page_pjmedia_samples_confsample_c\n
-    This demonstrates how to use the @ref PJMEDIA_CONF. The sample program can 
+    This demonstrates how to use the @ref PJMEDIA_CONF. The sample program can
     open multiple WAV files, and instruct the conference bridge to mix the
     signal before playing it to the sound device.
 
@@ -197,8 +195,8 @@ TOTAL                          55,232   268    2,020    57,520
     @ref PJMEDIA_FILE_PLAY) to remote peer using RTP.
 
   - @ref page_pjmedia_samples_siprtp_c\n
-    This is a useful program (integrated with PJSIP) to actively measure 
-    the network quality/impairment parameters by making one or more SIP 
+    This is a useful program (integrated with PJSIP) to actively measure
+    the network quality/impairment parameters by making one or more SIP
     calls (or receiving one or more SIP calls) and display the network
     impairment of each stream direction at the end of the call.
     The program is able to measure network quality parameters such as
@@ -220,7 +218,8 @@ TOTAL                          55,232   268    2,020    57,520
  */
 
 /**
- * \page page_pjmedia_samples_siprtp_c Samples: Using SIP and Custom RTP/RTCP to Monitor Quality
+ * \page page_pjmedia_samples_siprtp_c Samples: Using SIP and Custom RTP/RTCP to
+ * Monitor Quality
  *
  * This source is an example to demonstrate using SIP and RTP/RTCP framework
  * to measure the network quality/impairment from the SIP call. This
@@ -241,4 +240,3 @@ TOTAL                          55,232   268    2,020    57,520
  */
 
 #endif /* __PJMEDIA_DOXYGEN_H__ */
-

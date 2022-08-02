@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,57 +14,50 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/array.h>
 #include <pj/string.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
 
-PJ_DEF(void) pj_array_insert( void *array,
-			      unsigned elem_size,
-			      unsigned count,
-			      unsigned pos,
-			      const void *value)
+PJ_DEF(void)
+pj_array_insert(void* array, unsigned elem_size, unsigned count, unsigned pos,
+                const void* value)
 {
     if (count && pos < count) {
-	pj_memmove( (char*)array + (pos+1)*elem_size,
-		    (char*)array + pos*elem_size,
-		    (count-pos)*(pj_size_t)elem_size);
+        pj_memmove((char*)array + (pos + 1) * elem_size,
+                   (char*)array + pos * elem_size,
+                   (count - pos) * (pj_size_t)elem_size);
     }
-    pj_memmove((char*)array + pos*elem_size, value, elem_size);
+    pj_memmove((char*)array + pos * elem_size, value, elem_size);
 }
 
-PJ_DEF(void) pj_array_erase( void *array,
-			     unsigned elem_size,
-			     unsigned count,
-			     unsigned pos)
+PJ_DEF(void)
+pj_array_erase(void* array, unsigned elem_size, unsigned count, unsigned pos)
 {
     pj_assert(count != 0);
-    if (pos < count-1) {
-	pj_memmove( (char*)array + pos*elem_size,
-		    (char*)array + (pos+1)*elem_size,
-		    (count-pos-1)*(pj_size_t)elem_size);
+    if (pos < count - 1) {
+        pj_memmove((char*)array + pos * elem_size,
+                   (char*)array + (pos + 1) * elem_size,
+                   (count - pos - 1) * (pj_size_t)elem_size);
     }
 }
 
-PJ_DEF(pj_status_t) pj_array_find( const void *array, 
-				   unsigned elem_size, 
-				   unsigned count, 
-				   pj_status_t (*matching)(const void *value),
-				   void **result)
+PJ_DEF(pj_status_t)
+pj_array_find(const void* array, unsigned elem_size, unsigned count,
+              pj_status_t (*matching)(const void* value), void** result)
 {
     unsigned i;
-    const char *char_array = (const char*)array;
-    for (i=0; i<count; ++i) {
-	if ( (*matching)(char_array) == PJ_SUCCESS) {
-	    if (result) {
-		*result = (void*)char_array;
-	    }
-	    return PJ_SUCCESS;
-	}
-	char_array += elem_size;
+    const char* char_array = (const char*)array;
+    for (i = 0; i < count; ++i) {
+        if ((*matching)(char_array) == PJ_SUCCESS) {
+            if (result) {
+                *result = (void*)char_array;
+            }
+            return PJ_SUCCESS;
+        }
+        char_array += elem_size;
     }
     return PJ_ENOTFOUND;
 }
-

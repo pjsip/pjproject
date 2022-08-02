@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -26,54 +25,54 @@
 using namespace PjsuaCLI::BackEnd;
 using namespace Platform;
 
-#define THIS_FILE	"Globals.cpp"
+#define THIS_FILE "Globals.cpp"
 
-#if defined (PJ_WIN32_WINPHONE8) && (PJ_WIN32_WINPHONE8 != 0)
+#if defined(PJ_WIN32_WINPHONE8) && (PJ_WIN32_WINPHONE8 != 0)
 
 static pjsua_app_cfg_t wp_app_config;
 static int restart_argc;
-static char **restart_argv;
-extern const char *pjsua_app_def_argv[];
+static char** restart_argv;
+extern const char* pjsua_app_def_argv[];
 
-Globals^ Globals::singleton = nullptr;
+Globals ^ Globals::singleton = nullptr;
 
 /** Callback wrapper **/
-void on_cli_started(pj_status_t status, const char *msg)
+void on_cli_started(pj_status_t status, const char* msg)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
     if (Globals::Instance->PjsuaCallback) {
-	static wchar_t msgBuff[ PJ_ERR_MSG_SIZE ];
-	Platform::String ^outMsg = nullptr;
-	if ((status != PJ_SUCCESS) && (!msg || !*msg)) {
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    msg = errmsg;
-	}
-	mbstowcs(msgBuff, msg, PJ_ERR_MSG_SIZE);
-	outMsg = ref new Platform::String(msgBuff);
-	Globals::Instance->PjsuaCallback->OnStarted(outMsg);
+        static wchar_t msgBuff[PJ_ERR_MSG_SIZE];
+        Platform::String ^ outMsg = nullptr;
+        if ((status != PJ_SUCCESS) && (!msg || !*msg)) {
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            msg = errmsg;
+        }
+        mbstowcs(msgBuff, msg, PJ_ERR_MSG_SIZE);
+        outMsg = ref new Platform::String(msgBuff);
+        Globals::Instance->PjsuaCallback->OnStarted(outMsg);
     }
 }
 
-void on_cli_stopped(pj_bool_t restart, int argc, char **argv)
+void on_cli_stopped(pj_bool_t restart, int argc, char** argv)
 {
     if (restart) {
-	restart_argc = argc;
-	restart_argv = argv;
+        restart_argc = argc;
+        restart_argv = argv;
     }
 
     if (Globals::Instance->PjsuaCallback) {
-	Globals::Instance->PjsuaCallback->OnStopped(restart);
+        Globals::Instance->PjsuaCallback->OnStopped(restart);
     }
 }
 
-void on_config_init (pjsua_app_config *cfg)
+void on_config_init(pjsua_app_config* cfg)
 {
     PJ_UNUSED_ARG(cfg);
-    //cfg->media_cfg.snd_clock_rate = 16000;
-    //cfg->media_cfg.snd_play_latency = 140;
+    // cfg->media_cfg.snd_clock_rate = 16000;
+    // cfg->media_cfg.snd_play_latency = 140;
 }
 
-static int initMain(int argc, char **argv)
+static int initMain(int argc, char** argv)
 {
     pj_status_t status;
     wp_app_config.argc = argc;
@@ -81,9 +80,9 @@ static int initMain(int argc, char **argv)
 
     status = pjsua_app_init(&wp_app_config);
     if (status == PJ_SUCCESS) {
-	status = pjsua_app_run(PJ_FALSE);
+        status = pjsua_app_run(PJ_FALSE);
     } else {
-	pjsua_app_destroy();
+        pjsua_app_destroy();
     }
 
     return status;
@@ -91,7 +90,7 @@ static int initMain(int argc, char **argv)
 
 int Globals::pjsuaStart()
 {
-    const char **argv = pjsua_app_def_argv;
+    const char** argv = pjsua_app_def_argv;
     int argc = pjsua_app_def_argc;
 
     pj_bzero(&wp_app_config, sizeof(wp_app_config));
@@ -118,12 +117,10 @@ int Globals::pjsuaRestart()
     return initMain(restart_argc, restart_argv);
 }
 
-Globals^ Globals::Instance::get()
+Globals ^ Globals::Instance::get()
 {
-    if (Globals::singleton == nullptr)
-    {
-        if (Globals::singleton == nullptr)
-        {
+    if (Globals::singleton == nullptr) {
+        if (Globals::singleton == nullptr) {
             Globals::singleton = ref new Globals();
         }
     }
@@ -131,13 +128,11 @@ Globals^ Globals::Instance::get()
     return Globals::singleton;
 }
 
-PjsuaCallback^ Globals::PjsuaCallback::get()
+PjsuaCallback ^ Globals::PjsuaCallback::get()
 {
-    if (this->callback == nullptr)
-    {
-	if (this->callback == nullptr)
-        {
-	    this->callback = ref new PjsuaCLI::BackEnd::PjsuaCallback();
+    if (this->callback == nullptr) {
+        if (this->callback == nullptr) {
+            this->callback = ref new PjsuaCLI::BackEnd::PjsuaCallback();
         }
     }
 
@@ -150,8 +145,6 @@ Globals::Globals()
 }
 
 Globals::~Globals()
-{
-
-}
+{}
 
 #endif

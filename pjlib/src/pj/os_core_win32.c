@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -34,50 +33,49 @@
 #include <windows.h>
 
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0
-#  include <winsock2.h>
+#    include <winsock2.h>
 #endif
 
 #if defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H != 0
-#  include <winsock.h>
+#    include <winsock.h>
 #endif
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-#   include "../../../third_party/threademulation/include/ThreadEmulation.h"
+#    include "../../../third_party/threademulation/include/ThreadEmulation.h"
 #endif
 
 /* Activate mutex related logging if PJ_DEBUG_MUTEX is set, otherwise
  * use default level 6 logging.
  */
 #if defined(PJ_DEBUG_MUTEX) && PJ_DEBUG_MUTEX
-#   undef PJ_DEBUG
-#   define PJ_DEBUG	    1
-#   define LOG_MUTEX(expr)  PJ_LOG(5,expr)
+#    undef PJ_DEBUG
+#    define PJ_DEBUG        1
+#    define LOG_MUTEX(expr) PJ_LOG(5, expr)
 #else
-#   define LOG_MUTEX(expr)  PJ_LOG(6,expr)
+#    define LOG_MUTEX(expr) PJ_LOG(6, expr)
 #endif
 
-#define THIS_FILE	"os_core_win32.c"
+#define THIS_FILE "os_core_win32.c"
 
 /*
  * Implementation of pj_thread_t.
  */
 struct pj_thread_t
 {
-    char	    obj_name[PJ_MAX_OBJ_NAME];
-    HANDLE	    hthread;
-    DWORD	    idthread;
-    pj_thread_proc *proc;
-    void	   *arg;
+    char obj_name[PJ_MAX_OBJ_NAME];
+    HANDLE hthread;
+    DWORD idthread;
+    pj_thread_proc* proc;
+    void* arg;
 
-#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
-    pj_uint32_t	    stk_size;
-    pj_uint32_t	    stk_max_usage;
-    char	   *stk_start;
-    const char	   *caller_file;
-    int		    caller_line;
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK != 0
+    pj_uint32_t stk_size;
+    pj_uint32_t stk_max_usage;
+    char* stk_start;
+    const char* caller_file;
+    int caller_line;
 #endif
 };
-
 
 /*
  * Implementation of pj_mutex_t.
@@ -85,14 +83,14 @@ struct pj_thread_t
 struct pj_mutex_t
 {
 #if PJ_WIN32_WINNT >= 0x0400
-    CRITICAL_SECTION	crit;
+    CRITICAL_SECTION crit;
 #else
-    HANDLE		hMutex;
+    HANDLE hMutex;
 #endif
-    char		obj_name[PJ_MAX_OBJ_NAME];
+    char obj_name[PJ_MAX_OBJ_NAME];
 #if PJ_DEBUG
-    int		        nesting_level;
-    pj_thread_t	       *owner;
+    int nesting_level;
+    pj_thread_t* owner;
 #endif
 };
 
@@ -101,18 +99,17 @@ struct pj_mutex_t
  */
 typedef struct pj_sem_t
 {
-    HANDLE		hSemaphore;
-    char		obj_name[PJ_MAX_OBJ_NAME];
+    HANDLE hSemaphore;
+    char obj_name[PJ_MAX_OBJ_NAME];
 } pj_mem_t;
-
 
 /*
  * Implementation of pj_event_t.
  */
 struct pj_event_t
 {
-    HANDLE		hEvent;
-    char		obj_name[PJ_MAX_OBJ_NAME];
+    HANDLE hEvent;
+    char obj_name[PJ_MAX_OBJ_NAME];
 };
 
 /*
@@ -140,8 +137,7 @@ static void (*atexit_func[32])(void);
 /*
  * Some static prototypes.
  */
-static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name);
-
+static pj_status_t init_mutex(pj_mutex_t* mutex, const char* name);
 
 /*
  * pj_init(void).
@@ -156,20 +152,20 @@ PJ_DEF(pj_status_t) pj_init(void)
 
     /* Check if PJLIB have been initialized */
     if (initialized) {
-	++initialized;
-	return PJ_SUCCESS;
+        ++initialized;
+        return PJ_SUCCESS;
     }
 
     /* Init Winsock.. */
-    if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) {
-	return PJ_RETURN_OS_ERROR(WSAGetLastError());
+    if (WSAStartup(MAKEWORD(2, 0), &wsa) != 0) {
+        return PJ_RETURN_OS_ERROR(WSAGetLastError());
     }
 
     /* Init this thread's TLS. */
-    if ((rc=pj_thread_init()) != PJ_SUCCESS) {
-	return rc;
+    if ((rc = pj_thread_init()) != PJ_SUCCESS) {
+        return rc;
     }
-    
+
     /* Init logging */
     pj_log_init();
 
@@ -178,30 +174,30 @@ PJ_DEF(pj_status_t) pj_init(void)
     /* pj_srand( GetCurrentProcessId() ); */
 
     /* Initialize critical section. */
-    if ((rc=init_mutex(&critical_section_mutex, "pj%p")) != PJ_SUCCESS)
-	return rc;
+    if ((rc = init_mutex(&critical_section_mutex, "pj%p")) != PJ_SUCCESS)
+        return rc;
 
     /* Startup GUID. */
     guid.ptr = dummy_guid;
-    pj_generate_unique_string( &guid );
+    pj_generate_unique_string(&guid);
 
-    /* Initialize exception ID for the pool. 
+    /* Initialize exception ID for the pool.
      * Must do so after critical section is configured.
      */
     rc = pj_exception_id_alloc("PJLIB/No memory", &PJ_NO_MEMORY_EXCEPTION);
     if (rc != PJ_SUCCESS)
         return rc;
 
-    /* Startup timestamp */
+        /* Startup timestamp */
 #if defined(PJ_HAS_HIGH_RES_TIMER) && PJ_HAS_HIGH_RES_TIMER != 0
     {
-	pj_timestamp dummy_ts;
-	if ((rc=pj_get_timestamp_freq(&dummy_ts)) != PJ_SUCCESS) {
-	    return rc;
-	}
-	if ((rc=pj_get_timestamp(&dummy_ts)) != PJ_SUCCESS) {
-	    return rc;
-	}
+        pj_timestamp dummy_ts;
+        if ((rc = pj_get_timestamp_freq(&dummy_ts)) != PJ_SUCCESS) {
+            return rc;
+        }
+        if ((rc = pj_get_timestamp(&dummy_ts)) != PJ_SUCCESS) {
+            return rc;
+        }
     }
 #endif
 
@@ -209,8 +205,7 @@ PJ_DEF(pj_status_t) pj_init(void)
     ++initialized;
     pj_assert(initialized == 1);
 
-    PJ_LOG(4,(THIS_FILE, "pjlib %s for win32 initialized",
-	      PJ_VERSION));
+    PJ_LOG(4, (THIS_FILE, "pjlib %s for win32 initialized", PJ_VERSION));
 
     return PJ_SUCCESS;
 }
@@ -221,12 +216,11 @@ PJ_DEF(pj_status_t) pj_init(void)
 PJ_DEF(pj_status_t) pj_atexit(void (*func)(void))
 {
     if (atexit_count >= PJ_ARRAY_SIZE(atexit_func))
-	return PJ_ETOOMANY;
+        return PJ_ETOOMANY;
 
     atexit_func[atexit_count++] = func;
     return PJ_SUCCESS;
 }
-
 
 /*
  * pj_shutdown(void)
@@ -238,27 +232,27 @@ PJ_DEF(void) pj_shutdown()
     /* Only perform shutdown operation when 'initialized' reaches zero */
     pj_assert(initialized > 0);
     if (--initialized != 0)
-	return;
+        return;
 
-    /* Display stack usage */
-#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+        /* Display stack usage */
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK != 0
     {
-	pj_thread_t *rec = (pj_thread_t*)main_thread;
-	PJ_LOG(5,(rec->obj_name, "Main thread stack max usage=%u by %s:%d", 
-		  rec->stk_max_usage, rec->caller_file, rec->caller_line));
+        pj_thread_t* rec = (pj_thread_t*)main_thread;
+        PJ_LOG(5, (rec->obj_name, "Main thread stack max usage=%u by %s:%d",
+                   rec->stk_max_usage, rec->caller_file, rec->caller_line));
     }
 #endif
 
     /* Call atexit() functions */
-    for (i=atexit_count-1; i>=0; --i) {
-	(*atexit_func[i])();
+    for (i = atexit_count - 1; i >= 0; --i) {
+        (*atexit_func[i])();
     }
     atexit_count = 0;
 
     /* Free exception ID */
     if (PJ_NO_MEMORY_EXCEPTION != -1) {
-	pj_exception_id_free(PJ_NO_MEMORY_EXCEPTION);
-	PJ_NO_MEMORY_EXCEPTION = -1;
+        pj_exception_id_free(PJ_NO_MEMORY_EXCEPTION);
+        PJ_NO_MEMORY_EXCEPTION = -1;
     }
 
     /* Destroy PJLIB critical section */
@@ -266,8 +260,8 @@ PJ_DEF(void) pj_shutdown()
 
     /* Free PJLIB TLS */
     if (thread_tls_id != -1) {
-	pj_thread_local_free(thread_tls_id);
-	thread_tls_id = -1;
+        pj_thread_local_free(thread_tls_id);
+        thread_tls_id = -1;
     }
 
     /* Clear static variables */
@@ -279,7 +273,6 @@ PJ_DEF(void) pj_shutdown()
     /* Shutdown Winsock */
     WSACleanup();
 }
-
 
 /*
  * pj_getpid(void)
@@ -298,11 +291,10 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
     return pj_thread_local_get(thread_tls_id) != 0;
 }
 
-
 /*
  * Get thread priority value for the thread.
  */
-PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
+PJ_DEF(int) pj_thread_get_prio(pj_thread_t* thread)
 {
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     PJ_UNUSED_ARG(thread);
@@ -312,24 +304,23 @@ PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
 #endif
 }
 
-
 /*
  * Set the thread priority.
  */
-PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
+PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t* thread, int prio)
 {
 #if PJ_HAS_THREADS
     PJ_ASSERT_RETURN(thread, PJ_EINVAL);
-    PJ_ASSERT_RETURN(prio>=THREAD_PRIORITY_IDLE && 
-			prio<=THREAD_PRIORITY_TIME_CRITICAL,
-		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(
+      prio >= THREAD_PRIORITY_IDLE && prio <= THREAD_PRIORITY_TIME_CRITICAL,
+      PJ_EINVAL);
 
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+#    if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     if (SetThreadPriorityRT(thread->hthread, prio) == FALSE)
-#else
+#    else
     if (SetThreadPriority(thread->hthread, prio) == FALSE)
-#endif
-	return PJ_RETURN_OS_ERROR(GetLastError());
+#    endif
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
     return PJ_SUCCESS;
 
@@ -341,31 +332,28 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 #endif
 }
 
-
 /*
  * Get the lowest priority value available on this system.
  */
-PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
+PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t* thread)
 {
     PJ_UNUSED_ARG(thread);
     return THREAD_PRIORITY_IDLE;
 }
 
-
 /*
  * Get the highest priority value available on this system.
  */
-PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
+PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t* thread)
 {
     PJ_UNUSED_ARG(thread);
     return THREAD_PRIORITY_TIME_CRITICAL;
 }
 
-
 /*
  * Get native thread handle
  */
-PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread) 
+PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t* thread)
 {
     PJ_ASSERT_RETURN(thread, NULL);
 
@@ -380,30 +368,30 @@ PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread)
 /*
  * pj_thread_register(..)
  */
-PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
-					 pj_thread_desc desc,
-                                         pj_thread_t **thread_ptr)
+PJ_DEF(pj_status_t)
+pj_thread_register(const char* cstr_thread_name, pj_thread_desc desc,
+                   pj_thread_t** thread_ptr)
 {
     char stack_ptr;
     pj_status_t rc;
-    pj_thread_t *thread = (pj_thread_t *)desc;
+    pj_thread_t* thread = (pj_thread_t*)desc;
     pj_str_t thread_name = pj_str((char*)cstr_thread_name);
 
     /* Size sanity check. */
     if (sizeof(pj_thread_desc) < sizeof(pj_thread_t)) {
-	pj_assert(!"Not enough pj_thread_desc size!");
-	return PJ_EBUG;
+        pj_assert(!"Not enough pj_thread_desc size!");
+        return PJ_EBUG;
     }
 
     /* If a thread descriptor has been registered before, just return it. */
-    if (pj_thread_local_get (thread_tls_id) != 0) {
-	// 2006-02-26 bennylp:
-	//  This wouldn't work in all cases!.
-	//  If thread is created by external module (e.g. sound thread),
-	//  thread may be reused while the pool used for the thread descriptor
-	//  has been deleted by application.
-	//*thread_ptr = (pj_thread_t*)pj_thread_local_get (thread_tls_id);
-        //return PJ_SUCCESS;
+    if (pj_thread_local_get(thread_tls_id) != 0) {
+        // 2006-02-26 bennylp:
+        //  This wouldn't work in all cases!.
+        //  If thread is created by external module (e.g. sound thread),
+        //  thread may be reused while the pool used for the thread descriptor
+        //  has been deleted by application.
+        //*thread_ptr = (pj_thread_t*)pj_thread_local_get (thread_tls_id);
+        // return PJ_SUCCESS;
     }
 
     /* Initialize and set the thread entry. */
@@ -411,7 +399,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     thread->hthread = GetCurrentThread();
     thread->idthread = GetCurrentThreadId();
 
-#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK != 0
     thread->stk_start = &stack_ptr;
     thread->stk_size = 0xFFFFFFFFUL;
     thread->stk_max_usage = 0;
@@ -419,16 +407,17 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     stack_ptr = '\0';
 #endif
 
-    if (cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
-	pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name), 
-			 cstr_thread_name, thread->idthread);
+    if (cstr_thread_name &&
+        pj_strlen(&thread_name) < sizeof(thread->obj_name) - 1)
+        pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name),
+                         cstr_thread_name, thread->idthread);
     else
-	pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name), 
-		         "thr%p", (void*)(pj_ssize_t)thread->idthread);
-    
+        pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name), "thr%p",
+                         (void*)(pj_ssize_t)thread->idthread);
+
     rc = pj_thread_local_set(thread_tls_id, thread);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
     *thread_ptr = thread;
     return PJ_SUCCESS;
@@ -440,11 +429,11 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 pj_status_t pj_thread_init(void)
 {
     pj_status_t rc;
-    pj_thread_t *thread;
+    pj_thread_t* thread;
 
     rc = pj_thread_local_alloc(&thread_tls_id);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
     return pj_thread_register("thr%p", main_thread, &thread);
 }
@@ -455,39 +444,40 @@ pj_status_t pj_thread_init(void)
  * https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
  */
 #pragma pack(push, 8)
-typedef struct tagTHREADNAME_INFO {
-    DWORD dwType;     // Must be 0x1000.
-    LPCSTR szName;    // Pointer to name (in user addr space).
-    DWORD dwThreadID; // Thread ID (-1=caller thread).
-    DWORD dwFlags;    // Reserved for future use, must be zero.
+typedef struct tagTHREADNAME_INFO
+{
+    DWORD dwType;      // Must be 0x1000.
+    LPCSTR szName;     // Pointer to name (in user addr space).
+    DWORD dwThreadID;  // Thread ID (-1=caller thread).
+    DWORD dwFlags;     // Reserved for future use, must be zero.
 } THREADNAME_INFO;
 #pragma pack(pop)
 
 // The SetThreadDescription API was brought in version 1607 of Windows 10.
-typedef HRESULT(WINAPI *FnSetThreadDescription)(HANDLE hThread,
-						PCWSTR lpThreadDescription);
+typedef HRESULT(WINAPI* FnSetThreadDescription)(HANDLE hThread,
+                                                PCWSTR lpThreadDescription);
 
-static void set_thread_display_name(const char *name)
+static void set_thread_display_name(const char* name)
 {
     /* Set thread name by SetThreadDescription (if support) */
     FnSetThreadDescription fn = (FnSetThreadDescription)GetProcAddress(
-	GetModuleHandle(PJ_T("Kernel32.dll")), "SetThreadDescription");
+      GetModuleHandle(PJ_T("Kernel32.dll")), "SetThreadDescription");
     PJ_LOG(5, (THIS_FILE, "SetThreadDescription:%p, name:%s", fn, name));
     if (fn) {
-	wchar_t wname[PJ_MAX_OBJ_NAME];
-	pj_ansi_to_unicode(name, pj_ansi_strlen(name), wname, PJ_MAX_OBJ_NAME);
-	fn(GetCurrentThread(), wname);
-	return;
+        wchar_t wname[PJ_MAX_OBJ_NAME];
+        pj_ansi_to_unicode(name, pj_ansi_strlen(name), wname, PJ_MAX_OBJ_NAME);
+        fn(GetCurrentThread(), wname);
+        return;
     }
 
     /* Set thread name by throwing an exception */
 #if defined(__MINGW32__) || defined(__CYGWIN__)
-#pragma message("Warning: Not support exception")
+#    pragma message("Warning: Not support exception")
 #else
     // The debugger needs to be around to catch the name in the exception.
     // If there isn't a debugger, we are needlessly throwing an exception.
     if (!IsDebuggerPresent()) {
-	return;
+        return;
     }
 
     const DWORD MS_VC_EXCEPTION = 0x406D1388;
@@ -496,40 +486,41 @@ static void set_thread_display_name(const char *name)
     info.szName = name;
     info.dwThreadID = (DWORD)-1;
     info.dwFlags = 0;
-#pragma warning(push)
-#pragma warning(disable : 6320 6322)
-    __try {
-	RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR),
-		       (ULONG_PTR *)&info);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-    }
-#pragma warning(pop)
+#    pragma warning(push)
+#    pragma warning(disable : 6320 6322)
+    __try
+    {
+        RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR),
+                       (ULONG_PTR*)&info);
+    } __except (EXCEPTION_EXECUTE_HANDLER)
+    {}
+#    pragma warning(pop)
 #endif
 }
 
-static DWORD WINAPI thread_main(void *param)
+static DWORD WINAPI thread_main(void* param)
 {
-    pj_thread_t *rec = param;
+    pj_thread_t* rec = param;
     DWORD result;
 
-#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK != 0
     rec->stk_start = (char*)&rec;
 #endif
 
     if (pj_thread_local_set(thread_tls_id, rec) != PJ_SUCCESS) {
-	pj_assert(!"TLS is not set (pj_init() error?)");
+        pj_assert(!"TLS is not set (pj_init() error?)");
     }
 
-    PJ_LOG(6,(rec->obj_name, "Thread started"));
+    PJ_LOG(6, (rec->obj_name, "Thread started"));
 
     set_thread_display_name(rec->obj_name);
 
     result = (*rec->proc)(rec->arg);
 
-    PJ_LOG(6,(rec->obj_name, "Thread quitting"));
-#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
-    PJ_LOG(5,(rec->obj_name, "Thread stack max usage=%u by %s:%d", 
-	      rec->stk_max_usage, rec->caller_file, rec->caller_line));
+    PJ_LOG(6, (rec->obj_name, "Thread quitting"));
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK != 0
+    PJ_LOG(5, (rec->obj_name, "Thread stack max usage=%u by %s:%d",
+               rec->stk_max_usage, rec->caller_file, rec->caller_line));
 #endif
 
     return (DWORD)result;
@@ -538,16 +529,13 @@ static DWORD WINAPI thread_main(void *param)
 /*
  * pj_thread_create(...)
  */
-PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool, 
-                                      const char *thread_name,
-				      pj_thread_proc *proc, 
-                                      void *arg,
-				      pj_size_t stack_size, 
-				      unsigned flags,
-                                      pj_thread_t **thread_ptr)
+PJ_DEF(pj_status_t)
+pj_thread_create(pj_pool_t* pool, const char* thread_name, pj_thread_proc* proc,
+                 void* arg, pj_size_t stack_size, unsigned flags,
+                 pj_thread_t** thread_ptr)
 {
     DWORD dwflags = 0;
-    pj_thread_t *rec;
+    pj_thread_t* rec;
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     PJ_UNUSED_ARG(stack_size);
@@ -558,27 +546,27 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 
     /* Set flags */
     if (flags & PJ_THREAD_SUSPENDED)
-	dwflags |= CREATE_SUSPENDED;
+        dwflags |= CREATE_SUSPENDED;
 
     /* Create thread record and assign name for the thread */
-    rec = (struct pj_thread_t*) pj_pool_calloc(pool, 1, sizeof(pj_thread_t));
+    rec = (struct pj_thread_t*)pj_pool_calloc(pool, 1, sizeof(pj_thread_t));
     if (!rec)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
     /* Set name. */
     if (!thread_name)
-	thread_name = "thr%p";
+        thread_name = "thr%p";
 
     if (strchr(thread_name, '%')) {
-	pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
+        pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
-	pj_ansi_strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
-	rec->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
+        rec->obj_name[PJ_MAX_OBJ_NAME - 1] = '\0';
     }
 
     PJ_LOG(6, (rec->obj_name, "Thread created"));
 
-#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK != 0
     rec->stk_size = stack_size ? (pj_uint32_t)stack_size : 0xFFFFFFFFUL;
     rec->stk_max_usage = 0;
 #endif
@@ -588,17 +576,14 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     rec->arg = arg;
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-    rec->hthread = CreateThreadRT(NULL, 0,
-				  thread_main, rec,
-				  dwflags, NULL);
+    rec->hthread = CreateThreadRT(NULL, 0, thread_main, rec, dwflags, NULL);
 #else
-    rec->hthread = CreateThread(NULL, stack_size,
-			        thread_main, rec,
-			        dwflags, &rec->idthread);
+    rec->hthread =
+      CreateThread(NULL, stack_size, thread_main, rec, dwflags, &rec->idthread);
 #endif
 
     if (rec->hthread == NULL)
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
     /* Success! */
     *thread_ptr = rec;
@@ -608,9 +593,9 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 /*
  * pj_thread-get_name()
  */
-PJ_DEF(const char*) pj_thread_get_name(pj_thread_t *p)
+PJ_DEF(const char*) pj_thread_get_name(pj_thread_t* p)
 {
-    pj_thread_t *rec = (pj_thread_t*)p;
+    pj_thread_t* rec = (pj_thread_t*)p;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(p, "");
@@ -621,9 +606,9 @@ PJ_DEF(const char*) pj_thread_get_name(pj_thread_t *p)
 /*
  * pj_thread_resume()
  */
-PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t *p)
+PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t* p)
 {
-    pj_thread_t *rec = (pj_thread_t*)p;
+    pj_thread_t* rec = (pj_thread_t*)p;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(p, PJ_EINVAL);
@@ -632,7 +617,7 @@ PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t *p)
     if (ResumeThreadRT(rec->hthread) == (DWORD)-1)
 #else
     if (ResumeThread(rec->hthread) == (DWORD)-1)
-#endif    
+#endif
         return PJ_RETURN_OS_ERROR(GetLastError());
     else
         return PJ_SUCCESS;
@@ -643,10 +628,10 @@ PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t *p)
  */
 PJ_DEF(pj_thread_t*) pj_thread_this(void)
 {
-    pj_thread_t *rec = pj_thread_local_get(thread_tls_id);
+    pj_thread_t* rec = pj_thread_local_get(thread_tls_id);
 
     if (rec == NULL) {
-	pj_assert(!"Calling pjlib from unknown/external thread. You must "
+        pj_assert(!"Calling pjlib from unknown/external thread. You must "
 		   "register external threads with pj_thread_register() "
 		   "before calling any pjlib functions.");
     }
@@ -663,16 +648,16 @@ PJ_DEF(pj_thread_t*) pj_thread_this(void)
 /*
  * pj_thread_join()
  */
-PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
+PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t* p)
 {
-    pj_thread_t *rec = (pj_thread_t *)p;
+    pj_thread_t* rec = (pj_thread_t*)p;
     DWORD rc;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(p, PJ_EINVAL);
 
     if (p == pj_thread_this())
-	return PJ_ECANCELLED;
+        return PJ_ECANCELLED;
 
     PJ_LOG(6, (pj_thread_this()->obj_name, "Joining thread %s", p->obj_name));
 
@@ -680,11 +665,11 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
     rc = WaitForSingleObjectEx(rec->hthread, INFINITE, FALSE);
 #else
     rc = WaitForSingleObject(rec->hthread, INFINITE);
-#endif    
+#endif
 
-    if (rc==WAIT_OBJECT_0)
+    if (rc == WAIT_OBJECT_0)
         return PJ_SUCCESS;
-    else if (rc==WAIT_TIMEOUT)
+    else if (rc == WAIT_TIMEOUT)
         return PJ_ETIMEDOUT;
     else
         return PJ_RETURN_OS_ERROR(GetLastError());
@@ -693,9 +678,9 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 /*
  * pj_thread_destroy()
  */
-PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
+PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t* p)
 {
-    pj_thread_t *rec = (pj_thread_t *)p;
+    pj_thread_t* rec = (pj_thread_t*)p;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(p, PJ_EINVAL);
@@ -727,35 +712,34 @@ PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
  * pj_thread_check_stack()
  * Implementation for PJ_CHECK_STACK()
  */
-PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
+PJ_DEF(void) pj_thread_check_stack(const char* file, int line)
 {
     char stk_ptr;
     pj_uint32_t usage;
-    pj_thread_t *thread = pj_thread_this();
+    pj_thread_t* thread = pj_thread_this();
 
     pj_assert(thread);
 
     /* Calculate current usage. */
-    usage = (&stk_ptr > thread->stk_start) ? 
-		(pj_uint32_t)(&stk_ptr - thread->stk_start) :
-		(pj_uint32_t)(thread->stk_start - &stk_ptr);
+    usage = (&stk_ptr > thread->stk_start) ?
+              (pj_uint32_t)(&stk_ptr - thread->stk_start) :
+              (pj_uint32_t)(thread->stk_start - &stk_ptr);
 
     /* Assert if stack usage is dangerously high. */
     pj_assert("STACK OVERFLOW!! " && (usage <= thread->stk_size - 128));
 
     /* Keep statistic. */
     if (usage > thread->stk_max_usage) {
-	thread->stk_max_usage = usage;
-	thread->caller_file = file;
-	thread->caller_line = line;
+        thread->stk_max_usage = usage;
+        thread->caller_file = file;
+        thread->caller_line = line;
     }
-
 }
 
 /*
  * pj_thread_get_stack_max_usage()
  */
-PJ_DEF(pj_uint32_t) pj_thread_get_stack_max_usage(pj_thread_t *thread)
+PJ_DEF(pj_uint32_t) pj_thread_get_stack_max_usage(pj_thread_t* thread)
 {
     return thread->stk_max_usage;
 }
@@ -763,9 +747,8 @@ PJ_DEF(pj_uint32_t) pj_thread_get_stack_max_usage(pj_thread_t *thread)
 /*
  * pj_thread_get_stack_info()
  */
-PJ_DEF(pj_status_t) pj_thread_get_stack_info( pj_thread_t *thread,
-					      const char **file,
-					      int *line )
+PJ_DEF(pj_status_t)
+pj_thread_get_stack_info(pj_thread_t* thread, const char** file, int* line)
 {
     pj_assert(thread);
 
@@ -774,21 +757,20 @@ PJ_DEF(pj_status_t) pj_thread_get_stack_info( pj_thread_t *thread,
     return 0;
 }
 
-#endif	/* PJ_OS_HAS_CHECK_STACK */
-
+#endif /* PJ_OS_HAS_CHECK_STACK */
 
 ///////////////////////////////////////////////////////////////////////////////
 
 /*
  * pj_atomic_create()
  */
-PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool, 
-                                      pj_atomic_value_t initial,
-                                      pj_atomic_t **atomic_ptr)
+PJ_DEF(pj_status_t)
+pj_atomic_create(pj_pool_t* pool, pj_atomic_value_t initial,
+                 pj_atomic_t** atomic_ptr)
 {
-    pj_atomic_t *atomic_var = pj_pool_alloc(pool, sizeof(pj_atomic_t));
+    pj_atomic_t* atomic_var = pj_pool_alloc(pool, sizeof(pj_atomic_t));
     if (!atomic_var)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
     atomic_var->value = initial;
     *atomic_ptr = atomic_var;
@@ -799,7 +781,7 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
 /*
  * pj_atomic_destroy()
  */
-PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *var )
+PJ_DEF(pj_status_t) pj_atomic_destroy(pj_atomic_t* var)
 {
     PJ_UNUSED_ARG(var);
     PJ_ASSERT_RETURN(var, PJ_EINVAL);
@@ -810,10 +792,10 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *var )
 /*
  * pj_atomic_set()
  */
-PJ_DEF(void) pj_atomic_set( pj_atomic_t *atomic_var, pj_atomic_value_t value)
+PJ_DEF(void) pj_atomic_set(pj_atomic_t* atomic_var, pj_atomic_value_t value)
 {
     PJ_CHECK_STACK();
-    PJ_ASSERT_ON_FAIL(atomic_var, return);
+    PJ_ASSERT_ON_FAIL(atomic_var, return );
 
     InterlockedExchange(&atomic_var->value, value);
 }
@@ -821,7 +803,7 @@ PJ_DEF(void) pj_atomic_set( pj_atomic_t *atomic_var, pj_atomic_value_t value)
 /*
  * pj_atomic_get()
  */
-PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
+PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t* atomic_var)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(atomic_var, 0);
@@ -832,7 +814,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
 /*
  * pj_atomic_inc_and_get()
  */
-PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
+PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t* atomic_var)
 {
     PJ_CHECK_STACK();
 
@@ -846,16 +828,16 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
 /*
  * pj_atomic_inc()
  */
-PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
+PJ_DEF(void) pj_atomic_inc(pj_atomic_t* atomic_var)
 {
-    PJ_ASSERT_ON_FAIL(atomic_var, return);
+    PJ_ASSERT_ON_FAIL(atomic_var, return );
     pj_atomic_inc_and_get(atomic_var);
 }
 
 /*
  * pj_atomic_dec_and_get()
  */
-PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
+PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t* atomic_var)
 {
     PJ_CHECK_STACK();
 
@@ -869,37 +851,36 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
 /*
  * pj_atomic_dec()
  */
-PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
+PJ_DEF(void) pj_atomic_dec(pj_atomic_t* atomic_var)
 {
-    PJ_ASSERT_ON_FAIL(atomic_var, return);
+    PJ_ASSERT_ON_FAIL(atomic_var, return );
     pj_atomic_dec_and_get(atomic_var);
 }
 
 /*
  * pj_atomic_add()
  */
-PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var,
-			    pj_atomic_value_t value )
+PJ_DEF(void) pj_atomic_add(pj_atomic_t* atomic_var, pj_atomic_value_t value)
 {
-    PJ_ASSERT_ON_FAIL(atomic_var, return);
+    PJ_ASSERT_ON_FAIL(atomic_var, return );
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
-    InterlockedExchangeAdd( &atomic_var->value, value );
+    InterlockedExchangeAdd(&atomic_var->value, value);
 #else
-    InterlockedExchangeAdd( &atomic_var->value, value );
+    InterlockedExchangeAdd(&atomic_var->value, value);
 #endif
 }
 
 /*
  * pj_atomic_add_and_get()
  */
-PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
-			                         pj_atomic_value_t value)
+PJ_DEF(pj_atomic_value_t)
+pj_atomic_add_and_get(pj_atomic_t* atomic_var, pj_atomic_value_t value)
 {
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
-    long oldValue = InterlockedExchangeAdd( &atomic_var->value, value);
+    long oldValue = InterlockedExchangeAdd(&atomic_var->value, value);
     return oldValue + value;
 #else
-    long oldValue = InterlockedExchangeAdd( &atomic_var->value, value);
+    long oldValue = InterlockedExchangeAdd(&atomic_var->value, value);
     return oldValue + value;
 #endif
 }
@@ -908,13 +889,13 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
 /*
  * pj_thread_local_alloc()
  */
-PJ_DEF(pj_status_t) pj_thread_local_alloc(long *index)
+PJ_DEF(pj_status_t) pj_thread_local_alloc(long* index)
 {
     PJ_ASSERT_RETURN(index != NULL, PJ_EINVAL);
 
-    //Can't check stack because this function is called in the
-    //beginning before main thread is initialized.
-    //PJ_CHECK_STACK();
+    // Can't check stack because this function is called in the
+    // beginning before main thread is initialized.
+    // PJ_CHECK_STACK();
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     *index = TlsAllocRT();
@@ -938,27 +919,27 @@ PJ_DEF(void) pj_thread_local_free(long index)
     TlsFreeRT(index);
 #else
     TlsFree(index);
-#endif    
+#endif
 }
 
 /*
  * pj_thread_local_set()
  */
-PJ_DEF(pj_status_t) pj_thread_local_set(long index, void *value)
+PJ_DEF(pj_status_t) pj_thread_local_set(long index, void* value)
 {
     BOOL rc;
 
-    //Can't check stack because this function is called in the
-    //beginning before main thread is initialized.
-    //PJ_CHECK_STACK();
+    // Can't check stack because this function is called in the
+    // beginning before main thread is initialized.
+    // PJ_CHECK_STACK();
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     rc = TlsSetValueRT(index, value);
 #else
     rc = TlsSetValue(index, value);
 #endif
-    
-    return rc!=0 ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(GetLastError());
+
+    return rc != 0 ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(GetLastError());
 }
 
 /*
@@ -966,9 +947,9 @@ PJ_DEF(pj_status_t) pj_thread_local_set(long index, void *value)
  */
 PJ_DEF(void*) pj_thread_local_get(long index)
 {
-    //Can't check stack because this function is called
-    //by PJ_CHECK_STACK() itself!!!
-    //PJ_CHECK_STACK();
+    // Can't check stack because this function is called
+    // by PJ_CHECK_STACK() itself!!!
+    // PJ_CHECK_STACK();
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     return TlsGetValueRT(index);
 #else
@@ -977,9 +958,8 @@ PJ_DEF(void*) pj_thread_local_get(long index)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name)
+static pj_status_t init_mutex(pj_mutex_t* mutex, const char* name)
 {
-
     PJ_CHECK_STACK();
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
@@ -989,7 +969,7 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name)
 #else
     mutex->hMutex = CreateMutex(NULL, FALSE, NULL);
     if (!mutex->hMutex) {
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
     }
 #endif
 
@@ -1001,13 +981,13 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name)
 
     /* Set name. */
     if (!name) {
-	name = "mtx%p";
+        name = "mtx%p";
     }
     if (strchr(name, '%')) {
-	pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
+        pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
     } else {
-	pj_ansi_strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
-	mutex->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
+        mutex->obj_name[PJ_MAX_OBJ_NAME - 1] = '\0';
     }
 
     PJ_LOG(6, (mutex->obj_name, "Mutex created"));
@@ -1017,13 +997,12 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name)
 /*
  * pj_mutex_create()
  */
-PJ_DEF(pj_status_t) pj_mutex_create(pj_pool_t *pool, 
-                                    const char *name, 
-                                    int type,
-                                    pj_mutex_t **mutex_ptr)
+PJ_DEF(pj_status_t)
+pj_mutex_create(pj_pool_t* pool, const char* name, int type,
+                pj_mutex_t** mutex_ptr)
 {
     pj_status_t rc;
-    pj_mutex_t *mutex;
+    pj_mutex_t* mutex;
 
     PJ_UNUSED_ARG(type);
     PJ_ASSERT_RETURN(pool && mutex_ptr, PJ_EINVAL);
@@ -1044,9 +1023,8 @@ PJ_DEF(pj_status_t) pj_mutex_create(pj_pool_t *pool,
 /*
  * pj_mutex_create_simple()
  */
-PJ_DEF(pj_status_t) pj_mutex_create_simple( pj_pool_t *pool, 
-                                            const char *name,
-					    pj_mutex_t **mutex )
+PJ_DEF(pj_status_t)
+pj_mutex_create_simple(pj_pool_t* pool, const char* name, pj_mutex_t** mutex)
 {
     return pj_mutex_create(pool, name, PJ_MUTEX_SIMPLE, mutex);
 }
@@ -1054,9 +1032,8 @@ PJ_DEF(pj_status_t) pj_mutex_create_simple( pj_pool_t *pool,
 /*
  * pj_mutex_create_recursive()
  */
-PJ_DEF(pj_status_t) pj_mutex_create_recursive( pj_pool_t *pool,
-					       const char *name,
-					       pj_mutex_t **mutex )
+PJ_DEF(pj_status_t)
+pj_mutex_create_recursive(pj_pool_t* pool, const char* name, pj_mutex_t** mutex)
 {
     return pj_mutex_create(pool, name, PJ_MUTEX_RECURSE, mutex);
 }
@@ -1064,34 +1041,35 @@ PJ_DEF(pj_status_t) pj_mutex_create_recursive( pj_pool_t *pool,
 /*
  * pj_mutex_lock()
  */
-PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
+PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t* mutex)
 {
     pj_status_t status;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
-    LOG_MUTEX((mutex->obj_name, "Mutex: thread %s is waiting", 
-				pj_thread_this()->obj_name));
+    LOG_MUTEX((mutex->obj_name, "Mutex: thread %s is waiting",
+               pj_thread_this()->obj_name));
 
 #if PJ_WIN32_WINNT >= 0x0400
     EnterCriticalSection(&mutex->crit);
-    status=PJ_SUCCESS;
+    status = PJ_SUCCESS;
 #else
-    if (WaitForSingleObject(mutex->hMutex, INFINITE)==WAIT_OBJECT_0)
+    if (WaitForSingleObject(mutex->hMutex, INFINITE) == WAIT_OBJECT_0)
         status = PJ_SUCCESS;
     else
         status = PJ_STATUS_FROM_OS(GetLastError());
 
 #endif
-    LOG_MUTEX((mutex->obj_name, 
-	      (status==PJ_SUCCESS ? "Mutex acquired by thread %s" : "FAILED by %s"),
-	      pj_thread_this()->obj_name));
+    LOG_MUTEX(
+      (mutex->obj_name,
+       (status == PJ_SUCCESS ? "Mutex acquired by thread %s" : "FAILED by %s"),
+       pj_thread_this()->obj_name));
 
 #if PJ_DEBUG
     if (status == PJ_SUCCESS) {
-	mutex->owner = pj_thread_this();
-	++mutex->nesting_level;
+        mutex->owner = pj_thread_this();
+        ++mutex->nesting_level;
     }
 #endif
 
@@ -1101,7 +1079,7 @@ PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
 /*
  * pj_mutex_unlock()
  */
-PJ_DEF(pj_status_t) pj_mutex_unlock(pj_mutex_t *mutex)
+PJ_DEF(pj_status_t) pj_mutex_unlock(pj_mutex_t* mutex)
 {
     pj_status_t status;
 
@@ -1111,19 +1089,19 @@ PJ_DEF(pj_status_t) pj_mutex_unlock(pj_mutex_t *mutex)
 #if PJ_DEBUG
     pj_assert(mutex->owner == pj_thread_this());
     if (--mutex->nesting_level == 0) {
-	mutex->owner = NULL;
+        mutex->owner = NULL;
     }
 #endif
 
-    LOG_MUTEX((mutex->obj_name, "Mutex released by thread %s", 
-				pj_thread_this()->obj_name));
+    LOG_MUTEX((mutex->obj_name, "Mutex released by thread %s",
+               pj_thread_this()->obj_name));
 
 #if PJ_WIN32_WINNT >= 0x0400
     LeaveCriticalSection(&mutex->crit);
-    status=PJ_SUCCESS;
+    status = PJ_SUCCESS;
 #else
-    status = ReleaseMutex(mutex->hMutex) ? PJ_SUCCESS : 
-                PJ_STATUS_FROM_OS(GetLastError());
+    status = ReleaseMutex(mutex->hMutex) ? PJ_SUCCESS :
+                                           PJ_STATUS_FROM_OS(GetLastError());
 #endif
     return status;
 }
@@ -1131,33 +1109,34 @@ PJ_DEF(pj_status_t) pj_mutex_unlock(pj_mutex_t *mutex)
 /*
  * pj_mutex_trylock()
  */
-PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
+PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t* mutex)
 {
     pj_status_t status;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
-    LOG_MUTEX((mutex->obj_name, "Mutex: thread %s is trying", 
-				pj_thread_this()->obj_name));
+    LOG_MUTEX((mutex->obj_name, "Mutex: thread %s is trying",
+               pj_thread_this()->obj_name));
 
 #if PJ_WIN32_WINNT >= 0x0400
-    status=TryEnterCriticalSection(&mutex->crit) ? PJ_SUCCESS : PJ_EUNKNOWN;
+    status = TryEnterCriticalSection(&mutex->crit) ? PJ_SUCCESS : PJ_EUNKNOWN;
 #else
-    status = WaitForSingleObject(mutex->hMutex, 0)==WAIT_OBJECT_0 ? 
-                PJ_SUCCESS : PJ_ETIMEDOUT;
+    status = WaitForSingleObject(mutex->hMutex, 0) == WAIT_OBJECT_0 ?
+               PJ_SUCCESS :
+               PJ_ETIMEDOUT;
 #endif
-    if (status==PJ_SUCCESS) {
-	LOG_MUTEX((mutex->obj_name, "Mutex acquired by thread %s", 
-				  pj_thread_this()->obj_name));
+    if (status == PJ_SUCCESS) {
+        LOG_MUTEX((mutex->obj_name, "Mutex acquired by thread %s",
+                   pj_thread_this()->obj_name));
 
 #if PJ_DEBUG
-	mutex->owner = pj_thread_this();
-	++mutex->nesting_level;
+        mutex->owner = pj_thread_this();
+        ++mutex->nesting_level;
 #endif
     } else {
-	LOG_MUTEX((mutex->obj_name, "Mutex: thread %s's trylock() failed", 
-				    pj_thread_this()->obj_name));
+        LOG_MUTEX((mutex->obj_name, "Mutex: thread %s's trylock() failed",
+                   pj_thread_this()->obj_name));
     }
 
     return status;
@@ -1166,7 +1145,7 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
 /*
  * pj_mutex_destroy()
  */
-PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
+PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t* mutex)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
@@ -1177,15 +1156,15 @@ PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
     DeleteCriticalSection(&mutex->crit);
     return PJ_SUCCESS;
 #else
-    return CloseHandle(mutex->hMutex) ? PJ_SUCCESS : 
-            PJ_RETURN_OS_ERROR(GetLastError());
+    return CloseHandle(mutex->hMutex) ? PJ_SUCCESS :
+                                        PJ_RETURN_OS_ERROR(GetLastError());
 #endif
 }
 
 /*
  * pj_mutex_is_locked()
  */
-PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
+PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t* mutex)
 {
 #if PJ_DEBUG
     return mutex->owner == pj_thread_this();
@@ -1211,7 +1190,6 @@ PJ_DEF(void) pj_enter_critical_section(void)
     pj_mutex_lock(&critical_section_mutex);
 }
 
-
 /*
  * pj_leave_critical_section()
  */
@@ -1226,39 +1204,37 @@ PJ_DEF(void) pj_leave_critical_section(void)
 /*
  * pj_sem_create()
  */
-PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool, 
-                                   const char *name,
-				   unsigned initial, 
-                                   unsigned max,
-                                   pj_sem_t **sem_ptr)
+PJ_DEF(pj_status_t)
+pj_sem_create(pj_pool_t* pool, const char* name, unsigned initial, unsigned max,
+              pj_sem_t** sem_ptr)
 {
-    pj_sem_t *sem;
+    pj_sem_t* sem;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool && sem_ptr, PJ_EINVAL);
 
-    sem = pj_pool_alloc(pool, sizeof(*sem));    
+    sem = pj_pool_alloc(pool, sizeof(*sem));
 
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+#    if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     /** SEMAPHORE_ALL_ACCESS **/
-    sem->hSemaphore = CreateSemaphoreEx(NULL, initial, max, NULL, 0,
-					SEMAPHORE_ALL_ACCESS);
-#else
+    sem->hSemaphore =
+      CreateSemaphoreEx(NULL, initial, max, NULL, 0, SEMAPHORE_ALL_ACCESS);
+#    else
     sem->hSemaphore = CreateSemaphore(NULL, initial, max, NULL);
-#endif
-    
+#    endif
+
     if (!sem->hSemaphore)
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
     /* Set name. */
     if (!name) {
-	name = "sem%p";
+        name = "sem%p";
     }
     if (strchr(name, '%')) {
-	pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
+        pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
     } else {
-	pj_ansi_strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
-	sem->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
+        sem->obj_name[PJ_MAX_OBJ_NAME - 1] = '\0';
     }
 
     LOG_MUTEX((sem->obj_name, "Semaphore created"));
@@ -1267,33 +1243,33 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
+static pj_status_t pj_sem_wait_for(pj_sem_t* sem, unsigned timeout)
 {
     DWORD result;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
 
-    LOG_MUTEX((sem->obj_name, "Semaphore: thread %s is waiting", 
-			      pj_thread_this()->obj_name));
-    
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+    LOG_MUTEX((sem->obj_name, "Semaphore: thread %s is waiting",
+               pj_thread_this()->obj_name));
+
+#    if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     result = WaitForSingleObjectEx(sem->hSemaphore, timeout, FALSE);
-#else
+#    else
     result = WaitForSingleObject(sem->hSemaphore, timeout);
-#endif
+#    endif
 
     if (result == WAIT_OBJECT_0) {
-	LOG_MUTEX((sem->obj_name, "Semaphore acquired by thread %s", 
-				  pj_thread_this()->obj_name));
+        LOG_MUTEX((sem->obj_name, "Semaphore acquired by thread %s",
+                   pj_thread_this()->obj_name));
     } else {
-	LOG_MUTEX((sem->obj_name, "Semaphore: thread %s FAILED to acquire", 
-				  pj_thread_this()->obj_name));
+        LOG_MUTEX((sem->obj_name, "Semaphore: thread %s FAILED to acquire",
+                   pj_thread_this()->obj_name));
     }
 
-    if (result==WAIT_OBJECT_0)
+    if (result == WAIT_OBJECT_0)
         return PJ_SUCCESS;
-    else if (result==WAIT_TIMEOUT)
+    else if (result == WAIT_TIMEOUT)
         return PJ_ETIMEDOUT;
     else
         return PJ_RETURN_OS_ERROR(GetLastError());
@@ -1302,7 +1278,7 @@ static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
 /*
  * pj_sem_wait()
  */
-PJ_DEF(pj_status_t) pj_sem_wait(pj_sem_t *sem)
+PJ_DEF(pj_status_t) pj_sem_wait(pj_sem_t* sem)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
@@ -1313,7 +1289,7 @@ PJ_DEF(pj_status_t) pj_sem_wait(pj_sem_t *sem)
 /*
  * pj_sem_trywait()
  */
-PJ_DEF(pj_status_t) pj_sem_trywait(pj_sem_t *sem)
+PJ_DEF(pj_status_t) pj_sem_trywait(pj_sem_t* sem)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
@@ -1324,13 +1300,13 @@ PJ_DEF(pj_status_t) pj_sem_trywait(pj_sem_t *sem)
 /*
  * pj_sem_post()
  */
-PJ_DEF(pj_status_t) pj_sem_post(pj_sem_t *sem)
+PJ_DEF(pj_status_t) pj_sem_post(pj_sem_t* sem)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
 
     LOG_MUTEX((sem->obj_name, "Semaphore released by thread %s",
-			      pj_thread_this()->obj_name));
+               pj_thread_this()->obj_name));
 
     if (ReleaseSemaphore(sem->hSemaphore, 1, NULL))
         return PJ_SUCCESS;
@@ -1341,13 +1317,13 @@ PJ_DEF(pj_status_t) pj_sem_post(pj_sem_t *sem)
 /*
  * pj_sem_destroy()
  */
-PJ_DEF(pj_status_t) pj_sem_destroy(pj_sem_t *sem)
+PJ_DEF(pj_status_t) pj_sem_destroy(pj_sem_t* sem)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
 
     LOG_MUTEX((sem->obj_name, "Semaphore destroyed by thread %s",
-			      pj_thread_this()->obj_name));
+               pj_thread_this()->obj_name));
 
     if (CloseHandle(sem->hSemaphore))
         return PJ_SUCCESS;
@@ -1355,22 +1331,19 @@ PJ_DEF(pj_status_t) pj_sem_destroy(pj_sem_t *sem)
         return PJ_RETURN_OS_ERROR(GetLastError());
 }
 
-#endif	/* PJ_HAS_SEMAPHORE */
+#endif /* PJ_HAS_SEMAPHORE */
 ///////////////////////////////////////////////////////////////////////////////
-
 
 #if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
 
 /*
  * pj_event_create()
  */
-PJ_DEF(pj_status_t) pj_event_create( pj_pool_t *pool, 
-                                     const char *name,
-				     pj_bool_t manual_reset, 
-                                     pj_bool_t initial,
-                                     pj_event_t **event_ptr)
+PJ_DEF(pj_status_t)
+pj_event_create(pj_pool_t* pool, const char* name, pj_bool_t manual_reset,
+                pj_bool_t initial, pj_event_t** event_ptr)
 {
-    pj_event_t *event;
+    pj_event_t* event;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool && event_ptr, PJ_EINVAL);
@@ -1379,27 +1352,27 @@ PJ_DEF(pj_status_t) pj_event_create( pj_pool_t *pool,
     if (!event)
         return PJ_ENOMEM;
 
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-    event->hEvent = CreateEventEx(NULL, NULL,
-				 (manual_reset? 0x1:0x0) | (initial? 0x2:0x0),
-				 EVENT_ALL_ACCESS);
-#else
+#    if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+    event->hEvent = CreateEventEx(
+      NULL, NULL, (manual_reset ? 0x1 : 0x0) | (initial ? 0x2 : 0x0),
+      EVENT_ALL_ACCESS);
+#    else
     event->hEvent = CreateEvent(NULL, manual_reset ? TRUE : FALSE,
-			        initial ? TRUE : FALSE, NULL);
-#endif
+                                initial ? TRUE : FALSE, NULL);
+#    endif
 
     if (!event->hEvent)
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
     /* Set name. */
     if (!name) {
-	name = "evt%p";
+        name = "evt%p";
     }
     if (strchr(name, '%')) {
-	pj_ansi_snprintf(event->obj_name, PJ_MAX_OBJ_NAME, name, event);
+        pj_ansi_snprintf(event->obj_name, PJ_MAX_OBJ_NAME, name, event);
     } else {
-	pj_ansi_strncpy(event->obj_name, name, PJ_MAX_OBJ_NAME);
-	event->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strncpy(event->obj_name, name, PJ_MAX_OBJ_NAME);
+        event->obj_name[PJ_MAX_OBJ_NAME - 1] = '\0';
     }
 
     PJ_LOG(6, (event->obj_name, "Event created"));
@@ -1408,33 +1381,33 @@ PJ_DEF(pj_status_t) pj_event_create( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-static pj_status_t pj_event_wait_for(pj_event_t *event, unsigned timeout)
+static pj_status_t pj_event_wait_for(pj_event_t* event, unsigned timeout)
 {
     DWORD result;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
 
-    PJ_LOG(6, (event->obj_name, "Event: thread %s is waiting", 
-			        pj_thread_this()->obj_name));
+    PJ_LOG(6, (event->obj_name, "Event: thread %s is waiting",
+               pj_thread_this()->obj_name));
 
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+#    if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     result = WaitForSingleObjectEx(event->hEvent, timeout, FALSE);
-#else
+#    else
     result = WaitForSingleObject(event->hEvent, timeout);
-#endif
+#    endif
 
     if (result == WAIT_OBJECT_0) {
-	PJ_LOG(6, (event->obj_name, "Event: thread %s is released", 
-				    pj_thread_this()->obj_name));
+        PJ_LOG(6, (event->obj_name, "Event: thread %s is released",
+                   pj_thread_this()->obj_name));
     } else {
-	PJ_LOG(6, (event->obj_name, "Event: thread %s FAILED to acquire", 
-				    pj_thread_this()->obj_name));
+        PJ_LOG(6, (event->obj_name, "Event: thread %s FAILED to acquire",
+                   pj_thread_this()->obj_name));
     }
 
-    if (result==WAIT_OBJECT_0)
+    if (result == WAIT_OBJECT_0)
         return PJ_SUCCESS;
-    else if (result==WAIT_TIMEOUT)
+    else if (result == WAIT_TIMEOUT)
         return PJ_ETIMEDOUT;
     else
         return PJ_RETURN_OS_ERROR(GetLastError());
@@ -1443,7 +1416,7 @@ static pj_status_t pj_event_wait_for(pj_event_t *event, unsigned timeout)
 /*
  * pj_event_wait()
  */
-PJ_DEF(pj_status_t) pj_event_wait(pj_event_t *event)
+PJ_DEF(pj_status_t) pj_event_wait(pj_event_t* event)
 {
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
 
@@ -1453,7 +1426,7 @@ PJ_DEF(pj_status_t) pj_event_wait(pj_event_t *event)
 /*
  * pj_event_trywait()
  */
-PJ_DEF(pj_status_t) pj_event_trywait(pj_event_t *event)
+PJ_DEF(pj_status_t) pj_event_trywait(pj_event_t* event)
 {
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
 
@@ -1463,7 +1436,7 @@ PJ_DEF(pj_status_t) pj_event_trywait(pj_event_t *event)
 /*
  * pj_event_set()
  */
-PJ_DEF(pj_status_t) pj_event_set(pj_event_t *event)
+PJ_DEF(pj_status_t) pj_event_set(pj_event_t* event)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
@@ -1479,29 +1452,29 @@ PJ_DEF(pj_status_t) pj_event_set(pj_event_t *event)
 /*
  * pj_event_pulse()
  */
-PJ_DEF(pj_status_t) pj_event_pulse(pj_event_t *event)
+PJ_DEF(pj_status_t) pj_event_pulse(pj_event_t* event)
 {
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+#    if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     PJ_UNUSED_ARG(event);
     pj_assert(!"pj_event_pulse() not supported!");
     return PJ_ENOTSUP;
-#else
+#    else
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
 
     PJ_LOG(6, (event->obj_name, "Pulsing event"));
 
     if (PulseEvent(event->hEvent))
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     else
-	return PJ_RETURN_OS_ERROR(GetLastError());
-#endif
+        return PJ_RETURN_OS_ERROR(GetLastError());
+#    endif
 }
 
 /*
  * pj_event_reset()
  */
-PJ_DEF(pj_status_t) pj_event_reset(pj_event_t *event)
+PJ_DEF(pj_status_t) pj_event_reset(pj_event_t* event)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
@@ -1517,7 +1490,7 @@ PJ_DEF(pj_status_t) pj_event_reset(pj_event_t *event)
 /*
  * pj_event_destroy()
  */
-PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
+PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t* event)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
@@ -1530,7 +1503,7 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
         return PJ_RETURN_OS_ERROR(GetLastError());
 }
 
-#endif	/* PJ_HAS_EVENT_OBJ */
+#endif /* PJ_HAS_EVENT_OBJ */
 
 ///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_TERM_HAS_COLOR) && PJ_TERM_HAS_COLOR != 0
@@ -1543,13 +1516,13 @@ static WORD pj_color_to_os_attr(pj_color_t color)
     WORD attr = 0;
 
     if (color & PJ_TERM_COLOR_R)
-	attr |= FOREGROUND_RED;
+        attr |= FOREGROUND_RED;
     if (color & PJ_TERM_COLOR_G)
-	attr |= FOREGROUND_GREEN;
+        attr |= FOREGROUND_GREEN;
     if (color & PJ_TERM_COLOR_B)
-	attr |= FOREGROUND_BLUE;
+        attr |= FOREGROUND_BLUE;
     if (color & PJ_TERM_COLOR_BRIGHT)
-	attr |= FOREGROUND_INTENSITY;
+        attr |= FOREGROUND_INTENSITY;
 
     return attr;
 }
@@ -1559,17 +1532,16 @@ static pj_color_t os_attr_to_pj_color(WORD attr)
     int color = 0;
 
     if (attr & FOREGROUND_RED)
-	color |= PJ_TERM_COLOR_R;
+        color |= PJ_TERM_COLOR_R;
     if (attr & FOREGROUND_GREEN)
-	color |= PJ_TERM_COLOR_G;
+        color |= PJ_TERM_COLOR_G;
     if (attr & FOREGROUND_BLUE)
-	color |= PJ_TERM_COLOR_B;
+        color |= PJ_TERM_COLOR_B;
     if (attr & FOREGROUND_INTENSITY)
-	color |= PJ_TERM_COLOR_BRIGHT;
+        color |= PJ_TERM_COLOR_BRIGHT;
 
     return color;
 }
-
 
 /*
  * pj_term_set_color()
@@ -1582,7 +1554,7 @@ PJ_DEF(pj_status_t) pj_term_set_color(pj_color_t color)
     PJ_CHECK_STACK();
 
     attr = pj_color_to_os_attr(color);
-    rc = SetConsoleTextAttribute( GetStdHandle(STD_OUTPUT_HANDLE), attr);
+    rc = SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), attr);
     return rc ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(GetLastError());
 }
 
@@ -1596,17 +1568,17 @@ PJ_DEF(pj_color_t) pj_term_get_color(void)
 
     PJ_CHECK_STACK();
 
-    GetConsoleScreenBufferInfo( GetStdHandle(STD_OUTPUT_HANDLE), &info);
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info);
     return os_attr_to_pj_color(info.wAttributes);
 }
 
-#endif	/* PJ_TERM_HAS_COLOR */
+#endif /* PJ_TERM_HAS_COLOR */
 
 /*
  * pj_run_app()
  */
-PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
-                       unsigned flags)
+PJ_DEF(int)
+pj_run_app(pj_main_func_ptr main_func, int argc, char* argv[], unsigned flags)
 {
     PJ_UNUSED_ARG(flags);
     return (*main_func)(argc, argv);

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,34 +14,37 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "test.h"
 #include <pjsip.h>
 #include <pjlib.h>
 
-#define THIS_FILE   "transport_loop_test.c"
+#define THIS_FILE "transport_loop_test.c"
 
 static int datagram_loop_test()
 {
-    enum { LOOP = 8 };
-    pjsip_transport *loop;
+    enum
+    {
+        LOOP = 8
+    };
+    pjsip_transport* loop;
     int i, pkt_lost;
     pj_sockaddr_in addr;
     pj_status_t status;
     long ref_cnt;
     int rtt[LOOP], min_rtt;
 
-    PJ_LOG(3,(THIS_FILE, "testing datagram loop transport"));
+    PJ_LOG(3, (THIS_FILE, "testing datagram loop transport"));
 
     pj_sockaddr_in_init(&addr, NULL, 0);
     /* Test acquire transport. */
-    status = pjsip_endpt_acquire_transport( endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
-					    &addr, sizeof(addr), NULL, &loop);
+    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
+                                           &addr, sizeof(addr), NULL, &loop);
     if (status != PJ_SUCCESS) {
-	app_perror("   error: loop transport is not configured", status);
-	return -20;
+        app_perror("   error: loop transport is not configured", status);
+        return -20;
     }
 
     /* Get initial reference counter */
@@ -51,53 +53,53 @@ static int datagram_loop_test()
     /* Test basic transport attributes */
     status = generic_transport_test(loop);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Basic transport's send/receive loopback test. */
-    for (i=0; i<LOOP; ++i) {
-	status = transport_send_recv_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
-					  "sip:bob@130.0.0.1;transport=loop-dgram",
-					  &rtt[i]);
-	if (status != 0)
-	    return status;
+    for (i = 0; i < LOOP; ++i) {
+        status = transport_send_recv_test(
+          PJSIP_TRANSPORT_LOOP_DGRAM, loop,
+          "sip:bob@130.0.0.1;transport=loop-dgram", &rtt[i]);
+        if (status != 0)
+            return status;
     }
 
     min_rtt = 0xFFFFFFF;
-    for (i=0; i<LOOP; ++i)
-	if (rtt[i] < min_rtt) min_rtt = rtt[i];
+    for (i = 0; i < LOOP; ++i)
+        if (rtt[i] < min_rtt)
+            min_rtt = rtt[i];
 
     report_ival("loop-rtt-usec", min_rtt, "usec",
-		"Best Loopback transport round trip time, in microseconds "
-		"(time from sending request until response is received. "
-		"Tests were performed on local machine only)");
-
+                "Best Loopback transport round trip time, in microseconds "
+                "(time from sending request until response is received. "
+                "Tests were performed on local machine only)");
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
-			       "sip:bob@130.0.0.1;transport=loop-dgram",
-			       &pkt_lost);
+    status =
+      transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop,
+                        "sip:bob@130.0.0.1;transport=loop-dgram", &pkt_lost);
     if (status != 0)
-	return status;
+        return status;
 
     if (pkt_lost != 0) {
-	PJ_LOG(3,(THIS_FILE, "   error: %d packet(s) was lost", pkt_lost));
-	return -40;
+        PJ_LOG(3, (THIS_FILE, "   error: %d packet(s) was lost", pkt_lost));
+        return -40;
     }
 
     /* Put delay. */
-    PJ_LOG(3,(THIS_FILE,"  setting network delay to 10 ms"));
+    PJ_LOG(3, (THIS_FILE, "  setting network delay to 10 ms"));
     pjsip_loop_set_delay(loop, 10);
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
-			       "sip:bob@130.0.0.1;transport=loop-dgram",
-			       &pkt_lost);
+    status =
+      transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop,
+                        "sip:bob@130.0.0.1;transport=loop-dgram", &pkt_lost);
     if (status != 0)
-	return status;
+        return status;
 
     if (pkt_lost != 0) {
-	PJ_LOG(3,(THIS_FILE, "   error: %d packet(s) was lost", pkt_lost));
-	return -50;
+        PJ_LOG(3, (THIS_FILE, "   error: %d packet(s) was lost", pkt_lost));
+        return -50;
     }
 
     /* Restore delay. */
@@ -105,9 +107,9 @@ static int datagram_loop_test()
 
     /* Check reference counter. */
     if (pj_atomic_get(loop->ref_cnt) != ref_cnt) {
-	PJ_LOG(3,(THIS_FILE, "   error: ref counter is not %d (%d)", 
-			     ref_cnt, pj_atomic_get(loop->ref_cnt)));
-	return -51;
+        PJ_LOG(3, (THIS_FILE, "   error: ref counter is not %d (%d)", ref_cnt,
+                   pj_atomic_get(loop->ref_cnt)));
+        return -51;
     }
 
     /* Decrement reference. */
@@ -122,7 +124,7 @@ int transport_loop_test(void)
 
     status = datagram_loop_test();
     if (status != 0)
-	return status;
+        return status;
 
     return 0;
 }

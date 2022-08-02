@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_FIFOBUF_H__
 #define __PJ_FIFOBUF_H__
@@ -32,13 +31,12 @@ struct pj_fifobuf_t
     int full;
 };
 
-PJ_DECL(void)	     pj_fifobuf_init (pj_fifobuf_t *fb, void *buffer, unsigned size);
-PJ_DECL(unsigned)    pj_fifobuf_max_size (pj_fifobuf_t *fb);
-PJ_DECL(void*)	     pj_fifobuf_alloc (pj_fifobuf_t *fb, unsigned size);
-PJ_DECL(pj_status_t) pj_fifobuf_unalloc (pj_fifobuf_t *fb, void *buf);
-PJ_DECL(pj_status_t) pj_fifobuf_free (pj_fifobuf_t *fb, void *buf);
+PJ_DECL(void) pj_fifobuf_init(pj_fifobuf_t* fb, void* buffer, unsigned size);
+PJ_DECL(unsigned) pj_fifobuf_max_size(pj_fifobuf_t* fb);
+PJ_DECL(void*) pj_fifobuf_alloc(pj_fifobuf_t* fb, unsigned size);
+PJ_DECL(pj_status_t) pj_fifobuf_unalloc(pj_fifobuf_t* fb, void* buf);
+PJ_DECL(pj_status_t) pj_fifobuf_free(pj_fifobuf_t* fb, void* buf);
 
 PJ_END_DECL
 
-#endif	/* __PJ_FIFOBUF_H__ */
-
+#endif /* __PJ_FIFOBUF_H__ */

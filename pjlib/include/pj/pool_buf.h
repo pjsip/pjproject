@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __POOL_STACK_H__
 #define __POOL_STACK_H__
@@ -91,9 +90,8 @@ PJ_BEGIN_DECL
  *
  * @return	    The memory pool instance.
  */
-PJ_DECL(pj_pool_t*) pj_pool_create_on_buf(const char *name,
-					  void *buf,
-					  pj_size_t size);
+PJ_DECL(pj_pool_t*)
+pj_pool_create_on_buf(const char* name, void* buf, pj_size_t size);
 
 PJ_END_DECL
 
@@ -101,5 +99,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __POOL_STACK_H__ */
-
+#endif /* __POOL_STACK_H__ */

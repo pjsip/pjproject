@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -36,32 +35,32 @@
 
 class VidWin;
 
-class MainWin : public QWidget
-{
+class MainWin : public QWidget {
     Q_OBJECT
 
-public:
-    MainWin(QWidget *parent = 0);
+   public:
+    MainWin(QWidget* parent = 0);
     virtual ~MainWin();
 
-    static MainWin *instance();
+    static MainWin* instance();
 
     bool initStack();
-    void showError(const char *title, pj_status_t status);
-    void showStatus(const char *msg);
+    void showError(const char* title, pj_status_t status);
+    void showStatus(const char* msg);
 
     void on_reg_state(pjsua_acc_id acc_id);
-    void on_call_state(pjsua_call_id call_id, pjsip_event *e);
-    void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_rx_data *rdata);
+    void on_call_state(pjsua_call_id call_id, pjsip_event* e);
+    void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
+                          pjsip_rx_data* rdata);
     void on_call_media_state(pjsua_call_id call_id);
 
-signals:
+   signals:
     void signalNewCall(int, bool);
     void signalCallReleased();
     void signalInitVideoWindow();
     void signalShowStatus(const QString&);
-    
-public slots:
+
+   public slots:
     void preview();
     void call();
     void hangup();
@@ -73,30 +72,25 @@ public slots:
     void initVideoWindow();
     void doShowStatus(const QString& msg);
 
-private:
-    static MainWin *theInstance_;
+   private:
+    static MainWin* theInstance_;
     pjsua_acc_id accountId_;
     pjsua_call_id currentCall_;
     bool preview_on;
 
-private:
-    QPushButton *callButton_,
-		*hangupButton_,
-		*quitButton_,
-		*previewButton_;
-    QCheckBox   *vidEnabled_;
-    QLineEdit *url_;
-    VidWin *video_;
-    VidWin *video_prev_;
-    //QStatusBar *statusBar_;
-    QLabel *statusBar_;
-    QLabel *localUri_;
+   private:
+    QPushButton *callButton_, *hangupButton_, *quitButton_, *previewButton_;
+    QCheckBox* vidEnabled_;
+    QLineEdit* url_;
+    VidWin* video_;
+    VidWin* video_prev_;
+    // QStatusBar *statusBar_;
+    QLabel* statusBar_;
+    QLabel* localUri_;
 
-    QVBoxLayout *vbox_left;
+    QVBoxLayout* vbox_left;
 
     void initLayout();
 };
-
-
 
 #endif /* VIDGUI_H_ */

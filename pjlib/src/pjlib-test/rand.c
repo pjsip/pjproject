@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/rand.h>
 #include <pj/log.h>
@@ -23,7 +22,7 @@
 
 #if INCLUDE_RAND_TEST
 
-#define COUNT  1024
+#    define COUNT 1024
 static int values[COUNT];
 
 /*
@@ -34,21 +33,20 @@ int rand_test(void)
 {
     int i;
 
-    for (i=0; i<COUNT; ++i) {
-	int j;
+    for (i = 0; i < COUNT; ++i) {
+        int j;
 
-	values[i] = pj_rand();
-	for (j=0; j<i; ++j) {
-	    if (values[i] == values[j]) {
-		PJ_LOG(3,("test", "error: duplicate value %d at %d-th index",
-			 values[i], i));
-		return -10;
-	    }
-	}
+        values[i] = pj_rand();
+        for (j = 0; j < i; ++j) {
+            if (values[i] == values[j]) {
+                PJ_LOG(3, ("test", "error: duplicate value %d at %d-th index",
+                           values[i], i));
+                return -10;
+            }
+        }
     }
 
     return 0;
 }
 
-#endif	/* INCLUDE_RAND_TEST */
-
+#endif /* INCLUDE_RAND_TEST */

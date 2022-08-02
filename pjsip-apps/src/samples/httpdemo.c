@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -33,46 +32,45 @@
 #include <pjnath.h>
 #include <pjsip_simple.h>
 
-static pj_timer_heap_t *timer_heap;
-static pj_ioqueue_t *ioqueue;
-static pj_pool_t *pool;
-static pj_http_req *http_req;
-static pj_pool_factory *mem;
-static FILE *f = NULL;
+static pj_timer_heap_t* timer_heap;
+static pj_ioqueue_t* ioqueue;
+static pj_pool_t* pool;
+static pj_http_req* http_req;
+static pj_pool_factory* mem;
+static FILE* f = NULL;
 
 //#define VERBOSE
-#define THIS_FILE	    "http_demo"
+#define THIS_FILE "http_demo"
 
-static void on_response(pj_http_req *req, const pj_http_resp *resp)
+static void on_response(pj_http_req* req, const pj_http_resp* resp)
 {
     unsigned i;
 
     PJ_UNUSED_ARG(req);
-    PJ_LOG(3,(THIS_FILE, "%.*s %d %.*s", (int)resp->version.slen, resp->version.ptr,
-				           resp->status_code,
-				           (int)resp->reason.slen, resp->reason.ptr));
+    PJ_LOG(
+      3, (THIS_FILE, "%.*s %d %.*s", (int)resp->version.slen, resp->version.ptr,
+          resp->status_code, (int)resp->reason.slen, resp->reason.ptr));
 
-    for (i=0; i<resp->headers.count; ++i) {
-	const pj_http_header_elmt *h = &resp->headers.header[i];
+    for (i = 0; i < resp->headers.count; ++i) {
+        const pj_http_header_elmt* h = &resp->headers.header[i];
 
-	if (!pj_stricmp2(&h->name, "Content-Length") ||
-	    !pj_stricmp2(&h->name, "Content-Type"))
-	{
-	    PJ_LOG(3,(THIS_FILE, "%.*s: %.*s",
-		      (int)h->name.slen, h->name.ptr,
-		      (int)h->value.slen, h->value.ptr));
-	}
+        if (!pj_stricmp2(&h->name, "Content-Length") ||
+            !pj_stricmp2(&h->name, "Content-Type"))
+        {
+            PJ_LOG(3, (THIS_FILE, "%.*s: %.*s", (int)h->name.slen, h->name.ptr,
+                       (int)h->value.slen, h->value.ptr));
+        }
     }
 }
 
-static void on_send_data(pj_http_req *req, void **data, pj_size_t *size)
+static void on_send_data(pj_http_req* req, void** data, pj_size_t* size)
 {
-	PJ_UNUSED_ARG(req);
-	PJ_UNUSED_ARG(size);
-	PJ_UNUSED_ARG(data);
+    PJ_UNUSED_ARG(req);
+    PJ_UNUSED_ARG(size);
+    PJ_UNUSED_ARG(data);
 }
 
-static void on_data_read(pj_http_req *hreq, void *data, pj_size_t size)
+static void on_data_read(pj_http_req* hreq, void* data, pj_size_t size)
 {
     PJ_UNUSED_ARG(hreq);
 
@@ -81,13 +79,13 @@ static void on_data_read(pj_http_req *hreq, void *data, pj_size_t size)
         fflush(f);
 #ifdef VERBOSE
         PJ_LOG(3, (THIS_FILE, "Data received: %d bytes", size));
-        printf("%.*s\n", (int)size, (char *)data);
+        printf("%.*s\n", (int)size, (char*)data);
 #endif
     }
 }
 
-static void on_complete(pj_http_req *hreq, pj_status_t status,
-                        const pj_http_resp *resp)
+static void on_complete(pj_http_req* hreq, pj_status_t status,
+                        const pj_http_resp* resp)
 {
     PJ_UNUSED_ARG(hreq);
 
@@ -98,12 +96,12 @@ static void on_complete(pj_http_req *hreq, pj_status_t status,
     PJ_LOG(3, (THIS_FILE, "Data completed: %d bytes", resp->size));
     if (resp->size > 0 && resp->data) {
 #ifdef VERBOSE
-        printf("%.*s\n", (int)resp->size, (char *)resp->data);
+        printf("%.*s\n", (int)resp->size, (char*)resp->data);
 #endif
     }
 }
 
-pj_status_t getURL(const char *curl)
+pj_status_t getURL(const char* curl)
 {
     pj_str_t url;
     pj_http_req_callback hcb;
@@ -124,17 +122,17 @@ pj_status_t getURL(const char *curl)
 
     pj_strdup2(pool, &url, curl);
 
-    if ((status = pj_http_req_create(pool, &url, timer_heap, ioqueue, 
-                           NULL, &hcb, &http_req)) != PJ_SUCCESS)
+    if ((status = pj_http_req_create(pool, &url, timer_heap, ioqueue, NULL,
+                                     &hcb, &http_req)) != PJ_SUCCESS)
         return status;
 
     if ((status = pj_http_req_start(http_req)) != PJ_SUCCESS)
         return status;
 
     while (pj_http_req_is_running(http_req)) {
-        pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_time_val delay = { 0, 50 };
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
     pj_http_req_destroy(http_req);
@@ -147,14 +145,14 @@ pj_status_t getURL(const char *curl)
 /*
  * main()
  */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     pj_caching_pool cp;
     pj_status_t status;
 
     if (argc < 2 || argc > 3) {
-	puts("Usage: httpdemo URL [output-filename]");
-	return 1;
+        puts("Usage: httpdemo URL [output-filename]");
+        return 1;
     }
 
     pj_log_set_level(5);
@@ -165,9 +163,9 @@ int main(int argc, char *argv[])
     pjlib_util_init();
 
     if (argc > 2)
-	f = fopen(argv[2], "wb");
+        f = fopen(argv[2], "wb");
     else
-	f = stdout;
+        f = stdout;
 
     status = getURL(argv[1]);
     if (status != PJ_SUCCESS) {
@@ -175,7 +173,7 @@ int main(int argc, char *argv[])
     }
 
     if (f != stdout)
-	fclose(f);
+        fclose(f);
 
     pj_caching_pool_destroy(&cp);
     pj_shutdown();

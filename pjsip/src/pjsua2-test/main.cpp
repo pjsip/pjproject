@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2012 Teluu Inc. (http://www.teluu.com)
  *
@@ -20,8 +19,7 @@
 
 using namespace pj;
 
-extern "C"
-int main(int argc, char *argv[])
+extern "C" int main(int argc, char* argv[])
 {
     Endpoint ep;
 
@@ -36,4 +34,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-

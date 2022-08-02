@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -19,7 +18,6 @@
 #ifndef __PJMEDIA_CONVERTER_H__
 #define __PJMEDIA_CONVERTER_H__
 
-
 /**
  * @file pjmedia/converter.h Format conversion utilities
  * @brief Format conversion utilities
@@ -29,7 +27,6 @@
 #include <pjmedia/format.h>
 #include <pj/list.h>
 #include <pj/pool.h>
-
 
 /**
  * @defgroup PJMEDIA_CONVERTER Format converter
@@ -46,10 +43,9 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_conversion_param
 {
-    pjmedia_format	src;	/**< Source format.		*/
-    pjmedia_format	dst;	/**< Destination format.	*/
+    pjmedia_format src; /**< Source format.		*/
+    pjmedia_format dst; /**< Destination format.	*/
 } pjmedia_conversion_param;
-
 
 /** Forward declaration of factory operation structure */
 typedef struct pjmedia_converter_factory_op pjmedia_converter_factory_op;
@@ -64,13 +60,13 @@ typedef struct pjmedia_converter_factory_op pjmedia_converter_factory_op;
 typedef enum pjmedia_converter_priority_guide
 {
     /** Lowest priority. */
-    PJMEDIA_CONVERTER_PRIORITY_LOWEST 		= 0,
+    PJMEDIA_CONVERTER_PRIORITY_LOWEST = 0,
 
     /** Normal priority. */
-    PJMEDIA_CONVERTER_PRIORITY_NORMAL 		= 15000,
+    PJMEDIA_CONVERTER_PRIORITY_NORMAL = 15000,
 
     /** Highest priority. */
-    PJMEDIA_CONVERTER_PRIORITY_HIGHEST 		= 32000
+    PJMEDIA_CONVERTER_PRIORITY_HIGHEST = 32000
 } pjmedia_converter_priority_guide;
 
 /**
@@ -87,7 +83,7 @@ typedef struct pjmedia_converter_factory
     /**
      * Factory name.
      */
-    const char 			 *name;
+    const char* name;
 
     /**
      * Converter priority determines which converter instance to be used if
@@ -102,7 +98,7 @@ typedef struct pjmedia_converter_factory
     /**
      * Pointer to factory operation.
      */
-    pjmedia_converter_factory_op *op;
+    pjmedia_converter_factory_op* op;
 
 } pjmedia_converter_factory;
 
@@ -117,16 +113,14 @@ typedef struct pjmedia_converter
     /**
      * Pointer to converter operation.
      */
-    pjmedia_converter_op *op;
+    pjmedia_converter_op* op;
 
 } pjmedia_converter;
-
 
 /**
  * Settings for pjmedia_converter_convert2().
  */
 typedef void pjmedia_converter_convert_setting;
-
 
 /**
  * Converter factory operation.
@@ -144,17 +138,17 @@ struct pjmedia_converter_factory_op
      *
      * @return		PJ_SUCCESS if converter has been created successfully.
      */
-    pj_status_t (*create_converter)(pjmedia_converter_factory *cf,
-				    pj_pool_t *pool,
-				    const pjmedia_conversion_param *prm,
-				    pjmedia_converter **p_cv);
+    pj_status_t (*create_converter)(pjmedia_converter_factory* cf,
+                                    pj_pool_t* pool,
+                                    const pjmedia_conversion_param* prm,
+                                    pjmedia_converter** p_cv);
 
     /**
      * Destroy the factory.
      *
      * @param cf	The converter factory.
      */
-    void (*destroy_factory)(pjmedia_converter_factory *cf);
+    void (*destroy_factory)(pjmedia_converter_factory* cf);
 };
 
 /**
@@ -177,9 +171,8 @@ struct pjmedia_converter_op
      * @return			PJ_SUCCESS if conversion has been performed
      * 				successfully.
      */
-    pj_status_t (*convert)(pjmedia_converter *cv,
-			   pjmedia_frame *src_frame,
-			   pjmedia_frame *dst_frame);
+    pj_status_t (*convert)(pjmedia_converter* cv, pjmedia_frame* src_frame,
+                           pjmedia_frame* dst_frame);
 
     /**
      * Destroy the converter instance.
@@ -189,7 +182,7 @@ struct pjmedia_converter_op
      *
      * @param cv		The converter.
      */
-    void (*destroy)(pjmedia_converter *cv);
+    void (*destroy)(pjmedia_converter* cv);
 
     /**
      * Convert a region in the buffer of the source frame and put the result
@@ -211,18 +204,14 @@ struct pjmedia_converter_op
      * @return			PJ_SUCCESS if conversion has been performed
      * 				successfully.
      */
-    pj_status_t (*convert2)(pjmedia_converter	    *cv,
-			    pjmedia_frame	    *src_frame,
-			    const pjmedia_rect_size *src_frame_size,
-			    const pjmedia_coord	    *src_pos,
-			    pjmedia_frame	    *dst_frame,
-			    const pjmedia_rect_size *dst_frame_size,
-			    const pjmedia_coord	    *dst_pos,
-			    pjmedia_converter_convert_setting
-						    *param);
-
+    pj_status_t (*convert2)(pjmedia_converter* cv, pjmedia_frame* src_frame,
+                            const pjmedia_rect_size* src_frame_size,
+                            const pjmedia_coord* src_pos,
+                            pjmedia_frame* dst_frame,
+                            const pjmedia_rect_size* dst_frame_size,
+                            const pjmedia_coord* dst_pos,
+                            pjmedia_converter_convert_setting* param);
 };
-
 
 /**
  * Opaque data type for conversion manager. Typically, the conversion manager
@@ -230,7 +219,6 @@ struct pjmedia_converter_op
  * instances of this if required.
  */
 typedef struct pjmedia_converter_mgr pjmedia_converter_mgr;
-
 
 /**
  * Create a new conversion manager instance. This will also set the pointer
@@ -242,8 +230,8 @@ typedef struct pjmedia_converter_mgr pjmedia_converter_mgr;
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_converter_mgr_create(pj_pool_t *pool,
-						  pjmedia_converter_mgr **mgr);
+PJ_DECL(pj_status_t)
+pjmedia_converter_mgr_create(pj_pool_t* pool, pjmedia_converter_mgr** mgr);
 
 /**
  * Get the singleton instance of the conversion manager.
@@ -262,7 +250,7 @@ PJ_DECL(pjmedia_converter_mgr*) pjmedia_converter_mgr_instance(void);
  * 			Application may specify NULL to clear the singleton
  * 			singleton instance.
  */
-PJ_DECL(void) pjmedia_converter_mgr_set_instance(pjmedia_converter_mgr *mgr);
+PJ_DECL(void) pjmedia_converter_mgr_set_instance(pjmedia_converter_mgr* mgr);
 
 /**
  * Destroy a converter manager. If the manager happens to be the singleton
@@ -271,7 +259,7 @@ PJ_DECL(void) pjmedia_converter_mgr_set_instance(pjmedia_converter_mgr *mgr);
  * @param mgr		The converter manager. Specify NULL to use
  * 			the singleton instance.
  */
-PJ_DECL(void) pjmedia_converter_mgr_destroy(pjmedia_converter_mgr *mgr);
+PJ_DECL(void) pjmedia_converter_mgr_destroy(pjmedia_converter_mgr* mgr);
 
 /**
  * Register a converter factory to the converter manager.
@@ -283,8 +271,8 @@ PJ_DECL(void) pjmedia_converter_mgr_destroy(pjmedia_converter_mgr *mgr);
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t)
-pjmedia_converter_mgr_register_factory(pjmedia_converter_mgr *mgr,
-				       pjmedia_converter_factory *f);
+pjmedia_converter_mgr_register_factory(pjmedia_converter_mgr* mgr,
+                                       pjmedia_converter_factory* f);
 
 /**
  * Unregister a previously registered converter factory from the converter
@@ -300,9 +288,9 @@ pjmedia_converter_mgr_register_factory(pjmedia_converter_mgr *mgr,
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t)
-pjmedia_converter_mgr_unregister_factory(pjmedia_converter_mgr *mgr,
-				         pjmedia_converter_factory *f,
-				         pj_bool_t call_destroy);
+pjmedia_converter_mgr_unregister_factory(pjmedia_converter_mgr* mgr,
+                                         pjmedia_converter_factory* f,
+                                         pj_bool_t call_destroy);
 
 /**
  * Create a converter instance to perform the specified format conversion
@@ -317,10 +305,10 @@ pjmedia_converter_mgr_unregister_factory(pjmedia_converter_mgr *mgr,
  * @return		PJ_SUCCESS if a converter has been created successfully
  * 			or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_converter_create(pjmedia_converter_mgr *mgr,
-					      pj_pool_t *pool,
-					      pjmedia_conversion_param *param,
-					      pjmedia_converter **p_cv);
+PJ_DECL(pj_status_t)
+pjmedia_converter_create(pjmedia_converter_mgr* mgr, pj_pool_t* pool,
+                         pjmedia_conversion_param* param,
+                         pjmedia_converter** p_cv);
 
 /**
  * Convert the buffer in the source frame and save the result in the
@@ -334,10 +322,9 @@ PJ_DECL(pj_status_t) pjmedia_converter_create(pjmedia_converter_mgr *mgr,
  * @return		PJ_SUCCESS if conversion has been performed
  * 			successfully.
  */
-PJ_DECL(pj_status_t) pjmedia_converter_convert(pjmedia_converter *cv,
-					       pjmedia_frame *src_frame,
-					       pjmedia_frame *dst_frame);
-
+PJ_DECL(pj_status_t)
+pjmedia_converter_convert(pjmedia_converter* cv, pjmedia_frame* src_frame,
+                          pjmedia_frame* dst_frame);
 
 /**
  * Convert a region in the buffer of the source frame and put the result
@@ -356,24 +343,21 @@ PJ_DECL(pj_status_t) pjmedia_converter_convert(pjmedia_converter *cv,
  * @return		    PJ_SUCCESS if conversion has been performed
  * 			    successfully.
  */
-PJ_DECL(pj_status_t) pjmedia_converter_convert2(
-				    pjmedia_converter	    *cv,
-				    pjmedia_frame	    *src_frame,
-				    const pjmedia_rect_size *src_frame_size,
-				    const pjmedia_coord	    *src_pos,
-				    pjmedia_frame	    *dst_frame,
-				    const pjmedia_rect_size *dst_frame_size,
-				    const pjmedia_coord	    *dst_pos,
-				    pjmedia_converter_convert_setting
-							    *param);
+PJ_DECL(pj_status_t)
+pjmedia_converter_convert2(pjmedia_converter* cv, pjmedia_frame* src_frame,
+                           const pjmedia_rect_size* src_frame_size,
+                           const pjmedia_coord* src_pos,
+                           pjmedia_frame* dst_frame,
+                           const pjmedia_rect_size* dst_frame_size,
+                           const pjmedia_coord* dst_pos,
+                           pjmedia_converter_convert_setting* param);
 
 /**
  * Destroy the converter.
  *
  * @param cv		The converter instance.
  */
-PJ_DECL(void) pjmedia_converter_destroy(pjmedia_converter *cv);
-
+PJ_DECL(void) pjmedia_converter_destroy(pjmedia_converter* cv);
 
 PJ_END_DECL
 
@@ -381,7 +365,4 @@ PJ_END_DECL
  * @}
  */
 
-
 #endif /* __PJMEDIA_CONVERTER_H__ */
-
-

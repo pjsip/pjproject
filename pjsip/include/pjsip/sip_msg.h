@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_MSG_H__
 #define __PJSIP_SIP_MSG_H__
@@ -54,18 +53,16 @@ PJ_BEGIN_DECL
  */
 typedef enum pjsip_method_e
 {
-    PJSIP_INVITE_METHOD,    /**< INVITE method, for establishing dialogs.   */
-    PJSIP_CANCEL_METHOD,    /**< CANCEL method, for cancelling request.	    */
-    PJSIP_ACK_METHOD,	    /**< ACK method.				    */
-    PJSIP_BYE_METHOD,	    /**< BYE method, for terminating dialog.	    */
-    PJSIP_REGISTER_METHOD,  /**< REGISTER method.			    */
-    PJSIP_OPTIONS_METHOD,   /**< OPTIONS method.			    */
+    PJSIP_INVITE_METHOD,   /**< INVITE method, for establishing dialogs.   */
+    PJSIP_CANCEL_METHOD,   /**< CANCEL method, for cancelling request.	    */
+    PJSIP_ACK_METHOD,      /**< ACK method.				    */
+    PJSIP_BYE_METHOD,      /**< BYE method, for terminating dialog.	    */
+    PJSIP_REGISTER_METHOD, /**< REGISTER method.			    */
+    PJSIP_OPTIONS_METHOD,  /**< OPTIONS method.			    */
 
-    PJSIP_OTHER_METHOD	    /**< Other method.				    */
+    PJSIP_OTHER_METHOD /**< Other method.				    */
 
 } pjsip_method_e;
-
-
 
 /**
  * This structure represents a SIP method.
@@ -76,11 +73,10 @@ typedef enum pjsip_method_e
  */
 struct pjsip_method
 {
-    pjsip_method_e id;	    /**< Method ID, from \a pjsip_method_e. */
-    pj_str_t	   name;    /**< Method name, which will always contain the 
-			         method string. */
+    pjsip_method_e id; /**< Method ID, from \a pjsip_method_e. */
+    pj_str_t name;     /**< Method name, which will always contain the
+                            method string. */
 };
-
 
 /*
  * For convenience, standard method structures are defined in the library.
@@ -119,46 +115,43 @@ PJ_DECL(const pjsip_method*) pjsip_get_register_method(void);
 /** Get OPTIONS method constant. */
 PJ_DECL(const pjsip_method*) pjsip_get_options_method(void);
 
-
 /*
  * Accessor functions
  */
 
-/** 
- * Initialize the method structure from a string. 
+/**
+ * Initialize the method structure from a string.
  * This function will check whether the method is a known method then set
  * both the id and name accordingly.
  *
  * @param m	The method to initialize.
- * @param pool	Pool where memory allocation will be allocated from, if required.
+ * @param pool	Pool where memory allocation will be allocated from, if
+ * required.
  * @param str	The method string.
  */
-PJ_DECL(void) pjsip_method_init( pjsip_method *m, 
-				 pj_pool_t *pool, 
-				 const pj_str_t *str);
+PJ_DECL(void)
+pjsip_method_init(pjsip_method* m, pj_pool_t* pool, const pj_str_t* str);
 
-/** 
+/**
  * Initialize the method structure from a string, without cloning the string.
  * See #pjsip_method_init.
  *
  * @param m	The method structure to be initialized.
  * @param str	The method string.
  */
-PJ_DECL(void) pjsip_method_init_np( pjsip_method *m,
-				    pj_str_t *str);
+PJ_DECL(void) pjsip_method_init_np(pjsip_method* m, pj_str_t* str);
 
-/** 
- * Set the method with the predefined method ID. 
+/**
+ * Set the method with the predefined method ID.
  * This function will also set the name member of the structure to the correct
  * string according to the method.
  *
  * @param m	The method structure.
  * @param id	The method ID.
  */
-PJ_DECL(void) pjsip_method_set( pjsip_method *m, pjsip_method_e id );
+PJ_DECL(void) pjsip_method_set(pjsip_method* m, pjsip_method_e id);
 
-
-/** 
+/**
  * Copy one method structure to another. If the method is of the known methods,
  * then memory allocation is not required.
  *
@@ -166,27 +159,28 @@ PJ_DECL(void) pjsip_method_set( pjsip_method *m, pjsip_method_e id );
  * @param method    The destination method to copy to.
  * @param rhs	    The source method to copy from.
  */
-PJ_DECL(void) pjsip_method_copy( pj_pool_t *pool,
-				 pjsip_method *method,
-				 const pjsip_method *rhs );
+PJ_DECL(void)
+pjsip_method_copy(pj_pool_t* pool, pjsip_method* method,
+                  const pjsip_method* rhs);
 
-/** 
- * Compare one method with another, and conveniently determine whether the 
+/**
+ * Compare one method with another, and conveniently determine whether the
  * first method is equal, less than, or greater than the second method.
  *
  * @param m1	The first method.
  * @param m2	The second method.
  *
- * @return	Zero if equal, otherwise will return -1 if less or +1 if greater.
+ * @return	Zero if equal, otherwise will return -1 if less or +1 if
+ * greater.
  */
-PJ_DECL(int) pjsip_method_cmp( const pjsip_method *m1, const pjsip_method *m2);
+PJ_DECL(int) pjsip_method_cmp(const pjsip_method* m1, const pjsip_method* m2);
 
 /**
  * @}
  */
 
 /* **************************************************************************/
-/** 
+/**
  * @defgroup PJSIP_MSG_HDR Header Fields
  * @brief Declarations for various SIP header fields.
  * @ingroup PJSIP_MSG
@@ -200,54 +194,54 @@ typedef enum pjsip_hdr_e
 {
     /*
      * These are the headers documented in RFC3261. Headers not documented
-     * there must have type PJSIP_H_OTHER, and the header type itself is 
+     * there must have type PJSIP_H_OTHER, and the header type itself is
      * recorded in the header name string.
      *
      * DO NOT CHANGE THE VALUE/ORDER OF THE HEADER IDs!!!.
      */
     PJSIP_H_ACCEPT,
-    PJSIP_H_ACCEPT_ENCODING_UNIMP,	/* N/A, use pjsip_generic_string_hdr */
-    PJSIP_H_ACCEPT_LANGUAGE_UNIMP,	/* N/A, use pjsip_generic_string_hdr */
-    PJSIP_H_ALERT_INFO_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_ACCEPT_ENCODING_UNIMP, /* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_ACCEPT_LANGUAGE_UNIMP, /* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_ALERT_INFO_UNIMP,      /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_ALLOW,
-    PJSIP_H_AUTHENTICATION_INFO_UNIMP,	/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_AUTHENTICATION_INFO_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_AUTHORIZATION,
     PJSIP_H_CALL_ID,
-    PJSIP_H_CALL_INFO_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_CALL_INFO_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_CONTACT,
-    PJSIP_H_CONTENT_DISPOSITION_UNIMP,	/* N/A, use pjsip_generic_string_hdr */
-    PJSIP_H_CONTENT_ENCODING_UNIMP,	/* N/A, use pjsip_generic_string_hdr */
-    PJSIP_H_CONTENT_LANGUAGE_UNIMP,	/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_CONTENT_DISPOSITION_UNIMP, /* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_CONTENT_ENCODING_UNIMP,    /* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_CONTENT_LANGUAGE_UNIMP,    /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_CONTENT_LENGTH,
     PJSIP_H_CONTENT_TYPE,
     PJSIP_H_CSEQ,
-    PJSIP_H_DATE_UNIMP,			/* N/A, use pjsip_generic_string_hdr */
-    PJSIP_H_ERROR_INFO_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_DATE_UNIMP,       /* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_ERROR_INFO_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_EXPIRES,
     PJSIP_H_FROM,
-    PJSIP_H_IN_REPLY_TO_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_IN_REPLY_TO_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_MAX_FORWARDS,
-    PJSIP_H_MIME_VERSION_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_MIME_VERSION_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_MIN_EXPIRES,
-    PJSIP_H_ORGANIZATION_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
-    PJSIP_H_PRIORITY_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_ORGANIZATION_UNIMP, /* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_PRIORITY_UNIMP,     /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_PROXY_AUTHENTICATE,
     PJSIP_H_PROXY_AUTHORIZATION,
-    PJSIP_H_PROXY_REQUIRE_UNIMP,	/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_PROXY_REQUIRE_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_RECORD_ROUTE,
-    PJSIP_H_REPLY_TO_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_REPLY_TO_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_REQUIRE,
     PJSIP_H_RETRY_AFTER,
     PJSIP_H_ROUTE,
-    PJSIP_H_SERVER_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
-    PJSIP_H_SUBJECT_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_SERVER_UNIMP,  /* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_SUBJECT_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_SUPPORTED,
-    PJSIP_H_TIMESTAMP_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_TIMESTAMP_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_TO,
     PJSIP_H_UNSUPPORTED,
-    PJSIP_H_USER_AGENT_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_USER_AGENT_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_VIA,
-    PJSIP_H_WARNING_UNIMP,		/* N/A, use pjsip_generic_string_hdr */
+    PJSIP_H_WARNING_UNIMP, /* N/A, use pjsip_generic_string_hdr */
     PJSIP_H_WWW_AUTHENTICATE,
 
     PJSIP_H_OTHER
@@ -261,18 +255,18 @@ typedef enum pjsip_hdr_e
  */
 typedef struct pjsip_hdr_vptr
 {
-    /** 
-     * Function to clone the header. 
+    /**
+     * Function to clone the header.
      *
      * @param pool  Memory pool to allocate the new header.
      * @param hdr   Header to clone.
      *
      * @return A new instance of the header.
      */
-    void *(*clone)(pj_pool_t *pool, const void *hdr);
+    void* (*clone)(pj_pool_t* pool, const void* hdr);
 
-    /** 
-     * Pointer to function to shallow clone the header. 
+    /**
+     * Pointer to function to shallow clone the header.
      * Shallow cloning will just make a memory copy of the original header,
      * thus all pointers in original header will be kept intact. Because the
      * function does not need to perform deep copy, the operation should be
@@ -282,7 +276,7 @@ typedef struct pjsip_hdr_vptr
      * @param pool  Memory pool to allocate the new header.
      * @param hdr   The header to clone.
      */
-    void *(*shallow_clone)(pj_pool_t *pool, const void *hdr);
+    void* (*shallow_clone)(pj_pool_t* pool, const void* hdr);
 
     /** Pointer to function to print the header to the specified buffer.
      *	Returns the length of string written, or -1 if the remaining buffer
@@ -292,30 +286,29 @@ typedef struct pjsip_hdr_vptr
      *  @param buf  The buffer.
      *  @param len  The size of the buffer.
      *
-     *  @return	    The size copied to buffer, or -1 if there's not enough space.
+     *  @return	    The size copied to buffer, or -1 if there's not enough
+     *space.
      */
-    int (*print_on)(void *hdr, char *buf, pj_size_t len);
+    int (*print_on)(void* hdr, char* buf, pj_size_t len);
 
 } pjsip_hdr_vptr;
-
 
 /**
  * Generic fields for all SIP headers are declared using this macro, to make
  * sure that all headers will have exactly the same layout in their start of
  * the storage. This behaves like C++ inheritance actually.
  */
-#define PJSIP_DECL_HDR_MEMBER(hdr)   \
-    /** List members. */	\
-    PJ_DECL_LIST_MEMBER(hdr);	\
-    /** Header type */		\
-    pjsip_hdr_e	    type;	\
-    /** Header name. */		\
-    pj_str_t	    name;	\
-    /** Header short name version. */	\
-    pj_str_t	    sname;		\
-    /** Virtual function table. */	\
-    pjsip_hdr_vptr *vptr
-
+#define PJSIP_DECL_HDR_MEMBER(hdr) \
+    /** List members. */ \
+    PJ_DECL_LIST_MEMBER(hdr); \
+    /** Header type */ \
+    pjsip_hdr_e type; \
+    /** Header name. */ \
+    pj_str_t name; \
+    /** Header short name version. */ \
+    pj_str_t sname; \
+    /** Virtual function table. */ \
+    pjsip_hdr_vptr* vptr
 
 /**
  * Generic SIP header structure, for generic manipulation for headers in the
@@ -326,7 +319,6 @@ struct pjsip_hdr
     PJSIP_DECL_HDR_MEMBER(struct pjsip_hdr);
 };
 
-
 /**
  * This generic function will clone any header, by calling "clone" function
  * in header's virtual function table.
@@ -336,11 +328,10 @@ struct pjsip_hdr
  *
  * @return	    A new instance copied from the original header.
  */
-PJ_DECL(void*) pjsip_hdr_clone( pj_pool_t *pool, const void *hdr );
-
+PJ_DECL(void*) pjsip_hdr_clone(pj_pool_t* pool, const void* hdr);
 
 /**
- * This generic function will clone any header, by calling "shallow_clone" 
+ * This generic function will clone any header, by calling "shallow_clone"
  * function in header's virtual function table.
  *
  * @param pool	    The pool to allocate memory from.
@@ -348,10 +339,10 @@ PJ_DECL(void*) pjsip_hdr_clone( pj_pool_t *pool, const void *hdr );
  *
  * @return	    A new instance copied from the original header.
  */
-PJ_DECL(void*) pjsip_hdr_shallow_clone( pj_pool_t *pool, const void *hdr );
+PJ_DECL(void*) pjsip_hdr_shallow_clone(pj_pool_t* pool, const void* hdr);
 
 /**
- * This generic function will print any header, by calling "print" 
+ * This generic function will print any header, by calling "print"
  * function in header's virtual function table.
  *
  * @param hdr  The header to print.
@@ -360,7 +351,7 @@ PJ_DECL(void*) pjsip_hdr_shallow_clone( pj_pool_t *pool, const void *hdr );
  *
  * @return	The size copied to buffer, or -1 if there's not enough space.
  */
-PJ_DECL(int) pjsip_hdr_print_on( void *hdr, char *buf, pj_size_t len);
+PJ_DECL(int) pjsip_hdr_print_on(void* hdr, char* buf, pj_size_t len);
 
 /**
  * Find a header in a header list by the header type.
@@ -375,9 +366,8 @@ PJ_DECL(int) pjsip_hdr_print_on( void *hdr, char *buf, pj_size_t len);
  * @return          The header field, or NULL if no header with the specified
  *                  type is found.
  */
-PJ_DECL(void*)  pjsip_hdr_find( const void *hdr_list,
-				pjsip_hdr_e type,
-				const void *start);
+PJ_DECL(void*)
+pjsip_hdr_find(const void* hdr_list, pjsip_hdr_e type, const void* start);
 
 /**
  * Find a header in a header list by its name.
@@ -392,9 +382,9 @@ PJ_DECL(void*)  pjsip_hdr_find( const void *hdr_list,
  * @return          The header field, or NULL if no header with the specified
  *                  type is found.
  */
-PJ_DECL(void*)  pjsip_hdr_find_by_name( const void *hdr_list,
-					const pj_str_t *name,
-					const void *start);
+PJ_DECL(void*)
+pjsip_hdr_find_by_name(const void* hdr_list, const pj_str_t* name,
+                       const void* start);
 
 /**
  * Find a header in a header list by its name and short name version.
@@ -410,10 +400,9 @@ PJ_DECL(void*)  pjsip_hdr_find_by_name( const void *hdr_list,
  * @return	    The header field, or NULL if no header with the specified
  *		    type is found.
  */
-PJ_DECL(void*)  pjsip_hdr_find_by_names( const void *hdr_list,
-					 const pj_str_t *name,
-					 const pj_str_t *sname,
-					 const void *start);
+PJ_DECL(void*)
+pjsip_hdr_find_by_names(const void* hdr_list, const pj_str_t* name,
+                        const pj_str_t* sname, const void* start);
 
 /**
  * @}
@@ -430,27 +419,25 @@ PJ_DECL(void*)  pjsip_hdr_find_by_names( const void *hdr_list,
 /**
  * This structure describes SIP request line.
  */
-typedef struct pjsip_request_line 
+typedef struct pjsip_request_line
 {
-    pjsip_method    method; /**< Method for this request line. */
-    pjsip_uri *uri;    /**< URI for this request line. */
+    pjsip_method method; /**< Method for this request line. */
+    pjsip_uri* uri;      /**< URI for this request line. */
 } pjsip_request_line;
-
 
 /**
  * This structure describes SIP status line.
  */
-typedef struct pjsip_status_line 
+typedef struct pjsip_status_line
 {
-    int		code;	    /**< Status code. */
-    pj_str_t	reason;	    /**< Reason string. */
+    int code;        /**< Status code. */
+    pj_str_t reason; /**< Reason string. */
 } pjsip_status_line;
-
 
 /**
  * This enumeration lists standard SIP status codes according to RFC 3261.
  * In addition, it also declares new status class 7xx for errors generated
- * by the stack. This status class however should not get transmitted on the 
+ * by the stack. This status class however should not get transmitted on the
  * wire.
  */
 typedef enum pjsip_status_code
@@ -559,7 +546,7 @@ typedef enum pjsip_status_code
  * @param status_code	    SIP Status Code
  *
  * @return		    textual message for the status code.
- */ 
+ */
 PJ_DECL(const pj_str_t*) pjsip_get_status_text(int status_code);
 
 /**
@@ -569,8 +556,8 @@ PJ_DECL(const pj_str_t*) pjsip_get_status_text(int status_code);
  * @param status_code	The status code.
  * @param code_class	The status code in the class (for example 100, 200).
  */
-#define PJSIP_IS_STATUS_IN_CLASS(status_code, code_class)    \
-	    (status_code/100 == code_class/100)
+#define PJSIP_IS_STATUS_IN_CLASS(status_code, code_class) \
+    (status_code / 100 == code_class / 100)
 
 /**
  * @}
@@ -585,16 +572,25 @@ PJ_DECL(const pj_str_t*) pjsip_get_status_text(int status_code);
  */
 
 /**
- * This structure describes SIP media type, as used for example in 
+ * This structure describes SIP media type, as used for example in
  * Accept and Content-Type header..
  */
 typedef struct pjsip_media_type
 {
-    pj_str_t type;	    /**< Media type. */
-    pj_str_t subtype;	    /**< Media subtype. */
-    pjsip_param param;	    /**< Media type parameters */
+    pj_str_t type;     /**< Media type. */
+    pj_str_t subtype;  /**< Media subtype. */
+    pjsip_param param; /**< Media type parameters */
 } pjsip_media_type;
 
+/**
+ * Initialize the media type with the specified type and subtype string.
+ *
+ * @param mt		The media type.
+ * @param type		Optionally specify the media type.
+ * @param subtype	Optionally specify the media subtype.
+ */
+PJ_DECL(void)
+pjsip_media_type_init(pjsip_media_type* mt, pj_str_t* type, pj_str_t* subtype);
 
 /**
  * Initialize the media type with the specified type and subtype string.
@@ -603,20 +599,8 @@ typedef struct pjsip_media_type
  * @param type		Optionally specify the media type.
  * @param subtype	Optionally specify the media subtype.
  */
-PJ_DECL(void) pjsip_media_type_init(pjsip_media_type *mt,
-				    pj_str_t *type,
-				    pj_str_t *subtype);
-
-/**
- * Initialize the media type with the specified type and subtype string.
- *
- * @param mt		The media type.
- * @param type		Optionally specify the media type.
- * @param subtype	Optionally specify the media subtype.
- */
-PJ_DECL(void) pjsip_media_type_init2(pjsip_media_type *mt,
-				     char *type,
-				     char *subtype);
+PJ_DECL(void)
+pjsip_media_type_init2(pjsip_media_type* mt, char* type, char* subtype);
 
 /**
  * Compare two media types.
@@ -632,9 +616,9 @@ PJ_DECL(void) pjsip_media_type_init2(pjsip_media_type *mt,
  * @return		Zero if both media types are equal, -1 if mt1 < mt2,
  * 			1 if mt1 > mt2.
  */
-PJ_DECL(int) pjsip_media_type_cmp(const pjsip_media_type *mt1,
-				  const pjsip_media_type *mt2,
-				  int cmp_param);
+PJ_DECL(int)
+pjsip_media_type_cmp(const pjsip_media_type* mt1, const pjsip_media_type* mt2,
+                     int cmp_param);
 
 /**
  * Copy SIP media type to another.
@@ -643,9 +627,9 @@ PJ_DECL(int) pjsip_media_type_cmp(const pjsip_media_type *mt1,
  * @param dst	    Destination structure.
  * @param src	    Source structure.
  */
-PJ_DECL(void) pjsip_media_type_cp(pj_pool_t *pool,
-				  pjsip_media_type *dst,
-				  const pjsip_media_type *src);
+PJ_DECL(void)
+pjsip_media_type_cp(pj_pool_t* pool, pjsip_media_type* dst,
+                    const pjsip_media_type* src);
 
 /**
  * Print media type to the specified buffer.
@@ -657,8 +641,8 @@ PJ_DECL(void) pjsip_media_type_cp(pj_pool_t *pool,
  * @return		The number of characters printed to the buffer, or -1
  * 			if there's not enough space in the buffer.
  */
-PJ_DECL(int) pjsip_media_type_print(char *buf, unsigned len,
-				    const pjsip_media_type *mt);
+PJ_DECL(int)
+pjsip_media_type_print(char* buf, unsigned len, const pjsip_media_type* mt);
 
 /**
  * @}
@@ -678,11 +662,11 @@ PJ_DECL(int) pjsip_media_type_print(char *buf, unsigned len,
  * all members with the appropriate value. The 'data' and 'len' member will
  * describe portion of incoming packet which denotes the message body.
  * When application needs to attach message body to outgoing SIP message, it
- * must fill in all members of this structure. 
+ * must fill in all members of this structure.
  */
 struct pjsip_msg_body
 {
-    /** MIME content type. 
+    /** MIME content type.
      *  For incoming messages, the parser will fill in this member with the
      *  content type found in Content-Type header.
      *
@@ -696,7 +680,7 @@ struct pjsip_msg_body
      */
     pjsip_media_type content_type;
 
-    /** Pointer to buffer which holds the message body data. 
+    /** Pointer to buffer which holds the message body data.
      *  For incoming messages, the parser will fill in this member with the
      *  pointer to the body string.
      *
@@ -707,20 +691,20 @@ struct pjsip_msg_body
      *  instead will always call the print_body() whenever it needs to get the
      *  actual body string.
      */
-    void *data;
+    void* data;
 
-    /** The length of the data. 
+    /** The length of the data.
      *  For incoming messages, the parser will fill in this member with the
      *  actual length of message body.
      *
      *  When sending outgoing message, again just like the "data" member, the
-     *  "len" member doesn't need to point to the actual length of the body 
+     *  "len" member doesn't need to point to the actual length of the body
      *  string.
      */
     unsigned len;
 
-    /** Pointer to function to print this message body. 
-     *  Application must set a proper function here when sending outgoing 
+    /** Pointer to function to print this message body.
+     *  Application must set a proper function here when sending outgoing
      *  message.
      *
      *  @param msg_body	    This structure itself.
@@ -731,8 +715,8 @@ struct pjsip_msg_body
      *			    not enough space in the buffer to print the whole
      *			    message body.
      */
-    int (*print_body)(struct pjsip_msg_body *msg_body, 
-		      char *buf, pj_size_t size);
+    int (*print_body)(struct pjsip_msg_body* msg_body, char* buf,
+                      pj_size_t size);
 
     /** Clone the data part only of this message body. Note that this only
      *  duplicates the data part of the body instead of the whole message
@@ -745,13 +729,12 @@ struct pjsip_msg_body
      *
      *  @return		    New data duplicated from the original data.
      */
-    void* (*clone_data)(pj_pool_t *pool, const void *data, unsigned len);
-
+    void* (*clone_data)(pj_pool_t* pool, const void* data, unsigned len);
 };
 
 /**
  * General purpose function to textual data in a SIP body. Attach this function
- * in a SIP message body only if the data in pjsip_msg_body is a textual 
+ * in a SIP message body only if the data in pjsip_msg_body is a textual
  * message ready to be embedded in a SIP message. If the data in the message
  * body is not a textual body, then application must supply a custom function
  * to print that body.
@@ -762,8 +745,8 @@ struct pjsip_msg_body
  *
  * @return		The length copied to the buffer, or -1.
  */
-PJ_DECL(int) pjsip_print_text_body( pjsip_msg_body *msg_body, 
-				    char *buf, pj_size_t size);
+PJ_DECL(int)
+pjsip_print_text_body(pjsip_msg_body* msg_body, char* buf, pj_size_t size);
 
 /**
  * General purpose function to clone textual data in a SIP body. Attach this
@@ -777,9 +760,8 @@ PJ_DECL(int) pjsip_print_text_body( pjsip_msg_body *msg_body,
  *
  *  @return		New text duplicated from the original text.
  */
-PJ_DECL(void*) pjsip_clone_text_data( pj_pool_t *pool, const void *data,
-				      unsigned len);
-
+PJ_DECL(void*)
+pjsip_clone_text_data(pj_pool_t* pool, const void* data, unsigned len);
 
 /**
  * Clone the message body in src_body to the dst_body. This will duplicate
@@ -792,10 +774,9 @@ PJ_DECL(void*) pjsip_clone_text_data( pj_pool_t *pool, const void *data,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_msg_body_copy( pj_pool_t *pool,
-					  pjsip_msg_body *dst_body,
-					  const pjsip_msg_body *src_body );
-					   
+PJ_DECL(pj_status_t)
+pjsip_msg_body_copy(pj_pool_t* pool, pjsip_msg_body* dst_body,
+                    const pjsip_msg_body* src_body);
 
 /**
  * Create cloned message body. This will duplicate the contents of the message
@@ -806,13 +787,12 @@ PJ_DECL(pj_status_t) pjsip_msg_body_copy( pj_pool_t *pool,
  *
  * @return		The cloned message body on successfull.
  */
-PJ_DECL(pjsip_msg_body*) pjsip_msg_body_clone( pj_pool_t *pool,
-					       const pjsip_msg_body *body );
-					   
+PJ_DECL(pjsip_msg_body*)
+pjsip_msg_body_clone(pj_pool_t* pool, const pjsip_msg_body* body);
 
 /**
  * Create a text message body. Use this function to create message body when
- * the content is a simple text. For non-text message body (e.g. 
+ * the content is a simple text. For non-text message body (e.g.
  * pjmedia_sdp_session or pj_xml_node), application must construct the message
  * manually.
  *
@@ -824,10 +804,9 @@ PJ_DECL(pjsip_msg_body*) pjsip_msg_body_clone( pj_pool_t *pool,
  * @return		A new message body with the specified Content-Type and
  *			text.
  */
-PJ_DECL(pjsip_msg_body*) pjsip_msg_body_create( pj_pool_t *pool,
-					        const pj_str_t *type,
-						const pj_str_t *subtype,
-						const pj_str_t *text );
+PJ_DECL(pjsip_msg_body*)
+pjsip_msg_body_create(pj_pool_t* pool, const pj_str_t* type,
+                      const pj_str_t* subtype, const pj_str_t* text);
 
 /**
  * @}
@@ -846,10 +825,9 @@ PJ_DECL(pjsip_msg_body*) pjsip_msg_body_create( pj_pool_t *pool,
  */
 typedef enum pjsip_msg_type_e
 {
-    PJSIP_REQUEST_MSG,	    /**< Indicates request message. */
-    PJSIP_RESPONSE_MSG	    /**< Indicates response message. */
+    PJSIP_REQUEST_MSG, /**< Indicates request message. */
+    PJSIP_RESPONSE_MSG /**< Indicates response message. */
 } pjsip_msg_type_e;
-
 
 /**
  * This structure describes a SIP message.
@@ -857,7 +835,7 @@ typedef enum pjsip_msg_type_e
 struct pjsip_msg
 {
     /** Message type (ie request or response). */
-    pjsip_msg_type_e  type;
+    pjsip_msg_type_e type;
 
     /** The first line of the message can be either request line for request
      *	messages, or status line for response messages. It is represented here
@@ -865,32 +843,30 @@ struct pjsip_msg
      */
     union
     {
-	/** Request Line. */
-	struct pjsip_request_line   req;
+        /** Request Line. */
+        struct pjsip_request_line req;
 
-	/** Status Line. */
-	struct pjsip_status_line    status;
+        /** Status Line. */
+        struct pjsip_status_line status;
     } line;
 
     /** List of message headers. */
     pjsip_hdr hdr;
 
     /** Pointer to message body, or NULL if no message body is attached to
-     *	this mesage. 
+     *	this mesage.
      */
-    pjsip_msg_body *body;
+    pjsip_msg_body* body;
 };
 
-
-/** 
+/**
  * Create new request or response message.
  *
  * @param pool	    The pool.
  * @param type	    Message type.
  * @return	    New message, or THROW exception if failed.
  */
-PJ_DECL(pjsip_msg*)  pjsip_msg_create( pj_pool_t *pool, pjsip_msg_type_e type);
-
+PJ_DECL(pjsip_msg*) pjsip_msg_create(pj_pool_t* pool, pjsip_msg_type_e type);
 
 /**
  * Perform a deep clone of a SIP message.
@@ -898,13 +874,12 @@ PJ_DECL(pjsip_msg*)  pjsip_msg_create( pj_pool_t *pool, pjsip_msg_type_e type);
  * @param pool	    The pool for creating the new message.
  * @param msg	    The message to be duplicated.
  *
- * @return	    New message, which is duplicated from the original 
+ * @return	    New message, which is duplicated from the original
  *		    message.
  */
-PJ_DECL(pjsip_msg*) pjsip_msg_clone( pj_pool_t *pool, const pjsip_msg *msg);
+PJ_DECL(pjsip_msg*) pjsip_msg_clone(pj_pool_t* pool, const pjsip_msg* msg);
 
-
-/** 
+/**
  * Find a header in the message by the header type.
  *
  * @param msg	    The message.
@@ -914,13 +889,13 @@ PJ_DECL(pjsip_msg*) pjsip_msg_clone( pj_pool_t *pool, const pjsip_msg *msg);
  *		    first header, otherwise the search will begin at the
  *		    specified header.
  *
- * @return	    The header field, or NULL if no header with the specified 
+ * @return	    The header field, or NULL if no header with the specified
  *		    type is found.
  */
-PJ_DECL(void*)  pjsip_msg_find_hdr( const pjsip_msg *msg, 
-				    pjsip_hdr_e type, const void *start);
+PJ_DECL(void*)
+pjsip_msg_find_hdr(const pjsip_msg* msg, pjsip_hdr_e type, const void* start);
 
-/** 
+/**
  * Find a header in the message by its name.
  *
  * @param msg	    The message.
@@ -930,14 +905,14 @@ PJ_DECL(void*)  pjsip_msg_find_hdr( const pjsip_msg *msg,
  *		    first header, otherwise the search will begin at the
  *		    specified header.
  *
- * @return	    The header field, or NULL if no header with the specified 
+ * @return	    The header field, or NULL if no header with the specified
  *		    type is found.
  */
-PJ_DECL(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg, 
-					    const pj_str_t *name, 
-					    const void *start);
+PJ_DECL(void*)
+pjsip_msg_find_hdr_by_name(const pjsip_msg* msg, const pj_str_t* name,
+                           const void* start);
 
-/** 
+/**
  * Find a header in the message by its name and short name version.
  *
  * @param msg	    The message.
@@ -948,16 +923,15 @@ PJ_DECL(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg,
  *		    first header, otherwise the search will begin at the
  *		    specified header.
  *
- * @return	    The header field, or NULL if no header with the specified 
+ * @return	    The header field, or NULL if no header with the specified
  *		    type is found.
  */
-PJ_DECL(void*)  pjsip_msg_find_hdr_by_names(const pjsip_msg *msg, 
-					    const pj_str_t *name, 
-					    const pj_str_t *sname,
-					    const void *start);
+PJ_DECL(void*)
+pjsip_msg_find_hdr_by_names(const pjsip_msg* msg, const pj_str_t* name,
+                            const pj_str_t* sname, const void* start);
 
-/** 
- * Find and remove a header in the message. 
+/**
+ * Find and remove a header in the message.
  *
  * @param msg	    The message.
  * @param hdr	    The header type to find.
@@ -966,39 +940,39 @@ PJ_DECL(void*)  pjsip_msg_find_hdr_by_names(const pjsip_msg *msg,
  *
  * @return	    The header field, or NULL if not found.
  */
-PJ_DECL(void*)  pjsip_msg_find_remove_hdr( pjsip_msg *msg, 
-					   pjsip_hdr_e hdr, void *start);
+PJ_DECL(void*)
+pjsip_msg_find_remove_hdr(pjsip_msg* msg, pjsip_hdr_e hdr, void* start);
 
-/** 
+/**
  * Add a header to the message, putting it last in the header list.
  *
  * @param msg	    The message.
  * @param hdr	    The header to add.
  *
- * @bug Once the header is put in a list (or message), it can not be put in 
+ * @bug Once the header is put in a list (or message), it can not be put in
  *      other list (or message). Otherwise Real Bad Thing will happen.
  */
-PJ_INLINE(void) pjsip_msg_add_hdr( pjsip_msg *msg, pjsip_hdr *hdr )
+PJ_INLINE(void) pjsip_msg_add_hdr(pjsip_msg* msg, pjsip_hdr* hdr)
 {
     pj_list_insert_before(&msg->hdr, hdr);
 }
 
-/** 
+/**
  * Add header field to the message, putting it in the front of the header list.
  *
  * @param msg	The message.
  * @param hdr	The header to add.
  *
- * @bug Once the header is put in a list (or message), it can not be put in 
+ * @bug Once the header is put in a list (or message), it can not be put in
  *      other list (or message). Otherwise Real Bad Thing will happen.
  */
-PJ_INLINE(void) pjsip_msg_insert_first_hdr( pjsip_msg *msg, pjsip_hdr *hdr )
+PJ_INLINE(void) pjsip_msg_insert_first_hdr(pjsip_msg* msg, pjsip_hdr* hdr)
 {
     pj_list_insert_after(&msg->hdr, hdr);
 }
 
-/** 
- * Print the message to the specified buffer. 
+/**
+ * Print the message to the specified buffer.
  *
  * @param msg	The message to print.
  * @param buf	The buffer
@@ -1007,14 +981,12 @@ PJ_INLINE(void) pjsip_msg_insert_first_hdr( pjsip_msg *msg, pjsip_hdr *hdr )
  * @return	The length of the printed characters (in bytes), or NEGATIVE
  *		value if the message is too large for the specified buffer.
  */
-PJ_DECL(pj_ssize_t) pjsip_msg_print(const pjsip_msg *msg, 
-				    char *buf, pj_size_t size);
-
+PJ_DECL(pj_ssize_t)
+pjsip_msg_print(const pjsip_msg* msg, char* buf, pj_size_t size);
 
 /*
  * Some usefull macros to find common headers.
  */
-
 
 /**
  * Find Call-ID header.
@@ -1023,7 +995,7 @@ PJ_DECL(pj_ssize_t) pjsip_msg_print(const pjsip_msg *msg,
  * @return	Call-ID header instance.
  */
 #define PJSIP_MSG_CID_HDR(msg) \
-	    ((pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL))
+    ((pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL))
 
 /**
  * Find CSeq header.
@@ -1032,7 +1004,7 @@ PJ_DECL(pj_ssize_t) pjsip_msg_print(const pjsip_msg *msg,
  * @return	CSeq header instance.
  */
 #define PJSIP_MSG_CSEQ_HDR(msg) \
-	    ((pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL))
+    ((pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL))
 
 /**
  * Find From header.
@@ -1041,7 +1013,7 @@ PJ_DECL(pj_ssize_t) pjsip_msg_print(const pjsip_msg *msg,
  * @return	From header instance.
  */
 #define PJSIP_MSG_FROM_HDR(msg) \
-	    ((pjsip_from_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL))
+    ((pjsip_from_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL))
 
 /**
  * Find To header.
@@ -1050,8 +1022,7 @@ PJ_DECL(pj_ssize_t) pjsip_msg_print(const pjsip_msg *msg,
  * @return	To header instance.
  */
 #define PJSIP_MSG_TO_HDR(msg) \
-	    ((pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL))
-
+    ((pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL))
 
 /**
  * @}
@@ -1075,7 +1046,6 @@ typedef struct pjsip_generic_string_hdr
     pj_str_t hvalue;
 } pjsip_generic_string_hdr;
 
-
 /**
  * Create a new instance of generic header. A generic header can have an
  * arbitrary header name.
@@ -1087,16 +1057,14 @@ typedef struct pjsip_generic_string_hdr
  *
  * @return	    The header, or THROW exception.
  */
-PJ_DECL(pjsip_generic_string_hdr*) 
-pjsip_generic_string_hdr_create( pj_pool_t *pool, 
-				 const pj_str_t *hname,
-				 const pj_str_t *hvalue);
-
+PJ_DECL(pjsip_generic_string_hdr*)
+pjsip_generic_string_hdr_create(pj_pool_t* pool, const pj_str_t* hname,
+                                const pj_str_t* hvalue);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1107,15 +1075,12 @@ pjsip_generic_string_hdr_create( pj_pool_t *pool,
  *		    assign the header name with some string later.
  * @param hvalue    Optional string to be assigned as the value.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_generic_string_hdr*) 
-pjsip_generic_string_hdr_init( pj_pool_t *pool,
-			       void *mem,
-			       const pj_str_t *hname,
-			       const pj_str_t *hvalue);
-
+PJ_DECL(pjsip_generic_string_hdr*)
+pjsip_generic_string_hdr_init(pj_pool_t* pool, void* mem, const pj_str_t* hname,
+                              const pj_str_t* hvalue);
 
 /**
  * Construct a generic string header without allocating memory from the pool.
@@ -1129,10 +1094,9 @@ pjsip_generic_string_hdr_init( pj_pool_t *pool,
  * @param hvalue    Optional string to be assigned as the value.
  *
  */
-PJ_DECL(void) pjsip_generic_string_hdr_init2(pjsip_generic_string_hdr *h,
-					     pj_str_t *hname,
-					     pj_str_t *hvalue);
-
+PJ_DECL(void)
+pjsip_generic_string_hdr_init2(pjsip_generic_string_hdr* h, pj_str_t* hname,
+                               pj_str_t* hvalue);
 
 /* **************************************************************************/
 
@@ -1147,7 +1111,6 @@ typedef struct pjsip_generic_int_hdr
     pj_uint32_t ivalue;
 } pjsip_generic_int_hdr;
 
-
 /**
  * Create a new instance of generic header. A generic header can have an
  * arbitrary header name.
@@ -1159,15 +1122,14 @@ typedef struct pjsip_generic_int_hdr
  *
  * @return	    The header, or THROW exception.
  */
-PJ_DECL(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_create( pj_pool_t *pool,
-						      const pj_str_t *hname,
-						      unsigned hvalue );
-
+PJ_DECL(pjsip_generic_int_hdr*)
+pjsip_generic_int_hdr_create(pj_pool_t* pool, const pj_str_t* hname,
+                             unsigned hvalue);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1178,18 +1140,17 @@ PJ_DECL(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_create( pj_pool_t *pool,
  *		    assign the header name with some string later.
  * @param value	    Value to be assigned to the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_init( pj_pool_t *pool,
-							    void *mem,
-							    const pj_str_t *hname,
-							    unsigned value );
+PJ_DECL(pjsip_generic_int_hdr*)
+pjsip_generic_int_hdr_init(pj_pool_t* pool, void* mem, const pj_str_t* hname,
+                           unsigned value);
 
 /* **************************************************************************/
 
 /** Maximum elements in the header array. */
-#define PJSIP_GENERIC_ARRAY_MAX_COUNT	32
+#define PJSIP_GENERIC_ARRAY_MAX_COUNT 32
 
 /**
  * Generic array of string header.
@@ -1200,10 +1161,10 @@ typedef struct pjsip_generic_array_hdr
     PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_array_hdr);
 
     /** Number of tags/elements. */
-    unsigned	count;
+    unsigned count;
 
     /** Tags/elements. */
-    pj_str_t	values[PJSIP_GENERIC_ARRAY_MAX_COUNT];
+    pj_str_t values[PJSIP_GENERIC_ARRAY_MAX_COUNT];
 
 } pjsip_generic_array_hdr;
 
@@ -1215,13 +1176,13 @@ typedef struct pjsip_generic_array_hdr
  *
  * @return	    New generic array header.
  */
-PJ_DECL(pjsip_generic_array_hdr*) pjsip_generic_array_hdr_create(pj_pool_t *pool,
-							     const pj_str_t *hname);
+PJ_DECL(pjsip_generic_array_hdr*)
+pjsip_generic_array_hdr_create(pj_pool_t* pool, const pj_str_t* hname);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1231,13 +1192,11 @@ PJ_DECL(pjsip_generic_array_hdr*) pjsip_generic_array_hdr_create(pj_pool_t *pool
  * @param hname	    The header name to be assigned to the header, or NULL to
  *		    assign the header name with some string later.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_generic_array_hdr*) pjsip_generic_array_hdr_init(pj_pool_t *pool,
-							       void *mem,
-							       const pj_str_t *hname);
-
+PJ_DECL(pjsip_generic_array_hdr*)
+pjsip_generic_array_hdr_init(pj_pool_t* pool, void* mem, const pj_str_t* hname);
 
 /* **************************************************************************/
 
@@ -1245,7 +1204,7 @@ PJ_DECL(pjsip_generic_array_hdr*) pjsip_generic_array_hdr_init(pj_pool_t *pool,
 typedef pjsip_generic_array_hdr pjsip_accept_hdr;
 
 /** Maximum fields in Accept header. */
-#define PJSIP_MAX_ACCEPT_COUNT	PJSIP_GENERIC_ARRAY_MAX_COUNT
+#define PJSIP_MAX_ACCEPT_COUNT PJSIP_GENERIC_ARRAY_MAX_COUNT
 
 /**
  * Create new Accept header instance.
@@ -1254,12 +1213,12 @@ typedef pjsip_generic_array_hdr pjsip_accept_hdr;
  *
  * @return	    New Accept header instance.
  */
-PJ_DECL(pjsip_accept_hdr*) pjsip_accept_hdr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_accept_hdr*) pjsip_accept_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1267,12 +1226,10 @@ PJ_DECL(pjsip_accept_hdr*) pjsip_accept_hdr_create(pj_pool_t *pool);
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_accept_hdr*) pjsip_accept_hdr_init( pj_pool_t *pool,
-						  void *mem );
-
+PJ_DECL(pjsip_accept_hdr*) pjsip_accept_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 
@@ -1288,14 +1245,12 @@ typedef pjsip_generic_array_hdr pjsip_allow_hdr;
  *
  * @return	    New Allow header instance.
  */
-PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_create(pj_pool_t *pool);
-
-
+PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1303,11 +1258,10 @@ PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_create(pj_pool_t *pool);
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_init( pj_pool_t *pool,
-						void *mem );
+PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 
@@ -1317,9 +1271,8 @@ PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_init( pj_pool_t *pool,
 typedef struct pjsip_cid_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_cid_hdr);
-    pj_str_t id;	    /**< Call-ID string. */
+    pj_str_t id; /**< Call-ID string. */
 } pjsip_cid_hdr;
-
 
 /**
  * Create new Call-ID header.
@@ -1328,13 +1281,12 @@ typedef struct pjsip_cid_hdr
  *
  * @return	new Call-ID header.
  */
-PJ_DECL(pjsip_cid_hdr*) pjsip_cid_hdr_create( pj_pool_t *pool );
-
+PJ_DECL(pjsip_cid_hdr*) pjsip_cid_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1342,13 +1294,10 @@ PJ_DECL(pjsip_cid_hdr*) pjsip_cid_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_cid_hdr*) pjsip_cid_hdr_init( pj_pool_t *pool,
-					    void *mem );
-
-
+PJ_DECL(pjsip_cid_hdr*) pjsip_cid_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 /**
@@ -1357,7 +1306,7 @@ PJ_DECL(pjsip_cid_hdr*) pjsip_cid_hdr_init( pj_pool_t *pool,
 typedef struct pjsip_clen_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_clen_hdr);
-    int len;	/**< Content length. */
+    int len; /**< Content length. */
 } pjsip_clen_hdr;
 
 /**
@@ -1366,12 +1315,12 @@ typedef struct pjsip_clen_hdr
  * @param pool	the pool.
  * @return	A new Content-Length header instance.
  */
-PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1379,12 +1328,10 @@ PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_init( pj_pool_t *pool,
-					      void *mem );
-
+PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 /**
@@ -1393,22 +1340,21 @@ PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_init( pj_pool_t *pool,
 typedef struct pjsip_cseq_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_cseq_hdr);
-    pj_int32_t	    cseq;	/**< CSeq number. */
-    pjsip_method    method;	/**< CSeq method. */
+    pj_int32_t cseq;     /**< CSeq number. */
+    pjsip_method method; /**< CSeq method. */
 } pjsip_cseq_hdr;
 
-
-/** Create new  CSeq header. 
+/** Create new  CSeq header.
  *
  *  @param pool	The pool.
  *  @return A new CSeq header instance.
  */
-PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1416,16 +1362,15 @@ PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_init( pj_pool_t *pool,
-					      void *mem );
+PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 
 /** Expires not specified. */
-#define PJSIP_EXPIRES_NOT_SPECIFIED	((pj_uint32_t)0xFFFFFFFFUL)
+#define PJSIP_EXPIRES_NOT_SPECIFIED ((pj_uint32_t)0xFFFFFFFFUL)
 
 /**
  * Contact header.
@@ -1436,18 +1381,17 @@ PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_init( pj_pool_t *pool,
 typedef struct pjsip_contact_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_contact_hdr);
-    int		    star;	    /**< The contact contains only a '*'
-    					 character 			    */
-    pjsip_uri	   *uri;	    /**< URI in the contact. 		    */
-    int		    q1000;	    /**< The "q" value times 1000
-    					 (to avoid float) 		    */
-    pj_uint32_t	    expires;	    /**< Expires parameter, otherwise
-    					 PJSIP_EXPIRES_NOT_SPECIFIED
-    					 if not present. 		    */
-    pjsip_param	    other_param;    /**< Other parameters, concatenated in
-    					 a single string. 		    */
+    int star;                /**< The contact contains only a '*'
+                                  character 			    */
+    pjsip_uri* uri;          /**< URI in the contact. 		    */
+    int q1000;               /**< The "q" value times 1000
+                                  (to avoid float) 		    */
+    pj_uint32_t expires;     /**< Expires parameter, otherwise
+                                  PJSIP_EXPIRES_NOT_SPECIFIED
+                                  if not present. 		    */
+    pjsip_param other_param; /**< Other parameters, concatenated in
+                                  a single string. 		    */
 } pjsip_contact_hdr;
-
 
 /**
  * Create a new Contact header.
@@ -1455,12 +1399,12 @@ typedef struct pjsip_contact_hdr
  * @param pool	The pool.
  * @return	A new instance of Contact header.
  */
-PJ_DECL(pjsip_contact_hdr*) pjsip_contact_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_contact_hdr*) pjsip_contact_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1468,12 +1412,10 @@ PJ_DECL(pjsip_contact_hdr*) pjsip_contact_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_contact_hdr*) pjsip_contact_hdr_init( pj_pool_t *pool,
-						    void *mem );
-
+PJ_DECL(pjsip_contact_hdr*) pjsip_contact_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 /**
@@ -1485,19 +1427,18 @@ typedef struct pjsip_ctype_hdr
     pjsip_media_type media; /**< Media type. */
 } pjsip_ctype_hdr;
 
-
 /**
  * Create a nwe Content Type header.
  *
  * @param pool	The pool.
  * @return	A new Content-Type header.
  */
-PJ_DECL(pjsip_ctype_hdr*) pjsip_ctype_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_ctype_hdr*) pjsip_ctype_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1505,11 +1446,10 @@ PJ_DECL(pjsip_ctype_hdr*) pjsip_ctype_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_ctype_hdr*) pjsip_ctype_hdr_init( pj_pool_t *pool,
-						void *mem );
+PJ_DECL(pjsip_ctype_hdr*) pjsip_ctype_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 /** Expires header. */
@@ -1523,13 +1463,13 @@ typedef pjsip_generic_int_hdr pjsip_expires_hdr;
  *
  * @return	    A new Expires header.
  */
-PJ_DECL(pjsip_expires_hdr*) pjsip_expires_hdr_create( pj_pool_t *pool,
-						      unsigned value);
+PJ_DECL(pjsip_expires_hdr*)
+pjsip_expires_hdr_create(pj_pool_t* pool, unsigned value);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1538,14 +1478,11 @@ PJ_DECL(pjsip_expires_hdr*) pjsip_expires_hdr_create( pj_pool_t *pool,
  * @param mem	    Pre-allocated memory to be initialized as the header.
  * @param value	    The expiration value.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_expires_hdr*) pjsip_expires_hdr_init( pj_pool_t *pool,
-						    void *mem,
-						    unsigned value );
-
-
+PJ_DECL(pjsip_expires_hdr*)
+pjsip_expires_hdr_init(pj_pool_t* pool, void* mem, unsigned value);
 
 /* **************************************************************************/
 /**
@@ -1554,9 +1491,10 @@ PJ_DECL(pjsip_expires_hdr*) pjsip_expires_hdr_init( pj_pool_t *pool,
 typedef struct pjsip_fromto_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_fromto_hdr);
-    pjsip_uri	    *uri;	    /**< URI in From/To header. */
-    pj_str_t	     tag;	    /**< Header "tag" parameter. */
-    pjsip_param	     other_param;   /**< Other params, concatenated as a single string. */
+    pjsip_uri* uri; /**< URI in From/To header. */
+    pj_str_t tag;   /**< Header "tag" parameter. */
+    pjsip_param
+      other_param; /**< Other params, concatenated as a single string. */
 } pjsip_fromto_hdr;
 
 /** Alias for From header. */
@@ -1571,12 +1509,12 @@ typedef pjsip_fromto_hdr pjsip_to_hdr;
  * @param pool	The pool.
  * @return	New instance of From header.
  */
-PJ_DECL(pjsip_from_hdr*) pjsip_from_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_from_hdr*) pjsip_from_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1584,11 +1522,10 @@ PJ_DECL(pjsip_from_hdr*) pjsip_from_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_from_hdr*) pjsip_from_hdr_init( pj_pool_t *pool,
-					      void *mem );
+PJ_DECL(pjsip_from_hdr*) pjsip_from_hdr_init(pj_pool_t* pool, void* mem);
 
 /**
  * Create a To header.
@@ -1596,12 +1533,12 @@ PJ_DECL(pjsip_from_hdr*) pjsip_from_hdr_init( pj_pool_t *pool,
  * @param pool	The pool.
  * @return	New instance of To header.
  */
-PJ_DECL(pjsip_to_hdr*)   pjsip_to_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_to_hdr*) pjsip_to_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1609,11 +1546,10 @@ PJ_DECL(pjsip_to_hdr*)   pjsip_to_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_to_hdr*) pjsip_to_hdr_init( pj_pool_t *pool,
-					  void *mem );
+PJ_DECL(pjsip_to_hdr*) pjsip_to_hdr_init(pj_pool_t* pool, void* mem);
 
 /**
  * Convert the header to a From header.
@@ -1621,7 +1557,7 @@ PJ_DECL(pjsip_to_hdr*) pjsip_to_hdr_init( pj_pool_t *pool,
  * @param hdr	    The generic from/to header.
  * @return	    "From" header.
  */
-PJ_DECL(pjsip_from_hdr*) pjsip_fromto_hdr_set_from( pjsip_fromto_hdr *hdr );
+PJ_DECL(pjsip_from_hdr*) pjsip_fromto_hdr_set_from(pjsip_fromto_hdr* hdr);
 
 /**
  * Convert the header to a To header.
@@ -1629,8 +1565,7 @@ PJ_DECL(pjsip_from_hdr*) pjsip_fromto_hdr_set_from( pjsip_fromto_hdr *hdr );
  * @param hdr	    The generic from/to header.
  * @return	    "To" header.
  */
-PJ_DECL(pjsip_to_hdr*)   pjsip_fromto_hdr_set_to( pjsip_fromto_hdr *hdr );
-
+PJ_DECL(pjsip_to_hdr*) pjsip_fromto_hdr_set_to(pjsip_fromto_hdr* hdr);
 
 /* **************************************************************************/
 /**
@@ -1646,14 +1581,13 @@ typedef pjsip_generic_int_hdr pjsip_max_fwd_hdr;
  *
  * @return	    New Max-Forwards header instance.
  */
-PJ_DECL(pjsip_max_fwd_hdr*) 
-pjsip_max_fwd_hdr_create(pj_pool_t *pool, unsigned value);
-
+PJ_DECL(pjsip_max_fwd_hdr*)
+pjsip_max_fwd_hdr_create(pj_pool_t* pool, unsigned value);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1662,12 +1596,11 @@ pjsip_max_fwd_hdr_create(pj_pool_t *pool, unsigned value);
  * @param mem	    Pre-allocated memory to be initialized as the header.
  * @param value	    The Max-Forwards value.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_max_fwd_hdr*) 
-pjsip_max_fwd_hdr_init( pj_pool_t *pool, void *mem, unsigned value );
-
+PJ_DECL(pjsip_max_fwd_hdr*)
+pjsip_max_fwd_hdr_init(pj_pool_t* pool, void* mem, unsigned value);
 
 /* **************************************************************************/
 /**
@@ -1683,14 +1616,13 @@ typedef pjsip_generic_int_hdr pjsip_min_expires_hdr;
  *
  * @return	    New Min-Expires header instance.
  */
-PJ_DECL(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_create(pj_pool_t *pool,
-							     unsigned value);
-
+PJ_DECL(pjsip_min_expires_hdr*)
+pjsip_min_expires_hdr_create(pj_pool_t* pool, unsigned value);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1699,13 +1631,11 @@ PJ_DECL(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_create(pj_pool_t *pool,
  * @param mem	    Pre-allocated memory to be initialized as the header.
  * @param value	    The Min-Expires value.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_init( pj_pool_t *pool,
-							    void *mem,
-							    unsigned value );
-
+PJ_DECL(pjsip_min_expires_hdr*)
+pjsip_min_expires_hdr_init(pj_pool_t* pool, void* mem, unsigned value);
 
 /* **************************************************************************/
 /**
@@ -1713,9 +1643,10 @@ PJ_DECL(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_init( pj_pool_t *pool,
  */
 typedef struct pjsip_routing_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_routing_hdr);  /**< Generic header fields. */
-    pjsip_name_addr  name_addr;	  /**< The URL in the Route/Record-Route header. */
-    pjsip_param	     other_param; /**< Other parameter. */
+    PJSIP_DECL_HDR_MEMBER(
+      struct pjsip_routing_hdr); /**< Generic header fields. */
+    pjsip_name_addr name_addr; /**< The URL in the Route/Record-Route header. */
+    pjsip_param other_param;   /**< Other parameter. */
 } pjsip_routing_hdr;
 
 /** Alias for Record-Route header. */
@@ -1724,19 +1655,18 @@ typedef pjsip_routing_hdr pjsip_rr_hdr;
 /** Alias for Route header. */
 typedef pjsip_routing_hdr pjsip_route_hdr;
 
-
-/** 
- * Create new Record-Route header from the pool. 
+/**
+ * Create new Record-Route header from the pool.
  *
  * @param pool	The pool.
  * @return	A new instance of Record-Route header.
  */
-PJ_DECL(pjsip_rr_hdr*)	    pjsip_rr_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_rr_hdr*) pjsip_rr_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1744,24 +1674,23 @@ PJ_DECL(pjsip_rr_hdr*)	    pjsip_rr_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_rr_hdr*) pjsip_rr_hdr_init( pj_pool_t *pool,
-					  void *mem );
+PJ_DECL(pjsip_rr_hdr*) pjsip_rr_hdr_init(pj_pool_t* pool, void* mem);
 
-/** 
- * Create new Route header from the pool. 
+/**
+ * Create new Route header from the pool.
  *
  * @param pool	The pool.
  * @return	A new instance of "Route" header.
  */
-PJ_DECL(pjsip_route_hdr*)   pjsip_route_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_route_hdr*) pjsip_route_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1769,27 +1698,26 @@ PJ_DECL(pjsip_route_hdr*)   pjsip_route_hdr_create( pj_pool_t *pool );
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_route_hdr*) pjsip_route_hdr_init( pj_pool_t *pool,
-					        void *mem );
+PJ_DECL(pjsip_route_hdr*) pjsip_route_hdr_init(pj_pool_t* pool, void* mem);
 
-/** 
- * Convert generic routing header to Record-Route header. 
+/**
+ * Convert generic routing header to Record-Route header.
  *
  * @param r	The generic routing header, or a "Routing" header.
  * @return	Record-Route header.
  */
-PJ_DECL(pjsip_rr_hdr*)	    pjsip_routing_hdr_set_rr( pjsip_routing_hdr *r );
+PJ_DECL(pjsip_rr_hdr*) pjsip_routing_hdr_set_rr(pjsip_routing_hdr* r);
 
-/** 
- * Convert generic routing header to "Route" header. 
+/**
+ * Convert generic routing header to "Route" header.
  *
  * @param r	The generic routing header, or a "Record-Route" header.
  * @return	"Route" header.
  */
-PJ_DECL(pjsip_route_hdr*)   pjsip_routing_hdr_set_route( pjsip_routing_hdr *r );
+PJ_DECL(pjsip_route_hdr*) pjsip_routing_hdr_set_route(pjsip_routing_hdr* r);
 
 /* **************************************************************************/
 /**
@@ -1804,12 +1732,12 @@ typedef pjsip_generic_array_hdr pjsip_require_hdr;
  *
  * @return	    New Require header instance.
  */
-PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_create(pj_pool_t* pool);
 
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
- * allocate memory block for the specified header (e.g. in C++, when the 
+ * allocate memory block for the specified header (e.g. in C++, when the
  * header is allocated with "new" operator).
  * For normal applications, they should use pjsip_xxx_hdr_create() instead,
  * which allocates memory and initialize it in one go.
@@ -1817,12 +1745,10 @@ PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_create(pj_pool_t *pool);
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_init( pj_pool_t *pool,
-						    void *mem );
-
+PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 /**
@@ -1831,12 +1757,11 @@ PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_init( pj_pool_t *pool,
 typedef struct pjsip_retry_after_hdr
 {
     /** Standard header field. */
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_retry_after_hdr); 
-    pj_int32_t	ivalue;		/**< Retry-After value	    */
-    pjsip_param	param;		/**< Optional parameters    */
-    pj_str_t	comment;	/**< Optional comments.	    */
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_retry_after_hdr);
+    pj_int32_t ivalue; /**< Retry-After value	    */
+    pjsip_param param; /**< Optional parameters    */
+    pj_str_t comment;  /**< Optional comments.	    */
 } pjsip_retry_after_hdr;
-
 
 /**
  * Create new Retry-After header instance.
@@ -1846,23 +1771,21 @@ typedef struct pjsip_retry_after_hdr
  *
  * @return	    New Retry-After header instance.
  */
-PJ_DECL(pjsip_retry_after_hdr*) pjsip_retry_after_hdr_create(pj_pool_t *pool,
-							     int value);
+PJ_DECL(pjsip_retry_after_hdr*)
+pjsip_retry_after_hdr_create(pj_pool_t* pool, int value);
 
 /**
- * Initialize a preallocated memory with the header structure. 
+ * Initialize a preallocated memory with the header structure.
  *
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  * @param value	    The Retry-After value.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_retry_after_hdr*) pjsip_retry_after_hdr_init( pj_pool_t *pool,
-							    void *mem,
-							    int value );
-
+PJ_DECL(pjsip_retry_after_hdr*)
+pjsip_retry_after_hdr_init(pj_pool_t* pool, void* mem, int value);
 
 /* **************************************************************************/
 /**
@@ -1877,19 +1800,19 @@ typedef pjsip_generic_array_hdr pjsip_supported_hdr;
  *
  * @return	    New Supported header instance.
  */
-PJ_DECL(pjsip_supported_hdr*) pjsip_supported_hdr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_supported_hdr*) pjsip_supported_hdr_create(pj_pool_t* pool);
 
 /**
- * Initialize a preallocated memory with the header structure. 
+ * Initialize a preallocated memory with the header structure.
  *
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_supported_hdr*) pjsip_supported_hdr_init( pj_pool_t *pool,
-							void *mem );
+PJ_DECL(pjsip_supported_hdr*)
+pjsip_supported_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 /**
@@ -1904,19 +1827,19 @@ typedef pjsip_generic_array_hdr pjsip_unsupported_hdr;
  *
  * @return	    New Unsupported header instance.
  */
-PJ_DECL(pjsip_unsupported_hdr*) pjsip_unsupported_hdr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_unsupported_hdr*) pjsip_unsupported_hdr_create(pj_pool_t* pool);
 
 /**
- * Initialize a preallocated memory with the header structure. 
+ * Initialize a preallocated memory with the header structure.
  *
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_unsupported_hdr*) pjsip_unsupported_hdr_init( pj_pool_t *pool,
-							    void *mem );
+PJ_DECL(pjsip_unsupported_hdr*)
+pjsip_unsupported_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 /**
@@ -1928,16 +1851,17 @@ PJ_DECL(pjsip_unsupported_hdr*) pjsip_unsupported_hdr_init( pj_pool_t *pool,
 typedef struct pjsip_via_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_via_hdr);
-    pj_str_t	     transport;	    /**< Transport type. */
-    pjsip_host_port  sent_by;	    /**< Host and optional port */
-    int		     ttl_param;	    /**< TTL parameter, or -1 if it's not specified. */
-    int		     rport_param;   /**< "rport" parameter, 0 to specify without
-					 port number, -1 means doesn't exist. */
-    pj_str_t	     maddr_param;   /**< "maddr" parameter. */
-    pj_str_t	     recvd_param;   /**< "received" parameter. */
-    pj_str_t	     branch_param;  /**< "branch" parameter. */
-    pjsip_param	     other_param;   /**< Other parameters, concatenated as single string. */
-    pj_str_t	     comment;	    /**< Comment. */
+    pj_str_t transport;      /**< Transport type. */
+    pjsip_host_port sent_by; /**< Host and optional port */
+    int ttl_param;           /**< TTL parameter, or -1 if it's not specified. */
+    int rport_param;         /**< "rport" parameter, 0 to specify without
+                                  port number, -1 means doesn't exist. */
+    pj_str_t maddr_param;    /**< "maddr" parameter. */
+    pj_str_t recvd_param;    /**< "received" parameter. */
+    pj_str_t branch_param;   /**< "branch" parameter. */
+    pjsip_param
+      other_param;    /**< Other parameters, concatenated as single string. */
+    pj_str_t comment; /**< Comment. */
 } pjsip_via_hdr;
 
 /**
@@ -1946,24 +1870,23 @@ typedef struct pjsip_via_hdr
  * @param pool	    The pool.
  * @return	    A new "Via" header instance.
  */
-PJ_DECL(pjsip_via_hdr*) pjsip_via_hdr_create( pj_pool_t *pool );
+PJ_DECL(pjsip_via_hdr*) pjsip_via_hdr_create(pj_pool_t* pool);
 
 /**
- * Initialize a preallocated memory with the header structure. 
+ * Initialize a preallocated memory with the header structure.
  *
  * @param pool	    Pool for additional memory allocation if required.
  * @param mem	    Pre-allocated memory to be initialized as the header.
  *
- * @return	    The header instance, which points to the same memory 
+ * @return	    The header instance, which points to the same memory
  *		    location as the mem argument.
  */
-PJ_DECL(pjsip_via_hdr*) pjsip_via_hdr_init( pj_pool_t *pool,
-					    void *mem );
+PJ_DECL(pjsip_via_hdr*) pjsip_via_hdr_init(pj_pool_t* pool, void* mem);
 
 /* **************************************************************************/
 /**
  * SIP Warning header.
- * In this version, Warning header is just a typedef for generic string 
+ * In this version, Warning header is just a typedef for generic string
  * header.
  */
 typedef pjsip_generic_string_hdr pjsip_warning_hdr;
@@ -1979,10 +1902,9 @@ typedef pjsip_generic_string_hdr pjsip_warning_hdr;
  *
  * @return	    The Warning header field.
  */
-PJ_DECL(pjsip_warning_hdr*) pjsip_warning_hdr_create( pj_pool_t *pool,
-						      int code,
-						      const pj_str_t *host,
-						      const pj_str_t *text);
+PJ_DECL(pjsip_warning_hdr*)
+pjsip_warning_hdr_create(pj_pool_t* pool, int code, const pj_str_t* host,
+                         const pj_str_t* text);
 
 /**
  * Create a warning header and initialize the contents from the error
@@ -1996,10 +1918,9 @@ PJ_DECL(pjsip_warning_hdr*) pjsip_warning_hdr_create( pj_pool_t *pool,
  *
  * @return	    The Warning header field.
  */
-PJ_DECL(pjsip_warning_hdr*) 
-pjsip_warning_hdr_create_from_status( pj_pool_t *pool,
-				      const pj_str_t *host,
-				      pj_status_t status);
+PJ_DECL(pjsip_warning_hdr*)
+pjsip_warning_hdr_create_from_status(pj_pool_t* pool, const pj_str_t* host,
+                                     pj_status_t status);
 
 /* **************************************************************************/
 /** Accept-Encoding header. */
@@ -2119,7 +2040,6 @@ typedef pjsip_generic_string_hdr pjsip_user_agent_hdr;
 /** Create User-Agent header. */
 #define pjsip_user_agent_hdr_create pjsip_generic_string_hdr_create
 
-
 /**
  * @}
  */
@@ -2128,8 +2048,6 @@ typedef pjsip_generic_string_hdr pjsip_user_agent_hdr;
  * @}  PJSIP_MSG
  */
 
-
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_MSG_H__ */
-
+#endif /* __PJSIP_SIP_MSG_H__ */

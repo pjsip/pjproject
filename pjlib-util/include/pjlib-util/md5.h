@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_MD5_H__
 #define __PJLIB_UTIL_MD5_H__
@@ -35,34 +34,32 @@ PJ_BEGIN_DECL
  * @{
  */
 
-
 /** MD5 context. */
 typedef struct pj_md5_context
 {
-	pj_uint32_t buf[4];	/**< buf    */
-	pj_uint32_t bits[2];	/**< bits   */
-	pj_uint8_t  in[64];	/**< in	    */
+    pj_uint32_t buf[4];  /**< buf    */
+    pj_uint32_t bits[2]; /**< bits   */
+    pj_uint8_t in[64];   /**< in	    */
 } pj_md5_context;
 
-/** Initialize the algorithm. 
+/** Initialize the algorithm.
  *  @param pms		MD5 context.
  */
-PJ_DECL(void) pj_md5_init(pj_md5_context *pms);
+PJ_DECL(void) pj_md5_init(pj_md5_context* pms);
 
-/** Append a string to the message. 
+/** Append a string to the message.
  *  @param pms		MD5 context.
  *  @param data		Data.
  *  @param nbytes	Length of data.
  */
-PJ_DECL(void) pj_md5_update( pj_md5_context *pms, 
-			     const pj_uint8_t *data, unsigned nbytes);
+PJ_DECL(void)
+pj_md5_update(pj_md5_context* pms, const pj_uint8_t* data, unsigned nbytes);
 
-/** Finish the message and return the digest. 
+/** Finish the message and return the digest.
  *  @param pms		MD5 context.
  *  @param digest	16 byte digest.
  */
-PJ_DECL(void) pj_md5_final(pj_md5_context *pms, pj_uint8_t digest[16]);
-
+PJ_DECL(void) pj_md5_final(pj_md5_context* pms, pj_uint8_t digest[16]);
 
 /**
  * @}
@@ -70,5 +67,4 @@ PJ_DECL(void) pj_md5_final(pj_md5_context *pms, pj_uint8_t digest[16]);
 
 PJ_END_DECL
 
-
-#endif	/* __PJLIB_UTIL_MD5_H__ */
+#endif /* __PJLIB_UTIL_MD5_H__ */

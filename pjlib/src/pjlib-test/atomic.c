@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -42,13 +41,12 @@
  * \include pjlib-test/atomic.c
  */
 
-
 #if INCLUDE_ATOMIC_TEST
 
 int atomic_test(void)
 {
-    pj_pool_t *pool;
-    pj_atomic_t *atomic_var;
+    pj_pool_t* pool;
+    pj_atomic_t* atomic_var;
     pj_status_t rc;
 
     pool = pj_pool_create(mem, NULL, 4096, 0, NULL);
@@ -99,11 +97,9 @@ int atomic_test(void)
     return 0;
 }
 
-
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_atomic_test;
-#endif  /* INCLUDE_ATOMIC_TEST */
-
+#endif /* INCLUDE_ATOMIC_TEST */

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_AVI_STREAM_H__
 #define __PJMEDIA_AVI_STREAM_H__
@@ -25,10 +24,7 @@
  */
 #include <pjmedia/port.h>
 
-
-
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup PJMEDIA_FILE_PLAY AVI File Player
@@ -61,8 +57,8 @@ typedef pjmedia_port pjmedia_avi_stream;
 typedef struct pjmedia_avi_streams pjmedia_avi_streams;
 
 /**
- * Create avi streams to play an AVI file. AVI player supports 
- * reading AVI file with uncompressed video format and 
+ * Create avi streams to play an AVI file. AVI player supports
+ * reading AVI file with uncompressed video format and
  * 16 bit PCM or compressed G.711 A-law/U-law audio format.
  *
  * @param pool		Pool to create the streams.
@@ -73,10 +69,9 @@ typedef struct pjmedia_avi_streams pjmedia_avi_streams;
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
-pjmedia_avi_player_create_streams(pj_pool_t *pool,
-                                  const char *filename,
+pjmedia_avi_player_create_streams(pj_pool_t* pool, const char* filename,
                                   unsigned flags,
-                                  pjmedia_avi_streams **p_streams);
+                                  pjmedia_avi_streams** p_streams);
 
 /**
  * Get the number of AVI stream.
@@ -86,7 +81,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
  * @return		The number of AVI stream.
  */
 PJ_DECL(unsigned)
-pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams);
+pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams* streams);
 
 /**
  * Return the idx-th stream of the AVI streams.
@@ -96,9 +91,8 @@ pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams);
  *
  * @return		The AVI stream or NULL if it does not exist.
  */
-PJ_DECL(pjmedia_avi_stream *)
-pjmedia_avi_streams_get_stream(pjmedia_avi_streams *streams,
-                               unsigned idx);
+PJ_DECL(pjmedia_avi_stream*)
+pjmedia_avi_streams_get_stream(pjmedia_avi_streams* streams, unsigned idx);
 
 /**
  * Return an AVI stream with a certain media type from the AVI streams.
@@ -109,8 +103,8 @@ pjmedia_avi_streams_get_stream(pjmedia_avi_streams *streams,
  *
  * @return		The AVI stream or NULL if it does not exist.
  */
-PJ_DECL(pjmedia_avi_stream *)
-pjmedia_avi_streams_get_stream_by_media(pjmedia_avi_streams *streams,
+PJ_DECL(pjmedia_avi_stream*)
+pjmedia_avi_streams_get_stream_by_media(pjmedia_avi_streams* streams,
                                         unsigned start_idx,
                                         pjmedia_type media_type);
 
@@ -121,10 +115,10 @@ pjmedia_avi_streams_get_stream_by_media(pjmedia_avi_streams *streams,
  *
  * @return		The media port.
  */
-PJ_INLINE(pjmedia_port *)
-pjmedia_avi_stream_get_port(pjmedia_avi_stream *stream)
+PJ_INLINE(pjmedia_port*)
+pjmedia_avi_stream_get_port(pjmedia_avi_stream* stream)
 {
-    return (pjmedia_port *)stream;
+    return (pjmedia_port*)stream;
 }
 
 /**
@@ -135,14 +129,13 @@ pjmedia_avi_stream_get_port(pjmedia_avi_stream *stream)
  * @return		The length of the data, in bytes. Upon error it will
  *			return negative value.
  */
-PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream);
-
+PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream* stream);
 
 #if !DEPRECATED_FOR_TICKET_2251
 /**
  * Register a callback to be called when the file reading has reached the
  * end of file. If the file is set to play repeatedly, then the callback
- * will be called multiple times. Note that only one callback can be 
+ * will be called multiple times. Note that only one callback can be
  * registered for each AVI stream.
  *
  * @param stream	The AVI stream.
@@ -154,18 +147,16 @@ PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
-pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream *stream,
-			      void *user_data,
-			      pj_status_t (*cb)(pjmedia_avi_stream *stream,
-					        void *usr_data));
+PJ_DECL(pj_status_t)
+pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream* stream, void* user_data,
+                              pj_status_t (*cb)(pjmedia_avi_stream* stream,
+                                                void* usr_data));
 #endif
-
 
 /**
  * Register a callback to be called when the file reading has reached the
  * end of file. If the file is set to play repeatedly, then the callback
- * will be called multiple times. Note that only one callback can be 
+ * will be called multiple times. Note that only one callback can be
  * registered for each AVI stream.
  *
  * @param stream	The AVI stream.
@@ -178,19 +169,15 @@ pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream *stream,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
-pjmedia_avi_stream_set_eof_cb2(pjmedia_avi_stream *stream,
-			       void *user_data,
-			       void (*cb)(pjmedia_avi_stream *stream,
-					  void *usr_data));
-
+PJ_DECL(pj_status_t)
+pjmedia_avi_stream_set_eof_cb2(pjmedia_avi_stream* stream, void* user_data,
+                               void (*cb)(pjmedia_avi_stream* stream,
+                                          void* usr_data));
 
 /**
  * @}
  */
 
-
 PJ_END_DECL
 
-
-#endif	/* __PJMEDIA_AVI_STREAM_H__ */
+#endif /* __PJMEDIA_AVI_STREAM_H__ */

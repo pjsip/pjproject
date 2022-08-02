@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TRANSPORT_UDP_H__
 #define __PJMEDIA_TRANSPORT_UDP_H__
-
 
 /**
  * @file transport_udp.h
@@ -27,7 +25,6 @@
  */
 
 #include <pjmedia/stream.h>
-
 
 /**
  * @defgroup PJMEDIA_TRANSPORT_UDP UDP Media Transport
@@ -41,7 +38,6 @@
  */
 
 PJ_BEGIN_DECL
-
 
 /**
  * Options that can be specified when creating UDP transport.
@@ -59,7 +55,6 @@ enum pjmedia_transport_udp_options
     PJMEDIA_UDP_NO_SRC_ADDR_CHECKING = 1
 };
 
-
 /**
  * Create an RTP and RTCP sockets and bind the sockets to the specified
  * port to create media transport.
@@ -73,12 +68,9 @@ enum pjmedia_transport_udp_options
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_create(pjmedia_endpt *endpt,
-						  const char *name,
-						  int port,
-						  unsigned options,
-						  pjmedia_transport **p_tp);
-
+PJ_DECL(pj_status_t)
+pjmedia_transport_udp_create(pjmedia_endpt* endpt, const char* name, int port,
+                             unsigned options, pjmedia_transport** p_tp);
 
 /**
  * Create an RTP and RTCP sockets and bind the sockets to the specified
@@ -96,12 +88,10 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_create(pjmedia_endpt *endpt,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
-						   const char *name,
-						   const pj_str_t *addr,
-						   int port,
-						   unsigned options,
-						   pjmedia_transport **p_tp);
+PJ_DECL(pj_status_t)
+pjmedia_transport_udp_create2(pjmedia_endpt* endpt, const char* name,
+                              const pj_str_t* addr, int port, unsigned options,
+                              pjmedia_transport** p_tp);
 
 /**
  * Another variant of #pjmedia_transport_udp_create() which allows
@@ -121,14 +111,10 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
-						   int af,
-						   const char *name,
-						   const pj_str_t *addr,
-						   int port,
-						   unsigned options,
-						   pjmedia_transport **p_tp);
-
+PJ_DECL(pj_status_t)
+pjmedia_transport_udp_create3(pjmedia_endpt* endpt, int af, const char* name,
+                              const pj_str_t* addr, int port, unsigned options,
+                              pjmedia_transport** p_tp);
 
 /**
  * Create UDP stream transport from existing sockets. Use this function when
@@ -142,21 +128,15 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_attach(pjmedia_endpt *endpt,
-						  const char *name,
-						  const pjmedia_sock_info *si,
-						  unsigned options,
-						  pjmedia_transport **p_tp);
-
+PJ_DECL(pj_status_t)
+pjmedia_transport_udp_attach(pjmedia_endpt* endpt, const char* name,
+                             const pjmedia_sock_info* si, unsigned options,
+                             pjmedia_transport** p_tp);
 
 PJ_END_DECL
-
 
 /**
  * @}
  */
 
-
-#endif	/* __PJMEDIA_TRANSPORT_UDP_H__ */
-
-
+#endif /* __PJMEDIA_TRANSPORT_UDP_H__ */

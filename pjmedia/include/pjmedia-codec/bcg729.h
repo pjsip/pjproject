@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_BCG729_H__
 #define __PJMEDIA_CODEC_BCG729_H__
@@ -37,18 +36,18 @@
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
  *
  * This codec factory contains G.729 codec.
- * 
+ *
  * \section pjmedia_codec_bcg729 BCG729
  *
  * BCG729 is compliant with ITU-T G.729 and Annexes A, B specifications.
  *
- * BCGG729 supports 16-bit PCM audio signal with sampling rate 8000Hz, 
+ * BCGG729 supports 16-bit PCM audio signal with sampling rate 8000Hz,
  * frame length 10ms, and resulting in bitrate 8000bps.
  *
  * \subsection codec_setting Codec Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * Note that G.729 VAD status should be signalled in SDP, see more
@@ -58,7 +57,7 @@
  *
  * The capability of VAD/DTX is specified in Annex B.
  *
- * By default, Annex B is enabled. This default setting of Annex B can 
+ * By default, Annex B is enabled. This default setting of Annex B can
  * be modified using #pjmedia_codec_mgr_set_default_param().
  *
  * In #pjmedia_codec_param, Annex B is configured via VAD setting and
@@ -85,7 +84,7 @@
  \endcode
  *
  * \note
- * The difference of Annex B status in SDP offer/answer may be considered as 
+ * The difference of Annex B status in SDP offer/answer may be considered as
  * incompatible codec in SDP negotiation.
  *
  */
@@ -93,13 +92,13 @@
 PJ_BEGIN_DECL
 
 /**
- * Initialize and register BCG729 codec factory to pjmedia endpoint. 
+ * Initialize and register BCG729 codec factory to pjmedia endpoint.
  *
  * @param endpt		The pjmedia endpoint.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt *endpt);
+PJ_DECL(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt* endpt);
 
 /**
  * Unregister BCG729 codec factory from pjmedia endpoint and deinitialize
@@ -109,13 +108,10 @@ PJ_DECL(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt *endpt);
  */
 PJ_DECL(pj_status_t) pjmedia_codec_bcg729_deinit(void);
 
-
 PJ_END_DECL
-
 
 /**
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_BCG729_H__ */
-
+#endif /* __PJMEDIA_CODEC_BCG729_H__ */

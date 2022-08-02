@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_AUTH_SIP_AUTH_MSG_H__
 #define __PJSIP_AUTH_SIP_AUTH_MSG_H__
@@ -35,8 +34,8 @@ PJ_BEGIN_DECL
  */
 struct pjsip_common_credential
 {
-    pj_str_t	realm;		/**< Credential's realm.    */
-    pjsip_param	other_param;	/**< Other parameters.	    */
+    pj_str_t realm;          /**< Credential's realm.    */
+    pjsip_param other_param; /**< Other parameters.	    */
 };
 
 /**
@@ -44,24 +43,23 @@ struct pjsip_common_credential
  */
 typedef struct pjsip_common_credential pjsip_common_credential;
 
-
 /**
  * This structure describe credential used in Authorization and
  * Proxy-Authorization header for digest authentication scheme.
  */
 struct pjsip_digest_credential
 {
-    pj_str_t	realm;		/**< Realm of the credential	*/
-    pjsip_param	other_param;	/**< Other parameters.		*/
-    pj_str_t	username;	/**< Username parameter.	*/
-    pj_str_t	nonce;		/**< Nonce parameter.		*/
-    pj_str_t	uri;		/**< URI parameter.		*/ 
-    pj_str_t	response;	/**< Response digest.		*/
-    pj_str_t	algorithm;	/**< Algorithm.			*/
-    pj_str_t	cnonce;		/**< Cnonce.			*/
-    pj_str_t	opaque;		/**< Opaque value.		*/
-    pj_str_t	qop;		/**< Quality of protection.	*/
-    pj_str_t	nc;		/**< Nonce count.		*/
+    pj_str_t realm;          /**< Realm of the credential	*/
+    pjsip_param other_param; /**< Other parameters.		*/
+    pj_str_t username;       /**< Username parameter.	*/
+    pj_str_t nonce;          /**< Nonce parameter.		*/
+    pj_str_t uri;            /**< URI parameter.		*/
+    pj_str_t response;       /**< Response digest.		*/
+    pj_str_t algorithm;      /**< Algorithm.			*/
+    pj_str_t cnonce;         /**< Cnonce.			*/
+    pj_str_t opaque;         /**< Opaque value.		*/
+    pj_str_t qop;            /**< Quality of protection.	*/
+    pj_str_t nc;             /**< Nonce count.		*/
 };
 
 /**
@@ -75,12 +73,12 @@ typedef struct pjsip_digest_credential pjsip_digest_credential;
  */
 struct pjsip_pgp_credential
 {
-    pj_str_t	realm;		/**< Realm.			*/
-    pjsip_param	other_param;	/**< Other parameters.		*/
-    pj_str_t	version;	/**< Version parameter.		*/
-    pj_str_t	signature;	/**< Signature parameter.	*/
-    pj_str_t	signed_by;	/**< Signed by parameter.	*/
-    pj_str_t	nonce;		/**< Nonce parameter.		*/
+    pj_str_t realm;          /**< Realm.			*/
+    pjsip_param other_param; /**< Other parameters.		*/
+    pj_str_t version;        /**< Version parameter.		*/
+    pj_str_t signature;      /**< Signature parameter.	*/
+    pj_str_t signed_by;      /**< Signed by parameter.	*/
+    pj_str_t nonce;          /**< Nonce parameter.		*/
 };
 
 /**
@@ -94,10 +92,10 @@ typedef struct pjsip_pgp_credential pjsip_pgp_credential;
  */
 struct pjsip_oauth_credential
 {
-    pj_str_t    realm;          /**< Realm of the credential    */
-    pjsip_param other_param;    /**< Other parameters.          */
-    pj_str_t    username;       /**< Username parameter.        */
-    pj_str_t    token;          /**< Token parameter.           */
+    pj_str_t realm;          /**< Realm of the credential    */
+    pjsip_param other_param; /**< Other parameters.          */
+    pj_str_t username;       /**< Username parameter.        */
+    pj_str_t token;          /**< Token parameter.           */
 };
 
 /**
@@ -120,10 +118,10 @@ struct pjsip_authorization_hdr
     /** Type of credentials, depending on the scheme. */
     union
     {
-	pjsip_common_credential common;	/**< Common fields.	    */
-	pjsip_digest_credential digest;	/**< Digest credentials.    */
-	pjsip_pgp_credential	pgp;	/**< PGP credentials.	    */
-	pjsip_oauth_credential  oauth;  /**< OAuth credentials.     */
+        pjsip_common_credential common; /**< Common fields.	    */
+        pjsip_digest_credential digest; /**< Digest credentials.    */
+        pjsip_pgp_credential pgp;       /**< PGP credentials.	    */
+        pjsip_oauth_credential oauth;   /**< OAuth credentials.     */
     } credential;
 };
 
@@ -142,17 +140,16 @@ typedef struct pjsip_authorization_hdr pjsip_proxy_authorization_hdr;
  * @param pool	    Pool where memory will be allocated from.
  * @return	    SIP Authorization header.
  */
-PJ_DECL(pjsip_authorization_hdr*) 
-pjsip_authorization_hdr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_authorization_hdr*)
+pjsip_authorization_hdr_create(pj_pool_t* pool);
 
 /**
  * Create SIP Proxy-Authorization header.
  * @param pool	    Pool where memory will be allocated from.
  * @return SIP	    Proxy-Authorization header.
  */
-PJ_DECL(pjsip_proxy_authorization_hdr*) 
-pjsip_proxy_authorization_hdr_create(pj_pool_t *pool);
-
+PJ_DECL(pjsip_proxy_authorization_hdr*)
+pjsip_proxy_authorization_hdr_create(pj_pool_t* pool);
 
 /**
  * This structure describes common fields in authentication challenge
@@ -160,8 +157,8 @@ pjsip_proxy_authorization_hdr_create(pj_pool_t *pool);
  */
 struct pjsip_common_challenge
 {
-    pj_str_t	realm;		/**< Realm for the challenge.	*/
-    pjsip_param	other_param;	/**< Other parameters.		*/
+    pj_str_t realm;          /**< Realm for the challenge.	*/
+    pjsip_param other_param; /**< Other parameters.		*/
 };
 
 /**
@@ -175,14 +172,14 @@ typedef struct pjsip_common_challenge pjsip_common_challenge;
  */
 struct pjsip_digest_challenge
 {
-    pj_str_t	realm;		/**< Realm for the challenge.	*/
-    pjsip_param	other_param;	/**< Other parameters.		*/
-    pj_str_t	domain;		/**< Domain.			*/
-    pj_str_t	nonce;		/**< Nonce challenge.		*/
-    pj_str_t	opaque;		/**< Opaque value.		*/
-    int		stale;		/**< Stale parameter.		*/
-    pj_str_t	algorithm;	/**< Algorithm parameter.	*/
-    pj_str_t	qop;		/**< Quality of protection.	*/
+    pj_str_t realm;          /**< Realm for the challenge.	*/
+    pjsip_param other_param; /**< Other parameters.		*/
+    pj_str_t domain;         /**< Domain.			*/
+    pj_str_t nonce;          /**< Nonce challenge.		*/
+    pj_str_t opaque;         /**< Opaque value.		*/
+    int stale;               /**< Stale parameter.		*/
+    pj_str_t algorithm;      /**< Algorithm parameter.	*/
+    pj_str_t qop;            /**< Quality of protection.	*/
 };
 
 /**
@@ -196,12 +193,12 @@ typedef struct pjsip_digest_challenge pjsip_digest_challenge;
  */
 struct pjsip_pgp_challenge
 {
-    pj_str_t	realm;		/**< Realm for the challenge.	*/
-    pjsip_param	other_param;	/**< Other parameters.		*/
-    pj_str_t	version;	/**< PGP version.		*/
-    pj_str_t	micalgorithm;	/**< micalgorithm parameter.	*/
-    pj_str_t	pubalgorithm;	/**< pubalgorithm parameter.	*/ 
-    pj_str_t	nonce;		/**< Nonce challenge.		*/
+    pj_str_t realm;          /**< Realm for the challenge.	*/
+    pjsip_param other_param; /**< Other parameters.		*/
+    pj_str_t version;        /**< PGP version.		*/
+    pj_str_t micalgorithm;   /**< micalgorithm parameter.	*/
+    pj_str_t pubalgorithm;   /**< pubalgorithm parameter.	*/
+    pj_str_t nonce;          /**< Nonce challenge.		*/
 };
 
 /**
@@ -219,16 +216,16 @@ struct pjsip_www_authenticate_hdr
     PJSIP_DECL_HDR_MEMBER(struct pjsip_www_authenticate_hdr);
 
     /** Authentication scheme  */
-    pj_str_t	scheme;
+    pj_str_t scheme;
 
     /** This union contains structures that are only relevant
         depending on the value of the scheme being used.
      */
     union
     {
-	pjsip_common_challenge	common;	/**< Common fields.	*/
-	pjsip_digest_challenge	digest;	/**< Digest challenge.	*/
-	pjsip_pgp_challenge	pgp;	/**< PGP challenge.	*/
+        pjsip_common_challenge common; /**< Common fields.	*/
+        pjsip_digest_challenge digest; /**< Digest challenge.	*/
+        pjsip_pgp_challenge pgp;       /**< PGP challenge.	*/
     } challenge;
 };
 
@@ -242,15 +239,14 @@ typedef struct pjsip_www_authenticate_hdr pjsip_www_authenticate_hdr;
  */
 typedef struct pjsip_www_authenticate_hdr pjsip_proxy_authenticate_hdr;
 
-
 /**
  * Create SIP WWW-Authenticate header.
  *
  * @param pool	    Pool where memory will be allocated from.
  * @return	    SIP WWW-Authenticate header.
  */
-PJ_DECL(pjsip_www_authenticate_hdr*) 
-pjsip_www_authenticate_hdr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_www_authenticate_hdr*)
+pjsip_www_authenticate_hdr_create(pj_pool_t* pool);
 
 /**
  * Create SIP Proxy-Authenticate header.
@@ -258,8 +254,8 @@ pjsip_www_authenticate_hdr_create(pj_pool_t *pool);
  * @param pool	    Pool where memory will be allocated from.
  * @return	    SIP Proxy-Authenticate header.
  */
-PJ_DECL(pjsip_proxy_authenticate_hdr*) 
-pjsip_proxy_authenticate_hdr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_proxy_authenticate_hdr*)
+pjsip_proxy_authenticate_hdr_create(pj_pool_t* pool);
 
 /**
  * @}
@@ -267,4 +263,4 @@ pjsip_proxy_authenticate_hdr_create(pj_pool_t *pool);
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_AUTH_SIP_AUTH_MSG_H__ */
+#endif /* __PJSIP_AUTH_SIP_AUTH_MSG_H__ */

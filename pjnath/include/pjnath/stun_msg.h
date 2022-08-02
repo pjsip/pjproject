@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_STUN_MSG_H__
 #define __PJNATH_STUN_MSG_H__
@@ -28,9 +27,7 @@
 #include <pjnath/types.h>
 #include <pj/sock.h>
 
-
 PJ_BEGIN_DECL
-
 
 /* **************************************************************************/
 /**
@@ -40,12 +37,10 @@ PJ_BEGIN_DECL
  * @{
  */
 
-
 /**
  * STUN magic cookie.
  */
-#define PJ_STUN_MAGIC			    0x2112A442
-
+#define PJ_STUN_MAGIC 0x2112A442
 
 /**
  * STUN method constants.
@@ -55,57 +50,57 @@ enum pj_stun_method_e
     /**
      * STUN Binding method as defined by RFC 3489-bis.
      */
-    PJ_STUN_BINDING_METHOD		    = 1,
+    PJ_STUN_BINDING_METHOD = 1,
 
     /**
      * STUN Shared Secret method as defined by RFC 3489-bis.
      */
-    PJ_STUN_SHARED_SECRET_METHOD	    = 2,
+    PJ_STUN_SHARED_SECRET_METHOD = 2,
 
     /**
      * STUN/TURN Allocate method as defined by draft-ietf-behave-turn
      */
-    PJ_STUN_ALLOCATE_METHOD		    = 3,
+    PJ_STUN_ALLOCATE_METHOD = 3,
 
     /**
      * STUN/TURN Refresh method as defined by draft-ietf-behave-turn
      */
-    PJ_STUN_REFRESH_METHOD		    = 4,
+    PJ_STUN_REFRESH_METHOD = 4,
 
     /**
      * STUN/TURN Send indication as defined by draft-ietf-behave-turn
      */
-    PJ_STUN_SEND_METHOD			    = 6,
+    PJ_STUN_SEND_METHOD = 6,
 
     /**
      * STUN/TURN Data indication as defined by draft-ietf-behave-turn
      */
-    PJ_STUN_DATA_METHOD			    = 7,
+    PJ_STUN_DATA_METHOD = 7,
 
     /**
      * STUN/TURN CreatePermission method as defined by draft-ietf-behave-turn
      */
-    PJ_STUN_CREATE_PERM_METHOD		    = 8,
+    PJ_STUN_CREATE_PERM_METHOD = 8,
 
     /**
      * STUN/TURN ChannelBind as defined by draft-ietf-behave-turn
      */
-    PJ_STUN_CHANNEL_BIND_METHOD		    = 9,
+    PJ_STUN_CHANNEL_BIND_METHOD = 9,
 
     /**
      * STUN/TURN Connect as defined by RFC 6062
      */
-    PJ_STUN_CONNECT_METHOD		    = 10,
+    PJ_STUN_CONNECT_METHOD = 10,
 
     /**
      * STUN/TURN ConnectionBind as defined by RFC 6062
      */
-    PJ_STUN_CONNECTION_BIND_METHOD	    = 11,
+    PJ_STUN_CONNECTION_BIND_METHOD = 11,
 
     /**
      * STUN/TURN ConnectionAttempt as defined by RFC 6062
      */
-    PJ_STUN_CONNECTION_ATTEMPT_METHOD	    = 12,
+    PJ_STUN_CONNECTION_ATTEMPT_METHOD = 12,
 
     /**
      * All known methods.
@@ -113,13 +108,11 @@ enum pj_stun_method_e
     PJ_STUN_METHOD_MAX
 };
 
-
 /**
  * Retrieve the STUN method from the message-type field of the STUN
  * message.
  */
-#define PJ_STUN_GET_METHOD(msg_type)	((msg_type) & 0xFEEF)
-
+#define PJ_STUN_GET_METHOD(msg_type) ((msg_type)&0xFEEF)
 
 /**
  * STUN message classes constants.
@@ -129,68 +122,63 @@ enum pj_stun_msg_class_e
     /**
      * This specifies that the message type is a STUN request message.
      */
-    PJ_STUN_REQUEST_CLASS	    = 0,
+    PJ_STUN_REQUEST_CLASS = 0,
 
     /**
      * This specifies that the message type is a STUN indication message.
      */
-    PJ_STUN_INDICATION_CLASS	    = 1,
+    PJ_STUN_INDICATION_CLASS = 1,
 
     /**
      * This specifies that the message type is a STUN successful response.
      */
-    PJ_STUN_SUCCESS_CLASS	    = 2,
+    PJ_STUN_SUCCESS_CLASS = 2,
 
     /**
      * This specifies that the message type is a STUN error response.
      */
-    PJ_STUN_ERROR_CLASS		    = 3
+    PJ_STUN_ERROR_CLASS = 3
 };
-
 
 /**
  * Determine if the message type is a request.
  */
-#define PJ_STUN_IS_REQUEST(msg_type)	(((msg_type) & 0x0110) == 0x0000)
-
+#define PJ_STUN_IS_REQUEST(msg_type)          (((msg_type)&0x0110) == 0x0000)
 
 /**
  * Determine if the message type is a successful response.
  */
-#define PJ_STUN_IS_SUCCESS_RESPONSE(msg_type) (((msg_type) & 0x0110) == 0x0100)
+#define PJ_STUN_IS_SUCCESS_RESPONSE(msg_type) (((msg_type)&0x0110) == 0x0100)
 
 /**
  * The response bit in the message type.
  */
-#define PJ_STUN_SUCCESS_RESPONSE_BIT	(0x0100)
-
+#define PJ_STUN_SUCCESS_RESPONSE_BIT          (0x0100)
 
 /**
  * Determine if the message type is an error response.
  */
-#define PJ_STUN_IS_ERROR_RESPONSE(msg_type) (((msg_type) & 0x0110) == 0x0110)
+#define PJ_STUN_IS_ERROR_RESPONSE(msg_type)   (((msg_type)&0x0110) == 0x0110)
 
 /**
  * The error response bit in the message type.
  */
-#define PJ_STUN_ERROR_RESPONSE_BIT	(0x0110)
+#define PJ_STUN_ERROR_RESPONSE_BIT            (0x0110)
 
 /**
  * Determine if the message type is a response.
  */
-#define PJ_STUN_IS_RESPONSE(msg_type) (((msg_type) & 0x0100) == 0x0100)
-
+#define PJ_STUN_IS_RESPONSE(msg_type)         (((msg_type)&0x0100) == 0x0100)
 
 /**
  * Determine if the message type is an indication message.
  */
-#define PJ_STUN_IS_INDICATION(msg_type)	(((msg_type) & 0x0110) == 0x0010)
+#define PJ_STUN_IS_INDICATION(msg_type)       (((msg_type)&0x0110) == 0x0010)
 
 /**
  * The error response bit in the message type.
  */
-#define PJ_STUN_INDICATION_BIT		(0x0010)
-
+#define PJ_STUN_INDICATION_BIT                (0x0010)
 
 /**
  * This enumeration describes STUN message types.
@@ -200,198 +188,189 @@ typedef enum pj_stun_msg_type
     /**
      * STUN BINDING request.
      */
-    PJ_STUN_BINDING_REQUEST		    = 0x0001,
+    PJ_STUN_BINDING_REQUEST = 0x0001,
 
     /**
      * Successful response to STUN BINDING-REQUEST.
      */
-    PJ_STUN_BINDING_RESPONSE		    = 0x0101,
+    PJ_STUN_BINDING_RESPONSE = 0x0101,
 
     /**
      * Error response to STUN BINDING-REQUEST.
      */
-    PJ_STUN_BINDING_ERROR_RESPONSE	    = 0x0111,
+    PJ_STUN_BINDING_ERROR_RESPONSE = 0x0111,
 
     /**
      * Binding Indication (ICE)
      */
-    PJ_STUN_BINDING_INDICATION		    = 0x0011,
+    PJ_STUN_BINDING_INDICATION = 0x0011,
 
     /**
      * STUN SHARED-SECRET reqeust.
      */
-    PJ_STUN_SHARED_SECRET_REQUEST	    = 0x0002,
+    PJ_STUN_SHARED_SECRET_REQUEST = 0x0002,
 
     /**
      * Successful response to STUN SHARED-SECRET reqeust.
      */
-    PJ_STUN_SHARED_SECRET_RESPONSE	    = 0x0102,
+    PJ_STUN_SHARED_SECRET_RESPONSE = 0x0102,
 
     /**
      * Error response to STUN SHARED-SECRET reqeust.
      */
-    PJ_STUN_SHARED_SECRET_ERROR_RESPONSE    = 0x0112,
-
+    PJ_STUN_SHARED_SECRET_ERROR_RESPONSE = 0x0112,
 
     /**
      * STUN/TURN Allocate Request
      */
-    PJ_STUN_ALLOCATE_REQUEST		    = 0x0003,
+    PJ_STUN_ALLOCATE_REQUEST = 0x0003,
 
     /**
      * Successful response to STUN/TURN Allocate Request
      */
-    PJ_STUN_ALLOCATE_RESPONSE		    = 0x0103,
+    PJ_STUN_ALLOCATE_RESPONSE = 0x0103,
 
     /**
      * Failure response to STUN/TURN Allocate Request
      */
-    PJ_STUN_ALLOCATE_ERROR_RESPONSE	    = 0x0113,
-
+    PJ_STUN_ALLOCATE_ERROR_RESPONSE = 0x0113,
 
     /**
      * STUN/TURN REFRESH Request
      */
-    PJ_STUN_REFRESH_REQUEST		    = 0x0004,
+    PJ_STUN_REFRESH_REQUEST = 0x0004,
 
     /**
      * Successful response to STUN REFRESH request
      */
-    PJ_STUN_REFRESH_RESPONSE		    = 0x0104,
+    PJ_STUN_REFRESH_RESPONSE = 0x0104,
 
     /**
      * Error response to STUN REFRESH request.
      */
-    PJ_STUN_REFRESH_ERROR_RESPONSE	    = 0x0114,
-
+    PJ_STUN_REFRESH_ERROR_RESPONSE = 0x0114,
 
     /**
      * TURN Send indication
      */
-    PJ_STUN_SEND_INDICATION		    = 0x0016,
-
+    PJ_STUN_SEND_INDICATION = 0x0016,
 
     /**
      * TURN Data indication
      */
-    PJ_STUN_DATA_INDICATION		    = 0x0017,
-
+    PJ_STUN_DATA_INDICATION = 0x0017,
 
     /**
      * TURN CreatePermission request
      */
-    PJ_STUN_CREATE_PERM_REQUEST		    = 0x0008,
+    PJ_STUN_CREATE_PERM_REQUEST = 0x0008,
 
     /**
      * TURN CreatePermission successful response.
      */
-    PJ_STUN_CREATE_PERM_RESPONSE	    = 0x0108,
+    PJ_STUN_CREATE_PERM_RESPONSE = 0x0108,
 
     /**
      * TURN CreatePermission failure response
      */
-    PJ_STUN_CREATE_PERM_ERROR_RESPONSE	    = 0x0118,
-
+    PJ_STUN_CREATE_PERM_ERROR_RESPONSE = 0x0118,
 
     /**
      * STUN/TURN ChannelBind Request
      */
-    PJ_STUN_CHANNEL_BIND_REQUEST	    = 0x0009,
+    PJ_STUN_CHANNEL_BIND_REQUEST = 0x0009,
 
     /**
      * Successful response to STUN ChannelBind request
      */
-    PJ_STUN_CHANNEL_BIND_RESPONSE	    = 0x0109,
+    PJ_STUN_CHANNEL_BIND_RESPONSE = 0x0109,
 
     /**
      * Error response to STUN ChannelBind request.
      */
-    PJ_STUN_CHANNEL_BIND_ERROR_RESPONSE	    = 0x0119,
+    PJ_STUN_CHANNEL_BIND_ERROR_RESPONSE = 0x0119,
 
     /**
      * STUN/TURN Connect Request
      */
-    PJ_STUN_CONNECT_REQUEST                 = 0x000a,
+    PJ_STUN_CONNECT_REQUEST = 0x000a,
 
     /**
      * STUN/TURN ConnectBind Request
      */
-    PJ_STUN_CONNECTION_BIND_REQUEST	    = 0x000b,
+    PJ_STUN_CONNECTION_BIND_REQUEST = 0x000b,
 
     /**
      * TURN ConnectionAttempt indication
      */
-    PJ_STUN_CONNECTION_ATTEMPT_INDICATION   = 0x001c,
+    PJ_STUN_CONNECTION_ATTEMPT_INDICATION = 0x001c,
 
 } pj_stun_msg_type;
-
-
 
 /**
  * This enumeration describes STUN attribute types.
  */
 typedef enum pj_stun_attr_type
 {
-    PJ_STUN_ATTR_MAPPED_ADDR	    = 0x0001,/**< MAPPED-ADDRESS.	    */
-    PJ_STUN_ATTR_RESPONSE_ADDR	    = 0x0002,/**< RESPONSE-ADDRESS (deprcatd)*/
-    PJ_STUN_ATTR_CHANGE_REQUEST	    = 0x0003,/**< CHANGE-REQUEST (deprecated)*/
-    PJ_STUN_ATTR_SOURCE_ADDR	    = 0x0004,/**< SOURCE-ADDRESS (deprecated)*/
-    PJ_STUN_ATTR_CHANGED_ADDR	    = 0x0005,/**< CHANGED-ADDRESS (deprecatd)*/
-    PJ_STUN_ATTR_USERNAME	    = 0x0006,/**< USERNAME attribute.	    */
-    PJ_STUN_ATTR_PASSWORD	    = 0x0007,/**< was PASSWORD attribute.   */
-    PJ_STUN_ATTR_MESSAGE_INTEGRITY  = 0x0008,/**< MESSAGE-INTEGRITY.	    */
-    PJ_STUN_ATTR_ERROR_CODE	    = 0x0009,/**< ERROR-CODE.		    */
-    PJ_STUN_ATTR_UNKNOWN_ATTRIBUTES = 0x000A,/**< UNKNOWN-ATTRIBUTES.	    */
-    PJ_STUN_ATTR_REFLECTED_FROM	    = 0x000B,/**< REFLECTED-FROM (deprecatd)*/
-    PJ_STUN_ATTR_CHANNEL_NUMBER	    = 0x000C,/**< TURN CHANNEL-NUMBER	    */
-    PJ_STUN_ATTR_LIFETIME	    = 0x000D,/**< TURN LIFETIME attr.	    */
-    PJ_STUN_ATTR_MAGIC_COOKIE	    = 0x000F,/**< MAGIC-COOKIE attr (deprec)*/
-    PJ_STUN_ATTR_BANDWIDTH	    = 0x0010,/**< TURN BANDWIDTH (deprec)   */
-    PJ_STUN_ATTR_XOR_PEER_ADDR	    = 0x0012,/**< TURN XOR-PEER-ADDRESS	    */
-    PJ_STUN_ATTR_DATA		    = 0x0013,/**< DATA attribute.	    */
-    PJ_STUN_ATTR_REALM		    = 0x0014,/**< REALM attribute.	    */
-    PJ_STUN_ATTR_NONCE		    = 0x0015,/**< NONCE attribute.	    */
-    PJ_STUN_ATTR_XOR_RELAYED_ADDR   = 0x0016,/**< TURN XOR-RELAYED-ADDRESS  */
-    PJ_STUN_ATTR_REQ_ADDR_TYPE	    = 0x0017,/**< REQUESTED-ADDRESS-TYPE    */
-    PJ_STUN_ATTR_REQ_ADDR_FAMILY    = 0x0017,/**< REQUESTED-ADDRESS-FAMILY  */
-    PJ_STUN_ATTR_EVEN_PORT	    = 0x0018,/**< TURN EVEN-PORT	    */
-    PJ_STUN_ATTR_REQ_TRANSPORT	    = 0x0019,/**< TURN REQUESTED-TRANSPORT  */
-    PJ_STUN_ATTR_DONT_FRAGMENT	    = 0x001A,/**< TURN DONT-FRAGMENT	    */
-    PJ_STUN_ATTR_XOR_MAPPED_ADDR    = 0x0020,/**< XOR-MAPPED-ADDRESS	    */
-    PJ_STUN_ATTR_TIMER_VAL	    = 0x0021,/**< TIMER-VAL attribute.	    */
-    PJ_STUN_ATTR_RESERVATION_TOKEN  = 0x0022,/**< TURN RESERVATION-TOKEN    */
-    PJ_STUN_ATTR_XOR_REFLECTED_FROM = 0x0023,/**< XOR-REFLECTED-FROM	    */
-    PJ_STUN_ATTR_PRIORITY	    = 0x0024,/**< PRIORITY		    */
-    PJ_STUN_ATTR_USE_CANDIDATE	    = 0x0025,/**< USE-CANDIDATE		    */
-    PJ_STUN_ATTR_CONNECTION_ID	    = 0x002a,/**< CONNECTION-ID		    */
-    PJ_STUN_ATTR_ICMP		    = 0x0030,/**< ICMP (TURN)		    */
+    PJ_STUN_ATTR_MAPPED_ADDR = 0x0001,        /**< MAPPED-ADDRESS.	    */
+    PJ_STUN_ATTR_RESPONSE_ADDR = 0x0002,      /**< RESPONSE-ADDRESS (deprcatd)*/
+    PJ_STUN_ATTR_CHANGE_REQUEST = 0x0003,     /**< CHANGE-REQUEST (deprecated)*/
+    PJ_STUN_ATTR_SOURCE_ADDR = 0x0004,        /**< SOURCE-ADDRESS (deprecated)*/
+    PJ_STUN_ATTR_CHANGED_ADDR = 0x0005,       /**< CHANGED-ADDRESS (deprecatd)*/
+    PJ_STUN_ATTR_USERNAME = 0x0006,           /**< USERNAME attribute.	    */
+    PJ_STUN_ATTR_PASSWORD = 0x0007,           /**< was PASSWORD attribute.   */
+    PJ_STUN_ATTR_MESSAGE_INTEGRITY = 0x0008,  /**< MESSAGE-INTEGRITY.	    */
+    PJ_STUN_ATTR_ERROR_CODE = 0x0009,         /**< ERROR-CODE.		    */
+    PJ_STUN_ATTR_UNKNOWN_ATTRIBUTES = 0x000A, /**< UNKNOWN-ATTRIBUTES.	    */
+    PJ_STUN_ATTR_REFLECTED_FROM = 0x000B,     /**< REFLECTED-FROM (deprecatd)*/
+    PJ_STUN_ATTR_CHANNEL_NUMBER = 0x000C,     /**< TURN CHANNEL-NUMBER	    */
+    PJ_STUN_ATTR_LIFETIME = 0x000D,           /**< TURN LIFETIME attr.	    */
+    PJ_STUN_ATTR_MAGIC_COOKIE = 0x000F,       /**< MAGIC-COOKIE attr (deprec)*/
+    PJ_STUN_ATTR_BANDWIDTH = 0x0010,          /**< TURN BANDWIDTH (deprec)   */
+    PJ_STUN_ATTR_XOR_PEER_ADDR = 0x0012,      /**< TURN XOR-PEER-ADDRESS	    */
+    PJ_STUN_ATTR_DATA = 0x0013,               /**< DATA attribute.	    */
+    PJ_STUN_ATTR_REALM = 0x0014,              /**< REALM attribute.	    */
+    PJ_STUN_ATTR_NONCE = 0x0015,              /**< NONCE attribute.	    */
+    PJ_STUN_ATTR_XOR_RELAYED_ADDR = 0x0016,   /**< TURN XOR-RELAYED-ADDRESS  */
+    PJ_STUN_ATTR_REQ_ADDR_TYPE = 0x0017,      /**< REQUESTED-ADDRESS-TYPE    */
+    PJ_STUN_ATTR_REQ_ADDR_FAMILY = 0x0017,    /**< REQUESTED-ADDRESS-FAMILY  */
+    PJ_STUN_ATTR_EVEN_PORT = 0x0018,          /**< TURN EVEN-PORT	    */
+    PJ_STUN_ATTR_REQ_TRANSPORT = 0x0019,      /**< TURN REQUESTED-TRANSPORT  */
+    PJ_STUN_ATTR_DONT_FRAGMENT = 0x001A,      /**< TURN DONT-FRAGMENT	    */
+    PJ_STUN_ATTR_XOR_MAPPED_ADDR = 0x0020,    /**< XOR-MAPPED-ADDRESS	    */
+    PJ_STUN_ATTR_TIMER_VAL = 0x0021,          /**< TIMER-VAL attribute.	    */
+    PJ_STUN_ATTR_RESERVATION_TOKEN = 0x0022,  /**< TURN RESERVATION-TOKEN    */
+    PJ_STUN_ATTR_XOR_REFLECTED_FROM = 0x0023, /**< XOR-REFLECTED-FROM	    */
+    PJ_STUN_ATTR_PRIORITY = 0x0024,           /**< PRIORITY		    */
+    PJ_STUN_ATTR_USE_CANDIDATE = 0x0025,      /**< USE-CANDIDATE		    */
+    PJ_STUN_ATTR_CONNECTION_ID = 0x002a,      /**< CONNECTION-ID		    */
+    PJ_STUN_ATTR_ICMP = 0x0030,               /**< ICMP (TURN)		    */
 
     PJ_STUN_ATTR_END_MANDATORY_ATTR,
 
-    PJ_STUN_ATTR_START_EXTENDED_ATTR= 0x8021,
+    PJ_STUN_ATTR_START_EXTENDED_ATTR = 0x8021,
 
-    PJ_STUN_ATTR_SOFTWARE	    = 0x8022,/**< SOFTWARE attribute.	    */
-    PJ_STUN_ATTR_ALTERNATE_SERVER   = 0x8023,/**< ALTERNATE-SERVER.	    */
-    PJ_STUN_ATTR_REFRESH_INTERVAL   = 0x8024,/**< REFRESH-INTERVAL.	    */
-    PJ_STUN_ATTR_FINGERPRINT	    = 0x8028,/**< FINGERPRINT attribute.    */
-    PJ_STUN_ATTR_ICE_CONTROLLED	    = 0x8029,/**< ICE-CCONTROLLED attribute.*/
-    PJ_STUN_ATTR_ICE_CONTROLLING    = 0x802a,/**< ICE-CCONTROLLING attribute*/
+    PJ_STUN_ATTR_SOFTWARE = 0x8022,         /**< SOFTWARE attribute.	    */
+    PJ_STUN_ATTR_ALTERNATE_SERVER = 0x8023, /**< ALTERNATE-SERVER.	    */
+    PJ_STUN_ATTR_REFRESH_INTERVAL = 0x8024, /**< REFRESH-INTERVAL.	    */
+    PJ_STUN_ATTR_FINGERPRINT = 0x8028,      /**< FINGERPRINT attribute.    */
+    PJ_STUN_ATTR_ICE_CONTROLLED = 0x8029,   /**< ICE-CCONTROLLED attribute.*/
+    PJ_STUN_ATTR_ICE_CONTROLLING = 0x802a,  /**< ICE-CCONTROLLING attribute*/
 
     PJ_STUN_ATTR_END_EXTENDED_ATTR
 
 } pj_stun_attr_type;
-
 
 /**
  * STUN error codes, which goes into STUN ERROR-CODE attribute.
  */
 typedef enum pj_stun_status
 {
-    PJ_STUN_SC_TRY_ALTERNATE		= 300,  /**< Try Alternate	    */
-    PJ_STUN_SC_BAD_REQUEST		= 400,  /**< Bad Request	    */
-    PJ_STUN_SC_UNAUTHORIZED	        = 401,  /**< Unauthorized	    */
-    PJ_STUN_SC_FORBIDDEN		= 403,	/**< Forbidden (TURN)	    */
-    PJ_STUN_SC_UNKNOWN_ATTRIBUTE        = 420,  /**< Unknown Attribute	    */
+    PJ_STUN_SC_TRY_ALTERNATE = 300,     /**< Try Alternate	    */
+    PJ_STUN_SC_BAD_REQUEST = 400,       /**< Bad Request	    */
+    PJ_STUN_SC_UNAUTHORIZED = 401,      /**< Unauthorized	    */
+    PJ_STUN_SC_FORBIDDEN = 403,         /**< Forbidden (TURN)	    */
+    PJ_STUN_SC_UNKNOWN_ATTRIBUTE = 420, /**< Unknown Attribute	    */
 #if 0
     /* These were obsolete in recent rfc3489bis */
     //PJ_STUN_SC_STALE_CREDENTIALS      = 430,  /**< Stale Credentials	    */
@@ -402,27 +381,26 @@ typedef enum pj_stun_status
     //PJ_STUN_SC_MISSING_NONCE		= 435,  /**< Missing Nonce	    */
     //PJ_STUN_SC_UNKNOWN_USERNAME	= 436,  /**< Unknown Username	    */
 #endif
-    PJ_STUN_SC_ALLOCATION_MISMATCH      = 437,  /**< TURN Alloc Mismatch    */
-    PJ_STUN_SC_STALE_NONCE	        = 438,  /**< Stale Nonce	    */
-    PJ_STUN_SC_TRANSITIONING		= 439,  /**< Transitioning.	    */
-    PJ_STUN_SC_WRONG_CREDENTIALS	= 441,	/**< TURN Wrong Credentials */
-    PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport or
-						     Protocol (TURN) */
-    PJ_STUN_SC_OPER_TCP_ONLY		= 445,  /**< Operation for TCP Only */
-    PJ_STUN_SC_CONNECTION_FAILURE       = 446,  /**< Connection Failure	    */
-    PJ_STUN_SC_CONNECTION_TIMEOUT       = 447,  /**< Connection Timeout	    */
-    PJ_STUN_SC_ALLOCATION_QUOTA_REACHED = 486,  /**< Allocation Quota Reached
-						     (TURN) */
-    PJ_STUN_SC_ROLE_CONFLICT		= 487,  /**< Role Conflict	    */
-    PJ_STUN_SC_SERVER_ERROR	        = 500,  /**< Server Error	    */
-    PJ_STUN_SC_INSUFFICIENT_CAPACITY	= 508,  /**< Insufficient Capacity 
-						     (TURN) */
-    PJ_STUN_SC_GLOBAL_FAILURE	        = 600   /**< Global Failure	    */
+    PJ_STUN_SC_ALLOCATION_MISMATCH = 437,      /**< TURN Alloc Mismatch    */
+    PJ_STUN_SC_STALE_NONCE = 438,              /**< Stale Nonce	    */
+    PJ_STUN_SC_TRANSITIONING = 439,            /**< Transitioning.	    */
+    PJ_STUN_SC_WRONG_CREDENTIALS = 441,        /**< TURN Wrong Credentials */
+    PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO = 442,   /**< Unsupported Transport or
+                                                    Protocol (TURN) */
+    PJ_STUN_SC_OPER_TCP_ONLY = 445,            /**< Operation for TCP Only */
+    PJ_STUN_SC_CONNECTION_FAILURE = 446,       /**< Connection Failure	    */
+    PJ_STUN_SC_CONNECTION_TIMEOUT = 447,       /**< Connection Timeout	    */
+    PJ_STUN_SC_ALLOCATION_QUOTA_REACHED = 486, /**< Allocation Quota Reached
+                                                    (TURN) */
+    PJ_STUN_SC_ROLE_CONFLICT = 487,            /**< Role Conflict	    */
+    PJ_STUN_SC_SERVER_ERROR = 500,             /**< Server Error	    */
+    PJ_STUN_SC_INSUFFICIENT_CAPACITY = 508,    /**< Insufficient Capacity
+                                                    (TURN) */
+    PJ_STUN_SC_GLOBAL_FAILURE = 600            /**< Global Failure	    */
 } pj_stun_status;
 
-
 /**
- * This structure describes STUN message header. A STUN message has the 
+ * This structure describes STUN message header. A STUN message has the
  * following format:
  *
  * \verbatim
@@ -448,20 +426,20 @@ typedef struct pj_stun_msg_hdr
     /**
      * STUN message type, which the first two bits must be zeroes.
      */
-    pj_uint16_t		type;
+    pj_uint16_t type;
 
     /**
      * The message length is the size, in bytes, of the message not
      * including the 20 byte STUN header.
      */
-    pj_uint16_t		length;
+    pj_uint16_t length;
 
     /**
      * The magic cookie is a fixed value, 0x2112A442 (PJ_STUN_MAGIC constant).
-     * In the previous version of this specification [15] this field was part 
+     * In the previous version of this specification [15] this field was part
      * of the transaction ID.
      */
-    pj_uint32_t		magic;
+    pj_uint32_t magic;
 
     /**
      * The transaction ID is a 96 bit identifier.  STUN transactions are
@@ -469,12 +447,11 @@ typedef struct pj_stun_msg_hdr
      * response transactions, the transaction ID is chosen by the STUN
      * client and MUST be unique for each new STUN transaction generated by
      * that STUN client.  The transaction ID MUST be uniformly and randomly
-     * distributed between 0 and 2**96 - 1. 
+     * distributed between 0 and 2**96 - 1.
      */
-    pj_uint8_t		tsx_id[12];
+    pj_uint8_t tsx_id[12];
 
 } pj_stun_msg_hdr;
-
 
 /**
  * This structre describes STUN attribute header. Each attribute is
@@ -496,7 +473,7 @@ typedef struct pj_stun_attr_hdr
     /**
      * STUN attribute type.
      */
-    pj_uint16_t		type;
+    pj_uint16_t type;
 
     /**
      * The Length refers to the length of the actual useful content of the
@@ -504,10 +481,9 @@ typedef struct pj_stun_attr_hdr
      * in the Length field refers to the length of the Value part of the
      * attribute prior to padding - i.e., the useful content.
      */
-    pj_uint16_t		length;
+    pj_uint16_t length;
 
 } pj_stun_attr_hdr;
-
 
 /**
  * This structure describes STUN generic IP address attribute, used for
@@ -539,21 +515,20 @@ typedef struct pj_stun_sockaddr_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
+    pj_stun_attr_hdr hdr;
 
     /**
      * Flag to indicate whether this attribute should be sent in XOR-ed
      * format, or has been received in XOR-ed format.
      */
-    pj_bool_t		xor_ed;
+    pj_bool_t xor_ed;
 
     /**
      * The socket address
      */
-    pj_sockaddr		sockaddr;
+    pj_sockaddr sockaddr;
 
 } pj_stun_sockaddr_attr;
-
 
 /**
  * This structure represents a generic STUN attributes with no payload,
@@ -564,10 +539,9 @@ typedef struct pj_stun_empty_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
+    pj_stun_attr_hdr hdr;
 
 } pj_stun_empty_attr;
-
 
 /**
  * This structure represents generic STUN string attributes, such as STUN
@@ -578,15 +552,14 @@ typedef struct pj_stun_string_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
+    pj_stun_attr_hdr hdr;
 
     /**
      * The string value.
      */
-    pj_str_t		value;
+    pj_str_t value;
 
 } pj_stun_string_attr;
-
 
 /**
  * This structure represents a generic STUN attributes with 32bit (unsigned)
@@ -597,15 +570,14 @@ typedef struct pj_stun_uint_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
-    
+    pj_stun_attr_hdr hdr;
+
     /**
      * The 32bit value, in host byte order.
      */
-    pj_uint32_t		value;
+    pj_uint32_t value;
 
 } pj_stun_uint_attr;
-
 
 /**
  * This structure represents a generic STUN attributes with 64bit (unsigned)
@@ -616,15 +588,14 @@ typedef struct pj_stun_uint64_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
-    
+    pj_stun_attr_hdr hdr;
+
     /**
      * The 64bit value, in host byte order, represented with pj_timestamp.
      */
-    pj_timestamp	value;
+    pj_timestamp value;
 
 } pj_stun_uint64_attr;
-
 
 /**
  * This structure represents generic STUN attributes to hold a raw binary
@@ -635,26 +606,25 @@ typedef struct pj_stun_binary_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
-    
+    pj_stun_attr_hdr hdr;
+
     /**
      * Special signature to indicate that this is a valid attribute even
      * though we don't have meta-data to describe this attribute.
      */
-    pj_uint32_t		magic;
+    pj_uint32_t magic;
 
     /**
      * Length of the data.
      */
-    unsigned		length;
+    unsigned length;
 
     /**
      * The raw data.
      */
-    pj_uint8_t	       *data;
+    pj_uint8_t* data;
 
 } pj_stun_binary_attr;
-
 
 /**
  * This structure describes STUN MESSAGE-INTEGRITY attribute.
@@ -668,29 +638,27 @@ typedef struct pj_stun_msgint_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
+    pj_stun_attr_hdr hdr;
 
     /**
      * The 20 bytes hmac value.
      */
-    pj_uint8_t		hmac[20];
+    pj_uint8_t hmac[20];
 
 } pj_stun_msgint_attr;
 
-
 /**
- * This structure describes STUN FINGERPRINT attribute. The FINGERPRINT 
- * attribute can be present in all STUN messages.  It is computed as 
- * the CRC-32 of the STUN message up to (but excluding) the FINGERPRINT 
+ * This structure describes STUN FINGERPRINT attribute. The FINGERPRINT
+ * attribute can be present in all STUN messages.  It is computed as
+ * the CRC-32 of the STUN message up to (but excluding) the FINGERPRINT
  * attribute itself, xor-d with the 32 bit value 0x5354554e
  */
 typedef struct pj_stun_uint_attr pj_stun_fingerprint_attr;
 
-
 /**
- * This structure represents STUN ERROR-CODE attribute. The ERROR-CODE 
- * attribute is present in the Binding Error Response and Shared Secret 
- * Error Response.  It is a numeric value in the range of 100 to 699 
+ * This structure represents STUN ERROR-CODE attribute. The ERROR-CODE
+ * attribute is present in the Binding Error Response and Shared Secret
+ * Error Response.  It is a numeric value in the range of 100 to 699
  * plus a textual reason phrase encoded in UTF-8
  *
  * \verbatim
@@ -710,20 +678,19 @@ typedef struct pj_stun_errcode_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
+    pj_stun_attr_hdr hdr;
 
     /**
      * STUN error code.
      */
-    int			err_code;
+    int err_code;
 
     /**
      * The reason phrase.
      */
-    pj_str_t		reason;
+    pj_str_t reason;
 
 } pj_stun_errcode_attr;
-
 
 /**
  * This describes STUN REALM attribute.
@@ -734,16 +701,14 @@ typedef struct pj_stun_errcode_attr
  */
 typedef struct pj_stun_string_attr pj_stun_realm_attr;
 
-
 /**
- * This describes STUN NONCE attribute. 
+ * This describes STUN NONCE attribute.
  * The NONCE attribute is present in requests and in error responses.
  * It contains a sequence of qdtext or quoted-pair, which are defined in
  * RFC 3261 [11].  See RFC 2617 [7] for guidance on selection of nonce
  * values in a server.
  */
 typedef struct pj_stun_string_attr pj_stun_nonce_attr;
-
 
 /**
  * This describes STUN UNKNOWN-ATTRIBUTES attribute.
@@ -760,27 +725,25 @@ typedef struct pj_stun_unknown_attr
     /**
      * Standard STUN attribute header.
      */
-    pj_stun_attr_hdr	hdr;
+    pj_stun_attr_hdr hdr;
 
     /**
      * Number of unknown attributes in the array.
      */
-    unsigned		attr_count;
+    unsigned attr_count;
 
     /**
      * Array of unknown attribute IDs.
      */
-    pj_uint16_t	        attrs[PJ_STUN_MAX_ATTR];
+    pj_uint16_t attrs[PJ_STUN_MAX_ATTR];
 
 } pj_stun_unknown_attr;
-
 
 /**
  * This structure describes STUN MAPPED-ADDRESS attribute.
  * The MAPPED-ADDRESS attribute indicates the mapped transport address.
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_mapped_addr_attr;
-
 
 /**
  * This describes STUN XOR-MAPPED-ADDRESS attribute (which has the same
@@ -793,7 +756,6 @@ typedef struct pj_stun_sockaddr_attr pj_stun_mapped_addr_attr;
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_xor_mapped_addr_attr;
 
-
 /**
  * This describes STUN SOFTWARE attribute.
  * The SOFTWARE attribute contains a textual description of the software
@@ -801,7 +763,6 @@ typedef struct pj_stun_sockaddr_attr pj_stun_xor_mapped_addr_attr;
  * and servers.  Its value SHOULD include manufacturer and version
  * number. */
 typedef struct pj_stun_string_attr pj_stun_software_attr;
-
 
 /**
  * This describes STUN ALTERNATE-SERVER attribute.
@@ -811,7 +772,6 @@ typedef struct pj_stun_string_attr pj_stun_software_attr;
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_alt_server_attr;
 
-
 /**
  * This describes STUN REFRESH-INTERVAL attribute.
  * The REFRESH-INTERVAL indicates the number of milliseconds that the
@@ -820,18 +780,16 @@ typedef struct pj_stun_sockaddr_attr pj_stun_alt_server_attr;
  */
 typedef struct pj_stun_uint_attr pj_stun_refresh_interval_attr;
 
-
 /**
  * This structure describes STUN RESPONSE-ADDRESS attribute.
  * The RESPONSE-ADDRESS attribute indicates where the response to a
  * Binding Request should be sent.  Its syntax is identical to MAPPED-
  * ADDRESS.
  *
- * Note that the usage of this attribute has been deprecated by the 
+ * Note that the usage of this attribute has been deprecated by the
  * RFC 3489-bis standard.
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_response_addr_attr;
-
 
 /**
  * This structure describes STUN CHANGED-ADDRESS attribute.
@@ -842,27 +800,26 @@ typedef struct pj_stun_sockaddr_attr pj_stun_response_addr_attr;
  * Response, independent of the value of the flags.  Its syntax is
  * identical to MAPPED-ADDRESS.
  *
- * Note that the usage of this attribute has been deprecated by the 
+ * Note that the usage of this attribute has been deprecated by the
  * RFC 3489-bis standard.
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_changed_addr_attr;
-
 
 /**
  * This structure describes STUN CHANGE-REQUEST attribute.
  * The CHANGE-REQUEST attribute is used by the client to request that
  * the server use a different address and/or port when sending the
- * response. 
+ * response.
  *
- * Bit 29 of the value is the "change IP" flag.  If true, it requests 
- * the server to send the Binding Response with a different IP address 
+ * Bit 29 of the value is the "change IP" flag.  If true, it requests
+ * the server to send the Binding Response with a different IP address
  * than the one the Binding Request was received on.
  *
- * Bit 30 of the value is the "change port" flag.  If true, it requests 
- * the server to send the Binding Response with a different port than 
+ * Bit 30 of the value is the "change port" flag.  If true, it requests
+ * the server to send the Binding Response with a different port than
  * the one the Binding Request was received on.
  *
- * Note that the usage of this attribute has been deprecated by the 
+ * Note that the usage of this attribute has been deprecated by the
  * RFC 3489-bis standard.
  */
 typedef struct pj_stun_uint_attr pj_stun_change_request_attr;
@@ -874,11 +831,10 @@ typedef struct pj_stun_uint_attr pj_stun_change_request_attr;
  * the response from.  Its syntax is identical to that of MAPPED-
  * ADDRESS.
  *
- * Note that the usage of this attribute has been deprecated by the 
+ * Note that the usage of this attribute has been deprecated by the
  * RFC 3489-bis standard.
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_src_addr_attr;
-
 
 /**
  * This describes the STUN REFLECTED-FROM attribute.
@@ -891,7 +847,6 @@ typedef struct pj_stun_sockaddr_attr pj_stun_src_addr_attr;
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_reflected_from_attr;
 
-
 /**
  * This describes STUN USERNAME attribute.
  * The USERNAME attribute is used for message integrity.  It identifies
@@ -901,14 +856,12 @@ typedef struct pj_stun_sockaddr_attr pj_stun_reflected_from_attr;
  */
 typedef struct pj_stun_string_attr pj_stun_username_attr;
 
-
 /**
  * This describes STUN PASSWORD attribute.
  * If the message type is Shared Secret Response it MUST include the
  * PASSWORD attribute.
  */
 typedef struct pj_stun_string_attr pj_stun_password_attr;
-
 
 /**
  * This describes TURN CHANNEL-NUMBER attribute. In this library,
@@ -919,7 +872,7 @@ typedef struct pj_stun_string_attr pj_stun_password_attr;
  * The CHANNEL-NUMBER attribute contains the number of the channel.
  * It is a 16-bit unsigned integer, followed by a two-octet RFFU field
  * which MUST be set to 0 on transmission and ignored on reception.
-  
+
  \verbatim
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -936,7 +889,7 @@ typedef struct pj_stun_uint_attr pj_stun_channel_number_attr;
  * after they have been parsed from the PDU, so no need to do ntohs()
  * here.
  */
-#define PJ_STUN_GET_CH_NB(u32)	    ((pj_uint16_t)(u32>>16))
+#define PJ_STUN_GET_CH_NB(u32)   ((pj_uint16_t)(u32 >> 16))
 
 /**
  * Convert 16bit channel number into 32bit integral value.
@@ -944,8 +897,7 @@ typedef struct pj_stun_uint_attr pj_stun_channel_number_attr;
  * when the attribute is written to packet, so no need to do htons()
  * here.
  */
-#define PJ_STUN_SET_CH_NB(chnum)    (((pj_uint32_t)chnum) << 16)
-
+#define PJ_STUN_SET_CH_NB(chnum) (((pj_uint32_t)chnum) << 16)
 
 /**
  * This describes STUN LIFETIME attribute.
@@ -956,7 +908,6 @@ typedef struct pj_stun_uint_attr pj_stun_channel_number_attr;
  */
 typedef struct pj_stun_uint_attr pj_stun_lifetime_attr;
 
-
 /**
  * This describes STUN BANDWIDTH attribute.
  * The bandwidth attribute represents the peak bandwidth, measured in
@@ -965,15 +916,13 @@ typedef struct pj_stun_uint_attr pj_stun_lifetime_attr;
  */
 typedef struct pj_stun_uint_attr pj_stun_bandwidth_attr;
 
-
 /**
  * This describes the STUN XOR-PEER-ADDRESS attribute.
  * The XOR-PEER-ADDRESS specifies the address and port of the peer as seen
  * from the TURN server.  It is encoded in the same way as XOR-MAPPED-
- * ADDRESS. 
+ * ADDRESS.
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_xor_peer_addr_attr;
-
 
 /**
  * This describes the STUN DATA attribute.
@@ -984,15 +933,13 @@ typedef struct pj_stun_sockaddr_attr pj_stun_xor_peer_addr_attr;
  */
 typedef struct pj_stun_binary_attr pj_stun_data_attr;
 
-
 /**
- * This describes the STUN XOR-RELAYED-ADDRESS attribute. The 
+ * This describes the STUN XOR-RELAYED-ADDRESS attribute. The
  * XOR-RELAYED-ADDRESS is present in Allocate responses.  It specifies the
  * address and port that the server allocated to the client.  It is
  * encoded in the same way as XOR-MAPPED-ADDRESS.
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_xor_relayed_addr_attr;
-
 
 /**
  * According to RFC 6156, this describes the REQUESTED-ADDRESS-FAMILY
@@ -1013,7 +960,6 @@ typedef struct pj_stun_sockaddr_attr pj_stun_xor_relayed_addr_attr;
  */
 typedef struct pj_stun_uint_attr pj_stun_req_addr_type_attr;
 
-
 /**
  * This describes the TURN REQUESTED-TRANSPORT attribute, encoded in
  * STUN generic integer attribute.
@@ -1033,16 +979,15 @@ typedef struct pj_stun_uint_attr pj_stun_req_addr_type_attr;
 \endverbatim
 
  * The attribute contains a single 1-bit flag:
- * 
+ *
  * R: If 1, the server is requested to reserve the next higher port
  *    number (on the same IP address) for a subsequent allocation.  If
  *    0, no such reservation is requested.
- * 
+ *
  * The other 7 bits of the attribute must be set to zero on transmission
  * and ignored on reception.
  */
 typedef struct pj_stun_uint_attr pj_stun_even_port_attr;
-
 
 /**
  * This describes the TURN REQUESTED-TRANSPORT attribute, encoded in
@@ -1068,7 +1013,7 @@ typedef struct pj_stun_uint_attr pj_stun_even_port_attr;
  * in the IPv4 header and the NextHeader field in the IPv6 header
  * [Protocol-Numbers].  This specification only allows the use of
  * codepoint 17 (User Datagram Protocol).
- * 
+ *
  * The RFFU field is set to zero on transmission and ignored on
  * receiption.  It is reserved for future uses.
  */
@@ -1083,8 +1028,7 @@ typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
  * Convert protocol value to be placed in 32bit TURN REQUESTED-TRANSPORT
  * attribute.
  */
-#define PJ_STUN_SET_RT_PROTO(proto)   (((pj_uint32_t)(proto)) << 24)
-
+#define PJ_STUN_SET_RT_PROTO(proto) (((pj_uint32_t)(proto)) << 24)
 
 /**
  * This describes the TURN DONT-FRAGMENT attribute.
@@ -1096,7 +1040,6 @@ typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
  */
 typedef struct pj_stun_empty_attr pj_stun_dont_fragment_attr;
 
-
 /**
  * This describes the TURN RESERVATION-TOKEN attribute.
  * The RESERVATION-TOKEN attribute contains a token that uniquely
@@ -1105,9 +1048,9 @@ typedef struct pj_stun_empty_attr pj_stun_dont_fragment_attr;
  * tell the client about the token, and the client includes this
  * attribute in a subsequent Allocate request to request the server use
  * that relayed transport address for the allocation.
- * 
+ *
  * The attribute value is a 64-bit-long field containing the token
- * value. 
+ * value.
  */
 typedef struct pj_stun_uint64_attr pj_stun_res_token_attr;
 
@@ -1174,36 +1117,35 @@ typedef struct pj_stun_msg
     /**
      * STUN message header.
      */
-    pj_stun_msg_hdr     hdr;
+    pj_stun_msg_hdr hdr;
 
     /**
      * Number of attributes in the STUN message.
      */
-    unsigned		attr_count;
+    unsigned attr_count;
 
     /**
      * Array of STUN attributes.
      */
-    pj_stun_attr_hdr   *attr[PJ_STUN_MAX_ATTR];
+    pj_stun_attr_hdr* attr[PJ_STUN_MAX_ATTR];
 
 } pj_stun_msg;
-
 
 /** STUN decoding options */
 enum pj_stun_decode_options
 {
-    /** 
+    /**
      * Tell the decoder that the message was received from datagram
      * oriented transport (such as UDP).
      */
-    PJ_STUN_IS_DATAGRAM	    = 1,
+    PJ_STUN_IS_DATAGRAM = 1,
 
     /**
      * Tell pj_stun_msg_decode() to check the validity of the STUN
      * message by calling pj_stun_msg_check() before starting to
      * decode the packet.
      */
-    PJ_STUN_CHECK_PACKET    = 2,
+    PJ_STUN_CHECK_PACKET = 2,
 
     /**
      * This option current is only valid for #pj_stun_session_on_rx_pkt().
@@ -1214,13 +1156,12 @@ enum pj_stun_decode_options
 
     /**
      * Disable FINGERPRINT verification. This option can be used when calling
-     * #pj_stun_msg_check() and #pj_stun_msg_decode() to disable the 
+     * #pj_stun_msg_check() and #pj_stun_msg_decode() to disable the
      * verification of FINGERPRINT, for example when the STUN usage says when
      * FINGERPRINT mechanism shall not be used.
      */
     PJ_STUN_NO_FINGERPRINT_CHECK = 8
 };
-
 
 /**
  * Get STUN message method name.
@@ -1231,7 +1172,6 @@ enum pj_stun_decode_options
  */
 PJ_DECL(const char*) pj_stun_get_method_name(unsigned msg_type);
 
-
 /**
  * Get STUN message class name.
  *
@@ -1240,7 +1180,6 @@ PJ_DECL(const char*) pj_stun_get_method_name(unsigned msg_type);
  * @return		The STUN message class name string.
  */
 PJ_DECL(const char*) pj_stun_get_class_name(unsigned msg_type);
-
 
 /**
  * Get STUN attribute name.
@@ -1251,7 +1190,6 @@ PJ_DECL(const char*) pj_stun_get_class_name(unsigned msg_type);
  */
 PJ_DECL(const char*) pj_stun_get_attr_name(unsigned attr_type);
 
-
 /**
  * Get STUN standard reason phrase for the specified error code.
  *
@@ -1261,7 +1199,6 @@ PJ_DECL(const char*) pj_stun_get_attr_name(unsigned attr_type);
  */
 PJ_DECL(pj_str_t) pj_stun_get_err_reason(int err_code);
 
-
 /**
  * Internal: set the padding character for string attribute.
  * The default padding character is PJ_STUN_STRING_ATTR_PAD_CHR.
@@ -1270,12 +1207,11 @@ PJ_DECL(pj_str_t) pj_stun_get_err_reason(int err_code);
  */
 PJ_DECL(int) pj_stun_set_padding_char(int chr);
 
-
 /**
  * Initialize a generic STUN message.
  *
  * @param msg		The message structure to be initialized.
- * @param msg_type	The 14bit message type (see pj_stun_msg_type 
+ * @param msg_type	The 14bit message type (see pj_stun_msg_type
  *			constants).
  * @param magic		Magic value to be put to the mesage; for requests,
  *			the value normally should be PJ_STUN_MAGIC.
@@ -1284,10 +1220,9 @@ PJ_DECL(int) pj_stun_set_padding_char(int chr);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_init(pj_stun_msg *msg,
-				      unsigned msg_type,
-				      pj_uint32_t magic,
-				      const pj_uint8_t tsx_id[12]);
+PJ_DECL(pj_status_t)
+pj_stun_msg_init(pj_stun_msg* msg, unsigned msg_type, pj_uint32_t magic,
+                 const pj_uint8_t tsx_id[12]);
 
 /**
  * Create a generic STUN message.
@@ -1302,11 +1237,9 @@ PJ_DECL(pj_status_t) pj_stun_msg_init(pj_stun_msg *msg,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_create(pj_pool_t *pool,
-					unsigned msg_type,
-					pj_uint32_t magic,
-					const pj_uint8_t tsx_id[12],
-					pj_stun_msg **p_msg);
+PJ_DECL(pj_status_t)
+pj_stun_msg_create(pj_pool_t* pool, unsigned msg_type, pj_uint32_t magic,
+                   const pj_uint8_t tsx_id[12], pj_stun_msg** p_msg);
 
 /**
  * Clone a STUN message with all of its attributes.
@@ -1316,11 +1249,11 @@ PJ_DECL(pj_status_t) pj_stun_msg_create(pj_pool_t *pool,
  *
  * @return		The duplicate message.
  */
-PJ_DECL(pj_stun_msg*) pj_stun_msg_clone(pj_pool_t *pool,
-					const pj_stun_msg *msg);
+PJ_DECL(pj_stun_msg*)
+pj_stun_msg_clone(pj_pool_t* pool, const pj_stun_msg* msg);
 
 /**
- * Create STUN response message. 
+ * Create STUN response message.
  *
  * @param pool		Pool to create the mesage.
  * @param req_msg	The request message.
@@ -1335,12 +1268,10 @@ PJ_DECL(pj_stun_msg*) pj_stun_msg_clone(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
-						 const pj_stun_msg *req_msg,
-						 unsigned err_code,
-						 const pj_str_t *err_msg,
-						 pj_stun_msg **p_response);
-
+PJ_DECL(pj_status_t)
+pj_stun_msg_create_response(pj_pool_t* pool, const pj_stun_msg* req_msg,
+                            unsigned err_code, const pj_str_t* err_msg,
+                            pj_stun_msg** p_response);
 
 /**
  * Add STUN attribute to STUN message.
@@ -1351,13 +1282,12 @@ PJ_DECL(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
  * @return		PJ_SUCCESS on success, or PJ_ETOOMANY if there are
  *			already too many attributes in the message.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
-					  pj_stun_attr_hdr *attr);
-
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_attr(pj_stun_msg* msg, pj_stun_attr_hdr* attr);
 
 /**
- * Print the STUN message structure to a packet buffer, ready to be 
- * sent to remote destination. This function will take care about 
+ * Print the STUN message structure to a packet buffer, ready to be
+ * sent to remote destination. This function will take care about
  * calculating the MESSAGE-INTEGRITY digest as well as FINGERPRINT
  * value, if these attributes are present in the message.
  *
@@ -1365,9 +1295,9 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
  * include a blank MESSAGE-INTEGRITY attribute in the message as the
  * last attribute or the attribute before FINGERPRINT. This function will
  * calculate the HMAC digest from the message using  the supplied key in
- * the parameter. The key should be set to the password if short term 
- * credential is used, or calculated from the MD5 hash of the realm, 
- * username, and password using #pj_stun_create_key() if long term 
+ * the parameter. The key should be set to the password if short term
+ * credential is used, or calculated from the MD5 hash of the realm,
+ * username, and password using #pj_stun_create_key() if long term
  * credential is used.
  *
  * If FINGERPRINT attribute is present, this function will calculate
@@ -1383,17 +1313,14 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
  * @param key		Authentication key to calculate MESSAGE-INTEGRITY
  *			value. Application can create this key by using
  *			#pj_stun_create_key() function.
- * @param p_msg_len	Upon return, it will be filed with the size of 
+ * @param p_msg_len	Upon return, it will be filed with the size of
  *			the packet in bytes, or negative value on error.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
-				        pj_uint8_t *pkt_buf,
-				        pj_size_t buf_size,
-				        unsigned options,
-					const pj_str_t *key,
-				        pj_size_t *p_msg_len);
+PJ_DECL(pj_status_t)
+pj_stun_msg_encode(pj_stun_msg* msg, pj_uint8_t* pkt_buf, pj_size_t buf_size,
+                   unsigned options, const pj_str_t* key, pj_size_t* p_msg_len);
 
 /**
  * Check that the PDU is potentially a valid STUN message. This function
@@ -1401,22 +1328,21 @@ PJ_DECL(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
  * application traffic. When this function returns PJ_SUCCESS, there is a
  * big chance that the packet is a STUN packet.
  *
- * Note that we cannot be sure that the PDU is a really valid STUN message 
+ * Note that we cannot be sure that the PDU is a really valid STUN message
  * until we actually parse the PDU.
  *
  * @param pdu		The packet buffer.
  * @param pdu_len	The length of the packet buffer.
  * @param options	Additional options to be applied in the checking,
- *			which can be taken from pj_stun_decode_options. One 
- *			of the useful option is PJ_STUN_IS_DATAGRAM which 
+ *			which can be taken from pj_stun_decode_options. One
+ *			of the useful option is PJ_STUN_IS_DATAGRAM which
  *			means that the pdu represents a whole STUN packet.
  *
  * @return		PJ_SUCCESS if the PDU is a potentially valid STUN
  *			message.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, 
-				       pj_size_t pdu_len, unsigned options);
-
+PJ_DECL(pj_status_t)
+pj_stun_msg_check(const pj_uint8_t* pdu, pj_size_t pdu_len, unsigned options);
 
 /**
  * Decode incoming packet into STUN message.
@@ -1433,19 +1359,16 @@ PJ_DECL(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu,
  * @param p_response	Optional pointer to receive an instance of response
  *			message, if one can be created. If the packet being
  *			decoded is a request message, and it contains error,
- *			and a response can be created, then the STUN 
+ *			and a response can be created, then the STUN
  *			response message will be returned on this argument.
  *
  * @return		PJ_SUCCESS if a STUN message has been successfully
  *			decoded.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
-				        const pj_uint8_t *pdu,
-				        pj_size_t pdu_len,
-				        unsigned options,
-				        pj_stun_msg **p_msg,
-					pj_size_t *p_parsed_len,
-				        pj_stun_msg **p_response);
+PJ_DECL(pj_status_t)
+pj_stun_msg_decode(pj_pool_t* pool, const pj_uint8_t* pdu, pj_size_t pdu_len,
+                   unsigned options, pj_stun_msg** p_msg,
+                   pj_size_t* p_parsed_len, pj_stun_msg** p_response);
 
 /**
  * Dump STUN message to a printable string output.
@@ -1460,14 +1383,12 @@ PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
  * @return		The message string output.
  */
 #if PJ_LOG_MAX_LEVEL > 0
-PJ_DECL(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
-			        char *buffer,
-			        unsigned length,
-				unsigned *printed_len);
+PJ_DECL(char*)
+pj_stun_msg_dump(const pj_stun_msg* msg, char* buffer, unsigned length,
+                 unsigned* printed_len);
 #else
-#   define pj_stun_msg_dump(msg, buf, length, printed_len)  ""
+#    define pj_stun_msg_dump(msg, buf, length, printed_len) ""
 #endif
-
 
 /**
  * Find STUN attribute in the STUN message, starting from the specified
@@ -1482,10 +1403,9 @@ PJ_DECL(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
  * @return		The attribute instance, or NULL if it cannot be
  *			found.
  */
-PJ_DECL(pj_stun_attr_hdr*) pj_stun_msg_find_attr(const pj_stun_msg *msg,
-						 int attr_type,
-						 unsigned start_index);
-
+PJ_DECL(pj_stun_attr_hdr*)
+pj_stun_msg_find_attr(const pj_stun_msg* msg, int attr_type,
+                      unsigned start_index);
 
 /**
  * Clone a STUN attribute.
@@ -1495,9 +1415,8 @@ PJ_DECL(pj_stun_attr_hdr*) pj_stun_msg_find_attr(const pj_stun_msg *msg,
  *
  * @return		Duplicate attribute.
  */
-PJ_DECL(pj_stun_attr_hdr*) pj_stun_attr_clone(pj_pool_t *pool,
-					      const pj_stun_attr_hdr *attr);
-
+PJ_DECL(pj_stun_attr_hdr*)
+pj_stun_attr_clone(pj_pool_t* pool, const pj_stun_attr_hdr* attr);
 
 /**
  * Initialize generic STUN IP address attribute. The \a addr_len and
@@ -1513,11 +1432,10 @@ PJ_DECL(pj_stun_attr_hdr*) pj_stun_attr_clone(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_sockaddr_attr_init(pj_stun_sockaddr_attr *attr,
-						int attr_type, 
-						pj_bool_t xor_ed,
-						const pj_sockaddr_t *addr,
-						unsigned addr_len);
+PJ_DECL(pj_status_t)
+pj_stun_sockaddr_attr_init(pj_stun_sockaddr_attr* attr, int attr_type,
+                           pj_bool_t xor_ed, const pj_sockaddr_t* addr,
+                           unsigned addr_len);
 
 /**
  * Create a generic STUN IP address attribute. The \a addr_len and
@@ -1534,17 +1452,14 @@ PJ_DECL(pj_status_t) pj_stun_sockaddr_attr_init(pj_stun_sockaddr_attr *attr,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_sockaddr_attr_create(pj_pool_t *pool,
-						int attr_type, 
-						pj_bool_t xor_ed,
-						const pj_sockaddr_t *addr,
-						unsigned addr_len,
-						pj_stun_sockaddr_attr **p_attr);
-
+PJ_DECL(pj_status_t)
+pj_stun_sockaddr_attr_create(pj_pool_t* pool, int attr_type, pj_bool_t xor_ed,
+                             const pj_sockaddr_t* addr, unsigned addr_len,
+                             pj_stun_sockaddr_attr** p_attr);
 
 /**
  * Create and add generic STUN IP address attribute to a STUN message.
- * The \a addr_len and \a addr parameters specify whether the address is 
+ * The \a addr_len and \a addr parameters specify whether the address is
  * IPv4 or IPv4 address.
  *
  * @param pool		The pool to allocate memory from.
@@ -1557,12 +1472,10 @@ PJ_DECL(pj_status_t) pj_stun_sockaddr_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_sockaddr_attr(pj_pool_t *pool,
-						  pj_stun_msg *msg,
-						  int attr_type, 
-						  pj_bool_t xor_ed,
-						  const pj_sockaddr_t *addr,
-						  unsigned addr_len);
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_sockaddr_attr(pj_pool_t* pool, pj_stun_msg* msg, int attr_type,
+                              pj_bool_t xor_ed, const pj_sockaddr_t* addr,
+                              unsigned addr_len);
 
 /**
  * Initialize a STUN generic string attribute.
@@ -1575,10 +1488,9 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_sockaddr_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_string_attr_init(pj_stun_string_attr *attr,
-					      pj_pool_t *pool,
-					      int attr_type,
-					      const pj_str_t *value);
+PJ_DECL(pj_status_t)
+pj_stun_string_attr_init(pj_stun_string_attr* attr, pj_pool_t* pool,
+                         int attr_type, const pj_str_t* value);
 
 /**
  * Create a STUN generic string attribute.
@@ -1590,10 +1502,9 @@ PJ_DECL(pj_status_t) pj_stun_string_attr_init(pj_stun_string_attr *attr,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_string_attr_create(pj_pool_t *pool,
-					        int attr_type,
-					        const pj_str_t *value,
-					        pj_stun_string_attr **p_attr);
+PJ_DECL(pj_status_t)
+pj_stun_string_attr_create(pj_pool_t* pool, int attr_type,
+                           const pj_str_t* value, pj_stun_string_attr** p_attr);
 
 /**
  * Create and add STUN generic string attribute to the message.
@@ -1605,10 +1516,9 @@ PJ_DECL(pj_status_t) pj_stun_string_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_string_attr(pj_pool_t *pool,
-						 pj_stun_msg *msg,
-						 int attr_type,
-						 const pj_str_t *value);
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_string_attr(pj_pool_t* pool, pj_stun_msg* msg, int attr_type,
+                            const pj_str_t* value);
 
 /**
  * Create a STUN generic 32bit value attribute.
@@ -1620,10 +1530,9 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_string_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_uint_attr_create(pj_pool_t *pool,
-					      int attr_type,
-					      pj_uint32_t value,
-					      pj_stun_uint_attr **p_attr);
+PJ_DECL(pj_status_t)
+pj_stun_uint_attr_create(pj_pool_t* pool, int attr_type, pj_uint32_t value,
+                         pj_stun_uint_attr** p_attr);
 
 /**
  * Create and add STUN generic 32bit value attribute to the message.
@@ -1635,11 +1544,9 @@ PJ_DECL(pj_status_t) pj_stun_uint_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_uint_attr(pj_pool_t *pool,
-					       pj_stun_msg *msg,
-					       int attr_type,
-					       pj_uint32_t value);
-
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_uint_attr(pj_pool_t* pool, pj_stun_msg* msg, int attr_type,
+                          pj_uint32_t value);
 
 /**
  * Create a STUN generic 64bit value attribute.
@@ -1651,14 +1558,13 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_uint_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t)  pj_stun_uint64_attr_create(pj_pool_t *pool,
-					        int attr_type,
-					        const pj_timestamp *value,
-					        pj_stun_uint64_attr **p_attr);
-
+PJ_DECL(pj_status_t)
+pj_stun_uint64_attr_create(pj_pool_t* pool, int attr_type,
+                           const pj_timestamp* value,
+                           pj_stun_uint64_attr** p_attr);
 
 /**
- *  Create and add STUN generic 64bit value attribute to the message. 
+ *  Create and add STUN generic 64bit value attribute to the message.
  *
  * @param pool		The pool to allocate memory from.
  * @param msg		The STUN message
@@ -1667,10 +1573,9 @@ PJ_DECL(pj_status_t)  pj_stun_uint64_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t)  pj_stun_msg_add_uint64_attr(pj_pool_t *pool,
-					          pj_stun_msg *msg,
-					          int attr_type,
-					          const pj_timestamp *value);
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_uint64_attr(pj_pool_t* pool, pj_stun_msg* msg, int attr_type,
+                            const pj_timestamp* value);
 
 /**
  * Create a STUN MESSAGE-INTEGRITY attribute.
@@ -1680,10 +1585,10 @@ PJ_DECL(pj_status_t)  pj_stun_msg_add_uint64_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msgint_attr_create(pj_pool_t *pool,
-						pj_stun_msgint_attr **p_attr);
+PJ_DECL(pj_status_t)
+pj_stun_msgint_attr_create(pj_pool_t* pool, pj_stun_msgint_attr** p_attr);
 
-/** 
+/**
  * Create and add STUN MESSAGE-INTEGRITY attribute.
  *
  * @param pool		The pool to allocate memory from.
@@ -1691,8 +1596,8 @@ PJ_DECL(pj_status_t) pj_stun_msgint_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_msgint_attr(pj_pool_t *pool,
-						 pj_stun_msg *msg);
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_msgint_attr(pj_pool_t* pool, pj_stun_msg* msg);
 
 /**
  * Create a STUN ERROR-CODE attribute.
@@ -1705,11 +1610,10 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_msgint_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_errcode_attr_create(pj_pool_t *pool,
-						int err_code,
-						const pj_str_t *err_reason,
-						pj_stun_errcode_attr **p_attr);
-
+PJ_DECL(pj_status_t)
+pj_stun_errcode_attr_create(pj_pool_t* pool, int err_code,
+                            const pj_str_t* err_reason,
+                            pj_stun_errcode_attr** p_attr);
 
 /**
  * Create and add STUN ERROR-CODE attribute to the message.
@@ -1722,10 +1626,9 @@ PJ_DECL(pj_status_t) pj_stun_errcode_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_errcode_attr(pj_pool_t *pool,
-						  pj_stun_msg *msg,
-						  int err_code,
-						  const pj_str_t *err_reason);
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_errcode_attr(pj_pool_t* pool, pj_stun_msg* msg, int err_code,
+                             const pj_str_t* err_reason);
 
 /**
  * Create instance of STUN UNKNOWN-ATTRIBUTES attribute and copy the
@@ -1738,10 +1641,10 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_errcode_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_unknown_attr_create(pj_pool_t *pool,
-						unsigned attr_cnt,
-						const pj_uint16_t attr[],
-						pj_stun_unknown_attr **p_attr);
+PJ_DECL(pj_status_t)
+pj_stun_unknown_attr_create(pj_pool_t* pool, unsigned attr_cnt,
+                            const pj_uint16_t attr[],
+                            pj_stun_unknown_attr** p_attr);
 
 /**
  * Create and add STUN UNKNOWN-ATTRIBUTES attribute to the message.
@@ -1753,10 +1656,9 @@ PJ_DECL(pj_status_t) pj_stun_unknown_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
-						  pj_stun_msg *msg,
-						  unsigned attr_cnt,
-						  const pj_uint16_t attr[]);
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_unknown_attr(pj_pool_t* pool, pj_stun_msg* msg,
+                             unsigned attr_cnt, const pj_uint16_t attr[]);
 
 /**
  * Initialize STUN binary attribute.
@@ -1771,11 +1673,10 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_binary_attr_init(pj_stun_binary_attr *attr,
-					      pj_pool_t *pool,
-					      int attr_type,
-					      const pj_uint8_t *data,
-					      unsigned length);
+PJ_DECL(pj_status_t)
+pj_stun_binary_attr_init(pj_stun_binary_attr* attr, pj_pool_t* pool,
+                         int attr_type, const pj_uint8_t* data,
+                         unsigned length);
 
 /**
  * Create STUN binary attribute.
@@ -1790,11 +1691,10 @@ PJ_DECL(pj_status_t) pj_stun_binary_attr_init(pj_stun_binary_attr *attr,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_binary_attr_create(pj_pool_t *pool,
-					        int attr_type,
-					        const pj_uint8_t *data,
-					        unsigned length,
-					        pj_stun_binary_attr **p_attr);
+PJ_DECL(pj_status_t)
+pj_stun_binary_attr_create(pj_pool_t* pool, int attr_type,
+                           const pj_uint8_t* data, unsigned length,
+                           pj_stun_binary_attr** p_attr);
 
 /**
  * Create STUN binary attribute and add the attribute to the message.
@@ -1809,11 +1709,9 @@ PJ_DECL(pj_status_t) pj_stun_binary_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
-						 pj_stun_msg *msg,
-						 int attr_type,
-						 const pj_uint8_t *data,
-						 unsigned length);
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_binary_attr(pj_pool_t* pool, pj_stun_msg* msg, int attr_type,
+                            const pj_uint8_t* data, unsigned length);
 
 /**
  * Create STUN empty attribute.
@@ -1824,9 +1722,9 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_empty_attr_create(pj_pool_t *pool,
-					       int attr_type,
-					       pj_stun_empty_attr **p_attr);
+PJ_DECL(pj_status_t)
+pj_stun_empty_attr_create(pj_pool_t* pool, int attr_type,
+                          pj_stun_empty_attr** p_attr);
 
 /**
  * Create STUN empty attribute and add the attribute to the message.
@@ -1837,17 +1735,13 @@ PJ_DECL(pj_status_t) pj_stun_empty_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_empty_attr(pj_pool_t *pool,
-						pj_stun_msg *msg,
-						int attr_type);
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_empty_attr(pj_pool_t* pool, pj_stun_msg* msg, int attr_type);
 
 /**
  * @}
  */
 
-
 PJ_END_DECL
 
-
-#endif	/* __PJNATH_STUN_MSG_H__ */
-
+#endif /* __PJNATH_STUN_MSG_H__ */

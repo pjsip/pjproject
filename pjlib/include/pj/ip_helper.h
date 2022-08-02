@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_IP_ROUTE_H__
 #define __PJ_IP_ROUTE_H__
@@ -35,7 +34,7 @@ PJ_BEGIN_DECL
  * @ingroup PJ_IO
  * @{
  *
- * This module provides functions to query local host's IP interface and 
+ * This module provides functions to query local host's IP interface and
  * routing table.
  */
 
@@ -47,9 +46,9 @@ typedef union pj_ip_route_entry
     /** IP routing entry for IP version 4 routing */
     struct
     {
-	pj_in_addr	if_addr;    /**< Local interface IP address.	*/
-	pj_in_addr	dst_addr;   /**< Destination IP address.	*/
-	pj_in_addr	mask;	    /**< Destination mask.		*/
+        pj_in_addr if_addr;  /**< Local interface IP address.	*/
+        pj_in_addr dst_addr; /**< Destination IP address.	*/
+        pj_in_addr mask;     /**< Destination mask.		*/
     } ipv4;
 } pj_ip_route_entry;
 
@@ -65,7 +64,7 @@ typedef struct pj_enum_ip_option
      *
      * Default: pj_AF_UNSPEC().
      */
-    int			af;
+    int af;
 
     /**
      * IPv6 addresses can have a DEPRECATED flag, if this flag is set, any
@@ -75,21 +74,19 @@ typedef struct pj_enum_ip_option
      *
      * Default: PJ_FALSE.
      */
-    pj_bool_t		omit_deprecated_ipv6;
+    pj_bool_t omit_deprecated_ipv6;
 
 } pj_enum_ip_option;
-
 
 /**
  * Get default values of IP enumeration option.
  *
  * @param opt	    The IP enumeration option.
  */
-PJ_INLINE(void) pj_enum_ip_option_default(pj_enum_ip_option *opt)
+PJ_INLINE(void) pj_enum_ip_option_default(pj_enum_ip_option* opt)
 {
     pj_bzero(opt, sizeof(*opt));
 }
-
 
 /**
  * Enumerate the local IP interfaces currently active in the host.
@@ -107,10 +104,8 @@ PJ_INLINE(void) pj_enum_ip_option_default(pj_enum_ip_option *opt)
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_enum_ip_interface(int af,
-					  unsigned *count,
-					  pj_sockaddr ifs[]);
-
+PJ_DECL(pj_status_t)
+pj_enum_ip_interface(int af, unsigned* count, pj_sockaddr ifs[]);
 
 /**
  * Enumerate the local IP interfaces currently active in the host with
@@ -126,9 +121,9 @@ PJ_DECL(pj_status_t) pj_enum_ip_interface(int af,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_enum_ip_interface2(const pj_enum_ip_option *opt,
-					   unsigned *count,
-					   pj_sockaddr ifs[]);
+PJ_DECL(pj_status_t)
+pj_enum_ip_interface2(const pj_enum_ip_option* opt, unsigned* count,
+                      pj_sockaddr ifs[]);
 
 /**
  * Enumerate the IP routing table for this host.
@@ -139,15 +134,11 @@ PJ_DECL(pj_status_t) pj_enum_ip_interface2(const pj_enum_ip_option *opt,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_enum_ip_route(unsigned *count,
-				      pj_ip_route_entry routes[]);
-
-
+PJ_DECL(pj_status_t)
+pj_enum_ip_route(unsigned* count, pj_ip_route_entry routes[]);
 
 /** @} */
 
 PJ_END_DECL
 
-
-#endif	/* __PJ_IP_ROUTE_H__ */
-
+#endif /* __PJ_IP_ROUTE_H__ */

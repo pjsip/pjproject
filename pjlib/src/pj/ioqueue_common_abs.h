@@ -1,5 +1,5 @@
 /* $Id */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,14 +15,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /* ioqueue_common_abs.h
  *
- * This file contains private declarations for abstracting various 
- * event polling/dispatching mechanisms (e.g. select, poll, epoll) 
- * to the ioqueue. 
+ * This file contains private declarations for abstracting various
+ * event polling/dispatching mechanisms (e.g. select, poll, epoll)
+ * to the ioqueue.
  */
 
 #include <pj/list.h>
@@ -32,96 +32,93 @@
  * the correct error code.
  */
 #if PJ_RETURN_OS_ERROR(100) != PJ_STATUS_FROM_OS(100)
-#   error "Proper error reporting must be enabled for ioqueue to work!"
+#    error "Proper error reporting must be enabled for ioqueue to work!"
 #endif
-
 
 struct generic_operation
 {
     PJ_DECL_LIST_MEMBER(struct generic_operation);
-    pj_ioqueue_operation_e  op;
+    pj_ioqueue_operation_e op;
 };
 
 struct read_operation
 {
     PJ_DECL_LIST_MEMBER(struct read_operation);
-    pj_ioqueue_operation_e  op;
+    pj_ioqueue_operation_e op;
 
-    void		   *buf;
-    pj_size_t		    size;
-    unsigned                flags;
-    pj_sockaddr_t	   *rmt_addr;
-    int			   *rmt_addrlen;
+    void* buf;
+    pj_size_t size;
+    unsigned flags;
+    pj_sockaddr_t* rmt_addr;
+    int* rmt_addrlen;
 };
 
 struct write_operation
 {
     PJ_DECL_LIST_MEMBER(struct write_operation);
-    pj_ioqueue_operation_e  op;
+    pj_ioqueue_operation_e op;
 
-    char		   *buf;
-    pj_size_t		    size;
-    pj_ssize_t              written;
-    unsigned                flags;
-    pj_sockaddr_in	    rmt_addr;
-    int			    rmt_addrlen;
+    char* buf;
+    pj_size_t size;
+    pj_ssize_t written;
+    unsigned flags;
+    pj_sockaddr_in rmt_addr;
+    int rmt_addrlen;
 };
 
 struct accept_operation
 {
     PJ_DECL_LIST_MEMBER(struct accept_operation);
-    pj_ioqueue_operation_e  op;
+    pj_ioqueue_operation_e op;
 
-    pj_sock_t              *accept_fd;
-    pj_sockaddr_t	   *local_addr;
-    pj_sockaddr_t	   *rmt_addr;
-    int			   *addrlen;
+    pj_sock_t* accept_fd;
+    pj_sockaddr_t* local_addr;
+    pj_sockaddr_t* rmt_addr;
+    int* addrlen;
 };
 
 union operation_key
 {
     struct generic_operation generic_op;
-    struct read_operation    read;
-    struct write_operation   write;
+    struct read_operation read;
+    struct write_operation write;
 #if PJ_HAS_TCP
-    struct accept_operation  accept;
+    struct accept_operation accept;
 #endif
 };
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-#   define UNREG_FIELDS			\
-	unsigned	    ref_count;	\
-	pj_bool_t	    closing;	\
-	pj_time_val	    free_time;	\
-	
+#    define UNREG_FIELDS \
+        unsigned ref_count; \
+        pj_bool_t closing; \
+        pj_time_val free_time;
+
 #else
-#   define UNREG_FIELDS
+#    define UNREG_FIELDS
 #endif
 
-#define DECLARE_COMMON_KEY                          \
-    PJ_DECL_LIST_MEMBER(struct pj_ioqueue_key_t);   \
-    pj_ioqueue_t           *ioqueue;                \
-    pj_grp_lock_t 	   *grp_lock;		    \
-    pj_lock_t              *lock;                   \
-    pj_bool_t		    inside_callback;	    \
-    pj_bool_t		    destroy_requested;	    \
-    pj_bool_t		    allow_concurrent;	    \
-    pj_sock_t		    fd;                     \
-    int                     fd_type;                \
-    void		   *user_data;              \
-    pj_ioqueue_callback	    cb;                     \
-    int                     connecting;             \
-    struct read_operation   read_list;              \
-    struct write_operation  write_list;             \
-    struct accept_operation accept_list;	    \
+#define DECLARE_COMMON_KEY \
+    PJ_DECL_LIST_MEMBER(struct pj_ioqueue_key_t); \
+    pj_ioqueue_t* ioqueue; \
+    pj_grp_lock_t* grp_lock; \
+    pj_lock_t* lock; \
+    pj_bool_t inside_callback; \
+    pj_bool_t destroy_requested; \
+    pj_bool_t allow_concurrent; \
+    pj_sock_t fd; \
+    int fd_type; \
+    void* user_data; \
+    pj_ioqueue_callback cb; \
+    int connecting; \
+    struct read_operation read_list; \
+    struct write_operation write_list; \
+    struct accept_operation accept_list; \
     UNREG_FIELDS
 
-
-#define DECLARE_COMMON_IOQUEUE                      \
-    pj_lock_t          *lock;                       \
-    pj_bool_t           auto_delete_lock;	    \
-    pj_bool_t		default_concurrency;
-
+#define DECLARE_COMMON_IOQUEUE \
+    pj_lock_t* lock; \
+    pj_bool_t auto_delete_lock; \
+    pj_bool_t default_concurrency;
 
 enum ioqueue_event_type
 {
@@ -131,10 +128,8 @@ enum ioqueue_event_type
     EXCEPTION_EVENT,
 };
 
-static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
-                                pj_ioqueue_key_t *key,
-                                enum ioqueue_event_type event_type );
-static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
-                                     pj_ioqueue_key_t *key, 
-                                     enum ioqueue_event_type event_type);
-
+static void ioqueue_add_to_set(pj_ioqueue_t* ioqueue, pj_ioqueue_key_t* key,
+                               enum ioqueue_event_type event_type);
+static void ioqueue_remove_from_set(pj_ioqueue_t* ioqueue,
+                                    pj_ioqueue_key_t* key,
+                                    enum ioqueue_event_type event_type);

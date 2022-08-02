@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_G7221_SDP_MATCH_H__
 #define __PJMEDIA_CODEC_G7221_SDP_MATCH_H__
-
 
 /**
  * @file g7221_sdp_match.h
@@ -45,15 +43,11 @@ PJ_BEGIN_DECL
  *
  * @return		PJ_SUCCESS when the formats in offer and answer match.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_g7221_match_sdp( pj_pool_t *pool,
-						    pjmedia_sdp_media *offer,
-						    unsigned o_fmt_idx,
-						    pjmedia_sdp_media *answer,
-						    unsigned a_fmt_idx,
-						    unsigned option);
-
+PJ_DECL(pj_status_t)
+pjmedia_codec_g7221_match_sdp(pj_pool_t* pool, pjmedia_sdp_media* offer,
+                              unsigned o_fmt_idx, pjmedia_sdp_media* answer,
+                              unsigned a_fmt_idx, unsigned option);
 
 PJ_END_DECL
 
-
-#endif	/* __PJMEDIA_CODEC_G7221_SDP_MATCH_H__ */
+#endif /* __PJMEDIA_CODEC_G7221_SDP_MATCH_H__ */

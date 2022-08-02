@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_FILE_ACCESS_H__
 #define __PJ_FILE_ACCESS_H__
@@ -26,7 +25,7 @@
  */
 #include <pj/types.h>
 
-PJ_BEGIN_DECL 
+PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_FILE_ACCESS File Access
@@ -42,12 +41,11 @@ PJ_BEGIN_DECL
  */
 typedef struct pj_file_stat
 {
-    pj_off_t        size;   /**< Total file size.               */
-    pj_time_val     atime;  /**< Time of last access.           */
-    pj_time_val     mtime;  /**< Time of last modification.     */
-    pj_time_val     ctime;  /**< Time of last creation.         */
+    pj_off_t size;     /**< Total file size.               */
+    pj_time_val atime; /**< Time of last access.           */
+    pj_time_val mtime; /**< Time of last modification.     */
+    pj_time_val ctime; /**< Time of last creation.         */
 } pj_file_stat;
-
 
 /**
  * Returns non-zero if the specified file exists.
@@ -56,7 +54,7 @@ typedef struct pj_file_stat
  *
  * @return              Non-zero if the file exists.
  */
-PJ_DECL(pj_bool_t) pj_file_exists(const char *filename);
+PJ_DECL(pj_bool_t) pj_file_exists(const char* filename);
 
 /**
  * Returns the size of the file.
@@ -65,7 +63,7 @@ PJ_DECL(pj_bool_t) pj_file_exists(const char *filename);
  *
  * @return              The file size in bytes or -1 on error.
  */
-PJ_DECL(pj_off_t) pj_file_size(const char *filename);
+PJ_DECL(pj_off_t) pj_file_size(const char* filename);
 
 /**
  * Delete a file.
@@ -74,7 +72,7 @@ PJ_DECL(pj_off_t) pj_file_size(const char *filename);
  *
  * @return              PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_file_delete(const char *filename);
+PJ_DECL(pj_status_t) pj_file_delete(const char* filename);
 
 /**
  * Move a \c oldname to \c newname. If \c newname already exists,
@@ -85,9 +83,7 @@ PJ_DECL(pj_status_t) pj_file_delete(const char *filename);
  *
  * @return              PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_file_move( const char *oldname, 
-                                   const char *newname);
-
+PJ_DECL(pj_status_t) pj_file_move(const char* oldname, const char* newname);
 
 /**
  * Return information about the specified file. The time information in
@@ -98,12 +94,10 @@ PJ_DECL(pj_status_t) pj_file_move( const char *oldname,
  *
  * @return              PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_file_getstat(const char *filename, pj_file_stat *stat);
-
+PJ_DECL(pj_status_t) pj_file_getstat(const char* filename, pj_file_stat* stat);
 
 /** @} */
 
 PJ_END_DECL
 
-
-#endif	/* __PJ_FILE_ACCESS_H__ */
+#endif /* __PJ_FILE_ACCESS_H__ */

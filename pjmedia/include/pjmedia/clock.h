@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CLOCK_H__
 #define __PJMEDIA_CLOCK_H__
@@ -26,18 +25,17 @@
  */
 #include <pjmedia/types.h>
 
-
 /**
  * @defgroup PJMEDIA_PORT_CLOCK Clock/Timing
  * @ingroup PJMEDIA_PORT
  * @brief Various types of classes that provide timing.
  * @{
 
- The media clock/timing extends the media port concept that is explained 
- in @ref PJMEDIA_PORT. When clock is present in the ports 
+ The media clock/timing extends the media port concept that is explained
+ in @ref PJMEDIA_PORT. When clock is present in the ports
  interconnection, media will flow automatically (and with correct timing too!)
  from one media port to another.
- 
+
  There are few objects in PJMEDIA that are able to provide clock/timing
  to media ports interconnection:
 
@@ -59,20 +57,19 @@
  @}
  */
 
-
 /**
  * @addtogroup PJMEDIA_CLOCK Clock Generator
  * @ingroup PJMEDIA_PORT_CLOCK
  * @brief Interface for generating clock.
  * @{
- * 
+ *
  * The clock generator provides the application with media timing,
  * and it is used by the @ref PJMEDIA_MASTER_PORT for its sound clock.
  *
- * The clock generator may be configured to run <b>asynchronously</b> 
- * (the default behavior) or <b>synchronously</b>. When it is run 
+ * The clock generator may be configured to run <b>asynchronously</b>
+ * (the default behavior) or <b>synchronously</b>. When it is run
  * asynchronously, it will call the application's callback every time
- * the clock <b>tick</b> expires. When it is run synchronously, 
+ * the clock <b>tick</b> expires. When it is run synchronously,
  * application must continuously polls the clock generator to synchronize
  * the timing.
  */
@@ -84,20 +81,20 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_clock_src
 {
-    pjmedia_type    media_type;     /**< Media type.                */
-    unsigned        clock_rate;     /**< Clock rate.                */
-    unsigned        ptime_usec;     /**< Frame interval (in usec).  */
+    pjmedia_type media_type; /**< Media type.                */
+    unsigned clock_rate;     /**< Clock rate.                */
+    unsigned ptime_usec;     /**< Frame interval (in usec).  */
     /**
      * The timestamp field holds an increasing value in samples and its
      * value is expected to be increased by clock_rate samples per second.
      */
-    pj_timestamp    timestamp;
+    pj_timestamp timestamp;
     /**
      * Timestamp's last update. The last_update field contains a value in
      * ticks, and it is expected to be increased by pj_get_timestamp_freq()
      * ticks per second.
      */
-    pj_timestamp    last_update;
+    pj_timestamp last_update;
 } pjmedia_clock_src;
 
 /**
@@ -110,10 +107,9 @@ typedef struct pjmedia_clock_src
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_clock_src_init( pjmedia_clock_src *clocksrc,
-                                             pjmedia_type media_type,
-                                             unsigned clock_rate,
-                                             unsigned ptime_usec );
+PJ_DECL(pj_status_t)
+pjmedia_clock_src_init(pjmedia_clock_src* clocksrc, pjmedia_type media_type,
+                       unsigned clock_rate, unsigned ptime_usec);
 
 /**
  * This function updates the clock source's timestamp. Application should
@@ -127,8 +123,9 @@ PJ_DECL(pj_status_t) pjmedia_clock_src_init( pjmedia_clock_src *clocksrc,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_clock_src_update( pjmedia_clock_src *clocksrc,
-                                               const pj_timestamp *timestamp );
+PJ_DECL(pj_status_t)
+pjmedia_clock_src_update(pjmedia_clock_src* clocksrc,
+                         const pj_timestamp* timestamp);
 
 /**
  * This function gets the clock source's current timestamp. Application
@@ -142,8 +139,8 @@ PJ_DECL(pj_status_t) pjmedia_clock_src_update( pjmedia_clock_src *clocksrc,
  * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
-pjmedia_clock_src_get_current_timestamp( const pjmedia_clock_src *clocksrc,
-                                         pj_timestamp *timestamp);
+pjmedia_clock_src_get_current_timestamp(const pjmedia_clock_src* clocksrc,
+                                        pj_timestamp* timestamp);
 
 /**
  * This function gets the clock source's time in msec.
@@ -153,14 +150,12 @@ pjmedia_clock_src_get_current_timestamp( const pjmedia_clock_src *clocksrc,
  * @return		    The clock source's time (in msec).
  */
 PJ_DECL(pj_uint32_t)
-pjmedia_clock_src_get_time_msec( const pjmedia_clock_src *clocksrc );
-
+pjmedia_clock_src_get_time_msec(const pjmedia_clock_src* clocksrc);
 
 /**
  * Opaque declaration for media clock.
  */
 typedef struct pjmedia_clock pjmedia_clock;
-
 
 /**
  * Options when creating the clock.
@@ -172,14 +167,13 @@ enum pjmedia_clock_options
      * application must poll the clock continuously by calling
      * #pjmedia_clock_wait() in order to synchronize timing.
      */
-    PJMEDIA_CLOCK_NO_ASYNC  = 1,
+    PJMEDIA_CLOCK_NO_ASYNC = 1,
 
     /**
      * Prevent the clock from setting it's thread to highest priority.
      */
     PJMEDIA_CLOCK_NO_HIGHEST_PRIO = 2
 };
-
 
 typedef struct pjmedia_clock_param
 {
@@ -201,10 +195,7 @@ typedef struct pjmedia_clock_param
  * @param user_data	    Application data that is passed when
  *			    the clock was created.
  */
-typedef void pjmedia_clock_callback(const pj_timestamp *ts,
-				    void *user_data);
-
-
+typedef void pjmedia_clock_callback(const pj_timestamp* ts, void* user_data);
 
 /**
  * Create media clock. This creates a media clock object that will run
@@ -218,7 +209,7 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
  * @param clock_rate	    Number of samples per second.
  * @param channel_count	    Number of channel.
  * @param samples_per_frame Number of samples per frame. This argument
- *			    along with clock_rate and channel_count, specifies 
+ *			    along with clock_rate and channel_count, specifies
  *			    the interval of each clock run (or clock ticks).
  * @param options	    Bitmask of pjmedia_clock_options.
  * @param cb		    Callback to be called for each clock tick.
@@ -228,15 +219,11 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
-					   unsigned clock_rate,
-					   unsigned channel_count,
-					   unsigned samples_per_frame,
-					   unsigned options,
-					   pjmedia_clock_callback *cb,
-					   void *user_data,
-					   pjmedia_clock **p_clock);
-
+PJ_DECL(pj_status_t)
+pjmedia_clock_create(pj_pool_t* pool, unsigned clock_rate,
+                     unsigned channel_count, unsigned samples_per_frame,
+                     unsigned options, pjmedia_clock_callback* cb,
+                     void* user_data, pjmedia_clock** p_clock);
 
 /**
  * Create media clock. This creates a media clock object that will run
@@ -253,24 +240,21 @@ PJ_DECL(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
-                                           const pjmedia_clock_param *param,
-					   unsigned options,
-					   pjmedia_clock_callback *cb,
-					   void *user_data,
-					   pjmedia_clock **p_clock);
+PJ_DECL(pj_status_t)
+pjmedia_clock_create2(pj_pool_t* pool, const pjmedia_clock_param* param,
+                      unsigned options, pjmedia_clock_callback* cb,
+                      void* user_data, pjmedia_clock** p_clock);
 
 /**
  * Start the clock. For clock created with asynchronous flag set to TRUE,
- * this may start a worker thread for the clock (depending on the 
+ * this may start a worker thread for the clock (depending on the
  * backend clock implementation being used).
  *
  * @param clock		    The media clock.
  *
  * @return		    PJ_SUCCES on success.
  */
-PJ_DECL(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock);
-
+PJ_DECL(pj_status_t) pjmedia_clock_start(pjmedia_clock* clock);
 
 /**
  * Stop the clock.
@@ -279,8 +263,7 @@ PJ_DECL(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock);
  *
  * @return		    PJ_SUCCES on success.
  */
-PJ_DECL(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock);
-
+PJ_DECL(pj_status_t) pjmedia_clock_stop(pjmedia_clock* clock);
 
 /**
  * Modify the clock's parameter.
@@ -289,9 +272,8 @@ PJ_DECL(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock);
  * @param param	            The clock's new parameter.
  * @return		    PJ_SUCCES on success.
  */
-PJ_DECL(pj_status_t) pjmedia_clock_modify(pjmedia_clock *clock,
-                                          const pjmedia_clock_param *param);
-
+PJ_DECL(pj_status_t)
+pjmedia_clock_modify(pjmedia_clock* clock, const pjmedia_clock_param* param);
 
 /**
  * Poll the media clock, and execute the callback when the clock tick has
@@ -301,17 +283,15 @@ PJ_DECL(pj_status_t) pjmedia_clock_modify(pjmedia_clock *clock,
  * @param clock		    The media clock.
  * @param wait		    If non-zero, then the function will block until
  *			    a clock tick elapsed and callback has been called.
- * @param ts		    Optional argument to receive the current 
+ * @param ts		    Optional argument to receive the current
  *			    timestamp.
  *
  * @return		    Non-zero if clock tick has elapsed, or FALSE if
  *			    the function returns before a clock tick has
  *			    elapsed.
  */
-PJ_DECL(pj_bool_t) pjmedia_clock_wait(pjmedia_clock *clock,
-				      pj_bool_t wait,
-				      pj_timestamp *ts);
-
+PJ_DECL(pj_bool_t)
+pjmedia_clock_wait(pjmedia_clock* clock, pj_bool_t wait, pj_timestamp* ts);
 
 /**
  * Destroy the clock.
@@ -320,9 +300,7 @@ PJ_DECL(pj_bool_t) pjmedia_clock_wait(pjmedia_clock *clock,
  *
  * @return		    PJ_SUCCES on success.
  */
-PJ_DECL(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock);
-
-
+PJ_DECL(pj_status_t) pjmedia_clock_destroy(pjmedia_clock* clock);
 
 PJ_END_DECL
 
@@ -330,6 +308,4 @@ PJ_END_DECL
  * @}
  */
 
-
-#endif	/* __PJMEDIA_CLOCK_H__ */
-
+#endif /* __PJMEDIA_CLOCK_H__ */

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,14 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_RESOLVE_H__
 #define __PJSIP_SIP_RESOLVE_H__
 
 /**
  * @file sip_resolve.h
- * @brief 
+ * @brief
  * This module contains the mechanism to resolve server address as specified by
  * RFC 3263 - Locating SIP Servers
  */
@@ -34,22 +33,23 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_RESOLVE SIP SRV Server Resolution (RFC 3263 - Locating SIP Servers)
+ * @defgroup PJSIP_RESOLVE SIP SRV Server Resolution (RFC 3263 - Locating SIP
+ * Servers)
  * @ingroup PJSIP_TRANSPORT
  * @brief Framework to resolve SIP servers based on RFC 3263.
  * @{
  * \section PJSIP_RESOLVE_FEATURES Features
  *
- * This is the SIP server resolution framework, which is modelled after 
+ * This is the SIP server resolution framework, which is modelled after
  * RFC 3263 - Locating SIP Servers document. The SIP server resolution
- * framework is asynchronous; callback will be called once the server 
+ * framework is asynchronous; callback will be called once the server
  * address has been resolved (successfully or with errors).
  *
  * \subsection PJSIP_RESOLVE_CONFORMANT Conformance to RFC 3263
  *
- * The SIP server resolution framework is modelled after RFC 3263 (Locating 
+ * The SIP server resolution framework is modelled after RFC 3263 (Locating
  * SIP Servers) document, and it provides a single function (#pjsip_resolve())
- * to resolve a domain into actual IP addresses of the servers, by querying 
+ * to resolve a domain into actual IP addresses of the servers, by querying
  * DNS SRV record and DNS A record where necessary.
  *
  * The #pjsip_resolve() function performs the server resolution according
@@ -68,12 +68,12 @@ PJ_BEGIN_DECL
  *    addresses, these IP addresses will be returned to the caller.
  *  - if target name is not an IP address and port number is not specified,
  *    DNS SRV resolution will be performed for the specified name and
- *    transport type (or UDP when transport is not specified), 
+ *    transport type (or UDP when transport is not specified),
  *    then followed by DNS A (or AAAA, when IPv6 is supported)
  *    resolution for each target in the SRV record. If DNS SRV
  *    resolution returns error, DNS A (or AAAA) resolution will be
  *    performed for the original target (it is assumed that the target domain
- *    does not support SRV records). Upon successful completion, 
+ *    does not support SRV records). Upon successful completion,
  *    application callback will be called with each IP address of the
  *    target selected based on the load-balancing and fail-over criteria
  *    below.
@@ -86,27 +86,28 @@ PJ_BEGIN_DECL
  *    yet).
  *
  *
- * \subsection PJSIP_SIP_RESOLVE_FAILOVER_LOADBALANCE Load-Balancing and Fail-Over
+ * \subsection PJSIP_SIP_RESOLVE_FAILOVER_LOADBALANCE Load-Balancing and
+ * Fail-Over
  *
  * When multiple targets are returned in the DNS SRV response, server entries
  * are selected based on the following rule (which is described in RFC 2782):
  *  - targets will be sorted based on the priority first.
  *  - for targets with the same priority, #pjsip_resolve() will select
  *    only one target according to its weight. To select this one target,
- *    the function associates running-sum for all targets, and generates 
+ *    the function associates running-sum for all targets, and generates
  *    a random number between zero and the total running-sum (inclusive).
  *    The target selected is the first target with running-sum greater than
  *    or equal to this random number.
  *
  * The above procedure will select one target for each priority, allowing
  * application to fail-over to the next target when the previous target fails.
- * These targets are returned in the #pjsip_server_addresses structure 
- * argument of the callback. 
+ * These targets are returned in the #pjsip_server_addresses structure
+ * argument of the callback.
  *
  * \subsection PJSIP_SIP_RESOLVE_SIP_FEATURES SIP SRV Resolver Features
  *
  * Some features of the SIP resolver:
- *  - DNS SRV entries are returned on sorted order based on priority 
+ *  - DNS SRV entries are returned on sorted order based on priority
  *    to allow failover to the next appropriate server.
  *  - The procedure in RFC 2782 is used to select server with the same
  *    priority to load-balance the servers load.
@@ -118,8 +119,8 @@ PJ_BEGIN_DECL
  *  - The PJLIB-UTIL DNS resolver provides additional functionality such as
  *    response caching, query aggregation, parallel nameservers, fallback
  *    nameserver, etc., which will be described below.
- *  - Enable application to provide its own resolver implementation.  
- * 
+ *  - Enable application to provide its own resolver implementation.
+ *
  *
  * \subsection PJSIP_RESOLVE_DNS_FEATURES DNS Resolver Features
  *
@@ -147,21 +148,21 @@ PJ_BEGIN_DECL
  * With the default settings, the resolver WILL NOT perform DNS SRV resolution,
  * as it will just resolve the name with standard pj_gethostbyname() function.
  *
- * Application can enable the SRV resolver by creating the PJLIB-UTIL DNS 
+ * Application can enable the SRV resolver by creating the PJLIB-UTIL DNS
  * resolver with #pjsip_endpt_create_resolver(), configure the
  * nameservers of the PJLIB-UTIL DNS resolver object by calling
- * pj_dns_resolver_set_ns() function, and pass the DNS resolver object to 
+ * pj_dns_resolver_set_ns() function, and pass the DNS resolver object to
  * #pjsip_resolver_set_resolver() function.
  *
  * Once the resolver is set, it will be used automatically by PJSIP everytime
  * PJSIP needs to send SIP request/response messages.
  *
  * \section PJSIP_RESOLVE_EXT_RESOLVER External Resolver
- * 
- * As an alternative to enabling PJLIB-UTIL DNS resolver, application can 
- * provide its own resolver implementation by defining the callback in 
- * pjsip_ext_resolver and pass the callback to 
- * #pjsip_resolver_set_ext_resolver() function. Please note that if the 
+ *
+ * As an alternative to enabling PJLIB-UTIL DNS resolver, application can
+ * provide its own resolver implementation by defining the callback in
+ * pjsip_ext_resolver and pass the callback to
+ * #pjsip_resolver_set_ext_resolver() function. Please note that if the
  * implementation needs feature from PJLIB-UTL DNS resolver, it has to create
  * its own PJLIB-UTL DNS resolver instance.
  *
@@ -178,30 +179,29 @@ PJ_BEGIN_DECL
 typedef struct pjsip_server_addresses
 {
     /** Number of address records. */
-    unsigned	count;
+    unsigned count;
 
     /** Address records. */
     struct
     {
-	/** Preferable transport to be used to contact this address. */
-	pjsip_transport_type_e	type;
+        /** Preferable transport to be used to contact this address. */
+        pjsip_transport_type_e type;
 
-	/** Server priority (the lower the higher the priority). */
-	unsigned		priority;
+        /** Server priority (the lower the higher the priority). */
+        unsigned priority;
 
-	/** Server weight (the higher the more load it can handle). */
-	unsigned		weight;
+        /** Server weight (the higher the more load it can handle). */
+        unsigned weight;
 
-	/** The server's address. */
-	pj_sockaddr		addr;
+        /** The server's address. */
+        pj_sockaddr addr;
 
-	/** Address length. */
-	int			addr_len;
+        /** Address length. */
+        int addr_len;
 
     } entry[PJSIP_MAX_RESOLVED_ADDRESSES];
 
 } pjsip_server_addresses;
-
 
 /**
  * The type of callback function to be called when resolver finishes the job.
@@ -211,14 +211,13 @@ typedef struct pjsip_server_addresses
  *		    call the resolve function.
  * @param addr	    The addresses resolved by the operation.
  */
-typedef void pjsip_resolver_callback(pj_status_t status,
-				     void *token,
-				     const struct pjsip_server_addresses *addr);
+typedef void pjsip_resolver_callback(pj_status_t status, void* token,
+                                     const struct pjsip_server_addresses* addr);
 
 /**
- * This structure describes application callback to receive various event from 
+ * This structure describes application callback to receive various event from
  * the SIP resolver engine. Application can use this for its own resolver
- * implementation. 
+ * implementation.
  */
 typedef struct pjsip_ext_resolver
 {
@@ -228,16 +227,15 @@ typedef struct pjsip_ext_resolver
      * @param resolver      The resolver engine.
      * @param pool          The pool to allocate resolver job.
      * @param target        The target specification to be resolved.
-     * @param token         A user defined token to be passed back to callback 
+     * @param token         A user defined token to be passed back to callback
      *                      function.
      * @param cb            The callback function.
      */
-    void (*resolve) (pjsip_resolver_t *resolver, pj_pool_t *pool,
-                     const pjsip_host_info *target, void *token,
-                     pjsip_resolver_callback *cb);
+    void (*resolve)(pjsip_resolver_t* resolver, pj_pool_t* pool,
+                    const pjsip_host_info* target, void* token,
+                    pjsip_resolver_callback* cb);
 
 } pjsip_ext_resolver;
-
 
 /**
  * Create SIP resolver engine. Note that this function is normally called
@@ -248,8 +246,8 @@ typedef struct pjsip_ext_resolver
  *
  * @return	    PJ_SUCCESS when resolver can be successfully created.
  */
-PJ_DECL(pj_status_t) pjsip_resolver_create(pj_pool_t *pool,
-					   pjsip_resolver_t **p_res);
+PJ_DECL(pj_status_t)
+pjsip_resolver_create(pj_pool_t* pool, pjsip_resolver_t** p_res);
 
 /**
  * Set the DNS resolver instance of the SIP resolver engine. Before the
@@ -266,34 +264,33 @@ PJ_DECL(pj_status_t) pjsip_resolver_create(pj_pool_t *pool,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_resolver_set_resolver(pjsip_resolver_t *res,
-						 pj_dns_resolver *dns_res);
-
+PJ_DECL(pj_status_t)
+pjsip_resolver_set_resolver(pjsip_resolver_t* res, pj_dns_resolver* dns_res);
 
 /**
- * Set the DNS external resolver implementation to use in the SIP resolver 
+ * Set the DNS external resolver implementation to use in the SIP resolver
  * engine. Naturally when implementing its own resolver, application would not
- * need the internal resolver, hence this function will also destroy the 
- * PJLIB-UTIL DNS resolver if any (e.g: set using 
- * #pjsip_resolver_set_resolver()). Application that needs it, still be able 
+ * need the internal resolver, hence this function will also destroy the
+ * PJLIB-UTIL DNS resolver if any (e.g: set using
+ * #pjsip_resolver_set_resolver()). Application that needs it, still be able
  * create its own instance.
  *
- * Note that application normally will use #pjsip_endpt_set_ext_resolver() 
- * instead since it does not normally have access to the SIP resolver instance. 
+ * Note that application normally will use #pjsip_endpt_set_ext_resolver()
+ * instead since it does not normally have access to the SIP resolver instance.
  *
  * @param res       The SIP resolver engine.
  * @param ext_res   The external resolver implementation callback. This argument
- *		    can be NULL to reset the whole external implementation. 
+ *		    can be NULL to reset the whole external implementation.
  *		    However, it is prohibited to reset individual callback.
- * 
+ *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_resolver_set_ext_resolver(
-						pjsip_resolver_t *res,
-					        pjsip_ext_resolver *ext_res);
+PJ_DECL(pj_status_t)
+pjsip_resolver_set_ext_resolver(pjsip_resolver_t* res,
+                                pjsip_ext_resolver* ext_res);
 
 /**
- * Get the DNS resolver instance of the SIP resolver engine. 
+ * Get the DNS resolver instance of the SIP resolver engine.
  *
  * Note that application normally will use #pjsip_endpt_get_resolver() instead
  * since it does not normally have access to the SIP resolver instance.
@@ -302,7 +299,7 @@ PJ_DECL(pj_status_t) pjsip_resolver_set_ext_resolver(
  *
  * @return	    The DNS resolver instance (may be NULL)
  */
-PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
+PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t* res);
 
 /**
  * Destroy resolver engine. Note that this will also destroy the internal
@@ -315,10 +312,10 @@ PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
  *
  * @param resolver The resolver.
  */
-PJ_DECL(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver);
+PJ_DECL(void) pjsip_resolver_destroy(pjsip_resolver_t* resolver);
 
 /**
- * Asynchronously resolve a SIP target host or domain according to rule 
+ * Asynchronously resolve a SIP target host or domain according to rule
  * specified in RFC 3263 (Locating SIP Servers). When the resolving operation
  * has completed, the callback will be called.
  *
@@ -328,14 +325,14 @@ PJ_DECL(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver);
  * @param resolver	The resolver engine.
  * @param pool		The pool to allocate resolver job.
  * @param target	The target specification to be resolved.
- * @param token		A user defined token to be passed back to callback function.
+ * @param token		A user defined token to be passed back to callback
+ * function.
  * @param cb		The callback function.
  */
-PJ_DECL(void) pjsip_resolve( pjsip_resolver_t *resolver,
-			     pj_pool_t *pool,
-			     const pjsip_host_info *target,
-			     void *token,
-			     pjsip_resolver_callback *cb);
+PJ_DECL(void)
+pjsip_resolve(pjsip_resolver_t* resolver, pj_pool_t* pool,
+              const pjsip_host_info* target, void* token,
+              pjsip_resolver_callback* cb);
 
 /**
  * @}
@@ -343,4 +340,4 @@ PJ_DECL(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_RESOLVE_H__ */
+#endif /* __PJSIP_SIP_RESOLVE_H__ */

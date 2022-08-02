@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_COMPAT_CC_GCC_H__
 #define __PJ_COMPAT_CC_GCC_H__
@@ -26,55 +25,51 @@
  */
 
 #ifndef __GNUC__
-#  error "This file is only for gcc!"
+#    error "This file is only for gcc!"
 #endif
 
-#define PJ_CC_NAME		"gcc"
-#define PJ_CC_VER_1		__GNUC__
-#define PJ_CC_VER_2		__GNUC_MINOR__
+#define PJ_CC_NAME  "gcc"
+#define PJ_CC_VER_1 __GNUC__
+#define PJ_CC_VER_2 __GNUC_MINOR__
 
 /* __GNUC_PATCHLEVEL__ doesn't exist in gcc-2.9x.x */
 #ifdef __GNUC_PATCHLEVEL__
-#   define PJ_CC_VER_3		__GNUC_PATCHLEVEL__
+#    define PJ_CC_VER_3 __GNUC_PATCHLEVEL__
 #else
-#   define PJ_CC_VER_3		0
+#    define PJ_CC_VER_3 0
 #endif
 
+#define PJ_THREAD_FUNC
+#define PJ_NORETURN
 
-
-#define PJ_THREAD_FUNC	
-#define PJ_NORETURN		
-
-#define PJ_HAS_INT64		1
+#define PJ_HAS_INT64 1
 
 #ifdef __STRICT_ANSI__
-  #include <inttypes.h> 
-  typedef int64_t		pj_int64_t;
-  typedef uint64_t		pj_uint64_t;
-  #define PJ_INLINE_SPECIFIER	static __inline
-  #define PJ_ATTR_NORETURN	
-  #define PJ_ATTR_MAY_ALIAS	
+#    include <inttypes.h>
+typedef int64_t pj_int64_t;
+typedef uint64_t pj_uint64_t;
+#    define PJ_INLINE_SPECIFIER static __inline
+#    define PJ_ATTR_NORETURN
+#    define PJ_ATTR_MAY_ALIAS
 #else
-  typedef long long		pj_int64_t;
-  typedef unsigned long long	pj_uint64_t;
-  #define PJ_INLINE_SPECIFIER	static inline
-  #define PJ_ATTR_NORETURN	__attribute__ ((noreturn))
-  #define PJ_ATTR_MAY_ALIAS	__attribute__((__may_alias__))
+typedef long long pj_int64_t;
+typedef unsigned long long pj_uint64_t;
+#    define PJ_INLINE_SPECIFIER static inline
+#    define PJ_ATTR_NORETURN    __attribute__((noreturn))
+#    define PJ_ATTR_MAY_ALIAS   __attribute__((__may_alias__))
 #endif
 
-#define PJ_INT64(val)		val##LL
-#define PJ_UINT64(val)		val##ULL
-#define PJ_INT64_FMT		"L"
-
+#define PJ_INT64(val)  val##LL
+#define PJ_UINT64(val) val##ULL
+#define PJ_INT64_FMT   "L"
 
 #ifdef __GLIBC__
-#   define PJ_HAS_BZERO		1
+#    define PJ_HAS_BZERO 1
 #endif
 
-#define PJ_UNREACHED(x)	    	
+#define PJ_UNREACHED(x)
 
-#define PJ_ALIGN_DATA(declaration, alignment) declaration __attribute__((aligned (alignment)))
+#define PJ_ALIGN_DATA(declaration, alignment) \
+    declaration __attribute__((aligned(alignment)))
 
-
-#endif	/* __PJ_COMPAT_CC_GCC_H__ */
-
+#endif /* __PJ_COMPAT_CC_GCC_H__ */

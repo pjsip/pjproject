@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TRANSPORT_LOOP_H__
 #define __PJMEDIA_TRANSPORT_LOOP_H__
-
 
 /**
  * @file transport_loop.h
@@ -27,7 +25,6 @@
  */
 
 #include <pjmedia/stream.h>
-
 
 /**
  * @defgroup PJMEDIA_TRANSPORT_LOOP Loopback Media Transport
@@ -40,14 +37,13 @@
  * other PJMEDIA transports, the loop transport may be attached to multiple
  * streams (in other words, application should specify the same loop transport
  * instance when calling #pjmedia_stream_create()). Any RTP or RTCP packets
- * sent by one stream to this transport by default will be sent back to all 
+ * sent by one stream to this transport by default will be sent back to all
  * streams that are attached to this transport, including to the stream that
  * sends the packet. Application may individually select which stream to
  * receive packets by calling #pjmedia_transport_loop_disable_rx().
  */
 
 PJ_BEGIN_DECL
-
 
 /**
  * Settings to be given when creating loopback media transport. Application
@@ -59,7 +55,7 @@ typedef struct pjmedia_loop_tp_setting
     /* Address family, which can be pj_AF_INET() for IPv4 or
      * pj_AF_INET6() for IPv6. Default is IPv4 (pj_AF_INET()).
      */
-    int 	af;
+    int af;
 
     /* Optional local address which will be returned in the transport info.
      * If the string is empty, the address will be the default loopback
@@ -70,7 +66,7 @@ typedef struct pjmedia_loop_tp_setting
      *
      * Default is empty string.
      */
-    pj_str_t 	addr;
+    pj_str_t addr;
 
     /* The port number for the RTP socket. The RTCP port number will be
      * set to one above RTP port. If zero, it will use the default port
@@ -78,26 +74,24 @@ typedef struct pjmedia_loop_tp_setting
      *
      * Note that no actual port will be allocated. Default is 4000.
      */
-    int 	port;
-    
+    int port;
+
     /* Setting whether attached streams will receive incoming packets.
      * Application can further customize the setting of a particular setting
      * using the API pjmedia_transport_loop_disable_rx().
      *
      * Default: PJ_FALSE;
      */
-    pj_bool_t 	disable_rx;
+    pj_bool_t disable_rx;
 
 } pjmedia_loop_tp_setting;
-
 
 /**
  * Initialize loopback media transport setting with its default values.
  *
  * @param opt	SRTP setting to be initialized.
  */
-PJ_DECL(void) pjmedia_loop_tp_setting_default(pjmedia_loop_tp_setting *opt);
-
+PJ_DECL(void) pjmedia_loop_tp_setting_default(pjmedia_loop_tp_setting* opt);
 
 /**
  * Create the loopback transport.
@@ -107,9 +101,8 @@ PJ_DECL(void) pjmedia_loop_tp_setting_default(pjmedia_loop_tp_setting *opt);
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
-						   pjmedia_transport **p_tp);
-
+PJ_DECL(pj_status_t)
+pjmedia_transport_loop_create(pjmedia_endpt* endpt, pjmedia_transport** p_tp);
 
 /**
  * Create the loopback transport.
@@ -122,10 +115,9 @@ PJ_DECL(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
-pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
-			       const pjmedia_loop_tp_setting *opt,
-			       pjmedia_transport **p_tp);
-
+pjmedia_transport_loop_create2(pjmedia_endpt* endpt,
+                               const pjmedia_loop_tp_setting* opt,
+                               pjmedia_transport** p_tp);
 
 /**
  * Set the configuration of whether a stream will become the receiver of
@@ -136,19 +128,14 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
  * @param disabled  PJ_TRUE to disable the receiving of packets, or
  *		    PJ_FALSE to enable it.
  */
-PJ_DECL(pj_status_t) pjmedia_transport_loop_disable_rx(pjmedia_transport *tp,
-						       void *user,
-						       pj_bool_t disabled);
-
+PJ_DECL(pj_status_t)
+pjmedia_transport_loop_disable_rx(pjmedia_transport* tp, void* user,
+                                  pj_bool_t disabled);
 
 PJ_END_DECL
-
 
 /**
  * @}
  */
 
-
-#endif	/* __PJMEDIA_TRANSPORT_LOOP_H__ */
-
-
+#endif /* __PJMEDIA_TRANSPORT_LOOP_H__ */

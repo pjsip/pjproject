@@ -1,4 +1,3 @@
-# $Id$
 #
 # pjsua2 Setup script.
 #

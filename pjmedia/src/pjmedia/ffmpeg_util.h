@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -28,38 +27,36 @@
 #include <pjmedia/format.h>
 
 #ifdef _MSC_VER
-#   ifndef __cplusplus
-#	define inline _inline
-#   endif
-#   pragma warning(disable:4244) /* possible loss of data */
+#    ifndef __cplusplus
+#        define inline _inline
+#    endif
+#    pragma warning(disable : 4244) /* possible loss of data */
 #endif
 
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
 
-
 #ifdef PJMEDIA_USE_OLD_FFMPEG
-#   define AVPixelFormat	PixelFormat
-#   define AV(str)		str
-#   define PIX_FMT_GBRP 	PIX_FMT_GBR24P
+#    define AVPixelFormat PixelFormat
+#    define AV(str)       str
+#    define PIX_FMT_GBRP  PIX_FMT_GBR24P
 #else
-#   define AV(str)		AV_ ## str
+#    define AV(str) AV_##str
 #endif
-					 
 
 void pjmedia_ffmpeg_add_ref();
 void pjmedia_ffmpeg_dec_ref();
 
 pj_status_t pjmedia_format_id_to_PixelFormat(pjmedia_format_id fmt_id,
-					     enum AVPixelFormat *pixel_format);
+                                             enum AVPixelFormat* pixel_format);
 
 pj_status_t PixelFormat_to_pjmedia_format_id(enum AVPixelFormat pf,
-					     pjmedia_format_id *fmt_id);
+                                             pjmedia_format_id* fmt_id);
 
 pj_status_t pjmedia_format_id_to_CodecID(pjmedia_format_id fmt_id,
-					 unsigned *codec_id);
+                                         unsigned* codec_id);
 
 pj_status_t CodecID_to_pjmedia_format_id(unsigned codec_id,
-					 pjmedia_format_id *fmt_id);
+                                         pjmedia_format_id* fmt_id);
 
 #endif /* __PJMEDIA_FFMPEG_UTIL_H__ */

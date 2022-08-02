@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2010 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_CLI_TELNET_H__
 #define __PJLIB_UTIL_CLI_TELNET_H__
@@ -34,7 +33,7 @@ PJ_BEGIN_DECL
  *
  */
 
- /**
+/**
  * This structure contains the information about the telnet.
  * Application will get updated information each time the telnet is started/
  * restarted.
@@ -44,7 +43,7 @@ typedef struct pj_cli_telnet_info
     /**
      * The telnet's ip address.
      */
-    pj_str_t	ip_address;
+    pj_str_t ip_address;
 
     /**
      * The telnet's port number.
@@ -83,7 +82,7 @@ typedef struct pj_cli_telnet_cfg
      * Ioqueue instance to be used. If this field is NULL, an internal
      * ioqueue and worker thread will be created.
      */
-    pj_ioqueue_t *ioqueue;
+    pj_ioqueue_t* ioqueue;
 
     /**
      * Default log verbosity level for the session.
@@ -129,8 +128,7 @@ typedef struct pj_cli_telnet_cfg
  *
  * @param param		The structure to be initialized.
  */
-PJ_DECL(void) pj_cli_telnet_cfg_default(pj_cli_telnet_cfg *param);
-
+PJ_DECL(void) pj_cli_telnet_cfg_default(pj_cli_telnet_cfg* param);
 
 /**
  * Create, initialize, and start a telnet daemon for the application.
@@ -143,10 +141,9 @@ PJ_DECL(void) pj_cli_telnet_cfg_default(pj_cli_telnet_cfg *param);
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
-					  pj_cli_telnet_cfg *param,
-					  pj_cli_front_end **p_fe);
-
+PJ_DECL(pj_status_t)
+pj_cli_telnet_create(pj_cli_t* cli, pj_cli_telnet_cfg* param,
+                     pj_cli_front_end** p_fe);
 
 /**
  * Retrieve cli telnet info.
@@ -155,8 +152,8 @@ PJ_DECL(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe, 
-					    pj_cli_telnet_info *info); 
+PJ_DECL(pj_status_t)
+pj_cli_telnet_get_info(pj_cli_front_end* fe, pj_cli_telnet_info* info);
 
 /**
  * @}

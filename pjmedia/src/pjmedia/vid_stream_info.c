@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -25,22 +24,22 @@
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 static const pj_str_t ID_IN = { "IN", 2 };
-static const pj_str_t ID_IP4 = { "IP4", 3};
-static const pj_str_t ID_IP6 = { "IP6", 3};
-//static const pj_str_t ID_SDP_NAME = { "pjmedia", 7 };
+static const pj_str_t ID_IP4 = { "IP4", 3 };
+static const pj_str_t ID_IP6 = { "IP6", 3 };
+// static const pj_str_t ID_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
 
 /*
  * Internal function for collecting codec info and param from the SDP media.
  */
-static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
-					      pj_pool_t *pool,
-					      pjmedia_vid_codec_mgr *mgr,
-					      const pjmedia_sdp_media *local_m,
-					      const pjmedia_sdp_media *rem_m)
+static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info* si,
+                                              pj_pool_t* pool,
+                                              pjmedia_vid_codec_mgr* mgr,
+                                              const pjmedia_sdp_media* local_m,
+                                              const pjmedia_sdp_media* rem_m)
 {
     unsigned pt = 0;
-    const pjmedia_vid_codec_info *p_info;
+    const pjmedia_vid_codec_info* p_info;
     pj_status_t status;
 
     pt = pj_strtoul(&local_m->desc.fmt[0]);
@@ -50,110 +49,106 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
 
     /* Get codec info and payload type for transmitting direction. */
     if (pt < 96) {
-	/* For static payload types, get the codec info from codec manager. */
-	status = pjmedia_vid_codec_mgr_get_codec_info(mgr, pt, &p_info);
-	if (status != PJ_SUCCESS)
-	    return status;
+        /* For static payload types, get the codec info from codec manager. */
+        status = pjmedia_vid_codec_mgr_get_codec_info(mgr, pt, &p_info);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	si->codec_info = *p_info;
+        si->codec_info = *p_info;
 
-	/* Get payload type for transmitting direction.
-	 * For static payload type, pt's are symetric.
-	 */
-	si->tx_pt = pt;
+        /* Get payload type for transmitting direction.
+         * For static payload type, pt's are symetric.
+         */
+        si->tx_pt = pt;
     } else {
-	const pjmedia_sdp_attr *attr;
-	pjmedia_sdp_rtpmap *rtpmap;
-	pjmedia_codec_id codec_id;
-	pj_str_t codec_id_st;
-	unsigned i;
+        const pjmedia_sdp_attr* attr;
+        pjmedia_sdp_rtpmap* rtpmap;
+        pjmedia_codec_id codec_id;
+        pj_str_t codec_id_st;
+        unsigned i;
 
-	/* Determine payload type for outgoing channel, by finding
-	 * dynamic payload type in remote SDP that matches the answer.
-	 */
-	si->tx_pt = 0xFFFF;
-	for (i=0; i<rem_m->desc.fmt_count; ++i) {
-	    if (pjmedia_sdp_neg_fmt_match(NULL,
-					  (pjmedia_sdp_media*)local_m, 0,
-					  (pjmedia_sdp_media*)rem_m, i, 0) ==
-		PJ_SUCCESS)
-	    {
-		/* Found matched codec. */
-		si->tx_pt = pj_strtoul(&rem_m->desc.fmt[i]);
-		break;
-	    }
-	}
+        /* Determine payload type for outgoing channel, by finding
+         * dynamic payload type in remote SDP that matches the answer.
+         */
+        si->tx_pt = 0xFFFF;
+        for (i = 0; i < rem_m->desc.fmt_count; ++i) {
+            if (pjmedia_sdp_neg_fmt_match(NULL, (pjmedia_sdp_media*)local_m, 0,
+                                          (pjmedia_sdp_media*)rem_m, i,
+                                          0) == PJ_SUCCESS)
+            {
+                /* Found matched codec. */
+                si->tx_pt = pj_strtoul(&rem_m->desc.fmt[i]);
+                break;
+            }
+        }
 
-	if (si->tx_pt == 0xFFFF)
-	    return PJMEDIA_EMISSINGRTPMAP;
+        if (si->tx_pt == 0xFFFF)
+            return PJMEDIA_EMISSINGRTPMAP;
 
-	/* For dynamic payload types, get codec name from the rtpmap */
-	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP,
-					   &local_m->desc.fmt[0]);
-	if (attr == NULL)
-	    return PJMEDIA_EMISSINGRTPMAP;
+        /* For dynamic payload types, get codec name from the rtpmap */
+        attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP,
+                                           &local_m->desc.fmt[0]);
+        if (attr == NULL)
+            return PJMEDIA_EMISSINGRTPMAP;
 
-	status = pjmedia_sdp_attr_to_rtpmap(pool, attr, &rtpmap);
-	if (status != PJ_SUCCESS)
-	    return status;
+        status = pjmedia_sdp_attr_to_rtpmap(pool, attr, &rtpmap);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	/* Then get the codec info from the codec manager */
-	pj_ansi_snprintf(codec_id, sizeof(codec_id), "%.*s/",
-			 (int)rtpmap->enc_name.slen, rtpmap->enc_name.ptr);
-	codec_id_st = pj_str(codec_id);
-	i = 1;
-	status = pjmedia_vid_codec_mgr_find_codecs_by_id(mgr, &codec_id_st,
-							 &i, &p_info, NULL);
-	if (status != PJ_SUCCESS)
-	    return status;
+        /* Then get the codec info from the codec manager */
+        pj_ansi_snprintf(codec_id, sizeof(codec_id), "%.*s/",
+                         (int)rtpmap->enc_name.slen, rtpmap->enc_name.ptr);
+        codec_id_st = pj_str(codec_id);
+        i = 1;
+        status = pjmedia_vid_codec_mgr_find_codecs_by_id(mgr, &codec_id_st, &i,
+                                                         &p_info, NULL);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	si->codec_info = *p_info;
+        si->codec_info = *p_info;
     }
-
 
     /* Request for codec with the correct packing for streaming */
     si->codec_info.packings = PJMEDIA_VID_PACKING_PACKETS;
 
     /* Now that we have codec info, get the codec param. */
     si->codec_param = PJ_POOL_ALLOC_T(pool, pjmedia_vid_codec_param);
-    status = pjmedia_vid_codec_mgr_get_default_param(mgr,
-						     &si->codec_info,
-						     si->codec_param);
+    status = pjmedia_vid_codec_mgr_get_default_param(mgr, &si->codec_info,
+                                                     si->codec_param);
 
     /* Adjust encoding bitrate, if higher than remote preference. The remote
      * bitrate preference is read from SDP "b=TIAS" line in media level.
      */
     if ((si->dir & PJMEDIA_DIR_ENCODING) && rem_m->bandw_count) {
-	unsigned i, bandw = 0;
+        unsigned i, bandw = 0;
 
-	for (i = 0; i < rem_m->bandw_count; ++i) {
-	    const pj_str_t STR_BANDW_MODIFIER_TIAS = { "TIAS", 4 };
-	    if (!pj_stricmp(&rem_m->bandw[i]->modifier,
-		&STR_BANDW_MODIFIER_TIAS))
-	    {
-		bandw = rem_m->bandw[i]->value;
-		break;
-	    }
-	}
+        for (i = 0; i < rem_m->bandw_count; ++i) {
+            const pj_str_t STR_BANDW_MODIFIER_TIAS = { "TIAS", 4 };
+            if (!pj_stricmp(&rem_m->bandw[i]->modifier,
+                            &STR_BANDW_MODIFIER_TIAS)) {
+                bandw = rem_m->bandw[i]->value;
+                break;
+            }
+        }
 
-	if (bandw) {
-	    pjmedia_video_format_detail *enc_vfd;
-	    enc_vfd = pjmedia_format_get_video_format_detail(
-					&si->codec_param->enc_fmt, PJ_TRUE);
-	    if (!enc_vfd->avg_bps || enc_vfd->avg_bps > bandw)
-		enc_vfd->avg_bps = bandw * 3 / 4;
-	    if (!enc_vfd->max_bps || enc_vfd->max_bps > bandw)
-		enc_vfd->max_bps = bandw;
-	}
+        if (bandw) {
+            pjmedia_video_format_detail* enc_vfd;
+            enc_vfd = pjmedia_format_get_video_format_detail(
+              &si->codec_param->enc_fmt, PJ_TRUE);
+            if (!enc_vfd->avg_bps || enc_vfd->avg_bps > bandw)
+                enc_vfd->avg_bps = bandw * 3 / 4;
+            if (!enc_vfd->max_bps || enc_vfd->max_bps > bandw)
+                enc_vfd->max_bps = bandw;
+        }
     }
 
     /* Get remote fmtp for our encoder. */
     pjmedia_stream_info_parse_fmtp(pool, rem_m, si->tx_pt,
-				   &si->codec_param->enc_fmtp);
+                                   &si->codec_param->enc_fmtp);
 
     /* Get local fmtp for our decoder. */
     pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt,
-				   &si->codec_param->dec_fmtp);
+                                   &si->codec_param->dec_fmtp);
 
     /* When direction is NONE (it means SDP negotiation has failed) we don't
      * need to return a failure here, as returning failure will cause
@@ -163,33 +158,30 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
      * Thanks Alain Totouom
      */
     if (status != PJ_SUCCESS && si->dir != PJMEDIA_DIR_NONE)
-	return status;
+        return status;
 
     return PJ_SUCCESS;
 }
 
-
-
 /*
  * Create stream info from SDP media line.
  */
-PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
-					   pjmedia_vid_stream_info *si,
-					   pj_pool_t *pool,
-					   pjmedia_endpt *endpt,
-					   const pjmedia_sdp_session *local,
-					   const pjmedia_sdp_session *remote,
-					   unsigned stream_idx)
+PJ_DEF(pj_status_t)
+pjmedia_vid_stream_info_from_sdp(pjmedia_vid_stream_info* si, pj_pool_t* pool,
+                                 pjmedia_endpt* endpt,
+                                 const pjmedia_sdp_session* local,
+                                 const pjmedia_sdp_session* remote,
+                                 unsigned stream_idx)
 {
     const pj_str_t STR_INACTIVE = { "inactive", 8 };
     const pj_str_t STR_SENDONLY = { "sendonly", 8 };
     const pj_str_t STR_RECVONLY = { "recvonly", 8 };
 
-    const pjmedia_sdp_attr *attr;
-    const pjmedia_sdp_media *local_m;
-    const pjmedia_sdp_media *rem_m;
-    const pjmedia_sdp_conn *local_conn;
-    const pjmedia_sdp_conn *rem_conn;
+    const pjmedia_sdp_attr* attr;
+    const pjmedia_sdp_media* local_m;
+    const pjmedia_sdp_media* rem_m;
+    const pjmedia_sdp_conn* local_conn;
+    const pjmedia_sdp_conn* rem_conn;
     int rem_af, local_af;
     unsigned i;
     pj_status_t status;
@@ -207,16 +199,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
 
     local_conn = local_m->conn ? local_m->conn : local->conn;
     if (local_conn == NULL)
-	return PJMEDIA_SDP_EMISSINGCONN;
+        return PJMEDIA_SDP_EMISSINGCONN;
 
     rem_conn = rem_m->conn ? rem_m->conn : remote->conn;
     if (rem_conn == NULL)
-	return PJMEDIA_SDP_EMISSINGCONN;
+        return PJMEDIA_SDP_EMISSINGCONN;
 
     /* Media type must be video */
     if (pjmedia_get_type(&local_m->desc.media) != PJMEDIA_TYPE_VIDEO)
-	return PJMEDIA_EINVALIMEDIATYPE;
-
+        return PJMEDIA_EINVALIMEDIATYPE;
 
     /* Reset: */
 
@@ -231,164 +222,160 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
      * the transport instance will do more validation later.
      */
     status = pjmedia_sdp_transport_cmp(&rem_m->desc.transport,
-				       &local_m->desc.transport);
+                                       &local_m->desc.transport);
     if (status != PJ_SUCCESS)
-	return PJMEDIA_SDPNEG_EINVANSTP;
+        return PJMEDIA_SDPNEG_EINVANSTP;
 
     /* Get the transport protocol */
     si->proto = pjmedia_sdp_transport_get_proto(&local_m->desc.transport);
 
     /* Return success if transport protocol is not RTP/AVP compatible */
     if (!PJMEDIA_TP_PROTO_HAS_FLAG(si->proto, PJMEDIA_TP_PROTO_RTP_AVP))
-	return PJ_SUCCESS;
-
+        return PJ_SUCCESS;
 
     /* Check address family in remote SDP */
     rem_af = pj_AF_UNSPEC();
-    if (pj_stricmp(&rem_conn->net_type, &ID_IN)==0) {
-	if (pj_stricmp(&rem_conn->addr_type, &ID_IP4)==0) {
-	    rem_af = pj_AF_INET();
-	} else if (pj_stricmp(&rem_conn->addr_type, &ID_IP6)==0) {
-	    rem_af = pj_AF_INET6();
-	}
+    if (pj_stricmp(&rem_conn->net_type, &ID_IN) == 0) {
+        if (pj_stricmp(&rem_conn->addr_type, &ID_IP4) == 0) {
+            rem_af = pj_AF_INET();
+        } else if (pj_stricmp(&rem_conn->addr_type, &ID_IP6) == 0) {
+            rem_af = pj_AF_INET6();
+        }
     }
 
-    if (rem_af==pj_AF_UNSPEC()) {
-	/* Unsupported address family */
-	return PJ_EAFNOTSUP;
+    if (rem_af == pj_AF_UNSPEC()) {
+        /* Unsupported address family */
+        return PJ_EAFNOTSUP;
     }
 
     /* Set remote address: */
     status = pj_sockaddr_init(rem_af, &si->rem_addr, &rem_conn->addr,
-			      rem_m->desc.port);
+                              rem_m->desc.port);
     if (status != PJ_SUCCESS) {
-	/* Invalid IP address. */
-	return PJMEDIA_EINVALIDIP;
+        /* Invalid IP address. */
+        return PJMEDIA_EINVALIDIP;
     }
 
     /* Check address family of local info */
     local_af = pj_AF_UNSPEC();
-    if (pj_stricmp(&local_conn->net_type, &ID_IN)==0) {
-	if (pj_stricmp(&local_conn->addr_type, &ID_IP4)==0) {
-	    local_af = pj_AF_INET();
-	} else if (pj_stricmp(&local_conn->addr_type, &ID_IP6)==0) {
-	    local_af = pj_AF_INET6();
-	}
+    if (pj_stricmp(&local_conn->net_type, &ID_IN) == 0) {
+        if (pj_stricmp(&local_conn->addr_type, &ID_IP4) == 0) {
+            local_af = pj_AF_INET();
+        } else if (pj_stricmp(&local_conn->addr_type, &ID_IP6) == 0) {
+            local_af = pj_AF_INET6();
+        }
     }
 
-    if (local_af==pj_AF_UNSPEC()) {
-	/* Unsupported address family */
-	return PJ_SUCCESS;
+    if (local_af == pj_AF_UNSPEC()) {
+        /* Unsupported address family */
+        return PJ_SUCCESS;
     }
 
     /* Set remote address: */
     status = pj_sockaddr_init(local_af, &si->local_addr, &local_conn->addr,
-			      local_m->desc.port);
+                              local_m->desc.port);
     if (status != PJ_SUCCESS) {
-	/* Invalid IP address. */
-	return PJMEDIA_EINVALIDIP;
+        /* Invalid IP address. */
+        return PJMEDIA_EINVALIDIP;
     }
 
     /* Local and remote address family must match, except when ICE is used
      * by both sides (see also ticket #1952).
      */
     if (local_af != rem_af) {
-	const pj_str_t STR_ICE_CAND = { "candidate", 9 };
-	if (pjmedia_sdp_media_find_attr(rem_m, &STR_ICE_CAND, NULL)==NULL ||
-	    pjmedia_sdp_media_find_attr(local_m, &STR_ICE_CAND, NULL)==NULL)
-	{
-	    return PJ_EAFNOTSUP;
-	}
+        const pj_str_t STR_ICE_CAND = { "candidate", 9 };
+        if (pjmedia_sdp_media_find_attr(rem_m, &STR_ICE_CAND, NULL) == NULL ||
+            pjmedia_sdp_media_find_attr(local_m, &STR_ICE_CAND, NULL) == NULL)
+        {
+            return PJ_EAFNOTSUP;
+        }
     }
 
     /* Media direction: */
 
     if (local_m->desc.port == 0 ||
-	pj_sockaddr_has_addr(&si->local_addr)==PJ_FALSE ||
-	pj_sockaddr_has_addr(&si->rem_addr)==PJ_FALSE ||
-	pjmedia_sdp_media_find_attr(local_m, &STR_INACTIVE, NULL)!=NULL)
+        pj_sockaddr_has_addr(&si->local_addr) == PJ_FALSE ||
+        pj_sockaddr_has_addr(&si->rem_addr) == PJ_FALSE ||
+        pjmedia_sdp_media_find_attr(local_m, &STR_INACTIVE, NULL) != NULL)
     {
-	/* Inactive stream. */
+        /* Inactive stream. */
 
-	si->dir = PJMEDIA_DIR_NONE;
+        si->dir = PJMEDIA_DIR_NONE;
 
-    } else if (pjmedia_sdp_media_find_attr(local_m, &STR_SENDONLY, NULL)!=NULL) {
+    } else if (pjmedia_sdp_media_find_attr(local_m, &STR_SENDONLY, NULL) !=
+               NULL) {
+        /* Send only stream. */
 
-	/* Send only stream. */
+        si->dir = PJMEDIA_DIR_ENCODING;
 
-	si->dir = PJMEDIA_DIR_ENCODING;
+    } else if (pjmedia_sdp_media_find_attr(local_m, &STR_RECVONLY, NULL) !=
+               NULL) {
+        /* Recv only stream. */
 
-    } else if (pjmedia_sdp_media_find_attr(local_m, &STR_RECVONLY, NULL)!=NULL) {
-
-	/* Recv only stream. */
-
-	si->dir = PJMEDIA_DIR_DECODING;
+        si->dir = PJMEDIA_DIR_DECODING;
 
     } else {
+        /* Send and receive stream. */
 
-	/* Send and receive stream. */
-
-	si->dir = PJMEDIA_DIR_ENCODING_DECODING;
-
+        si->dir = PJMEDIA_DIR_ENCODING_DECODING;
     }
 
     /* No need to do anything else if stream is rejected */
     if (local_m->desc.port == 0) {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     /* Check if "rtcp-mux" is present in the SDP. */
-    attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
-    				  "rtcp-mux", NULL);
+    attr =
+      pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr, "rtcp-mux", NULL);
     if (attr)
-    	si->rtcp_mux = PJ_TRUE;
+        si->rtcp_mux = PJ_TRUE;
 
     /* If "rtcp" attribute is present in the SDP, set the RTCP address
      * from that attribute. Otherwise, calculate from RTP address.
      */
-    attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
-				  "rtcp", NULL);
+    attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr, "rtcp", NULL);
     if (attr) {
-	pjmedia_sdp_rtcp_attr rtcp;
-	status = pjmedia_sdp_attr_get_rtcp(attr, &rtcp);
-	if (status == PJ_SUCCESS) {
-	    if (rtcp.addr.slen) {
-		status = pj_sockaddr_init(rem_af, &si->rem_rtcp, &rtcp.addr,
-					  (pj_uint16_t)rtcp.port);
-	    } else {
-		pj_sockaddr_init(rem_af, &si->rem_rtcp, NULL,
-				 (pj_uint16_t)rtcp.port);
-		pj_memcpy(pj_sockaddr_get_addr(&si->rem_rtcp),
-		          pj_sockaddr_get_addr(&si->rem_addr),
-			  pj_sockaddr_get_addr_len(&si->rem_addr));
-	    }
-	}
+        pjmedia_sdp_rtcp_attr rtcp;
+        status = pjmedia_sdp_attr_get_rtcp(attr, &rtcp);
+        if (status == PJ_SUCCESS) {
+            if (rtcp.addr.slen) {
+                status = pj_sockaddr_init(rem_af, &si->rem_rtcp, &rtcp.addr,
+                                          (pj_uint16_t)rtcp.port);
+            } else {
+                pj_sockaddr_init(rem_af, &si->rem_rtcp, NULL,
+                                 (pj_uint16_t)rtcp.port);
+                pj_memcpy(pj_sockaddr_get_addr(&si->rem_rtcp),
+                          pj_sockaddr_get_addr(&si->rem_addr),
+                          pj_sockaddr_get_addr_len(&si->rem_addr));
+            }
+        }
     }
 
     if (!pj_sockaddr_has_addr(&si->rem_rtcp)) {
-	int rtcp_port;
+        int rtcp_port;
 
-	pj_memcpy(&si->rem_rtcp, &si->rem_addr, sizeof(pj_sockaddr));
-	rtcp_port = pj_sockaddr_get_port(&si->rem_addr) + 1;
-	pj_sockaddr_set_port(&si->rem_rtcp, (pj_uint16_t)rtcp_port);
+        pj_memcpy(&si->rem_rtcp, &si->rem_addr, sizeof(pj_sockaddr));
+        rtcp_port = pj_sockaddr_get_port(&si->rem_addr) + 1;
+        pj_sockaddr_set_port(&si->rem_rtcp, (pj_uint16_t)rtcp_port);
     }
 
     /* Check if "ssrc" attribute is present in the SDP. */
     for (i = 0; i < rem_m->attr_count; i++) {
-	if (pj_strcmp2(&rem_m->attr[i]->name, "ssrc") == 0) {
-	    pjmedia_sdp_ssrc_attr ssrc;
+        if (pj_strcmp2(&rem_m->attr[i]->name, "ssrc") == 0) {
+            pjmedia_sdp_ssrc_attr ssrc;
 
-	    status = pjmedia_sdp_attr_get_ssrc(
-	    		(const pjmedia_sdp_attr *)rem_m->attr[i], &ssrc);
-	    if (status == PJ_SUCCESS) {
-	        si->has_rem_ssrc = PJ_TRUE;
-	    	si->rem_ssrc = ssrc.ssrc;
-	    	if (ssrc.cname.slen > 0) {
-	    	    pj_strdup(pool, &si->rem_cname, &ssrc.cname);
-	    	    break;
-	    	}
-	    }
-	}
+            status = pjmedia_sdp_attr_get_ssrc(
+              (const pjmedia_sdp_attr*)rem_m->attr[i], &ssrc);
+            if (status == PJ_SUCCESS) {
+                si->has_rem_ssrc = PJ_TRUE;
+                si->rem_ssrc = ssrc.ssrc;
+                if (ssrc.cname.slen > 0) {
+                    pj_strdup(pool, &si->rem_cname, &ssrc.cname);
+                    break;
+                }
+            }
+        }
     }
 
     /* Get codec info and param */
@@ -402,15 +389,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
 
     /* Get local RTCP-FB info */
     status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local, stream_idx,
-					 si->rx_pt, &si->loc_rtcp_fb);
+                                         si->rx_pt, &si->loc_rtcp_fb);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Get remote RTCP-FB info */
     status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, remote, stream_idx,
-					 si->tx_pt, &si->rem_rtcp_fb);
+                                         si->tx_pt, &si->rem_rtcp_fb);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     return status;
 }

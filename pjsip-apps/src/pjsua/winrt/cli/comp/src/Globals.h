@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,47 +13,44 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #pragma once
 
 namespace PjsuaCLI
 {
-    namespace BackEnd
-    {        
-	ref class PjsuaCallback;
+namespace BackEnd
+{
+ref class PjsuaCallback;
 
-	public ref class Globals sealed
-        {
-        public:
-            // Get the single instance of this class
-            static property Globals^ Instance
-            {
-                Globals^ get();
-            }
-	    
-            // Get the callback singleton object
-	    property PjsuaCLI::BackEnd::PjsuaCallback^ PjsuaCallback
-            {
-		PjsuaCLI::BackEnd::PjsuaCallback^ get();
-            }
+public
+ref class Globals sealed {
+   public:
+    // Get the single instance of this class
+    static property Globals ^
+      Instance { Globals ^ get(); }
 
-	    /* pjsua method */
-	    int pjsuaStart();
-	    void pjsuaDestroy();
-	    int pjsuaRestart();
+      // Get the callback singleton object
+      property PjsuaCLI::BackEnd::PjsuaCallback ^
+      PjsuaCallback { PjsuaCLI::BackEnd::PjsuaCallback ^ get(); }
 
-        private:
-            // Default constructor
-            Globals();
+      /* pjsua method */
+      int
+      pjsuaStart();
+    void pjsuaDestroy();
+    int pjsuaRestart();
 
-            // Destructor
-            ~Globals();
+   private:
+    // Default constructor
+    Globals();
 
-	    static Globals^ singleton;
+    // Destructor
+    ~Globals();
 
-	    PjsuaCLI::BackEnd::PjsuaCallback^ callback;
-        };
-    }
-}
+    static Globals ^ singleton;
+
+    PjsuaCLI::BackEnd::PjsuaCallback ^ callback;
+};
+}  // namespace BackEnd
+}  // namespace PjsuaCLI

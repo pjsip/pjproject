@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_TYPES_H__
 #define __PJSIP_SIP_TYPES_H__
-
 
 /*
  * My note: Doxygen PJSIP and PJSIP_CORE group is declared in
@@ -43,8 +41,6 @@
  * @brief Basic data types.
  * @{
  */
-
-
 
 /**
  * Forward declaration for SIP transport.
@@ -89,7 +85,7 @@ typedef enum pjsip_transport_type_e
     PJSIP_TRANSPORT_START_OTHER,
 
     /** Start of IPv6 transports */
-    PJSIP_TRANSPORT_IPV6    = 128,
+    PJSIP_TRANSPORT_IPV6 = 128,
 
     /** UDP over IPv6 */
     PJSIP_TRANSPORT_UDP6 = PJSIP_TRANSPORT_UDP + PJSIP_TRANSPORT_IPV6,
@@ -104,7 +100,6 @@ typedef enum pjsip_transport_type_e
     PJSIP_TRANSPORT_DTLS6 = PJSIP_TRANSPORT_DTLS + PJSIP_TRANSPORT_IPV6
 
 } pjsip_transport_type_e;
-
 
 /**
  * Forward declaration for endpoint (sip_endpoint.h).
@@ -166,15 +161,13 @@ typedef struct pjsip_resolver_t pjsip_resolver_t;
  */
 typedef struct pjsip_cred_info pjsip_cred_info;
 
-
 /**
  * Forward declaration for module (sip_module.h).
  */
 typedef struct pjsip_module pjsip_module;
 
-
-/** 
- * Forward declaration for user agent type (sip_ua_layer.h). 
+/**
+ * Forward declaration for user agent type (sip_ua_layer.h).
  */
 typedef pjsip_module pjsip_user_agent;
 
@@ -188,16 +181,15 @@ typedef struct pjsip_dialog pjsip_dialog;
  */
 typedef enum pjsip_role_e
 {
-    PJSIP_ROLE_UAC,	/**< Role is UAC. */
-    PJSIP_ROLE_UAS,	/**< Role is UAS. */
+    PJSIP_ROLE_UAC, /**< Role is UAC. */
+    PJSIP_ROLE_UAS, /**< Role is UAS. */
 
     /* Alias: */
 
-    PJSIP_UAC_ROLE = PJSIP_ROLE_UAC,	/**< Role is UAC. */
-    PJSIP_UAS_ROLE = PJSIP_ROLE_UAS	/**< Role is UAS. */
+    PJSIP_UAC_ROLE = PJSIP_ROLE_UAC, /**< Role is UAC. */
+    PJSIP_UAS_ROLE = PJSIP_ROLE_UAS  /**< Role is UAS. */
 
 } pjsip_role_e;
-
 
 /**
  * General purpose buffer.
@@ -205,26 +197,25 @@ typedef enum pjsip_role_e
 typedef struct pjsip_buffer
 {
     /** The start of the buffer. */
-    char *start;
+    char* start;
 
     /** Pointer to current end of the buffer, which also indicates the position
         of subsequent buffer write.
      */
-    char *cur;
+    char* cur;
 
     /** The absolute end of the buffer. */
-    char *end;
+    char* end;
 
 } pjsip_buffer;
-
 
 /**
  * General host:port pair, used for example as Via sent-by.
  */
 typedef struct pjsip_host_port
 {
-    pj_str_t host;	/**< Host part or IP address. */
-    int	     port;	/**< Port number. */
+    pj_str_t host; /**< Host part or IP address. */
+    int port;      /**< Port number. */
 } pjsip_host_port;
 
 /**
@@ -232,11 +223,10 @@ typedef struct pjsip_host_port
  */
 typedef struct pjsip_host_info
 {
-    unsigned		    flag;   /**< Flags of pjsip_transport_flags_e. */
-    pjsip_transport_type_e  type;   /**< Transport type. */
-    pjsip_host_port	    addr;   /**< Address information. */
+    unsigned flag;               /**< Flags of pjsip_transport_flags_e. */
+    pjsip_transport_type_e type; /**< Transport type. */
+    pjsip_host_port addr;        /**< Address information. */
 } pjsip_host_info;
-
 
 /**
  * Convert exception ID into pj_status_t status.
@@ -257,10 +247,8 @@ PJ_DECL(pj_status_t) pjsip_exception_to_status(int exception_id);
  */
 #define PJSIP_THROW_SPEC(list)
 
-
 /**
  * @}
  */
 
-#endif	/* __PJSIP_SIP_TYPES_H__ */
-
+#endif /* __PJSIP_SIP_TYPES_H__ */

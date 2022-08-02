@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,39 +14,37 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
-#define THIS_FILE   "test.c"
+#define THIS_FILE "test.c"
 
-#define DO_TEST(test)	do { \
-			    PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
-			    rc = test; \
-			    PJ_LOG(3, (THIS_FILE,  \
-				       "%s(%d)",  \
-				       (rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+#define DO_TEST(test) \
+    do { \
+        PJ_LOG(3, (THIS_FILE, "Running %s...", #test)); \
+        rc = test; \
+        PJ_LOG(3, (THIS_FILE, "%s(%d)", (rc ? "..ERROR" : "..success"), rc)); \
+        if (rc != 0) \
+            goto on_return; \
+    } while (0)
 
+pj_pool_factory* mem;
 
-pj_pool_factory *mem;
-
-
-void app_perror(pj_status_t status, const char *msg)
+void app_perror(pj_status_t status, const char* msg)
 {
     char errbuf[PJ_ERR_MSG_SIZE];
-    
+
     pjmedia_strerror(status, errbuf, sizeof(errbuf));
 
-    PJ_LOG(3,(THIS_FILE, "%s: %s", msg, errbuf));
+    PJ_LOG(3, (THIS_FILE, "%s: %s", msg, errbuf));
 }
 
 /* Force linking PLC stuff if G.711 is disabled. See:
- *  https://trac.pjsip.org/repos/ticket/1337 
+ *  https://trac.pjsip.org/repos/ticket/1337
  */
-#if PJMEDIA_HAS_G711_CODEC==0
-void *dummy()
+#if PJMEDIA_HAS_G711_CODEC == 0
+void* dummy()
 {
     // Dummy
     return &pjmedia_plc_save;
@@ -58,14 +55,14 @@ int test_main(void)
 {
     int rc = 0;
     pj_caching_pool caching_pool;
-    pj_pool_t *pool;
+    pj_pool_t* pool;
 
     pj_init();
     pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
     pool = pj_pool_create(&caching_pool.factory, "test", 1000, 512, NULL);
 
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-		     PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT);
+                     PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT);
     pj_log_set_level(3);
 
     mem = &caching_pool.factory;
@@ -93,9 +90,9 @@ int test_main(void)
 #if HAS_SDP_NEG_TEST
     DO_TEST(sdp_neg_test());
 #endif
-    //DO_TEST(sdp_test (&caching_pool.factory));
-    //DO_TEST(rtp_test(&caching_pool.factory));
-    //DO_TEST(session_test (&caching_pool.factory));
+    // DO_TEST(sdp_test (&caching_pool.factory));
+    // DO_TEST(rtp_test(&caching_pool.factory));
+    // DO_TEST(session_test (&caching_pool.factory));
 #if HAS_JBUF_TEST
     DO_TEST(jbuf_main());
 #endif
@@ -106,13 +103,13 @@ int test_main(void)
     DO_TEST(codec_test_vectors());
 #endif
 
-    PJ_LOG(3,(THIS_FILE," "));
+    PJ_LOG(3, (THIS_FILE, " "));
 
 on_return:
     if (rc != 0) {
-	PJ_LOG(3,(THIS_FILE,"Test completed with error(s)!"));
+        PJ_LOG(3, (THIS_FILE, "Test completed with error(s)!"));
     } else {
-	PJ_LOG(3,(THIS_FILE,"Looks like everything is okay!"));
+        PJ_LOG(3, (THIS_FILE, "Looks like everything is okay!"));
     }
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)

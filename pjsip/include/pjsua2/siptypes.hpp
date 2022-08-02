@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2032 Teluu Inc. (http://www.teluu.com)
  *
@@ -48,29 +47,29 @@ struct AuthCredInfo : public PersistentObject
     /**
      * The authentication scheme (e.g. "digest").
      */
-    string	scheme;
+    string scheme;
 
     /**
      * Realm on which this credential is to be used. Use "*" to make
      * a credential that can be used to authenticate against any challenges.
      */
-    string	realm;
+    string realm;
 
     /**
      * Authentication user name.
      */
-    string	username;
+    string username;
 
     /**
      * Type of data that is contained in the "data" field. Use 0 if the data
      * contains plain text password.
      */
-    int		dataType;
+    int dataType;
 
     /**
      * The data, which can be a plain text password or a hashed digest.
      */
-    string	data;
+    string data;
 
     /*
      * Digest AKA credential information. Note that when AKA credential
@@ -80,29 +79,27 @@ struct AuthCredInfo : public PersistentObject
      */
 
     /** Permanent subscriber key. */
-    string	akaK;
+    string akaK;
 
     /** Operator variant key. */
-    string	akaOp;
+    string akaOp;
 
     /** Authentication Management Field	*/
-    string	akaAmf;
+    string akaAmf;
 
-public:
+   public:
     /** Default constructor */
     AuthCredInfo();
 
     /** Construct a credential with the specified parameters */
-    AuthCredInfo(const string &scheme,
-                 const string &realm,
-                 const string &user_name,
-                 const int data_type,
+    AuthCredInfo(const string& scheme, const string& realm,
+                 const string& user_name, const int data_type,
                  const string data);
 
     /**
      * Convert from pjsip
      */
-    void fromPj(const pjsip_cred_info &prm);
+    void fromPj(const pjsip_cred_info& prm);
 
     /**
      * Convert to pjsip
@@ -114,16 +111,15 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
+    virtual void readObject(const ContainerNode& node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
+    virtual void writeObject(ContainerNode& node) const PJSUA2_THROW(Error);
 };
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -135,30 +131,30 @@ struct TlsConfig : public PersistentObject
     /**
      * Certificate of Authority (CA) list file.
      */
-    string		CaListFile;
+    string CaListFile;
 
     /**
      * Public endpoint certificate file, which will be used as client-
      * side  certificate for outgoing TLS connection, and server-side
      * certificate for incoming TLS connection.
      */
-    string		certFile;
+    string certFile;
 
     /**
      * Optional private key of the endpoint certificate to be used.
      */
-    string		privKeyFile;
+    string privKeyFile;
 
     /**
      * Password to open private key.
      */
-    string		password;
+    string password;
 
     /**
      * Certificate of Authority (CA) buffer. If CaListFile, certFile or
      * privKeyFile are set, this setting will be ignored.
      */
-    string		CaBuf;
+    string CaBuf;
 
     /**
      * Public endpoint certificate buffer, which will be used as client-
@@ -166,33 +162,33 @@ struct TlsConfig : public PersistentObject
      * certificate for incoming TLS connection. If CaListFile, certFile or
      * privKeyFile are set, this setting will be ignored.
      */
-    string		certBuf;
+    string certBuf;
 
     /**
-     * Optional private key buffer of the endpoint certificate to be used. 
-     * If CaListFile, certFile or privKeyFile are set, this setting will 
+     * Optional private key buffer of the endpoint certificate to be used.
+     * If CaListFile, certFile or privKeyFile are set, this setting will
      * be ignored.
      */
-    string		privKeyBuf;
+    string privKeyBuf;
 
     /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field
-     * might be deprecated in favor of <b>proto</b> field. For now, this field 
+     * might be deprecated in favor of <b>proto</b> field. For now, this field
      * is only applicable only when <b>proto</b> field is set to zero.
      *
      * Default is PJSIP_SSL_UNSPECIFIED_METHOD (0), which in turn will
      * use PJSIP_SSL_DEFAULT_METHOD, which default value is PJSIP_TLSV1_METHOD.
      */
-    pjsip_ssl_method	method;
+    pjsip_ssl_method method;
 
     /**
-     * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable 
-     * specific protocol type. Use bitwise OR operation to combine the protocol 
+     * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable
+     * specific protocol type. Use bitwise OR operation to combine the protocol
      * type.
      *
      * Default is PJSIP_SSL_DEFAULT_PROTO.
      */
-    unsigned		proto;
+    unsigned proto;
 
     /**
      * Ciphers and order preference. The Endpoint::utilSslGetAvailableCiphers()
@@ -200,7 +196,7 @@ struct TlsConfig : public PersistentObject
      * If the array is empty, then default cipher list of the backend
      * will be used.
      */
-    IntVector		ciphers;
+    IntVector ciphers;
 
     /**
      * Specifies TLS transport behavior on the server TLS certificate
@@ -218,7 +214,7 @@ struct TlsConfig : public PersistentObject
      *
      * Default value is false.
      */
-    bool		verifyServer;
+    bool verifyServer;
 
     /**
      * Specifies TLS transport behavior on the client TLS certificate
@@ -236,7 +232,7 @@ struct TlsConfig : public PersistentObject
      *
      * Default value is PJ_FALSE.
      */
-    bool		verifyClient;
+    bool verifyClient;
 
     /**
      * When acting as server (incoming TLS connections), reject incoming
@@ -245,7 +241,7 @@ struct TlsConfig : public PersistentObject
      * This setting corresponds to SSL_VERIFY_FAIL_IF_NO_PEER_CERT flag.
      * Default value is PJ_FALSE.
      */
-    bool		requireClientCert;
+    bool requireClientCert;
 
     /**
      * TLS negotiation timeout to be applied for both outgoing and incoming
@@ -254,7 +250,7 @@ struct TlsConfig : public PersistentObject
      *
      * Default: zero
      */
-    unsigned		msecTimeout;
+    unsigned msecTimeout;
 
     /**
      * QoS traffic type to be set on this transport. When application wants
@@ -263,7 +259,7 @@ struct TlsConfig : public PersistentObject
      *
      * Default value is PJ_QOS_TYPE_BEST_EFFORT.
      */
-    pj_qos_type 	qosType;
+    pj_qos_type qosType;
 
     /**
      * Set the low level QoS parameters to the transport. This is a lower
@@ -272,7 +268,7 @@ struct TlsConfig : public PersistentObject
      *
      * By default all settings in this structure are disabled.
      */
-    pj_qos_params 	qosParams;
+    pj_qos_params qosParams;
 
     /**
      * Specify if the transport should ignore any errors when setting the QoS
@@ -280,9 +276,9 @@ struct TlsConfig : public PersistentObject
      *
      * Default: PJ_TRUE
      */
-    bool		qosIgnoreError;
+    bool qosIgnoreError;
 
-public:
+   public:
     /** Default constructor initialises with default values */
     TlsConfig();
 
@@ -290,23 +286,22 @@ public:
     pjsip_tls_setting toPj() const;
 
     /** Convert from pjsip */
-    void fromPj(const pjsip_tls_setting &prm);
+    void fromPj(const pjsip_tls_setting& prm);
 
     /**
      * Read this object from a container node.
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
+    virtual void readObject(const ContainerNode& node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
+    virtual void writeObject(ContainerNode& node) const PJSUA2_THROW(Error);
 };
-
 
 /**
  * Parameters to create a transport instance.
@@ -319,31 +314,31 @@ struct TransportConfig : public PersistentObject
      * transport will be bound to any available port, and application
      * can query the port by querying the transport info.
      */
-    unsigned		port;
+    unsigned port;
 
     /**
      * Specify the port range for socket binding, relative to the start
      * port number specified in \a port. Note that this setting is only
      * applicable when the start port number is non zero.
-     * 
+     *
      * Example: \a port=5000, \a portRange=4
      * - Available ports: 5000, 5001, 5002, 5003, 5004 (SIP transport)
-     * 
-     * Available ports are in the range of [\a port, \a port + \a portRange]. 
+     *
+     * Available ports are in the range of [\a port, \a port + \a portRange].
      *
      * Default value is zero.
      */
-    unsigned		portRange;
+    unsigned portRange;
 
     /**
      * Specify whether to randomly pick the starting port number from
      * the range of [\a port, \a port + \a port_range]. This setting is
      * used only if both port and port_range are non-zero, and only
      * applicable for the port selection of UDP and loop media transport.
-     * 
+     *
      * Default is PJ_FALSE.
      */
-    bool		randomizePort;
+    bool randomizePort;
 
     /**
      * Optional address to advertise as the address of this transport.
@@ -354,7 +349,7 @@ struct TransportConfig : public PersistentObject
      *
      * Note: this option can be used for both UDP and TCP as well!
      */
-    string		publicAddress;
+    string publicAddress;
 
     /**
      * Optional address where the socket should be bound to. This option
@@ -367,14 +362,14 @@ struct TransportConfig : public PersistentObject
      * MUST correspond to the actual interface address in the host, since
      * this address will be specified as bind() argument.
      */
-    string		boundAddress;
+    string boundAddress;
 
     /**
      * This specifies TLS settings for TLS transport. It is only be used
      * when this transport config is being used to create a SIP TLS
      * transport.
      */
-    TlsConfig		tlsConfig;
+    TlsConfig tlsConfig;
 
     /**
      * QoS traffic type to be set on this transport. When application wants
@@ -383,7 +378,7 @@ struct TransportConfig : public PersistentObject
      *
      * Default is QoS not set.
      */
-    pj_qos_type		qosType;
+    pj_qos_type qosType;
 
     /**
      * Set the low level QoS parameters to the transport. This is a lower
@@ -392,14 +387,14 @@ struct TransportConfig : public PersistentObject
      *
      * Default is QoS not set.
      */
-    pj_qos_params	qosParams;
+    pj_qos_params qosParams;
 
-public:
+   public:
     /** Default constructor initialises with default values */
     TransportConfig();
 
     /** Convert from pjsip */
-    void fromPj(const pjsua_transport_config &prm);
+    void fromPj(const pjsua_transport_config& prm);
 
     /** Convert to pjsip */
     pjsua_transport_config toPj() const;
@@ -409,14 +404,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
+    virtual void readObject(const ContainerNode& node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
+    virtual void writeObject(ContainerNode& node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -426,37 +421,37 @@ public:
 struct TransportInfo
 {
     /** PJSUA transport identification. */
-    TransportId	    	    id;
+    TransportId id;
 
     /** Transport type. */
-    pjsip_transport_type_e  type;
+    pjsip_transport_type_e type;
 
     /** Transport type name. */
-    string		    typeName;
+    string typeName;
 
     /** Transport string info/description. */
-    string		    info;
+    string info;
 
     /** Transport flags (see pjsip_transport_flags_e). */
-    unsigned		    flags;
+    unsigned flags;
 
     /** Local/bound address. */
-    SocketAddress	    localAddress;
+    SocketAddress localAddress;
 
     /** Published address (or transport address name). */
-    SocketAddress	    localName;
+    SocketAddress localName;
 
     /** Current number of objects currently referencing this transport. */
-    unsigned		    usageCount;
+    unsigned usageCount;
 
-public:
+   public:
     /**
      * Default constructor.
      */
     TransportInfo();
 
     /** Construct from pjsua_transport_info */
-    void fromPj(const pjsua_transport_info &info);
+    void fromPj(const pjsua_transport_info& info);
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -471,26 +466,26 @@ struct SipRxData
      * A short info string describing the request, which normally contains
      * the request method and its CSeq.
      */
-    string		info;
+    string info;
 
     /**
      * The whole message data as a string, containing both the header section
      * and message body section.
      */
-    string		wholeMsg;
+    string wholeMsg;
 
     /**
      * Source address of the message.
      */
-    SocketAddress       srcAddress;
+    SocketAddress srcAddress;
 
     /**
      * Pointer to original pjsip_rx_data. Only valid when the struct
      * is constructed from PJSIP's pjsip_rx_data.
      */
-    void               *pjRxData;
+    void* pjRxData;
 
-public:
+   public:
     /**
      * Default constructor.
      */
@@ -499,7 +494,7 @@ public:
     /**
      * Construct from PJSIP's pjsip_rx_data
      */
-    void fromPj(pjsip_rx_data &rdata);
+    void fromPj(pjsip_rx_data& rdata);
 };
 
 /**
@@ -512,26 +507,26 @@ struct SipTxData
      * A short info string describing the request, which normally contains
      * the request method and its CSeq.
      */
-    string		info;
-    
+    string info;
+
     /**
      * The whole message data as a string, containing both the header section
      * and message body section.
      */
-    string		wholeMsg;
-    
+    string wholeMsg;
+
     /**
      * Destination address of the message.
      */
-    SocketAddress	dstAddress;
-    
+    SocketAddress dstAddress;
+
     /**
      * Pointer to original pjsip_tx_data. Only valid when the struct
      * is constructed from PJSIP's pjsip_tx_data.
      */
-    void               *pjTxData;
-    
-public:
+    void* pjTxData;
+
+   public:
     /**
      * Default constructor.
      */
@@ -540,7 +535,7 @@ public:
     /**
      * Construct from PJSIP's pjsip_tx_data
      */
-    void fromPj(pjsip_tx_data &tdata);
+    void fromPj(pjsip_tx_data& tdata);
 };
 
 /**
@@ -550,21 +545,21 @@ public:
 struct SipTransaction
 {
     /* Transaction identification. */
-    pjsip_role_e        role;           /**< Role (UAS or UAC)      */
-    string              method;         /**< The method.            */
-    
+    pjsip_role_e role; /**< Role (UAS or UAC)      */
+    string method;     /**< The method.            */
+
     /* State and status. */
-    int			statusCode;     /**< Last status code seen. */
-    string		statusText;     /**< Last reason phrase.    */
-    pjsip_tsx_state_e	state;          /**< State.                 */
-    
+    int statusCode;          /**< Last status code seen. */
+    string statusText;       /**< Last reason phrase.    */
+    pjsip_tsx_state_e state; /**< State.                 */
+
     /* Messages and timer. */
-    SipTxData           lastTx;         /**< Msg kept for retrans.  */
-    
+    SipTxData lastTx; /**< Msg kept for retrans.  */
+
     /* Original pjsip_transaction. */
-    void               *pjTransaction;  /**< pjsip_transaction.     */
-    
-public:
+    void* pjTransaction; /**< pjsip_transaction.     */
+
+   public:
     /**
      * Default constructor.
      */
@@ -573,7 +568,7 @@ public:
     /**
      * Construct from PJSIP's pjsip_transaction
      */
-    void fromPj(pjsip_transaction &tsx);
+    void fromPj(pjsip_transaction& tsx);
 };
 
 /**
@@ -581,7 +576,7 @@ public:
  */
 struct TimerEvent
 {
-    TimerEntry          entry;          /**< The timer entry.           */
+    TimerEntry entry; /**< The timer entry.           */
 };
 
 /**
@@ -589,13 +584,14 @@ struct TimerEvent
  */
 struct TsxStateEventSrc
 {
-    SipRxData       rdata;          /**< The incoming message.      */
-    SipTxData       tdata;          /**< The outgoing message.      */
-    TimerEntry      timer;          /**< The timer.                 */
-    pj_status_t     status;         /**< Transport error status.    */
-    GenericData     data;           /**< Generic data.              */
+    SipRxData rdata;    /**< The incoming message.      */
+    SipTxData tdata;    /**< The outgoing message.      */
+    TimerEntry timer;   /**< The timer.                 */
+    pj_status_t status; /**< Transport error status.    */
+    GenericData data;   /**< Generic data.              */
 
-    TsxStateEventSrc() : status() {}
+    TsxStateEventSrc() : status()
+    {}
 };
 
 /**
@@ -603,16 +599,16 @@ struct TsxStateEventSrc
  */
 struct TsxStateEvent
 {
-    TsxStateEventSrc    src;            /**< Event source.              */
-    SipTransaction      tsx;            /**< The transaction.           */
-    pjsip_tsx_state_e   prevState;      /**< Previous state.            */
-    pjsip_event_id_e    type;           /**< Type of event source:
-                                         *     - PJSIP_EVENT_TX_MSG
-                                         *     - PJSIP_EVENT_RX_MSG,
-                                         *     - PJSIP_EVENT_TRANSPORT_ERROR
-                                         *     - PJSIP_EVENT_TIMER
-                                         *     - PJSIP_EVENT_USER
-                                         */
+    TsxStateEventSrc src;        /**< Event source.              */
+    SipTransaction tsx;          /**< The transaction.           */
+    pjsip_tsx_state_e prevState; /**< Previous state.            */
+    pjsip_event_id_e type;       /**< Type of event source:
+                                  *     - PJSIP_EVENT_TX_MSG
+                                  *     - PJSIP_EVENT_RX_MSG,
+                                  *     - PJSIP_EVENT_TRANSPORT_ERROR
+                                  *     - PJSIP_EVENT_TIMER
+                                  *     - PJSIP_EVENT_USER
+                                  */
 
     TsxStateEvent();
 };
@@ -622,7 +618,7 @@ struct TsxStateEvent
  */
 struct TxMsgEvent
 {
-    SipTxData           tdata;          /**< The transmit data buffer.  */
+    SipTxData tdata; /**< The transmit data buffer.  */
 };
 
 /**
@@ -630,8 +626,8 @@ struct TxMsgEvent
  */
 struct TxErrorEvent
 {
-    SipTxData           tdata;          /**< The transmit data.         */
-    SipTransaction      tsx;            /**< The transaction.           */
+    SipTxData tdata;    /**< The transmit data.         */
+    SipTransaction tsx; /**< The transaction.           */
 };
 
 /**
@@ -639,7 +635,7 @@ struct TxErrorEvent
  */
 struct RxMsgEvent
 {
-    SipRxData           rdata;          /**< The receive data buffer.   */
+    SipRxData rdata; /**< The receive data buffer.   */
 };
 
 /**
@@ -647,10 +643,10 @@ struct RxMsgEvent
  */
 struct UserEvent
 {
-    GenericData         user1;          /**< User data 1.               */
-    GenericData         user2;          /**< User data 2.               */
-    GenericData         user3;          /**< User data 3.               */
-    GenericData         user4;          /**< User data 4.               */
+    GenericData user1; /**< User data 1.               */
+    GenericData user2; /**< User data 2.               */
+    GenericData user3; /**< User data 3.               */
+    GenericData user4; /**< User data 4.               */
 };
 
 /**
@@ -661,33 +657,32 @@ struct SipEventBody
     /**
      * Timer event.
      */
-    TimerEvent      timer;
-    
+    TimerEvent timer;
+
     /**
      * Transaction state has changed event.
      */
-    TsxStateEvent   tsxState;
-    
+    TsxStateEvent tsxState;
+
     /**
      * Message transmission event.
      */
-    TxMsgEvent      txMsg;
-    
+    TxMsgEvent txMsg;
+
     /**
      * Transmission error event.
      */
-    TxErrorEvent    txError;
-    
+    TxErrorEvent txError;
+
     /**
      * Message arrival event.
      */
-    RxMsgEvent      rxMsg;
-    
+    RxMsgEvent rxMsg;
+
     /**
      * User event.
      */
-    UserEvent       user;
-    
+    UserEvent user;
 };
 
 /**
@@ -699,20 +694,20 @@ struct SipEvent
     /**
      * The event type, can be any value of \b pjsip_event_id_e.
      */
-    pjsip_event_id_e    type;
-    
+    pjsip_event_id_e type;
+
     /**
      * The event body, which fields depends on the event type.
      */
-    SipEventBody        body;
-    
+    SipEventBody body;
+
     /**
      * Pointer to its original pjsip_event. Only valid when the struct is
      * constructed from PJSIP's pjsip_event.
      */
-    void               *pjEvent;
-    
-public:
+    void* pjEvent;
+
+   public:
     /**
      * Default constructor.
      */
@@ -721,7 +716,7 @@ public:
     /**
      * Construct from PJSIP's pjsip_event
      */
-    void fromPj(const pjsip_event &ev);
+    void fromPj(const pjsip_event& ev);
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -733,16 +728,16 @@ public:
 struct SipMediaType
 {
     /** Media type. */
-    string		type;
+    string type;
 
     /** Media subtype. */
-    string		subType;
+    string subType;
 
-public:
+   public:
     /**
      * Construct from PJSIP's pjsip_media_type
      */
-    void fromPj(const pjsip_media_type &prm);
+    void fromPj(const pjsip_media_type& prm);
 
     /**
      * Convert to PJSIP's pjsip_media_type.
@@ -758,29 +753,28 @@ struct SipHeader
     /**
      * Header name.
      */
-    string		hName;
+    string hName;
 
     /**
      * Header value.
      */
-    string		hValue;
+    string hValue;
 
-public:
+   public:
     /**
      * Initiaize from PJSIP header.
      */
-    void fromPj(const pjsip_hdr *) PJSUA2_THROW(Error);
+    void fromPj(const pjsip_hdr*) PJSUA2_THROW(Error);
 
     /**
      * Convert to PJSIP header.
      */
-    pjsip_generic_string_hdr &toPj() const;
+    pjsip_generic_string_hdr& toPj() const;
 
-private:
+   private:
     /** Interal buffer for conversion to PJSIP header */
-    mutable pjsip_generic_string_hdr	pjHdr;
+    mutable pjsip_generic_string_hdr pjHdr;
 };
-
 
 /** Array of strings */
 typedef std::vector<SipHeader> SipHeaderVector;
@@ -793,33 +787,33 @@ struct SipMultipartPart
     /**
      * Optional headers to be put in this multipart part.
      */
-    SipHeaderVector	headers;
+    SipHeaderVector headers;
 
     /**
      * The MIME type of the body part of this multipart part.
      */
-    SipMediaType	contentType;
+    SipMediaType contentType;
 
     /**
      * The body part of tthis multipart part.
      */
-    string		body;
+    string body;
 
-public:
+   public:
     /**
      * Initiaize from PJSIP's pjsip_multipart_part.
      */
-    void fromPj(const pjsip_multipart_part &prm) PJSUA2_THROW(Error);
+    void fromPj(const pjsip_multipart_part& prm) PJSUA2_THROW(Error);
 
     /**
      * Convert to PJSIP's pjsip_multipart_part.
      */
     pjsip_multipart_part& toPj() const;
 
-private:
+   private:
     /** Interal buffer for conversion to PJSIP pjsip_multipart_part */
-    mutable pjsip_multipart_part	pjMpp;
-    mutable pjsip_msg_body		pjMsgBody;
+    mutable pjsip_multipart_part pjMpp;
+    mutable pjsip_msg_body pjMsgBody;
 };
 
 /** Array of multipart parts */
@@ -836,24 +830,24 @@ struct SipTxOption
      * target will be set to the remote URI (To header). At the moment this
      * field is only used when sending initial INVITE and MESSAGE requests.
      */
-    string                  targetUri;
+    string targetUri;
 
     /**
      * Additional message headers to be included in the outgoing message.
      */
-    SipHeaderVector         headers;
+    SipHeaderVector headers;
 
     /**
      * MIME type of the message body, if application specifies the messageBody
      * in this structure.
      */
-    string                  contentType;
+    string contentType;
 
     /**
      * Optional message body to be added to the message, only when the
      * message doesn't have a body.
      */
-    string                  msgBody;
+    string msgBody;
 
     /**
      * Content type of the multipart body. If application wants to send
@@ -861,7 +855,7 @@ struct SipTxOption
      * the content type in multipartContentType. If the message already
      * contains a body, the body will be added to the multipart bodies.
      */
-    SipMediaType            multipartContentType;
+    SipMediaType multipartContentType;
 
     /**
      * Array of multipart parts. If application wants to send multipart
@@ -869,9 +863,9 @@ struct SipTxOption
      * type in \a multipart_ctype. If the message already contains a body,
      * the body will be added to the multipart bodies.
      */
-    SipMultipartPartVector  multipartParts;
+    SipMultipartPartVector multipartParts;
 
-public:
+   public:
     /**
      * Check if the options are empty. If the options are set with empty
      * values, there will be no additional information sent with outgoing
@@ -880,16 +874,16 @@ public:
      * @return              True if the options are empty.
      */
     bool isEmpty() const;
-    
+
     /**
      * Initiaize from PJSUA's pjsua_msg_data.
      */
-    void fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error);
+    void fromPj(const pjsua_msg_data& prm) PJSUA2_THROW(Error);
 
     /**
      * Convert to PJSUA's pjsua_msg_data.
      */
-    void toPj(pjsua_msg_data &msg_data) const;
+    void toPj(pjsua_msg_data& msg_data) const;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -903,30 +897,29 @@ struct SendInstantMessageParam
     /**
      * MIME type. Default is "text/plain".
      */
-    string      contentType;
-    
+    string contentType;
+
     /**
      * The message content.
      */
-    string      content;
-    
+    string content;
+
     /**
      * List of headers etc to be included in outgoing request.
      */
     SipTxOption txOption;
-    
+
     /**
      * User data, which will be given back when the IM callback is called.
      */
-    Token       userData;
-    
-public:
+    Token userData;
+
+   public:
     /**
      * Default constructor initializes with zero/empty values.
      */
     SendInstantMessageParam();
 };
-
 
 /**
  * This structure contains parameters for sending typing indication methods,
@@ -937,49 +930,41 @@ struct SendTypingIndicationParam
     /**
      * True to indicate to remote that local person is currently typing an IM.
      */
-    bool         isTyping;
-    
+    bool isTyping;
+
     /**
      * List of headers etc to be included in outgoing request.
      */
-    SipTxOption  txOption;
-    
-public:
+    SipTxOption txOption;
+
+   public:
     /**
      * Default constructor initializes with zero/empty values.
      */
     SendTypingIndicationParam();
 };
 
-
 /* Utilities */
 #ifndef SWIG
 //! @cond Doxygen_Suppress
-void readIntVector( ContainerNode &node,
-                    const string &array_name,
-                    IntVector &v) PJSUA2_THROW(Error);
-void writeIntVector(ContainerNode &node,
-                    const string &array_name,
-                    const IntVector &v) PJSUA2_THROW(Error);
-void readQosParams( ContainerNode &node,
-                    pj_qos_params &qos) PJSUA2_THROW(Error);
-void writeQosParams( ContainerNode &node,
-                     const pj_qos_params &qos) PJSUA2_THROW(Error);
-void readSipHeaders( const ContainerNode &node,
-                     const string &array_name,
-                     SipHeaderVector &headers) PJSUA2_THROW(Error);
-void writeSipHeaders(ContainerNode &node,
-                     const string &array_name,
-                     const SipHeaderVector &headers) PJSUA2_THROW(Error);
+void readIntVector(ContainerNode& node, const string& array_name, IntVector& v)
+  PJSUA2_THROW(Error);
+void writeIntVector(ContainerNode& node, const string& array_name,
+                    const IntVector& v) PJSUA2_THROW(Error);
+void readQosParams(ContainerNode& node, pj_qos_params& qos) PJSUA2_THROW(Error);
+void writeQosParams(ContainerNode& node, const pj_qos_params& qos)
+  PJSUA2_THROW(Error);
+void readSipHeaders(const ContainerNode& node, const string& array_name,
+                    SipHeaderVector& headers) PJSUA2_THROW(Error);
+void writeSipHeaders(ContainerNode& node, const string& array_name,
+                     const SipHeaderVector& headers) PJSUA2_THROW(Error);
 //! @endcond
-#endif // SWIG
+#endif  // SWIG
 
 /**
  * @}  PJSUA2
  */
 
-} // namespace pj
+}  // namespace pj
 
-
-
-#endif	/* __PJSUA2_SIPTYPES_HPP__ */
+#endif /* __PJSUA2_SIPTYPES_HPP__ */

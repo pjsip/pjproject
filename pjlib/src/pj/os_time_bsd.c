@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,14 +14,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include <pj/compat/time.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *tv)
+PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val* tv)
 {
     struct timeb tb;
 
@@ -33,4 +32,3 @@ PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *tv)
     tv->msec = tb.millitm;
     return PJ_SUCCESS;
 }
-

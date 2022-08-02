@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_STRING_HPP__
 #define __PJPP_STRING_HPP__
@@ -27,92 +26,91 @@
 //
 // String wrapper class for pj_str_t.
 //
-class Pj_String : public pj_str_t
-{
-public:
+class Pj_String : public pj_str_t {
+   public:
     //
     // Default constructor.
     //
-    Pj_String() 
-    { 
-	pj_assert(sizeof(Pj_String) == sizeof(pj_str_t));
-	ptr=NULL; 
-        slen=0; 
+    Pj_String()
+    {
+        pj_assert(sizeof(Pj_String) == sizeof(pj_str_t));
+        ptr = NULL;
+        slen = 0;
     }
 
     //
     // Construct the buffer from a char* (use with care)
     //
-    Pj_String(char *str) 
-    { 
-	set(str);
+    Pj_String(char* str)
+    {
+        set(str);
     }
 
     //
     // Construct from a const char*.
     //
-    Pj_String(Pj_Pool &pool, const char *src)
+    Pj_String(Pj_Pool& pool, const char* src)
     {
-	set(pool, src);
+        set(pool, src);
     }
 
     //
     // Construct from pj_str_t&.
     //
-    explicit Pj_String(pj_str_t &s)
+    explicit Pj_String(pj_str_t& s)
     {
-	ptr = s.ptr;
-	slen = s.slen;
+        ptr = s.ptr;
+        slen = s.slen;
     }
 
     //
     // Construct from const pj_str_t& (use with care!).
     //
-    explicit Pj_String(const pj_str_t &s)
+    explicit Pj_String(const pj_str_t& s)
     {
-	ptr = (char*)s.ptr;
-	slen = s.slen;
+        ptr = (char*)s.ptr;
+        slen = s.slen;
     }
 
     //
     // Construct by copying from const pj_str_t*.
     //
-    Pj_String(Pj_Pool &pool, const pj_str_t *s)
+    Pj_String(Pj_Pool& pool, const pj_str_t* s)
     {
-	set(pool, s);
+        set(pool, s);
     }
 
     //
     // Construct by copying from Pj_String
     //
-    Pj_String(Pj_Pool &pool, const Pj_String &rhs)
+    Pj_String(Pj_Pool& pool, const Pj_String& rhs)
     {
-	set(pool, rhs);
+        set(pool, rhs);
     }
 
     //
     // Construct from another Pj_String, use with care!
     //
-    explicit Pj_String(const Pj_String &rhs)
+    explicit Pj_String(const Pj_String& rhs)
     {
-	ptr = rhs.ptr;
-	slen = rhs.slen;
+        ptr = rhs.ptr;
+        slen = rhs.slen;
     }
 
     //
     // Construct from a char* and a length.
     //
-    Pj_String(char *str, pj_size_t len)
+    Pj_String(char* str, pj_size_t len)
     {
-	set(str, len);
+        set(str, len);
     }
 
     //
     // Construct from pair of pointer.
     //
-    Pj_String(char *begin, char *end)
+    Pj_String(char* begin, char* end)
     {
-	pj_strset3(this, begin, end);
+        pj_strset3(this, begin, end);
     }
 
     //
@@ -120,7 +118,7 @@ public:
     //
     operator pj_str_t*()
     {
-	return this;
+        return this;
     }
 
     //
@@ -128,7 +126,7 @@ public:
     //
     operator const pj_str_t*() const
     {
-	return this;
+        return this;
     }
 
     //
@@ -136,7 +134,7 @@ public:
     //
     pj_size_t length() const
     {
-	return pj_strlen(this);
+        return pj_strlen(this);
     }
 
     //
@@ -144,274 +142,274 @@ public:
     //
     pj_size_t size() const
     {
-	return length();
+        return length();
     }
 
     //
     // Get the string buffer.
     //
-    const char *buf() const
+    const char* buf() const
     {
-	return ptr;
+        return ptr;
     }
 
     //
     // Initialize buffer from char*.
     //
-    void set(char *str)
+    void set(char* str)
     {
-	pj_strset2(this, str);
+        pj_strset2(this, str);
     }
 
     //
     // Initialize by copying from a const char*.
     //
-    void set(Pj_Pool &pool, const char *s)
+    void set(Pj_Pool& pool, const char* s)
     {
-	pj_strdup2(pool, this, s);
+        pj_strdup2(pool, this, s);
     }
 
     //
     // Initialize from pj_str_t*.
     //
-    void set(pj_str_t *s)
+    void set(pj_str_t* s)
     {
-	pj_strassign(this, s);
+        pj_strassign(this, s);
     }
 
     //
     // Initialize by copying from const pj_str_t*.
     //
-    void set(Pj_Pool &pool, const pj_str_t *s)
+    void set(Pj_Pool& pool, const pj_str_t* s)
     {
-	pj_strdup(pool, this, s);
+        pj_strdup(pool, this, s);
     }
 
     //
     // Initialize from char* and length.
     //
-    void set(char *str, pj_size_t len)
+    void set(char* str, pj_size_t len)
     {
-	pj_strset(this, str, len);
+        pj_strset(this, str, len);
     }
 
     //
     // Initialize from pair of pointers.
     //
-    void set(char *begin, char *end)
+    void set(char* begin, char* end)
     {
-	pj_strset3(this, begin, end);
+        pj_strset3(this, begin, end);
     }
 
     //
     // Initialize from other Pj_String.
     //
-    void set(Pj_String &rhs)
+    void set(Pj_String& rhs)
     {
-	pj_strassign(this, &rhs);
+        pj_strassign(this, &rhs);
     }
 
     //
     // Initialize by copying from a Pj_String*.
     //
-    void set(Pj_Pool &pool, const Pj_String *s)
+    void set(Pj_Pool& pool, const Pj_String* s)
     {
-	pj_strdup(pool, this, s);
+        pj_strdup(pool, this, s);
     }
 
     //
     // Initialize by copying from other Pj_String.
     //
-    void set(Pj_Pool &pool, const Pj_String &s)
+    void set(Pj_Pool& pool, const Pj_String& s)
     {
-	pj_strdup(pool, this, &s);
+        pj_strdup(pool, this, &s);
     }
 
     //
     // Copy the contents of other string.
     //
-    void strcpy(const pj_str_t *s)
+    void strcpy(const pj_str_t* s)
     {
-	pj_strcpy(this, s);
+        pj_strcpy(this, s);
     }
 
     //
     // Copy the contents of other string.
     //
-    void strcpy(const Pj_String &rhs)
+    void strcpy(const Pj_String& rhs)
     {
-	pj_strcpy(this, &rhs);
+        pj_strcpy(this, &rhs);
     }
 
     //
     // Copy the contents of other string.
     //
-    void strcpy(const char *s)
+    void strcpy(const char* s)
     {
-	pj_strcpy2(this, s);
+        pj_strcpy2(this, s);
     }
 
     //
     // Compare string.
     //
-    int strcmp(const char *s) const
+    int strcmp(const char* s) const
     {
-	return pj_strcmp2(this, s);
+        return pj_strcmp2(this, s);
     }
 
     //
     // Compare string.
     //
-    int strcmp(const pj_str_t *s) const
+    int strcmp(const pj_str_t* s) const
     {
-	return pj_strcmp(this, s);
+        return pj_strcmp(this, s);
     }
 
     //
     // Compare string.
     //
-    int strcmp(const Pj_String &rhs) const
+    int strcmp(const Pj_String& rhs) const
     {
-	return pj_strcmp(this, &rhs);
+        return pj_strcmp(this, &rhs);
     }
 
     //
     // Compare string.
     //
-    int strncmp(const char *s, pj_size_t len) const
+    int strncmp(const char* s, pj_size_t len) const
     {
-	return pj_strncmp2(this, s, len);
+        return pj_strncmp2(this, s, len);
     }
 
     //
     // Compare string.
     //
-    int strncmp(const pj_str_t *s, pj_size_t len) const
+    int strncmp(const pj_str_t* s, pj_size_t len) const
     {
-	return pj_strncmp(this, s, len);
+        return pj_strncmp(this, s, len);
     }
 
     //
     // Compare string.
     //
-    int strncmp(const Pj_String &rhs, pj_size_t len) const
+    int strncmp(const Pj_String& rhs, pj_size_t len) const
     {
-	return pj_strncmp(this, &rhs, len);
+        return pj_strncmp(this, &rhs, len);
     }
 
     //
     // Compare string.
     //
-    int stricmp(const char *s) const
+    int stricmp(const char* s) const
     {
-	return pj_stricmp2(this, s);
+        return pj_stricmp2(this, s);
     }
 
     //
     // Compare string.
     //
-    int stricmp(const pj_str_t *s) const
+    int stricmp(const pj_str_t* s) const
     {
-	return pj_stricmp(this, s);
+        return pj_stricmp(this, s);
     }
 
     //
     // Compare string.
     //
-    int stricmp(const Pj_String &rhs) const
+    int stricmp(const Pj_String& rhs) const
     {
-	return stricmp(&rhs);
+        return stricmp(&rhs);
     }
 
     //
     // Compare string.
     //
-    int strnicmp(const char *s, pj_size_t len) const
+    int strnicmp(const char* s, pj_size_t len) const
     {
-	return pj_strnicmp2(this, s, len);
+        return pj_strnicmp2(this, s, len);
     }
 
     //
     // Compare string.
     //
-    int strnicmp(const pj_str_t *s, pj_size_t len) const
+    int strnicmp(const pj_str_t* s, pj_size_t len) const
     {
-	return pj_strnicmp(this, s, len);
+        return pj_strnicmp(this, s, len);
     }
 
     //
     // Compare string.
     //
-    int strnicmp(const Pj_String &rhs, pj_size_t len) const
+    int strnicmp(const Pj_String& rhs, pj_size_t len) const
     {
-	return strnicmp(&rhs, len);
+        return strnicmp(&rhs, len);
     }
 
     //
     // Compare contents for equality.
     //
-    bool operator==(const char *s) const
+    bool operator==(const char* s) const
     {
-	return strcmp(s) == 0;
+        return strcmp(s) == 0;
     }
 
     //
     // Compare contents for equality.
     //
-    bool operator==(const pj_str_t *s) const
+    bool operator==(const pj_str_t* s) const
     {
-	return strcmp(s) == 0;
+        return strcmp(s) == 0;
     }
 
     //
     // Compare contents for equality.
     //
-    bool operator==(const Pj_String &rhs) const
+    bool operator==(const Pj_String& rhs) const
     {
-	return pj_strcmp(this, &rhs) == 0;
+        return pj_strcmp(this, &rhs) == 0;
     }
 
     //
     // Assign from char*
     //
-    Pj_String& operator=(char *s)
+    Pj_String& operator=(char* s)
     {
-	set(s);
-	return *this;
+        set(s);
+        return *this;
     }
 
     ///
     // Assign from another Pj_String, use with care!
     //
-    Pj_String& operator=(const Pj_String &rhs)
+    Pj_String& operator=(const Pj_String& rhs)
     {
-	ptr = rhs.ptr;
-	slen = rhs.slen;
-	return *this;
+        ptr = rhs.ptr;
+        slen = rhs.slen;
+        return *this;
     }
 
     //
     // Find a character in the string.
     //
-    char *strchr(int chr)
+    char* strchr(int chr)
     {
-	return pj_strchr(this, chr);
+        return pj_strchr(this, chr);
     }
 
     //
     // Find a character in the string.
     //
-    char *find(int chr)
+    char* find(int chr)
     {
-	return strchr(chr);
+        return strchr(chr);
     }
 
     //
     // Concatenate string.
     //
-    void strcat(const Pj_String &rhs)
+    void strcat(const Pj_String& rhs)
     {
-	pj_strcat(this, &rhs);
+        pj_strcat(this, &rhs);
     }
 
     //
@@ -419,7 +417,7 @@ public:
     //
     void ltrim()
     {
-	pj_strltrim(this);
+        pj_strltrim(this);
     }
 
     //
@@ -427,7 +425,7 @@ public:
     //
     void rtrim()
     {
-	pj_strrtrim(this);
+        pj_strrtrim(this);
     }
 
     //
@@ -435,7 +433,7 @@ public:
     //
     void trim()
     {
-	pj_strtrim(this);
+        pj_strtrim(this);
     }
 
     //
@@ -443,7 +441,7 @@ public:
     //
     unsigned long to_ulong() const
     {
-	return pj_strtoul(this);
+        return pj_strtoul(this);
     }
 
     //
@@ -457,12 +455,11 @@ public:
     //
     // Convert from unsigned long with padding.
     //
-    void from_ulong_with_pad(unsigned long value, int min_dig=0, int pad=' ')
+    void from_ulong_with_pad(unsigned long value, int min_dig = 0,
+                             int pad = ' ')
     {
         slen = pj_utoa_pad(value, ptr, min_dig, pad);
     }
-
 };
 
-#endif	/* __PJPP_STRING_HPP__ */
-
+#endif /* __PJPP_STRING_HPP__ */

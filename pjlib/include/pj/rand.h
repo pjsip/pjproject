@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_RAND_H__
 #define __PJ_RAND_H__
@@ -28,7 +27,6 @@
 #include <pj/config.h>
 
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup PJ_RAND Random Number Generator
@@ -47,7 +45,6 @@ PJ_BEGIN_DECL
  */
 PJ_DECL(void) pj_srand(unsigned int seed);
 
-
 /**
  * Generate random integer with 32bit randomness.
  *
@@ -55,12 +52,8 @@ PJ_DECL(void) pj_srand(unsigned int seed);
  */
 PJ_DECL(int) pj_rand(void);
 
-
 /** @} */
-
 
 PJ_END_DECL
 
-
-#endif	/* __PJ_RAND_H__ */
-
+#endif /* __PJ_RAND_H__ */

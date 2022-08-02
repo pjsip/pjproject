@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_WSOLA_H__
 #define __PJMEDIA_WSOLA_H__
@@ -33,7 +32,7 @@
  * @{
  *
  * This section describes Waveform Similarity Based Overlap-Add (WSOLA)
- * implementation in PJMEDIA. The WSOLA API here can be used both to 
+ * implementation in PJMEDIA. The WSOLA API here can be used both to
  * compress (speed-up) and stretch (expand, slow down) audio playback
  * without altering the pitch, or as a mean for performing packet loss
  * concealment (WSOLA).
@@ -43,12 +42,10 @@
 
 PJ_BEGIN_DECL
 
-
 /**
  * Opaque declaration for WSOLA structure.
  */
 typedef struct pjmedia_wsola pjmedia_wsola;
-
 
 /**
  * WSOLA options, can be combined with bitmask operation.
@@ -58,7 +55,7 @@ enum pjmedia_wsola_option
     /**
      * Disable Hanning window to conserve memory.
      */
-    PJMEDIA_WSOLA_NO_HANNING	= 1,
+    PJMEDIA_WSOLA_NO_HANNING = 1,
 
     /**
      * Specify that the WSOLA will not be used for PLC.
@@ -73,16 +70,14 @@ enum pjmedia_wsola_option
 
     /**
      * Disable fade-in and fade-out feature in the transition between
-     * actual and synthetic frames in WSOLA. With fade feature enabled, 
-     * WSOLA will only generate a limited number of synthetic frames 
-     * (configurable with #pjmedia_wsola_set_max_expand()), fading out 
+     * actual and synthetic frames in WSOLA. With fade feature enabled,
+     * WSOLA will only generate a limited number of synthetic frames
+     * (configurable with #pjmedia_wsola_set_max_expand()), fading out
      * the volume on every more samples it generates, and when it reaches
      * the limit it will only generate silence.
      */
     PJMEDIA_WSOLA_NO_FADING = 8
 };
-
-
 
 /**
  * Create and initialize WSOLA.
@@ -97,13 +92,10 @@ enum pjmedia_wsola_option
  *
  * @return		    PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_wsola_create(pj_pool_t *pool, 
-					  unsigned clock_rate,
-					  unsigned samples_per_frame,
-					  unsigned channel_count,
-					  unsigned options,
-					  pjmedia_wsola **p_wsola);
-
+PJ_DECL(pj_status_t)
+pjmedia_wsola_create(pj_pool_t* pool, unsigned clock_rate,
+                     unsigned samples_per_frame, unsigned channel_count,
+                     unsigned options, pjmedia_wsola** p_wsola);
 
 /**
  * Specify maximum number of continuous synthetic frames that can be
@@ -118,9 +110,8 @@ PJ_DECL(pj_status_t) pjmedia_wsola_create(pj_pool_t *pool,
  *
  * @return	    PJ_SUCCESS normally.
  */
-PJ_DECL(pj_status_t) pjmedia_wsola_set_max_expand(pjmedia_wsola *wsola,
-						  unsigned msec);
-
+PJ_DECL(pj_status_t)
+pjmedia_wsola_set_max_expand(pjmedia_wsola* wsola, unsigned msec);
 
 /**
  * Destroy WSOLA.
@@ -129,8 +120,7 @@ PJ_DECL(pj_status_t) pjmedia_wsola_set_max_expand(pjmedia_wsola *wsola,
  *
  * @return	    PJ_SUCCESS normally.
  */
-PJ_DECL(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola *wsola);
-
+PJ_DECL(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola* wsola);
 
 /**
  * Reset the buffer contents of WSOLA.
@@ -140,9 +130,8 @@ PJ_DECL(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola *wsola);
  *
  * @return	    PJ_SUCCESS normally.
  */
-PJ_DECL(pj_status_t) pjmedia_wsola_reset(pjmedia_wsola *wsola,
-					 unsigned options);
-
+PJ_DECL(pj_status_t)
+pjmedia_wsola_reset(pjmedia_wsola* wsola, unsigned options);
 
 /**
  * Give one good frame to WSOLA to be kept as reference. Application
@@ -163,9 +152,8 @@ PJ_DECL(pj_status_t) pjmedia_wsola_reset(pjmedia_wsola *wsola,
  *
  * @return	    PJ_SUCCESS normally.
  */
-PJ_DECL(pj_status_t) pjmedia_wsola_save(pjmedia_wsola *wsola, 
-					pj_int16_t frm[], 
-					pj_bool_t prev_lost);
+PJ_DECL(pj_status_t)
+pjmedia_wsola_save(pjmedia_wsola* wsola, pj_int16_t frm[], pj_bool_t prev_lost);
 
 /**
  * Generate one synthetic frame from WSOLA.
@@ -175,17 +163,16 @@ PJ_DECL(pj_status_t) pjmedia_wsola_save(pjmedia_wsola *wsola,
  *
  * @return	    PJ_SUCCESS normally.
  */
-PJ_DECL(pj_status_t) pjmedia_wsola_generate(pjmedia_wsola *wsola, 
-					    pj_int16_t frm[]);
-
+PJ_DECL(pj_status_t)
+pjmedia_wsola_generate(pjmedia_wsola* wsola, pj_int16_t frm[]);
 
 /**
  * Compress or compact the specified buffer by removing some audio samples
- * from the buffer, without altering the pitch. For this function to work, 
+ * from the buffer, without altering the pitch. For this function to work,
  * total length of the buffer must be more than twice \a erase_cnt.
- * 
+ *
  * @param wsola	    WSOLA session.
- * @param buf1	    Pointer to buffer. 
+ * @param buf1	    Pointer to buffer.
  * @param buf1_cnt  Number of samples in the buffer.
  * @param buf2	    Pointer to second buffer, if the buffer is not
  *		    contiguous. Otherwise this parameter must be NULL.
@@ -193,21 +180,18 @@ PJ_DECL(pj_status_t) pjmedia_wsola_generate(pjmedia_wsola *wsola,
  *		    is not contiguous. Otherwise this parameter should be
  *		    zero.
  * @param erase_cnt On input, specify the number of samples to be erased.
- *		    This function may erase more or less than the requested 
- *		    number, and the actual number of samples erased will be 
+ *		    This function may erase more or less than the requested
+ *		    number, and the actual number of samples erased will be
  *		    given on this argument upon returning from the function.
  *
  * @return	    PJ_SUCCESS if some samples have been erased, PJ_ETOOSMALL
  *		    if buffer is too small to be reduced, PJ_EINVAL if any
  *		    of the parameters are not valid.
  */
-PJ_DECL(pj_status_t) pjmedia_wsola_discard(pjmedia_wsola *wsola, 
-					   pj_int16_t buf1[],
-					   unsigned buf1_cnt, 
-					   pj_int16_t buf2[],
-					   unsigned buf2_cnt,
-					   unsigned *erase_cnt);
-
+PJ_DECL(pj_status_t)
+pjmedia_wsola_discard(pjmedia_wsola* wsola, pj_int16_t buf1[],
+                      unsigned buf1_cnt, pj_int16_t buf2[], unsigned buf2_cnt,
+                      unsigned* erase_cnt);
 
 PJ_END_DECL
 
@@ -215,5 +199,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_WSOLA_H__ */
-
+#endif /* __PJMEDIA_WSOLA_H__ */

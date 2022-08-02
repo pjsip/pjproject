@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __GUI_H__
 #define __GUI_H__
@@ -23,17 +22,16 @@ PJ_BEGIN_DECL
 
 #ifdef USE_GUI
 
-#define printf showMsg
-#define puts(str) showMsg("%s\n", str)
-#define fgets getInput
+#    define printf    showMsg
+#    define puts(str) showMsg("%s\n", str)
+#    define fgets     getInput
 
-void showMsg(const char *format, ...);
-char * getInput(char *s, int n, FILE *stream);
+void showMsg(const char* format, ...);
+char* getInput(char* s, int n, FILE* stream);
 pj_bool_t showNotification(pjsua_call_id call_id);
 
 #endif
 
 PJ_END_DECL
 
-
-#endif	/* __GUI_H__ */
+#endif /* __GUI_H__ */

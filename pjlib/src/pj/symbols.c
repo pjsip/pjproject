@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib.h>
 
@@ -35,7 +34,7 @@ PJ_EXPORT_SYMBOL(pj_array_find)
  * config.h
  */
 PJ_EXPORT_SYMBOL(pj_dump_config)
-	
+
 /*
  * errno.h
  */
@@ -56,7 +55,6 @@ PJ_EXPORT_SYMBOL(pj_longjmp)
 PJ_EXPORT_SYMBOL(pj_exception_id_alloc)
 PJ_EXPORT_SYMBOL(pj_exception_id_free)
 PJ_EXPORT_SYMBOL(pj_exception_id_name)
-
 
 /*
  * fifobuf.h
@@ -118,7 +116,6 @@ PJ_EXPORT_SYMBOL(pj_list_merge_last)
 PJ_EXPORT_SYMBOL(pj_list_erase)
 PJ_EXPORT_SYMBOL(pj_list_find_node)
 PJ_EXPORT_SYMBOL(pj_list_search)
-
 
 /*
  * log.h
@@ -206,7 +203,6 @@ PJ_EXPORT_SYMBOL(pj_elapsed_nanosec)
 PJ_EXPORT_SYMBOL(pj_elapsed_cycle)
 #endif
 
-	
 /*
  * pool.h
  */
@@ -345,4 +341,3 @@ PJ_EXPORT_SYMBOL(pj_timer_heap_poll)
  * types.h
  */
 PJ_EXPORT_SYMBOL(pj_time_val_normalize)
-

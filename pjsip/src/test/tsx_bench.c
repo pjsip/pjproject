@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,46 +14,46 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjsip.h>
 #include <pjlib.h>
 
-#define THIS_FILE   "tsx_uas_test.c"
-
+#define THIS_FILE "tsx_uas_test.c"
 
 static pjsip_module mod_tsx_user;
 
-static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
+static int uac_tsx_bench(unsigned working_set, pj_timestamp* p_elapsed)
 {
     unsigned i;
-    pjsip_tx_data *request;
-    pjsip_transaction **tsx;
+    pjsip_tx_data* request;
+    pjsip_transaction** tsx;
     pj_timestamp t1, t2, elapsed;
-    pjsip_via_hdr *via;
+    pjsip_via_hdr* via;
     pj_status_t status;
 
     /* Create the request first. */
     pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
-    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
-    pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
+    pj_str_t str_from =
+      pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_to =
+      pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
     pj_str_t str_contact = str_from;
 
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method,
-					&str_target, &str_from, &str_to,
-					&str_contact, NULL, -1, NULL,
-					&request);
+                                        &str_target, &str_from, &str_to,
+                                        &str_contact, NULL, -1, NULL, &request);
     if (status != PJ_SUCCESS) {
-	app_perror("    error: unable to create request", status);
-	return status;
+        app_perror("    error: unable to create request", status);
+        return status;
     }
 
-    via = (pjsip_via_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_VIA,
-					      NULL);
+    via = (pjsip_via_hdr*)pjsip_msg_find_hdr(request->msg, PJSIP_H_VIA, NULL);
 
     /* Create transaction array */
-    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
+    tsx = (pjsip_transaction**)pj_pool_zalloc(request->pool,
+                                              working_set * sizeof(pj_pool_t*));
 
     pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;
@@ -62,12 +61,12 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     /* Benchmark */
     elapsed.u64 = 0;
     pj_get_timestamp(&t1);
-    for (i=0; i<working_set; ++i) {
-	status = pjsip_tsx_create_uac(&mod_tsx_user, request, &tsx[i]);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-	/* Reset branch param */
-	via->branch_param.slen = 0;
+    for (i = 0; i < working_set; ++i) {
+        status = pjsip_tsx_create_uac(&mod_tsx_user, request, &tsx[i]);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+        /* Reset branch param */
+        via->branch_param.slen = 0;
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
@@ -75,51 +74,50 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
     p_elapsed->u64 = elapsed.u64;
     status = PJ_SUCCESS;
-    
+
 on_error:
-    for (i=0; i<working_set; ++i) {
-	if (tsx[i]) {
-	    pj_timer_heap_t *th;
+    for (i = 0; i < working_set; ++i) {
+        if (tsx[i]) {
+            pj_timer_heap_t* th;
 
-	    pjsip_tsx_terminate(tsx[i], 601);
-	    tsx[i] = NULL;
+            pjsip_tsx_terminate(tsx[i], 601);
+            tsx[i] = NULL;
 
-	    th = pjsip_endpt_get_timer_heap(endpt);
-	    pj_timer_heap_poll(th, NULL);
-	}
+            th = pjsip_endpt_get_timer_heap(endpt);
+            pj_timer_heap_poll(th, NULL);
+        }
     }
     pjsip_tx_data_dec_ref(request);
     flush_events(2000);
     return status;
 }
 
-
-
-static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
+static int uas_tsx_bench(unsigned working_set, pj_timestamp* p_elapsed)
 {
     unsigned i;
-    pjsip_tx_data *request;
-    pjsip_via_hdr *via;
+    pjsip_tx_data* request;
+    pjsip_via_hdr* via;
     pjsip_rx_data rdata;
     pj_sockaddr_in remote;
-    pjsip_transaction **tsx;
+    pjsip_transaction** tsx;
     pj_timestamp t1, t2, elapsed;
     char branch_buf[80] = PJSIP_RFC3261_BRANCH_ID "0000000000";
     pj_status_t status;
 
     /* Create the request first. */
     pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
-    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
-    pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
+    pj_str_t str_from =
+      pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_to =
+      pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
     pj_str_t str_contact = str_from;
 
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method,
-					&str_target, &str_from, &str_to,
-					&str_contact, NULL, -1, NULL,
-					&request);
+                                        &str_target, &str_from, &str_to,
+                                        &str_contact, NULL, -1, NULL, &request);
     if (status != PJ_SUCCESS) {
-	app_perror("    error: unable to create request", status);
-	return status;
+        app_perror("    error: unable to create request", status);
+        return status;
     }
 
     /* Create  Via */
@@ -130,47 +128,48 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     via->rport_param = 1;
     via->recvd_param = pj_str("192.168.0.7");
     pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*)via);
-    
 
     /* Create "dummy" rdata from the tdata */
     pj_bzero(&rdata, sizeof(pjsip_rx_data));
     rdata.tp_info.pool = request->pool;
     rdata.msg_info.msg = request->msg;
-    rdata.msg_info.from = (pjsip_from_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
-    rdata.msg_info.to = (pjsip_to_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_TO, NULL);
-    rdata.msg_info.cseq = (pjsip_cseq_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
-    rdata.msg_info.cid = (pjsip_cid_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.from =
+      (pjsip_from_hdr*)pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.to =
+      (pjsip_to_hdr*)pjsip_msg_find_hdr(request->msg, PJSIP_H_TO, NULL);
+    rdata.msg_info.cseq =
+      (pjsip_cseq_hdr*)pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
+    rdata.msg_info.cid =
+      (pjsip_cid_hdr*)pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.via = via;
-    
+
     pj_sockaddr_in_init(&remote, 0, 0);
-    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
-					   &remote, sizeof(pj_sockaddr_in),
-					   NULL, &rdata.tp_info.transport);
+    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
+                                           &remote, sizeof(pj_sockaddr_in),
+                                           NULL, &rdata.tp_info.transport);
     if (status != PJ_SUCCESS) {
-	app_perror("    error: unable to get loop transport", status);
-	return status;
+        app_perror("    error: unable to get loop transport", status);
+        return status;
     }
 
-
     /* Create transaction array */
-    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
+    tsx = (pjsip_transaction**)pj_pool_zalloc(request->pool,
+                                              working_set * sizeof(pj_pool_t*));
 
     pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;
 
-
     /* Benchmark */
     elapsed.u64 = 0;
     pj_get_timestamp(&t1);
-    for (i=0; i<working_set; ++i) {
-	via->branch_param.ptr = branch_buf;
-	via->branch_param.slen = PJSIP_RFC3261_BRANCH_LEN + 
-				    pj_ansi_sprintf(branch_buf+PJSIP_RFC3261_BRANCH_LEN,
-						    "-%d", i);
-	status = pjsip_tsx_create_uas(&mod_tsx_user, &rdata, &tsx[i]);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
+    for (i = 0; i < working_set; ++i) {
+        via->branch_param.ptr = branch_buf;
+        via->branch_param.slen =
+          PJSIP_RFC3261_BRANCH_LEN +
+          pj_ansi_sprintf(branch_buf + PJSIP_RFC3261_BRANCH_LEN, "-%d", i);
+        status = pjsip_tsx_create_uas(&mod_tsx_user, &rdata, &tsx[i]);
+        if (status != PJ_SUCCESS)
+            goto on_error;
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
@@ -178,30 +177,31 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
     p_elapsed->u64 = elapsed.u64;
     status = PJ_SUCCESS;
-    
+
 on_error:
-    for (i=0; i<working_set; ++i) {
-	if (tsx[i]) {
-	    pj_timer_heap_t *th;
+    for (i = 0; i < working_set; ++i) {
+        if (tsx[i]) {
+            pj_timer_heap_t* th;
 
-	    pjsip_tsx_terminate(tsx[i], 601);
-	    tsx[i] = NULL;
+            pjsip_tsx_terminate(tsx[i], 601);
+            tsx[i] = NULL;
 
-	    th = pjsip_endpt_get_timer_heap(endpt);
-	    pj_timer_heap_poll(th, NULL);
-
-	}
+            th = pjsip_endpt_get_timer_heap(endpt);
+            pj_timer_heap_poll(th, NULL);
+        }
     }
     pjsip_tx_data_dec_ref(request);
     flush_events(2000);
     return status;
 }
 
-
-
 int tsx_bench(void)
 {
-    enum { WORKING_SET=10000, REPEAT = 4 };
+    enum
+    {
+        WORKING_SET = 10000,
+        REPEAT = 4
+    };
     unsigned i, speed;
     pj_timestamp usec[REPEAT], min, freq;
     char desc[250];
@@ -209,87 +209,83 @@ int tsx_bench(void)
 
     status = pj_get_timestamp_freq(&freq);
     if (status != PJ_SUCCESS)
-	return status;
-
+        return status;
 
     /*
      * Benchmark UAC
      */
-    PJ_LOG(3,(THIS_FILE, "   benchmarking UAC transaction creation:"));
-    for (i=0; i<REPEAT; ++i) {
-	PJ_LOG(3,(THIS_FILE, "    test %d of %d..",
-		  i+1, REPEAT));
-	PJ_LOG(3,(THIS_FILE, "    number of current tsx: %d",
-		  pjsip_tsx_layer_get_tsx_count()));
-	status = uac_tsx_bench(WORKING_SET, &usec[i]);
-	if (status != PJ_SUCCESS)
-	    return status;
+    PJ_LOG(3, (THIS_FILE, "   benchmarking UAC transaction creation:"));
+    for (i = 0; i < REPEAT; ++i) {
+        PJ_LOG(3, (THIS_FILE, "    test %d of %d..", i + 1, REPEAT));
+        PJ_LOG(3, (THIS_FILE, "    number of current tsx: %d",
+                   pjsip_tsx_layer_get_tsx_count()));
+        status = uac_tsx_bench(WORKING_SET, &usec[i]);
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     min.u64 = PJ_UINT64(0xFFFFFFFFFFFFFFF);
-    for (i=0; i<REPEAT; ++i) {
-	if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
+    for (i = 0; i < REPEAT; ++i) {
+        if (usec[i].u64 < min.u64)
+            min.u64 = usec[i].u64;
     }
 
-    
     /* Report time */
     pj_ansi_sprintf(desc, "Time to create %d UAC transactions, in miliseconds",
-			  WORKING_SET);
-    report_ival("create-uac-time", (unsigned)(min.u64 * 1000 / freq.u64), "msec", desc);
-
+                    WORKING_SET);
+    report_ival("create-uac-time", (unsigned)(min.u64 * 1000 / freq.u64),
+                "msec", desc);
 
     /* Write speed */
     speed = (unsigned)(freq.u64 * WORKING_SET / min.u64);
-    PJ_LOG(3,(THIS_FILE, "    UAC created at %d tsx/sec", speed));
+    PJ_LOG(3, (THIS_FILE, "    UAC created at %d tsx/sec", speed));
 
-    pj_ansi_sprintf(desc, "Number of UAC transactions that potentially can be created per second "
-			  "with <tt>pjsip_tsx_create_uac()</tt>, based on the time "
-			  "to create %d simultaneous transactions above.",
-			  WORKING_SET);
+    pj_ansi_sprintf(
+      desc,
+      "Number of UAC transactions that potentially can be created per second "
+      "with <tt>pjsip_tsx_create_uac()</tt>, based on the time "
+      "to create %d simultaneous transactions above.",
+      WORKING_SET);
 
-    report_ival("create-uac-tsx-per-sec", 
-		speed, "tsx/sec", desc);
-
-
+    report_ival("create-uac-tsx-per-sec", speed, "tsx/sec", desc);
 
     /*
      * Benchmark UAS
      */
-    PJ_LOG(3,(THIS_FILE, "   benchmarking UAS transaction creation:"));
-    for (i=0; i<REPEAT; ++i) {
-	PJ_LOG(3,(THIS_FILE, "    test %d of %d..",
-		  i+1, REPEAT));
-	PJ_LOG(3,(THIS_FILE, "    number of current tsx: %d",
-		  pjsip_tsx_layer_get_tsx_count()));
-	status = uas_tsx_bench(WORKING_SET, &usec[i]);
-	if (status != PJ_SUCCESS)
-	    return status;
+    PJ_LOG(3, (THIS_FILE, "   benchmarking UAS transaction creation:"));
+    for (i = 0; i < REPEAT; ++i) {
+        PJ_LOG(3, (THIS_FILE, "    test %d of %d..", i + 1, REPEAT));
+        PJ_LOG(3, (THIS_FILE, "    number of current tsx: %d",
+                   pjsip_tsx_layer_get_tsx_count()));
+        status = uas_tsx_bench(WORKING_SET, &usec[i]);
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     min.u64 = PJ_UINT64(0xFFFFFFFFFFFFFFF);
-    for (i=0; i<REPEAT; ++i) {
-	if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
+    for (i = 0; i < REPEAT; ++i) {
+        if (usec[i].u64 < min.u64)
+            min.u64 = usec[i].u64;
     }
 
-    
     /* Report time */
     pj_ansi_sprintf(desc, "Time to create %d UAS transactions, in miliseconds",
-			  WORKING_SET);
-    report_ival("create-uas-time", (unsigned)(min.u64 * 1000 / freq.u64), "msec", desc);
-
+                    WORKING_SET);
+    report_ival("create-uas-time", (unsigned)(min.u64 * 1000 / freq.u64),
+                "msec", desc);
 
     /* Write speed */
     speed = (unsigned)(freq.u64 * WORKING_SET / min.u64);
-    PJ_LOG(3,(THIS_FILE, "    UAS created at %d tsx/sec", speed));
+    PJ_LOG(3, (THIS_FILE, "    UAS created at %d tsx/sec", speed));
 
-    pj_ansi_sprintf(desc, "Number of UAS transactions that potentially can be created per second "
-			  "with <tt>pjsip_tsx_create_uas()</tt>, based on the time "
-			  "to create %d simultaneous transactions above.",
-			  WORKING_SET);
+    pj_ansi_sprintf(
+      desc,
+      "Number of UAS transactions that potentially can be created per second "
+      "with <tt>pjsip_tsx_create_uas()</tt>, based on the time "
+      "to create %d simultaneous transactions above.",
+      WORKING_SET);
 
-    report_ival("create-uas-tsx-per-sec", 
-		speed, "tsx/sec", desc);
+    report_ival("create-uas-tsx-per-sec", speed, "tsx/sec", desc);
 
     return PJ_SUCCESS;
 }
-

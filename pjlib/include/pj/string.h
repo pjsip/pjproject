@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_STRING_H__
 #define __PJ_STRING_H__
@@ -79,7 +78,8 @@ PJ_BEGIN_DECL
  * @param len	    The length of the string buffer.
  */
 #define PJ_CHECK_TRUNC_STR(ret, str, len) \
-    if ((ret) >= (len) || (ret) < 0) pj_ansi_strcpy((str) + (len) - 3, "..")
+    if ((ret) >= (len) || (ret) < 0) \
+    pj_ansi_strcpy((str) + (len)-3, "..")
 
 /**
  * Create string initializer from a normal C string.
@@ -88,7 +88,7 @@ PJ_BEGIN_DECL
  *
  * @return	pj_str_t.
  */
-PJ_IDECL(pj_str_t) pj_str(char *str);
+PJ_IDECL(pj_str_t) pj_str(char* str);
 
 /**
  * Create constant string from normal C string.
@@ -98,7 +98,7 @@ PJ_IDECL(pj_str_t) pj_str(char *str);
  *
  * @return	pj_str_t.
  */
-PJ_INLINE(const pj_str_t*) pj_cstr(pj_str_t *str, const char *s)
+PJ_INLINE(const pj_str_t*) pj_cstr(pj_str_t* str, const char* s)
 {
     str->ptr = (char*)s;
     str->slen = s ? (pj_ssize_t)strlen(s) : 0;
@@ -114,7 +114,7 @@ PJ_INLINE(const pj_str_t*) pj_cstr(pj_str_t *str, const char *s)
  *
  * @return the string.
  */
-PJ_INLINE(pj_str_t*) pj_strset( pj_str_t *str, char *ptr, pj_size_t length)
+PJ_INLINE(pj_str_t*) pj_strset(pj_str_t* str, char* ptr, pj_size_t length)
 {
     str->ptr = ptr;
     str->slen = (pj_ssize_t)length;
@@ -130,7 +130,7 @@ PJ_INLINE(pj_str_t*) pj_strset( pj_str_t *str, char *ptr, pj_size_t length)
  *
  * @return the string.
  */
-PJ_INLINE(pj_str_t*) pj_strset2( pj_str_t *str, char *src)
+PJ_INLINE(pj_str_t*) pj_strset2(pj_str_t* str, char* src)
 {
     str->ptr = src;
     str->slen = src ? (pj_ssize_t)strlen(src) : 0;
@@ -146,10 +146,10 @@ PJ_INLINE(pj_str_t*) pj_strset2( pj_str_t *str, char *src)
  *
  * @return the target string.
  */
-PJ_INLINE(pj_str_t*) pj_strset3( pj_str_t *str, char *begin, char *end )
+PJ_INLINE(pj_str_t*) pj_strset3(pj_str_t* str, char* begin, char* end)
 {
     str->ptr = begin;
-    str->slen = (pj_ssize_t)(end-begin);
+    str->slen = (pj_ssize_t)(end - begin);
     return str;
 }
 
@@ -161,7 +161,7 @@ PJ_INLINE(pj_str_t*) pj_strset3( pj_str_t *str, char *begin, char *end )
  *
  * @return the target string.
  */
-PJ_IDECL(pj_str_t*) pj_strassign( pj_str_t *dst, pj_str_t *src );
+PJ_IDECL(pj_str_t*) pj_strassign(pj_str_t* dst, pj_str_t* src);
 
 /**
  * Copy string contents.
@@ -171,7 +171,7 @@ PJ_IDECL(pj_str_t*) pj_strassign( pj_str_t *dst, pj_str_t *src );
  *
  * @return the target string.
  */
-PJ_IDECL(pj_str_t*) pj_strcpy(pj_str_t *dst, const pj_str_t *src);
+PJ_IDECL(pj_str_t*) pj_strcpy(pj_str_t* dst, const pj_str_t* src);
 
 /**
  * Copy string contents.
@@ -181,7 +181,7 @@ PJ_IDECL(pj_str_t*) pj_strcpy(pj_str_t *dst, const pj_str_t *src);
  *
  * @return the target string.
  */
-PJ_IDECL(pj_str_t*) pj_strcpy2(pj_str_t *dst, const char *src);
+PJ_IDECL(pj_str_t*) pj_strcpy2(pj_str_t* dst, const char* src);
 
 /**
  * Copy source string to destination up to the specified max length.
@@ -192,8 +192,8 @@ PJ_IDECL(pj_str_t*) pj_strcpy2(pj_str_t *dst, const char *src);
  *
  * @return the target string.
  */
-PJ_IDECL(pj_str_t*) pj_strncpy(pj_str_t *dst, const pj_str_t *src, 
-			       pj_ssize_t max);
+PJ_IDECL(pj_str_t*)
+pj_strncpy(pj_str_t* dst, const pj_str_t* src, pj_ssize_t max);
 
 /**
  * Copy source string to destination up to the specified max length,
@@ -206,8 +206,8 @@ PJ_IDECL(pj_str_t*) pj_strncpy(pj_str_t *dst, const pj_str_t *src,
  *
  * @return the target string.
  */
-PJ_IDECL(pj_str_t*) pj_strncpy_with_null(pj_str_t *dst, const pj_str_t *src,
-					 pj_ssize_t max);
+PJ_IDECL(pj_str_t*)
+pj_strncpy_with_null(pj_str_t* dst, const pj_str_t* src, pj_ssize_t max);
 
 /**
  * Duplicate string.
@@ -218,9 +218,8 @@ PJ_IDECL(pj_str_t*) pj_strncpy_with_null(pj_str_t *dst, const pj_str_t *src,
  *
  * @return the string result.
  */
-PJ_IDECL(pj_str_t*) pj_strdup(pj_pool_t *pool,
-			      pj_str_t *dst,
-			      const pj_str_t *src);
+PJ_IDECL(pj_str_t*)
+pj_strdup(pj_pool_t* pool, pj_str_t* dst, const pj_str_t* src);
 
 /**
  * Duplicate string and NULL terminate the destination string.
@@ -231,9 +230,8 @@ PJ_IDECL(pj_str_t*) pj_strdup(pj_pool_t *pool,
  *
  * @return	    The string result.
  */
-PJ_IDECL(pj_str_t*) pj_strdup_with_null(pj_pool_t *pool,
-					pj_str_t *dst,
-					const pj_str_t *src);
+PJ_IDECL(pj_str_t*)
+pj_strdup_with_null(pj_pool_t* pool, pj_str_t* dst, const pj_str_t* src);
 
 /**
  * Duplicate string.
@@ -244,9 +242,7 @@ PJ_IDECL(pj_str_t*) pj_strdup_with_null(pj_pool_t *pool,
  *
  * @return the string result.
  */
-PJ_IDECL(pj_str_t*) pj_strdup2(pj_pool_t *pool,
-			       pj_str_t *dst,
-			       const char *src);
+PJ_IDECL(pj_str_t*) pj_strdup2(pj_pool_t* pool, pj_str_t* dst, const char* src);
 
 /**
  * Duplicate string and NULL terminate the destination string.
@@ -257,10 +253,8 @@ PJ_IDECL(pj_str_t*) pj_strdup2(pj_pool_t *pool,
  *
  * @return	    The string result.
  */
-PJ_IDECL(pj_str_t*) pj_strdup2_with_null(pj_pool_t *pool,
-					 pj_str_t *dst,
-					 const char *src);
-
+PJ_IDECL(pj_str_t*)
+pj_strdup2_with_null(pj_pool_t* pool, pj_str_t* dst, const char* src);
 
 /**
  * Duplicate string.
@@ -270,7 +264,7 @@ PJ_IDECL(pj_str_t*) pj_strdup2_with_null(pj_pool_t *pool,
  *
  * @return the string result.
  */
-PJ_IDECL(pj_str_t) pj_strdup3(pj_pool_t *pool, const char *src);
+PJ_IDECL(pj_str_t) pj_strdup3(pj_pool_t* pool, const char* src);
 
 /**
  * Return the length of the string.
@@ -279,7 +273,7 @@ PJ_IDECL(pj_str_t) pj_strdup3(pj_pool_t *pool, const char *src);
  *
  * @return the length of the string.
  */
-PJ_INLINE(pj_size_t) pj_strlen( const pj_str_t *str )
+PJ_INLINE(pj_size_t) pj_strlen(const pj_str_t* str)
 {
     return str->slen;
 }
@@ -291,23 +285,10 @@ PJ_INLINE(pj_size_t) pj_strlen( const pj_str_t *str )
  *
  * @return the pointer to the string buffer.
  */
-PJ_INLINE(const char*) pj_strbuf( const pj_str_t *str )
+PJ_INLINE(const char*) pj_strbuf(const pj_str_t* str)
 {
     return str->ptr;
 }
-
-/**
- * Compare strings. 
- *
- * @param str1	    The string to compare.
- * @param str2	    The string to compare.
- *
- * @return 
- *	- < 0 if str1 is less than str2
- *      - 0   if str1 is identical to str2
- *      - > 0 if str1 is greater than str2
- */
-PJ_IDECL(int) pj_strcmp( const pj_str_t *str1, const pj_str_t *str2);
 
 /**
  * Compare strings.
@@ -315,42 +296,55 @@ PJ_IDECL(int) pj_strcmp( const pj_str_t *str1, const pj_str_t *str2);
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
  *
- * @return 
+ * @return
  *	- < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strcmp2( const pj_str_t *str1, const char *str2 );
+PJ_IDECL(int) pj_strcmp(const pj_str_t* str1, const pj_str_t* str2);
 
 /**
- * Compare strings. 
+ * Compare strings.
+ *
+ * @param str1	    The string to compare.
+ * @param str2	    The string to compare.
+ *
+ * @return
+ *	- < 0 if str1 is less than str2
+ *      - 0   if str1 is identical to str2
+ *      - > 0 if str1 is greater than str2
+ */
+PJ_IDECL(int) pj_strcmp2(const pj_str_t* str1, const char* str2);
+
+/**
+ * Compare strings.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
  * @param len	    The maximum number of characters to compare.
  *
- * @return 
+ * @return
  *	- < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strncmp( const pj_str_t *str1, const pj_str_t *str2, 
-			  pj_size_t len);
+PJ_IDECL(int)
+pj_strncmp(const pj_str_t* str1, const pj_str_t* str2, pj_size_t len);
 
 /**
- * Compare strings. 
+ * Compare strings.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
  * @param len	    The maximum number of characters to compare.
  *
- * @return 
+ * @return
  *	- < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strncmp2( const pj_str_t *str1, const char *str2, 
-			   pj_size_t len);
+PJ_IDECL(int)
+pj_strncmp2(const pj_str_t* str1, const char* str2, pj_size_t len);
 
 /**
  * Perform case-insensitive comparison to the strings.
@@ -358,34 +352,33 @@ PJ_IDECL(int) pj_strncmp2( const pj_str_t *str1, const char *str2,
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
  *
- * @return 
+ * @return
  *	- < 0 if str1 is less than str2
  *      - 0   if str1 is equal to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_stricmp(const pj_str_t *str1, const pj_str_t *str2);
+PJ_IDECL(int) pj_stricmp(const pj_str_t* str1, const pj_str_t* str2);
 
 /**
  * Perform lowercase comparison to the strings which consists of only
  * alnum characters. More over, it will only return non-zero if both
  * strings are not equal, not the usual negative or positive value.
  *
- * If non-alnum inputs are given, then the function may mistakenly 
+ * If non-alnum inputs are given, then the function may mistakenly
  * treat two strings as equal.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
  * @param len	    The length to compare.
  *
- * @return 
+ * @return
  *      - 0	    if str1 is equal to str2
  *      - (-1)	    if not equal.
  */
-#if defined(PJ_HAS_STRICMP_ALNUM) && PJ_HAS_STRICMP_ALNUM!=0
-PJ_IDECL(int) strnicmp_alnum(const char *str1, const char *str2,
-			     int len);
+#if defined(PJ_HAS_STRICMP_ALNUM) && PJ_HAS_STRICMP_ALNUM != 0
+PJ_IDECL(int) strnicmp_alnum(const char* str1, const char* str2, int len);
 #else
-#define strnicmp_alnum	pj_ansi_strnicmp
+#    define strnicmp_alnum pj_ansi_strnicmp
 #endif
 
 /**
@@ -393,20 +386,20 @@ PJ_IDECL(int) strnicmp_alnum(const char *str1, const char *str2,
  * alnum characters. More over, it will only return non-zero if both
  * strings are not equal, not the usual negative or positive value.
  *
- * If non-alnum inputs are given, then the function may mistakenly 
+ * If non-alnum inputs are given, then the function may mistakenly
  * treat two strings as equal.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
  *
- * @return 
+ * @return
  *      - 0	    if str1 is equal to str2
  *      - (-1)	    if not equal.
  */
-#if defined(PJ_HAS_STRICMP_ALNUM) && PJ_HAS_STRICMP_ALNUM!=0
-PJ_IDECL(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2);
+#if defined(PJ_HAS_STRICMP_ALNUM) && PJ_HAS_STRICMP_ALNUM != 0
+PJ_IDECL(int) pj_stricmp_alnum(const pj_str_t* str1, const pj_str_t* str2);
 #else
-#define pj_stricmp_alnum    pj_stricmp
+#    define pj_stricmp_alnum pj_stricmp
 #endif
 
 /**
@@ -415,12 +408,12 @@ PJ_IDECL(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2);
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
  *
- * @return 
+ * @return
  *	- < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_stricmp2( const pj_str_t *str1, const char *str2);
+PJ_IDECL(int) pj_stricmp2(const pj_str_t* str1, const char* str2);
 
 /**
  * Perform case-insensitive comparison to the strings.
@@ -429,13 +422,13 @@ PJ_IDECL(int) pj_stricmp2( const pj_str_t *str1, const char *str2);
  * @param str2	    The string to compare.
  * @param len	    The maximum number of characters to compare.
  *
- * @return 
+ * @return
  *	- < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2, 
-			   pj_size_t len);
+PJ_IDECL(int)
+pj_strnicmp(const pj_str_t* str1, const pj_str_t* str2, pj_size_t len);
 
 /**
  * Perform case-insensitive comparison to the strings.
@@ -444,13 +437,13 @@ PJ_IDECL(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2,
  * @param str2	    The string to compare.
  * @param len	    The maximum number of characters to compare.
  *
- * @return 
+ * @return
  *	- < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strnicmp2( const pj_str_t *str1, const char *str2, 
-			    pj_size_t len);
+PJ_IDECL(int)
+pj_strnicmp2(const pj_str_t* str1, const char* str2, pj_size_t len);
 
 /**
  * Concatenate strings.
@@ -458,8 +451,7 @@ PJ_IDECL(int) pj_strnicmp2( const pj_str_t *str1, const char *str2,
  * @param dst	    The destination string.
  * @param src	    The source string.
  */
-PJ_IDECL(void) pj_strcat(pj_str_t *dst, const pj_str_t *src);
-
+PJ_IDECL(void) pj_strcat(pj_str_t* dst, const pj_str_t* src);
 
 /**
  * Concatenate strings.
@@ -467,8 +459,7 @@ PJ_IDECL(void) pj_strcat(pj_str_t *dst, const pj_str_t *src);
  * @param dst	    The destination string.
  * @param src	    The source string.
  */
-PJ_IDECL(void) pj_strcat2(pj_str_t *dst, const char *src);
-
+PJ_IDECL(void) pj_strcat2(pj_str_t* dst, const char* src);
 
 /**
  * Finds a character in a string.
@@ -478,26 +469,12 @@ PJ_IDECL(void) pj_strcat2(pj_str_t *dst, const char *src);
  *
  * @return the pointer to first character found, or NULL.
  */
-PJ_INLINE(char*) pj_strchr( const pj_str_t *str, int chr)
+PJ_INLINE(char*) pj_strchr(const pj_str_t* str, int chr)
 {
     if (str->slen == 0)
-	return NULL;
-    return (char*) memchr((char*)str->ptr, chr, str->slen);
+        return NULL;
+    return (char*)memchr((char*)str->ptr, chr, str->slen);
 }
-
-
-/**
- * Find the first index of character, in a string, that does not belong to a 
- * set of characters.
- *
- * @param str	    The string.
- * @param set_char  The string containing the set of characters. 
- *
- * @return the index of the first character in the str that doesn't belong to 
- * set_char. If str starts with a character not in set_char, return 0.
- */
-PJ_DECL(pj_ssize_t) pj_strspn(const pj_str_t *str, const pj_str_t *set_char);
-
 
 /**
  * Find the first index of character, in a string, that does not belong to a
@@ -509,21 +486,19 @@ PJ_DECL(pj_ssize_t) pj_strspn(const pj_str_t *str, const pj_str_t *set_char);
  * @return the index of the first character in the str that doesn't belong to
  * set_char. If str starts with a character not in set_char, return 0.
  */
-PJ_DECL(pj_ssize_t) pj_strspn2(const pj_str_t *str, const char *set_char);
-
+PJ_DECL(pj_ssize_t) pj_strspn(const pj_str_t* str, const pj_str_t* set_char);
 
 /**
- * Find the first index of character, in a string, that belong to a set of 
- * characters.
+ * Find the first index of character, in a string, that does not belong to a
+ * set of characters.
  *
  * @param str	    The string.
  * @param set_char  The string containing the set of characters.
  *
- * @return the index of the first character in the str that belong to
- * set_char. If no match is found, return the length of str.
+ * @return the index of the first character in the str that doesn't belong to
+ * set_char. If str starts with a character not in set_char, return 0.
  */
-PJ_DECL(pj_ssize_t) pj_strcspn(const pj_str_t *str, const pj_str_t *set_char);
-
+PJ_DECL(pj_ssize_t) pj_strspn2(const pj_str_t* str, const char* set_char);
 
 /**
  * Find the first index of character, in a string, that belong to a set of
@@ -535,25 +510,19 @@ PJ_DECL(pj_ssize_t) pj_strcspn(const pj_str_t *str, const pj_str_t *set_char);
  * @return the index of the first character in the str that belong to
  * set_char. If no match is found, return the length of str.
  */
-PJ_DECL(pj_ssize_t) pj_strcspn2(const pj_str_t *str, const char *set_char);
-
+PJ_DECL(pj_ssize_t) pj_strcspn(const pj_str_t* str, const pj_str_t* set_char);
 
 /**
- * Find tokens from a string using the delimiter.
+ * Find the first index of character, in a string, that belong to a set of
+ * characters.
  *
  * @param str	    The string.
- * @param delim	    The string containing the delimiter. It might contain 
- *		    multiple character treated as unique set. If same character
- *		    was found on the set, it will be skipped.
- * @param tok	    The string containing the token.
- * @param start_idx The search will start from this index.
+ * @param set_char  The string containing the set of characters.
  *
- * @return the index of token from the str, or the length of the str
- * if the token is not found.
+ * @return the index of the first character in the str that belong to
+ * set_char. If no match is found, return the length of str.
  */
-PJ_DECL(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
-			      pj_str_t *tok, pj_size_t start_idx);
-
+PJ_DECL(pj_ssize_t) pj_strcspn2(const pj_str_t* str, const char* set_char);
 
 /**
  * Find tokens from a string using the delimiter.
@@ -568,9 +537,26 @@ PJ_DECL(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
  * @return the index of token from the str, or the length of the str
  * if the token is not found.
  */
-PJ_DECL(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
-			       pj_str_t *tok, pj_size_t start_idx);
+PJ_DECL(pj_ssize_t)
+pj_strtok(const pj_str_t* str, const pj_str_t* delim, pj_str_t* tok,
+          pj_size_t start_idx);
 
+/**
+ * Find tokens from a string using the delimiter.
+ *
+ * @param str	    The string.
+ * @param delim	    The string containing the delimiter. It might contain
+ *		    multiple character treated as unique set. If same character
+ *		    was found on the set, it will be skipped.
+ * @param tok	    The string containing the token.
+ * @param start_idx The search will start from this index.
+ *
+ * @return the index of token from the str, or the length of the str
+ * if the token is not found.
+ */
+PJ_DECL(pj_ssize_t)
+pj_strtok2(const pj_str_t* str, const char* delim, pj_str_t* tok,
+           pj_size_t start_idx);
 
 /**
  * Find the occurence of a substring substr in string str.
@@ -582,7 +568,7 @@ PJ_DECL(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
  *         that if str is not NULL terminated, the returned pointer
  *         is pointing to non-NULL terminated string.
  */
-PJ_DECL(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr);
+PJ_DECL(char*) pj_strstr(const pj_str_t* str, const pj_str_t* substr);
 
 /**
  * Performs substring lookup like pj_strstr() but ignores the case of
@@ -595,7 +581,7 @@ PJ_DECL(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr);
  *         that if str is not NULL terminated, the returned pointer
  *         is pointing to non-NULL terminated string.
  */
-PJ_DECL(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr);
+PJ_DECL(char*) pj_stristr(const pj_str_t* str, const pj_str_t* substr);
 
 /**
  * Remove (trim) leading whitespaces from the string.
@@ -604,7 +590,7 @@ PJ_DECL(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr);
  *
  * @return the string.
  */
-PJ_DECL(pj_str_t*) pj_strltrim( pj_str_t *str );
+PJ_DECL(pj_str_t*) pj_strltrim(pj_str_t* str);
 
 /**
  * Remove (trim) the trailing whitespaces from the string.
@@ -613,7 +599,7 @@ PJ_DECL(pj_str_t*) pj_strltrim( pj_str_t *str );
  *
  * @return the string.
  */
-PJ_DECL(pj_str_t*) pj_strrtrim( pj_str_t *str );
+PJ_DECL(pj_str_t*) pj_strrtrim(pj_str_t* str);
 
 /**
  * Remove (trim) leading and trailing whitespaces from the string.
@@ -622,10 +608,10 @@ PJ_DECL(pj_str_t*) pj_strrtrim( pj_str_t *str );
  *
  * @return the string.
  */
-PJ_IDECL(pj_str_t*) pj_strtrim( pj_str_t *str );
+PJ_IDECL(pj_str_t*) pj_strtrim(pj_str_t* str);
 
 /**
- * Initialize the buffer with some random string. Note that the 
+ * Initialize the buffer with some random string. Note that the
  * generated string is not NULL terminated.
  *
  * @param str	    the string to store the result.
@@ -633,7 +619,7 @@ PJ_IDECL(pj_str_t*) pj_strtrim( pj_str_t *str );
  *
  * @return the string.
  */
-PJ_DECL(char*) pj_create_random_string(char *str, pj_size_t length);
+PJ_DECL(char*) pj_create_random_string(char* str, pj_size_t length);
 
 /**
  * Convert string to signed integer. The conversion will stop as
@@ -644,7 +630,7 @@ PJ_DECL(char*) pj_create_random_string(char *str, pj_size_t length);
  *
  * @return the integer.
  */
-PJ_DECL(long) pj_strtol(const pj_str_t *str);
+PJ_DECL(long) pj_strtol(const pj_str_t* str);
 
 /**
  * Convert string to signed long integer. The conversion will stop as
@@ -661,13 +647,12 @@ PJ_DECL(long) pj_strtol(const pj_str_t *str);
  *         PJ_ETOOBIG if the value was an impossibly long positive number.
  *         In this case, *value will be set to LONG_MAX.
  *         \n
- *         PJ_EINVAL if the input string was NULL, the value pointer was NULL 
+ *         PJ_EINVAL if the input string was NULL, the value pointer was NULL
  *         or the input string could not be parsed at all such as starting with
  *         a character other than a '+', '-' or not in the '0' - '9' range.
  *         In this case, *value will be left untouched.
  */
-PJ_DECL(pj_status_t) pj_strtol2(const pj_str_t *str, long *value);
-
+PJ_DECL(pj_status_t) pj_strtol2(const pj_str_t* str, long* value);
 
 /**
  * Convert string to unsigned integer. The conversion will stop as
@@ -678,14 +663,14 @@ PJ_DECL(pj_status_t) pj_strtol2(const pj_str_t *str, long *value);
  *
  * @return the unsigned integer.
  */
-PJ_DECL(unsigned long) pj_strtoul(const pj_str_t *str);
+PJ_DECL(unsigned long) pj_strtoul(const pj_str_t* str);
 
 /**
  * Convert strings to an unsigned long-integer value.
  * This function stops reading the string input either when the number
- * of characters has exceeded the length of the input or it has read 
+ * of characters has exceeded the length of the input or it has read
  * the first character it cannot recognize as part of a number, that is
- * a character greater than or equal to base. 
+ * a character greater than or equal to base.
  *
  * @param str	    The input string.
  * @param endptr    Optional pointer to receive the remainder/unparsed
@@ -694,8 +679,8 @@ PJ_DECL(unsigned long) pj_strtoul(const pj_str_t *str);
  *
  * @return the unsigned integer number.
  */
-PJ_DECL(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
-				   unsigned base);
+PJ_DECL(unsigned long)
+pj_strtoul2(const pj_str_t* str, pj_str_t* endptr, unsigned base);
 
 /**
  * Convert string to unsigned long integer. The conversion will stop as
@@ -710,13 +695,13 @@ PJ_DECL(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
  *         PJ_ETOOBIG if the value was an impossibly long positive number.
  *         In this case, *value will be set to ULONG_MAX.
  *         \n
- *         PJ_EINVAL if the input string was NULL, the value pointer was NULL 
- *         or the input string could not be parsed at all such as starting 
+ *         PJ_EINVAL if the input string was NULL, the value pointer was NULL
+ *         or the input string could not be parsed at all such as starting
  *         with a character outside the base character range.  In this case,
  *         *value will be left untouched.
  */
-PJ_DECL(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
-				 unsigned base);
+PJ_DECL(pj_status_t)
+pj_strtoul3(const pj_str_t* str, unsigned long* value, unsigned base);
 
 /**
  * Convert string to float.
@@ -725,7 +710,7 @@ PJ_DECL(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
  *
  * @return the value.
  */
-PJ_DECL(float) pj_strtof(const pj_str_t *str);
+PJ_DECL(float) pj_strtof(const pj_str_t* str);
 
 /**
  * Utility to convert unsigned integer to string. Note that the
@@ -736,7 +721,7 @@ PJ_DECL(float) pj_strtof(const pj_str_t *str);
  *
  * @return the number of characters written
  */
-PJ_DECL(int) pj_utoa(unsigned long val, char *buf);
+PJ_DECL(int) pj_utoa(unsigned long val, char* buf);
 
 /**
  * Convert unsigned integer to string with minimum digits. Note that the
@@ -751,8 +736,7 @@ PJ_DECL(int) pj_utoa(unsigned long val, char *buf);
  *
  * @return the number of characters written.
  */
-PJ_DECL(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad);
-
+PJ_DECL(int) pj_utoa_pad(unsigned long val, char* buf, int min_dig, int pad);
 
 /**
  * Fill the memory location with zero.
@@ -760,15 +744,14 @@ PJ_DECL(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad);
  * @param dst	    The destination buffer.
  * @param size	    The number of bytes.
  */
-PJ_INLINE(void) pj_bzero(void *dst, pj_size_t size)
+PJ_INLINE(void) pj_bzero(void* dst, pj_size_t size)
 {
-#if defined(PJ_HAS_BZERO) && PJ_HAS_BZERO!=0
+#if defined(PJ_HAS_BZERO) && PJ_HAS_BZERO != 0
     bzero(dst, size);
 #else
     memset(dst, 0, size);
 #endif
 }
-
 
 /**
  * Fill the memory location with value.
@@ -779,7 +762,7 @@ PJ_INLINE(void) pj_bzero(void *dst, pj_size_t size)
  *
  * @return the value of dst.
  */
-PJ_INLINE(void*) pj_memset(void *dst, int c, pj_size_t size)
+PJ_INLINE(void*) pj_memset(void* dst, int c, pj_size_t size)
 {
     return memset(dst, c, size);
 }
@@ -793,7 +776,7 @@ PJ_INLINE(void*) pj_memset(void *dst, int c, pj_size_t size)
  *
  * @return the destination buffer.
  */
-PJ_INLINE(void*) pj_memcpy(void *dst, const void *src, pj_size_t size)
+PJ_INLINE(void*) pj_memcpy(void* dst, const void* src, pj_size_t size)
 {
     return memcpy(dst, src, size);
 }
@@ -807,7 +790,7 @@ PJ_INLINE(void*) pj_memcpy(void *dst, const void *src, pj_size_t size)
  *
  * @return the destination buffer.
  */
-PJ_INLINE(void*) pj_memmove(void *dst, const void *src, pj_size_t size)
+PJ_INLINE(void*) pj_memmove(void* dst, const void* src, pj_size_t size)
 {
     return memmove(dst, src, size);
 }
@@ -821,7 +804,7 @@ PJ_INLINE(void*) pj_memmove(void *dst, const void *src, pj_size_t size)
  *
  * @return negative, zero, or positive value.
  */
-PJ_INLINE(int) pj_memcmp(const void *buf1, const void *buf2, pj_size_t size)
+PJ_INLINE(int) pj_memcmp(const void* buf1, const void* buf2, pj_size_t size)
 {
     return memcmp(buf1, buf2, size);
 }
@@ -836,7 +819,7 @@ PJ_INLINE(int) pj_memcmp(const void *buf1, const void *buf2, pj_size_t size)
  * @return the pointer to location where the character is found, or NULL if
  *         not found.
  */
-PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
+PJ_INLINE(void*) pj_memchr(const void* buf, int c, pj_size_t size)
 {
     return (void*)memchr((void*)buf, c, size);
 }
@@ -846,10 +829,9 @@ PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
  */
 
 #if PJ_FUNCTIONS_ARE_INLINED
-#  include <pj/string_i.h>
+#    include <pj/string_i.h>
 #endif
 
 PJ_END_DECL
 
-#endif	/* __PJ_STRING_H__ */
-
+#endif /* __PJ_STRING_H__ */

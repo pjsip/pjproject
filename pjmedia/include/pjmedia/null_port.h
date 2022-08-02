@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_NULL_PORT_H__
 #define __PJMEDIA_NULL_PORT_H__
@@ -26,8 +25,6 @@
  */
 #include <pjmedia/port.h>
 
-
-
 /**
  * @defgroup PJMEDIA_NULL_PORT Null Port
  * @ingroup PJMEDIA_PORT
@@ -35,12 +32,10 @@
  * @{
  */
 
-
 PJ_BEGIN_DECL
 
-
 /**
- * Create Null port. 
+ * Create Null port.
  *
  * @param pool			Pool to allocate memory.
  * @param sampling_rate		Sampling rate of the port.
@@ -51,14 +46,10 @@ PJ_BEGIN_DECL
  *
  * @return			PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
-					       unsigned sampling_rate,
-					       unsigned channel_count,
-					       unsigned samples_per_frame,
-					       unsigned bits_per_sample,
-					       pjmedia_port **p_port );
-
-
+PJ_DECL(pj_status_t)
+pjmedia_null_port_create(pj_pool_t* pool, unsigned sampling_rate,
+                         unsigned channel_count, unsigned samples_per_frame,
+                         unsigned bits_per_sample, pjmedia_port** p_port);
 
 PJ_END_DECL
 
@@ -66,5 +57,4 @@ PJ_END_DECL
  * @}
  */
 
-
-#endif	/* __PJMEDIA_NULL_PORT_H__ */
+#endif /* __PJMEDIA_NULL_PORT_H__ */

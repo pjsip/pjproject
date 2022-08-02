@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,11 +13,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_H263_PACKETIZER_H__
 #define __PJMEDIA_H263_PACKETIZER_H__
-
 
 /**
  * @file h263_packetizer.h
@@ -30,12 +28,10 @@
 
 PJ_BEGIN_DECL
 
-
 /**
  * Opaque declaration for H.263 packetizer.
  */
 typedef struct pjmedia_h263_packetizer pjmedia_h263_packetizer;
-
 
 /**
  * Enumeration of H.263 packetization modes.
@@ -55,7 +51,6 @@ typedef enum
 
 } pjmedia_h263_packetizer_mode;
 
-
 /**
  * H.263 packetizer configuration.
  */
@@ -65,7 +60,7 @@ typedef struct pjmedia_h263_packetizer_cfg
      * Maximum payload length.
      * Default: PJMEDIA_MAX_MTU
      */
-    int	mtu;
+    int mtu;
 
     /**
      * Packetization mode.
@@ -74,7 +69,6 @@ typedef struct pjmedia_h263_packetizer_cfg
     pjmedia_h263_packetizer_mode mode;
 
 } pjmedia_h263_packetizer_cfg;
-
 
 /**
  * Create H.263 packetizer.
@@ -86,11 +80,10 @@ typedef struct pjmedia_h263_packetizer_cfg
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h263_packetizer_create(
-				    pj_pool_t *pool,
-				    const pjmedia_h263_packetizer_cfg *cfg,
-				    pjmedia_h263_packetizer **p_pktz);
-
+PJ_DECL(pj_status_t)
+pjmedia_h263_packetizer_create(pj_pool_t* pool,
+                               const pjmedia_h263_packetizer_cfg* cfg,
+                               pjmedia_h263_packetizer** p_pktz);
 
 /**
  * Generate an RTP payload from a H.263 picture bitstream. Note that this
@@ -106,13 +99,10 @@ PJ_DECL(pj_status_t) pjmedia_h263_packetizer_create(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
-					    pj_uint8_t *bits,
-                                            pj_size_t bits_len,
-                                            unsigned *bits_pos,
-                                            const pj_uint8_t **payload,
-                                            pj_size_t *payload_len);
-
+PJ_DECL(pj_status_t)
+pjmedia_h263_packetize(pjmedia_h263_packetizer* pktz, pj_uint8_t* bits,
+                       pj_size_t bits_len, unsigned* bits_pos,
+                       const pj_uint8_t** payload, pj_size_t* payload_len);
 
 /**
  * Append an RTP payload to an H.263 picture bitstream. Note that in case of
@@ -132,15 +122,12 @@ PJ_DECL(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h263_unpacketize(pjmedia_h263_packetizer *pktz,
-					      const pj_uint8_t *payload,
-                                              pj_size_t payload_len,
-                                              pj_uint8_t *bits,
-                                              pj_size_t bits_size,
-					      unsigned *bits_pos);
-
+PJ_DECL(pj_status_t)
+pjmedia_h263_unpacketize(pjmedia_h263_packetizer* pktz,
+                         const pj_uint8_t* payload, pj_size_t payload_len,
+                         pj_uint8_t* bits, pj_size_t bits_size,
+                         unsigned* bits_pos);
 
 PJ_END_DECL
 
-
-#endif	/* __PJMEDIA_H263_PACKETIZER_H__ */
+#endif /* __PJMEDIA_H263_PACKETIZER_H__ */

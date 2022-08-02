@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_SOUND_PORT_H__
 #define __PJMEDIA_SOUND_PORT_H__
@@ -40,17 +39,17 @@ PJ_BEGIN_DECL
  As explained in @ref PJMED_SND, the sound hardware abstraction provides
  some callbacks for its user:
  - it calls <b><tt>rec_cb</tt></b> callback when it has finished capturing
-   one media frame, and 
- - it calls <b><tt>play_cb</tt></b> when it needs media frame to be 
+   one media frame, and
+ - it calls <b><tt>play_cb</tt></b> when it needs media frame to be
    played to the sound playback hardware.
 
  The @ref PJMED_SND_PORT (the object being explained here) add a
  thin wrapper to the hardware abstraction:
  - it will call downstream port's <tt>put_frame()</tt>
-   when <b><tt>rec_cb()</tt></b> is called (i.e. when the sound hardware 
-   has finished capturing frame), and 
- - it will call downstream port's <tt>get_frame()</tt> when 
-   <b><tt>play_cb()</tt></b> is called (i.e. every time the 
+   when <b><tt>rec_cb()</tt></b> is called (i.e. when the sound hardware
+   has finished capturing frame), and
+ - it will call downstream port's <tt>get_frame()</tt> when
+   <b><tt>play_cb()</tt></b> is called (i.e. every time the
    sound hardware needs more frames to be played to the playback hardware).
 
  This simple abstraction enables media to flow automatically (and
@@ -61,7 +60,7 @@ PJ_BEGIN_DECL
 
  Application registers downstream port to the sound device port by
  calling #pjmedia_snd_port_connect();
- 
+
  */
 
 /**
@@ -69,9 +68,9 @@ PJ_BEGIN_DECL
  */
 enum pjmedia_snd_port_option
 {
-    /** 
+    /**
      * Don't start the audio device when creating a sound port.
-     */    
+     */
     PJMEDIA_SND_PORT_NO_AUTO_START = 1
 };
 
@@ -86,7 +85,7 @@ typedef struct pjmedia_snd_port_param
      * Base structure.
      */
     pjmedia_aud_param base;
-    
+
     /**
      * Sound port creation options.
      */
@@ -100,7 +99,7 @@ typedef struct pjmedia_snd_port_param
     /**
      * Arbitrary user data for playback and record preview callbacks below.
      */
-    void *user_data;
+    void* user_data;
 
     /**
      * Optional callback for audio frame preview right before queued to
@@ -136,7 +135,7 @@ typedef struct pjmedia_snd_port_param
  *
  * @param prm		    The parameter.
  */
-PJ_DECL(void) pjmedia_snd_port_param_default(pjmedia_snd_port_param *prm);
+PJ_DECL(void) pjmedia_snd_port_param_default(pjmedia_snd_port_param* prm);
 
 /**
  * This opaque type describes sound device port connection.
@@ -145,7 +144,6 @@ PJ_DECL(void) pjmedia_snd_port_param_default(pjmedia_snd_port_param *prm);
  */
 typedef struct pjmedia_snd_port pjmedia_snd_port;
 
-
 /**
  * Create bidirectional sound port for both capturing and playback of
  * audio samples.
@@ -153,14 +151,14 @@ typedef struct pjmedia_snd_port pjmedia_snd_port;
  * @param pool		    Pool to allocate sound port structure.
  * @param rec_id	    Device index for recorder/capture stream, or
  *			    -1 to use the first capable device.
- * @param play_id	    Device index for playback stream, or -1 to use 
+ * @param play_id	    Device index for playback stream, or -1 to use
  *			    the first capable device.
  * @param clock_rate	    Sound device's clock rate to set.
  * @param channel_count	    Set number of channels, 1 for mono, or 2 for
  *			    stereo. The channel count determines the format
  *			    of the frame.
  * @param samples_per_frame Number of samples per frame.
- * @param bits_per_sample   Set the number of bits per sample. The normal 
+ * @param bits_per_sample   Set the number of bits per sample. The normal
  *			    value for this parameter is 16 bits per sample.
  * @param options	    Options flag.
  * @param p_port	    Pointer to receive the sound device port instance.
@@ -168,29 +166,25 @@ typedef struct pjmedia_snd_port pjmedia_snd_port;
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
-					      int rec_id,
-					      int play_id,
-					      unsigned clock_rate,
-					      unsigned channel_count,
-					      unsigned samples_per_frame,
-					      unsigned bits_per_sample,
-					      unsigned options,
-					      pjmedia_snd_port **p_port);
+PJ_DECL(pj_status_t)
+pjmedia_snd_port_create(pj_pool_t* pool, int rec_id, int play_id,
+                        unsigned clock_rate, unsigned channel_count,
+                        unsigned samples_per_frame, unsigned bits_per_sample,
+                        unsigned options, pjmedia_snd_port** p_port);
 
 /**
- * Create unidirectional sound device port for capturing audio streams from 
+ * Create unidirectional sound device port for capturing audio streams from
  * the sound device with the specified parameters.
  *
  * @param pool		    Pool to allocate sound port structure.
- * @param index		    Device index, or -1 to let the library choose the 
+ * @param index		    Device index, or -1 to let the library choose the
  *			    first available device.
  * @param clock_rate	    Sound device's clock rate to set.
  * @param channel_count	    Set number of channels, 1 for mono, or 2 for
  *			    stereo. The channel count determines the format
  *			    of the frame.
  * @param samples_per_frame Number of samples per frame.
- * @param bits_per_sample   Set the number of bits per sample. The normal 
+ * @param bits_per_sample   Set the number of bits per sample. The normal
  *			    value for this parameter is 16 bits per sample.
  * @param options	    Options flag.
  * @param p_port	    Pointer to receive the sound device port instance.
@@ -198,28 +192,25 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_create_rec(pj_pool_t *pool,
-						 int index,
-						 unsigned clock_rate,
-						 unsigned channel_count,
-						 unsigned samples_per_frame,
-						 unsigned bits_per_sample,
-						 unsigned options,
-						 pjmedia_snd_port **p_port);
-					      
+PJ_DECL(pj_status_t)
+pjmedia_snd_port_create_rec(pj_pool_t* pool, int index, unsigned clock_rate,
+                            unsigned channel_count, unsigned samples_per_frame,
+                            unsigned bits_per_sample, unsigned options,
+                            pjmedia_snd_port** p_port);
+
 /**
- * Create unidirectional sound device port for playing audio streams with the 
+ * Create unidirectional sound device port for playing audio streams with the
  * specified parameters.
  *
  * @param pool		    Pool to allocate sound port structure.
- * @param index		    Device index, or -1 to let the library choose the 
+ * @param index		    Device index, or -1 to let the library choose the
  *			    first available device.
  * @param clock_rate	    Sound device's clock rate to set.
  * @param channel_count	    Set number of channels, 1 for mono, or 2 for
  *			    stereo. The channel count determines the format
  *			    of the frame.
  * @param samples_per_frame Number of samples per frame.
- * @param bits_per_sample   Set the number of bits per sample. The normal 
+ * @param bits_per_sample   Set the number of bits per sample. The normal
  *			    value for this parameter is 16 bits per sample.
  * @param options	    Options flag.
  * @param p_port	    Pointer to receive the sound device port instance.
@@ -227,15 +218,12 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create_rec(pj_pool_t *pool,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_create_player(pj_pool_t *pool,
-						    int index,
-						    unsigned clock_rate,
-						    unsigned channel_count,
-						    unsigned samples_per_frame,
-						    unsigned bits_per_sample,
-						    unsigned options,
-						    pjmedia_snd_port **p_port);
-
+PJ_DECL(pj_status_t)
+pjmedia_snd_port_create_player(pj_pool_t* pool, int index, unsigned clock_rate,
+                               unsigned channel_count,
+                               unsigned samples_per_frame,
+                               unsigned bits_per_sample, unsigned options,
+                               pjmedia_snd_port** p_port);
 
 /**
  * Create sound device port according to the specified parameters.
@@ -247,10 +235,9 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create_player(pj_pool_t *pool,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
-					      const pjmedia_snd_port_param *prm,
-					      pjmedia_snd_port **p_port);
-
+PJ_DECL(pj_status_t)
+pjmedia_snd_port_create2(pj_pool_t* pool, const pjmedia_snd_port_param* prm,
+                         pjmedia_snd_port** p_port);
 
 /**
  * Destroy sound device port.
@@ -260,8 +247,7 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_destroy(pjmedia_snd_port *snd_port);
-
+PJ_DECL(pj_status_t) pjmedia_snd_port_destroy(pjmedia_snd_port* snd_port);
 
 /**
  * Retrieve the sound stream associated by this sound device port.
@@ -270,12 +256,11 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_destroy(pjmedia_snd_port *snd_port);
  *
  * @return		    The sound stream instance.
  */
-PJ_DECL(pjmedia_aud_stream*) pjmedia_snd_port_get_snd_stream(
-						pjmedia_snd_port *snd_port);
-
+PJ_DECL(pjmedia_aud_stream*)
+pjmedia_snd_port_get_snd_stream(pjmedia_snd_port* snd_port);
 
 /**
- * Change the echo cancellation settings. The echo cancellation settings 
+ * Change the echo cancellation settings. The echo cancellation settings
  * should have been specified when this sound port was created, by setting
  * the appropriate fields in the pjmedia_aud_param, because not all sound
  * device implementation supports changing the EC setting once the device
@@ -298,14 +283,12 @@ PJ_DECL(pjmedia_aud_stream*) pjmedia_snd_port_get_snd_stream(
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
-					      pj_pool_t *pool,
-					      unsigned tail_ms,
-					      unsigned options);
-
+PJ_DECL(pj_status_t)
+pjmedia_snd_port_set_ec(pjmedia_snd_port* snd_port, pj_pool_t* pool,
+                        unsigned tail_ms, unsigned options);
 
 /**
- * Get current echo canceller tail length, in miliseconds. The tail length 
+ * Get current echo canceller tail length, in miliseconds. The tail length
  * will be zero if EC is not enabled.
  *
  * @param snd_port	    The sound device port.
@@ -313,9 +296,8 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_get_ec_tail(pjmedia_snd_port *snd_port,
-						  unsigned *p_length);
-
+PJ_DECL(pj_status_t)
+pjmedia_snd_port_get_ec_tail(pjmedia_snd_port* snd_port, unsigned* p_length);
 
 /**
  * Get echo canceller statistics.
@@ -326,9 +308,9 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_get_ec_tail(pjmedia_snd_port *snd_port,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_get_ec_stat(pjmedia_snd_port *snd_port,
-						  pjmedia_echo_stat *p_stat);
-
+PJ_DECL(pj_status_t)
+pjmedia_snd_port_get_ec_stat(pjmedia_snd_port* snd_port,
+                             pjmedia_echo_stat* p_stat);
 
 /**
  * Get a clock source from the sound port.
@@ -338,10 +320,8 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_get_ec_stat(pjmedia_snd_port *snd_port,
  *
  * @return	    The clock source.
  */
-PJ_DECL(pjmedia_clock_src *)
-pjmedia_snd_port_get_clock_src( pjmedia_snd_port *snd_port,
-                                pjmedia_dir dir );
-
+PJ_DECL(pjmedia_clock_src*)
+pjmedia_snd_port_get_clock_src(pjmedia_snd_port* snd_port, pjmedia_dir dir);
 
 /**
  * Connect a port to the sound device port. If the sound device port has a
@@ -361,21 +341,19 @@ pjmedia_snd_port_get_clock_src( pjmedia_snd_port *snd_port,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_connect(pjmedia_snd_port *snd_port,
-					      pjmedia_port *port);
-
+PJ_DECL(pj_status_t)
+pjmedia_snd_port_connect(pjmedia_snd_port* snd_port, pjmedia_port* port);
 
 /**
  * Retrieve the port instance currently attached to the sound port, if any.
  *
  * @param snd_port	    The sound device port.
  *
- * @return		    The port instance currently attached to the 
+ * @return		    The port instance currently attached to the
  *			    sound device port, or NULL if there is no port
  *			    currently attached to the sound device port.
  */
-PJ_DECL(pjmedia_port*) pjmedia_snd_port_get_port(pjmedia_snd_port *snd_port);
-
+PJ_DECL(pjmedia_port*) pjmedia_snd_port_get_port(pjmedia_snd_port* snd_port);
 
 /**
  * Disconnect currently attached port from the sound device port.
@@ -384,8 +362,7 @@ PJ_DECL(pjmedia_port*) pjmedia_snd_port_get_port(pjmedia_snd_port *snd_port);
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_disconnect(pjmedia_snd_port *snd_port);
-
+PJ_DECL(pj_status_t) pjmedia_snd_port_disconnect(pjmedia_snd_port* snd_port);
 
 /**
  * @}
@@ -393,6 +370,4 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_disconnect(pjmedia_snd_port *snd_port);
 
 PJ_END_DECL
 
-
-#endif	/* __PJMEDIA_SOUND_PORT_H__ */
-
+#endif /* __PJMEDIA_SOUND_PORT_H__ */

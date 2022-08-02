@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __SIP_100REL_H__
 #define __SIP_100REL_H__
@@ -25,9 +24,7 @@
  * @brief PRACK (Reliability of Provisional Responses)
  */
 
-
 #include <pjsip-ua/sip_inv.h>
-
 
 /**
  * @defgroup PJSIP_100REL 100rel/PRACK - Reliability of Provisional Responses
@@ -55,7 +52,7 @@
  * \subsection pjsip_100rel_sess Using 100rel in a Session
  *
  * For UAC, \a 100rel support will be enabled in the session if \a 100rel
- * support is enabled in the library (default is yes). 
+ * support is enabled in the library (default is yes).
  * Outgoing INVITE request will include \a 100rel tag in \a Supported
  * header and \a PRACK method in \a Allow header. When callee endpoint
  * sends reliable provisional responses, the UAC will automatically send
@@ -65,17 +62,17 @@
  *
  * If the UAC wants to <b>mandate</b> \a 100rel support, it can specify
  * #PJSIP_INV_REQUIRE_100REL in the \a options argument when calling
- * #pjsip_inv_create_uac(). In this case, PJSIP will add \a 100rel tag 
+ * #pjsip_inv_create_uac(). In this case, PJSIP will add \a 100rel tag
  * in the \a Require header of the outgoing INVITE request.
  *
- * For UAS, if it wants to support \a 100rel but not to mandate it, 
- * it must specify  #PJSIP_INV_SUPPORT_100REL flag in the \a options 
- * argument when calling  #pjsip_inv_verify_request(), and pass the same 
- * \a options variable when calling #pjsip_inv_verify_request. If UAC had 
- * specified \a 100rel in it's list of extensions in \a Require header, 
- * the UAS will send provisional responses reliably. If UAC only listed 
- * \a 100rel in its \a Supported header but not in \a Require header, 
- * or if UAC does not list \a 100rel support at all, the UAS WILL NOT 
+ * For UAS, if it wants to support \a 100rel but not to mandate it,
+ * it must specify  #PJSIP_INV_SUPPORT_100REL flag in the \a options
+ * argument when calling  #pjsip_inv_verify_request(), and pass the same
+ * \a options variable when calling #pjsip_inv_verify_request. If UAC had
+ * specified \a 100rel in it's list of extensions in \a Require header,
+ * the UAS will send provisional responses reliably. If UAC only listed
+ * \a 100rel in its \a Supported header but not in \a Require header,
+ * or if UAC does not list \a 100rel support at all, the UAS WILL NOT
  * send provisional responses reliably.
  * The snippet below can be used to accomplish this task:
  *
@@ -85,12 +82,12 @@
     options |= PJSIP_INV_SUPPORT_100REL;
 
     status = pjsip_inv_verify_request(rdata, &options, answer, NULL,
-				      endpt, &resp);
+                                      endpt, &resp);
     if (status != PJ_SUCCESS) {
-	// INVITE request cannot be handled.
-	// Reject the request with the response in resp.
-	...
-	return;
+        // INVITE request cannot be handled.
+        // Reject the request with the response in resp.
+        ...
+        return;
     }
 
     // Create UAS dialog, populate Contact header, etc.
@@ -104,8 +101,8 @@
    \endverbatim
  *
  * For another requirement, if UAS wants to <b>mandate</b> \a 100rel support,
- * it can specify #PJSIP_INV_REQUIRE_100REL flag when calling 
- * #pjsip_inv_verify_request(), and pass the \a options when calling 
+ * it can specify #PJSIP_INV_REQUIRE_100REL flag when calling
+ * #pjsip_inv_verify_request(), and pass the \a options when calling
  * #pjsip_inv_verify_request. In this case,
  * \a 100rel extension will be used if UAC specifies \a 100rel in its
  * \a Supported header. If UAC does not list \a 100rel in \a Supported header,
@@ -123,19 +120,16 @@
 
 PJ_BEGIN_DECL
 
-
-/** 
- * PRACK method constant. 
- * @see pjsip_get_prack_method() 
-  */
+/**
+ * PRACK method constant.
+ * @see pjsip_get_prack_method()
+ */
 PJ_DECL_DATA(const pjsip_method) pjsip_prack_method;
 
-
-/** 
- * Get #pjsip_invite_method constant. 
+/**
+ * Get #pjsip_invite_method constant.
  */
 PJ_DECL(const pjsip_method*) pjsip_get_prack_method(void);
-
 
 /**
  * Initialize 100rel module. This function must be called once during
@@ -145,8 +139,7 @@ PJ_DECL(const pjsip_method*) pjsip_get_prack_method(void);
  *
  * @return		PJ_SUCCESS if module is successfully initialized.
  */
-PJ_DECL(pj_status_t) pjsip_100rel_init_module(pjsip_endpoint *endpt);
-
+PJ_DECL(pj_status_t) pjsip_100rel_init_module(pjsip_endpoint* endpt);
 
 /**
  * Add 100rel support to the specified invite session. This function will
@@ -157,8 +150,7 @@ PJ_DECL(pj_status_t) pjsip_100rel_init_module(pjsip_endpoint *endpt);
  *
  * @return		PJ_SUCCESS on successful.
  */
-PJ_DECL(pj_status_t) pjsip_100rel_attach(pjsip_inv_session *inv);
-
+PJ_DECL(pj_status_t) pjsip_100rel_attach(pjsip_inv_session* inv);
 
 /**
  * Check if incoming response has reliable provisional response feature.
@@ -167,8 +159,7 @@ PJ_DECL(pj_status_t) pjsip_100rel_attach(pjsip_inv_session *inv);
  *
  * @return		PJ_TRUE if the provisional response is reliable.
  */
-PJ_DECL(pj_bool_t) pjsip_100rel_is_reliable(pjsip_rx_data *rdata);
-
+PJ_DECL(pj_bool_t) pjsip_100rel_is_reliable(pjsip_rx_data* rdata);
 
 /**
  * Create PRACK request for the incoming reliable provisional response.
@@ -181,9 +172,9 @@ PJ_DECL(pj_bool_t) pjsip_100rel_is_reliable(pjsip_rx_data *rdata);
  *
  * @return		PJ_SUCCESS on successful.
  */
-PJ_DECL(pj_status_t) pjsip_100rel_create_prack(pjsip_inv_session *inv,
-					       pjsip_rx_data *rdata,
-					       pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t)
+pjsip_100rel_create_prack(pjsip_inv_session* inv, pjsip_rx_data* rdata,
+                          pjsip_tx_data** p_tdata);
 
 /**
  * Send PRACK request.
@@ -193,9 +184,8 @@ PJ_DECL(pj_status_t) pjsip_100rel_create_prack(pjsip_inv_session *inv,
  *
  * @return		PJ_SUCCESS on successful.
  */
-PJ_DECL(pj_status_t) pjsip_100rel_send_prack(pjsip_inv_session *inv,
-					     pjsip_tx_data *tdata);
-
+PJ_DECL(pj_status_t)
+pjsip_100rel_send_prack(pjsip_inv_session* inv, pjsip_tx_data* tdata);
 
 /**
  * Handle incoming PRACK request.
@@ -205,9 +195,8 @@ PJ_DECL(pj_status_t) pjsip_100rel_send_prack(pjsip_inv_session *inv,
  *
  * @return		PJ_SUCCESS on successful.
  */
-PJ_DECL(pj_status_t) pjsip_100rel_on_rx_prack(pjsip_inv_session *inv,
-					      pjsip_rx_data *rdata);
-
+PJ_DECL(pj_status_t)
+pjsip_100rel_on_rx_prack(pjsip_inv_session* inv, pjsip_rx_data* rdata);
 
 /**
  * Transmit INVITE response (provisional or final) reliably according to
@@ -221,9 +210,8 @@ PJ_DECL(pj_status_t) pjsip_100rel_on_rx_prack(pjsip_inv_session *inv,
  *
  * @return		PJ_SUCCESS on successful.
  */
-PJ_DECL(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
-					      pjsip_tx_data *tdata);
-
+PJ_DECL(pj_status_t)
+pjsip_100rel_tx_response(pjsip_inv_session* inv, pjsip_tx_data* tdata);
 
 /**
  * Notify 100rel module that the invite session has been disconnected.
@@ -232,8 +220,7 @@ PJ_DECL(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
  *
  * @return		PJ_SUCCESS on successful.
  */
-PJ_DECL(pj_status_t) pjsip_100rel_end_session(pjsip_inv_session *inv);
-
+PJ_DECL(pj_status_t) pjsip_100rel_end_session(pjsip_inv_session* inv);
 
 PJ_END_DECL
 
@@ -241,5 +228,4 @@ PJ_END_DECL
  * @}
  */
 
-
-#endif	/* __SIP_100REL_H__ */
+#endif /* __SIP_100REL_H__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,202 +22,187 @@
 
 #if PJMEDIA_AUDIO_DEV_HAS_COREAUDIO
 
-#include "TargetConditionals.h"
-#if TARGET_OS_IPHONE
-    #define COREAUDIO_MAC 0
-#else
-    #define COREAUDIO_MAC 1
-#endif
+#    include "TargetConditionals.h"
+#    if TARGET_OS_IPHONE
+#        define COREAUDIO_MAC 0
+#    else
+#        define COREAUDIO_MAC 1
+#    endif
 
-#include <AudioUnit/AudioUnit.h>
-#include <AudioToolbox/AudioConverter.h>
-#if COREAUDIO_MAC
-    #include <CoreAudio/CoreAudio.h>
-#else
-    #include <AVFoundation/AVAudioSession.h>
+#    include <AudioUnit/AudioUnit.h>
+#    include <AudioToolbox/AudioConverter.h>
+#    if COREAUDIO_MAC
+#        include <CoreAudio/CoreAudio.h>
+#    else
+#        include <AVFoundation/AVAudioSession.h>
 
-    #define AudioDeviceID unsigned
+#        define AudioDeviceID                        unsigned
 
-    /**
-     * As in iOS SDK 4 or later, audio route change property listener is
-     * no longer necessary. Just make surethat your application can receive
-     * remote control events by adding the code:
-     *     [[UIApplication sharedApplication] 
-     *      beginReceivingRemoteControlEvents];
-     * Otherwise audio route change (such as headset plug/unplug) will not be
-     * processed while your application is in the background mode.
-     */
-    #define USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER 0
+/**
+ * As in iOS SDK 4 or later, audio route change property listener is
+ * no longer necessary. Just make surethat your application can receive
+ * remote control events by adding the code:
+ *     [[UIApplication sharedApplication]
+ *      beginReceivingRemoteControlEvents];
+ * Otherwise audio route change (such as headset plug/unplug) will not be
+ * processed while your application is in the background mode.
+ */
+#        define USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER 0
 
-    /* Starting iOS SDK 7, Audio Session API is deprecated. */
-    #define USE_AUDIO_SESSION_API 0
+/* Starting iOS SDK 7, Audio Session API is deprecated. */
+#        define USE_AUDIO_SESSION_API                0
 
-    /* For better integration with CallKit features (available starting
-     * in iOS 10), let the application setup and manage its own
-     * audio session.
-     */
-    #define SETUP_AV_AUDIO_SESSION  0
-#endif
+/* For better integration with CallKit features (available starting
+ * in iOS 10), let the application setup and manage its own
+ * audio session.
+ */
+#        define SETUP_AV_AUDIO_SESSION               0
+#    endif
 
 /* For Mac OS 10.5.x and earlier */
-#if AUDIO_UNIT_VERSION < 1060
-    #define AudioComponent Component
-    #define AudioComponentDescription ComponentDescription
-    #define AudioComponentInstance ComponentInstance
-    #define AudioComponentFindNext FindNextComponent
-    #define AudioComponentInstanceNew OpenAComponent
-    #define AudioComponentInstanceDispose CloseComponent
-#endif
+#    if AUDIO_UNIT_VERSION < 1060
+#        define AudioComponent                Component
+#        define AudioComponentDescription     ComponentDescription
+#        define AudioComponentInstance        ComponentInstance
+#        define AudioComponentFindNext        FindNextComponent
+#        define AudioComponentInstanceNew     OpenAComponent
+#        define AudioComponentInstanceDispose CloseComponent
+#    endif
 
-
-#define THIS_FILE		"coreaudio_dev.c"
+#    define THIS_FILE "coreaudio_dev.c"
 
 /* coreaudio device info */
 struct coreaudio_dev_info
 {
-    pjmedia_aud_dev_info	 info;
-    AudioDeviceID		 dev_id;
+    pjmedia_aud_dev_info info;
+    AudioDeviceID dev_id;
 };
 
 /* linked list of streams */
 struct stream_list
 {
     PJ_DECL_LIST_MEMBER(struct stream_list);
-    struct coreaudio_stream	*stream;
+    struct coreaudio_stream* stream;
 };
 
 /* coreaudio factory */
 struct coreaudio_factory
 {
-    pjmedia_aud_dev_factory	 base;
-    pj_pool_t			*base_pool;
-    pj_pool_t			*pool;
-    pj_pool_factory		*pf;
-    pj_mutex_t			*mutex;
+    pjmedia_aud_dev_factory base;
+    pj_pool_t* base_pool;
+    pj_pool_t* pool;
+    pj_pool_factory* pf;
+    pj_mutex_t* mutex;
 
-    unsigned			 dev_count;
-    struct coreaudio_dev_info	*dev_info;
+    unsigned dev_count;
+    struct coreaudio_dev_info* dev_info;
 
-    AudioComponent		 io_comp;
-    pj_bool_t			 has_vpio;
-    struct stream_list		 streams;
+    AudioComponent io_comp;
+    pj_bool_t has_vpio;
+    struct stream_list streams;
 };
 
 /* Sound stream. */
 struct coreaudio_stream
 {
-    pjmedia_aud_stream	 	 base;   	 /**< Base stream  	  */
-    pjmedia_aud_param	 	 param;		 /**< Settings	          */
-    pj_pool_t			*pool;           /**< Memory pool.        */
-    struct coreaudio_factory	*cf;
-    struct stream_list		 list_entry;
+    pjmedia_aud_stream base; /**< Base stream  	  */
+    pjmedia_aud_param param; /**< Settings	          */
+    pj_pool_t* pool;         /**< Memory pool.        */
+    struct coreaudio_factory* cf;
+    struct stream_list list_entry;
 
-    pjmedia_aud_rec_cb   	 rec_cb;         /**< Capture callback.   */
-    pjmedia_aud_play_cb  	 play_cb;        /**< Playback callback.  */
-    void                	*user_data;      /**< Application data.   */
+    pjmedia_aud_rec_cb rec_cb;   /**< Capture callback.   */
+    pjmedia_aud_play_cb play_cb; /**< Playback callback.  */
+    void* user_data;             /**< Application data.   */
 
-    pj_timestamp	 	 play_timestamp;
-    pj_timestamp	 	 rec_timestamp;
+    pj_timestamp play_timestamp;
+    pj_timestamp rec_timestamp;
 
-    pj_int16_t			*rec_buf;
-    unsigned		 	 rec_buf_count;
-    pj_int16_t			*play_buf;
-    unsigned		 	 play_buf_count;
+    pj_int16_t* rec_buf;
+    unsigned rec_buf_count;
+    pj_int16_t* play_buf;
+    unsigned play_buf_count;
 
-    pj_bool_t			 interrupted;
-    pj_bool_t		 	 quit_flag;
-    pj_bool_t			 running;
+    pj_bool_t interrupted;
+    pj_bool_t quit_flag;
+    pj_bool_t running;
 
-    pj_bool_t		 	 rec_thread_initialized;
-    pj_thread_desc	 	 rec_thread_desc;
-    pj_thread_t			*rec_thread;
+    pj_bool_t rec_thread_initialized;
+    pj_thread_desc rec_thread_desc;
+    pj_thread_t* rec_thread;
 
-    pj_bool_t		 	 play_thread_initialized;
-    pj_thread_desc	 	 play_thread_desc;
-    pj_thread_t			*play_thread;
+    pj_bool_t play_thread_initialized;
+    pj_thread_desc play_thread_desc;
+    pj_thread_t* play_thread;
 
-    AudioUnit		 	 io_units[2];
-    AudioStreamBasicDescription  streamFormat;
-    AudioBufferList		*audio_buf;
+    AudioUnit io_units[2];
+    AudioStreamBasicDescription streamFormat;
+    AudioBufferList* audio_buf;
 
-    AudioConverterRef            resample;
-    pj_int16_t			*resample_buf;
-    void			*resample_buf_ptr;
-    unsigned		 	 resample_buf_count;
-    unsigned		 	 resample_buf_size;
-    
-#if !COREAUDIO_MAC
-    AVAudioSession              *sess;
-#endif
+    AudioConverterRef resample;
+    pj_int16_t* resample_buf;
+    void* resample_buf_ptr;
+    unsigned resample_buf_count;
+    unsigned resample_buf_size;
+
+#    if !COREAUDIO_MAC
+    AVAudioSession* sess;
+#    endif
 };
 
 /* Static variable */
-static struct coreaudio_factory *cf_instance = NULL;
+static struct coreaudio_factory* cf_instance = NULL;
 
 /* Prototypes */
-static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f);
-static pj_status_t ca_factory_destroy(pjmedia_aud_dev_factory *f);
-static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f);
-static unsigned    ca_factory_get_dev_count(pjmedia_aud_dev_factory *f);
-static pj_status_t ca_factory_get_dev_info(pjmedia_aud_dev_factory *f,
-					   unsigned index,
-					   pjmedia_aud_dev_info *info);
-static pj_status_t ca_factory_default_param(pjmedia_aud_dev_factory *f,
-					    unsigned index,
-					    pjmedia_aud_param *param);
-static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory *f,
-					    const pjmedia_aud_param *param,
-					    pjmedia_aud_rec_cb rec_cb,
-					    pjmedia_aud_play_cb play_cb,
-					    void *user_data,
-					    pjmedia_aud_stream **p_aud_strm);
+static pj_status_t ca_factory_init(pjmedia_aud_dev_factory* f);
+static pj_status_t ca_factory_destroy(pjmedia_aud_dev_factory* f);
+static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory* f);
+static unsigned ca_factory_get_dev_count(pjmedia_aud_dev_factory* f);
+static pj_status_t ca_factory_get_dev_info(pjmedia_aud_dev_factory* f,
+                                           unsigned index,
+                                           pjmedia_aud_dev_info* info);
+static pj_status_t ca_factory_default_param(pjmedia_aud_dev_factory* f,
+                                            unsigned index,
+                                            pjmedia_aud_param* param);
+static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory* f,
+                                            const pjmedia_aud_param* param,
+                                            pjmedia_aud_rec_cb rec_cb,
+                                            pjmedia_aud_play_cb play_cb,
+                                            void* user_data,
+                                            pjmedia_aud_stream** p_aud_strm);
 
-static pj_status_t ca_stream_get_param(pjmedia_aud_stream *strm,
-				       pjmedia_aud_param *param);
-static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *strm,
-				     pjmedia_aud_dev_cap cap,
-				     void *value);
-static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *strm,
-				     pjmedia_aud_dev_cap cap,
-				     const void *value);
-static pj_status_t ca_stream_start(pjmedia_aud_stream *strm);
-static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm);
-static pj_status_t ca_stream_destroy(pjmedia_aud_stream *strm);
+static pj_status_t ca_stream_get_param(pjmedia_aud_stream* strm,
+                                       pjmedia_aud_param* param);
+static pj_status_t ca_stream_get_cap(pjmedia_aud_stream* strm,
+                                     pjmedia_aud_dev_cap cap, void* value);
+static pj_status_t ca_stream_set_cap(pjmedia_aud_stream* strm,
+                                     pjmedia_aud_dev_cap cap,
+                                     const void* value);
+static pj_status_t ca_stream_start(pjmedia_aud_stream* strm);
+static pj_status_t ca_stream_stop(pjmedia_aud_stream* strm);
+static pj_status_t ca_stream_destroy(pjmedia_aud_stream* strm);
 static pj_status_t create_audio_unit(AudioComponent io_comp,
-				     AudioDeviceID dev_id,
-				     pjmedia_dir dir,
-				     struct coreaudio_stream *strm,
-				     AudioUnit *io_unit);
-#if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
-static void interruptionListener(void *inClientData, UInt32 inInterruption);
-static void propListener(void *                 inClientData,
-                         AudioSessionPropertyID inID,
-                         UInt32                 inDataSize,
-                         const void *           inData);
-#endif
+                                     AudioDeviceID dev_id, pjmedia_dir dir,
+                                     struct coreaudio_stream* strm,
+                                     AudioUnit* io_unit);
+#    if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
+static void interruptionListener(void* inClientData, UInt32 inInterruption);
+static void propListener(void* inClientData, AudioSessionPropertyID inID,
+                         UInt32 inDataSize, const void* inData);
+#    endif
 
 /* Operations */
-static pjmedia_aud_dev_factory_op factory_op =
-{
-    &ca_factory_init,
-    &ca_factory_destroy,
-    &ca_factory_get_dev_count,
-    &ca_factory_get_dev_info,
-    &ca_factory_default_param,
-    &ca_factory_create_stream,
+static pjmedia_aud_dev_factory_op factory_op = {
+    &ca_factory_init,          &ca_factory_destroy,
+    &ca_factory_get_dev_count, &ca_factory_get_dev_info,
+    &ca_factory_default_param, &ca_factory_create_stream,
     &ca_factory_refresh
 };
 
-static pjmedia_aud_stream_op stream_op =
-{
-    &ca_stream_get_param,
-    &ca_stream_get_cap,
-    &ca_stream_set_cap,
-    &ca_stream_start,
-    &ca_stream_stop,
-    &ca_stream_destroy
+static pjmedia_aud_stream_op stream_op = {
+    &ca_stream_get_param, &ca_stream_get_cap, &ca_stream_set_cap,
+    &ca_stream_start,     &ca_stream_stop,    &ca_stream_destroy
 };
-
 
 /****************************************************************************
  * Factory operations
@@ -226,10 +210,10 @@ static pjmedia_aud_stream_op stream_op =
 /*
  * Init coreaudio audio driver.
  */
-pjmedia_aud_dev_factory* pjmedia_coreaudio_factory(pj_pool_factory *pf)
+pjmedia_aud_dev_factory* pjmedia_coreaudio_factory(pj_pool_factory* pf)
 {
-    struct coreaudio_factory *f;
-    pj_pool_t *pool;
+    struct coreaudio_factory* f;
+    pj_pool_t* pool;
 
     pool = pj_pool_create(pf, "core audio base", 1000, 1000, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct coreaudio_factory);
@@ -240,92 +224,85 @@ pjmedia_aud_dev_factory* pjmedia_coreaudio_factory(pj_pool_factory *pf)
     return &f->base;
 }
 
-
 /* API: init factory */
-static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
+static pj_status_t ca_factory_init(pjmedia_aud_dev_factory* f)
 {
-    struct coreaudio_factory *cf = (struct coreaudio_factory*)f;
+    struct coreaudio_factory* cf = (struct coreaudio_factory*)f;
     AudioComponentDescription desc;
     pj_status_t status;
-#if !COREAUDIO_MAC
+#    if !COREAUDIO_MAC
     unsigned i;
-#endif
+#    endif
 
     pj_list_init(&cf->streams);
-    status = pj_mutex_create_recursive(cf->base_pool,
-				       "coreaudio",
-				       &cf->mutex);
+    status = pj_mutex_create_recursive(cf->base_pool, "coreaudio", &cf->mutex);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     desc.componentType = kAudioUnitType_Output;
-#if COREAUDIO_MAC
+#    if COREAUDIO_MAC
     desc.componentSubType = kAudioUnitSubType_HALOutput;
-#else
+#    else
     desc.componentSubType = kAudioUnitSubType_RemoteIO;
-#endif
+#    endif
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
     desc.componentFlagsMask = 0;
 
     cf->io_comp = AudioComponentFindNext(NULL, &desc);
     if (cf->io_comp == NULL)
-	return PJMEDIA_EAUD_INIT; // cannot find IO unit;
+        return PJMEDIA_EAUD_INIT; // cannot find IO unit;
 
     desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
     if (AudioComponentFindNext(NULL, &desc) != NULL)
-    	cf->has_vpio = PJ_TRUE;
+        cf->has_vpio = PJ_TRUE;
 
     status = ca_factory_refresh(f);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
-#if !COREAUDIO_MAC
+#    if !COREAUDIO_MAC
     cf->pool = pj_pool_create(cf->pf, "core audio", 1000, 1000, NULL);
     cf->dev_count = 1;
-    cf->dev_info = (struct coreaudio_dev_info*)
-   		   pj_pool_calloc(cf->pool, cf->dev_count,
-   		   sizeof(struct coreaudio_dev_info));
+    cf->dev_info = (struct coreaudio_dev_info*)pj_pool_calloc(
+      cf->pool, cf->dev_count, sizeof(struct coreaudio_dev_info));
     for (i = 0; i < cf->dev_count; i++) {
- 	struct coreaudio_dev_info *cdi;
+        struct coreaudio_dev_info* cdi;
 
- 	cdi = &cf->dev_info[i];
- 	pj_bzero(cdi, sizeof(*cdi));
- 	cdi->dev_id = 0;
- 	strcpy(cdi->info.name, "iPhone IO device");
- 	strcpy(cdi->info.driver, "apple");
- 	cdi->info.input_count = 1;
- 	cdi->info.output_count = 1;
- 	cdi->info.default_samples_per_sec = 8000;
+        cdi = &cf->dev_info[i];
+        pj_bzero(cdi, sizeof(*cdi));
+        cdi->dev_id = 0;
+        strcpy(cdi->info.name, "iPhone IO device");
+        strcpy(cdi->info.driver, "apple");
+        cdi->info.input_count = 1;
+        cdi->info.output_count = 1;
+        cdi->info.default_samples_per_sec = 8000;
 
-	/* Set the device capabilities here */
- 	cdi->info.caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
-			 PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY |
-			 PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
-#if USE_AUDIO_SESSION_API != 0
-			 PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE |
-			 PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE |
-#endif
-			 PJMEDIA_AUD_DEV_CAP_EC;
- 	cdi->info.routes = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER |
-			   PJMEDIA_AUD_DEV_ROUTE_EARPIECE |
-			   PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH;
+        /* Set the device capabilities here */
+        cdi->info.caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
+                         PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY |
+                         PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
+#        if USE_AUDIO_SESSION_API != 0
+                         PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE |
+                         PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE |
+#        endif
+                         PJMEDIA_AUD_DEV_CAP_EC;
+        cdi->info.routes = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER |
+                           PJMEDIA_AUD_DEV_ROUTE_EARPIECE |
+                           PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH;
 
-	PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d) %dHz",
-		   i,
-		   cdi->info.name,
-		   cdi->info.input_count,
-		   cdi->info.output_count,
-		   cdi->info.default_samples_per_sec));
+        PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d) %dHz", i,
+                   cdi->info.name, cdi->info.input_count,
+                   cdi->info.output_count, cdi->info.default_samples_per_sec));
     }
 
-#if USE_AUDIO_SESSION_API != 0
+#        if USE_AUDIO_SESSION_API != 0
     {
         OSStatus ostatus;
 
         /* Initialize the Audio Session */
-        ostatus = AudioSessionInitialize(NULL, NULL, interruptionListener,
-                                         NULL);
+        ostatus =
+          AudioSessionInitialize(NULL, NULL, interruptionListener, NULL);
         if (ostatus != kAudioSessionNoError) {
             PJ_LOG(4, (THIS_FILE,
                        "Warning: cannot initialize audio session services (%i)",
@@ -333,49 +310,49 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
         }
 
         /* Listen for audio routing change notifications. */
-#if USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
+#            if USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
         ostatus = AudioSessionAddPropertyListener(
-                      kAudioSessionProperty_AudioRouteChange,
-		      propListener, cf);
+          kAudioSessionProperty_AudioRouteChange, propListener, cf);
         if (ostatus != kAudioSessionNoError) {
             PJ_LOG(4, (THIS_FILE,
                        "Warning: cannot listen for audio route change "
-                       "notifications (%i)", ostatus));
+                       "notifications (%i)",
+                       ostatus));
         }
-#endif
+#            endif
     }
-#endif
+#        endif
 
-#if SETUP_AV_AUDIO_SESSION
+#        if SETUP_AV_AUDIO_SESSION
     /* Initialize audio session category and mode */
     {
-	AVAudioSession *sess = [AVAudioSession sharedInstance];
-	pj_bool_t err;
+        AVAudioSession* sess = [AVAudioSession sharedInstance];
+        pj_bool_t err;
 
-	if ([sess respondsToSelector:@selector(setCategory:withOptions:error:)])
-	{
-	    err = [sess setCategory:AVAudioSessionCategoryPlayAndRecord
-		        withOptions:AVAudioSessionCategoryOptionAllowBluetooth
-		        error:nil] != YES;
+        if ([sess respondsToSelector:@selector(setCategory:withOptions:error:)])
+        {
+            err = [sess setCategory:AVAudioSessionCategoryPlayAndRecord
+                        withOptions:AVAudioSessionCategoryOptionAllowBluetooth
+                              error:nil] != YES;
         } else {
-    	    err = [sess setCategory:AVAudioSessionCategoryPlayAndRecord
-		        error:nil] != YES;
+            err = [sess setCategory:AVAudioSessionCategoryPlayAndRecord
+                              error:nil] != YES;
         }
-	if (err) {
+        if (err) {
             PJ_LOG(3, (THIS_FILE,
-   	               "Warning: failed settting audio session category"));
-	}
+                       "Warning: failed settting audio session category"));
+        }
 
-	if ([sess respondsToSelector:@selector(setMode:error:)] &&
-	    [sess setMode:AVAudioSessionModeVoiceChat error:nil] != YES)
-	{
-	    PJ_LOG(3, (THIS_FILE, "Warning: failed settting audio mode"));
-	}
+        if ([sess respondsToSelector:@selector(setMode:error:)] &&
+            [sess setMode:AVAudioSessionModeVoiceChat error:nil] != YES)
+        {
+            PJ_LOG(3, (THIS_FILE, "Warning: failed settting audio mode"));
+        }
     }
-#endif
+#        endif
 
     cf_instance = cf;
-#endif
+#    endif
 
     PJ_LOG(4, (THIS_FILE, "core audio initialized"));
 
@@ -383,33 +360,34 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 }
 
 /* API: destroy factory */
-static pj_status_t ca_factory_destroy(pjmedia_aud_dev_factory *f)
+static pj_status_t ca_factory_destroy(pjmedia_aud_dev_factory* f)
 {
-    struct coreaudio_factory *cf = (struct coreaudio_factory*)f;
-    pj_pool_t *pool;
+    struct coreaudio_factory* cf = (struct coreaudio_factory*)f;
+    pj_pool_t* pool;
 
     pj_assert(cf);
     pj_assert(cf->base_pool);
     pj_assert(pj_list_empty(&cf->streams));
 
-#if !COREAUDIO_MAC
-#if USE_AUDIO_SESSION_API != 0 && USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
+#    if !COREAUDIO_MAC
+#        if USE_AUDIO_SESSION_API != 0 && \
+          USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
     AudioSessionRemovePropertyListenerWithUserData(
-        kAudioSessionProperty_AudioRouteChange, propListener, cf);
-#endif
-#endif
-    
+      kAudioSessionProperty_AudioRouteChange, propListener, cf);
+#        endif
+#    endif
+
     if (cf->pool) {
-	pj_pool_release(cf->pool);
-	cf->pool = NULL;
+        pj_pool_release(cf->pool);
+        cf->pool = NULL;
     }
 
     if (cf->mutex) {
-	pj_mutex_lock(cf->mutex);
-	cf_instance = NULL;
-	pj_mutex_unlock(cf->mutex);
-	pj_mutex_destroy(cf->mutex);
-	cf->mutex = NULL;
+        pj_mutex_lock(cf->mutex);
+        cf_instance = NULL;
+        pj_mutex_unlock(cf->mutex);
+        pj_mutex_destroy(cf->mutex);
+        cf->mutex = NULL;
     }
 
     pool = cf->base_pool;
@@ -420,25 +398,25 @@ static pj_status_t ca_factory_destroy(pjmedia_aud_dev_factory *f)
 }
 
 /* API: refresh the device list */
-static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
+static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory* f)
 {
-#if !COREAUDIO_MAC
+#    if !COREAUDIO_MAC
     /* iPhone doesn't support refreshing the device list */
     PJ_UNUSED_ARG(f);
     return PJ_SUCCESS;
-#else
-    struct coreaudio_factory *cf = (struct coreaudio_factory*)f;
+#    else
+    struct coreaudio_factory* cf = (struct coreaudio_factory*)f;
     unsigned i;
     unsigned dev_count;
     AudioObjectPropertyAddress addr;
-    AudioDeviceID *dev_ids;
+    AudioDeviceID* dev_ids;
     UInt32 buf_size, dev_size, size = sizeof(AudioDeviceID);
-    AudioBufferList *buf = NULL;
+    AudioBufferList* buf = NULL;
     OSStatus ostatus;
 
     if (cf->pool != NULL) {
-	pj_pool_release(cf->pool);
-	cf->pool = NULL;
+        pj_pool_release(cf->pool);
+        cf->pool = NULL;
     }
 
     cf->dev_count = 0;
@@ -448,225 +426,212 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
     addr.mSelector = kAudioHardwarePropertyDevices;
     addr.mScope = kAudioObjectPropertyScopeGlobal;
     addr.mElement = kAudioObjectPropertyElementMaster;
-    ostatus = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &addr,
-                                             0, NULL, &dev_size);
+    ostatus = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &addr, 0,
+                                             NULL, &dev_size);
     if (ostatus != noErr) {
-	dev_size = 0;
+        dev_size = 0;
     }
 
     /* Calculate the number of audio devices available */
     dev_count = dev_size / size;
-    if (dev_count==0) {
-  	PJ_LOG(4,(THIS_FILE, "core audio found no sound devices"));
-  	/* Enabling this will cause pjsua-lib initialization to fail when
-  	 * there is no sound device installed in the system, even when pjsua
-  	 * has been run with --null-audio. Moreover, it might be better to
-  	 * think that the core audio backend initialization is successful,
-  	 * regardless there is no audio device installed, as later application
-  	 * can check it using get_dev_count().
-  	return PJMEDIA_EAUD_NODEV;
-  	 */
-  	return PJ_SUCCESS;
+    if (dev_count == 0) {
+        PJ_LOG(4, (THIS_FILE, "core audio found no sound devices"));
+        /* Enabling this will cause pjsua-lib initialization to fail when
+         * there is no sound device installed in the system, even when pjsua
+         * has been run with --null-audio. Moreover, it might be better to
+         * think that the core audio backend initialization is successful,
+         * regardless there is no audio device installed, as later application
+         * can check it using get_dev_count().
+        return PJMEDIA_EAUD_NODEV;
+         */
+        return PJ_SUCCESS;
     }
-    PJ_LOG(4, (THIS_FILE, "core audio detected %d devices",
-	       dev_count));
+    PJ_LOG(4, (THIS_FILE, "core audio detected %d devices", dev_count));
 
     /* Get all the audio device IDs */
-    dev_ids = (AudioDeviceID *)pj_pool_calloc(cf->pool, dev_count, size);
+    dev_ids = (AudioDeviceID*)pj_pool_calloc(cf->pool, dev_count, size);
     if (!dev_ids)
-	return PJ_ENOMEM;
-    ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr,
-					 0, NULL,
-				         &dev_size, (void *)dev_ids);
-    if (ostatus != noErr ) {
-	/* This should not happen since we have successfully retrieved
-	 * the property data size before
-	 */
-	return PJMEDIA_EAUD_INIT;
+        return PJ_ENOMEM;
+    ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0,
+                                         NULL, &dev_size, (void*)dev_ids);
+    if (ostatus != noErr) {
+        /* This should not happen since we have successfully retrieved
+         * the property data size before
+         */
+        return PJMEDIA_EAUD_INIT;
     }
-    
-    if (dev_size > 1) {
-	AudioDeviceID dev_id = kAudioObjectUnknown;
-	unsigned idx = 0;
-	
-	/* Find default audio input device */
-	addr.mSelector = kAudioHardwarePropertyDefaultInputDevice;
-	addr.mScope = kAudioObjectPropertyScopeGlobal;
-	addr.mElement = kAudioObjectPropertyElementMaster;
-	size = sizeof(dev_id);
-	
-	ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
-					     &addr, 0, NULL,
-					     &size, (void *)&dev_id);
-	if (ostatus == noErr && dev_id != dev_ids[idx]) {
-	    AudioDeviceID temp_id = dev_ids[idx];
-	    
-	    for (i = idx + 1; i < dev_count; i++) {
-		if (dev_ids[i] == dev_id) {
-		    dev_ids[idx++] = dev_id;
-		    dev_ids[i] = temp_id;
-		    break;
-		}
-	    }
-	}
 
-	/* Find default audio output device */
-	addr.mSelector = kAudioHardwarePropertyDefaultOutputDevice;	
-	ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
-					     &addr, 0, NULL,
-					     &size, (void *)&dev_id);
-	if (ostatus == noErr && dev_id != dev_ids[idx]) {
-	    AudioDeviceID temp_id = dev_ids[idx];
-	    
-	    for (i = idx + 1; i < dev_count; i++) {
-		if (dev_ids[i] == dev_id) {
-		    dev_ids[idx] = dev_id;
-		    dev_ids[i] = temp_id;
-		    break;
-		}
-	    }
-	}
+    if (dev_size > 1) {
+        AudioDeviceID dev_id = kAudioObjectUnknown;
+        unsigned idx = 0;
+
+        /* Find default audio input device */
+        addr.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+        addr.mScope = kAudioObjectPropertyScopeGlobal;
+        addr.mElement = kAudioObjectPropertyElementMaster;
+        size = sizeof(dev_id);
+
+        ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0,
+                                             NULL, &size, (void*)&dev_id);
+        if (ostatus == noErr && dev_id != dev_ids[idx]) {
+            AudioDeviceID temp_id = dev_ids[idx];
+
+            for (i = idx + 1; i < dev_count; i++) {
+                if (dev_ids[i] == dev_id) {
+                    dev_ids[idx++] = dev_id;
+                    dev_ids[i] = temp_id;
+                    break;
+                }
+            }
+        }
+
+        /* Find default audio output device */
+        addr.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
+        ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0,
+                                             NULL, &size, (void*)&dev_id);
+        if (ostatus == noErr && dev_id != dev_ids[idx]) {
+            AudioDeviceID temp_id = dev_ids[idx];
+
+            for (i = idx + 1; i < dev_count; i++) {
+                if (dev_ids[i] == dev_id) {
+                    dev_ids[idx] = dev_id;
+                    dev_ids[i] = temp_id;
+                    break;
+                }
+            }
+        }
     }
 
     /* Build the devices' info */
-    cf->dev_info = (struct coreaudio_dev_info*)
-  		   pj_pool_calloc(cf->pool, dev_count,
-  		   sizeof(struct coreaudio_dev_info));
+    cf->dev_info = (struct coreaudio_dev_info*)pj_pool_calloc(
+      cf->pool, dev_count, sizeof(struct coreaudio_dev_info));
     buf_size = 0;
     for (i = 0; i < dev_count; i++) {
-	struct coreaudio_dev_info *cdi;
-	Float64 sampleRate;
+        struct coreaudio_dev_info* cdi;
+        Float64 sampleRate;
 
-	cdi = &cf->dev_info[i];
-	pj_bzero(cdi, sizeof(*cdi));
-	cdi->dev_id = dev_ids[i];
+        cdi = &cf->dev_info[i];
+        pj_bzero(cdi, sizeof(*cdi));
+        cdi->dev_id = dev_ids[i];
 
-	/* Get device name */
-	addr.mSelector = kAudioDevicePropertyDeviceName;
-	addr.mScope = kAudioObjectPropertyScopeGlobal;
-	addr.mElement = kAudioObjectPropertyElementMaster;
-	size = sizeof(cdi->info.name);
-	AudioObjectGetPropertyData(cdi->dev_id, &addr,
-				   0, NULL,
-			           &size, (void *)cdi->info.name);
+        /* Get device name */
+        addr.mSelector = kAudioDevicePropertyDeviceName;
+        addr.mScope = kAudioObjectPropertyScopeGlobal;
+        addr.mElement = kAudioObjectPropertyElementMaster;
+        size = sizeof(cdi->info.name);
+        AudioObjectGetPropertyData(cdi->dev_id, &addr, 0, NULL, &size,
+                                   (void*)cdi->info.name);
 
-	strcpy(cdi->info.driver, "core audio");
+        strcpy(cdi->info.driver, "core audio");
 
         /* Get the number of input channels */
-	addr.mSelector = kAudioDevicePropertyStreamConfiguration;
-	addr.mScope = kAudioDevicePropertyScopeInput;
-	size = 0;
-	ostatus = AudioObjectGetPropertyDataSize(cdi->dev_id, &addr,
-	                                         0, NULL, &size);
-	if (ostatus == noErr && size > 0) {
+        addr.mSelector = kAudioDevicePropertyStreamConfiguration;
+        addr.mScope = kAudioDevicePropertyScopeInput;
+        size = 0;
+        ostatus =
+          AudioObjectGetPropertyDataSize(cdi->dev_id, &addr, 0, NULL, &size);
+        if (ostatus == noErr && size > 0) {
 
-	    if (size > buf_size) {
-		buf = pj_pool_alloc(cf->pool, size);
-		buf_size = size;
-	    }
-	    if (buf) {
-		UInt32 idx;
+            if (size > buf_size) {
+                buf = pj_pool_alloc(cf->pool, size);
+                buf_size = size;
+            }
+            if (buf) {
+                UInt32 idx;
 
-		/* Get the input stream configuration */
-		ostatus = AudioObjectGetPropertyData(cdi->dev_id, &addr,
-						     0, NULL,
-						     &size, buf);
-		if (ostatus == noErr) {
-		    /* Count the total number of input channels in
-		     * the stream
-		     */
-		    for (idx = 0; idx < buf->mNumberBuffers; idx++) {
-			cdi->info.input_count +=
-			    buf->mBuffers[idx].mNumberChannels;
-		    }
-		}
-	    }
-	}
+                /* Get the input stream configuration */
+                ostatus = AudioObjectGetPropertyData(cdi->dev_id, &addr, 0,
+                                                     NULL, &size, buf);
+                if (ostatus == noErr) {
+                    /* Count the total number of input channels in
+                     * the stream
+                     */
+                    for (idx = 0; idx < buf->mNumberBuffers; idx++) {
+                        cdi->info.input_count +=
+                          buf->mBuffers[idx].mNumberChannels;
+                    }
+                }
+            }
+        }
 
         /* Get the number of output channels */
-	addr.mScope = kAudioDevicePropertyScopeOutput;
-	size = 0;
-	ostatus = AudioObjectGetPropertyDataSize(cdi->dev_id, &addr,
-	                                         0, NULL, &size);
-	if (ostatus == noErr && size > 0) {
+        addr.mScope = kAudioDevicePropertyScopeOutput;
+        size = 0;
+        ostatus =
+          AudioObjectGetPropertyDataSize(cdi->dev_id, &addr, 0, NULL, &size);
+        if (ostatus == noErr && size > 0) {
 
-	    if (size > buf_size) {
-		buf = pj_pool_alloc(cf->pool, size);
-		buf_size = size;
-	    }
-	    if (buf) {
-		UInt32 idx;
+            if (size > buf_size) {
+                buf = pj_pool_alloc(cf->pool, size);
+                buf_size = size;
+            }
+            if (buf) {
+                UInt32 idx;
 
-		/* Get the output stream configuration */
-		ostatus = AudioObjectGetPropertyData(cdi->dev_id, &addr,
-						     0, NULL,
-						     &size, buf);
-		if (ostatus == noErr) {
-		    /* Count the total number of output channels in
-		     * the stream
-		     */
-		    for (idx = 0; idx < buf->mNumberBuffers; idx++) {
-			cdi->info.output_count +=
-			    buf->mBuffers[idx].mNumberChannels;
-		    }
-		}
-	    }
-	}
+                /* Get the output stream configuration */
+                ostatus = AudioObjectGetPropertyData(cdi->dev_id, &addr, 0,
+                                                     NULL, &size, buf);
+                if (ostatus == noErr) {
+                    /* Count the total number of output channels in
+                     * the stream
+                     */
+                    for (idx = 0; idx < buf->mNumberBuffers; idx++) {
+                        cdi->info.output_count +=
+                          buf->mBuffers[idx].mNumberChannels;
+                    }
+                }
+            }
+        }
 
-	/* Get default sample rate */
-	addr.mSelector = kAudioDevicePropertyNominalSampleRate;
-	addr.mScope = kAudioObjectPropertyScopeGlobal;
-	size = sizeof(Float64);
-	ostatus = AudioObjectGetPropertyData (cdi->dev_id, &addr,
-		                              0, NULL,
-		                              &size, &sampleRate);
-	cdi->info.default_samples_per_sec = (ostatus == noErr ?
-					    sampleRate:
-					    16000);
+        /* Get default sample rate */
+        addr.mSelector = kAudioDevicePropertyNominalSampleRate;
+        addr.mScope = kAudioObjectPropertyScopeGlobal;
+        size = sizeof(Float64);
+        ostatus = AudioObjectGetPropertyData(cdi->dev_id, &addr, 0, NULL, &size,
+                                             &sampleRate);
+        cdi->info.default_samples_per_sec =
+          (ostatus == noErr ? sampleRate : 16000);
 
-	/* Set device capabilities here */
-	if (cdi->info.input_count > 0) {
-	    cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
-	}
-	if (cdi->info.output_count > 0) {
-	    cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
-	    addr.mSelector = kAudioDevicePropertyVolumeScalar;
-	    addr.mScope = kAudioDevicePropertyScopeOutput;
-	    if (AudioObjectHasProperty(cdi->dev_id, &addr)) {
-		cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
-	    }
-	}
-	if (cf->has_vpio) {
-	    cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_EC;
-	}
+        /* Set device capabilities here */
+        if (cdi->info.input_count > 0) {
+            cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
+        }
+        if (cdi->info.output_count > 0) {
+            cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
+            addr.mSelector = kAudioDevicePropertyVolumeScalar;
+            addr.mScope = kAudioDevicePropertyScopeOutput;
+            if (AudioObjectHasProperty(cdi->dev_id, &addr)) {
+                cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+            }
+        }
+        if (cf->has_vpio) {
+            cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_EC;
+        }
 
-	cf->dev_count++;
+        cf->dev_count++;
 
-	PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d) %dHz",
-	       cdi->dev_id,
-	       cdi->info.name,
-	       cdi->info.input_count,
-	       cdi->info.output_count,
-	       cdi->info.default_samples_per_sec));
+        PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d) %dHz",
+                   cdi->dev_id, cdi->info.name, cdi->info.input_count,
+                   cdi->info.output_count, cdi->info.default_samples_per_sec));
     }
 
     return PJ_SUCCESS;
-#endif
+#    endif
 }
 
 /* API: get number of devices */
-static unsigned ca_factory_get_dev_count(pjmedia_aud_dev_factory *f)
+static unsigned ca_factory_get_dev_count(pjmedia_aud_dev_factory* f)
 {
-    struct coreaudio_factory *cf = (struct coreaudio_factory*)f;
+    struct coreaudio_factory* cf = (struct coreaudio_factory*)f;
     return cf->dev_count;
 }
 
 /* API: get device info */
-static pj_status_t ca_factory_get_dev_info(pjmedia_aud_dev_factory *f,
-					   unsigned index,
-					   pjmedia_aud_dev_info *info)
+static pj_status_t ca_factory_get_dev_info(pjmedia_aud_dev_factory* f,
+                                           unsigned index,
+                                           pjmedia_aud_dev_info* info)
 {
-    struct coreaudio_factory *cf = (struct coreaudio_factory*)f;
+    struct coreaudio_factory* cf = (struct coreaudio_factory*)f;
 
     PJ_ASSERT_RETURN(index < cf->dev_count, PJMEDIA_EAUD_INVDEV);
 
@@ -676,30 +641,30 @@ static pj_status_t ca_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 }
 
 /* API: create default device parameter */
-static pj_status_t ca_factory_default_param(pjmedia_aud_dev_factory *f,
-					    unsigned index,
-					    pjmedia_aud_param *param)
+static pj_status_t ca_factory_default_param(pjmedia_aud_dev_factory* f,
+                                            unsigned index,
+                                            pjmedia_aud_param* param)
 {
-    struct coreaudio_factory *cf = (struct coreaudio_factory*)f;
-    struct coreaudio_dev_info *di = &cf->dev_info[index];
+    struct coreaudio_factory* cf = (struct coreaudio_factory*)f;
+    struct coreaudio_dev_info* di = &cf->dev_info[index];
 
     PJ_ASSERT_RETURN(index < cf->dev_count, PJMEDIA_EAUD_INVDEV);
 
     pj_bzero(param, sizeof(*param));
     if (di->info.input_count && di->info.output_count) {
-	param->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
-	param->rec_id = index;
-	param->play_id = index;
+        param->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+        param->rec_id = index;
+        param->play_id = index;
     } else if (di->info.input_count) {
-	param->dir = PJMEDIA_DIR_CAPTURE;
-	param->rec_id = index;
-	param->play_id = PJMEDIA_AUD_INVALID_DEV;
+        param->dir = PJMEDIA_DIR_CAPTURE;
+        param->rec_id = index;
+        param->play_id = PJMEDIA_AUD_INVALID_DEV;
     } else if (di->info.output_count) {
-	param->dir = PJMEDIA_DIR_PLAYBACK;
-	param->play_id = index;
-	param->rec_id = PJMEDIA_AUD_INVALID_DEV;
+        param->dir = PJMEDIA_DIR_PLAYBACK;
+        param->play_id = index;
+        param->rec_id = PJMEDIA_AUD_INVALID_DEV;
     } else {
-	return PJMEDIA_EAUD_INVDEV;
+        return PJMEDIA_EAUD_INVDEV;
     }
 
     /* Set the mandatory settings here */
@@ -709,48 +674,47 @@ static pj_status_t ca_factory_default_param(pjmedia_aud_dev_factory *f,
     param->bits_per_sample = 16;
 
     /* Set the param for device capabilities here */
-    param->flags = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
-		   PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
+    param->flags =
+      PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
     param->input_latency_ms = PJMEDIA_SND_DEFAULT_REC_LATENCY;
     param->output_latency_ms = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
 
     return PJ_SUCCESS;
 }
 
-OSStatus resampleProc(AudioConverterRef             inAudioConverter,
-		      UInt32                        *ioNumberDataPackets,
-		      AudioBufferList               *ioData,
-		      AudioStreamPacketDescription  **outDataPacketDescription,
-		      void                          *inUserData)
+OSStatus resampleProc(AudioConverterRef inAudioConverter,
+                      UInt32* ioNumberDataPackets, AudioBufferList* ioData,
+                      AudioStreamPacketDescription** outDataPacketDescription,
+                      void* inUserData)
 {
-    struct coreaudio_stream *strm = (struct coreaudio_stream*)inUserData;
+    struct coreaudio_stream* strm = (struct coreaudio_stream*)inUserData;
 
     if (*ioNumberDataPackets > strm->resample_buf_size)
-	*ioNumberDataPackets = strm->resample_buf_size;
+        *ioNumberDataPackets = strm->resample_buf_size;
 
     ioData->mNumberBuffers = 1;
     ioData->mBuffers[0].mNumberChannels = strm->streamFormat.mChannelsPerFrame;
     ioData->mBuffers[0].mData = strm->resample_buf_ptr;
     ioData->mBuffers[0].mDataByteSize = *ioNumberDataPackets *
-					strm->streamFormat.mChannelsPerFrame *
-					strm->param.bits_per_sample >> 3;
+                                          strm->streamFormat.mChannelsPerFrame *
+                                          strm->param.bits_per_sample >>
+                                        3;
 
     return noErr;
 }
 
-static OSStatus resample_callback(void                       *inRefCon,
-				  AudioUnitRenderActionFlags *ioActionFlags,
-				  const AudioTimeStamp       *inTimeStamp,
-				  UInt32                      inBusNumber,
-				  UInt32                      inNumberFrames,
-				  AudioBufferList            *ioData)
+static OSStatus resample_callback(void* inRefCon,
+                                  AudioUnitRenderActionFlags* ioActionFlags,
+                                  const AudioTimeStamp* inTimeStamp,
+                                  UInt32 inBusNumber, UInt32 inNumberFrames,
+                                  AudioBufferList* ioData)
 {
-    struct coreaudio_stream *strm = (struct coreaudio_stream*)inRefCon;
+    struct coreaudio_stream* strm = (struct coreaudio_stream*)inRefCon;
     OSStatus ostatus;
     pj_status_t status = 0;
     unsigned nsamples;
-    AudioBufferList *buf = strm->audio_buf;
-    pj_int16_t *input;
+    AudioBufferList* buf = strm->audio_buf;
+    pj_int16_t* input;
     UInt32 resampleSize;
 
     pj_assert(!strm->quit_flag);
@@ -762,127 +726,110 @@ static OSStatus resample_callback(void                       *inRefCon,
      *   session will leave TLS set, but release the TLS data address,
      *   so the second session must re-register the callback's thread.
      */
-    if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered())
-    {
-	pj_bzero(strm->rec_thread_desc, sizeof(pj_thread_desc));
-	status = pj_thread_register("ca_rec", strm->rec_thread_desc,
-				    &strm->rec_thread);
-	strm->rec_thread_initialized = 1;
-	PJ_LOG(5,(THIS_FILE, "Recorder thread started, (%i frames)", 
-		  inNumberFrames));
+    if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered()) {
+        pj_bzero(strm->rec_thread_desc, sizeof(pj_thread_desc));
+        status = pj_thread_register("ca_rec", strm->rec_thread_desc,
+                                    &strm->rec_thread);
+        strm->rec_thread_initialized = 1;
+        PJ_LOG(5, (THIS_FILE, "Recorder thread started, (%i frames)",
+                   inNumberFrames));
     }
 
     buf->mBuffers[0].mData = NULL;
-    buf->mBuffers[0].mDataByteSize = inNumberFrames *
-				     strm->streamFormat.mChannelsPerFrame;
+    buf->mBuffers[0].mDataByteSize =
+      inNumberFrames * strm->streamFormat.mChannelsPerFrame;
     /* Render the unit to get input data */
-    ostatus = AudioUnitRender(strm->io_units[0],
-			      ioActionFlags,
-			      inTimeStamp,
-			      inBusNumber,
-			      inNumberFrames,
-			      buf);
+    ostatus = AudioUnitRender(strm->io_units[0], ioActionFlags, inTimeStamp,
+                              inBusNumber, inNumberFrames, buf);
 
     if (ostatus != noErr) {
-	PJ_LOG(5, (THIS_FILE, "Core audio unit render error %i", ostatus));
-	goto on_break;
+        PJ_LOG(5, (THIS_FILE, "Core audio unit render error %i", ostatus));
+        goto on_break;
     }
-    input = (pj_int16_t *)buf->mBuffers[0].mData;
+    input = (pj_int16_t*)buf->mBuffers[0].mData;
 
     resampleSize = strm->resample_buf_size;
-    nsamples = inNumberFrames * strm->param.channel_count +
-	       strm->resample_buf_count;
+    nsamples =
+      inNumberFrames * strm->param.channel_count + strm->resample_buf_count;
 
     if (nsamples >= resampleSize) {
-	pjmedia_frame frame;
-	UInt32 resampleOutput = strm->param.samples_per_frame /
-				strm->streamFormat.mChannelsPerFrame;
-	AudioBufferList ab;
+        pjmedia_frame frame;
+        UInt32 resampleOutput =
+          strm->param.samples_per_frame / strm->streamFormat.mChannelsPerFrame;
+        AudioBufferList ab;
 
-	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frame.buf = (void*) strm->rec_buf;
-	frame.size = strm->param.samples_per_frame *
-		     strm->param.bits_per_sample >> 3;
-	frame.bit_info = 0;
-	
-	ab.mNumberBuffers = 1;
-	ab.mBuffers[0].mNumberChannels = strm->streamFormat.mChannelsPerFrame;
-	ab.mBuffers[0].mData = strm->rec_buf;
-	ab.mBuffers[0].mDataByteSize = frame.size;
+        frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+        frame.buf = (void*)strm->rec_buf;
+        frame.size =
+          strm->param.samples_per_frame * strm->param.bits_per_sample >> 3;
+        frame.bit_info = 0;
 
-	/* If buffer is not empty, combine the buffer with the just incoming
-	 * samples, then call put_frame.
-	 */
-	if (strm->resample_buf_count) {
-	    unsigned chunk_count = resampleSize - strm->resample_buf_count;
-	    pjmedia_copy_samples(strm->resample_buf + strm->resample_buf_count,
-				 input, chunk_count);
+        ab.mNumberBuffers = 1;
+        ab.mBuffers[0].mNumberChannels = strm->streamFormat.mChannelsPerFrame;
+        ab.mBuffers[0].mData = strm->rec_buf;
+        ab.mBuffers[0].mDataByteSize = frame.size;
 
-	    /* Do the resample */
+        /* If buffer is not empty, combine the buffer with the just incoming
+         * samples, then call put_frame.
+         */
+        if (strm->resample_buf_count) {
+            unsigned chunk_count = resampleSize - strm->resample_buf_count;
+            pjmedia_copy_samples(strm->resample_buf + strm->resample_buf_count,
+                                 input, chunk_count);
 
-	    strm->resample_buf_ptr = strm->resample_buf;
-	    ostatus = AudioConverterFillComplexBuffer(strm->resample,
-						      resampleProc,
-						      strm,
-						      &resampleOutput,
-						      &ab,
-						      NULL);
-	    if (ostatus != noErr) {
-		goto on_break;
-	    }
-	    frame.timestamp.u64 = strm->rec_timestamp.u64;
+            /* Do the resample */
 
-	    status = (*strm->rec_cb)(strm->user_data, &frame);
+            strm->resample_buf_ptr = strm->resample_buf;
+            ostatus = AudioConverterFillComplexBuffer(
+              strm->resample, resampleProc, strm, &resampleOutput, &ab, NULL);
+            if (ostatus != noErr) {
+                goto on_break;
+            }
+            frame.timestamp.u64 = strm->rec_timestamp.u64;
 
-	    input = input + chunk_count;
-	    nsamples -= resampleSize;
-	    strm->resample_buf_count = 0;
-	    strm->rec_timestamp.u64 += strm->param.samples_per_frame /
-				       strm->param.channel_count;
-	}
-	
-	
- 	/* Give all frames we have */
- 	while (nsamples >= resampleSize && status == 0) {
- 	    frame.timestamp.u64 = strm->rec_timestamp.u64;
-	    
-	    /* Do the resample */
-	    strm->resample_buf_ptr = input;
-	    ab.mBuffers[0].mDataByteSize = frame.size;
-	    resampleOutput = strm->param.samples_per_frame /
-			     strm->streamFormat.mChannelsPerFrame;
-	    ostatus = AudioConverterFillComplexBuffer(strm->resample,
-						      resampleProc,
-						      strm,
-						      &resampleOutput,
-						      &ab,
-						      NULL);
-	    if (ostatus != noErr) {
-		goto on_break;
-	    }	    
-	    
- 	    status = (*strm->rec_cb)(strm->user_data, &frame);
-	    
- 	    input = (pj_int16_t*) input + resampleSize;
- 	    nsamples -= resampleSize;
- 	    strm->rec_timestamp.u64 += strm->param.samples_per_frame /
-				       strm->param.channel_count;
- 	}
+            status = (*strm->rec_cb)(strm->user_data, &frame);
 
-	/* Store the remaining samples into the buffer */
-	if (nsamples && status == 0) {
-	    strm->resample_buf_count = nsamples;
-	    pjmedia_copy_samples(strm->resample_buf, input,
-				 nsamples);
-	}
+            input = input + chunk_count;
+            nsamples -= resampleSize;
+            strm->resample_buf_count = 0;
+            strm->rec_timestamp.u64 +=
+              strm->param.samples_per_frame / strm->param.channel_count;
+        }
+
+        /* Give all frames we have */
+        while (nsamples >= resampleSize && status == 0) {
+            frame.timestamp.u64 = strm->rec_timestamp.u64;
+
+            /* Do the resample */
+            strm->resample_buf_ptr = input;
+            ab.mBuffers[0].mDataByteSize = frame.size;
+            resampleOutput = strm->param.samples_per_frame /
+                             strm->streamFormat.mChannelsPerFrame;
+            ostatus = AudioConverterFillComplexBuffer(
+              strm->resample, resampleProc, strm, &resampleOutput, &ab, NULL);
+            if (ostatus != noErr) {
+                goto on_break;
+            }
+
+            status = (*strm->rec_cb)(strm->user_data, &frame);
+
+            input = (pj_int16_t*)input + resampleSize;
+            nsamples -= resampleSize;
+            strm->rec_timestamp.u64 +=
+              strm->param.samples_per_frame / strm->param.channel_count;
+        }
+
+        /* Store the remaining samples into the buffer */
+        if (nsamples && status == 0) {
+            strm->resample_buf_count = nsamples;
+            pjmedia_copy_samples(strm->resample_buf, input, nsamples);
+        }
 
     } else {
-	/* Not enough samples, let's just store them in the buffer */
-	pjmedia_copy_samples(strm->resample_buf + strm->resample_buf_count,
-			     input,
-			     inNumberFrames * strm->param.channel_count);
-	strm->resample_buf_count += inNumberFrames *
-				    strm->param.channel_count;
+        /* Not enough samples, let's just store them in the buffer */
+        pjmedia_copy_samples(strm->resample_buf + strm->resample_buf_count,
+                             input, inNumberFrames * strm->param.channel_count);
+        strm->resample_buf_count += inNumberFrames * strm->param.channel_count;
     }
 
     return noErr;
@@ -891,19 +838,18 @@ on_break:
     return -1;
 }
 
-static OSStatus input_callback(void                       *inRefCon,
-                               AudioUnitRenderActionFlags *ioActionFlags,
-                               const AudioTimeStamp       *inTimeStamp,
-                               UInt32                      inBusNumber,
-                               UInt32                      inNumberFrames,
-                               AudioBufferList            *ioData)
+static OSStatus input_callback(void* inRefCon,
+                               AudioUnitRenderActionFlags* ioActionFlags,
+                               const AudioTimeStamp* inTimeStamp,
+                               UInt32 inBusNumber, UInt32 inNumberFrames,
+                               AudioBufferList* ioData)
 {
-    struct coreaudio_stream *strm = (struct coreaudio_stream*)inRefCon;
+    struct coreaudio_stream* strm = (struct coreaudio_stream*)inRefCon;
     OSStatus ostatus;
     pj_status_t status = 0;
     unsigned nsamples;
-    AudioBufferList *buf = strm->audio_buf;
-    pj_int16_t *input;
+    AudioBufferList* buf = strm->audio_buf;
+    pj_int16_t* input;
 
     pj_assert(!strm->quit_flag);
 
@@ -914,93 +860,85 @@ static OSStatus input_callback(void                       *inRefCon,
      *   session will leave TLS set, but release the TLS data address,
      *   so the second session must re-register the callback's thread.
      */
-    if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered())
-    {
-	pj_bzero(strm->rec_thread_desc, sizeof(pj_thread_desc));
-	status = pj_thread_register("ca_rec", strm->rec_thread_desc,
-				    &strm->rec_thread);
-	strm->rec_thread_initialized = 1;
-	PJ_LOG(5,(THIS_FILE, "Recorder thread started, (%i frames)",
-		  inNumberFrames));
+    if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered()) {
+        pj_bzero(strm->rec_thread_desc, sizeof(pj_thread_desc));
+        status = pj_thread_register("ca_rec", strm->rec_thread_desc,
+                                    &strm->rec_thread);
+        strm->rec_thread_initialized = 1;
+        PJ_LOG(5, (THIS_FILE, "Recorder thread started, (%i frames)",
+                   inNumberFrames));
     }
 
     buf->mBuffers[0].mData = NULL;
-    buf->mBuffers[0].mDataByteSize = inNumberFrames *
-				     strm->streamFormat.mChannelsPerFrame;
+    buf->mBuffers[0].mDataByteSize =
+      inNumberFrames * strm->streamFormat.mChannelsPerFrame;
     /* Render the unit to get input data */
-    ostatus = AudioUnitRender(strm->io_units[0],
-			      ioActionFlags,
-			      inTimeStamp,
-			      inBusNumber,
-			      inNumberFrames,
-			      buf);
+    ostatus = AudioUnitRender(strm->io_units[0], ioActionFlags, inTimeStamp,
+                              inBusNumber, inNumberFrames, buf);
 
     if (ostatus != noErr) {
-	PJ_LOG(5, (THIS_FILE, "Core audio unit render error %i", ostatus));
-	goto on_break;
+        PJ_LOG(5, (THIS_FILE, "Core audio unit render error %i", ostatus));
+        goto on_break;
     }
-    input = (pj_int16_t *)buf->mBuffers[0].mData;
+    input = (pj_int16_t*)buf->mBuffers[0].mData;
 
     /* Calculate number of samples we've got */
-    nsamples = inNumberFrames * strm->param.channel_count +
-	       strm->rec_buf_count;
+    nsamples = inNumberFrames * strm->param.channel_count + strm->rec_buf_count;
     if (nsamples >= strm->param.samples_per_frame) {
-	pjmedia_frame frame;
+        pjmedia_frame frame;
 
-	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frame.size = strm->param.samples_per_frame *
-		     strm->param.bits_per_sample >> 3;
-	frame.bit_info = 0;
+        frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+        frame.size =
+          strm->param.samples_per_frame * strm->param.bits_per_sample >> 3;
+        frame.bit_info = 0;
 
- 	/* If buffer is not empty, combine the buffer with the just incoming
- 	 * samples, then call put_frame.
- 	 */
- 	if (strm->rec_buf_count) {
- 	    unsigned chunk_count = 0;
+        /* If buffer is not empty, combine the buffer with the just incoming
+         * samples, then call put_frame.
+         */
+        if (strm->rec_buf_count) {
+            unsigned chunk_count = 0;
 
- 	    chunk_count = strm->param.samples_per_frame - strm->rec_buf_count;
- 	    pjmedia_copy_samples(strm->rec_buf + strm->rec_buf_count,
- 				 input, chunk_count);
+            chunk_count = strm->param.samples_per_frame - strm->rec_buf_count;
+            pjmedia_copy_samples(strm->rec_buf + strm->rec_buf_count, input,
+                                 chunk_count);
 
- 	    frame.buf = (void*) strm->rec_buf;
- 	    frame.timestamp.u64 = strm->rec_timestamp.u64;
+            frame.buf = (void*)strm->rec_buf;
+            frame.timestamp.u64 = strm->rec_timestamp.u64;
 
- 	    status = (*strm->rec_cb)(strm->user_data, &frame);
+            status = (*strm->rec_cb)(strm->user_data, &frame);
 
- 	    input = input + chunk_count;
- 	    nsamples -= strm->param.samples_per_frame;
- 	    strm->rec_buf_count = 0;
- 	    strm->rec_timestamp.u64 += strm->param.samples_per_frame /
-				       strm->param.channel_count;
- 	}
+            input = input + chunk_count;
+            nsamples -= strm->param.samples_per_frame;
+            strm->rec_buf_count = 0;
+            strm->rec_timestamp.u64 +=
+              strm->param.samples_per_frame / strm->param.channel_count;
+        }
 
- 	/* Give all frames we have */
- 	while (nsamples >= strm->param.samples_per_frame && status == 0) {
- 	    frame.buf = (void*) input;
- 	    frame.timestamp.u64 = strm->rec_timestamp.u64;
+        /* Give all frames we have */
+        while (nsamples >= strm->param.samples_per_frame && status == 0) {
+            frame.buf = (void*)input;
+            frame.timestamp.u64 = strm->rec_timestamp.u64;
 
- 	    status = (*strm->rec_cb)(strm->user_data, &frame);
+            status = (*strm->rec_cb)(strm->user_data, &frame);
 
- 	    input = (pj_int16_t*) input + strm->param.samples_per_frame;
- 	    nsamples -= strm->param.samples_per_frame;
- 	    strm->rec_timestamp.u64 += strm->param.samples_per_frame /
-				       strm->param.channel_count;
- 	}
+            input = (pj_int16_t*)input + strm->param.samples_per_frame;
+            nsamples -= strm->param.samples_per_frame;
+            strm->rec_timestamp.u64 +=
+              strm->param.samples_per_frame / strm->param.channel_count;
+        }
 
- 	/* Store the remaining samples into the buffer */
- 	if (nsamples && status == 0) {
- 	    strm->rec_buf_count = nsamples;
- 	    pjmedia_copy_samples(strm->rec_buf, input,
- 			         nsamples);
- 	}
+        /* Store the remaining samples into the buffer */
+        if (nsamples && status == 0) {
+            strm->rec_buf_count = nsamples;
+            pjmedia_copy_samples(strm->rec_buf, input, nsamples);
+        }
 
-     } else {
- 	/* Not enough samples, let's just store them in the buffer */
- 	pjmedia_copy_samples(strm->rec_buf + strm->rec_buf_count,
- 			     input,
- 			     inNumberFrames * strm->param.channel_count);
- 	strm->rec_buf_count += inNumberFrames * strm->param.channel_count;
-     }
+    } else {
+        /* Not enough samples, let's just store them in the buffer */
+        pjmedia_copy_samples(strm->rec_buf + strm->rec_buf_count, input,
+                             inNumberFrames * strm->param.channel_count);
+        strm->rec_buf_count += inNumberFrames * strm->param.channel_count;
+    }
 
     return noErr;
 
@@ -1011,40 +949,39 @@ on_break:
 /* Copy 16-bit signed int samples to a destination buffer, which can be
  * either 16-bit signed int, or float.
  */
-static void copy_samples(void *dst, unsigned *dst_pos, unsigned dst_elmt_size,
-			 pj_int16_t *src, unsigned nsamples)
+static void copy_samples(void* dst, unsigned* dst_pos, unsigned dst_elmt_size,
+                         pj_int16_t* src, unsigned nsamples)
 {
-   if (dst_elmt_size == sizeof(pj_int16_t)) {
-   	/* Destination is also 16-bit signed int. */
-	pjmedia_copy_samples((pj_int16_t*)dst + *dst_pos, src, nsamples);
-   } else {
-   	/* Convert it first to float. */
-   	unsigned i;
-   	float *fdst = (float *)dst;
+    if (dst_elmt_size == sizeof(pj_int16_t)) {
+        /* Destination is also 16-bit signed int. */
+        pjmedia_copy_samples((pj_int16_t*)dst + *dst_pos, src, nsamples);
+    } else {
+        /* Convert it first to float. */
+        unsigned i;
+        float* fdst = (float*)dst;
 
-   	pj_assert(dst_elmt_size == sizeof(Float32));
+        pj_assert(dst_elmt_size == sizeof(Float32));
 
-   	for (i = 0; i< nsamples; i++) {
-   	    /* Value needs to be between -1.0 to 1.0 */
-   	    fdst[*dst_pos + i] = (float)src[i] / 32768.0f;
-   	}
-   }
-   *dst_pos += nsamples;
+        for (i = 0; i < nsamples; i++) {
+            /* Value needs to be between -1.0 to 1.0 */
+            fdst[*dst_pos + i] = (float)src[i] / 32768.0f;
+        }
+    }
+    *dst_pos += nsamples;
 }
 
-static OSStatus output_renderer(void                       *inRefCon,
-                                AudioUnitRenderActionFlags *ioActionFlags,
-                                const AudioTimeStamp       *inTimeStamp,
-                                UInt32                      inBusNumber,
-                                UInt32                      inNumberFrames,
-                                AudioBufferList            *ioData)
+static OSStatus output_renderer(void* inRefCon,
+                                AudioUnitRenderActionFlags* ioActionFlags,
+                                const AudioTimeStamp* inTimeStamp,
+                                UInt32 inBusNumber, UInt32 inNumberFrames,
+                                AudioBufferList* ioData)
 {
-    struct coreaudio_stream *stream = (struct coreaudio_stream*)inRefCon;
+    struct coreaudio_stream* stream = (struct coreaudio_stream*)inRefCon;
     pj_status_t status = 0;
     unsigned nsamples_req = inNumberFrames * stream->param.channel_count;
-    void *output = ioData->mBuffers[0].mData;
+    void* output = ioData->mBuffers[0].mData;
     unsigned elmt_size = ioData->mBuffers[0].mDataByteSize / inNumberFrames /
-    			 stream->param.channel_count;
+                         stream->param.channel_count;
     unsigned output_pos = 0;
 
     pj_assert(!stream->quit_flag);
@@ -1056,93 +993,91 @@ static OSStatus output_renderer(void                       *inRefCon,
      *   session will leave TLS set, but release the TLS data address,
      *   so the second session must re-register the callback's thread.
      */
-    if (stream->play_thread_initialized == 0 || !pj_thread_is_registered())
-    {
-	pj_bzero(stream->play_thread_desc, sizeof(pj_thread_desc));
-	status = pj_thread_register("coreaudio", stream->play_thread_desc,
-				    &stream->play_thread);
-	stream->play_thread_initialized = 1;
-	PJ_LOG(5,(THIS_FILE, "Player thread started, (%i frames)",
-		  inNumberFrames));
+    if (stream->play_thread_initialized == 0 || !pj_thread_is_registered()) {
+        pj_bzero(stream->play_thread_desc, sizeof(pj_thread_desc));
+        status = pj_thread_register("coreaudio", stream->play_thread_desc,
+                                    &stream->play_thread);
+        stream->play_thread_initialized = 1;
+        PJ_LOG(
+          5, (THIS_FILE, "Player thread started, (%i frames)", inNumberFrames));
     }
-
 
     /* Check if any buffered samples */
     if (stream->play_buf_count) {
-	/* samples buffered >= requested by sound device */
-	if (stream->play_buf_count >= nsamples_req) {
-	    copy_samples(output, &output_pos, elmt_size,
-	    		 stream->play_buf, nsamples_req);
-	    stream->play_buf_count -= nsamples_req;
-	    pjmedia_move_samples(stream->play_buf,
-				 stream->play_buf + nsamples_req,
-				 stream->play_buf_count);
-	    nsamples_req = 0;
+        /* samples buffered >= requested by sound device */
+        if (stream->play_buf_count >= nsamples_req) {
+            copy_samples(output, &output_pos, elmt_size, stream->play_buf,
+                         nsamples_req);
+            stream->play_buf_count -= nsamples_req;
+            pjmedia_move_samples(stream->play_buf,
+                                 stream->play_buf + nsamples_req,
+                                 stream->play_buf_count);
+            nsamples_req = 0;
 
-	    return noErr;
-	}
+            return noErr;
+        }
 
-	/* samples buffered < requested by sound device */
-	copy_samples(output, &output_pos, elmt_size,
-		     stream->play_buf, stream->play_buf_count);
-	nsamples_req -= stream->play_buf_count;
-	stream->play_buf_count = 0;
+        /* samples buffered < requested by sound device */
+        copy_samples(output, &output_pos, elmt_size, stream->play_buf,
+                     stream->play_buf_count);
+        nsamples_req -= stream->play_buf_count;
+        stream->play_buf_count = 0;
     }
 
     /* Fill output buffer as requested */
     while (nsamples_req && status == 0) {
-	pjmedia_frame frame;
+        pjmedia_frame frame;
 
-	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frame.size = stream->param.samples_per_frame *
-		     stream->param.bits_per_sample >> 3;
-	frame.timestamp.u64 = stream->play_timestamp.u64;
-	frame.bit_info = 0;
+        frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+        frame.size =
+          stream->param.samples_per_frame * stream->param.bits_per_sample >> 3;
+        frame.timestamp.u64 = stream->play_timestamp.u64;
+        frame.bit_info = 0;
 
-	if (nsamples_req >= stream->param.samples_per_frame) {
-	    /* If the output buffer is 16-bit signed int, we can
-	     * directly use the supplied buffer.
-	     */
-	    if (elmt_size == sizeof(pj_int16_t)) {
-	    	frame.buf = (pj_int16_t *)output + output_pos;
-	    } else {
-	    	frame.buf = stream->play_buf;
-	    }
-	    status = (*stream->play_cb)(stream->user_data, &frame);
-	    if (status != PJ_SUCCESS)
-		goto on_break;
+        if (nsamples_req >= stream->param.samples_per_frame) {
+            /* If the output buffer is 16-bit signed int, we can
+             * directly use the supplied buffer.
+             */
+            if (elmt_size == sizeof(pj_int16_t)) {
+                frame.buf = (pj_int16_t*)output + output_pos;
+            } else {
+                frame.buf = stream->play_buf;
+            }
+            status = (*stream->play_cb)(stream->user_data, &frame);
+            if (status != PJ_SUCCESS)
+                goto on_break;
 
-	    if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
-		pj_bzero(frame.buf, frame.size);
+            if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
+                pj_bzero(frame.buf, frame.size);
 
-	    nsamples_req -= stream->param.samples_per_frame;
-	    if (elmt_size == sizeof(pj_int16_t)) {
-	    	output_pos += stream->param.samples_per_frame;
-	    } else {
-	    	copy_samples(output, &output_pos, elmt_size, stream->play_buf,
-	    		     stream->param.samples_per_frame);
-	    }
-	} else {
-	    frame.buf = stream->play_buf;
-	    status = (*stream->play_cb)(stream->user_data, &frame);
-	    if (status != PJ_SUCCESS)
-		goto on_break;
+            nsamples_req -= stream->param.samples_per_frame;
+            if (elmt_size == sizeof(pj_int16_t)) {
+                output_pos += stream->param.samples_per_frame;
+            } else {
+                copy_samples(output, &output_pos, elmt_size, stream->play_buf,
+                             stream->param.samples_per_frame);
+            }
+        } else {
+            frame.buf = stream->play_buf;
+            status = (*stream->play_cb)(stream->user_data, &frame);
+            if (status != PJ_SUCCESS)
+                goto on_break;
 
-	    if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
-		pj_bzero(frame.buf, frame.size);
+            if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
+                pj_bzero(frame.buf, frame.size);
 
-	    copy_samples(output, &output_pos, elmt_size,
-	    		 stream->play_buf, nsamples_req);
-	    stream->play_buf_count = stream->param.samples_per_frame -
-		                     nsamples_req;
-	    pjmedia_move_samples(stream->play_buf,
-				 stream->play_buf+nsamples_req,
-				 stream->play_buf_count);
-	    nsamples_req = 0;
-	}
+            copy_samples(output, &output_pos, elmt_size, stream->play_buf,
+                         nsamples_req);
+            stream->play_buf_count =
+              stream->param.samples_per_frame - nsamples_req;
+            pjmedia_move_samples(stream->play_buf,
+                                 stream->play_buf + nsamples_req,
+                                 stream->play_buf_count);
+            nsamples_req = 0;
+        }
 
-	stream->play_timestamp.u64 += stream->param.samples_per_frame /
-				      stream->param.channel_count;
+        stream->play_timestamp.u64 +=
+          stream->param.samples_per_frame / stream->param.channel_count;
     }
 
     return noErr;
@@ -1151,13 +1086,11 @@ on_break:
     return -1;
 }
 
-#if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
-static void propListener(void 			*inClientData,
-			 AudioSessionPropertyID	inID,
-			 UInt32                 inDataSize,
-			 const void *           inData)
+#    if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
+static void propListener(void* inClientData, AudioSessionPropertyID inID,
+                         UInt32 inDataSize, const void* inData)
 {
-    struct coreaudio_factory *cf = (struct coreaudio_factory*)inClientData;
+    struct coreaudio_factory* cf = (struct coreaudio_factory*)inClientData;
     struct stream_list *it, *itBegin;
     CFDictionaryRef routeDictionary;
     CFNumberRef reason;
@@ -1165,18 +1098,16 @@ static void propListener(void 			*inClientData,
     pj_assert(cf);
 
     if (inID != kAudioSessionProperty_AudioRouteChange)
-	return;
+        return;
 
     routeDictionary = (CFDictionaryRef)inData;
-    reason = (CFNumberRef)
-	     CFDictionaryGetValue(
-	         routeDictionary, 
-		 CFSTR(kAudioSession_AudioRouteChangeKey_Reason));
+    reason = (CFNumberRef)CFDictionaryGetValue(
+      routeDictionary, CFSTR(kAudioSession_AudioRouteChangeKey_Reason));
     CFNumberGetValue(reason, kCFNumberSInt32Type, &reasonVal);
 
     if (reasonVal != kAudioSessionRouteChangeReason_OldDeviceUnavailable) {
-	PJ_LOG(3, (THIS_FILE, "ignoring audio route change..."));
-	return;
+        PJ_LOG(3, (THIS_FILE, "ignoring audio route change..."));
+        return;
     }
 
     PJ_LOG(3, (THIS_FILE, "audio route changed"));
@@ -1184,99 +1115,101 @@ static void propListener(void 			*inClientData,
     pj_mutex_lock(cf->mutex);
     itBegin = &cf->streams;
     for (it = itBegin->next; it != itBegin; it = it->next) {
-	if (it->stream->interrupted)
-	    continue;
+        if (it->stream->interrupted)
+            continue;
 
-	/*
-	status = ca_stream_stop((pjmedia_aud_stream *)it->stream);
-	status = ca_stream_start((pjmedia_aud_stream *)it->stream);
-	if (status != PJ_SUCCESS) {
-	    PJ_LOG(3, (THIS_FILE,
-		       "Error: failed to restart the audio unit (%i)",
-		       status));
-	    continue;
-	}
-	PJ_LOG(3, (THIS_FILE, "core audio unit successfully restarted"));
-	*/
+        /*
+        status = ca_stream_stop((pjmedia_aud_stream *)it->stream);
+        status = ca_stream_start((pjmedia_aud_stream *)it->stream);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3, (THIS_FILE,
+                       "Error: failed to restart the audio unit (%i)",
+                       status));
+            continue;
+        }
+        PJ_LOG(3, (THIS_FILE, "core audio unit successfully restarted"));
+        */
     }
     pj_mutex_unlock(cf->mutex);
 }
 
-static void interruptionListener(void *inClientData, UInt32 inInterruption)
+static void interruptionListener(void* inClientData, UInt32 inInterruption)
 {
     struct stream_list *it, *itBegin;
     pj_status_t status;
     static pj_thread_desc thread_desc;
-    pj_thread_t *thread;
-    
+    pj_thread_t* thread;
+
     /* Register the thread with PJLIB, this is must for any external threads
      * which need to use the PJLIB framework.
      */
     if (!pj_thread_is_registered()) {
-	pj_bzero(thread_desc, sizeof(pj_thread_desc));
-	status = pj_thread_register("intListener", thread_desc, &thread);
+        pj_bzero(thread_desc, sizeof(pj_thread_desc));
+        status = pj_thread_register("intListener", thread_desc, &thread);
     }
-    
+
     PJ_LOG(3, (THIS_FILE, "Session interrupted! --- %s ---",
-	   inInterruption == kAudioSessionBeginInterruption ?
-	   "Begin Interruption" : "End Interruption"));
+               inInterruption == kAudioSessionBeginInterruption ?
+                 "Begin Interruption" :
+                 "End Interruption"));
 
     if (!cf_instance)
-	return;
-    
+        return;
+
     pj_mutex_lock(cf_instance->mutex);
     itBegin = &cf_instance->streams;
     for (it = itBegin->next; it != itBegin; it = it->next) {
-	if (inInterruption == kAudioSessionEndInterruption &&
-	    it->stream->interrupted == PJ_TRUE)
-	{
-	    UInt32 audioCategory;
-	    OSStatus ostatus;
+        if (inInterruption == kAudioSessionEndInterruption &&
+            it->stream->interrupted == PJ_TRUE)
+        {
+            UInt32 audioCategory;
+            OSStatus ostatus;
 
-	    /* Make sure that your application can receive remote control
-	     * events by adding the code:
-	     *     [[UIApplication sharedApplication] 
-	     *      beginReceivingRemoteControlEvents];
-	     * Otherwise audio unit will fail to restart while your
-	     * application is in the background mode.
-	     */
-	    /* Make sure we set the correct audio category before restarting */
-	    audioCategory = kAudioSessionCategory_PlayAndRecord;
-	    ostatus = AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
-					      sizeof(audioCategory),
-					      &audioCategory);
-	    if (ostatus != kAudioSessionNoError) {
-		PJ_LOG(4, (THIS_FILE,
-			   "Warning: cannot set the audio session category (%i)",
-			   ostatus));
-	    }
-	    
-	    /* Restart the stream */
-	    status = ca_stream_start((pjmedia_aud_stream*)it->stream);
-	    if (status != PJ_SUCCESS) {
-		PJ_LOG(3, (THIS_FILE,
-			   "Error: failed to restart the audio unit (%i)",
-			   status));
-		continue;
-	    }
-	    PJ_LOG(3, (THIS_FILE, "core audio unit successfully resumed"
-		       " after interruption"));
-	} else if (inInterruption == kAudioSessionBeginInterruption &&
-		   it->stream->running == PJ_TRUE)
-	{
-	    status = ca_stream_stop((pjmedia_aud_stream*)it->stream);
-	    it->stream->interrupted = PJ_TRUE;
-	}
+            /* Make sure that your application can receive remote control
+             * events by adding the code:
+             *     [[UIApplication sharedApplication]
+             *      beginReceivingRemoteControlEvents];
+             * Otherwise audio unit will fail to restart while your
+             * application is in the background mode.
+             */
+            /* Make sure we set the correct audio category before restarting */
+            audioCategory = kAudioSessionCategory_PlayAndRecord;
+            ostatus =
+              AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
+                                      sizeof(audioCategory), &audioCategory);
+            if (ostatus != kAudioSessionNoError) {
+                PJ_LOG(4,
+                       (THIS_FILE,
+                        "Warning: cannot set the audio session category (%i)",
+                        ostatus));
+            }
+
+            /* Restart the stream */
+            status = ca_stream_start((pjmedia_aud_stream*)it->stream);
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(3, (THIS_FILE,
+                           "Error: failed to restart the audio unit (%i)",
+                           status));
+                continue;
+            }
+            PJ_LOG(3, (THIS_FILE, "core audio unit successfully resumed"
+                                  " after interruption"));
+        } else if (inInterruption == kAudioSessionBeginInterruption &&
+                   it->stream->running == PJ_TRUE)
+        {
+            status = ca_stream_stop((pjmedia_aud_stream*)it->stream);
+            it->stream->interrupted = PJ_TRUE;
+        }
     }
     pj_mutex_unlock(cf_instance->mutex);
 }
 
-#endif
+#    endif
 
-#if COREAUDIO_MAC
+#    if COREAUDIO_MAC
 /* Internal: create audio converter for resampling the recorder device */
-static pj_status_t create_audio_resample(struct coreaudio_stream     *strm,
-					 AudioStreamBasicDescription *desc)
+static pj_status_t create_audio_resample(struct coreaudio_stream* strm,
+                                         AudioStreamBasicDescription* desc)
 {
     OSStatus ostatus;
 
@@ -1287,377 +1220,342 @@ static pj_status_t create_audio_resample(struct coreaudio_stream     *strm,
     /* Create the audio converter */
     ostatus = AudioConverterNew(desc, &strm->streamFormat, &strm->resample);
     if (ostatus != noErr) {
-	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
-    
+
     /*
      * Allocate the buffer required to hold enough input data
      */
-    strm->resample_buf_size =  (unsigned)(desc->mSampleRate *
-					  strm->param.samples_per_frame /
-					  strm->param.clock_rate);
-    strm->resample_buf = (pj_int16_t*)
-			 pj_pool_alloc(strm->pool,
-				       strm->resample_buf_size *
-				       strm->param.bits_per_sample >> 3);
+    strm->resample_buf_size =
+      (unsigned)(desc->mSampleRate * strm->param.samples_per_frame /
+                 strm->param.clock_rate);
+    strm->resample_buf = (pj_int16_t*)pj_pool_alloc(
+      strm->pool, strm->resample_buf_size * strm->param.bits_per_sample >> 3);
     if (!strm->resample_buf)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
     strm->resample_buf_count = 0;
 
     return PJ_SUCCESS;
 }
-#endif
+#    endif
 
 /* Internal: create audio unit for recorder/playback device */
 static pj_status_t create_audio_unit(AudioComponent io_comp,
-				     AudioDeviceID dev_id,
-				     pjmedia_dir dir,
-				     struct coreaudio_stream *strm,
-				     AudioUnit *io_unit)
+                                     AudioDeviceID dev_id, pjmedia_dir dir,
+                                     struct coreaudio_stream* strm,
+                                     AudioUnit* io_unit)
 {
     OSStatus ostatus;
 
-#if !COREAUDIO_MAC
+#    if !COREAUDIO_MAC
     strm->sess = [AVAudioSession sharedInstance];
-#endif
-    
+#    endif
+
     /* Create an audio unit to interface with the device */
     ostatus = AudioComponentInstanceNew(io_comp, io_unit);
     if (ostatus != noErr) {
-	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
 
     /* Set audio unit's properties for capture device */
     if (dir & PJMEDIA_DIR_CAPTURE) {
-	UInt32 enable = 1;
+        UInt32 enable = 1;
 
-	/* Enable input */
-	ostatus = AudioUnitSetProperty(*io_unit,
-	                               kAudioOutputUnitProperty_EnableIO,
-	                               kAudioUnitScope_Input,
-	                               1,
-	                               &enable,
-	                               sizeof(enable));
-	if (ostatus != noErr && !strm->param.ec_enabled) {
-	    PJ_LOG(4, (THIS_FILE,
-		   "Warning: cannot enable IO of capture device %d",
-		   dev_id));
-	}
+        /* Enable input */
+        ostatus = AudioUnitSetProperty(
+          *io_unit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, 1,
+          &enable, sizeof(enable));
+        if (ostatus != noErr && !strm->param.ec_enabled) {
+            PJ_LOG(4,
+                   (THIS_FILE, "Warning: cannot enable IO of capture device %d",
+                    dev_id));
+        }
 
-	/* Disable output */
-	if (!(dir & PJMEDIA_DIR_PLAYBACK)) {
-	    enable = 0;
-	    ostatus = AudioUnitSetProperty(*io_unit,
-					   kAudioOutputUnitProperty_EnableIO,
-					   kAudioUnitScope_Output,
-					   0,
-					   &enable,
-					   sizeof(enable));
-	    if (ostatus != noErr && !strm->param.ec_enabled) {
-		PJ_LOG(4, (THIS_FILE,
-		       "Warning: cannot disable IO of capture device %d",
-		       dev_id));
-	    }
-	}
+        /* Disable output */
+        if (!(dir & PJMEDIA_DIR_PLAYBACK)) {
+            enable = 0;
+            ostatus = AudioUnitSetProperty(
+              *io_unit, kAudioOutputUnitProperty_EnableIO,
+              kAudioUnitScope_Output, 0, &enable, sizeof(enable));
+            if (ostatus != noErr && !strm->param.ec_enabled) {
+                PJ_LOG(4, (THIS_FILE,
+                           "Warning: cannot disable IO of capture device %d",
+                           dev_id));
+            }
+        }
     }
 
     /* Set audio unit's properties for playback device */
     if (dir & PJMEDIA_DIR_PLAYBACK) {
-	UInt32 enable = 1;
+        UInt32 enable = 1;
 
-	/* Enable output */
-	ostatus = AudioUnitSetProperty(*io_unit,
-	                               kAudioOutputUnitProperty_EnableIO,
-	                               kAudioUnitScope_Output,
-	                               0,
-	                               &enable,
-	                               sizeof(enable));
-	if (ostatus != noErr && !strm->param.ec_enabled)
-	{
-	    PJ_LOG(4, (THIS_FILE,
-		   "Warning: cannot enable IO of playback device %d",
-		   dev_id));
-	}
-
+        /* Enable output */
+        ostatus = AudioUnitSetProperty(
+          *io_unit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output,
+          0, &enable, sizeof(enable));
+        if (ostatus != noErr && !strm->param.ec_enabled) {
+            PJ_LOG(4,
+                   (THIS_FILE,
+                    "Warning: cannot enable IO of playback device %d", dev_id));
+        }
     }
 
-#if COREAUDIO_MAC
+#    if COREAUDIO_MAC
     if (!strm->param.ec_enabled) {
-    	/* When using VPIO on Mac, we shouldn't set the current device.
-    	 * Doing so will cause getting the buffer size later to fail
-    	 * with kAudioUnitErr_InvalidProperty error (-10879).
-    	 */
-    	PJ_LOG(4, (THIS_FILE, "Setting current device %d", dev_id));
-    	ostatus = AudioUnitSetProperty(*io_unit,
-			               kAudioOutputUnitProperty_CurrentDevice,
-			               kAudioUnitScope_Global,
-			               0,
-			               &dev_id,
-			               sizeof(dev_id));
-    	if (ostatus != noErr) {
-	    PJ_LOG(3, (THIS_FILE, "Failed setting current device %d, "
-	    	       "error: %d", dev_id, ostatus));
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        /* When using VPIO on Mac, we shouldn't set the current device.
+         * Doing so will cause getting the buffer size later to fail
+         * with kAudioUnitErr_InvalidProperty error (-10879).
+         */
+        PJ_LOG(4, (THIS_FILE, "Setting current device %d", dev_id));
+        ostatus = AudioUnitSetProperty(
+          *io_unit, kAudioOutputUnitProperty_CurrentDevice,
+          kAudioUnitScope_Global, 0, &dev_id, sizeof(dev_id));
+        if (ostatus != noErr) {
+            PJ_LOG(3, (THIS_FILE,
+                       "Failed setting current device %d, "
+                       "error: %d",
+                       dev_id, ostatus));
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
     }
-#endif
+#    endif
 
     if (dir & PJMEDIA_DIR_CAPTURE) {
-#if COREAUDIO_MAC
-	AudioStreamBasicDescription deviceFormat;
-	UInt32 size;
+#    if COREAUDIO_MAC
+        AudioStreamBasicDescription deviceFormat;
+        UInt32 size;
 
-	if (!strm->param.ec_enabled) {
-	    /* Keep the sample rate from the device, otherwise we will confuse
-	     * AUHAL.
-	     */
-	    size = sizeof(AudioStreamBasicDescription);
-	    ostatus = AudioUnitGetProperty(*io_unit,
-				       	   kAudioUnitProperty_StreamFormat,
-				       	   kAudioUnitScope_Input,
-				       	   1,
-				       	   &deviceFormat,
-				       	   &size);
-	    if (ostatus != noErr) {
-	    	PJ_LOG(3, (THIS_FILE, "Failed getting stream format of device"
-	    			      " %d, error: %d", dev_id, ostatus));
-	    	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	    }
-	    strm->streamFormat.mSampleRate = deviceFormat.mSampleRate;
-	}
-#endif
+        if (!strm->param.ec_enabled) {
+            /* Keep the sample rate from the device, otherwise we will confuse
+             * AUHAL.
+             */
+            size = sizeof(AudioStreamBasicDescription);
+            ostatus = AudioUnitGetProperty(
+              *io_unit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
+              1, &deviceFormat, &size);
+            if (ostatus != noErr) {
+                PJ_LOG(3, (THIS_FILE,
+                           "Failed getting stream format of device"
+                           " %d, error: %d",
+                           dev_id, ostatus));
+                return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+            }
+            strm->streamFormat.mSampleRate = deviceFormat.mSampleRate;
+        }
+#    endif
 
-	/* When setting the stream format, we have to make sure the sample
-	 * rate is supported. Setting an unsupported sample rate will cause
-	 * AudioUnitRender() to fail later.
-	 */
-	ostatus = AudioUnitSetProperty(*io_unit,
-				       kAudioUnitProperty_StreamFormat,
-				       kAudioUnitScope_Output,
-				       1,
-				       &strm->streamFormat,
-				       sizeof(strm->streamFormat));
-	if (ostatus != noErr) {
-	    PJ_LOG(3, (THIS_FILE, "Failed setting stream format of device %d"
-	    			  ", error: %d", dev_id, ostatus));
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        /* When setting the stream format, we have to make sure the sample
+         * rate is supported. Setting an unsupported sample rate will cause
+         * AudioUnitRender() to fail later.
+         */
+        ostatus = AudioUnitSetProperty(
+          *io_unit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1,
+          &strm->streamFormat, sizeof(strm->streamFormat));
+        if (ostatus != noErr) {
+            PJ_LOG(3, (THIS_FILE,
+                       "Failed setting stream format of device %d"
+                       ", error: %d",
+                       dev_id, ostatus));
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
 
-#if COREAUDIO_MAC
-	strm->streamFormat.mSampleRate = strm->param.clock_rate;
-	size = sizeof(AudioStreamBasicDescription);
-	ostatus = AudioUnitGetProperty (*io_unit,
-					kAudioUnitProperty_StreamFormat,
-					kAudioUnitScope_Output,
-					1,
-					&deviceFormat,
-					&size);
-	if (ostatus == noErr) {
-	    if (strm->streamFormat.mSampleRate != deviceFormat.mSampleRate) {
-	    	PJ_LOG(4, (THIS_FILE, "Creating audio resample from %d to %d",
-	    		   (int)deviceFormat.mSampleRate,
-	    		   (int)strm->streamFormat.mSampleRate));
-		pj_status_t rc = create_audio_resample(strm, &deviceFormat);
-		if (PJ_SUCCESS != rc) {
-	    	    PJ_LOG(3, (THIS_FILE, "Failed creating resample %d",
-	    		       rc));
-		    return rc;
-		}
-	    }
-	} else {
-	    PJ_LOG(3, (THIS_FILE, "Failed getting stream format of device %d"
-	    			  " (2), error: %d", dev_id, ostatus));
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
-#endif
+#    if COREAUDIO_MAC
+        strm->streamFormat.mSampleRate = strm->param.clock_rate;
+        size = sizeof(AudioStreamBasicDescription);
+        ostatus =
+          AudioUnitGetProperty(*io_unit, kAudioUnitProperty_StreamFormat,
+                               kAudioUnitScope_Output, 1, &deviceFormat, &size);
+        if (ostatus == noErr) {
+            if (strm->streamFormat.mSampleRate != deviceFormat.mSampleRate) {
+                PJ_LOG(4, (THIS_FILE, "Creating audio resample from %d to %d",
+                           (int)deviceFormat.mSampleRate,
+                           (int)strm->streamFormat.mSampleRate));
+                pj_status_t rc = create_audio_resample(strm, &deviceFormat);
+                if (PJ_SUCCESS != rc) {
+                    PJ_LOG(3, (THIS_FILE, "Failed creating resample %d", rc));
+                    return rc;
+                }
+            }
+        } else {
+            PJ_LOG(3, (THIS_FILE,
+                       "Failed getting stream format of device %d"
+                       " (2), error: %d",
+                       dev_id, ostatus));
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
+#    endif
     }
 
     if (dir & PJMEDIA_DIR_PLAYBACK) {
-	AURenderCallbackStruct output_cb;
-	AudioStreamBasicDescription streamFormat = strm->streamFormat;
-	BOOL isMacCatalystApp = false;
+        AURenderCallbackStruct output_cb;
+        AudioStreamBasicDescription streamFormat = strm->streamFormat;
+        BOOL isMacCatalystApp = false;
 
-#ifdef __IPHONE_13_0
-	if (@available(iOS 13.0, *)) {
+#    ifdef __IPHONE_13_0
+        if (@available(iOS 13.0, *)) {
             /* According to Apple's doc, the property isMacCatalystApp is true
-	     * when the process is:
-             * - A Mac app built with Mac Catalyst, or an iOS app running on Apple silicon.
+             * when the process is:
+             * - A Mac app built with Mac Catalyst, or an iOS app running on
+             * Apple silicon.
              * - Running on a Mac.
              */
             isMacCatalystApp = [NSProcessInfo processInfo].isMacCatalystApp;
-	}
-#endif
+        }
+#    endif
 
-	/* Set the stream format */
-   	if (strm->param.ec_enabled
-#if !COREAUDIO_MAC
-	    && isMacCatalystApp
-#endif   	
-   	) {
-   	    /* When using VPIO on Mac, we need to use float data. Using
-   	     * signed integer will generate no errors, but strangely,
-   	     * no sound will be played.
-   	     */
-    	    streamFormat.mFormatFlags      = kLinearPCMFormatFlagIsFloat |
-  					     kLinearPCMFormatFlagIsPacked;
-    	    streamFormat.mBitsPerChannel   = sizeof(float) * 8;
-   	    streamFormat.mBytesPerFrame    = streamFormat.mChannelsPerFrame *
-	                                     streamFormat.mBitsPerChannel / 8;
-    	    streamFormat.mBytesPerPacket   = streamFormat.mBytesPerFrame *
-					     streamFormat.mFramesPerPacket;
-	}
+        /* Set the stream format */
+        if (strm->param.ec_enabled
+#    if !COREAUDIO_MAC
+            && isMacCatalystApp
+#    endif
+        )
+        {
+            /* When using VPIO on Mac, we need to use float data. Using
+             * signed integer will generate no errors, but strangely,
+             * no sound will be played.
+             */
+            streamFormat.mFormatFlags =
+              kLinearPCMFormatFlagIsFloat | kLinearPCMFormatFlagIsPacked;
+            streamFormat.mBitsPerChannel = sizeof(float) * 8;
+            streamFormat.mBytesPerFrame =
+              streamFormat.mChannelsPerFrame * streamFormat.mBitsPerChannel / 8;
+            streamFormat.mBytesPerPacket =
+              streamFormat.mBytesPerFrame * streamFormat.mFramesPerPacket;
+        }
 
-	ostatus = AudioUnitSetProperty(*io_unit,
-	                               kAudioUnitProperty_StreamFormat,
-	                               kAudioUnitScope_Input,
-	                               0,
-	                               &streamFormat,
-	                               sizeof(streamFormat));
-	if (ostatus != noErr) {
-	    PJ_LOG(4, (THIS_FILE,
-		   "Warning: cannot set playback stream format of dev %d",
-		   dev_id));
-	}
+        ostatus = AudioUnitSetProperty(
+          *io_unit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0,
+          &streamFormat, sizeof(streamFormat));
+        if (ostatus != noErr) {
+            PJ_LOG(4, (THIS_FILE,
+                       "Warning: cannot set playback stream format of dev %d",
+                       dev_id));
+        }
 
-	/* Set render callback */
-	output_cb.inputProc = output_renderer;
-	output_cb.inputProcRefCon = strm;
-	ostatus = AudioUnitSetProperty(*io_unit,
-				       kAudioUnitProperty_SetRenderCallback,
-				       kAudioUnitScope_Input,
-				       0,
-				       &output_cb,
-				       sizeof(output_cb));
-	if (ostatus != noErr) {
-	    PJ_LOG(3, (THIS_FILE, "Failed setting render callback %d",
-	    	       ostatus));
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        /* Set render callback */
+        output_cb.inputProc = output_renderer;
+        output_cb.inputProcRefCon = strm;
+        ostatus = AudioUnitSetProperty(
+          *io_unit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input,
+          0, &output_cb, sizeof(output_cb));
+        if (ostatus != noErr) {
+            PJ_LOG(3,
+                   (THIS_FILE, "Failed setting render callback %d", ostatus));
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
 
-	/* Allocate playback buffer */
-	strm->play_buf = (pj_int16_t*)pj_pool_alloc(strm->pool,
-			 strm->param.samples_per_frame *
-			 (strm->param.ec_enabled? 2: 1) *
-			 strm->param.bits_per_sample >> 3);
-	if (!strm->play_buf)
-	    return PJ_ENOMEM;
-	strm->play_buf_count = 0;
+        /* Allocate playback buffer */
+        strm->play_buf = (pj_int16_t*)pj_pool_alloc(
+          strm->pool, strm->param.samples_per_frame *
+                          (strm->param.ec_enabled ? 2 : 1) *
+                          strm->param.bits_per_sample >>
+                        3);
+        if (!strm->play_buf)
+            return PJ_ENOMEM;
+        strm->play_buf_count = 0;
     }
 
     if (dir & PJMEDIA_DIR_CAPTURE) {
-	AURenderCallbackStruct input_cb;
-#if COREAUDIO_MAC
-	AudioBuffer *ab;
-	UInt32 size, buf_size;
-#endif
+        AURenderCallbackStruct input_cb;
+#    if COREAUDIO_MAC
+        AudioBuffer* ab;
+        UInt32 size, buf_size;
+#    endif
 
-	/* Set input callback */
-	input_cb.inputProc = strm->resample ? resample_callback :
-			     input_callback;
-	input_cb.inputProcRefCon = strm;
-	ostatus = AudioUnitSetProperty(
-		      *io_unit,
-		      kAudioOutputUnitProperty_SetInputCallback,
-		      kAudioUnitScope_Global,
-		      1,
-		      &input_cb,
-		      sizeof(input_cb));
-	if (ostatus != noErr) {
-	    PJ_LOG(3, (THIS_FILE, "Failed setting input callback %d",
-	    	       ostatus));
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        /* Set input callback */
+        input_cb.inputProc =
+          strm->resample ? resample_callback : input_callback;
+        input_cb.inputProcRefCon = strm;
+        ostatus = AudioUnitSetProperty(
+          *io_unit, kAudioOutputUnitProperty_SetInputCallback,
+          kAudioUnitScope_Global, 1, &input_cb, sizeof(input_cb));
+        if (ostatus != noErr) {
+            PJ_LOG(3, (THIS_FILE, "Failed setting input callback %d", ostatus));
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
 
-#if COREAUDIO_MAC
-	/* Set device's buffer frame size */
-	size = sizeof(UInt32);
-	buf_size = (20 * strm->streamFormat.mSampleRate) / 1000;
-    	ostatus = AudioUnitSetProperty (*io_unit,
-    					kAudioDevicePropertyBufferFrameSize,
-    					kAudioUnitScope_Global,
-    					0,
-    					&buf_size,
-    					size);
-	if (ostatus != noErr) {
-	    PJ_LOG(3, (THIS_FILE, "Failed setting buffer size %d",
-	    	       ostatus));
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+#    if COREAUDIO_MAC
+        /* Set device's buffer frame size */
+        size = sizeof(UInt32);
+        buf_size = (20 * strm->streamFormat.mSampleRate) / 1000;
+        ostatus =
+          AudioUnitSetProperty(*io_unit, kAudioDevicePropertyBufferFrameSize,
+                               kAudioUnitScope_Global, 0, &buf_size, size);
+        if (ostatus != noErr) {
+            PJ_LOG(3, (THIS_FILE, "Failed setting buffer size %d", ostatus));
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
 
-	/* Get device's buffer frame size */
-	ostatus = AudioUnitGetProperty(*io_unit,
-		                       kAudioDevicePropertyBufferFrameSize,
-		                       kAudioUnitScope_Global,
-		                       0,
-		                       &buf_size,
-		                       &size);
-	if (ostatus != noErr) {
-	    PJ_LOG(3, (THIS_FILE, "Failed getting buffer size %d",
-	    	       ostatus));
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        /* Get device's buffer frame size */
+        ostatus =
+          AudioUnitGetProperty(*io_unit, kAudioDevicePropertyBufferFrameSize,
+                               kAudioUnitScope_Global, 0, &buf_size, &size);
+        if (ostatus != noErr) {
+            PJ_LOG(3, (THIS_FILE, "Failed getting buffer size %d", ostatus));
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
 
-	/* Allocate audio buffer */
-	strm->audio_buf = (AudioBufferList*)pj_pool_alloc(strm->pool,
-		          sizeof(AudioBufferList) + sizeof(AudioBuffer));
-	if (!strm->audio_buf)
-	    return PJ_ENOMEM;
+        /* Allocate audio buffer */
+        strm->audio_buf = (AudioBufferList*)pj_pool_alloc(
+          strm->pool, sizeof(AudioBufferList) + sizeof(AudioBuffer));
+        if (!strm->audio_buf)
+            return PJ_ENOMEM;
 
-	strm->audio_buf->mNumberBuffers = 1;
-	ab = &strm->audio_buf->mBuffers[0];
-	ab->mNumberChannels = strm->streamFormat.mChannelsPerFrame;
-	ab->mDataByteSize = buf_size * ab->mNumberChannels *
-			    strm->streamFormat.mBitsPerChannel >> 3;
-	ab->mData = pj_pool_alloc(strm->pool,
-				  ab->mDataByteSize);
-	if (!ab->mData)
-	    return PJ_ENOMEM;
+        strm->audio_buf->mNumberBuffers = 1;
+        ab = &strm->audio_buf->mBuffers[0];
+        ab->mNumberChannels = strm->streamFormat.mChannelsPerFrame;
+        ab->mDataByteSize =
+          buf_size * ab->mNumberChannels * strm->streamFormat.mBitsPerChannel >>
+          3;
+        ab->mData = pj_pool_alloc(strm->pool, ab->mDataByteSize);
+        if (!ab->mData)
+            return PJ_ENOMEM;
 
-#else
-	/* We will let AudioUnitRender() to allocate the buffer
-	 * for us later
-	 */
-	strm->audio_buf = (AudioBufferList*)pj_pool_alloc(strm->pool,
-		          sizeof(AudioBufferList) + sizeof(AudioBuffer));
-	if (!strm->audio_buf)
-	    return PJ_ENOMEM;
+#    else
+        /* We will let AudioUnitRender() to allocate the buffer
+         * for us later
+         */
+        strm->audio_buf = (AudioBufferList*)pj_pool_alloc(
+          strm->pool, sizeof(AudioBufferList) + sizeof(AudioBuffer));
+        if (!strm->audio_buf)
+            return PJ_ENOMEM;
 
-	strm->audio_buf->mNumberBuffers = 1;
-	strm->audio_buf->mBuffers[0].mNumberChannels =
-		strm->streamFormat.mChannelsPerFrame;
-	
-#endif
+        strm->audio_buf->mNumberBuffers = 1;
+        strm->audio_buf->mBuffers[0].mNumberChannels =
+          strm->streamFormat.mChannelsPerFrame;
 
-	/* Allocate recording buffer */
-	strm->rec_buf = (pj_int16_t*)pj_pool_alloc(strm->pool,
-			strm->param.samples_per_frame *
-			strm->param.bits_per_sample >> 3);
-	if (!strm->rec_buf)
-	    return PJ_ENOMEM;
-	strm->rec_buf_count = 0;
+#    endif
+
+        /* Allocate recording buffer */
+        strm->rec_buf = (pj_int16_t*)pj_pool_alloc(
+          strm->pool,
+          strm->param.samples_per_frame * strm->param.bits_per_sample >> 3);
+        if (!strm->rec_buf)
+            return PJ_ENOMEM;
+        strm->rec_buf_count = 0;
     }
 
     /* Initialize the audio unit */
     ostatus = AudioUnitInitialize(*io_unit);
     if (ostatus != noErr) {
-	PJ_LOG(3, (THIS_FILE, "Failed initializing audio unit %d", ostatus));
- 	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        PJ_LOG(3, (THIS_FILE, "Failed initializing audio unit %d", ostatus));
+        return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
 
     return PJ_SUCCESS;
 }
 
 /* API: create stream */
-static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory *f,
-					    const pjmedia_aud_param *param,
-					    pjmedia_aud_rec_cb rec_cb,
-					    pjmedia_aud_play_cb play_cb,
-					    void *user_data,
-					    pjmedia_aud_stream **p_aud_strm)
+static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory* f,
+                                            const pjmedia_aud_param* param,
+                                            pjmedia_aud_rec_cb rec_cb,
+                                            pjmedia_aud_play_cb play_cb,
+                                            void* user_data,
+                                            pjmedia_aud_stream** p_aud_strm)
 {
-    struct coreaudio_factory *cf = (struct coreaudio_factory*)f;
-    pj_pool_t *pool;
-    struct coreaudio_stream *strm;
+    struct coreaudio_factory* cf = (struct coreaudio_factory*)f;
+    pj_pool_t* pool;
+    struct coreaudio_stream* strm;
     pj_status_t status;
 
     /* Create and Initialize stream descriptor */
@@ -1675,110 +1573,101 @@ static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory *f,
     strm->user_data = user_data;
 
     /* Set the stream format */
-    strm->streamFormat.mSampleRate       = param->clock_rate;
-    strm->streamFormat.mFormatID         = kAudioFormatLinearPCM;
-    strm->streamFormat.mFormatFlags      = kLinearPCMFormatFlagIsSignedInteger
-  					   | kLinearPCMFormatFlagIsPacked;
-    strm->streamFormat.mBitsPerChannel   = strm->param.bits_per_sample;
+    strm->streamFormat.mSampleRate = param->clock_rate;
+    strm->streamFormat.mFormatID = kAudioFormatLinearPCM;
+    strm->streamFormat.mFormatFlags =
+      kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
+    strm->streamFormat.mBitsPerChannel = strm->param.bits_per_sample;
     strm->streamFormat.mChannelsPerFrame = param->channel_count;
-    strm->streamFormat.mBytesPerFrame    = strm->streamFormat.mChannelsPerFrame
-	                                   * strm->streamFormat.mBitsPerChannel
-	                                   / 8;
-    strm->streamFormat.mFramesPerPacket  = 1;
-    strm->streamFormat.mBytesPerPacket   = strm->streamFormat.mBytesPerFrame *
-					   strm->streamFormat.mFramesPerPacket;
+    strm->streamFormat.mBytesPerFrame = strm->streamFormat.mChannelsPerFrame *
+                                        strm->streamFormat.mBitsPerChannel / 8;
+    strm->streamFormat.mFramesPerPacket = 1;
+    strm->streamFormat.mBytesPerPacket =
+      strm->streamFormat.mBytesPerFrame * strm->streamFormat.mFramesPerPacket;
 
     /* Apply input/output routes settings before we create the audio units */
     if (param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE) {
-	ca_stream_set_cap(&strm->base,
-		          PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE,
-		          &param->input_route);
+        ca_stream_set_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE,
+                          &param->input_route);
     }
     if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE) {
-	ca_stream_set_cap(&strm->base,
-		          PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
-		          &param->output_route);
+        ca_stream_set_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+                          &param->output_route);
     }
     if (param->flags & PJMEDIA_AUD_DEV_CAP_EC) {
-#if COREAUDIO_MAC
-	/* Temporarily disable VPIO on Mac for stereo due to recording sound
-	 * artefacts.
-	 */
-    	if (param->channel_count > 1) {
-    	    strm->param.ec_enabled = PJ_FALSE;
-    	}
-#endif
-	status = ca_stream_set_cap(&strm->base,
-		          	   PJMEDIA_AUD_DEV_CAP_EC,
-		          	   &strm->param.ec_enabled);
-	if (status != PJ_SUCCESS)
-	    strm->param.ec_enabled = PJ_FALSE;
+#    if COREAUDIO_MAC
+        /* Temporarily disable VPIO on Mac for stereo due to recording sound
+         * artefacts.
+         */
+        if (param->channel_count > 1) {
+            strm->param.ec_enabled = PJ_FALSE;
+        }
+#    endif
+        status = ca_stream_set_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_EC,
+                                   &strm->param.ec_enabled);
+        if (status != PJ_SUCCESS)
+            strm->param.ec_enabled = PJ_FALSE;
     } else {
-	pj_bool_t ec = PJ_FALSE;
-	ca_stream_set_cap(&strm->base,
-		          PJMEDIA_AUD_DEV_CAP_EC, &ec);
+        pj_bool_t ec = PJ_FALSE;
+        ca_stream_set_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_EC, &ec);
     }
 
-#if !TARGET_OS_IPHONE
+#    if !TARGET_OS_IPHONE
     if (strm->param.ec_enabled &&
-	param->rec_id != PJMEDIA_AUD_DEFAULT_CAPTURE_DEV &&
-	param->play_id != PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV)
+        param->rec_id != PJMEDIA_AUD_DEFAULT_CAPTURE_DEV &&
+        param->play_id != PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV)
     {
-	PJ_LOG(4, (THIS_FILE, "Warning: audio device id settings are "
-			      "ignored when using VPIO"));
+        PJ_LOG(4, (THIS_FILE, "Warning: audio device id settings are "
+                              "ignored when using VPIO"));
     }
-#endif
+#    endif
 
     strm->io_units[0] = strm->io_units[1] = NULL;
     if ((param->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK &&
-	 param->rec_id == param->play_id) ||
-	(param->flags & PJMEDIA_AUD_DEV_CAP_EC && strm->param.ec_enabled))
+         param->rec_id == param->play_id) ||
+        (param->flags & PJMEDIA_AUD_DEV_CAP_EC && strm->param.ec_enabled))
     {
-	/* If both input and output are on the same device or if EC is enabled,
-	 * only create one audio unit to interface with the device(s).
-	 */
-	status = create_audio_unit(cf->io_comp,
-		                   cf->dev_info[param->rec_id].dev_id,
-		                   param->dir, strm, &strm->io_units[0]);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+        /* If both input and output are on the same device or if EC is enabled,
+         * only create one audio unit to interface with the device(s).
+         */
+        status =
+          create_audio_unit(cf->io_comp, cf->dev_info[param->rec_id].dev_id,
+                            param->dir, strm, &strm->io_units[0]);
+        if (status != PJ_SUCCESS)
+            goto on_error;
     } else {
-	unsigned nunits = 0;
+        unsigned nunits = 0;
 
-	if (param->dir & PJMEDIA_DIR_CAPTURE) {
-	    status = create_audio_unit(cf->io_comp,
-				       cf->dev_info[param->rec_id].dev_id,
-				       PJMEDIA_DIR_CAPTURE,
-				       strm, &strm->io_units[nunits++]);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
-	}
-	if (param->dir & PJMEDIA_DIR_PLAYBACK) {
+        if (param->dir & PJMEDIA_DIR_CAPTURE) {
+            status = create_audio_unit(
+              cf->io_comp, cf->dev_info[param->rec_id].dev_id,
+              PJMEDIA_DIR_CAPTURE, strm, &strm->io_units[nunits++]);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+        }
+        if (param->dir & PJMEDIA_DIR_PLAYBACK) {
 
-	    status = create_audio_unit(cf->io_comp,
-				       cf->dev_info[param->play_id].dev_id,
-				       PJMEDIA_DIR_PLAYBACK,
-				       strm, &strm->io_units[nunits++]);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
-	}
+            status = create_audio_unit(
+              cf->io_comp, cf->dev_info[param->play_id].dev_id,
+              PJMEDIA_DIR_PLAYBACK, strm, &strm->io_units[nunits++]);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+        }
     }
 
     /* Apply the remaining settings */
     if (param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY) {
-	ca_stream_get_cap(&strm->base,
-		          PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY,
-		          &strm->param.input_latency_ms);
+        ca_stream_get_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY,
+                          &strm->param.input_latency_ms);
     }
     if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY) {
-	ca_stream_get_cap(&strm->base,
-		          PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY,
-		          &strm->param.output_latency_ms);
+        ca_stream_get_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY,
+                          &strm->param.output_latency_ms);
     }
     if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
-	ca_stream_set_cap(&strm->base,
-		          PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
-		          &param->output_vol);
+        ca_stream_set_cap(&strm->base,
+                          PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+                          &param->output_vol);
     }
 
     pj_mutex_lock(strm->cf->mutex);
@@ -1792,16 +1681,16 @@ static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory *f,
 
     return PJ_SUCCESS;
 
- on_error:
-    ca_stream_destroy((pjmedia_aud_stream *)strm);
+on_error:
+    ca_stream_destroy((pjmedia_aud_stream*)strm);
     return status;
 }
 
 /* API: Get stream info. */
-static pj_status_t ca_stream_get_param(pjmedia_aud_stream *s,
-				       pjmedia_aud_param *pi)
+static pj_status_t ca_stream_get_param(pjmedia_aud_stream* s,
+                                       pjmedia_aud_param* pi)
 {
-    struct coreaudio_stream *strm = (struct coreaudio_stream*)s;
+    struct coreaudio_stream* strm = (struct coreaudio_stream*)s;
 
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
 
@@ -1809,33 +1698,32 @@ static pj_status_t ca_stream_get_param(pjmedia_aud_stream *s,
 
     /* Update the device capabilities' values */
     if (ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY,
-		          &pi->input_latency_ms) == PJ_SUCCESS)
+                          &pi->input_latency_ms) == PJ_SUCCESS)
     {
-    	pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
+        pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
     }
     if (ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY,
-			  &pi->output_latency_ms) == PJ_SUCCESS)
+                          &pi->output_latency_ms) == PJ_SUCCESS)
     {
-	pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
+        pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
     }
     if (ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
-			  &pi->output_vol) == PJ_SUCCESS)
+                          &pi->output_vol) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
     }
     if (ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE,
-			  &pi->input_route) == PJ_SUCCESS)
+                          &pi->input_route) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE;
     }
     if (ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
-			  &pi->output_route) == PJ_SUCCESS)
+                          &pi->output_route) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE;
     }
-    if (ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_EC,
-			  &pi->ec_enabled) == PJ_SUCCESS)
-    {
+    if (ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_EC, &pi->ec_enabled) ==
+        PJ_SUCCESS) {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_EC;
     }
 
@@ -1843,325 +1731,307 @@ static pj_status_t ca_stream_get_param(pjmedia_aud_stream *s,
 }
 
 /* API: get capability */
-static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
-				     pjmedia_aud_dev_cap cap,
-				     void *pval)
+static pj_status_t ca_stream_get_cap(pjmedia_aud_stream* s,
+                                     pjmedia_aud_dev_cap cap, void* pval)
 {
-    struct coreaudio_stream *strm = (struct coreaudio_stream*)s;
+    struct coreaudio_stream* strm = (struct coreaudio_stream*)s;
 
     PJ_UNUSED_ARG(strm);
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
-    if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
-	(strm->param.dir & PJMEDIA_DIR_CAPTURE))
+    if (cap == PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
+        (strm->param.dir & PJMEDIA_DIR_CAPTURE))
     {
-#if COREAUDIO_MAC
-	UInt32 latency, size = sizeof(UInt32);
+#    if COREAUDIO_MAC
+        UInt32 latency, size = sizeof(UInt32);
 
-	/* Recording latency */
-	if (AudioUnitGetProperty (strm->io_units[0],
-				  kAudioDevicePropertyLatency,
-				  kAudioUnitScope_Input,
-				  1,
-				  &latency,
-				  &size) == noErr)
-	{
-	    UInt32 latency2;
-	    if (AudioUnitGetProperty (strm->io_units[0],
-				      kAudioDevicePropertyBufferFrameSize,
-				      kAudioUnitScope_Input,
-				      1,
-				      &latency2,
-				      &size) == noErr)
-	    {
-		strm->param.input_latency_ms = (latency + latency2) * 1000 /
-					       strm->param.clock_rate;
-		strm->param.input_latency_ms++;
-	    }
-	}
-#else
+        /* Recording latency */
+        if (AudioUnitGetProperty(strm->io_units[0], kAudioDevicePropertyLatency,
+                                 kAudioUnitScope_Input, 1, &latency,
+                                 &size) == noErr)
+        {
+            UInt32 latency2;
+            if (AudioUnitGetProperty(
+                  strm->io_units[0], kAudioDevicePropertyBufferFrameSize,
+                  kAudioUnitScope_Input, 1, &latency2, &size) == noErr)
+            {
+                strm->param.input_latency_ms =
+                  (latency + latency2) * 1000 / strm->param.clock_rate;
+                strm->param.input_latency_ms++;
+            }
+        }
+#    else
         if ([strm->sess respondsToSelector:@selector(inputLatency)]) {
-	    strm->param.input_latency_ms =
-                (unsigned)(([strm->sess inputLatency] +
-                            [strm->sess IOBufferDuration]) * 1000);
-	    strm->param.input_latency_ms++;
-	} else
+            strm->param.input_latency_ms =
+              (unsigned)(([strm->sess inputLatency] +
+                          [strm->sess IOBufferDuration]) *
+                         1000);
+            strm->param.input_latency_ms++;
+        } else
             return PJMEDIA_EAUD_INVCAP;
-#endif
+#    endif
 
-	*(unsigned*)pval = strm->param.input_latency_ms;
-	return PJ_SUCCESS;
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY  &&
-	       (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+        *(unsigned*)pval = strm->param.input_latency_ms;
+        return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY &&
+               (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
-#if COREAUDIO_MAC
-	UInt32 latency, size = sizeof(UInt32);
-	AudioUnit *io_unit = strm->io_units[1] ? &strm->io_units[1] :
-			     &strm->io_units[0];
+#    if COREAUDIO_MAC
+        UInt32 latency, size = sizeof(UInt32);
+        AudioUnit* io_unit =
+          strm->io_units[1] ? &strm->io_units[1] : &strm->io_units[0];
 
-	/* Playback latency */
-	if (AudioUnitGetProperty (*io_unit,
-				  kAudioDevicePropertyLatency,
-				  kAudioUnitScope_Output,
-				  0,
-				  &latency,
-				  &size) == noErr)
-	{
-	    UInt32 latency2;
-	    if (AudioUnitGetProperty (*io_unit,
-				      kAudioDevicePropertyBufferFrameSize,
-				      kAudioUnitScope_Output,
-				      0,
-				      &latency2,
-				      &size) == noErr)
-	    {
-		strm->param.output_latency_ms = (latency + latency2) * 1000 /
-						strm->param.clock_rate;
-		strm->param.output_latency_ms++;
-	    }
-	}
-#else
+        /* Playback latency */
+        if (AudioUnitGetProperty(*io_unit, kAudioDevicePropertyLatency,
+                                 kAudioUnitScope_Output, 0, &latency,
+                                 &size) == noErr)
+        {
+            UInt32 latency2;
+            if (AudioUnitGetProperty(
+                  *io_unit, kAudioDevicePropertyBufferFrameSize,
+                  kAudioUnitScope_Output, 0, &latency2, &size) == noErr)
+            {
+                strm->param.output_latency_ms =
+                  (latency + latency2) * 1000 / strm->param.clock_rate;
+                strm->param.output_latency_ms++;
+            }
+        }
+#    else
         if ([strm->sess respondsToSelector:@selector(outputLatency)]) {
-	    strm->param.output_latency_ms =
-            (unsigned)(([strm->sess outputLatency] +
-                        [strm->sess IOBufferDuration]) * 1000);
-	    strm->param.output_latency_ms++;
-	} else
+            strm->param.output_latency_ms =
+              (unsigned)(([strm->sess outputLatency] +
+                          [strm->sess IOBufferDuration]) *
+                         1000);
+            strm->param.output_latency_ms++;
+        } else
             return PJMEDIA_EAUD_INVCAP;
-#endif
-	*(unsigned*)pval = (++strm->param.output_latency_ms * 2);
-	return PJ_SUCCESS;
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
-	       (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+#    endif
+        *(unsigned*)pval = (++strm->param.output_latency_ms * 2);
+        return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
+               (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
-#if COREAUDIO_MAC
-	OSStatus ostatus;
-	Float32 volume;
-	UInt32 size = sizeof(Float32);
+#    if COREAUDIO_MAC
+        OSStatus ostatus;
+        Float32 volume;
+        UInt32 size = sizeof(Float32);
 
-	/* Output volume setting */
-	ostatus = AudioUnitGetProperty (strm->io_units[1] ? strm->io_units[1] :
-					strm->io_units[0],
-					kAudioDevicePropertyVolumeScalar,
-	                                kAudioUnitScope_Output,
-	                                0,
-	                                &volume,
-	                                &size);
-	if (ostatus != noErr)
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        /* Output volume setting */
+        ostatus = AudioUnitGetProperty(
+          strm->io_units[1] ? strm->io_units[1] : strm->io_units[0],
+          kAudioDevicePropertyVolumeScalar, kAudioUnitScope_Output, 0, &volume,
+          &size);
+        if (ostatus != noErr)
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
 
-	*(unsigned*)pval = (unsigned)(volume * 100);
-	return PJ_SUCCESS;
-#else
+        *(unsigned*)pval = (unsigned)(volume * 100);
+        return PJ_SUCCESS;
+#    else
         if ([strm->sess respondsToSelector:@selector(outputVolume)]) {
             *(unsigned*)pval = (unsigned)([strm->sess outputVolume] * 100);
             return PJ_SUCCESS;
-	} else
+        } else
             return PJMEDIA_EAUD_INVCAP;
-#endif
+#    endif
 
-#if !COREAUDIO_MAC
-#if USE_AUDIO_SESSION_API != 0
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE &&
-	       (strm->param.dir & PJMEDIA_DIR_CAPTURE))
+#    if !COREAUDIO_MAC
+#        if USE_AUDIO_SESSION_API != 0
+    } else if (cap == PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE &&
+               (strm->param.dir & PJMEDIA_DIR_CAPTURE))
     {
-	UInt32 btooth, size = sizeof(UInt32);
-	OSStatus ostatus;
+        UInt32 btooth, size = sizeof(UInt32);
+        OSStatus ostatus;
 
-	ostatus = AudioSessionGetProperty (
-	    kAudioSessionProperty_OverrideCategoryEnableBluetoothInput,
-	    &size, &btooth);
-	if (ostatus != kAudioSessionNoError) {
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        ostatus = AudioSessionGetProperty(
+          kAudioSessionProperty_OverrideCategoryEnableBluetoothInput, &size,
+          &btooth);
+        if (ostatus != kAudioSessionNoError) {
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
 
-	*(pjmedia_aud_dev_route*)pval = btooth?
-		                        PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH:
-					PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
-	return PJ_SUCCESS;
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE &&
-	       (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+        *(pjmedia_aud_dev_route*)pval = btooth ?
+                                          PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH :
+                                          PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
+        return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE &&
+               (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
-	CFStringRef route;
-	UInt32 size = sizeof(CFStringRef);
-	OSStatus ostatus;
+        CFStringRef route;
+        UInt32 size = sizeof(CFStringRef);
+        OSStatus ostatus;
 
-	ostatus = AudioSessionGetProperty (kAudioSessionProperty_AudioRoute,
-					   &size, &route);
-	if (ostatus != kAudioSessionNoError) {
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        ostatus = AudioSessionGetProperty(kAudioSessionProperty_AudioRoute,
+                                          &size, &route);
+        if (ostatus != kAudioSessionNoError) {
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
 
-	if (!route) {
-	    *(pjmedia_aud_dev_route*)pval = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
-	} else if (CFStringHasPrefix(route, CFSTR("Headset"))) {
-	    *(pjmedia_aud_dev_route*)pval = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
-	} else {
-	    *(pjmedia_aud_dev_route*)pval = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
-	}
+        if (!route) {
+            *(pjmedia_aud_dev_route*)pval = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
+        } else if (CFStringHasPrefix(route, CFSTR("Headset"))) {
+            *(pjmedia_aud_dev_route*)pval = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
+        } else {
+            *(pjmedia_aud_dev_route*)pval = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
+        }
 
-	CFRelease(route);
+        CFRelease(route);
 
-	return PJ_SUCCESS;
-#endif
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
-	AudioComponentDescription desc;
-	OSStatus ostatus;
+        return PJ_SUCCESS;
+#        endif
+    } else if (cap == PJMEDIA_AUD_DEV_CAP_EC) {
+        AudioComponentDescription desc;
+        OSStatus ostatus;
 
-	ostatus = AudioComponentGetDescription(strm->cf->io_comp, &desc);
-	if (ostatus != noErr) {
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        ostatus = AudioComponentGetDescription(strm->cf->io_comp, &desc);
+        if (ostatus != noErr) {
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
 
-	*(pj_bool_t*)pval = (desc.componentSubType ==
-		            kAudioUnitSubType_VoiceProcessingIO);
-	return PJ_SUCCESS;
-#endif
+        *(pj_bool_t*)pval =
+          (desc.componentSubType == kAudioUnitSubType_VoiceProcessingIO);
+        return PJ_SUCCESS;
+#    endif
     } else {
-	return PJMEDIA_EAUD_INVCAP;
+        return PJMEDIA_EAUD_INVCAP;
     }
 }
 
 /* API: set capability */
-static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
-				     pjmedia_aud_dev_cap cap,
-				     const void *pval)
+static pj_status_t ca_stream_set_cap(pjmedia_aud_stream* s,
+                                     pjmedia_aud_dev_cap cap, const void* pval)
 {
-    struct coreaudio_stream *strm = (struct coreaudio_stream*)s;
+    struct coreaudio_stream* strm = (struct coreaudio_stream*)s;
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
-    if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
-	AudioComponentDescription desc;
-	AudioComponent io_comp;
-        
-	desc.componentType = kAudioUnitType_Output;
-	desc.componentSubType = (*(pj_bool_t*)pval)?
-        			kAudioUnitSubType_VoiceProcessingIO :
-#if COREAUDIO_MAC
-        			kAudioUnitSubType_HALOutput;
-#else
-				kAudioUnitSubType_RemoteIO;
-#endif
-	desc.componentManufacturer = kAudioUnitManufacturer_Apple;
-	desc.componentFlags = 0;
-	desc.componentFlagsMask = 0;
-        
-	io_comp = AudioComponentFindNext(NULL, &desc);
-	if (io_comp == NULL)
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(-1);
-	strm->cf->io_comp = io_comp;
-	strm->param.ec_enabled = *(pj_bool_t*)pval;
-        
-        PJ_LOG(4, (THIS_FILE, "Using %s audio unit",
-                   (desc.componentSubType ==
-                    kAudioUnitSubType_VoiceProcessingIO?
-                    "VoiceProcessingIO": "default")));
-        
-	return PJ_SUCCESS;
-    }
-#if COREAUDIO_MAC
-    else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
-	(strm->param.dir & PJMEDIA_DIR_PLAYBACK))
-    {
-	OSStatus ostatus;
-	Float32 volume = *(unsigned*)pval;
+    if (cap == PJMEDIA_AUD_DEV_CAP_EC) {
+        AudioComponentDescription desc;
+        AudioComponent io_comp;
 
-	/* Output volume setting */
-	volume /= 100.0;
-	ostatus = AudioUnitSetProperty (strm->io_units[1] ? strm->io_units[1] :
-					strm->io_units[0],
-					kAudioDevicePropertyVolumeScalar,
-	                                kAudioUnitScope_Output,
-	                                0,
-	                                &volume,
-	                                sizeof(Float32));
-	if (ostatus != noErr) {
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
-	strm->param.output_vol = *(unsigned*)pval;
-	return PJ_SUCCESS;
+        desc.componentType = kAudioUnitType_Output;
+        desc.componentSubType = (*(pj_bool_t*)pval) ?
+                                  kAudioUnitSubType_VoiceProcessingIO :
+#    if COREAUDIO_MAC
+                                  kAudioUnitSubType_HALOutput;
+#    else
+                                  kAudioUnitSubType_RemoteIO;
+#    endif
+        desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+        desc.componentFlags = 0;
+        desc.componentFlagsMask = 0;
+
+        io_comp = AudioComponentFindNext(NULL, &desc);
+        if (io_comp == NULL)
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(-1);
+        strm->cf->io_comp = io_comp;
+        strm->param.ec_enabled = *(pj_bool_t*)pval;
+
+        PJ_LOG(4,
+               (THIS_FILE, "Using %s audio unit",
+                (desc.componentSubType == kAudioUnitSubType_VoiceProcessingIO ?
+                   "VoiceProcessingIO" :
+                   "default")));
+
+        return PJ_SUCCESS;
+    }
+#    if COREAUDIO_MAC
+    else if (cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
+             (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+    {
+        OSStatus ostatus;
+        Float32 volume = *(unsigned*)pval;
+
+        /* Output volume setting */
+        volume /= 100.0;
+        ostatus = AudioUnitSetProperty(
+          strm->io_units[1] ? strm->io_units[1] : strm->io_units[0],
+          kAudioDevicePropertyVolumeScalar, kAudioUnitScope_Output, 0, &volume,
+          sizeof(Float32));
+        if (ostatus != noErr) {
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
+        strm->param.output_vol = *(unsigned*)pval;
+        return PJ_SUCCESS;
     }
 
-#else
-    else if ((cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
-	 (strm->param.dir & PJMEDIA_DIR_CAPTURE)) ||
-	(cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY &&
-	 (strm->param.dir & PJMEDIA_DIR_PLAYBACK)))
+#    else
+    else if ((cap == PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
+              (strm->param.dir & PJMEDIA_DIR_CAPTURE)) ||
+             (cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY &&
+              (strm->param.dir & PJMEDIA_DIR_PLAYBACK)))
     {
-	NSTimeInterval duration = *(unsigned *)pval;
-	unsigned latency;
+        NSTimeInterval duration = *(unsigned*)pval;
+        unsigned latency;
 
-	/* For low-latency audio streaming, you can set this value to
-	 * as low as 5 ms (the default is 23ms). However, lowering the
-	 * latency may cause a decrease in audio quality.
-	 */
-	duration /= 1000;
-	if ([strm->sess setPreferredIOBufferDuration:duration error:nil]
-            != YES)
+        /* For low-latency audio streaming, you can set this value to
+         * as low as 5 ms (the default is 23ms). However, lowering the
+         * latency may cause a decrease in audio quality.
+         */
+        duration /= 1000;
+        if ([strm->sess setPreferredIOBufferDuration:duration error:nil] != YES)
         {
-	    PJ_LOG(4, (THIS_FILE,
-		       "Error: cannot set the preferred buffer duration"));
-	    return PJMEDIA_EAUD_INVOP;
-	}
-	
-	ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY, &latency);
-	ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY, &latency);
-	
-	return PJ_SUCCESS;
+            PJ_LOG(4, (THIS_FILE,
+                       "Error: cannot set the preferred buffer duration"));
+            return PJMEDIA_EAUD_INVOP;
+        }
+
+        ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY, &latency);
+        ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY, &latency);
+
+        return PJ_SUCCESS;
     }
 
-#if USE_AUDIO_SESSION_API != 0
+#        if USE_AUDIO_SESSION_API != 0
 
-    else if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE &&
-	       (strm->param.dir & PJMEDIA_DIR_CAPTURE))
+    else if (cap == PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE &&
+             (strm->param.dir & PJMEDIA_DIR_CAPTURE))
     {
-	UInt32 btooth = *(pjmedia_aud_dev_route*)pval ==
-		        PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH ? 1 : 0;
-	OSStatus ostatus;
+        UInt32 btooth =
+          *(pjmedia_aud_dev_route*)pval == PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH ? 1 :
+                                                                             0;
+        OSStatus ostatus;
 
-	ostatus = AudioSessionSetProperty (
-	    kAudioSessionProperty_OverrideCategoryEnableBluetoothInput,
-	    sizeof(btooth), &btooth);
-	if (ostatus != kAudioSessionNoError) {
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
-	strm->param.input_route = *(pjmedia_aud_dev_route*)pval;
-	return PJ_SUCCESS;
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE &&
-	       (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+        ostatus = AudioSessionSetProperty(
+          kAudioSessionProperty_OverrideCategoryEnableBluetoothInput,
+          sizeof(btooth), &btooth);
+        if (ostatus != kAudioSessionNoError) {
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
+        strm->param.input_route = *(pjmedia_aud_dev_route*)pval;
+        return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE &&
+               (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
-	OSStatus ostatus;
-	UInt32 route = *(pjmedia_aud_dev_route*)pval ==
-		       PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER ?
-		       kAudioSessionOverrideAudioRoute_Speaker :
-		       kAudioSessionOverrideAudioRoute_None;
+        OSStatus ostatus;
+        UInt32 route =
+          *(pjmedia_aud_dev_route*)pval == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER ?
+            kAudioSessionOverrideAudioRoute_Speaker :
+            kAudioSessionOverrideAudioRoute_None;
 
-	ostatus = AudioSessionSetProperty (
-	    kAudioSessionProperty_OverrideAudioRoute,
-	    sizeof(route), &route);
-	if (ostatus != kAudioSessionNoError) {
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
-	strm->param.output_route = *(pjmedia_aud_dev_route*)pval;
-	return PJ_SUCCESS;
+        ostatus = AudioSessionSetProperty(
+          kAudioSessionProperty_OverrideAudioRoute, sizeof(route), &route);
+        if (ostatus != kAudioSessionNoError) {
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
+        strm->param.output_route = *(pjmedia_aud_dev_route*)pval;
+        return PJ_SUCCESS;
     }
-#endif
-#endif
+#        endif
+#    endif
 
     return PJMEDIA_EAUD_INVCAP;
 }
 
 /* API: Start stream. */
-static pj_status_t ca_stream_start(pjmedia_aud_stream *strm)
+static pj_status_t ca_stream_start(pjmedia_aud_stream* strm)
 {
-    struct coreaudio_stream *stream = (struct coreaudio_stream*)strm;
+    struct coreaudio_stream* stream = (struct coreaudio_stream*)strm;
     OSStatus ostatus;
     UInt32 i;
 
     if (stream->running)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     stream->quit_flag = 0;
     stream->interrupted = PJ_FALSE;
@@ -2170,25 +2040,26 @@ static pj_status_t ca_stream_start(pjmedia_aud_stream *strm)
     stream->resample_buf_count = 0;
 
     if (stream->resample) {
-	ostatus = AudioConverterReset(stream->resample);
-	if (ostatus != noErr)
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        ostatus = AudioConverterReset(stream->resample);
+        if (ostatus != noErr)
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
 
-#if !COREAUDIO_MAC
+#    if !COREAUDIO_MAC
     if ([stream->sess setActive:true error:nil] != YES) {
-	PJ_LOG(4, (THIS_FILE, "Warning: cannot activate audio session"));
+        PJ_LOG(4, (THIS_FILE, "Warning: cannot activate audio session"));
     }
-#endif
-    
+#    endif
+
     for (i = 0; i < 2; i++) {
-	if (stream->io_units[i] == NULL) break;
-	ostatus = AudioOutputUnitStart(stream->io_units[i]);
-	if (ostatus != noErr) {
-	    if (i == 1)
-		AudioOutputUnitStop(stream->io_units[0]);
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        if (stream->io_units[i] == NULL)
+            break;
+        ostatus = AudioOutputUnitStart(stream->io_units[i]);
+        if (ostatus != noErr) {
+            if (i == 1)
+                AudioOutputUnitStop(stream->io_units[0]);
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
     }
 
     stream->running = PJ_TRUE;
@@ -2199,25 +2070,26 @@ static pj_status_t ca_stream_start(pjmedia_aud_stream *strm)
 }
 
 /* API: Stop stream. */
-static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm)
+static pj_status_t ca_stream_stop(pjmedia_aud_stream* strm)
 {
-    struct coreaudio_stream *stream = (struct coreaudio_stream*)strm;
+    struct coreaudio_stream* stream = (struct coreaudio_stream*)strm;
     OSStatus ostatus;
     unsigned i;
     int should_deactivate;
     struct stream_list *it, *itBegin;
 
     if (!stream->running)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     for (i = 0; i < 2; i++) {
-	if (stream->io_units[i] == NULL) break;
-	ostatus = AudioOutputUnitStop(stream->io_units[i]);
-	if (ostatus != noErr) {
-	    if (i == 0 && stream->io_units[1])
-		AudioOutputUnitStop(stream->io_units[1]);
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-	}
+        if (stream->io_units[i] == NULL)
+            break;
+        ostatus = AudioOutputUnitStop(stream->io_units[i]);
+        if (ostatus != noErr) {
+            if (i == 0 && stream->io_units[1])
+                AudioOutputUnitStop(stream->io_units[1]);
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+        }
     }
 
     /* Check whether we need to deactivate the audio session. */
@@ -2228,29 +2100,30 @@ static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm)
     should_deactivate = PJ_TRUE;
     itBegin = &stream->cf->streams;
     for (it = itBegin->next; it != itBegin; it = it->next) {
-	if (it->stream->running) {
-	    should_deactivate = PJ_FALSE;
-	    break;
-	}
+        if (it->stream->running) {
+            should_deactivate = PJ_FALSE;
+            break;
+        }
     }
     pj_mutex_unlock(stream->cf->mutex);
 
-#if !COREAUDIO_MAC && SETUP_AV_AUDIO_SESSION
+#    if !COREAUDIO_MAC && SETUP_AV_AUDIO_SESSION
     if (should_deactivate) {
-        if ([stream->sess 
-             respondsToSelector:@selector(setActive:withOptions:error:)])
-        {
-  	    [stream->sess setActive:NO
-  	    withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation 
-  	    error:nil];
-	} else {
-	    if ([stream->sess setActive:NO error:nil] != YES) {
-            	PJ_LOG(4, (THIS_FILE, "Warning: cannot deactivate "
-            			      "audio session"));
+        if ([stream->sess respondsToSelector:@selector(setActive:
+                                                     withOptions:error:)]) {
+            [stream->sess
+                setActive:NO
+              withOptions:
+                AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
+                    error:nil];
+        } else {
+            if ([stream->sess setActive:NO error:nil] != YES) {
+                PJ_LOG(4, (THIS_FILE, "Warning: cannot deactivate "
+                                      "audio session"));
             }
         }
     }
-#endif
+#    endif
 
     stream->quit_flag = 1;
     stream->play_thread_initialized = 0;
@@ -2263,11 +2136,10 @@ static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm)
     return PJ_SUCCESS;
 }
 
-
 /* API: Destroy stream. */
-static pj_status_t ca_stream_destroy(pjmedia_aud_stream *strm)
+static pj_status_t ca_stream_destroy(pjmedia_aud_stream* strm)
 {
-    struct coreaudio_stream *stream = (struct coreaudio_stream*)strm;
+    struct coreaudio_stream* stream = (struct coreaudio_stream*)strm;
     unsigned i;
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
@@ -2275,19 +2147,19 @@ static pj_status_t ca_stream_destroy(pjmedia_aud_stream *strm)
     ca_stream_stop(strm);
 
     for (i = 0; i < 2; i++) {
-	if (stream->io_units[i]) {
-	    AudioUnitUninitialize(stream->io_units[i]);
-	    AudioComponentInstanceDispose(stream->io_units[i]);
-	    stream->io_units[i] = NULL;
-	}
+        if (stream->io_units[i]) {
+            AudioUnitUninitialize(stream->io_units[i]);
+            AudioComponentInstanceDispose(stream->io_units[i]);
+            stream->io_units[i] = NULL;
+        }
     }
 
     if (stream->resample)
-	AudioConverterDispose(stream->resample);
+        AudioConverterDispose(stream->resample);
 
     pj_mutex_lock(stream->cf->mutex);
     if (!pj_list_empty(&stream->list_entry))
-	pj_list_erase(&stream->list_entry);
+        pj_list_erase(&stream->list_entry);
     pj_mutex_unlock(stream->cf->mutex);
 
     pj_pool_release(stream->pool);
@@ -2295,4 +2167,4 @@ static pj_status_t ca_stream_destroy(pjmedia_aud_stream *strm)
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_AUDIO_DEV_HAS_COREAUDIO */
+#endif /* PJMEDIA_AUDIO_DEV_HAS_COREAUDIO */

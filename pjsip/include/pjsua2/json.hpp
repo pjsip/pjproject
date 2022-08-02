@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -44,9 +43,8 @@ using std::string;
 /**
  * Persistent document (file) with JSON format.
  */
-class JsonDocument : public PersistentDocument
-{
-public:
+class JsonDocument : public PersistentDocument {
+   public:
     /** Default constructor */
     JsonDocument();
 
@@ -58,21 +56,21 @@ public:
      *
      * @param filename		The file name.
      */
-    virtual void   loadFile(const string &filename) PJSUA2_THROW(Error);
+    virtual void loadFile(const string& filename) PJSUA2_THROW(Error);
 
     /**
      * Load this document from string.
      *
      * @param input		The string.
      */
-    virtual void   loadString(const string &input) PJSUA2_THROW(Error);
+    virtual void loadString(const string& input) PJSUA2_THROW(Error);
 
     /**
      * Write this document to a file.
      *
      * @param filename		The file name.
      */
-    virtual void   saveFile(const string &filename) PJSUA2_THROW(Error);
+    virtual void saveFile(const string& filename) PJSUA2_THROW(Error);
 
     /**
      * Write this document to string.
@@ -82,35 +80,31 @@ public:
     /**
      * Get the root container node for this document
      */
-    virtual ContainerNode & getRootContainer() const;
+    virtual ContainerNode& getRootContainer() const;
 
     /**
      * An internal function to create JSON element.
      */
-    pj_json_elem*    allocElement() const;
+    pj_json_elem* allocElement() const;
 
     /**
      * An internal function to get the pool.
      */
-    pj_pool_t*	     getPool();
+    pj_pool_t* getPool();
 
-private:
-    pj_caching_pool	  cp;
+   private:
+    pj_caching_pool cp;
     mutable ContainerNode rootNode;
-    mutable pj_json_elem *root;
-    mutable pj_pool_t	 *pool;
+    mutable pj_json_elem* root;
+    mutable pj_pool_t* pool;
 
     void initRoot() const;
 };
-
-
-
 
 /**
  * @}  PJSUA2
  */
 
-} // namespace pj
+}  // namespace pj
 
-
-#endif	/* __PJSUA2_JSON_HPP__ */
+#endif /* __PJSUA2_JSON_HPP__ */

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/event.h>
 #include <pjmedia/errno.h>
@@ -25,7 +24,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#define THIS_FILE	"event.c"
+#define THIS_FILE  "event.c"
 
 #define MAX_EVENTS 16
 
@@ -33,9 +32,9 @@
 // #define EVENT_TRACE
 
 #ifdef EVENT_TRACE
-    #define TRACE_(arg)	PJ_LOG(4, arg)
+#    define TRACE_(arg) PJ_LOG(4, arg)
 #else
-    #define TRACE_(arg)
+#    define TRACE_(arg)
 #endif
 
 typedef struct esub esub;
@@ -44,47 +43,47 @@ struct esub
 {
     PJ_DECL_LIST_MEMBER(esub);
 
-    pjmedia_event_cb    *cb;
-    void                *user_data;
-    void                *epub;
+    pjmedia_event_cb* cb;
+    void* user_data;
+    void* epub;
 };
 
 typedef struct event_queue
 {
-    pjmedia_event   events[MAX_EVENTS]; /**< array of events.           */
-    int             head, tail;
-    pj_bool_t       is_full;
+    pjmedia_event events[MAX_EVENTS]; /**< array of events.           */
+    int head, tail;
+    pj_bool_t is_full;
 } event_queue;
 
 struct pjmedia_event_mgr
 {
-    pj_pool_t      *pool;
-    pj_thread_t    *thread;             /**< worker thread.             */
-    pj_bool_t       is_quitting;
-    pj_sem_t       *sem;
-    pj_mutex_t     *mutex;
-    pj_mutex_t     *cb_mutex;
-    event_queue     ev_queue;
-    event_queue    *pub_ev_queue;       /**< publish() event queue.     */
-    esub            esub_list;          /**< list of subscribers.       */
-    esub            free_esub_list;     /**< list of subscribers.       */
-    esub           *th_next_sub,        /**< worker thread's next sub.  */
-                   *pub_next_sub;       /**< publish() next sub.        */
+    pj_pool_t* pool;
+    pj_thread_t* thread; /**< worker thread.             */
+    pj_bool_t is_quitting;
+    pj_sem_t* sem;
+    pj_mutex_t* mutex;
+    pj_mutex_t* cb_mutex;
+    event_queue ev_queue;
+    event_queue* pub_ev_queue; /**< publish() event queue.     */
+    esub esub_list;            /**< list of subscribers.       */
+    esub free_esub_list;       /**< list of subscribers.       */
+    esub *th_next_sub,         /**< worker thread's next sub.  */
+      *pub_next_sub;           /**< publish() next sub.        */
 };
 
-static pjmedia_event_mgr *event_manager_instance;
+static pjmedia_event_mgr* event_manager_instance;
 
 static pj_status_t event_queue_add_event(event_queue* ev_queue,
-                                         pjmedia_event *event)
+                                         pjmedia_event* event)
 {
     if (ev_queue->is_full) {
         char ev_name[5];
 
         /* This event will be ignored. */
-        PJ_LOG(4, (THIS_FILE, "Lost event %s from publisher [0x%p] "
-                              "due to full queue.",
-                              pjmedia_fourcc_name(event->type, ev_name),
-                              event->epub));
+        PJ_LOG(4, (THIS_FILE,
+                   "Lost event %s from publisher [0x%p] "
+                   "due to full queue.",
+                   pjmedia_fourcc_name(event->type, ev_name), event->epub));
 
         return PJ_ETOOMANY;
     }
@@ -97,27 +96,27 @@ static pj_status_t event_queue_add_event(event_queue* ev_queue,
     return PJ_SUCCESS;
 }
 
-static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
-                                               event_queue *ev_queue,
-                                               esub **next_sub,
+static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr* mgr,
+                                               event_queue* ev_queue,
+                                               esub** next_sub,
                                                pj_bool_t rls_lock)
 {
     pj_status_t err = PJ_SUCCESS;
-    esub * sub = mgr->esub_list.next;
-    pjmedia_event *ev = &ev_queue->events[ev_queue->head];
+    esub* sub = mgr->esub_list.next;
+    pjmedia_event* ev = &ev_queue->events[ev_queue->head];
     unsigned i = 0;
 
     while (sub != &mgr->esub_list) {
         *next_sub = sub->next;
 
-        /* Check if the subscriber is interested in 
+        /* Check if the subscriber is interested in
          * receiving the event from the publisher.
          */
         if (sub->epub == ev->epub || !sub->epub) {
-            pjmedia_event_cb *cb = sub->cb;
-            void *user_data = sub->user_data;
+            pjmedia_event_cb* cb = sub->cb;
+            void* user_data = sub->user_data;
             pj_status_t status;
-            
+
             if (rls_lock) {
                 /* To make sure that event unsubscription waits
                  * until the callback completes.
@@ -126,20 +125,22 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
                 pj_mutex_unlock(mgr->mutex);
             }
 
-	    TRACE_((THIS_FILE, "Distributing event %d sub->epub %p ev->epub %p "
-	    	   "user data %p", i, sub->epub, ev->epub, sub->user_data));
+            TRACE_((THIS_FILE,
+                    "Distributing event %d sub->epub %p ev->epub %p "
+                    "user data %p",
+                    i, sub->epub, ev->epub, sub->user_data));
 
             status = (*cb)(ev, user_data);
             if (status != PJ_SUCCESS && err == PJ_SUCCESS)
-	        err = status;
+                err = status;
 
             if (rls_lock) {
                 pj_mutex_unlock(mgr->cb_mutex);
                 pj_mutex_lock(mgr->mutex);
             }
         }
-	sub = *next_sub;
-	i++;
+        sub = *next_sub;
+        i++;
     }
     *next_sub = NULL;
 
@@ -150,48 +151,47 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
 }
 
 /* Event worker thread function. */
-static int event_worker_thread(void *arg)
+static int event_worker_thread(void* arg)
 {
-    pjmedia_event_mgr *mgr = (pjmedia_event_mgr *)arg;
+    pjmedia_event_mgr* mgr = (pjmedia_event_mgr*)arg;
 
     while (1) {
-	/* Wait until there is an event. */
+        /* Wait until there is an event. */
         pj_sem_wait(mgr->sem);
 
         if (mgr->is_quitting)
             break;
 
         pj_mutex_lock(mgr->mutex);
-        event_mgr_distribute_events(mgr, &mgr->ev_queue,
-                                    &mgr->th_next_sub, PJ_TRUE);
+        event_mgr_distribute_events(mgr, &mgr->ev_queue, &mgr->th_next_sub,
+                                    PJ_TRUE);
         pj_mutex_unlock(mgr->mutex);
     }
 
     return 0;
 }
 
-PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
-                                             unsigned options,
-				             pjmedia_event_mgr **p_mgr)
+PJ_DEF(pj_status_t)
+pjmedia_event_mgr_create(pj_pool_t* pool, unsigned options,
+                         pjmedia_event_mgr** p_mgr)
 {
-    pjmedia_event_mgr *mgr;
+    pjmedia_event_mgr* mgr;
     pj_status_t status;
 
     mgr = PJ_POOL_ZALLOC_T(pool, pjmedia_event_mgr);
-    mgr->pool = pj_pool_create(pool->factory, "evt mgr",
-                            PJMEDIA_POOL_LEN_EVTMGR,
-                            PJMEDIA_POOL_INC_EVTMGR, NULL);
+    mgr->pool =
+      pj_pool_create(pool->factory, "evt mgr", PJMEDIA_POOL_LEN_EVTMGR,
+                     PJMEDIA_POOL_INC_EVTMGR, NULL);
     pj_list_init(&mgr->esub_list);
     pj_list_init(&mgr->free_esub_list);
 
     if (!(options & PJMEDIA_EVENT_MGR_NO_THREAD)) {
-        status = pj_sem_create(mgr->pool, "ev_sem", 0, MAX_EVENTS + 1,
-                               &mgr->sem);
+        status =
+          pj_sem_create(mgr->pool, "ev_sem", 0, MAX_EVENTS + 1, &mgr->sem);
         if (status != PJ_SUCCESS)
             return status;
 
-        status = pj_thread_create(mgr->pool, "ev_thread",
-                                  &event_worker_thread,
+        status = pj_thread_create(mgr->pool, "ev_thread", &event_worker_thread,
                                   mgr, 0, 0, &mgr->thread);
         if (status != PJ_SUCCESS) {
             pjmedia_event_mgr_destroy(mgr);
@@ -205,18 +205,18 @@ PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
         return status;
     }
 
-    status = pj_mutex_create_recursive(mgr->pool, "ev_cb_mutex",
-    				       &mgr->cb_mutex);
+    status =
+      pj_mutex_create_recursive(mgr->pool, "ev_cb_mutex", &mgr->cb_mutex);
     if (status != PJ_SUCCESS) {
         pjmedia_event_mgr_destroy(mgr);
         return status;
     }
 
     if (!event_manager_instance)
-	event_manager_instance = mgr;
+        event_manager_instance = mgr;
 
     if (p_mgr)
-	*p_mgr = mgr;
+        *p_mgr = mgr;
 
     return PJ_SUCCESS;
 }
@@ -226,15 +226,16 @@ PJ_DEF(pjmedia_event_mgr*) pjmedia_event_mgr_instance(void)
     return event_manager_instance;
 }
 
-PJ_DEF(void) pjmedia_event_mgr_set_instance(pjmedia_event_mgr *mgr)
+PJ_DEF(void) pjmedia_event_mgr_set_instance(pjmedia_event_mgr* mgr)
 {
     event_manager_instance = mgr;
 }
 
-PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr)
+PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr* mgr)
 {
-    if (!mgr) mgr = pjmedia_event_mgr_instance();
-    PJ_ASSERT_ON_FAIL(mgr != NULL, return);
+    if (!mgr)
+        mgr = pjmedia_event_mgr_instance();
+    PJ_ASSERT_ON_FAIL(mgr != NULL, return );
 
     if (mgr->thread) {
         mgr->is_quitting = PJ_TRUE;
@@ -261,32 +262,31 @@ PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr)
         pj_pool_release(mgr->pool);
 
     if (event_manager_instance == mgr)
-	event_manager_instance = NULL;
+        event_manager_instance = NULL;
 }
 
-PJ_DEF(void) pjmedia_event_init( pjmedia_event *event,
-                                 pjmedia_event_type type,
-                                 const pj_timestamp *ts,
-                                 const void *src)
+PJ_DEF(void)
+pjmedia_event_init(pjmedia_event* event, pjmedia_event_type type,
+                   const pj_timestamp* ts, const void* src)
 {
     pj_bzero(event, sizeof(*event));
     event->type = type;
     if (ts)
-	event->timestamp.u64 = ts->u64;
+        event->timestamp.u64 = ts->u64;
     event->epub = event->src = src;
 }
 
-PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
-                                             pjmedia_event_cb *cb,
-                                             void *user_data,
-                                             void *epub)
+PJ_DEF(pj_status_t)
+pjmedia_event_subscribe(pjmedia_event_mgr* mgr, pjmedia_event_cb* cb,
+                        void* user_data, void* epub)
 {
-    esub *sub;
+    esub* sub;
     unsigned i = 0;
 
     PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
-    if (!mgr) mgr = pjmedia_event_mgr_instance();
+    if (!mgr)
+        mgr = pjmedia_event_mgr_instance();
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
     pj_mutex_lock(mgr->mutex);
@@ -296,15 +296,13 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
      */
     sub = mgr->esub_list.next;
     while (sub != &mgr->esub_list) {
-	esub *next = sub->next;
-        if (sub->cb == cb && sub->user_data == user_data &&
-            sub->epub == epub)
-        {
+        esub* next = sub->next;
+        if (sub->cb == cb && sub->user_data == user_data && sub->epub == epub) {
             pj_mutex_unlock(mgr->mutex);
             return PJ_SUCCESS;
         }
-	sub = next;
-	i++;
+        sub = next;
+        i++;
     }
 
     if (mgr->free_esub_list.next != &mgr->free_esub_list) {
@@ -317,8 +315,10 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
     sub->epub = epub;
     pj_list_push_back(&mgr->esub_list, sub);
 
-    TRACE_((THIS_FILE, "Media event: subscribing event %d epub %p "
-    		       "user data %p", i, epub, user_data));
+    TRACE_((THIS_FILE,
+            "Media event: subscribing event %d epub %p "
+            "user data %p",
+            i, epub, user_data));
 
     pj_mutex_unlock(mgr->mutex);
 
@@ -326,33 +326,32 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
 }
 
 PJ_DEF(pj_status_t)
-pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
-                          pjmedia_event_cb *cb,
-                          void *user_data,
-                          void *epub)
+pjmedia_event_unsubscribe(pjmedia_event_mgr* mgr, pjmedia_event_cb* cb,
+                          void* user_data, void* epub)
 {
-    esub *sub;
+    esub* sub;
     unsigned i = 0, j = 0;
 
     PJ_UNUSED_ARG(j);
     PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
-    if (!mgr) mgr = pjmedia_event_mgr_instance();
+    if (!mgr)
+        mgr = pjmedia_event_mgr_instance();
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
-    while(1) {
-    	pj_mutex_lock(mgr->mutex);
-    	if (pj_mutex_trylock(mgr->cb_mutex) == PJ_SUCCESS)
-    	    break;
-    	
-    	/* The callback is currently being called, wait for a while. */
-    	pj_mutex_unlock(mgr->mutex);
-    	pj_thread_sleep(10);
+    while (1) {
+        pj_mutex_lock(mgr->mutex);
+        if (pj_mutex_trylock(mgr->cb_mutex) == PJ_SUCCESS)
+            break;
+
+        /* The callback is currently being called, wait for a while. */
+        pj_mutex_unlock(mgr->mutex);
+        pj_thread_sleep(10);
     }
 
     sub = mgr->esub_list.next;
     while (sub != &mgr->esub_list) {
-	esub *next = sub->next;
+        esub* next = sub->next;
         if (sub->cb == cb && (sub->user_data == user_data || !user_data) &&
             (sub->epub == epub || !epub))
         {
@@ -370,12 +369,14 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
             if (user_data && epub)
                 break;
         }
-	sub = next;
-	i++;
+        sub = next;
+        i++;
     }
 
-    TRACE_((THIS_FILE, "Media event: unsubscribing event %d/%d epub %p "
-    		       "user data %p", j, i, epub, user_data));
+    TRACE_((THIS_FILE,
+            "Media event: unsubscribing event %d/%d epub %p "
+            "user data %p",
+            j, i, epub, user_data));
 
     pj_mutex_unlock(mgr->cb_mutex);
     pj_mutex_unlock(mgr->mutex);
@@ -383,16 +384,16 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjmedia_event_publish( pjmedia_event_mgr *mgr,
-                                           void *epub,
-                                           pjmedia_event *event,
-                                           pjmedia_event_publish_flag flag)
+PJ_DEF(pj_status_t)
+pjmedia_event_publish(pjmedia_event_mgr* mgr, void* epub, pjmedia_event* event,
+                      pjmedia_event_publish_flag flag)
 {
     pj_status_t err = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(epub && event, PJ_EINVAL);
 
-    if (!mgr) mgr = pjmedia_event_mgr_instance();
+    if (!mgr)
+        mgr = pjmedia_event_mgr_instance();
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
     event->epub = epub;
@@ -421,12 +422,11 @@ PJ_DEF(pj_status_t) pjmedia_event_publish( pjmedia_event_mgr *mgr,
             event_queue_add_event(mgr->pub_ev_queue, event);
 
             do {
-                status = event_mgr_distribute_events(mgr, mgr->pub_ev_queue,
-                                                     &mgr->pub_next_sub,
-                                                     PJ_FALSE);
+                status = event_mgr_distribute_events(
+                  mgr, mgr->pub_ev_queue, &mgr->pub_next_sub, PJ_FALSE);
                 if (status != PJ_SUCCESS && err == PJ_SUCCESS)
-	            err = status;
-            } while(ev_queue.head != ev_queue.tail || ev_queue.is_full);
+                    err = status;
+            } while (ev_queue.head != ev_queue.tail || ev_queue.is_full);
 
             mgr->pub_ev_queue = NULL;
         }

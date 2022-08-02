@@ -24,8 +24,8 @@
 
 @interface ipjsuaAppDelegate : UIResponder <UIApplicationDelegate>
 
-@property (strong, nonatomic) UIWindow *window;
+@property(strong, nonatomic) UIWindow* window;
 
-@property (strong, nonatomic) ipjsuaViewController *viewController;
+@property(strong, nonatomic) ipjsuaViewController* viewController;
 
 @end

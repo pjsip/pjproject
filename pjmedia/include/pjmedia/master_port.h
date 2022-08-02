@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_MASTER_PORT_H__
 #define __PJMEDIA_MASTER_PORT_H__
-
 
 /**
  * @file master_port.h
@@ -35,7 +33,7 @@
  *
  * A master port has two media ports connected to it, and by convention
  * thay are called downstream and upstream ports. The media stream flowing to
- * the downstream port is called encoding or send direction, and media stream 
+ * the downstream port is called encoding or send direction, and media stream
  * flowing to the upstream port is called decoding or receive direction
  * (imagine the downstream as stream to remote endpoint, and upstream as
  * local media port; media flowing to remote endpoint (downstream) will need
@@ -52,19 +50,17 @@
  *    from upstream port and give it to the downstream port).
  *
  * Because master port enables media stream to flow automatically, it is
- * said that the master port supplies @ref PJMEDIA_PORT_CLOCK to the 
+ * said that the master port supplies @ref PJMEDIA_PORT_CLOCK to the
  * media ports interconnection.
  *
  */
 
 PJ_BEGIN_DECL
 
-
 /**
  * Opaque declaration for master port.
  */
 typedef struct pjmedia_master_port pjmedia_master_port;
-
 
 /**
  * Create a master port.
@@ -78,12 +74,10 @@ typedef struct pjmedia_master_port pjmedia_master_port;
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_master_port_create(pj_pool_t *pool,
-						pjmedia_port *u_port,
-						pjmedia_port *d_port,
-						unsigned options,
-						pjmedia_master_port **p_m);
-
+PJ_DECL(pj_status_t)
+pjmedia_master_port_create(pj_pool_t* pool, pjmedia_port* u_port,
+                           pjmedia_port* d_port, unsigned options,
+                           pjmedia_master_port** p_m);
 
 /**
  * Start the media flow.
@@ -92,8 +86,7 @@ PJ_DECL(pj_status_t) pjmedia_master_port_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_master_port_start(pjmedia_master_port *m);
-
+PJ_DECL(pj_status_t) pjmedia_master_port_start(pjmedia_master_port* m);
 
 /**
  * Stop the media flow.
@@ -102,8 +95,7 @@ PJ_DECL(pj_status_t) pjmedia_master_port_start(pjmedia_master_port *m);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m);
-
+PJ_DECL(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port* m);
 
 /**
  * Poll the master port clock and execute the callback when the clock tick has
@@ -113,17 +105,16 @@ PJ_DECL(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m);
  * @param m		    The master port.
  * @param wait		    If non-zero, then the function will block until
  *			    a clock tick elapsed and callback has been called.
- * @param ts		    Optional argument to receive the current 
+ * @param ts		    Optional argument to receive the current
  *			    timestamp.
  *
  * @return		    Non-zero if clock tick has elapsed, or FALSE if
  *			    the function returns before a clock tick has
  *			    elapsed.
  */
-PJ_DECL(pj_bool_t) pjmedia_master_port_wait(pjmedia_master_port *m,
-					    pj_bool_t wait,
-					    pj_timestamp *ts);
-
+PJ_DECL(pj_bool_t)
+pjmedia_master_port_wait(pjmedia_master_port* m, pj_bool_t wait,
+                         pj_timestamp* ts);
 
 /**
  * Change the upstream port. Note that application is responsible to destroy
@@ -135,9 +126,8 @@ PJ_DECL(pj_bool_t) pjmedia_master_port_wait(pjmedia_master_port *m,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_master_port_set_uport(pjmedia_master_port *m,
-						   pjmedia_port *port);
-
+PJ_DECL(pj_status_t)
+pjmedia_master_port_set_uport(pjmedia_master_port* m, pjmedia_port* port);
 
 /**
  * Get the upstream port.
@@ -146,8 +136,7 @@ PJ_DECL(pj_status_t) pjmedia_master_port_set_uport(pjmedia_master_port *m,
  *
  * @return		The upstream port.
  */
-PJ_DECL(pjmedia_port*) pjmedia_master_port_get_uport(pjmedia_master_port*m);
-
+PJ_DECL(pjmedia_port*) pjmedia_master_port_get_uport(pjmedia_master_port* m);
 
 /**
  * Change the downstream port. Note that application is responsible to destroy
@@ -159,9 +148,8 @@ PJ_DECL(pjmedia_port*) pjmedia_master_port_get_uport(pjmedia_master_port*m);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_master_port_set_dport(pjmedia_master_port *m,
-						   pjmedia_port *port);
-
+PJ_DECL(pj_status_t)
+pjmedia_master_port_set_dport(pjmedia_master_port* m, pjmedia_port* port);
 
 /**
  * Get the downstream port.
@@ -170,11 +158,10 @@ PJ_DECL(pj_status_t) pjmedia_master_port_set_dport(pjmedia_master_port *m,
  *
  * @return		The downstream port.
  */
-PJ_DECL(pjmedia_port*) pjmedia_master_port_get_dport(pjmedia_master_port*m);
-
+PJ_DECL(pjmedia_port*) pjmedia_master_port_get_dport(pjmedia_master_port* m);
 
 /**
- * Destroy the master port, and optionally destroy the upstream and 
+ * Destroy the master port, and optionally destroy the upstream and
  * downstream ports.
  *
  * @param m		The master port.
@@ -183,10 +170,8 @@ PJ_DECL(pjmedia_port*) pjmedia_master_port_get_dport(pjmedia_master_port*m);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_master_port_destroy(pjmedia_master_port *m,
-						 pj_bool_t destroy_ports);
-
-
+PJ_DECL(pj_status_t)
+pjmedia_master_port_destroy(pjmedia_master_port* m, pj_bool_t destroy_ports);
 
 PJ_END_DECL
 
@@ -194,6 +179,4 @@ PJ_END_DECL
  * @}
  */
 
-
-#endif	/* __PJMEDIA_MASTER_PORT_H__ */
-
+#endif /* __PJMEDIA_MASTER_PORT_H__ */

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_URI_H__
 #define __PJSIP_SIP_URI_H__
@@ -32,7 +31,6 @@
 #include <pjlib-util/scanner.h>
 
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup PJSIP_URI URI
@@ -52,11 +50,10 @@ PJ_BEGIN_DECL
  */
 typedef struct pjsip_param
 {
-    PJ_DECL_LIST_MEMBER(struct pjsip_param);	/**< Generic list member.   */
-    pj_str_t	    name;			/**< Param/header name.	    */
-    pj_str_t	    value;			/**< Param/header value.    */
+    PJ_DECL_LIST_MEMBER(struct pjsip_param); /**< Generic list member.   */
+    pj_str_t name;                           /**< Param/header name.	    */
+    pj_str_t value;                          /**< Param/header value.    */
 } pjsip_param;
-
 
 /**
  * Find the specified parameter name in the list. The name will be compared
@@ -67,15 +64,14 @@ typedef struct pjsip_param
  *
  * @return		The parameter if found, or NULL.
  */
-PJ_DECL(pjsip_param*) pjsip_param_find( const pjsip_param *param_list,
-					const pj_str_t *name );
-
+PJ_DECL(pjsip_param*)
+pjsip_param_find(const pjsip_param* param_list, const pj_str_t* name);
 
 /**
  * Alias for pjsip_param_find()
  */
-PJ_INLINE(pjsip_param*) pjsip_param_cfind(const pjsip_param *param_list,
-					  const pj_str_t *name)
+PJ_INLINE(pjsip_param*)
+pjsip_param_cfind(const pjsip_param* param_list, const pj_str_t* name)
 {
     return pjsip_param_find(param_list, name);
 }
@@ -91,9 +87,9 @@ PJ_INLINE(pjsip_param*) pjsip_param_cfind(const pjsip_param *param_list,
  * @return		Zero if the parameter list are equal, non-zero
  * 			otherwise.
  */
-PJ_DECL(int) pjsip_param_cmp(const pjsip_param *param_list1,
-			     const pjsip_param *param_list2,
-			     pj_bool_t ig_nf);
+PJ_DECL(int)
+pjsip_param_cmp(const pjsip_param* param_list1, const pjsip_param* param_list2,
+                pj_bool_t ig_nf);
 
 /**
  * Duplicate the parameters.
@@ -102,8 +98,9 @@ PJ_DECL(int) pjsip_param_cmp(const pjsip_param *param_list1,
  * @param dst_list	Destination list.
  * @param src_list	Source list.
  */
-PJ_DECL(void) pjsip_param_clone(pj_pool_t *pool, pjsip_param *dst_list,
-				const pjsip_param *src_list);
+PJ_DECL(void)
+pjsip_param_clone(pj_pool_t* pool, pjsip_param* dst_list,
+                  const pjsip_param* src_list);
 
 /**
  * Duplicate the parameters.
@@ -112,9 +109,9 @@ PJ_DECL(void) pjsip_param_clone(pj_pool_t *pool, pjsip_param *dst_list,
  * @param dst_list	Destination list.
  * @param src_list	Source list.
  */
-PJ_DECL(void) pjsip_param_shallow_clone(pj_pool_t *pool, 
-					pjsip_param *dst_list,
-					const pjsip_param *src_list);
+PJ_DECL(void)
+pjsip_param_shallow_clone(pj_pool_t* pool, pjsip_param* dst_list,
+                          const pjsip_param* src_list);
 
 /**
  * Print parameters.
@@ -131,11 +128,10 @@ PJ_DECL(void) pjsip_param_shallow_clone(pj_pool_t *pool,
  *
  * @return		The number of bytes printed, or -1 on errr.
  */
-PJ_DECL(pj_ssize_t) pjsip_param_print_on(const pjsip_param *param_list,
-					 char *buf, pj_size_t size,
-					 const pj_cis_t *pname_unres,
-					 const pj_cis_t *pvalue_unres,
-					 int sep);
+PJ_DECL(pj_ssize_t)
+pjsip_param_print_on(const pjsip_param* param_list, char* buf, pj_size_t size,
+                     const pj_cis_t* pname_unres, const pj_cis_t* pvalue_unres,
+                     int sep);
 
 /**
  * @}
@@ -153,37 +149,37 @@ PJ_DECL(pj_ssize_t) pjsip_param_print_on(const pjsip_param *param_list,
  */
 typedef enum pjsip_uri_context_e
 {
-    PJSIP_URI_IN_REQ_URI,	/**< The URI is in Request URI. */
-    PJSIP_URI_IN_FROMTO_HDR,	/**< The URI is in From/To header. */
-    PJSIP_URI_IN_CONTACT_HDR,	/**< The URI is in Contact header. */
-    PJSIP_URI_IN_ROUTING_HDR,	/**< The URI is in Route/Record-Route header. */
-    PJSIP_URI_IN_OTHER		/**< Other context (web page, business card, etc.) */
+    PJSIP_URI_IN_REQ_URI,     /**< The URI is in Request URI. */
+    PJSIP_URI_IN_FROMTO_HDR,  /**< The URI is in From/To header. */
+    PJSIP_URI_IN_CONTACT_HDR, /**< The URI is in Contact header. */
+    PJSIP_URI_IN_ROUTING_HDR, /**< The URI is in Route/Record-Route header. */
+    PJSIP_URI_IN_OTHER /**< Other context (web page, business card, etc.) */
 } pjsip_uri_context_e;
 
 /**
  * URI 'virtual' function table.
- * All types of URI in this library (such as sip:, sips:, tel:, and name-addr) 
+ * All types of URI in this library (such as sip:, sips:, tel:, and name-addr)
  * will have pointer to this table as their first struct member. This table
  * provides polimorphic behaviour to the URI.
  */
 typedef struct pjsip_uri_vptr
 {
-    /** 
-     * Get URI scheme. 
+    /**
+     * Get URI scheme.
      * @param uri the URI (self).
      * @return the URI scheme.
      */
-    const pj_str_t* (*p_get_scheme)(const void *uri);
+    const pj_str_t* (*p_get_scheme)(const void* uri);
 
     /**
      * Get the URI object contained by this URI, or the URI itself if
      * it doesn't contain another URI.
      * @param uri the URI (self).
      */
-    void* (*p_get_uri)(void *uri);
+    void* (*p_get_uri)(void* uri);
 
     /**
-     * Print URI components to the buffer, following the rule of which 
+     * Print URI components to the buffer, following the rule of which
      * components are allowed for the context.
      * @param context the context where the URI will be placed.
      * @param uri the URI (self).
@@ -191,11 +187,10 @@ typedef struct pjsip_uri_vptr
      * @param size the size of the buffer.
      * @return the length printed.
      */
-    pj_ssize_t (*p_print)(pjsip_uri_context_e context,
-			  const void *uri, 
-		          char *buf, pj_size_t size);
+    pj_ssize_t (*p_print)(pjsip_uri_context_e context, const void* uri,
+                          char* buf, pj_size_t size);
 
-    /** 
+    /**
      * Compare two URIs according to the context.
      * @param context the context.
      * @param uri1 the first URI (self).
@@ -203,19 +198,18 @@ typedef struct pjsip_uri_vptr
      * @return PJ_SUCCESS if equal, or otherwise the error status which
      *		    should point to the mismatch part.
      */
-    pj_status_t	(*p_compare)(pjsip_uri_context_e context, 
-			     const void *uri1, const void *uri2);
+    pj_status_t (*p_compare)(pjsip_uri_context_e context, const void* uri1,
+                             const void* uri2);
 
-    /** 
-     * Clone URI. 
+    /**
+     * Clone URI.
      * @param pool the pool.
      * @param the URI to clone (self).
      * @return new URI.
      */
-    void *(*p_clone)(pj_pool_t *pool, const void *uri);
+    void* (*p_clone)(pj_pool_t* pool, const void* uri);
 
 } pjsip_uri_vptr;
-
 
 /**
  * The declaration of 'base class' for all URI scheme.
@@ -223,7 +217,7 @@ typedef struct pjsip_uri_vptr
 struct pjsip_uri
 {
     /** All URIs must have URI virtual function table as their first member. */
-    pjsip_uri_vptr *vptr;
+    pjsip_uri_vptr* vptr;
 };
 
 /**
@@ -231,44 +225,43 @@ struct pjsip_uri
  * @param url The URL (pointer to)
  * @return non-zero if TRUE.
  */
-#define PJSIP_URI_SCHEME_IS_SIP(url)	\
-    (pj_stricmp2(pjsip_uri_get_scheme(url), "sip")==0)
+#define PJSIP_URI_SCHEME_IS_SIP(url) \
+    (pj_stricmp2(pjsip_uri_get_scheme(url), "sip") == 0)
 
 /**
  * This macro checks that the URL is a "sips:" URL (not SIP).
  * @param url The URL (pointer to)
  * @return non-zero if TRUE.
  */
-#define PJSIP_URI_SCHEME_IS_SIPS(url)	\
-    (pj_stricmp2(pjsip_uri_get_scheme(url), "sips")==0)
+#define PJSIP_URI_SCHEME_IS_SIPS(url) \
+    (pj_stricmp2(pjsip_uri_get_scheme(url), "sips") == 0)
 
 /**
  * This macro checks that the URL is a "tel:" URL.
  * @param url The URL (pointer to)
  * @return non-zero if TRUE.
  */
-#define PJSIP_URI_SCHEME_IS_TEL(url)	\
-    (pj_stricmp2(pjsip_uri_get_scheme(url), "tel")==0)
-
+#define PJSIP_URI_SCHEME_IS_TEL(url) \
+    (pj_stricmp2(pjsip_uri_get_scheme(url), "tel") == 0)
 
 /**
  * Generic function to get the URI scheme.
  * @param uri	    the URI object.
  * @return	    the URI scheme.
  */
-PJ_INLINE(const pj_str_t*) pjsip_uri_get_scheme(const void *uri)
+PJ_INLINE(const pj_str_t*) pjsip_uri_get_scheme(const void* uri)
 {
     return (*((pjsip_uri*)uri)->vptr->p_get_scheme)(uri);
 }
 
 /**
- * Generic function to get the URI object contained by this URI, or the URI 
+ * Generic function to get the URI object contained by this URI, or the URI
  * itself if it doesn't contain another URI.
  *
  * @param uri	    the URI.
  * @return	    the URI.
  */
-PJ_INLINE(void*) pjsip_uri_get_uri(const void *uri)
+PJ_INLINE(void*) pjsip_uri_get_uri(const void* uri)
 {
     PJ_ASSERT_RETURN(uri, NULL);
     return (*((pjsip_uri*)uri)->vptr->p_get_uri)((void*)uri);
@@ -283,8 +276,8 @@ PJ_INLINE(void*) pjsip_uri_get_uri(const void *uri)
  * @return	    PJ_SUCCESS if equal, or otherwise the error status which
  *		    should point to the mismatch part.
  */
-PJ_INLINE(pj_status_t) pjsip_uri_cmp(pjsip_uri_context_e context, 
-				     const void *uri1, const void *uri2)
+PJ_INLINE(pj_status_t)
+pjsip_uri_cmp(pjsip_uri_context_e context, const void* uri1, const void* uri2)
 {
     return (*((const pjsip_uri*)uri1)->vptr->p_compare)(context, uri1, uri2);
 }
@@ -298,12 +291,12 @@ PJ_INLINE(pj_status_t) pjsip_uri_cmp(pjsip_uri_context_e context,
  * @param size	    Size of the buffer.
  * @return	    Length printed if successful, negative value if failed.
  */
-PJ_INLINE(int) pjsip_uri_print(pjsip_uri_context_e context,
-			       const void *uri,
-			       char *buf, pj_size_t size)
+PJ_INLINE(int)
+pjsip_uri_print(pjsip_uri_context_e context, const void* uri, char* buf,
+                pj_size_t size)
 {
-    return (int)(*((const pjsip_uri*)uri)->vptr->p_print)(context, uri, 
-							  buf, size);
+    return (int)(*((const pjsip_uri*)uri)->vptr->p_print)(context, uri, buf,
+                                                          size);
 }
 
 /**
@@ -313,12 +306,10 @@ PJ_INLINE(int) pjsip_uri_print(pjsip_uri_context_e context,
  * @param uri	    URI to clone.
  * @return	    New URI.
  */
-PJ_INLINE(void*) pjsip_uri_clone( pj_pool_t *pool, const void *uri )
+PJ_INLINE(void*) pjsip_uri_clone(pj_pool_t* pool, const void* uri)
 {
     return (*((const pjsip_uri*)uri)->vptr->p_clone)(pool, uri);
 }
-
-
 
 /**
  * @}
@@ -331,27 +322,25 @@ PJ_INLINE(void*) pjsip_uri_clone( pj_pool_t *pool, const void *uri )
  * @{
  */
 
-
 /**
  * SIP and SIPS URL scheme.
  */
 typedef struct pjsip_sip_uri
 {
-    pjsip_uri_vptr *vptr;		/**< Pointer to virtual function table.*/
-    pj_str_t	    user;		/**< Optional user part. */
-    pj_str_t	    passwd;		/**< Optional password part. */
-    pj_str_t	    host;		/**< Host part, always exists. */
-    int		    port;		/**< Optional port number, or zero. */
-    pj_str_t	    user_param;		/**< Optional user parameter */
-    pj_str_t	    method_param;	/**< Optional method parameter. */
-    pj_str_t	    transport_param;	/**< Optional transport parameter. */
-    int		    ttl_param;		/**< Optional TTL param, or -1. */
-    int		    lr_param;		/**< Optional loose routing param, or zero */
-    pj_str_t	    maddr_param;	/**< Optional maddr param */
-    pjsip_param	    other_param;	/**< Other parameters grouped together. */
-    pjsip_param	    header_param;	/**< Optional header parameter. */
+    pjsip_uri_vptr* vptr;     /**< Pointer to virtual function table.*/
+    pj_str_t user;            /**< Optional user part. */
+    pj_str_t passwd;          /**< Optional password part. */
+    pj_str_t host;            /**< Host part, always exists. */
+    int port;                 /**< Optional port number, or zero. */
+    pj_str_t user_param;      /**< Optional user parameter */
+    pj_str_t method_param;    /**< Optional method parameter. */
+    pj_str_t transport_param; /**< Optional transport parameter. */
+    int ttl_param;            /**< Optional TTL param, or -1. */
+    int lr_param;             /**< Optional loose routing param, or zero */
+    pj_str_t maddr_param;     /**< Optional maddr param */
+    pjsip_param other_param;  /**< Other parameters grouped together. */
+    pjsip_param header_param; /**< Optional header parameter. */
 } pjsip_sip_uri;
-
 
 /**
  * SIP name-addr, which typically appear in From, To, and Contact header.
@@ -360,16 +349,15 @@ typedef struct pjsip_sip_uri
 typedef struct pjsip_name_addr
 {
     /** Pointer to virtual function table. */
-    pjsip_uri_vptr  *vptr;
+    pjsip_uri_vptr* vptr;
 
     /** Optional display name. */
-    pj_str_t	     display;
+    pj_str_t display;
 
     /** URI part. */
-    pjsip_uri	    *uri;
+    pjsip_uri* uri;
 
 } pjsip_name_addr;
-
 
 /**
  * Create new SIP URL and initialize all fields with zero or NULL.
@@ -377,8 +365,7 @@ typedef struct pjsip_name_addr
  * @param secure    Flag to indicate whether secure transport should be used.
  * @return SIP URL.
  */
-PJ_DECL(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, 
-					      pj_bool_t secure );
+PJ_DECL(pjsip_sip_uri*) pjsip_sip_uri_create(pj_pool_t* pool, pj_bool_t secure);
 
 /**
  * Change the SIP URI scheme to sip or sips based on the secure flag.
@@ -386,15 +373,14 @@ PJ_DECL(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool,
  * @param uri	    The URI
  * @param secure    Non-zero if sips is wanted.
  */
-PJ_DECL(void) pjsip_sip_uri_set_secure( pjsip_sip_uri *uri, 
-				        pj_bool_t secure );
+PJ_DECL(void) pjsip_sip_uri_set_secure(pjsip_sip_uri* uri, pj_bool_t secure);
 
 /**
  * Initialize SIP URL (all fields are set to NULL or zero).
  * @param url	    The URL.
  * @param secure    Create sips URI?
  */
-PJ_DECL(void)  pjsip_sip_uri_init(pjsip_sip_uri *url, pj_bool_t secure);
+PJ_DECL(void) pjsip_sip_uri_init(pjsip_sip_uri* url, pj_bool_t secure);
 
 /**
  * Perform full assignment to the SIP URL.
@@ -402,8 +388,9 @@ PJ_DECL(void)  pjsip_sip_uri_init(pjsip_sip_uri *url, pj_bool_t secure);
  * @param url	    Destination URL.
  * @param rhs	    The source URL.
  */
-PJ_DECL(void)  pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
-				    const pjsip_sip_uri *rhs);
+PJ_DECL(void)
+pjsip_sip_uri_assign(pj_pool_t* pool, pjsip_sip_uri* url,
+                     const pjsip_sip_uri* rhs);
 
 /**
  * Create new instance of name address and initialize all fields with zero or
@@ -411,13 +398,13 @@ PJ_DECL(void)  pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url,
  * @param pool	    The pool.
  * @return	    New SIP name address.
  */
-PJ_DECL(pjsip_name_addr*) pjsip_name_addr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_name_addr*) pjsip_name_addr_create(pj_pool_t* pool);
 
 /**
  * Initialize with default value.
  * @param name_addr The name address.
  */
-PJ_DECL(void) pjsip_name_addr_init(pjsip_name_addr *name_addr);
+PJ_DECL(void) pjsip_name_addr_init(pjsip_name_addr* name_addr);
 
 /**
  * Perform full assignment to the name address.
@@ -425,9 +412,9 @@ PJ_DECL(void) pjsip_name_addr_init(pjsip_name_addr *name_addr);
  * @param addr	    The destination name address.
  * @param rhs	    The source name address.
  */
-PJ_DECL(void)  pjsip_name_addr_assign(pj_pool_t *pool, 
-				      pjsip_name_addr *addr, 
-				      const pjsip_name_addr *rhs);
+PJ_DECL(void)
+pjsip_name_addr_assign(pj_pool_t* pool, pjsip_name_addr* addr,
+                       const pjsip_name_addr* rhs);
 
 /**
  * @}
@@ -443,13 +430,12 @@ PJ_DECL(void)  pjsip_name_addr_assign(pj_pool_t *pool,
 /**
  * Generic URI container for non SIP/tel URI scheme.
  */
-typedef struct pjsip_other_uri 
+typedef struct pjsip_other_uri
 {
-    pjsip_uri_vptr *vptr;	/**< Pointer to virtual function table.	*/
-    pj_str_t scheme;		/**< The URI scheme (e.g. "mailto")	*/
-    pj_str_t content;		/**< The whole URI content		*/
+    pjsip_uri_vptr* vptr; /**< Pointer to virtual function table.	*/
+    pj_str_t scheme;      /**< The URI scheme (e.g. "mailto")	*/
+    pj_str_t content;     /**< The whole URI content		*/
 } pjsip_other_uri;
-
 
 /**
  * Create a generic URI object.
@@ -458,8 +444,7 @@ typedef struct pjsip_other_uri
  *
  * @return	    The URI instance.
  */
-PJ_DECL(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool);
-
+PJ_DECL(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t* pool);
 
 /**
  * @}
@@ -467,5 +452,4 @@ PJ_DECL(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool);
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_URL_H__ */
-
+#endif /* __PJSIP_URL_H__ */

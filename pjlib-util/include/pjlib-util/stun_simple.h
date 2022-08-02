@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSTUN_H__
 #define __PJSTUN_H__
@@ -28,7 +27,6 @@
 #include <pjlib-util/types.h>
 #include <pj/sock.h>
 
-
 PJ_BEGIN_DECL
 
 /*
@@ -36,14 +34,13 @@ PJ_BEGIN_DECL
  */
 typedef enum pjstun_msg_type
 {
-    PJSTUN_BINDING_REQUEST		    = 0x0001,
-    PJSTUN_BINDING_RESPONSE		    = 0x0101,
-    PJSTUN_BINDING_ERROR_RESPONSE	    = 0x0111,
-    PJSTUN_SHARED_SECRET_REQUEST	    = 0x0002,
-    PJSTUN_SHARED_SECRET_RESPONSE	    = 0x0102,
-    PJSTUN_SHARED_SECRET_ERROR_RESPONSE    = 0x0112
+    PJSTUN_BINDING_REQUEST = 0x0001,
+    PJSTUN_BINDING_RESPONSE = 0x0101,
+    PJSTUN_BINDING_ERROR_RESPONSE = 0x0111,
+    PJSTUN_SHARED_SECRET_REQUEST = 0x0002,
+    PJSTUN_SHARED_SECRET_RESPONSE = 0x0102,
+    PJSTUN_SHARED_SECRET_ERROR_RESPONSE = 0x0112
 } pjstun_msg_type;
-
 
 /*
  * This enumeration describes STUN attribute types.
@@ -64,38 +61,35 @@ typedef enum pjstun_attr_type
     PJSTUN_ATTR_XOR_MAPPED_ADDR = 0x0020
 } pjstun_attr_type;
 
-
 /*
  * This structre describes STUN message header.
  */
 typedef struct pjstun_msg_hdr
 {
-    pj_uint16_t		type;
-    pj_uint16_t		length;
-    pj_uint32_t		tsx[4];
+    pj_uint16_t type;
+    pj_uint16_t length;
+    pj_uint32_t tsx[4];
 } pjstun_msg_hdr;
-
 
 /*
  * This structre describes STUN attribute header.
  */
 typedef struct pjstun_attr_hdr
 {
-    pj_uint16_t		type;
-    pj_uint16_t		length;
+    pj_uint16_t type;
+    pj_uint16_t length;
 } pjstun_attr_hdr;
-
 
 /*
  * This structre describes STUN MAPPED-ADDR attribute.
  */
 typedef struct pjstun_mapped_addr_attr
 {
-    pjstun_attr_hdr	hdr;
-    pj_uint8_t		ignored;
-    pj_uint8_t		family;
-    pj_uint16_t		port;
-    pj_uint32_t		addr;
+    pjstun_attr_hdr hdr;
+    pj_uint8_t ignored;
+    pj_uint8_t family;
+    pj_uint16_t port;
+    pj_uint32_t addr;
 } pjstun_mapped_addr_attr;
 
 typedef pjstun_mapped_addr_attr pjstun_response_addr_attr;
@@ -105,44 +99,42 @@ typedef pjstun_mapped_addr_attr pjstun_reflected_form_attr;
 
 typedef struct pjstun_change_request_attr
 {
-    pjstun_attr_hdr	hdr;
-    pj_uint32_t		value;
+    pjstun_attr_hdr hdr;
+    pj_uint32_t value;
 } pjstun_change_request_attr;
 
 typedef struct pjstun_username_attr
 {
-    pjstun_attr_hdr	hdr;
-    pj_uint32_t		value[1];
+    pjstun_attr_hdr hdr;
+    pj_uint32_t value[1];
 } pjstun_username_attr;
 
 typedef pjstun_username_attr pjstun_password_attr;
 
 typedef struct pjstun_error_code_attr
 {
-    pjstun_attr_hdr	hdr;
-    pj_uint16_t		ignored;
-    pj_uint8_t		err_class;
-    pj_uint8_t		number;
-    char		reason[4];
+    pjstun_attr_hdr hdr;
+    pj_uint16_t ignored;
+    pj_uint8_t err_class;
+    pj_uint8_t number;
+    char reason[4];
 } pjstun_error_code_attr;
 
 typedef struct pjstun_msg
 {
-    pjstun_msg_hdr    *hdr;
-    int			attr_count;
-    pjstun_attr_hdr   *attr[PJSTUN_MAX_ATTR];
+    pjstun_msg_hdr* hdr;
+    int attr_count;
+    pjstun_attr_hdr* attr[PJSTUN_MAX_ATTR];
 } pjstun_msg;
 
 /* STUN message API (stun.c). */
 
-PJ_DECL(pj_status_t) pjstun_create_bind_req( pj_pool_t *pool, 
-					      void **msg, pj_size_t *len,
-					      pj_uint32_t id_hi,
-					      pj_uint32_t id_lo);
-PJ_DECL(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t len,
-				        pjstun_msg *msg);
-PJ_DECL(void*) pjstun_msg_find_attr( pjstun_msg *msg, pjstun_attr_type t);
-
+PJ_DECL(pj_status_t)
+pjstun_create_bind_req(pj_pool_t* pool, void** msg, pj_size_t* len,
+                       pj_uint32_t id_hi, pj_uint32_t id_lo);
+PJ_DECL(pj_status_t)
+pjstun_parse_msg(void* buf, pj_size_t len, pjstun_msg* msg);
+PJ_DECL(void*) pjstun_msg_find_attr(pjstun_msg* msg, pjstun_attr_type t);
 
 /**
  * @defgroup PJLIB_UTIL_STUN_CLIENT Simple STUN Helper
@@ -157,7 +149,7 @@ PJ_DECL(void*) pjstun_msg_find_attr( pjstun_msg *msg, pjstun_attr_type t);
 
 /**
  * This is the main function to request the mapped address of local sockets
- * to multiple STUN servers. This function is able to find the mapped 
+ * to multiple STUN servers. This function is able to find the mapped
  * addresses of multiple sockets simultaneously, and for each socket, two
  * requests will be sent to two different STUN servers to see if both servers
  * get the same public address for the same socket. (Note that application can
@@ -176,10 +168,10 @@ PJ_DECL(void*) pjstun_msg_find_attr( pjstun_msg *msg, pjstun_attr_type t);
  *			to be queried from the STUN servers.
  * @param srv1		Host name or IP address string of the first STUN
  *			server.
- * @param port1		The port number of the first STUN server. 
+ * @param port1		The port number of the first STUN server.
  * @param srv2		Host name or IP address string of the second STUN
  *			server.
- * @param port2		The port number of the second STUN server. 
+ * @param port2		The port number of the second STUN server.
  * @param mapped_addr	Array to receive the mapped public address of the local
  *			UDP sockets, when the function returns PJ_SUCCESS.
  *
@@ -193,12 +185,10 @@ PJ_DECL(void*) pjstun_msg_find_attr( pjstun_msg *msg, pjstun_attr_type t);
  *			- etc.
  *
  */
-PJ_DECL(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
-					      int sock_cnt, pj_sock_t sock[],
-					      const pj_str_t *srv1, int port1,
-					      const pj_str_t *srv2, int port2,
-					      pj_sockaddr_in mapped_addr[]);
-
+PJ_DECL(pj_status_t)
+pjstun_get_mapped_addr(pj_pool_factory* pf, int sock_cnt, pj_sock_t sock[],
+                       const pj_str_t* srv1, int port1, const pj_str_t* srv2,
+                       int port2, pj_sockaddr_in mapped_addr[]);
 
 /*
  * This structre describes configurable setting for requesting mapped address.
@@ -209,8 +199,8 @@ typedef struct pjstun_setting
      * Specifies whether STUN request generated by old STUN library should
      * insert magic cookie (specified in RFC 5389) in the transaction ID.
      */
-    pj_bool_t	use_stun2;
-    
+    pj_bool_t use_stun2;
+
     /**
      * Address family of the STUN servers.
      */
@@ -237,7 +227,6 @@ typedef struct pjstun_setting
     int port2;
 
 } pjstun_setting;
-
 
 /**
  * Another version of mapped address resolution of local sockets to multiple
@@ -272,12 +261,10 @@ typedef struct pjstun_setting
  *			- etc.
  *
  */
-PJ_DECL(pj_status_t) pjstun_get_mapped_addr2( pj_pool_factory *pf,
-					      const pjstun_setting *opt,
-					      int sock_cnt,
-					      pj_sock_t sock[],
-					      pj_sockaddr_in mapped_addr[]);
-
+PJ_DECL(pj_status_t)
+pjstun_get_mapped_addr2(pj_pool_factory* pf, const pjstun_setting* opt,
+                        int sock_cnt, pj_sock_t sock[],
+                        pj_sockaddr_in mapped_addr[]);
 
 PJ_END_DECL
 
@@ -285,5 +272,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJSTUN_H__ */
-
+#endif /* __PJSTUN_H__ */

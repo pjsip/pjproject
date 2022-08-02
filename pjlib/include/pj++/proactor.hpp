@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_PROACTOR_HPP__
 #define __PJPP_PROACTOR_HPP__
@@ -29,39 +28,35 @@
 class Pj_Proactor;
 class Pj_Event_Handler;
 
-
 //////////////////////////////////////////////////////////////////////////////
 // Asynchronous operation key.
 //
 // Applications may inheric this class to put their application
 // specific data.
 //
-class Pj_Async_Op : public pj_ioqueue_op_key_t
-{
-public:
+class Pj_Async_Op : public pj_ioqueue_op_key_t {
+   public:
     //
     // Construct with null handler.
     // App must call set_handler() before use.
     //
-    Pj_Async_Op()
-        : handler_(NULL)
+    Pj_Async_Op() : handler_(NULL)
     {
-	pj_ioqueue_op_key_init(this, sizeof(*this));
+        pj_ioqueue_op_key_init(this, sizeof(*this));
     }
 
     //
     // Constructor.
     //
-    explicit Pj_Async_Op(Pj_Event_Handler *handler)
-        : handler_(handler)
+    explicit Pj_Async_Op(Pj_Event_Handler* handler) : handler_(handler)
     {
-	pj_ioqueue_op_key_init(this, sizeof(*this));
+        pj_ioqueue_op_key_init(this, sizeof(*this));
     }
 
     //
     // Set handler.
     //
-    void set_handler(Pj_Event_Handler *handler)
+    void set_handler(Pj_Event_Handler* handler)
     {
         handler_ = handler;
     }
@@ -74,12 +69,11 @@ public:
     //
     // Cancel the operation.
     //
-    bool cancel(pj_ssize_t bytes_status=-PJ_ECANCELLED);
+    bool cancel(pj_ssize_t bytes_status = -PJ_ECANCELLED);
 
-protected:
-    Pj_Event_Handler *handler_;
+   protected:
+    Pj_Event_Handler* handler_;
 };
-
 
 //////////////////////////////////////////////////////////////////////////////
 // Event handler.
@@ -89,21 +83,20 @@ protected:
 //
 // Applications should implement get_socket_handle().
 //
-class Pj_Event_Handler : public Pj_Object
-{
+class Pj_Event_Handler : public Pj_Object {
     friend class Pj_Proactor;
-public:
+
+   public:
     //
     // Default constructor.
     //
-    Pj_Event_Handler()
-        : key_(NULL)
+    Pj_Event_Handler() : key_(NULL)
     {
         pj_memset(&timer_, 0, sizeof(timer_));
         timer_.user_data = this;
         timer_.cb = &timer_callback;
     }
-    
+
     //
     // Destroy.
     //
@@ -134,52 +127,47 @@ public:
     //
     // Start async receive.
     //
-    pj_status_t recv( Pj_Async_Op *op_key, 
-                      void *buf, pj_ssize_t *len, 
-                      unsigned flags)
+    pj_status_t recv(Pj_Async_Op* op_key, void* buf, pj_ssize_t* len,
+                     unsigned flags)
     {
-        return pj_ioqueue_recv( key_, op_key,
-                                buf, len, flags);
+        return pj_ioqueue_recv(key_, op_key, buf, len, flags);
     }
 
     //
     // Start async recvfrom()
     //
-    pj_status_t recvfrom( Pj_Async_Op *op_key, 
-                          void *buf, pj_ssize_t *len, unsigned flags,
-                          Pj_Inet_Addr *addr)
+    pj_status_t recvfrom(Pj_Async_Op* op_key, void* buf, pj_ssize_t* len,
+                         unsigned flags, Pj_Inet_Addr* addr)
     {
         addr->addrlen_ = sizeof(Pj_Inet_Addr);
-        return pj_ioqueue_recvfrom( key_, op_key, buf, len, flags,
-                                    addr, &addr->addrlen_ );
+        return pj_ioqueue_recvfrom(key_, op_key, buf, len, flags, addr,
+                                   &addr->addrlen_);
     }
 
     //
     // Start async send()
     //
-    pj_status_t send( Pj_Async_Op *op_key, 
-                      const void *data, pj_ssize_t *len, 
-                      unsigned flags)
+    pj_status_t send(Pj_Async_Op* op_key, const void* data, pj_ssize_t* len,
+                     unsigned flags)
     {
-        return pj_ioqueue_send( key_, op_key, data, len, flags);
+        return pj_ioqueue_send(key_, op_key, data, len, flags);
     }
 
     //
     // Start async sendto()
     //
-    pj_status_t sendto( Pj_Async_Op *op_key,
-                        const void *data, pj_ssize_t *len, unsigned flags,
-                        const Pj_Inet_Addr &addr)
+    pj_status_t sendto(Pj_Async_Op* op_key, const void* data, pj_ssize_t* len,
+                       unsigned flags, const Pj_Inet_Addr& addr)
     {
-        return pj_ioqueue_sendto(key_, op_key, data, len, flags,
-                                 &addr, sizeof(addr));
+        return pj_ioqueue_sendto(key_, op_key, data, len, flags, &addr,
+                                 sizeof(addr));
     }
 
 #if PJ_HAS_TCP
     //
     // Start async connect()
     //
-    pj_status_t connect(const Pj_Inet_Addr &addr)
+    pj_status_t connect(const Pj_Inet_Addr& addr)
     {
         return pj_ioqueue_connect(key_, &addr, sizeof(addr));
     }
@@ -187,19 +175,17 @@ public:
     //
     // Start async accept().
     //
-    pj_status_t accept( Pj_Async_Op *op_key,
-                        Pj_Socket *sock, 
-                        Pj_Inet_Addr *local = NULL, 
-                        Pj_Inet_Addr *remote = NULL)
+    pj_status_t accept(Pj_Async_Op* op_key, Pj_Socket* sock,
+                       Pj_Inet_Addr* local = NULL, Pj_Inet_Addr* remote = NULL)
     {
-        int *addrlen = local ? &local->addrlen_ : NULL;
-        return pj_ioqueue_accept( key_, op_key, &sock->sock_,
-                                  local, remote, addrlen );
+        int* addrlen = local ? &local->addrlen_ : NULL;
+        return pj_ioqueue_accept(key_, op_key, &sock->sock_, local, remote,
+                                 addrlen);
     }
 
 #endif
 
-protected:
+   protected:
     //////////////////
     // Overridables
     //////////////////
@@ -207,45 +193,39 @@ protected:
     //
     // Timeout callback.
     //
-    virtual void on_timeout(int) 
-    {
-    }
+    virtual void on_timeout(int)
+    {}
 
     //
     // On read complete callback.
     //
-    virtual void on_read_complete( Pj_Async_Op*, pj_ssize_t) 
-    {
-    }
+    virtual void on_read_complete(Pj_Async_Op*, pj_ssize_t)
+    {}
 
     //
     // On write complete callback.
     //
-    virtual void on_write_complete( Pj_Async_Op *, pj_ssize_t) 
-    {
-    }
+    virtual void on_write_complete(Pj_Async_Op*, pj_ssize_t)
+    {}
 
 #if PJ_HAS_TCP
     //
     // On connect complete callback.
     //
-    virtual void on_connect_complete(pj_status_t) 
-    {
-    }
+    virtual void on_connect_complete(pj_status_t)
+    {}
 
     //
     // On new connection callback.
     //
-    virtual void on_accept_complete( Pj_Async_Op*, pj_sock_t, pj_status_t) 
-    {
-    }
+    virtual void on_accept_complete(Pj_Async_Op*, pj_sock_t, pj_status_t)
+    {}
 
 #endif
 
-
-private:
-    pj_ioqueue_key_t *key_;
-    pj_timer_entry    timer_;
+   private:
+    pj_ioqueue_key_t* key_;
+    pj_timer_entry timer_;
 
     friend class Pj_Proactor;
     friend class Pj_Async_Op;
@@ -253,11 +233,9 @@ private:
     //
     // Static timer callback.
     //
-    static void timer_callback( pj_timer_heap_t*, 
-                                struct pj_timer_entry *entry)
+    static void timer_callback(pj_timer_heap_t*, struct pj_timer_entry* entry)
     {
-        Pj_Event_Handler *handler = 
-            (Pj_Event_Handler*) entry->user_data;
+        Pj_Event_Handler* handler = (Pj_Event_Handler*)entry->user_data;
 
         handler->on_timeout(entry->id);
     }
@@ -270,38 +248,35 @@ inline bool Pj_Async_Op::is_pending()
 
 inline bool Pj_Async_Op::cancel(pj_ssize_t bytes_status)
 {
-    return pj_ioqueue_post_completion(handler_->key_, this, 
-                                      bytes_status) == PJ_SUCCESS;
+    return pj_ioqueue_post_completion(handler_->key_, this, bytes_status) ==
+           PJ_SUCCESS;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Proactor
 //
-class Pj_Proactor : public Pj_Object
-{
-public:
+class Pj_Proactor : public Pj_Object {
+   public:
     //
     // Default constructor, initializes to NULL.
     //
-    Pj_Proactor()
-        : ioq_(NULL), th_(NULL)
+    Pj_Proactor() : ioq_(NULL), th_(NULL)
     {
-        cb_.on_read_complete    = &read_complete_cb;
-        cb_.on_write_complete   = &write_complete_cb;
-        cb_.on_accept_complete  = &accept_complete_cb;
+        cb_.on_read_complete = &read_complete_cb;
+        cb_.on_write_complete = &write_complete_cb;
+        cb_.on_accept_complete = &accept_complete_cb;
         cb_.on_connect_complete = &connect_complete_cb;
     }
 
     //
     // Construct proactor.
     //
-    Pj_Proactor( Pj_Pool *pool, pj_size_t max_fd,
-                 pj_size_t max_timer_entries )
-    : ioq_(NULL), th_(NULL)
+    Pj_Proactor(Pj_Pool* pool, pj_size_t max_fd, pj_size_t max_timer_entries)
+        : ioq_(NULL), th_(NULL)
     {
-        cb_.on_read_complete    = &read_complete_cb;
-        cb_.on_write_complete   = &write_complete_cb;
-        cb_.on_accept_complete  = &accept_complete_cb;
+        cb_.on_read_complete = &read_complete_cb;
+        cb_.on_write_complete = &write_complete_cb;
+        cb_.on_accept_complete = &accept_complete_cb;
         cb_.on_connect_complete = &connect_complete_cb;
 
         create(pool, max_fd, max_timer_entries);
@@ -318,25 +293,24 @@ public:
     //
     // Create proactor.
     //
-    pj_status_t create( Pj_Pool *pool, pj_size_t max_fd, 
-			pj_size_t timer_entry_count)
+    pj_status_t create(Pj_Pool* pool, pj_size_t max_fd,
+                       pj_size_t timer_entry_count)
     {
         pj_status_t status;
 
         destroy();
 
         status = pj_ioqueue_create(pool->pool_(), max_fd, &ioq_);
-        if (status != PJ_SUCCESS) 
+        if (status != PJ_SUCCESS)
             return status;
-        
-        status = pj_timer_heap_create(pool->pool_(), 
-                                      timer_entry_count, &th_);
+
+        status = pj_timer_heap_create(pool->pool_(), timer_entry_count, &th_);
         if (status != PJ_SUCCESS) {
             pj_ioqueue_destroy(ioq_);
             ioq_ = NULL;
             return NULL;
         }
-        
+
         return status;
     }
 
@@ -359,21 +333,21 @@ public:
     // Register handler.
     // This will call handler->get_socket_handle()
     //
-    pj_status_t register_socket_handler(Pj_Pool *pool, 
-                                        Pj_Event_Handler *handler)
+    pj_status_t register_socket_handler(Pj_Pool* pool,
+                                        Pj_Event_Handler* handler)
     {
-        return   pj_ioqueue_register_sock( pool->pool_(), ioq_,
-                                           handler->get_socket_handle(),
-                                           handler, &cb_, &handler->key_ );
+        return pj_ioqueue_register_sock(pool->pool_(), ioq_,
+                                        handler->get_socket_handle(), handler,
+                                        &cb_, &handler->key_);
     }
 
     //
     // Unregister handler.
     //
-    static void unregister_handler(Pj_Event_Handler *handler)
+    static void unregister_handler(Pj_Event_Handler* handler)
     {
         if (handler->key_) {
-            pj_ioqueue_unregister( handler->key_ );
+            pj_ioqueue_unregister(handler->key_);
             handler->key_ = NULL;
         }
     }
@@ -381,9 +355,8 @@ public:
     //
     // Scheduler timer.
     //
-    bool schedule_timer( Pj_Event_Handler *handler, 
-                         const Pj_Time_Val &delay, 
-                         int id=-1)
+    bool schedule_timer(Pj_Event_Handler* handler, const Pj_Time_Val& delay,
+                        int id = -1)
     {
         return schedule_timer(th_, handler, delay, id);
     }
@@ -391,7 +364,7 @@ public:
     //
     // Cancel timer.
     //
-    bool cancel_timer(Pj_Event_Handler *handler)
+    bool cancel_timer(Pj_Event_Handler* handler)
     {
         return pj_timer_heap_cancel(th_, &handler->timer_) == 1;
     }
@@ -399,21 +372,21 @@ public:
     //
     // Handle events.
     //
-    int handle_events(Pj_Time_Val *max_timeout)
+    int handle_events(Pj_Time_Val* max_timeout)
     {
         Pj_Time_Val timeout(0, 0);
         int timer_count;
 
-        timer_count = pj_timer_heap_poll( th_, &timeout );
+        timer_count = pj_timer_heap_poll(th_, &timeout);
 
-        if (timeout.get_sec() < 0) 
+        if (timeout.get_sec() < 0)
             timeout.sec = PJ_MAXINT32;
 
-        /* If caller specifies maximum time to wait, then compare the value 
+        /* If caller specifies maximum time to wait, then compare the value
          * with the timeout to wait from timer, and use the minimum value.
          */
         if (max_timeout && timeout >= *max_timeout) {
-	    timeout = *max_timeout;
+            timeout = *max_timeout;
         }
 
         /* Poll events in ioqueue. */
@@ -421,7 +394,7 @@ public:
 
         ioqueue_count = pj_ioqueue_poll(ioq_, &timeout);
         if (ioqueue_count < 0)
-	    return ioqueue_count;
+            return ioqueue_count;
 
         return ioqueue_count + timer_count;
     }
@@ -429,7 +402,7 @@ public:
     //
     // Get the internal ioqueue object.
     //
-    pj_ioqueue_t *get_io_queue()
+    pj_ioqueue_t* get_io_queue()
     {
         return ioq_;
     }
@@ -437,35 +410,33 @@ public:
     //
     // Get the internal timer heap object.
     //
-    pj_timer_heap_t *get_timer_heap()
+    pj_timer_heap_t* get_timer_heap()
     {
         return th_;
     }
 
-private:
-    pj_ioqueue_t *ioq_;
-    pj_timer_heap_t *th_;
+   private:
+    pj_ioqueue_t* ioq_;
+    pj_timer_heap_t* th_;
     pj_ioqueue_callback cb_;
 
-    static bool schedule_timer( pj_timer_heap_t *timer, 
-                                Pj_Event_Handler *handler,
-				const Pj_Time_Val &delay, 
-                                int id=-1)
+    static bool schedule_timer(pj_timer_heap_t* timer,
+                               Pj_Event_Handler* handler,
+                               const Pj_Time_Val& delay, int id = -1)
     {
         handler->timer_.id = id;
         return pj_timer_heap_schedule(timer, &handler->timer_, &delay) == 0;
     }
 
-
     //
     // Static read completion callback.
     //
-    static void read_complete_cb( pj_ioqueue_key_t *key, 
-                                  pj_ioqueue_op_key_t *op_key, 
-                                  pj_ssize_t bytes_read)
+    static void read_complete_cb(pj_ioqueue_key_t* key,
+                                 pj_ioqueue_op_key_t* op_key,
+                                 pj_ssize_t bytes_read)
     {
-        Pj_Event_Handler *handler = 
-	    (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
+        Pj_Event_Handler* handler =
+          (Pj_Event_Handler*)pj_ioqueue_get_user_data(key);
 
         handler->on_read_complete((Pj_Async_Op*)op_key, bytes_read);
     }
@@ -473,12 +444,12 @@ private:
     //
     // Static write completion callback.
     //
-    static void write_complete_cb(pj_ioqueue_key_t *key, 
-                                  pj_ioqueue_op_key_t *op_key,
+    static void write_complete_cb(pj_ioqueue_key_t* key,
+                                  pj_ioqueue_op_key_t* op_key,
                                   pj_ssize_t bytes_sent)
     {
-        Pj_Event_Handler *handler = 
-	    (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
+        Pj_Event_Handler* handler =
+          (Pj_Event_Handler*)pj_ioqueue_get_user_data(key);
 
         handler->on_write_complete((Pj_Async_Op*)op_key, bytes_sent);
     }
@@ -486,13 +457,12 @@ private:
     //
     // Static accept completion callback.
     //
-    static void accept_complete_cb(pj_ioqueue_key_t *key, 
-                                   pj_ioqueue_op_key_t *op_key,
-                                   pj_sock_t new_sock,
-                                   pj_status_t status)
+    static void accept_complete_cb(pj_ioqueue_key_t* key,
+                                   pj_ioqueue_op_key_t* op_key,
+                                   pj_sock_t new_sock, pj_status_t status)
     {
-        Pj_Event_Handler *handler = 
-	    (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
+        Pj_Event_Handler* handler =
+          (Pj_Event_Handler*)pj_ioqueue_get_user_data(key);
 
         handler->on_accept_complete((Pj_Async_Op*)op_key, new_sock, status);
     }
@@ -500,16 +470,13 @@ private:
     //
     // Static connect completion callback.
     //
-    static void connect_complete_cb(pj_ioqueue_key_t *key, 
-                                    pj_status_t status)
+    static void connect_complete_cb(pj_ioqueue_key_t* key, pj_status_t status)
     {
-        Pj_Event_Handler *handler = 
-	    (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
+        Pj_Event_Handler* handler =
+          (Pj_Event_Handler*)pj_ioqueue_get_user_data(key);
 
         handler->on_connect_complete(status);
     }
-
 };
 
-#endif	/* __PJPP_PROACTOR_HPP__ */
-
+#endif /* __PJPP_PROACTOR_HPP__ */

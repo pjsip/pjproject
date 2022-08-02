@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_OS_H__
 #define __PJ_OS_H__
@@ -31,7 +30,6 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJ_OS Operating System Dependent Functionality.
  */
-
 
 /* **************************************************************************/
 /**
@@ -53,7 +51,6 @@ typedef enum pj_sys_info_flag
 
 } pj_sys_info_flag;
 
-
 /**
  * This structure contains information about the system. Use #pj_get_sys_info()
  * to obtain the system information.
@@ -64,14 +61,14 @@ typedef struct pj_sys_info
      * Null terminated string containing processor information (e.g. "i386",
      * "x86_64"). It may contain empty string if the value cannot be obtained.
      */
-    pj_str_t	machine;
+    pj_str_t machine;
 
     /**
      * Null terminated string identifying the system operation (e.g. "Linux",
      * "win32", "wince"). It may contain empty string if the value cannot be
      * obtained.
      */
-    pj_str_t	os_name;
+    pj_str_t os_name;
 
     /**
      * A number containing the operating system version number. By convention,
@@ -85,36 +82,35 @@ typedef struct pj_sys_info
      *
      * This field may contain zero if the OS version cannot be obtained.
      */
-    pj_uint32_t	os_ver;
+    pj_uint32_t os_ver;
 
     /**
      * Null terminated string identifying the SDK name that is used to build
      * the library (e.g. "glibc", "uclibc", "msvc", "wince"). It may contain
      * empty string if the value cannot eb obtained.
      */
-    pj_str_t	sdk_name;
+    pj_str_t sdk_name;
 
     /**
      * A number containing the SDK version, using the numbering convention as
      * the "os_ver" field. The value will be zero if the version cannot be
      * obtained.
      */
-    pj_uint32_t	sdk_ver;
+    pj_uint32_t sdk_ver;
 
     /**
      * A longer null terminated string identifying the underlying system with
      * as much information as possible.
      */
-    pj_str_t	info;
+    pj_str_t info;
 
     /**
      * Other flags containing system specific information. The value is
      * bitmask of #pj_sys_info_flag constants.
      */
-    pj_uint32_t	flags;
+    pj_uint32_t flags;
 
 } pj_sys_info;
-
 
 /**
  * Obtain the system information.
@@ -151,22 +147,21 @@ typedef enum pj_thread_create_flags
     PJ_THREAD_SUSPENDED = 1
 } pj_thread_create_flags;
 
-
 /**
  * Type of thread entry function.
  */
-typedef int (PJ_THREAD_FUNC pj_thread_proc)(void*);
+typedef int(PJ_THREAD_FUNC pj_thread_proc)(void*);
 
 /**
  * Size of thread struct.
  */
 #if !defined(PJ_THREAD_DESC_SIZE)
-#   define PJ_THREAD_DESC_SIZE	    (64)
+#    define PJ_THREAD_DESC_SIZE (64)
 #endif
 
 /**
  * Thread structure, to thread's state when the thread is created by external
- * or native API. 
+ * or native API.
  */
 typedef long pj_thread_desc[PJ_THREAD_DESC_SIZE];
 
@@ -179,29 +174,26 @@ PJ_DECL(pj_uint32_t) pj_getpid(void);
 /**
  * Create a new thread.
  *
- * @param pool          The memory pool from which the thread record 
+ * @param pool          The memory pool from which the thread record
  *                      will be allocated from.
  * @param thread_name   The optional name to be assigned to the thread.
  * @param proc          Thread entry function.
  * @param arg           Argument to be passed to the thread entry function.
  * @param stack_size    The size of the stack for the new thread, or ZERO or
- *                      PJ_THREAD_DEFAULT_STACK_SIZE to let the 
- *		        library choose the reasonable size for the stack. 
- *                      For some systems, the stack will be allocated from 
+ *                      PJ_THREAD_DEFAULT_STACK_SIZE to let the
+ *		        library choose the reasonable size for the stack.
+ *                      For some systems, the stack will be allocated from
  *                      the pool, so the pool must have suitable capacity.
- * @param flags         Flags for thread creation, which is bitmask combination 
+ * @param flags         Flags for thread creation, which is bitmask combination
  *                      from enum pj_thread_create_flags.
  * @param thread        Pointer to hold the newly created thread.
  *
  * @return	        PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_thread_create(  pj_pool_t *pool, 
-                                        const char *thread_name,
-				        pj_thread_proc *proc, 
-                                        void *arg,
-				        pj_size_t stack_size, 
-                                        unsigned flags,
-					pj_thread_t **thread );
+PJ_DECL(pj_status_t)
+pj_thread_create(pj_pool_t* pool, const char* thread_name, pj_thread_proc* proc,
+                 void* arg, pj_size_t stack_size, unsigned flags,
+                 pj_thread_t** thread);
 
 /**
  * Register a thread that was created by external or native API to PJLIB.
@@ -209,19 +201,19 @@ PJ_DECL(pj_status_t) pj_thread_create(  pj_pool_t *pool,
  * When the thread is created by external function or API call,
  * it must be 'registered' to PJLIB using pj_thread_register(), so that it can
  * cooperate with PJLIB's framework. During registration, some data needs to
- * be maintained, and this data must remain available during the thread's 
+ * be maintained, and this data must remain available during the thread's
  * lifetime.
  *
  * @param thread_name   The optional name to be assigned to the thread.
- * @param desc          Thread descriptor, which must be available throughout 
+ * @param desc          Thread descriptor, which must be available throughout
  *                      the lifetime of the thread.
  * @param thread        Pointer to hold the created thread handle.
  *
  * @return              PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_thread_register ( const char *thread_name,
-					  pj_thread_desc desc,
-					  pj_thread_t **thread);
+PJ_DECL(pj_status_t)
+pj_thread_register(const char* thread_name, pj_thread_desc desc,
+                   pj_thread_t** thread);
 
 /**
  * Check if this thread has been registered to PJLIB.
@@ -230,7 +222,6 @@ PJ_DECL(pj_status_t) pj_thread_register ( const char *thread_name,
  */
 PJ_DECL(pj_bool_t) pj_thread_is_registered(void);
 
-
 /**
  * Get thread priority value for the thread.
  *
@@ -238,8 +229,7 @@ PJ_DECL(pj_bool_t) pj_thread_is_registered(void);
  *
  * @return		Thread priority value, or -1 on error.
  */
-PJ_DECL(int) pj_thread_get_prio(pj_thread_t *thread);
-
+PJ_DECL(int) pj_thread_get_prio(pj_thread_t* thread);
 
 /**
  * Set the thread priority. The priority value must be in the priority
@@ -254,7 +244,7 @@ PJ_DECL(int) pj_thread_get_prio(pj_thread_t *thread);
  *
  * @return		PJ_SUCCESS on success or the error code.
  */
-PJ_DECL(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio);
+PJ_DECL(pj_status_t) pj_thread_set_prio(pj_thread_t* thread, int prio);
 
 /**
  * Get the lowest priority value available for this thread.
@@ -262,8 +252,7 @@ PJ_DECL(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio);
  * @param thread	Thread handle.
  * @return		Minimum thread priority value, or -1 on error.
  */
-PJ_DECL(int) pj_thread_get_prio_min(pj_thread_t *thread);
-
+PJ_DECL(int) pj_thread_get_prio_min(pj_thread_t* thread);
 
 /**
  * Get the highest priority value available for this thread.
@@ -271,8 +260,7 @@ PJ_DECL(int) pj_thread_get_prio_min(pj_thread_t *thread);
  * @param thread	Thread handle.
  * @return		Minimum thread priority value, or -1 on error.
  */
-PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t *thread);
-
+PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t* thread);
 
 /**
  * Return native handle from pj_thread_t for manipulation using native
@@ -285,7 +273,7 @@ PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t *thread);
  *			return pointer to pthread_t, and on Windows,
  *			this function will return HANDLE.
  */
-PJ_DECL(void*) pj_thread_get_os_handle(pj_thread_t *thread);
+PJ_DECL(void*) pj_thread_get_os_handle(pj_thread_t* thread);
 
 /**
  * Get thread name.
@@ -294,7 +282,7 @@ PJ_DECL(void*) pj_thread_get_os_handle(pj_thread_t *thread);
  *
  * @return Thread name as null terminated string.
  */
-PJ_DECL(const char*) pj_thread_get_name(pj_thread_t *thread);
+PJ_DECL(const char*) pj_thread_get_name(pj_thread_t* thread);
 
 /**
  * Resume a suspended thread.
@@ -303,7 +291,7 @@ PJ_DECL(const char*) pj_thread_get_name(pj_thread_t *thread);
  *
  * @return zero on success.
  */
-PJ_DECL(pj_status_t) pj_thread_resume(pj_thread_t *thread);
+PJ_DECL(pj_status_t) pj_thread_resume(pj_thread_t* thread);
 
 /**
  * Get the current thread.
@@ -323,20 +311,18 @@ PJ_DECL(pj_thread_t*) pj_thread_this(void);
  *
  * @return PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_thread_join(pj_thread_t *thread);
-
+PJ_DECL(pj_status_t) pj_thread_join(pj_thread_t* thread);
 
 /**
  * Destroy thread and release resources allocated for the thread.
- * However, the memory allocated for the pj_thread_t itself will only be released
- * when the pool used to create the thread is destroyed.
+ * However, the memory allocated for the pj_thread_t itself will only be
+ * released when the pool used to create the thread is destroyed.
  *
  * @param thread    The thread handle.
  *
  * @return zero on success.
  */
-PJ_DECL(pj_status_t) pj_thread_destroy(pj_thread_t *thread);
-
+PJ_DECL(pj_status_t) pj_thread_destroy(pj_thread_t* thread);
 
 /**
  * Put the current thread to sleep for the specified miliseconds.
@@ -353,34 +339,33 @@ PJ_DECL(pj_status_t) pj_thread_sleep(unsigned msec);
  * The OS implementation may check that no stack overflow occurs, and
  * it also may collect statistic about stack usage.
  */
-#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK != 0
 
-#  define PJ_CHECK_STACK() pj_thread_check_stack(__FILE__, __LINE__)
-
-/** @internal
- * The implementation of stack checking. 
- */
-PJ_DECL(void) pj_thread_check_stack(const char *file, int line);
+#    define PJ_CHECK_STACK() pj_thread_check_stack(__FILE__, __LINE__)
 
 /** @internal
- * Get maximum stack usage statistic. 
+ * The implementation of stack checking.
  */
-PJ_DECL(pj_uint32_t) pj_thread_get_stack_max_usage(pj_thread_t *thread);
+PJ_DECL(void) pj_thread_check_stack(const char* file, int line);
 
 /** @internal
- * Dump thread stack status. 
+ * Get maximum stack usage statistic.
  */
-PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
-					      const char **file,
-					      int *line);
+PJ_DECL(pj_uint32_t) pj_thread_get_stack_max_usage(pj_thread_t* thread);
+
+/** @internal
+ * Dump thread stack status.
+ */
+PJ_DECL(pj_status_t)
+pj_thread_get_stack_info(pj_thread_t* thread, const char** file, int* line);
 #else
 
-#  define PJ_CHECK_STACK()
+#    define PJ_CHECK_STACK()
 /** pj_thread_get_stack_max_usage() for the thread */
-#  define pj_thread_get_stack_max_usage(thread)	    0
+#    define pj_thread_get_stack_max_usage(thread)  0
 /** pj_thread_get_stack_info() for the thread */
-#  define pj_thread_get_stack_info(thread,f,l)	    (*(f)="",*(l)=0)
-#endif	/* PJ_OS_HAS_CHECK_STACK */
+#    define pj_thread_get_stack_info(thread, f, l) (*(f) = "", *(l) = 0)
+#endif /* PJ_OS_HAS_CHECK_STACK */
 
 /**
  * @}
@@ -399,7 +384,7 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
  * tasks. PJLIB port for Symbian complies to this recommended behavior.
  * As the result, few things have been changed in PJLIB for Symbian:
  *	- the timer heap (see @ref PJ_TIMER) is implemented with active
- *	  object framework, and each timer entry registered to the timer 
+ *	  object framework, and each timer entry registered to the timer
  *	  heap will register an Active Object to the Active Scheduler.
  *	  Because of this, polling the timer heap with pj_timer_heap_poll()
  *	  is no longer necessary, and this function will just evaluate
@@ -411,16 +396,16 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
  *	  necessary, and this function will just evaluate to nothing.
  *
  * Since timer heap and ioqueue polling are no longer necessary, Symbian
- * application can now poll for all events by calling 
+ * application can now poll for all events by calling
  * \a User::WaitForAnyRequest() and \a CActiveScheduler::RunIfReady().
  * PJLIB provides a thin wrapper which calls these two functions,
  * called pj_symbianos_poll().
  */
- 
+
 /**
  * Wait the completion of any Symbian active objects. When the timeout
- * value is not specified (the \a ms_timeout argument is -1), this 
- * function is a thin wrapper which calls \a User::WaitForAnyRequest() 
+ * value is not specified (the \a ms_timeout argument is -1), this
+ * function is a thin wrapper which calls \a User::WaitForAnyRequest()
  * and \a CActiveScheduler::RunIfReady(). If the timeout value is
  * specified, this function will schedule a timer entry to the timer
  * heap (which is an Active Object), to limit the wait time for event
@@ -445,41 +430,40 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
  */
 PJ_DECL(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout);
 
-
 /**
  * This structure declares Symbian OS specific parameters that can be
  * specified when calling #pj_symbianos_set_params().
  */
-typedef struct pj_symbianos_params 
+typedef struct pj_symbianos_params
 {
     /**
      * Optional RSocketServ instance to be used by PJLIB. If this
      * value is NULL, PJLIB will create a new RSocketServ instance
      * when pj_init() is called.
      */
-    void	*rsocketserv;
-    
+    void* rsocketserv;
+
     /**
      * Optional RConnection instance to be used by PJLIB when creating
      * sockets. If this value is NULL, no RConnection will be
      * specified when creating sockets.
      */
-    void	*rconnection;
-    
+    void* rconnection;
+
     /**
      * Optional RHostResolver instance to be used by PJLIB. If this value
      * is NULL, a new RHostResolver instance will be created when
      * pj_init() is called.
      */
-    void 	*rhostresolver;
-     
+    void* rhostresolver;
+
     /**
-     * Optional RHostResolver for IPv6 instance to be used by PJLIB. 
+     * Optional RHostResolver for IPv6 instance to be used by PJLIB.
      * If this value is NULL, a new RHostResolver instance will be created
      * when pj_init() is called.
      */
-    void 	*rhostresolver6;
-     
+    void* rhostresolver6;
+
 } pj_symbianos_params;
 
 /**
@@ -491,15 +475,15 @@ typedef struct pj_symbianos_params
  * @return		PJ_SUCCESS if the parameters can be applied
  *			successfully.
  */
-PJ_DECL(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm);
+PJ_DECL(pj_status_t) pj_symbianos_set_params(pj_symbianos_params* prm);
 
 /**
  *  Notify PJLIB that the access point connection has been down or unusable
  *  and PJLIB should not try to access the Symbian socket API (especially ones
- *  that send packets). Sending packet when RConnection is reconnected to 
- *  different access point may cause the WaitForRequest() for the function to 
+ *  that send packets). Sending packet when RConnection is reconnected to
+ *  different access point may cause the WaitForRequest() for the function to
  *  block indefinitely.
- *  
+ *
  *  @param up		If set to PJ_FALSE it will cause PJLIB to not try
  *  			to access socket API, and error will be returned
  *  			immediately instead.
@@ -509,7 +493,7 @@ PJ_DECL(void) pj_symbianos_set_connection_status(pj_bool_t up);
 /**
  * @}
  */
- 
+
 /* **************************************************************************/
 /**
  * @defgroup PJ_TLS Thread Local Storage.
@@ -517,14 +501,14 @@ PJ_DECL(void) pj_symbianos_set_connection_status(pj_bool_t up);
  * @{
  */
 
-/** 
+/**
  * Allocate thread local storage index. The initial value of the variable at
  * the index is zero.
  *
  * @param index	    Pointer to hold the return value.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_thread_local_alloc(long *index);
+PJ_DECL(pj_status_t) pj_thread_local_alloc(long* index);
 
 /**
  * Deallocate thread local variable.
@@ -539,7 +523,7 @@ PJ_DECL(void) pj_thread_local_free(long index);
  * @param index	    The index of the variable.
  * @param value	    The value.
  */
-PJ_DECL(pj_status_t) pj_thread_local_set(long index, void *value);
+PJ_DECL(pj_status_t) pj_thread_local_set(long index, void* value);
 
 /**
  * Get the value of thread local variable.
@@ -549,11 +533,9 @@ PJ_DECL(pj_status_t) pj_thread_local_set(long index, void *value);
  */
 PJ_DECL(void*) pj_thread_local_get(long index);
 
-
 /**
  * @}
  */
-
 
 /* **************************************************************************/
 /**
@@ -569,7 +551,6 @@ PJ_DECL(void*) pj_thread_local_get(long index);
  *  - @ref page_pjlib_atomic_test
  */
 
-
 /**
  * Create atomic variable.
  *
@@ -579,9 +560,9 @@ PJ_DECL(void*) pj_thread_local_get(long index);
  *
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_atomic_create( pj_pool_t *pool, 
-				       pj_atomic_value_t initial,
-				       pj_atomic_t **atomic );
+PJ_DECL(pj_status_t)
+pj_atomic_create(pj_pool_t* pool, pj_atomic_value_t initial,
+                 pj_atomic_t** atomic);
 
 /**
  * Destroy atomic variable.
@@ -590,7 +571,7 @@ PJ_DECL(pj_status_t) pj_atomic_create( pj_pool_t *pool,
  *
  * @return PJ_SUCCESS if success.
  */
-PJ_DECL(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var );
+PJ_DECL(pj_status_t) pj_atomic_destroy(pj_atomic_t* atomic_var);
 
 /**
  * Set the value of an atomic type, and return the previous value.
@@ -598,8 +579,7 @@ PJ_DECL(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var );
  * @param atomic_var	the atomic variable.
  * @param value		value to be set to the variable.
  */
-PJ_DECL(void) pj_atomic_set( pj_atomic_t *atomic_var, 
-			     pj_atomic_value_t value);
+PJ_DECL(void) pj_atomic_set(pj_atomic_t* atomic_var, pj_atomic_value_t value);
 
 /**
  * Get the value of an atomic type.
@@ -608,14 +588,14 @@ PJ_DECL(void) pj_atomic_set( pj_atomic_t *atomic_var,
  *
  * @return the value of the atomic variable.
  */
-PJ_DECL(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var);
+PJ_DECL(pj_atomic_value_t) pj_atomic_get(pj_atomic_t* atomic_var);
 
 /**
  * Increment the value of an atomic type.
  *
  * @param atomic_var	the atomic variable.
  */
-PJ_DECL(void) pj_atomic_inc(pj_atomic_t *atomic_var);
+PJ_DECL(void) pj_atomic_inc(pj_atomic_t* atomic_var);
 
 /**
  * Increment the value of an atomic type and get the result.
@@ -624,14 +604,14 @@ PJ_DECL(void) pj_atomic_inc(pj_atomic_t *atomic_var);
  *
  * @return              The incremented value.
  */
-PJ_DECL(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var);
+PJ_DECL(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t* atomic_var);
 
 /**
  * Decrement the value of an atomic type.
  *
  * @param atomic_var	the atomic variable.
  */
-PJ_DECL(void) pj_atomic_dec(pj_atomic_t *atomic_var);
+PJ_DECL(void) pj_atomic_dec(pj_atomic_t* atomic_var);
 
 /**
  * Decrement the value of an atomic type and get the result.
@@ -640,7 +620,7 @@ PJ_DECL(void) pj_atomic_dec(pj_atomic_t *atomic_var);
  *
  * @return              The decremented value.
  */
-PJ_DECL(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var);
+PJ_DECL(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t* atomic_var);
 
 /**
  * Add a value to an atomic type.
@@ -648,8 +628,7 @@ PJ_DECL(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var);
  * @param atomic_var	The atomic variable.
  * @param value		Value to be added.
  */
-PJ_DECL(void) pj_atomic_add( pj_atomic_t *atomic_var,
-			     pj_atomic_value_t value);
+PJ_DECL(void) pj_atomic_add(pj_atomic_t* atomic_var, pj_atomic_value_t value);
 
 /**
  * Add a value to an atomic type and get the result.
@@ -659,8 +638,8 @@ PJ_DECL(void) pj_atomic_add( pj_atomic_t *atomic_var,
  *
  * @return              The result after the addition.
  */
-PJ_DECL(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
-			                          pj_atomic_value_t value);
+PJ_DECL(pj_atomic_value_t)
+pj_atomic_add_and_get(pj_atomic_t* atomic_var, pj_atomic_value_t value);
 
 /**
  * @}
@@ -673,7 +652,7 @@ PJ_DECL(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
  * @{
  *
  * Mutex manipulation. Alternatively, application can use higher abstraction
- * for lock objects, which provides uniform API for all kinds of lock 
+ * for lock objects, which provides uniform API for all kinds of lock
  * mechanisms, including mutex. See @ref PJ_LOCK for more information.
  */
 
@@ -690,7 +669,6 @@ typedef enum pj_mutex_type_e
     PJ_MUTEX_RECURSE
 } pj_mutex_type_e;
 
-
 /**
  * Create mutex of the specified type.
  *
@@ -701,14 +679,13 @@ typedef enum pj_mutex_type_e
  *
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_mutex_create(pj_pool_t *pool, 
-                                     const char *name,
-				     int type, 
-                                     pj_mutex_t **mutex);
+PJ_DECL(pj_status_t)
+pj_mutex_create(pj_pool_t* pool, const char* name, int type,
+                pj_mutex_t** mutex);
 
 /**
  * Create simple, non-recursive mutex.
- * This function is a simple wrapper for #pj_mutex_create to create 
+ * This function is a simple wrapper for #pj_mutex_create to create
  * non-recursive mutex.
  *
  * @param pool	    The pool.
@@ -717,12 +694,12 @@ PJ_DECL(pj_status_t) pj_mutex_create(pj_pool_t *pool,
  *
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_mutex_create_simple( pj_pool_t *pool, const char *name,
-					     pj_mutex_t **mutex );
+PJ_DECL(pj_status_t)
+pj_mutex_create_simple(pj_pool_t* pool, const char* name, pj_mutex_t** mutex);
 
 /**
  * Create recursive mutex.
- * This function is a simple wrapper for #pj_mutex_create to create 
+ * This function is a simple wrapper for #pj_mutex_create to create
  * recursive mutex.
  *
  * @param pool	    The pool.
@@ -731,9 +708,9 @@ PJ_DECL(pj_status_t) pj_mutex_create_simple( pj_pool_t *pool, const char *name,
  *
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_mutex_create_recursive( pj_pool_t *pool,
-					        const char *name,
-						pj_mutex_t **mutex );
+PJ_DECL(pj_status_t)
+pj_mutex_create_recursive(pj_pool_t* pool, const char* name,
+                          pj_mutex_t** mutex);
 
 /**
  * Acquire mutex lock.
@@ -741,7 +718,7 @@ PJ_DECL(pj_status_t) pj_mutex_create_recursive( pj_pool_t *pool,
  * @param mutex	    The mutex.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex);
+PJ_DECL(pj_status_t) pj_mutex_lock(pj_mutex_t* mutex);
 
 /**
  * Release mutex lock.
@@ -749,7 +726,7 @@ PJ_DECL(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex);
  * @param mutex	    The mutex.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_mutex_unlock(pj_mutex_t *mutex);
+PJ_DECL(pj_status_t) pj_mutex_unlock(pj_mutex_t* mutex);
 
 /**
  * Try to acquire mutex lock.
@@ -758,7 +735,7 @@ PJ_DECL(pj_status_t) pj_mutex_unlock(pj_mutex_t *mutex);
  * @return	    PJ_SUCCESS on success, or the error code if the
  *		    lock couldn't be acquired.
  */
-PJ_DECL(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex);
+PJ_DECL(pj_status_t) pj_mutex_trylock(pj_mutex_t* mutex);
 
 /**
  * Destroy mutex.
@@ -766,7 +743,7 @@ PJ_DECL(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex);
  * @param mutex	    Te mutex.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex);
+PJ_DECL(pj_status_t) pj_mutex_destroy(pj_mutex_t* mutex);
 
 /**
  * Determine whether calling thread is owning the mutex (only available when
@@ -774,7 +751,7 @@ PJ_DECL(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex);
  * @param mutex	    The mutex.
  * @return	    Non-zero if yes.
  */
-PJ_DECL(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex);
+PJ_DECL(pj_bool_t) pj_mutex_is_locked(pj_mutex_t* mutex);
 
 /**
  * @}
@@ -786,14 +763,14 @@ PJ_DECL(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex);
  * @ingroup PJ_OS
  * @{
  * Reader/writer mutex is a classic synchronization object where multiple
- * readers can acquire the mutex, but only a single writer can acquire the 
+ * readers can acquire the mutex, but only a single writer can acquire the
  * mutex.
  */
 
 /**
  * Opaque declaration for reader/writer mutex.
  * Reader/writer mutex is a classic synchronization object where multiple
- * readers can acquire the mutex, but only a single writer can acquire the 
+ * readers can acquire the mutex, but only a single writer can acquire the
  * mutex.
  */
 typedef struct pj_rwmutex_t pj_rwmutex_t;
@@ -807,8 +784,8 @@ typedef struct pj_rwmutex_t pj_rwmutex_t;
  *
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
-				       pj_rwmutex_t **mutex);
+PJ_DECL(pj_status_t)
+pj_rwmutex_create(pj_pool_t* pool, const char* name, pj_rwmutex_t** mutex);
 
 /**
  * Lock the mutex for reading.
@@ -816,7 +793,7 @@ PJ_DECL(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
  * @param mutex	    The mutex.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex);
+PJ_DECL(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t* mutex);
 
 /**
  * Lock the mutex for writing.
@@ -824,7 +801,7 @@ PJ_DECL(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex);
  * @param mutex	    The mutex.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t *mutex);
+PJ_DECL(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t* mutex);
 
 /**
  * Release read lock.
@@ -832,7 +809,7 @@ PJ_DECL(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t *mutex);
  * @param mutex	    The mutex.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex);
+PJ_DECL(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t* mutex);
 
 /**
  * Release write lock.
@@ -840,7 +817,7 @@ PJ_DECL(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex);
  * @param mutex	    The mutex.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex);
+PJ_DECL(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t* mutex);
 
 /**
  * Destroy reader/writer mutex.
@@ -848,13 +825,11 @@ PJ_DECL(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex);
  * @param mutex	    The mutex.
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex);
-
+PJ_DECL(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t* mutex);
 
 /**
  * @}
  */
-
 
 /* **************************************************************************/
 /**
@@ -911,11 +886,9 @@ PJ_DECL(void) pj_leave_critical_section(void);
  *
  * @return	    PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_sem_create( pj_pool_t *pool, 
-                                    const char *name,
-				    unsigned initial, 
-                                    unsigned max,
-				    pj_sem_t **sem);
+PJ_DECL(pj_status_t)
+pj_sem_create(pj_pool_t* pool, const char* name, unsigned initial, unsigned max,
+              pj_sem_t** sem);
 
 /**
  * Wait for semaphore.
@@ -924,7 +897,7 @@ PJ_DECL(pj_status_t) pj_sem_create( pj_pool_t *pool,
  *
  * @return	PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_sem_wait(pj_sem_t *sem);
+PJ_DECL(pj_status_t) pj_sem_wait(pj_sem_t* sem);
 
 /**
  * Try wait for semaphore.
@@ -933,7 +906,7 @@ PJ_DECL(pj_status_t) pj_sem_wait(pj_sem_t *sem);
  *
  * @return	PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_sem_trywait(pj_sem_t *sem);
+PJ_DECL(pj_status_t) pj_sem_trywait(pj_sem_t* sem);
 
 /**
  * Release semaphore.
@@ -942,7 +915,7 @@ PJ_DECL(pj_status_t) pj_sem_trywait(pj_sem_t *sem);
  *
  * @return	PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_sem_post(pj_sem_t *sem);
+PJ_DECL(pj_status_t) pj_sem_post(pj_sem_t* sem);
 
 /**
  * Destroy semaphore.
@@ -951,13 +924,12 @@ PJ_DECL(pj_status_t) pj_sem_post(pj_sem_t *sem);
  *
  * @return	PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_sem_destroy(pj_sem_t *sem);
+PJ_DECL(pj_status_t) pj_sem_destroy(pj_sem_t* sem);
 
 /**
  * @}
  */
-#endif	/* PJ_HAS_SEMAPHORE */
-
+#endif /* PJ_HAS_SEMAPHORE */
 
 /* **************************************************************************/
 #if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
@@ -981,9 +953,9 @@ PJ_DECL(pj_status_t) pj_sem_destroy(pj_sem_t *sem);
  *
  * @return event handle, or NULL if failed.
  */
-PJ_DECL(pj_status_t) pj_event_create(pj_pool_t *pool, const char *name,
-				     pj_bool_t manual_reset, pj_bool_t initial,
-				     pj_event_t **event);
+PJ_DECL(pj_status_t)
+pj_event_create(pj_pool_t* pool, const char* name, pj_bool_t manual_reset,
+                pj_bool_t initial, pj_event_t** event);
 
 /**
  * Wait for event to be signaled.
@@ -992,7 +964,7 @@ PJ_DECL(pj_status_t) pj_event_create(pj_pool_t *pool, const char *name,
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_event_wait(pj_event_t *event);
+PJ_DECL(pj_status_t) pj_event_wait(pj_event_t* event);
 
 /**
  * Try wait for event object to be signalled.
@@ -1001,20 +973,20 @@ PJ_DECL(pj_status_t) pj_event_wait(pj_event_t *event);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_event_trywait(pj_event_t *event);
+PJ_DECL(pj_status_t) pj_event_trywait(pj_event_t* event);
 
 /**
- * Set the event object state to signaled. For auto-reset event, this 
+ * Set the event object state to signaled. For auto-reset event, this
  * will only release the first thread that are waiting on the event. For
  * manual reset event, the state remains signaled until the event is reset.
- * If there is no thread waiting on the event, the event object state 
+ * If there is no thread waiting on the event, the event object state
  * remains signaled.
  *
  * @param event	    The event object.
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_event_set(pj_event_t *event);
+PJ_DECL(pj_status_t) pj_event_set(pj_event_t* event);
 
 /**
  * Set the event object to signaled state to release appropriate number of
@@ -1026,7 +998,7 @@ PJ_DECL(pj_status_t) pj_event_set(pj_event_t *event);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_event_pulse(pj_event_t *event);
+PJ_DECL(pj_status_t) pj_event_pulse(pj_event_t* event);
 
 /**
  * Set the event object state to non-signaled.
@@ -1035,7 +1007,7 @@ PJ_DECL(pj_status_t) pj_event_pulse(pj_event_t *event);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_event_reset(pj_event_t *event);
+PJ_DECL(pj_status_t) pj_event_reset(pj_event_t* event);
 
 /**
  * Destroy the event object.
@@ -1044,12 +1016,12 @@ PJ_DECL(pj_status_t) pj_event_reset(pj_event_t *event);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
+PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t* event);
 
 /**
  * @}
  */
-#endif	/* PJ_HAS_EVENT_OBJ */
+#endif /* PJ_HAS_EVENT_OBJ */
 
 /* **************************************************************************/
 /**
@@ -1071,8 +1043,7 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_gettimeofday(pj_time_val *tv);
-
+PJ_DECL(pj_status_t) pj_gettimeofday(pj_time_val* tv);
 
 /**
  * Parse time value into date/time representation.
@@ -1082,7 +1053,7 @@ PJ_DECL(pj_status_t) pj_gettimeofday(pj_time_val *tv);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt);
+PJ_DECL(pj_status_t) pj_time_decode(const pj_time_val* tv, pj_parsed_time* pt);
 
 /**
  * Encode date/time to time value.
@@ -1092,7 +1063,7 @@ PJ_DECL(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv);
+PJ_DECL(pj_status_t) pj_time_encode(const pj_parsed_time* pt, pj_time_val* tv);
 
 /**
  * Convert local time to GMT.
@@ -1101,7 +1072,7 @@ PJ_DECL(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv);
+PJ_DECL(pj_status_t) pj_time_local_to_gmt(pj_time_val* tv);
 
 /**
  * Convert GMT to local time.
@@ -1110,7 +1081,7 @@ PJ_DECL(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv);
  *
  * @return zero if successfull.
  */
-PJ_DECL(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv);
+PJ_DECL(pj_status_t) pj_time_gmt_to_local(pj_time_val* tv);
 
 /**
  * @}
@@ -1145,7 +1116,7 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
  * @}
  */
 
-#endif	/* PJ_TERM_HAS_COLOR */
+#endif /* PJ_TERM_HAS_COLOR */
 
 /* **************************************************************************/
 /**
@@ -1153,7 +1124,7 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
  * @ingroup PJ_OS
  * @{
  *
- * PJLIB provides <b>High Resolution Timestamp</b> API to access highest 
+ * PJLIB provides <b>High Resolution Timestamp</b> API to access highest
  * resolution timestamp value provided by the platform. The API is usefull
  * to measure precise elapsed time, and can be used in applications such
  * as profiling.
@@ -1180,7 +1151,7 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
  *
  * @return PJ_SUCCESS if successful.
  */
-PJ_DECL(pj_status_t) pj_gettickcount(pj_time_val *tv);
+PJ_DECL(pj_status_t) pj_gettickcount(pj_time_val* tv);
 
 /**
  * Acquire high resolution timer value. The time value are stored
@@ -1191,7 +1162,7 @@ PJ_DECL(pj_status_t) pj_gettickcount(pj_time_val *tv);
  *
  * @see pj_get_timestamp_freq().
  */
-PJ_DECL(pj_status_t) pj_get_timestamp(pj_timestamp *ts);
+PJ_DECL(pj_status_t) pj_get_timestamp(pj_timestamp* ts);
 
 /**
  * Get high resolution timer frequency, in cycles per second.
@@ -1199,7 +1170,7 @@ PJ_DECL(pj_status_t) pj_get_timestamp(pj_timestamp *ts);
  * @param freq	    Timer frequency, in cycles per second.
  * @return	    PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq);
+PJ_DECL(pj_status_t) pj_get_timestamp_freq(pj_timestamp* freq);
 
 /**
  * Set timestamp from 32bit values.
@@ -1207,13 +1178,12 @@ PJ_DECL(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq);
  * @param hi	    The high 32bit part.
  * @param lo	    The low 32bit part.
  */
-PJ_INLINE(void) pj_set_timestamp32(pj_timestamp *t, pj_uint32_t hi,
-				   pj_uint32_t lo)
+PJ_INLINE(void)
+pj_set_timestamp32(pj_timestamp* t, pj_uint32_t hi, pj_uint32_t lo)
 {
     t->u32.hi = hi;
     t->u32.lo = lo;
 }
-
 
 /**
  * Compare timestamp t1 and t2.
@@ -1221,44 +1191,43 @@ PJ_INLINE(void) pj_set_timestamp32(pj_timestamp *t, pj_uint32_t hi,
  * @param t2	    t2.
  * @return	    -1 if (t1 < t2), 1 if (t1 > t2), or 0 if (t1 == t2)
  */
-PJ_INLINE(int) pj_cmp_timestamp(const pj_timestamp *t1, const pj_timestamp *t2)
+PJ_INLINE(int) pj_cmp_timestamp(const pj_timestamp* t1, const pj_timestamp* t2)
 {
-#if PJ_HAS_INT64
+#    if PJ_HAS_INT64
     if (t1->u64 < t2->u64)
-	return -1;
+        return -1;
     else if (t1->u64 > t2->u64)
-	return 1;
+        return 1;
     else
-	return 0;
-#else
+        return 0;
+#    else
     if (t1->u32.hi < t2->u32.hi ||
-	(t1->u32.hi == t2->u32.hi && t1->u32.lo < t2->u32.lo))
-	return -1;
+        (t1->u32.hi == t2->u32.hi && t1->u32.lo < t2->u32.lo))
+        return -1;
     else if (t1->u32.hi > t2->u32.hi ||
-	     (t1->u32.hi == t2->u32.hi && t1->u32.lo > t2->u32.lo))
-	return 1;
+             (t1->u32.hi == t2->u32.hi && t1->u32.lo > t2->u32.lo))
+        return 1;
     else
-	return 0;
-#endif
+        return 0;
+#    endif
 }
-
 
 /**
  * Add timestamp t2 to t1.
  * @param t1	    t1.
  * @param t2	    t2.
  */
-PJ_INLINE(void) pj_add_timestamp(pj_timestamp *t1, const pj_timestamp *t2)
+PJ_INLINE(void) pj_add_timestamp(pj_timestamp* t1, const pj_timestamp* t2)
 {
-#if PJ_HAS_INT64
+#    if PJ_HAS_INT64
     t1->u64 += t2->u64;
-#else
+#    else
     pj_uint32_t old = t1->u32.lo;
     t1->u32.hi += t2->u32.hi;
     t1->u32.lo += t2->u32.lo;
     if (t1->u32.lo < old)
-	++t1->u32.hi;
-#endif
+        ++t1->u32.hi;
+#    endif
 }
 
 /**
@@ -1266,16 +1235,16 @@ PJ_INLINE(void) pj_add_timestamp(pj_timestamp *t1, const pj_timestamp *t2)
  * @param t1	    t1.
  * @param t2	    t2.
  */
-PJ_INLINE(void) pj_add_timestamp32(pj_timestamp *t1, pj_uint32_t t2)
+PJ_INLINE(void) pj_add_timestamp32(pj_timestamp* t1, pj_uint32_t t2)
 {
-#if PJ_HAS_INT64
+#    if PJ_HAS_INT64
     t1->u64 += t2;
-#else
+#    else
     pj_uint32_t old = t1->u32.lo;
     t1->u32.lo += t2;
     if (t1->u32.lo < old)
-	++t1->u32.hi;
-#endif
+        ++t1->u32.hi;
+#    endif
 }
 
 /**
@@ -1283,19 +1252,19 @@ PJ_INLINE(void) pj_add_timestamp32(pj_timestamp *t1, pj_uint32_t t2)
  * @param t1	    t1.
  * @param t2	    t2.
  */
-PJ_INLINE(void) pj_sub_timestamp(pj_timestamp *t1, const pj_timestamp *t2)
+PJ_INLINE(void) pj_sub_timestamp(pj_timestamp* t1, const pj_timestamp* t2)
 {
-#if PJ_HAS_INT64
+#    if PJ_HAS_INT64
     t1->u64 -= t2->u64;
-#else
+#    else
     t1->u32.hi -= t2->u32.hi;
     if (t1->u32.lo >= t2->u32.lo)
-	t1->u32.lo -= t2->u32.lo;
+        t1->u32.lo -= t2->u32.lo;
     else {
-	t1->u32.lo -= t2->u32.lo;
-	--t1->u32.hi;
+        t1->u32.lo -= t2->u32.lo;
+        --t1->u32.hi;
     }
-#endif
+#    endif
 }
 
 /**
@@ -1303,43 +1272,42 @@ PJ_INLINE(void) pj_sub_timestamp(pj_timestamp *t1, const pj_timestamp *t2)
  * @param t1	    t1.
  * @param t2	    t2.
  */
-PJ_INLINE(void) pj_sub_timestamp32(pj_timestamp *t1, pj_uint32_t t2)
+PJ_INLINE(void) pj_sub_timestamp32(pj_timestamp* t1, pj_uint32_t t2)
 {
-#if PJ_HAS_INT64
+#    if PJ_HAS_INT64
     t1->u64 -= t2;
-#else
+#    else
     if (t1->u32.lo >= t2)
-	t1->u32.lo -= t2;
+        t1->u32.lo -= t2;
     else {
-	t1->u32.lo -= t2;
-	--t1->u32.hi;
+        t1->u32.lo -= t2;
+        --t1->u32.hi;
     }
-#endif
+#    endif
 }
 
 /**
  * Get the timestamp difference between t2 and t1 (that is t2 minus t1),
  * and return a 32bit signed integer difference.
  */
-PJ_INLINE(pj_int32_t) pj_timestamp_diff32(const pj_timestamp *t1,
-					  const pj_timestamp *t2)
+PJ_INLINE(pj_int32_t)
+pj_timestamp_diff32(const pj_timestamp* t1, const pj_timestamp* t2)
 {
     /* Be careful with the signess (I think!) */
-#if PJ_HAS_INT64
+#    if PJ_HAS_INT64
     pj_int64_t diff = t2->u64 - t1->u64;
-    return (pj_int32_t) diff;
-#else
+    return (pj_int32_t)diff;
+#    else
     pj_int32 diff = t2->u32.lo - t1->u32.lo;
     return diff;
-#endif
+#    endif
 }
-
 
 /**
  * Calculate the elapsed time, and store it in pj_time_val.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1350,14 +1318,14 @@ PJ_INLINE(pj_int32_t) pj_timestamp_diff32(const pj_timestamp *t1,
  *
  * @see pj_elapsed_usec(), pj_elapsed_cycle(), pj_elapsed_nanosec()
  */
-PJ_DECL(pj_time_val) pj_elapsed_time( const pj_timestamp *start,
-                                      const pj_timestamp *stop );
+PJ_DECL(pj_time_val)
+pj_elapsed_time(const pj_timestamp* start, const pj_timestamp* stop);
 
 /**
  * Calculate the elapsed time as 32-bit miliseconds.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1368,20 +1336,20 @@ PJ_DECL(pj_time_val) pj_elapsed_time( const pj_timestamp *start,
  *
  * @see pj_elapsed_time(), pj_elapsed_cycle(), pj_elapsed_nanosec()
  */
-PJ_DECL(pj_uint32_t) pj_elapsed_msec( const pj_timestamp *start,
-                                      const pj_timestamp *stop );
+PJ_DECL(pj_uint32_t)
+pj_elapsed_msec(const pj_timestamp* start, const pj_timestamp* stop);
 
 /**
  * Variant of #pj_elapsed_msec() which returns 64bit value.
  */
-PJ_DECL(pj_uint64_t) pj_elapsed_msec64(const pj_timestamp *start,
-                                       const pj_timestamp *stop );
+PJ_DECL(pj_uint64_t)
+pj_elapsed_msec64(const pj_timestamp* start, const pj_timestamp* stop);
 
 /**
  * Calculate the elapsed time in 32-bit microseconds.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1392,14 +1360,14 @@ PJ_DECL(pj_uint64_t) pj_elapsed_msec64(const pj_timestamp *start,
  *
  * @see pj_elapsed_time(), pj_elapsed_cycle(), pj_elapsed_nanosec()
  */
-PJ_DECL(pj_uint32_t) pj_elapsed_usec( const pj_timestamp *start,
-                                      const pj_timestamp *stop );
+PJ_DECL(pj_uint32_t)
+pj_elapsed_usec(const pj_timestamp* start, const pj_timestamp* stop);
 
 /**
  * Calculate the elapsed time in 32-bit nanoseconds.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1410,14 +1378,14 @@ PJ_DECL(pj_uint32_t) pj_elapsed_usec( const pj_timestamp *start,
  *
  * @see pj_elapsed_time(), pj_elapsed_cycle(), pj_elapsed_usec()
  */
-PJ_DECL(pj_uint32_t) pj_elapsed_nanosec( const pj_timestamp *start,
-                                         const pj_timestamp *stop );
+PJ_DECL(pj_uint32_t)
+pj_elapsed_nanosec(const pj_timestamp* start, const pj_timestamp* stop);
 
 /**
  * Calculate the elapsed time in 32-bit cycles.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1428,14 +1396,12 @@ PJ_DECL(pj_uint32_t) pj_elapsed_nanosec( const pj_timestamp *start,
  *
  * @see pj_elapsed_usec(), pj_elapsed_time(), pj_elapsed_nanosec()
  */
-PJ_DECL(pj_uint32_t) pj_elapsed_cycle( const pj_timestamp *start,
-                                       const pj_timestamp *stop );
+PJ_DECL(pj_uint32_t)
+pj_elapsed_cycle(const pj_timestamp* start, const pj_timestamp* stop);
 
-
-#endif	/* PJ_HAS_HIGH_RES_TIMER */
+#endif /* PJ_HAS_HIGH_RES_TIMER */
 
 /** @} */
-
 
 /* **************************************************************************/
 /**
@@ -1447,7 +1413,7 @@ PJ_DECL(pj_uint32_t) pj_elapsed_cycle( const pj_timestamp *start,
 /**
  * Type for application main function.
  */
-typedef int (*pj_main_func_ptr)(int argc, char *argv[]);
+typedef int (*pj_main_func_ptr)(int argc, char* argv[]);
 
 /**
  * Run the application. This function has to be called in the main thread
@@ -1463,11 +1429,10 @@ typedef int (*pj_main_func_ptr)(int argc, char *argv[]);
  *
  * @return          main_func()'s return value.
  */
-PJ_DECL(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
-			unsigned flags);
+PJ_DECL(int)
+pj_run_app(pj_main_func_ptr main_func, int argc, char* argv[], unsigned flags);
 
 /** @} */
-
 
 /* **************************************************************************/
 /**
@@ -1476,8 +1441,6 @@ PJ_DECL(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
  */
 pj_status_t pj_thread_init(void);
 
-
 PJ_END_DECL
 
-#endif  /* __PJ_OS_H__ */
-
+#endif /* __PJ_OS_H__ */

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,22 +14,22 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/types.h>
 
-#if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
-#   define WITH_BENCHMARK	    0
+#if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS == 1)
+#    define WITH_BENCHMARK 0
 #else
-#   define WITH_BENCHMARK	    1
+#    define WITH_BENCHMARK 1
 #endif
 
-#define INCLUDE_XML_TEST	    1
-#define INCLUDE_JSON_TEST	    1
-#define INCLUDE_ENCRYPTION_TEST	    1
-#define INCLUDE_STUN_TEST	    1
-#define INCLUDE_RESOLVER_TEST	    1
-#define INCLUDE_HTTP_CLIENT_TEST    1
+#define INCLUDE_XML_TEST         1
+#define INCLUDE_JSON_TEST        1
+#define INCLUDE_ENCRYPTION_TEST  1
+#define INCLUDE_STUN_TEST        1
+#define INCLUDE_RESOLVER_TEST    1
+#define INCLUDE_HTTP_CLIENT_TEST 1
 
 extern int xml_test(void);
 extern int json_test(void);
@@ -41,6 +40,5 @@ extern int test_main(void);
 extern int resolver_test(void);
 extern int http_client_test();
 
-extern void app_perror(const char *title, pj_status_t rc);
-extern pj_pool_factory *mem;
-
+extern void app_perror(const char* title, pj_status_t rc);
+extern pj_pool_factory* mem;

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_PLC_H__
 #define __PJMEDIA_PLC_H__
-
 
 /**
  * @file plc.h
@@ -35,7 +33,7 @@
  *
  * This section describes PJMEDIA's implementation of Packet Lost
  * Concealment algorithm. This algorithm is used to implement PLC for
- * codecs that do not have built-in support for one (e.g. G.711 or GSM 
+ * codecs that do not have built-in support for one (e.g. G.711 or GSM
  * codecs).
  *
  * The PLC algorithm (either built-in or external) is embedded in
@@ -46,16 +44,12 @@
  * See also @ref plc_codec for more info.
  */
 
-
 PJ_BEGIN_DECL
-
 
 /**
  * Opaque declaration for PLC.
  */
 typedef struct pjmedia_plc pjmedia_plc;
-
-
 
 /**
  * Create PLC session. This function will select the PLC algorithm to
@@ -69,12 +63,10 @@ typedef struct pjmedia_plc pjmedia_plc;
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_plc_create( pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned samples_per_frame,
-					 unsigned options,
-					 pjmedia_plc **p_plc);
-
+PJ_DECL(pj_status_t)
+pjmedia_plc_create(pj_pool_t* pool, unsigned clock_rate,
+                   unsigned samples_per_frame, unsigned options,
+                   pjmedia_plc** p_plc);
 
 /**
  * Save a good frame to PLC.
@@ -86,9 +78,7 @@ PJ_DECL(pj_status_t) pjmedia_plc_create( pj_pool_t *pool,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_plc_save( pjmedia_plc *plc,
-				       pj_int16_t *frame );
-
+PJ_DECL(pj_status_t) pjmedia_plc_save(pjmedia_plc* plc, pj_int16_t* frame);
 
 /**
  * Generate a replacement for lost frame.
@@ -99,11 +89,7 @@ PJ_DECL(pj_status_t) pjmedia_plc_save( pjmedia_plc *plc,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_plc_generate( pjmedia_plc *plc,
-					   pj_int16_t *frame );
-
-
-
+PJ_DECL(pj_status_t) pjmedia_plc_generate(pjmedia_plc* plc, pj_int16_t* frame);
 
 PJ_END_DECL
 
@@ -111,5 +97,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_PLC_H__ */
-
+#endif /* __PJMEDIA_PLC_H__ */

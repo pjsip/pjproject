@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/list.h>
 #include <pj/assert.h>
@@ -36,37 +35,36 @@ struct my_node
     int value;
 };
 
-
 int main()
 {
     struct my_node nodes[10];
     struct my_node list;
-    struct my_node *it;
+    struct my_node* it;
     int i;
-    
+
     // Initialize the list as empty.
     pj_list_init(&list);
-    
+
     // Insert nodes.
-    for (i=0; i<10; ++i) {
+    for (i = 0; i < 10; ++i) {
         nodes[i].value = i;
         pj_list_insert_before(&list, &nodes[i]);
     }
-    
+
     // Iterate list nodes.
     it = list.next;
     while (it != &list) {
-        PJ_LOG(3,("list", "value = %d", it->value));
+        PJ_LOG(3, ("list", "value = %d", it->value));
         it = it->next;
     }
-    
+
     // Erase all nodes.
-    for (i=0; i<10; ++i) {
+    for (i = 0; i < 10; ++i) {
         pj_list_erase(&nodes[i]);
     }
-    
+
     // List must be empty by now.
-    pj_assert( pj_list_empty(&list) );
-    
+    pj_assert(pj_list_empty(&list));
+
     return 0;
 };

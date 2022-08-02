@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pj/errno.h>
@@ -26,18 +25,18 @@
 
 #if INCLUDE_ERRNO_TEST
 
-#define THIS_FILE   "errno"
+#    define THIS_FILE "errno"
 
-#if (defined(PJ_WIN32) && PJ_WIN32 != 0) || \
-    (defined(PJ_WIN64) && PJ_WIN64 != 0)
-#   include <windows.h>
-#endif
+#    if (defined(PJ_WIN32) && PJ_WIN32 != 0) || \
+      (defined(PJ_WIN64) && PJ_WIN64 != 0)
+#        include <windows.h>
+#    endif
 
-#if defined(PJ_HAS_ERRNO_H) && PJ_HAS_ERRNO_H != 0
-#   include <errno.h>
-#endif
+#    if defined(PJ_HAS_ERRNO_H) && PJ_HAS_ERRNO_H != 0
+#        include <errno.h>
+#    endif
 
-static void trim_newlines(char *s)
+static void trim_newlines(char* s)
 {
     while (*s) {
         if (*s == '\r' || *s == '\n')
@@ -46,7 +45,7 @@ static void trim_newlines(char *s)
     }
 }
 
-int my_strncasecmp(const char *s1, const char *s2, int max_len)
+int my_strncasecmp(const char* s1, const char* s2, int max_len)
 {
     while (*s1 && *s2 && max_len > 0) {
         if (pj_tolower(*s1) != pj_tolower(*s2))
@@ -58,7 +57,7 @@ int my_strncasecmp(const char *s1, const char *s2, int max_len)
     return 0;
 }
 
-const char *my_stristr(const char *whole, const char *part)
+const char* my_stristr(const char* whole, const char* part)
 {
     int part_len = (int)strlen(part);
     while (*whole) {
@@ -71,43 +70,47 @@ const char *my_stristr(const char *whole, const char *part)
 
 int errno_test(void)
 {
-    enum { CUT = 6 };
+    enum
+    {
+        CUT = 6
+    };
     pj_status_t rc = 0;
     char errbuf[256];
 
-    PJ_LOG(3,(THIS_FILE, "...errno test: check the msg carefully"));
+    PJ_LOG(3, (THIS_FILE, "...errno test: check the msg carefully"));
 
     PJ_UNUSED_ARG(rc);
-    
-    /* 
-     * Windows platform error. 
+
+    /*
+     * Windows platform error.
      */
-#   ifdef ERROR_INVALID_DATA
+#    ifdef ERROR_INVALID_DATA
     rc = PJ_STATUS_FROM_OS(ERROR_INVALID_DATA);
     pj_set_os_error(rc);
 
     /* Whole */
     pj_strerror(rc, errbuf, sizeof(errbuf));
     trim_newlines(errbuf);
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=ERROR_INVALID_DATA: '%s'", errbuf));
+    PJ_LOG(3, (THIS_FILE, "...msg for rc=ERROR_INVALID_DATA: '%s'", errbuf));
     if (my_stristr(errbuf, "invalid") == NULL) {
-        PJ_LOG(3, (THIS_FILE, 
-                   "...error: expecting \"invalid\" string in the msg"));
-#ifndef PJ_WIN32_WINCE
+        PJ_LOG(
+          3, (THIS_FILE, "...error: expecting \"invalid\" string in the msg"));
+#        ifndef PJ_WIN32_WINCE
         return -20;
-#endif
+#        endif
     }
 
     /* Cut version. */
     pj_strerror(rc, errbuf, CUT);
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=ERROR_INVALID_DATA (cut): '%s'", errbuf));
-#   endif
+    PJ_LOG(3,
+           (THIS_FILE, "...msg for rc=ERROR_INVALID_DATA (cut): '%s'", errbuf));
+#    endif
 
     /*
      * Unix errors
      */
-#   if defined(EINVAL) && !defined(PJ_SYMBIAN) && !defined(PJ_WIN32) \
-       && !defined(PJ_WIN64)
+#    if defined(EINVAL) && !defined(PJ_SYMBIAN) && !defined(PJ_WIN32) && \
+      !defined(PJ_WIN64)
 
     rc = PJ_STATUS_FROM_OS(EINVAL);
     pj_set_os_error(rc);
@@ -115,60 +118,56 @@ int errno_test(void)
     /* Whole */
     pj_strerror(rc, errbuf, sizeof(errbuf));
     trim_newlines(errbuf);
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=EINVAL: '%s'", errbuf));
+    PJ_LOG(3, (THIS_FILE, "...msg for rc=EINVAL: '%s'", errbuf));
     if (my_stristr(errbuf, "invalid") == NULL) {
-        PJ_LOG(3, (THIS_FILE, 
-                   "...error: expecting \"invalid\" string in the msg"));
+        PJ_LOG(
+          3, (THIS_FILE, "...error: expecting \"invalid\" string in the msg"));
         return -30;
     }
 
     /* Cut */
     pj_strerror(rc, errbuf, CUT);
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=EINVAL (cut): '%s'", errbuf));
-#   endif
+    PJ_LOG(3, (THIS_FILE, "...msg for rc=EINVAL (cut): '%s'", errbuf));
+#    endif
 
-    /* 
+    /*
      * Windows WSA errors
      */
-#   ifdef WSAEINVAL
+#    ifdef WSAEINVAL
     rc = PJ_STATUS_FROM_OS(WSAEINVAL);
     pj_set_os_error(rc);
 
     /* Whole */
     pj_strerror(rc, errbuf, sizeof(errbuf));
     trim_newlines(errbuf);
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=WSAEINVAL: '%s'", errbuf));
+    PJ_LOG(3, (THIS_FILE, "...msg for rc=WSAEINVAL: '%s'", errbuf));
     if (my_stristr(errbuf, "invalid") == NULL) {
-        PJ_LOG(3, (THIS_FILE, 
-                   "...error: expecting \"invalid\" string in the msg"));
+        PJ_LOG(
+          3, (THIS_FILE, "...error: expecting \"invalid\" string in the msg"));
         return -40;
     }
 
     /* Cut */
     pj_strerror(rc, errbuf, CUT);
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=WSAEINVAL (cut): '%s'", errbuf));
-#   endif
+    PJ_LOG(3, (THIS_FILE, "...msg for rc=WSAEINVAL (cut): '%s'", errbuf));
+#    endif
 
     pj_strerror(PJ_EBUG, errbuf, sizeof(errbuf));
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=PJ_EBUG: '%s'", errbuf));
+    PJ_LOG(3, (THIS_FILE, "...msg for rc=PJ_EBUG: '%s'", errbuf));
     if (my_stristr(errbuf, "BUG") == NULL) {
-        PJ_LOG(3, (THIS_FILE, 
-                   "...error: expecting \"BUG\" string in the msg"));
+        PJ_LOG(3, (THIS_FILE, "...error: expecting \"BUG\" string in the msg"));
         return -20;
     }
 
     pj_strerror(PJ_EBUG, errbuf, CUT);
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=PJ_EBUG, cut at %d chars: '%s'", 
-              CUT, errbuf));
+    PJ_LOG(3, (THIS_FILE, "...msg for rc=PJ_EBUG, cut at %d chars: '%s'", CUT,
+               errbuf));
 
     /* Perror */
     pj_perror(3, THIS_FILE, PJ_SUCCESS, "...testing %s", "pj_perror");
-    PJ_PERROR(3,(THIS_FILE, PJ_SUCCESS, "...testing %s", "PJ_PERROR"));
+    PJ_PERROR(3, (THIS_FILE, PJ_SUCCESS, "...testing %s", "PJ_PERROR"));
 
     return 0;
 }
 
-
-#endif	/* INCLUDE_ERRNO_TEST */
-
-
+#endif /* INCLUDE_ERRNO_TEST */

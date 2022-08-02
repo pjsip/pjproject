@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_TURN_SOCK_H__
 #define __PJNATH_TURN_SOCK_H__
@@ -28,9 +27,7 @@
 #include <pj/sock_qos.h>
 #include <pj/ssl_sock.h>
 
-
 PJ_BEGIN_DECL
-
 
 /* **************************************************************************/
 /**
@@ -56,8 +53,7 @@ Also see <b>\ref samples_page</b> for other samples.
 
  */
 
-
-/** 
+/**
  * Opaque declaration for TURN client.
  */
 typedef struct pj_turn_sock pj_turn_sock;
@@ -76,16 +72,13 @@ typedef struct pj_turn_sock_cb
      * function is called).
      *
      * @param turn_sock	    The TURN client transport.
-     * @param data	    The data as received from the peer.    
+     * @param data	    The data as received from the peer.
      * @param data_len	    Length of the data.
      * @param peer_addr	    The peer address.
      * @param addr_len	    The length of the peer address.
      */
-    void (*on_rx_data)(pj_turn_sock *turn_sock,
-		       void *pkt,
-		       unsigned pkt_len,
-		       const pj_sockaddr_t *peer_addr,
-		       unsigned addr_len);
+    void (*on_rx_data)(pj_turn_sock* turn_sock, void* pkt, unsigned pkt_len,
+                       const pj_sockaddr_t* peer_addr, unsigned addr_len);
 
     /**
      * Notifification when asynchronous send operation has completed.
@@ -101,8 +94,7 @@ typedef struct pj_turn_sock_cb
      *			    it must return PJ_FALSE if it has destroyed the
      *			    TURN transport in this callback.
      */
-    pj_bool_t (*on_data_sent)(pj_turn_sock *sock,
-			      pj_ssize_t sent);
+    pj_bool_t (*on_data_sent)(pj_turn_sock* sock, pj_ssize_t sent);
 
     /**
      * Notification when TURN session state has changed. Application should
@@ -112,9 +104,8 @@ typedef struct pj_turn_sock_cb
      * @param old_state	    Previous state.
      * @param new_state	    Current state.
      */
-    void (*on_state)(pj_turn_sock *turn_sock, 
-		     pj_turn_state_t old_state,
-		     pj_turn_state_t new_state);
+    void (*on_state)(pj_turn_sock* turn_sock, pj_turn_state_t old_state,
+                     pj_turn_state_t new_state);
 
     /**
      * Notification when TURN client received a ConnectionAttempt Indication
@@ -138,10 +129,10 @@ typedef struct pj_turn_sock_cb
      * @return		    The callback must return PJ_SUCCESS to accept
      *			    the connection attempt.
      */
-    pj_status_t (*on_connection_attempt)(pj_turn_sock *turn_sock,
-					 pj_uint32_t conn_id,
-					 const pj_sockaddr_t *peer_addr,
-					 unsigned addr_len);
+    pj_status_t (*on_connection_attempt)(pj_turn_sock* turn_sock,
+                                         pj_uint32_t conn_id,
+                                         const pj_sockaddr_t* peer_addr,
+                                         unsigned addr_len);
 
     /**
      * Notification for initiated TCP data connection to peer (RFC 6062),
@@ -153,23 +144,21 @@ typedef struct pj_turn_sock_cb
      * @param peer_addr	    Peer address.
      * @param addr_len	    Length of the peer address.
      */
-    void (*on_connection_status)(pj_turn_sock *turn_sock,
-				 pj_status_t status,
-				 pj_uint32_t conn_id,
-				 const pj_sockaddr_t *peer_addr,
-				 unsigned addr_len);
+    void (*on_connection_status)(pj_turn_sock* turn_sock, pj_status_t status,
+                                 pj_uint32_t conn_id,
+                                 const pj_sockaddr_t* peer_addr,
+                                 unsigned addr_len);
 
 } pj_turn_sock_cb;
-
 
 /**
  * The default enabled SSL proto to be used.
  * Default is all protocol above TLSv1 (TLSv1 & TLS v1.1 & TLS v1.2).
  */
 #ifndef PJ_TURN_TLS_DEFAULT_PROTO
-#   define PJ_TURN_TLS_DEFAULT_PROTO  (PJ_SSL_SOCK_PROTO_TLS1 | \
-				       PJ_SSL_SOCK_PROTO_TLS1_1 | \
-				       PJ_SSL_SOCK_PROTO_TLS1_2)
+#    define PJ_TURN_TLS_DEFAULT_PROTO \
+        (PJ_SSL_SOCK_PROTO_TLS1 | PJ_SSL_SOCK_PROTO_TLS1_1 | \
+         PJ_SSL_SOCK_PROTO_TLS1_2)
 #endif
 
 /**
@@ -180,23 +169,23 @@ typedef struct pj_turn_sock_tls_cfg
     /**
      * Certificate of Authority (CA) list file.
      */
-    pj_str_t	ca_list_file;
+    pj_str_t ca_list_file;
 
     /**
      * Certificate of Authority (CA) list directory path.
      */
-    pj_str_t	ca_list_path;
+    pj_str_t ca_list_path;
 
     /**
      * Public endpoint certificate file, which will be used as client-
      * side  certificate for outgoing TLS connection.
      */
-    pj_str_t	cert_file;
+    pj_str_t cert_file;
 
     /**
      * Optional private key of the endpoint certificate to be used.
      */
-    pj_str_t	privkey_file;
+    pj_str_t privkey_file;
 
     /**
      * Certificate of Authority (CA) buffer. If ca_list_file, ca_list_path,
@@ -213,8 +202,8 @@ typedef struct pj_turn_sock_tls_cfg
     pj_ssl_cert_buffer cert_buf;
 
     /**
-     * Optional private key buffer of the endpoint certificate to be used. 
-     * If ca_list_file, ca_list_path, cert_file or privkey_file are set, 
+     * Optional private key buffer of the endpoint certificate to be used.
+     * If ca_list_file, ca_list_path, cert_file or privkey_file are set,
      * this setting will be ignored.
      */
     pj_ssl_cert_buffer privkey_buf;
@@ -222,7 +211,7 @@ typedef struct pj_turn_sock_tls_cfg
     /**
      * Password to open private key.
      */
-    pj_str_t	password;
+    pj_str_t password;
 
     /**
      * The ssl socket parameter.
@@ -248,7 +237,7 @@ typedef struct pj_turn_sock_tls_cfg
  *
  * @param tls_cfg   The TLS setting to be initialized.
  */
- PJ_DECL(void) pj_turn_sock_tls_cfg_default(pj_turn_sock_tls_cfg *tls_cfg);
+PJ_DECL(void) pj_turn_sock_tls_cfg_default(pj_turn_sock_tls_cfg* tls_cfg);
 
 /**
  * Duplicate TLS setting.
@@ -257,17 +246,16 @@ typedef struct pj_turn_sock_tls_cfg
  * @param dst	    Destination structure.
  * @param src	    Source structure.
  */
- PJ_DECL(void) pj_turn_sock_tls_cfg_dup(pj_pool_t *pool,
-					pj_turn_sock_tls_cfg *dst,
-					const pj_turn_sock_tls_cfg *src);
+PJ_DECL(void)
+pj_turn_sock_tls_cfg_dup(pj_pool_t* pool, pj_turn_sock_tls_cfg* dst,
+                         const pj_turn_sock_tls_cfg* src);
 
 /**
  * Wipe out certificates and keys in the TLS setting.
  *
  * @param tls_cfg   The TLS setting.
  */
-PJ_DECL(void) pj_turn_sock_tls_cfg_wipe_keys(pj_turn_sock_tls_cfg *tls_cfg);
-
+PJ_DECL(void) pj_turn_sock_tls_cfg_wipe_keys(pj_turn_sock_tls_cfg* tls_cfg);
 
 /**
  * This structure describes options that can be specified when creating
@@ -282,7 +270,7 @@ typedef struct pj_turn_sock_cfg
      *
      * Default: NULL
      */
-    pj_grp_lock_t *grp_lock;
+    pj_grp_lock_t* grp_lock;
 
     /**
      * Packet buffer size.
@@ -332,7 +320,7 @@ typedef struct pj_turn_sock_cfg
      *
      * Default value is zero.
      */
-    pj_uint16_t	port_range;
+    pj_uint16_t port_range;
 
     /**
      * Specify target value for socket receive buffer size. It will be
@@ -362,12 +350,10 @@ typedef struct pj_turn_sock_cfg
 
 } pj_turn_sock_cfg;
 
-
 /**
  * Initialize pj_turn_sock_cfg structure with default values.
  */
-PJ_DECL(void) pj_turn_sock_cfg_default(pj_turn_sock_cfg *cfg);
-
+PJ_DECL(void) pj_turn_sock_cfg_default(pj_turn_sock_cfg* cfg);
 
 /**
  * Create a TURN transport instance with the specified address family and
@@ -394,13 +380,10 @@ PJ_DECL(void) pj_turn_sock_cfg_default(pj_turn_sock_cfg *cfg);
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
-					 int af,
-					 pj_turn_tp_type conn_type,
-					 const pj_turn_sock_cb *cb,
-					 const pj_turn_sock_cfg *setting,
-					 void *user_data,
-					 pj_turn_sock **p_turn_sock);
+PJ_DECL(pj_status_t)
+pj_turn_sock_create(pj_stun_config* cfg, int af, pj_turn_tp_type conn_type,
+                    const pj_turn_sock_cb* cb, const pj_turn_sock_cfg* setting,
+                    void* user_data, pj_turn_sock** p_turn_sock);
 
 /**
  * Destroy the TURN transport instance. This will gracefully close the
@@ -411,8 +394,7 @@ PJ_DECL(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
  *
  * @param turn_sock	The TURN transport instance.
  */
-PJ_DECL(void) pj_turn_sock_destroy(pj_turn_sock *turn_sock);
-
+PJ_DECL(void) pj_turn_sock_destroy(pj_turn_sock* turn_sock);
 
 /**
  * Associate a user data with this TURN transport. The user data may then
@@ -424,8 +406,8 @@ PJ_DECL(void) pj_turn_sock_destroy(pj_turn_sock *turn_sock);
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_set_user_data(pj_turn_sock *turn_sock,
-					        void *user_data);
+PJ_DECL(pj_status_t)
+pj_turn_sock_set_user_data(pj_turn_sock* turn_sock, void* user_data);
 
 /**
  * Retrieve the previously assigned user data associated with this TURN
@@ -435,8 +417,7 @@ PJ_DECL(pj_status_t) pj_turn_sock_set_user_data(pj_turn_sock *turn_sock,
  *
  * @return		The user/application data.
  */
-PJ_DECL(void*) pj_turn_sock_get_user_data(pj_turn_sock *turn_sock);
-
+PJ_DECL(void*) pj_turn_sock_get_user_data(pj_turn_sock* turn_sock);
 
 /**
  * Get the group lock for this TURN transport.
@@ -445,8 +426,7 @@ PJ_DECL(void*) pj_turn_sock_get_user_data(pj_turn_sock *turn_sock);
  *
  * @return	        The group lock.
  */
-PJ_DECL(pj_grp_lock_t *) pj_turn_sock_get_grp_lock(pj_turn_sock *turn_sock);
-
+PJ_DECL(pj_grp_lock_t*) pj_turn_sock_get_grp_lock(pj_turn_sock* turn_sock);
 
 /**
  * Get the TURN transport info. The transport info contains, among other
@@ -458,12 +438,12 @@ PJ_DECL(pj_grp_lock_t *) pj_turn_sock_get_grp_lock(pj_turn_sock *turn_sock);
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_get_info(pj_turn_sock *turn_sock,
-					   pj_turn_session_info *info);
+PJ_DECL(pj_status_t)
+pj_turn_sock_get_info(pj_turn_sock* turn_sock, pj_turn_session_info* info);
 
 /**
  * Acquire the internal mutex of the TURN transport. Application may need
- * to call this function to synchronize access to other objects alongside 
+ * to call this function to synchronize access to other objects alongside
  * the TURN transport, to avoid deadlock.
  *
  * @param turn_sock	The TURN transport instance.
@@ -471,8 +451,7 @@ PJ_DECL(pj_status_t) pj_turn_sock_get_info(pj_turn_sock *turn_sock,
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_lock(pj_turn_sock *turn_sock);
-
+PJ_DECL(pj_status_t) pj_turn_sock_lock(pj_turn_sock* turn_sock);
 
 /**
  * Release the internal mutex previously held with pj_turn_sock_lock().
@@ -482,18 +461,16 @@ PJ_DECL(pj_status_t) pj_turn_sock_lock(pj_turn_sock *turn_sock);
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_unlock(pj_turn_sock *turn_sock);
-
+PJ_DECL(pj_status_t) pj_turn_sock_unlock(pj_turn_sock* turn_sock);
 
 /**
- * Set STUN message logging for this TURN session. 
+ * Set STUN message logging for this TURN session.
  * See #pj_stun_session_set_log().
  *
  * @param turn_sock	The TURN transport instance.
  * @param flags		Bitmask combination of #pj_stun_sess_msg_log_flag
  */
-PJ_DECL(void) pj_turn_sock_set_log(pj_turn_sock *turn_sock,
-				   unsigned flags);
+PJ_DECL(void) pj_turn_sock_set_log(pj_turn_sock* turn_sock, unsigned flags);
 
 /**
  * Configure the SOFTWARE name to be sent in all STUN requests by the
@@ -506,9 +483,8 @@ PJ_DECL(void) pj_turn_sock_set_log(pj_turn_sock *turn_sock,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_set_software_name(pj_turn_sock *turn_sock,
-						    const pj_str_t *sw);
-
+PJ_DECL(pj_status_t)
+pj_turn_sock_set_software_name(pj_turn_sock* turn_sock, const pj_str_t* sw);
 
 /**
  * Allocate a relay address/resource in the TURN server. This function
@@ -543,14 +519,13 @@ PJ_DECL(pj_status_t) pj_turn_sock_set_software_name(pj_turn_sock *turn_sock,
  *			When this function returns PJ_SUCCESS, the final
  *			result of the allocation process will be notified
  *			to application in \a on_state() callback.
- *			
+ *
  */
-PJ_DECL(pj_status_t) pj_turn_sock_alloc(pj_turn_sock *turn_sock,
-				        const pj_str_t *domain,
-				        int default_port,
-				        pj_dns_resolver *resolver,
-				        const pj_stun_auth_cred *cred,
-				        const pj_turn_alloc_param *param);
+PJ_DECL(pj_status_t)
+pj_turn_sock_alloc(pj_turn_sock* turn_sock, const pj_str_t* domain,
+                   int default_port, pj_dns_resolver* resolver,
+                   const pj_stun_auth_cred* cred,
+                   const pj_turn_alloc_param* param);
 
 /**
  * Create or renew permission in the TURN server for the specified peer IP
@@ -570,13 +545,12 @@ PJ_DECL(pj_status_t) pj_turn_sock_alloc(pj_turn_sock *turn_sock,
  *			issued, or the appropriate error code. Note that
  *			the operation itself will complete asynchronously.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_set_perm(pj_turn_sock *turn_sock,
-					   unsigned addr_cnt,
-					   const pj_sockaddr addr[],
-					   unsigned options);
+PJ_DECL(pj_status_t)
+pj_turn_sock_set_perm(pj_turn_sock* turn_sock, unsigned addr_cnt,
+                      const pj_sockaddr addr[], unsigned options);
 
 /**
- * Send a data to the specified peer address via the TURN relay. This 
+ * Send a data to the specified peer address via the TURN relay. This
  * function will encapsulate the data as STUN Send Indication or TURN
  * ChannelData packet and send the message to the TURN server. The TURN
  * server then will send the data to the peer.
@@ -596,12 +570,11 @@ PJ_DECL(pj_status_t) pj_turn_sock_set_perm(pj_turn_sock *turn_sock,
  *			this case the \a on_data_sent() callback will be
  *			called when data is actually sent. Any other return
  *			value indicates error condition.
- */ 
-PJ_DECL(pj_status_t) pj_turn_sock_sendto(pj_turn_sock *turn_sock,
-					const pj_uint8_t *pkt,
-					unsigned pkt_len,
-					const pj_sockaddr_t *peer_addr,
-					unsigned addr_len);
+ */
+PJ_DECL(pj_status_t)
+pj_turn_sock_sendto(pj_turn_sock* turn_sock, const pj_uint8_t* pkt,
+                    unsigned pkt_len, const pj_sockaddr_t* peer_addr,
+                    unsigned addr_len);
 
 /**
  * Optionally establish channel binding for the specified a peer address.
@@ -619,9 +592,9 @@ PJ_DECL(pj_status_t) pj_turn_sock_sendto(pj_turn_sock *turn_sock,
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_bind_channel(pj_turn_sock *turn_sock,
-					       const pj_sockaddr_t *peer,
-					       unsigned addr_len);
+PJ_DECL(pj_status_t)
+pj_turn_sock_bind_channel(pj_turn_sock* turn_sock, const pj_sockaddr_t* peer,
+                          unsigned addr_len);
 /**
  * Initiate connection to the specified peer using Connect request.
  * Application must call this function when it uses RFC 6062 (TURN TCP
@@ -641,9 +614,9 @@ PJ_DECL(pj_status_t) pj_turn_sock_bind_channel(pj_turn_sock *turn_sock,
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_connect(pj_turn_sock *turn_sock,
-					  const pj_sockaddr_t *peer,
-					  unsigned addr_len);
+PJ_DECL(pj_status_t)
+pj_turn_sock_connect(pj_turn_sock* turn_sock, const pj_sockaddr_t* peer,
+                     unsigned addr_len);
 /**
  * Close previous TCP data connection for the specified peer.
  * According to RFC 6062, when the client wishes to terminate its relayed
@@ -656,18 +629,14 @@ PJ_DECL(pj_status_t) pj_turn_sock_connect(pj_turn_sock *turn_sock,
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_turn_sock_disconnect(pj_turn_sock *turn_sock,
-					   const pj_sockaddr_t *peer,
-					   unsigned addr_len);
-
+PJ_DECL(pj_status_t)
+pj_turn_sock_disconnect(pj_turn_sock* turn_sock, const pj_sockaddr_t* peer,
+                        unsigned addr_len);
 
 /**
  * @}
  */
 
-
 PJ_END_DECL
 
-
-#endif	/* __PJNATH_TURN_SOCK_H__ */
-
+#endif /* __PJNATH_TURN_SOCK_H__ */

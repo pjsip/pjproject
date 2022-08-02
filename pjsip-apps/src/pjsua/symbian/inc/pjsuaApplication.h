@@ -3,7 +3,7 @@
  Name        : pjsuaApplication.h
  Author      : nanang
  Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
- Description : 
+ Description :
 ========================================================================
 */
 #ifndef PJSUAAPPLICATION_H
@@ -20,16 +20,14 @@ const TUid KUidpjsuaApplication = { 0xE44C2D02 };
 /**
  *
  * @class	CpjsuaApplication pjsuaApplication.h
- * @brief	A CAknApplication-derived class is required by the S60 application 
- *          framework. It is subclassed to create the application's document 
+ * @brief	A CAknApplication-derived class is required by the S60
+ * application framework. It is subclassed to create the application's document
  *          object.
  */
-class CpjsuaApplication : public CAknApplication
-	{
-private:
-	TUid AppDllUid() const;
-	CApaDocument* CreateDocumentL();
-	
-	};
-			
-#endif // PJSUAAPPLICATION_H		
+class CpjsuaApplication : public CAknApplication {
+   private:
+    TUid AppDllUid() const;
+    CApaDocument* CreateDocumentL();
+};
+
+#endif  // PJSUAAPPLICATION_H

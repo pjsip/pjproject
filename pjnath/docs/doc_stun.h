@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,9 +13,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
 
 /**
 @defgroup PJNATH_STUN STUN: Session Traversal Utilities for NAT
@@ -29,7 +27,6 @@
 @brief STUN aware UDP socket transport
 @ingroup PJNATH_STUN
  */
-
 
 /**
 @defgroup PJNATH_STUN_SESSION STUN session
@@ -48,7 +45,6 @@ representation and parsing, transactions, authentication
 framework, as well as compile-time and run-time configurations.
 */
 
-
 /**
 @addtogroup PJNATH_STUN
 
@@ -63,19 +59,19 @@ The STUN part of PJNATH consists of the the following sections (see
 
 \section stun_using_sec Using the STUN transport
 
-The \ref PJNATH_STUN_SOCK is a ready to use object which provides 
+The \ref PJNATH_STUN_SOCK is a ready to use object which provides
 send and receive interface for communicating UDP packets as well as
 means to communicate with the STUN server and manage the STUN mapped
 address.
 
 Some features of the \ref PJNATH_STUN_SOCK:
  - API to send and receive UDP packets,
- - interface to query the STUN mapped address info, 
+ - interface to query the STUN mapped address info,
  - multiplex STUN and non-STUN incoming packets and distinguish between
    STUN responses that belong to internal requests with application data
    (the application data may be STUN packets as well),
- - resolution of the STUN server with DNS SRV query (if wanted), 
- - maintaining STUN keep-alive, and 
+ - resolution of the STUN server with DNS SRV query (if wanted),
+ - maintaining STUN keep-alive, and
  - handle changes in STUN mapped address binding.
 
 Please see \ref PJNATH_STUN_SOCK for more information.
@@ -85,21 +81,21 @@ Please see \ref PJNATH_STUN_SOCK for more information.
 
 The rest of the STUN part of the library provides lower level objects
 which can be used to build your own STUN based transport or
-protocols (officially called STUN usages). These will be explained 
+protocols (officially called STUN usages). These will be explained
 briefly below.
 
 
 \subsection stun_sess_sec The STUN session
 
-A STUN session is interactive information exchange between two STUN 
+A STUN session is interactive information exchange between two STUN
 endpoints that lasts for some period of time. It is typically started by
-an outgoing or incoming request, and consists of several requests, 
+an outgoing or incoming request, and consists of several requests,
 responses, and indications. All requests and responses within the session
 typically share a same credential.
 
 The \ref PJNATH_STUN_SESSION is a transport-independent object to
 manage a client or server STUN session. It is one of the core object in
-PJNATH, and it is used by several higher level objects including the 
+PJNATH, and it is used by several higher level objects including the
 \ref PJNATH_STUN_SOCK, \ref PJNATH_TURN_SESSION, and \ref PJNATH_ICE_SESSION.
 
 The \ref PJNATH_STUN_SESSION has the following features:
@@ -109,7 +105,7 @@ The \ref PJNATH_STUN_SESSION has the following features:
    - client transaction management
    - server transaction management
 
-For more information, including how to use it please see 
+For more information, including how to use it please see
 \ref PJNATH_STUN_SESSION.
 
 
@@ -125,10 +121,9 @@ PJNATH, as well as implementing the logic for the STUN usage.
 \section stunsamples_sec STUN samples
 
 The \ref turn_client_sample sample application also contains sample
-code to use \ref PJNATH_STUN_SOCK. 
+code to use \ref PJNATH_STUN_SOCK.
 
 Also see <b>\ref samples_page</b> for other samples.
 
 
  */
-

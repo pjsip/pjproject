@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_VID_CODEC_UTIL_H__
 #define __PJMEDIA_VID_CODEC_UTIL_H__
-
 
 /**
  * @file vid_codec_util.h
@@ -31,20 +29,19 @@
 
 PJ_BEGIN_DECL
 
-
 /**
  * Definition of H.263 parameters.
  */
 typedef struct pjmedia_vid_codec_h263_fmtp
 {
-    unsigned mpi_cnt;		    /**< # of parsed MPI param		    */
-    struct mpi {
-	pjmedia_rect_size   size;   /**< Picture size/resolution	    */
-	unsigned	    val;    /**< MPI value			    */
-    } mpi[32];			    /**< Minimum Picture Interval parameter */
+    unsigned mpi_cnt; /**< # of parsed MPI param		    */
+    struct mpi
+    {
+        pjmedia_rect_size size; /**< Picture size/resolution	    */
+        unsigned val;           /**< MPI value			    */
+    } mpi[32];                  /**< Minimum Picture Interval parameter */
 
 } pjmedia_vid_codec_h263_fmtp;
-
 
 /**
  * Parse SDP fmtp of H.263.
@@ -54,10 +51,9 @@ typedef struct pjmedia_vid_codec_h263_fmtp
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_h263_parse_fmtp(
-				const pjmedia_codec_fmtp *fmtp,
-				pjmedia_vid_codec_h263_fmtp *h263_fmtp);
-
+PJ_DECL(pj_status_t)
+pjmedia_vid_codec_h263_parse_fmtp(const pjmedia_codec_fmtp* fmtp,
+                                  pjmedia_vid_codec_h263_fmtp* h263_fmtp);
 
 /**
  * Parse, negotiate, and apply the encoding and decoding SDP fmtp of H.263
@@ -67,9 +63,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_h263_parse_fmtp(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
-				pjmedia_vid_codec_param *param);
-
+PJ_DECL(pj_status_t)
+pjmedia_vid_codec_h263_apply_fmtp(pjmedia_vid_codec_param* param);
 
 /**
  * Definition of H.264 parameters.
@@ -77,27 +72,26 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
 typedef struct pjmedia_vid_codec_h264_fmtp
 {
     /* profile-level-id */
-    pj_uint8_t	    profile_idc;    /**< Profile ID			    */
-    pj_uint8_t	    profile_iop;    /**< Profile constraints bits	    */
-    pj_uint8_t	    level;	    /**< Level				    */
+    pj_uint8_t profile_idc; /**< Profile ID			    */
+    pj_uint8_t profile_iop; /**< Profile constraints bits	    */
+    pj_uint8_t level;       /**< Level				    */
 
     /* packetization-mode */
-    pj_uint8_t	    packetization_mode;	/**< Packetization mode		    */
+    pj_uint8_t packetization_mode; /**< Packetization mode		    */
 
     /* max-mbps, max-fs, max-cpb, max-dpb, and max-br */
-    unsigned	    max_mbps;	    /**< Max macroblock processing rate	    */
-    unsigned	    max_fs;	    /**< Max frame size (in macroblocks)    */
-    unsigned	    max_cpb;	    /**< Max coded picture buffer size	    */
-    unsigned	    max_dpb;	    /**< Max decoded picture buffer size    */
-    unsigned	    max_br;	    /**< Max video bit rate		    */
+    unsigned max_mbps; /**< Max macroblock processing rate	    */
+    unsigned max_fs;   /**< Max frame size (in macroblocks)    */
+    unsigned max_cpb;  /**< Max coded picture buffer size	    */
+    unsigned max_dpb;  /**< Max decoded picture buffer size    */
+    unsigned max_br;   /**< Max video bit rate		    */
 
     /* sprop-parameter-sets, in NAL units */
-    pj_size_t	    sprop_param_sets_len;   /**< Parameter set length	    */
-    pj_uint8_t	    sprop_param_sets[256];  /**< Parameter set (SPS & PPS),
-						 in NAL unit bitstream	    */
+    pj_size_t sprop_param_sets_len;   /**< Parameter set length	    */
+    pj_uint8_t sprop_param_sets[256]; /**< Parameter set (SPS & PPS),
+                                           in NAL unit bitstream	    */
 
 } pjmedia_vid_codec_h264_fmtp;
-
 
 /**
  * Parse SDP fmtp of H.264.
@@ -107,10 +101,9 @@ typedef struct pjmedia_vid_codec_h264_fmtp
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
-				const pjmedia_codec_fmtp *fmtp,
-				pjmedia_vid_codec_h264_fmtp *h264_fmtp);
-
+PJ_DECL(pj_status_t)
+pjmedia_vid_codec_h264_parse_fmtp(const pjmedia_codec_fmtp* fmtp,
+                                  pjmedia_vid_codec_h264_fmtp* h264_fmtp);
 
 /**
  * Match H.264 format in the SDP media offer and answer. This will compare
@@ -130,14 +123,10 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
  *
  * @return		PJ_SUCCESS when the formats in offer and answer match.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_match_sdp(
-						pj_pool_t *pool,
-						pjmedia_sdp_media *offer,
-						unsigned o_fmt_idx,
-						pjmedia_sdp_media *answer,
-						unsigned a_fmt_idx,
-						unsigned option);
-
+PJ_DECL(pj_status_t)
+pjmedia_vid_codec_h264_match_sdp(pj_pool_t* pool, pjmedia_sdp_media* offer,
+                                 unsigned o_fmt_idx, pjmedia_sdp_media* answer,
+                                 unsigned a_fmt_idx, unsigned option);
 
 /**
  * Parse and apply the encoding and decoding SDP fmtp of H.264 in the
@@ -148,20 +137,18 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_match_sdp(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
-				pjmedia_vid_codec_param *param);
-
+PJ_DECL(pj_status_t)
+pjmedia_vid_codec_h264_apply_fmtp(pjmedia_vid_codec_param* param);
 
 /**
  * Definition of VPX parameters.
  */
 typedef struct pjmedia_vid_codec_vpx_fmtp
 {
-    unsigned	    max_fr;	    /**< Max frame rate    		    */
-    unsigned	    max_fs;	    /**< Max frame size (in macroblocks)    */
-    pj_uint8_t	    profile_id;     /**< Profile ID			    */
+    unsigned max_fr;       /**< Max frame rate    		    */
+    unsigned max_fs;       /**< Max frame size (in macroblocks)    */
+    pj_uint8_t profile_id; /**< Profile ID			    */
 } pjmedia_vid_codec_vpx_fmtp;
-
 
 /**
  * Parse SDP fmtp of VPX.
@@ -171,10 +158,9 @@ typedef struct pjmedia_vid_codec_vpx_fmtp
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_vpx_parse_fmtp(
-				const pjmedia_codec_fmtp *fmtp,
-				pjmedia_vid_codec_vpx_fmtp *vpx_fmtp);
-
+PJ_DECL(pj_status_t)
+pjmedia_vid_codec_vpx_parse_fmtp(const pjmedia_codec_fmtp* fmtp,
+                                 pjmedia_vid_codec_vpx_fmtp* vpx_fmtp);
 
 /**
  * Parse and apply the encoding and decoding SDP fmtp of VPX in the
@@ -185,11 +171,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_vpx_parse_fmtp(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_vpx_apply_fmtp(
-				pjmedia_vid_codec_param *param);
-
+PJ_DECL(pj_status_t)
+pjmedia_vid_codec_vpx_apply_fmtp(pjmedia_vid_codec_param* param);
 
 PJ_END_DECL
 
-
-#endif	/* __PJMEDIA_VID_CODEC_UTIL_H__ */
+#endif /* __PJMEDIA_VID_CODEC_UTIL_H__ */

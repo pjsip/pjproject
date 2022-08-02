@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_HASH_H__
 #define __PJ_HASH_H__
@@ -34,7 +33,7 @@ PJ_BEGIN_DECL
  * @ingroup PJ_DS
  * @{
  * A hash table is a dictionary in which keys are mapped to array positions by
- * hash functions. Having the keys of more than one item map to the same 
+ * hash functions. Having the keys of more than one item map to the same
  * position is called a collision. In this library, we will chain the nodes
  * that have the same key in a list.
  */
@@ -43,17 +42,18 @@ PJ_BEGIN_DECL
  * If this constant is used as keylen, then the key is interpreted as
  * NULL terminated string.
  */
-#define PJ_HASH_KEY_STRING	((unsigned)-1)
+#define PJ_HASH_KEY_STRING     ((unsigned)-1)
 
 /**
  * This indicates the size of of each hash entry.
  */
-#define PJ_HASH_ENTRY_BUF_SIZE	(3*sizeof(void*) + 2*sizeof(pj_uint32_t))
+#define PJ_HASH_ENTRY_BUF_SIZE (3 * sizeof(void*) + 2 * sizeof(pj_uint32_t))
 
 /**
  * Type declaration for entry buffer, used by #pj_hash_set_np()
  */
-typedef void *pj_hash_entry_buf[(PJ_HASH_ENTRY_BUF_SIZE+sizeof(void*)-1)/(sizeof(void*))];
+typedef void* pj_hash_entry_buf[(PJ_HASH_ENTRY_BUF_SIZE + sizeof(void*) - 1) /
+                                (sizeof(void*))];
 
 /**
  * This is the function that is used by the hash table to calculate hash value
@@ -61,14 +61,13 @@ typedef void *pj_hash_entry_buf[(PJ_HASH_ENTRY_BUF_SIZE+sizeof(void*)-1)/(sizeof
  *
  * @param hval	    the initial hash value, or zero.
  * @param key	    the key to calculate.
- * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to treat 
+ * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to treat
  *		    the key as null terminated string.
  *
  * @return          the hash value.
  */
-PJ_DECL(pj_uint32_t) pj_hash_calc(pj_uint32_t hval, 
-				  const void *key, unsigned keylen);
-
+PJ_DECL(pj_uint32_t)
+pj_hash_calc(pj_uint32_t hval, const void* key, unsigned keylen);
 
 /**
  * Convert the key to lowercase and calculate the hash value. The resulting
@@ -81,9 +80,8 @@ PJ_DECL(pj_uint32_t) pj_hash_calc(pj_uint32_t hval,
  *
  * @return          The hash value.
  */
-PJ_DECL(pj_uint32_t) pj_hash_calc_tolower(pj_uint32_t hval,
-                                          char *result,
-                                          const pj_str_t *key);
+PJ_DECL(pj_uint32_t)
+pj_hash_calc_tolower(pj_uint32_t hval, char* result, const pj_str_t* key);
 
 /**
  * Create a hash table with the specified 'bucket' size.
@@ -93,8 +91,7 @@ PJ_DECL(pj_uint32_t) pj_hash_calc_tolower(pj_uint32_t hval,
  *
  * @return the hash table.
  */
-PJ_DECL(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size);
-
+PJ_DECL(pj_hash_table_t*) pj_hash_create(pj_pool_t* pool, unsigned size);
 
 /**
  * Get the value associated with the specified key.
@@ -110,10 +107,9 @@ PJ_DECL(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size);
  *
  * @return the value associated with the key, or NULL if the key is not found.
  */
-PJ_DECL(void *) pj_hash_get( pj_hash_table_t *ht,
-			     const void *key, unsigned keylen,
-			     pj_uint32_t *hval );
-
+PJ_DECL(void*)
+pj_hash_get(pj_hash_table_t* ht, const void* key, unsigned keylen,
+            pj_uint32_t* hval);
 
 /**
  * Variant of #pj_hash_get() with the key being converted to lowercase when
@@ -121,10 +117,9 @@ PJ_DECL(void *) pj_hash_get( pj_hash_table_t *ht,
  *
  * @see pj_hash_get()
  */
-PJ_DECL(void *) pj_hash_get_lower( pj_hash_table_t *ht,
-			           const void *key, unsigned keylen,
-			           pj_uint32_t *hval );
-
+PJ_DECL(void*)
+pj_hash_get_lower(pj_hash_table_t* ht, const void* key, unsigned keylen,
+                  pj_uint32_t* hval);
 
 /**
  * Associate/disassociate a value with the specified key. If value is not
@@ -138,7 +133,7 @@ PJ_DECL(void *) pj_hash_get_lower( pj_hash_table_t *ht,
  * @param ht	    the hash table.
  * @param key	    the key. If pool is not specified, the key MUST point to
  * 		    buffer that remains valid for the duration of the entry.
- * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the 
+ * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the
  *		    string length of the key.
  * @param hval	    if the value is not zero, then the hash table will use
  *		    this value to search the entry's index, otherwise it will
@@ -147,10 +142,9 @@ PJ_DECL(void *) pj_hash_get_lower( pj_hash_table_t *ht,
  * @param value	    value to be associated, or NULL to delete the entry with
  *		    the specified key.
  */
-PJ_DECL(void) pj_hash_set( pj_pool_t *pool, pj_hash_table_t *ht,
-			   const void *key, unsigned keylen, pj_uint32_t hval,
-			   void *value );
-
+PJ_DECL(void)
+pj_hash_set(pj_pool_t* pool, pj_hash_table_t* ht, const void* key,
+            unsigned keylen, pj_uint32_t hval, void* value);
 
 /**
  * Variant of #pj_hash_set() with the key being converted to lowercase when
@@ -158,19 +152,18 @@ PJ_DECL(void) pj_hash_set( pj_pool_t *pool, pj_hash_table_t *ht,
  *
  * @see pj_hash_set()
  */
-PJ_DECL(void) pj_hash_set_lower( pj_pool_t *pool, pj_hash_table_t *ht,
-			         const void *key, unsigned keylen,
-                                 pj_uint32_t hval, void *value );
-
+PJ_DECL(void)
+pj_hash_set_lower(pj_pool_t* pool, pj_hash_table_t* ht, const void* key,
+                  unsigned keylen, pj_uint32_t hval, void* value);
 
 /**
  * Associate/disassociate a value with the specified key. This function works
- * like #pj_hash_set(), except that it doesn't use pool (hence the np -- no 
+ * like #pj_hash_set(), except that it doesn't use pool (hence the np -- no
  * pool suffix). If new entry needs to be allocated, it will use the entry_buf.
  *
  * @param ht	    the hash table.
  * @param key	    the key.
- * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the 
+ * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the
  *		    string length of the key.
  * @param hval	    if the value is not zero, then the hash table will use
  *		    this value to search the entry's index, otherwise it will
@@ -181,10 +174,9 @@ PJ_DECL(void) pj_hash_set_lower( pj_pool_t *pool, pj_hash_table_t *ht,
  * @param value	    value to be associated, or NULL to delete the entry with
  *		    the specified key.
  */
-PJ_DECL(void) pj_hash_set_np(pj_hash_table_t *ht,
-			     const void *key, unsigned keylen, 
-			     pj_uint32_t hval, pj_hash_entry_buf entry_buf, 
-			     void *value);
+PJ_DECL(void)
+pj_hash_set_np(pj_hash_table_t* ht, const void* key, unsigned keylen,
+               pj_uint32_t hval, pj_hash_entry_buf entry_buf, void* value);
 
 /**
  * Variant of #pj_hash_set_np() with the key being converted to lowercase
@@ -192,11 +184,10 @@ PJ_DECL(void) pj_hash_set_np(pj_hash_table_t *ht,
  *
  * @see pj_hash_set_np()
  */
-PJ_DECL(void) pj_hash_set_np_lower(pj_hash_table_t *ht,
-			           const void *key, unsigned keylen,
-			           pj_uint32_t hval,
-                                   pj_hash_entry_buf entry_buf,
-			           void *value);
+PJ_DECL(void)
+pj_hash_set_np_lower(pj_hash_table_t* ht, const void* key, unsigned keylen,
+                     pj_uint32_t hval, pj_hash_entry_buf entry_buf,
+                     void* value);
 
 /**
  * Get the total number of entries in the hash table.
@@ -205,20 +196,18 @@ PJ_DECL(void) pj_hash_set_np_lower(pj_hash_table_t *ht,
  *
  * @return the number of entries in the hash table.
  */
-PJ_DECL(unsigned) pj_hash_count( pj_hash_table_t *ht );
-
+PJ_DECL(unsigned) pj_hash_count(pj_hash_table_t* ht);
 
 /**
- * Get the iterator to the first element in the hash table. 
+ * Get the iterator to the first element in the hash table.
  *
  * @param ht	the hash table.
  * @param it	the iterator for iterating hash elements.
  *
  * @return the iterator to the hash element, or NULL if no element presents.
  */
-PJ_DECL(pj_hash_iterator_t*) pj_hash_first( pj_hash_table_t *ht,
-					    pj_hash_iterator_t *it );
-
+PJ_DECL(pj_hash_iterator_t*)
+pj_hash_first(pj_hash_table_t* ht, pj_hash_iterator_t* it);
 
 /**
  * Get the next element from the iterator.
@@ -228,8 +217,8 @@ PJ_DECL(pj_hash_iterator_t*) pj_hash_first( pj_hash_table_t *ht,
  *
  * @return the next iterator, or NULL if there's no more element.
  */
-PJ_DECL(pj_hash_iterator_t*) pj_hash_next( pj_hash_table_t *ht, 
-					   pj_hash_iterator_t *it );
+PJ_DECL(pj_hash_iterator_t*)
+pj_hash_next(pj_hash_table_t* ht, pj_hash_iterator_t* it);
 
 /**
  * Get the value associated with a hash iterator.
@@ -239,9 +228,7 @@ PJ_DECL(pj_hash_iterator_t*) pj_hash_next( pj_hash_table_t *ht,
  *
  * @return the value associated with the current element in iterator.
  */
-PJ_DECL(void*) pj_hash_this( pj_hash_table_t *ht,
-			     pj_hash_iterator_t *it );
-
+PJ_DECL(void*) pj_hash_this(pj_hash_table_t* ht, pj_hash_iterator_t* it);
 
 /**
  * @}
@@ -250,5 +237,3 @@ PJ_DECL(void*) pj_hash_this( pj_hash_table_t *ht,
 PJ_END_DECL
 
 #endif
-
-

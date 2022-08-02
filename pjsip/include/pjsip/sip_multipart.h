@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_MULTIPART_H__
 #define __PJSIP_SIP_MULTIPART_H__
@@ -50,12 +49,12 @@ typedef struct pjsip_multipart_part
     /**
      * Optional message headers.
      */
-    pjsip_hdr		    hdr;
+    pjsip_hdr hdr;
 
     /**
      * Pointer to the message body.
      */
-    pjsip_msg_body	   *body;
+    pjsip_msg_body* body;
 
 } pjsip_multipart_part;
 
@@ -73,9 +72,9 @@ typedef struct pjsip_multipart_part
  *
  * @return		Multipart body instance with no part.
  */
-PJ_DECL(pjsip_msg_body*) pjsip_multipart_create(pj_pool_t *pool,
-						const pjsip_media_type *ctype,
-						const pj_str_t *boundary);
+PJ_DECL(pjsip_msg_body*)
+pjsip_multipart_create(pj_pool_t* pool, const pjsip_media_type* ctype,
+                       const pj_str_t* boundary);
 
 /**
  * Create an empty multipart part.
@@ -84,8 +83,7 @@ PJ_DECL(pjsip_msg_body*) pjsip_multipart_create(pj_pool_t *pool,
  *
  * @return		The multipart part.
  */
-PJ_DECL(pjsip_multipart_part*) pjsip_multipart_create_part(pj_pool_t *pool);
-
+PJ_DECL(pjsip_multipart_part*) pjsip_multipart_create_part(pj_pool_t* pool);
 
 /**
  * Perform a deep clone to a multipart part.
@@ -96,8 +94,7 @@ PJ_DECL(pjsip_multipart_part*) pjsip_multipart_create_part(pj_pool_t *pool);
  * @return		Copy of the multipart part.
  */
 PJ_DECL(pjsip_multipart_part*)
-pjsip_multipart_clone_part(pj_pool_t *pool,
-			   const pjsip_multipart_part *part);
+pjsip_multipart_clone_part(pj_pool_t* pool, const pjsip_multipart_part* part);
 
 /**
  * Add a part into multipart bodies.
@@ -108,9 +105,9 @@ pjsip_multipart_clone_part(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_multipart_add_part(pj_pool_t *pool,
-					      pjsip_msg_body *mp,
-					      pjsip_multipart_part *part);
+PJ_DECL(pj_status_t)
+pjsip_multipart_add_part(pj_pool_t* pool, pjsip_msg_body* mp,
+                         pjsip_multipart_part* part);
 
 /**
  * Get the first part of multipart bodies.
@@ -121,7 +118,7 @@ PJ_DECL(pj_status_t) pjsip_multipart_add_part(pj_pool_t *pool,
  * 			bodies currently doesn't hold any elements.
  */
 PJ_DECL(pjsip_multipart_part*)
-pjsip_multipart_get_first_part(const pjsip_msg_body *mp);
+pjsip_multipart_get_first_part(const pjsip_msg_body* mp);
 
 /**
  * Get the next part after the specified part.
@@ -133,8 +130,8 @@ pjsip_multipart_get_first_part(const pjsip_msg_body *mp);
  * 			the part.
  */
 PJ_DECL(pjsip_multipart_part*)
-pjsip_multipart_get_next_part(const pjsip_msg_body *mp,
-			      pjsip_multipart_part *part);
+pjsip_multipart_get_next_part(const pjsip_msg_body* mp,
+                              pjsip_multipart_part* part);
 
 /**
  * Find a body inside multipart bodies which has the specified content type.
@@ -149,9 +146,9 @@ pjsip_multipart_get_next_part(const pjsip_msg_body *mp,
  * 			if found, or NULL.
  */
 PJ_DECL(pjsip_multipart_part*)
-pjsip_multipart_find_part( const pjsip_msg_body *mp,
-			   const pjsip_media_type *content_type,
-			   const pjsip_multipart_part *start);
+pjsip_multipart_find_part(const pjsip_msg_body* mp,
+                          const pjsip_media_type* content_type,
+                          const pjsip_multipart_part* start);
 
 /**
  * Find a body inside multipart bodies which has a header matching the
@@ -168,10 +165,9 @@ pjsip_multipart_find_part( const pjsip_msg_body *mp,
  * 			specified one, or NULL if not found.
  */
 PJ_DECL(pjsip_multipart_part*)
-pjsip_multipart_find_part_by_header(pj_pool_t *pool,
-				    const pjsip_msg_body *mp,
-				    void *search_hdr,
-				    const pjsip_multipart_part *start);
+pjsip_multipart_find_part_by_header(pj_pool_t* pool, const pjsip_msg_body* mp,
+                                    void* search_hdr,
+                                    const pjsip_multipart_part* start);
 
 /**
  * Find a body inside multipart bodies which has a header matching the
@@ -190,13 +186,11 @@ pjsip_multipart_find_part_by_header(pj_pool_t *pool,
  * 			specified one, or NULL if not found.
  */
 PJ_DECL(pjsip_multipart_part*)
-pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
-				    const pjsip_msg_body *mp,
-				    const pj_str_t *hdr_name,
-				    const pj_str_t *hdr_value,
-				    const pjsip_multipart_part *start);
-
-
+pjsip_multipart_find_part_by_header_str(pj_pool_t* pool,
+                                        const pjsip_msg_body* mp,
+                                        const pj_str_t* hdr_name,
+                                        const pj_str_t* hdr_value,
+                                        const pjsip_multipart_part* start);
 
 /**
  * Find a body inside multipart bodies which has a Content-ID value matching the
@@ -210,13 +204,12 @@ pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
  * @param mp	The multipart body.
  * @param cid	The "cid" URI to search for in pj_str form.
  *
- * @return		The first part which has a Content-ID header matching the
- * 			specified "cid" URI. or NULL if not found.
+ * @return		The first part which has a Content-ID header matching
+ * the specified "cid" URI. or NULL if not found.
  */
 PJ_DECL(pjsip_multipart_part*)
-pjsip_multipart_find_part_by_cid_str(pj_pool_t *pool,
-				 const pjsip_msg_body *mp,
-				 pj_str_t *cid);
+pjsip_multipart_find_part_by_cid_str(pj_pool_t* pool, const pjsip_msg_body* mp,
+                                     pj_str_t* cid);
 
 /**
  * Find a body inside multipart bodies which has a Content-ID value matching the
@@ -228,13 +221,12 @@ pjsip_multipart_find_part_by_cid_str(pj_pool_t *pool,
  * @param mp	The multipart body.
  * @param cid	The "cid" URI to search for.
  *
- * @return		The first part which had a Content-ID header matching the
- * 			specified "cid" URI. or NULL if not found.
+ * @return		The first part which had a Content-ID header matching
+ * the specified "cid" URI. or NULL if not found.
  */
 PJ_DECL(pjsip_multipart_part*)
-pjsip_multipart_find_part_by_cid_uri(pj_pool_t *pool,
-				 const pjsip_msg_body *mp,
-				 pjsip_other_uri *cid_uri);
+pjsip_multipart_find_part_by_cid_uri(pj_pool_t* pool, const pjsip_msg_body* mp,
+                                     pjsip_other_uri* cid_uri);
 
 /**
  * Parse multipart message.
@@ -247,10 +239,9 @@ pjsip_multipart_find_part_by_cid_uri(pj_pool_t *pool,
  *
  * @return		Multipart message body.
  */
-PJ_DECL(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
-					       char *buf, pj_size_t len,
-					       const pjsip_media_type *ctype,
-					       unsigned options);
+PJ_DECL(pjsip_msg_body*)
+pjsip_multipart_parse(pj_pool_t* pool, char* buf, pj_size_t len,
+                      const pjsip_media_type* ctype, unsigned options);
 
 /**
  * Get the boundary string and the raw message body of the specified
@@ -263,15 +254,14 @@ PJ_DECL(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_multipart_get_raw(pjsip_msg_body *mp,
-					     pj_str_t *boundary,
-					     pj_str_t *raw_data);
+PJ_DECL(pj_status_t)
+pjsip_multipart_get_raw(pjsip_msg_body* mp, pj_str_t* boundary,
+                        pj_str_t* raw_data);
 
 /**
  * @}  PJSIP_MULTIPART
  */
 
-
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_MULTIPART_H__ */
+#endif /* __PJSIP_SIP_MULTIPART_H__ */

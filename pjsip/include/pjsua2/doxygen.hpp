@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2012 Teluu Inc. (http://www.teluu.com)
  *
@@ -34,7 +33,6 @@ For more info regarding pjsua2, including some tutorials, please
 see The PJSIP Book.
 */
 
-
 /**
  * @defgroup PJSUA2_Ref pjsua2 API Reference
  */
@@ -44,9 +42,8 @@ see The PJSIP Book.
  * @ingroup PJSUA2_Ref
  */
 
-
 /**
  * @}  PJSUA2_CFG
  */
 
-#endif	/* __PJSUA2_DOXYGEN_HPP__ */
+#endif /* __PJSUA2_DOXYGEN_HPP__ */

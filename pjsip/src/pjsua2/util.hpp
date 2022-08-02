@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -27,7 +26,7 @@ namespace pj
 {
 using std::string;
 
-inline pj_str_t str2Pj(const string &input_str)
+inline pj_str_t str2Pj(const string& input_str)
 {
     pj_str_t output_str;
     output_str.ptr = (char*)input_str.c_str();
@@ -35,23 +34,27 @@ inline pj_str_t str2Pj(const string &input_str)
     return output_str;
 }
 
-inline string pj2Str(const pj_str_t &input_str)
+inline string pj2Str(const pj_str_t& input_str)
 {
-    if (input_str.ptr && input_str.slen>0)
-	return string(input_str.ptr, input_str.slen);
+    if (input_str.ptr && input_str.slen > 0)
+        return string(input_str.ptr, input_str.slen);
     return string();
 }
 
-class AudioMediaHelper : public AudioMedia
-{
-public:
-    void setPortId(int port_id) { id = port_id; }
+class AudioMediaHelper : public AudioMedia {
+   public:
+    void setPortId(int port_id)
+    {
+        id = port_id;
+    }
 };
 
-class VideoMediaHelper : public VideoMedia
-{
-public:
-    void setPortId(int port_id) { id = port_id; }
+class VideoMediaHelper : public VideoMedia {
+   public:
+    void setPortId(int port_id)
+    {
+        id = port_id;
+    }
 };
 
-} // namespace pj
+}  // namespace pj

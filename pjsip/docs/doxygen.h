@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -25,7 +24,7 @@
 
 /*////////////////////////////////////////////////////////////////////////// */
 /*
-	INTRODUCTION PAGE
+        INTRODUCTION PAGE
  */
 
 /**
@@ -37,20 +36,20 @@
   \n
   @section intro_sec Introduction
 
-  PJSIP is an Open Source SIP prototol stack, designed to be very small in 
+  PJSIP is an Open Source SIP prototol stack, designed to be very small in
   footprint, have high performance, and very flexible.
 
   @subsection hist_sec History
 
   PJSIP has been actively developed since 2003, but its history goes well
   beyond that. The author has been developing SIP stack since 1999 during
-  RFC 2543 era, and after several experimentation with different approaches 
+  RFC 2543 era, and after several experimentation with different approaches
   in the programming (the first stack actually was in C++!), and also with
   the evolution of the SIP protocol itself, the current/third generation
-  of PJSIP (the 0.2.9 version is the second generation) can be considered 
+  of PJSIP (the 0.2.9 version is the second generation) can be considered
   as pretty stable in term of design, and should
-  incorporate all design considerations (and implementation tricks!) that 
-  have been learned over the years. Of course only time will tell if this 
+  incorporate all design considerations (and implementation tricks!) that
+  have been learned over the years. Of course only time will tell if this
   statement can still be held true in the future.
 
 
@@ -71,7 +70,7 @@
   @subsection getting_started_high Using PJSUA API
 
   @ref PJSUA_LIB wraps together all SIP components and media into a high level
-  API, suitable for creating typical SIP user agent applications. It 
+  API, suitable for creating typical SIP user agent applications. It
   features easy to use API for:
   - multiple client registration (accounts),
   - high level SIP and media session (calls),
@@ -94,12 +93,13 @@
   @subsection getting_started_pjsip_pjmedia Using PJSIP and PJMEDIA Directly
 
   For the ultimate flexibility and power, using PJSIP and PJMEDIA directly
-  is the way to go. The drawback will be, of course, steeper learning curve. 
+  is the way to go. The drawback will be, of course, steeper learning curve.
 
   However, the following links may provide some useful information:
   - <A HREF="/docs.htm">PJSIP Developer's Guide</A> PDF
     document is the ultimate guide to understand PJSIP design concept.
-  - there are some samples in <A HREF="/cgi-bin/viewcvs.cgi/pjproject/trunk/pjsip-apps/src/samples/">
+  - there are some samples in <A
+  HREF="/cgi-bin/viewcvs.cgi/pjproject/trunk/pjsip-apps/src/samples/">
    <b>pjsip-apps/src/samples</b></A> directory.
   - @ref PJSUA_LIB source code may also be useful to see how high level
     API are implemented with PJSIP/PJMEDIA.
@@ -112,7 +112,7 @@
   @section this_doc About This Document
 
   This document contains the reference information about PJSIP. For
-  more in-depth guide (and information in general), readers are 
+  more in-depth guide (and information in general), readers are
   encouraged to read the <A HREF="/docs.htm">
   <b>PJSIP Developer's Guide</b></A> PDF document
   which can be downloaded from http://www.pjsip.org/docs.htm.
@@ -131,7 +131,7 @@
   \n
   @section pjsip_toc Documentation Contents
 
-  Click on <A HREF="modules.htm"><b>Modules</b></A> link on top of this page 
+  Click on <A HREF="modules.htm"><b>Modules</b></A> link on top of this page
   to get the detailed table of contents.
 
   The following are top level sections in the <A HREF="modules.htm">
@@ -151,32 +151,31 @@
 
   - PJMEDIA-CODEC is the placeholder for media codecs,
 
-  - @ref PJSIP_CORE (<b>PJSIP-CORE</b>) is the very core of the PJSIP library, 
+  - @ref PJSIP_CORE (<b>PJSIP-CORE</b>) is the very core of the PJSIP library,
     and contains the SIP @ref PJSIP_ENDPT, which is the owner/manager for all
-    SIP objects in the application, messaging elements, parsing, transport 
+    SIP objects in the application, messaging elements, parsing, transport
     management, module management, and stateless operations, and also
     contains:
 
-  - The @ref PJSIP_TRANSACT module inside <b>PJSIP-CORE</b> provides 
-    stateful operation, and is the base for higher layer features such as 
+  - The @ref PJSIP_TRANSACT module inside <b>PJSIP-CORE</b> provides
+    stateful operation, and is the base for higher layer features such as
     dialogs,
 
-  - The @ref PJSIP_UA module inside <b>PJSIP-CORE</b> manages dialogs, and supports dialog
-    usages,
+  - The @ref PJSIP_UA module inside <b>PJSIP-CORE</b> manages dialogs, and
+  supports dialog usages,
 
-  - @ref PJSIP_SIMPLE (<b>PJSIP-SIMPLE</b>) provides the base SIP event framework 
-    (which uses the common/base dialog framework) and implements presence 
-    on top of it, and is also used by call transfer functions,
+  - @ref PJSIP_SIMPLE (<b>PJSIP-SIMPLE</b>) provides the base SIP event
+  framework (which uses the common/base dialog framework) and implements
+  presence on top of it, and is also used by call transfer functions,
 
-  - @ref PJSIP_HIGH_UA (<b>PJSIP-UA</b>) is the high level abstraction of INVITE sessions
-    (using the common/base dialog framework). This library also provides
+  - @ref PJSIP_HIGH_UA (<b>PJSIP-UA</b>) is the high level abstraction of INVITE
+  sessions (using the common/base dialog framework). This library also provides
     SIP client registration and call transfer functionality,
 
-  - and finally, @ref PJSUA_LIB (<b>PJSUA-LIB</b>) is the highest level of abstraction, 
-    which wraps together all above functionalities into high level, easy to
-    use API.
+  - and finally, @ref PJSUA_LIB (<b>PJSUA-LIB</b>) is the highest level of
+  abstraction, which wraps together all above functionalities into high level,
+  easy to use API.
 */
-
 
 /**
  @page page_pjsip_samples PJSIP Samples
@@ -193,7 +192,7 @@
     This is a very simple SIP User Agent application that only use PJSIP
     (without PJSIP-UA). It's able to make and receive call, and play
     media to the sound device.
-    
+
   - @ref page_pjsip_sample_simple_pjsuaua_c\n
     Very simple SIP User Agent with registration, call, and media, using
     PJSUA-API, all in under 200 lines of code.
@@ -206,8 +205,8 @@
     Screenshot on WinXP: \image html pjsua.jpg "pjsua on WinXP"
 
   - @ref page_pjmedia_samples_siprtp_c\n
-    This is a useful program (integrated with PJSIP) to actively measure 
-    the network quality/impairment parameters by making one or more SIP 
+    This is a useful program (integrated with PJSIP) to actively measure
+    the network quality/impairment parameters by making one or more SIP
     calls (or receiving one or more SIP calls) and display the network
     impairment of each stream direction at the end of the call.
     The program is able to measure network quality parameters such as
@@ -222,7 +221,8 @@
     measurement tool. Unlike other tool such SIPp, pjsip-perf is geared
     more towards finding the performance of an endpoint by flooding the
     endpoint with some requests and time the completion of the requests.\n
-    Screenshots on Linux console: \image html pjsip-perf.jpg "pjsip-perf screenshot on Linux"
+    Screenshots on Linux console: \image html pjsip-perf.jpg "pjsip-perf
+ screenshot on Linux"
  */
 
 /**
@@ -270,7 +270,8 @@
  */
 
 /**
- * \page page_pjmedia_samples_siprtp_c Samples: siprtp - SIP with RTCP Quality Monitoring
+ * \page page_pjmedia_samples_siprtp_c Samples: siprtp - SIP with RTCP Quality
+ * Monitoring
  *
  * This source is an example to demonstrate using SIP and RTP/RTCP framework
  * to measure the network quality/impairment from the SIP call. This
@@ -291,7 +292,8 @@
  */
 
 /**
- * \page page_pjsip_perf_c Samples: pjsip-perf - SIP Performance Benchmarking Tool
+ * \page page_pjsip_perf_c Samples: pjsip-perf - SIP Performance Benchmarking
+ * Tool
  *
  * This sample contains a complete implementation of a SIP performance
  * measurement tool. Unlike other tool such SIPp, pjsip-perf is geared
@@ -304,4 +306,3 @@
  *
  * \includelineno pjsip-perf.c
  */
-

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TRANSPORT_ICE_H__
 #define __PJMEDIA_TRANSPORT_ICE_H__
-
 
 /**
  * @file transport_ice.h
@@ -29,9 +27,8 @@
 #include <pjmedia/stream.h>
 #include <pjnath/ice_strans.h>
 
-
 /**
- * @defgroup PJMEDIA_TRANSPORT_ICE ICE Media Transport 
+ * @defgroup PJMEDIA_TRANSPORT_ICE ICE Media Transport
  * @ingroup PJMEDIA_TRANSPORT
  * @brief Interactive Connectivity Establishment (ICE) transport
  * @{
@@ -41,7 +38,6 @@
  */
 
 PJ_BEGIN_DECL
-
 
 /**
  * Structure containing callbacks to receive ICE notifications.
@@ -55,9 +51,8 @@ typedef struct pjmedia_ice_cb
      * @param op	The operation
      * @param status	Operation status.
      */
-    void    (*on_ice_complete)(pjmedia_transport *tp,
-			       pj_ice_strans_op op,
-			       pj_status_t status);
+    void (*on_ice_complete)(pjmedia_transport* tp, pj_ice_strans_op op,
+                            pj_status_t status);
 
     /**
      * This callback will be called when ICE negotiation completes, with
@@ -69,10 +64,8 @@ typedef struct pjmedia_ice_cb
      * @param status	Operation status.
      * @param user_data	User data for this callback.
      */
-    void    (*on_ice_complete2)(pjmedia_transport *tp,
-			        pj_ice_strans_op op,
-			        pj_status_t status,
-				void *user_data);
+    void (*on_ice_complete2)(pjmedia_transport* tp, pj_ice_strans_op op,
+                             pj_status_t status, void* user_data);
 
     /**
      * Callback to report a new ICE local candidate, e.g: after successful
@@ -89,12 +82,10 @@ typedef struct pjmedia_ice_cb
      *			local candidate initialization failed/timeout.
      * @param last	PJ_TRUE if this is the last of local candidate.
      */
-    void    (*on_new_candidate)(pjmedia_transport *tp,
-				const pj_ice_sess_cand *cand,
-				pj_bool_t last);
+    void (*on_new_candidate)(pjmedia_transport* tp,
+                             const pj_ice_sess_cand* cand, pj_bool_t last);
 
 } pjmedia_ice_cb;
-
 
 /**
  * This structure specifies ICE transport specific info. This structure
@@ -118,8 +109,8 @@ typedef struct pjmedia_ice_transport_info
      */
     pj_ice_sess_role role;
 
-    pj_str_t	loc_ufrag;
-    pj_str_t	rem_ufrag;
+    pj_str_t loc_ufrag;
+    pj_str_t rem_ufrag;
 
     /**
      * Number of components in the component array. Before ICE negotiation
@@ -136,30 +127,29 @@ typedef struct pjmedia_ice_transport_info
      */
     struct
     {
-	/**
-	 * Local candidate type.
-	 */
-	pj_ice_cand_type    lcand_type;
+        /**
+         * Local candidate type.
+         */
+        pj_ice_cand_type lcand_type;
 
-	/**
-	 * The local address.
-	 */
-	pj_sockaddr	    lcand_addr;
+        /**
+         * The local address.
+         */
+        pj_sockaddr lcand_addr;
 
-	/**
-	 * Remote candidate type.
-	 */
-	pj_ice_cand_type    rcand_type;
+        /**
+         * Remote candidate type.
+         */
+        pj_ice_cand_type rcand_type;
 
-	/**
-	 * Remote address.
-	 */
-	pj_sockaddr	    rcand_addr;
+        /**
+         * Remote address.
+         */
+        pj_sockaddr rcand_addr;
 
     } comp[2];
 
 } pjmedia_ice_transport_info;
-
 
 /**
  * Options that can be specified when creating ICE transport.
@@ -167,10 +157,10 @@ typedef struct pjmedia_ice_transport_info
 enum pjmedia_transport_ice_options
 {
     /**
-     * Normally when remote doesn't use ICE, the ICE transport will 
-     * continuously check the source address of incoming packets to see 
-     * if it is different than the configured remote address, and switch 
-     * the remote address to the source address of the packet if they 
+     * Normally when remote doesn't use ICE, the ICE transport will
+     * continuously check the source address of incoming packets to see
+     * if it is different than the configured remote address, and switch
+     * the remote address to the source address of the packet if they
      * are different after several packets are received.
      * Specifying this option will disable this feature.
      */
@@ -187,7 +177,6 @@ enum pjmedia_transport_ice_options
      */
     PJMEDIA_ICE_DISABLE_ICE_MISMATCH = 2
 };
-
 
 /**
  * Create the Interactive Connectivity Establishment (ICE) media transport
@@ -215,13 +204,10 @@ enum pjmedia_transport_ice_options
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
-					const char *name,
-					unsigned comp_cnt,
-					const pj_ice_strans_cfg *cfg,
-					const pjmedia_ice_cb *cb,
-					pjmedia_transport **p_tp);
-
+PJ_DECL(pj_status_t)
+pjmedia_ice_create(pjmedia_endpt* endpt, const char* name, unsigned comp_cnt,
+                   const pj_ice_strans_cfg* cfg, const pjmedia_ice_cb* cb,
+                   pjmedia_transport** p_tp);
 
 /**
  * The same as #pjmedia_ice_create() with additional \a options param.
@@ -237,13 +223,10 @@ PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_create2(pjmedia_endpt *endpt,
-					 const char *name,
-					 unsigned comp_cnt,
-					 const pj_ice_strans_cfg *cfg,
-					 const pjmedia_ice_cb *cb,
-					 unsigned options,
-					 pjmedia_transport **p_tp);
+PJ_DECL(pj_status_t)
+pjmedia_ice_create2(pjmedia_endpt* endpt, const char* name, unsigned comp_cnt,
+                    const pj_ice_strans_cfg* cfg, const pjmedia_ice_cb* cb,
+                    unsigned options, pjmedia_transport** p_tp);
 
 /**
  * The same as #pjmedia_ice_create2() with additional \a user_data param.
@@ -260,14 +243,11 @@ PJ_DECL(pj_status_t) pjmedia_ice_create2(pjmedia_endpt *endpt,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
-					 const char *name,
-					 unsigned comp_cnt,
-					 const pj_ice_strans_cfg *cfg,
-					 const pjmedia_ice_cb *cb,
-					 unsigned options,
-					 void *user_data,
-					 pjmedia_transport **p_tp);
+PJ_DECL(pj_status_t)
+pjmedia_ice_create3(pjmedia_endpt* endpt, const char* name, unsigned comp_cnt,
+                    const pj_ice_strans_cfg* cfg, const pjmedia_ice_cb* cb,
+                    unsigned options, void* user_data,
+                    pjmedia_transport** p_tp);
 
 /**
  * Get the group lock for the ICE media transport.
@@ -276,8 +256,7 @@ PJ_DECL(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
  *
  * @return		The group lock.
  */
-PJ_DECL(pj_grp_lock_t *) pjmedia_ice_get_grp_lock(pjmedia_transport *tp);
-
+PJ_DECL(pj_grp_lock_t*) pjmedia_ice_get_grp_lock(pjmedia_transport* tp);
 
 /**
  * Add application to receive ICE notifications from the specified ICE media
@@ -289,10 +268,9 @@ PJ_DECL(pj_grp_lock_t *) pjmedia_ice_get_grp_lock(pjmedia_transport *tp);
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_add_ice_cb(pjmedia_transport *tp,
-					    const pjmedia_ice_cb *cb,
-					    void *user_data);
-
+PJ_DECL(pj_status_t)
+pjmedia_ice_add_ice_cb(pjmedia_transport* tp, const pjmedia_ice_cb* cb,
+                       void* user_data);
 
 /**
  * Remove application to stop receiving ICE notifications from the specified
@@ -306,10 +284,9 @@ PJ_DECL(pj_status_t) pjmedia_ice_add_ice_cb(pjmedia_transport *tp,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
-					       const pjmedia_ice_cb *cb,
-					       void *user_data);
-
+PJ_DECL(pj_status_t)
+pjmedia_ice_remove_ice_cb(pjmedia_transport* tp, const pjmedia_ice_cb* cb,
+                          void* user_data);
 
 /**
  * Check if trickle support is signalled in the specified SDP. This function
@@ -321,9 +298,8 @@ PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
  *
  * @return		PJ_TRUE if trickle ICE indication is found.
  */
-PJ_DECL(pj_bool_t) pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session *sdp,
-					       unsigned med_idx);
-
+PJ_DECL(pj_bool_t)
+pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session* sdp, unsigned med_idx);
 
 /**
  * Update check list after remote ICE candidates list are received or after
@@ -351,14 +327,10 @@ PJ_DECL(pj_bool_t) pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session *sdp,
  *
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_trickle_update(
-					    pjmedia_transport *tp,
-					    const pj_str_t *rem_ufrag,
-					    const pj_str_t *rem_passwd,
-					    unsigned rcand_cnt,
-					    const pj_ice_sess_cand rcand[],
-					    pj_bool_t rcand_end);
-
+PJ_DECL(pj_status_t)
+pjmedia_ice_trickle_update(pjmedia_transport* tp, const pj_str_t* rem_ufrag,
+                           const pj_str_t* rem_passwd, unsigned rcand_cnt,
+                           const pj_ice_sess_cand rcand[], pj_bool_t rcand_end);
 
 /**
  * Decode trickle ICE info from the specified SDP.
@@ -375,16 +347,12 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_update(
  *
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_trickle_decode_sdp(
-					    const pjmedia_sdp_session *sdp,
-					    unsigned media_index,
-					    pj_str_t *mid,
-					    pj_str_t *ufrag,
-					    pj_str_t *passwd,
-					    unsigned *cand_cnt,
-					    pj_ice_sess_cand cand[],
-					    pj_bool_t *end_of_cand);
-
+PJ_DECL(pj_status_t)
+pjmedia_ice_trickle_decode_sdp(const pjmedia_sdp_session* sdp,
+                               unsigned media_index, pj_str_t* mid,
+                               pj_str_t* ufrag, pj_str_t* passwd,
+                               unsigned* cand_cnt, pj_ice_sess_cand cand[],
+                               pj_bool_t* end_of_cand);
 
 /**
  * Encode trickle ICE info into the specified SDP. This function may generate
@@ -406,16 +374,12 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_decode_sdp(
  *
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_trickle_encode_sdp(
-					    pj_pool_t *sdp_pool,
-					    pjmedia_sdp_session *sdp,
-					    const pj_str_t *mid,
-					    const pj_str_t *ufrag,
-					    const pj_str_t *passwd,
-					    unsigned cand_cnt,
-					    const pj_ice_sess_cand cand[],
-					    pj_bool_t end_of_cand);
-
+PJ_DECL(pj_status_t)
+pjmedia_ice_trickle_encode_sdp(pj_pool_t* sdp_pool, pjmedia_sdp_session* sdp,
+                               const pj_str_t* mid, const pj_str_t* ufrag,
+                               const pj_str_t* passwd, unsigned cand_cnt,
+                               const pj_ice_sess_cand cand[],
+                               pj_bool_t end_of_cand);
 
 /**
  * Check if trickling ICE has found any new local candidates since the last
@@ -425,8 +389,7 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_encode_sdp(
  *
  * @return		PJ_TRUE if new local canditates are available.
  */
-PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp);
-
+PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport* tp);
 
 /**
  * Convey all local candidates via the specified SDP.
@@ -439,21 +402,15 @@ PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp);
  *
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_trickle_send_local_cand(
-					    pjmedia_transport *tp,
-					    pj_pool_t *sdp_pool,
-					    pjmedia_sdp_session *sdp,
-					    pj_bool_t *p_end_of_cand);
-
+PJ_DECL(pj_status_t)
+pjmedia_ice_trickle_send_local_cand(pjmedia_transport* tp, pj_pool_t* sdp_pool,
+                                    pjmedia_sdp_session* sdp,
+                                    pj_bool_t* p_end_of_cand);
 
 PJ_END_DECL
-
 
 /**
  * @}
  */
 
-
-#endif	/* __PJMEDIA_TRANSPORT_ICE_H__ */
-
-
+#endif /* __PJMEDIA_TRANSPORT_ICE_H__ */

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,33 +14,31 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 
 #include "test.h"
 
- 
 /* Any tests that want to build a linked executable for RTEMS must include
    this header to get a default config for the network stack. */
-#if defined(PJ_RTEMS) 
-#   include <bsp.h>
-#   include <rtems.h>
-#   include <rtems/rtems_bsdnet.h>
-#   include "../../../pjlib/include/rtems-network-config.h"
+#if defined(PJ_RTEMS)
+#    include <bsp.h>
+#    include <rtems.h>
+#    include <rtems/rtems_bsdnet.h>
+#    include "../../../pjlib/include/rtems-network-config.h"
 #endif
-
 
 #if PJ_LINUX || PJ_DARWINOS
 
-#include <execinfo.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#    include <execinfo.h>
+#    include <signal.h>
+#    include <stdio.h>
+#    include <stdlib.h>
+#    include <unistd.h>
 static void print_stack(int sig)
 {
-    void *array[16];
+    void* array[16];
     size_t size;
 
     size = backtrace(array, 16);
@@ -57,45 +54,44 @@ static void init_signals(void)
 }
 
 #else
-#define init_signals()
+#    define init_signals()
 #endif
 
-
-static int main_func(int argc, char *argv[])
+static int main_func(int argc, char* argv[])
 {
     int rc;
     int interractive = 0;
     int no_trap = 0;
 
     while (argc > 1) {
-        char *arg = argv[--argc];
+        char* arg = argv[--argc];
 
-	if (*arg=='-' && *(arg+1)=='i') {
-	    interractive = 1;
+        if (*arg == '-' && *(arg + 1) == 'i') {
+            interractive = 1;
 
-	} else if (*arg=='-' && *(arg+1)=='n') {
-	    no_trap = 1;
-	}
+        } else if (*arg == '-' && *(arg + 1) == 'n') {
+            no_trap = 1;
+        }
     }
 
     if (!no_trap) {
-	init_signals();
+        init_signals();
     }
 
     rc = test_main();
 
     if (interractive) {
-	char s[10];
-	puts("");
-	puts("Press <ENTER> to exit");
-	if (!fgets(s, sizeof(s), stdin))
-	    return rc;
+        char s[10];
+        puts("");
+        puts("Press <ENTER> to exit");
+        if (!fgets(s, sizeof(s), stdin))
+            return rc;
     }
 
     return rc;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     return pj_run_app(&main_func, argc, argv, 0);
 }

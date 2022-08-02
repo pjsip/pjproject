@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2010 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_CLI_CONSOLE_H__
 #define __PJLIB_UTIL_CLI_CONSOLE_H__
@@ -26,7 +25,6 @@
 
 #include <pjlib-util/cli_imp.h>
 
-
 PJ_BEGIN_DECL
 
 /**
@@ -34,7 +32,6 @@ PJ_BEGIN_DECL
  * @{
  *
  */
-
 
 /**
  * This structure contains various options for CLI console front-end.
@@ -66,14 +63,12 @@ typedef struct pj_cli_console_cfg
 
 } pj_cli_console_cfg;
 
-
 /**
  * Initialize pj_cli_console_cfg with its default values.
  *
  * @param param		The structure to be initialized.
  */
-PJ_DECL(void) pj_cli_console_cfg_default(pj_cli_console_cfg *param);
-
+PJ_DECL(void) pj_cli_console_cfg_default(pj_cli_console_cfg* param);
 
 /**
  * Create a console front-end for the specified CLI application, and return
@@ -90,10 +85,9 @@ PJ_DECL(void) pj_cli_console_cfg_default(pj_cli_console_cfg *param);
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
-					   const pj_cli_console_cfg *param,
-					   pj_cli_sess **p_sess,
-					   pj_cli_front_end **p_fe);
+PJ_DECL(pj_status_t)
+pj_cli_console_create(pj_cli_t* cli, const pj_cli_console_cfg* param,
+                      pj_cli_sess** p_sess, pj_cli_front_end** p_fe);
 
 /**
  * Retrieve a cmdline from console stdin and process the input accordingly.
@@ -104,9 +98,8 @@ PJ_DECL(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
  *
  * @return		PJ_SUCCESS if an input was read
  */
-PJ_DECL(pj_status_t) pj_cli_console_process(pj_cli_sess *sess, 
-					    char *buf,
-					    unsigned maxlen);
+PJ_DECL(pj_status_t)
+pj_cli_console_process(pj_cli_sess* sess, char* buf, unsigned maxlen);
 
 /**
  * @}

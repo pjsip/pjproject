@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <e32std.h>
@@ -23,7 +22,6 @@
 #include <e32std.h>
 #include <e32cons.h>
 #include <stdlib.h>
-
 
 //  Global Variables
 CConsoleBase* console;
@@ -33,12 +31,11 @@ TPtrC APP_UID = _L("A000000E");
 
 int app_main();
 
-
 ////////////////////////////////////////////////////////////////////////////
 
 LOCAL_C void DoStartL()
 {
-    CActiveScheduler *scheduler = new (ELeave) CActiveScheduler;
+    CActiveScheduler* scheduler = new (ELeave) CActiveScheduler;
     CleanupStack::PushL(scheduler);
     CActiveScheduler::Install(scheduler);
 
@@ -48,7 +45,6 @@ LOCAL_C void DoStartL()
     CleanupStack::Pop(scheduler);
     delete scheduler;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -62,14 +58,16 @@ GLDEF_C TInt E32Main()
     CTrapCleanup* cleanup = CTrapCleanup::New();
 
     // Create output console
-    TRAPD(createError, console = Console::NewL(_L("Console"), TSize(KConsFullScreen,KConsFullScreen)));
+    TRAPD(createError,
+          console = Console::NewL(_L("Console"),
+                                  TSize(KConsFullScreen, KConsFullScreen)));
     if (createError)
         return createError;
 
     TRAPD(startError, DoStartL());
 
-    //console->Printf(_L("[press any key to close]\n"));
-    //console->Getch();
+    // console->Printf(_L("[press any key to close]\n"));
+    // console->Getch();
 
     delete console;
     delete cleanup;
@@ -80,4 +78,3 @@ GLDEF_C TInt E32Main()
     __UHEAP_MARKEND;
     return KErrNone;
 }
-

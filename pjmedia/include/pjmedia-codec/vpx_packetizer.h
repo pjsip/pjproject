@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2020 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_VPX_PACKETIZER_H__
 #define __PJMEDIA_VPX_PACKETIZER_H__
@@ -32,7 +32,6 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_vpx_packetizer pjmedia_vpx_packetizer;
 
-
 /**
  * VPX packetizer setting.
  */
@@ -42,24 +41,22 @@ typedef struct pjmedia_vpx_packetizer_cfg
      * VPX format id.
      * Default: PJMEDIA_FORMAT_VP8
      */
-    pj_uint32_t	fmt_id;
+    pj_uint32_t fmt_id;
 
     /**
      * MTU size.
      * Default: PJMEDIA_MAX_VID_PAYLOAD_SIZE
      */
     unsigned mtu;
-}
-pjmedia_vpx_packetizer_cfg;
+} pjmedia_vpx_packetizer_cfg;
 
 /**
  * Use this function to initialize VPX packetizer config.
  *
  * @param cfg	The VPX packetizer config to be initialized.
  */
-PJ_DECL(void) pjmedia_vpx_packetizer_cfg_default(
-					    pjmedia_vpx_packetizer_cfg *cfg);
-
+PJ_DECL(void)
+pjmedia_vpx_packetizer_cfg_default(pjmedia_vpx_packetizer_cfg* cfg);
 
 /**
  * Create VPX packetizer.
@@ -71,11 +68,10 @@ PJ_DECL(void) pjmedia_vpx_packetizer_cfg_default(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vpx_packetizer_create(
-				    pj_pool_t *pool,
-				    const pjmedia_vpx_packetizer_cfg *cfg,
-				    pjmedia_vpx_packetizer **p_pktz);
-
+PJ_DECL(pj_status_t)
+pjmedia_vpx_packetizer_create(pj_pool_t* pool,
+                              const pjmedia_vpx_packetizer_cfg* cfg,
+                              pjmedia_vpx_packetizer** p_pktz);
 
 /**
  * Generate an RTP payload from a VPX picture bitstream. Note that this
@@ -92,13 +88,10 @@ PJ_DECL(pj_status_t) pjmedia_vpx_packetizer_create(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
-					   pj_size_t bits_len,
-                                           unsigned *bits_pos,
-                                           pj_bool_t is_keyframe,
-                                           pj_uint8_t **payload,
-                                           pj_size_t *payload_len);
-
+PJ_DECL(pj_status_t)
+pjmedia_vpx_packetize(const pjmedia_vpx_packetizer* pktz, pj_size_t bits_len,
+                      unsigned* bits_pos, pj_bool_t is_keyframe,
+                      pj_uint8_t** payload, pj_size_t* payload_len);
 
 /**
  * Append an RTP payload to an VPX picture bitstream. Note that in case of
@@ -113,11 +106,10 @@ PJ_DECL(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vpx_unpacketize(pjmedia_vpx_packetizer *pktz,
-					     const pj_uint8_t *payload,
-                                             pj_size_t payload_len,
-					     unsigned  *payload_desc_len);
+PJ_DECL(pj_status_t)
+pjmedia_vpx_unpacketize(pjmedia_vpx_packetizer* pktz, const pj_uint8_t* payload,
+                        pj_size_t payload_len, unsigned* payload_desc_len);
 
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_VPX_PACKETIZER_H__ */
+#endif /* __PJMEDIA_VPX_PACKETIZER_H__ */

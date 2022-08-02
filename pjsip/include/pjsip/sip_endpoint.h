@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_ENDPOINT_H__
 #define __PJSIP_SIP_ENDPOINT_H__
@@ -44,13 +43,13 @@ PJ_BEGIN_DECL
  * SIP Endpoint instance (pjsip_endpoint) can be viewed as the master/owner of
  * all SIP objects in an application. It performs the following roles:
  *  - it manages the allocation/deallocation of memory pools for all objects.
- *  - it manages listeners and transports, and how they are used by 
+ *  - it manages listeners and transports, and how they are used by
  *    transactions.
  *  - it receives incoming messages from transport layer and automatically
  *    dispatches them to the correct transaction (or create a new one).
  *  - it has a single instance of timer management (timer heap).
  *  - it manages modules, which is the primary means of extending the library.
- *  - it provides single polling function for all objects and distributes 
+ *  - it provides single polling function for all objects and distributes
  *    events.
  *  - it automatically handles incoming requests which can not be handled by
  *    existing modules (such as when incoming request has unsupported method).
@@ -62,20 +61,18 @@ PJ_BEGIN_DECL
  * @{
  */
 
-
 /**
  * Type of callback to register to pjsip_endpt_atexit().
  */
-typedef void (*pjsip_endpt_exit_callback)(pjsip_endpoint *endpt);
-
+typedef void (*pjsip_endpt_exit_callback)(pjsip_endpoint* endpt);
 
 /**
  * Create an instance of SIP endpoint from the specified pool factory.
- * The pool factory reference then will be kept by the endpoint, so that 
+ * The pool factory reference then will be kept by the endpoint, so that
  * future memory allocations by SIP components will be taken from the same
  * pool factory.
  *
- * @param pf	        Pool factory that will be used for the lifetime of 
+ * @param pf	        Pool factory that will be used for the lifetime of
  *                      endpoint.
  * @param name          Optional name to be specified for the endpoint.
  *                      If this parameter is NULL, then the name will use
@@ -84,9 +81,9 @@ typedef void (*pjsip_endpt_exit_callback)(pjsip_endpoint *endpt);
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
-					const char *name,
-                                        pjsip_endpoint **endpt);
+PJ_DECL(pj_status_t)
+pjsip_endpt_create(pj_pool_factory* pf, const char* name,
+                   pjsip_endpoint** endpt);
 
 /**
  * Destroy endpoint instance. Application must make sure that all pending
@@ -95,7 +92,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
  *
  * @param endpt		The SIP endpoint to be destroyed.
  */
-PJ_DECL(void) pjsip_endpt_destroy(pjsip_endpoint *endpt);
+PJ_DECL(void) pjsip_endpt_destroy(pjsip_endpoint* endpt);
 
 /**
  * Get endpoint name.
@@ -105,13 +102,14 @@ PJ_DECL(void) pjsip_endpt_destroy(pjsip_endpoint *endpt);
  * @return              Endpoint name, as was registered during endpoint
  *                      creation. The string is NULL terminated.
  */
-PJ_DECL(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint *endpt);
+PJ_DECL(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint* endpt);
 
 /**
  * Poll for events. Application must call this function periodically to ensure
  * that all events from both transports and timer heap are handled in timely
- * manner.  This function, like all other endpoint functions, is thread safe, 
- * and application may have more than one thread concurrently calling this function.
+ * manner.  This function, like all other endpoint functions, is thread safe,
+ * and application may have more than one thread concurrently calling this
+ *function.
  *
  * @param endpt		The endpoint.
  * @param max_timeout	Maximum time to wait for events, or NULL to wait forever
@@ -119,9 +117,9 @@ PJ_DECL(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint *endpt);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_handle_events( pjsip_endpoint *endpt, 
-					        const pj_time_val *max_timeout);
-
+PJ_DECL(pj_status_t)
+pjsip_endpt_handle_events(pjsip_endpoint* endpt,
+                          const pj_time_val* max_timeout);
 
 /**
  * Handle events with additional info about number of events that
@@ -135,9 +133,9 @@ PJ_DECL(pj_status_t) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
-					        const pj_time_val *max_timeout,
-					        unsigned *count);
+PJ_DECL(pj_status_t)
+pjsip_endpt_handle_events2(pjsip_endpoint* endpt,
+                           const pj_time_val* max_timeout, unsigned* count);
 
 /**
  * Schedule timer to endpoint's timer heap. Application must poll the endpoint
@@ -152,19 +150,17 @@ PJ_DECL(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
  * @return	    PJ_OK (zero) if successfull.
  */
 #if PJ_TIMER_DEBUG
-#define pjsip_endpt_schedule_timer(ept,ent,d) \
-			pjsip_endpt_schedule_timer_dbg(ept, ent, d, \
-			                               __FILE__, __LINE__)
+#    define pjsip_endpt_schedule_timer(ept, ent, d) \
+        pjsip_endpt_schedule_timer_dbg(ept, ent, d, __FILE__, __LINE__)
 
-PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_dbg(pjsip_endpoint *endpt,
-						    pj_timer_entry *entry,
-						    const pj_time_val *delay,
-						    const char *src_file,
-						    int src_line);
+PJ_DECL(pj_status_t)
+pjsip_endpt_schedule_timer_dbg(pjsip_endpoint* endpt, pj_timer_entry* entry,
+                               const pj_time_val* delay, const char* src_file,
+                               int src_line);
 #else
-PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
-						 pj_timer_entry *entry,
-						 const pj_time_val *delay );
+PJ_DECL(pj_status_t)
+pjsip_endpt_schedule_timer(pjsip_endpoint* endpt, pj_timer_entry* entry,
+                           const pj_time_val* delay);
 #endif
 
 /**
@@ -184,25 +180,22 @@ PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
  * @return	    PJ_OK (zero) if successfull.
  */
 #if PJ_TIMER_DEBUG
-#define pjsip_endpt_schedule_timer_w_grp_lock(ept,ent,d,id,gl) \
-		pjsip_endpt_schedule_timer_w_grp_lock_dbg(ept,ent,d,id,gl,\
-							  __FILE__, __LINE__)
+#    define pjsip_endpt_schedule_timer_w_grp_lock(ept, ent, d, id, gl) \
+        pjsip_endpt_schedule_timer_w_grp_lock_dbg(ept, ent, d, id, gl, \
+                                                  __FILE__, __LINE__)
 
-PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock_dbg(
-						    pjsip_endpoint *endpt,
-						    pj_timer_entry *entry,
-						    const pj_time_val *delay,
-						    int id_val,
-						    pj_grp_lock_t *grp_lock,
-						    const char *src_file,
-						    int src_line);
+PJ_DECL(pj_status_t)
+pjsip_endpt_schedule_timer_w_grp_lock_dbg(pjsip_endpoint* endpt,
+                                          pj_timer_entry* entry,
+                                          const pj_time_val* delay, int id_val,
+                                          pj_grp_lock_t* grp_lock,
+                                          const char* src_file, int src_line);
 #else
-PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock(
-						 pjsip_endpoint *endpt,
-						 pj_timer_entry *entry,
-						 const pj_time_val *delay,
-						 int id_val,
-						 pj_grp_lock_t *grp_lock );
+PJ_DECL(pj_status_t)
+pjsip_endpt_schedule_timer_w_grp_lock(pjsip_endpoint* endpt,
+                                      pj_timer_entry* entry,
+                                      const pj_time_val* delay, int id_val,
+                                      pj_grp_lock_t* grp_lock);
 #endif
 
 /**
@@ -212,8 +205,8 @@ PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock(
  * @param endpt	    The endpoint.
  * @param entry	    The timer entry previously registered.
  */
-PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt, 
-					pj_timer_entry *entry );
+PJ_DECL(void)
+pjsip_endpt_cancel_timer(pjsip_endpoint* endpt, pj_timer_entry* entry);
 
 /**
  * Get the timer heap instance of the SIP endpoint.
@@ -222,13 +215,12 @@ PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt,
  *
  * @return	    The timer heap instance.
  */
-PJ_DECL(pj_timer_heap_t*) pjsip_endpt_get_timer_heap(pjsip_endpoint *endpt);
-
+PJ_DECL(pj_timer_heap_t*) pjsip_endpt_get_timer_heap(pjsip_endpoint* endpt);
 
 /**
  * Register new module to the endpoint.
- * The endpoint will then call the load and start function in the module to 
- * properly initialize the module, and assign a unique module ID for the 
+ * The endpoint will then call the load and start function in the module to
+ * properly initialize the module, and assign a unique module ID for the
  * module.
  *
  * @param endpt		The endpoint.
@@ -236,12 +228,12 @@ PJ_DECL(pj_timer_heap_t*) pjsip_endpt_get_timer_heap(pjsip_endpoint *endpt);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
-						  pjsip_module *module );
+PJ_DECL(pj_status_t)
+pjsip_endpt_register_module(pjsip_endpoint* endpt, pjsip_module* module);
 
 /**
  * Unregister a module from the endpoint.
- * The endpoint will then call the stop and unload function in the module to 
+ * The endpoint will then call the stop and unload function in the module to
  * properly shutdown the module.
  *
  * @param endpt		The endpoint.
@@ -249,8 +241,8 @@ PJ_DECL(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
-						    pjsip_module *module );
+PJ_DECL(pj_status_t)
+pjsip_endpt_unregister_module(pjsip_endpoint* endpt, pjsip_module* module);
 
 /**
  * This describes additional parameters to pjsip_endpt_process_rx_data()
@@ -271,7 +263,7 @@ typedef struct pjsip_process_rdata_param
      * The default is NULL, meaning processing will start from the start
      * of the module list.
      */
-    void *start_mod;
+    void* start_mod;
 
     /**
      * Set to N, then processing will start at Nth module after start
@@ -294,7 +286,7 @@ typedef struct pjsip_process_rdata_param
  *
  * @param p	The param.
  */
-PJ_DECL(void) pjsip_process_rdata_param_default(pjsip_process_rdata_param *p);
+PJ_DECL(void) pjsip_process_rdata_param_default(pjsip_process_rdata_param* p);
 
 /**
  * Manually distribute the specified pjsip_rx_data to registered modules.
@@ -319,10 +311,9 @@ PJ_DECL(void) pjsip_process_rdata_param_default(pjsip_process_rdata_param *p);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_process_rx_data(pjsip_endpoint *endpt,
-                                                 pjsip_rx_data *rdata,
-                                                 pjsip_process_rdata_param *p,
-                                                 pj_bool_t *p_handled);
+PJ_DECL(pj_status_t)
+pjsip_endpt_process_rx_data(pjsip_endpoint* endpt, pjsip_rx_data* rdata,
+                            pjsip_process_rdata_param* p, pj_bool_t* p_handled);
 
 /**
  * Create pool from the endpoint. All SIP components should allocate their
@@ -338,10 +329,9 @@ PJ_DECL(pj_status_t) pjsip_endpt_process_rx_data(pjsip_endpoint *endpt,
  *
  * @see pj_pool_create
  */
-PJ_DECL(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
-					     const char *pool_name,
-					     pj_size_t initial,
-					     pj_size_t increment );
+PJ_DECL(pj_pool_t*)
+pjsip_endpt_create_pool(pjsip_endpoint* endpt, const char* pool_name,
+                        pj_size_t initial, pj_size_t increment);
 
 /**
  * Return back pool to endpoint to be released back to the pool factory.
@@ -350,8 +340,7 @@ PJ_DECL(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
  * @param endpt	    The endpoint.
  * @param pool	    The pool to be destroyed.
  */
-PJ_DECL(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt,
-					pj_pool_t *pool );
+PJ_DECL(void) pjsip_endpt_release_pool(pjsip_endpoint* endpt, pj_pool_t* pool);
 
 /**
  * Find transaction in endpoint's transaction table by the transaction's key.
@@ -363,8 +352,8 @@ PJ_DECL(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt,
  *
  * @return	    The transaction, or NULL if it's not found.
  */
-PJ_DECL(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
-					          const pj_str_t *key );
+PJ_DECL(pjsip_transaction*)
+pjsip_endpt_find_tsx(pjsip_endpoint* endpt, const pj_str_t* key);
 
 /**
  * Register the transaction to the endpoint's transaction table.
@@ -373,8 +362,8 @@ PJ_DECL(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
  * @param endpt	    The SIP endpoint.
  * @param tsx	    The transaction.
  */
-PJ_DECL(void) pjsip_endpt_register_tsx( pjsip_endpoint *endpt,
-					pjsip_transaction *tsx);
+PJ_DECL(void)
+pjsip_endpt_register_tsx(pjsip_endpoint* endpt, pjsip_transaction* tsx);
 
 /**
  * Forcefull destroy the transaction. This function should only be used
@@ -383,8 +372,8 @@ PJ_DECL(void) pjsip_endpt_register_tsx( pjsip_endpoint *endpt,
  * @param endpt	    The endpoint.
  * @param tsx	    The transaction to destroy.
  */
-PJ_DECL(void) pjsip_endpt_destroy_tsx( pjsip_endpoint *endpt,
-				      pjsip_transaction *tsx);
+PJ_DECL(void)
+pjsip_endpt_destroy_tsx(pjsip_endpoint* endpt, pjsip_transaction* tsx);
 
 /**
  * Create a new transmit data buffer.
@@ -395,8 +384,8 @@ PJ_DECL(void) pjsip_endpt_destroy_tsx( pjsip_endpoint *endpt,
  *
  * @return	    PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_tdata( pjsip_endpoint *endpt,
-					       pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t)
+pjsip_endpt_create_tdata(pjsip_endpoint* endpt, pjsip_tx_data** p_tdata);
 
 /**
  * Create the DNS resolver instance. Application creates the DNS
@@ -410,8 +399,8 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_tdata( pjsip_endpoint *endpt,
  * @return		PJ_SUCCESS on success, or the appropriate error
  *			code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_resolver(pjsip_endpoint *endpt,
-						 pj_dns_resolver **p_resv);
+PJ_DECL(pj_status_t)
+pjsip_endpt_create_resolver(pjsip_endpoint* endpt, pj_dns_resolver** p_resv);
 
 /**
  * Set DNS resolver to be used by the SIP resolver. Application can set
@@ -426,26 +415,27 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_resolver(pjsip_endpoint *endpt,
  * @return		PJ_SUCCESS on success, or the appropriate error
  *			code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_set_resolver(pjsip_endpoint *endpt,
-					      pj_dns_resolver *resv);
+PJ_DECL(pj_status_t)
+pjsip_endpt_set_resolver(pjsip_endpoint* endpt, pj_dns_resolver* resv);
 
 /**
- * Set the DNS external resolver implementation to use in the SIP resolver. 
+ * Set the DNS external resolver implementation to use in the SIP resolver.
  *
  * Note that naturally when implementing its own resolver, application would not
- * need the internal resolver, hence this function will also destroy the 
- * PJLIB-UTIL DNS resolver if any (e.g: set using #pjsip_endpt_set_resolver()). 
- * Application that needs it, still be able create its own instance. 
+ * need the internal resolver, hence this function will also destroy the
+ * PJLIB-UTIL DNS resolver if any (e.g: set using #pjsip_endpt_set_resolver()).
+ * Application that needs it, still be able create its own instance.
  *
  * @param endpt       The SIP resolver engine.
  * @param ext_res   The external resolver implementation callback. This argument
- *		    can be NULL to reset the whole external implementation. 
+ *		    can be NULL to reset the whole external implementation.
  *		    However, it is prohibited to reset individual callback.
- * 
+ *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_set_ext_resolver(pjsip_endpoint *endpt,
-						  pjsip_ext_resolver *ext_res);
+PJ_DECL(pj_status_t)
+pjsip_endpt_set_ext_resolver(pjsip_endpoint* endpt,
+                             pjsip_ext_resolver* ext_res);
 
 /**
  * Get the DNS resolver being used by the SIP resolver.
@@ -455,10 +445,10 @@ PJ_DECL(pj_status_t) pjsip_endpt_set_ext_resolver(pjsip_endpoint *endpt,
  * @return		The DNS resolver instance currently being used
  *			by the SIP endpoint.
  */
-PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
+PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint* endpt);
 
 /**
- * Asynchronously resolve a SIP target host or domain according to rule 
+ * Asynchronously resolve a SIP target host or domain according to rule
  * specified in RFC 3263 (Locating SIP Servers). When the resolving operation
  * has completed, the callback will be called.
  *
@@ -468,11 +458,10 @@ PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
  * @param token	    A user defined token to be passed back to callback function.
  * @param cb	    The callback function.
  */
-PJ_DECL(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
-				   pj_pool_t *pool,
-				   pjsip_host_info *target,
-				   void *token,
-				   pjsip_resolver_callback *cb);
+PJ_DECL(void)
+pjsip_endpt_resolve(pjsip_endpoint* endpt, pj_pool_t* pool,
+                    pjsip_host_info* target, void* token,
+                    pjsip_resolver_callback* cb);
 
 /**
  * Get transport manager instance.
@@ -481,7 +470,7 @@ PJ_DECL(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
  *
  * @return	    Transport manager instance.
  */
-PJ_DECL(pjsip_tpmgr*) pjsip_endpt_get_tpmgr(pjsip_endpoint *endpt);
+PJ_DECL(pjsip_tpmgr*) pjsip_endpt_get_tpmgr(pjsip_endpoint* endpt);
 
 /**
  * Get ioqueue instance.
@@ -490,7 +479,7 @@ PJ_DECL(pjsip_tpmgr*) pjsip_endpt_get_tpmgr(pjsip_endpoint *endpt);
  *
  * @return	    The ioqueue.
  */
-PJ_DECL(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt);
+PJ_DECL(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint* endpt);
 
 /**
  * Find a SIP transport suitable for sending SIP message to the specified
@@ -510,19 +499,17 @@ PJ_DECL(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt);
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
-pjsip_endpt_acquire_transport( pjsip_endpoint *endpt,
-			       pjsip_transport_type_e type,
-			       const pj_sockaddr_t *remote,
-			       int addr_len,
-			       const pjsip_tpselector *sel,
-			       pjsip_transport **p_tp);
-
+PJ_DECL(pj_status_t)
+pjsip_endpt_acquire_transport(pjsip_endpoint* endpt,
+                              pjsip_transport_type_e type,
+                              const pj_sockaddr_t* remote, int addr_len,
+                              const pjsip_tpselector* sel,
+                              pjsip_transport** p_tp);
 
 /**
  * Find a SIP transport suitable for sending SIP message to the specified
- * address by also considering the outgoing SIP message data. If transport 
- * selector ("sel") is set, then the function will check if the transport 
+ * address by also considering the outgoing SIP message data. If transport
+ * selector ("sel") is set, then the function will check if the transport
  * selected is suitable to send requests to the specified address.
  *
  * @see pjsip_tpmgr_acquire_transport
@@ -538,15 +525,12 @@ pjsip_endpt_acquire_transport( pjsip_endpoint *endpt,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
-pjsip_endpt_acquire_transport2(pjsip_endpoint *endpt,
-			       pjsip_transport_type_e type,
-			       const pj_sockaddr_t *remote,
-			       int addr_len,
-			       const pjsip_tpselector *sel,
-			       pjsip_tx_data *tdata,
-			       pjsip_transport **p_tp);
-
+PJ_DECL(pj_status_t)
+pjsip_endpt_acquire_transport2(pjsip_endpoint* endpt,
+                               pjsip_transport_type_e type,
+                               const pj_sockaddr_t* remote, int addr_len,
+                               const pjsip_tpselector* sel,
+                               pjsip_tx_data* tdata, pjsip_transport** p_tp);
 
 /*****************************************************************************
  *
@@ -579,10 +563,9 @@ pjsip_endpt_acquire_transport2(pjsip_endpoint *endpt,
  * @return	    The appropriate header, or NULL if the header is not
  *		    available.
  */
-PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_capability( pjsip_endpoint *endpt,
-						      int htype,
-						      const pj_str_t *hname);
-
+PJ_DECL(const pjsip_hdr*)
+pjsip_endpt_get_capability(pjsip_endpoint* endpt, int htype,
+                           const pj_str_t* hname);
 
 /**
  * Check if we have the specified capability.
@@ -603,11 +586,9 @@ PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_capability( pjsip_endpoint *endpt,
  * @return	    PJ_TRUE if the specified capability is supported,
  *		    otherwise PJ_FALSE..
  */
-PJ_DECL(pj_bool_t) pjsip_endpt_has_capability( pjsip_endpoint *endpt,
-					       int htype,
-					       const pj_str_t *hname,
-					       const pj_str_t *token);
-
+PJ_DECL(pj_bool_t)
+pjsip_endpt_has_capability(pjsip_endpoint* endpt, int htype,
+                           const pj_str_t* hname, const pj_str_t* token);
 
 /**
  * Add or register new capabilities as indicated by the tags to the
@@ -629,12 +610,10 @@ PJ_DECL(pj_bool_t) pjsip_endpt_has_capability( pjsip_endpoint *endpt,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
-						 pjsip_module *mod,
-						 int htype,
-						 const pj_str_t *hname,
-						 unsigned count,
-						 const pj_str_t tags[]);
+PJ_DECL(pj_status_t)
+pjsip_endpt_add_capability(pjsip_endpoint* endpt, pjsip_module* mod, int htype,
+                           const pj_str_t* hname, unsigned count,
+                           const pj_str_t tags[]);
 
 /**
  * Get list of additional headers to be put in outgoing request message.
@@ -644,8 +623,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
  *
  * @return	    List of headers.
  */
-PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_request_headers(pjsip_endpoint *e);
-
+PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_request_headers(pjsip_endpoint* e);
 
 /**
  * Dump endpoint status to the log. This will print the status to the log
@@ -656,11 +634,10 @@ PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_request_headers(pjsip_endpoint *e);
  *			BEWARE that this option may crash the system because
  *			it tries to access all memory pools.
  */
-PJ_DECL(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail );
-
+PJ_DECL(void) pjsip_endpt_dump(pjsip_endpoint* endpt, pj_bool_t detail);
 
 /**
- * Register cleanup function to be called by SIP endpoint when 
+ * Register cleanup function to be called by SIP endpoint when
  * #pjsip_endpt_destroy() is called.  Note that application should not
  * use or access any endpoint resource (such as pool, ioqueue, timer heap)
  * from within the callback as such resource may have been released when
@@ -671,32 +648,27 @@ PJ_DECL(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail );
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_atexit(pjsip_endpoint *endpt,
-					pjsip_endpt_exit_callback func);
-
+PJ_DECL(pj_status_t)
+pjsip_endpt_atexit(pjsip_endpoint* endpt, pjsip_endpt_exit_callback func);
 
 /**
  * @}
  */
 
-
 /**
  * Log an error.
  */
-PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
-				     const char *sender,
-                                     pj_status_t error_code,
-                                     const char *format,
-                                     ... );
+PJ_DECL(void)
+pjsip_endpt_log_error(pjsip_endpoint* endpt, const char* sender,
+                      pj_status_t error_code, const char* format, ...);
 
-#define PJSIP_ENDPT_LOG_ERROR(expr)   \
-            pjsip_endpt_log_error expr
+#define PJSIP_ENDPT_LOG_ERROR(expr) pjsip_endpt_log_error expr
 
-#define PJSIP_ENDPT_TRACE(tracing,expr) \
-            do {                        \
-                if ((tracing))          \
-                    PJ_LOG(4,expr);     \
-            } while (0)
+#define PJSIP_ENDPT_TRACE(tracing, expr) \
+    do { \
+        if ((tracing)) \
+            PJ_LOG(4, expr); \
+    } while (0)
 
 /*
  * Internal functions.
@@ -705,9 +677,8 @@ PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
  * Receive transaction events from transactions and put in the event queue
  * to be processed later.
  */
-void pjsip_endpt_send_tsx_event( pjsip_endpoint *endpt, pjsip_event *evt );
+void pjsip_endpt_send_tsx_event(pjsip_endpoint* endpt, pjsip_event* evt);
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_ENDPOINT_H__ */
-
+#endif /* __PJSIP_SIP_ENDPOINT_H__ */

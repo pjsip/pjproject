@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2010 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_CLI_IMP_H__
 #define __PJLIB_UTIL_CLI_IMP_H__
@@ -25,7 +24,6 @@
  */
 
 #include <pjlib-util/cli.h>
-
 
 PJ_BEGIN_DECL
 
@@ -40,21 +38,21 @@ PJ_BEGIN_DECL
  * Default log level for console sessions.
  */
 #ifndef PJ_CLI_CONSOLE_LOG_LEVEL
-#   define PJ_CLI_CONSOLE_LOG_LEVEL	PJ_LOG_MAX_LEVEL
+#    define PJ_CLI_CONSOLE_LOG_LEVEL PJ_LOG_MAX_LEVEL
 #endif
 
 /**
  * Default log level for telnet sessions.
  */
 #ifndef PJ_CLI_TELNET_LOG_LEVEL
-#   define PJ_CLI_TELNET_LOG_LEVEL	4
+#    define PJ_CLI_TELNET_LOG_LEVEL 4
 #endif
 
 /**
  * Default port number for telnet daemon.
  */
 #ifndef PJ_CLI_TELNET_PORT
-#   define PJ_CLI_TELNET_PORT		0
+#    define PJ_CLI_TELNET_PORT 0
 #endif
 
 /**
@@ -62,12 +60,11 @@ PJ_BEGIN_DECL
  */
 typedef enum pj_cli_front_end_type
 {
-    PJ_CLI_CONSOLE_FRONT_END,	/**< Console front end.	*/
-    PJ_CLI_TELNET_FRONT_END,	/**< Telnet front end.	*/
-    PJ_CLI_HTTP_FRONT_END,	/**< HTTP front end.	*/
-    PJ_CLI_GUI_FRONT_END	/**< GUI front end.	*/
+    PJ_CLI_CONSOLE_FRONT_END, /**< Console front end.	*/
+    PJ_CLI_TELNET_FRONT_END,  /**< Telnet front end.	*/
+    PJ_CLI_HTTP_FRONT_END,    /**< HTTP front end.	*/
+    PJ_CLI_GUI_FRONT_END      /**< GUI front end.	*/
 } pj_cli_front_end_type;
-
 
 /**
  * Front end operations. Only the CLI should call these functions
@@ -86,8 +83,8 @@ typedef struct pj_cli_front_end_op
      * @param data	The message itself.
      * @param len 	Length of this message.
      */
-    void (*on_write_log)(pj_cli_front_end *fe, int level,
-		         const char *data, pj_size_t len);
+    void (*on_write_log)(pj_cli_front_end* fe, int level, const char* data,
+                         pj_size_t len);
 
     /**
      * Callback to be called when the application is quitting, to signal the
@@ -97,7 +94,7 @@ typedef struct pj_cli_front_end_op
      * @param fe	The front end.
      * @param req	The session which requested the application quit.
      */
-    void (*on_quit)(pj_cli_front_end *fe, pj_cli_sess *req);
+    void (*on_quit)(pj_cli_front_end* fe, pj_cli_sess* req);
 
     /**
      * Callback to be called to close and self destroy the front-end. This
@@ -105,10 +102,9 @@ typedef struct pj_cli_front_end_op
      *
      * @param fe	The front end.
      */
-    void (*on_destroy)(pj_cli_front_end *fe);
+    void (*on_destroy)(pj_cli_front_end* fe);
 
 } pj_cli_front_end_op;
-
 
 /**
  * This structure describes common properties of CLI front-ends. A front-
@@ -135,14 +131,13 @@ struct pj_cli_front_end
     /**
      * The CLI application.
      */
-    pj_cli_t *cli;
+    pj_cli_t* cli;
 
     /**
      * Front end operations.
      */
-    pj_cli_front_end_op *op;
+    pj_cli_front_end_op* op;
 };
-
 
 /**
  * Session operations.
@@ -154,10 +149,9 @@ typedef struct pj_cli_sess_op
      *
      * @param sess	The session to destroy.
      */
-    void (*destroy)(pj_cli_sess *sess);
+    void (*destroy)(pj_cli_sess* sess);
 
 } pj_cli_sess_op;
-
 
 /**
  * This structure describes common properties of a CLI session. A CLI session
@@ -178,12 +172,12 @@ struct pj_cli_sess
     /**
      * Pointer to the front-end instance which created this session.
      */
-    pj_cli_front_end *fe;
+    pj_cli_front_end* fe;
 
     /**
      * Session operations.
      */
-    pj_cli_sess_op *op;
+    pj_cli_sess_op* op;
 
     /**
      * Text containing session info, which is filled by the renderer when
@@ -195,14 +189,12 @@ struct pj_cli_sess
      * Log verbosity of this session.
      */
     int log_level;
-
 };
 
 /**
  * @}
  */
 
-
 PJ_END_DECL
 
-#endif	/* __PJLIB_UTIL_CLI_IMP_H__ */
+#endif /* __PJLIB_UTIL_CLI_IMP_H__ */

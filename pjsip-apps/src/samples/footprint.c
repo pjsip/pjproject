@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -38,77 +37,76 @@
 
 /* All flags: */
 #if 0
-#define HAS_PJLIB
+#    define HAS_PJLIB
 
-#define HAS_PJLIB_STUN
-#define HAS_PJLIB_GETOPT
-#define HAS_PJLIB_XML
-#define HAS_PJLIB_SCANNER
-#define HAS_PJLIB_DNS
-#define HAS_PJLIB_RESOLVER
-#define HAS_PJLIB_SRV_RESOLVER
+#    define HAS_PJLIB_STUN
+#    define HAS_PJLIB_GETOPT
+#    define HAS_PJLIB_XML
+#    define HAS_PJLIB_SCANNER
+#    define HAS_PJLIB_DNS
+#    define HAS_PJLIB_RESOLVER
+#    define HAS_PJLIB_SRV_RESOLVER
 
-#define HAS_PJLIB_CRC32
-#define HAS_PJLIB_HMAC_MD5
-#define HAS_PJLIB_HMAC_SHA1
+#    define HAS_PJLIB_CRC32
+#    define HAS_PJLIB_HMAC_MD5
+#    define HAS_PJLIB_HMAC_SHA1
 
-#define HAS_PJSIP_CORE_MSG_ELEM
-#define HAS_PJSIP_CORE
-#define HAS_PJSIP_CORE_MSG_UTIL
+#    define HAS_PJSIP_CORE_MSG_ELEM
+#    define HAS_PJSIP_CORE
+#    define HAS_PJSIP_CORE_MSG_UTIL
 
-#define HAS_PJSIP_UDP_TRANSPORT
-#define HAS_PJSIP_TCP_TRANSPORT
-#define HAS_PJSIP_TLS_TRANSPORT
-#define HAS_PJSIP_TRANSACTION
-#define HAS_PJSIP_UA_LAYER
-#define HAS_PJMEDIA_SDP
-#define HAS_PJMEDIA_SDP_NEGOTIATOR
-#define HAS_PJSIP_AUTH_CLIENT
-#define HAS_PJSIP_INV_SESSION
-#define HAS_PJSIP_REGC
-#define HAS_PJSIP_EVENT_FRAMEWORK
-#define HAS_PJSIP_CALL_TRANSFER
-#define HAS_PJSIP_PRESENCE
-#define HAS_PJSIP_IS_COMPOSING
+#    define HAS_PJSIP_UDP_TRANSPORT
+#    define HAS_PJSIP_TCP_TRANSPORT
+#    define HAS_PJSIP_TLS_TRANSPORT
+#    define HAS_PJSIP_TRANSACTION
+#    define HAS_PJSIP_UA_LAYER
+#    define HAS_PJMEDIA_SDP
+#    define HAS_PJMEDIA_SDP_NEGOTIATOR
+#    define HAS_PJSIP_AUTH_CLIENT
+#    define HAS_PJSIP_INV_SESSION
+#    define HAS_PJSIP_REGC
+#    define HAS_PJSIP_EVENT_FRAMEWORK
+#    define HAS_PJSIP_CALL_TRANSFER
+#    define HAS_PJSIP_PRESENCE
+#    define HAS_PJSIP_IS_COMPOSING
 
-#define HAS_PJNATH_STUN
-#define HAS_PJNATH_ICE
+#    define HAS_PJNATH_STUN
+#    define HAS_PJNATH_ICE
 
-#define HAS_PJMEDIA
-#define HAS_PJMEDIA_SND_DEV
-#define HAS_PJMEDIA_EC
-#define HAS_PJMEDIA_SND_PORT
-#define HAS_PJMEDIA_RESAMPLE
-#define HAS_PJMEDIA_SILENCE_DET
-#define HAS_PJMEDIA_PLC
-#define HAS_PJMEDIA_CONFERENCE
-#define HAS_PJMEDIA_MASTER_PORT
-#define HAS_PJMEDIA_RTP
-#define HAS_PJMEDIA_RTCP
-#define HAS_PJMEDIA_JBUF
-#define HAS_PJMEDIA_STREAM
-#define HAS_PJMEDIA_TONEGEN
-#define HAS_PJMEDIA_UDP_TRANSPORT
-#define HAS_PJMEDIA_FILE_PLAYER
-#define HAS_PJMEDIA_FILE_CAPTURE
-#define HAS_PJMEDIA_MEM_PLAYER
-#define HAS_PJMEDIA_MEM_CAPTURE
-#define HAS_PJMEDIA_ICE
+#    define HAS_PJMEDIA
+#    define HAS_PJMEDIA_SND_DEV
+#    define HAS_PJMEDIA_EC
+#    define HAS_PJMEDIA_SND_PORT
+#    define HAS_PJMEDIA_RESAMPLE
+#    define HAS_PJMEDIA_SILENCE_DET
+#    define HAS_PJMEDIA_PLC
+#    define HAS_PJMEDIA_CONFERENCE
+#    define HAS_PJMEDIA_MASTER_PORT
+#    define HAS_PJMEDIA_RTP
+#    define HAS_PJMEDIA_RTCP
+#    define HAS_PJMEDIA_JBUF
+#    define HAS_PJMEDIA_STREAM
+#    define HAS_PJMEDIA_TONEGEN
+#    define HAS_PJMEDIA_UDP_TRANSPORT
+#    define HAS_PJMEDIA_FILE_PLAYER
+#    define HAS_PJMEDIA_FILE_CAPTURE
+#    define HAS_PJMEDIA_MEM_PLAYER
+#    define HAS_PJMEDIA_MEM_CAPTURE
+#    define HAS_PJMEDIA_ICE
 
-#define HAS_PJMEDIA_G711_CODEC
-#define HAS_PJMEDIA_GSM_CODEC
-#define HAS_PJMEDIA_SPEEX_CODEC
-#define HAS_PJMEDIA_ILBC_CODEC
+#    define HAS_PJMEDIA_G711_CODEC
+#    define HAS_PJMEDIA_GSM_CODEC
+#    define HAS_PJMEDIA_SPEEX_CODEC
+#    define HAS_PJMEDIA_ILBC_CODEC
 #endif
-
 
 int dummy_function()
 {
     pj_caching_pool cp;
- 
+
     sprintf(NULL, "%d", 0);
     rand();
-    
+
 #ifdef HAS_PJLIB
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
@@ -130,7 +128,7 @@ int dummy_function()
 #ifdef HAS_PJLIB_GETOPT
     pj_getopt_long(0, NULL, NULL, NULL, NULL);
 #endif
-    
+
 #ifdef HAS_PJLIB_XML
     pj_xml_parse(NULL, NULL, 100);
     pj_xml_print(NULL, NULL, 10, PJ_FALSE);
@@ -272,14 +270,13 @@ int dummy_function()
     pjsip_tpmgr_destroy(NULL);
     pjsip_transport_send(NULL, NULL, NULL, 0, NULL, NULL);
 
-
 #endif
 
 #ifdef HAS_PJSIP_CORE_MSG_UTIL
-    pjsip_endpt_create_request(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-			       -1, NULL, NULL);
+    pjsip_endpt_create_request(NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1,
+                               NULL, NULL);
     pjsip_endpt_create_request_from_hdr(NULL, NULL, NULL, NULL, NULL, NULL,
-					NULL, -1, NULL, NULL);
+                                        NULL, -1, NULL, NULL);
     pjsip_endpt_create_response(NULL, NULL, -1, NULL, NULL);
     pjsip_endpt_create_ack(NULL, NULL, NULL, NULL);
     pjsip_endpt_create_cancel(NULL, NULL, NULL);
@@ -374,12 +371,12 @@ int dummy_function()
     pjsip_inv_update(NULL, NULL, NULL, NULL);
     pjsip_inv_send_msg(NULL, NULL);
     pjsip_dlg_get_inv_session(NULL);
-    //pjsip_tsx_get_inv_session(NULL);
+    // pjsip_tsx_get_inv_session(NULL);
     pjsip_inv_state_name(PJSIP_INV_STATE_NULL);
 #endif
 
 #ifdef HAS_PJSIP_REGC
-    //pjsip_regc_get_module();
+    // pjsip_regc_get_module();
     pjsip_regc_create(NULL, NULL, NULL, NULL);
     pjsip_regc_destroy(NULL);
     pjsip_regc_get_info(NULL, NULL);
@@ -637,18 +634,16 @@ int dummy_function()
     return 0;
 }
 
-
 int test_main()
 {
     return dummy_function();
 }
 
-#if defined(PJ_RTEMS) && PJ_RTEMS!=0
-#  include "../../pjlib/src/pjlib-test/main_rtems.c"
+#if defined(PJ_RTEMS) && PJ_RTEMS != 0
+#    include "../../pjlib/src/pjlib-test/main_rtems.c"
 #else
 int main()
 {
-  return test_main();
+    return test_main();
 }
 #endif
-

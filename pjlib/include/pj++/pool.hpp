@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_POOL_HPP__
 #define __PJPP_POOL_HPP__
@@ -28,74 +27,62 @@ class Pj_Caching_Pool;
 //
 // Base class for all Pjlib objects
 //
-class Pj_Object
-{
-public:
-    void *operator new(unsigned int class_size, Pj_Pool *pool);
-    void *operator new(unsigned int class_size, Pj_Pool &pool);
+class Pj_Object {
+   public:
+    void* operator new(unsigned int class_size, Pj_Pool* pool);
+    void* operator new(unsigned int class_size, Pj_Pool& pool);
 
     void operator delete(void*)
-    {
-    }
+    {}
 
     void operator delete(void*, Pj_Pool*)
-    {
-    }
+    {}
 
     void operator delete(void*, Pj_Pool&)
-    {
-    }
+    {}
 
     //
     // Inline implementations at the end of this file.
     //
 
-private:
+   private:
     // Can not use normal new operator; must use pool.
     // e.g.:
     //   obj = new(pool) Pj_The_Object(pool, ...);
     //
-    void *operator new(unsigned int)
+    void* operator new(unsigned int)
     {}
 };
-
 
 //
 // Pool.
 //
-class Pj_Pool : public Pj_Object
-{
-public:
+class Pj_Pool : public Pj_Object {
+   public:
     //
     // Default constructor, initializes internal pool to NULL.
     // Application must call attach() some time later.
     //
-    Pj_Pool()
-        : p_(NULL)
-    {
-    }
+    Pj_Pool() : p_(NULL)
+    {}
 
     //
     // Create pool.
     //
-    Pj_Pool(Pj_Caching_Pool &caching_pool,
-            pj_size_t initial_size, 
-            pj_size_t increment_size, 
-            const char *name = NULL, 
-            pj_pool_callback *callback = NULL);
+    Pj_Pool(Pj_Caching_Pool& caching_pool, pj_size_t initial_size,
+            pj_size_t increment_size, const char* name = NULL,
+            pj_pool_callback* callback = NULL);
 
     //
     // Construct from existing pool.
     //
-    explicit Pj_Pool(pj_pool_t *pool)
-        : p_(pool)
-    {
-    }
+    explicit Pj_Pool(pj_pool_t* pool) : p_(pool)
+    {}
 
     //
     // Attach existing pool.
     //
-    void attach(pj_pool_t *pool)
+    void attach(pj_pool_t* pool)
     {
         p_ = pool;
     }
@@ -103,7 +90,7 @@ public:
     //
     // Destructor.
     //
-    // Release pool back to factory. Remember: if you delete pool, then 
+    // Release pool back to factory. Remember: if you delete pool, then
     // make sure that all objects that have been allocated from this pool
     // have been properly destroyed.
     //
@@ -112,15 +99,15 @@ public:
     ~Pj_Pool()
     {
         if (p_)
-	    pj_pool_release(p_);
+            pj_pool_release(p_);
     }
 
     //
     // Get name.
     //
-    const char *getobjname() const
+    const char* getobjname() const
     {
-	return pj_pool_getobjname(p_);
+        return pj_pool_getobjname(p_);
     }
 
     //
@@ -128,31 +115,31 @@ public:
     //
     operator pj_pool_t*()
     {
-	return p_;
+        return p_;
     }
 
     //
     // Get pjlib compatible pool object.
     //
-    pj_pool_t *pool_()
+    pj_pool_t* pool_()
     {
-	return p_;
+        return p_;
     }
 
     //
     // Get pjlib compatible pool object.
     //
-    const pj_pool_t *pool_() const
+    const pj_pool_t* pool_() const
     {
-	return p_;
+        return p_;
     }
 
     //
     // Get pjlib compatible pool object.
     //
-    pj_pool_t *pj_pool_t_()
+    pj_pool_t* pj_pool_t_()
     {
-	return p_;
+        return p_;
     }
 
     //
@@ -160,7 +147,7 @@ public:
     //
     void reset()
     {
-	pj_pool_reset(p_);
+        pj_pool_reset(p_);
     }
 
     //
@@ -168,7 +155,7 @@ public:
     //
     pj_size_t get_capacity()
     {
-	pj_pool_get_capacity(p_);
+        pj_pool_get_capacity(p_);
     }
 
     //
@@ -176,51 +163,50 @@ public:
     //
     pj_size_t get_used_size()
     {
-	pj_pool_get_used_size(p_);
+        pj_pool_get_used_size(p_);
     }
 
     //
     // Allocate.
     //
-    void *alloc(pj_size_t size)
+    void* alloc(pj_size_t size)
     {
-	return pj_pool_alloc(p_, size);
+        return pj_pool_alloc(p_, size);
     }
 
     //
     // Allocate elements and zero fill the memory.
     //
-    void *calloc(pj_size_t count, pj_size_t elem)
+    void* calloc(pj_size_t count, pj_size_t elem)
     {
-	return pj_pool_calloc(p_, count, elem);
+        return pj_pool_calloc(p_, count, elem);
     }
 
     //
     // Allocate and zero fill memory.
     //
-    void *zalloc(pj_size_t size)
+    void* zalloc(pj_size_t size)
     {
         return pj_pool_zalloc(p_, size);
     }
 
-private:
-    pj_pool_t *p_;
+   private:
+    pj_pool_t* p_;
 };
-
 
 //
 // Caching pool.
 //
-class Pj_Caching_Pool
-{
-public:
+class Pj_Caching_Pool {
+   public:
     //
     // Construct caching pool.
     //
-    Pj_Caching_Pool( pj_size_t cache_capacity = 0,
-	             const pj_pool_factory_policy *pol=&pj_pool_factory_default_policy)
+    Pj_Caching_Pool(
+      pj_size_t cache_capacity = 0,
+      const pj_pool_factory_policy* pol = &pj_pool_factory_default_policy)
     {
-	pj_caching_pool_init(&cp_, pol, cache_capacity);
+        pj_caching_pool_init(&cp_, pol, cache_capacity);
     }
 
     //
@@ -228,35 +214,32 @@ public:
     //
     ~Pj_Caching_Pool()
     {
-	pj_caching_pool_destroy(&cp_);
+        pj_caching_pool_destroy(&cp_);
     }
 
     //
     // Create pool.
     //
-    pj_pool_t *create_pool( pj_size_t initial_size, 
-                            pj_size_t increment_size, 
-                            const char *name = NULL, 
-                            pj_pool_callback *callback = NULL)
+    pj_pool_t* create_pool(pj_size_t initial_size, pj_size_t increment_size,
+                           const char* name = NULL,
+                           pj_pool_callback* callback = NULL)
     {
-	return (pj_pool_t*)(*cp_.factory.create_pool)(&cp_.factory, name, 
-                                                     initial_size, 
-                                                     increment_size, 
-                                                     callback);
+        return (pj_pool_t*)(*cp_.factory.create_pool)(
+          &cp_.factory, name, initial_size, increment_size, callback);
     }
 
-private:
+   private:
     pj_caching_pool cp_;
 };
 
 //
 // Inlines for Pj_Object
 //
-inline void *Pj_Object::operator new(unsigned int class_size, Pj_Pool *pool)
+inline void* Pj_Object::operator new(unsigned int class_size, Pj_Pool* pool)
 {
     return pool->alloc(class_size);
 }
-inline void *Pj_Object::operator new(unsigned int class_size, Pj_Pool &pool)
+inline void* Pj_Object::operator new(unsigned int class_size, Pj_Pool& pool)
 {
     return pool.alloc(class_size);
 }
@@ -264,16 +247,11 @@ inline void *Pj_Object::operator new(unsigned int class_size, Pj_Pool &pool)
 //
 // Inlines for Pj_Pool
 //
-inline Pj_Pool::Pj_Pool( Pj_Caching_Pool &caching_pool,
-                         pj_size_t initial_size, 
-                         pj_size_t increment_size, 
-                         const char *name, 
-                         pj_pool_callback *callback)
+inline Pj_Pool::Pj_Pool(Pj_Caching_Pool& caching_pool, pj_size_t initial_size,
+                        pj_size_t increment_size, const char* name,
+                        pj_pool_callback* callback)
 {
-    p_ = caching_pool.create_pool(initial_size, increment_size, name,
-                                  callback);
+    p_ = caching_pool.create_pool(initial_size, increment_size, name, callback);
 }
 
-
-#endif	/* __PJPP_POOL_HPP__ */
-
+#endif /* __PJPP_POOL_HPP__ */

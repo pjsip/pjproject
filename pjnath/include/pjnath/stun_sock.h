@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_STUN_SOCK_H__
 #define __PJNATH_STUN_SOCK_H__
@@ -31,9 +30,7 @@
 #include <pj/sock.h>
 #include <pj/sock_qos.h>
 
-
 PJ_BEGIN_DECL
-
 
 /**
  * @addtogroup PJNATH_STUN_SOCK
@@ -71,7 +68,7 @@ typedef enum pj_stun_sock_op
     /**
      * Asynchronous DNS resolution.
      */
-    PJ_STUN_SOCK_DNS_OP		= 1,
+    PJ_STUN_SOCK_DNS_OP = 1,
 
     /**
      * Initial STUN Binding request.
@@ -89,9 +86,7 @@ typedef enum pj_stun_sock_op
      */
     PJ_STUN_SOCK_MAPPED_ADDR_CHANGE
 
-
 } pj_stun_sock_op;
-
 
 /**
  * This structure contains callbacks that will be called by the STUN
@@ -113,11 +108,9 @@ typedef struct pj_stun_sock_cb
      *			it must return PJ_FALSE if it has destroyed the
      *			STUN transport in this callback.
      */
-    pj_bool_t (*on_rx_data)(pj_stun_sock *stun_sock,
-			    void *pkt,
-			    unsigned pkt_len,
-			    const pj_sockaddr_t *src_addr,
-			    unsigned addr_len);
+    pj_bool_t (*on_rx_data)(pj_stun_sock* stun_sock, void* pkt,
+                            unsigned pkt_len, const pj_sockaddr_t* src_addr,
+                            unsigned addr_len);
 
     /**
      * Notifification when asynchronous send operation has completed.
@@ -135,16 +128,15 @@ typedef struct pj_stun_sock_cb
      *			it must return PJ_FALSE if it has destroyed the
      *			STUN transport in this callback.
      */
-    pj_bool_t (*on_data_sent)(pj_stun_sock *stun_sock,
-			      pj_ioqueue_op_key_t *send_key,
-			      pj_ssize_t sent);
+    pj_bool_t (*on_data_sent)(pj_stun_sock* stun_sock,
+                              pj_ioqueue_op_key_t* send_key, pj_ssize_t sent);
 
     /**
      * Notification when the status of the STUN transport has changed. This
      * callback may be called for the following conditions:
      *	- the first time the publicly mapped address has been resolved from
      *	  the STUN server, this callback will be called with \a op argument
-     *    set to PJ_STUN_SOCK_BINDING_OP \a status  argument set to 
+     *    set to PJ_STUN_SOCK_BINDING_OP \a status  argument set to
      *    PJ_SUCCESS.
      *	- anytime when the transport has detected that the publicly mapped
      *    address has changed, this callback will be called with \a op
@@ -153,7 +145,7 @@ typedef struct pj_stun_sock_cb
      *    application will get the resolved public address in the
      *    #pj_stun_sock_info structure.
      *	- for any terminal error (such as STUN time-out, DNS resolution
-     *    failure, or keep-alive failure), this callback will be called 
+     *    failure, or keep-alive failure), this callback will be called
      *	  with the \a status argument set to non-PJ_SUCCESS.
      *
      * @param stun_sock	The STUN transport.
@@ -167,12 +159,10 @@ typedef struct pj_stun_sock_cb
      *			should return PJ_TRUE to let the STUN socket operation
      *			continues.
      */
-    pj_bool_t	(*on_status)(pj_stun_sock *stun_sock, 
-			     pj_stun_sock_op op,
-			     pj_status_t status);
+    pj_bool_t (*on_status)(pj_stun_sock* stun_sock, pj_stun_sock_op op,
+                           pj_status_t status);
 
 } pj_stun_sock_cb;
-
 
 /**
  * This structure contains information about the STUN transport. Application
@@ -183,33 +173,32 @@ typedef struct pj_stun_sock_info
     /**
      * The bound address of the socket.
      */
-    pj_sockaddr	    bound_addr;
+    pj_sockaddr bound_addr;
 
     /**
      * IP address of the STUN server.
      */
-    pj_sockaddr	    srv_addr;
+    pj_sockaddr srv_addr;
 
     /**
      * The publicly mapped address. It may contain zero address when the
      * mapped address has not been resolved. Application may query whether
      * this field contains valid address with pj_sockaddr_has_addr().
      */
-    pj_sockaddr	    mapped_addr;
+    pj_sockaddr mapped_addr;
 
     /**
      * Number of interface address aliases. The interface address aliases
      * are list of all interface addresses in this host.
      */
-    unsigned	    alias_cnt;
+    unsigned alias_cnt;
 
     /**
      * Array of interface address aliases.
      */
-    pj_sockaddr	    aliases[PJ_ICE_ST_MAX_CAND];
+    pj_sockaddr aliases[PJ_ICE_ST_MAX_CAND];
 
 } pj_stun_sock_info;
-
 
 /**
  * This describe the settings to be given to the STUN transport during its
@@ -224,7 +213,7 @@ typedef struct pj_stun_sock_cfg
      *
      * Default: NULL
      */
-    pj_grp_lock_t *grp_lock;
+    pj_grp_lock_t* grp_lock;
 
     /**
      * Packet buffer size.
@@ -259,11 +248,11 @@ typedef struct pj_stun_sock_cfg
      *
      * Default value is zero.
      */
-    pj_uint16_t	port_range;
+    pj_uint16_t port_range;
 
     /**
      * Specify the STUN keep-alive duration, in seconds. The STUN transport
-     * does keep-alive by sending STUN Binding request to the STUN server. 
+     * does keep-alive by sending STUN Binding request to the STUN server.
      * If this value is zero, the PJ_STUN_KEEP_ALIVE_SEC value will be used.
      * If the value is negative, it will disable STUN keep-alive.
      */
@@ -317,21 +306,17 @@ typedef struct pj_stun_sock_cfg
 
 } pj_stun_sock_cfg;
 
-
-
 /**
  * Retrieve the name representing the specified operation.
  */
 PJ_DECL(const char*) pj_stun_sock_op_name(pj_stun_sock_op op);
-
 
 /**
  * Initialize the STUN transport setting with its default values.
  *
  * @param cfg	The STUN transport config.
  */
-PJ_DECL(void) pj_stun_sock_cfg_default(pj_stun_sock_cfg *cfg);
-
+PJ_DECL(void) pj_stun_sock_cfg_default(pj_stun_sock_cfg* cfg);
 
 /**
  * Create the STUN transport using the specified configuration. Once
@@ -342,7 +327,7 @@ PJ_DECL(void) pj_stun_sock_cfg_default(pj_stun_sock_cfg *cfg);
  *			things the ioqueue and timer heap instance for
  *			the operation of this transport.
  * @param af		Address family of socket. Currently pj_AF_INET()
- *			and pj_AF_INET6() are supported. 
+ *			and pj_AF_INET6() are supported.
  * @param name		Optional name to be given to this transport to
  *			assist debugging.
  * @param cb		Callback to receive events/data from the transport.
@@ -354,14 +339,10 @@ PJ_DECL(void) pj_stun_sock_cfg_default(pj_stun_sock_cfg *cfg);
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_stun_sock_create(pj_stun_config *stun_cfg,
-					 const char *name,
-					 int af,
-					 const pj_stun_sock_cb *cb,
-					 const pj_stun_sock_cfg *cfg,
-					 void *user_data,
-					 pj_stun_sock **p_sock);
-
+PJ_DECL(pj_status_t)
+pj_stun_sock_create(pj_stun_config* stun_cfg, const char* name, int af,
+                    const pj_stun_sock_cb* cb, const pj_stun_sock_cfg* cfg,
+                    void* user_data, pj_stun_sock** p_sock);
 
 /**
  * Start the STUN transport. This will start the DNS SRV resolution for
@@ -393,10 +374,9 @@ PJ_DECL(pj_status_t) pj_stun_sock_create(pj_stun_config *stun_cfg,
  *			result of the allocation process will be notified
  *			to application in \a on_status() callback.
  */
-PJ_DECL(pj_status_t) pj_stun_sock_start(pj_stun_sock *stun_sock,
-				        const pj_str_t *domain,
-				        pj_uint16_t default_port,
-				        pj_dns_resolver *resolver);
+PJ_DECL(pj_status_t)
+pj_stun_sock_start(pj_stun_sock* stun_sock, const pj_str_t* domain,
+                   pj_uint16_t default_port, pj_dns_resolver* resolver);
 
 /**
  * Destroy the STUN transport.
@@ -406,8 +386,7 @@ PJ_DECL(pj_status_t) pj_stun_sock_start(pj_stun_sock *stun_sock,
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *sock);
-
+PJ_DECL(pj_status_t) pj_stun_sock_destroy(pj_stun_sock* sock);
 
 /**
  * Associate a user data with this STUN transport. The user data may then
@@ -419,8 +398,8 @@ PJ_DECL(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *sock);
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_stun_sock_set_user_data(pj_stun_sock *stun_sock,
-					        void *user_data);
+PJ_DECL(pj_status_t)
+pj_stun_sock_set_user_data(pj_stun_sock* stun_sock, void* user_data);
 
 /**
  * Retrieve the previously assigned user data associated with this STUN
@@ -430,8 +409,7 @@ PJ_DECL(pj_status_t) pj_stun_sock_set_user_data(pj_stun_sock *stun_sock,
  *
  * @return		The user/application data.
  */
-PJ_DECL(void*) pj_stun_sock_get_user_data(pj_stun_sock *stun_sock);
-
+PJ_DECL(void*) pj_stun_sock_get_user_data(pj_stun_sock* stun_sock);
 
 /**
  * Get the group lock for this STUN transport.
@@ -440,8 +418,7 @@ PJ_DECL(void*) pj_stun_sock_get_user_data(pj_stun_sock *stun_sock);
  *
  * @return	        The group lock.
  */
-PJ_DECL(pj_grp_lock_t *) pj_stun_sock_get_grp_lock(pj_stun_sock *stun_sock);
-
+PJ_DECL(pj_grp_lock_t*) pj_stun_sock_get_grp_lock(pj_stun_sock* stun_sock);
 
 /**
  * Get the STUN transport info. The transport info contains, among other
@@ -453,9 +430,8 @@ PJ_DECL(pj_grp_lock_t *) pj_stun_sock_get_grp_lock(pj_stun_sock *stun_sock);
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_stun_sock_get_info(pj_stun_sock *stun_sock,
-					   pj_stun_sock_info *info);
-
+PJ_DECL(pj_status_t)
+pj_stun_sock_get_info(pj_stun_sock* stun_sock, pj_stun_sock_info* info);
 
 /**
  * Send a data to the specified address. This function may complete
@@ -476,22 +452,16 @@ PJ_DECL(pj_status_t) pj_stun_sock_get_info(pj_stun_sock *stun_sock,
  *			this case the \a on_data_sent() callback will be
  *			called when data is actually sent. Any other return
  *			value indicates error condition.
- */ 
-PJ_DECL(pj_status_t) pj_stun_sock_sendto(pj_stun_sock *stun_sock,
-					 pj_ioqueue_op_key_t *send_key,
-					 const void *pkt,
-					 unsigned pkt_len,
-					 unsigned flag,
-					 const pj_sockaddr_t *dst_addr,
-					 unsigned addr_len);
+ */
+PJ_DECL(pj_status_t)
+pj_stun_sock_sendto(pj_stun_sock* stun_sock, pj_ioqueue_op_key_t* send_key,
+                    const void* pkt, unsigned pkt_len, unsigned flag,
+                    const pj_sockaddr_t* dst_addr, unsigned addr_len);
 
 /**
  * @}
  */
 
-
 PJ_END_DECL
 
-
-#endif	/* __PJNATH_STUN_SOCK_H__ */
-
+#endif /* __PJNATH_STUN_SOCK_H__ */

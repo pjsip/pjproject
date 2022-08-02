@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/file_io.h>
 #include <pj/assert.h>
@@ -24,13 +23,12 @@
 #include <stdio.h>
 #include <errno.h>
 
-PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
-                                  const char *pathname, 
-                                  unsigned flags,
-                                  pj_oshandle_t *fd)
+PJ_DEF(pj_status_t)
+pj_file_open(pj_pool_t* pool, const char* pathname, unsigned flags,
+             pj_oshandle_t* fd)
 {
     char mode[8];
-    char *p = mode;
+    char* p = mode;
 
     PJ_ASSERT_RETURN(pathname && fd, PJ_EINVAL);
     PJ_UNUSED_ARG(pool);
@@ -42,7 +40,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
                 *p++ = '+';
         } else {
             /* This is invalid.
-             * Can not specify PJ_O_RDONLY with PJ_O_APPEND! 
+             * Can not specify PJ_O_RDONLY with PJ_O_APPEND!
              */
         }
     } else {
@@ -55,7 +53,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
         }
     }
 
-    if (p==mode)
+    if (p == mode)
         return PJ_EINVAL;
 
     *p++ = 'b';
@@ -64,7 +62,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     *fd = fopen(pathname, mode);
     if (*fd == NULL)
         return PJ_RETURN_OS_ERROR(errno);
-    
+
     return PJ_SUCCESS;
 }
 
@@ -77,9 +75,8 @@ PJ_DEF(pj_status_t) pj_file_close(pj_oshandle_t fd)
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_file_write( pj_oshandle_t fd,
-                                   const void *data,
-                                   pj_ssize_t *size)
+PJ_DEF(pj_status_t)
+pj_file_write(pj_oshandle_t fd, const void* data, pj_ssize_t* size)
 {
     size_t written;
 
@@ -94,9 +91,7 @@ PJ_DEF(pj_status_t) pj_file_write( pj_oshandle_t fd,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_file_read( pj_oshandle_t fd,
-                                  void *data,
-                                  pj_ssize_t *size)
+PJ_DEF(pj_status_t) pj_file_read(pj_oshandle_t fd, void* data, pj_ssize_t* size)
 {
     size_t bytes;
 
@@ -119,25 +114,27 @@ PJ_DEF(pj_bool_t) pj_file_eof(pj_oshandle_t fd, enum pj_file_access access)
 }
 */
 
-PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
-                                    pj_off_t offset,
-                                    enum pj_file_seek_type whence)
+PJ_DEF(pj_status_t)
+pj_file_setpos(pj_oshandle_t fd, pj_off_t offset, enum pj_file_seek_type whence)
 {
     int mode;
 
     if ((sizeof(pj_off_t) > sizeof(long)) &&
-        (offset > PJ_MAXLONG || offset < PJ_MINLONG)) 
+        (offset > PJ_MAXLONG || offset < PJ_MINLONG))
     {
         return PJ_ENOTSUP;
     }
 
     switch (whence) {
     case PJ_SEEK_SET:
-        mode = SEEK_SET; break;
+        mode = SEEK_SET;
+        break;
     case PJ_SEEK_CUR:
-        mode = SEEK_CUR; break;
+        mode = SEEK_CUR;
+        break;
     case PJ_SEEK_END:
-        mode = SEEK_END; break;
+        mode = SEEK_END;
+        break;
     default:
         pj_assert(!"Invalid whence in file_setpos");
         return PJ_EINVAL;
@@ -149,8 +146,7 @@ PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_file_getpos( pj_oshandle_t fd,
-                                    pj_off_t *pos)
+PJ_DEF(pj_status_t) pj_file_getpos(pj_oshandle_t fd, pj_off_t* pos)
 {
     long offset;
 
@@ -170,7 +166,7 @@ PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
 
     rc = fflush((FILE*)fd);
     if (rc == EOF) {
-	return PJ_RETURN_OS_ERROR(errno);
+        return PJ_RETURN_OS_ERROR(errno);
     }
 
     return PJ_SUCCESS;

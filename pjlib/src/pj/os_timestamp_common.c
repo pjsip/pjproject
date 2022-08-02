@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,26 +14,26 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include <pj/compat/high_precision.h>
 
 #if defined(PJ_HAS_HIGH_RES_TIMER) && PJ_HAS_HIGH_RES_TIMER != 0
 
-#define U32MAX  (0xFFFFFFFFUL)
-#define NANOSEC (1000000000UL)
-#define USEC    (1000000UL)
-#define MSEC    (1000)
+#    define U32MAX             (0xFFFFFFFFUL)
+#    define NANOSEC            (1000000000UL)
+#    define USEC               (1000000UL)
+#    define MSEC               (1000)
 
-#define u64tohighprec(u64)	((pj_highprec_t)((pj_int64_t)(u64)))
+#    define u64tohighprec(u64) ((pj_highprec_t)((pj_int64_t)(u64)))
 
-static pj_highprec_t get_elapsed( const pj_timestamp *start,
-                                  const pj_timestamp *stop )
+static pj_highprec_t get_elapsed(const pj_timestamp* start,
+                                 const pj_timestamp* stop)
 {
-#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+#    if defined(PJ_HAS_INT64) && PJ_HAS_INT64 != 0
     return u64tohighprec(stop->u64 - start->u64);
-#else
+#    else
     pj_highprec_t elapsed_hi, elapsed_lo;
 
     elapsed_hi = stop->u32.hi - start->u32.hi;
@@ -44,11 +43,11 @@ static pj_highprec_t get_elapsed( const pj_timestamp *start,
     pj_highprec_mul(elapsed_hi, U32MAX);
 
     return elapsed_hi + elapsed_lo;
-#endif
+#    endif
 }
 
-static pj_highprec_t elapsed_msec( const pj_timestamp *start,
-                                   const pj_timestamp *stop )
+static pj_highprec_t elapsed_msec(const pj_timestamp* start,
+                                  const pj_timestamp* stop)
 {
     pj_timestamp ts_freq;
     pj_highprec_t freq, elapsed;
@@ -56,33 +55,33 @@ static pj_highprec_t elapsed_msec( const pj_timestamp *start,
     if (pj_get_timestamp_freq(&ts_freq) != PJ_SUCCESS)
         return 0;
 
-    /* Convert frequency timestamp */
-#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+        /* Convert frequency timestamp */
+#    if defined(PJ_HAS_INT64) && PJ_HAS_INT64 != 0
     freq = u64tohighprec(ts_freq.u64);
-#else
+#    else
     freq = ts_freq.u32.hi;
     pj_highprec_mul(freq, U32MAX);
     freq += ts_freq.u32.lo;
-#endif
+#    endif
 
     /* Get elapsed time in cycles. */
     elapsed = get_elapsed(start, stop);
 
     /* usec = elapsed * MSEC / freq */
     pj_highprec_div(freq, MSEC);
-     
+
     /* Avoid division by zero. */
     if (freq == 0) {
-      /* Regard freq = 1 */
-      pj_highprec_mul(elapsed, MSEC);
+        /* Regard freq = 1 */
+        pj_highprec_mul(elapsed, MSEC);
     } else {
-      pj_highprec_div(elapsed, freq);
+        pj_highprec_div(elapsed, freq);
     }
     return elapsed;
 }
 
-static pj_highprec_t elapsed_usec( const pj_timestamp *start,
-                                   const pj_timestamp *stop )
+static pj_highprec_t elapsed_usec(const pj_timestamp* start,
+                                  const pj_timestamp* stop)
 {
     pj_timestamp ts_freq;
     pj_highprec_t freq, elapsed;
@@ -90,17 +89,18 @@ static pj_highprec_t elapsed_usec( const pj_timestamp *start,
     if (pj_get_timestamp_freq(&ts_freq) != PJ_SUCCESS)
         return 0;
 
-    /* Convert frequency timestamp */
-#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+        /* Convert frequency timestamp */
+#    if defined(PJ_HAS_INT64) && PJ_HAS_INT64 != 0
     freq = u64tohighprec(ts_freq.u64);
-#else
+#    else
     freq = ts_freq.u32.hi;
     pj_highprec_mul(freq, U32MAX);
     freq += ts_freq.u32.lo;
-#endif
+#    endif
 
     /* Avoid division by zero. */
-    if (freq == 0) freq = 1;
+    if (freq == 0)
+        freq = 1;
 
     /* Get elapsed time in cycles. */
     elapsed = get_elapsed(start, stop);
@@ -112,8 +112,8 @@ static pj_highprec_t elapsed_usec( const pj_timestamp *start,
     return elapsed;
 }
 
-PJ_DEF(pj_uint32_t) pj_elapsed_nanosec( const pj_timestamp *start,
-                                        const pj_timestamp *stop )
+PJ_DEF(pj_uint32_t)
+pj_elapsed_nanosec(const pj_timestamp* start, const pj_timestamp* stop)
 {
     pj_timestamp ts_freq;
     pj_highprec_t freq, elapsed;
@@ -121,17 +121,18 @@ PJ_DEF(pj_uint32_t) pj_elapsed_nanosec( const pj_timestamp *start,
     if (pj_get_timestamp_freq(&ts_freq) != PJ_SUCCESS)
         return 0;
 
-    /* Convert frequency timestamp */
-#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+        /* Convert frequency timestamp */
+#    if defined(PJ_HAS_INT64) && PJ_HAS_INT64 != 0
     freq = u64tohighprec(ts_freq.u64);
-#else
+#    else
     freq = ts_freq.u32.hi;
     pj_highprec_mul(freq, U32MAX);
     freq += ts_freq.u32.lo;
-#endif
+#    endif
 
     /* Avoid division by zero. */
-    if (freq == 0) freq = 1;
+    if (freq == 0)
+        freq = 1;
 
     /* Get elapsed time in cycles. */
     elapsed = get_elapsed(start, stop);
@@ -143,26 +144,26 @@ PJ_DEF(pj_uint32_t) pj_elapsed_nanosec( const pj_timestamp *start,
     return (pj_uint32_t)elapsed;
 }
 
-PJ_DEF(pj_uint32_t) pj_elapsed_usec( const pj_timestamp *start,
-                                     const pj_timestamp *stop )
+PJ_DEF(pj_uint32_t)
+pj_elapsed_usec(const pj_timestamp* start, const pj_timestamp* stop)
 {
     return (pj_uint32_t)elapsed_usec(start, stop);
 }
 
-PJ_DEF(pj_uint32_t) pj_elapsed_msec( const pj_timestamp *start,
-                                     const pj_timestamp *stop )
+PJ_DEF(pj_uint32_t)
+pj_elapsed_msec(const pj_timestamp* start, const pj_timestamp* stop)
 {
     return (pj_uint32_t)elapsed_msec(start, stop);
 }
 
-PJ_DEF(pj_uint64_t) pj_elapsed_msec64(const pj_timestamp *start,
-                                      const pj_timestamp *stop )
+PJ_DEF(pj_uint64_t)
+pj_elapsed_msec64(const pj_timestamp* start, const pj_timestamp* stop)
 {
     return (pj_uint64_t)elapsed_msec(start, stop);
 }
 
-PJ_DEF(pj_time_val) pj_elapsed_time( const pj_timestamp *start,
-                                     const pj_timestamp *stop )
+PJ_DEF(pj_time_val)
+pj_elapsed_time(const pj_timestamp* start, const pj_timestamp* stop)
 {
     pj_highprec_t elapsed = elapsed_msec(start, stop);
     pj_time_val tv_elapsed;
@@ -185,13 +186,13 @@ PJ_DEF(pj_time_val) pj_elapsed_time( const pj_timestamp *start,
     }
 }
 
-PJ_DEF(pj_uint32_t) pj_elapsed_cycle( const pj_timestamp *start,
-                                      const pj_timestamp *stop )
+PJ_DEF(pj_uint32_t)
+pj_elapsed_cycle(const pj_timestamp* start, const pj_timestamp* stop)
 {
     return stop->u32.lo - start->u32.lo;
 }
 
-PJ_DEF(pj_status_t) pj_gettickcount(pj_time_val *tv)
+PJ_DEF(pj_status_t) pj_gettickcount(pj_time_val* tv)
 {
     pj_timestamp ts, start;
     pj_status_t status;
@@ -205,5 +206,4 @@ PJ_DEF(pj_status_t) pj_gettickcount(pj_time_val *tv)
     return PJ_SUCCESS;
 }
 
-#endif  /* PJ_HAS_HIGH_RES_TIMER */
-
+#endif /* PJ_HAS_HIGH_RES_TIMER */

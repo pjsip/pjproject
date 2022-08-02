@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_SCANNER_CIS_BIT_H__
 #define __PJLIB_UTIL_SCANNER_CIS_BIT_H__
@@ -29,7 +28,7 @@ PJ_BEGIN_DECL
  * #pj_cis_buf_t. Basicly the number of bits here
  */
 #ifndef PJ_CIS_ELEM_TYPE
-#   define PJ_CIS_ELEM_TYPE pj_uint32_t
+#    define PJ_CIS_ELEM_TYPE pj_uint32_t
 #endif
 
 /**
@@ -42,15 +41,15 @@ typedef PJ_CIS_ELEM_TYPE pj_cis_elem_t;
  * Maximum number of input specification in a buffer.
  * Effectively this means the number of bits in pj_cis_elem_t.
  */
-#define PJ_CIS_MAX_INDEX   (sizeof(pj_cis_elem_t) << 3)
+#define PJ_CIS_MAX_INDEX (sizeof(pj_cis_elem_t) << 3)
 
 /**
  * The scanner input specification buffer.
  */
 typedef struct pj_cis_buf_t
 {
-    pj_cis_elem_t    cis_buf[256];  /**< Must be 256 (not 128)! */
-    pj_cis_elem_t    use_mask;      /**< To keep used indexes.  */
+    pj_cis_elem_t cis_buf[256]; /**< Must be 256 (not 128)! */
+    pj_cis_elem_t use_mask;     /**< To keep used indexes.  */
 } pj_cis_buf_t;
 
 /**
@@ -58,10 +57,9 @@ typedef struct pj_cis_buf_t
  */
 typedef struct pj_cis_t
 {
-    pj_cis_elem_t   *cis_buf;       /**< Pointer to buffer.     */
-    int              cis_id;        /**< Id.                    */
+    pj_cis_elem_t* cis_buf; /**< Pointer to buffer.     */
+    int cis_id;             /**< Id.                    */
 } pj_cis_t;
-
 
 /**
  * Set the membership of the specified character.
@@ -70,7 +68,7 @@ typedef struct pj_cis_t
  * @param cis       Pointer to character input specification.
  * @param c         The character.
  */
-#define PJ_CIS_SET(cis,c)   ((cis)->cis_buf[(int)(c)] |= (1 << (cis)->cis_id))
+#define PJ_CIS_SET(cis, c)   ((cis)->cis_buf[(int)(c)] |= (1 << (cis)->cis_id))
 
 /**
  * Remove the membership of the specified character.
@@ -79,7 +77,7 @@ typedef struct pj_cis_t
  * @param cis       Pointer to character input specification.
  * @param c         The character to be removed from the membership.
  */
-#define PJ_CIS_CLR(cis,c)   ((cis)->cis_buf[(int)c] &= ~(1 << (cis)->cis_id))
+#define PJ_CIS_CLR(cis, c)   ((cis)->cis_buf[(int)c] &= ~(1 << (cis)->cis_id))
 
 /**
  * Check the membership of the specified character.
@@ -88,10 +86,8 @@ typedef struct pj_cis_t
  * @param cis       Pointer to character input specification.
  * @param c         The character.
  */
-#define PJ_CIS_ISSET(cis,c) ((cis)->cis_buf[(int)c] & (1 << (cis)->cis_id))
-
-
+#define PJ_CIS_ISSET(cis, c) ((cis)->cis_buf[(int)c] & (1 << (cis)->cis_id))
 
 PJ_END_DECL
 
-#endif	/* __PJLIB_UTIL_SCANNER_CIS_BIT_H__ */
+#endif /* __PJLIB_UTIL_SCANNER_CIS_BIT_H__ */

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_DNS_SERVER_H__
 #define __PJLIB_UTIL_DNS_SERVER_H__
@@ -33,8 +32,8 @@ PJ_BEGIN_DECL
  * @defgroup PJ_DNS_SERVER Simple DNS Server
  * @ingroup PJ_DNS
  * @{
- * This contains a simple but fully working DNS server implementation, 
- * mostly for testing purposes. It supports serving various DNS resource 
+ * This contains a simple but fully working DNS server implementation,
+ * mostly for testing purposes. It supports serving various DNS resource
  * records such as SRV, CNAME, A, and AAAA.
  */
 
@@ -59,12 +58,9 @@ typedef struct pj_dns_server pj_dns_server;
  *		    otherwise the function will return the appropriate
  *		    error code.
  */
-PJ_DECL(pj_status_t) pj_dns_server_create(pj_pool_factory *pf,
-				          pj_ioqueue_t *ioqueue,
-					  int af,
-					  unsigned port,
-					  unsigned flags,
-				          pj_dns_server **p_srv);
+PJ_DECL(pj_status_t)
+pj_dns_server_create(pj_pool_factory* pf, pj_ioqueue_t* ioqueue, int af,
+                     unsigned port, unsigned flags, pj_dns_server** p_srv);
 
 /**
  * Destroy DNS server instance.
@@ -73,8 +69,7 @@ PJ_DECL(pj_status_t) pj_dns_server_create(pj_pool_factory *pf,
  *
  * @return	    PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_dns_server_destroy(pj_dns_server *srv);
-
+PJ_DECL(pj_status_t) pj_dns_server_destroy(pj_dns_server* srv);
 
 /**
  * Add generic resource record entries to the server.
@@ -85,9 +80,9 @@ PJ_DECL(pj_status_t) pj_dns_server_destroy(pj_dns_server *srv);
  *
  * @return	    PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_dns_server_add_rec(pj_dns_server *srv,
-					   unsigned count,
-					   const pj_dns_parsed_rr rr[]);
+PJ_DECL(pj_status_t)
+pj_dns_server_add_rec(pj_dns_server* srv, unsigned count,
+                      const pj_dns_parsed_rr rr[]);
 
 /**
  * Remove the specified record from the server.
@@ -99,12 +94,9 @@ PJ_DECL(pj_status_t) pj_dns_server_add_rec(pj_dns_server *srv,
  *
  * @return	    PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_dns_server_del_rec(pj_dns_server *srv,
-					   int dns_class,
-					   pj_dns_type type,
-					   const pj_str_t *name);
-
-
+PJ_DECL(pj_status_t)
+pj_dns_server_del_rec(pj_dns_server* srv, int dns_class, pj_dns_type type,
+                      const pj_str_t* name);
 
 /**
  * @}
@@ -112,6 +104,4 @@ PJ_DECL(pj_status_t) pj_dns_server_del_rec(pj_dns_server *srv,
 
 PJ_END_DECL
 
-
-#endif	/* __PJLIB_UTIL_DNS_SERVER_H__ */
-
+#endif /* __PJLIB_UTIL_DNS_SERVER_H__ */

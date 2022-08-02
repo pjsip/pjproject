@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,18 +14,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_SILENCE_DET_H__
 #define __PJMEDIA_SILENCE_DET_H__
-
 
 /**
  * @file silencedet.h
  * @brief Adaptive silence detector.
  */
 #include <pjmedia/types.h>
-
 
 /**
  * @defgroup PJMEDIA_SILENCEDET Adaptive Silence Detection
@@ -35,16 +32,12 @@
  * @{
  */
 
-
 PJ_BEGIN_DECL
-
 
 /**
  * Opaque declaration for silence detector.
  */
 typedef struct pjmedia_silence_det pjmedia_silence_det;
-
-
 
 /**
  * Create voice activity detector with default settings. The default settings
@@ -60,11 +53,10 @@ typedef struct pjmedia_silence_det pjmedia_silence_det;
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
-						 unsigned clock_rate,
-						 unsigned samples_per_frame,
-						 pjmedia_silence_det **p_sd );
-
+PJ_DECL(pj_status_t)
+pjmedia_silence_det_create(pj_pool_t* pool, unsigned clock_rate,
+                           unsigned samples_per_frame,
+                           pjmedia_silence_det** p_sd);
 
 /**
  * Set silence detector name to identify the particular silence detector
@@ -75,9 +67,8 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_silence_det_set_name(pjmedia_silence_det *sd,
-						  const char *name);
-
+PJ_DECL(pj_status_t)
+pjmedia_silence_det_set_name(pjmedia_silence_det* sd, const char* name);
 
 /**
  * Set the sd to operate in fixed threshold mode. With fixed threshold mode,
@@ -89,8 +80,8 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_set_name(pjmedia_silence_det *sd,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_silence_det_set_fixed( pjmedia_silence_det *sd,
-						    int threshold );
+PJ_DECL(pj_status_t)
+pjmedia_silence_det_set_fixed(pjmedia_silence_det* sd, int threshold);
 
 /**
  * Set the sd to operate in adaptive mode. This is the default mode
@@ -102,34 +93,32 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_set_fixed( pjmedia_silence_det *sd,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_silence_det_set_adaptive(pjmedia_silence_det *sd,
-						      int threshold);
+PJ_DECL(pj_status_t)
+pjmedia_silence_det_set_adaptive(pjmedia_silence_det* sd, int threshold);
 
 /**
  * Set other silence detector parameters.
  *
  * @param sd		    The silence detector
- * @param before_silence    Minimum duration of silence (in msec) before 
+ * @param before_silence    Minimum duration of silence (in msec) before
  *			    silence is reported. If -1 is specified, then
  *			    the default value will be used. The default is
  *			    400 msec.
  * @param recalc_time1	    The interval (in msec) to recalculate threshold
- *			    in non-silence condition when adaptive silence 
- *			    detection is set. If -1 is specified, then the 
+ *			    in non-silence condition when adaptive silence
+ *			    detection is set. If -1 is specified, then the
  *			    default value will be used. The default is 4000
  *			    (msec).
  * @param recalc_time2	    The interval (in msec) to recalculate threshold
  *			    in silence condition when adaptive silence detection
- *			    is set. If -1 is specified, then the default value 
+ *			    is set. If -1 is specified, then the default value
  *			    will be used. The default value is 2000 (msec).
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_silence_det_set_params( pjmedia_silence_det *sd,
-						     int before_silence,
-						     int recalc_time1,
-						     int recalc_time2);
-
+PJ_DECL(pj_status_t)
+pjmedia_silence_det_set_params(pjmedia_silence_det* sd, int before_silence,
+                               int recalc_time1, int recalc_time2);
 
 /**
  * Disable the silence detector.
@@ -138,8 +127,7 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_set_params( pjmedia_silence_det *sd,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_silence_det_disable( pjmedia_silence_det *sd );
-
+PJ_DECL(pj_status_t) pjmedia_silence_det_disable(pjmedia_silence_det* sd);
 
 /**
  * Perform voice activity detection on the given input samples. This
@@ -154,11 +142,9 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_disable( pjmedia_silence_det *sd );
  *
  * @return		Non zero if signal is silence.
  */
-PJ_DECL(pj_bool_t) pjmedia_silence_det_detect( pjmedia_silence_det *sd,
-					       const pj_int16_t samples[],
-					       pj_size_t count,
-					       pj_int32_t *p_level);
-
+PJ_DECL(pj_bool_t)
+pjmedia_silence_det_detect(pjmedia_silence_det* sd, const pj_int16_t samples[],
+                           pj_size_t count, pj_int32_t* p_level);
 
 /**
  * Calculate average signal level for the given samples.
@@ -169,10 +155,8 @@ PJ_DECL(pj_bool_t) pjmedia_silence_det_detect( pjmedia_silence_det *sd,
  * @return		The average signal level, which simply is total level
  *			divided by number of samples.
  */
-PJ_DECL(pj_int32_t) pjmedia_calc_avg_signal( const pj_int16_t samples[],
-					     pj_size_t count );
-
-
+PJ_DECL(pj_int32_t)
+pjmedia_calc_avg_signal(const pj_int16_t samples[], pj_size_t count);
 
 /**
  * Perform voice activity detection, given the specified average signal
@@ -183,18 +167,13 @@ PJ_DECL(pj_int32_t) pjmedia_calc_avg_signal( const pj_int16_t samples[],
  *
  * @return		Non zero if signal is silence.
  */
-PJ_DECL(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
-					      pj_uint32_t level);
-
-
+PJ_DECL(pj_bool_t)
+pjmedia_silence_det_apply(pjmedia_silence_det* sd, pj_uint32_t level);
 
 PJ_END_DECL
-
 
 /**
  * @}
  */
 
-
-#endif	/* __PJMEDIA_SILENCE_DET_H__ */
-
+#endif /* __PJMEDIA_SILENCE_DET_H__ */

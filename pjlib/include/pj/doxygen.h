@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_DOXYGEN_H__
 #define __PJ_DOXYGEN_H__
@@ -27,7 +26,7 @@
 
 /*////////////////////////////////////////////////////////////////////////// */
 /*
-	INTRODUCTION PAGE
+        INTRODUCTION PAGE
  */
 
 /**
@@ -35,7 +34,7 @@
  *
  * @section intro_sec What is PJLIB
  *
- * PJLIB is an Open Source, small footprint framework library written in C for 
+ * PJLIB is an Open Source, small footprint framework library written in C for
  * making scalable applications. Because of its small footprint, it can be used
  * in embedded applications (we hope so!), but yet the library is also aimed for
  * facilitating the creation of high performance protocol stacks.
@@ -44,14 +43,14 @@
  *
  * @section download_sec Download
  *
- * PJLIB and all documentation can be downloaded from 
+ * PJLIB and all documentation can be downloaded from
  * http://www.pjsip.org.
  *
  *
  * @section how_to_use_sec About This Documentation
  *
  * This document is generated directly from PJLIB source file using
- * \a doxygen (http://www.doxygen.org). Doxygen is a great (and free!) 
+ * \a doxygen (http://www.doxygen.org). Doxygen is a great (and free!)
  * tools for generating such documentation.
  *
  *
@@ -70,7 +69,7 @@
  *    which should guide you to understand basic things about PJLIB.
  *
  *  - find information about specific features that you want to use
- *    in PJLIB. Use the <b>Module Index</b> to find out about all 
+ *    in PJLIB. Use the <b>Module Index</b> to find out about all
  *    features in PJLIB (if you're browsing the HTML documentation,
  *    click on the \a Module link on top of the page, or if you're
  *    reading the PDF documentation, click on \a Module \a Documentation
@@ -96,8 +95,8 @@
  *  - <b>Where to Read Samples Documentation</b>
  *\n
  * Most of the modules provide link to the corresponding sample file.
- * Alternatively, to get the list of all examples, you can click on 
- * <b>Related Pages</b> on the top of HTML document or on 
+ * Alternatively, to get the list of all examples, you can click on
+ * <b>Related Pages</b> on the top of HTML document or on
  * <b>PJLIB Page Documentation</b> on navigation pane of your PDF reader.
  *
  *  - <b>How to Submit Code to PJLIB Project</b>
@@ -120,7 +119,7 @@
  * of processors (16-bit, 32-bit, or 64-bit, big or little endian, single
  * or multi-processors) and operating systems. Floating point or no
  * floating point. Multi-threading or not.
- * It can even run in environment where no ANSI LIBC is available. 
+ * It can even run in environment where no ANSI LIBC is available.
  *
  * Currently PJLIB is known to run on these platforms:
  *  - Win32/x86 (Win95/98/ME, NT/2000/XP/2003, mingw).
@@ -138,7 +137,7 @@
  * @subsection small_size_feat Small in Size
  *
  * One of the primary objectives is to have library that is small in size for
- * typical embedded applications. As a rough guidance, we aim to keep the 
+ * typical embedded applications. As a rough guidance, we aim to keep the
  * library size below 100KB for it to be considered as small.
  * As the result, most of the functionalities in the library can be tailored
  * to meet the requirements; user can enable/disable specific functionalities
@@ -150,33 +149,33 @@
  * @subsection big_perform_feat Big in Performance
  *
  * Almost everything in PJLIB is designed to achieve the highest possible
- * performance out of the target platform. 
+ * performance out of the target platform.
  *
  *
  * @subsection no_dyn_mem No Dynamic Memory Allocations
  *
  * The central idea of PJLIB is that for applications to run as fast as it can,
- * it should not use \a malloc() at all, but instead should get the memory 
- * from a preallocated storage pool. There are few things that can be 
+ * it should not use \a malloc() at all, but instead should get the memory
+ * from a preallocated storage pool. There are few things that can be
  * optimized with this approach:
  *
  *  - \a alloc() is a O(1) operation.
- *  - no mutex is used inside alloc(). It is assumed that synchronization 
+ *  - no mutex is used inside alloc(). It is assumed that synchronization
  *    will be used in higher abstraction by application anyway.
- *  - no \a free() is required. All chunks will be deleted when the pool is 
+ *  - no \a free() is required. All chunks will be deleted when the pool is
  *    destroyed.
  *
  * The performance gained on some systems can be as high as 30x speed up
  * against \a malloc() and \a free() on certain configurations, but of
- * course your mileage may vary. 
+ * course your mileage may vary.
  *
  * For more information, see \ref PJ_POOL_GROUP
  *
- * 
+ *
  * @subsection os_abstract_feat Operating System Abstraction
  *
- * PJLIB has abstractions for features that are normally not portable 
- * across operating systems: 
+ * PJLIB has abstractions for features that are normally not portable
+ * across operating systems:
  *  - @ref PJ_THREAD
  *\n
  *    Portable thread manipulation.
@@ -253,7 +252,7 @@
  * @subsection exception_sec Exception Construct
  *
  * A convenient TRY/CATCH like construct to propagate errors, which by
- * default are used by the @ref PJ_POOL_GROUP "memory pool" and 
+ * default are used by the @ref PJ_POOL_GROUP "memory pool" and
  * the lexical scanner in pjlib-util. The exception
  * construct can be used to write programs like below:
  *
@@ -289,7 +288,7 @@
  *
  * @subsection guid_gen_sec Random and GUID Generation
  *
- * PJLIB provides facility to create random string 
+ * PJLIB provides facility to create random string
  * (#pj_create_random_string()) or globally unique identifier
  * (see @ref PJ_GUID).
  *
@@ -358,7 +357,7 @@
  *
  * So for maximum portability, do NOT use ANSI C. Do not even try to include
  * any other header files outside <include/pj>. Stick with the functionalities
- * provided by PJLIB. 
+ * provided by PJLIB.
  *
  *
  * @subsubsection string_rep_subsubsec Use pj_str_t instead of C Strings
@@ -393,8 +392,6 @@
  * Benny Prijono < bennylp at pjsip dot org >
  */
 
-
-
 /*////////////////////////////////////////////////////////////////////////// */
 /*
          CODING CONVENTION
@@ -409,7 +406,7 @@
  *
  * @section coding_conv_editor_sec Editor Settings
  *
- * The single most important thing in the whole coding convention is editor 
+ * The single most important thing in the whole coding convention is editor
  * settings. It's more important than the correctness of your code (bugs will
  * only crash the system, but incorrect tab size is mental!).
  *
@@ -429,10 +426,10 @@
  *
  * Coding style MUST strictly follow K&R style. The rest of coding style
  * must follow current style. You SHOULD be able to observe the style
- * currently used by PJLIB from PJLIB sources, and apply the style to your 
+ * currently used by PJLIB from PJLIB sources, and apply the style to your
  * code. If you're not able to do simple thing like to observe PJLIB
  * coding style from the sources, then logic dictates that your ability to
- * observe more difficult area in PJLIB such as memory allocation strategy, 
+ * observe more difficult area in PJLIB such as memory allocation strategy,
  * concurrency, etc is questionable.
  *
  * @section coding_conv_comment_sec Commenting Your Code
@@ -441,13 +438,10 @@
  *
  */
 
-
 /*////////////////////////////////////////////////////////////////////////// */
 /*
-	BUILDING AND INSTALLING PJLIB
+        BUILDING AND INSTALLING PJLIB
  */
-
-
 
 /**
  * @page pjlib_build_sys_pg Building, and Installing PJLIB
@@ -458,7 +452,7 @@
  * <b>The most up-to-date information on building and installing PJLIB
  *  should be found in the website, under "Getting Started" document.
  *  More over, the new PJLIB build system is now based on autoconf,
- *  so some of the information here might not be relevant anymore 
+ *  so some of the information here might not be relevant anymore
  *  (although most still are, since the autoconf script still use
  *  the old Makefile system as the backend).</b>
  *
@@ -478,10 +472,11 @@
  ..etc
  \endverbatim
  *
- * The easiest way is to open <tt>pjsip_apps.dsw</tt> file in \b \c $PJPROJECT/pjsip-apps/build
- * directory, and build pjsua project or the samples project. 
- * However this will not build the complete projects. 
- * For example, the PJLIB test is not included in this workspace. 
+ * The easiest way is to open <tt>pjsip_apps.dsw</tt> file in \b \c
+$PJPROJECT/pjsip-apps/build
+ * directory, and build pjsua project or the samples project.
+ * However this will not build the complete projects.
+ * For example, the PJLIB test is not included in this workspace.
  * To build the complete projects, you must
  * open and build each \a dsw file in \c build directory in each
  * subprojects. For example, to open the complete PJLIB workspace, open
@@ -498,9 +493,10 @@
  * The reason why it's not included in PJLIB is so that you would not accidently
  * overwrite your site configuration.
  *
- * If you fail to do this, Visual C will complain with error like: 
+ * If you fail to do this, Visual C will complain with error like:
  *
- * <b>"fatal error C1083: Cannot open include file: 'pj/config_site.h': No such file 
+ * <b>"fatal error C1083: Cannot open include file: 'pj/config_site.h': No such
+file
  * or directory"</b>.
  *
  * @subsubsection build_vc_subsubsec Build the Projects
@@ -511,7 +507,7 @@
  * @subsection build_sys_install_unix_sec Make System
  *
  * For other targets, PJLIB provides a rather comprehensive build system
- * that uses GNU \a make (and only GNU \a make will work). 
+ * that uses GNU \a make (and only GNU \a make will work).
  * Currently, the build system supports building * PJLIB for these targets:
  *  - i386/Win32/mingw
  *  - i386/Linux
@@ -533,7 +529,7 @@
  *\n
  *    Specificly, there is a command <tt>"echo -n"</tt> which may not work
  *    in other shells. This command is used when generating dependencies
- *    (<tt>make dep</tt>) and it's located in 
+ *    (<tt>make dep</tt>) and it's located in
  *    <tt>$PJPROJECT/build/rules.mak</tt>.
  *  - <b>ar</b>, <b>ranlib</b> from GNU binutils
  *\n
@@ -573,9 +569,10 @@
  * will be explained in section \ref linux_kern_target_subsec.
  *
  * @subsubsection build_mak_sec Cross Compilation
- * 
- * For cross compilation, you will need to edit the \c build.mak file in 
- * \c $PJPROJECT root directory manually. Please see <b>README-configure</b> file
+ *
+ * For cross compilation, you will need to edit the \c build.mak file in
+ * \c $PJPROJECT root directory manually. Please see <b>README-configure</b>
+file
  * in the root directory for more information.
  *
  * For Linux kernel target, you are also required to declare the following
@@ -586,12 +583,13 @@
  *	- \c PJPROJECT_DIR: full path of PJPROJECT source tree.
  *
  * Apart from these, there are also additional steps required to build
- * Linux kernel target, which will be explained in \ref linux_kern_target_subsec.
+ * Linux kernel target, which will be explained in \ref
+linux_kern_target_subsec.
  *
  * @subsubsection build_dir_sec Files in "build" Directory
  *
  * The <tt>*.mak</tt> files in \c $PJPROJECT/build directory are used to specify
- * the configuration for the specified compiler, target machine target 
+ * the configuration for the specified compiler, target machine target
  * operating system, and host options. These files will be executed
  * (included) by \a make during building process, depending on the values
  * specified in <b>$PJPROJECT/build.mak</b> file.
@@ -637,8 +635,8 @@
    $ make
  \endverbatim
  *
- * Alternatively you may invoke <tt>make</tt> in <tt>$PJPROJECT</tt> 
- * directory, to build all projects under that directory (e.g. 
+ * Alternatively you may invoke <tt>make</tt> in <tt>$PJPROJECT</tt>
+ * directory, to build all projects under that directory (e.g.
  * PJLIB, PJSIP, etc.).
  *
  *
@@ -659,12 +657,13 @@
  * \note
  * I only use <b>UML</b> to experiment with PJLIB kernel modules.
  * <b>I wouldn't be so foolish to use my host Linux machine to experiment
- * with this.</b> 
+ * with this.</b>
  *
  * \note
  * You have been warned.
  *
- * For building PJLIB for Linux kernel target, there are additional steps required.
+ * For building PJLIB for Linux kernel target, there are additional steps
+required.
  * In general, the additional tasks are:
  *	- Declare some more variables in <b><tt>build.mak</tt></b> file (this
  *        has been explained in \ref build_mak_sec above).
@@ -674,7 +673,7 @@
  *
  * <b>1. Edit <tt>Makefile</tt> in kernel root source tree.</b>
  *
- * Add the following lines at the end of the <tt>Makefile</tt> in your 
+ * Add the following lines at the end of the <tt>Makefile</tt> in your
  * <tt>$KERNEL_SRC</tt> dir:
  \verbatim
 script:
@@ -683,16 +682,17 @@ script:
  *
  * \note Remember to replace spaces with <b>tab</b> in the Makefile.
  *
- * The modification above is needed to capture kernel's \c $CFLAGS and 
+ * The modification above is needed to capture kernel's \c $CFLAGS and
  * \c $CFLAGS_MODULE which will be used for PJLIB's compilation.
  *
  * <b>2. Add Additional Exports.</b>
  *
  * We need the kernel to export some more symbols for our use. So we declare
- * the additional symbols to be exported in <tt>extra-exports.c</tt> file, and add
+ * the additional symbols to be exported in <tt>extra-exports.c</tt> file, and
+add
  * a this file to be compiled into the kernel:
  *
- *	- Copy the file <tt>extra-exports.c</tt> from <tt>pjlib/src/pj</tt> 
+ *	- Copy the file <tt>extra-exports.c</tt> from <tt>pjlib/src/pj</tt>
  *	  directory to <tt>$KERNEL_SRC/kernel/</tt> directory.
  *	- Edit <tt>Makefile</tt> in that directory, and add this line
  *        somewhere after the declaration of that variable:
@@ -706,9 +706,9 @@ obj-y   += extra-exports.o
  \verbatim
 [root@vpc-linux linux-2.6.7]# pwd
 /usr/src/linux-2.6.7
-[root@vpc-linux linux-2.6.7]# 
-[root@vpc-linux linux-2.6.7]# 
-[root@vpc-linux linux-2.6.7]# tail Makefile 
+[root@vpc-linux linux-2.6.7]#
+[root@vpc-linux linux-2.6.7]#
+[root@vpc-linux linux-2.6.7]# tail Makefile
 
 endif   # skip-makefile
 
@@ -719,9 +719,9 @@ FORCE:
 script:
         $(SCRIPT)
 
-[root@vpc-linux linux-2.6.7]# 
-[root@vpc-linux linux-2.6.7]# 
-[root@vpc-linux linux-2.6.7]# head kernel/extra-exports.c 
+[root@vpc-linux linux-2.6.7]#
+[root@vpc-linux linux-2.6.7]#
+[root@vpc-linux linux-2.6.7]# head kernel/extra-exports.c
 #include <linux/module.h>
 #include <linux/syscalls.h>
 
@@ -732,9 +732,9 @@ EXPORT_SYMBOL(sys_epoll_ctl);
 EXPORT_SYMBOL(sys_epoll_wait);
 
 EXPORT_SYMBOL(sys_socket);
-[root@vpc-linux linux-2.6.7]# 
-[root@vpc-linux linux-2.6.7]# 
-[root@vpc-linux linux-2.6.7]# head -15 kernel/Makefile 
+[root@vpc-linux linux-2.6.7]#
+[root@vpc-linux linux-2.6.7]#
+[root@vpc-linux linux-2.6.7]# head -15 kernel/Makefile
 #
 # Makefile for the linux kernel.
 #
@@ -750,7 +750,7 @@ obj-y   +=  extra-exports.o
 
 obj-$(CONFIG_FUTEX) += futex.o
 obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
-[root@vpc-linux linux-2.6.7]# 
+[root@vpc-linux linux-2.6.7]#
 
  \endverbatim
  *
@@ -762,7 +762,7 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
  * in pjlib module. You can safely ignore these warnings. However, you can not
  * ignore warnings about non-pjlib unresolved symbols.
  *
- * 
+ *
  * @subsection makefile_explained_sec Makefile Explained
  *
  * The \a Makefile for each project (e.g. PJLIB, PJSIP, etc) should be
@@ -777,9 +777,9 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
  *
  * @subsubsection pjlib_os_makefile_subsec PJLIB os-linux.mak.
  *
- * Below is file <tt><b>os-linux.mak</b></tt> file in 
+ * Below is file <tt><b>os-linux.mak</b></tt> file in
  * <tt>$PJPROJECT/pjlib/build</tt> directory,
- * which is OS specific configuration file for Linux target that is specific 
+ * which is OS specific configuration file for Linux target that is specific
  * for PJLIB project. For \b global OS specific configuration, please see
  * <tt>$PJPROJECT/build/os-*.mak</tt>.
  *
@@ -787,13 +787,10 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
  *
  */
 
-
 /*////////////////////////////////////////////////////////////////////////// */
 /*
          PORTING PJLIB
  */
-
-
 
 /**
  * @page porting_pjlib_pg Porting PJLIB
@@ -809,8 +806,8 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
  * @section new_arch_sec Porting to New CPU Architecture
  *
  * Below is step-by-step guide to add support for new CPU architecture.
- * This sample is based on porting to Alpha architecture; however steps for 
- * porting to other CPU architectures should be pretty similar. 
+ * This sample is based on porting to Alpha architecture; however steps for
+ * porting to other CPU architectures should be pretty similar.
  *
  * Also note that in this example, the operating system used is <b>Linux</b>.
  * Should you wish to add support for new operating system, then follow
@@ -840,7 +837,8 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
  *      export M_LDFLAGS :=
  *      export M_SOURCES :=
  *    </pre>
- *  - create a new file <tt>$PJPROJECT/pjlib/include/pj/compat/<b>m_alpha.h</b></tt>.
+ *  - create a new file
+<tt>$PJPROJECT/pjlib/include/pj/compat/<b>m_alpha.h</b></tt>.
  *    Alternatively create a copy from other header file in this directory.
  *    The contents of this file will look something like:
  *    <pre>
@@ -867,13 +865,13 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
  * @section porting_os_sec Porting to New Operating System Target
  *
  * This section will try to give you rough guideline on how to
- * port PJLIB to a new target. As a sample, we give the target a name tag, 
- * for example <tt><b>xos</b></tt> (for X OS). 
+ * port PJLIB to a new target. As a sample, we give the target a name tag,
+ * for example <tt><b>xos</b></tt> (for X OS).
  *
  * @subsection new_compat_os_h_file_sec Create New Compat Header File
  *
- * You'll need to create a new header file 
- * <b><tt>include/pj/compat/os_xos.h</tt></b>. You can copy as a 
+ * You'll need to create a new header file
+ * <b><tt>include/pj/compat/os_xos.h</tt></b>. You can copy as a
  * template other header file and edit it accordingly.
  *
  * @subsection modify_config_h_file_sec Modify config.h
@@ -889,11 +887,11 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
  #else
  #...
  \endverbatim
- * 
+ *
  * @subsection new_target_mak_file_sec Create New Global Make Config File
  *
  * Then you'll need to create global configuration file that
- * is specific for this OS, i.e. <tt><b>os-xos.mak</b></tt> in 
+ * is specific for this OS, i.e. <tt><b>os-xos.mak</b></tt> in
  * <tt><b>$PJPROJECT/build</b></tt> directory.
  *
  * At very minimum, the file will normally need to define
@@ -904,9 +902,9 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
 # $PJPROJECT/build/os-xos.mak:
 #
 export OS_CFLAGS   := $(CC_DEF)PJ_XOS=1
-export OS_CXXFLAGS := 
+export OS_CXXFLAGS :=
 export OS_LDFLAGS  :=
-export OS_SOURCES  := 
+export OS_SOURCES  :=
  \endverbatim
  *
  *
@@ -955,8 +953,8 @@ export TARGETS	    =	pjlib pjlib-test
  *    BSD socket API, and edit <tt>include/pj/compat/socket.h</tt>
  *    file accordingly.
  *
- * You will also need to check various files in 
- * <tt><b>include/pj/compat/*.h</b></tt>, to see if they're 
+ * You will also need to check various files in
+ * <tt><b>include/pj/compat/*.h</b></tt>, to see if they're
  * compatible with your OS.
  *
  * @subsection new_target_build_file_sec Build The Project
@@ -965,7 +963,8 @@ export TARGETS	    =	pjlib pjlib-test
  * the easiest way to see which parts need to be fixed is by building
  * the project and see the error messages.
  *
- * @subsection new_target_edit_vs_new_file_sec Editing Existing Files vs Creating New File
+ * @subsection new_target_edit_vs_new_file_sec Editing Existing Files vs
+Creating New File
  *
  * When you encounter compatibility errors in PJLIB during porting,
  * you have three options on how to fix the error:
@@ -978,7 +977,7 @@ export TARGETS	    =	pjlib pjlib-test
  * to use, however the following guidelines may be used:
  *  - if the file is expected to be completely different than
  *    any existing file, then perhaps you should create a completely
- *    new file. For example, file <tt>os_core_xxx.c</tt> will 
+ *    new file. For example, file <tt>os_core_xxx.c</tt> will
  *    normally be different for each OS flavour.
  *  - if the difference can be localized in <tt>include/compat</tt>
  *    header file, and existing <tt>#ifdef</tt> switch is there,
@@ -992,5 +991,4 @@ export TARGETS	    =	pjlib pjlib-test
  *    to edit the file or create new file etc.
  */
 
-#endif	/* __PJ_DOXYGEN_H__ */
-
+#endif /* __PJ_DOXYGEN_H__ */

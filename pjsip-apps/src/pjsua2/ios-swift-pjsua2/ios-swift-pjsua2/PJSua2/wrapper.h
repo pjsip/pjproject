@@ -24,78 +24,78 @@
  */
 @interface CPPWrapper : NSObject
 
-//Lib
+// Lib
 /**
  Create Lib with EpConfig
  */
--(void) createLibWrapper;
+- (void)createLibWrapper;
 
 /**
  Delete lib
  */
--(void) deleteLibWrapper;
+- (void)deleteLibWrapper;
 
-
-//Account
+// Account
 /**
- Create Account via following config(string username, string password, string ip, string port)
+ Create Account via following config(string username, string password, string
+ ip, string port)
  */
--(void) createAccountWrapper :(NSString*) username :(NSString*) password :(NSString*) ip :(NSString*) port;
+- (void)createAccountWrapper:(NSString*)
+                    username:(NSString*)password
+                            :(NSString*)ip
+                            :(NSString*)port;
 
 /**
  Unregister account
  */
--(void) unregisterAccountWrapper;
+- (void)unregisterAccountWrapper;
 
+// Register State Info
 
+- (bool)registerStateInfoWrapper;
 
-//Register State Info
-
--(bool) registerStateInfoWrapper;
-
-
-
-//Call
+// Call
 /**
- Get caller id for incoming call, checks account currently registered (ai.regIsActive)
+ Get caller id for incoming call, checks account currently registered
+ (ai.regIsActive)
  */
--(NSString*) incomingCallInfoWrapper;
-
+- (NSString*)incomingCallInfoWrapper;
 
 /**
  Listener (When we have incoming call, this function pointer will notify swift.)
  (Runs swift code from C++)
  */
--(void) incoming_call_wrapper: (void(*)())function;
+- (void)incoming_call_wrapper:(void (*)())function;
 
 /**
- Listener (When we have changes on the call state, this function pointer will notify swift.)
- (Runs swift code from C++)
+ Listener (When we have changes on the call state, this function pointer will
+ notify swift.) (Runs swift code from C++)
  */
--(void) call_listener_wrapper: (void(*)(int))function;
+- (void)call_listener_wrapper:(void (*)(int))function;
 
 /**
  Answer incoming call
  */
--(void) answerCallWrapper;
+- (void)answerCallWrapper;
 
 /**
  Hangup active call (Incoming/Outgoing/Active)
  */
--(void) hangupCallWrapper;
+- (void)hangupCallWrapper;
 
 /**
  Hold the call
  */
--(void) holdCallWrapper;
+- (void)holdCallWrapper;
 
 /**
  unhold the call
  */
--(void) unholdCallWrapper;
+- (void)unholdCallWrapper;
 
 /**
- Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_IP:SIP_PORT>)
+ Make outgoing call (string dest_uri) -> e.g.
+ makeCall(sip:<SIP_USERNAME@SIP_IP:SIP_PORT>)
  */
--(void) outgoingCallWrapper :(NSString*) dest_uri;
+- (void)outgoingCallWrapper:(NSString*)dest_uri;
 @end

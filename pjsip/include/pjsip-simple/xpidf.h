@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_XPIDF_H__
 #define __PJSIP_SIMPLE_XPIDF_H__
@@ -45,7 +44,6 @@ PJ_BEGIN_DECL
 /** Type definitions for XPIDF root document. */
 typedef pj_xml_node pjxpidf_pres;
 
-
 /**
  * Create a new XPIDF document.
  *
@@ -54,8 +52,7 @@ typedef pj_xml_node pjxpidf_pres;
  *
  * @return	    XPIDF document.
  */
-PJ_DECL(pjxpidf_pres*) pjxpidf_create(pj_pool_t *pool, const pj_str_t *uri);
-
+PJ_DECL(pjxpidf_pres*) pjxpidf_create(pj_pool_t* pool, const pj_str_t* uri);
 
 /**
  * Parse XPIDF document.
@@ -69,8 +66,8 @@ PJ_DECL(pjxpidf_pres*) pjxpidf_create(pj_pool_t *pool, const pj_str_t *uri);
  *
  * @return	    XPIDF document.
  */
-PJ_DECL(pjxpidf_pres*) pjxpidf_parse(pj_pool_t *pool, char *text, pj_size_t len);
-
+PJ_DECL(pjxpidf_pres*)
+pjxpidf_parse(pj_pool_t* pool, char* text, pj_size_t len);
 
 /**
  * Print XPIDF document.
@@ -81,8 +78,7 @@ PJ_DECL(pjxpidf_pres*) pjxpidf_parse(pj_pool_t *pool, char *text, pj_size_t len)
  *
  * @return	    The length printed.
  */
-PJ_DECL(int) pjxpidf_print( pjxpidf_pres *pres, char *text, pj_size_t len);
-
+PJ_DECL(int) pjxpidf_print(pjxpidf_pres* pres, char* text, pj_size_t len);
 
 /**
  * Get URI in the XPIDF document
@@ -91,8 +87,7 @@ PJ_DECL(int) pjxpidf_print( pjxpidf_pres *pres, char *text, pj_size_t len);
  *
  * @return	    The URI, or an empty string.
  */
-PJ_DECL(pj_str_t*) pjxpidf_get_uri(pjxpidf_pres *pres);
-
+PJ_DECL(pj_str_t*) pjxpidf_get_uri(pjxpidf_pres* pres);
 
 /**
  * Set the URI of the XPIDF document.
@@ -103,9 +98,8 @@ PJ_DECL(pj_str_t*) pjxpidf_get_uri(pjxpidf_pres *pres);
  *
  * @return	    Zero on success.
  */
-PJ_DECL(pj_status_t) pjxpidf_set_uri(pj_pool_t *pool, pjxpidf_pres *pres, 
-				     const pj_str_t *uri);
-
+PJ_DECL(pj_status_t)
+pjxpidf_set_uri(pj_pool_t* pool, pjxpidf_pres* pres, const pj_str_t* uri);
 
 /**
  * Get presence status in the XPIDF document.
@@ -114,8 +108,7 @@ PJ_DECL(pj_status_t) pjxpidf_set_uri(pj_pool_t *pool, pjxpidf_pres *pres,
  *
  * @return	    True to indicate the contact is online.
  */
-PJ_DECL(pj_bool_t) pjxpidf_get_status(pjxpidf_pres *pres);
-
+PJ_DECL(pj_bool_t) pjxpidf_get_status(pjxpidf_pres* pres);
 
 /**
  * Set presence status in the XPIDF document.
@@ -125,8 +118,7 @@ PJ_DECL(pj_bool_t) pjxpidf_get_status(pjxpidf_pres *pres);
  *
  * @return	    Zero on success.
  */
-PJ_DECL(pj_status_t) pjxpidf_set_status(pjxpidf_pres *pres, pj_bool_t status);
-
+PJ_DECL(pj_status_t) pjxpidf_set_status(pjxpidf_pres* pres, pj_bool_t status);
 
 /**
  * @}
@@ -134,5 +126,4 @@ PJ_DECL(pj_status_t) pjxpidf_set_status(pjxpidf_pres *pres, pj_bool_t status);
 
 PJ_END_DECL
 
-
-#endif	/* __PJSIP_SIMPLE_XPIDF_H__ */
+#endif /* __PJSIP_SIMPLE_XPIDF_H__ */

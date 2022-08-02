@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_STUN_TRANSACTION_H__
 #define __PJNATH_STUN_TRANSACTION_H__
@@ -29,9 +28,7 @@
 #include <pjnath/stun_config.h>
 #include <pj/lock.h>
 
-
 PJ_BEGIN_DECL
-
 
 /* **************************************************************************/
 /**
@@ -72,15 +69,13 @@ typedef struct pj_stun_tsx_cb
      *			    response.
      * @param response	    The STUN response, which value may be NULL if
      *			    \a status is not PJ_SUCCESS.
-     * @param src_addr	    The source address of the response, if response 
+     * @param src_addr	    The source address of the response, if response
      *			    is not NULL.
      * @param src_addr_len  The length of the source address.
      */
-    void	(*on_complete)(pj_stun_client_tsx *tsx,
-			       pj_status_t status, 
-			       const pj_stun_msg *response,
-			       const pj_sockaddr_t *src_addr,
-			       unsigned src_addr_len);
+    void (*on_complete)(pj_stun_client_tsx* tsx, pj_status_t status,
+                        const pj_stun_msg* response,
+                        const pj_sockaddr_t* src_addr, unsigned src_addr_len);
 
     /**
      * This callback is called by the STUN transaction when it wants to send
@@ -95,9 +90,8 @@ typedef struct pj_stun_tsx_cb
      *			    PJNATH_ESTUNDESTROYED if it has destroyed the
      *			    transaction in this callback.
      */
-    pj_status_t (*on_send_msg)(pj_stun_client_tsx *tsx,
-			       const void *stun_pkt,
-			       pj_size_t pkt_size);
+    pj_status_t (*on_send_msg)(pj_stun_client_tsx* tsx, const void* stun_pkt,
+                               pj_size_t pkt_size);
 
     /**
      * This callback is called after the timer that was scheduled by
@@ -105,20 +99,18 @@ typedef struct pj_stun_tsx_cb
      * should call #pj_stun_client_tsx_destroy() upon receiving this
      * callback.
      *
-     * This callback is optional if application will not call 
+     * This callback is optional if application will not call
      * #pj_stun_client_tsx_schedule_destroy().
      *
      * @param tsx	    The STUN transaction instance.
      */
-    void (*on_destroy)(pj_stun_client_tsx *tsx);
+    void (*on_destroy)(pj_stun_client_tsx* tsx);
 
 } pj_stun_tsx_cb;
 
-
-
 /**
- * Create an instance of STUN client transaction. The STUN client 
- * transaction is used to transmit outgoing STUN request and to 
+ * Create an instance of STUN client transaction. The STUN client
+ * transaction is used to transmit outgoing STUN request and to
  * ensure the reliability of the request by periodically retransmitting
  * the request, if necessary.
  *
@@ -133,21 +125,20 @@ typedef struct pj_stun_tsx_cb
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_create(	pj_stun_config *cfg,
-					        pj_pool_t *pool,
-					        pj_grp_lock_t *grp_lock,
-						const pj_stun_tsx_cb *cb,
-						pj_stun_client_tsx **p_tsx);
+PJ_DECL(pj_status_t)
+pj_stun_client_tsx_create(pj_stun_config* cfg, pj_pool_t* pool,
+                          pj_grp_lock_t* grp_lock, const pj_stun_tsx_cb* cb,
+                          pj_stun_client_tsx** p_tsx);
 
 /**
- * Schedule timer to destroy the transaction after the transaction is 
+ * Schedule timer to destroy the transaction after the transaction is
  * complete. Application normally calls this function in the on_complete()
- * callback. When this timer elapsed, the on_destroy() callback will be 
+ * callback. When this timer elapsed, the on_destroy() callback will be
  * called.
  *
- * This is convenient to let the STUN transaction absorbs any response 
+ * This is convenient to let the STUN transaction absorbs any response
  * for the previous request retransmissions. If application doesn't want
- * this, it can destroy the transaction immediately by calling 
+ * this, it can destroy the transaction immediately by calling
  * #pj_stun_client_tsx_destroy().
  *
  * @param tsx		The STUN transaction.
@@ -156,10 +147,9 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_create(	pj_stun_config *cfg,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
-pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx *tsx,
-				    const pj_time_val *delay);
-
+PJ_DECL(pj_status_t)
+pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx* tsx,
+                                    const pj_time_val* delay);
 
 /**
  * Destroy the STUN transaction immediately after the transaction is complete.
@@ -169,8 +159,7 @@ pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx *tsx,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx);
-
+PJ_DECL(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx* tsx);
 
 /**
  * Stop the client transaction.
@@ -180,8 +169,7 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx);
  * @return		PJ_SUCCESS on success or PJ_EINVAL if the parameter
  *			is NULL.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_stop(pj_stun_client_tsx *tsx);
-
+PJ_DECL(pj_status_t) pj_stun_client_tsx_stop(pj_stun_client_tsx* tsx);
 
 /**
  * Check if transaction has completed.
@@ -190,8 +178,7 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_stop(pj_stun_client_tsx *tsx);
  *
  * @return		Non-zero if transaction has completed.
  */
-PJ_DECL(pj_bool_t) pj_stun_client_tsx_is_complete(pj_stun_client_tsx *tsx);
-
+PJ_DECL(pj_bool_t) pj_stun_client_tsx_is_complete(pj_stun_client_tsx* tsx);
 
 /**
  * Associate an arbitrary data with the STUN transaction. This data
@@ -204,20 +191,18 @@ PJ_DECL(pj_bool_t) pj_stun_client_tsx_is_complete(pj_stun_client_tsx *tsx);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_set_data(pj_stun_client_tsx *tsx,
-						 void *data);
-
+PJ_DECL(pj_status_t)
+pj_stun_client_tsx_set_data(pj_stun_client_tsx* tsx, void* data);
 
 /**
- * Get the user data that was previously associated with the STUN 
+ * Get the user data that was previously associated with the STUN
  * transaction.
  *
  * @param tsx		The STUN client transaction.
  *
  * @return		The user data.
  */
-PJ_DECL(void*) pj_stun_client_tsx_get_data(pj_stun_client_tsx *tsx);
-
+PJ_DECL(void*) pj_stun_client_tsx_get_data(pj_stun_client_tsx* tsx);
 
 /**
  * Start the STUN client transaction by sending STUN request using
@@ -231,15 +216,14 @@ PJ_DECL(void*) pj_stun_client_tsx_get_data(pj_stun_client_tsx *tsx);
  * @param pkt		The STUN packet to send.
  * @param pkt_len	Length of STUN packet.
  *
- * @return		PJ_SUCCESS on success, or PJNATH_ESTUNDESTROYED 
- *			when the user has destroyed the transaction in 
+ * @return		PJ_SUCCESS on success, or PJNATH_ESTUNDESTROYED
+ *			when the user has destroyed the transaction in
  *			\a on_send_msg() callback, or any other error code
  *			as returned by \a on_send_msg() callback.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
-						 pj_bool_t retransmit,
-						 void *pkt,
-						 unsigned pkt_len);
+PJ_DECL(pj_status_t)
+pj_stun_client_tsx_send_msg(pj_stun_client_tsx* tsx, pj_bool_t retransmit,
+                            void* pkt, unsigned pkt_len);
 
 /**
  * Request to retransmit the request. Normally application should not need
@@ -250,14 +234,13 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
  * @param mod_count     Boolean flag to indicate whether transmission count
  *                      needs to be incremented.
  *
- * @return		PJ_SUCCESS on success, or PJNATH_ESTUNDESTROYED 
- *			when the user has destroyed the transaction in 
+ * @return		PJ_SUCCESS on success, or PJNATH_ESTUNDESTROYED
+ *			when the user has destroyed the transaction in
  *			\a on_send_msg() callback, or any other error code
  *			as returned by \a on_send_msg() callback.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx,
-                                                   pj_bool_t mod_count);
-
+PJ_DECL(pj_status_t)
+pj_stun_client_tsx_retransmit(pj_stun_client_tsx* tsx, pj_bool_t mod_count);
 
 /**
  * Notify the STUN transaction about the arrival of STUN response.
@@ -274,19 +257,15 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
-						  const pj_stun_msg *msg,
-						  const pj_sockaddr_t*src_addr,
-						  unsigned src_addr_len);
-
+PJ_DECL(pj_status_t)
+pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx* tsx, const pj_stun_msg* msg,
+                             const pj_sockaddr_t* src_addr,
+                             unsigned src_addr_len);
 
 /**
  * @}
  */
 
-
 PJ_END_DECL
 
-
-#endif	/* __PJNATH_STUN_TRANSACTION_H__ */
-
+#endif /* __PJNATH_STUN_TRANSACTION_H__ */

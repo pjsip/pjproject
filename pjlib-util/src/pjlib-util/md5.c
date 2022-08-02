@@ -1,10 +1,9 @@
-/* $Id$ */
-/* 
+/*
  * This is the implementation of MD5 algorithm, based on the code
  * written by Colin Plumb. This file is put in public domain.
  */
 #include <pjlib-util/md5.h>
-#include <pj/string.h>		/* pj_memcpy */
+#include <pj/string.h> /* pj_memcpy */
 /*
  * This code implements the MD5 message-digest algorithm.
  * The algorithm is due to Ron Rivest.  This code was
@@ -23,39 +22,38 @@
  */
 
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN != 0
-#define HIGHFIRST 1
+#    define HIGHFIRST 1
 #endif
 
 #ifndef HIGHFIRST
-#define byteReverse(buf, len)	/* Nothing */
+#    define byteReverse(buf, len) /* Nothing */
 #else
-static void byteReverse(unsigned char *buf, unsigned longs);
+static void byteReverse(unsigned char* buf, unsigned longs);
 
-#ifndef ASM_MD5
+#    ifndef ASM_MD5
 /*
  * Note: this code is harmless on little-endian machines.
  */
-static void byteReverse(unsigned char *buf, unsigned longs)
+static void byteReverse(unsigned char* buf, unsigned longs)
 {
     pj_uint32_t t;
     do {
-	t = (pj_uint32_t) ((unsigned) buf[3] << 8 | buf[2]) << 16 |
-	    ((unsigned) buf[1] << 8 | buf[0]);
-	*(pj_uint32_t *) buf = t;
-	buf += 4;
+        t = (pj_uint32_t)((unsigned)buf[3] << 8 | buf[2]) << 16 |
+            ((unsigned)buf[1] << 8 | buf[0]);
+        *(pj_uint32_t*)buf = t;
+        buf += 4;
     } while (--longs);
 }
-#endif
+#    endif
 #endif
 
 static void MD5Transform(pj_uint32_t buf[4], pj_uint32_t const in[16]);
-
 
 /*
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
  * initialization constants.
  */
-PJ_DEF(void) pj_md5_init(pj_md5_context *ctx)
+PJ_DEF(void) pj_md5_init(pj_md5_context* ctx)
 {
     ctx->buf[0] = 0x67452301;
     ctx->buf[1] = 0xefcdab89;
@@ -70,44 +68,44 @@ PJ_DEF(void) pj_md5_init(pj_md5_context *ctx)
  * Update context to reflect the concatenation of another buffer full
  * of bytes.
  */
-PJ_DEF(void) pj_md5_update( pj_md5_context *ctx, 
-			    unsigned char const *buf, unsigned len)
+PJ_DEF(void)
+pj_md5_update(pj_md5_context* ctx, unsigned char const* buf, unsigned len)
 {
     pj_uint32_t t;
 
     /* Update bitcount */
 
     t = ctx->bits[0];
-    if ((ctx->bits[0] = t + ((pj_uint32_t) len << 3)) < t)
-	ctx->bits[1]++;		/* Carry from low to high */
+    if ((ctx->bits[0] = t + ((pj_uint32_t)len << 3)) < t)
+        ctx->bits[1]++; /* Carry from low to high */
     ctx->bits[1] += len >> 29;
 
-    t = (t >> 3) & 0x3f;	/* Bytes already in shsInfo->data */
+    t = (t >> 3) & 0x3f; /* Bytes already in shsInfo->data */
 
     /* Handle any leading odd-sized chunks */
 
     if (t) {
-	unsigned char *p = (unsigned char *) ctx->in + t;
+        unsigned char* p = (unsigned char*)ctx->in + t;
 
-	t = 64 - t;
-	if (len < t) {
-	    pj_memcpy(p, buf, len);
-	    return;
-	}
-	pj_memcpy(p, buf, t);
-	byteReverse(ctx->in, 16);
-	MD5Transform(ctx->buf, (pj_uint32_t *) ctx->in);
-	buf += t;
-	len -= t;
+        t = 64 - t;
+        if (len < t) {
+            pj_memcpy(p, buf, len);
+            return;
+        }
+        pj_memcpy(p, buf, t);
+        byteReverse(ctx->in, 16);
+        MD5Transform(ctx->buf, (pj_uint32_t*)ctx->in);
+        buf += t;
+        len -= t;
     }
     /* Process data in 64-byte chunks */
 
     while (len >= 64) {
-	pj_memcpy(ctx->in, buf, 64);
-	byteReverse(ctx->in, 16);
-	MD5Transform(ctx->buf, (pj_uint32_t *) ctx->in);
-	buf += 64;
-	len -= 64;
+        pj_memcpy(ctx->in, buf, 64);
+        byteReverse(ctx->in, 16);
+        MD5Transform(ctx->buf, (pj_uint32_t*)ctx->in);
+        buf += 64;
+        len -= 64;
     }
 
     /* Handle any remaining bytes of data. */
@@ -116,13 +114,13 @@ PJ_DEF(void) pj_md5_update( pj_md5_context *ctx,
 }
 
 /*
- * Final wrapup - pad to 64-byte boundary with the bit pattern 
+ * Final wrapup - pad to 64-byte boundary with the bit pattern
  * 1 0* (64-bit count of bits processed, MSB-first)
  */
-PJ_DEF(void) pj_md5_final(pj_md5_context *ctx, unsigned char digest[16])
+PJ_DEF(void) pj_md5_final(pj_md5_context* ctx, unsigned char digest[16])
 {
     unsigned count;
-    unsigned char *p;
+    unsigned char* p;
 
     /* Compute number of bytes mod 64 */
     count = (ctx->bits[0] >> 3) & 0x3F;
@@ -137,16 +135,16 @@ PJ_DEF(void) pj_md5_final(pj_md5_context *ctx, unsigned char digest[16])
 
     /* Pad out to 56 mod 64 */
     if (count < 8) {
-	/* Two lots of padding:  Pad the first block to 64 bytes */
-	pj_bzero(p, count);
-	byteReverse(ctx->in, 16);
-	MD5Transform(ctx->buf, (pj_uint32_t *) ctx->in);
+        /* Two lots of padding:  Pad the first block to 64 bytes */
+        pj_bzero(p, count);
+        byteReverse(ctx->in, 16);
+        MD5Transform(ctx->buf, (pj_uint32_t*)ctx->in);
 
-	/* Now fill the next block with 56 bytes */
-	pj_bzero(ctx->in, 56);
+        /* Now fill the next block with 56 bytes */
+        pj_bzero(ctx->in, 56);
     } else {
-	/* Pad block to 56 bytes */
-	pj_bzero(p, count - 8);
+        /* Pad block to 56 bytes */
+        pj_bzero(p, count - 8);
     }
     byteReverse(ctx->in, 14);
 
@@ -156,10 +154,10 @@ PJ_DEF(void) pj_md5_final(pj_md5_context *ctx, unsigned char digest[16])
     pj_memcpy(&ctx->in[14 << 2], &ctx->bits[0], sizeof(ctx->bits[0]));
     pj_memcpy(&ctx->in[15 << 2], &ctx->bits[1], sizeof(ctx->bits[1]));
 
-    MD5Transform(ctx->buf, (pj_uint32_t *) ctx->in);
-    byteReverse((unsigned char *) ctx->buf, 4);
+    MD5Transform(ctx->buf, (pj_uint32_t*)ctx->in);
+    byteReverse((unsigned char*)ctx->buf, 4);
     pj_memcpy(digest, ctx->buf, 16);
-    pj_bzero(ctx, sizeof(*ctx));	/* In case it's sensitive */
+    pj_bzero(ctx, sizeof(*ctx)); /* In case it's sensitive */
 }
 
 #ifndef ASM_MD5
@@ -167,14 +165,14 @@ PJ_DEF(void) pj_md5_final(pj_md5_context *ctx, unsigned char digest[16])
 /* The four core functions - F1 is optimized somewhat */
 
 /* #define F1(x, y, z) (x & y | ~x & z) */
-#define F1(x, y, z) (z ^ (x & (y ^ z)))
-#define F2(x, y, z) F1(z, x, y)
-#define F3(x, y, z) (x ^ y ^ z)
-#define F4(x, y, z) (y ^ (x | ~z))
+#    define F1(x, y, z) (z ^ (x & (y ^ z)))
+#    define F2(x, y, z) F1(z, x, y)
+#    define F3(x, y, z) (x ^ y ^ z)
+#    define F4(x, y, z) (y ^ (x | ~z))
 
 /* This is the central step in the MD5 algorithm. */
-#define MD5STEP(f, w, x, y, z, data, s) \
-	( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
+#    define MD5STEP(f, w, x, y, z, data, s) \
+        (w += f(x, y, z) + data, w = w << s | w >> (32 - s), w += x)
 
 /*
  * The core of the MD5 algorithm, this alters an existing MD5 hash to
@@ -265,4 +263,3 @@ static void MD5Transform(pj_uint32_t buf[4], pj_uint32_t const in[16])
 }
 
 #endif
-

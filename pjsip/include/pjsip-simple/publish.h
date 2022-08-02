@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_PUBLISH_H__
 #define __PJSIP_SIMPLE_PUBLISH_H__
@@ -28,9 +27,7 @@
 #include <pjsip/sip_util.h>
 #include <pjsip/sip_auth.h>
 
-
 PJ_BEGIN_DECL
-
 
 /**
  @defgroup PJSIP_SIMPLE_PUBLISH SIP Event State Publication (PUBLISH, RFC 3903)
@@ -47,7 +44,6 @@ PJ_BEGIN_DECL
  */
 extern const pjsip_method pjsip_publish_method;
 
-
 /*****************************************************************************
  * @defgroup PJSIP_SIMPLE_PUBLISH_CLIENT SIP Event State Publication Client
  * @ingroup PJSIP_SIMPLE
@@ -55,15 +51,13 @@ extern const pjsip_method pjsip_publish_method;
  * @{
  */
 
-
 /** Expiration not specified. */
-#define PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED	((pj_uint32_t)0xFFFFFFFFUL)
+#define PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED ((pj_uint32_t)0xFFFFFFFFUL)
 
 /**
  * Opaque declaration for client side event publication session.
  */
 typedef struct pjsip_publishc pjsip_publishc;
-
 
 /**
  * Client publication options. Application should initialize this structure
@@ -80,10 +74,9 @@ typedef struct pjsip_publishc_opt
      *
      * Default: PJSIP_PUBLISHC_QUEUE_REQUEST
      */
-    pj_bool_t	queue_request;
+    pj_bool_t queue_request;
 
 } pjsip_publishc_opt;
-
 
 /** Structure to hold parameters when calling application's callback.
  *  The application's callback is called when the client publication process
@@ -91,31 +84,28 @@ typedef struct pjsip_publishc_opt
  */
 struct pjsip_publishc_cbparam
 {
-    pjsip_publishc	*pubc;	    /**< Client publication structure.	    */
-    void		*token;	    /**< Arbitrary token.		    */
-    pj_status_t		 status;    /**< Error status.			    */
-    int			 code;	    /**< SIP status code received.	    */
-    pj_str_t		 reason;    /**< SIP reason phrase received.	    */
-    pjsip_rx_data	*rdata;	    /**< The complete received response.    */
-    unsigned		 expiration;/**< Next expiration interval. If the
-					 value is
-					 PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED,
-					 it means the session will not renew
-					 itself.		    	    */
+    pjsip_publishc* pubc; /**< Client publication structure.	    */
+    void* token;          /**< Arbitrary token.		    */
+    pj_status_t status;   /**< Error status.			    */
+    int code;             /**< SIP status code received.	    */
+    pj_str_t reason;      /**< SIP reason phrase received.	    */
+    pjsip_rx_data* rdata; /**< The complete received response.    */
+    unsigned expiration;  /**< Next expiration interval. If the
+                               value is
+                               PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED,
+                               it means the session will not renew
+                               itself.		    	    */
 };
 
-
 /** Type declaration for callback to receive publication result. */
-typedef void pjsip_publishc_cb(struct pjsip_publishc_cbparam *param);
-
+typedef void pjsip_publishc_cb(struct pjsip_publishc_cbparam* param);
 
 /**
  * Initialize client publication session option with default values.
  *
  * @param opt	    The option.
  */
-PJ_DECL(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt);
-
+PJ_DECL(void) pjsip_publishc_opt_default(pjsip_publishc_opt* opt);
 
 /**
  * Initialize client publication module.
@@ -124,8 +114,7 @@ PJ_DECL(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt);
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt);
-
+PJ_DECL(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint* endpt);
 
 /**
  * Create client publication structure.
@@ -138,12 +127,10 @@ PJ_DECL(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt);
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt, 
-					    const pjsip_publishc_opt *opt,
-					    void *token,
-				            pjsip_publishc_cb *cb, 
-					    pjsip_publishc **p_pubc);
-
+PJ_DECL(pj_status_t)
+pjsip_publishc_create(pjsip_endpoint* endpt, const pjsip_publishc_opt* opt,
+                      void* token, pjsip_publishc_cb* cb,
+                      pjsip_publishc** p_pubc);
 
 /**
  * Destroy client publication structure. If a publication transaction is
@@ -154,9 +141,7 @@ PJ_DECL(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc);
-
-
+PJ_DECL(pj_status_t) pjsip_publishc_destroy(pjsip_publishc* pubc);
 
 /**
  * Get the memory pool associated with a publication client session.
@@ -164,8 +149,7 @@ PJ_DECL(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc);
  * @param pubc	    The client publication structure.
  * @return pool	    handle.
  */
-PJ_DECL(pj_pool_t*) pjsip_publishc_get_pool(pjsip_publishc *pubc);
-
+PJ_DECL(pj_pool_t*) pjsip_publishc_get_pool(pjsip_publishc* pubc);
 
 /**
  * Initialize client publication structure with various information needed to
@@ -175,24 +159,21 @@ PJ_DECL(pj_pool_t*) pjsip_publishc_get_pool(pjsip_publishc *pubc);
  * @param event		The Event identification (e.g. "presence").
  * @param target_uri	The URI of the presentity which the which the status
  *			is being published.
- * @param from_uri	The URI of the endpoint who sends the event 
+ * @param from_uri	The URI of the endpoint who sends the event
  *			publication. Normally the value would be the same as
  *			target_uri.
- * @param to_uri	The URI to be put in To header. Normally the value 
+ * @param to_uri	The URI to be put in To header. Normally the value
  *			would be the same as target_uri.
- * @param expires	The default expiration of the event publication. 
- *			If the value PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED is 
+ * @param expires	The default expiration of the event publication.
+ *			If the value PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED is
  *			given, then no default expiration will be applied.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_init(pjsip_publishc *pubc,
-					 const pj_str_t *event,
-					 const pj_str_t *target_uri,
-					 const pj_str_t *from_uri,
-					 const pj_str_t *to_uri,
-					 pj_uint32_t expires);
-
+PJ_DECL(pj_status_t)
+pjsip_publishc_init(pjsip_publishc* pubc, const pj_str_t* event,
+                    const pj_str_t* target_uri, const pj_str_t* from_uri,
+                    const pj_str_t* to_uri, pj_uint32_t expires);
 
 /**
  * Set authentication credentials to use by this publication.
@@ -203,9 +184,9 @@ PJ_DECL(pj_status_t) pjsip_publishc_init(pjsip_publishc *pubc,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_set_credentials(pjsip_publishc *pubc,
-						    int count,
-						    const pjsip_cred_info c[]);
+PJ_DECL(pj_status_t)
+pjsip_publishc_set_credentials(pjsip_publishc* pubc, int count,
+                               const pjsip_cred_info c[]);
 
 /**
  * Set route set to be used for outgoing requests.
@@ -215,9 +196,8 @@ PJ_DECL(pj_status_t) pjsip_publishc_set_credentials(pjsip_publishc *pubc,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_set_route_set(pjsip_publishc *pubc,
-						  const pjsip_route_hdr *rs);
-
+PJ_DECL(pj_status_t)
+pjsip_publishc_set_route_set(pjsip_publishc* pubc, const pjsip_route_hdr* rs);
 
 /**
  * Set list of headers to be added to each PUBLISH request generated by
@@ -235,8 +215,8 @@ PJ_DECL(pj_status_t) pjsip_publishc_set_route_set(pjsip_publishc *pubc,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_set_headers(pjsip_publishc *pubc,
-						const pjsip_hdr *hdr_list);
+PJ_DECL(pj_status_t)
+pjsip_publishc_set_headers(pjsip_publishc* pubc, const pjsip_hdr* hdr_list);
 
 /**
  * Set the "sent-by" field of the Via header for outgoing requests.
@@ -249,15 +229,14 @@ PJ_DECL(pj_status_t) pjsip_publishc_set_headers(pjsip_publishc *pubc,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
-				                    pjsip_host_port *via_addr,
-                                                    pjsip_transport *via_tp);
-
+PJ_DECL(pj_status_t)
+pjsip_publishc_set_via_sent_by(pjsip_publishc* pubc, pjsip_host_port* via_addr,
+                               pjsip_transport* via_tp);
 
 /**
  * Create PUBLISH request for the specified client publication structure.
  * Application can use this function to both create initial publication
- * or to modify existing publication. 
+ * or to modify existing publication.
  *
  * After the PUBLISH request is created, application MUST fill in the
  * body part of the request with the appropriate content for the Event
@@ -268,18 +247,17 @@ PJ_DECL(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
  * should not use this function to perform publication refresh.
  *
  * @param pubc		The client publication session.
- * @param auto_refresh	If non zero, the library will automatically 
- *			refresh the next publication until application 
+ * @param auto_refresh	If non zero, the library will automatically
+ *			refresh the next publication until application
  *			unpublish.
  * @param p_tdata	Pointer to receive the PUBLISH request. Note that
  *			the request DOES NOT have a message body.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc, 
-					     pj_bool_t auto_refresh,
-					     pjsip_tx_data **p_tdata);
-
+PJ_DECL(pj_status_t)
+pjsip_publishc_publish(pjsip_publishc* pubc, pj_bool_t auto_refresh,
+                       pjsip_tx_data** p_tdata);
 
 /**
  * Create PUBLISH request to unpublish the current client publication.
@@ -289,9 +267,8 @@ PJ_DECL(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_unpublish(pjsip_publishc *pubc,
-					      pjsip_tx_data **p_tdata);
-
+PJ_DECL(pj_status_t)
+pjsip_publishc_unpublish(pjsip_publishc* pubc, pjsip_tx_data** p_tdata);
 
 /**
  * Update the client publication expiration value. Note that this DOES NOT
@@ -304,20 +281,19 @@ PJ_DECL(pj_status_t) pjsip_publishc_unpublish(pjsip_publishc *pubc,
  *
  * @return	    PU_SUCCESS on successfull.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_update_expires(pjsip_publishc *pubc,
-					           pj_uint32_t expires );
-
+PJ_DECL(pj_status_t)
+pjsip_publishc_update_expires(pjsip_publishc* pubc, pj_uint32_t expires);
 
 /**
  * Sends outgoing PUBLISH request. The process will complete asynchronously,
- * and application will be notified via the callback when the process 
+ * and application will be notified via the callback when the process
  * completes.
  *
  * If the session has another PUBLISH request outstanding, the behavior
  * depends on whether request queueing is enabled in the session (this was
  * set by setting \a queue_request field of #pjsip_publishc_opt to true
  * when calling #pjsip_publishc_create(). Default is true). If request
- * queueing is enabled, the request will be queued and the function will 
+ * queueing is enabled, the request will be queued and the function will
  * return PJ_EPENDING. One the outstanding request is complete, the queued
  * request will be sent automatically. If request queueing is disabled, the
  * function will reject the request and return PJ_EBUSY.
@@ -325,16 +301,14 @@ PJ_DECL(pj_status_t) pjsip_publishc_update_expires(pjsip_publishc *pubc,
  * @param pubc	    The client publication structure.
  * @param tdata	    Transmit data.
  *
- * @return	    - PJ_SUCCESS on success, or 
+ * @return	    - PJ_SUCCESS on success, or
  *		    - PJ_EPENDING if request is queued, or
  *		    - PJ_EBUSY if request is rejected because another PUBLISH
  *		      request is in progress, or
  *		    - other status code to indicate the error.
  */
-PJ_DECL(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
-					 pjsip_tx_data *tdata);
-
-
+PJ_DECL(pj_status_t)
+pjsip_publishc_send(pjsip_publishc* pubc, pjsip_tx_data* tdata);
 
 /**
  * @}
@@ -346,6 +320,4 @@ PJ_DECL(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
 
 PJ_END_DECL
 
-
-#endif	/* __PJSIP_SIMPLE_PUBLISH_H__ */
-
+#endif /* __PJSIP_SIMPLE_PUBLISH_H__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2015-2016 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2012-2015 Zaark Technology AB
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /* This file is the header of Opus codec wrapper and was contributed by
  * Zaark Technology AB
@@ -51,14 +50,14 @@ PJ_BEGIN_DECL
  *
  * \section codec_setting Codec Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
+ * General codec settings for this codec such as VAD and PLC can be
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param
  * (see the documentation of #pjmedia_codec_param for more info).
  *
  * For Opus codec specific settings, such as sample rate,
  * channel count, bit rate, complexity, and CBR, can be configured
  * in #pjmedia_codec_opus_config.
- * The default setting of sample rate is specified in 
+ * The default setting of sample rate is specified in
  * #PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE. The default setting of
  * bitrate is specified in #PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE.
  * And the default setting of complexity is specified in
@@ -97,15 +96,14 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_codec_opus_config
 {
-    unsigned   sample_rate; /**< Sample rate in Hz.                     */
-    unsigned   channel_cnt; /**< Number of channels.                    */
-    unsigned   frm_ptime;   /**< Frame time in msec.   			*/
-    unsigned   bit_rate;    /**< Encoder bit rate in bps.		*/
-    unsigned   packet_loss; /**< Encoder's expected packet loss pct.	*/
-    unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/
-    pj_bool_t  cbr;         /**< Constant bit rate?			*/
+    unsigned sample_rate; /**< Sample rate in Hz.                     */
+    unsigned channel_cnt; /**< Number of channels.                    */
+    unsigned frm_ptime;   /**< Frame time in msec.   			*/
+    unsigned bit_rate;    /**< Encoder bit rate in bps.		*/
+    unsigned packet_loss; /**< Encoder's expected packet loss pct.	*/
+    unsigned complexity;  /**< Encoder complexity, 0-10(10 is highest)*/
+    pj_bool_t cbr;        /**< Constant bit rate?			*/
 } pjmedia_codec_opus_config;
-
 
 /**
  * Initialize and register Opus codec factory to pjmedia endpoint.
@@ -114,7 +112,7 @@ typedef struct pjmedia_codec_opus_config
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_opus_init( pjmedia_endpt *endpt );
+PJ_DECL(pj_status_t) pjmedia_codec_opus_init(pjmedia_endpt* endpt);
 
 /**
  * Unregister Opus codec factory from pjmedia endpoint and deinitialize
@@ -122,7 +120,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_opus_init( pjmedia_endpt *endpt );
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_opus_deinit( void );
+PJ_DECL(pj_status_t) pjmedia_codec_opus_deinit(void);
 
 /**
  * Get the default Opus configuration.
@@ -132,7 +130,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_opus_deinit( void );
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
-pjmedia_codec_opus_get_config( pjmedia_codec_opus_config *cfg );
+pjmedia_codec_opus_get_config(pjmedia_codec_opus_config* cfg);
 
 /**
  * Set the default Opus configuration and set the default Opus codec param.
@@ -148,8 +146,8 @@ pjmedia_codec_opus_get_config( pjmedia_codec_opus_config *cfg );
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
-pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
-				     pjmedia_codec_param *param );
+pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config* cfg,
+                                     pjmedia_codec_param* param);
 
 PJ_END_DECL
 
@@ -157,4 +155,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_OPUS_H__ */
+#endif /* __PJMEDIA_CODEC_OPUS_H__ */

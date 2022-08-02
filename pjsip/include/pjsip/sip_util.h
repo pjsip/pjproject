@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_MISC_H__
 #define __PJSIP_SIP_MISC_H__
@@ -34,11 +33,11 @@ PJ_BEGIN_DECL
  * This module provides utility functions to manage target set for UAC.
  * The target set is provided as pjsip_target_set structure. Initially,
  * the target set for UAC contains only one target, that is the target of
- * the initial request. When 3xx/redirection class response is received, 
+ * the initial request. When 3xx/redirection class response is received,
  * the UAC can use the functionality of this module to add the URI's listed
- * in the Contact header(s) in the response to the target set, and retry 
- * sending the request to the next destination/target. The UAC may retry 
- * this sequentially until one of the target answers with succesful/2xx 
+ * in the Contact header(s) in the response to the target set, and retry
+ * sending the request to the next destination/target. The UAC may retry
+ * this sequentially until one of the target answers with succesful/2xx
  * response, or one target returns global error/6xx response, or all targets
  * are exhausted.
  *
@@ -47,20 +46,19 @@ PJ_BEGIN_DECL
 
 /**
  * This structure describes a target, which can be chained together to form
- * a target set. Each target contains an URI, priority (as q-value), and 
- * the last status code and reason phrase received from the target, if the 
- * target has been contacted. If the target has not been contacted, the 
+ * a target set. Each target contains an URI, priority (as q-value), and
+ * the last status code and reason phrase received from the target, if the
+ * target has been contacted. If the target has not been contacted, the
  * status code field will be zero.
  */
 typedef struct pjsip_target
 {
-    PJ_DECL_LIST_MEMBER(struct pjsip_target);/**< Standard list element */
-    pjsip_uri	       *uri;	/**< The target URI		    */
-    int			q1000;	/**< q-value multiplied by 1000	    */
-    pjsip_status_code	code;	/**< Last status code received	    */
-    pj_str_t		reason;	/**< Last reason phrase received    */
+    PJ_DECL_LIST_MEMBER(struct pjsip_target); /**< Standard list element */
+    pjsip_uri* uri;                           /**< The target URI		    */
+    int q1000;              /**< q-value multiplied by 1000	    */
+    pjsip_status_code code; /**< Last status code received	    */
+    pj_str_t reason;        /**< Last reason phrase received    */
 } pjsip_target;
-
 
 /**
  * This describes a target set. A target set contains a linked-list of
@@ -68,10 +66,9 @@ typedef struct pjsip_target
  */
 typedef struct pjsip_target_set
 {
-    pjsip_target     head;	    /**< Target linked-list head    */
-    pjsip_target    *current;	    /**< Current target.	    */
+    pjsip_target head;     /**< Target linked-list head    */
+    pjsip_target* current; /**< Current target.	    */
 } pjsip_target_set;
-
 
 /**
  * These enumerations specify the action to be performed to a redirect
@@ -112,19 +109,17 @@ typedef enum pjsip_redirect_op
 
 } pjsip_redirect_op;
 
-
 /**
  * Initialize target set. This will empty the list of targets in the
  * target set.
  *
  * @param tset	    The target set.
  */
-PJ_INLINE(void) pjsip_target_set_init(pjsip_target_set *tset)
+PJ_INLINE(void) pjsip_target_set_init(pjsip_target_set* tset)
 {
     pj_list_init(&tset->head);
     tset->current = NULL;
 }
-
 
 /**
  * Add an URI to the target set, if the URI is not already in the target set.
@@ -145,14 +140,13 @@ PJ_INLINE(void) pjsip_target_set_init(pjsip_target_set *tset)
  *		    or PJ_EEXISTS if the URI already exists in the target
  *		    set, or other error codes.
  */
-PJ_DECL(pj_status_t) pjsip_target_set_add_uri(pjsip_target_set *tset,
-					      pj_pool_t *pool,
-					      const pjsip_uri *uri,
-					      int q1000);
+PJ_DECL(pj_status_t)
+pjsip_target_set_add_uri(pjsip_target_set* tset, pj_pool_t* pool,
+                         const pjsip_uri* uri, int q1000);
 
 /**
  * Extract URI's in the Contact headers of the specified (response) message
- * and add them to the target set. This function will also check if the 
+ * and add them to the target set. This function will also check if the
  * URI's already exist in the target set before adding them to the list.
  *
  * @param tset	    The target set.
@@ -161,15 +155,15 @@ PJ_DECL(pj_status_t) pjsip_target_set_add_uri(pjsip_target_set *tset,
  *		    scanned and the URI's to be extracted, checked, and
  *		    added to the target set.
  *
- * @return	    PJ_SUCCESS if at least one URI was added to the 
- *		    target set, or PJ_EEXISTS if all URI's in the message 
+ * @return	    PJ_SUCCESS if at least one URI was added to the
+ *		    target set, or PJ_EEXISTS if all URI's in the message
  *		    already exists in the target set or if the message
  *		    doesn't contain usable Contact headers, or other error
  *		    codes.
  */
-PJ_DECL(pj_status_t) pjsip_target_set_add_from_msg(pjsip_target_set *tset,
-						   pj_pool_t *pool,
-						   const pjsip_msg *msg);
+PJ_DECL(pj_status_t)
+pjsip_target_set_add_from_msg(pjsip_target_set* tset, pj_pool_t* pool,
+                              const pjsip_msg* msg);
 
 /**
  * Get the next target to be retried. This function will scan the target set
@@ -184,9 +178,8 @@ PJ_DECL(pj_status_t) pjsip_target_set_add_from_msg(pjsip_target_set *tset,
  *		    been tried or at least one target returns 2xx or 6xx
  *		    response.
  */
-PJ_DECL(pjsip_target*) 
-pjsip_target_set_get_next(const pjsip_target_set *tset);
-
+PJ_DECL(pjsip_target*)
+pjsip_target_set_get_next(const pjsip_target_set* tset);
 
 /**
  * Set the specified target as the current target in the target set. The
@@ -198,9 +191,8 @@ pjsip_target_set_get_next(const pjsip_target_set *tset);
  *
  * @return	    PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_target_set_set_current(pjsip_target_set *tset,
-						  pjsip_target *target);
-
+PJ_DECL(pj_status_t)
+pjsip_target_set_set_current(pjsip_target_set* tset, pjsip_target* target);
 
 /**
  * Set the status code and reason phrase of the specified target.
@@ -213,10 +205,9 @@ PJ_DECL(pj_status_t) pjsip_target_set_set_current(pjsip_target_set *tset,
  * @return	    PJ_SUCCESS on successful operation or the appropriate
  *		    error code.
  */
-PJ_DECL(pj_status_t) pjsip_target_assign_status(pjsip_target *target,
-					        pj_pool_t *pool,
-					        int status_code,
-					        const pj_str_t *reason);
+PJ_DECL(pj_status_t)
+pjsip_target_assign_status(pjsip_target* target, pj_pool_t* pool,
+                           int status_code, const pj_str_t* reason);
 
 /**
  * @}
@@ -225,7 +216,8 @@ PJ_DECL(pj_status_t) pjsip_target_assign_status(pjsip_target *target,
 /**
  * @defgroup PJSIP_ENDPT_STATELESS Message Creation and Stateless Operations
  * @ingroup PJSIP_CORE_CORE
- * @brief Utilities to create various messages and base function to send messages.
+ * @brief Utilities to create various messages and base function to send
+ * messages.
  * @{
  */
 
@@ -252,12 +244,12 @@ PJ_DECL(pj_status_t) pjsip_target_assign_status(pjsip_target *target,
  * @param to	    URL to put in To header.
  * @param contact   Contact to be put as Contact header value, hence
  *		    the format must follow RFC 3261 Section 20.10:
- *		    When the header field value contains a display 
- *		    name, the URI including all URI parameters is 
- *		    enclosed in "<" and ">".  If no "<" and ">" are 
+ *		    When the header field value contains a display
+ *		    name, the URI including all URI parameters is
+ *		    enclosed in "<" and ">".  If no "<" and ">" are
  *		    present, all parameters after the URI are header
- *		    parameters, not URI parameters.  The display name 
- *		    can be tokens, or a quoted string, if a larger 
+ *		    parameters, not URI parameters.  The display name
+ *		    can be tokens, or a quoted string, if a larger
  *		    character set is desired.
  * @param call_id   Optional Call-ID (put NULL to generate unique Call-ID).
  * @param cseq	    Optional CSeq (put -1 to generate random CSeq).
@@ -266,16 +258,12 @@ PJ_DECL(pj_status_t) pjsip_target_assign_status(pjsip_target *target,
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_request( pjsip_endpoint *endpt, 
-						 const pjsip_method *method,
-						 const pj_str_t *target,
-						 const pj_str_t *from,
-						 const pj_str_t *to, 
-						 const pj_str_t *contact,
-						 const pj_str_t *call_id,
-						 int cseq, 
-						 const pj_str_t *text,
-						 pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t)
+pjsip_endpt_create_request(pjsip_endpoint* endpt, const pjsip_method* method,
+                           const pj_str_t* target, const pj_str_t* from,
+                           const pj_str_t* to, const pj_str_t* contact,
+                           const pj_str_t* call_id, int cseq,
+                           const pj_str_t* text, pjsip_tx_data** p_tdata);
 
 /**
  * Create an independent request message from the specified headers. This
@@ -306,20 +294,15 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_request( pjsip_endpoint *endpt,
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t)
-pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
-				     const pjsip_method *method,
-				     const pjsip_uri *target,
-				     const pjsip_from_hdr *from,
-				     const pjsip_to_hdr *to,
-				     const pjsip_contact_hdr *contact,
-				     const pjsip_cid_hdr *call_id,
-				     int cseq,
-				     const pj_str_t *text,
-				     pjsip_tx_data **p_tdata);
+pjsip_endpt_create_request_from_hdr(
+  pjsip_endpoint* endpt, const pjsip_method* method, const pjsip_uri* target,
+  const pjsip_from_hdr* from, const pjsip_to_hdr* to,
+  const pjsip_contact_hdr* contact, const pjsip_cid_hdr* call_id, int cseq,
+  const pj_str_t* text, pjsip_tx_data** p_tdata);
 
 /**
  * Construct a minimal response message for the received request. This function
- * will construct all the Via, Record-Route, Call-ID, From, To, CSeq, and 
+ * will construct all the Via, Record-Route, Call-ID, From, To, CSeq, and
  * Call-ID headers from the request.
  *
  * Once a transmit data is created, the reference counter is initialized to 1.
@@ -332,11 +315,10 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
-						  const pjsip_rx_data *rdata,
-						  int st_code,
-						  const pj_str_t *st_text,
-						  pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t)
+pjsip_endpt_create_response(pjsip_endpoint* endpt, const pjsip_rx_data* rdata,
+                            int st_code, const pj_str_t* st_text,
+                            pjsip_tx_data** p_tdata);
 
 /**
  * Construct a full ACK request for the received non-2xx final response.
@@ -346,7 +328,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
  * this one.
  *
  * Once a transmit data is created, the reference counter is initialized to 1.
- * 
+ *
  * @param endpt	    The endpoint.
  * @param tdata	    This contains the original INVITE request
  * @param rdata	    The final response.
@@ -354,11 +336,9 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
-					     const pjsip_tx_data *tdata,
-					     const pjsip_rx_data *rdata,
-					     pjsip_tx_data **ack);
-
+PJ_DECL(pj_status_t)
+pjsip_endpt_create_ack(pjsip_endpoint* endpt, const pjsip_tx_data* tdata,
+                       const pjsip_rx_data* rdata, pjsip_tx_data** ack);
 
 /**
  * Construct CANCEL request for the previously sent request.
@@ -371,9 +351,9 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
-						const pjsip_tx_data *tdata,
-						pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t)
+pjsip_endpt_create_cancel(pjsip_endpoint* endpt, const pjsip_tx_data* tdata,
+                          pjsip_tx_data** p_tdata);
 
 /**
  * Get destination address and port and transport type information for the
@@ -386,10 +366,9 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
  *
  * @return		PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
-				 	 const pjsip_uri *request_uri,
-				 	 pj_pool_t *pool,
-				 	 pjsip_host_info *dest_info);
+PJ_DECL(pj_status_t)
+pjsip_get_dest_info(const pjsip_uri* target_uri, const pjsip_uri* request_uri,
+                    pj_pool_t* pool, pjsip_host_info* dest_info);
 
 /**
  * Find which destination to be used to send the request message, based
@@ -414,13 +393,12 @@ PJ_DECL(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
  *
  * @see pjsip_process_route_set
  */
-PJ_DECL(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
-					    pjsip_host_info *dest_info );
-
+PJ_DECL(pj_status_t)
+pjsip_get_request_dest(const pjsip_tx_data* tdata, pjsip_host_info* dest_info);
 
 /**
  * Process route-set found in the request and calculate destination to be
- * used to send the request message, based on the request URI and Route 
+ * used to send the request message, based on the request URI and Route
  * headers in the message. The procedure used here follows the guidelines
  * on sending the request in RFC 3261 chapter 8.1.2.
  *
@@ -441,9 +419,8 @@ PJ_DECL(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
  *
  * @see pjsip_get_request_addr
  */
-PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
-					     pjsip_host_info *dest_info );
-
+PJ_DECL(pj_status_t)
+pjsip_process_route_set(pjsip_tx_data* tdata, pjsip_host_info* dest_info);
 
 /**
  * Swap the request URI and strict route back to the original position
@@ -456,8 +433,7 @@ PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
  *
  * @param tdata	    Transmit data containing request message.
  */
-PJ_DECL(void) pjsip_restore_strict_route_set(pjsip_tx_data *tdata);
-
+PJ_DECL(void) pjsip_restore_strict_route_set(pjsip_tx_data* tdata);
 
 /**
  * This structure holds the state of outgoing stateless request.
@@ -467,31 +443,28 @@ typedef struct pjsip_send_state
     /** Application token, which was specified when the function
      *  #pjsip_endpt_send_request_stateless() is called.
      */
-    void *token;
+    void* token;
 
-    /** Endpoint instance. 
+    /** Endpoint instance.
      */
-    pjsip_endpoint *endpt;
+    pjsip_endpoint* endpt;
 
-    /** Transmit data buffer being sent. 
+    /** Transmit data buffer being sent.
      */
-    pjsip_tx_data *tdata;
+    pjsip_tx_data* tdata;
 
-    /** Current transport being used. 
+    /** Current transport being used.
      */
-    pjsip_transport *cur_transport;
+    pjsip_transport* cur_transport;
 
     /** The application callback which was specified when the function
      *  #pjsip_endpt_send_request_stateless() was called.
      */
-    void (*app_cb)(struct pjsip_send_state*,
-		   pj_ssize_t sent,
-		   pj_bool_t *cont);
+    void (*app_cb)(struct pjsip_send_state*, pj_ssize_t sent, pj_bool_t* cont);
 } pjsip_send_state;
 
-
 /**
- * Declaration for callback function to be specified in 
+ * Declaration for callback function to be specified in
  * #pjsip_endpt_send_request_stateless(), #pjsip_endpt_send_response(), or
  * #pjsip_endpt_send_response2().
  *
@@ -500,15 +473,15 @@ typedef struct pjsip_send_state
  * @param cont	    When current transmission fails, specify whether
  *		    the function should fallback to next destination.
  */
-typedef void (*pjsip_send_callback)(pjsip_send_state *st, pj_ssize_t sent,
-				    pj_bool_t *cont);
+typedef void (*pjsip_send_callback)(pjsip_send_state* st, pj_ssize_t sent,
+                                    pj_bool_t* cont);
 
 /**
- * Send outgoing request statelessly The function will take care of which 
+ * Send outgoing request statelessly The function will take care of which
  * destination and transport to use based on the information in the message,
  * taking care of URI in the request line and Route header.
  *
- * This function is different than #pjsip_transport_send() in that this 
+ * This function is different than #pjsip_transport_send() in that this
  * function adds/modify the Via header as necessary.
  *
  * @param endpt	    The endpoint instance.
@@ -520,11 +493,9 @@ typedef void (*pjsip_send_callback)(pjsip_send_state *st, pj_ssize_t sent,
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
-pjsip_endpt_send_request_stateless( pjsip_endpoint *endpt,
-				    pjsip_tx_data *tdata,
-				    void *token,
-				    pjsip_send_callback cb);
+PJ_DECL(pj_status_t)
+pjsip_endpt_send_request_stateless(pjsip_endpoint* endpt, pjsip_tx_data* tdata,
+                                   void* token, pjsip_send_callback cb);
 
 /**
  * This is a low-level function to send raw data to a destination.
@@ -546,23 +517,19 @@ pjsip_endpt_send_request_stateless( pjsip_endpoint *endpt,
  *		    the completion status of the pending send operation.
  *
  * @return	    If the message has been sent successfully, this function
- *		    will return PJ_SUCCESS and the callback will not be 
+ *		    will return PJ_SUCCESS and the callback will not be
  *		    called. If message cannot be sent immediately, this
  *		    function will return PJ_EPENDING, and application will
  *		    be notified later about the completion via the callback.
  *		    Any statuses other than PJ_SUCCESS or PJ_EPENDING
- *		    indicates immediate failure, and in this case the 
+ *		    indicates immediate failure, and in this case the
  *		    callback will not be called.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_send_raw(pjsip_endpoint *endpt,
-					  pjsip_transport_type_e tp_type,
-					  const pjsip_tpselector *sel,
-					  const void *raw_data,
-					  pj_size_t data_len,
-					  const pj_sockaddr_t *addr,
-					  int addr_len,
-					  void *token,
-					  pjsip_tp_send_callback cb);
+PJ_DECL(pj_status_t)
+pjsip_endpt_send_raw(pjsip_endpoint* endpt, pjsip_transport_type_e tp_type,
+                     const pjsip_tpselector* sel, const void* raw_data,
+                     pj_size_t data_len, const pj_sockaddr_t* addr,
+                     int addr_len, void* token, pjsip_tp_send_callback cb);
 
 /**
  * Send raw data to the specified destination URI. The actual destination
@@ -584,21 +551,19 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_raw(pjsip_endpoint *endpt,
  *		    the completion status of the pending send operation.
  *
  * @return	    If the message has been sent successfully, this function
- *		    will return PJ_SUCCESS and the callback will not be 
+ *		    will return PJ_SUCCESS and the callback will not be
  *		    called. If message cannot be sent immediately, this
  *		    function will return PJ_EPENDING, and application will
  *		    be notified later about the completion via the callback.
  *		    Any statuses other than PJ_SUCCESS or PJ_EPENDING
- *		    indicates immediate failure, and in this case the 
+ *		    indicates immediate failure, and in this case the
  *		    callback will not be called.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
-						 const pj_str_t *dst_uri,
-						 const pjsip_tpselector *sel,
-						 const void *raw_data,
-						 pj_size_t data_len,
-						 void *token,
-						 pjsip_tp_send_callback cb);
+PJ_DECL(pj_status_t)
+pjsip_endpt_send_raw_to_uri(pjsip_endpoint* endpt, const pj_str_t* dst_uri,
+                            const pjsip_tpselector* sel, const void* raw_data,
+                            pj_size_t data_len, void* token,
+                            pjsip_tp_send_callback cb);
 
 /**
  * This structure describes destination information to send response.
@@ -616,10 +581,10 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
  */
 typedef struct pjsip_response_addr
 {
-    pjsip_transport *transport;	/**< Immediate transport to be used. */
-    pj_sockaddr	     addr;	/**< Immediate address to send to.   */
-    int		     addr_len;	/**< Address length.		     */
-    pjsip_host_info  dst_host;	/**< Destination host to contact.    */
+    pjsip_transport* transport; /**< Immediate transport to be used. */
+    pj_sockaddr addr;           /**< Immediate address to send to.   */
+    int addr_len;               /**< Address length.		     */
+    pjsip_host_info dst_host;   /**< Destination host to contact.    */
 } pjsip_response_addr;
 
 /**
@@ -638,18 +603,18 @@ typedef struct pjsip_response_addr
  *
  * @return	    zero (PJ_OK) if successfull.
  */
-PJ_DECL(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
-					     pjsip_rx_data *rdata,
-					     pjsip_response_addr *res_addr);
+PJ_DECL(pj_status_t)
+pjsip_get_response_addr(pj_pool_t* pool, pjsip_rx_data* rdata,
+                        pjsip_response_addr* res_addr);
 
 /**
- * Send response in tdata statelessly. The function will take care of which 
- * response destination and transport to use based on the information in the 
+ * Send response in tdata statelessly. The function will take care of which
+ * response destination and transport to use based on the information in the
  * Via header (such as the presence of rport, symmetric transport, etc.).
  *
- * This function will create a new ephemeral transport if no existing 
+ * This function will create a new ephemeral transport if no existing
  * transports can be used to send the message to the destination. The ephemeral
- * transport will be destroyed after some period if it is not used to send any 
+ * transport will be destroyed after some period if it is not used to send any
  * more messages.
  *
  * The behavior of this function complies with section 18.2.2 of RFC 3261
@@ -664,17 +629,16 @@ PJ_DECL(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
  * @param cb	    Optional callback to notify the transmission status
  *		    to application, and to inform whether next address or
  *		    transport will be tried.
- * 
+ *
  * @return	    PJ_SUCCESS if response has been successfully created and
- *		    sent to transport layer, or a non-zero error code. 
- *		    However, even when it returns PJ_SUCCESS, there is no 
+ *		    sent to transport layer, or a non-zero error code.
+ *		    However, even when it returns PJ_SUCCESS, there is no
  *		    guarantee that the response has been successfully sent.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
-					        pjsip_response_addr *res_addr,
-					        pjsip_tx_data *tdata,
-						void *token,
-						pjsip_send_callback cb);
+PJ_DECL(pj_status_t)
+pjsip_endpt_send_response(pjsip_endpoint* endpt, pjsip_response_addr* res_addr,
+                          pjsip_tx_data* tdata, void* token,
+                          pjsip_send_callback cb);
 
 /**
  * This is a convenient function which wraps #pjsip_get_response_addr() and
@@ -687,17 +651,16 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
  * @param cb	    Optional callback to notify the transmission status
  *		    to application, and to inform whether next address or
  *		    transport will be tried.
- * 
+ *
  * @return	    PJ_SUCCESS if response has been successfully created and
- *		    sent to transport layer, or a non-zero error code. 
- *		    However, even when it returns PJ_SUCCESS, there is no 
+ *		    sent to transport layer, or a non-zero error code.
+ *		    However, even when it returns PJ_SUCCESS, there is no
  *		    guarantee that the response has been successfully sent.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_send_response2(pjsip_endpoint *endpt,
-					        pjsip_rx_data *rdata,
-					        pjsip_tx_data *tdata,
-						void *token,
-						pjsip_send_callback cb);
+PJ_DECL(pj_status_t)
+pjsip_endpt_send_response2(pjsip_endpoint* endpt, pjsip_rx_data* rdata,
+                           pjsip_tx_data* tdata, void* token,
+                           pjsip_send_callback cb);
 
 /**
  * This composite function sends response message statelessly to an incoming
@@ -714,13 +677,12 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_response2(pjsip_endpoint *endpt,
  * @return	    PJ_SUCCESS if response message has successfully been
  *		    sent.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_respond_stateless(pjsip_endpoint *endpt,
-						   pjsip_rx_data *rdata,
-						   int st_code,
-						   const pj_str_t *st_text,
-						   const pjsip_hdr *hdr_list,
-						   const pjsip_msg_body *body);
-						    
+PJ_DECL(pj_status_t)
+pjsip_endpt_respond_stateless(pjsip_endpoint* endpt, pjsip_rx_data* rdata,
+                              int st_code, const pj_str_t* st_text,
+                              const pjsip_hdr* hdr_list,
+                              const pjsip_msg_body* body);
+
 /**
  * @}
  */
@@ -749,14 +711,11 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond_stateless(pjsip_endpoint *endpt,
  * @return	    PJ_SUCCESS if response message has successfully been
  *		    created.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_respond( pjsip_endpoint *endpt,
-					  pjsip_module *tsx_user,
-					  pjsip_rx_data *rdata,
-					  int st_code,
-					  const pj_str_t *st_text,
-					  const pjsip_hdr *hdr_list,
-					  const pjsip_msg_body *body,
-					  pjsip_transaction **p_tsx );
+PJ_DECL(pj_status_t)
+pjsip_endpt_respond(pjsip_endpoint* endpt, pjsip_module* tsx_user,
+                    pjsip_rx_data* rdata, int st_code, const pj_str_t* st_text,
+                    const pjsip_hdr* hdr_list, const pjsip_msg_body* body,
+                    pjsip_transaction** p_tsx);
 
 /**
  * Type of callback to be specified in #pjsip_endpt_send_request().
@@ -764,7 +723,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond( pjsip_endpoint *endpt,
  * @param token	    The token that was given in #pjsip_endpt_send_request()
  * @param e	    Completion event.
  */
-typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
+typedef void (*pjsip_endpt_send_callback)(void* token, pjsip_event* e);
 
 /**
  * Send outgoing request and initiate UAC transaction for the request.
@@ -774,12 +733,12 @@ typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
  *
  * @param endpt	    The endpoint instance.
  * @param tdata	    The transmit data to be sent.
- * @param timeout   Optional timeout for final response to be received, or -1 
+ * @param timeout   Optional timeout for final response to be received, or -1
  *		    if the transaction should not have a timeout restriction.
- *		    The value is in miliseconds. Note that this is not 
- *		    implemented yet, so application needs to use its own timer 
+ *		    The value is in miliseconds. Note that this is not
+ *		    implemented yet, so application needs to use its own timer
  *		    to handle timeout.
- * @param token	    Optional token to be associated with the transaction, and 
+ * @param token	    Optional token to be associated with the transaction, and
  *		    to be passed to the callback.
  * @param cb	    Optional callback to be called when the transaction has
  *		    received a final response. The callback will be called with
@@ -788,11 +747,10 @@ typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
-					       pjsip_tx_data *tdata,
-					       pj_int32_t timeout,
-					       void *token,
-					       pjsip_endpt_send_callback cb);
+PJ_DECL(pj_status_t)
+pjsip_endpt_send_request(pjsip_endpoint* endpt, pjsip_tx_data* tdata,
+                         pj_int32_t timeout, void* token,
+                         pjsip_endpt_send_callback cb);
 
 /**
  * @}
@@ -805,10 +763,10 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
  */
 
 /**
- * Create new request message to be forwarded upstream to new destination URI 
- * in uri. The new request is a full/deep clone of the request received in 
- * rdata, unless if other copy mechanism is specified in the options. 
- * The branch parameter, if not NULL, will be used as the branch-param in 
+ * Create new request message to be forwarded upstream to new destination URI
+ * in uri. The new request is a full/deep clone of the request received in
+ * rdata, unless if other copy mechanism is specified in the options.
+ * The branch parameter, if not NULL, will be used as the branch-param in
  * the Via header. If it is NULL, then a unique branch parameter will be used.
  *
  * Note: this function DOES NOT perform Route information preprocessing as
@@ -822,28 +780,24 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
  * @param branch    Optional branch parameter. Application may specify its
  *		    own branch, for example if it wishes to perform loop
  *		    detection. If the branch parameter is not specified,
- *		    this function will generate its own by calling 
+ *		    this function will generate its own by calling
  *		    #pjsip_calculate_branch_id() function.
  * @param options   Optional option flags when duplicating the message.
  * @param tdata	    The result.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
-						    pjsip_rx_data *rdata, 
-						    const pjsip_uri *uri,
-						    const pj_str_t *branch,
-						    unsigned options,
-						    pjsip_tx_data **tdata);
-
-
+PJ_DECL(pj_status_t)
+pjsip_endpt_create_request_fwd(pjsip_endpoint* endpt, pjsip_rx_data* rdata,
+                               const pjsip_uri* uri, const pj_str_t* branch,
+                               unsigned options, pjsip_tx_data** tdata);
 
 /**
- * Create new response message to be forwarded downstream by the proxy from 
- * the response message found in rdata. Note that this function practically 
- * will clone the response as is, i.e. without checking the validity of the 
- * response or removing top most Via header. This function will perform 
- * full/deep clone of the response, unless other copy mechanism is used in 
+ * Create new response message to be forwarded downstream by the proxy from
+ * the response message found in rdata. Note that this function practically
+ * will clone the response as is, i.e. without checking the validity of the
+ * response or removing top most Via header. This function will perform
+ * full/deep clone of the response, unless other copy mechanism is used in
  * the options.
  *
  * @param endpt	    The endpoint instance.
@@ -853,17 +807,14 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
-						      pjsip_rx_data *rdata, 
-						      unsigned options,
-						      pjsip_tx_data **tdata);
-
-
+PJ_DECL(pj_status_t)
+pjsip_endpt_create_response_fwd(pjsip_endpoint* endpt, pjsip_rx_data* rdata,
+                                unsigned options, pjsip_tx_data** tdata);
 
 /**
- * Create a globally unique branch parameter based on the information in 
+ * Create a globally unique branch parameter based on the information in
  * the incoming request message, for the purpose of creating a new request
- * for forwarding. This is the default implementation used by 
+ * for forwarding. This is the default implementation used by
  * #pjsip_endpt_create_request_fwd() function if the branch parameter is
  * not specified.
  *
@@ -876,8 +827,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
  *
  * @return	    Unique branch-ID string.
  */
-PJ_DECL(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata );
-
+PJ_DECL(pj_str_t) pjsip_calculate_branch_id(pjsip_rx_data* rdata);
 
 /**
  * @}
@@ -885,5 +835,4 @@ PJ_DECL(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata );
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_MISC_H__ */
-
+#endif /* __PJSIP_SIP_MISC_H__ */

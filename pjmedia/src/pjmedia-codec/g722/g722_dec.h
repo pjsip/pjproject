@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /*
  * Based on implementation found in Carnegie Mellon Speech Group Software
@@ -28,20 +27,21 @@
 #include <pjmedia-codec/types.h>
 
 /* Decoder state */
-typedef struct g722_dec_t {
+typedef struct g722_dec_t
+{
     /* PCM low band */
     int slow;
     int detlow;
     int spl;
     int szl;
-    int rlt  [3];
-    int al   [3];
-    int apl  [3];
-    int plt  [3];
-    int dlt  [7];
-    int bl   [7];
-    int bpl  [7];
-    int sgl  [7];
+    int rlt[3];
+    int al[3];
+    int apl[3];
+    int plt[3];
+    int dlt[7];
+    int bl[7];
+    int bpl[7];
+    int sgl[7];
     int nbl;
 
     /* PCM high band*/
@@ -49,14 +49,14 @@ typedef struct g722_dec_t {
     int dethigh;
     int sph;
     int szh;
-    int rh   [3];
-    int ah   [3];
-    int aph  [3];
-    int ph   [3];
-    int dh   [7];
-    int bh   [7];
-    int bph  [7];
-    int sgh  [7];
+    int rh[3];
+    int ah[3];
+    int aph[3];
+    int ph[3];
+    int dh[7];
+    int bh[7];
+    int bph[7];
+    int sgh[7];
     int nbh;
 
     /* QMF signal history */
@@ -64,16 +64,12 @@ typedef struct g722_dec_t {
     int xs[12];
 } g722_dec_t;
 
+PJ_DECL(pj_status_t) g722_dec_init(g722_dec_t* dec);
 
-PJ_DECL(pj_status_t) g722_dec_init(g722_dec_t *dec);
+PJ_DECL(pj_status_t)
+g722_dec_decode(g722_dec_t* dec, void* in, pj_size_t in_size, pj_int16_t out[],
+                pj_size_t* nsamples);
 
-PJ_DECL(pj_status_t) g722_dec_decode(g722_dec_t *dec, 
-				     void *in, 
-				     pj_size_t in_size,
-				     pj_int16_t out[],
-				     pj_size_t *nsamples);
-
-PJ_DECL(pj_status_t) g722_dec_deinit(g722_dec_t *dec);
+PJ_DECL(pj_status_t) g722_dec_deinit(g722_dec_t* dec);
 
 #endif /* __PJMEDIA_CODEC_G722_DEC_H__ */
-

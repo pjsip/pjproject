@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,32 +14,36 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
 
 #if INCLUDE_FILE_TEST
 
-#define FILENAME                "testfil1.txt"
-#define NEWNAME                 "testfil2.txt"
-#define INCLUDE_FILE_TIME_TEST  0
+#    define FILENAME               "testfil1.txt"
+#    define NEWNAME                "testfil2.txt"
+#    define INCLUDE_FILE_TIME_TEST 0
 
-static char buffer[11] = {'H', 'e', 'l', 'l', 'o', ' ',
-		          'W', 'o', 'r', 'l', 'd' };
+static char buffer[11] = {
+    'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'
+};
 
 static int file_test_internal(void)
 {
-    enum { FILE_MAX_AGE = 1000 };
+    enum
+    {
+        FILE_MAX_AGE = 1000
+    };
     pj_oshandle_t fd = 0;
     pj_status_t status;
-    char readbuf[sizeof(buffer)+16];
+    char readbuf[sizeof(buffer) + 16];
     pj_file_stat stat;
     pj_time_val start_time;
     pj_ssize_t size;
     pj_off_t pos;
 
-    PJ_LOG(3,("", "..file io test.."));
+    PJ_LOG(3, ("", "..file io test.."));
 
     /* Get time. */
     pj_gettimeofday(&start_time);
@@ -90,7 +93,7 @@ static int file_test_internal(void)
     if (stat.size != sizeof(buffer))
         return -70;
 
-#if INCLUDE_FILE_TIME_TEST
+#    if INCLUDE_FILE_TIME_TEST
     /* Check file creation time >= start_time. */
     if (!PJ_TIME_VAL_GTE(stat.ctime, start_time))
         return -80;
@@ -114,7 +117,7 @@ static int file_test_internal(void)
     PJ_TIME_VAL_SUB(stat.atime, start_time);
     if (stat.atime.sec > FILE_MAX_AGE)
         return -90;
-#endif
+#    endif
 
     /*
      * Re-open the file and read data.
@@ -131,8 +134,9 @@ static int file_test_internal(void)
         read = 1;
         status = pj_file_read(fd, &readbuf[size], &read);
         if (status != PJ_SUCCESS) {
-	    PJ_LOG(3,("", "...error reading file after %d bytes (error follows)", 
-		      size));
+            PJ_LOG(3,
+                   ("", "...error reading file after %d bytes (error follows)",
+                    size));
             app_perror("...error", status);
             return -110;
         }
@@ -203,10 +207,9 @@ static int file_test_internal(void)
     if (pj_file_exists(NEWNAME))
         return -210;
 
-    PJ_LOG(3,("", "...success"));
+    PJ_LOG(3, ("", "...success"));
     return PJ_SUCCESS;
 }
-
 
 int file_test(void)
 {
@@ -222,4 +225,3 @@ int file_test(void)
 #else
 int dummy_file_test;
 #endif
-

@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,33 +22,33 @@
 #include <QWidget>
 #include <QBoxLayout>
 
-class VidWin : public QWidget
-{
+class VidWin : public QWidget {
     Q_OBJECT
 
-public:
-    VidWin(const pjmedia_vid_dev_hwnd *hwnd,
-	   QWidget* parent = 0,
-	   Qt::WindowFlags f = 0);
+   public:
+    VidWin(const pjmedia_vid_dev_hwnd* hwnd, QWidget* parent = 0,
+           Qt::WindowFlags f = 0);
     virtual ~VidWin();
-    QSize sizeHint() const { return size_hint; }
+    QSize sizeHint() const
+    {
+        return size_hint;
+    }
 
-    void putIntoLayout(QBoxLayout *layout);
+    void putIntoLayout(QBoxLayout* layout);
 
-protected:
-    virtual bool event(QEvent *e);
+   protected:
+    virtual bool event(QEvent* e);
 
-private:
+   private:
     pjmedia_vid_dev_hwnd hwnd;
-    void *orig_parent;
+    void* orig_parent;
     QSize size_hint;
 
     void attach();
     void detach();
     void set_size();
     void get_size();
-    void show_sdl(bool visible=true);
+    void show_sdl(bool visible = true);
 };
 
 #endif
-

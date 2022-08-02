@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2022 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_UPNP_H__
 #define __PJ_UPNP_H__
@@ -24,7 +24,6 @@
  */
 
 #include <pj/sock.h>
-
 
 PJ_BEGIN_DECL
 
@@ -48,28 +47,28 @@ typedef struct pj_upnp_init_param
     /**
      * The pool factory where memory will be allocated from.
      */
-    pj_pool_factory    *factory;
+    pj_pool_factory* factory;
 
     /**
      * The interface name to use for all UPnP operations.
      *
      * If NULL, the library will use the first suitable interface found.
      */
-    const char 	       *if_name;
+    const char* if_name;
 
     /**
      * The port number to use for all UPnP operations.
      *
      * If 0, the library will pick an arbitrary free port.
      */
-    unsigned  		port;
-    
+    unsigned port;
+
     /**
      * The time duration to search for IGD devices (in seconds).
      *
      * If 0, the library will use PJ_UPNP_DEFAULT_SEARCH_TIME.
      */
-    int			search_time;
+    int search_time;
 
     /**
      * The callback to notify application when the initialization
@@ -77,11 +76,9 @@ typedef struct pj_upnp_init_param
      *
      * @param status	The initialization status.
      */
-    void		(*upnp_cb)(pj_status_t status);
+    void (*upnp_cb)(pj_status_t status);
 
 } pj_upnp_init_param;
-
-
 
 /**
  * Initialize UPnP library and initiate the search for valid Internet
@@ -92,8 +89,7 @@ typedef struct pj_upnp_init_param
  * @return		PJ_SUCCESS on success, or the appropriate error
  *			status.
  */
-PJ_DECL(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param);
-
+PJ_DECL(pj_status_t) pj_upnp_init(const pj_upnp_init_param* param);
 
 /**
  * Deinitialize UPnP library.
@@ -102,7 +98,6 @@ PJ_DECL(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param);
  *			status.
  */
 PJ_DECL(pj_status_t) pj_upnp_deinit();
-
 
 /**
  * This is the main function to request a port mapping. If successful,
@@ -121,11 +116,9 @@ PJ_DECL(pj_status_t) pj_upnp_deinit();
  * @return		PJ_SUCCESS on success, or the appropriate error
  *			status.
  */
-PJ_DECL(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
-					     const pj_sock_t sock[],
-			 		     unsigned ext_port[],
-			 		     pj_sockaddr mapped_addr[]);
-
+PJ_DECL(pj_status_t)
+pj_upnp_add_port_mapping(unsigned sock_cnt, const pj_sock_t sock[],
+                         unsigned ext_port[], pj_sockaddr mapped_addr[]);
 
 /**
  * Send request to delete a port mapping.
@@ -136,8 +129,7 @@ PJ_DECL(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
  * @return		PJ_SUCCESS on success, or the appropriate error
  *			status.
  */
-PJ_DECL(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr);
-
+PJ_DECL(pj_status_t) pj_upnp_del_port_mapping(const pj_sockaddr* mapped_addr);
 
 PJ_END_DECL
 
@@ -145,4 +137,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJ_UPNP_H__ */
+#endif /* __PJ_UPNP_H__ */

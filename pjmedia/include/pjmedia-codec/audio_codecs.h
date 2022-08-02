@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_ALL_CODECS_H__
 #define __PJMEDIA_CODEC_ALL_CODECS_H__
@@ -25,7 +24,6 @@
  */
 #include <pjmedia/endpoint.h>
 #include <pjmedia-codec/passthrough.h>
-
 
 PJ_BEGIN_DECL
 
@@ -46,24 +44,26 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_audio_codec_config
 {
     /** Speex codec settings. See #pjmedia_codec_speex_init() for more info */
-    struct {
-	unsigned	option;		/**< Bitmask of options.	*/
-	int		quality;	/**< Codec quality.		*/
-	int		complexity;	/**< Codec complexity.		*/
+    struct
+    {
+        unsigned option; /**< Bitmask of options.	*/
+        int quality;     /**< Codec quality.		*/
+        int complexity;  /**< Codec complexity.		*/
     } speex;
 
     /** iLBC settings */
-    struct {
-	unsigned	mode;		/**< iLBC mode.			*/
+    struct
+    {
+        unsigned mode; /**< iLBC mode.			*/
     } ilbc;
 
     /** Passthrough */
-    struct {
-	pjmedia_codec_passthrough_setting setting; /**< Passthrough	*/
+    struct
+    {
+        pjmedia_codec_passthrough_setting setting; /**< Passthrough	*/
     } passthrough;
 
 } pjmedia_audio_codec_config;
-
 
 /**
  * Initialize pjmedia_audio_codec_config structure with default values.
@@ -71,7 +71,7 @@ typedef struct pjmedia_audio_codec_config
  * @param cfg		The codec config to be initialized.
  */
 PJ_DECL(void)
-pjmedia_audio_codec_config_default(pjmedia_audio_codec_config *cfg);
+pjmedia_audio_codec_config_default(pjmedia_audio_codec_config* cfg);
 
 /**
  * Register all known audio codecs implemented in PJMEDA-CODEC library to the
@@ -84,15 +84,13 @@ pjmedia_audio_codec_config_default(pjmedia_audio_codec_config *cfg);
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t)
-pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
-                                    const pjmedia_audio_codec_config *c);
-
+pjmedia_codec_register_audio_codecs(pjmedia_endpt* endpt,
+                                    const pjmedia_audio_codec_config* c);
 
 /**
  * @}  PJMEDIA_CODEC_REGISTER_ALL
  */
 
-
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_CODEC_ALL_CODECS_H__ */
+#endif /* __PJMEDIA_CODEC_ALL_CODECS_H__ */

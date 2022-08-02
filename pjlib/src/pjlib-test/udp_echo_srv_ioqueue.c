@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,36 +14,36 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib.h>
 #include "test.h"
 
-static pj_ioqueue_key_t *key;
-static pj_atomic_t *total_bytes;
+static pj_ioqueue_key_t* key;
+static pj_atomic_t* total_bytes;
 static pj_bool_t thread_quit_flag;
 
 struct op_key
 {
-    pj_ioqueue_op_key_t  op_key_;
-    struct op_key       *peer;
-    char                *buffer;
-    pj_size_t            size;
-    int                  is_pending;
-    pj_status_t          last_err;
-    pj_sockaddr_in       addr;
-    int                  addrlen;
+    pj_ioqueue_op_key_t op_key_;
+    struct op_key* peer;
+    char* buffer;
+    pj_size_t size;
+    int is_pending;
+    pj_status_t last_err;
+    pj_sockaddr_in addr;
+    int addrlen;
 };
 
-static void on_read_complete(pj_ioqueue_key_t *ioq_key, 
-                             pj_ioqueue_op_key_t *op_key, 
+static void on_read_complete(pj_ioqueue_key_t* ioq_key,
+                             pj_ioqueue_op_key_t* op_key,
                              pj_ssize_t bytes_received)
 {
     pj_status_t rc;
-    struct op_key *recv_rec = (struct op_key *)op_key;
+    struct op_key* recv_rec = (struct op_key*)op_key;
 
     for (;;) {
-        struct op_key *send_rec = recv_rec->peer;
+        struct op_key* send_rec = recv_rec->peer;
         recv_rec->is_pending = 0;
 
         if (bytes_received < 0) {
@@ -65,9 +64,9 @@ static void on_read_complete(pj_ioqueue_key_t *ioq_key,
                 rc = pj_ioqueue_sendto(ioq_key, &send_rec->op_key_,
                                        send_rec->buffer, &sent, 0,
                                        &send_rec->addr, send_rec->addrlen);
-                send_rec->is_pending = (rc==PJ_EPENDING);
+                send_rec->is_pending = (rc == PJ_EPENDING);
 
-                if (rc!=PJ_SUCCESS && rc!=PJ_EPENDING) {
+                if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
                     app_perror("...send error(1)", rc);
                 }
             }
@@ -78,7 +77,7 @@ static void on_read_complete(pj_ioqueue_key_t *ioq_key,
             rc = pj_ioqueue_recvfrom(ioq_key, &recv_rec->op_key_,
                                      recv_rec->buffer, &bytes_received, 0,
                                      &recv_rec->addr, &recv_rec->addrlen);
-            recv_rec->is_pending = (rc==PJ_EPENDING);
+            recv_rec->is_pending = (rc == PJ_EPENDING);
             if (rc == PJ_SUCCESS) {
                 /* fall through next loop. */
             } else if (rc == PJ_EPENDING) {
@@ -99,11 +98,11 @@ static void on_read_complete(pj_ioqueue_key_t *ioq_key,
     }
 }
 
-static void on_write_complete(pj_ioqueue_key_t *ioq_key, 
-                              pj_ioqueue_op_key_t *op_key, 
+static void on_write_complete(pj_ioqueue_key_t* ioq_key,
+                              pj_ioqueue_op_key_t* op_key,
                               pj_ssize_t bytes_sent)
 {
-    struct op_key *send_rec = (struct op_key*)op_key;
+    struct op_key* send_rec = (struct op_key*)op_key;
 
     if (bytes_sent <= 0) {
         pj_status_t rc = (pj_status_t)-bytes_sent;
@@ -117,9 +116,9 @@ static void on_write_complete(pj_ioqueue_key_t *ioq_key,
     on_read_complete(ioq_key, &send_rec->peer->op_key_, 0);
 }
 
-static int worker_thread(void *arg)
+static int worker_thread(void* arg)
 {
-    pj_ioqueue_t *ioqueue = (pj_ioqueue_t*) arg;
+    pj_ioqueue_t* ioqueue = (pj_ioqueue_t*)arg;
     struct op_key read_op, write_op;
     char recv_buf[512], send_buf[512];
     pj_ssize_t length;
@@ -145,10 +144,11 @@ static int worker_thread(void *arg)
         read_op.is_pending = 1;
         on_read_complete(key, &read_op.op_key_, length);
     }
-    
+
     while (!thread_quit_flag) {
         pj_time_val timeout;
-        timeout.sec = 0; timeout.msec = 10;
+        timeout.sec = 0;
+        timeout.msec = 10;
         rc = pj_ioqueue_poll(ioqueue, &timeout);
     }
     return 0;
@@ -156,12 +156,12 @@ static int worker_thread(void *arg)
 
 int udp_echo_srv_ioqueue(void)
 {
-    pj_pool_t *pool;
+    pj_pool_t* pool;
     pj_sock_t sock;
-    pj_ioqueue_t *ioqueue;
+    pj_ioqueue_t* ioqueue;
     pj_ioqueue_callback callback;
     int i;
-    pj_thread_t *thread[ECHO_SERVER_MAX_THREADS];
+    pj_thread_t* thread[ECHO_SERVER_MAX_THREADS];
     pj_status_t rc;
 
     pj_bzero(&callback, sizeof(callback));
@@ -178,15 +178,14 @@ int udp_echo_srv_ioqueue(void)
         return -20;
     }
 
-    rc = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, 
-                    ECHO_SERVER_START_PORT, &sock);
+    rc = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, ECHO_SERVER_START_PORT,
+                    &sock);
     if (rc != PJ_SUCCESS) {
         app_perror("...app_socket error", rc);
         return -30;
     }
 
-    rc = pj_ioqueue_register_sock(pool, ioqueue, sock, NULL,
-                                  &callback, &key);
+    rc = pj_ioqueue_register_sock(pool, ioqueue, sock, NULL, &callback, &key);
     if (rc != PJ_SUCCESS) {
         app_perror("...error registering socket", rc);
         return -40;
@@ -198,10 +197,9 @@ int udp_echo_srv_ioqueue(void)
         return -45;
     }
 
-    for (i=0; i<ECHO_SERVER_MAX_THREADS; ++i) {
+    for (i = 0; i < ECHO_SERVER_MAX_THREADS; ++i) {
         rc = pj_thread_create(pool, NULL, &worker_thread, ioqueue,
-                              PJ_THREAD_DEFAULT_STACK_SIZE, 0,
-                              &thread[i]);
+                              PJ_THREAD_DEFAULT_STACK_SIZE, 0, &thread[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...create thread error", rc);
             return -50;

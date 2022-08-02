@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,11 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_GUID_H__
 #define __PJ_GUID_H__
-
 
 /**
  * @file guid.h
@@ -27,9 +25,7 @@
  */
 #include <pj/types.h>
 
-
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup PJ_DS Data Structure.
@@ -43,7 +39,6 @@ PJ_BEGIN_DECL
  * If application doesn't require that strong requirement, it can just
  * use #pj_create_random_string() instead.
  */
-
 
 /**
  * PJ_GUID_STRING_LENGTH specifies length of GUID string. The value is
@@ -69,7 +64,7 @@ PJ_DECL(unsigned) pj_GUID_STRING_LENGTH(void);
  * PJ_GUID_MAX_LENGTH specifies the maximum length of GUID string,
  * regardless of which algorithm to use.
  */
-#define PJ_GUID_MAX_LENGTH  36
+#define PJ_GUID_MAX_LENGTH 36
 
 /**
  * Create a globally unique string, which length is PJ_GUID_STRING_LENGTH
@@ -80,7 +75,7 @@ PJ_DECL(unsigned) pj_GUID_STRING_LENGTH(void);
  *
  * @return          The string.
  */
-PJ_DECL(pj_str_t*) pj_generate_unique_string(pj_str_t *str);
+PJ_DECL(pj_str_t*) pj_generate_unique_string(pj_str_t* str);
 
 /**
  * Create a globally unique string in lowercase, which length is
@@ -91,7 +86,7 @@ PJ_DECL(pj_str_t*) pj_generate_unique_string(pj_str_t *str);
  *
  * @return          The string.
  */
-PJ_DECL(pj_str_t*) pj_generate_unique_string_lower(pj_str_t *str);
+PJ_DECL(pj_str_t*) pj_generate_unique_string_lower(pj_str_t* str);
 
 /**
  * Generate a unique string.
@@ -99,7 +94,7 @@ PJ_DECL(pj_str_t*) pj_generate_unique_string_lower(pj_str_t *str);
  * @param pool	    Pool to allocate memory from.
  * @param str	    The string.
  */
-PJ_DECL(void) pj_create_unique_string(pj_pool_t *pool, pj_str_t *str);
+PJ_DECL(void) pj_create_unique_string(pj_pool_t* pool, pj_str_t* str);
 
 /**
  * Generate a unique string in lowercase.
@@ -107,8 +102,7 @@ PJ_DECL(void) pj_create_unique_string(pj_pool_t *pool, pj_str_t *str);
  * @param pool	    Pool to allocate memory from.
  * @param str	    The string.
  */
-PJ_DECL(void) pj_create_unique_string_lower(pj_pool_t *pool, pj_str_t *str);
-
+PJ_DECL(void) pj_create_unique_string_lower(pj_pool_t* pool, pj_str_t* str);
 
 /**
  * @}
@@ -116,5 +110,4 @@ PJ_DECL(void) pj_create_unique_string_lower(pj_pool_t *pool, pj_str_t *str);
 
 PJ_END_DECL
 
-#endif/* __PJ_GUID_H__ */
-
+#endif /* __PJ_GUID_H__ */

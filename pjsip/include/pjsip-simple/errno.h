@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -27,8 +26,7 @@ PJ_BEGIN_DECL
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.
  */
-#define PJSIP_SIMPLE_ERRNO_START  (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*2)
-
+#define PJSIP_SIMPLE_ERRNO_START     (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE * 2)
 
 /************************************************************
  * EVENT PACKAGE ERRORS
@@ -37,13 +35,12 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * No event package with the specified name.
  */
-#define PJSIP_SIMPLE_ENOPKG	    (PJSIP_SIMPLE_ERRNO_START+1)    /*270001*/
+#define PJSIP_SIMPLE_ENOPKG          (PJSIP_SIMPLE_ERRNO_START + 1) /*270001*/
 /**
  * @hideinitializer
  * Event package already exists.
  */
-#define PJSIP_SIMPLE_EPKGEXISTS	    (PJSIP_SIMPLE_ERRNO_START+2)    /*270002*/
-
+#define PJSIP_SIMPLE_EPKGEXISTS      (PJSIP_SIMPLE_ERRNO_START + 2) /*270002*/
 
 /************************************************************
  * PRESENCE ERROR
@@ -52,38 +49,37 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Expecting SUBSCRIBE request
  */
-#define PJSIP_SIMPLE_ENOTSUBSCRIBE  (PJSIP_SIMPLE_ERRNO_START+20)   /*270020*/
+#define PJSIP_SIMPLE_ENOTSUBSCRIBE   (PJSIP_SIMPLE_ERRNO_START + 20) /*270020*/
 /**
  * @hideinitializer
  * No presence associated with subscription
  */
-#define PJSIP_SIMPLE_ENOPRESENCE    (PJSIP_SIMPLE_ERRNO_START+21)   /*270021*/
+#define PJSIP_SIMPLE_ENOPRESENCE     (PJSIP_SIMPLE_ERRNO_START + 21) /*270021*/
 /**
  * @hideinitializer
  * No presence info in server subscription
  */
-#define PJSIP_SIMPLE_ENOPRESENCEINFO (PJSIP_SIMPLE_ERRNO_START+22)  /*270022*/
+#define PJSIP_SIMPLE_ENOPRESENCEINFO (PJSIP_SIMPLE_ERRNO_START + 22) /*270022*/
 /**
  * @hideinitializer
  * Bad Content-Type
  */
-#define PJSIP_SIMPLE_EBADCONTENT    (PJSIP_SIMPLE_ERRNO_START+23)   /*270023*/
+#define PJSIP_SIMPLE_EBADCONTENT     (PJSIP_SIMPLE_ERRNO_START + 23) /*270023*/
 /**
  * @hideinitializer
  * Bad PIDF Message
  */
-#define PJSIP_SIMPLE_EBADPIDF	    (PJSIP_SIMPLE_ERRNO_START+24)   /*270024*/
+#define PJSIP_SIMPLE_EBADPIDF        (PJSIP_SIMPLE_ERRNO_START + 24) /*270024*/
 /**
  * @hideinitializer
  * Bad XPIDF Message
  */
-#define PJSIP_SIMPLE_EBADXPIDF	    (PJSIP_SIMPLE_ERRNO_START+25)   /*270025*/
+#define PJSIP_SIMPLE_EBADXPIDF       (PJSIP_SIMPLE_ERRNO_START + 25) /*270025*/
 /**
  * @hideinitializer
  * Bad RPID Message
  */
-#define PJSIP_SIMPLE_EBADRPID	    (PJSIP_SIMPLE_ERRNO_START+26)   /*270026*/
-
+#define PJSIP_SIMPLE_EBADRPID        (PJSIP_SIMPLE_ERRNO_START + 26) /*270026*/
 
 /************************************************************
  * ISCOMPOSING ERRORS
@@ -92,7 +88,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Bad isComposing XML message.
  */
-#define PJSIP_SIMPLE_EBADISCOMPOSE  (PJSIP_SIMPLE_ERRNO_START+40)   /*270040*/
+#define PJSIP_SIMPLE_EBADISCOMPOSE   (PJSIP_SIMPLE_ERRNO_START + 40) /*270040*/
 
 /**
  * Get error message for the specified error code. Note that this
@@ -108,11 +104,9 @@ PJ_BEGIN_DECL
  * @return	    The error message as NULL terminated string,
  *                  wrapped with pj_str_t.
  */
-PJ_DECL(pj_str_t) pjsipsimple_strerror(pj_status_t status, 
-				       char *buffer, pj_size_t bufsize);
-
+PJ_DECL(pj_str_t)
+pjsipsimple_strerror(pj_status_t status, char* buffer, pj_size_t bufsize);
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIMPLE_ERRNO_H__ */
-
+#endif /* __PJSIP_SIMPLE_ERRNO_H__ */

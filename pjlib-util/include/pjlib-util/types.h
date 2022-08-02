@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_TYPES_H__
 #define __PJLIB_UTIL_TYPES_H__
@@ -42,10 +41,7 @@ PJ_BEGIN_DECL
  */
 PJ_DECL(pj_status_t) pjlib_util_init(void);
 
-
-
 PJ_END_DECL
-
 
 /**
  * @}
@@ -71,7 +67,7 @@ PJ_END_DECL
  * \n
  * This is the documentation of PJLIB-UTIL, an auxiliary library providing
  * adjunct functions to PJLIB.
- * 
+ *
  * Please go to the <A HREF="modules.htm"><B>Table of Contents</B></A> page
  * for list of modules.
  *
@@ -91,5 +87,4 @@ PJ_END_DECL
  * \n
  */
 
-#endif	/* __PJLIB_UTIL_TYPES_H__ */
-
+#endif /* __PJLIB_UTIL_TYPES_H__ */

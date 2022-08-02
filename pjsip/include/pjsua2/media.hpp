@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -53,14 +52,14 @@ struct MediaFormat
      *
      * @see pjmedia_format_id
      */
-    pj_uint32_t		id;
+    pj_uint32_t id;
 
     /**
      * The top-most type of the media, as an information.
      */
-    pjmedia_type	type;
+    pjmedia_type type;
 
-public:
+   public:
     /**
      * Default constructor
      */
@@ -73,17 +72,17 @@ public:
  */
 struct MediaFormatAudio : public MediaFormat
 {
-    unsigned	clockRate;	/**< Audio clock rate in samples or Hz. */
-    unsigned	channelCount;	/**< Number of channels.		*/
-    unsigned	frameTimeUsec;  /**< Frame interval, in microseconds.	*/
-    unsigned	bitsPerSample;	/**< Number of bits per sample.		*/
-    pj_uint32_t	avgBps;		/**< Average bitrate			*/
-    pj_uint32_t	maxBps;		/**< Maximum bitrate			*/
+    unsigned clockRate;     /**< Audio clock rate in samples or Hz. */
+    unsigned channelCount;  /**< Number of channels.		*/
+    unsigned frameTimeUsec; /**< Frame interval, in microseconds.	*/
+    unsigned bitsPerSample; /**< Number of bits per sample.		*/
+    pj_uint32_t avgBps;     /**< Average bitrate			*/
+    pj_uint32_t maxBps;     /**< Maximum bitrate			*/
 
     /**
      * Construct from pjmedia_format.
      */
-    void fromPj(const pjmedia_format &format);
+    void fromPj(const pjmedia_format& format);
 
     /**
      * Export to pjmedia_format.
@@ -96,17 +95,17 @@ struct MediaFormatAudio : public MediaFormat
  */
 struct MediaFormatVideo : public MediaFormat
 {
-    unsigned		width;	    /**< Video width. 			*/
-    unsigned		height;	    /**< Video height.			*/
-    int			fpsNum;	    /**< Frames per second numerator.	*/
-    int			fpsDenum;   /**< Frames per second denumerator.	*/
-    pj_uint32_t		avgBps;	    /**< Average bitrate.		*/
-    pj_uint32_t		maxBps;	    /**< Maximum bitrate.		*/
+    unsigned width;     /**< Video width. 			*/
+    unsigned height;    /**< Video height.			*/
+    int fpsNum;         /**< Frames per second numerator.	*/
+    int fpsDenum;       /**< Frames per second denumerator.	*/
+    pj_uint32_t avgBps; /**< Average bitrate.		*/
+    pj_uint32_t maxBps; /**< Maximum bitrate.		*/
 
     /**
      * Construct from pjmedia_format.
      */
-    void fromPj(const pjmedia_format &format);
+    void fromPj(const pjmedia_format& format);
 
     /**
      * Export to pjmedia_format.
@@ -122,61 +121,60 @@ typedef std::vector<MediaFormatVideo> MediaFormatVideoVector;
 
 /**
  * This structure descibes information about a particular media port that
- * has been registered into the conference bridge. 
+ * has been registered into the conference bridge.
  */
 struct ConfPortInfo
 {
     /**
      * Conference port number.
      */
-    int			portId;
+    int portId;
 
     /**
      * Port name.
      */
-    string		name;
+    string name;
 
     /**
      * Media audio format information
      */
-    MediaFormatAudio	format;
+    MediaFormatAudio format;
 
     /**
      * Tx level adjustment. Value 1.0 means no adjustment, value 0 means
      * the port is muted, value 2.0 means the level is amplified two times.
      */
-    float		txLevelAdj;
+    float txLevelAdj;
 
     /**
      * Rx level adjustment. Value 1.0 means no adjustment, value 0 means
      * the port is muted, value 2.0 means the level is amplified two times.
      */
-    float		rxLevelAdj;
+    float rxLevelAdj;
 
     /**
      * Array of listeners (in other words, ports where this port is
      * transmitting to).
      */
-    IntVector		listeners;
+    IntVector listeners;
 
-public:
+   public:
     /**
      * Construct from pjsua_conf_port_info.
      */
-    void fromPj(const pjsua_conf_port_info &port_info);
+    void fromPj(const pjsua_conf_port_info& port_info);
 };
 
 /**
  * Media port, corresponds to pjmedia_port
  */
-typedef void *MediaPort;
+typedef void* MediaPort;
 
 /**
  * Media.
  */
-class Media
-{
-public:
+class Media {
+   public:
     /**
      * Virtual destructor.
      */
@@ -189,17 +187,17 @@ public:
      */
     pjmedia_type getType() const;
 
-protected:
+   protected:
     /**
      * Constructor.
      */
     Media(pjmedia_type med_type);
 
-private:
+   private:
     /**
      * Media type.
      */
-    pjmedia_type        type;
+    pjmedia_type type;
 };
 
 /**
@@ -213,9 +211,9 @@ struct AudioMediaTransmitParam
      *
      * Default: 1.0
      */
-    float		level;
+    float level;
 
-public:
+   public:
     /**
      * Default constructor
      */
@@ -224,7 +222,7 @@ public:
 
 /**
  * Audio Media. This is a lite wrapper class for audio conference bridge port,
- * i.e: this class only maintains one data member, conference slot ID, and 
+ * i.e: this class only maintains one data member, conference slot ID, and
  * the methods are simply proxies for conference bridge operations.
  *
  * Application can create a derived class and use registerMediaPort2()/
@@ -240,12 +238,11 @@ public:
  * generated copy. All AudioMedia methods should work normally on this
  * generated copy instance.
  */
-class AudioMedia : public Media
-{
-public:
+class AudioMedia : public Media {
+   public:
     /**
-    * Get information about the specified conference port.
-    */
+     * Get information about the specified conference port.
+     */
     ConfPortInfo getPortInfo() const PJSUA2_THROW(Error);
 
     /**
@@ -271,7 +268,7 @@ public:
      *
      * @param sink		The destination Media.
      */
-    void startTransmit(const AudioMedia &sink) const PJSUA2_THROW(Error);
+    void startTransmit(const AudioMedia& sink) const PJSUA2_THROW(Error);
 
     /**
      * Establish unidirectional media flow to sink. This media port
@@ -298,9 +295,9 @@ public:
      * @param sink		The destination Media.
      * @param param		The parameter.
      */
-    void startTransmit2(const AudioMedia &sink, 
-			const AudioMediaTransmitParam &param) const
-         PJSUA2_THROW(Error);
+    void startTransmit2(const AudioMedia& sink,
+                        const AudioMediaTransmitParam& param) const
+      PJSUA2_THROW(Error);
 
     /**
      *  Stop media flow to destination/sink port.
@@ -308,7 +305,7 @@ public:
      * @param sink		The destination media.
      *
      */
-    void stopTransmit(const AudioMedia &sink) const PJSUA2_THROW(Error);
+    void stopTransmit(const AudioMedia& sink) const PJSUA2_THROW(Error);
 
     /**
      * Adjust the signal level to be transmitted from the bridge to this
@@ -354,7 +351,7 @@ public:
      *
      * @return			The object as AudioMedia instance
      */
-    static AudioMedia* typecastFromMedia(Media *media);
+    static AudioMedia* typecastFromMedia(Media* media);
 
     /**
      * Default Constructor.
@@ -370,13 +367,13 @@ public:
      */
     virtual ~AudioMedia();
 
-protected:
+   protected:
     /**
      * Conference port Id.
      */
-    int			 id;
+    int id;
 
-protected:
+   protected:
     /**
      * Warning: deprecated and will be removed in future release, use
      * registerMediaPort2() instead.
@@ -399,8 +396,8 @@ protected:
      * param pool  The memory pool.
      *
      */
-    void registerMediaPort2(MediaPort port, pj_pool_t *pool)
-			    PJSUA2_THROW(Error);
+    void registerMediaPort2(MediaPort port, pj_pool_t* pool)
+      PJSUA2_THROW(Error);
 
     /**
      * This method needs to be called by descendants of this class to remove
@@ -410,19 +407,18 @@ protected:
      */
     void unregisterMediaPort();
 
-private:
+   private:
     /* Memory pool for deprecated registerMediaPort() */
-    pj_caching_pool 	 mediaCachingPool;
-    pj_pool_t 		*mediaPool;
+    pj_caching_pool mediaCachingPool;
+    pj_pool_t* mediaPool;
 };
 
-/** 
+/**
  * Warning: deprecated, use AudioMediaVector2 instead.
  *
  * Array of Audio Media.
  */
 typedef std::vector<AudioMedia*> AudioMediaVector;
-
 
 /** Array of Audio Media */
 typedef std::vector<AudioMedia> AudioMediaVector2;
@@ -435,25 +431,25 @@ struct AudioMediaPlayerInfo
     /**
      * Format ID of the payload.
      */
-    pjmedia_format_id	formatId;
+    pjmedia_format_id formatId;
 
     /**
      * The number of bits per sample of the file payload. For example,
      * the value is 16 for PCM WAV and 8 for Alaw/Ulas WAV files.
      */
-    unsigned		payloadBitsPerSample;
+    unsigned payloadBitsPerSample;
 
     /**
      * The WAV payload size in bytes.
      */
-    pj_uint32_t		sizeBytes;
+    pj_uint32_t sizeBytes;
 
     /**
      * The WAV payload size in samples.
      */
-    pj_uint32_t		sizeSamples;
+    pj_uint32_t sizeSamples;
 
-public:
+   public:
     /**
      * Default constructor
      */
@@ -464,16 +460,15 @@ public:
 /**
  * Audio Media Player.
  */
-class AudioMediaPlayer : public AudioMedia
-{
-public:
-    /** 
+class AudioMediaPlayer : public AudioMedia {
+   public:
+    /**
      * Constructor.
      */
     AudioMediaPlayer();
 
     /**
-     * Create a file player,  and automatically add this 
+     * Create a file player,  and automatically add this
      * player to the conference bridge.
      *
      * @param file_name	 The filename to be played. Currently only
@@ -483,8 +478,8 @@ public:
      * @param options	 Optional option flag. Application may specify
      *			 PJMEDIA_FILE_NO_LOOP to prevent playback loop.
      */
-    void createPlayer(const string &file_name,
-		      unsigned options=0) PJSUA2_THROW(Error);
+    void createPlayer(const string& file_name, unsigned options = 0)
+      PJSUA2_THROW(Error);
 
     /**
      * Create a file playlist media port, and automatically add the port
@@ -497,9 +492,9 @@ public:
      * @param options	  Optional option flag. Application may specify
      *			  PJMEDIA_FILE_NO_LOOP to prevent looping.
      */
-    void createPlaylist(const StringVector &file_names,
-			const string &label="",
-			unsigned options=0) PJSUA2_THROW(Error);
+    void createPlaylist(const StringVector& file_names,
+                        const string& label = "", unsigned options = 0)
+      PJSUA2_THROW(Error);
 
     /**
      * Get additional info about the player. This operation is only valid
@@ -535,7 +530,7 @@ public:
      *
      * @return			The object as AudioMediaPlayer instance
      */
-    static AudioMediaPlayer* typecastFromAudioMedia(AudioMedia *media);
+    static AudioMediaPlayer* typecastFromAudioMedia(AudioMedia* media);
 
     /**
      * Destructor. This will unregister the player port from the conference
@@ -543,14 +538,13 @@ public:
      */
     virtual ~AudioMediaPlayer();
 
-public:
+   public:
     /*
      * Callbacks
      */
 
-
 /* Unfortunately for pjsua2, a hard deprecation is inevitable. */
-#if 0 // !DEPRECATED_FOR_TICKET_2251
+#if 0  // !DEPRECATED_FOR_TICKET_2251
     /**
      * Register a callback to be called when the file player reading has
      * reached the end of file, or when the file reading has reached the
@@ -579,27 +573,25 @@ public:
      * been stopped, could the application safely destroy the player.
      */
     virtual void onEof2()
-    { }
+    {}
 
-private:
+   private:
     /**
      * Player Id.
      */
-    int	playerId;
+    int playerId;
 
     /**
      *  Low level PJMEDIA callback
      */
-    static void eof_cb(pjmedia_port *port,
-                       void *usr_data);
+    static void eof_cb(pjmedia_port* port, void* usr_data);
 };
 
 /**
  * Audio Media Recorder.
  */
-class AudioMediaRecorder : public AudioMedia
-{
-public:
+class AudioMediaRecorder : public AudioMedia {
+   public:
     /**
      * Constructor.
      */
@@ -625,10 +617,9 @@ public:
      * 			 and PJMEDIA_FILE_WRITE_ULAW. Default is zero or
      * 			 PJMEDIA_FILE_WRITE_PCM.
      */
-    void createRecorder(const string &file_name,
-			unsigned enc_type=0,
-			long max_size=0,
-			unsigned options=0) PJSUA2_THROW(Error);
+    void createRecorder(const string& file_name, unsigned enc_type = 0,
+                        long max_size = 0, unsigned options = 0)
+      PJSUA2_THROW(Error);
 
     /**
      * Warning: deprecated and will be removed in future release.
@@ -640,7 +631,7 @@ public:
      *
      * @return			The object as AudioMediaRecorder instance
      */
-    static AudioMediaRecorder* typecastFromAudioMedia(AudioMedia *media);
+    static AudioMediaRecorder* typecastFromAudioMedia(AudioMedia* media);
 
     /**
      * Destructor. This will unregister the recorder port from the conference
@@ -648,24 +639,24 @@ public:
      */
     virtual ~AudioMediaRecorder();
 
-private:
+   private:
     /**
      * Recorder Id.
      */
-    int	recorderId;
+    int recorderId;
 };
 
 /**
  * Tone descriptor (abstraction for pjmedia_tone_desc)
  */
-class ToneDesc : public pjmedia_tone_desc
-{
-public:
+class ToneDesc : public pjmedia_tone_desc {
+   public:
     ToneDesc()
     {
-	pj_bzero(this, sizeof(*this));
+        pj_bzero(this, sizeof(*this));
     }
-    ~ToneDesc() {}
+    ~ToneDesc()
+    {}
 };
 
 /**
@@ -676,14 +667,14 @@ typedef std::vector<ToneDesc> ToneDescVector;
 /**
  * Tone digit (abstraction for pjmedia_tone_digit)
  */
-class ToneDigit : public pjmedia_tone_digit
-{
-public:
+class ToneDigit : public pjmedia_tone_digit {
+   public:
     ToneDigit()
     {
-	pj_bzero(this, sizeof(*this));
+        pj_bzero(this, sizeof(*this));
     }
-    ~ToneDigit() {}
+    ~ToneDigit()
+    {}
 };
 
 /**
@@ -696,10 +687,10 @@ typedef std::vector<ToneDigit> ToneDigitVector;
  */
 struct ToneDigitMapDigit
 {
-public:
-    string	digit;
-    int		freq1;
-    int		freq2;
+   public:
+    string digit;
+    int freq1;
+    int freq2;
 };
 
 /**
@@ -710,9 +701,8 @@ typedef std::vector<ToneDigitMapDigit> ToneDigitMapVector;
 /**
  * Tone generator.
  */
-class ToneGenerator : public AudioMedia
-{
-public:
+class ToneGenerator : public AudioMedia {
+   public:
     /**
      * Constructor.
      */
@@ -728,7 +718,7 @@ public:
      * Create tone generator and register the port to the conference bridge.
      */
     void createToneGenerator(unsigned clock_rate = 16000,
-			     unsigned channel_count = 1) PJSUA2_THROW(Error);
+                             unsigned channel_count = 1) PJSUA2_THROW(Error);
 
     /**
      * Check if the tone generator is still busy producing some tones.
@@ -757,8 +747,8 @@ public:
      * @param tones	    Array of tones to be played.
      * @param loop	    Play the tone in a loop.
      */
-    void play(const ToneDescVector &tones,
-              bool loop=false) PJSUA2_THROW(Error);
+    void play(const ToneDescVector& tones, bool loop = false)
+      PJSUA2_THROW(Error);
 
     /**
      * Instruct the tone generator to play multiple MF digits with each of
@@ -771,8 +761,8 @@ public:
      * @param digits	    Array of MF digits.
      * @param loop	    Play the tone in a loop.
      */
-    void playDigits(const ToneDigitVector &digits,
-                    bool loop=false) PJSUA2_THROW(Error);
+    void playDigits(const ToneDigitVector& digits, bool loop = false)
+      PJSUA2_THROW(Error);
 
     /**
      * Get the digit-map currently used by this tone generator.
@@ -786,18 +776,17 @@ public:
      *
      * @param digit_map	    Digitmap to be used by the tone generator.
      */
-    void setDigitMap(const ToneDigitMapVector &digit_map) PJSUA2_THROW(Error);
+    void setDigitMap(const ToneDigitMapVector& digit_map) PJSUA2_THROW(Error);
 
-private:
-    pj_pool_t *pool;
-    pjmedia_port *tonegen;
+   private:
+    pj_pool_t* pool;
+    pjmedia_port* tonegen;
     pjmedia_tone_digit_map digitMap;
 };
 
-
 /*************************************************************************
-* Sound device management
-*/
+ * Sound device management
+ */
 
 /**
  * Audio device information structure.
@@ -853,7 +842,7 @@ struct AudioDevInfo
     /**
      * Construct from pjmedia_aud_dev_info.
      */
-    void fromPj(const pjmedia_aud_dev_info &dev_info);
+    void fromPj(const pjmedia_aud_dev_info& dev_info);
 
     /**
      * Destructor.
@@ -861,7 +850,7 @@ struct AudioDevInfo
     ~AudioDevInfo();
 };
 
-/** 
+/**
  * Warning: deprecated, use AudioDevInfoVector2 instead.
  *
  * Array of audio device info.
@@ -874,9 +863,8 @@ typedef std::vector<AudioDevInfo> AudioDevInfoVector2;
 /**
  * Audio device manager.
  */
-class AudDevManager
-{
-public:
+class AudDevManager {
+   public:
     /**
      * Get currently active capture sound devices. If sound devices has not been
      * created, it is possible that the function returns -1 as device IDs.
@@ -890,7 +878,7 @@ public:
      *
      * @return			Audio media for the capture device.
      */
-    AudioMedia &getCaptureDevMedia() PJSUA2_THROW(Error);
+    AudioMedia& getCaptureDevMedia() PJSUA2_THROW(Error);
 
     /**
      * Get currently active playback sound devices. If sound devices has not
@@ -905,11 +893,11 @@ public:
      *
      * @return			Audio media for the speaker/playback device.
      */
-    AudioMedia &getPlaybackDevMedia() PJSUA2_THROW(Error);
+    AudioMedia& getPlaybackDevMedia() PJSUA2_THROW(Error);
 
     /**
      * Select or change capture sound device. Application may call this
-     * function at any time to replace current sound device. Calling this 
+     * function at any time to replace current sound device. Calling this
      * method will not change the state of the sound device (opened/closed).
      *
      * @param capture_dev   	Device ID of the capture device.
@@ -918,7 +906,7 @@ public:
 
     /**
      * Select or change playback sound device. Application may call this
-     * function at any time to replace current sound device. Calling this 
+     * function at any time to replace current sound device. Calling this
      * method will not change the state of the sound device (opened/closed).
      *
      * @param playback_dev   	Device ID of the playback device.
@@ -935,7 +923,7 @@ public:
      *
      * @return			The list of audio device info.
      */
-    const AudioDevInfoVector &enumDev() PJSUA2_THROW(Error);
+    const AudioDevInfoVector& enumDev() PJSUA2_THROW(Error);
 #endif
 
     /**
@@ -961,7 +949,7 @@ public:
      *				so that application can connect this to it's
      *				own sound device or master port.
      */
-    MediaPort *setNoDev();
+    MediaPort* setNoDev();
 
     /**
      * Set sound device mode.
@@ -969,8 +957,8 @@ public:
      * Note that this method will open the sound device, using current
      * active IDs set via setCaptureDev() or setPlaybackDev(), if the flag
      * PJSUA_SND_DEV_NO_IMMEDIATE_OPEN is not specified.
-     * 
-     * @param mode		The sound device mode, as bitmask combination 
+     *
+     * @param mode		The sound device mode, as bitmask combination
      *				of #pjsua_snd_dev_mode
      *
      */
@@ -1057,8 +1045,8 @@ public:
      * @return			The device ID. If the device is not found,
      * 				Error will be thrown.
      */
-    int lookupDev(const string &drv_name,
-		  const string &dev_name) const PJSUA2_THROW(Error);
+    int lookupDev(const string& drv_name, const string& dev_name) const
+      PJSUA2_THROW(Error);
 
     /**
      * Get string info for the specified capability.
@@ -1088,8 +1076,8 @@ public:
      * 				future use.
      *
      */
-    void setExtFormat(const MediaFormatAudio &format, bool keep=true)
-		      PJSUA2_THROW(Error);
+    void setExtFormat(const MediaFormatAudio& format, bool keep = true)
+      PJSUA2_THROW(Error);
 
     /**
      * Get the audio format capability (other than PCM) of the sound device
@@ -1126,8 +1114,8 @@ public:
      * @param keep		Specify whether the setting is to be kept
      *				for future use.
      */
-    void
-    setInputLatency(unsigned latency_msec, bool keep=true) PJSUA2_THROW(Error);
+    void setInputLatency(unsigned latency_msec, bool keep = true)
+      PJSUA2_THROW(Error);
 
     /**
      * Get the audio input latency control or query capability of the sound
@@ -1165,8 +1153,8 @@ public:
      * 				for future use.
      *
      */
-    void
-    setOutputLatency(unsigned latency_msec, bool keep=true) PJSUA2_THROW(Error);
+    void setOutputLatency(unsigned latency_msec, bool keep = true)
+      PJSUA2_THROW(Error);
 
     /**
      * Get the audio output latency control or query capability of the sound
@@ -1205,7 +1193,7 @@ public:
      * 				future use.
      *
      */
-    void setInputVolume(unsigned volume, bool keep=true) PJSUA2_THROW(Error);
+    void setInputVolume(unsigned volume, bool keep = true) PJSUA2_THROW(Error);
 
     /**
      * Get the audio input volume level capability of the sound device being
@@ -1243,7 +1231,7 @@ public:
      * 				for future use.
      *
      */
-    void setOutputVolume(unsigned volume, bool keep=true) PJSUA2_THROW(Error);
+    void setOutputVolume(unsigned volume, bool keep = true) PJSUA2_THROW(Error);
 
     /**
      * Get the audio output volume level capability of the sound device being
@@ -1315,8 +1303,8 @@ public:
      * 				for future use.
      *
      */
-    void setInputRoute(pjmedia_aud_dev_route route, bool keep=true)
-		       PJSUA2_THROW(Error);
+    void setInputRoute(pjmedia_aud_dev_route route, bool keep = true)
+      PJSUA2_THROW(Error);
 
     /**
      * Get the audio input route capability of the sound device being used.
@@ -1354,8 +1342,8 @@ public:
      * 				for future use.
      *
      */
-    void setOutputRoute(pjmedia_aud_dev_route route, bool keep=true)
-			PJSUA2_THROW(Error);
+    void setOutputRoute(pjmedia_aud_dev_route route, bool keep = true)
+      PJSUA2_THROW(Error);
 
     /**
      * Get the audio output route capability of the sound device being used.
@@ -1393,7 +1381,7 @@ public:
      *				future use.
      *
      */
-    void setVad(bool enable, bool keep=true) PJSUA2_THROW(Error);
+    void setVad(bool enable, bool keep = true) PJSUA2_THROW(Error);
 
     /**
      * Get the audio voice activity detection capability of the sound device
@@ -1430,7 +1418,7 @@ public:
      *				future use.
      *
      */
-    void setCng(bool enable, bool keep=true) PJSUA2_THROW(Error);
+    void setCng(bool enable, bool keep = true) PJSUA2_THROW(Error);
 
     /**
      * Get the audio comfort noise generation capability of the sound device
@@ -1467,7 +1455,7 @@ public:
      *				future use.
      *
      */
-    void setPlc(bool enable, bool keep=true) PJSUA2_THROW(Error);
+    void setPlc(bool enable, bool keep = true) PJSUA2_THROW(Error);
 
     /**
      * Get the audio packet loss concealment capability of the sound device
@@ -1485,11 +1473,11 @@ public:
      */
     bool getPlc() const PJSUA2_THROW(Error);
 
-private:
+   private:
 #if !DEPRECATED_FOR_TICKET_2232
-    AudioDevInfoVector		 audioDevList;
+    AudioDevInfoVector audioDevList;
 #endif
-    AudioMedia			*devMedia;
+    AudioMedia* devMedia;
 
     /**
      * Constructor.
@@ -1507,11 +1495,10 @@ private:
     friend class Endpoint;
 };
 
-
 /**
  * Extra audio device. This class allows application to have multiple
  * sound device instances active concurrently.
- 
+
  * Application may also use this class to improve media clock. Normally
  * media clock is driven by sound device in master port, but unfortunately
  * some sound devices may produce jittery clock. To improve media clock,
@@ -1522,9 +1509,8 @@ private:
  * Note that extra sound device will not have auto-close upon idle feature.
  * Also note that the extra sound device only supports mono channel.
  */
-class ExtraAudioDevice : public AudioMedia
-{
-public:
+class ExtraAudioDevice : public AudioMedia {
+   public:
     /**
      * Constructor.
      *
@@ -1559,24 +1545,23 @@ public:
      */
     bool isOpened();
 
-protected:
+   protected:
     int playDev;
     int recDev;
-    void *ext_snd_dev;
+    void* ext_snd_dev;
 };
 
-
 /*************************************************************************
-* Video media
-*/
+ * Video media
+ */
 
 /**
  * Representation of media coordinate.
  */
 struct MediaCoordinate
 {
-    int		x;	    /**< X position of the coordinate */
-    int		y;	    /**< Y position of the coordinate */
+    int x; /**< X position of the coordinate */
+    int y; /**< Y position of the coordinate */
 };
 
 /**
@@ -1584,49 +1569,48 @@ struct MediaCoordinate
  */
 struct MediaSize
 {
-    unsigned	w;	    /**< The width.	*/
-    unsigned 	h;	    /**< The height.	*/
+    unsigned w; /**< The width.	*/
+    unsigned h; /**< The height.	*/
 };
-
 
 /**
  * This structure descibes information about a particular media port that
- * has been registered into the conference bridge. 
+ * has been registered into the conference bridge.
  */
 struct VidConfPortInfo
 {
     /**
      * Conference port number.
      */
-    int			portId;
+    int portId;
 
     /**
      * Port name.
      */
-    string		name;
+    string name;
 
     /**
      * Media audio format information
      */
-    MediaFormatVideo	format;
+    MediaFormatVideo format;
 
     /**
      * Array of listeners (in other words, ports where this port is
      * transmitting to).
      */
-    IntVector		listeners;
+    IntVector listeners;
 
     /**
      * Array of listeners (in other words, ports where this port is
      * listening to).
      */
-    IntVector		transmitters;
+    IntVector transmitters;
 
-public:
+   public:
     /**
      * Construct from pjsua_conf_port_info.
      */
-    void fromPj(const pjsua_vid_conf_port_info &port_info);
+    void fromPj(const pjsua_vid_conf_port_info& port_info);
 };
 
 /**
@@ -1639,12 +1623,11 @@ struct VideoMediaTransmitParam
 /**
  * Video Media.
  */
-class VideoMedia : public Media
-{
-public:
+class VideoMedia : public Media {
+   public:
     /**
-    * Get information about the specified conference port.
-    */
+     * Get information about the specified conference port.
+     */
     VidConfPortInfo getPortInfo() const PJSUA2_THROW(Error);
 
     /**
@@ -1671,9 +1654,9 @@ public:
      * @param sink		The destination Media.
      * @param param		The parameter.
      */
-    void startTransmit(const VideoMedia &sink, 
-		       const VideoMediaTransmitParam &param) const
-         PJSUA2_THROW(Error);
+    void startTransmit(const VideoMedia& sink,
+                       const VideoMediaTransmitParam& param) const
+      PJSUA2_THROW(Error);
 
     /**
      *  Stop media flow to destination/sink port.
@@ -1681,7 +1664,7 @@ public:
      * @param sink		The destination media.
      *
      */
-    void stopTransmit(const VideoMedia &sink) const PJSUA2_THROW(Error);
+    void stopTransmit(const VideoMedia& sink) const PJSUA2_THROW(Error);
 
     /**
      * Update or refresh port states from video port info. Some port may
@@ -1707,13 +1690,13 @@ public:
      */
     virtual ~VideoMedia();
 
-protected:
+   protected:
     /**
      * Conference port Id.
      */
-    int			 id;
+    int id;
 
-protected:
+   protected:
     /**
      * This method needs to be called by descendants of this class to register
      * the media port created to the conference bridge and Endpoint's
@@ -1722,7 +1705,7 @@ protected:
      * param port  The media port to be registered to the conference bridge.
      * param pool  The memory pool.
      */
-    void registerMediaPort(MediaPort port, pj_pool_t *pool) PJSUA2_THROW(Error);
+    void registerMediaPort(MediaPort port, pj_pool_t* pool) PJSUA2_THROW(Error);
 
     /**
      * This method needs to be called by descendants of this class to remove
@@ -1736,13 +1719,13 @@ protected:
 /** Array of Video Media */
 typedef std::vector<VideoMedia> VideoMediaVector;
 
-
 /**
  * Window handle.
  */
-typedef struct WindowHandle {
-    void    	*window;    /**< Window		*/
-    void    	*display;   /**< Display	*/
+typedef struct WindowHandle
+{
+    void* window;  /**< Window		*/
+    void* display; /**< Display	*/
 } WindowHandle;
 
 /**
@@ -1753,12 +1736,12 @@ struct VideoWindowHandle
     /**
      * The window handle type.
      */
-    pjmedia_vid_dev_hwnd_type 	type;
+    pjmedia_vid_dev_hwnd_type type;
 
     /**
      * The window handle.
      */
-    WindowHandle 		handle;
+    WindowHandle handle;
 };
 
 /**
@@ -1772,41 +1755,40 @@ typedef struct VideoWindowInfo
      * true, only the video window handle field of this
      * structure is valid.
      */
-    bool 		isNative;
+    bool isNative;
 
     /**
      * Video window handle.
      */
-    VideoWindowHandle 	winHandle;
+    VideoWindowHandle winHandle;
 
     /**
      * Renderer device ID.
      */
-    int 		renderDeviceId;
+    int renderDeviceId;
 
     /**
      * Window show status. The window is hidden if false.
      */
-    bool		show;
+    bool show;
 
     /**
      * Window position.
      */
-    MediaCoordinate 	pos;
+    MediaCoordinate pos;
 
     /**
      * Window size.
      */
-    MediaSize 		size;
+    MediaSize size;
 
 } VideoWindowInfo;
 
 /**
  * Video window.
  */
-class VideoWindow
-{
-public:
+class VideoWindow {
+   public:
     /**
      * Constructor
      */
@@ -1826,7 +1808,7 @@ public:
      * @return			Video media of this renderer window.
      */
     VideoMedia getVideoMedia() PJSUA2_THROW(Error);
-    
+
     /**
      * Show or hide window. This operation is not valid for native windows
      * (VideoWindowInfo.isNative=true), on which native windowing API
@@ -1837,7 +1819,7 @@ public:
      *
      */
     void Show(bool show) PJSUA2_THROW(Error);
-    
+
     /**
      * Set video window position. This operation is not valid for native windows
      * (VideoWindowInfo.isNative=true), on which native windowing API
@@ -1846,8 +1828,8 @@ public:
      * @param pos		The window position.
      *
      */
-    void setPos(const MediaCoordinate &pos) PJSUA2_THROW(Error);
-    
+    void setPos(const MediaCoordinate& pos) PJSUA2_THROW(Error);
+
     /**
      * Resize window. This operation is not valid for native windows
      * (VideoWindowInfo.isNative=true), on which native windowing API
@@ -1856,8 +1838,8 @@ public:
      * @param size		The new window size.
      *
      */
-    void setSize(const MediaSize &size) PJSUA2_THROW(Error);
-    
+    void setSize(const MediaSize& size) PJSUA2_THROW(Error);
+
     /**
      * Rotate the video window. This function will change the video orientation
      * and also possibly the video window size (width and height get swapped).
@@ -1879,7 +1861,7 @@ public:
      *
      * @param win		The new output window.
      */
-    void setWindow(const VideoWindowHandle &win) PJSUA2_THROW(Error);
+    void setWindow(const VideoWindowHandle& win) PJSUA2_THROW(Error);
 
     /**
      * Set video window full-screen. This operation is valid only when the
@@ -1900,16 +1882,17 @@ public:
      *				pjmedia_vid_dev_fullscreen_flag.
      */
     void setFullScreen2(pjmedia_vid_dev_fullscreen_flag mode)
-							PJSUA2_THROW(Error);
+      PJSUA2_THROW(Error);
 
-private:
-    pjsua_vid_win_id		winId;
+   private:
+    pjsua_vid_win_id winId;
 };
 
 /**
  * This structure contains parameters for VideoPreview::start()
  */
-struct VideoPreviewOpParam {
+struct VideoPreviewOpParam
+{
     /**
      * Device ID for the video renderer to be used for rendering the
      * capture stream for preview. This parameter is ignored if native
@@ -1917,14 +1900,14 @@ struct VideoPreviewOpParam {
      *
      * Default: PJMEDIA_VID_DEFAULT_RENDER_DEV
      */
-    pjmedia_vid_dev_index   rendId;
+    pjmedia_vid_dev_index rendId;
 
     /**
      * Show window initially.
      *
      * Default: PJ_TRUE.
      */
-    bool		    show;
+    bool show;
 
     /**
      * Window flags.  The value is a bitmask combination of
@@ -1932,12 +1915,12 @@ struct VideoPreviewOpParam {
      *
      * Default: 0.
      */
-    unsigned		    windowFlags;
+    unsigned windowFlags;
 
     /**
      * Media format. If left unitialized, this parameter will not be used.
      */
-    MediaFormat		    format;
+    MediaFormat format;
 
     /**
      * Optional output window to be used to display the video preview.
@@ -1945,18 +1928,18 @@ struct VideoPreviewOpParam {
      * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW capability and the capability
      * is not read-only.
      */
-    VideoWindowHandle	    window;
+    VideoWindowHandle window;
 
-public:
+   public:
     /**
      * Default constructor initializes with default values.
      */
     VideoPreviewOpParam();
 
-    /** 
+    /**
      * Convert from pjsip
      */
-    void fromPj(const pjsua_vid_preview_param &prm);
+    void fromPj(const pjsua_vid_preview_param& prm);
 
     /**
      * Convert to pjsip
@@ -1968,7 +1951,7 @@ public:
  * Video Preview
  */
 class VideoPreview {
-public:
+   public:
     /**
      * Constructor
      */
@@ -1987,9 +1970,9 @@ public:
     /**
      * Start video preview window for the specified capture device.
      *
-     * @param p		Video preview parameters. 
+     * @param p		Video preview parameters.
      */
-    void start(const VideoPreviewOpParam &param) PJSUA2_THROW(Error);
+    void start(const VideoPreviewOpParam& param) PJSUA2_THROW(Error);
 
     /**
      * Stop video preview.
@@ -2008,7 +1991,7 @@ public:
      */
     VideoMedia getVideoMedia() PJSUA2_THROW(Error);
 
-private:
+   private:
     pjmedia_vid_dev_index devId;
     pjsua_vid_win_id winId;
     void updateDevId();
@@ -2040,8 +2023,8 @@ struct VideoDevInfo
      */
     pjmedia_dir dir;
 
-    /** 
-     * Device capabilities, as bitmask combination of #pjmedia_vid_dev_cap 
+    /**
+     * Device capabilities, as bitmask combination of #pjmedia_vid_dev_cap
      */
     unsigned caps;
 
@@ -2053,7 +2036,7 @@ struct VideoDevInfo
      */
     MediaFormatVideoVector fmt;
 
-public:
+   public:
     /**
      * Default constructor
      */
@@ -2063,7 +2046,7 @@ public:
     /**
      * Construct from pjmedia_vid_dev_info.
      */
-    void fromPj(const pjmedia_vid_dev_info &dev_info);
+    void fromPj(const pjmedia_vid_dev_info& dev_info);
 
     /**
      * Destructor.
@@ -2071,7 +2054,7 @@ public:
     ~VideoDevInfo();
 };
 
-/** 
+/**
  * Warning: deprecated, use VideoDevInfoVector2 instead.
  *
  * Array of video device info.
@@ -2092,13 +2075,12 @@ struct VideoSwitchParam
      */
     pjmedia_vid_dev_index target_id;
 };
- 
+
 /**
  * Video device manager.
  */
 class VidDevManager {
-public:
-
+   public:
     /**
      * Initialize the video device subsystem. This will register all supported
      * video device factories to the video device subsystem.
@@ -2129,10 +2111,10 @@ public:
     unsigned getDevCount();
 
     /**
-     * Retrieve the video device info for the specified device index.     
+     * Retrieve the video device info for the specified device index.
      *
      * @param dev_id	The video device id
-     * 
+     *
      * @return		The list of video device info
      */
     VideoDevInfo getDevInfo(int dev_id) const PJSUA2_THROW(Error);
@@ -2146,7 +2128,7 @@ public:
      *
      * @return		The list of video device info
      */
-    const VideoDevInfoVector &enumDev() PJSUA2_THROW(Error);
+    const VideoDevInfoVector& enumDev() PJSUA2_THROW(Error);
 #endif
 
     /**
@@ -2162,11 +2144,11 @@ public:
      * @param drv_name	The driver name.
      * @param dev_name	The device name.
      *
-     * @return		The device ID. If the device is not found, 
+     * @return		The device ID. If the device is not found,
      *			Error will be thrown.
      */
-    int lookupDev(const string &drv_name,
-		  const string &dev_name) const PJSUA2_THROW(Error);
+    int lookupDev(const string& drv_name, const string& dev_name) const
+      PJSUA2_THROW(Error);
 
     /**
      * Get string info for the specified capability.
@@ -2178,9 +2160,9 @@ public:
     string capName(pjmedia_vid_dev_cap cap) const;
 
     /**
-     * This will configure video format capability to the video device. 
-     * If video device is currently active, the method will forward the setting 
-     * to the video device instance to be applied immediately, if it 
+     * This will configure video format capability to the video device.
+     * If video device is currently active, the method will forward the setting
+     * to the video device instance to be applied immediately, if it
      * supports it.
      *
      * This method is only valid if the device has
@@ -2191,21 +2173,20 @@ public:
      * to any devices, even when application has changed the video device to be
      * used.
      *
-     * @param dev_id	The video device id.	
+     * @param dev_id	The video device id.
      * @param format	The video format.
      * @param keep	Specify whether the setting is to be kept for
      * 			future use.
      */
-    void setFormat(int dev_id, 
-		   const MediaFormatVideo &format, 
-		   bool keep) PJSUA2_THROW(Error);
+    void setFormat(int dev_id, const MediaFormatVideo& format, bool keep)
+      PJSUA2_THROW(Error);
 
     /**
      * Get the video format capability to the video device.
      * If video device is currently active, the method will forward the request
-     * to the video device. If video device is currently inactive, and if 
-     * application had previously set the setting and mark the setting as kept, 
-     * then that setting will be returned. Otherwise, this method will 
+     * to the video device. If video device is currently inactive, and if
+     * application had previously set the setting and mark the setting as kept,
+     * then that setting will be returned. Otherwise, this method will
      * raise error.
      *
      * This method is only valid if the device has
@@ -2236,9 +2217,8 @@ public:
      * @param keep	Specify whether the setting is to be kept for
      * 			future use.
      */
-    void setInputScale(int dev_id, 
-		       const MediaSize &scale, 
-		       bool keep) PJSUA2_THROW(Error);
+    void setInputScale(int dev_id, const MediaSize& scale, bool keep)
+      PJSUA2_THROW(Error);
 
     /**
      * Get the video input scale capability to the video device.
@@ -2263,10 +2243,10 @@ public:
      * to the video device instance to be applied immediately, if it
      * supports it.
      *
-     * This method is only valid if the device has 
-     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps 
+     * This method is only valid if the device has
+     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps
      * flags, otherwise Error will be thrown.
-     * 
+     *
      * Note that in case the setting is kept for future use, it will be applied
      * to any devices, even when application has changed the video device to be
      * used.
@@ -2277,8 +2257,8 @@ public:
      * 			future use.
      */
     void setOutputWindowFlags(int dev_id, int flags, bool keep)
-			      PJSUA2_THROW(Error);
-    
+      PJSUA2_THROW(Error);
+
     /**
      * Get the window output flags capability to the video device.
      * If video device is currently active, the method will forward the request
@@ -2288,7 +2268,7 @@ public:
      * raise error.
      *
      * This method is only valid if the device has
-     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps 
+     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps
      * flags, otherwise Error will be thrown.
      *
      * @param dev_id	The video device id.
@@ -2309,16 +2289,16 @@ public:
      * @param dev_id	The video device id.
      * @param param	The video switch param.
      */
-    void switchDev(int dev_id,
-		   const VideoSwitchParam &param) PJSUA2_THROW(Error);
+    void switchDev(int dev_id, const VideoSwitchParam& param)
+      PJSUA2_THROW(Error);
 
     /**
      * Check whether the video capture device is currently active, i.e. if
      * a video preview has been started or there is a video call using
-     * the device.    
+     * the device.
      *
      * @param dev_id	The video device id
-     * 
+     *
      * @return		True if it's active.
      */
     bool isCaptureActive(int dev_id) const;
@@ -2341,11 +2321,10 @@ public:
      * 			future use.
      *
      */
-    void setCaptureOrient(pjmedia_vid_dev_index dev_id,
-    			  pjmedia_orient orient,
-    			  bool keep=true) PJSUA2_THROW(Error);
+    void setCaptureOrient(pjmedia_vid_dev_index dev_id, pjmedia_orient orient,
+                          bool keep = true) PJSUA2_THROW(Error);
 
-private:
+   private:
 #if !DEPRECATED_FOR_TICKET_2232
     VideoDevInfoVector videoDevList;
 #endif
@@ -2365,10 +2344,9 @@ private:
     friend class Endpoint;
 };
 
-
 /*************************************************************************
-* Codec management
-*/
+ * Codec management
+ */
 
 /**
  * This structure describes codec information.
@@ -2378,25 +2356,25 @@ struct CodecInfo
     /**
      * Codec unique identification.
      */
-    string		codecId;
+    string codecId;
 
     /**
      * Codec priority (integer 0-255).
      */
-    pj_uint8_t		priority;
+    pj_uint8_t priority;
 
     /**
      * Codec description.
      */
-    string		desc;
+    string desc;
 
     /**
      * Construct from pjsua_codec_info.
      */
-    void fromPj(const pjsua_codec_info &codec_info);
+    void fromPj(const pjsua_codec_info& codec_info);
 };
 
-/** 
+/**
  * Warning: deprecated, use CodecInfoVector2 instead.
  *
  * Array of codec info.
@@ -2425,20 +2403,20 @@ typedef std::vector<CodecFmtp> CodecFmtpVector;
  */
 struct CodecParamInfo
 {
-    unsigned	clockRate;		/**< Sampling rate in Hz	    */
-    unsigned	channelCnt;		/**< Channel count.		    */
-    unsigned 	avgBps;			/**< Average bandwidth in bits/sec  */
-    unsigned	maxBps;			/**< Maximum bandwidth in bits/sec  */
-    unsigned    maxRxFrameSize;		/**< Maximum frame size             */
-    unsigned 	frameLen;		/**< Decoder frame ptime in msec.   */
-    unsigned 	encFrameLen;		/**< Encoder ptime, or zero if it's
-					     equal to decoder ptime.	    */
-    unsigned  	pcmBitsPerSample;	/**< Bits/sample in the PCM side    */
-    unsigned  	pt;			/**< Payload type.		    */
-    pjmedia_format_id fmtId;		/**< Source format, it's format of
-					     encoder input and decoder
-					     output.			    */
-public:
+    unsigned clockRate;        /**< Sampling rate in Hz	    */
+    unsigned channelCnt;       /**< Channel count.		    */
+    unsigned avgBps;           /**< Average bandwidth in bits/sec  */
+    unsigned maxBps;           /**< Maximum bandwidth in bits/sec  */
+    unsigned maxRxFrameSize;   /**< Maximum frame size             */
+    unsigned frameLen;         /**< Decoder frame ptime in msec.   */
+    unsigned encFrameLen;      /**< Encoder ptime, or zero if it's
+                                    equal to decoder ptime.	    */
+    unsigned pcmBitsPerSample; /**< Bits/sample in the PCM side    */
+    unsigned pt;               /**< Payload type.		    */
+    pjmedia_format_id fmtId;   /**< Source format, it's format of
+                                    encoder input and decoder
+                                    output.			    */
+   public:
     /**
      * Default constructor
      */
@@ -2451,14 +2429,14 @@ public:
  */
 struct CodecParamSetting
 {
-    unsigned  	frmPerPkt;	    /**< Number of frames per packet.	*/
-    bool	vad;		    /**< Voice Activity Detector.	*/
-    bool	cng;		    /**< Comfort Noise Generator.	*/
-    bool	penh;		    /**< Perceptual Enhancement		*/
-    bool	plc;		    /**< Packet loss concealment	*/
-    bool	reserved;	    /**< Reserved, must be zero.	*/
-    CodecFmtpVector encFmtp;	    /**< Encoder's fmtp params.		*/
-    CodecFmtpVector decFmtp;	    /**< Decoder's fmtp params.		*/
+    unsigned frmPerPkt;      /**< Number of frames per packet.	*/
+    bool vad;                /**< Voice Activity Detector.	*/
+    bool cng;                /**< Comfort Noise Generator.	*/
+    bool penh;               /**< Perceptual Enhancement		*/
+    bool plc;                /**< Packet loss concealment	*/
+    bool reserved;           /**< Reserved, must be zero.	*/
+    CodecFmtpVector encFmtp; /**< Encoder's fmtp params.		*/
+    CodecFmtpVector decFmtp; /**< Decoder's fmtp params.		*/
 };
 
 /**
@@ -2466,8 +2444,8 @@ struct CodecParamSetting
  * the capability of audio codec factories.
  *
  * Please note that codec parameter also contains SDP specific setting,
- * #setting::decFmtp and #setting::encFmtp, which may need to be set 
- * appropriately based on the effective setting. 
+ * #setting::decFmtp and #setting::encFmtp, which may need to be set
+ * appropriately based on the effective setting.
  * See each codec documentation for more detail.
  */
 struct CodecParam
@@ -2475,7 +2453,7 @@ struct CodecParam
     struct CodecParamInfo info;
     struct CodecParamSetting setting;
 
-    void fromPj(const pjmedia_codec_param &param);
+    void fromPj(const pjmedia_codec_param& param);
 
     pjmedia_codec_param toPj() const;
 };
@@ -2485,21 +2463,21 @@ struct CodecParam
  */
 struct CodecOpusConfig
 {
-    unsigned   sample_rate; /**< Sample rate in Hz.                     */
-    unsigned   channel_cnt; /**< Number of channels.                    */
-    unsigned   frm_ptime;   /**< Frame time in msec.   			*/
-    unsigned   bit_rate;    /**< Encoder bit rate in bps.		*/
-    unsigned   packet_loss; /**< Encoder's expected packet loss pct.	*/
-    unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/
-    bool       cbr;         /**< Constant bit rate?			*/
+    unsigned sample_rate; /**< Sample rate in Hz.                     */
+    unsigned channel_cnt; /**< Number of channels.                    */
+    unsigned frm_ptime;   /**< Frame time in msec.   			*/
+    unsigned bit_rate;    /**< Encoder bit rate in bps.		*/
+    unsigned packet_loss; /**< Encoder's expected packet loss pct.	*/
+    unsigned complexity;  /**< Encoder complexity, 0-10(10 is highest)*/
+    bool cbr;             /**< Constant bit rate?			*/
 
     pjmedia_codec_opus_config toPj() const;
-    void fromPj(const pjmedia_codec_opus_config &config);
+    void fromPj(const pjmedia_codec_opus_config& config);
 };
 
 /**
  * Detailed codec attributes used in configuring a video codec and in querying
- * the capability of video codec factories. 
+ * the capability of video codec factories.
  *
  * Please note that codec parameter also contains SDP specific setting,
  * #decFmtp and #encFmtp, which may need to be set appropriately based on
@@ -2507,48 +2485,45 @@ struct CodecOpusConfig
  */
 struct VidCodecParam
 {
-    pjmedia_dir         dir;            /**< Direction                      */
-    pjmedia_vid_packing packing; 	/**< Packetization strategy.	    */
+    pjmedia_dir dir;             /**< Direction                      */
+    pjmedia_vid_packing packing; /**< Packetization strategy.	    */
 
-    struct
-    MediaFormatVideo    encFmt;         /**< Encoded format	            */
-    CodecFmtpVector	encFmtp;        /**< Encoder fmtp params	    */
-    unsigned            encMtu;         /**< MTU or max payload size setting*/
+    struct MediaFormatVideo encFmt; /**< Encoded format	            */
+    CodecFmtpVector encFmtp;        /**< Encoder fmtp params	    */
+    unsigned encMtu;                /**< MTU or max payload size setting*/
 
-    struct
-    MediaFormatVideo    decFmt;         /**< Decoded format	            */
-    CodecFmtpVector	decFmtp;        /**< Decoder fmtp params	    */
+    struct MediaFormatVideo decFmt; /**< Decoded format	            */
+    CodecFmtpVector decFmtp;        /**< Decoder fmtp params	    */
 
-    bool		ignoreFmtp;	/**< Ignore fmtp params. If set to
-					     true, the codec will apply
-					     format settings specified in
-					     encFmt and decFmt only.	    */
+    bool ignoreFmtp; /**< Ignore fmtp params. If set to
+                          true, the codec will apply
+                          format settings specified in
+                          encFmt and decFmt only.	    */
 
-public:
+   public:
     /**
      * Default constructor
      */
-    VidCodecParam() : dir(PJMEDIA_DIR_NONE),
-		      packing(PJMEDIA_VID_PACKING_UNKNOWN)
+    VidCodecParam()
+        : dir(PJMEDIA_DIR_NONE), packing(PJMEDIA_VID_PACKING_UNKNOWN)
     {}
 
-    void fromPj(const pjmedia_vid_codec_param &param);
+    void fromPj(const pjmedia_vid_codec_param& param);
 
     pjmedia_vid_codec_param toPj() const;
 };
 
-
 /*************************************************************************
-* Media event
-*/
+ * Media event
+ */
 
 /**
  * This structure describes a media format changed event.
  */
 struct MediaFmtChangedEvent
 {
-    unsigned newWidth;      /**< The new width.     */
-    unsigned newHeight;     /**< The new height.    */
+    unsigned newWidth;  /**< The new width.     */
+    unsigned newHeight; /**< The new height.    */
 };
 
 /**
@@ -2556,30 +2531,31 @@ struct MediaFmtChangedEvent
  */
 struct AudDevErrorEvent
 {
-    pjmedia_dir		    dir;	/**< The direction.	    */
-    int			    id;		/**< The audio device ID.   */
-    pj_status_t		    status;	/**< The status code.	    */
+    pjmedia_dir dir;    /**< The direction.	    */
+    int id;             /**< The audio device ID.   */
+    pj_status_t status; /**< The status code.	    */
 };
 
 /**
  * Media event data.
  */
-typedef union MediaEventData {
+typedef union MediaEventData
+{
     /**
      * Media format changed event data.
      */
-    MediaFmtChangedEvent    fmtChanged;
+    MediaFmtChangedEvent fmtChanged;
 
     /**
      * Audio device error event data.
      */
-    AudDevErrorEvent	    audDevError;
-    
+    AudDevErrorEvent audDevError;
+
     /**
      * Pointer to storage to user event data, if it's outside
      * this struct
      */
-    GenericData		    ptr;
+    GenericData ptr;
 
 } MediaEventData;
 
@@ -2592,21 +2568,21 @@ struct MediaEvent
     /**
      * The event type.
      */
-    pjmedia_event_type          type;
+    pjmedia_event_type type;
 
     /**
      * Additional data/parameters about the event. The type of data
      * will be specific to the event type being reported.
      */
-    MediaEventData              data;
-    
+    MediaEventData data;
+
     /**
      * Pointer to original pjmedia_event. Only valid when the struct
      * is converted from PJSIP's pjmedia_event.
      */
-    void                       *pjMediaEvent;
+    void* pjMediaEvent;
 
-public:
+   public:
     /**
      * Default constructor
      */
@@ -2616,13 +2592,13 @@ public:
     /**
      * Convert from pjsip
      */
-    void fromPj(const pjmedia_event &ev);
+    void fromPj(const pjmedia_event& ev);
 };
 
 /**
  * @}  // PJSUA2_MED
  */
 
-} // namespace pj
+}  // namespace pj
 
-#endif	/* __PJSUA2_MEDIA_HPP__ */
+#endif /* __PJSUA2_MEDIA_HPP__ */

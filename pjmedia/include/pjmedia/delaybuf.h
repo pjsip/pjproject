@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,12 +14,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef __PJMEDIA_DELAYBUF_H__
 #define __PJMEDIA_DELAYBUF_H__
-
 
 /**
  * @file delaybuf.h
@@ -48,7 +46,7 @@
  * get() and put() are matched).
  *
  * The buffer is adaptive, that is it continuously learns the optimal delay
- * to be applied to the audio flow at run-time. Once the optimal delay has 
+ * to be applied to the audio flow at run-time. Once the optimal delay has
  * been learned, the delay buffer will apply this delay to the audio flow,
  * expanding or shrinking the audio samples as necessary when the actual
  * audio samples in the buffer are too low or too high. It does this without
@@ -83,13 +81,13 @@ typedef enum pjmedia_delay_buf_flag
  *
  * @param pool		    Pool where the delay buffer will be allocated
  *			    from.
- * @param name		    Optional name for the buffer for log 
+ * @param name		    Optional name for the buffer for log
  *			    identification.
  * @param clock_rate	    Number of samples processed per second.
  * @param samples_per_frame Number of samples per frame.
  * @param channel_count	    Number of channel per frame.
  * @param max_delay	    Maximum number of delay to be accommodated,
- *			    in ms, if this value is negative or less than 
+ *			    in ms, if this value is negative or less than
  *			    one frame time, default maximum delay used is
  *			    400 ms.
  * @param options	    Options. If PJMEDIA_DELAY_BUF_SIMPLE_FIFO is
@@ -104,14 +102,11 @@ typedef enum pjmedia_delay_buf_flag
  *			    created successfully, otherwise the appropriate
  *			    error will be returned.
  */
-PJ_DECL(pj_status_t) pjmedia_delay_buf_create(pj_pool_t *pool,
-					      const char *name,
-					      unsigned clock_rate,
-					      unsigned samples_per_frame,
-					      unsigned channel_count,
-					      unsigned max_delay,
-					      unsigned options,
-					      pjmedia_delay_buf **p_b);
+PJ_DECL(pj_status_t)
+pjmedia_delay_buf_create(pj_pool_t* pool, const char* name, unsigned clock_rate,
+                         unsigned samples_per_frame, unsigned channel_count,
+                         unsigned max_delay, unsigned options,
+                         pjmedia_delay_buf** p_b);
 
 /**
  * Put one frame into the buffer.
@@ -127,8 +122,8 @@ PJ_DECL(pj_status_t) pjmedia_delay_buf_create(pj_pool_t *pool,
  *			    case the new frame will overwrite the oldest
  *			    frame in the buffer.
  */
-PJ_DECL(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
-					   pj_int16_t frame[]);
+PJ_DECL(pj_status_t)
+pjmedia_delay_buf_put(pjmedia_delay_buf* b, pj_int16_t frame[]);
 
 /**
  * Get one frame from the buffer.
@@ -144,8 +139,8 @@ PJ_DECL(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
  *			    On non-successful return, the frame will be
  *			    filled with zeroes.
  */
-PJ_DECL(pj_status_t) pjmedia_delay_buf_get(pjmedia_delay_buf *b,
-					   pj_int16_t frame[]);
+PJ_DECL(pj_status_t)
+pjmedia_delay_buf_get(pjmedia_delay_buf* b, pj_int16_t frame[]);
 
 /**
  * Reset delay buffer. This will clear the buffer's content. But keep
@@ -155,7 +150,7 @@ PJ_DECL(pj_status_t) pjmedia_delay_buf_get(pjmedia_delay_buf *b,
  *
  * @return		    PJ_SUCCESS on success or the appropriate error.
  */
-PJ_DECL(pj_status_t) pjmedia_delay_buf_reset(pjmedia_delay_buf *b);
+PJ_DECL(pj_status_t) pjmedia_delay_buf_reset(pjmedia_delay_buf* b);
 
 /**
  * Destroy delay buffer.
@@ -164,8 +159,7 @@ PJ_DECL(pj_status_t) pjmedia_delay_buf_reset(pjmedia_delay_buf *b);
  *
  * @return	    PJ_SUCCESS normally.
  */
-PJ_DECL(pj_status_t) pjmedia_delay_buf_destroy(pjmedia_delay_buf *b);
-
+PJ_DECL(pj_status_t) pjmedia_delay_buf_destroy(pjmedia_delay_buf* b);
 
 PJ_END_DECL
 
@@ -173,4 +167,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_DELAYBUF_H__ */
+#endif /* __PJMEDIA_DELAYBUF_H__ */

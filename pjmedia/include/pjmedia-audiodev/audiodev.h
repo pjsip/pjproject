@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_AUDIODEV_AUDIODEV_H__
 #define __PJMEDIA_AUDIODEV_AUDIODEV_H__
@@ -27,7 +26,6 @@
 #include <pj/pool.h>
 #include <pjmedia/audiodev.h>
 
-
 PJ_BEGIN_DECL
 
 /**
@@ -37,9 +35,8 @@ PJ_BEGIN_DECL
  * @{
  */
 
-
 /**
- * Initialize the audio subsystem. This will register all supported audio 
+ * Initialize the audio subsystem. This will register all supported audio
  * device factories to the audio subsystem. This function may be called
  * more than once, but each call to this function must have the
  * corresponding #pjmedia_aud_subsys_shutdown() call.
@@ -49,8 +46,7 @@ PJ_BEGIN_DECL
  * @return		PJ_SUCCESS on successful operation or the appropriate
  *			error code.
  */
-PJ_DECL(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf);
-
+PJ_DECL(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory* pf);
 
 /**
  * Get the pool factory registered to the audio subsystem.
@@ -58,7 +54,6 @@ PJ_DECL(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf);
  * @return		The pool factory.
  */
 PJ_DECL(pj_pool_factory*) pjmedia_aud_subsys_get_pool_factory(void);
-
 
 /**
  * Shutdown the audio subsystem. This will destroy all audio device factories
@@ -71,7 +66,6 @@ PJ_DECL(pj_pool_factory*) pjmedia_aud_subsys_get_pool_factory(void);
  */
 PJ_DECL(pj_status_t) pjmedia_aud_subsys_shutdown(void);
 
-
 /**
  * Register a supported audio device factory to the audio subsystem. This
  * function can only be called after calling #pjmedia_aud_subsys_init().
@@ -83,7 +77,6 @@ PJ_DECL(pj_status_t) pjmedia_aud_subsys_shutdown(void);
  */
 PJ_DECL(pj_status_t)
 pjmedia_aud_register_factory(pjmedia_aud_dev_factory_create_func_ptr adf);
-
 
 /**
  * Unregister an audio device factory from the audio subsystem. This
@@ -99,13 +92,10 @@ pjmedia_aud_register_factory(pjmedia_aud_dev_factory_create_func_ptr adf);
 PJ_DECL(pj_status_t)
 pjmedia_aud_unregister_factory(pjmedia_aud_dev_factory_create_func_ptr adf);
 
-
 /**
  * @}
  */
 
 PJ_END_DECL
 
-
-#endif	/* __PJMEDIA_AUDIODEV_AUDIODEV_H__ */
-
+#endif /* __PJMEDIA_AUDIODEV_AUDIODEV_H__ */

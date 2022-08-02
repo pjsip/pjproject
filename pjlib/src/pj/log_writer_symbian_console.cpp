@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/log.h>
 #include <pj/os.h>
@@ -24,7 +23,7 @@
 #include "os_symbian.h"
 #include <e32cons.h>
 
-PJ_DEF(void) pj_log_write(int level, const char *buffer, int len)
+PJ_DEF(void) pj_log_write(int level, const char* buffer, int len)
 {
 #if 0
     wchar_t wbuffer[PJ_LOG_MAX_SIZE];
@@ -41,4 +40,3 @@ PJ_DEF(void) pj_log_write(int level, const char *buffer, int len)
     PJ_UNUSED_ARG(len);
 #endif
 }
-

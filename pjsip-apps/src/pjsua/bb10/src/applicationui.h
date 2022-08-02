@@ -6,38 +6,44 @@
 
 #include "../../pjsua_app.h"
 
-namespace bb { namespace cascades { class Application; }}
+namespace bb
+{
+namespace cascades
+{
+class Application;
+}
+}  // namespace bb
 
 /*!
  * @brief Application pane object
  *
- *Use this object to create and init app UI, to create context objects, to register the new meta types etc.
+ *Use this object to create and init app UI, to create context objects, to
+ *register the new meta types etc.
  */
-class ApplicationUI : public QObject
-{
+class ApplicationUI : public QObject {
     Q_OBJECT
-public:
-    ApplicationUI(bb::cascades::Application *app);
+   public:
+    ApplicationUI(bb::cascades::Application* app);
     virtual ~ApplicationUI();
 
     bool isShuttingDown;
-    static ApplicationUI *instance();
+    static ApplicationUI* instance();
 
     /* Write msg to label (from different thread) */
-    static void extDisplayMsg(const char *msg);
+    static void extDisplayMsg(const char* msg);
 
     /* Restart request (from different thread) */
-    void extRestartRequest(int argc, char **argv);
+    void extRestartRequest(int argc, char** argv);
 
-public slots:
+   public slots:
     void aboutToQuit();
 
     Q_INVOKABLE void restartPjsua();
-    Q_INVOKABLE void displayMsg(const QString &msg);
+    Q_INVOKABLE void displayMsg(const QString& msg);
 
-private:
-    static ApplicationUI *instance_;
-    char **restartArgv;
+   private:
+    static ApplicationUI* instance_;
+    char** restartArgv;
     int restartArgc;
 
     /* pjsua main operations */
@@ -47,8 +53,7 @@ private:
     /* pjsua app callbacks */
     static void pjsuaOnStartedCb(pj_status_t status, const char* msg);
     static void pjsuaOnStoppedCb(pj_bool_t restart, int argc, char** argv);
-    static void pjsuaOnAppConfigCb(pjsua_app_config *cfg);
+    static void pjsuaOnAppConfigCb(pjsua_app_config* cfg);
 };
-
 
 #endif /* ApplicationUI_HPP_ */

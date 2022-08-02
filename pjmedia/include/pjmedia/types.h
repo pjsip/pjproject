@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TYPES_H__
 #define __PJMEDIA_TYPES_H__
@@ -29,12 +28,10 @@
 #include <pj/sock.h>
 #include <pj/types.h>
 
-
 /**
  * @defgroup PJMEDIA_PORT Media Ports Framework
  * @brief Extensible framework for media terminations
  */
-
 
 /**
  * @defgroup PJMEDIA_FRAME_OP Audio Manipulation Algorithms
@@ -70,7 +67,6 @@ typedef enum pjmedia_type
 
 } pjmedia_type;
 
-
 /**
  * Media transport protocol and profile.
  */
@@ -79,58 +75,55 @@ typedef enum pjmedia_tp_proto
     /* Basic transports */
 
     /** No transport type */
-    PJMEDIA_TP_PROTO_NONE	    = 0,
+    PJMEDIA_TP_PROTO_NONE = 0,
 
     /** Transport unknown */
-    PJMEDIA_TP_PROTO_UNKNOWN	    = (1 << 0),
+    PJMEDIA_TP_PROTO_UNKNOWN = (1 << 0),
 
     /** UDP transport */
-    PJMEDIA_TP_PROTO_UDP	    = (1 << 1),
+    PJMEDIA_TP_PROTO_UDP = (1 << 1),
 
     /** RTP transport */
-    PJMEDIA_TP_PROTO_RTP	    = (1 << 2),
+    PJMEDIA_TP_PROTO_RTP = (1 << 2),
 
     /** DTLS transport */
-    PJMEDIA_TP_PROTO_DTLS	    = (1 << 3),
-
+    PJMEDIA_TP_PROTO_DTLS = (1 << 3),
 
     /* Basic profiles */
-    
+
     /** RTCP Feedback profile */
-    PJMEDIA_TP_PROFILE_RTCP_FB	    = (1 << 13),
+    PJMEDIA_TP_PROFILE_RTCP_FB = (1 << 13),
 
     /** Secure RTP profile */
-    PJMEDIA_TP_PROFILE_SRTP	    = (1 << 14),
+    PJMEDIA_TP_PROFILE_SRTP = (1 << 14),
 
     /** Audio/video profile */
-    PJMEDIA_TP_PROFILE_AVP	    = (1 << 15),
-
+    PJMEDIA_TP_PROFILE_AVP = (1 << 15),
 
     /* Predefined transport profiles (commonly used) */
 
     /** RTP using A/V profile */
-    PJMEDIA_TP_PROTO_RTP_AVP	    = (PJMEDIA_TP_PROTO_RTP |
-				       PJMEDIA_TP_PROFILE_AVP),
+    PJMEDIA_TP_PROTO_RTP_AVP = (PJMEDIA_TP_PROTO_RTP | PJMEDIA_TP_PROFILE_AVP),
 
     /** Secure RTP using A/V profile */
-    PJMEDIA_TP_PROTO_RTP_SAVP	    = (PJMEDIA_TP_PROTO_RTP_AVP |
-				       PJMEDIA_TP_PROFILE_SRTP),
+    PJMEDIA_TP_PROTO_RTP_SAVP =
+      (PJMEDIA_TP_PROTO_RTP_AVP | PJMEDIA_TP_PROFILE_SRTP),
 
     /** Secure RTP using A/V profile and DTLS-SRTP keying */
-    PJMEDIA_TP_PROTO_DTLS_SRTP	    = (PJMEDIA_TP_PROTO_DTLS |
-				       PJMEDIA_TP_PROTO_RTP_SAVP),
+    PJMEDIA_TP_PROTO_DTLS_SRTP =
+      (PJMEDIA_TP_PROTO_DTLS | PJMEDIA_TP_PROTO_RTP_SAVP),
 
     /** RTP using A/V and RTCP feedback profile */
-    PJMEDIA_TP_PROTO_RTP_AVPF	    = (PJMEDIA_TP_PROTO_RTP_AVP |
-				       PJMEDIA_TP_PROFILE_RTCP_FB),
+    PJMEDIA_TP_PROTO_RTP_AVPF =
+      (PJMEDIA_TP_PROTO_RTP_AVP | PJMEDIA_TP_PROFILE_RTCP_FB),
 
     /** Secure RTP using A/V and RTCP feedback profile */
-    PJMEDIA_TP_PROTO_RTP_SAVPF	    = (PJMEDIA_TP_PROTO_RTP_SAVP |
-				       PJMEDIA_TP_PROFILE_RTCP_FB),
+    PJMEDIA_TP_PROTO_RTP_SAVPF =
+      (PJMEDIA_TP_PROTO_RTP_SAVP | PJMEDIA_TP_PROFILE_RTCP_FB),
 
     /** Secure RTP using A/V and RTCP feedback profile and DTLS-SRTP keying */
-    PJMEDIA_TP_PROTO_DTLS_SRTPF	    = (PJMEDIA_TP_PROTO_DTLS_SRTP |
-				       PJMEDIA_TP_PROFILE_RTCP_FB),
+    PJMEDIA_TP_PROTO_DTLS_SRTPF =
+      (PJMEDIA_TP_PROTO_DTLS_SRTP | PJMEDIA_TP_PROFILE_RTCP_FB),
 
 } pjmedia_tp_proto;
 
@@ -139,7 +132,7 @@ typedef enum pjmedia_tp_proto
  * transport and profile flags.
  */
 #define PJMEDIA_TP_PROTO_HAS_FLAG(TP_PROTO, FLAGS) \
-				    (((TP_PROTO) & (FLAGS)) == (FLAGS))
+    (((TP_PROTO) & (FLAGS)) == (FLAGS))
 
 /**
  * Macro helper for excluding specific flags in transport protocol.
@@ -180,7 +173,6 @@ typedef enum pjmedia_dir
 
 } pjmedia_dir;
 
-
 /**
  * Opaque declaration of media endpoint.
  */
@@ -215,8 +207,8 @@ typedef enum pjmedia_coord_base
  */
 typedef struct pjmedia_ratio
 {
-    int		num;    /** < Numerator. */
-    int		denum;  /** < Denumerator. */
+    int num;   /** < Numerator. */
+    int denum; /** < Denumerator. */
 } pjmedia_ratio;
 
 /**
@@ -224,8 +216,8 @@ typedef struct pjmedia_ratio
  */
 typedef struct pjmedia_coord
 {
-    int		x;	/**< X position of the coordinate */
-    int		y;	/**< Y position of the coordinate */
+    int x; /**< X position of the coordinate */
+    int y; /**< Y position of the coordinate */
 } pjmedia_coord;
 
 /**
@@ -233,8 +225,8 @@ typedef struct pjmedia_coord
  */
 typedef struct pjmedia_rect_size
 {
-    unsigned	w;	/**< The width.		*/
-    unsigned 	h;	/**< The height.	*/
+    unsigned w; /**< The width.		*/
+    unsigned h; /**< The height.	*/
 } pjmedia_rect_size;
 
 /**
@@ -242,8 +234,8 @@ typedef struct pjmedia_rect_size
  */
 typedef struct pjmedia_rect
 {
-    pjmedia_coord	coord;	/**< The position.	*/
-    pjmedia_rect_size	size;	/**< The size.		*/
+    pjmedia_coord coord;    /**< The position.	*/
+    pjmedia_rect_size size; /**< The size.		*/
 } pjmedia_rect;
 
 /**
@@ -290,12 +282,10 @@ typedef enum pjmedia_orient
 
 } pjmedia_orient;
 
-
 /**
  * Macro for packing format from a four character code, similar to FOURCC.
  */
-#define PJMEDIA_FOURCC(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )
-
+#define PJMEDIA_FOURCC(C1, C2, C3, C4) (C4 << 24 | C3 << 16 | C2 << 8 | C1)
 
 /**
  * Utility function to return the string name for a pjmedia_type.
@@ -306,7 +296,6 @@ typedef enum pjmedia_orient
  */
 PJ_DECL(const char*) pjmedia_type_name(pjmedia_type t);
 
-
 /**
  * Utility function to return the media type for a media name string.
  *
@@ -314,8 +303,7 @@ PJ_DECL(const char*) pjmedia_type_name(pjmedia_type t);
  *
  * @return		media type.
  */
-PJ_DECL(pjmedia_type) pjmedia_get_type(const pj_str_t *name);
-
+PJ_DECL(pjmedia_type) pjmedia_get_type(const pj_str_t* name);
 
 /**
  * A utility function to convert fourcc type of value to four letters string.
@@ -330,17 +318,14 @@ PJ_INLINE(const char*) pjmedia_fourcc_name(pj_uint32_t sig, char buf[])
 {
     buf[3] = (char)((sig >> 24) & 0xFF);
     buf[2] = (char)((sig >> 16) & 0xFF);
-    buf[1] = (char)((sig >>  8) & 0xFF);
-    buf[0] = (char)((sig >>  0) & 0xFF);
+    buf[1] = (char)((sig >> 8) & 0xFF);
+    buf[0] = (char)((sig >> 0) & 0xFF);
     buf[4] = '\0';
     return buf;
 }
-
 
 /**
  * @}
  */
 
-
-#endif	/* __PJMEDIA_TYPES_H__ */
-
+#endif /* __PJMEDIA_TYPES_H__ */

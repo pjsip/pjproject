@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,9 +13,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
 
 /**
 @defgroup PJNATH_TURN TURN: Traversal Using Relays around NAT
@@ -30,8 +28,8 @@ use the services of an intermediate host that acts as a relay for the
 packets.  This relay typically sits in the public Internet and relays
 packets between two hosts that both sit behind NATs.
 
-TURN allows a host behind a NAT (called the TURN client) to request that 
-another host (called the TURN server) act as a relay.  The client can 
+TURN allows a host behind a NAT (called the TURN client) to request that
+another host (called the TURN server) act as a relay.  The client can
 arrange for the server to relay packets to and from certain other hosts
 (called peers) and can control aspects of how the relaying is done.
 The client does this by obtaining an IP address and port on the
@@ -58,35 +56,35 @@ configured with the correct credential to use the service.
 <b>Allocation</b>.\n
 Client creates one "relay port" (or called <b>relayed-transport-address</b>
 in TURN terminology) in the TURN server by sending TURN \a Allocate request,
-hence this process is called creating allocation. Once the allocation is 
-successful, client will be given the IP address and port of the "relay 
+hence this process is called creating allocation. Once the allocation is
+successful, client will be given the IP address and port of the "relay
 port" in the Allocate response.
 
 <b>Sending data through the relay</b>.\n
-Once allocation has been created, client may send data to any remote 
-endpoints (called peers in TURN terminology) via the "relay port". It does 
-so by sending Send Indication to the TURN server, giving the peer address 
+Once allocation has been created, client may send data to any remote
+endpoints (called peers in TURN terminology) via the "relay port". It does
+so by sending Send Indication to the TURN server, giving the peer address
 in the indication message. But note that at this point peers are not allowed
-to send data towards the client (via the "relay port") before permission is 
+to send data towards the client (via the "relay port") before permission is
 installed for that peer.
 
 <b>Creating permissions</b>.\n
-Permission needs to be created in the TURN server so that a peer can send 
+Permission needs to be created in the TURN server so that a peer can send
 data to the client via the relay port (a peer in this case is identified by
 its IP address). Without this, when the TURN server receives data from the
 peer in the "relay port", it will drop this data.
 
 <b>Receiving data from peers</b>.\n
-Once permission has been installed for the peer, any data received by the 
-TURN server (from that peer) in the "relay port" will be relayed back to 
+Once permission has been installed for the peer, any data received by the
+TURN server (from that peer) in the "relay port" will be relayed back to
 client by using Data Indication.
 
 <b>Using ChannelData</b>.\n
-TURN provides optimized framing to the data by using ChannelData 
-packetization. The client activates this format by sending ChannelBind 
-request to the TURN server, which provides (channel) binding which maps a 
+TURN provides optimized framing to the data by using ChannelData
+packetization. The client activates this format by sending ChannelBind
+request to the TURN server, which provides (channel) binding which maps a
 particular peer address with a channel number. Data sent or received to/for
-this peer will then use ChannelData format instead of Send or Data 
+this peer will then use ChannelData format instead of Send or Data
 Indications.
 
 <b>Refreshing the allocation, permissions, and channel bindings</b>.\n
@@ -100,7 +98,7 @@ by sending Refresh request with LIFETIME attribute set to zero.
 
 \section turn_org_sec Library organizations
 
-The TURN functionalities in PJNATH primarily consist of 
+The TURN functionalities in PJNATH primarily consist of
 \ref PJNATH_TURN_SOCK and \ref PJNATH_TURN_SESSION. Please see more
 below.
 
@@ -144,12 +142,11 @@ Please see \ref PJNATH_TURN_SESSION for more information.
 
 The \ref turn_client_sample is a sample application to use the
 \ref PJNATH_TURN_SOCK. Also there is a sample TURN server in
-the distribution as well. 
+the distribution as well.
 
 Also see <b>\ref samples_page</b> for other samples.
 
  */
-
 
 /**
  * @defgroup PJNATH_TURN_SOCK TURN client transport

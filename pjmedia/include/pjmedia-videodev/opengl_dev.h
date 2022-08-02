@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013-2014 Teluu Inc. (http://www.teluu.com)
  *
@@ -28,26 +27,23 @@
 int pjmedia_vid_dev_opengl_imp_get_cap(void);
 
 /* Create OpenGL stream */
-pj_status_t
-pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
-                                         pjmedia_vid_dev_param *param,
-                                         const pjmedia_vid_dev_cb *cb,
-                                         void *user_data,
-                                         pjmedia_vid_dev_stream **p_vid_strm);
+pj_status_t pjmedia_vid_dev_opengl_imp_create_stream(
+  pj_pool_t* pool, pjmedia_vid_dev_param* param, const pjmedia_vid_dev_cb* cb,
+  void* user_data, pjmedia_vid_dev_stream** p_vid_strm);
 
 /****************************************************************************/
 /* OpenGL buffers opaque structure. */
 typedef struct gl_buffers gl_buffers;
 
 /* Create OpenGL buffers. */
-void        pjmedia_vid_dev_opengl_create_buffers(pj_pool_t *pool, pj_bool_t direct,
-                                                  gl_buffers **glb);
+void pjmedia_vid_dev_opengl_create_buffers(pj_pool_t* pool, pj_bool_t direct,
+                                           gl_buffers** glb);
 /* Initialize OpenGL buffers. */
-pj_status_t pjmedia_vid_dev_opengl_init_buffers(gl_buffers *glb);
+pj_status_t pjmedia_vid_dev_opengl_init_buffers(gl_buffers* glb);
 /* Render a texture. */
-pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb,unsigned int width,
-                                        unsigned int height, void *pixels);
+pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers* glb, unsigned int width,
+                                        unsigned int height, void* pixels);
 /* Destroy OpenGL buffers. */
-void        pjmedia_vid_dev_opengl_destroy_buffers(gl_buffers *glb);
+void pjmedia_vid_dev_opengl_destroy_buffers(gl_buffers* glb);
 
-#endif    /* __PJMEDIA_VIDEODEV_OPENGL_DEV_H__ */
+#endif /* __PJMEDIA_VIDEODEV_OPENGL_DEV_H__ */

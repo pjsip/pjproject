@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -46,14 +45,14 @@ typedef struct pjmedia_avi_dev_param
     /**
      * Specifies the full path of the AVI file to be played.
      */
-    pj_str_t	path;
+    pj_str_t path;
 
     /**
      * If this setting is specified when setting the device, this specifies
      * the title to be assigned as the device name. If this setting not
      * specified, the filename part of the path will be used.
      */
-    pj_str_t	title;
+    pj_str_t title;
 
     /**
      * The underlying AVI streams created by the device. If the value is NULL,
@@ -61,10 +60,9 @@ typedef struct pjmedia_avi_dev_param
      * this field to retrieve the audio stream of the AVI. This setting is
      * "get"-only and will be ignored in "set capability" operation.
      */
-    pjmedia_avi_streams *avi_streams;
+    pjmedia_avi_streams* avi_streams;
 
 } pjmedia_avi_dev_param;
-
 
 /**
  * Reset pjmedia_avi_dev_param with the default settings. This mostly will
@@ -72,8 +70,7 @@ typedef struct pjmedia_avi_dev_param
  *
  * @param p	The parameter to be initialized.
  */
-PJ_DECL(void) pjmedia_avi_dev_param_default(pjmedia_avi_dev_param *p);
-
+PJ_DECL(void) pjmedia_avi_dev_param_default(pjmedia_avi_dev_param* p);
 
 /**
  * Create a AVI device factory, and register it to the video device
@@ -88,10 +85,9 @@ PJ_DECL(void) pjmedia_avi_dev_param_default(pjmedia_avi_dev_param *p);
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_avi_dev_create_factory(
-				    pj_pool_factory *pf,
-				    unsigned max_dev,
-				    pjmedia_vid_dev_factory **p_ret);
+PJ_DECL(pj_status_t)
+pjmedia_avi_dev_create_factory(pj_pool_factory* pf, unsigned max_dev,
+                               pjmedia_vid_dev_factory** p_ret);
 
 /**
  * Allocate one device ID to be used to play the specified AVI file in
@@ -105,9 +101,9 @@ PJ_DECL(pj_status_t) pjmedia_avi_dev_create_factory(
  * @return		PJ_SUCCESS or the appropriate error code.
  *
  */
-PJ_DECL(pj_status_t) pjmedia_avi_dev_alloc(pjmedia_vid_dev_factory *f,
-                                           pjmedia_avi_dev_param *param,
-                                           pjmedia_vid_dev_index *p_id);
+PJ_DECL(pj_status_t)
+pjmedia_avi_dev_alloc(pjmedia_vid_dev_factory* f, pjmedia_avi_dev_param* param,
+                      pjmedia_vid_dev_index* p_id);
 
 /**
  * Retrieve the parameters set for the virtual device.
@@ -117,8 +113,9 @@ PJ_DECL(pj_status_t) pjmedia_avi_dev_alloc(pjmedia_vid_dev_factory *f,
  *
  * @return		PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_avi_dev_get_param(pjmedia_vid_dev_index id,
-                                               pjmedia_avi_dev_param *param);
+PJ_DECL(pj_status_t)
+pjmedia_avi_dev_get_param(pjmedia_vid_dev_index id,
+                          pjmedia_avi_dev_param* param);
 
 /**
  * Free the resources associated with the virtual device.
@@ -135,5 +132,4 @@ PJ_DECL(pj_status_t) pjmedia_avi_dev_free(pjmedia_vid_dev_index id);
 
 PJ_END_DECL
 
-
-#endif    /* __PJMEDIA_VIDEODEV_AVI_DEV_H__ */
+#endif /* __PJMEDIA_VIDEODEV_AVI_DEV_H__ */

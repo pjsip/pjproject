@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_PRESENCE_H__
 #define __PJSIP_SIMPLE_PRESENCE_H__
@@ -29,9 +28,7 @@
 #include <pjsip-simple/xpidf.h>
 #include <pjsip-simple/rpid.h>
 
-
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup PJSIP_SIMPLE_PRES SIP Extension for Presence (RFC 3856)
@@ -39,13 +36,11 @@ PJ_BEGIN_DECL
  * @brief Support for SIP Extension for Presence (RFC 3856)
  * @{
  *
- * This module contains the implementation of SIP Presence Extension as 
+ * This module contains the implementation of SIP Presence Extension as
  * described in RFC 3856. It uses the SIP Event Notification framework
  * (evsub.h) and extends the framework by implementing "presence"
  * event package.
  */
-
-
 
 /**
  * Initialize the presence module and register it as endpoint module and
@@ -54,13 +49,12 @@ PJ_BEGIN_DECL
  * @param endpt		The endpoint instance.
  * @param mod_evsub	The event subscription module instance.
  *
- * @return		PJ_SUCCESS if the module is successfully 
+ * @return		PJ_SUCCESS if the module is successfully
  *			initialized and registered to both endpoint
  *			and the event subscription module.
  */
-PJ_DECL(pj_status_t) pjsip_pres_init_module(pjsip_endpoint *endpt,
-					    pjsip_module *mod_evsub);
-
+PJ_DECL(pj_status_t)
+pjsip_pres_init_module(pjsip_endpoint* endpt, pjsip_module* mod_evsub);
 
 /**
  * Get the presence module instance.
@@ -69,46 +63,42 @@ PJ_DECL(pj_status_t) pjsip_pres_init_module(pjsip_endpoint *endpt,
  */
 PJ_DECL(pjsip_module*) pjsip_pres_instance(void);
 
-
 /**
  * Maximum presence status info.
  */
-#define PJSIP_PRES_STATUS_MAX_INFO  8
-
+#define PJSIP_PRES_STATUS_MAX_INFO 8
 
 /**
  * This structure describes presence status of a presentity.
  */
 struct pjsip_pres_status
 {
-    unsigned		info_cnt;	/**< Number of info in the status.  */
-    struct {
+    unsigned info_cnt; /**< Number of info in the status.  */
+    struct
+    {
+        pj_bool_t basic_open; /**< Basic status/availability.	    */
+        pjrpid_element rpid;  /**< Optional RPID info.	    */
 
-	pj_bool_t	basic_open;	/**< Basic status/availability.	    */
-	pjrpid_element	rpid;		/**< Optional RPID info.	    */
+        pj_str_t id;      /**< Tuple id.			    */
+        pj_str_t contact; /**< Optional contact address.	    */
 
-	pj_str_t	id;		/**< Tuple id.			    */
-	pj_str_t	contact;	/**< Optional contact address.	    */
+        pj_xml_node* tuple_node; /**< Pointer to tuple XML node of
+                                      parsed PIDF body received from
+                                      remote agent. Only valid for
+                                      client subscription. If the
+                                      last received NOTIFY request
+                                      does not contain any PIDF body,
+                                      this valud will be set to NULL */
 
-	pj_xml_node    *tuple_node;	/**< Pointer to tuple XML node of
-					     parsed PIDF body received from
-					     remote agent. Only valid for
-					     client subscription. If the
-					     last received NOTIFY request
-					     does not contain any PIDF body,
-					     this valud will be set to NULL */
+    } info[PJSIP_PRES_STATUS_MAX_INFO]; /**< Array of info.		    */
 
-    } info[PJSIP_PRES_STATUS_MAX_INFO];	/**< Array of info.		    */
-
-    pj_bool_t		_is_valid;	/**< Internal flag.		    */
+    pj_bool_t _is_valid; /**< Internal flag.		    */
 };
-
 
 /**
  * @see pjsip_pres_status
  */
 typedef struct pjsip_pres_status pjsip_pres_status;
-
 
 /**
  * Create presence client subscription session.
@@ -123,11 +113,9 @@ typedef struct pjsip_pres_status pjsip_pres_status;
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
-					    const pjsip_evsub_user *user_cb,
-					    unsigned options,
-					    pjsip_evsub **p_evsub );
-
+PJ_DECL(pj_status_t)
+pjsip_pres_create_uac(pjsip_dialog* dlg, const pjsip_evsub_user* user_cb,
+                      unsigned options, pjsip_evsub** p_evsub);
 
 /**
  * Create presence server subscription session.
@@ -135,22 +123,20 @@ PJ_DECL(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
  * @param dlg		The underlying dialog to use.
  * @param user_cb	Pointer to callbacks to receive presence subscription
  *			events.
- * @param rdata		The incoming SUBSCRIBE request that creates the event 
+ * @param rdata		The incoming SUBSCRIBE request that creates the event
  *			subscription.
  * @param p_evsub	Pointer to receive the presence subscription
  *			session.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
-					    const pjsip_evsub_user *user_cb,
-					    pjsip_rx_data *rdata,
-					    pjsip_evsub **p_evsub );
-
+PJ_DECL(pj_status_t)
+pjsip_pres_create_uas(pjsip_dialog* dlg, const pjsip_evsub_user* user_cb,
+                      pjsip_rx_data* rdata, pjsip_evsub** p_evsub);
 
 /**
  * Forcefully destroy the presence subscription. This function should only
- * be called on special condition, such as when the subscription 
+ * be called on special condition, such as when the subscription
  * initialization has failed. For other conditions, application MUST terminate
  * the subscription by sending the appropriate un(SUBSCRIBE) or NOTIFY.
  *
@@ -160,13 +146,10 @@ PJ_DECL(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
  *
  * @return		PJ_SUCCESS if subscription session has been destroyed.
  */
-PJ_DECL(pj_status_t) pjsip_pres_terminate( pjsip_evsub *sub,
-					   pj_bool_t notify );
-
-
+PJ_DECL(pj_status_t) pjsip_pres_terminate(pjsip_evsub* sub, pj_bool_t notify);
 
 /**
- * Call this function to create request to initiate presence subscription, to 
+ * Call this function to create request to initiate presence subscription, to
  * refresh subcription, or to request subscription termination.
  *
  * @param sub		Client subscription instance.
@@ -178,10 +161,9 @@ PJ_DECL(pj_status_t) pjsip_pres_terminate( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_initiate( pjsip_evsub *sub,
-					  pj_uint32_t expires,
-					  pjsip_tx_data **p_tdata);
-
+PJ_DECL(pj_status_t)
+pjsip_pres_initiate(pjsip_evsub* sub, pj_uint32_t expires,
+                    pjsip_tx_data** p_tdata);
 
 /**
  * Add a list of headers to the subscription instance. The list of headers
@@ -192,9 +174,8 @@ PJ_DECL(pj_status_t) pjsip_pres_initiate( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_add_header( pjsip_evsub *sub,
-					    const pjsip_hdr *hdr_list );
-
+PJ_DECL(pj_status_t)
+pjsip_pres_add_header(pjsip_evsub* sub, const pjsip_hdr* hdr_list);
 
 /**
  * Accept the incoming subscription request by sending 2xx response to
@@ -207,16 +188,12 @@ PJ_DECL(pj_status_t) pjsip_pres_add_header( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_accept( pjsip_evsub *sub,
-					pjsip_rx_data *rdata,
-				        int st_code,
-					const pjsip_hdr *hdr_list );
-
-
-
+PJ_DECL(pj_status_t)
+pjsip_pres_accept(pjsip_evsub* sub, pjsip_rx_data* rdata, int st_code,
+                  const pjsip_hdr* hdr_list);
 
 /**
- * For notifier, create NOTIFY request to subscriber, and set the state 
+ * For notifier, create NOTIFY request to subscriber, and set the state
  * of the subscription. Application MUST set the presence status to the
  * appropriate state (by calling #pjsip_pres_set_status()) before calling
  * this function.
@@ -232,12 +209,10 @@ PJ_DECL(pj_status_t) pjsip_pres_accept( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_notify( pjsip_evsub *sub,
-					pjsip_evsub_state state,
-					const pj_str_t *state_str,
-					const pj_str_t *reason,
-					pjsip_tx_data **p_tdata);
-
+PJ_DECL(pj_status_t)
+pjsip_pres_notify(pjsip_evsub* sub, pjsip_evsub_state state,
+                  const pj_str_t* state_str, const pj_str_t* reason,
+                  pjsip_tx_data** p_tdata);
 
 /**
  * Create NOTIFY request to reflect current subscription status.
@@ -247,10 +222,8 @@ PJ_DECL(pj_status_t) pjsip_pres_notify( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_current_notify( pjsip_evsub *sub,
-					        pjsip_tx_data **p_tdata );
-
-
+PJ_DECL(pj_status_t)
+pjsip_pres_current_notify(pjsip_evsub* sub, pjsip_tx_data** p_tdata);
 
 /**
  * Send request message that was previously created with initiate(), notify(),
@@ -263,9 +236,8 @@ PJ_DECL(pj_status_t) pjsip_pres_current_notify( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_send_request( pjsip_evsub *sub,
-					      pjsip_tx_data *tdata );
-
+PJ_DECL(pj_status_t)
+pjsip_pres_send_request(pjsip_evsub* sub, pjsip_tx_data* tdata);
 
 /**
  * Get the presence status. Client normally would call this function
@@ -276,9 +248,8 @@ PJ_DECL(pj_status_t) pjsip_pres_send_request( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_get_status( pjsip_evsub *sub,
-					    pjsip_pres_status *status );
-
+PJ_DECL(pj_status_t)
+pjsip_pres_get_status(pjsip_evsub* sub, pjsip_pres_status* status);
 
 /**
  * Set the presence status. This operation is only valid for server
@@ -290,9 +261,8 @@ PJ_DECL(pj_status_t) pjsip_pres_get_status( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
-					    const pjsip_pres_status *status );
-
+PJ_DECL(pj_status_t)
+pjsip_pres_set_status(pjsip_evsub* sub, const pjsip_pres_status* status);
 
 /**
  * This is a utility function to create PIDF message body from PJSIP
@@ -301,17 +271,15 @@ PJ_DECL(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
  * @param pool		The pool to allocate memory for the message body.
  * @param status	Presence status to be converted into PIDF message
  *			body.
- * @param entity	The entity ID, which normally is equal to the 
+ * @param entity	The entity ID, which normally is equal to the
  *			presentity ID publishing this presence info.
  * @param p_body	Pointer to receive the SIP message body.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
-					     const pjsip_pres_status *status,
-					     const pj_str_t *entity,
-					     pjsip_msg_body **p_body );
-
+PJ_DECL(pj_status_t)
+pjsip_pres_create_pidf(pj_pool_t* pool, const pjsip_pres_status* status,
+                       const pj_str_t* entity, pjsip_msg_body** p_body);
 
 /**
  * This is a utility function to create X-PIDF message body from PJSIP
@@ -320,18 +288,15 @@ PJ_DECL(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
  * @param pool		The pool to allocate memory for the message body.
  * @param status	Presence status to be converted into X-PIDF message
  *			body.
- * @param entity	The entity ID, which normally is equal to the 
+ * @param entity	The entity ID, which normally is equal to the
  *			presentity ID publishing this presence info.
  * @param p_body	Pointer to receive the SIP message body.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_pres_create_xpidf(pj_pool_t *pool,
-					     const pjsip_pres_status *status,
-					     const pj_str_t *entity,
-					     pjsip_msg_body **p_body );
-
-
+PJ_DECL(pj_status_t)
+pjsip_pres_create_xpidf(pj_pool_t* pool, const pjsip_pres_status* status,
+                        const pj_str_t* entity, pjsip_msg_body** p_body);
 
 /**
  * This is a utility function to parse PIDF body into PJSIP presence status.
@@ -345,9 +310,9 @@ PJ_DECL(pj_status_t) pjsip_pres_create_xpidf(pj_pool_t *pool,
  *
  * @see pjsip_pres_parse_pidf2()
  */
-PJ_DECL(pj_status_t) pjsip_pres_parse_pidf(pjsip_rx_data *rdata,
-					   pj_pool_t *pool,
-					   pjsip_pres_status *status);
+PJ_DECL(pj_status_t)
+pjsip_pres_parse_pidf(pjsip_rx_data* rdata, pj_pool_t* pool,
+                      pjsip_pres_status* status);
 
 /**
  * This is a utility function to parse PIDF body into PJSIP presence status.
@@ -364,10 +329,9 @@ PJ_DECL(pj_status_t) pjsip_pres_parse_pidf(pjsip_rx_data *rdata,
  *
  * @see pjsip_pres_parse_pidf()
  */
-PJ_DECL(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
-					    pj_pool_t *pool,
-					    pjsip_pres_status *status);
-
+PJ_DECL(pj_status_t)
+pjsip_pres_parse_pidf2(char* body, unsigned body_len, pj_pool_t* pool,
+                       pjsip_pres_status* status);
 
 /**
  * This is a utility function to parse X-PIDF body into PJSIP presence status.
@@ -381,10 +345,9 @@ PJ_DECL(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
  *
  * @see pjsip_pres_parse_xpidf2()
  */
-PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf(pjsip_rx_data *rdata,
-					   pj_pool_t *pool,
-					   pjsip_pres_status *status);
-
+PJ_DECL(pj_status_t)
+pjsip_pres_parse_xpidf(pjsip_rx_data* rdata, pj_pool_t* pool,
+                       pjsip_pres_status* status);
 
 /**
  * This is a utility function to parse X-PIDF body into PJSIP presence status.
@@ -401,11 +364,9 @@ PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf(pjsip_rx_data *rdata,
  *
  * @see pjsip_pres_parse_xpidf()
  */
-PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
-					     pj_pool_t *pool,
-					     pjsip_pres_status *status);
-
-
+PJ_DECL(pj_status_t)
+pjsip_pres_parse_xpidf2(char* body, unsigned body_len, pj_pool_t* pool,
+                        pjsip_pres_status* status);
 
 /**
  * @}
@@ -413,5 +374,4 @@ PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
 
 PJ_END_DECL
 
-
-#endif	/* __PJSIP_SIMPLE_PRESENCE_H__ */
+#endif /* __PJSIP_SIMPLE_PRESENCE_H__ */

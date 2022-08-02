@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,36 +13,40 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include "TargetConditionals.h"
 
 #if TARGET_OS_IPHONE
 
-PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
-                       unsigned flags)
+PJ_DEF(int)
+pj_run_app(pj_main_func_ptr main_func, int argc, char* argv[], unsigned flags)
 {
     return (*main_func)(argc, argv);
 }
 
 #else
 
-#include <pthread.h>
-#include <AppKit/AppKit.h>
-#include <CoreFoundation/CFRunLoop.h>
-#include <Foundation/Foundation.h>
+#    include <pthread.h>
+#    include <AppKit/AppKit.h>
+#    include <CoreFoundation/CFRunLoop.h>
+#    include <Foundation/Foundation.h>
 
-#define THIS_FILE   "os_core_darwin.m"
+#    define THIS_FILE "os_core_darwin.m"
 
-typedef struct run_app_t {
-    pj_main_func_ptr  main_func;
-    int               argc;
-    char            **argv;
-    int               retval;
+typedef struct run_app_t
+{
+    pj_main_func_ptr main_func;
+    int argc;
+    char** argv;
+    int retval;
 } run_app_t;
 
-@interface DeadThread: NSObject { ;; }
+@interface DeadThread : NSObject {
+    ;
+    ;
+}
 + (void)enterMultiThreadedMode;
 + (void)emptyThreadMethod:(id)obj;
 @end
@@ -52,19 +55,23 @@ typedef struct run_app_t {
 + (void)enterMultiThreadedMode
 {
     [NSThread detachNewThreadSelector:@selector(emptyThreadMethod:)
-              toTarget:[DeadThread class] withObject:nil];
+                             toTarget:[DeadThread class]
+                           withObject:nil];
 }
 
-+ (void)emptyThreadMethod:(id)obj { ; }
++ (void)emptyThreadMethod:(id)obj
+{
+    ;
+}
 @end
 
-static void* main_thread(void *data)
+static void* main_thread(void* data)
 {
-    run_app_t *param = (run_app_t *)data;
-    
+    run_app_t* param = (run_app_t*)data;
+
     param->retval = (*param->main_func)(param->argc, param->argv);
     CFRunLoopStop(CFRunLoopGetMain());
-    
+
     return NULL;
 }
 
@@ -74,26 +81,26 @@ static void* main_thread(void *data)
  * this function is to initialize the application's memory pool, event
  * loop management, and multi-threading environment.
  */
-PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
-                       unsigned flags)
+PJ_DEF(int)
+pj_run_app(pj_main_func_ptr main_func, int argc, char* argv[], unsigned flags)
 {
     pthread_t thread;
     run_app_t param;
-    NSAutoreleasePool *pool;
-    
+    NSAutoreleasePool* pool;
+
     pool = [[NSAutoreleasePool alloc] init];
     [NSApplication sharedApplication];
     [DeadThread enterMultiThreadedMode];
 
     param.argc = argc;
-    param.argv = (char **)argv;
+    param.argv = (char**)argv;
     param.main_func = main_func;
     if (pthread_create(&thread, NULL, &main_thread, &param) == 0) {
         CFRunLoopRun();
     }
-    
+
     PJ_UNUSED_ARG(pool);
-    
+
     return param.retval;
 }
 

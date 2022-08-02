@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,15 +13,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
 
 /**
 
 @mainpage PJNATH - Open Source ICE, STUN, and TURN Library
 
-PJNATH (PJSIP NAT Helper) is an open source library providing NAT traversal 
+PJNATH (PJSIP NAT Helper) is an open source library providing NAT traversal
 functionalities by using standard based protocols such as STUN, TURN, and ICE.
 
 
@@ -30,53 +28,53 @@ functionalities by using standard based protocols such as STUN, TURN, and ICE.
 
 
 Network Address Translation (NAT) is commonly deployed everywhere primarily to
-alleviate the exhaustion of IPv4 address space by allowing multiple hosts to 
-share a public/Internet address. While NAT would work well for typical client 
-server communications (such as web and email), since it's always the client 
+alleviate the exhaustion of IPv4 address space by allowing multiple hosts to
+share a public/Internet address. While NAT would work well for typical client
+server communications (such as web and email), since it's always the client
 that initiates the conversation and normally client doesn't need to maintain
 the connection for a long time, installation of NAT would cause major problem
-for peer-to-peer communication, such as (and especially) VoIP. 
+for peer-to-peer communication, such as (and especially) VoIP.
 
 <strong>\ref nat_intro "Read more.."</strong>
 
 
 \section intro Introduction to PJNATH
 
-PJSIP NAT Helper (PJNATH) is a library which contains the implementation of 
-standard based NAT traversal solutions. PJNATH can be used as a stand-alone 
+PJSIP NAT Helper (PJNATH) is a library which contains the implementation of
+standard based NAT traversal solutions. PJNATH can be used as a stand-alone
 library for your software, or you may use PJSUA-LIB library, a very high level
  library integrating PJSIP, PJMEDIA, and PJNATH into simple to use APIs.
 
 PJNATH has the following features:
 
  - <strong>STUNbis</strong> implementation,\n
-   providing both ready to use 
-   STUN-aware socket and framework to implement higher level STUN based 
-   protocols such as TURN and ICE. The implementation complies to 
+   providing both ready to use
+   STUN-aware socket and framework to implement higher level STUN based
+   protocols such as TURN and ICE. The implementation complies to
    <A HREF="http://www.ietf.org/rfc/rfc5389.txt">RFC 5389</A>
    standard.\n\n
 
  - <strong>NAT type detection</strong>, \n
    performs detection of the NAT type in front of the endpoint, according
-   to <A HREF="http://www.ietf.org/rfc/rfc3489.txt">RFC 3489</A>. 
-   While the practice to detect the NAT type to assist NAT 
+   to <A HREF="http://www.ietf.org/rfc/rfc3489.txt">RFC 3489</A>.
+   While the practice to detect the NAT type to assist NAT
    traversal has been deprecated in favor of ICE, the information may still
    be useful for troubleshooting purposes, hence the utility is provided.\n\n
 
  - <strong>Traversal Using Relays around NAT (TURN)</strong> implementation.\n
-   TURN is a protocol for relaying communications by means of using relay, 
-   and combined with ICE it provides efficient last effort alternative for 
-   the communication path. The TURN implementation in PJNATH complies to 
+   TURN is a protocol for relaying communications by means of using relay,
+   and combined with ICE it provides efficient last effort alternative for
+   the communication path. The TURN implementation in PJNATH complies to
    <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-14.txt">
    draft-ietf-behave-turn-14</A> draft.\n\n
 
- - <strong>Interactive Connectivity Establishmen (ICE)</strong> implementation.\n
-   ICE is a protocol for discovering communication path(s) between two 
-   endpoints. The implementation in PJNATH complies to
-   <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-19.txt">
+ - <strong>Interactive Connectivity Establishmen (ICE)</strong>
+implementation.\n ICE is a protocol for discovering communication path(s)
+between two endpoints. The implementation in PJNATH complies to <A
+HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-19.txt">
    draft-ietf-mmusic-ice-19.txt</A> draft
 
-In the future, more protocols will be implemented (such as UPnP IGD, and 
+In the future, more protocols will be implemented (such as UPnP IGD, and
 SOCKS5).
 
 
@@ -89,7 +87,7 @@ The library provides the following main component groups:
  - \ref PJNATH_ICE\n\n
  - \ref PJNATH_NAT_DETECT\n\n
 
-Apart from the \ref PJNATH_NAT_DETECT, each component group are further 
+Apart from the \ref PJNATH_NAT_DETECT, each component group are further
 divided into two functionalities:
 
  - <b>Transport objects</b>\n
@@ -124,7 +122,7 @@ from <A HREF="http://www.pjsip.org">PJSIP website</A>
 \subsection pjnath_using_sec Using the libraries
 
 Please click on the appropriate component under \ref pjnath_organization_sec
-section above, which will take you to the documentation on how to use the 
+section above, which will take you to the documentation on how to use the
 component.
 
 
@@ -138,11 +136,7 @@ Please see <b>\ref samples_page</b> page for the list of samples.
 
 */
 
-
-
 /**
 @defgroup samples_page PJNATH Samples and screenshots
 @brief Sample applications and screenshots
  */
-
-

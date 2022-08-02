@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_RESOLVER_H__
 #define __PJLIB_UTIL_RESOLVER_H__
@@ -26,9 +25,7 @@
  */
 #include <pjlib-util/dns.h>
 
-
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup PJ_DNS_RESOLVER DNS Asynchronous/Caching Resolution Engine
@@ -36,21 +33,22 @@ PJ_BEGIN_DECL
  * @{
  *
  * This module manages the host/server resolution by performing asynchronous
- * DNS queries and caching the results in the cache. It uses PJLIB-UTIL 
+ * DNS queries and caching the results in the cache. It uses PJLIB-UTIL
  * low-level DNS parsing functions (see @ref PJ_DNS) and currently supports
  * several types of DNS resource records such as A record (typical query with
  * gethostbyname()) and SRV record.
  *
  * \section PJ_DNS_RESOLVER_FEATURES Features
  *
- * \subsection PJ_DNS_RESOLVER_FEATURES_ASYNC Asynchronous Query and Query Aggregation
- * 
- * The DNS queries are performed asychronously, with timeout setting 
+ * \subsection PJ_DNS_RESOLVER_FEATURES_ASYNC Asynchronous Query and Query
+ * Aggregation
+ *
+ * The DNS queries are performed asychronously, with timeout setting
  * configured on per resolver instance basis. Application can issue multiple
  * asynchronous queries simultaneously. Subsequent queries to the same resource
  * (name and DNS resource type) while existing query is still pending will be
  * merged into one query, so that only one DNS request packet is issued.
- * 
+ *
  * \subsection PJ_DNS_RESOLVER_FEATURES_RETRANSMISSION Query Retransmission
  *
  * Asynchronous query will be retransmitted if no response is received
@@ -62,18 +60,19 @@ PJ_BEGIN_DECL
  *
  * The resolver instance caches the results returned by nameservers, to
  * enhance the performance by minimizing the message round-trip to the server.
- * The TTL of the cached resposne is calculated from minimum TTL value found 
+ * The TTL of the cached resposne is calculated from minimum TTL value found
  * across all resource record (RR) TTL in the response and further more it can
- * be limited to some preconfigured maximum TTL in the resolver. 
+ * be limited to some preconfigured maximum TTL in the resolver.
  *
- * Response caching can be  disabled by setting the maximum TTL value of the 
+ * Response caching can be  disabled by setting the maximum TTL value of the
  * resolver to zero.
  *
- * \subsection PJ_DNS_RESOLVER_FEATURES_PARALLEL Parallel and Backup Name Servers
+ * \subsection PJ_DNS_RESOLVER_FEATURES_PARALLEL Parallel and Backup Name
+ * Servers
  *
  * When the resolver is configured with multiple nameservers, initially the
  * queries will be issued to multiple name servers simultaneously to probe
- * which servers are not active. Once the probing stage is done, subsequent 
+ * which servers are not active. Once the probing stage is done, subsequent
  * queries will be directed to only one ACTIVE server which provides the best
  * response time.
  *
@@ -93,7 +92,7 @@ PJ_BEGIN_DECL
  *  - DNS NS record
  *  - DNS CNAME record
  *
- * For other types of record, application can parse the raw resource 
+ * For other types of record, application can parse the raw resource
  * record data (rdata) from the parsed DNS packet (#pj_dns_parsed_packet).
  *
  *
@@ -102,22 +101,23 @@ PJ_BEGIN_DECL
  * To use the resolver, application first creates the resolver instance by
  * calling #pj_dns_resolver_create(). If application already has its own
  * timer and ioqueue instances, it can instruct the resolver to use these
- * instances so that application does not need to poll the resolver 
+ * instances so that application does not need to poll the resolver
  * periodically to process events. If application does not specify the
  * timer and ioqueue instance for the resolver, an internal timer and
  * ioqueue will be created by the resolver. And since the resolver does not
  * create it's own thread, application MUST poll the resolver periodically
- * by calling #pj_dns_resolver_handle_events() to allow events (network and 
+ * by calling #pj_dns_resolver_handle_events() to allow events (network and
  * timer) to be processed.
  *
  * Next, application MUST configure the nameservers to be used by the
  * resolver, by calling #pj_dns_resolver_set_ns().
  *
  * Application performs asynchronous query by submitting the query with
- * #pj_dns_resolver_start_query(). Once the query completes (either 
+ * #pj_dns_resolver_start_query(). Once the query completes (either
  * successfully or times out), the callback will be called.
  *
- * Application can cancel a pending query by calling #pj_dns_resolver_cancel_query().
+ * Application can cancel a pending query by calling
+ * #pj_dns_resolver_cancel_query().
  *
  * Resolver must be destroyed by calling #pj_dns_resolver_destroy() to
  * release all resources back to the system.
@@ -132,17 +132,17 @@ PJ_BEGIN_DECL
  * entries. So the more unique names being queried by application, there more
  * enties will be created in the response cache.
  *
- * Note that a single response entry will occupy about 600-700 bytes of 
+ * Note that a single response entry will occupy about 600-700 bytes of
  * pool memory (the PJ_DNS_RESOLVER_RES_BUF_SIZE value plus internal
- * structure). 
+ * structure).
  *
  * Application can work around this problem by doing one of these:
- *  - disable caching by setting PJ_DNS_RESOLVER_MAX_TTL and 
+ *  - disable caching by setting PJ_DNS_RESOLVER_MAX_TTL and
  *    PJ_DNS_RESOLVER_INVALID_TTL to zero.
  *  - periodically query #pj_dns_resolver_get_cached_count() and destroy-
  *    recreate the resolver to recycle the memory used by the resolver.
  *
- * Note that future improvement may solve this problem by introducing 
+ * Note that future improvement may solve this problem by introducing
  * expiration timer to the cached entries.
  *
  *
@@ -156,8 +156,6 @@ PJ_BEGIN_DECL
  *    RFC 2782: "A DNS RR for specifying the location of services (DNS SRV)"
  *    </A>
  */
-
-
 
 /**
  * Opaque data type for DNS resolver object.
@@ -179,25 +177,22 @@ typedef struct pj_dns_async_query pj_dns_async_query;
  * @param response	The response packet received from the server. This
  *			argument may be NULL when status is not PJ_SUCCESS.
  */
-typedef void pj_dns_callback(void *user_data,
-			     pj_status_t status,
-			     pj_dns_parsed_packet *response);
-
+typedef void pj_dns_callback(void* user_data, pj_status_t status,
+                             pj_dns_parsed_packet* response);
 
 /**
  * This structure describes resolver settings.
  */
 typedef struct pj_dns_settings
 {
-    unsigned	options;	/**< Options flags.			    */
-    unsigned	qretr_delay;	/**< Query retransmit delay in msec.	    */
-    unsigned	qretr_count;	/**< Query maximum retransmission count.    */
-    unsigned	cache_max_ttl;	/**< Maximum TTL for cached responses. If the
-				     value is zero, caching is disabled.    */
-    unsigned	good_ns_ttl;	/**< See #PJ_DNS_RESOLVER_GOOD_NS_TTL	    */
-    unsigned	bad_ns_ttl;	/**< See #PJ_DNS_RESOLVER_BAD_NS_TTL	    */
+    unsigned options;       /**< Options flags.			    */
+    unsigned qretr_delay;   /**< Query retransmit delay in msec.	    */
+    unsigned qretr_count;   /**< Query maximum retransmission count.    */
+    unsigned cache_max_ttl; /**< Maximum TTL for cached responses. If the
+                                 value is zero, caching is disabled.    */
+    unsigned good_ns_ttl;   /**< See #PJ_DNS_RESOLVER_GOOD_NS_TTL	    */
+    unsigned bad_ns_ttl;    /**< See #PJ_DNS_RESOLVER_BAD_NS_TTL	    */
 } pj_dns_settings;
-
 
 /**
  * This structure represents DNS A record, as the result of parsing
@@ -206,24 +201,23 @@ typedef struct pj_dns_settings
 typedef struct pj_dns_a_record
 {
     /** The target name being queried.   */
-    pj_str_t		name;
+    pj_str_t name;
 
     /** If target name corresponds to a CNAME entry, the alias contains
      *  the value of the CNAME entry, otherwise it will be empty.
      */
-    pj_str_t		alias;
+    pj_str_t alias;
 
     /** Number of IP addresses. */
-    unsigned		addr_count;
+    unsigned addr_count;
 
     /** IP addresses of the host found in the response */
-    pj_in_addr		addr[PJ_DNS_MAX_IP_IN_A_REC];
+    pj_in_addr addr[PJ_DNS_MAX_IP_IN_A_REC];
 
     /** Internal buffer for hostname and alias. */
-    char		buf_[128];
+    char buf_[128];
 
 } pj_dns_a_record;
-
 
 /**
  * This structure represents DNS address record, i.e: DNS A and DNS AAAA
@@ -233,46 +227,45 @@ typedef struct pj_dns_a_record
 typedef struct pj_dns_addr_record
 {
     /** The target name being queried.   */
-    pj_str_t		name;
+    pj_str_t name;
 
     /** If target name corresponds to a CNAME entry, the alias contains
      *  the value of the CNAME entry, otherwise it will be empty.
      */
-    pj_str_t		alias;
+    pj_str_t alias;
 
     /** Number of IP addresses. */
-    unsigned		addr_count;
+    unsigned addr_count;
 
     /** IP addresses of the host found in the response */
-    struct {
+    struct
+    {
+        /** IP address family */
+        int af;
 
-	/** IP address family */
-	int		af;
-	
-	/** IP address */
-	union {
-	    /** IPv4 address */
-	    pj_in_addr	v4;
+        /** IP address */
+        union
+        {
+            /** IPv4 address */
+            pj_in_addr v4;
 
-	    /** IPv6 address */
-	    pj_in6_addr	v6;
-	} ip;
+            /** IPv6 address */
+            pj_in6_addr v6;
+        } ip;
 
     } addr[PJ_DNS_MAX_IP_IN_A_REC];
 
     /** Internal buffer for hostname and alias. */
-    char		buf_[128];
+    char buf_[128];
 
 } pj_dns_addr_record;
-
 
 /**
  * Set default values to the DNS settings.
  *
  * @param s	    The DNS settings to be initialized.
  */
-PJ_DECL(void) pj_dns_settings_default(pj_dns_settings *s);
-
+PJ_DECL(void) pj_dns_settings_default(pj_dns_settings* s);
 
 /**
  * Create DNS resolver instance. After the resolver is created, application
@@ -283,7 +276,7 @@ PJ_DECL(void) pj_dns_settings_default(pj_dns_settings *s);
  * periodically.
  *
  * @param pf	     Pool factory where the memory pool will be created from.
- * @param name	     Optional resolver name to identify the instance in 
+ * @param name	     Optional resolver name to identify the instance in
  *		     the log.
  * @param options    Optional options, must be zero for now.
  * @param timer	     Optional timer heap instance to be used by the resolver.
@@ -298,13 +291,10 @@ PJ_DECL(void) pj_dns_settings_default(pj_dns_settings *s);
  *
  * @return	     PJ_SUCCESS on success, or the appropriate error code,
  */
-PJ_DECL(pj_status_t) pj_dns_resolver_create(pj_pool_factory *pf,
-					    const char *name,
-					    unsigned options,
-					    pj_timer_heap_t *timer,
-					    pj_ioqueue_t *ioqueue,
-					    pj_dns_resolver **p_resolver);
-
+PJ_DECL(pj_status_t)
+pj_dns_resolver_create(pj_pool_factory* pf, const char* name, unsigned options,
+                       pj_timer_heap_t* timer, pj_ioqueue_t* ioqueue,
+                       pj_dns_resolver** p_resolver);
 
 /**
  * Update the name servers for the DNS resolver. The name servers MUST be
@@ -322,11 +312,9 @@ PJ_DECL(pj_status_t) pj_dns_resolver_create(pj_pool_factory *pf,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code,
  */
-PJ_DECL(pj_status_t) pj_dns_resolver_set_ns(pj_dns_resolver *resolver,
-					    unsigned count,
-					    const pj_str_t servers[],
-					    const pj_uint16_t ports[]);
-
+PJ_DECL(pj_status_t)
+pj_dns_resolver_set_ns(pj_dns_resolver* resolver, unsigned count,
+                       const pj_str_t servers[], const pj_uint16_t ports[]);
 
 /**
  * Get the resolver current settings.
@@ -336,9 +324,8 @@ PJ_DECL(pj_status_t) pj_dns_resolver_set_ns(pj_dns_resolver *resolver,
  *
  * @return	    The query timeout setting, in seconds.
  */
-PJ_DECL(pj_status_t) pj_dns_resolver_get_settings(pj_dns_resolver *resolver,
-						  pj_dns_settings *st);
-
+PJ_DECL(pj_status_t)
+pj_dns_resolver_get_settings(pj_dns_resolver* resolver, pj_dns_settings* st);
 
 /**
  * Modify the resolver settings. Application should initialize the settings
@@ -350,12 +337,12 @@ PJ_DECL(pj_status_t) pj_dns_resolver_get_settings(pj_dns_resolver *resolver,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code,
  */
-PJ_DECL(pj_status_t) pj_dns_resolver_set_settings(pj_dns_resolver *resolver,
-						  const pj_dns_settings *st);
-
+PJ_DECL(pj_status_t)
+pj_dns_resolver_set_settings(pj_dns_resolver* resolver,
+                             const pj_dns_settings* st);
 
 /**
- * Poll for events from the resolver. This function MUST be called 
+ * Poll for events from the resolver. This function MUST be called
  * periodically when the resolver is using it's own timer or ioqueue
  * (in other words, when NULL is specified as either \a timer or
  * \a ioqueue argument in #pj_dns_resolver_create()).
@@ -365,9 +352,9 @@ PJ_DECL(pj_status_t) pj_dns_resolver_set_settings(pj_dns_resolver *resolver,
  *		    argument is NULL, this function will wait forever
  *		    until events occur.
  */
-PJ_DECL(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
-					    const pj_time_val *timeout);
-
+PJ_DECL(void)
+pj_dns_resolver_handle_events(pj_dns_resolver* resolver,
+                              const pj_time_val* timeout);
 
 /**
  * Destroy DNS resolver instance.
@@ -379,9 +366,8 @@ PJ_DECL(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code,
  */
-PJ_DECL(pj_status_t) pj_dns_resolver_destroy(pj_dns_resolver *resolver,
-					     pj_bool_t notify);
-
+PJ_DECL(pj_status_t)
+pj_dns_resolver_destroy(pj_dns_resolver* resolver, pj_bool_t notify);
 
 /**
  * Create and start asynchronous DNS query for a single resource. Depending
@@ -393,7 +379,7 @@ PJ_DECL(pj_status_t) pj_dns_resolver_destroy(pj_dns_resolver *resolver,
  * completes. If \a p_query argument is not NULL, it will be filled with
  * the asynchronous query object.
  *
- * If response is available in the cache, the callback will be called 
+ * If response is available in the cache, the callback will be called
  * immediately before this function returns. In this case, if \a p_query
  * argument is not NULL, the value will be set to NULL since no new query
  * is started.
@@ -410,17 +396,14 @@ PJ_DECL(pj_status_t) pj_dns_resolver_destroy(pj_dns_resolver *resolver,
  *		    was started. If this pointer is specified, a NULL may
  *		    be returned if response cache is available immediately.
  *
- * @return	    PJ_SUCCESS if either an asynchronous query has been 
+ * @return	    PJ_SUCCESS if either an asynchronous query has been
  *		    started successfully or response cache is available and
  *		    the user callback has been called.
  */
-PJ_DECL(pj_status_t) pj_dns_resolver_start_query(pj_dns_resolver *resolver,
-						 const pj_str_t *name,
-						 int type,
-						 unsigned options,
-						 pj_dns_callback *cb,
-						 void *user_data,
-						 pj_dns_async_query **p_query);
+PJ_DECL(pj_status_t)
+pj_dns_resolver_start_query(pj_dns_resolver* resolver, const pj_str_t* name,
+                            int type, unsigned options, pj_dns_callback* cb,
+                            void* user_data, pj_dns_async_query** p_query);
 
 /**
  * Cancel a pending query.
@@ -431,11 +414,11 @@ PJ_DECL(pj_status_t) pj_dns_resolver_start_query(pj_dns_resolver *resolver,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code,
  */
-PJ_DECL(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
-						  pj_bool_t notify);
+PJ_DECL(pj_status_t)
+pj_dns_resolver_cancel_query(pj_dns_async_query* query, pj_bool_t notify);
 
 /**
- * A utility function to parse a DNS response containing A records into 
+ * A utility function to parse a DNS response containing A records into
  * DNS A record.
  *
  * @param pkt	    The DNS response packet.
@@ -444,12 +427,11 @@ PJ_DECL(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
  *
  * @return	    PJ_SUCCESS if response can be parsed successfully.
  */
-PJ_DECL(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
-					     pj_dns_a_record *rec);
-
+PJ_DECL(pj_status_t)
+pj_dns_parse_a_response(const pj_dns_parsed_packet* pkt, pj_dns_a_record* rec);
 
 /**
- * A utility function to parse a DNS response containing AAAA records into 
+ * A utility function to parse a DNS response containing AAAA records into
  * DNS AAAA record.
  *
  * @param pkt	    The DNS response packet.
@@ -458,10 +440,9 @@ PJ_DECL(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
  *
  * @return	    PJ_SUCCESS if response can be parsed successfully.
  */
-PJ_DECL(pj_status_t) pj_dns_parse_addr_response(
-					    const pj_dns_parsed_packet *pkt,
-					    pj_dns_addr_record *rec);
-
+PJ_DECL(pj_status_t)
+pj_dns_parse_addr_response(const pj_dns_parsed_packet* pkt,
+                           pj_dns_addr_record* rec);
 
 /**
  * Put the specified DNS packet into DNS cache. This function is mainly used
@@ -474,15 +455,15 @@ PJ_DECL(pj_status_t) pj_dns_parse_addr_response(
  * @param resolver  The resolver instance.
  * @param pkt	    DNS packet to be added to the DNS cache. If the packet
  *		    matches existing entry, it will update the entry.
- * @param set_ttl   If the value is PJ_FALSE, the entry will not expire 
+ * @param set_ttl   If the value is PJ_FALSE, the entry will not expire
  *		    (so use with care). Otherwise cache expiration will be
  *		    calculated based on the TTL of the answeres.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_dns_resolver_add_entry(pj_dns_resolver *resolver,
-					       const pj_dns_parsed_packet *pkt,
-					       pj_bool_t set_ttl);
+PJ_DECL(pj_status_t)
+pj_dns_resolver_add_entry(pj_dns_resolver* resolver,
+                          const pj_dns_parsed_packet* pkt, pj_bool_t set_ttl);
 
 /**
  * Get the total number of response in the response cache.
@@ -492,8 +473,7 @@ PJ_DECL(pj_status_t) pj_dns_resolver_add_entry(pj_dns_resolver *resolver,
  * @return	    Current number of entries being stored in the response
  *		    cache.
  */
-PJ_DECL(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver);
-
+PJ_DECL(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver* resolver);
 
 /**
  * Dump resolver state to the log.
@@ -501,9 +481,7 @@ PJ_DECL(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver);
  * @param resolver  The resolver instance.
  * @param detail    Will print detailed entries.
  */
-PJ_DECL(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
-				   pj_bool_t detail);
-
+PJ_DECL(void) pj_dns_resolver_dump(pj_dns_resolver* resolver, pj_bool_t detail);
 
 /**
  * @}
@@ -511,6 +489,4 @@ PJ_DECL(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
 
 PJ_END_DECL
 
-
-#endif	/* __PJLIB_UTIL_RESOLVER_H__ */
-
+#endif /* __PJLIB_UTIL_RESOLVER_H__ */

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_NAT_DETECT_H__
 #define __PJNATH_NAT_DETECT_H__
@@ -26,9 +25,7 @@
  */
 #include <pjnath/stun_session.h>
 
-
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup PJNATH_NAT_DETECT NAT Classification/Detection Tool
@@ -40,7 +37,6 @@ PJ_BEGIN_DECL
  * detection. NAT type detection is performed by calling
  * #pj_stun_detect_nat_type() function.
  */
-
 
 /**
  * This enumeration describes the NAT types, as specified by RFC 3489
@@ -80,18 +76,18 @@ typedef enum pj_stun_nat_type
     PJ_STUN_NAT_TYPE_SYMMETRIC_UDP,
 
     /**
-     * A full cone NAT is one where all requests from the same internal 
+     * A full cone NAT is one where all requests from the same internal
      * IP address and port are mapped to the same external IP address and
-     * port.  Furthermore, any external host can send a packet to the 
+     * port.  Furthermore, any external host can send a packet to the
      * internal host, by sending a packet to the mapped external address.
      */
     PJ_STUN_NAT_TYPE_FULL_CONE,
 
     /**
-     * A symmetric NAT is one where all requests from the same internal 
+     * A symmetric NAT is one where all requests from the same internal
      * IP address and port, to a specific destination IP address and port,
-     * are mapped to the same external IP address and port.  If the same 
-     * host sends a packet with the same source address and port, but to 
+     * are mapped to the same external IP address and port.  If the same
+     * host sends a packet with the same source address and port, but to
      * a different destination, a different mapping is used.  Furthermore,
      * only the external host that receives a packet can send a UDP packet
      * back to the internal host.
@@ -99,25 +95,24 @@ typedef enum pj_stun_nat_type
     PJ_STUN_NAT_TYPE_SYMMETRIC,
 
     /**
-     * A restricted cone NAT is one where all requests from the same 
-     * internal IP address and port are mapped to the same external IP 
-     * address and port.  Unlike a full cone NAT, an external host (with 
-     * IP address X) can send a packet to the internal host only if the 
+     * A restricted cone NAT is one where all requests from the same
+     * internal IP address and port are mapped to the same external IP
+     * address and port.  Unlike a full cone NAT, an external host (with
+     * IP address X) can send a packet to the internal host only if the
      * internal host had previously sent a packet to IP address X.
      */
     PJ_STUN_NAT_TYPE_RESTRICTED,
 
     /**
-     * A port restricted cone NAT is like a restricted cone NAT, but the 
-     * restriction includes port numbers. Specifically, an external host 
-     * can send a packet, with source IP address X and source port P, 
+     * A port restricted cone NAT is like a restricted cone NAT, but the
+     * restriction includes port numbers. Specifically, an external host
+     * can send a packet, with source IP address X and source port P,
      * to the internal host only if the internal host had previously sent
      * a packet to IP address X and port P.
      */
     PJ_STUN_NAT_TYPE_PORT_RESTRICTED
 
 } pj_stun_nat_type;
-
 
 /**
  * This structure contains the result of NAT classification function.
@@ -129,34 +124,32 @@ typedef struct pj_stun_nat_detect_result
      * the detection has failed and \a nat_type field will contain
      * PJ_STUN_NAT_TYPE_UNKNOWN.
      */
-    pj_status_t		 status;
+    pj_status_t status;
 
     /**
      * The text describing the status, if the status is not PJ_SUCCESS.
      */
-    const char		*status_text;
+    const char* status_text;
 
     /**
      * This contains the NAT type as detected by the detection procedure.
      * This value is only valid when the \a status is PJ_SUCCESS.
      */
-    pj_stun_nat_type	 nat_type;
+    pj_stun_nat_type nat_type;
 
     /**
      * Text describing that NAT type.
      */
-    const char		*nat_type_name;
+    const char* nat_type_name;
 
 } pj_stun_nat_detect_result;
-
 
 /**
  * Type of callback to be called when the NAT detection function has
  * completed.
  */
-typedef void pj_stun_nat_detect_cb(void *user_data,
-				   const pj_stun_nat_detect_result *res);
-
+typedef void pj_stun_nat_detect_cb(void* user_data,
+                                   const pj_stun_nat_detect_result* res);
 
 /**
  * Get the NAT name from the specified NAT type.
@@ -166,7 +159,6 @@ typedef void pj_stun_nat_detect_cb(void *user_data,
  * @return		NAT name.
  */
 PJ_DECL(const char*) pj_stun_get_nat_name(pj_stun_nat_type type);
-
 
 /**
  * Perform NAT classification function according to the procedures
@@ -192,11 +184,9 @@ PJ_DECL(const char*) pj_stun_get_nat_name(pj_stun_nat_type type);
  *			values, it means that an error has occured and
  *			the procedure did not start.
  */
-PJ_DECL(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
-					     pj_stun_config *stun_cfg,
-					     void *user_data,
-					     pj_stun_nat_detect_cb *cb);
-
+PJ_DECL(pj_status_t)
+pj_stun_detect_nat_type(const pj_sockaddr_in* server, pj_stun_config* stun_cfg,
+                        void* user_data, pj_stun_nat_detect_cb* cb);
 
 /**
  * Variant of #pj_stun_detect_nat_type() that supports IPv6.
@@ -216,19 +206,14 @@ PJ_DECL(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
  *			values, it means that an error has occured and
  *			the procedure did not start.
  */
-PJ_DECL(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
-					      pj_stun_config *stun_cfg,
-					      void *user_data,
-					      pj_stun_nat_detect_cb *cb);
-
+PJ_DECL(pj_status_t)
+pj_stun_detect_nat_type2(const pj_sockaddr* server, pj_stun_config* stun_cfg,
+                         void* user_data, pj_stun_nat_detect_cb* cb);
 
 /**
  * @}
  */
 
-
 PJ_END_DECL
 
-
-#endif	/* __PJNATH_NAT_DETECT_H__ */
-
+#endif /* __PJNATH_NAT_DETECT_H__ */

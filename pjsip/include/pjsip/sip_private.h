@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_PRIVATE_H__
 #define __PJSIP_SIP_PRIVATE_H__
@@ -23,10 +22,8 @@
 /**
  * @file sip_private.h
  * @brief Private structures and functions for PJSIP Library.
- */ 
+ */
 
 #include <pjsip/sip_types.h>
 
-
 #endif /* __PJSIP_PRIVATE_I_H__ */
-

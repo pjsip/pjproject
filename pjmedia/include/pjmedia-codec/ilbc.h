@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_ILBC_H__
 #define __PJMEDIA_CODEC_ILBC_H__
@@ -37,11 +36,11 @@
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
  *
- * The iLBC codec is developed by Global IP Solutions (GIPS), formerly 
- * Global IP Sound. The iLBC offers low bitrate and graceful audio quality 
+ * The iLBC codec is developed by Global IP Solutions (GIPS), formerly
+ * Global IP Sound. The iLBC offers low bitrate and graceful audio quality
  * degradation on frame losses.
  *
- * The iLBC codec supports 16-bit PCM audio signal with sampling rate of 
+ * The iLBC codec supports 16-bit PCM audio signal with sampling rate of
  * 8000Hz operating at two modes: 20ms and 30ms frame length modes, resulting
  * in bitrates of 15.2kbps for 20ms mode and 13.33kbps for 30ms mode.
  *
@@ -50,8 +49,8 @@
  *
  * \subsection general_setting General Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * \subsection specific_setting Codec Specific Settings
@@ -66,7 +65,7 @@
  *
  * In #pjmedia_codec_param, iLBC mode can be set by specifying SDP
  * format parameter "mode" in the SDP "a=fmtp" attribute for decoding
- * direction. Valid values are "20" and "30" (for 20ms and 30ms mode 
+ * direction. Valid values are "20" and "30" (for 20ms and 30ms mode
  * respectively).
  *
  * Here is an example to set up #pjmedia_codec_param to use mode 20ms:
@@ -83,7 +82,6 @@
 
 PJ_BEGIN_DECL
 
-
 /**
  * Initialize and register iLBC codec factory to pjmedia endpoint.
  *
@@ -94,10 +92,7 @@ PJ_BEGIN_DECL
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_ilbc_init( pjmedia_endpt *endpt,
-					      int mode );
-
-
+PJ_DECL(pj_status_t) pjmedia_codec_ilbc_init(pjmedia_endpt* endpt, int mode);
 
 /**
  * Unregister iLBC codec factory from pjmedia endpoint and deinitialize
@@ -107,13 +102,10 @@ PJ_DECL(pj_status_t) pjmedia_codec_ilbc_init( pjmedia_endpt *endpt,
  */
 PJ_DECL(pj_status_t) pjmedia_codec_ilbc_deinit(void);
 
-
 PJ_END_DECL
-
 
 /**
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_ILBC_H__ */
-
+#endif /* __PJMEDIA_CODEC_ILBC_H__ */

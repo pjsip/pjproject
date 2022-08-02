@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -25,7 +24,6 @@
  */
 #include <pjmedia/videodev.h>
 
-
 PJ_BEGIN_DECL
 
 /**
@@ -34,7 +32,6 @@ PJ_BEGIN_DECL
  * @brief API Reference
  * @{
  */
- 
 
 /**
  * Initialize the video device subsystem. This will register all supported
@@ -47,8 +44,7 @@ PJ_BEGIN_DECL
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf);
-
+PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory* pf);
 
 /**
  * Get the pool factory registered to the video device subsystem.
@@ -56,7 +52,6 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf);
  * @return          The pool factory.
  */
 PJ_DECL(pj_pool_factory*) pjmedia_vid_dev_subsys_get_pool_factory(void);
-
 
 /**
  * Shutdown the video device subsystem. This will destroy all video device
@@ -68,7 +63,6 @@ PJ_DECL(pj_pool_factory*) pjmedia_vid_dev_subsys_get_pool_factory(void);
  *                  error code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void);
-
 
 /**
  * Register a supported video device factory to the video device subsystem.
@@ -88,8 +82,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void);
  */
 PJ_DECL(pj_status_t)
 pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr vdf,
-                             pjmedia_vid_dev_factory *factory);
-
+                             pjmedia_vid_dev_factory* factory);
 
 /**
  * Unregister a video device factory from the video device subsystem. This
@@ -107,8 +100,7 @@ pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr vdf,
  */
 PJ_DECL(pj_status_t)
 pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr vdf,
-                               pjmedia_vid_dev_factory *factory);
-
+                               pjmedia_vid_dev_factory* factory);
 
 /**
  * @}
@@ -116,5 +108,4 @@ pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr vdf,
 
 PJ_END_DECL
 
-
-#endif    /* __PJMEDIA_VIDEODEV_VIDEODEV_H__ */
+#endif /* __PJMEDIA_VIDEODEV_VIDEODEV_H__ */

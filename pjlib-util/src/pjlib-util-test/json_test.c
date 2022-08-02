@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -18,16 +17,16 @@
  */
 #include "test.h"
 
-#define THIS_FILE	"json_test.c"
+#define THIS_FILE "json_test.c"
 
 #if INCLUDE_JSON_TEST
 
-#include <pjlib-util/json.h>
-#include <pj/log.h>
-#include <pj/string.h>
+#    include <pjlib-util/json.h>
+#    include <pj/log.h>
+#    include <pj/string.h>
 
 static char json_doc1[] =
-"{\
+  "{\
     \"Object\": {\
        \"Integer\":  800,\
        \"Negative\":  -12,\
@@ -55,9 +54,9 @@ static char json_doc1[] =
 
 static int json_verify_1()
 {
-    pj_pool_t *pool;
-    pj_json_elem *elem;
-    char *out_buf;
+    pj_pool_t* pool;
+    pj_json_elem* elem;
+    char* out_buf;
     unsigned size;
     pj_json_err_info err;
 
@@ -66,19 +65,19 @@ static int json_verify_1()
     size = (unsigned)strlen(json_doc1);
     elem = pj_json_parse(pool, json_doc1, &size, &err);
     if (!elem) {
-	PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() parse error"));
-	goto on_error;
+        PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() parse error"));
+        goto on_error;
     }
 
     size = (unsigned)strlen(json_doc1) * 2;
     out_buf = pj_pool_alloc(pool, size);
 
     if (pj_json_write(elem, out_buf, &size)) {
-	PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() write error"));
-	goto on_error;
+        PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() write error"));
+        goto on_error;
     }
 
-    PJ_LOG(3,(THIS_FILE, "Json document:\n%s", out_buf));
+    PJ_LOG(3, (THIS_FILE, "Json document:\n%s", out_buf));
     pj_pool_release(pool);
     return 0;
 
@@ -87,19 +86,16 @@ on_error:
     return 10;
 }
 
-
 int json_test(void)
 {
     int rc;
 
     rc = json_verify_1();
     if (rc)
-	return rc;
+        return rc;
 
     return 0;
 }
-
-
 
 #else
 int json_dummy;

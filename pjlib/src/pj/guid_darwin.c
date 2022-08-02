@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2021-2021 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/guid.h>
 #include <pj/assert.h>
@@ -22,25 +22,25 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 
-PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=36;
+PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH = 36;
 
 PJ_DEF(unsigned) pj_GUID_STRING_LENGTH()
 {
     return PJ_GUID_STRING_LENGTH;
 }
 
-PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
+PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t* str)
 {
     CFUUIDRef uuid_obj;
     CFStringRef uuid_str;
     pj_str_t sguid;
-    
+
     PJ_ASSERT_RETURN(str->ptr != NULL, NULL);
     PJ_CHECK_STACK();
 
     /* Create universally unique identifier (object). */
     uuid_obj = CFUUIDCreate(kCFAllocatorDefault);
-    
+
     /* Get the string representation of CFUUID object. */
     uuid_str = CFUUIDCreateString(kCFAllocatorDefault, uuid_obj);
     CFRelease(uuid_obj);

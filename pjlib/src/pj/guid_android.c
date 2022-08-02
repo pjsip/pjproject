@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2015-2016 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /* This original code was kindly contributed by Johan Lantz.
  */
@@ -24,21 +23,19 @@
 
 #include <jni.h>
 
-extern JavaVM *pj_jni_jvm;
+extern JavaVM* pj_jni_jvm;
 
-static pj_bool_t attach_jvm(JNIEnv **jni_env)
+static pj_bool_t attach_jvm(JNIEnv** jni_env)
 {
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                               JNI_VERSION_1_4) < 0)
+    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void**)jni_env, JNI_VERSION_1_4) < 0)
     {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
-        {
+        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0) {
             jni_env = NULL;
             return PJ_FALSE;
         }
         return PJ_TRUE;
     }
-    
+
     return PJ_FALSE;
 }
 
@@ -46,23 +43,22 @@ static pj_bool_t attach_jvm(JNIEnv **jni_env)
     if (attached) \
         (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
 
-
-PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=36;
+PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH = 36;
 
 PJ_DEF(unsigned) pj_GUID_STRING_LENGTH()
 {
     return PJ_GUID_STRING_LENGTH;
 }
 
-PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
+PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t* str)
 {
     jclass uuid_class;
     jmethodID get_uuid_method;
     jmethodID to_string_method;
-    JNIEnv *jni_env = 0;
+    JNIEnv* jni_env = 0;
     jobject javaUuid;
     jstring uuid_string;
-    const char *native_string;
+    const char* native_string;
     pj_str_t native_str;
 
     pj_bool_t attached = attach_jvm(&jni_env);
@@ -74,34 +70,32 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     if (uuid_class == 0)
         goto on_error;
 
-    get_uuid_method = (*jni_env)->GetStaticMethodID(jni_env, uuid_class,
-                      "randomUUID",
-                      "()Ljava/util/UUID;");
+    get_uuid_method = (*jni_env)->GetStaticMethodID(
+      jni_env, uuid_class, "randomUUID", "()Ljava/util/UUID;");
     if (get_uuid_method == 0)
         goto on_error;
 
-    javaUuid = (*jni_env)->CallStaticObjectMethod(jni_env, uuid_class, 
-    						  get_uuid_method);
+    javaUuid =
+      (*jni_env)->CallStaticObjectMethod(jni_env, uuid_class, get_uuid_method);
     if (javaUuid == 0)
         goto on_error;
 
-    to_string_method = (*jni_env)->GetMethodID(jni_env, uuid_class,
-    						"toString",
-    						"()Ljava/lang/String;");
+    to_string_method = (*jni_env)->GetMethodID(jni_env, uuid_class, "toString",
+                                               "()Ljava/lang/String;");
     if (to_string_method == 0)
         goto on_error;
 
-    uuid_string = (*jni_env)->CallObjectMethod(jni_env, javaUuid,
-    					       to_string_method);
+    uuid_string =
+      (*jni_env)->CallObjectMethod(jni_env, javaUuid, to_string_method);
     if (uuid_string == 0)
         goto on_error;
 
-    native_string = (*jni_env)->GetStringUTFChars(jni_env, uuid_string,
-    						  JNI_FALSE);
+    native_string =
+      (*jni_env)->GetStringUTFChars(jni_env, uuid_string, JNI_FALSE);
     if (native_string == 0)
         goto on_error;
 
-    native_str.ptr = (char *)native_string;
+    native_str.ptr = (char*)native_string;
     native_str.slen = pj_ansi_strlen(native_string);
     pj_strncpy(str, &native_str, PJ_GUID_STRING_LENGTH);
 

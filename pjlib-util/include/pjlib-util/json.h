@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -18,7 +17,6 @@
  */
 #ifndef __PJLIB_UTIL_JSON_H__
 #define __PJLIB_UTIL_JSON_H__
-
 
 /**
  * @file json.h
@@ -44,12 +42,12 @@ PJ_BEGIN_DECL
  */
 typedef enum pj_json_val_type
 {
-    PJ_JSON_VAL_NULL,		/**< Null value (null)			*/
-    PJ_JSON_VAL_BOOL,		/**< Boolean value (true, false)	*/
-    PJ_JSON_VAL_NUMBER,		/**< Numeric (float or fixed point)	*/
-    PJ_JSON_VAL_STRING,		/**< Literal string value.		*/
-    PJ_JSON_VAL_ARRAY,		/**< Array				*/
-    PJ_JSON_VAL_OBJ		/**< Object.				*/
+    PJ_JSON_VAL_NULL,   /**< Null value (null)			*/
+    PJ_JSON_VAL_BOOL,   /**< Boolean value (true, false)	*/
+    PJ_JSON_VAL_NUMBER, /**< Numeric (float or fixed point)	*/
+    PJ_JSON_VAL_STRING, /**< Literal string value.		*/
+    PJ_JSON_VAL_ARRAY,  /**< Array				*/
+    PJ_JSON_VAL_OBJ     /**< Object.				*/
 } pj_json_val_type;
 
 /* Forward declaration for JSON element */
@@ -73,15 +71,15 @@ typedef struct pj_json_list
 struct pj_json_elem
 {
     PJ_DECL_LIST_MEMBER(pj_json_elem);
-    pj_str_t		name;		/**< ELement name.		*/
-    pj_json_val_type	type;		/**< Element type.		*/
+    pj_str_t name;         /**< ELement name.		*/
+    pj_json_val_type type; /**< Element type.		*/
     union
     {
-	pj_bool_t	is_true;	/**< Boolean value.		*/
-	float		num;		/**< Number value.		*/
-	pj_str_t	str;		/**< String value.		*/
-	pj_json_list	children;	/**< Object and array children	*/
-    } value;				/**< Element value.		*/
+        pj_bool_t is_true;     /**< Boolean value.		*/
+        float num;             /**< Number value.		*/
+        pj_str_t str;          /**< String value.		*/
+        pj_json_list children; /**< Object and array children	*/
+    } value;                   /**< Element value.		*/
 };
 
 /**
@@ -90,9 +88,9 @@ struct pj_json_elem
  */
 typedef struct pj_json_err_info
 {
-    unsigned	line;		/**< Line location of the error		*/
-    unsigned	col;		/**< Column location of the error	*/
-    int		err_char;	/**< The offending character.		*/
+    unsigned line; /**< Line location of the error		*/
+    unsigned col;  /**< Column location of the error	*/
+    int err_char;  /**< The offending character.		*/
 } pj_json_err_info;
 
 /**
@@ -106,9 +104,8 @@ typedef struct pj_json_err_info
  * 			stop the pj_json_writef() function and this error
  * 			will be returned to caller.
  */
-typedef pj_status_t (*pj_json_writer)(const char *s,
-				      unsigned size,
-				      void *user_data);
+typedef pj_status_t (*pj_json_writer)(const char* s, unsigned size,
+                                      void* user_data);
 
 /**
  * Initialize null element.
@@ -116,7 +113,7 @@ typedef pj_status_t (*pj_json_writer)(const char *s,
  * @param el		The element.
  * @param name		Name to be given to the element, or NULL.
  */
-PJ_DECL(void) pj_json_elem_null(pj_json_elem *el, pj_str_t *name);
+PJ_DECL(void) pj_json_elem_null(pj_json_elem* el, pj_str_t* name);
 
 /**
  * Initialize boolean element with the specified value.
@@ -125,8 +122,8 @@ PJ_DECL(void) pj_json_elem_null(pj_json_elem *el, pj_str_t *name);
  * @param name		Name to be given to the element, or NULL.
  * @param val		The value.
  */
-PJ_DECL(void) pj_json_elem_bool(pj_json_elem *el, pj_str_t *name,
-                                pj_bool_t val);
+PJ_DECL(void)
+pj_json_elem_bool(pj_json_elem* el, pj_str_t* name, pj_bool_t val);
 
 /**
  * Initialize number element with the specified value.
@@ -135,8 +132,7 @@ PJ_DECL(void) pj_json_elem_bool(pj_json_elem *el, pj_str_t *name,
  * @param name		Name to be given to the element, or NULL.
  * @param val		The value.
  */
-PJ_DECL(void) pj_json_elem_number(pj_json_elem *el, pj_str_t *name,
-                                  float val);
+PJ_DECL(void) pj_json_elem_number(pj_json_elem* el, pj_str_t* name, float val);
 
 /**
  * Initialize string element with the specified value.
@@ -145,8 +141,8 @@ PJ_DECL(void) pj_json_elem_number(pj_json_elem *el, pj_str_t *name,
  * @param name		Name to be given to the element, or NULL.
  * @param val		The value.
  */
-PJ_DECL(void) pj_json_elem_string(pj_json_elem *el, pj_str_t *name,
-                                  pj_str_t *val);
+PJ_DECL(void)
+pj_json_elem_string(pj_json_elem* el, pj_str_t* name, pj_str_t* val);
 
 /**
  * Initialize element as an empty array
@@ -154,7 +150,7 @@ PJ_DECL(void) pj_json_elem_string(pj_json_elem *el, pj_str_t *name,
  * @param el		The element.
  * @param name		Name to be given to the element, or NULL.
  */
-PJ_DECL(void) pj_json_elem_array(pj_json_elem *el, pj_str_t *name);
+PJ_DECL(void) pj_json_elem_array(pj_json_elem* el, pj_str_t* name);
 
 /**
  * Initialize element as an empty object
@@ -162,7 +158,7 @@ PJ_DECL(void) pj_json_elem_array(pj_json_elem *el, pj_str_t *name);
  * @param el		The element.
  * @param name		Name to be given to the element, or NULL.
  */
-PJ_DECL(void) pj_json_elem_obj(pj_json_elem *el, pj_str_t *name);
+PJ_DECL(void) pj_json_elem_obj(pj_json_elem* el, pj_str_t* name);
 
 /**
  * Add an element to an object or array.
@@ -170,7 +166,7 @@ PJ_DECL(void) pj_json_elem_obj(pj_json_elem *el, pj_str_t *name);
  * @param el		The object or array element.
  * @param child		Element to be added to the object or array.
  */
-PJ_DECL(void) pj_json_elem_add(pj_json_elem *el, pj_json_elem *child);
+PJ_DECL(void) pj_json_elem_add(pj_json_elem* el, pj_json_elem* child);
 
 /**
  * Parse a JSON document in the buffer. The buffer MUST be NULL terminated,
@@ -184,10 +180,9 @@ PJ_DECL(void) pj_json_elem_add(pj_json_elem *el, pj_json_elem *child);
  *
  * @return		The root element from the document.
  */
-PJ_DECL(pj_json_elem*) pj_json_parse(pj_pool_t *pool,
-                                     char *buffer,
-                                     unsigned *size,
-                                     pj_json_err_info *err_info);
+PJ_DECL(pj_json_elem*)
+pj_json_parse(pj_pool_t* pool, char* buffer, unsigned* size,
+              pj_json_err_info* err_info);
 
 /**
  * Write the specified element to the string buffer.
@@ -200,8 +195,8 @@ PJ_DECL(pj_json_elem*) pj_json_parse(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error.
  */
-PJ_DECL(pj_status_t)   pj_json_write(const pj_json_elem *elem,
-                                     char *buffer, unsigned *size);
+PJ_DECL(pj_status_t)
+pj_json_write(const pj_json_elem* elem, char* buffer, unsigned* size);
 
 /**
  * Incrementally write the element to arbitrary medium using the specified
@@ -215,9 +210,9 @@ PJ_DECL(pj_status_t)   pj_json_write(const pj_json_elem *elem,
  *
  * @return		PJ_SUCCESS on success or the appropriate error.
  */
-PJ_DECL(pj_status_t)   pj_json_writef(const pj_json_elem *elem,
-                                      pj_json_writer writer,
-                                      void *user_data);
+PJ_DECL(pj_status_t)
+pj_json_writef(const pj_json_elem* elem, pj_json_writer writer,
+               void* user_data);
 
 /**
  * @}
@@ -225,4 +220,4 @@ PJ_DECL(pj_status_t)   pj_json_writef(const pj_json_elem *elem,
 
 PJ_END_DECL
 
-#endif	/* __PJLIB_UTIL_JSON_H__ */
+#endif /* __PJLIB_UTIL_JSON_H__ */

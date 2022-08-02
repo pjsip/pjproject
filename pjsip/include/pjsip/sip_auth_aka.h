@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_AUTH_SIP_AUTH_AKA_H__
 #define __PJSIP_AUTH_SIP_AUTH_AKA_H__
@@ -54,7 +53,7 @@ PJ_BEGIN_DECL
  * In addition, application would need to link with <b>libmilenage</b>
  * library from \a third_party directory.
  *
- * Application then specifies digest AKA credential by initializing the 
+ * Application then specifies digest AKA credential by initializing the
  * authentication credential as follows:
  *
  @code
@@ -78,14 +77,14 @@ PJ_BEGIN_DECL
  * Description:
  * - To support AKA, application adds \a PJSIP_CRED_DATA_EXT_AKA flag in the
  * \a data_type field. This indicates that extended information specific to
- * AKA authentication is available in the credential, and that response 
+ * AKA authentication is available in the credential, and that response
  * digest computation will use the callback function instead of the usual MD5
  * digest computation.
  *
- * - The \a scheme for the credential is "Digest". 
+ * - The \a scheme for the credential is "Digest".
  *
- * - The \a realm is the expected realm in the challenge. Application may 
- * also specify wildcard realm ("*") if it wishes to respond to any realms 
+ * - The \a realm is the expected realm in the challenge. Application may
+ * also specify wildcard realm ("*") if it wishes to respond to any realms
  * in the challenge.
  *
  * - The \a data field is optional. Application may fill this with the password
@@ -105,69 +104,69 @@ PJ_BEGIN_DECL
  * it's own function.
  *
  * - Optionally application may set \a ext.aka.op and \a ext.aka.amf in the
- * credential to specify AKA Operator variant key and AKA Authentication 
+ * credential to specify AKA Operator variant key and AKA Authentication
  * Management Field information.
  */
 
 /**
  * Length of Authentication Key (AK) in bytes.
  */
-#define PJSIP_AKA_AKLEN		6
+#define PJSIP_AKA_AKLEN   6
 
 /**
  * Length of Authentication Management Field (AMF) in bytes.
  */
-#define PJSIP_AKA_AMFLEN	2
+#define PJSIP_AKA_AMFLEN  2
 
 /**
  * Length of AUTN in bytes.
  */
-#define PJSIP_AKA_AUTNLEN	16
+#define PJSIP_AKA_AUTNLEN 16
 
 /**
  * Length of Confidentiality Key (CK) in bytes.
  */
-#define PJSIP_AKA_CKLEN		16
+#define PJSIP_AKA_CKLEN   16
 
 /**
  * Length of Integrity Key (AK) in bytes.
  */
-#define PJSIP_AKA_IKLEN		16
+#define PJSIP_AKA_IKLEN   16
 
 /**
  * Length of permanent/subscriber Key (K) in bytes.
  */
-#define PJSIP_AKA_KLEN		16
+#define PJSIP_AKA_KLEN    16
 
 /**
  * Length of AKA authentication code in bytes.
  */
-#define PJSIP_AKA_MACLEN	8
+#define PJSIP_AKA_MACLEN  8
 
 /**
  * Length of operator key in bytes.
  */
-#define PJSIP_AKA_OPLEN		16
+#define PJSIP_AKA_OPLEN   16
 
 /**
  * Length of random challenge (RAND) in bytes.
  */
-#define PJSIP_AKA_RANDLEN	16
+#define PJSIP_AKA_RANDLEN 16
 
 /**
  * Length of response digest in bytes.
  */
-#define PJSIP_AKA_RESLEN	8
+#define PJSIP_AKA_RESLEN  8
 
 /**
  * Length of sequence number (SQN) in bytes.
  */
-#define PJSIP_AKA_SQNLEN	6
+#define PJSIP_AKA_SQNLEN  6
 
 /**
  * This function creates MD5, AKAv1-MD5, or AKAv2-MD5 response for
- * the specified challenge in \a chal, according to the algorithm 
- * specified in the challenge, and based on the information in the 
+ * the specified challenge in \a chal, according to the algorithm
+ * specified in the challenge, and based on the information in the
  * credential \a cred.
  *
  * Application may register this function as \a ext.aka.cb field of
@@ -192,22 +191,17 @@ PJ_BEGIN_DECL
  *
  * @return	    PJ_SUCCESS if response has been created successfully.
  */
-PJ_DECL(pj_status_t) pjsip_auth_create_aka_response(
-					     pj_pool_t *pool,
-					     const pjsip_digest_challenge*chal,
-					     const pjsip_cred_info *cred,
-					     const pj_str_t *method,
-					     pjsip_digest_credential *auth);
-
+PJ_DECL(pj_status_t)
+pjsip_auth_create_aka_response(pj_pool_t* pool,
+                               const pjsip_digest_challenge* chal,
+                               const pjsip_cred_info* cred,
+                               const pj_str_t* method,
+                               pjsip_digest_credential* auth);
 
 /**
  * @}
  */
 
-
-
 PJ_END_DECL
 
-
-#endif	/* __PJSIP_AUTH_SIP_AUTH_AKA_H__ */
-
+#endif /* __PJSIP_AUTH_SIP_AUTH_AKA_H__ */

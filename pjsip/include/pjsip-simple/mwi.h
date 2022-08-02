@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_MWI_H__
 #define __PJSIP_SIMPLE_MWI_H__
@@ -26,9 +25,7 @@
 #include <pjsip-simple/evsub.h>
 #include <pjsip/sip_msg.h>
 
-
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup mwi SIP Message Summary and Message Waiting Indication (RFC 3842)
@@ -38,10 +35,9 @@ PJ_BEGIN_DECL
  *
  * This module implements RFC 3842: A Message Summary and Message Waiting
  * Indication Event Package for the Session Initiation Protocol (SIP).
- * It uses the SIP Event Notification framework (evsub.h) and extends the 
+ * It uses the SIP Event Notification framework (evsub.h) and extends the
  * framework by implementing "message-summary" event package.
  */
-
 
 /**
  * Initialize the MWI module and register it as endpoint module and
@@ -50,12 +46,12 @@ PJ_BEGIN_DECL
  * @param endpt		The endpoint instance.
  * @param mod_evsub	The event subscription module instance.
  *
- * @return		PJ_SUCCESS if the module is successfully 
+ * @return		PJ_SUCCESS if the module is successfully
  *			initialized and registered to both endpoint
  *			and the event subscription module.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_init_module(pjsip_endpoint *endpt,
-					   pjsip_module *mod_evsub);
+PJ_DECL(pj_status_t)
+pjsip_mwi_init_module(pjsip_endpoint* endpt, pjsip_module* mod_evsub);
 
 /**
  * Get the MWI module instance.
@@ -77,10 +73,9 @@ PJ_DECL(pjsip_module*) pjsip_mwi_instance(void);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_create_uac( pjsip_dialog *dlg,
-					   const pjsip_evsub_user *user_cb,
-					   unsigned options,
-					   pjsip_evsub **p_evsub );
+PJ_DECL(pj_status_t)
+pjsip_mwi_create_uac(pjsip_dialog* dlg, const pjsip_evsub_user* user_cb,
+                     unsigned options, pjsip_evsub** p_evsub);
 
 /**
  * Create MWI server subscription session.
@@ -88,21 +83,20 @@ PJ_DECL(pj_status_t) pjsip_mwi_create_uac( pjsip_dialog *dlg,
  * @param dlg		The underlying dialog to use.
  * @param user_cb	Pointer to callbacks to receive MWI subscription
  *			events.
- * @param rdata		The incoming SUBSCRIBE request that creates the event 
+ * @param rdata		The incoming SUBSCRIBE request that creates the event
  *			subscription.
  * @param p_evsub	Pointer to receive the MWI subscription
  *			session.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_create_uas( pjsip_dialog *dlg,
-					   const pjsip_evsub_user *user_cb,
-					   pjsip_rx_data *rdata,
-					   pjsip_evsub **p_evsub );
+PJ_DECL(pj_status_t)
+pjsip_mwi_create_uas(pjsip_dialog* dlg, const pjsip_evsub_user* user_cb,
+                     pjsip_rx_data* rdata, pjsip_evsub** p_evsub);
 
 /**
  * Forcefully destroy the MWI subscription. This function should only
- * be called on special condition, such as when the subscription 
+ * be called on special condition, such as when the subscription
  * initialization has failed. For other conditions, application MUST terminate
  * the subscription by sending the appropriate un(SUBSCRIBE) or NOTIFY.
  *
@@ -112,11 +106,10 @@ PJ_DECL(pj_status_t) pjsip_mwi_create_uas( pjsip_dialog *dlg,
  *
  * @return		PJ_SUCCESS if subscription session has been destroyed.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_terminate( pjsip_evsub *sub,
-					  pj_bool_t notify );
+PJ_DECL(pj_status_t) pjsip_mwi_terminate(pjsip_evsub* sub, pj_bool_t notify);
 
 /**
- * Call this function to create request to initiate MWI subscription, to 
+ * Call this function to create request to initiate MWI subscription, to
  * refresh subcription, or to request subscription termination.
  *
  * @param sub		Client subscription instance.
@@ -128,9 +121,9 @@ PJ_DECL(pj_status_t) pjsip_mwi_terminate( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_initiate( pjsip_evsub *sub,
-					 pj_uint32_t expires,
-					 pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t)
+pjsip_mwi_initiate(pjsip_evsub* sub, pj_uint32_t expires,
+                   pjsip_tx_data** p_tdata);
 
 /**
  * Accept the incoming subscription request by sending 2xx response to
@@ -143,14 +136,13 @@ PJ_DECL(pj_status_t) pjsip_mwi_initiate( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_accept( pjsip_evsub *sub,
-				       pjsip_rx_data *rdata,
-				       int st_code,
-				       const pjsip_hdr *hdr_list );
+PJ_DECL(pj_status_t)
+pjsip_mwi_accept(pjsip_evsub* sub, pjsip_rx_data* rdata, int st_code,
+                 const pjsip_hdr* hdr_list);
 
 /**
- * For notifier, create NOTIFY request to subscriber, and set the state 
- * of the subscription. 
+ * For notifier, create NOTIFY request to subscriber, and set the state
+ * of the subscription.
  *
  * @param sub		The server subscription (notifier) instance.
  * @param state		New state to set.
@@ -165,13 +157,11 @@ PJ_DECL(pj_status_t) pjsip_mwi_accept( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_notify( pjsip_evsub *sub,
-				       pjsip_evsub_state state,
-				       const pj_str_t *state_str,
-				       const pj_str_t *reason,
-				       const pjsip_media_type *mime_type,
-				       const pj_str_t *body,
-				       pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t)
+pjsip_mwi_notify(pjsip_evsub* sub, pjsip_evsub_state state,
+                 const pj_str_t* state_str, const pj_str_t* reason,
+                 const pjsip_media_type* mime_type, const pj_str_t* body,
+                 pjsip_tx_data** p_tdata);
 
 /**
  * Create NOTIFY request containing message body from the last NOITFY
@@ -182,9 +172,8 @@ PJ_DECL(pj_status_t) pjsip_mwi_notify( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_current_notify( pjsip_evsub *sub,
-					       pjsip_tx_data **p_tdata );
-
+PJ_DECL(pj_status_t)
+pjsip_mwi_current_notify(pjsip_evsub* sub, pjsip_tx_data** p_tdata);
 
 /**
  * Send request message that was previously created with initiate(), notify(),
@@ -197,8 +186,8 @@ PJ_DECL(pj_status_t) pjsip_mwi_current_notify( pjsip_evsub *sub,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_mwi_send_request( pjsip_evsub *sub,
-					     pjsip_tx_data *tdata );
+PJ_DECL(pj_status_t)
+pjsip_mwi_send_request(pjsip_evsub* sub, pjsip_tx_data* tdata);
 
 /**
  * @}
@@ -206,5 +195,4 @@ PJ_DECL(pj_status_t) pjsip_mwi_send_request( pjsip_evsub *sub,
 
 PJ_END_DECL
 
-
-#endif	/* __PJSIP_SIMPLE_MWI_H__ */
+#endif /* __PJSIP_SIMPLE_MWI_H__ */

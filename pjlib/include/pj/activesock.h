@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_ASYNCSOCK_H__
 #define __PJ_ASYNCSOCK_H__
@@ -27,7 +26,6 @@
 
 #include <pj/ioqueue.h>
 #include <pj/sock.h>
-
 
 PJ_BEGIN_DECL
 
@@ -60,8 +58,8 @@ typedef struct pj_activesock_cb
      * pj_activesock_start_read().
      *
      * @param asock	The active socket.
-     * @param data	The buffer containing the new data, if any. If 
-     *			the status argument is non-PJ_SUCCESS, this 
+     * @param data	The buffer containing the new data, if any. If
+     *			the status argument is non-PJ_SUCCESS, this
      *			argument may be NULL.
      * @param size	The length of data in the buffer.
      * @param status	The status of the read operation. This may contain
@@ -69,49 +67,44 @@ typedef struct pj_activesock_cb
      *			has been closed. In this case, the buffer may
      *			contain left over data from previous callback which
      *			the application may want to process.
-     * @param remainder	If application wishes to leave some data in the 
-     *			buffer (common for TCP applications), it should 
-     *			move the remainder data to the front part of the 
+     * @param remainder	If application wishes to leave some data in the
+     *			buffer (common for TCP applications), it should
+     *			move the remainder data to the front part of the
      *			buffer and set the remainder length here. The value
      *			of this parameter will be ignored for datagram
      *			sockets.
      *
-     * @return		PJ_TRUE if further read is desired, and PJ_FALSE 
+     * @return		PJ_TRUE if further read is desired, and PJ_FALSE
      *			when application no longer wants to receive data.
      *			Application may destroy the active socket in the
      *			callback and return PJ_FALSE here.
      */
-    pj_bool_t (*on_data_read)(pj_activesock_t *asock,
-			      void *data,
-			      pj_size_t size,
-			      pj_status_t status,
-			      pj_size_t *remainder);
+    pj_bool_t (*on_data_read)(pj_activesock_t* asock, void* data,
+                              pj_size_t size, pj_status_t status,
+                              pj_size_t* remainder);
     /**
      * This callback is called when a packet arrives as the result of
      * pj_activesock_start_recvfrom().
      *
      * @param asock	The active socket.
-     * @param data	The buffer containing the packet, if any. If 
-     *			the status argument is non-PJ_SUCCESS, this 
+     * @param data	The buffer containing the packet, if any. If
+     *			the status argument is non-PJ_SUCCESS, this
      *			argument will be set to NULL.
-     * @param size	The length of packet in the buffer. If 
-     *			the status argument is non-PJ_SUCCESS, this 
+     * @param size	The length of packet in the buffer. If
+     *			the status argument is non-PJ_SUCCESS, this
      *			argument will be set to zero.
      * @param src_addr	Source address of the packet.
      * @param addr_len	Length of the source address.
      * @param status	This contains
      *
-     * @return		PJ_TRUE if further read is desired, and PJ_FALSE 
+     * @return		PJ_TRUE if further read is desired, and PJ_FALSE
      *			when application no longer wants to receive data.
      *			Application may destroy the active socket in the
      *			callback and return PJ_FALSE here.
      */
-    pj_bool_t (*on_data_recvfrom)(pj_activesock_t *asock,
-				  void *data,
-				  pj_size_t size,
-				  const pj_sockaddr_t *src_addr,
-				  int addr_len,
-				  pj_status_t status);
+    pj_bool_t (*on_data_recvfrom)(pj_activesock_t* asock, void* data,
+                                  pj_size_t size, const pj_sockaddr_t* src_addr,
+                                  int addr_len, pj_status_t status);
 
     /**
      * This callback is called when data has been sent.
@@ -126,9 +119,8 @@ typedef struct pj_activesock_cb
      * @return		Application may destroy the active socket in the
      *			callback and return PJ_FALSE here.
      */
-    pj_bool_t (*on_data_sent)(pj_activesock_t *asock,
-			      pj_ioqueue_op_key_t *send_key,
-			      pj_ssize_t sent);
+    pj_bool_t (*on_data_sent)(pj_activesock_t* asock,
+                              pj_ioqueue_op_key_t* send_key, pj_ssize_t sent);
 
     /**
      * This callback is called when new connection arrives as the result
@@ -145,10 +137,9 @@ typedef struct pj_activesock_cb
      *			connection. Application may destroy the active socket
      *			in the callback and return PJ_FALSE here.
      */
-    pj_bool_t (*on_accept_complete)(pj_activesock_t *asock,
-				    pj_sock_t newsock,
-				    const pj_sockaddr_t *src_addr,
-				    int src_addr_len);
+    pj_bool_t (*on_accept_complete)(pj_activesock_t* asock, pj_sock_t newsock,
+                                    const pj_sockaddr_t* src_addr,
+                                    int src_addr_len);
 
     /**
      * This callback is called when new connection arrives as the result
@@ -168,11 +159,9 @@ typedef struct pj_activesock_cb
      *			connection. Application may destroy the active socket
      *			in the callback and return PJ_FALSE here.
      */
-    pj_bool_t (*on_accept_complete2)(pj_activesock_t *asock,
-				     pj_sock_t newsock,
-				     const pj_sockaddr_t *src_addr,
-				     int src_addr_len, 
-				     pj_status_t status);
+    pj_bool_t (*on_accept_complete2)(pj_activesock_t* asock, pj_sock_t newsock,
+                                     const pj_sockaddr_t* src_addr,
+                                     int src_addr_len, pj_status_t status);
 
     /**
      * This callback is called when pending connect operation has been
@@ -184,13 +173,12 @@ typedef struct pj_activesock_cb
      *			PJ_SUCCESS.
      *
      * @return		Application may destroy the active socket in the
-     *			callback and return PJ_FALSE here. 
+     *			callback and return PJ_FALSE here.
      */
-    pj_bool_t (*on_connect_complete)(pj_activesock_t *asock,
-				     pj_status_t status);
+    pj_bool_t (*on_connect_complete)(pj_activesock_t* asock,
+                                     pj_status_t status);
 
 } pj_activesock_cb;
-
 
 /**
  * Settings that can be given during active socket creation. Application
@@ -201,12 +189,12 @@ typedef struct pj_activesock_cfg
     /**
      * Optional group lock to be assigned to the ioqueue key.
      */
-    pj_grp_lock_t *grp_lock;
+    pj_grp_lock_t* grp_lock;
 
     /**
      * Number of concurrent asynchronous operations that is to be supported
      * by the active socket. This value only affects socket receive and
-     * accept operations -- the active socket will issue one or more 
+     * accept operations -- the active socket will issue one or more
      * asynchronous read and accept operations based on the value of this
      * field. Setting this field to more than one will allow more than one
      * incoming data or incoming connections to be processed simultaneously
@@ -218,12 +206,12 @@ typedef struct pj_activesock_cfg
     unsigned async_cnt;
 
     /**
-     * The ioqueue concurrency to be forced on the socket when it is 
+     * The ioqueue concurrency to be forced on the socket when it is
      * registered to the ioqueue. See #pj_ioqueue_set_concurrency() for more
      * info about ioqueue concurrency.
      *
      * When this value is -1, the concurrency setting will not be forced for
-     * this socket, and the socket will inherit the concurrency setting of 
+     * this socket, and the socket will inherit the concurrency setting of
      * the ioqueue. When this value is zero, the active socket will disable
      * concurrency for the socket. When this value is +1, the active socket
      * will enable concurrency for the socket.
@@ -249,18 +237,16 @@ typedef struct pj_activesock_cfg
 
 } pj_activesock_cfg;
 
-
 /**
  * Initialize the active socket configuration with the default values.
  *
  * @param cfg		The configuration to be initialized.
  */
-PJ_DECL(void) pj_activesock_cfg_default(pj_activesock_cfg *cfg);
-
+PJ_DECL(void) pj_activesock_cfg_default(pj_activesock_cfg* cfg);
 
 /**
  * Create the active socket for the specified socket. This will register
- * the socket to the specified ioqueue. 
+ * the socket to the specified ioqueue.
  *
  * @param pool		Pool to allocate memory from.
  * @param sock		The socket handle.
@@ -280,17 +266,14 @@ PJ_DECL(void) pj_activesock_cfg_default(pj_activesock_cfg *cfg);
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_create(pj_pool_t *pool,
-					  pj_sock_t sock,
-					  int sock_type,
-					  const pj_activesock_cfg *opt,
-					  pj_ioqueue_t *ioqueue,
-					  const pj_activesock_cb *cb,
-					  void *user_data,
-					  pj_activesock_t **p_asock);
+PJ_DECL(pj_status_t)
+pj_activesock_create(pj_pool_t* pool, pj_sock_t sock, int sock_type,
+                     const pj_activesock_cfg* opt, pj_ioqueue_t* ioqueue,
+                     const pj_activesock_cb* cb, void* user_data,
+                     pj_activesock_t** p_asock);
 
 /**
- * Create UDP socket descriptor, bind it to the specified address, and 
+ * Create UDP socket descriptor, bind it to the specified address, and
  * create the active socket for the socket descriptor.
  *
  * @param pool		Pool to allocate memory from.
@@ -311,14 +294,11 @@ PJ_DECL(pj_status_t) pj_activesock_create(pj_pool_t *pool,
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_create_udp(pj_pool_t *pool,
-					      const pj_sockaddr *addr,
-					      const pj_activesock_cfg *opt,
-					      pj_ioqueue_t *ioqueue,
-					      const pj_activesock_cb *cb,
-					      void *user_data,
-					      pj_activesock_t **p_asock,
-					      pj_sockaddr *bound_addr);
+PJ_DECL(pj_status_t)
+pj_activesock_create_udp(pj_pool_t* pool, const pj_sockaddr* addr,
+                         const pj_activesock_cfg* opt, pj_ioqueue_t* ioqueue,
+                         const pj_activesock_cb* cb, void* user_data,
+                         pj_activesock_t** p_asock, pj_sockaddr* bound_addr);
 
 /**
  * Close the active socket. This will unregister the socket from the
@@ -329,11 +309,11 @@ PJ_DECL(pj_status_t) pj_activesock_create_udp(pj_pool_t *pool,
  * @return	    PJ_SUCCESS if the operation has been successful,
  *		    or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_close(pj_activesock_t *asock);
+PJ_DECL(pj_status_t) pj_activesock_close(pj_activesock_t* asock);
 
 #if (defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0) || \
-     defined(DOXYGEN)
+     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT != 0) || \
+  defined(DOXYGEN)
 /**
  * Set iPhone OS background mode setting. Setting to 1 will enable TCP
  * active socket to receive incoming data when application is in the
@@ -347,8 +327,7 @@ PJ_DECL(pj_status_t) pj_activesock_close(pj_activesock_t *asock);
  * @param val	    The value of background mode setting.
  *
  */
-PJ_DECL(void) pj_activesock_set_iphone_os_bg(pj_activesock_t *asock,
-					     int val);
+PJ_DECL(void) pj_activesock_set_iphone_os_bg(pj_activesock_t* asock, int val);
 
 /**
  * Enable/disable support for iPhone OS background mode. This setting
@@ -378,8 +357,8 @@ PJ_DECL(void) pj_activesock_enable_iphone_os_bg(pj_bool_t val);
  * @return	    PJ_SUCCESS if the operation has been successful,
  *		    or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_set_user_data(pj_activesock_t *asock,
-						 void *user_data);
+PJ_DECL(pj_status_t)
+pj_activesock_set_user_data(pj_activesock_t* asock, void* user_data);
 
 /**
  * Retrieve the user data previously associated with this active
@@ -389,22 +368,21 @@ PJ_DECL(pj_status_t) pj_activesock_set_user_data(pj_activesock_t *asock,
  *
  * @return	    The user data.
  */
-PJ_DECL(void*) pj_activesock_get_user_data(pj_activesock_t *asock);
-
+PJ_DECL(void*) pj_activesock_get_user_data(pj_activesock_t* asock);
 
 /**
  * Starts read operation on this active socket. This function will create
  * \a async_cnt number of buffers (the \a async_cnt parameter was given
  * in \a pj_activesock_create() function) where each buffer is \a buff_size
- * long. The buffers are allocated from the specified \a pool. Once the 
+ * long. The buffers are allocated from the specified \a pool. Once the
  * buffers are created, it then issues \a async_cnt number of asynchronous
  * \a recv() operations to the socket and returns back to caller. Incoming
- * data on the socket will be reported back to application via the 
+ * data on the socket will be reported back to application via the
  * \a on_data_read() callback.
  *
  * Application only needs to call this function once to initiate read
  * operations. Further read operations will be done automatically by the
- * active socket when \a on_data_read() callback returns non-zero. 
+ * active socket when \a on_data_read() callback returns non-zero.
  *
  * @param asock	    The active socket.
  * @param pool	    Pool used to allocate buffers for incoming data.
@@ -414,10 +392,9 @@ PJ_DECL(void*) pj_activesock_get_user_data(pj_activesock_t *asock);
  * @return	    PJ_SUCCESS if the operation has been successful,
  *		    or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_start_read(pj_activesock_t *asock,
-					      pj_pool_t *pool,
-					      unsigned buff_size,
-					      pj_uint32_t flags);
+PJ_DECL(pj_status_t)
+pj_activesock_start_read(pj_activesock_t* asock, pj_pool_t* pool,
+                         unsigned buff_size, pj_uint32_t flags);
 
 /**
  * Same as #pj_activesock_start_read(), except that the application
@@ -433,11 +410,10 @@ PJ_DECL(pj_status_t) pj_activesock_start_read(pj_activesock_t *asock,
  * @return	    PJ_SUCCESS if the operation has been successful,
  *		    or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_start_read2(pj_activesock_t *asock,
-					       pj_pool_t *pool,
-					       unsigned buff_size,
-					       void *readbuf[],
-					       pj_uint32_t flags);
+PJ_DECL(pj_status_t)
+pj_activesock_start_read2(pj_activesock_t* asock, pj_pool_t* pool,
+                          unsigned buff_size, void* readbuf[],
+                          pj_uint32_t flags);
 
 /**
  * Same as pj_activesock_start_read(), except that this function is used
@@ -452,13 +428,12 @@ PJ_DECL(pj_status_t) pj_activesock_start_read2(pj_activesock_t *asock,
  * @return	    PJ_SUCCESS if the operation has been successful,
  *		    or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_start_recvfrom(pj_activesock_t *asock,
-						  pj_pool_t *pool,
-						  unsigned buff_size,
-						  pj_uint32_t flags);
+PJ_DECL(pj_status_t)
+pj_activesock_start_recvfrom(pj_activesock_t* asock, pj_pool_t* pool,
+                             unsigned buff_size, pj_uint32_t flags);
 
 /**
- * Same as #pj_activesock_start_recvfrom() except that the recvfrom() 
+ * Same as #pj_activesock_start_recvfrom() except that the recvfrom()
  * operation takes the buffer from the argument rather than creating
  * new ones.
  *
@@ -471,11 +446,10 @@ PJ_DECL(pj_status_t) pj_activesock_start_recvfrom(pj_activesock_t *asock,
  * @return	    PJ_SUCCESS if the operation has been successful,
  *		    or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_start_recvfrom2(pj_activesock_t *asock,
-						   pj_pool_t *pool,
-						   unsigned buff_size,
-						   void *readbuf[],
-						   pj_uint32_t flags);
+PJ_DECL(pj_status_t)
+pj_activesock_start_recvfrom2(pj_activesock_t* asock, pj_pool_t* pool,
+                              unsigned buff_size, void* readbuf[],
+                              pj_uint32_t flags);
 
 /**
  * Send data using the socket.
@@ -483,7 +457,7 @@ PJ_DECL(pj_status_t) pj_activesock_start_recvfrom2(pj_activesock_t *asock,
  * @param asock	    The active socket.
  * @param send_key  The operation key to send the data, which is useful
  *		    if application wants to submit multiple pending
- *		    send operations and want to track which exact data 
+ *		    send operations and want to track which exact data
  *		    has been sent in the \a on_data_sent() callback.
  * @param data	    The data to be sent. This data must remain valid
  *		    until the data has been sent.
@@ -497,11 +471,9 @@ PJ_DECL(pj_status_t) pj_activesock_start_recvfrom2(pj_activesock_t *asock,
  *		    called when data is actually sent. Any other return
  *		    value indicates error condition.
  */
-PJ_DECL(pj_status_t) pj_activesock_send(pj_activesock_t *asock,
-					pj_ioqueue_op_key_t *send_key,
-					const void *data,
-					pj_ssize_t *size,
-					unsigned flags);
+PJ_DECL(pj_status_t)
+pj_activesock_send(pj_activesock_t* asock, pj_ioqueue_op_key_t* send_key,
+                   const void* data, pj_ssize_t* size, unsigned flags);
 
 /**
  * Send datagram using the socket.
@@ -509,7 +481,7 @@ PJ_DECL(pj_status_t) pj_activesock_send(pj_activesock_t *asock,
  * @param asock	    The active socket.
  * @param send_key  The operation key to send the data, which is useful
  *		    if application wants to submit multiple pending
- *		    send operations and want to track which exact data 
+ *		    send operations and want to track which exact data
  *		    has been sent in the \a on_data_sent() callback.
  * @param data	    The data to be sent. This data must remain valid
  *		    until the data has been sent.
@@ -524,25 +496,22 @@ PJ_DECL(pj_status_t) pj_activesock_send(pj_activesock_t *asock,
  *		    called when data is actually sent. Any other return
  *		    value indicates error condition.
  */
-PJ_DECL(pj_status_t) pj_activesock_sendto(pj_activesock_t *asock,
-					  pj_ioqueue_op_key_t *send_key,
-					  const void *data,
-					  pj_ssize_t *size,
-					  unsigned flags,
-					  const pj_sockaddr_t *addr,
-					  int addr_len);
+PJ_DECL(pj_status_t)
+pj_activesock_sendto(pj_activesock_t* asock, pj_ioqueue_op_key_t* send_key,
+                     const void* data, pj_ssize_t* size, unsigned flags,
+                     const pj_sockaddr_t* addr, int addr_len);
 
 #if PJ_HAS_TCP
 /**
- * Starts asynchronous socket accept() operations on this active socket. 
- * Application must bind the socket before calling this function. This 
- * function will issue \a async_cnt number of asynchronous \a accept() 
+ * Starts asynchronous socket accept() operations on this active socket.
+ * Application must bind the socket before calling this function. This
+ * function will issue \a async_cnt number of asynchronous \a accept()
  * operations to the socket and returns back to caller. Incoming
  * connection on the socket will be reported back to application via the
  * \a on_accept_complete() callback.
  *
  * Application only needs to call this function once to initiate accept()
- * operations. Further accept() operations will be done automatically by 
+ * operations. Further accept() operations will be done automatically by
  * the active socket when \a on_accept_complete() callback returns non-zero.
  *
  * @param asock	    The active socket.
@@ -552,12 +521,12 @@ PJ_DECL(pj_status_t) pj_activesock_sendto(pj_activesock_t *asock,
  * @return	    PJ_SUCCESS if the operation has been successful,
  *		    or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_activesock_start_accept(pj_activesock_t *asock,
-						pj_pool_t *pool);
+PJ_DECL(pj_status_t)
+pj_activesock_start_accept(pj_activesock_t* asock, pj_pool_t* pool);
 
 /**
  * Starts asynchronous socket connect() operation for this socket. Once
- * the connection is done (either successfully or not), the 
+ * the connection is done (either successfully or not), the
  * \a on_connect_complete() callback will be called.
  *
  * @param asock	    The active socket.
@@ -567,18 +536,16 @@ PJ_DECL(pj_status_t) pj_activesock_start_accept(pj_activesock_t *asock,
  * @param addr_len  Length of the remote address.
  *
  * @return	    PJ_SUCCESS if connection can be established immediately,
- *		    or PJ_EPENDING if connection cannot be established 
+ *		    or PJ_EPENDING if connection cannot be established
  *		    immediately. In this case the \a on_connect_complete()
- *		    callback will be called when connection is complete. 
+ *		    callback will be called when connection is complete.
  *		    Any other return value indicates error condition.
  */
-PJ_DECL(pj_status_t) pj_activesock_start_connect(pj_activesock_t *asock,
-						 pj_pool_t *pool,
-						 const pj_sockaddr_t *remaddr,
-						 int addr_len);
+PJ_DECL(pj_status_t)
+pj_activesock_start_connect(pj_activesock_t* asock, pj_pool_t* pool,
+                            const pj_sockaddr_t* remaddr, int addr_len);
 
-
-#endif	/* PJ_HAS_TCP */
+#endif /* PJ_HAS_TCP */
 
 /**
  * @}
@@ -586,5 +553,4 @@ PJ_DECL(pj_status_t) pj_activesock_start_connect(pj_activesock_t *asock,
 
 PJ_END_DECL
 
-#endif	/* __PJ_ASYNCSOCK_H__ */
-
+#endif /* __PJ_ASYNCSOCK_H__ */

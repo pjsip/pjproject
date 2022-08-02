@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_ALAW_ULAW_H__
 #define __PJMEDIA_ALAW_ULAW_H__
@@ -24,13 +23,12 @@
 
 PJ_BEGIN_DECL
 
-#if defined(PJMEDIA_HAS_ALAW_ULAW_TABLE) && PJMEDIA_HAS_ALAW_ULAW_TABLE!=0
+#if defined(PJMEDIA_HAS_ALAW_ULAW_TABLE) && PJMEDIA_HAS_ALAW_ULAW_TABLE != 0
 
 extern const pj_uint8_t pjmedia_linear2ulaw_tab[16384];
 extern const pj_uint8_t pjmedia_linear2alaw_tab[16384];
 extern const pj_int16_t pjmedia_ulaw2linear_tab[256];
 extern const pj_int16_t pjmedia_alaw2linear_tab[256];
-
 
 /**
  * Convert 16-bit linear PCM value to 8-bit A-Law.
@@ -38,8 +36,8 @@ extern const pj_int16_t pjmedia_alaw2linear_tab[256];
  * @param pcm_val   16-bit linear PCM value.
  * @return	    8-bit A-Law value.
  */
-#define pjmedia_linear2alaw(pcm_val)	\
-	    pjmedia_linear2alaw_tab[(((pj_int16_t)pcm_val) >> 2) & 0x3fff]
+#    define pjmedia_linear2alaw(pcm_val) \
+        pjmedia_linear2alaw_tab[(((pj_int16_t)pcm_val) >> 2) & 0x3fff]
 
 /**
  * Convert 8-bit A-Law value to 16-bit linear PCM value.
@@ -47,8 +45,7 @@ extern const pj_int16_t pjmedia_alaw2linear_tab[256];
  * @param chara_val 8-bit A-Law value.
  * @return	    16-bit linear PCM value.
  */
-#define pjmedia_alaw2linear(chara_val)	\
-	    pjmedia_alaw2linear_tab[chara_val]
+#    define pjmedia_alaw2linear(chara_val) pjmedia_alaw2linear_tab[chara_val]
 
 /**
  * Convert 16-bit linear PCM value to 8-bit U-Law.
@@ -56,8 +53,8 @@ extern const pj_int16_t pjmedia_alaw2linear_tab[256];
  * @param pcm_val   16-bit linear PCM value.
  * @return	    U-bit A-Law value.
  */
-#define pjmedia_linear2ulaw(pcm_val)	\
-	    pjmedia_linear2ulaw_tab[(((pj_int16_t)pcm_val) >> 2) & 0x3fff]
+#    define pjmedia_linear2ulaw(pcm_val) \
+        pjmedia_linear2ulaw_tab[(((pj_int16_t)pcm_val) >> 2) & 0x3fff]
 
 /**
  * Convert 8-bit U-Law value to 16-bit linear PCM value.
@@ -65,8 +62,7 @@ extern const pj_int16_t pjmedia_alaw2linear_tab[256];
  * @param u_val	    8-bit U-Law value.
  * @return	    16-bit linear PCM value.
  */
-#define pjmedia_ulaw2linear(u_val)	\
-	    pjmedia_ulaw2linear_tab[u_val]
+#    define pjmedia_ulaw2linear(u_val) pjmedia_ulaw2linear_tab[u_val]
 
 /**
  * Convert 8-bit A-Law value to 8-bit U-Law value.
@@ -74,8 +70,8 @@ extern const pj_int16_t pjmedia_alaw2linear_tab[256];
  * @param aval	    8-bit A-Law value.
  * @return	    8-bit U-Law value.
  */
-#define pjmedia_alaw2ulaw(aval)		\
-	    pjmedia_linear2ulaw(pjmedia_alaw2linear(aval))
+#    define pjmedia_alaw2ulaw(aval) \
+        pjmedia_linear2ulaw(pjmedia_alaw2linear(aval))
 
 /**
  * Convert 8-bit U-Law value to 8-bit A-Law value.
@@ -83,9 +79,8 @@ extern const pj_int16_t pjmedia_alaw2linear_tab[256];
  * @param uval	    8-bit U-Law value.
  * @return	    8-bit A-Law value.
  */
-#define pjmedia_ulaw2alaw(uval)		\
-	    pjmedia_linear2alaw(pjmedia_ulaw2linear(uval))
-
+#    define pjmedia_ulaw2alaw(uval) \
+        pjmedia_linear2alaw(pjmedia_ulaw2linear(uval))
 
 #else
 
@@ -146,13 +141,13 @@ PJ_DECL(unsigned char) pjmedia_ulaw2alaw(unsigned char uval);
  * @param src	    Source, 16-bit linear PCM data.
  * @param count	    Number of samples.
  */
-PJ_INLINE(void) pjmedia_ulaw_encode(pj_uint8_t *dst, const pj_int16_t *src, 
-				    pj_size_t count)
+PJ_INLINE(void)
+pjmedia_ulaw_encode(pj_uint8_t* dst, const pj_int16_t* src, pj_size_t count)
 {
-    const pj_int16_t *end = src + count;
-    
+    const pj_int16_t* end = src + count;
+
     while (src < end) {
-	*dst++ = pjmedia_linear2ulaw(*src++);
+        *dst++ = pjmedia_linear2ulaw(*src++);
     }
 }
 
@@ -163,13 +158,13 @@ PJ_INLINE(void) pjmedia_ulaw_encode(pj_uint8_t *dst, const pj_int16_t *src,
  * @param src	    Source, 16-bit linear PCM data.
  * @param count	    Number of samples.
  */
-PJ_INLINE(void) pjmedia_alaw_encode(pj_uint8_t *dst, const pj_int16_t *src, 
-				    pj_size_t count)
+PJ_INLINE(void)
+pjmedia_alaw_encode(pj_uint8_t* dst, const pj_int16_t* src, pj_size_t count)
 {
-    const pj_int16_t *end = src + count;
-    
+    const pj_int16_t* end = src + count;
+
     while (src < end) {
-	*dst++ = pjmedia_linear2alaw(*src++);
+        *dst++ = pjmedia_linear2alaw(*src++);
     }
 }
 
@@ -180,13 +175,13 @@ PJ_INLINE(void) pjmedia_alaw_encode(pj_uint8_t *dst, const pj_int16_t *src,
  * @param src	    Source, 8-bit U-Law data.
  * @param len	    Encoded frame/source length in bytes.
  */
-PJ_INLINE(void) pjmedia_ulaw_decode(pj_int16_t *dst, const pj_uint8_t *src, 
-				    pj_size_t len)
+PJ_INLINE(void)
+pjmedia_ulaw_decode(pj_int16_t* dst, const pj_uint8_t* src, pj_size_t len)
 {
-    const pj_uint8_t *end = src + len;
-    
+    const pj_uint8_t* end = src + len;
+
     while (src < end) {
-	*dst++ = pjmedia_ulaw2linear(*src++);
+        *dst++ = pjmedia_ulaw2linear(*src++);
     }
 }
 
@@ -197,17 +192,16 @@ PJ_INLINE(void) pjmedia_ulaw_decode(pj_int16_t *dst, const pj_uint8_t *src,
  * @param src	    Source, 8-bit A-Law data.
  * @param len	    Encoded frame/source length in bytes.
  */
-PJ_INLINE(void) pjmedia_alaw_decode(pj_int16_t *dst, const pj_uint8_t *src, 
-				    pj_size_t len)
+PJ_INLINE(void)
+pjmedia_alaw_decode(pj_int16_t* dst, const pj_uint8_t* src, pj_size_t len)
 {
-    const pj_uint8_t *end = src + len;
-    
+    const pj_uint8_t* end = src + len;
+
     while (src < end) {
-	*dst++ = pjmedia_alaw2linear(*src++);
+        *dst++ = pjmedia_alaw2linear(*src++);
     }
 }
 
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_ALAW_ULAW_H__ */
-
+#endif /* __PJMEDIA_ALAW_ULAW_H__ */

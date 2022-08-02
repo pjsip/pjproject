@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,36 +14,36 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
 #include <pjlib-util.h>
 
-void app_perror(const char *msg, pj_status_t rc)
+void app_perror(const char* msg, pj_status_t rc)
 {
     char errbuf[256];
 
     PJ_CHECK_STACK();
 
     pj_strerror(rc, errbuf, sizeof(errbuf));
-    PJ_LOG(1,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
+    PJ_LOG(1, ("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
 }
 
-#define DO_TEST(test)	do { \
-			    PJ_LOG(3, ("test", "Running %s...", #test));  \
-			    rc = test; \
-			    PJ_LOG(3, ("test",  \
-				       "%s(%d)",  \
-				       (char*)(rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+#define DO_TEST(test) \
+    do { \
+        PJ_LOG(3, ("test", "Running %s...", #test)); \
+        rc = test; \
+        PJ_LOG(3, \
+               ("test", "%s(%d)", (char*)(rc ? "..ERROR" : "..success"), rc)); \
+        if (rc != 0) \
+            goto on_return; \
+    } while (0)
 
-
-pj_pool_factory *mem;
+pj_pool_factory* mem;
 
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
+                      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
 
 static int test_inner(void)
 {
@@ -58,15 +57,15 @@ static int test_inner(void)
 
     rc = pj_init();
     if (rc != 0) {
-	app_perror("pj_init() error!!", rc);
-	return rc;
+        app_perror("pj_init() error!!", rc);
+        return rc;
     }
 
     rc = pjlib_util_init();
     pj_assert(rc == 0);
 
     pj_dump_config();
-    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
+    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
 
 #if INCLUDE_XML_TEST
     DO_TEST(xml_test());
@@ -78,9 +77,9 @@ static int test_inner(void)
 
 #if INCLUDE_ENCRYPTION_TEST
     DO_TEST(encryption_test());
-#   if WITH_BENCHMARK
+#    if WITH_BENCHMARK
     DO_TEST(encryption_benchmark());
-#   endif
+#    endif
 #endif
 
 #if INCLUDE_STUN_TEST
@@ -103,16 +102,17 @@ int test_main(void)
 {
     PJ_USE_EXCEPTION;
 
-    PJ_TRY {
+    PJ_TRY
+    {
         return test_inner();
     }
-    PJ_CATCH_ANY {
+    PJ_CATCH_ANY
+    {
         int id = PJ_GET_EXCEPTION();
-        PJ_LOG(3,("test", "FATAL: unhandled exception id %d (%s)", 
-                  id, pj_exception_id_name(id)));
+        PJ_LOG(3, ("test", "FATAL: unhandled exception id %d (%s)", id,
+                   pj_exception_id_name(id)));
     }
     PJ_END;
 
     return -1;
 }
-

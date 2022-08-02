@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/except.h>
 #include <pj/rand.h>
@@ -38,9 +37,9 @@ static void randomly_throw_exception()
         PJ_THROW(OTHER_EXCEPTION);
 }
 
-static void *my_malloc(size_t size)
+static void* my_malloc(size_t size)
 {
-    void *ptr = malloc(size);
+    void* ptr = malloc(size);
     if (!ptr)
         PJ_THROW(NO_MEMORY);
     return ptr;
@@ -49,34 +48,34 @@ static void *my_malloc(size_t size)
 static int test_exception()
 {
     PJ_USE_EXCEPTION;
-    
-    PJ_TRY {
-        void *data = my_malloc(200);
+
+    PJ_TRY
+    {
+        void* data = my_malloc(200);
         free(data);
         randomly_throw_exception();
     }
-    PJ_CATCH_ANY {
+    PJ_CATCH_ANY
+    {
         pj_exception_id_t x_id;
-        
+
         x_id = PJ_GET_EXCEPTION();
-        printf("Caught exception %d (%s)\n", 
-            x_id, pj_exception_id_name(x_id));
+        printf("Caught exception %d (%s)\n", x_id, pj_exception_id_name(x_id));
     }
     PJ_END
-        return 1;
+    return 1;
 }
 
 int main()
 {
     pj_status_t rc;
-    
+
     // Error handling is omited for clarity.
-    
+
     rc = pj_init();
 
     rc = pj_exception_id_alloc("No Memory", &NO_MEMORY);
     rc = pj_exception_id_alloc("Other Exception", &OTHER_EXCEPTION);
-    
+
     return test_exception();
 }
-

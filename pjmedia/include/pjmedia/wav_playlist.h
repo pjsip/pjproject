@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_WAV_PLAYLIST_H__
 #define __PJMEDIA_WAV_PLAYLIST_H__
@@ -26,10 +25,7 @@
  */
 #include <pjmedia/wav_port.h>
 
-
-
 PJ_BEGIN_DECL
-
 
 /**
  * @defgroup PJMEDIA_WAV_PLAYLIST WAV File Play List
@@ -55,7 +51,7 @@ PJ_BEGIN_DECL
  * @param ptime		The duration (in miliseconds) of each frame read
  *			from this port. If the value is zero, the default
  *			duration (20ms) will be used.
- * @param options	Optional options. Application may specify 
+ * @param options	Optional options. Application may specify
  *			PJMEDIA_FILE_NO_LOOP to prevent play back loop.
  * @param buff_size	Buffer size to be allocated. If the value is zero or
  *			negative, the port will use default buffer size (which
@@ -64,21 +60,17 @@ PJ_BEGIN_DECL
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
-						 const pj_str_t *port_label,
-						 const pj_str_t file_list[],
-						 int file_count,
-						 unsigned ptime,
-						 unsigned options,
-						 pj_ssize_t buff_size,
-						 pjmedia_port **p_port);
-
+PJ_DECL(pj_status_t)
+pjmedia_wav_playlist_create(pj_pool_t* pool, const pj_str_t* port_label,
+                            const pj_str_t file_list[], int file_count,
+                            unsigned ptime, unsigned options,
+                            pj_ssize_t buff_size, pjmedia_port** p_port);
 
 #if !DEPRECATED_FOR_TICKET_2251
 /**
  * Register a callback to be called when the file reading has reached the
- * end of file of the last file. If the file is set to play repeatedly, 
- * then the callback will be called multiple times. Note that only one 
+ * end of file of the last file. If the file is set to play repeatedly,
+ * then the callback will be called multiple times. Note that only one
  * callback can be registered for each file port.
  *
  * @param port		The WAV play list port.
@@ -91,17 +83,15 @@ PJ_DECL(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
-pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
-			        void *user_data,
-			        pj_status_t (*cb)(pjmedia_port *port,
-						  void *usr_data));
+pjmedia_wav_playlist_set_eof_cb(pjmedia_port* port, void* user_data,
+                                pj_status_t (*cb)(pjmedia_port* port,
+                                                  void* usr_data));
 #endif
-
 
 /**
  * Register a callback to be called when the file reading has reached the
- * end of file of the last file. If the file is set to play repeatedly, 
- * then the callback will be called multiple times. Note that only one 
+ * end of file of the last file. If the file is set to play repeatedly,
+ * then the callback will be called multiple times. Note that only one
  * callback can be registered for each file port.
  *
  * @param port		The WAV play list port.
@@ -115,18 +105,14 @@ pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
-pjmedia_wav_playlist_set_eof_cb2(pjmedia_port *port,
-			         void *user_data,
-			         void (*cb)(pjmedia_port *port,
-					    void *usr_data));
-
+pjmedia_wav_playlist_set_eof_cb2(pjmedia_port* port, void* user_data,
+                                 void (*cb)(pjmedia_port* port,
+                                            void* usr_data));
 
 /**
  * @}
  */
 
-
 PJ_END_DECL
 
-
-#endif	/* __PJMEDIA_WAV_PLAYLIST_H__ */
+#endif /* __PJMEDIA_WAV_PLAYLIST_H__ */

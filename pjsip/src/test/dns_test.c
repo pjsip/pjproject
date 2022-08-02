@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjsip.h>
@@ -23,28 +22,25 @@
 #include <pjlib-util.h>
 
 /* For logging purpose. */
-#define THIS_FILE   "dns_test.c"
+#define THIS_FILE "dns_test.c"
 
 struct result
 {
-    pj_status_t		    status;
-    pjsip_server_addresses  servers;
+    pj_status_t status;
+    pjsip_server_addresses servers;
 };
 
-
-static void cb(pj_status_t status,
-	       void *token,
-	       const struct pjsip_server_addresses *addr)
+static void cb(pj_status_t status, void* token,
+               const struct pjsip_server_addresses* addr)
 {
-    struct result *result = (struct result*) token;
+    struct result* result = (struct result*)token;
 
     result->status = status;
     if (status == PJ_SUCCESS)
-	pj_memcpy(&result->servers, addr, sizeof(*addr));
+        pj_memcpy(&result->servers, addr, sizeof(*addr));
 }
 
-
-static void add_dns_entries(pj_dns_resolver *resv)
+static void add_dns_entries(pj_dns_resolver* resv)
 {
     /* Inject DNS SRV entry */
     pj_dns_parsed_packet pkt;
@@ -63,12 +59,12 @@ static void add_dns_entries(pj_dns_resolver *resv)
      _sip._udp.example.com 3600 IN SRV 0 20 5060 sip02.example.com.
      _sip._udp.example.com 3600 IN SRV 0 10 5060 sip03.example.com.
      _sip._udp.example.com 3600 IN SRV 1 0  5060 sip04.example.com.
-     
+
      sip01.example.com. 3600 IN A       1.1.1.1
      sip02.example.com. 3600 IN A       2.2.2.2
      sip03.example.com. 3600 IN A       3.3.3.3
      sip04.example.com. 3600 IN A       4.4.4.4
-     
+
      ; Additionally, add A record for "example.com"
      example.com.	3600 IN A       5.5.5.5
 
@@ -120,7 +116,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[3].rdata.srv.port = 5060;
     ans[3].rdata.srv.target = pj_str("sip04.example.com");
 
-    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+    pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
 
     ar[0].name = pj_str("sip01.example.com");
     ar[0].type = PJ_DNS_TYPE_A;
@@ -154,61 +150,60 @@ static void add_dns_entries(pj_dns_resolver *resv)
 
     /* Add corresponding AAAA records for A records above */
     for (i = 0; i < 5; ++i) {
-	ar[5+i].name = ar[i].name;
-	ar[5+i].type = PJ_DNS_TYPE_AAAA;
-	ar[5+i].dnsclass = PJ_DNS_CLASS_IN;
-	ar[5+i].ttl = 3600;
+        ar[5 + i].name = ar[i].name;
+        ar[5 + i].type = PJ_DNS_TYPE_AAAA;
+        ar[5 + i].dnsclass = PJ_DNS_CLASS_IN;
+        ar[5 + i].ttl = 3600;
     }
 
-    /* 
+    /*
      * Create individual A records for all hosts in "example.com" domain.
      */
-    for (i=0; i<PJ_ARRAY_SIZE(ar); ++i) {
-	pj_bzero(&pkt, sizeof(pkt));
-	pkt.hdr.flags = PJ_DNS_SET_QR(1);
-	pkt.hdr.qdcount = 1;
-	pkt.q = &q;
-	q.name = ar[i].name;
-	q.type = ar[i].type;
-	q.dnsclass = PJ_DNS_CLASS_IN;
-	/* For now, AAAA always contains empty record */
-	if (ar[i].type != PJ_DNS_TYPE_AAAA) {
-	    pkt.hdr.anscount = 1;
-	    pkt.ans = &ar[i];
-	}
+    for (i = 0; i < PJ_ARRAY_SIZE(ar); ++i) {
+        pj_bzero(&pkt, sizeof(pkt));
+        pkt.hdr.flags = PJ_DNS_SET_QR(1);
+        pkt.hdr.qdcount = 1;
+        pkt.q = &q;
+        q.name = ar[i].name;
+        q.type = ar[i].type;
+        q.dnsclass = PJ_DNS_CLASS_IN;
+        /* For now, AAAA always contains empty record */
+        if (ar[i].type != PJ_DNS_TYPE_AAAA) {
+            pkt.hdr.anscount = 1;
+            pkt.ans = &ar[i];
+        }
 
-	pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+        pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
     }
 
-    /* 
+    /*
      * Simulate DNS error response by creating these answers.
      * Sample of invalid SRV records: _sip._udp.sip01.example.com.
      */
-    for (i=0; i<PJ_ARRAY_SIZE(ans); ++i) {
-	pj_dns_parsed_query q2;
-	char buf[128];
-	char *services[] = { "_sip._udp.", "_sip._tcp.", "_sips._tcp."};
-	unsigned j;
+    for (i = 0; i < PJ_ARRAY_SIZE(ans); ++i) {
+        pj_dns_parsed_query q2;
+        char buf[128];
+        char* services[] = { "_sip._udp.", "_sip._tcp.", "_sips._tcp." };
+        unsigned j;
 
-	for (j=0; j<PJ_ARRAY_SIZE(services); ++j) {
-	    q2.dnsclass = PJ_DNS_CLASS_IN;
-	    q2.type = PJ_DNS_TYPE_SRV;
+        for (j = 0; j < PJ_ARRAY_SIZE(services); ++j) {
+            q2.dnsclass = PJ_DNS_CLASS_IN;
+            q2.type = PJ_DNS_TYPE_SRV;
 
-	    q2.name.ptr = buf;
-	    pj_bzero(buf, sizeof(buf));
-	    pj_strcpy2(&q2.name, services[j]);
-	    pj_strcat(&q2.name, &ans[i].rdata.srv.target);
+            q2.name.ptr = buf;
+            pj_bzero(buf, sizeof(buf));
+            pj_strcpy2(&q2.name, services[j]);
+            pj_strcat(&q2.name, &ans[i].rdata.srv.target);
 
-	    pj_bzero(&pkt, sizeof(pkt));
-	    pkt.hdr.qdcount = 1;
-	    pkt.hdr.flags = PJ_DNS_SET_QR(1) |
-			    PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
-	    pkt.q = &q2;
-	    
-	    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
-	}
+            pj_bzero(&pkt, sizeof(pkt));
+            pkt.hdr.qdcount = 1;
+            pkt.hdr.flags =
+              PJ_DNS_SET_QR(1) | PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
+            pkt.q = &q2;
+
+            pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
+        }
     }
-
 
     /*
      * ANOTHER DOMAIN.
@@ -219,11 +214,11 @@ static void add_dns_entries(pj_dns_resolver *resv)
 
     /* The "domain.com" DNS records (note the different the port):
 
-	_sip._tcp.domain.com 3600 IN SRV 1 0 50060 sip06.domain.com.
-	_sip._tcp.domain.com 3600 IN SRV 2 0 50060 sip07.domain.com.
+        _sip._tcp.domain.com 3600 IN SRV 1 0 50060 sip06.domain.com.
+        _sip._tcp.domain.com 3600 IN SRV 2 0 50060 sip07.domain.com.
 
-	sip06.domain.com. 3600 IN A       6.6.6.6
-	sip07.domain.com. 3600 IN A       7.7.7.7
+        sip06.domain.com. 3600 IN A       6.6.6.6
+        sip07.domain.com. 3600 IN A       7.7.7.7
 
         ; Additionally, add corresponding empty AAAA records for all A records
      */
@@ -255,7 +250,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[1].rdata.srv.port = 50060;
     ans[1].rdata.srv.target = pj_str("SIP06.DOMAIN.COM");
 
-    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+    pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
 
     /* From herein there is only one answer */
     pkt.hdr.anscount = 1;
@@ -270,8 +265,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[0].rdata.srv.port = 50060;
     ans[0].rdata.srv.target = pj_str("SIP06.DOMAIN.COM");
 
-    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
-
+    pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
 
     /* Add the A record for sip06.domain.com */
     ans[0].name = pj_str("sip06.domain.com");
@@ -287,13 +281,12 @@ static void add_dns_entries(pj_dns_resolver *resv)
     q.type = ans[0].type;
     q.dnsclass = ans[0].dnsclass;
 
-    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+    pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
 
     /* Add corresponding AAAA record */
     q.type = PJ_DNS_TYPE_AAAA;
     pkt.hdr.anscount = 0;
-    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
-
+    pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
 
     /* Add the A record for sip07.domain.com */
     ans[0].name = pj_str("sip07.domain.com");
@@ -309,33 +302,28 @@ static void add_dns_entries(pj_dns_resolver *resv)
     q.type = ans[0].type;
     q.dnsclass = ans[0].dnsclass;
 
-    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+    pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
 
     /* Add corresponding AAAA record */
     q.type = PJ_DNS_TYPE_AAAA;
     pkt.hdr.anscount = 0;
-    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
-
+    pj_dns_resolver_add_entry(resv, &pkt, PJ_FALSE);
 
     pkt.hdr.qdcount = 0;
 }
-
 
 /*
  * Perform server resolution where the results are expected to
  * come in strict order.
  */
-static int test_resolve(const char *title,
-			pj_pool_t *pool,
-			pjsip_transport_type_e type,
-			char *name,
-			int port,
-			pjsip_server_addresses *ref)
+static int test_resolve(const char* title, pj_pool_t* pool,
+                        pjsip_transport_type_e type, char* name, int port,
+                        pjsip_server_addresses* ref)
 {
     pjsip_host_info dest;
     struct result result;
 
-    PJ_LOG(3,(THIS_FILE, " test_resolve(): %s", title));
+    PJ_LOG(3, (THIS_FILE, " test_resolve(): %s", title));
 
     dest.type = type;
     dest.flag = pjsip_transport_get_flag_from_type(type);
@@ -347,47 +335,53 @@ static int test_resolve(const char *title,
     pjsip_endpt_resolve(endpt, pool, &dest, &result, &cb);
 
     while (result.status == 0x12345678) {
-	int i = 0;
-	pj_time_val timeout = { 1, 0 };
-	pjsip_endpt_handle_events(endpt, &timeout);
-	if (i == 1)
-	    pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
+        int i = 0;
+        pj_time_val timeout = { 1, 0 };
+        pjsip_endpt_handle_events(endpt, &timeout);
+        if (i == 1)
+            pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
     }
 
     if (result.status != PJ_SUCCESS) {
-	app_perror("  pjsip_endpt_resolve() error", result.status);
-	return result.status;
+        app_perror("  pjsip_endpt_resolve() error", result.status);
+        return result.status;
     }
 
     if (ref) {
-	unsigned i;
+        unsigned i;
 
-	if (ref->count != result.servers.count) {
-	    PJ_LOG(3,(THIS_FILE, "  test_resolve() error 10: result count mismatch"));
-	    return 10;
-	}
-	
-	for (i=0; i<ref->count; ++i) {
-	    pj_sockaddr_in *ra = (pj_sockaddr_in *)&ref->entry[i].addr;
-	    pj_sockaddr_in *rb = (pj_sockaddr_in *)&result.servers.entry[i].addr;
+        if (ref->count != result.servers.count) {
+            PJ_LOG(3, (THIS_FILE,
+                       "  test_resolve() error 10: result count mismatch"));
+            return 10;
+        }
 
-	    if (ra->sin_addr.s_addr != rb->sin_addr.s_addr) {
-		PJ_LOG(3,(THIS_FILE, "  test_resolve() error 20: IP address mismatch"));
-		return 20;
-	    }
-	    if (ra->sin_port != rb->sin_port) {
-		PJ_LOG(3,(THIS_FILE, "  test_resolve() error 30: port mismatch"));
-		return 30;
-	    }
-	    if (ref->entry[i].addr_len != result.servers.entry[i].addr_len) {
-		PJ_LOG(3,(THIS_FILE, "  test_resolve() error 40: addr_len mismatch"));
-		return 40;
-	    }
-	    if (ref->entry[i].type != result.servers.entry[i].type) {
-		PJ_LOG(3,(THIS_FILE, "  test_resolve() error 50: transport type mismatch"));
-		return 50;
-	    }
-	}
+        for (i = 0; i < ref->count; ++i) {
+            pj_sockaddr_in* ra = (pj_sockaddr_in*)&ref->entry[i].addr;
+            pj_sockaddr_in* rb = (pj_sockaddr_in*)&result.servers.entry[i].addr;
+
+            if (ra->sin_addr.s_addr != rb->sin_addr.s_addr) {
+                PJ_LOG(3, (THIS_FILE,
+                           "  test_resolve() error 20: IP address mismatch"));
+                return 20;
+            }
+            if (ra->sin_port != rb->sin_port) {
+                PJ_LOG(3,
+                       (THIS_FILE, "  test_resolve() error 30: port mismatch"));
+                return 30;
+            }
+            if (ref->entry[i].addr_len != result.servers.entry[i].addr_len) {
+                PJ_LOG(3, (THIS_FILE,
+                           "  test_resolve() error 40: addr_len mismatch"));
+                return 40;
+            }
+            if (ref->entry[i].type != result.servers.entry[i].type) {
+                PJ_LOG(3,
+                       (THIS_FILE,
+                        "  test_resolve() error 50: transport type mismatch"));
+                return 50;
+            }
+        }
     }
 
     return PJ_SUCCESS;
@@ -396,114 +390,116 @@ static int test_resolve(const char *title,
 /*
  * Perform round-robin/load balance test.
  */
-static int round_robin_test(pj_pool_t *pool)
+static int round_robin_test(pj_pool_t* pool)
 {
-    enum { COUNT = 400, PCT_ALLOWANCE = 10 };
+    enum
+    {
+        COUNT = 400,
+        PCT_ALLOWANCE = 10
+    };
     unsigned i;
     struct server_hit
     {
-	char *ip_addr;
-	unsigned percent;
-	unsigned hits;
-    } server_hit[] =
-    {
-	{ "1.1.1.1", 3,  0 },
-	{ "2.2.2.2", 65, 0 },
-	{ "3.3.3.3", 32, 0 },
-	{ "4.4.4.4", 0,  0 }
-    };
+        char* ip_addr;
+        unsigned percent;
+        unsigned hits;
+    } server_hit[] = { { "1.1.1.1", 3, 0 },
+                       { "2.2.2.2", 65, 0 },
+                       { "3.3.3.3", 32, 0 },
+                       { "4.4.4.4", 0, 0 } };
 
-    PJ_LOG(3,(THIS_FILE, " Performing round-robin/load-balance test.."));
+    PJ_LOG(3, (THIS_FILE, " Performing round-robin/load-balance test.."));
 
     /* Do multiple resolve request to "example.com".
      * The resolver should select the server based on the weight proportion
      * the the servers in the SRV entry.
      */
-    for (i=0; i<COUNT; ++i) {
-	pjsip_host_info dest;
-	struct result result;
-	unsigned j;
+    for (i = 0; i < COUNT; ++i) {
+        pjsip_host_info dest;
+        struct result result;
+        unsigned j;
 
-	dest.type = PJSIP_TRANSPORT_UDP;
-	dest.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_UDP);
-	dest.addr.host = pj_str("example.com");
-	dest.addr.port = 0;
+        dest.type = PJSIP_TRANSPORT_UDP;
+        dest.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_UDP);
+        dest.addr.host = pj_str("example.com");
+        dest.addr.port = 0;
 
-	result.status = 0x12345678;
+        result.status = 0x12345678;
 
-	pjsip_endpt_resolve(endpt, pool, &dest, &result, &cb);
+        pjsip_endpt_resolve(endpt, pool, &dest, &result, &cb);
 
-	while (result.status == 0x12345678) {
-	    int ii = 0;
-	    pj_time_val timeout = { 1, 0 };
-	    pjsip_endpt_handle_events(endpt, &timeout);
-	    if (ii == 1)
-		pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
-	}
+        while (result.status == 0x12345678) {
+            int ii = 0;
+            pj_time_val timeout = { 1, 0 };
+            pjsip_endpt_handle_events(endpt, &timeout);
+            if (ii == 1)
+                pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
+        }
 
-	/* Find which server was "hit" */
-	for (j=0; j<PJ_ARRAY_SIZE(server_hit); ++j) {
-	    pj_str_t tmp;
-	    pj_in_addr a1;
-	    pj_sockaddr_in *a2;
+        /* Find which server was "hit" */
+        for (j = 0; j < PJ_ARRAY_SIZE(server_hit); ++j) {
+            pj_str_t tmp;
+            pj_in_addr a1;
+            pj_sockaddr_in* a2;
 
-	    tmp = pj_str(server_hit[j].ip_addr);
-	    a1 = pj_inet_addr(&tmp);
-	    a2 = (pj_sockaddr_in*) &result.servers.entry[0].addr;
+            tmp = pj_str(server_hit[j].ip_addr);
+            a1 = pj_inet_addr(&tmp);
+            a2 = (pj_sockaddr_in*)&result.servers.entry[0].addr;
 
-	    if (a1.s_addr == a2->sin_addr.s_addr) {
-		server_hit[j].hits++;
-		break;
-	    }
-	}
+            if (a1.s_addr == a2->sin_addr.s_addr) {
+                server_hit[j].hits++;
+                break;
+            }
+        }
 
-	if (j == PJ_ARRAY_SIZE(server_hit)) {
-	    PJ_LOG(1,(THIS_FILE, "..round_robin_test() error 10: returned address mismatch"));
-	    return 10;
-	}
+        if (j == PJ_ARRAY_SIZE(server_hit)) {
+            PJ_LOG(
+              1, (THIS_FILE,
+                  "..round_robin_test() error 10: returned address mismatch"));
+            return 10;
+        }
     }
 
     /* Print the actual hit rate */
-    for (i=0; i<PJ_ARRAY_SIZE(server_hit); ++i) {
-	PJ_LOG(3,(THIS_FILE, " ..Server %s: weight=%d%%, hit %d%% times",
-		  server_hit[i].ip_addr, server_hit[i].percent,
-		  (server_hit[i].hits * 100) / COUNT));
+    for (i = 0; i < PJ_ARRAY_SIZE(server_hit); ++i) {
+        PJ_LOG(3, (THIS_FILE, " ..Server %s: weight=%d%%, hit %d%% times",
+                   server_hit[i].ip_addr, server_hit[i].percent,
+                   (server_hit[i].hits * 100) / COUNT));
     }
 
     /* Compare the actual hit with the weight proportion */
-    for (i=0; i<PJ_ARRAY_SIZE(server_hit); ++i) {
-	int actual_pct = (server_hit[i].hits * 100) / COUNT;
+    for (i = 0; i < PJ_ARRAY_SIZE(server_hit); ++i) {
+        int actual_pct = (server_hit[i].hits * 100) / COUNT;
 
-	if (actual_pct + PCT_ALLOWANCE < (int)server_hit[i].percent ||
-	    actual_pct - PCT_ALLOWANCE > (int)server_hit[i].percent)
-	{
-	    PJ_LOG(1,(THIS_FILE, 
-		      "..round_robin_test() error 20: "
-		      "hit rate difference for server %s (%d%%) is more than "
-		      "tolerable allowance (%d%%)",
-		      server_hit[i].ip_addr, 
-		      actual_pct - server_hit[i].percent, 
-		      PCT_ALLOWANCE));
-	    return 20;
-	}
+        if (actual_pct + PCT_ALLOWANCE < (int)server_hit[i].percent ||
+            actual_pct - PCT_ALLOWANCE > (int)server_hit[i].percent)
+        {
+            PJ_LOG(1, (THIS_FILE,
+                       "..round_robin_test() error 20: "
+                       "hit rate difference for server %s (%d%%) is more than "
+                       "tolerable allowance (%d%%)",
+                       server_hit[i].ip_addr,
+                       actual_pct - server_hit[i].percent, PCT_ALLOWANCE));
+            return 20;
+        }
     }
 
-    PJ_LOG(3,(THIS_FILE, 
-	      " Load balance test success, hit-rate is "
-	      "within %d%% allowance", PCT_ALLOWANCE));
+    PJ_LOG(3, (THIS_FILE,
+               " Load balance test success, hit-rate is "
+               "within %d%% allowance",
+               PCT_ALLOWANCE));
     return PJ_SUCCESS;
 }
 
+#define C(expr) \
+    status = expr; \
+    if (status != PJ_SUCCESS) \
+        app_perror(THIS_FILE, "Error", status);
 
-#define C(expr)	    status = expr; \
-		    if (status != PJ_SUCCESS) app_perror(THIS_FILE, "Error", status);
-
-static void add_ref(pjsip_server_addresses *r,
-		    pjsip_transport_type_e type,
-		    char *addr,
-		    int port)
+static void add_ref(pjsip_server_addresses* r, pjsip_transport_type_e type,
+                    char* addr, int port)
 {
-    pj_sockaddr_in *a;
+    pj_sockaddr_in* a;
     pj_str_t tmp;
 
     r->entry[r->count].type = type;
@@ -511,7 +507,7 @@ static void add_ref(pjsip_server_addresses *r,
     r->entry[r->count].weight = 0;
     r->entry[r->count].addr_len = sizeof(pj_sockaddr_in);
 
-    a = (pj_sockaddr_in *)&r->entry[r->count].addr;
+    a = (pj_sockaddr_in*)&r->entry[r->count].addr;
     a->sin_family = pj_AF_INET();
     tmp = pj_str(addr);
     a->sin_addr = pj_inet_addr(&tmp);
@@ -520,23 +516,20 @@ static void add_ref(pjsip_server_addresses *r,
     r->count++;
 }
 
-static void create_ref(pjsip_server_addresses *r,
-		       pjsip_transport_type_e type,
-		       char *addr,
-		       int port)
+static void create_ref(pjsip_server_addresses* r, pjsip_transport_type_e type,
+                       char* addr, int port)
 {
     r->count = 0;
     add_ref(r, type, addr, port);
 }
-
 
 /*
  * Main test entry.
  */
 int resolve_test(void)
 {
-    pj_pool_t *pool;
-    pj_dns_resolver *resv;
+    pj_pool_t* pool;
+    pj_dns_resolver* resv;
     pj_str_t nameserver;
     pj_uint16_t port = 5353;
     pj_status_t status;
@@ -553,94 +546,108 @@ int resolve_test(void)
 
     /* These all should be resolved as IP addresses (DNS A query) */
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_UDP, "1.1.1.1", 5060);
-	status = test_resolve("IP address without transport and port", pool, PJSIP_TRANSPORT_UNSPECIFIED, "1.1.1.1", 0, &ref);
-	if (status != PJ_SUCCESS)
-	    return -100;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_UDP, "1.1.1.1", 5060);
+        status = test_resolve("IP address without transport and port", pool,
+                              PJSIP_TRANSPORT_UNSPECIFIED, "1.1.1.1", 0, &ref);
+        if (status != PJ_SUCCESS)
+            return -100;
     }
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_UDP, "1.1.1.1", 5060);
-	status = test_resolve("IP address with explicit port", pool, PJSIP_TRANSPORT_UNSPECIFIED, "1.1.1.1", 5060, &ref);
-	if (status != PJ_SUCCESS)
-	    return -110;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_UDP, "1.1.1.1", 5060);
+        status =
+          test_resolve("IP address with explicit port", pool,
+                       PJSIP_TRANSPORT_UNSPECIFIED, "1.1.1.1", 5060, &ref);
+        if (status != PJ_SUCCESS)
+            return -110;
     }
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_TCP, "1.1.1.1", 5060);
-	status = test_resolve("IP address without port (TCP)", pool, PJSIP_TRANSPORT_TCP,"1.1.1.1", 0, &ref);
-	if (status != PJ_SUCCESS)
-	    return -120;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_TCP, "1.1.1.1", 5060);
+        status = test_resolve("IP address without port (TCP)", pool,
+                              PJSIP_TRANSPORT_TCP, "1.1.1.1", 0, &ref);
+        if (status != PJ_SUCCESS)
+            return -120;
     }
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_TLS, "1.1.1.1", 5061);
-	status = test_resolve("IP address without port (TLS)", pool, PJSIP_TRANSPORT_TLS, "1.1.1.1", 0, &ref);
-	if (status != PJ_SUCCESS)
-	    return -130;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_TLS, "1.1.1.1", 5061);
+        status = test_resolve("IP address without port (TLS)", pool,
+                              PJSIP_TRANSPORT_TLS, "1.1.1.1", 0, &ref);
+        if (status != PJ_SUCCESS)
+            return -130;
     }
 
     /* This should be resolved as DNS A record (because port is present) */
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_UDP, "5.5.5.5", 5060);
-	status = test_resolve("domain name with port should resolve to A record", pool, PJSIP_TRANSPORT_UNSPECIFIED, "example.com", 5060, &ref);
-	if (status != PJ_SUCCESS)
-	    return -140;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_UDP, "5.5.5.5", 5060);
+        status =
+          test_resolve("domain name with port should resolve to A record", pool,
+                       PJSIP_TRANSPORT_UNSPECIFIED, "example.com", 5060, &ref);
+        if (status != PJ_SUCCESS)
+            return -140;
     }
 
-    /* This will fail to be resolved as SRV, resolver should fallback to 
+    /* This will fail to be resolved as SRV, resolver should fallback to
      * resolving to A record.
      */
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_UDP, "2.2.2.2", 5060);
-	status = test_resolve("failure with SRV fallback to A record", pool, PJSIP_TRANSPORT_UNSPECIFIED, "sip02.example.com", 0, &ref);
-	if (status != PJ_SUCCESS)
-	    return -150;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_UDP, "2.2.2.2", 5060);
+        status = test_resolve("failure with SRV fallback to A record", pool,
+                              PJSIP_TRANSPORT_UNSPECIFIED, "sip02.example.com",
+                              0, &ref);
+        if (status != PJ_SUCCESS)
+            return -150;
     }
 
     /* Same as above, but explicitly for TLS. */
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_TLS, "2.2.2.2", 5061);
-	status = test_resolve("failure with SRV fallback to A record (for TLS)", pool, PJSIP_TRANSPORT_TLS, "sip02.example.com", 0, &ref);
-	if (status != PJ_SUCCESS)
-	    return -150;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_TLS, "2.2.2.2", 5061);
+        status =
+          test_resolve("failure with SRV fallback to A record (for TLS)", pool,
+                       PJSIP_TRANSPORT_TLS, "sip02.example.com", 0, &ref);
+        if (status != PJ_SUCCESS)
+            return -150;
     }
 
     /* Standard DNS SRV followed by A recolution */
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_UDP, "6.6.6.6", 50060);
-	status = test_resolve("standard SRV resolution", pool, PJSIP_TRANSPORT_UNSPECIFIED, "domain.com", 0, &ref);
-	if (status != PJ_SUCCESS)
-	    return -155;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_UDP, "6.6.6.6", 50060);
+        status =
+          test_resolve("standard SRV resolution", pool,
+                       PJSIP_TRANSPORT_UNSPECIFIED, "domain.com", 0, &ref);
+        if (status != PJ_SUCCESS)
+            return -155;
     }
 
     /* Standard DNS SRV followed by A recolution (explicit transport) */
     {
-	pjsip_server_addresses ref;
-	create_ref(&ref, PJSIP_TRANSPORT_TCP, "6.6.6.6", 50060);
-	add_ref(&ref, PJSIP_TRANSPORT_TCP, "7.7.7.7", 50060);
-	status = test_resolve("standard SRV resolution with explicit transport (TCP)", pool, PJSIP_TRANSPORT_TCP, "domain.com", 0, &ref);
-	if (status != PJ_SUCCESS)
-	    return -160;
+        pjsip_server_addresses ref;
+        create_ref(&ref, PJSIP_TRANSPORT_TCP, "6.6.6.6", 50060);
+        add_ref(&ref, PJSIP_TRANSPORT_TCP, "7.7.7.7", 50060);
+        status =
+          test_resolve("standard SRV resolution with explicit transport (TCP)",
+                       pool, PJSIP_TRANSPORT_TCP, "domain.com", 0, &ref);
+        if (status != PJ_SUCCESS)
+            return -160;
     }
-
 
     /* Round robin/load balance test */
     if (round_robin_test(pool) != 0)
-	return -170;
+        return -170;
 
     /* Timeout test */
     {
-	status = test_resolve("timeout test", pool, PJSIP_TRANSPORT_UNSPECIFIED, "an.invalid.address", 0, NULL);
-	if (status == PJ_SUCCESS)
-	    return -150;
+        status = test_resolve("timeout test", pool, PJSIP_TRANSPORT_UNSPECIFIED,
+                              "an.invalid.address", 0, NULL);
+        if (status == PJ_SUCCESS)
+            return -150;
     }
 
     return 0;
 }
-

@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_EVENT_H__
 #define __PJSIP_SIP_EVENT_H__
@@ -36,8 +35,7 @@ PJ_BEGIN_DECL
 #include <pj/types.h>
 #include <pj/timer.h>
 
-
-/** 
+/**
  * Event IDs.
  */
 typedef enum pjsip_event_id_e
@@ -64,7 +62,6 @@ typedef enum pjsip_event_id_e
     PJSIP_EVENT_USER
 
 } pjsip_event_id_e;
-
 
 /**
  * This structure describe event descriptor to fully identify a SIP event.
@@ -97,7 +94,7 @@ struct pjsip_event
         /** Timer event. */
         struct
         {
-            pj_timer_entry *entry;      /**< The timer entry.           */
+            pj_timer_entry* entry; /**< The timer entry.           */
         } timer;
 
         /** Transaction state has changed event. */
@@ -105,50 +102,50 @@ struct pjsip_event
         {
             union
             {
-                pjsip_rx_data   *rdata; /**< The incoming message.      */
-                pjsip_tx_data   *tdata; /**< The outgoing message.      */
-                pj_timer_entry  *timer; /**< The timer.                 */
-                pj_status_t      status;/**< Transport error status.    */
-                void            *data;  /**< Generic data.              */
+                pjsip_rx_data* rdata;  /**< The incoming message.      */
+                pjsip_tx_data* tdata;  /**< The outgoing message.      */
+                pj_timer_entry* timer; /**< The timer.                 */
+                pj_status_t status;    /**< Transport error status.    */
+                void* data;            /**< Generic data.              */
             } src;
-            pjsip_transaction   *tsx;   /**< The transaction.           */
-	    int			 prev_state; /**< Previous state.	*/
-            pjsip_event_id_e     type;  /**< Type of event source:      
-                                         *      - PJSIP_EVENT_TX_MSG
-                                         *      - PJSIP_EVENT_RX_MSG,
-                                         *      - PJSIP_EVENT_TRANSPORT_ERROR
-                                         *      - PJSIP_EVENT_TIMER
-                                         *      - PJSIP_EVENT_USER
-                                         */
+            pjsip_transaction* tsx; /**< The transaction.           */
+            int prev_state;         /**< Previous state.	*/
+            pjsip_event_id_e type;  /**< Type of event source:
+                                     *      - PJSIP_EVENT_TX_MSG
+                                     *      - PJSIP_EVENT_RX_MSG,
+                                     *      - PJSIP_EVENT_TRANSPORT_ERROR
+                                     *      - PJSIP_EVENT_TIMER
+                                     *      - PJSIP_EVENT_USER
+                                     */
         } tsx_state;
 
         /** Message transmission event. */
         struct
         {
-            pjsip_tx_data       *tdata; /**< The transmit data buffer.  */
+            pjsip_tx_data* tdata; /**< The transmit data buffer.  */
 
         } tx_msg;
 
         /** Transmission error event. */
         struct
         {
-            pjsip_tx_data       *tdata; /**< The transmit data.         */
-            pjsip_transaction   *tsx;   /**< The transaction.           */
+            pjsip_tx_data* tdata;   /**< The transmit data.         */
+            pjsip_transaction* tsx; /**< The transaction.           */
         } tx_error;
 
         /** Message arrival event. */
         struct
         {
-            pjsip_rx_data       *rdata; /**< The receive data buffer.   */
+            pjsip_rx_data* rdata; /**< The receive data buffer.   */
         } rx_msg;
 
         /** User event. */
         struct
         {
-            void                *user1; /**< User data 1.               */
-            void                *user2; /**< User data 2.               */
-            void                *user3; /**< User data 3.               */
-            void                *user4; /**< User data 4.               */
+            void* user1; /**< User data 1.               */
+            void* user2; /**< User data 2.               */
+            void* user3; /**< User data 3.               */
+            void* user4; /**< User data 4.               */
         } user;
 
     } body;
@@ -157,70 +154,70 @@ struct pjsip_event
 /**
  * Init timer event.
  */
-#define PJSIP_EVENT_INIT_TIMER(event,pentry)            \
-        do { \
-            (event).type = PJSIP_EVENT_TIMER;           \
-            (event).body.timer.entry = pentry;          \
-        } while (0)
+#define PJSIP_EVENT_INIT_TIMER(event, pentry) \
+    do { \
+        (event).type = PJSIP_EVENT_TIMER; \
+        (event).body.timer.entry = pentry; \
+    } while (0)
 
 /**
  * Init tsx state event.
  */
-#define PJSIP_EVENT_INIT_TSX_STATE(event,ptsx,ptype,pdata,prev)   \
-        do { \
-            (event).type = PJSIP_EVENT_TSX_STATE;           \
-            (event).body.tsx_state.tsx = ptsx;		    \
-            (event).body.tsx_state.type = ptype;            \
-            (event).body.tsx_state.src.data = pdata;        \
-	    (event).body.tsx_state.prev_state = prev;	    \
-        } while (0)
+#define PJSIP_EVENT_INIT_TSX_STATE(event, ptsx, ptype, pdata, prev) \
+    do { \
+        (event).type = PJSIP_EVENT_TSX_STATE; \
+        (event).body.tsx_state.tsx = ptsx; \
+        (event).body.tsx_state.type = ptype; \
+        (event).body.tsx_state.src.data = pdata; \
+        (event).body.tsx_state.prev_state = prev; \
+    } while (0)
 
 /**
  * Init tx msg event.
  */
-#define PJSIP_EVENT_INIT_TX_MSG(event,ptdata)	\
-        do { \
-            (event).type = PJSIP_EVENT_TX_MSG;          \
-            (event).body.tx_msg.tdata = ptdata;		\
-        } while (0)
+#define PJSIP_EVENT_INIT_TX_MSG(event, ptdata) \
+    do { \
+        (event).type = PJSIP_EVENT_TX_MSG; \
+        (event).body.tx_msg.tdata = ptdata; \
+    } while (0)
 
 /**
  * Init rx msg event.
  */
-#define PJSIP_EVENT_INIT_RX_MSG(event,prdata)	\
-        do { \
-            (event).type = PJSIP_EVENT_RX_MSG;		\
-            (event).body.rx_msg.rdata = prdata;		\
-        } while (0)
+#define PJSIP_EVENT_INIT_RX_MSG(event, prdata) \
+    do { \
+        (event).type = PJSIP_EVENT_RX_MSG; \
+        (event).body.rx_msg.rdata = prdata; \
+    } while (0)
 
 /**
  * Init transport error event.
  */
-#define PJSIP_EVENT_INIT_TRANSPORT_ERROR(event,ptsx,ptdata)   \
-        do { \
-            (event).type = PJSIP_EVENT_TRANSPORT_ERROR; \
-            (event).body.tx_error.tsx = ptsx;		\
-            (event).body.tx_error.tdata = ptdata;	\
-        } while (0)
+#define PJSIP_EVENT_INIT_TRANSPORT_ERROR(event, ptsx, ptdata) \
+    do { \
+        (event).type = PJSIP_EVENT_TRANSPORT_ERROR; \
+        (event).body.tx_error.tsx = ptsx; \
+        (event).body.tx_error.tdata = ptdata; \
+    } while (0)
 
 /**
  * Init user event.
  */
-#define PJSIP_EVENT_INIT_USER(event,u1,u2,u3,u4)    \
-        do { \
-            (event).type = PJSIP_EVENT_USER;        \
-            (event).body.user.user1 = (void*)u1;     \
-            (event).body.user.user2 = (void*)u2;     \
-            (event).body.user.user3 = (void*)u3;     \
-            (event).body.user.user4 = (void*)u4;     \
-        } while (0)
+#define PJSIP_EVENT_INIT_USER(event, u1, u2, u3, u4) \
+    do { \
+        (event).type = PJSIP_EVENT_USER; \
+        (event).body.user.user1 = (void*)u1; \
+        (event).body.user.user2 = (void*)u2; \
+        (event).body.user.user3 = (void*)u3; \
+        (event).body.user.user4 = (void*)u4; \
+    } while (0)
 
 /**
  * Get the event string from the event ID.
  * @param e the event ID.
  * @note defined in sip_util.c
  */
-PJ_DECL(const char *) pjsip_event_str(pjsip_event_id_e e);
+PJ_DECL(const char*) pjsip_event_str(pjsip_event_id_e e);
 
 /**
  * @}
@@ -228,4 +225,4 @@ PJ_DECL(const char *) pjsip_event_str(pjsip_event_id_e e);
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_EVENT_H__ */
+#endif /* __PJSIP_SIP_EVENT_H__ */

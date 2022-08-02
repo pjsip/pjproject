@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,17 +14,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjsip.h>
 #include <pjlib.h>
 
-#define THIS_FILE   "msg_err_test.c"
+#define THIS_FILE "msg_err_test.c"
 
-
-static pj_bool_t verify_success(pjsip_msg *msg,
-				pjsip_parser_err_report *err_list)
+static pj_bool_t verify_success(pjsip_msg* msg,
+                                pjsip_parser_err_report* err_list)
 {
     PJ_UNUSED_ARG(msg);
     PJ_UNUSED_ARG(err_list);
@@ -35,67 +33,56 @@ static pj_bool_t verify_success(pjsip_msg *msg,
 
 static struct test_entry
 {
-    char	msg[1024];
-    pj_bool_t (*verify)(pjsip_msg *msg,
-		        pjsip_parser_err_report *err_list);
+    char msg[1024];
+    pj_bool_t (*verify)(pjsip_msg* msg, pjsip_parser_err_report* err_list);
 
-} test_entries[] = 
-{
+} test_entries[] = {
     /* Syntax error in status line */
-    {
-	"SIP/2.0 200\r\n"
-	"H-Name: H-Value\r\n"
-	"\r\n",
-	&verify_success
-    },
+    { "SIP/2.0 200\r\n"
+      "H-Name: H-Value\r\n"
+      "\r\n",
+      &verify_success },
 
     /* Syntax error in header */
-    {
-	"SIP/2.0 200 OK\r\n"
-	"Via: SIP/2.0\r\n"
-	"H-Name: H-Value\r\n"
-	"\r\n",
-	&verify_success
-    },
+    { "SIP/2.0 200 OK\r\n"
+      "Via: SIP/2.0\r\n"
+      "H-Name: H-Value\r\n"
+      "\r\n",
+      &verify_success },
 
     /* Multiple syntax errors in headers */
-    {
-	"SIP/2.0 200 OK\r\n"
-	"Via: SIP/2.0\r\n"
-	"H-Name: H-Value\r\n"
-	"Via: SIP/2.0\r\n"
-	"\r\n",
-	&verify_success
-    }
+    { "SIP/2.0 200 OK\r\n"
+      "Via: SIP/2.0\r\n"
+      "H-Name: H-Value\r\n"
+      "Via: SIP/2.0\r\n"
+      "\r\n",
+      &verify_success }
 };
-
 
 int msg_err_test(void)
 {
-    pj_pool_t *pool;
+    pj_pool_t* pool;
     unsigned i;
 
-    PJ_LOG(3,(THIS_FILE, "Testing parsing error"));
+    PJ_LOG(3, (THIS_FILE, "Testing parsing error"));
 
     pool = pjsip_endpt_create_pool(endpt, "msgerrtest", 4000, 4000);
 
-    for (i=0; i<PJ_ARRAY_SIZE(test_entries); ++i) {
-	pjsip_parser_err_report err_list, *e;
+    for (i = 0; i < PJ_ARRAY_SIZE(test_entries); ++i) {
+        pjsip_parser_err_report err_list, *e;
 
-	PJ_LOG(3,(THIS_FILE, "  Parsing msg %d", i));
-	pj_list_init(&err_list);
-	pjsip_parse_msg(pool, test_entries[i].msg,
-			strlen(test_entries[i].msg), &err_list);
+        PJ_LOG(3, (THIS_FILE, "  Parsing msg %d", i));
+        pj_list_init(&err_list);
+        pjsip_parse_msg(pool, test_entries[i].msg, strlen(test_entries[i].msg),
+                        &err_list);
 
-	e = err_list.next;
-	while (e != &err_list) {
-	    PJ_LOG(3,(THIS_FILE, 
-		      "   reported syntax error at line %d col %d for %.*s",
-		      e->line, e->col,
-		      (int)e->hname.slen,
-		      e->hname.ptr));
-	    e = e->next;
-	}
+        e = err_list.next;
+        while (e != &err_list) {
+            PJ_LOG(3, (THIS_FILE,
+                       "   reported syntax error at line %d col %d for %.*s",
+                       e->line, e->col, (int)e->hname.slen, e->hname.ptr));
+            e = e->next;
+        }
     }
 
     pj_pool_release(pool);

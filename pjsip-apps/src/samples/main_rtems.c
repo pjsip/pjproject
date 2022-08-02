@@ -1,5 +1,5 @@
 
-/* 
+/*
  *  !! OIY OIY !!
  *
  *  The purpose of this file is only to get the executable linked. I haven't
@@ -8,5 +8,3 @@
  */
 
 #include "../../pjlib/src/pjlib-test/main_rtems.c"
-
-

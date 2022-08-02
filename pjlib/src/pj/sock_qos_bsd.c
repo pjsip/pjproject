@@ -1,5 +1,4 @@
-/* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/sock_qos.h>
 #include <pj/assert.h>
@@ -23,84 +22,80 @@
 
 /* This is the implementation of QoS with BSD socket's setsockopt(),
  * using IP_TOS/IPV6_TCLASS and SO_PRIORITY
- */ 
-#if !defined(PJ_QOS_IMPLEMENTATION) || PJ_QOS_IMPLEMENTATION==PJ_QOS_BSD
+ */
+#if !defined(PJ_QOS_IMPLEMENTATION) || PJ_QOS_IMPLEMENTATION == PJ_QOS_BSD
 
-PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
-					   pj_qos_params *param)
+PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock, pj_qos_params* param)
 {
     pj_status_t last_err = PJ_ENOTSUP;
     pj_status_t status;
 
     /* No op? */
     if (!param->flags)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     /* Clear WMM field since we don't support it */
     param->flags &= ~(PJ_QOS_PARAM_HAS_WMM);
 
     /* Set TOS/DSCP */
     if (param->flags & PJ_QOS_PARAM_HAS_DSCP) {
-	/* We need to know if the socket is IPv4 or IPv6 */
-	pj_sockaddr sa;
-	int salen = sizeof(salen);
+        /* We need to know if the socket is IPv4 or IPv6 */
+        pj_sockaddr sa;
+        int salen = sizeof(salen);
 
-	/* Value is dscp_val << 2 */
-	int val = (param->dscp_val << 2);
+        /* Value is dscp_val << 2 */
+        int val = (param->dscp_val << 2);
 
-	status = pj_sock_getsockname(sock, &sa, &salen);
-	if (status != PJ_SUCCESS)
-	    return status;
+        status = pj_sock_getsockname(sock, &sa, &salen);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	if (sa.addr.sa_family == pj_AF_INET()) {
-	    /* In IPv4, the DS field goes in the TOS field */
-	    status = pj_sock_setsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
-					&val, sizeof(val));
-	} else if (sa.addr.sa_family == pj_AF_INET6()) {
-	    /* In IPv6, the DS field goes in the Traffic Class field */
-	    status = pj_sock_setsockopt(sock, pj_SOL_IPV6(),
-					pj_IPV6_TCLASS(),
-					&val, sizeof(val));
-	} else {
-	    status = PJ_EINVAL;
-	}
+        if (sa.addr.sa_family == pj_AF_INET()) {
+            /* In IPv4, the DS field goes in the TOS field */
+            status = pj_sock_setsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), &val,
+                                        sizeof(val));
+        } else if (sa.addr.sa_family == pj_AF_INET6()) {
+            /* In IPv6, the DS field goes in the Traffic Class field */
+            status = pj_sock_setsockopt(sock, pj_SOL_IPV6(), pj_IPV6_TCLASS(),
+                                        &val, sizeof(val));
+        } else {
+            status = PJ_EINVAL;
+        }
 
-	if (status != PJ_SUCCESS) {
-	    param->flags &= ~(PJ_QOS_PARAM_HAS_DSCP);
-	    last_err = status;
-	}
+        if (status != PJ_SUCCESS) {
+            param->flags &= ~(PJ_QOS_PARAM_HAS_DSCP);
+            last_err = status;
+        }
     }
 
     /* Set SO_PRIORITY */
     if (param->flags & PJ_QOS_PARAM_HAS_SO_PRIO) {
-	int val = param->so_prio;
-	status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_PRIORITY(),
-				    &val, sizeof(val));
-	if (status != PJ_SUCCESS) {
-	    param->flags &= ~(PJ_QOS_PARAM_HAS_SO_PRIO);
-	    last_err = status;
-	}
+        int val = param->so_prio;
+        status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_PRIORITY(),
+                                    &val, sizeof(val));
+        if (status != PJ_SUCCESS) {
+            param->flags &= ~(PJ_QOS_PARAM_HAS_SO_PRIO);
+            last_err = status;
+        }
     }
 
     return param->flags ? PJ_SUCCESS : last_err;
 }
 
-PJ_DEF(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
-					 pj_qos_type type)
+PJ_DEF(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock, pj_qos_type type)
 {
     pj_qos_params param;
     pj_status_t status;
 
     status = pj_qos_get_params(type, &param);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     return pj_sock_set_qos_params(sock, &param);
 }
 
-
-PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
-					   pj_qos_params *p_param)
+PJ_DEF(pj_status_t)
+pj_sock_get_qos_params(pj_sock_t sock, pj_qos_params* p_param)
 {
     pj_status_t last_err = PJ_ENOTSUP;
     int val = 0, optlen;
@@ -113,37 +108,36 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
     /* Get DSCP/TOS value */
     status = pj_sock_getsockname(sock, &sa, &salen);
     if (status == PJ_SUCCESS) {
-	optlen = sizeof(val);
-	if (sa.addr.sa_family == pj_AF_INET()) {
-	    status = pj_sock_getsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
-					&val, &optlen);
-	} else if (sa.addr.sa_family == pj_AF_INET6()) {
-	    status = pj_sock_getsockopt(sock, pj_SOL_IPV6(),
-					pj_IPV6_TCLASS(),
-					&val, &optlen);
-	} else {
-	    status = PJ_EINVAL;
-	}
+        optlen = sizeof(val);
+        if (sa.addr.sa_family == pj_AF_INET()) {
+            status =
+              pj_sock_getsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), &val, &optlen);
+        } else if (sa.addr.sa_family == pj_AF_INET6()) {
+            status = pj_sock_getsockopt(sock, pj_SOL_IPV6(), pj_IPV6_TCLASS(),
+                                        &val, &optlen);
+        } else {
+            status = PJ_EINVAL;
+        }
 
         if (status == PJ_SUCCESS) {
-    	    p_param->flags |= PJ_QOS_PARAM_HAS_DSCP;
-	    p_param->dscp_val = (pj_uint8_t)(val >> 2);
-	} else {
-	    last_err = status;
-	}
+            p_param->flags |= PJ_QOS_PARAM_HAS_DSCP;
+            p_param->dscp_val = (pj_uint8_t)(val >> 2);
+        } else {
+            last_err = status;
+        }
     } else {
-	last_err = status;
+        last_err = status;
     }
 
     /* Get SO_PRIORITY */
     optlen = sizeof(val);
-    status = pj_sock_getsockopt(sock, pj_SOL_SOCKET(), pj_SO_PRIORITY(),
-				&val, &optlen);
+    status = pj_sock_getsockopt(sock, pj_SOL_SOCKET(), pj_SO_PRIORITY(), &val,
+                                &optlen);
     if (status == PJ_SUCCESS) {
-	p_param->flags |= PJ_QOS_PARAM_HAS_SO_PRIO;
-	p_param->so_prio = (pj_uint8_t)val;
+        p_param->flags |= PJ_QOS_PARAM_HAS_SO_PRIO;
+        p_param->so_prio = (pj_uint8_t)val;
     } else {
-	last_err = status;
+        last_err = status;
     }
 
     /* WMM is not supported */
@@ -151,18 +145,16 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
     return p_param->flags ? PJ_SUCCESS : last_err;
 }
 
-PJ_DEF(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
-					 pj_qos_type *p_type)
+PJ_DEF(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock, pj_qos_type* p_type)
 {
     pj_qos_params param;
     pj_status_t status;
 
     status = pj_sock_get_qos_params(sock, &param);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     return pj_qos_get_type(&param, p_type);
 }
 
-#endif	/* PJ_QOS_IMPLEMENTATION */
-
+#endif /* PJ_QOS_IMPLEMENTATION */
