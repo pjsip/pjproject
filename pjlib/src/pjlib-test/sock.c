@@ -826,20 +826,20 @@ static int connect_test()
 static const char *family2str(int f)
 {
     if (f == pj_AF_UNIX())
-        return "AF_UNIX";
+	return "AF_UNIX";
     if (f == pj_AF_INET())
-        return "AF_INET";
+	return "AF_INET";
     if (f == pj_AF_INET6())
-        return "AF_INET6";
+	return "AF_INET6";
     return "?";
 }
 
 static const char *type2str(int type)
 {
     if (type == pj_SOCK_DGRAM())
-        return "SOCK_DGRAM";
+	return "SOCK_DGRAM";
     if (type == pj_SOCK_STREAM())
-        return "SOCK_STREAM";
+	return "SOCK_STREAM";
     return "?";
 }
 
@@ -890,9 +890,7 @@ on_error:
 	pj_sock_close(sv[1]);
 
     if (rc != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(rc, errmsg, sizeof(errmsg));
-	PJ_LOG(1, ("test", "error: %s(%d)", errmsg, rc));
+	PJ_PERROR(1, ("test", rc, "error"));
     }
 
     return rc;
@@ -904,8 +902,8 @@ static int socketpair_test()
 
     PJ_LOG(3, ("test", "...socketpair_test()"));
 
-#if (defined(PJ_SOCK_HAS_SOCKETPAIR) && PJ_SOCK_HAS_SOCKETPAIR)
     /* AF_UNIX */
+#if (defined(PJ_SOCK_HAS_SOCKETPAIR) && PJ_SOCK_HAS_SOCKETPAIR)
     rc = do_sockpair_tst(pj_AF_UNIX(), pj_SOCK_DGRAM(), 0);
     if (rc != PJ_SUCCESS)
 	return rc;
