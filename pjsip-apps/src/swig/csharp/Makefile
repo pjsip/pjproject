@@ -27,9 +27,12 @@ ARCH=$(TARGET_ARCH)
 ifeq ($(OS),android)
     LIBPJSUA2_DIR=$(PROJ_NAME)/Droid/lib/$(ARCH)
     LIBPJSUA2=$(LIBPJSUA2_DIR)/libpjsua2.so
-endif
-ifeq ($(OS),ios)
-    LIBPJSUA2_DIR=$(PROJ_NAME)/iOS/lib/$(ARCH)
+else
+    ifeq ($(OS),ios)
+        LIBPJSUA2_DIR=$(PROJ_NAME)/iOS/lib/$(ARCH)
+    else
+        LIBPJSUA2_DIR=$(PROJ_NAME)/lib
+    endif
     LIBPJSUA2=$(LIBPJSUA2_DIR)/libpjsua2.a
 endif
 
@@ -48,8 +51,7 @@ ifeq ($(OS),android)
 		$(MY_CFLAGS) $(MY_LDFLAGS)
 	# copy libc++_shared.so manually
 	cp -f ${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${TARGET_ARCH}/libc++_shared.so $(LIBPJSUA2_DIR)
-endif
-ifeq ($(OS),ios)
+else
 	$(AR) $(LIBPJSUA2) $(AR_FLAGS) $(OUT_DIR)/pjsua2_wrap.o $(PJ_LIBXX_FILES)
 endif
 
