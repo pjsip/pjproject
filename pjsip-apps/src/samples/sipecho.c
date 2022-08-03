@@ -230,7 +230,6 @@ static void destroy_stack(void)
     pj_caching_pool_destroy(&app.cp);
 }
 
-#define CHECK_STATUS()	do { if (status != PJ_SUCCESS) return status; } while (0)
 
 static pj_status_t init_stack()
 {
@@ -240,38 +239,35 @@ static pj_status_t init_stack()
 
     pj_log_set_level(3);
 
-    status = pjlib_util_init();
-    CHECK_STATUS();
+    CHECK( pjlib_util_init() );
 
     pj_caching_pool_init(&app.cp, NULL, 0);
     app.pool = pj_pool_create( &app.cp.factory, "sipecho", 512, 512, 0);
 
-    status = pjsip_endpt_create(&app.cp.factory, NULL, &app.sip_endpt);
-    CHECK_STATUS();
+    CHECK( pjsip_endpt_create(&app.cp.factory, NULL, &app.sip_endpt) );
 
     pj_log_set_level(4);
     pj_sockaddr_init((pj_uint16_t)sip_af, &addr, NULL, (pj_uint16_t)sip_port);
     if (sip_af == pj_AF_INET()) {
 	if (sip_tcp) {
-	    status = pjsip_tcp_transport_start( app.sip_endpt, &addr.ipv4, 1,
-						NULL);
+	    CHECK( pjsip_tcp_transport_start( app.sip_endpt, &addr.ipv4, 1,
+			    	    	      NULL) );
 	} else {
-	    status = pjsip_udp_transport_start( app.sip_endpt, &addr.ipv4,
-	                                        NULL, 1, NULL);
+	    CHECK( pjsip_udp_transport_start( app.sip_endpt, &addr.ipv4,
+	                                      NULL, 1, NULL) );
 	}
     } else if (sip_af == pj_AF_INET6()) {
-	    status = pjsip_udp_transport_start6(app.sip_endpt, &addr.ipv6,
-	                                        NULL, 1, NULL);
+	    CHECK( pjsip_udp_transport_start6(app.sip_endpt, &addr.ipv6,
+	                                      NULL, 1, NULL) );
     } else {
-	status = PJ_EAFNOTSUP;
+        CHECK(  PJ_EAFNOTSUP );
     }
 
     pj_log_set_level(3);
-    CHECK_STATUS();
 
     status = pjsip_tsx_layer_init_module(app.sip_endpt) ||
 	     pjsip_ua_init_module( app.sip_endpt, NULL );
-    CHECK_STATUS();
+    CHECK( status );
 
     pj_bzero(&inv_cb, sizeof(inv_cb));
     inv_cb.on_state_changed = &call_on_state_changed;
@@ -288,9 +284,12 @@ static pj_status_t init_stack()
 		//		  0, &app.med_endpt) ||
              pj_thread_create(app.pool, "sipecho", &worker_proc, NULL, 0, 0,
                               &app.worker_thread);
-    CHECK_STATUS();
+    CHECK( status );
 
     return PJ_SUCCESS;
+
+on_error:
+    return status;
 }
 
 static void destroy_call(call_t *call)
@@ -572,6 +571,8 @@ int main(int argc, char *argv[])
         { "help", 	0, 0, 'h' }
     };
     int c, option_index;
+    pj_status_t status;
+
 
     pj_log_set_level(5);
 
@@ -604,7 +605,7 @@ int main(int argc, char *argv[])
 	}
     }
 
-    if (init_stack())
+    if ((status=init_stack()) != PJ_SUCCESS)
 	goto on_error;
 
     /* If URL is specified, then make call immediately. */
@@ -616,13 +617,9 @@ int main(int argc, char *argv[])
 	pj_str_t dst_uri = pj_str(argv[pj_optind]);
 	pj_str_t local_uri;
 	pjsip_dialog *dlg;
-	pj_status_t status;
 	pjsip_tx_data *tdata;
 
-	if (pj_gethostip(sip_af, &hostaddr) != PJ_SUCCESS) {
-	    PJ_LOG(1,(THIS_FILE, "Unable to retrieve local host IP"));
-	    goto on_error;
-	}
+	CHECK( pj_gethostip(sip_af, &hostaddr) );
 	pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
 	pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>",
@@ -631,26 +628,21 @@ int main(int argc, char *argv[])
 
 	call = &app.call[0];
 
-	status = pjsip_dlg_create_uac( pjsip_ua_instance(),
+	CHECK(   pjsip_dlg_create_uac( pjsip_ua_instance(),
 				       &local_uri,  /* local URI */
 				       &local_uri,  /* local Contact */
 				       &dst_uri,    /* remote URI */
 				       &dst_uri,    /* remote target */
-				       &dlg);	    /* dialog */
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to create UAC dialog", status);
-	    return 1;
-	}
+				       &dlg) );	    /* dialog */
 
-	status = pjsip_inv_create_uac( dlg, NULL, 0, &call->inv);
-	if (status != PJ_SUCCESS) goto on_error;
+	CHECK( pjsip_inv_create_uac( dlg, NULL, 0, &call->inv) );
 
 	call->inv->mod_data[mod_sipecho.id] = call;
 
-	status = pjsip_inv_invite(call->inv, &tdata);
+	CHECK( pjsip_inv_invite(call->inv, &tdata) );
 	if (status != PJ_SUCCESS) goto on_error;
 
-	status = pjsip_inv_send_msg(call->inv, tdata);
+	CHECK( pjsip_inv_send_msg(call->inv, tdata) );
 	if (status != PJ_SUCCESS) goto on_error;
 
 	puts("Press ENTER to quit...");
@@ -688,7 +680,6 @@ int main(int argc, char *argv[])
     return 0;
 
 on_error:
-    puts("An error has occurred. run a debugger..");
     return 1;
 }
 
