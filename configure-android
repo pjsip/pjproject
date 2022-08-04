@@ -219,6 +219,12 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
         #echo "--- found RANLIB=${NDK_RANLIB}"
       #fi
     fi
+    # Get STL lib path
+    if test "x${STL_CPP_LIB}" = "x"; then
+      if test "x`echo $i | grep '/libc++_shared.so'`" != "x"; then
+        STL_CPP_LIB=$i
+      fi
+    fi
   done
 
   # Get target host from NDK toolchain dir name
@@ -326,7 +332,8 @@ if test "${IS_USING_LLVM}" = "1"; then
   STDCPP_TC="${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++"
   #STDCPP_CFLAGS="-I${STDCPP_TC}/include"
   #STDCPP_LIBS="-lc++_static -lc++abi"
-  STDCPP_LIBS="${STDCPP_TC}/libs/${TARGET_ABI}/libc++_shared.so"
+  #STDCPP_LIBS="${STDCPP_TC}/libs/${TARGET_ABI}/libc++_shared.so"
+  STDCPP_LIBS="${STL_CPP_LIB}"
   #STDCPP_LDFLAGS="-L${STDCPP_TC}/libs/${TARGET_ABI}/"
 else
   # gnustl
