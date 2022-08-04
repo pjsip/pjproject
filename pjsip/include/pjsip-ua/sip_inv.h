@@ -98,12 +98,12 @@ typedef enum pjsip_inv_state
 
 /**
  * Structure to hold parameters when calling the callback
- * #on_rx_offer2().
+ * on_rx_offer2().
  */
 struct pjsip_inv_on_rx_offer_cb_param
 {
-    const pjmedia_sdp_session 	*offer;	    /** Remote offer.		    */
-    const pjsip_rx_data 	*rdata;	    /** The received request.       */
+    const pjmedia_sdp_session 	*offer;	    /**< Remote offer.		    */
+    const pjsip_rx_data 	*rdata;	    /**< The received request.      */
 };
 
 
@@ -497,6 +497,12 @@ typedef struct pjsip_sdp_info
  * are typedef'd to pjsip_sdp_info.
  */
 typedef pjsip_sdp_info pjsip_rdata_sdp_info;
+
+/**
+ * For backwards compatibility and completeness,
+ * pjsip_rdata_sdp_info and pjsip_tdata_sdp_info
+ * are typedef'd to pjsip_sdp_info.
+ */
 typedef pjsip_sdp_info pjsip_tdata_sdp_info;
 
 

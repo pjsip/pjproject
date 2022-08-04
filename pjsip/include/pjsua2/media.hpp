@@ -697,9 +697,9 @@ typedef std::vector<ToneDigit> ToneDigitVector;
 struct ToneDigitMapDigit
 {
 public:
-    string	digit;
-    int		freq1;
-    int		freq2;
+    string	digit;  /**< the digit        */
+    int		freq1;  /**< first frequency  */
+    int		freq2;  /**< second frequency */
 };
 
 /**
@@ -1987,7 +1987,7 @@ public:
     /**
      * Start video preview window for the specified capture device.
      *
-     * @param p		Video preview parameters. 
+     * @param param	Video preview parameters.
      */
     void start(const VideoPreviewOpParam &param) PJSUA2_THROW(Error);
 
@@ -1996,7 +1996,7 @@ public:
      */
     void stop() PJSUA2_THROW(Error);
 
-    /*
+    /**
      * Get the preview window handle associated with the capture device,if any.
      */
     VideoWindow getVideoWindow();
@@ -2413,8 +2413,8 @@ typedef std::vector<CodecInfo> CodecInfoVector2;
  */
 typedef struct CodecFmtp
 {
-    string name;
-    string val;
+    string name;   /**< name  */
+    string val;    /**< value */
 } CodecFmtp;
 
 /** Array of codec fmtp */
@@ -2469,13 +2469,15 @@ struct CodecParamSetting
  * the capability of audio codec factories.
  *
  * Please note that codec parameter also contains SDP specific setting,
- * #setting::decFmtp and #setting::encFmtp, which may need to be set 
+ * setting::decFmtp and setting::encFmtp, which may need to be set
  * appropriately based on the effective setting. 
  * See each codec documentation for more detail.
  */
 struct CodecParam
 {
+    /** info */
     struct CodecParamInfo info;
+    /** setting */
     struct CodecParamSetting setting;
 
     void fromPj(const pjmedia_codec_param &param);

@@ -37,15 +37,15 @@
  * L16 codec types to codec manager (different combinations of clock
  * rate and number of channels).
  *
- * \section codec_setting Codec Settings
+ * \section l16_codec_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection l16_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection l16_specific_setting Codec Specific Settings
  *
  * Currently none.
  */
@@ -76,6 +76,9 @@ PJ_DECL(pj_status_t) pjmedia_codec_l16_deinit(void);
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 #endif	/* __PJMEDIA_CODEC_L16_H__ */
 

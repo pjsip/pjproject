@@ -1004,10 +1004,19 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_POOL_EVSUB_INC		512
 #endif
 
-
+/**
+ * Default value for Max-Forwards header
+ */
 #define PJSIP_MAX_FORWARDS_VALUE	70
 
+/**
+ * Via branch parameter prefix
+ */
 #define PJSIP_RFC3261_BRANCH_ID		"z9hG4bK"
+
+/**
+ * Length of PJSIP_RFC3261_BRANCH_ID
+ */
 #define PJSIP_RFC3261_BRANCH_LEN	7
 
 /* Transaction related constants. */
@@ -1071,24 +1080,29 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 #define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
 
-/* User agent. */
+/* User agent's pool setting. */
 #define PJSIP_POOL_LEN_USER_AGENT	1024
+/* User agent's pool setting. */
 #define PJSIP_POOL_INC_USER_AGENT	1024
 
-/* Message/URL related constants. */
+/** Message/URL related constants. */
 #define PJSIP_MAX_CALL_ID_LEN		pj_GUID_STRING_LENGTH()
+/** Message/URL related constants. */
 #define PJSIP_MAX_TAG_LEN		pj_GUID_STRING_LENGTH()
+/** Message/URL related constants. */
 #define PJSIP_MAX_BRANCH_LEN		(PJSIP_RFC3261_BRANCH_LEN + pj_GUID_STRING_LENGTH() + 2)
+/** Message/URL related constants. */
 #define PJSIP_MAX_HNAME_LEN		64
 
-/* Dialog related constants. */
+/** Dialog's pool setting. */
 #define PJSIP_POOL_LEN_DIALOG		1200
+/** Dialog's pool setting. */
 #define PJSIP_POOL_INC_DIALOG		512
 
-/* Maximum header types. */
+/** Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES		72
 
-/* Maximum URI types. */
+/** Maximum URI types. */
 #define PJSIP_MAX_URI_TYPES		4
 
 /*****************************************************************************

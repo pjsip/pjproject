@@ -956,7 +956,7 @@ export TARGETS	    =	pjlib pjlib-test
  *    file accordingly.
  *
  * You will also need to check various files in 
- * <tt><b>include/pj/compat/*.h</b></tt>, to see if they're 
+ * <tt><b>include/pj/compat/xxx.h</b></tt>, to see if they're
  * compatible with your OS.
  *
  * @subsection new_target_build_file_sec Build The Project

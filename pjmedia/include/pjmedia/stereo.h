@@ -51,8 +51,7 @@ PJ_BEGIN_DECL
 
 
 /**
- * Multichannel to monochannel conversion, it has two operation mode specified
- * by param options, @see pjmedia_stereo_options. This function can work safely
+ * Multichannel to monochannel conversion. This function can work safely
  * using the same buffer (in place conversion).
  *
  * @param mono		    Output buffer to store the mono frame extracted 
@@ -148,8 +147,7 @@ PJ_INLINE(pj_status_t) pjmedia_convert_channel_1ton(pj_int16_t multi[],
 
 
 /** 
- * Options for channel converter port. The #pjmedia_stereo_options is also
- * valid for this port options.
+ * Options for channel converter port.
  */
 typedef enum pjmedia_stereo_port_options
 {

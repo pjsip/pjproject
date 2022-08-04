@@ -39,8 +39,8 @@ int main()
 
     // Configure an AccountConfig
     AccountConfig acfg;
-    acfg.idUri = "sip:test@pjsip.org";
-    acfg.regConfig.registrarUri = "sip:pjsip.org";
+    acfg.idUri = "sip:test@sip.pjsip.org";
+    acfg.regConfig.registrarUri = "sip:sip.pjsip.org";
     AuthCredInfo cred("digest", "*", "test", 0, "secret");
     acfg.sipConfig.authCreds.push_back( cred );
 

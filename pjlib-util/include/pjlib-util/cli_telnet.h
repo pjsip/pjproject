@@ -51,7 +51,7 @@ typedef struct pj_cli_telnet_info
      */
     pj_uint16_t port;
 
-    /* Internal buffer for IP address */
+    /** Internal buffer for IP address */
     char buf_[32];
 
 } pj_cli_telnet_info;
@@ -151,6 +151,7 @@ PJ_DECL(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
 /**
  * Retrieve cli telnet info.
  *
+ * @param fe     The front end.
  * @param info   The telnet runtime information.
  *
  * @return		PJ_SUCCESS on success.

@@ -40,7 +40,7 @@ for peer-to-peer communication, such as (and especially) VoIP.
 <strong>\ref nat_intro "Read more.."</strong>
 
 
-\section intro Introduction to PJNATH
+\section pjnath_intro Introduction to PJNATH
 
 PJSIP NAT Helper (PJNATH) is a library which contains the implementation of 
 standard based NAT traversal solutions. PJNATH can be used as a stand-alone 
@@ -88,11 +88,11 @@ PJNATH has the following features:
 
 The library provides the following main component groups:
 
- - \ref PJNATH_STUN\n\n
- - \ref PJNATH_TURN\n\n
- - \ref PJNATH_ICE\n\n
- - \ref PJNATH_NAT_DETECT\n\n
- - \ref PJNATH_UPNP\n\n
+ - \ref PJNATH_STUN \n\n
+ - \ref PJNATH_TURN \n\n
+ - \ref PJNATH_ICE \n\n
+ - \ref PJNATH_NAT_DETECT \n\n
+ - \ref PJNATH_UPNP \n\n
 
 Apart from the \ref PJNATH_NAT_DETECT and \ref PJNATH_UPNP, each component
 group are further divided into two functionalities:

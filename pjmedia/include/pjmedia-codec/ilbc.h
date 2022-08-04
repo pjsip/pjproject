@@ -46,19 +46,19 @@
  * in bitrates of 15.2kbps for 20ms mode and 13.33kbps for 30ms mode.
  *
  *
- * \section codec_setting Codec Settings
+ * \section ilbc_codec_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection ilbc_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection ilbc_specific_setting Codec Specific Settings
  *
  * The following settings are applicable for this codec.
  *
- * \subsubsection mode Mode
+ * \subsubsection ilbc_mode Mode
  *
  * The default mode should be set upon initialization, see
  * #pjmedia_codec_ilbc_init(). After the codec is initialized, the default

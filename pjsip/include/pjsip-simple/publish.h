@@ -48,7 +48,7 @@ PJ_BEGIN_DECL
 extern const pjsip_method pjsip_publish_method;
 
 
-/*****************************************************************************
+/**
  * @defgroup PJSIP_SIMPLE_PUBLISH_CLIENT SIP Event State Publication Client
  * @ingroup PJSIP_SIMPLE
  * @brief Event State Publication Clien

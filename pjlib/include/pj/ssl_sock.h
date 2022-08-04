@@ -60,6 +60,9 @@ typedef struct pj_ssl_sock_t pj_ssl_sock_t;
 typedef struct pj_ssl_cert_t pj_ssl_cert_t;
 
 
+/**
+ * Bitwise flag for SSL certificate verification.
+ */
 typedef enum pj_ssl_cert_verify_flag_t
 {
     /**
@@ -131,6 +134,9 @@ typedef enum pj_ssl_cert_verify_flag_t
 } pj_ssl_cert_verify_flag_t;
 
 
+/**
+ * Type of SSL certificate name.
+ */
 typedef enum pj_ssl_cert_name_type
 {
     PJ_SSL_CERT_NAME_UNKNOWN = 0,
@@ -202,6 +208,7 @@ typedef pj_str_t pj_ssl_cert_buffer;
  * suffix, e.g: "pjsip_rsa.pem", the library will automatically check for
  * other certificates with "_ecc" and "_dsa" suffix.
  *
+ * @param pool		The pool.
  * @param CA_file	The file of trusted CA list.
  * @param cert_file	The file of certificate.
  * @param privkey_file	The file of private key.
@@ -227,6 +234,7 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
  * accepts an additional param CA_path to load CA certificates from
  * a directory.
  *
+ * @param pool		The pool.
  * @param CA_file	The file of trusted CA list.
  * @param CA_path	The path to a directory of trusted CA list.
  * @param cert_file	The file of certificate.
@@ -250,6 +258,7 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
  * Create credential from data buffer. The certificate expected is in 
  * PEM format.
  *
+ * @param pool		The pool.
  * @param CA_buf	The buffer of trusted CA list.
  * @param cert_buf	The buffer of certificate.
  * @param privkey_buf	The buffer of private key.
@@ -518,17 +527,17 @@ PJ_DECL(const char*) pj_ssl_curve_name(pj_ssl_curve curve);
  */
 PJ_DECL(pj_ssl_curve) pj_ssl_curve_id(const char *curve_name);
 
-/*
+/**
  * Entropy enumeration
  */
 typedef enum pj_ssl_entropy
 {
-	PJ_SSL_ENTROPY_NONE	= 0,
-	PJ_SSL_ENTROPY_EGD	= 1,
-	PJ_SSL_ENTROPY_RANDOM	= 2,
-	PJ_SSL_ENTROPY_URANDOM	= 3,
-	PJ_SSL_ENTROPY_FILE	= 4,
-	PJ_SSL_ENTROPY_UNKNOWN	= 0x0F
+	PJ_SSL_ENTROPY_NONE	= 0,	/**< None */
+	PJ_SSL_ENTROPY_EGD	= 1,	/**< EGD */
+	PJ_SSL_ENTROPY_RANDOM	= 2,	/**< Random */
+	PJ_SSL_ENTROPY_URANDOM	= 3,	/**< Urandom */
+	PJ_SSL_ENTROPY_FILE	= 4,	/**< File */
+	PJ_SSL_ENTROPY_UNKNOWN	= 0x0F	/**< Unknown */
 } pj_ssl_entropy_t;
 
 /**

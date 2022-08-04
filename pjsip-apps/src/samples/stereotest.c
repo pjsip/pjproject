@@ -21,7 +21,7 @@
 /**
  * \page page_pjmedia_samples_stereo_c Samples: Using Stereo Port
  *
- * This example demonstrates how to use @ref PJMEDIA_STEREO_PORT to
+ * This example demonstrates how to use @ref PJMEDIA_STEREO to
  * change the channel count of the media streams.
  *
  * This file is pjsip-apps/src/samples/stereotest.c

@@ -23,9 +23,9 @@
  *
  * Video codec encode and decode test.
  *
- * This file is pjsip-apps/src/samples/vid_vodec_test.c
+ * This file is pjsip-apps/src/samples/vid_codec_test.c
  *
- * \includelineno vid_vodec_test.c
+ * \includelineno vid_codec_test.c
  */
 
 #include <pjlib.h>

@@ -683,6 +683,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_lookup(const char *drv_name,
  * Initialize the video device parameters with default values for the
  * specified device.
  *
+ * @param pool 	    The pool.
  * @param id        The video device ID.
  * @param param     The video device parameters which will be initialized
  *                  by this function once it returns successfully.

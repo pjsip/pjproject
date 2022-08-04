@@ -91,11 +91,11 @@ PJ_BEGIN_DECL
  *
  * Few samples are provided:
  *
-  - @ref page_pjsip_sample_simple_pjsuaua_c\n
+  - @ref page_pjsip_sample_simple_pjsuaua_c \n
     Very simple SIP User Agent with registration, call, and media, using
     PJSUA-API, all in under 200 lines of code.
 
-  - @ref page_pjsip_samples_pjsua\n
+  - @ref page_pjsip_samples_pjsua \n
     This is the reference implementation for PJSIP and PJMEDIA.
     PJSUA is a console based application, designed to be simple enough
     to be readble, but powerful enough to demonstrate all features
@@ -600,7 +600,7 @@ typedef struct pjsua_stream_stat
 
 /**
  * Structure to be passed to on stream precreate callback.
- * See #on_stream_precreate().
+ * See on_stream_precreate().
  */
 typedef struct pjsua_on_stream_precreate_param
 {
@@ -618,7 +618,7 @@ typedef struct pjsua_on_stream_precreate_param
 
 /**
  * Structure to be passed to on stream created callback.
- * See #on_stream_created2().
+ * See on_stream_created2().
  */
 typedef struct pjsua_on_stream_created_param
 {
@@ -1158,7 +1158,7 @@ typedef struct pjsua_callback
 
     /**
      * Notify application when an audio media session is about to be created
-     * (as opposed to #on_stream_created() and #on_stream_created2() which are
+     * (as opposed to #on_stream_created() and on_stream_created2() which are
      * called *after* the session has been created). The application may change
      * some stream info parameter values, i.e: jb_init, jb_min_pre, jb_max_pre,
      * jb_max, use_ka, rtcp_sdes_bye_disabled, jb_discard_algo (audio),
@@ -1176,7 +1176,7 @@ typedef struct pjsua_callback
      * audio media port if it has added media processing port to the stream.
      * This media port then will be added to the conference bridge instead.
      *
-     * Note: if implemented, #on_stream_created2() callback will be called
+     * Note: if implemented, on_stream_created2() callback will be called
      * instead of this one. 
      *
      * @param call_id	    Call identification.
@@ -2785,7 +2785,7 @@ PJ_DECL(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type);
  *			PJ_SUCCESS if one usable STUN server is found.
  *			Otherwise it will always return PJ_SUCCESS, and
  *			application will be notified about the result in
- *			the callback #on_stun_resolution_complete.
+ *			the callback on_stun_resolution_complete().
  */
 PJ_DECL(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
 					       pj_bool_t wait);
@@ -5572,7 +5572,7 @@ PJ_DECL(pj_status_t) pjsua_call_get_info(pjsua_call_id call_id,
  *			 "100rel".
  *
  * @return		PJSIP_DIALOG_CAP_SUPPORTED if the specified capability
- *			is explicitly supported, see @pjsip_dialog_cap_status
+ *			is explicitly supported, see pjsip_dialog_cap_status
  *			for more info.
  */
 PJ_DECL(pjsip_dialog_cap_status) pjsua_call_remote_has_cap(
@@ -7243,21 +7243,21 @@ typedef enum pjsua_snd_dev_mode
  */
 typedef struct pjsua_snd_dev_param
 {
-    /*
+    /**
      * Capture dev id.
      *
      * Default: PJMEDIA_AUD_DEFAULT_CAPTURE_DEV
      */
     int			capture_dev;
 
-    /*
+    /**
      * Playback dev id.
      *
      * Default: PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV
      */
     int			playback_dev;
 
-    /*
+    /**
      * Sound device mode, refer to #pjsua_snd_dev_mode.
      *
      * Default: 0
@@ -7282,7 +7282,7 @@ PJ_DECL(void) pjsua_snd_dev_param_default(pjsua_snd_dev_param *prm);
  */
 typedef struct pjsua_conf_connect_param
 {
-    /*
+    /**
      * Signal level adjustment from the source to the sink to make it
      * louder or quieter. Value 1.0 means no level adjustment,
      * while value 0 means to mute the port.
@@ -8140,7 +8140,7 @@ PJ_DECL(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id);
  * manually update the settings to reflect the newly updated video device
  * indexes. See #pjmedia_vid_dev_refresh() for more information.
  *
- * See also #pjmedia_vid_stream_set_cap() for more information about setting
+ * See also pjmedia_vid_stream_set_cap() for more information about setting
  * a video device capability.
  *
  * @param id		The video device index.
@@ -8148,6 +8148,7 @@ PJ_DECL(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id);
  * @param pval		Pointer to value. Please see #pjmedia_vid_dev_cap
  *			documentation about the type of value to be 
  *			supplied for each setting.
+ * @param keep          (see description)
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */

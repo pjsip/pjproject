@@ -34,7 +34,7 @@
  * Video and Sound Devices
  *
  * This is a very simple example to use the @ref PJMEDIA_FILE_PLAY,
- * @ref PJMED_SND_PORT, and @ref PJMEDIA_VID_PORT. In this example, we
+ * @ref PJMED_SND_PORT, and @ref PJMEDIA_VIDEO_PORT. In this example, we
  * open the file, video, and sound devices, then connect the file to both
  * video and sound devices to play the contents of the file.
  *

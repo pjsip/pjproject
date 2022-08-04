@@ -57,7 +57,7 @@
 #   define DEPRECATED_FOR_TICKET_2232		1
 #endif
 
-/*
+/**
  * C++11 deprecated dynamic exception specification, but SWIG needs it.
  */
 #ifndef SWIG

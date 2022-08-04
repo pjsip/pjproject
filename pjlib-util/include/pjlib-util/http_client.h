@@ -181,7 +181,7 @@ typedef struct pj_http_req_param
         pj_size_t  size;           /**< Request body size */
         pj_size_t  total_size;     /**< If total_size > 0, data */
                                    /**< will be provided later  */
-    } reqdata;
+    } reqdata; /**< The request body */
 
     /**
      * Authentication credential needed to respond to 401/407 response.

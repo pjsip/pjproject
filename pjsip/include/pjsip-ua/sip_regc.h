@@ -94,8 +94,13 @@ typedef void pjsip_regc_cb(struct pjsip_regc_cbparam *param);
  */
 struct pjsip_regc_tsx_cb_param
 {
+    /** cbparam */
     struct pjsip_regc_cbparam   cbparam;
+
+    /** Number of Contacts */
     int                         contact_cnt;
+
+    /** Array of Contacts */
     pj_str_t                    contact[PJSIP_REGC_MAX_CONTACT];
 };
 

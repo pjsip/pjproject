@@ -38,7 +38,7 @@
  * @addtogroup PJSIP_BASE
  */
 
-/* @defgroup PJSIP_TYPES Basic Data Types
+/** @defgroup PJSIP_TYPES Basic Data Types
  * @ingroup PJSIP_BASE
  * @brief Basic data types.
  * @{

@@ -143,7 +143,7 @@ PJ_DECL(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
  * @param payload	The payload to be unpacketized.
  * @param payload_len	The payload length.
  * @param bits		The bitstream buffer.
- * @param bits_size	The bitstream buffer size.
+ * @param bits_len	The bitstream buffer size.
  * @param bits_pos	The bitstream offset to put the unpacketized payload
  *			in the bitstream, upon return, this will be updated
  *			to the latest offset as a result of the unpacketized
