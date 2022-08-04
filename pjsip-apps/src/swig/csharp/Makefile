@@ -68,8 +68,8 @@ sample: sample.cs
 	cp sample.cs $(PROJ_NAME)/$(PROJ_NAME)
 
 clean distclean realclean:
-	rm -rf $(OUT_DIR)/*
-	rm -rf $(LIBPJSUA2_DIR)/*
+	rm -rf ./$(OUT_DIR)/*
+	rm -rf ./$(LIBPJSUA2_DIR)/*
 
 install:
 
