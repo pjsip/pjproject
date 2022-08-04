@@ -739,7 +739,7 @@ ac_no_pjsua2
 ac_shared_libraries
 ac_linux_poll
 ac_os_objs
-ac_stl_cpp_lib
+ac_std_cpp_lib
 ac_target_arch
 ac_cross_compile
 ac_shlib_suffix
@@ -4867,12 +4867,6 @@ if test "$CC_OPTIMIZE" = ""; then CC_OPTIMIZE="-O2"; fi
 if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
 
 
-case $target in
-  *android*)
-	ANDROID_LIBS=$LIBS
-	;;
-esac
-
 
 
 
@@ -5700,7 +5694,7 @@ case $target in
 	printf "%s\n" "#define PJ_ANDROID 1" >>confdefs.h
 
 	ac_target_arch=$TARGET_ABI
-	ac_stl_cpp_lib=$ANDROID_LIBS
+	ac_std_cpp_lib=$STD_CPP_LIB
 	;;
     *mingw* | *cygw* | *win32* | *w32* )
 	printf "%s\n" "#define PJ_WIN32 1" >>confdefs.h

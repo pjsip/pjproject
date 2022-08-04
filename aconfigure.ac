@@ -67,12 +67,6 @@ AC_SUBST(CC_OPTIMIZE)
 if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
 AC_SUBST(CC_CFLAGS)
 
-case $target in
-  *android*)
-	ANDROID_LIBS=$LIBS
-	;;
-esac
-
 AC_SUBST(ac_pjdir)
 AC_SUBST(ac_build_mak_vars)
 AC_SUBST(ac_cflags)
@@ -159,12 +153,12 @@ dnl
 dnl Legacy macros
 dnl
 AC_SUBST(ac_target_arch)
-AC_SUBST(ac_stl_cpp_lib)
+AC_SUBST(ac_std_cpp_lib)
 case $target in
     *android*)
 	AC_DEFINE(PJ_ANDROID,1)
 	ac_target_arch=$TARGET_ABI
-	ac_stl_cpp_lib=$ANDROID_LIBS
+	ac_std_cpp_lib=$STD_CPP_LIB
 	;;
     *mingw* | *cygw* | *win32* | *w32* )
 	AC_DEFINE(PJ_WIN32,1)
