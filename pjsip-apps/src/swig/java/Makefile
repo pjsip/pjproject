@@ -173,7 +173,7 @@ $(LIBPJSUA2_SO): $(OUT_DIR)/pjsua2_wrap.o
 ifeq ($(OS),android)
 	mkdir -p android/pjsua2/src/main/jniLibs/$(TARGET_ARCH)
 	# copy libc++_shared.so manually
-	cp -f ${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${TARGET_ARCH}/libc++_shared.so android/pjsua2/src/main/jniLibs/$(TARGET_ARCH)
+	cp -f ${STD_CPP_LIB} android/pjsua2/src/main/jniLibs/$(TARGET_ARCH)
 endif
 	$(PJ_CXX) -shared -o $(LIBPJSUA2_SO) $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_LDFLAGS)

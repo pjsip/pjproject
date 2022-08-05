@@ -50,7 +50,7 @@ ifeq ($(OS),android)
 	$(PJ_CXX) -shared -o $(LIBPJSUA2) $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_CFLAGS) $(MY_LDFLAGS)
 	# copy libc++_shared.so manually
-	cp -f ${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${TARGET_ARCH}/libc++_shared.so $(LIBPJSUA2_DIR)
+	cp -f ${STD_CPP_LIB} $(LIBPJSUA2_DIR)
 else
 	$(AR) $(LIBPJSUA2) $(AR_FLAGS) $(OUT_DIR)/pjsua2_wrap.o $(PJ_LIBXX_FILES)
 endif
