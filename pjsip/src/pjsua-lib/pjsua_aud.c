@@ -1813,7 +1813,8 @@ static pj_status_t update_initial_aud_param()
     pjmedia_aud_param param;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pjsua_var.snd_port != NULL, PJ_EBUG);    
+    PJ_ASSERT_RETURN(pjsua_var.snd_port != NULL, PJ_EBUG);
+
     strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
 
     status = pjmedia_aud_stream_get_param(strm, &param);

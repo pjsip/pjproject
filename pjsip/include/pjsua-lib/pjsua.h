@@ -7790,7 +7790,8 @@ PJ_DECL(pj_bool_t) pjsua_snd_is_active(void);
  * 
  * Note that in case the setting is kept for future use, it will be applied
  * to any devices, even when application has changed the sound device to be
- * used.
+ * used. To reset the setting, application can call #pjsua_set_snd_dev2()
+ * with \a use_default_settings set to PJ_TRUE.
  *
  * Note also that the echo cancellation setting should be set with 
  * #pjsua_set_ec() API instead.
