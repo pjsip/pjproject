@@ -64,7 +64,7 @@ All features except video are expected to work (video is coming soon!). Consider
 
 #. You need to use TCP transport for SIP for the background feature to work
 #. IP change (for example when user is changing access point) is a feature frequently asked by developers and you can find the documentation here: http://trac.pjsip.org/repos/wiki/IPAddressChange
-#. There are some specific issues for iOS 7 and beyond, please see http://trac.pjsip.org/repos/ticket/1697
+#. There are some specific issues for iOS 7 and beyond, please see https://github.com/pjsip/pjproject/issues/1697
 #. If SSL is needed, you need to compile OpenSSL for iOS
 
 

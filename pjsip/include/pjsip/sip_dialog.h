@@ -64,7 +64,7 @@ PJ_BEGIN_DECL
 /** Deprecated API pjsip_dlg_create_uas() due to a fatal bug of possible
  * premature dialog destroy. Application should not change this setting,
  * unless it uses single worker thread.
- * See also https://trac.pjsip.org/repos/ticket/1902.
+ * See also https://github.com/pjsip/pjproject/issues/1902.
  */
 #ifndef DEPRECATED_FOR_TICKET_1902
 #  define DEPRECATED_FOR_TICKET_1902      1

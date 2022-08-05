@@ -162,7 +162,7 @@ int sock_perf_test(void)
 
     /* Disable this test on Symbian since UDP connect()/send() failed
      * with S60 3rd edition (including MR2).
-     * See http://www.pjsip.org/trac/ticket/264
+     * See https://github.com/pjsip/pjproject/issues/264
      */    
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     /* Benchmarking UDP */

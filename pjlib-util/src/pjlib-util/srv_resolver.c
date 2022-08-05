@@ -317,7 +317,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 
 	    /* Remove all other entries (of the same priority) */
 	    /* Don't need to do this.
-	     * See https://trac.pjsip.org/repos/ticket/1719
+	     * See https://github.com/pjsip/pjproject/issues/1719
 	    while (count > 1) {
 		pj_array_erase(query_job->srv, sizeof(struct srv_target), 
 			       query_job->srv_cnt, i+1);

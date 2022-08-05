@@ -653,7 +653,7 @@ static void update_digest_session( pjsip_cached_auth *cached_auth,
 	cached_auth->nc = 1;
 
 	/* Save realm. */
-	/* Note: allow empty realm (http://trac.pjsip.org/repos/ticket/1061)
+	/* Note: allow empty realm (https://github.com/pjsip/pjproject/issues/1061)
 	pj_assert(cached_auth->realm.slen != 0);
 	*/
 	if (cached_auth->realm.slen == 0) {
@@ -1510,7 +1510,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
     via->branch_param.slen = 0;
 
     /* Restore strict route set.
-     * See http://trac.pjsip.org/repos/ticket/492
+     * See https://github.com/pjsip/pjproject/issues/492
      */
     pjsip_restore_strict_route_set(tdata);
 

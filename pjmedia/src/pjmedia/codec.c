@@ -154,7 +154,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
     PJ_ASSERT_RETURN(mgr && factory, PJ_EINVAL);
 
     /* Since 2.0 we require codec factory to implement "destroy" op. Please
-     * see: https://trac.pjsip.org/repos/ticket/1294
+     * see: https://github.com/pjsip/pjproject/issues/1294
      *
      * Really! Please do see it.
      */

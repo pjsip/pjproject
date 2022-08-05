@@ -563,7 +563,7 @@ typedef union pj_in6_addr
     /* Do not use this with Winsock2, as this will align pj_sockaddr_in6
      * to 64-bit boundary and Winsock2 doesn't like it!
      * Update 26/04/2010:
-     *  This is now disabled, see http://trac.pjsip.org/repos/ticket/1058
+     *  This is now disabled, see https://github.com/pjsip/pjproject/issues/1058
      */
 #if 0 && defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0 && \
     (!defined(PJ_WIN32) || PJ_WIN32==0)

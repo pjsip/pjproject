@@ -69,7 +69,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
 		     PJ_EINVAL);
 
     /* Use PJSUA_LOCK() instead of acquire_call():
-     *  https://trac.pjsip.org/repos/ticket/1371
+     *  https://github.com/pjsip/pjproject/issues/1371
      */
     PJSUA_LOCK();
 
@@ -626,7 +626,7 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
     } else if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
 	/* For discussions about call mutex protection related to this
 	 * callback, please see ticket #460:
-	 *	http://trac.pjsip.org/repos/ticket/460#comment:4
+	 *	https://github.com/pjsip/pjproject/issues/460#comment:4
 	 */    
 	(*pjsua_var.ua_cfg.cb.on_dtmf_digit)(call_id, digit);
     }

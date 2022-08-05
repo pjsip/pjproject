@@ -701,7 +701,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 	    pj_list_push_back(&pubc->pending_reqs_empty, pp);
 
 	    /* Add SIP-If-Match if we have etag and the request doesn't have
-	     * one (http://trac.pjsip.org/repos/ticket/996)
+	     * one (https://github.com/pjsip/pjproject/issues/996)
 	     */
 	    if (pubc->etag.slen) {
 		const pj_str_t STR_HNAME = { "SIP-If-Match", 12 };

@@ -1410,7 +1410,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 		    /* The function may be called from worker thread, we have
 		     * to handle the events instead of simple sleep here
 		     * and must not hold any lock while handling the events:
-		     * https://trac.pjsip.org/repos/ticket/1737
+		     * https://github.com/pjsip/pjproject/issues/1737
 		     */
 		    num_locks = PJSUA_RELEASE_LOCK();
 
@@ -2905,7 +2905,7 @@ PJ_DEF(pjsua_vid_win_id) pjsua_call_get_vid_win(pjsua_call_id call_id)
 		     PJ_EINVAL);
 
     /* Use PJSUA_LOCK() instead of acquire_call():
-     *  https://trac.pjsip.org/repos/ticket/1371
+     *  https://github.com/pjsip/pjproject/issues/1371
      */
     PJSUA_LOCK();
 
@@ -2946,7 +2946,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_vid_conf_port(
 		     PJ_EINVAL);
 
     /* Use PJSUA_LOCK() instead of acquire_call():
-     *  https://trac.pjsip.org/repos/ticket/1371
+     *  https://github.com/pjsip/pjproject/issues/1371
      */
     PJSUA_LOCK();
 

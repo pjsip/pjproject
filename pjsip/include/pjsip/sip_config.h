@@ -90,7 +90,7 @@ typedef struct pjsip_cfg_t
 
 	/**
 	 * Allow hash character ('#') to appear in outgoing URIs. See
-	 * https://trac.pjsip.org/repos/ticket/1569.
+	 * https://github.com/pjsip/pjproject/issues/1569.
 	 *
 	 * Default is PJ_FALSE.
 	 */
@@ -151,7 +151,7 @@ typedef struct pjsip_cfg_t
 	 * uses "sips" scheme in its request URI. Contact URI should use "sips"
 	 * scheme and the top-most Record-Route URI, if any, should use either
 	 * "sips" scheme or "transport=tls" param. See also
-	 * https://trac.pjsip.org/repos/ticket/1735.
+	 * https://github.com/pjsip/pjproject/issues/1735.
 	 *
 	 * Default is PJ_FALSE.
 	 */
@@ -579,7 +579,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  *
  * Update:
  * As of version 2.1, the default value is 0. This change was part of
- * https://trac.pjsip.org/repos/ticket/1412
+ * https://github.com/pjsip/pjproject/issues/1412
  */
 #ifndef PJSIP_CHECK_VIA_SENT_BY
 #   define PJSIP_CHECK_VIA_SENT_BY	0
@@ -651,7 +651,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  *
  * Note that if the value is put lower than 33 seconds, it may cause some
  * pjsip test units to fail. See the comment on the following link:
- * https://trac.pjsip.org/repos/ticket/1465#comment:4
+ * https://github.com/pjsip/pjproject/issues/1465#comment:4
  *
  * Default: 33
  */

@@ -1046,7 +1046,7 @@ static pj_status_t bb10_stream_set_cap(pjmedia_aud_stream *strm,
 
 	/* OS 10.2.1 requires pausing audio stream */
 	/* No longer necessary!
-	 * See https://trac.pjsip.org/repos/ticket/1743
+	 * See https://github.com/pjsip/pjproject/issues/1743
 	 */
 	need_restart = PJ_FALSE;
 	/*

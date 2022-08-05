@@ -399,7 +399,7 @@ struct pjsip_timer;
  *
  * Note regarding the invite session's pools. The inv_sess used to have
  * only one pool, which is just a pointer to the dialog's pool. Ticket
- * http://trac.pjsip.org/repos/ticket/877 has found that the memory
+ * https://github.com/pjsip/pjproject/issues/877 has found that the memory
  * usage will grow considerably everytime re-INVITE or UPDATE is
  * performed.
  *

@@ -1586,7 +1586,7 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
     }
 
     /* Note: 
-     *  the second condition is for http://trac.pjsip.org/repos/ticket/911
+     *  the second condition is for https://github.com/pjsip/pjproject/issues/911
      * Take note that it could be us that is trying to send a final message,
      * such as final NOTIFY upon unsubscription.
      */

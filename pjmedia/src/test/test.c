@@ -44,7 +44,7 @@ void app_perror(pj_status_t status, const char *msg)
 }
 
 /* Force linking PLC stuff if G.711 is disabled. See:
- *  https://trac.pjsip.org/repos/ticket/1337 
+ *  https://github.com/pjsip/pjproject/issues/1337 
  */
 #if PJMEDIA_HAS_G711_CODEC==0
 void *dummy()

@@ -318,7 +318,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
 	return status;
 
     /* If this response is a forked response from a different call-leg,
-     * update the req URI (https://trac.pjsip.org/repos/ticket/1364)
+     * update the req URI (https://github.com/pjsip/pjproject/issues/1364)
      */
     if (pj_stricmp(&uac_state->tag, &dd->inv->dlg->remote.info->tag)) {
 	const pjsip_contact_hdr *mhdr;
