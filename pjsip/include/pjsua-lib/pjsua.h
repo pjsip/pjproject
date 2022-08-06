@@ -7264,6 +7264,22 @@ typedef struct pjsua_snd_dev_param
      */
     unsigned		mode;
 
+    /*
+     * The library will maintain the global sound device settings set when
+     * opening the sound device for the first time and later can be modified
+     * using #pjsua_snd_set_setting(). These setings are then applied to any
+     * sound device when opening. This might be undesirable,
+     * e.g: output volume changes when switching sound device due to the
+     * use of previously set volume settings.
+     *
+     * To avoid such case, application can set this to PJ_TRUE and let the
+     * sound device use default settings when opening. This will also reset
+     * the global sound device settings.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t		use_default_settings;
+
 } pjsua_snd_dev_param;
 
 
@@ -7844,7 +7860,8 @@ PJ_DECL(pj_bool_t) pjsua_snd_is_active(void);
  * 
  * Note that in case the setting is kept for future use, it will be applied
  * to any devices, even when application has changed the sound device to be
- * used.
+ * used. To reset the setting, application can call #pjsua_set_snd_dev2()
+ * with \a use_default_settings set to PJ_TRUE.
  *
  * Note also that the echo cancellation setting should be set with 
  * #pjsua_set_ec() API instead.
