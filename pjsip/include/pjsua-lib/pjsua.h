@@ -1158,7 +1158,7 @@ typedef struct pjsua_callback
 
     /**
      * Notify application when an audio media session is about to be created
-     * (as opposed to #on_stream_created() and on_stream_created2() which are
+     * (as opposed to on_stream_created() and on_stream_created2() which are
      * called *after* the session has been created). The application may change
      * some stream info parameter values, i.e: jb_init, jb_min_pre, jb_max_pre,
      * jb_max, use_ka, rtcp_sdes_bye_disabled, jb_discard_algo (audio),
