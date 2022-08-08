@@ -641,10 +641,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     status = os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &key->ev);
     if (status != 0) {
 	status = pj_get_os_error();
-        PJ_PERROR(2, (THIS_FILE,
-                "Ignoring pj_ioqueue_unregister error: os_epoll_ctl status=%d",
-		status));
-        /* From epoll doc: "Closing a file descriptor cause it to be
+	PJ_PERROR(2, (THIS_FILE, status,
+		      "Ignoring pj_ioqueue_unregister error: os_epoll_ctl"));
+	/* From epoll doc: "Closing a file descriptor cause it to be
          * removed from all epoll interest lists". So we should just
          * proceed instead of returning failure here.
          */
