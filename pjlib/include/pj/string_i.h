@@ -21,7 +21,7 @@
 #include <pj/assert.h>
 #include <pj/pool.h>
 
-PJ_IDEF(pj_str_t) pj_str(char *str)
+PJ_IDEF(pj_str_t) pj_str(const char *str)
 {
     pj_str_t dst;
     dst.ptr = str;

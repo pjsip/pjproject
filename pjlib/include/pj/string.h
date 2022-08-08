@@ -88,7 +88,7 @@ PJ_BEGIN_DECL
  *
  * @return	pj_str_t.
  */
-PJ_IDECL(pj_str_t) pj_str(char *str);
+PJ_IDECL(pj_str_t) pj_str(const char *str);
 
 /**
  * Create constant string from normal C string.
