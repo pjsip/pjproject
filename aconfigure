@@ -6225,6 +6225,32 @@ printf "%s\n" "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if socketpair() is available" >&5
+printf %s "checking if socketpair() is available... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/types.h>
+				     #include <sys/socket.h>
+int
+main (void)
+{
+socketpair(0, 0, 0, 0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  printf "%s\n" "#define PJ_SOCK_HAS_SOCKETPAIR 1" >>confdefs.h
+
+		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+else $as_nop
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if sockaddr_in has sin_len member" >&5
 printf %s "checking if sockaddr_in has sin_len member... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext

@@ -823,6 +823,121 @@ static int connect_test()
 }
 #endif
 
+static const char *family2str(int f)
+{
+    if (f == pj_AF_UNIX())
+	return "AF_UNIX";
+    if (f == pj_AF_INET())
+	return "AF_INET";
+    if (f == pj_AF_INET6())
+	return "AF_INET6";
+    return "?";
+}
+
+static const char *type2str(int type)
+{
+    if (type == pj_SOCK_DGRAM())
+	return "SOCK_DGRAM";
+    if (type == pj_SOCK_STREAM())
+	return "SOCK_STREAM";
+    return "?";
+}
+
+static int do_sockpair_tst(int family, int type, int proto)
+{
+    pj_status_t rc;
+    pj_sock_t sv[2] = {-1, -1};
+    char buf[64];
+    pj_ssize_t len;
+
+    PJ_LOG(3, ("test", "#Test socketpair, family: %s, type: %s",
+	       family2str(family), type2str(type)));
+
+    rc = pj_sock_socketpair(family, type, proto, sv);
+    if (rc != PJ_SUCCESS)
+	goto on_error;
+
+    /* sv[0] send text to sv[1] */
+    len = pj_ansi_snprintf(buf, sizeof(buf), "hello, %ld->%ld", sv[0], sv[1]);
+    rc = pj_sock_send(sv[0], buf, &len, 0);
+    if (rc != PJ_SUCCESS)
+	goto on_error;
+    PJ_LOG(3, ("test", "send: %.*s", (int)len, buf));
+
+    len = sizeof(buf);
+    rc = pj_sock_recv(sv[1], buf, &len, 0);
+    if (rc != PJ_SUCCESS)
+	goto on_error;
+    PJ_LOG(3, ("test", "recv: %.*s", (int)len, buf));
+
+    /* sv[1] send text to sv[0] */
+    len = pj_ansi_snprintf(buf, sizeof(buf), "hello, %ld->%ld", sv[1], sv[0]);
+    rc = pj_sock_send(sv[1], buf, &len, 0);
+    if (rc != PJ_SUCCESS)
+	goto on_error;
+    PJ_LOG(3, ("test", "send: %.*s", (int)len, buf));
+
+    len = sizeof(buf);
+    rc = pj_sock_recv(sv[0], buf, &len, 0);
+    if (rc != PJ_SUCCESS)
+	goto on_error;
+    PJ_LOG(3, ("test", "recv: %.*s", (int)len, buf));
+
+on_error:
+    if (sv[0] > 0)
+	pj_sock_close(sv[0]);
+    if (sv[1] > 0)
+	pj_sock_close(sv[1]);
+
+    if (rc != PJ_SUCCESS) {
+	PJ_PERROR(1, ("test", rc, "error"));
+    }
+
+    return rc;
+}
+
+static int socketpair_test()
+{
+    int rc;
+
+    PJ_LOG(3, ("test", "...socketpair_test()"));
+
+    /* AF_UNIX */
+#if (defined(PJ_SOCK_HAS_SOCKETPAIR) && PJ_SOCK_HAS_SOCKETPAIR)
+    rc = do_sockpair_tst(pj_AF_UNIX(), pj_SOCK_DGRAM(), 0);
+    if (rc != PJ_SUCCESS)
+	return rc;
+
+    rc = do_sockpair_tst(pj_AF_UNIX(), pj_SOCK_STREAM(), 0);
+    if (rc != PJ_SUCCESS)
+	return rc;
+#else
+    PJ_LOG(2, ("test", "Not support AF_UNIX"));
+#endif
+
+    /* AF_INET */
+    rc = do_sockpair_tst(pj_AF_INET(), pj_SOCK_DGRAM(), 0);
+    if (rc != PJ_SUCCESS)
+	return rc;
+#if PJ_HAS_TCP
+    rc = do_sockpair_tst(pj_AF_INET(), pj_SOCK_STREAM(), 0);
+    if (rc != PJ_SUCCESS)
+	return rc;
+#endif
+
+    /* AF_INET6 */
+    rc = do_sockpair_tst(pj_AF_INET6(), pj_SOCK_DGRAM(), 0);
+    if (rc != PJ_SUCCESS)
+	return rc;
+#if PJ_HAS_TCP
+    rc = do_sockpair_tst(pj_AF_INET6(), pj_SOCK_STREAM(), 0);
+    if (rc != PJ_SUCCESS)
+	return rc;
+#endif
+
+    return 0;
+}
+
 int sock_test()
 {
     int rc;
@@ -865,6 +980,10 @@ int sock_test()
 	return rc;
 
     rc = tcp_test();
+    if (rc != 0)
+	return rc;
+
+    rc = socketpair_test();
     if (rc != 0)
 	return rc;
 

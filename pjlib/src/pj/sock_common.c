@@ -1224,6 +1224,131 @@ PJ_DEF(char *) pj_addr_str_print( const pj_str_t *host_str, int port,
     return buf;
 }
 
+/*
+ * Simulate unix-like socketpair()
+ * Use a pair of IPv4/IPv6 local sockets (listening on 127.0.0.1/::1)
+ */
+static pj_status_t socketpair_imp(int family,
+				  int type,
+				  int protocol,
+				  pj_sock_t sv[2])
+{
+    pj_status_t status;
+    pj_sock_t lfd = PJ_INVALID_SOCKET;
+    pj_sock_t cfd = PJ_INVALID_SOCKET;
+    pj_str_t loopback;
+    pj_sockaddr sa;
+    int salen;
+
+#if PJ_HAS_TCP
+    PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM() || type == pj_SOCK_STREAM(),
+		     PJ_EINVAL);
+#else
+    PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM(), PJ_EINVAL);
+#endif
+
+    PJ_ASSERT_RETURN(family == pj_AF_INET() || family == pj_AF_INET6(),
+		     PJ_EINVAL);
+
+    loopback = family == pj_AF_INET() ? pj_str("127.0.0.1") : pj_str("::1");
+
+    /* listen */
+    status = pj_sock_socket(family, type, protocol, &lfd);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    pj_sockaddr_init(family, &sa, &loopback, 0);
+    salen = pj_sockaddr_get_len(&sa);
+    status = pj_sock_bind(lfd, &sa, salen);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    status = pj_sock_getsockname(lfd, &sa, &salen);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+#if PJ_HAS_TCP
+    if (type == pj_SOCK_STREAM()) {
+	status = pj_sock_listen(lfd, 1);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+#endif
+
+    /* connect to listen fd */
+    status = pj_sock_socket(family, type, protocol, &cfd);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+    status = pj_sock_connect(cfd, &sa, salen);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    if (type == pj_SOCK_DGRAM()) {
+	status = pj_sock_getsockname(cfd, &sa, &salen);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+	status = pj_sock_connect(lfd, &sa, salen);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+	sv[0] = lfd;
+	sv[1] = cfd;
+    }
+#if PJ_HAS_TCP
+    else if (type == pj_SOCK_STREAM()) {
+	pj_sock_t newfd = PJ_INVALID_SOCKET;
+	status = pj_sock_accept(lfd, &newfd, NULL, NULL);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+	pj_sock_close(lfd);
+	sv[0] = newfd;
+	sv[1] = cfd;
+    }
+#endif
+
+    return PJ_SUCCESS;
+
+on_error:
+    if (lfd != PJ_INVALID_SOCKET)
+	pj_sock_close(lfd);
+    if (cfd != PJ_INVALID_SOCKET)
+	pj_sock_close(cfd);
+    return status;
+}
+
+#if defined(PJ_SOCK_HAS_SOCKETPAIR) && PJ_SOCK_HAS_SOCKETPAIR != 0
+PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
+				       int type,
+				       int protocol,
+				       pj_sock_t sv[2])
+{
+    int status;
+    int tmp_sv[2];
+
+    PJ_CHECK_STACK();
+
+    status = socketpair(family, type, protocol, tmp_sv);
+    if (status != PJ_SUCCESS) {
+	if (errno == EOPNOTSUPP) {
+	    return socketpair_imp(family, type, protocol, sv);
+	}
+	status = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+	return status;
+    }
+    sv[0] = tmp_sv[0];
+    sv[1] = tmp_sv[1];
+    return PJ_SUCCESS;
+}
+#else
+PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
+				       int type,
+				       int protocol,
+				       pj_sock_t sv[2])
+{
+    PJ_CHECK_STACK();
+    return socketpair_imp(family, type, protocol, sv);
+}
+#endif
+
 
 /* Only need to implement these in DLL build */
 #if defined(PJ_DLL)
