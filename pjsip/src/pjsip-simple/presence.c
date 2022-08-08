@@ -839,7 +839,7 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
 
     } else {
 #if 1
-	/* This is the newest change, http://trac.pjsip.org/repos/ticket/873
+	/* This is the newest change, https://github.com/pjsip/pjproject/issues/873
 	 * Some app want to be notified about the empty NOTIFY, e.g. to 
 	 * decide whether it should consider the buddy as offline.
 	 * In this case, leave the buddy state unchanged, but set the

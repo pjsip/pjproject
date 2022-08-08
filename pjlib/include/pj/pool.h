@@ -523,7 +523,9 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
 /*
  * Internal functions
  */
+/** Internal function */
 PJ_IDECL(void*) pj_pool_alloc_from_block(pj_pool_block *block, pj_size_t size);
+/** Internal function */
 PJ_DECL(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size);
 
 
@@ -627,7 +629,6 @@ typedef struct pj_pool_factory_policy
 } pj_pool_factory_policy;
 
 /**
- * \def PJ_NO_MEMORY_EXCEPTION
  * This constant denotes the exception number that will be thrown by default
  * memory factory policy when memory allocation fails.
  *

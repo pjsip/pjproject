@@ -816,7 +816,7 @@ static void ice_init_complete_cb(void *user_data)
     /* No need to acquire_call() if we only change the tp_ready flag
      * (i.e. transport is being created synchronously). Otherwise
      * calling acquire_call() here may cause deadlock. See
-     * https://trac.pjsip.org/repos/ticket/1578
+     * https://github.com/pjsip/pjproject/issues/1578
      */
     call_med->tp_ready = call_med->tp_result;
 
@@ -1232,7 +1232,7 @@ static pj_status_t create_ice_media_transport(
 	    PJSUA_UNLOCK();
         if (dlg) {
             /* Don't lock otherwise deadlock:
-             * https://trac.pjsip.org/repos/ticket/1737
+             * https://github.com/pjsip/pjproject/issues/1737
              */
 	    pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
             pjsip_dlg_dec_lock(dlg);
@@ -1970,7 +1970,7 @@ on_return:
 
 /* Determine if call's media is being changed, for example when video is being
  * added. Then we can reject incoming re-INVITE, for example. This is the
- * solution for https://trac.pjsip.org/repos/ticket/1738
+ * solution for https://github.com/pjsip/pjproject/issues/1738
  */
 pj_bool_t  pjsua_call_media_is_changing(pjsua_call *call)
 {

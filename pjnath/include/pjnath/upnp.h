@@ -39,7 +39,7 @@ PJ_BEGIN_DECL
  * port to a local socket.
  */
 
-/*
+/**
  * This structre describes the parameter to initialize UPnP.
  */
 typedef struct pj_upnp_init_param

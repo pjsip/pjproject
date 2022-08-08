@@ -928,7 +928,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     }
 
     /* Apply weight adjustment for special IPv4/IPv6 addresses
-     * See http://trac.pjsip.org/repos/ticket/1046
+     * See https://github.com/pjsip/pjproject/issues/1046
      */
     if (af == PJ_AF_INET) {
 	for (i=0; i<cand_cnt; ++i) {

@@ -375,7 +375,7 @@
 
 /**
  * Enable OpenCORE AMR-NB codec.
- * See https://trac.pjsip.org/repos/ticket/1388 for some info.
+ * See https://github.com/pjsip/pjproject/issues/1388 for some info.
  *
  * Default: 0
  */
@@ -385,7 +385,7 @@
 
 /**
  * Enable OpenCORE AMR-WB codec.
- * See https://trac.pjsip.org/repos/ticket/1608 for some info.
+ * See https://github.com/pjsip/pjproject/issues/1608 for some info.
  *
  * Default: 0
  */

@@ -268,7 +268,7 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 
     /* Prevent STATE_CALLING from being reported more than once because
      * of authentication
-     * https://trac.pjsip.org/repos/ticket/1318
+     * https://github.com/pjsip/pjproject/issues/1318
      */
     if (state==PJSIP_INV_STATE_CALLING && 
 	(inv->cb_called & (1 << PJSIP_INV_STATE_CALLING)) != 0)
@@ -424,7 +424,7 @@ static const pjmedia_sdp_session *inv_has_pending_answer(pjsip_inv_session *inv,
 }
 
 /* Process pending disconnection
- *  http://trac.pjsip.org/repos/ticket/1712
+ *  https://github.com/pjsip/pjproject/issues/1712
  */
 static void inv_perform_pending_bye(pjsip_inv_session *inv)
 {
@@ -462,7 +462,7 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
 	return PJ_EBUG;
     }
 
-    /* Note that with https://trac.pjsip.org/repos/ticket/1725, this
+    /* Note that with https://github.com/pjsip/pjproject/issues/1725, this
      * function can be called to send ACK for previous INVITE 200/OK
      * retransmission
      */
@@ -583,7 +583,7 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	}
 
 	/* Ignore ACK with different CSeq
-	 * https://trac.pjsip.org/repos/ticket/1391
+	 * https://github.com/pjsip/pjproject/issues/1391
 	 */
 	if (rdata->msg_info.cseq->cseq != inv->invite_tsx->cseq) {
 	    return PJ_TRUE;
@@ -594,7 +594,7 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	    /* Before we terminate INVITE transaction, process the SDP
 	     * in the ACK request, if any. 
 	     * Only do this when invite state is not already disconnected
-	     * (http://trac.pjsip.org/repos/ticket/640).
+	     * (https://github.com/pjsip/pjproject/issues/640).
 	     */
 	    if (inv->state < PJSIP_INV_STATE_DISCONNECTED) {
 		inv_check_sdp_in_incoming_msg(inv, inv->invite_tsx, rdata);
@@ -632,7 +632,7 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	    inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &event);
 
 	    /* Send pending BYE if any:
-	     *   http://trac.pjsip.org/repos/ticket/1712
+	     *   https://github.com/pjsip/pjproject/issues/1712
 	     * Do this after setting the state to CONFIRMED, so that we
 	     * have consistent CONFIRMED state between caller and callee.
 	     */
@@ -702,9 +702,9 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
 	 * retransmission is received. Also handle the situation
 	 * when we have another re-INVITE on going and 200/OK
 	 * retransmission is received. See:
-	 * https://trac.pjsip.org/repos/ticket/1725.
+	 * https://github.com/pjsip/pjproject/issues/1725.
 	 * Also send ACK for 200/OK of pending re-INVITE after call is
-	 * disconnected (see https://trac.pjsip.org/repos/ticket/1755).
+	 * disconnected (see https://github.com/pjsip/pjproject/issues/1755).
 	 */
 	if (inv->invite_tsx == NULL ||
 	    inv->state == PJSIP_INV_STATE_DISCONNECTED ||
@@ -770,7 +770,7 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     /* Clear invite transaction when tsx is confirmed.
      * Previously we set invite_tsx to NULL only when transaction has
      * terminated, but this didn't work when ACK has the same Via branch
-     * value as the INVITE (see http://www.pjsip.org/trac/ticket/113)
+     * value as the INVITE (see https://github.com/pjsip/pjproject/issues/113)
      */
     if (tsx->state>=PJSIP_TSX_STATE_CONFIRMED && tsx == inv->invite_tsx) {	
 	inv->invite_tsx = NULL;
@@ -1976,7 +1976,7 @@ static void cleanup_allow_sup_hdr(unsigned inv_option,
     }
 
     /* Remove "timer" from Supported header if Session-Timers is
-     * disabled (https://trac.pjsip.org/repos/ticket/1761)
+     * disabled (https://github.com/pjsip/pjproject/issues/1761)
      */
     if ((inv_option & PJSIP_INV_SUPPORT_TIMER) == 0 && sup_hdr) {
 	const pj_str_t STR_TIMER = { "timer", 5 };
@@ -3045,7 +3045,7 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
 	    pjsip_tx_data_add_ref(tdata);
 
 	    /* Restore strict route set.
-	     * See http://trac.pjsip.org/repos/ticket/492
+	     * See https://github.com/pjsip/pjproject/issues/492
 	     */
 	    pjsip_restore_strict_route_set(tdata);
 
@@ -3454,7 +3454,7 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	}
 
 	/* Don't send BYE before ACK is received
-	 * http://trac.pjsip.org/repos/ticket/1712
+	 * https://github.com/pjsip/pjproject/issues/1712
 	 */
 	if (tdata->msg->line.req.method.id == PJSIP_BYE_METHOD &&
 	    inv->role == PJSIP_ROLE_UAS &&
@@ -3561,7 +3561,7 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
     pj_assert(e->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
     rdata = e->body.tsx_state.src.rdata;
 
-    /* https://trac.pjsip.org/repos/ticket/1651
+    /* https://github.com/pjsip/pjproject/issues/1651
      * Special treatment for CANCEL. Since here we're responding to CANCEL
      * automatically (including 487 to INVITE), application will see the
      * 200/OK response to CANCEL first in the callback, and then 487 to
@@ -4894,7 +4894,7 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 		inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
 
 		/* Send pending BYE if any:
-		 *   http://trac.pjsip.org/repos/ticket/1712
+		 *   https://github.com/pjsip/pjproject/issues/1712
 		 * Do this after setting the state to CONFIRMED, so that we
 		 * have consistent CONFIRMED state between caller and callee.
 		 */
@@ -4987,7 +4987,7 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	pjsip_tx_data *tdata;
 	pj_status_t status;
 
-	/* See https://trac.pjsip.org/repos/ticket/1455
+	/* See https://github.com/pjsip/pjproject/issues/1455
 	 * Handle incoming re-INVITE before current INVITE is confirmed.
 	 * According to RFC 5407:
 	 *  - answer with 200 if we don't have pending offer-answer

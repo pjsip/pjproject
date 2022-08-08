@@ -31,7 +31,7 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMEDIA_FILE_PLAY AVI File Player
+ * @defgroup PJMEDIA_AVI_FILE_PLAY AVI File Player
  * @ingroup PJMEDIA_PORT
  * @brief Video and audio playback from AVI file
  * @{

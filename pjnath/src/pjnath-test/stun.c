@@ -481,7 +481,7 @@ static struct test_vector
 	"",
 	&create_msgint1
     }
-    /* disabled: see http://trac.pjsip.org/repos/ticket/960
+    /* disabled: see https://github.com/pjsip/pjproject/issues/960
     ,
     {
 	PJ_STUN_BINDING_RESPONSE,
@@ -508,7 +508,7 @@ static struct test_vector
     }
     */
 
-    /* disabled: see http://trac.pjsip.org/repos/ticket/960
+    /* disabled: see https://github.com/pjsip/pjproject/issues/960
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
     ,
     {

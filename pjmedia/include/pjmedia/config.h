@@ -1092,7 +1092,7 @@
  * so we recommend to disable this.
  *
  * To enable this, you would require OpenSSL which supports it.
- * See https://trac.pjsip.org/repos/ticket/1943 for more info.
+ * See https://github.com/pjsip/pjproject/issues/1943 for more info.
  *
  * Default: disabled.
  */
@@ -1114,7 +1114,7 @@
  * Enable AES_GCM_256 cryptos in SRTP.
  *
  * To enable this, you would require OpenSSL which supports it.
- * See https://trac.pjsip.org/repos/ticket/1943 for more info. 
+ * See https://github.com/pjsip/pjproject/issues/1943 for more info. 
  *
  * Default: disabled.
  */
@@ -1127,7 +1127,7 @@
  * Enable AES_GCM_128 cryptos in SRTP.
  *
  * To enable this, you would require OpenSSL which supports it.
- * See https://trac.pjsip.org/repos/ticket/1943 for more info.
+ * See https://github.com/pjsip/pjproject/issues/1943 for more info.
  *
  * Default: disabled.
  */

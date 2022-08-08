@@ -113,9 +113,9 @@ PJ_BEGIN_DECL
  *    applications.\n\n
  */
 
-/* Deprecated API pj_ice_strans_sendto() due to its limitations. See
+/** Deprecated API pj_ice_strans_sendto() due to its limitations. See
  * below for more info and refer to
- * https://trac.pjsip.org/repos/ticket/2229 for more details.
+ * https://github.com/pjsip/pjproject/issues/2229 for more details.
  */
 #ifndef DEPRECATED_FOR_TICKET_2229
 #  define DEPRECATED_FOR_TICKET_2229	0

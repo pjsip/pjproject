@@ -828,7 +828,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      * We also need to close handle to make sure that no further events
      * will come to the handle.
      */
-    /* Update 2008/07/18 (http://trac.pjsip.org/repos/ticket/575):
+    /* Update 2008/07/18 (https://github.com/pjsip/pjproject/issues/575):
      *  - It seems that CloseHandle() in itself does not actually close
      *    the socket (i.e. it will still appear in "netstat" output). Also
      *    if we only use CloseHandle(), an "Invalid Handle" exception will

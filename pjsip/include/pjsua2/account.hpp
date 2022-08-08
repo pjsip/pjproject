@@ -801,7 +801,7 @@ public:
     pjmedia_srtp_crypto toPj() const;
 };
 
-/* Array of SRTP cryptos. */
+/** Array of SRTP cryptos. */
 typedef std::vector<SrtpCrypto> SrtpCryptoVector;
 
 /**
@@ -904,7 +904,7 @@ public:
     pjmedia_rtcp_fb_cap toPj() const;
 };
 
-/* Array of RTCP Feedback capabilities. */
+/** Array of RTCP Feedback capabilities. */
 typedef std::vector<RtcpFbCap> RtcpFbCapVector;
 
 

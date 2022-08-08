@@ -26,21 +26,21 @@ below were taken on a Windows machine, but the library is very portable and
 it is known to run on platforms such as Linux, MacOS X, Windows Mobile,
 Symbian, and so on.
 
-  - @ref ice_demo_sample\n
+  - @ref ice_demo_sample \n
     This sample demonstrates how to use \ref PJNATH_ICE_STREAM_TRANSPORT
     <b>without</b> using signaling protocol such as <b>SIP</b>. It provides 
     interactive user interface to create and manage the ICE sessions as well
     as to exchange SDP with another ice_demo instance.\n\n
     \image html ice_demo.jpg "ice_demo on WinXP"
 
-  - @ref turn_client_sample\n
+  - @ref turn_client_sample \n
     This sample demonstrates how to use \ref PJNATH_TURN_SOCK
     and also \ref PJNATH_STUN_SOCK. It provides interactive 
     user interface to manage allocation, permissions, and
     channel bindings.\n\n
     \image html pjturn_client.jpg "pjturn_client on WinXP"
 
-  - TURN server sample\n
+  - TURN server sample \n
     This is a simple sample TURN server application, which
     we mainly use for testing (as back then there is no TURN
     server available).\n

@@ -502,7 +502,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 #endif
 
     /* Disable WSAECONNRESET for UDP.
-     * See https://trac.pjsip.org/repos/ticket/1197
+     * See https://github.com/pjsip/pjproject/issues/1197
      */
     if (type==PJ_SOCK_DGRAM) {
 	DWORD dwBytesReturned = 0;
@@ -674,7 +674,7 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
     PJ_ASSERT_RETURN(len, PJ_EINVAL);
 
 #ifdef MSG_NOSIGNAL
-    /* Suppress SIGPIPE. See https://trac.pjsip.org/repos/ticket/1538 */
+    /* Suppress SIGPIPE. See https://github.com/pjsip/pjproject/issues/1538 */
     flags |= MSG_NOSIGNAL;
 #endif
 

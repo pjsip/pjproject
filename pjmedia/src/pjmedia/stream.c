@@ -1436,8 +1436,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
      * In this case we periodically transmit RTP frame to keep NAT binding
      * open, by giving zero PCM frame to the codec.
      *
-     * This was originally done in http://trac.pjsip.org/repos/ticket/56,
-     * but then disabled in http://trac.pjsip.org/repos/ticket/439, but
+     * This was originally done in https://github.com/pjsip/pjproject/issues/56,
+     * but then disabled in https://github.com/pjsip/pjproject/issues/439, but
      * now it's enabled again.
      */
     } else if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO &&
@@ -1597,7 +1597,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 
     samples_per_frame = stream->enc_samples_per_pkt;
 
-    /* http://www.pjsip.org/trac/ticket/56:
+    /* https://github.com/pjsip/pjproject/issues/56:
      *  when input is PJMEDIA_FRAME_TYPE_NONE, feed zero PCM frame
      *  instead so that encoder can decide whether or not to transmit
      *  silence frame.

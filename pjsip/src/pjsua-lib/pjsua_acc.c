@@ -1802,7 +1802,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     }
 
     /* Convert IP address strings into sockaddr for comparison.
-     * (http://trac.pjsip.org/repos/ticket/863)
+     * (https://github.com/pjsip/pjproject/issues/863)
      */
     status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &uri->host, 
 			       &contact_addr);
@@ -1842,7 +1842,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     /* Do not switch if both Contact and server's IP address are
      * public but response contains private IP. A NAT in the middle
      * might have messed up with the SIP packets. See:
-     * http://trac.pjsip.org/repos/ticket/643
+     * https://github.com/pjsip/pjproject/issues/643
      *
      * This exception can be disabled by setting allow_contact_rewrite
      * to 2. In this case, the switch will always be done whenever there
@@ -1858,7 +1858,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
     /* Also don't switch if only the port number part is different, and
      * the Via received address is private.
-     * See http://trac.pjsip.org/repos/ticket/864
+     * See https://github.com/pjsip/pjproject/issues/864
      */
     if (acc->cfg.allow_contact_rewrite != 2 &&
 	pj_sockaddr_cmp(&contact_addr, &recv_addr)==0 &&
@@ -1953,9 +1953,9 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
 	update_regc_contact(acc);
 
-	/* Always update, by http://trac.pjsip.org/repos/ticket/864. */
+	/* Always update, by https://github.com/pjsip/pjproject/issues/864. */
         /* Since the Via address will now be overwritten to the correct
-         * address by https://trac.pjsip.org/repos/ticket/1537, we do
+         * address by https://github.com/pjsip/pjproject/issues/1537, we do
          * not need to update the transport address.
          */
         /*
@@ -2215,7 +2215,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	acc->ka_transport = param->rdata->tp_info.transport;
 	pjsip_transport_add_ref(acc->ka_transport);
 
-	/* https://trac.pjsip.org/repos/ticket/1607:
+	/* https://github.com/pjsip/pjproject/issues/1607:
 	 * Calculate the destination address from the original request. Some
 	 * (broken) servers send the response using different source address
 	 * than the one that receives the request, which is forbidden by RFC
@@ -4114,7 +4114,7 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
 	}
 
 	/* Release transport immediately if regc is using it
-	 * See https://trac.pjsip.org/repos/ticket/1481
+	 * See https://github.com/pjsip/pjproject/issues/1481
 	 */
 	if (acc->regc) {
 	    pjsip_regc_info reg_info;

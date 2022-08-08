@@ -934,7 +934,7 @@ PJ_DECL(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
 
 
 /**
- * !}
+ * @}
  */
 
 PJ_END_DECL

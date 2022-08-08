@@ -20,7 +20,7 @@
 #define __PJMEDIA_CODEC_ALL_CODECS_H__
 
 /**
- * @file pjmedia-codec/all_codecs.h
+ * @file pjmedia-codec/audio_codecs.h
  * @brief Helper function to register all codecs
  */
 #include <pjmedia/endpoint.h>

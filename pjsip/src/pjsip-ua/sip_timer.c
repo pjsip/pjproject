@@ -827,7 +827,7 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 	via->branch_param.slen = 0;
 
 	/* Restore strict route set.
-	 * See http://trac.pjsip.org/repos/ticket/492
+	 * See https://github.com/pjsip/pjproject/issues/492
 	 */
 	pjsip_restore_strict_route_set(tdata);
 

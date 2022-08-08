@@ -1169,7 +1169,7 @@ static pj_status_t set_cap(void *data)
          * the window's flag to shown (while the window is, actually,
          * still hidden). This causes problems later when setting/querying
          * the window's visibility.
-         * See ticket #1429 (http://trac.pjsip.org/repos/ticket/1429)
+         * See ticket #1429 (https://github.com/pjsip/pjproject/issues/1429)
          */
 	Uint32 flag = SDL_GetWindowFlags(strm->window);
 	if (flag & SDL_WINDOW_HIDDEN)

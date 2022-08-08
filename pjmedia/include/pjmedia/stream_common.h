@@ -65,7 +65,7 @@ typedef struct pjmedia_stream_ka_config
     /**
      * The number of keepalive to be sent after the stream is created.
      * When this is set to 0, keepalive will be sent once for NAT hole
-     * punching if stream's #use_ka is enabled.
+     * punching if stream's use_ka is enabled.
      *
      * Default: PJMEDIA_STREAM_START_KA_CNT
      */

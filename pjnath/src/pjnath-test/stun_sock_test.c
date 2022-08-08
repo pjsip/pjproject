@@ -658,7 +658,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
      * called
      */
     /* No longer valid due to this ticket:
-     *  http://trac.pjsip.org/repos/ticket/742
+     *  https://github.com/pjsip/pjproject/issues/742
 
     if (client->on_status_cnt != 0) {
 	PJ_LOG(3, (THIS_FILE, "    error: on_status() must not be called on successful"

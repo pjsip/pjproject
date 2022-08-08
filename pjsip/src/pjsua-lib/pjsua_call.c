@@ -729,7 +729,7 @@ static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
     	       !pjsua_sip_acc_is_using_upnp(acc->index))
     {
    	/* Choose local interface to use in Via if acc is not using
-   	 * STUN nor UPnP. See https://trac.pjsip.org/repos/ticket/1804
+   	 * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
    	 */
    	pjsip_host_port via_addr;
    	const void *via_tp;
@@ -1795,7 +1795,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     	       !pjsua_sip_acc_is_using_upnp(acc_id))
     {
 	/* Choose local interface to use in Via if acc is not using
-	 * STUN nor UPnP. See https://trac.pjsip.org/repos/ticket/1804
+	 * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
 	 */
 	char target_buf[PJSIP_MAX_URL_SIZE];
 	pj_str_t target;
@@ -2249,7 +2249,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     pj_bzero(info, sizeof(*info));
 
     /* Use PJSUA_LOCK() instead of acquire_call():
-     *  https://trac.pjsip.org/repos/ticket/1371
+     *  https://github.com/pjsip/pjproject/issues/1371
      */
     PJSUA_LOCK();
 
@@ -3912,7 +3912,7 @@ PJ_DEF(void) pjsua_call_hangup_all(void)
     PJ_LOG(4,(THIS_FILE, "Hangup all calls.."));
     pj_log_push_indent();
 
-    // This may deadlock, see https://trac.pjsip.org/repos/ticket/1305
+    // This may deadlock, see https://github.com/pjsip/pjproject/issues/1305
     //PJSUA_LOCK();
 
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
@@ -5309,10 +5309,10 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
      * 'inactive' (PJMEDIA_DIR_NONE).
      * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
      */
-    /* http://trac.pjsip.org/repos/ticket/880
+    /* https://github.com/pjsip/pjproject/issues/880
        if (call->dir != PJMEDIA_DIR_ENCODING) {
      */
-    /* https://trac.pjsip.org/repos/ticket/1142:
+    /* https://github.com/pjsip/pjproject/issues/1142:
      *  configuration to use c=0.0.0.0 for call hold.
      */
 
@@ -6169,7 +6169,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	goto on_return;
     }
 
-    /* https://trac.pjsip.org/repos/ticket/1452:
+    /* https://github.com/pjsip/pjproject/issues/1452:
      *    If a request is retried due to 401/407 challenge, don't process the
      *    transaction first but wait until we've retried it.
      */

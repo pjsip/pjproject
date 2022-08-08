@@ -41,8 +41,8 @@ enum pjmedia_amr_options
 };
 
 /**
- * Settings. Use #pjmedia_codec_opencore_amrnb/wb_set_config() to
- * activate.
+ * Settings. Use pjmedia_codec_opencore_amrnb_set_config() and
+ * pjmedia_codec_opencore_amrwb_set_config() to activate.
  */
 typedef struct pjmedia_codec_amr_config
 {

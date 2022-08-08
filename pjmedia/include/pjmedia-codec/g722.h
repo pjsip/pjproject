@@ -43,15 +43,15 @@
  * The G.722 codec implementation is provided as part of pjmedia-codec
  * library, and does not depend on external G.722 codec implementation.
  *
- * \section codec_setting Codec Settings
+ * \section codec_g722_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection g722_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection g722_specific_setting Codec Specific Settings
  *
  * Currently none.
  */

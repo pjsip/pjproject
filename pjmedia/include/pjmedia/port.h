@@ -194,7 +194,7 @@ PJ_BEGIN_DECL
  * been deprecated and replaced by set_eof_cb2() and set_cb2(), which
  * will call the callback asynchronously without expecting any return value.
  *
- * See also https://trac.pjsip.org/repos/ticket/2251.
+ * See also https://github.com/pjsip/pjproject/issues/2251.
  */
 #ifndef DEPRECATED_FOR_TICKET_2251
 #  define DEPRECATED_FOR_TICKET_2251	0

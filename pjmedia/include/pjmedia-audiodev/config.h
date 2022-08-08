@@ -265,10 +265,18 @@ PJMEDIA Audio Device API is a cross-platform audio API appropriate for use with
 VoIP applications and many other types of audio streaming applications. 
 
 The API abstracts many different audio API's on various platforms, such as:
- - PortAudio back-end for Win32, Windows Mobile, Linux, Unix, dan MacOS X.
- - native WMME audio for Win32 and Windows Mobile devices
- - native Symbian audio streaming/multimedia framework (MMF) implementation
- - native Nokia Audio Proxy Server (APS) implementation
+ - WMME audio for Windows and Windows Mobile devices
+ - Windows Audio Session API (WASAPI)
+ - CoreAudio for Mac and iPhone
+ - ALSA for Linux
+ - Android OpenSL
+ - Android JNI
+ - Android Oboe
+ - PortAudio for Windows, Windows Mobile, Linux, Unix, dan MacOS X.
+ - BDIMAP
+ - Blackberry BB10
+ - Symbian audio streaming/multimedia framework (MMF) implementation
+ - Nokia Audio Proxy Server (APS) implementation
  - null-audio implementation
  - and more to be implemented in the future
 

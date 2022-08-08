@@ -549,7 +549,7 @@
  * Enable timer debugging facility. When this is enabled, application
  * can call pj_timer_heap_dump() to show the contents of the timer
  * along with the source location where the timer entries were scheduled.
- * See https://trac.pjsip.org/repos/ticket/1527 for more info.
+ * See https://github.com/pjsip/pjproject/issues/1527 for more info.
  *
  * Default: 1
  */
@@ -1068,7 +1068,7 @@
 
 /**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
- * https://trac.pjsip.org/repos/ticket/1197.
+ * https://github.com/pjsip/pjproject/issues/1197.
  *
  * Default: 1
  */

@@ -20,7 +20,7 @@
 #define __PJMEDIA_VIDPORT_H__
 
 /**
- * @file pjmedia/videoport.h Video media port
+ * @file pjmedia/vid_port.h Video media port
  * @brief Video media port
  */
 

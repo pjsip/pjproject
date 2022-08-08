@@ -448,9 +448,9 @@ struct DigestChallenge
      * */
     std::string realm;
 
-    /*
+    /**
      * Other parameters.
-     * */
+     */
     StringToStringMap otherParam;
 
     /**
@@ -572,12 +572,16 @@ struct DigestCredential
  */
 struct OnCredAuthParam
 {
+    /** Digest challenge */
     DigestChallenge digestChallenge;
 
+    /** Credential info */
     AuthCredInfo credentialInfo;
 
+    /** Method */
     std::string method;
 
+    /** Digest credential */
     DigestCredential digestCredential;
 };
 
@@ -1770,7 +1774,7 @@ public:
      *    continue the call by sending re-INVITE
      *    (configurable via \a AccountConfig.ipChangeConfig.reinviteFlags).
      *
-     * @param param	The IP change parameter, have a look at #IpChangeParam.
+     * @param param	The IP change parameter, have a look at IpChangeParam.
      */
     void handleIpChange(const IpChangeParam &param) PJSUA2_THROW(Error);
 

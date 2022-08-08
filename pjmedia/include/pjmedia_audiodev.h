@@ -22,7 +22,7 @@
 
 /**
  * @file pjmedia_audiodev.h
- * @brief PJMEDIA main header file.
+ * @brief PJMEDIA-AUDIODEV main header file.
  */
 
 #include <pjmedia-audiodev/audiodev.h>

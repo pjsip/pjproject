@@ -628,7 +628,7 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
     if (mod_tsx_layer.mod.id == -1) {
 	/* The transaction layer has been unregistered. This could happen
 	 * if the transaction was pending on transport and the application
-	 * is shutdown. See http://trac.pjsip.org/repos/ticket/1033. In
+	 * is shutdown. See https://github.com/pjsip/pjproject/issues/1033. In
 	 * this case just do nothing.
 	 */
 	return;
@@ -1151,7 +1151,7 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
 
 /*
  * Callback when timer expires. Transport error also piggybacks this event
- * to avoid deadlock (https://trac.pjsip.org/repos/ticket/1646).
+ * to avoid deadlock (https://github.com/pjsip/pjproject/issues/1646).
  */
 static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 {
@@ -1215,13 +1215,13 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
 	    /* Set transaction state etc, but don't notify TU now,
 	     * otherwise we'll get a deadlock. See:
-	     * https://trac.pjsip.org/repos/ticket/1646
+	     * https://github.com/pjsip/pjproject/issues/1646
 	     */
 	    /* Also don't schedule tsx handler, otherwise we'll get race
 	     * condition of TU notifications due to delayed TERMINATED
 	     * state TU notification. It happened in multiple worker threads
 	     * environment between TERMINATED & DESTROYED! See:
-	     * https://trac.pjsip.org/repos/ticket/1902
+	     * https://github.com/pjsip/pjproject/issues/1902
 	     */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
 	                   PJSIP_EVENT_TRANSPORT_ERROR, NULL,
@@ -1329,7 +1329,7 @@ static void tsx_set_state( pjsip_transaction *tsx,
   	 *    events, such as the ones handled by tsx_on_state_terminated()
   	 *    should be ignored.
          * 3. tsx_shutdown() hasn't been called.
-	 * Refer to ticket #2001 (https://trac.pjsip.org/repos/ticket/2001).
+	 * Refer to ticket #2001 (https://github.com/pjsip/pjproject/issues/2001).
 	 */
 	if (event_src_type == PJSIP_EVENT_TIMER &&
 	    (pj_timer_entry *)event_src == &tsx->timeout_timer)
@@ -1358,7 +1358,7 @@ static void tsx_set_state( pjsip_transaction *tsx,
 	    /* Disassociate ourselves from the outstanding transmit data
 	     * so that when the send callback is called we will be able
 	     * to ignore that (otherwise we'll get assertion, see
-	     * http://trac.pjsip.org/repos/ticket/1033)
+	     * https://github.com/pjsip/pjproject/issues/1033)
 	     */
 	    if (tsx->pending_tx) {
 		tsx->pending_tx->mod_data[mod_tsx_layer.mod.id] = NULL;
@@ -1915,9 +1915,9 @@ static void send_msg_callback( pjsip_send_state *send_state,
     pjsip_tx_data *tdata = send_state->tdata;
 
     /* Check if transaction has cancelled itself from this transmit
-     * notification (https://trac.pjsip.org/repos/ticket/1033).
+     * notification (https://github.com/pjsip/pjproject/issues/1033).
      * Also check if the transaction layer itself may have been shutdown
-     * (https://trac.pjsip.org/repos/ticket/1535)
+     * (https://github.com/pjsip/pjproject/issues/1535)
      */
     if (mod_tsx_layer.mod.id < 0 ||
 	tdata->mod_data[mod_tsx_layer.mod.id] == NULL)
@@ -2009,7 +2009,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    tsx_update_transport(tsx, NULL);
 
 	/* Also stop processing if transaction has been flagged with
-	 * pending destroy (http://trac.pjsip.org/repos/ticket/906)
+	 * pending destroy (https://github.com/pjsip/pjproject/issues/906)
 	 */
 	if ((!*cont) || (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
@@ -2033,7 +2033,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
 	    /* Server resolution error is now mapped to 502 instead of 503,
 	     * since with 503 normally client should try again.
-	     * See http://trac.pjsip.org/repos/ticket/870
+	     * See https://github.com/pjsip/pjproject/issues/870
 	     */
 	    if (-sent==PJ_ERESOLVE || -sent==PJLIB_UTIL_EDNS_NXDOMAIN)
 		sc = PJSIP_SC_BAD_GATEWAY;
@@ -2050,7 +2050,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 			       send_state->tdata, 0);
 	    } 
 	    /* Don't forget to destroy if we have pending destroy flag
-	     * (http://trac.pjsip.org/repos/ticket/906)
+	     * (https://github.com/pjsip/pjproject/issues/906)
 	     */
 	    else if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)
 	    {
@@ -2152,7 +2152,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 		      pjsip_tx_data_get_info(tdata)));
 
 	/* Post the event for later processing, to avoid deadlock.
-	 * See https://trac.pjsip.org/repos/ticket/1646
+	 * See https://github.com/pjsip/pjproject/issues/1646
 	 */
 	lock_timer(tsx);
 	tsx->transport_err = (pj_status_t)-sent;
@@ -2190,7 +2190,7 @@ static void tsx_tp_state_callback( pjsip_transport *tp,
 	tsx = (pjsip_transaction*)info->user_data;
 
 	/* Post the event for later processing, to avoid deadlock.
-	 * See https://trac.pjsip.org/repos/ticket/1646
+	 * See https://github.com/pjsip/pjproject/issues/1646
 	 */
 	lock_timer(tsx);
 	tsx->transport_err = info->status;
@@ -2236,7 +2236,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
     if (tsx->transport) {
 	/* Increment group lock while waiting for send operation to complete,
 	 * to prevent us from being destroyed prematurely. See
-	 * https://trac.pjsip.org/repos/ticket/1646
+	 * https://github.com/pjsip/pjproject/issues/1646
 	 */
 	pj_grp_lock_add_ref(tsx->grp_lock);
 	tsx->transport_flag |= TSX_HAS_PENDING_TRANSPORT;
@@ -3256,7 +3256,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	lock_timer(tsx);
 	/* In the short period above timer may have been inserted
 	 * by set_timeout() (by CANCEL). Cancel it if necessary. See:
-	 *  https://trac.pjsip.org/repos/ticket/1374
+	 *  https://github.com/pjsip/pjproject/issues/1374
 	 */
 	tsx_cancel_timer( tsx, &tsx->timeout_timer );
 	tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout,
@@ -3394,7 +3394,7 @@ static pj_status_t tsx_on_state_completed_uac( pjsip_transaction *tsx,
 
     if (event->type == PJSIP_EVENT_TIMER) {
 	/* Ignore stray retransmit event
-	 *  https://trac.pjsip.org/repos/ticket/1766
+	 *  https://github.com/pjsip/pjproject/issues/1766
 	 */
 	if (event->body.timer.entry != &tsx->timeout_timer)
 	    return PJ_SUCCESS;
@@ -3466,7 +3466,7 @@ static pj_status_t tsx_on_state_confirmed( pjsip_transaction *tsx,
 
     } else if (event->type == PJSIP_EVENT_TIMER) {
 	/* Ignore overlapped retransmit timer.
-	 * https://trac.pjsip.org/repos/ticket/1746
+	 * https://github.com/pjsip/pjproject/issues/1746
 	 */
 	if (event->body.timer.entry == &tsx->retransmit_timer) {
 	    /* Ignore */
@@ -3523,7 +3523,7 @@ static pj_status_t tsx_on_state_destroyed(pjsip_transaction *tsx,
     PJ_UNUSED_ARG(tsx);
     PJ_UNUSED_ARG(event);
 
-    // See https://trac.pjsip.org/repos/ticket/1432
+    // See https://github.com/pjsip/pjproject/issues/1432
     //pj_assert(!"Not expecting any events!!");
 
     return PJ_EIGNORED;

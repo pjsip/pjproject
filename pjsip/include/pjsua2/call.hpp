@@ -364,7 +364,7 @@ public:
  *
  * Application can query conference bridge port of this media using
  * Call::getAudioMedia() if the media type is audio,
- * or Call::getEncodingVideoMedia()/Call::getDecodingVideoMedia()
+ * or Call::getEncodingVideoMedia() / Call::getDecodingVideoMedia()
  * if the media type is video.
  */
 struct CallMediaInfo
@@ -1866,7 +1866,7 @@ public:
 
     /**
      * Notify application when an audio media session is about to be created
-     * (as opposed to #on_stream_created() and #on_stream_created2() which are
+     * (as opposed to on_stream_created() and on_stream_created2() which are
      * called *after* the session has been created). The application may change
      * some stream info parameter values, i.e: jbInit, jbMinPre, jbMaxPre,
      * jbMax, useKa, rtcpSdesByeDisabled, jbDiscardAlgo (audio),
@@ -2019,7 +2019,7 @@ public:
      * Notify application when call has received a re-INVITE offer from
      * the peer. It allows more fine-grained control over the response to
      * a re-INVITE. If application sets async to PJ_TRUE, it can send
-     * the reply manually using the function #Call::answer() and setting
+     * the reply manually using the function #pj::Call::answer() and setting
      * the SDP answer. Otherwise, by default the re-INVITE will be
      * answered automatically after the callback returns.
      *

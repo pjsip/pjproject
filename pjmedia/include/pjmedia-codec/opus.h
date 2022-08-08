@@ -49,7 +49,7 @@ PJ_BEGIN_DECL
  * (8 kHz sampling rate).
  *
  *
- * \section codec_setting Codec Settings
+ * \section opus_codec_setting Codec Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param
