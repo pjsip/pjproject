@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -25,14 +24,14 @@
     defined(PJ_WIN64) && PJ_WIN64 != 0
 
     typedef unsigned long pj_os_err_type;
-#   define pj_get_native_os_error()	    GetLastError()
-#   define pj_get_native_netos_error()	    WSAGetLastError()
+#   define pj_get_native_os_error()         GetLastError()
+#   define pj_get_native_netos_error()      WSAGetLastError()
 
 #elif defined(PJ_HAS_ERRNO_VAR) && PJ_HAS_ERRNO_VAR!= 0
 
     typedef int pj_os_err_type;
-#   define pj_get_native_os_error()	    (errno)
-#   define pj_get_native_netos_error()	    (errno)
+#   define pj_get_native_os_error()         (errno)
+#   define pj_get_native_netos_error()      (errno)
 
 #else
 
@@ -41,5 +40,5 @@
 #endif
 
 
-#endif	/* __PJ_COMPAT_ERRNO_H__ */
+#endif  /* __PJ_COMPAT_ERRNO_H__ */
 

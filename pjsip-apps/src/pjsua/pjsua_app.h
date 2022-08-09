@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -85,4 +84,4 @@ pj_status_t pjsua_app_destroy(void);
 
 PJ_END_DECL
     
-#endif	/* __PJSUA_APP_H__ */
+#endif  /* __PJSUA_APP_H__ */

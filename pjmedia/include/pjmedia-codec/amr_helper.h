@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -602,11 +601,11 @@ const pj_uint16_t pjmedia_codec_amrwb_bitrates[9] =
  */
 #pragma pack(1)
 typedef struct pjmedia_codec_amr_bit_info {
-    pj_uint8_t frame_type;	/**< AMR frame type.			*/
-    pj_int8_t  mode;		/**< AMR mode.				*/
-    pj_uint8_t start_bit;	/**< Frame start bit.			*/
-    pj_uint8_t good_quality:1;	/**< Flag if frame is good/degraded.	*/
-    pj_uint8_t STI:1;		/**< STI mode (first/update).		*/
+    pj_uint8_t frame_type;      /**< AMR frame type.                    */
+    pj_int8_t  mode;            /**< AMR mode.                          */
+    pj_uint8_t start_bit;       /**< Frame start bit.                   */
+    pj_uint8_t good_quality:1;  /**< Flag if frame is good/degraded.    */
+    pj_uint8_t STI:1;           /**< STI mode (first/update).           */
 } pjmedia_codec_amr_bit_info;
 #pragma pack()
 
@@ -615,14 +614,14 @@ typedef struct pjmedia_codec_amr_bit_info {
  * This structure describes AMR settings.
  */
 typedef struct pjmedia_codec_amr_pack_setting {
-    pj_uint8_t amr_nb:1;	/**< Set 1 for AMR-NB, 0 for AMR-WB.	*/
-    pj_uint8_t reorder:1;	/**< Reorder bitstream into descending 
-				     sensitivity order or vice versa.	*/
-    pj_uint8_t octet_aligned:1;	/**< TRUE if payload is in octet-aligned mode,
-				     FALSE if payload is in bandwidth 
-				     efficient mode.			*/
-    pj_uint8_t cmr:4;		/**< Change Mode Request for remote
-				     encoder.				*/
+    pj_uint8_t amr_nb:1;        /**< Set 1 for AMR-NB, 0 for AMR-WB.    */
+    pj_uint8_t reorder:1;       /**< Reorder bitstream into descending 
+                                     sensitivity order or vice versa.   */
+    pj_uint8_t octet_aligned:1; /**< TRUE if payload is in octet-aligned mode,
+                                     FALSE if payload is in bandwidth 
+                                     efficient mode.                    */
+    pj_uint8_t cmr:4;           /**< Change Mode Request for remote
+                                     encoder.                           */
 } pjmedia_codec_amr_pack_setting;
 
 
@@ -631,48 +630,48 @@ typedef struct pjmedia_codec_amr_pack_setting {
  *
  * @param bitrate   AMR bitrate.
  *
- * @return	    AMR mode.
+ * @return          AMR mode.
  */
 PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode(unsigned bitrate)
 {
     pj_int8_t mode = -1;
 
     if(bitrate==4750){
-	mode = 0;
+        mode = 0;
     } else if(bitrate==5150){
-	mode = 1;
+        mode = 1;
     } else if(bitrate==5900){
-	mode = 2;
+        mode = 2;
     } else if(bitrate==6700){
-	mode = 3;
+        mode = 3;
     } else if(bitrate==7400){
-	mode = 4;
+        mode = 4;
     } else if(bitrate==7950){
-	mode = 5;
+        mode = 5;
     } else if(bitrate==10200){
-	mode = 6;
+        mode = 6;
     } else if(bitrate==12200){
-	mode = 7;
+        mode = 7;
 
     /* AMRWB */
     } else if(bitrate==6600){
-	mode = 0;
+        mode = 0;
     } else if(bitrate==8850){
-	mode = 1;
+        mode = 1;
     } else if(bitrate==12650){
-	mode = 2;
+        mode = 2;
     } else if(bitrate==14250){
-	mode = 3;
+        mode = 3;
     } else if(bitrate==15850){
-	mode = 4;
+        mode = 4;
     } else if(bitrate==18250){
-	mode = 5;
+        mode = 5;
     } else if(bitrate==19850){
-	mode = 6;
+        mode = 6;
     } else if(bitrate==23050){
-	mode = 7;
+        mode = 7;
     } else if(bitrate==23850){
-	mode = 8;
+        mode = 8;
     }
     return mode;
 }
@@ -680,26 +679,26 @@ PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode(unsigned bitrate)
 /**
  * Get AMR mode based on frame length.
  *
- * @param amrnb	    Set to PJ_TRUE for AMR-NB domain or PJ_FALSE for AMR-WB.
+ * @param amrnb     Set to PJ_TRUE for AMR-NB domain or PJ_FALSE for AMR-WB.
  * @param frame_len The frame length.
  *
- * @return	    AMR mode.
+ * @return          AMR mode.
  */
 
 PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode2(pj_bool_t amrnb,
-						 unsigned frame_len)
+                                                 unsigned frame_len)
 {
     int i;
 
     if (amrnb) {
-	for (i = 0; i < 9; ++i)
-	    if (frame_len == pjmedia_codec_amrnb_framelen[i])
-		return (pj_int8_t)i;
+        for (i = 0; i < 9; ++i)
+            if (frame_len == pjmedia_codec_amrnb_framelen[i])
+                return (pj_int8_t)i;
     } else {
-	for (i = 0; i < 10; ++i) {
-	    if (frame_len == pjmedia_codec_amrwb_framelen[i])
-		return (pj_int8_t)i;
-	}
+        for (i = 0; i < 10; ++i) {
+            if (frame_len == pjmedia_codec_amrwb_framelen[i])
+                return (pj_int8_t)i;
+        }
     }
     
     pj_assert(!"Invalid AMR frame length");
@@ -713,16 +712,16 @@ PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode2(pj_bool_t amrnb,
  *   'setting' by setting/resetting field 'reorder'.
  * - align left the start bit (make the start_bit to be 0).
  *
- * @param in	    Input frame.
+ * @param in        Input frame.
  * @param setting   Settings, see #pjmedia_codec_amr_pack_setting.
- * @param out	    Output frame.
+ * @param out       Output frame.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
-			    const pjmedia_frame *in,
-			    const pjmedia_codec_amr_pack_setting *setting,
-			    pjmedia_frame *out)
+                            const pjmedia_frame *in,
+                            const pjmedia_codec_amr_pack_setting *setting,
+                            pjmedia_frame *out)
 {
     pj_int8_t    amr_bits[477 + 7] = {0};
     pj_int8_t   *p_amr_bits = &amr_bits[0];
@@ -731,116 +730,116 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
     pj_uint8_t  *w = (pj_uint8_t*) out->buf; /* write cursor */
 
     /* env vars for AMR or AMRWB */
-    pj_uint8_t		     SID_FT;
-    const pj_uint8_t	    *framelen_tbl;
-    const pj_uint16_t	    *framelenbit_tbl;
-    const pj_uint16_t	    *bitrate_tbl;
+    pj_uint8_t               SID_FT;
+    const pj_uint8_t        *framelen_tbl;
+    const pj_uint16_t       *framelenbit_tbl;
+    const pj_uint16_t       *bitrate_tbl;
     const pj_int16_t* const *order_maps;
 
     pjmedia_codec_amr_bit_info *in_info =
-			    (pjmedia_codec_amr_bit_info*) &in->bit_info;
+                            (pjmedia_codec_amr_bit_info*) &in->bit_info;
     pjmedia_codec_amr_bit_info *out_info =
-			    (pjmedia_codec_amr_bit_info*) &out->bit_info;
+                            (pjmedia_codec_amr_bit_info*) &out->bit_info;
 
     unsigned i;
 
     *out_info = *in_info;
 
     if (setting->amr_nb) {
-	SID_FT		= 8;
-	framelen_tbl	= pjmedia_codec_amrnb_framelen;
-	framelenbit_tbl = pjmedia_codec_amrnb_framelenbits;
-	bitrate_tbl	= pjmedia_codec_amrnb_bitrates;
-	order_maps	= pjmedia_codec_amrnb_ordermaps;
+        SID_FT          = 8;
+        framelen_tbl    = pjmedia_codec_amrnb_framelen;
+        framelenbit_tbl = pjmedia_codec_amrnb_framelenbits;
+        bitrate_tbl     = pjmedia_codec_amrnb_bitrates;
+        order_maps      = pjmedia_codec_amrnb_ordermaps;
     } else {
-	SID_FT		= 9;
-	framelen_tbl	= pjmedia_codec_amrwb_framelen;
-	framelenbit_tbl = pjmedia_codec_amrwb_framelenbits;
-	bitrate_tbl	= pjmedia_codec_amrwb_bitrates;
-	order_maps	= pjmedia_codec_amrwb_ordermaps;
+        SID_FT          = 9;
+        framelen_tbl    = pjmedia_codec_amrwb_framelen;
+        framelenbit_tbl = pjmedia_codec_amrwb_framelenbits;
+        bitrate_tbl     = pjmedia_codec_amrwb_bitrates;
+        order_maps      = pjmedia_codec_amrwb_ordermaps;
     }
     
     PJ_UNUSED_ARG(bitrate_tbl);
 
     /* unpack AMR bitstream if there is any data */
     if (in_info->frame_type <= SID_FT) {
-	i = 0;
-	if (in_info->start_bit) {
-	    for (; i < (unsigned)(8-in_info->start_bit); ++i)
-		*p_amr_bits++ = (pj_uint8_t)
-				((*r >> (7-in_info->start_bit-i)) & 1);
-	    ++r;
-	}
-	for(; i < framelenbit_tbl[in_info->frame_type]; i += 8, ++r) {
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 7) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 6) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 5) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 4) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 3) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 2) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 1) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r ) & 1);
-	}
+        i = 0;
+        if (in_info->start_bit) {
+            for (; i < (unsigned)(8-in_info->start_bit); ++i)
+                *p_amr_bits++ = (pj_uint8_t)
+                                ((*r >> (7-in_info->start_bit-i)) & 1);
+            ++r;
+        }
+        for(; i < framelenbit_tbl[in_info->frame_type]; i += 8, ++r) {
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 7) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 6) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 5) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 4) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 3) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 2) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 1) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r ) & 1);
+        }
     }
 
     if (in_info->frame_type < SID_FT) {
 
-	/* Speech */
-	out_info->mode = in_info->frame_type;
-	out->size = framelen_tbl[out_info->mode];
+        /* Speech */
+        out_info->mode = in_info->frame_type;
+        out->size = framelen_tbl[out_info->mode];
 
-	pj_bzero(out->buf, out->size);
+        pj_bzero(out->buf, out->size);
 
-	if (setting->reorder) {
-	    const pj_int16_t *order_map;
+        if (setting->reorder) {
+            const pj_int16_t *order_map;
 
-	    order_map = order_maps[out_info->mode];
-	    for(i = 0; i < framelenbit_tbl[out_info->mode]; ++i) {
-		if (amr_bits[i]) {
-		    pj_uint16_t bitpos;
-		    bitpos = order_map[i];
-		    w[bitpos>>3] |= 1 << (7 - (bitpos % 8));
-		}
-	    }
-	} else {
-	    for(i = 0; i < framelenbit_tbl[out_info->mode]; ++i) {
-		if (amr_bits[i])
-		    w[i >> 3] |= 1 << (7 - (i % 8));
-	    }
-	}
+            order_map = order_maps[out_info->mode];
+            for(i = 0; i < framelenbit_tbl[out_info->mode]; ++i) {
+                if (amr_bits[i]) {
+                    pj_uint16_t bitpos;
+                    bitpos = order_map[i];
+                    w[bitpos>>3] |= 1 << (7 - (bitpos % 8));
+                }
+            }
+        } else {
+            for(i = 0; i < framelenbit_tbl[out_info->mode]; ++i) {
+                if (amr_bits[i])
+                    w[i >> 3] |= 1 << (7 - (i % 8));
+            }
+        }
 
     } else if (in_info->frame_type == SID_FT) {
 
-	/* SID */
-	pj_uint8_t w_bitptr = 0;
-	pj_uint8_t FT_;
+        /* SID */
+        pj_uint8_t w_bitptr = 0;
+        pj_uint8_t FT_;
 
-	if (setting->amr_nb)
-	    FT_ = (pj_uint8_t)((amr_bits[36] << 2) | (amr_bits[37] << 1) | 
-	                       amr_bits[38]);
-	else
-	    FT_ = (pj_uint8_t)((amr_bits[36] << 3) | (amr_bits[37] << 2) |
-		               (amr_bits[38] << 1) | amr_bits[39]);
+        if (setting->amr_nb)
+            FT_ = (pj_uint8_t)((amr_bits[36] << 2) | (amr_bits[37] << 1) | 
+                               amr_bits[38]);
+        else
+            FT_ = (pj_uint8_t)((amr_bits[36] << 3) | (amr_bits[37] << 2) |
+                               (amr_bits[38] << 1) | amr_bits[39]);
 
-	out_info->mode = FT_;
-	out->size = 5;
+        out_info->mode = FT_;
+        out->size = 5;
 
-	pj_bzero(out->buf, out->size);
-	for(i = 0; i < framelenbit_tbl[SID_FT]; ++i) {
-	    if (amr_bits[i])
-		*w |= (1 << (7-w_bitptr));
+        pj_bzero(out->buf, out->size);
+        for(i = 0; i < framelenbit_tbl[SID_FT]; ++i) {
+            if (amr_bits[i])
+                *w |= (1 << (7-w_bitptr));
 
-	    if (++w_bitptr == 8) {
-		++w;
-		w_bitptr = 0;
-	    }
-	}
+            if (++w_bitptr == 8) {
+                ++w;
+                w_bitptr = 0;
+            }
+        }
 
     } else {
 
-	/* NO DATA */
-	out->size = 0;
-	out_info->mode = -1;
+        /* NO DATA */
+        out->size = 0;
+        out_info->mode = -1;
     }
 
     out_info->start_bit = 0;
@@ -855,18 +854,18 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
  * @param frames    AMR frames to be packed.
  * @param nframes   Number of frames to be packed.
  * @param setting   Settings, see #pjmedia_codec_amr_pack_setting.
- * @param pkt	    Payload.
+ * @param pkt       Payload.
  * @param pkt_size  Payload size, as input this specifies payload maximum size,
- *		    as output this specifies payload packed size.
+ *                  as output this specifies payload packed size.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
-			    const pjmedia_frame frames[],
-			    unsigned nframes,
-			    const pjmedia_codec_amr_pack_setting *setting,
-			    void *pkt, 
-			    pj_size_t *pkt_size)
+                            const pjmedia_frame frames[],
+                            unsigned nframes,
+                            const pjmedia_codec_amr_pack_setting *setting,
+                            void *pkt, 
+                            pj_size_t *pkt_size)
 {
     /* Write cursor */
     pj_uint8_t *w = (pj_uint8_t*)pkt;
@@ -876,10 +875,10 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
     pj_uint8_t *r;
 
     /* env vars for AMR or AMRWB */
-    pj_uint8_t		     SID_FT;
-    const pj_uint8_t	    *framelen_tbl;
-    const pj_uint16_t	    *framelenbit_tbl;
-    const pj_uint16_t	    *bitrate_tbl;
+    pj_uint8_t               SID_FT;
+    const pj_uint8_t        *framelen_tbl;
+    const pj_uint16_t       *framelenbit_tbl;
+    const pj_uint16_t       *bitrate_tbl;
     const pj_int16_t* const *order_maps;
 
     /* frame info */
@@ -890,17 +889,17 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
     max_pkt_size = (unsigned)*pkt_size;
 
     if (setting->amr_nb) {
-	SID_FT		= 8;
-	framelen_tbl	= pjmedia_codec_amrnb_framelen;
-	framelenbit_tbl = pjmedia_codec_amrnb_framelenbits;
-	bitrate_tbl	= pjmedia_codec_amrnb_bitrates;
-	order_maps	= pjmedia_codec_amrnb_ordermaps;
+        SID_FT          = 8;
+        framelen_tbl    = pjmedia_codec_amrnb_framelen;
+        framelenbit_tbl = pjmedia_codec_amrnb_framelenbits;
+        bitrate_tbl     = pjmedia_codec_amrnb_bitrates;
+        order_maps      = pjmedia_codec_amrnb_ordermaps;
     } else {
-	SID_FT		= 9;
-	framelen_tbl	= pjmedia_codec_amrwb_framelen;
-	framelenbit_tbl = pjmedia_codec_amrwb_framelenbits;
-	bitrate_tbl	= pjmedia_codec_amrwb_bitrates;
-	order_maps	= pjmedia_codec_amrwb_ordermaps;
+        SID_FT          = 9;
+        framelen_tbl    = pjmedia_codec_amrwb_framelen;
+        framelenbit_tbl = pjmedia_codec_amrwb_framelenbits;
+        bitrate_tbl     = pjmedia_codec_amrwb_bitrates;
+        order_maps      = pjmedia_codec_amrwb_ordermaps;
     }
     
     PJ_UNUSED_ARG(bitrate_tbl);
@@ -909,157 +908,157 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
     *w = (pj_uint8_t)(setting->cmr << 4);
     w_bitptr = 4;
     if (setting->octet_aligned) {
-	++w;
-	w_bitptr = 0;
+        ++w;
+        w_bitptr = 0;
     }
 
     /* Table Of Contents, 6 bits each */
     for (i = 0; i < nframes; ++i) {
-	pj_uint8_t TOC, FT, Q;
-	pj_bool_t F;
+        pj_uint8_t TOC, FT, Q;
+        pj_bool_t F;
 
-	info = (pjmedia_codec_amr_bit_info*)&frames[i].bit_info;
+        info = (pjmedia_codec_amr_bit_info*)&frames[i].bit_info;
 
-	F = (i != nframes-1);
-	FT = info->frame_type;
-	Q  = (pj_uint8_t)(info->good_quality == 1);
-	pj_assert(FT <= SID_FT || FT == 14 || FT == 15);
+        F = (i != nframes-1);
+        FT = info->frame_type;
+        Q  = (pj_uint8_t)(info->good_quality == 1);
+        pj_assert(FT <= SID_FT || FT == 14 || FT == 15);
 
-	/* Check buffer availability */
-	*pkt_size = w - (pj_uint8_t*)pkt + 1;
-	PJ_ASSERT_RETURN(*pkt_size <= max_pkt_size, PJ_ETOOSMALL);
+        /* Check buffer availability */
+        *pkt_size = w - (pj_uint8_t*)pkt + 1;
+        PJ_ASSERT_RETURN(*pkt_size <= max_pkt_size, PJ_ETOOSMALL);
 
-	TOC = (pj_uint8_t)((F<<5) | (FT<<1) | Q);
-	if (w_bitptr == 0) {
-	    *w = (pj_uint8_t)(TOC<<2);
-	    w_bitptr = 6;
-	} else if (w_bitptr == 2) {
-	    *w++ |= TOC;
-	    w_bitptr = 0;
-	} else if (w_bitptr == 4) {
-	    *w++ |= TOC>>2;
-	    *w = (pj_uint8_t)(TOC<<6);
-	    w_bitptr = 2;
-	} else if (w_bitptr == 6) {
-	    *w++ |= TOC>>4;
-	    *w = (pj_uint8_t)(TOC<<4);
-	    w_bitptr = 4;
-	}
-	if (setting->octet_aligned) {
-	    ++w;
-	    w_bitptr = 0;
-	}
+        TOC = (pj_uint8_t)((F<<5) | (FT<<1) | Q);
+        if (w_bitptr == 0) {
+            *w = (pj_uint8_t)(TOC<<2);
+            w_bitptr = 6;
+        } else if (w_bitptr == 2) {
+            *w++ |= TOC;
+            w_bitptr = 0;
+        } else if (w_bitptr == 4) {
+            *w++ |= TOC>>2;
+            *w = (pj_uint8_t)(TOC<<6);
+            w_bitptr = 2;
+        } else if (w_bitptr == 6) {
+            *w++ |= TOC>>4;
+            *w = (pj_uint8_t)(TOC<<4);
+            w_bitptr = 4;
+        }
+        if (setting->octet_aligned) {
+            ++w;
+            w_bitptr = 0;
+        }
     }
 
     /* Encoded data */
     for (i = 0; i < nframes; ++i) {
-	pj_int8_t amr_bits[477 + 7] = {0};
-	pj_int8_t *p_amr_bits = &amr_bits[0];
-	unsigned j;
+        pj_int8_t amr_bits[477 + 7] = {0};
+        pj_int8_t *p_amr_bits = &amr_bits[0];
+        unsigned j;
 
-	info = (pjmedia_codec_amr_bit_info*)&frames[i].bit_info;
+        info = (pjmedia_codec_amr_bit_info*)&frames[i].bit_info;
 
-	/* Check buffer availability */
-	*pkt_size = w - (pj_uint8_t*)pkt;
-	if (info->frame_type <= SID_FT)
-	    *pkt_size += framelen_tbl[info->frame_type] + 1;
-	PJ_ASSERT_RETURN(*pkt_size <= max_pkt_size, PJ_ETOOSMALL);
+        /* Check buffer availability */
+        *pkt_size = w - (pj_uint8_t*)pkt;
+        if (info->frame_type <= SID_FT)
+            *pkt_size += framelen_tbl[info->frame_type] + 1;
+        PJ_ASSERT_RETURN(*pkt_size <= max_pkt_size, PJ_ETOOSMALL);
 
-	/* Skip if there is no data */
-	if (info->frame_type > SID_FT)
-	    continue;
+        /* Skip if there is no data */
+        if (info->frame_type > SID_FT)
+            continue;
 
-	/* Unpack bits */
-	r = (pj_uint8_t*) frames[i].buf;
-	j = 0;
-	if (info->start_bit) {
-	    for (; j < (unsigned)(8-info->start_bit); ++j)
-		*p_amr_bits++ = (pj_uint8_t)
-				((*r >> (7-info->start_bit-j)) & 1);
-	    ++r;
-	}
-	for(; j < framelenbit_tbl[info->frame_type]; j+=8, ++r) {
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 7) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 6) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 5) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 4) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 3) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 2) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r >> 1) & 1);
-	    *p_amr_bits++ = (pj_uint8_t)((*r ) & 1);
-	}
+        /* Unpack bits */
+        r = (pj_uint8_t*) frames[i].buf;
+        j = 0;
+        if (info->start_bit) {
+            for (; j < (unsigned)(8-info->start_bit); ++j)
+                *p_amr_bits++ = (pj_uint8_t)
+                                ((*r >> (7-info->start_bit-j)) & 1);
+            ++r;
+        }
+        for(; j < framelenbit_tbl[info->frame_type]; j+=8, ++r) {
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 7) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 6) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 5) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 4) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 3) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 2) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r >> 1) & 1);
+            *p_amr_bits++ = (pj_uint8_t)((*r ) & 1);
+        }
 
-	if (info->frame_type < SID_FT) {
+        if (info->frame_type < SID_FT) {
 
-	    /* Speech */
-	    if (w_bitptr == 0) *w = 0;
+            /* Speech */
+            if (w_bitptr == 0) *w = 0;
 
-	    if (setting->reorder) {
-		const pj_int16_t *order_map;
+            if (setting->reorder) {
+                const pj_int16_t *order_map;
 
-		/* Put bits in the packet, sensitivity descending ordered */
-		order_map = order_maps[info->frame_type];
-		for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
-		    if (amr_bits[order_map[j]])
-			*w |= (1 << (7-w_bitptr));
+                /* Put bits in the packet, sensitivity descending ordered */
+                order_map = order_maps[info->frame_type];
+                for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
+                    if (amr_bits[order_map[j]])
+                        *w |= (1 << (7-w_bitptr));
 
-		    if (++w_bitptr == 8) {
-			w_bitptr = 0;
-			++w;
-			*w = 0;
-		    }
-		}
-	    } else {
-		for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
-		    if (amr_bits[j])
-			*w |= (1 << (7-w_bitptr));
+                    if (++w_bitptr == 8) {
+                        w_bitptr = 0;
+                        ++w;
+                        *w = 0;
+                    }
+                }
+            } else {
+                for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
+                    if (amr_bits[j])
+                        *w |= (1 << (7-w_bitptr));
 
-		    if (++w_bitptr == 8) {
-			w_bitptr = 0;
-			++w;
-			*w = 0;
-		    }
-		}
-	    }
+                    if (++w_bitptr == 8) {
+                        w_bitptr = 0;
+                        ++w;
+                        *w = 0;
+                    }
+                }
+            }
 
-	} else if (info->frame_type == SID_FT) {
+        } else if (info->frame_type == SID_FT) {
 
-	    /* SID */
-	    amr_bits[35] |= info->STI;
+            /* SID */
+            amr_bits[35] |= info->STI;
 
-	    if (setting->amr_nb) {
-		amr_bits[36] = (pj_uint8_t)((info->mode >> 2) & 1);
-		amr_bits[37] = (pj_uint8_t)((info->mode >> 1) & 1);
-		amr_bits[38] = (pj_uint8_t)((info->mode) & 1);
-	    } else {
-		amr_bits[36] = (pj_uint8_t)((info->mode >> 3) & 1);
-		amr_bits[37] = (pj_uint8_t)((info->mode >> 2) & 1);
-		amr_bits[38] = (pj_uint8_t)((info->mode >> 1) & 1);
-		amr_bits[39] = (pj_uint8_t)((info->mode) & 1);
-	    }
+            if (setting->amr_nb) {
+                amr_bits[36] = (pj_uint8_t)((info->mode >> 2) & 1);
+                amr_bits[37] = (pj_uint8_t)((info->mode >> 1) & 1);
+                amr_bits[38] = (pj_uint8_t)((info->mode) & 1);
+            } else {
+                amr_bits[36] = (pj_uint8_t)((info->mode >> 3) & 1);
+                amr_bits[37] = (pj_uint8_t)((info->mode >> 2) & 1);
+                amr_bits[38] = (pj_uint8_t)((info->mode >> 1) & 1);
+                amr_bits[39] = (pj_uint8_t)((info->mode) & 1);
+            }
 
-	    if (w_bitptr == 0) *w = 0;
-	    for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
-		if (amr_bits[j])
-		    *w |= (1 << (7-w_bitptr));
+            if (w_bitptr == 0) *w = 0;
+            for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
+                if (amr_bits[j])
+                    *w |= (1 << (7-w_bitptr));
 
-		if (++w_bitptr == 8) {
-		    w_bitptr = 0;
-		    ++w;
-		    *w = 0;
-		}
-	    }
-	}
+                if (++w_bitptr == 8) {
+                    w_bitptr = 0;
+                    ++w;
+                    *w = 0;
+                }
+            }
+        }
 
-	if (setting->octet_aligned) {
-	    ++w;
-	    w_bitptr = 0;
-	}
+        if (setting->octet_aligned) {
+            ++w;
+            w_bitptr = 0;
+        }
     }
 
     *pkt_size = w - (pj_uint8_t*)pkt;
     if (w_bitptr)
-	*pkt_size += 1;
+        *pkt_size += 1;
 
     return PJ_SUCCESS;
 }
@@ -1068,24 +1067,24 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
 /**
  * Parse AMR payload into frames.
  *
- * @param pkt	    Payload.
+ * @param pkt       Payload.
  * @param pkt_size  Payload size.
- * @param ts	    Base timestamp.
+ * @param ts        Base timestamp.
  * @param setting   Settings, see #pjmedia_codec_amr_pack_setting.
  * @param frames    Frames parsed.
  * @param nframes   Number of frames parsed.
- * @param cmr	    Change Mode Request message for local encoder.
+ * @param cmr       Change Mode Request message for local encoder.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
-			     void *pkt, 
-			     pj_size_t pkt_size, 
-			     const pj_timestamp *ts,
-			     const pjmedia_codec_amr_pack_setting* setting,
-			     pjmedia_frame frames[], 
-			     unsigned *nframes,
-			     pj_uint8_t *cmr)
+                             void *pkt, 
+                             pj_size_t pkt_size, 
+                             const pj_timestamp *ts,
+                             const pjmedia_codec_amr_pack_setting* setting,
+                             pjmedia_frame frames[], 
+                             unsigned *nframes,
+                             pj_uint8_t *cmr)
 {
     unsigned cnt = 0;
     pj_timestamp ts_ = *ts;
@@ -1095,24 +1094,24 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
     pj_uint8_t *r = (pj_uint8_t*)pkt;
 
     /* env vars for AMR or AMRWB */
-    pj_uint8_t		     SID_FT;
-    const pj_uint8_t	    *framelen_tbl;
-    const pj_uint16_t	    *framelenbit_tbl;
+    pj_uint8_t               SID_FT;
+    const pj_uint8_t        *framelen_tbl;
+    const pj_uint16_t       *framelenbit_tbl;
     const pj_int16_t* const *order_maps;
 
     /* frame info */
     pjmedia_codec_amr_bit_info *info;
 
     if (setting->amr_nb) {
-	SID_FT		= 8;
-	framelen_tbl	= pjmedia_codec_amrnb_framelen;
-	framelenbit_tbl = pjmedia_codec_amrnb_framelenbits;
-	order_maps	= pjmedia_codec_amrnb_ordermaps;
+        SID_FT          = 8;
+        framelen_tbl    = pjmedia_codec_amrnb_framelen;
+        framelenbit_tbl = pjmedia_codec_amrnb_framelenbits;
+        order_maps      = pjmedia_codec_amrnb_ordermaps;
     } else {
-	SID_FT		= 9;
-	framelen_tbl	= pjmedia_codec_amrwb_framelen;
-	framelenbit_tbl = pjmedia_codec_amrwb_framelenbits;
-	order_maps	= pjmedia_codec_amrwb_ordermaps;
+        SID_FT          = 9;
+        framelen_tbl    = pjmedia_codec_amrwb_framelen;
+        framelenbit_tbl = pjmedia_codec_amrwb_framelenbits;
+        order_maps      = pjmedia_codec_amrwb_ordermaps;
     }
 
     PJ_UNUSED_ARG(pkt_size);
@@ -1122,64 +1121,64 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
     *cmr = (pj_uint8_t)((*r >> 4) & 0x0F);
     r_bitptr = 4;
     if (setting->octet_aligned) {
-	++r;
-	r_bitptr = 0;
+        ++r;
+        r_bitptr = 0;
     }
 
     /* Table Of Contents, 6 bits each */
     for (;;) {
-	pj_uint8_t TOC = 0;
-	pj_uint8_t F, FT, Q;
+        pj_uint8_t TOC = 0;
+        pj_uint8_t F, FT, Q;
 
-	if (r_bitptr == 0) {
-	    TOC = (pj_uint8_t)(*r >> 2);
-	    r_bitptr = 6;
-	} else if (r_bitptr == 2) {
-	    TOC = (pj_uint8_t)(*r++ & 0x3F);
-	    r_bitptr = 0;
-	} else if (r_bitptr == 4) {
-	    TOC = (pj_uint8_t)((*r++ & 0x0f) << 2);
-	    TOC |= *r >> 6;
-	    r_bitptr = 2;
-	} else if (r_bitptr == 6) {
-	    TOC = (pj_uint8_t)((*r++ & 0x03) << 4);
-	    TOC |= *r >> 4;
-	    r_bitptr = 4;
-	}
+        if (r_bitptr == 0) {
+            TOC = (pj_uint8_t)(*r >> 2);
+            r_bitptr = 6;
+        } else if (r_bitptr == 2) {
+            TOC = (pj_uint8_t)(*r++ & 0x3F);
+            r_bitptr = 0;
+        } else if (r_bitptr == 4) {
+            TOC = (pj_uint8_t)((*r++ & 0x0f) << 2);
+            TOC |= *r >> 6;
+            r_bitptr = 2;
+        } else if (r_bitptr == 6) {
+            TOC = (pj_uint8_t)((*r++ & 0x03) << 4);
+            TOC |= *r >> 4;
+            r_bitptr = 4;
+        }
 
-	F = (pj_uint8_t)(TOC >> 5);
-	FT = (pj_uint8_t)((TOC >> 1) & 0x0F);
-	Q = (pj_uint8_t)(TOC & 1);
+        F = (pj_uint8_t)(TOC >> 5);
+        FT = (pj_uint8_t)((TOC >> 1) & 0x0F);
+        Q = (pj_uint8_t)(TOC & 1);
 
-	if (FT > SID_FT && FT < 14) {
-	    /* Discard the whole packet (RFC4867 4.3.2) */
-	    //pj_assert(!"Invalid AMR frametype, stream may be corrupted!");
-	    cnt = 0;
-	    PJ_LOG(4, ("AMR parser", "Invalid AMR frametype, stream may be "
-		       "corrupted!"));
-	    break;
-	}
+        if (FT > SID_FT && FT < 14) {
+            /* Discard the whole packet (RFC4867 4.3.2) */
+            //pj_assert(!"Invalid AMR frametype, stream may be corrupted!");
+            cnt = 0;
+            PJ_LOG(4, ("AMR parser", "Invalid AMR frametype, stream may be "
+                       "corrupted!"));
+            break;
+        }
 
-	if (setting->octet_aligned) {
-	    ++r;
-	    r_bitptr = 0;
-	}
+        if (setting->octet_aligned) {
+            ++r;
+            r_bitptr = 0;
+        }
 
-	/* Set frame attributes */
-	info = (pjmedia_codec_amr_bit_info*) &frames[cnt].bit_info;
-	info->frame_type = FT;
-	info->mode = (pj_int8_t)((FT < SID_FT)? FT : -1);
-	info->good_quality = (pj_uint8_t)(Q == 1);
-	info->start_bit = 0;
-	info->STI = 0;
-	frames[cnt].timestamp = ts_;
-	frames[cnt].type = PJMEDIA_FRAME_TYPE_AUDIO;
+        /* Set frame attributes */
+        info = (pjmedia_codec_amr_bit_info*) &frames[cnt].bit_info;
+        info->frame_type = FT;
+        info->mode = (pj_int8_t)((FT < SID_FT)? FT : -1);
+        info->good_quality = (pj_uint8_t)(Q == 1);
+        info->start_bit = 0;
+        info->STI = 0;
+        frames[cnt].timestamp = ts_;
+        frames[cnt].type = PJMEDIA_FRAME_TYPE_AUDIO;
 
-	/* AMR frame length is 20ms */
-	ts_.u64 += setting->amr_nb? 160 : 320;
-	
-	if (++cnt == *nframes || !F)
-	    break;
+        /* AMR frame length is 20ms */
+        ts_.u64 += setting->amr_nb? 160 : 320;
+        
+        if (++cnt == *nframes || !F)
+            break;
     }
     *nframes = cnt;
 
@@ -1187,41 +1186,41 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
 
     /* Speech frames */
     while (cnt < *nframes) {
-	pj_uint8_t FT;
+        pj_uint8_t FT;
 
-	info = (pjmedia_codec_amr_bit_info*) &frames[cnt].bit_info;
-	FT = info->frame_type;
+        info = (pjmedia_codec_amr_bit_info*) &frames[cnt].bit_info;
+        FT = info->frame_type;
 
-	frames[cnt].buf = r;
-	info->start_bit = r_bitptr;
+        frames[cnt].buf = r;
+        info->start_bit = r_bitptr;
 
-	if (FT == SID_FT) {
-	    unsigned sti_bitptr;
-	    sti_bitptr = r_bitptr + 35;
-	    info->STI = (pj_uint8_t)
-			(r[sti_bitptr >> 3] >> (7 - (sti_bitptr % 8))) & 1;
-	}
+        if (FT == SID_FT) {
+            unsigned sti_bitptr;
+            sti_bitptr = r_bitptr + 35;
+            info->STI = (pj_uint8_t)
+                        (r[sti_bitptr >> 3] >> (7 - (sti_bitptr % 8))) & 1;
+        }
 
-	if (setting->octet_aligned) {
-	    r += framelen_tbl[FT];
-	    frames[cnt].size = framelen_tbl[FT];
-	} else {
-	    if (FT == 14 || FT == 15) {
-		/* NO DATA */
-		frames[cnt].size = 0;
-	    } else {
-		unsigned adv_bit;
+        if (setting->octet_aligned) {
+            r += framelen_tbl[FT];
+            frames[cnt].size = framelen_tbl[FT];
+        } else {
+            if (FT == 14 || FT == 15) {
+                /* NO DATA */
+                frames[cnt].size = 0;
+            } else {
+                unsigned adv_bit;
 
-		adv_bit = framelenbit_tbl[FT] + r_bitptr;
-		r += adv_bit >> 3;
-		r_bitptr = (pj_uint8_t)(adv_bit % 8);
+                adv_bit = framelenbit_tbl[FT] + r_bitptr;
+                r += adv_bit >> 3;
+                r_bitptr = (pj_uint8_t)(adv_bit % 8);
 
-		frames[cnt].size = adv_bit >> 3;
-		if (r_bitptr)
-		    ++frames[cnt].size;
-	    }
-	}
-	++cnt;
+                frames[cnt].size = adv_bit >> 3;
+                if (r_bitptr)
+                    ++frames[cnt].size;
+            }
+        }
+        ++cnt;
     }
 
     return PJ_SUCCESS;

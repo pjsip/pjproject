@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2012-2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -27,7 +26,7 @@ using namespace std;
 
 #include <pjsua-lib/pjsua_internal.h>
 
-#define THIS_FILE		"call.cpp"
+#define THIS_FILE               "call.cpp"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -133,13 +132,13 @@ void MediaTransportInfo::fromPj(const pjmedia_transport_info &info)
     localRtpName = localRtcpName = srcRtpName = srcRtcpName = "";    
     if (pj_sockaddr_has_addr(&info.sock_info.rtp_addr_name)) { 
         pj_sockaddr_print(&info.sock_info.rtp_addr_name, straddr, 
-		          sizeof(straddr), 3);
+                          sizeof(straddr), 3);
         localRtpName = straddr;
     }
 
     if (pj_sockaddr_has_addr(&info.sock_info.rtcp_addr_name)) { 
         pj_sockaddr_print(&info.sock_info.rtcp_addr_name, straddr, 
-		          sizeof(straddr), 3);
+                          sizeof(straddr), 3);
         localRtcpName = straddr;
     }
 
@@ -239,10 +238,10 @@ void CallSetting::fromPj(const pjsua_call_setting &prm)
      * mediaDir vector up to the element with non-default value.
      */
     for (mi = PJMEDIA_MAX_SDP_MEDIA - 1; mi >= 0; mi--) {
-    	if (prm.media_dir[mi] != PJMEDIA_DIR_ENCODING_DECODING) break;
+        if (prm.media_dir[mi] != PJMEDIA_DIR_ENCODING_DECODING) break;
     }
     for (i = 0; i <= mi; i++) {
-    	this->mediaDir.push_back(prm.media_dir[i]);
+        this->mediaDir.push_back(prm.media_dir[i]);
     }
 }
 
@@ -259,7 +258,7 @@ pjsua_call_setting CallSetting::toPj() const
     setting.aud_cnt             = this->audioCount;
     setting.vid_cnt             = this->videoCount;
     for (mi = 0; mi < this->mediaDir.size(); mi++) {
-	setting.media_dir[mi] = (pjmedia_dir)this->mediaDir[mi];
+        setting.media_dir[mi] = (pjmedia_dir)this->mediaDir[mi];
     }
     
     return setting;
@@ -296,7 +295,7 @@ void CallInfo::fromPj(const pjsua_call_info &pci)
 {
     unsigned mi;
     
-    id 			= pci.id;
+    id                  = pci.id;
     role                = pci.role;
     accId               = pci.acc_id;
     localUri            = pj2Str(pci.local_info);
@@ -446,16 +445,16 @@ call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
     if (sdp_str != "") {
         pj_str_t dup_pj_sdp;
         pj_str_t pj_sdp_str = {(char*)sdp_str.c_str(),
-        		       (pj_ssize_t)sdp_str.size()};
-	pj_status_t status;
+                               (pj_ssize_t)sdp_str.size()};
+        pj_status_t status;
 
         pj_strdup(pool, &dup_pj_sdp, &pj_sdp_str);        
         status = pjmedia_sdp_parse(pool, dup_pj_sdp.ptr,
-				   dup_pj_sdp.slen, &sdp);
-	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(4,(THIS_FILE, status,
-			 "Failed to parse SDP for call param"));
-	}
+                                   dup_pj_sdp.slen, &sdp);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4,(THIS_FILE, status,
+                         "Failed to parse SDP for call param"));
+        }
     }
 }
 
@@ -470,20 +469,20 @@ Call::~Call()
 {
     /* Remove reference to this instance from PJSUA library */
     if (id != PJSUA_INVALID_ID)
-	pjsua_call_set_user_data(id, NULL);
+        pjsua_call_set_user_data(id, NULL);
 
     /*
      * If this instance is deleted, also hangup the corresponding call in
      * PJSUA library.
      */
     if (pjsua_get_state() < PJSUA_STATE_CLOSING && isActive()) {
-	try {
-	    CallOpParam prm;
-	    hangup(prm);
-	} catch (Error &err) {
-	    // Ignore
-	    PJ_UNUSED_ARG(err);
-	}
+        try {
+            CallOpParam prm;
+            hangup(prm);
+        } catch (Error &err) {
+            // Ignore
+            PJ_UNUSED_ARG(err);
+        }
     }
 }
 
@@ -514,16 +513,16 @@ Call *Call::lookup(int call_id)
 {
     Call *call = (Call*)pjsua_call_get_user_data(call_id);
     if (call && call_id != call->id) {
-	if (call->child && call->child->id == PJSUA_INVALID_ID) {
-	    /* This must be a new call from call transfer or call replace
-	     * which initially shares user_data with its parent (so the
-	     * user_data points to its parent's Call instance).
-	     * Let's update its user_data to its own Call instance.
-	     */
-	    call = call->child;
-	    pjsua_call_set_user_data(call_id, call);
-	}
-	call->id = call_id;
+        if (call->child && call->child->id == PJSUA_INVALID_ID) {
+            /* This must be a new call from call transfer or call replace
+             * which initially shares user_data with its parent (so the
+             * user_data points to its parent's Call instance).
+             * Let's update its user_data to its own Call instance.
+             */
+            call = call->child;
+            pjsua_call_set_user_data(call_id, call);
+        }
+        call->id = call_id;
     }
     return call;
 }
@@ -552,31 +551,31 @@ AudioMedia Call::getAudioMedia(int med_idx) const PJSUA2_THROW(Error)
     pjsua_call_get_info(id, &pj_ci);
     
     if (med_idx < 0) {
-	for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
-	    if (pj_ci.media[i].type == PJMEDIA_TYPE_AUDIO &&
-		pj_ci.media[i].stream.aud.conf_slot != PJSUA_INVALID_ID)
-	    {
-		med_idx = i;
-		break;
-	    }
-	}
-	if (med_idx < 0) {
-    	    PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getAudioMedia()",
-				"no active audio media");
-	}
+        for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
+            if (pj_ci.media[i].type == PJMEDIA_TYPE_AUDIO &&
+                pj_ci.media[i].stream.aud.conf_slot != PJSUA_INVALID_ID)
+            {
+                med_idx = i;
+                break;
+            }
+        }
+        if (med_idx < 0) {
+            PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getAudioMedia()",
+                                "no active audio media");
+        }
     }
 
     if (med_idx >= (int)pj_ci.media_cnt) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
-			    "invalid media index");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
+                            "invalid media index");
     }
     if (pj_ci.media[med_idx].type != PJMEDIA_TYPE_AUDIO) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
-			    "media is not audio");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
+                            "media is not audio");
     }
     if (pj_ci.media[med_idx].stream.aud.conf_slot == PJSUA_INVALID_ID) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
-			    "no audio slot (inactive?)");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
+                            "no audio slot (inactive?)");
     }
 
     AudioMediaHelper am;
@@ -590,31 +589,31 @@ VideoMedia Call::getEncodingVideoMedia(int med_idx) const PJSUA2_THROW(Error)
     pjsua_call_get_info(id, &pj_ci);
 
     if (med_idx < 0) {
-	for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
-	    if (pj_ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
-		pj_ci.media[i].stream.vid.enc_slot != PJSUA_INVALID_ID)
-	    {
-		med_idx = i;
-		break;
-	    }
-	}
-	if (med_idx < 0) {
-    	    PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getEncodingVideoMedia()",
-				"no active encoding video media");
-	}
+        for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
+            if (pj_ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
+                pj_ci.media[i].stream.vid.enc_slot != PJSUA_INVALID_ID)
+            {
+                med_idx = i;
+                break;
+            }
+        }
+        if (med_idx < 0) {
+            PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getEncodingVideoMedia()",
+                                "no active encoding video media");
+        }
     }
 
     if (med_idx >= (int)pj_ci.media_cnt) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
-			    "invalid media index");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
+                            "invalid media index");
     }
     if (pj_ci.media[med_idx].type != PJMEDIA_TYPE_VIDEO) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
-			    "media is not video");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
+                            "media is not video");
     }
     if (pj_ci.media[med_idx].stream.vid.enc_slot == PJSUA_INVALID_ID) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
-			    "no encoding slot (recvonly?)");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
+                            "no encoding slot (recvonly?)");
     }
 
     VideoMediaHelper vm;
@@ -628,31 +627,31 @@ VideoMedia Call::getDecodingVideoMedia(int med_idx) const PJSUA2_THROW(Error)
     pjsua_call_get_info(id, &pj_ci);
 
     if (med_idx < 0) {
-	for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
-	    if (pj_ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
-		pj_ci.media[i].stream.vid.dec_slot != PJSUA_INVALID_ID)
-	    {
-		med_idx = i;
-		break;
-	    }
-	}
-	if (med_idx < 0) {
-    	    PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getDecodingVideoMedia()",
-				"no active decoding video media");
-	}
+        for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
+            if (pj_ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
+                pj_ci.media[i].stream.vid.dec_slot != PJSUA_INVALID_ID)
+            {
+                med_idx = i;
+                break;
+            }
+        }
+        if (med_idx < 0) {
+            PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getDecodingVideoMedia()",
+                                "no active decoding video media");
+        }
     }
 
     if (med_idx >= (int)pj_ci.media_cnt) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
-			    "invalid media index");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
+                            "invalid media index");
     }
     if (pj_ci.media[med_idx].type != PJMEDIA_TYPE_VIDEO) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
-			    "media is not video");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
+                            "media is not video");
     }
     if (pj_ci.media[med_idx].stream.vid.dec_slot == PJSUA_INVALID_ID) {
-    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
-			    "no decoding slot (sendonly?)");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
+                            "no decoding slot (sendonly?)");
     }
 
     VideoMediaHelper vm;
@@ -692,7 +691,7 @@ pj_stun_nat_type Call::getRemNatType() PJSUA2_THROW(Error)
 }
 
 void Call::makeCall(const string &dst_uri, const CallOpParam &prm)
-		    PJSUA2_THROW(Error)
+                    PJSUA2_THROW(Error)
 {
     pj_str_t pj_dst_uri = str2Pj(dst_uri);
     call_param param(prm.txOption, prm.opt, prm.reason);
@@ -705,16 +704,16 @@ void Call::makeCall(const string &dst_uri, const CallOpParam &prm)
 void Call::answer(const CallOpParam &prm) PJSUA2_THROW(Error)
 {
     call_param param(prm.txOption, prm.opt, prm.reason,
-    		     sdp_pool, prm.sdp.wholeSdp);
+                     sdp_pool, prm.sdp.wholeSdp);
     
     if (param.sdp) {
-    	PJSUA2_CHECK_EXPR( pjsua_call_answer_with_sdp(id, param.sdp,
-						      param.p_opt,
-    						      prm.statusCode,
-                                              	      param.p_reason,
-                                              	      param.p_msg_data) );
+        PJSUA2_CHECK_EXPR( pjsua_call_answer_with_sdp(id, param.sdp,
+                                                      param.p_opt,
+                                                      prm.statusCode,
+                                                      param.p_reason,
+                                                      param.p_msg_data) );
     } else {
-    	PJSUA2_CHECK_EXPR( pjsua_call_answer2(id, param.p_opt, prm.statusCode,
+        PJSUA2_CHECK_EXPR( pjsua_call_answer2(id, param.p_opt, prm.statusCode,
                                               param.p_reason,
                                               param.p_msg_data) );
     }
@@ -733,7 +732,7 @@ void Call::setHold(const CallOpParam &prm) PJSUA2_THROW(Error)
     call_param param(prm.txOption, prm.opt, prm.reason);
     
     PJSUA2_CHECK_EXPR( pjsua_call_set_hold2(id, prm.options,
-					    param.p_msg_data) );
+                                            param.p_msg_data) );
 }
 
 void Call::reinvite(const CallOpParam &prm) PJSUA2_THROW(Error)
@@ -741,7 +740,7 @@ void Call::reinvite(const CallOpParam &prm) PJSUA2_THROW(Error)
     call_param param(prm.txOption, prm.opt, prm.reason);
 
     PJSUA2_CHECK_EXPR( pjsua_call_reinvite2(id, param.p_opt,
-					    param.p_msg_data) );
+                                            param.p_msg_data) );
 }
 
 void Call::update(const CallOpParam &prm) PJSUA2_THROW(Error)
@@ -749,11 +748,11 @@ void Call::update(const CallOpParam &prm) PJSUA2_THROW(Error)
     call_param param(prm.txOption, prm.opt, prm.reason);
     
     PJSUA2_CHECK_EXPR( pjsua_call_update2(id, param.p_opt,
-					  param.p_msg_data) );
+                                          param.p_msg_data) );
 }
 
 void Call::xfer(const string &dest, const CallOpParam &prm)
-		PJSUA2_THROW(Error)
+                PJSUA2_THROW(Error)
 {
     call_param param(prm.txOption);
     pj_str_t pj_dest = str2Pj(dest);
@@ -768,7 +767,7 @@ void Call::xferReplaces(const Call& dest_call,
     
     PJSUA2_CHECK_EXPR(pjsua_call_xfer_replaces(id, dest_call.getId(),
                                                prm.options,
-					       param.p_msg_data) );
+                                               param.p_msg_data) );
 }
 
 void Call::processRedirect(pjsip_redirect_op cmd) PJSUA2_THROW(Error)
@@ -819,7 +818,7 @@ void Call::sendRequest(const CallSendRequestParam &prm) PJSUA2_THROW(Error)
     call_param param(prm.txOption);
     
     PJSUA2_CHECK_EXPR(pjsua_call_send_request(id, &method,
-					      param.p_msg_data) );
+                                              param.p_msg_data) );
 }
 
 string Call::dump(bool with_media, const string indent) PJSUA2_THROW(Error)
@@ -859,7 +858,7 @@ bool Call::vidStreamIsRunning(int med_idx, pjmedia_dir dir) const
 
 void Call::vidSetStream(pjsua_call_vid_strm_op op,
                         const CallVidSetStreamParam &param)
-			PJSUA2_THROW(Error)
+                        PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
     pjsua_call_vid_strm_op_param prm;
@@ -876,11 +875,11 @@ void Call::vidSetStream(pjsua_call_vid_strm_op op,
 }
 
 void Call::audStreamModifyCodecParam(int med_idx, const CodecParam &param)
-    				     PJSUA2_THROW(Error)
+                                     PJSUA2_THROW(Error)
 {
     pjmedia_codec_param prm = param.toPj();
     PJSUA2_CHECK_EXPR( pjsua_call_aud_stream_modify_codec_param(id, med_idx,
-    								&prm) );
+                                                                &prm) );
 }
 
 StreamInfo Call::getStreamInfo(unsigned med_idx) const PJSUA2_THROW(Error)
@@ -921,16 +920,16 @@ void Call::processMediaUpdate(OnCallMediaStateParam &prm)
     unsigned mi;
     
     if (pjsua_call_get_info(id, &pj_ci) == PJ_SUCCESS) {
-	if (medias.size()) {
-	    /* Clear medias. */
-	    for (mi = 0; mi < medias.size(); mi++) {
-		if (medias[mi]) {
-		    Endpoint::instance().mediaRemove((AudioMedia&)*medias[mi]);
-		    delete medias[mi];
-		}
-	    }
-	    medias.clear();	
-	}
+        if (medias.size()) {
+            /* Clear medias. */
+            for (mi = 0; mi < medias.size(); mi++) {
+                if (medias[mi]) {
+                    Endpoint::instance().mediaRemove((AudioMedia&)*medias[mi]);
+                    delete medias[mi];
+                }
+            }
+            medias.clear();     
+        }
 
         for (mi = 0; mi < pj_ci.media_cnt; mi++) {
             if (mi >= medias.size()) {
@@ -945,14 +944,14 @@ void Call::processMediaUpdate(OnCallMediaStateParam &prm)
                 AudioMediaHelper *aud_med = (AudioMediaHelper*)medias[mi];
                 aud_med->setPortId(pj_ci.media[mi].stream.aud.conf_slot);
 
-		/* Add media if the conference slot ID is valid. */
+                /* Add media if the conference slot ID is valid. */
                 if (pj_ci.media[mi].stream.aud.conf_slot != PJSUA_INVALID_ID)
                 {
                     Endpoint::instance().mediaAdd((AudioMedia &)*aud_med);
                 } else {
                     Endpoint::instance().mediaRemove((AudioMedia &)*aud_med);
                 }
-	    }
+            }
         }
     }
     
@@ -968,35 +967,35 @@ void Call::processStateChange(OnCallStateParam &prm)
     if (pjsua_call_get_info(id, &pj_ci) == PJ_SUCCESS &&
         pj_ci.state == PJSIP_INV_STATE_DISCONNECTED)
     {
-    	pjsua_call *call = &pjsua_var.calls[id];
+        pjsua_call *call = &pjsua_var.calls[id];
 
-	/* We are going to remove the Call object association below,
-	 * so we need to call onStreamDestroyed() callback here.
-	 */
-    	for (mi = 0; mi < call->med_cnt; ++mi) {
-    	    pjsua_call_media *call_med = &call->media[mi];
-	    if (call_med->type == PJMEDIA_TYPE_AUDIO &&
-	    	call_med->strm.a.stream)
-	    {
-    		OnStreamDestroyedParam strm_prm;
-    		strm_prm.stream = call_med->strm.a.stream;
-    		strm_prm.streamIdx = mi;
+        /* We are going to remove the Call object association below,
+         * so we need to call onStreamDestroyed() callback here.
+         */
+        for (mi = 0; mi < call->med_cnt; ++mi) {
+            pjsua_call_media *call_med = &call->media[mi];
+            if (call_med->type == PJMEDIA_TYPE_AUDIO &&
+                call_med->strm.a.stream)
+            {
+                OnStreamDestroyedParam strm_prm;
+                strm_prm.stream = call_med->strm.a.stream;
+                strm_prm.streamIdx = mi;
     
-    		onStreamDestroyed(strm_prm);	    	
-	    }
-    	}
+                onStreamDestroyed(strm_prm);            
+            }
+        }
 
         /* Clear medias. */
         for (mi = 0; mi < medias.size(); mi++) {
             if (medias[mi]) {
-		Endpoint::instance().mediaRemove((AudioMedia &)*medias[mi]);
+                Endpoint::instance().mediaRemove((AudioMedia &)*medias[mi]);
                 delete medias[mi];
             }
         }
         medias.clear();
 
-	/* Remove this Call object association */
-	pjsua_call_set_user_data(id, NULL);
+        /* Remove this Call object association */
+        pjsua_call_set_user_data(id, NULL);
     }
     
     onCallState(prm);

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -88,9 +87,9 @@ static int echo_client_thread(void *arg)
     }
 
     PJ_LOG(3,("", "...socket connected to %s:%d", 
-		  pj_inet_ntop2(pj_AF_INET(), &addr.sin_addr,
-		  		addr, sizeof(addr)),
-		  pj_ntohs(addr.sin_port)));
+                  pj_inet_ntop2(pj_AF_INET(), &addr.sin_addr,
+                                addr, sizeof(addr)),
+                  pj_ntohs(addr.sin_port)));
 
     pj_memset(send_buf, 'A', BUF_SIZE);
     send_buf[BUF_SIZE-1]='\0';
@@ -109,14 +108,14 @@ static int echo_client_thread(void *arg)
         int rc;
         pj_ssize_t bytes;
 
-	++counter;
+        ++counter;
 
-	//while (wait_socket(sock,0) > 0)
-	//    ;
+        //while (wait_socket(sock,0) > 0)
+        //    ;
 
         /* Send a packet. */
         bytes = BUF_SIZE;
-	*(pj_uint32_t*)(send_buf+4) = ++buffer_counter;
+        *(pj_uint32_t*)(send_buf+4) = ++buffer_counter;
         rc = pj_sock_send(sock, send_buf, &bytes, 0);
         if (rc != PJ_SUCCESS || bytes != BUF_SIZE) {
             if (rc != last_send_err) {
@@ -131,12 +130,12 @@ static int echo_client_thread(void *arg)
         rc = wait_socket(sock, 500);
         if (rc == 0) {
             PJ_LOG(3,("", "...timeout"));
-	    bytes = 0;
-	    pj_atomic_inc(timeout_counter);
-	} else if (rc < 0) {
-	    rc = pj_get_netos_error();
-	    app_perror("...select() error", rc);
-	    break;
+            bytes = 0;
+            pj_atomic_inc(timeout_counter);
+        } else if (rc < 0) {
+            rc = pj_get_netos_error();
+            app_perror("...select() error", rc);
+            break;
         } else {
             /* Receive back the original packet. */
             bytes = 0;
@@ -151,7 +150,7 @@ static int echo_client_thread(void *arg)
                         pj_thread_sleep(100);
                     }
                     bytes = 0;
-		    received = 0;
+                    received = 0;
                     break;
                 }
                 bytes += received;
@@ -162,16 +161,16 @@ static int echo_client_thread(void *arg)
             continue;
 
         if (pj_memcmp(send_buf, recv_buf, BUF_SIZE) != 0) {
-	    recv_buf[BUF_SIZE-1] = '\0';
+            recv_buf[BUF_SIZE-1] = '\0';
             PJ_LOG(3,("", "...error: buffer %u has changed!\n"
-			  "send_buf=%s\n"
-			  "recv_buf=%s\n", 
-			  counter, send_buf, recv_buf));
-	    pj_atomic_inc(invalid_counter);
+                          "send_buf=%s\n"
+                          "recv_buf=%s\n", 
+                          counter, send_buf, recv_buf));
+            pj_atomic_inc(invalid_counter);
         }
 
         /* Accumulate total received. */
-	pj_atomic_add(totalBytes, bytes);
+        pj_atomic_add(totalBytes, bytes);
     }
 
     pj_sock_close(sock);
@@ -221,40 +220,40 @@ int echo_client(int sock_type, const char *server, int port)
     pj_get_timestamp(&last_report);
 
     for (;;) {
-	pj_timestamp now;
-	unsigned long received, cur_received;
-	unsigned msec;
-	pj_highprec_t bw;
-	pj_time_val elapsed;
-	unsigned bw32;
-	pj_uint32_t timeout, invalid;
+        pj_timestamp now;
+        unsigned long received, cur_received;
+        unsigned msec;
+        pj_highprec_t bw;
+        pj_time_val elapsed;
+        unsigned bw32;
+        pj_uint32_t timeout, invalid;
 
-	pj_thread_sleep(1000);
+        pj_thread_sleep(1000);
 
-	pj_get_timestamp(&now);
-	elapsed = pj_elapsed_time(&last_report, &now);
-	msec = PJ_TIME_VAL_MSEC(elapsed);
+        pj_get_timestamp(&now);
+        elapsed = pj_elapsed_time(&last_report, &now);
+        msec = PJ_TIME_VAL_MSEC(elapsed);
 
-	received = pj_atomic_get(totalBytes);
-	cur_received = received - last_received;
-	
-	bw = cur_received;
-	pj_highprec_mul(bw, 1000);
-	pj_highprec_div(bw, msec);
+        received = pj_atomic_get(totalBytes);
+        cur_received = received - last_received;
+        
+        bw = cur_received;
+        pj_highprec_mul(bw, 1000);
+        pj_highprec_div(bw, msec);
 
-	bw32 = (unsigned)bw;
-	
-	last_report = now;
-	last_received = received;
+        bw32 = (unsigned)bw;
+        
+        last_report = now;
+        last_received = received;
 
-	timeout = pj_atomic_get(timeout_counter);
-	invalid = pj_atomic_get(invalid_counter);
+        timeout = pj_atomic_get(timeout_counter);
+        invalid = pj_atomic_get(invalid_counter);
 
         PJ_LOG(3,("", 
-	          "...%d threads, total bandwidth: %d KB/s, "
-		  "timeout=%d, invalid=%d", 
+                  "...%d threads, total bandwidth: %d KB/s, "
+                  "timeout=%d, invalid=%d", 
                   ECHO_CLIENT_MAX_THREADS, bw32/1000,
-		  timeout, invalid));
+                  timeout, invalid));
     }
 
     for (i=0; i<ECHO_CLIENT_MAX_THREADS; ++i) {

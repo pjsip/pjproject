@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Digital Audio Resampling Home Page located at
  * http://www-ccrma.stanford.edu/~jos/resample/.
@@ -8,7 +7,7 @@
  * Snippet from the resample.1 man page:
  *
  * HISTORY
- *
+ *F
  * The first version of this software was written by Julius O. Smith III
  * <jos@ccrma.stanford.edu> at CCRMA <http://www-ccrma.stanford.edu> in
  * 1981.  It was called SRCONV and was written in SAIL for PDP-10

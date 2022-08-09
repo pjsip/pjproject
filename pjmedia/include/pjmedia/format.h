@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -59,31 +58,31 @@ typedef enum pjmedia_format_id
      */
 
     /** 16bit signed integer linear PCM audio */
-    PJMEDIA_FORMAT_L16	    = 0,
+    PJMEDIA_FORMAT_L16      = 0,
 
     /** Alias for PJMEDIA_FORMAT_L16 */
-    PJMEDIA_FORMAT_PCM	    = PJMEDIA_FORMAT_L16,
+    PJMEDIA_FORMAT_PCM      = PJMEDIA_FORMAT_L16,
 
     /** G.711 ALAW */
-    PJMEDIA_FORMAT_PCMA	    = PJMEDIA_FORMAT_PACK('A', 'L', 'A', 'W'),
+    PJMEDIA_FORMAT_PCMA     = PJMEDIA_FORMAT_PACK('A', 'L', 'A', 'W'),
 
     /** Alias for PJMEDIA_FORMAT_PCMA */
-    PJMEDIA_FORMAT_ALAW	    = PJMEDIA_FORMAT_PCMA,
+    PJMEDIA_FORMAT_ALAW     = PJMEDIA_FORMAT_PCMA,
 
     /** G.711 ULAW */
-    PJMEDIA_FORMAT_PCMU	    = PJMEDIA_FORMAT_PACK('u', 'L', 'A', 'W'),
+    PJMEDIA_FORMAT_PCMU     = PJMEDIA_FORMAT_PACK('u', 'L', 'A', 'W'),
 
     /** Aliaw for PJMEDIA_FORMAT_PCMU */
-    PJMEDIA_FORMAT_ULAW	    = PJMEDIA_FORMAT_PCMU,
+    PJMEDIA_FORMAT_ULAW     = PJMEDIA_FORMAT_PCMU,
 
     /** AMR narrowband */
-    PJMEDIA_FORMAT_AMR	    = PJMEDIA_FORMAT_PACK(' ', 'A', 'M', 'R'),
+    PJMEDIA_FORMAT_AMR      = PJMEDIA_FORMAT_PACK(' ', 'A', 'M', 'R'),
 
     /** ITU G.729 */
-    PJMEDIA_FORMAT_G729	    = PJMEDIA_FORMAT_PACK('G', '7', '2', '9'),
+    PJMEDIA_FORMAT_G729     = PJMEDIA_FORMAT_PACK('G', '7', '2', '9'),
 
     /** Internet Low Bit-Rate Codec (ILBC) */
-    PJMEDIA_FORMAT_ILBC	    = PJMEDIA_FORMAT_PACK('I', 'L', 'B', 'C'),
+    PJMEDIA_FORMAT_ILBC     = PJMEDIA_FORMAT_PACK('I', 'L', 'B', 'C'),
 
 
     /*
@@ -124,7 +123,7 @@ typedef enum pjmedia_format_id
      * Y0, A0. Source:
      * http://msdn.microsoft.com/en-us/library/dd206750%28v=VS.85%29.aspx#ayuv
      */
-    PJMEDIA_FORMAT_AYUV	    = PJMEDIA_FORMAT_PACK('A', 'Y', 'U', 'V'),
+    PJMEDIA_FORMAT_AYUV     = PJMEDIA_FORMAT_PACK('A', 'Y', 'U', 'V'),
 
     /**
      * This is packed 4:2:2/16bpp YUV format, the data can be treated as
@@ -134,7 +133,7 @@ typedef enum pjmedia_format_id
      * contains the first V (Cr) sample, and so forth. Source:
      * http://msdn.microsoft.com/en-us/library/dd206750%28v=VS.85%29.aspx#yuy2
      */
-    PJMEDIA_FORMAT_YUY2	    = PJMEDIA_FORMAT_PACK('Y', 'U', 'Y', '2'),
+    PJMEDIA_FORMAT_YUY2     = PJMEDIA_FORMAT_PACK('Y', 'U', 'Y', '2'),
 
     /**
      * This format is the same as the YUY2 format except the byte order is
@@ -144,7 +143,7 @@ typedef enum pjmedia_format_id
      * WORD contains V in the LSBs and Y1 in the MSBs. Source:
      * http://msdn.microsoft.com/en-us/library/dd206750%28v=VS.85%29.aspx#uyvy
      */
-    PJMEDIA_FORMAT_UYVY	    = PJMEDIA_FORMAT_PACK('U', 'Y', 'V', 'Y'),
+    PJMEDIA_FORMAT_UYVY     = PJMEDIA_FORMAT_PACK('U', 'Y', 'V', 'Y'),
 
     /**
      * This format is the same as the YUY2 and UYVY format except the byte
@@ -153,7 +152,7 @@ typedef enum pjmedia_format_id
      * the first WORD contains Y0 in the LSBs and V in the MSBs, and the second
      * WORD contains Y1 in the LSBs and U in the MSBs.
      */
-    PJMEDIA_FORMAT_YVYU	    = PJMEDIA_FORMAT_PACK('Y', 'V', 'Y', 'U'),
+    PJMEDIA_FORMAT_YVYU     = PJMEDIA_FORMAT_PACK('Y', 'V', 'Y', 'U'),
 
     /**
      * This is planar 4:2:0/12bpp YUV format, the data can be treated as
@@ -161,12 +160,12 @@ typedef enum pjmedia_format_id
      * only the Y samples, the second plane contains only the U (Cb) samples,
      * and the third plane contains only the V (Cr) sample.
      */
-    PJMEDIA_FORMAT_I420	    = PJMEDIA_FORMAT_PACK('I', '4', '2', '0'),
+    PJMEDIA_FORMAT_I420     = PJMEDIA_FORMAT_PACK('I', '4', '2', '0'),
 
     /**
      * IYUV is alias for I420.
      */
-    PJMEDIA_FORMAT_IYUV	    = PJMEDIA_FORMAT_I420,
+    PJMEDIA_FORMAT_IYUV     = PJMEDIA_FORMAT_I420,
 
     /**
      * This is planar 4:2:0/12bpp YUV format, similar to I420 or IYUV but
@@ -174,7 +173,7 @@ typedef enum pjmedia_format_id
      * contains the V (Cb) samples and the third plane contains the V (Cr)
      * samples.
      */
-    PJMEDIA_FORMAT_YV12	    = PJMEDIA_FORMAT_PACK('Y', 'V', '1', '2'),
+    PJMEDIA_FORMAT_YV12     = PJMEDIA_FORMAT_PACK('Y', 'V', '1', '2'),
 
     /**
      * This is planar 4:2:0/12bpp YUV format, the data can be treated as
@@ -182,7 +181,7 @@ typedef enum pjmedia_format_id
      * only the Y samples, the second plane contains interleaved
      * U (Cb) - V (Cr) samples.
      */
-    PJMEDIA_FORMAT_NV12	    = PJMEDIA_FORMAT_PACK('N', 'V', '1', '2'),
+    PJMEDIA_FORMAT_NV12     = PJMEDIA_FORMAT_PACK('N', 'V', '1', '2'),
     
     /**
      * This is planar 4:2:0/12bpp YUV format, the data can be treated as
@@ -190,7 +189,7 @@ typedef enum pjmedia_format_id
      * only the Y samples, the second plane contains interleaved
      * V (Cr) - U (Cb) samples.
      */
-    PJMEDIA_FORMAT_NV21	    = PJMEDIA_FORMAT_PACK('N', 'V', '2', '1'),
+    PJMEDIA_FORMAT_NV21     = PJMEDIA_FORMAT_PACK('N', 'V', '2', '1'),
     
     /**
      * This is planar 4:2:2/16bpp YUV format, the data can be treated as
@@ -198,7 +197,7 @@ typedef enum pjmedia_format_id
      * only the Y samples, the second plane contains only the U (Cb) samples,
      * and the third plane contains only the V (Cr) sample.
      */
-    PJMEDIA_FORMAT_I422	    = PJMEDIA_FORMAT_PACK('I', '4', '2', '2'),
+    PJMEDIA_FORMAT_I422     = PJMEDIA_FORMAT_PACK('I', '4', '2', '2'),
 
     /**
      * The JPEG version of planar 4:2:0/12bpp YUV format.
@@ -257,12 +256,12 @@ typedef enum pjmedia_format_detail_type
  */
 typedef struct pjmedia_audio_format_detail
 {
-    unsigned	clock_rate;	/**< Audio clock rate in samples or Hz. */
-    unsigned	channel_count;	/**< Number of channels.		*/
-    unsigned	frame_time_usec;/**< Frame interval, in microseconds.	*/
-    unsigned	bits_per_sample;/**< Number of bits per sample.		*/
-    pj_uint32_t	avg_bps;	/**< Average bitrate			*/
-    pj_uint32_t	max_bps;	/**< Maximum bitrate			*/
+    unsigned    clock_rate;     /**< Audio clock rate in samples or Hz. */
+    unsigned    channel_count;  /**< Number of channels.                */
+    unsigned    frame_time_usec;/**< Frame interval, in microseconds.   */
+    unsigned    bits_per_sample;/**< Number of bits per sample.         */
+    pj_uint32_t avg_bps;        /**< Average bitrate                    */
+    pj_uint32_t max_bps;        /**< Maximum bitrate                    */
 } pjmedia_audio_format_detail;
 
 /**
@@ -274,10 +273,10 @@ typedef struct pjmedia_audio_format_detail
  */
 typedef struct pjmedia_video_format_detail
 {
-    pjmedia_rect_size	size;	/**< Video size (width, height) 	*/
-    pjmedia_ratio	fps;	/**< Number of frames per second.	*/
-    pj_uint32_t		avg_bps;/**< Average bitrate.			*/
-    pj_uint32_t		max_bps;/**< Maximum bitrate.			*/
+    pjmedia_rect_size   size;   /**< Video size (width, height)         */
+    pjmedia_ratio       fps;    /**< Number of frames per second.       */
+    pj_uint32_t         avg_bps;/**< Average bitrate.                   */
+    pj_uint32_t         max_bps;/**< Maximum bitrate.                   */
 } pjmedia_video_format_detail;
 
 /**
@@ -285,7 +284,7 @@ typedef struct pjmedia_video_format_detail
  * to be reserved for user defined detail.
  */
 #ifndef PJMEDIA_FORMAT_DETAIL_USER_SIZE
-#   define PJMEDIA_FORMAT_DETAIL_USER_SIZE		1
+#   define PJMEDIA_FORMAT_DETAIL_USER_SIZE              1
 #endif
 
 /**
@@ -301,37 +300,37 @@ typedef struct pjmedia_format
      *
      * @see pjmedia_format_id
      */
-    pj_uint32_t		 	 id;
+    pj_uint32_t                  id;
 
     /**
      * The top-most type of the media, as an information.
      */
-    pjmedia_type		 type;
+    pjmedia_type                 type;
 
     /**
      * The type of detail structure in the \a detail pointer.
      */
-    pjmedia_format_detail_type	 detail_type;
+    pjmedia_format_detail_type   detail_type;
 
     /**
      * Detail section to describe the media.
      */
     union
     {
-	/**
-	 * Detail section for audio format.
-	 */
-	pjmedia_audio_format_detail	aud;
+        /**
+         * Detail section for audio format.
+         */
+        pjmedia_audio_format_detail     aud;
 
-	/**
-	 * Detail section for video format.
-	 */
-	pjmedia_video_format_detail	vid;
+        /**
+         * Detail section for video format.
+         */
+        pjmedia_video_format_detail     vid;
 
-	/**
-	 * Reserved area for user-defined format detail.
-	 */
-	char				user[PJMEDIA_FORMAT_DETAIL_USER_SIZE];
+        /**
+         * Reserved area for user-defined format detail.
+         */
+        char                            user[PJMEDIA_FORMAT_DETAIL_USER_SIZE];
     } det;
 
 } pjmedia_format;
@@ -367,7 +366,7 @@ typedef struct pjmedia_video_apply_fmt_param
      * [IN] The image size. This field is mandatory, and has to be set
      * correctly prior to calling \a apply_fmt() function.
      */
-    pjmedia_rect_size	 size;
+    pjmedia_rect_size    size;
 
     /**
      * [IN] Pointer to the buffer that holds the frame. The \a apply_fmt()
@@ -377,7 +376,7 @@ typedef struct pjmedia_video_apply_fmt_param
      * correct pointer even though the buffer is set to NULL. This could be
      * useful to calculate the size (in bytes) of each plane.
      */
-    pj_uint8_t		*buffer;
+    pj_uint8_t          *buffer;
 
     /* output fields: */
 
@@ -385,23 +384,23 @@ typedef struct pjmedia_video_apply_fmt_param
      * [OUT] The size (in bytes) required of the buffer to hold the video
      * frame of the particular frame size (width, height).
      */
-    pj_size_t		 framebytes;
+    pj_size_t            framebytes;
 
     /**
      * [OUT] Array of strides value (in bytes) for each video plane.
      */
-    int		         strides[PJMEDIA_MAX_VIDEO_PLANES];
+    int                  strides[PJMEDIA_MAX_VIDEO_PLANES];
 
     /**
      * [OUT] Array of pointers to each of the video planes. The values are
      * calculated from the \a buffer field.
      */
-    pj_uint8_t		*planes[PJMEDIA_MAX_VIDEO_PLANES];
+    pj_uint8_t          *planes[PJMEDIA_MAX_VIDEO_PLANES];
 
     /**
      * [OUT] Array of video plane sizes.
      */
-    pj_size_t		 plane_bytes[PJMEDIA_MAX_VIDEO_PLANES];
+    pj_size_t            plane_bytes[PJMEDIA_MAX_VIDEO_PLANES];
 
 } pjmedia_video_apply_fmt_param;
 
@@ -416,29 +415,29 @@ typedef struct pjmedia_video_format_info
      * The unique format ID of the media. Well known format ids are declared
      * in pjmedia_format_id enumeration.
      */
-    pj_uint32_t		id;
+    pj_uint32_t         id;
 
     /**
      * Null terminated string containing short identification about the
      * format.
      */
-    char		name[8];
+    char                name[8];
 
     /**
      * Information about the color model of this video format.
      */
-    pjmedia_color_model	color_model;
+    pjmedia_color_model color_model;
 
     /**
      * Number of bits needed to store one pixel of this video format.
      */
-    pj_uint8_t		bpp;
+    pj_uint8_t          bpp;
 
     /**
      * Number of video planes that this format uses. Value 1 indicates
      * packed format, while value greater than 1 indicates planar format.
      */
-    pj_uint8_t		plane_cnt;
+    pj_uint8_t          plane_cnt;
 
     /**
      * Pointer to function to apply this format against size and buffer
@@ -448,14 +447,14 @@ typedef struct pjmedia_video_format_info
      * location of the planes, and so on. See pjmedia_video_apply_fmt_param
      * for additional information.
      *
-     * @param vfi	The video format info.
-     * @param vafp	The parameters to investigate.
+     * @param vfi       The video format info.
+     * @param vafp      The parameters to investigate.
      *
-     * @return		PJ_SUCCESS if the function has calculated the
-     * 			information in \a vafp successfully.
+     * @return          PJ_SUCCESS if the function has calculated the
+     *                  information in \a vafp successfully.
      */
     pj_status_t (*apply_fmt)(const struct pjmedia_video_format_info *vfi,
-	                     pjmedia_video_apply_fmt_param *vafp);
+                             pjmedia_video_apply_fmt_param *vafp);
 
 } pjmedia_video_format_info;
 
@@ -469,23 +468,23 @@ typedef struct pjmedia_video_format_info
  * rate, ptime (in usec), and channel count. Application should use this
  * macro whenever possible due to possible overflow in the math calculation.
  *
- * @param clock_rate		Clock rate.
- * @param usec_ptime		Frame interval, in microsecond.
- * @param channel_count		Number of channels.
+ * @param clock_rate            Clock rate.
+ * @param usec_ptime            Frame interval, in microsecond.
+ * @param channel_count         Number of channels.
  *
- * @return			The samples per frame value.
+ * @return                      The samples per frame value.
  */
 PJ_INLINE(unsigned) PJMEDIA_SPF(unsigned clock_rate, unsigned usec_ptime,
-				unsigned channel_count)
+                                unsigned channel_count)
 {
 #if PJ_HAS_INT64
     return ((unsigned)((pj_uint64_t)usec_ptime * \
-		       clock_rate * channel_count / 1000000));
+                       clock_rate * channel_count / 1000000));
 #elif PJ_HAS_FLOATING_POINT
     return ((unsigned)(1.0*usec_ptime * clock_rate * channel_count / 1000000));
 #else
     return ((unsigned)(usec_ptime / 1000L * clock_rate * \
-		       channel_count / 1000));
+                       channel_count / 1000));
 #endif
 }
 
@@ -493,11 +492,11 @@ PJ_INLINE(unsigned) PJMEDIA_SPF(unsigned clock_rate, unsigned usec_ptime,
  * Variant of #PJMEDIA_SPF() which takes frame rate instead of ptime.
  */
 PJ_INLINE(unsigned) PJMEDIA_SPF2(unsigned clock_rate, const pjmedia_ratio *fr,
-				 unsigned channel_count)
+                                 unsigned channel_count)
 {
 #if PJ_HAS_INT64
     return ((unsigned)((pj_uint64_t)clock_rate * fr->denum \
-		       / fr->num / channel_count));
+                       / fr->num / channel_count));
 #elif PJ_HAS_FLOATING_POINT
     return ((unsigned)(1.0* clock_rate * fr->denum / fr->num /channel_count));
 #else
@@ -511,10 +510,10 @@ PJ_INLINE(unsigned) PJMEDIA_SPF2(unsigned clock_rate, const pjmedia_ratio *fr,
  * interval values. Application should use this macro whenever possible due
  * to possible overflow in the math calculation.
  *
- * @param bps			The bitrate of the stream.
- * @param usec_ptime		Frame interval, in microsecond.
+ * @param bps                   The bitrate of the stream.
+ * @param usec_ptime            Frame interval, in microsecond.
  *
- * @return			Frame size in bytes.
+ * @return                      Frame size in bytes.
  */
 PJ_INLINE(unsigned) PJMEDIA_FSZ(unsigned bps, unsigned usec_ptime)
 {
@@ -532,15 +531,15 @@ PJ_INLINE(unsigned) PJMEDIA_FSZ(unsigned bps, unsigned usec_ptime)
  * Application should use this macro whenever possible due to possible
  * overflow in the math calculation.
  *
- * @param frame_rate		Frame rate
+ * @param frame_rate            Frame rate
  *
- * @return			The ptime value (in usec).
+ * @return                      The ptime value (in usec).
  */
 PJ_INLINE(unsigned) PJMEDIA_PTIME(const pjmedia_ratio *frame_rate)
 {
 #if PJ_HAS_INT64
     return ((unsigned)((pj_uint64_t)1000000 * \
-		       frame_rate->denum / frame_rate->num));
+                       frame_rate->denum / frame_rate->num));
 #elif PJ_HAS_FLOATING_POINT
     return ((unsigned)(1000000.0 * frame_rate->denum /
                        frame_rate->num));
@@ -554,13 +553,13 @@ PJ_INLINE(unsigned) PJMEDIA_PTIME(const pjmedia_ratio *frame_rate)
  * Utility to retrieve samples_per_frame value from
  * pjmedia_audio_format_detail.
  *
- * @param pafd		Pointer to pjmedia_audio_format_detail
- * @return		Samples per frame
+ * @param pafd          Pointer to pjmedia_audio_format_detail
+ * @return              Samples per frame
  */
 PJ_INLINE(unsigned) PJMEDIA_AFD_SPF(const pjmedia_audio_format_detail *pafd)
 {
     return PJMEDIA_SPF(pafd->clock_rate, pafd->frame_time_usec,
-		       pafd->channel_count);
+                       pafd->channel_count);
 }
 
 /**
@@ -568,8 +567,8 @@ PJ_INLINE(unsigned) PJMEDIA_AFD_SPF(const pjmedia_audio_format_detail *pafd)
  * The average frame size is derived from the average bitrate of the audio
  * stream.
  *
- * @param afd		Pointer to pjmedia_audio_format_detail
- * @return		Average frame size.
+ * @param afd           Pointer to pjmedia_audio_format_detail
+ * @return              Average frame size.
  */
 PJ_INLINE(unsigned) PJMEDIA_AFD_AVG_FSZ(const pjmedia_audio_format_detail *afd)
 {
@@ -581,8 +580,8 @@ PJ_INLINE(unsigned) PJMEDIA_AFD_AVG_FSZ(const pjmedia_audio_format_detail *afd)
  * The maximum frame size is derived from the maximum bitrate of the audio
  * stream.
  *
- * @param afd		Pointer to pjmedia_audio_format_detail
- * @return		Average frame size.
+ * @param afd           Pointer to pjmedia_audio_format_detail
+ * @return              Average frame size.
  */
 PJ_INLINE(unsigned) PJMEDIA_AFD_MAX_FSZ(const pjmedia_audio_format_detail *afd)
 {
@@ -593,23 +592,23 @@ PJ_INLINE(unsigned) PJMEDIA_AFD_MAX_FSZ(const pjmedia_audio_format_detail *afd)
 /**
  * Initialize the format as audio format with the specified parameters.
  *
- * @param fmt			The format to be initialized.
- * @param fmt_id		Format ID. See #pjmedia_format_id
- * @param clock_rate		Audio clock rate.
- * @param channel_count		Number of channels.
- * @param bits_per_sample	Number of bits per sample.
- * @param frame_time_usec	Frame interval, in microsecond.
- * @param avg_bps		Average bitrate.
- * @param max_bps		Maximum bitrate.
+ * @param fmt                   The format to be initialized.
+ * @param fmt_id                Format ID. See #pjmedia_format_id
+ * @param clock_rate            Audio clock rate.
+ * @param channel_count         Number of channels.
+ * @param bits_per_sample       Number of bits per sample.
+ * @param frame_time_usec       Frame interval, in microsecond.
+ * @param avg_bps               Average bitrate.
+ * @param max_bps               Maximum bitrate.
  */
 PJ_INLINE(void) pjmedia_format_init_audio(pjmedia_format *fmt,
-				          pj_uint32_t fmt_id,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned bits_per_sample,
-					  unsigned frame_time_usec,
-					  pj_uint32_t avg_bps,
-					  pj_uint32_t max_bps)
+                                          pj_uint32_t fmt_id,
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned bits_per_sample,
+                                          unsigned frame_time_usec,
+                                          pj_uint32_t avg_bps,
+                                          pj_uint32_t max_bps)
 {
     /* This function is inlined to avoid build problem due to circular
      * dependency, i.e: this function is part of pjmedia and is needed
@@ -635,64 +634,64 @@ PJ_INLINE(void) pjmedia_format_init_audio(pjmedia_format *fmt,
  * to consult to a format manager in order to fill in detailed
  * information about the format.
  *
- * @param fmt		The format to be initialised.
- * @param fmt_id	Format ID. See #pjmedia_format_id
- * @param width		Image width.
- * @param height	Image heigth.
- * @param fps_num	FPS numerator.
- * @param fps_denum	FPS denumerator.
+ * @param fmt           The format to be initialised.
+ * @param fmt_id        Format ID. See #pjmedia_format_id
+ * @param width         Image width.
+ * @param height        Image heigth.
+ * @param fps_num       FPS numerator.
+ * @param fps_denum     FPS denumerator.
  */
 PJ_DECL(void) pjmedia_format_init_video(pjmedia_format *fmt,
-					pj_uint32_t fmt_id,
-					unsigned width,
-					unsigned height,
-					unsigned fps_num,
-					unsigned fps_denum);
+                                        pj_uint32_t fmt_id,
+                                        unsigned width,
+                                        unsigned height,
+                                        unsigned fps_num,
+                                        unsigned fps_denum);
 
 /**
  * Copy format to another.
  *
- * @param dst		The destination format.
- * @param src		The source format.
+ * @param dst           The destination format.
+ * @param src           The source format.
  *
- * @return		Pointer to destination format.
+ * @return              Pointer to destination format.
  */
 PJ_DECL(pjmedia_format*) pjmedia_format_copy(pjmedia_format *dst,
-					     const pjmedia_format *src);
+                                             const pjmedia_format *src);
 
 /**
  * Check if the format contains audio format, and retrieve the audio format
  * detail in the format.
  *
- * @param fmt		The format structure.
- * @param assert_valid	If this is set to non-zero, an assertion will be
- * 			raised if the detail type is not audio or if the
- * 			the detail is NULL.
+ * @param fmt           The format structure.
+ * @param assert_valid  If this is set to non-zero, an assertion will be
+ *                      raised if the detail type is not audio or if the
+ *                      the detail is NULL.
  *
- * @return		The instance of audio format detail in the format
- * 			structure, or NULL if the format doesn't contain
- * 			audio detail.
+ * @return              The instance of audio format detail in the format
+ *                      structure, or NULL if the format doesn't contain
+ *                      audio detail.
  */
 PJ_DECL(pjmedia_audio_format_detail*)
 pjmedia_format_get_audio_format_detail(const pjmedia_format *fmt,
-				       pj_bool_t assert_valid);
+                                       pj_bool_t assert_valid);
 
 /**
  * Check if the format contains video format, and retrieve the video format
  * detail in the format.
  *
- * @param fmt		The format structure.
- * @param assert_valid	If this is set to non-zero, an assertion will be
- * 			raised if the detail type is not video or if the
- * 			the detail is NULL.
+ * @param fmt           The format structure.
+ * @param assert_valid  If this is set to non-zero, an assertion will be
+ *                      raised if the detail type is not video or if the
+ *                      the detail is NULL.
  *
- * @return		The instance of video format detail in the format
- * 			structure, or NULL if the format doesn't contain
- * 			video detail.
+ * @return              The instance of video format detail in the format
+ *                      structure, or NULL if the format doesn't contain
+ *                      video detail.
  */
 PJ_DECL(pjmedia_video_format_detail*)
 pjmedia_format_get_video_format_detail(const pjmedia_format *fmt,
-				       pj_bool_t assert_valid);
+                                       pj_bool_t assert_valid);
 
 /*****************************************************************************
  * FORMAT MANAGEMENT:
@@ -711,23 +710,23 @@ typedef struct pjmedia_video_format_mgr pjmedia_video_format_mgr;
  * Create a new video format manager instance. This will also set the pointer
  * to the singleton instance if the value is still NULL.
  *
- * @param pool		The pool to allocate memory.
- * @param max_fmt	Maximum number of formats to accommodate.
- * @param options	Option flags. Must be zero for now.
- * @param p_mgr		Pointer to hold the created instance.
+ * @param pool          The pool to allocate memory.
+ * @param max_fmt       Maximum number of formats to accommodate.
+ * @param options       Option flags. Must be zero for now.
+ * @param p_mgr         Pointer to hold the created instance.
  *
- * @return		PJ_SUCCESS on success, or the appripriate error value.
+ * @return              PJ_SUCCESS on success, or the appripriate error value.
  */
 PJ_DECL(pj_status_t)
 pjmedia_video_format_mgr_create(pj_pool_t *pool,
-				unsigned max_fmt,
-				unsigned options,
-				pjmedia_video_format_mgr **p_mgr);
+                                unsigned max_fmt,
+                                unsigned options,
+                                pjmedia_video_format_mgr **p_mgr);
 
 /**
  * Get the singleton instance of the video format manager.
  *
- * @return		The instance.
+ * @return              The instance.
  */
 PJ_DECL(pjmedia_video_format_mgr*) pjmedia_video_format_mgr_instance(void);
 
@@ -737,9 +736,9 @@ PJ_DECL(pjmedia_video_format_mgr*) pjmedia_video_format_mgr_instance(void);
  * going to be created, as the library automatically assign the singleton
  * instance.
  *
- * @param mgr		The instance to be used as the singleton instance.
- * 			Application may specify NULL to clear the singleton
- * 			singleton instance.
+ * @param mgr           The instance to be used as the singleton instance.
+ *                      Application may specify NULL to clear the singleton
+ *                      singleton instance.
  */
 PJ_DECL(void)
 pjmedia_video_format_mgr_set_instance(pjmedia_video_format_mgr *mgr);
@@ -747,18 +746,18 @@ pjmedia_video_format_mgr_set_instance(pjmedia_video_format_mgr *mgr);
 /**
  * Retrieve a video format info for the specified format id.
  *
- * @param mgr		The video format manager. Specify NULL to use
- * 			the singleton instance (however, a video format
- * 			manager still must have been created prior to
- * 			calling this function).
- * @param id		The format id which format info is to be
- * 			retrieved.
+ * @param mgr           The video format manager. Specify NULL to use
+ *                      the singleton instance (however, a video format
+ *                      manager still must have been created prior to
+ *                      calling this function).
+ * @param id            The format id which format info is to be
+ *                      retrieved.
  *
- * @return		The video format info.
+ * @return              The video format info.
  */
 PJ_DECL(const pjmedia_video_format_info*)
 pjmedia_get_video_format_info(pjmedia_video_format_mgr *mgr,
-			      pj_uint32_t id);
+                              pj_uint32_t id);
 
 /**
  * Register a new video format to the framework. By default, built-in
@@ -768,28 +767,28 @@ pjmedia_get_video_format_info(pjmedia_video_format_mgr *mgr,
  * application to use user defined format id by registering that format
  * into the framework.
  *
- * @param mgr		The video format manager. Specify NULL to use
- * 			the singleton instance (however, a video format
- * 			manager still must have been created prior to
- * 			calling this function).
- * @param vfi		The video format info to be registered. This
- * 			structure must remain valid until the format
- * 			manager is destroyed.
+ * @param mgr           The video format manager. Specify NULL to use
+ *                      the singleton instance (however, a video format
+ *                      manager still must have been created prior to
+ *                      calling this function).
+ * @param vfi           The video format info to be registered. This
+ *                      structure must remain valid until the format
+ *                      manager is destroyed.
  *
- * @return		PJ_SUCCESS on success, or the appripriate error value.
+ * @return              PJ_SUCCESS on success, or the appripriate error value.
  */
 PJ_DECL(pj_status_t)
 pjmedia_register_video_format_info(pjmedia_video_format_mgr *mgr,
-				   pjmedia_video_format_info *vfi);
+                                   pjmedia_video_format_info *vfi);
 
 /**
  * Destroy a video format manager. If the manager happens to be the singleton
  * instance, the singleton instance will be set to NULL.
  *
- * @param mgr		The video format manager. Specify NULL to use
- * 			the singleton instance (however, a video format
- * 			manager still must have been created prior to
- * 			calling this function).
+ * @param mgr           The video format manager. Specify NULL to use
+ *                      the singleton instance (however, a video format
+ *                      manager still must have been created prior to
+ *                      calling this function).
  */
 PJ_DECL(void) pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr *mgr);
 
@@ -801,15 +800,15 @@ PJ_DECL(void) pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr *mgr);
 /**
  * Fill video frame buffer with black color.
  *
- * @param fmt		The video format.
- * @param buf		The frame buffer.
- * @param buf_size	The frame buffer size.
+ * @param fmt           The video format.
+ * @param buf           The frame buffer.
+ * @param buf_size      The frame buffer size.
  *
- * @return		PJ_SUCCESS if successfull.
+ * @return              PJ_SUCCESS if successfull.
  */
 PJ_DECL(pj_status_t) pjmedia_video_format_fill_black(const pjmedia_format *fmt,
-						     void *buf,
-						     pj_size_t buf_size);
+                                                     void *buf,
+                                                     pj_size_t buf_size);
 
 
 PJ_END_DECL
@@ -818,5 +817,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_FORMAT_H__ */
+#endif  /* __PJMEDIA_FORMAT_H__ */
 

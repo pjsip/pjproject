@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -44,13 +43,13 @@ struct pj_pool_t
 {
     struct pj_pool_mem *first_mem;
     pj_pool_factory    *factory;
-    char	        obj_name[32];
-    pj_size_t		used_size;
+    char                obj_name[32];
+    pj_size_t           used_size;
     pj_pool_callback   *cb;
 };
 
 
-#define PJ_POOL_SIZE	        (sizeof(struct pj_pool_t))
+#define PJ_POOL_SIZE            (sizeof(struct pj_pool_t))
 
 /**
  * This constant denotes the exception number that will be thrown by default
@@ -69,23 +68,23 @@ PJ_DECL(int) pj_NO_MEMORY_EXCEPTION(void);
  * function.
  */
 #define pj_pool_create(fc,nm,init,inc,cb)   \
-	pj_pool_create_imp(__FILE__, __LINE__, fc, nm, init, inc, cb)
+        pj_pool_create_imp(__FILE__, __LINE__, fc, nm, init, inc, cb)
 
-#define pj_pool_release(pool)		    pj_pool_release_imp(pool)
-#define pj_pool_safe_release(pool)	    pj_pool_safe_release_imp(pool)
-#define pj_pool_secure_release(pool)	    pj_pool_secure_release_imp(pool)
-#define pj_pool_getobjname(pool)	    pj_pool_getobjname_imp(pool)
-#define pj_pool_reset(pool)		    pj_pool_reset_imp(pool)
-#define pj_pool_get_capacity(pool)	    pj_pool_get_capacity_imp(pool)
-#define pj_pool_get_used_size(pool)	    pj_pool_get_used_size_imp(pool)
-#define pj_pool_alloc(pool,sz)		    \
-	pj_pool_alloc_imp(__FILE__, __LINE__, pool, sz)
+#define pj_pool_release(pool)               pj_pool_release_imp(pool)
+#define pj_pool_safe_release(pool)          pj_pool_safe_release_imp(pool)
+#define pj_pool_secure_release(pool)        pj_pool_secure_release_imp(pool)
+#define pj_pool_getobjname(pool)            pj_pool_getobjname_imp(pool)
+#define pj_pool_reset(pool)                 pj_pool_reset_imp(pool)
+#define pj_pool_get_capacity(pool)          pj_pool_get_capacity_imp(pool)
+#define pj_pool_get_used_size(pool)         pj_pool_get_used_size_imp(pool)
+#define pj_pool_alloc(pool,sz)              \
+        pj_pool_alloc_imp(__FILE__, __LINE__, pool, sz)
 
-#define pj_pool_calloc(pool,cnt,elem)	    \
-	pj_pool_calloc_imp(__FILE__, __LINE__, pool, cnt, elem)
+#define pj_pool_calloc(pool,cnt,elem)       \
+        pj_pool_calloc_imp(__FILE__, __LINE__, pool, cnt, elem)
 
-#define pj_pool_zalloc(pool,sz)		    \
-	pj_pool_zalloc_imp(__FILE__, __LINE__, pool, sz)
+#define pj_pool_zalloc(pool,sz)             \
+        pj_pool_zalloc_imp(__FILE__, __LINE__, pool, sz)
 
 
 
@@ -95,11 +94,11 @@ PJ_DECL(int) pj_NO_MEMORY_EXCEPTION(void);
 
 /* Create pool */
 PJ_DECL(pj_pool_t*) pj_pool_create_imp(const char *file, int line,
-				       void *factory,
-				       const char *name,
-				       pj_size_t initial_size,
-				       pj_size_t increment_size,
-				       pj_pool_callback *callback);
+                                       void *factory,
+                                       const char *name,
+                                       pj_size_t initial_size,
+                                       pj_size_t increment_size,
+                                       pj_pool_callback *callback);
 
 /* Release pool */
 PJ_DECL(void) pj_pool_release_imp(pj_pool_t *pool);
@@ -124,22 +123,22 @@ PJ_DECL(pj_size_t) pj_pool_get_used_size_imp(pj_pool_t *pool);
 
 /* Allocate memory from the pool */
 PJ_DECL(void*) pj_pool_alloc_imp(const char *file, int line, 
-				 pj_pool_t *pool, pj_size_t sz);
+                                 pj_pool_t *pool, pj_size_t sz);
 
 /* Allocate memory from the pool and zero the memory */
 PJ_DECL(void*) pj_pool_calloc_imp(const char *file, int line, 
-				  pj_pool_t *pool, unsigned cnt, 
-				  unsigned elemsz);
+                                  pj_pool_t *pool, unsigned cnt, 
+                                  unsigned elemsz);
 
 /* Allocate memory from the pool and zero the memory */
 PJ_DECL(void*) pj_pool_zalloc_imp(const char *file, int line, 
-				  pj_pool_t *pool, pj_size_t sz);
+                                  pj_pool_t *pool, pj_size_t sz);
 
 
 #define PJ_POOL_ZALLOC_T(pool,type) \
-	    ((type*)pj_pool_zalloc(pool, sizeof(type)))
+            ((type*)pj_pool_zalloc(pool, sizeof(type)))
 #define PJ_POOL_ALLOC_T(pool,type) \
-	    ((type*)pj_pool_alloc(pool, sizeof(type)))
+            ((type*)pj_pool_alloc(pool, sizeof(type)))
 #ifndef PJ_POOL_ALIGNMENT
 #   define PJ_POOL_ALIGNMENT    4
 #endif
@@ -153,19 +152,19 @@ typedef struct pj_pool_factory_policy
      * Allocate memory block (for use by pool). This function is called
      * by memory pool to allocate memory block.
      * 
-     * @param factory	Pool factory.
-     * @param size	The size of memory block to allocate.
+     * @param factory   Pool factory.
+     * @param size      The size of memory block to allocate.
      *
-     * @return		Memory block.
+     * @return          Memory block.
      */
     void* (*block_alloc)(pj_pool_factory *factory, pj_size_t size);
 
     /**
      * Free memory block.
      *
-     * @param factory	Pool factory.
-     * @param mem	Memory block previously allocated by block_alloc().
-     * @param size	The size of memory block.
+     * @param factory   Pool factory.
+     * @param mem       Memory block previously allocated by block_alloc().
+     * @param size      The size of memory block.
      */
     void (*block_free)(pj_pool_factory *factory, void *mem, pj_size_t size);
 
@@ -209,5 +208,5 @@ typedef struct pj_pool_block
 
 PJ_END_DECL
 
-#endif	/* __PJ_POOL_ALT_H__ */
+#endif  /* __PJ_POOL_ALT_H__ */
 

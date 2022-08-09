@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
 * Copyright (C) 2016 Teluu Inc. (http://www.teluu.com)
 *
@@ -38,29 +37,29 @@ MyAppRT^ MyAppRT::singleton = nullptr;
     delete inPtr;
 
 #define CHECK_EXCEPTION(expr) \
-	do { \
-	    try { \
-		(expr); 	\
-	    } catch (pj::Error e) { \
-		Platform::Exception^ exp = ref new Platform::COMException( \
-		    GenHresultFromITF(e.status)); \
-	    } \
-	} while (0)
+        do { \
+            try { \
+                (expr);         \
+            } catch (pj::Error e) { \
+                Platform::Exception^ exp = ref new Platform::COMException( \
+                    GenHresultFromITF(e.status)); \
+            } \
+        } while (0)
 
 ///////////////////////////////////////////////////////////////////////////////
 std::string make_string(const std::wstring& wstring)
 {
     auto wideData = wstring.c_str();
     int bufferSize = WideCharToMultiByte(CP_UTF8, 0, wideData, 
-					 -1, nullptr, 0, NULL, NULL);
+                                         -1, nullptr, 0, NULL, NULL);
 
     std::unique_ptr<char[]> utf8;
     utf8.reset(new char[bufferSize]);    
 
     if (WideCharToMultiByte(CP_UTF8, 0, wideData, -1,
-	utf8.get(), bufferSize, NULL, NULL) == 0) 
-    {	
-	return std::string();
+        utf8.get(), bufferSize, NULL, NULL) == 0) 
+    {   
+        return std::string();
     }
 
     return std::string(utf8.get());    
@@ -75,10 +74,10 @@ std::wstring make_wstring(const std::string& string)
     wide.reset(new wchar_t[bufferSize]);
 
     if (MultiByteToWideChar(CP_UTF8, 0, utf8Data, -1,
-	wide.get(), bufferSize) == 0)
-    {	
-	return std::wstring();
-    }	    
+        wide.get(), bufferSize) == 0)
+    {   
+        return std::wstring();
+    }       
 
     return std::wstring(wide.get());;
 }
@@ -147,11 +146,11 @@ void ImpAccount::setCallback(IntAccount^ callback)
 void ImpAccount::onIncomingCall(pj::OnIncomingCallParam& prm)
 {
     if (cb) {
-	if (MyAppRT::Instance->handleIncomingCall(prm.callId)) {
-	    CallInfoRT^ info = MyAppRT::Instance->getCallInfo();
-	    if (info != nullptr)
-		cb->onIncomingCall(info);
-	}
+        if (MyAppRT::Instance->handleIncomingCall(prm.callId)) {
+            CallInfoRT^ info = MyAppRT::Instance->getCallInfo();
+            if (info != nullptr)
+                cb->onIncomingCall(info);
+        }
     }
 }
 
@@ -159,7 +158,7 @@ void ImpAccount::onIncomingCall(pj::OnIncomingCallParam& prm)
 void ImpAccount::onRegState(pj::OnRegStateParam& prm)
 {
     if (cb)
-	cb->onRegState(ref new OnRegStateParamRT(prm));
+        cb->onRegState(ref new OnRegStateParamRT(prm));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -245,8 +244,8 @@ void ImpCall::setCallback(IntCall^ callback)
 void ImpCall::onCallState(pj::OnCallStateParam& prm)
 {
     if (cb) {
-	pj::CallInfo info = getInfo();	
-	cb->onCallState(ref new CallInfoRT(info));
+        pj::CallInfo info = getInfo();  
+        cb->onCallState(ref new CallInfoRT(info));
     }
 };
 
@@ -254,33 +253,33 @@ void ImpCall::onCallMediaState(pj::OnCallMediaStateParam& prm)
 {
     pj::CallInfo info;    
     try {
-	info = getInfo();
+        info = getInfo();
     } catch (pj::Error& e) {
-	MyAppRT::Instance->writeLog(2, to_platform_str(e.info()));
-	return;
+        MyAppRT::Instance->writeLog(2, to_platform_str(e.info()));
+        return;
     }
 
     for (unsigned i = 0; i < info.media.size(); i++) {
-	pj::CallMediaInfo med_info = info.media[i];
-	if ((med_info.type == PJMEDIA_TYPE_AUDIO) &&
-	    ((med_info.status == PJSUA_CALL_MEDIA_ACTIVE) ||
-	    (med_info.status == PJSUA_CALL_MEDIA_REMOTE_HOLD))
-	    )
-	{
-	    pj::Media* m = getMedia(i);
-	    pj::AudioMedia *am = pj::AudioMedia::typecastFromMedia(m);
-	    pj::AudDevManager& aud_mgr = 
-		pj::Endpoint::instance().audDevManager();
+        pj::CallMediaInfo med_info = info.media[i];
+        if ((med_info.type == PJMEDIA_TYPE_AUDIO) &&
+            ((med_info.status == PJSUA_CALL_MEDIA_ACTIVE) ||
+            (med_info.status == PJSUA_CALL_MEDIA_REMOTE_HOLD))
+            )
+        {
+            pj::Media* m = getMedia(i);
+            pj::AudioMedia *am = pj::AudioMedia::typecastFromMedia(m);
+            pj::AudDevManager& aud_mgr = 
+                pj::Endpoint::instance().audDevManager();
 
-	    try {
-		aud_mgr.getCaptureDevMedia().startTransmit(*am);
-		am->startTransmit(aud_mgr.getPlaybackDevMedia());	
+            try {
+                aud_mgr.getCaptureDevMedia().startTransmit(*am);
+                am->startTransmit(aud_mgr.getPlaybackDevMedia());       
 
-	    } catch (pj::Error& e) {
-		MyAppRT::Instance->writeLog(2, to_platform_str(e.info()));
-		continue;
-	    }	
-	}
+            } catch (pj::Error& e) {
+                MyAppRT::Instance->writeLog(2, to_platform_str(e.info()));
+                continue;
+            }   
+        }
     }
 };
 ///////////////////////////////////////////////////////////////////////////////
@@ -298,29 +297,29 @@ Platform::String^ AccountInfo::registrar::get() {
 
 Platform::String^ AccountInfo::proxy::get() {
     if (!cfg->sipConfig.proxies.empty()) {
-	return to_platform_str(cfg->sipConfig.proxies[0]);
+        return to_platform_str(cfg->sipConfig.proxies[0]);
     } else {
-	return ref new Platform::String(L"");
+        return ref new Platform::String(L"");
     }
 }
 
 Platform::String^ AccountInfo::username::get() {
     if (!cfg->sipConfig.authCreds.empty()) {
-	pj::AuthCredInfo& info = cfg->sipConfig.authCreds[0];
+        pj::AuthCredInfo& info = cfg->sipConfig.authCreds[0];
 
-	return to_platform_str(info.username);
+        return to_platform_str(info.username);
     } else {
-	return ref new Platform::String(L"");
+        return ref new Platform::String(L"");
     }
 }
 
 Platform::String^ AccountInfo::password::get() {
     if (!cfg->sipConfig.authCreds.empty()) {
-	pj::AuthCredInfo& info = cfg->sipConfig.authCreds[0];
+        pj::AuthCredInfo& info = cfg->sipConfig.authCreds[0];
 
-	return to_platform_str(info.data);
+        return to_platform_str(info.data);
     } else {
-	return ref new Platform::String(L"");
+        return ref new Platform::String(L"");
     }
 }
 
@@ -338,16 +337,16 @@ MyAppRT::~MyAppRT()
 {        
     delete logWriter;
     if (account)
-	delete account;
+        delete account;
 
     if (epConfig)
-	delete epConfig;
+        delete epConfig;
 
     if (accConfig)
-	delete accConfig;
+        delete accConfig;
 
     if (sipTpConfig)
-	delete sipTpConfig;
+        delete sipTpConfig;
 }
 
 void MyAppRT::loadConfig()
@@ -357,24 +356,24 @@ void MyAppRT::loadConfig()
     std::string configPath = appDir + "/" + CONFIG_NAME;
 
     try {
-	/* Load file */
-	json->loadFile(configPath);
-	pj::ContainerNode root = json->getRootContainer();
+        /* Load file */
+        json->loadFile(configPath);
+        pj::ContainerNode root = json->getRootContainer();
 
-	/* Read endpoint config */
-	epConfig->readObject(root);
+        /* Read endpoint config */
+        epConfig->readObject(root);
 
-	/* Read transport config */
-	pj::ContainerNode tp_node = root.readContainer("SipTransport");
-	sipTpConfig->readObject(tp_node);
+        /* Read transport config */
+        pj::ContainerNode tp_node = root.readContainer("SipTransport");
+        sipTpConfig->readObject(tp_node);
 
-	/* Read account configs */
-	pj::ContainerNode acc_node = root.readContainer("Account");
-	accConfig->readObject(acc_node);
+        /* Read account configs */
+        pj::ContainerNode acc_node = root.readContainer("Account");
+        accConfig->readObject(acc_node);
     } catch (pj::Error) {
-	ep.utilLogWrite(2, "loadConfig", "Failed loading config");
+        ep.utilLogWrite(2, "loadConfig", "Failed loading config");
 
-	sipTpConfig->port = SIP_PORT;
+        sipTpConfig->port = SIP_PORT;
     }
 
     delete json;
@@ -387,23 +386,23 @@ void MyAppRT::saveConfig()
     std::string configPath = appDir + "/" + CONFIG_NAME;
 
     try {
-	/* Write endpoint config */
-	json->writeObject(*epConfig);	
+        /* Write endpoint config */
+        json->writeObject(*epConfig);   
 
-	/* Write transport config */
-	pj::ContainerNode tp_node = json->writeNewContainer("SipTransport");
-	sipTpConfig->writeObject(tp_node);
+        /* Write transport config */
+        pj::ContainerNode tp_node = json->writeNewContainer("SipTransport");
+        sipTpConfig->writeObject(tp_node);
 
-	/* Write account configs */	
-	pj::ContainerNode acc_node = json->writeNewContainer("Account");
-	accConfig->writeObject(acc_node);
+        /* Write account configs */     
+        pj::ContainerNode acc_node = json->writeNewContainer("Account");
+        accConfig->writeObject(acc_node);
 
-	/* Save file */
-	json->saveFile(configPath);
+        /* Save file */
+        json->saveFile(configPath);
     } catch (pj::Error) {
-	ep.utilLogWrite(2, "saveConfig", "Failed saving config");
+        ep.utilLogWrite(2, "saveConfig", "Failed saving config");
 
-	sipTpConfig->port = SIP_PORT;
+        sipTpConfig->port = SIP_PORT;
     }
 
     delete json;
@@ -413,10 +412,10 @@ MyAppRT^ MyAppRT::Instance::get()
 {
     if (MyAppRT::singleton == nullptr)
     {
-	if (MyAppRT::singleton == nullptr)
-	{
-	    MyAppRT::singleton = ref new MyAppRT();
-	}
+        if (MyAppRT::singleton == nullptr)
+        {
+            MyAppRT::singleton = ref new MyAppRT();
+        }
     }
 
     return MyAppRT::singleton;
@@ -426,9 +425,9 @@ void MyAppRT::init(IntAccount^ iAcc, IntCall^ iCall)
 {    
     /* Create endpoint */
     try {
-	ep.libCreate();
+        ep.libCreate();
     } catch (pj::Error e) {
-	return;
+        return;
     }
 
     intAcc = iAcc;
@@ -449,8 +448,8 @@ void MyAppRT::init(IntAccount^ iAcc, IntCall^ iCall)
     pj::LogConfig *log_cfg = &epConfig->logConfig;
     log_cfg->writer = logWriter;
     log_cfg->decor = log_cfg->decor &
-	~(::pj_log_decoration::PJ_LOG_HAS_CR |
-	  ::pj_log_decoration::PJ_LOG_HAS_NEWLINE);
+        ~(::pj_log_decoration::PJ_LOG_HAS_CR |
+          ::pj_log_decoration::PJ_LOG_HAS_NEWLINE);
 
     /* Set ua config. */
     pj::UaConfig* ua_cfg = &epConfig->uaConfig;
@@ -460,36 +459,36 @@ void MyAppRT::init(IntAccount^ iAcc, IntCall^ iCall)
     /* Init endpoint */
     try
     {
-	ep.libInit(*epConfig);
+        ep.libInit(*epConfig);
     } catch (pj::Error& e)
     {
-	ep.utilLogWrite(2,THIS_FILE,e.info());
-	return;
+        ep.utilLogWrite(2,THIS_FILE,e.info());
+        return;
     }
 
     /* Create transports. */
 
     try {
-	sipTpConfig->port = 5060;
-	ep.transportCreate(::pjsip_transport_type_e::PJSIP_TRANSPORT_TCP,
-			   *sipTpConfig);
+        sipTpConfig->port = 5060;
+        ep.transportCreate(::pjsip_transport_type_e::PJSIP_TRANSPORT_TCP,
+                           *sipTpConfig);
     } catch (pj::Error& e) {
-	ep.utilLogWrite(2,THIS_FILE,e.info());	
+        ep.utilLogWrite(2,THIS_FILE,e.info());  
     }
 
     try {
-	ep.transportCreate(::pjsip_transport_type_e::PJSIP_TRANSPORT_UDP,
-			   *sipTpConfig);
+        ep.transportCreate(::pjsip_transport_type_e::PJSIP_TRANSPORT_UDP,
+                           *sipTpConfig);
     } catch (pj::Error& e) {
-	ep.utilLogWrite(2,THIS_FILE,e.info());
+        ep.utilLogWrite(2,THIS_FILE,e.info());
     }    
 
     /* Create accounts. */    
     account = new ImpAccount();
     if (accConfig->idUri.length() == 0) {
-	accConfig->idUri = "sip:localhost";	
+        accConfig->idUri = "sip:localhost";     
     } else {
-	ua_cfg->stunServer.push_back("stun.pjsip.org");	
+        ua_cfg->stunServer.push_back("stun.pjsip.org"); 
     }
     //accConfig->natConfig.iceEnabled = true;
     account->create(*accConfig);
@@ -497,10 +496,10 @@ void MyAppRT::init(IntAccount^ iAcc, IntCall^ iCall)
 
     /* Start. */
     try {
-	ep.libStart();
+        ep.libStart();
     } catch (pj::Error& e) {
-	ep.utilLogWrite(2,THIS_FILE,e.info());
-	return;
+        ep.utilLogWrite(2,THIS_FILE,e.info());
+        return;
     }
 }
 
@@ -509,7 +508,7 @@ void MyAppRT::deInit()
     saveConfig();
 
     try {
-	ep.libDestroy();
+        ep.libDestroy();
     } catch (pj::Error) {}
 
 }
@@ -522,13 +521,13 @@ void MyAppRT::writeLog(int level, Platform::String^ message)
 void MyAppRT::hangupCall()
 {
     if (activeCall) {
-	if (!isThreadRegistered())
-	{
-	    registerThread("hangupCall");
-	}
-	
-	delete activeCall;
-	activeCall = NULL;
+        if (!isThreadRegistered())
+        {
+            registerThread("hangupCall");
+        }
+        
+        delete activeCall;
+        activeCall = NULL;
     }
 };
 
@@ -536,7 +535,7 @@ void MyAppRT::answerCall(CallOpParamRT^ prm)
 {
     if (!isThreadRegistered())
     {
-	registerThread("answerCall");
+        registerThread("answerCall");
     }
     CHECK_EXCEPTION(activeCall->answer(*prm->getPtr()));
 };
@@ -545,7 +544,7 @@ void MyAppRT::makeCall(Platform::String^ dst_uri)
 {
     if (!isThreadRegistered())
     {
-	registerThread("makeCall");
+        registerThread("makeCall");
     }
     CallOpParamRT^ param = ref new CallOpParamRT;
     activeCall = new ImpCall(*account, -1);
@@ -557,8 +556,8 @@ void MyAppRT::makeCall(Platform::String^ dst_uri)
 CallInfoRT^ MyAppRT::getCallInfo()
 {
     if (activeCall) {
-	pj::CallInfo info = activeCall->getInfo();
-	return ref new CallInfoRT(info);
+        pj::CallInfo info = activeCall->getInfo();
+        return ref new CallInfoRT(info);
     }
 
     return nullptr;
@@ -567,7 +566,7 @@ CallInfoRT^ MyAppRT::getCallInfo()
 pj_bool_t MyAppRT::handleIncomingCall(int callId)
 {    
     if (activeCall) {
-	return PJ_FALSE;
+        return PJ_FALSE;
     }
 
     activeCall = new ImpCall(*account, callId);
@@ -595,34 +594,34 @@ AccountInfo^ MyAppRT::getAccountInfo()
 }
 
 void MyAppRT::modifyAccount(Platform::String^ id, 
-			    Platform::String^ registrar,
-			    Platform::String^ proxy, 			    
-			    Platform::String^ username,
-			    Platform::String^ password)
+                            Platform::String^ registrar,
+                            Platform::String^ proxy,                        
+                            Platform::String^ username,
+                            Platform::String^ password)
 {    
     if (id->IsEmpty()) {
-	accConfig->idUri = "sip:localhost";
-	accConfig->regConfig.registrarUri = "";
-	accConfig->sipConfig.authCreds.clear();
-	accConfig->sipConfig.proxies.clear();
+        accConfig->idUri = "sip:localhost";
+        accConfig->regConfig.registrarUri = "";
+        accConfig->sipConfig.authCreds.clear();
+        accConfig->sipConfig.proxies.clear();
     } else {
-	pj::AuthCredInfo info = pj::AuthCredInfo("Digest", "*", 
-						 to_std_str(username), 0, 
-						 to_std_str(password));
+        pj::AuthCredInfo info = pj::AuthCredInfo("Digest", "*", 
+                                                 to_std_str(username), 0, 
+                                                 to_std_str(password));
 
-	accConfig->idUri = to_std_str(id);
-	accConfig->regConfig.registrarUri = to_std_str(registrar);
+        accConfig->idUri = to_std_str(id);
+        accConfig->regConfig.registrarUri = to_std_str(registrar);
 
-	accConfig->sipConfig.authCreds.clear();    
-	accConfig->sipConfig.authCreds.push_back(info);
+        accConfig->sipConfig.authCreds.clear();    
+        accConfig->sipConfig.authCreds.push_back(info);
 
-	accConfig->sipConfig.proxies.clear();
-	accConfig->sipConfig.proxies.push_back(to_std_str(proxy));
+        accConfig->sipConfig.proxies.clear();
+        accConfig->sipConfig.proxies.push_back(to_std_str(proxy));
     }
 
     if (!isThreadRegistered())
     {
-	registerThread("registerAccount");
+        registerThread("registerAccount");
     }
 
     account->modify(*accConfig);

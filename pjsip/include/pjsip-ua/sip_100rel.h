@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -85,12 +84,12 @@
     options |= PJSIP_INV_SUPPORT_100REL;
 
     status = pjsip_inv_verify_request(rdata, &options, answer, NULL,
-				      endpt, &resp);
+                                      endpt, &resp);
     if (status != PJ_SUCCESS) {
-	// INVITE request cannot be handled.
-	// Reject the request with the response in resp.
-	...
-	return;
+        // INVITE request cannot be handled.
+        // Reject the request with the response in resp.
+        ...
+        return;
     }
 
     // Create UAS dialog, populate Contact header, etc.
@@ -141,9 +140,9 @@ PJ_DECL(const pjsip_method*) pjsip_get_prack_method(void);
  * Initialize 100rel module. This function must be called once during
  * application initialization, to register 100rel module to SIP endpoint.
  *
- * @param endpt		The SIP endpoint instance.
+ * @param endpt         The SIP endpoint instance.
  *
- * @return		PJ_SUCCESS if module is successfully initialized.
+ * @return              PJ_SUCCESS if module is successfully initialized.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_init_module(pjsip_endpoint *endpt);
 
@@ -153,9 +152,9 @@ PJ_DECL(pj_status_t) pjsip_100rel_init_module(pjsip_endpoint *endpt);
  * be called internally by the invite session if it detects that the
  * session needs 100rel support.
  *
- * @param inv		The invite session.
+ * @param inv           The invite session.
  *
- * @return		PJ_SUCCESS on successful.
+ * @return              PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_attach(pjsip_inv_session *inv);
 
@@ -163,9 +162,9 @@ PJ_DECL(pj_status_t) pjsip_100rel_attach(pjsip_inv_session *inv);
 /**
  * Check if incoming response has reliable provisional response feature.
  *
- * @param rdata		Receive data buffer containing the response.
+ * @param rdata         Receive data buffer containing the response.
  *
- * @return		PJ_TRUE if the provisional response is reliable.
+ * @return              PJ_TRUE if the provisional response is reliable.
  */
 PJ_DECL(pj_bool_t) pjsip_100rel_is_reliable(pjsip_rx_data *rdata);
 
@@ -174,39 +173,39 @@ PJ_DECL(pj_bool_t) pjsip_100rel_is_reliable(pjsip_rx_data *rdata);
  * Create PRACK request for the incoming reliable provisional response.
  * Note that PRACK request MUST be sent using #pjsip_100rel_send_prack().
  *
- * @param inv		The invite session.
- * @param rdata		The incoming reliable provisional response.
- * @param p_tdata	Upon return, it will be initialized with the
- *			PRACK request.
+ * @param inv           The invite session.
+ * @param rdata         The incoming reliable provisional response.
+ * @param p_tdata       Upon return, it will be initialized with the
+ *                      PRACK request.
  *
- * @return		PJ_SUCCESS on successful.
+ * @return              PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_create_prack(pjsip_inv_session *inv,
-					       pjsip_rx_data *rdata,
-					       pjsip_tx_data **p_tdata);
+                                               pjsip_rx_data *rdata,
+                                               pjsip_tx_data **p_tdata);
 
 /**
  * Send PRACK request.
  *
- * @param inv		The invite session.
- * @param tdata		The PRACK request.
+ * @param inv           The invite session.
+ * @param tdata         The PRACK request.
  *
- * @return		PJ_SUCCESS on successful.
+ * @return              PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_send_prack(pjsip_inv_session *inv,
-					     pjsip_tx_data *tdata);
+                                             pjsip_tx_data *tdata);
 
 
 /**
  * Handle incoming PRACK request.
  *
- * @param inv		The invite session.
- * @param rdata		Incoming PRACK request.
+ * @param inv           The invite session.
+ * @param rdata         Incoming PRACK request.
  *
- * @return		PJ_SUCCESS on successful.
+ * @return              PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_on_rx_prack(pjsip_inv_session *inv,
-					      pjsip_rx_data *rdata);
+                                              pjsip_rx_data *rdata);
 
 
 /**
@@ -216,21 +215,21 @@ PJ_DECL(pj_status_t) pjsip_100rel_on_rx_prack(pjsip_inv_session *inv,
  * reliable response processing. This function will be called internally
  * by invite session.
  *
- * @param inv		The invite session.
- * @param tdata		The INVITE response.
+ * @param inv           The invite session.
+ * @param tdata         The INVITE response.
  *
- * @return		PJ_SUCCESS on successful.
+ * @return              PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
-					      pjsip_tx_data *tdata);
+                                              pjsip_tx_data *tdata);
 
 
 /**
  * Notify 100rel module that the invite session has been disconnected.
  *
- * @param inv		The invite session.
+ * @param inv           The invite session.
  *
- * @return		PJ_SUCCESS on successful.
+ * @return              PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_end_session(pjsip_inv_session *inv);
 
@@ -242,4 +241,4 @@ PJ_END_DECL
  */
 
 
-#endif	/* __SIP_100REL_H__ */
+#endif  /* __SIP_100REL_H__ */

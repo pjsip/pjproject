@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -54,7 +53,7 @@
  * Settings to enable L16 codec 8KHz, mono. By default it is disabled.
  */
 #ifndef PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
-#   define PJMEDIA_CODEC_L16_HAS_8KHZ_MONO	0
+#   define PJMEDIA_CODEC_L16_HAS_8KHZ_MONO      0
 #endif
 
 
@@ -62,7 +61,7 @@
  * Settings to enable L16 codec 8KHz, stereo. By default it is disabled.
  */
 #ifndef PJMEDIA_CODEC_L16_HAS_8KHZ_STEREO
-#   define PJMEDIA_CODEC_L16_HAS_8KHZ_STEREO	0
+#   define PJMEDIA_CODEC_L16_HAS_8KHZ_STEREO    0
 #endif
 
 
@@ -70,7 +69,7 @@
  * Settings to enable L16 codec 16KHz, mono. By default it is disabled.
  */
 #ifndef PJMEDIA_CODEC_L16_HAS_16KHZ_MONO
-#   define PJMEDIA_CODEC_L16_HAS_16KHZ_MONO	0
+#   define PJMEDIA_CODEC_L16_HAS_16KHZ_MONO     0
 #endif
 
 
@@ -78,7 +77,7 @@
  * Settings to enable L16 codec 16KHz, stereo. By default it is disabled.
  */
 #ifndef PJMEDIA_CODEC_L16_HAS_16KHZ_STEREO
-#   define PJMEDIA_CODEC_L16_HAS_16KHZ_STEREO	0
+#   define PJMEDIA_CODEC_L16_HAS_16KHZ_STEREO   0
 #endif
 
 
@@ -86,7 +85,7 @@
  * Settings to enable L16 codec 48KHz, mono. By default it is disabled.
  */
 #ifndef PJMEDIA_CODEC_L16_HAS_48KHZ_MONO
-#   define PJMEDIA_CODEC_L16_HAS_48KHZ_MONO	0
+#   define PJMEDIA_CODEC_L16_HAS_48KHZ_MONO     0
 #endif
 
 
@@ -94,7 +93,7 @@
  * Settings to enable L16 codec 48KHz, stereo. By default it is disabled.
  */
 #ifndef PJMEDIA_CODEC_L16_HAS_48KHZ_STEREO
-#   define PJMEDIA_CODEC_L16_HAS_48KHZ_STEREO	0
+#   define PJMEDIA_CODEC_L16_HAS_48KHZ_STEREO   0
 #endif
 
 
@@ -125,7 +124,7 @@
  * this setting via its codec quality setting (i.e PJSUA_DEFAULT_CODEC_QUALITY).
  */
 #ifndef PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY
-#   define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY	    8
+#   define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY      8
 #endif
 
 
@@ -172,7 +171,7 @@
  * Default: 2.
  */
 #ifndef PJMEDIA_G722_DEFAULT_PCM_SHIFT
-#   define PJMEDIA_G722_DEFAULT_PCM_SHIFT	    2
+#   define PJMEDIA_G722_DEFAULT_PCM_SHIFT           2
 #endif
 
 
@@ -201,7 +200,7 @@
  * Intel IPP with PJMEDIA.
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP
-#   define PJMEDIA_HAS_INTEL_IPP		0
+#   define PJMEDIA_HAS_INTEL_IPP                0
 #endif
 
 
@@ -220,7 +219,7 @@
  * Default 1.
  */
 #ifndef PJMEDIA_AUTO_LINK_IPP_LIBS
-#   define PJMEDIA_AUTO_LINK_IPP_LIBS		1
+#   define PJMEDIA_AUTO_LINK_IPP_LIBS           1
 #endif
 
 
@@ -232,7 +231,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
-#   define PJMEDIA_HAS_INTEL_IPP_CODEC_AMR	1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_AMR      1
 #endif
 
 
@@ -244,7 +243,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB
-#   define PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB	1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB    1
 #endif
 
 
@@ -255,7 +254,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G729
-#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G729	1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G729     1
 #endif
 
 
@@ -266,7 +265,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1
-#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1	1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1   1
 #endif
 
 
@@ -277,7 +276,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G726
-#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G726	1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G726     1
 #endif
 
 
@@ -288,7 +287,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G728
-#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G728	1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G728     1
 #endif
 
 
@@ -299,7 +298,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
-#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1	1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1   1
 #endif
 
 /**
@@ -308,7 +307,7 @@
  * Default: 0
  */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODECS
-#   define PJMEDIA_HAS_PASSTHROUGH_CODECS	0
+#   define PJMEDIA_HAS_PASSTHROUGH_CODECS       0
 #endif
 
 /**
@@ -317,7 +316,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
-#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR	1
+#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR    1
 #endif
 
 /**
@@ -326,7 +325,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
-#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_G729	1
+#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_G729   1
 #endif
 
 /**
@@ -335,7 +334,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
-#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC	1
+#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC   1
 #endif
 
 /**
@@ -344,7 +343,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU
-#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU	1
+#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU   1
 #endif
 
 /**
@@ -353,7 +352,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA
-#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA	1
+#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA   1
 #endif
 
 /* If passthrough and PCMU/PCMA are enabled, disable the software
@@ -362,7 +361,7 @@
 #if PJMEDIA_HAS_PASSTHROUGH_CODECS && \
     (PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU || PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA)
 #   undef PJMEDIA_HAS_G711_CODEC
-#   define PJMEDIA_HAS_G711_CODEC		0
+#   define PJMEDIA_HAS_G711_CODEC               0
 #endif
 
 
@@ -370,7 +369,7 @@
  * G.722.1 codec is disabled by default.
  */
 #ifndef PJMEDIA_HAS_G7221_CODEC
-#   define PJMEDIA_HAS_G7221_CODEC		0
+#   define PJMEDIA_HAS_G7221_CODEC              0
 #endif
 
 /**
@@ -380,7 +379,7 @@
  * Default: 0
  */
 #ifndef PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
-#   define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC	0
+#   define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC     0
 #endif
 
 /**
@@ -390,7 +389,7 @@
  * Default: 0
  */
 #ifndef PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
-#   define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC	0
+#   define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC     0
 #endif
 
 /**
@@ -401,7 +400,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_AUTO_LINK_OPENCORE_AMR_LIBS
-#  define PJMEDIA_AUTO_LINK_OPENCORE_AMR_LIBS	1
+#  define PJMEDIA_AUTO_LINK_OPENCORE_AMR_LIBS   1
 #endif
 
 /**
@@ -412,7 +411,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_OPENCORE_AMR_BUILT_WITH_GCC
-#   define PJMEDIA_OPENCORE_AMR_BUILT_WITH_GCC	1
+#   define PJMEDIA_OPENCORE_AMR_BUILT_WITH_GCC  1
 #endif
 
 
@@ -426,7 +425,7 @@
  * #pjmedia_codec_g7221_set_pcm_shift().
  */
 #ifndef PJMEDIA_G7221_DEFAULT_PCM_SHIFT
-#   define PJMEDIA_G7221_DEFAULT_PCM_SHIFT	1
+#   define PJMEDIA_G7221_DEFAULT_PCM_SHIFT      1
 #endif
 
 
@@ -442,9 +441,9 @@
 #if (PJMEDIA_HAS_G7221_CODEC != 0) && (PJMEDIA_HAS_INTEL_IPP != 0) && \
     (PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 != 0)
 #   error Only one G.722.1 implementation can be enabled at the same time. \
-	  Please use PJMEDIA_HAS_G7221_CODEC and \
-	  PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 in your config_site.h \
-	  to control which implementation to be used.
+          Please use PJMEDIA_HAS_G7221_CODEC and \
+          PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 in your config_site.h \
+          to control which implementation to be used.
 #endif
 
 
@@ -454,7 +453,7 @@
  * Default: 0
  */
 #ifndef PJMEDIA_HAS_SILK_CODEC
-#   define PJMEDIA_HAS_SILK_CODEC		0
+#   define PJMEDIA_HAS_SILK_CODEC               0
 #endif
 
 
@@ -476,7 +475,7 @@
  * Default: 10
  */
 #ifndef PJMEDIA_CODEC_SILK_DEFAULT_QUALITY
-#   define PJMEDIA_CODEC_SILK_DEFAULT_QUALITY	    10
+#   define PJMEDIA_CODEC_SILK_DEFAULT_QUALITY       10
 #endif
 
 
@@ -486,7 +485,7 @@
  * Default: 0
  */
 #ifndef PJMEDIA_HAS_OPUS_CODEC
-#   define PJMEDIA_HAS_OPUS_CODEC			0
+#   define PJMEDIA_HAS_OPUS_CODEC                       0
 #endif
 
 /**
@@ -495,7 +494,7 @@
  * Default: 48000
  */
 #ifndef PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE
-#   define PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE  	48000
+#   define PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE       48000
 #endif
 
 /**
@@ -506,7 +505,7 @@
  * rate, channel count, etc).
  */
 #ifndef PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE
-#   define PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE  	0
+#   define PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE          0
 #endif
 
 
@@ -517,7 +516,7 @@
  * Default: 5
  */
 #ifndef PJMEDIA_CODEC_OPUS_DEFAULT_COMPLEXITY
-#   define PJMEDIA_CODEC_OPUS_DEFAULT_COMPLEXITY 	5
+#   define PJMEDIA_CODEC_OPUS_DEFAULT_COMPLEXITY        5
 #endif
 
 
@@ -527,7 +526,7 @@
  * Default: PJ_FALSE (which means Opus will use VBR (variable bit rate))
  */
 #ifndef PJMEDIA_CODEC_OPUS_DEFAULT_CBR
-#   define PJMEDIA_CODEC_OPUS_DEFAULT_CBR 		PJ_FALSE
+#   define PJMEDIA_CODEC_OPUS_DEFAULT_CBR               PJ_FALSE
 #endif
 
 
@@ -537,7 +536,7 @@
  * Default: 0 
  */
 #ifndef PJMEDIA_HAS_BCG729
-#   define PJMEDIA_HAS_BCG729				0
+#   define PJMEDIA_HAS_BCG729                           0
 #endif
 
 
@@ -547,7 +546,7 @@
  * Default: PJMEDIA_HAS_LIBAVFORMAT
  */
 #ifndef PJMEDIA_HAS_FFMPEG_CODEC
-#   define PJMEDIA_HAS_FFMPEG_CODEC		PJMEDIA_HAS_LIBAVFORMAT
+#   define PJMEDIA_HAS_FFMPEG_CODEC             PJMEDIA_HAS_LIBAVFORMAT
 #endif
 
 
@@ -557,7 +556,7 @@
  * Default: PJMEDIA_HAS_FFMPEG_CODEC
  */
 #ifndef PJMEDIA_HAS_FFMPEG_VID_CODEC
-#   define PJMEDIA_HAS_FFMPEG_VID_CODEC		PJMEDIA_HAS_FFMPEG_CODEC
+#   define PJMEDIA_HAS_FFMPEG_VID_CODEC         PJMEDIA_HAS_FFMPEG_CODEC
 #endif
 
 /**
@@ -566,7 +565,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_FFMPEG_CODEC_H263P
-#   define PJMEDIA_HAS_FFMPEG_CODEC_H263P	PJMEDIA_HAS_FFMPEG_VID_CODEC
+#   define PJMEDIA_HAS_FFMPEG_CODEC_H263P       PJMEDIA_HAS_FFMPEG_VID_CODEC
 #endif
 
 /**
@@ -577,9 +576,9 @@
  */
 #ifndef PJMEDIA_HAS_FFMPEG_CODEC_H264
 #   if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
-#	define PJMEDIA_HAS_FFMPEG_CODEC_H264	0
+#       define PJMEDIA_HAS_FFMPEG_CODEC_H264    0
 #   else
-#	define PJMEDIA_HAS_FFMPEG_CODEC_H264	PJMEDIA_HAS_FFMPEG_VID_CODEC
+#       define PJMEDIA_HAS_FFMPEG_CODEC_H264    PJMEDIA_HAS_FFMPEG_VID_CODEC
 #   endif
 #endif
 
@@ -588,17 +587,17 @@
  */
 #ifndef PJMEDIA_HAS_FFMPEG_CODEC_VP8
 #   if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
-#	define PJMEDIA_HAS_FFMPEG_CODEC_VP8		0
+#       define PJMEDIA_HAS_FFMPEG_CODEC_VP8             0
 #   else
-#	define PJMEDIA_HAS_FFMPEG_CODEC_VP8		1
+#       define PJMEDIA_HAS_FFMPEG_CODEC_VP8             1
 #   endif
 #endif
 
 #ifndef PJMEDIA_HAS_FFMPEG_CODEC_VP9
 #   if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
-#	define PJMEDIA_HAS_FFMPEG_CODEC_VP9		0
+#       define PJMEDIA_HAS_FFMPEG_CODEC_VP9             0
 #   else
-#	define PJMEDIA_HAS_FFMPEG_CODEC_VP9		1
+#       define PJMEDIA_HAS_FFMPEG_CODEC_VP9             1
 #   endif
 #endif
 
@@ -620,7 +619,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_VPX_CODEC_VP8
-#   define PJMEDIA_HAS_VPX_CODEC_VP8		1
+#   define PJMEDIA_HAS_VPX_CODEC_VP8            1
 #endif
 
 /**
@@ -629,7 +628,7 @@
  * Default: 0 (disabled)
  */
 #ifndef PJMEDIA_HAS_VPX_CODEC_VP9
-#   define PJMEDIA_HAS_VPX_CODEC_VP9		0
+#   define PJMEDIA_HAS_VPX_CODEC_VP9            0
 #endif
 
 /**
@@ -638,7 +637,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_AND_MEDIA_AMRNB
-#   define PJMEDIA_HAS_AND_MEDIA_AMRNB		1
+#   define PJMEDIA_HAS_AND_MEDIA_AMRNB          1
 #endif
 
 /**
@@ -647,7 +646,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_AND_MEDIA_AMRWB
-#   define PJMEDIA_HAS_AND_MEDIA_AMRWB		1
+#   define PJMEDIA_HAS_AND_MEDIA_AMRWB          1
 #endif
 
 /**
@@ -656,7 +655,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_AND_MEDIA_H264
-#   define PJMEDIA_HAS_AND_MEDIA_H264		1
+#   define PJMEDIA_HAS_AND_MEDIA_H264           1
 #endif
 
 /**
@@ -665,7 +664,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_AND_MEDIA_VP8
-#   define PJMEDIA_HAS_AND_MEDIA_VP8		1
+#   define PJMEDIA_HAS_AND_MEDIA_VP8            1
 #endif
 
 /**
@@ -674,7 +673,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_HAS_AND_MEDIA_VP9
-#   define PJMEDIA_HAS_AND_MEDIA_VP9		1
+#   define PJMEDIA_HAS_AND_MEDIA_VP9            1
 #endif
 
 /**
@@ -686,7 +685,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC
-#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC 	1
+#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC   1
 #endif
 
 /**
@@ -698,7 +697,7 @@
  * Default: 1
  */
 #ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC
-#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC 	1
+#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC   1
 #endif
 
 
@@ -709,7 +708,7 @@
  * Default: 5 (seconds)
  */
 #ifndef PJMEDIA_CODEC_VID_TOOLBOX_MAX_KEYFRAME_INTERVAL
-#   define PJMEDIA_CODEC_VID_TOOLBOX_MAX_KEYFRAME_INTERVAL	5
+#   define PJMEDIA_CODEC_VID_TOOLBOX_MAX_KEYFRAME_INTERVAL      5
 #endif
 
 /**
@@ -718,4 +717,4 @@
 
 
 
-#endif	/* __PJMEDIA_CODEC_CONFIG_H__ */
+#endif  /* __PJMEDIA_CODEC_CONFIG_H__ */

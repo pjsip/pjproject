@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -61,18 +60,18 @@
  */
 #if defined(_MSC_VER) && defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
 #   ifndef s_addr
-#	define s_addr  S_un.S_addr
+#       define s_addr  S_un.S_addr
 #   endif
 
 #   if !defined(IPPROTO_IPV6) && (_WIN32_WINNT == 0x0500)
-	/* Need to download and install IPv6Kit for this platform.
-	 * Please see the comments above about Visual Studio 6.
-	 */
-#	include <tpipv6.h>
+        /* Need to download and install IPv6Kit for this platform.
+         * Please see the comments above about Visual Studio 6.
+         */
+#       include <tpipv6.h>
 #   endif
 
 #   define PJ_SOCK_HAS_GETADDRINFO  1
-#endif	/* _MSC_VER */
+#endif  /* _MSC_VER */
 
 #if defined(PJ_HAS_SYS_TYPES_H) && PJ_HAS_SYS_TYPES_H != 0
 #  include <sys/types.h>
@@ -124,7 +123,7 @@
 #endif
 
 #if defined(PJ_HAS_SYS_IOCTL_H) && PJ_HAS_SYS_IOCTL_H != 0
-#  include <sys/ioctl.h>	/* FBIONBIO */
+#  include <sys/ioctl.h>        /* FBIONBIO */
 #endif
 
 #if defined(PJ_HAS_ERRNO_H) && PJ_HAS_ERRNO_H != 0
@@ -217,5 +216,5 @@
 #   define PJ_SOCKADDR_RESET_LEN(addr)
 #endif
 
-#endif	/* __PJ_COMPAT_SOCKET_H__ */
+#endif  /* __PJ_COMPAT_SOCKET_H__ */
 

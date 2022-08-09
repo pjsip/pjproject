@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2010 Teluu Inc. (http://www.teluu.com)
  *
@@ -70,7 +69,7 @@ typedef struct pj_cli_console_cfg
 /**
  * Initialize pj_cli_console_cfg with its default values.
  *
- * @param param		The structure to be initialized.
+ * @param param         The structure to be initialized.
  */
 PJ_DECL(void) pj_cli_console_cfg_default(pj_cli_console_cfg *param);
 
@@ -80,33 +79,33 @@ PJ_DECL(void) pj_cli_console_cfg_default(pj_cli_console_cfg *param);
  * the only session instance for the console front end. On Windows operating
  * system, this may open a new console window.
  *
- * @param cli		The CLI application instance.
- * @param param		Optional console CLI parameters. If this value is
- * 			NULL, default parameters will be used.
- * @param p_sess	Pointer to receive the session instance for the
- * 			console front end.
- * @param p_fe		Optional pointer to receive the front-end instance
- * 			of the console front-end just created.
+ * @param cli           The CLI application instance.
+ * @param param         Optional console CLI parameters. If this value is
+ *                      NULL, default parameters will be used.
+ * @param p_sess        Pointer to receive the session instance for the
+ *                      console front end.
+ * @param p_fe          Optional pointer to receive the front-end instance
+ *                      of the console front-end just created.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
-					   const pj_cli_console_cfg *param,
-					   pj_cli_sess **p_sess,
-					   pj_cli_front_end **p_fe);
+                                           const pj_cli_console_cfg *param,
+                                           pj_cli_sess **p_sess,
+                                           pj_cli_front_end **p_fe);
 
 /**
  * Retrieve a cmdline from console stdin and process the input accordingly.
  *
- * @param sess		The CLI session.
- * @param buf		Pointer to receive the buffer.
- * @param maxlen	Maximum length to read.
+ * @param sess          The CLI session.
+ * @param buf           Pointer to receive the buffer.
+ * @param maxlen        Maximum length to read.
  *
- * @return		PJ_SUCCESS if an input was read
+ * @return              PJ_SUCCESS if an input was read
  */
 PJ_DECL(pj_status_t) pj_cli_console_process(pj_cli_sess *sess, 
-					    char *buf,
-					    unsigned maxlen);
+                                            char *buf,
+                                            unsigned maxlen);
 
 /**
  * @}

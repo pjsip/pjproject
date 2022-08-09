@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013-2014 Teluu Inc. (http://www.teluu.com)
  *
@@ -32,7 +31,7 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
-#define THIS_FILE		"android_opengl.cpp"
+#define THIS_FILE               "android_opengl.cpp"
 
 #define MAX_JOBS 1
 /* Define the number of errors before the stream stops trying to do rendering.
@@ -75,12 +74,12 @@ typedef struct job_queue {
 /* Video stream. */
 struct andgl_stream
 {
-    pjmedia_vid_dev_stream  base;		/**< Base stream       */
-    pjmedia_vid_dev_param   param;		/**< Settings	       */
-    pj_pool_t		   *pool;		/**< Memory pool       */
+    pjmedia_vid_dev_stream  base;               /**< Base stream       */
+    pjmedia_vid_dev_param   param;              /**< Settings          */
+    pj_pool_t              *pool;               /**< Memory pool       */
     
-    pjmedia_vid_dev_cb	    vid_cb;		/**< Stream callback   */
-    void		   *user_data;          /**< Application data  */
+    pjmedia_vid_dev_cb      vid_cb;             /**< Stream callback   */
+    void                   *user_data;          /**< Application data  */
     
     pj_timestamp            frame_ts;
     unsigned                ts_inc;
@@ -88,14 +87,14 @@ struct andgl_stream
     
     job_queue              *jq;
     pj_bool_t               is_running;
-    pj_int32_t		    err_rend;
+    pj_int32_t              err_rend;
     const pjmedia_frame    *frame;
     
     gl_buffers             *gl_buf;
-    EGLDisplay 		    display;
-    EGLSurface 		    surface;
-    EGLContext 		    context;
-    ANativeWindow 	   *window;
+    EGLDisplay              display;
+    EGLSurface              surface;
+    EGLContext              context;
+    ANativeWindow          *window;
 };
 
 
@@ -120,8 +119,8 @@ static pj_status_t deinit_opengl(void * data);
 /* Job queue prototypes */
 static pj_status_t job_queue_create(pj_pool_t *pool, job_queue **pjq);
 static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
-				      void *data, unsigned flags,
-				      pj_status_t *retval);
+                                      void *data, unsigned flags,
+                                      pj_status_t *retval);
 static pj_status_t job_queue_destroy(job_queue *jq);
 
 /* Operations */
@@ -158,7 +157,7 @@ static andgl_fmt_info* get_andgl_format_info(pjmedia_format_id id)
     { \
         PJ_LOG(3, (THIS_FILE, "Unable to %s %d", str, eglGetError())); \
         status = PJMEDIA_EVID_SYSERR; \
-	goto on_return; \
+        goto on_return; \
     }
 
 static pj_status_t init_opengl(void * data)
@@ -168,7 +167,7 @@ static pj_status_t init_opengl(void * data)
     {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_SURFACE_TYPE,
         EGL_WINDOW_BIT, EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8,
-	EGL_RED_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_NONE
+        EGL_RED_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_NONE
     };
     EGLint context_attr[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
     EGLConfig config;
@@ -180,13 +179,13 @@ static pj_status_t init_opengl(void * data)
     
     strm->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (strm->display == EGL_NO_DISPLAY ||
-    	!eglInitialize(strm->display, NULL, NULL))
+        !eglInitialize(strm->display, NULL, NULL))
     {
         EGL_ERR("initialize OpenGL display");
     }
 
     if (!eglChooseConfig(strm->display, attr, &config, 1, &numConfigs) ||
-	(!eglGetConfigAttrib(strm->display, config, EGL_NATIVE_VISUAL_ID,
+        (!eglGetConfigAttrib(strm->display, config, EGL_NATIVE_VISUAL_ID,
                              &format)))
     {
         EGL_ERR("configure OpenGL display");
@@ -228,7 +227,7 @@ static pj_status_t init_opengl(void * data)
     
 on_return:
     if (status != PJ_SUCCESS)
-	deinit_opengl(strm);
+        deinit_opengl(strm);
 
     return status;
 }
@@ -240,7 +239,7 @@ static pj_status_t render(void * data)
     struct andgl_stream *stream = (struct andgl_stream *)data;
     
     if (stream->display == EGL_NO_DISPLAY || stream->err_rend == 0)
-    	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     
     pjmedia_vid_dev_opengl_draw(stream->gl_buf, stream->vid_size.w,
                                 stream->vid_size.h, stream->frame->buf);
@@ -250,8 +249,8 @@ static pj_status_t render(void * data)
             stream->err_rend--;
             if (stream->err_rend == 0) {
                 PJ_LOG(3, (THIS_FILE, "Stopping OpenGL rendering due to "
-			              "consecutive errors. If app is in bg,"
-			              "it's advisable to stop the stream."));
+                                      "consecutive errors. If app is in bg,"
+                                      "it's advisable to stop the stream."));
             }
         }
         return eglGetError();
@@ -320,13 +319,13 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
 
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         status = andgl_stream_set_cap(&strm->base,
-                	  	      PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
-                             	      &param->window);
+                                      PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
+                                      &param->window);
     }
     
     if (status != PJ_SUCCESS) {
         PJ_LOG(3, (THIS_FILE, "Failed to initialize OpenGL with the specified"
-			      " output window"));
+                              " output window"));
         goto on_error;
     }
 
@@ -379,7 +378,7 @@ static pj_status_t andgl_stream_get_cap(pjmedia_vid_dev_stream *s,
         wnd->info.android.window = strm->window;
         return PJ_SUCCESS;
     } else {
-	return PJMEDIA_EVID_INVCAP;
+        return PJMEDIA_EVID_INVCAP;
     }
 }
 
@@ -419,13 +418,13 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         pj_memcpy(&strm->vid_size, &vfd->size, sizeof(vfd->size));
         pj_memcpy(&strm->param.disp_size, &vfd->size, sizeof(vfd->size));
         
-	if (strm->window)
-	    job_queue_post_job(strm->jq, init_opengl, strm, 0, &status);
-	    
-	PJ_PERROR(4,(THIS_FILE, status,
-		     "Re-initializing OpenGL due to format change"));
-	return status;
-	
+        if (strm->window)
+            job_queue_post_job(strm->jq, init_opengl, strm, 0, &status);
+            
+        PJ_PERROR(4,(THIS_FILE, status,
+                     "Re-initializing OpenGL due to format change"));
+        return status;
+        
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         pj_status_t status = PJ_SUCCESS;
         pjmedia_vid_dev_hwnd *wnd = (pjmedia_vid_dev_hwnd *)pval;
@@ -445,8 +444,8 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         }
 
         PJ_PERROR(4,(THIS_FILE, status,
-		     "Re-initializing OpenGL with native window %p",
-		     strm->window));
+                     "Re-initializing OpenGL with native window %p",
+                     strm->window));
         return status;
     }
     
@@ -477,10 +476,10 @@ static pj_status_t andgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
      * or keep-alive, this port doesn't need any, just ignore.
      */
     if (frame->size==0 || frame->buf==NULL)
-	return PJ_SUCCESS;
-	
+        return PJ_SUCCESS;
+        
     if (!stream->is_running || stream->display == EGL_NO_DISPLAY)
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
     
     stream->frame = frame;
     job_queue_post_job(stream->jq, render, strm, 0, &status);
@@ -533,7 +532,7 @@ static int job_thread(void * data)
     while (1) {
         job *jb;
         
-	/* Wait until there is a job. */
+        /* Wait until there is a job. */
         pj_sem_wait(jq->sem);
         
         /* Make sure there is no pending jobs before we quit. */
@@ -584,8 +583,8 @@ on_error:
 }
 
 static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
-				      void *data, unsigned flags,
-				      pj_status_t *retval)
+                                      void *data, unsigned flags,
+                                      pj_status_t *retval)
 {
     job jb;
     int tail;
@@ -643,4 +642,4 @@ static pj_status_t job_queue_destroy(job_queue *jq)
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL */

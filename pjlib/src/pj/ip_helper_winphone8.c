@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -27,8 +26,8 @@
  * Enumerate the local IP interface currently active in the host.
  */
 PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
-					 unsigned *p_cnt,
-					 pj_sockaddr ifs[])
+                                         unsigned *p_cnt,
+                                         pj_sockaddr ifs[])
 {
     PJ_UNUSED_ARG(af);
     PJ_UNUSED_ARG(ifs);
@@ -44,8 +43,8 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
  * Enumerate the local IP interface currently active in the host.
  */
 PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
-					   unsigned *p_cnt,
-					   pj_sockaddr ifs[])
+                                           unsigned *p_cnt,
+                                           pj_sockaddr ifs[])
 {
     PJ_UNUSED_ARG(opt);
     PJ_UNUSED_ARG(ifs);
@@ -64,7 +63,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
  * Enumerate the IP routing table for this host.
  */
 PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
-				     pj_ip_route_entry routes[])
+                                     pj_ip_route_entry routes[])
 {
     PJ_UNUSED_ARG(routes);
     PJ_ASSERT_RETURN(p_cnt, PJ_EINVAL);

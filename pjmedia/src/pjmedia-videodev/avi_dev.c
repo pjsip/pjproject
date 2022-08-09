@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -27,26 +26,26 @@
 #if defined(PJMEDIA_VIDEO_DEV_HAS_AVI) && PJMEDIA_VIDEO_DEV_HAS_AVI != 0 && \
     defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
-#define THIS_FILE		"avi_dev.c"
-#define DRIVER_NAME		"AVIDev"
-#define DEFAULT_CLOCK_RATE	90000
-#define DEFAULT_WIDTH		640
-#define DEFAULT_HEIGHT		480
-#define DEFAULT_FPS		25
+#define THIS_FILE               "avi_dev.c"
+#define DRIVER_NAME             "AVIDev"
+#define DEFAULT_CLOCK_RATE      90000
+#define DEFAULT_WIDTH           640
+#define DEFAULT_HEIGHT          480
+#define DEFAULT_FPS             25
 
 typedef struct avi_dev_strm avi_dev_strm;
 
 /* avi_ device info */
 struct avi_dev_info
 {
-    pjmedia_vid_dev_info	 info;
+    pjmedia_vid_dev_info         info;
 
-    pj_pool_t			*pool;
-    pj_str_t			 fpath;
-    pj_str_t			 title;
-    pjmedia_avi_streams		*avi;
+    pj_pool_t                   *pool;
+    pj_str_t                     fpath;
+    pj_str_t                     title;
+    pjmedia_avi_streams         *avi;
     pjmedia_port                *vid;
-    avi_dev_strm		*strm;
+    avi_dev_strm                *strm;
     pjmedia_vid_codec           *codec;
     pj_uint8_t                  *enc_buf;
     pj_size_t                    enc_buf_size;
@@ -55,24 +54,24 @@ struct avi_dev_info
 /* avi_ factory */
 struct avi_factory
 {
-    pjmedia_vid_dev_factory	 base;
-    pj_pool_t			*pool;
-    pj_pool_factory		*pf;
+    pjmedia_vid_dev_factory      base;
+    pj_pool_t                   *pool;
+    pj_pool_factory             *pf;
 
-    unsigned			 dev_count;
-    struct avi_dev_info		*dev_info;
+    unsigned                     dev_count;
+    struct avi_dev_info         *dev_info;
 };
 
 /* Video stream. */
 struct avi_dev_strm
 {
-    pjmedia_vid_dev_stream	     base;	    /**< Base stream	    */
-    pjmedia_vid_dev_param	     param;	    /**< Settings	    */
-    pj_pool_t			    *pool;          /**< Memory pool.       */
-    struct avi_dev_info		    *adi;
+    pjmedia_vid_dev_stream           base;          /**< Base stream        */
+    pjmedia_vid_dev_param            param;         /**< Settings           */
+    pj_pool_t                       *pool;          /**< Memory pool.       */
+    struct avi_dev_info             *adi;
 
-    pjmedia_vid_dev_cb		     vid_cb;	    /**< Stream callback.   */
-    void			    *user_data;	    /**< Application data.  */
+    pjmedia_vid_dev_cb               vid_cb;        /**< Stream callback.   */
+    void                            *user_data;     /**< Application data.  */
 };
 
 
@@ -82,27 +81,27 @@ static pj_status_t avi_factory_destroy(pjmedia_vid_dev_factory *f);
 static pj_status_t avi_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    avi_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t avi_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_info *info);
+                                             unsigned index,
+                                             pjmedia_vid_dev_info *info);
 static pj_status_t avi_factory_default_param(pj_pool_t *pool,
                                               pjmedia_vid_dev_factory *f,
-					      unsigned index,
-					      pjmedia_vid_dev_param *param);
+                                              unsigned index,
+                                              pjmedia_vid_dev_param *param);
 static pj_status_t avi_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm);
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm);
 
 static pj_status_t avi_dev_strm_get_param(pjmedia_vid_dev_stream *strm,
-					  pjmedia_vid_dev_param *param);
+                                          pjmedia_vid_dev_param *param);
 static pj_status_t avi_dev_strm_get_cap(pjmedia_vid_dev_stream *strm,
-				        pjmedia_vid_dev_cap cap,
-				        void *value);
+                                        pjmedia_vid_dev_cap cap,
+                                        void *value);
 static pj_status_t avi_dev_strm_set_cap(pjmedia_vid_dev_stream *strm,
-				        pjmedia_vid_dev_cap cap,
-				        const void *value);
+                                        pjmedia_vid_dev_cap cap,
+                                        const void *value);
 static pj_status_t avi_dev_strm_get_frame(pjmedia_vid_dev_stream *strm,
                                           pjmedia_frame *frame);
 static pj_status_t avi_dev_strm_start(pjmedia_vid_dev_stream *strm);
@@ -142,9 +141,9 @@ static pjmedia_vid_dev_stream_op stream_op =
 
 /* API */
 PJ_DEF(pj_status_t) pjmedia_avi_dev_create_factory(
-				    pj_pool_factory *pf,
-				    unsigned max_dev,
-				    pjmedia_vid_dev_factory **p_ret)
+                                    pj_pool_factory *pf,
+                                    unsigned max_dev,
+                                    pjmedia_vid_dev_factory **p_ret)
 {
     struct avi_factory *cf;
     pj_pool_t *pool;
@@ -158,19 +157,19 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_create_factory(
     cf->base.op = &factory_op;
 
     cf->dev_info = (struct avi_dev_info*)
- 		   pj_pool_calloc(cf->pool, cf->dev_count,
- 				  sizeof(struct avi_dev_info));
+                   pj_pool_calloc(cf->pool, cf->dev_count,
+                                  sizeof(struct avi_dev_info));
 
     if (p_ret) {
-	*p_ret = &cf->base;
+        *p_ret = &cf->base;
     }
 
     status = pjmedia_vid_register_factory(NULL, &cf->base);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     PJ_LOG(4, (THIS_FILE, "AVI dev factory created with %d virtual device(s)",
-	       cf->dev_count));
+               cf->dev_count));
 
     return PJ_SUCCESS;
 }
@@ -182,7 +181,7 @@ static pj_status_t avi_factory_init(pjmedia_vid_dev_factory *f)
     unsigned i;
 
     for (i=0; i<cf->dev_count; ++i) {
-	reset_dev_info(&cf->dev_info[i]);
+        reset_dev_info(&cf->dev_info[i]);
     }
 
     return PJ_SUCCESS;
@@ -214,8 +213,8 @@ static unsigned avi_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 
 /* API: get device info */
 static pj_status_t avi_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_info *info)
+                                             unsigned index,
+                                             pjmedia_vid_dev_info *info)
 {
     struct avi_factory *cf = (struct avi_factory*)f;
 
@@ -229,8 +228,8 @@ static pj_status_t avi_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 /* API: create default device parameter */
 static pj_status_t avi_factory_default_param(pj_pool_t *pool,
                                               pjmedia_vid_dev_factory *f,
-					      unsigned index,
-					      pjmedia_vid_dev_param *param)
+                                              unsigned index,
+                                              pjmedia_vid_dev_param *param)
 {
     struct avi_factory *cf = (struct avi_factory*)f;
     struct avi_dev_info *di = &cf->dev_info[index];
@@ -255,20 +254,20 @@ static void reset_dev_info(struct avi_dev_info *adi)
 {
     /* Close avi streams */
     if (adi->avi) {
-	unsigned i, cnt;
+        unsigned i, cnt;
 
-	cnt = pjmedia_avi_streams_get_num_streams(adi->avi);
-	for (i=0; i<cnt; ++i) {
-	    pjmedia_avi_stream *as;
+        cnt = pjmedia_avi_streams_get_num_streams(adi->avi);
+        for (i=0; i<cnt; ++i) {
+            pjmedia_avi_stream *as;
 
-	    as = pjmedia_avi_streams_get_stream(adi->avi, i);
-	    if (as) {
-		pjmedia_port *port;
-		port = pjmedia_avi_stream_get_port(as);
-		pjmedia_port_destroy(port);
-	    }
-	}
-	adi->avi = NULL;
+            as = pjmedia_avi_streams_get_stream(adi->avi, i);
+            if (as) {
+                pjmedia_port *port;
+                port = pjmedia_avi_stream_get_port(as);
+                pjmedia_port_destroy(port);
+            }
+        }
+        adi->avi = NULL;
     }
 
     if (adi->codec) {
@@ -277,7 +276,7 @@ static void reset_dev_info(struct avi_dev_info *adi)
     }
 
     if (adi->pool)
-	pj_pool_release(adi->pool);
+        pj_pool_release(adi->pool);
 
     pj_bzero(adi, sizeof(*adi));
 
@@ -300,7 +299,7 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_free(pjmedia_vid_dev_index id)
     /* Lookup the factory and local device index */
     status = pjmedia_vid_dev_get_local_index(id, &f, &local_idx);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* The factory must be AVI factory */
     PJ_ASSERT_RETURN(f->op->init == &avi_factory_init, PJMEDIA_EVID_INVDEV);
@@ -312,7 +311,7 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_free(pjmedia_vid_dev_index id)
 
     /* Cannot configure if stream is running */
     if (adi->strm)
-	return PJ_EBUSY;
+        return PJ_EBUSY;
 
     /* Reset */
     reset_dev_info(adi);
@@ -332,7 +331,7 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_get_param(pjmedia_vid_dev_index id,
     /* Lookup the factory and local device index */
     status = pjmedia_vid_dev_get_local_index(id, &f, &local_idx);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* The factory must be factory */
     PJ_ASSERT_RETURN(f->op->init == &avi_factory_init, PJMEDIA_EVID_INVDEV);
@@ -371,27 +370,27 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
     PJ_ASSERT_RETURN(f && p && p_id, PJ_EINVAL);
 
     if (p_id)
-	*p_id = PJMEDIA_VID_INVALID_DEV;
+        *p_id = PJMEDIA_VID_INVALID_DEV;
 
     /* Get a free dev */
     for (local_idx=0; local_idx<cf->dev_count; ++local_idx) {
-	if (cf->dev_info[local_idx].avi == NULL) {
-	    adi = &cf->dev_info[local_idx];
-	    break;
-	}
+        if (cf->dev_info[local_idx].avi == NULL) {
+            adi = &cf->dev_info[local_idx];
+            break;
+        }
     }
 
     if (!adi)
-	return PJ_ETOOMANY;
+        return PJ_ETOOMANY;
 
     /* Convert local ID to global id */
     status = pjmedia_vid_dev_get_global_index(&cf->base, local_idx, &id);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Reset */
     if (adi->pool) {
-	pj_pool_release(adi->pool);
+        pj_pool_release(adi->pool);
     }
     pj_bzero(adi, sizeof(*adi));
 
@@ -405,16 +404,16 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
     status = pjmedia_avi_player_create_streams(adi->pool, adi->fpath.ptr, 0,
                                                &adi->avi);
     if (status != PJ_SUCCESS) {
-	goto on_error;
+        goto on_error;
     }
 
     adi->vid = pjmedia_avi_streams_get_stream_by_media(adi->avi, 0,
                                                        PJMEDIA_TYPE_VIDEO);
     if (!adi->vid) {
-	status = PJMEDIA_EVID_BADFORMAT;
-	PJ_LOG(4,(THIS_FILE, "Error: cannot find video in AVI %s",
-		adi->fpath.ptr));
-	goto on_error;
+        status = PJMEDIA_EVID_BADFORMAT;
+        PJ_LOG(4,(THIS_FILE, "Error: cannot find video in AVI %s",
+                adi->fpath.ptr));
+        goto on_error;
     }
 
     pjmedia_format_copy(&avi_fmt, &adi->vid->info.fmt);
@@ -424,7 +423,7 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
         /* Yes, prepare codec */
         const pjmedia_vid_codec_info *codec_info;
         pjmedia_vid_codec_param codec_param;
-	pjmedia_video_apply_fmt_param vafp;
+        pjmedia_video_apply_fmt_param vafp;
 
         /* Lookup codec */
         status = pjmedia_vid_codec_mgr_get_codec_info2(NULL,
@@ -454,34 +453,34 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
         if (status != PJ_SUCCESS)
             goto on_error;
 
-	/* Allocate buffer */
+        /* Allocate buffer */
         avi_fmt.id = codec_info->dec_fmt_id[0];
         vfi = pjmedia_get_video_format_info(NULL, avi_fmt.id);
-	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = avi_fmt.det.vid.size;
-	status = vfi->apply_fmt(vfi, &vafp);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+        pj_bzero(&vafp, sizeof(vafp));
+        vafp.size = avi_fmt.det.vid.size;
+        status = vfi->apply_fmt(vfi, &vafp);
+        if (status != PJ_SUCCESS)
+            goto on_error;
 
-	adi->enc_buf = pj_pool_alloc(adi->pool, vafp.framebytes);
-	adi->enc_buf_size = vafp.framebytes;
+        adi->enc_buf = pj_pool_alloc(adi->pool, vafp.framebytes);
+        adi->enc_buf_size = vafp.framebytes;
     }
 
     /* Calculate title */
     if (p->title.slen) {
-	pj_strdup_with_null(adi->pool, &adi->title, &p->title);
+        pj_strdup_with_null(adi->pool, &adi->title, &p->title);
     } else {
-	char *start = p->path.ptr + p->path.slen;
-	pj_str_t tmp;
+        char *start = p->path.ptr + p->path.slen;
+        pj_str_t tmp;
 
-	while (start >= p->path.ptr) {
-	    if (*start == '/' || *start == '\\')
-		break;
-	    --start;
-	}
-	tmp.ptr = start + 1;
-	tmp.slen = p->path.ptr + p->path.slen - tmp.ptr;
-	pj_strdup_with_null(adi->pool, &adi->title, &tmp);
+        while (start >= p->path.ptr) {
+            if (*start == '/' || *start == '\\')
+                break;
+            --start;
+        }
+        tmp.ptr = start + 1;
+        tmp.slen = p->path.ptr + p->path.slen - tmp.ptr;
+        pj_strdup_with_null(adi->pool, &adi->title, &tmp);
     }
 
     /* Init device info */
@@ -496,10 +495,10 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
 
     /* Set out vars */
     if (p_id)
-	*p_id = id;
+        *p_id = id;
     p->avi_streams = adi->avi;
     if (p->title.slen == 0)
-	p->title = adi->title;
+        p->title = adi->title;
 
     return PJ_SUCCESS;
 
@@ -509,8 +508,8 @@ on_error:
         adi->codec = NULL;
     }
     if (adi->pool) {
-	pj_pool_release(adi->pool);
-	adi->pool = NULL;
+        pj_pool_release(adi->pool);
+        adi->pool = NULL;
     }
     pjmedia_avi_dev_free(id);
     return status;
@@ -519,11 +518,11 @@ on_error:
 
 /* API: create stream */
 static pj_status_t avi_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm)
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm)
 {
     struct avi_factory *cf = (struct avi_factory*)f;
     pj_pool_t *pool = NULL;
@@ -532,9 +531,9 @@ static pj_status_t avi_factory_create_stream(
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      param->dir == PJMEDIA_DIR_CAPTURE,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
 
     /* Device must have been configured with pjmedia_avi_dev_set_param() */
     adi = &cf->dev_info[param->cap_id];
@@ -566,7 +565,7 @@ static pj_status_t avi_factory_create_stream(
 
 /* API: Get stream info. */
 static pj_status_t avi_dev_strm_get_param(pjmedia_vid_dev_stream *s,
-					 pjmedia_vid_dev_param *pi)
+                                         pjmedia_vid_dev_param *pi)
 {
     struct avi_dev_strm *strm = (struct avi_dev_strm*)s;
 
@@ -579,8 +578,8 @@ static pj_status_t avi_dev_strm_get_param(pjmedia_vid_dev_stream *s,
 
 /* API: get capability */
 static pj_status_t avi_dev_strm_get_cap(pjmedia_vid_dev_stream *s,
-				       pjmedia_vid_dev_cap cap,
-				       void *pval)
+                                       pjmedia_vid_dev_cap cap,
+                                       void *pval)
 {
     struct avi_dev_strm *strm = (struct avi_dev_strm*)s;
 
@@ -595,8 +594,8 @@ static pj_status_t avi_dev_strm_get_cap(pjmedia_vid_dev_stream *s,
 
 /* API: set capability */
 static pj_status_t avi_dev_strm_set_cap(pjmedia_vid_dev_stream *s,
-				       pjmedia_vid_dev_cap cap,
-				       const void *pval)
+                                       pjmedia_vid_dev_cap cap,
+                                       const void *pval)
 {
     struct avi_dev_strm *strm = (struct avi_dev_strm*)s;
 
@@ -673,4 +672,4 @@ static pj_status_t avi_dev_strm_destroy(pjmedia_vid_dev_stream *strm)
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_AVI */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_AVI */

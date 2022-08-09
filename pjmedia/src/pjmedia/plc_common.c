@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -50,7 +49,7 @@ static struct plc_alg plc_wsola =
 
 struct pjmedia_plc
 {
-    void	    *obj;
+    void            *obj;
     struct plc_alg  *op;
 };
 
@@ -60,15 +59,15 @@ struct pjmedia_plc
  * use based on the arguments.
  */
 PJ_DEF(pj_status_t) pjmedia_plc_create( pj_pool_t *pool,
-					unsigned clock_rate,
-					unsigned samples_per_frame,
-					unsigned options,
-					pjmedia_plc **p_plc)
+                                        unsigned clock_rate,
+                                        unsigned samples_per_frame,
+                                        unsigned options,
+                                        pjmedia_plc **p_plc)
 {
     pjmedia_plc *plc;
 
     PJ_ASSERT_RETURN(pool && clock_rate && samples_per_frame && p_plc,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
     PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
 
     PJ_UNUSED_ARG(options);
@@ -88,7 +87,7 @@ PJ_DEF(pj_status_t) pjmedia_plc_create( pj_pool_t *pool,
  * Save a good frame to PLC.
  */
 PJ_DEF(pj_status_t) pjmedia_plc_save( pjmedia_plc *plc,
-				      pj_int16_t *frame )
+                                      pj_int16_t *frame )
 {
     PJ_ASSERT_RETURN(plc && frame, PJ_EINVAL);
  
@@ -101,7 +100,7 @@ PJ_DEF(pj_status_t) pjmedia_plc_save( pjmedia_plc *plc,
  * Generate a replacement for lost frame.
  */
 PJ_DEF(pj_status_t) pjmedia_plc_generate( pjmedia_plc *plc,
-					  pj_int16_t *frame )
+                                          pj_int16_t *frame )
 {
     PJ_ASSERT_RETURN(plc && frame, PJ_EINVAL);
     
@@ -117,12 +116,12 @@ PJ_DEF(pj_status_t) pjmedia_plc_generate( pjmedia_plc *plc,
 struct wsola_plc
 {
     pjmedia_wsola   *wsola;
-    pj_bool_t	     prev_lost;
+    pj_bool_t        prev_lost;
 };
 
 
 static void* plc_wsola_create(pj_pool_t *pool, unsigned clock_rate, 
-			      unsigned samples_per_frame)
+                              unsigned samples_per_frame)
 {
     struct wsola_plc *o;
     unsigned flag;
@@ -135,12 +134,12 @@ static void* plc_wsola_create(pj_pool_t *pool, unsigned clock_rate,
 
     flag = PJMEDIA_WSOLA_NO_DISCARD;
     if (PJMEDIA_WSOLA_PLC_NO_FADING)
-	flag |= PJMEDIA_WSOLA_NO_FADING;
+        flag |= PJMEDIA_WSOLA_NO_FADING;
 
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
-				  flag, &o->wsola);
+                                  flag, &o->wsola);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     return o;
 }

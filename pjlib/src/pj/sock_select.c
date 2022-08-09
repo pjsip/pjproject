@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,9 +35,9 @@
 #   pragma warning(disable: 4389)    // Signed/unsigned mismatch in FD_*
 #endif
 
-#define PART_FDSET(ps)		((fd_set*)&ps->data[1])
-#define PART_FDSET_OR_NULL(ps)	(ps ? PART_FDSET(ps) : NULL)
-#define PART_COUNT(ps)		(ps->data[0])
+#define PART_FDSET(ps)          ((fd_set*)&ps->data[1])
+#define PART_FDSET_OR_NULL(ps)  (ps ? PART_FDSET(ps) : NULL)
+#define PART_COUNT(ps)          (ps->data[0])
 
 PJ_DEF(void) PJ_FD_ZERO(pj_fd_set_t *fdsetp)
 {
@@ -87,10 +86,10 @@ PJ_DEF(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp)
 }
 
 PJ_DEF(int) pj_sock_select( int n, 
-			    pj_fd_set_t *readfds, 
-			    pj_fd_set_t *writefds,
-			    pj_fd_set_t *exceptfds, 
-			    const pj_time_val *timeout)
+                            pj_fd_set_t *readfds, 
+                            pj_fd_set_t *writefds,
+                            pj_fd_set_t *exceptfds, 
+                            const pj_time_val *timeout)
 {
     struct timeval os_timeout, *p_os_timeout;
 
@@ -100,14 +99,14 @@ PJ_DEF(int) pj_sock_select( int n,
                      PJ_EBUG);
 
     if (timeout) {
-	os_timeout.tv_sec = timeout->sec;
-	os_timeout.tv_usec = timeout->msec * 1000;
-	p_os_timeout = &os_timeout;
+        os_timeout.tv_sec = timeout->sec;
+        os_timeout.tv_usec = timeout->msec * 1000;
+        p_os_timeout = &os_timeout;
     } else {
-	p_os_timeout = NULL;
+        p_os_timeout = NULL;
     }
 
     return select(n, PART_FDSET_OR_NULL(readfds), PART_FDSET_OR_NULL(writefds),
-		  PART_FDSET_OR_NULL(exceptfds), p_os_timeout);
+                  PART_FDSET_OR_NULL(exceptfds), p_os_timeout);
 }
 

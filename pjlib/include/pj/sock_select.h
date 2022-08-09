@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -87,7 +86,7 @@ PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
  * If the file descriptor fd is already in this set, there shall be no effect
  * on the set, nor will an error be returned.
  *
- * @param fd	    The socket descriptor.
+ * @param fd        The socket descriptor.
  * @param fdsetp    The descriptor set.
  */
 PJ_DECL(void) PJ_FD_SET(pj_sock_t fd, pj_fd_set_t *fdsetp);
@@ -97,7 +96,7 @@ PJ_DECL(void) PJ_FD_SET(pj_sock_t fd, pj_fd_set_t *fdsetp);
  * If fd is not a member of this set, there shall be no effect on the set, 
  * nor will an error be returned.
  *
- * @param fd	    The socket descriptor.
+ * @param fd        The socket descriptor.
  * @param fdsetp    The descriptor set.
  */
 PJ_DECL(void) PJ_FD_CLR(pj_sock_t fd, pj_fd_set_t *fdsetp);
@@ -107,10 +106,10 @@ PJ_DECL(void) PJ_FD_CLR(pj_sock_t fd, pj_fd_set_t *fdsetp);
  * Evaluate to non-zero if the file descriptor fd is a member of the set 
  * pointed to by fdsetp, and shall evaluate to zero otherwise.
  *
- * @param fd	    The socket descriptor.
+ * @param fd        The socket descriptor.
  * @param fdsetp    The descriptor set.
  *
- * @return	    Nonzero if fd is member of the descriptor set.
+ * @return          Nonzero if fd is member of the descriptor set.
  */
 PJ_DECL(pj_bool_t) PJ_FD_ISSET(pj_sock_t fd, const pj_fd_set_t *fdsetp);
 
@@ -120,26 +119,26 @@ PJ_DECL(pj_bool_t) PJ_FD_ISSET(pj_sock_t fd, const pj_fd_set_t *fdsetp);
  * The behaviour is the same as select() function call which appear in
  * standard BSD socket libraries.
  *
- * @param n	    On Unices, this specifies the highest-numbered
- *		    descriptor in any of the three set, plus 1. On Windows,
- *		    the value is ignored.
+ * @param n         On Unices, this specifies the highest-numbered
+ *                  descriptor in any of the three set, plus 1. On Windows,
+ *                  the value is ignored.
  * @param readfds   Optional pointer to a set of sockets to be checked for 
- *		    readability.
+ *                  readability.
  * @param writefds  Optional pointer to a set of sockets to be checked for 
- *		    writability.
+ *                  writability.
  * @param exceptfds Optional pointer to a set of sockets to be checked for 
- *		    errors.
+ *                  errors.
  * @param timeout   Maximum time for select to wait, or null for blocking 
- *		    operations.
+ *                  operations.
  *
- * @return	    The total number of socket handles that are ready, or
- *		    zero if the time limit expired, or -1 if an error occurred.
+ * @return          The total number of socket handles that are ready, or
+ *                  zero if the time limit expired, or -1 if an error occurred.
  */
 PJ_DECL(int) pj_sock_select( int n, 
-			     pj_fd_set_t *readfds, 
-			     pj_fd_set_t *writefds,
-			     pj_fd_set_t *exceptfds, 
-			     const pj_time_val *timeout);
+                             pj_fd_set_t *readfds, 
+                             pj_fd_set_t *writefds,
+                             pj_fd_set_t *exceptfds, 
+                             const pj_time_val *timeout);
 
 
 /**
@@ -149,4 +148,4 @@ PJ_DECL(int) pj_sock_select( int n,
 
 PJ_END_DECL
 
-#endif	/* __PJ_SELECT_H__ */
+#endif  /* __PJ_SELECT_H__ */

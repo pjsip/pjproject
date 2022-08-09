@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -26,24 +25,24 @@
 
 #define THIS_FILE   "test.c"
 
-#define DO_TEST(test)	do { \
-			    PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
-			    rc = test; \
-			    PJ_LOG(3, (THIS_FILE,  \
-				       "%s(%d)",  \
-				       (rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+#define DO_TEST(test)   do { \
+                            PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
+                            rc = test; \
+                            PJ_LOG(3, (THIS_FILE,  \
+                                       "%s(%d)",  \
+                                       (rc ? "..ERROR" : "..success"), rc)); \
+                            if (rc!=0) goto on_return; \
+                        } while (0)
 
 #define DO_TSX_TEST(test, param) \
-			do { \
-			    PJ_LOG(3, (THIS_FILE, "Running %s(%s)...", #test, (param)->tp_type));  \
-			    rc = test(param); \
-			    PJ_LOG(3, (THIS_FILE,  \
-				       "%s(%d)",  \
-				       (rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+                        do { \
+                            PJ_LOG(3, (THIS_FILE, "Running %s(%s)...", #test, (param)->tp_type));  \
+                            rc = test(param); \
+                            PJ_LOG(3, (THIS_FILE,  \
+                                       "%s(%d)",  \
+                                       (rc ? "..ERROR" : "..success"), rc)); \
+                            if (rc!=0) goto on_return; \
+                        } while (0)
 
 #ifdef _MSC_VER
 # define strtok_r strtok_s
@@ -53,7 +52,7 @@ pjsip_endpoint *endpt;
 pj_caching_pool caching_pool;
 int log_level = 3;
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | PJ_LOG_HAS_SENDER |
-		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
+                      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
 
 static pj_oshandle_t fd_report;
 const char *system_name = "Unknown";
@@ -102,24 +101,24 @@ static pj_status_t select_tests(char *testlist)
     int j;
 
     if (!testlist) {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
     run_all_tests = 0;
 
     for (token = strtok_r(testlist, ",", &saveptr); token != NULL;
-	token = strtok_r(NULL, ",", &saveptr)) {
+        token = strtok_r(NULL, ",", &saveptr)) {
 
-	int found = 0;
-	for (j = 0; j < maxtok; j++) {
-	    if (strcmp(token, test_list[j].name) == 0) {
-		test_list[j].run_test = 1;
-		found = 1;
-	    }
-	}
-	if (!found) {
-	    fprintf(stderr, "Test '%s' is not valid\n", token);
-	    return PJ_ENOTFOUND;
-	}
+        int found = 0;
+        for (j = 0; j < maxtok; j++) {
+            if (strcmp(token, test_list[j].name) == 0) {
+                test_list[j].run_test = 1;
+                found = 1;
+            }
+        }
+        if (!found) {
+            fprintf(stderr, "Test '%s' is not valid\n", token);
+            return PJ_ENOTFOUND;
+        }
     }
 
     return PJ_SUCCESS;
@@ -132,7 +131,7 @@ void list_tests(void) {
     fprintf(stderr, "Valid tests:\n");
 
     for (j = 0; j < maxtok; j++) {
-	fprintf(stderr, "   %s\n", test_list[j].name);
+        fprintf(stderr, "   %s\n", test_list[j].name);
     }
 }
 
@@ -159,13 +158,13 @@ void flush_events(unsigned duration)
 
     /* Process all events for the specified duration. */
     for (;;) {
-	pj_time_val timeout = {0, 1}, now;
+        pj_time_val timeout = {0, 1}, now;
 
-	pjsip_endpt_handle_events(endpt, &timeout);
+        pjsip_endpt_handle_events(endpt, &timeout);
 
-	pj_gettimeofday(&now);
-	if (PJ_TIME_VAL_GTE(now, stop_time))
-	    break;
+        pj_gettimeofday(&now);
+        if (PJ_TIME_VAL_GTE(now, stop_time))
+            break;
     }
 }
 
@@ -189,38 +188,38 @@ static pj_status_t init_report(void)
 
     status = pj_file_open(NULL, tmp, PJ_O_WRONLY, &fd_report);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Title */
     len = pj_ansi_sprintf(buf, "<HTML>\n"
-			       " <HEAD>\n"
-			       "  <TITLE>PJSIP %s (%s) - Static Benchmark</TITLE>\n"
-			       " </HEAD>\n"
-			       "<BODY>\n"
-			       "\n", 
-			       PJ_VERSION,
-			       (PJ_DEBUG ? "Debug" : "Release"));
+                               " <HEAD>\n"
+                               "  <TITLE>PJSIP %s (%s) - Static Benchmark</TITLE>\n"
+                               " </HEAD>\n"
+                               "<BODY>\n"
+                               "\n", 
+                               PJ_VERSION,
+                               (PJ_DEBUG ? "Debug" : "Release"));
     pj_file_write(fd_report, buf, &len);
 
 
     /* Title */
     len = pj_ansi_sprintf(buf, "<H1>PJSIP %s (%s) - Static Benchmark</H1>\n", 
-			       PJ_VERSION,
-			       (PJ_DEBUG ? "Debug" : "Release"));
+                               PJ_VERSION,
+                               (PJ_DEBUG ? "Debug" : "Release"));
     pj_file_write(fd_report, buf, &len);
 
     len = pj_ansi_sprintf(buf, "<P>Below is the benchmark result generated "
-			       "by <b>test-pjsip</b> program. The program "
-			       "is single-threaded only.</P>\n");
+                               "by <b>test-pjsip</b> program. The program "
+                               "is single-threaded only.</P>\n");
     pj_file_write(fd_report, buf, &len);
 
 
     /* Write table heading */
     len = pj_ansi_sprintf(buf, "<TABLE border=\"1\" cellpadding=\"4\">\n"
-			       "  <TR><TD bgColor=\"aqua\" align=\"center\">Variable</TD>\n"
-			       "      <TD bgColor=\"aqua\" align=\"center\">Value</TD>\n"
-			       "      <TD bgColor=\"aqua\" align=\"center\">Description</TD>\n"
-			       "  </TR>\n");
+                               "  <TR><TD bgColor=\"aqua\" align=\"center\">Variable</TD>\n"
+                               "      <TD bgColor=\"aqua\" align=\"center\">Value</TD>\n"
+                               "      <TD bgColor=\"aqua\" align=\"center\">Description</TD>\n"
+                               "  </TR>\n");
     pj_file_write(fd_report, buf, &len);
 
 
@@ -240,8 +239,8 @@ static pj_status_t init_report(void)
     /* Write time of day */
     pj_time_decode(&timestamp, &date_time);
     len = pj_ansi_sprintf(tmp, "%04d-%02d-%02d %02d:%02d:%02d",
-			       date_time.year, date_time.mon+1, date_time.day,
-			       date_time.hour, date_time.min, date_time.sec);
+                               date_time.year, date_time.mon+1, date_time.day,
+                               date_time.hour, date_time.min, date_time.sec);
     report_sval("date-time", tmp, "", "Date/time of the test");
 
 
@@ -255,7 +254,7 @@ static pj_status_t init_report(void)
 
     /* Write CC name */
     len = pj_ansi_sprintf(tmp, "%s-%d.%d.%d", PJ_CC_NAME, 
-			  PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_2);
+                          PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_2);
     report_sval("cc-name", tmp, "", "Compiler name and version");
 
 
@@ -263,29 +262,29 @@ static pj_status_t init_report(void)
 }
 
 void report_sval(const char *name, const char* value, const char *valname, 
-		 const char *desc)
+                 const char *desc)
 {
     pj_ssize_t len;
 
     len = pj_ansi_sprintf(buf, "  <TR><TD><TT>%s</TT></TD>\n"
-			       "      <TD align=\"right\"><B>%s %s</B></TD>\n"
-			       "      <TD>%s</TD>\n"
-			       "  </TR>\n",
-			       name, value, valname, desc);
+                               "      <TD align=\"right\"><B>%s %s</B></TD>\n"
+                               "      <TD>%s</TD>\n"
+                               "  </TR>\n",
+                               name, value, valname, desc);
     pj_file_write(fd_report, buf, &len);
 }
 
 
 void report_ival(const char *name, int value, const char *valname, 
-		 const char *desc)
+                 const char *desc)
 {
     pj_ssize_t len;
 
     len = pj_ansi_sprintf(buf, "  <TR><TD><TT>%s</TT></TD>\n"
-			       "      <TD align=\"right\"><B>%d %s</B></TD>\n"
-			       "      <TD>%s</TD>\n"
-			       "  </TR>\n",
-			       name, value, valname, desc);
+                               "      <TD align=\"right\"><B>%d %s</B></TD>\n"
+                               "      <TD>%s</TD>\n"
+                               "  </TR>\n",
+                               name, value, valname, desc);
     pj_file_write(fd_report, buf, &len);
 
 }
@@ -295,10 +294,10 @@ static void close_report(void)
     pj_ssize_t len;
 
     if (fd_report) {
-	len = pj_ansi_sprintf(buf, "</TABLE>\n</BODY>\n</HTML>\n");
-	pj_file_write(fd_report, buf, &len);
+        len = pj_ansi_sprintf(buf, "</TABLE>\n</BODY>\n</HTML>\n");
+        pj_file_write(fd_report, buf, &len);
 
-	pj_file_close(fd_report);
+        pj_file_close(fd_report);
     }
 }
 
@@ -315,43 +314,43 @@ int test_main(char *testlist)
     pjsip_transport *tp;
 #if PJ_HAS_TCP
     pjsip_tpfactory *tpfactory;
-#endif	/* PJ_HAS_TCP */
-#endif	/* INCLUDE_TSX_TEST */
+#endif  /* PJ_HAS_TCP */
+#endif  /* INCLUDE_TSX_TEST */
     int line;
 
     rc = select_tests(testlist);
     if (rc != PJ_SUCCESS) {
-	list_tests();
-	return rc;
+        list_tests();
+        return rc;
     }
 
     pj_log_set_level(log_level);
     pj_log_set_decor(param_log_decor);
 
     if ((rc=pj_init()) != PJ_SUCCESS) {
-	app_perror("pj_init", rc);
-	return rc;
+        app_perror("pj_init", rc);
+        return rc;
     }
 
     if ((rc=pjlib_util_init()) != PJ_SUCCESS) {
-	app_perror("pj_init", rc);
-	return rc;
+        app_perror("pj_init", rc);
+        return rc;
     }
 
     status = init_report();
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     pj_dump_config();
 
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 
-			  PJSIP_TEST_MEM_SIZE );
+                          PJSIP_TEST_MEM_SIZE );
 
     rc = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
     if (rc != PJ_SUCCESS) {
-	app_perror("pjsip_endpt_create", rc);
-	pj_caching_pool_destroy(&caching_pool);
-	return rc;
+        app_perror("pjsip_endpt_create", rc);
+        pj_caching_pool_destroy(&caching_pool);
+        return rc;
     }
 
     PJ_LOG(3,(THIS_FILE,""));
@@ -363,16 +362,16 @@ int test_main(char *testlist)
     /* Start transaction layer module. */
     rc = pjsip_tsx_layer_init_module(endpt);
     if (rc != PJ_SUCCESS) {
-	app_perror("   Error initializing transaction module", rc);
-	goto on_return;
+        app_perror("   Error initializing transaction module", rc);
+        goto on_return;
     }
 
     /* Create loop transport. */
     rc = pjsip_loop_start(endpt, NULL);
     if (rc != PJ_SUCCESS) {
-	app_perror("   error: unable to create datagram loop transport", 
-		   rc);
-	goto on_return;
+        app_perror("   error: unable to create datagram loop transport", 
+                   rc);
+        goto on_return;
     }
     tsx_test[tsx_test_cnt].port = 5060;
     tsx_test[tsx_test_cnt].tp_type = "loop-dgram";
@@ -382,101 +381,101 @@ int test_main(char *testlist)
 
 #if INCLUDE_URI_TEST
     if (SHOULD_RUN_TEST(include_uri_test)) {
-	DO_TEST(uri_test());
+        DO_TEST(uri_test());
     }
 #endif
 
 #if INCLUDE_MSG_TEST
     if (SHOULD_RUN_TEST(include_msg_test)) {
-	DO_TEST(msg_test());
-	DO_TEST(msg_err_test());
+        DO_TEST(msg_test());
+        DO_TEST(msg_err_test());
     }
 #endif
 
 #if INCLUDE_MULTIPART_TEST
     if (SHOULD_RUN_TEST(include_multipart_test)) {
-	DO_TEST(multipart_test());
+        DO_TEST(multipart_test());
     }
 #endif
 
 #if INCLUDE_TXDATA_TEST
     if (SHOULD_RUN_TEST(include_txdata_test)) {
-	DO_TEST(txdata_test());
+        DO_TEST(txdata_test());
     }
 #endif
 
 #if INCLUDE_TSX_BENCH
     if (SHOULD_RUN_TEST(include_tsx_bench)) {
-	DO_TEST(tsx_bench());
+        DO_TEST(tsx_bench());
     }
 #endif
 
 #if INCLUDE_UDP_TEST
     if (SHOULD_RUN_TEST(include_udp_test)) {
-	DO_TEST(transport_udp_test());
+        DO_TEST(transport_udp_test());
     }
 #endif
 
 #if INCLUDE_LOOP_TEST
     if (SHOULD_RUN_TEST(include_loop_test)) {
-	DO_TEST(transport_loop_test());
+        DO_TEST(transport_loop_test());
     }
 #endif
 
 #if INCLUDE_TCP_TEST
     if (SHOULD_RUN_TEST(include_tcp_test)) {
-	DO_TEST(transport_tcp_test());
+        DO_TEST(transport_tcp_test());
     }
 #endif
 
 #if INCLUDE_RESOLVE_TEST
     if (SHOULD_RUN_TEST(include_resolve_test)) {
-	DO_TEST(resolve_test());
+        DO_TEST(resolve_test());
     }
 #endif
 
 
 #if INCLUDE_TSX_TEST
     if (SHOULD_RUN_TEST(include_tsx_test)) {
-	status = pjsip_udp_transport_start(endpt, NULL, NULL, 1, &tp);
-	if (status == PJ_SUCCESS) {
-	    tsx_test[tsx_test_cnt].port = tp->local_name.port;
-	    tsx_test[tsx_test_cnt].tp_type = "udp";
-	    tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_UDP;
-	    ++tsx_test_cnt;
-	}
+        status = pjsip_udp_transport_start(endpt, NULL, NULL, 1, &tp);
+        if (status == PJ_SUCCESS) {
+            tsx_test[tsx_test_cnt].port = tp->local_name.port;
+            tsx_test[tsx_test_cnt].tp_type = "udp";
+            tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_UDP;
+            ++tsx_test_cnt;
+        }
 
 #if PJ_HAS_TCP
-	status = pjsip_tcp_transport_start(endpt, NULL, 1, &tpfactory);
-	if (status == PJ_SUCCESS) {
-	    tsx_test[tsx_test_cnt].port = tpfactory->addr_name.port;
-	    tsx_test[tsx_test_cnt].tp_type = "tcp";
-	    tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_TCP;
-	    ++tsx_test_cnt;
-	} else {
-	    app_perror("Unable to create TCP", status);
-	    rc = -4;
-	    goto on_return;
-	}
+        status = pjsip_tcp_transport_start(endpt, NULL, 1, &tpfactory);
+        if (status == PJ_SUCCESS) {
+            tsx_test[tsx_test_cnt].port = tpfactory->addr_name.port;
+            tsx_test[tsx_test_cnt].tp_type = "tcp";
+            tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_TCP;
+            ++tsx_test_cnt;
+        } else {
+            app_perror("Unable to create TCP", status);
+            rc = -4;
+            goto on_return;
+        }
 #endif
 
-	for (i = 0; i < tsx_test_cnt; ++i) {
-	    DO_TSX_TEST(tsx_basic_test, &tsx_test[i]);
-	    DO_TSX_TEST(tsx_uac_test, &tsx_test[i]);
-	    DO_TSX_TEST(tsx_uas_test, &tsx_test[i]);
-	}
+        for (i = 0; i < tsx_test_cnt; ++i) {
+            DO_TSX_TEST(tsx_basic_test, &tsx_test[i]);
+            DO_TSX_TEST(tsx_uac_test, &tsx_test[i]);
+            DO_TSX_TEST(tsx_uas_test, &tsx_test[i]);
+        }
     }
 #endif
 
 #if INCLUDE_INV_OA_TEST
     if (SHOULD_RUN_TEST(include_inv_oa_test)) {
-	DO_TEST(inv_offer_answer_test());
+        DO_TEST(inv_offer_answer_test());
     }
 #endif
 
 #if INCLUDE_REGC_TEST
     if (SHOULD_RUN_TEST(include_regc_test)) {
-	DO_TEST(regc_test());
+        DO_TEST(regc_test());
     }
 #endif
 
@@ -485,7 +484,7 @@ int test_main(char *testlist)
      */
 #if INCLUDE_TSX_DESTROY_TEST
     if (SHOULD_RUN_TEST(include_tsx_destroy_test)) {
-	DO_TEST(tsx_destroy_test());
+        DO_TEST(tsx_destroy_test());
     }
 #endif
 
@@ -497,7 +496,7 @@ on_return:
 
     /* Dumping memory pool usage */
     PJ_LOG(3,(THIS_FILE, "Peak memory size=%u MB",
-		         caching_pool.peak_used_size / 1000000));
+                         caching_pool.peak_used_size / 1000000));
 
     pjsip_endpt_destroy(endpt);
     pj_caching_pool_destroy(&caching_pool);
@@ -506,12 +505,12 @@ on_return:
  
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
     PJ_LOG(3,(THIS_FILE, "Stack max usage: %u, deepest: %s:%u", 
-	              pj_thread_get_stack_max_usage(pj_thread_this()),
-		      filename, line));
+                      pj_thread_get_stack_max_usage(pj_thread_this()),
+                      filename, line));
     if (rc == 0)
-	PJ_LOG(3,(THIS_FILE, "Looks like everything is okay!.."));
+        PJ_LOG(3,(THIS_FILE, "Looks like everything is okay!.."));
     else
-	PJ_LOG(3,(THIS_FILE, "Test completed with error(s)"));
+        PJ_LOG(3,(THIS_FILE, "Test completed with error(s)"));
 
     report_ival("test-status", rc, "", "Overall test status/result (0==success)");
     close_report();

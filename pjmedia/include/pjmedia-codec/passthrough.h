@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -225,11 +224,11 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_codec_passthrough_setting
 {
-    unsigned		 fmt_cnt;	/**< Number of encoding formats
-					     to be enabled.		*/
-    pjmedia_format	*fmts;		/**< Encoding formats to be 
-					     enabled.			*/
-    unsigned		 ilbc_mode;	/**< iLBC default mode.		*/
+    unsigned             fmt_cnt;       /**< Number of encoding formats
+                                             to be enabled.             */
+    pjmedia_format      *fmts;          /**< Encoding formats to be 
+                                             enabled.                   */
+    unsigned             ilbc_mode;     /**< iLBC default mode.         */
 } pjmedia_codec_passthrough_setting;
 
 
@@ -237,9 +236,9 @@ typedef struct pjmedia_codec_passthrough_setting
  * Initialize and register passthrough codecs factory to pjmedia endpoint,
  * all supported encoding formats will be enabled.
  *
- * @param endpt	    The pjmedia endpoint.
+ * @param endpt     The pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_passthrough_init( pjmedia_endpt *endpt );
 
@@ -248,20 +247,20 @@ PJ_DECL(pj_status_t) pjmedia_codec_passthrough_init( pjmedia_endpt *endpt );
  * Initialize and register passthrough codecs factory to pjmedia endpoint
  * with only specified encoding formats enabled.
  *
- * @param endpt	    The pjmedia endpoint.
+ * @param endpt     The pjmedia endpoint.
  * @param setting   The settings.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_passthrough_init2(
-		       pjmedia_endpt *endpt,
-		       const pjmedia_codec_passthrough_setting *setting);
+                       pjmedia_endpt *endpt,
+                       const pjmedia_codec_passthrough_setting *setting);
 
 
 /**
  * Unregister passthrough codecs factory from pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_passthrough_deinit(void);
 
@@ -273,5 +272,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODECS_PASSTHROUGH_H__ */
+#endif  /* __PJMEDIA_CODECS_PASSTHROUGH_H__ */
 

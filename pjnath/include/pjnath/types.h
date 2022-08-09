@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -39,13 +38,13 @@ PJ_BEGIN_DECL
  * This constant describes a number to be used to identify an invalid TURN
  * channel number.
  */
-#define PJ_TURN_INVALID_CHANNEL	    0xFFFF
+#define PJ_TURN_INVALID_CHANNEL     0xFFFF
 
 
 /**
  * Initialize pjnath library.
  *
- * @return	    Initialization status.
+ * @return          Initialization status.
  */
 PJ_DECL(pj_status_t) pjnath_init(void);
 
@@ -54,12 +53,12 @@ PJ_DECL(pj_status_t) pjnath_init(void);
  * Display error to the log. 
  *
  * @param sender    The sender name.
- * @param title	    Title message.
+ * @param title     Title message.
  * @param status    The error status.
  */
 #if PJNATH_ERROR_LEVEL <= PJ_LOG_MAX_LEVEL
 PJ_DECL(void) pjnath_perror(const char *sender, const char *title,
-			    pj_status_t status);
+                            pj_status_t status);
 #else
 # define pjnath_perror(sender, title, status)
 #endif
@@ -72,5 +71,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJNATH_TYPES_H__ */
+#endif  /* __PJNATH_TYPES_H__ */
 

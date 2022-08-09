@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -38,7 +37,7 @@ PJ_DEF(pj_status_t) pj_cis_init(pj_cis_buf_t *cis_buf, pj_cis_t *cis)
     for (i=0; i<PJ_CIS_MAX_INDEX; ++i) {
         if ((cis_buf->use_mask & (1 << i)) == 0) {
             cis->cis_id = i;
-	    cis_buf->use_mask |= (1 << i);
+            cis_buf->use_mask |= (1 << i);
             return PJ_SUCCESS;
         }
     }

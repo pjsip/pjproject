@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -29,28 +28,28 @@
     PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC != 0
     
 
-#define THIS_FILE		"colorbar_dev.c"
-#define DEFAULT_CLOCK_RATE	90000
-#define DEFAULT_WIDTH		352 //640
-#define DEFAULT_HEIGHT		288 //480
-#define DEFAULT_FPS		25
+#define THIS_FILE               "colorbar_dev.c"
+#define DEFAULT_CLOCK_RATE      90000
+#define DEFAULT_WIDTH           352 //640
+#define DEFAULT_HEIGHT          288 //480
+#define DEFAULT_FPS             25
 
 
 /* cbar_ device info */
 struct cbar_dev_info
 {
-    pjmedia_vid_dev_info	 info;
+    pjmedia_vid_dev_info         info;
 };
 
 /* cbar_ factory */
 struct cbar_factory
 {
-    pjmedia_vid_dev_factory	 base;
-    pj_pool_t			*pool;
-    pj_pool_factory		*pf;
+    pjmedia_vid_dev_factory      base;
+    pj_pool_t                   *pool;
+    pj_pool_factory             *pf;
 
-    unsigned			 dev_count;
-    struct cbar_dev_info	*dev_info;
+    unsigned                     dev_count;
+    struct cbar_dev_info        *dev_info;
 };
 
 struct cbar_fmt_info {
@@ -87,23 +86,23 @@ static struct cbar_fmt_info cbar_fmts[] =
 /* Video stream. */
 struct cbar_stream
 {
-    pjmedia_vid_dev_stream	     base;	    /**< Base stream	    */
-    pjmedia_vid_dev_param	     param;	    /**< Settings	    */
-    pj_pool_t			    *pool;          /**< Memory pool.       */
+    pjmedia_vid_dev_stream           base;          /**< Base stream        */
+    pjmedia_vid_dev_param            param;         /**< Settings           */
+    pj_pool_t                       *pool;          /**< Memory pool.       */
 
-    pjmedia_vid_dev_cb		     vid_cb;	    /**< Stream callback.   */
-    void			    *user_data;	    /**< Application data.  */
+    pjmedia_vid_dev_cb               vid_cb;        /**< Stream callback.   */
+    void                            *user_data;     /**< Application data.  */
 
     const struct cbar_fmt_info      *cbfi;
     const pjmedia_video_format_info *vfi;
     pjmedia_video_apply_fmt_param    vafp;
     pj_uint8_t                      *first_line[PJMEDIA_MAX_VIDEO_PLANES];
-    pj_timestamp		     ts;
-    unsigned			     ts_inc;
+    pj_timestamp                     ts;
+    unsigned                         ts_inc;
 
     /* For active capturer only */
-    pjmedia_clock		    *clock;
-    pj_uint8_t			    *clock_buf;
+    pjmedia_clock                   *clock;
+    pj_uint8_t                      *clock_buf;
 };
 
 
@@ -113,27 +112,27 @@ static pj_status_t cbar_factory_destroy(pjmedia_vid_dev_factory *f);
 static pj_status_t cbar_factory_refresh(pjmedia_vid_dev_factory *f); 
 static unsigned    cbar_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t cbar_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_info *info);
+                                             unsigned index,
+                                             pjmedia_vid_dev_info *info);
 static pj_status_t cbar_factory_default_param(pj_pool_t *pool,
                                               pjmedia_vid_dev_factory *f,
-					      unsigned index,
-					      pjmedia_vid_dev_param *param);
+                                              unsigned index,
+                                              pjmedia_vid_dev_param *param);
 static pj_status_t cbar_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm);
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm);
 
 static pj_status_t cbar_stream_get_param(pjmedia_vid_dev_stream *strm,
-					 pjmedia_vid_dev_param *param);
+                                         pjmedia_vid_dev_param *param);
 static pj_status_t cbar_stream_get_cap(pjmedia_vid_dev_stream *strm,
-				       pjmedia_vid_dev_cap cap,
-				       void *value);
+                                       pjmedia_vid_dev_cap cap,
+                                       void *value);
 static pj_status_t cbar_stream_set_cap(pjmedia_vid_dev_stream *strm,
-				       pjmedia_vid_dev_cap cap,
-				       const void *value);
+                                       pjmedia_vid_dev_cap cap,
+                                       const void *value);
 static pj_status_t cbar_stream_get_frame(pjmedia_vid_dev_stream *strm,
                                          pjmedia_frame *frame);
 static pj_status_t cbar_stream_start(pjmedia_vid_dev_stream *strm);
@@ -196,14 +195,14 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     cf->dev_count = 2;
 
     cf->dev_info = (struct cbar_dev_info*)
- 		   pj_pool_calloc(cf->pool, cf->dev_count,
- 				  sizeof(struct cbar_dev_info));
+                   pj_pool_calloc(cf->pool, cf->dev_count,
+                                  sizeof(struct cbar_dev_info));
 
     /* Passive capturer */
     ddi = &cf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strncpy(ddi->info.name, "Colorbar generator",
-		    sizeof(ddi->info.name));
+                    sizeof(ddi->info.name));
     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
     pj_ansi_strncpy(ddi->info.driver, "Colorbar", sizeof(ddi->info.driver));
     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
@@ -215,15 +214,15 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     for (i = 0; i < ddi->info.fmt_cnt; i++) {
         pjmedia_format *fmt = &ddi->info.fmt[i];
         pjmedia_format_init_video(fmt, cbar_fmts[i].fmt_id,
-				  DEFAULT_WIDTH, DEFAULT_HEIGHT,
-				  DEFAULT_FPS, 1);
+                                  DEFAULT_WIDTH, DEFAULT_HEIGHT,
+                                  DEFAULT_FPS, 1);
     }
 
     /* Active capturer */
     ddi = &cf->dev_info[1];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strncpy(ddi->info.name, "Colorbar-active",
-		    sizeof(ddi->info.name));
+                    sizeof(ddi->info.name));
     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
     pj_ansi_strncpy(ddi->info.driver, "Colorbar", sizeof(ddi->info.driver));
     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
@@ -235,14 +234,14 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     for (i = 0; i < ddi->info.fmt_cnt; i++) {
         pjmedia_format *fmt = &ddi->info.fmt[i];
         pjmedia_format_init_video(fmt, cbar_fmts[i].fmt_id,
-				  DEFAULT_WIDTH, DEFAULT_HEIGHT,
-				  DEFAULT_FPS, 1);
+                                  DEFAULT_WIDTH, DEFAULT_HEIGHT,
+                                  DEFAULT_FPS, 1);
     }
 
     PJ_LOG(4, (THIS_FILE, "Colorbar video src initialized with %d device(s):",
-	       cf->dev_count));
+               cf->dev_count));
     for (i = 0; i < cf->dev_count; i++) {
-	PJ_LOG(4, (THIS_FILE, "%2d: %s", i, cf->dev_info[i].info.name));
+        PJ_LOG(4, (THIS_FILE, "%2d: %s", i, cf->dev_info[i].info.name));
     }
 
     return PJ_SUCCESS;
@@ -274,8 +273,8 @@ static unsigned cbar_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 
 /* API: get device info */
 static pj_status_t cbar_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_info *info)
+                                             unsigned index,
+                                             pjmedia_vid_dev_info *info)
 {
     struct cbar_factory *cf = (struct cbar_factory*)f;
 
@@ -289,8 +288,8 @@ static pj_status_t cbar_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 /* API: create default device parameter */
 static pj_status_t cbar_factory_default_param(pj_pool_t *pool,
                                               pjmedia_vid_dev_factory *f,
-					      unsigned index,
-					      pjmedia_vid_dev_param *param)
+                                              unsigned index,
+                                              pjmedia_vid_dev_param *param)
 {
     struct cbar_factory *cf = (struct cbar_factory*)f;
     struct cbar_dev_info *di = &cf->dev_info[index];
@@ -382,12 +381,12 @@ static void fill_first_line(pj_uint8_t *first_lines[],
 
                 if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB)
                     c = rgb_colors[i][j];
-		else {
-		    if (vfi->id == PJMEDIA_FORMAT_YV12 && j > 0)
-			c = yuv_colors[i][3-j];
-		    else
-			c = yuv_colors[i][j];
-		}
+                else {
+                    if (vfi->id == PJMEDIA_FORMAT_YV12 && j > 0)
+                        c = yuv_colors[i][3-j];
+                    else
+                        c = yuv_colors[i][j];
+                }
 
                 bar_width = vafp->strides[j]/8;
                 p = first_lines[j] + bar_width*i;
@@ -414,18 +413,18 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
     f.size = stream->vafp.framebytes;
     status = cbar_stream_get_frame(&stream->base, &f);
     if (status == PJ_SUCCESS) {
-	(*stream->vid_cb.capture_cb)(&stream->base, stream->user_data, &f);
+        (*stream->vid_cb.capture_cb)(&stream->base, stream->user_data, &f);
     }
 }
 
 
 /* API: create stream */
 static pj_status_t cbar_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm)
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm)
 {
     struct cbar_factory *cf = (struct cbar_factory*)f;
     pj_pool_t *pool;
@@ -438,9 +437,9 @@ static pj_status_t cbar_factory_create_stream(
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      param->dir == PJMEDIA_DIR_CAPTURE,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
 
     pj_bzero(&vafp, sizeof(vafp));
 
@@ -477,8 +476,8 @@ static pj_status_t cbar_factory_create_stream(
 
     /* Apply the remaining settings */
 /*    if (param->flags & PJMEDIA_VID_DEV_CAP_INPUT_SCALE) {
-	cbar_stream_set_cap(&strm->base,
-		            PJMEDIA_VID_DEV_CAP_INPUT_SCALE,
+        cbar_stream_set_cap(&strm->base,
+                            PJMEDIA_VID_DEV_CAP_INPUT_SCALE,
                             &param->fmt);
     }
 */
@@ -486,23 +485,23 @@ static pj_status_t cbar_factory_create_stream(
     /* Active role? */
     if (param->cap_id == 1 && cb && cb->capture_cb) {
         pjmedia_clock_param clock_param;
-	pj_status_t status;
+        pj_status_t status;
 
-	/* Allocate buffer */
-	strm->clock_buf = pj_pool_alloc(pool, strm->vafp.framebytes);
+        /* Allocate buffer */
+        strm->clock_buf = pj_pool_alloc(pool, strm->vafp.framebytes);
 
-	/* Create clock */
-	pj_bzero(&clock_param, sizeof(clock_param));
+        /* Create clock */
+        pj_bzero(&clock_param, sizeof(clock_param));
         clock_param.usec_interval = PJMEDIA_PTIME(&vfd->fps);
         clock_param.clock_rate = param->clock_rate;
         status = pjmedia_clock_create2(pool, &clock_param,
                                        PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
                                        &clock_cb,
                                        strm, &strm->clock);
-	if (status != PJ_SUCCESS) {
-	    pj_pool_release(pool);
+        if (status != PJ_SUCCESS) {
+            pj_pool_release(pool);
             return status;
-	}
+        }
     }
 
     /* Done */
@@ -514,7 +513,7 @@ static pj_status_t cbar_factory_create_stream(
 
 /* API: Get stream info. */
 static pj_status_t cbar_stream_get_param(pjmedia_vid_dev_stream *s,
-					 pjmedia_vid_dev_param *pi)
+                                         pjmedia_vid_dev_param *pi)
 {
     struct cbar_stream *strm = (struct cbar_stream*)s;
 
@@ -533,8 +532,8 @@ static pj_status_t cbar_stream_get_param(pjmedia_vid_dev_stream *s,
 
 /* API: get capability */
 static pj_status_t cbar_stream_get_cap(pjmedia_vid_dev_stream *s,
-				       pjmedia_vid_dev_cap cap,
-				       void *pval)
+                                       pjmedia_vid_dev_cap cap,
+                                       void *pval)
 {
     struct cbar_stream *strm = (struct cbar_stream*)s;
 
@@ -545,16 +544,16 @@ static pj_status_t cbar_stream_get_cap(pjmedia_vid_dev_stream *s,
     if (cap==PJMEDIA_VID_DEV_CAP_INPUT_SCALE)
     {
         return PJMEDIA_EVID_INVCAP;
-//	return PJ_SUCCESS;
+//      return PJ_SUCCESS;
     } else {
-	return PJMEDIA_EVID_INVCAP;
+        return PJMEDIA_EVID_INVCAP;
     }
 }
 
 /* API: set capability */
 static pj_status_t cbar_stream_set_cap(pjmedia_vid_dev_stream *s,
-				       pjmedia_vid_dev_cap cap,
-				       const void *pval)
+                                       pjmedia_vid_dev_cap cap,
+                                       const void *pval)
 {
     struct cbar_stream *strm = (struct cbar_stream*)s;
 
@@ -564,7 +563,7 @@ static pj_status_t cbar_stream_set_cap(pjmedia_vid_dev_stream *s,
 
     if (cap==PJMEDIA_VID_DEV_CAP_INPUT_SCALE)
     {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     return PJMEDIA_EVID_INVCAP;
@@ -593,7 +592,7 @@ static pj_status_t spectrum_run(struct cbar_stream *d, pj_uint8_t *p,
     /* blinking dot */
     pj_gettimeofday(&tv);
     if (tv.msec < 660) {
-	enum { DOT_SIZE = 8 };
+        enum { DOT_SIZE = 8 };
         pj_uint8_t dot_clr_rgb[3] = {255, 255, 255};
         pj_uint8_t dot_clr_yuv[3] = {235, 128, 128};
 
@@ -665,7 +664,7 @@ static pj_status_t cbar_stream_start(pjmedia_vid_dev_stream *strm)
     PJ_LOG(4, (THIS_FILE, "Starting cbar video stream"));
 
     if (stream->clock)
-	return pjmedia_clock_start(stream->clock);
+        return pjmedia_clock_start(stream->clock);
 
     return PJ_SUCCESS;
 }
@@ -678,7 +677,7 @@ static pj_status_t cbar_stream_stop(pjmedia_vid_dev_stream *strm)
     PJ_LOG(4, (THIS_FILE, "Stopping cbar video stream"));
 
     if (stream->clock)
-	return pjmedia_clock_stop(stream->clock);
+        return pjmedia_clock_stop(stream->clock);
 
     return PJ_SUCCESS;
 }
@@ -694,7 +693,7 @@ static pj_status_t cbar_stream_destroy(pjmedia_vid_dev_stream *strm)
     cbar_stream_stop(strm);
 
     if (stream->clock)
-	pjmedia_clock_destroy(stream->clock);
+        pjmedia_clock_destroy(stream->clock);
     stream->clock = NULL;
 
     pj_pool_release(stream->pool);
@@ -702,4 +701,4 @@ static pj_status_t cbar_stream_destroy(pjmedia_vid_dev_stream *strm)
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC */

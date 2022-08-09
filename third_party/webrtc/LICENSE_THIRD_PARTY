@@ -206,7 +206,6 @@ modules/audio_device/mac/portaudio/pa_ringbuffer.h
 
 License:
 /*
- * $Id$
  * Portable Audio I/O Library
  * Memory barrier utilities
  *
@@ -248,7 +247,6 @@ License:
  */
 
 /*
- * $Id$
  * Portable Audio I/O Library
  * Ring Buffer utility.
  *

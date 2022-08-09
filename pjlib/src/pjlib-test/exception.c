@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -48,12 +47,12 @@
 
 #include <pjlib.h>
 
-#ifdef	_MSC_VER
+#ifdef  _MSC_VER
 #pragma warning(disable:4702) // warning C4702: unreachable code
 #endif
 
-#define	ID_1	1
-#define ID_2	2
+#define ID_1    1
+#define ID_2    2
 
 static int throw_id_1(void)
 {
@@ -73,10 +72,10 @@ static int try_catch_test(void)
     int rc = -200;
 
     PJ_TRY {
-	PJ_THROW(ID_1);
+        PJ_THROW(ID_1);
     }
     PJ_CATCH_ANY {
-	rc = 0;
+        rc = 0;
     }
     PJ_END;
     return rc;
@@ -88,13 +87,13 @@ static int throw_in_handler(void)
     int rc = 0;
 
     PJ_TRY {
-	PJ_THROW(ID_1);
+        PJ_THROW(ID_1);
     }
     PJ_CATCH_ANY {
-	if (PJ_GET_EXCEPTION() != ID_1)
-	    rc = -300;
-	else
-	    PJ_THROW(ID_2);
+        if (PJ_GET_EXCEPTION() != ID_1)
+            rc = -300;
+        else
+            PJ_THROW(ID_2);
     }
     PJ_END;
     return rc;
@@ -105,10 +104,10 @@ static int return_in_handler(void)
     PJ_USE_EXCEPTION;
 
     PJ_TRY {
-	PJ_THROW(ID_1);
+        PJ_THROW(ID_1);
     }
     PJ_CATCH_ANY {
-	return 0;
+        return 0;
     }
     PJ_END;
     return -400;
@@ -132,115 +131,115 @@ static int test(void)
     PJ_END;
 
     if (rc != 0)
-	return rc;
+        return rc;
 
 
     /*
      * Basic TRY/CATCH
      */ 
     PJ_TRY {
-	rc = throw_id_1();
+        rc = throw_id_1();
 
-	// should not reach here.
-	rc = -10;
+        // should not reach here.
+        rc = -10;
     }
     PJ_CATCH_ANY {
         int id = PJ_GET_EXCEPTION();
-	if (id != ID_1) {
-	    PJ_LOG(3,("", "...error: got unexpected exception %d (%s)", 
-		      id, pj_exception_id_name(id)));
-	    if (!rc) rc = -20;
-	}
+        if (id != ID_1) {
+            PJ_LOG(3,("", "...error: got unexpected exception %d (%s)", 
+                      id, pj_exception_id_name(id)));
+            if (!rc) rc = -20;
+        }
     }
     PJ_END;
 
     if (rc != 0)
-	return rc;
+        return rc;
 
     /*
      * Multiple exceptions handlers
      */
     PJ_TRY {
-	rc = throw_id_2();
-	// should not reach here.
-	rc = -25;
+        rc = throw_id_2();
+        // should not reach here.
+        rc = -25;
     }
     PJ_CATCH_ANY {
-	switch (PJ_GET_EXCEPTION()) {
-	case ID_1:
-	    if (!rc) rc = -30;
-	    break;
-	case ID_2:
-	    if (!rc) rc = 0;
-	    break;
-	default:
-	    if (!rc) rc = -40;
-	    break;
-	}
+        switch (PJ_GET_EXCEPTION()) {
+        case ID_1:
+            if (!rc) rc = -30;
+            break;
+        case ID_2:
+            if (!rc) rc = 0;
+            break;
+        default:
+            if (!rc) rc = -40;
+            break;
+        }
     }
     PJ_END;
 
     if (rc != 0)
-	return rc;
+        return rc;
 
     /*
      * Test default handler.
      */
     PJ_TRY {
-	rc = throw_id_1();
-	// should not reach here
-	rc = -50;
+        rc = throw_id_1();
+        // should not reach here
+        rc = -50;
     }
     PJ_CATCH_ANY {
-	switch (PJ_GET_EXCEPTION()) {
-	case ID_1:
-	    if (!rc) rc = 0;
-	    break;
-	default:
-	    if (!rc) rc = -60;
-	    break;
-	}
+        switch (PJ_GET_EXCEPTION()) {
+        case ID_1:
+            if (!rc) rc = 0;
+            break;
+        default:
+            if (!rc) rc = -60;
+            break;
+        }
     }
     PJ_END;
 
     if (rc != 0)
-	return rc;
+        return rc;
 
     /*
      * Nested handlers
      */
     PJ_TRY {
-	rc = try_catch_test();
+        rc = try_catch_test();
     }
     PJ_CATCH_ANY {
-	rc = -70;
+        rc = -70;
     }
     PJ_END;
 
     if (rc != 0)
-	return rc;
+        return rc;
 
     /*
      * Throwing exception inside handler
      */
     rc = -80;
     PJ_TRY {
-	int rc2;
-	rc2 = throw_in_handler();
-	if (rc2)
-	    rc = rc2;
+        int rc2;
+        rc2 = throw_in_handler();
+        if (rc2)
+            rc = rc2;
     }
     PJ_CATCH_ANY {
-	if (PJ_GET_EXCEPTION() == ID_2) {
-	    rc = 0;
-	} else {
-	    rc = -90;
-	}
+        if (PJ_GET_EXCEPTION() == ID_2) {
+            rc = 0;
+        } else {
+            rc = -90;
+        }
     }
     PJ_END;
 
     if (rc != 0)
-	return rc;
+        return rc;
 
 
     /*
@@ -250,13 +249,13 @@ static int test(void)
      * is cleaned up properly, but not sure how to do this.
      */
     PJ_TRY {
-	int rc2;
-	rc2 = return_in_handler();
-	if (rc2)
-	    rc = rc2;
+        int rc2;
+        rc2 = return_in_handler();
+        if (rc2)
+            rc = rc2;
     }
     PJ_CATCH_ANY {
-	rc = -100;
+        rc = -100;
     }
     PJ_END;
 
@@ -270,10 +269,10 @@ int exception_test(void)
     enum { LOOP = 10 };
 
     for (i=0; i<LOOP; ++i) {
-	if ((rc=test()) != 0) {
-	    PJ_LOG(3,("", "...failed at i=%d (rc=%d)", i, rc));
-	    return rc;
-	}
+        if ((rc=test()) != 0) {
+            PJ_LOG(3,("", "...failed at i=%d (rc=%d)", i, rc));
+            return rc;
+        }
     }
     return 0;
 }
@@ -283,6 +282,6 @@ int exception_test(void)
  * when this test is disabled. 
  */
 int dummy_exception_test;
-#endif	/* INCLUDE_EXCEPTION_TEST */
+#endif  /* INCLUDE_EXCEPTION_TEST */
 
 

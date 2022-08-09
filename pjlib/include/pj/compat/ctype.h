@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -28,18 +27,18 @@
 #if defined(PJ_HAS_CTYPE_H) && PJ_HAS_CTYPE_H != 0
 #  include <ctype.h>
 #else
-#  define isalnum(c)	    (isalpha(c) || isdigit(c))
-#  define isalpha(c)	    (islower(c) || isupper(c))
-#  define isascii(c)	    (((unsigned char)(c))<=0x7f)
-#  define isdigit(c)	    ((c)>='0' && (c)<='9')
-#  define isspace(c)	    ((c)==' '  || (c)=='\t' ||\
-			     (c)=='\n' || (c)=='\r' || (c)=='\v')
-#  define islower(c)	    ((c)>='a' && (c)<='z')
-#  define isupper(c)	    ((c)>='A' && (c)<='Z')
-#  define isxdigit(c)	    (isdigit(c) || (tolower(c)>='a'&&tolower(c)<='f'))
-#  define tolower(c)	    (((c) >= 'A' && (c) <= 'Z') ? (c)+('a'-'A') : (c))
-#  define toupper(c)	    (((c) >= 'a' && (c) <= 'z') ? (c)-('a'-'A') : (c))
+#  define isalnum(c)        (isalpha(c) || isdigit(c))
+#  define isalpha(c)        (islower(c) || isupper(c))
+#  define isascii(c)        (((unsigned char)(c))<=0x7f)
+#  define isdigit(c)        ((c)>='0' && (c)<='9')
+#  define isspace(c)        ((c)==' '  || (c)=='\t' ||\
+                             (c)=='\n' || (c)=='\r' || (c)=='\v')
+#  define islower(c)        ((c)>='a' && (c)<='z')
+#  define isupper(c)        ((c)>='A' && (c)<='Z')
+#  define isxdigit(c)       (isdigit(c) || (tolower(c)>='a'&&tolower(c)<='f'))
+#  define tolower(c)        (((c) >= 'A' && (c) <= 'Z') ? (c)+('a'-'A') : (c))
+#  define toupper(c)        (((c) >= 'a' && (c) <= 'z') ? (c)-('a'-'A') : (c))
 #endif
 
 
-#endif	/* __PJ_COMPAT_CTYPE_H__ */
+#endif  /* __PJ_COMPAT_CTYPE_H__ */

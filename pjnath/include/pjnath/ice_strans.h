@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -61,10 +60,10 @@ PJ_BEGIN_DECL
  *    the STUN and TURN settings.\n\n
  *  - create the instance with #pj_ice_strans_create(). Among other things,
  *    the function needs the following arguments:
- *	- the #pj_ice_strans_cfg structure for the main configurations
- *	- number of components to be supported
- *	- instance of #pj_ice_strans_cb structure to report callbacks to
- *	  application.\n\n
+ *      - the #pj_ice_strans_cfg structure for the main configurations
+ *      - number of components to be supported
+ *      - instance of #pj_ice_strans_cb structure to report callbacks to
+ *        application.\n\n
  *  - while the #pj_ice_strans_create() call completes immediately, the
  *    initialization will be running in the background to gather the 
  *    candidates (for example STUN and TURN candidates, if they are enabled
@@ -77,9 +76,9 @@ PJ_BEGIN_DECL
  *  - the application now typically will need to communicate local ICE
  *    information to remote host. It can achieve this by using the following
  *    functions to query local ICE information:
- *	- #pj_ice_strans_get_ufrag_pwd()
- *	- #pj_ice_strans_enum_cands()
- *	- #pj_ice_strans_get_def_cand()\n
+ *      - #pj_ice_strans_get_ufrag_pwd()
+ *      - #pj_ice_strans_enum_cands()
+ *      - #pj_ice_strans_get_def_cand()\n
  *    The application may need to encode the above information as SDP.\n\n
  *  - when the application receives remote ICE information (for example, from
  *    the SDP received from remote), it can now start ICE negotiation, by
@@ -118,7 +117,7 @@ PJ_BEGIN_DECL
  * https://github.com/pjsip/pjproject/issues/2229 for more details.
  */
 #ifndef DEPRECATED_FOR_TICKET_2229
-#  define DEPRECATED_FOR_TICKET_2229	0
+#  define DEPRECATED_FOR_TICKET_2229    0
 #endif
 
 /** Forward declaration for ICE stream transport. */
@@ -155,50 +154,50 @@ typedef struct pj_ice_strans_cb
      * incoming packet from the sockets which is not related to ICE
      * (for example, normal RTP/RTCP packet destined for application).
      *
-     * @param ice_st	    The ICE stream transport.
-     * @param comp_id	    The component ID.
-     * @param pkt	    The packet.
-     * @param size	    Size of the packet.
-     * @param src_addr	    Source address of the packet.
+     * @param ice_st        The ICE stream transport.
+     * @param comp_id       The component ID.
+     * @param pkt           The packet.
+     * @param size          Size of the packet.
+     * @param src_addr      Source address of the packet.
      * @param src_addr_len  Length of the source address.
      */
     void    (*on_rx_data)(pj_ice_strans *ice_st,
-			  unsigned comp_id, 
-			  void *pkt, pj_size_t size,
-			  const pj_sockaddr_t *src_addr,
-			  unsigned src_addr_len);
+                          unsigned comp_id, 
+                          void *pkt, pj_size_t size,
+                          const pj_sockaddr_t *src_addr,
+                          unsigned src_addr_len);
 
     /**
      * This callback is optional and will be called to notify the status of
      * async send operations.
      *
-     * @param ice_st	    The ICE stream transport.
-     * @param sent	    If value is positive non-zero it indicates the
-     *			    number of data sent. When the value is negative,
-     *			    it contains the error code which can be retrieved
-     *			    by negating the value (i.e. status=-sent).
+     * @param ice_st        The ICE stream transport.
+     * @param sent          If value is positive non-zero it indicates the
+     *                      number of data sent. When the value is negative,
+     *                      it contains the error code which can be retrieved
+     *                      by negating the value (i.e. status=-sent).
      */
     void    (*on_data_sent)(pj_ice_strans *sock,
-			    pj_ssize_t sent);
+                            pj_ssize_t sent);
 
     /**
      * An optional callback that will be called by the ICE transport when a
      * valid pair has been found during ICE negotiation.
      *
-     * @param ice_st	    The ICE stream transport.
+     * @param ice_st        The ICE stream transport.
      */
     void (*on_valid_pair)(pj_ice_strans *ice_st);
 
     /**
      * Callback to report status of various ICE operations.
      * 
-     * @param ice_st	    The ICE stream transport.
-     * @param op	    The operation which status is being reported.
-     * @param status	    Operation status.
+     * @param ice_st        The ICE stream transport.
+     * @param op            The operation which status is being reported.
+     * @param status        Operation status.
      */
     void    (*on_ice_complete)(pj_ice_strans *ice_st, 
-			       pj_ice_strans_op op,
-			       pj_status_t status);
+                               pj_ice_strans_op op,
+                               pj_status_t status);
 
     /**
      * Callback to report a new ICE local candidate, e.g: after successful
@@ -210,14 +209,14 @@ typedef struct pj_ice_strans_cb
      * Trickle ICE can use this callback to convey the new candidate
      * to remote agent and monitor end-of-candidate indication.
      *
-     * @param ice_st	    The ICE stream transport.
-     * @param cand	    The new local candidate, can be NULL when the last
-     *			    local candidate initialization failed/timeout.
+     * @param ice_st        The ICE stream transport.
+     * @param cand          The new local candidate, can be NULL when the last
+     *                      local candidate initialization failed/timeout.
      * @param end_of_cand   PJ_TRUE if this is the last of local candidate.
      */
     void    (*on_new_candidate)(pj_ice_strans *ice_st,
-				const pj_ice_sess_cand *cand,
-				pj_bool_t end_of_cand);
+                                const pj_ice_sess_cand *cand,
+                                pj_bool_t end_of_cand);
 
 } pj_ice_strans_cb;
 
@@ -232,13 +231,13 @@ typedef struct pj_ice_strans_stun_cfg
      *
      * Default value is pj_AF_INET() (IPv4)
      */
-    int			 af;
+    int                  af;
 
     /**
      * Optional configuration for STUN transport. The default
      * value will be initialized with #pj_stun_sock_cfg_default().
      */
-    pj_stun_sock_cfg	 cfg;
+    pj_stun_sock_cfg     cfg;
 
     /**
      * Maximum number of host candidates to be added. If the
@@ -246,14 +245,14 @@ typedef struct pj_ice_strans_stun_cfg
      *
      * Default: 64
      */
-    unsigned		 max_host_cands;
+    unsigned             max_host_cands;
 
     /**
      * Include loopback addresses in the host candidates.
      *
      * Default: PJ_FALSE
      */
-    pj_bool_t		 loop_addr;
+    pj_bool_t            loop_addr;
 
     /**
      * Specify the STUN server domain or hostname or IP address.
@@ -279,7 +278,7 @@ typedef struct pj_ice_strans_stun_cfg
      *
      * The default value is empty.
      */
-    pj_str_t		 server;
+    pj_str_t             server;
 
     /**
      * The port number of the STUN server, when \a server
@@ -291,7 +290,7 @@ typedef struct pj_ice_strans_stun_cfg
      *
      * The default value is PJ_STUN_PORT.
      */
-    pj_uint16_t		 port;
+    pj_uint16_t          port;
 
     /**
      * Ignore STUN resolution error and proceed with just local
@@ -299,7 +298,7 @@ typedef struct pj_ice_strans_stun_cfg
      *
      * The default is PJ_FALSE
      */
-    pj_bool_t		 ignore_stun_error;
+    pj_bool_t            ignore_stun_error;
 
 } pj_ice_strans_stun_cfg;
 
@@ -314,14 +313,14 @@ typedef struct pj_ice_strans_turn_cfg
      *
      * Default value is pj_AF_INET() (IPv4)
      */
-    int			 af;
+    int                  af;
 
     /**
      * Optional TURN socket settings. The default values will be
      * initialized by #pj_turn_sock_cfg_default(). This contains
      * settings such as QoS.
      */
-    pj_turn_sock_cfg	 cfg;
+    pj_turn_sock_cfg     cfg;
 
     /**
      * Specify the TURN server domain or hostname or IP address.
@@ -340,7 +339,7 @@ typedef struct pj_ice_strans_turn_cfg
      *
      * The default value is empty.
      */
-    pj_str_t		 server;
+    pj_str_t             server;
 
     /**
      * The port number of the TURN server, when \a server
@@ -352,14 +351,14 @@ typedef struct pj_ice_strans_turn_cfg
      *
      * Default is zero.
      */
-    pj_uint16_t		 port;
+    pj_uint16_t          port;
 
     /**
      * Type of connection to the TURN server.
      *
      * Default is PJ_TURN_TP_UDP.
      */
-    pj_turn_tp_type	 conn_type;
+    pj_turn_tp_type      conn_type;
 
     /**
      * Credential to be used for the TURN session. This setting
@@ -367,13 +366,13 @@ typedef struct pj_ice_strans_turn_cfg
      *
      * Default is to have no credential.
      */
-    pj_stun_auth_cred	 auth_cred;
+    pj_stun_auth_cred    auth_cred;
 
     /**
      * Optional TURN Allocate parameter. The default value will be
      * initialized by #pj_turn_alloc_param_default().
      */
-    pj_turn_alloc_param	 alloc_param;
+    pj_turn_alloc_param  alloc_param;
 
 } pj_ice_strans_turn_cfg;
 
@@ -393,7 +392,7 @@ typedef struct pj_ice_strans_cfg
      *
      * The default value is pj_AF_INET() (IPv4).
      */
-    int			 af;
+    int                  af;
 
     /**
      * STUN configuration which contains the timer heap and
@@ -403,7 +402,7 @@ typedef struct pj_ice_strans_cfg
      * The default value is all zero. Application must initialize
      * this setting with #pj_stun_config_init().
      */
-    pj_stun_config	 stun_cfg;
+    pj_stun_config       stun_cfg;
 
     /**
      * DNS resolver to be used to resolve servers. If DNS SRV
@@ -411,14 +410,14 @@ typedef struct pj_ice_strans_cfg
      *
      * The default value is NULL.
      */
-    pj_dns_resolver	*resolver;
+    pj_dns_resolver     *resolver;
 
     /**
      * This contains various STUN session options. Once the ICE stream
      * transport is created, application may also change the options
      * with #pj_ice_strans_set_options().
      */
-    pj_ice_sess_options	 opt;
+    pj_ice_sess_options  opt;
 
     /**
      * Warning: this field is deprecated, please use \a stun_tp field instead.
@@ -435,7 +434,7 @@ typedef struct pj_ice_strans_cfg
      *
      * Default: 0
      */
-    unsigned		 stun_tp_cnt;
+    unsigned             stun_tp_cnt;
 
     /**
      * STUN and local transport settings. This specifies the settings
@@ -457,7 +456,7 @@ typedef struct pj_ice_strans_cfg
      *
      * Default: 0
      */
-    unsigned		 turn_tp_cnt;
+    unsigned             turn_tp_cnt;
 
     /**
      * TURN transport settings.
@@ -475,14 +474,14 @@ typedef struct pj_ice_strans_cfg
      *
      * Default: 4
      */
-    unsigned 		 num_send_buf;
+    unsigned             num_send_buf;
 
     /**
      * Buffer size used for pj_ice_strans_sendto2().
      *
      * Default: 0 (size determined by the size of the first packet sent).
      */
-    unsigned 		 send_buf_size;
+    unsigned             send_buf_size;
 
     /**
      * Component specific settings, which will override the settings in
@@ -491,58 +490,58 @@ typedef struct pj_ice_strans_cfg
      * traffic type for RTP and RTCP component.
      */
     struct {
-	/**
-	 * QoS traffic type to be set on this transport. When application
-	 * wants to apply QoS tagging to the transport, it's preferable to
-	 * set this field rather than \a qos_param fields since this is 
-	 * more portable.
-	 *
-	 * Default value is PJ_QOS_TYPE_BEST_EFFORT.
-	 */
-	pj_qos_type qos_type;
+        /**
+         * QoS traffic type to be set on this transport. When application
+         * wants to apply QoS tagging to the transport, it's preferable to
+         * set this field rather than \a qos_param fields since this is 
+         * more portable.
+         *
+         * Default value is PJ_QOS_TYPE_BEST_EFFORT.
+         */
+        pj_qos_type qos_type;
 
-	/**
-	 * Set the low level QoS parameters to the transport. This is a 
-	 * lower level operation than setting the \a qos_type field and
-	 * may not be supported on all platforms.
-	 *
-	 * By default all settings in this structure are disabled.
-	 */
-	pj_qos_params qos_params;
+        /**
+         * Set the low level QoS parameters to the transport. This is a 
+         * lower level operation than setting the \a qos_type field and
+         * may not be supported on all platforms.
+         *
+         * By default all settings in this structure are disabled.
+         */
+        pj_qos_params qos_params;
 
-	/**
-	 * Specify target value for socket receive buffer size. It will be
-	 * applied using setsockopt(). When it fails to set the specified
-	 * size, it will try with lower value until the highest possible is
-	 * successfully set.
-	 *
-	 * When this is set to zero, this component will apply socket receive
-	 * buffer size settings specified in STUN and TURN socket config
-	 * above, i.e: \a stun::cfg::so_rcvbuf_size and
-	 * \a turn::cfg::so_rcvbuf_size. Otherwise, this setting will be
-	 * applied to STUN and TURN sockets for this component, overriding
-	 * the setting specified in STUN/TURN socket config.
-	 *
-	 * Default: 0
-	 */
-	unsigned so_rcvbuf_size;
+        /**
+         * Specify target value for socket receive buffer size. It will be
+         * applied using setsockopt(). When it fails to set the specified
+         * size, it will try with lower value until the highest possible is
+         * successfully set.
+         *
+         * When this is set to zero, this component will apply socket receive
+         * buffer size settings specified in STUN and TURN socket config
+         * above, i.e: \a stun::cfg::so_rcvbuf_size and
+         * \a turn::cfg::so_rcvbuf_size. Otherwise, this setting will be
+         * applied to STUN and TURN sockets for this component, overriding
+         * the setting specified in STUN/TURN socket config.
+         *
+         * Default: 0
+         */
+        unsigned so_rcvbuf_size;
 
-	/**
-	 * Specify target value for socket send buffer size. It will be
-	 * applied using setsockopt(). When it fails to set the specified
-	 * size, it will try with lower value until the highest possible is
-	 * successfully set.
-	 *
-	 * When this is set to zero, this component will apply socket send
-	 * buffer size settings specified in STUN and TURN socket config
-	 * above, i.e: \a stun::cfg::so_sndbuf_size and
-	 * \a turn::cfg::so_sndbuf_size. Otherwise, this setting will be
-	 * applied to STUN and TURN sockets for this component, overriding
-	 * the setting specified in STUN/TURN socket config.
-	 *
-	 * Default: 0
-	 */
-	unsigned so_sndbuf_size;
+        /**
+         * Specify target value for socket send buffer size. It will be
+         * applied using setsockopt(). When it fails to set the specified
+         * size, it will try with lower value until the highest possible is
+         * successfully set.
+         *
+         * When this is set to zero, this component will apply socket send
+         * buffer size settings specified in STUN and TURN socket config
+         * above, i.e: \a stun::cfg::so_sndbuf_size and
+         * \a turn::cfg::so_sndbuf_size. Otherwise, this setting will be
+         * applied to STUN and TURN sockets for this component, overriding
+         * the setting specified in STUN/TURN socket config.
+         *
+         * Default: 0
+         */
+        unsigned so_sndbuf_size;
 
     } comp[PJ_ICE_MAX_COMP];
 
@@ -597,7 +596,7 @@ typedef enum pj_ice_strans_state
 /** 
  * Initialize ICE transport configuration with default values.
  *
- * @param cfg		The configuration to be initialized.
+ * @param cfg           The configuration to be initialized.
  */
 PJ_DECL(void) pj_ice_strans_cfg_default(pj_ice_strans_cfg *cfg);
 
@@ -605,7 +604,7 @@ PJ_DECL(void) pj_ice_strans_cfg_default(pj_ice_strans_cfg *cfg);
 /** 
  * Initialize ICE STUN transport configuration with default values.
  *
- * @param cfg		The configuration to be initialized.
+ * @param cfg           The configuration to be initialized.
  */
 PJ_DECL(void) pj_ice_strans_stun_cfg_default(pj_ice_strans_stun_cfg *cfg);
 
@@ -613,7 +612,7 @@ PJ_DECL(void) pj_ice_strans_stun_cfg_default(pj_ice_strans_stun_cfg *cfg);
 /** 
  * Initialize ICE TURN transport configuration with default values.
  *
- * @param cfg		The configuration to be initialized.
+ * @param cfg           The configuration to be initialized.
  */
 PJ_DECL(void) pj_ice_strans_turn_cfg_default(pj_ice_strans_turn_cfg *cfg);
 
@@ -621,44 +620,44 @@ PJ_DECL(void) pj_ice_strans_turn_cfg_default(pj_ice_strans_turn_cfg *cfg);
 /**
  * Copy configuration.
  *
- * @param pool		Pool.
- * @param dst		Destination.
- * @param src		Source.
+ * @param pool          Pool.
+ * @param dst           Destination.
+ * @param src           Source.
  */
 PJ_DECL(void) pj_ice_strans_cfg_copy(pj_pool_t *pool,
-				     pj_ice_strans_cfg *dst,
-				     const pj_ice_strans_cfg *src);
+                                     pj_ice_strans_cfg *dst,
+                                     const pj_ice_strans_cfg *src);
 
 
 /**
  * Create and initialize the ICE stream transport with the specified
  * parameters. 
  *
- * @param name		Optional name for logging identification.
- * @param cfg		Configuration.
- * @param comp_cnt	Number of components.
- * @param user_data	Arbitrary user data to be associated with this
- *			ICE stream transport.
- * @param cb		Callback.
- * @param p_ice_st	Pointer to receive the ICE stream transport
- *			instance.
+ * @param name          Optional name for logging identification.
+ * @param cfg           Configuration.
+ * @param comp_cnt      Number of components.
+ * @param user_data     Arbitrary user data to be associated with this
+ *                      ICE stream transport.
+ * @param cb            Callback.
+ * @param p_ice_st      Pointer to receive the ICE stream transport
+ *                      instance.
  *
- * @return		PJ_SUCCESS if ICE stream transport is created
- *			successfully.
+ * @return              PJ_SUCCESS if ICE stream transport is created
+ *                      successfully.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_create(const char *name,
-					  const pj_ice_strans_cfg *cfg,
-					  unsigned comp_cnt,
-					  void *user_data,
-					  const pj_ice_strans_cb *cb,
-					  pj_ice_strans **p_ice_st);
+                                          const pj_ice_strans_cfg *cfg,
+                                          unsigned comp_cnt,
+                                          void *user_data,
+                                          const pj_ice_strans_cb *cb,
+                                          pj_ice_strans **p_ice_st);
 
 /**
  * Get ICE session state.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		ICE session state.
+ * @return              ICE session state.
  */
 PJ_DECL(pj_ice_strans_state) pj_ice_strans_get_state(pj_ice_strans *ice_st);
 
@@ -666,9 +665,9 @@ PJ_DECL(pj_ice_strans_state) pj_ice_strans_get_state(pj_ice_strans *ice_st);
 /**
  * Get string representation of ICE state.
  *
- * @param state		ICE stream transport state.
+ * @param state         ICE stream transport state.
  *
- * @return		String.
+ * @return              String.
  */
 PJ_DECL(const char*) pj_ice_strans_state_name(pj_ice_strans_state state);
 
@@ -678,9 +677,9 @@ PJ_DECL(const char*) pj_ice_strans_state_name(pj_ice_strans_state state);
  * inside the ICE stream transport, close all sockets and release all
  * other resources.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_destroy(pj_ice_strans *ice_st);
 
@@ -688,9 +687,9 @@ PJ_DECL(pj_status_t) pj_ice_strans_destroy(pj_ice_strans *ice_st);
 /**
  * Get the user data associated with the ICE stream transport.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		The user data.
+ * @return              The user data.
  */
 PJ_DECL(void*) pj_ice_strans_get_user_data(pj_ice_strans *ice_st);
 
@@ -698,47 +697,47 @@ PJ_DECL(void*) pj_ice_strans_get_user_data(pj_ice_strans *ice_st);
 /**
  * Get the value of various options of the ICE stream transport.
  *
- * @param ice_st	The ICE stream transport.
- * @param opt		The options to be initialized with the values
- *			from the ICE stream transport.
+ * @param ice_st        The ICE stream transport.
+ * @param opt           The options to be initialized with the values
+ *                      from the ICE stream transport.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error.
+ * @return              PJ_SUCCESS on success, or the appropriate error.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_get_options(pj_ice_strans *ice_st,
-					       pj_ice_sess_options *opt);
+                                               pj_ice_sess_options *opt);
 
 /**
  * Specify various options for this ICE stream transport. Application 
  * should call #pj_ice_strans_get_options() to initialize the options 
  * with their default values.
  *
- * @param ice_st	The ICE stream transport.
- * @param opt		Options to be applied to this ICE stream transport.
+ * @param ice_st        The ICE stream transport.
+ * @param opt           Options to be applied to this ICE stream transport.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error.
+ * @return              PJ_SUCCESS on success, or the appropriate error.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
-					       const pj_ice_sess_options *opt);
+                                               const pj_ice_sess_options *opt);
 
 /**
  * Update number of components of the ICE stream transport. This can only
  * reduce the number of components from the initial value specified in
  * pj_ice_strans_create() and before ICE session is initialized.
  *
- * @param ice_st	The ICE stream transport.
- * @param comp_cnt	Number of components.
+ * @param ice_st        The ICE stream transport.
+ * @param comp_cnt      Number of components.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error.
+ * @return              PJ_SUCCESS on success, or the appropriate error.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_update_comp_cnt(pj_ice_strans *ice_st,
-						   unsigned comp_cnt);
+                                                   unsigned comp_cnt);
 
 /**
  * Get the group lock for this ICE stream transport.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		The group lock.
+ * @return              The group lock.
  */
 PJ_DECL(pj_grp_lock_t *) pj_ice_strans_get_grp_lock(pj_ice_strans *ice_st);
 
@@ -752,26 +751,26 @@ PJ_DECL(pj_grp_lock_t *) pj_ice_strans_get_grp_lock(pj_ice_strans *ice_st);
  * candidates by calling #pj_ice_strans_enum_cands(), and encode these
  * candidates in the SDP to be sent to remote agent.
  *
- * @param ice_st	The ICE stream transport.
- * @param role		ICE role.
- * @param local_ufrag	Optional local username fragment.
- * @param local_passwd	Optional local password.
+ * @param ice_st        The ICE stream transport.
+ * @param role          ICE role.
+ * @param local_ufrag   Optional local username fragment.
+ * @param local_passwd  Optional local password.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
-					    pj_ice_sess_role role,
-					    const pj_str_t *local_ufrag,
-					    const pj_str_t *local_passwd);
+                                            pj_ice_sess_role role,
+                                            const pj_str_t *local_ufrag,
+                                            const pj_str_t *local_passwd);
 
 /**
  * Check if the ICE stream transport has the ICE session created. The
  * ICE session is created with #pj_ice_strans_init_ice().
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		PJ_TRUE if #pj_ice_strans_init_ice() has been
- *			called.
+ * @return              PJ_TRUE if #pj_ice_strans_init_ice() has been
+ *                      called.
  */
 PJ_DECL(pj_bool_t) pj_ice_strans_has_sess(pj_ice_strans *ice_st);
 
@@ -779,10 +778,10 @@ PJ_DECL(pj_bool_t) pj_ice_strans_has_sess(pj_ice_strans *ice_st);
 /**
  * Check if ICE negotiation is still running.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		PJ_TRUE if ICE session has been created and ICE 
- *			negotiation negotiation is in progress.
+ * @return              PJ_TRUE if ICE session has been created and ICE 
+ *                      negotiation negotiation is in progress.
  */
 PJ_DECL(pj_bool_t) pj_ice_strans_sess_is_running(pj_ice_strans *ice_st);
 
@@ -790,10 +789,10 @@ PJ_DECL(pj_bool_t) pj_ice_strans_sess_is_running(pj_ice_strans *ice_st);
 /**
  * Check if ICE negotiation has completed.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		PJ_TRUE if ICE session has been created and the
- *			negotiation is complete.
+ * @return              PJ_TRUE if ICE session has been created and the
+ *                      negotiation is complete.
  */
 PJ_DECL(pj_bool_t) pj_ice_strans_sess_is_complete(pj_ice_strans *ice_st);
 
@@ -805,9 +804,9 @@ PJ_DECL(pj_bool_t) pj_ice_strans_sess_is_complete(pj_ice_strans *ice_st);
  * started, the number of components will be the lowest number of 
  * component between local and remote agents.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		The running number of components.
+ * @return              The running number of components.
  */
 PJ_DECL(unsigned) pj_ice_strans_get_running_comp_cnt(pj_ice_strans *ice_st);
 
@@ -825,54 +824,54 @@ PJ_DECL(unsigned) pj_ice_strans_get_running_comp_cnt(pj_ice_strans *ice_st);
  * #pj_ice_strans_stop_ice(), the pointer in the string will no longer be
  * valid.
  *
- * @param ice_st	The ICE stream transport.
- * @param loc_ufrag	Optional pointer to receive ICE username fragment
- *			of local endpoint from the ICE session.
- * @param loc_pwd	Optional pointer to receive ICE password of local
- *			endpoint from the ICE session.
- * @param rem_ufrag	Optional pointer to receive ICE username fragment
- *			of remote endpoint from the ICE session.
- * @param rem_pwd	Optional pointer to receive ICE password of remote
- *			endpoint from the ICE session.
+ * @param ice_st        The ICE stream transport.
+ * @param loc_ufrag     Optional pointer to receive ICE username fragment
+ *                      of local endpoint from the ICE session.
+ * @param loc_pwd       Optional pointer to receive ICE password of local
+ *                      endpoint from the ICE session.
+ * @param rem_ufrag     Optional pointer to receive ICE username fragment
+ *                      of remote endpoint from the ICE session.
+ * @param rem_pwd       Optional pointer to receive ICE password of remote
+ *                      endpoint from the ICE session.
  *
- * @return		PJ_SUCCESS if the strings have been retrieved
- *			successfully.
+ * @return              PJ_SUCCESS if the strings have been retrieved
+ *                      successfully.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_get_ufrag_pwd(pj_ice_strans *ice_st,
-						 pj_str_t *loc_ufrag,
-						 pj_str_t *loc_pwd,
-						 pj_str_t *rem_ufrag,
-						 pj_str_t *rem_pwd);
+                                                 pj_str_t *loc_ufrag,
+                                                 pj_str_t *loc_pwd,
+                                                 pj_str_t *rem_ufrag,
+                                                 pj_str_t *rem_pwd);
 
 
 /**
  * Get the number of local candidates for the specified component ID.
  *
- * @param ice_st	The ICE stream transport.
- * @param comp_id	Component ID.
+ * @param ice_st        The ICE stream transport.
+ * @param comp_id       Component ID.
  *
- * @return		The number of candidates.
+ * @return              The number of candidates.
  */
 PJ_DECL(unsigned) pj_ice_strans_get_cands_count(pj_ice_strans *ice_st,
-					        unsigned comp_id);
+                                                unsigned comp_id);
 
 /**
  * Enumerate the local candidates for the specified component.
  *
- * @param ice_st	The ICE stream transport.
- * @param comp_id	Component ID.
- * @param count		On input, it specifies the maximum number of
- *			elements. On output, it will be filled with
- *			the number of candidates copied to the
- *			array.
- * @param cand		Array of candidates.
+ * @param ice_st        The ICE stream transport.
+ * @param comp_id       Component ID.
+ * @param count         On input, it specifies the maximum number of
+ *                      elements. On output, it will be filled with
+ *                      the number of candidates copied to the
+ *                      array.
+ * @param cand          Array of candidates.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_enum_cands(pj_ice_strans *ice_st,
-					      unsigned comp_id,
-					      unsigned *count,
-					      pj_ice_sess_cand cand[]);
+                                              unsigned comp_id,
+                                              unsigned *count,
+                                              pj_ice_sess_cand cand[]);
 
 /**
  * Get the default candidate for the specified component. When this
@@ -881,22 +880,22 @@ PJ_DECL(pj_status_t) pj_ice_strans_enum_cands(pj_ice_strans *ice_st,
  * this function is called after ICE negotiation completes, the
  * default candidate is the candidate that forms the valid pair.
  *
- * @param ice_st	The ICE stream transport.
- * @param comp_id	Component ID.
- * @param cand		Pointer to receive the default candidate
- *			information.
+ * @param ice_st        The ICE stream transport.
+ * @param comp_id       Component ID.
+ * @param cand          Pointer to receive the default candidate
+ *                      information.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_get_def_cand(pj_ice_strans *ice_st,
-						unsigned comp_id,
-						pj_ice_sess_cand *cand);
+                                                unsigned comp_id,
+                                                pj_ice_sess_cand *cand);
 
 /**
  * Get the current ICE role. ICE session must have been initialized
  * before this function can be called.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		Current ICE role.
+ * @return              Current ICE role.
  */
 PJ_DECL(pj_ice_sess_role) pj_ice_strans_get_role(pj_ice_strans *ice_st);
 
@@ -908,13 +907,13 @@ PJ_DECL(pj_ice_sess_role) pj_ice_strans_get_role(pj_ice_strans *ice_st);
  * inspected. ICE session must have been initialized before this function
  * can be called.
  *
- * @param ice_st	The ICE stream transport.
- * @param new_role	The new role to be set.
+ * @param ice_st        The ICE stream transport.
+ * @param new_role      The new role to be set.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error.
+ * @return              PJ_SUCCESS on success, or the appropriate error.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_change_role(pj_ice_strans *ice_st,
-					       pj_ice_sess_role new_role);
+                                               pj_ice_sess_role new_role);
 
 
 /**
@@ -929,21 +928,21 @@ PJ_DECL(pj_status_t) pj_ice_strans_change_role(pj_ice_strans *ice_st,
  * via the callback when ICE connectivity checks completes, either 
  * successfully or with failure.
  *
- * @param ice_st	The ICE stream transport.
- * @param rem_ufrag	Remote ufrag, as seen in the SDP received from 
- *			the remote agent.
- * @param rem_passwd	Remote password, as seen in the SDP received from
- *			the remote agent.
- * @param rcand_cnt	Number of remote candidates in the array.
- * @param rcand		Remote candidates array.
+ * @param ice_st        The ICE stream transport.
+ * @param rem_ufrag     Remote ufrag, as seen in the SDP received from 
+ *                      the remote agent.
+ * @param rem_passwd    Remote password, as seen in the SDP received from
+ *                      the remote agent.
+ * @param rcand_cnt     Number of remote candidates in the array.
+ * @param rcand         Remote candidates array.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_start_ice(pj_ice_strans *ice_st,
-					     const pj_str_t *rem_ufrag,
-					     const pj_str_t *rem_passwd,
-					     unsigned rcand_cnt,
-					     const pj_ice_sess_cand rcand[]);
+                                             const pj_str_t *rem_ufrag,
+                                             const pj_str_t *rem_passwd,
+                                             unsigned rcand_cnt,
+                                             const pj_ice_sess_cand rcand[]);
 
 
 /**
@@ -955,40 +954,40 @@ PJ_DECL(pj_status_t) pj_ice_strans_start_ice(pj_ice_strans *ice_st,
  * This function is only applicable when trickle ICE is not disabled and
  * after ICE session has been created using pj_ice_strans_init_ice().
  *
- * @param ice_st	The ICE stream transport.
- * @param rem_ufrag	Remote ufrag, as seen in the SDP received from
- *			the remote agent.
- * @param rem_passwd	Remote password, as seen in the SDP received from
- *			the remote agent.
- * @param rcand_cnt	Number of new remote candidates in the array.
- * @param rcand		New remote candidates array.
- * @param rcand_end	Set to PJ_TRUE if remote has signalled
- *			end-of-candidate.
+ * @param ice_st        The ICE stream transport.
+ * @param rem_ufrag     Remote ufrag, as seen in the SDP received from
+ *                      the remote agent.
+ * @param rem_passwd    Remote password, as seen in the SDP received from
+ *                      the remote agent.
+ * @param rcand_cnt     Number of new remote candidates in the array.
+ * @param rcand         New remote candidates array.
+ * @param rcand_end     Set to PJ_TRUE if remote has signalled
+ *                      end-of-candidate.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_update_check_list(
-					     pj_ice_strans *ice_st,
-					     const pj_str_t *rem_ufrag,
-					     const pj_str_t *rem_passwd,
-					     unsigned rcand_cnt,
-					     const pj_ice_sess_cand rcand[],
-					     pj_bool_t rcand_end);
+                                             pj_ice_strans *ice_st,
+                                             const pj_str_t *rem_ufrag,
+                                             const pj_str_t *rem_passwd,
+                                             unsigned rcand_cnt,
+                                             const pj_ice_sess_cand rcand[],
+                                             pj_bool_t rcand_end);
 
 /**
  * Retrieve the candidate pair that has been nominated and successfully
  * checked for the specified component. If ICE negotiation is still in
  * progress or it has failed, this function will return NULL.
  *
- * @param ice_st	The ICE stream transport.
- * @param comp_id	Component ID.
+ * @param ice_st        The ICE stream transport.
+ * @param comp_id       Component ID.
  *
- * @return		The valid pair as ICE checklist structure if the
- *			pair exist.
+ * @return              The valid pair as ICE checklist structure if the
+ *                      pair exist.
  */
 PJ_DECL(const pj_ice_sess_check*) 
 pj_ice_strans_get_valid_pair(const pj_ice_strans *ice_st,
-			     unsigned comp_id);
+                             unsigned comp_id);
 
 /**
  * Stop and destroy the ICE session inside this media transport. Application
@@ -1008,9 +1007,9 @@ pj_ice_strans_get_valid_pair(const pj_ice_strans *ice_st,
  * subsequent calls, it must call #pj_ice_strans_destroy() to destroy the
  * ICE stream transport altogether.
  *
- * @param ice_st	The ICE stream transport.
+ * @param ice_st        The ICE stream transport.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
 
@@ -1041,22 +1040,22 @@ PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
  * pj_ice_strans_sendto2() to avoid inconsistent calling of
  * on_data_sent() callback.
  *
- * @param ice_st	The ICE stream transport.
- * @param comp_id	Component ID.
- * @param data		The data or packet to be sent.
- * @param data_len	Size of data or packet, in bytes.
- * @param dst_addr	The destination address.
- * @param dst_addr_len	Length of destination address.
+ * @param ice_st        The ICE stream transport.
+ * @param comp_id       Component ID.
+ * @param data          The data or packet to be sent.
+ * @param data_len      Size of data or packet, in bytes.
+ * @param dst_addr      The destination address.
+ * @param dst_addr_len  Length of destination address.
  *
- * @return		PJ_SUCCESS if data has been sent, or will be sent
- *			later. No callback will be called.
+ * @return              PJ_SUCCESS if data has been sent, or will be sent
+ *                      later. No callback will be called.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_sendto(pj_ice_strans *ice_st,
-					  unsigned comp_id,
-					  const void *data,
-					  pj_size_t data_len,
-					  const pj_sockaddr_t *dst_addr,
-					  int dst_addr_len);
+                                          unsigned comp_id,
+                                          const void *data,
+                                          pj_size_t data_len,
+                                          const pj_sockaddr_t *dst_addr,
+                                          int dst_addr_len);
 #endif
 
 
@@ -1079,25 +1078,25 @@ PJ_DECL(pj_status_t) pj_ice_strans_sendto(pj_ice_strans *ice_st,
  * pj_ice_strans_sendto2() to avoid inconsistent calling of
  * on_data_sent() callback.
  *
- * @param ice_st	The ICE stream transport.
- * @param comp_id	Component ID.
- * @param data		The data or packet to be sent.
- * @param data_len	Size of data or packet, in bytes.
- * @param dst_addr	The destination address.
- * @param dst_addr_len	Length of destination address.
+ * @param ice_st        The ICE stream transport.
+ * @param comp_id       Component ID.
+ * @param data          The data or packet to be sent.
+ * @param data_len      Size of data or packet, in bytes.
+ * @param dst_addr      The destination address.
+ * @param dst_addr_len  Length of destination address.
  *
- * @return		PJ_SUCCESS if data has been sent, or
- *		    	PJ_EPENDING if data cannot be sent immediately. In
- *		    	this case the \a on_data_sent() callback will be
- *		    	called when data is actually sent. Any other return
- *		    	value indicates error condition.
+ * @return              PJ_SUCCESS if data has been sent, or
+ *                      PJ_EPENDING if data cannot be sent immediately. In
+ *                      this case the \a on_data_sent() callback will be
+ *                      called when data is actually sent. Any other return
+ *                      value indicates error condition.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_sendto2(pj_ice_strans *ice_st,
-					   unsigned comp_id,
-					   const void *data,
-					   pj_size_t data_len,
-					   const pj_sockaddr_t *dst_addr,
-					   int dst_addr_len);
+                                           unsigned comp_id,
+                                           const void *data,
+                                           pj_size_t data_len,
+                                           const pj_sockaddr_t *dst_addr,
+                                           int dst_addr_len);
 
 
 /**
@@ -1109,5 +1108,5 @@ PJ_END_DECL
 
 
 
-#endif	/* __PJNATH_ICE_STRANS_H__ */
+#endif  /* __PJNATH_ICE_STRANS_H__ */
 

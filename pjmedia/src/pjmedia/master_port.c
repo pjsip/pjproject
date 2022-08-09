@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -28,13 +27,13 @@
 
 struct pjmedia_master_port
 {
-    unsigned	     options;
+    unsigned         options;
     pjmedia_clock   *clock;
     pjmedia_port    *u_port;
     pjmedia_port    *d_port;
-    unsigned	     buff_size;
-    void	    *buff;
-    pj_lock_t	    *lock;
+    unsigned         buff_size;
+    void            *buff;
+    pj_lock_t       *lock;
 };
 
 
@@ -46,10 +45,10 @@ static void clock_callback(const pj_timestamp *ts, void *user_data);
  *
  */
 PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
-						pjmedia_port *u_port,
-						pjmedia_port *d_port,
-						unsigned options,
-						pjmedia_master_port **p_m)
+                                                pjmedia_port *u_port,
+                                                pjmedia_port *d_port,
+                                                unsigned options,
+                                                pjmedia_master_port **p_m)
 {
     pjmedia_master_port *m;
     unsigned clock_rate;
@@ -67,16 +66,16 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
 
     /* Both ports MUST have equal clock rate */
     PJ_ASSERT_RETURN(u_afd->clock_rate == d_afd->clock_rate,
-		     PJMEDIA_ENCCLOCKRATE);
+                     PJMEDIA_ENCCLOCKRATE);
 
     /* Both ports MUST have equal samples per frame */
     PJ_ASSERT_RETURN(PJMEDIA_PIA_SPF(&u_port->info)==
-			PJMEDIA_PIA_SPF(&d_port->info),
-		     PJMEDIA_ENCSAMPLESPFRAME);
+                        PJMEDIA_PIA_SPF(&d_port->info),
+                     PJMEDIA_ENCSAMPLESPFRAME);
 
     /* Both ports MUST have equal channel count */
     PJ_ASSERT_RETURN(u_afd->channel_count == d_afd->channel_count,
-		     PJMEDIA_ENCCHANNEL);
+                     PJMEDIA_ENCCHANNEL);
 
 
     /* Get clock_rate and samples_per_frame from one of the port. */
@@ -90,7 +89,7 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
      */
     bytes_per_frame = PJMEDIA_AFD_AVG_FSZ(u_afd);
     if (PJMEDIA_AFD_AVG_FSZ(d_afd) > bytes_per_frame)
-	bytes_per_frame = PJMEDIA_AFD_AVG_FSZ(d_afd);
+        bytes_per_frame = PJMEDIA_AFD_AVG_FSZ(d_afd);
 
 
     /* Create the master port instance */
@@ -104,20 +103,20 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
     m->buff_size = bytes_per_frame;
     m->buff = pj_pool_alloc(pool, m->buff_size);
     if (!m->buff)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
     /* Create lock object */
     status = pj_lock_create_simple_mutex(pool, "mport", &m->lock);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Create media clock */
     status = pjmedia_clock_create(pool, clock_rate, channel_count, 
-				  samples_per_frame, options, &clock_callback,
-				  m, &m->clock);
+                                  samples_per_frame, options, &clock_callback,
+                                  m, &m->clock);
     if (status != PJ_SUCCESS) {
-	pj_lock_destroy(m->lock);
-	return status;
+        pj_lock_destroy(m->lock);
+        return status;
     }
 
     /* Done */
@@ -152,8 +151,8 @@ PJ_DEF(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m)
 
 /* Poll the master port clock */
 PJ_DEF(pj_bool_t) pjmedia_master_port_wait( pjmedia_master_port *m,
-					    pj_bool_t wait,
-					    pj_timestamp *ts)
+                                            pj_bool_t wait,
+                                            pj_timestamp *ts)
 {
     PJ_ASSERT_RETURN(m && m->clock, PJ_FALSE);
 
@@ -181,7 +180,7 @@ static void clock_callback(const pj_timestamp *ts, void *user_data)
 
     status = pjmedia_port_get_frame(m->u_port, &frame);
     if (status != PJ_SUCCESS)
-	frame.type = PJMEDIA_FRAME_TYPE_NONE;
+        frame.type = PJMEDIA_FRAME_TYPE_NONE;
 
     status = pjmedia_port_put_frame(m->d_port, &frame);
 
@@ -193,7 +192,7 @@ static void clock_callback(const pj_timestamp *ts, void *user_data)
 
     status = pjmedia_port_get_frame(m->d_port, &frame);
     if (status != PJ_SUCCESS)
-	frame.type = PJMEDIA_FRAME_TYPE_NONE;
+        frame.type = PJMEDIA_FRAME_TYPE_NONE;
 
     status = pjmedia_port_put_frame(m->u_port, &frame);
 
@@ -206,7 +205,7 @@ static void clock_callback(const pj_timestamp *ts, void *user_data)
  * Change the upstream port.
  */
 PJ_DEF(pj_status_t) pjmedia_master_port_set_uport(pjmedia_master_port *m,
-						     pjmedia_port *port)
+                                                     pjmedia_port *port)
 {
     PJ_ASSERT_RETURN(m && port, PJ_EINVAL);
 
@@ -217,11 +216,11 @@ PJ_DEF(pj_status_t) pjmedia_master_port_set_uport(pjmedia_master_port *m,
      * frame.
      */
     if (m->d_port) {
-	PJ_ASSERT_RETURN(
-	    PJMEDIA_PIA_PTIME(&port->info) ==
-		PJMEDIA_PIA_PTIME(&m->d_port->info),
-	    PJMEDIA_ENCSAMPLESPFRAME
-	);
+        PJ_ASSERT_RETURN(
+            PJMEDIA_PIA_PTIME(&port->info) ==
+                PJMEDIA_PIA_PTIME(&m->d_port->info),
+            PJMEDIA_ENCSAMPLESPFRAME
+        );
     }
 
     pj_lock_acquire(m->lock);
@@ -248,7 +247,7 @@ PJ_DEF(pjmedia_port*) pjmedia_master_port_get_uport(pjmedia_master_port*m)
  * Change the downstream port.
  */
 PJ_DEF(pj_status_t) pjmedia_master_port_set_dport(pjmedia_master_port *m,
-						  pjmedia_port *port)
+                                                  pjmedia_port *port)
 {
     PJ_ASSERT_RETURN(m && port, PJ_EINVAL);
 
@@ -259,11 +258,11 @@ PJ_DEF(pj_status_t) pjmedia_master_port_set_dport(pjmedia_master_port *m,
      * frame.
      */
     if (m->u_port) {
-	PJ_ASSERT_RETURN(
-	    PJMEDIA_PIA_PTIME(&port->info) ==
-		    PJMEDIA_PIA_PTIME(&m->u_port->info),
-	    PJMEDIA_ENCSAMPLESPFRAME
-	);
+        PJ_ASSERT_RETURN(
+            PJMEDIA_PIA_PTIME(&port->info) ==
+                    PJMEDIA_PIA_PTIME(&m->u_port->info),
+            PJMEDIA_ENCSAMPLESPFRAME
+        );
     }
 
     pj_lock_acquire(m->lock);
@@ -291,28 +290,28 @@ PJ_DEF(pjmedia_port*) pjmedia_master_port_get_dport(pjmedia_master_port*m)
  * d_port ports.
  */
 PJ_DEF(pj_status_t) pjmedia_master_port_destroy(pjmedia_master_port *m,
-						pj_bool_t destroy_ports)
+                                                pj_bool_t destroy_ports)
 {
     PJ_ASSERT_RETURN(m, PJ_EINVAL);
 
     if (m->clock) {
-	pjmedia_clock_destroy(m->clock);
-	m->clock = NULL;
+        pjmedia_clock_destroy(m->clock);
+        m->clock = NULL;
     }
 
     if (m->u_port && destroy_ports) {
-	pjmedia_port_destroy(m->u_port);
-	m->u_port = NULL;
+        pjmedia_port_destroy(m->u_port);
+        m->u_port = NULL;
     }
 
     if (m->d_port && destroy_ports) {
-	pjmedia_port_destroy(m->d_port);
-	m->d_port = NULL;
+        pjmedia_port_destroy(m->d_port);
+        m->d_port = NULL;
     }
 
     if (m->lock) {
-	pj_lock_destroy(m->lock);
-	m->lock = NULL;
+        pj_lock_destroy(m->lock);
+        m->lock = NULL;
     }
 
     return PJ_SUCCESS;

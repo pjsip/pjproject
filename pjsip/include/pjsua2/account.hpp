@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -52,7 +51,7 @@ struct AccountRegConfig : public PersistentObject
      * This field should be specified if registration is desired. If the
      * value is empty, no account registration will be performed.
      */
-    string		registrarUri;
+    string              registrarUri;
 
     /**
      * Specify whether the account should register as soon as it is
@@ -61,13 +60,13 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: True
      */
-    bool		registerOnAdd;
+    bool                registerOnAdd;
 
     /**
      * The optional custom SIP headers to be put in the registration
      * request.
      */
-    SipHeaderVector	headers;
+    SipHeaderVector     headers;
 
     /**
      * Additional parameters that will be appended in the Contact header
@@ -76,9 +75,9 @@ struct AccountRegConfig : public PersistentObject
      *
      * The parameters should be preceeded by semicolon, and all strings must
      * be properly escaped. Example:
-     *	 ";my-param=X;another-param=Hi%20there"
+     *   ";my-param=X;another-param=Hi%20there"
      */
-    string	    	contactParams;
+    string              contactParams;
 
     /**
      * Additional parameters that will be appended in the Contact URI
@@ -87,15 +86,15 @@ struct AccountRegConfig : public PersistentObject
      *
      * The parameters should be preceeded by semicolon, and all strings must
      * be properly escaped. Example:
-     *	 ";my-param=X;another-param=Hi%20there"
+     *   ";my-param=X;another-param=Hi%20there"
      */
-    string	    	contactUriParams;
+    string              contactUriParams;
 
     /**
      * Optional interval for registration, in seconds. If the value is zero,
      * default interval will be used (PJSUA_REG_INTERVAL, 300 seconds).
      */
-    unsigned		timeoutSec;
+    unsigned            timeoutSec;
 
     /**
      * Specify interval of auto registration retry upon registration failure
@@ -112,7 +111,7 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: PJSUA_REG_RETRY_INTERVAL
      */
-    unsigned		retryIntervalSec;
+    unsigned            retryIntervalSec;
 
     /**
      * This specifies the interval for the first registration retry. The
@@ -125,7 +124,7 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: 0
      */
-    unsigned		firstRetryIntervalSec;
+    unsigned            firstRetryIntervalSec;
 
     /**
      * This specifies maximum randomized value to be added/substracted
@@ -140,7 +139,7 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: 10
      */
-    unsigned		randomRetryIntervalSec;
+    unsigned            randomRetryIntervalSec;
 
     /**
      * Specify the number of seconds to refresh the client registration
@@ -148,7 +147,7 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH, 5 seconds
      */
-    unsigned		delayBeforeRefreshSec;
+    unsigned            delayBeforeRefreshSec;
 
     /**
      * Specify whether calls of the configured account should be dropped
@@ -157,7 +156,7 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: FALSE (disabled)
      */
-    bool		dropCallsOnFail;
+    bool                dropCallsOnFail;
 
     /**
      * Specify the maximum time to wait for unregistration requests to
@@ -165,7 +164,7 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: PJSUA_UNREG_TIMEOUT
      */
-    unsigned		unregWaitMsec;
+    unsigned            unregWaitMsec;
 
     /**
      * Specify how the registration uses the outbound and account proxy
@@ -177,20 +176,20 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: 3 (PJSUA_REG_USE_OUTBOUND_PROXY | PJSUA_REG_USE_ACC_PROXY)
      */
-    unsigned		proxyUse;
+    unsigned            proxyUse;
 
 public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 
@@ -212,20 +211,20 @@ struct AccountSipConfig : public PersistentObject
      * example when the requests are expected to be challenged by the
      * proxies in the route set.
      */
-    AuthCredInfoVector	authCreds;
+    AuthCredInfoVector  authCreds;
 
     /**
      * Array of proxy servers to visit for outgoing requests. Each of the
      * entry is translated into one Route URI.
      */
-    StringVector	proxies;
+    StringVector        proxies;
 
     /**
      * Optional URI to be put as Contact for this account. It is recommended
      * that this field is left empty, so that the value will be calculated
      * automatically based on the transport address.
      */
-    string		contactForced;
+    string              contactForced;
 
     /**
      * Additional parameters that will be appended in the Contact header
@@ -235,9 +234,9 @@ struct AccountSipConfig : public PersistentObject
      *
      * The parameters should be preceeded by semicolon, and all strings must
      * be properly escaped. Example:
-     *	 ";my-param=X;another-param=Hi%20there"
+     *   ";my-param=X;another-param=Hi%20there"
      */
-    string		contactParams;
+    string              contactParams;
 
     /**
      * Additional URI parameters that will be appended in the Contact URI
@@ -247,9 +246,9 @@ struct AccountSipConfig : public PersistentObject
      *
      * The parameters should be preceeded by semicolon, and all strings must
      * be properly escaped. Example:
-     *	 ";my-param=X;another-param=Hi%20there"
+     *   ";my-param=X;another-param=Hi%20there"
      */
-    string		contactUriParams;
+    string              contactUriParams;
 
 
     /**
@@ -257,13 +256,13 @@ struct AccountSipConfig : public PersistentObject
      * send an empty Authorization header in each initial request.
      * Default is no.
      */
-    bool		authInitialEmpty;
+    bool                authInitialEmpty;
 
     /**
      * Specify the algorithm to use when empty Authorization header
      * is to be sent for each initial request (see above)
      */
-    string		authInitialAlgorithm;
+    string              authInitialAlgorithm;
 
     /**
      * Optionally bind this account to specific transport. This normally is
@@ -276,20 +275,20 @@ struct AccountSipConfig : public PersistentObject
      *
      * @see Account::setTransport()
      */
-    TransportId		transportId;
+    TransportId         transportId;
 
 public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -314,7 +313,7 @@ struct AccountCallConfig : public PersistentObject
      *
      * Default: PJSUA_100REL_NOT_USED
      */
-    pjsua_100rel_use	prackUse;
+    pjsua_100rel_use    prackUse;
 
     /**
      * Specify the usage of Session Timers for all sessions. See the
@@ -322,40 +321,40 @@ struct AccountCallConfig : public PersistentObject
      *
      * Default: PJSUA_SIP_TIMER_OPTIONAL
      */
-    pjsua_sip_timer_use	timerUse;
+    pjsua_sip_timer_use timerUse;
 
     /**
      * Specify minimum Session Timer expiration period, in seconds.
      * Must not be lower than 90. Default is 90.
      */
-    unsigned		timerMinSESec;
+    unsigned            timerMinSESec;
 
     /**
      * Specify Session Timer expiration period, in seconds.
      * Must not be lower than timerMinSE. Default is 1800.
      */
-    unsigned		timerSessExpiresSec;
+    unsigned            timerSessExpiresSec;
 
 public:
     /**
      * Default constructor
      */
     AccountCallConfig() : holdType(PJSUA_CALL_HOLD_TYPE_DEFAULT),
-			  prackUse(PJSUA_100REL_NOT_USED),
-			  timerUse(PJSUA_SIP_TIMER_OPTIONAL)
+                          prackUse(PJSUA_100REL_NOT_USED),
+                          timerUse(PJSUA_SIP_TIMER_OPTIONAL)
     {}
 
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -369,7 +368,7 @@ struct AccountPresConfig : public PersistentObject
      * The optional custom SIP headers to be put in the presence
      * subscription request.
      */
-    SipHeaderVector	headers;
+    SipHeaderVector     headers;
 
     /**
      * If this flag is set, the presence information of this account will
@@ -377,7 +376,7 @@ struct AccountPresConfig : public PersistentObject
      *
      * Default: PJ_FALSE
      */
-    bool		publishEnabled;
+    bool                publishEnabled;
 
     /**
      * Specify whether the client publication session should queue the
@@ -388,7 +387,7 @@ struct AccountPresConfig : public PersistentObject
      *
      * Default: PJSIP_PUBLISHC_QUEUE_REQUEST (TRUE)
      */
-    bool		publishQueue;
+    bool                publishQueue;
 
     /**
      * Maximum time to wait for unpublication transaction(s) to complete
@@ -403,26 +402,26 @@ struct AccountPresConfig : public PersistentObject
      *
      * Default: PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC (2000)
      */
-    unsigned		publishShutdownWaitMsec;
+    unsigned            publishShutdownWaitMsec;
 
     /**
      * Optional PIDF tuple ID for outgoing PUBLISH and NOTIFY. If this value
      * is not specified, a random string will be used.
      */
-    string		pidfTupleId;
+    string              pidfTupleId;
 
 public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -440,7 +439,7 @@ struct AccountMwiConfig : public PersistentObject
      *
      * Default: FALSE
      */
-    bool		enabled;
+    bool                enabled;
 
     /**
      * Specify the default expiration time (in seconds) for Message
@@ -449,20 +448,20 @@ struct AccountMwiConfig : public PersistentObject
      *
      * Default: PJSIP_MWI_DEFAULT_EXPIRES (3600)
      */
-    unsigned		expirationSec;
+    unsigned            expirationSec;
 
 public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -478,63 +477,63 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: PJSUA_STUN_USE_DEFAULT
      */
-    pjsua_stun_use 	sipStunUse;
+    pjsua_stun_use      sipStunUse;
 
     /**
      * Control the use of STUN for the media transports.
      *
      * Default: PJSUA_STUN_USE_DEFAULT
      */
-    pjsua_stun_use 	mediaStunUse;
+    pjsua_stun_use      mediaStunUse;
 
     /**
      * Control the use of UPnP for the SIP signaling.
      *
      * Default: PJSUA_UPNP_USE_DEFAULT
      */
-    pjsua_upnp_use 	sipUpnpUse;
+    pjsua_upnp_use      sipUpnpUse;
 
     /**
      * Control the use of UPnP for the media transports.
      *
      * Default: PJSUA_UPNP_USE_DEFAULT
      */
-    pjsua_upnp_use 	mediaUpnpUse;
+    pjsua_upnp_use      mediaUpnpUse;
 
     /**
      * Specify NAT64 options.
      *
      * Default: PJSUA_NAT64_DISABLED
      */
-    pjsua_nat64_opt 	nat64Opt;
+    pjsua_nat64_opt     nat64Opt;
 
     /**
      * Enable ICE for the media transport.
      *
      * Default: False
      */
-    bool		iceEnabled;
+    bool                iceEnabled;
 
     /**
      * Set trickle ICE mode for ICE media transport.
      *
      * Default: PJ_ICE_SESS_TRICKLE_DISABLED
      */
-    pj_ice_sess_trickle	iceTrickle;
+    pj_ice_sess_trickle iceTrickle;
 
     /**
      * Set the maximum number of ICE host candidates.
      *
      * Default: -1 (maximum not set)
      */
-    int			iceMaxHostCands;
+    int                 iceMaxHostCands;
 
     /**
      * Specify whether to use aggressive nomination.
      *
      * Default: True
      */
-    bool		iceAggressiveNomination;
+    bool                iceAggressiveNomination;
 
     /**
      * For controlling agent if it uses regular nomination, specify the delay
@@ -543,7 +542,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default value is PJ_ICE_NOMINATED_CHECK_DELAY.
      */
-    unsigned		iceNominatedCheckDelayMsec;
+    unsigned            iceNominatedCheckDelayMsec;
 
     /**
      * For a controlled agent, specify how long it wants to wait (in
@@ -557,14 +556,14 @@ struct AccountNatConfig : public PersistentObject
      * ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT. Specify -1 to disable
      * this timer.
      */
-    int			iceWaitNominationTimeoutMsec;
+    int                 iceWaitNominationTimeoutMsec;
 
     /**
      * Disable RTCP component.
      *
      * Default: False
      */
-    bool		iceNoRtcp;
+    bool                iceNoRtcp;
 
     /**
      * Always send re-INVITE/UPDATE after ICE negotiation regardless of whether
@@ -574,18 +573,18 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: yes
      */
-    bool		iceAlwaysUpdate;
+    bool                iceAlwaysUpdate;
 
     /**
      * Enable TURN candidate in ICE.
      */
-    bool		turnEnabled;
+    bool                turnEnabled;
 
     /**
      * Specify TURN domain name or host name, in in "DOMAIN:PORT" or
      * "HOST:PORT" format.
      */
-    string		turnServer;
+    string              turnServer;
 
     /**
      * Specify the connection type to be used to the TURN server. Valid
@@ -593,23 +592,23 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: PJ_TURN_TP_UDP
      */
-    pj_turn_tp_type	turnConnType;
+    pj_turn_tp_type     turnConnType;
 
     /**
      * Specify the username to authenticate with the TURN server.
      */
-    string		turnUserName;
+    string              turnUserName;
 
     /**
      * Specify the type of password. Currently this must be zero to
      * indicate plain-text password will be used in the password.
      */
-    int			turnPasswordType;
+    int                 turnPasswordType;
 
     /**
      * Specify the password to authenticate with the TURN server.
      */
-    string		turnPassword;
+    string              turnPassword;
 
     /**
      * This option is used to update the transport address and the Contact
@@ -625,7 +624,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: 1 (PJ_TRUE / yes)
      */
-    int			contactRewriteUse;
+    int                 contactRewriteUse;
 
     /**
      * Specify how Contact update will be done with the registration, if
@@ -637,7 +636,7 @@ struct AccountNatConfig : public PersistentObject
      * Default value: PJSUA_CONTACT_REWRITE_METHOD
      *   (PJSUA_CONTACT_REWRITE_NO_UNREG | PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE)
      */
-    int			contactRewriteMethod;
+    int                 contactRewriteMethod;
 
     /**
      * Specify if source TCP port should be used as the initial Contact
@@ -650,7 +649,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: 1 (PJ_TRUE / yes).
      */
-    int			contactUseSrcPort;
+    int                 contactUseSrcPort;
 
     /**
      * This option is used to overwrite the "sent-by" field of the Via header
@@ -660,7 +659,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: 1 (PJ_TRUE / yes)
      */
-    int			viaRewriteUse;
+    int                 viaRewriteUse;
 
     /**
      * This option controls whether the IP address in SDP should be replaced
@@ -672,7 +671,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: PJ_FALSE (no)
      */
-    int			sdpNatRewriteUse;
+    int                 sdpNatRewriteUse;
 
     /**
      * Control the use of SIP outbound feature. SIP outbound is described in
@@ -687,7 +686,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: 1 (PJ_TRUE / yes)
      */
-    int			sipOutboundUse;
+    int                 sipOutboundUse;
 
     /**
      * Specify SIP outbound (RFC 5626) instance ID to be used by this
@@ -698,7 +697,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: empty
      */
-    string		sipOutboundInstanceId;
+    string              sipOutboundInstanceId;
 
     /**
      * Specify SIP outbound (RFC 5626) registration ID. The default value
@@ -707,7 +706,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: empty
      */
-    string		sipOutboundRegId;
+    string              sipOutboundRegId;
 
     /**
      * Set the interval for periodic keep-alive transmission for this account.
@@ -717,14 +716,14 @@ struct AccountNatConfig : public PersistentObject
      *
      * Default: 15 (seconds)
      */
-    unsigned		udpKaIntervalSec;
+    unsigned            udpKaIntervalSec;
 
     /**
      * Specify the data to be transmitted as keep-alive packets.
      *
      * Default: CR-LF
      */
-    string		udpKaData;
+    string              udpKaData;
 
 public:
     /**
@@ -757,14 +756,14 @@ public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -777,17 +776,17 @@ struct SrtpCrypto
     /**
      * Optional key. If empty, a random key will be autogenerated.
      */
-    string	key;
+    string      key;
 
     /**
      * Crypto name.
      */
-    string	name;
+    string      name;
 
     /**
      * Flags, bitmask from #pjmedia_srtp_crypto_option
      */
-    unsigned	flags;
+    unsigned    flags;
 
 public:
     /**
@@ -815,7 +814,7 @@ struct SrtpOpt : public PersistentObject
      *
      * Default: empty.
      */
-    SrtpCryptoVector		cryptos;
+    SrtpCryptoVector            cryptos;
 
     /**
      * Specify SRTP keying methods, valid keying method is defined in
@@ -824,7 +823,7 @@ struct SrtpOpt : public PersistentObject
      *
      * Default: empty.
      */
-    IntVector			keyings;
+    IntVector                   keyings;
 
 public:
     /**
@@ -846,14 +845,14 @@ public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -869,7 +868,7 @@ struct RtcpFbCap
      * pjmedia_vid_codec_mgr_find_codecs_by_id(), e.g: "L16/8000/1", "PCMU",
      * "H264". This can also be an asterisk ("*") to represent all codecs.
      */
-    string		    codecId;
+    string                  codecId;
 
     /**
      * Specify the RTCP Feedback type.
@@ -879,12 +878,12 @@ struct RtcpFbCap
     /**
      * Specify the type name if RTCP Feedback type is PJMEDIA_RTCP_FB_OTHER.
      */
-    string		    typeName;
+    string                  typeName;
 
     /**
      * Specify the RTCP Feedback parameters.
      */
-    string		    param;
+    string                  param;
 
 public:
     /**
@@ -922,12 +921,12 @@ struct RtcpFbConfig : public PersistentObject
      *
      * Default: false.
      */
-    bool		    dontUseAvpf;
+    bool                    dontUseAvpf;
 
     /**
      * RTCP Feedback capabilities.
      */
-    RtcpFbCapVector	    caps;
+    RtcpFbCapVector         caps;
 
 public:
     /**
@@ -949,14 +948,14 @@ public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -976,7 +975,7 @@ struct AccountMediaConfig : public PersistentObject
      * - Available ports: 5000, 5002, 5004 (Media/RTP transport)
      *                    5001, 5003, 5005 (Media/RTCP transport)
      */
-    TransportConfig	transportConfig;
+    TransportConfig     transportConfig;
 
     /**
      * If remote sends SDP answer containing more than one format or codec in
@@ -985,7 +984,7 @@ struct AccountMediaConfig : public PersistentObject
      *
      * Default: True (Yes).
      */
-    bool		lockCodecEnabled;
+    bool                lockCodecEnabled;
 
     /**
      * Specify whether stream keep-alive and NAT hole punching with
@@ -994,7 +993,7 @@ struct AccountMediaConfig : public PersistentObject
      *
      * Default: False
      */
-    bool		streamKaEnabled;
+    bool                streamKaEnabled;
 
     /**
      * Specify whether secure media transport should be used for this account.
@@ -1003,47 +1002,47 @@ struct AccountMediaConfig : public PersistentObject
      *
      * Default: PJSUA_DEFAULT_USE_SRTP
      */
-    pjmedia_srtp_use	srtpUse;
+    pjmedia_srtp_use    srtpUse;
 
     /**
      * Specify whether SRTP requires secure signaling to be used. This option
      * is only used when \a use_srtp option above is non-zero.
      *
      * Valid values are:
-     *	0: SRTP does not require secure signaling
-     *	1: SRTP requires secure transport such as TLS
-     *	2: SRTP requires secure end-to-end transport (SIPS)
+     *  0: SRTP does not require secure signaling
+     *  1: SRTP requires secure transport such as TLS
+     *  2: SRTP requires secure end-to-end transport (SIPS)
      *
      * Default: PJSUA_DEFAULT_SRTP_SECURE_SIGNALING
      */
-    int			srtpSecureSignaling;
+    int                 srtpSecureSignaling;
 
     /**
      * Specify SRTP settings, like cryptos and keying methods.
      */
-    SrtpOpt		srtpOpt;
+    SrtpOpt             srtpOpt;
 
     /**
      * Specify whether IPv6 should be used on media. Default is not used.
      */
-    pjsua_ipv6_use	ipv6Use;
+    pjsua_ipv6_use      ipv6Use;
 
     /**
      * Enable RTP and RTCP multiplexing.
      */
-    bool		rtcpMuxEnabled;
+    bool                rtcpMuxEnabled;
 
     /**
      * RTCP Feedback settings.
      */
-    RtcpFbConfig	rtcpFbConfig;
+    RtcpFbConfig        rtcpFbConfig;
 
     /**
      * Enable RTCP Extended Report (RTCP XR).
      *
      * Default: PJMEDIA_STREAM_ENABLE_XR
      */
-    bool		rtcpXrEnabled;
+    bool                rtcpXrEnabled;
 
     /**
      * Use loopback media transport. This may be useful if application
@@ -1052,7 +1051,7 @@ struct AccountMediaConfig : public PersistentObject
      *
      * Default: false
      */
-    bool		useLoopMedTp;
+    bool                useLoopMedTp;
 
     /**
      * Enable local loopback when useLoopMedTp is set to TRUE.
@@ -1061,27 +1060,27 @@ struct AccountMediaConfig : public PersistentObject
      *
      * Default: false
      */
-    bool		enableLoopback;
+    bool                enableLoopback;
 
 public:
     /**
      * Default constructor
      */
     AccountMediaConfig() : srtpUse(PJSUA_DEFAULT_USE_SRTP),
-			   ipv6Use(PJSUA_IPV6_DISABLED)
+                           ipv6Use(PJSUA_IPV6_DISABLED)
     {}
 
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -1105,7 +1104,7 @@ struct AccountVideoConfig : public PersistentObject
      *
      * Default: False
      */
-    bool			autoShowIncoming;
+    bool                        autoShowIncoming;
 
     /**
      * Specify whether outgoing video should be activated by default when
@@ -1120,7 +1119,7 @@ struct AccountVideoConfig : public PersistentObject
      *
      * Default: False
      */
-    bool			autoTransmitOutgoing;
+    bool                        autoTransmitOutgoing;
 
     /**
      * Specify video window's flags. The value is a bitmask combination of
@@ -1128,7 +1127,7 @@ struct AccountVideoConfig : public PersistentObject
      *
      * Default: 0
      */
-    unsigned			windowFlags;
+    unsigned                    windowFlags;
 
     /**
      * Specify the default capture device to be used by this account. If
@@ -1137,14 +1136,14 @@ struct AccountVideoConfig : public PersistentObject
      *
      * Default: PJMEDIA_VID_DEFAULT_CAPTURE_DEV
      */
-    pjmedia_vid_dev_index 	defaultCaptureDevice;
+    pjmedia_vid_dev_index       defaultCaptureDevice;
 
     /**
      * Specify the default rendering device to be used by this account.
      *
      * Default: PJMEDIA_VID_DEFAULT_RENDER_DEV
      */
-    pjmedia_vid_dev_index 	defaultRenderDevice;
+    pjmedia_vid_dev_index       defaultRenderDevice;
 
     /**
      * Rate control method.
@@ -1159,21 +1158,21 @@ struct AccountVideoConfig : public PersistentObject
      *
      * Default: 0 (follow codec maximum bitrate).
      */
-    unsigned			rateControlBandwidth;
+    unsigned                    rateControlBandwidth;
 
     /**
      * The number of keyframe to be sent after the stream is created.
      *
      * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_CNT
      */
-    unsigned			    startKeyframeCount;
+    unsigned                        startKeyframeCount;
 
     /**
      * The keyframe sending interval after the stream is created.
      *
      * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC
      */
-    unsigned			    startKeyframeInterval;
+    unsigned                        startKeyframeInterval;
 
 
 public:
@@ -1181,20 +1180,20 @@ public:
      * Default constructor
      */
     AccountVideoConfig() :
-		    rateControlMethod(PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING)
+                    rateControlMethod(PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING)
     {}
 
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -1212,7 +1211,7 @@ typedef struct AccountIpChangeConfig
      *
      * Default: true
      */
-    bool    		shutdownTp;
+    bool                shutdownTp;
 
     /**
      * Hangup active calls associated with the acount. If this is set to true, 
@@ -1220,7 +1219,7 @@ typedef struct AccountIpChangeConfig
      *
      * Default: false
      */
-    bool		hangupCalls;
+    bool                hangupCalls;
 
     /**
      * Specify the call flags used in the re-INVITE when \a hangupCalls is set 
@@ -1230,7 +1229,7 @@ typedef struct AccountIpChangeConfig
      * Default: PJSUA_CALL_REINIT_MEDIA | PJSUA_CALL_UPDATE_CONTACT |
      *          PJSUA_CALL_UPDATE_VIA
      */
-    unsigned		reinviteFlags;
+    unsigned            reinviteFlags;
 
 public:
     /**
@@ -1242,14 +1241,14 @@ public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
     
@@ -1265,7 +1264,7 @@ struct AccountConfig : public PersistentObject
      * incoming/outgoing requests. The higher the number means the higher
      * the priority is, and the account will be matched first.
      */
-    int			priority;
+    int                 priority;
 
     /**
      * The Address of Record or AOR, that is full SIP URL that identifies the
@@ -1274,47 +1273,47 @@ struct AccountConfig : public PersistentObject
      *
      * This field is mandatory.
      */
-    string		idUri;
+    string              idUri;
 
     /**
      * Registration settings.
      */
-    AccountRegConfig	regConfig;
+    AccountRegConfig    regConfig;
 
     /**
      * SIP settings.
      */
-    AccountSipConfig	sipConfig;
+    AccountSipConfig    sipConfig;
 
     /**
      * Call settings.
      */
-    AccountCallConfig	callConfig;
+    AccountCallConfig   callConfig;
 
     /**
      * Presence settings.
      */
-    AccountPresConfig	presConfig;
+    AccountPresConfig   presConfig;
 
     /**
      * MWI (Message Waiting Indication) settings.
      */
-    AccountMwiConfig	mwiConfig;
+    AccountMwiConfig    mwiConfig;
 
     /**
      * NAT settings.
      */
-    AccountNatConfig	natConfig;
+    AccountNatConfig    natConfig;
 
     /**
      * Media settings (applicable for both audio and video).
      */
-    AccountMediaConfig	mediaConfig;
+    AccountMediaConfig  mediaConfig;
 
     /**
      * Video settings.
      */
-    AccountVideoConfig	videoConfig;
+    AccountVideoConfig  videoConfig;
 
     /**
      * IP Change settings.
@@ -1344,14 +1343,14 @@ public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
@@ -1366,46 +1365,46 @@ struct AccountInfo
     /**
      * The account ID.
      */
-    pjsua_acc_id	id;
+    pjsua_acc_id        id;
 
     /**
      * Flag to indicate whether this is the default account.
      */
-    bool		isDefault;
+    bool                isDefault;
 
     /**
      * Account URI
      */
-    string		uri;
+    string              uri;
 
     /**
      * Flag to tell whether this account has registration setting
      * (reg_uri is not empty).
      */
-    bool		regIsConfigured;
+    bool                regIsConfigured;
 
     /**
      * Flag to tell whether this account is currently registered
      * (has active registration session).
      */
-    bool		regIsActive;
+    bool                regIsActive;
 
     /**
      * An up to date expiration interval for account registration session.
      */
-    unsigned		regExpiresSec;
+    unsigned            regExpiresSec;
 
     /**
      * Last registration status code. If status code is zero, the account
      * is currently not registered. Any other value indicates the SIP
      * status code of the registration.
      */
-    pjsip_status_code	regStatus;
+    pjsip_status_code   regStatus;
 
     /**
      * String describing the registration status.
      */
-    string		regStatusText;
+    string              regStatusText;
 
     /**
      * Last registration error code. When the status field contains a SIP
@@ -1413,17 +1412,17 @@ struct AccountInfo
      * error code contains the error code that causes the failure. In any
      * other case, its value is zero.
      */
-    pj_status_t		regLastErr;
+    pj_status_t         regLastErr;
 
     /**
      * Presence online status for this account.
      */
-    bool		onlineStatus;
+    bool                onlineStatus;
 
     /**
      * Presence online status text.
      */
-    string		onlineStatusText;
+    string              onlineStatusText;
 
 public:
     /**
@@ -1444,12 +1443,12 @@ struct OnIncomingCallParam
     /**
      * The library call ID allocated for the new call.
      */
-    int			callId;
+    int                 callId;
 
     /**
      * The incoming INVITE request.
      */
-    SipRxData		rdata;
+    SipRxData           rdata;
 };
 
 /**
@@ -1471,27 +1470,27 @@ struct OnRegStateParam
     /**
      * Registration operation status.
      */
-    pj_status_t		status;
+    pj_status_t         status;
 
     /**
      * SIP status code received.
      */
-    pjsip_status_code	code;
+    pjsip_status_code   code;
 
     /**
      * SIP reason phrase received.
      */
-    string		reason;
+    string              reason;
 
     /**
      * The incoming message.
      */
-    SipRxData		rdata;
+    SipRxData           rdata;
 
     /**
      * Next expiration interval.
      */
-    unsigned		expiration;
+    unsigned            expiration;
 };
 
 /**
@@ -1504,34 +1503,34 @@ struct OnIncomingSubscribeParam
      * the acceptance of the request, it will need to specify this object
      * when calling Account::presNotify().
      */
-    void	       *srvPres;
+    void               *srvPres;
 
     /**
      *  Sender URI.
      */
-    string		fromUri;
+    string              fromUri;
 
     /**
      * The incoming message.
      */
-    SipRxData		rdata;
+    SipRxData           rdata;
 
     /**
      * The status code to respond to the request. The default value is 200.
      * Application may set this to other final status code to accept or
      * reject the request.
      */
-    pjsip_status_code	code;
+    pjsip_status_code   code;
 
     /**
      * The reason phrase to respond to the request.
      */
-    string		reason;
+    string              reason;
 
     /**
      * Additional data to be sent with the response, if any.
      */
-    SipTxOption		txOption;
+    SipTxOption         txOption;
 };
 
 /**
@@ -1542,32 +1541,32 @@ struct OnInstantMessageParam
     /**
      * Sender From URI.
      */
-    string		fromUri;
+    string              fromUri;
 
     /**
      * To URI of the request.
      */
-    string		toUri;
+    string              toUri;
 
     /**
      * Contact URI of the sender.
      */
-    string		contactUri;
+    string              contactUri;
 
     /**
      * MIME type of the message body.
      */
-    string		contentType;
+    string              contentType;
 
     /**
      * The message body.
      */
-    string		msgBody;
+    string              msgBody;
 
     /**
      * The whole message.
      */
-    SipRxData		rdata;
+    SipRxData           rdata;
 };
 
 /**
@@ -1579,34 +1578,34 @@ struct OnInstantMessageStatusParam
      * Token or a user data that was associated with the pager
      * transmission.
      */
-    Token		userData;
+    Token               userData;
 
     /**
      * Destination URI.
      */
-    string		toUri;
+    string              toUri;
 
     /**
      * The message body.
      */
-    string		msgBody;
+    string              msgBody;
 
     /**
      * The SIP status code of the transaction.
      */
-    pjsip_status_code	code;
+    pjsip_status_code   code;
 
     /**
      * The reason phrase of the transaction.
      */
-    string		reason;
+    string              reason;
 
     /**
      * The incoming response that causes this callback to be called.
      * If the transaction fails because of time out or transport error,
      * the content will be empty.
      */
-    SipRxData		rdata;
+    SipRxData           rdata;
 };
 
 /**
@@ -1617,27 +1616,27 @@ struct OnTypingIndicationParam
     /**
      * Sender/From URI.
      */
-    string		fromUri;
+    string              fromUri;
 
     /**
      * To URI.
      */
-    string		toUri;
+    string              toUri;
 
     /**
      * The Contact URI.
      */
-    string		contactUri;
+    string              contactUri;
 
     /**
      * Boolean to indicate if sender is typing.
      */
-    bool		isTyping;
+    bool                isTyping;
 
     /**
      * The whole message buffer.
      */
-    SipRxData		rdata;
+    SipRxData           rdata;
 };
 
 /**
@@ -1648,12 +1647,12 @@ struct OnMwiInfoParam
     /**
      * MWI subscription state.
      */
-    pjsip_evsub_state	state;
+    pjsip_evsub_state   state;
 
     /**
      * The whole message buffer.
      */
-    SipRxData		rdata;
+    SipRxData           rdata;
 };
 
 /**
@@ -1664,36 +1663,36 @@ struct PresNotifyParam
     /**
      * Server presence subscription instance.
      */
-    void	       *srvPres;
+    void               *srvPres;
 
     /**
      * Server presence subscription state to set.
      */
-    pjsip_evsub_state	state;
+    pjsip_evsub_state   state;
     
     /**
      * Optionally specify the state string name, if state is not "active",
      * "pending", or "terminated".
      */
-    string		stateStr;
+    string              stateStr;
 
     /**
      * If the new state is PJSIP_EVSUB_STATE_TERMINATED, optionally specify
      * the termination reason.
      */
-    string		reason;
+    string              reason;
 
     /**
      * If the new state is PJSIP_EVSUB_STATE_TERMINATED, this specifies
      * whether the NOTIFY request should contain message body containing
      * account's presence information.
      */
-    bool		withBody;
+    bool                withBody;
 
     /**
      * Optional list of headers to be sent with the NOTIFY request.
      */
-    SipTxOption		txOption;
+    SipTxOption         txOption;
 };
 
 
@@ -1713,8 +1712,8 @@ public:
      */
     virtual bool match(const string &token, const Buddy &buddy)
     {
-	BuddyInfo bi = buddy.getInfo();
-	return bi.uri.find(token) != string::npos;
+        BuddyInfo bi = buddy.getInfo();
+        return bi.uri.find(token) != string::npos;
     }
 
     /**
@@ -1756,8 +1755,8 @@ public:
      * the derived class instance. This is to avoid race condition between
      * the derived class destructor and Account callbacks.
      *
-     * @param cfg		The account config.
-     * @param make_default	Make this the default account.
+     * @param cfg               The account config.
+     * @param make_default      Make this the default account.
      */
     void create(const AccountConfig &cfg,
                 bool make_default=false) PJSUA2_THROW(Error);
@@ -1782,15 +1781,15 @@ public:
      * Depending on the changes, this may cause unregistration or
      * reregistration on the account.
      *
-     * @param cfg 		New account config to be applied to the
-     * 				account.
+     * @param cfg               New account config to be applied to the
+     *                          account.
      */
     void modify(const AccountConfig &cfg) PJSUA2_THROW(Error);
 
     /**
      * Check if this account is still valid.
      *
-     * @return			True if it is.
+     * @return                  True if it is.
      */
     bool isValid() const;
 
@@ -1805,30 +1804,30 @@ public:
      * used for incoming and outgoing requests that don't match any other
      * accounts.
      *
-     * @return			True if this is the default account.
+     * @return                  True if this is the default account.
      */
     bool isDefault() const;
 
     /**
      * Get PJSUA-LIB account ID or index associated with this account.
      *
-     * @return			Integer greater than or equal to zero.
+     * @return                  Integer greater than or equal to zero.
      */
     int getId() const;
 
     /**
      * Get the Account class for the specified account Id.
      *
-     * @param acc_id		The account ID to lookup
+     * @param acc_id            The account ID to lookup
      *
-     * @return			The Account instance or NULL if not found.
+     * @return                  The Account instance or NULL if not found.
      */
     static Account *lookup(int acc_id);
 
     /**
      * Get account info.
      *
-     * @return			Account info.
+     * @return                  Account info.
      */
     AccountInfo getInfo() const PJSUA2_THROW(Error);
 
@@ -1837,8 +1836,8 @@ public:
      * only needs to call this function if it wants to manually update the
      * registration or to unregister from the server.
      *
-     * @param renew		If False, this will start unregistration
-     * 				process.
+     * @param renew             If False, this will start unregistration
+     *                          process.
      */
     void setRegistration(bool renew) PJSUA2_THROW(Error);
 
@@ -1849,7 +1848,7 @@ public:
      * for this account, and/or outgoing PUBLISH if presence publication is
      * enabled for this account.
      *
-     * @param pres_st		Presence online status.
+     * @param pres_st           Presence online status.
      */
     void setOnlineStatus(const PresenceStatus &pres_st) PJSUA2_THROW(Error);
 
@@ -1865,7 +1864,7 @@ public:
      *
      * Note that transport id may be specified in AccountConfig too.
      *
-     * @param tp_id		The transport ID.
+     * @param tp_id             The transport ID.
      */
     void setTransport(TransportId tp_id) PJSUA2_THROW(Error);
 
@@ -1875,7 +1874,7 @@ public:
      * request, it should set the param \a PresNotifyParam.state to
      * PJSIP_EVSUB_STATE_TERMINATED.
      *
-     * @param prm		The sending NOTIFY parameter.
+     * @param prm               The sending NOTIFY parameter.
      */
     void presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error);
     
@@ -1886,7 +1885,7 @@ public:
      *
      * Enumerate all buddies of the account.
      *
-     * @return			The buddy list.
+     * @return                  The buddy list.
      */
     const BuddyVector& enumBuddies() const PJSUA2_THROW(Error);
 #endif
@@ -1894,7 +1893,7 @@ public:
     /**
      * Enumerate all buddies of the account.
      *
-     * @return			The buddy list.
+     * @return                  The buddy list.
      */
     BuddyVector2 enumBuddies2() const PJSUA2_THROW(Error);
 
@@ -1907,13 +1906,13 @@ public:
      *
      * Exception: if buddy is not found, PJ_ENOTFOUND will be thrown.
      *
-     * @param uri		The buddy URI.
-     * @param buddy_match	The buddy match algo.
+     * @param uri               The buddy URI.
+     * @param buddy_match       The buddy match algo.
      *
-     * @return			The pointer to buddy.
+     * @return                  The pointer to buddy.
      */
     Buddy* findBuddy(string uri, FindBuddyMatch *buddy_match = NULL) const
-		    PJSUA2_THROW(Error);
+                    PJSUA2_THROW(Error);
 #endif
 
     /**
@@ -1921,9 +1920,9 @@ public:
      *
      * Exception: if buddy is not found, PJ_ENOTFOUND will be thrown.
      *
-     * @param uri		The buddy URI.
+     * @param uri               The buddy URI.
      *
-     * @return			The pointer to buddy.
+     * @return                  The pointer to buddy.
      */
     Buddy findBuddy2(string uri) const PJSUA2_THROW(Error);
 
@@ -1934,7 +1933,7 @@ public:
     /**
      * Notify application on incoming call.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onIncomingCall(OnIncomingCallParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1945,7 +1944,7 @@ public:
      * and unregistration. Once registration session is active, subsequent
      * refresh will not cause this callback to be called.
      *
-     * @param prm	    Callback parameter.
+     * @param prm           Callback parameter.
      */
     virtual void onRegStarted(OnRegStartedParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1955,7 +1954,7 @@ public:
      * Application may then query the account info to get the
      * registration details.
      *
-     * @param prm	    Callback parameter.
+     * @param prm           Callback parameter.
      */
     virtual void onRegState(OnRegStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1970,18 +1969,18 @@ public:
      *
      * If this callback is implemented, application has several choices on
      * what to do with the incoming request:
-     *	- it may reject the request immediately by specifying non-200 class
+     *  - it may reject the request immediately by specifying non-200 class
      *    final response in the IncomingSubscribeParam.code parameter.
-     *	- it may immediately accept the request by specifying 200 as the
-     *	  IncomingSubscribeParam.code parameter. This is the default value if
-     *	  application doesn't set any value to the IncomingSubscribeParam.code
-     *	  parameter. In this case, the library will automatically send NOTIFY
-     *	  request upon returning from this callback.
-     *	- it may delay the processing of the request, for example to request
+     *  - it may immediately accept the request by specifying 200 as the
+     *    IncomingSubscribeParam.code parameter. This is the default value if
+     *    application doesn't set any value to the IncomingSubscribeParam.code
+     *    parameter. In this case, the library will automatically send NOTIFY
+     *    request upon returning from this callback.
+     *  - it may delay the processing of the request, for example to request
      *    user permission whether to accept or reject the request. In this
-     *	  case, the application MUST set the IncomingSubscribeParam.code
-     *	  argument to 202, then IMMEDIATELY calls presNotify() with
-     *	  state PJSIP_EVSUB_STATE_PENDING and later calls presNotify()
+     *    case, the application MUST set the IncomingSubscribeParam.code
+     *    argument to 202, then IMMEDIATELY calls presNotify() with
+     *    state PJSIP_EVSUB_STATE_PENDING and later calls presNotify()
      *    again to accept or reject the subscription request.
      *
      * Any IncomingSubscribeParam.code other than 200 and 202 will be treated
@@ -1990,7 +1989,7 @@ public:
      * Application MUST return from this callback immediately (e.g. it must
      * not block in this callback while waiting for user confirmation).
      *
-     * @param prm	    Callback parameter.
+     * @param prm           Callback parameter.
      */
     virtual void onIncomingSubscribe(OnIncomingSubscribeParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1999,7 +1998,7 @@ public:
      * Notify application on incoming instant message or pager (i.e. MESSAGE
      * request) that was received outside call context.
      *
-     * @param prm	    Callback parameter.
+     * @param prm           Callback parameter.
      */
     virtual void onInstantMessage(OnInstantMessageParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2008,7 +2007,7 @@ public:
      * Notify application about the delivery status of outgoing pager/instant
      * message (i.e. MESSAGE) request.
      *
-     * @param prm	    Callback parameter.
+     * @param prm           Callback parameter.
      */
     virtual void onInstantMessageStatus(OnInstantMessageStatusParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2016,7 +2015,7 @@ public:
     /**
      * Notify application about typing indication.
      *
-     * @param prm	    Callback parameter.
+     * @param prm           Callback parameter.
      */
     virtual void onTypingIndication(OnTypingIndicationParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2027,7 +2026,7 @@ public:
      * SUBSCRIBE request (for example, 202/Accepted to SUBSCRIBE is received)
      * or when a NOTIFY reqeust is received.
      *
-     * @param prm	    Callback parameter.
+     * @param prm           Callback parameter.
      */
     virtual void onMwiInfo(OnMwiInfoParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2049,10 +2048,10 @@ private:
     void removeBuddy(Buddy *buddy);
 
 private:
-    pjsua_acc_id 	 id;
-    string		 tmpReason;	// for saving response's reason
+    pjsua_acc_id         id;
+    string               tmpReason;     // for saving response's reason
 #if !DEPRECATED_FOR_TICKET_2232
-    BuddyVector		 buddyList;
+    BuddyVector          buddyList;
 #endif
 };
 
@@ -2062,5 +2061,5 @@ private:
 
 } // namespace pj
 
-#endif	/* __PJSUA2_ACCOUNT_HPP__ */
+#endif  /* __PJSUA2_ACCOUNT_HPP__ */
 

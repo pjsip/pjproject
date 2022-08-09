@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -38,22 +37,22 @@ static int simple_mutex_test(pj_pool_t *pool)
     TRACE_(("", "....create mutex"));
     rc = pj_mutex_create( pool, "", PJ_MUTEX_SIMPLE, &mutex);
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: pj_mutex_create", rc);
-	return -10;
+        app_perror("...error: pj_mutex_create", rc);
+        return -10;
     }
 
     /* Normal lock/unlock cycle. */
     TRACE_(("", "....lock mutex"));
     rc = pj_mutex_lock(mutex);
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: pj_mutex_lock", rc);
-	return -20;
+        app_perror("...error: pj_mutex_lock", rc);
+        return -20;
     }
     TRACE_(("", "....unlock mutex"));
     rc = pj_mutex_unlock(mutex);
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: pj_mutex_unlock", rc);
-	return -30;
+        app_perror("...error: pj_mutex_unlock", rc);
+        return -30;
     }
     
     /* Lock again. */
@@ -65,7 +64,7 @@ static int simple_mutex_test(pj_pool_t *pool)
     TRACE_(("", "....trylock mutex"));
     rc = pj_mutex_trylock(mutex);
     if (rc == PJ_SUCCESS)
-	PJ_LOG(3,("", "...info: looks like simple mutex is recursive"));
+        PJ_LOG(3,("", "...info: looks like simple mutex is recursive"));
 
     /* Unlock and done. */
     TRACE_(("", "....unlock mutex"));
@@ -93,22 +92,22 @@ static int recursive_mutex_test(pj_pool_t *pool)
     TRACE_(("", "....create mutex"));
     rc = pj_mutex_create( pool, "", PJ_MUTEX_RECURSE, &mutex);
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: pj_mutex_create", rc);
-	return -10;
+        app_perror("...error: pj_mutex_create", rc);
+        return -10;
     }
 
     /* Normal lock/unlock cycle. */
     TRACE_(("", "....lock mutex"));
     rc = pj_mutex_lock(mutex);
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: pj_mutex_lock", rc);
-	return -20;
+        app_perror("...error: pj_mutex_lock", rc);
+        return -20;
     }
     TRACE_(("", "....unlock mutex"));
     rc = pj_mutex_unlock(mutex);
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: pj_mutex_unlock", rc);
-	return -30;
+        app_perror("...error: pj_mutex_unlock", rc);
+        return -30;
     }
     
     /* Lock again. */
@@ -120,16 +119,16 @@ static int recursive_mutex_test(pj_pool_t *pool)
     TRACE_(("", "....trylock mutex"));
     rc = pj_mutex_trylock(mutex);
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: recursive mutex is not recursive!", rc);
-	return -40;
+        app_perror("...error: recursive mutex is not recursive!", rc);
+        return -40;
     }
 
     /* Locking again should not fail. */
     TRACE_(("", "....lock mutex"));
     rc = pj_mutex_lock(mutex);
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: recursive mutex is not recursive!", rc);
-	return -45;
+        app_perror("...error: recursive mutex is not recursive!", rc);
+        return -45;
     }
 
     /* Unlock several times and done. */
@@ -159,47 +158,47 @@ static int semaphore_test(pj_pool_t *pool)
 
     status = pj_sem_create(pool, NULL, 0, 1, &sem);
     if (status != PJ_SUCCESS) {
-	app_perror("...error: pj_sem_create()", status);
-	return -151;
+        app_perror("...error: pj_sem_create()", status);
+        return -151;
     }
 
     status = pj_sem_post(sem);
     if (status != PJ_SUCCESS) {
-	app_perror("...error: pj_sem_post()", status);
-	pj_sem_destroy(sem);
-	return -153;
+        app_perror("...error: pj_sem_post()", status);
+        pj_sem_destroy(sem);
+        return -153;
     }
 
     status = pj_sem_trywait(sem);
     if (status != PJ_SUCCESS) {
-	app_perror("...error: pj_sem_trywait()", status);
-	pj_sem_destroy(sem);
-	return -156;
+        app_perror("...error: pj_sem_trywait()", status);
+        pj_sem_destroy(sem);
+        return -156;
     }
 
     status = pj_sem_post(sem);
     if (status != PJ_SUCCESS) {
-	app_perror("...error: pj_sem_post()", status);
-	pj_sem_destroy(sem);
-	return -159;
+        app_perror("...error: pj_sem_post()", status);
+        pj_sem_destroy(sem);
+        return -159;
     }
 
     status = pj_sem_wait(sem);
     if (status != PJ_SUCCESS) {
-	app_perror("...error: pj_sem_wait()", status);
-	pj_sem_destroy(sem);
-	return -161;
+        app_perror("...error: pj_sem_wait()", status);
+        pj_sem_destroy(sem);
+        return -161;
     }
 
     status = pj_sem_destroy(sem);
     if (status != PJ_SUCCESS) {
-	app_perror("...error: pj_sem_destroy()", status);
-	return -163;
+        app_perror("...error: pj_sem_destroy()", status);
+        return -163;
     }
 
     return 0;
 }
-#endif	/* PJ_HAS_SEMAPHORE */
+#endif  /* PJ_HAS_SEMAPHORE */
 
 
 int mutex_test(void)
@@ -211,16 +210,16 @@ int mutex_test(void)
 
     rc = simple_mutex_test(pool);
     if (rc != 0)
-	return rc;
+        return rc;
 
     rc = recursive_mutex_test(pool);
     if (rc != 0)
-	return rc;
+        return rc;
 
 #if PJ_HAS_SEMAPHORE
     rc = semaphore_test(pool);
     if (rc != 0)
-	return rc;
+        return rc;
 #endif
 
     pj_pool_release(pool);

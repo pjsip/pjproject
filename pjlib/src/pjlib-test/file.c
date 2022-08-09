@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -27,7 +26,7 @@
 #define INCLUDE_FILE_TIME_TEST  0
 
 static char buffer[11] = {'H', 'e', 'l', 'l', 'o', ' ',
-		          'W', 'o', 'r', 'l', 'd' };
+                          'W', 'o', 'r', 'l', 'd' };
 
 static int file_test_internal(void)
 {
@@ -131,8 +130,8 @@ static int file_test_internal(void)
         read = 1;
         status = pj_file_read(fd, &readbuf[size], &read);
         if (status != PJ_SUCCESS) {
-	    PJ_LOG(3,("", "...error reading file after %d bytes (error follows)", 
-		      size));
+            PJ_LOG(3,("", "...error reading file after %d bytes (error follows)", 
+                      size));
             app_perror("...error", status);
             return -110;
         }

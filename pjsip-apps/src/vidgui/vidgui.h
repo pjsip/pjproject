@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -81,9 +80,9 @@ private:
 
 private:
     QPushButton *callButton_,
-		*hangupButton_,
-		*quitButton_,
-		*previewButton_;
+                *hangupButton_,
+                *quitButton_,
+                *previewButton_;
     QCheckBox   *vidEnabled_;
     QLineEdit *url_;
     VidWin *video_;
