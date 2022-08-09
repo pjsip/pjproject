@@ -22,7 +22,7 @@
 
 /**
  * @file time.h
- * @brief Provides ftime() and localtime() etc functions.
+ * @brief Provides gettimeofday() and localtime() etc functions.
  */
 
 #if defined(PJ_HAS_TIME_H) && PJ_HAS_TIME_H != 0
@@ -31,10 +31,6 @@
 
 #if defined(PJ_HAS_SYS_TIME_H) && PJ_HAS_SYS_TIME_H != 0
 #  include <sys/time.h>
-#endif
-
-#if defined(PJ_HAS_SYS_TIMEB_H) && PJ_HAS_SYS_TIMEB_H != 0
-#  include <sys/timeb.h>
 #endif
 
 

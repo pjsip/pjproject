@@ -5962,13 +5962,6 @@ then :
 
 fi
 
-ac_fn_c_check_header_compile "$LINENO" "sys/timeb.h" "ac_cv_header_sys_timeb_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_timeb_h" = xyes
-then :
-  printf "%s\n" "#define PJ_HAS_SYS_TIMEB_H 1" >>confdefs.h
-
-fi
-
 ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_types_h" = xyes
 then :

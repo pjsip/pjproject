@@ -45,7 +45,6 @@
 #define PJ_HAS_SYS_SELECT_H	    1
 #define PJ_HAS_SYS_SOCKET_H	    1
 #define PJ_HAS_SYS_TIME_H	    1
-#define PJ_HAS_SYS_TIMEB_H	    1
 #define PJ_HAS_SYS_TYPES_H	    1
 #define PJ_HAS_TIME_H		    1
 #define PJ_HAS_UNISTD_H		    1
