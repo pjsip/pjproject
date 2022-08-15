@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="pjsua2">
-      <HintPath>..\pjsip-apps\src\swig\csharp\output\pjsua2.dll</HintPath>
+      <HintPath>..\..\output\pjsua2.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
