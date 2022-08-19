@@ -7986,7 +7986,7 @@ printf "%s\n" "not found" >&6; }
 			ac_sdl_cflags=`$SDL_CONFIG --cflags`
 			ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			ac_sdl_ldflags=`$SDL_CONFIG --libs`
-			ac_sdl_ldflags=${ac_sdl_ldflags//-mwindows/}
+			ac_sdl_ldflags=`echo "${ac_sdl_ldflags}" | sed -e 's/-mwindows//g'`
 			LIBS="$LIBS $ac_sdl_ldflags"
 		  else
 			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Unsupported SDL version" >&5

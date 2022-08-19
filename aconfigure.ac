@@ -1295,7 +1295,7 @@ AC_ARG_ENABLE(sdl,
 			ac_sdl_cflags=`$SDL_CONFIG --cflags`
 			ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			ac_sdl_ldflags=`$SDL_CONFIG --libs`
-			ac_sdl_ldflags=${ac_sdl_ldflags//-mwindows/}
+			ac_sdl_ldflags=`echo "${ac_sdl_ldflags}" | sed -e 's/-mwindows//g'`
 			LIBS="$LIBS $ac_sdl_ldflags"
 		  else
 			AC_MSG_RESULT([Unsupported SDL version])
