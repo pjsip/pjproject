@@ -3021,8 +3021,9 @@ typedef struct pjsua_transport_config
      * Specify the port range for socket binding, relative to the start
      * port number specified in \a port. Note that this setting is only
      * applicable to media transport when the start port number is non zero.
-     * Refer to pjsua_acc_config.rtp_cfg documentation for the sample
-     * implementation.
+     * Media transport is configurable via account setting, 
+     * i.e: pjsua_acc_config.rtp_cfg, please check the media transport 
+     * config docs for more info.
      *
      * Available ports are in the range of [\a port, \a port + \a port_range]. 
      * 

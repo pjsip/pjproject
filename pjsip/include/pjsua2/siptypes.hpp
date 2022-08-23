@@ -325,8 +325,9 @@ struct TransportConfig : public PersistentObject
      * Specify the port range for socket binding, relative to the start
      * port number specified in \a port. Note that this setting is only
      * applicable for media transport when the start port number is non zero.
-     * Refer to AccountMediaConfig::transportConfig documentation for the
-     * sample implementation.
+     * Media transport is configurable via account setting, 
+     * i.e: AccountMediaConfig::transportConfig, please check the media
+     * transport config docs for more info.
      * 
      * Available ports are in the range of [\a port, \a port + \a portRange].
      *
