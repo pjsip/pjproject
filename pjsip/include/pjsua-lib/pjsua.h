@@ -3020,11 +3020,11 @@ typedef struct pjsua_transport_config
     /**
      * Specify the port range for socket binding, relative to the start
      * port number specified in \a port. Note that this setting is only
-     * applicable when the start port number is non zero.
+     * applicable to media transport when the start port number is non zero.
+     * Media transport is configurable via account setting, 
+     * i.e: pjsua_acc_config.rtp_cfg, please check the media transport 
+     * config docs for more info.
      *
-     * Example: \a port=5000, \a port_range=4
-     * - Available ports: 5000, 5001, 5002, 5003, 5004 (SIP transport)
-     * 
      * Available ports are in the range of [\a port, \a port + \a port_range]. 
      * 
      * Default value is zero.
