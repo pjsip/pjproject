@@ -495,7 +495,8 @@ typedef struct pjmedia_sdp_media pjmedia_sdp_media;
  * @return	    the length printed, or -1 if the buffer is too
  *		    short.
  */
-PJ_DECL(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media, char *buf, pj_size_t size);
+PJ_DECL(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media,
+				     char *buf, pj_size_t size);
 
 /** 
  * Clone SDP media description. 

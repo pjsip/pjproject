@@ -781,7 +781,7 @@ static int print_media_desc(const pjmedia_sdp_media *m, char *buf,
 }
 
 PJ_DEF(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media,
-			       char *buf, pj_size_t size)
+				    char *buf, pj_size_t size)
 {
 	return print_media_desc(media, buf, size);
 }
