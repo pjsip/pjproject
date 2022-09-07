@@ -178,6 +178,38 @@ namespace pjsua2xamarin
             }
         }
 
+        public void updatePreviewWindow(IntPtr hwnd)
+        {
+            try
+            {
+                // Video render operation needs to be invoked from non-main-thread.
+                new Thread(() =>
+                {
+                    try
+                    {
+                        checkThread("pjsua2.updatePreviewWindow");
+
+                        VideoWindowHandle handle = new VideoWindowHandle();
+                        handle.handle.setWindow(hwnd.ToInt64());
+
+                        VideoWindow window = vp.getVideoWindow();
+                        window.setWindow(handle);
+
+                        Debug.WriteLine("Preview window updated");
+                    }
+                    catch (Exception err)
+                    {
+                        Debug.WriteLine("Exception: " + err.Message);
+                    }
+                }).Start();
+
+            }
+            catch (Exception err)
+            {
+                Debug.WriteLine("Exception: " + err.Message);
+            }
+        }
+
         public void stopPreview()
         {
             try
