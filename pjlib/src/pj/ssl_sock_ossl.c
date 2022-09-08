@@ -1355,6 +1355,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 	    X509_STORE *cts = SSL_CTX_get_cert_store(ctx);
 
 	    if (cbio && cts) {
+	    printf("pem x509 read bio\n");
 		STACK_OF(X509_INFO) *inf = PEM_X509_INFO_read_bio(cbio, NULL, 
 								  NULL, NULL);
 
@@ -2225,6 +2226,13 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 	ssl_update_remote_cert_chain_info(ssock->info_pool,
        					  remote_cert_info,
        					  chain, PJ_TRUE);
+	/* Only free the chain returned by X509_STORE_CTX_get1_chain().
+	 * The reference count of each cert returned by
+	 * SSL_get_peer_cert_chain() is not incremented.
+	 */
+	if (is_verify) {
+	    sk_X509_pop_free(chain, X509_free);
+	}
     } else {
 	remote_cert_info->raw_chain.cnt = 0;
     }
