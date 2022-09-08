@@ -1355,7 +1355,6 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 	    X509_STORE *cts = SSL_CTX_get_cert_store(ctx);
 
 	    if (cbio && cts) {
-	    printf("pem x509 read bio\n");
 		STACK_OF(X509_INFO) *inf = PEM_X509_INFO_read_bio(cbio, NULL, 
 								  NULL, NULL);
 
