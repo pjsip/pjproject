@@ -493,15 +493,15 @@ typedef enum pj_socket_sd_type
 /* Must undefine s_addr because of pj_in_addr below */
 #undef s_addr
 
-/**
- * This structure describes Internet address.
- */
 typedef struct pj_in_addr
 {
     pj_uint32_t	s_addr;		/**< The 32bit IP address.	    */
 } pj_in_addr;
 
 #else
+/**
+ * This structure describes Internet address.
+ */
 typedef struct in_addr pj_in_addr;
 #endif
 
@@ -552,9 +552,6 @@ struct pj_sockaddr_in
 #if 0
 #undef s6_addr
 
-/**
- * This structure describes IPv6 address.
- */
 typedef union pj_in6_addr
 {
     /* This is the main entry */
@@ -566,7 +563,7 @@ typedef union pj_in6_addr
     /* Do not use this with Winsock2, as this will align pj_sockaddr_in6
      * to 64-bit boundary and Winsock2 doesn't like it!
      * Update 26/04/2010:
-     *  This is now disabled, see http://trac.pjsip.org/repos/ticket/1058
+     *  This is now disabled, see https://github.com/pjsip/pjproject/issues/1058
      */
 #if 0 && defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0 && \
     (!defined(PJ_WIN32) || PJ_WIN32==0)
@@ -575,6 +572,9 @@ typedef union pj_in6_addr
 
 } pj_in6_addr;
 #else
+/**
+ * This structure describes IPv6 address.
+ */
 typedef struct in6_addr pj_in6_addr;
 #endif
 
@@ -652,21 +652,21 @@ typedef struct pj_ip_mreq {
  */
 typedef struct pj_sockopt_params
 {
-    /* The number of options to be applied. */
+    /** The number of options to be applied. */
     unsigned cnt;
 
-    /* Array of options to be applied. */
+    /** Array of options to be applied. */
     struct {
-	/* The level at which the option is defined. */
+	/** The level at which the option is defined. */
 	int level;
 
-	/* Option name. */
+	/** Option name. */
 	int optname;
 
-	/* Pointer to the buffer in which the option is specified. */
+	/** Pointer to the buffer in which the option is specified. */
 	void *optval;
 
-	/* Buffer size of the buffer pointed by optval. */
+	/** Buffer size of the buffer pointed by optval. */
 	int optlen;
     } options[PJ_MAX_SOCKOPT_PARAMS];
 } pj_sockopt_params;
@@ -933,7 +933,7 @@ PJ_DECL(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr);
  * @param dst	    Destination socket address.
  * @param src	    Source socket address.
  *
- * @see @pj_sockaddr_cp()
+ * @see pj_sockaddr_cp()
  */
 PJ_DECL(void) pj_sockaddr_copy_addr(pj_sockaddr *dst,
 				    const pj_sockaddr *src);
@@ -944,11 +944,11 @@ PJ_DECL(void) pj_sockaddr_copy_addr(pj_sockaddr *dst,
  * @param dst	    Destination socket address.
  * @param src	    Source socket address.
  *
- * @see @pj_sockaddr_copy_addr()
+ * @see pj_sockaddr_copy_addr()
  */
 PJ_DECL(void) pj_sockaddr_cp(pj_sockaddr_t *dst, const pj_sockaddr_t *src);
 
-/*
+/**
  * If the source's and desired address family matches, copy the address,
  * otherwise synthesize a new address with the desired address family,
  * from the source address. This can be useful to generate an IPv4-mapped
@@ -1245,7 +1245,7 @@ PJ_DECL(pj_status_t) pj_sock_bind_in( pj_sock_t sockfd,
  * @param sockfd    	The socket desriptor.
  * @param addr      	The local address and port to bind the socket to.
  * @param port_range	The port range, relative the to start port number
- * 			specified in port field in #addr. Note that if the
+ * 			specified in port field in addr. Note that if the
  * 			port is zero, this param will be ignored.
  * @param max_try   	Maximum retries.
  *
@@ -1527,6 +1527,27 @@ PJ_DECL(pj_status_t) pj_sock_shutdown( pj_sock_t sockfd,
 PJ_DECL(char *) pj_addr_str_print( const pj_str_t *host_str, int port, 
 				   char *buf, int size, unsigned flag);
 
+/**
+ * Create socket pair
+ * @param family    Specifies a communication domain; this selects the
+ *		    protocol family which will be used for communication.
+ *		    On Unix, support AF_UNIX, AF_INET and AF_INET6,
+ *		    On Win32, not support AF_UNIX.
+ * @param type	    The socket has the indicated type, which specifies the 
+ *		    communication semantics.
+ * @param protocol  Specifies  a  particular  protocol  to  be used with the
+ *		    socket.  Normally only a single protocol exists to support 
+ *		    a particular socket  type  within  a given protocol family, 
+ *		    in which a case protocol can be specified as 0.
+ * @param sv	    The new sockets vector
+ *
+ * @return	    Zero on success.
+ *
+ */
+PJ_DECL(pj_status_t) pj_sock_socketpair(int family,
+					int type,
+					int protocol,
+					pj_sock_t sv[2]);
 
 /**
  * @}

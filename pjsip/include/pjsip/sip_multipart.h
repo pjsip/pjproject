@@ -206,17 +206,17 @@ pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
  *
  * @see RFC2392 Content-ID and Message-ID Uniform Resource Locators
  *
- * @param pool	Memory pool to use for temp space.
- * @param mp	The multipart body.
- * @param cid	The "cid" URI to search for in pj_str form.
+ * @param pool		Memory pool to use for temp space.
+ * @param mp		The multipart body.
+ * @param cid		The "cid" URI to search for in pj_str form.
  *
  * @return		The first part which has a Content-ID header matching the
  * 			specified "cid" URI. or NULL if not found.
  */
 PJ_DECL(pjsip_multipart_part*)
 pjsip_multipart_find_part_by_cid_str(pj_pool_t *pool,
-				 const pjsip_msg_body *mp,
-				 pj_str_t *cid);
+				     const pjsip_msg_body *mp,
+				     pj_str_t *cid);
 
 /**
  * Find a body inside multipart bodies which has a Content-ID value matching the
@@ -224,17 +224,17 @@ pjsip_multipart_find_part_by_cid_str(pj_pool_t *pool,
  *
  * @see RFC2392 Content-ID and Message-ID Uniform Resource Locators
  *
- * @param pool	Memory pool to use for temp space.
- * @param mp	The multipart body.
- * @param cid	The "cid" URI to search for.
+ * @param pool		Memory pool to use for temp space.
+ * @param mp		The multipart body.
+ * @param cid		The "cid" URI to search for.
  *
  * @return		The first part which had a Content-ID header matching the
  * 			specified "cid" URI. or NULL if not found.
  */
 PJ_DECL(pjsip_multipart_part*)
 pjsip_multipart_find_part_by_cid_uri(pj_pool_t *pool,
-				 const pjsip_msg_body *mp,
-				 pjsip_other_uri *cid_uri);
+				     const pjsip_msg_body *mp,
+				     pjsip_other_uri *cid);
 
 /**
  * Parse multipart message.

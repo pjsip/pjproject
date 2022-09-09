@@ -246,7 +246,8 @@ PJ_DECL(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
  * Get the rtpmap representation of the same SDP attribute.
  *
  * @param attr		Generic attribute to be converted to rtpmap, which
- *			name must be "rtpmap".
+ *			name must be "rtpmap". Attribute value must be
+ *			terminated with a NULL, CR, or LF character.
  * @param rtpmap	SDP \a rtpmap attribute to be initialized.
  *
  * @return		PJ_SUCCESS if the attribute can be successfully

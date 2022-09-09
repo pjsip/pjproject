@@ -488,6 +488,20 @@ struct AccountNatConfig : public PersistentObject
     pjsua_stun_use 	mediaStunUse;
 
     /**
+     * Control the use of UPnP for the SIP signaling.
+     *
+     * Default: PJSUA_UPNP_USE_DEFAULT
+     */
+    pjsua_upnp_use 	sipUpnpUse;
+
+    /**
+     * Control the use of UPnP for the media transports.
+     *
+     * Default: PJSUA_UPNP_USE_DEFAULT
+     */
+    pjsua_upnp_use 	mediaUpnpUse;
+
+    /**
      * Specify NAT64 options.
      *
      * Default: PJSUA_NAT64_DISABLED
@@ -718,6 +732,8 @@ public:
      */
     AccountNatConfig() : sipStunUse(PJSUA_STUN_USE_DEFAULT),
       mediaStunUse(PJSUA_STUN_USE_DEFAULT),
+      sipUpnpUse(PJSUA_UPNP_USE_DEFAULT),
+      mediaUpnpUse(PJSUA_UPNP_USE_DEFAULT),
       nat64Opt(PJSUA_NAT64_DISABLED),
       iceEnabled(false),
       iceTrickle(PJ_ICE_SESS_TRICKLE_DISABLED),
@@ -785,7 +801,7 @@ public:
     pjmedia_srtp_crypto toPj() const;
 };
 
-/* Array of SRTP cryptos. */
+/** Array of SRTP cryptos. */
 typedef std::vector<SrtpCrypto> SrtpCryptoVector;
 
 /**
@@ -888,7 +904,7 @@ public:
     pjmedia_rtcp_fb_cap toPj() const;
 };
 
-/* Array of RTCP Feedback capabilities. */
+/** Array of RTCP Feedback capabilities. */
 typedef std::vector<RtcpFbCap> RtcpFbCapVector;
 
 
@@ -1021,6 +1037,13 @@ struct AccountMediaConfig : public PersistentObject
      * RTCP Feedback settings.
      */
     RtcpFbConfig	rtcpFbConfig;
+
+    /**
+     * Enable RTCP Extended Report (RTCP XR).
+     *
+     * Default: PJMEDIA_STREAM_ENABLE_XR
+     */
+    bool		rtcpXrEnabled;
 
     /**
      * Use loopback media transport. This may be useful if application

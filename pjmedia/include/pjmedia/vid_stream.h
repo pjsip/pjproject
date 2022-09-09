@@ -71,7 +71,7 @@ PJ_BEGIN_DECL
  * specifying #pjmedia_stream_info structure in the parameter. Application
  * can construct the #pjmedia_vid_stream_info structure manually, or use 
  * #pjmedia_vid_stream_info_from_sdp() function to construct the
- * #pjmedia_vid stream_info from local and remote SDP session descriptors.
+ * #pjmedia_vid_stream_info from local and remote SDP session descriptors.
  */
 
 

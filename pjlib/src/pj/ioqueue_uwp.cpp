@@ -52,15 +52,21 @@ struct pj_ioqueue_t
 
 #include "ioqueue_common_abs.c"
 
-static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
+static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
 				     pj_ioqueue_key_t *key, 
-				     enum ioqueue_event_type event_type)
+				     unsigned event_types)
 {
     PJ_UNUSED_ARG(ioqueue);
     PJ_UNUSED_ARG(key);
-    PJ_UNUSED_ARG(event_type);
+    PJ_UNUSED_ARG(event_types);
 }
 
+static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
+				     pj_ioqueue_key_t *key,
+				     enum ioqueue_event_type event_type )
+{
+    ioqueue_remove_from_set2(ioqueue, key, event_type);
+}
 
 static void start_next_read(pj_ioqueue_key_t *key)
 {
@@ -92,21 +98,28 @@ static void start_next_write(pj_ioqueue_key_t *key)
 }
 
 
-static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
+static void ioqueue_add_to_set2(pj_ioqueue_t *ioqueue,
 				pj_ioqueue_key_t *key,
-				enum ioqueue_event_type event_type )
+				unsigned event_types )
 {
     PJ_UNUSED_ARG(ioqueue);
 
-    if (event_type == READABLE_EVENT) {
+    if (event_types & READABLE_EVENT) {
 	/* This is either recv, recvfrom, or accept, do nothing on accept */
 	start_next_read(key);
-    } else if (event_type == WRITEABLE_EVENT) {
+    }
+    if (event_types & WRITEABLE_EVENT) {
 	/* This is either send, sendto, or connect, do nothing on connect */
 	//start_next_write(key);
     }
 }
 
+static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
+                                pj_ioqueue_key_t *key,
+				enum ioqueue_event_type event_type )
+{
+    ioqueue_add_to_set2(ioqueue, key, event_type);
+}
 
 static void check_thread(pj_ioqueue_t *ioq) {
     if (pj_thread_is_registered())
@@ -176,9 +189,20 @@ PJ_DEF(const char*) pj_ioqueue_name(void)
 /*
  * Create a new I/O Queue framework.
  */
-PJ_DEF(pj_status_t) pj_ioqueue_create(	pj_pool_t *pool, 
-					pj_size_t max_fd,
-					pj_ioqueue_t **p_ioqueue)
+PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
+                                       pj_size_t max_fd,
+                                       pj_ioqueue_t **p_ioqueue)
+{
+    return pj_ioqueue_create2(pool, max_fd, NULL, p_ioqueue);
+}
+
+/*
+ * Create a new I/O Queue framework.
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
+                                       pj_size_t max_fd,
+				       const pj_ioqueue_cfg *cfg,
+                                       pj_ioqueue_t **p_ioqueue)
 {
     pj_ioqueue_t *ioq;
     pj_lock_t *lock;
@@ -187,6 +211,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_create(	pj_pool_t *pool,
     PJ_UNUSED_ARG(max_fd);
 
     ioq = PJ_POOL_ZALLOC_T(pool, pj_ioqueue_t);
+
+    if (cfg)
+	pj_memcpy(&ioq->cfg, cfg, sizeof(*cfg));
+    else
+	pj_ioqueue_cfg_default(&ioq->cfg);
 
     /* Create and init ioqueue mutex */
     rc = pj_lock_create_null_mutex(pool, "ioq%p", &lock);
@@ -197,7 +226,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create(	pj_pool_t *pool,
     if (rc != PJ_SUCCESS)
 	return rc;
 
-    PJ_LOG(4, ("pjlib", "select() I/O Queue created (%p)", ioq));
+    PJ_LOG(4, ("pjlib", "uwp I/O Queue created (%p)", ioq));
 
     *p_ioqueue = ioq;
     return PJ_SUCCESS;

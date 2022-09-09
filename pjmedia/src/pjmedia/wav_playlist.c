@@ -419,7 +419,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     for (index=file_count-1; index>=0; index--) {
 
 	pjmedia_wave_hdr wavehdr;
-	pj_ssize_t size_to_read, size_read;
+	pj_ssize_t size_read;
+	pj_off_t size_to_read;
 
 	/* we end with the last one so we are good to go if still in function*/
 	pj_memcpy(filename, file_list[index].ptr, file_list[index].slen);
@@ -442,7 +443,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	    goto on_error;
 	
 	/* Read the file header plus fmt header only. */
-	size_read = size_to_read = sizeof(wavehdr) - 8;
+	size_to_read = size_read = sizeof(wavehdr) - 8;	
 	status = pj_file_read( fport->fd_list[index], &wavehdr, &size_read);
 	if (status != PJ_SUCCESS) {
 	    goto on_error;
@@ -492,7 +493,9 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	 * fmt header data.
 	 */
 	if (wavehdr.fmt_hdr.len > 16) {
-	    size_to_read = wavehdr.fmt_hdr.len - 16;
+	    PJ_CHECK_OVERFLOW_UINT32_TO_LONG(wavehdr.fmt_hdr.len-16,
+			       status = PJMEDIA_ENOTVALIDWAVE; goto on_error;);
+	    size_to_read = (pj_off_t)wavehdr.fmt_hdr.len - 16;
 	    status = pj_file_setpos(fport->fd_list[index], size_to_read, 
 				    PJ_SEEK_CUR);
 	    if (status != PJ_SUCCESS) {
@@ -522,7 +525,10 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	    }
 	    
 	    /* Otherwise skip the chunk contents */
+	    PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len, 
+			       status = PJMEDIA_ENOTVALIDWAVE; goto on_error;);
 	    size_to_read = subchunk.len;
+
 	    status = pj_file_setpos(fport->fd_list[index], size_to_read, 
 				    PJ_SEEK_CUR);
 	    if (status != PJ_SUCCESS) {

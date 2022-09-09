@@ -153,6 +153,12 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
 static void trickle_ice_retrans_18x(pj_timer_heap_t *th,
 				    struct pj_timer_entry *te);
 
+/* End call session */
+static pj_status_t call_inv_end_session(pjsua_call *call,
+					unsigned code,
+				        const pj_str_t *reason,
+				        const pjsua_msg_data *msg_data);
+
 /*
  * Reset call descriptor.
  */
@@ -729,9 +735,11 @@ static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
 {
     if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
         pjsip_dlg_set_via_sent_by(dlg, &acc->via_addr, acc->via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc->index)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc->index) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc->index))
+    {
    	/* Choose local interface to use in Via if acc is not using
-   	 * STUN. See https://trac.pjsip.org/repos/ticket/1804
+   	 * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
    	 */
    	pjsip_host_port via_addr;
    	const void *via_tp;
@@ -1152,6 +1160,34 @@ static void process_pending_call_answer(pjsua_call *call)
         pj_list_erase(answer);
         answer = next;
     }
+}
+
+static pj_status_t process_pending_call_hangup(pjsua_call *call)
+{
+    pjsip_dialog *dlg = NULL;
+    pj_status_t status;
+
+    PJ_LOG(4,(THIS_FILE, "Call %d processing pending hangup: code=%d..",
+    			 call->index, call->last_code));
+    pj_log_push_indent();
+
+    status = acquire_call("pending_hangup()", call->index, &call, &dlg);
+    if (status != PJ_SUCCESS) {
+    	PJ_LOG(3, (THIS_FILE, "Call %d failed to process pending hangup",
+    			      call->index));
+	goto on_return;
+    }
+
+    pjsua_media_channel_deinit(call->index);
+    pjsua_check_snd_dev_idle();
+
+    if (call->inv)
+	call_inv_end_session(call, call->last_code, &call->last_text, NULL);
+
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
+    pj_log_pop_indent();
+    return status;
 }
 
 pj_status_t create_temp_sdp(pj_pool_t *pool,
@@ -1575,6 +1611,12 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				st_code, &st_text, NULL, NULL, NULL);
 	    goto on_return;
 	}
+
+	/* Set the user_data of the new call to the existing/parent call,
+	 * it is needed by PJSUA2 to update its states. While PJSUA app can
+	 * always override it anytime.
+	 */
+	pjsua_call_set_user_data(call_id, replaced_call->user_data);
     }
 
     if (!replaced_dlg) {
@@ -1587,16 +1629,23 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * call. We need the account to find which contact URI to put for
      * the call.
      */
-    acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
-    if (acc_id == PJSUA_INVALID_ID) {
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
-				      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
-				      NULL, NULL);
+    if (replaced_dlg) {
+	/* For call replace, use the same account as the replaced call */
+	pjsua_call *replaced_call;
+	replaced_call = (pjsua_call*)replaced_dlg->mod_data[pjsua_var.mod.id];
+	acc_id = call->acc_id = replaced_call->acc_id;
+    } else {
+	acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
+	if (acc_id == PJSUA_INVALID_ID) {
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
+					  PJSIP_SC_TEMPORARILY_UNAVAILABLE,
+					  NULL, NULL, NULL);
 
-	PJ_LOG(2,(THIS_FILE,
-		  "Unable to accept incoming call (no available account)"));
+	    PJ_LOG(2,(THIS_FILE,
+		      "Unable to accept incoming call (no available account)"));
 
-	goto on_return;
+	    goto on_return;
+	}
     }
     call->call_hold_type = pjsua_var.acc[acc_id].cfg.call_hold_type;
 
@@ -1752,9 +1801,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     {
         pjsip_dlg_set_via_sent_by(dlg, &pjsua_var.acc[acc_id].via_addr,
                                   pjsua_var.acc[acc_id].via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc_id))
+    {
 	/* Choose local interface to use in Via if acc is not using
-	 * STUN. See https://trac.pjsip.org/repos/ticket/1804
+	 * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
 	 */
 	char target_buf[PJSIP_MAX_URL_SIZE];
 	pj_str_t target;
@@ -2065,8 +2116,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	     * so let's process the answer/hangup now.
 	     */
 	    if (call->async_call.call_var.inc_call.hangup) {
-		pjsua_call_hangup(call_id, call->last_code, &call->last_text,
-				  NULL);
+		process_pending_call_hangup(call);
 	    } else if (call->med_ch_cb == NULL && call->inv) {
 		process_pending_call_answer(call);
 	    }
@@ -2209,7 +2259,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     pj_bzero(info, sizeof(*info));
 
     /* Use PJSUA_LOCK() instead of acquire_call():
-     *  https://trac.pjsip.org/repos/ticket/1371
+     *  https://github.com/pjsip/pjproject/issues/1371
      */
     PJSUA_LOCK();
 
@@ -2947,6 +2997,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	goto on_return;
 
     if (!call->hanging_up) {
+    	pj_bool_t delay_hangup = PJ_FALSE;
 	pjsip_event user_event;
 
 	pj_gettimeofday(&call->dis_time);
@@ -2980,6 +3031,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	    ((call->inv != NULL) &&
 	     (call->inv->state == PJSIP_INV_STATE_NULL)))
     	{
+    	    delay_hangup = PJ_TRUE;
             PJ_LOG(4,(THIS_FILE, "Will continue call %d hangup upon "
                              	 "completion of media transport", call_id));
 
@@ -3011,8 +3063,9 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	    					 &user_event);
 	}
 
-	if (call->inv)
+	if (call->inv && !delay_hangup) {
 	    call_inv_end_session(call, code, reason, msg_data);
+	}
     } else {
 	/* Already requested and on progress */
         PJ_LOG(4,(THIS_FILE, "Call %d hangup request ignored as "
@@ -3869,7 +3922,7 @@ PJ_DEF(void) pjsua_call_hangup_all(void)
     PJ_LOG(4,(THIS_FILE, "Hangup all calls.."));
     pj_log_push_indent();
 
-    // This may deadlock, see https://trac.pjsip.org/repos/ticket/1305
+    // This may deadlock, see https://github.com/pjsip/pjproject/issues/1305
     //PJSUA_LOCK();
 
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
@@ -4120,15 +4173,18 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 	return PJ_EINVALIDOP;
     }
 
-    /* Delay this when the SDP negotiation done in call state EARLY and
-     * remote does not support UPDATE method.
-     */
-    if (inv->state == PJSIP_INV_STATE_EARLY &&
-	pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL, &ST_UPDATE)!=
-	PJSIP_DIALOG_CAP_SUPPORTED)
-    {
-        call->reinv_pending = PJ_TRUE;
-        return PJ_EPENDING;
+    if (inv->state == PJSIP_INV_STATE_EARLY) {
+    	if (pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL,
+    	        &ST_UPDATE) == PJSIP_DIALOG_CAP_SUPPORTED &&
+    	    inv->sdp_done_early_rel)
+    	{
+    	    /* Yes, remote supports UPDATE and SDP negotiation was done
+    	     * using reliable provisional responses. We can proceed.
+    	     */
+    	} else {
+            call->reinv_pending = PJ_TRUE;
+            return PJ_EPENDING;
+        }
     }
 
     /* Check if ICE setup is complete and if it needs reinvite */
@@ -5263,10 +5319,10 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
      * 'inactive' (PJMEDIA_DIR_NONE).
      * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
      */
-    /* http://trac.pjsip.org/repos/ticket/880
+    /* https://github.com/pjsip/pjproject/issues/880
        if (call->dir != PJMEDIA_DIR_ENCODING) {
      */
-    /* https://trac.pjsip.org/repos/ticket/1142:
+    /* https://github.com/pjsip/pjproject/issues/1142:
      *  configuration to use c=0.0.0.0 for call hold.
      */
 
@@ -6045,7 +6101,11 @@ static void on_call_transferred( pjsip_inv_session *inv,
 	pj_list_push_back(&msg_data.hdr_list, dup);
     }
 
-    /* Now make the outgoing call. */
+    /* Now make the outgoing call.
+     * Note that the user_data of the new call is initialized to the
+     * original call, it is needed by PJSUA2 to update its states.
+     * While PJSUA app can always override it anytime.
+     */
     tmp = pj_str(uri);
     status = pjsua_call_make_call(existing_call->acc_id, &tmp, &call_opt,
 				  existing_call->user_data, &msg_data,
@@ -6168,7 +6228,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	goto on_return;
     }
 
-    /* https://trac.pjsip.org/repos/ticket/1452:
+    /* https://github.com/pjsip/pjproject/issues/1452:
      *    If a request is retried due to 401/407 challenge, don't process the
      *    transaction first but wait until we've retried it.
      */

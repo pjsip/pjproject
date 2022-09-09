@@ -1824,6 +1824,7 @@ void CodecParam::fromPj(const pjmedia_codec_param &param)
     info.maxBps = param.info.max_bps;
     info.maxRxFrameSize = param.info.max_rx_frame_size;
     info.frameLen = param.info.frm_ptime;
+    info.encFrameLen = param.info.enc_ptime;
     info.pcmBitsPerSample = param.info.pcm_bits_per_sample;
     info.pt = param.info.pt;
     info.fmtId = param.info.fmt_id;
@@ -1837,6 +1838,9 @@ void CodecParam::fromPj(const pjmedia_codec_param &param)
     setting.reserved = param.setting.reserved;
     CodecFmtpUtil::fromPj(param.setting.enc_fmtp, setting.encFmtp);
     CodecFmtpUtil::fromPj(param.setting.dec_fmtp, setting.decFmtp);
+    setting.packetLoss = param.setting.packet_loss;
+    setting.complexity = param.setting.complexity;
+    setting.cbr = PJ2BOOL(param.setting.cbr);
 }
 
 pjmedia_codec_param CodecParam::toPj() const
@@ -1850,6 +1854,7 @@ pjmedia_codec_param CodecParam::toPj() const
     param.info.max_bps= (pj_uint32_t)info.maxBps;
     param.info.max_rx_frame_size = info.maxRxFrameSize;
     param.info.frm_ptime = (pj_uint16_t)info.frameLen;
+    param.info.enc_ptime = (pj_uint16_t)info.encFrameLen;
     param.info.pcm_bits_per_sample = (pj_uint8_t)info.pcmBitsPerSample;
     param.info.pt = (pj_uint8_t)info.pt;
     param.info.fmt_id = info.fmtId;
@@ -1863,6 +1868,9 @@ pjmedia_codec_param CodecParam::toPj() const
     param.setting.reserved = setting.reserved;
     CodecFmtpUtil::toPj(setting.encFmtp, param.setting.enc_fmtp);
     CodecFmtpUtil::toPj(setting.decFmtp, param.setting.dec_fmtp);
+    param.setting.packet_loss = setting.packetLoss;
+    param.setting.complexity = setting.complexity;
+    param.setting.cbr = setting.cbr;
     return param;
 }
 

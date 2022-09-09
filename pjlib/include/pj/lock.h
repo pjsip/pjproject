@@ -338,6 +338,15 @@ PJ_DECL(pj_status_t) pj_grp_lock_del_handler(pj_grp_lock_t *grp_lock,
 #if !PJ_GRP_LOCK_DEBUG
 PJ_DECL(pj_status_t) pj_grp_lock_add_ref(pj_grp_lock_t *grp_lock);
 
+/**
+ * Debug version of pj_grp_lock_add_ref(), allowing to specify file and lineno.
+ *
+ * @param grp_lock	The group lock.
+ * @param x		Filename
+ * @param y		Line number
+ *
+ * @return		PJ_SUCCESS or the appropriate error code.
+ */
 #define pj_grp_lock_add_ref_dbg(grp_lock, x, y) pj_grp_lock_add_ref(grp_lock)
 
 #else
@@ -360,6 +369,15 @@ PJ_DECL(pj_status_t) pj_grp_lock_add_ref_dbg(pj_grp_lock_t *grp_lock,
 #if !PJ_GRP_LOCK_DEBUG
 PJ_DECL(pj_status_t) pj_grp_lock_dec_ref(pj_grp_lock_t *grp_lock);
 
+/**
+ * Debug version of pj_grp_lock_dec_ref(), allowing to specify file and lineno.
+ *
+ * @param grp_lock	The group lock.
+ * @param x		Filename
+ * @param y		Line number
+ *
+ * @return		PJ_SUCCESS or the appropriate error code.
+ */
 #define pj_grp_lock_dec_ref_dbg(grp_lock, x, y) pj_grp_lock_dec_ref(grp_lock)
 #else
 

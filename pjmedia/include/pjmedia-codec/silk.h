@@ -41,25 +41,19 @@
  * (24 kHz sampling rate), wideband (16 kHz sampling rate), medium (12kHz
  * sampling rate), and narrowband (telephone quality, 8 kHz sampling rate).
  *
- * By default, the SILK codec factory registers two SILK codecs:
- * "SILK/8000" narrowband codec and "SILK/16000" wideband codec. This behavior
- * can be changed by specifying #pjmedia_codec_silk_options flags during
- * initialization.
+ * \section silk_codec_setting Codec Settings
  *
- *
- * \section codec_setting Codec Settings
- *
- * \subsection general_setting General Settings
+ * \subsection silk_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection silk_specific_setting Codec Specific Settings
  *
  * The following settings are applicable for this codec.
  *
- * \subsubsection quality_vs_complexity Quality vs Complexity
+ * \subsubsection silk_quality_vs_complexity Quality vs Complexity
  *
  * The SILK codec quality versus computational complexity and bandwidth
  * requirement can be adjusted by modifying the quality and complexity

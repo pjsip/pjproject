@@ -564,14 +564,30 @@
 
 /** Default STUN software name */
 #ifndef PJNATH_STUN_SOFTWARE_NAME
+/** Create STUN software name */
 #   define PJNATH_MAKE_SW_NAME(a,b,c,d)     "pjnath-" #a "." #b "." #c d
+/** Create STUN software name */
 #   define PJNATH_MAKE_SW_NAME2(a,b,c,d)    PJNATH_MAKE_SW_NAME(a,b,c,d)
+/** Default STUN software name */
 #   define PJNATH_STUN_SOFTWARE_NAME        PJNATH_MAKE_SW_NAME2( \
 						    PJ_VERSION_NUM_MAJOR, \
 						    PJ_VERSION_NUM_MINOR, \
 						    PJ_VERSION_NUM_REV, \
 						    PJ_VERSION_NUM_EXTRA)
 #endif
+
+
+/* **************************************************************************
+ * UPnP
+ */
+
+/** Default duration for searching UPnP Internet Gateway Devices (in seconds).
+ *  Default: 5 seconds
+ */
+#ifndef PJ_UPNP_DEFAULT_SEARCH_TIME 
+#   define PJ_UPNP_DEFAULT_SEARCH_TIME 	5
+#endif
+
 
 /**
  * @}

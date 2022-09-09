@@ -242,6 +242,11 @@ PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
     sess->rtcp_rr_pkt.common.pt = RTCP_RR;
     sess->rtcp_rr_pkt.common.length = pj_htons(7);
 
+    /* Copy to RTCP FB common header */
+    pj_memcpy(&sess->rtcp_fb_com, &sr_pkt->common, 
+	      sizeof(pjmedia_rtcp_common));
+    sess->rtcp_fb_com.ssrc_src = 0;
+
     /* Get time and timestamp base and frequency */
     pj_gettimeofday(&now);
     sess->tv_base = now;
@@ -797,6 +802,12 @@ static void parse_rtcp_fb(pjmedia_rtcp_session *sess,
     //pjmedia_rtcp_fb_rpsi rpsi;
     pjmedia_event ev;
     pj_timestamp ts_now;
+
+    if (size < sizeof(pjmedia_rtcp_fb_common)) {
+        PJ_PERROR(3, (THIS_FILE, PJ_ETOOSMALL,
+                      "Failed parsing RTCP FB, invalid packet length"));
+	return;
+    }    
 
     pj_get_timestamp(&ts_now);
 

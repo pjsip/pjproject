@@ -30,6 +30,7 @@
 #include <pjmedia/frame.h>
 #include <pjmedia/signatures.h>
 #include <pj/assert.h>
+#include <pj/lock.h>
 #include <pj/os.h>
 
 
@@ -193,7 +194,7 @@ PJ_BEGIN_DECL
  * been deprecated and replaced by set_eof_cb2() and set_cb2(), which
  * will call the callback asynchronously without expecting any return value.
  *
- * See also https://trac.pjsip.org/repos/ticket/2251.
+ * See also https://github.com/pjsip/pjproject/issues/2251.
  */
 #ifndef DEPRECATED_FOR_TICKET_2251
 #  define DEPRECATED_FOR_TICKET_2251	0
@@ -387,6 +388,14 @@ typedef struct pjmedia_port
     } port_data;
 
     /**
+     * Group lock.
+     *
+     * This is optional, but if this port is registered to the audio/video
+     * conference bridge, the bridge will create one if the port has none.
+     */
+    pj_grp_lock_t	*grp_lock;
+
+    /**
      * Get clock source.
      * This should only be called by #pjmedia_port_get_clock_src().
      */
@@ -492,7 +501,10 @@ PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
 					     pjmedia_frame *frame );
 
 /**
- * Destroy port (and subsequent downstream ports)
+ * Destroy port (and subsequent downstream ports).
+ *
+ * Note that if the port has group lock, instead of destroying the port
+ * immediately, this function will just decrease the reference counter.
  *
  * @param port	    The media port.
  *
@@ -500,6 +512,48 @@ PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
  */
 PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
 
+
+/**
+ * This is a helper function to initialize the port's group lock. This
+ * function will create a group lock if NULL is passed, initialize the group
+ * lock by adding the port's destructor to the group lock handler list, and
+ * increment the reference counter.
+ *
+ * This function should only be called by a media port implementation and
+ * after port's on_destroy() function has been assigned.
+ *
+ * @param port		    The pjmedia port to be initialized.
+ * @param pool		    The pool, this can be a temporary pool as
+ *			    group lock will create and use its internal pool.
+ * @param glock		    The group lock, or create a new one if NULL.
+ *
+ * @return		    PJ_SUCCESS on success, PJ_EEXISTS if group lock
+ *			    is already initialized, or the other appropriate
+ *			    error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
+						 pj_pool_t *pool,
+						 pj_grp_lock_t *glock );
+
+
+/**
+ * This is a helper function to increase the port reference counter.
+ *
+ * @param port		    The PJMEDIA port.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_port_add_ref( pjmedia_port *port );
+
+
+/**
+ * This is a helper function to decrease the port reference counter.
+ *
+ * @param port		    The PJMEDIA port.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_port_dec_ref( pjmedia_port *port );
 
 
 PJ_END_DECL

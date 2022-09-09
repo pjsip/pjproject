@@ -235,6 +235,8 @@ struct pjsip_evsub
     int			  pending_tsx;	/**< Number of pending transactions.*/
     pjsip_transaction	 *pending_sub;	/**< Pending UAC SUBSCRIBE tsx.	    */
     pj_timer_entry	 *pending_sub_timer; /**< Stop pending sub timer.   */
+    pjsip_tx_data	 *pending_notify;/**< Pending NOTIFY to be sent.    */
+    pj_bool_t		  calling_on_rx_refresh;/**< Inside on_rx_refresh()?*/
     pj_grp_lock_t	 *grp_lock;	/* Session group lock	    */
 
     void		 *mod_data[PJSIP_MAX_MODULE];	/**< Module data.   */
@@ -354,7 +356,7 @@ PJ_DEF(pjsip_module*) pjsip_evsub_instance(void)
 /*
  * Get the event subscription instance in the transaction.
  */
-PJ_DEF(pjsip_evsub*) pjsip_tsx_get_evsub(pjsip_transaction *tsx)
+PJ_DEF(pjsip_evsub*) pjsip_tsx_get_evsub(const pjsip_transaction *tsx)
 {
     return (pjsip_evsub*) tsx->mod_data[mod_evsub.mod.id];
 }
@@ -374,7 +376,8 @@ PJ_DEF(void) pjsip_evsub_set_mod_data( pjsip_evsub *sub, unsigned mod_id,
 /*
  * Get event subscription's module data.
  */
-PJ_DEF(void*) pjsip_evsub_get_mod_data( pjsip_evsub *sub, unsigned mod_id )
+PJ_DEF(void*) pjsip_evsub_get_mod_data( const pjsip_evsub *sub,
+					unsigned mod_id )
 {
     PJ_ASSERT_RETURN(mod_id < PJSIP_MAX_MODULE, NULL);
     return sub->mod_data[mod_id];
@@ -474,7 +477,8 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
 /*
  * Retrieve Allow-Events header
  */
-PJ_DEF(const pjsip_hdr*) pjsip_evsub_get_allow_events_hdr(pjsip_module *m)
+PJ_DEF(const pjsip_hdr*) pjsip_evsub_get_allow_events_hdr(
+			     const pjsip_module *m)
 {
     struct mod_evsub *mod;
 
@@ -631,7 +635,8 @@ static void set_state( pjsip_evsub *sub, pjsip_evsub_state state,
 	/* Kill any timer. */
 	set_timer(sub, TIMER_TYPE_NONE, 0);
 
-	if (sub->pending_tsx == 0) {
+	/* We must not destroy evsub if we're still calling the callback. */
+	if (sub->pending_tsx == 0 && !sub->calling_on_rx_refresh) {
 	    evsub_destroy(sub);
 	}
     }
@@ -1045,7 +1050,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_terminate( pjsip_evsub *sub,
 /*
  * Get subscription state.
  */
-PJ_DEF(pjsip_evsub_state) pjsip_evsub_get_state(pjsip_evsub *sub)
+PJ_DEF(pjsip_evsub_state) pjsip_evsub_get_state(const pjsip_evsub *sub)
 {
     return sub->state;
 }
@@ -1053,7 +1058,7 @@ PJ_DEF(pjsip_evsub_state) pjsip_evsub_get_state(pjsip_evsub *sub)
 /*
  * Get state name.
  */
-PJ_DEF(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub)
+PJ_DEF(const char*) pjsip_evsub_get_state_name(const pjsip_evsub *sub)
 {
     return sub->state_str.ptr;
 }
@@ -1061,9 +1066,18 @@ PJ_DEF(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub)
 /*
  * Get termination reason.
  */
-PJ_DEF(const pj_str_t*) pjsip_evsub_get_termination_reason(pjsip_evsub *sub)
+PJ_DEF(const pj_str_t*) pjsip_evsub_get_termination_reason(
+			    const pjsip_evsub *sub)
 {
     return &sub->term_reason;
+}
+
+/**
+ * Get subscription expiration time.
+ */
+PJ_DEF(pj_uint32_t) pjsip_evsub_get_expires(const pjsip_evsub *sub)
+{
+    return sub->expires->ivalue;
 }
 
 /*
@@ -1377,7 +1391,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_current_notify( pjsip_evsub *sub,
 PJ_DEF(pj_status_t) pjsip_evsub_send_request( pjsip_evsub *sub,
 					      pjsip_tx_data *tdata)
 {
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Must be request message. */
     PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG,
@@ -1385,6 +1399,18 @@ PJ_DEF(pj_status_t) pjsip_evsub_send_request( pjsip_evsub *sub,
 
     /* Lock */
     pjsip_dlg_inc_lock(sub->dlg);
+
+
+    /* Delay sending NOTIFY if we're inside on_rx_refresh() callback
+     * until we have sent the response to the incoming SUBSCRIBE.
+     */
+    if (sub->calling_on_rx_refresh &&
+        pjsip_method_cmp(&tdata->msg->line.req.method, 
+			 &pjsip_notify_method)==0)
+    {
+    	sub->pending_notify = tdata;
+    	goto on_return;
+    }
 
     /* Send the request. */
     status = pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
@@ -1560,10 +1586,13 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
     }
 
     /* Note: 
-     *  the second condition is for http://trac.pjsip.org/repos/ticket/911 
+     *  the second condition is for https://github.com/pjsip/pjproject/issues/911
+     * Take note that it could be us that is trying to send a final message,
+     * such as final NOTIFY upon unsubscription.
      */
     if (dlgsub == dlgsub_head ||
-	(dlgsub->sub && 
+	(dlgsub->sub &&
+	    tsx->role == PJSIP_ROLE_UAS &&
 	    pjsip_evsub_get_state(dlgsub->sub)==PJSIP_EVSUB_STATE_TERMINATED))
     {
 	const char *reason_msg = 
@@ -2117,13 +2146,24 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 
 	/* Save old state.
 	 * If application respond with non-2xx, revert to old state.
+	 * But if subscriber wants to unsubscribe, there is no
+	 * turning back.
 	 */
 	old_state = sub->state;
 	old_state_str = sub->state_str;
 
+	/* Must set this before calling set_state(), to prevent evsub
+	 * from being destroyed.
+	 */
+	sub->calling_on_rx_refresh = PJ_TRUE;
+
 	if (sub->expires->ivalue == 0) {
-	    sub->state = PJSIP_EVSUB_STATE_TERMINATED;
-	    sub->state_str = evsub_state_names[sub->state];
+	    pj_str_t timeout = { "timeout", 7};
+
+	    PJ_LOG(4,(sub->obj_name, "Receiving unsubscription request "
+	    			     "(Expires=0)."));
+	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event,
+	    	      &timeout);
 	} else  if (sub->state == PJSIP_EVSUB_STATE_NULL) {
 	    sub->state = PJSIP_EVSUB_STATE_ACCEPTED;
 	    sub->state_str = evsub_state_names[sub->state];
@@ -2137,7 +2177,10 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	if (sub->user.on_rx_refresh && sub->call_cb) {
 	    (*sub->user.on_rx_refresh)(sub, rdata, &st_code, &st_text, 
 				       &res_hdr, &body);
+	    /* We shouldn't fail an unsubscription request, should we? */
+	    if (sub->expires->ivalue == 0) st_code = 200;
 	}
+	sub->calling_on_rx_refresh = PJ_FALSE;
 
 	/* Application MUST specify final response! */
 	PJ_ASSERT_ON_FAIL(st_code >= 200, {st_code=200; });
@@ -2162,9 +2205,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	/* Update state or revert state */
 	if (st_code/100==2) {
 	    
-	    if (sub->expires->ivalue == 0) {
-		set_state(sub, sub->state, NULL, event, &reason);
-	    } else  if (sub->state == PJSIP_EVSUB_STATE_NULL) {
+	    if (sub->state == PJSIP_EVSUB_STATE_NULL) {
 		set_state(sub, sub->state, NULL, event, &reason);
 	    }
 
@@ -2181,6 +2222,12 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    sub->state_str = old_state_str;
 	}
 
+	/* Send the pending NOTIFY sent by app from inside
+	 * on_rx_refresh() callback.
+	 */
+	pj_assert(sub->pending_notify);
+	status = pjsip_evsub_send_request(sub, sub->pending_notify);
+	sub->pending_notify = NULL;
 
     } else if (pjsip_method_cmp(&tsx->method, &pjsip_notify_method)==0) {
 

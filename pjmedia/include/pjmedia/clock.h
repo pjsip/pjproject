@@ -41,7 +41,7 @@
  There are few objects in PJMEDIA that are able to provide clock/timing
  to media ports interconnection:
 
- - @ref PJMED_SND_PORT\n
+ - @ref PJMED_SND_PORT \n
    The sound device makes a good candidate as the clock source, and
    PJMEDIA @ref PJMED_SND is designed so that it is able to invoke
    operations according to timing driven by the sound hardware clock
@@ -50,7 +50,7 @@
    it has/wants media frames).\n
    See @ref PJMED_SND_PORT for more details.
 
- - @ref PJMEDIA_MASTER_PORT\n
+ - @ref PJMEDIA_MASTER_PORT \n
    The master port uses @ref PJMEDIA_CLOCK as the clock source. By using
    @ref PJMEDIA_MASTER_PORT, it is possible to interconnect passive
    media ports and let the frames flow automatically in timely manner.\n

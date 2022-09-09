@@ -298,6 +298,7 @@ PJ_DECL(pj_status_t) pj_activesock_create(pj_pool_t *pool,
  *			address where the socket should be bound to. If
  *			this argument is NULL, then AF_INET is assumed and
  *			the socket will be bound to any addresses and port.
+ * @param ioqueue	The ioqueue.
  * @param opt		Optional settings. When this setting is not specifed,
  *			the default values will be used.
  * @param cb		Pointer to structure containing application

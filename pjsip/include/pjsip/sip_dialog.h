@@ -61,10 +61,10 @@
 PJ_BEGIN_DECL
 
 
-/* Deprecated API pjsip_dlg_create_uas() due to a fatal bug of possible
+/** Deprecated API pjsip_dlg_create_uas() due to a fatal bug of possible
  * premature dialog destroy. Application should not change this setting,
  * unless it uses single worker thread.
- * See also https://trac.pjsip.org/repos/ticket/1902.
+ * See also https://github.com/pjsip/pjproject/issues/1902.
  */
 #ifndef DEPRECATED_FOR_TICKET_1902
 #  define DEPRECATED_FOR_TICKET_1902      1
@@ -819,7 +819,7 @@ PJ_DECL(pj_status_t) pjsip_dlg_respond( pjsip_dialog *dlg,
  *		    specifies the extension names such as "100rel".
  *
  * @return	    PJSIP_DIALOG_CAP_SUPPORTED if the specified capability
- *		    is explicitly supported, see @pjsip_dialog_cap_status
+ *		    is explicitly supported, see pjsip_dialog_cap_status
  *		    for more info.
  */
 PJ_DECL(pjsip_dialog_cap_status) pjsip_dlg_remote_has_cap(
@@ -911,14 +911,16 @@ PJ_DECL(pj_status_t) pjsip_dlg_update_remote_cap(pjsip_dialog *dlg,
  * Internal (called by sip_ua_layer.c)
  */
 
-/* Receives transaction event (called by user_agent module) */
+/** Internal: receives transaction event (called by user_agent module) */
 void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
 			     pjsip_transaction *tsx,
 			     pjsip_event *e );
 
+/** Internal */
 void pjsip_dlg_on_rx_request( pjsip_dialog *dlg,
 			      pjsip_rx_data *rdata );
 
+/** Internal */
 void pjsip_dlg_on_rx_response( pjsip_dialog *dlg,
 			       pjsip_rx_data *rdata );
 

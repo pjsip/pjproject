@@ -29,7 +29,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup video_device_reference Video Subsystem API Reference
+ * @defgroup video_device_reference Video Device API Reference
  * @ingroup video_subsystem_api
  * @brief API Reference
  * @{

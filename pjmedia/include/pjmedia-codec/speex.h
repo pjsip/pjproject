@@ -47,19 +47,19 @@
  * specifying #pjmedia_speex_options flags during initialization.
  *
  *
- * \section codec_setting Codec Settings
+ * \section speex_codec_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection speex_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection speex_specific_setting Codec Specific Settings
  *
  * The following settings are applicable for this codec.
  *
- * \subsubsection quality_vs_complexity Quality vs Complexity
+ * \subsubsection speex_quality_vs_complexity Quality vs Complexity
  *
  * The Speex codec quality versus computational complexity and bandwidth
  * requirement can be adjusted by modifying the quality and complexity

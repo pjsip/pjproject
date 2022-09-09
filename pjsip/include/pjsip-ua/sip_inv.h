@@ -98,18 +98,18 @@ typedef enum pjsip_inv_state
 
 /**
  * Structure to hold parameters when calling the callback
- * #on_rx_offer2().
+ * on_rx_offer2().
  */
 struct pjsip_inv_on_rx_offer_cb_param
 {
-    const pjmedia_sdp_session 	*offer;	    /** Remote offer.		    */
-    const pjsip_rx_data 	*rdata;	    /** The received request.       */
+    const pjmedia_sdp_session 	*offer;	    /**< Remote offer.		    */
+    const pjsip_rx_data 	*rdata;	    /**< The received request.      */
 };
 
 
 /**
  * This structure contains callbacks to be registered by application to 
- * receieve notifications from the framework about various events in
+ * receive notifications from the framework about various events in
  * the invite session.
  */
 typedef struct pjsip_inv_callback
@@ -416,7 +416,7 @@ struct pjsip_timer;
  *
  * Note regarding the invite session's pools. The inv_sess used to have
  * only one pool, which is just a pointer to the dialog's pool. Ticket
- * http://trac.pjsip.org/repos/ticket/877 has found that the memory
+ * https://github.com/pjsip/pjproject/issues/877 has found that the memory
  * usage will grow considerably everytime re-INVITE or UPDATE is
  * performed.
  *
@@ -458,6 +458,8 @@ struct pjsip_inv_session
     pjsip_status_code	 cause;			    /**< Disconnect cause.  */
     pj_str_t		 cause_text;		    /**< Cause text.	    */
     pj_bool_t		 notify;		    /**< Internal.	    */
+    pj_bool_t		 sdp_done_early_rel;	    /**< Nego done in early
+    							 med was reliable?  */
     unsigned		 cb_called;		    /**< Cb has been called */
     pjsip_dialog	*dlg;			    /**< Underlying dialog. */
     pjsip_role_e	 role;			    /**< Invite role.	    */
@@ -512,6 +514,12 @@ typedef struct pjsip_sdp_info
  * are typedef'd to pjsip_sdp_info.
  */
 typedef pjsip_sdp_info pjsip_rdata_sdp_info;
+
+/**
+ * For backwards compatibility and completeness,
+ * pjsip_rdata_sdp_info and pjsip_tdata_sdp_info
+ * are typedef'd to pjsip_sdp_info.
+ */
 typedef pjsip_sdp_info pjsip_tdata_sdp_info;
 
 

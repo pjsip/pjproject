@@ -733,12 +733,21 @@ static int print_media_desc(const pjmedia_sdp_media *m, char *buf, pj_size_t len
     pj_memcpy(p, m->desc.transport.ptr, m->desc.transport.slen);
     p += m->desc.transport.slen;
     for (i=0; i<m->desc.fmt_count; ++i) {
-	*p++ = ' ';
-	pj_memcpy(p, m->desc.fmt[i].ptr, m->desc.fmt[i].slen);
-	p += m->desc.fmt[i].slen;
+	if (end-p > m->desc.fmt[i].slen) {
+	    *p++ = ' ';
+	    pj_memcpy(p, m->desc.fmt[i].ptr, m->desc.fmt[i].slen);
+	    p += m->desc.fmt[i].slen;
+	} else {
+	    return -1;
+	}
     }
-    *p++ = '\r';
-    *p++ = '\n';
+
+    if (end-p >= 2) {
+	*p++ = '\r';
+	*p++ = '\n';
+    } else {
+	return -1;
+    }
 
     /* print connection info, if present. */
     if (m->conn) {

@@ -47,6 +47,10 @@
 #include <errno.h>	    // errno
 
 #include <pthread.h>
+#if defined(PJ_HAS_PTHREAD_NP_H) && PJ_HAS_PTHREAD_NP_H != 0
+#  include <pthread_np.h>
+#endif
+#include <pj/config.h>
 
 #define THIS_FILE   "os_core_unix.c"
 
@@ -616,6 +620,37 @@ pj_status_t pj_thread_init(void)
 }
 
 #if PJ_HAS_THREADS
+
+/*
+ * Set current thread display name
+ * This can be useful for debugging, as the name is displayed in the thread status
+ */
+static void set_thread_display_name(const char *name)
+{
+#if (defined(PJ_LINUX) && PJ_LINUX != 0) ||                                    \
+    (defined(PJ_ANDROID) && PJ_ANDROID != 0)
+    char xname[16];
+    // On linux, thread display name length is restricted to 16 (include '\0')
+    if (pj_ansi_strlen(name) >= 16) {
+	pj_ansi_snprintf(xname, 16, "%s", name);
+	name = xname;
+    }
+#endif
+
+#if defined(PJ_HAS_PTHREAD_SETNAME_NP) && PJ_HAS_PTHREAD_SETNAME_NP != 0
+#   if defined(PJ_DARWINOS) && PJ_DARWINOS != 0
+    pthread_setname_np(name);
+#   else
+    pthread_setname_np(pthread_self(), name);
+#   endif
+#elif defined(PJ_HAS_PTHREAD_SET_NAME_NP) && PJ_HAS_PTHREAD_SET_NAME_NP != 0
+    pthread_set_name_np(pthread_self(), name);
+#else
+#   warning "OS not support set thread display name"
+    PJ_UNUSED_ARG(name);
+#endif
+}
+
 /*
  * thread_main()
  *
@@ -644,6 +679,8 @@ static void *thread_main(void *param)
     }
 
     PJ_LOG(6,(rec->obj_name, "Thread started"));
+
+    set_thread_display_name(rec->obj_name);
 
     /* Call user's entry! */
     result = (void*)(long)(*rec->proc)(rec->arg);
@@ -720,8 +757,10 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 #if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
     /* Set thread's stack size */
     rc = pthread_attr_setstacksize(&thread_attr, stack_size);
-    if (rc != 0)
+    if (rc != 0) {
+	pthread_attr_destroy(&thread_attr);
 	return PJ_RETURN_OS_ERROR(rc);
+    }
 #endif	/* PJ_THREAD_SET_STACK_SIZE */
 
 
@@ -731,8 +770,10 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(stack_addr, PJ_ENOMEM);
 
     rc = pthread_attr_setstackaddr(&thread_attr, stack_addr);
-    if (rc != 0)
+    if (rc != 0) {
+	pthread_attr_destroy(&thread_attr);
 	return PJ_RETURN_OS_ERROR(rc);
+    }
 #endif	/* PJ_THREAD_ALLOCATE_STACK */
 
 
@@ -741,8 +782,12 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     rec->arg = arg;
     rc = pthread_create( &rec->thread, &thread_attr, &thread_main, rec);
     if (rc != 0) {
+	pthread_attr_destroy(&thread_attr);
 	return PJ_RETURN_OS_ERROR(rc);
     }
+
+    /* Destroy thread attributes */
+    pthread_attr_destroy(&thread_attr);
 
     *ptr_thread = rec;
 

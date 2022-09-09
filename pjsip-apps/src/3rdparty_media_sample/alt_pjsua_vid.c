@@ -386,6 +386,14 @@ PJ_DEF(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id)
     return PJSUA_INVALID_ID;
 }
 
+/* Get video conference slot ID of the specified capture device. */
+PJ_DEF(pjsua_conf_port_id) pjsua_vid_preview_get_vid_conf_port(
+						    pjmedia_vid_dev_index id)
+{
+    UNIMPLEMENTED(pjsua_vid_preview_get_vid_conf_port)
+    return PJSUA_INVALID_ID;
+}
+
 /* Reset internal window structure. Not sure if this is needed?. */
 PJ_DEF(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
 {
@@ -449,6 +457,31 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_devs(pjmedia_vid_dev_info info[],
     return PJ_ENOTSUP;
 }
 
+/* Check whether the video device is currently active. */
+PJ_DEF(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id)
+{
+    UNIMPLEMENTED(pjsua_vid_dev_is_active)
+    return PJ_FALSE;
+}
+
+/* Set the capability of the video device. */
+PJ_DEF(pj_status_t) pjsua_vid_dev_set_setting( pjmedia_vid_dev_index id,
+					       pjmedia_vid_dev_cap cap,
+					       const void *pval,
+					       pj_bool_t keep)
+{
+    UNIMPLEMENTED(pjsua_vid_dev_set_setting)
+    return PJ_ENOTSUP;
+}
+
+/* Get the value of the video device capability. */
+PJ_DEF(pj_status_t) pjsua_vid_dev_get_setting( pjmedia_vid_dev_index id,
+					       pjmedia_vid_dev_cap cap,
+					       void *pval)
+{
+    UNIMPLEMENTED(pjsua_vid_dev_get_setting)
+    return PJ_ENOTSUP;
+}
 
 /*****************************************************************************
  * Codecs.
@@ -561,6 +594,23 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_size( pjsua_vid_win_id wid,
     return PJ_ENOTSUP;
 }
 
+/* Set video window fullscreen. */
+PJ_DEF(pj_status_t) pjsua_vid_win_set_fullscreen(
+					pjsua_vid_win_id wid,
+					pjmedia_vid_dev_fullscreen_flag mode)
+{
+    UNIMPLEMENTED(pjsua_vid_win_set_fullscreen)
+    return PJ_ENOTSUP;
+}
+
+/* Set output window. */
+PJ_DEF(pj_status_t) pjsua_vid_win_set_win( pjsua_vid_win_id wid,
+                                           const pjmedia_vid_dev_hwnd *win)
+{
+    UNIMPLEMENTED(pjsua_vid_win_set_win)
+    return PJ_ENOTSUP;
+}
+
 /* Set video orientation. */
 PJ_DEF(pj_status_t) pjsua_vid_win_rotate( pjsua_vid_win_id wid,
                                           int angle)
@@ -596,6 +646,64 @@ PJ_DEF(pj_bool_t) pjsua_call_vid_stream_is_running( pjsua_call_id call_id,
 {
     UNIMPLEMENTED(pjsua_call_vid_stream_is_running)
     return PJ_FALSE;
+}
+
+/* Enumerate all video conference ports. */
+PJ_DEF(pj_status_t) pjsua_vid_conf_enum_ports( pjsua_conf_port_id id[],
+					       unsigned *count)
+{
+    UNIMPLEMENTED(pjsua_vid_conf_enum_ports)
+    return PJ_ENOTSUP;
+}
+
+/* Get information about the specified video conference port. */
+PJ_DEF(pj_status_t) pjsua_vid_conf_get_port_info(
+					    pjsua_conf_port_id port_id,
+					    pjsua_vid_conf_port_info *info)
+{
+    UNIMPLEMENTED(pjsua_vid_conf_get_port_info)
+    return PJ_ENOTSUP;
+}
+
+/* Establish unidirectional video flow from souce to sink. */
+PJ_DEF(pj_status_t) pjsua_vid_conf_connect( pjsua_conf_port_id source,
+					    pjsua_conf_port_id sink,
+					    const void *param)
+{
+    UNIMPLEMENTED(pjsua_vid_conf_connect)
+    return PJ_ENOTSUP;
+}
+
+/* Disconnect video flow from the source to destination port. */
+PJ_DEF(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
+					      pjsua_conf_port_id sink)
+{
+    UNIMPLEMENTED(pjsua_vid_conf_disconnect)
+    return PJ_ENOTSUP;
+}
+
+/* Add arbitrary video media port to PJSUA's video conference bridge. */
+PJ_DEF(pj_status_t) pjsua_vid_conf_add_port( pj_pool_t *pool,
+					     pjmedia_port *port,
+					     const void *param,
+					     pjsua_conf_port_id *p_id)
+{
+    UNIMPLEMENTED(pjsua_vid_conf_add_port)
+    return PJ_ENOTSUP;
+}
+
+/* Remove arbitrary slot from the video conference bridge. */
+PJ_DEF(pj_status_t) pjsua_vid_conf_remove_port(pjsua_conf_port_id id)
+{
+    UNIMPLEMENTED(pjsua_vid_conf_remove_port)
+    return PJ_ENOTSUP;
+}
+
+/* Update or refresh port states from video port info. */
+PJ_DEF(pj_status_t) pjsua_vid_conf_update_port(pjsua_conf_port_id id)
+{
+    UNIMPLEMENTED(pjsua_vid_conf_update_port)
+    return PJ_ENOTSUP;
 }
 
 #endif	/* PJSUA_HAS_VIDEO */

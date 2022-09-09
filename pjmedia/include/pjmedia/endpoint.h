@@ -184,7 +184,7 @@ PJ_INLINE(pj_status_t) pjmedia_endpt_destroy(pjmedia_endpt *endpt)
  * @param flag		The flag.
  * @param value		Pointer to the value to be set.
  *
- * @reurn		PJ_SUCCESS on success.
+ * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_endpt_set_flag(pjmedia_endpt *endpt,
 					    pjmedia_endpt_flag flag,

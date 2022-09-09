@@ -657,6 +657,7 @@ ac_webrtc_cflags
 ac_webrtc_instset
 ac_no_webrtc
 ac_no_yuv
+ac_no_srtp
 ac_no_bcg729
 opus_present
 opus_h_present
@@ -738,6 +739,7 @@ ac_no_pjsua2
 ac_shared_libraries
 ac_linux_poll
 ac_os_objs
+ac_std_cpp_lib
 ac_target_arch
 ac_cross_compile
 ac_shlib_suffix
@@ -822,9 +824,12 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_floating_point
+enable_kqueue
 enable_epoll
 enable_shared
 enable_pjsua2
+with_upnp
+enable_upnp
 with_external_speex
 with_external_gsm
 with_external_srtp
@@ -878,6 +883,7 @@ with_opus
 enable_opus
 with_bcg729
 enable_bcg729
+enable_libsrtp
 enable_libyuv
 enable_libwebrtc
 enable_libwebrtc_aec3
@@ -1518,10 +1524,12 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-floating-point
                           Disable floating point where possible
+  --enable-kqueue         Use kqueue ioqueue on macos/BSD (experimental)
   --enable-epoll          Use /dev/epoll ioqueue on Linux (experimental)
   --enable-shared         Build shared libraries
   --disable-pjsua2        Exclude pjsua2 library and application from the
                           build
+  --disable-upnp          Disable UPnP (default: not disabled)
   --disable-resample      Disable resampling implementations
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-video         Disable video feature
@@ -1563,6 +1571,7 @@ Optional Features:
                           autodetect)
 
   --disable-bcg729        Disable bcg729 (default: not disabled)
+  --disable-libsrtp       Exclude libsrtp in the build
   --disable-libyuv        Exclude libyuv in the build
   --disable-libwebrtc     Exclude libwebrtc in the build
   --enable-libwebrtc-aec3 Build libwebrtc-aec3 that's included in PJSIP
@@ -1570,6 +1579,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-upnp=DIR         Specify alternate libupnp prefix
   --with-external-speex   Use external Speex development files, not the one in
                           "third_party" directory. When this option is set,
                           make sure that Speex is accessible to use (hint: use
@@ -4861,8 +4871,6 @@ if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
 
 
 
-
-
 case $host in
     *mingw* | *cygw* | *win32* | *w32* )
 	if pwd -W 2&> /dev/null; then
@@ -5680,11 +5688,13 @@ else
 fi
 
 
+
 case $target in
     *android*)
 	printf "%s\n" "#define PJ_ANDROID 1" >>confdefs.h
 
 	ac_target_arch=$TARGET_ABI
+	ac_std_cpp_lib=$STD_CPP_LIB
 	;;
     *mingw* | *cygw* | *win32* | *w32* )
 	printf "%s\n" "#define PJ_WIN32 1" >>confdefs.h
@@ -5709,6 +5719,10 @@ case $target in
 	printf "%s\n" "#define PJ_LINUX 1" >>confdefs.h
 
 	;;
+    *bsd*)
+	printf "%s\n" "#define PJ_BSD 1" >>confdefs.h
+
+	;;
     *rtems*)
 	printf "%s\n" "#define PJ_RTEMS 1" >>confdefs.h
 
@@ -5720,9 +5734,6 @@ case $target in
     *)
 	;;
 esac
-
-
-
 
 # Check whether --enable-floating-point was given.
 if test ${enable_floating_point+y}
@@ -6214,6 +6225,32 @@ printf "%s\n" "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if socketpair() is available" >&5
+printf %s "checking if socketpair() is available... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/types.h>
+				     #include <sys/socket.h>
+int
+main (void)
+{
+socketpair(0, 0, 0, 0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  printf "%s\n" "#define PJ_SOCK_HAS_SOCKETPAIR 1" >>confdefs.h
+
+		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+else $as_nop
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if sockaddr_in has sin_len member" >&5
 printf %s "checking if sockaddr_in has sin_len member... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -6448,26 +6485,49 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking ioqueue backend" >&5
 printf %s "checking ioqueue backend... " >&6; }
-# Check whether --enable-epoll was given.
-if test ${enable_epoll+y}
-then :
-  enableval=$enable_epoll;
-		ac_os_objs=ioqueue_epoll.o
-		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: /dev/epoll" >&5
-printf "%s\n" "/dev/epoll" >&6; }
-		printf "%s\n" "#define PJ_HAS_LINUX_EPOLL 1" >>confdefs.h
 
-		ac_linux_poll=epoll
+case $target in
+	*darwin* | *bsd*)
+		# Check whether --enable-kqueue was given.
+if test ${enable_kqueue+y}
+then :
+  enableval=$enable_kqueue;
+				ac_os_objs=ioqueue_kqueue.o
+				{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: kqueue()" >&5
+printf "%s\n" "kqueue()" >&6; }
 
 else $as_nop
 
-		ac_os_objs=ioqueue_select.o
-		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: select()" >&5
+				ac_os_objs=ioqueue_select.o
+				{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: select()" >&5
 printf "%s\n" "select()" >&6; }
-		ac_linux_poll=select
 
 fi
 
+		;;
+	*)
+		# Check whether --enable-epoll was given.
+if test ${enable_epoll+y}
+then :
+  enableval=$enable_epoll;
+				ac_os_objs=ioqueue_epoll.o
+				{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: /dev/epoll" >&5
+printf "%s\n" "/dev/epoll" >&6; }
+				printf "%s\n" "#define PJ_HAS_LINUX_EPOLL 1" >>confdefs.h
+
+				ac_linux_poll=epoll
+
+else $as_nop
+
+				ac_os_objs=ioqueue_select.o
+				{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: select()" >&5
+printf "%s\n" "select()" >&6; }
+				ac_linux_poll=select
+
+fi
+
+		;;
+esac
 
 
 # Check whether --enable-shared was given.
@@ -6553,6 +6613,93 @@ case $target in
 	esac
 	;;
 esac
+
+
+
+
+# Check whether --with-upnp was given.
+if test ${with_upnp+y}
+then :
+  withval=$with_upnp;
+else $as_nop
+  with_upnp=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_upnp" = "xno"; then
+    enable_upnp=no
+fi
+
+# Check whether --enable-upnp was given.
+if test ${enable_upnp+y}
+then :
+  enableval=$enable_upnp;
+		if test "$enable_upnp" = "no"; then
+		  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if UPnP is disabled... yes" >&5
+printf "%s\n" "Checking if UPnP is disabled... yes" >&6; }
+		fi
+
+else $as_nop
+
+		  if test "x$with_upnp" != "xno" -a "x$with_upnp" != "x"; then
+		        UPNP_PREFIX=$with_upnp
+		  	UPNP_CFLAGS="-I$UPNP_PREFIX/upnp/inc -I$UPNP_PREFIX/ixml/inc"
+			UPNP_LDFLAGS="-L$UPNP_PREFIX/upnp/.libs -L$UPNP_PREFIX/imxl/.libs"
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Using UPnP prefix... $with_upnp" >&5
+printf "%s\n" "Using UPnP prefix... $with_upnp" >&6; }
+		  else
+		  	UPNP_CFLAGS=""
+			UPNP_LDFLAGS=""
+		  fi
+
+		  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking UPnP usability" >&5
+printf %s "checking UPnP usability... " >&6; }
+
+		  UPNP_LIBS="-lupnp -lixml"
+
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+
+		  LIBS="$UPNP_LIBS $LIBS"
+		  LDFLAGS="$UPNP_LDFLAGS $LDFLAGS"
+		  CFLAGS="$UPNP_CFLAGS $CFLAGS"
+
+		  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <upnp/upnp.h>
+int
+main (void)
+{
+UpnpInit2(NULL, 0);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+   CFLAGS="$CFLAGS -DPJNATH_HAS_UPNP=1 $UPNP_CFLAGS"
+		  		   LDFLAGS="$LDFLAGS $UPNP_LDFLAGS $UPNP_LIBS"
+		  		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+else $as_nop
+
+				   LIBS="$SAVED_LIBS"
+				   LDFLAGS="$SAVED_LDFLAGS"
+				   CFLAGS="$SAVED_CFLAGS"
+		  		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
+
+fi
+
 
 
 ac_external_speex=0
@@ -9859,6 +10006,23 @@ fi
 
 
 
+# Check whether --enable-libsrtp was given.
+if test ${enable_libsrtp+y}
+then :
+  enableval=$enable_libsrtp; if test "$enable_libsrtp" = "no"; then
+		ac_no_srtp=1
+		CFLAGS="$CFLAGS -DPJMEDIA_HAS_SRTP=0"
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if libsrtp is disabled...yes" >&5
+printf "%s\n" "Checking if libsrtp is disabled...yes" >&6; }
+	       fi
+else $as_nop
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if libsrtp is disabled...no" >&5
+printf "%s\n" "Checking if libsrtp is disabled...no" >&6; }
+fi
+
+
+
+
 # Check whether --enable-libyuv was given.
 if test ${enable_libyuv+y}
 then :
@@ -10175,6 +10339,33 @@ case $target in
 
      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ** Setting non-blocking connect() retval to EINPROGRESS (please check)" >&5
 printf "%s\n" "** Setting non-blocking connect() retval to EINPROGRESS (please check)" >&6; }
+	;;
+esac
+
+
+case $target in
+  *linux* | *darwin* | *bsd*)
+	ac_fn_c_check_header_compile "$LINENO" "pthread_np.h" "ac_cv_header_pthread_np_h" "$ac_includes_default"
+if test "x$ac_cv_header_pthread_np_h" = xyes
+then :
+  printf "%s\n" "#define PJ_HAS_PTHREAD_NP_H 1" >>confdefs.h
+
+fi
+
+	ac_fn_c_check_func "$LINENO" "pthread_setname_np" "ac_cv_func_pthread_setname_np"
+if test "x$ac_cv_func_pthread_setname_np" = xyes
+then :
+  printf "%s\n" "#define PJ_HAS_PTHREAD_SETNAME_NP 1" >>confdefs.h
+
+fi
+
+	ac_fn_c_check_func "$LINENO" "pthread_set_name_np" "ac_cv_func_pthread_set_name_np"
+if test "x$ac_cv_func_pthread_set_name_np" = xyes
+then :
+  printf "%s\n" "#define PJ_HAS_PTHREAD_SET_NAME_NP 1" >>confdefs.h
+
+fi
+
 	;;
 esac
 

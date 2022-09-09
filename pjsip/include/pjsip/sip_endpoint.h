@@ -689,9 +689,11 @@ PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
                                      const char *format,
                                      ... );
 
+/** Internal */
 #define PJSIP_ENDPT_LOG_ERROR(expr)   \
             pjsip_endpt_log_error expr
 
+/** Internal */
 #define PJSIP_ENDPT_TRACE(tracing,expr) \
             do {                        \
                 if ((tracing))          \
@@ -701,9 +703,9 @@ PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
 /*
  * Internal functions.
  */
-/*
- * Receive transaction events from transactions and put in the event queue
- * to be processed later.
+/**
+ * Internal: receive transaction events from transactions and put in the
+ * event queue to be processed later.
  */
 void pjsip_endpt_send_tsx_event( pjsip_endpoint *endpt, pjsip_event *evt );
 

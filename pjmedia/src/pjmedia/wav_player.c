@@ -188,7 +188,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 						     pjmedia_port **p_port )
 {
     pjmedia_wave_hdr wave_hdr;
-    pj_ssize_t size_to_read, size_read;
+    pj_ssize_t size_read;
+    pj_off_t size_to_read;
     struct file_reader_port *fport;
     pjmedia_audio_format_detail *ad;
     pj_off_t pos;
@@ -234,7 +235,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 	return status;
 
     /* Read the file header plus fmt header only. */
-    size_read = size_to_read = sizeof(wave_hdr) - 8;
+    size_to_read = size_read = sizeof(wave_hdr) - 8;
     status = pj_file_read( fport->fd, &wave_hdr, &size_read);
     if (status != PJ_SUCCESS) {
 	pj_file_close(fport->fd);
@@ -297,7 +298,9 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
      * fmt header data.
      */
     if (wave_hdr.fmt_hdr.len > 16) {
-	size_to_read = wave_hdr.fmt_hdr.len - 16;
+	PJ_CHECK_OVERFLOW_UINT32_TO_LONG(wave_hdr.fmt_hdr.len - 16,
+		      pj_file_close(fport->fd); return PJMEDIA_ENOTVALIDWAVE;);
+	size_to_read = (pj_off_t)wave_hdr.fmt_hdr.len - 16;
 	status = pj_file_setpos(fport->fd, size_to_read, PJ_SEEK_CUR);
 	if (status != PJ_SUCCESS) {
 	    pj_file_close(fport->fd);
@@ -326,7 +329,10 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 	}
 
 	/* Otherwise skip the chunk contents */
+	PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len, 
+		      pj_file_close(fport->fd); return PJMEDIA_ENOTVALIDWAVE;);
 	size_to_read = subchunk.len;
+
 	status = pj_file_setpos(fport->fd, size_to_read, PJ_SEEK_CUR);
 	if (status != PJ_SUCCESS) {
 	    pj_file_close(fport->fd);

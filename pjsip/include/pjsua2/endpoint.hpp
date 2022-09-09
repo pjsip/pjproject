@@ -448,9 +448,9 @@ struct DigestChallenge
      * */
     std::string realm;
 
-    /*
+    /**
      * Other parameters.
-     * */
+     */
     StringToStringMap otherParam;
 
     /**
@@ -572,12 +572,16 @@ struct DigestCredential
  */
 struct OnCredAuthParam
 {
+    /** Digest challenge */
     DigestChallenge digestChallenge;
 
+    /** Credential info */
     AuthCredInfo credentialInfo;
 
+    /** Method */
     std::string method;
 
+    /** Digest credential */
     DigestCredential digestCredential;
 };
 
@@ -703,6 +707,26 @@ struct UaConfig : public PersistentObject
      * Default: PJ_TRUE
      */
     bool	    	mwiUnsolicitedEnabled;
+
+    /**
+     * Specify whether to enable UPnP.
+     *
+     * Note that this setting can be further customized in account
+     * configuration (#pjsua_acc_config).
+     *
+     * Default: FALSE
+     */
+    bool        	enableUpnp;
+
+    /**
+     * Specify which interface to use for UPnP. If empty, UPnP will use
+     * the first suitable interface found.
+     *
+     * Note that this setting is only applicable if UPnP is enabled.
+     *
+     * Default: empty string
+     */
+    string         	upnpIfName;
 
 public:
     /**
@@ -923,7 +947,7 @@ public:
     /**
      * Disable VAD?
      *
-     * Default: 0 (no (meaning VAD is enabled))
+     * Default: 0 (codec specific)
      */
     bool		noVad;
 
@@ -983,23 +1007,24 @@ public:
 
     /**
      * Jitter buffer initial prefetch delay in msec. The value must be
-     * between jb_min_pre and jb_max_pre below.
+     * between jb_min_pre and jb_max_pre below. If the value is 0,
+     * prefetching will be disabled.
      *
-     * Default: -1 (to use default stream settings, currently 150 msec)
+     * Default: -1 (to use default stream settings, currently 0)
      */
     int			jbInit;
 
     /**
      * Jitter buffer minimum prefetch delay in msec.
      *
-     * Default: -1 (to use default stream settings, currently 60 msec)
+     * Default: -1 (to use default stream settings, currently codec ptime)
      */
     int			jbMinPre;
 
     /**
      * Jitter buffer maximum prefetch delay in msec.
      *
-     * Default: -1 (to use default stream settings, currently 240 msec)
+     * Default: -1 (to use default stream settings, currently 80% of jbMax)
      */
     int			jbMaxPre;
 
@@ -1749,7 +1774,7 @@ public:
      *    continue the call by sending re-INVITE
      *    (configurable via \a AccountConfig.ipChangeConfig.reinviteFlags).
      *
-     * @param param	The IP change parameter, have a look at #IpChangeParam.
+     * @param param	The IP change parameter, have a look at IpChangeParam.
      */
     void handleIpChange(const IpChangeParam &param) PJSUA2_THROW(Error);
 

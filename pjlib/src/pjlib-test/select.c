@@ -142,7 +142,7 @@ int select_test()
 	status=-40; goto on_return;
     }
 
-    // Sleep a bit. See http://trac.pjsip.org/repos/ticket/890
+    // Sleep a bit. See https://github.com/pjsip/pjproject/issues/890
     pj_thread_sleep(10);
 
     // Check that socket is marked as reable.

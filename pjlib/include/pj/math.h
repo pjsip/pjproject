@@ -45,14 +45,21 @@ PJ_BEGIN_DECL
 /**
  * Mathematical constants
  */
+/** pi */
 #define PJ_PI		    3.14159265358979323846	/* pi	    */
+/** 1/pi */
 #define PJ_1_PI		    0.318309886183790671538	/* 1/pi	    */
 
 /**
- * Mathematical macro
+ * Mathematical macros
  */
+/** Get the absolute value */
 #define	PJ_ABS(x)	((x) >  0 ? (x) : -(x))
+
+/** Get the maximum of two values */
 #define	PJ_MAX(x, y)	((x) > (y)? (x) : (y))
+
+/** Get the minimum of two values */
 #define	PJ_MIN(x, y)	((x) < (y)? (x) : (y))
 
 /**
@@ -60,19 +67,19 @@ PJ_BEGIN_DECL
  */
 typedef struct pj_math_stat
 {
-    int		     n;		/* number of samples	*/
-    int		     max;	/* maximum value	*/
-    int		     min;	/* minimum value	*/
-    int		     last;	/* last value		*/
-    int		     mean;	/* mean			*/
+    int		     n;		/**< number of samples	*/
+    int		     max;	/**< maximum value	*/
+    int		     min;	/**< minimum value	*/
+    int		     last;	/**< last value		*/
+    int		     mean;	/**< mean		*/
 
     /* Private members */
 #if PJ_HAS_FLOATING_POINT
-    float	     fmean_;	/* mean(floating point) */
+    float	     fmean_;	/**< mean(floating point) */
 #else
-    int		     mean_res_;	/* mean residu		*/
+    int		     mean_res_;	/**< mean residue	*/
 #endif
-    pj_highprec_t    m2_;	/* variance * n		*/
+    pj_highprec_t    m2_;	/**< variance * n	*/
 } pj_math_stat;
 
 /**

@@ -54,6 +54,7 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
 {
     pj_uint16_t msg_type, msg_len;
     char *p_attr;
+    int attr_max_cnt = PJ_ARRAY_SIZE(msg->attr);
 
     PJ_CHECK_STACK();
 
@@ -83,7 +84,7 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
     msg->attr_count = 0;
     p_attr = (char*)buf + sizeof(pjstun_msg_hdr);
 
-    while (msg_len > 0) {
+    while (msg_len > 0 && msg->attr_count < attr_max_cnt) {
 	pjstun_attr_hdr **attr = &msg->attr[msg->attr_count];
 	pj_uint32_t len;
 	pj_uint16_t attr_type;
@@ -110,6 +111,10 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
 	msg_len = (pj_uint16_t)(msg_len - len);
 	p_attr += len;
 	++msg->attr_count;
+    }
+    if (msg->attr_count == attr_max_cnt) {
+	PJ_LOG(4, (THIS_FILE, "Warning: max number attribute %d reached.",
+		   attr_max_cnt));
     }
 
     return PJ_SUCCESS;

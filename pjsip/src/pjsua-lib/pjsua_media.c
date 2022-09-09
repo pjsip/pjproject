@@ -249,7 +249,7 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 
 /*
  * Create RTP and RTCP socket pair, and possibly resolve their public
- * address via STUN.
+ * address via STUN/UPnP.
  */
 static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 					const pjsua_transport_config *cfg,
@@ -542,6 +542,43 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    break;
 #endif
 
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
+	} else if ((!use_ipv6 || use_nat64) &&
+	           pjsua_media_acc_is_using_upnp(call_med->call->acc_id) &&
+	    	   pjsua_var.upnp_status == PJ_SUCCESS)
+	{
+	    status = pj_upnp_add_port_mapping(2, sock, NULL, mapped_addr);
+	    if (status == PJ_SUCCESS) {
+	    	call_med->use_upnp = PJ_TRUE;
+	    	pj_sockaddr_cp(&call_med->mapped_addr[0], &mapped_addr[0]);
+	    	pj_sockaddr_cp(&call_med->mapped_addr[1], &mapped_addr[1]);
+	    } else {
+	    	pjsua_perror(THIS_FILE, "Error adding UPnP "
+	    	    			"port mapping", status);
+
+		if (!pj_sockaddr_has_addr(&bound_addr)) {
+		    pj_sockaddr addr;
+
+		    /* Get local IP address. */
+		    status = pj_gethostip(af, &addr);
+		    if (status != PJ_SUCCESS)
+			goto on_error;
+
+		    pj_sockaddr_copy_addr(&bound_addr, &addr);
+		}
+
+		for (i = 0; i < 2; ++i) {
+		    pj_sockaddr_init(af, &mapped_addr[i], NULL, 0);
+		    pj_sockaddr_copy_addr(&mapped_addr[i], &bound_addr);
+		    pj_sockaddr_set_port(&mapped_addr[i],
+					 (pj_uint16_t)(acc->next_rtp_port+i));
+		}
+		break;
+	    }
+
+	    break;
+#endif
+
 	} else if (cfg->public_addr.slen) {
 
 	    status = pj_sockaddr_init(af, &mapped_addr[0], &cfg->public_addr,
@@ -779,7 +816,7 @@ static void ice_init_complete_cb(void *user_data)
     /* No need to acquire_call() if we only change the tp_ready flag
      * (i.e. transport is being created synchronously). Otherwise
      * calling acquire_call() here may cause deadlock. See
-     * https://trac.pjsip.org/repos/ticket/1578
+     * https://github.com/pjsip/pjproject/issues/1578
      */
     call_med->tp_ready = call_med->tp_result;
 
@@ -1195,7 +1232,7 @@ static pj_status_t create_ice_media_transport(
 	    PJSUA_UNLOCK();
         if (dlg) {
             /* Don't lock otherwise deadlock:
-             * https://trac.pjsip.org/repos/ticket/1737
+             * https://github.com/pjsip/pjproject/issues/1737
              */
 	    pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
             pjsip_dlg_dec_lock(dlg);
@@ -1933,7 +1970,7 @@ on_return:
 
 /* Determine if call's media is being changed, for example when video is being
  * added. Then we can reject incoming re-INVITE, for example. This is the
- * solution for https://trac.pjsip.org/repos/ticket/1738
+ * solution for https://github.com/pjsip/pjproject/issues/1738
  */
 pj_bool_t  pjsua_call_media_is_changing(pjsua_call *call)
 {
@@ -3205,7 +3242,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 
     /* Print call dump first */
     dlg = (call->inv? call->inv->dlg : call->async_call.dlg);
-    if (dlg)
+    if (dlg && pj_log_get_level() >= 3)
     	log_call_dump(call_id);
 
     stop_media_session(call_id);
@@ -3225,6 +3262,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     call->med_prov_cnt = 0;
     for (mi=0; mi<call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
+
+        if (call_med->use_upnp) {
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
+            pj_upnp_del_port_mapping(&call_med->mapped_addr[0]);
+            pj_upnp_del_port_mapping(&call_med->mapped_addr[1]);
+#endif
+        }
 
         if (call_med->tp_st > PJSUA_MED_TP_IDLE) {
     	    pjmedia_transport_info tpinfo;
@@ -3326,6 +3370,7 @@ static void check_srtp_roc(pjsua_call *call,
     pjsua_call_media *call_med = &call->media[med_idx];
     pjmedia_transport_info tpinfo;
     pjmedia_srtp_info *srtp_info;
+    pjmedia_transport *srtp;
     pjmedia_ice_transport_info *ice_info;
     const pjmedia_stream_info *prev_aud_si = NULL;
     pjmedia_stream_info aud_si;
@@ -3340,8 +3385,11 @@ static void check_srtp_roc(pjsua_call *call,
     pjmedia_transport_get_info(call_med->tp, &tpinfo);
     srtp_info = (pjmedia_srtp_info *) pjmedia_transport_info_get_spc_info(
 	            &tpinfo, PJMEDIA_TRANSPORT_TYPE_SRTP);
-    /* We are not using SRTP. */
-    if (!srtp_info)
+    srtp = pjmedia_transport_info_get_transport(&tpinfo,
+						PJMEDIA_TRANSPORT_TYPE_SRTP);
+
+    /* Just return if there is no SRTP transport in the transport stack. */
+    if (!srtp_info || !srtp)
     	return;
 
     ice_info = (pjmedia_ice_transport_info*)
@@ -3469,7 +3517,7 @@ static void check_srtp_roc(pjsua_call *call,
 	 }	    
     }
 
-    pjmedia_transport_srtp_get_setting(call_med->tp, &setting);
+    pjmedia_transport_srtp_get_setting(srtp, &setting);
     setting.tx_roc = call_med->prev_srtp_info.tx_roc;
     setting.rx_roc = call_med->prev_srtp_info.rx_roc;
     if (local_change) {
@@ -3500,7 +3548,7 @@ static void check_srtp_roc(pjsua_call *call,
  	}
 #endif 
     }
-    pjmedia_transport_srtp_modify_setting(call_med->tp, &setting);
+    pjmedia_transport_srtp_modify_setting(srtp, &setting);
 }
 #endif
 
@@ -3826,6 +3874,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		goto on_check_med_status;
 	    }
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	    /* Enable/disable RTCP XR based on account setting. */
+	    si->rtcp_xr_enabled = acc->cfg.enable_rtcp_xr;
+#endif
+
 	    /* Check if remote wants RTP and RTCP multiplexing,
 	     * but we don't enable it.
 	     */
@@ -3909,10 +3962,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    stream_info.type = PJMEDIA_TYPE_AUDIO;
 	    stream_info.info.aud = the_si;
 
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 	    /* Check if we need to reset or maintain SRTP ROC */
 	    check_srtp_roc(call, mi, &stream_info,
 	    		   local_sdp->media[mi], remote_sdp->media[mi]);
+#endif
 #endif
 
 	    /* Check if this media is changed */

@@ -36,6 +36,7 @@
 #undef WIN32_LEAN_AND_MEAN
 #undef PJ_DARWINOS
 #undef PJ_LINUX
+#undef PJ_BSD
 #undef PJ_RTEMS
 #undef PJ_SUNOS
 #undef PJ_ANDROID
@@ -90,6 +91,7 @@
 #undef PJ_SOCK_HAS_INET_PTON
 #undef PJ_SOCK_HAS_INET_NTOP
 #undef PJ_SOCK_HAS_GETADDRINFO
+#undef PJ_SOCK_HAS_SOCKETPAIR
 
 /* On these OSes, semaphore feature depends on semaphore.h */
 #if defined(PJ_HAS_SEMAPHORE_H) && PJ_HAS_SEMAPHORE_H!=0
@@ -225,6 +227,13 @@
 #ifndef PJ_SSL_SOCK_IMP
 #undef PJ_SSL_SOCK_IMP
 #endif
+
+/* Has pthread_np.h ? */
+#undef PJ_HAS_PTHREAD_NP_H
+/* Has pthread_setname_np() ? */
+#undef PJ_HAS_PTHREAD_SETNAME_NP
+/* Has pthread_set_name_np() ? */
+#undef PJ_HAS_PTHREAD_SET_NAME_NP
 
 
 #endif	/* __PJ_COMPAT_OS_AUTO_H__ */

@@ -33,8 +33,8 @@
  * @brief Implementation of G.722.1 codec
  * @{
  *
- * <b>G.722.1 licensed from Polycom®</b><br />
- * <b>G.722.1 Annex C licensed from Polycom®</b>
+ * <b>G.722.1 licensed from Polycomï¿½</b><br />
+ * <b>G.722.1 Annex C licensed from Polycomï¿½</b>
  *
  * This section describes functions to initialize and register G.722.1 codec
  * factory to the codec manager. After the codec factory has been registered,
@@ -48,19 +48,19 @@
  * used with speech or music inputs.
  *
  *
- * \section codec_setting Codec Settings
+ * \section g7221_codec_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection g7221_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection g7221_specific_setting Codec Specific Settings
  *
  * The following settings are applicable for this codec.
  *
- * \subsubsection bitrate Bitrate
+ * \subsubsection g7221_bitrate Bitrate
  *
  * The codec implementation supports standard and non-standard bitrates.
  * Use #pjmedia_codec_g7221_set_mode() to enable or disable the bitrates.

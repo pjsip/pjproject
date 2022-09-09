@@ -2345,6 +2345,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 	pj_assert(sizeof(*ii) <= sizeof(tsi->buffer));
 	tsi = &info->spc_info[info->specific_info_cnt++];
 	tsi->type = PJMEDIA_TRANSPORT_TYPE_ICE;
+	tsi->tp = tp;
 	tsi->cbsize = sizeof(*ii);
 
 	ii = (pjmedia_ice_transport_info*) tsi->buffer;

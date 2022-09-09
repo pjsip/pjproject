@@ -21,7 +21,7 @@
 <!--  - we send NOTIFY, expect 200					-->
 <!--  - UAC sends SUBSCRIBE, we ignore					-->
 <!--  - we send NOTIFY							-->
-<!-- See http://trac.pjsip.org/repos/ticket/911                         -->
+<!-- See https://github.com/pjsip/pjproject/issues/911                         -->
 <!--                                                                    -->
 
 <scenario name="Late NOTIFY">

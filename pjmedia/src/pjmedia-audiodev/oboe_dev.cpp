@@ -633,8 +633,8 @@ class MyOboeEngine : oboe::AudioStreamDataCallback,
 public:
     MyOboeEngine(struct oboe_aud_stream *stream_, pjmedia_dir dir_)
     : stream(stream_), dir(dir_), oboe_stream(NULL), dir_st(NULL),
-      thread(NULL), thread_quit(PJ_FALSE), queue(NULL),
-      err_thread_registered(false)
+      thread(NULL), thread_quit(PJ_TRUE), queue(NULL),
+      err_thread_registered(false), mutex(NULL)
     {
 	pj_assert(dir == PJMEDIA_DIR_CAPTURE || dir == PJMEDIA_DIR_PLAYBACK);
 	dir_st = (dir == PJMEDIA_DIR_CAPTURE? "capture":"playback");
@@ -642,12 +642,26 @@ public:
     }
 
     pj_status_t Start() {
-	if (oboe_stream)
-	    return PJ_SUCCESS;
+	pj_status_t status;
+
+	if (!mutex) {
+	    status = pj_mutex_create_recursive(stream->pool, "oboe", &mutex);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(3,(THIS_FILE, status,
+			     "Oboe stream %s failed creating mutex", dir_st));
+		return status;
+	    }
+	}
 
 	int dev_id = 0;
 	oboe::AudioStreamBuilder sb;
-	pj_status_t status;
+
+	pj_mutex_lock(mutex);
+
+	if (oboe_stream) {
+	    pj_mutex_unlock(mutex);
+	    return PJ_SUCCESS;
+	}
 
 	if (dir == PJMEDIA_DIR_CAPTURE) {
 	    sb.setDirection(oboe::Direction::Input);
@@ -669,6 +683,8 @@ public:
 	sb.setChannelCount(stream->param.channel_count);
 	sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
 	sb.setFormat(oboe::AudioFormat::I16);
+	sb.setUsage(oboe::Usage::VoiceCommunication);
+	sb.setContentType(oboe::ContentType::Speech);
 	sb.setDataCallback(this);
 	sb.setErrorCallback(this);
 	sb.setFramesPerDataCallback(stream->param.samples_per_frame /
@@ -710,15 +726,18 @@ public:
 
 	/* Create semaphore */
         if (sem_init(&sem, 0, 0) != 0) {
+	    pj_mutex_unlock(mutex);
 	    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
 	}
 
 	/* Create thread */
 	thread_quit = PJ_FALSE;
         status = pj_thread_create(stream->pool, "android_oboe",
-                                  AudioThread, this, 0, 0, &thread);
-        if (status != PJ_SUCCESS)
+                                  &AudioThread, this, 0, 0, &thread);
+        if (status != PJ_SUCCESS) {
+	    pj_mutex_unlock(mutex);
             return status;
+	}
 
 	/* Open & start oboe stream */
 	oboe::Result result = sb.openStream(&oboe_stream);
@@ -726,6 +745,7 @@ public:
 	    PJ_LOG(3,(THIS_FILE,
 		      "Oboe stream %s open failed (err=%d/%s)",
 		      dir_st, result, oboe::convertToText(result)));
+	    pj_mutex_unlock(mutex);
 	    return PJMEDIA_EAUD_SYSERR;
 	}
 
@@ -734,6 +754,7 @@ public:
 	    PJ_LOG(3,(THIS_FILE,
 		      "Oboe stream %s start failed (err=%d/%s)",
 		      dir_st, result, oboe::convertToText(result)));
+	    pj_mutex_unlock(mutex);
 	    return PJMEDIA_EAUD_SYSERR;
 	}
 
@@ -762,29 +783,47 @@ public:
 		oboe_stream->getFramesPerBurst()
 		));
 
+	pj_mutex_unlock(mutex);
 	return PJ_SUCCESS;
     }
 
     void Stop() {
-	if (oboe_stream) {
-	    oboe_stream->close();
-	    delete oboe_stream;
-	    oboe_stream = NULL;
+	/* Just return if it has not been started */
+	if (!mutex || thread_quit) {
+	    PJ_LOG(5, (THIS_FILE, "Oboe stream %s stop request when "
+		       "already stopped.", dir_st));
+	    return;
 	}
 
+	PJ_LOG(5, (THIS_FILE, "Oboe stream %s stop requested.", dir_st));
+
+	pj_mutex_lock(mutex);
+
 	if (thread) {
+	    PJ_LOG(5,(THIS_FILE, "Oboe %s stopping thread", dir_st));
 	    thread_quit = PJ_TRUE;
             sem_post(&sem);
             pj_thread_join(thread);
             pj_thread_destroy(thread);
             thread = NULL;
-            sem_destroy(&sem);
+	}
+
+	if (oboe_stream) {
+	    PJ_LOG(5,(THIS_FILE, "Oboe %s closing stream", dir_st));
+	    oboe_stream->close();
+	    delete oboe_stream;
+	    oboe_stream = NULL;
 	}
 
 	if (queue) {
+	    PJ_LOG(5,(THIS_FILE, "Oboe %s deleting queue", dir_st));
 	    delete queue;
 	    queue = NULL;
 	}
+
+	sem_destroy(&sem);
+
+	pj_mutex_unlock(mutex);
 
 	PJ_LOG(4, (THIS_FILE, "Oboe stream %s stopped.", dir_st));
     }
@@ -810,11 +849,16 @@ public:
 
 	sem_post(&sem);
 
-	return oboe::DataCallbackResult::Continue;
+	return (thread_quit? oboe::DataCallbackResult::Stop :
+			     oboe::DataCallbackResult::Continue);
     }
 
     void onErrorAfterClose(oboe::AudioStream *oboeStream, oboe::Result result)
     {
+	__android_log_print(ANDROID_LOG_INFO, THIS_FILE,
+			    "Oboe %s got onErrorAfterClose(%d)",
+			    dir_st, result);
+
 	/* Register callback thread */
 	if (!err_thread_registered || !pj_thread_is_registered())
 	{
@@ -825,17 +869,40 @@ public:
 	    err_thread_registered = true;
 	}
 
-	PJ_LOG(3,(THIS_FILE,
-		  "Oboe stream %s error (%d/%s), trying to restart stream..",
-		  dir_st, result, oboe::convertToText(result)));
-
 	/* Just try to restart */
-	Stop();
-	Start();
+	pj_mutex_lock(mutex);
+
+	/* Make sure stop request has not been made */
+	if (!thread_quit) {
+	    PJ_LOG(3,(THIS_FILE,
+		      "Oboe stream %s error (%d/%s), "
+		      "trying to restart stream..",
+		      dir_st, result, oboe::convertToText(result)));
+
+	    Stop();
+	    Start();
+	}
+
+	pj_mutex_unlock(mutex);
     }
 
     ~MyOboeEngine() {
+	/* Oboe should have been stopped before destroying the engine.
+	 * As stopping it here (below) may cause undefined behaviour when
+	 * there is race condition against restart in onErrorAfterClose().
+	 */
+	pj_assert(thread_quit == PJ_TRUE);
+
+	/* Forcefully stopping Oboe anyway */
 	Stop();
+
+	/* Try to trigger context switch in case onErrorAfterClose() is
+	 * waiting for mutex.
+	 */
+	pj_thread_sleep(1);
+
+	if (mutex)
+	    pj_mutex_destroy(mutex);
     }
 
 private:
@@ -932,6 +999,8 @@ private:
 	}
 
 	delete [] tmp_buf;
+
+	PJ_LOG(5,(THIS_FILE, "Oboe %s thread stopped", this_->dir_st));
 	return 0;
     }
 
@@ -941,12 +1010,13 @@ private:
     oboe::AudioStream		*oboe_stream;
     const char			*dir_st;
     pj_thread_t			*thread;
-    pj_bool_t			 thread_quit;
+    volatile pj_bool_t		 thread_quit;
     sem_t			 sem;
     AtomicQueue			*queue;
     pj_timestamp		 ts;
     bool			 err_thread_registered;
     pj_thread_desc		 err_thread_desc;
+    pj_mutex_t			*mutex;
 
 };
 
@@ -1118,6 +1188,15 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
 
     /* Stop the stream */
     strm_stop(s);
+
+    if (stream->rec_engine) {
+	delete stream->rec_engine;
+	stream->rec_engine = NULL;
+    }
+    if (stream->play_engine) {
+	delete stream->play_engine;
+	stream->play_engine = NULL;
+    }
 
     pj_pool_release(stream->pool);
     PJ_LOG(4, (THIS_FILE, "Oboe stream destroyed"));

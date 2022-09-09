@@ -72,7 +72,7 @@ public:
     
     virtual void onCallState(OnCallStateParam &prm);
     virtual void onCallTransferRequest(OnCallTransferRequestParam &prm);
-    virtual void onCallReplaced(OnCallReplacedParam &prm);
+    virtual void onCallReplaceRequest(OnCallReplaceRequestParam &prm);
     virtual void onCallMediaState(OnCallMediaStateParam &prm);
 };
 
@@ -190,10 +190,10 @@ void MyCall::onCallTransferRequest(OnCallTransferRequestParam &prm)
     prm.newCall = new MyCall(*myAcc);
 }
 
-void MyCall::onCallReplaced(OnCallReplacedParam &prm)
+void MyCall::onCallReplaceRequest(OnCallReplaceRequestParam &prm)
 {
     /* Create new Call for call replace */
-    prm.newCall = new MyCall(*myAcc, prm.newCallId);
+    prm.newCall = new MyCall(*myAcc);
 }
 
 

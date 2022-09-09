@@ -90,7 +90,7 @@ typedef struct pjsip_cfg_t
 
 	/**
 	 * Allow hash character ('#') to appear in outgoing URIs. See
-	 * https://trac.pjsip.org/repos/ticket/1569.
+	 * https://github.com/pjsip/pjproject/issues/1569.
 	 *
 	 * Default is PJ_FALSE.
 	 */
@@ -151,7 +151,7 @@ typedef struct pjsip_cfg_t
 	 * uses "sips" scheme in its request URI. Contact URI should use "sips"
 	 * scheme and the top-most Record-Route URI, if any, should use either
 	 * "sips" scheme or "transport=tls" param. See also
-	 * https://trac.pjsip.org/repos/ticket/1735.
+	 * https://github.com/pjsip/pjproject/issues/1735.
 	 *
 	 * Default is PJ_FALSE.
 	 */
@@ -579,7 +579,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  *
  * Update:
  * As of version 2.1, the default value is 0. This change was part of
- * https://trac.pjsip.org/repos/ticket/1412
+ * https://github.com/pjsip/pjproject/issues/1412
  */
 #ifndef PJSIP_CHECK_VIA_SENT_BY
 #   define PJSIP_CHECK_VIA_SENT_BY	0
@@ -651,7 +651,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  *
  * Note that if the value is put lower than 33 seconds, it may cause some
  * pjsip test units to fail. See the comment on the following link:
- * https://trac.pjsip.org/repos/ticket/1465#comment:4
+ * https://github.com/pjsip/pjproject/issues/1465#comment:4
  *
  * Default: 33
  */
@@ -1004,10 +1004,19 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_POOL_EVSUB_INC		512
 #endif
 
-
+/**
+ * Default value for Max-Forwards header
+ */
 #define PJSIP_MAX_FORWARDS_VALUE	70
 
+/**
+ * Via branch parameter prefix
+ */
 #define PJSIP_RFC3261_BRANCH_ID		"z9hG4bK"
+
+/**
+ * Length of PJSIP_RFC3261_BRANCH_ID
+ */
 #define PJSIP_RFC3261_BRANCH_LEN	7
 
 /* Transaction related constants. */
@@ -1071,24 +1080,29 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 #define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
 
-/* User agent. */
+/* User agent's pool setting. */
 #define PJSIP_POOL_LEN_USER_AGENT	1024
+/* User agent's pool setting. */
 #define PJSIP_POOL_INC_USER_AGENT	1024
 
-/* Message/URL related constants. */
+/** Message/URL related constants. */
 #define PJSIP_MAX_CALL_ID_LEN		pj_GUID_STRING_LENGTH()
+/** Message/URL related constants. */
 #define PJSIP_MAX_TAG_LEN		pj_GUID_STRING_LENGTH()
+/** Message/URL related constants. */
 #define PJSIP_MAX_BRANCH_LEN		(PJSIP_RFC3261_BRANCH_LEN + pj_GUID_STRING_LENGTH() + 2)
+/** Message/URL related constants. */
 #define PJSIP_MAX_HNAME_LEN		64
 
-/* Dialog related constants. */
+/** Dialog's pool setting. */
 #define PJSIP_POOL_LEN_DIALOG		1200
+/** Dialog's pool setting. */
 #define PJSIP_POOL_INC_DIALOG		512
 
-/* Maximum header types. */
+/** Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES		72
 
-/* Maximum URI types. */
+/** Maximum URI types. */
 #define PJSIP_MAX_URI_TYPES		4
 
 /*****************************************************************************
@@ -1280,6 +1294,18 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY	1
 #endif
 
+/**
+ * Allow client to send multiple Authorization header when receiving multiple 
+ * WWW-Authenticate header fields. If this is disabled, the stack will send
+ * Authorization header field containing credentials that match the
+ * topmost header field.
+ *
+ * Default is 0
+ */
+#ifndef PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER
+#   define PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER 0
+#endif
+
 /*****************************************************************************
  *  SIP Event framework and presence settings.
  */
@@ -1457,6 +1483,25 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #ifndef PJSIP_INV_ACCEPT_UNKNOWN_BODY
 #   define PJSIP_INV_ACCEPT_UNKNOWN_BODY    PJ_FALSE
 #endif
+
+/** 
+ * Specify whether to check if UPDATE sent in EARLY state has already
+ * completed SDP negotiation using reliable provisional responses, as
+ * specified in RFC3311 section 5.1.
+ *
+ * By default, the library will disable the check and allow the UPDATE
+ * to be sent for backward compatibility.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE
+#   define PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE    0
+#endif
+
+/**
+ * Dump configuration to log with verbosity equal to info(3).
+ */
+PJ_DECL(void) pjsip_dump_config(void);
 
 PJ_END_DECL
 

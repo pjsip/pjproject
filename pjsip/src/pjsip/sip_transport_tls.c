@@ -1670,7 +1670,7 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
 	    /*
 	     * connect() is still in progress. Put the transmit data to
 	     * the delayed list.
-             * Starting from #1583 (https://trac.pjsip.org/repos/ticket/1583),
+             * Starting from #1583 (https://github.com/pjsip/pjproject/issues/1583),
              * we also add timeout value for the transmit data. When the
              * connect() is completed, the timeout value will be checked to
              * determine whether the transmit data needs to be sent.

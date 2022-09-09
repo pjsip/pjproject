@@ -175,6 +175,7 @@ struct pjmedia_stream
     void		    *out_rtcp_pkt;  /**< Outgoing RTCP packet.	    */
     unsigned		     out_rtcp_pkt_size;
 					    /**< Outgoing RTCP packet size. */
+    pj_int16_t		    *zero_frame;    /**< Zero frame buffer.	    */
 
     /* RFC 2833 DTMF transmission queue: */
     unsigned		     dtmf_duration; /**< DTMF duration(in timestamp)*/
@@ -1435,20 +1436,19 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
      * In this case we periodically transmit RTP frame to keep NAT binding
      * open, by giving zero PCM frame to the codec.
      *
-     * This was originally done in http://trac.pjsip.org/repos/ticket/56,
-     * but then disabled in http://trac.pjsip.org/repos/ticket/439, but
+     * This was originally done in https://github.com/pjsip/pjproject/issues/56,
+     * but then disabled in https://github.com/pjsip/pjproject/issues/439, but
      * now it's enabled again.
      */
     } else if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO &&
 	       frame->buf == NULL &&
 	       stream->port.info.fmt.id == PJMEDIA_FORMAT_L16 &&
-	       (stream->dir & PJMEDIA_DIR_ENCODING) &&
-	       stream->enc_samples_per_pkt < PJ_ARRAY_SIZE(zero_frame))
+	       (stream->dir & PJMEDIA_DIR_ENCODING))
     {
 	pjmedia_frame silence_frame;
 
 	pj_bzero(&silence_frame, sizeof(silence_frame));
-	silence_frame.buf = zero_frame;
+	silence_frame.buf = stream->zero_frame;
 	silence_frame.size = stream->enc_samples_per_pkt * 2;
 	silence_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	silence_frame.timestamp.u32.lo = pj_ntohl(stream->enc->rtp.out_hdr.ts);
@@ -1597,7 +1597,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 
     samples_per_frame = stream->enc_samples_per_pkt;
 
-    /* http://www.pjsip.org/trac/ticket/56:
+    /* https://github.com/pjsip/pjproject/issues/56:
      *  when input is PJMEDIA_FRAME_TYPE_NONE, feed zero PCM frame
      *  instead so that encoder can decide whether or not to transmit
      *  silence frame.
@@ -2799,11 +2799,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     att_param.rtcp_cb = &on_rx_rtcp;
 
     /* Only attach transport when stream is ready. */
+    stream->transport = tp;
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
-
-    stream->transport = tp;
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     /* Enable RTCP XR and update stream info/config to RTCP XR */
@@ -2898,6 +2897,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Update the stream info's codec param */
     stream->si.param = &stream->codec_param;
 
+    /* Check the zero frame buffer. */
+    if (stream->enc_samples_per_pkt > PJ_ARRAY_SIZE(zero_frame)) {
+	stream->zero_frame = (pj_int16_t*)pj_pool_zalloc(pool, 
+			       sizeof(pj_int16_t)*stream->enc_samples_per_pkt);	
+    } else {
+	stream->zero_frame = zero_frame;
+    }
+
     /* Send RTCP SDES */
     if (!stream->rtcp_sdes_bye_disabled) {
         pjmedia_stream_send_rtcp_sdes(stream);
@@ -2964,7 +2971,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 
     /* Send RTCP BYE (also SDES & XR) */
     if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
-	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_TRUE, PJ_FALSE);
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	send_rtcp(stream, PJ_TRUE, PJ_TRUE, stream->rtcp.xr_enabled, PJ_FALSE);
+#else
+	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
+#endif
     }
 
     /* If we're in the middle of transmitting DTMF digit, send one last
@@ -3114,6 +3125,18 @@ PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
     }
 
     return PJ_SUCCESS;
+}
+
+/*
+ * Modify codec parameter.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_modify_codec_param(pjmedia_stream *stream,
+			  	  const pjmedia_codec_param *param)
+{
+    PJ_ASSERT_RETURN(stream && param, PJ_EINVAL);
+
+    return pjmedia_codec_modify(stream->codec, param);
 }
 
 

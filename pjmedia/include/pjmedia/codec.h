@@ -150,7 +150,7 @@ PJ_BEGIN_DECL
     pjmedia_codec_param param;
 
     // Retrieve default codec param for the specified codec.
-    pjmedia_codec_mgr_get_default_param(codec_mgr, codec_info
+    pjmedia_codec_mgr_get_default_param(codec_mgr, codec_info,
 					&param);
 
     // Application may change the "settings" part of codec param,
@@ -269,7 +269,7 @@ typedef struct pjmedia_codec_param
 {
     /**
      * The "info" part of codec param describes the capability of the codec,
-     * and the value should NOT be changed by application.
+     * and is recommended not to be modified unless necessary.
      */
     struct {
        unsigned	   clock_rate;		/**< Sampling rate in Hz	    */
@@ -294,7 +294,7 @@ typedef struct pjmedia_codec_param
      * of the codec. Any features that are supported by the codec (e.g. vad
      * or plc) will be turned on, so that application can query which 
      * capabilities are supported by the codec. Application may change the
-     * settings here before instantiating the codec/stream.
+     * settings here before instantiating or modifying the codec.
      */
     struct {
 	pj_uint8_t  frm_per_pkt;    /**< Number of frames per packet.	*/
@@ -305,6 +305,9 @@ typedef struct pjmedia_codec_param
 	unsigned    reserved:1;	    /**< Reserved, must be zero.	*/
 	pjmedia_codec_fmtp enc_fmtp;/**< Encoder's fmtp params.		*/
 	pjmedia_codec_fmtp dec_fmtp;/**< Decoder's fmtp params.		*/
+    	unsigned   packet_loss;     /**< Encoder's expected pkt loss %.	*/
+    	unsigned   complexity;      /**< Encoder complexity, 0-10(max). */
+    	pj_bool_t  cbr;             /**< Constant bit rate?		*/
     } setting;
 } pjmedia_codec_param;
 
@@ -380,13 +383,11 @@ typedef struct pjmedia_codec_op
     pj_status_t (*close)(pjmedia_codec *codec);
 
     /** 
-     * Modify the codec parameter after the codec is open. 
-     * Note that not all codec parameters can be modified during run-time. 
-     * When the parameter cannot be changed, this function will return 
-     * non-PJ_SUCCESS, and the original parameters will not be changed.
-     *
-     * Application can expect changing trivial codec settings such as
-     * changing VAD setting to succeed.
+     * Modify the codec parameter after the codec is open.
+     * Note that not all codec parameters can be modified during run-time.
+     * Currently, only Opus codec supports changing key codec parameters
+     * such as bitrate and bandwidth, while other codecs may only be able to
+     * modify minor settings such as VAD or PLC.
      *
      * Application should call #pjmedia_codec_modify() instead of 
      * calling this function directly.
@@ -998,13 +999,11 @@ PJ_INLINE(pj_status_t) pjmedia_codec_close( pjmedia_codec *codec )
 
 
 /** 
- * Modify the codec parameter after the codec is open. 
- * Note that not all codec parameters can be modified during run-time. 
- * When the parameter cannot be changed, this function will return 
- * non-PJ_SUCCESS, and the original parameters will not be changed.
- *
- * Application can expect changing trivial codec settings such as
- * changing VAD setting to succeed.
+ * Modify the codec parameter after the codec is open.
+ * Note that not all codec parameters can be modified during run-time.
+ * Currently, only Opus codec supports changing key codec parameters
+ * such as bitrate and bandwidth, while other codecs may only be able to
+ * modify minor settings such as VAD or PLC.
  *
  * @param codec	    The codec instance.
  * @param param	    The new codec parameter.

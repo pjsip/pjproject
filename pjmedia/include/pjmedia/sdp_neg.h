@@ -87,7 +87,7 @@
  * remote peer using signaling protocol such as SIP.
  *
  *
- * \subsection sdpneg_subseq_offer Generating Subsequent Offer
+ * \subsection sdpneg_generate_offer Generating Subsequent Offer
  *
  * The negotiator can only create subsequent offer after it has finished
  * the negotiation process of previous offer/answer session (i.e. the
@@ -771,7 +771,7 @@ typedef pj_status_t (*pjmedia_sdp_neg_fmt_match_cb)(pj_pool_t *pool,
  * the negotiation must be done by the format or codec implementation.
  *
  * To unregister the callback of specific format, just call this function with
- * parameter #cb set to NULL.
+ * parameter cb set to NULL.
  *
  * @param fmt_name	The format name, e.g: "H.264", "AMR", "G7221". Note
  *			that the string buffer must remain valid until the

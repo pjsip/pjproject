@@ -91,11 +91,11 @@ PJ_BEGIN_DECL
  *
  * Few samples are provided:
  *
-  - @ref page_pjsip_sample_simple_pjsuaua_c\n
+  - @ref page_pjsip_sample_simple_pjsuaua_c \n
     Very simple SIP User Agent with registration, call, and media, using
     PJSUA-API, all in under 200 lines of code.
 
-  - @ref page_pjsip_samples_pjsua\n
+  - @ref page_pjsip_samples_pjsua \n
     This is the reference implementation for PJSIP and PJMEDIA.
     PJSUA is a console based application, designed to be simple enough
     to be readble, but powerful enough to demonstrate all features
@@ -600,7 +600,7 @@ typedef struct pjsua_stream_stat
 
 /**
  * Structure to be passed to on stream precreate callback.
- * See #on_stream_precreate().
+ * See on_stream_precreate().
  */
 typedef struct pjsua_on_stream_precreate_param
 {
@@ -618,7 +618,7 @@ typedef struct pjsua_on_stream_precreate_param
 
 /**
  * Structure to be passed to on stream created callback.
- * See #on_stream_created2().
+ * See on_stream_created2().
  */
 typedef struct pjsua_on_stream_created_param
 {
@@ -1169,7 +1169,7 @@ typedef struct pjsua_callback
 
     /**
      * Notify application when an audio media session is about to be created
-     * (as opposed to #on_stream_created() and #on_stream_created2() which are
+     * (as opposed to on_stream_created() and on_stream_created2() which are
      * called *after* the session has been created). The application may change
      * some stream info parameter values, i.e: jb_init, jb_min_pre, jb_max_pre,
      * jb_max, use_ka, rtcp_sdes_bye_disabled, jb_discard_algo (audio),
@@ -1187,7 +1187,7 @@ typedef struct pjsua_callback
      * audio media port if it has added media processing port to the stream.
      * This media port then will be added to the conference bridge instead.
      *
-     * Note: if implemented, #on_stream_created2() callback will be called
+     * Note: if implemented, on_stream_created2() callback will be called
      * instead of this one. 
      *
      * @param call_id	    Call identification.
@@ -2318,6 +2318,27 @@ typedef struct pjsua_config
      */
     pj_bool_t	     hangup_forked_call;
 
+    /**
+     * Specify whether to enable UPnP.
+     *
+     * Note that this setting can be further customized in account
+     * configuration (#pjsua_acc_config).
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t        enable_upnp;
+
+    /**
+     * Specify which interface to use for UPnP. If empty, UPnP will use
+     * the first suitable interface found.
+     *
+     * Note that this setting is only applicable if UPnP is enabled and
+     * the string must be NULL terminated.
+     *
+     * Default: empty string
+     */
+    pj_str_t         upnp_if_name;
+
 } pjsua_config;
 
 
@@ -2775,7 +2796,7 @@ PJ_DECL(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type);
  *			PJ_SUCCESS if one usable STUN server is found.
  *			Otherwise it will always return PJ_SUCCESS, and
  *			application will be notified about the result in
- *			the callback #on_stun_resolution_complete.
+ *			the callback on_stun_resolution_complete().
  */
 PJ_DECL(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
 					       pj_bool_t wait);
@@ -3010,11 +3031,11 @@ typedef struct pjsua_transport_config
     /**
      * Specify the port range for socket binding, relative to the start
      * port number specified in \a port. Note that this setting is only
-     * applicable when the start port number is non zero.
+     * applicable to media transport when the start port number is non zero.
+     * Media transport is configurable via account setting, 
+     * i.e: pjsua_acc_config.rtp_cfg, please check the media transport 
+     * config docs for more info.
      *
-     * Example: \a port=5000, \a port_range=4
-     * - Available ports: 5000, 5001, 5002, 5003, 5004 (SIP transport)
-     * 
      * Available ports are in the range of [\a port, \a port + \a port_range]. 
      * 
      * Default value is zero.
@@ -3515,6 +3536,23 @@ typedef enum pjsua_stun_use
     PJSUA_STUN_RETRY_ON_FAILURE
 
 } pjsua_stun_use;
+
+/**
+ * This enumeration controls the use of UPnP in the account.
+ */
+typedef enum pjsua_upnp_use
+{
+    /**
+     * Follow the default setting in the global \a pjsua_config.
+     */
+    PJSUA_UPNP_USE_DEFAULT,
+
+    /**
+     * Disable UPnP.
+     */
+    PJSUA_UPNP_USE_DISABLED
+
+} pjsua_upnp_use;
 
 /**
  * This enumeration controls the use of ICE settings in the account.
@@ -4144,6 +4182,20 @@ typedef struct pjsua_acc_config
     pjsua_stun_use 		media_stun_use;
 
     /**
+     * Control the use of UPnP for the SIP signaling.
+     *
+     * Default: PJSUA_UPNP_USE_DEFAULT
+     */
+    pjsua_upnp_use 		sip_upnp_use;
+
+    /**
+     * Control the use of UPnP for the media transports.
+     *
+     * Default: PJSUA_UPNP_USE_DEFAULT
+     */
+    pjsua_upnp_use 		media_upnp_use;
+
+    /**
      * Use loopback media transport. This may be useful if application
      * doesn't want PJSIP to create real media transports/sockets, such as
      * when using third party media.
@@ -4339,6 +4391,13 @@ typedef struct pjsua_acc_config
      * RTCP Feedback configuration.
      */
     pjmedia_rtcp_fb_setting rtcp_fb_cfg;
+
+    /**
+     * Enable RTCP Extended Report (RTCP XR).
+     *
+     * Default: PJMEDIA_STREAM_ENABLE_XR
+     */
+    pj_bool_t		enable_rtcp_xr;
 
 } pjsua_acc_config;
 
@@ -5524,7 +5583,7 @@ PJ_DECL(pj_status_t) pjsua_call_get_info(pjsua_call_id call_id,
  *			 "100rel".
  *
  * @return		PJSIP_DIALOG_CAP_SUPPORTED if the specified capability
- *			is explicitly supported, see @pjsip_dialog_cap_status
+ *			is explicitly supported, see pjsip_dialog_cap_status
  *			for more info.
  */
 PJ_DECL(pjsip_dialog_cap_status) pjsua_call_remote_has_cap(
@@ -6054,6 +6113,24 @@ PJ_DECL(pj_status_t) pjsua_call_set_vid_strm (
 				pjsua_call_vid_strm_op op,
 				const pjsua_call_vid_strm_op_param *param);
 
+/**
+ * Modify the audio stream's codec parameter after the codec is opened.
+ * Note that not all codec parameters can be modified during run-time.
+ * Currently, only Opus codec supports changing key codec parameters
+ * such as bitrate and bandwidth, while other codecs may only be able to
+ * modify minor settings such as VAD or PLC.
+ *
+ * @param call_id	Call identification.
+ * @param med_idx	Media stream index, or -1 to specify default audio
+ * 			media.
+ * @param param		The new codec parameter.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjsua_call_aud_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+			  	  	 const pjmedia_codec_param *param);
 
 /**
  * Get media stream info for the specified media index.
@@ -6791,7 +6868,7 @@ struct pjsua_media_config
     /**
      * Disable VAD?
      *
-     * Default: 0 (no (meaning VAD is enabled))
+     * Default: 0 (codec specific)
      */
     pj_bool_t		no_vad;
 
@@ -6860,14 +6937,14 @@ struct pjsua_media_config
     /**
      * Jitter buffer minimum prefetch delay in msec.
      *
-     * Default: -1 (to use default stream settings, currently 60 msec)
+     * Default: -1 (to use default stream settings, currently codec ptime)
      */
     int			jb_min_pre;
     
     /**
      * Jitter buffer maximum prefetch delay in msec.
      *
-     * Default: -1 (to use default stream settings, currently 240 msec)
+     * Default: -1 (to use default stream settings, currently 80% of jb_max)
      */
     int			jb_max_pre;
 
@@ -7177,26 +7254,42 @@ typedef enum pjsua_snd_dev_mode
  */
 typedef struct pjsua_snd_dev_param
 {
-    /*
+    /**
      * Capture dev id.
      *
      * Default: PJMEDIA_AUD_DEFAULT_CAPTURE_DEV
      */
     int			capture_dev;
 
-    /*
+    /**
      * Playback dev id.
      *
      * Default: PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV
      */
     int			playback_dev;
 
-    /*
+    /**
      * Sound device mode, refer to #pjsua_snd_dev_mode.
      *
      * Default: 0
      */
     unsigned		mode;
+
+    /*
+     * The library will maintain the global sound device settings set when
+     * opening the sound device for the first time and later can be modified
+     * using #pjsua_snd_set_setting(). These setings are then applied to any
+     * sound device when opening. This might be undesirable,
+     * e.g: output volume changes when switching sound device due to the
+     * use of previously set volume settings.
+     *
+     * To avoid such case, application can set this to PJ_TRUE and let the
+     * sound device use default settings when opening. This will also reset
+     * the global sound device settings.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t		use_default_settings;
 
 } pjsua_snd_dev_param;
 
@@ -7216,7 +7309,7 @@ PJ_DECL(void) pjsua_snd_dev_param_default(pjsua_snd_dev_param *prm);
  */
 typedef struct pjsua_conf_connect_param
 {
-    /*
+    /**
      * Signal level adjustment from the source to the sink to make it
      * louder or quieter. Value 1.0 means no level adjustment,
      * while value 0 means to mute the port.
@@ -7778,7 +7871,8 @@ PJ_DECL(pj_bool_t) pjsua_snd_is_active(void);
  * 
  * Note that in case the setting is kept for future use, it will be applied
  * to any devices, even when application has changed the sound device to be
- * used.
+ * used. To reset the setting, application can call #pjsua_set_snd_dev2()
+ * with \a use_default_settings set to PJ_TRUE.
  *
  * Note also that the echo cancellation setting should be set with 
  * #pjsua_set_ec() API instead.
@@ -8074,7 +8168,7 @@ PJ_DECL(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id);
  * manually update the settings to reflect the newly updated video device
  * indexes. See #pjmedia_vid_dev_refresh() for more information.
  *
- * See also #pjmedia_vid_stream_set_cap() for more information about setting
+ * See also pjmedia_vid_stream_set_cap() for more information about setting
  * a video device capability.
  *
  * @param id		The video device index.
@@ -8082,6 +8176,7 @@ PJ_DECL(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id);
  * @param pval		Pointer to value. Please see #pjmedia_vid_dev_cap
  *			documentation about the type of value to be 
  *			supplied for each setting.
+ * @param keep          (see description)
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */

@@ -32,7 +32,7 @@
 #define THIS_FILE   "wsola.c"
 
 /*
- * http://trac.pjsip.org/repos/ticket/683:
+ * https://github.com/pjsip/pjproject/issues/683:
  *  Workaround for segfault problem in the fixed point version of create_win()
  *  on ARM9 platform, possibly due to gcc optimization bug.
  *
