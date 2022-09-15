@@ -16,10 +16,10 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import sys
-if sys.version_info[0] >= 3: # Python 3
+if sys.version_info[0] >= 3:  # Python 3
     import tkinter as tk
     from tkinter import ttk
     from tkinter import messagebox as msgbox
@@ -34,10 +34,13 @@ import endpoint
 import application
 
 # Buddy class
+
+
 class Buddy(pj.Buddy):
     """
     High level Python Buddy object, derived from pjsua2's Buddy object.
     """
+
     def __init__(self, app):
         pj.Buddy.__init__(self)
         self.app = app
@@ -62,10 +65,12 @@ class Buddy(pj.Buddy):
     def onBuddyState(self):
         self.app.updateBuddy(self)
 
+
 class SettingDialog(tk.Toplevel):
     """
     This implements buddy settings dialog to manipulate buddy settings.
     """
+
     def __init__(self, parent, cfg):
         tk.Toplevel.__init__(self, parent)
         self.transient(parent)
@@ -95,7 +100,8 @@ class SettingDialog(tk.Toplevel):
         self.frm.columnconfigure(0, weight=1)
         self.frm.columnconfigure(1, weight=1)
         self.wTab = ttk.Notebook(self.frm)
-        self.wTab.grid(column=0, row=0, columnspan=2, padx=5, pady=5, sticky=tk.N+tk.S+tk.W+tk.E)
+        self.wTab.grid(column=0, row=0, columnspan=2, padx=5,
+                       pady=5, sticky=tk.N+tk.S+tk.W+tk.E)
 
         # Main buttons
         btnOk = ttk.Button(self.frm, text='Ok', command=self.onOk)
@@ -109,7 +115,7 @@ class SettingDialog(tk.Toplevel):
     def createBasicTab(self):
         # Prepare the variables to set/receive values from GUI
         self.cfgUri = tk.StringVar()
-        self.cfgUri.set( self.cfg.uri )
+        self.cfgUri.set(self.cfg.uri)
         self.cfgSubscribe = tk.IntVar()
         self.cfgSubscribe.set(self.cfg.subscribe)
 
@@ -118,17 +124,19 @@ class SettingDialog(tk.Toplevel):
         frm.columnconfigure(0, weight=1)
         frm.columnconfigure(1, weight=2)
         row = 0
-        ttk.Label(frm, text='URI:').grid(row=row, column=0, sticky=tk.E, pady=2)
-        ttk.Entry(frm, textvariable=self.cfgUri, width=40).grid(row=row, column=1, sticky=tk.W+tk.E, padx=6)
+        ttk.Label(frm, text='URI:').grid(
+            row=row, column=0, sticky=tk.E, pady=2)
+        ttk.Entry(frm, textvariable=self.cfgUri, width=40).grid(
+            row=row, column=1, sticky=tk.W+tk.E, padx=6)
         row += 1
-        ttk.Checkbutton(frm, text='Subscribe presence', variable=self.cfgSubscribe).grid(row=row, column=1, sticky=tk.W, padx=6, pady=2)
+        ttk.Checkbutton(frm, text='Subscribe presence', variable=self.cfgSubscribe).grid(
+            row=row, column=1, sticky=tk.W, padx=6, pady=2)
 
         self.wTab.add(frm, text='Basic Settings')
 
-
     def onOk(self):
         # Check basic settings
-        errors = "";
+        errors = ""
         if self.cfgUri.get():
             if not endpoint.validateSipUri(self.cfgUri.get()):
                 errors += "Invalid Buddy URI: '%s'\n" % (self.cfgUri.get())
@@ -139,8 +147,8 @@ class SettingDialog(tk.Toplevel):
 
         # Basic settings
         self.cfg.uri = self.cfgUri.get()
-        self.cfg.subscribe = self.cfgSubscribe.get()
-
+        iscfgSubscribeTrue = True if self.cfgSubscribe.get() == 1 else False
+        self.cfg.subscribe = iscfgSubscribeTrue
         self.isOk = True
         self.destroy()
 
