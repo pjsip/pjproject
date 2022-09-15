@@ -3983,7 +3983,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    }
 
 	    /* Check if no media is active */
-	    if (local_sdp->media[mi]->desc.port == 0) {
+	    if ((local_sdp->media[mi]->desc.port == 0) || 
+	        (si->dir == PJMEDIA_DIR_NONE))	    
+	    {
 
 		/* Update call media state and direction */
 		call_med->state = PJSUA_CALL_MEDIA_NONE;
