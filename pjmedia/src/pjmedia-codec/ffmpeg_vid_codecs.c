@@ -41,10 +41,6 @@
 
 #define THIS_FILE   "ffmpeg_vid_codecs.c"
 
-#define LIBAVCODEC_VER_AT_LEAST(major,minor)  (LIBAVCODEC_VERSION_MAJOR > major || \
-     					       (LIBAVCODEC_VERSION_MAJOR == major && \
-					        LIBAVCODEC_VERSION_MINOR >= minor))
-
 #include "../pjmedia/ffmpeg_util.h"
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -63,7 +59,9 @@
 #endif
 
 #if LIBAVCODEC_VER_AT_LEAST(53,61)
-#  if LIBAVCODEC_VER_AT_LEAST(54,59)
+#  if LIBAVCODEC_VER_AT_LEAST(59,25)
+#      define AVCODEC_HAS_ENCODE(c)	(is_encoder)
+#  elif LIBAVCODEC_VER_AT_LEAST(54,59)
    /* Not sure when AVCodec::encode is obsoleted/removed. */
 #      define AVCODEC_HAS_ENCODE(c)	(c->encode2)
 #  else
@@ -80,7 +78,11 @@
 #  define AV_OPT_SET(obj,name,val,opt)	(av_set_string3(obj,name,val,opt,NULL)==0)
 #  define AV_OPT_SET_INT(obj,name,val)	(av_set_int(obj,name,val)!=NULL)
 #endif
-#define AVCODEC_HAS_DECODE(c)		(c->decode)
+#if LIBAVCODEC_VER_AT_LEAST(59,25)
+#  define AVCODEC_HAS_DECODE(c)		(!is_encoder)
+#else
+#  define AVCODEC_HAS_DECODE(c)         (c->decode)
+#endif
 
 /* AVCodec H264 default PT */
 #define AVC_H264_PT                       PJMEDIA_RTP_PT_H264_RSV3
@@ -732,6 +734,140 @@ static int find_codec_idx_by_fmt_id(pjmedia_format_id fmt_id)
     return -1;
 }
 
+static void init_codec(const AVCodec *c, pj_bool_t is_encoder)
+{
+    pj_status_t status;
+    ffmpeg_codec_desc *desc;
+    pjmedia_format_id fmt_id;
+    int codec_info_idx;
+        
+#if LIBAVCODEC_VERSION_MAJOR <= 52
+#   define AVMEDIA_TYPE_VIDEO   CODEC_TYPE_VIDEO
+#endif
+    if (c->type != AVMEDIA_TYPE_VIDEO)
+        return;
+
+    /* Video encoder and decoder are usually implemented in separate
+     * AVCodec instances. While the codec attributes (e.g: raw formats,
+     * supported fps) are in the encoder.
+     */
+
+    status = CodecID_to_pjmedia_format_id(c->id, &fmt_id);
+    /* Skip if format ID is unknown */
+    if (status != PJ_SUCCESS)
+        return;
+
+    codec_info_idx = find_codec_idx_by_fmt_id(fmt_id);
+    /* Skip if codec is unwanted by this wrapper (not listed in 
+     * the codec info array)
+     */
+    if (codec_info_idx < 0)
+        return;
+
+    desc = &codec_desc[codec_info_idx];
+
+    /* Skip duplicated codec implementation */
+    if ((AVCODEC_HAS_ENCODE(c) && (desc->info.dir & PJMEDIA_DIR_ENCODING))
+        ||
+        (AVCODEC_HAS_DECODE(c) && (desc->info.dir & PJMEDIA_DIR_DECODING)))
+    {
+        return;
+    }
+
+    /* Get raw/decoded format ids in the encoder */
+    if (c->pix_fmts && AVCODEC_HAS_ENCODE(c)) {
+        pjmedia_format_id raw_fmt[PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT];
+        unsigned raw_fmt_cnt = 0;
+        unsigned raw_fmt_cnt_should_be = 0;
+        const enum AVPixelFormat *p = c->pix_fmts;
+
+        for(;(p && *p != -1) &&
+             (raw_fmt_cnt < PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT);
+             ++p)
+        {
+            pjmedia_format_id fmt_id;
+
+            raw_fmt_cnt_should_be++;
+            status = PixelFormat_to_pjmedia_format_id(*p, &fmt_id);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(6, (THIS_FILE, status,
+                              "Unrecognized ffmpeg pixel format %d", *p));
+                continue;
+            }
+            
+            //raw_fmt[raw_fmt_cnt++] = fmt_id;
+            /* Disable some formats due to H.264 error:
+             * x264 [error]: baseline profile doesn't support 4:4:4
+             */
+            if (desc->info.pt != PJMEDIA_RTP_PT_H264 ||
+                fmt_id != PJMEDIA_FORMAT_RGB24)
+            {
+                raw_fmt[raw_fmt_cnt++] = fmt_id;
+            }
+        }
+
+        if (raw_fmt_cnt == 0) {
+            PJ_LOG(5, (THIS_FILE, "No recognized raw format "
+                                    "for codec [%s/%s], codec ignored",
+                                    c->name, c->long_name));
+            /* Skip this encoder */
+            return;
+        }
+
+        if (raw_fmt_cnt < raw_fmt_cnt_should_be) {
+            PJ_LOG(6, (THIS_FILE, "Codec [%s/%s] have %d raw formats, "
+                                    "recognized only %d raw formats",
+                                    c->name, c->long_name,
+                                    raw_fmt_cnt_should_be, raw_fmt_cnt));
+        }
+
+        desc->info.dec_fmt_id_cnt = raw_fmt_cnt;
+        pj_memcpy(desc->info.dec_fmt_id, raw_fmt, 
+	          sizeof(raw_fmt[0])*raw_fmt_cnt);
+    }
+
+    /* Get supported framerates */
+    if (c->supported_framerates) {
+        const AVRational *fr = c->supported_framerates;
+        while ((fr->num != 0 || fr->den != 0) && 
+                desc->info.fps_cnt < PJMEDIA_VID_CODEC_MAX_FPS_CNT)
+        {
+            desc->info.fps[desc->info.fps_cnt].num = fr->num;
+            desc->info.fps[desc->info.fps_cnt].denum = fr->den;
+            ++desc->info.fps_cnt;
+            ++fr;
+        }
+    }
+
+    /* Get ffmpeg encoder instance */
+    if (AVCODEC_HAS_ENCODE(c) && !desc->enc) {
+        desc->info.dir |= PJMEDIA_DIR_ENCODING;
+        desc->enc = c;
+    }
+    
+    /* Get ffmpeg decoder instance */
+    if (AVCODEC_HAS_DECODE(c) && !desc->dec) {
+        desc->info.dir |= PJMEDIA_DIR_DECODING;
+        desc->dec = c;
+    }
+
+    /* Enable this codec when any ffmpeg codec instance are recognized
+     * and the supported raw formats info has been collected.
+     */
+    if ((desc->dec || desc->enc) && desc->info.dec_fmt_id_cnt)
+    {
+        desc->enabled = PJ_TRUE;
+    }
+
+    /* Normalize default value of clock rate */
+    if (desc->info.clock_rate == 0)
+        desc->info.clock_rate = 90000;
+
+    /* Set supported packings */
+    desc->info.packings |= PJMEDIA_VID_PACKING_WHOLE;
+    if (desc->packetize && desc->unpacketize)
+        desc->info.packings |= PJMEDIA_VID_PACKING_PACKETS;
+}
 
 /*
  * Initialize and register FFMPEG codec factory to pjmedia endpoint.
@@ -775,143 +911,32 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
      */
     avcodec_init();
 #endif
+
+#if LIBAVCODEC_VER_AT_LEAST(58,137)
+    
+    for (i = 0; i < PJ_ARRAY_SIZE(codec_desc); ++i) {
+        unsigned codec_id;
+
+	pjmedia_format_id_to_CodecID(codec_desc[i].info.fmt_id, &codec_id);
+
+        c = avcodec_find_encoder(codec_id);
+        if (c)
+	    init_codec(c, PJ_TRUE);
+
+        c = avcodec_find_decoder(codec_id);
+        if (c)
+	    init_codec(c, PJ_FALSE);
+    }
+#else
+
     avcodec_register_all();
 
     /* Enum FFMPEG codecs */
     for (c=av_codec_next(NULL); c; c=av_codec_next(c)) {
-        ffmpeg_codec_desc *desc;
-	pjmedia_format_id fmt_id;
-	int codec_info_idx;
-        
-#if LIBAVCODEC_VERSION_MAJOR <= 52
-#   define AVMEDIA_TYPE_VIDEO	CODEC_TYPE_VIDEO
-#endif
-        if (c->type != AVMEDIA_TYPE_VIDEO)
-            continue;
-
-        /* Video encoder and decoder are usually implemented in separate
-         * AVCodec instances. While the codec attributes (e.g: raw formats,
-	 * supported fps) are in the encoder.
-         */
-
-	//PJ_LOG(3, (THIS_FILE, "%s", c->name));
-	status = CodecID_to_pjmedia_format_id(c->id, &fmt_id);
-	/* Skip if format ID is unknown */
-	if (status != PJ_SUCCESS)
-	    continue;
-
-	codec_info_idx = find_codec_idx_by_fmt_id(fmt_id);
-	/* Skip if codec is unwanted by this wrapper (not listed in 
-	 * the codec info array)
-	 */
-	if (codec_info_idx < 0)
-	    continue;
-
-	desc = &codec_desc[codec_info_idx];
-
-	/* Skip duplicated codec implementation */
-	if ((AVCODEC_HAS_ENCODE(c) && (desc->info.dir & PJMEDIA_DIR_ENCODING))
-	    ||
-	    (AVCODEC_HAS_DECODE(c) && (desc->info.dir & PJMEDIA_DIR_DECODING)))
-	{
-	    continue;
-	}
-
-	/* Get raw/decoded format ids in the encoder */
-	if (c->pix_fmts && AVCODEC_HAS_ENCODE(c)) {
-	    pjmedia_format_id raw_fmt[PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT];
-	    unsigned raw_fmt_cnt = 0;
-	    unsigned raw_fmt_cnt_should_be = 0;
-	    const enum AVPixelFormat *p = c->pix_fmts;
-
-	    for(;(p && *p != -1) &&
-		 (raw_fmt_cnt < PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT);
-		 ++p)
-	    {
-		pjmedia_format_id fmt_id;
-
-		raw_fmt_cnt_should_be++;
-		status = PixelFormat_to_pjmedia_format_id(*p, &fmt_id);
-		if (status != PJ_SUCCESS) {
-		    PJ_PERROR(6, (THIS_FILE, status,
-				  "Unrecognized ffmpeg pixel format %d", *p));
-		    continue;
-		}
-		
-		//raw_fmt[raw_fmt_cnt++] = fmt_id;
-		/* Disable some formats due to H.264 error:
-		 * x264 [error]: baseline profile doesn't support 4:4:4
-		 */
-		if (desc->info.pt != PJMEDIA_RTP_PT_H264 ||
-		    fmt_id != PJMEDIA_FORMAT_RGB24)
-		{
-		    raw_fmt[raw_fmt_cnt++] = fmt_id;
-		}
-	    }
-
-	    if (raw_fmt_cnt == 0) {
-		PJ_LOG(5, (THIS_FILE, "No recognized raw format "
-				      "for codec [%s/%s], codec ignored",
-				      c->name, c->long_name));
-		/* Skip this encoder */
-		continue;
-	    }
-
-	    if (raw_fmt_cnt < raw_fmt_cnt_should_be) {
-		PJ_LOG(6, (THIS_FILE, "Codec [%s/%s] have %d raw formats, "
-				      "recognized only %d raw formats",
-				      c->name, c->long_name,
-				      raw_fmt_cnt_should_be, raw_fmt_cnt));
-	    }
-
-	    desc->info.dec_fmt_id_cnt = raw_fmt_cnt;
-	    pj_memcpy(desc->info.dec_fmt_id, raw_fmt, 
-		      sizeof(raw_fmt[0])*raw_fmt_cnt);
-	}
-
-	/* Get supported framerates */
-	if (c->supported_framerates) {
-	    const AVRational *fr = c->supported_framerates;
-	    while ((fr->num != 0 || fr->den != 0) && 
-		   desc->info.fps_cnt < PJMEDIA_VID_CODEC_MAX_FPS_CNT)
-	    {
-		desc->info.fps[desc->info.fps_cnt].num = fr->num;
-		desc->info.fps[desc->info.fps_cnt].denum = fr->den;
-		++desc->info.fps_cnt;
-		++fr;
-	    }
-	}
-
-	/* Get ffmpeg encoder instance */
-	if (AVCODEC_HAS_ENCODE(c) && !desc->enc) {
-            desc->info.dir |= PJMEDIA_DIR_ENCODING;
-            desc->enc = c;
-        }
-	
-	/* Get ffmpeg decoder instance */
-        if (AVCODEC_HAS_DECODE(c) && !desc->dec) {
-            desc->info.dir |= PJMEDIA_DIR_DECODING;
-            desc->dec = c;
-        }
-
-	/* Enable this codec when any ffmpeg codec instance are recognized
-	 * and the supported raw formats info has been collected.
-	 */
-	if ((desc->dec || desc->enc) && desc->info.dec_fmt_id_cnt)
-	{
-	    desc->enabled = PJ_TRUE;
-	}
-
-	/* Normalize default value of clock rate */
-	if (desc->info.clock_rate == 0)
-	    desc->info.clock_rate = 90000;
-
-	/* Set supported packings */
-	desc->info.packings |= PJMEDIA_VID_PACKING_WHOLE;
-	if (desc->packetize && desc->unpacketize)
-	    desc->info.packings |= PJMEDIA_VID_PACKING_PACKETS;
-
+        init_codec(c, PJ_TRUE);
     }
+
+#endif
 
     /* Review all codecs for applying base format, registering format match for
      * SDP negotiation, etc.
@@ -1618,7 +1643,32 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     avpacket.data = (pj_uint8_t*)output->buf;
     avpacket.size = output_buf_len;
 
-#if LIBAVCODEC_VER_AT_LEAST(54,15)
+#if LIBAVCODEC_VER_AT_LEAST(58,137)
+
+    err = avcodec_send_frame(ff->enc_ctx, &avframe);
+    if (err >= 0) {
+        AVPacket *pkt = NULL;
+        pj_uint8_t  *bits_out = (pj_uint8_t*) output->buf;
+        unsigned out_size = 0;
+        pkt = av_packet_alloc();
+        if (pkt) {
+            while (err >= 0) {
+                err = avcodec_receive_packet(ff->enc_ctx, pkt);
+                if (err == AVERROR(EAGAIN) || err == AVERROR_EOF) {
+                    err = out_size;
+                    break;
+                }
+                pj_memcpy(bits_out, pkt->data, pkt->size);
+                bits_out += pkt->size;
+                out_size += pkt->size;
+                av_packet_unref(&avpacket);
+            }
+            av_packet_free(&pkt);
+        }
+    }
+
+#elif LIBAVCODEC_VER_AT_LEAST(54,15)
+
     err = avcodec_encode_video2(ff->enc_ctx, &avpacket, &avframe, &got_packet);
     if (!err && got_packet)
 	err = avpacket.size;
@@ -1861,7 +1911,18 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
     avpacket.flags = 0;
 #endif
 
-#if LIBAVCODEC_VER_AT_LEAST(52,72)
+#if LIBAVCODEC_VER_AT_LEAST(58,137)
+    err = avcodec_send_packet(ff->dec_ctx, &avpacket);
+    if (err >= 0) {
+        err = avcodec_receive_frame(ff->dec_ctx, &avframe);
+        if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
+            err = 0;
+
+        if (err >= 0) {
+            got_picture = PJ_TRUE;
+        }
+    }
+#elif LIBAVCODEC_VER_AT_LEAST(52,72)
     err = avcodec_decode_video2(ff->dec_ctx, &avframe, 
                                 &got_picture, &avpacket);
 #else
