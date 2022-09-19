@@ -1221,8 +1221,11 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 
     /* Set cipher list */
     status = set_cipher_list(ssock);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	SSL_CTX_free(ctx);
+	ossock->ossl_ctx = NULL;
         return status;
+    }
 
     /* Apply credentials */
     if (cert) {
