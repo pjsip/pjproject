@@ -1654,7 +1654,7 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
         if (pkt) {
             while (err >= 0) {
                 err = avcodec_receive_packet(ff->enc_ctx, pkt);
-                if (err == AVERROR_EOF) {
+                if (err == AVERROR(EAGAIN) || err == AVERROR_EOF) {
                     err = out_size;
                     break;
                 }
