@@ -1654,14 +1654,16 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
         if (pkt) {
             while (err >= 0) {
                 err = avcodec_receive_packet(ff->enc_ctx, pkt);
-                if (err == AVERROR(EAGAIN) || err == AVERROR_EOF) {
+                if (err == AVERROR_EOF) {
                     err = out_size;
                     break;
                 }
-                pj_memcpy(bits_out, pkt->data, pkt->size);
-                bits_out += pkt->size;
-                out_size += pkt->size;
-                av_packet_unref(&avpacket);
+                if (err >= 0) {
+		    pj_memcpy(bits_out, pkt->data, pkt->size);
+		    bits_out += pkt->size;
+		    out_size += pkt->size;
+		    av_packet_unref(&avpacket);
+		}
             }
             av_packet_free(&pkt);
         }
@@ -1915,7 +1917,7 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
     err = avcodec_send_packet(ff->dec_ctx, &avpacket);
     if (err >= 0) {
         err = avcodec_receive_frame(ff->dec_ctx, &avframe);
-        if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
+        if (err == AVERROR_EOF)
             err = 0;
 
         if (err >= 0) {
