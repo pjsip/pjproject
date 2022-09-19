@@ -87,6 +87,7 @@
 #define CMD_MEDIA_ADJUST_VOL	    ((CMD_MEDIA*10)+4)
 #define CMD_MEDIA_CODEC_PRIO	    ((CMD_MEDIA*10)+5)
 #define CMD_MEDIA_SPEAKER_TOGGLE    ((CMD_MEDIA*10)+6)
+#define CMD_MEDIA_QUALITY	    ((CMD_MEDIA*10)+7)
 
 /* status & config level 2 command */
 #define CMD_CONFIG_DUMP_STAT	    ((CMD_CONFIG*10)+1)
@@ -1354,6 +1355,30 @@ static pj_status_t cmd_set_codec_prio(pj_cli_cmd_val *cval)
     return status;
 }
 
+/* Change audio quality */
+static pj_status_t cmd_change_quality(pj_cli_cmd_val *cval)
+{
+    char buf[80];
+    int orig_quality, quality;
+    char new_val[16] = {0};
+    pj_str_t tmp = pj_str(new_val);
+
+    /* Analyze quality requested */
+    pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(new_val));
+	quality = my_atoi(new_val);
+	if (quality<0 || quality>10)
+		return PJ_EINVAL;
+		
+    orig_quality = app_config.media_cfg.quality;
+    app_config.media_cfg.quality = quality;	
+    pj_ansi_snprintf(buf, sizeof(buf),
+		     "Change media quality: [%2d] -> [%2d]\n",
+		     orig_quality, app_config.media_cfg.quality);
+    pj_cli_sess_write_msg(cval->sess, buf, pj_ansi_strlen(buf));
+
+    return PJ_SUCCESS;
+}
+
 /* Conference/media command handler */
 pj_status_t cmd_media_handler(pj_cli_cmd_val *cval)
 {
@@ -1400,6 +1425,9 @@ pj_status_t cmd_media_handler(pj_cli_cmd_val *cval)
 					   &route, PJ_TRUE);
 	    PJ_PERROR(4,(THIS_FILE, status, "Result"));
 	}
+	break;
+    case CMD_MEDIA_QUALITY:
+	status = cmd_change_quality(cval);
 	break;
     }
 
@@ -2987,6 +3015,10 @@ static pj_status_t add_media_command(pj_cli_t *c)
 	"   desc='Arrange codec priorities'>"
 	"    <ARG name='codec_id' type='choice' id='9904' desc='Codec Id'/>"
 	"    <ARG name='priority' type='int' desc='Codec Priority'/>"
+	"  </CMD>"
+	"  <CMD name='quality' id='4007' sc='ql' "
+	"   desc='Change audio quality'>"
+	"    <ARG name='audio_qual' type='int' desc='Quality range 1-10'/>"
 	"  </CMD>"
 	"</CMD>";
 
