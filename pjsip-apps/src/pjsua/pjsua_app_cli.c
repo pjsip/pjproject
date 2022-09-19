@@ -1365,9 +1365,9 @@ static pj_status_t cmd_change_quality(pj_cli_cmd_val *cval)
 
     /* Analyze quality requested */
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(new_val));
-	quality = my_atoi(new_val);
-	if (quality<0 || quality>10)
-		return PJ_EINVAL;
+    quality = my_atoi(new_val);
+    if (quality<0 || quality>10)
+	return PJ_EINVAL;
 		
     orig_quality = app_config.media_cfg.quality;
     app_config.media_cfg.quality = quality;	
@@ -3018,7 +3018,7 @@ static pj_status_t add_media_command(pj_cli_t *c)
 	"  </CMD>"
 	"  <CMD name='quality' id='4007' sc='ql' "
 	"   desc='Change audio quality'>"
-	"    <ARG name='audio_qual' type='int' desc='Quality range 1-10'/>"
+	"    <ARG name='audio_qual' type='int' desc='Quality range 0-10'/>"
 	"  </CMD>"
 	"</CMD>";
 
