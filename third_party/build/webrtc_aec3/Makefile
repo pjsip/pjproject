@@ -38,7 +38,6 @@ export WEBRTC_AEC3_OBJS = \
 	api/audio/channel_layout.o \
 	api/audio/echo_canceller3_config.o \
 	api/audio/echo_canceller3_factory.o \
-	api/audio/echo_detector_creator.o \
 	modules/audio_processing/audio_buffer.o \
 	modules/audio_processing/gain_controller2.o \
 	modules/audio_processing/high_pass_filter.o \
@@ -103,7 +102,6 @@ export WEBRTC_AEC3_OBJS = \
 	modules/audio_processing/agc2/adaptive_digital_gain_applier.o \
 	modules/audio_processing/agc2/adaptive_mode_level_estimator.o \
 	modules/audio_processing/agc2/biquad_filter.o \
-	modules/audio_processing/agc2/compute_interpolated_gain_curve.o \
 	modules/audio_processing/agc2/cpu_features.o \
 	modules/audio_processing/agc2/down_sampler.o \
 	modules/audio_processing/agc2/fixed_digital_level_estimator.o \
