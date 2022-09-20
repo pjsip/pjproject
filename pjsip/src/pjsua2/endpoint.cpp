@@ -2247,7 +2247,7 @@ TransportId Endpoint::transportCreate(pjsip_transport_type_e type,
     return tid;
 }
 
-IntVector Endpoint::transportEnum() PJSUA2_THROW(Error)
+IntVector Endpoint::transportEnum() const PJSUA2_THROW(Error)
 {
     pjsua_transport_id tids[32];
     unsigned count = PJ_ARRAY_SIZE(tids);
@@ -2257,7 +2257,7 @@ IntVector Endpoint::transportEnum() PJSUA2_THROW(Error)
     return IntVector(tids, tids+count);
 }
 
-TransportInfo Endpoint::transportGetInfo(TransportId id) PJSUA2_THROW(Error)
+TransportInfo Endpoint::transportGetInfo(TransportId id) const PJSUA2_THROW(Error)
 {
     pjsua_transport_info pj_tinfo;
     TransportInfo tinfo;
