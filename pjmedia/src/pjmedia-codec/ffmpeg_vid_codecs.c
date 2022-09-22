@@ -59,17 +59,15 @@
 #endif
 
 #if LIBAVCODEC_VER_AT_LEAST(53,61)
-#  if LIBAVCODEC_VER_AT_LEAST(59,25)
-#      define AVCODEC_HAS_ENCODE(c)	(is_encoder)
-#  elif LIBAVCODEC_VER_AT_LEAST(54,59)
+#  if LIBAVCODEC_VER_AT_LEAST(54,59)
    /* Not sure when AVCodec::encode is obsoleted/removed. */
-#      define AVCODEC_HAS_ENCODE(c)	(c->encode2)
+#    define AVCODEC_HAS_ENCODE(c)	(c->encode2)
 #  else
    /* Not sure when AVCodec::encode2 is introduced. It appears in 
     * libavcodec 53.61 where some codecs actually still use AVCodec::encode
     * (e.g: H263, H264).
     */
-#      define AVCODEC_HAS_ENCODE(c)	(c->encode || c->encode2)
+#    define AVCODEC_HAS_ENCODE(c)	(c->encode || c->encode2)
 #  endif
 #  define AV_OPT_SET(obj,name,val,opt)	(av_opt_set(obj,name,val,opt)==0)
 #  define AV_OPT_SET_INT(obj,name,val)	(av_opt_set_int(obj,name,val,0)==0)
@@ -78,11 +76,7 @@
 #  define AV_OPT_SET(obj,name,val,opt)	(av_set_string3(obj,name,val,opt,NULL)==0)
 #  define AV_OPT_SET_INT(obj,name,val)	(av_set_int(obj,name,val)!=NULL)
 #endif
-#if LIBAVCODEC_VER_AT_LEAST(59,25)
-#  define AVCODEC_HAS_DECODE(c)		(!is_encoder)
-#else
-#  define AVCODEC_HAS_DECODE(c)         (c->decode)
-#endif
+#define AVCODEC_HAS_DECODE(c)         (c->decode)
 
 /* AVCodec H264 default PT */
 #define AVC_H264_PT                       PJMEDIA_RTP_PT_H264_RSV3
@@ -734,7 +728,8 @@ static int find_codec_idx_by_fmt_id(pjmedia_format_id fmt_id)
     return -1;
 }
 
-static void init_codec(const AVCodec *c, pj_bool_t is_encoder)
+static void init_codec(const AVCodec *c, pj_bool_t is_encoder, 
+                       pj_bool_t is_decoder)
 {
     pj_status_t status;
     ffmpeg_codec_desc *desc;
@@ -767,15 +762,15 @@ static void init_codec(const AVCodec *c, pj_bool_t is_encoder)
     desc = &codec_desc[codec_info_idx];
 
     /* Skip duplicated codec implementation */
-    if ((AVCODEC_HAS_ENCODE(c) && (desc->info.dir & PJMEDIA_DIR_ENCODING))
+    if ((is_encoder && (desc->info.dir & PJMEDIA_DIR_ENCODING))
         ||
-        (AVCODEC_HAS_DECODE(c) && (desc->info.dir & PJMEDIA_DIR_DECODING)))
+        (is_decoder && (desc->info.dir & PJMEDIA_DIR_DECODING)))
     {
         return;
     }
 
     /* Get raw/decoded format ids in the encoder */
-    if (c->pix_fmts && AVCODEC_HAS_ENCODE(c)) {
+    if (c->pix_fmts && is_encoder) {
         pjmedia_format_id raw_fmt[PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT];
         unsigned raw_fmt_cnt = 0;
         unsigned raw_fmt_cnt_should_be = 0;
@@ -840,13 +835,13 @@ static void init_codec(const AVCodec *c, pj_bool_t is_encoder)
     }
 
     /* Get ffmpeg encoder instance */
-    if (AVCODEC_HAS_ENCODE(c) && !desc->enc) {
+    if (is_encoder && !desc->enc) {
         desc->info.dir |= PJMEDIA_DIR_ENCODING;
         desc->enc = c;
     }
     
     /* Get ffmpeg decoder instance */
-    if (AVCODEC_HAS_DECODE(c) && !desc->dec) {
+    if (is_decoder && !desc->dec) {
         desc->info.dir |= PJMEDIA_DIR_DECODING;
         desc->dec = c;
     }
@@ -921,11 +916,11 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
 
         c = avcodec_find_encoder(codec_id);
         if (c)
-	    init_codec(c, PJ_TRUE);
+	    init_codec(c, PJ_TRUE, PJ_FALSE);
 
         c = avcodec_find_decoder(codec_id);
         if (c)
-	    init_codec(c, PJ_FALSE);
+	    init_codec(c, PJ_FALSE, PJ_TRUE);
     }
 #else
 
@@ -933,7 +928,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
 
     /* Enum FFMPEG codecs */
     for (c=av_codec_next(NULL); c; c=av_codec_next(c)) {
-        init_codec(c, PJ_TRUE);
+        init_codec(c, AV_HAS_ENCODE(c), AV_HAS_DECODE(c));
     }
 
 #endif
@@ -1644,7 +1639,7 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     avpacket.size = output_buf_len;
 
 #if LIBAVCODEC_VER_AT_LEAST(58,137)
-
+    PJ_UNUSED_ARG(got_packet);
     err = avcodec_send_frame(ff->enc_ctx, &avframe);
     if (err >= 0) {
         AVPacket *pkt = NULL;
