@@ -2225,6 +2225,13 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 	ssl_update_remote_cert_chain_info(ssock->info_pool,
        					  remote_cert_info,
        					  chain, PJ_TRUE);
+	/* Only free the chain returned by X509_STORE_CTX_get1_chain().
+	 * The reference count of each cert returned by
+	 * SSL_get_peer_cert_chain() is not incremented.
+	 */
+	if (is_verify) {
+	    sk_X509_pop_free(chain, X509_free);
+	}
     } else {
 	remote_cert_info->raw_chain.cnt = 0;
     }
