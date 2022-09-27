@@ -1304,7 +1304,8 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt2(
 
 	if (prm->pkt_len < 4) {
 	    prm->parsed_len = 0;
-	    return PJ_ETOOSMALL;
+	    status = PJ_ETOOSMALL;
+	    goto on_return;
 	}
 
 	/* Decode ChannelData packet */
