@@ -413,8 +413,11 @@ static pj_status_t initialize_acc(unsigned acc_id)
     pj_array_insert(pjsua_var.acc_ids, sizeof(pjsua_var.acc_ids[0]),
 		    pjsua_var.acc_cnt, i, &acc_id);
 
-    if (acc_cfg->transport_id != PJSUA_INVALID_ID)
-	acc->tp_type = pjsua_var.tpdata[acc_cfg->transport_id].type;
+    if (acc_cfg->transport_id != PJSUA_INVALID_ID) {
+        acc->tp_type = pjsua_var.tpdata[acc_cfg->transport_id].type;
+    } else {
+        acc->tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
+    }
 
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
 
