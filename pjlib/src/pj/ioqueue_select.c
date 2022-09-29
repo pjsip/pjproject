@@ -1044,50 +1044,50 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	 h != &ioqueue->active_list && event_cnt < MAX_EVENTS;
 	 h = h->next)
     {
+	int event_type = NO_EVENT;
+
 	if (h->fd == PJ_INVALID_SOCKET)
 	    continue;
-
-	if ( (key_has_pending_write(h) || key_has_pending_connect(h))
-	     && PJ_FD_ISSET(h->fd, &wfdset) && !IS_CLOSING(h))
-        {
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
-#endif
-            event[event_cnt].key = h;
-            event[event_cnt].event_type = WRITEABLE_EVENT;
-            ++event_cnt;
-        }
-
-        /* Scan for readable socket. */
-	if ((key_has_pending_read(h) || key_has_pending_accept(h))
-            && PJ_FD_ISSET(h->fd, &rfdset) && !IS_CLOSING(h) &&
-	    event_cnt < MAX_EVENTS)
-        {
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
-#endif
-            event[event_cnt].key = h;
-            event[event_cnt].event_type = READABLE_EVENT;
-            ++event_cnt;
+	if (IS_CLOSING(h))
+	    continue;
+	/*
+	 * Check readability.
+	 */
+	if ((key_has_pending_read(h) || key_has_pending_accept(h)) &&
+	    PJ_FD_ISSET(h->fd, &rfdset)) {
+	    event_type |= READABLE_EVENT;
 	}
 
+	/*
+	 * Check writeability.
+	 */
+	if ((key_has_pending_write(h) || key_has_pending_connect(h)) &&
+	    PJ_FD_ISSET(h->fd, &wfdset)) {
+	    event_type |= WRITEABLE_EVENT;
+	}	
+
 #if PJ_HAS_TCP
-        if (key_has_pending_connect(h) && PJ_FD_ISSET(h->fd, &xfdset) &&
-	    !IS_CLOSING(h) && event_cnt < MAX_EVENTS)
-	{
+	/*
+	 * Check for error condition.
+	 */
+	if (key_has_pending_connect(h) && PJ_FD_ISSET(h->fd, &xfdset)) {
+	    event_type |= EXCEPTION_EVENT;
+	}
+#endif
+
+	/*
+	 * Mark event as changed.
+	 */
+	if (event_type != NO_EVENT && !IS_CLOSING(h)) {
+	    event[event_cnt].key = h;
+	    event[event_cnt].event_type = event_type;
+	    ++event_cnt;
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	    increment_counter(h);
 #endif
-            event[event_cnt].key = h;
-            event[event_cnt].event_type = EXCEPTION_EVENT;
-            ++event_cnt;
-        }
-#endif
-    }
-
-    for (i=0; i<event_cnt; ++i) {
-	if (event[i].key->grp_lock)
-	    pj_grp_lock_add_ref_dbg(event[i].key->grp_lock, "ioqueue", 0);
+	    if (h->grp_lock)
+		pj_grp_lock_add_ref_dbg(h->grp_lock, "ioqueue", 0);
+	}
     }
 
     PJ_RACE_ME(5);
@@ -1101,36 +1101,35 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     /* Now process all events. The dispatch functions will take care
      * of locking in each of the key
      */
-    for (i=0; i<event_cnt; ++i) {
+    for (i = 0; i < event_cnt; ++i) {
+	h = event[i].key;
 
 	/* Just do not exceed PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL */
 	if (processed_cnt < PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL) {
-	    switch (event[i].event_type) {
-	    case READABLE_EVENT:
-		if (ioqueue_dispatch_read_event(ioqueue, event[i].key))
-		    ++processed_cnt;
-		break;
-	    case WRITEABLE_EVENT:
-		if (ioqueue_dispatch_write_event(ioqueue, event[i].key))
-		    ++processed_cnt;
-		break;
-	    case EXCEPTION_EVENT:
-		if (ioqueue_dispatch_exception_event(ioqueue, event[i].key))
-		    ++processed_cnt;
-		break;
-	    case NO_EVENT:
-		pj_assert(!"Invalid event!");
-		break;
+	    pj_bool_t event_done = PJ_FALSE;
+	    int event_type = event[i].event_type;
+
+	    if (event_type & READABLE_EVENT) {
+		event_done |= ioqueue_dispatch_read_event(ioqueue, h);
+	    }
+	    if (event_type & WRITEABLE_EVENT) {
+		event_done |= ioqueue_dispatch_write_event(ioqueue, h);
+	    }
+	    if (event_type & EXCEPTION_EVENT) {
+		event_done |= ioqueue_dispatch_exception_event(ioqueue, h);
+	    }
+
+	    if (event_done) {
+		processed_cnt++;
 	    }
 	}
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	decrement_counter(event[i].key);
+	decrement_counter(h);
 #endif
 
-	if (event[i].key->grp_lock)
-	    pj_grp_lock_dec_ref_dbg(event[i].key->grp_lock,
-	                            "ioqueue", 0);
+	if (h->grp_lock)
+	    pj_grp_lock_dec_ref_dbg(h->grp_lock, "ioqueue", 0);
     }
 
     TRACE__((THIS_FILE, "     poll: count=%d events=%d processed=%d",
