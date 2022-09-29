@@ -2492,9 +2492,6 @@ void Endpoint::setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
    pjmedia_codec_opus_config new_opus_cfg;
 
    PJSUA2_CHECK_EXPR(pjsua_codec_get_param(&codec_id, &param));
-
-   PJSUA2_CHECK_EXPR(pjmedia_codec_opus_get_config(&new_opus_cfg));
-
    new_opus_cfg = opus_cfg.toPj();
 
    PJSUA2_CHECK_EXPR(pjmedia_codec_opus_set_default_param(&new_opus_cfg,
