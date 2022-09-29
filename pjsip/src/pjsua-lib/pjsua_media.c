@@ -3983,8 +3983,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    }
 
 	    /* Check if no media is active */
-	    if ((local_sdp->media[mi]->desc.port == 0) || 
-	        (si->dir == PJMEDIA_DIR_NONE))	    
+            if (local_sdp->media[mi]->desc.port == 0)
 	    {
 
 		/* Update call media state and direction */
@@ -3999,12 +3998,27 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call_med->dir = si->dir;
 
 		/* Call media state */
-		if (call->local_hold)
+                if (call->local_hold) {
 		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-		else if (call_med->dir == PJMEDIA_DIR_DECODING)
+		} else if (call_med->dir == PJMEDIA_DIR_DECODING) {
 		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-		else
+		} else if (call_med->dir == PJMEDIA_DIR_NONE) {
+		    pj_bool_t remote_hold = PJ_FALSE;
+
+		    if (pjmedia_sdp_media_find_attr2(remote_sdp->media[mi], 
+						     "inactive", NULL) ||
+			pjmedia_sdp_media_find_attr2(remote_sdp->media[mi], 
+						     "sendonly", NULL)) 
+                    {
+                        remote_hold = PJ_TRUE;
+                    }
+		    
+		    call_med->state = remote_hold? 
+						PJSUA_CALL_MEDIA_REMOTE_HOLD:
+					        PJSUA_CALL_MEDIA_NONE;
+                } else {
 		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+		}
 
 		if (call->inv->following_fork) {
 		    unsigned options = (call_med->enable_rtcp_mux?
@@ -4231,12 +4245,27 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call_med->dir = si->dir;
 
 		/* Call media state */
-		if (call->local_hold)
+                if (call->local_hold) {
 		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-		else if (call_med->dir == PJMEDIA_DIR_DECODING)
+		} else if (call_med->dir == PJMEDIA_DIR_DECODING) {
 		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-		else
+		} else if (call_med->dir == PJMEDIA_DIR_NONE) {
+		    pj_bool_t remote_hold = PJ_FALSE;
+
+		    if (pjmedia_sdp_media_find_attr2(remote_sdp->media[mi], 
+						     "inactive", NULL) ||
+			pjmedia_sdp_media_find_attr2(remote_sdp->media[mi], 
+						     "sendonly", NULL)) 
+                    {
+                        remote_hold = PJ_TRUE;
+                    }
+		    
+		    call_med->state = remote_hold? 
+						PJSUA_CALL_MEDIA_REMOTE_HOLD:
+					        PJSUA_CALL_MEDIA_NONE;
+                } else {
 		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+		}
 
 		/* Start/restart media transport */
 		status = pjmedia_transport_media_start(call_med->tp,

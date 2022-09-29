@@ -199,6 +199,28 @@ static const char* get_dtmf_method_name(int type)
     return "(Unknown)";
 }
 
+static pj_bool_t call_is_hold(const pjsua_call_setting *call_opt) 
+{
+    if (call_opt->flag & PJSUA_CALL_SET_MEDIA_DIR) 
+    {	
+	unsigned med_cnt = 
+	    PJ_MIN(PJMEDIA_MAX_SDP_MEDIA, \
+		   (call_opt->vid_cnt + call_opt->aud_cnt));
+
+	if (med_cnt) {
+	    unsigned i=0;
+	    for (;i<med_cnt;++i) {
+                if ((call_opt->media_dir[i] == PJMEDIA_DIR_ENCODING) ||
+		    (call_opt->media_dir[i] == PJMEDIA_DIR_NONE))
+		{
+		    return PJ_TRUE;
+		}
+	    }
+	}
+    }
+    return PJ_FALSE;
+}
+
 /*
  * Init call subsystem.
  */
@@ -567,6 +589,10 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     /* Must increment call counter now */
     ++pjsua_var.call_cnt;
 
+    if (call_is_hold(&call->opt)) {
+        call->hold_msg = tdata;
+        call->local_hold = PJ_TRUE;
+    }
     /* Send initial INVITE: */
 
     status = pjsip_inv_send_msg(inv, tdata);
@@ -577,6 +603,10 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 	 * session would have been cleared.
 	 */
 	call->inv = inv = NULL;
+        if (call_is_hold(&call->opt)) {
+            call->hold_msg = NULL;
+            call->local_hold = PJ_FALSE;
+        }
 	goto on_error;
     }
 
@@ -2769,6 +2799,11 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     if (reason && reason->slen == 0)
 	reason = NULL;
 
+    if (call_is_hold(&call->opt)) {
+        call->hold_msg = tdata;
+        call->local_hold = PJ_TRUE;
+    }
+
     /* Create response message */
     status = pjsip_inv_answer(call->inv, code, reason, NULL, &tdata);
     if (status != PJ_SUCCESS) {
@@ -2788,9 +2823,14 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
 
     /* Send the message */
     status = pjsip_inv_send_msg(call->inv, tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	if (call_is_hold(&call->opt)) {
+	    call->hold_msg = NULL;
+	    call->local_hold = PJ_FALSE;
+	}
 	pjsua_perror(THIS_FILE, "Error sending response",
 		     status);
+    }
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -3313,6 +3353,10 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
+    if (call_is_hold(&call->opt)) {
+        call->hold_msg = tdata;
+        call->local_hold = PJ_TRUE;
+    }
     /* Send the request */
     call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
@@ -3322,6 +3366,10 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     {
     	call->local_hold = PJ_FALSE;
     } else if (status != PJ_SUCCESS) {
+        if (call_is_hold(&call->opt)) {
+            call->hold_msg = NULL;
+            call->local_hold = PJ_FALSE;
+        }
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
 	goto on_return;
     }
@@ -3454,6 +3502,9 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     {
     	call->local_hold = PJ_FALSE;
     } else if (status != PJ_SUCCESS) {
+        if (call_is_hold(&call->opt)) {
+            call->local_hold = PJ_TRUE;
+        }
 	pjsua_perror(THIS_FILE, "Unable to send UPDATE request", status);
 	goto on_return;
     }
