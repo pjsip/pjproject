@@ -199,10 +199,9 @@ static const char* get_dtmf_method_name(int type)
     return "(Unknown)";
 }
 
-static pj_bool_t call_local_hold(const pjsua_call_setting *call_opt) 
+static pj_bool_t call_is_hold(const pjsua_call_setting *call_opt) 
 {
-    if ((call_opt->flag & PJSUA_CALL_SET_MEDIA_DIR) &&
-	(call_opt->flag & PJSUA_CALL_NO_SDP_OFFER) == 0)
+    if (call_opt->flag & PJSUA_CALL_SET_MEDIA_DIR) 
     {	
 	unsigned med_cnt = 
 	    PJ_MIN(PJMEDIA_MAX_SDP_MEDIA, \
@@ -217,35 +216,6 @@ static pj_bool_t call_local_hold(const pjsua_call_setting *call_opt)
 		    return PJ_TRUE;
 		}
 	    }
-	}
-    }
-    return PJ_FALSE;
-}
-
-static pj_bool_t call_release_hold(const pjsua_call_setting *call_opt) 
-{
-    if ((call_opt->flag & PJSUA_CALL_UNHOLD) &&
-        (call_opt->flag & PJSUA_CALL_NO_SDP_OFFER) == 0)
-    {
-        return PJ_TRUE;
-    }
-
-    if ((call_opt->flag & PJSUA_CALL_SET_MEDIA_DIR) &&
-	(call_opt->flag & PJSUA_CALL_NO_SDP_OFFER) == 0)
-    {	
-	unsigned med_cnt = 
-	    PJ_MIN(PJMEDIA_MAX_SDP_MEDIA, \
-		   (call_opt->vid_cnt + call_opt->aud_cnt));
-
-	if (med_cnt) {
-	    unsigned i=0;
-	    for (;i<med_cnt;++i) {
-                if (call_opt->media_dir[i] != PJMEDIA_DIR_ENCODING_DECODING)
-		{
-		    return PJ_FALSE;
-		}
-	    }
-	    return PJ_TRUE;
 	}
     }
     return PJ_FALSE;
@@ -619,7 +589,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     /* Must increment call counter now */
     ++pjsua_var.call_cnt;
 
-    if (call_local_hold(&call->opt)) {
+    if (call_is_hold(&call->opt)) {
         call->hold_msg = tdata;
         call->local_hold = PJ_TRUE;
     }
@@ -633,7 +603,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 	 * session would have been cleared.
 	 */
 	call->inv = inv = NULL;
-        if (call_local_hold(&call->opt)) {
+        if (call_is_hold(&call->opt)) {
             call->hold_msg = NULL;
             call->local_hold = PJ_FALSE;
         }
@@ -2829,7 +2799,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     if (reason && reason->slen == 0)
 	reason = NULL;
 
-    if (call_local_hold(&call->opt)) {
+    if (call_is_hold(&call->opt)) {
         call->hold_msg = tdata;
         call->local_hold = PJ_TRUE;
     }
@@ -2854,7 +2824,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     /* Send the message */
     status = pjsip_inv_send_msg(call->inv, tdata);
     if (status != PJ_SUCCESS) {
-	if (call_local_hold(&call->opt)) {
+	if (call_is_hold(&call->opt)) {
 	    call->hold_msg = NULL;
 	    call->local_hold = PJ_FALSE;
 	}
@@ -3338,7 +3308,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     }
 
     /* Create SDP */
-    if (call->local_hold && !call_release_hold(&call->opt)) {
+    if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD)==0) {
 	status = create_sdp_of_call_hold(call, &sdp);
     } else if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
 	status = pjsua_media_channel_create_sdp(call->index,
@@ -3383,17 +3353,20 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
-    if (call_local_hold(&call->opt)) {
+    if (call_is_hold(&call->opt)) {
         call->hold_msg = tdata;
         call->local_hold = PJ_TRUE;
     }
     /* Send the request */
     call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
-    if ((status == PJ_SUCCESS) && call_release_hold(&call->opt)) {
+    if (status == PJ_SUCCESS &&
+        ((call->opt.flag & PJSUA_CALL_UNHOLD) &&
+         (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
+    {
     	call->local_hold = PJ_FALSE;
     } else if (status != PJ_SUCCESS) {
-        if (call_local_hold(&call->opt)) {
+        if (call_is_hold(&call->opt)) {
             call->hold_msg = NULL;
             call->local_hold = PJ_FALSE;
         }
@@ -3474,7 +3447,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     }
 
     /* Create SDP */
-    if (call->local_hold && !call_release_hold(&call->opt)) {
+    if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD)==0) {
 	status = create_sdp_of_call_hold(call, &sdp);
     } else if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
 	status = pjsua_media_channel_create_sdp(call->index,
@@ -3523,10 +3496,13 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     /* Send the request */
     call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
-    if ((status == PJ_SUCCESS) && (call_release_hold(&call->opt))) {
+    if (status == PJ_SUCCESS &&
+        ((call->opt.flag & PJSUA_CALL_UNHOLD) &&
+         (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
+    {
     	call->local_hold = PJ_FALSE;
     } else if (status != PJ_SUCCESS) {
-        if (call_local_hold(&call->opt)) {
+        if (call_is_hold(&call->opt)) {
             call->local_hold = PJ_TRUE;
         }
 	pjsua_perror(THIS_FILE, "Unable to send UPDATE request", status);
