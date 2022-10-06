@@ -1531,13 +1531,14 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 	pjmedia_srtp_crypto tx, rx;
 	pj_status_t status;
 
+	tx = srtp->tx_policy;
+	rx = srtp->rx_policy;
+
 	/* Stop SRTP first, otherwise srtp_start() will maintain current
 	 * roll-over counter.
 	 */
 	pjmedia_transport_srtp_stop((pjmedia_transport*)srtp);
 
-	tx = srtp->tx_policy;
-	rx = srtp->rx_policy;
 	status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
 					      &tx, &rx);
 	if (status != PJ_SUCCESS) {
