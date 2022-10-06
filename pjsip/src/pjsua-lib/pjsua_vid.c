@@ -1073,7 +1073,8 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 				     const pjmedia_sdp_session *remote_sdp)
 {
     pjsua_call *call = call_med->call;
-    pjsua_acc  *acc  = &pjsua_var.acc[call->acc_id];
+    unsigned strm_idx = call_med->idx;
+    pjsua_acc  *acc  = &pjsua_var.acc[call->acc_id];    
     pjmedia_port *media_port;
     pj_status_t status;
  
@@ -1087,7 +1088,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
     si->rtcp_sdes_bye_disabled = pjsua_var.media_cfg.no_rtcp_sdes_bye;;
 
     /* Check if no media is active */
-    if (si->dir != PJMEDIA_DIR_NONE) {
+    if (local_sdp->media[strm_idx]->desc.port != 0) {
 	/* Optionally, application may modify other stream settings here
 	 * (such as jitter buffer parameters, codec ptime, etc.)
 	 */
@@ -1155,7 +1156,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_precreate) {
             pjsua_on_stream_precreate_param prm;
-            prm.stream_idx = call_med->idx;
+            prm.stream_idx = strm_idx;
             prm.stream_info.type = PJMEDIA_TYPE_VIDEO;
             prm.stream_info.info.vid = *si;
             (*pjsua_var.ua_cfg.cb.on_stream_precreate)(call->index, &prm);

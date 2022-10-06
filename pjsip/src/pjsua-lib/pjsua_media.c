@@ -4004,12 +4004,26 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call_med->dir = si->dir;
 
 		/* Call media state */
-		if (call->local_hold)
+		if (call->local_hold ||
+		    ((call_med->dir & PJMEDIA_DIR_DECODING) == 0 &&
+		     (call_med->def_dir & PJMEDIA_DIR_DECODING) == 0))
+		{
+		    /* Local hold: Either the user holds the call, or sets
+		     * the media direction that requests the remote party to
+		     * stop sending media (i.e. sendonly or inactive).
+		     */
 		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-		else if (call_med->dir == PJMEDIA_DIR_DECODING)
+		} else if ((call_med->dir & PJMEDIA_DIR_ENCODING) == 0 &&
+		           (call_med->def_dir & PJMEDIA_DIR_DECODING) != 0)
+		{
+		    /* Remote hold: Remote doesn't want us to send media
+		     * (recvonly or inactive) and we don't set media dir that
+		     * locally holds the media.
+		     */
 		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-		else
+		} else {
 		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+		}
 
 		if (call->inv->following_fork) {
 		    unsigned options = (call_med->enable_rtcp_mux?
@@ -4222,7 +4236,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    }
 
 	    /* Check if no media is active */
-	    if (si->dir == PJMEDIA_DIR_NONE) {
+	    if (local_sdp->media[mi]->desc.port == 0) {
 
 		/* Update call media state and direction */
 		call_med->state = PJSUA_CALL_MEDIA_NONE;
@@ -4236,12 +4250,26 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call_med->dir = si->dir;
 
 		/* Call media state */
-		if (call->local_hold)
+		if (call->local_hold ||
+		    ((call_med->dir & PJMEDIA_DIR_DECODING) == 0 &&
+		     (call_med->def_dir & PJMEDIA_DIR_DECODING) == 0))
+		{
+		    /* Local hold: Either the user holds the call, or sets
+		     * the media direction that requests the remote party to
+		     * stop sending media (i.e. sendonly or inactive).
+		     */
 		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-		else if (call_med->dir == PJMEDIA_DIR_DECODING)
+		} else if ((call_med->dir & PJMEDIA_DIR_ENCODING) == 0 &&
+		           (call_med->def_dir & PJMEDIA_DIR_DECODING) != 0)
+		{
+		    /* Remote hold: Remote doesn't want us to send media 
+		     * (recvonly or inactive) and we don't set media dir that
+		     * locally holds the media.
+		     */
 		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-		else
+		} else {
 		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+		}
 
 		/* Start/restart media transport */
 		status = pjmedia_transport_media_start(call_med->tp,
