@@ -4944,6 +4944,24 @@ PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
 #   define PJSUA_MAX_VID_WINS	    16
 #endif
 
+
+/**
+ * Specifies if lock codec feature should always use INVITE method.
+ * This will also affect ICE completion update in updating default address
+ * in SDP.
+ *
+ * This can be useful when communicating with endpoints that do not
+ * respond to UPDATE properly while indicating UPDATE support (by
+ * specifying UPDATE in its SIP Allow header).
+ *
+ * Note that UPDATE can be sent when dialog is still in early state,
+ * while re-INVITE needs to wait until the dialog is confirmed.
+ */
+#ifndef PJSUA_LOCK_CODEC_DONT_USE_UPDATE
+#   define PJSUA_LOCK_CODEC_DONT_USE_UPDATE	    0
+#endif
+
+
 /**
  * Video window ID.
  */
