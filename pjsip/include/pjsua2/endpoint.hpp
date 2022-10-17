@@ -933,7 +933,7 @@ public:
      * The media quality also sets speex codec quality/complexity to the
      * number.
      *
-     * Default: 5 (PJSUA_DEFAULT_CODEC_QUALITY).
+     * Default: PJSUA_DEFAULT_CODEC_QUALITY.
      */
     unsigned		quality;
 
