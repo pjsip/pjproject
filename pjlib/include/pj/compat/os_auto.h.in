@@ -80,6 +80,7 @@
 #undef PJ_HAS_SYS_UTSNAME_H
 #undef PJ_HAS_TIME_H
 #undef PJ_HAS_UNISTD_H
+#undef PJ_HAS_EXECINFO_H
 
 #undef PJ_HAS_MSWSOCK_H
 #undef PJ_HAS_WINSOCK_H
