@@ -79,7 +79,7 @@ PJ_BEGIN_DECL
     // Set VAD
     param.setting.vad = 1;
     // Set PLC
-    param.setting.plc = 1;
+    param.setting.vad = 1;
     // Set sample rate
     opus_cfg.sample_rate = 16000;
     // Set channel count
