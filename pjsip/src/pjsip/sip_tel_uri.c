@@ -181,14 +181,14 @@ static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
 {
     int printed;
     char *startbuf = buf;
-    char *endbuf = buf+size-1;
+    char *endbuf = buf+size-1; // Need to minus one for NULL terminator
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     PJ_UNUSED_ARG(context);
 
     /* Print scheme. */
     copy_advance(buf, pc->pjsip_TEL_STR);
-    *buf++ = ':';
+    copy_advance_char_check(buf, ':');
 
     /* Print number. */
     copy_advance_escape(buf, uri->number, pjsip_TEL_NUMBER_SPEC);

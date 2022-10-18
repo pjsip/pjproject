@@ -28,7 +28,6 @@
 #if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
 
 #include <upnp/upnp.h>
-#include <upnp/upnpdebug.h>
 #include <upnp/upnptools.h>
 
 #define THIS_FILE       "upnp.c"
@@ -40,6 +39,10 @@
 
 /* Maximum number of devices. */
 #define MAX_DEVS 16
+
+#if ENABLE_LOG
+#   include <upnp/upnpdebug.h>
+#endif
 
 
 /* UPnP device descriptions. */

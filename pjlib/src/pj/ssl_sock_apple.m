@@ -40,7 +40,7 @@
 
 #include <err.h>
 #include <CoreFoundation/CoreFoundation.h>
-#include <CommonCrypto/CommonDigest.h> 
+#include <CommonCrypto/CommonDigest.h>
 #include <Foundation/NSLock.h>
 #include <Network/Network.h>
 #include <Security/Security.h>
@@ -78,7 +78,7 @@ typedef struct applessl_sock_t {
  * Event manager
  *******************************************************************
  */
- 
+
  typedef enum event_id
 {
     EVENT_ACCEPT,
@@ -160,7 +160,7 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert);
 static void event_manager_destroy()
 {
     event_manager *mgr = event_mgr;
-    
+
     event_mgr = NULL;
 
     while (!pj_list_empty(&mgr->free_event_list)) {
@@ -174,7 +174,7 @@ static void event_manager_destroy()
         pj_list_erase(event);
         free(event);
     }
-    
+
     [mgr->lock release];
 
     free(mgr);
@@ -183,10 +183,10 @@ static void event_manager_destroy()
 static pj_status_t event_manager_create()
 {
     event_manager *mgr;
-    
+
     if (event_mgr)
         return PJ_SUCCESS;
-    
+
     mgr = malloc(sizeof(event_manager));
     if (!mgr) return PJ_ENOMEM;
 
@@ -224,7 +224,7 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
 #if SSL_DEBUG
     PJ_LOG(3,(THIS_FILE, "Post event success %p %d",ssock, event_item->type));
 #endif
-    
+
     [mgr->lock lock];
 
     if (pj_list_empty(&mgr->free_event_list)) {
@@ -233,14 +233,14 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
         event = mgr->free_event_list.next;
         pj_list_erase(event);
     }
-    
+
     pj_memcpy(event, event_item, sizeof(event_t));
     event->ssock = ssock;
     event->async = async;
     pj_list_push_back(&mgr->event_list, event);
-    
+
     [mgr->lock unlock];
-    
+
     if (!async) {
         dispatch_semaphore_wait(((applessl_sock_t *)ssock)->ev_semaphore,
                                 DISPATCH_TIME_FOREVER);
@@ -253,7 +253,7 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
 static void event_manager_remove_events(pj_ssl_sock_t *ssock)
 {
     event_t *event;
-        
+
     [event_mgr->lock lock];
     event = event_mgr->event_list.next;
     while (event != &event_mgr->event_list) {
@@ -283,7 +283,7 @@ pj_status_t ssl_network_event_poll()
         applessl_sock_t * assock;
         event_t *event;
         pj_bool_t ret = PJ_TRUE, add_ref = PJ_FALSE;
-        
+
         [event_mgr->lock lock];
         /* Check again, this time by holding the lock */
         if (pj_list_empty(&event_mgr->event_list)) {
@@ -359,14 +359,14 @@ pj_status_t ssl_network_event_poll()
         if (event->type != EVENT_DISCARD && ret && !event->async && ret) {
             dispatch_semaphore_signal(assock->ev_semaphore);
         }
-        
+
         /* Put the event into the free list to be reused */
         [event_mgr->lock lock];
         if (add_ref) {
             pj_grp_lock_dec_ref(ssock->param.grp_lock);
         }
         pj_list_push_back(&event_mgr->free_event_list, event);
-        [event_mgr->lock unlock];       
+        [event_mgr->lock unlock];
     }
 
     return 0;
@@ -377,7 +377,7 @@ pj_status_t ssl_network_event_poll()
  * Static/internal functions.
  *******************************************************************
  */
- 
+
 #define PJ_SSL_ERRNO_START              (PJ_ERRNO_START_USER + \
                                          PJ_ERRNO_SPACE_SIZE*6)
 
@@ -390,7 +390,7 @@ static pj_status_t pj_status_from_err(applessl_sock_t *assock,
 {
     pj_status_t status = (pj_status_t)-err;
     CFStringRef errmsg;
-    
+
     errmsg = SecCopyErrorMessageString(err, NULL);
     PJ_LOG(3, (THIS_FILE, "Apple SSL error %s [%d]: %s",
                (msg? msg: ""), err,
@@ -415,21 +415,21 @@ static pj_status_t create_data_from_file(CFDataRef *data,
     CFReadStreamRef read_stream;
     UInt8 data_buf[8192];
     CFIndex nbytes = 0;
-    
+
     if (path) {
         CFURLRef filepath;
         CFStringRef path_str;
-        
+
         path_str = CFStringCreateWithBytes(NULL, (const UInt8 *)path->ptr,
                                            path->slen,
                                            kCFStringEncodingUTF8, false);
         if (!path_str) return PJ_ENOMEM;
-    
+
         filepath = CFURLCreateWithFileSystemPath(NULL, path_str,
                                                  kCFURLPOSIXPathStyle, true);
         CFRelease(path_str);
         if (!filepath) return PJ_ENOMEM;
-    
+
         path_str = CFStringCreateWithBytes(NULL, (const UInt8 *)fname->ptr,
                                            fname->slen,
                                            kCFStringEncodingUTF8, false);
@@ -437,7 +437,7 @@ static pj_status_t create_data_from_file(CFDataRef *data,
             CFRelease(filepath);
             return PJ_ENOMEM;
         }
-    
+
         file = CFURLCreateCopyAppendingPathComponent(NULL, filepath,
                                                      path_str, false);
         CFRelease(path_str);
@@ -446,32 +446,32 @@ static pj_status_t create_data_from_file(CFDataRef *data,
         file = CFURLCreateFromFileSystemRepresentation(NULL,
                (const UInt8 *)fname->ptr, fname->slen, false);
     }
-    
+
     if (!file)
         return PJ_ENOMEM;
-    
+
     read_stream = CFReadStreamCreateWithFile(NULL, file);
     CFRelease(file);
-    
+
     if (!read_stream)
         return PJ_ENOTFOUND;
-    
+
     if (!CFReadStreamOpen(read_stream)) {
         PJ_LOG(2, (THIS_FILE, "Failed opening file"));
         CFRelease(read_stream);
         return PJ_EINVAL;
     }
-    
+
     nbytes = CFReadStreamRead(read_stream, data_buf,
                               sizeof(data_buf));
     if (nbytes > 0)
         *data = CFDataCreate(NULL, data_buf, nbytes);
     else
         *data = NULL;
-    
+
     CFReadStreamClose(read_stream);
     CFRelease(read_stream);
-    
+
     return (*data? PJ_SUCCESS: PJ_EINVAL);
 }
 
@@ -523,13 +523,13 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
             keys[0] = (void *)kSecImportExportPassphrase;
             values[0] = (void *)password;
         }
-    
+
         options = CFDictionaryCreate(NULL, (const void **)keys,
                                      (const void **)values,
                                      (password? 1: 0), NULL, NULL);
         if (!options)
             return PJ_ENOMEM;
-        
+
 #if TARGET_OS_IPHONE
         err = SecPKCS12Import(cert_data, options, &items);
 #else
@@ -539,11 +539,11 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
                                                kSecFormatX509Cert/* DER */};
             SecExternalItemType ext_type = kSecItemTypeCertificate;
             SecItemImportExportKeyParameters key_params;
-    
+
             pj_bzero(&key_params, sizeof(key_params));
             key_params.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
             key_params.passphrase = password;
-    
+
             for (i = 0; i < PJ_ARRAY_SIZE(ext_format); i++) {
                 items = NULL;
                 err = SecItemImport(cert_data, NULL, &ext_format[i],
@@ -554,7 +554,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
             }
         }
 #endif
-    
+
         CFRelease(options);
         if (password)
             CFRelease(password);
@@ -562,16 +562,16 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
         if (err != noErr || !items) {
             return pj_status_from_err(assock, "SecItemImport", err);
         }
-    
+
         count = CFArrayGetCount(items);
-    
+
         for (i = 0; i < count; i++) {
             CFTypeRef item;
             CFTypeID item_id;
-        
+
             item = (CFTypeRef) CFArrayGetValueAtIndex(items, i);
             item_id = CFGetTypeID(item);
-    
+
             if (item_id == CFDictionaryGetTypeID()) {
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
@@ -594,9 +594,9 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
             }
 #endif
         }
-    
+
         CFRelease(items);
-    
+
         if (!identity) {
             PJ_LOG(2, (THIS_FILE, "Failed extracting identity from "
                                   "the cert file"));
@@ -604,7 +604,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
         }
 
         *p_identity = sec_identity_create(identity);
-    
+
         CFRelease(identity);
     }
 
@@ -619,7 +619,7 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert)
     CFErrorRef error;
     pj_status_t status = PJ_SUCCESS;
     OSStatus err = noErr;
-    
+
     if (trust && cert && cert->CA_file.slen) {
         status = create_data_from_file(&ca_data, &cert->CA_file,
                                        (cert->CA_path.slen? &cert->CA_path:
@@ -632,13 +632,13 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert)
         if (!ca_data)
             PJ_LOG(2, (THIS_FILE, "Not enough memory for CA buffer"));
     }
-    
+
     if (ca_data) {
         SecCertificateRef ca_cert;
         CFMutableArrayRef ca_array;
 
         ca_cert = SecCertificateCreateWithData(NULL, ca_data);
-        CFRelease(ca_data);     
+        CFRelease(ca_data);
         if (!ca_cert) {
             PJ_LOG(2, (THIS_FILE, "Failed creating certificate from "
                                   "CA file/buffer. It has to be "
@@ -646,7 +646,7 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert)
             status = PJ_EINVAL;
             goto on_return;
         }
-    
+
         ca_array = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
         if (!ca_array) {
             PJ_LOG(2, (THIS_FILE, "Not enough memory for CA array"));
@@ -657,7 +657,7 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert)
 
         CFArrayAppendValue(ca_array, ca_cert);
         CFRelease(ca_cert);
-        
+
         err = SecTrustSetAnchorCertificates(trust, ca_array);
         CFRelease(ca_array);
         if (err != noErr)
@@ -672,13 +672,16 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert)
     if (!result) {
         pj_ssl_sock_t *ssock = &assock->base;
         SecTrustResultType trust_result;
-        
+
         err = SecTrustGetTrustResult(trust, &trust_result);
         if (err == noErr) {
-            switch (trust_result) {
-                case kSecTrustResultInvalid:
-                    ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
-                    break;
+#if SSL_DEBUG
+            PJ_LOG(3, (THIS_FILE, "SSL trust evaluation: %d", trust_result));
+#endif
+    	    switch (trust_result) {
+    		case kSecTrustResultInvalid:
+		    ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
+		    break;
 
                 case kSecTrustResultDeny:
                 case kSecTrustResultFatalTrustFailure:
@@ -694,7 +697,7 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert)
                      */
                     ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
                     break;
-        
+
                 case kSecTrustResultOtherError:
                     ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
                     break;
@@ -704,7 +707,7 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert)
             }
         }
 
-        if (error) 
+        if (error)
             CFRelease(error);
 
         /* Evaluation failed */
@@ -737,7 +740,7 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
 
     if (!assock->connection)
         return PJ_EGONE;
-    
+
     content = dispatch_data_create(data, *size, assock->queue,
                                    DISPATCH_DATA_DESTRUCTOR_DEFAULT);
     if (!content)
@@ -770,7 +773,7 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
         event_manager_post_event(ssock, &event, PJ_TRUE);
     });
     dispatch_release(content);
-    
+
     return PJ_EPENDING;
 }
 
@@ -792,7 +795,7 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
               bool is_complete, nw_error_t error)
         {
             pj_status_t status = PJ_SUCCESS;
-            
+
             /* If the context is marked as complete, and is the final context,
              * we're read-closed.
              */
@@ -815,7 +818,7 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
                 }
             }
 
-            dispatch_block_t schedule_next_receive = 
+            dispatch_block_t schedule_next_receive =
             ^{
                 /* If there was no error in receiving, request more data. */
                 if (!error && !is_complete && assock->connection) {
@@ -825,7 +828,7 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
             };
 
             if (content) {
-                dispatch_data_apply(content, 
+                dispatch_data_apply(content,
                     ^(dispatch_data_t region, size_t offset,
                       const void *buffer, size_t inSize)
                 {
@@ -846,7 +849,7 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 
                     return (bool)true;
                 });
-                
+
                 schedule_next_receive();
 
             } else {
@@ -862,12 +865,12 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 
                     event_manager_post_event(ssock, &event, PJ_TRUE);
                 }
-            
+
                 schedule_next_receive();
             }
         });
     }
-        
+
     return PJ_SUCCESS;
 }
 
@@ -880,11 +883,11 @@ static pj_status_t network_get_localaddr(pj_ssl_sock_t *ssock,
     nw_path_t path;
     nw_endpoint_t endpoint;
     const struct sockaddr *address;
-    
+
     path = nw_connection_copy_current_path(assock->connection);
     if (!path)
         return PJ_EINVALIDOP;
-    
+
     endpoint = nw_path_copy_effective_local_endpoint(path);
     nw_release(path);
     if (!endpoint)
@@ -896,7 +899,7 @@ static pj_status_t network_get_localaddr(pj_ssl_sock_t *ssock,
         *namelen = pj_sockaddr_get_addr_len(addr);
     }
     nw_release(endpoint);
-    
+
     return PJ_SUCCESS;
 }
 
@@ -975,18 +978,18 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 
         /* Set cipher list */
         if (ssock->param.ciphers_num > 0) {
-            unsigned i;         
+            unsigned i;
             for (i = 0; i < ssock->param.ciphers_num; i++) {
                 sec_protocol_options_append_tls_ciphersuite(sec_options,
                     (tls_ciphersuite_t)ssock->param.ciphers[i]);
             }
         }
-    
+
         if (!ssock->is_server && ssock->param.server_name.slen) {
             sec_protocol_options_set_tls_server_name(sec_options,
                 ssock->param.server_name.ptr);
         }
-        
+
         sec_protocol_options_set_tls_renegotiation_enabled(sec_options,
                                                            true);
         /* This must be disabled, otherwise server may think this is
@@ -994,7 +997,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
          * verify block may never be invoked!
          */
         sec_protocol_options_set_tls_resumption_enabled(sec_options, false);
-        
+
         /* SSL verification options */
         sec_protocol_options_set_peer_authentication_required(sec_options,
             true);
@@ -1012,7 +1015,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
         {
             complete(assock->identity);
         }, assock->queue);
-        
+
         sec_protocol_options_set_verify_block(sec_options,
             ^(sec_protocol_metadata_t metadata, sec_trust_t trust_ref,
               sec_protocol_verify_complete_t complete)
@@ -1026,10 +1029,10 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
             assock->cipher =
               sec_protocol_metadata_get_negotiated_tls_ciphersuite(metadata);
 
-            /* For client, call on_connect_complete() callback first. */
-            if (!ssock->is_server) {
-                if (!assock->connection)
-                    complete(false);
+	    /* For client, call on_connect_complete() callback first. */
+	    if (!ssock->is_server && ssock->ssl_state == SSL_STATE_NULL) {
+	    	if (!assock->connection)
+	    	    complete(false);
 
                 event.type = EVENT_CONNECT;
                 event.body.connect_ev.status = PJ_SUCCESS;
@@ -1074,7 +1077,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
     }
     nw_release(ip_options);
     nw_release(protocol_stack);
-    
+
     if (ssock->is_server && ssock->param.reuse_addr) {
         nw_parameters_set_reuse_local_address(parameters, true);
     }
@@ -1096,7 +1099,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
             base_port = pj_sockaddr_get_port(localaddr);
             port = (pj_uint16_t)(base_port + pj_rand() % (port_range + 1));
             pj_utoa(port, port_str);
-            
+
             local_endpoint = nw_endpoint_create_host(ip_addr, port_str);
             if (local_endpoint)
                 break;
@@ -1107,7 +1110,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 
         local_endpoint = nw_endpoint_create_host(ip_addr, port_str);
     }
-    
+
     if (!local_endpoint) {
         PJ_LOG(2, (THIS_FILE, "Failed creating local endpoint"));
         return PJ_EINVALIDOP;
@@ -1115,7 +1118,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 
     nw_parameters_set_local_endpoint(parameters, local_endpoint);
     nw_release(local_endpoint);
-    
+
     *p_params = parameters;
     return PJ_SUCCESS;
 }
@@ -1161,7 +1164,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 #if SSL_DEBUG
             PJ_LOG(3, (THIS_FILE, "SSL state and errno %d %d", state, errno));
 #endif
-            call_cb = PJ_TRUE;  
+            call_cb = PJ_TRUE;
         }
 
         if (state == nw_connection_state_ready) {
@@ -1169,7 +1172,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
                 nw_protocol_definition_t tls_def;
                 nw_protocol_metadata_t prot_meta;
                 sec_protocol_metadata_t meta;
-                
+
                 tls_def = nw_protocol_copy_tls_definition();
                 prot_meta = nw_connection_copy_protocol_metadata(connection,
                                                                  tls_def);
@@ -1212,7 +1215,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
     });
 
     nw_connection_start(assock->connection);
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1243,7 +1246,7 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     nw_retain(assock->listener);
 
     assock->lis_state = nw_listener_state_invalid;
-    nw_listener_set_state_changed_handler(assock->listener, 
+    nw_listener_set_state_changed_handler(assock->listener,
         ^(nw_listener_state_t state, nw_error_t error)
     {
         errno = error ? nw_error_get_error_code(error) : 0;
@@ -1271,7 +1274,7 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
         nw_endpoint_t endpoint = nw_connection_copy_endpoint(connection);
         const struct sockaddr *address;
         event_t event;
-        
+
         address = nw_endpoint_get_address(endpoint);
 
         event.type = EVENT_ACCEPT;
@@ -1279,10 +1282,10 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
         pj_sockaddr_cp(&event.body.accept_ev.src_addr, address);
         event.body.accept_ev.src_addr_len = pj_sockaddr_get_addr_len(address);
         event.body.accept_ev.status = PJ_SUCCESS;
-        
+
         nw_retain(connection);
         event_manager_post_event(ssock, &event, PJ_TRUE);
-        
+
         nw_release(endpoint);
     });
 
@@ -1298,7 +1301,7 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     nw_listener_start(assock->listener);
     /* Wait until it's ready */
     dispatch_semaphore_wait(assock->ev_semaphore, DISPATCH_TIME_FOREVER);
-    
+
     if (pj_sockaddr_get_port(&ssock->local_addr) == 0) {
         /* Failed. */
         status = PJ_EEOF;
@@ -1364,14 +1367,14 @@ static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
     status = network_setup_connection(ssock, connection);
     if (status != PJ_SUCCESS)
         return status;
-    
+
     /* Save remote address */
     pj_sockaddr_cp(&ssock->rem_addr, remaddr);
 
     /* Update local address */
     ssock->addr_len = addr_len;
     pj_sockaddr_cp(&ssock->local_addr, localaddr);
-    
+
     return PJ_EPENDING;
 }
 
@@ -1385,20 +1388,20 @@ static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
 static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
 {
     applessl_sock_t *assock;
-    
+
     /* Create event manager */
     if (event_manager_create() != PJ_SUCCESS)
         return NULL;
-    
-    assock = PJ_POOL_ZALLOC_T(pool, applessl_sock_t);    
+
+    assock = PJ_POOL_ZALLOC_T(pool, applessl_sock_t);
 
     assock->queue = dispatch_queue_create("ssl_queue", DISPATCH_QUEUE_SERIAL);
-    assock->ev_semaphore = dispatch_semaphore_create(0);    
+    assock->ev_semaphore = dispatch_semaphore_create(0);
     if (!assock->queue || !assock->ev_semaphore) {
         ssl_destroy(&assock->base);
         return NULL;
     }
-        
+
     return (pj_ssl_sock_t *)assock;
 }
 
@@ -1415,7 +1418,7 @@ static void close_connection(applessl_sock_t *assock)
     if (assock->connection) {
         unsigned i;
         nw_connection_t conn = assock->connection;
-        
+
         assock->connection = nil;
         nw_connection_force_cancel(conn);
         nw_release(conn);
@@ -1476,7 +1479,7 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 
     if (assock->listener) {
         unsigned i;
-        
+
         nw_listener_set_new_connection_handler(assock->listener, nil);
         nw_listener_cancel(assock->listener);
 
@@ -1514,7 +1517,7 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     /* Destroy circular buffers */
     circ_deinit(&ssock->circ_buf_input);
     circ_deinit(&ssock->circ_buf_output);
-    
+
     PJ_LOG(4, (THIS_FILE, "SSL %p destroyed", ssock));
 }
 
@@ -1541,171 +1544,171 @@ const char *sslGetCipherSuiteString(SSLCipherSuite cs)
 {
     switch (cs) {
         /* TLS addenda using AES-CBC, RFC 3268 */
-        case TLS_RSA_WITH_AES_128_CBC_SHA:          
+        case TLS_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_DH_DSS_WITH_AES_128_CBC_SHA:       
+        case TLS_DH_DSS_WITH_AES_128_CBC_SHA:
             return "TLS_DH_DSS_WITH_AES_128_CBC_SHA";
-        case TLS_DH_RSA_WITH_AES_128_CBC_SHA:       
+        case TLS_DH_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_DH_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_DHE_DSS_WITH_AES_128_CBC_SHA:      
+        case TLS_DHE_DSS_WITH_AES_128_CBC_SHA:
             return "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
-        case TLS_DHE_RSA_WITH_AES_128_CBC_SHA:      
+        case TLS_DHE_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_DHE_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_DH_anon_WITH_AES_128_CBC_SHA:      
+        case TLS_DH_anon_WITH_AES_128_CBC_SHA:
             return "TLS_DH_anon_WITH_AES_128_CBC_SHA";
-        case TLS_RSA_WITH_AES_256_CBC_SHA:          
+        case TLS_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_DH_DSS_WITH_AES_256_CBC_SHA:       
+        case TLS_DH_DSS_WITH_AES_256_CBC_SHA:
             return "TLS_DH_DSS_WITH_AES_256_CBC_SHA";
-        case TLS_DH_RSA_WITH_AES_256_CBC_SHA:       
+        case TLS_DH_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_DH_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_DHE_DSS_WITH_AES_256_CBC_SHA:      
+        case TLS_DHE_DSS_WITH_AES_256_CBC_SHA:
             return "TLS_DHE_DSS_WITH_AES_256_CBC_SHA";
-        case TLS_DHE_RSA_WITH_AES_256_CBC_SHA:      
+        case TLS_DHE_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_DHE_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_DH_anon_WITH_AES_256_CBC_SHA:      
+        case TLS_DH_anon_WITH_AES_256_CBC_SHA:
             return "TLS_DH_anon_WITH_AES_256_CBC_SHA";
 
         /* ECDSA addenda, RFC 4492 */
-        case TLS_ECDH_ECDSA_WITH_NULL_SHA:          
+        case TLS_ECDH_ECDSA_WITH_NULL_SHA:
             return "TLS_ECDH_ECDSA_WITH_NULL_SHA";
-        case TLS_ECDH_ECDSA_WITH_RC4_128_SHA:       
+        case TLS_ECDH_ECDSA_WITH_RC4_128_SHA:
             return "TLS_ECDH_ECDSA_WITH_RC4_128_SHA";
-        case TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA:  
+        case TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA:   
+        case TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA:
             return "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA";
-        case TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA:   
+        case TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA:
             return "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA";
-        case TLS_ECDHE_ECDSA_WITH_NULL_SHA:         
+        case TLS_ECDHE_ECDSA_WITH_NULL_SHA:
             return "TLS_ECDHE_ECDSA_WITH_NULL_SHA";
-        case TLS_ECDHE_ECDSA_WITH_RC4_128_SHA:      
+        case TLS_ECDHE_ECDSA_WITH_RC4_128_SHA:
             return "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA";
-        case TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA: 
+        case TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA:  
+        case TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA:
             return "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA";
-        case TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:  
+        case TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:
             return "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA";
-        case TLS_ECDH_RSA_WITH_NULL_SHA:            
+        case TLS_ECDH_RSA_WITH_NULL_SHA:
             return "TLS_ECDH_RSA_WITH_NULL_SHA";
-        case TLS_ECDH_RSA_WITH_RC4_128_SHA:         
+        case TLS_ECDH_RSA_WITH_RC4_128_SHA:
             return "TLS_ECDH_RSA_WITH_RC4_128_SHA";
-        case TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA:    
+        case TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDH_RSA_WITH_AES_128_CBC_SHA:     
+        case TLS_ECDH_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_ECDH_RSA_WITH_AES_256_CBC_SHA:     
+        case TLS_ECDH_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_ECDHE_RSA_WITH_NULL_SHA:           
+        case TLS_ECDHE_RSA_WITH_NULL_SHA:
             return "TLS_ECDHE_RSA_WITH_NULL_SHA";
-        case TLS_ECDHE_RSA_WITH_RC4_128_SHA:        
+        case TLS_ECDHE_RSA_WITH_RC4_128_SHA:
             return "TLS_ECDHE_RSA_WITH_RC4_128_SHA";
-        case TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA:   
+        case TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:    
+        case TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:    
+        case TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_ECDH_anon_WITH_NULL_SHA:           
+        case TLS_ECDH_anon_WITH_NULL_SHA:
             return "TLS_ECDH_anon_WITH_NULL_SHA";
-        case TLS_ECDH_anon_WITH_RC4_128_SHA:        
+        case TLS_ECDH_anon_WITH_RC4_128_SHA:
             return "TLS_ECDH_anon_WITH_RC4_128_SHA";
-        case TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA:   
+        case TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDH_anon_WITH_AES_128_CBC_SHA:    
+        case TLS_ECDH_anon_WITH_AES_128_CBC_SHA:
             return "TLS_ECDH_anon_WITH_AES_128_CBC_SHA";
-        case TLS_ECDH_anon_WITH_AES_256_CBC_SHA:    
+        case TLS_ECDH_anon_WITH_AES_256_CBC_SHA:
             return "TLS_ECDH_anon_WITH_AES_256_CBC_SHA";
 
         /* TLS 1.2 addenda, RFC 5246 */
-        case TLS_RSA_WITH_AES_128_CBC_SHA256:       
+        case TLS_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_RSA_WITH_AES_256_CBC_SHA256:       
+        case TLS_RSA_WITH_AES_256_CBC_SHA256:
             return "TLS_RSA_WITH_AES_256_CBC_SHA256";
-        case TLS_DH_DSS_WITH_AES_128_CBC_SHA256:    
+        case TLS_DH_DSS_WITH_AES_128_CBC_SHA256:
             return "TLS_DH_DSS_WITH_AES_128_CBC_SHA256";
-        case TLS_DH_RSA_WITH_AES_128_CBC_SHA256:    
+        case TLS_DH_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_DH_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_DHE_DSS_WITH_AES_128_CBC_SHA256:   
+        case TLS_DHE_DSS_WITH_AES_128_CBC_SHA256:
             return "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256";
-        case TLS_DHE_RSA_WITH_AES_128_CBC_SHA256:   
+        case TLS_DHE_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_DH_DSS_WITH_AES_256_CBC_SHA256:    
+        case TLS_DH_DSS_WITH_AES_256_CBC_SHA256:
             return "TLS_DH_DSS_WITH_AES_256_CBC_SHA256";
-        case TLS_DH_RSA_WITH_AES_256_CBC_SHA256:    
+        case TLS_DH_RSA_WITH_AES_256_CBC_SHA256:
             return "TLS_DH_RSA_WITH_AES_256_CBC_SHA256";
-        case TLS_DHE_DSS_WITH_AES_256_CBC_SHA256:   
+        case TLS_DHE_DSS_WITH_AES_256_CBC_SHA256:
             return "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256";
-        case TLS_DHE_RSA_WITH_AES_256_CBC_SHA256:   
+        case TLS_DHE_RSA_WITH_AES_256_CBC_SHA256:
             return "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256";
-        case TLS_DH_anon_WITH_AES_128_CBC_SHA256:   
+        case TLS_DH_anon_WITH_AES_128_CBC_SHA256:
             return "TLS_DH_anon_WITH_AES_128_CBC_SHA256";
-        case TLS_DH_anon_WITH_AES_256_CBC_SHA256:   
+        case TLS_DH_anon_WITH_AES_256_CBC_SHA256:
             return "TLS_DH_anon_WITH_AES_256_CBC_SHA256";
 
         /* TLS addenda using AES-GCM, RFC 5288 */
-        case TLS_RSA_WITH_AES_128_GCM_SHA256:       
+        case TLS_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_RSA_WITH_AES_256_GCM_SHA384:       
+        case TLS_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_DHE_RSA_WITH_AES_128_GCM_SHA256:   
+        case TLS_DHE_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_DHE_RSA_WITH_AES_256_GCM_SHA384:   
+        case TLS_DHE_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384";
-        case TLS_DH_RSA_WITH_AES_128_GCM_SHA256:    
+        case TLS_DH_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_DH_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_DH_RSA_WITH_AES_256_GCM_SHA384:    
+        case TLS_DH_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_DH_RSA_WITH_AES_256_GCM_SHA384";
-        case TLS_DHE_DSS_WITH_AES_128_GCM_SHA256:   
+        case TLS_DHE_DSS_WITH_AES_128_GCM_SHA256:
             return "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256";
-        case TLS_DHE_DSS_WITH_AES_256_GCM_SHA384:   
+        case TLS_DHE_DSS_WITH_AES_256_GCM_SHA384:
             return "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384";
-        case TLS_DH_DSS_WITH_AES_128_GCM_SHA256:    
+        case TLS_DH_DSS_WITH_AES_128_GCM_SHA256:
             return "TLS_DH_DSS_WITH_AES_128_GCM_SHA256";
-        case TLS_DH_DSS_WITH_AES_256_GCM_SHA384:    
+        case TLS_DH_DSS_WITH_AES_256_GCM_SHA384:
             return "TLS_DH_DSS_WITH_AES_256_GCM_SHA384";
-        case TLS_DH_anon_WITH_AES_128_GCM_SHA256:   
+        case TLS_DH_anon_WITH_AES_128_GCM_SHA256:
             return "TLS_DH_anon_WITH_AES_128_GCM_SHA256";
-        case TLS_DH_anon_WITH_AES_256_GCM_SHA384:   
+        case TLS_DH_anon_WITH_AES_256_GCM_SHA384:
             return "TLS_DH_anon_WITH_AES_256_GCM_SHA384";
 
         /* ECDSA addenda, RFC 5289 */
-        case TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256:   
+        case TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256:
             return "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256";
-        case TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384:   
+        case TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384:
             return "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384";
-        case TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256:    
+        case TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256:
             return "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256";
-        case TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384:    
+        case TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384:
             return "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384";
-        case TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256:     
+        case TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384:     
+        case TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384:
             return "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384";
-        case TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256:      
+        case TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384:      
+        case TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384:
             return "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384";
-        case TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:   
+        case TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:
             return "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256";
-        case TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:   
+        case TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:
             return "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
-        case TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256:    
+        case TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256:
             return "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256";
-        case TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384:    
+        case TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384:
             return "TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384";
-        case TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:     
+        case TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:     
+        case TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384";
-        case TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256:      
+        case TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384:      
+        case TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384";
 
         case TLS_AES_128_GCM_SHA256:
-            return "TLS_AES_128_GCM_SHA256";    
+            return "TLS_AES_128_GCM_SHA256";
         case TLS_AES_256_GCM_SHA384:
             return "TLS_AES_256_GCM_SHA384";
         case TLS_CHACHA20_POLY1305_SHA256:
@@ -1716,7 +1719,7 @@ const char *sslGetCipherSuiteString(SSLCipherSuite cs)
             return "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256";
         case TLS_RSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_RSA_WITH_3DES_EDE_CBC_SHA";
-            
+
         default:
             return "TLS_CIPHER_STRING_UNKNOWN";
     }
@@ -1758,7 +1761,7 @@ static void ssl_ciphers_populate(void)
     };
     if (!ssl_cipher_num) {
         unsigned i;
-        
+
         ssl_cipher_num = sizeof(ciphers)/sizeof(ciphers[0]);
         for (i = 0; i < ssl_cipher_num; i++) {
             ssl_ciphers[i].id = (pj_ssl_cipher)ciphers[i];
@@ -1802,7 +1805,7 @@ static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
                 continue;
             str = (CFStringRef) CFDictionaryGetValue(dict,
                                                      kSecPropertyKeyValue);
-                                                     
+
             if (CFStringGetLength(str) > 0) {
                 if (add_separator) {
                     CFStringAppendCString(info, "/", kCFStringEncodingUTF8);
@@ -1810,7 +1813,7 @@ static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
                 CFStringAppendCString(info, labels[i], kCFStringEncodingUTF8);
                 CFStringAppend(info, str);
                 add_separator = PJ_TRUE;
-                
+
                 if (CFEqual(keys[i], kSecOIDCommonName))
                     *cn = str;
             }
@@ -1877,7 +1880,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
      * validity, and alt names.
      */
     CFArrayRef issuer_vals;
-    
+
     dict = get_cert_oid(cert, kSecOIDX509V1IssuerName,
                         (CFTypeRef *)&issuer_vals);
     if (dict) {
@@ -1915,7 +1918,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 #if !TARGET_OS_IPHONE
 {
     CFStringRef version;
-    
+
     dict = get_cert_oid(cert, kSecOIDX509V1Version,
                         (CFTypeRef *)&version);
     if (dict) {
@@ -1953,17 +1956,17 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 {
     CFArrayRef subject;
     CFMutableStringRef subject_info;
-    
+
     dict = get_cert_oid(cert, kSecOIDX509V1SubjectName,
                         (CFTypeRef *)&subject);
     if (dict) {
         subject_info = CFStringCreateMutable(NULL, 0);
 
         get_info_and_cn(subject, subject_info, &str);
-    
+
         CFStringGetCString(subject_info, buf, bufsize, kCFStringEncodingUTF8);
         pj_strdup2(pool, &ci->subject.info, buf);
-    
+
         CFRelease(dict);
         CFRelease(subject_info);
     }
@@ -1975,7 +1978,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 {
     CFNumberRef validity;
     double interval;
-    
+
     dict = get_cert_oid(cert, kSecOIDX509V1ValidityNotBefore,
                         (CFTypeRef *)&validity);
     if (dict) {
@@ -2018,11 +2021,11 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
         CFDictionaryRef item;
         CFStringRef label, value;
         pj_ssl_cert_name_type type = PJ_SSL_CERT_NAME_UNKNOWN;
-        
+
         item = CFArrayGetValueAtIndex(altname, i);
         if (CFGetTypeID(item) != CFDictionaryGetTypeID())
             continue;
-        
+
         label = (CFStringRef)CFDictionaryGetValue(item, kSecPropertyKeyLabel);
         if (CFGetTypeID(label) != CFStringGetTypeID())
             continue;
@@ -2099,11 +2102,11 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
     SecCertificateRef cert;
 
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
-    
+
     /* Get active local certificate */
     if (assock->identity) {
         CFArrayRef cert_arr;
-        
+
         cert_arr = sec_identity_copy_certificates_ref(assock->identity);
         if (cert_arr) {
             count = CFArrayGetCount(cert_arr);
@@ -2115,7 +2118,7 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
                     cert = (SecCertificateRef)elmt;
                     get_cert_info(ssock->pool, &ssock->local_cert_info, cert);
                 }
-            }               
+            }
             CFRelease(cert_arr);
         }
     }
@@ -2188,7 +2191,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
 
     status = circ_write(&ssock->circ_buf_output, data, size);
     *nwritten = (status == PJ_SUCCESS)? (int)size: 0;
-    
+
     return status;
 }
 

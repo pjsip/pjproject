@@ -932,7 +932,7 @@ public:
      * The media quality also sets speex codec quality/complexity to the
      * number.
      *
-     * Default: 5 (PJSUA_DEFAULT_CODEC_QUALITY).
+     * Default: PJSUA_DEFAULT_CODEC_QUALITY.
      */
     unsigned            quality;
 
@@ -1473,7 +1473,7 @@ public:
      *
      * @return                  Array of transport IDs.
      */
-    IntVector transportEnum() PJSUA2_THROW(Error);
+    IntVector transportEnum() const PJSUA2_THROW(Error);
 
     /**
      * Get information about transport.
@@ -1482,7 +1482,7 @@ public:
      *
      * @return                  Transport info.
      */
-    TransportInfo transportGetInfo(TransportId id) PJSUA2_THROW(Error);
+    TransportInfo transportGetInfo(TransportId id) const PJSUA2_THROW(Error);
 
     /**
      * Disable a transport or re-enable it. By default transport is always

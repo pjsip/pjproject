@@ -3019,11 +3019,11 @@ typedef struct pjsua_transport_config
     /**
      * Specify the port range for socket binding, relative to the start
      * port number specified in \a port. Note that this setting is only
-     * applicable when the start port number is non zero.
+     * applicable to media transport when the start port number is non zero.
+     * Media transport is configurable via account setting, 
+     * i.e: pjsua_acc_config.rtp_cfg, please check the media transport 
+     * config docs for more info.
      *
-     * Example: \a port=5000, \a port_range=4
-     * - Available ports: 5000, 5001, 5002, 5003, 5004 (SIP transport)
-     * 
      * Available ports are in the range of [\a port, \a port + \a port_range]. 
      * 
      * Default value is zero.
@@ -4943,6 +4943,24 @@ PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
 #   define PJSUA_MAX_VID_WINS       16
 #endif
 
+
+/**
+ * Specifies if lock codec feature should always use INVITE method.
+ * This will also affect ICE completion update in updating default address
+ * in SDP.
+ *
+ * This can be useful when communicating with endpoints that do not
+ * respond to UPDATE properly while indicating UPDATE support (by
+ * specifying UPDATE in its SIP Allow header).
+ *
+ * Note that UPDATE can be sent when dialog is still in early state,
+ * while re-INVITE needs to wait until the dialog is confirmed.
+ */
+#ifndef PJSUA_LOCK_CODEC_DONT_USE_UPDATE
+#   define PJSUA_LOCK_CODEC_DONT_USE_UPDATE	    0
+#endif
+
+
 /**
  * Video window ID.
  */
@@ -6842,7 +6860,7 @@ struct pjsua_media_config
      * The media quality also sets speex codec quality/complexity to the
      * number.
      *
-     * Default: 5 (PJSUA_DEFAULT_CODEC_QUALITY).
+     * Default: PJSUA_DEFAULT_CODEC_QUALITY.
      */
     unsigned            quality;
 

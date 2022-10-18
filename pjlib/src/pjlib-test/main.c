@@ -53,7 +53,7 @@ static void init_signals()
     sigaction(SIGALRM, &act, NULL);
 }
 
-#elif PJ_LINUX || PJ_DARWINOS
+#elif (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0
 
 #include <execinfo.h>
 #include <signal.h>

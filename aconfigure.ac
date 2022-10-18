@@ -257,6 +257,7 @@ AC_CHECK_HEADER(sys/sockio.h,[AC_DEFINE(PJ_HAS_SYS_SOCKIO_H,1)])
 AC_CHECK_HEADER(sys/utsname.h,[AC_DEFINE(PJ_HAS_SYS_UTSNAME_H,1)])
 AC_CHECK_HEADER(time.h,[AC_DEFINE(PJ_HAS_TIME_H,1)])
 AC_CHECK_HEADER(unistd.h,[AC_DEFINE(PJ_HAS_UNISTD_H,1)])
+AC_CHECK_HEADER(execinfo.h,[AC_DEFINE(PJ_HAS_EXECINFO_H,1)])
 AC_CHECK_HEADER(winsock.h,[AC_DEFINE(PJ_HAS_WINSOCK_H,1)])
 AC_CHECK_HEADER(winsock2.h,[AC_DEFINE(PJ_HAS_WINSOCK2_H,1)])
 AC_CHECK_HEADER(mswsock.h,[AC_DEFINE(PJ_HAS_MSWSOCK_H,1)],[],
@@ -1295,7 +1296,7 @@ AC_ARG_ENABLE(sdl,
 			ac_sdl_cflags=`$SDL_CONFIG --cflags`
 			ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			ac_sdl_ldflags=`$SDL_CONFIG --libs`
-			ac_sdl_ldflags=${ac_sdl_ldflags//-mwindows/}
+			ac_sdl_ldflags=`echo "${ac_sdl_ldflags}" | sed -e 's/-mwindows//g'`
 			LIBS="$LIBS $ac_sdl_ldflags"
 		  else
 			AC_MSG_RESULT([Unsupported SDL version])

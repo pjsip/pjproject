@@ -76,9 +76,11 @@ static void ffmpeg_log_cb(void* ptr, int level, const char* fmt, va_list vl);
 void pjmedia_ffmpeg_add_ref()
 {
     if (pjmedia_ffmpeg_ref_cnt++ == 0) {
-        av_log_set_level(AV_LOG_ERROR);
-        av_log_set_callback(&ffmpeg_log_cb);
-        av_register_all();
+	av_log_set_level(AV_LOG_ERROR);
+	av_log_set_callback(&ffmpeg_log_cb);
+#if !LIBAVCODEC_VER_AT_LEAST(58,137)
+	av_register_all();
+#endif
     }
 }
 
@@ -103,7 +105,7 @@ static void ffmpeg_log_cb(void* ptr, int level, const char* fmt, va_list vl)
     /* Custom callback needs to filter log level by itself */
     if (level > av_log_get_level())
         return;
-    
+
     /* Add original ffmpeg sender to log format */
     if (ptr) {
         AVClass* avc = *(AVClass**)ptr;

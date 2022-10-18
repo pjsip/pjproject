@@ -84,8 +84,8 @@
 #  include <srtp2/srtp.h>
 #  include <srtp2/cipher.h>
 
-/* In libsrtp 2.0.0, the macro SRTP_AES_ICM_128 is not available. 
- * Instead it was named with ICM at the end: SRTP_AES_128_ICM. 
+/* In libsrtp 2.0.0, the macro SRTP_AES_ICM_128 is not available.
+ * Instead it was named with ICM at the end: SRTP_AES_128_ICM.
  */
 #  ifdef SRTP_AES_128_ICM
 #    define SRTP_AES_ICM_128            SRTP_AES_128_ICM
@@ -147,7 +147,7 @@ typedef struct crypto_suite
     unsigned             srtcp_auth_tag_len;
     srtp_sec_serv_t      service;
     /* This is an attempt to validate crypto support by libsrtp, i.e: it should
-     * raise linking error if the libsrtp does not support the crypto. 
+     * raise linking error if the libsrtp does not support the crypto.
      */
     srtp_cipher_type_t  *ext_cipher_type;
     crypto_method_t      ext_crypto_method;
@@ -653,7 +653,7 @@ PJ_DEF(pj_status_t) pjmedia_srtp_enum_crypto(unsigned *count,
         pj_bzero(&crypto[i], sizeof(crypto[0]));
         crypto[i].name = pj_str(crypto_suites[i+1].name);
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -679,7 +679,7 @@ PJ_DEF(pj_status_t) pjmedia_srtp_enum_keying(unsigned *count,
     if (*count < max)
         keying[(*count)++] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
 #endif
-    
+
     return PJ_SUCCESS;
 }
 
@@ -753,7 +753,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     /* If crypto count is set to zero, setup default crypto-suites,
      * i.e: all available crypto but 'NULL'.
      */
-    if (srtp->setting.crypto_count == 0 && 
+    if (srtp->setting.crypto_count == 0 &&
         srtp->setting.use != PJMEDIA_SRTP_DISABLED)
     {
         srtp->setting.crypto_count = PJMEDIA_SRTP_MAX_CRYPTOS;
@@ -941,14 +941,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     if (srtp->setting.tx_roc.roc != 0 &&
         srtp->setting.tx_roc.ssrc != 0)
     {
-        srtp_err_status_t status;
-        status = srtp_set_stream_roc(srtp->srtp_tx_ctx,
-                                     srtp->setting.tx_roc.ssrc,
-                                     srtp->setting.tx_roc.roc);
-        PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %d with "
-                   "ROC %d %s\n", srtp->setting.tx_roc.ssrc,
-                   srtp->setting.tx_roc.roc,
-                   (status == srtp_err_status_ok)? "succeeded": "failed"));
+	err = srtp_set_stream_roc(srtp->srtp_tx_ctx,
+				  srtp->setting.tx_roc.ssrc,
+			    	  srtp->setting.tx_roc.roc);
+    	PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %d with "
+    		   "ROC %d %s\n", srtp->setting.tx_roc.ssrc,
+    		   srtp->setting.tx_roc.roc,
+    	           (err == srtp_err_status_ok)? "succeeded": "failed"));
     }
     srtp->tx_policy = *tx;
     pj_strset(&srtp->tx_policy.key,  srtp->tx_key, tx->key.slen);
@@ -994,14 +993,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     if (srtp->setting.rx_roc.roc != 0 &&
         srtp->setting.rx_roc.ssrc != 0)
     {
-        srtp_err_status_t status;
-        status = srtp_set_stream_roc(srtp->srtp_rx_ctx,
-                                     srtp->setting.rx_roc.ssrc,
-                                     srtp->setting.rx_roc.roc);
-        PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %d with "
-                   "ROC %d %s\n",
-                   srtp->setting.rx_roc.ssrc, srtp->setting.rx_roc.roc,
-                   (status == srtp_err_status_ok)? "succeeded": "failed"));
+	err = srtp_set_stream_roc(srtp->srtp_rx_ctx,
+				  srtp->setting.rx_roc.ssrc,
+			    	  srtp->setting.rx_roc.roc);
+    	PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %d with "
+    		   "ROC %d %s\n",
+    	           srtp->setting.rx_roc.ssrc, srtp->setting.rx_roc.roc,
+    	       	   (err == srtp_err_status_ok)? "succeeded": "failed"));
     }
     srtp->rx_policy = *rx;
     pj_strset(&srtp->rx_policy.key,  srtp->rx_key, rx->key.slen);
@@ -1086,6 +1084,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
                    "Failed to dealloc TX SRTP context: %s",
                    get_libsrtp_errstr(err)));
     }
+    p_srtp->srtp_rx_ctx = NULL;
+    p_srtp->srtp_tx_ctx = NULL;
 
     p_srtp->session_inited = PJ_FALSE;
     pj_bzero(&p_srtp->rx_policy, sizeof(p_srtp->rx_policy));
@@ -1486,8 +1486,8 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     /* Check if multiplexing is allowed and the payload indicates RTCP. */
     if (srtp->use_rtcp_mux) {
         pjmedia_rtp_hdr *hdr = (pjmedia_rtp_hdr *)pkt;
-  
-        if (hdr->pt >= 64 && hdr->pt <= 95) {   
+
+        if (hdr->pt >= 64 && hdr->pt <= 95) {
             pj_lock_release(srtp->mutex);
             srtp_rtcp_cb(srtp, pkt, size);
             return;
@@ -1497,11 +1497,11 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 #if TEST_ROC
     if (srtp->setting.rx_roc.ssrc == 0) {
         srtp_err_status_t status;
-        
+
         srtp->rx_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
-        status = srtp_set_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc, 
+        status = srtp_set_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc,
                                      (srtp->offerer_side? 2: 1));
-        if (status == srtp_err_status_ok) {     
+        if (status == srtp_err_status_ok) {
             srtp->setting.rx_roc.ssrc = srtp->rx_ssrc;
             srtp->setting.rx_roc.roc = (srtp->offerer_side? 2: 1);
 
@@ -1513,7 +1513,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         }
     }
 #endif
-    
+
     err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
 
 #if PJMEDIA_SRTP_CHECK_RTP_SEQ_ON_RESTART
@@ -1530,21 +1530,22 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         pjmedia_srtp_crypto tx, rx;
         pj_status_t status;
 
-        /* Stop SRTP first, otherwise srtp_start() will maintain current
-         * roll-over counter.
-         */
-        pjmedia_transport_srtp_stop((pjmedia_transport*)srtp);
+	tx = srtp->tx_policy;
+	rx = srtp->rx_policy;
 
-        tx = srtp->tx_policy;
-        rx = srtp->rx_policy;
-        status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
-                                              &tx, &rx);
-        if (status != PJ_SUCCESS) {
-            PJ_LOG(5,(srtp->pool->obj_name, "Failed to restart SRTP, err=%s",
-                      get_libsrtp_errstr(err)));
-        } else if (!srtp->bypass_srtp) {
-            err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
-        }
+	/* Stop SRTP first, otherwise srtp_start() will maintain current
+	 * roll-over counter.
+	 */
+	pjmedia_transport_srtp_stop((pjmedia_transport*)srtp);
+
+	status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
+					      &tx, &rx);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(5,(srtp->pool->obj_name, "Failed to restart SRTP, err=%s",
+		      get_libsrtp_errstr(err)));
+	} else if (!srtp->bypass_srtp) {
+	    err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
+	}
     }
 #if PJMEDIA_SRTP_CHECK_ROC_ON_RESTART
     else

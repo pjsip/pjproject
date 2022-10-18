@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/rtp.h>
 #include <pjmedia/errno.h>
@@ -34,15 +34,15 @@
 #define MAX_MISORDER    ((pj_int16_t)100)
 #define MIN_SEQUENTIAL  ((pj_int16_t)2)
 
-static void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *seq_ctrl, 
+static void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *seq_ctrl,
                                     pj_uint16_t seq);
 
 
 PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
-                                              int default_pt, 
+                                              int default_pt,
                                               pj_uint32_t sender_ssrc )
 {
-    PJ_LOG(5, (THIS_FILE, 
+    PJ_LOG(5, (THIS_FILE,
                "pjmedia_rtp_session_init: ses=%p, default_pt=%d, ssrc=0x%x",
                ses, default_pt, sender_ssrc));
 
@@ -66,7 +66,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
     /* According to RFC 3711, it should be random within 2^15 bit */
     ses->out_extseq = pj_rand() & 0x7FFF;
     ses->peer_ssrc = 0;
-    
+
     /* Build default header for outgoing RTP packet. */
     ses->out_hdr.v = RTP_VERSION;
     ses->out_hdr.p = 0;
@@ -84,7 +84,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjmedia_rtp_session_init2( 
+PJ_DEF(pj_status_t) pjmedia_rtp_session_init2(
                                     pjmedia_rtp_session *ses,
                                     pjmedia_rtp_session_setting settings)
 {
@@ -121,7 +121,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init2(
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses, 
+PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses,
                                             int pt, int m,
                                             int payload_len, int ts_len,
                                             const void **rtphdr, int *hdrlen )
@@ -151,7 +151,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses,
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses, 
+PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
                                             const void *pkt, int pkt_len,
                                             const pjmedia_rtp_hdr **hdr,
                                             const void **payload,
@@ -159,7 +159,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
 {
     pjmedia_rtp_dec_hdr dec_hdr;
 
-    return pjmedia_rtp_decode_rtp2(ses, pkt, pkt_len, hdr, &dec_hdr, 
+    return pjmedia_rtp_decode_rtp2(ses, pkt, pkt_len, hdr, &dec_hdr,
                                    payload, payloadlen);
 }
 
@@ -187,6 +187,11 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
     /* Payload is located right after header plus CSRC */
     offset = sizeof(pjmedia_rtp_hdr) + ((*hdr)->cc * sizeof(pj_uint32_t));
 
+    /* Check that offset is less than packet size */
+    if (offset >= pkt_len) {
+        return PJMEDIA_RTP_EINLEN;
+    }
+
     /* Decode RTP extension. */
     if ((*hdr)->x) {
         if (offset + sizeof (pjmedia_rtp_ext_hdr) > (unsigned)pkt_len)
@@ -201,14 +206,14 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
         dec_hdr->ext_len = 0;
     }
 
-    /* Check that offset is less than packet size */
-    if (offset > pkt_len)
-        return PJMEDIA_RTP_EINLEN;
+    /* Check again that offset is still less than packet size */
+    if (offset >= pkt_len)
+	return PJMEDIA_RTP_EINLEN;
 
     /* Find and set payload. */
     *payload = ((pj_uint8_t*)pkt) + offset;
     *payloadlen = pkt_len - offset;
- 
+
     /* Remove payload padding if any */
     if ((*hdr)->p && *payloadlen > 0) {
         pj_uint8_t pad_len;
@@ -222,14 +227,14 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
 }
 
 
-PJ_DEF(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, 
+PJ_DEF(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses,
                                          const pjmedia_rtp_hdr *hdr,
                                          pjmedia_rtp_status *p_seq_st)
 {
     pjmedia_rtp_session_update2(ses, hdr, p_seq_st, PJ_TRUE);
 }
 
-PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses, 
+PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
                                           const pjmedia_rtp_hdr *hdr,
                                           pjmedia_rtp_status *p_seq_st,
                                           pj_bool_t check_pt)
@@ -237,7 +242,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
     pjmedia_rtp_status seq_st;
 
     /* for now check_pt MUST be either PJ_TRUE or PJ_FALSE.
-     * In the future we might change check_pt from boolean to 
+     * In the future we might change check_pt from boolean to
      * unsigned integer to accommodate more flags.
      */
     pj_assert(check_pt==PJ_TRUE || check_pt==PJ_FALSE);
@@ -305,13 +310,13 @@ void pjmedia_rtp_seq_init(pjmedia_rtp_seq_session *sess, pj_uint16_t seq)
 }
 
 
-void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess, 
+void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
                              pj_uint16_t seq,
                              pjmedia_rtp_status *seq_status)
 {
     pj_uint16_t udelta = (pj_uint16_t) (seq - sess->max_seq);
     pjmedia_rtp_status st;
-    
+
     /* Init status */
     st.status.value = 0;
     st.diff = 0;
@@ -323,7 +328,7 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
     if (sess->probation) {
 
         st.status.flag.probation = 1;
-        
+
         if (seq == sess->max_seq+ 1) {
             /* packet is in sequence */
             st.diff = 1;
@@ -385,12 +390,10 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
          */
         st.status.flag.outorder = 1;
     }
-    
+
 
     if (seq_status) {
         seq_status->diff = st.diff;
         seq_status->status.value = st.status.value;
     }
 }
-
-

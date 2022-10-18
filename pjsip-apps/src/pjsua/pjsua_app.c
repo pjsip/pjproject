@@ -1940,6 +1940,12 @@ static pj_status_t app_init(void)
     return PJ_SUCCESS;
 
 on_error:
+
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    /* Wipe out TLS key settings in transport configs */
+    pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
+#endif
+
     pj_pool_release(tmp_pool);
     app_destroy();
     return status;
@@ -2096,6 +2102,11 @@ static pj_status_t app_destroy(void)
         }
     }
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    /* Wipe out TLS key settings in transport configs */
+    pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
+#endif
+
     pj_pool_safe_release(&app_config.pool);
 
     status = pjsua_destroy();
@@ -2105,11 +2116,6 @@ static pj_status_t app_destroy(void)
         cli_fe = app_config.cli_cfg.cli_fe;
         cli_telnet_port = app_config.cli_cfg.telnet_cfg.port;   
     }
-
-#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
-    /* Wipe out TLS key settings in transport configs */
-    pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
-#endif
 
     /* Reset config */
     pj_bzero(&app_config, sizeof(app_config));

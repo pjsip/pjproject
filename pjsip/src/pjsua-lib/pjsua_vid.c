@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
@@ -287,7 +287,7 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_get_info(pjmedia_vid_dev_index id,
 PJ_DEF(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id)
 {
     pjsua_vid_win_id wid = vid_preview_get_win(id, PJ_FALSE);
-    
+
     return (wid != PJSUA_INVALID_ID? PJ_TRUE: PJ_FALSE);
 }
 
@@ -301,7 +301,7 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_set_setting( pjmedia_vid_dev_index id,
 {
     pj_status_t status = PJ_SUCCESS;
     pjsua_vid_win_id wid;
-    
+
     PJSUA_LOCK();
     wid = vid_preview_get_win(id, PJ_FALSE);
     if (wid != PJSUA_INVALID_ID) {
@@ -323,11 +323,11 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_set_setting( pjmedia_vid_dev_index id,
 
     if (keep) {
         pjmedia_vid_dev_info info;
-            
+
         status = pjmedia_vid_dev_get_info(id, &info);
         if (status != PJ_SUCCESS || (info.dir & PJMEDIA_DIR_CAPTURE) == 0)
             return status;
-        
+
         /* Get real capture ID, if set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV */
         id = info.id;
         status = pjmedia_vid_dev_param_set_cap(&pjsua_var.vid_param[id],
@@ -336,7 +336,7 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_set_setting( pjmedia_vid_dev_index id,
             pjsua_var.vid_caps[id] |= cap;
         }
     }
-    
+
     return status;
 }
 
@@ -349,9 +349,9 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_get_setting( pjmedia_vid_dev_index id,
 {
     pj_status_t status = PJ_SUCCESS;
     pjsua_vid_win_id wid;
-    
+
     PJSUA_LOCK();
-    wid = vid_preview_get_win(id, PJ_FALSE);    
+    wid = vid_preview_get_win(id, PJ_FALSE);
     if (wid != PJSUA_INVALID_ID) {
         pjsua_vid_win *w;
         pjmedia_vid_dev_stream *cap_dev;
@@ -360,20 +360,20 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_get_setting( pjmedia_vid_dev_index id,
         cap_dev = pjmedia_vid_port_get_stream(w->vp_cap);
 
         status = pjmedia_vid_dev_stream_get_cap(cap_dev, cap, pval);
-        
+
         PJSUA_UNLOCK();
     } else {
         pjmedia_vid_dev_info info;
-        
+
         PJSUA_UNLOCK();
 
         status = pjmedia_vid_dev_get_info(id, &info);
         if (status != PJ_SUCCESS)
             return status;
-        
+
         /* Get real device ID, if set to default device */
         id = info.id;
-    
+
         if ((pjsua_var.vid_caps[id] & cap) != 0) {
             status = pjmedia_vid_dev_param_get_cap(&pjsua_var.vid_param[id],
                                                    cap, pval);
@@ -423,7 +423,7 @@ static pj_status_t find_codecs_with_rtp_packing(
     const pjmedia_vid_codec_info *info[32];
     unsigned i, j, count_ = PJ_ARRAY_SIZE(info);
     pj_status_t status;
-    
+
     status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, codec_id,
                                                      &count_, info, NULL);
     if (status != PJ_SUCCESS)
@@ -605,7 +605,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_vid_preview_get_vid_conf_port(
         conf_id = w->cap_slot;
     }
     PJSUA_UNLOCK();
-    
+
     return conf_id;
 }
 
@@ -792,7 +792,7 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
         } else {
             update_param(PJMEDIA_VID_DEV_CAP_FORMAT, fmt);
         }
-        
+
         update_param(PJMEDIA_VID_DEV_CAP_ORIENTATION, orient);
 
 #undef update_param
@@ -900,7 +900,7 @@ static void free_vid_win(pjsua_vid_win_id wid)
 {
     pjsua_vid_win *w = &pjsua_var.win[wid];
     unsigned num_locks = 0;
-    
+
     PJ_LOG(4,(THIS_FILE, "Window %d: destroying..", wid));
     pj_log_push_indent();
 
@@ -933,7 +933,7 @@ static void free_vid_win(pjsua_vid_win_id wid)
 static void inc_vid_win(pjsua_vid_win_id wid)
 {
     pjsua_vid_win *w;
-    
+
     pj_assert(wid >= 0 && wid < PJSUA_MAX_VID_WINS);
 
     w = &pjsua_var.win[wid];
@@ -944,7 +944,7 @@ static void inc_vid_win(pjsua_vid_win_id wid)
 static void dec_vid_win(pjsua_vid_win_id wid)
 {
     pjsua_vid_win *w;
-    
+
     pj_assert(wid >= 0 && wid < PJSUA_MAX_VID_WINS);
 
     w = &pjsua_var.win[wid];
@@ -1072,10 +1072,11 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
                                      const pjmedia_sdp_session *remote_sdp)
 {
     pjsua_call *call = call_med->call;
+    unsigned strm_idx = call_med->idx;
     pjsua_acc  *acc  = &pjsua_var.acc[call->acc_id];
     pjmedia_port *media_port;
     pj_status_t status;
- 
+
     PJ_UNUSED_ARG(tmp_pool);
     PJ_UNUSED_ARG(local_sdp);
     PJ_UNUSED_ARG(remote_sdp);
@@ -1086,14 +1087,14 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
     si->rtcp_sdes_bye_disabled = pjsua_var.media_cfg.no_rtcp_sdes_bye;;
 
     /* Check if no media is active */
-    if (si->dir != PJMEDIA_DIR_NONE) {
-        /* Optionally, application may modify other stream settings here
-         * (such as jitter buffer parameters, codec ptime, etc.)
-         */
-        si->jb_init = pjsua_var.media_cfg.jb_init;
-        si->jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
-        si->jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
-        si->jb_max = pjsua_var.media_cfg.jb_max;
+    if (local_sdp->media[strm_idx]->desc.port != 0) {
+	/* Optionally, application may modify other stream settings here
+	 * (such as jitter buffer parameters, codec ptime, etc.)
+	 */
+	si->jb_init = pjsua_var.media_cfg.jb_init;
+	si->jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
+	si->jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
+	si->jb_max = pjsua_var.media_cfg.jb_max;
 
         /* Set SSRC and CNAME */
         si->ssrc = call_med->ssrc;
@@ -1121,7 +1122,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
         si->ka_cfg = acc->cfg.stream_ka_cfg;
 #endif
 
-        /* Try to get shared format ID between the capture device and 
+        /* Try to get shared format ID between the capture device and
          * the encoder to avoid format conversion in the capture device.
          */
         if (si->dir & PJMEDIA_DIR_ENCODING) {
@@ -1137,11 +1138,11 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
             /* Find matched format ID */
             for (i = 0; i < codec_info->dec_fmt_id_cnt; ++i) {
                 for (j = 0; j < dev_info.fmt_cnt; ++j) {
-                    if (codec_info->dec_fmt_id[i] == 
+                    if (codec_info->dec_fmt_id[i] ==
                         (pjmedia_format_id)dev_info.fmt[j].id)
                     {
                         /* Apply the matched format ID to the codec */
-                        si->codec_param->dec_fmt.id = 
+                        si->codec_param->dec_fmt.id =
                                                 codec_info->dec_fmt_id[i];
 
                         /* Force outer loop to break */
@@ -1154,7 +1155,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_precreate) {
             pjsua_on_stream_precreate_param prm;
-            prm.stream_idx = call_med->idx;
+            prm.stream_idx = strm_idx;
             prm.stream_info.type = PJMEDIA_TYPE_VIDEO;
             prm.stream_info.info.vid = *si;
             (*pjsua_var.ua_cfg.cb.on_stream_precreate)(call->index, &prm);
@@ -1234,7 +1235,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
             pjmedia_event_subscribe(NULL, &call_media_on_event,
                                     call_med, media_port);
 #endif
-            
+
             /* Register renderer to stream events */
             pjmedia_vid_port_subscribe_event(w->vp_rend, media_port);
 
@@ -1333,7 +1334,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 
     PJ_LOG(4,(THIS_FILE, "Stopping video stream.."));
     pj_log_push_indent();
-    
+
     pjmedia_vid_stream_get_info(strm, &call_med->prev_vid_si);
 
     pjmedia_vid_stream_send_rtcp_bye(strm);
@@ -1397,7 +1398,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
         while (act_timer != &pjsua_var.active_timer_list) {
             if (act_timer->cb == &call_med_event_cb) {
                 pjsua_event_list *eve;
-                
+
                 eve = (pjsua_event_list *)act_timer->user_data;
 
                 if (eve->call_id == (int)call_med->call->index &&
@@ -1429,7 +1430,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
                     break;
                 }
             }
-            act_timer = act_timer->next;            
+            act_timer = act_timer->next;
         }
         if (act_timer == &pjsua_var.active_timer_list)
             break;
@@ -1439,7 +1440,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
         /* Decrement ref count of preview video window */
         dec_vid_win(call_med->strm.v.cap_win_id);
         call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
-        
+
         PJ_LOG(4,(THIS_FILE, "Call %d media %d: Preview video window "
                              "released", call_med->call->index,
                              call_med->idx));
@@ -1694,7 +1695,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
 
     PJSUA_LOCK();
     w = &pjsua_var.win[wid];
-    
+
     wi->is_native = w->is_native;
 
     if (w->is_native) {
@@ -1708,7 +1709,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
             if (!cap_strm) {
                 status = PJ_EINVAL;
             } else {
-                status = pjmedia_vid_dev_stream_get_cap(cap_strm, cap, 
+                status = pjmedia_vid_dev_stream_get_cap(cap_strm, cap,
                                                         &wi->hwnd);
             }
         }
@@ -1859,7 +1860,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_win( pjsua_vid_win_id wid,
         return PJ_EINVAL;
     }
 
-    status = pjmedia_vid_dev_stream_set_cap(s, 
+    status = pjmedia_vid_dev_stream_set_cap(s,
                             PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW, win);
 
     PJSUA_UNLOCK();
@@ -2168,7 +2169,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
     /* Verify and normalize media index */
     if (med_idx == -1) {
         int first_active;
-        
+
         call_get_vid_strm_info(call, &first_active, NULL, NULL, NULL);
         if (first_active == -1)
             return PJ_ENOTFOUND;
@@ -2295,7 +2296,7 @@ on_error:
 
             return status;
         }
-    
+
     } else {
 
         pj_pool_t *pool = call->inv->pool_prov;
@@ -2336,7 +2337,7 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     /* Verify and normalize media index */
     if (med_idx == -1) {
         int first_active;
-        
+
         call_get_vid_strm_info(call, &first_active, NULL, NULL, NULL);
         if (first_active == -1)
             return PJ_ENOTFOUND;
@@ -2400,7 +2401,7 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     }
 
     media_event_unsubscribe(NULL, &call_media_on_event, call_med, w->vp_cap);
-    
+
     /* Disconnect the old capture device to stream encoding port */
     status = pjsua_vid_conf_disconnect(w->cap_slot,
                                        call_med->strm.v.strm_enc_slot);
@@ -2522,7 +2523,7 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
     /* Verify and normalize media index */
     if (med_idx == -1) {
         int first_active;
-        
+
         call_get_vid_strm_info(call, &first_active, NULL, NULL, NULL);
         if (first_active == -1)
             return PJ_ENOTFOUND;
@@ -2533,7 +2534,7 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
     call_med = &call->media[med_idx];
 
     /* Verify if the stream is transmitting video */
-    if (call_med->type != PJMEDIA_TYPE_VIDEO || 
+    if (call_med->type != PJMEDIA_TYPE_VIDEO ||
         (enable && (call_med->dir & PJMEDIA_DIR_ENCODING) == 0))
     {
         return PJ_EINVAL;
@@ -2546,7 +2547,7 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
             if (status != PJ_SUCCESS)
                 return status;
         }
-        
+
         /* Resume stream in encoding direction */
         status = pjmedia_vid_stream_resume(call_med->strm.v.stream,
                                            PJMEDIA_DIR_ENCODING);
@@ -2557,9 +2558,9 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
         /* Pause stream in encoding direction */
         status = pjmedia_vid_stream_pause( call_med->strm.v.stream,
                                            PJMEDIA_DIR_ENCODING);
-        
+
         PJSUA_LOCK();
-        
+
         wid = vid_preview_get_win(call_med->strm.v.cap_dev, PJ_FALSE);
         if (wid != PJSUA_INVALID_ID) {
             w = &pjsua_var.win[wid];
@@ -2576,7 +2577,7 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
             dec_vid_win(call_med->strm.v.cap_win_id);
             call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
         }
-        
+
         PJSUA_UNLOCK();
     }
 
@@ -2595,7 +2596,7 @@ static pj_status_t call_send_vid_keyframe(pjsua_call *call,
     /* Verify and normalize media index */
     if (med_idx == -1) {
         int first_active;
-        
+
         call_get_vid_strm_info(call, &first_active, NULL, NULL, NULL);
         if (first_active == -1)
             return PJ_ENOTFOUND;
@@ -2650,7 +2651,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
     if (param_.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
         pjsua_acc_config *acc_cfg = &pjsua_var.acc[call->acc_id].cfg;
         param_.cap_dev = acc_cfg->vid_cap_dev;
-        
+
         /* If the account default video capture device is
          * PJMEDIA_VID_DEFAULT_CAPTURE_DEV, replace it with
          * global default video capture device.

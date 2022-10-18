@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_parser.h>
@@ -84,7 +84,7 @@ PJ_DEF(const pjsip_method*) pjsip_get_options_method(void)
 }
 
 
-static const pj_str_t *method_names[] = 
+static const pj_str_t *method_names[] =
 {
     &pjsip_invite_method.name,
     &pjsip_cancel_method.name,
@@ -94,7 +94,7 @@ static const pj_str_t *method_names[] =
     &pjsip_options_method.name
 };
 
-const pjsip_hdr_name_info_t pjsip_hdr_names[] = 
+const pjsip_hdr_name_info_t pjsip_hdr_names[] =
 {
     { "Accept",             6,  NULL },   // PJSIP_H_ACCEPT,
     { "Accept-Encoding",    15, NULL },   // PJSIP_H_ACCEPT_ENCODING,
@@ -251,8 +251,8 @@ static int init_status_phrase()
  * Method.
  */
 
-PJ_DEF(void) pjsip_method_init( pjsip_method *m, 
-                                pj_pool_t *pool, 
+PJ_DEF(void) pjsip_method_init( pjsip_method *m,
+                                pj_pool_t *pool,
                                 const pj_str_t *str)
 {
     pj_str_t dup;
@@ -271,8 +271,8 @@ PJ_DEF(void) pjsip_method_init_np(pjsip_method *m,
 {
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(method_names); ++i) {
-        if (pj_memcmp(str, method_names[i], sizeof(pj_str_t))==0 || 
-            pj_stricmp(str, method_names[i])==0) 
+        if (pj_memcmp(str, method_names[i], sizeof(pj_str_t))==0 ||
+            pj_stricmp(str, method_names[i])==0)
         {
             m->id = (pjsip_method_e)i;
             m->name = *method_names[i];
@@ -304,7 +304,7 @@ PJ_DEF(int) pjsip_method_cmp( const pjsip_method *m1, const pjsip_method *m2)
         /* Method comparison is case sensitive! */
         return pj_strcmp(&m1->name, &m2->name);
     }
-    
+
     return ( m1->id < m2->id ) ? -1 : 1;
 }
 
@@ -332,7 +332,7 @@ PJ_DEF(pjsip_msg*) pjsip_msg_clone( pj_pool_t *pool, const pjsip_msg *src)
     /* Clone request/status line */
     if (src->type == PJSIP_REQUEST_MSG) {
         pjsip_method_copy(pool, &dst->line.req.method, &src->line.req.method);
-        dst->line.req.uri = (pjsip_uri*) pjsip_uri_clone(pool, 
+        dst->line.req.uri = (pjsip_uri*) pjsip_uri_clone(pool,
                                                          src->line.req.uri);
     } else {
         dst->line.status.code = src->line.status.code;
@@ -426,7 +426,7 @@ PJ_DEF(void*)  pjsip_msg_find_hdr_by_names( const pjsip_msg *msg,
     return pjsip_hdr_find_by_names(&msg->hdr, name, sname, start);
 }
 
-PJ_DEF(void*) pjsip_msg_find_remove_hdr( pjsip_msg *msg, 
+PJ_DEF(void*) pjsip_msg_find_remove_hdr( pjsip_msg *msg,
                                          pjsip_hdr_e hdr_type, void *start)
 {
     pjsip_hdr *hdr = (pjsip_hdr*) pjsip_msg_find_hdr(msg, hdr_type, start);
@@ -436,7 +436,7 @@ PJ_DEF(void*) pjsip_msg_find_remove_hdr( pjsip_msg *msg,
     return hdr;
 }
 
-PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg, 
+PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
                                     char *buf, pj_size_t size)
 {
     char *p=buf, *end=buf+size;
@@ -553,7 +553,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
             }
             pj_memcpy(p, clen_hdr.ptr, clen_hdr.slen);
             p += clen_hdr.slen;
-            
+
             /* Print blanks after "Content-Length:", this is where we'll put
              * the content length value after we know the length of the
              * body.
@@ -564,7 +564,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
             *p++ = '\r';
             *p++ = '\n';
         }
-        
+
         /* Add blank newline. */
         *p++ = '\r';
         *p++ = '\n';
@@ -641,8 +641,8 @@ PJ_DEF(const pj_str_t*) pjsip_get_status_text(int code)
         init_status_phrase();
     }
 
-    return (code>=100 && 
-            code<(int)(sizeof(status_phrase)/sizeof(status_phrase[0]))) ? 
+    return (code>=100 &&
+            code<(int)(sizeof(status_phrase)/sizeof(status_phrase[0]))) ?
         &status_phrase[code] : &status_phrase[0];
 }
 
@@ -727,14 +727,14 @@ PJ_DEF(void) pjsip_media_type_cp( pj_pool_t *pool,
  * Generic pjsip_hdr_names/hvalue header.
  */
 
-static int pjsip_generic_string_hdr_print( pjsip_generic_string_hdr *hdr, 
+static int pjsip_generic_string_hdr_print( pjsip_generic_string_hdr *hdr,
                                     char *buf, pj_size_t size);
-static pjsip_generic_string_hdr* pjsip_generic_string_hdr_clone( pj_pool_t *pool, 
+static pjsip_generic_string_hdr* pjsip_generic_string_hdr_clone( pj_pool_t *pool,
                                                    const pjsip_generic_string_hdr *hdr);
 static pjsip_generic_string_hdr* pjsip_generic_string_hdr_shallow_clone( pj_pool_t *pool,
                                                            const pjsip_generic_string_hdr *hdr );
 
-static pjsip_hdr_vptr generic_hdr_vptr = 
+static pjsip_hdr_vptr generic_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_generic_string_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_generic_string_hdr_shallow_clone,
@@ -796,9 +796,9 @@ static int pjsip_generic_string_hdr_print( pjsip_generic_string_hdr *hdr,
                                            char *buf, pj_size_t size)
 {
     char *p = buf;
-    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form?
                             &hdr->sname : &hdr->name;
-    
+
     if ((pj_ssize_t)size < hname->slen + hdr->hvalue.slen + 5)
         return -1;
 
@@ -813,11 +813,11 @@ static int pjsip_generic_string_hdr_print( pjsip_generic_string_hdr *hdr,
     return (int)(p - buf);
 }
 
-static pjsip_generic_string_hdr* pjsip_generic_string_hdr_clone( pj_pool_t *pool, 
+static pjsip_generic_string_hdr* pjsip_generic_string_hdr_clone( pj_pool_t *pool,
                                                    const pjsip_generic_string_hdr *rhs)
 {
     pjsip_generic_string_hdr *hdr;
-    
+
     hdr = pjsip_generic_string_hdr_create(pool, &rhs->name, &rhs->hvalue);
 
     hdr->type = rhs->type;
@@ -838,14 +838,14 @@ static pjsip_generic_string_hdr* pjsip_generic_string_hdr_shallow_clone( pj_pool
  * Generic pjsip_hdr_names/integer value header.
  */
 
-static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr, 
+static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr,
                                         char *buf, pj_size_t size);
-static pjsip_generic_int_hdr* pjsip_generic_int_hdr_clone( pj_pool_t *pool, 
+static pjsip_generic_int_hdr* pjsip_generic_int_hdr_clone( pj_pool_t *pool,
                                                    const pjsip_generic_int_hdr *hdr);
 static pjsip_generic_int_hdr* pjsip_generic_int_hdr_shallow_clone( pj_pool_t *pool,
                                                            const pjsip_generic_int_hdr *hdr );
 
-static pjsip_hdr_vptr generic_int_hdr_vptr = 
+static pjsip_hdr_vptr generic_int_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_generic_int_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_generic_int_hdr_shallow_clone,
@@ -876,11 +876,11 @@ PJ_DEF(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_create( pj_pool_t *pool,
     return pjsip_generic_int_hdr_init(pool, mem, hnames, value);
 }
 
-static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr, 
+static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr,
                                         char *buf, pj_size_t size)
 {
     char *p = buf;
-    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form?
                             &hdr->sname : &hdr->name;
 
     if ((pj_ssize_t)size < hname->slen + 15)
@@ -896,7 +896,7 @@ static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr,
     return (int)(p - buf);
 }
 
-static pjsip_generic_int_hdr* pjsip_generic_int_hdr_clone( pj_pool_t *pool, 
+static pjsip_generic_int_hdr* pjsip_generic_int_hdr_clone( pj_pool_t *pool,
                                                    const pjsip_generic_int_hdr *rhs)
 {
     pjsip_generic_int_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_generic_int_hdr);
@@ -917,12 +917,12 @@ static pjsip_generic_int_hdr* pjsip_generic_int_hdr_shallow_clone( pj_pool_t *po
  * Generic array header.
  */
 static int pjsip_generic_array_hdr_print( pjsip_generic_array_hdr *hdr, char *buf, pj_size_t size);
-static pjsip_generic_array_hdr* pjsip_generic_array_hdr_clone( pj_pool_t *pool, 
+static pjsip_generic_array_hdr* pjsip_generic_array_hdr_clone( pj_pool_t *pool,
                                                  const pjsip_generic_array_hdr *hdr);
-static pjsip_generic_array_hdr* pjsip_generic_array_hdr_shallow_clone( pj_pool_t *pool, 
+static pjsip_generic_array_hdr* pjsip_generic_array_hdr_shallow_clone( pj_pool_t *pool,
                                                  const pjsip_generic_array_hdr *hdr);
 
-static pjsip_hdr_vptr generic_array_hdr_vptr = 
+static pjsip_hdr_vptr generic_array_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_generic_array_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_generic_array_hdr_shallow_clone,
@@ -953,11 +953,11 @@ PJ_DEF(pjsip_generic_array_hdr*) pjsip_generic_array_hdr_create( pj_pool_t *pool
 
 }
 
-static int pjsip_generic_array_hdr_print( pjsip_generic_array_hdr *hdr, 
+static int pjsip_generic_array_hdr_print( pjsip_generic_array_hdr *hdr,
                                           char *buf, pj_size_t size)
 {
     char *p = buf, *endbuf = buf+size;
-    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form?
                             &hdr->sname : &hdr->name;
 
     copy_advance(p, (*hname));
@@ -976,7 +976,7 @@ static int pjsip_generic_array_hdr_print( pjsip_generic_array_hdr *hdr,
     return (int)(p - buf);
 }
 
-static pjsip_generic_array_hdr* pjsip_generic_array_hdr_clone( pj_pool_t *pool, 
+static pjsip_generic_array_hdr* pjsip_generic_array_hdr_clone( pj_pool_t *pool,
                                                  const pjsip_generic_array_hdr *rhs)
 {
     unsigned i;
@@ -991,7 +991,7 @@ static pjsip_generic_array_hdr* pjsip_generic_array_hdr_clone( pj_pool_t *pool,
 }
 
 
-static pjsip_generic_array_hdr* pjsip_generic_array_hdr_shallow_clone( pj_pool_t *pool, 
+static pjsip_generic_array_hdr* pjsip_generic_array_hdr_shallow_clone( pj_pool_t *pool,
                                                  const pjsip_generic_array_hdr *rhs)
 {
     pjsip_generic_array_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_generic_array_hdr);
@@ -1077,7 +1077,7 @@ static int pjsip_clen_hdr_print( pjsip_clen_hdr *hdr, char *buf, pj_size_t size)
 static pjsip_clen_hdr* pjsip_clen_hdr_clone( pj_pool_t *pool, const pjsip_clen_hdr *hdr);
 #define pjsip_clen_hdr_shallow_clone pjsip_clen_hdr_clone
 
-static pjsip_hdr_vptr clen_hdr_vptr = 
+static pjsip_hdr_vptr clen_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_clen_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_clen_hdr_shallow_clone,
@@ -1102,12 +1102,12 @@ PJ_DEF(pjsip_clen_hdr*) pjsip_clen_hdr_create( pj_pool_t *pool )
     return pjsip_clen_hdr_init(pool, mem);
 }
 
-static int pjsip_clen_hdr_print( pjsip_clen_hdr *hdr, 
+static int pjsip_clen_hdr_print( pjsip_clen_hdr *hdr,
                                  char *buf, pj_size_t size)
 {
     char *p = buf;
     int len;
-    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form?
                             &hdr->sname : &hdr->name;
 
     if ((pj_ssize_t)size < hname->slen + 14)
@@ -1141,7 +1141,7 @@ static int pjsip_cseq_hdr_print( pjsip_cseq_hdr *hdr, char *buf, pj_size_t size)
 static pjsip_cseq_hdr* pjsip_cseq_hdr_clone( pj_pool_t *pool, const pjsip_cseq_hdr *hdr);
 static pjsip_cseq_hdr* pjsip_cseq_hdr_shallow_clone( pj_pool_t *pool, const pjsip_cseq_hdr *hdr );
 
-static pjsip_hdr_vptr cseq_hdr_vptr = 
+static pjsip_hdr_vptr cseq_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_cseq_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_cseq_hdr_shallow_clone,
@@ -1195,7 +1195,7 @@ static int pjsip_cseq_hdr_print( pjsip_cseq_hdr *hdr, char *buf, pj_size_t size)
     return (int)(p-buf);
 }
 
-static pjsip_cseq_hdr* pjsip_cseq_hdr_clone( pj_pool_t *pool, 
+static pjsip_cseq_hdr* pjsip_cseq_hdr_clone( pj_pool_t *pool,
                                              const pjsip_cseq_hdr *rhs)
 {
     pjsip_cseq_hdr *hdr = pjsip_cseq_hdr_create(pool);
@@ -1221,7 +1221,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf, pj_size_t
 static pjsip_contact_hdr* pjsip_contact_hdr_clone( pj_pool_t *pool, const pjsip_contact_hdr *hdr);
 static pjsip_contact_hdr* pjsip_contact_hdr_shallow_clone( pj_pool_t *pool, const pjsip_contact_hdr *);
 
-static pjsip_hdr_vptr contact_hdr_vptr = 
+static pjsip_hdr_vptr contact_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_contact_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_contact_hdr_shallow_clone,
@@ -1248,10 +1248,10 @@ PJ_DEF(pjsip_contact_hdr*) pjsip_contact_hdr_create( pj_pool_t *pool )
     return pjsip_contact_hdr_init(pool, mem);
 }
 
-static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf, 
+static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
                                     pj_size_t size)
 {
-    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form?
                             &hdr->sname : &hdr->name;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
@@ -1275,7 +1275,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
         copy_advance_char_check(buf, ':');
         copy_advance_char_check(buf, ' ');
 
-        printed = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR, hdr->uri, 
+        printed = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR, hdr->uri,
                                   buf, endbuf-buf);
         if (printed < 1)
             return -1;
@@ -1316,7 +1316,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 
         printed = (int)pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
                                             &pc->pjsip_TOKEN_SPEC,
-                                            &pc->pjsip_TOKEN_SPEC, 
+                                            &pc->pjsip_TOKEN_SPEC,
                                             ';');
         if (printed < 0)
             return printed;
@@ -1326,7 +1326,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
     }
 }
 
-static pjsip_contact_hdr* pjsip_contact_hdr_clone(pj_pool_t *pool, 
+static pjsip_contact_hdr* pjsip_contact_hdr_clone(pj_pool_t *pool,
                                                   const pjsip_contact_hdr *rhs)
 {
     pjsip_contact_hdr *hdr = pjsip_contact_hdr_create(pool);
@@ -1342,7 +1342,7 @@ static pjsip_contact_hdr* pjsip_contact_hdr_clone(pj_pool_t *pool,
     return hdr;
 }
 
-static pjsip_contact_hdr* 
+static pjsip_contact_hdr*
 pjsip_contact_hdr_shallow_clone( pj_pool_t *pool,
                                  const pjsip_contact_hdr *rhs)
 {
@@ -1356,13 +1356,13 @@ pjsip_contact_hdr_shallow_clone( pj_pool_t *pool,
 /*
  * Content-Type header..
  */
-static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr, char *buf, 
+static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr, char *buf,
                                   pj_size_t size);
-static pjsip_ctype_hdr* pjsip_ctype_hdr_clone(pj_pool_t *pool, 
+static pjsip_ctype_hdr* pjsip_ctype_hdr_clone(pj_pool_t *pool,
                                               const pjsip_ctype_hdr *hdr);
 #define pjsip_ctype_hdr_shallow_clone pjsip_ctype_hdr_clone
 
-static pjsip_hdr_vptr ctype_hdr_vptr = 
+static pjsip_hdr_vptr ctype_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_ctype_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_ctype_hdr_shallow_clone,
@@ -1421,15 +1421,15 @@ PJ_DEF(int) pjsip_media_type_print(char *buf, unsigned len,
     return print_media_type(buf, len, media);
 }
 
-static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr, 
+static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr,
                                   char *buf, pj_size_t size)
 {
     char *p = buf;
     int len;
-    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form?
                             &hdr->sname : &hdr->name;
 
-    if ((pj_ssize_t)size < hname->slen + 
+    if ((pj_ssize_t)size < hname->slen +
                            hdr->media.type.slen + hdr->media.subtype.slen + 8)
     {
         return -1;
@@ -1447,7 +1447,7 @@ static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr,
     return (int)(p-buf);
 }
 
-static pjsip_ctype_hdr* pjsip_ctype_hdr_clone( pj_pool_t *pool, 
+static pjsip_ctype_hdr* pjsip_ctype_hdr_clone( pj_pool_t *pool,
                                                const pjsip_ctype_hdr *rhs)
 {
     pjsip_ctype_hdr *hdr = pjsip_ctype_hdr_create(pool);
@@ -1487,15 +1487,15 @@ PJ_DEF(pjsip_expires_hdr*) pjsip_expires_hdr_create( pj_pool_t *pool,
 /*
  * To or From header.
  */
-static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr, 
+static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
                                    char *buf, pj_size_t size);
-static pjsip_fromto_hdr* pjsip_fromto_hdr_clone( pj_pool_t *pool, 
+static pjsip_fromto_hdr* pjsip_fromto_hdr_clone( pj_pool_t *pool,
                                                  const pjsip_fromto_hdr *hdr);
 static pjsip_fromto_hdr* pjsip_fromto_hdr_shallow_clone( pj_pool_t *pool,
                                                          const pjsip_fromto_hdr *hdr);
 
 
-static pjsip_hdr_vptr fromto_hdr_vptr = 
+static pjsip_hdr_vptr fromto_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_fromto_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_fromto_hdr_shallow_clone,
@@ -1561,21 +1561,21 @@ PJ_DEF(pjsip_to_hdr*) pjsip_fromto_hdr_set_to( pjsip_fromto_hdr *hdr )
     return hdr;
 }
 
-static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr, 
+static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
                                    char *buf, pj_size_t size)
 {
     pj_ssize_t printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
-    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form?
                             &hdr->sname : &hdr->name;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(buf, (*hname));
-    *buf++ = ':';
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ':');
+    copy_advance_char_check(buf, ' ');
 
-    printed = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, hdr->uri, 
+    printed = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, hdr->uri,
                               buf, endbuf-buf);
     if (printed < 1)
         return -1;
@@ -1585,7 +1585,7 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
     copy_advance_pair_escape(buf, ";tag=", 5, hdr->tag,
                              pc->pjsip_TOKEN_SPEC);
 
-    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
+    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
                                    &pc->pjsip_TOKEN_SPEC,
                                    &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
@@ -1595,7 +1595,7 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
     return (int)(buf-startbuf);
 }
 
-static pjsip_fromto_hdr* pjsip_fromto_hdr_clone( pj_pool_t *pool, 
+static pjsip_fromto_hdr* pjsip_fromto_hdr_clone( pj_pool_t *pool,
                                                  const pjsip_fromto_hdr *rhs)
 {
     pjsip_fromto_hdr *hdr = pjsip_from_hdr_create(pool);
@@ -1610,7 +1610,7 @@ static pjsip_fromto_hdr* pjsip_fromto_hdr_clone( pj_pool_t *pool,
     return hdr;
 }
 
-static pjsip_fromto_hdr* 
+static pjsip_fromto_hdr*
 pjsip_fromto_hdr_shallow_clone( pj_pool_t *pool,
                                 const pjsip_fromto_hdr *rhs)
 {
@@ -1679,7 +1679,7 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *r, char *buf, pj_size_t s
 static pjsip_routing_hdr* pjsip_routing_hdr_clone( pj_pool_t *pool, const pjsip_routing_hdr *r );
 static pjsip_routing_hdr* pjsip_routing_hdr_shallow_clone( pj_pool_t *pool, const pjsip_routing_hdr *r );
 
-static pjsip_hdr_vptr routing_hdr_vptr = 
+static pjsip_hdr_vptr routing_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_routing_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_routing_hdr_shallow_clone,
@@ -1753,7 +1753,7 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     pjsip_sip_uri *sip_uri;
     pjsip_param *p;
 
-    /* Check the proprietary param 'hide', don't print this header 
+    /* Check the proprietary param 'hide', don't print this header
      * if it exists in the route URI.
      */
     if (PJSIP_URI_SCHEME_IS_SIPS(hdr->name_addr.uri) ||
@@ -1776,17 +1776,17 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     /* Route and Record-Route don't compact forms */
 
     copy_advance(buf, hdr->name);
-    *buf++ = ':';
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ':');
+    copy_advance_char_check(buf, ' ');
 
-    printed = pjsip_uri_print(PJSIP_URI_IN_ROUTING_HDR, &hdr->name_addr, buf, 
+    printed = pjsip_uri_print(PJSIP_URI_IN_ROUTING_HDR, &hdr->name_addr, buf,
                               endbuf-buf);
     if (printed < 1)
         return -1;
     buf += printed;
 
-    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
-                                   &pc->pjsip_TOKEN_SPEC, 
+    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
+                                   &pc->pjsip_TOKEN_SPEC,
                                    &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
         return -1;
@@ -1843,15 +1843,15 @@ PJ_DEF(pjsip_require_hdr*) pjsip_require_hdr_create(pj_pool_t *pool)
 /*
  * Retry-After header.
  */
-static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *r, 
+static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *r,
                                        char *buf, pj_size_t size );
-static pjsip_retry_after_hdr* pjsip_retry_after_hdr_clone(pj_pool_t *pool, 
+static pjsip_retry_after_hdr* pjsip_retry_after_hdr_clone(pj_pool_t *pool,
                                                           const pjsip_retry_after_hdr *r);
-static pjsip_retry_after_hdr* 
-pjsip_retry_after_hdr_shallow_clone(pj_pool_t *pool, 
+static pjsip_retry_after_hdr*
+pjsip_retry_after_hdr_shallow_clone(pj_pool_t *pool,
                                     const pjsip_retry_after_hdr *r );
 
-static pjsip_hdr_vptr retry_after_hdr_vptr = 
+static pjsip_hdr_vptr retry_after_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_retry_after_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_retry_after_hdr_shallow_clone,
@@ -1882,7 +1882,7 @@ PJ_DEF(pjsip_retry_after_hdr*) pjsip_retry_after_hdr_create(pj_pool_t *pool,
 }
 
 
-static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *hdr, 
+static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *hdr,
                                        char *buf, pj_size_t size)
 {
     char *p = buf;
@@ -1890,7 +1890,7 @@ static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *hdr,
     const pj_str_t *hname = &hdr->name;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
     pj_ssize_t printed;
-    
+
     if ((pj_ssize_t)size < hdr->name.slen + 2+11)
         return -1;
 
@@ -1921,7 +1921,7 @@ static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *hdr,
 
     printed = pjsip_param_print_on(&hdr->param, p, endbuf-p,
                                    &pc->pjsip_TOKEN_SPEC,
-                                   &pc->pjsip_TOKEN_SPEC, 
+                                   &pc->pjsip_TOKEN_SPEC,
                                    ';');
     if (printed < 0)
         return (int)printed;
@@ -1931,7 +1931,7 @@ static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *hdr,
     return (int)(p - buf);
 }
 
-static pjsip_retry_after_hdr* pjsip_retry_after_hdr_clone(pj_pool_t *pool, 
+static pjsip_retry_after_hdr* pjsip_retry_after_hdr_clone(pj_pool_t *pool,
                                                           const pjsip_retry_after_hdr *rhs)
 {
     pjsip_retry_after_hdr *hdr = pjsip_retry_after_hdr_create(pool, rhs->ivalue);
@@ -1940,8 +1940,8 @@ static pjsip_retry_after_hdr* pjsip_retry_after_hdr_clone(pj_pool_t *pool,
     return hdr;
 }
 
-static pjsip_retry_after_hdr* 
-pjsip_retry_after_hdr_shallow_clone(pj_pool_t *pool, 
+static pjsip_retry_after_hdr*
+pjsip_retry_after_hdr_shallow_clone(pj_pool_t *pool,
                                     const pjsip_retry_after_hdr *rhs)
 {
     pjsip_retry_after_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_retry_after_hdr);
@@ -1980,7 +1980,7 @@ PJ_DEF(pjsip_unsupported_hdr*) pjsip_unsupported_hdr_init( pj_pool_t *pool,
                                                            void *mem )
 {
     pjsip_unsupported_hdr *hdr = (pjsip_unsupported_hdr*) mem;
-    
+
     PJ_UNUSED_ARG(pool);
 
     init_hdr(hdr, PJSIP_H_UNSUPPORTED, &generic_array_hdr_vptr);
@@ -2002,7 +2002,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr, char *buf, pj_size_t size);
 static pjsip_via_hdr* pjsip_via_hdr_clone( pj_pool_t *pool, const pjsip_via_hdr *hdr);
 static pjsip_via_hdr* pjsip_via_hdr_shallow_clone( pj_pool_t *pool, const pjsip_via_hdr *hdr );
 
-static pjsip_hdr_vptr via_hdr_vptr = 
+static pjsip_hdr_vptr via_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_via_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_via_hdr_shallow_clone,
@@ -2031,18 +2031,18 @@ PJ_DEF(pjsip_via_hdr*) pjsip_via_hdr_create( pj_pool_t *pool )
     return pjsip_via_hdr_init(pool, mem);
 }
 
-static int pjsip_via_hdr_print( pjsip_via_hdr *hdr, 
+static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
                                 char *buf, pj_size_t size)
 {
     pj_ssize_t printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
     pj_str_t sip_ver = { "SIP/2.0/", 8 };
-    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form?
                             &hdr->sname : &hdr->name;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
-    if ((pj_ssize_t)size < hname->slen + sip_ver.slen + 
+    if ((pj_ssize_t)size < hname->slen + sip_ver.slen +
                            hdr->transport.slen + hdr->sent_by.host.slen + 12)
     {
         return -1;
@@ -2050,8 +2050,8 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
 
     /* pjsip_hdr_names */
     copy_advance(buf, (*hname));
-    *buf++ = ':';
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ':');
+    copy_advance_char_check(buf, ' ');
 
     /* SIP/2.0/transport host:port */
     pj_memcpy(buf, sip_ver.ptr, sip_ver.slen);
@@ -2065,7 +2065,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
         }
     }
     buf += hdr->transport.slen;
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ' ');
 
     /* Check if host contains IPv6 */
     if (pj_strchr(&hdr->sent_by.host, ':')) {
@@ -2075,9 +2075,9 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     }
 
     if (hdr->sent_by.port != 0) {
-        *buf++ = ':';
-        printed = pj_utoa(hdr->sent_by.port, buf);
-        buf += printed;
+	copy_advance_char_check(buf, ':');
+	printed = pj_utoa(hdr->sent_by.port, buf);
+	buf += printed;
     }
 
     if (hdr->ttl_param >= 0) {
@@ -2090,15 +2090,15 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     }
 
     if (hdr->rport_param >= 0) {
-        size = endbuf-buf;
-        if (size < 14)
-            return -1;
-        pj_memcpy(buf, ";rport", 6);
-        buf += 6;
-        if (hdr->rport_param > 0) {
-            *buf++ = '=';
-            buf += pj_utoa(hdr->rport_param, buf);
-        }
+	size = endbuf-buf;
+	if (size < 14)
+	    return -1;
+	pj_memcpy(buf, ";rport", 6);
+	buf += 6;
+	if (hdr->rport_param > 0) {
+	    copy_advance_char_check(buf, '=');
+	    buf += pj_utoa(hdr->rport_param, buf);
+	}
     }
 
 
@@ -2115,18 +2115,18 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     copy_advance_pair(buf, ";received=", 10, hdr->recvd_param);
     copy_advance_pair_escape(buf, ";branch=", 8, hdr->branch_param,
                              pc->pjsip_TOKEN_SPEC);
-    
-    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
+
+    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
                                    &pc->pjsip_TOKEN_SPEC,
                                    &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
         return -1;
     buf += printed;
-    
+
     return (int)(buf-startbuf);
 }
 
-static pjsip_via_hdr* pjsip_via_hdr_clone( pj_pool_t *pool, 
+static pjsip_via_hdr* pjsip_via_hdr_clone( pj_pool_t *pool,
                                            const pjsip_via_hdr *rhs)
 {
     pjsip_via_hdr *hdr = pjsip_via_hdr_create(pool);
@@ -2179,7 +2179,7 @@ PJ_DEF(pjsip_warning_hdr*) pjsip_warning_hdr_create_from_status(pj_pool_t *pool,
 {
     char errbuf[PJ_ERR_MSG_SIZE];
     pj_str_t text;
-    
+
     text = pj_strerror(status, errbuf, sizeof(errbuf));
     return pjsip_warning_hdr_create(pool, 399, host, &text);
 }
@@ -2220,7 +2220,7 @@ PJ_DEF(pj_status_t) pjsip_msg_body_copy( pj_pool_t *pool,
                         &src_body->content_type);
 
     /* Duplicate data. */
-    dst_body->data = (*src_body->clone_data)(pool, src_body->data, 
+    dst_body->data = (*src_body->clone_data)(pool, src_body->data,
                                              src_body->len );
 
     /* Length. */
@@ -2274,4 +2274,3 @@ PJ_DEF(pjsip_msg_body*) pjsip_msg_body_create( pj_pool_t *pool,
 
     return body;
 }
-

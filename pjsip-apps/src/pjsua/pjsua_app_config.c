@@ -122,7 +122,7 @@ static void usage(void)
     puts  ("  --tls-verify-server Verify server's certificate (default=no)");
     puts  ("  --tls-verify-client Verify client's certificate (default=no)");
     puts  ("  --tls-neg-timeout   Specify TLS negotiation timeout (default=no)");
-    puts  ("  --tls-cipher        Specify prefered TLS cipher (optional).");
+    puts  ("  --tls-cipher        Specify preferred TLS cipher (optional).");
     puts  ("                      May be specified multiple times");
 #endif
 
@@ -144,7 +144,7 @@ static void usage(void)
     puts  ("  --auto-play-hangup  Automatically hangup the file after file play completes");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --auto-conf         Automatically put calls in conference with others");
-    puts  ("  --rec-file=file     Open file recorder (extension can be .wav or .mp3");
+    puts  ("  --rec-file=file     Open file recorder (extension can be .wav or .mp3)");
     puts  ("  --auto-rec          Automatically record conversation");
     puts  ("  --quality=N         Specify media quality (0-10, default="
                                   xstr(PJSUA_DEFAULT_CODEC_QUALITY) ")");
@@ -208,7 +208,7 @@ static void usage(void)
     puts  ("  --turn-tls-privkey-file  Specify TURN TLS private key file (default=none)");
     puts  ("  --turn-tls-privkey-pwd Specify TURN TLS password to private key file (default=none)");
     puts  ("  --turn-tls-neg-timeout Specify TURN TLS negotiation timeout (default=no)");
-    puts  ("  --turn-tls-cipher   Specify prefered TURN TLS cipher (optional).");
+    puts  ("  --turn-tls-cipher   Specify preferred TURN TLS cipher (optional).");
     puts  ("                      May be specified multiple times");
 #endif
     puts  ("");

@@ -118,7 +118,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
         return PJ_EINVAL;
     }
 
-    dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+    dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
     
     dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/vid_codec_util.h>
 #include <pjmedia/errno.h>
@@ -49,7 +49,7 @@
 /* ITU resolution definition */
 struct mpi_resolution_t
 {
-    pj_str_t            name;    
+    pj_str_t            name;
     pjmedia_rect_size   size;
 }
 mpi_resolutions [] =
@@ -130,7 +130,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_parse_h263_fmtp(
                 if (mpi<1 || mpi>32)
                     return PJMEDIA_SDP_EINFMTP;
 
-                h263_fmtp->mpi[h263_fmtp->mpi_cnt].size = 
+                h263_fmtp->mpi[h263_fmtp->mpi_cnt].size =
                                                     mpi_resolutions[j].size;
                 h263_fmtp->mpi[h263_fmtp->mpi_cnt].val = mpi;
                 ++h263_fmtp->mpi_cnt;
@@ -160,13 +160,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_parse_h263_fmtp(
 }
 
 
-static unsigned fps_to_mpi(const pjmedia_ratio *fps) 
+static unsigned fps_to_mpi(const pjmedia_ratio *fps)
 {
     unsigned mpi;
 
     /* Original formula = (fps->denum * 30000) / (fps->num * 1001) */
     mpi = (fps->denum*30000 + fps->num*1001/2) / (fps->num*1001);
-    
+
     /* Normalize, should be in the range of 1-32 */
     if (mpi > 32) mpi = 32;
     if (mpi < 1) mpi = 1;
@@ -264,7 +264,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
         pjmedia_vid_codec_h263_fmtp fmtp;
         pjmedia_video_format_detail *vfd;
         pj_status_t status;
-        
+
         status = pjmedia_vid_codec_parse_h263_fmtp(&param->dec_fmtp,
                                                    &fmtp);
         if (status != PJ_SUCCESS)
@@ -281,7 +281,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
             vfd->fps.denum = 1001;
         } else {
             unsigned i, max_size = 0, max_size_idx = 0, min_mpi = 32;
-            
+
             /* Get the largest size and the lowest MPI */
             for (i = 0; i < fmtp.mpi_cnt; ++i) {
                 if (fmtp.mpi[i].size.w * fmtp.mpi[i].size.h > max_size) {
@@ -316,24 +316,30 @@ typedef struct h264_level_info_t
 static pj_status_t init_h264_profile(const pj_str_t *profile,
                                      pjmedia_vid_codec_h264_fmtp *fmtp)
 {
+    // Taken from https://www.itu.int/rec/T-REC-H.264
+    // H.264 (08/21) Table A-1 – Level limits
     const h264_level_info_t level_info[] =
     {
-        { 10,   1485,    99,     64 },
-        { 9,    1485,    99,    128 }, /*< level 1b */
-        { 11,   3000,   396,    192 },
-        { 12,   6000,   396,    384 },
-        { 13,  11880,   396,    768 },
-        { 20,  11880,   396,   2000 },
-        { 21,  19800,   792,   4000 },
-        { 22,  20250,  1620,   4000 },
-        { 30,  40500,  1620,  10000 },
-        { 31, 108000,  3600,  14000 },
-        { 32, 216000,  5120,  20000 },
-        { 40, 245760,  8192,  20000 },
-        { 41, 245760,  8192,  50000 },
-        { 42, 522240,  8704,  50000 },
-        { 50, 589824, 22080, 135000 },
-        { 51, 983040, 36864, 240000 },
+	{ 10,     1485,     99,     64 },
+	{ 9,      1485,     99,    128 }, /*< level 1b */
+	{ 11,     3000,    396,    192 },
+	{ 12,     6000,    396,    384 },
+	{ 13,    11880,    396,    768 },
+	{ 20,    11880,    396,   2000 },
+	{ 21,    19800,    792,   4000 },
+	{ 22,    20250,   1620,   4000 },
+	{ 30,    40500,   1620,  10000 },
+	{ 31,   108000,   3600,  14000 },
+	{ 32,   216000,   5120,  20000 },
+	{ 40,   245760,   8192,  20000 },
+	{ 41,   245760,   8192,  50000 },
+	{ 42,   522240,   8704,  50000 },
+	{ 50,   589824,  22080, 135000 },
+	{ 51,   983040,  36864, 240000 },
+	{ 52,  2073600,  36864, 240000 },
+	{ 60,  4177920, 139264, 240000 },
+	{ 61,  8355840, 139264, 480000 },
+	{ 62, 16711680, 139264, 800000 },
     };
     unsigned i, tmp;
     pj_str_t endst;
@@ -398,7 +404,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
                 return status;
         } else if (pj_stricmp(&fmtp->param[i].name, &PACKETIZATION_MODE)==0) {
             tmp = pj_strtoul(&fmtp->param[i].val);
-            if (tmp <= 2) 
+            if (tmp <= 2)
                 h264_fmtp->packetization_mode = (pj_uint8_t)tmp;
             else
                 return PJMEDIA_SDP_EINFMTP;
@@ -488,7 +494,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 
     /* Parse offer */
     status = pjmedia_stream_info_parse_fmtp(
-                                    NULL, offer, 
+                                    NULL, offer,
                                     pj_strtoul(&offer->desc.fmt[o_fmt_idx]),
                                     &o_fmtp_raw);
     if (status != PJ_SUCCESS)
@@ -500,7 +506,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 
     /* Parse answer */
     status = pjmedia_stream_info_parse_fmtp(
-                                    NULL, answer, 
+                                    NULL, answer,
                                     pj_strtoul(&answer->desc.fmt[a_fmt_idx]),
                                     &a_fmtp_raw);
     if (status != PJ_SUCCESS)
@@ -692,7 +698,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 
         if (vfd->size.w && vfd->size.h) {
             unsigned mb, mbps;
-            
+
             /* Scale down the resolution if it exceeds profile spec */
             mb = CALC_H264_MB_NUM(vfd->size);
             mbps = CALC_H264_MBPS(vfd->size, vfd->fps);
@@ -726,7 +732,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
         pjmedia_ratio r;
         pjmedia_rect_size highest_size;
         pj_status_t status;
-        
+
         status = pjmedia_vid_codec_h264_parse_fmtp(&param->dec_fmtp,
                                                    &fmtp);
         if (status != PJ_SUCCESS)
@@ -820,10 +826,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_vpx_apply_fmtp(
                 vfd->fps.denum = 1;
             }
         }
-        
+
         if (fmtp.max_fs > 0) {
             unsigned max_res = ((int)pj_isqrt(fmtp.max_fs * 8)) * 16;
-            
+
             if (vfd->size.w > max_res || vfd->size.h > max_res) {
                 /* Here we maintain the aspect ratio. Or should we scale down
                  * to some predetermined resolution instead (for example,
@@ -861,10 +867,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_vpx_apply_fmtp(
             vfd->fps.num   = fmtp.max_fr;
             vfd->fps.denum = 1;
         }
-        
+
         if (fmtp.max_fs > 0) {
             unsigned max_res = ((int)pj_isqrt(fmtp.max_fs * 8)) * 16;
-            
+
             vfd->size.w = max_res;
             vfd->size.h = max_res;
         }

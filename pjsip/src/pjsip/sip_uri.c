@@ -255,10 +255,11 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 {
     int printed;
     char *startbuf = buf;
-    char *endbuf = buf+size;
+    char *endbuf = buf+size-1; // Need to minus one for NULL terminator
     const pj_str_t *scheme;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
+    if (endbuf < startbuf) return -1;
     *buf = '\0';
 
     /* Print scheme ("sip:" or "sips:") */
@@ -557,7 +558,7 @@ static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
 {
     int printed;
     char *startbuf = buf;
-    char *endbuf = buf + size;
+    char *endbuf = buf + size - 1; // Need to minus one for NULL terminator
     pjsip_uri *uri;
 
     uri = (pjsip_uri*) pjsip_uri_get_uri(name->uri);
@@ -574,7 +575,7 @@ static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
         copy_advance_char_check(buf, '<');;
     }
 
-    printed = pjsip_uri_print(context,uri, buf, size-(buf-startbuf));
+    printed = pjsip_uri_print(context,uri, buf, endbuf - buf);
     if (printed < 1)
         return -1;
     buf += printed;
@@ -677,7 +678,7 @@ static pj_ssize_t other_uri_print(pjsip_uri_context_e context,
                                   char *buf, pj_size_t size)
 {
     char *startbuf = buf;
-    char *endbuf = buf + size;
+    char *endbuf = buf + size - 1; // Need to minus one for NULL terminator
     
     PJ_UNUSED_ARG(context);
     
@@ -686,11 +687,12 @@ static pj_ssize_t other_uri_print(pjsip_uri_context_e context,
 
     /* Print scheme. */
     copy_advance(buf, uri->scheme);
-    *buf++ = ':';
+    copy_advance_char_check(buf, ':');
     
     /* Print content. */
     copy_advance(buf, uri->content);
     
+    *buf = '\0';
     return (buf - startbuf);
 }
 

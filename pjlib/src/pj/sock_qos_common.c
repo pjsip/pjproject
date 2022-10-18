@@ -42,7 +42,7 @@ static const pj_qos_params qos_map[] =
 PJ_DEF(pj_status_t) pj_qos_get_params(pj_qos_type type, 
                                       pj_qos_params *p_param)
 {
-    PJ_ASSERT_RETURN(type<=PJ_QOS_TYPE_CONTROL && p_param, PJ_EINVAL);
+    PJ_ASSERT_RETURN(type<=PJ_QOS_TYPE_SIGNALLING && p_param, PJ_EINVAL);
     pj_memcpy(p_param, &qos_map[type], sizeof(*p_param));
     return PJ_SUCCESS;
 }

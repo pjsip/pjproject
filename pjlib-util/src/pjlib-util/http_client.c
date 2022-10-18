@@ -1099,7 +1099,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
     /* Connect to host */
     http_req->state = CONNECTING;
     status = pj_activesock_start_connect(http_req->asock, http_req->pool, 
-                                         (pj_sock_t *)&(http_req->addr), 
+                                         (pj_sockaddr_t *)&(http_req->addr), 
                                          pj_sockaddr_get_len(&http_req->addr));
     if (status == PJ_SUCCESS) {
         http_req->state = SENDING_REQUEST;
