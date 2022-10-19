@@ -113,8 +113,22 @@ AC_CHECK_LIB(winmm,puts)
 AC_CHECK_LIB(socket,puts)
 AC_CHECK_LIB(rt,puts)
 AC_CHECK_LIB(m,sin)
-AC_CHECK_LIB(uuid,uuid_generate)
-AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
+
+dnl
+dnl libuuid
+dnl
+AC_ARG_ENABLE(libuuid,
+	AS_HELP_STRING([--disable-libuuid],
+			[Exclude libuuid(default: autodetect)]),
+	[if test "$enable_libuuid" = "no"; then
+	AC_MSG_RESULT([Checking if libuuid disabled... yes])
+	ac_has_uuid_lib=0
+	fi],
+	[
+	AC_CHECK_LIB(uuid,uuid_generate)
+	AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
+	])
+
 AC_SEARCH_LIBS(gethostbyname,nsl)
 
 AC_MSG_RESULT([Setting PJ_M_NAME to $target_cpu])
