@@ -4214,9 +4214,10 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     {
 	for (i = 0; i < (int)pjsua_var.ua_cfg.max_calls; ++i) {
 	    pjsua_call_info call_info;
-	    pjsua_call_get_info(i, &call_info);
 
-	    if (pjsua_var.calls[i].acc_id != acc->index)
+	    status = pjsua_call_get_info(i, &call_info);
+	    if (status != PJ_SUCCESS ||
+		pjsua_var.calls[i].acc_id != acc->index)
 	    {
 		continue;
 	    }
@@ -4247,21 +4248,73 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 	    } else if ((acc->cfg.ip_change_cfg.reinvite_flags) &&
 		(call_info.state == PJSIP_INV_STATE_CONFIRMED))
 	    {
+		pj_bool_t use_update = acc->cfg.ip_change_cfg.reinv_use_update;
+
+		/* Check if remote support SIP UPDATE method */
+		if (use_update) {
+		    pjsua_call *call;
+		    pjsip_dialog *dlg = NULL;
+
+		    PJ_LOG(5, (THIS_FILE, "Call #%d: IP change is configured "
+			       "to using UPDATE", i));
+
+		    status = acquire_call("handle_call_on_ip_change()",
+					  i, &call, &dlg);
+		    if (status != PJ_SUCCESS) {
+			use_update = PJ_FALSE;
+			PJ_PERROR(3,(THIS_FILE, status,
+				     "Call #%d: IP change cannot "
+				     "check if remote supports UPDATE due to "
+				     "failure in acquiring dialog lock", i));
+		    } else {
+			const pj_str_t ST_UPDATE = {"UPDATE", 6};
+			use_update = pjsip_dlg_remote_has_cap(
+					    dlg, PJSIP_H_ALLOW, NULL,
+					    &ST_UPDATE)
+				     == PJSIP_DIALOG_CAP_SUPPORTED;
+			pjsip_dlg_dec_lock(dlg);
+
+			if (!use_update) {
+			    PJ_LOG(3, (THIS_FILE, "Call #%d: IP change will "
+				       "use re-INVITE because remote does "
+				       "not support UPDATE", i));
+			}
+		    }
+		}
+
 		acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS;
 
 		pjsua_call_cleanup_flag(&call_info.setting);
 		call_info.setting.flag |=
 					 acc->cfg.ip_change_cfg.reinvite_flags;
 
-		PJ_LOG(3, (THIS_FILE, "call to %.*s: send "
-			   "re-INVITE with flags 0x%x triggered "
+		PJ_LOG(3, (THIS_FILE, "Call #%d to %.*s: send %s "
+			   "with flags 0x%x triggered "
 			   "by IP change (IP change flag: 0x%x)",
+			   i,
 			   call_info.remote_info.slen,
 			   call_info.remote_info.ptr,
+			   (use_update? "UPDATE" : "re-INVITE"),
 			   call_info.setting.flag,
 			   acc->cfg.ip_change_cfg.reinvite_flags));
 
-		status = pjsua_call_reinvite(i, call_info.setting.flag, NULL);
+		/* Refresh call using UPDATE */
+		if (use_update) {
+		    status = pjsua_call_update(i, call_info.setting.flag,
+					       NULL);
+		    /* If this fails, retry using INVITE below */
+		    if (status != PJ_SUCCESS) {
+			PJ_LOG(3, (THIS_FILE, "Call #%d: failed sending UPDATE"
+			                      " retrying using re-INVITE", i));
+			use_update = PJ_FALSE;
+		    }
+		}
+
+		/* Refresh call using re-INVITE */
+		if (!use_update) {
+		    status = pjsua_call_reinvite(i, call_info.setting.flag,
+						 NULL);
+		}
 
 		if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
 		    pjsua_ip_change_op_info info;
