@@ -970,7 +970,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 
     /* Allocate packet */
     tdata->max_len = PJ_STUN_MAX_PKT_LEN;
-    tdata->pkt = pj_pool_alloc(tdata->pool, tdata->max_len);
+    tdata->pkt = pj_pool_zalloc(tdata->pool, tdata->max_len);
 
     tdata->token = token;
     tdata->retransmit = retransmit;
