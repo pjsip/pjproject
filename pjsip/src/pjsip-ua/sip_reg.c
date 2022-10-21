@@ -232,8 +232,12 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
 
 	next_reg = regc->next_reg;
 	pj_gettimeofday(&now);
-	PJ_TIME_VAL_SUB(next_reg, now);
-	info->next_reg = next_reg.sec;
+	if (PJ_TIME_VAL_GT(next_reg, now)) {
+	    PJ_TIME_VAL_SUB(next_reg, now);
+	    info->next_reg = next_reg.sec;
+	} else {
+	    info->next_reg = 0;
+	}
     }
 
     pj_lock_release(regc->lock);
