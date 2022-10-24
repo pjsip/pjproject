@@ -586,6 +586,8 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
 	pj_enum_ip_option_default(&opt_);
 
     if (opt_.af != pj_AF_INET() && opt_.omit_deprecated_ipv6) {
+
+#if defined(PJ_LINUX) && PJ_LINUX!=0
 	pj_sockaddr addrs[*p_cnt];
 	pj_sockaddr deprecatedAddrs[*p_cnt];
 	unsigned deprecatedCount = *p_cnt;
@@ -619,6 +621,9 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
 
 	*p_cnt = cnt;
 	return *p_cnt ? PJ_SUCCESS : PJ_ENOTFOUND;
+#else
+        return PJ_ENOTSUP;
+#endif
     }
 
     return pj_enum_ip_interface(opt_.af, p_cnt, ifs);

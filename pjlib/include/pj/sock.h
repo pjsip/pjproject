@@ -549,7 +549,7 @@ struct pj_sockaddr_in
  * recommended as it may cause build issues for anyone who uses
  * the macro. See #2311 for more details.
  */
-#if 0
+#if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0)
 #undef s6_addr
 
 typedef union pj_in6_addr

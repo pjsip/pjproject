@@ -469,6 +469,12 @@ typedef HRESULT(WINAPI *FnSetThreadDescription)(HANDLE hThread,
 
 static void set_thread_display_name(const char *name)
 {
+#if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
+      (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
+
+    return;
+
+#else
     /* Set thread name by SetThreadDescription (if support) */
     FnSetThreadDescription fn = (FnSetThreadDescription)GetProcAddress(
 	GetModuleHandle(PJ_T("Kernel32.dll")), "SetThreadDescription");
@@ -506,6 +512,8 @@ static void set_thread_display_name(const char *name)
 	}
 #pragma warning(pop)
     }
+#  endif
+
 #endif
 }
 
