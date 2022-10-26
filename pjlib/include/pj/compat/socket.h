@@ -37,6 +37,9 @@
 #   include <ws2tcpip.h>
 #endif
 
+#if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0)
+#   include <in6addr.h>
+#endif
 
 /*
  * IPv6 for Visual Studio's
