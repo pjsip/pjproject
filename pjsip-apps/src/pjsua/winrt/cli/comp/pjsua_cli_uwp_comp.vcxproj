@@ -109,7 +109,7 @@
   </ImportGroup>
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <Import Project="pjsua_cli_shared_comp.vcxitems" Label="Shared" />  
+  <Import Project="pjsua_cli_shared_comp.vcxitems" Label="Shared" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -212,6 +212,7 @@
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>libcmtd.lib;msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <OutputFile>..\lib\pjsua-cli-uwp-comp-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).dll</OutputFile>
+      <AdditionalDependencies>kernel32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
@@ -268,10 +269,10 @@
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <OutputFile>..\lib\pjsua-cli-uwp-comp-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).dll</OutputFile>
     </Link>
-  </ItemDefinitionGroup>  
+  </ItemDefinitionGroup>
   <!--Don't build this project unless it's for UWP-->
   <Import Condition="'$(API_Family)'=='UWP'" Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Condition="'$(API_Family)'!='UWP'" Project="..\..\..\..\..\..\build\vs\pjproject-vs14-build-targets.targets" />                                     
+  <Import Condition="'$(API_Family)'!='UWP'" Project="..\..\..\..\..\..\build\vs\pjproject-vs14-build-targets.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
