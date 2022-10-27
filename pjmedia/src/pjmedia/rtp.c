@@ -188,6 +188,11 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
     /* Payload is located right after header plus CSRC */
     offset = sizeof(pjmedia_rtp_hdr) + ((*hdr)->cc * sizeof(pj_uint32_t));
 
+    /* Check that offset is less than packet size */
+    if (offset >= pkt_len) {
+        return PJMEDIA_RTP_EINLEN;
+    }
+
     /* Decode RTP extension. */
     if ((*hdr)->x) {
         if (offset + sizeof (pjmedia_rtp_ext_hdr) > (unsigned)pkt_len)
@@ -202,8 +207,8 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
 	dec_hdr->ext_len = 0;
     }
 
-    /* Check that offset is less than packet size */
-    if (offset > pkt_len)
+    /* Check again that offset is still less than packet size */
+    if (offset >= pkt_len)
 	return PJMEDIA_RTP_EINLEN;
 
     /* Find and set payload. */
@@ -393,5 +398,3 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
 	seq_status->status.value = st.status.value;
     }
 }
-
-

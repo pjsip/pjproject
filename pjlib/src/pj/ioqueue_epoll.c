@@ -1065,7 +1065,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
          */
 	int delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
         if (delay > 10) delay = 10;
-	pj_thread_sleep(delay);
+	if (delay > 0)
+	    pj_thread_sleep(delay);
     }
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d",

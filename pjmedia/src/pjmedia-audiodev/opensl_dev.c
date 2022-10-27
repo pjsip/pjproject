@@ -471,7 +471,6 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
     struct opensl_aud_factory *pa = (struct opensl_aud_factory*)f;
     pj_pool_t *pool;
     struct opensl_aud_stream *stream;
-    pj_status_t status = PJ_SUCCESS;
     int i, bufferSize;
     SLresult result;
     SLDataFormat_PCM format_pcm;
@@ -730,7 +729,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
     
 on_error:
     strm_destroy(&stream->base);
-    return status;
+    return opensl_to_pj_error(result);
 }
 
 /* API: Get stream parameters */

@@ -1221,8 +1221,11 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 
     /* Set cipher list */
     status = set_cipher_list(ssock);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	SSL_CTX_free(ctx);
+	ossock->ossl_ctx = NULL;
         return status;
+    }
 
     /* Apply credentials */
     if (cert) {
@@ -2225,6 +2228,13 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 	ssl_update_remote_cert_chain_info(ssock->info_pool,
        					  remote_cert_info,
        					  chain, PJ_TRUE);
+	/* Only free the chain returned by X509_STORE_CTX_get1_chain().
+	 * The reference count of each cert returned by
+	 * SSL_get_peer_cert_chain() is not incremented.
+	 */
+	if (is_verify) {
+	    sk_X509_pop_free(chain, X509_free);
+	}
     } else {
 	remote_cert_info->raw_chain.cnt = 0;
     }
@@ -2347,11 +2357,19 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 	    
 	    sess = SSL_get_session(ossock->ossl_ssl);
 
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
 	    PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
 		       "timeout=%d",
 		       SSL_session_reused(ossock->ossl_ssl),
 		       SSL_SESSION_is_resumable(sess),
 		       SSL_SESSION_get_timeout(sess)));
+#else
+	    PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
+		       "timeout=%d",
+		       SSL_session_reused(ossock->ossl_ssl),
+		       -1,
+		       SSL_SESSION_get_timeout(sess)));
+#endif
 
 	    sid = SSL_SESSION_get_id(sess, &len);
 	    len *= 2;

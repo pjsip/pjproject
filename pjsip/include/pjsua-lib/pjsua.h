@@ -2717,6 +2717,17 @@ typedef struct pjsua_ip_change_acc_cfg
      */
     unsigned		reinvite_flags;
     
+    /**
+     * For refreshing the call, use SIP UPDATE, instead of re-INVITE, if
+     * remote supports it (by publishing it in Allow header). If remote
+     * does not support UPDATE method or somehow the UPDATE attempt fails,
+     * it will fallback to using re-INVITE. The \a reinvite_flags will be
+     * used regardless whether it is re-INVITE or UPDATE that is sent.
+     *
+     * Default: PJ_FALSE (using re-INVITE).
+     */
+    pj_bool_t		reinv_use_update;
+
 } pjsua_ip_change_acc_cfg;
 
 
@@ -4943,6 +4954,24 @@ PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
 #ifndef PJSUA_MAX_VID_WINS
 #   define PJSUA_MAX_VID_WINS	    16
 #endif
+
+
+/**
+ * Specifies if lock codec feature should always use INVITE method.
+ * This will also affect ICE completion update in updating default address
+ * in SDP.
+ *
+ * This can be useful when communicating with endpoints that do not
+ * respond to UPDATE properly while indicating UPDATE support (by
+ * specifying UPDATE in its SIP Allow header).
+ *
+ * Note that UPDATE can be sent when dialog is still in early state,
+ * while re-INVITE needs to wait until the dialog is confirmed.
+ */
+#ifndef PJSUA_LOCK_CODEC_DONT_USE_UPDATE
+#   define PJSUA_LOCK_CODEC_DONT_USE_UPDATE	    0
+#endif
+
 
 /**
  * Video window ID.

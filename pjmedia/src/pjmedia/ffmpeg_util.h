@@ -45,7 +45,10 @@
 #else
 #   define AV(str)		AV_ ## str
 #endif
-					 
+
+#define LIBAVCODEC_VER_AT_LEAST(major,minor)  (LIBAVCODEC_VERSION_MAJOR > major || \
+     					       (LIBAVCODEC_VERSION_MAJOR == major && \
+					        LIBAVCODEC_VERSION_MINOR >= minor))
 
 void pjmedia_ffmpeg_add_ref();
 void pjmedia_ffmpeg_dec_ref();

@@ -675,6 +675,9 @@ static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert)
         
         err = SecTrustGetTrustResult(trust, &trust_result);
         if (err == noErr) {
+#if SSL_DEBUG
+            PJ_LOG(3, (THIS_FILE, "SSL trust evaluation: %d", trust_result));
+#endif
     	    switch (trust_result) {
     		case kSecTrustResultInvalid:
 		    ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
@@ -1027,7 +1030,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 	      sec_protocol_metadata_get_negotiated_tls_ciphersuite(metadata);
 
 	    /* For client, call on_connect_complete() callback first. */
-	    if (!ssock->is_server) {
+	    if (!ssock->is_server && ssock->ssl_state == SSL_STATE_NULL) {
 	    	if (!assock->connection)
 	    	    complete(false);
 

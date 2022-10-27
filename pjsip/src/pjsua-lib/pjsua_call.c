@@ -4166,7 +4166,8 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
     if (inv->state == PJSIP_INV_STATE_EARLY) {
     	if (pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL,
     	        &ST_UPDATE) == PJSIP_DIALOG_CAP_SUPPORTED &&
-    	    inv->sdp_done_early_rel)
+	    inv->sdp_done_early_rel &&
+	    !PJSUA_LOCK_CODEC_DONT_USE_UPDATE)
     	{
     	    /* Yes, remote supports UPDATE and SDP negotiation was done
     	     * using reliable provisional responses. We can proceed.
@@ -4193,7 +4194,8 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
     /* Okay! So we need to send re-INVITE/UPDATE */
 
     /* Check if remote support UPDATE */
-    rem_can_update = pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL,
+    rem_can_update = !PJSUA_LOCK_CODEC_DONT_USE_UPDATE &&
+		     pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL,
 					      &ST_UPDATE) ==
 						PJSIP_DIALOG_CAP_SUPPORTED;
 
