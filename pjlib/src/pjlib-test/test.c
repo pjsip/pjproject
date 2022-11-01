@@ -19,8 +19,18 @@
  */
 #include "test.h"
 #include <pjlib.h>
+
 #ifdef _MSC_VER
 #  pragma warning(disable:4127)
+
+  /* Disable ioqueue stress test on MSVC2005, due to compile errors on
+   * structure field assignments.
+   */
+#  if _MSC_VER <= 1400
+#    undef INCLUDE_IOQUEUE_STRESS_TEST
+#    define INCLUDE_IOQUEUE_STRESS_TEST 0
+#  endif
+
 #endif
 
 #define DO_TEST(test)	do { \
