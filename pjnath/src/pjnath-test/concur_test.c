@@ -364,9 +364,7 @@ on_return:
 
 int concur_test(void)
 {
-    int rc = 0;
-
-    rc += stun_destroy_test();
+    stun_destroy_test();
 
     return 0;
 }

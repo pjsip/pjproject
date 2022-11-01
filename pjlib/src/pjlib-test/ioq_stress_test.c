@@ -479,7 +479,7 @@ static int worker_thread(void *p)
 	}
     }
 
-    //TRACE((THIS_FILE, "thread exiting, n_events=%d", n_events));
+    TRACE((THIS_FILE, "thread exiting, n_events=%d", n_events));
     return 0;
 }
 

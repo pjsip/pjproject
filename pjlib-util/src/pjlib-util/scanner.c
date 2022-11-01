@@ -304,7 +304,7 @@ PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
     /* Must not match character '%' */
     pj_assert(pj_cis_match(spec,'%')==0);
 
-    if (pj_scan_is_eof(scanner) || !pj_cis_match(spec, *s) && *s != '%') {
+    if (pj_scan_is_eof(scanner) || (!pj_cis_match(spec, *s) && *s != '%')) {
 	pj_scan_syntax_err(scanner);
 	return;
     }

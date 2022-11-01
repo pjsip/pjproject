@@ -472,9 +472,9 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
     return PJ_SUCCESS;
 }
 
+#if defined(PJ_LINUX) && PJ_LINUX!=0
 static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
 {
-#if defined(PJ_LINUX) && PJ_LINUX!=0
     struct {
         struct nlmsghdr        nlmsg_info;
         struct ifaddrmsg    ifaddrmsg_info;
@@ -564,12 +564,8 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
     *count = idx;
 
     return PJ_SUCCESS;
-#else
-    *count = 0;
-    return PJ_ENOTSUP;
-#endif
 }
-
+#endif
 
 /*
  * Enumerate the local IP interface currently active in the host.
