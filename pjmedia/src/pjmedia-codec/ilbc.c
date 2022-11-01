@@ -734,7 +734,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
         theABL.mBuffers[0].mData = output->buf + output->size;
         
         ilbc_codec->enc_total_packets = 1;
-        ilbc_codec->enc_buffer = (char *)input->buf;
+        ilbc_codec->enc_buffer = (char *)pcm_in;
         ilbc_codec->enc_buffer_offset = input->size - (nsamples << 1);
         
         err = AudioConverterFillComplexBuffer(ilbc_codec->enc, encodeDataProc,

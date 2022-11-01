@@ -1305,7 +1305,7 @@ void Endpoint::on_dtmf_digit(pjsua_call_id call_id, int digit)
     PendingOnDtmfDigitCallback *job = new PendingOnDtmfDigitCallback;
     job->call_id = call_id;
     char buf[10];
-    pj_ansi_sprintf(buf, "%c", digit);
+    pj_ansi_snprintf(buf, sizeof(buf), "%c", digit);
     job->prm.digit = string(buf);
     
     Endpoint::instance().utilAddPendingJob(job);
@@ -1322,7 +1322,7 @@ void Endpoint::on_dtmf_digit2(pjsua_call_id call_id,
     PendingOnDtmfDigitCallback *job = new PendingOnDtmfDigitCallback;
     job->call_id = call_id;
     char buf[10];
-    pj_ansi_sprintf(buf, "%c", info->digit);
+    pj_ansi_snprintf(buf, sizeof(buf), "%c", info->digit);
     job->prm.digit = string(buf);
     job->prm.method = info->method;
     job->prm.duration = info->duration;
@@ -1374,7 +1374,7 @@ void Endpoint::on_dtmf_event(pjsua_call_id call_id,
     PendingOnDtmfEventCallback *job = new PendingOnDtmfEventCallback;
     job->call_id = call_id;
     char buf[10];
-    pj_ansi_sprintf(buf, "%c", event->digit);
+    pj_ansi_snprintf(buf, sizeof(buf), "%c", event->digit);
     job->prm.method = event->method;
     job->prm.timestamp = event->timestamp;
     job->prm.digit = string(buf);
