@@ -644,7 +644,7 @@ PJ_DEF(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param)
 }
 
 /* Deinitialize UPnP. */
-PJ_DEF(pj_status_t) pj_upnp_deinit()
+PJ_DEF(pj_status_t) pj_upnp_deinit(void)
 {
     PJ_LOG(4, (THIS_FILE, "UPnP deinitializing..."));
 

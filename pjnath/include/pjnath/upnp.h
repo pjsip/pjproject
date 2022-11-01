@@ -100,7 +100,7 @@ PJ_DECL(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param);
  * @return		PJ_SUCCESS on success, or the appropriate error
  *			status.
  */
-PJ_DECL(pj_status_t) pj_upnp_deinit();
+PJ_DECL(pj_status_t) pj_upnp_deinit(void);
 
 
 /**
