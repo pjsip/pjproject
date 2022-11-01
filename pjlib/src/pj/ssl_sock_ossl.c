@@ -333,9 +333,14 @@ static void SSLLogErrors(char * action, int ret, int ssl_err, int len,
 	int level = 0;
 
 	while (err2) {
+	    unsigned long next_err;
+
 	    ERROR_LOG("SSL_ERROR_SSL", err2, ssock);
 	    level++;
-	    err2 = ERR_get_error();
+
+	    next_err = ERR_get_error();
+	    if (next_err == err2) break;
+	    err2 = next_err;
 	}
 	break;
     }
