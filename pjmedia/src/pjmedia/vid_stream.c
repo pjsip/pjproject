@@ -2005,6 +2005,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
 	pjmedia_rtcp_init2(&stream->rtcp, &rtcp_setting);
 
+	if (info->rtp_seq_ts_set) {
+	    stream->rtcp.stat.rtp_tx_last_seq = info->rtp_seq;
+	    stream->rtcp.stat.rtp_tx_last_ts = info->rtp_ts;
+	}
+
 	/* Subscribe to RTCP events */
 	pjmedia_event_subscribe(NULL, &stream_event_cb, stream,
 				&stream->rtcp);
