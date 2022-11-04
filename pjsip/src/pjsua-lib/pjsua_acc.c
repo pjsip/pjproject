@@ -4216,9 +4216,9 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 	for (i = 0; i < (int)pjsua_var.ua_cfg.max_calls; ++i) {
 	    pjsua_call_info call_info;
 
-	    status = pjsua_call_get_info(i, &call_info);
-	    if (status != PJ_SUCCESS ||
-		pjsua_var.calls[i].acc_id != acc->index)
+	    if (!pjsua_call_is_active(i) ||
+		pjsua_var.calls[i].acc_id != acc->index ||
+		pjsua_call_get_info(i, &call_info) != PJ_SUCCESS)
 	    {
 		continue;
 	    }
