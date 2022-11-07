@@ -754,7 +754,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
     unsigned i, fds_cnt, flags=0;
     pj_qos_params qos_params;
     unsigned msec;
-    pj_status_t status;
+    pj_status_t status = PJ_EUNKNOWN;
 
     pj_lock_acquire(h->ioqueue->lock);
 
