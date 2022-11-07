@@ -1763,8 +1763,15 @@ static void ui_call_redirect(char menuin[])
 static void ui_handle_ip_change()
 {
     pjsua_ip_change_param param;
+    pj_status_t status;
+
     pjsua_ip_change_param_default(&param);
-    pjsua_handle_ip_change(&param);
+    status = pjsua_handle_ip_change(&param);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "IP change failed", status);
+    } else {
+	PJ_LOG(3,(THIS_FILE, "IP change succeeded"));
+    }
 }
 
 /*
