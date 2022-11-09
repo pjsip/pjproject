@@ -118,6 +118,7 @@ struct vid_pasv_port
 {
     pjmedia_port	 base;
     pjmedia_vid_port	*vp;
+    pj_bool_t            is_destroying;
 };
 
 struct fmt_prop 
@@ -146,6 +147,8 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
 
 static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
 					   pjmedia_frame *frame);
+
+static pj_status_t vid_pasv_port_on_destroy(struct pjmedia_port *this_port);
 
 
 PJ_DEF(void) pjmedia_vid_port_param_default(pjmedia_vid_port_param *prm)
@@ -351,17 +354,25 @@ static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
 
 	/* Fill the nearest width list. */
 	if (diff_width1 <= diff_width2) {
-	    int k = 1;
-	    pjmedia_rect_size tmp_size = vfd->size;
+	    int k = 0;
+	    while (((k < PJ_ARRAY_SIZE(nearest_width)) &&
+	        (!((vfd->size.w == nearest_width[k].w) &&
+	        (vfd->size.h == nearest_width[k].h))))) {
+	        ++k;
+	    }
+	    if (k < PJ_ARRAY_SIZE(nearest_width)) {
+	        /* resolution was already processed */
+	        continue;
 
+	    }
+	    k = 1;
 	    while(((k < PJ_ARRAY_SIZE(nearest_width)) &&
-		   (GET_DIFF(tmp_size.w, req_fmt_size->w) <
-		   (GET_DIFF(nearest_width[k].w, req_fmt_size->w)))))
+		   (diff_width1 < (GET_DIFF(nearest_width[k].w, req_fmt_size->w)))))
 	    {
 		nearest_width[k-1] = nearest_width[k];
 		++k;
 	    }
-	    nearest_width[k-1] = tmp_size;
+	    nearest_width[k-1] = vfd->size;
 	}
     }
     /* No need to calculate ratio if exact match is found. */
@@ -525,8 +536,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
         return status;
 
     /* Allocate videoport */
+    pool = pj_pool_create(pool->factory, "video port", 500, 500, NULL);
     vp = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_port);
-    vp->pool = pj_pool_create(pool->factory, "video port", 500, 500, NULL);
+    vp->pool = pool;
     vp->role = prm->active ? ROLE_ACTIVE : ROLE_PASSIVE;
     vp->dir = prm->vidparam.dir;
 //    vp->cap_size = vfd->size;
@@ -652,6 +664,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	    pp->base.get_frame = &vid_pasv_port_get_frame;
 	if (prm->vidparam.dir & PJMEDIA_DIR_RENDER)
 	    pp->base.put_frame = &vid_pasv_port_put_frame;
+	pp->base.on_destroy = &vid_pasv_port_on_destroy;
 	pjmedia_port_info_init2(&pp->base.info, &vp->dev_name,
 	                        PJMEDIA_SIG_VID_PORT,
 			        prm->vidparam.dir, &prm->vidparam.fmt);
@@ -852,11 +865,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_stop(pjmedia_vid_port *vp)
     return status;
 }
 
-PJ_DEF(void) pjmedia_vid_port_destroy(pjmedia_vid_port *vp)
+static void vid_port_destroy(pjmedia_vid_port *vp)
 {
     PJ_ASSERT_ON_FAIL(vp, return);
 
-    PJ_LOG(4,(THIS_FILE, "Closing %s..", vp->dev_name.ptr));
+    PJ_LOG(4,(THIS_FILE, "Destroying %s..", vp->dev_name.ptr));
 
     /* Unsubscribe events first, otherwise the event callbacks can be called
      * and try to access already destroyed objects.
@@ -891,6 +904,22 @@ PJ_DEF(void) pjmedia_vid_port_destroy(pjmedia_vid_port *vp)
         vp->conv.conv = NULL;
     }
     pj_pool_release(vp->pool);
+}
+
+PJ_DEF(void) pjmedia_vid_port_destroy(pjmedia_vid_port *vp)
+{
+    PJ_ASSERT_ON_FAIL(vp, return);
+
+    PJ_LOG(4,(THIS_FILE, "Destroy request on %s..", vp->dev_name.ptr));
+
+    /* This is a passive port, destroy via PJMEDIA port API */
+    if (vp->pasv_port) {
+	vp->pasv_port->is_destroying = PJ_TRUE;
+	pjmedia_port_destroy(&vp->pasv_port->base);
+	return;
+    }
+
+    vid_port_destroy(vp);
 }
 
 /*
@@ -1336,6 +1365,9 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
     struct vid_pasv_port *vpp = (struct vid_pasv_port*)this_port;
     pjmedia_vid_port *vp = vpp->vp;
 
+    if (vp->pasv_port->is_destroying)
+	return PJ_EGONE;
+
     if (vp->stream_role==ROLE_PASSIVE) {
         /* We are passive and the stream is passive.
          * The encoding counterpart is in vid_pasv_port_get_frame().
@@ -1383,6 +1415,9 @@ static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
     pjmedia_vid_port *vp = vpp->vp;
     pj_status_t status = PJ_SUCCESS;
 
+    if (vp->pasv_port->is_destroying)
+	return PJ_EGONE;
+
     if (vp->stream_role==ROLE_PASSIVE) {
         /* We are passive and the stream is passive.
          * The decoding counterpart is in vid_pasv_port_put_frame().
@@ -1406,6 +1441,14 @@ static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
     }
 
     return status;
+}
+
+
+static pj_status_t vid_pasv_port_on_destroy(struct pjmedia_port *this_port)
+{
+    struct vid_pasv_port *vpp = (struct vid_pasv_port*)this_port;
+    vid_port_destroy(vpp->vp);
+    return PJ_SUCCESS;
 }
 
 

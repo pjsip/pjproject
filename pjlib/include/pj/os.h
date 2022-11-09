@@ -123,7 +123,7 @@ typedef struct pj_sys_info
  */
 PJ_DECL(const pj_sys_info*) pj_get_sys_info(void);
 
-/*
+/**
  * @}
  */
 

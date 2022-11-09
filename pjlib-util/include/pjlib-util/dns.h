@@ -243,32 +243,32 @@ typedef struct pj_dns_parsed_rr
 	    pj_uint16_t weight;	/**< Weight/proportion			    */
 	    pj_uint16_t port;	/**< Port number of the service		    */
 	    pj_str_t	target;	/**< Target name.			    */
-	} srv;
+	} srv; /**< SRV Resource Data (PJ_DNS_TYPE_SRV, 33) */
 
 	/** CNAME Resource Data (PJ_DNS_TYPE_CNAME, 5) */
 	struct cname {
 	    pj_str_t	name;	/**< Primary canonical name for an alias.   */
-	} cname;
+	} cname; /**< CNAME Resource Data (PJ_DNS_TYPE_CNAME, 5) */
 
 	/** NS Resource Data (PJ_DNS_TYPE_NS, 2) */
 	struct ns {
 	    pj_str_t	name;	/**< Primary name server.		    */
-	} ns;
+	} ns; /**< NS Resource Data (PJ_DNS_TYPE_NS, 2) */
 
 	/** PTR Resource Data (PJ_DNS_TYPE_PTR, 12) */
 	struct ptr {
 	    pj_str_t	name;	/**< PTR name.				    */
-	} ptr;
+	} ptr; /**< PTR Resource Data (PJ_DNS_TYPE_PTR, 12) */
 
 	/** A Resource Data (PJ_DNS_TYPE_A, 1) */
 	struct a {
 	    pj_in_addr	ip_addr;/**< IPv4 address in network byte order.    */
-	} a;
+	} a; /**< A Resource Data (PJ_DNS_TYPE_A, 1) */
 
 	/** AAAA Resource Data (PJ_DNS_TYPE_AAAA, 28) */
 	struct aaaa {
 	    pj_in6_addr	ip_addr;/**< IPv6 address in network byte order.    */
-	} aaaa;
+	} aaaa; /**< AAAA Resource Data (PJ_DNS_TYPE_AAAA, 28) */
 
     } rdata;
 

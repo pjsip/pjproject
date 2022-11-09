@@ -1475,6 +1475,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
     if (dir & PJMEDIA_DIR_PLAYBACK) {
 	AURenderCallbackStruct output_cb;
 	AudioStreamBasicDescription streamFormat = strm->streamFormat;
+#if !COREAUDIO_MAC
 	BOOL isMacCatalystApp = false;
 
 #ifdef __IPHONE_13_0
@@ -1486,6 +1487,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
              */
             isMacCatalystApp = [NSProcessInfo processInfo].isMacCatalystApp;
 	}
+#endif
 #endif
 
 	/* Set the stream format */
@@ -2235,8 +2237,8 @@ static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm)
     }
     pj_mutex_unlock(stream->cf->mutex);
 
-#if !COREAUDIO_MAC && SETUP_AV_AUDIO_SESSION
     if (should_deactivate) {
+#if !COREAUDIO_MAC && SETUP_AV_AUDIO_SESSION
         if ([stream->sess 
              respondsToSelector:@selector(setActive:withOptions:error:)])
         {
@@ -2249,8 +2251,8 @@ static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm)
             			      "audio session"));
             }
         }
-    }
 #endif
+    }
 
     stream->quit_flag = 1;
     stream->play_thread_initialized = 0;

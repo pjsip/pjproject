@@ -1758,7 +1758,7 @@ int main(int argc, char *argv[])
 	pj_ansi_snprintf(
 	    report, sizeof(report),
 	    "Total %d %s sent in %d ms at rate of %d/sec\n"
-	    "Total %d responses receieved in %d ms at rate of %d/sec:",
+	    "Total %d responses received in %d ms at rate of %d/sec:",
 	    app.client.job_submitted, test_type, msec_req, 
 	    app.client.job_submitted * 1000 / msec_req,
 	    app.client.total_responses, msec_res,

@@ -650,6 +650,7 @@ static inv_test_param_t test_params[] =
     ACK	-->
 */
 #if 1
+#if !PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE
     {
 	"INVITE and UPDATE by UAC",
 	0,
@@ -658,9 +659,10 @@ static inv_test_param_t test_params[] =
 	{ OFFERER_UAC, OFFERER_UAC },
 	PJ_FALSE
     },
+#endif
     {
-	"INVITE and UPDATE by UAC, with Multipart",
-	0,
+	"INVITE and UPDATE by UAC, with Multipart, with 100rel",
+	PJSIP_INV_REQUIRE_100REL,
 	PJ_TRUE,
 	2,
 	{ OFFERER_UAC, OFFERER_UAC },
@@ -691,16 +693,17 @@ static inv_test_param_t test_params[] =
     ACK			-->
 
  */
+
     {
-	"INVITE and many UPDATE by UAC and UAS",
-	0,
+	"INVITE and many UPDATE by UAC and UAS, with 100rel",
+	PJSIP_INV_REQUIRE_100REL,
 	PJ_TRUE,
 	4,
 	{ OFFERER_UAC, OFFERER_UAS, OFFERER_UAC, OFFERER_UAS }
     },
     {
-	"INVITE and many UPDATE by UAC and UAS, with Multipart",
-	0,
+	"INVITE and many UPDATE by UAC and UAS, with Multipart, with 100rel",
+	PJSIP_INV_REQUIRE_100REL,
 	PJ_TRUE,
 	4,
 	{ OFFERER_UAC, OFFERER_UAS, OFFERER_UAC, OFFERER_UAS },

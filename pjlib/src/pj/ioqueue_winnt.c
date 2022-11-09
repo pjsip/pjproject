@@ -135,6 +135,7 @@ struct pj_ioqueue_key_t
  */
 struct pj_ioqueue_t
 {
+    pj_ioqueue_cfg    cfg;
     HANDLE	      iocp;
     pj_lock_t        *lock;
     pj_bool_t         auto_delete_lock;
@@ -323,9 +324,20 @@ PJ_DEF(const char*) pj_ioqueue_name(void)
 /*
  * pj_ioqueue_create()
  */
-PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool, 
-				       pj_size_t max_fd,
-				       pj_ioqueue_t **p_ioqueue)
+PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
+                                       pj_size_t max_fd,
+                                       pj_ioqueue_t **p_ioqueue)
+{
+    return pj_ioqueue_create2(pool, max_fd, NULL, p_ioqueue);
+}
+
+/*
+ * pj_ioqueue_create2()
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
+                                       pj_size_t max_fd,
+				       const pj_ioqueue_cfg *cfg,
+                                       pj_ioqueue_t **p_ioqueue)
 {
     pj_ioqueue_t *ioqueue;
     unsigned i;
@@ -342,6 +354,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
     /* Create IOCP */
     ioqueue = pj_pool_zalloc(pool, sizeof(*ioqueue));
+    if (cfg)
+	pj_memcpy(&ioqueue->cfg, cfg, sizeof(*cfg));
+    else
+	pj_ioqueue_cfg_default(&ioqueue->cfg);
+
     ioqueue->iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
     if (ioqueue->iocp == NULL)
 	return PJ_RETURN_OS_ERROR(GetLastError());
@@ -811,7 +828,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      * We also need to close handle to make sure that no further events
      * will come to the handle.
      */
-    /* Update 2008/07/18 (http://trac.pjsip.org/repos/ticket/575):
+    /* Update 2008/07/18 (https://github.com/pjsip/pjproject/issues/575):
      *  - It seems that CloseHandle() in itself does not actually close
      *    the socket (i.e. it will still appear in "netstat" output). Also
      *    if we only use CloseHandle(), an "Invalid Handle" exception will

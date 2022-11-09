@@ -101,7 +101,7 @@ static void logging_shutdown(void)
 #endif	/* PJ_HAS_THREADS */
 
 #if PJ_LOG_ENABLE_INDENT && PJ_HAS_THREADS
-static void log_set_indent(int indent)
+PJ_DEF(void) pj_log_set_indent(int indent)
 {
     if (indent < 0) indent = 0;
     pj_thread_local_set(thread_indent_tls_id, (void*)(pj_ssize_t)indent);
@@ -113,7 +113,7 @@ static int log_get_raw_indent(void)
 }
 
 #else
-static void log_set_indent(int indent)
+PJ_DEF(void) pj_log_set_indent(int indent)
 {
     log_indent = indent;
     if (log_indent < 0) log_indent = 0;
@@ -125,7 +125,7 @@ static int log_get_raw_indent(void)
 }
 #endif	/* PJ_LOG_ENABLE_INDENT && PJ_HAS_THREADS */
 
-static int log_get_indent(void)
+PJ_DEF(int) pj_log_get_indent(void)
 {
     int indent = log_get_raw_indent();
     return indent > LOG_MAX_INDENT ? LOG_MAX_INDENT : indent;
@@ -133,7 +133,7 @@ static int log_get_indent(void)
 
 PJ_DEF(void) pj_log_add_indent(int indent)
 {
-    log_set_indent(log_get_raw_indent() + indent);
+    pj_log_set_indent(log_get_raw_indent() + indent);
 }
 
 PJ_DEF(void) pj_log_push_indent(void)
@@ -338,7 +338,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 #if PJ_LOG_USE_STACK_BUFFER
     char log_buffer[PJ_LOG_MAX_SIZE];
 #endif
-    int saved_level, len, print_len, indent;
+    int saved_level, len, print_len;
 
     PJ_CHECK_STACK();
 
@@ -444,7 +444,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 
 #if PJ_LOG_ENABLE_INDENT
     if (log_decor & PJ_LOG_HAS_INDENT) {
-	indent = log_get_indent();
+	int indent = pj_log_get_indent();
 	if (indent > 0) {
 	    pj_memset(pre, PJ_LOG_INDENT_CHAR, indent);
 	    pre += indent;

@@ -1073,7 +1073,8 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 				     const pjmedia_sdp_session *remote_sdp)
 {
     pjsua_call *call = call_med->call;
-    pjsua_acc  *acc  = &pjsua_var.acc[call->acc_id];
+    unsigned strm_idx = call_med->idx;
+    pjsua_acc  *acc  = &pjsua_var.acc[call->acc_id];    
     pjmedia_port *media_port;
     pj_status_t status;
  
@@ -1087,7 +1088,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
     si->rtcp_sdes_bye_disabled = pjsua_var.media_cfg.no_rtcp_sdes_bye;;
 
     /* Check if no media is active */
-    if (si->dir != PJMEDIA_DIR_NONE) {
+    if (local_sdp->media[strm_idx]->desc.port != 0) {
 	/* Optionally, application may modify other stream settings here
 	 * (such as jitter buffer parameters, codec ptime, etc.)
 	 */
@@ -1155,7 +1156,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_precreate) {
             pjsua_on_stream_precreate_param prm;
-            prm.stream_idx = call_med->idx;
+            prm.stream_idx = strm_idx;
             prm.stream_info.type = PJMEDIA_TYPE_VIDEO;
             prm.stream_info.info.vid = *si;
             (*pjsua_var.ua_cfg.cb.on_stream_precreate)(call->index, &prm);
@@ -1410,7 +1411,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 		    /* The function may be called from worker thread, we have
 		     * to handle the events instead of simple sleep here
 		     * and must not hold any lock while handling the events:
-		     * https://trac.pjsip.org/repos/ticket/1737
+		     * https://github.com/pjsip/pjproject/issues/1737
 		     */
 		    num_locks = PJSUA_RELEASE_LOCK();
 
@@ -2792,6 +2793,8 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_get_port_info(
     unsigned i;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(port_id >= 0, PJ_EINVAL);
+
     status = pjmedia_vid_conf_get_port_info(pjsua_var.vid_conf,
 					    (unsigned)port_id, &cinfo);
     if (status != PJ_SUCCESS)
@@ -2847,6 +2850,8 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_add_port( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pjsua_vid_conf_remove_port(pjsua_conf_port_id id)
 {
+    PJ_ASSERT_RETURN(id >= 0, PJ_EINVAL);
+
     return pjmedia_vid_conf_remove_port(pjsua_var.vid_conf, (unsigned)id);
 }
 
@@ -2859,6 +2864,9 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_connect( pjsua_conf_port_id source,
 					    const void *param)
 {
     PJ_UNUSED_ARG(param);
+
+    PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
+
     return pjmedia_vid_conf_connect_port(pjsua_var.vid_conf, source, sink,
 					 NULL);
 }
@@ -2870,6 +2878,8 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_connect( pjsua_conf_port_id source,
 PJ_DEF(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
 					      pjsua_conf_port_id sink)
 {
+    PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
+
     return pjmedia_vid_conf_disconnect_port(pjsua_var.vid_conf, source, sink);
 }
 
@@ -2896,7 +2906,7 @@ PJ_DEF(pjsua_vid_win_id) pjsua_call_get_vid_win(pjsua_call_id call_id)
 		     PJ_EINVAL);
 
     /* Use PJSUA_LOCK() instead of acquire_call():
-     *  https://trac.pjsip.org/repos/ticket/1371
+     *  https://github.com/pjsip/pjproject/issues/1371
      */
     PJSUA_LOCK();
 
@@ -2937,7 +2947,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_vid_conf_port(
 		     PJ_EINVAL);
 
     /* Use PJSUA_LOCK() instead of acquire_call():
-     *  https://trac.pjsip.org/repos/ticket/1371
+     *  https://github.com/pjsip/pjproject/issues/1371
      */
     PJSUA_LOCK();
 

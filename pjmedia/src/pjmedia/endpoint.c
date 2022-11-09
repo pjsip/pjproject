@@ -345,7 +345,7 @@ static int PJ_THREAD_FUNC worker_proc(void *arg)
     pjmedia_endpt *endpt = (pjmedia_endpt*) arg;
 
     while (!endpt->quit_flag) {
-	pj_time_val timeout = { 0, 500 };
+	pj_time_val timeout = { 0, 10 };
 	pj_ioqueue_poll(endpt->ioqueue, &timeout);
     }
 
@@ -699,7 +699,8 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    attr->name = pj_str("rtpmap");
 	    pj_ansi_snprintf(buf, sizeof(buf), "%d telephone-event/%d",
 			     pt, televent_clockrates[i]);
-	    attr->value = pj_strdup3(pool, buf);
+	    /* Must be NULL terminated for pjmedia_sdp_attr_get_rtpmap() */
+	    pj_strdup2_with_null(pool, &attr->value, buf);
 	    m->attr[m->attr_count++] = attr;
 
 	    /* Add fmtp */

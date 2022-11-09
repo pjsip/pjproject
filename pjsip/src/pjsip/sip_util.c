@@ -837,7 +837,7 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
             pjsip_transport_get_type_from_name(&url->transport_param);
 	/* Double-check that the transport parameter match.
 	 * Sample case:     sips:host;transport=tcp
-	 * See https://trac.pjsip.org/repos/ticket/1319
+	 * See https://github.com/pjsip/pjproject/issues/1319
 	 */
 	flag = pjsip_transport_get_flag_from_type(dest_info->type);
 	if ((flag & dest_info->flag) != dest_info->flag) {
@@ -869,7 +869,7 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
 	return PJSIP_ENOROUTESET;
     }
 
-    /* Handle IPv6 (http://trac.pjsip.org/repos/ticket/861) */
+    /* Handle IPv6 (https://github.com/pjsip/pjproject/issues/861) */
     if (dest_info->type != PJSIP_TRANSPORT_UNSPECIFIED && 
 	pj_strchr(&dest_info->addr.host, ':'))
     {

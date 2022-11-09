@@ -31,7 +31,16 @@ static int app_perror( const char *sender, const char *title,
     return 1;
 }
 
-
+#define STRLIT_(expr)    #expr
+#define STRLIT(expr)    STRLIT_(expr)
+#define CHECK(expr) 	do { \
+			    status = expr; \
+			    if (status!=PJ_SUCCESS && status!=PJ_EPENDING) { \
+				PJ_PERROR(1,(THIS_FILE, status, \
+					     "In " __FILE__ ":" STRLIT(__LINE__))); \
+				goto on_error; \
+			    } \
+			} while (0)
 
 /* Constants */
 #define CLOCK_RATE	44100

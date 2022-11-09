@@ -657,14 +657,13 @@
  * and to prevent server from disconnecting the call because no 
  * RTP packet is received.
  *
- * This only applies to codecs that use PJMEDIA's VAD (pretty much
- * everything including iLBC, except Speex, which has its own DTX 
- * mechanism).
+ * This only applies to codecs that use PJMEDIA's VAD such as G711, GSM,
+ * iLBC, G722, G722.1, L16. Some other codecs, such as Speex, Opus, G729,
+ * have their own VAD/DTX mechanism will not be affected by this setting.
  *
  * Use (-1) to disable this feature.
  *
  * Default: 5000 ms
- *
  */
 #ifndef PJMEDIA_CODEC_MAX_SILENCE_PERIOD
 #   define PJMEDIA_CODEC_MAX_SILENCE_PERIOD	5000
@@ -1092,7 +1091,7 @@
  * so we recommend to disable this.
  *
  * To enable this, you would require OpenSSL which supports it.
- * See https://trac.pjsip.org/repos/ticket/1943 for more info.
+ * See https://github.com/pjsip/pjproject/issues/1943 for more info.
  *
  * Default: disabled.
  */
@@ -1114,7 +1113,7 @@
  * Enable AES_GCM_256 cryptos in SRTP.
  *
  * To enable this, you would require OpenSSL which supports it.
- * See https://trac.pjsip.org/repos/ticket/1943 for more info. 
+ * See https://github.com/pjsip/pjproject/issues/1943 for more info. 
  *
  * Default: disabled.
  */
@@ -1127,7 +1126,7 @@
  * Enable AES_GCM_128 cryptos in SRTP.
  *
  * To enable this, you would require OpenSSL which supports it.
- * See https://trac.pjsip.org/repos/ticket/1943 for more info.
+ * See https://github.com/pjsip/pjproject/issues/1943 for more info.
  *
  * Default: disabled.
  */
@@ -1244,6 +1243,7 @@
 #ifndef PJMEDIA_STREAM_KA_USER_PKT
 #   define PJMEDIA_STREAM_KA_USER_PKT	{ "\r\n", 2 }
 #endif
+
 
 /**
  * Specify another type of keep-alive and NAT hole punching 

@@ -35,7 +35,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup s2_audio_device_reference Audio Device API Reference
+ * @defgroup PJMEDIA_AUDIODEV_API Audio Device API Reference
  * @ingroup audio_device_api
  * @brief Documentation and API Reference
  * @{

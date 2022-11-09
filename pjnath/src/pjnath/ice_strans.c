@@ -1850,7 +1850,7 @@ static pj_status_t send_data(pj_ice_strans *ice_st,
      * failure, it will fallback to sending with the default candidate
      * selected during initialization.
      *
-     * https://trac.pjsip.org/repos/ticket/1416:
+     * https://github.com/pjsip/pjproject/issues/1416:
      * Once ICE has failed, also send data with the default candidate.
      */
     if (ice_st->ice && ice_st->state <= PJ_ICE_STRANS_STATE_RUNNING) {
@@ -1876,7 +1876,7 @@ static pj_status_t send_data(pj_ice_strans *ice_st,
 				    PJ_STUN_SESS_LOG_RX_IND)
 	    };
 
-	    /* https://trac.pjsip.org/repos/ticket/1316 */
+	    /* https://github.com/pjsip/pjproject/issues/1316 */
 	    if (comp->turn[tp_idx].sock == NULL) {
 		/* TURN socket error */
 		status = PJ_EINVALIDOP;

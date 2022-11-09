@@ -545,6 +545,9 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     pj_bool_t content_in_msg_data;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     PJ_EINVAL);
+
     content_in_msg_data = msg_data && (msg_data->msg_body.slen ||
 				       msg_data->multipart_ctype.type.slen);
 
@@ -672,6 +675,9 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     pjsip_tx_data *tdata;
     pjsua_acc *acc;
     pj_status_t status;
+
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     PJ_EINVAL);
 
     acc = &pjsua_var.acc[acc_id];
 

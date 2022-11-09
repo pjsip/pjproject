@@ -2502,7 +2502,7 @@ static pj_status_t cmd_vid_conf_list()
     }
 
     PJ_LOG(3,(THIS_FILE," Video conference has %d ports:\n", count));
-    PJ_LOG(3,(THIS_FILE," id name                   format               rx           tx    \n"));
+    PJ_LOG(3,(THIS_FILE," id name                   format               rx-from      tx-to \n"));
     PJ_LOG(3,(THIS_FILE," ------------------------------------------------------------------\n"));
     for (i=0; i<count; ++i) {
 	char li_list[PJSUA_MAX_CALLS*4];
@@ -2695,10 +2695,16 @@ static pj_status_t cmd_quit_handler(pj_cli_cmd_val *cval)
 static pj_status_t cmd_ip_change_handler(pj_cli_cmd_val *cval)
 {
     pjsua_ip_change_param param;
+    pj_status_t status;
     PJ_UNUSED_ARG(cval);
 
     pjsua_ip_change_param_default(&param);
-    pjsua_handle_ip_change(&param);    
+    status = pjsua_handle_ip_change(&param);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "IP change failed", status);
+    } else {
+	PJ_LOG(3,(THIS_FILE, "IP change succeeded"));
+    }
 
     return PJ_SUCCESS;
 }

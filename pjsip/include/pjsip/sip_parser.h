@@ -41,22 +41,22 @@ PJ_BEGIN_DECL
 /**
  * Contants for limit checks
  */
-#define PJSIP_MIN_CONTENT_LENGTH    0
-#define PJSIP_MAX_CONTENT_LENGTH    PJ_MAXINT32
-#define PJSIP_MIN_PORT		    0
-#define PJSIP_MAX_PORT		    PJ_MAXUINT16
-#define PJSIP_MIN_TTL		    0
-#define PJSIP_MAX_TTL		    PJ_MAXUINT8
-#define PJSIP_MIN_STATUS_CODE	    100
-#define PJSIP_MAX_STATUS_CODE	    999
-#define PJSIP_MIN_Q1000		    0
-#define PJSIP_MAX_Q1000		    PJ_MAXINT32 / 1000
-#define PJSIP_MIN_EXPIRES	    0
-#define PJSIP_MAX_EXPIRES	    ((pj_uint32_t)0xFFFFFFFFUL)
-#define PJSIP_MIN_CSEQ		    0
-#define PJSIP_MAX_CSEQ		    PJ_MAXINT32
-#define PJSIP_MIN_RETRY_AFTER	    0
-#define PJSIP_MAX_RETRY_AFTER	    PJ_MAXINT32
+#define PJSIP_MIN_CONTENT_LENGTH    0		/**< For limit checks */
+#define PJSIP_MAX_CONTENT_LENGTH    PJ_MAXINT32 /**< For limit checks */
+#define PJSIP_MIN_PORT		    0		/**< For limit checks */
+#define PJSIP_MAX_PORT		    PJ_MAXUINT16/**< For limit checks */
+#define PJSIP_MIN_TTL		    0		/**< For limit checks */
+#define PJSIP_MAX_TTL		    PJ_MAXUINT8 /**< For limit checks */
+#define PJSIP_MIN_STATUS_CODE	    100		/**< For limit checks */
+#define PJSIP_MAX_STATUS_CODE	    999		/**< For limit checks */
+#define PJSIP_MIN_Q1000		    0		/**< For limit checks */
+#define PJSIP_MAX_Q1000		    PJ_MAXINT32 / 1000/**< For limit checks */
+#define PJSIP_MIN_EXPIRES	    0		/**< For limit checks */
+#define PJSIP_MAX_EXPIRES	    ((pj_uint32_t)0xFFFFFFFFUL)/**< for chk */
+#define PJSIP_MIN_CSEQ		    0		/**< For limit checks */
+#define PJSIP_MAX_CSEQ		    PJ_MAXINT32 /**< For limit checks */
+#define PJSIP_MIN_RETRY_AFTER	    0		/**< For limit checks */
+#define PJSIP_MAX_RETRY_AFTER	    PJ_MAXINT32	/**< For limit checks */
 
 /**
  * URI Parsing options.
@@ -439,21 +439,23 @@ enum
     PJSIP_PARSE_REMOVE_QUOTE = 1
 };
 
-/* Parse parameter in header (matching the character as token) */
+/** Internal: parse parameter in header (matching the character as token) */
 PJ_DECL(void) pjsip_parse_param_imp(pj_scanner *scanner, pj_pool_t *pool,
 			     	    pj_str_t *pname, pj_str_t *pvalue,
 			     	    unsigned opt);
-/* Parse parameter in URL (matching the character as paramchar) */
+/** Internal: parse parameter in URL (matching the character as paramchar) */
 PJ_DECL(void) pjsip_parse_uri_param_imp(pj_scanner *scanner, pj_pool_t *pool,
 				 	pj_str_t *pname, pj_str_t *pvalue,
 				 	unsigned opt);
+/** Internal: concatenate parameter */
 PJ_DECL(void) pjsip_concat_param_imp(pj_str_t *param, pj_pool_t *pool, 
 			     	     const pj_str_t *pname, 
 				     const pj_str_t *pvalue, 
 			     	     int sepchar);
+/** Internal */
 PJ_DECL(void) pjsip_parse_end_hdr_imp ( pj_scanner *scanner );
 
-/* Parse generic array header */
+/** Parse generic array header */
 PJ_DECL(void) pjsip_parse_generic_array_hdr_imp(pjsip_generic_array_hdr *hdr,
 						pj_scanner *scanner);
 

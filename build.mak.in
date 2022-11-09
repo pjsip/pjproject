@@ -8,6 +8,7 @@ export OS_NAME := auto
 export HOST_NAME := unix
 export CC_NAME := gcc
 export TARGET_ARCH := @ac_target_arch@
+export STD_CPP_LIB := @ac_std_cpp_lib@
 export TARGET_NAME := @target@
 export CROSS_COMPILE := @ac_cross_compile@
 export LINUX_POLL := @ac_linux_poll@ 
@@ -41,6 +42,7 @@ export APP_THIRD_PARTY_EXT :=
 export APP_THIRD_PARTY_LIBS :=
 export APP_THIRD_PARTY_LIB_FILES :=
 
+ifneq (@ac_no_srtp@,1)
 ifneq (@ac_external_srtp@,0)
 # External SRTP library
 APP_THIRD_PARTY_EXT += -l@ac_external_srtp_lib@
@@ -51,6 +53,7 @@ APP_THIRD_PARTY_LIBS += -lsrtp-$(TARGET_NAME)
 else
 APP_THIRD_PARTY_LIBS += -lsrtp
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libsrtp.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libsrtp.$(SHLIB_SUFFIX)
+endif
 endif
 endif
 

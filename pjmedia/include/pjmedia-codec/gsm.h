@@ -40,15 +40,15 @@
  * The GSM codec supports 16-bit PCM with sampling rate of 8000Hz resulting
  * in 13.2kbps bitrate.
  *
- * \section codec_setting Codec Settings
+ * \section gsm_codec_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection gsm_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection gsm_specific_setting Codec Specific Settings
  *
  * Currently none.
  */

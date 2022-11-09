@@ -21,7 +21,7 @@
 
 /**
  * @file pjmedia_videodev.h
- * @brief PJMEDIA main header file.
+ * @brief PJMEDIA-VIDEODEV main header file.
  */
 
 #include <pjmedia-videodev/videodev.h>

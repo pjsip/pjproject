@@ -303,7 +303,7 @@
      */
 
     /* Both armv6 and armv7 has FP hardware support.
-     * See https://trac.pjsip.org/repos/ticket/1589 for more info
+     * See https://github.com/pjsip/pjproject/issues/1589 for more info
      */
     #define PJ_HAS_FLOATING_POINT		1
 

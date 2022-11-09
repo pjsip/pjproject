@@ -255,7 +255,7 @@
 #   define PJ_IS_BIG_ENDIAN	1
 
 #elif defined(ARM) || defined(_ARM_) ||  defined(__arm__) || \
-       defined(_M_ARM) || defined(_M_ARM64)
+       defined(_M_ARM) || defined(_M_ARM64) || defined(__aarch64__)
 #   define PJ_HAS_PENTIUM	0
     /*
      * ARM, bi-endian, so raise error if endianness is not configured
@@ -271,7 +271,7 @@
 #	undef PJ_M_ARMV4
 #	define PJ_M_ARMV4		1
 #	define PJ_M_NAME		"armv4"
-#   elif defined (PJ_M_ARM64) || defined(ARM64)
+#   elif defined (PJ_M_ARM64) || defined(ARM64) || defined(__aarch64__)
 #	undef PJ_M_ARM64
 #	define PJ_M_ARM64		1
 #	define PJ_M_NAME		"arm64"
@@ -549,7 +549,7 @@
  * Enable timer debugging facility. When this is enabled, application
  * can call pj_timer_heap_dump() to show the contents of the timer
  * along with the source location where the timer entries were scheduled.
- * See https://trac.pjsip.org/repos/ticket/1527 for more info.
+ * See https://github.com/pjsip/pjproject/issues/1527 for more info.
  *
  * Default: 1
  */
@@ -741,6 +741,17 @@
  */
 #ifndef PJ_IOQUEUE_KEY_FREE_DELAY
 #   define PJ_IOQUEUE_KEY_FREE_DELAY	500
+#endif
+
+
+/**
+ * Default flags for epoll_flags member of  pj_ioqueue_cfg structure.
+ * The values are combination of pj_ioqueue_epoll_flag constants.
+ *
+ * Default: PJ_IOQUEUE_EPOLL_AUTO
+ */
+#ifndef PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS
+#   define PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS PJ_IOQUEUE_EPOLL_AUTO
 #endif
 
 
@@ -1057,7 +1068,7 @@
 
 /**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
- * https://trac.pjsip.org/repos/ticket/1197.
+ * https://github.com/pjsip/pjproject/issues/1197.
  *
  * Default: 1
  */

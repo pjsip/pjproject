@@ -247,7 +247,8 @@ static void keystroke_help()
     puts("| Video: \"vid help\" for more info                                             |");
     puts("+-----------------------------------------------------------------------------+");
 #endif
-    puts("|  q  QUIT   L  ReLoad   sleep MS   echo [0|1|txt]     n: detect NAT type     |");
+    puts("|  q  QUIT      L  ReLoad       I  IP change     n  detect NAT type           |");
+    puts("|  sleep MS     echo [0|1|txt]                                                |");
     puts("+=============================================================================+");
 
     i = pjsua_call_get_count();
@@ -618,7 +619,7 @@ static void vid_handle_menu(char *menuin)
 	    } else {
 		unsigned i;
 		printf(" Video conference has %d ports:\n", count);
-		printf(" id name                   format               rx           tx    \n");
+		printf(" id name                   format               rx-from      tx-to \n");
 		printf(" ------------------------------------------------------------------\n");
 		for (i=0; i<count; ++i) {
 		    char li_list[PJSUA_MAX_CALLS*4];
@@ -1762,8 +1763,15 @@ static void ui_call_redirect(char menuin[])
 static void ui_handle_ip_change()
 {
     pjsua_ip_change_param param;
+    pj_status_t status;
+
     pjsua_ip_change_param_default(&param);
-    pjsua_handle_ip_change(&param);
+    status = pjsua_handle_ip_change(&param);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "IP change failed", status);
+    } else {
+	PJ_LOG(3,(THIS_FILE, "IP change succeeded"));
+    }
 }
 
 /*

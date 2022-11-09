@@ -413,8 +413,11 @@ static pj_status_t initialize_acc(unsigned acc_id)
     pj_array_insert(pjsua_var.acc_ids, sizeof(pjsua_var.acc_ids[0]),
 		    pjsua_var.acc_cnt, i, &acc_id);
 
-    if (acc_cfg->transport_id != PJSUA_INVALID_ID)
-	acc->tp_type = pjsua_var.tpdata[acc_cfg->transport_id].type;
+    if (acc_cfg->transport_id != PJSUA_INVALID_ID) {
+        acc->tp_type = pjsua_var.tpdata[acc_cfg->transport_id].type;
+    } else {
+        acc->tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
+    }
 
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
 
@@ -1379,6 +1382,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.ipv6_media_use = cfg->ipv6_media_use;
     acc->cfg.enable_rtcp_mux = cfg->enable_rtcp_mux;
     acc->cfg.lock_codec = cfg->lock_codec;
+    acc->cfg.enable_rtcp_xr = cfg->enable_rtcp_xr;
 
     /* STUN and Media customization */
     if (acc->cfg.sip_stun_use != cfg->sip_stun_use) {
@@ -1801,7 +1805,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     }
 
     /* Convert IP address strings into sockaddr for comparison.
-     * (http://trac.pjsip.org/repos/ticket/863)
+     * (https://github.com/pjsip/pjproject/issues/863)
      */
     status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &uri->host, 
 			       &contact_addr);
@@ -1841,7 +1845,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     /* Do not switch if both Contact and server's IP address are
      * public but response contains private IP. A NAT in the middle
      * might have messed up with the SIP packets. See:
-     * http://trac.pjsip.org/repos/ticket/643
+     * https://github.com/pjsip/pjproject/issues/643
      *
      * This exception can be disabled by setting allow_contact_rewrite
      * to 2. In this case, the switch will always be done whenever there
@@ -1857,7 +1861,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
     /* Also don't switch if only the port number part is different, and
      * the Via received address is private.
-     * See http://trac.pjsip.org/repos/ticket/864
+     * See https://github.com/pjsip/pjproject/issues/864
      */
     if (acc->cfg.allow_contact_rewrite != 2 &&
 	pj_sockaddr_cmp(&contact_addr, &recv_addr)==0 &&
@@ -1952,9 +1956,9 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
 	update_regc_contact(acc);
 
-	/* Always update, by http://trac.pjsip.org/repos/ticket/864. */
+	/* Always update, by https://github.com/pjsip/pjproject/issues/864. */
         /* Since the Via address will now be overwritten to the correct
-         * address by https://trac.pjsip.org/repos/ticket/1537, we do
+         * address by https://github.com/pjsip/pjproject/issues/1537, we do
          * not need to update the transport address.
          */
         /*
@@ -2214,7 +2218,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	acc->ka_transport = param->rdata->tp_info.transport;
 	pjsip_transport_add_ref(acc->ka_transport);
 
-	/* https://trac.pjsip.org/repos/ticket/1607:
+	/* https://github.com/pjsip/pjproject/issues/1607:
 	 * Calculate the destination address from the original request. Some
 	 * (broken) servers send the response using different source address
 	 * than the one that receives the request, which is forbidden by RFC
@@ -2512,6 +2516,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
      * considered to be recoverable in relatively short term.
      */
     if (acc->cfg.reg_retry_interval && 
+	acc->ip_change_op != PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT &&
 	(param->code == PJSIP_SC_REQUEST_TIMEOUT ||
 	 param->code == PJSIP_SC_INTERNAL_SERVER_ERROR ||
 	 param->code == PJSIP_SC_BAD_GATEWAY ||
@@ -2564,19 +2569,18 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 			   pjsua_var.acc[acc->index].cfg.id.ptr));
 
 		status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
-		if ((status != PJ_SUCCESS) &&
-		    pjsua_var.ua_cfg.cb.on_ip_change_progress)
-		{
-		    pjsua_ip_change_op_info ip_chg_info;
+		if (status != PJ_SUCCESS) {
+		    if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+			pjsua_ip_change_op_info ip_chg_info;
 
-		    pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
-		    ip_chg_info.acc_update_contact.acc_id = acc->index;
-		    ip_chg_info.acc_update_contact.is_register = PJ_TRUE;
-		    (*pjsua_var.ua_cfg.cb.on_ip_change_progress)(
+			pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
+			ip_chg_info.acc_update_contact.acc_id = acc->index;
+			ip_chg_info.acc_update_contact.is_register = PJ_TRUE;
+			(*pjsua_var.ua_cfg.cb.on_ip_change_progress)(
 							    acc->ip_change_op,
 							    status,
 							    &ip_chg_info);
-
+		    }
 		    pjsua_acc_end_ip_change(acc);
 		}
 	    } else {
@@ -2796,6 +2800,24 @@ pj_bool_t pjsua_media_acc_is_using_stun(pjsua_acc_id acc_id)
 	   pjsua_var.ua_cfg.stun_srv_cnt != 0;
 }
 
+pj_bool_t pjsua_sip_acc_is_using_upnp(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    return acc->cfg.sip_upnp_use != PJSUA_UPNP_USE_DISABLED &&
+	   pjsua_var.ua_cfg.enable_upnp &&
+	   pjsua_var.upnp_status == PJ_SUCCESS;
+}
+
+pj_bool_t pjsua_media_acc_is_using_upnp(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    return acc->cfg.media_upnp_use != PJSUA_UPNP_USE_DISABLED &&
+	   pjsua_var.ua_cfg.enable_upnp &&
+	   pjsua_var.upnp_status == PJ_SUCCESS;
+}
+
 /*
  * Update registration or perform unregistration. 
  */
@@ -2891,9 +2913,11 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
             pjsip_regc_set_via_sent_by(pjsua_var.acc[acc_id].regc,
                                        &pjsua_var.acc[acc_id].via_addr,
                                        pjsua_var.acc[acc_id].via_tp);
-        } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+        } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+        	   !pjsua_sip_acc_is_using_upnp(acc_id))
+        {
             /* Choose local interface to use in Via if acc is not using
-             * STUN
+             * STUN nor UPnP.
              */
             pjsua_acc_get_uac_addr(acc_id, tdata->pool,
 	                           &acc->cfg.reg_uri,
@@ -3314,9 +3338,11 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
     {
         tdata->via_addr = pjsua_var.acc[acc_id].via_addr;
         tdata->via_tp = pjsua_var.acc[acc_id].via_tp;
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc_id))
+    {
         /* Choose local interface to use in Via if acc is not using
-         * STUN
+         * STUN nor UPnP.
          */
         pjsua_acc_get_uac_addr(acc_id, tdata->pool,
 	                       target,
@@ -3427,7 +3453,8 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     tfla2_prm.tp_type = tp_type;
     tfla2_prm.tp_sel = &tp_sel;
     tfla2_prm.dst_host = sip_uri->host;
-    tfla2_prm.local_if = (!pjsua_sip_acc_is_using_stun(acc_id) ||
+    tfla2_prm.local_if = ((!pjsua_sip_acc_is_using_stun(acc_id) &&
+			   !pjsua_sip_acc_is_using_upnp(acc_id)) ||
 	                  (flag & PJSIP_TRANSPORT_RELIABLE));
 
     tpmgr = pjsip_endpt_get_tpmgr(pjsua_var.endpt);
@@ -3447,7 +3474,8 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
         
         tfla2_prm2.tp_type = PJSIP_TRANSPORT_UDP6;
         tfla2_prm2.tp_sel = NULL;
-        tfla2_prm2.local_if = (!pjsua_sip_acc_is_using_stun(acc_id));
+        tfla2_prm2.local_if = (!pjsua_sip_acc_is_using_stun(acc_id) &&
+        		       !pjsua_sip_acc_is_using_upnp(acc_id));
         status = pjsip_tpmgr_find_local_addr2(tpmgr, pool, &tfla2_prm2);
     	if (status == PJ_SUCCESS) {
     	    update_addr = PJ_FALSE;
@@ -3805,7 +3833,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     tfla2_prm.tp_type = tp_type;
     tfla2_prm.tp_sel = &tp_sel;
     tfla2_prm.dst_host = sip_uri->host;
-    tfla2_prm.local_if = (!pjsua_sip_acc_is_using_stun(acc_id) ||
+    tfla2_prm.local_if = ((!pjsua_sip_acc_is_using_stun(acc_id) &&
+    			   !pjsua_sip_acc_is_using_upnp(acc_id)) ||
 	                  (flag & PJSIP_TRANSPORT_RELIABLE));
 
     tpmgr = pjsip_endpt_get_tpmgr(pjsua_var.endpt);
@@ -3947,7 +3976,8 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	    if (acc->contact.slen < tmp_contact.slen) {
 		pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
 	    } else {
-		pj_strcpy(&acc->contact, &tmp_contact);
+		pj_strncpy_with_null(&acc->contact, &tmp_contact, 
+				     PJSIP_MAX_URL_SIZE);
 	    }
 	    update_regc_contact(acc);
 	    if (acc->regc)
@@ -4088,7 +4118,7 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
 	}
 
 	/* Release transport immediately if regc is using it
-	 * See https://trac.pjsip.org/repos/ticket/1481
+	 * See https://github.com/pjsip/pjproject/issues/1481
 	 */
 	if (acc->regc) {
 	    pjsip_regc_info reg_info;
@@ -4185,9 +4215,10 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     {
 	for (i = 0; i < (int)pjsua_var.ua_cfg.max_calls; ++i) {
 	    pjsua_call_info call_info;
-	    pjsua_call_get_info(i, &call_info);
 
-	    if (pjsua_var.calls[i].acc_id != acc->index)
+	    if (!pjsua_call_is_active(i) ||
+		pjsua_var.calls[i].acc_id != acc->index ||
+		pjsua_call_get_info(i, &call_info) != PJ_SUCCESS)
 	    {
 		continue;
 	    }
@@ -4218,21 +4249,73 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 	    } else if ((acc->cfg.ip_change_cfg.reinvite_flags) &&
 		(call_info.state == PJSIP_INV_STATE_CONFIRMED))
 	    {
+		pj_bool_t use_update = acc->cfg.ip_change_cfg.reinv_use_update;
+
+		/* Check if remote support SIP UPDATE method */
+		if (use_update) {
+		    pjsua_call *call;
+		    pjsip_dialog *dlg = NULL;
+
+		    PJ_LOG(5, (THIS_FILE, "Call #%d: IP change is configured "
+			       "to using UPDATE", i));
+
+		    status = acquire_call("handle_call_on_ip_change()",
+					  i, &call, &dlg);
+		    if (status != PJ_SUCCESS) {
+			use_update = PJ_FALSE;
+			PJ_PERROR(3,(THIS_FILE, status,
+				     "Call #%d: IP change cannot "
+				     "check if remote supports UPDATE due to "
+				     "failure in acquiring dialog lock", i));
+		    } else {
+			const pj_str_t ST_UPDATE = {"UPDATE", 6};
+			use_update = pjsip_dlg_remote_has_cap(
+					    dlg, PJSIP_H_ALLOW, NULL,
+					    &ST_UPDATE)
+				     == PJSIP_DIALOG_CAP_SUPPORTED;
+			pjsip_dlg_dec_lock(dlg);
+
+			if (!use_update) {
+			    PJ_LOG(3, (THIS_FILE, "Call #%d: IP change will "
+				       "use re-INVITE because remote does "
+				       "not support UPDATE", i));
+			}
+		    }
+		}
+
 		acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS;
 
 		pjsua_call_cleanup_flag(&call_info.setting);
 		call_info.setting.flag |=
 					 acc->cfg.ip_change_cfg.reinvite_flags;
 
-		PJ_LOG(3, (THIS_FILE, "call to %.*s: send "
-			   "re-INVITE with flags 0x%x triggered "
+		PJ_LOG(3, (THIS_FILE, "Call #%d to %.*s: send %s "
+			   "with flags 0x%x triggered "
 			   "by IP change (IP change flag: 0x%x)",
+			   i,
 			   call_info.remote_info.slen,
 			   call_info.remote_info.ptr,
+			   (use_update? "UPDATE" : "re-INVITE"),
 			   call_info.setting.flag,
 			   acc->cfg.ip_change_cfg.reinvite_flags));
 
-		status = pjsua_call_reinvite(i, call_info.setting.flag, NULL);
+		/* Refresh call using UPDATE */
+		if (use_update) {
+		    status = pjsua_call_update(i, call_info.setting.flag,
+					       NULL);
+		    /* If this fails, retry using INVITE below */
+		    if (status != PJ_SUCCESS) {
+			PJ_LOG(3, (THIS_FILE, "Call #%d: failed sending UPDATE"
+			                      " retrying using re-INVITE", i));
+			use_update = PJ_FALSE;
+		    }
+		}
+
+		/* Refresh call using re-INVITE */
+		if (!use_update) {
+		    status = pjsua_call_reinvite(i, call_info.setting.flag,
+						 NULL);
+		}
 
 		if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
 		    pjsua_ip_change_op_info info;

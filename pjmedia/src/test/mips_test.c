@@ -1075,7 +1075,7 @@ static pjmedia_port* create_wsola_plc(unsigned loss_pct,
 	opt |= PJMEDIA_WSOLA_NO_PLC;
 
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame,
-				  channel_count, 0, &wp->wsola);
+				  channel_count, opt, &wp->wsola);
     if (status != PJ_SUCCESS)
 	return NULL;
 
@@ -1249,7 +1249,7 @@ static pjmedia_port* create_wsola_discard(unsigned discard_pct,
 	opt |= PJMEDIA_WSOLA_NO_DISCARD;
 
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame,
-				  channel_count, 0, &wp->wsola);
+				  channel_count, opt, &wp->wsola);
     if (status != PJ_SUCCESS)
 	return NULL;
 

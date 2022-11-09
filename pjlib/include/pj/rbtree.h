@@ -51,8 +51,14 @@ typedef enum pj_rbcolor_t
  */
 typedef struct pj_rbtree_node 
 {
-    /** Pointers to the node's parent, and left and right siblings. */
-    struct pj_rbtree_node *parent, *left, *right;
+    /** Pointers to the node's parent. */
+    struct pj_rbtree_node *parent;
+
+    /** Pointers to the node's left sibling. */
+    struct pj_rbtree_node *left;
+
+    /** Pointers to the node's right sibling. */
+    struct pj_rbtree_node *right;
 
     /** Key associated with the node. */
     const void *key;

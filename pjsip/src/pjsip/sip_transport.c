@@ -2399,8 +2399,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 		key_len = sizeof(key.type) + addr_len;
 		tp_entry = (transport *) pj_hash_get(mgr->table, &key,
 						     key_len, NULL);
-		if (tp_entry) {
+
+		while (tp_entry) {
 		    tp_ref = tp_entry->tp;
+                    if (!tp_ref->is_shutdown && !tp_ref->is_destroying)
+                        break;
+                    tp_entry = tp_entry->next;
 		}
 	    }
 	}

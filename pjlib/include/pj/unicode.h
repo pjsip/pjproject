@@ -133,7 +133,7 @@ PJ_DECL(char*) pj_unicode_to_ansi(const wchar_t *wstr, pj_ssize_t len,
 
 PJ_END_DECL
 
-/*
+/**
  * @}
  */
 

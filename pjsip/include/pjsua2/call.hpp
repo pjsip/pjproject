@@ -364,7 +364,7 @@ public:
  *
  * Application can query conference bridge port of this media using
  * Call::getAudioMedia() if the media type is audio,
- * or Call::getEncodingVideoMedia()/Call::getDecodingVideoMedia()
+ * or Call::getEncodingVideoMedia() / Call::getDecodingVideoMedia()
  * if the media type is video.
  */
 struct CallMediaInfo
@@ -965,6 +965,11 @@ struct OnCallReplaceRequestParam
      * the call being replaced.
      */
     CallSetting         opt;
+
+    /**
+     * New Call derived object instantiated by application.
+     */
+    Call		*newCall;
 };
 
 /**
@@ -1755,6 +1760,22 @@ public:
                       const CallVidSetStreamParam &param) PJSUA2_THROW(Error);
 
     /**
+     * Modify the audio stream's codec parameter after the codec is opened.
+     * Note that not all codec parameters can be modified during run-time.
+     * Currently, only Opus codec supports changing key codec parameters
+     * such as bitrate and bandwidth, while other codecs may only be able to
+     * modify minor settings such as VAD or PLC.
+     *
+     * @param med_idx	    Media stream index, or -1 to specify default audio
+     * 			    media.
+     * @param param	    The new codec parameter.
+     *
+     * @return		    PJ_SUCCESS on success.
+     */
+    void audStreamModifyCodecParam(int med_idx, const CodecParam &param)
+    				   PJSUA2_THROW(Error);
+
+    /**
      * Get media stream info for the specified media index.
      *
      * @param med_idx       Media stream index.
@@ -1845,7 +1866,7 @@ public:
 
     /**
      * Notify application when an audio media session is about to be created
-     * (as opposed to #on_stream_created() and #on_stream_created2() which are
+     * (as opposed to on_stream_created() and on_stream_created2() which are
      * called *after* the session has been created). The application may change
      * some stream info parameter values, i.e: jbInit, jbMinPre, jbMaxPre,
      * jbMax, useKa, rtcpSdesByeDisabled, jbDiscardAlgo (audio),
@@ -1900,7 +1921,9 @@ public:
      *
      * If application decides to accept the transfer request, it must also
      * instantiate the new Call object for the transfer operation and return
-     * this new Call object to prm.newCall.
+     * this new Call object to prm.newCall. For the new Call instance,
+     * the account should use the same account as this call and the call ID
+     * must be set to PJSUA_INVALID_ID.
      * 
      * If application does not specify new Call object, library will reuse the
      * existing Call object for initiating the new call (to the transfer
@@ -1930,6 +1953,19 @@ public:
      * Notify application about incoming INVITE with Replaces header.
      * Application may reject the request by setting non-2xx code.
      *
+     * In this callback, application should create a new Call instance and
+     * return the Call object via prm.newCall. In creating the new Call
+     * instance, the account should use the same account as this call and
+     * the call ID must be set to PJSUA_INVALID_ID.
+     *
+     * If application does not specify new Call object, library will reuse the
+     * existing Call object for callbacks. In this case, any events from
+     * both calls (replaced and new) will be delivered to the same Call object,
+     * where the call ID will be switched back and forth between callbacks.
+     * Application must be careful to not destroy the Call object when
+     * receiving disconnection event of the replaced call after the transfer
+     * process is completed.
+     *
      * @param prm	Callback parameter.
      */
     virtual void onCallReplaceRequest(OnCallReplaceRequestParam &prm)
@@ -1941,11 +1977,24 @@ public:
      * request with Replaces header.
      *
      * After this callback is called, normally PJSUA-API will disconnect
-     * this call and establish a new call. To be able to control the call,
-     * e.g: hold, transfer, change media parameters, application must
-     * instantiate a new Call object for the new call using call ID
-     * specified in prm.newCallId, and return the Call object via
-     * prm.newCall.
+     * this call and establish a new call.
+     *
+     * If not yet done in onCallReplaceRequest(), application can create
+     * the new Call instance and return the Call object via prm.newCall.
+     * In creating the new Call instance, the account should use the same
+     * account as this call and the call ID must be set to prm.newCallId.
+     *
+     * If the new Call instance has been setup in onCallReplaceRequest(),
+     * the prm.newCall should contain the new Call instance and application
+     * MUST not change it.
+     *
+     * If application does not specify new Call object, library will reuse the
+     * existing Call object for callbacks. In this case, any events from
+     * both calls (replaced and new) will be delivered to the same Call object,
+     * where the call ID will be switched back and forth between callbacks.
+     * Application must be careful to not destroy the Call object when
+     * receiving disconnection event of the replaced call after the transfer
+     * process is completed.
      *
      * @param prm	Callback parameter.
      */
@@ -1970,7 +2019,7 @@ public:
      * Notify application when call has received a re-INVITE offer from
      * the peer. It allows more fine-grained control over the response to
      * a re-INVITE. If application sets async to PJ_TRUE, it can send
-     * the reply manually using the function #Call::answer() and setting
+     * the reply manually using the function #pj::Call::answer() and setting
      * the SDP answer. Otherwise, by default the re-INVITE will be
      * answered automatically after the callback returns.
      *

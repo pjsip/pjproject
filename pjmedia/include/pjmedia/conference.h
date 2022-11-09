@@ -45,7 +45,7 @@ PJ_BEGIN_DECL
 
 /* Since 1.3 pjmedia_conf_add_passive_port() has been deprecated
  * and replaced by splitcomb.
- * See also https://trac.pjsip.org/repos/ticket/2234.
+ * See also https://github.com/pjsip/pjproject/issues/2234.
  */
 #ifndef DEPRECATED_FOR_TICKET_2234
 #  define DEPRECATED_FOR_TICKET_2234	1

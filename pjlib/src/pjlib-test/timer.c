@@ -89,7 +89,7 @@ static int test_timer_heap(void)
     count = MIN_COUNT;
     for (i=0; i<LOOP; ++i) {
 	int early = 0;
-	int done=0;
+	//int done=0;
 	int cancelled=0;
 	int rc;
 	pj_timestamp t1, t2, t_sched, t_cancel, t_poll;
@@ -155,7 +155,7 @@ static int test_timer_heap(void)
 #endif
 	    pj_get_timestamp(&t2);
 	    if (rc > 0) {
-		done += rc;
+		//done += rc;
 		t_poll.u32.lo += (t2.u32.lo - t1.u32.lo);
 	    }
 

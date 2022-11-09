@@ -94,8 +94,13 @@ typedef void pjsip_regc_cb(struct pjsip_regc_cbparam *param);
  */
 struct pjsip_regc_tsx_cb_param
 {
+    /** cbparam */
     struct pjsip_regc_cbparam   cbparam;
+
+    /** Number of Contacts */
     int                         contact_cnt;
+
+    /** Array of Contacts */
     pj_str_t                    contact[PJSIP_REGC_MAX_CONTACT];
 };
 
@@ -361,7 +366,7 @@ PJ_DECL(pj_status_t) pjsip_regc_set_transport(pjsip_regc *regc,
  * to prevent it from being destroyed. In some situation however, such as
  * when the transport is disconnected, it is necessary to instruct the
  * regc to release this reference so that the transport can be destroyed.
- * See https://trac.pjsip.org/repos/ticket/1481 for background info.
+ * See https://github.com/pjsip/pjproject/issues/1481 for background info.
  *
  * @param regc	    The client registration instance.
  *

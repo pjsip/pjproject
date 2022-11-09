@@ -1092,7 +1092,7 @@ parse_headers:
 		/* Note:
 		 *  hdr MAY BE NULL, if parsing does not yield a new header
 		 *  instance, e.g. the values have been added to existing
-		 *  header. See http://trac.pjsip.org/repos/ticket/940
+		 *  header. See https://github.com/pjsip/pjproject/issues/940
 		 */
 
 		/* Check if we've just parsed a Content-Type header. 

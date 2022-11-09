@@ -60,11 +60,11 @@ const pj_uint16_t PJ_SOCK_RDM	= SOCK_RDM;
  * Socket level values.
  */
 const pj_uint16_t PJ_SOL_SOCKET	= SOL_SOCKET;
-#ifdef SOL_IP
-const pj_uint16_t PJ_SOL_IP	= SOL_IP;
-#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) || \
+#if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) || \
       (defined (IPPROTO_IP))
 const pj_uint16_t PJ_SOL_IP	= IPPROTO_IP;
+#elif defined(SOL_IP)
+const pj_uint16_t PJ_SOL_IP	= SOL_IP;
 #else
 const pj_uint16_t PJ_SOL_IP	= 0;
 #endif /* SOL_IP */
@@ -502,7 +502,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 #endif
 
     /* Disable WSAECONNRESET for UDP.
-     * See https://trac.pjsip.org/repos/ticket/1197
+     * See https://github.com/pjsip/pjproject/issues/1197
      */
     if (type==PJ_SOCK_DGRAM) {
 	DWORD dwBytesReturned = 0;
@@ -674,7 +674,7 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
     PJ_ASSERT_RETURN(len, PJ_EINVAL);
 
 #ifdef MSG_NOSIGNAL
-    /* Suppress SIGPIPE. See https://trac.pjsip.org/repos/ticket/1538 */
+    /* Suppress SIGPIPE. See https://github.com/pjsip/pjproject/issues/1538 */
     flags |= MSG_NOSIGNAL;
 #endif
 

@@ -40,7 +40,7 @@ for peer-to-peer communication, such as (and especially) VoIP.
 <strong>\ref nat_intro "Read more.."</strong>
 
 
-\section intro Introduction to PJNATH
+\section pjnath_intro Introduction to PJNATH
 
 PJSIP NAT Helper (PJNATH) is a library which contains the implementation of 
 standard based NAT traversal solutions. PJNATH can be used as a stand-alone 
@@ -76,21 +76,26 @@ PJNATH has the following features:
    <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-19.txt">
    draft-ietf-mmusic-ice-19.txt</A> draft
 
-In the future, more protocols will be implemented (such as UPnP IGD, and 
-SOCKS5).
+ - <strong>Universal Plug and Play (UPnP)</strong> control point implementation.\n
+   Universal Plug and Play (UPnP) Internet Gateway Device (IGD) Protocol
+   allows any local UPnP control point to retrieve the external IP address of
+   the device, and add or remove port mappings. By adding a port mapping,
+   a UPnP controller behind the IGD can enable traversal of the IGD from
+   an external address to an internal client.\n\n
 
 
 \section pjnath_organization_sec Library Organization
 
 The library provides the following main component groups:
 
- - \ref PJNATH_STUN\n\n
- - \ref PJNATH_TURN\n\n
- - \ref PJNATH_ICE\n\n
- - \ref PJNATH_NAT_DETECT\n\n
+ - \ref PJNATH_STUN \n\n
+ - \ref PJNATH_TURN \n\n
+ - \ref PJNATH_ICE \n\n
+ - \ref PJNATH_NAT_DETECT \n\n
+ - \ref PJNATH_UPNP \n\n
 
-Apart from the \ref PJNATH_NAT_DETECT, each component group are further 
-divided into two functionalities:
+Apart from the \ref PJNATH_NAT_DETECT and \ref PJNATH_UPNP, each component
+group are further divided into two functionalities:
 
  - <b>Transport objects</b>\n
    The transport objects (such as STUN transport, TURN transport, and ICE

@@ -249,7 +249,7 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 
 /*
  * Create RTP and RTCP socket pair, and possibly resolve their public
- * address via STUN.
+ * address via STUN/UPnP.
  */
 static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 					const pjsua_transport_config *cfg,
@@ -342,6 +342,9 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]);
 	    sock[0] = PJ_INVALID_SOCKET;
+	    PJ_PERROR(1,(THIS_FILE, status, "RTP socket bind() at %s error",
+		      pj_sockaddr_print(&bound_addr, addr_buf,
+					sizeof(addr_buf), 3)));
 	    continue;
 	}
 	
@@ -386,6 +389,10 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 
 	    pj_sock_close(sock[1]);
 	    sock[1] = PJ_INVALID_SOCKET;
+
+	    PJ_PERROR(1,(THIS_FILE, status, "RTCP socket bind() at %s error",
+		      pj_sockaddr_print(&bound_addr, addr_buf,
+					sizeof(addr_buf), 3)));
 	    continue;
 	}
 
@@ -539,6 +546,43 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 			  pj_sockaddr_get_port(&mapped_addr[0])));
 	    }
 	    /* Success! */
+	    break;
+#endif
+
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
+	} else if ((!use_ipv6 || use_nat64) &&
+	           pjsua_media_acc_is_using_upnp(call_med->call->acc_id) &&
+	    	   pjsua_var.upnp_status == PJ_SUCCESS)
+	{
+	    status = pj_upnp_add_port_mapping(2, sock, NULL, mapped_addr);
+	    if (status == PJ_SUCCESS) {
+	    	call_med->use_upnp = PJ_TRUE;
+	    	pj_sockaddr_cp(&call_med->mapped_addr[0], &mapped_addr[0]);
+	    	pj_sockaddr_cp(&call_med->mapped_addr[1], &mapped_addr[1]);
+	    } else {
+	    	pjsua_perror(THIS_FILE, "Error adding UPnP "
+	    	    			"port mapping", status);
+
+		if (!pj_sockaddr_has_addr(&bound_addr)) {
+		    pj_sockaddr addr;
+
+		    /* Get local IP address. */
+		    status = pj_gethostip(af, &addr);
+		    if (status != PJ_SUCCESS)
+			goto on_error;
+
+		    pj_sockaddr_copy_addr(&bound_addr, &addr);
+		}
+
+		for (i = 0; i < 2; ++i) {
+		    pj_sockaddr_init(af, &mapped_addr[i], NULL, 0);
+		    pj_sockaddr_copy_addr(&mapped_addr[i], &bound_addr);
+		    pj_sockaddr_set_port(&mapped_addr[i],
+					 (pj_uint16_t)(acc->next_rtp_port+i));
+		}
+		break;
+	    }
+
 	    break;
 #endif
 
@@ -779,7 +823,7 @@ static void ice_init_complete_cb(void *user_data)
     /* No need to acquire_call() if we only change the tp_ready flag
      * (i.e. transport is being created synchronously). Otherwise
      * calling acquire_call() here may cause deadlock. See
-     * https://trac.pjsip.org/repos/ticket/1578
+     * https://github.com/pjsip/pjproject/issues/1578
      */
     call_med->tp_ready = call_med->tp_result;
 
@@ -1195,7 +1239,7 @@ static pj_status_t create_ice_media_transport(
 	    PJSUA_UNLOCK();
         if (dlg) {
             /* Don't lock otherwise deadlock:
-             * https://trac.pjsip.org/repos/ticket/1737
+             * https://github.com/pjsip/pjproject/issues/1737
              */
 	    pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
             pjsip_dlg_dec_lock(dlg);
@@ -1933,7 +1977,7 @@ on_return:
 
 /* Determine if call's media is being changed, for example when video is being
  * added. Then we can reject incoming re-INVITE, for example. This is the
- * solution for https://trac.pjsip.org/repos/ticket/1738
+ * solution for https://github.com/pjsip/pjproject/issues/1738
  */
 pj_bool_t  pjsua_call_media_is_changing(pjsua_call *call)
 {
@@ -3226,6 +3270,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     for (mi=0; mi<call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
 
+        if (call_med->use_upnp) {
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
+            pj_upnp_del_port_mapping(&call_med->mapped_addr[0]);
+            pj_upnp_del_port_mapping(&call_med->mapped_addr[1]);
+#endif
+        }
+
         if (call_med->tp_st > PJSUA_MED_TP_IDLE) {
     	    pjmedia_transport_info tpinfo;
     	    pjmedia_srtp_info *srtp_info;
@@ -3326,6 +3377,7 @@ static void check_srtp_roc(pjsua_call *call,
     pjsua_call_media *call_med = &call->media[med_idx];
     pjmedia_transport_info tpinfo;
     pjmedia_srtp_info *srtp_info;
+    pjmedia_transport *srtp;
     pjmedia_ice_transport_info *ice_info;
     const pjmedia_stream_info *prev_aud_si = NULL;
     pjmedia_stream_info aud_si;
@@ -3340,8 +3392,11 @@ static void check_srtp_roc(pjsua_call *call,
     pjmedia_transport_get_info(call_med->tp, &tpinfo);
     srtp_info = (pjmedia_srtp_info *) pjmedia_transport_info_get_spc_info(
 	            &tpinfo, PJMEDIA_TRANSPORT_TYPE_SRTP);
-    /* We are not using SRTP. */
-    if (!srtp_info)
+    srtp = pjmedia_transport_info_get_transport(&tpinfo,
+						PJMEDIA_TRANSPORT_TYPE_SRTP);
+
+    /* Just return if there is no SRTP transport in the transport stack. */
+    if (!srtp_info || !srtp)
     	return;
 
     ice_info = (pjmedia_ice_transport_info*)
@@ -3469,7 +3524,7 @@ static void check_srtp_roc(pjsua_call *call,
 	 }	    
     }
 
-    pjmedia_transport_srtp_get_setting(call_med->tp, &setting);
+    pjmedia_transport_srtp_get_setting(srtp, &setting);
     setting.tx_roc = call_med->prev_srtp_info.tx_roc;
     setting.rx_roc = call_med->prev_srtp_info.rx_roc;
     if (local_change) {
@@ -3500,7 +3555,7 @@ static void check_srtp_roc(pjsua_call *call,
  	}
 #endif 
     }
-    pjmedia_transport_srtp_modify_setting(call_med->tp, &setting);
+    pjmedia_transport_srtp_modify_setting(srtp, &setting);
 }
 #endif
 
@@ -3826,6 +3881,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		goto on_check_med_status;
 	    }
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	    /* Enable/disable RTCP XR based on account setting. */
+	    si->rtcp_xr_enabled = acc->cfg.enable_rtcp_xr;
+#endif
+
 	    /* Check if remote wants RTP and RTCP multiplexing,
 	     * but we don't enable it.
 	     */
@@ -3944,12 +4004,26 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call_med->dir = si->dir;
 
 		/* Call media state */
-		if (call->local_hold)
+		if (call->local_hold ||
+		    ((call_med->dir & PJMEDIA_DIR_DECODING) == 0 &&
+		     (call_med->def_dir & PJMEDIA_DIR_DECODING) == 0))
+		{
+		    /* Local hold: Either the user holds the call, or sets
+		     * the media direction that requests the remote party to
+		     * stop sending media (i.e. sendonly or inactive).
+		     */
 		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-		else if (call_med->dir == PJMEDIA_DIR_DECODING)
+		} else if ((call_med->dir & PJMEDIA_DIR_ENCODING) == 0 &&
+		           (call_med->def_dir & PJMEDIA_DIR_DECODING) != 0)
+		{
+		    /* Remote hold: Remote doesn't want us to send media
+		     * (recvonly or inactive) and we don't set media dir that
+		     * locally holds the media.
+		     */
 		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-		else
+		} else {
 		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+		}
 
 		if (call->inv->following_fork) {
 		    unsigned options = (call_med->enable_rtcp_mux?
@@ -4162,7 +4236,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    }
 
 	    /* Check if no media is active */
-	    if (si->dir == PJMEDIA_DIR_NONE) {
+	    if (local_sdp->media[mi]->desc.port == 0) {
 
 		/* Update call media state and direction */
 		call_med->state = PJSUA_CALL_MEDIA_NONE;
@@ -4176,12 +4250,26 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call_med->dir = si->dir;
 
 		/* Call media state */
-		if (call->local_hold)
+		if (call->local_hold ||
+		    ((call_med->dir & PJMEDIA_DIR_DECODING) == 0 &&
+		     (call_med->def_dir & PJMEDIA_DIR_DECODING) == 0))
+		{
+		    /* Local hold: Either the user holds the call, or sets
+		     * the media direction that requests the remote party to
+		     * stop sending media (i.e. sendonly or inactive).
+		     */
 		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-		else if (call_med->dir == PJMEDIA_DIR_DECODING)
+		} else if ((call_med->dir & PJMEDIA_DIR_ENCODING) == 0 &&
+		           (call_med->def_dir & PJMEDIA_DIR_DECODING) != 0)
+		{
+		    /* Remote hold: Remote doesn't want us to send media 
+		     * (recvonly or inactive) and we don't set media dir that
+		     * locally holds the media.
+		     */
 		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-		else
+		} else {
 		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+		}
 
 		/* Start/restart media transport */
 		status = pjmedia_transport_media_start(call_med->tp,

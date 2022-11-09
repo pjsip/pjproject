@@ -92,7 +92,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_tee_create(pj_pool_t *pool,
  * destination port's media format must match the source format.
  *
  * @param vid_tee	    The video tee.
- * @param option	    Video tee option, see @pjmedia_vid_tee_flag.
+ * @param option	    Video tee option, see pjmedia_vid_tee_flag.
  * @param port		    The destination media port.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error
@@ -109,7 +109,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
  * the source format.
  *
  * @param vid_tee	    The video tee.
- * @param option	    Video tee option, see @pjmedia_vid_tee_flag.
+ * @param option	    Video tee option, see pjmedia_vid_tee_flag.
  * @param port		    The destination media port.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error

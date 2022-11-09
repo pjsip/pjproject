@@ -202,12 +202,13 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
 	dec_hdr->ext_len = 0;
     }
 
-    /* Check that offset is less than packet size */
-    if (offset > pkt_len)
-	return PJMEDIA_RTP_EINLEN;
+    /* Check that offset is not greater than packet size */
+    if (offset > pkt_len) {
+        return PJMEDIA_RTP_EINLEN;
+    }
 
     /* Find and set payload. */
-    *payload = ((pj_uint8_t*)pkt) + offset;
+    *payload = offset==pkt_len? NULL : ((pj_uint8_t*)pkt) + offset;
     *payloadlen = pkt_len - offset;
  
     /* Remove payload padding if any */
@@ -393,5 +394,3 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
 	seq_status->status.value = st.status.value;
     }
 }
-
-

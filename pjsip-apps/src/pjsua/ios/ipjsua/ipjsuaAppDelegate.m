@@ -318,6 +318,10 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 
 pj_bool_t showNotification(pjsua_call_id call_id)
 {
+    /* This is deprecated. Use VoIP Push Notifications with PushKit
+     * framework instead.
+     */
+#if 0
     // Create a new notification
     UILocalNotification* alert = [[UILocalNotification alloc] init];
     if (alert)
@@ -334,7 +338,8 @@ pj_bool_t showNotification(pjsua_call_id call_id)
                        ^{[[UIApplication sharedApplication]
                           presentLocalNotificationNow:alert];});
     }
-    
+#endif
+
     return PJ_FALSE;
 }
 

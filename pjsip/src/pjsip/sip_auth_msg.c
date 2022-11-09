@@ -125,14 +125,14 @@ static int pjsip_authorization_hdr_print( pjsip_authorization_hdr *hdr,
 {
     int printed;
     char *startbuf = buf;
-    char *endbuf = buf + size;
+    char *endbuf = buf + size - 1; // Need to minus one for NULL terminator
 
     copy_advance(buf, hdr->name);
-    *buf++ = ':';
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ':');
+    copy_advance_char_check(buf, ' ');
 
     copy_advance(buf, hdr->scheme);
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ' ');
 
     if (pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR) == 0)
     {
@@ -255,7 +255,7 @@ static int print_digest_challenge( pjsip_digest_challenge *chal,
     char *endbuf = buf + size;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
-    /* Allow empty realm, see http://trac.pjsip.org/repos/ticket/1061 */
+    /* Allow empty realm, see https://github.com/pjsip/pjproject/issues/1061 */
     copy_advance_pair_quote(buf, "realm=", 6, chal->realm, '"', '"');
     copy_advance_pair_quote_cond(buf, ",domain=", 8, chal->domain, '"', '"');
     copy_advance_pair_quote_cond(buf, ",nonce=", 7, chal->nonce, '"', '"');
@@ -291,14 +291,14 @@ static int pjsip_www_authenticate_hdr_print( pjsip_www_authenticate_hdr *hdr,
 {
     int printed;
     char *startbuf = buf;
-    char *endbuf = buf + size;
+    char *endbuf = buf + size - 1; // Need to minus one for NULL terminator
 
     copy_advance(buf, hdr->name);
-    *buf++ = ':';
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ':');
+    copy_advance_char_check(buf, ' ');
 
     copy_advance(buf, hdr->scheme);
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ' ');
 
     if (pj_stricmp2(&hdr->scheme, "digest") == 0)
 	printed = print_digest_challenge(&hdr->challenge.digest, buf, endbuf - buf);

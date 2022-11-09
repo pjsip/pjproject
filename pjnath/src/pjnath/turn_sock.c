@@ -729,7 +729,7 @@ static pj_bool_t on_connect_complete(pj_turn_sock *turn_sock,
     pj_grp_lock_acquire(turn_sock->grp_lock);
 
     /* TURN session may have already been destroyed here.
-     * See ticket #1557 (http://trac.pjsip.org/repos/ticket/1557).
+     * See ticket #1557 (https://github.com/pjsip/pjproject/issues/1557).
      */
     if (!turn_sock->sess) {
 	sess_fail(turn_sock, "TURN session already destroyed", status);
@@ -1027,7 +1027,7 @@ static pj_status_t send_pkt(pj_turn_session *sess,
 
     if (turn_sock == NULL || turn_sock->is_destroying) {
 	/* We've been destroyed */
-	// https://trac.pjsip.org/repos/ticket/1316
+	// https://github.com/pjsip/pjproject/issues/1316
 	//pj_assert(!"We should shutdown gracefully");
 	return PJ_EINVALIDOP;
     }

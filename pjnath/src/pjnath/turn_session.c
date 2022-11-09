@@ -421,7 +421,7 @@ static void sess_shutdown(pj_turn_session *sess,
 	 * state==PJ_TURN_STATE_DEALLOCATED.
 	 */
 	/* No need to deallocate as we're already deallocating!
-	 * See https://trac.pjsip.org/repos/ticket/1551
+	 * See https://github.com/pjsip/pjproject/issues/1551
 	send_refresh(sess, 0);
 	*/
 	break;
@@ -1304,7 +1304,8 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt2(
 
 	if (prm->pkt_len < 4) {
 	    prm->parsed_len = 0;
-	    return PJ_ETOOSMALL;
+	    status = PJ_ETOOSMALL;
+	    goto on_return;
 	}
 
 	/* Decode ChannelData packet */

@@ -286,7 +286,7 @@ static void dump_media_session(const char *indent,
 
 	if (call_med->dir == PJMEDIA_DIR_NONE) {
 	    /* To handle when the stream that is currently being paused
-	     * (http://trac.pjsip.org/repos/ticket/1079)
+	     * (https://github.com/pjsip/pjproject/issues/1079)
 	     */
 	    dir_str = "inactive";
 	} else if (call_med->dir == PJMEDIA_DIR_ENCODING)

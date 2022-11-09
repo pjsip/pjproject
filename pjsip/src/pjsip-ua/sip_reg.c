@@ -232,8 +232,12 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
 
 	next_reg = regc->next_reg;
 	pj_gettimeofday(&now);
-	PJ_TIME_VAL_SUB(next_reg, now);
-	info->next_reg = next_reg.sec;
+	if (PJ_TIME_VAL_GT(next_reg, now)) {
+	    PJ_TIME_VAL_SUB(next_reg, now);
+	    info->next_reg = next_reg.sec;
+	} else {
+	    info->next_reg = 0;
+	}
     }
 
     pj_lock_release(regc->lock);
@@ -617,7 +621,7 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 	regc->timer.id = 0;
     }
 
-    /* Add Allow header (http://trac.pjsip.org/repos/ticket/1039) */
+    /* Add Allow header (https://github.com/pjsip/pjproject/issues/1039) */
     h_allow = pjsip_endpt_get_capability(regc->endpt, PJSIP_H_ALLOW, NULL);
     if (h_allow) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
@@ -1482,7 +1486,7 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     }
 
     /* Need to unlock the regc temporarily while sending the message to
-     * prevent deadlock (https://trac.pjsip.org/repos/ticket/1247).
+     * prevent deadlock (https://github.com/pjsip/pjproject/issues/1247).
      * It should be safe to do this since the regc's refcount has been
      * incremented.
      */

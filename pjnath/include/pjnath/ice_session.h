@@ -225,8 +225,8 @@ typedef struct pj_ice_msg_data
 	    unsigned		     ckid;  /**< Check ID	*/
 	    pj_ice_sess_cand	    *lcand; /**< Local cand	*/
 	    pj_ice_sess_cand	    *rcand; /**< Remote cand	*/
-	} req;
-    } data;
+	} req; /**< Request data */
+    } data; /**< The data */
 
 } pj_ice_msg_data;
 

@@ -77,7 +77,7 @@ typedef enum pjsip_ssl_method
 
 
 /**
- * This structure describe the parameter passed from #on_accept_fail_cb().
+ * This structure describe the parameter passed from on_accept_fail_cb().
  */
 typedef struct pjsip_tls_on_accept_fail_param {
     /**
@@ -105,7 +105,7 @@ typedef struct pjsip_tls_on_accept_fail_param {
 
 
 /**
- * This structure describe the parameter passed from #on_verify_cb().
+ * This structure describe the parameter passed from on_verify_cb().
  */
 typedef struct pjsip_tls_on_verify_param {
     /**

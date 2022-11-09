@@ -40,7 +40,7 @@ lib:
 	done; \
 
 
-.PHONY: lib doc
+.PHONY: lib doc clean-doc
 
 doc:
 	@if test \( ! "$(WWWDIR)" == "" \) -a \( ! -d $(WWWDIR)/pjlib/docs/html \) ; then \
@@ -53,6 +53,11 @@ doc:
 		else \
 		    exit 1; \
 		fi; \
+	done
+
+clean-doc:
+	for dir in pjlib pjlib-util pjnath pjmedia pjsip; do \
+		rm -rf ./$${dir}/docs/html ./$${dir}/docs/xml ./$${dir}/docs/latex ./$${dir}/docs/$${dir}.tag; \
 	done
 
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \

@@ -942,14 +942,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     if (srtp->setting.tx_roc.roc != 0 &&
         srtp->setting.tx_roc.ssrc != 0)
     {
-	srtp_err_status_t status;
-	status = srtp_set_stream_roc(srtp->srtp_tx_ctx,
-				     srtp->setting.tx_roc.ssrc,
-			    	     srtp->setting.tx_roc.roc);
+	err = srtp_set_stream_roc(srtp->srtp_tx_ctx,
+				  srtp->setting.tx_roc.ssrc,
+			    	  srtp->setting.tx_roc.roc);
     	PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %d with "
     		   "ROC %d %s\n", srtp->setting.tx_roc.ssrc,
     		   srtp->setting.tx_roc.roc,
-    	           (status == srtp_err_status_ok)? "succeeded": "failed"));
+    	           (err == srtp_err_status_ok)? "succeeded": "failed"));
     }
     srtp->tx_policy = *tx;
     pj_strset(&srtp->tx_policy.key,  srtp->tx_key, tx->key.slen);
@@ -995,14 +994,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     if (srtp->setting.rx_roc.roc != 0 &&
         srtp->setting.rx_roc.ssrc != 0)
     {
-	srtp_err_status_t status;
-	status = srtp_set_stream_roc(srtp->srtp_rx_ctx,
-				     srtp->setting.rx_roc.ssrc,
-			    	     srtp->setting.rx_roc.roc);
+	err = srtp_set_stream_roc(srtp->srtp_rx_ctx,
+				  srtp->setting.rx_roc.ssrc,
+			    	  srtp->setting.rx_roc.roc);
     	PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %d with "
     		   "ROC %d %s\n",
     	           srtp->setting.rx_roc.ssrc, srtp->setting.rx_roc.roc,
-    	       	   (status == srtp_err_status_ok)? "succeeded": "failed"));
+    	       	   (err == srtp_err_status_ok)? "succeeded": "failed"));
     }
     srtp->rx_policy = *rx;
     pj_strset(&srtp->rx_policy.key,  srtp->rx_key, rx->key.slen);
@@ -1087,6 +1085,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
 		   "Failed to dealloc TX SRTP context: %s",
 		   get_libsrtp_errstr(err)));
     }
+    p_srtp->srtp_rx_ctx = NULL;
+    p_srtp->srtp_tx_ctx = NULL;
 
     p_srtp->session_inited = PJ_FALSE;
     pj_bzero(&p_srtp->rx_policy, sizeof(p_srtp->rx_policy));
@@ -1199,6 +1199,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 
     spc_info_idx = info->specific_info_cnt++;
     info->spc_info[spc_info_idx].type = PJMEDIA_TRANSPORT_TYPE_SRTP;
+    info->spc_info[spc_info_idx].tp = tp;
     info->spc_info[spc_info_idx].cbsize = sizeof(srtp_info);
     pj_memcpy(&info->spc_info[spc_info_idx].buffer, &srtp_info,
 	      sizeof(srtp_info));
@@ -1530,13 +1531,14 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 	pjmedia_srtp_crypto tx, rx;
 	pj_status_t status;
 
+	tx = srtp->tx_policy;
+	rx = srtp->rx_policy;
+
 	/* Stop SRTP first, otherwise srtp_start() will maintain current
 	 * roll-over counter.
 	 */
 	pjmedia_transport_srtp_stop((pjmedia_transport*)srtp);
 
-	tx = srtp->tx_policy;
-	rx = srtp->rx_policy;
 	status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
 					      &tx, &rx);
 	if (status != PJ_SUCCESS) {

@@ -1838,6 +1838,9 @@ void CodecParam::fromPj(const pjmedia_codec_param &param)
     setting.reserved = param.setting.reserved;
     CodecFmtpUtil::fromPj(param.setting.enc_fmtp, setting.encFmtp);
     CodecFmtpUtil::fromPj(param.setting.dec_fmtp, setting.decFmtp);
+    setting.packetLoss = param.setting.packet_loss;
+    setting.complexity = param.setting.complexity;
+    setting.cbr = PJ2BOOL(param.setting.cbr);
 }
 
 pjmedia_codec_param CodecParam::toPj() const
@@ -1865,6 +1868,9 @@ pjmedia_codec_param CodecParam::toPj() const
     param.setting.reserved = setting.reserved;
     CodecFmtpUtil::toPj(setting.encFmtp, param.setting.enc_fmtp);
     CodecFmtpUtil::toPj(setting.decFmtp, param.setting.dec_fmtp);
+    param.setting.packet_loss = setting.packetLoss;
+    param.setting.complexity = setting.complexity;
+    param.setting.cbr = setting.cbr;
     return param;
 }
 

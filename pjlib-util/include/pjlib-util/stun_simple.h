@@ -21,7 +21,7 @@
 #define __PJSTUN_H__
 
 /**
- * @file stun.h
+ * @file stun_simple.h
  * @brief STUN client.
  */
 
@@ -31,21 +31,21 @@
 
 PJ_BEGIN_DECL
 
-/*
+/**
  * This enumeration describes STUN message types.
  */
 typedef enum pjstun_msg_type
 {
-    PJSTUN_BINDING_REQUEST		    = 0x0001,
-    PJSTUN_BINDING_RESPONSE		    = 0x0101,
-    PJSTUN_BINDING_ERROR_RESPONSE	    = 0x0111,
-    PJSTUN_SHARED_SECRET_REQUEST	    = 0x0002,
-    PJSTUN_SHARED_SECRET_RESPONSE	    = 0x0102,
-    PJSTUN_SHARED_SECRET_ERROR_RESPONSE    = 0x0112
+    PJSTUN_BINDING_REQUEST		    = 0x0001, /**< Binding request  */
+    PJSTUN_BINDING_RESPONSE		    = 0x0101, /**< Binding response */
+    PJSTUN_BINDING_ERROR_RESPONSE	    = 0x0111, /**< Binding error    */
+    PJSTUN_SHARED_SECRET_REQUEST	    = 0x0002, /**< Secret request   */
+    PJSTUN_SHARED_SECRET_RESPONSE	    = 0x0102, /**< Secret response  */
+    PJSTUN_SHARED_SECRET_ERROR_RESPONSE     = 0x0112  /**< Secret error     */
 } pjstun_msg_type;
 
 
-/*
+/**
  * This enumeration describes STUN attribute types.
  */
 typedef enum pjstun_attr_type

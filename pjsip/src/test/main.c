@@ -36,7 +36,7 @@ static void usage(void)
     list_tests();
 }
 
-#if PJ_LINUX || PJ_DARWINOS
+#if (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0
 
 #include <execinfo.h>
 #include <signal.h>

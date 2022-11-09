@@ -40,7 +40,7 @@ export PJNATH_SRCDIR = ../src/pjnath
 export PJNATH_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		errno.o ice_session.o ice_strans.o nat_detect.o stun_auth.o \
 		stun_msg.o stun_msg_dump.o stun_session.o stun_sock.o \
-		stun_transaction.o turn_session.o turn_sock.o
+		stun_transaction.o turn_session.o turn_sock.o upnp.o
 export PJNATH_CFLAGS += $(_CFLAGS)
 export PJNATH_CXXFLAGS += $(_CXXFLAGS)
 export PJNATH_LDFLAGS += $(PJLIB_UTIL_LDLIB) $(PJLIB_LDLIB) $(_LDFLAGS)

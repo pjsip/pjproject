@@ -360,7 +360,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
     /* No, we still need to process SRTP offer/answer even if the media is
      * marked as inactive, because the transport is still alive in this
      * case (e.g. for keep-alive). See:
-     *   http://trac.pjsip.org/repos/ticket/1079
+     *   https://github.com/pjsip/pjproject/issues/1079
      */
     /*
     if (pjmedia_sdp_media_find_attr(m_loc, &ID_INACTIVE, NULL) ||

@@ -482,7 +482,7 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  *  - PJMEDIA_VIDEODEV_ERRNO_START (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*7)
  */
 
-/* Internal */
+/** Internal */
 void pj_errno_clear_handlers(void);
 
 

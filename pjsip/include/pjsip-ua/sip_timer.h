@@ -134,7 +134,7 @@ PJ_DECL(pj_status_t) pjsip_timer_setting_default(pjsip_timer_setting *setting);
  * session will apply default setting to the Session Timers.
  *
  * @param inv		The invite session.
- * @param setting	Session Timers setting, see @pjsip_timer_setting.
+ * @param setting	Session Timers setting, see pjsip_timer_setting.
  *			If setting is NULL, default setting will be applied.
  *
  * @return		PJ_SUCCESS on successful.

@@ -515,7 +515,11 @@ Call *Call::lookup(int call_id)
     Call *call = (Call*)pjsua_call_get_user_data(call_id);
     if (call && call_id != call->id) {
 	if (call->child && call->child->id == PJSUA_INVALID_ID) {
-	    /* This must be a new call from call transfer */
+	    /* This must be a new call from call transfer or call replace
+	     * which initially shares user_data with its parent (so the
+	     * user_data points to its parent's Call instance).
+	     * Let's update its user_data to its own Call instance.
+	     */
 	    call = call->child;
 	    pjsua_call_set_user_data(call_id, call);
 	}
@@ -869,6 +873,14 @@ void Call::vidSetStream(pjsua_call_vid_strm_op op,
     PJ_UNUSED_ARG(param);
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
 #endif
+}
+
+void Call::audStreamModifyCodecParam(int med_idx, const CodecParam &param)
+    				     PJSUA2_THROW(Error)
+{
+    pjmedia_codec_param prm = param.toPj();
+    PJSUA2_CHECK_EXPR( pjsua_call_aud_stream_modify_codec_param(id, med_idx,
+    								&prm) );
 }
 
 StreamInfo Call::getStreamInfo(unsigned med_idx) const PJSUA2_THROW(Error)
