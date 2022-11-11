@@ -3913,8 +3913,10 @@ static void ip_change_put_back_inv_config(void *user_data)
 {
     PJ_UNUSED_ARG(user_data);
 
-    PJ_LOG(4,(THIS_FILE,"IP change stops ignoring request timeout"));
-    pjsip_cfg()->endpt.keep_inv_after_tsx_timeout = PJ_FALSE;
+    if (pjsip_cfg()->endpt.keep_inv_after_tsx_timeout) {
+    	PJ_LOG(4,(THIS_FILE,"IP change stops ignoring request timeout"));
+    	pjsip_cfg()->endpt.keep_inv_after_tsx_timeout = PJ_FALSE;
+    }
 }
 
 

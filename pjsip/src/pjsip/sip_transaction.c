@@ -1168,6 +1168,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
     {
 	/* Posted transport error/disconnection event */
 	pj_bool_t tp_disc = (entry->id == TRANSPORT_DISC_TIMER);
+	pj_bool_t tsx_continue = PJ_FALSE;
 
 	entry->id = 0;
 	if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
@@ -1185,10 +1186,13 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 	    	tsx->role == PJSIP_ROLE_UAS && tsx->status_code < 200 &&
 	    	!(tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) &&
         	!(tsx->transport_flag & TSX_HAS_PENDING_DESTROY))
-#else
-	    PJ_UNUSED_ARG(tp_disc);
-	    if (0)
+            {
+            	tsx_continue = PJ_TRUE;
+            }
 #endif
+
+	    if ((tp_disc && pjsip_cfg()->endpt.keep_inv_after_tsx_timeout) ||
+	        tsx_continue)
 	    {
 	    	/* Upon transport disconnection event, if we receive
 	    	 * incoming INVITE and haven't responded with a final answer,

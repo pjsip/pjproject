@@ -1770,7 +1770,7 @@ static void ui_handle_ip_change()
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "IP change failed", status);
     } else {
-	PJ_LOG(3,(THIS_FILE, "IP change succeeded"));
+	PJ_LOG(3,(THIS_FILE, "IP change in progress"));
     }
 }
 

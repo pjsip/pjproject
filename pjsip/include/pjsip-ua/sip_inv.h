@@ -453,6 +453,7 @@ struct pjsip_inv_session
     pjsip_tx_data	*invite_req;		    /**< Saved invite req   */
     pjsip_tx_data	*last_answer;		    /**< Last INVITE resp.  */
     pjsip_tx_data	*last_ack;		    /**< Last ACK request   */
+    pjsip_rx_data	*last_update;
     pj_int32_t		 last_ack_cseq;		    /**< CSeq of last ACK   */
     void		*mod_data[PJSIP_MAX_MODULE];/**< Modules data.	    */
     struct pjsip_timer	*timer;			    /**< Session Timers.    */

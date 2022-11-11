@@ -4247,9 +4247,18 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 							     &info);
 		}
 	    } else if ((acc->cfg.ip_change_cfg.reinvite_flags) &&
-		(call_info.state == PJSIP_INV_STATE_CONFIRMED))
+			(call_info.state >= PJSIP_INV_STATE_EARLY))
 	    {
-		pj_bool_t use_update = acc->cfg.ip_change_cfg.reinv_use_update;
+		pj_bool_t use_update = PJ_FALSE;
+		
+		/* We use UPDATE if call is not confirmed yet or if specified
+		 * in the config.
+		 */
+		if (call_info.state != PJSIP_INV_STATE_CONFIRMED ||
+		    acc->cfg.ip_change_cfg.reinv_use_update)
+		{
+		    use_update = PJ_TRUE;
+		}
 
 		/* Check if remote support SIP UPDATE method */
 		if (use_update) {
@@ -4281,6 +4290,15 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 				       "not support UPDATE", i));
 			}
 		    }
+		}
+
+		if (call_info.state != PJSIP_INV_STATE_CONFIRMED &&
+		    !use_update)
+		{
+		    PJ_LOG(3, (THIS_FILE, "Call #%d: IP change cannot "
+				          "use re-INVITE on non-confirmed "
+				          "call", i));
+		    continue;
 		}
 
 		acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS;
@@ -4362,6 +4380,12 @@ void pjsua_acc_end_ip_change(pjsua_acc *acc)
     }
     if (all_done && pjsua_var.ua_cfg.cb.on_ip_change_progress) {
 	PJ_LOG(3, (THIS_FILE, "IP address change handling completed"));
+
+    	if (pjsip_cfg()->endpt.keep_inv_after_tsx_timeout) {
+    	    PJ_LOG(4,(THIS_FILE,"IP change stops ignoring request timeout"));
+    	    pjsip_cfg()->endpt.keep_inv_after_tsx_timeout = PJ_FALSE;
+        }
+
 	pjsua_var.ua_cfg.cb.on_ip_change_progress(
 					    PJSUA_IP_CHANGE_OP_COMPLETED,
 					    PJ_SUCCESS,

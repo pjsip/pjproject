@@ -2631,6 +2631,32 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    if (inv->state < PJSIP_INV_STATE_CONFIRMED && inv->last_update) {
+    	pjsip_via_hdr *via = inv->last_update->msg_info.via;
+    	pjsip_msg *update_msg = inv->last_update->msg_info.msg;
+    	pjsip_hdr *hdr = &last_res->msg->hdr;
+
+        /* Remove existing Via header */
+	while (pjsip_msg_find_remove_hdr(last_res->msg, PJSIP_H_VIA, NULL)) {}
+
+    	/* Copy all the via headers, in order. */
+    	while (via) {
+	    pjsip_via_hdr *new_via;
+
+	    new_via = (pjsip_via_hdr*)pjsip_hdr_clone(last_res->pool, via);
+	    //pjsip_msg_add_hdr( last_res->msg, (pjsip_hdr*)new_via);
+	    pj_list_insert_after(hdr, new_via);
+	    hdr = (pjsip_hdr *)new_via;
+	    via = via->next;
+	    if (via != (void*)&update_msg->hdr) {
+	    	via = (pjsip_via_hdr*)
+	    	      pjsip_msg_find_hdr(update_msg, PJSIP_H_VIA, via);
+	    } else {
+	    	break;
+	    }
+    	}
+    }
+
     /* Modify last response. */
     status = pjsip_dlg_modify_response(inv->dlg, last_res, st_code, st_text);
     if (status != PJ_SUCCESS) {
@@ -3821,6 +3847,14 @@ on_return:
     }
 
     pjsip_dlg_send_response(inv->dlg, pjsip_rdata_get_tsx(rdata), tdata);
+
+    if (inv->state < PJSIP_INV_STATE_CONFIRMED) {
+    	if (inv->last_update) {
+    	    pjsip_rx_data_free_cloned(inv->last_update);
+    	}
+    	pjsip_rx_data_clone(rdata, 0, &inv->last_update);
+    	// TODO: free this cloned UPDATE when calls are confirmed or disconnected
+    }
 }
 
 

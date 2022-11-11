@@ -2708,9 +2708,12 @@ typedef struct pjsua_ip_change_acc_cfg
     pj_bool_t		hangup_calls;
 
     /**
-     * Specify the call flags used in the re-INVITE when \a hangup_calls is set 
-     * to PJ_FALSE. If this is set to 0, no re-INVITE will be sent. The 
+     * Specify the call flags used in the re-INVITE when \a hangup_calls is set
+     * to PJ_FALSE. If this is set to 0, no re-INVITE will be sent. The
      * re-INVITE will be sent after re-Registration is finished.
+     *
+     * Note that instead of re-INVITE, UPDATE will be sent if the call is
+     * still on early state or if \a reinv_use_update is PJ_TRUE.
      *
      * Default: PJSUA_CALL_REINIT_MEDIA | PJSUA_CALL_UPDATE_CONTACT |
      *          PJSUA_CALL_UPDATE_VIA
