@@ -44,6 +44,7 @@ ifneq ($(PJ_SHARED_LIBRARIES),)
 else
 ifneq ($(PJ_RESAMPLE_DLL),)
 export RESAMPLE_CFLAGS := -fPIC $(RESAMPLE_CFLAGS)
+export RESAMPLE_LDFLAGS := $(RESAMPLE_LDFLAGS)
 endif
 endif
 
