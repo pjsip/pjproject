@@ -202,9 +202,6 @@ VPX_LDFLAGS =  @ac_vpx_ldflags@
 AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
 # QT_CFLAGS = @ac_qt_cflags@
 
-# resample flags
-RESAMPLE_LDFLAGS = @ac_resample_ldflags@
-
 # Darwin (Mac and iOS)
 AC_PJMEDIA_VIDEO_HAS_DARWIN = @ac_pjmedia_video_has_darwin@
 AC_PJMEDIA_VIDEO_HAS_VTOOLBOX = @ac_pjmedia_video_has_vtoolbox@

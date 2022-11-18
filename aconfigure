@@ -696,7 +696,6 @@ ac_has_ffmpeg
 ac_sdl_ldflags
 ac_sdl_cflags
 SDL_CONFIG
-ac_resample_ldflags
 ac_resample_dll
 ac_no_ilbc_codec
 ac_no_speex_codec
@@ -7834,13 +7833,11 @@ fi
 
 
 
-
 # Check whether --enable-resample_dll was given.
 if test ${enable_resample_dll+y}
 then :
   enableval=$enable_resample_dll; if test "$enable_resample_dll" = "yes"; then
 		ac_resample_dll=1
-		ac_resample_ldflags=$LDFLAGS
 		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Building libresample as shared library... yes" >&5
 printf "%s\n" "Building libresample as shared library... yes" >&6; }
 	       fi

@@ -20,6 +20,7 @@ export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 export RESAMPLE_SRCDIR = ../../resample/src
 export RESAMPLE_OBJS = resamplesubs.o
 export RESAMPLE_CFLAGS = $(_CFLAGS)
+export RESAMPLE_LDFLAGS = $(_LDFLAGS)
 
 export RESAMPLE_LIB := libresample-$(TARGET_NAME)$(LIBEXT)
 
@@ -44,7 +45,6 @@ ifneq ($(PJ_SHARED_LIBRARIES),)
 else
 ifneq ($(PJ_RESAMPLE_DLL),)
 export RESAMPLE_CFLAGS := -fPIC $(RESAMPLE_CFLAGS)
-export RESAMPLE_LDFLAGS := $(RESAMPLE_LDFLAGS)
 endif
 endif
 

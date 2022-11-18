@@ -1248,13 +1248,11 @@ AC_ARG_ENABLE(libsamplerate,
            ], AC_MSG_RESULT([Checking if libsamplerate is enabled...no]))
 
 AC_SUBST(ac_resample_dll)
-AC_SUBST(ac_resample_ldflags)
 AC_ARG_ENABLE(resample_dll,
 	      AS_HELP_STRING([--enable-resample-dll],
 			     [Build libresample as shared library]),
 	      [if test "$enable_resample_dll" = "yes"; then
 		[ac_resample_dll=1]
-		[ac_resample_ldflags="$LDFLAGS"]
 		AC_MSG_RESULT([Building libresample as shared library... yes])
 	       fi],
 	      AC_MSG_RESULT([Building libresample as shared library... no])
