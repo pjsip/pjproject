@@ -1190,8 +1190,8 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
             	tsx_continue = PJ_TRUE;
             }
 #endif
-
-	    if ((tp_disc && pjsip_cfg()->endpt.keep_inv_after_tsx_timeout) ||
+	    if ((tp_disc && pjsip_cfg()->endpt.keep_inv_after_tsx_timeout && 
+		 (tsx->method.id == PJSIP_INVITE_METHOD)) ||
 	        tsx_continue)
 	    {
 	    	/* Upon transport disconnection event, if we receive
