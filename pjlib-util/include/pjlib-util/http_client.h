@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -53,8 +52,8 @@ typedef struct pj_http_req pj_http_req;
  */
 typedef struct pj_http_header_elmt
 {
-    pj_str_t name;	/**< Header name */
-    pj_str_t value;	/**< Header value */
+    pj_str_t name;      /**< Header name */
+    pj_str_t value;     /**< Header value */
 } pj_http_header_elmt;
 
 /**
@@ -83,7 +82,7 @@ typedef struct pj_http_auth_cred
      *
      * Default is empty.
      */
-    pj_str_t	scheme;
+    pj_str_t    scheme;
 
     /**
      * Specify specific authentication realm to be responded. If this field
@@ -92,14 +91,14 @@ typedef struct pj_http_auth_cred
      *
      * Default is empty.
      */
-    pj_str_t	realm;
+    pj_str_t    realm;
 
     /**
      * Specify authentication username.
      *
      * Default is empty.
      */
-    pj_str_t	username;
+    pj_str_t    username;
 
     /**
      * The type of password in \a data field. Currently only 0 is
@@ -107,7 +106,7 @@ typedef struct pj_http_auth_cred
      *
      * Default is 0.
      */
-    unsigned	data_type;
+    unsigned    data_type;
 
     /**
      * Specify authentication password. The encoding of the password depends
@@ -115,7 +114,7 @@ typedef struct pj_http_auth_cred
      *
      * Default is empty.
      */
-    pj_str_t	data;
+    pj_str_t    data;
 
 } pj_http_auth_cred;
 
@@ -186,7 +185,7 @@ typedef struct pj_http_req_param
     /**
      * Authentication credential needed to respond to 401/407 response.
      */
-    pj_http_auth_cred	auth_cred;
+    pj_http_auth_cred   auth_cred;
 
     /**
      * Optional source port range to use when binding the socket.
@@ -199,7 +198,7 @@ typedef struct pj_http_req_param
      *
      * Default is 0 (The OS will select the source port automatically)
      */
-    pj_uint16_t		source_port_range_start;
+    pj_uint16_t         source_port_range_start;
 
     /**
      * Optional source port range to use when binding.
@@ -207,7 +206,7 @@ typedef struct pj_http_req_param
      *
      * Default is 0 (The OS will select the source port automatically))
      */
-    pj_uint16_t		source_port_range_size;
+    pj_uint16_t         source_port_range_size;
 
     /**
      * Max number of retries if binding to a port fails.
@@ -216,7 +215,7 @@ typedef struct pj_http_req_param
      *
      * Default is 3
      */
-    pj_uint16_t		max_retries;
+    pj_uint16_t         max_retries;
 
 } pj_http_req_param;
 
@@ -225,14 +224,14 @@ typedef struct pj_http_req_param
  */
 typedef struct pj_http_auth_chal
 {
-    pj_str_t	scheme;		/**< Auth scheme.		*/
-    pj_str_t	realm;		/**< Realm for the challenge.	*/
-    pj_str_t	domain;		/**< Domain.			*/
-    pj_str_t	nonce;		/**< Nonce challenge.		*/
-    pj_str_t	opaque;		/**< Opaque value.		*/
-    int		stale;		/**< Stale parameter.		*/
-    pj_str_t	algorithm;	/**< Algorithm parameter.	*/
-    pj_str_t	qop;		/**< Quality of protection.	*/
+    pj_str_t    scheme;         /**< Auth scheme.               */
+    pj_str_t    realm;          /**< Realm for the challenge.   */
+    pj_str_t    domain;         /**< Domain.                    */
+    pj_str_t    nonce;          /**< Nonce challenge.           */
+    pj_str_t    opaque;         /**< Opaque value.              */
+    int         stale;          /**< Stale parameter.           */
+    pj_str_t    algorithm;      /**< Algorithm parameter.       */
+    pj_str_t    qop;            /**< Quality of protection.     */
 } pj_http_auth_chal;
 
 /**
@@ -245,9 +244,9 @@ typedef struct pj_http_resp
     pj_str_t        reason;         /**< Reason phrase */
     pj_http_headers headers;        /**< Response headers */
     pj_http_auth_chal auth_chal;    /**< Parsed WWW-Authenticate header, if
-				         any. */
+                                         any. */
     pj_int32_t      content_length; /**< The value of content-length header
-					 field. -1 if not specified. */
+                                         field. -1 if not specified. */
     void            *data;          /**< Data received */
     pj_size_t       size;           /**< Data size */
 } pj_http_resp;
@@ -257,8 +256,8 @@ typedef struct pj_http_resp
  */
 typedef struct pj_http_url
 {
-    pj_str_t	username;	    /**< Username part */
-    pj_str_t	passwd;		    /**< Password part */
+    pj_str_t    username;           /**< Username part */
+    pj_str_t    passwd;             /**< Password part */
     pj_str_t    protocol;           /**< Protocol used */
     pj_str_t    host;               /**< Host name */
     pj_uint16_t port;               /**< Port number */
@@ -274,8 +273,8 @@ typedef struct pj_http_req_callback
      * This callback is called when a complete HTTP response header 
      * is received.
      *
-     * @param http_req	The http request.
-     * @param resp	The response of the request.
+     * @param http_req  The http request.
+     * @param resp      The response of the request.
      */
     void (*on_response)(pj_http_req *http_req, const pj_http_resp *resp);
 
@@ -287,13 +286,13 @@ typedef struct pj_http_req_callback
      * callback to be called, application MUST set http_req_param.total_size
      * to a value greater than 0.
      *
-     * @param http_req	The http request.
-     * @param data	Pointer to the data that will be sent. Application
+     * @param http_req  The http request.
+     * @param data      Pointer to the data that will be sent. Application
      *                  must set the pointer to the current data chunk/segment
      *                  to be sent. Data must remain valid until the next 
      *                  on_send_data() callback or for the last segment,
      *                  until it is sent.
-     * @param size	Pointer to the data size that will be sent.
+     * @param size      Pointer to the data size that will be sent.
      */
     void (*on_send_data)(pj_http_req *http_req,
                          void **data, pj_size_t *size);
@@ -307,9 +306,9 @@ typedef struct pj_http_req_callback
      * on_complete() callback will be called with the response 
      * parameter containing the complete data. 
      * 
-     * @param http_req	The http request.
-     * @param data	The buffer containing the data.
-     * @param size	The length of data in the buffer.
+     * @param http_req  The http request.
+     * @param data      The buffer containing the data.
+     * @param size      The length of data in the buffer.
      */
     void (*on_data_read)(pj_http_req *http_req,
                          void *data, pj_size_t size);
@@ -327,15 +326,15 @@ typedef struct pj_http_req_callback
      * pj_http_req immediately by calling #pj_http_req_destroy() inside 
      * the callback.
      *
-     * @param http_req	The http request.
-     * @param status	The status of the request operation. PJ_SUCCESS
+     * @param http_req  The http request.
+     * @param status    The status of the request operation. PJ_SUCCESS
      *                  if the operation completed successfully
      *                  (connection-wise). To check the server's 
      *                  status-code response to the HTTP request, 
      *                  application should check resp->status_code instead.
-     * @param resp	The response of the corresponding request. If 
-     *			the status argument is non-PJ_SUCCESS, this 
-     *			argument will be set to NULL.
+     * @param resp      The response of the corresponding request. If 
+     *                  the status argument is non-PJ_SUCCESS, this 
+     *                  argument will be set to NULL.
      */
     void (*on_complete)(pj_http_req *http_req,
                         pj_status_t status,
@@ -347,7 +346,7 @@ typedef struct pj_http_req_callback
 /**
  * Initialize the http request parameters with the default values.
  *
- * @param param		The parameter to be initialized.
+ * @param param         The parameter to be initialized.
  */
 PJ_DECL(void) pj_http_req_param_default(pj_http_req_param *param);
 
@@ -355,12 +354,12 @@ PJ_DECL(void) pj_http_req_param_default(pj_http_req_param *param);
  * Add a header element/field. Application MUST make sure that 
  * name and val pointer remains valid until the HTTP request is sent.
  *
- * @param headers	The headers.
- * @param name	        The header field name.
- * @param val	        The header field value.
+ * @param headers       The headers.
+ * @param name          The header field name.
+ * @param val           The header field value.
  *
- * @return	        PJ_SUCCESS if the operation has been successful,
- *		        or the appropriate error code on failure.
+ * @return              PJ_SUCCESS if the operation has been successful,
+ *                      or the appropriate error code on failure.
  */
 PJ_DECL(pj_status_t) pj_http_headers_add_elmt(pj_http_headers *headers, 
                                               pj_str_t *name, 
@@ -371,12 +370,12 @@ PJ_DECL(pj_status_t) pj_http_headers_add_elmt(pj_http_headers *headers,
  * its parameters. Application MUST make sure that name and val pointer 
  * remains valid until the HTTP request is sent.
  *
- * @param headers	The headers.
- * @param name	        The header field name.
- * @param val	        The header field value.
+ * @param headers       The headers.
+ * @param name          The header field name.
+ * @param val           The header field value.
  *
- * @return	        PJ_SUCCESS if the operation has been successful,
- *		        or the appropriate error code on failure.
+ * @return              PJ_SUCCESS if the operation has been successful,
+ *                      or the appropriate error code on failure.
  */
 PJ_DECL(pj_status_t) pj_http_headers_add_elmt2(pj_http_headers *headers, 
                                                char *name, char *val);
@@ -384,11 +383,11 @@ PJ_DECL(pj_status_t) pj_http_headers_add_elmt2(pj_http_headers *headers,
 /**
  * Parse a http URL into its components.
  *
- * @param url	        The URL to be parsed.
- * @param hurl	        Pointer to receive the parsed result.
+ * @param url           The URL to be parsed.
+ * @param hurl          Pointer to receive the parsed result.
  *
- * @return	        PJ_SUCCESS if the operation has been successful,
- *		        or the appropriate error code on failure.
+ * @return              PJ_SUCCESS if the operation has been successful,
+ *                      or the appropriate error code on failure.
  */
 PJ_DECL(pj_status_t) pj_http_req_parse_url(const pj_str_t *url, 
                                            pj_http_url *hurl);
@@ -396,24 +395,24 @@ PJ_DECL(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
 /**
  * Create the HTTP request.
  *
- * @param pool		Pool to use. HTTP request will use the pool's factory
+ * @param pool          Pool to use. HTTP request will use the pool's factory
  *                      to allocate its own memory pool.
- * @param url		HTTP URL request.
- * @param timer	        The timer to use.
- * @param ioqueue	The ioqueue to use.
- * @param param		Optional parameters. When this parameter is not 
+ * @param url           HTTP URL request.
+ * @param timer         The timer to use.
+ * @param ioqueue       The ioqueue to use.
+ * @param param         Optional parameters. When this parameter is not 
  *                      specifed (NULL), the default values will be used.
- * @param hcb		Pointer to structure containing application
- *			callbacks.
- * @param http_req	Pointer to receive the http request instance.
+ * @param hcb           Pointer to structure containing application
+ *                      callbacks.
+ * @param http_req      Pointer to receive the http request instance.
  *
- * @return		PJ_SUCCESS if the operation has been successful,
- *			or the appropriate error code on failure.
+ * @return              PJ_SUCCESS if the operation has been successful,
+ *                      or the appropriate error code on failure.
  */
 PJ_DECL(pj_status_t) pj_http_req_create(pj_pool_t *pool,
                                         const pj_str_t *url,
-					pj_timer_heap_t *timer,
-					pj_ioqueue_t *ioqueue,
+                                        pj_timer_heap_t *timer,
+                                        pj_ioqueue_t *ioqueue,
                                         const pj_http_req_param *param,
                                         const pj_http_req_callback *hcb,
                                         pj_http_req **http_req);
@@ -458,7 +457,7 @@ PJ_DECL(pj_status_t) pj_http_req_cancel(pj_http_req *http_req,
 /**
  * Destroy the http request.
  *
- * @param http_req	The http request to be destroyed.
+ * @param http_req      The http request to be destroyed.
  *
  * @return              PJ_SUCCESS if success.
  */
@@ -469,8 +468,8 @@ PJ_DECL(pj_status_t) pj_http_req_destroy(pj_http_req *http_req);
  *
  * @param http_req      The http request.
  *
- * @return	        PJ_TRUE if a request is pending, or
- *		        PJ_FALSE if idle
+ * @return              PJ_TRUE if a request is pending, or
+ *                      PJ_FALSE if idle
  */
 PJ_DECL(pj_bool_t) pj_http_req_is_running(const pj_http_req *http_req);
 
@@ -480,7 +479,7 @@ PJ_DECL(pj_bool_t) pj_http_req_is_running(const pj_http_req *http_req);
  *
  * @param http_req  The http request.
  *
- * @return	    The user data.
+ * @return          The user data.
  */
 PJ_DECL(void *) pj_http_req_get_user_data(pj_http_req *http_req);
 
@@ -491,4 +490,4 @@ PJ_DECL(void *) pj_http_req_get_user_data(pj_http_req *http_req);
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_HTTP_CLIENT_H__ */
+#endif  /* __PJLIB_UTIL_HTTP_CLIENT_H__ */

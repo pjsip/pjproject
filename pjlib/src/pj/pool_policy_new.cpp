@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,20 +35,20 @@ static void *operator_new(pj_pool_factory *factory, pj_size_t size)
     PJ_CHECK_STACK();
 
     if (factory->on_block_alloc) {
-		int rc;
-		rc = factory->on_block_alloc(factory, size);
-		if (!rc)
-		    return NULL;
+                int rc;
+                rc = factory->on_block_alloc(factory, size);
+                if (!rc)
+                    return NULL;
     }
     
     mem = (void*) new char[size+(SIG_SIZE << 1)];
     
     /* Exception for new operator may be disabled, so.. */
     if (mem) {
-	/* Apply signature when PJ_SAFE_POOL is set. It will move
-	 * "mem" pointer forward.
-	 */
-	APPLY_SIG(mem, size);
+        /* Apply signature when PJ_SAFE_POOL is set. It will move
+         * "mem" pointer forward.
+         */
+        APPLY_SIG(mem, size);
     }
 
     return mem;
@@ -98,5 +97,5 @@ PJ_DEF(const pj_pool_factory_policy*) pj_pool_factory_get_default_policy(void)
 }
 
  
-#endif	/* PJ_HAS_POOL_ALT_API */
+#endif  /* PJ_HAS_POOL_ALT_API */
 

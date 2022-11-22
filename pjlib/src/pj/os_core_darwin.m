@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *

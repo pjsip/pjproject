@@ -1,4 +1,3 @@
-# $Id$
 import time
 import imp
 import sys

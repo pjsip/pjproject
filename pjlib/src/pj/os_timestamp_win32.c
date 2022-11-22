@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -27,9 +26,9 @@
 
 
 #if 1
-#   define TRACE_(x)	    PJ_LOG(3,x)
+#   define TRACE_(x)        PJ_LOG(3,x)
 #else
-#   define TRACE_(x)	    ;
+#   define TRACE_(x)        ;
 #endif
 
 
@@ -54,23 +53,23 @@ static pj_status_t GetCpuHz(void)
 
 #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     rc = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-		      L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-		      0, 0, &key);
+                      L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                      0, 0, &key);
 #else
     rc = RegOpenKey( HKEY_LOCAL_MACHINE,
-		     "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-		     &key);
+                     "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                     &key);
 #endif
 
     if (rc != ERROR_SUCCESS)
-	return PJ_RETURN_OS_ERROR(rc);
+        return PJ_RETURN_OS_ERROR(rc);
 
     size = sizeof(CpuMhz);
     rc = RegQueryValueEx(key, "~MHz", NULL, NULL, (BYTE*)&CpuMhz, &size);
     RegCloseKey(key);
 
     if (rc != ERROR_SUCCESS) {
-	return PJ_RETURN_OS_ERROR(rc);
+        return PJ_RETURN_OS_ERROR(rc);
     }
 
     CpuHz = CpuMhz;
@@ -84,8 +83,8 @@ __declspec(naked) __int64 rdtsc()
 {
     __asm 
     {
-	RDTSC
-	RET
+        RDTSC
+        RET
     }
 }
 
@@ -100,9 +99,9 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
     pj_status_t status;
 
     if (CpuHz == 0) {
-	status = GetCpuHz();
-	if (status != PJ_SUCCESS)
-	    return status;
+        status = GetCpuHz();
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     freq->u64 = CpuHz;
@@ -143,47 +142,47 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
      */
     i = 0;
     do {
-	LARGE_INTEGER val;
-	pj_int64_t counter64, time64, diff;
-	pj_time_val time_now;
+        LARGE_INTEGER val;
+        pj_int64_t counter64, time64, diff;
+        pj_time_val time_now;
 
-	/* Retrieve the counter */
-	if (!QueryPerformanceCounter(&val))
-	    return PJ_RETURN_OS_ERROR(GetLastError());
+        /* Retrieve the counter */
+        if (!QueryPerformanceCounter(&val))
+            return PJ_RETURN_OS_ERROR(GetLastError());
 
-	/* Regardless of the goodness of the value, we should put
-	 * the counter here, because normally application wouldn't
-	 * check the error result of this function.
-	 */
-	ts->u64 = val.QuadPart;
+        /* Regardless of the goodness of the value, we should put
+         * the counter here, because normally application wouldn't
+         * check the error result of this function.
+         */
+        ts->u64 = val.QuadPart;
 
-	/* Retrieve time */
-	pj_gettimeofday(&time_now);
+        /* Retrieve time */
+        pj_gettimeofday(&time_now);
 
-	/* Get the counter elapsed time in miliseconds */
-	counter64 = (val.QuadPart - g_ts_base.u64) * 1000 / g_ts_freq.u64;
-	
-	/* Get the time elapsed in miliseconds. 
-	 * We don't want to use PJ_TIME_VAL_MSEC() since it's using
-	 * 32bit calculation, which limits the maximum elapsed time
-	 * to around 49 days only.
-	 */
-	time64 = time_now.sec;
-	time64 = time64 * 1000 + time_now.msec;
-	//time64 = GetTickCount();
+        /* Get the counter elapsed time in miliseconds */
+        counter64 = (val.QuadPart - g_ts_base.u64) * 1000 / g_ts_freq.u64;
+        
+        /* Get the time elapsed in miliseconds. 
+         * We don't want to use PJ_TIME_VAL_MSEC() since it's using
+         * 32bit calculation, which limits the maximum elapsed time
+         * to around 49 days only.
+         */
+        time64 = time_now.sec;
+        time64 = time64 * 1000 + time_now.msec;
+        //time64 = GetTickCount();
 
-	/* It's good if the difference between two clocks are within
-	 * some compile time constant (default: 20ms, which to allow
-	 * context switch happen between QueryPerformanceCounter and
-	 * pj_gettimeofday()).
-	 */
-	diff = (time64 - g_time_base) - counter64;
-	if (diff >= -20 && diff <= 20) {
-	    /* It's good */
-	    return PJ_SUCCESS;
-	}
+        /* It's good if the difference between two clocks are within
+         * some compile time constant (default: 20ms, which to allow
+         * context switch happen between QueryPerformanceCounter and
+         * pj_gettimeofday()).
+         */
+        diff = (time64 - g_time_base) - counter64;
+        if (diff >= -20 && diff <= 20) {
+            /* It's good */
+            return PJ_SUCCESS;
+        }
 
-	++i;
+        ++i;
 
     } while (i < MAX_RETRY);
 
@@ -199,13 +198,13 @@ static pj_status_t init_performance_counter(void)
 
     /* Get the frequency */
     if (!QueryPerformanceFrequency(&val))
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
     g_ts_freq.u64 = val.QuadPart;
 
     /* Get the base timestamp */
     if (!QueryPerformanceCounter(&val))
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
     g_ts_base.u64 = val.QuadPart;
 
@@ -213,7 +212,7 @@ static pj_status_t init_performance_counter(void)
     /* Get the base time */
     status = pj_gettimeofday(&time_base);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Convert time base to 64bit value in msec */
     g_time_base = time_base.sec;
@@ -226,34 +225,34 @@ static pj_status_t init_performance_counter(void)
 PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 {
     if (g_ts_freq.u64 == 0) {
-	enum { MAX_REPEAT = 10 };
-	unsigned i;
-	pj_status_t status;
+        enum { MAX_REPEAT = 10 };
+        unsigned i;
+        pj_status_t status;
 
-	/* Make unellegant compiler happy */
-	status = 0;
+        /* Make unellegant compiler happy */
+        status = 0;
 
-	/* Repeat initializing performance counter until we're sure
-	 * the base timing is correct. It is possible that the system
-	 * returns bad counter during this initialization!
-	 */
-	for (i=0; i<MAX_REPEAT; ++i) {
+        /* Repeat initializing performance counter until we're sure
+         * the base timing is correct. It is possible that the system
+         * returns bad counter during this initialization!
+         */
+        for (i=0; i<MAX_REPEAT; ++i) {
 
-	    pj_timestamp dummy;
+            pj_timestamp dummy;
 
-	    /* Init base time */
-	    status = init_performance_counter();
-	    if (status != PJ_SUCCESS)
-		return status;
+            /* Init base time */
+            status = init_performance_counter();
+            if (status != PJ_SUCCESS)
+                return status;
 
-	    /* Try the base time */
-	    status = pj_get_timestamp(&dummy);
-	    if (status == PJ_SUCCESS)
-		break;
-	}
+            /* Try the base time */
+            status = pj_get_timestamp(&dummy);
+            if (status == PJ_SUCCESS)
+                break;
+        }
 
-	if (status != PJ_SUCCESS)
-	    return status;
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     freq->u64 = g_ts_freq.u64;
@@ -273,7 +272,7 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
     LARGE_INTEGER val;
 
     if (!QueryPerformanceCounter(&val))
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
     ts->u64 = val.QuadPart;
     return PJ_SUCCESS;
@@ -284,12 +283,12 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
     LARGE_INTEGER val;
 
     if (!QueryPerformanceFrequency(&val))
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
     freq->u64 = val.QuadPart;
     return PJ_SUCCESS;
 }
 
 
-#endif	/* PJ_TIMESTAMP_USE_RDTSC */
+#endif  /* PJ_TIMESTAMP_USE_RDTSC */
 

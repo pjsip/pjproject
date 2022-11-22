@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -24,7 +23,7 @@ using namespace PjsuaCLI::BackEnd;
 using namespace Platform;
 using namespace Windows::Foundation;
 
-#define THIS_FILE	"PjsuaCallback.cpp"
+#define THIS_FILE       "PjsuaCallback.cpp"
 
 void PjsuaCallback::SetCallback(IPjsuaCallback^ cb)
 {
@@ -34,14 +33,14 @@ void PjsuaCallback::SetCallback(IPjsuaCallback^ cb)
 void PjsuaCallback::OnStarted(Platform::String ^outStr)
 {
     if (callback) {
-	callback->OnPjsuaStarted(outStr);
+        callback->OnPjsuaStarted(outStr);
     }
 }
 
 void PjsuaCallback::OnStopped(int restart)
 {
     if (callback) {
-	callback->OnPjsuaStopped(restart);
+        callback->OnPjsuaStopped(restart);
     }
 }
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -29,34 +28,34 @@
 #include <pj/string.h>
 
 
-#define THIS_FILE	    "wav_writer.c"
-#define SIGNATURE	    PJMEDIA_SIG_PORT_WAV_WRITER
+#define THIS_FILE           "wav_writer.c"
+#define SIGNATURE           PJMEDIA_SIG_PORT_WAV_WRITER
 
 
 struct file_port
 {
     pjmedia_port     base;
     pjmedia_wave_fmt_tag fmt_tag;
-    pj_uint16_t	     bytes_per_sample;
+    pj_uint16_t      bytes_per_sample;
 
-    pj_size_t	     bufsize;
-    char	    *buf;
-    char	    *writepos;
-    pj_size_t	     total;
+    pj_size_t        bufsize;
+    char            *buf;
+    char            *writepos;
+    pj_size_t        total;
 
     pj_oshandle_t    fd;
 
-    pj_size_t	     cb_size;
-    pj_status_t	   (*cb)(pjmedia_port*, void*);
-    pj_bool_t	     subscribed;
-    pj_bool_t	     cb_called;
-    void	   (*cb2)(pjmedia_port*, void*);
+    pj_size_t        cb_size;
+    pj_status_t    (*cb)(pjmedia_port*, void*);
+    pj_bool_t        subscribed;
+    pj_bool_t        cb_called;
+    void           (*cb2)(pjmedia_port*, void*);
 };
 
 static pj_status_t file_put_frame(pjmedia_port *this_port, 
-				  pjmedia_frame *frame);
+                                  pjmedia_frame *frame);
 static pj_status_t file_get_frame(pjmedia_port *this_port, 
-				  pjmedia_frame *frame);
+                                  pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
 
 
@@ -64,14 +63,14 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port);
  * Create file writer port.
  */
 PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
-						     const char *filename,
-						     unsigned sampling_rate,
-						     unsigned channel_count,
-						     unsigned samples_per_frame,
-						     unsigned bits_per_sample,
-						     unsigned flags,
-						     pj_ssize_t buff_size,
-						     pjmedia_port **p_port )
+                                                     const char *filename,
+                                                     unsigned sampling_rate,
+                                                     unsigned channel_count,
+                                                     unsigned samples_per_frame,
+                                                     unsigned bits_per_sample,
+                                                     unsigned flags,
+                                                     pj_ssize_t buff_size,
+                                                     pjmedia_port **p_port )
 {
     struct file_port *fport;
     pjmedia_wave_hdr wave_hdr;
@@ -94,22 +93,22 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     /* Initialize port info. */
     pj_strdup2(pool, &name, filename);
     pjmedia_port_info_init(&fport->base.info, &name, SIGNATURE,
-			   sampling_rate, channel_count, bits_per_sample,
-			   samples_per_frame);
+                           sampling_rate, channel_count, bits_per_sample,
+                           samples_per_frame);
 
     fport->base.get_frame = &file_get_frame;
     fport->base.put_frame = &file_put_frame;
     fport->base.on_destroy = &file_on_destroy;
 
     if (flags == PJMEDIA_FILE_WRITE_ALAW) {
-	fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_ALAW;
-	fport->bytes_per_sample = 1;
+        fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_ALAW;
+        fport->bytes_per_sample = 1;
     } else if (flags == PJMEDIA_FILE_WRITE_ULAW) {
-	fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_ULAW;
-	fport->bytes_per_sample = 1;
+        fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_ULAW;
+        fport->bytes_per_sample = 1;
     } else {
-	fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_PCM;
-	fport->bytes_per_sample = 2;
+        fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_PCM;
+        fport->bytes_per_sample = 2;
     }
 
     /* Open file in write and read mode.
@@ -118,7 +117,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
      */
     status = pj_file_open(pool, filename, PJ_O_WRONLY, &fport->fd);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Initialize WAVE header */
     pj_bzero(&wave_hdr, sizeof(pjmedia_wave_hdr));
@@ -132,14 +131,14 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     wave_hdr.fmt_hdr.nchan = (pj_int16_t)channel_count;
     wave_hdr.fmt_hdr.sample_rate = sampling_rate;
     wave_hdr.fmt_hdr.bytes_per_sec = sampling_rate * channel_count * 
-				     fport->bytes_per_sample;
+                                     fport->bytes_per_sample;
     wave_hdr.fmt_hdr.block_align = (pj_uint16_t)
-				   (fport->bytes_per_sample * channel_count);
+                                   (fport->bytes_per_sample * channel_count);
     wave_hdr.fmt_hdr.bits_per_sample = (pj_uint16_t)
-				       (fport->bytes_per_sample * 8);
+                                       (fport->bytes_per_sample * 8);
 
     wave_hdr.data_hdr.data = PJMEDIA_DATA_TAG;
-    wave_hdr.data_hdr.len = 0;	    /* will be filled later */
+    wave_hdr.data_hdr.len = 0;      /* will be filled later */
 
 
     /* Convert WAVE header from host byte order to little endian
@@ -150,50 +149,50 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 
     /* Write WAVE header */
     if (fport->fmt_tag != PJMEDIA_WAVE_FMT_TAG_PCM) {
-	pjmedia_wave_subchunk fact_chunk;
-	pj_uint32_t tmp = 0;
+        pjmedia_wave_subchunk fact_chunk;
+        pj_uint32_t tmp = 0;
 
-	fact_chunk.id = PJMEDIA_FACT_TAG;
-	fact_chunk.len = 4;
+        fact_chunk.id = PJMEDIA_FACT_TAG;
+        fact_chunk.len = 4;
 
-	PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&fact_chunk);
+        PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&fact_chunk);
 
-	/* Write WAVE header without DATA chunk header */
-	size = sizeof(pjmedia_wave_hdr) - sizeof(wave_hdr.data_hdr);
-	status = pj_file_write(fport->fd, &wave_hdr, &size);
-	if (status != PJ_SUCCESS) {
-	    pj_file_close(fport->fd);
-	    return status;
-	}
+        /* Write WAVE header without DATA chunk header */
+        size = sizeof(pjmedia_wave_hdr) - sizeof(wave_hdr.data_hdr);
+        status = pj_file_write(fport->fd, &wave_hdr, &size);
+        if (status != PJ_SUCCESS) {
+            pj_file_close(fport->fd);
+            return status;
+        }
 
-	/* Write FACT chunk if it stores compressed data */
-	size = sizeof(fact_chunk);
-	status = pj_file_write(fport->fd, &fact_chunk, &size);
-	if (status != PJ_SUCCESS) {
-	    pj_file_close(fport->fd);
-	    return status;
-	}
-	size = 4;
-	status = pj_file_write(fport->fd, &tmp, &size);
-	if (status != PJ_SUCCESS) {
-	    pj_file_close(fport->fd);
-	    return status;
-	}
+        /* Write FACT chunk if it stores compressed data */
+        size = sizeof(fact_chunk);
+        status = pj_file_write(fport->fd, &fact_chunk, &size);
+        if (status != PJ_SUCCESS) {
+            pj_file_close(fport->fd);
+            return status;
+        }
+        size = 4;
+        status = pj_file_write(fport->fd, &tmp, &size);
+        if (status != PJ_SUCCESS) {
+            pj_file_close(fport->fd);
+            return status;
+        }
 
-	/* Write DATA chunk header */
-	size = sizeof(wave_hdr.data_hdr);
-	status = pj_file_write(fport->fd, &wave_hdr.data_hdr, &size);
-	if (status != PJ_SUCCESS) {
-	    pj_file_close(fport->fd);
-	    return status;
-	}
+        /* Write DATA chunk header */
+        size = sizeof(wave_hdr.data_hdr);
+        status = pj_file_write(fport->fd, &wave_hdr.data_hdr, &size);
+        if (status != PJ_SUCCESS) {
+            pj_file_close(fport->fd);
+            return status;
+        }
     } else {
-	size = sizeof(pjmedia_wave_hdr);
-	status = pj_file_write(fport->fd, &wave_hdr, &size);
-	if (status != PJ_SUCCESS) {
-	    pj_file_close(fport->fd);
-	    return status;
-	}
+        size = sizeof(pjmedia_wave_hdr);
+        status = pj_file_write(fport->fd, &wave_hdr, &size);
+        if (status != PJ_SUCCESS) {
+            pj_file_close(fport->fd);
+            return status;
+        }
     }
 
     /* Set buffer size. */
@@ -207,8 +206,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     /* Allocate buffer and set initial write position */
     fport->buf = (char*) pj_pool_alloc(pool, fport->bufsize);
     if (fport->buf == NULL) {
-	pj_file_close(fport->fd);
-	return PJ_ENOMEM;
+        pj_file_close(fport->fd);
+        return PJ_ENOMEM;
     }
     fport->writepos = fport->buf;
 
@@ -216,11 +215,11 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     *p_port = &fport->base;
 
     PJ_LOG(4,(THIS_FILE, 
-	      "File writer '%.*s' created: samp.rate=%d, bufsize=%uKB",
-	      (int)fport->base.info.name.slen,
-	      fport->base.info.name.ptr,
-	      PJMEDIA_PIA_SRATE(&fport->base.info),
-	      fport->bufsize / 1000));
+              "File writer '%.*s' created: samp.rate=%d, bufsize=%uKB",
+              (int)fport->base.info.name.slen,
+              fport->base.info.name.ptr,
+              PJMEDIA_PIA_SRATE(&fport->base.info),
+              fport->bufsize / 1000));
 
 
     return PJ_SUCCESS;
@@ -252,10 +251,10 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port )
  * Register callback.
  */
 PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
-				pj_size_t pos,
-				void *user_data,
-			        pj_status_t (*cb)(pjmedia_port *port,
-						  void *usr_data))
+                                pj_size_t pos,
+                                void *user_data,
+                                pj_status_t (*cb)(pjmedia_port *port,
+                                                  void *usr_data))
 {
     struct file_port *fport;
 
@@ -266,7 +265,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
 
     PJ_LOG(1, (THIS_FILE, "pjmedia_wav_writer_port_set_cb() is deprecated. "
-    	       "Use pjmedia_wav_writer_port_set_cb2() instead."));
+               "Use pjmedia_wav_writer_port_set_cb2() instead."));
 
     fport = (struct file_port*) port;
 
@@ -283,10 +282,10 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
  * Register callback.
  */
 PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
-				pj_size_t pos,
-				void *user_data,
-			        void (*cb)(pjmedia_port *port,
-					   void *usr_data))
+                                pj_size_t pos,
+                                void *user_data,
+                                void (*cb)(pjmedia_port *port,
+                                           void *usr_data))
 {
     struct file_port *fport;
 
@@ -310,10 +309,10 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
     static void swap_samples(pj_int16_t *samples, unsigned count)
     {
-	unsigned i;
-	for (i=0; i<count; ++i) {
-	    samples[i] = pj_swap16(samples[i]);
-	}
+        unsigned i;
+        for (i=0; i<count; ++i) {
+            samples[i] = pj_swap16(samples[i]);
+        }
     }
 #else
 #   define swap_samples(samples,count)
@@ -345,8 +344,8 @@ static pj_status_t file_on_event(pjmedia_event *event,
     struct file_port *fport = (struct file_port*)user_data;
 
     if (event->type == PJMEDIA_EVENT_CALLBACK) {
-	if (fport->cb2)
-	    (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
+        if (fport->cb2)
+            (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
     }
     
     return PJ_SUCCESS;
@@ -357,45 +356,45 @@ static pj_status_t file_on_event(pjmedia_event *event,
  * to the file.
  */
 static pj_status_t file_put_frame(pjmedia_port *this_port, 
-				  pjmedia_frame *frame)
+                                  pjmedia_frame *frame)
 {
     struct file_port *fport = (struct file_port *)this_port;
     pj_size_t frame_size;
 
     if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM)
-	frame_size = frame->size;
+        frame_size = frame->size;
     else
-	frame_size = frame->size >> 1;
+        frame_size = frame->size >> 1;
 
     /* Flush buffer if we don't have enough room for the frame. */
     if (fport->writepos + frame_size > fport->buf + fport->bufsize) {
-	pj_status_t status;
-	status = flush_buffer(fport);
-	if (status != PJ_SUCCESS)
-	    return status;
+        pj_status_t status;
+        status = flush_buffer(fport);
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     /* Check if frame is not too large. */
     PJ_ASSERT_RETURN(fport->writepos+frame_size <= fport->buf+fport->bufsize,
-		     PJMEDIA_EFRMFILETOOBIG);
+                     PJMEDIA_EFRMFILETOOBIG);
 
     /* Copy frame to buffer. */
     if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM) {
-	pj_memcpy(fport->writepos, frame->buf, frame->size);
+        pj_memcpy(fport->writepos, frame->buf, frame->size);
     } else {
-	unsigned i;
-	pj_int16_t *src = (pj_int16_t*)frame->buf;
-	pj_uint8_t *dst = (pj_uint8_t*)fport->writepos;
+        unsigned i;
+        pj_int16_t *src = (pj_int16_t*)frame->buf;
+        pj_uint8_t *dst = (pj_uint8_t*)fport->writepos;
 
-	if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW) {
-	    for (i = 0; i < frame_size; ++i) {
-		*dst++ = pjmedia_linear2ulaw(*src++);
-	    }
-	} else {
-	    for (i = 0; i < frame_size; ++i) {
-		*dst++ = pjmedia_linear2alaw(*src++);
-	    }
-	}
+        if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW) {
+            for (i = 0; i < frame_size; ++i) {
+                *dst++ = pjmedia_linear2ulaw(*src++);
+            }
+        } else {
+            for (i = 0; i < frame_size; ++i) {
+                *dst++ = pjmedia_linear2alaw(*src++);
+            }
+        }
 
     }
     fport->writepos += frame_size;
@@ -403,37 +402,37 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
     /* Increment total written, and check if we need to call callback */
     fport->total += frame_size;
     if (fport->total >= fport->cb_size) {
-	if (fport->cb2) {
-	    if (!fport->subscribed) {
-	        pj_status_t status;
+        if (fport->cb2) {
+            if (!fport->subscribed) {
+                pj_status_t status;
 
-	    	status = pjmedia_event_subscribe(NULL, &file_on_event,
-	    				         fport, fport);
-	    	fport->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
-	    			    PJ_FALSE;
-	    }
+                status = pjmedia_event_subscribe(NULL, &file_on_event,
+                                                 fport, fport);
+                fport->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
+                                    PJ_FALSE;
+            }
 
-	    if (fport->subscribed && !fport->cb_called) {
-	    	pjmedia_event event;
+            if (fport->subscribed && !fport->cb_called) {
+                pjmedia_event event;
 
-	    	/* To prevent the callback from being called more than once. */
-	    	fport->cb_called = PJ_TRUE;
+                /* To prevent the callback from being called more than once. */
+                fport->cb_called = PJ_TRUE;
 
-	    	pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
-	                      	   NULL, fport);
-	    	pjmedia_event_publish(NULL, fport, &event,
-	                              PJMEDIA_EVENT_PUBLISH_POST_EVENT);
-	    }
-	} else if (fport->cb) {
-	    pj_status_t (*cb)(pjmedia_port*, void*);
-	    pj_status_t status;
+                pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+                                   NULL, fport);
+                pjmedia_event_publish(NULL, fport, &event,
+                                      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+            }
+        } else if (fport->cb) {
+            pj_status_t (*cb)(pjmedia_port*, void*);
+            pj_status_t status;
 
-	    cb = fport->cb;
-	    fport->cb = NULL;
+            cb = fport->cb;
+            fport->cb = NULL;
 
-	    status = (*cb)(this_port, this_port->port_data.pdata);
-	    return status;
-	}
+            status = (*cb)(this_port, this_port->port_data.pdata);
+            return status;
+        }
     }
 
     return PJ_SUCCESS;
@@ -443,7 +442,7 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
  * Get frame, basicy is a no-op operation.
  */
 static pj_status_t file_get_frame(pjmedia_port *this_port, 
-				  pjmedia_frame *frame)
+                                  pjmedia_frame *frame)
 {
     PJ_UNUSED_ARG(this_port);
     PJ_UNUSED_ARG(frame);
@@ -465,19 +464,19 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     pj_uint32_t data_len_pos = DATA_LEN_POS;
 
     if (fport->subscribed) {
-    	pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
-    	fport->subscribed = PJ_FALSE;
+        pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
+        fport->subscribed = PJ_FALSE;
     }
 
     /* Flush remaining buffers. */
     if (fport->writepos != fport->buf) 
-	flush_buffer(fport);
+        flush_buffer(fport);
 
     /* Get file size. */
     status = pj_file_getpos(fport->fd, &file_size);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-	return status;
+        return status;
     }
 
     /* Calculate wave fields */
@@ -493,7 +492,7 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     status = pj_file_setpos(fport->fd, FILE_LEN_POS, PJ_SEEK_SET);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-	return status;
+        return status;
     }
 
     /* Write file_len */
@@ -501,32 +500,32 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     status = pj_file_write(fport->fd, &wave_file_len, &bytes);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-	return status;
+        return status;
     }
 
     /* Write samples_len in FACT chunk */
     if (fport->fmt_tag != PJMEDIA_WAVE_FMT_TAG_PCM) {
-	enum { SAMPLES_LEN_POS = 44};
-	pj_uint32_t wav_samples_len;
+        enum { SAMPLES_LEN_POS = 44};
+        pj_uint32_t wav_samples_len;
 
-	/* Adjust wave_data_len & data_len_pos since there is FACT chunk */
-	wave_data_len -= 12;
-	data_len_pos += 12;
-	wav_samples_len = wave_data_len;
+        /* Adjust wave_data_len & data_len_pos since there is FACT chunk */
+        wave_data_len -= 12;
+        data_len_pos += 12;
+        wav_samples_len = wave_data_len;
 
-	/* Seek to samples_len field. */
-	status = pj_file_setpos(fport->fd, SAMPLES_LEN_POS, PJ_SEEK_SET);
+        /* Seek to samples_len field. */
+        status = pj_file_setpos(fport->fd, SAMPLES_LEN_POS, PJ_SEEK_SET);
         if (status != PJ_SUCCESS) {
             pj_file_close(fport->fd);
-	    return status;
+            return status;
         }
 
-	/* Write samples_len */
-	bytes = sizeof(wav_samples_len);
-	status = pj_file_write(fport->fd, &wav_samples_len, &bytes);
-	if (status != PJ_SUCCESS) {
+        /* Write samples_len */
+        bytes = sizeof(wav_samples_len);
+        status = pj_file_write(fport->fd, &wav_samples_len, &bytes);
+        if (status != PJ_SUCCESS) {
             pj_file_close(fport->fd);
-	    return status;
+            return status;
         }
     }
 
@@ -534,7 +533,7 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     status = pj_file_setpos(fport->fd, data_len_pos, PJ_SEEK_SET);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-	return status;
+        return status;
     }
 
     /* Write file_len */
@@ -542,13 +541,13 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     status = pj_file_write(fport->fd, &wave_data_len, &bytes);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-	return status;
+        return status;
     }
 
     /* Close file */
     status = pj_file_close(fport->fd);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Done. */
     return PJ_SUCCESS;

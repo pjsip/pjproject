@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -49,7 +48,7 @@
  * Maximum server address entries per one SRV record
  */
 #ifndef PJ_DNS_SRV_MAX_ADDR
-#   define PJ_DNS_SRV_MAX_ADDR	    8
+#   define PJ_DNS_SRV_MAX_ADDR      8
 #endif
 
 
@@ -66,7 +65,7 @@
  * Default: 16
  */
 #ifndef PJ_DNS_MAX_NAMES_IN_NAMETABLE
-#   define PJ_DNS_MAX_NAMES_IN_NAMETABLE	    16
+#   define PJ_DNS_MAX_NAMES_IN_NAMETABLE            16
 #endif
 
 
@@ -79,7 +78,7 @@
  * Maximum numbers of DNS nameservers that can be configured in resolver.
  */
 #ifndef PJ_DNS_RESOLVER_MAX_NS
-#   define PJ_DNS_RESOLVER_MAX_NS		    16
+#   define PJ_DNS_RESOLVER_MAX_NS                   16
 #endif
 
 
@@ -115,7 +114,7 @@
  * @see PJ_DNS_RESOLVER_INVALID_TTL
  */
 #ifndef PJ_DNS_RESOLVER_MAX_TTL
-#   define PJ_DNS_RESOLVER_MAX_TTL		    (5*60)
+#   define PJ_DNS_RESOLVER_MAX_TTL                  (5*60)
 #endif
 
 /**
@@ -129,7 +128,7 @@
  * @see PJ_DNS_RESOLVER_MAX_TTL
  */
 #ifndef PJ_DNS_RESOLVER_INVALID_TTL
-#   define PJ_DNS_RESOLVER_INVALID_TTL		    60
+#   define PJ_DNS_RESOLVER_INVALID_TTL              60
 #endif
 
 /**
@@ -146,7 +145,7 @@
  * @see PJ_DNS_RESOLVER_BAD_NS_TTL
  */
 #ifndef PJ_DNS_RESOLVER_GOOD_NS_TTL
-#   define PJ_DNS_RESOLVER_GOOD_NS_TTL		    (10*60)
+#   define PJ_DNS_RESOLVER_GOOD_NS_TTL              (10*60)
 #endif
 
 /**
@@ -158,7 +157,7 @@
  * @see PJ_DNS_RESOLVER_GOOD_NS_TTL
  */
 #ifndef PJ_DNS_RESOLVER_BAD_NS_TTL
-#   define PJ_DNS_RESOLVER_BAD_NS_TTL		    (1*60)
+#   define PJ_DNS_RESOLVER_BAD_NS_TTL               (1*60)
 #endif
 
 
@@ -169,7 +168,7 @@
  * Default: 512 byes
  */
 #ifndef PJ_DNS_RESOLVER_MAX_UDP_SIZE
-#   define PJ_DNS_RESOLVER_MAX_UDP_SIZE		    512
+#   define PJ_DNS_RESOLVER_MAX_UDP_SIZE             512
 #endif
 
 
@@ -182,7 +181,7 @@
  * Default: 512
  */
 #ifndef PJ_DNS_RESOLVER_RES_BUF_SIZE
-#   define PJ_DNS_RESOLVER_RES_BUF_SIZE		    512
+#   define PJ_DNS_RESOLVER_RES_BUF_SIZE             512
 #endif
 
 
@@ -192,7 +191,7 @@
  * default: 4000
  */
 #ifndef PJ_DNS_RESOLVER_TMP_BUF_SIZE
-#   define PJ_DNS_RESOLVER_TMP_BUF_SIZE		    4000
+#   define PJ_DNS_RESOLVER_TMP_BUF_SIZE             4000
 #endif
 
 
@@ -207,7 +206,7 @@
  * This would save several kilobytes of .bss memory in the SIP parser.
  */
 #ifndef PJ_SCANNER_USE_BITWISE
-#  define PJ_SCANNER_USE_BITWISE		    1
+#  define PJ_SCANNER_USE_BITWISE                    1
 #endif
 
 
@@ -223,7 +222,7 @@
  * Default: 16
  */
 #ifndef PJSTUN_MAX_ATTR
-#   define PJSTUN_MAX_ATTR			    16
+#   define PJSTUN_MAX_ATTR                          16
 #endif
 
 
@@ -234,7 +233,7 @@
  * Default: 16
  */
 #ifndef PJ_STUN_MAX_ATTR
-#   define PJ_STUN_MAX_ATTR			    16
+#   define PJ_STUN_MAX_ATTR                         16
 #endif
 
 
@@ -251,7 +250,7 @@
  * Default: 1
  */
 #ifndef PJ_CRC32_HAS_TABLES
-#   define PJ_CRC32_HAS_TABLES			    1
+#   define PJ_CRC32_HAS_TABLES                      1
 #endif
 
 
@@ -291,7 +290,7 @@
  * Default: 512
  */
 #ifndef PJ_CLI_MAX_CMDBUF
-#   define PJ_CLI_MAX_CMDBUF		512
+#   define PJ_CLI_MAX_CMDBUF            512
 #endif
 
 /**
@@ -299,7 +298,7 @@
  * Default: 8
  */
 #ifndef PJ_CLI_MAX_ARGS
-#   define PJ_CLI_MAX_ARGS		8
+#   define PJ_CLI_MAX_ARGS              8
 #endif
 
 /**
@@ -307,7 +306,7 @@
  * Default: 32
  */
 #ifndef PJ_CLI_MAX_HINTS
-#   define PJ_CLI_MAX_HINTS		32
+#   define PJ_CLI_MAX_HINTS             32
 #endif
 
 /**
@@ -315,7 +314,7 @@
  * Default: 4
  */
 #ifndef PJ_CLI_MAX_SHORTCUTS
-#   define PJ_CLI_MAX_SHORTCUTS		4
+#   define PJ_CLI_MAX_SHORTCUTS         4
 #endif
 
 /**
@@ -370,5 +369,5 @@
  * @}
  */
 
-#endif	/* __PJLIB_UTIL_CONFIG_H__ */
+#endif  /* __PJLIB_UTIL_CONFIG_H__ */
 

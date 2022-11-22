@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -41,7 +40,7 @@ static pj_pool_factory *mem;
 static FILE *f = NULL;
 
 //#define VERBOSE
-#define THIS_FILE	    "http_demo"
+#define THIS_FILE           "http_demo"
 
 static void on_response(pj_http_req *req, const pj_http_resp *resp)
 {
@@ -49,27 +48,27 @@ static void on_response(pj_http_req *req, const pj_http_resp *resp)
 
     PJ_UNUSED_ARG(req);
     PJ_LOG(3,(THIS_FILE, "%.*s %d %.*s", (int)resp->version.slen, resp->version.ptr,
-				           resp->status_code,
-				           (int)resp->reason.slen, resp->reason.ptr));
+                                           resp->status_code,
+                                           (int)resp->reason.slen, resp->reason.ptr));
 
     for (i=0; i<resp->headers.count; ++i) {
-	const pj_http_header_elmt *h = &resp->headers.header[i];
+        const pj_http_header_elmt *h = &resp->headers.header[i];
 
-	if (!pj_stricmp2(&h->name, "Content-Length") ||
-	    !pj_stricmp2(&h->name, "Content-Type"))
-	{
-	    PJ_LOG(3,(THIS_FILE, "%.*s: %.*s",
-		      (int)h->name.slen, h->name.ptr,
-		      (int)h->value.slen, h->value.ptr));
-	}
+        if (!pj_stricmp2(&h->name, "Content-Length") ||
+            !pj_stricmp2(&h->name, "Content-Type"))
+        {
+            PJ_LOG(3,(THIS_FILE, "%.*s: %.*s",
+                      (int)h->name.slen, h->name.ptr,
+                      (int)h->value.slen, h->value.ptr));
+        }
     }
 }
 
 static void on_send_data(pj_http_req *req, void **data, pj_size_t *size)
 {
-	PJ_UNUSED_ARG(req);
-	PJ_UNUSED_ARG(size);
-	PJ_UNUSED_ARG(data);
+        PJ_UNUSED_ARG(req);
+        PJ_UNUSED_ARG(size);
+        PJ_UNUSED_ARG(data);
 }
 
 static void on_data_read(pj_http_req *hreq, void *data, pj_size_t size)
@@ -133,8 +132,8 @@ pj_status_t getURL(const char *curl)
 
     while (pj_http_req_is_running(http_req)) {
         pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
     pj_http_req_destroy(http_req);
@@ -153,8 +152,8 @@ int main(int argc, char *argv[])
     pj_status_t status;
 
     if (argc < 2 || argc > 3) {
-	puts("Usage: httpdemo URL [output-filename]");
-	return 1;
+        puts("Usage: httpdemo URL [output-filename]");
+        return 1;
     }
 
     pj_log_set_level(5);
@@ -165,9 +164,9 @@ int main(int argc, char *argv[])
     pjlib_util_init();
 
     if (argc > 2)
-	f = fopen(argv[2], "wb");
+        f = fopen(argv[2], "wb");
     else
-	f = stdout;
+        f = stdout;
 
     status = getURL(argv[1]);
     if (status != PJ_SUCCESS) {
@@ -175,7 +174,7 @@ int main(int argc, char *argv[])
     }
 
     if (f != stdout)
-	fclose(f);
+        fclose(f);
 
     pj_caching_pool_destroy(&cp);
     pj_shutdown();

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -31,13 +30,13 @@ static const pj_str_t STR_MIME_SUBTYPE = { "im-iscomposing+xml", 18 };
 
 
 /* XML node constants. */
-static const pj_str_t STR_ISCOMPOSING	= { "isComposing", 11 };
-static const pj_str_t STR_STATE		= { "state", 5 };
-static const pj_str_t STR_ACTIVE	= { "active", 6 };
-static const pj_str_t STR_IDLE		= { "idle", 4 };
-static const pj_str_t STR_LASTACTIVE	= { "lastactive", 10 };
-static const pj_str_t STR_CONTENTTYPE	= { "contenttype", 11 };
-static const pj_str_t STR_REFRESH	= { "refresh", 7 };
+static const pj_str_t STR_ISCOMPOSING   = { "isComposing", 11 };
+static const pj_str_t STR_STATE         = { "state", 5 };
+static const pj_str_t STR_ACTIVE        = { "active", 6 };
+static const pj_str_t STR_IDLE          = { "idle", 4 };
+static const pj_str_t STR_LASTACTIVE    = { "lastactive", 10 };
+static const pj_str_t STR_CONTENTTYPE   = { "contenttype", 11 };
+static const pj_str_t STR_REFRESH       = { "refresh", 7 };
 
 
 /* XML attributes constants */
@@ -50,10 +49,10 @@ static const pj_str_t STR_XSI_SLOC_VAL =   { "urn:ietf:params:xml:ns:im-composin
 
 
 PJ_DEF(pj_xml_node*) pjsip_iscomposing_create_xml( pj_pool_t *pool,
-						   pj_bool_t is_composing,
-						   const pj_time_val *lst_actv,
-						   const pj_str_t *content_tp,
-						   int refresh)
+                                                   pj_bool_t is_composing,
+                                                   const pj_time_val *lst_actv,
+                                                   const pj_str_t *content_tp,
+                                                   int refresh)
 {
     pj_xml_node *doc, *node;
     pj_xml_attr *attr;
@@ -75,30 +74,30 @@ PJ_DEF(pj_xml_node*) pjsip_iscomposing_create_xml( pj_pool_t *pool,
     /* Add state. */
     node = pj_xml_node_new(pool, &STR_STATE);
     if (is_composing)
-	node->content = STR_ACTIVE;
+        node->content = STR_ACTIVE;
     else
-	node->content = STR_IDLE;
+        node->content = STR_IDLE;
     pj_xml_add_node(doc, node);
 
     /* Add lastactive, if any. */
     PJ_UNUSED_ARG(lst_actv);
     //if (!is_composing && lst_actv) {
-    //	PJ_TODO(IMPLEMENT_LAST_ACTIVE_ATTRIBUTE);
+    //  PJ_TODO(IMPLEMENT_LAST_ACTIVE_ATTRIBUTE);
     //}
 
     /* Add contenttype, if any. */
     if (content_tp) {
-	node = pj_xml_node_new(pool, &STR_CONTENTTYPE);
-	pj_strdup(pool, &node->content, content_tp);
-	pj_xml_add_node(doc, node);
+        node = pj_xml_node_new(pool, &STR_CONTENTTYPE);
+        pj_strdup(pool, &node->content, content_tp);
+        pj_xml_add_node(doc, node);
     }
 
     /* Add refresh, if any. */
     if (is_composing && refresh > 1 && refresh < 3601) {
-	node = pj_xml_node_new(pool, &STR_REFRESH);
-	node->content.ptr = (char*) pj_pool_alloc(pool, 10);
-	node->content.slen = pj_utoa(refresh, node->content.ptr);
-	pj_xml_add_node(doc, node);
+        node = pj_xml_node_new(pool, &STR_REFRESH);
+        node->content.ptr = (char*) pj_pool_alloc(pool, 10);
+        node->content.slen = pj_utoa(refresh, node->content.ptr);
+        pj_xml_add_node(doc, node);
     }
 
     /* Done! */
@@ -112,10 +111,10 @@ PJ_DEF(pj_xml_node*) pjsip_iscomposing_create_xml( pj_pool_t *pool,
  * Function to print XML message body.
  */
 static int xml_print_body( struct pjsip_msg_body *msg_body, 
-			   char *buf, pj_size_t size)
+                           char *buf, pj_size_t size)
 {
     return pj_xml_print((const pj_xml_node*)msg_body->data, buf, size, 
-    			PJ_TRUE);
+                        PJ_TRUE);
 }
 
 
@@ -131,18 +130,18 @@ static void* xml_clone_data(pj_pool_t *pool, const void *data, unsigned len)
 
 
 PJ_DEF(pjsip_msg_body*) pjsip_iscomposing_create_body( pj_pool_t *pool,
-						   pj_bool_t is_composing,
-						   const pj_time_val *lst_actv,
-						   const pj_str_t *content_tp,
-						   int refresh)
+                                                   pj_bool_t is_composing,
+                                                   const pj_time_val *lst_actv,
+                                                   const pj_str_t *content_tp,
+                                                   int refresh)
 {
     pj_xml_node *doc;
     pjsip_msg_body *body;
 
     doc = pjsip_iscomposing_create_xml( pool, is_composing, lst_actv,
-					content_tp, refresh);
+                                        content_tp, refresh);
     if (doc == NULL)
-	return NULL;
+        return NULL;
 
 
     body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
@@ -160,12 +159,12 @@ PJ_DEF(pjsip_msg_body*) pjsip_iscomposing_create_body( pj_pool_t *pool,
 
 
 PJ_DEF(pj_status_t) pjsip_iscomposing_parse( pj_pool_t *pool,
-					     char *msg,
-					     pj_size_t len,
-					     pj_bool_t *p_is_composing,
-					     pj_str_t **p_last_active,
-					     pj_str_t **p_content_type,
-					     int *p_refresh )
+                                             char *msg,
+                                             pj_size_t len,
+                                             pj_bool_t *p_is_composing,
+                                             pj_str_t **p_last_active,
+                                             pj_str_t **p_content_type,
+                                             int *p_refresh )
 {
     pj_xml_node *doc, *node;
 
@@ -177,39 +176,39 @@ PJ_DEF(pj_status_t) pjsip_iscomposing_parse( pj_pool_t *pool,
     /* Parse XML */
     doc = pj_xml_parse( pool, msg, len);
     if (!doc)
-	return PJLIB_UTIL_EINXML;
+        return PJLIB_UTIL_EINXML;
 
     /* Root document must be "isComposing" */
     if (pj_stricmp(&doc->name, &STR_ISCOMPOSING) != 0)
-	return PJSIP_SIMPLE_EBADISCOMPOSE;
+        return PJSIP_SIMPLE_EBADISCOMPOSE;
 
     /* Get the status. */
     if (p_is_composing) {
-	node = pj_xml_find_node(doc, &STR_STATE);
-	if (node == NULL)
-	    return PJSIP_SIMPLE_EBADISCOMPOSE;
-	*p_is_composing = (pj_stricmp(&node->content, &STR_ACTIVE)==0);
+        node = pj_xml_find_node(doc, &STR_STATE);
+        if (node == NULL)
+            return PJSIP_SIMPLE_EBADISCOMPOSE;
+        *p_is_composing = (pj_stricmp(&node->content, &STR_ACTIVE)==0);
     }
 
     /* Get last active. */
     if (p_last_active) {
-	node = pj_xml_find_node(doc, &STR_LASTACTIVE);
-	if (node)
-	    *p_last_active = &node->content;
+        node = pj_xml_find_node(doc, &STR_LASTACTIVE);
+        if (node)
+            *p_last_active = &node->content;
     }
 
     /* Get content type */
     if (p_content_type) {
-	node = pj_xml_find_node(doc, &STR_CONTENTTYPE);
-	if (node)
-	    *p_content_type = &node->content;
+        node = pj_xml_find_node(doc, &STR_CONTENTTYPE);
+        if (node)
+            *p_content_type = &node->content;
     }
 
     /* Get refresh */
     if (p_refresh) {
-	node = pj_xml_find_node(doc, &STR_REFRESH);
-	if (node)
-	    *p_refresh = pj_strtoul(&node->content);
+        node = pj_xml_find_node(doc, &STR_REFRESH);
+        if (node)
+            *p_refresh = pj_strtoul(&node->content);
     }
 
     return PJ_SUCCESS;

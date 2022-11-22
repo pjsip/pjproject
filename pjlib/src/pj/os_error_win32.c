@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -109,7 +108,7 @@ static const struct {
     {0, NULL}
 };
 
-#endif	/* PJ_HAS_ERROR_STRING */
+#endif  /* PJ_HAS_ERROR_STRING */
 
 
 
@@ -156,63 +155,63 @@ int platform_strerror( pj_os_err_type os_errcode,
 
     if (!len) {
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING!=0)
-	int i;
+        int i;
         for (i = 0; gaErrorList[i].msg; ++i) {
             if (gaErrorList[i].code == os_errcode) {
                 len = strlen(gaErrorList[i].msg);
-		if ((pj_size_t)len >= bufsize) {
-		    len = bufsize-1;
-		}
-		pj_memcpy(buf, gaErrorList[i].msg, len);
-		buf[len] = '\0';
+                if ((pj_size_t)len >= bufsize) {
+                    len = bufsize-1;
+                }
+                pj_memcpy(buf, gaErrorList[i].msg, len);
+                buf[len] = '\0';
                 break;
             }
         }
-#endif	/* PJ_HAS_ERROR_STRING */
+#endif  /* PJ_HAS_ERROR_STRING */
 
     }
 
 
     if (!len) {
 #if PJ_NATIVE_STRING_IS_UNICODE
-	len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
-			     | FORMAT_MESSAGE_IGNORE_INSERTS,
-			     NULL,
-			     os_errcode,
-			     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-			     wbuf,
-			     PJ_ARRAY_SIZE(wbuf),
-			     NULL);
-	if (len) {
-	    pj_unicode_to_ansi(wbuf, len, buf, bufsize);
-	}
+        len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
+                             | FORMAT_MESSAGE_IGNORE_INSERTS,
+                             NULL,
+                             os_errcode,
+                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+                             wbuf,
+                             PJ_ARRAY_SIZE(wbuf),
+                             NULL);
+        if (len) {
+            pj_unicode_to_ansi(wbuf, len, buf, bufsize);
+        }
 #else
-	len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
-			     | FORMAT_MESSAGE_IGNORE_INSERTS,
-			     NULL,
-			     os_errcode,
-			     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-			     buf,
-			     (int)bufsize,
-			     NULL);
-	buf[bufsize-1] = '\0';
+        len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
+                             | FORMAT_MESSAGE_IGNORE_INSERTS,
+                             NULL,
+                             os_errcode,
+                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+                             buf,
+                             (int)bufsize,
+                             NULL);
+        buf[bufsize-1] = '\0';
 #endif
 
-	if (len) {
-	    /* Remove trailing newlines. */
-	    while (len && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
-		buf[len-1] = '\0';
-		--len;
-	    }
-	}
+        if (len) {
+            /* Remove trailing newlines. */
+            while (len && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
+                buf[len-1] = '\0';
+                --len;
+            }
+        }
     }
 
     if (!len) {
-	len = pj_ansi_snprintf( buf, bufsize, "Win32 error code %u", 
-				(unsigned)os_errcode);
-	if (len < 0 || len >= (int)bufsize)
-	    len = bufsize-1;
-	buf[len] = '\0';
+        len = pj_ansi_snprintf( buf, bufsize, "Win32 error code %u", 
+                                (unsigned)os_errcode);
+        if (len < 0 || len >= (int)bufsize)
+            len = bufsize-1;
+        buf[len] = '\0';
     }
 
     return (int)len;

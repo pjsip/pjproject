@@ -25,7 +25,7 @@ int main()
     //err = test_main();
 
     if (err)
-	return err;
+        return err;
     return exp;
     //return 0;
 }
@@ -129,5 +129,5 @@ GLDEF_C TInt E32Main()
     return KErrNone;
     }
 
-#endif	/* if 0 */
+#endif  /* if 0 */
 

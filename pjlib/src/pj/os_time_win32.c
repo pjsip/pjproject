@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -57,13 +56,13 @@ static LARGE_INTEGER base_time;
 static LARGE_INTEGER g_start_time;  /* Time gettimeofday() is first called  */
 static pj_timestamp  g_start_tick;  /* TS gettimeofday() is first called  */
 static pj_timestamp  g_last_update; /* Last time check_system_time() is 
-				       called, to periodically synchronize
-				       with up-to-date system time (in case
-				       user changes system time).	    */
+                                       called, to periodically synchronize
+                                       with up-to-date system time (in case
+                                       user changes system time).           */
 static pj_uint64_t   g_update_period; /* Period (in TS) check_system_time()
-				         should be called.		    */
+                                         should be called.                  */
 
-/* Period on which check_system_time() is called, in seconds		    */
+/* Period on which check_system_time() is called, in seconds                */
 #ifndef PJ_WINCE_TIME_CHECK_INTERVAL
 #   define PJ_WINCE_TIME_CHECK_INTERVAL (10)
 #endif
@@ -88,13 +87,13 @@ static pj_status_t init_start_time(void)
 
     status = pj_get_timestamp(&g_start_tick);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     g_last_update.u64 = g_start_tick.u64;
 
     status = pj_get_timestamp_freq(&freq);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     g_update_period = PJ_WINCE_TIME_CHECK_INTERVAL * freq.u64;
 
@@ -125,24 +124,24 @@ static pj_status_t check_system_time(pj_uint64_t ts_elapsed)
     /* Get our calculated system time */
     status = pj_get_timestamp_freq(&freq);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     calc.QuadPart = g_start_time.QuadPart + ts_elapsed / freq.u64;
 
     /* See the difference between calculated and actual system time */
     if (calc.QuadPart >= cur.QuadPart) {
-	diff = (DWORD)(calc.QuadPart - cur.QuadPart);
+        diff = (DWORD)(calc.QuadPart - cur.QuadPart);
     } else {
-	diff = (DWORD)(cur.QuadPart - calc.QuadPart);
+        diff = (DWORD)(cur.QuadPart - calc.QuadPart);
     }
 
     if (diff > MIS) {
-	/* System time has changed */
-	PJ_LOG(3,("os_time_win32.c", "WinCE system time changed detected "
-				      "(diff=%u)", diff));
-	status = init_start_time();
+        /* System time has changed */
+        PJ_LOG(3,("os_time_win32.c", "WinCE system time changed detected "
+                                      "(diff=%u)", diff));
+        status = init_start_time();
     } else {
-	status = PJ_SUCCESS;
+        status = PJ_SUCCESS;
     }
 
     return status;
@@ -189,27 +188,27 @@ PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *tv)
     pj_status_t status;
 
     if (base_time.QuadPart == 0) {
-	status = get_base_time();
-	if (status != PJ_SUCCESS)
-	    return status;
+        status = get_base_time();
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
 #ifdef WINCE_TIME
     do {
-	status = pj_get_timestamp(&tick);
-	if (status != PJ_SUCCESS)
-	    return status;
+        status = pj_get_timestamp(&tick);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	if (tick.u64 - g_last_update.u64 >= g_update_period) {
-	    pj_enter_critical_section();
-	    if (tick.u64 - g_last_update.u64 >= g_update_period) {
-		g_last_update.u64 = tick.u64;
-		check_system_time(tick.u64 - g_start_tick.u64);
-	    }
-	    pj_leave_critical_section();
-	} else {
-	    break;
-	}
+        if (tick.u64 - g_last_update.u64 >= g_update_period) {
+            pj_enter_critical_section();
+            if (tick.u64 - g_last_update.u64 >= g_update_period) {
+                g_last_update.u64 = tick.u64;
+                check_system_time(tick.u64 - g_start_tick.u64);
+            }
+            pj_leave_critical_section();
+        } else {
+            break;
+        }
     } while (1);
 
     msec_elapsed = pj_elapsed_msec64(&g_start_tick, &tick);
@@ -228,7 +227,7 @@ PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *tv)
 
     tv->sec = li.LowPart;
     tv->msec = st.wMilliseconds;
-#endif	/* WINCE_TIME */
+#endif  /* WINCE_TIME */
 
     return PJ_SUCCESS;
 }
@@ -311,7 +310,7 @@ PJ_DEF(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv)
     ft_local.dwHighDateTime = li.HighPart;
 
     if (LocalFileTimeToFileTime(&ft_local, &ft_gmt) == 0)
-	return PJ_EINVAL;
+        return PJ_EINVAL;
 
     li.LowPart = ft_gmt.dwLowDateTime;
     li.HighPart = ft_gmt.dwHighDateTime;
@@ -344,7 +343,7 @@ PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv)
     ft_gmt.dwHighDateTime = li.HighPart;
 
     if (FileTimeToLocalFileTime(&ft_gmt, &ft_local) == 0)
-	return PJ_EINVAL;
+        return PJ_EINVAL;
 
     li.LowPart = ft_local.dwLowDateTime;
     li.HighPart = ft_local.dwHighDateTime;

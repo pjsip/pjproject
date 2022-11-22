@@ -1,4 +1,3 @@
-# $Id$
 #
 # SIP account and registration sample. In this sample, the program
 # will block to wait until registration is complete

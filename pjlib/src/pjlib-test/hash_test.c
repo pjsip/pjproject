@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,48 +35,48 @@ static int hash_test_with_key(pj_pool_t *pool, unsigned char key)
 
     ht = pj_hash_create(pool, HASH_COUNT);
     if (!ht)
-	return -10;
+        return -10;
 
     pj_hash_set(pool, ht, &key, sizeof(key), 0, &value);
 
     entry = (unsigned*) pj_hash_get(ht, &key, sizeof(key), NULL);
     if (!entry)
-	return -20;
+        return -20;
 
     if (*entry != value)
-	return -30;
+        return -30;
 
     if (pj_hash_count(ht) != 1)
-	return -30;
+        return -30;
 
     it = pj_hash_first(ht, &it_buf);
     if (it == NULL)
-	return -40;
+        return -40;
 
     entry = (unsigned*) pj_hash_this(ht, it);
     if (!entry)
-	return -50;
+        return -50;
 
     if (*entry != value)
-	return -60;
+        return -60;
 
     it = pj_hash_next(ht, it);
     if (it != NULL)
-	return -70;
+        return -70;
 
     /* Erase item */
 
     pj_hash_set(NULL, ht, &key, sizeof(key), 0, NULL);
 
     if (pj_hash_get(ht, &key, sizeof(key), NULL) != NULL)
-	return -80;
+        return -80;
 
     if (pj_hash_count(ht) != 0)
-	return -90;
+        return -90;
 
     it = pj_hash_first(ht, &it_buf);
     if (it != NULL)
-	return -100;
+        return -100;
 
     return 0;
 }
@@ -86,7 +85,7 @@ static int hash_test_with_key(pj_pool_t *pool, unsigned char key)
 static int hash_collision_test(pj_pool_t *pool)
 {
     enum {
-	COUNT = HASH_COUNT * 4
+        COUNT = HASH_COUNT * 4
     };
     pj_hash_table_t *ht;
     pj_hash_iterator_t it_buf, *it;
@@ -95,36 +94,36 @@ static int hash_collision_test(pj_pool_t *pool)
 
     ht = pj_hash_create(pool, HASH_COUNT);
     if (!ht)
-	return -200;
+        return -200;
 
     values = (unsigned char*) pj_pool_alloc(pool, COUNT);
 
     for (i=0; i<COUNT; ++i) {
-	values[i] = (unsigned char)i;
-	pj_hash_set(pool, ht, &i, sizeof(i), 0, &values[i]);
+        values[i] = (unsigned char)i;
+        pj_hash_set(pool, ht, &i, sizeof(i), 0, &values[i]);
     }
 
     if (pj_hash_count(ht) != COUNT)
-	return -210;
+        return -210;
 
     for (i=0; i<COUNT; ++i) {
-	unsigned char *entry;
-	entry = (unsigned char*) pj_hash_get(ht, &i, sizeof(i), NULL);
-	if (!entry)
-	    return -220;
-	if (*entry != values[i])
-	    return -230;
+        unsigned char *entry;
+        entry = (unsigned char*) pj_hash_get(ht, &i, sizeof(i), NULL);
+        if (!entry)
+            return -220;
+        if (*entry != values[i])
+            return -230;
     }
 
     i = 0;
     it = pj_hash_first(ht, &it_buf);
     while (it) {
-	++i;
-	it = pj_hash_next(ht, it);
+        ++i;
+        it = pj_hash_next(ht, it);
     }
 
     if (i != COUNT)
-	return -240;
+        return -240;
 
     return 0;
 }
@@ -141,23 +140,23 @@ int hash_test(void)
 
     /* Test to fill in each row in the table */
     for (i=0; i<=HASH_COUNT; ++i) {
-	rc = hash_test_with_key(pool, (unsigned char)i);
-	if (rc != 0) {
-	    pj_pool_release(pool);
-	    return rc;
-	}
+        rc = hash_test_with_key(pool, (unsigned char)i);
+        if (rc != 0) {
+            pj_pool_release(pool);
+            return rc;
+        }
     }
 
     /* Collision test */
     rc = hash_collision_test(pool);
     if (rc != 0) {
-	pj_pool_release(pool);
-	return rc;
+        pj_pool_release(pool);
+        return rc;
     }
 
     pj_pool_release(pool);
     return 0;
 }
 
-#endif	/* INCLUDE_HASH_TEST */
+#endif  /* INCLUDE_HASH_TEST */
 

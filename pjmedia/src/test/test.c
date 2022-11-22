@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -21,14 +20,14 @@
 
 #define THIS_FILE   "test.c"
 
-#define DO_TEST(test)	do { \
-			    PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
-			    rc = test; \
-			    PJ_LOG(3, (THIS_FILE,  \
-				       "%s(%d)",  \
-				       (rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+#define DO_TEST(test)   do { \
+                            PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
+                            rc = test; \
+                            PJ_LOG(3, (THIS_FILE,  \
+                                       "%s(%d)",  \
+                                       (rc ? "..ERROR" : "..success"), rc)); \
+                            if (rc!=0) goto on_return; \
+                        } while (0)
 
 
 pj_pool_factory *mem;
@@ -65,7 +64,7 @@ int test_main(void)
     pool = pj_pool_create(&caching_pool.factory, "test", 1000, 512, NULL);
 
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-		     PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT);
+                     PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT);
     pj_log_set_level(3);
 
     mem = &caching_pool.factory;
@@ -110,9 +109,9 @@ int test_main(void)
 
 on_return:
     if (rc != 0) {
-	PJ_LOG(3,(THIS_FILE,"Test completed with error(s)!"));
+        PJ_LOG(3,(THIS_FILE,"Test completed with error(s)!"));
     } else {
-	PJ_LOG(3,(THIS_FILE,"Looks like everything is okay!"));
+        PJ_LOG(3,(THIS_FILE,"Looks like everything is okay!"));
     }
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)

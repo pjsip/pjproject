@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -37,12 +36,12 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * No event package with the specified name.
  */
-#define PJSIP_SIMPLE_ENOPKG	    (PJSIP_SIMPLE_ERRNO_START+1)    /*270001*/
+#define PJSIP_SIMPLE_ENOPKG         (PJSIP_SIMPLE_ERRNO_START+1)    /*270001*/
 /**
  * @hideinitializer
  * Event package already exists.
  */
-#define PJSIP_SIMPLE_EPKGEXISTS	    (PJSIP_SIMPLE_ERRNO_START+2)    /*270002*/
+#define PJSIP_SIMPLE_EPKGEXISTS     (PJSIP_SIMPLE_ERRNO_START+2)    /*270002*/
 
 
 /************************************************************
@@ -72,17 +71,17 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Bad PIDF Message
  */
-#define PJSIP_SIMPLE_EBADPIDF	    (PJSIP_SIMPLE_ERRNO_START+24)   /*270024*/
+#define PJSIP_SIMPLE_EBADPIDF       (PJSIP_SIMPLE_ERRNO_START+24)   /*270024*/
 /**
  * @hideinitializer
  * Bad XPIDF Message
  */
-#define PJSIP_SIMPLE_EBADXPIDF	    (PJSIP_SIMPLE_ERRNO_START+25)   /*270025*/
+#define PJSIP_SIMPLE_EBADXPIDF      (PJSIP_SIMPLE_ERRNO_START+25)   /*270025*/
 /**
  * @hideinitializer
  * Bad RPID Message
  */
-#define PJSIP_SIMPLE_EBADRPID	    (PJSIP_SIMPLE_ERRNO_START+26)   /*270026*/
+#define PJSIP_SIMPLE_EBADRPID       (PJSIP_SIMPLE_ERRNO_START+26)   /*270026*/
 
 
 /************************************************************
@@ -105,14 +104,14 @@ PJ_BEGIN_DECL
  * @param buffer    The buffer where to put the error message.
  * @param bufsize   Size of the buffer.
  *
- * @return	    The error message as NULL terminated string,
+ * @return          The error message as NULL terminated string,
  *                  wrapped with pj_str_t.
  */
 PJ_DECL(pj_str_t) pjsipsimple_strerror(pj_status_t status, 
-				       char *buffer, pj_size_t bufsize);
+                                       char *buffer, pj_size_t bufsize);
 
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIMPLE_ERRNO_H__ */
+#endif  /* __PJSIP_SIMPLE_ERRNO_H__ */
 

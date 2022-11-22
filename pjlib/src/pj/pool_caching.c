@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -28,10 +27,10 @@
 #if !PJ_HAS_POOL_ALT_API
 
 static pj_pool_t* cpool_create_pool(pj_pool_factory *pf, 
-				    const char *name,
-				    pj_size_t initial_size, 
-				    pj_size_t increment_sz,
-				    pj_pool_callback *callback);
+                                    const char *name,
+                                    pj_size_t initial_size, 
+                                    pj_size_t increment_sz,
+                                    pj_pool_callback *callback);
 static void cpool_release_pool(pj_pool_factory *pf, pj_pool_t *pool);
 static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail );
 static pj_bool_t cpool_on_block_alloc(pj_pool_factory *f, pj_size_t sz);
@@ -51,8 +50,8 @@ static pj_size_t pool_sizes[PJ_CACHING_POOL_ARRAY_SIZE] =
 
 
 PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp, 
-				   const pj_pool_factory_policy *policy,
-				   pj_size_t max_capacity)
+                                   const pj_pool_factory_policy *policy,
+                                   pj_size_t max_capacity)
 {
     int i;
     pj_pool_t *pool;
@@ -64,10 +63,10 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
     cp->max_capacity = max_capacity;
     pj_list_init(&cp->used_list);
     for (i=0; i<PJ_CACHING_POOL_ARRAY_SIZE; ++i)
-	pj_list_init(&cp->free_list[i]);
+        pj_list_init(&cp->free_list[i]);
 
     if (policy == NULL) {
-    	policy = &pj_pool_factory_default_policy;
+        policy = &pj_pool_factory_default_policy;
     }
     
     pj_memcpy(&cp->factory.policy, policy, sizeof(pj_pool_factory_policy));
@@ -90,37 +89,37 @@ PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
 
     /* Delete all pool in free list */
     for (i=0; i < PJ_CACHING_POOL_ARRAY_SIZE; ++i) {
-	pj_pool_t *next;
-	pool = (pj_pool_t*) cp->free_list[i].next;
-	for (; pool != (void*)&cp->free_list[i]; pool = next) {
-	    next = pool->next;
-	    pj_list_erase(pool);
-	    pj_pool_destroy_int(pool);
-	}
+        pj_pool_t *next;
+        pool = (pj_pool_t*) cp->free_list[i].next;
+        for (; pool != (void*)&cp->free_list[i]; pool = next) {
+            next = pool->next;
+            pj_list_erase(pool);
+            pj_pool_destroy_int(pool);
+        }
     }
 
     /* Delete all pools in used list */
     pool = (pj_pool_t*) cp->used_list.next;
     while (pool != (pj_pool_t*) &cp->used_list) {
-	pj_pool_t *next = pool->next;
-	pj_list_erase(pool);
-	PJ_LOG(4,(pool->obj_name, 
-		  "Pool is not released by application, releasing now"));
-	pj_pool_destroy_int(pool);
-	pool = next;
+        pj_pool_t *next = pool->next;
+        pj_list_erase(pool);
+        PJ_LOG(4,(pool->obj_name, 
+                  "Pool is not released by application, releasing now"));
+        pj_pool_destroy_int(pool);
+        pool = next;
     }
 
     if (cp->lock) {
-	pj_lock_destroy(cp->lock);
-	pj_lock_create_null_mutex(NULL, "cachingpool", &cp->lock);
+        pj_lock_destroy(cp->lock);
+        pj_lock_create_null_mutex(NULL, "cachingpool", &cp->lock);
     }
 }
 
 static pj_pool_t* cpool_create_pool(pj_pool_factory *pf, 
-					      const char *name, 
-					      pj_size_t initial_size, 
-					      pj_size_t increment_sz, 
-					      pj_pool_callback *callback)
+                                              const char *name, 
+                                              pj_size_t initial_size, 
+                                              pj_size_t increment_sz, 
+                                              pj_pool_callback *callback)
 {
     pj_caching_pool *cp = (pj_caching_pool*)pf;
     pj_pool_t *pool;
@@ -132,7 +131,7 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
 
     /* Use pool factory's policy when callback is NULL */
     if (callback == NULL) {
-	callback = pf->policy.callback;
+        callback = pf->policy.callback;
     }
 
     /* Search the suitable size for the pool. 
@@ -141,50 +140,50 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
      * for this purpose.
      */
     if (initial_size <= pool_sizes[START_SIZE]) {
-	for (idx=START_SIZE-1; 
-	     idx >= 0 && pool_sizes[idx] >= initial_size;
-	     --idx)
-	    ;
-	++idx;
+        for (idx=START_SIZE-1; 
+             idx >= 0 && pool_sizes[idx] >= initial_size;
+             --idx)
+            ;
+        ++idx;
     } else {
-	for (idx=START_SIZE+1; 
-	     idx < PJ_CACHING_POOL_ARRAY_SIZE && 
-		  pool_sizes[idx] < initial_size;
-	     ++idx)
-	    ;
+        for (idx=START_SIZE+1; 
+             idx < PJ_CACHING_POOL_ARRAY_SIZE && 
+                  pool_sizes[idx] < initial_size;
+             ++idx)
+            ;
     }
 
     /* Check whether there's a pool in the list. */
     if (idx==PJ_CACHING_POOL_ARRAY_SIZE || pj_list_empty(&cp->free_list[idx])) {
-	/* No pool is available. */
-	/* Set minimum size. */
-	if (idx < PJ_CACHING_POOL_ARRAY_SIZE)
-	    initial_size =  pool_sizes[idx];
+        /* No pool is available. */
+        /* Set minimum size. */
+        if (idx < PJ_CACHING_POOL_ARRAY_SIZE)
+            initial_size =  pool_sizes[idx];
 
-	/* Create new pool */
-	pool = pj_pool_create_int(&cp->factory, name, initial_size, 
-				  increment_sz, callback);
-	if (!pool) {
-	    pj_lock_release(cp->lock);
-	    return NULL;
-	}
+        /* Create new pool */
+        pool = pj_pool_create_int(&cp->factory, name, initial_size, 
+                                  increment_sz, callback);
+        if (!pool) {
+            pj_lock_release(cp->lock);
+            return NULL;
+        }
 
     } else {
-	/* Get one pool from the list. */
-	pool = (pj_pool_t*) cp->free_list[idx].next;
-	pj_list_erase(pool);
+        /* Get one pool from the list. */
+        pool = (pj_pool_t*) cp->free_list[idx].next;
+        pj_list_erase(pool);
 
-	/* Initialize the pool. */
-	pj_pool_init_int(pool, name, increment_sz, callback);
+        /* Initialize the pool. */
+        pj_pool_init_int(pool, name, increment_sz, callback);
 
-	/* Update pool manager's free capacity. */
-	if (cp->capacity > pj_pool_get_capacity(pool)) {
-	    cp->capacity -= pj_pool_get_capacity(pool);
-	} else {
-	    cp->capacity = 0;
-	}
+        /* Update pool manager's free capacity. */
+        if (cp->capacity > pj_pool_get_capacity(pool)) {
+            cp->capacity -= pj_pool_get_capacity(pool);
+        } else {
+            cp->capacity = 0;
+        }
 
-	PJ_LOG(6, (pool->obj_name, "pool reused, size=%u", pool->capacity));
+        PJ_LOG(6, (pool->obj_name, "pool reused, size=%u", pool->capacity));
     }
 
     /* Put in used list. */
@@ -215,8 +214,8 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 #if PJ_SAFE_POOL
     /* Make sure pool is still in our used list */
     if (pj_list_find_node(&cp->used_list, pool) != pool) {
-	pj_assert(!"Attempt to destroy pool that has been destroyed before");
-	return;
+        pj_assert(!"Attempt to destroy pool that has been destroyed before");
+        return;
     }
 #endif
 
@@ -233,17 +232,17 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
      * maximum capacity.
    . */
     if (pool_capacity > pool_sizes[PJ_CACHING_POOL_ARRAY_SIZE-1] ||
-	cp->capacity + pool_capacity > cp->max_capacity)
+        cp->capacity + pool_capacity > cp->max_capacity)
     {
-	pj_pool_destroy_int(pool);
-	pj_lock_release(cp->lock);
-	return;
+        pj_pool_destroy_int(pool);
+        pj_lock_release(cp->lock);
+        return;
     }
 
     /* Reset pool. */
     PJ_LOG(6, (pool->obj_name, "recycle(): cap=%d, used=%d(%d%%)", 
-	       pool_capacity, pj_pool_get_used_size(pool), 
-	       pj_pool_get_used_size(pool)*100/pool_capacity));
+               pool_capacity, pj_pool_get_used_size(pool), 
+               pj_pool_get_used_size(pool)*100/pool_capacity));
     pj_pool_reset(pool);
 
     pool_capacity = pj_pool_get_capacity(pool);
@@ -255,10 +254,10 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 
     pj_assert(i<PJ_CACHING_POOL_ARRAY_SIZE);
     if (i >= PJ_CACHING_POOL_ARRAY_SIZE ) {
-	/* Something has gone wrong with the pool. */
-	pj_pool_destroy_int(pool);
-	pj_lock_release(cp->lock);
-	return;
+        /* Something has gone wrong with the pool. */
+        pj_pool_destroy_int(pool);
+        pj_lock_release(cp->lock);
+        return;
     }
 
     pj_list_insert_after(&cp->free_list[i], pool);
@@ -276,27 +275,27 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
 
     PJ_LOG(3,("cachpool", " Dumping caching pool:"));
     PJ_LOG(3,("cachpool", "   Capacity=%u, max_capacity=%u, used_cnt=%u", \
-			     cp->capacity, cp->max_capacity, cp->used_count));
+                             cp->capacity, cp->max_capacity, cp->used_count));
     if (detail) {
-	pj_pool_t *pool = (pj_pool_t*) cp->used_list.next;
-	pj_size_t total_used = 0, total_capacity = 0;
+        pj_pool_t *pool = (pj_pool_t*) cp->used_list.next;
+        pj_size_t total_used = 0, total_capacity = 0;
         PJ_LOG(3,("cachpool", "  Dumping all active pools:"));
-	while (pool != (void*)&cp->used_list) {
-	    pj_size_t pool_capacity = pj_pool_get_capacity(pool);
-	    PJ_LOG(3,("cachpool", "   %16s: %8d of %8d (%d%%) used", 
-				  pj_pool_getobjname(pool), 
-				  pj_pool_get_used_size(pool), 
-				  pool_capacity,
-				  pj_pool_get_used_size(pool)*100/pool_capacity));
-	    total_used += pj_pool_get_used_size(pool);
-	    total_capacity += pool_capacity;
-	    pool = pool->next;
-	}
-	if (total_capacity) {
-	    PJ_LOG(3,("cachpool", "  Total %9d of %9d (%d %%) used!",
-				  total_used, total_capacity,
-				  total_used * 100 / total_capacity));
-	}
+        while (pool != (void*)&cp->used_list) {
+            pj_size_t pool_capacity = pj_pool_get_capacity(pool);
+            PJ_LOG(3,("cachpool", "   %16s: %8d of %8d (%d%%) used", 
+                                  pj_pool_getobjname(pool), 
+                                  pj_pool_get_used_size(pool), 
+                                  pool_capacity,
+                                  pj_pool_get_used_size(pool)*100/pool_capacity));
+            total_used += pj_pool_get_used_size(pool);
+            total_capacity += pool_capacity;
+            pool = pool->next;
+        }
+        if (total_capacity) {
+            PJ_LOG(3,("cachpool", "  Total %9d of %9d (%d %%) used!",
+                                  total_used, total_capacity,
+                                  total_used * 100 / total_capacity));
+        }
     }
 
     pj_lock_release(cp->lock);
@@ -316,7 +315,7 @@ static pj_bool_t cpool_on_block_alloc(pj_pool_factory *f, pj_size_t sz)
 
     cp->used_size += sz;
     if (cp->used_size > cp->peak_used_size)
-	cp->peak_used_size = cp->used_size;
+        cp->peak_used_size = cp->used_size;
 
     //if (cp->mutex) pj_mutex_unlock(cp->mutex);
 
@@ -334,5 +333,5 @@ static void cpool_on_block_free(pj_pool_factory *f, pj_size_t sz)
 }
 
 
-#endif	/* PJ_HAS_POOL_ALT_API */
+#endif  /* PJ_HAS_POOL_ALT_API */
 

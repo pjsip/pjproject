@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -72,7 +71,7 @@ PJ_BEGIN_DECL
  *
  * Reference:
  *  - <A HREF="http://www.ietf.org/rfc/rfc2782.txt">RFC 2782</A>: 
- *	A DNS RR for specifying the location of services (DNS SRV)
+ *      A DNS RR for specifying the location of services (DNS SRV)
  */
 
 /**
@@ -87,7 +86,7 @@ typedef enum pj_dns_srv_option
      * make the resolver fallback to both DNS A and DNS AAAA
      * resolutions if SRV resolution fails.
      */
-    PJ_DNS_SRV_FALLBACK_A	= 1,
+    PJ_DNS_SRV_FALLBACK_A       = 1,
 
     /**
      * Specify if the resolver should fallback with DNS AAAA
@@ -96,7 +95,7 @@ typedef enum pj_dns_srv_option
      * make the resolver fallback to both DNS A and DNS AAAA
      * resolutions if SRV resolution fails.
      */
-    PJ_DNS_SRV_FALLBACK_AAAA	= 2,
+    PJ_DNS_SRV_FALLBACK_AAAA    = 2,
 
     /**
      * Specify if the resolver should try to resolve with DNS AAAA
@@ -104,7 +103,7 @@ typedef enum pj_dns_srv_option
      * option is not specified, the SRV resolver will query the
      * DNS A record for the target instead.
      */
-    PJ_DNS_SRV_RESOLVE_AAAA	= 4,
+    PJ_DNS_SRV_RESOLVE_AAAA     = 4,
 
     /**
      * Specify if the resolver should try to resolve with DNS AAAA
@@ -123,22 +122,22 @@ typedef enum pj_dns_srv_option
 typedef struct pj_dns_srv_record
 {
     /** Number of address records. */
-    unsigned	count;
+    unsigned    count;
 
     /** Address records. */
     struct
     {
-	/** Server priority (the lower the higher the priority). */
-	unsigned		priority;
+        /** Server priority (the lower the higher the priority). */
+        unsigned                priority;
 
-	/** Server weight (the higher the more load it can handle). */
-	unsigned		weight;
+        /** Server weight (the higher the more load it can handle). */
+        unsigned                weight;
 
-	/** Port number. */
-	pj_uint16_t		port;
+        /** Port number. */
+        pj_uint16_t             port;
 
-	/** The host address. */
-	pj_dns_addr_record	server;
+        /** The host address. */
+        pj_dns_addr_record      server;
 
     } entry[PJ_DNS_SRV_MAX_ADDR];
 
@@ -153,62 +152,62 @@ typedef struct pj_dns_srv_async_query pj_dns_srv_async_query;
  * when the resolution process completes.
  */
 typedef void pj_dns_srv_resolver_cb(void *user_data,
-				    pj_status_t status,
-				    const pj_dns_srv_record *rec);
+                                    pj_status_t status,
+                                    const pj_dns_srv_record *rec);
 
 
 /**
  * Start DNS SRV resolution for the specified name. The full name of the
  * entry will be concatenated from \a res_name and \a domain_name fragments.
  *
- * @param domain_name	The domain name part of the name.
- * @param res_name	The full service name, including the transport name
- *			and with all the leading underscore characters and
- *			ending dot (e.g. "_sip._udp.", "_stun._udp.").
- * @param def_port	The port number to be assigned to the resolved address
- *			when the DNS SRV resolution fails and the name is 
- *			resolved with DNS A resolution.
- * @param pool		Memory pool used to allocate memory for the query.
- * @param resolver	The resolver instance.
- * @param option	Option flags, which can be constructed from
- *			#pj_dns_srv_option bitmask. Note that this argument
- *			was called "fallback_a" in pjsip version 0.8.0 and
- *			older, but the new option should be backward 
- *			compatible with existing applications. If application
- *			specifies PJ_TRUE as "fallback_a" value, it will
- *			correspond to PJ_DNS_SRV_FALLBACK_A option.
- * @param token		Arbitrary data to be associated with this query when
- *			the calback is called.
- * @param cb		Pointer to callback function to receive the
- *			notification when the resolution process completes.
- * @param p_query	Optional pointer to receive the query object, if one
- *			was started. If this pointer is specified, a NULL may
- *			be returned if response cache is available immediately.
+ * @param domain_name   The domain name part of the name.
+ * @param res_name      The full service name, including the transport name
+ *                      and with all the leading underscore characters and
+ *                      ending dot (e.g. "_sip._udp.", "_stun._udp.").
+ * @param def_port      The port number to be assigned to the resolved address
+ *                      when the DNS SRV resolution fails and the name is 
+ *                      resolved with DNS A resolution.
+ * @param pool          Memory pool used to allocate memory for the query.
+ * @param resolver      The resolver instance.
+ * @param option        Option flags, which can be constructed from
+ *                      #pj_dns_srv_option bitmask. Note that this argument
+ *                      was called "fallback_a" in pjsip version 0.8.0 and
+ *                      older, but the new option should be backward 
+ *                      compatible with existing applications. If application
+ *                      specifies PJ_TRUE as "fallback_a" value, it will
+ *                      correspond to PJ_DNS_SRV_FALLBACK_A option.
+ * @param token         Arbitrary data to be associated with this query when
+ *                      the calback is called.
+ * @param cb            Pointer to callback function to receive the
+ *                      notification when the resolution process completes.
+ * @param p_query       Optional pointer to receive the query object, if one
+ *                      was started. If this pointer is specified, a NULL may
+ *                      be returned if response cache is available immediately.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
-					const pj_str_t *res_name,
-					unsigned def_port,
-					pj_pool_t *pool,
-					pj_dns_resolver *resolver,
-					unsigned option,
-					void *token,
-					pj_dns_srv_resolver_cb *cb,
-					pj_dns_srv_async_query **p_query);
+                                        const pj_str_t *res_name,
+                                        unsigned def_port,
+                                        pj_pool_t *pool,
+                                        pj_dns_resolver *resolver,
+                                        unsigned option,
+                                        void *token,
+                                        pj_dns_srv_resolver_cb *cb,
+                                        pj_dns_srv_async_query **p_query);
 
 
 /**
  * Cancel an outstanding DNS SRV query.
  *
- * @param query	    The pending asynchronous query to be cancelled.
+ * @param query     The pending asynchronous query to be cancelled.
  * @param notify    If non-zero, the callback will be called with failure
- *		    status to notify that the query has been cancelled.
+ *                  status to notify that the query has been cancelled.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code,
+ * @return          PJ_SUCCESS on success, or the appropriate error code,
  */
 PJ_DECL(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
-					     pj_bool_t notify);
+                                             pj_bool_t notify);
 
 
 /**
@@ -218,5 +217,5 @@ PJ_DECL(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_SRV_RESOLVER_H__ */
+#endif  /* __PJLIB_UTIL_SRV_RESOLVER_H__ */
 

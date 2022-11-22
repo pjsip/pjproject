@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,59 +45,59 @@ static int log_indent;
 
 static pj_log_func *log_writer = &pj_log_write;
 static unsigned log_decor = PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC |
-			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE |
-			    PJ_LOG_HAS_SPACE | PJ_LOG_HAS_THREAD_SWC |
-			    PJ_LOG_HAS_INDENT
+                            PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE |
+                            PJ_LOG_HAS_SPACE | PJ_LOG_HAS_THREAD_SWC |
+                            PJ_LOG_HAS_INDENT
 #if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
     (defined(PJ_WIN64) && PJ_WIN64!=0)
-			    | PJ_LOG_HAS_COLOR
+                            | PJ_LOG_HAS_COLOR
 #endif
-			    ;
+                            ;
 
 static pj_color_t PJ_LOG_COLOR_0 = PJ_TERM_COLOR_BRIGHT | PJ_TERM_COLOR_R;
 static pj_color_t PJ_LOG_COLOR_1 = PJ_TERM_COLOR_BRIGHT | PJ_TERM_COLOR_R;
 static pj_color_t PJ_LOG_COLOR_2 = PJ_TERM_COLOR_BRIGHT | 
-				   PJ_TERM_COLOR_R | 
-				   PJ_TERM_COLOR_G;
+                                   PJ_TERM_COLOR_R | 
+                                   PJ_TERM_COLOR_G;
 static pj_color_t PJ_LOG_COLOR_3 = PJ_TERM_COLOR_BRIGHT | 
-				   PJ_TERM_COLOR_R | 
-				   PJ_TERM_COLOR_G | 
-				   PJ_TERM_COLOR_B;
+                                   PJ_TERM_COLOR_R | 
+                                   PJ_TERM_COLOR_G | 
+                                   PJ_TERM_COLOR_B;
 static pj_color_t PJ_LOG_COLOR_4 = PJ_TERM_COLOR_R | 
-				   PJ_TERM_COLOR_G | 
-				   PJ_TERM_COLOR_B;
+                                   PJ_TERM_COLOR_G | 
+                                   PJ_TERM_COLOR_B;
 static pj_color_t PJ_LOG_COLOR_5 = PJ_TERM_COLOR_R | 
-				   PJ_TERM_COLOR_G | 
-				   PJ_TERM_COLOR_B;
+                                   PJ_TERM_COLOR_G | 
+                                   PJ_TERM_COLOR_B;
 static pj_color_t PJ_LOG_COLOR_6 = PJ_TERM_COLOR_R | 
-				   PJ_TERM_COLOR_G | 
-				   PJ_TERM_COLOR_B;
+                                   PJ_TERM_COLOR_G | 
+                                   PJ_TERM_COLOR_B;
 /* Default terminal color */
 static pj_color_t PJ_LOG_COLOR_77 = PJ_TERM_COLOR_R | 
-				    PJ_TERM_COLOR_G | 
-				    PJ_TERM_COLOR_B;
+                                    PJ_TERM_COLOR_G | 
+                                    PJ_TERM_COLOR_B;
 
 #if PJ_LOG_USE_STACK_BUFFER==0
 static char log_buffer[PJ_LOG_MAX_SIZE];
 #endif
 
-#define LOG_MAX_INDENT		80
+#define LOG_MAX_INDENT          80
 
 #if PJ_HAS_THREADS
 static void logging_shutdown(void)
 {
     if (thread_suspended_tls_id != -1) {
-	pj_thread_local_free(thread_suspended_tls_id);
-	thread_suspended_tls_id = -1;
+        pj_thread_local_free(thread_suspended_tls_id);
+        thread_suspended_tls_id = -1;
     }
 #  if PJ_LOG_ENABLE_INDENT
     if (thread_indent_tls_id != -1) {
-	pj_thread_local_free(thread_indent_tls_id);
-	thread_indent_tls_id = -1;
+        pj_thread_local_free(thread_indent_tls_id);
+        thread_indent_tls_id = -1;
     }
 #  endif
 }
-#endif	/* PJ_HAS_THREADS */
+#endif  /* PJ_HAS_THREADS */
 
 #if PJ_LOG_ENABLE_INDENT && PJ_HAS_THREADS
 PJ_DEF(void) pj_log_set_indent(int indent)
@@ -123,7 +122,7 @@ static int log_get_raw_indent(void)
 {
     return log_indent;
 }
-#endif	/* PJ_LOG_ENABLE_INDENT && PJ_HAS_THREADS */
+#endif  /* PJ_LOG_ENABLE_INDENT && PJ_HAS_THREADS */
 
 PJ_DEF(int) pj_log_get_indent(void)
 {
@@ -150,20 +149,20 @@ pj_status_t pj_log_init(void)
 {
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id == -1) {
-	pj_status_t status;
-	status = pj_thread_local_alloc(&thread_suspended_tls_id);
-	if (status != PJ_SUCCESS)
-	    return status;
+        pj_status_t status;
+        status = pj_thread_local_alloc(&thread_suspended_tls_id);
+        if (status != PJ_SUCCESS)
+            return status;
 
 #  if PJ_LOG_ENABLE_INDENT
-	status = pj_thread_local_alloc(&thread_indent_tls_id);
-	if (status != PJ_SUCCESS) {
-	    pj_thread_local_free(thread_suspended_tls_id);
-	    thread_suspended_tls_id = -1;
-	    return status;
-	}
+        status = pj_thread_local_alloc(&thread_indent_tls_id);
+        if (status != PJ_SUCCESS) {
+            pj_thread_local_free(thread_suspended_tls_id);
+            thread_suspended_tls_id = -1;
+            return status;
+        }
 #  endif
-	pj_atexit(&logging_shutdown);
+        pj_atexit(&logging_shutdown);
     }
 #endif
     g_last_thread = NULL;
@@ -200,49 +199,49 @@ PJ_DEF(void) pj_log_set_color(int level, pj_color_t color)
 {
     switch (level) 
     {
-	case 0: PJ_LOG_COLOR_0 = color; 
-	    break;
-	case 1: PJ_LOG_COLOR_1 = color; 
-	    break;
-	case 2: PJ_LOG_COLOR_2 = color; 
-	    break;
-	case 3: PJ_LOG_COLOR_3 = color; 
-	    break;
-	case 4: PJ_LOG_COLOR_4 = color; 
-	    break;
-	case 5: PJ_LOG_COLOR_5 = color; 
-	    break;
-	case 6: PJ_LOG_COLOR_6 = color; 
-	    break;
-	/* Default terminal color */
-	case 77: PJ_LOG_COLOR_77 = color; 
-	    break;
-	default:
-	    /* Do nothing */
-	    break;
+        case 0: PJ_LOG_COLOR_0 = color; 
+            break;
+        case 1: PJ_LOG_COLOR_1 = color; 
+            break;
+        case 2: PJ_LOG_COLOR_2 = color; 
+            break;
+        case 3: PJ_LOG_COLOR_3 = color; 
+            break;
+        case 4: PJ_LOG_COLOR_4 = color; 
+            break;
+        case 5: PJ_LOG_COLOR_5 = color; 
+            break;
+        case 6: PJ_LOG_COLOR_6 = color; 
+            break;
+        /* Default terminal color */
+        case 77: PJ_LOG_COLOR_77 = color; 
+            break;
+        default:
+            /* Do nothing */
+            break;
     }
 }
 
 PJ_DEF(pj_color_t) pj_log_get_color(int level)
 {
     switch (level) {
-	case 0:
-	    return PJ_LOG_COLOR_0;
-	case 1:
-	    return PJ_LOG_COLOR_1;
-	case 2:
-	    return PJ_LOG_COLOR_2;
-	case 3:
-	    return PJ_LOG_COLOR_3;
-	case 4:
-	    return PJ_LOG_COLOR_4;
-	case 5:
-	    return PJ_LOG_COLOR_5;
-	case 6:
-	    return PJ_LOG_COLOR_6;
-	default:
-	    /* Return default terminal color */
-	    return PJ_LOG_COLOR_77;
+        case 0:
+            return PJ_LOG_COLOR_0;
+        case 1:
+            return PJ_LOG_COLOR_1;
+        case 2:
+            return PJ_LOG_COLOR_2;
+        case 3:
+            return PJ_LOG_COLOR_3;
+        case 4:
+            return PJ_LOG_COLOR_4;
+        case 5:
+            return PJ_LOG_COLOR_5;
+        case 6:
+            return PJ_LOG_COLOR_6;
+        default:
+            /* Return default terminal color */
+            return PJ_LOG_COLOR_77;
     }
 }
 
@@ -276,21 +275,21 @@ PJ_DEF(pj_log_func*) pj_log_get_log_func(void)
  */
 static void suspend_logging(int *saved_level)
 {
-	/* Save the level regardless, just in case PJLIB is shutdown
-	 * between suspend and resume.
-	 */
-	*saved_level = pj_log_max_level;
+        /* Save the level regardless, just in case PJLIB is shutdown
+         * between suspend and resume.
+         */
+        *saved_level = pj_log_max_level;
 
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
-	pj_thread_local_set(thread_suspended_tls_id, 
-			    (void*)(pj_ssize_t)PJ_TRUE);
+        pj_thread_local_set(thread_suspended_tls_id, 
+                            (void*)(pj_ssize_t)PJ_TRUE);
     } 
     else
 #endif
     {
-	pj_log_max_level = 0;
+        pj_log_max_level = 0;
     }
 }
 
@@ -300,17 +299,17 @@ static void resume_logging(int *saved_level)
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
-	pj_thread_local_set(thread_suspended_tls_id,
-			    (void*)(pj_size_t)PJ_FALSE);
+        pj_thread_local_set(thread_suspended_tls_id,
+                            (void*)(pj_size_t)PJ_FALSE);
     }
     else
 #endif
     {
-	/* Only revert the level if application doesn't change the
-	 * logging level between suspend and resume.
-	 */
-	if (pj_log_max_level==0 && *saved_level)
-	    pj_log_max_level = *saved_level;
+        /* Only revert the level if application doesn't change the
+         * logging level between suspend and resume.
+         */
+        if (pj_log_max_level==0 && *saved_level)
+            pj_log_max_level = *saved_level;
     }
 }
 
@@ -320,17 +319,17 @@ static pj_bool_t is_logging_suspended(void)
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
-	return pj_thread_local_get(thread_suspended_tls_id) != NULL;
+        return pj_thread_local_get(thread_suspended_tls_id) != NULL;
     }
     else
 #endif
     {
-	return pj_log_max_level == 0;
+        return pj_log_max_level == 0;
     }
 }
 
 PJ_DEF(void) pj_log( const char *sender, int level, 
-		     const char *format, va_list marker)
+                     const char *format, va_list marker)
 {
     pj_time_val now;
     pj_parsed_time ptime;
@@ -343,10 +342,10 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     PJ_CHECK_STACK();
 
     if (level > pj_log_max_level)
-	return;
+        return;
 
     if (is_logging_suspended())
-	return;
+        return;
 
     /* Temporarily disable logging for this thread. Some of PJLIB APIs that
      * this function calls below will recursively call the logging function 
@@ -360,95 +359,95 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 
     pre = log_buffer;
     if (log_decor & PJ_LOG_HAS_LEVEL_TEXT) {
-	static const char *ltexts[] = { "FATAL:", "ERROR:", " WARN:", 
-			      " INFO:", "DEBUG:", "TRACE:", "DETRC:"};
-	pj_ansi_strcpy(pre, ltexts[level]);
-	pre += 6;
+        static const char *ltexts[] = { "FATAL:", "ERROR:", " WARN:", 
+                              " INFO:", "DEBUG:", "TRACE:", "DETRC:"};
+        pj_ansi_strcpy(pre, ltexts[level]);
+        pre += 6;
     }
     if (log_decor & PJ_LOG_HAS_DAY_NAME) {
-	static const char *wdays[] = { "Sun", "Mon", "Tue", "Wed",
-				       "Thu", "Fri", "Sat"};
-	pj_ansi_strcpy(pre, wdays[ptime.wday]);
-	pre += 3;
+        static const char *wdays[] = { "Sun", "Mon", "Tue", "Wed",
+                                       "Thu", "Fri", "Sat"};
+        pj_ansi_strcpy(pre, wdays[ptime.wday]);
+        pre += 3;
     }
     if (log_decor & PJ_LOG_HAS_YEAR) {
-	if (pre!=log_buffer) *pre++ = ' ';
-	pre += pj_utoa(ptime.year, pre);
+        if (pre!=log_buffer) *pre++ = ' ';
+        pre += pj_utoa(ptime.year, pre);
     }
     if (log_decor & PJ_LOG_HAS_MONTH) {
-	*pre++ = '-';
-	pre += pj_utoa_pad(ptime.mon+1, pre, 2, '0');
+        *pre++ = '-';
+        pre += pj_utoa_pad(ptime.mon+1, pre, 2, '0');
     }
     if (log_decor & PJ_LOG_HAS_DAY_OF_MON) {
-	*pre++ = '-';
-	pre += pj_utoa_pad(ptime.day, pre, 2, '0');
+        *pre++ = '-';
+        pre += pj_utoa_pad(ptime.day, pre, 2, '0');
     }
     if (log_decor & PJ_LOG_HAS_TIME) {
-	if (pre!=log_buffer) *pre++ = ' ';
-	pre += pj_utoa_pad(ptime.hour, pre, 2, '0');
-	*pre++ = ':';
-	pre += pj_utoa_pad(ptime.min, pre, 2, '0');
-	*pre++ = ':';
-	pre += pj_utoa_pad(ptime.sec, pre, 2, '0');
+        if (pre!=log_buffer) *pre++ = ' ';
+        pre += pj_utoa_pad(ptime.hour, pre, 2, '0');
+        *pre++ = ':';
+        pre += pj_utoa_pad(ptime.min, pre, 2, '0');
+        *pre++ = ':';
+        pre += pj_utoa_pad(ptime.sec, pre, 2, '0');
     }
     if (log_decor & PJ_LOG_HAS_MICRO_SEC) {
-	*pre++ = '.';
-	pre += pj_utoa_pad(ptime.msec, pre, 3, '0');
+        *pre++ = '.';
+        pre += pj_utoa_pad(ptime.msec, pre, 3, '0');
     }
     if (log_decor & PJ_LOG_HAS_SENDER) {
-	enum { SENDER_WIDTH = PJ_LOG_SENDER_WIDTH };
-	pj_size_t sender_len = strlen(sender);
-	if (pre!=log_buffer) *pre++ = ' ';
-	if (sender_len <= SENDER_WIDTH) {
-	    while (sender_len < SENDER_WIDTH)
-		*pre++ = ' ', ++sender_len;
-	    while (*sender)
-		*pre++ = *sender++;
-	} else {
-	    int i;
-	    for (i=0; i<SENDER_WIDTH; ++i)
-		*pre++ = *sender++;
-	}
+        enum { SENDER_WIDTH = PJ_LOG_SENDER_WIDTH };
+        pj_size_t sender_len = strlen(sender);
+        if (pre!=log_buffer) *pre++ = ' ';
+        if (sender_len <= SENDER_WIDTH) {
+            while (sender_len < SENDER_WIDTH)
+                *pre++ = ' ', ++sender_len;
+            while (*sender)
+                *pre++ = *sender++;
+        } else {
+            int i;
+            for (i=0; i<SENDER_WIDTH; ++i)
+                *pre++ = *sender++;
+        }
     }
     if (log_decor & PJ_LOG_HAS_THREAD_ID) {
-	enum { THREAD_WIDTH = PJ_LOG_THREAD_WIDTH };
-	const char *thread_name = pj_thread_get_name(pj_thread_this());
-	pj_size_t thread_len = strlen(thread_name);
-	*pre++ = ' ';
-	if (thread_len <= THREAD_WIDTH) {
-	    while (thread_len < THREAD_WIDTH)
-		*pre++ = ' ', ++thread_len;
-	    while (*thread_name)
-		*pre++ = *thread_name++;
-	} else {
-	    int i;
-	    for (i=0; i<THREAD_WIDTH; ++i)
-		*pre++ = *thread_name++;
-	}
+        enum { THREAD_WIDTH = PJ_LOG_THREAD_WIDTH };
+        const char *thread_name = pj_thread_get_name(pj_thread_this());
+        pj_size_t thread_len = strlen(thread_name);
+        *pre++ = ' ';
+        if (thread_len <= THREAD_WIDTH) {
+            while (thread_len < THREAD_WIDTH)
+                *pre++ = ' ', ++thread_len;
+            while (*thread_name)
+                *pre++ = *thread_name++;
+        } else {
+            int i;
+            for (i=0; i<THREAD_WIDTH; ++i)
+                *pre++ = *thread_name++;
+        }
     }
 
     if (log_decor != 0 && log_decor != PJ_LOG_HAS_NEWLINE)
-	*pre++ = ' ';
+        *pre++ = ' ';
 
     if (log_decor & PJ_LOG_HAS_THREAD_SWC) {
-	void *current_thread = (void*)pj_thread_this();
-	if (current_thread != g_last_thread) {
-	    *pre++ = '!';
-	    g_last_thread = current_thread;
-	} else {
-	    *pre++ = ' ';
-	}
+        void *current_thread = (void*)pj_thread_this();
+        if (current_thread != g_last_thread) {
+            *pre++ = '!';
+            g_last_thread = current_thread;
+        } else {
+            *pre++ = ' ';
+        }
     } else if (log_decor & PJ_LOG_HAS_SPACE) {
-	*pre++ = ' ';
+        *pre++ = ' ';
     }
 
 #if PJ_LOG_ENABLE_INDENT
     if (log_decor & PJ_LOG_HAS_INDENT) {
-	int indent = pj_log_get_indent();
-	if (indent > 0) {
-	    pj_memset(pre, PJ_LOG_INDENT_CHAR, indent);
-	    pre += indent;
-	}
+        int indent = pj_log_get_indent();
+        if (indent > 0) {
+            pj_memset(pre, PJ_LOG_INDENT_CHAR, indent);
+            pre += indent;
+        }
     }
 #endif
 
@@ -456,33 +455,33 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 
     /* Print the whole message to the string log_buffer. */
     print_len = pj_ansi_vsnprintf(pre, sizeof(log_buffer)-len, format, 
-				  marker);
+                                  marker);
     if (print_len < 0) {
-	level = 1;
-	print_len = pj_ansi_snprintf(pre, sizeof(log_buffer)-len, 
-				     "<logging error: msg too long>");
+        level = 1;
+        print_len = pj_ansi_snprintf(pre, sizeof(log_buffer)-len, 
+                                     "<logging error: msg too long>");
     }
     if (print_len < 1 || print_len >= (int)(sizeof(log_buffer)-len)) {
-	print_len = sizeof(log_buffer) - len - 1;
+        print_len = sizeof(log_buffer) - len - 1;
     }
     len = len + print_len;
     if (len > 0 && len < (int)sizeof(log_buffer)-2) {
-	if (log_decor & PJ_LOG_HAS_CR) {
-	    log_buffer[len++] = '\r';
-	}
-	if (log_decor & PJ_LOG_HAS_NEWLINE) {
-	    log_buffer[len++] = '\n';
-	}
-	log_buffer[len] = '\0';
+        if (log_decor & PJ_LOG_HAS_CR) {
+            log_buffer[len++] = '\r';
+        }
+        if (log_decor & PJ_LOG_HAS_NEWLINE) {
+            log_buffer[len++] = '\n';
+        }
+        log_buffer[len] = '\0';
     } else {
-	len = sizeof(log_buffer)-1;
-	if (log_decor & PJ_LOG_HAS_CR) {
-	    log_buffer[sizeof(log_buffer)-3] = '\r';
-	}
-	if (log_decor & PJ_LOG_HAS_NEWLINE) {
-	    log_buffer[sizeof(log_buffer)-2] = '\n';
-	}
-	log_buffer[sizeof(log_buffer)-1] = '\0';
+        len = sizeof(log_buffer)-1;
+        if (log_decor & PJ_LOG_HAS_CR) {
+            log_buffer[sizeof(log_buffer)-3] = '\r';
+        }
+        if (log_decor & PJ_LOG_HAS_NEWLINE) {
+            log_buffer[sizeof(log_buffer)-2] = '\n';
+        }
+        log_buffer[sizeof(log_buffer)-1] = '\0';
     }
 
     /* It should be safe to resume logging at this point. Application can
@@ -491,7 +490,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     resume_logging(&saved_level);
 
     if (log_writer)
-	(*log_writer)(level, log_buffer, len);
+        (*log_writer)(level, log_buffer, len);
 }
 
 /*
@@ -511,7 +510,7 @@ PJ_DEF(void) pj_log_1(const char *obj, const char *format, ...)
     pj_log(obj, 1, format, arg);
     va_end(arg);
 }
-#endif	/* PJ_LOG_MAX_LEVEL >= 1 */
+#endif  /* PJ_LOG_MAX_LEVEL >= 1 */
 
 #if PJ_LOG_MAX_LEVEL >= 2
 PJ_DEF(void) pj_log_2(const char *obj, const char *format, ...)

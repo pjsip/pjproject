@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -63,8 +62,8 @@ pjmedia_vid_dev_factory* pjmedia_opengl_factory(pj_pool_factory *pf);
 pjmedia_vid_dev_factory* pjmedia_and_factory(pj_pool_factory *pf);
 #endif
 
-#define MAX_DRIVERS	PJMEDIA_VID_DEV_MAX_DRIVERS
-#define MAX_DEVS	PJMEDIA_VID_DEV_MAX_DEVS
+#define MAX_DRIVERS     PJMEDIA_VID_DEV_MAX_DRIVERS
+#define MAX_DEVS        PJMEDIA_VID_DEV_MAX_DEVS
 
 
 /* API: Initialize the video device subsystem. */
@@ -78,13 +77,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf)
      * number of shutdown().
      */
     if (vid_subsys->init_count++ != 0) {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     /* Register error subsystem */
     pj_register_strerror(PJMEDIA_VIDEODEV_ERRNO_START, 
-			 PJ_ERRNO_SPACE_SIZE, 
-			 &pjmedia_videodev_strerror);
+                         PJ_ERRNO_SPACE_SIZE, 
+                         &pjmedia_videodev_strerror);
 
     /* Init */
     vid_subsys->pf = pf;
@@ -125,11 +124,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf)
 
     /* Initialize each factory and build the device ID list */
     for (i=0; i<vid_subsys->drv_cnt; ++i) {
-	status = pjmedia_vid_driver_init(i, PJ_FALSE);
-	if (status != PJ_SUCCESS) {
-	    pjmedia_vid_driver_deinit(i);
-	    continue;
-	}
+        status = pjmedia_vid_driver_init(i, PJ_FALSE);
+        if (status != PJ_SUCCESS) {
+            pjmedia_vid_driver_deinit(i);
+            continue;
+        }
     }
 
     return vid_subsys->dev_cnt ? PJ_SUCCESS : status;
@@ -145,7 +144,7 @@ pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr adf,
     pjmedia_vid_subsys *vid_subsys = pjmedia_get_vid_subsys();
 
     if (vid_subsys->init_count == 0)
-	return PJMEDIA_EVID_INIT;
+        return PJMEDIA_EVID_INIT;
 
     vid_subsys->drv[vid_subsys->drv_cnt].create = adf;
     vid_subsys->drv[vid_subsys->drv_cnt].f = factory;
@@ -162,9 +161,9 @@ pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr adf,
 
     status = pjmedia_vid_driver_init(vid_subsys->drv_cnt, refresh);
     if (status == PJ_SUCCESS) {
-	vid_subsys->drv_cnt++;
+        vid_subsys->drv_cnt++;
     } else {
-	pjmedia_vid_driver_deinit(vid_subsys->drv_cnt);
+        pjmedia_vid_driver_deinit(vid_subsys->drv_cnt);
     }
 
     return status;
@@ -179,21 +178,21 @@ pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr adf,
     pjmedia_vid_subsys *vid_subsys = pjmedia_get_vid_subsys();
 
     if (vid_subsys->init_count == 0)
-	return PJMEDIA_EVID_INIT;
+        return PJMEDIA_EVID_INIT;
 
     for (i=0; i<vid_subsys->drv_cnt; ++i) {
-	pjmedia_vid_driver *drv = &vid_subsys->drv[i];
+        pjmedia_vid_driver *drv = &vid_subsys->drv[i];
 
-	if ((factory && drv->f==factory) || (adf && drv->create == adf)) {
-	    for (j = drv->start_idx; j < drv->start_idx + drv->dev_cnt; j++)
-	    {
-		vid_subsys->dev_list[j] = (pj_uint32_t)PJMEDIA_VID_INVALID_DEV;
-	    }
+        if ((factory && drv->f==factory) || (adf && drv->create == adf)) {
+            for (j = drv->start_idx; j < drv->start_idx + drv->dev_cnt; j++)
+            {
+                vid_subsys->dev_list[j] = (pj_uint32_t)PJMEDIA_VID_INVALID_DEV;
+            }
 
-	    pjmedia_vid_driver_deinit(i);
-	    pj_bzero(drv, sizeof(*drv));
-	    return PJ_SUCCESS;
-	}
+            pjmedia_vid_driver_deinit(i);
+            pj_bzero(drv, sizeof(*drv));
+            return PJ_SUCCESS;
+        }
     }
 
     return PJMEDIA_EVID_ERR;
@@ -216,13 +215,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void)
      * matching number of init().
      */
     if (vid_subsys->init_count == 0) {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
     --vid_subsys->init_count;
 
     if (vid_subsys->init_count == 0) {
         for (i=0; i<vid_subsys->drv_cnt; ++i) {
-	    pjmedia_vid_driver_deinit(i);
+            pjmedia_vid_driver_deinit(i);
         }
 
         pj_bzero(vid_subsys, sizeof(pjmedia_vid_subsys));

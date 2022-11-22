@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -42,9 +41,9 @@ PJ_BEGIN_DECL
  */
 typedef enum pjmedia_frame_type
 {
-    PJMEDIA_FRAME_TYPE_NONE,	    /**< No frame.		*/
-    PJMEDIA_FRAME_TYPE_AUDIO,	    /**< Normal audio frame.	*/
-    PJMEDIA_FRAME_TYPE_EXTENDED,    /**< Extended audio frame.	*/
+    PJMEDIA_FRAME_TYPE_NONE,        /**< No frame.              */
+    PJMEDIA_FRAME_TYPE_AUDIO,       /**< Normal audio frame.    */
+    PJMEDIA_FRAME_TYPE_EXTENDED,    /**< Extended audio frame.  */
     PJMEDIA_FRAME_TYPE_VIDEO        /**< Video frame.           */
 
 } pjmedia_frame_type;
@@ -55,15 +54,15 @@ typedef enum pjmedia_frame_type
  */
 typedef struct pjmedia_frame
 {
-    pjmedia_frame_type	 type;	    /**< Frame type.			    */
-    void		*buf;	    /**< Pointer to buffer.		    */
-    pj_size_t		 size;	    /**< Frame size in bytes.		    */
-    pj_timestamp	 timestamp; /**< Frame timestamp.		    */
-    pj_uint32_t		 bit_info;  /**< Bit info of the frame, sample case:
-					 a frame may not exactly start and end
-					 at the octet boundary, so this field
-					 may be used for specifying start &
-					 end bit offset.		    */
+    pjmedia_frame_type   type;      /**< Frame type.                        */
+    void                *buf;       /**< Pointer to buffer.                 */
+    pj_size_t            size;      /**< Frame size in bytes.               */
+    pj_timestamp         timestamp; /**< Frame timestamp.                   */
+    pj_uint32_t          bit_info;  /**< Bit info of the frame, sample case:
+                                         a frame may not exactly start and end
+                                         at the octet boundary, so this field
+                                         may be used for specifying start &
+                                         end bit offset.                    */
 } pjmedia_frame;
 
 
@@ -83,7 +82,7 @@ typedef struct pjmedia_frame
 
 #pragma pack(1)
 typedef struct pjmedia_frame_ext {
-    pjmedia_frame   base;	    /**< Base frame info */
+    pjmedia_frame   base;           /**< Base frame info */
     pj_uint16_t     samples_cnt;    /**< Number of samples in this frame */
     pj_uint16_t     subframe_cnt;   /**< Number of (sub)frames in this frame */
 
@@ -99,8 +98,8 @@ typedef struct pjmedia_frame_ext {
  */
 #pragma pack(1)
 typedef struct pjmedia_frame_ext_subframe {
-    pj_uint16_t     bitlen;	    /**< Number of bits in the data */
-    pj_uint8_t      data[1];	    /**< Start of encoded data */
+    pj_uint16_t     bitlen;         /**< Number of bits in the data */
+    pj_uint8_t      data[1];        /**< Start of encoded data */
 } pjmedia_frame_ext_subframe;
 
 #pragma pack()
@@ -109,11 +108,11 @@ typedef struct pjmedia_frame_ext_subframe {
  * Copy one frame to another. If the destination frame's size is smaller than
  * the source frame's, the destination buffer will be truncated.
  *
- * @param src		    Source frame.
- * @param dst		    Destination frame.
+ * @param src               Source frame.
+ * @param dst               Destination frame.
  */
 PJ_INLINE(void) pjmedia_frame_copy(pjmedia_frame *dst,
-				   const pjmedia_frame *src)
+                                   const pjmedia_frame *src)
 {
     dst->type = src->type;
     dst->timestamp = src->timestamp;
@@ -125,15 +124,15 @@ PJ_INLINE(void) pjmedia_frame_copy(pjmedia_frame *dst,
 /**
  * Append one subframe to #pjmedia_frame_ext.
  *
- * @param frm		    The #pjmedia_frame_ext.
- * @param src		    Subframe data.
- * @param bitlen	    Length of subframe, in bits.
- * @param samples_cnt	    Number of audio samples in subframe.
+ * @param frm               The #pjmedia_frame_ext.
+ * @param src               Subframe data.
+ * @param bitlen            Length of subframe, in bits.
+ * @param samples_cnt       Number of audio samples in subframe.
  */
 PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
-						  const void *src,
-					          unsigned bitlen,
-						  unsigned samples_cnt)
+                                                  const void *src,
+                                                  unsigned bitlen,
+                                                  unsigned samples_cnt)
 {
     pjmedia_frame_ext_subframe *fsub;
     pj_uint8_t *p;
@@ -141,14 +140,14 @@ PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
 
     p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
     for (i = 0; i < frm->subframe_cnt; ++i) {
-	fsub = (pjmedia_frame_ext_subframe*) p;
-	p += sizeof(fsub->bitlen) + ((fsub->bitlen+7) >> 3);
+        fsub = (pjmedia_frame_ext_subframe*) p;
+        p += sizeof(fsub->bitlen) + ((fsub->bitlen+7) >> 3);
     }
 
     fsub = (pjmedia_frame_ext_subframe*) p;
     fsub->bitlen = (pj_uint16_t)bitlen;
     if (bitlen)
-	pj_memcpy(fsub->data, src, (bitlen+7) >> 3);
+        pj_memcpy(fsub->data, src, (bitlen+7) >> 3);
 
     frm->subframe_cnt++;
     frm->samples_cnt = (pj_uint16_t)(frm->samples_cnt + samples_cnt);
@@ -157,10 +156,10 @@ PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
 /**
  * Get a subframe from #pjmedia_frame_ext.
  *
- * @param frm		    The #pjmedia_frame_ext.
- * @param n		    Subframe index, zero based.
+ * @param frm               The #pjmedia_frame_ext.
+ * @param n                 Subframe index, zero based.
  *
- * @return		    The n-th subframe, or NULL if n is out-of-range.
+ * @return                  The n-th subframe, or NULL if n is out-of-range.
  */
 PJ_INLINE(pjmedia_frame_ext_subframe*)
 pjmedia_frame_ext_get_subframe(const pjmedia_frame_ext *frm, unsigned n)
@@ -168,16 +167,16 @@ pjmedia_frame_ext_get_subframe(const pjmedia_frame_ext *frm, unsigned n)
     pjmedia_frame_ext_subframe *sf = NULL;
 
     if (n < frm->subframe_cnt) {
-	pj_uint8_t *p;
-	unsigned i;
+        pj_uint8_t *p;
+        unsigned i;
 
-	p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
-	for (i = 0; i < n; ++i) {
-	    sf = (pjmedia_frame_ext_subframe*) p;
-	    p += sizeof(sf->bitlen) + ((sf->bitlen+7) >> 3);
-	}
+        p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
+        for (i = 0; i < n; ++i) {
+            sf = (pjmedia_frame_ext_subframe*) p;
+            p += sizeof(sf->bitlen) + ((sf->bitlen+7) >> 3);
+        }
 
-	sf = (pjmedia_frame_ext_subframe*) p;
+        sf = (pjmedia_frame_ext_subframe*) p;
     }
 
     return sf;
@@ -186,33 +185,33 @@ pjmedia_frame_ext_get_subframe(const pjmedia_frame_ext *frm, unsigned n)
 /**
  * Extract all frame payload to the specified buffer.
  *
- * @param frm		    The frame.
- * @param dst		    Destination buffer.
- * @param maxlen	    Maximum size to copy (i.e. the size of the
- *			    destination buffer).
+ * @param frm               The frame.
+ * @param dst               Destination buffer.
+ * @param maxlen            Maximum size to copy (i.e. the size of the
+ *                          destination buffer).
  *
- * @return		    Total size of payload copied.
+ * @return                  Total size of payload copied.
  */
 PJ_INLINE(unsigned)
 pjmedia_frame_ext_copy_payload(const pjmedia_frame_ext *frm,
-			       void *dst,
-			       unsigned maxlen)
+                               void *dst,
+                               unsigned maxlen)
 {
     unsigned i, copied=0;
     for (i=0; i<frm->subframe_cnt; ++i) {
-	pjmedia_frame_ext_subframe *sf;
-	unsigned sz;
+        pjmedia_frame_ext_subframe *sf;
+        unsigned sz;
 
-	sf = pjmedia_frame_ext_get_subframe(frm, i);
-	if (!sf)
-	    continue;
+        sf = pjmedia_frame_ext_get_subframe(frm, i);
+        if (!sf)
+            continue;
 
-	sz = ((sf->bitlen + 7) >> 3);
-	if (sz + copied > maxlen)
-	    break;
+        sz = ((sf->bitlen + 7) >> 3);
+        if (sz + copied > maxlen)
+            break;
 
-	pj_memcpy(((pj_uint8_t*)dst) + copied, sf->data, sz);
-	copied += sz;
+        pj_memcpy(((pj_uint8_t*)dst) + copied, sf->data, sz);
+        copied += sz;
     }
     return copied;
 }
@@ -221,10 +220,10 @@ pjmedia_frame_ext_copy_payload(const pjmedia_frame_ext *frm,
 /**
  * Pop out first n subframes from #pjmedia_frame_ext.
  *
- * @param frm		    The #pjmedia_frame_ext.
- * @param n		    Number of first subframes to be popped out.
+ * @param frm               The #pjmedia_frame_ext.
+ * @param n                 Number of first subframes to be popped out.
  *
- * @return		    PJ_SUCCESS when successful.
+ * @return                  PJ_SUCCESS when successful.
  */
 PJ_INLINE(pj_status_t)
 pjmedia_frame_ext_pop_subframes(pjmedia_frame_ext *frm, unsigned n)
@@ -234,20 +233,20 @@ pjmedia_frame_ext_pop_subframes(pjmedia_frame_ext *frm, unsigned n)
     pj_size_t move_len;
 
     if (frm->subframe_cnt <= n) {
-	frm->subframe_cnt = 0;
-	frm->samples_cnt = 0;
-	return PJ_SUCCESS;
+        frm->subframe_cnt = 0;
+        frm->samples_cnt = 0;
+        return PJ_SUCCESS;
     }
 
     move_src = (pj_uint8_t*)pjmedia_frame_ext_get_subframe(frm, n);
     sf = pjmedia_frame_ext_get_subframe(frm, frm->subframe_cnt-1);
     move_len = ((pj_uint8_t*)sf - move_src + sizeof(sf->bitlen) +
-	       ((sf->bitlen+7) >> 3));
+               ((sf->bitlen+7) >> 3));
     pj_memmove((pj_uint8_t*)frm+sizeof(pjmedia_frame_ext),
-	       move_src, move_len);
+               move_src, move_len);
 
     frm->samples_cnt = (pj_uint16_t)
-		   (frm->samples_cnt - n*frm->samples_cnt/frm->subframe_cnt);
+                   (frm->samples_cnt - n*frm->samples_cnt/frm->subframe_cnt);
     frm->subframe_cnt = (pj_uint16_t) (frm->subframe_cnt - n);
 
     return PJ_SUCCESS;
@@ -260,8 +259,8 @@ pjmedia_frame_ext_pop_subframes(pjmedia_frame_ext *frm, unsigned n)
  * by putting this functionality in one place, it enables some.
  * clever people to optimize this function.
  *
- * @param samples	The 16bit PCM samples.
- * @param count		Number of samples.
+ * @param samples       The 16bit PCM samples.
+ * @param count         Number of samples.
  */
 PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
 {
@@ -285,7 +284,7 @@ PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
  * clever people to optimize this function.
  */
 PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
-				     unsigned count)
+                                     unsigned count)
 {
 #if 1
     pj_memcpy(dst, src, (count<<1));
@@ -296,7 +295,7 @@ PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
     unsigned i;
     count >>= 1;
     for (i=0; i<count; ++i)
-	((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
+        ((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
 #endif
 }
 
@@ -308,7 +307,7 @@ PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
  * clever people to optimize this function.
  */
 PJ_INLINE(void) pjmedia_move_samples(pj_int16_t *dst, const pj_int16_t *src,
-				     unsigned count)
+                                     unsigned count)
 {
 #if 1
     pj_memmove(dst, src, (count<<1));
@@ -319,7 +318,7 @@ PJ_INLINE(void) pjmedia_move_samples(pj_int16_t *dst, const pj_int16_t *src,
     unsigned i;
     count >>= 1;
     for (i=0; i<count; ++i)
-	((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
+        ((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
 #endif
 }
 

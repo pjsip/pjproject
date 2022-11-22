@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2018 Teluu Inc. (http://www.teluu.com)
  *
@@ -85,7 +84,7 @@ typedef struct pjmedia_rtcp_fb_cap
      * pjmedia_vid_codec_mgr_find_codecs_by_id(), e.g: "L16/8000/1", "PCMU",
      * "H264". This can also be an asterisk ("*") to represent all codecs.
      */
-    pj_str_t		    codec_id;
+    pj_str_t                codec_id;
 
     /**
      * Specify the RTCP Feedback type.
@@ -95,7 +94,7 @@ typedef struct pjmedia_rtcp_fb_cap
     /**
      * Specify the type name if RTCP Feedback type is PJMEDIA_RTCP_FB_OTHER.
      */
-    pj_str_t		    type_name;
+    pj_str_t                type_name;
 
     /**
      * Specify the RTCP Feedback parameters. Feedback subtypes should be
@@ -105,7 +104,7 @@ typedef struct pjmedia_rtcp_fb_cap
      * - 'rpsi' for Reference Picture Selection Indication feedback,
      * - 'app' for specific/proprietary application layer feedback.
      */
-    pj_str_t		    param;
+    pj_str_t                param;
 
 } pjmedia_rtcp_fb_cap;
 
@@ -118,12 +117,12 @@ typedef struct pjmedia_rtcp_fb_info
     /**
      * Number of RTCP Feedback capabilities.
      */
-    unsigned		     cap_count;
+    unsigned                 cap_count;
 
     /**
      * The RTCP Feedback capabilities.
      */
-    pjmedia_rtcp_fb_cap	     caps[PJMEDIA_RTCP_FB_MAX_CAP];
+    pjmedia_rtcp_fb_cap      caps[PJMEDIA_RTCP_FB_MAX_CAP];
 
 } pjmedia_rtcp_fb_info;
 
@@ -143,17 +142,17 @@ typedef struct pjmedia_rtcp_fb_setting
      *
      * Default: PJ_TRUE.
      */
-    pj_bool_t		     dont_use_avpf;
+    pj_bool_t                dont_use_avpf;
 
     /**
      * Number of RTCP Feedback capabilities.
      */
-    unsigned		     cap_count;
+    unsigned                 cap_count;
 
     /**
      * The RTCP Feedback capabilities.
      */
-    pjmedia_rtcp_fb_cap	     caps[PJMEDIA_RTCP_FB_MAX_CAP];
+    pjmedia_rtcp_fb_cap      caps[PJMEDIA_RTCP_FB_MAX_CAP];
 
 } pjmedia_rtcp_fb_setting;
 
@@ -163,9 +162,9 @@ typedef struct pjmedia_rtcp_fb_setting
  */
 typedef struct pjmedia_rtcp_fb_nack
 {
-    pj_int32_t		 pid;		/**< Packet ID (RTP seq)    */
-    pj_uint16_t		 blp;		/**< Bitmask of following lost
-					     packets		    */
+    pj_int32_t           pid;           /**< Packet ID (RTP seq)    */
+    pj_uint16_t          blp;           /**< Bitmask of following lost
+                                             packets                */
 } pjmedia_rtcp_fb_nack;
 
 
@@ -174,10 +173,10 @@ typedef struct pjmedia_rtcp_fb_nack
  */
 typedef struct pjmedia_rtcp_fb_sli
 {
-    pj_uint16_t		 first;		/**< First lost macroblock	*/
-    pj_uint16_t		 number;	/**< The number of lost macroblocks
-					     packets			*/
-    pj_uint8_t		 pict_id;	/**< Picture ID (temporal ref)	*/
+    pj_uint16_t          first;         /**< First lost macroblock      */
+    pj_uint16_t          number;        /**< The number of lost macroblocks
+                                             packets                    */
+    pj_uint8_t           pict_id;       /**< Picture ID (temporal ref)  */
 } pjmedia_rtcp_fb_sli;
 
 
@@ -187,9 +186,9 @@ typedef struct pjmedia_rtcp_fb_sli
  */
 typedef struct pjmedia_rtcp_fb_rpsi
 {
-    pj_uint8_t		 pt;		/**< Payload Type		*/
-    pj_str_t		 rpsi;		/**< Native RPSI bit string	*/
-    pj_size_t		 rpsi_bit_len;	/**< Length of RPSI in bit	*/
+    pj_uint8_t           pt;            /**< Payload Type               */
+    pj_str_t             rpsi;          /**< Native RPSI bit string     */
+    pj_size_t            rpsi_bit_len;  /**< Length of RPSI in bit      */
 } pjmedia_rtcp_fb_rpsi;
 
 
@@ -199,11 +198,11 @@ typedef struct pjmedia_rtcp_fb_rpsi
  */
 typedef struct pjmedia_event_rx_rtcp_fb_data
 {
-    pjmedia_rtcp_fb_cap		cap;
+    pjmedia_rtcp_fb_cap         cap;
     union {
-	pjmedia_rtcp_fb_nack	nack;
-	pjmedia_rtcp_fb_sli	sli;
-	pjmedia_rtcp_fb_rpsi	rpsi;
+        pjmedia_rtcp_fb_nack    nack;
+        pjmedia_rtcp_fb_sli     sli;
+        pjmedia_rtcp_fb_rpsi    rpsi;
     } msg;
 
 } pjmedia_event_rx_rtcp_fb_data;
@@ -212,38 +211,38 @@ typedef struct pjmedia_event_rx_rtcp_fb_data
 /**
  * Initialize RTCP Feedback setting with default values.
  *
- * @param opt		The RTCP Feedback setting to be initialized.
+ * @param opt           The RTCP Feedback setting to be initialized.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_setting_default(
-					pjmedia_rtcp_fb_setting *opt);
+                                        pjmedia_rtcp_fb_setting *opt);
 
 
 /**
  * Duplicate RTCP Feedback setting.
  *
- * @param pool		Pool to be used for duplicating the config.
- * @param dst		Destination configuration.
- * @param src		Source configuration.
+ * @param pool          Pool to be used for duplicating the config.
+ * @param dst           Destination configuration.
+ * @param src           Source configuration.
  *
  */
 PJ_DECL(void) pjmedia_rtcp_fb_setting_dup(pj_pool_t *pool,
-					  pjmedia_rtcp_fb_setting *dst,
-					  const pjmedia_rtcp_fb_setting *src);
+                                          pjmedia_rtcp_fb_setting *dst,
+                                          const pjmedia_rtcp_fb_setting *src);
 
 
 /**
  * Duplicate RTCP Feedback info.
  *
- * @param pool		Pool to be used for duplicating the info.
- * @param dst		Destination info.
- * @param src		Source info.
+ * @param pool          Pool to be used for duplicating the info.
+ * @param dst           Destination info.
+ * @param src           Source info.
  *
  */
 PJ_DECL(void) pjmedia_rtcp_fb_info_dup(pj_pool_t *pool,
-				       pjmedia_rtcp_fb_info *dst,
-				       const pjmedia_rtcp_fb_info *src);
+                                       pjmedia_rtcp_fb_info *dst,
+                                       const pjmedia_rtcp_fb_info *src);
 
 
 /**
@@ -252,44 +251,44 @@ PJ_DECL(void) pjmedia_rtcp_fb_info_dup(pj_pool_t *pool,
  * endpoint that local endpoint is capable and willing to receive RTCP
  * Feedback packets as described in the local SDP.
  *
- * @param pool		Pool object to allocate memory in updating local SDP.
- * @param endpt		The media endpoint.
- * @param opt		RTCP Feedback setting.
- * @param sdp_local	The local SDP to be filled in information from the
- *			media transport.
- * @param med_idx	The SDP media index.
- * @param sdp_remote	Remote SDP or NULL if local is offerer.
+ * @param pool          Pool object to allocate memory in updating local SDP.
+ * @param endpt         The media endpoint.
+ * @param opt           RTCP Feedback setting.
+ * @param sdp_local     The local SDP to be filled in information from the
+ *                      media transport.
+ * @param med_idx       The SDP media index.
+ * @param sdp_remote    Remote SDP or NULL if local is offerer.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_encode_sdp(
-				    pj_pool_t *pool,
-				    pjmedia_endpt *endpt,
-				    const pjmedia_rtcp_fb_setting *opt,
-				    pjmedia_sdp_session *sdp_local,
-				    unsigned med_idx,
-				    const pjmedia_sdp_session *sdp_remote);
+                                    pj_pool_t *pool,
+                                    pjmedia_endpt *endpt,
+                                    const pjmedia_rtcp_fb_setting *opt,
+                                    pjmedia_sdp_session *sdp_local,
+                                    unsigned med_idx,
+                                    const pjmedia_sdp_session *sdp_remote);
 
 
 /**
  * Decode RTCP Feedback specific information from SDP media.
  *
- * @param pool		Pool object to allocate memory.
- * @param endpt		The media endpoint.
- * @param opt		Options, currently it must be NULL.
- * @param sdp		The SDP.
- * @param med_idx	The SDP media index.
- * @param info		The RTCP-FB info fetched from SDP.
+ * @param pool          Pool object to allocate memory.
+ * @param endpt         The media endpoint.
+ * @param opt           Options, currently it must be NULL.
+ * @param sdp           The SDP.
+ * @param med_idx       The SDP media index.
+ * @param info          The RTCP-FB info fetched from SDP.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_decode_sdp(
-				    pj_pool_t *pool,
-				    pjmedia_endpt *endpt,
-				    const void *opt,
-				    const pjmedia_sdp_session *sdp,
-				    unsigned med_idx,
-				    pjmedia_rtcp_fb_info *info);
+                                    pj_pool_t *pool,
+                                    pjmedia_endpt *endpt,
+                                    const void *opt,
+                                    const pjmedia_sdp_session *sdp,
+                                    unsigned med_idx,
+                                    pjmedia_rtcp_fb_info *info);
 
 
 /**
@@ -297,24 +296,24 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_decode_sdp(
  * payload type. If the payload type is set to negative value, it will decode
  * RTCP Feedback info for all payload types in the SDP media.
  *
- * @param pool		Pool object to allocate memory.
- * @param endpt		The media endpoint.
- * @param opt		Options, currently it must be NULL.
- * @param sdp		The SDP.
- * @param med_idx	The SDP media index.
- * @param pt		The payload type.
- * @param info		The RTCP-FB info fetched from SDP.
+ * @param pool          Pool object to allocate memory.
+ * @param endpt         The media endpoint.
+ * @param opt           Options, currently it must be NULL.
+ * @param sdp           The SDP.
+ * @param med_idx       The SDP media index.
+ * @param pt            The payload type.
+ * @param info          The RTCP-FB info fetched from SDP.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_decode_sdp2(
-				    pj_pool_t *pool,
-				    pjmedia_endpt *endpt,
-				    const void *opt,
-				    const pjmedia_sdp_session *sdp,
-				    unsigned med_idx,
-				    int pt,
-				    pjmedia_rtcp_fb_info *info);
+                                    pj_pool_t *pool,
+                                    pjmedia_endpt *endpt,
+                                    const void *opt,
+                                    const pjmedia_sdp_session *sdp,
+                                    unsigned med_idx,
+                                    int pt,
+                                    pjmedia_rtcp_fb_info *info);
 
 
 /**
@@ -323,21 +322,21 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_decode_sdp2(
  * See also RFC 4585 Section 6.2.1 about Generic NACK message.
  *
  * @param session   The RTCP session.
- * @param buf	    The buffer to receive RTCP Feedback packet.
+ * @param buf       The buffer to receive RTCP Feedback packet.
  * @param length    On input, it will contain the buffer length.
- *		    On output, it will contain the generated RTCP Feedback
- *		    packet length.
+ *                  On output, it will contain the generated RTCP Feedback
+ *                  packet length.
  * @param nack_cnt  The number of RTCP Feedback Generic NACK messages.
- * @param nack	    The array of RTCP Feedback Generic NACK messages.
+ * @param nack      The array of RTCP Feedback Generic NACK messages.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_nack(
-					pjmedia_rtcp_session *session,
-					void *buf,
-					pj_size_t *length,
-					unsigned nack_cnt,
-					const pjmedia_rtcp_fb_nack nack[]);
+                                        pjmedia_rtcp_session *session,
+                                        void *buf,
+                                        pj_size_t *length,
+                                        unsigned nack_cnt,
+                                        const pjmedia_rtcp_fb_nack nack[]);
 
 
 /**
@@ -346,17 +345,17 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_nack(
  * compound RTCP packet. See also RFC 4585 Section 6.3.1 about PLI FB message.
  *
  * @param session   The RTCP session.
- * @param buf	    The buffer to receive RTCP Feedback packet.
+ * @param buf       The buffer to receive RTCP Feedback packet.
  * @param length    On input, it will contain the buffer length.
- *		    On output, it will contain the generated RTCP Feedback
- *		    packet length.
+ *                  On output, it will contain the generated RTCP Feedback
+ *                  packet length.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_pli(
-					pjmedia_rtcp_session *session, 
-					void *buf,
-					pj_size_t *length);
+                                        pjmedia_rtcp_session *session, 
+                                        void *buf,
+                                        pj_size_t *length);
 
 
 /**
@@ -365,21 +364,21 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_pli(
  * RTCP packet. See also RFC 4585 Section 6.3.2 about SLI FB message.
  *
  * @param session   The RTCP session.
- * @param buf	    The buffer to receive RTCP Feedback packet.
+ * @param buf       The buffer to receive RTCP Feedback packet.
  * @param length    On input, it will contain the buffer length.
- *		    On output, it will contain the generated RTCP Feedback
- *		    packet length.
+ *                  On output, it will contain the generated RTCP Feedback
+ *                  packet length.
  * @param sli_cnt   The number of RTCP Feedback SLI messages.
- * @param sli	    The array of RTCP Feedback SLI messages.
+ * @param sli       The array of RTCP Feedback SLI messages.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_sli(
-					pjmedia_rtcp_session *session, 
-					void *buf,
-					pj_size_t *length,
-					unsigned sli_cnt,
-					const pjmedia_rtcp_fb_sli sli[]);
+                                        pjmedia_rtcp_session *session, 
+                                        void *buf,
+                                        pj_size_t *length,
+                                        unsigned sli_cnt,
+                                        const pjmedia_rtcp_fb_sli sli[]);
 
 
 /**
@@ -389,75 +388,75 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_sli(
  * RPSI FB message.
  *
  * @param session   The RTCP session.
- * @param buf	    The buffer to receive RTCP Feedback packet.
+ * @param buf       The buffer to receive RTCP Feedback packet.
  * @param length    On input, it will contain the buffer length.
- *		    On output, it will contain the generated RTCP Feedback
- *		    packet length.
- * @param rpsi	    The RTCP Feedback RPSI message.
+ *                  On output, it will contain the generated RTCP Feedback
+ *                  packet length.
+ * @param rpsi      The RTCP Feedback RPSI message.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
-					pjmedia_rtcp_session *session, 
-					void *buf,
-					pj_size_t *length,
-					const pjmedia_rtcp_fb_rpsi *rpsi);
+                                        pjmedia_rtcp_session *session, 
+                                        void *buf,
+                                        pj_size_t *length,
+                                        const pjmedia_rtcp_fb_rpsi *rpsi);
 
 
 /**
  * Check whether the specified payload contains RTCP feedback generic NACK
  * message, and parse the payload if it does.
  *
- * @param buf	    The payload buffer.
+ * @param buf       The payload buffer.
  * @param length    The payload length.
  * @param nack_cnt  On input, it specifies the maximum number of generic NACK
- *		    messages.
- *		    On output, it specifies the number of parsed generic NACK
- *		    messages.
- * @param nack	    The array of RTCP Feedback Generic NACK messages.
+ *                  messages.
+ *                  On output, it specifies the number of parsed generic NACK
+ *                  messages.
+ * @param nack      The array of RTCP Feedback Generic NACK messages.
  *
- * @return	    PJ_SUCCESS if the payload contains generic NACK message
- *		    and has been parsed successfully.
+ * @return          PJ_SUCCESS if the payload contains generic NACK message
+ *                  and has been parsed successfully.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_nack(
-					const void *buf,
-					pj_size_t length,
-					unsigned *nack_cnt,
-					pjmedia_rtcp_fb_nack nack[]);
+                                        const void *buf,
+                                        pj_size_t length,
+                                        unsigned *nack_cnt,
+                                        pjmedia_rtcp_fb_nack nack[]);
 
 
 /**
  * Check whether the specified payload contains RTCP feedback Picture Loss
  * Indication (PLI) message.
  *
- * @param buf	    The payload buffer.
+ * @param buf       The payload buffer.
  * @param length    The payload length.
  *
- * @return	    PJ_SUCCESS if the payload contains PLI message.
+ * @return          PJ_SUCCESS if the payload contains PLI message.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_pli(
-					const void *buf,
-					pj_size_t length);
+                                        const void *buf,
+                                        pj_size_t length);
 
 
 /**
  * Check whether the specified payload contains RTCP feedback Slice Loss
  * Indication (SLI) message, and parse the payload if it does.
  *
- * @param buf	    The payload buffer.
+ * @param buf       The payload buffer.
  * @param length    The payload length.
  * @param sli_cnt   On input, it specifies the maximum number of SLI messages.
- *		    On output, it specifies the number of parsed SLI messages.
- * @param sli	    The array of RTCP Feedback SLI messages.
+ *                  On output, it specifies the number of parsed SLI messages.
+ * @param sli       The array of RTCP Feedback SLI messages.
  *
- * @return	    PJ_SUCCESS if the payload contains SLI messages and
- *		    has been parsed successfully.
+ * @return          PJ_SUCCESS if the payload contains SLI messages and
+ *                  has been parsed successfully.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_sli(
-					const void *buf,
-					pj_size_t length,
-					unsigned *sli_cnt,
-					pjmedia_rtcp_fb_sli sli[]);
+                                        const void *buf,
+                                        pj_size_t length,
+                                        unsigned *sli_cnt,
+                                        pjmedia_rtcp_fb_sli sli[]);
 
 
 /**
@@ -465,17 +464,17 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_sli(
  * Picture Selection Indication (RPSI) message, and parse the payload
  * if it does.
  *
- * @param buf	    The payload buffer.
+ * @param buf       The payload buffer.
  * @param length    The payload length.
- * @param rpsi	    The parsed RTCP Feedback RPSI messages.
+ * @param rpsi      The parsed RTCP Feedback RPSI messages.
  *
- * @return	    PJ_SUCCESS if the payload contains SLI messages and
- *		    has been parsed successfully.
+ * @return          PJ_SUCCESS if the payload contains SLI messages and
+ *                  has been parsed successfully.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_rpsi(
-					const void *buf,
-					pj_size_t length,
-					pjmedia_rtcp_fb_rpsi *rpsi);
+                                        const void *buf,
+                                        pj_size_t length,
+                                        pjmedia_rtcp_fb_rpsi *rpsi);
 
 
 /**
@@ -485,4 +484,4 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_rpsi(
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_RTCP_FB_H__ */
+#endif  /* __PJMEDIA_RTCP_FB_H__ */

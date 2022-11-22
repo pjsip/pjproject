@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,7 +45,7 @@ static int worker_thread(void *arg)
             continue;
         }
 
-	pj_atomic_add(total_bytes, (pj_atomic_value_t)len);
+        pj_atomic_add(total_bytes, (pj_atomic_value_t)len);
 
         rc = pj_sock_sendto(sock, buf, &len, 0, &addr, addrlen);
         if (rc != PJ_SUCCESS) {
@@ -144,7 +143,7 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
         count++;
 
         PJ_LOG(3,("", "%s UDP (%d threads): %u KB/s (avg=%u KB/s) %s", 
-		  ioqueue_name,
+                  ioqueue_name,
                   ECHO_SERVER_MAX_THREADS, 
                   (unsigned)(bw / 1000),
                   (unsigned)(avg_bw / count / 1000),

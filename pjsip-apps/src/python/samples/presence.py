@@ -1,4 +1,3 @@
-# $Id$
 #
 # Presence and instant messaging
 #

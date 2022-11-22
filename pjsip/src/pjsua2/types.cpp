@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -22,7 +21,7 @@
 using namespace pj;
 using namespace std;
 
-#define THIS_FILE	"types.cpp"
+#define THIS_FILE       "types.cpp"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -32,17 +31,17 @@ Error::Error()
 }
 
 Error::Error( pj_status_t prm_status,
-	      const string &prm_title,
-	      const string &prm_reason,
-	      const string &prm_src_file,
-	      int prm_src_line)
+              const string &prm_title,
+              const string &prm_reason,
+              const string &prm_src_file,
+              int prm_src_line)
 : status(prm_status), title(prm_title), reason(prm_reason),
   srcFile(prm_src_file), srcLine(prm_src_line)
 {
     if (this->status != PJ_SUCCESS && prm_reason.empty()) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(this->status, errmsg, sizeof(errmsg));
-	this->reason = errmsg;
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_strerror(this->status, errmsg, sizeof(errmsg));
+        this->reason = errmsg;
     }
 }
 
@@ -51,35 +50,35 @@ string Error::info(bool multi_line) const
     string output;
 
     if (status==PJ_SUCCESS) {
-	output = "No error";
+        output = "No error";
     } else if (!multi_line) {
-	char temp[80];
+        char temp[80];
 
-	if (!title.empty()) {
-	    output += title + " error: ";
-	}
-	snprintf(temp, sizeof(temp), " (status=%d)", status);
-	output += reason + temp;
-	if (!srcFile.empty()) {
-	    output += " [";
-	    output += srcFile;
-	    snprintf(temp, sizeof(temp), ":%d]", srcLine);
-	    output += temp;
-	}
+        if (!title.empty()) {
+            output += title + " error: ";
+        }
+        snprintf(temp, sizeof(temp), " (status=%d)", status);
+        output += reason + temp;
+        if (!srcFile.empty()) {
+            output += " [";
+            output += srcFile;
+            snprintf(temp, sizeof(temp), ":%d]", srcLine);
+            output += temp;
+        }
     } else {
-	char temp[80];
+        char temp[80];
 
-	if (!title.empty()) {
-	    output += string("Title:       ") + title + "\n";
-	}
+        if (!title.empty()) {
+            output += string("Title:       ") + title + "\n";
+        }
 
-	snprintf(temp, sizeof(temp), "%d\n", status);
-	output += string("Code:        ") + temp;
-	output += string("Description: ") + reason + "\n";
-	if (!srcFile.empty()) {
-	    snprintf(temp, sizeof(temp), ":%d\n", srcLine);
-	    output += string("Location:    ") + srcFile + temp;
-	}
+        snprintf(temp, sizeof(temp), "%d\n", status);
+        output += string("Code:        ") + temp;
+        output += string("Description: ") + reason + "\n";
+        if (!srcFile.empty()) {
+            snprintf(temp, sizeof(temp), ":%d\n", srcLine);
+            output += string("Location:    ") + srcFile + temp;
+        }
     }
 
     return output;

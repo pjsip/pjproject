@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -31,8 +30,8 @@
 #include <pj/rand.h>
 #include <pj/sock.h>
 
-#define PJ_TURN_CHANNEL_MIN	    0x4000
-#define PJ_TURN_CHANNEL_MAX	    0x7FFF  /* inclusive */
+#define PJ_TURN_CHANNEL_MIN         0x4000
+#define PJ_TURN_CHANNEL_MAX         0x7FFF  /* inclusive */
 #define PJ_TURN_CHANNEL_HTABLE_SIZE 8
 #define PJ_TURN_PERM_HTABLE_SIZE    8
 
@@ -61,18 +60,18 @@ enum timer_id_t
 struct ch_t
 {
     /* The channel number */
-    pj_uint16_t	    num;
+    pj_uint16_t     num;
 
     /* PJ_TRUE if we've received successful response to ChannelBind request
      * for this channel.
      */
-    pj_bool_t	    bound;
+    pj_bool_t       bound;
 
     /* The peer IP address and port */
-    pj_sockaddr	    addr;
+    pj_sockaddr     addr;
 
     /* The channel binding expiration */
-    pj_time_val	    expiry;
+    pj_time_val     expiry;
 };
 
 
@@ -82,82 +81,82 @@ struct ch_t
 struct perm_t
 {
     /* Cache of hash value to speed-up lookup */
-    pj_uint32_t	    hval;
+    pj_uint32_t     hval;
 
     /* The permission IP address. The port number MUST be zero */
-    pj_sockaddr	    addr;
+    pj_sockaddr     addr;
 
     /* Number of peers that uses this permission. */
-    unsigned	    peer_cnt;
+    unsigned        peer_cnt;
 
     /* Automatically renew this permission once it expires? */
-    pj_bool_t	    renew;
+    pj_bool_t       renew;
 
     /* The permission expiration */
-    pj_time_val	    expiry;
+    pj_time_val     expiry;
 
     /* Arbitrary/random pointer value (token) to map this perm with the 
      * request to create it. It is used to invalidate this perm when the 
      * request fails.
      */
-    void	   *req_token;
+    void           *req_token;
 };
 
 struct conn_bind_t
 {
-    pj_uint32_t	     id;		/* Connection ID.	*/
-    pj_sockaddr	     peer_addr;		/* Peer address.	*/
-    unsigned	     peer_addr_len;
+    pj_uint32_t      id;                /* Connection ID.       */
+    pj_sockaddr      peer_addr;         /* Peer address.        */
+    unsigned         peer_addr_len;
 };
 
 /* The TURN client session structure */
 struct pj_turn_session
 {
-    pj_pool_t		*pool;
-    const char		*obj_name;
-    pj_turn_session_cb	 cb;
-    void		*user_data;
-    pj_stun_config	 stun_cfg;
-    pj_bool_t		 is_destroying;
+    pj_pool_t           *pool;
+    const char          *obj_name;
+    pj_turn_session_cb   cb;
+    void                *user_data;
+    pj_stun_config       stun_cfg;
+    pj_bool_t            is_destroying;
 
-    pj_grp_lock_t	*grp_lock;
-    int			 busy;
+    pj_grp_lock_t       *grp_lock;
+    int                  busy;
 
-    pj_turn_state_t	 state;
-    pj_status_t		 last_status;
-    pj_bool_t		 pending_destroy;
+    pj_turn_state_t      state;
+    pj_status_t          last_status;
+    pj_bool_t            pending_destroy;
 
-    pj_stun_session	*stun;
+    pj_stun_session     *stun;
 
-    unsigned		 lifetime;
-    int			 ka_interval;
-    pj_time_val		 expiry;
+    unsigned             lifetime;
+    int                  ka_interval;
+    pj_time_val          expiry;
 
-    pj_timer_heap_t	*timer_heap;
-    pj_timer_entry	 timer;
+    pj_timer_heap_t     *timer_heap;
+    pj_timer_entry       timer;
 
-    pj_uint16_t		 default_port;
+    pj_uint16_t          default_port;
 
-    pj_uint16_t		 af;
-    pj_turn_tp_type	 conn_type;
-    pj_uint16_t		 srv_addr_cnt;
-    pj_sockaddr		*srv_addr_list;
-    pj_sockaddr		*srv_addr;
+    pj_uint16_t          af;
+    pj_turn_tp_type      conn_type;
+    pj_uint16_t          srv_addr_cnt;
+    pj_sockaddr         *srv_addr_list;
+    pj_sockaddr         *srv_addr;
 
-    pj_bool_t		 pending_alloc;
-    pj_turn_alloc_param	 alloc_param;
+    pj_bool_t            pending_alloc;
+    pj_turn_alloc_param  alloc_param;
 
-    pj_sockaddr		 mapped_addr;
-    pj_sockaddr		 relay_addr;
+    pj_sockaddr          mapped_addr;
+    pj_sockaddr          relay_addr;
 
-    pj_hash_table_t	*ch_table;
-    pj_hash_table_t	*perm_table;
+    pj_hash_table_t     *ch_table;
+    pj_hash_table_t     *perm_table;
 
-    pj_uint32_t		 send_ind_tsx_id[3];
+    pj_uint32_t          send_ind_tsx_id[3];
     /* tx_pkt must be 16bit aligned */
-    pj_uint8_t		 tx_pkt[PJ_TURN_MAX_PKT_LEN];
+    pj_uint8_t           tx_pkt[PJ_TURN_MAX_PKT_LEN];
 
-    pj_uint16_t		 next_ch;
+    pj_uint16_t          next_ch;
 };
 
 
@@ -165,46 +164,46 @@ struct pj_turn_session
  * Prototypes.
  */
 static void sess_shutdown(pj_turn_session *sess,
-			  pj_status_t status);
+                          pj_status_t status);
 static void turn_sess_on_destroy(void *comp);
 static void do_destroy(pj_turn_session *sess);
 static void send_refresh(pj_turn_session *sess, int lifetime);
 static pj_status_t stun_on_send_msg(pj_stun_session *sess,
-				    void *token,
-				    const void *pkt,
-				    pj_size_t pkt_size,
-				    const pj_sockaddr_t *dst_addr,
-				    unsigned addr_len);
+                                    void *token,
+                                    const void *pkt,
+                                    pj_size_t pkt_size,
+                                    const pj_sockaddr_t *dst_addr,
+                                    unsigned addr_len);
 static void stun_on_request_complete(pj_stun_session *sess,
-				     pj_status_t status,
-				     void *token,
-				     pj_stun_tx_data *tdata,
-				     const pj_stun_msg *response,
-				     const pj_sockaddr_t *src_addr,
-				     unsigned src_addr_len);
+                                     pj_status_t status,
+                                     void *token,
+                                     pj_stun_tx_data *tdata,
+                                     const pj_stun_msg *response,
+                                     const pj_sockaddr_t *src_addr,
+                                     unsigned src_addr_len);
 static pj_status_t stun_on_rx_indication(pj_stun_session *sess,
-					 const pj_uint8_t *pkt,
-					 unsigned pkt_len,
-					 const pj_stun_msg *msg,
-					 void *token,
-					 const pj_sockaddr_t *src_addr,
-					 unsigned src_addr_len);
+                                         const pj_uint8_t *pkt,
+                                         unsigned pkt_len,
+                                         const pj_stun_msg *msg,
+                                         void *token,
+                                         const pj_sockaddr_t *src_addr,
+                                         unsigned src_addr_len);
 static void dns_srv_resolver_cb(void *user_data,
-				pj_status_t status,
-				const pj_dns_srv_record *rec);
+                                pj_status_t status,
+                                const pj_dns_srv_record *rec);
 static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
-				      const pj_sockaddr_t *addr,
-				      unsigned addr_len,
-				      pj_bool_t update,
-				      pj_bool_t bind_channel);
+                                      const pj_sockaddr_t *addr,
+                                      unsigned addr_len,
+                                      pj_bool_t update,
+                                      pj_bool_t bind_channel);
 static struct ch_t *lookup_ch_by_chnum(pj_turn_session *sess,
-				       pj_uint16_t chnum);
+                                       pj_uint16_t chnum);
 static struct perm_t *lookup_perm(pj_turn_session *sess,
-				  const pj_sockaddr_t *addr,
-				  unsigned addr_len,
-				  pj_bool_t update);
+                                  const pj_sockaddr_t *addr,
+                                  unsigned addr_len,
+                                  pj_bool_t update);
 static void invalidate_perm(pj_turn_session *sess,
-			    struct perm_t *perm);
+                            struct perm_t *perm);
 static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e);
 
 
@@ -221,8 +220,8 @@ PJ_DEF(void) pj_turn_alloc_param_default(pj_turn_alloc_param *prm)
  * Duplicate pj_turn_alloc_param.
  */
 PJ_DEF(void) pj_turn_alloc_param_copy( pj_pool_t *pool, 
-				       pj_turn_alloc_param *dst,
-				       const pj_turn_alloc_param *src)
+                                       pj_turn_alloc_param *dst,
+                                       const pj_turn_alloc_param *src)
 {
     PJ_UNUSED_ARG(pool);
     pj_memcpy(dst, src, sizeof(*dst));
@@ -240,14 +239,14 @@ PJ_DEF(const char*) pj_turn_state_name(pj_turn_state_t state)
  * Create TURN client session.
  */
 PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
-					    const char *name,
-					    int af,
-					    pj_turn_tp_type conn_type,
-					    pj_grp_lock_t *grp_lock,
-					    const pj_turn_session_cb *cb,
-					    unsigned options,
-					    void *user_data,
-					    pj_turn_session **p_sess)
+                                            const char *name,
+                                            int af,
+                                            pj_turn_tp_type conn_type,
+                                            pj_grp_lock_t *grp_lock,
+                                            const pj_turn_session_cb *cb,
+                                            unsigned options,
+                                            void *user_data,
+                                            pj_turn_session **p_sess)
 {
     pj_pool_t *pool;
     pj_turn_session *sess;
@@ -260,11 +259,11 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
     PJ_UNUSED_ARG(options);
 
     if (name == NULL)
-	name = "turn%p";
+        name = "turn%p";
 
     /* Allocate and create TURN session */
     pool = pj_pool_create(cfg->pf, name, PJNATH_POOL_LEN_TURN_SESS,
-			  PJNATH_POOL_INC_TURN_SESS, NULL);
+                          PJNATH_POOL_INC_TURN_SESS, NULL);
     sess = PJ_POOL_ZALLOC_T(pool, pj_turn_session);
     sess->pool = pool;
     sess->obj_name = pool->obj_name;
@@ -289,13 +288,13 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
 
     /* Session lock */
     if (grp_lock) {
-	sess->grp_lock = grp_lock;
+        sess->grp_lock = grp_lock;
     } else {
-	status = pj_grp_lock_create(pool, NULL, &sess->grp_lock);
-	if (status != PJ_SUCCESS) {
-	    pj_pool_release(pool);
-	    return status;
-	}
+        status = pj_grp_lock_create(pool, NULL, &sess->grp_lock);
+        if (status != PJ_SUCCESS) {
+            pj_pool_release(pool);
+            return status;
+        }
     }
 
     pj_grp_lock_add_ref(sess->grp_lock);
@@ -311,10 +310,10 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
     stun_cb.on_request_complete = &stun_on_request_complete;
     stun_cb.on_rx_indication = &stun_on_rx_indication;
     status = pj_stun_session_create(&sess->stun_cfg, sess->obj_name, &stun_cb,
-				    PJ_FALSE, sess->grp_lock, &sess->stun);
+                                    PJ_FALSE, sess->grp_lock, &sess->stun);
     if (status != PJ_SUCCESS) {
-	do_destroy(sess);
-	return status;
+        do_destroy(sess);
+        return status;
     }
 
     /* Attach ourself to STUN session */
@@ -335,8 +334,8 @@ static void turn_sess_on_destroy(void *comp)
 
     /* Destroy pool */
     if (sess->pool) {
-	PJ_LOG(4,(sess->obj_name, "TURN client session destroyed"));
-	pj_pool_safe_release(&sess->pool);
+        PJ_LOG(4,(sess->obj_name, "TURN client session destroyed"));
+        pj_pool_safe_release(&sess->pool);
     }
 }
 
@@ -344,12 +343,12 @@ static void turn_sess_on_destroy(void *comp)
 static void do_destroy(pj_turn_session *sess)
 {
     PJ_LOG(4,(sess->obj_name, "TURN session destroy request, ref_cnt=%d",
-	      pj_grp_lock_get_ref(sess->grp_lock)));
+              pj_grp_lock_get_ref(sess->grp_lock)));
 
     pj_grp_lock_acquire(sess->grp_lock);
     if (sess->is_destroying) {
-	pj_grp_lock_release(sess->grp_lock);
-	return;
+        pj_grp_lock_release(sess->grp_lock);
+        return;
     }
 
     sess->is_destroying = PJ_TRUE;
@@ -367,14 +366,14 @@ static void set_state(pj_turn_session *sess, enum pj_turn_state_t state)
     pj_turn_state_t old_state = sess->state;
 
     if (state==sess->state)
-	return;
+        return;
 
     PJ_LOG(4,(sess->obj_name, "State changed %s --> %s",
-	      state_names[old_state], state_names[state]));
+              state_names[old_state], state_names[state]));
     sess->state = state;
 
     if (sess->cb.on_state) {
-	(*sess->cb.on_state)(sess, old_state, state);
+        (*sess->cb.on_state)(sess, old_state, state);
     }
 }
 
@@ -382,65 +381,65 @@ static void set_state(pj_turn_session *sess, enum pj_turn_state_t state)
  * Notify application and shutdown the TURN session.
  */
 static void sess_shutdown(pj_turn_session *sess,
-			  pj_status_t status)
+                          pj_status_t status)
 {
     pj_bool_t can_destroy = PJ_TRUE;
 
     PJ_LOG(4,(sess->obj_name, "Request to shutdown in state %s, cause:%d",
-	      state_names[sess->state], status));
+              state_names[sess->state], status));
 
     if (sess->last_status == PJ_SUCCESS && status != PJ_SUCCESS)
-	sess->last_status = status;
+        sess->last_status = status;
 
     switch (sess->state) {
     case PJ_TURN_STATE_NULL:
-	break;
+        break;
     case PJ_TURN_STATE_RESOLVING:
-	/* Wait for DNS callback invoked, it will call the this function
-	 * again. If the callback happens to get pending_destroy==FALSE,
-	 * the TURN allocation will call this function again.
-	 */
-	sess->pending_destroy = PJ_TRUE;
-	can_destroy = PJ_FALSE;
-	break;
+        /* Wait for DNS callback invoked, it will call the this function
+         * again. If the callback happens to get pending_destroy==FALSE,
+         * the TURN allocation will call this function again.
+         */
+        sess->pending_destroy = PJ_TRUE;
+        can_destroy = PJ_FALSE;
+        break;
     case PJ_TURN_STATE_RESOLVED:
-	break;
+        break;
     case PJ_TURN_STATE_ALLOCATING:
-	/* We need to wait until allocation complete */
-	sess->pending_destroy = PJ_TRUE;
-	can_destroy = PJ_FALSE;
-	break;
+        /* We need to wait until allocation complete */
+        sess->pending_destroy = PJ_TRUE;
+        can_destroy = PJ_FALSE;
+        break;
     case PJ_TURN_STATE_READY:
-	/* Send REFRESH with LIFETIME=0 */
-	can_destroy = PJ_FALSE;
-	send_refresh(sess, 0);
-	break;
+        /* Send REFRESH with LIFETIME=0 */
+        can_destroy = PJ_FALSE;
+        send_refresh(sess, 0);
+        break;
     case PJ_TURN_STATE_DEALLOCATING:
-	can_destroy = PJ_FALSE;
-	/* This may recursively call this function again with
-	 * state==PJ_TURN_STATE_DEALLOCATED.
-	 */
-	/* No need to deallocate as we're already deallocating!
-	 * See https://github.com/pjsip/pjproject/issues/1551
-	send_refresh(sess, 0);
-	*/
-	break;
+        can_destroy = PJ_FALSE;
+        /* This may recursively call this function again with
+         * state==PJ_TURN_STATE_DEALLOCATED.
+         */
+        /* No need to deallocate as we're already deallocating!
+         * See https://github.com/pjsip/pjproject/issues/1551
+        send_refresh(sess, 0);
+        */
+        break;
     case PJ_TURN_STATE_DEALLOCATED:
     case PJ_TURN_STATE_DESTROYING:
-	break;
+        break;
     }
 
     if (can_destroy) {
-	/* Schedule destroy */
-	pj_time_val delay = {0, 0};
+        /* Schedule destroy */
+        pj_time_val delay = {0, 0};
 
-	set_state(sess, PJ_TURN_STATE_DESTROYING);
+        set_state(sess, PJ_TURN_STATE_DESTROYING);
 
-	pj_timer_heap_cancel_if_active(sess->timer_heap, &sess->timer,
-	                               TIMER_NONE);
-	pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->timer,
-	                                  &delay, TIMER_DESTROY,
-	                                  sess->grp_lock);
+        pj_timer_heap_cancel_if_active(sess->timer_heap, &sess->timer,
+                                       TIMER_NONE);
+        pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->timer,
+                                          &delay, TIMER_DESTROY,
+                                          sess->grp_lock);
     }
 }
 
@@ -466,12 +465,12 @@ PJ_DEF(pj_status_t) pj_turn_session_shutdown(pj_turn_session *sess)
  * Forcefully destroy the TURN session.
  */
 PJ_DEF(pj_status_t) pj_turn_session_destroy( pj_turn_session *sess,
-					     pj_status_t last_err)
+                                             pj_status_t last_err)
 {
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
 
     if (last_err != PJ_SUCCESS && sess->last_status == PJ_SUCCESS)
-	sess->last_status = last_err;
+        sess->last_status = last_err;
     set_state(sess, PJ_TURN_STATE_DEALLOCATED);
     sess_shutdown(sess, PJ_SUCCESS);
     return PJ_SUCCESS;
@@ -482,7 +481,7 @@ PJ_DEF(pj_status_t) pj_turn_session_destroy( pj_turn_session *sess,
  * Get TURN session info.
  */
 PJ_DEF(pj_status_t) pj_turn_session_get_info( pj_turn_session *sess,
-					      pj_turn_session_info *info)
+                                              pj_turn_session_info *info)
 {
     pj_time_val now;
 
@@ -496,14 +495,14 @@ PJ_DEF(pj_status_t) pj_turn_session_get_info( pj_turn_session *sess,
     info->last_status = sess->last_status;
 
     if (sess->srv_addr)
-	pj_memcpy(&info->server, sess->srv_addr, sizeof(info->server));
+        pj_memcpy(&info->server, sess->srv_addr, sizeof(info->server));
     else
-	pj_bzero(&info->server, sizeof(info->server));
+        pj_bzero(&info->server, sizeof(info->server));
 
     pj_memcpy(&info->mapped_addr, &sess->mapped_addr, 
-	      sizeof(sess->mapped_addr));
+              sizeof(sess->mapped_addr));
     pj_memcpy(&info->relay_addr, &sess->relay_addr, 
-	      sizeof(sess->relay_addr));
+              sizeof(sess->relay_addr));
 
     return PJ_SUCCESS;
 }
@@ -513,7 +512,7 @@ PJ_DEF(pj_status_t) pj_turn_session_get_info( pj_turn_session *sess,
  * Re-assign user data.
  */
 PJ_DEF(pj_status_t) pj_turn_session_set_user_data( pj_turn_session *sess,
-						   void *user_data)
+                                                   void *user_data)
 {
     sess->user_data = user_data;
     return PJ_SUCCESS;
@@ -540,11 +539,11 @@ PJ_DEF(pj_grp_lock_t *) pj_turn_session_get_grp_lock(pj_turn_session *sess)
 /*
  * Configure message logging. By default all flags are enabled.
  *
- * @param sess		The TURN client session.
- * @param flags		Bitmask combination of #pj_stun_sess_msg_log_flag
+ * @param sess          The TURN client session.
+ * @param flags         Bitmask combination of #pj_stun_sess_msg_log_flag
  */
 PJ_DEF(void) pj_turn_session_set_log( pj_turn_session *sess,
-				      unsigned flags)
+                                      unsigned flags)
 {
     pj_stun_session_set_log(sess->stun, flags);
 }
@@ -554,7 +553,7 @@ PJ_DEF(void) pj_turn_session_set_log( pj_turn_session *sess,
  * Set software name
  */
 PJ_DEF(pj_status_t) pj_turn_session_set_software_name( pj_turn_session *sess,
-						       const pj_str_t *sw)
+                                                       const pj_str_t *sw)
 {
     pj_status_t status;
 
@@ -570,9 +569,9 @@ PJ_DEF(pj_status_t) pj_turn_session_set_software_name( pj_turn_session *sess,
  * Set the server or domain name of the server.
  */
 PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
-					        const pj_str_t *domain,
-						int default_port,
-						pj_dns_resolver *resolver)
+                                                const pj_str_t *domain,
+                                                int default_port,
+                                                pj_dns_resolver *resolver)
 {
     pj_sockaddr tmp_addr;
     pj_bool_t is_ip_addr;
@@ -586,109 +585,109 @@ PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
     /* See if "domain" contains just IP address */
     tmp_addr.addr.sa_family = sess->af;
     status = pj_inet_pton(sess->af, domain, 
-			  pj_sockaddr_get_addr(&tmp_addr));
+                          pj_sockaddr_get_addr(&tmp_addr));
     is_ip_addr = (status == PJ_SUCCESS);
 
     if (!is_ip_addr && resolver) {
-	/* Resolve with DNS SRV resolution, and fallback to DNS A resolution
-	 * if default_port is specified.
-	 */
-	unsigned opt = 0;
-	pj_str_t res_name;
+        /* Resolve with DNS SRV resolution, and fallback to DNS A resolution
+         * if default_port is specified.
+         */
+        unsigned opt = 0;
+        pj_str_t res_name;
 
-	switch (sess->conn_type) {
-	case PJ_TURN_TP_UDP:
-	    res_name = pj_str("_turn._udp.");
-	    break;
-	case PJ_TURN_TP_TCP:
-	    res_name = pj_str("_turn._tcp.");
-	    break;
-	case PJ_TURN_TP_TLS:
-	    res_name = pj_str("_turns._tcp.");
-	    break;
-	default:
-	    status = PJNATH_ETURNINTP;
-	    goto on_return;
-	}
+        switch (sess->conn_type) {
+        case PJ_TURN_TP_UDP:
+            res_name = pj_str("_turn._udp.");
+            break;
+        case PJ_TURN_TP_TCP:
+            res_name = pj_str("_turn._tcp.");
+            break;
+        case PJ_TURN_TP_TLS:
+            res_name = pj_str("_turns._tcp.");
+            break;
+        default:
+            status = PJNATH_ETURNINTP;
+            goto on_return;
+        }
 
-	/* Init DNS resolution option for IPv6 */
-	if (sess->af == pj_AF_INET6())
-	    opt |= PJ_DNS_SRV_RESOLVE_AAAA_ONLY;
+        /* Init DNS resolution option for IPv6 */
+        if (sess->af == pj_AF_INET6())
+            opt |= PJ_DNS_SRV_RESOLVE_AAAA_ONLY;
 
-	/* Fallback to DNS A only if default port is specified */
-	if (default_port>0 && default_port<65536) {
-	    if (sess->af == pj_AF_INET6())
-		opt |= PJ_DNS_SRV_FALLBACK_AAAA;
-	    else
-		opt |= PJ_DNS_SRV_FALLBACK_A;
-	    sess->default_port = (pj_uint16_t)default_port;
-	}
+        /* Fallback to DNS A only if default port is specified */
+        if (default_port>0 && default_port<65536) {
+            if (sess->af == pj_AF_INET6())
+                opt |= PJ_DNS_SRV_FALLBACK_AAAA;
+            else
+                opt |= PJ_DNS_SRV_FALLBACK_A;
+            sess->default_port = (pj_uint16_t)default_port;
+        }
 
-	PJ_LOG(5,(sess->obj_name, "Resolving %.*s%.*s with DNS SRV",
-		  (int)res_name.slen, res_name.ptr,
-		  (int)domain->slen, domain->ptr));
-	set_state(sess, PJ_TURN_STATE_RESOLVING);
+        PJ_LOG(5,(sess->obj_name, "Resolving %.*s%.*s with DNS SRV",
+                  (int)res_name.slen, res_name.ptr,
+                  (int)domain->slen, domain->ptr));
+        set_state(sess, PJ_TURN_STATE_RESOLVING);
 
-	/* User may have destroyed us in the callback */
-	if (sess->state != PJ_TURN_STATE_RESOLVING) {
-	    status = PJ_ECANCELLED;
-	    goto on_return;
-	}
+        /* User may have destroyed us in the callback */
+        if (sess->state != PJ_TURN_STATE_RESOLVING) {
+            status = PJ_ECANCELLED;
+            goto on_return;
+        }
 
-	/* Add reference before async DNS resolution */
-	pj_grp_lock_add_ref(sess->grp_lock);
+        /* Add reference before async DNS resolution */
+        pj_grp_lock_add_ref(sess->grp_lock);
 
-	status = pj_dns_srv_resolve(domain, &res_name, default_port, 
-				    sess->pool, resolver, opt, sess, 
-				    &dns_srv_resolver_cb, NULL);
-	if (status != PJ_SUCCESS) {
-	    set_state(sess, PJ_TURN_STATE_NULL);
-	    pj_grp_lock_dec_ref(sess->grp_lock);
-	    goto on_return;
-	}
+        status = pj_dns_srv_resolve(domain, &res_name, default_port, 
+                                    sess->pool, resolver, opt, sess, 
+                                    &dns_srv_resolver_cb, NULL);
+        if (status != PJ_SUCCESS) {
+            set_state(sess, PJ_TURN_STATE_NULL);
+            pj_grp_lock_dec_ref(sess->grp_lock);
+            goto on_return;
+        }
 
     } else {
-	/* Resolver is not specified, resolve with standard gethostbyname().
-	 * The default_port MUST be specified in this case.
-	 */
-	pj_addrinfo *ai;
-	unsigned i, cnt;
+        /* Resolver is not specified, resolve with standard gethostbyname().
+         * The default_port MUST be specified in this case.
+         */
+        pj_addrinfo *ai;
+        unsigned i, cnt;
 
-	/* Default port must be specified */
-	PJ_ASSERT_RETURN(default_port>0 && default_port<65536, PJ_EINVAL);
-	sess->default_port = (pj_uint16_t)default_port;
+        /* Default port must be specified */
+        PJ_ASSERT_RETURN(default_port>0 && default_port<65536, PJ_EINVAL);
+        sess->default_port = (pj_uint16_t)default_port;
 
-	cnt = PJ_TURN_MAX_DNS_SRV_CNT;
-	ai = (pj_addrinfo*)
-	     pj_pool_calloc(sess->pool, cnt, sizeof(pj_addrinfo));
+        cnt = PJ_TURN_MAX_DNS_SRV_CNT;
+        ai = (pj_addrinfo*)
+             pj_pool_calloc(sess->pool, cnt, sizeof(pj_addrinfo));
 
-	PJ_LOG(5,(sess->obj_name, "Resolving %.*s with DNS A",
-		  (int)domain->slen, domain->ptr));
-	set_state(sess, PJ_TURN_STATE_RESOLVING);
+        PJ_LOG(5,(sess->obj_name, "Resolving %.*s with DNS A",
+                  (int)domain->slen, domain->ptr));
+        set_state(sess, PJ_TURN_STATE_RESOLVING);
 
-	/* User may have destroyed us in the callback */
-	if (sess->state != PJ_TURN_STATE_RESOLVING) {
-	    status = PJ_ECANCELLED;
-	    goto on_return;
-	}
+        /* User may have destroyed us in the callback */
+        if (sess->state != PJ_TURN_STATE_RESOLVING) {
+            status = PJ_ECANCELLED;
+            goto on_return;
+        }
 
-	status = pj_getaddrinfo(sess->af, domain, &cnt, ai);
-	if (status != PJ_SUCCESS)
-	    goto on_return;
+        status = pj_getaddrinfo(sess->af, domain, &cnt, ai);
+        if (status != PJ_SUCCESS)
+            goto on_return;
 
-	sess->srv_addr_cnt = (pj_uint16_t)cnt;
-	sess->srv_addr_list = (pj_sockaddr*)
-		              pj_pool_calloc(sess->pool, cnt, 
-					     sizeof(pj_sockaddr));
-	for (i=0; i<cnt; ++i) {
-	    pj_sockaddr *addr = &sess->srv_addr_list[i];
-	    pj_memcpy(addr, &ai[i].ai_addr, sizeof(pj_sockaddr));
-	    addr->addr.sa_family = sess->af;
-	    pj_sockaddr_set_port(addr, sess->default_port);
-	}
+        sess->srv_addr_cnt = (pj_uint16_t)cnt;
+        sess->srv_addr_list = (pj_sockaddr*)
+                              pj_pool_calloc(sess->pool, cnt, 
+                                             sizeof(pj_sockaddr));
+        for (i=0; i<cnt; ++i) {
+            pj_sockaddr *addr = &sess->srv_addr_list[i];
+            pj_memcpy(addr, &ai[i].ai_addr, sizeof(pj_sockaddr));
+            addr->addr.sa_family = sess->af;
+            pj_sockaddr_set_port(addr, sess->default_port);
+        }
 
-	sess->srv_addr = &sess->srv_addr_list[0];
-	set_state(sess, PJ_TURN_STATE_RESOLVED);
+        sess->srv_addr = &sess->srv_addr_list[0];
+        set_state(sess, PJ_TURN_STATE_RESOLVED);
     }
 
 on_return:
@@ -701,7 +700,7 @@ on_return:
  * Set credential to be used by the session.
  */
 PJ_DEF(pj_status_t) pj_turn_session_set_credential(pj_turn_session *sess,
-					     const pj_stun_auth_cred *cred)
+                                             const pj_stun_auth_cred *cred)
 {
     PJ_ASSERT_RETURN(sess && cred, PJ_EINVAL);
     PJ_ASSERT_RETURN(sess->stun, PJ_EINVALIDOP);
@@ -720,7 +719,7 @@ PJ_DEF(pj_status_t) pj_turn_session_set_credential(pj_turn_session *sess,
  * Create TURN allocation.
  */
 PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
-					  const pj_turn_alloc_param *param)
+                                          const pj_turn_alloc_param *param)
 {
     pj_stun_tx_data *tdata;
     pj_bool_t retransmit;
@@ -728,31 +727,31 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
     PJ_ASSERT_RETURN(sess->state>PJ_TURN_STATE_NULL && 
-		     sess->state<=PJ_TURN_STATE_RESOLVED, 
-		     PJ_EINVALIDOP);
+                     sess->state<=PJ_TURN_STATE_RESOLVED, 
+                     PJ_EINVALIDOP);
     PJ_ASSERT_RETURN(param->peer_conn_type == PJ_TURN_TP_UDP ||
                      param->peer_conn_type == PJ_TURN_TP_TCP,
                      PJ_EINVAL);
 
     /* Verify address family in allocation param */
     if (param && param->af) {
-	PJ_ASSERT_RETURN(param->af==pj_AF_INET() || param->af==pj_AF_INET6(),
-			 PJ_EINVAL);
+        PJ_ASSERT_RETURN(param->af==pj_AF_INET() || param->af==pj_AF_INET6(),
+                         PJ_EINVAL);
     }
 
     pj_grp_lock_acquire(sess->grp_lock);
 
     if (param && param != &sess->alloc_param) 
-	pj_turn_alloc_param_copy(sess->pool, &sess->alloc_param, param);
+        pj_turn_alloc_param_copy(sess->pool, &sess->alloc_param, param);
 
     if (sess->state < PJ_TURN_STATE_RESOLVED) {
-	sess->pending_alloc = PJ_TRUE;
+        sess->pending_alloc = PJ_TRUE;
 
-	PJ_LOG(4,(sess->obj_name, "Pending ALLOCATE in state %s",
-		  state_names[sess->state]));
+        PJ_LOG(4,(sess->obj_name, "Pending ALLOCATE in state %s",
+                  state_names[sess->state]));
 
-	pj_grp_lock_release(sess->grp_lock);
-	return PJ_SUCCESS;
+        pj_grp_lock_release(sess->grp_lock);
+        return PJ_SUCCESS;
 
     }
 
@@ -761,46 +760,46 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
     
     /* Create a bare request */
     status = pj_stun_session_create_req(sess->stun, PJ_STUN_ALLOCATE_REQUEST,
-					PJ_STUN_MAGIC, NULL, &tdata);
+                                        PJ_STUN_MAGIC, NULL, &tdata);
     if (status != PJ_SUCCESS) {
-	pj_grp_lock_release(sess->grp_lock);
-	return status;
+        pj_grp_lock_release(sess->grp_lock);
+        return status;
     }
 
     /* MUST include REQUESTED-TRANSPORT attribute */
     pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-			      PJ_STUN_ATTR_REQ_TRANSPORT, 
-			      PJ_STUN_SET_RT_PROTO(param->peer_conn_type));
+                              PJ_STUN_ATTR_REQ_TRANSPORT, 
+                              PJ_STUN_SET_RT_PROTO(param->peer_conn_type));
 
     /* Include BANDWIDTH if requested */
     if (sess->alloc_param.bandwidth > 0) {
-	pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-				  PJ_STUN_ATTR_BANDWIDTH,
-				  sess->alloc_param.bandwidth);
+        pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+                                  PJ_STUN_ATTR_BANDWIDTH,
+                                  sess->alloc_param.bandwidth);
     }
 
     /* Include LIFETIME if requested */
     if (sess->alloc_param.lifetime > 0) {
-	pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-				  PJ_STUN_ATTR_LIFETIME,
-				  sess->alloc_param.lifetime);
+        pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+                                  PJ_STUN_ATTR_LIFETIME,
+                                  sess->alloc_param.lifetime);
     }
 
     /* Include ADDRESS-FAMILY if requested */
     if (sess->alloc_param.af || sess->af == pj_AF_INET6()) {
-	enum  { IPV4_AF_TYPE = 0x01 << 24,
-		IPV6_AF_TYPE = 0x02 << 24 };
+        enum  { IPV4_AF_TYPE = 0x01 << 24,
+                IPV6_AF_TYPE = 0x02 << 24 };
 
-	if (sess->alloc_param.af == pj_AF_INET6() ||
-	    (sess->alloc_param.af == 0 && sess->af == pj_AF_INET6()))
-	{
-	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-				      PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV6_AF_TYPE);
-	} else if (sess->alloc_param.af == pj_AF_INET()) {
-	    /* For IPv4, only add the attribute when explicitly requested */
-	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-				      PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV4_AF_TYPE);
-	}
+        if (sess->alloc_param.af == pj_AF_INET6() ||
+            (sess->alloc_param.af == 0 && sess->af == pj_AF_INET6()))
+        {
+            pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+                                      PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV6_AF_TYPE);
+        } else if (sess->alloc_param.af == pj_AF_INET()) {
+            /* For IPv4, only add the attribute when explicitly requested */
+            pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+                                      PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV4_AF_TYPE);
+        }
     }
 
     /* Server address must be set */
@@ -810,15 +809,15 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
     set_state(sess, PJ_TURN_STATE_ALLOCATING);
     retransmit = (sess->conn_type == PJ_TURN_TP_UDP);
     status = pj_stun_session_send_msg(sess->stun, NULL, PJ_FALSE, 
-				      retransmit, sess->srv_addr,
-				      pj_sockaddr_get_len(sess->srv_addr), 
-				      tdata);
+                                      retransmit, sess->srv_addr,
+                                      pj_sockaddr_get_len(sess->srv_addr), 
+                                      tdata);
     if (status != PJ_SUCCESS) {
-	/* Set state back to RESOLVED. We don't want to destroy session now,
-	 * let the application do it if it wants to.
-	 */
-	/* Set state back to RESOLVED may cause infinite loop (see #1942). */
-	//set_state(sess, PJ_TURN_STATE_RESOLVED);
+        /* Set state back to RESOLVED. We don't want to destroy session now,
+         * let the application do it if it wants to.
+         */
+        /* Set state back to RESOLVED may cause infinite loop (see #1942). */
+        //set_state(sess, PJ_TURN_STATE_RESOLVED);
     }
 
     pj_grp_lock_release(sess->grp_lock);
@@ -830,9 +829,9 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
  * Install or renew permissions
  */
 PJ_DEF(pj_status_t) pj_turn_session_set_perm( pj_turn_session *sess,
-					      unsigned addr_cnt,
-					      const pj_sockaddr addr[],
-					      unsigned options)
+                                              unsigned addr_cnt,
+                                              const pj_sockaddr addr[],
+                                              unsigned options)
 {
     pj_stun_tx_data *tdata;
     pj_hash_iterator_t it_buf, *it;
@@ -846,11 +845,11 @@ PJ_DEF(pj_status_t) pj_turn_session_set_perm( pj_turn_session *sess,
 
     /* Create a bare CreatePermission request */
     status = pj_stun_session_create_req(sess->stun, 
-					PJ_STUN_CREATE_PERM_REQUEST,
-					PJ_STUN_MAGIC, NULL, &tdata);
+                                        PJ_STUN_CREATE_PERM_REQUEST,
+                                        PJ_STUN_MAGIC, NULL, &tdata);
     if (status != PJ_SUCCESS) {
-	pj_grp_lock_release(sess->grp_lock);
-	return status;
+        pj_grp_lock_release(sess->grp_lock);
+        return status;
     }
 
     /* Create request token to map the request to the perm structures
@@ -860,49 +859,49 @@ PJ_DEF(pj_status_t) pj_turn_session_set_perm( pj_turn_session *sess,
 
     /* Process the addresses */
     for (i=0; i<addr_cnt; ++i) {
-	struct perm_t *perm;
+        struct perm_t *perm;
 
-	/* Lookup the perm structure and create if it doesn't exist */
-	perm = lookup_perm(sess, &addr[i], pj_sockaddr_get_len(&addr[i]),
-			   PJ_TRUE);
-	perm->renew = (options & 0x01);
+        /* Lookup the perm structure and create if it doesn't exist */
+        perm = lookup_perm(sess, &addr[i], pj_sockaddr_get_len(&addr[i]),
+                           PJ_TRUE);
+        perm->renew = (options & 0x01);
 
-	/* Only add to the request if the request doesn't contain this
-	 * address yet.
-	 */
-	if (perm->req_token != req_token) {
-	    perm->req_token = req_token;
+        /* Only add to the request if the request doesn't contain this
+         * address yet.
+         */
+        if (perm->req_token != req_token) {
+            perm->req_token = req_token;
 
-	    /* Add XOR-PEER-ADDRESS */
-	    status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
-						   PJ_STUN_ATTR_XOR_PEER_ADDR,
-						   PJ_TRUE,
-						   &addr[i],
-						   sizeof(addr[i]));
-	    if (status != PJ_SUCCESS)
-		goto on_error;
+            /* Add XOR-PEER-ADDRESS */
+            status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
+                                                   PJ_STUN_ATTR_XOR_PEER_ADDR,
+                                                   PJ_TRUE,
+                                                   &addr[i],
+                                                   sizeof(addr[i]));
+            if (status != PJ_SUCCESS)
+                goto on_error;
 
-	    ++attr_added;
-	}
+            ++attr_added;
+        }
     }
 
     /* No address to set */
     if (attr_added == 0) {
-	pj_stun_msg_destroy_tdata(sess->stun, tdata);
-	pj_grp_lock_release(sess->grp_lock);
-	return PJ_SUCCESS;
+        pj_stun_msg_destroy_tdata(sess->stun, tdata);
+        pj_grp_lock_release(sess->grp_lock);
+        return PJ_SUCCESS;
     }
 
     /* Send the request */
     status = pj_stun_session_send_msg(sess->stun, req_token, PJ_FALSE, 
-				      (sess->conn_type==PJ_TURN_TP_UDP),
-				      sess->srv_addr,
-				      pj_sockaddr_get_len(sess->srv_addr), 
-				      tdata);
+                                      (sess->conn_type==PJ_TURN_TP_UDP),
+                                      sess->srv_addr,
+                                      pj_sockaddr_get_len(sess->srv_addr), 
+                                      tdata);
     if (status != PJ_SUCCESS) {
-	/* tdata is already destroyed */
-	tdata = NULL;
-	goto on_error;
+        /* tdata is already destroyed */
+        tdata = NULL;
+        goto on_error;
     }
 
     pj_grp_lock_release(sess->grp_lock);
@@ -911,16 +910,16 @@ PJ_DEF(pj_status_t) pj_turn_session_set_perm( pj_turn_session *sess,
 on_error:
     /* destroy tdata */
     if (tdata) {
-	pj_stun_msg_destroy_tdata(sess->stun, tdata);
+        pj_stun_msg_destroy_tdata(sess->stun, tdata);
     }
     /* invalidate perm structures associated with this request */
     it = pj_hash_first(sess->perm_table, &it_buf);
     while (it) {
-	struct perm_t *perm = (struct perm_t*)
-			      pj_hash_this(sess->perm_table, it);
-	it = pj_hash_next(sess->perm_table, it);
-	if (perm->req_token == req_token)
-	    invalidate_perm(sess, perm);
+        struct perm_t *perm = (struct perm_t*)
+                              pj_hash_this(sess->perm_table, it);
+        it = pj_hash_next(sess->perm_table, it);
+        if (perm->req_token == req_token)
+            invalidate_perm(sess, perm);
     }
     pj_grp_lock_release(sess->grp_lock);
     return status;
@@ -938,35 +937,35 @@ static void send_refresh(pj_turn_session *sess, int lifetime)
 
     /* Create a bare REFRESH request */
     status = pj_stun_session_create_req(sess->stun, PJ_STUN_REFRESH_REQUEST,
-					PJ_STUN_MAGIC, NULL, &tdata);
+                                        PJ_STUN_MAGIC, NULL, &tdata);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Add LIFETIME */
     if (lifetime >= 0) {
-	pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-				  PJ_STUN_ATTR_LIFETIME, lifetime);
+        pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+                                  PJ_STUN_ATTR_LIFETIME, lifetime);
     }
 
     /* Send request */
     if (lifetime == 0) {
-	set_state(sess, PJ_TURN_STATE_DEALLOCATING);
+        set_state(sess, PJ_TURN_STATE_DEALLOCATING);
     }
 
     status = pj_stun_session_send_msg(sess->stun, NULL, PJ_FALSE, 
-				      (sess->conn_type==PJ_TURN_TP_UDP),
-				      sess->srv_addr,
-				      pj_sockaddr_get_len(sess->srv_addr), 
-				      tdata);
+                                      (sess->conn_type==PJ_TURN_TP_UDP),
+                                      sess->srv_addr,
+                                      pj_sockaddr_get_len(sess->srv_addr), 
+                                      tdata);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     return;
 
 on_error:
     if (lifetime == 0) {
-	set_state(sess, PJ_TURN_STATE_DEALLOCATED);
-	sess_shutdown(sess, status);
+        set_state(sess, PJ_TURN_STATE_DEALLOCATED);
+        sess_shutdown(sess, status);
     }
 }
 
@@ -975,21 +974,21 @@ on_error:
  * Relay data to the specified peer through the session.
  */
 PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
-					    const pj_uint8_t *pkt,
-					    unsigned pkt_len,
-					    const pj_sockaddr_t *addr,
-					    unsigned addr_len)
+                                            const pj_uint8_t *pkt,
+                                            unsigned pkt_len,
+                                            const pj_sockaddr_t *addr,
+                                            unsigned addr_len)
 {
     struct ch_t *ch;
     struct perm_t *perm;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && pkt && pkt_len && addr && addr_len, 
-		     PJ_EINVAL);
+                     PJ_EINVAL);
 
     /* Return error if we're not ready */
     if (sess->state != PJ_TURN_STATE_READY) {
-	return PJ_EIGNORED;
+        return PJ_EIGNORED;
     }
 
     /* Lock session now */
@@ -998,95 +997,95 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
     /* Lookup permission first */
     perm = lookup_perm(sess, addr, pj_sockaddr_get_len(addr), PJ_FALSE);
     if (perm == NULL) {
-	/* Permission doesn't exist, install it first */
-	char ipstr[PJ_INET6_ADDRSTRLEN+2];
+        /* Permission doesn't exist, install it first */
+        char ipstr[PJ_INET6_ADDRSTRLEN+2];
 
-	PJ_LOG(4,(sess->obj_name, 
-		  "sendto(): IP %s has no permission, requesting it first..",
-		  pj_sockaddr_print(addr, ipstr, sizeof(ipstr), 2)));
+        PJ_LOG(4,(sess->obj_name, 
+                  "sendto(): IP %s has no permission, requesting it first..",
+                  pj_sockaddr_print(addr, ipstr, sizeof(ipstr), 2)));
 
-	status = pj_turn_session_set_perm(sess, 1, (const pj_sockaddr*)addr, 
-					  0);
-	if (status != PJ_SUCCESS) {
-	    pj_grp_lock_release(sess->grp_lock);
-	    return status;
-	}
+        status = pj_turn_session_set_perm(sess, 1, (const pj_sockaddr*)addr, 
+                                          0);
+        if (status != PJ_SUCCESS) {
+            pj_grp_lock_release(sess->grp_lock);
+            return status;
+        }
     }
 
     /* If peer connection is TCP (RFC 6062), send it directly */
     if (sess->alloc_param.peer_conn_type == PJ_TURN_TP_TCP) {
-	status = sess->cb.on_send_pkt(sess, pkt, pkt_len, addr, addr_len);
-	goto on_return;
+        status = sess->cb.on_send_pkt(sess, pkt, pkt_len, addr, addr_len);
+        goto on_return;
     }
 
     /* See if the peer is bound to a channel number */
     ch = lookup_ch_by_addr(sess, addr, pj_sockaddr_get_len(addr), 
-			   PJ_FALSE, PJ_FALSE);
+                           PJ_FALSE, PJ_FALSE);
     if (ch && ch->num != PJ_TURN_INVALID_CHANNEL && ch->bound) {
-	unsigned total_len;
+        unsigned total_len;
 
-	/* Peer is assigned a channel number, we can use ChannelData */
-	pj_turn_channel_data *cd = (pj_turn_channel_data*)sess->tx_pkt;
-	
-	pj_assert(sizeof(*cd)==4);
+        /* Peer is assigned a channel number, we can use ChannelData */
+        pj_turn_channel_data *cd = (pj_turn_channel_data*)sess->tx_pkt;
+        
+        pj_assert(sizeof(*cd)==4);
 
-	/* Calculate total length, including paddings */
-	total_len = (pkt_len + sizeof(*cd) + 3) & (~3);
-	if (total_len > sizeof(sess->tx_pkt)) {
-	    status = PJ_ETOOBIG;
-	    goto on_return;
-	}
+        /* Calculate total length, including paddings */
+        total_len = (pkt_len + sizeof(*cd) + 3) & (~3);
+        if (total_len > sizeof(sess->tx_pkt)) {
+            status = PJ_ETOOBIG;
+            goto on_return;
+        }
 
-	cd->ch_number = pj_htons((pj_uint16_t)ch->num);
-	cd->length = pj_htons((pj_uint16_t)pkt_len);
-	pj_memcpy(cd+1, pkt, pkt_len);
+        cd->ch_number = pj_htons((pj_uint16_t)ch->num);
+        cd->length = pj_htons((pj_uint16_t)pkt_len);
+        pj_memcpy(cd+1, pkt, pkt_len);
 
-	pj_assert(sess->srv_addr != NULL);
+        pj_assert(sess->srv_addr != NULL);
 
-	status = sess->cb.on_send_pkt(sess, sess->tx_pkt, total_len,
-				      sess->srv_addr,
-				      pj_sockaddr_get_len(sess->srv_addr));
+        status = sess->cb.on_send_pkt(sess, sess->tx_pkt, total_len,
+                                      sess->srv_addr,
+                                      pj_sockaddr_get_len(sess->srv_addr));
 
     } else {
-	/* Use Send Indication. */
-	pj_stun_sockaddr_attr peer_attr;
-	pj_stun_binary_attr data_attr;
-	pj_stun_msg send_ind;
-	pj_size_t send_ind_len;
+        /* Use Send Indication. */
+        pj_stun_sockaddr_attr peer_attr;
+        pj_stun_binary_attr data_attr;
+        pj_stun_msg send_ind;
+        pj_size_t send_ind_len;
 
-	/* Increment counter */
-	++sess->send_ind_tsx_id[2];
+        /* Increment counter */
+        ++sess->send_ind_tsx_id[2];
 
-	/* Create blank SEND-INDICATION */
-	status = pj_stun_msg_init(&send_ind, PJ_STUN_SEND_INDICATION,
-				  PJ_STUN_MAGIC, 
-				  (const pj_uint8_t*)sess->send_ind_tsx_id);
-	if (status != PJ_SUCCESS)
-	    goto on_return;
+        /* Create blank SEND-INDICATION */
+        status = pj_stun_msg_init(&send_ind, PJ_STUN_SEND_INDICATION,
+                                  PJ_STUN_MAGIC, 
+                                  (const pj_uint8_t*)sess->send_ind_tsx_id);
+        if (status != PJ_SUCCESS)
+            goto on_return;
 
-	/* Add XOR-PEER-ADDRESS */
-	pj_stun_sockaddr_attr_init(&peer_attr, PJ_STUN_ATTR_XOR_PEER_ADDR,
-				   PJ_TRUE, addr, addr_len);
-	pj_stun_msg_add_attr(&send_ind, (pj_stun_attr_hdr*)&peer_attr);
+        /* Add XOR-PEER-ADDRESS */
+        pj_stun_sockaddr_attr_init(&peer_attr, PJ_STUN_ATTR_XOR_PEER_ADDR,
+                                   PJ_TRUE, addr, addr_len);
+        pj_stun_msg_add_attr(&send_ind, (pj_stun_attr_hdr*)&peer_attr);
 
-	/* Add DATA attribute */
-	pj_stun_binary_attr_init(&data_attr, NULL, PJ_STUN_ATTR_DATA, NULL, 0);
-	data_attr.data = (pj_uint8_t*)pkt;
-	data_attr.length = pkt_len;
-	pj_stun_msg_add_attr(&send_ind, (pj_stun_attr_hdr*)&data_attr);
+        /* Add DATA attribute */
+        pj_stun_binary_attr_init(&data_attr, NULL, PJ_STUN_ATTR_DATA, NULL, 0);
+        data_attr.data = (pj_uint8_t*)pkt;
+        data_attr.length = pkt_len;
+        pj_stun_msg_add_attr(&send_ind, (pj_stun_attr_hdr*)&data_attr);
 
-	/* Encode the message */
-	status = pj_stun_msg_encode(&send_ind, sess->tx_pkt, 
-				    sizeof(sess->tx_pkt), 0,
-				    NULL, &send_ind_len);
-	if (status != PJ_SUCCESS)
-	    goto on_return;
+        /* Encode the message */
+        status = pj_stun_msg_encode(&send_ind, sess->tx_pkt, 
+                                    sizeof(sess->tx_pkt), 0,
+                                    NULL, &send_ind_len);
+        if (status != PJ_SUCCESS)
+            goto on_return;
 
-	/* Send the Send Indication */
-	status = sess->cb.on_send_pkt(sess, sess->tx_pkt, 
-				      (unsigned)send_ind_len,
-				      sess->srv_addr,
-				      pj_sockaddr_get_len(sess->srv_addr));
+        /* Send the Send Indication */
+        status = sess->cb.on_send_pkt(sess, sess->tx_pkt, 
+                                      (unsigned)send_ind_len,
+                                      sess->srv_addr,
+                                      pj_sockaddr_get_len(sess->srv_addr));
     }
 
 on_return:
@@ -1099,8 +1098,8 @@ on_return:
  * Bind a peer address to a channel number.
  */
 PJ_DEF(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
-						 const pj_sockaddr_t *peer_adr,
-						 unsigned addr_len)
+                                                 const pj_sockaddr_t *peer_adr,
+                                                 unsigned addr_len)
 {
     struct ch_t *ch;
     pj_stun_tx_data *tdata;
@@ -1114,43 +1113,43 @@ PJ_DEF(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
 
     /* Create blank ChannelBind request */
     status = pj_stun_session_create_req(sess->stun, 
-					PJ_STUN_CHANNEL_BIND_REQUEST,
-					PJ_STUN_MAGIC, NULL, &tdata);
+                                        PJ_STUN_CHANNEL_BIND_REQUEST,
+                                        PJ_STUN_MAGIC, NULL, &tdata);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /* Lookup if this peer has already been assigned a number */
     ch = lookup_ch_by_addr(sess, peer_adr, pj_sockaddr_get_len(peer_adr),
-			   PJ_TRUE, PJ_FALSE);
+                           PJ_TRUE, PJ_FALSE);
     pj_assert(ch);
 
     if (ch->num != PJ_TURN_INVALID_CHANNEL) {
-	/* Channel is already bound. This is a refresh request. */
-	ch_num = ch->num;
+        /* Channel is already bound. This is a refresh request. */
+        ch_num = ch->num;
     } else {
-	PJ_ASSERT_ON_FAIL(sess->next_ch <= PJ_TURN_CHANNEL_MAX, 
-			    {status=PJ_ETOOMANY; goto on_return;});
-	ch->num = ch_num = sess->next_ch++;
+        PJ_ASSERT_ON_FAIL(sess->next_ch <= PJ_TURN_CHANNEL_MAX, 
+                            {status=PJ_ETOOMANY; goto on_return;});
+        ch->num = ch_num = sess->next_ch++;
     }
 
     /* Add CHANNEL-NUMBER attribute */
     pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-			      PJ_STUN_ATTR_CHANNEL_NUMBER,
-			      PJ_STUN_SET_CH_NB(ch_num));
+                              PJ_STUN_ATTR_CHANNEL_NUMBER,
+                              PJ_STUN_SET_CH_NB(ch_num));
 
     /* Add XOR-PEER-ADDRESS attribute */
     pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
-				  PJ_STUN_ATTR_XOR_PEER_ADDR, PJ_TRUE,
-				  peer_adr, addr_len);
+                                  PJ_STUN_ATTR_XOR_PEER_ADDR, PJ_TRUE,
+                                  peer_adr, addr_len);
 
     /* Send the request, associate peer data structure with tdata 
      * for future reference when we receive the ChannelBind response.
      */
     status = pj_stun_session_send_msg(sess->stun, ch, PJ_FALSE, 
-				      (sess->conn_type==PJ_TURN_TP_UDP),
-				      sess->srv_addr,
-				      pj_sockaddr_get_len(sess->srv_addr),
-				      tdata);
+                                      (sess->conn_type==PJ_TURN_TP_UDP),
+                                      sess->srv_addr,
+                                      pj_sockaddr_get_len(sess->srv_addr),
+                                      tdata);
 
 on_return:
     pj_grp_lock_release(sess->grp_lock);
@@ -1162,33 +1161,33 @@ on_return:
  * Send ConnectionBind request.
  */
 PJ_DEF(pj_status_t) pj_turn_session_connection_bind(
-					    pj_turn_session *sess,
-					    pj_pool_t *pool,
-					    pj_uint32_t conn_id,
-					    const pj_sockaddr_t *peer_addr,
-					    unsigned addr_len)
+                                            pj_turn_session *sess,
+                                            pj_pool_t *pool,
+                                            pj_uint32_t conn_id,
+                                            const pj_sockaddr_t *peer_addr,
+                                            unsigned addr_len)
 {
     pj_stun_tx_data *tdata;
     struct conn_bind_t *conn_bind;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && pool && conn_id && peer_addr && addr_len,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
     PJ_ASSERT_RETURN(sess->state == PJ_TURN_STATE_READY, PJ_EINVALIDOP);
 
     pj_grp_lock_acquire(sess->grp_lock);
 
     /* Create blank ConnectionBind request */
     status = pj_stun_session_create_req(sess->stun, 
-					PJ_STUN_CONNECTION_BIND_REQUEST,
-					PJ_STUN_MAGIC, NULL, &tdata);
+                                        PJ_STUN_CONNECTION_BIND_REQUEST,
+                                        PJ_STUN_MAGIC, NULL, &tdata);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /* Add CONNECTION_ID attribute */
     pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-			      PJ_STUN_ATTR_CONNECTION_ID,
-			      conn_id);
+                              PJ_STUN_ATTR_CONNECTION_ID,
+                              conn_id);
 
     conn_bind = PJ_POOL_ZALLOC_T(pool, struct conn_bind_t);
     conn_bind->id = conn_id;
@@ -1199,7 +1198,7 @@ PJ_DEF(pj_status_t) pj_turn_session_connection_bind(
      * for future reference when we receive the ConnectionBind response.
      */
     status = pj_stun_session_send_msg(sess->stun, conn_bind, PJ_FALSE,
-				      PJ_FALSE, peer_addr, addr_len, tdata);
+                                      PJ_FALSE, peer_addr, addr_len, tdata);
 
 on_return:
     pj_grp_lock_release(sess->grp_lock);
@@ -1210,8 +1209,8 @@ on_return:
  * Send Connect request.
  */
 PJ_DEF(pj_status_t) pj_turn_session_connect(pj_turn_session *sess,
-					    const pj_sockaddr_t *peer_addr,
-					    unsigned addr_len)
+                                            const pj_sockaddr_t *peer_addr,
+                                            unsigned addr_len)
 {
     pj_stun_tx_data *tdata;
     pj_status_t status;
@@ -1223,18 +1222,18 @@ PJ_DEF(pj_status_t) pj_turn_session_connect(pj_turn_session *sess,
 
     /* Create blank Connect request */
     status = pj_stun_session_create_req(sess->stun, PJ_STUN_CONNECT_REQUEST,
-    					PJ_STUN_MAGIC, NULL, &tdata);
+                                        PJ_STUN_MAGIC, NULL, &tdata);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
-					   PJ_STUN_ATTR_XOR_PEER_ADDR,
-					   PJ_TRUE, peer_addr, addr_len);
+                                           PJ_STUN_ATTR_XOR_PEER_ADDR,
+                                           PJ_TRUE, peer_addr, addr_len);
     if (status != PJ_SUCCESS) goto on_return;
     status = pj_stun_session_send_msg(sess->stun, (void *)peer_addr, PJ_FALSE,
-				      PJ_FALSE, sess->srv_addr,
-				      pj_sockaddr_get_len(sess->srv_addr),
-				      tdata);
+                                      PJ_FALSE, sess->srv_addr,
+                                      pj_sockaddr_get_len(sess->srv_addr),
+                                      tdata);
 
 on_return:
     pj_grp_lock_release(sess->grp_lock);
@@ -1242,9 +1241,9 @@ on_return:
 }
 
 PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
-					      void *pkt,
-					      pj_size_t pkt_len,
-					      pj_size_t *parsed_len)
+                                              void *pkt,
+                                              pj_size_t pkt_len,
+                                              pj_size_t *parsed_len)
 {
     pj_turn_session_on_rx_pkt_param prm;
     pj_status_t status;
@@ -1254,7 +1253,7 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
     prm.pkt_len = pkt_len;
     status = pj_turn_session_on_rx_pkt2(sess, &prm);
     if (status == PJ_SUCCESS && parsed_len)
-	*parsed_len = prm.parsed_len;
+        *parsed_len = prm.parsed_len;
     return status;
 }
 
@@ -1263,8 +1262,8 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
  * The packet maybe a STUN packet or ChannelData packet.
  */
 PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt2(
-				pj_turn_session *sess,
-				pj_turn_session_on_rx_pkt_param *prm)
+                                pj_turn_session *sess,
+                                pj_turn_session_on_rx_pkt_param *prm)
 {
     pj_bool_t is_stun;
     pj_status_t status;
@@ -1283,67 +1282,67 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt2(
     is_stun = ((((pj_uint8_t*)prm->pkt)[0] & 0xC0) == 0);
 
     if (is_stun) {
-	/* This looks like STUN, give it to the STUN session */
-	unsigned options;
-	const pj_sockaddr_t *src_addr = prm->src_addr?
-					prm->src_addr:sess->srv_addr;
-	unsigned src_addr_len = prm->src_addr_len? prm->src_addr_len:
-				pj_sockaddr_get_len(sess->srv_addr);
+        /* This looks like STUN, give it to the STUN session */
+        unsigned options;
+        const pj_sockaddr_t *src_addr = prm->src_addr?
+                                        prm->src_addr:sess->srv_addr;
+        unsigned src_addr_len = prm->src_addr_len? prm->src_addr_len:
+                                pj_sockaddr_get_len(sess->srv_addr);
 
-	options = PJ_STUN_CHECK_PACKET | PJ_STUN_NO_FINGERPRINT_CHECK;
-	if (is_datagram)
-	    options |= PJ_STUN_IS_DATAGRAM;
-	status=pj_stun_session_on_rx_pkt(sess->stun, prm->pkt, prm->pkt_len,
-					 options, NULL, &prm->parsed_len,
-					 src_addr, src_addr_len);
+        options = PJ_STUN_CHECK_PACKET | PJ_STUN_NO_FINGERPRINT_CHECK;
+        if (is_datagram)
+            options |= PJ_STUN_IS_DATAGRAM;
+        status=pj_stun_session_on_rx_pkt(sess->stun, prm->pkt, prm->pkt_len,
+                                         options, NULL, &prm->parsed_len,
+                                         src_addr, src_addr_len);
 
     } else {
-	/* This must be ChannelData. */
-	pj_turn_channel_data cd;
-	struct ch_t *ch;
+        /* This must be ChannelData. */
+        pj_turn_channel_data cd;
+        struct ch_t *ch;
 
-	if (prm->pkt_len < 4) {
-	    prm->parsed_len = 0;
-	    status = PJ_ETOOSMALL;
-	    goto on_return;
-	}
+        if (prm->pkt_len < 4) {
+            prm->parsed_len = 0;
+            status = PJ_ETOOSMALL;
+            goto on_return;
+        }
 
-	/* Decode ChannelData packet */
-	pj_memcpy(&cd, prm->pkt, sizeof(pj_turn_channel_data));
-	cd.ch_number = pj_ntohs(cd.ch_number);
-	cd.length = pj_ntohs(cd.length);
+        /* Decode ChannelData packet */
+        pj_memcpy(&cd, prm->pkt, sizeof(pj_turn_channel_data));
+        cd.ch_number = pj_ntohs(cd.ch_number);
+        cd.length = pj_ntohs(cd.length);
 
-	/* Check that size is sane */
-	if (prm->pkt_len < cd.length+sizeof(cd)) {
-	    if (is_datagram) {
-		/* Discard the datagram */
-		prm->parsed_len = prm->pkt_len;
-	    } else {
-		/* Insufficient fragment */
-		prm->parsed_len = 0;
-	    }
-	    status = PJ_ETOOSMALL;
-	    goto on_return;
-	} else {
-	    /* Apply padding too */
-	    prm->parsed_len = ((cd.length + 3) & (~3)) + sizeof(cd);
-	}
+        /* Check that size is sane */
+        if (prm->pkt_len < cd.length+sizeof(cd)) {
+            if (is_datagram) {
+                /* Discard the datagram */
+                prm->parsed_len = prm->pkt_len;
+            } else {
+                /* Insufficient fragment */
+                prm->parsed_len = 0;
+            }
+            status = PJ_ETOOSMALL;
+            goto on_return;
+        } else {
+            /* Apply padding too */
+            prm->parsed_len = ((cd.length + 3) & (~3)) + sizeof(cd);
+        }
 
-	/* Lookup channel */
-	ch = lookup_ch_by_chnum(sess, cd.ch_number);
-	if (!ch || !ch->bound) {
-	    status = PJ_ENOTFOUND;
-	    goto on_return;
-	}
+        /* Lookup channel */
+        ch = lookup_ch_by_chnum(sess, cd.ch_number);
+        if (!ch || !ch->bound) {
+            status = PJ_ENOTFOUND;
+            goto on_return;
+        }
 
-	/* Notify application */
-	if (sess->cb.on_rx_data) {
-	    (*sess->cb.on_rx_data)(sess, ((pj_uint8_t*)prm->pkt)+sizeof(cd), 
-				   cd.length, &ch->addr,
-				   pj_sockaddr_get_len(&ch->addr));
-	}
+        /* Notify application */
+        if (sess->cb.on_rx_data) {
+            (*sess->cb.on_rx_data)(sess, ((pj_uint8_t*)prm->pkt)+sizeof(cd), 
+                                   cd.length, &ch->addr,
+                                   pj_sockaddr_get_len(&ch->addr));
+        }
 
-	status = PJ_SUCCESS;
+        status = PJ_SUCCESS;
     }
 
 on_return:
@@ -1356,11 +1355,11 @@ on_return:
  * This is a callback from STUN session to send outgoing packet.
  */
 static pj_status_t stun_on_send_msg(pj_stun_session *stun,
-				    void *token,
-				    const void *pkt,
-				    pj_size_t pkt_size,
-				    const pj_sockaddr_t *dst_addr,
-				    unsigned addr_len)
+                                    void *token,
+                                    const void *pkt,
+                                    pj_size_t pkt_size,
+                                    const pj_sockaddr_t *dst_addr,
+                                    unsigned addr_len)
 {
     pj_turn_session *sess;
 
@@ -1368,13 +1367,13 @@ static pj_status_t stun_on_send_msg(pj_stun_session *stun,
 
     sess = (pj_turn_session*) pj_stun_session_get_user_data(stun);
     if (sess->cb.on_stun_send_pkt) {
-    	return (*sess->cb.on_stun_send_pkt)(sess, (const pj_uint8_t*)pkt,
-				       	    (unsigned)pkt_size,
-				       	    dst_addr, addr_len);
+        return (*sess->cb.on_stun_send_pkt)(sess, (const pj_uint8_t*)pkt,
+                                            (unsigned)pkt_size,
+                                            dst_addr, addr_len);
     } else {
-    	return (*sess->cb.on_send_pkt)(sess, (const pj_uint8_t*)pkt,
-				       (unsigned)pkt_size,
-				       dst_addr, addr_len);
+        return (*sess->cb.on_send_pkt)(sess, (const pj_uint8_t*)pkt,
+                                       (unsigned)pkt_size,
+                                       dst_addr, addr_len);
     }
 }
 
@@ -1384,54 +1383,54 @@ static pj_status_t stun_on_send_msg(pj_stun_session *stun,
  * server if we have one.
  */
 static void on_session_fail( pj_turn_session *sess, 
-			     enum pj_stun_method_e method,
-			     pj_status_t status,
-			     const pj_str_t *reason)
+                             enum pj_stun_method_e method,
+                             pj_status_t status,
+                             const pj_str_t *reason)
 {
     sess->last_status = status;
 
     do {
-	pj_str_t reason1;
-	char err_msg[PJ_ERR_MSG_SIZE];
+        pj_str_t reason1;
+        char err_msg[PJ_ERR_MSG_SIZE];
 
-	if (reason == NULL) {
-	    pj_strerror(status, err_msg, sizeof(err_msg));
-	    reason1 = pj_str(err_msg);
-	    reason = &reason1;
-	}
+        if (reason == NULL) {
+            pj_strerror(status, err_msg, sizeof(err_msg));
+            reason1 = pj_str(err_msg);
+            reason = &reason1;
+        }
 
-	PJ_LOG(4,(sess->obj_name, "%s error: %.*s",
-		  pj_stun_get_method_name(method),
-		  (int)reason->slen, reason->ptr));
+        PJ_LOG(4,(sess->obj_name, "%s error: %.*s",
+                  pj_stun_get_method_name(method),
+                  (int)reason->slen, reason->ptr));
 
-	/* If this is ALLOCATE response and we don't have more server 
-	 * addresses to try, notify application and destroy the TURN
-	 * session.
-	 */
-	if (method==PJ_STUN_ALLOCATE_METHOD &&
-	    sess->srv_addr == &sess->srv_addr_list[sess->srv_addr_cnt-1]) 
-	{
+        /* If this is ALLOCATE response and we don't have more server 
+         * addresses to try, notify application and destroy the TURN
+         * session.
+         */
+        if (method==PJ_STUN_ALLOCATE_METHOD &&
+            sess->srv_addr == &sess->srv_addr_list[sess->srv_addr_cnt-1]) 
+        {
 
-	    set_state(sess, PJ_TURN_STATE_DEALLOCATED);
-	    sess_shutdown(sess, status);
-	    return;
-	}
+            set_state(sess, PJ_TURN_STATE_DEALLOCATED);
+            sess_shutdown(sess, status);
+            return;
+        }
 
-	/* Otherwise if this is not ALLOCATE response, notify application
-	 * that session has been TERMINATED.
-	 */
-	if (method!=PJ_STUN_ALLOCATE_METHOD) {
-	    set_state(sess, PJ_TURN_STATE_DEALLOCATED);
-	    sess_shutdown(sess, status);
-	    return;
-	}
+        /* Otherwise if this is not ALLOCATE response, notify application
+         * that session has been TERMINATED.
+         */
+        if (method!=PJ_STUN_ALLOCATE_METHOD) {
+            set_state(sess, PJ_TURN_STATE_DEALLOCATED);
+            sess_shutdown(sess, status);
+            return;
+        }
 
-	/* Try next server */
-	++sess->srv_addr;
-	reason = NULL;
+        /* Try next server */
+        ++sess->srv_addr;
+        reason = NULL;
 
-	PJ_LOG(4,(sess->obj_name, "Trying next server"));
-	set_state(sess, PJ_TURN_STATE_RESOLVED);
+        PJ_LOG(4,(sess->obj_name, "Trying next server"));
+        set_state(sess, PJ_TURN_STATE_RESOLVED);
 
     } while (0);
 }
@@ -1441,8 +1440,8 @@ static void on_session_fail( pj_turn_session *sess,
  * Handle successful response to ALLOCATE or REFRESH request.
  */
 static void on_allocate_success(pj_turn_session *sess, 
-				enum pj_stun_method_e method,
-				const pj_stun_msg *msg)
+                                enum pj_stun_method_e method,
+                                const pj_stun_msg *msg)
 {
     const pj_stun_lifetime_attr *lf_attr;
     const pj_stun_xor_relayed_addr_attr *raddr_attr;
@@ -1451,18 +1450,18 @@ static void on_allocate_success(pj_turn_session *sess,
 
     /* Must have LIFETIME attribute */
     lf_attr = (const pj_stun_lifetime_attr*)
-	      pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_LIFETIME, 0);
+              pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_LIFETIME, 0);
     if (lf_attr == NULL) {
-	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
-			pj_cstr(&s, "Error: Missing LIFETIME attribute"));
-	return;
+        on_session_fail(sess, method, PJNATH_EINSTUNMSG,
+                        pj_cstr(&s, "Error: Missing LIFETIME attribute"));
+        return;
     }
 
     /* If LIFETIME is zero, this is a deallocation */
     if (lf_attr->value == 0) {
-	set_state(sess, PJ_TURN_STATE_DEALLOCATED);
-	sess_shutdown(sess, PJ_SUCCESS);
-	return;
+        set_state(sess, PJ_TURN_STATE_DEALLOCATED);
+        sess_shutdown(sess, PJ_SUCCESS);
+        return;
     }
 
     /* Update lifetime and keep-alive interval */
@@ -1470,79 +1469,79 @@ static void on_allocate_success(pj_turn_session *sess,
     pj_gettimeofday(&sess->expiry);
 
     if (sess->lifetime < PJ_TURN_KEEP_ALIVE_SEC) {
-	if (sess->lifetime <= 2) {
-	    on_session_fail(sess, method, PJ_ETOOSMALL,
-			     pj_cstr(&s, "Error: LIFETIME too small"));
-	    return;
-	}
-	sess->ka_interval = sess->lifetime - 2;
-	sess->expiry.sec += (sess->ka_interval-1);
+        if (sess->lifetime <= 2) {
+            on_session_fail(sess, method, PJ_ETOOSMALL,
+                             pj_cstr(&s, "Error: LIFETIME too small"));
+            return;
+        }
+        sess->ka_interval = sess->lifetime - 2;
+        sess->expiry.sec += (sess->ka_interval-1);
     } else {
-	int timeout;
+        int timeout;
 
-	sess->ka_interval = PJ_TURN_KEEP_ALIVE_SEC;
+        sess->ka_interval = PJ_TURN_KEEP_ALIVE_SEC;
 
-	timeout = sess->lifetime - PJ_TURN_REFRESH_SEC_BEFORE;
-	if (timeout < sess->ka_interval)
-	    timeout = sess->ka_interval - 1;
+        timeout = sess->lifetime - PJ_TURN_REFRESH_SEC_BEFORE;
+        if (timeout < sess->ka_interval)
+            timeout = sess->ka_interval - 1;
 
-	sess->expiry.sec += timeout;
+        sess->expiry.sec += timeout;
     }
 
     /* Check that relayed transport address contains correct
      * address family.
      */
     raddr_attr = (const pj_stun_xor_relayed_addr_attr*)
-		 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_RELAYED_ADDR, 0);
+                 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_RELAYED_ADDR, 0);
     if (raddr_attr == NULL && method==PJ_STUN_ALLOCATE_METHOD) {
-	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
-		        pj_cstr(&s, "Error: Received ALLOCATE without "
-				    "RELAY-ADDRESS attribute"));
-	return;
+        on_session_fail(sess, method, PJNATH_EINSTUNMSG,
+                        pj_cstr(&s, "Error: Received ALLOCATE without "
+                                    "RELAY-ADDRESS attribute"));
+        return;
     }
     if (raddr_attr &&
-	((sess->alloc_param.af != 0 &&
-	  raddr_attr->sockaddr.addr.sa_family != sess->alloc_param.af) ||
-	 (sess->alloc_param.af == 0 &&
-	  raddr_attr->sockaddr.addr.sa_family != sess->af)))
+        ((sess->alloc_param.af != 0 &&
+          raddr_attr->sockaddr.addr.sa_family != sess->alloc_param.af) ||
+         (sess->alloc_param.af == 0 &&
+          raddr_attr->sockaddr.addr.sa_family != sess->af)))
     {
-	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
-			pj_cstr(&s, "Error: Mismatched RELAY-ADDRESS "
-				    "address family"));
-	return;
+        on_session_fail(sess, method, PJNATH_EINSTUNMSG,
+                        pj_cstr(&s, "Error: Mismatched RELAY-ADDRESS "
+                                    "address family"));
+        return;
     }
     if (raddr_attr && !pj_sockaddr_has_addr(&raddr_attr->sockaddr)) {
-	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
-			pj_cstr(&s, "Error: Invalid IP address in "
-				    "RELAY-ADDRESS attribute"));
-	return;
+        on_session_fail(sess, method, PJNATH_EINSTUNMSG,
+                        pj_cstr(&s, "Error: Invalid IP address in "
+                                    "RELAY-ADDRESS attribute"));
+        return;
     }
     
     /* Save relayed address */
     if (raddr_attr) {
-	/* If we already have relay address, check if the relay address 
-	 * in the response matches our relay address.
-	 */
-	if (pj_sockaddr_has_addr(&sess->relay_addr)) {
-	    if (pj_sockaddr_cmp(&sess->relay_addr, &raddr_attr->sockaddr)) {
-		on_session_fail(sess, method, PJNATH_EINSTUNMSG,
-				pj_cstr(&s, "Error: different RELAY-ADDRESS is"
-					    "returned by server"));
-		return;
-	    }
-	} else {
-	    /* Otherwise save the relayed address */
-	    pj_memcpy(&sess->relay_addr, &raddr_attr->sockaddr, 
-		      sizeof(pj_sockaddr));
-	}
+        /* If we already have relay address, check if the relay address 
+         * in the response matches our relay address.
+         */
+        if (pj_sockaddr_has_addr(&sess->relay_addr)) {
+            if (pj_sockaddr_cmp(&sess->relay_addr, &raddr_attr->sockaddr)) {
+                on_session_fail(sess, method, PJNATH_EINSTUNMSG,
+                                pj_cstr(&s, "Error: different RELAY-ADDRESS is"
+                                            "returned by server"));
+                return;
+            }
+        } else {
+            /* Otherwise save the relayed address */
+            pj_memcpy(&sess->relay_addr, &raddr_attr->sockaddr, 
+                      sizeof(pj_sockaddr));
+        }
     }
 
     /* Get mapped address */
     mapped_attr = (const pj_stun_sockaddr_attr*)
-		  pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_MAPPED_ADDR, 0);
+                  pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_MAPPED_ADDR, 0);
     if (mapped_attr) {
-	pj_memcpy(&sess->mapped_addr, &mapped_attr->sockaddr,
-		  sizeof(mapped_attr->sockaddr));
+        pj_memcpy(&sess->mapped_addr, &mapped_attr->sockaddr,
+                  sizeof(mapped_attr->sockaddr));
     }
 
     /* Success */
@@ -1550,21 +1549,21 @@ static void on_allocate_success(pj_turn_session *sess,
     /* Cancel existing keep-alive timer, if any */
     pj_assert(sess->timer.id != TIMER_DESTROY);
     if (sess->timer.id == TIMER_KEEP_ALIVE) {
-	pj_timer_heap_cancel_if_active(sess->timer_heap, &sess->timer,
-				       TIMER_NONE);
+        pj_timer_heap_cancel_if_active(sess->timer_heap, &sess->timer,
+                                       TIMER_NONE);
     }
 
     /* Start keep-alive timer once allocation succeeds */
     if (sess->state < PJ_TURN_STATE_DEALLOCATING) {
-	pj_time_val timeout;
-	timeout.sec = sess->ka_interval;
-	timeout.msec = 0;
+        pj_time_val timeout;
+        timeout.sec = sess->ka_interval;
+        timeout.msec = 0;
 
-	pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->timer,
-					  &timeout, TIMER_KEEP_ALIVE,
-					  sess->grp_lock);
+        pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->timer,
+                                          &timeout, TIMER_KEEP_ALIVE,
+                                          sess->grp_lock);
 
-	set_state(sess, PJ_TURN_STATE_READY);
+        set_state(sess, PJ_TURN_STATE_READY);
     }
 }
 
@@ -1572,16 +1571,16 @@ static void on_allocate_success(pj_turn_session *sess,
  * Notification from STUN session on request completion.
  */
 static void stun_on_request_complete(pj_stun_session *stun,
-				     pj_status_t status,
-				     void *token,
-				     pj_stun_tx_data *tdata,
-				     const pj_stun_msg *response,
-				     const pj_sockaddr_t *src_addr,
-				     unsigned src_addr_len)
+                                     pj_status_t status,
+                                     void *token,
+                                     pj_stun_tx_data *tdata,
+                                     const pj_stun_msg *response,
+                                     const pj_sockaddr_t *src_addr,
+                                     unsigned src_addr_len)
 {
     pj_turn_session *sess;
     enum pj_stun_method_e method = (enum pj_stun_method_e) 
-			      	   PJ_STUN_GET_METHOD(tdata->msg->hdr.type);
+                                   PJ_STUN_GET_METHOD(tdata->msg->hdr.type);
 
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
@@ -1590,260 +1589,260 @@ static void stun_on_request_complete(pj_stun_session *stun,
 
     if (method == PJ_STUN_ALLOCATE_METHOD) {
 
-	/* Destroy if we have pending destroy request */
-	if (sess->pending_destroy) {
-	    if (status == PJ_SUCCESS)
-		sess->state = PJ_TURN_STATE_READY;
-	    else
-		sess->state = PJ_TURN_STATE_DEALLOCATED;
-	    sess_shutdown(sess, PJ_SUCCESS);
-	    return;
-	}
+        /* Destroy if we have pending destroy request */
+        if (sess->pending_destroy) {
+            if (status == PJ_SUCCESS)
+                sess->state = PJ_TURN_STATE_READY;
+            else
+                sess->state = PJ_TURN_STATE_DEALLOCATED;
+            sess_shutdown(sess, PJ_SUCCESS);
+            return;
+        }
 
-	/* Handle ALLOCATE response */
-	if (status==PJ_SUCCESS && 
-	    PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
-	{
+        /* Handle ALLOCATE response */
+        if (status==PJ_SUCCESS && 
+            PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
+        {
 
-	    /* Successful Allocate response */
-	    on_allocate_success(sess, method, response);
+            /* Successful Allocate response */
+            on_allocate_success(sess, method, response);
 
-	} else {
-	    /* Failed Allocate request */
-	    const pj_str_t *err_msg = NULL;
+        } else {
+            /* Failed Allocate request */
+            const pj_str_t *err_msg = NULL;
 
-	    if (status == PJ_SUCCESS) {
-		const pj_stun_errcode_attr *err_attr;
-		err_attr = (const pj_stun_errcode_attr*)
-			   pj_stun_msg_find_attr(response,
-						 PJ_STUN_ATTR_ERROR_CODE, 0);
-		if (err_attr) {
-		    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
-		    err_msg = &err_attr->reason;
-		} else {
-		    status = PJNATH_EINSTUNMSG;
-		}
-	    }
+            if (status == PJ_SUCCESS) {
+                const pj_stun_errcode_attr *err_attr;
+                err_attr = (const pj_stun_errcode_attr*)
+                           pj_stun_msg_find_attr(response,
+                                                 PJ_STUN_ATTR_ERROR_CODE, 0);
+                if (err_attr) {
+                    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
+                    err_msg = &err_attr->reason;
+                } else {
+                    status = PJNATH_EINSTUNMSG;
+                }
+            }
 
-	    on_session_fail(sess, method, status, err_msg);
-	}
+            on_session_fail(sess, method, status, err_msg);
+        }
 
     } else if (method == PJ_STUN_REFRESH_METHOD) {
-	/* Handle Refresh response */
-	if (status==PJ_SUCCESS && 
-	    PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
-	{
-	    /* Success, schedule next refresh. */
-	    on_allocate_success(sess, method, response);
+        /* Handle Refresh response */
+        if (status==PJ_SUCCESS && 
+            PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
+        {
+            /* Success, schedule next refresh. */
+            on_allocate_success(sess, method, response);
 
-	} else {
-	    /* Failed Refresh request */
-	    const pj_str_t *err_msg = NULL;
+        } else {
+            /* Failed Refresh request */
+            const pj_str_t *err_msg = NULL;
 
-	    pj_assert(status != PJ_SUCCESS);
+            pj_assert(status != PJ_SUCCESS);
 
-	    if (response) {
-		const pj_stun_errcode_attr *err_attr;
-		err_attr = (const pj_stun_errcode_attr*)
-			   pj_stun_msg_find_attr(response,
-						 PJ_STUN_ATTR_ERROR_CODE, 0);
-		if (err_attr) {
-		    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
-		    err_msg = &err_attr->reason;
-		}
-	    }
+            if (response) {
+                const pj_stun_errcode_attr *err_attr;
+                err_attr = (const pj_stun_errcode_attr*)
+                           pj_stun_msg_find_attr(response,
+                                                 PJ_STUN_ATTR_ERROR_CODE, 0);
+                if (err_attr) {
+                    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
+                    err_msg = &err_attr->reason;
+                }
+            }
 
-	    /* Notify and destroy */
-	    on_session_fail(sess, method, status, err_msg);
-	}
+            /* Notify and destroy */
+            on_session_fail(sess, method, status, err_msg);
+        }
 
     } else if (method == PJ_STUN_CHANNEL_BIND_METHOD) {
-	/* Handle ChannelBind response */
-	if (status==PJ_SUCCESS && 
-	    PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
-	{
-	    /* Successful ChannelBind response */
-	    struct ch_t *ch = (struct ch_t*)token;
+        /* Handle ChannelBind response */
+        if (status==PJ_SUCCESS && 
+            PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
+        {
+            /* Successful ChannelBind response */
+            struct ch_t *ch = (struct ch_t*)token;
 
-	    pj_assert(ch->num != PJ_TURN_INVALID_CHANNEL);
-	    ch->bound = PJ_TRUE;
+            pj_assert(ch->num != PJ_TURN_INVALID_CHANNEL);
+            ch->bound = PJ_TRUE;
 
-	    /* Update hash table */
-	    lookup_ch_by_addr(sess, &ch->addr,
-			      pj_sockaddr_get_len(&ch->addr),
-			      PJ_TRUE, PJ_TRUE);
+            /* Update hash table */
+            lookup_ch_by_addr(sess, &ch->addr,
+                              pj_sockaddr_get_len(&ch->addr),
+                              PJ_TRUE, PJ_TRUE);
 
-	} else {
-	    /* Failed ChannelBind response */
-	    pj_str_t reason = {"", 0};
-	    int err_code = 0;
-	    char errbuf[PJ_ERR_MSG_SIZE];
+        } else {
+            /* Failed ChannelBind response */
+            pj_str_t reason = {"", 0};
+            int err_code = 0;
+            char errbuf[PJ_ERR_MSG_SIZE];
 
-	    pj_assert(status != PJ_SUCCESS);
+            pj_assert(status != PJ_SUCCESS);
 
-	    if (response) {
-		const pj_stun_errcode_attr *err_attr;
-		err_attr = (const pj_stun_errcode_attr*)
-			   pj_stun_msg_find_attr(response,
-						 PJ_STUN_ATTR_ERROR_CODE, 0);
-		if (err_attr) {
-		    err_code = err_attr->err_code;
-		    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
-		    reason = err_attr->reason;
-		}
-	    } else {
-		err_code = status;
-		reason = pj_strerror(status, errbuf, sizeof(errbuf));
-	    }
+            if (response) {
+                const pj_stun_errcode_attr *err_attr;
+                err_attr = (const pj_stun_errcode_attr*)
+                           pj_stun_msg_find_attr(response,
+                                                 PJ_STUN_ATTR_ERROR_CODE, 0);
+                if (err_attr) {
+                    err_code = err_attr->err_code;
+                    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
+                    reason = err_attr->reason;
+                }
+            } else {
+                err_code = status;
+                reason = pj_strerror(status, errbuf, sizeof(errbuf));
+            }
 
-	    PJ_LOG(1,(sess->obj_name, "ChannelBind failed: %d/%.*s",
-		      err_code, (int)reason.slen, reason.ptr));
+            PJ_LOG(1,(sess->obj_name, "ChannelBind failed: %d/%.*s",
+                      err_code, (int)reason.slen, reason.ptr));
 
-	    if (err_code == PJ_STUN_SC_ALLOCATION_MISMATCH) {
-		/* Allocation mismatch means allocation no longer exists */
-		on_session_fail(sess, PJ_STUN_CHANNEL_BIND_METHOD,
-				status, &reason);
-		return;
-	    }
-	}
+            if (err_code == PJ_STUN_SC_ALLOCATION_MISMATCH) {
+                /* Allocation mismatch means allocation no longer exists */
+                on_session_fail(sess, PJ_STUN_CHANNEL_BIND_METHOD,
+                                status, &reason);
+                return;
+            }
+        }
 
     } else if (method == PJ_STUN_CREATE_PERM_METHOD) {
-	/* Handle CreatePermission response */
-	if (status==PJ_SUCCESS && 
-	    PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
-	{
-	    /* No special handling when the request is successful. */
-	} else {
-	    /* Iterate the permission table and invalidate all permissions
-	     * that are related to this request.
-	     */
-	    pj_hash_iterator_t it_buf, *it;
-	    char ipstr[PJ_INET6_ADDRSTRLEN+10];
-	    int err_code;
-	    char errbuf[PJ_ERR_MSG_SIZE];
-	    pj_str_t reason;
+        /* Handle CreatePermission response */
+        if (status==PJ_SUCCESS && 
+            PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
+        {
+            /* No special handling when the request is successful. */
+        } else {
+            /* Iterate the permission table and invalidate all permissions
+             * that are related to this request.
+             */
+            pj_hash_iterator_t it_buf, *it;
+            char ipstr[PJ_INET6_ADDRSTRLEN+10];
+            int err_code;
+            char errbuf[PJ_ERR_MSG_SIZE];
+            pj_str_t reason;
 
-	    pj_assert(status != PJ_SUCCESS);
+            pj_assert(status != PJ_SUCCESS);
 
-	    if (response) {
-		const pj_stun_errcode_attr *eattr;
+            if (response) {
+                const pj_stun_errcode_attr *eattr;
 
-		eattr = (const pj_stun_errcode_attr*)
-			pj_stun_msg_find_attr(response, 
-					      PJ_STUN_ATTR_ERROR_CODE, 0);
-		if (eattr) {
-		    err_code = eattr->err_code;
-		    reason = eattr->reason;
-		} else {
-		    err_code = -1;
-		    reason = pj_str("?");
-		}
-	    } else {
-		err_code = status;
-		reason = pj_strerror(status, errbuf, sizeof(errbuf));
-	    }
+                eattr = (const pj_stun_errcode_attr*)
+                        pj_stun_msg_find_attr(response, 
+                                              PJ_STUN_ATTR_ERROR_CODE, 0);
+                if (eattr) {
+                    err_code = eattr->err_code;
+                    reason = eattr->reason;
+                } else {
+                    err_code = -1;
+                    reason = pj_str("?");
+                }
+            } else {
+                err_code = status;
+                reason = pj_strerror(status, errbuf, sizeof(errbuf));
+            }
 
-	    it = pj_hash_first(sess->perm_table, &it_buf);
-	    while (it) {
-		struct perm_t *perm = (struct perm_t*)
-				      pj_hash_this(sess->perm_table, it);
-		it = pj_hash_next(sess->perm_table, it);
+            it = pj_hash_first(sess->perm_table, &it_buf);
+            while (it) {
+                struct perm_t *perm = (struct perm_t*)
+                                      pj_hash_this(sess->perm_table, it);
+                it = pj_hash_next(sess->perm_table, it);
 
-		if (perm->req_token == token) {
-		    PJ_LOG(1,(sess->obj_name, 
-			      "CreatePermission failed for IP %s: %d/%.*s",
-			      pj_sockaddr_print(&perm->addr, ipstr, 
-						sizeof(ipstr), 2),
-			      err_code, (int)reason.slen, reason.ptr));
+                if (perm->req_token == token) {
+                    PJ_LOG(1,(sess->obj_name, 
+                              "CreatePermission failed for IP %s: %d/%.*s",
+                              pj_sockaddr_print(&perm->addr, ipstr, 
+                                                sizeof(ipstr), 2),
+                              err_code, (int)reason.slen, reason.ptr));
 
-		    invalidate_perm(sess, perm);
-		}
-	    }
+                    invalidate_perm(sess, perm);
+                }
+            }
 
-	    if (err_code == PJ_STUN_SC_ALLOCATION_MISMATCH) {
-		/* Allocation mismatch means allocation no longer exists */
-		on_session_fail(sess, PJ_STUN_CREATE_PERM_METHOD,
-				status, &reason);
-		return;
-	    }
-	}
+            if (err_code == PJ_STUN_SC_ALLOCATION_MISMATCH) {
+                /* Allocation mismatch means allocation no longer exists */
+                on_session_fail(sess, PJ_STUN_CREATE_PERM_METHOD,
+                                status, &reason);
+                return;
+            }
+        }
 
     } else if (method == PJ_STUN_CONNECTION_BIND_METHOD) {
-	/* Handle ConnectionBind response */
-	struct conn_bind_t *conn_bind = (struct conn_bind_t*)token;
+        /* Handle ConnectionBind response */
+        struct conn_bind_t *conn_bind = (struct conn_bind_t*)token;
 
-	if (status != PJ_SUCCESS ||
-	    !PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
-	{
-	    pj_str_t reason = {0};
-	    if (status == PJ_SUCCESS) {
-		const pj_stun_errcode_attr *err_attr;
-		err_attr = (const pj_stun_errcode_attr*)
-			   pj_stun_msg_find_attr(response,
-						 PJ_STUN_ATTR_ERROR_CODE, 0);
-		if (err_attr) {
-		    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
-		    reason = err_attr->reason;
-		} else {
-		    status = PJNATH_EINSTUNMSG;
-		}
-	    }
-	    pj_perror(1, sess->obj_name, status, "ConnectionBind failed: %.*s",
-		      (int)reason.slen, reason.ptr);
-	}
+        if (status != PJ_SUCCESS ||
+            !PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
+        {
+            pj_str_t reason = {0};
+            if (status == PJ_SUCCESS) {
+                const pj_stun_errcode_attr *err_attr;
+                err_attr = (const pj_stun_errcode_attr*)
+                           pj_stun_msg_find_attr(response,
+                                                 PJ_STUN_ATTR_ERROR_CODE, 0);
+                if (err_attr) {
+                    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
+                    reason = err_attr->reason;
+                } else {
+                    status = PJNATH_EINSTUNMSG;
+                }
+            }
+            pj_perror(1, sess->obj_name, status, "ConnectionBind failed: %.*s",
+                      (int)reason.slen, reason.ptr);
+        }
 
-	/* Notify app */
-	if (sess->cb.on_connection_bind_status) {
-	    (*sess->cb.on_connection_bind_status)
-			(sess, status, conn_bind->id,
-			&conn_bind->peer_addr, conn_bind->peer_addr_len);
-	}
+        /* Notify app */
+        if (sess->cb.on_connection_bind_status) {
+            (*sess->cb.on_connection_bind_status)
+                        (sess, status, conn_bind->id,
+                        &conn_bind->peer_addr, conn_bind->peer_addr_len);
+        }
     } else if (method == PJ_STUN_CONNECT_METHOD) {
-	/* Handle Connct response */
-	struct pj_sockaddr_t *peer_addr = (struct pj_sockaddr_t*)token;
-	pj_uint32_t conn_id = 0;
+        /* Handle Connct response */
+        struct pj_sockaddr_t *peer_addr = (struct pj_sockaddr_t*)token;
+        pj_uint32_t conn_id = 0;
 
-	if (status != PJ_SUCCESS ||
-	    !PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type))
-	{
-	    pj_str_t reason = {0};
-	    if (status == PJ_SUCCESS) {
-		const pj_stun_errcode_attr *err_attr;
-		err_attr = (const pj_stun_errcode_attr*)
-			   pj_stun_msg_find_attr(response,
-						 PJ_STUN_ATTR_ERROR_CODE, 0);
-		if (err_attr) {
-		    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
-		    reason = err_attr->reason;
-		} else {
-		    status = PJNATH_EINSTUNMSG;
-		}
-	    }
-	    pj_perror(1, sess->obj_name, status, "Connect failed: %.*s",
-		      (int)reason.slen, reason.ptr);
-	} else {
-	    const pj_stun_uint_attr *conn_id_attr;
-	    conn_id_attr = (const pj_stun_uint_attr*)
-	    pj_stun_msg_find_attr(response, PJ_STUN_ATTR_CONNECTION_ID, 0);
-	    if (conn_id_attr == NULL) {
-		status = PJNATH_EINSTUNMSG;
-		pj_perror(1, sess->obj_name, status,
-			  "Error: Missing CONNECTION-ID attribute");
-	    }
-	    else {
-		conn_id = conn_id_attr->value;
-	    }
-	}
+        if (status != PJ_SUCCESS ||
+            !PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type))
+        {
+            pj_str_t reason = {0};
+            if (status == PJ_SUCCESS) {
+                const pj_stun_errcode_attr *err_attr;
+                err_attr = (const pj_stun_errcode_attr*)
+                           pj_stun_msg_find_attr(response,
+                                                 PJ_STUN_ATTR_ERROR_CODE, 0);
+                if (err_attr) {
+                    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
+                    reason = err_attr->reason;
+                } else {
+                    status = PJNATH_EINSTUNMSG;
+                }
+            }
+            pj_perror(1, sess->obj_name, status, "Connect failed: %.*s",
+                      (int)reason.slen, reason.ptr);
+        } else {
+            const pj_stun_uint_attr *conn_id_attr;
+            conn_id_attr = (const pj_stun_uint_attr*)
+            pj_stun_msg_find_attr(response, PJ_STUN_ATTR_CONNECTION_ID, 0);
+            if (conn_id_attr == NULL) {
+                status = PJNATH_EINSTUNMSG;
+                pj_perror(1, sess->obj_name, status,
+                          "Error: Missing CONNECTION-ID attribute");
+            }
+            else {
+                conn_id = conn_id_attr->value;
+            }
+        }
 
-	/* Notify app */
-	if (sess->cb.on_connect_complete) {
-	    (*sess->cb.on_connect_complete)
-			(sess, status, conn_id,
-			peer_addr, pj_sockaddr_get_len(peer_addr));
-	}
+        /* Notify app */
+        if (sess->cb.on_connect_complete) {
+            (*sess->cb.on_connect_complete)
+                        (sess, status, conn_id,
+                        peer_addr, pj_sockaddr_get_len(peer_addr));
+        }
     } else {
-	PJ_LOG(4,(sess->obj_name, "Unexpected STUN %s response",
-		  pj_stun_get_method_name(response->hdr.type)));
+        PJ_LOG(4,(sess->obj_name, "Unexpected STUN %s response",
+                  pj_stun_get_method_name(response->hdr.type)));
     }
 }
 
@@ -1853,12 +1852,12 @@ static void stun_on_request_complete(pj_stun_session *stun,
  * message.
  */
 static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
-					 const pj_uint8_t *pkt,
-					 unsigned pkt_len,
-					 const pj_stun_msg *msg,
-					 void *token,
-					 const pj_sockaddr_t *src_addr,
-					 unsigned src_addr_len)
+                                         const pj_uint8_t *pkt,
+                                         unsigned pkt_len,
+                                         const pj_stun_msg *msg,
+                                         void *token,
+                                         const pj_sockaddr_t *src_addr,
+                                         unsigned src_addr_len)
 {
     pj_turn_session *sess;
     pj_stun_xor_peer_addr_attr *peer_attr;
@@ -1889,16 +1888,16 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
         if (!peer_attr || !connection_id_attr) {
             PJ_LOG(4,(sess->obj_name, 
                       "Received ConnectionAttempt indication with missing "
-		      "attributes"));
+                      "attributes"));
             return PJ_EINVALIDOP;
         }
 
         /* Notify application */
         if (sess->cb.on_connection_attempt) {
             (*sess->cb.on_connection_attempt)
-				(sess,
-				connection_id_attr->value,
-				&peer_attr->sockaddr,
+                                (sess,
+                                connection_id_attr->value,
+                                &peer_attr->sockaddr,
                                 pj_sockaddr_get_len(&peer_attr->sockaddr));
         }
         return PJ_SUCCESS;
@@ -1906,39 +1905,39 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
 
     /* Next, expecting Data Indication only */
     if (msg->hdr.type != PJ_STUN_DATA_INDICATION) {
-	PJ_LOG(4,(sess->obj_name, "Unexpected STUN %s indication",
-		  pj_stun_get_method_name(msg->hdr.type)));
-	return PJ_EINVALIDOP;
+        PJ_LOG(4,(sess->obj_name, "Unexpected STUN %s indication",
+                  pj_stun_get_method_name(msg->hdr.type)));
+        return PJ_EINVALIDOP;
     }
 
     /* Check if there is ICMP attribute in the message */
     icmp = (pj_stun_icmp_attr*)
-	   pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ICMP, 0);
+           pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ICMP, 0);
     if (icmp != NULL) {
-	/* This is a forwarded ICMP packet. Ignore it for now */
-	return PJ_SUCCESS;
+        /* This is a forwarded ICMP packet. Ignore it for now */
+        return PJ_SUCCESS;
     }
 
     /* Get XOR-PEER-ADDRESS attribute */
     peer_attr = (pj_stun_xor_peer_addr_attr*)
-		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
+                pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
 
     /* Get DATA attribute */
     data_attr = (pj_stun_data_attr*)
-		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_DATA, 0);
+                pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_DATA, 0);
 
     /* Must have both XOR-PEER-ADDRESS and DATA attributes */
     if (!peer_attr || !data_attr) {
-	PJ_LOG(4,(sess->obj_name, 
-		  "Received Data indication with missing attributes"));
-	return PJ_EINVALIDOP;
+        PJ_LOG(4,(sess->obj_name, 
+                  "Received Data indication with missing attributes"));
+        return PJ_EINVALIDOP;
     }
 
     /* Notify application */
     if (sess->cb.on_rx_data) {
-	(*sess->cb.on_rx_data)(sess, data_attr->data, data_attr->length, 
-			       &peer_attr->sockaddr,
-			       pj_sockaddr_get_len(&peer_attr->sockaddr));
+        (*sess->cb.on_rx_data)(sess, data_attr->data, data_attr->length, 
+                               &peer_attr->sockaddr,
+                               pj_sockaddr_get_len(&peer_attr->sockaddr));
     }
 
     return PJ_SUCCESS;
@@ -1949,54 +1948,54 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
  * Notification on completion of DNS SRV resolution.
  */
 static void dns_srv_resolver_cb(void *user_data,
-				pj_status_t status,
-				const pj_dns_srv_record *rec)
+                                pj_status_t status,
+                                const pj_dns_srv_record *rec)
 {
     pj_turn_session *sess = (pj_turn_session*) user_data;
     unsigned i, cnt, tot_cnt;
 
     /* Check failure */
     if (status != PJ_SUCCESS || sess->pending_destroy) {
-	set_state(sess, PJ_TURN_STATE_DESTROYING);
-	sess_shutdown(sess, status);
-	pj_grp_lock_dec_ref(sess->grp_lock);
-	return;
+        set_state(sess, PJ_TURN_STATE_DESTROYING);
+        sess_shutdown(sess, status);
+        pj_grp_lock_dec_ref(sess->grp_lock);
+        return;
     }
 
     /* Calculate total number of server entries in the response */
     tot_cnt = 0;
     for (i=0; i<rec->count; ++i) {
-	tot_cnt += rec->entry[i].server.addr_count;
+        tot_cnt += rec->entry[i].server.addr_count;
     }
 
     if (tot_cnt > PJ_TURN_MAX_DNS_SRV_CNT)
-	tot_cnt = PJ_TURN_MAX_DNS_SRV_CNT;
+        tot_cnt = PJ_TURN_MAX_DNS_SRV_CNT;
 
     /* Allocate server entries */
     sess->srv_addr_list = (pj_sockaddr*)
-		           pj_pool_calloc(sess->pool, tot_cnt, 
-					  sizeof(pj_sockaddr));
+                           pj_pool_calloc(sess->pool, tot_cnt, 
+                                          sizeof(pj_sockaddr));
 
     /* Copy results to server entries */
     for (i=0, cnt=0; i<rec->count && cnt<PJ_TURN_MAX_DNS_SRV_CNT; ++i) {
-	unsigned j;
+        unsigned j;
 
-	for (j=0; j<rec->entry[i].server.addr_count && 
-		  cnt<PJ_TURN_MAX_DNS_SRV_CNT; ++j) 
-	{
-	    if (rec->entry[i].server.addr[j].af == sess->af) {
-		pj_sockaddr *addr = &sess->srv_addr_list[cnt];
+        for (j=0; j<rec->entry[i].server.addr_count && 
+                  cnt<PJ_TURN_MAX_DNS_SRV_CNT; ++j) 
+        {
+            if (rec->entry[i].server.addr[j].af == sess->af) {
+                pj_sockaddr *addr = &sess->srv_addr_list[cnt];
 
-		addr->addr.sa_family = sess->af;
-		pj_sockaddr_set_port(addr, rec->entry[i].port);
-		if (sess->af == pj_AF_INET6())
-		    addr->ipv6.sin6_addr = rec->entry[i].server.addr[j].ip.v6;
-		else
-		    addr->ipv4.sin_addr = rec->entry[i].server.addr[j].ip.v4;
+                addr->addr.sa_family = sess->af;
+                pj_sockaddr_set_port(addr, rec->entry[i].port);
+                if (sess->af == pj_AF_INET6())
+                    addr->ipv6.sin6_addr = rec->entry[i].server.addr[j].ip.v6;
+                else
+                    addr->ipv4.sin_addr = rec->entry[i].server.addr[j].ip.v4;
 
-		++cnt;
-	    }
-	}
+                ++cnt;
+            }
+        }
     }
     sess->srv_addr_cnt = (pj_uint16_t)cnt;
 
@@ -2008,10 +2007,10 @@ static void dns_srv_resolver_cb(void *user_data,
 
     /* Run pending allocation */
     if (sess->pending_alloc) {
-	pj_status_t status2;
-	status2 = pj_turn_session_alloc(sess, NULL);
-	if (status2 != PJ_SUCCESS)
-	    on_session_fail(sess, PJ_STUN_ALLOCATE_METHOD, status2, NULL);
+        pj_status_t status2;
+        status2 = pj_turn_session_alloc(sess, NULL);
+        if (status2 != PJ_SUCCESS)
+            on_session_fail(sess, PJ_STUN_ALLOCATE_METHOD, status2, NULL);
     }
 
     pj_grp_lock_dec_ref(sess->grp_lock);
@@ -2022,41 +2021,41 @@ static void dns_srv_resolver_cb(void *user_data,
  * Lookup peer descriptor from its address.
  */
 static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
-				      const pj_sockaddr_t *addr,
-				      unsigned addr_len,
-				      pj_bool_t update,
-				      pj_bool_t bind_channel)
+                                      const pj_sockaddr_t *addr,
+                                      unsigned addr_len,
+                                      pj_bool_t update,
+                                      pj_bool_t bind_channel)
 {
     pj_uint32_t hval = 0;
     struct ch_t *ch;
 
     ch = (struct ch_t*) 
-	 pj_hash_get(sess->ch_table, addr, addr_len, &hval);
+         pj_hash_get(sess->ch_table, addr, addr_len, &hval);
     if (ch == NULL && update) {
-	ch = PJ_POOL_ZALLOC_T(sess->pool, struct ch_t);
-	ch->num = PJ_TURN_INVALID_CHANNEL;
-	pj_memcpy(&ch->addr, addr, addr_len);
+        ch = PJ_POOL_ZALLOC_T(sess->pool, struct ch_t);
+        ch->num = PJ_TURN_INVALID_CHANNEL;
+        pj_memcpy(&ch->addr, addr, addr_len);
 
-	/* Register by peer address */
-	pj_hash_set(sess->pool, sess->ch_table, &ch->addr, addr_len,
-		    hval, ch);
+        /* Register by peer address */
+        pj_hash_set(sess->pool, sess->ch_table, &ch->addr, addr_len,
+                    hval, ch);
     }
 
     if (ch && update) {
-	pj_gettimeofday(&ch->expiry);
-	ch->expiry.sec += PJ_TURN_PERM_TIMEOUT - sess->ka_interval - 1;
+        pj_gettimeofday(&ch->expiry);
+        ch->expiry.sec += PJ_TURN_PERM_TIMEOUT - sess->ka_interval - 1;
 
-	if (bind_channel) {
-	    pj_uint32_t hval2 = 0;
-	    /* Register by channel number */
-	    pj_assert(ch->num != PJ_TURN_INVALID_CHANNEL && ch->bound);
+        if (bind_channel) {
+            pj_uint32_t hval2 = 0;
+            /* Register by channel number */
+            pj_assert(ch->num != PJ_TURN_INVALID_CHANNEL && ch->bound);
 
-	    if (pj_hash_get(sess->ch_table, &ch->num, 
-			    sizeof(ch->num), &hval2)==0) {
-		pj_hash_set(sess->pool, sess->ch_table, &ch->num,
-			    sizeof(ch->num), hval2, ch);
-	    }
-	}
+            if (pj_hash_get(sess->ch_table, &ch->num, 
+                            sizeof(ch->num), &hval2)==0) {
+                pj_hash_set(sess->pool, sess->ch_table, &ch->num,
+                            sizeof(ch->num), hval2, ch);
+            }
+        }
     }
 
     /* Also create/update permission for this destination. Ideally we
@@ -2065,7 +2064,7 @@ static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
      * during refreshing.
      */
     if (ch && update) {
-	lookup_perm(sess, &ch->addr, pj_sockaddr_get_len(&ch->addr), PJ_TRUE);
+        lookup_perm(sess, &ch->addr, pj_sockaddr_get_len(&ch->addr), PJ_TRUE);
     }
 
     return ch;
@@ -2076,10 +2075,10 @@ static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
  * Lookup channel descriptor from its channel number.
  */
 static struct ch_t *lookup_ch_by_chnum(pj_turn_session *sess,
-					 pj_uint16_t chnum)
+                                         pj_uint16_t chnum)
 {
     return (struct ch_t*) pj_hash_get(sess->ch_table, &chnum, 
-				      sizeof(chnum), NULL);
+                                      sizeof(chnum), NULL);
 }
 
 
@@ -2087,9 +2086,9 @@ static struct ch_t *lookup_ch_by_chnum(pj_turn_session *sess,
  * Lookup permission and optionally create if it doesn't exist.
  */
 static struct perm_t *lookup_perm(pj_turn_session *sess,
-				  const pj_sockaddr_t *addr,
-				  unsigned addr_len,
-				  pj_bool_t update)
+                                  const pj_sockaddr_t *addr,
+                                  unsigned addr_len,
+                                  pj_bool_t update)
 {
     pj_uint32_t hval = 0;
     pj_sockaddr perm_addr;
@@ -2097,26 +2096,26 @@ static struct perm_t *lookup_perm(pj_turn_session *sess,
 
     /* make sure port number if zero */
     if (pj_sockaddr_get_port(addr) != 0) {
-	pj_memcpy(&perm_addr, addr, addr_len);
-	pj_sockaddr_set_port(&perm_addr, 0);
-	addr = &perm_addr;
+        pj_memcpy(&perm_addr, addr, addr_len);
+        pj_sockaddr_set_port(&perm_addr, 0);
+        addr = &perm_addr;
     }
 
     /* lookup and create if it doesn't exist and wanted */
     perm = (struct perm_t*) 
-	   pj_hash_get(sess->perm_table, addr, addr_len, &hval);
+           pj_hash_get(sess->perm_table, addr, addr_len, &hval);
     if (perm == NULL && update) {
-	perm = PJ_POOL_ZALLOC_T(sess->pool, struct perm_t);
-	pj_memcpy(&perm->addr, addr, addr_len);
-	perm->hval = hval;
+        perm = PJ_POOL_ZALLOC_T(sess->pool, struct perm_t);
+        pj_memcpy(&perm->addr, addr, addr_len);
+        perm->hval = hval;
 
-	pj_hash_set(sess->pool, sess->perm_table, &perm->addr, addr_len,
-		    perm->hval, perm);
+        pj_hash_set(sess->pool, sess->perm_table, &perm->addr, addr_len,
+                    perm->hval, perm);
     }
 
     if (perm && update) {
-	pj_gettimeofday(&perm->expiry);
-	perm->expiry.sec += PJ_TURN_PERM_TIMEOUT - sess->ka_interval - 1;
+        pj_gettimeofday(&perm->expiry);
+        perm->expiry.sec += PJ_TURN_PERM_TIMEOUT - sess->ka_interval - 1;
 
     }
 
@@ -2127,17 +2126,17 @@ static struct perm_t *lookup_perm(pj_turn_session *sess,
  * Delete permission
  */
 static void invalidate_perm(pj_turn_session *sess,
-			    struct perm_t *perm)
+                            struct perm_t *perm)
 {
     pj_hash_set(NULL, sess->perm_table, &perm->addr,
-		pj_sockaddr_get_len(&perm->addr), perm->hval, NULL);
+                pj_sockaddr_get_len(&perm->addr), perm->hval, NULL);
 }
 
 /*
  * Scan permission's hash table to refresh the permission.
  */
 static unsigned refresh_permissions(pj_turn_session *sess, 
-				    const pj_time_val *now)
+                                    const pj_time_val *now)
 {
     pj_stun_tx_data *tdata = NULL;
     unsigned count = 0;
@@ -2147,69 +2146,69 @@ static unsigned refresh_permissions(pj_turn_session *sess,
 
     it = pj_hash_first(sess->perm_table, &itbuf);
     while (it) {
-	struct perm_t *perm = (struct perm_t*)
-			      pj_hash_this(sess->perm_table, it);
+        struct perm_t *perm = (struct perm_t*)
+                              pj_hash_this(sess->perm_table, it);
 
-	it = pj_hash_next(sess->perm_table, it);
+        it = pj_hash_next(sess->perm_table, it);
 
-	if (perm->expiry.sec-1 <= now->sec) {
-	    if (perm->renew) {
-		/* Renew this permission */
-		if (tdata == NULL) {
-		    /* Create a bare CreatePermission request */
-		    status = pj_stun_session_create_req(
-					sess->stun, 
-					PJ_STUN_CREATE_PERM_REQUEST,
-					PJ_STUN_MAGIC, NULL, &tdata);
-		    if (status != PJ_SUCCESS) {
-			PJ_PERROR(1,(sess->obj_name, status,
-				  "Error creating CreatePermission request"));
-			return 0;
-		    }
+        if (perm->expiry.sec-1 <= now->sec) {
+            if (perm->renew) {
+                /* Renew this permission */
+                if (tdata == NULL) {
+                    /* Create a bare CreatePermission request */
+                    status = pj_stun_session_create_req(
+                                        sess->stun, 
+                                        PJ_STUN_CREATE_PERM_REQUEST,
+                                        PJ_STUN_MAGIC, NULL, &tdata);
+                    if (status != PJ_SUCCESS) {
+                        PJ_PERROR(1,(sess->obj_name, status,
+                                  "Error creating CreatePermission request"));
+                        return 0;
+                    }
 
-		    /* Create request token to map the request to the perm
-		     * structures which the request belongs.
-		     */
-		    req_token = (void*)(pj_ssize_t)pj_rand();
-		}
+                    /* Create request token to map the request to the perm
+                     * structures which the request belongs.
+                     */
+                    req_token = (void*)(pj_ssize_t)pj_rand();
+                }
 
-		status = pj_stun_msg_add_sockaddr_attr(
-					tdata->pool, 
-					tdata->msg,
-					PJ_STUN_ATTR_XOR_PEER_ADDR,
-					PJ_TRUE,
-					&perm->addr,
-					sizeof(perm->addr));
-		if (status != PJ_SUCCESS) {
-		    pj_stun_msg_destroy_tdata(sess->stun, tdata);
-		    return 0;
-		}
+                status = pj_stun_msg_add_sockaddr_attr(
+                                        tdata->pool, 
+                                        tdata->msg,
+                                        PJ_STUN_ATTR_XOR_PEER_ADDR,
+                                        PJ_TRUE,
+                                        &perm->addr,
+                                        sizeof(perm->addr));
+                if (status != PJ_SUCCESS) {
+                    pj_stun_msg_destroy_tdata(sess->stun, tdata);
+                    return 0;
+                }
 
-		perm->expiry = *now;
-		perm->expiry.sec += PJ_TURN_PERM_TIMEOUT-sess->ka_interval-1;
-		perm->req_token = req_token;
-		++count;
+                perm->expiry = *now;
+                perm->expiry.sec += PJ_TURN_PERM_TIMEOUT-sess->ka_interval-1;
+                perm->req_token = req_token;
+                ++count;
 
-	    } else {
-		/* This permission has expired and app doesn't want
-		 * us to renew, so delete it from the hash table.
-		 */
-		invalidate_perm(sess, perm);
-	    }
-	}
+            } else {
+                /* This permission has expired and app doesn't want
+                 * us to renew, so delete it from the hash table.
+                 */
+                invalidate_perm(sess, perm);
+            }
+        }
     }
 
     if (tdata) {
-	status = pj_stun_session_send_msg(sess->stun, req_token, PJ_FALSE, 
-					  (sess->conn_type==PJ_TURN_TP_UDP),
-					  sess->srv_addr,
-					  pj_sockaddr_get_len(sess->srv_addr), 
-					  tdata);
-	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(1,(sess->obj_name, status,
-		      "Error sending CreatePermission request"));
-	    count = 0;
-	}
+        status = pj_stun_session_send_msg(sess->stun, req_token, PJ_FALSE, 
+                                          (sess->conn_type==PJ_TURN_TP_UDP),
+                                          sess->srv_addr,
+                                          pj_sockaddr_get_len(sess->srv_addr), 
+                                          tdata);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1,(sess->obj_name, status,
+                      "Error sending CreatePermission request"));
+            count = 0;
+        }
 
     }
 
@@ -2232,92 +2231,92 @@ static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e)
     e->id = TIMER_NONE;
     
     if (eid == TIMER_KEEP_ALIVE) {
-	pj_time_val now;
-	pj_hash_iterator_t itbuf, *it;
-	pj_bool_t resched = PJ_TRUE;
-	pj_bool_t pkt_sent = PJ_FALSE;
+        pj_time_val now;
+        pj_hash_iterator_t itbuf, *it;
+        pj_bool_t resched = PJ_TRUE;
+        pj_bool_t pkt_sent = PJ_FALSE;
 
-	if (sess->state >= PJ_TURN_STATE_DEALLOCATING) {
-	    /* Ignore if we're deallocating */
-	    goto on_return;
-	}
+        if (sess->state >= PJ_TURN_STATE_DEALLOCATING) {
+            /* Ignore if we're deallocating */
+            goto on_return;
+        }
 
-	pj_gettimeofday(&now);
+        pj_gettimeofday(&now);
 
-	/* Refresh allocation if it's time to do so */
-	if (PJ_TIME_VAL_LTE(sess->expiry, now)) {
-	    int lifetime = sess->alloc_param.lifetime;
+        /* Refresh allocation if it's time to do so */
+        if (PJ_TIME_VAL_LTE(sess->expiry, now)) {
+            int lifetime = sess->alloc_param.lifetime;
 
-	    if (lifetime == 0)
-		lifetime = -1;
+            if (lifetime == 0)
+                lifetime = -1;
 
-	    send_refresh(sess, lifetime);
-	    resched = PJ_FALSE;
-	    pkt_sent = PJ_TRUE;
-	}
+            send_refresh(sess, lifetime);
+            resched = PJ_FALSE;
+            pkt_sent = PJ_TRUE;
+        }
 
-	/* Scan hash table to refresh bound channels */
-	it = pj_hash_first(sess->ch_table, &itbuf);
-	while (it) {
-	    struct ch_t *ch = (struct ch_t*) 
-			      pj_hash_this(sess->ch_table, it);
-	    if (ch->bound && PJ_TIME_VAL_LTE(ch->expiry, now)) {
+        /* Scan hash table to refresh bound channels */
+        it = pj_hash_first(sess->ch_table, &itbuf);
+        while (it) {
+            struct ch_t *ch = (struct ch_t*) 
+                              pj_hash_this(sess->ch_table, it);
+            if (ch->bound && PJ_TIME_VAL_LTE(ch->expiry, now)) {
 
-		/* Send ChannelBind to refresh channel binding and 
-		 * permission.
-		 */
-		pj_turn_session_bind_channel(sess, &ch->addr,
-					     pj_sockaddr_get_len(&ch->addr));
-		pkt_sent = PJ_TRUE;
-	    }
+                /* Send ChannelBind to refresh channel binding and 
+                 * permission.
+                 */
+                pj_turn_session_bind_channel(sess, &ch->addr,
+                                             pj_sockaddr_get_len(&ch->addr));
+                pkt_sent = PJ_TRUE;
+            }
 
-	    it = pj_hash_next(sess->ch_table, it);
-	}
+            it = pj_hash_next(sess->ch_table, it);
+        }
 
-	/* Scan permission table to refresh permissions */
-	if (refresh_permissions(sess, &now))
-	    pkt_sent = PJ_TRUE;
+        /* Scan permission table to refresh permissions */
+        if (refresh_permissions(sess, &now))
+            pkt_sent = PJ_TRUE;
 
-	/* If no packet is sent, send a blank Send indication to
-	 * refresh local NAT.
-	 */
-	if (!pkt_sent && sess->alloc_param.ka_interval > 0) {
-	    pj_stun_tx_data *tdata;
-	    pj_status_t rc;
+        /* If no packet is sent, send a blank Send indication to
+         * refresh local NAT.
+         */
+        if (!pkt_sent && sess->alloc_param.ka_interval > 0) {
+            pj_stun_tx_data *tdata;
+            pj_status_t rc;
 
-	    /* Create blank SEND-INDICATION */
-	    rc = pj_stun_session_create_ind(sess->stun, 
-					    PJ_STUN_SEND_INDICATION, &tdata);
-	    if (rc == PJ_SUCCESS) {
-		/* Add DATA attribute with zero length */
-		pj_stun_msg_add_binary_attr(tdata->pool, tdata->msg,
-					    PJ_STUN_ATTR_DATA, NULL, 0);
+            /* Create blank SEND-INDICATION */
+            rc = pj_stun_session_create_ind(sess->stun, 
+                                            PJ_STUN_SEND_INDICATION, &tdata);
+            if (rc == PJ_SUCCESS) {
+                /* Add DATA attribute with zero length */
+                pj_stun_msg_add_binary_attr(tdata->pool, tdata->msg,
+                                            PJ_STUN_ATTR_DATA, NULL, 0);
 
-		/* Send the indication */
-		pj_stun_session_send_msg(sess->stun, NULL, PJ_FALSE, 
-					 PJ_FALSE, sess->srv_addr,
-					 pj_sockaddr_get_len(sess->srv_addr),
-					 tdata);
-	    }
-	}
+                /* Send the indication */
+                pj_stun_session_send_msg(sess->stun, NULL, PJ_FALSE, 
+                                         PJ_FALSE, sess->srv_addr,
+                                         pj_sockaddr_get_len(sess->srv_addr),
+                                         tdata);
+            }
+        }
 
-	/* Reshcedule timer */
-	if (resched) {
-	    pj_time_val delay;
+        /* Reshcedule timer */
+        if (resched) {
+            pj_time_val delay;
 
-	    delay.sec = sess->ka_interval;
-	    delay.msec = 0;
+            delay.sec = sess->ka_interval;
+            delay.msec = 0;
 
-	    pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->timer,
-	                                      &delay, TIMER_KEEP_ALIVE,
-	                                      sess->grp_lock);
-	}
+            pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->timer,
+                                              &delay, TIMER_KEEP_ALIVE,
+                                              sess->grp_lock);
+        }
 
     } else if (eid == TIMER_DESTROY) {
-	/* Time to destroy */
-	do_destroy(sess);
+        /* Time to destroy */
+        do_destroy(sess);
     } else {
-	pj_assert(!"Unknown timer event");
+        pj_assert(!"Unknown timer event");
     }
 
 on_return:

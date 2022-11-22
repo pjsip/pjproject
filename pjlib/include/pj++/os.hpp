@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -86,7 +85,7 @@ public:
     //
     static pj_status_t sleep(unsigned msec)
     {
-	return pj_thread_sleep(msec);
+        return pj_thread_sleep(msec);
     }
 
     //
@@ -119,7 +118,7 @@ class Pj_Thread : public Pj_Object
 public:
     enum Flags
     {
-	FLAG_SUSPENDED = PJ_THREAD_SUSPENDED
+        FLAG_SUSPENDED = PJ_THREAD_SUSPENDED
     };
 
     //
@@ -149,7 +148,7 @@ public:
     pj_status_t create( Pj_Pool *pool, 
                         unsigned flags = 0,
                         const char *thread_name = NULL,
-			pj_size_t stack_size = PJ_THREAD_DEFAULT_STACK_SIZE)
+                        pj_size_t stack_size = PJ_THREAD_DEFAULT_STACK_SIZE)
     {
         destroy();
         return Pj_Thread_API::create( pool, &thread_, &thread_proc, this,
@@ -161,7 +160,7 @@ public:
     //
     pj_thread_t *pj_thread_t_()
     {
-	return thread_;
+        return thread_;
     }
 
     //
@@ -321,7 +320,7 @@ public:
     pj_status_t create( Pj_Pool *pool, pj_atomic_value_t value)
     {
         destroy();
-	return pj_atomic_create(pool->pool_(), value, &var_);
+        return pj_atomic_create(pool->pool_(), value, &var_);
     }
 
     //
@@ -340,7 +339,7 @@ public:
     //
     pj_atomic_t *pj_atomic_t_()
     {
-	return var_;
+        return var_;
     }
 
     //
@@ -348,7 +347,7 @@ public:
     //
     void set(pj_atomic_value_t val)
     {
-	pj_atomic_set(var_, val);
+        pj_atomic_set(var_, val);
     }
 
     //
@@ -356,7 +355,7 @@ public:
     //
     pj_atomic_value_t get()
     {
-	return pj_atomic_get(var_);
+        return pj_atomic_get(var_);
     }
 
     //
@@ -364,7 +363,7 @@ public:
     //
     void inc()
     {
-	pj_atomic_inc(var_);
+        pj_atomic_inc(var_);
     }
 
     //
@@ -380,7 +379,7 @@ public:
     //
     void dec()
     {
-	pj_atomic_dec(var_);
+        pj_atomic_dec(var_);
     }
 
     //
@@ -423,9 +422,9 @@ public:
     //
     enum Type
     {
-	DEFAULT = PJ_MUTEX_DEFAULT,
-	SIMPLE = PJ_MUTEX_SIMPLE,
-	RECURSE = PJ_MUTEX_RECURSE,
+        DEFAULT = PJ_MUTEX_DEFAULT,
+        SIMPLE = PJ_MUTEX_SIMPLE,
+        RECURSE = PJ_MUTEX_RECURSE,
     };
 
     //
@@ -452,7 +451,7 @@ public:
     pj_status_t create( Pj_Pool *pool, Type type, const char *name = NULL)
     {
         destroy();
-	return pj_mutex_create( pool->pool_(), name, type,
+        return pj_mutex_create( pool->pool_(), name, type,
                                 &mutex_ );
     }
 
@@ -477,7 +476,7 @@ public:
     //
     pj_mutex_t *pj_mutex_t_()
     {
-	return mutex_;
+        return mutex_;
     }
 
     //
@@ -486,7 +485,7 @@ public:
     void destroy()
     {
         if (mutex_) {
-	    pj_mutex_destroy(mutex_);
+            pj_mutex_destroy(mutex_);
             mutex_ = NULL;
         }
     }
@@ -496,7 +495,7 @@ public:
     //
     pj_status_t acquire()
     {
-	return pj_mutex_lock(mutex_);
+        return pj_mutex_lock(mutex_);
     }
 
     //
@@ -504,7 +503,7 @@ public:
     //
     pj_status_t release()
     {
-	return pj_mutex_unlock(mutex_);
+        return pj_mutex_unlock(mutex_);
     }
 
     //
@@ -512,7 +511,7 @@ public:
     //
     pj_status_t tryacquire()
     {
-	return pj_mutex_trylock(mutex_);
+        return pj_mutex_trylock(mutex_);
     }
 
 private:
@@ -533,7 +532,7 @@ public:
                  unsigned initial = 0, const char *name = NULL)
     : sem_(NULL)
     {
-	create(pool, max, initial, name);
+        create(pool, max, initial, name);
     }
 
     //
@@ -551,7 +550,7 @@ public:
                         unsigned initial = 0, const char *name = NULL )
     {
         destroy();
-	return pj_sem_create( pool->pool_(), name, initial, max, &sem_);
+        return pj_sem_create( pool->pool_(), name, initial, max, &sem_);
     }
 
     //
@@ -570,7 +569,7 @@ public:
     //
     pj_sem_t *pj_sem_t_()
     {
-	return (pj_sem_t*)this;
+        return (pj_sem_t*)this;
     }
 
     //
@@ -578,7 +577,7 @@ public:
     //
     pj_status_t wait()
     {
-	return pj_sem_wait(this->pj_sem_t_());
+        return pj_sem_wait(this->pj_sem_t_());
     }
 
     //
@@ -586,7 +585,7 @@ public:
     //
     pj_status_t acquire()
     {
-	return wait();
+        return wait();
     }
 
     //
@@ -594,7 +593,7 @@ public:
     //
     pj_status_t trywait()
     {
-	return pj_sem_trywait(this->pj_sem_t_());
+        return pj_sem_trywait(this->pj_sem_t_());
     }
 
     //
@@ -602,7 +601,7 @@ public:
     //
     pj_status_t tryacquire()
     {
-	return trywait();
+        return trywait();
     }
 
     //
@@ -610,7 +609,7 @@ public:
     //
     pj_status_t post()
     {
-	return pj_sem_post(this->pj_sem_t_());
+        return pj_sem_post(this->pj_sem_t_());
     }
 
     //
@@ -618,7 +617,7 @@ public:
     //
     pj_status_t release()
     {
-	return post();
+        return post();
     }
 
 private:
@@ -657,7 +656,7 @@ public:
                         bool initial = false, const char *name = NULL)
     {
         destroy();
-	return pj_event_create(pool->pool_(), name, manual_reset, initial,
+        return pj_event_create(pool->pool_(), name, manual_reset, initial,
                                &event_);
     }
 
@@ -666,7 +665,7 @@ public:
     //
     pj_event_t *pj_event_t_()
     {
-	return event_;
+        return event_;
     }
 
     //
@@ -675,7 +674,7 @@ public:
     void destroy()
     {
         if (event_) {
-	    pj_event_destroy(event_);
+            pj_event_destroy(event_);
             event_ = NULL;
         }
     }
@@ -685,7 +684,7 @@ public:
     //
     pj_status_t wait()
     {
-	return pj_event_wait(event_);
+        return pj_event_wait(event_);
     }
 
     //
@@ -693,7 +692,7 @@ public:
     //
     pj_status_t trywait()
     {
-	return pj_event_trywait(event_);
+        return pj_event_trywait(event_);
     }
 
     //
@@ -701,7 +700,7 @@ public:
     //
     pj_status_t set()
     {
-	return pj_event_set(this->pj_event_t_());
+        return pj_event_set(this->pj_event_t_());
     }
 
     //
@@ -709,7 +708,7 @@ public:
     //
     pj_status_t pulse()
     {
-	return pj_event_pulse(this->pj_event_t_());
+        return pj_event_pulse(this->pj_event_t_());
     }
 
     //
@@ -717,7 +716,7 @@ public:
     //
     pj_status_t reset()
     {
-	return pj_event_reset(this->pj_event_t_());
+        return pj_event_reset(this->pj_event_t_());
     }
 
 private:
@@ -732,54 +731,54 @@ class Pj_Timestamp
 public:
     pj_status_t get_timestamp()
     {
-	return pj_get_timestamp(&ts_);
+        return pj_get_timestamp(&ts_);
     }
 
     Pj_Timestamp& operator += (const Pj_Timestamp &rhs)
     {
-	pj_add_timestamp(&ts_, &rhs.ts_);
-	return *this;
+        pj_add_timestamp(&ts_, &rhs.ts_);
+        return *this;
     }
 
     Pj_Timestamp& operator -= (const Pj_Timestamp &rhs)
     {
-	pj_sub_timestamp(&ts_, &rhs.ts_);
-	return *this;
+        pj_sub_timestamp(&ts_, &rhs.ts_);
+        return *this;
     }
 
     Pj_Time_Val to_time() const
     {
-	Pj_Timestamp zero;
-	pj_memset(&zero, 0, sizeof(zero));
-	return Pj_Time_Val(pj_elapsed_time(&zero.ts_, &ts_));
+        Pj_Timestamp zero;
+        pj_memset(&zero, 0, sizeof(zero));
+        return Pj_Time_Val(pj_elapsed_time(&zero.ts_, &ts_));
     }
 
     pj_uint32_t to_msec() const
     {
-	Pj_Timestamp zero;
-	pj_memset(&zero, 0, sizeof(zero));
-	return pj_elapsed_msec(&zero.ts_, &ts_);
+        Pj_Timestamp zero;
+        pj_memset(&zero, 0, sizeof(zero));
+        return pj_elapsed_msec(&zero.ts_, &ts_);
     }
 
     pj_uint32_t to_usec() const
     {
-	Pj_Timestamp zero;
-	pj_memset(&zero, 0, sizeof(zero));
-	return pj_elapsed_usec(&zero.ts_, &ts_);
+        Pj_Timestamp zero;
+        pj_memset(&zero, 0, sizeof(zero));
+        return pj_elapsed_usec(&zero.ts_, &ts_);
     }
 
     pj_uint32_t to_nanosec() const
     {
-	Pj_Timestamp zero;
-	pj_memset(&zero, 0, sizeof(zero));
-	return pj_elapsed_nanosec(&zero.ts_, &ts_);
+        Pj_Timestamp zero;
+        pj_memset(&zero, 0, sizeof(zero));
+        return pj_elapsed_nanosec(&zero.ts_, &ts_);
     }
 
     pj_uint32_t to_cycle() const
     {
-	Pj_Timestamp zero;
-	pj_memset(&zero, 0, sizeof(zero));
-	return pj_elapsed_cycle(&zero.ts_, &ts_);
+        Pj_Timestamp zero;
+        pj_memset(&zero, 0, sizeof(zero));
+        return pj_elapsed_cycle(&zero.ts_, &ts_);
     }
 
 private:
@@ -798,7 +797,7 @@ public:
     //
     static pj_status_t gettimeofday( Pj_Time_Val *tv )
     {
-	return pj_gettimeofday(tv);
+        return pj_gettimeofday(tv);
     }
 
     //
@@ -807,7 +806,7 @@ public:
     static pj_status_t time_decode( const Pj_Time_Val *tv, 
                                     pj_parsed_time *pt )
     {
-	return pj_time_decode(tv, pt);
+        return pj_time_decode(tv, pt);
     }
 
     //
@@ -816,7 +815,7 @@ public:
     static pj_status_t time_encode( const pj_parsed_time *pt, 
                                     Pj_Time_Val *tv)
     {
-	return pj_time_encode(pt, tv);
+        return pj_time_encode(pt, tv);
     }
 
     //
@@ -824,7 +823,7 @@ public:
     //
     static pj_status_t time_local_to_gmt( Pj_Time_Val *tv )
     {
-	return pj_time_local_to_gmt( tv );
+        return pj_time_local_to_gmt( tv );
     }
 
     //
@@ -832,7 +831,7 @@ public:
     //
     static pj_status_t time_gmt_to_local( Pj_Time_Val *tv) 
     {
-	return pj_time_gmt_to_local( tv );
+        return pj_time_gmt_to_local( tv );
     }
 };
 
@@ -866,5 +865,5 @@ inline pj_status_t Pj_Time_Val::to_local()
     return Pj_OS_API::time_gmt_to_local(this);
 }
 
-#endif	/* __PJPP_OS_HPP__ */
+#endif  /* __PJPP_OS_HPP__ */
 

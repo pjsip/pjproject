@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -38,25 +37,25 @@ PJ_BEGIN_DECL
 /* ************************************************************************* */
 
 /** Signed 32bit integer. */
-typedef int		pj_int32_t;
+typedef int             pj_int32_t;
 
 /** Unsigned 32bit integer. */
-typedef unsigned int	pj_uint32_t;
+typedef unsigned int    pj_uint32_t;
 
 /** Signed 16bit integer. */
-typedef short		pj_int16_t;
+typedef short           pj_int16_t;
 
 /** Unsigned 16bit integer. */
-typedef unsigned short	pj_uint16_t;
+typedef unsigned short  pj_uint16_t;
 
 /** Signed 8bit integer. */
-typedef signed char	pj_int8_t;
+typedef signed char     pj_int8_t;
 
 /** Unsigned 8bit integer. */
-typedef unsigned char	pj_uint8_t;
+typedef unsigned char   pj_uint8_t;
 
 /** Large unsigned integer. */
-typedef size_t		pj_size_t;
+typedef size_t          pj_size_t;
 
 /** Large signed integer. */
 #if defined(PJ_WIN64) && PJ_WIN64!=0
@@ -66,10 +65,10 @@ typedef size_t		pj_size_t;
 #endif
 
 /** Status code. */
-typedef int		pj_status_t;
+typedef int             pj_status_t;
 
 /** Boolean. */
-typedef int		pj_bool_t;
+typedef int             pj_bool_t;
 
 /** Native char type, which will be equal to wchar_t for Unicode
  * and char for ANSI. */
@@ -82,9 +81,9 @@ typedef int		pj_bool_t;
 /** This macro creates Unicode or ANSI literal string depending whether
  *  native platform string is Unicode or ANSI. */
 #if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
-#   define PJ_T(literal_str)	L##literal_str
+#   define PJ_T(literal_str)    L##literal_str
 #else
-#   define PJ_T(literal_str)	literal_str
+#   define PJ_T(literal_str)    literal_str
 #endif
 
 /** Some constants */
@@ -136,11 +135,11 @@ typedef union pj_timestamp
     struct
     {
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
-	pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
-	pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
+        pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
+        pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
 #else
-	pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
-	pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
+        pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
+        pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
 #endif
     } u32;                  /**< The 64-bit value as two 32-bit values. */
 
@@ -179,7 +178,7 @@ typedef struct pj_hash_entry pj_hash_entry;
  */
 typedef struct pj_hash_iterator_t
 {
-    pj_uint32_t	     index;     /**< Internal index.     */
+    pj_uint32_t      index;     /**< Internal index.     */
     pj_hash_entry   *entry;     /**< Internal entry.     */
 } pj_hash_iterator_t;
 
@@ -284,7 +283,7 @@ typedef int pj_exception_id_t;
 /**
  * Length of object names.
  */
-#define PJ_MAX_OBJ_NAME	32
+#define PJ_MAX_OBJ_NAME 32
 
 /* ************************************************************************* */
 /*
@@ -319,7 +318,7 @@ typedef void (*pj_exit_callback)(void);
  * Register cleanup function to be called by PJLIB when pj_shutdown() is 
  * called.
  *
- * @param func	    The function to be registered.
+ * @param func      The function to be registered.
  *
  * @return PJ_SUCCESS on success.
  */
@@ -330,9 +329,9 @@ PJ_DECL(pj_status_t) pj_atexit(pj_exit_callback func);
 /**
  * Swap the byte order of an 16bit data.
  *
- * @param val16	    The 16bit data.
+ * @param val16     The 16bit data.
  *
- * @return	    An 16bit data with swapped byte order.
+ * @return          An 16bit data with swapped byte order.
  */
 PJ_INLINE(pj_int16_t) pj_swap16(pj_int16_t val16)
 {
@@ -346,9 +345,9 @@ PJ_INLINE(pj_int16_t) pj_swap16(pj_int16_t val16)
 /**
  * Swap the byte order of an 32bit data.
  *
- * @param val32	    The 32bit data.
+ * @param val32     The 32bit data.
  *
- * @return	    An 32bit data with swapped byte order.
+ * @return          An 32bit data with swapped byte order.
  */
 PJ_INLINE(pj_int32_t) pj_swap32(pj_int32_t val32)
 {
@@ -419,7 +418,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Total time in miliseconds.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_MSEC(t)	((t).sec * 1000 + (t).msec)
+#define PJ_TIME_VAL_MSEC(t)     ((t).sec * 1000 + (t).msec)
 
 /**
  * This macro will check if \a t1 is equal to \a t2.
@@ -429,7 +428,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if both time values are equal.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_EQ(t1, t2)	((t1).sec==(t2).sec && (t1).msec==(t2).msec)
+#define PJ_TIME_VAL_EQ(t1, t2)  ((t1).sec==(t2).sec && (t1).msec==(t2).msec)
 
 /**
  * This macro will check if \a t1 is greater than \a t2
@@ -439,7 +438,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if t1 is greater than t2.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_GT(t1, t2)	((t1).sec>(t2).sec || \
+#define PJ_TIME_VAL_GT(t1, t2)  ((t1).sec>(t2).sec || \
                                 ((t1).sec==(t2).sec && (t1).msec>(t2).msec))
 
 /**
@@ -450,7 +449,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if t1 is greater than or equal to t2.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_GTE(t1, t2)	(PJ_TIME_VAL_GT(t1,t2) || \
+#define PJ_TIME_VAL_GTE(t1, t2) (PJ_TIME_VAL_GT(t1,t2) || \
                                  PJ_TIME_VAL_EQ(t1,t2))
 
 /**
@@ -461,7 +460,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if t1 is less than t2.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_LT(t1, t2)	(!(PJ_TIME_VAL_GTE(t1,t2)))
+#define PJ_TIME_VAL_LT(t1, t2)  (!(PJ_TIME_VAL_GTE(t1,t2)))
 
 /**
  * This macro will check if \a t1 is less than or equal to \a t2.
@@ -471,7 +470,7 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @return      Non-zero if t1 is less than or equal to t2.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_LTE(t1, t2)	(!PJ_TIME_VAL_GT(t1, t2))
+#define PJ_TIME_VAL_LTE(t1, t2) (!PJ_TIME_VAL_GT(t1, t2))
 
 /**
  * Add \a t2 to \a t1 and store the result in \a t1. Effectively
@@ -481,11 +480,11 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @param t2    The time value to be added to \a t1.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_ADD(t1, t2)	    do {			    \
-					(t1).sec += (t2).sec;	    \
-					(t1).msec += (t2).msec;	    \
-					pj_time_val_normalize(&(t1)); \
-				    } while (0)
+#define PJ_TIME_VAL_ADD(t1, t2)     do {                            \
+                                        (t1).sec += (t2).sec;       \
+                                        (t1).msec += (t2).msec;     \
+                                        pj_time_val_normalize(&(t1)); \
+                                    } while (0)
 
 
 /**
@@ -496,11 +495,11 @@ PJ_DECL(void) pj_time_val_normalize(pj_time_val *t);
  * @param t2    The time value to be substracted from \a t1.
  * @hideinitializer
  */
-#define PJ_TIME_VAL_SUB(t1, t2)	    do {			    \
-					(t1).sec -= (t2).sec;	    \
-					(t1).msec -= (t2).msec;	    \
-					pj_time_val_normalize(&(t1)); \
-				    } while (0)
+#define PJ_TIME_VAL_SUB(t1, t2)     do {                            \
+                                        (t1).sec -= (t2).sec;       \
+                                        (t1).msec -= (t2).msec;     \
+                                        pj_time_val_normalize(&(t1)); \
+                                    } while (0)
 
 
 /**
@@ -544,7 +543,7 @@ typedef struct pj_parsed_time
 
 
 /**
- * @}	// Time Management
+ * @}   // Time Management
  */
 
 /* ************************************************************************* */
@@ -555,9 +554,9 @@ typedef struct pj_parsed_time
  * Color code combination.
  */
 enum {
-    PJ_TERM_COLOR_R	= 2,    /**< Red            */
-    PJ_TERM_COLOR_G	= 4,    /**< Green          */
-    PJ_TERM_COLOR_B	= 1,    /**< Blue.          */
+    PJ_TERM_COLOR_R     = 2,    /**< Red            */
+    PJ_TERM_COLOR_G     = 4,    /**< Green          */
+    PJ_TERM_COLOR_B     = 1,    /**< Blue.          */
     PJ_TERM_COLOR_BRIGHT = 8    /**< Bright mask.   */
 };
 

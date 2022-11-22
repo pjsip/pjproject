@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2012 Teluu Inc. (http://www.teluu.com)
  *
@@ -46,4 +45,4 @@ see The PJSIP Book.
 
 
 
-#endif	/* __PJSUA2_DOXYGEN_HPP__ */
+#endif  /* __PJSUA2_DOXYGEN_HPP__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -70,105 +69,105 @@ typedef struct pjsip_cfg_t
 {
     /** Global settings. */
     struct {
-	/**
-	 * Specify port number should be allowed to appear in To and From
-	 * header. Note that RFC 3261 disallow this, see Table 1 in section
-	 * 19.1.1 of the RFC.
-	 *
-	 * Default is PJSIP_ALLOW_PORT_IN_FROMTO_HDR.
-	 */
-	pj_bool_t allow_port_in_fromto_hdr;
+        /**
+         * Specify port number should be allowed to appear in To and From
+         * header. Note that RFC 3261 disallow this, see Table 1 in section
+         * 19.1.1 of the RFC.
+         *
+         * Default is PJSIP_ALLOW_PORT_IN_FROMTO_HDR.
+         */
+        pj_bool_t allow_port_in_fromto_hdr;
 
-	/**
-	 * Accept call replace in early state when invite is not initiated
-	 * by the user agent. RFC 3891 Section 3 disallows this, however,
-	 * for better interoperability reason, this might be ignored.
-	 *
-	 * Default is PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE.
-	 */
-	pj_bool_t accept_replace_in_early_state;
+        /**
+         * Accept call replace in early state when invite is not initiated
+         * by the user agent. RFC 3891 Section 3 disallows this, however,
+         * for better interoperability reason, this might be ignored.
+         *
+         * Default is PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE.
+         */
+        pj_bool_t accept_replace_in_early_state;
 
-	/**
-	 * Allow hash character ('#') to appear in outgoing URIs. See
-	 * https://github.com/pjsip/pjproject/issues/1569.
-	 *
-	 * Default is PJ_FALSE.
-	 */
-	pj_bool_t allow_tx_hash_in_uri;
+        /**
+         * Allow hash character ('#') to appear in outgoing URIs. See
+         * https://github.com/pjsip/pjproject/issues/1569.
+         *
+         * Default is PJ_FALSE.
+         */
+        pj_bool_t allow_tx_hash_in_uri;
 
-	/**
-	 * Disable rport in request.
-	 *
-	 * Default is PJ_FALSE.
-	 */
-	pj_bool_t disable_rport;
+        /**
+         * Disable rport in request.
+         *
+         * Default is PJ_FALSE.
+         */
+        pj_bool_t disable_rport;
 
-	/**
-	 * Disable automatic switching from UDP to TCP if outgoing request
-	 * is greater than 1300 bytes.
-	 *
-	 * Default is PJSIP_DONT_SWITCH_TO_TCP.
-	 */
-	pj_bool_t disable_tcp_switch;
+        /**
+         * Disable automatic switching from UDP to TCP if outgoing request
+         * is greater than 1300 bytes.
+         *
+         * Default is PJSIP_DONT_SWITCH_TO_TCP.
+         */
+        pj_bool_t disable_tcp_switch;
 
-	/**
-	 * Disable automatic switching to TLS if target-URI does not use
-	 * "sips" scheme nor TLS transport, even when request-URI uses
-	 * "sips" scheme.
-	 *
-	 * Default is PJSIP_DONT_SWITCH_TO_TLS.
-	 */
-	pj_bool_t disable_tls_switch;
+        /**
+         * Disable automatic switching to TLS if target-URI does not use
+         * "sips" scheme nor TLS transport, even when request-URI uses
+         * "sips" scheme.
+         *
+         * Default is PJSIP_DONT_SWITCH_TO_TLS.
+         */
+        pj_bool_t disable_tls_switch;
 
-	/**
-	 * Enable call media session to always be updated to the latest
-	 * received early media SDP when receiving forked early media
-	 * (multiple 183 responses with different To tag).
-	 *
-	 * Default is PJSIP_FOLLOW_EARLY_MEDIA_FORK.
-	 */
-	pj_bool_t follow_early_media_fork;
+        /**
+         * Enable call media session to always be updated to the latest
+         * received early media SDP when receiving forked early media
+         * (multiple 183 responses with different To tag).
+         *
+         * Default is PJSIP_FOLLOW_EARLY_MEDIA_FORK.
+         */
+        pj_bool_t follow_early_media_fork;
 
-	/**
-	 * Specify whether "alias" param should be added to the Via header
-	 * in any outgoing request with connection oriented transport.
-	 *
-	 * Default is PJSIP_REQ_HAS_VIA_ALIAS.
-	 */
-	pj_bool_t req_has_via_alias;
+        /**
+         * Specify whether "alias" param should be added to the Via header
+         * in any outgoing request with connection oriented transport.
+         *
+         * Default is PJSIP_REQ_HAS_VIA_ALIAS.
+         */
+        pj_bool_t req_has_via_alias;
 
-	/**
-	 * Resolve hostname when trying to get the network interface to be put 
-	 * in Via or Contact header.
-	 *
-	 * Default is PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE.
-	 */
-	pj_bool_t resolve_hostname_to_get_interface;
+        /**
+         * Resolve hostname when trying to get the network interface to be put 
+         * in Via or Contact header.
+         *
+         * Default is PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE.
+         */
+        pj_bool_t resolve_hostname_to_get_interface;
 
-	/**
-	 * Disable security check on incoming messages in a secure dialog.
-	 * A secure dialog is created when the request that creates the dialog
-	 * uses "sips" scheme in its request URI. Contact URI should use "sips"
-	 * scheme and the top-most Record-Route URI, if any, should use either
-	 * "sips" scheme or "transport=tls" param. See also
-	 * https://github.com/pjsip/pjproject/issues/1735.
-	 *
-	 * Default is PJ_FALSE.
-	 */
-	pj_bool_t disable_secure_dlg_check;
+        /**
+         * Disable security check on incoming messages in a secure dialog.
+         * A secure dialog is created when the request that creates the dialog
+         * uses "sips" scheme in its request URI. Contact URI should use "sips"
+         * scheme and the top-most Record-Route URI, if any, should use either
+         * "sips" scheme or "transport=tls" param. See also
+         * https://github.com/pjsip/pjproject/issues/1735.
+         *
+         * Default is PJ_FALSE.
+         */
+        pj_bool_t disable_secure_dlg_check;
 
-	/**
-	 * Encode SIP headers in their short forms to reduce size. By default,
-	 * SIP headers in outgoing messages will be encoded in their full names.
-	 * If this option is enabled, then SIP headers for outgoing messages
-	 * will be encoded in their short forms, to reduce message size. 
-	 * Note that this does not affect the ability of PJSIP to parse incoming
-	 * SIP messages, as the parser always supports parsing both the long
-	 * and short version of the headers.
-	 *
-	 * Default is PJSIP_ENCODE_SHORT_HNAME
-	 */
-	pj_bool_t use_compact_form;
+        /**
+         * Encode SIP headers in their short forms to reduce size. By default,
+         * SIP headers in outgoing messages will be encoded in their full names.
+         * If this option is enabled, then SIP headers for outgoing messages
+         * will be encoded in their short forms, to reduce message size. 
+         * Note that this does not affect the ability of PJSIP to parse incoming
+         * SIP messages, as the parser always supports parsing both the long
+         * and short version of the headers.
+         *
+         * Default is PJSIP_ENCODE_SHORT_HNAME
+         */
+        pj_bool_t use_compact_form;
 
         /**
          * Accept multiple SDP answers on non-reliable 18X responses and the 2XX
@@ -181,46 +180,46 @@ typedef struct pjsip_cfg_t
          */
         pj_bool_t accept_multiple_sdp_answers;
 
-	/**
-	 * Don't disconnect the INVITE session after an outgoing request
-	 * gets timed out or responded with 408 (request timeout).
-	 *
-	 * Default is PJ_FALSE.
-	 */
-	pj_bool_t keep_inv_after_tsx_timeout;
+        /**
+         * Don't disconnect the INVITE session after an outgoing request
+         * gets timed out or responded with 408 (request timeout).
+         *
+         * Default is PJ_FALSE.
+         */
+        pj_bool_t keep_inv_after_tsx_timeout;
 
     } endpt;
 
     /** Transaction layer settings. */
     struct {
 
-	/** Maximum number of transactions. The value is initialized with
-	 *  PJSIP_MAX_TSX_COUNT
-	 */
-	unsigned max_count;
+        /** Maximum number of transactions. The value is initialized with
+         *  PJSIP_MAX_TSX_COUNT
+         */
+        unsigned max_count;
 
-	/* Timeout values: */
+        /* Timeout values: */
 
-	/** Transaction T1 timeout, in msec. Default value is PJSIP_T1_TIMEOUT
-	 */
-	unsigned t1;
+        /** Transaction T1 timeout, in msec. Default value is PJSIP_T1_TIMEOUT
+         */
+        unsigned t1;
 
-	/** Transaction T2 timeout, in msec. Default value is PJSIP_T2_TIMEOUT
-	 */
-	unsigned t2;
+        /** Transaction T2 timeout, in msec. Default value is PJSIP_T2_TIMEOUT
+         */
+        unsigned t2;
 
-	/** Transaction completed timer for non-INVITE, in msec. Default value
-	 *  is PJSIP_T4_TIMEOUT
-	 */
-	unsigned t4;
+        /** Transaction completed timer for non-INVITE, in msec. Default value
+         *  is PJSIP_T4_TIMEOUT
+         */
+        unsigned t4;
 
-	/** Transaction completed timer for INVITE, in msec. Default value is
-	 *  PJSIP_TD_TIMEOUT.
-	 *
-	 *  This setting is also used for transaction timeout timer for both
-	 *  INVITE and non-INVITE.
-	 */
-	unsigned td;
+        /** Transaction completed timer for INVITE, in msec. Default value is
+         *  PJSIP_TD_TIMEOUT.
+         *
+         *  This setting is also used for transaction timeout timer for both
+         *  INVITE and non-INVITE.
+         */
+        unsigned td;
 
     } tsx;
 
@@ -228,27 +227,27 @@ typedef struct pjsip_cfg_t
 
     /** Client registration settings. */
     struct {
-	/**
-	 * Specify whether client registration should check for its 
-	 * registered contact in Contact header of successful REGISTER 
-	 * response to determine whether registration has been successful. 
-	 * This setting may be disabled if non-compliant registrar is unable
-	 * to return correct Contact header.
-	 *
-	 * Default is PJSIP_REGISTER_CLIENT_CHECK_CONTACT
-	 */
-	pj_bool_t   check_contact;
+        /**
+         * Specify whether client registration should check for its 
+         * registered contact in Contact header of successful REGISTER 
+         * response to determine whether registration has been successful. 
+         * This setting may be disabled if non-compliant registrar is unable
+         * to return correct Contact header.
+         *
+         * Default is PJSIP_REGISTER_CLIENT_CHECK_CONTACT
+         */
+        pj_bool_t   check_contact;
 
-	/**
-	 * Specify whether client registration should add "x-uid" extension
-	 * parameter in all Contact URIs that it registers to assist the
-	 * matching of Contact URIs in the 200/OK REGISTER response, in 
-	 * case the registrar is unable to return exact Contact URI in the
-	 * 200/OK response.
-	 *
-	 * Default is PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM.
-	 */
-	pj_bool_t   add_xuid_param;
+        /**
+         * Specify whether client registration should add "x-uid" extension
+         * parameter in all Contact URIs that it registers to assist the
+         * matching of Contact URIs in the 200/OK REGISTER response, in 
+         * case the registrar is unable to return exact Contact URI in the
+         * 200/OK response.
+         *
+         * Default is PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM.
+         */
+        pj_bool_t   add_xuid_param;
 
     } regc;
 
@@ -288,7 +287,7 @@ typedef struct pjsip_cfg_t
  */
 PJ_DECL(pjsip_cfg_t*) pjsip_cfg(void);
 
-#else	/* PJ_DLL */
+#else   /* PJ_DLL */
 
 extern pjsip_cfg_t pjsip_sip_cfg_var;
 
@@ -303,7 +302,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
     return &pjsip_sip_cfg_var;
 }
 
-#endif	/* PJ_DLL */
+#endif  /* PJ_DLL */
 
 
 /**
@@ -314,7 +313,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default value is 1023
  */
 #ifndef PJSIP_MAX_TSX_COUNT
-#   define PJSIP_MAX_TSX_COUNT		(1024-1)
+#   define PJSIP_MAX_TSX_COUNT          (1024-1)
 #endif
 
 /**
@@ -325,7 +324,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default value is 511.
  */
 #ifndef PJSIP_MAX_DIALOG_COUNT
-#   define PJSIP_MAX_DIALOG_COUNT	(512-1)
+#   define PJSIP_MAX_DIALOG_COUNT       (512-1)
 #endif
 
 
@@ -335,7 +334,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * See also PJSIP_TPMGR_HTABLE_SIZE.
  */
 #ifndef PJSIP_MAX_TRANSPORTS
-#   define PJSIP_MAX_TRANSPORTS		(PJ_IOQUEUE_MAX_HANDLES)
+#   define PJSIP_MAX_TRANSPORTS         (PJ_IOQUEUE_MAX_HANDLES)
 #endif
 
 
@@ -344,7 +343,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * See also PJSIP_MAX_TRANSPORTS
  */
 #ifndef PJSIP_TPMGR_HTABLE_SIZE
-#   define PJSIP_TPMGR_HTABLE_SIZE	31
+#   define PJSIP_TPMGR_HTABLE_SIZE      31
 #endif
 
 
@@ -352,7 +351,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Specify maximum URL size.
  */
 #ifndef PJSIP_MAX_URL_SIZE
-#   define PJSIP_MAX_URL_SIZE		256
+#   define PJSIP_MAX_URL_SIZE           256
 #endif
 
 
@@ -361,7 +360,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * This mainly affects the size of mod_data array in various components.
  */
 #ifndef PJSIP_MAX_MODULE
-#   define PJSIP_MAX_MODULE		32
+#   define PJSIP_MAX_MODULE             32
 #endif
 
 
@@ -370,7 +369,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * containing presence information can be quite large (>1500).
  */
 #ifndef PJSIP_MAX_PKT_LEN
-#   define PJSIP_MAX_PKT_LEN		4000
+#   define PJSIP_MAX_PKT_LEN            4000
 #endif
 
 
@@ -390,7 +389,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 0 (no).
  */
 #ifndef PJSIP_DONT_SWITCH_TO_TCP
-#   define PJSIP_DONT_SWITCH_TO_TCP	0
+#   define PJSIP_DONT_SWITCH_TO_TCP     0
 #endif
 
 
@@ -408,7 +407,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 0 (no).
  */
 #ifndef PJSIP_DONT_SWITCH_TO_TLS
-#   define PJSIP_DONT_SWITCH_TO_TLS	0
+#   define PJSIP_DONT_SWITCH_TO_TLS     0
 #endif
 
 /**
@@ -419,7 +418,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 
 #ifndef PJSIP_HANDLE_EVENTS_HAS_SLEEP_ON_ERR
-#   define PJSIP_HANDLE_EVENTS_HAS_SLEEP_ON_ERR	    1
+#   define PJSIP_HANDLE_EVENTS_HAS_SLEEP_ON_ERR     1
 #endif
 
 /**
@@ -433,7 +432,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is PJ_TRUE.
  */
 #ifndef PJSIP_FOLLOW_EARLY_MEDIA_FORK
-#   define PJSIP_FOLLOW_EARLY_MEDIA_FORK	    PJ_TRUE
+#   define PJSIP_FOLLOW_EARLY_MEDIA_FORK            PJ_TRUE
 #endif
 
 
@@ -461,7 +460,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is PJ_TRUE.
  */
 #ifndef PJSIP_REQ_HAS_VIA_ALIAS
-#   define PJSIP_REQ_HAS_VIA_ALIAS		    PJ_TRUE
+#   define PJSIP_REQ_HAS_VIA_ALIAS                  PJ_TRUE
 #endif
 
 /**
@@ -488,7 +487,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 0 (no).
  */
 #ifndef PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE
-#   define PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE	    0
+#   define PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE      0
 #endif
 
 
@@ -500,7 +499,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 1300 bytes.
  */
 #ifndef PJSIP_UDP_SIZE_THRESHOLD
-#   define PJSIP_UDP_SIZE_THRESHOLD	1300
+#   define PJSIP_UDP_SIZE_THRESHOLD     1300
 #endif
 
 
@@ -519,7 +518,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 0 (no)
  */
 #ifndef PJSIP_ENCODE_SHORT_HNAME
-#   define PJSIP_ENCODE_SHORT_HNAME	0
+#   define PJSIP_ENCODE_SHORT_HNAME     0
 #endif
 
 
@@ -545,7 +544,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 1 (Yes)
  */
 #ifndef PJSIP_INCLUDE_ALLOW_HDR_IN_DLG
-#   define PJSIP_INCLUDE_ALLOW_HDR_IN_DLG	1
+#   define PJSIP_INCLUDE_ALLOW_HDR_IN_DLG       1
 #endif
 
 
@@ -555,7 +554,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * access module.
  */
 #ifndef PJSIP_SAFE_MODULE
-#   define PJSIP_SAFE_MODULE		1
+#   define PJSIP_SAFE_MODULE            1
 #endif
 
 
@@ -582,7 +581,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * https://github.com/pjsip/pjproject/issues/1412
  */
 #ifndef PJSIP_CHECK_VIA_SENT_BY
-#   define PJSIP_CHECK_VIA_SENT_BY	0
+#   define PJSIP_CHECK_VIA_SENT_BY      0
 #endif
 
 
@@ -599,7 +598,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 0
  */
 #ifndef PJSIP_UNESCAPE_IN_PLACE
-#   define PJSIP_UNESCAPE_IN_PLACE	0
+#   define PJSIP_UNESCAPE_IN_PLACE      0
 #endif
 
 
@@ -613,7 +612,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 0
  */
 #ifndef PJSIP_ALLOW_PORT_IN_FROMTO_HDR
-#   define PJSIP_ALLOW_PORT_IN_FROMTO_HDR	0
+#   define PJSIP_ALLOW_PORT_IN_FROMTO_HDR       0
 #endif
 
 /**
@@ -630,7 +629,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 1
  */
 #ifndef PJSIP_MAX_NET_EVENTS
-#   define PJSIP_MAX_NET_EVENTS		1
+#   define PJSIP_MAX_NET_EVENTS         1
 #endif
 
 
@@ -640,7 +639,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 10
  */
 #ifndef PJSIP_MAX_TIMED_OUT_ENTRIES
-#   define PJSIP_MAX_TIMED_OUT_ENTRIES	10
+#   define PJSIP_MAX_TIMED_OUT_ENTRIES  10
 #endif
 
 
@@ -656,7 +655,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 33
  */
 #ifndef PJSIP_TRANSPORT_IDLE_TIME
-#   define PJSIP_TRANSPORT_IDLE_TIME	33
+#   define PJSIP_TRANSPORT_IDLE_TIME    33
 #endif
 
 
@@ -669,7 +668,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 600
  */
 #ifndef PJSIP_TRANSPORT_SERVER_IDLE_TIME
-#   define PJSIP_TRANSPORT_SERVER_IDLE_TIME	600
+#   define PJSIP_TRANSPORT_SERVER_IDLE_TIME     600
 #endif
 
 
@@ -682,7 +681,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: -1
  */
 #ifndef PJSIP_MAX_TRANSPORT_USAGE
-#   define PJSIP_MAX_TRANSPORT_USAGE	((unsigned)-1)
+#   define PJSIP_MAX_TRANSPORT_USAGE    ((unsigned)-1)
 #endif
 
 
@@ -694,7 +693,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * @see PJSIP_TLS_TRANSPORT_BACKLOG
  */
 #ifndef PJSIP_TCP_TRANSPORT_BACKLOG
-#   define PJSIP_TCP_TRANSPORT_BACKLOG	5
+#   define PJSIP_TCP_TRANSPORT_BACKLOG  5
 #endif
 
 
@@ -709,9 +708,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_TCP_TRANSPORT_REUSEADDR
 # if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
-#   define PJSIP_TCP_TRANSPORT_REUSEADDR	0
+#   define PJSIP_TCP_TRANSPORT_REUSEADDR        0
 # else
-#   define PJSIP_TCP_TRANSPORT_REUSEADDR	1
+#   define PJSIP_TCP_TRANSPORT_REUSEADDR        1
 # endif
 #endif
 
@@ -778,7 +777,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: CRLF
  */
 #ifndef PJSIP_TCP_KEEP_ALIVE_DATA
-#   define PJSIP_TCP_KEEP_ALIVE_DATA	    { "\r\n\r\n", 4 }
+#   define PJSIP_TCP_KEEP_ALIVE_DATA        { "\r\n\r\n", 4 }
 #endif
 
 
@@ -794,7 +793,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 0 (disabled)
  */
 #ifndef PJSIP_TCP_INITIAL_TIMEOUT
-#   define PJSIP_TCP_INITIAL_TIMEOUT	    0
+#   define PJSIP_TCP_INITIAL_TIMEOUT        0
 #endif
 
 /**
@@ -819,7 +818,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: CRLF
  */
 #ifndef PJSIP_TLS_KEEP_ALIVE_DATA
-#   define PJSIP_TLS_KEEP_ALIVE_DATA	    { "\r\n\r\n", 4 }
+#   define PJSIP_TLS_KEEP_ALIVE_DATA        { "\r\n\r\n", 4 }
 #endif
 
 
@@ -844,7 +843,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * @see PJSIP_MAX_RESOLVED_ADDRESSES
  */
 #ifndef PJSIP_HAS_RESOLVER
-#   define PJSIP_HAS_RESOLVER		1
+#   define PJSIP_HAS_RESOLVER           1
 #endif
 
 
@@ -859,9 +858,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_MAX_RESOLVED_ADDRESSES
 #   if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
-#       define PJSIP_MAX_RESOLVED_ADDRESSES	    32
+#       define PJSIP_MAX_RESOLVED_ADDRESSES         32
 #   else
-#       define PJSIP_MAX_RESOLVED_ADDRESSES	    16
+#       define PJSIP_MAX_RESOLVED_ADDRESSES         16
 #   endif
 #endif
 
@@ -885,7 +884,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * @see PJSIP_TCP_TRANSPORT_BACKLOG
  */
 #ifndef PJSIP_TLS_TRANSPORT_BACKLOG
-#   define PJSIP_TLS_TRANSPORT_BACKLOG	    5
+#   define PJSIP_TLS_TRANSPORT_BACKLOG      5
 #endif
 
 
@@ -898,9 +897,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_TLS_TRANSPORT_REUSEADDR
 # if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
-#   define PJSIP_TLS_TRANSPORT_REUSEADDR	0
+#   define PJSIP_TLS_TRANSPORT_REUSEADDR        0
 # else
-#   define PJSIP_TLS_TRANSPORT_REUSEADDR	1
+#   define PJSIP_TLS_TRANSPORT_REUSEADDR        1
 # endif
 #endif
 
@@ -913,22 +912,22 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: (2*pjsip_cfg()->tsx.max_count) + (2*PJSIP_MAX_DIALOG_COUNT)
  */
 #ifndef PJSIP_MAX_TIMER_COUNT
-#   define PJSIP_MAX_TIMER_COUNT	(2*pjsip_cfg()->tsx.max_count + \
-					 2*PJSIP_MAX_DIALOG_COUNT)
+#   define PJSIP_MAX_TIMER_COUNT        (2*pjsip_cfg()->tsx.max_count + \
+                                         2*PJSIP_MAX_DIALOG_COUNT)
 #endif
 
 /**
  * Initial memory block for the endpoint.
  */
 #ifndef PJSIP_POOL_LEN_ENDPT
-#   define PJSIP_POOL_LEN_ENDPT		(4000)
+#   define PJSIP_POOL_LEN_ENDPT         (4000)
 #endif
 
 /**
  * Memory increment for endpoint.
  */
 #ifndef PJSIP_POOL_INC_ENDPT
-#   define PJSIP_POOL_INC_ENDPT		(4000)
+#   define PJSIP_POOL_INC_ENDPT         (4000)
 #endif
 
 
@@ -938,86 +937,86 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Initial memory block for rdata.
  */
 #ifndef PJSIP_POOL_RDATA_LEN
-#   define PJSIP_POOL_RDATA_LEN		4000
+#   define PJSIP_POOL_RDATA_LEN         4000
 #endif
 
 /**
  * Memory increment for rdata.
  */
 #ifndef PJSIP_POOL_RDATA_INC
-#   define PJSIP_POOL_RDATA_INC		4000
+#   define PJSIP_POOL_RDATA_INC         4000
 #endif
 
 /**
  * Initial memory block for SIP transport.
  */
 #ifndef PJSIP_POOL_LEN_TRANSPORT
-#   define PJSIP_POOL_LEN_TRANSPORT	512
+#   define PJSIP_POOL_LEN_TRANSPORT     512
 #endif
 
 /**
  * Memory increment for SIP transport.
  */
 #ifndef PJSIP_POOL_INC_TRANSPORT
-#   define PJSIP_POOL_INC_TRANSPORT	512
+#   define PJSIP_POOL_INC_TRANSPORT     512
 #endif
 
 /**
  * Initial memory block size for tdata.
  */
 #ifndef PJSIP_POOL_LEN_TDATA
-#   define PJSIP_POOL_LEN_TDATA		4000
+#   define PJSIP_POOL_LEN_TDATA         4000
 #endif
 
 /**
  * Memory increment for tdata.
  */
 #ifndef PJSIP_POOL_INC_TDATA
-#   define PJSIP_POOL_INC_TDATA		4000
+#   define PJSIP_POOL_INC_TDATA         4000
 #endif
 
 /**
  * Initial memory size for UA layer
  */
 #ifndef PJSIP_POOL_LEN_UA
-#   define PJSIP_POOL_LEN_UA		512
+#   define PJSIP_POOL_LEN_UA            512
 #endif
 
 /**
  * Memory increment for UA layer.
  */
 #ifndef PJSIP_POOL_INC_UA
-#   define PJSIP_POOL_INC_UA		512
+#   define PJSIP_POOL_INC_UA            512
 #endif
 
 /**
  * Initial memory block for event subscription module.
  */
 #ifndef PJSIP_POOL_EVSUB_LEN
-#   define PJSIP_POOL_EVSUB_LEN		512
+#   define PJSIP_POOL_EVSUB_LEN         512
 #endif
 
 /**
  * Memory increment for event subscription module.
  */
 #ifndef PJSIP_POOL_EVSUB_INC
-#   define PJSIP_POOL_EVSUB_INC		512
+#   define PJSIP_POOL_EVSUB_INC         512
 #endif
 
 /**
  * Default value for Max-Forwards header
  */
-#define PJSIP_MAX_FORWARDS_VALUE	70
+#define PJSIP_MAX_FORWARDS_VALUE        70
 
 /**
  * Via branch parameter prefix
  */
-#define PJSIP_RFC3261_BRANCH_ID		"z9hG4bK"
+#define PJSIP_RFC3261_BRANCH_ID         "z9hG4bK"
 
 /**
  * Length of PJSIP_RFC3261_BRANCH_ID
  */
-#define PJSIP_RFC3261_BRANCH_LEN	7
+#define PJSIP_RFC3261_BRANCH_LEN        7
 
 /* Transaction related constants. */
 
@@ -1028,7 +1027,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * fragmentation and the memory will most likely be wasted.
  */
 #ifndef PJSIP_POOL_TSX_LAYER_LEN
-#   define PJSIP_POOL_TSX_LAYER_LEN	512
+#   define PJSIP_POOL_TSX_LAYER_LEN     512
 #endif
 
 /**
@@ -1038,21 +1037,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * fragmentation and the memory will most likely be wasted.
  */
 #ifndef PJSIP_POOL_TSX_LAYER_INC
-#   define PJSIP_POOL_TSX_LAYER_INC	512
+#   define PJSIP_POOL_TSX_LAYER_INC     512
 #endif
 
 /**
  * Initial memory size for a SIP transaction object.
  */
 #ifndef PJSIP_POOL_TSX_LEN
-#   define PJSIP_POOL_TSX_LEN		1536 /* 768 */
+#   define PJSIP_POOL_TSX_LEN           1536 /* 768 */
 #endif
 
 /**
  * Memory increment for transaction object.
  */
 #ifndef PJSIP_POOL_TSX_INC
-#   define PJSIP_POOL_TSX_INC		256
+#   define PJSIP_POOL_TSX_INC           256
 #endif
 
 /**
@@ -1062,7 +1061,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 60 seconds
  */
 #ifndef PJSIP_TSX_1XX_RETRANS_DELAY
-#   define PJSIP_TSX_1XX_RETRANS_DELAY	60
+#   define PJSIP_TSX_1XX_RETRANS_DELAY  60
 #endif
 
 /**
@@ -1078,32 +1077,32 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_TSX_UAS_CONTINUE_ON_TP_ERROR 1
 #endif
 
-#define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
+#define PJSIP_MAX_TSX_KEY_LEN           (PJSIP_MAX_URL_SIZE*2)
 
 /* User agent's pool setting. */
-#define PJSIP_POOL_LEN_USER_AGENT	1024
+#define PJSIP_POOL_LEN_USER_AGENT       1024
 /* User agent's pool setting. */
-#define PJSIP_POOL_INC_USER_AGENT	1024
+#define PJSIP_POOL_INC_USER_AGENT       1024
 
 /** Message/URL related constants. */
-#define PJSIP_MAX_CALL_ID_LEN		pj_GUID_STRING_LENGTH()
+#define PJSIP_MAX_CALL_ID_LEN           pj_GUID_STRING_LENGTH()
 /** Message/URL related constants. */
-#define PJSIP_MAX_TAG_LEN		pj_GUID_STRING_LENGTH()
+#define PJSIP_MAX_TAG_LEN               pj_GUID_STRING_LENGTH()
 /** Message/URL related constants. */
-#define PJSIP_MAX_BRANCH_LEN		(PJSIP_RFC3261_BRANCH_LEN + pj_GUID_STRING_LENGTH() + 2)
+#define PJSIP_MAX_BRANCH_LEN            (PJSIP_RFC3261_BRANCH_LEN + pj_GUID_STRING_LENGTH() + 2)
 /** Message/URL related constants. */
-#define PJSIP_MAX_HNAME_LEN		64
+#define PJSIP_MAX_HNAME_LEN             64
 
 /** Dialog's pool setting. */
-#define PJSIP_POOL_LEN_DIALOG		1200
+#define PJSIP_POOL_LEN_DIALOG           1200
 /** Dialog's pool setting. */
-#define PJSIP_POOL_INC_DIALOG		512
+#define PJSIP_POOL_INC_DIALOG           512
 
 /** Maximum header types. */
-#define PJSIP_MAX_HEADER_TYPES		72
+#define PJSIP_MAX_HEADER_TYPES          72
 
 /** Maximum URI types. */
-#define PJSIP_MAX_URI_TYPES		4
+#define PJSIP_MAX_URI_TYPES             4
 
 /*****************************************************************************
  *  Default timeout settings, in miliseconds. 
@@ -1111,17 +1110,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 /** Transaction T1 timeout value. */
 #if !defined(PJSIP_T1_TIMEOUT)
-#  define PJSIP_T1_TIMEOUT	500
+#  define PJSIP_T1_TIMEOUT      500
 #endif
 
 /** Transaction T2 timeout value. */
 #if !defined(PJSIP_T2_TIMEOUT)
-#  define PJSIP_T2_TIMEOUT	4000
+#  define PJSIP_T2_TIMEOUT      4000
 #endif
 
 /** Transaction completed timer for non-INVITE */
 #if !defined(PJSIP_T4_TIMEOUT)
-#  define PJSIP_T4_TIMEOUT	5000
+#  define PJSIP_T4_TIMEOUT      5000
 #endif
 
 /**
@@ -1131,7 +1130,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * INVITE and non-INVITE.
  */
 #if !defined(PJSIP_TD_TIMEOUT)
-#  define PJSIP_TD_TIMEOUT	32000
+#  define PJSIP_TD_TIMEOUT      32000
 #endif
 
 
@@ -1152,7 +1151,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 0
  */
 #if !defined(PJSIP_AUTH_HEADER_CACHING)
-#   define PJSIP_AUTH_HEADER_CACHING	    0
+#   define PJSIP_AUTH_HEADER_CACHING        0
 #endif
 
 /**
@@ -1173,7 +1172,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 0
  */
 #if !defined(PJSIP_AUTH_AUTO_SEND_NEXT)
-#   define PJSIP_AUTH_AUTO_SEND_NEXT	    0
+#   define PJSIP_AUTH_AUTO_SEND_NEXT        0
 #endif
 
 /**
@@ -1184,7 +1183,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 1
  */
 #if !defined(PJSIP_AUTH_QOP_SUPPORT)
-#   define PJSIP_AUTH_QOP_SUPPORT	    1
+#   define PJSIP_AUTH_QOP_SUPPORT           1
 #endif
 
 
@@ -1195,7 +1194,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 3
  */
 #ifndef PJSIP_MAX_STALE_COUNT
-#   define PJSIP_MAX_STALE_COUNT	    3
+#   define PJSIP_MAX_STALE_COUNT            3
 #endif
 
 
@@ -1209,7 +1208,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 0 (for now)
  */
 #ifndef PJSIP_HAS_DIGEST_AKA_AUTH
-#   define PJSIP_HAS_DIGEST_AKA_AUTH	    0
+#   define PJSIP_HAS_DIGEST_AKA_AUTH        0
 #endif
 
 
@@ -1236,7 +1235,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 1
  */
 #ifndef PJSIP_REGISTER_CLIENT_CHECK_CONTACT
-#   define PJSIP_REGISTER_CLIENT_CHECK_CONTACT	1
+#   define PJSIP_REGISTER_CLIENT_CHECK_CONTACT  1
 #endif
 
 
@@ -1253,7 +1252,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 0.
  */
 #ifndef PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM
-#   define PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM	0
+#   define PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM 0
 #endif
 
 
@@ -1265,7 +1264,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 1.
  */
 #ifndef PJSIP_REGISTER_ALLOW_EXP_REFRESH
-#   define PJSIP_REGISTER_ALLOW_EXP_REFRESH	1
+#   define PJSIP_REGISTER_ALLOW_EXP_REFRESH     1
 #endif
 
 
@@ -1277,7 +1276,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 20 kB
  */
 #ifndef PJSIP_AUTH_CACHED_POOL_MAX_SIZE
-#   define PJSIP_AUTH_CACHED_POOL_MAX_SIZE	(20 * 1024)
+#   define PJSIP_AUTH_CACHED_POOL_MAX_SIZE      (20 * 1024)
 #endif
 
 
@@ -1291,7 +1290,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default is 1 (cnonce will not contain any hyphen characters).
  */
 #ifndef PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY
-#   define PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY	1
+#   define PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY    1
 #endif
 
 /**
@@ -1317,7 +1316,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 5 seconds
  */
 #ifndef PJSIP_EVSUB_TIME_UAC_REFRESH
-#   define PJSIP_EVSUB_TIME_UAC_REFRESH		5
+#   define PJSIP_EVSUB_TIME_UAC_REFRESH         5
 #endif
 
 
@@ -1328,7 +1327,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 5 seconds
  */
 #ifndef PJSIP_PUBLISHC_DELAY_BEFORE_REFRESH
-#   define PJSIP_PUBLISHC_DELAY_BEFORE_REFRESH	5
+#   define PJSIP_PUBLISHC_DELAY_BEFORE_REFRESH  5
 #endif
 
 
@@ -1339,7 +1338,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 5 seconds
  */
 #ifndef PJSIP_EVSUB_TIME_UAC_TERMINATE
-#   define PJSIP_EVSUB_TIME_UAC_TERMINATE	5
+#   define PJSIP_EVSUB_TIME_UAC_TERMINATE       5
 #endif
 
 
@@ -1352,7 +1351,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 5 seconds
  */
 #ifndef PJSIP_EVSUB_TIME_UAC_WAIT_NOTIFY
-#   define PJSIP_EVSUB_TIME_UAC_WAIT_NOTIFY	5
+#   define PJSIP_EVSUB_TIME_UAC_WAIT_NOTIFY     5
 #endif
 
 
@@ -1368,7 +1367,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 600 seconds (10 minutes)
  */
 #ifndef PJSIP_PRES_DEFAULT_EXPIRES
-#   define PJSIP_PRES_DEFAULT_EXPIRES		600
+#   define PJSIP_PRES_DEFAULT_EXPIRES           600
 #endif
 
 
@@ -1386,7 +1385,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 488 (Not Acceptable Here)
  */
 #ifndef PJSIP_PRES_BAD_CONTENT_RESPONSE
-#   define PJSIP_PRES_BAD_CONTENT_RESPONSE	488
+#   define PJSIP_PRES_BAD_CONTENT_RESPONSE      488
 #endif
 
 
@@ -1397,7 +1396,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 1 (yes)
  */
 #ifndef PJSIP_PRES_PIDF_ADD_TIMESTAMP
-#   define PJSIP_PRES_PIDF_ADD_TIMESTAMP	1
+#   define PJSIP_PRES_PIDF_ADD_TIMESTAMP        1
 #endif
 
 
@@ -1410,7 +1409,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 1800 seconds
  */
 #ifndef PJSIP_SESS_TIMER_DEF_SE
-#   define PJSIP_SESS_TIMER_DEF_SE		1800
+#   define PJSIP_SESS_TIMER_DEF_SE              1800
 #endif
 
 
@@ -1422,7 +1421,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 10 seconds
  */
 #ifndef PJSIP_SESS_TIMER_RETRY_DELAY
-#   define PJSIP_SESS_TIMER_RETRY_DELAY		10
+#   define PJSIP_SESS_TIMER_RETRY_DELAY         10
 #endif
 
 
@@ -1436,7 +1435,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 1 (yes)
  */
 #ifndef PJSIP_PUBLISHC_QUEUE_REQUEST
-#   define PJSIP_PUBLISHC_QUEUE_REQUEST		1
+#   define PJSIP_PUBLISHC_QUEUE_REQUEST         1
 #endif
 
 
@@ -1453,7 +1452,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 3600 seconds
  */
 #ifndef PJSIP_MWI_DEFAULT_EXPIRES
-#   define PJSIP_MWI_DEFAULT_EXPIRES		3600
+#   define PJSIP_MWI_DEFAULT_EXPIRES            3600
 #endif
 
 
@@ -1468,7 +1467,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: 0 (no)
  */
 #ifndef PJSIP_HAS_TX_DATA_LIST
-#   define PJSIP_HAS_TX_DATA_LIST		0
+#   define PJSIP_HAS_TX_DATA_LIST               0
 #endif
 
 /** 
@@ -1513,5 +1512,5 @@ PJ_END_DECL
 #include <pj/config.h>
 
 
-#endif	/* __PJSIP_SIP_CONFIG_H__ */
+#endif  /* __PJSIP_SIP_CONFIG_H__ */
 

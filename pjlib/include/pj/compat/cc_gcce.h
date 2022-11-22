@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -29,27 +28,27 @@
 #  error "This file is only for gcce!"
 #endif
 
-#define PJ_CC_NAME		"gcce"
-#define PJ_CC_VER_1		__GCCE__
-#define PJ_CC_VER_2		__GCCE_MINOR__
-#define PJ_CC_VER_3		__GCCE_PATCHLEVEL__
+#define PJ_CC_NAME              "gcce"
+#define PJ_CC_VER_1             __GCCE__
+#define PJ_CC_VER_2             __GCCE_MINOR__
+#define PJ_CC_VER_3             __GCCE_PATCHLEVEL__
 
 
-#define PJ_INLINE_SPECIFIER	static inline
-#define PJ_THREAD_FUNC	
-#define PJ_NORETURN		
-#define PJ_ATTR_NORETURN	__attribute__ ((noreturn))
-#define PJ_ATTR_MAY_ALIAS	__attribute__ ((__may_alias__))
+#define PJ_INLINE_SPECIFIER     static inline
+#define PJ_THREAD_FUNC  
+#define PJ_NORETURN             
+#define PJ_ATTR_NORETURN        __attribute__ ((noreturn))
+#define PJ_ATTR_MAY_ALIAS       __attribute__ ((__may_alias__))
 
-#define PJ_HAS_INT64		1
+#define PJ_HAS_INT64            1
 
 typedef long long pj_int64_t;
 typedef unsigned long long pj_uint64_t;
 
-#define PJ_INT64(val)		val##LL
-#define PJ_UINT64(val)		val##LLU
-#define PJ_INT64_FMT		"L"
+#define PJ_INT64(val)           val##LL
+#define PJ_UINT64(val)          val##LLU
+#define PJ_INT64_FMT            "L"
 
 
-#endif	/* __PJ_COMPAT_CC_GCCE_H__ */
+#endif  /* __PJ_COMPAT_CC_GCCE_H__ */
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -32,18 +31,18 @@ void pj_iphone_os_get_sys_info(pj_sys_info *si, pj_str_t *si_buffer)
     UIDevice *device = [UIDevice currentDevice];
     
     if ([device respondsToSelector:@selector(isMultitaskingSupported)])
-	si->flags |= PJ_SYS_HAS_IOS_BG;
+        si->flags |= PJ_SYS_HAS_IOS_BG;
     
-#define ALLOC_CP_STR(str,field)	\
+#define ALLOC_CP_STR(str,field) \
     do { \
-	len = [str length]; \
-	if (len && left >= len+1) { \
-	    si->field.ptr = si_buffer->ptr + buf_len - left; \
-	    si->field.slen = len; \
-	    [str getCString:si->field.ptr maxLength:len+1 \
-		 encoding:NSASCIIStringEncoding]; \
-	    left -= (len+1); \
-	} \
+        len = [str length]; \
+        if (len && left >= len+1) { \
+            si->field.ptr = si_buffer->ptr + buf_len - left; \
+            si->field.slen = len; \
+            [str getCString:si->field.ptr maxLength:len+1 \
+                 encoding:NSASCIIStringEncoding]; \
+            left -= (len+1); \
+        } \
     } while (0)
 
     ALLOC_CP_STR([device systemName], os_name);

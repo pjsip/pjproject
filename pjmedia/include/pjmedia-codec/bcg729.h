@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
  *
@@ -95,9 +94,9 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register BCG729 codec factory to pjmedia endpoint. 
  *
- * @param endpt		The pjmedia endpoint.
+ * @param endpt         The pjmedia endpoint.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt *endpt);
 
@@ -105,7 +104,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt *endpt);
  * Unregister BCG729 codec factory from pjmedia endpoint and deinitialize
  * the BCG729 codec library.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_bcg729_deinit(void);
 
@@ -117,5 +116,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_BCG729_H__ */
+#endif  /* __PJMEDIA_CODEC_BCG729_H__ */
 
