@@ -1078,6 +1078,7 @@ static void set_dh_use_option(BIO *bio, const pj_ssl_sock_t* ssock,
 	}
 	DH_free(dh);
     }
+    PJ_UNUSED_ARG(pass);
 #else
     OSSL_DECODER_CTX* dctx;
     EVP_PKEY* dh_pkey = NULL;
