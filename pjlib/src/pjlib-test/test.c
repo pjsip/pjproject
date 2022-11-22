@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -33,14 +32,14 @@
 
 #endif
 
-#define DO_TEST(test)	do { \
-			    PJ_LOG(3, ("test", "Running %s...", #test));  \
-			    rc = test; \
-			    PJ_LOG(3, ("test",  \
-				       "%s(%d)",  \
-				       (rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+#define DO_TEST(test)   do { \
+                            PJ_LOG(3, ("test", "Running %s...", #test));  \
+                            rc = test; \
+                            PJ_LOG(3, ("test",  \
+                                       "%s(%d)",  \
+                                       (rc ? "..ERROR" : "..success"), rc)); \
+                            if (rc!=0) goto on_return; \
+                        } while (0)
 
 
 pj_pool_factory *mem;
@@ -49,7 +48,7 @@ int param_echo_sock_type;
 const char *param_echo_server = ECHO_SERVER_ADDRESS;
 int param_echo_port = ECHO_SERVER_START_PORT;
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
+                      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
 
 int null_func()
 {
@@ -70,8 +69,8 @@ int test_inner(void)
 
     rc = pj_init();
     if (rc != 0) {
-	app_perror("pj_init() error!!", rc);
-	return rc;
+        app_perror("pj_init() error!!", rc);
+        return rc;
     }
 
     //pj_dump_config();
@@ -213,12 +212,12 @@ on_return:
 
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
     PJ_LOG(3,("test", "Stack max usage: %u, deepest: %s:%u",
-	              pj_thread_get_stack_max_usage(pj_thread_this()),
-		      filename, line));
+                      pj_thread_get_stack_max_usage(pj_thread_this()),
+                      filename, line));
     if (rc == 0)
-	PJ_LOG(3,("test", "Looks like everything is okay!.."));
+        PJ_LOG(3,("test", "Looks like everything is okay!.."));
     else
-	PJ_LOG(3,("test", "Test completed with error(s)"));
+        PJ_LOG(3,("test", "Test completed with error(s)"));
 
     pj_shutdown();
 

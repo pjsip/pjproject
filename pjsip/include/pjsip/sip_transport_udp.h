@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -49,14 +48,14 @@ enum
      * This flag tells the transport to keep the existing/internal socket
      * handle.
      */
-    PJSIP_UDP_TRANSPORT_KEEP_SOCKET	= 1,
+    PJSIP_UDP_TRANSPORT_KEEP_SOCKET     = 1,
 
     /**
      * This flag tells the transport to destroy the existing/internal socket
      * handle. Naturally this flag and PJSIP_UDP_TRANSPORT_KEEP_SOCKET are 
      * mutually exclusive.
      */
-    PJSIP_UDP_TRANSPORT_DESTROY_SOCKET	= 2
+    PJSIP_UDP_TRANSPORT_DESTROY_SOCKET  = 2
 };
 
 
@@ -71,19 +70,19 @@ typedef struct pjsip_udp_transport_cfg
      * Address family to use. Valid values are pj_AF_INET() and
      * pj_AF_INET6(). Default is pj_AF_INET().
      */
-    int			af;
+    int                 af;
 
     /**
      * Address to bind the socket to.
      */
-    pj_sockaddr		bind_addr;
+    pj_sockaddr         bind_addr;
 
     /**
      * Optional published address, which is the address to be
      * advertised as the address of this SIP transport. 
      * By default the bound address will be used as the published address.
      */
-    pjsip_host_port	addr_name;
+    pjsip_host_port     addr_name;
 
     /**
      * Number of simultaneous asynchronous accept() operations to be 
@@ -93,7 +92,7 @@ typedef struct pjsip_udp_transport_cfg
      *
      * Default: 1
      */
-    unsigned	        async_cnt;
+    unsigned            async_cnt;
 
     /**
      * QoS traffic type to be set on this transport. When application wants
@@ -102,7 +101,7 @@ typedef struct pjsip_udp_transport_cfg
      *
      * Default is QoS not set.
      */
-    pj_qos_type		qos_type;
+    pj_qos_type         qos_type;
 
     /**
      * Set the low level QoS parameters to the transport. This is a lower
@@ -111,7 +110,7 @@ typedef struct pjsip_udp_transport_cfg
      *
      * Default is QoS not set.
      */
-    pj_qos_params	qos_params;
+    pj_qos_params       qos_params;
 
     /**
      * Specify options to be set on the transport. 
@@ -119,7 +118,7 @@ typedef struct pjsip_udp_transport_cfg
      * By default there is no options.
      * 
      */
-    pj_sockopt_params	sockopt_params;
+    pj_sockopt_params   sockopt_params;
 
 } pjsip_udp_transport_cfg;
 
@@ -128,107 +127,107 @@ typedef struct pjsip_udp_transport_cfg
  * Initialize pjsip_udp_transport_cfg structure with default values for
  * the specifed address family.
  *
- * @param cfg		The structure to initialize.
- * @param af		Address family to be used.
+ * @param cfg           The structure to initialize.
+ * @param af            Address family to be used.
  */
 PJ_DECL(void) pjsip_udp_transport_cfg_default(pjsip_udp_transport_cfg *cfg,
-					      int af);
+                                              int af);
 
 
 /**
  * Start UDP IPv4/IPv6 transport.
  *
- * @param endpt		The SIP endpoint.
- * @param cfg		UDP transport settings. Application should initialize
- *			this setting with #pjsip_udp_transport_cfg_default().
- * @param p_transport	Pointer to receive the transport.
+ * @param endpt         The SIP endpoint.
+ * @param cfg           UDP transport settings. Application should initialize
+ *                      this setting with #pjsip_udp_transport_cfg_default().
+ * @param p_transport   Pointer to receive the transport.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_start2(
-					pjsip_endpoint *endpt,
-					const pjsip_udp_transport_cfg *cfg,
-					pjsip_transport **p_transport);
+                                        pjsip_endpoint *endpt,
+                                        const pjsip_udp_transport_cfg *cfg,
+                                        pjsip_transport **p_transport);
 
 
 /**
  * Start UDP transport.
  *
- * @param endpt		The SIP endpoint.
- * @param local		Optional local address to bind. If this argument
- *			is NULL, the UDP transport will be bound to arbitrary
- *			UDP port.
- * @param a_name	Published address (only the host and port portion is 
- *			used). If this argument is NULL, then the bound address
- *			will be used as the published address.
- * @param async_cnt	Number of simultaneous async operations.
- * @param p_transport	Pointer to receive the transport.
+ * @param endpt         The SIP endpoint.
+ * @param local         Optional local address to bind. If this argument
+ *                      is NULL, the UDP transport will be bound to arbitrary
+ *                      UDP port.
+ * @param a_name        Published address (only the host and port portion is 
+ *                      used). If this argument is NULL, then the bound address
+ *                      will be used as the published address.
+ * @param async_cnt     Number of simultaneous async operations.
+ * @param p_transport   Pointer to receive the transport.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_start(pjsip_endpoint *endpt,
-					       const pj_sockaddr_in *local,
-					       const pjsip_host_port *a_name,
-					       unsigned async_cnt,
-					       pjsip_transport **p_transport);
+                                               const pj_sockaddr_in *local,
+                                               const pjsip_host_port *a_name,
+                                               unsigned async_cnt,
+                                               pjsip_transport **p_transport);
 
 /**
  * Start IPv6 UDP transport.
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_start6(pjsip_endpoint *endpt,
-						const pj_sockaddr_in6 *local,
-						const pjsip_host_port *a_name,
-						unsigned async_cnt,
-						pjsip_transport **p_transport);
+                                                const pj_sockaddr_in6 *local,
+                                                const pjsip_host_port *a_name,
+                                                unsigned async_cnt,
+                                                pjsip_transport **p_transport);
 
 
 /**
  * Attach IPv4 UDP socket as a new transport and start the transport.
  *
- * @param endpt		The SIP endpoint.
- * @param sock		UDP socket to use.
- * @param a_name	Published address (only the host and port portion is 
- *			used).
- * @param async_cnt	Number of simultaneous async operations.
- * @param p_transport	Pointer to receive the transport.
+ * @param endpt         The SIP endpoint.
+ * @param sock          UDP socket to use.
+ * @param a_name        Published address (only the host and port portion is 
+ *                      used).
+ * @param async_cnt     Number of simultaneous async operations.
+ * @param p_transport   Pointer to receive the transport.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_attach(pjsip_endpoint *endpt,
-						pj_sock_t sock,
-						const pjsip_host_port *a_name,
-						unsigned async_cnt,
-						pjsip_transport **p_transport);
+                                                pj_sock_t sock,
+                                                const pjsip_host_port *a_name,
+                                                unsigned async_cnt,
+                                                pjsip_transport **p_transport);
 
 
 /**
  * Attach IPv4 or IPv6 UDP socket as a new transport and start the transport.
  *
- * @param endpt		The SIP endpoint.
- * @param type		Transport type, which is PJSIP_TRANSPORT_UDP for IPv4
- *			or PJSIP_TRANSPORT_UDP6 for IPv6 socket.
- * @param sock		UDP socket to use.
- * @param a_name	Published address (only the host and port portion is 
- *			used).
- * @param async_cnt	Number of simultaneous async operations.
- * @param p_transport	Pointer to receive the transport.
+ * @param endpt         The SIP endpoint.
+ * @param type          Transport type, which is PJSIP_TRANSPORT_UDP for IPv4
+ *                      or PJSIP_TRANSPORT_UDP6 for IPv6 socket.
+ * @param sock          UDP socket to use.
+ * @param a_name        Published address (only the host and port portion is 
+ *                      used).
+ * @param async_cnt     Number of simultaneous async operations.
+ * @param p_transport   Pointer to receive the transport.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_attach2(pjsip_endpoint *endpt,
-						 pjsip_transport_type_e type,
-						 pj_sock_t sock,
-						 const pjsip_host_port *a_name,
-						 unsigned async_cnt,
-						 pjsip_transport **p_transport);
+                                                 pjsip_transport_type_e type,
+                                                 pj_sock_t sock,
+                                                 const pjsip_host_port *a_name,
+                                                 unsigned async_cnt,
+                                                 pjsip_transport **p_transport);
 
 /**
  * Retrieve the internal socket handle used by the UDP transport. Note
@@ -236,11 +235,11 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_attach2(pjsip_endpoint *endpt,
  * wants to make use of this socket, it should temporarily pause the
  * transport.
  *
- * @param transport	The UDP transport.
+ * @param transport     The UDP transport.
  *
- * @return		The socket handle, or PJ_INVALID_SOCKET if no socket
- *			is currently being used (for example, when transport
- *			is being paused).
+ * @return              The socket handle, or PJ_INVALID_SOCKET if no socket
+ *                      is currently being used (for example, when transport
+ *                      is being paused).
  */
 PJ_DECL(pj_sock_t) pjsip_udp_transport_get_socket(pjsip_transport *transport);
 
@@ -266,14 +265,14 @@ PJ_DECL(pj_sock_t) pjsip_udp_transport_get_socket(pjsip_transport *transport);
  *    flag when calling this function, and specify a new socket when
  *    calling #pjsip_udp_transport_restart().
  *
- * @param transport	The UDP transport.
- * @param option	Pause option.
+ * @param transport     The UDP transport.
+ * @param option        Pause option.
  *
- * @return		PJ_SUCCESS if transport is paused successfully,
- *			or the appropriate error code.
+ * @return              PJ_SUCCESS if transport is paused successfully,
+ *                      or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
-					       unsigned option);
+                                               unsigned option);
 
 /**
  * Restart the transport. Several operations are supported by this function:
@@ -303,29 +302,29 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
  * this method. 
  * Please see https://github.com/pjsip/pjproject/pull/2731 for more details. 
  *
- * @param transport	The UDP transport.
- * @param option	Restart option.
- * @param sock		Optional socket to be used by the transport.
- * @param local		The address where the socket should be bound to.
- *			If this argument is NULL, socket will be bound
- *			to any available port.
- * @param a_name	Optionally specify the published address for
- *			this transport. If the socket is not replaced
- *			(PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag is
- *			specified), then if this argument is NULL, the
- *			previous value will be used. If the socket is
- *			replaced and this argument is NULL, the bound
- *			address will be used as the published address 
- *			of the transport.
+ * @param transport     The UDP transport.
+ * @param option        Restart option.
+ * @param sock          Optional socket to be used by the transport.
+ * @param local         The address where the socket should be bound to.
+ *                      If this argument is NULL, socket will be bound
+ *                      to any available port.
+ * @param a_name        Optionally specify the published address for
+ *                      this transport. If the socket is not replaced
+ *                      (PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag is
+ *                      specified), then if this argument is NULL, the
+ *                      previous value will be used. If the socket is
+ *                      replaced and this argument is NULL, the bound
+ *                      address will be used as the published address 
+ *                      of the transport.
  *
- * @return		PJ_SUCCESS if transport can be restarted, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS if transport can be restarted, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
-					         unsigned option,
-						 pj_sock_t sock,
-						 const pj_sockaddr_in *local,
-						 const pjsip_host_port *a_name);
+                                                 unsigned option,
+                                                 pj_sock_t sock,
+                                                 const pj_sockaddr_in *local,
+                                                 const pjsip_host_port *a_name);
 
 /**
  * Restart the transport. Several operations are supported by this function:
@@ -356,29 +355,29 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
  * this method. 
  * Please see https://github.com/pjsip/pjproject/pull/2731 for more details.
  *
- * @param transport	The UDP transport.
- * @param option	Restart option.
- * @param sock		Optional socket to be used by the transport.
- * @param local		The address where the socket should be bound to.
- *			If this argument is NULL, socket will be bound
- *			to any available port.
- * @param a_name	Optionally specify the published address for
- *			this transport. If the socket is not replaced
- *			(PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag is
- *			specified), then if this argument is NULL, the
- *			previous value will be used. If the socket is
- *			replaced and this argument is NULL, the bound
- *			address will be used as the published address 
- *			of the transport.
+ * @param transport     The UDP transport.
+ * @param option        Restart option.
+ * @param sock          Optional socket to be used by the transport.
+ * @param local         The address where the socket should be bound to.
+ *                      If this argument is NULL, socket will be bound
+ *                      to any available port.
+ * @param a_name        Optionally specify the published address for
+ *                      this transport. If the socket is not replaced
+ *                      (PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag is
+ *                      specified), then if this argument is NULL, the
+ *                      previous value will be used. If the socket is
+ *                      replaced and this argument is NULL, the bound
+ *                      address will be used as the published address 
+ *                      of the transport.
  *
- * @return		PJ_SUCCESS if transport can be restarted, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS if transport can be restarted, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
-					        unsigned option,
-					        pj_sock_t sock,
-					        const pj_sockaddr *local,
-					        const pjsip_host_port *a_name);
+                                                unsigned option,
+                                                pj_sock_t sock,
+                                                const pj_sockaddr *local,
+                                                const pjsip_host_port *a_name);
 
 
 PJ_END_DECL
@@ -387,4 +386,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJSIP_TRANSPORT_UDP_H__ */
+#endif  /* __PJSIP_TRANSPORT_UDP_H__ */

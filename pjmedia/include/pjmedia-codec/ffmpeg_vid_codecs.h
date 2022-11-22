@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,13 +34,13 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register FFMPEG video codecs factory to pjmedia endpoint.
  *
- * @param mgr	    The video codec manager instance where this codec will
- * 		    be registered to. Specify NULL to use default instance
- * 		    (in that case, an instance of video codec manager must
- * 		    have been created beforehand).
- * @param pf	    Pool factory.
+ * @param mgr       The video codec manager instance where this codec will
+ *                  be registered to. Specify NULL to use default instance
+ *                  (in that case, an instance of video codec manager must
+ *                  have been created beforehand).
+ * @param pf        Pool factory.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
                                                    pj_pool_factory *pf);
@@ -51,7 +50,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
  * Unregister FFMPEG video codecs factory from the video codec manager and
  * deinitialize the codecs library.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_ffmpeg_vid_deinit(void);
 
@@ -63,5 +62,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODECS_FFMPEG_VID_H__ */
+#endif  /* __PJMEDIA_CODECS_FFMPEG_VID_H__ */
 

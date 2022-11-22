@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -44,60 +43,60 @@ PJ_BEGIN_DECL
  * Create XML message with MIME type "application/im-iscomposing+xml"
  * to indicate the message composition status.
  *
- * @param pool		    Pool to allocate memory.
- * @param is_composing	    Message composition indication status. Set to
- *			    PJ_TRUE (or non-zero) to indicate that application
- *			    is currently composing an instant message.
- * @param lst_actv	    Optional attribute to indicate time of last
- *			    activity. If none is to be specified, the value
- *			    MUST be set to NULL.
- * @param content_tp	    Optional attribute to indicate the content type of
- *			    message being composed. If none is to be specified, 
- *			    the value MUST be set to NULL.
- * @param refresh	    Optional attribute to indicate the interval when
- *			    next indication will be sent, only when 
- *			    is_composing is non-zero. If none is to be 
- *			    specified, the value MUST be set to -1.
+ * @param pool              Pool to allocate memory.
+ * @param is_composing      Message composition indication status. Set to
+ *                          PJ_TRUE (or non-zero) to indicate that application
+ *                          is currently composing an instant message.
+ * @param lst_actv          Optional attribute to indicate time of last
+ *                          activity. If none is to be specified, the value
+ *                          MUST be set to NULL.
+ * @param content_tp        Optional attribute to indicate the content type of
+ *                          message being composed. If none is to be specified, 
+ *                          the value MUST be set to NULL.
+ * @param refresh           Optional attribute to indicate the interval when
+ *                          next indication will be sent, only when 
+ *                          is_composing is non-zero. If none is to be 
+ *                          specified, the value MUST be set to -1.
  *
- * @return		    An XML message containing the message indication.
- *			    NULL will be returned when there's not enough
- *			    memory to allocate the message.
+ * @return                  An XML message containing the message indication.
+ *                          NULL will be returned when there's not enough
+ *                          memory to allocate the message.
  */
 PJ_DECL(pj_xml_node*) pjsip_iscomposing_create_xml(pj_pool_t *pool,
-						   pj_bool_t is_composing,
-						   const pj_time_val *lst_actv,
-						   const pj_str_t *content_tp,
-						   int refresh);
+                                                   pj_bool_t is_composing,
+                                                   const pj_time_val *lst_actv,
+                                                   const pj_str_t *content_tp,
+                                                   int refresh);
 
 
 /**
  * Create message body with Content-Type "application/im-iscomposing+xml"
  * to indicate the message composition status.
  *
- * @param pool		    Pool to allocate memory.
- * @param is_composing	    Message composition indication status. Set to
- *			    PJ_TRUE (or non-zero) to indicate that application
- *			    is currently composing an instant message.
- * @param lst_actv	    Optional attribute to indicate time of last
- *			    activity. If none is to be specified, the value
- *			    MUST be set to NULL.
- * @param content_tp	    Optional attribute to indicate the content type of
- *			    message being composed. If none is to be specified, 
- *			    the value MUST be set to NULL.
- * @param refresh	    Optional attribute to indicate the interval when
- *			    next indication will be sent, only when 
- *			    is_composing is non-zero. If none is to be 
- *			    specified, the value MUST be set to -1.
+ * @param pool              Pool to allocate memory.
+ * @param is_composing      Message composition indication status. Set to
+ *                          PJ_TRUE (or non-zero) to indicate that application
+ *                          is currently composing an instant message.
+ * @param lst_actv          Optional attribute to indicate time of last
+ *                          activity. If none is to be specified, the value
+ *                          MUST be set to NULL.
+ * @param content_tp        Optional attribute to indicate the content type of
+ *                          message being composed. If none is to be specified, 
+ *                          the value MUST be set to NULL.
+ * @param refresh           Optional attribute to indicate the interval when
+ *                          next indication will be sent, only when 
+ *                          is_composing is non-zero. If none is to be 
+ *                          specified, the value MUST be set to -1.
  *
- * @return		    The SIP message body containing XML message 
- *			    indication. NULL will be returned when there's not
- *			    enough memory to allocate the message.
+ * @return                  The SIP message body containing XML message 
+ *                          indication. NULL will be returned when there's not
+ *                          enough memory to allocate the message.
  */
 PJ_DECL(pjsip_msg_body*) pjsip_iscomposing_create_body( pj_pool_t *pool,
-						   pj_bool_t is_composing,
-						   const pj_time_val *lst_actv,
-						   const pj_str_t *content_tp,
-						   int refresh);
+                                                   pj_bool_t is_composing,
+                                                   const pj_time_val *lst_actv,
+                                                   const pj_str_t *content_tp,
+                                                   int refresh);
 
 
 /**
@@ -107,23 +106,23 @@ PJ_DECL(pjsip_msg_body*) pjsip_iscomposing_create_body( pj_pool_t *pool,
  * Note that the input string buffer MUST be NULL terminated and have
  * length at least len+1 (len MUST NOT include the NULL terminator).
  *
- * @param pool		    Pool to allocate memory for the parsing process.
- * @param msg		    The message to be parsed, MUST be NULL terminated.
- * @param len		    Length of the message, excluding NULL terminator.
+ * @param pool              Pool to allocate memory for the parsing process.
+ * @param msg               The message to be parsed, MUST be NULL terminated.
+ * @param len               Length of the message, excluding NULL terminator.
  * @param p_is_composing    Optional pointer to receive iscomposing status.
- * @param p_last_active	    Optional pointer to receive last active attribute.
+ * @param p_last_active     Optional pointer to receive last active attribute.
  * @param p_content_type    Optional pointer to receive content type attribute.
- * @param p_refresh	    Optional pointer to receive refresh time.
+ * @param p_refresh         Optional pointer to receive refresh time.
  *
- * @return		    PJ_SUCCESS if message can be successfully parsed.
+ * @return                  PJ_SUCCESS if message can be successfully parsed.
  */
 PJ_DECL(pj_status_t) pjsip_iscomposing_parse( pj_pool_t *pool,
-					      char *msg,
-					      pj_size_t len,
-					      pj_bool_t *p_is_composing,
-					      pj_str_t **p_last_active,
-					      pj_str_t **p_content_type,
-					      int *p_refresh );
+                                              char *msg,
+                                              pj_size_t len,
+                                              pj_bool_t *p_is_composing,
+                                              pj_str_t **p_last_active,
+                                              pj_str_t **p_content_type,
+                                              int *p_refresh );
 
 
 /**
@@ -134,5 +133,5 @@ PJ_DECL(pj_status_t) pjsip_iscomposing_parse( pj_pool_t *pool,
 PJ_END_DECL
 
 
-#endif	/* __PJSIP_SIMPLE_ISCOMPOSING_H__ */
+#endif  /* __PJSIP_SIMPLE_ISCOMPOSING_H__ */
 

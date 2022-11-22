@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -25,11 +24,11 @@
  * @brief Describes Intel i386 family processor specifics.
  */
 
-#define PJ_M_NAME		"i386"
+#define PJ_M_NAME               "i386"
 
-#define PJ_HAS_PENTIUM		1
-#define PJ_IS_LITTLE_ENDIAN	1
-#define PJ_IS_BIG_ENDIAN	0
+#define PJ_HAS_PENTIUM          1
+#define PJ_IS_LITTLE_ENDIAN     1
+#define PJ_IS_BIG_ENDIAN        0
 
 
-#endif	/* __PJ_COMPAT_M_i386_H__ */
+#endif  /* __PJ_COMPAT_M_i386_H__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -62,7 +61,7 @@ static int timestamp_accuracy()
     /* Get the start time */
     pj_gettimeofday(&tvtmp);
     do {
-	pj_gettimeofday(&tv1);
+        pj_gettimeofday(&tv1);
     } while (PJ_TIME_VAL_EQ(tvtmp, tv1));
     pj_get_timestamp(&t1);
 
@@ -72,7 +71,7 @@ static int timestamp_accuracy()
     /* Get end time */
     pj_gettimeofday(&tvtmp);
     do {
-	pj_gettimeofday(&tv2);
+        pj_gettimeofday(&tv2);
     } while (PJ_TIME_VAL_EQ(tvtmp, tv2));
     pj_get_timestamp(&t2);
 
@@ -84,25 +83,25 @@ static int timestamp_accuracy()
     tics = t2.u64 - t1.u64;
     diff = tics - (msec * freq.u64 / 1000);
     if (diff < 0)
-	diff = -diff;
+        diff = -diff;
 
     /* Only allow 1 msec mismatch */
     if (diff > (pj_int64_t)(freq.u64 / 1000)) {
-	PJ_LOG(3,(THIS_FILE, "....error: timestamp drifted by %d usec after "
-			     "%d msec", 
-			     (pj_uint32_t)(diff * 1000000 / freq.u64), 
-			     msec));
-	return -2000;
+        PJ_LOG(3,(THIS_FILE, "....error: timestamp drifted by %d usec after "
+                             "%d msec", 
+                             (pj_uint32_t)(diff * 1000000 / freq.u64), 
+                             msec));
+        return -2000;
 
     /* Otherwise just print warning if timestamp drifted by >1 usec */
     } else if (diff > (pj_int64_t)(freq.u64 / 1000000)) {
-	PJ_LOG(3,(THIS_FILE, "....warning: timestamp drifted by %d usec after "
-			     "%d msec", 
-			     (pj_uint32_t)(diff * 1000000 / freq.u64), 
-			     msec));
+        PJ_LOG(3,(THIS_FILE, "....warning: timestamp drifted by %d usec after "
+                             "%d msec", 
+                             (pj_uint32_t)(diff * 1000000 / freq.u64), 
+                             msec));
     } else {
-	PJ_LOG(3,(THIS_FILE, "....good. Timestamp is accurate down to"
-			     " nearest usec."));
+        PJ_LOG(3,(THIS_FILE, "....good. Timestamp is accurate down to"
+                             " nearest usec."));
     }
 
     return 0;
@@ -122,12 +121,12 @@ int timestamp_test(void)
     
     /* Get and display timestamp frequency. */
     if ((rc=pj_get_timestamp_freq(&freq)) != PJ_SUCCESS) {
-	app_perror("...ERROR: get timestamp freq", rc);
-	return -1000;
+        app_perror("...ERROR: get timestamp freq", rc);
+        return -1000;
     }
 
     PJ_LOG(3,(THIS_FILE, "....frequency: hiword=%lu loword=%lu", 
-			freq.u32.hi, freq.u32.lo));
+                        freq.u32.hi, freq.u32.lo));
 
     PJ_LOG(3,(THIS_FILE, "...checking if time can run backwards (pls wait).."));
 
@@ -138,42 +137,42 @@ int timestamp_test(void)
      */
     rc = pj_get_timestamp(&t1);
     if (rc != PJ_SUCCESS) {
-	app_perror("...ERROR: pj_get_timestamp", rc);
-	return -1001;
+        app_perror("...ERROR: pj_get_timestamp", rc);
+        return -1001;
     }
     rc = pj_gettimeofday(&tv1);
     if (rc != PJ_SUCCESS) {
-	app_perror("...ERROR: pj_gettimeofday", rc);
-	return -1002;
+        app_perror("...ERROR: pj_gettimeofday", rc);
+        return -1002;
     }
     for (i=0; i<CONSECUTIVE_LOOP; ++i) {
         
         pj_thread_sleep(pj_rand() % 100);
 
-	rc = pj_get_timestamp(&t2);
-	if (rc != PJ_SUCCESS) {
-	    app_perror("...ERROR: pj_get_timestamp", rc);
-	    return -1003;
-	}
-	rc = pj_gettimeofday(&tv2);
-	if (rc != PJ_SUCCESS) {
-	    app_perror("...ERROR: pj_gettimeofday", rc);
-	    return -1004;
-	}
+        rc = pj_get_timestamp(&t2);
+        if (rc != PJ_SUCCESS) {
+            app_perror("...ERROR: pj_get_timestamp", rc);
+            return -1003;
+        }
+        rc = pj_gettimeofday(&tv2);
+        if (rc != PJ_SUCCESS) {
+            app_perror("...ERROR: pj_gettimeofday", rc);
+            return -1004;
+        }
 
-	/* compare t2 with t1, expecting t2 >= t1. */
-	if (t2.u32.hi < t1.u32.hi ||
-	    (t2.u32.hi == t1.u32.hi && t2.u32.lo < t1.u32.lo))
-	{
-	    PJ_LOG(3,(THIS_FILE, "...ERROR: timestamp run backwards!"));
-	    return -1005;
-	}
+        /* compare t2 with t1, expecting t2 >= t1. */
+        if (t2.u32.hi < t1.u32.hi ||
+            (t2.u32.hi == t1.u32.hi && t2.u32.lo < t1.u32.lo))
+        {
+            PJ_LOG(3,(THIS_FILE, "...ERROR: timestamp run backwards!"));
+            return -1005;
+        }
 
-	/* compare tv2 with tv1, expecting tv2 >= tv1. */
-	if (PJ_TIME_VAL_LT(tv2, tv1)) {
-	    PJ_LOG(3,(THIS_FILE, "...ERROR: time run backwards!"));
-	    return -1006;
-	}
+        /* compare tv2 with tv1, expecting tv2 >= tv1. */
+        if (PJ_TIME_VAL_LT(tv2, tv1)) {
+            PJ_LOG(3,(THIS_FILE, "...ERROR: time run backwards!"));
+            return -1006;
+        }
     }
 
     /* 
@@ -184,16 +183,16 @@ int timestamp_test(void)
 
     /* Mark start time. */
     if ((rc=pj_get_timestamp(&t1)) != PJ_SUCCESS) {
-	app_perror("....error: cat't get timestamp", rc);
-	return -1010;
+        app_perror("....error: cat't get timestamp", rc);
+        return -1010;
     }
 
     /* Loop.. */
     for (i=0; i<1000000; ++i) {
-	/* Try to do something so that smart compilers wont
-	 * remove this silly loop.
-	 */
-	null_func();
+        /* Try to do something so that smart compilers wont
+         * remove this silly loop.
+         */
+        null_func();
     }
 
     pj_thread_sleep(0);
@@ -209,18 +208,18 @@ int timestamp_test(void)
      * This should be good even on 50Mhz embedded powerpc.
      */
     if (elapsed < 1 || elapsed > 1000000) {
-	PJ_LOG(3,(THIS_FILE, "....error: elapsed time outside window (%u, "
-			     "t1.u32.hi=%u, t1.u32.lo=%u, "
-			     "t2.u32.hi=%u, t2.u32.lo=%u)",
-			     elapsed, 
-			     t1.u32.hi, t1.u32.lo, t2.u32.hi, t2.u32.lo));
-	return -1030;
+        PJ_LOG(3,(THIS_FILE, "....error: elapsed time outside window (%u, "
+                             "t1.u32.hi=%u, t1.u32.lo=%u, "
+                             "t2.u32.hi=%u, t2.u32.lo=%u)",
+                             elapsed, 
+                             t1.u32.hi, t1.u32.lo, t2.u32.hi, t2.u32.lo));
+        return -1030;
     }
 
     /* Testing time/timestamp accuracy */
     rc = timestamp_accuracy();
     if (rc != 0)
-	return rc;
+        return rc;
 
     return 0;
 }
@@ -231,5 +230,5 @@ int timestamp_test(void)
  * when this test is disabled. 
  */
 int dummy_timestamp_test;
-#endif	/* INCLUDE_TIMESTAMP_TEST */
+#endif  /* INCLUDE_TIMESTAMP_TEST */
 

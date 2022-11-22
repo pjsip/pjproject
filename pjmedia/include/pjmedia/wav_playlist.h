@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,32 +45,32 @@ PJ_BEGIN_DECL
  * files must have the same clock rate, number of channels, and bits
  * per sample, or otherwise this function will return error.
  *
- * @param pool		Pool to create memory buffers for this port.
- * @param port_label	Optional label to set as the port name.
- * @param file_list	Array of WAV file names.
- *			Each filename's length must be smaller than
- * 			PJ_MAXPATH.
- * @param file_count	Number of files in the array.
- * @param ptime		The duration (in miliseconds) of each frame read
- *			from this port. If the value is zero, the default
- *			duration (20ms) will be used.
- * @param options	Optional options. Application may specify 
- *			PJMEDIA_FILE_NO_LOOP to prevent play back loop.
- * @param buff_size	Buffer size to be allocated. If the value is zero or
- *			negative, the port will use default buffer size (which
- *			is about 4KB).
- * @param p_port	Pointer to receive the file port instance.
+ * @param pool          Pool to create memory buffers for this port.
+ * @param port_label    Optional label to set as the port name.
+ * @param file_list     Array of WAV file names.
+ *                      Each filename's length must be smaller than
+ *                      PJ_MAXPATH.
+ * @param file_count    Number of files in the array.
+ * @param ptime         The duration (in miliseconds) of each frame read
+ *                      from this port. If the value is zero, the default
+ *                      duration (20ms) will be used.
+ * @param options       Optional options. Application may specify 
+ *                      PJMEDIA_FILE_NO_LOOP to prevent play back loop.
+ * @param buff_size     Buffer size to be allocated. If the value is zero or
+ *                      negative, the port will use default buffer size (which
+ *                      is about 4KB).
+ * @param p_port        Pointer to receive the file port instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
-						 const pj_str_t *port_label,
-						 const pj_str_t file_list[],
-						 int file_count,
-						 unsigned ptime,
-						 unsigned options,
-						 pj_ssize_t buff_size,
-						 pjmedia_port **p_port);
+                                                 const pj_str_t *port_label,
+                                                 const pj_str_t file_list[],
+                                                 int file_count,
+                                                 unsigned ptime,
+                                                 unsigned options,
+                                                 pj_ssize_t buff_size,
+                                                 pjmedia_port **p_port);
 
 
 #if !DEPRECATED_FOR_TICKET_2251
@@ -81,20 +80,20 @@ PJ_DECL(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
  * then the callback will be called multiple times. Note that only one 
  * callback can be registered for each file port.
  *
- * @param port		The WAV play list port.
- * @param user_data	User data to be specified in the callback
- * @param cb		Callback to be called. If the callback returns non-
- *			PJ_SUCCESS, the playback will stop. Note that if
- *			application destroys the file port in the callback,
- *			it must return non-PJ_SUCCESS here.
+ * @param port          The WAV play list port.
+ * @param user_data     User data to be specified in the callback
+ * @param cb            Callback to be called. If the callback returns non-
+ *                      PJ_SUCCESS, the playback will stop. Note that if
+ *                      application destroys the file port in the callback,
+ *                      it must return non-PJ_SUCCESS here.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
-			        void *user_data,
-			        pj_status_t (*cb)(pjmedia_port *port,
-						  void *usr_data));
+                                void *user_data,
+                                pj_status_t (*cb)(pjmedia_port *port,
+                                                  void *usr_data));
 #endif
 
 
@@ -104,21 +103,21 @@ pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
  * then the callback will be called multiple times. Note that only one 
  * callback can be registered for each file port.
  *
- * @param port		The WAV play list port.
- * @param user_data	User data to be specified in the callback
- * @param cb		Callback to be called. Note that if
- *			application wishes to stop the playback, it
- *			can disconnect the port in the callback, and
- *			only after all connections have been removed
- *			could the application safely destroy the port.
+ * @param port          The WAV play list port.
+ * @param user_data     User data to be specified in the callback
+ * @param cb            Callback to be called. Note that if
+ *                      application wishes to stop the playback, it
+ *                      can disconnect the port in the callback, and
+ *                      only after all connections have been removed
+ *                      could the application safely destroy the port.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_wav_playlist_set_eof_cb2(pjmedia_port *port,
-			         void *user_data,
-			         void (*cb)(pjmedia_port *port,
-					    void *usr_data));
+                                 void *user_data,
+                                 void (*cb)(pjmedia_port *port,
+                                            void *usr_data));
 
 
 /**
@@ -129,4 +128,4 @@ pjmedia_wav_playlist_set_eof_cb2(pjmedia_port *port,
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_WAV_PLAYLIST_H__ */
+#endif  /* __PJMEDIA_WAV_PLAYLIST_H__ */

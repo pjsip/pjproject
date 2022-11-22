@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -48,13 +47,13 @@ PJ_BEGIN_DECL
 typedef struct pjsip_regc pjsip_regc;
 
 /** Maximum contacts in registration. */
-#define PJSIP_REGC_MAX_CONTACT	10
+#define PJSIP_REGC_MAX_CONTACT  10
 
 /** Expiration not specified. */
-#define PJSIP_REGC_EXPIRATION_NOT_SPECIFIED	PJSIP_EXPIRES_NOT_SPECIFIED
+#define PJSIP_REGC_EXPIRATION_NOT_SPECIFIED     PJSIP_EXPIRES_NOT_SPECIFIED
 
 /** Buffer to hold all contacts. */
-#define PJSIP_REGC_CONTACT_BUF_SIZE	512
+#define PJSIP_REGC_CONTACT_BUF_SIZE     512
 
 /** Structure to hold parameters when calling application's callback.
  *  The application's callback is called when the client registration process
@@ -62,24 +61,24 @@ typedef struct pjsip_regc pjsip_regc;
  */
 struct pjsip_regc_cbparam
 {
-    pjsip_regc		*regc;	    /**< Client registration structure.	    */
-    void		*token;	    /**< Arbitrary token set by application */
+    pjsip_regc          *regc;      /**< Client registration structure.     */
+    void                *token;     /**< Arbitrary token set by application */
 
     /** Error status. If this value is non-PJ_SUCCESS, some error has occured.
      *  Note that even when this contains PJ_SUCCESS the registration might
      *  have failed; in this case the \a code field will contain non
      *  successful (non-2xx status class) code
      */
-    pj_status_t		 status;
-    int			 code;	    /**< SIP status code received.	    */
-    pj_str_t		 reason;    /**< SIP reason phrase received.	    */
-    pjsip_rx_data	*rdata;	    /**< The complete received response.    */
-    unsigned		 expiration;/**< Next expiration interval,
-    					 PJSIP_REGC_EXPIRATION_NOT_SPECIFIED
-    					 if not specified.	    	    */
-    int			 contact_cnt;/**<Number of contacts in response.    */
-    pjsip_contact_hdr	*contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
-    pj_bool_t		 is_unreg;  /**< Expire header, if any, set to zero?*/
+    pj_status_t          status;
+    int                  code;      /**< SIP status code received.          */
+    pj_str_t             reason;    /**< SIP reason phrase received.        */
+    pjsip_rx_data       *rdata;     /**< The complete received response.    */
+    unsigned             expiration;/**< Next expiration interval,
+                                         PJSIP_REGC_EXPIRATION_NOT_SPECIFIED
+                                         if not specified.                  */
+    int                  contact_cnt;/**<Number of contacts in response.    */
+    pjsip_contact_hdr   *contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
+    pj_bool_t            is_unreg;  /**< Expire header, if any, set to zero?*/
 };
 
 
@@ -112,13 +111,13 @@ typedef void pjsip_regc_tsx_cb(struct pjsip_regc_tsx_cb_param *param);
  */
 struct pjsip_regc_info
 {
-    pj_str_t	server_uri; /**< Server URI,				    */
-    pj_str_t	client_uri; /**< Client URI (From header).		    */
-    pj_bool_t	is_busy;    /**< Have pending transaction?		    */
-    pj_bool_t	auto_reg;   /**< Will register automatically?		    */
-    unsigned	interval;   /**< Registration interval (seconds).	    */
-    unsigned	next_reg;   /**< Time until next registration (seconds).    */
-    pjsip_transport *transport; /**< Last transport used.		    */
+    pj_str_t    server_uri; /**< Server URI,                                */
+    pj_str_t    client_uri; /**< Client URI (From header).                  */
+    pj_bool_t   is_busy;    /**< Have pending transaction?                  */
+    pj_bool_t   auto_reg;   /**< Will register automatically?               */
+    unsigned    interval;   /**< Registration interval (seconds).           */
+    unsigned    next_reg;   /**< Time until next registration (seconds).    */
+    pjsip_transport *transport; /**< Last transport used.                   */
 };
 
 /**
@@ -130,7 +129,7 @@ typedef struct pjsip_regc_info pjsip_regc_info;
 /**
  * Get the module instance for client registration module.
  *
- * @return	    client registration module.
+ * @return          client registration module.
  */
 PJ_DECL(pjsip_module*) pjsip_regc_get_module(void);
 
@@ -138,16 +137,16 @@ PJ_DECL(pjsip_module*) pjsip_regc_get_module(void);
 /**
  * Create client registration structure.
  *
- * @param endpt	    Endpoint, used to allocate pool from.
- * @param token	    A data to be associated with the client registration struct.
- * @param cb	    Pointer to callback function to receive registration status.
+ * @param endpt     Endpoint, used to allocate pool from.
+ * @param token     A data to be associated with the client registration struct.
+ * @param cb        Pointer to callback function to receive registration status.
  * @param p_regc    Pointer to receive client registration structure.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
-				        pjsip_regc_cb *cb, 
-					pjsip_regc **p_regc);
+                                        pjsip_regc_cb *cb, 
+                                        pjsip_regc **p_regc);
 
 
 /**
@@ -155,9 +154,9 @@ PJ_DECL(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
  * in progress, then the structure will be deleted only after a final response
  * has been received, and in this case, the callback won't be called.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc);
 
@@ -171,10 +170,10 @@ PJ_DECL(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc);
  *   pjsip_regc_destroye()).
  * - if force is PJ_FALSE, the function will return PJ_EBUSY
  *
- * @param regc	    The client registration structure.
- * @param force	    Specify if the function must destroy the structure.
+ * @param regc      The client registration structure.
+ * @param force     Specify if the function must destroy the structure.
  *
- * @return	    PJ_SUCCESS on success, or PJ_EBUSY.
+ * @return          PJ_SUCCESS on success, or PJ_EBUSY.
  */
 PJ_DECL(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force);
 
@@ -182,20 +181,20 @@ PJ_DECL(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force);
 /**
  * Get registration info.
  *
- * @param regc	    The client registration structure.
- * @param info	    Client registration info.
+ * @param regc      The client registration structure.
+ * @param info      Client registration info.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
-					  pjsip_regc_info *info );
+                                          pjsip_regc_info *info );
 
 
 /**
  * Get the memory pool associated with a registration client handle.
  *
- * @param regc	    The client registration structure.
- * @return pool	    handle.
+ * @param regc      The client registration structure.
+ * @return pool     handle.
  */
 PJ_DECL(pj_pool_t*) pjsip_regc_get_pool(pjsip_regc *regc);
 
@@ -203,41 +202,41 @@ PJ_DECL(pj_pool_t*) pjsip_regc_get_pool(pjsip_regc *regc);
  * Initialize client registration structure with various information needed to
  * perform the registration.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param srv_url   Server URL.
  * @param from_url  The person performing the registration, must be a SIP URL type.
  * @param to_url    The address of record for which the registration is targetd, must
- *		    be a SIP/SIPS URL.
- * @param ccnt	    Number of contacts in the array.
+ *                  be a SIP/SIPS URL.
+ * @param ccnt      Number of contacts in the array.
  * @param contact   Array of contacts, each contact item must be formatted
- *		    as described in RFC 3261 Section 20.10:
- *		    When the header field value contains a display 
- *		    name, the URI including all URI parameters is 
- *		    enclosed in "<" and ">".  If no "<" and ">" are 
- *		    present, all parameters after the URI are header
- *		    parameters, not URI parameters.  The display name 
- *		    can be tokens, or a quoted string, if a larger 
- *		    character set is desired.
+ *                  as described in RFC 3261 Section 20.10:
+ *                  When the header field value contains a display 
+ *                  name, the URI including all URI parameters is 
+ *                  enclosed in "<" and ">".  If no "<" and ">" are 
+ *                  present, all parameters after the URI are header
+ *                  parameters, not URI parameters.  The display name 
+ *                  can be tokens, or a quoted string, if a larger 
+ *                  character set is desired.
  * @param expires   Default expiration interval (in seconds) to be applied for
- *		    contact URL that doesn't have expiration settings. If the
- *		    value PJSIP_REGC_EXPIRATION_NOT_SPECIFIED is given, then 
- *		    no default expiration will be applied.
- * @return	    zero on success.
+ *                  contact URL that doesn't have expiration settings. If the
+ *                  value PJSIP_REGC_EXPIRATION_NOT_SPECIFIED is given, then 
+ *                  no default expiration will be applied.
+ * @return          zero on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
-				     const pj_str_t *srv_url,
-				     const pj_str_t *from_url,
-				     const pj_str_t *to_url,
-				     int ccnt,
-				     const pj_str_t contact[],
-				     pj_uint32_t expires);
+                                     const pj_str_t *srv_url,
+                                     const pj_str_t *from_url,
+                                     const pj_str_t *to_url,
+                                     int ccnt,
+                                     const pj_str_t contact[],
+                                     pj_uint32_t expires);
 
 
 /**
  * Increment busy counter temporarily, to prevent client registration
  * structure from being destroyed.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  */
 PJ_DECL(void) pjsip_regc_add_ref( pjsip_regc *regc );
 
@@ -247,10 +246,10 @@ PJ_DECL(void) pjsip_regc_add_ref( pjsip_regc *regc );
  * is called, client registration structure may have been destroyed
  * if there's a pending destroy.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  *
- * @return	    PJ_SUCCESS on success. PJ_EGONE if the registration
- *		    structure has been destroyed inside the function.
+ * @return          PJ_SUCCESS on success. PJ_EGONE if the registration
+ *                  structure has been destroyed inside the function.
  */
 PJ_DECL(pj_status_t) pjsip_regc_dec_ref( pjsip_regc *regc );
 
@@ -262,78 +261,78 @@ PJ_DECL(pj_status_t) pjsip_regc_dec_ref( pjsip_regc *regc );
  * (including 401/407/423) and before any subsequent requests are sent.
  * In case of unregistration, this callback will not be called.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param tsx_cb    Pointer to callback function to receive registration status.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_reg_tsx_cb(pjsip_regc *regc,
-				               pjsip_regc_tsx_cb *tsx_cb);
+                                               pjsip_regc_tsx_cb *tsx_cb);
 
 /**
  * Set the "sent-by" field of the Via header for outgoing requests.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param via_addr  Set via_addr to use for the Via header or NULL to use
  *                  the transport's published name.
  * @param via_tp    via_addr will only be used if we are using via_tp
  *                  transport.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_via_sent_by(pjsip_regc *regc,
-				                pjsip_host_port *via_addr,
+                                                pjsip_host_port *via_addr,
                                                 pjsip_transport *via_tp);
 
 /**
  * Set the number of seconds to refresh the client registration before
  * the registration expires.
  *
- * @param regc	    The registration structure.
+ * @param regc      The registration structure.
  * @param delay     The number of seconds to refresh the client
  *                  registration before the registration expires.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjsip_regc_set_delay_before_refresh( pjsip_regc *regc,
-				     pj_uint32_t delay );
+                                     pj_uint32_t delay );
 
 
 /**
  * Set authentication credentials to use by this registration.
  *
- * @param regc	    The registration structure.
- * @param count	    Number of credentials in the array.
- * @param cred	    Array of credentials.
+ * @param regc      The registration structure.
+ * @param count     Number of credentials in the array.
+ * @param cred      Array of credentials.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
-						 int count,
-						 const pjsip_cred_info cred[] );
+                                                 int count,
+                                                 const pjsip_cred_info cred[] );
 
 /**
  * Set authentication preference.
  *
- * @param regc	    The registration structure.
- * @param pref	    Authentication preference.
+ * @param regc      The registration structure.
+ * @param pref      Authentication preference.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_prefs( pjsip_regc *regc,
-					   const pjsip_auth_clt_pref *pref);
+                                           const pjsip_auth_clt_pref *pref);
 
 /**
  * Set route set to be used for outgoing requests.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param route_set List containing Route headers.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_route_set(pjsip_regc *regc,
-					      const pjsip_route_hdr*route_set);
+                                              const pjsip_route_hdr*route_set);
 
 
 /**
@@ -350,15 +349,15 @@ PJ_DECL(pj_status_t) pjsip_regc_set_route_set(pjsip_regc *regc,
  * necessary, to adjust the address according to the transport being
  * selected.
  *
- * @param regc	    The client registration instance.
- * @param sel	    Transport selector containing the specification of
- *		    transport or listener to be used by this session
- *		    to send requests.
+ * @param regc      The client registration instance.
+ * @param sel       Transport selector containing the specification of
+ *                  transport or listener to be used by this session
+ *                  to send requests.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_transport(pjsip_regc *regc,
-					      const pjsip_tpselector *sel);
+                                              const pjsip_tpselector *sel);
 
 /**
  * Release the reference to current transport being used by the regc, if any.
@@ -368,23 +367,23 @@ PJ_DECL(pj_status_t) pjsip_regc_set_transport(pjsip_regc *regc,
  * regc to release this reference so that the transport can be destroyed.
  * See https://github.com/pjsip/pjproject/issues/1481 for background info.
  *
- * @param regc	    The client registration instance.
+ * @param regc      The client registration instance.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_regc_release_transport(pjsip_regc *regc);
 
 /**
  * Add headers to be added to outgoing REGISTER requests.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param hdr_list  List containing SIP headers to be added for all outgoing
- *		    REGISTER requests.
+ *                  REGISTER requests.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_add_headers(pjsip_regc *regc,
-					    const pjsip_hdr *hdr_list);
+                                            const pjsip_hdr *hdr_list);
 
 
 /**
@@ -394,28 +393,28 @@ PJ_DECL(pj_status_t) pjsip_regc_add_headers(pjsip_regc *regc,
  * the client registration structure to list what contacts are associaciated
  * with the address of record being targeted in the registration.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param autoreg   If non zero, the library will automatically refresh the
- *		    next registration until application unregister.
+ *                  next registration until application unregister.
  * @param p_tdata   Pointer to receive the REGISTER request.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
-					 pjsip_tx_data **p_tdata);
+                                         pjsip_tx_data **p_tdata);
 
 
 /**
  * Create REGISTER request to unregister the contacts that were previously
  * registered by this client registration.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param p_tdata   Pointer to receive the REGISTER request.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
-					   pjsip_tx_data **p_tdata);
+                                           pjsip_tx_data **p_tdata);
 
 /**
  * Create REGISTER request to unregister all contacts from server records.
@@ -424,13 +423,13 @@ PJ_DECL(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
  * contact registered by this client registration instance, use
  * #pjsip_regc_unregister() instead.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param p_tdata   Pointer to receive the REGISTER request.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
-					       pjsip_tx_data **p_tdata);
+                                               pjsip_tx_data **p_tdata);
 
 /**
  * Update Contact details in the client registration structure. For each
@@ -446,43 +445,43 @@ PJ_DECL(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
  * old contacts will have it's expires parameter set to zero to instruct
  * the registrar to remove the bindings.
  *
- * @param regc	    The client registration structure.
- * @param ccnt	    Number of contacts.
+ * @param regc      The client registration structure.
+ * @param ccnt      Number of contacts.
  * @param contact   Array of contacts, each contact item must be formatted
- *		    as described in RFC 3261 Section 20.10:
- *		    When the header field value contains a display 
- *		    name, the URI including all URI parameters is 
- *		    enclosed in "<" and ">".  If no "<" and ">" are 
- *		    present, all parameters after the URI are header
- *		    parameters, not URI parameters.  The display name 
- *		    can be tokens, or a quoted string, if a larger 
- *		    character set is desired.
- * @return	    PJ_SUCCESS if sucessfull.
+ *                  as described in RFC 3261 Section 20.10:
+ *                  When the header field value contains a display 
+ *                  name, the URI including all URI parameters is 
+ *                  enclosed in "<" and ">".  If no "<" and ">" are 
+ *                  present, all parameters after the URI are header
+ *                  parameters, not URI parameters.  The display name 
+ *                  can be tokens, or a quoted string, if a larger 
+ *                  character set is desired.
+ * @return          PJ_SUCCESS if sucessfull.
  */
 PJ_DECL(pj_status_t) pjsip_regc_update_contact( pjsip_regc *regc,
-					        int ccnt,
-						const pj_str_t contact[] );
+                                                int ccnt,
+                                                const pj_str_t contact[] );
 
 /**
  * Update the expires value. The next REGISTER request will contain
  * new expires value for the registration.
  *
- * @param regc	    The client registration structure.
+ * @param regc      The client registration structure.
  * @param expires   The new expires value.
- * @return	    zero on successfull.
+ * @return          zero on successfull.
  */
 PJ_DECL(pj_status_t) pjsip_regc_update_expires( pjsip_regc *regc,
-					        pj_uint32_t expires );
+                                                pj_uint32_t expires );
 
 /**
  * Sends outgoing REGISTER request.
  * The process will complete asynchronously, and application
  * will be notified via the callback when the process completes.
  *
- * @param regc	    The client registration structure.
- * @param tdata	    Transmit data.
+ * @param regc      The client registration structure.
+ * @param tdata     Transmit data.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
 
@@ -493,4 +492,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJSIP_REG_H__ */
+#endif  /* __PJSIP_REG_H__ */

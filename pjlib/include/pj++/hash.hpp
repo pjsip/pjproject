@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,36 +35,36 @@ public:
     class iterator
     {
     public:
-	iterator() 
+        iterator() 
         {
         }
-	explicit iterator(pj_hash_table_t *h, pj_hash_iterator_t *i) 
+        explicit iterator(pj_hash_table_t *h, pj_hash_iterator_t *i) 
         : ht_(h), it_(i) 
         {
         }
-	iterator(const iterator &rhs) 
+        iterator(const iterator &rhs) 
         : ht_(rhs.ht_), it_(rhs.it_) 
         {
         }
-	void operator++() 
+        void operator++() 
         { 
             it_ = pj_hash_next(ht_, it_); 
         }
-	bool operator==(const iterator &rhs) 
+        bool operator==(const iterator &rhs) 
         { 
             return ht_ == rhs.ht_ && it_ == rhs.it_; 
         }
-	iterator & operator=(const iterator &rhs) 
+        iterator & operator=(const iterator &rhs) 
         { 
             ht_=rhs.ht_; it_=rhs.it_; 
             return *this; 
         }
     private:
-	pj_hash_table_t *ht_;
-	pj_hash_iterator_t it_val_;
-	pj_hash_iterator_t *it_;
+        pj_hash_table_t *ht_;
+        pj_hash_iterator_t it_val_;
+        pj_hash_iterator_t *it_;
 
-	friend class Pj_Hash_Table;
+        friend class Pj_Hash_Table;
     };
 
     //
@@ -73,7 +72,7 @@ public:
     //
     Pj_Hash_Table(Pj_Pool *pool, unsigned size)
     {
-	table_ = pj_hash_create(pool->pool_(), size);
+        table_ = pj_hash_create(pool->pool_(), size);
     }
 
     //
@@ -90,7 +89,7 @@ public:
                              const void *key, 
                              unsigned keylen = PJ_HASH_KEY_STRING)
     {
-	return pj_hash_calc(initial_hval, key, keylen);
+        return pj_hash_calc(initial_hval, key, keylen);
     }
 
     //
@@ -98,7 +97,7 @@ public:
     //
     pj_hash_table_t *pj_hash_table_t_()
     {
-	return table_;
+        return table_;
     }
 
     //
@@ -106,7 +105,7 @@ public:
     //
     void *get(const void *key, unsigned keylen = PJ_HASH_KEY_STRING)
     {
-	return pj_hash_get(table_, key, keylen);
+        return pj_hash_get(table_, key, keylen);
     }
 
     //
@@ -118,7 +117,7 @@ public:
              void *value,
              unsigned keylen = PJ_HASH_KEY_STRING)
     {
-	pj_hash_set(pool->pool_(), table_, key, keylen, value);
+        pj_hash_set(pool->pool_(), table_, key, keylen, value);
     }
 
     //
@@ -126,7 +125,7 @@ public:
     //
     unsigned count()
     {
-	return pj_hash_count(table_);
+        return pj_hash_count(table_);
     }
 
     //
@@ -134,9 +133,9 @@ public:
     //
     iterator begin()
     {
-	iterator it(table_, NULL);
-	it.it_ = pj_hash_first(table_, &it.it_val_);
-	return it;
+        iterator it(table_, NULL);
+        it.it_ = pj_hash_first(table_, &it.it_val_);
+        return it;
     }
 
     //
@@ -144,7 +143,7 @@ public:
     //
     iterator end()
     {
-	return iterator(table_, NULL);
+        return iterator(table_, NULL);
     }
 
 private:
@@ -152,5 +151,5 @@ private:
 };
 
 
-#endif	/* __PJPP_HASH_HPP__ */
+#endif  /* __PJPP_HASH_HPP__ */
 

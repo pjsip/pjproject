@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -40,7 +39,7 @@
 #define HAS_TCP_TRANSPORT   (1 && PJ_HAS_TCP)
 
 /* Log identification */
-#define THIS_FILE	"sipstateless.c"
+#define THIS_FILE       "sipstateless.c"
 
 
 /* Global SIP endpoint */
@@ -74,9 +73,9 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
      * with 501 (Not Implemented)
      */
     if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
-	pjsip_endpt_respond_stateless( sip_endpt, rdata, 
-				       code, NULL,
-				       &hdr_list, NULL);
+        pjsip_endpt_respond_stateless( sip_endpt, rdata, 
+                                       code, NULL,
+                                       &hdr_list, NULL);
     }
     return PJ_TRUE;
 }
@@ -93,19 +92,19 @@ int main(int argc, char *argv[])
     pj_pool_t *pool = NULL;
     pjsip_module mod_app =
     {
-	NULL, NULL,		    /* prev, next.		*/
-	{ "mod-app", 7 },	    /* Name.			*/
-	-1,				    /* Id		*/
-	PJSIP_MOD_PRIORITY_APPLICATION, /* Priority		*/
-	NULL,			    /* load()			*/
-	NULL,			    /* start()			*/
-	NULL,			    /* stop()			*/
-	NULL,			    /* unload()			*/
-	&on_rx_request,		    /* on_rx_request()		*/
-	NULL,			    /* on_rx_response()		*/
-	NULL,			    /* on_tx_request.		*/
-	NULL,			    /* on_tx_response()		*/
-	NULL,			    /* on_tsx_state()		*/
+        NULL, NULL,                 /* prev, next.              */
+        { "mod-app", 7 },           /* Name.                    */
+        -1,                                 /* Id               */
+        PJSIP_MOD_PRIORITY_APPLICATION, /* Priority             */
+        NULL,                       /* load()                   */
+        NULL,                       /* start()                  */
+        NULL,                       /* stop()                   */
+        NULL,                       /* unload()                 */
+        &on_rx_request,             /* on_rx_request()          */
+        NULL,                       /* on_rx_response()         */
+        NULL,                       /* on_tx_request.           */
+        NULL,                       /* on_tx_response()         */
+        NULL,                       /* on_tsx_state()           */
     };
     int c;
     pj_status_t status;
@@ -124,64 +123,64 @@ int main(int argc, char *argv[])
 
     /* Create global endpoint: */
     {
-	/* Endpoint MUST be assigned a globally unique name.
-	 * Ideally we should put hostname or public IP address, but
-	 * we'll just use an arbitrary name here.
-	 */
+        /* Endpoint MUST be assigned a globally unique name.
+         * Ideally we should put hostname or public IP address, but
+         * we'll just use an arbitrary name here.
+         */
 
-	/* Create the endpoint: */
-	status = pjsip_endpt_create(&cp.factory, "sipstateless", 
-				    &sip_endpt);
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+        /* Create the endpoint: */
+        status = pjsip_endpt_create(&cp.factory, "sipstateless", 
+                                    &sip_endpt);
+        PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }
 
     /* Parse arguments */
     pj_optind = 0;
     pj_list_init(&hdr_list);
     while ((c=pj_getopt(argc, argv , "H:")) != -1) {
-	switch (c) {
-	case 'H':
-	    if (pool == NULL) {
-		pool = pj_pool_create(&cp.factory, "sipstateless", 1000, 
-				      1000, NULL);
-	    } 
-	    
-	    if (pool) {
-		char *name;
-		name = strtok(pj_optarg, ":");
-		if (name == NULL) {
-		    puts("Error: invalid header format");
-		    return 1;
-		} else {
-		    char *val = strtok(NULL, "\r\n");
-		    pjsip_generic_string_hdr *h;
-		    pj_str_t hname, hvalue;
+        switch (c) {
+        case 'H':
+            if (pool == NULL) {
+                pool = pj_pool_create(&cp.factory, "sipstateless", 1000, 
+                                      1000, NULL);
+            } 
+            
+            if (pool) {
+                char *name;
+                name = strtok(pj_optarg, ":");
+                if (name == NULL) {
+                    puts("Error: invalid header format");
+                    return 1;
+                } else {
+                    char *val = strtok(NULL, "\r\n");
+                    pjsip_generic_string_hdr *h;
+                    pj_str_t hname, hvalue;
 
-		    hname = pj_str(name);
-		    hvalue = pj_str(val);
+                    hname = pj_str(name);
+                    hvalue = pj_str(val);
 
-		    h = pjsip_generic_string_hdr_create(pool, &hname, &hvalue);
+                    h = pjsip_generic_string_hdr_create(pool, &hname, &hvalue);
 
-		    pj_list_push_back(&hdr_list, h);
+                    pj_list_push_back(&hdr_list, h);
 
-		    PJ_LOG(4,(THIS_FILE, "Header %s: %s added", name, val));
-		}
-	    }
-	    break;
-	default:
-	    puts("Error: invalid argument");
-	    usage();
-	    return 1;
-	}
+                    PJ_LOG(4,(THIS_FILE, "Header %s: %s added", name, val));
+                }
+            }
+            break;
+        default:
+            puts("Error: invalid argument");
+            usage();
+            return 1;
+        }
     }
 
     if (pj_optind != argc) {
-	code = atoi(argv[pj_optind]);
-	if (code < 200 || code > 699) {
-	    puts("Error: invalid status code");
-	    usage();
-	    return 1;
-	}
+        code = atoi(argv[pj_optind]);
+        if (code < 200 || code > 699) {
+            puts("Error: invalid status code");
+            usage();
+            return 1;
+        }
     }
 
     PJ_LOG(4,(THIS_FILE, "Returning %d to incoming requests", code));
@@ -192,18 +191,18 @@ int main(int argc, char *argv[])
      */
 #ifdef HAS_UDP_TRANSPORT
     {
-	pj_sockaddr_in addr;
+        pj_sockaddr_in addr;
 
-	addr.sin_family = pj_AF_INET();
-	addr.sin_addr.s_addr = 0;
-	addr.sin_port = pj_htons(5060);
+        addr.sin_family = pj_AF_INET();
+        addr.sin_addr.s_addr = 0;
+        addr.sin_port = pj_htons(5060);
 
-	status = pjsip_udp_transport_start( sip_endpt, &addr, NULL, 1, NULL);
-	if (status != PJ_SUCCESS) {
-	    PJ_LOG(3,(THIS_FILE, 
-		      "Error starting UDP transport (port in use?)"));
-	    return 1;
-	}
+        status = pjsip_udp_transport_start( sip_endpt, &addr, NULL, 1, NULL);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3,(THIS_FILE, 
+                      "Error starting UDP transport (port in use?)"));
+            return 1;
+        }
     }
 #endif
 
@@ -212,18 +211,18 @@ int main(int argc, char *argv[])
      * Add UDP transport, with hard-coded port 
      */
     {
-	pj_sockaddr_in addr;
+        pj_sockaddr_in addr;
 
-	addr.sin_family = pj_AF_INET();
-	addr.sin_addr.s_addr = 0;
-	addr.sin_port = pj_htons(5060);
+        addr.sin_family = pj_AF_INET();
+        addr.sin_addr.s_addr = 0;
+        addr.sin_port = pj_htons(5060);
 
-	status = pjsip_tcp_transport_start(sip_endpt, &addr, 1, NULL);
-	if (status != PJ_SUCCESS) {
-	    PJ_LOG(3,(THIS_FILE, 
-		      "Error starting TCP transport (port in use?)"));
-	    return 1;
-	}
+        status = pjsip_tcp_transport_start(sip_endpt, &addr, 1, NULL);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3,(THIS_FILE, 
+                      "Error starting TCP transport (port in use?)"));
+            return 1;
+        }
     }
 #endif
 
@@ -238,6 +237,6 @@ int main(int argc, char *argv[])
     PJ_LOG(3,(THIS_FILE, "Press Ctrl-C to quit.."));
 
     for (;;) {
-	pjsip_endpt_handle_events(sip_endpt, NULL);
+        pjsip_endpt_handle_events(sip_endpt, NULL);
     }
 }

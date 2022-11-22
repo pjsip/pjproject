@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -30,23 +29,23 @@
 #include <commctrl.h>
 #include <tchar.h>
 
-#define MAX_LOADSTRING	    100
-#define THIS_FILE	    "main_win32.c"
+#define MAX_LOADSTRING      100
+#define THIS_FILE           "main_win32.c"
 
-#define IDC_HELLO_WINCE	    3
-#define ID_LOGWINDOW	    104
-
-
-ATOM			    MyRegisterClass	(HINSTANCE, LPTSTR);
-BOOL			    InitInstance	(HINSTANCE, int);
-LRESULT CALLBACK	    WndProc		(HWND, UINT, WPARAM, LPARAM);
+#define IDC_HELLO_WINCE     3
+#define ID_LOGWINDOW        104
 
 
-extern int		    param_log_decor;	// in test.c
+ATOM                        MyRegisterClass     (HINSTANCE, LPTSTR);
+BOOL                        InitInstance        (HINSTANCE, int);
+LRESULT CALLBACK            WndProc             (HWND, UINT, WPARAM, LPARAM);
 
-static HINSTANCE	    hInst;
-static HWND		    hwndLog;
-static HFONT		    hFixedFont;
+
+extern int                  param_log_decor;    // in test.c
+
+static HINSTANCE            hInst;
+static HWND                 hwndLog;
+static HFONT                hFixedFont;
 
 
 static void write_log(int level, const char *data, int len)
@@ -56,12 +55,12 @@ static void write_log(int level, const char *data, int len)
     PJ_UNUSED_ARG(level);
     PJ_UNUSED_ARG(len);
     SendMessage(hwndLog, EM_REPLACESEL, FALSE, 
-		(LPARAM)PJ_STRING_TO_NATIVE(data,wdata,256));
+                (LPARAM)PJ_STRING_TO_NATIVE(data,wdata,256));
 }
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
-		   LPTSTR lpCmdLine, int nCmdShow)
+                   LPTSTR lpCmdLine, int nCmdShow)
 {
     MSG msg;
     
@@ -70,7 +69,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     
     if (!InitInstance (hInstance, nCmdShow))
-	return FALSE;
+        return FALSE;
     
     pj_log_set_log_func( &write_log );
     param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR;
@@ -83,8 +82,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     // Message loop, waiting to quit.
     while (GetMessage(&msg, NULL, 0, 0)) {
-	TranslateMessage(&msg);
-	DispatchMessage(&msg);
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
     
     DeleteObject(hFixedFont);
@@ -102,19 +101,19 @@ int main()
 
 ATOM MyRegisterClass(HINSTANCE hInstance, LPTSTR szWindowClass)
 {
-    WNDCLASS	wc;
+    WNDCLASS    wc;
     
-    wc.style		= CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc	= (WNDPROC) WndProc;
-    wc.cbClsExtra	= 0;
-    wc.cbWndExtra	= 0;
-    wc.hInstance	= hInstance;
-    ///wc.hIcon		= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_HELLO_WINCE));
-    wc.hIcon		= NULL;
-    wc.hCursor		= 0;
-    wc.hbrBackground	= (HBRUSH) GetStockObject(WHITE_BRUSH);
-    wc.lpszMenuName	= 0;
-    wc.lpszClassName	= szWindowClass;
+    wc.style            = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc      = (WNDPROC) WndProc;
+    wc.cbClsExtra       = 0;
+    wc.cbWndExtra       = 0;
+    wc.hInstance        = hInstance;
+    ///wc.hIcon         = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_HELLO_WINCE));
+    wc.hIcon            = NULL;
+    wc.hCursor          = 0;
+    wc.hbrBackground    = (HBRUSH) GetStockObject(WHITE_BRUSH);
+    wc.lpszMenuName     = 0;
+    wc.lpszClassName    = szWindowClass;
     
     return RegisterClass(&wc);
 }
@@ -122,10 +121,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance, LPTSTR szWindowClass)
 
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-    HWND	hWnd;
-    TCHAR	*szTitle = _T("PJSIP Test");
-    TCHAR	*szWindowClass = _T("PJSIP_TEST");
-    LOGFONT	lf;
+    HWND        hWnd;
+    TCHAR       *szTitle = _T("PJSIP Test");
+    TCHAR       *szWindowClass = _T("PJSIP_TEST");
+    LOGFONT     lf;
 
 
     memset(&lf, 0, sizeof(lf));
@@ -138,25 +137,25 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     hFixedFont = CreateFontIndirect(&lf);
     if (!hFixedFont)
-	return FALSE;
+        return FALSE;
 
     hInst = hInstance;
     
     MyRegisterClass(hInstance, szWindowClass);
     
     hWnd = CreateWindow(szWindowClass, szTitle, WS_VISIBLE,
-		        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 
-			CW_USEDEFAULT, NULL, NULL, hInstance, NULL);
+                        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 
+                        CW_USEDEFAULT, NULL, NULL, hInstance, NULL);
     
     if (!hWnd)
-	return FALSE;
+        return FALSE;
     
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
     if (hwndLog) {
-	SendMessage(hwndLog, WM_SETFONT, (WPARAM) hFixedFont, (LPARAM) 0);  
-	ShowWindow(hwndLog, TRUE);
+        SendMessage(hwndLog, WM_SETFONT, (WPARAM) hFixedFont, (LPARAM) 0);  
+        ShowWindow(hwndLog, TRUE);
     }
 
     return TRUE;
@@ -171,40 +170,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message) 
     {
     case WM_CREATE:
-	// Create text control.
-	GetClientRect(hWnd, &rt);
-	dwStyle = WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | 
-		  WS_BORDER | ES_LEFT | ES_MULTILINE | ES_NOHIDESEL |
-		  ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY; 
-	hwndLog = CreateWindow( TEXT("edit"),	    // class
-				NULL,		    // window text
-				dwStyle,	    // style
-				0,		    // x-left
-				0,		    // y-top
-				rt.right-rt.left,   // w
-				rt.bottom-rt.top,   // h
-				hWnd,		    // parent
-				(HMENU)ID_LOGWINDOW,// id
-				hInst,		    // instance
-				NULL);		    // NULL for control.
-	break;
+        // Create text control.
+        GetClientRect(hWnd, &rt);
+        dwStyle = WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | 
+                  WS_BORDER | ES_LEFT | ES_MULTILINE | ES_NOHIDESEL |
+                  ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY; 
+        hwndLog = CreateWindow( TEXT("edit"),       // class
+                                NULL,               // window text
+                                dwStyle,            // style
+                                0,                  // x-left
+                                0,                  // y-top
+                                rt.right-rt.left,   // w
+                                rt.bottom-rt.top,   // h
+                                hWnd,               // parent
+                                (HMENU)ID_LOGWINDOW,// id
+                                hInst,              // instance
+                                NULL);              // NULL for control.
+        break;
     case WM_ACTIVATE:
-	if (LOWORD(wParam) == WA_INACTIVE)
-	    DestroyWindow(hWnd);
-	break;
+        if (LOWORD(wParam) == WA_INACTIVE)
+            DestroyWindow(hWnd);
+        break;
     case WM_CHAR:
-	if (wParam == 27) {
-	    DestroyWindow(hWnd);
-	}
-	break;
+        if (wParam == 27) {
+            DestroyWindow(hWnd);
+        }
+        break;
     case WM_CLOSE:
-	DestroyWindow(hWnd);
-	break;
+        DestroyWindow(hWnd);
+        break;
     case WM_DESTROY:
-	PostQuitMessage(0);
-	break;
+        PostQuitMessage(0);
+        break;
     default:
-	return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
 }

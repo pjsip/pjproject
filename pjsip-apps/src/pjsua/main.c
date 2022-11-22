@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -19,12 +18,12 @@
  */
 #include "pjsua_app.h"
 
-#define THIS_FILE	"main.c"
+#define THIS_FILE       "main.c"
 
-static pj_bool_t	    running = PJ_TRUE;
-static pj_status_t	    receive_end_sig;
-static pj_thread_t	    *sig_thread;
-static pjsua_app_cfg_t	    cfg;
+static pj_bool_t            running = PJ_TRUE;
+static pj_status_t          receive_end_sig;
+static pj_thread_t          *sig_thread;
+static pjsua_app_cfg_t      cfg;
 
 /* Called when CLI (re)started */
 void on_app_started(pj_status_t status, const char *msg)
@@ -35,8 +34,8 @@ void on_app_started(pj_status_t status, const char *msg)
 void on_app_stopped(pj_bool_t restart, int argc, char** argv)
 {
     if (argv) {
-	cfg.argc = argc;
-	cfg.argv = argv;
+        cfg.argc = argc;
+        cfg.argv = argv;
     }
 
     running = restart;
@@ -58,11 +57,11 @@ static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
         case CTRL_BREAK_EVENT: 
         case CTRL_LOGOFF_EVENT: 
         case CTRL_SHUTDOWN_EVENT: 
-	    pj_thread_register("ctrlhandler", handler_desc, &sig_thread);
-	    PJ_LOG(3,(THIS_FILE, "Ctrl-C detected, quitting.."));
-	    receive_end_sig = PJ_TRUE;
-            pjsua_app_destroy();	    
-	    ExitProcess(1);
+            pj_thread_register("ctrlhandler", handler_desc, &sig_thread);
+            PJ_LOG(3,(THIS_FILE, "Ctrl-C detected, quitting.."));
+            receive_end_sig = PJ_TRUE;
+            pjsua_app_destroy();            
+            ExitProcess(1);
             PJ_UNREACHED(return TRUE;)
  
         default: 
@@ -136,21 +135,21 @@ int main_func(int argc, char *argv[])
     setup_socket_signal();
 
     while (running) {        
-	status = pjsua_app_init(&cfg);
-	if (status == PJ_SUCCESS) {
-	    status = pjsua_app_run(PJ_TRUE);
-	} else {
-	    running = PJ_FALSE;
-	}
+        status = pjsua_app_init(&cfg);
+        if (status == PJ_SUCCESS) {
+            status = pjsua_app_run(PJ_TRUE);
+        } else {
+            running = PJ_FALSE;
+        }
 
-	if (!receive_end_sig) {
-	    pjsua_app_destroy();
+        if (!receive_end_sig) {
+            pjsua_app_destroy();
 
-	    /* This is on purpose */
-	    pjsua_app_destroy();
-	} else {
-	    pj_thread_join(sig_thread);
-	}
+            /* This is on purpose */
+            pjsua_app_destroy();
+        } else {
+            pj_thread_join(sig_thread);
+        }
     }
     return 0;
 }

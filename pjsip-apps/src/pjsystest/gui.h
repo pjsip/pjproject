@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -29,10 +28,10 @@ typedef void (*gui_menu_handler) (void);
 
 typedef struct gui_menu 
 {
-    gui_title		 title;
-    gui_menu_handler	 handler;
-    unsigned		 submenu_cnt;
-    struct gui_menu	*submenus[16];
+    gui_title            title;
+    gui_menu_handler     handler;
+    unsigned             submenu_cnt;
+    struct gui_menu     *submenus[16];
 } gui_menu;
 
 enum gui_flag 
@@ -69,4 +68,4 @@ void gui_sleep(unsigned sec);
 PJ_END_DECL
 
 
-#endif	/* __GUI_H__ */
+#endif  /* __GUI_H__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -124,25 +123,25 @@ public:
 
     Pj_Time_Val & operator = (const Pj_Time_Val &rhs) 
     {
-	sec = rhs.sec;
-	msec = rhs.msec;
-	return *this;
+        sec = rhs.sec;
+        msec = rhs.msec;
+        return *this;
     }
  
     Pj_Time_Val & operator += (const Pj_Time_Val &rhs) 
     {
-	PJ_TIME_VAL_ADD((*this), rhs);
-	return *this;
+        PJ_TIME_VAL_ADD((*this), rhs);
+        return *this;
     }
 
     Pj_Time_Val & operator -= (const Pj_Time_Val &rhs) 
     {
-	PJ_TIME_VAL_SUB((*this), rhs);
-	return *this;
+        PJ_TIME_VAL_SUB((*this), rhs);
+        return *this;
     }
 
     /* Must include os.hpp to use these, otherwise unresolved in linking */
-    inline pj_status_t	   gettimeofday();
+    inline pj_status_t     gettimeofday();
     inline pj_parsed_time  decode();
     inline pj_status_t     encode(const pj_parsed_time *pt);
     inline pj_status_t     to_gmt();
@@ -160,16 +159,16 @@ private:
 //
 // Macro to declare common object comparison operators.
 //
-#define PJ_DECLARE_OPERATORS(rhs_type)			    \
-	    bool operator!=(rhs_type rhs) const {	    \
-		return !operator==(rhs); }		    \
-	    bool operator<=(rhs_type rhs) const {	    \
-		return operator<(rhs) || operator==(rhs); } \
-	    bool operator>(rhs_type rhs) const {	    \
-		return !operator<=(rhs); }		    \
-	    bool operator>=(rhs_type rhs) const {	    \
-		return !operator<(rhs); }
+#define PJ_DECLARE_OPERATORS(rhs_type)                      \
+            bool operator!=(rhs_type rhs) const {           \
+                return !operator==(rhs); }                  \
+            bool operator<=(rhs_type rhs) const {           \
+                return operator<(rhs) || operator==(rhs); } \
+            bool operator>(rhs_type rhs) const {            \
+                return !operator<=(rhs); }                  \
+            bool operator>=(rhs_type rhs) const {           \
+                return !operator<(rhs); }
 
 
-#endif	/* __PJPP_TYPES_HPP__ */
+#endif  /* __PJPP_TYPES_HPP__ */
 

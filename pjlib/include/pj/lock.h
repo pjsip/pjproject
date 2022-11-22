@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,71 +45,71 @@ PJ_BEGIN_DECL
 /**
  * Create simple, non recursive mutex lock object.
  *
- * @param pool	    Memory pool.
- * @param name	    Lock object's name.
- * @param lock	    Pointer to store the returned handle.
+ * @param pool      Memory pool.
+ * @param name      Lock object's name.
+ * @param lock      Pointer to store the returned handle.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_lock_create_simple_mutex( pj_pool_t *pool,
-						  const char *name,
-						  pj_lock_t **lock );
+                                                  const char *name,
+                                                  pj_lock_t **lock );
 
 /**
  * Create recursive mutex lock object.
  *
- * @param pool	    Memory pool.
- * @param name	    Lock object's name.
- * @param lock	    Pointer to store the returned handle.
+ * @param pool      Memory pool.
+ * @param name      Lock object's name.
+ * @param lock      Pointer to store the returned handle.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_lock_create_recursive_mutex( pj_pool_t *pool,
-						     const char *name,
-						     pj_lock_t **lock );
+                                                     const char *name,
+                                                     pj_lock_t **lock );
 
 
 /**
  * Create NULL mutex. A NULL mutex doesn't actually have any synchronization
  * object attached to it.
  *
- * @param pool	    Memory pool.
- * @param name	    Lock object's name.
- * @param lock	    Pointer to store the returned handle.
+ * @param pool      Memory pool.
+ * @param name      Lock object's name.
+ * @param lock      Pointer to store the returned handle.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_lock_create_null_mutex( pj_pool_t *pool,
-						const char *name,
-						pj_lock_t **lock );
+                                                const char *name,
+                                                pj_lock_t **lock );
 
 
 #if defined(PJ_HAS_SEMAPHORE) && PJ_HAS_SEMAPHORE != 0
 /**
  * Create semaphore lock object.
  *
- * @param pool	    Memory pool.
- * @param name	    Lock object's name.
+ * @param pool      Memory pool.
+ * @param name      Lock object's name.
  * @param initial   Initial value of the semaphore.
- * @param max	    Maximum value of the semaphore.
- * @param lock	    Pointer to store the returned handle.
+ * @param max       Maximum value of the semaphore.
+ * @param lock      Pointer to store the returned handle.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_lock_create_semaphore( pj_pool_t *pool,
-					       const char *name,
-					       unsigned initial,
-					       unsigned max,
-					       pj_lock_t **lock );
+                                               const char *name,
+                                               unsigned initial,
+                                               unsigned max,
+                                               pj_lock_t **lock );
 
-#endif	/* PJ_HAS_SEMAPHORE */
+#endif  /* PJ_HAS_SEMAPHORE */
 
 /**
  * Acquire lock on the specified lock object.
  *
- * @param lock	    The lock object.
+ * @param lock      The lock object.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_lock_acquire( pj_lock_t *lock );
 
@@ -118,9 +117,9 @@ PJ_DECL(pj_status_t) pj_lock_acquire( pj_lock_t *lock );
 /**
  * Try to acquire lock on the specified lock object.
  *
- * @param lock	    The lock object.
+ * @param lock      The lock object.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_lock_tryacquire( pj_lock_t *lock );
 
@@ -128,9 +127,9 @@ PJ_DECL(pj_status_t) pj_lock_tryacquire( pj_lock_t *lock );
 /**
  * Release lock on the specified lock object.
  *
- * @param lock	    The lock object.
+ * @param lock      The lock object.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_lock_release( pj_lock_t *lock );
 
@@ -138,9 +137,9 @@ PJ_DECL(pj_status_t) pj_lock_release( pj_lock_t *lock );
 /**
  * Destroy the lock object.
  *
- * @param lock	    The lock object.
+ * @param lock      The lock object.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_lock_destroy( pj_lock_t *lock );
 
@@ -189,7 +188,7 @@ typedef struct pj_grp_lock_config
     /**
      * Creation flags, currently must be zero.
      */
-    unsigned	flags;
+    unsigned    flags;
 
 } pj_grp_lock_config;
 
@@ -198,7 +197,7 @@ typedef struct pj_grp_lock_config
  * The group lock destroy handler, a destructor function called when
  * a group lock is about to be destroyed.
  *
- * @param member	A pointer to be passed to the handler.
+ * @param member        A pointer to be passed to the handler.
  */
 typedef void (*pj_grp_lock_handler)(void *member);
 
@@ -206,7 +205,7 @@ typedef void (*pj_grp_lock_handler)(void *member);
 /**
  * Initialize the config with the default values.
  *
- * @param cfg		The config to be initialized.
+ * @param cfg           The config to be initialized.
  */
 PJ_DECL(void) pj_grp_lock_config_default(pj_grp_lock_config *cfg);
 
@@ -214,13 +213,13 @@ PJ_DECL(void) pj_grp_lock_config_default(pj_grp_lock_config *cfg);
  * Create a group lock object. Initially the group lock will have reference
  * counter of zero.
  *
- * @param pool		The group lock only uses the pool parameter to get
- * 			the pool factory, from which it will create its own
- * 			pool.
- * @param cfg		Optional configuration.
- * @param p_grp_lock	Pointer to receive the newly created group lock.
+ * @param pool          The group lock only uses the pool parameter to get
+ *                      the pool factory, from which it will create its own
+ *                      pool.
+ * @param cfg           Optional configuration.
+ * @param p_grp_lock    Pointer to receive the newly created group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_create(pj_pool_t *pool,
                                         const pj_grp_lock_config *cfg,
@@ -231,28 +230,28 @@ PJ_DECL(pj_status_t) pj_grp_lock_create(pj_pool_t *pool,
  * called by the group lock when it is about to be destroyed. Initially the
  * group lock will have reference counter of zero.
  *
- * @param pool		The group lock only uses the pool parameter to get
- * 			the pool factory, from which it will create its own
- * 			pool.
- * @param cfg		Optional configuration.
- * @param member	A pointer to be passed to the handler.
- * @param handler	The destroy handler.
- * @param p_grp_lock	Pointer to receive the newly created group lock.
+ * @param pool          The group lock only uses the pool parameter to get
+ *                      the pool factory, from which it will create its own
+ *                      pool.
+ * @param cfg           Optional configuration.
+ * @param member        A pointer to be passed to the handler.
+ * @param handler       The destroy handler.
+ * @param p_grp_lock    Pointer to receive the newly created group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_create_w_handler(pj_pool_t *pool,
-                                        	  const pj_grp_lock_config *cfg,
-                                        	  void *member,
+                                                  const pj_grp_lock_config *cfg,
+                                                  void *member,
                                                   pj_grp_lock_handler handler,
-                                        	  pj_grp_lock_t **p_grp_lock);
+                                                  pj_grp_lock_t **p_grp_lock);
 
 /**
  * Forcibly destroy the group lock, ignoring the reference counter value.
  *
- * @param grp_lock	The group lock.
+ * @param grp_lock      The group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_destroy( pj_grp_lock_t *grp_lock);
 
@@ -260,10 +259,10 @@ PJ_DECL(pj_status_t) pj_grp_lock_destroy( pj_grp_lock_t *grp_lock);
  * Move the contents of the old lock to the new lock and destroy the
  * old lock.
  *
- * @param old_lock	The old group lock to be destroyed.
- * @param new_lock	The new group lock.
+ * @param old_lock      The old group lock to be destroyed.
+ * @param new_lock      The new group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_replace(pj_grp_lock_t *old_lock,
                                          pj_grp_lock_t *new_lock);
@@ -271,9 +270,9 @@ PJ_DECL(pj_status_t) pj_grp_lock_replace(pj_grp_lock_t *old_lock,
 /**
  * Acquire lock on the specified group lock.
  *
- * @param grp_lock	The group lock.
+ * @param grp_lock      The group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_acquire( pj_grp_lock_t *grp_lock);
 
@@ -281,9 +280,9 @@ PJ_DECL(pj_status_t) pj_grp_lock_acquire( pj_grp_lock_t *grp_lock);
  * Acquire lock on the specified group lock if it is available, otherwise
  * return immediately wihout waiting.
  *
- * @param grp_lock	The group lock.
+ * @param grp_lock      The group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_tryacquire( pj_grp_lock_t *grp_lock);
 
@@ -292,9 +291,9 @@ PJ_DECL(pj_status_t) pj_grp_lock_tryacquire( pj_grp_lock_t *grp_lock);
  * to be destroyed if it is the last one to hold the reference counter.
  * In that case, the function will return PJ_EGONE.
  *
- * @param grp_lock	The group lock.
+ * @param grp_lock      The group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_release( pj_grp_lock_t *grp_lock);
 
@@ -302,12 +301,12 @@ PJ_DECL(pj_status_t) pj_grp_lock_release( pj_grp_lock_t *grp_lock);
  * Add a destructor handler, to be called by the group lock when it is
  * about to be destroyed.
  *
- * @param grp_lock	The group lock.
- * @param pool		Pool to allocate memory for the handler.
- * @param member	A pointer to be passed to the handler.
- * @param handler	The destroy handler.
+ * @param grp_lock      The group lock.
+ * @param pool          Pool to allocate memory for the handler.
+ * @param member        A pointer to be passed to the handler.
+ * @param handler       The destroy handler.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_add_handler(pj_grp_lock_t *grp_lock,
                                              pj_pool_t *pool,
@@ -318,11 +317,11 @@ PJ_DECL(pj_status_t) pj_grp_lock_add_handler(pj_grp_lock_t *grp_lock,
  * Remove previously registered handler. All parameters must be the same
  * as when the handler was added.
  *
- * @param grp_lock	The group lock.
- * @param member	A pointer to be passed to the handler.
- * @param handler	The destroy handler.
+ * @param grp_lock      The group lock.
+ * @param member        A pointer to be passed to the handler.
+ * @param handler       The destroy handler.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_del_handler(pj_grp_lock_t *grp_lock,
                                              void *member,
@@ -331,9 +330,9 @@ PJ_DECL(pj_status_t) pj_grp_lock_del_handler(pj_grp_lock_t *grp_lock,
 /**
  * Increment reference counter to prevent the group lock grom being destroyed.
  *
- * @param grp_lock	The group lock.
+ * @param grp_lock      The group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 #if !PJ_GRP_LOCK_DEBUG
 PJ_DECL(pj_status_t) pj_grp_lock_add_ref(pj_grp_lock_t *grp_lock);
@@ -341,17 +340,17 @@ PJ_DECL(pj_status_t) pj_grp_lock_add_ref(pj_grp_lock_t *grp_lock);
 /**
  * Debug version of pj_grp_lock_add_ref(), allowing to specify file and lineno.
  *
- * @param grp_lock	The group lock.
- * @param x		Filename
- * @param y		Line number
+ * @param grp_lock      The group lock.
+ * @param x             Filename
+ * @param y             Line number
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 #define pj_grp_lock_add_ref_dbg(grp_lock, x, y) pj_grp_lock_add_ref(grp_lock)
 
 #else
 
-#define pj_grp_lock_add_ref(g)	pj_grp_lock_add_ref_dbg(g, __FILE__, __LINE__)
+#define pj_grp_lock_add_ref(g)  pj_grp_lock_add_ref_dbg(g, __FILE__, __LINE__)
 
 PJ_DECL(pj_status_t) pj_grp_lock_add_ref_dbg(pj_grp_lock_t *grp_lock,
                                              const char *file,
@@ -362,9 +361,9 @@ PJ_DECL(pj_status_t) pj_grp_lock_add_ref_dbg(pj_grp_lock_t *grp_lock,
  * Decrement the reference counter. When the counter value reaches zero, the
  * group lock will be destroyed and all destructor handlers will be called.
  *
- * @param grp_lock	The group lock.
+ * @param grp_lock      The group lock.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 #if !PJ_GRP_LOCK_DEBUG
 PJ_DECL(pj_status_t) pj_grp_lock_dec_ref(pj_grp_lock_t *grp_lock);
@@ -372,16 +371,16 @@ PJ_DECL(pj_status_t) pj_grp_lock_dec_ref(pj_grp_lock_t *grp_lock);
 /**
  * Debug version of pj_grp_lock_dec_ref(), allowing to specify file and lineno.
  *
- * @param grp_lock	The group lock.
- * @param x		Filename
- * @param y		Line number
+ * @param grp_lock      The group lock.
+ * @param x             Filename
+ * @param y             Line number
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 #define pj_grp_lock_dec_ref_dbg(grp_lock, x, y) pj_grp_lock_dec_ref(grp_lock)
 #else
 
-#define pj_grp_lock_dec_ref(g)	pj_grp_lock_dec_ref_dbg(g, __FILE__, __LINE__)
+#define pj_grp_lock_dec_ref(g)  pj_grp_lock_dec_ref_dbg(g, __FILE__, __LINE__)
 
 PJ_DECL(pj_status_t) pj_grp_lock_dec_ref_dbg(pj_grp_lock_t *grp_lock,
                                              const char *file,
@@ -393,9 +392,9 @@ PJ_DECL(pj_status_t) pj_grp_lock_dec_ref_dbg(pj_grp_lock_t *grp_lock,
  * Get current reference count value. This normally is only used for
  * debugging purpose.
  *
- * @param grp_lock	The group lock.
+ * @param grp_lock      The group lock.
  *
- * @return		The reference count value.
+ * @return              The reference count value.
  */
 PJ_DECL(int) pj_grp_lock_get_ref(pj_grp_lock_t *grp_lock);
 
@@ -406,7 +405,7 @@ PJ_DECL(int) pj_grp_lock_get_ref(pj_grp_lock_t *grp_lock);
  * reference counter value along with the source file and line. If
  * debugging is disabled, this will only print the reference counter.
  *
- * @param grp_lock	The group lock.
+ * @param grp_lock      The group lock.
  */
 PJ_DECL(void) pj_grp_lock_dump(pj_grp_lock_t *grp_lock);
 
@@ -422,11 +421,11 @@ PJ_DECL(void) pj_grp_lock_dump(pj_grp_lock_t *grp_lock);
  * will be locked before the group lock (the group lock's ''pos'' value is
  * zero).
  *
- * @param grp_lock	The group lock.
- * @param ext_lock	The external lock
- * @param pos		The position.
+ * @param grp_lock      The group lock.
+ * @param ext_lock      The external lock
+ * @param pos           The position.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_chain_lock(pj_grp_lock_t *grp_lock,
                                             pj_lock_t *ext_lock,
@@ -435,10 +434,10 @@ PJ_DECL(pj_status_t) pj_grp_lock_chain_lock(pj_grp_lock_t *grp_lock,
 /**
  * Remove an external lock from group lock's list of synchronized locks.
  *
- * @param grp_lock	The group lock.
- * @param ext_lock	The external lock
+ * @param grp_lock      The group lock.
+ * @param ext_lock      The external lock
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_grp_lock_unchain_lock(pj_grp_lock_t *grp_lock,
                                               pj_lock_t *ext_lock);
@@ -450,5 +449,5 @@ PJ_DECL(pj_status_t) pj_grp_lock_unchain_lock(pj_grp_lock_t *grp_lock,
 PJ_END_DECL
 
 
-#endif	/* __PJ_LOCK_H__ */
+#endif  /* __PJ_LOCK_H__ */
 

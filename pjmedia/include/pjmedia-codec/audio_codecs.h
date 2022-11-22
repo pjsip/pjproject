@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -47,19 +46,19 @@ typedef struct pjmedia_audio_codec_config
 {
     /** Speex codec settings. See #pjmedia_codec_speex_init() for more info */
     struct {
-	unsigned	option;		/**< Bitmask of options.	*/
-	int		quality;	/**< Codec quality.		*/
-	int		complexity;	/**< Codec complexity.		*/
+        unsigned        option;         /**< Bitmask of options.        */
+        int             quality;        /**< Codec quality.             */
+        int             complexity;     /**< Codec complexity.          */
     } speex;
 
     /** iLBC settings */
     struct {
-	unsigned	mode;		/**< iLBC mode.			*/
+        unsigned        mode;           /**< iLBC mode.                 */
     } ilbc;
 
     /** Passthrough */
     struct {
-	pjmedia_codec_passthrough_setting setting; /**< Passthrough	*/
+        pjmedia_codec_passthrough_setting setting; /**< Passthrough     */
     } passthrough;
 
 } pjmedia_audio_codec_config;
@@ -68,7 +67,7 @@ typedef struct pjmedia_audio_codec_config
 /**
  * Initialize pjmedia_audio_codec_config structure with default values.
  *
- * @param cfg		The codec config to be initialized.
+ * @param cfg           The codec config to be initialized.
  */
 PJ_DECL(void)
 pjmedia_audio_codec_config_default(pjmedia_audio_codec_config *cfg);
@@ -77,11 +76,11 @@ pjmedia_audio_codec_config_default(pjmedia_audio_codec_config *cfg);
  * Register all known audio codecs implemented in PJMEDA-CODEC library to the
  * specified media endpoint.
  *
- * @param endpt		The media endpoint.
- * @param c		Optional codec configuration, or NULL to use default
- * 			values.
+ * @param endpt         The media endpoint.
+ * @param c             Optional codec configuration, or NULL to use default
+ *                      values.
  *
- * @return		PJ_SUCCESS on success or the appropriate error code.
+ * @return              PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t)
 pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
@@ -95,4 +94,4 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
 
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_CODEC_ALL_CODECS_H__ */
+#endif  /* __PJMEDIA_CODEC_ALL_CODECS_H__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -21,8 +20,8 @@
 
 @interface TestViewController : UIViewController {
     IBOutlet UITextView *testDesc;
-    IBOutlet UIButton	*button1;
-    IBOutlet UIButton	*button2;
+    IBOutlet UIButton   *button1;
+    IBOutlet UIButton   *button2;
     
     NSInteger key;
 }

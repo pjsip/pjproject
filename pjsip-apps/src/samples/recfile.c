@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -41,27 +40,27 @@
 
 
 /* Configs */
-#define CLOCK_RATE	    44100
-#define NCHANNELS	    2
+#define CLOCK_RATE          44100
+#define NCHANNELS           2
 #define SAMPLES_PER_FRAME   (NCHANNELS * (CLOCK_RATE * 10 / 1000))
-#define BITS_PER_SAMPLE	    16
+#define BITS_PER_SAMPLE     16
 
 
 static const char *desc = 
- " FILE					    \n"
- "  recfile.c				    \n"
- "					    \n"
- " PURPOSE:				    \n"
- "  Record microphone to WAVE file.	    \n"
- "					    \n"
- " USAGE:				    \n"
- "  recfile FILE.WAV			    \n"
+ " FILE                                     \n"
+ "  recfile.c                               \n"
+ "                                          \n"
+ " PURPOSE:                                 \n"
+ "  Record microphone to WAVE file.         \n"
+ "                                          \n"
+ " USAGE:                                   \n"
+ "  recfile FILE.WAV                        \n"
  "";
 
 
 /* Util to display the error message for the specified error code  */
 static int app_perror( const char *sender, const char *title, 
-		       pj_status_t status)
+                       pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
@@ -90,9 +89,9 @@ int main(int argc, char *argv[])
 
     /* Verify cmd line arguments. */
     if (argc != 2) {
-	puts("");
-	puts(desc);
-	return 0;
+        puts("");
+        puts(desc);
+        return 0;
     }
 
     /* Must init PJLIB first: */
@@ -110,40 +109,40 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for our file player */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "app",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "app",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     /* Create WAVE file writer port. */
     status = pjmedia_wav_writer_port_create(  pool, argv[1],
-					      CLOCK_RATE,
-					      NCHANNELS,
-					      SAMPLES_PER_FRAME,
-					      BITS_PER_SAMPLE,
-					      0, 0, 
-					      &file_port);
+                                              CLOCK_RATE,
+                                              NCHANNELS,
+                                              SAMPLES_PER_FRAME,
+                                              BITS_PER_SAMPLE,
+                                              0, 0, 
+                                              &file_port);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open WAV file for writing", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to open WAV file for writing", status);
+        return 1;
     }
 
     /* Create sound player port. */
     status = pjmedia_snd_port_create_rec( 
-		 pool,				    /* pool		    */
-		 -1,				    /* use default dev.	    */
-		 PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.	    */
-		 PJMEDIA_PIA_CCNT(&file_port->info),/* # of channels.	    */
-		 PJMEDIA_PIA_SPF(&file_port->info), /* samples per frame.   */
-		 PJMEDIA_PIA_BITS(&file_port->info),/* bits per sample.	    */
-		 0,				    /* options		    */
-		 &snd_port			    /* returned port	    */
-		 );
+                 pool,                              /* pool                 */
+                 -1,                                /* use default dev.     */
+                 PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.         */
+                 PJMEDIA_PIA_CCNT(&file_port->info),/* # of channels.       */
+                 PJMEDIA_PIA_SPF(&file_port->info), /* samples per frame.   */
+                 PJMEDIA_PIA_BITS(&file_port->info),/* bits per sample.     */
+                 0,                                 /* options              */
+                 &snd_port                          /* returned port        */
+                 );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open sound device", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to open sound device", status);
+        return 1;
     }
 
     /* Connect file port to the sound player.
@@ -168,7 +167,7 @@ int main(int argc, char *argv[])
     puts("Press <ENTER> to stop recording and quit");
 
     if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
-	puts("EOF while reading stdin, will quit now..");
+        puts("EOF while reading stdin, will quit now..");
     }
 
     

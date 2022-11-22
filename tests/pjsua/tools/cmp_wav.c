@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -28,30 +27,30 @@
 
 /* For logging purpose. */
 #define THIS_FILE   "cmp_wav.c"
-#define BYTES_PER_FRAME	    512
+#define BYTES_PER_FRAME     512
 
 static const char *desc = 
-" FILE		    						    \n"
-"		    						    \n"
-"  cmp_wav.c	    						    \n"
-"		    						    \n"
-" PURPOSE	    						    \n"
-"		    						    \n"
-"  Compare two WAV files.					    \n"
-"		    						    \n"
-" USAGE		    						    \n"
-"		    						    \n"
-"  cmp_wav ORIGINAL_WAV DEGRADED_WAV [TIME] [DETAIL]		    \n"
-"		    						    \n"
-"  ORIGINAL_WAV	    The original WAV file as reference.		    \n"
-"  DEGRADED_WAV	    The degraded WAV file.			    \n"
-"  TIME	            Compare only some part of the files		    \n"
-"                   (in ms, since the beginning).		    \n"
+" FILE                                                              \n"
+"                                                                   \n"
+"  cmp_wav.c                                                        \n"
+"                                                                   \n"
+" PURPOSE                                                           \n"
+"                                                                   \n"
+"  Compare two WAV files.                                           \n"
+"                                                                   \n"
+" USAGE                                                             \n"
+"                                                                   \n"
+"  cmp_wav ORIGINAL_WAV DEGRADED_WAV [TIME] [DETAIL]                \n"
+"                                                                   \n"
+"  ORIGINAL_WAV     The original WAV file as reference.             \n"
+"  DEGRADED_WAV     The degraded WAV file.                          \n"
+"  TIME             Compare only some part of the files             \n"
+"                   (in ms, since the beginning).                   \n"
 "                   Specify 0 (default) to compare the whole time.  \n"
 "  DETAIL           Show detail result, 1 or 0 (default=0, means no)\n"
-"		    						    \n"
-"  Both files must have same clock rate and must contain	    \n"
-"  uncompressed (i.e. 16bit) PCM.				    \n";
+"                                                                   \n"
+"  Both files must have same clock rate and must contain            \n"
+"  uncompressed (i.e. 16bit) PCM.                                   \n";
 
 
 /* Sum of multiplication of corresponding samples in buf1 & buf2 */
@@ -60,7 +59,7 @@ double sum_mult_sig(pj_int16_t *buf1, pj_int16_t *buf2, unsigned nsamples)
     double mag = 0;
 
     while (nsamples--)
-	mag += (double)*buf1++ * (double)*buf2++;
+        mag += (double)*buf1++ * (double)*buf2++;
 
     return mag;
 }
@@ -91,9 +90,9 @@ int main(int argc, char *argv[])
     int res_deg, res_mix, res_overall;
 
     if (argc < 3) {
-    	puts("Error: original & degraded filename required");
-	puts(desc);
-	return 1;
+        puts("Error: original & degraded filename required");
+        puts(desc);
+        return 1;
     }
 
     /* Set log level. */
@@ -114,127 +113,127 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for our file player */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "wav",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "wav",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     /* Create file media port from the original WAV file */
-    status = pjmedia_wav_player_port_create(  pool,	/* memory pool	    */
-					      argv[1],	/* file to play	    */
-					      40,	/* ptime.	    */
-					      PJMEDIA_FILE_NO_LOOP,	/* flags	    */
-					      0,	/* default buffer   */
-					      &file_ori_port/* returned port    */
-					      );
+    status = pjmedia_wav_player_port_create(  pool,     /* memory pool      */
+                                              argv[1],  /* file to play     */
+                                              40,       /* ptime.           */
+                                              PJMEDIA_FILE_NO_LOOP,     /* flags            */
+                                              0,        /* default buffer   */
+                                              &file_ori_port/* returned port    */
+                                              );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to use WAV file", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to use WAV file", status);
+        return 1;
     }
 
     /* Create file media port from the degraded WAV file */
-    status = pjmedia_wav_player_port_create(  pool,	/* memory pool	    */
-					      argv[2],	/* file to play	    */
-					      40,	/* ptime.	    */
-					      PJMEDIA_FILE_NO_LOOP,	/* flags	    */
-					      0,	/* default buffer   */
-					      &file_deg_port/* returned port    */
-					      );
+    status = pjmedia_wav_player_port_create(  pool,     /* memory pool      */
+                                              argv[2],  /* file to play     */
+                                              40,       /* ptime.           */
+                                              PJMEDIA_FILE_NO_LOOP,     /* flags            */
+                                              0,        /* default buffer   */
+                                              &file_deg_port/* returned port    */
+                                              );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to use WAV file", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to use WAV file", status);
+        return 1;
     }
 
     if (file_ori_port->info.fmt.det.aud.clock_rate !=
-	file_deg_port->info.fmt.det.aud.clock_rate)
+        file_deg_port->info.fmt.det.aud.clock_rate)
     {
-	app_perror(THIS_FILE, "Clock rates must be same.", PJ_EINVAL);
-	return 1;
+        app_perror(THIS_FILE, "Clock rates must be same.", PJ_EINVAL);
+        return 1;
     }
 
     if (argc > 3)
-	first_nsamples = atoi(argv[3]) *
-			 file_ori_port->info.fmt.det.aud.clock_rate / 1000;
+        first_nsamples = atoi(argv[3]) *
+                         file_ori_port->info.fmt.det.aud.clock_rate / 1000;
 
     if (argc > 4)
-	detail = atoi(argv[4]);
+        detail = atoi(argv[4]);
 
     while (1) {
-	pjmedia_frame f1, f2;
+        pjmedia_frame f1, f2;
 
-	f1.buf = buf1;
-	f1.size = BYTES_PER_FRAME;
-	f2.buf = buf2;
-	f2.size = BYTES_PER_FRAME;
+        f1.buf = buf1;
+        f1.size = BYTES_PER_FRAME;
+        f2.buf = buf2;
+        f2.size = BYTES_PER_FRAME;
 
-	status = pjmedia_port_get_frame(file_ori_port, &f1);
-	if (status == PJ_EEOF) {
-	    break;
-	} else if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Error occured while reading file", status);
-	    break;
-	}
-	status = pjmedia_port_get_frame(file_deg_port, &f2);
-	if (status == PJ_EEOF) {
-	    break;
-	} else if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Error occured while reading file", status);
-	    break;
-	}
+        status = pjmedia_port_get_frame(file_ori_port, &f1);
+        if (status == PJ_EEOF) {
+            break;
+        } else if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Error occured while reading file", status);
+            break;
+        }
+        status = pjmedia_port_get_frame(file_deg_port, &f2);
+        if (status == PJ_EEOF) {
+            break;
+        } else if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Error occured while reading file", status);
+            break;
+        }
 
-	/* Calculate magnitudes */
-	ref_mag += sum_mult_sig(f1.buf, f1.buf, BYTES_PER_FRAME >> 1);
-	deg_mag += sum_mult_sig(f2.buf, f2.buf, BYTES_PER_FRAME >> 1);
-	mix_mag += sum_mult_sig(f1.buf, f2.buf, BYTES_PER_FRAME >> 1);
+        /* Calculate magnitudes */
+        ref_mag += sum_mult_sig(f1.buf, f1.buf, BYTES_PER_FRAME >> 1);
+        deg_mag += sum_mult_sig(f2.buf, f2.buf, BYTES_PER_FRAME >> 1);
+        mix_mag += sum_mult_sig(f1.buf, f2.buf, BYTES_PER_FRAME >> 1);
 
-	samples_compared += BYTES_PER_FRAME >> 1;
-	if (first_nsamples && samples_compared >= first_nsamples)
-	    break;
+        samples_compared += BYTES_PER_FRAME >> 1;
+        if (first_nsamples && samples_compared >= first_nsamples)
+            break;
     }
 
     /* Degraded magnitude compared to reference magnitude 
      */
     res_deg = (int) (deg_mag / ref_mag * 100.0);
     if (res_deg < 0)
-	res_deg = -1;
+        res_deg = -1;
     else if (res_deg >= 81)
-	res_deg = 9;
+        res_deg = 9;
     else
-	res_deg = pj_isqrt(res_deg);
+        res_deg = pj_isqrt(res_deg);
 
     /* Mixed magnitude (don't know what this is actually :D) compared to 
      * reference magnitude 
      */
     res_mix = (int) (mix_mag / ref_mag * 100.0);
     if (res_mix < 0)
-	res_mix = -1;
+        res_mix = -1;
     else if (res_mix >= 81)
-	res_mix = 9;
+        res_mix = 9;
     else
-	res_mix = pj_isqrt(res_mix);
+        res_mix = pj_isqrt(res_mix);
 
     /* Overall score.
      * If mixed score is -1, then overall score should be -1 as well.
      * Apply no weighting (1:1) for now.
      */
     if (res_mix == -1)
-	res_overall = -1;
+        res_overall = -1;
     else
-	res_overall = (res_mix*1 + res_deg*1) / 2;
+        res_overall = (res_mix*1 + res_deg*1) / 2;
 
     if (detail) {
-	printf("Reference = %.0f\n", ref_mag);
-	printf("Degraded  = %.0f\n", deg_mag);
-	printf("Mixed     = %.0f\n", mix_mag);
+        printf("Reference = %.0f\n", ref_mag);
+        printf("Degraded  = %.0f\n", deg_mag);
+        printf("Mixed     = %.0f\n", mix_mag);
 
-	printf("\n");
+        printf("\n");
 
-	printf("Score 1   = %d\n", res_deg);
-	printf("Score 2   = %d\n", res_mix);
+        printf("Score 1   = %d\n", res_deg);
+        printf("Score 2   = %d\n", res_mix);
 
-	printf("\n");
+        printf("\n");
     }
 
     printf("Overall   = %d\n", res_overall);

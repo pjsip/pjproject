@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -68,10 +67,10 @@ typedef struct g722_dec_t {
 PJ_DECL(pj_status_t) g722_dec_init(g722_dec_t *dec);
 
 PJ_DECL(pj_status_t) g722_dec_decode(g722_dec_t *dec, 
-				     void *in, 
-				     pj_size_t in_size,
-				     pj_int16_t out[],
-				     pj_size_t *nsamples);
+                                     void *in, 
+                                     pj_size_t in_size,
+                                     pj_int16_t out[],
+                                     pj_size_t *nsamples);
 
 PJ_DECL(pj_status_t) g722_dec_deinit(g722_dec_t *dec);
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -34,5 +33,5 @@
 #include <pjsip_auth/sip_auth_msg.h>
 #include <pjsip_auth/sip_auth_parser.h>
 
-#endif	/* __PJSIP_AUTH_H__ */
+#endif  /* __PJSIP_AUTH_H__ */
 

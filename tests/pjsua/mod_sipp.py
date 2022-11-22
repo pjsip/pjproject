@@ -1,4 +1,3 @@
-# $Id$
 
 ## Automatic test module for SIPp.
 ##

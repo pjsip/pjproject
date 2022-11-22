@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -31,20 +30,20 @@ void app_perror(const char *msg, pj_status_t rc)
     PJ_LOG(1,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
 }
 
-#define DO_TEST(test)	do { \
-			    PJ_LOG(3, ("test", "Running %s...", #test));  \
-			    rc = test; \
-			    PJ_LOG(3, ("test",  \
-				       "%s(%d)",  \
-				       (char*)(rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+#define DO_TEST(test)   do { \
+                            PJ_LOG(3, ("test", "Running %s...", #test));  \
+                            rc = test; \
+                            PJ_LOG(3, ("test",  \
+                                       "%s(%d)",  \
+                                       (char*)(rc ? "..ERROR" : "..success"), rc)); \
+                            if (rc!=0) goto on_return; \
+                        } while (0)
 
 
 pj_pool_factory *mem;
 
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
+                      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
 
 static int test_inner(void)
 {
@@ -58,8 +57,8 @@ static int test_inner(void)
 
     rc = pj_init();
     if (rc != 0) {
-	app_perror("pj_init() error!!", rc);
-	return rc;
+        app_perror("pj_init() error!!", rc);
+        return rc;
     }
 
     rc = pjlib_util_init();

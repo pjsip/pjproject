@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -30,37 +29,37 @@
  * \includelineno aectest.c
  */
 #include <pjmedia.h>
-#include <pjlib-util.h>	/* pj_getopt */
+#include <pjlib-util.h> /* pj_getopt */
 #include <pjlib.h>
 
 #define THIS_FILE   "aectest.c"
-#define PTIME	    20
+#define PTIME       20
 #define TAIL_LENGTH 200
 
 static const char *desc = 
-" FILE		    						    \n"
-"		    						    \n"
-"  aectest.c	    						    \n"
-"		    						    \n"
-" PURPOSE	    						    \n"
-"		    						    \n"
-"  Test the AEC effectiveness.					    \n"
-"		    						    \n"
-" USAGE		    						    \n"
-"		    						    \n"
-"  aectest [options] <PLAY.WAV> <REC.WAV> <OUTPUT.WAV>		    \n"
-"		    						    \n"
-"  <PLAY.WAV>   is the signal played to the speaker.		    \n"
-"  <REC.WAV>    is the signal captured from the microphone.	    \n"
-"  <OUTPUT.WAV> is the output file to store the test result	    \n"
+" FILE                                                              \n"
+"                                                                   \n"
+"  aectest.c                                                        \n"
+"                                                                   \n"
+" PURPOSE                                                           \n"
+"                                                                   \n"
+"  Test the AEC effectiveness.                                      \n"
+"                                                                   \n"
+" USAGE                                                             \n"
+"                                                                   \n"
+"  aectest [options] <PLAY.WAV> <REC.WAV> <OUTPUT.WAV>              \n"
+"                                                                   \n"
+"  <PLAY.WAV>   is the signal played to the speaker.                \n"
+"  <REC.WAV>    is the signal captured from the microphone.         \n"
+"  <OUTPUT.WAV> is the output file to store the test result         \n"
 "\n"
 " options:\n"
 "  -d  The delay between playback and capture in ms, at least 25 ms.\n"
 "      Default is 25 ms. See note below.                            \n"
-"  -l  Set the echo tail length in ms. Default is 200 ms	    \n"
+"  -l  Set the echo tail length in ms. Default is 200 ms            \n"
 "  -r  Set repeat count (default=1)                                 \n"
-"  -a  Algorithm: 0=default, 1=speex, 2=echo suppress, 3=WebRtc	    \n"
-"  -i  Interactive						    \n"
+"  -a  Algorithm: 0=default, 1=speex, 2=echo suppress, 3=WebRtc     \n"
+"  -i  Interactive                                                  \n"
 "\n"
 " Note that for the AEC internal buffering mechanism, it is required\n"
 " that the echoed signal (in REC.WAV) is delayed from the           \n"
@@ -91,7 +90,7 @@ int main(int argc, char *argv[])
 {
     pj_caching_pool cp;
     pjmedia_endpt *med_endpt;
-    pj_pool_t	  *pool;
+    pj_pool_t     *pool;
     pjmedia_port  *wav_play;
     pjmedia_port  *wav_rec;
     pjmedia_port  *wav_out;
@@ -106,58 +105,58 @@ int main(int argc, char *argv[])
 
     pj_optind = 0;
     while ((c=pj_getopt(argc, argv, "d:l:a:r:i")) !=-1) {
-	switch (c) {
-	case 'd':
-	    latency_ms = atoi(pj_optarg);
-	    if (latency_ms < 25) {
-		puts("Invalid delay");
-		puts(desc);
-	    }
-	    break;
-	case 'l':
-	    tail_ms = atoi(pj_optarg);
-	    break;
-	case 'a':
-	    {
-		int alg = atoi(pj_optarg);
-		switch (alg) {
-		case 0:
-		    opt = 0;
-		    break;
-		case 1:
-		    opt = PJMEDIA_ECHO_SPEEX;
-		    break;
-		case 2:
-		    opt = PJMEDIA_ECHO_SIMPLE;
-		    break;
-		case 3:
-		    opt = PJMEDIA_ECHO_WEBRTC;
-		    break;
-		default:
-		    puts("Invalid algorithm");
-		    puts(desc);
-		    return 1;
-		}
-	    }
-	    break;
-	case 'r':
-	    repeat = atoi(pj_optarg);
-	    if (repeat < 1) {
-		puts("Invalid repeat count");
-		puts(desc);
-		return 1;
-	    }
-	    break;
-	case 'i':
-	    interactive = 1;
-	    break;
-	}
+        switch (c) {
+        case 'd':
+            latency_ms = atoi(pj_optarg);
+            if (latency_ms < 25) {
+                puts("Invalid delay");
+                puts(desc);
+            }
+            break;
+        case 'l':
+            tail_ms = atoi(pj_optarg);
+            break;
+        case 'a':
+            {
+                int alg = atoi(pj_optarg);
+                switch (alg) {
+                case 0:
+                    opt = 0;
+                    break;
+                case 1:
+                    opt = PJMEDIA_ECHO_SPEEX;
+                    break;
+                case 2:
+                    opt = PJMEDIA_ECHO_SIMPLE;
+                    break;
+                case 3:
+                    opt = PJMEDIA_ECHO_WEBRTC;
+                    break;
+                default:
+                    puts("Invalid algorithm");
+                    puts(desc);
+                    return 1;
+                }
+            }
+            break;
+        case 'r':
+            repeat = atoi(pj_optarg);
+            if (repeat < 1) {
+                puts("Invalid repeat count");
+                puts(desc);
+                return 1;
+            }
+            break;
+        case 'i':
+            interactive = 1;
+            break;
+        }
     }
 
     if (argc - pj_optind != 3) {
-	puts("Error: missing argument(s)");
-	puts(desc);
-	return 1;
+        puts("Error: missing argument(s)");
+        puts(desc);
+        return 1;
     }
 
     /* Must init PJLIB first: */
@@ -175,64 +174,64 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for our file player */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "wav",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "wav",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     /* Open wav_play */
     status = pjmedia_wav_player_port_create(pool, argv[pj_optind], PTIME, 
-					    PJMEDIA_FILE_NO_LOOP, 0, 
-					    &wav_play);
+                                            PJMEDIA_FILE_NO_LOOP, 0, 
+                                            &wav_play);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Error opening playback WAV file", status);
-	return 1;
+        app_perror(THIS_FILE, "Error opening playback WAV file", status);
+        return 1;
     }
     
     /* Open recorded wav */
     status = pjmedia_wav_player_port_create(pool, argv[pj_optind+1], PTIME, 
-					    PJMEDIA_FILE_NO_LOOP, 0, 
-					    &wav_rec);
+                                            PJMEDIA_FILE_NO_LOOP, 0, 
+                                            &wav_rec);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Error opening recorded WAV file", status);
-	return 1;
+        app_perror(THIS_FILE, "Error opening recorded WAV file", status);
+        return 1;
     }
 
     /* play and rec WAVs must have the same clock rate */
     if (PJMEDIA_PIA_SRATE(&wav_play->info) != PJMEDIA_PIA_SRATE(&wav_rec->info)) {
-	puts("Error: clock rate mismatch in the WAV files");
-	return 1;
+        puts("Error: clock rate mismatch in the WAV files");
+        return 1;
     }
 
     /* .. and channel count */
     if (PJMEDIA_PIA_CCNT(&wav_play->info) != PJMEDIA_PIA_CCNT(&wav_rec->info)) {
-	puts("Error: clock rate mismatch in the WAV files");
-	return 1;
+        puts("Error: clock rate mismatch in the WAV files");
+        return 1;
     }
 
     /* Create output wav */
     status = pjmedia_wav_writer_port_create(pool, argv[pj_optind+2],
-					    PJMEDIA_PIA_SRATE(&wav_play->info),
-					    PJMEDIA_PIA_CCNT(&wav_play->info),
-					    PJMEDIA_PIA_SPF(&wav_play->info),
-					    PJMEDIA_PIA_BITS(&wav_play->info),
-					    0, 0, &wav_out);
+                                            PJMEDIA_PIA_SRATE(&wav_play->info),
+                                            PJMEDIA_PIA_CCNT(&wav_play->info),
+                                            PJMEDIA_PIA_SPF(&wav_play->info),
+                                            PJMEDIA_PIA_BITS(&wav_play->info),
+                                            0, 0, &wav_out);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Error opening output WAV file", status);
-	return 1;
+        app_perror(THIS_FILE, "Error opening output WAV file", status);
+        return 1;
     }
 
     /* Create echo canceller */
     status = pjmedia_echo_create2(pool, PJMEDIA_PIA_SRATE(&wav_play->info),
-				  PJMEDIA_PIA_CCNT(&wav_play->info),
-				  PJMEDIA_PIA_SPF(&wav_play->info),
-				  tail_ms, latency_ms,
-				  opt, &ec);
+                                  PJMEDIA_PIA_CCNT(&wav_play->info),
+                                  PJMEDIA_PIA_SPF(&wav_play->info),
+                                  tail_ms, latency_ms,
+                                  opt, &ec);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Error creating EC", status);
-	return 1;
+        app_perror(THIS_FILE, "Error creating EC", status);
+        return 1;
     }
 
 
@@ -241,36 +240,36 @@ int main(int argc, char *argv[])
     rec_frame.buf = pj_pool_alloc(pool, PJMEDIA_PIA_SPF(&wav_play->info)<<1);
     pj_get_timestamp(&t0);
     for (i=0; i < repeat; ++i) {
-	for (;;) {
-	    play_frame.size = PJMEDIA_PIA_SPF(&wav_play->info) << 1;
-	    status = pjmedia_port_get_frame(wav_play, &play_frame);
-	    if (status != PJ_SUCCESS)
-		break;
+        for (;;) {
+            play_frame.size = PJMEDIA_PIA_SPF(&wav_play->info) << 1;
+            status = pjmedia_port_get_frame(wav_play, &play_frame);
+            if (status != PJ_SUCCESS)
+                break;
 
-	    status = pjmedia_echo_playback(ec, (short*)play_frame.buf);
+            status = pjmedia_echo_playback(ec, (short*)play_frame.buf);
 
-	    rec_frame.size = PJMEDIA_PIA_SPF(&wav_play->info) << 1;
-	    status = pjmedia_port_get_frame(wav_rec, &rec_frame);
-	    if (status != PJ_SUCCESS)
-		break;
+            rec_frame.size = PJMEDIA_PIA_SPF(&wav_play->info) << 1;
+            status = pjmedia_port_get_frame(wav_rec, &rec_frame);
+            if (status != PJ_SUCCESS)
+                break;
 
-	    status = pjmedia_echo_capture(ec, (short*)rec_frame.buf, 0);
+            status = pjmedia_echo_capture(ec, (short*)rec_frame.buf, 0);
 
-	    //status = pjmedia_echo_cancel(ec, (short*)rec_frame.buf, 
-	    //			     (short*)play_frame.buf, 0, NULL);
+            //status = pjmedia_echo_cancel(ec, (short*)rec_frame.buf, 
+            //                       (short*)play_frame.buf, 0, NULL);
 
-	    pjmedia_port_put_frame(wav_out, &rec_frame);
-	}
+            pjmedia_port_put_frame(wav_out, &rec_frame);
+        }
 
-	pjmedia_wav_player_port_set_pos(wav_play, 0);
-	pjmedia_wav_player_port_set_pos(wav_rec, 0);
+        pjmedia_wav_player_port_set_pos(wav_play, 0);
+        pjmedia_wav_player_port_set_pos(wav_rec, 0);
     }
     pj_get_timestamp(&t1);
 
     i = (int)pjmedia_wav_writer_port_get_pos(wav_out) / sizeof(pj_int16_t) * 1000 / 
-	 (PJMEDIA_PIA_SRATE(&wav_out->info) * PJMEDIA_PIA_CCNT(&wav_out->info));
+         (PJMEDIA_PIA_SRATE(&wav_out->info) * PJMEDIA_PIA_CCNT(&wav_out->info));
     PJ_LOG(3,(THIS_FILE, "Processed %3d.%03ds audio",
-	      i / 1000, i % 1000));
+              i / 1000, i % 1000));
     PJ_LOG(3,(THIS_FILE, "Completed in %u msec\n", pj_elapsed_msec(&t0, &t1)));
 
     /* Destroy file port(s) */
@@ -297,10 +296,10 @@ int main(int argc, char *argv[])
     pj_shutdown();
 
     if (interactive) {
-	char s[10], *dummy;
-	puts("ENTER to quit");
-	dummy = fgets(s, sizeof(s), stdin);
-	PJ_UNUSED_ARG(dummy);
+        char s[10], *dummy;
+        puts("ENTER to quit");
+        dummy = fgets(s, sizeof(s), stdin);
+        PJ_UNUSED_ARG(dummy);
     }
 
     /* Done. */

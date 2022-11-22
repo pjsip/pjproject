@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -87,13 +86,13 @@ typedef struct pjsip_inv_session pjsip_inv_session;
  */
 typedef enum pjsip_inv_state
 {
-    PJSIP_INV_STATE_NULL,	    /**< Before INVITE is sent or received  */
-    PJSIP_INV_STATE_CALLING,	    /**< After INVITE is sent		    */
-    PJSIP_INV_STATE_INCOMING,	    /**< After INVITE is received.	    */
-    PJSIP_INV_STATE_EARLY,	    /**< After response with To tag.	    */
-    PJSIP_INV_STATE_CONNECTING,	    /**< After 2xx is sent/received.	    */
-    PJSIP_INV_STATE_CONFIRMED,	    /**< After ACK is sent/received.	    */
-    PJSIP_INV_STATE_DISCONNECTED,   /**< Session is terminated.		    */
+    PJSIP_INV_STATE_NULL,           /**< Before INVITE is sent or received  */
+    PJSIP_INV_STATE_CALLING,        /**< After INVITE is sent               */
+    PJSIP_INV_STATE_INCOMING,       /**< After INVITE is received.          */
+    PJSIP_INV_STATE_EARLY,          /**< After response with To tag.        */
+    PJSIP_INV_STATE_CONNECTING,     /**< After 2xx is sent/received.        */
+    PJSIP_INV_STATE_CONFIRMED,      /**< After ACK is sent/received.        */
+    PJSIP_INV_STATE_DISCONNECTED,   /**< Session is terminated.             */
 } pjsip_inv_state;
 
 /**
@@ -102,8 +101,8 @@ typedef enum pjsip_inv_state
  */
 struct pjsip_inv_on_rx_offer_cb_param
 {
-    const pjmedia_sdp_session 	*offer;	    /**< Remote offer.		    */
-    const pjsip_rx_data 	*rdata;	    /**< The received request.      */
+    const pjmedia_sdp_session   *offer;     /**< Remote offer.              */
+    const pjsip_rx_data         *rdata;     /**< The received request.      */
 };
 
 
@@ -121,9 +120,9 @@ typedef struct pjsip_inv_callback
      *
      * This callback is mandatory.
      *
-     * @param inv	The invite session.
-     * @param e		The event which has caused the invite session's 
-     *			state to change.
+     * @param inv       The invite session.
+     * @param e         The event which has caused the invite session's 
+     *                  state to change.
      */
     void (*on_state_changed)(pjsip_inv_session *inv, pjsip_event *e);
 
@@ -134,10 +133,10 @@ typedef struct pjsip_inv_callback
      * Currently the invite session does not create a new dialog in
      * forking scenario, so this callback will never be invoked.
      *
-     * @param inv	The new invite session.
-     * @param e		The event which has caused the dialog to fork.
-     *			The type of this event can be either
-     *			PJSIP_EVENT_RX_MSG or PJSIP_EVENT_RX_200_MSG.
+     * @param inv       The new invite session.
+     * @param e         The event which has caused the dialog to fork.
+     *                  The type of this event can be either
+     *                  PJSIP_EVENT_RX_MSG or PJSIP_EVENT_RX_200_MSG.
      */
     void (*on_new_session)(pjsip_inv_session *inv, pjsip_event *e);
 
@@ -149,14 +148,14 @@ typedef struct pjsip_inv_callback
      *
      * This callback is optional.
      *
-     * @param inv	The invite session.
-     * @param tsx	The transaction, which state has changed.
-     * @param e		The event which has caused the transation state's
-     *			to change.
+     * @param inv       The invite session.
+     * @param tsx       The transaction, which state has changed.
+     * @param e         The event which has caused the transation state's
+     *                  to change.
      */
     void (*on_tsx_state_changed)(pjsip_inv_session *inv,
-				 pjsip_transaction *tsx,
-				 pjsip_event *e);
+                                 pjsip_transaction *tsx,
+                                 pjsip_event *e);
 
     /**
      * This callback is called when the invite session has received 
@@ -169,8 +168,8 @@ typedef struct pjsip_inv_callback
      * Note: if callback #on_rx_offer2() is implemented, this callback will
      * not be called.
      *
-     * @param inv	The invite session.
-     * @param offer	Remote offer.
+     * @param inv       The invite session.
+     * @param offer     Remote offer.
      */
     void (*on_rx_offer)(pjsip_inv_session *inv,
                         const pjmedia_sdp_session *offer);
@@ -179,8 +178,8 @@ typedef struct pjsip_inv_callback
      * This callback is called when the invite session has received 
      * new offer from peer. Variant of #on_rx_offer() callback.
      *
-     * @param inv	The invite session.
-     * @param param	The callback parameters.
+     * @param inv       The invite session.
+     * @param param     The callback parameters.
      */
     void (*on_rx_offer2)(pjsip_inv_session *inv,
                          struct pjsip_inv_on_rx_offer_cb_param *param);
@@ -201,17 +200,17 @@ typedef struct pjsip_inv_callback
      * callback to check whether the re-INVITE is already answered
      * automatically with 487 due to being cancelled.
      *
-     * @param inv	The invite session.
-     * @param offer	Remote offer.
+     * @param inv       The invite session.
+     * @param offer     Remote offer.
      * @param rdata     The received re-INVITE request.
      *
-     * @return		- PJ_SUCCESS: application will answer the re-INVITE
+     * @return          - PJ_SUCCESS: application will answer the re-INVITE
      *                    manually
      *                  - non-PJ_SUCCESS: answer the re-INVITE automatically
      *                    using the SDP set via #pjsip_inv_set_sdp_answer()
      */
     pj_status_t (*on_rx_reinvite)(pjsip_inv_session *inv,
-    		                  const pjmedia_sdp_session *offer,
+                                  const pjmedia_sdp_session *offer,
                                   pjsip_rx_data *rdata);
 
     /**
@@ -223,12 +222,12 @@ typedef struct pjsip_inv_callback
      * If application doesn't implement this callback, the invite session
      * will send the currently active SDP as the offer.
      *
-     * @param inv	The invite session.
-     * @param p_offer	Pointer to receive the SDP offer created by
-     *			application.
+     * @param inv       The invite session.
+     * @param p_offer   Pointer to receive the SDP offer created by
+     *                  application.
      */
     void (*on_create_offer)(pjsip_inv_session *inv,
-			    pjmedia_sdp_session **p_offer);
+                            pjmedia_sdp_session **p_offer);
 
     /**
      * This callback is called after SDP offer/answer session has completed.
@@ -238,11 +237,11 @@ typedef struct pjsip_inv_callback
      * This callback is optional (from the point of view of the framework), 
      * but all useful applications normally need to implement this callback.
      *
-     * @param inv	The invite session.
-     * @param status	The negotiation status.
+     * @param inv       The invite session.
+     * @param status    The negotiation status.
      */
     void (*on_media_update)(pjsip_inv_session *inv_ses, 
-			    pj_status_t status);
+                            pj_status_t status);
 
     /**
      * This callback is called when the framework needs to send
@@ -287,40 +286,40 @@ typedef struct pjsip_inv_callback
      * This callback is optional. If this callback is not implemented,
      * the default behavior is to NOT follow the redirection response.
      *
-     * @param inv	The invite session.
-     * @param target	The current target to be tried.
-     * @param e		The event that caused this callback to be called.
-     *			This could be the receipt of 3xx response, or
-     *			4xx/5xx response received for the INVITE sent to
-     *			subsequent targets, or NULL if this callback is
-     *			called from within #pjsip_inv_process_redirect()
-     *			context.
+     * @param inv       The invite session.
+     * @param target    The current target to be tried.
+     * @param e         The event that caused this callback to be called.
+     *                  This could be the receipt of 3xx response, or
+     *                  4xx/5xx response received for the INVITE sent to
+     *                  subsequent targets, or NULL if this callback is
+     *                  called from within #pjsip_inv_process_redirect()
+     *                  context.
      *
-     * @return		Action to be performed for the target. Set this
-     *			parameter to one of the value below:
-     *			- PJSIP_REDIRECT_ACCEPT: immediately accept the
-     *			  redirection to this target. When set, the
-     *			  session will immediately resend INVITE request
-     *			  to the target after this callback returns.
-     *			- PJSIP_REDIRECT_REJECT: immediately reject this
-     *			  target. The session will continue retrying with
-     *			  next target if present, or disconnect the call
-     *			  if there is no more target to try.
-     *			- PJSIP_REDIRECT_STOP: stop the whole redirection
-     *			  process and immediately disconnect the call. The
-     *			  on_state_changed() callback will be called with
-     *			  PJSIP_INV_STATE_DISCONNECTED state immediately
-     *			  after this callback returns.
-     *			- PJSIP_REDIRECT_PENDING: set to this value if
-     *			  no decision can be made immediately (for example
-     *			  to request confirmation from user). Application
-     *			  then MUST call #pjsip_inv_process_redirect()
-     *			  to either accept or reject the redirection upon
-     *			  getting user decision.
+     * @return          Action to be performed for the target. Set this
+     *                  parameter to one of the value below:
+     *                  - PJSIP_REDIRECT_ACCEPT: immediately accept the
+     *                    redirection to this target. When set, the
+     *                    session will immediately resend INVITE request
+     *                    to the target after this callback returns.
+     *                  - PJSIP_REDIRECT_REJECT: immediately reject this
+     *                    target. The session will continue retrying with
+     *                    next target if present, or disconnect the call
+     *                    if there is no more target to try.
+     *                  - PJSIP_REDIRECT_STOP: stop the whole redirection
+     *                    process and immediately disconnect the call. The
+     *                    on_state_changed() callback will be called with
+     *                    PJSIP_INV_STATE_DISCONNECTED state immediately
+     *                    after this callback returns.
+     *                  - PJSIP_REDIRECT_PENDING: set to this value if
+     *                    no decision can be made immediately (for example
+     *                    to request confirmation from user). Application
+     *                    then MUST call #pjsip_inv_process_redirect()
+     *                    to either accept or reject the redirection upon
+     *                    getting user decision.
      */
     pjsip_redirect_op (*on_redirected)(pjsip_inv_session *inv, 
-				       const pjsip_uri *target,
-				       const pjsip_event *e);
+                                       const pjsip_uri *target,
+                                       const pjsip_event *e);
 
 } pjsip_inv_callback;
 
@@ -334,16 +333,16 @@ typedef struct pjsip_inv_callback
  * common in both endpoints.
  */
 enum pjsip_inv_option
-{	
+{       
     /** 
      * Indicate support for reliable provisional response extension 
      */
-    PJSIP_INV_SUPPORT_100REL	= 1,
+    PJSIP_INV_SUPPORT_100REL    = 1,
 
     /** 
      * Indicate support for session timer extension. 
      */
-    PJSIP_INV_SUPPORT_TIMER	= 2,
+    PJSIP_INV_SUPPORT_TIMER     = 2,
 
     /** 
      * Indicate support for UPDATE method. This is automatically implied
@@ -351,33 +350,33 @@ enum pjsip_inv_option
      * the options member of #pjsip_inv_session shows whether peer supports
      * this method as well.
      */
-    PJSIP_INV_SUPPORT_UPDATE	= 4,
+    PJSIP_INV_SUPPORT_UPDATE    = 4,
 
     /**
      * Indicate support for ICE
      */
-    PJSIP_INV_SUPPORT_ICE	= 8,
+    PJSIP_INV_SUPPORT_ICE       = 8,
 
     /**
      * Require ICE support.
      */
-    PJSIP_INV_REQUIRE_ICE	= 16,
+    PJSIP_INV_REQUIRE_ICE       = 16,
 
     /** 
      * Require reliable provisional response extension. 
      */
-    PJSIP_INV_REQUIRE_100REL	= 32,
+    PJSIP_INV_REQUIRE_100REL    = 32,
 
     /**  
      * Require session timer extension. 
      */
-    PJSIP_INV_REQUIRE_TIMER	= 64,
+    PJSIP_INV_REQUIRE_TIMER     = 64,
 
     /**  
      * Session timer extension will always be used even when peer doesn't
      * support/want session timer.
      */
-    PJSIP_INV_ALWAYS_USE_TIMER	= 128,
+    PJSIP_INV_ALWAYS_USE_TIMER  = 128,
 
     /**
      * Indicate support for trickle ICE
@@ -430,37 +429,37 @@ struct pjsip_timer;
  */
 struct pjsip_inv_session
 {
-    char		 obj_name[PJ_MAX_OBJ_NAME]; /**< Log identification */
-    pj_pool_t		*pool;			    /**< Long term pool.    */
-    pj_pool_t		*pool_prov;		    /**< Provisional pool   */
-    pj_pool_t		*pool_active;		    /**< Active/current pool*/
-    pjsip_inv_state	 state;			    /**< Invite sess state. */
-    pj_bool_t		 cancelling;		    /**< CANCEL requested   */
-    pj_bool_t		 pending_cancel;	    /**< Wait to send CANCEL*/
-    pjsip_tx_data	*pending_bye;               /**< BYE to send later  */
-    pjsip_status_code	 cause;			    /**< Disconnect cause.  */
-    pj_str_t		 cause_text;		    /**< Cause text.	    */
-    pj_bool_t		 notify;		    /**< Internal.	    */
-    pj_bool_t		 sdp_done_early_rel;	    /**< Nego done in early
-    							 med was reliable?  */
-    unsigned		 cb_called;		    /**< Cb has been called */
-    pjsip_dialog	*dlg;			    /**< Underlying dialog. */
-    pjsip_role_e	 role;			    /**< Invite role.	    */
-    unsigned		 options;		    /**< Options in use.    */
-    pjmedia_sdp_neg	*neg;			    /**< Negotiator.	    */
+    char                 obj_name[PJ_MAX_OBJ_NAME]; /**< Log identification */
+    pj_pool_t           *pool;                      /**< Long term pool.    */
+    pj_pool_t           *pool_prov;                 /**< Provisional pool   */
+    pj_pool_t           *pool_active;               /**< Active/current pool*/
+    pjsip_inv_state      state;                     /**< Invite sess state. */
+    pj_bool_t            cancelling;                /**< CANCEL requested   */
+    pj_bool_t            pending_cancel;            /**< Wait to send CANCEL*/
+    pjsip_tx_data       *pending_bye;               /**< BYE to send later  */
+    pjsip_status_code    cause;                     /**< Disconnect cause.  */
+    pj_str_t             cause_text;                /**< Cause text.        */
+    pj_bool_t            notify;                    /**< Internal.          */
+    pj_bool_t            sdp_done_early_rel;        /**< Nego done in early
+                                                         med was reliable?  */
+    unsigned             cb_called;                 /**< Cb has been called */
+    pjsip_dialog        *dlg;                       /**< Underlying dialog. */
+    pjsip_role_e         role;                      /**< Invite role.       */
+    unsigned             options;                   /**< Options in use.    */
+    pjmedia_sdp_neg     *neg;                       /**< Negotiator.        */
     unsigned             sdp_neg_flags;             /**< SDP neg flags.     */
-    pjsip_transaction	*invite_tsx;		    /**< 1st invite tsx.    */
-    pjsip_tx_data	*invite_req;		    /**< Saved invite req   */
-    pjsip_tx_data	*last_answer;		    /**< Last INVITE resp.  */
-    pjsip_tx_data	*last_ack;		    /**< Last ACK request   */
-    pj_int32_t		 last_ack_cseq;		    /**< CSeq of last ACK   */
-    void		*mod_data[PJSIP_MAX_MODULE];/**< Modules data.	    */
-    struct pjsip_timer	*timer;			    /**< Session Timers.    */
-    pj_bool_t		 following_fork;	    /**< Internal, following
-							 forked media?	    */
-    pj_atomic_t		*ref_cnt;		    /**< Reference counter. */
+    pjsip_transaction   *invite_tsx;                /**< 1st invite tsx.    */
+    pjsip_tx_data       *invite_req;                /**< Saved invite req   */
+    pjsip_tx_data       *last_answer;               /**< Last INVITE resp.  */
+    pjsip_tx_data       *last_ack;                  /**< Last ACK request   */
+    pj_int32_t           last_ack_cseq;             /**< CSeq of last ACK   */
+    void                *mod_data[PJSIP_MAX_MODULE];/**< Modules data.      */
+    struct pjsip_timer  *timer;                     /**< Session Timers.    */
+    pj_bool_t            following_fork;            /**< Internal, following
+                                                         forked media?      */
+    pj_atomic_t         *ref_cnt;                   /**< Reference counter. */
     pj_bool_t            updated_sdp_answer;        /**< SDP answer just been
-							 updated?	    */
+                                                         updated?           */
 };
 
 
@@ -476,13 +475,13 @@ typedef struct pjsip_sdp_info
      * the pointer is NULL, it means the message does not contain SDP
      * body.
      */
-    pj_str_t		 body;
+    pj_str_t             body;
 
     /**
      * This will contain non-zero if an invalid SDP body is found in the
      * message.
      */
-    pj_status_t		 sdp_err;
+    pj_status_t          sdp_err;
 
     /**
      * A parsed and validated SDP body.
@@ -511,18 +510,18 @@ typedef pjsip_sdp_info pjsip_tdata_sdp_info;
  * The callback argument contains pointer to functions to be called on 
  * occurences of events in invite sessions.
  *
- * @param endpt		The endpoint instance.
- * @param cb		Callback structure.
+ * @param endpt         The endpoint instance.
+ * @param cb            Callback structure.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_inv_usage_init(pjsip_endpoint *endpt,
-					  const pjsip_inv_callback *cb);
+                                          const pjsip_inv_callback *cb);
 
 /**
  * Get the INVITE usage module instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pjsip_module*) pjsip_inv_usage_instance(void);
 
@@ -536,23 +535,23 @@ PJ_DECL(void) pjsip_inv_usage_dump(void);
 /**
  * Create UAC invite session for the specified dialog in dlg. 
  *
- * @param dlg		The dialog which will be used by this invite session.
- * @param local_sdp	If application has determined its media capability, 
- *			it can specify the SDP here. Otherwise it can leave 
- *			this to NULL, to let remote UAS specifies an offer.
- * @param options	The options argument is bitmask combination of SIP 
- *			features in pjsip_inv_option enumeration.
- * @param p_inv		On successful return, the invite session will be put 
- *			in this argument.
+ * @param dlg           The dialog which will be used by this invite session.
+ * @param local_sdp     If application has determined its media capability, 
+ *                      it can specify the SDP here. Otherwise it can leave 
+ *                      this to NULL, to let remote UAS specifies an offer.
+ * @param options       The options argument is bitmask combination of SIP 
+ *                      features in pjsip_inv_option enumeration.
+ * @param p_inv         On successful return, the invite session will be put 
+ *                      in this argument.
  *
- * @return		The function will return PJ_SUCCESS if it can create
- *			the session. Otherwise the appropriate error status 
- *			will be returned on failure.
+ * @return              The function will return PJ_SUCCESS if it can create
+ *                      the session. Otherwise the appropriate error status 
+ *                      will be returned on failure.
  */
 PJ_DECL(pj_status_t) pjsip_inv_create_uac(pjsip_dialog *dlg,
-					  const pjmedia_sdp_session *local_sdp,
-					  unsigned options,
-					  pjsip_inv_session **p_inv);
+                                          const pjmedia_sdp_session *local_sdp,
+                                          unsigned options,
+                                          pjsip_inv_session **p_inv);
 
 
 /**
@@ -563,68 +562,68 @@ PJ_DECL(pj_status_t) pjsip_inv_create_uac(pjsip_dialog *dlg,
  * SIP extensions in the request (i.e. Require header) and also the media, 
  * if media description is present in the request.
  *
- * @param rdata		The incoming INVITE request.
+ * @param rdata         The incoming INVITE request.
  *
- * @param options	Upon calling this function, the options argument 
- *			MUST contain the desired SIP extensions to be 
- *			applied to the session. Upon return, this argument 
- *			will contain the SIP extension that will be applied 
- *			to the session, after considering the Supported, 
- *			Require, and Allow headers in the request.
+ * @param options       Upon calling this function, the options argument 
+ *                      MUST contain the desired SIP extensions to be 
+ *                      applied to the session. Upon return, this argument 
+ *                      will contain the SIP extension that will be applied 
+ *                      to the session, after considering the Supported, 
+ *                      Require, and Allow headers in the request.
  *
- * @param sdp		If local media capability has been determined, 
- *			and if application wishes to verify that it can 
- *			handle the media offer in the incoming INVITE 
- *			request, it SHOULD specify its local media capability
- *			in this argument. 
- *			If it is not specified, media verification will not
- *			be performed by this function.
+ * @param sdp           If local media capability has been determined, 
+ *                      and if application wishes to verify that it can 
+ *                      handle the media offer in the incoming INVITE 
+ *                      request, it SHOULD specify its local media capability
+ *                      in this argument. 
+ *                      If it is not specified, media verification will not
+ *                      be performed by this function.
  *
- * @param dlg		If tdata is not NULL, application needs to specify
- *			how to create the response. Either dlg or endpt
- *			argument MUST be specified, with dlg argument takes
- *			precedence when both are specified.
+ * @param dlg           If tdata is not NULL, application needs to specify
+ *                      how to create the response. Either dlg or endpt
+ *                      argument MUST be specified, with dlg argument takes
+ *                      precedence when both are specified.
  *
- *			If a dialog has been created prior to calling this 
- *			function, then it MUST be specified in dlg argument. 
- *			Otherwise application MUST specify the endpt argument
- *			(this is useful e.g. when application wants to send 
- *			the response statelessly).
+ *                      If a dialog has been created prior to calling this 
+ *                      function, then it MUST be specified in dlg argument. 
+ *                      Otherwise application MUST specify the endpt argument
+ *                      (this is useful e.g. when application wants to send 
+ *                      the response statelessly).
  *
- * @param endpt		If tdata is not NULL, application needs to specify
- *			how to create the response. Either dlg or endpt
- *			argument MUST be specified, with dlg argument takes
- *			precedence when both are specified.
+ * @param endpt         If tdata is not NULL, application needs to specify
+ *                      how to create the response. Either dlg or endpt
+ *                      argument MUST be specified, with dlg argument takes
+ *                      precedence when both are specified.
  *
- * @param tdata		If this argument is not NULL, this function will 
- *			create the appropriate non-2xx final response message
- *			when the verification fails.
+ * @param tdata         If this argument is not NULL, this function will 
+ *                      create the appropriate non-2xx final response message
+ *                      when the verification fails.
  *
- * @return		If everything has been negotiated successfully, 
- *			the function will return PJ_SUCCESS. Otherwise it 
- *			will return the reason of the failure as the return
- *			code.
+ * @return              If everything has been negotiated successfully, 
+ *                      the function will return PJ_SUCCESS. Otherwise it 
+ *                      will return the reason of the failure as the return
+ *                      code.
  *
- *			This function is capable to create the appropriate 
- *			response message when the verification has failed. 
- *			If tdata is specified, then a non-2xx final response
- *			will be created and put in this argument upon return,
- *			when the verification has failed. 
+ *                      This function is capable to create the appropriate 
+ *                      response message when the verification has failed. 
+ *                      If tdata is specified, then a non-2xx final response
+ *                      will be created and put in this argument upon return,
+ *                      when the verification has failed. 
  *
- *			If a dialog has been created prior to calling this 
- *			function, then it MUST be specified in dlg argument. 
- *			Otherwise application MUST specify the endpt argument
- *			(this is useful e.g. when application wants to send 
- *			the response statelessly).
+ *                      If a dialog has been created prior to calling this 
+ *                      function, then it MUST be specified in dlg argument. 
+ *                      Otherwise application MUST specify the endpt argument
+ *                      (this is useful e.g. when application wants to send 
+ *                      the response statelessly).
  *
  * @see pjsip_inv_verify_request2()
  */
-PJ_DECL(pj_status_t) pjsip_inv_verify_request(	pjsip_rx_data *rdata,
-						unsigned *options,
-						const pjmedia_sdp_session *sdp,
-						pjsip_dialog *dlg,
-						pjsip_endpoint *endpt,
-						pjsip_tx_data **tdata);
+PJ_DECL(pj_status_t) pjsip_inv_verify_request(  pjsip_rx_data *rdata,
+                                                unsigned *options,
+                                                const pjmedia_sdp_session *sdp,
+                                                pjsip_dialog *dlg,
+                                                pjsip_endpoint *endpt,
+                                                pjsip_tx_data **tdata);
 
 /**
  * Variant of #pjsip_inv_verify_request() which allows application to specify
@@ -634,12 +633,12 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request(	pjsip_rx_data *rdata,
  * @see pjsip_inv_verify_request()
  */
 PJ_DECL(pj_status_t) pjsip_inv_verify_request2( pjsip_rx_data *rdata,
-						unsigned *options,
-						const pjmedia_sdp_session *offer,
-						const pjmedia_sdp_session *answer,
-						pjsip_dialog *dlg,
-						pjsip_endpoint *endpt,
-						pjsip_tx_data **tdata);
+                                                unsigned *options,
+                                                const pjmedia_sdp_session *offer,
+                                                const pjmedia_sdp_session *answer,
+                                                pjsip_dialog *dlg,
+                                                pjsip_endpoint *endpt,
+                                                pjsip_tx_data **tdata);
 
 /**
  * Variant of #pjsip_inv_verify_request() which allows application not to
@@ -652,12 +651,12 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request2( pjsip_rx_data *rdata,
  */
 PJ_DECL(pj_status_t) pjsip_inv_verify_request3( pjsip_rx_data *rdata,
                                                 pj_pool_t *tmp_pool,
-						unsigned *options,
-						const pjmedia_sdp_session *offer,
-						const pjmedia_sdp_session *answer,
-						pjsip_dialog *dlg,
-						pjsip_endpoint *endpt,
-						pjsip_tx_data **tdata);
+                                                unsigned *options,
+                                                const pjmedia_sdp_session *offer,
+                                                const pjmedia_sdp_session *answer,
+                                                pjsip_dialog *dlg,
+                                                pjsip_endpoint *endpt,
+                                                pjsip_tx_data **tdata);
 
 
 /**
@@ -665,32 +664,32 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request3( pjsip_rx_data *rdata,
  * SHOULD call the verification function before calling this function, 
  * to ensure that it can create the session successfully.
  *
- * @param dlg		The dialog to be used.
- * @param rdata		Application MUST specify the received INVITE request 
- *			in rdata. The invite session needs to inspect the 
- *			received request to see if the request contains 
- *			features that it supports.
- * @param local_sdp	If application has determined its media capability, 
- *			it can specify this capability in this argument. 
- *			If SDP is received in the initial INVITE, the UAS 
- *			capability specified in this argument doesn't have to
- *			match the received offer; the SDP negotiator is able 
- *			to rearrange the media lines in the answer so that it
- *			matches the offer. 
- * @param options	The options argument is bitmask combination of SIP 
- *			features in pjsip_inv_option enumeration.
- * @param p_inv		Pointer to receive the newly created invite session.
+ * @param dlg           The dialog to be used.
+ * @param rdata         Application MUST specify the received INVITE request 
+ *                      in rdata. The invite session needs to inspect the 
+ *                      received request to see if the request contains 
+ *                      features that it supports.
+ * @param local_sdp     If application has determined its media capability, 
+ *                      it can specify this capability in this argument. 
+ *                      If SDP is received in the initial INVITE, the UAS 
+ *                      capability specified in this argument doesn't have to
+ *                      match the received offer; the SDP negotiator is able 
+ *                      to rearrange the media lines in the answer so that it
+ *                      matches the offer. 
+ * @param options       The options argument is bitmask combination of SIP 
+ *                      features in pjsip_inv_option enumeration.
+ * @param p_inv         Pointer to receive the newly created invite session.
  *
- * @return		On successful, the invite session will be put in 
- *			p_inv argument and the function will return PJ_SUCCESS.
- *			Otherwise the appropriate error status will be returned 
- *			on failure.
+ * @return              On successful, the invite session will be put in 
+ *                      p_inv argument and the function will return PJ_SUCCESS.
+ *                      Otherwise the appropriate error status will be returned 
+ *                      on failure.
  */
 PJ_DECL(pj_status_t) pjsip_inv_create_uas(pjsip_dialog *dlg,
-					  pjsip_rx_data *rdata,
-					  const pjmedia_sdp_session *local_sdp,
-					  unsigned options,
-					  pjsip_inv_session **p_inv);
+                                          pjsip_rx_data *rdata,
+                                          const pjmedia_sdp_session *local_sdp,
+                                          unsigned options,
+                                          pjsip_inv_session **p_inv);
 
 
 /**
@@ -727,17 +726,17 @@ PJ_DECL(pj_status_t) pjsip_inv_dec_ref( pjsip_inv_session *inv );
  * Note also that this function may terminate the underlying dialog, if
  * there are no other sessions in the dialog.
  *
- * @param inv		The invite session.
- * @param st_code	Status code for the reason of the termination.
- * @param notify	If set to non-zero, then on_state_changed() 
- *			callback will be called.
+ * @param inv           The invite session.
+ * @param st_code       Status code for the reason of the termination.
+ * @param notify        If set to non-zero, then on_state_changed() 
+ *                      callback will be called.
  *
- * @return		PJ_SUCCESS if the INVITE session has been
- *			terminated.
+ * @return              PJ_SUCCESS if the INVITE session has been
+ *                      terminated.
  */
 PJ_DECL(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
-				          int st_code,
-					  pj_bool_t notify );
+                                          int st_code,
+                                          pj_bool_t notify );
 
 
 /**
@@ -748,14 +747,14 @@ PJ_DECL(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
  * the session is restarted, application may create and send a new INVITE
  * request.
  *
- * @param inv		The invite session.
- * @param new_offer	Should be set to PJ_TRUE since the application will
- *			restart the session.
+ * @param inv           The invite session.
+ * @param new_offer     Should be set to PJ_TRUE since the application will
+ *                      restart the session.
  *
- * @return		PJ_SUCCESS on successful operation.
+ * @return              PJ_SUCCESS on successful operation.
  */
 PJ_DECL(pj_status_t) pjsip_inv_uac_restart(pjsip_inv_session *inv,
-					   pj_bool_t new_offer);
+                                           pj_bool_t new_offer);
 
 
 /**
@@ -773,18 +772,18 @@ PJ_DECL(pj_status_t) pjsip_inv_uac_restart(pjsip_inv_session *inv,
  * may also be called before this function returns if there is another target
  * to try.
  *
- * @param inv		The invite session.
- * @param cmd		Redirection operation. The semantic of this argument
- *			is similar to the description in the \a on_redirected()
- *			callback, except that the PJSIP_REDIRECT_PENDING is
- *			not accepted here.
- * @param e		Should be set to NULL.
+ * @param inv           The invite session.
+ * @param cmd           Redirection operation. The semantic of this argument
+ *                      is similar to the description in the \a on_redirected()
+ *                      callback, except that the PJSIP_REDIRECT_PENDING is
+ *                      not accepted here.
+ * @param e             Should be set to NULL.
  *
- * @return		PJ_SUCCESS on successful operation.
+ * @return              PJ_SUCCESS on successful operation.
  */
 PJ_DECL(pj_status_t) pjsip_inv_process_redirect(pjsip_inv_session *inv,
-						pjsip_redirect_op cmd,
-						pjsip_event *e);
+                                                pjsip_redirect_op cmd,
+                                                pjsip_event *e);
 
 
 /**
@@ -794,14 +793,14 @@ PJ_DECL(pj_status_t) pjsip_inv_process_redirect(pjsip_inv_session *inv,
  * in the outgoing INVITE request. Otherwise the outgoing request will not 
  * contain SDP body.
  *
- * @param inv		The UAC invite session.
- * @param p_tdata	The initial INVITE request will be put in this 
- *			argument if it can be created successfully.
+ * @param inv           The UAC invite session.
+ * @param p_tdata       The initial INVITE request will be put in this 
+ *                      argument if it can be created successfully.
  *
- * @return		PJ_SUCCESS if the INVITE request can be created.
+ * @return              PJ_SUCCESS if the INVITE request can be created.
  */
 PJ_DECL(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
-				       pjsip_tx_data **p_tdata );
+                                       pjsip_tx_data **p_tdata );
 
 
 /**
@@ -809,73 +808,73 @@ PJ_DECL(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
  * rdata with  status code st_code and optional status text st_text. Use
  * #pjsip_inv_answer() to create subsequent response message.
  */
-PJ_DECL(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
-						pjsip_rx_data *rdata,
-						int st_code,
-						const pj_str_t *st_text,
-						const pjmedia_sdp_session *sdp,
-						pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t) pjsip_inv_initial_answer(  pjsip_inv_session *inv,
+                                                pjsip_rx_data *rdata,
+                                                int st_code,
+                                                const pj_str_t *st_text,
+                                                const pjmedia_sdp_session *sdp,
+                                                pjsip_tx_data **p_tdata);
 
 /**
  * Create a response message to an INVITE request.
  *
- * @param inv		The UAS invite session.
- * @param st_code	The st_code contains the status code to be sent, 
- *			which may be a provisional or final response. 
- * @param st_text	If custom status text is desired, application can 
- *			specify the text in st_text; otherwise if this 
- *			argument is NULL, default status text will be used.
- * @param local_sdp	If application has specified its media capability
- *			during creation of UAS invite session, the local_sdp
- *			argument MUST be NULL. This is because application 
- *			can not perform more than one SDP offer/answer session
- *			in a single INVITE transaction.
- *			If application has not specified its media capability 
- *			during creation of UAS invite session, it MAY or MUST
- *			specify its capability in local_sdp argument, 
- *			depending whether st_code indicates a 2xx final 
- *			response.
- * @param p_tdata	Pointer to receive the response message created by
- *			this function.
+ * @param inv           The UAS invite session.
+ * @param st_code       The st_code contains the status code to be sent, 
+ *                      which may be a provisional or final response. 
+ * @param st_text       If custom status text is desired, application can 
+ *                      specify the text in st_text; otherwise if this 
+ *                      argument is NULL, default status text will be used.
+ * @param local_sdp     If application has specified its media capability
+ *                      during creation of UAS invite session, the local_sdp
+ *                      argument MUST be NULL. This is because application 
+ *                      can not perform more than one SDP offer/answer session
+ *                      in a single INVITE transaction.
+ *                      If application has not specified its media capability 
+ *                      during creation of UAS invite session, it MAY or MUST
+ *                      specify its capability in local_sdp argument, 
+ *                      depending whether st_code indicates a 2xx final 
+ *                      response.
+ * @param p_tdata       Pointer to receive the response message created by
+ *                      this function.
  *
- * @return		PJ_SUCCESS if response message was created
- *			successfully.
+ * @return              PJ_SUCCESS if response message was created
+ *                      successfully.
  */
-PJ_DECL(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
-					int st_code,
-					const pj_str_t *st_text,
-					const pjmedia_sdp_session *local_sdp,
-					pjsip_tx_data **p_tdata );
+PJ_DECL(pj_status_t) pjsip_inv_answer(  pjsip_inv_session *inv,
+                                        int st_code,
+                                        const pj_str_t *st_text,
+                                        const pjmedia_sdp_session *local_sdp,
+                                        pjsip_tx_data **p_tdata );
 
 
 /**
  * Set local offer or answer depending on negotiator state (it may also
  * create a negotiator if it doesn't exist yet).
  *
- * @param inv		The invite session.
- * @param sdp		The SDP description which will be set as
- *			an offer/answer to remote.
+ * @param inv           The invite session.
+ * @param sdp           The SDP description which will be set as
+ *                      an offer/answer to remote.
  *
- * @return		PJ_SUCCESS if local offer/answer can be accepted by
- *			SDP negotiator.
+ * @return              PJ_SUCCESS if local offer/answer can be accepted by
+ *                      SDP negotiator.
  */
 PJ_DECL(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
-					     const pjmedia_sdp_session *sdp );
+                                             const pjmedia_sdp_session *sdp );
 
 
 /**
  * Set local answer to respond to remote SDP offer, to be carried by 
  * subsequent response (or request).
  *
- * @param inv		The invite session.
- * @param sdp		The SDP description which will be set as answer
- *			to remote.
+ * @param inv           The invite session.
+ * @param sdp           The SDP description which will be set as answer
+ *                      to remote.
  *
- * @return		PJ_SUCCESS if local answer can be accepted by
- *			SDP negotiator.
+ * @return              PJ_SUCCESS if local answer can be accepted by
+ *                      SDP negotiator.
  */
 PJ_DECL(pj_status_t) pjsip_inv_set_sdp_answer(pjsip_inv_session *inv,
-					      const pjmedia_sdp_session *sdp );
+                                              const pjmedia_sdp_session *sdp );
 
 
 /**
@@ -899,19 +898,19 @@ PJ_DECL(pj_status_t) pjsip_inv_set_sdp_answer(pjsip_inv_session *inv,
  * For both UAC and UAS, if the INVITE session has been answered with final
  * response, a BYE request will be created.
  *
- * @param inv		The invite session.
- * @param st_code	Status code to be used for terminating the session.
- * @param st_text	Optional status text.
- * @param p_tdata	Pointer to receive the message to be created. Note
- *			that it's possible to receive NULL here while the
- *			function returns PJ_SUCCESS, see the description.
+ * @param inv           The invite session.
+ * @param st_code       Status code to be used for terminating the session.
+ * @param st_text       Optional status text.
+ * @param p_tdata       Pointer to receive the message to be created. Note
+ *                      that it's possible to receive NULL here while the
+ *                      function returns PJ_SUCCESS, see the description.
  *
- * @return		PJ_SUCCESS if termination is initiated.
+ * @return              PJ_SUCCESS if termination is initiated.
  */
 PJ_DECL(pj_status_t) pjsip_inv_end_session( pjsip_inv_session *inv,
-					    int st_code,
-					    const pj_str_t *st_text,
-					    pjsip_tx_data **p_tdata );
+                                            int st_code,
+                                            const pj_str_t *st_text,
+                                            pjsip_tx_data **p_tdata );
 
 
 /**
@@ -922,67 +921,67 @@ PJ_DECL(pj_status_t) pjsip_inv_end_session( pjsip_inv_session *inv,
  * provisional response. If then a provisional response is received,
  * the invite session will send CANCEL automatically.
  *
- * @param inv		The invite session.
- * @param p_tdata	Pointer to receive the message to be created. Note
- *			that it's possible to receive NULL here while the
- *			function returns PJ_SUCCESS, see the description.
+ * @param inv           The invite session.
+ * @param p_tdata       Pointer to receive the message to be created. Note
+ *                      that it's possible to receive NULL here while the
+ *                      function returns PJ_SUCCESS, see the description.
  *
- * @return		PJ_SUCCESS if termination is initiated.
+ * @return              PJ_SUCCESS if termination is initiated.
  */
 PJ_DECL(pj_status_t) pjsip_inv_cancel_reinvite( pjsip_inv_session *inv,
-					        pjsip_tx_data **p_tdata );
+                                                pjsip_tx_data **p_tdata );
 
 
 /**
  * Create a re-INVITE request. 
  *
- * @param inv		The invite session.
- * @param new_contact	If application wants to update its local contact and
- *			inform peer to perform target refresh with a new 
- *			contact, it can specify the new contact in this 
- *			argument; otherwise this argument must be NULL.
- * @param new_offer	Application MAY initiate a new SDP offer/answer 
- *			session in the request when there is no pending 
- *			answer to be sent or received. It can detect this 
- *			condition by observing the state of the SDP 
- *			negotiator of the invite session. If new offer 
- *			should be sent to remote, the offer must be specified
- *			in this argument, otherwise it must be NULL.
- * @param p_tdata	Pointer to receive the re-INVITE request message to
- *			be created.
+ * @param inv           The invite session.
+ * @param new_contact   If application wants to update its local contact and
+ *                      inform peer to perform target refresh with a new 
+ *                      contact, it can specify the new contact in this 
+ *                      argument; otherwise this argument must be NULL.
+ * @param new_offer     Application MAY initiate a new SDP offer/answer 
+ *                      session in the request when there is no pending 
+ *                      answer to be sent or received. It can detect this 
+ *                      condition by observing the state of the SDP 
+ *                      negotiator of the invite session. If new offer 
+ *                      should be sent to remote, the offer must be specified
+ *                      in this argument, otherwise it must be NULL.
+ * @param p_tdata       Pointer to receive the re-INVITE request message to
+ *                      be created.
  *
- * @return		PJ_SUCCESS if a re-INVITE request with the specified
- *			characteristics (e.g. to contain new offer) can be 
- *			created.
+ * @return              PJ_SUCCESS if a re-INVITE request with the specified
+ *                      characteristics (e.g. to contain new offer) can be 
+ *                      created.
  */
 PJ_DECL(pj_status_t) pjsip_inv_reinvite(pjsip_inv_session *inv,
-					const pj_str_t *new_contact,
-					const pjmedia_sdp_session *new_offer,
-					pjsip_tx_data **p_tdata );
+                                        const pj_str_t *new_contact,
+                                        const pjmedia_sdp_session *new_offer,
+                                        pjsip_tx_data **p_tdata );
 
 
 
 /**
  * Create an UPDATE request to initiate new SDP offer.
  *
- * @param inv		The invite session.
- * @param new_contact	If application wants to update its local contact
- *			and inform peer to perform target refresh with a new
- *			contact, it can specify the new contact in this 
- *			argument; otherwise this argument must be NULL.
- * @param offer		Offer to be sent to remote. This argument is
- *			mandatory.
- * @param p_tdata	Pointer to receive the UPDATE request message to
- *			be created.
+ * @param inv           The invite session.
+ * @param new_contact   If application wants to update its local contact
+ *                      and inform peer to perform target refresh with a new
+ *                      contact, it can specify the new contact in this 
+ *                      argument; otherwise this argument must be NULL.
+ * @param offer         Offer to be sent to remote. This argument is
+ *                      mandatory.
+ * @param p_tdata       Pointer to receive the UPDATE request message to
+ *                      be created.
  *
- * @return		PJ_SUCCESS if a UPDATE request with the specified
- *			characteristics (e.g. to contain new offer) can be 
- *			created.
+ * @return              PJ_SUCCESS if a UPDATE request with the specified
+ *                      characteristics (e.g. to contain new offer) can be 
+ *                      created.
  */
-PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
-					const pj_str_t *new_contact,
-					const pjmedia_sdp_session *offer,
-					pjsip_tx_data **p_tdata );
+PJ_DECL(pj_status_t) pjsip_inv_update ( pjsip_inv_session *inv,
+                                        const pj_str_t *new_contact,
+                                        const pjmedia_sdp_session *offer,
+                                        pjsip_tx_data **p_tdata );
 
 
 /**
@@ -997,54 +996,54 @@ PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
  * prior to creating the ACK request. In this case, the ACK request
  * will be added with SDP message body.
  *
- * @param inv		The invite session.
- * @param cseq		Mandatory argument to specify the CSeq of the
- *			ACK request. This value MUST match the value
- *			of the INVITE transaction to be acknowledged.
- * @param p_tdata	Pointer to receive the ACK request message to
- *			be created.
+ * @param inv           The invite session.
+ * @param cseq          Mandatory argument to specify the CSeq of the
+ *                      ACK request. This value MUST match the value
+ *                      of the INVITE transaction to be acknowledged.
+ * @param p_tdata       Pointer to receive the ACK request message to
+ *                      be created.
  *
- * @return		PJ_SUCCESS if ACK request has been created.
+ * @return              PJ_SUCCESS if ACK request has been created.
  */
 PJ_DECL(pj_status_t) pjsip_inv_create_ack(pjsip_inv_session *inv,
-					  int cseq,
-					  pjsip_tx_data **p_tdata);
+                                          int cseq,
+                                          pjsip_tx_data **p_tdata);
 
 
 /**
  * Send request or response message in tdata. 
  *
- * @param inv		The invite session.
- * @param tdata		The message to be sent.
+ * @param inv           The invite session.
+ * @param tdata         The message to be sent.
  *
- * @return		PJ_SUCCESS if transaction can be initiated 
- *			successfully to send this message. Note that the
- *			actual final state of the transaction itself will
- *			be reported later, in on_tsx_state_changed()
- *			callback.
+ * @return              PJ_SUCCESS if transaction can be initiated 
+ *                      successfully to send this message. Note that the
+ *                      actual final state of the transaction itself will
+ *                      be reported later, in on_tsx_state_changed()
+ *                      callback.
  */
 PJ_DECL(pj_status_t) pjsip_inv_send_msg(pjsip_inv_session *inv,
-					pjsip_tx_data *tdata);
+                                        pjsip_tx_data *tdata);
 
 
 /**
  * Get the invite session for the dialog, if any.
  *
- * @param dlg		The dialog which invite session is being queried.
+ * @param dlg           The dialog which invite session is being queried.
  *
- * @return		The invite session instance which has been 
- *			associated with this dialog, or NULL.
+ * @return              The invite session instance which has been 
+ *                      associated with this dialog, or NULL.
  */
 PJ_DECL(pjsip_inv_session*) pjsip_dlg_get_inv_session(pjsip_dialog *dlg);
 
 /**
  * Get the invite session instance associated with transaction tsx, if any.
  *
- * @param tsx		The transaction, which invite session is being 
- *			queried.
+ * @param tsx           The transaction, which invite session is being 
+ *                      queried.
  *
- * @return		The invite session instance which has been 
- *			associated with this transaction, or NULL.
+ * @return              The invite session instance which has been 
+ *                      associated with this transaction, or NULL.
  */
 PJ_DECL(pjsip_inv_session*) pjsip_tsx_get_inv_session(pjsip_transaction *tsx);
 
@@ -1052,9 +1051,9 @@ PJ_DECL(pjsip_inv_session*) pjsip_tsx_get_inv_session(pjsip_transaction *tsx);
 /**
  * Get state names for INVITE session state.
  *
- * @param state		The invite state.
+ * @param state         The invite state.
  *
- * @return		String describing the state.
+ * @return              String describing the state.
  */
 PJ_DECL(const char *) pjsip_inv_state_name(pjsip_inv_state state);
 
@@ -1062,27 +1061,27 @@ PJ_DECL(const char *) pjsip_inv_state_name(pjsip_inv_state state);
 /**
  * This is a utility function to create SIP body for SDP content.
  *
- * @param pool		Pool to allocate memory.
- * @param sdp		SDP session to be put in the SIP message body.
- * @param p_body	Pointer to receive SIP message body containing
- *			the SDP session.
+ * @param pool          Pool to allocate memory.
+ * @param sdp           SDP session to be put in the SIP message body.
+ * @param p_body        Pointer to receive SIP message body containing
+ *                      the SDP session.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_create_sdp_body(pj_pool_t *pool,
-					   pjmedia_sdp_session *sdp,
-					   pjsip_msg_body **p_body);
+                                           pjmedia_sdp_session *sdp,
+                                           pjsip_msg_body **p_body);
 
 /**
  * This is a utility function to create a multipart body with the
  * SIP body as the first part.
  *
- * @param pool		Pool to allocate memory.
- * @param sdp		SDP session to be put in the SIP message body.
- * @param p_body	Pointer to receive SIP message body containing
- *			the SDP session.
+ * @param pool          Pool to allocate memory.
+ * @param sdp           SDP session to be put in the SIP message body.
+ * @param p_body        Pointer to receive SIP message body containing
+ *                      the SDP session.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_create_multipart_sdp_body( pj_pool_t *pool,
                                            pjmedia_sdp_session *sdp,
@@ -1107,9 +1106,9 @@ PJ_DECL(pj_status_t) pjsip_create_multipart_sdp_body( pj_pool_t *pool,
  * @return                   The SDP info.
  */
 PJ_DECL(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
-					   pjsip_msg_body *body,
-					   pjsip_media_type *msg_media_type,
-					   const pjsip_media_type *search_media_type);
+                                           pjsip_msg_body *body,
+                                           pjsip_media_type *msg_media_type,
+                                           const pjsip_media_type *search_media_type);
 
 /**
  * Retrieve SDP information from an incoming message. Application should
@@ -1120,9 +1119,9 @@ PJ_DECL(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
  * on the same message. Subsequent call on the same message will just pick
  * up the already parsed SDP from the message.
  *
- * @param rdata		The incoming message.
+ * @param rdata         The incoming message.
  *
- * @return		The SDP info.
+ * @return              The SDP info.
  */
 PJ_DECL(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata);
 
@@ -1143,8 +1142,8 @@ PJ_DECL(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata);
  * @return                    The SDP info.
  */
 PJ_DECL(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
-					    pjsip_rx_data *rdata,
-					    const pjsip_media_type *search_media_type);
+                                            pjsip_rx_data *rdata,
+                                            const pjsip_media_type *search_media_type);
 
 /**
  * Retrieve SDP information from an outgoing message. Application should
@@ -1177,8 +1176,8 @@ PJ_DECL(pjsip_tdata_sdp_info*) pjsip_tdata_get_sdp_info(pjsip_tx_data *tdata);
  * @return                    The SDP info.
  */
 PJ_DECL(pjsip_tdata_sdp_info*) pjsip_tdata_get_sdp_info2(
-					    pjsip_tx_data *tdata,
-					    const pjsip_media_type *search_media_type);
+                                            pjsip_tx_data *tdata,
+                                            const pjsip_media_type *search_media_type);
 
 
 PJ_END_DECL
@@ -1188,4 +1187,4 @@ PJ_END_DECL
  */
 
 
-#endif	/* __SIP_INVITE_SESSION_H__ */
+#endif  /* __SIP_INVITE_SESSION_H__ */

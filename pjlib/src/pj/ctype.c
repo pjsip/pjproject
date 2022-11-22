@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -21,7 +20,7 @@
 
 /*
 char pj_hex_digits[] = {'0', '1', '2', '3', '4', '5', '6', '7',
-			'8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+                        '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 */
 
 int pjlib_ctype_c_dummy_symbol;

@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013-2014 Teluu Inc. (http://www.teluu.com)
  *
@@ -30,13 +29,13 @@
 #include <OpenGLES/ES2/glext.h>
 #import <UIKit/UIKit.h>
 
-#define THIS_FILE		"ios_opengl_dev.c"
+#define THIS_FILE               "ios_opengl_dev.c"
 
 /* If this is enabled, iOS OpenGL will not return error during creation when
  * in the background. Instead, it will perform the initialization later
  * during rendering.
  */ 
-#define ALLOW_DELAYED_INITIALIZATION 	0
+#define ALLOW_DELAYED_INITIALIZATION    0
 
 typedef struct iosgl_fmt_info
 {
@@ -60,23 +59,23 @@ static iosgl_fmt_info iosgl_fmts[] =
 /* Video stream. */
 struct iosgl_stream
 {
-    pjmedia_vid_dev_stream  base;		/**< Base stream       */
-    pjmedia_vid_dev_param   param;		/**< Settings	       */
-    pj_pool_t		   *pool;		/**< Memory pool       */
+    pjmedia_vid_dev_stream  base;               /**< Base stream       */
+    pjmedia_vid_dev_param   param;              /**< Settings          */
+    pj_pool_t              *pool;               /**< Memory pool       */
     
-    pjmedia_vid_dev_cb	    vid_cb;		/**< Stream callback   */
-    void		   *user_data;          /**< Application data  */
+    pjmedia_vid_dev_cb      vid_cb;             /**< Stream callback   */
+    void                   *user_data;          /**< Application data  */
     
-    pj_bool_t		    is_running;
+    pj_bool_t               is_running;
     pj_status_t             status;
     pj_timestamp            frame_ts;
     unsigned                ts_inc;
     pjmedia_rect_size       vid_size;
-    unsigned		    frame_size;
+    unsigned                frame_size;
 
-    pj_bool_t		    is_rendering;
-    void		   *render_buf;
-    unsigned		    render_buf_size;
+    pj_bool_t               is_rendering;
+    void                   *render_buf;
+    unsigned                render_buf_size;
     
     gl_buffers             *gl_buf;
     GLView                 *gl_view;
@@ -220,7 +219,7 @@ static void dispatch_sync_on_main_queue(void (^block)(void))
         if (stream->status == PJMEDIA_EVID_INIT) {
             [self init_gl];
             NSLog(@"Initializing OpenGL now %s", stream->status == PJ_SUCCESS?
-            	  "success": "failed");
+                  "success": "failed");
         }
         
         return;
@@ -285,7 +284,7 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
     
     rect = CGRectMake(0, 0, strm->param.disp_size.w, strm->param.disp_size.h);
     dispatch_sync_on_main_queue(^{
-	strm->gl_view = [[GLView alloc] initWithFrame:rect];
+        strm->gl_view = [[GLView alloc] initWithFrame:rect];
     });
     if (!strm->gl_view)
         return PJ_ENOMEM;
@@ -310,11 +309,11 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
     {
         if (status == PJMEDIA_EVID_INIT) {
             PJ_LOG(3, (THIS_FILE, "Failed to initialize iOS OpenGL because "
-            			  "we are in background"));
+                                  "we are in background"));
 #if !ALLOW_DELAYED_INITIALIZATION
             goto on_error;
 #endif
-	} else {
+        } else {
             PJ_LOG(3, (THIS_FILE, "Unable to create and init OpenGL buffers"));
             goto on_error;
         }
@@ -398,7 +397,7 @@ static pj_status_t iosgl_stream_get_cap(pjmedia_vid_dev_stream *s,
         wnd->info.ios.window = strm->gl_view;
         return PJ_SUCCESS;
     } else {
-	return PJMEDIA_EVID_INVCAP;
+        return PJMEDIA_EVID_INVCAP;
     }
 }
 
@@ -415,7 +414,7 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
     
     if (cap==PJMEDIA_VID_DEV_CAP_FORMAT) {
         const pjmedia_video_format_info *vfi;
-    	pjmedia_video_apply_fmt_param vafp;
+        pjmedia_video_apply_fmt_param vafp;
         pjmedia_format *fmt = (pjmedia_format *)pval;
         iosgl_fmt_info *ifi;
         
@@ -427,24 +426,24 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         if (!vfi)
             return PJMEDIA_EVID_BADFORMAT;
 
-    	vafp.size = fmt->det.vid.size;
-    	vafp.buffer = NULL;
-    	if (vfi->apply_fmt(vfi, &vafp) != PJ_SUCCESS)
+        vafp.size = fmt->det.vid.size;
+        vafp.buffer = NULL;
+        if (vfi->apply_fmt(vfi, &vafp) != PJ_SUCCESS)
             return PJMEDIA_EVID_BADFORMAT;
         
         pjmedia_format_copy(&strm->param.fmt, fmt);
 
         strm->frame_size = vafp.framebytes;
-	if (strm->render_buf_size < strm->frame_size) {
+        if (strm->render_buf_size < strm->frame_size) {
             /* Realloc only when needed */
-	    strm->render_buf_size = strm->frame_size;
+            strm->render_buf_size = strm->frame_size;
             strm->render_buf=pj_pool_alloc(strm->pool, strm->render_buf_size);
         }
         
         [strm->gl_view performSelectorOnMainThread:@selector(change_format)
                        withObject:nil waitUntilDone:YES];
 
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         UIView *view = (UIView *)pval;
         strm->param.window.info.ios.window = (void *)pval;
@@ -507,14 +506,14 @@ static pj_status_t iosgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
      * or keep-alive, this port doesn't need any, just ignore.
      */
     if (frame->size==0 || frame->buf==NULL)
-	return PJ_SUCCESS;
-	
+        return PJ_SUCCESS;
+        
     if (!stream->is_running)
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
     
     /* Prevent more than one async rendering task. */
     if (stream->is_rendering)
-    	return PJ_EIGNORED;
+        return PJ_EIGNORED;
 
     if (stream->frame_size >= frame->size)
         pj_memcpy(stream->render_buf, frame->buf, frame->size);
@@ -557,7 +556,7 @@ static pj_status_t iosgl_stream_destroy(pjmedia_vid_dev_stream *strm)
 
     if (stream->gl_view) {
         [stream->gl_view performSelectorOnMainThread:@selector(deinit_gl)
-              		 withObject:nil waitUntilDone:YES];
+                         withObject:nil waitUntilDone:YES];
 
         [stream->gl_view release];
         stream->gl_view = NULL;
@@ -568,4 +567,4 @@ static pj_status_t iosgl_stream_destroy(pjmedia_vid_dev_stream *strm)
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL */

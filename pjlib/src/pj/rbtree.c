@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -37,9 +36,9 @@ static void left_rotate( pj_rbtree *tree, pj_rbtree_node *node )
     rnode->parent = parent;
     if (parent != tree->null) {
         if (parent->left == node)
-	   parent->left = rnode;
+           parent->left = rnode;
         else
-	   parent->right = rnode;
+           parent->right = rnode;
     } else {
         tree->root = rnode;
     }
@@ -59,15 +58,15 @@ static void right_rotate( pj_rbtree *tree, pj_rbtree_node *node )
 
     node->left = lnode->right;
     if (lnode->right != tree->null)
-	lnode->right->parent = node;
+        lnode->right->parent = node;
     parent = node->parent;
     lnode->parent = parent;
 
     if (parent != tree->null) {
         if (parent->left == node)
-	    parent->left = lnode;
-	else
-	    parent->right = lnode;
+            parent->left = lnode;
+        else
+            parent->right = lnode;
     } else {
         tree->root = lnode;
     }
@@ -84,46 +83,46 @@ static void insert_fixup( pj_rbtree *tree, pj_rbtree_node *node )
     while (node != tree->root && node->parent->color == PJ_RBCOLOR_RED) {
         parent = node->parent;
         if (parent == parent->parent->left) {
-	    temp = parent->parent->right;
-	    if (temp->color == PJ_RBCOLOR_RED) {
-	        temp->color = PJ_RBCOLOR_BLACK;
-	        node = parent;
-	        node->color = PJ_RBCOLOR_BLACK;
-	        node = node->parent;
-	        node->color = PJ_RBCOLOR_RED;
-	    } else {
-	        if (node == parent->right) {
-		   node = parent;
-		   left_rotate(tree, node);
-	        }
-	        temp = node->parent;
-	        temp->color = PJ_RBCOLOR_BLACK;
-	        temp = temp->parent;
-	        temp->color = PJ_RBCOLOR_RED;
-	        right_rotate( tree, temp);
-	    }
+            temp = parent->parent->right;
+            if (temp->color == PJ_RBCOLOR_RED) {
+                temp->color = PJ_RBCOLOR_BLACK;
+                node = parent;
+                node->color = PJ_RBCOLOR_BLACK;
+                node = node->parent;
+                node->color = PJ_RBCOLOR_RED;
+            } else {
+                if (node == parent->right) {
+                   node = parent;
+                   left_rotate(tree, node);
+                }
+                temp = node->parent;
+                temp->color = PJ_RBCOLOR_BLACK;
+                temp = temp->parent;
+                temp->color = PJ_RBCOLOR_RED;
+                right_rotate( tree, temp);
+            }
         } else {
-	    temp = parent->parent->left;
-	    if (temp->color == PJ_RBCOLOR_RED) {
-	        temp->color = PJ_RBCOLOR_BLACK;
-	        node = parent;
-	        node->color = PJ_RBCOLOR_BLACK;
-	        node = node->parent;
-	        node->color = PJ_RBCOLOR_RED;
-	    } else {
-	        if (node == parent->left) {
-		    node = parent;
-		    right_rotate(tree, node);
-	        }
-	        temp = node->parent;
-	        temp->color = PJ_RBCOLOR_BLACK;
-	        temp = temp->parent;
-	        temp->color = PJ_RBCOLOR_RED;
-	        left_rotate(tree, temp);
-	   }
+            temp = parent->parent->left;
+            if (temp->color == PJ_RBCOLOR_RED) {
+                temp->color = PJ_RBCOLOR_BLACK;
+                node = parent;
+                node->color = PJ_RBCOLOR_BLACK;
+                node = node->parent;
+                node->color = PJ_RBCOLOR_RED;
+            } else {
+                if (node == parent->left) {
+                    node = parent;
+                    right_rotate(tree, node);
+                }
+                temp = node->parent;
+                temp->color = PJ_RBCOLOR_BLACK;
+                temp = temp->parent;
+                temp->color = PJ_RBCOLOR_RED;
+                left_rotate(tree, temp);
+           }
         }
     }
-	
+        
     tree->root->color = PJ_RBCOLOR_BLACK;
 }
 
@@ -136,60 +135,60 @@ static void delete_fixup( pj_rbtree *tree, pj_rbtree_node *node )
 
     while (node != tree->root && node->color == PJ_RBCOLOR_BLACK) {
         if (node->parent->left == node) {
-	    temp = node->parent->right;
-	    if (temp->color == PJ_RBCOLOR_RED) {
-	        temp->color = PJ_RBCOLOR_BLACK;
-	        node->parent->color = PJ_RBCOLOR_RED;
-	        left_rotate(tree, node->parent);
-	        temp = node->parent->right;
-	    }
-	    if (temp->left->color == PJ_RBCOLOR_BLACK && 
-	        temp->right->color == PJ_RBCOLOR_BLACK) 
-	    {
-	        temp->color = PJ_RBCOLOR_RED;
-	        node = node->parent;
-	    } else {
-	        if (temp->right->color == PJ_RBCOLOR_BLACK) {
-		    temp->left->color = PJ_RBCOLOR_BLACK;
-		    temp->color = PJ_RBCOLOR_RED;
-		    right_rotate( tree, temp);
-		    temp = node->parent->right;
-	        }
-	        temp->color = node->parent->color;
-	        temp->right->color = PJ_RBCOLOR_BLACK;
-	        node->parent->color = PJ_RBCOLOR_BLACK;
-	        left_rotate(tree, node->parent);
-	        node = tree->root;
-	    }
+            temp = node->parent->right;
+            if (temp->color == PJ_RBCOLOR_RED) {
+                temp->color = PJ_RBCOLOR_BLACK;
+                node->parent->color = PJ_RBCOLOR_RED;
+                left_rotate(tree, node->parent);
+                temp = node->parent->right;
+            }
+            if (temp->left->color == PJ_RBCOLOR_BLACK && 
+                temp->right->color == PJ_RBCOLOR_BLACK) 
+            {
+                temp->color = PJ_RBCOLOR_RED;
+                node = node->parent;
+            } else {
+                if (temp->right->color == PJ_RBCOLOR_BLACK) {
+                    temp->left->color = PJ_RBCOLOR_BLACK;
+                    temp->color = PJ_RBCOLOR_RED;
+                    right_rotate( tree, temp);
+                    temp = node->parent->right;
+                }
+                temp->color = node->parent->color;
+                temp->right->color = PJ_RBCOLOR_BLACK;
+                node->parent->color = PJ_RBCOLOR_BLACK;
+                left_rotate(tree, node->parent);
+                node = tree->root;
+            }
         } else {
-	    temp = node->parent->left;
-	    if (temp->color == PJ_RBCOLOR_RED) {
-	        temp->color = PJ_RBCOLOR_BLACK;
-	        node->parent->color = PJ_RBCOLOR_RED;
-	        right_rotate( tree, node->parent);
-	        temp = node->parent->left;
-	    }
-	    if (temp->right->color == PJ_RBCOLOR_BLACK && 
-		temp->left->color == PJ_RBCOLOR_BLACK) 
-	    {
-	        temp->color = PJ_RBCOLOR_RED;
-	        node = node->parent;
-	    } else {
-	        if (temp->left->color == PJ_RBCOLOR_BLACK) {
-		    temp->right->color = PJ_RBCOLOR_BLACK;
-		    temp->color = PJ_RBCOLOR_RED;
-		    left_rotate( tree, temp);
-		    temp = node->parent->left;
-	        }
-	        temp->color = node->parent->color;
-	        node->parent->color = PJ_RBCOLOR_BLACK;
-	        temp->left->color = PJ_RBCOLOR_BLACK;
-	        right_rotate(tree, node->parent);
-	        node = tree->root;
-	    }
+            temp = node->parent->left;
+            if (temp->color == PJ_RBCOLOR_RED) {
+                temp->color = PJ_RBCOLOR_BLACK;
+                node->parent->color = PJ_RBCOLOR_RED;
+                right_rotate( tree, node->parent);
+                temp = node->parent->left;
+            }
+            if (temp->right->color == PJ_RBCOLOR_BLACK && 
+                temp->left->color == PJ_RBCOLOR_BLACK) 
+            {
+                temp->color = PJ_RBCOLOR_RED;
+                node = node->parent;
+            } else {
+                if (temp->left->color == PJ_RBCOLOR_BLACK) {
+                    temp->right->color = PJ_RBCOLOR_BLACK;
+                    temp->color = PJ_RBCOLOR_RED;
+                    left_rotate( tree, temp);
+                    temp = node->parent->left;
+                }
+                temp->color = node->parent->color;
+                node->parent->color = PJ_RBCOLOR_BLACK;
+                temp->left->color = PJ_RBCOLOR_BLACK;
+                right_rotate(tree, node->parent);
+                node = tree->root;
+            }
         }
     }
-	
+        
     node->color = PJ_RBCOLOR_BLACK;
 }
 
@@ -215,7 +214,7 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_first( pj_rbtree *tree )
     PJ_CHECK_STACK();
 
     while (node->left != null)
-	node = node->left;
+        node = node->left;
     return node != null ? node : NULL;
 }
 
@@ -227,33 +226,33 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_last( pj_rbtree *tree )
     PJ_CHECK_STACK();
 
     while (node->right != null)
-	node = node->right;
+        node = node->right;
     return node != null ? node : NULL;
 }
 
 PJ_DEF(pj_rbtree_node*) pj_rbtree_next( pj_rbtree *tree, 
-					register pj_rbtree_node *node )
+                                        register pj_rbtree_node *node )
 {
     register pj_rbtree_node *null = tree->null;
     
     PJ_CHECK_STACK();
 
     if (node->right != null) {
-	for (node=node->right; node->left!=null; node = node->left)
-	    /* void */;
+        for (node=node->right; node->left!=null; node = node->left)
+            /* void */;
     } else {
         register pj_rbtree_node *temp = node->parent;
         while (temp!=null && temp->right==node) {
-	    node = temp;
-	    temp = temp->parent;
-	}
-	node = temp;
+            node = temp;
+            temp = temp->parent;
+        }
+        node = temp;
     }    
     return node != null ? node : NULL;
 }
 
 PJ_DEF(pj_rbtree_node*) pj_rbtree_prev( pj_rbtree *tree, 
-					register pj_rbtree_node *node )
+                                        register pj_rbtree_node *node )
 {
     register pj_rbtree_node *null = tree->null;
     
@@ -261,12 +260,12 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_prev( pj_rbtree *tree,
 
     if (node->left != null) {
         for (node=node->left; node->right!=null; node=node->right)
-	   /* void */;
+           /* void */;
     } else {
         register pj_rbtree_node *temp = node->parent;
         while (temp!=null && temp->left==node) {
-	    node = temp;
-	    temp = temp->parent;
+            node = temp;
+            temp = temp->parent;
         }
         node = temp;
     }    
@@ -274,23 +273,23 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_prev( pj_rbtree *tree,
 }
 
 PJ_DEF(int) pj_rbtree_insert( pj_rbtree *tree, 
-			      pj_rbtree_node *element )
+                              pj_rbtree_node *element )
 {
     int rv = 0;
     pj_rbtree_node *node, *parent = tree->null, 
-		   *null = tree->null;
+                   *null = tree->null;
     pj_rbtree_comp *comp = tree->comp;
-	
+        
     PJ_CHECK_STACK();
 
-    node = tree->root;	
+    node = tree->root;  
     while (node != null) {
         rv = (*comp)(element->key, node->key);
         if (rv == 0) {
-	    /* found match, i.e. entry with equal key already exist */
-	    return -1;
-	}    
-	parent = node;
+            /* found match, i.e. entry with equal key already exist */
+            return -1;
+        }    
+        parent = node;
         node = rv < 0 ? node->left : node->right;
     }
 
@@ -301,23 +300,23 @@ PJ_DEF(int) pj_rbtree_insert( pj_rbtree *tree,
     if (parent != null) {
         node->parent = parent;
         if (rv < 0)
-	   parent->left = node;
+           parent->left = node;
         else
-	   parent->right = node;
+           parent->right = node;
         insert_fixup( tree, node);
     } else {
         tree->root = node;
         node->parent = null;
         node->color = PJ_RBCOLOR_BLACK;
     }
-	
+        
     ++tree->size;
     return 0;
 }
 
 
 PJ_DEF(pj_rbtree_node*) pj_rbtree_find( pj_rbtree *tree,
-					const void *key )
+                                        const void *key )
 {
     int rv;
     pj_rbtree_node *node = tree->root;
@@ -327,14 +326,14 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_find( pj_rbtree *tree,
     while (node != null) {
         rv = (*comp)(key, node->key);
         if (rv == 0)
-	    return node;
+            return node;
         node = rv < 0 ? node->left : node->right;
     }
     return node != null ? node : NULL;
 }
 
 PJ_DEF(pj_rbtree_node*) pj_rbtree_erase( pj_rbtree *tree,
-					 pj_rbtree_node *node )
+                                         pj_rbtree_node *node )
 {
     pj_rbtree_node *succ;
     pj_rbtree_node *null = tree->null;
@@ -347,7 +346,7 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_erase( pj_rbtree *tree,
         succ = node;
     } else {
         for (succ=node->right; succ->left!=null; succ=succ->left)
-	   /* void */;
+           /* void */;
     }
 
     child = succ->left != null ? succ->left : succ->right;
@@ -355,10 +354,10 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_erase( pj_rbtree *tree,
     child->parent = parent;
     
     if (parent != null) {
-	if (parent->left == succ)
-	    parent->left = child;
+        if (parent->left == succ)
+            parent->left = child;
         else
-	   parent->right = child;
+           parent->right = child;
     } else
         tree->root = child;
 
@@ -370,23 +369,23 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_erase( pj_rbtree *tree,
 
         parent = node->parent;
         if (parent != null) {
-	   if (parent->left==node)
-	        parent->left=succ;
-	   else
-		parent->right=succ;
+           if (parent->left==node)
+                parent->left=succ;
+           else
+                parent->right=succ;
         }
         if (node->left != null)
-	   node->left->parent = succ;;
+           node->left->parent = succ;;
         if (node->right != null)
-	    node->right->parent = succ;
+            node->right->parent = succ;
 
         if (tree->root == node)
-	   tree->root = succ;
+           tree->root = succ;
     }
 
     if (succ->color == PJ_RBCOLOR_BLACK) {
-	if (child != null) 
-	    delete_fixup(tree, child);
+        if (child != null) 
+            delete_fixup(tree, child);
         tree->null->color = PJ_RBCOLOR_BLACK;
     }
 
@@ -396,14 +395,14 @@ PJ_DEF(pj_rbtree_node*) pj_rbtree_erase( pj_rbtree *tree,
 
 
 PJ_DEF(unsigned) pj_rbtree_max_height( pj_rbtree *tree,
-				       pj_rbtree_node *node )
+                                       pj_rbtree_node *node )
 {
     unsigned l, r;
     
     PJ_CHECK_STACK();
 
     if (node==NULL) 
-	node = tree->root;
+        node = tree->root;
     
     l = node->left != tree->null ? pj_rbtree_max_height(tree,node->left)+1 : 0;
     r = node->right != tree->null ? pj_rbtree_max_height(tree,node->right)+1 : 0;
@@ -411,14 +410,14 @@ PJ_DEF(unsigned) pj_rbtree_max_height( pj_rbtree *tree,
 }
 
 PJ_DEF(unsigned) pj_rbtree_min_height( pj_rbtree *tree,
-				       pj_rbtree_node *node )
+                                       pj_rbtree_node *node )
 {
     unsigned l, r;
     
     PJ_CHECK_STACK();
 
     if (node==NULL) 
-	node=tree->root;
+        node=tree->root;
     
     l = (node->left != tree->null) ? pj_rbtree_max_height(tree,node->left)+1 : 0;
     r = (node->right != tree->null) ? pj_rbtree_max_height(tree,node->right)+1 : 0;

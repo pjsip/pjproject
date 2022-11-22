@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -24,20 +23,20 @@
 #include <pjlib.h>
 
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
-#   define WITH_BENCHMARK	    0
+#   define WITH_BENCHMARK           0
 #else
-#   define WITH_BENCHMARK	    1
+#   define WITH_BENCHMARK           1
 #endif
 
-#define HAS_VID_DEV_TEST	PJMEDIA_HAS_VIDEO
-#define HAS_VID_PORT_TEST	PJMEDIA_HAS_VIDEO
+#define HAS_VID_DEV_TEST        PJMEDIA_HAS_VIDEO
+#define HAS_VID_PORT_TEST       PJMEDIA_HAS_VIDEO
 #ifndef HAS_VID_CODEC_TEST
-    #define HAS_VID_CODEC_TEST	PJMEDIA_HAS_VIDEO
+    #define HAS_VID_CODEC_TEST  PJMEDIA_HAS_VIDEO
 #endif
-#define HAS_SDP_NEG_TEST	1
-#define HAS_JBUF_TEST		1
-#define HAS_MIPS_TEST		WITH_BENCHMARK
-#define HAS_CODEC_VECTOR_TEST	1
+#define HAS_SDP_NEG_TEST        1
+#define HAS_JBUF_TEST           1
+#define HAS_MIPS_TEST           WITH_BENCHMARK
+#define HAS_CODEC_VECTOR_TEST   1
 
 int session_test(void);
 int rtp_test(void);
@@ -55,4 +54,4 @@ void app_perror(pj_status_t status, const char *title);
 
 int test_main(void);
 
-#endif	/* __PJMEDIA_TEST_H__ */
+#endif  /* __PJMEDIA_TEST_H__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -43,7 +42,7 @@
  * offending statements.
  * For release build, this macro will not do anything.
  *
- * @param expr	    The expression to be evaluated.
+ * @param expr      The expression to be evaluated.
  */
 #ifndef pj_assert
 #   define pj_assert(expr)   assert(expr)
@@ -57,9 +56,9 @@
  */
 // #if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK != 0
 #define PJ_ASSERT_RETURN(expr,retval)    \
-	    do { \
-		if (!(expr)) { pj_assert(expr); return retval; } \
-	    } while (0)
+            do { \
+                if (!(expr)) { pj_assert(expr); return retval; } \
+            } while (0)
 //#else
 //#   define PJ_ASSERT_RETURN(expr,retval)    pj_assert(expr)
 //#endif
@@ -71,15 +70,15 @@
  */
 //#if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK != 0
 #define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    \
-	    do { \
-		pj_assert(expr); \
-		if (!(expr)) exec_on_fail; \
-	    } while (0)
+            do { \
+                pj_assert(expr); \
+                if (!(expr)) exec_on_fail; \
+            } while (0)
 //#else
 //#   define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    pj_assert(expr)
 //#endif
 
 /** @} */
 
-#endif	/* __PJ_ASSERT_H__ */
+#endif  /* __PJ_ASSERT_H__ */
 

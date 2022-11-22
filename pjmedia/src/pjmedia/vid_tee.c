@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -27,31 +26,31 @@
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 
-#define TEE_PORT_NAME	"vid_tee"
-#define TEE_PORT_SIGN	PJMEDIA_SIG_PORT_VID_TEE
+#define TEE_PORT_NAME   "vid_tee"
+#define TEE_PORT_SIGN   PJMEDIA_SIG_PORT_VID_TEE
 
-#define THIS_FILE	"vid_tee.c"
+#define THIS_FILE       "vid_tee.c"
 
 typedef struct vid_tee_dst_port
 {
-    pjmedia_port	*dst;
-    unsigned		 option;
+    pjmedia_port        *dst;
+    unsigned             option;
 } vid_tee_dst_port;
 
 
 typedef struct vid_tee_port
 {
-    pjmedia_port	 base;
+    pjmedia_port         base;
     pj_pool_t           *pool;
     pj_pool_factory     *pf;
     pj_pool_t           *buf_pool;
-    void		*buf[2];
+    void                *buf[2];
     unsigned             buf_cnt;
-    pj_size_t		 buf_size;
-    unsigned		 dst_port_maxcnt;
-    unsigned		 dst_port_cnt;
-    vid_tee_dst_port	*dst_ports;
-    pj_uint8_t		*put_frm_flag;
+    pj_size_t            buf_size;
+    unsigned             dst_port_maxcnt;
+    unsigned             dst_port_cnt;
+    vid_tee_dst_port    *dst_ports;
+    pj_uint8_t          *put_frm_flag;
     
     struct vid_tee_conv_t {
         pjmedia_converter   *conv;
@@ -68,9 +67,9 @@ static pj_status_t tee_destroy(pjmedia_port *port);
  * Create a video tee port with the specified source media port.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_tee_create( pj_pool_t *pool,
-					    const pjmedia_format *fmt,
-					    unsigned max_dst_cnt,
-					    pjmedia_port **p_vid_tee)
+                                            const pjmedia_format *fmt,
+                                            unsigned max_dst_cnt,
+                                            pjmedia_port **p_vid_tee)
 {
     vid_tee_port *tee;
     pj_str_t name_st;
@@ -95,30 +94,30 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_create( pj_pool_t *pool,
                     pj_pool_calloc(pool, max_dst_cnt,
                                    sizeof(struct vid_tee_conv_t));
     tee->put_frm_flag = (pj_uint8_t*)
-			pj_pool_calloc(pool, max_dst_cnt,
-				       sizeof(tee->put_frm_flag[0]));
+                        pj_pool_calloc(pool, max_dst_cnt,
+                                       sizeof(tee->put_frm_flag[0]));
 
     /* Initialize video tee buffer, its size is one frame */
     vfi = pjmedia_get_video_format_info(NULL, fmt->id);
     if (vfi == NULL)
-	return PJMEDIA_EBADFMT;
+        return PJMEDIA_EBADFMT;
 
     pj_bzero(&vafp, sizeof(vafp));
     vafp.size = fmt->det.vid.size;
     status = vfi->apply_fmt(vfi, &vafp);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     tee->buf_size = vafp.framebytes;
 
     /* Initialize video tee port */
     status = pjmedia_port_info_init2(&tee->base.info,
-				     pj_strset2(&name_st, (char*)TEE_PORT_NAME),
-				     TEE_PORT_SIGN,
-				     PJMEDIA_DIR_ENCODING,
-				     fmt);
+                                     pj_strset2(&name_st, (char*)TEE_PORT_NAME),
+                                     TEE_PORT_SIGN,
+                                     PJMEDIA_DIR_ENCODING,
+                                     fmt);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     tee->base.get_frame = &tee_get_frame;
     tee->base.put_frame = &tee_put_frame;
@@ -164,24 +163,24 @@ static void realloc_buf(vid_tee_port *vid_tee,
  * Add a destination media port to the video tee.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
-						 unsigned option,
-						 pjmedia_port *port)
+                                                 unsigned option,
+                                                 pjmedia_port *port)
 {
     vid_tee_port *tee = (vid_tee_port*)vid_tee;
     pjmedia_video_format_detail *vfd;
 
     PJ_ASSERT_RETURN(vid_tee && vid_tee->info.signature==TEE_PORT_SIGN,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
 
     if (tee->dst_port_cnt >= tee->dst_port_maxcnt)
-	return PJ_ETOOMANY;
+        return PJ_ETOOMANY;
     
     if (vid_tee->info.fmt.id != port->info.fmt.id)
-	return PJMEDIA_EBADFMT;
+        return PJMEDIA_EBADFMT;
 
     vfd = pjmedia_format_get_video_format_detail(&port->info.fmt, PJ_TRUE);
     if (vfd->size.w != vid_tee->info.fmt.det.vid.size.w ||
-	vfd->size.h != vid_tee->info.fmt.det.vid.size.h)
+        vfd->size.h != vid_tee->info.fmt.det.vid.size.h)
     {
         return PJMEDIA_EBADFMT;
     }
@@ -203,17 +202,17 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
  * necessary.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
-						  unsigned option,
-						  pjmedia_port *port)
+                                                  unsigned option,
+                                                  pjmedia_port *port)
 {
     vid_tee_port *tee = (vid_tee_port*)vid_tee;
     pjmedia_video_format_detail *vfd;
     
     PJ_ASSERT_RETURN(vid_tee && vid_tee->info.signature==TEE_PORT_SIGN,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
     
     if (tee->dst_port_cnt >= tee->dst_port_maxcnt)
-	return PJ_ETOOMANY;
+        return PJ_ETOOMANY;
     
     pj_bzero(&tee->tee_conv[tee->dst_port_cnt], sizeof(tee->tee_conv[0]));
     
@@ -221,7 +220,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
     vfd = pjmedia_format_get_video_format_detail(&port->info.fmt, PJ_TRUE);
     if (vid_tee->info.fmt.id != port->info.fmt.id ||
         vfd->size.w != vid_tee->info.fmt.det.vid.size.w ||
-	vfd->size.h != vid_tee->info.fmt.det.vid.size.h)
+        vfd->size.h != vid_tee->info.fmt.det.vid.size.h)
     {
         const pjmedia_video_format_info *vfi;
         pjmedia_video_apply_fmt_param vafp;
@@ -242,7 +241,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
                     2: 1, vafp.framebytes);
         
         pjmedia_format_copy(&conv_param.src, &vid_tee->info.fmt);
-	pjmedia_format_copy(&conv_param.dst, &port->info.fmt);
+        pjmedia_format_copy(&conv_param.dst, &port->info.fmt);
         
         status = pjmedia_converter_create(
                      NULL, tee->pool, &conv_param,
@@ -268,26 +267,26 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
  * Remove a destination media port from the video tee.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_tee_remove_dst_port(pjmedia_port *vid_tee,
-						    pjmedia_port *port)
+                                                    pjmedia_port *port)
 {
     vid_tee_port *tee = (vid_tee_port*)vid_tee;
     unsigned i;
 
     PJ_ASSERT_RETURN(vid_tee && vid_tee->info.signature==TEE_PORT_SIGN,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
 
     for (i = 0; i < tee->dst_port_cnt; ++i) {
-	if (tee->dst_ports[i].dst == port) {
+        if (tee->dst_ports[i].dst == port) {
             if (tee->tee_conv[i].conv)
                 pjmedia_converter_destroy(tee->tee_conv[i].conv);
             
-	    pj_array_erase(tee->dst_ports, sizeof(tee->dst_ports[0]),
-			   tee->dst_port_cnt, i);
+            pj_array_erase(tee->dst_ports, sizeof(tee->dst_ports[0]),
+                           tee->dst_port_cnt, i);
             pj_array_erase(tee->tee_conv, sizeof(tee->tee_conv[0]),
-			   tee->dst_port_cnt, i);
-	    --tee->dst_port_cnt;
-	    return PJ_SUCCESS;
-	}
+                           tee->dst_port_cnt, i);
+            --tee->dst_port_cnt;
+            return PJ_SUCCESS;
+        }
     }
 
     return PJ_ENOTFOUND;
@@ -301,10 +300,10 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
     const pj_uint8_t PUT_FRM_DONE = 1;
 
     pj_bzero(tee->put_frm_flag, tee->dst_port_cnt *
-				sizeof(tee->put_frm_flag[0]));
+                                sizeof(tee->put_frm_flag[0]));
 
     for (i = 0; i < tee->dst_port_cnt; ++i) {
-	pjmedia_frame frame_ = *frame;
+        pjmedia_frame frame_ = *frame;
 
         if (tee->put_frm_flag[i])
             continue;
@@ -318,10 +317,10 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
                                                frame, &frame_);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(3, (THIS_FILE, status,
-			      "Failed to convert frame for destination"
-			      " port %d (%.*s)", i,
-			      tee->dst_ports[i].dst->info.name.slen,
-			      tee->dst_ports[i].dst->info.name.ptr));
+                              "Failed to convert frame for destination"
+                              " port %d (%.*s)", i,
+                              tee->dst_ports[i].dst->info.name.slen,
+                              tee->dst_ports[i].dst->info.name.ptr));
                 continue;
             }
         }

@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -41,11 +40,11 @@
 #   include <Foundation/Foundation.h>
 #endif
 
-#define THIS_FILE		"sdl_dev.c"
-#define DEFAULT_CLOCK_RATE	90000
-#define DEFAULT_WIDTH		640
-#define DEFAULT_HEIGHT		480
-#define DEFAULT_FPS		25
+#define THIS_FILE               "sdl_dev.c"
+#define DEFAULT_CLOCK_RATE      90000
+#define DEFAULT_WIDTH           640
+#define DEFAULT_HEIGHT          480
+#define DEFAULT_FPS             25
 
 typedef struct sdl_fmt_info
 {
@@ -90,14 +89,14 @@ static sdl_fmt_info sdl_fmts[] =
 /* sdl_ device info */
 struct sdl_dev_info
 {
-    pjmedia_vid_dev_info	 info;
+    pjmedia_vid_dev_info         info;
 };
 
 /* Linked list of streams */
 struct stream_list
 {
     PJ_DECL_LIST_MEMBER(struct stream_list);
-    struct sdl_stream	*stream;
+    struct sdl_stream   *stream;
 };
 
 #define INITIAL_MAX_JOBS 64
@@ -141,55 +140,55 @@ typedef struct job_queue {
 
     unsigned        size;
     unsigned        head, tail;
-    pj_bool_t	    is_full;
+    pj_bool_t       is_full;
     pj_bool_t       is_quitting;
 } job_queue;
 
 /* sdl_ factory */
 struct sdl_factory
 {
-    pjmedia_vid_dev_factory	 base;
-    pj_pool_t			*pool;
-    pj_pool_factory		*pf;
+    pjmedia_vid_dev_factory      base;
+    pj_pool_t                   *pool;
+    pj_pool_factory             *pf;
 
-    unsigned			 dev_count;
-    struct sdl_dev_info	        *dev_info;
+    unsigned                     dev_count;
+    struct sdl_dev_info         *dev_info;
     job_queue                   *jq;
 
-    pj_thread_t			*sdl_thread;        /**< SDL thread.        */
+    pj_thread_t                 *sdl_thread;        /**< SDL thread.        */
     pj_sem_t                    *sem;
-    pj_mutex_t			*mutex;
-    struct stream_list		 streams;
+    pj_mutex_t                  *mutex;
+    struct stream_list           streams;
     pj_bool_t                    is_quitting;
-    pj_thread_desc 		 thread_desc;
-    pj_thread_t 		*ev_thread;
+    pj_thread_desc               thread_desc;
+    pj_thread_t                 *ev_thread;
 };
 
 /* Video stream. */
 struct sdl_stream
 {
-    pjmedia_vid_dev_stream	 base;		    /**< Base stream	    */
-    pjmedia_vid_dev_param	 param;		    /**< Settings	    */
-    pj_pool_t			*pool;              /**< Memory pool.       */
+    pjmedia_vid_dev_stream       base;              /**< Base stream        */
+    pjmedia_vid_dev_param        param;             /**< Settings           */
+    pj_pool_t                   *pool;              /**< Memory pool.       */
 
-    pjmedia_vid_dev_cb		 vid_cb;            /**< Stream callback.   */
-    void			*user_data;         /**< Application data.  */
+    pjmedia_vid_dev_cb           vid_cb;            /**< Stream callback.   */
+    void                        *user_data;         /**< Application data.  */
 
     struct sdl_factory          *sf;
     const pjmedia_frame         *frame;
-    pj_bool_t			 is_running;
-    pj_timestamp		 last_ts;
-    struct stream_list		 list_entry;
+    pj_bool_t                    is_running;
+    pj_timestamp                 last_ts;
+    struct stream_list           list_entry;
 
     SDL_Window                  *window;            /**< Display window.    */
     SDL_Renderer                *renderer;          /**< Display renderer.  */
     SDL_Texture                 *scr_tex;           /**< Screen texture.    */
     int                          pitch;             /**< Pitch value.       */
-    SDL_Rect			 rect;              /**< Frame rectangle.   */
-    SDL_Rect			 dstrect;           /**< Display rectangle. */
+    SDL_Rect                     rect;              /**< Frame rectangle.   */
+    SDL_Rect                     dstrect;           /**< Display rectangle. */
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     SDL_GLContext               *gl_context;
-    GLuint			 texture;
+    GLuint                       texture;
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
     pjmedia_video_apply_fmt_param vafp;
@@ -201,27 +200,27 @@ static pj_status_t sdl_factory_destroy(pjmedia_vid_dev_factory *f);
 static pj_status_t sdl_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    sdl_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t sdl_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					    unsigned index,
-					    pjmedia_vid_dev_info *info);
+                                            unsigned index,
+                                            pjmedia_vid_dev_info *info);
 static pj_status_t sdl_factory_default_param(pj_pool_t *pool,
                                              pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_param *param);
+                                             unsigned index,
+                                             pjmedia_vid_dev_param *param);
 static pj_status_t sdl_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm);
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm);
 
 static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *strm,
-					pjmedia_vid_dev_param *param);
+                                        pjmedia_vid_dev_param *param);
 static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *strm,
-				      pjmedia_vid_dev_cap cap,
-				      void *value);
+                                      pjmedia_vid_dev_cap cap,
+                                      void *value);
 static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *strm,
-				      pjmedia_vid_dev_cap cap,
-				      const void *value);
+                                      pjmedia_vid_dev_cap cap,
+                                      const void *value);
 static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
                                         const pjmedia_frame *frame);
 static pj_status_t sdl_stream_start(pjmedia_vid_dev_stream *strm);
@@ -235,8 +234,8 @@ static pj_status_t sdl_destroy_all(void *data);
 /* Job queue prototypes */
 static pj_status_t job_queue_create(pj_pool_t *pool, job_queue **pjq);
 static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
-				      void *data, unsigned flags,
-				      pj_status_t *retval);
+                                      void *data, unsigned flags,
+                                      pj_status_t *retval);
 static pj_status_t job_queue_destroy(job_queue *jq);
 
 /* Operations */
@@ -328,7 +327,7 @@ static struct sdl_stream* find_stream(struct sdl_factory *sf,
  
     if (strm)
         pjmedia_event_init(pevent, PJMEDIA_EVENT_NONE, &strm->last_ts,
-		           strm);
+                           strm);
 
     return strm;
 }
@@ -339,7 +338,7 @@ static pj_status_t handle_event(void *data)
     SDL_Event sevent;
 
     if (!pj_thread_is_registered())
-	pj_thread_register("sdl_ev", sf->thread_desc, &sf->ev_thread);
+        pj_thread_register("sdl_ev", sf->thread_desc, &sf->ev_thread);
 
     while (SDL_PollEvent(&sevent)) {
         struct sdl_stream *strm = NULL;
@@ -347,7 +346,7 @@ static pj_status_t handle_event(void *data)
 
         pj_mutex_lock(sf->mutex);
         pevent.type = PJMEDIA_EVENT_NONE;
-	switch(sevent.type) {
+        switch(sevent.type) {
         case SDL_MOUSEBUTTONDOWN:
             strm = find_stream(sf, sevent.button.windowID, &pevent);
             pevent.type = PJMEDIA_EVENT_MOUSE_BTN_DOWN;
@@ -369,32 +368,32 @@ static pj_status_t handle_event(void *data)
             break;
         default:
             break;
-	}
+        }
 
         if (strm && pevent.type != PJMEDIA_EVENT_NONE) {
             pj_status_t status;
 
-	    pjmedia_event_publish(NULL, strm, &pevent, 0);
+            pjmedia_event_publish(NULL, strm, &pevent, 0);
 
-	    switch (pevent.type) {
-	    case PJMEDIA_EVENT_WND_RESIZED:
+            switch (pevent.type) {
+            case PJMEDIA_EVENT_WND_RESIZED:
                 status = resize_disp(strm, &pevent.data.wnd_resized.new_size);
-		if (status != PJ_SUCCESS) {
+                if (status != PJ_SUCCESS) {
                     PJ_PERROR(3, (THIS_FILE, status,
-				  "Failed resizing the display."));
-		}
-		break;
-	    case PJMEDIA_EVENT_WND_CLOSING:
-		if (pevent.data.wnd_closing.cancel) {
-		    /* Cancel the closing operation */
-		    break;
-		}
+                                  "Failed resizing the display."));
+                }
+                break;
+            case PJMEDIA_EVENT_WND_CLOSING:
+                if (pevent.data.wnd_closing.cancel) {
+                    /* Cancel the closing operation */
+                    break;
+                }
 
-		/* Proceed to cleanup SDL. App must still call
-		 * pjmedia_dev_stream_destroy() when getting WND_CLOSED
-		 * event
-		 */
-		sdl_stream_stop(&strm->base);
+                /* Proceed to cleanup SDL. App must still call
+                 * pjmedia_dev_stream_destroy() when getting WND_CLOSED
+                 * event
+                 */
+                sdl_stream_stop(&strm->base);
                 sdl_destroy_all(strm);
                 pjmedia_event_init(&pevent, PJMEDIA_EVENT_WND_CLOSED,
                                    &strm->last_ts, strm);
@@ -405,10 +404,10 @@ static pj_status_t handle_event(void *data)
                  * might have been destroyed
                  */
                 break;
-	    default:
-		/* Just to prevent gcc warning about unused enums */
-		break;
-	    }
+            default:
+                /* Just to prevent gcc warning about unused enums */
+                break;
+            }
         }
 
         pj_mutex_unlock(sf->mutex);
@@ -470,17 +469,17 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
         return status;
 
     status = pj_mutex_create_recursive(sf->pool, "sdl_factory",
-				       &sf->mutex);
+                                       &sf->mutex);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     status = pj_sem_create(sf->pool, NULL, 0, 1, &sf->sem);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Create event handler thread. */
     status = pj_thread_create(sf->pool, "sdl_thread", sdl_ev_thread,
-			      sf, 0, 0, &sf->sdl_thread);
+                              sf, 0, 0, &sf->sdl_thread);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -489,8 +488,8 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
     sf->dev_count++;
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
     sf->dev_info = (struct sdl_dev_info*)
-		   pj_pool_calloc(sf->pool, sf->dev_count,
-				  sizeof(struct sdl_dev_info));
+                   pj_pool_calloc(sf->pool, sf->dev_count,
+                                  sizeof(struct sdl_dev_info));
 
     ddi = &sf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
@@ -527,7 +526,7 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
 
     SDL_VERSION(&version);
     PJ_LOG(4, (THIS_FILE, "SDL %d.%d initialized",
-			  version.major, version.minor));
+                          version.major, version.minor));
 
     return PJ_SUCCESS;
 }
@@ -556,8 +555,8 @@ static pj_status_t sdl_factory_destroy(pjmedia_vid_dev_factory *f)
     }
 
     if (sf->mutex) {
-	pj_mutex_destroy(sf->mutex);
-	sf->mutex = NULL;
+        pj_mutex_destroy(sf->mutex);
+        sf->mutex = NULL;
     }
 
     if (sf->sem) {
@@ -590,8 +589,8 @@ static unsigned sdl_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 
 /* API: get device info */
 static pj_status_t sdl_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					    unsigned index,
-					    pjmedia_vid_dev_info *info)
+                                            unsigned index,
+                                            pjmedia_vid_dev_info *info)
 {
     struct sdl_factory *sf = (struct sdl_factory*)f;
 
@@ -605,8 +604,8 @@ static pj_status_t sdl_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 /* API: create default device parameter */
 static pj_status_t sdl_factory_default_param(pj_pool_t *pool,
                                              pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_param *param)
+                                             unsigned index,
+                                             pjmedia_vid_dev_param *param)
 {
     struct sdl_factory *sf = (struct sdl_factory*)f;
     struct sdl_dev_info *di = &sf->dev_info[index];
@@ -647,8 +646,8 @@ static pj_status_t sdl_destroy(void *data)
      
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     if (strm->texture) {
-	glDeleteTextures(1, &strm->texture);
-	strm->texture = 0;
+        glDeleteTextures(1, &strm->texture);
+        strm->texture = 0;
     }
     if (strm->gl_context) {
         SDL_GL_DeleteContext(strm->gl_context);
@@ -683,9 +682,9 @@ static pj_status_t sdl_destroy_all(void *data)
 }
 
 static pj_status_t sdl_create_window(struct sdl_stream *strm, 
-				     pj_bool_t use_app_win,
-				     Uint32 sdl_format,
-				     pjmedia_vid_dev_hwnd *hwnd)
+                                     pj_bool_t use_app_win,
+                                     Uint32 sdl_format,
+                                     pjmedia_vid_dev_hwnd *hwnd)
 {
     if (!strm->window) {
         Uint32 flags = 0;
@@ -711,23 +710,23 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
         if ((strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) &&
             strm->param.window_fullscreen)
         {
-	    if (strm->param.window_fullscreen == PJMEDIA_VID_DEV_FULLSCREEN)
-		flags |= SDL_WINDOW_FULLSCREEN;
-	    else
-		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+            if (strm->param.window_fullscreen == PJMEDIA_VID_DEV_FULLSCREEN)
+                flags |= SDL_WINDOW_FULLSCREEN;
+            else
+                flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
         }
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
         if (strm->param.rend_id == OPENGL_DEV_IDX)
             flags |= SDL_WINDOW_OPENGL;
-#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */	
-	if (use_app_win) {
-            /* Use the window supplied by the application. */	    
-	    strm->window = SDL_CreateWindowFrom(hwnd->info.window);
-	    if (!strm->window) {
-		sdl_log_err("SDL_CreateWindowFrom()");
-		return PJMEDIA_EVID_SYSERR;
-	    }
+#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */   
+        if (use_app_win) {
+            /* Use the window supplied by the application. */       
+            strm->window = SDL_CreateWindowFrom(hwnd->info.window);
+            if (!strm->window) {
+                sdl_log_err("SDL_CreateWindowFrom()");
+                return PJMEDIA_EVID_SYSERR;
+            }
         } else {
             int x, y;
 
@@ -743,10 +742,10 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
                                             strm->param.disp_size.w,
                                             strm->param.disp_size.h,
                                             flags);
-	    if (!strm->window) {
-		sdl_log_err("SDL_CreateWindow()");
-		return PJMEDIA_EVID_SYSERR;
-	    }
+            if (!strm->window) {
+                sdl_log_err("SDL_CreateWindow()");
+                return PJMEDIA_EVID_SYSERR;
+            }
         }
     }
 
@@ -756,7 +755,7 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
       */
     strm->renderer = SDL_CreateRenderer(strm->window, -1, 0);
     if (!strm->renderer) {
-	sdl_log_err("SDL_CreateRenderer()");
+        sdl_log_err("SDL_CreateRenderer()");
         return PJMEDIA_EVID_SYSERR;
     }
 
@@ -770,24 +769,24 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
         SDL_GL_MakeCurrent(strm->window, strm->gl_context);
 
         /* Init some OpenGL settings */
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_TEXTURE_2D);
-	
-	/* Init the viewport */
-	glViewport(0, 0, strm->param.disp_size.w, strm->param.disp_size.h);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	
-	glOrtho(0.0, (GLdouble)strm->param.disp_size.w,
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_TEXTURE_2D);
+        
+        /* Init the viewport */
+        glViewport(0, 0, strm->param.disp_size.w, strm->param.disp_size.h);
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        
+        glOrtho(0.0, (GLdouble)strm->param.disp_size.w,
                 (GLdouble)strm->param.disp_size.h, 0.0, 0.0, 1.0);
-	
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	
-	/* Create a texture */
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-	glGenTextures(1, &strm->texture);
+        
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        
+        /* Create a texture */
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+        glGenTextures(1, &strm->texture);
 
         if (!strm->texture)
             return PJMEDIA_EVID_SYSERR;
@@ -842,13 +841,13 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     if (strm->param.rend_id == OPENGL_DEV_IDX) {
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
+        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
     }
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
     return sdl_create_window(strm, 
-			 (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW),
-			 sdl_info->sdl_format,
-			 &strm->param.window);
+                         (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW),
+                         sdl_info->sdl_format,
+                         &strm->param.window);
 }
 
 static pj_status_t sdl_create(void *data)
@@ -866,12 +865,12 @@ static pj_status_t resize_disp(struct sdl_stream *strm,
     if (strm->scr_tex) {
         strm->dstrect.x = strm->dstrect.y = 0;
         strm->dstrect.w = (Uint16)strm->param.disp_size.w;
-	strm->dstrect.h = (Uint16)strm->param.disp_size.h;
-	SDL_RenderSetViewport(strm->renderer, &strm->dstrect);
+        strm->dstrect.h = (Uint16)strm->param.disp_size.h;
+        SDL_RenderSetViewport(strm->renderer, &strm->dstrect);
     }
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     else if (strm->param.rend_id == OPENGL_DEV_IDX) {
-	sdl_create_rend(strm, &strm->param.fmt);
+        sdl_create_rend(strm, &strm->param.fmt);
     }
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
@@ -885,7 +884,7 @@ static pj_status_t change_format(struct sdl_stream *strm,
 
     /* Recreate SDL renderer */
     status = sdl_create_rend(strm, (new_fmt? new_fmt :
-				   &strm->param.fmt));
+                                   &strm->param.fmt));
     if (status == PJ_SUCCESS && new_fmt)
         pjmedia_format_copy(&strm->param.fmt, new_fmt);
 
@@ -901,24 +900,24 @@ static pj_status_t put_frame(void *data)
         SDL_UpdateTexture(stream->scr_tex, NULL, frame->buf, stream->pitch);
         SDL_RenderClear(stream->renderer);
         SDL_RenderCopy(stream->renderer, stream->scr_tex,
-		       &stream->rect, &stream->dstrect);
+                       &stream->rect, &stream->dstrect);
         SDL_RenderPresent(stream->renderer);
     }
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     else if (stream->param.rend_id == OPENGL_DEV_IDX && stream->texture) {
-	glBindTexture(GL_TEXTURE_2D, stream->texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-		     stream->rect.w, stream->rect.h, 0,
-		     GL_RGBA, GL_UNSIGNED_BYTE, frame->buf);
-	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2f(0, 0); glVertex2i(0, 0);
-	glTexCoord2f(1, 0); glVertex2i(stream->param.disp_size.w, 0);
-	glTexCoord2f(0, 1); glVertex2i(0, stream->param.disp_size.h);
-	glTexCoord2f(1, 1);
+        glBindTexture(GL_TEXTURE_2D, stream->texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                     stream->rect.w, stream->rect.h, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, frame->buf);
+        glBegin(GL_TRIANGLE_STRIP);
+        glTexCoord2f(0, 0); glVertex2i(0, 0);
+        glTexCoord2f(1, 0); glVertex2i(stream->param.disp_size.w, 0);
+        glTexCoord2f(0, 1); glVertex2i(0, stream->param.disp_size.h);
+        glTexCoord2f(1, 1);
         glVertex2i(stream->param.disp_size.w, stream->param.disp_size.h);
-	glEnd();
+        glEnd();
         SDL_GL_SwapWindow(stream->window);
     }
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
@@ -928,7 +927,7 @@ static pj_status_t put_frame(void *data)
 
 /* API: Put frame from stream */
 static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
-					const pjmedia_frame *frame)
+                                        const pjmedia_frame *frame)
 {
     struct sdl_stream *stream = (struct sdl_stream*)strm;
     pj_status_t status;
@@ -939,13 +938,13 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
      * or keep-alive, this port doesn't need any, just ignore.
      */
     if (frame->size==0 || frame->buf==NULL)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     if (frame->size < stream->vafp.framebytes)
-	return PJ_ETOOSMALL;
+        return PJ_ETOOSMALL;
 
     if (!stream->is_running)
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
 
     stream->frame = frame;
     job_queue_post_job(stream->sf->jq, put_frame, strm, 0, &status);
@@ -955,11 +954,11 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 
 /* API: create stream */
 static pj_status_t sdl_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm)
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm)
 {
     struct sdl_factory *sf = (struct sdl_factory*)f;
     pj_pool_t *pool;
@@ -1005,7 +1004,7 @@ on_error:
 
 /* API: Get stream info. */
 static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *s,
-					pjmedia_vid_dev_param *pi)
+                                        pjmedia_vid_dev_param *pi)
 {
     struct sdl_stream *strm = (struct sdl_stream*)s;
 
@@ -1014,34 +1013,34 @@ static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *s,
     pj_memcpy(pi, &strm->param, sizeof(*pi));
 
     if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
-			   &pi->window) == PJ_SUCCESS)
+                           &pi->window) == PJ_SUCCESS)
     {
-	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+        pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
     }
     if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION,
-			   &pi->window_pos) == PJ_SUCCESS)
+                           &pi->window_pos) == PJ_SUCCESS)
     {
-	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION;
+        pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION;
     }
     if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE,
-			   &pi->disp_size) == PJ_SUCCESS)
+                           &pi->disp_size) == PJ_SUCCESS)
     {
-	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
+        pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
     }
     if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
-			   &pi->window_hide) == PJ_SUCCESS)
+                           &pi->window_hide) == PJ_SUCCESS)
     {
-	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
+        pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
     }
     if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS,
-			   &pi->window_flags) == PJ_SUCCESS)
+                           &pi->window_flags) == PJ_SUCCESS)
     {
-	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+        pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
     }
     if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN,
-			   &pi->window_fullscreen) == PJ_SUCCESS)
+                           &pi->window_fullscreen) == PJ_SUCCESS)
     {
-	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN;
+        pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN;
     }
 
     return PJ_SUCCESS;
@@ -1065,72 +1064,72 @@ static pj_status_t get_cap(void *data)
 
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW)
     {
-	SDL_SysWMinfo info;
-	SDL_VERSION(&info.version);
+        SDL_SysWMinfo info;
+        SDL_VERSION(&info.version);
 
-	if (SDL_GetWindowWMInfo(strm->window, &info)) {
-	    pjmedia_vid_dev_hwnd *wnd = (pjmedia_vid_dev_hwnd *)pval;
-	    if (0) { }
+        if (SDL_GetWindowWMInfo(strm->window, &info)) {
+            pjmedia_vid_dev_hwnd *wnd = (pjmedia_vid_dev_hwnd *)pval;
+            if (0) { }
 #if defined(SDL_VIDEO_DRIVER_WINDOWS)
-	    else if (info.subsystem == SDL_SYSWM_WINDOWS) {
-		wnd->type = PJMEDIA_VID_DEV_HWND_TYPE_WINDOWS;
-		wnd->info.win.hwnd = (void *)info.info.win.window;
-	    }
+            else if (info.subsystem == SDL_SYSWM_WINDOWS) {
+                wnd->type = PJMEDIA_VID_DEV_HWND_TYPE_WINDOWS;
+                wnd->info.win.hwnd = (void *)info.info.win.window;
+            }
 #endif
 #if defined(SDL_VIDEO_DRIVER_X11)
-	    else if (info.subsystem == SDL_SYSWM_X11) {
-		wnd->info.x11.window = (void *)info.info.x11.window;
-		wnd->info.x11.display = (void *)info.info.x11.display;
-	    }
+            else if (info.subsystem == SDL_SYSWM_X11) {
+                wnd->info.x11.window = (void *)info.info.x11.window;
+                wnd->info.x11.display = (void *)info.info.x11.display;
+            }
 #endif
 #if defined(SDL_VIDEO_DRIVER_COCOA)
-	    else if (info.subsystem == SDL_SYSWM_COCOA) {
-		wnd->info.cocoa.window = (void *)info.info.cocoa.window;
-	    }
+            else if (info.subsystem == SDL_SYSWM_COCOA) {
+                wnd->info.cocoa.window = (void *)info.info.cocoa.window;
+            }
 #endif
 #if defined(SDL_VIDEO_DRIVER_UIKIT)
-	    else if (info.subsystem == SDL_SYSWM_UIKIT) {
-		wnd->info.ios.window = (void *)info.info.uikit.window;
-	    }
+            else if (info.subsystem == SDL_SYSWM_UIKIT) {
+                wnd->info.ios.window = (void *)info.info.uikit.window;
+            }
 #endif
-	    else {
-		return PJMEDIA_EVID_INVCAP;
-	    }
-	    return PJ_SUCCESS;
-	} else
-	    return PJMEDIA_EVID_INVCAP;
+            else {
+                return PJMEDIA_EVID_INVCAP;
+            }
+            return PJ_SUCCESS;
+        } else
+            return PJMEDIA_EVID_INVCAP;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
         SDL_GetWindowPosition(strm->window, &((pjmedia_coord *)pval)->x,
                               &((pjmedia_coord *)pval)->y);
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
         SDL_GetWindowSize(strm->window, (int *)&((pjmedia_rect_size *)pval)->w,
                           (int *)&((pjmedia_rect_size *)pval)->h);
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
-	Uint32 flag = SDL_GetWindowFlags(strm->window);
-	*((pj_bool_t *)pval) = (flag & SDL_WINDOW_HIDDEN)? PJ_TRUE: PJ_FALSE;
-	return PJ_SUCCESS;
+        Uint32 flag = SDL_GetWindowFlags(strm->window);
+        *((pj_bool_t *)pval) = (flag & SDL_WINDOW_HIDDEN)? PJ_TRUE: PJ_FALSE;
+        return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS) {
-	Uint32 flag = SDL_GetWindowFlags(strm->window);
+        Uint32 flag = SDL_GetWindowFlags(strm->window);
         unsigned *wnd_flags = (unsigned *)pval;
         if (!(flag & SDL_WINDOW_BORDERLESS))
             *wnd_flags |= PJMEDIA_VID_DEV_WND_BORDER;
         if (flag & SDL_WINDOW_RESIZABLE)
             *wnd_flags |= PJMEDIA_VID_DEV_WND_RESIZABLE;
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
-	Uint32 flag = SDL_GetWindowFlags(strm->window);
-	pjmedia_vid_dev_fullscreen_flag val = PJMEDIA_VID_DEV_WINDOWED;
-	if ((flag & SDL_WINDOW_FULLSCREEN_DESKTOP) ==
-		    SDL_WINDOW_FULLSCREEN_DESKTOP)
-	{
-	     val = PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP;
-	} else if ((flag & SDL_WINDOW_FULLSCREEN) == SDL_WINDOW_FULLSCREEN) {
-	     val = PJMEDIA_VID_DEV_FULLSCREEN;
-	}
-	*((pjmedia_vid_dev_fullscreen_flag*)pval) = val;
-	return PJ_SUCCESS;
+        Uint32 flag = SDL_GetWindowFlags(strm->window);
+        pjmedia_vid_dev_fullscreen_flag val = PJMEDIA_VID_DEV_WINDOWED;
+        if ((flag & SDL_WINDOW_FULLSCREEN_DESKTOP) ==
+                    SDL_WINDOW_FULLSCREEN_DESKTOP)
+        {
+             val = PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP;
+        } else if ((flag & SDL_WINDOW_FULLSCREEN) == SDL_WINDOW_FULLSCREEN) {
+             val = PJMEDIA_VID_DEV_FULLSCREEN;
+        }
+        *((pjmedia_vid_dev_fullscreen_flag*)pval) = val;
+        return PJ_SUCCESS;
     }
 
     return PJMEDIA_EVID_INVCAP;
@@ -1138,8 +1137,8 @@ static pj_status_t get_cap(void *data)
 
 /* API: get capability */
 static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *s,
-				      pjmedia_vid_dev_cap cap,
-				      void *pval)
+                                      pjmedia_vid_dev_cap cap,
+                                      void *pval)
 {
     struct sdl_stream *strm = (struct sdl_stream*)s;
     struct strm_cap scap;
@@ -1171,102 +1170,102 @@ static pj_status_t set_cap(void *data)
          * the window's visibility.
          * See ticket #1429 (https://github.com/pjsip/pjproject/issues/1429)
          */
-	Uint32 flag = SDL_GetWindowFlags(strm->window);
-	if (flag & SDL_WINDOW_HIDDEN)
+        Uint32 flag = SDL_GetWindowFlags(strm->window);
+        if (flag & SDL_WINDOW_HIDDEN)
             SDL_ShowWindow(strm->window);
         SDL_SetWindowPosition(strm->window, ((pjmedia_coord *)pval)->x,
                               ((pjmedia_coord *)pval)->y);
-	if (flag & SDL_WINDOW_HIDDEN)
+        if (flag & SDL_WINDOW_HIDDEN)
             SDL_HideWindow(strm->window);
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
         if (*(pj_bool_t *)pval)
             SDL_HideWindow(strm->window);
         else
             SDL_ShowWindow(strm->window);
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
         pj_status_t status;
 
         status = change_format(strm, (pjmedia_format *)pval);
-	if (status != PJ_SUCCESS) {
-	    pj_status_t status_;
-	    
-	    /**
-	     * Failed to change the output format. Try to revert
-	     * to its original format.
-	     */
+        if (status != PJ_SUCCESS) {
+            pj_status_t status_;
+            
+            /**
+             * Failed to change the output format. Try to revert
+             * to its original format.
+             */
             status_ = change_format(strm, &strm->param.fmt);
-	    if (status_ != PJ_SUCCESS) {
-		/**
-		 * This means that we failed to revert to our
-		 * original state!
-		 */
-		status = PJMEDIA_EVID_ERR;
-	    }
-	}
-	
-	return status;
+            if (status_ != PJ_SUCCESS) {
+                /**
+                 * This means that we failed to revert to our
+                 * original state!
+                 */
+                status = PJMEDIA_EVID_ERR;
+            }
+        }
+        
+        return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
-	pjmedia_rect_size *new_size = (pjmedia_rect_size *)pval;
-	Uint32 flag = SDL_GetWindowFlags(strm->window);
-	pj_status_t status;
+        pjmedia_rect_size *new_size = (pjmedia_rect_size *)pval;
+        Uint32 flag = SDL_GetWindowFlags(strm->window);
+        pj_status_t status;
 
-	/**
-	 * Exit full-screen if engaged, since resizing while in full-screen is
+        /**
+         * Exit full-screen if engaged, since resizing while in full-screen is
          * not supported.
-	 */
-	if (flag & SDL_WINDOW_FULLSCREEN_DESKTOP)
-	    SDL_SetWindowFullscreen(strm->window, 0);
+         */
+        if (flag & SDL_WINDOW_FULLSCREEN_DESKTOP)
+            SDL_SetWindowFullscreen(strm->window, 0);
 
-	SDL_SetWindowSize(strm->window, new_size->w, new_size->h);
-	status = resize_disp(strm, new_size);
+        SDL_SetWindowSize(strm->window, new_size->w, new_size->h);
+        status = resize_disp(strm, new_size);
 
-	/* Restore full-screen if it was engaged. */
-	if (flag & SDL_WINDOW_FULLSCREEN_DESKTOP)
-	    SDL_SetWindowFullscreen(strm->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        /* Restore full-screen if it was engaged. */
+        if (flag & SDL_WINDOW_FULLSCREEN_DESKTOP)
+            SDL_SetWindowFullscreen(strm->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 
-	return status;
+        return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
-	pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*)pval;
-	pj_status_t status = PJ_SUCCESS;
-	sdl_fmt_info *sdl_info = get_sdl_format_info(strm->param.fmt.id);
-	/* Re-init SDL */
-	status = sdl_destroy_all(strm);
-	if (status != PJ_SUCCESS)
-	    return status;	
+        pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*)pval;
+        pj_status_t status = PJ_SUCCESS;
+        sdl_fmt_info *sdl_info = get_sdl_format_info(strm->param.fmt.id);
+        /* Re-init SDL */
+        status = sdl_destroy_all(strm);
+        if (status != PJ_SUCCESS)
+            return status;      
 
-	status = sdl_create_window(strm, PJ_TRUE, sdl_info->sdl_format, hwnd);
+        status = sdl_create_window(strm, PJ_TRUE, sdl_info->sdl_format, hwnd);
         PJ_PERROR(4, (THIS_FILE, status,
-		      "Re-initializing SDL with native window %d",
-		      hwnd->info.window));
-	return status;	
+                      "Re-initializing SDL with native window %d",
+                      hwnd->info.window));
+        return status;  
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
         Uint32 flag;
-	pjmedia_vid_dev_fullscreen_flag val =
-				    *(pjmedia_vid_dev_fullscreen_flag*)pval;
+        pjmedia_vid_dev_fullscreen_flag val =
+                                    *(pjmedia_vid_dev_fullscreen_flag*)pval;
 
-	flag = SDL_GetWindowFlags(strm->window);
-	if (val == PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP)
-	    flag |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-	else if (val == PJMEDIA_VID_DEV_FULLSCREEN)
+        flag = SDL_GetWindowFlags(strm->window);
+        if (val == PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP)
+            flag |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+        else if (val == PJMEDIA_VID_DEV_FULLSCREEN)
             flag |= SDL_WINDOW_FULLSCREEN;
         else
             flag &= (~SDL_WINDOW_FULLSCREEN_DESKTOP);
 
         SDL_SetWindowFullscreen(strm->window, flag);
 
-	/* Trying to restore the border after returning from fullscreen,
-	 * unfortunately not sure how to put back the resizable flag.
-	 */
-	if ((flag & SDL_WINDOW_FULLSCREEN)==0 &&
-	    (flag & SDL_WINDOW_BORDERLESS)==0)
-	{
-	    SDL_SetWindowBordered(strm->window, SDL_FALSE);
-	    SDL_SetWindowBordered(strm->window, SDL_TRUE);
-	}
+        /* Trying to restore the border after returning from fullscreen,
+         * unfortunately not sure how to put back the resizable flag.
+         */
+        if ((flag & SDL_WINDOW_FULLSCREEN)==0 &&
+            (flag & SDL_WINDOW_BORDERLESS)==0)
+        {
+            SDL_SetWindowBordered(strm->window, SDL_FALSE);
+            SDL_SetWindowBordered(strm->window, SDL_TRUE);
+        }
 
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     return PJMEDIA_EVID_INVCAP;
@@ -1274,8 +1273,8 @@ static pj_status_t set_cap(void *data)
 
 /* API: set capability */
 static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
-				      pjmedia_vid_dev_cap cap,
-				      const void *pval)
+                                      pjmedia_vid_dev_cap cap,
+                                      const void *pval)
 {
     struct sdl_stream *strm = (struct sdl_stream*)s;
     struct strm_cap scap;
@@ -1334,7 +1333,7 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 
     pj_mutex_lock(stream->sf->mutex);
     if (!pj_list_empty(&stream->list_entry))
-	pj_list_erase(&stream->list_entry);
+        pj_list_erase(&stream->list_entry);
     pj_mutex_unlock(stream->sf->mutex);
 
     pj_pool_release(stream->pool);
@@ -1353,7 +1352,7 @@ static int job_thread(void * data)
     while (1) {
         job *jb;
 
-	/* Wait until there is a job. */
+        /* Wait until there is a job. */
         pj_sem_wait(jq->sem);
 
         /* Make sure there is no pending jobs before we quit. */
@@ -1383,7 +1382,7 @@ static int job_thread(void * data)
                                    &jq->sem);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(3, (THIS_FILE, status,
-			      "Failed growing SDL job queue size."));
+                              "Failed growing SDL job queue size."));
                 return 0;
             }
             jq->jobs = (job **)pj_pool_calloc(jq->pool, jq->size,
@@ -1395,7 +1394,7 @@ static int job_thread(void * data)
                                        &jq->job_sem[i]);
                 if (status != PJ_SUCCESS) {
                     PJ_PERROR(3, (THIS_FILE, status,
-				  "Failed growing SDL job queue size."));
+                                  "Failed growing SDL job queue size."));
                     return 0;
                 }
             }
@@ -1455,8 +1454,8 @@ on_error:
 }
 
 static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
-				      void *data, unsigned flags,
-				      pj_status_t *retval)
+                                      void *data, unsigned flags,
+                                      pj_status_t *retval)
 {
     job jb;
     int tail;
@@ -1474,7 +1473,7 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
     JQDelegate *jqd = [[JQDelegate alloc]init];
     jqd->pjob = &jb;
     [jqd performSelectorOnMainThread:@selector(run_job)
- 	 withObject:nil waitUntilDone:YES];
+         withObject:nil waitUntilDone:YES];
     [jqd release];
     [apool release];
 #else /* PJ_DARWINOS */
@@ -1483,7 +1482,7 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
     tail = jq->tail;
     jq->tail = (jq->tail + 1) % jq->size;
     if (jq->tail == jq->head) {
-	jq->is_full = PJ_TRUE;
+        jq->is_full = PJ_TRUE;
         PJ_LOG(4, (THIS_FILE, "SDL job queue is full, increasing "
                               "the queue size."));
         pj_sem_post(jq->sem);
@@ -1543,16 +1542,16 @@ static pj_status_t job_queue_destroy(job_queue *jq)
 
 #ifdef _MSC_VER
 #   if defined(PJMEDIA_SDL_LIB)
-#	pragma comment( lib, PJMEDIA_SDL_LIB)
+#       pragma comment( lib, PJMEDIA_SDL_LIB)
 #   elif SDL_VERSION_ATLEAST(2,0,0)
-#	pragma comment( lib, "sdl2.lib")
+#       pragma comment( lib, "sdl2.lib")
 #   elif SDL_VERSION_ATLEAST(1,3,0)
-#	pragma comment( lib, "sdl.lib")
+#       pragma comment( lib, "sdl.lib")
 #   endif
 #   if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
-#	pragma comment(lib, "OpenGL32.lib")
+#       pragma comment(lib, "OpenGL32.lib")
 #   endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 #endif /* _MSC_VER */
 
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_SDL */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_SDL */

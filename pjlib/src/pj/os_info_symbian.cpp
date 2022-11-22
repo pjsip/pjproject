@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,9 +22,9 @@
 #include <pj/ctype.h>
 #include <pj/string.h>
 
-#include <f32file.h>	/* link against efsrv.lib	*/
-#include <hal.h>	/* link against hal.lib		*/
-#include <utf.h>	/* link against charconv.lib	*/
+#include <f32file.h>    /* link against efsrv.lib       */
+#include <hal.h>        /* link against hal.lib         */
+#include <utf.h>        /* link against charconv.lib    */
 
 
 PJ_BEGIN_DECL
@@ -60,21 +59,21 @@ unsigned pj_symbianos_get_model_info(char *buf, unsigned buf_size)
     fs.Connect(1);
     err = file.Open(fs, KModelFilename, EFileRead);
     if (err == KErrNone) {
-	TFileText text;
-	text.Set(file);
-	TBuf16<64> ModelName16;
-	err = text.Read(ModelName16);
-	if (err == KErrNone) {
-	    TPtr8 ptr8((TUint8*)tmp_buf, sizeof(tmp_buf));
-	    ptr8.Copy(ModelName16);
-	    pj_strset(&tmp_str, tmp_buf, ptr8.Length());
-	    pj_strtrim(&tmp_str);
-	}
-	file.Close();
+        TFileText text;
+        text.Set(file);
+        TBuf16<64> ModelName16;
+        err = text.Read(ModelName16);
+        if (err == KErrNone) {
+            TPtr8 ptr8((TUint8*)tmp_buf, sizeof(tmp_buf));
+            ptr8.Copy(ModelName16);
+            pj_strset(&tmp_str, tmp_buf, ptr8.Length());
+            pj_strtrim(&tmp_str);
+        }
+        file.Close();
     }
     fs.Close();
     if (err != KErrNone)
-	goto on_return;
+        goto on_return;
     
     /* The retrieved model name is usually in long format, e.g: 
      * "© Nokia N95 (01.01)", "(C) Nokia E52". As we need only
@@ -89,30 +88,30 @@ unsigned pj_symbianos_get_model_info(char *buf, unsigned buf_size)
     /* Remove "(C)" */
     p = pj_stristr(&tmp_str, &st_copyright);
     if (p) {
-	p += st_copyright.slen;
-	pj_strset(&tmp_str, p, tmp_str.slen - (p - tmp_str.ptr));
+        p += st_copyright.slen;
+        pj_strset(&tmp_str, p, tmp_str.slen - (p - tmp_str.ptr));
     }
 
     /* Remove "Nokia" */
     p = pj_stristr(&tmp_str, &st_nokia);
     if (p) {
-	p += st_nokia.slen;
-	pj_strset(&tmp_str, p, tmp_str.slen - (p - tmp_str.ptr));
+        p += st_nokia.slen;
+        pj_strset(&tmp_str, p, tmp_str.slen - (p - tmp_str.ptr));
     }
     
     /* Remove language version, e.g: "(01.01)" */
     p = pj_strchr(&tmp_str, '(');
     if (p) {
-	tmp_str.slen = p - tmp_str.ptr;
+        tmp_str.slen = p - tmp_str.ptr;
     }
     
     pj_strtrim(&tmp_str);
     
     if (tmp_str.slen == 0)
-	goto on_return;
+        goto on_return;
     
     if ((unsigned)tmp_str.slen > buf_size - model_name.slen - 3)
-	tmp_str.slen = buf_size - model_name.slen - 3;
+        tmp_str.slen = buf_size - model_name.slen - 3;
     
     pj_strcat2(&model_name, "(");
     pj_strcat(&model_name, &tmp_str);
@@ -142,19 +141,19 @@ unsigned pj_symbianos_get_platform_info(char *buf, unsigned buf_size)
     fs.Connect(1);
     err = ff.FindWildByDir(KS60ProductIDFile, KROMInstallDir, result);
     if (err == KErrNone) {
-	err = result->Sort(ESortByName|EDescending);
-	if (err == KErrNone) {
-	    TPtr8 tmp_ptr8((TUint8*)buf, buf_size);
-	    const pj_str_t tmp_ext = {".sis", 4};
-	    char *p;
-	    
-	    tmp_ptr8.Copy((*result)[0].iName);
-	    pj_strset(&plat_info, buf, (pj_size_t)tmp_ptr8.Length());
-	    p = pj_stristr(&plat_info, &tmp_ext);
-	    if (p)
-		plat_info.slen -= (p - plat_info.ptr);
-	}
-	delete result;
+        err = result->Sort(ESortByName|EDescending);
+        if (err == KErrNone) {
+            TPtr8 tmp_ptr8((TUint8*)buf, buf_size);
+            const pj_str_t tmp_ext = {".sis", 4};
+            char *p;
+            
+            tmp_ptr8.Copy((*result)[0].iName);
+            pj_strset(&plat_info, buf, (pj_size_t)tmp_ptr8.Length());
+            p = pj_stristr(&plat_info, &tmp_ext);
+            if (p)
+                plat_info.slen -= (p - plat_info.ptr);
+        }
+        delete result;
     }
     fs.Close();
     buf[plat_info.slen] = '\0';
@@ -168,23 +167,23 @@ void pj_symbianos_get_sdk_info(pj_str_t *name, pj_uint32_t *ver)
 {
     const pj_str_t S60 = {"S60", 3};
     #if defined(__SERIES60_30__)
-	*name = S60;
-	*ver  = (3 << 24);
+        *name = S60;
+        *ver  = (3 << 24);
     #elif defined(__SERIES60_31__)
-	*name = S60;
-	*ver  = (3 << 24) | (1 << 16);
+        *name = S60;
+        *ver  = (3 << 24) | (1 << 16);
     #elif defined(__S60_32__)
-	*name = S60;
-	*ver  = (3 << 24) | (2 << 16);
+        *name = S60;
+        *ver  = (3 << 24) | (2 << 16);
     #elif defined(__S60_50__)
-	*name = S60;
-	*ver  = (5 << 24);
+        *name = S60;
+        *ver  = (5 << 24);
     #elif defined(__NOKIA_N97__)
-	*name = pj_str("N97");
-	*ver  = (1 << 24);
+        *name = pj_str("N97");
+        *ver  = (1 << 24);
     #else
-	*name = pj_str("Unknown");
-	*ver  = 0;
+        *name = pj_str("Unknown");
+        *ver  = 0;
     #endif
 }
 

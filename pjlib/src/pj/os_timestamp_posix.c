@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -56,9 +55,9 @@ static int get_machine_speed_mhz()
     char buf[512];
     int len;
     char *pos, *end;
-	
+        
     PJ_CHECK_STACK();
-	
+        
     /* Open /proc/cpuinfo and read the file */
     strm = fopen("/proc/cpuinfo", "r");
     if (!strm)
@@ -88,15 +87,15 @@ static int get_machine_speed_mhz()
 PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 {
     if (machine_speed_mhz == 0) {
-	machine_speed_mhz = get_machine_speed_mhz();
-	if (machine_speed_mhz > 0) {
-	    machine_speed.u64 = machine_speed_mhz * 1000000.0;
-	}
+        machine_speed_mhz = get_machine_speed_mhz();
+        if (machine_speed_mhz > 0) {
+            machine_speed.u64 = machine_speed_mhz * 1000000.0;
+        }
     }
     
     if (machine_speed_mhz == -1) {
-	ts->u64 = 0;
-	return -1;
+        ts->u64 = 0;
+        return -1;
     } 
     ts->u64 = rdtsc();
     return 0;
@@ -105,15 +104,15 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 {
     if (machine_speed_mhz == 0) {
-	machine_speed_mhz = get_machine_speed_mhz();
-	if (machine_speed_mhz > 0) {
-	    machine_speed.u64 = machine_speed_mhz * 1000000.0;
-	}
+        machine_speed_mhz = get_machine_speed_mhz();
+        if (machine_speed_mhz > 0) {
+            machine_speed.u64 = machine_speed_mhz * 1000000.0;
+        }
     }
     
     if (machine_speed_mhz == -1) {
-	freq->u64 = 1;	/* return 1 to prevent division by zero in apps. */
-	return -1;
+        freq->u64 = 1;  /* return 1 to prevent division by zero in apps. */
+        return -1;
     } 
 
     freq->u64 = machine_speed.u64;
@@ -137,7 +136,7 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 #endif
 
 #ifndef NSEC_PER_SEC
-#	define NSEC_PER_SEC	1000000000
+#       define NSEC_PER_SEC     1000000000
 #endif
 
 #if USE_KERN_BOOTTIME
@@ -179,12 +178,12 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 
     ret = host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &serv);
     if (ret != KERN_SUCCESS) {
-	return PJ_RETURN_OS_ERROR(EINVAL);
+        return PJ_RETURN_OS_ERROR(EINVAL);
     }
 
     ret = clock_get_time(serv, &tp);
     if (ret != KERN_SUCCESS) {
-	return PJ_RETURN_OS_ERROR(EINVAL);
+        return PJ_RETURN_OS_ERROR(EINVAL);
     }
 
     ts->u64 = tp.tv_sec;
@@ -213,7 +212,7 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 #  include <fcntl.h>
 #endif
 
-#define NSEC_PER_SEC	1000000000
+#define NSEC_PER_SEC    1000000000
 
 #if defined(ANDROID_ALARM_GET_TIME)
 static int s_alarm_fd = -1;
@@ -221,7 +220,7 @@ static int s_alarm_fd = -1;
 void close_alarm_fd()
 {
     if (s_alarm_fd != -1)
-	close(s_alarm_fd);
+        close(s_alarm_fd);
     s_alarm_fd = -1;
 }
 #endif
@@ -235,8 +234,8 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
     if (s_alarm_fd == -1) {
         int fd = open("/dev/alarm", O_RDONLY);
         if (fd >= 0) {
-	    s_alarm_fd = fd;
-	    pj_atexit(&close_alarm_fd);
+            s_alarm_fd = fd;
+            pj_atexit(&close_alarm_fd);
         }
     }
     
@@ -249,15 +248,15 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 #endif
     
     if (err != 0) {
-    	/* Fallback to CLOCK_MONOTONIC if /dev/alarm is not found, or
-    	 * getting ANDROID_ALARM_ELAPSED_REALTIME fails, or 
+        /* Fallback to CLOCK_MONOTONIC if /dev/alarm is not found, or
+         * getting ANDROID_ALARM_ELAPSED_REALTIME fails, or 
          * CLOCK_BOOTTIME fails.
-    	 */
+         */
         err = clock_gettime(CLOCK_MONOTONIC, &tp);
     }
 
     if (err != 0) {
-	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
 
     ts->u64 = tp.tv_sec;
@@ -280,14 +279,14 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 #include <time.h>
 #include <errno.h>
 
-#define NSEC_PER_SEC	1000000000
+#define NSEC_PER_SEC    1000000000
 
 PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 {
     struct timespec tp;
 
     if (clock_gettime(CLOCK_MONOTONIC, &tp) != 0) {
-	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
 
     ts->u64 = tp.tv_sec;
@@ -309,14 +308,14 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 #include <sys/time.h>
 #include <errno.h>
 
-#define USEC_PER_SEC	1000000
+#define USEC_PER_SEC    1000000
 
 PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 {
     struct timeval tv;
 
     if (gettimeofday(&tv, NULL) != 0) {
-	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
 
     ts->u64 = tv.tv_sec;

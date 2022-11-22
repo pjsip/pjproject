@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -31,16 +30,16 @@
 @synthesize menus;
 @synthesize testView;
 
-RootViewController	*view;
+RootViewController      *view;
 
-bool			systest_initialized;
-bool			thread_quit;
-gui_menu		*gmenu;
-int			section;
-int			row;
-const char		*ctitle;
-const char		*cmsg; 
-enum gui_flag		cflag;
+bool                    systest_initialized;
+bool                    thread_quit;
+gui_menu                *gmenu;
+int                     section;
+int                     row;
+const char              *ctitle;
+const char              *cmsg; 
+enum gui_flag           cflag;
 
 pj_status_t gui_init(gui_menu *menu)
 {
@@ -55,17 +54,17 @@ pj_status_t gui_start(gui_menu *menu)
     view.menus = [NSMutableArray arrayWithCapacity:menu->submenu_cnt];
     NSMutableArray *smenu;
     for (int i = 0; i < menu->submenu_cnt; i++) {
-	NSString *str = [NSString stringWithFormat:@"%s" , menu->submenus[i]->title];
-	[view.titles addObject: str];
-	smenu = [NSMutableArray arrayWithCapacity:menu->submenus[i]->submenu_cnt];
-	/* We do not need the last two menus of the "Tests" menu (NULL and "Exit"),
-	 * so subtract by 2
-	 */
-	for (int j = 0; j < menu->submenus[i]->submenu_cnt - (i==0? 2: 0); j++) {
-	    str = [NSString stringWithFormat:@"%s" , menu->submenus[i]->submenus[j]->title];
-	    [smenu addObject:str];
-	}
-	[view.menus addObject:smenu];
+        NSString *str = [NSString stringWithFormat:@"%s" , menu->submenus[i]->title];
+        [view.titles addObject: str];
+        smenu = [NSMutableArray arrayWithCapacity:menu->submenus[i]->submenu_cnt];
+        /* We do not need the last two menus of the "Tests" menu (NULL and "Exit"),
+         * so subtract by 2
+         */
+        for (int j = 0; j < menu->submenus[i]->submenu_cnt - (i==0? 2: 0); j++) {
+            str = [NSString stringWithFormat:@"%s" , menu->submenus[i]->submenus[j]->title];
+            [smenu addObject:str];
+        }
+        [view.menus addObject:smenu];
     }
     gmenu = menu;
     
@@ -87,16 +86,16 @@ enum gui_key gui_msgbox(const char *title, const char *message, enum gui_flag fl
     
     view.testView.key = 0;
     while(view.testView.key == 0) {
-	/* Let the main thread do its job (refresh the view) while we wait for 
-	 * user interaction (button click)
-	 */
-	[NSThread sleepForTimeInterval:SLEEP_INTERVAL];
+        /* Let the main thread do its job (refresh the view) while we wait for 
+         * user interaction (button click)
+         */
+        [NSThread sleepForTimeInterval:SLEEP_INTERVAL];
     }
     
     if (view.testView.key == 1)
-	return KEY_OK;
+        return KEY_OK;
     else
-	return (flag == WITH_YESNO? KEY_NO: KEY_CANCEL);
+        return (flag == WITH_YESNO? KEY_NO: KEY_CANCEL);
 }
 
 /* AUX: sleep */
@@ -126,7 +125,7 @@ void gui_sleep(unsigned sec)
     [NSThread detachNewThreadSelector:@selector(startTest) toTarget:self withObject:nil];
     /* Let our new thread initialize */
     while (!systest_initialized) {
-	[NSThread sleepForTimeInterval:SLEEP_INTERVAL];
+        [NSThread sleepForTimeInterval:SLEEP_INTERVAL];
     }
 
     // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
@@ -218,21 +217,21 @@ void gui_sleep(unsigned sec)
 - (void)startTest {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     if (systest_init() != PJ_SUCCESS) {
-	[pool release];
-	return;
+        [pool release];
+        return;
     }
     
     systest_run();
     
     systest_initialized = 1;
     while(!thread_quit) {
-	section = -1;
-	while (section == -1) {
-	    [NSThread sleepForTimeInterval:SLEEP_INTERVAL];
-	}
-	(*gmenu->submenus[section]->submenus[row]->handler)();
-	cmsg = NULL;
-	[view performSelectorOnMainThread:@selector(showMsg) withObject:nil waitUntilDone:YES];
+        section = -1;
+        while (section == -1) {
+            [NSThread sleepForTimeInterval:SLEEP_INTERVAL];
+        }
+        (*gmenu->submenus[section]->submenus[row]->handler)();
+        cmsg = NULL;
+        [view performSelectorOnMainThread:@selector(showMsg) withObject:nil waitUntilDone:YES];
     }
     
     systest_deinit();
@@ -241,11 +240,11 @@ void gui_sleep(unsigned sec)
 
 - (void)showMsg {
     if (cmsg == NULL) {
-	self.testView.testDesc.text = [self.testView.testDesc.text stringByAppendingString: @"Finished"];
-	[self.testView.testDesc scrollRangeToVisible:NSMakeRange([self.testView.testDesc.text length] - 1, 1)];
-	[self.testView.button1 setHidden:true];
-	[self.testView.button2 setHidden:true];
-	return;
+        self.testView.testDesc.text = [self.testView.testDesc.text stringByAppendingString: @"Finished"];
+        [self.testView.testDesc scrollRangeToVisible:NSMakeRange([self.testView.testDesc.text length] - 1, 1)];
+        [self.testView.button1 setHidden:true];
+        [self.testView.button2 setHidden:true];
+        return;
     }
     self.testView.title = [NSString stringWithFormat:@"%s", ctitle];
     self.testView.testDesc.text = [self.testView.testDesc.text stringByAppendingString: [NSString stringWithFormat:@"%s\n\n", cmsg]];
@@ -254,14 +253,14 @@ void gui_sleep(unsigned sec)
     [self.testView.button1 setHidden:false];
     [self.testView.button2 setHidden:false];
     if (cflag == WITH_YESNO) {
-	[self.testView.button1 setTitle:@"Yes" forState:UIControlStateNormal];
-	[self.testView.button2 setTitle:@"No" forState:UIControlStateNormal];
+        [self.testView.button1 setTitle:@"Yes" forState:UIControlStateNormal];
+        [self.testView.button2 setTitle:@"No" forState:UIControlStateNormal];
     } else if (cflag == WITH_OK) {
-	[self.testView.button1 setTitle:@"OK" forState:UIControlStateNormal];
-	[self.testView.button2 setHidden:true];
+        [self.testView.button1 setTitle:@"OK" forState:UIControlStateNormal];
+        [self.testView.button2 setHidden:true];
     } else if (cflag == WITH_OKCANCEL) {
-	[self.testView.button1 setTitle:@"OK" forState:UIControlStateNormal];
-	[self.testView.button2 setTitle:@"Cancel" forState:UIControlStateNormal];
+        [self.testView.button1 setTitle:@"OK" forState:UIControlStateNormal];
+        [self.testView.button2 setTitle:@"Cancel" forState:UIControlStateNormal];
     }
 }
 
@@ -275,7 +274,7 @@ void gui_sleep(unsigned sec)
     // [anotherViewController release];
     
     if (self.testView == nil) {
-	self.testView = [[TestViewController alloc] initWithNibName:@"TestViewController" bundle:[NSBundle mainBundle]];
+        self.testView = [[TestViewController alloc] initWithNibName:@"TestViewController" bundle:[NSBundle mainBundle]];
     }
     
     [self.navigationController pushViewController:self.testView animated:YES];
@@ -300,11 +299,11 @@ void gui_sleep(unsigned sec)
  - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
  
     if (editingStyle == UITableViewCellEditingStyleDelete) {
-	// Delete the row from the data source.
-	[tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
+        // Delete the row from the data source.
+        [tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
     }   
     else if (editingStyle == UITableViewCellEditingStyleInsert) {
-	// Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view.
+        // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view.
     }   
  }
  */
