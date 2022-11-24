@@ -349,6 +349,10 @@ else
   STDCPP_LDFLAGS="-L${STDCPP_TC_VER}/libs/${TARGET_ABI}/"
 fi
 
+if test "x$AR_FLAGS" = "x"; then
+  AR_FLAGS="rvc"
+fi
+
 # stlport
 #STDCPP_CFLAGS="-I${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/stlport"
 #STDCPP_LIBS="-lstlport_static -ldl"
@@ -360,6 +364,7 @@ export LDFLAGS="${LDFLAGS} ${STDCPP_LDFLAGS}"
 export CPPFLAGS="${CPPFLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${STDCPP_CFLAGS}"
 export STD_CPP_LIB="${STD_CPP_LIB}"
+export AR_FLAGS="${AR_FLAGS}"
 
 # Print settings
 if test "1" = "1"; then
@@ -373,6 +378,7 @@ if test "1" = "1"; then
   echo " LDFLAGS = ${LDFLAGS}"
   echo " LIBS = ${LIBS}"
   echo " AR = ${AR}"
+  echo " AR_FLAGS = ${AR_FLAGS}"
   echo " RANLIB = ${RANLIB}"
   echo " TARGET_HOST = ${TARGET_HOST}"
   echo " TARGET_ABI = ${TARGET_ABI}"
