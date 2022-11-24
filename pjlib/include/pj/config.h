@@ -1406,7 +1406,7 @@ PJ_BEGIN_DECL
 #define PJ_VERSION_NUM_MAJOR    2
 
 /** PJLIB version minor number. */
-#define PJ_VERSION_NUM_MINOR    12
+#define PJ_VERSION_NUM_MINOR    13
 
 /** PJLIB version revision number. */
 #define PJ_VERSION_NUM_REV      0
