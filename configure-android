@@ -219,10 +219,16 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
         #echo "--- found RANLIB=${NDK_RANLIB}"
       #fi
     fi
+
     # Get STD C++ lib path
     if test "x${STD_CPP_LIB}" = "x"; then
-      if test "x`echo $i | grep '/libc++_shared.so'`" != "x"; then
-        STD_CPP_LIB=$i
+      if test "x`echo $i | grep 'libc++_shared.so'`" != "x"; then
+        MY_CONF_TMP=`echo ${i} | sed -e 's/\\\/\\//g' | sed -e 's/\\"//g'`
+        if test -e $MY_CONF_TMP; then
+          STD_CPP_LIB=$MY_CONF_TMP
+        else
+          echo "--- not good path for libc++_shared.so: ${MY_CONF_TMP}"
+        fi
       fi
     fi
   done
