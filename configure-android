@@ -226,8 +226,8 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
         MY_CONF_TMP=`echo ${i} | sed -e 's/\\\/\\//g' | sed -e 's/\\"//g'`
         if test -e $MY_CONF_TMP; then
           STD_CPP_LIB=$MY_CONF_TMP
-        else
-          echo "--- not good path for libc++_shared.so: ${MY_CONF_TMP}"
+        #else
+          #echo "--- not good path for libc++_shared.so: ${MY_CONF_TMP}"
         fi
       fi
     fi
