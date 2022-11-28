@@ -26,6 +26,8 @@ pjlib=-lpjlib-util-x86_64-unknown-linux-gnu -lpj-x86_64-unknown-linux-gnu
 pjmedia=-lpjmedia-codec-x86_64-unknown-linux-gnu -lpjmedia-videodev-x86_64-unknown-linux-gnu -lpjmedia-audiodev-x86_64-unknown-linux-gnu -lpjmedia-x86_64-unknown-linux-gnu -lpjnath-x86_64-unknown-linux-gnu -lpjlib-util-x86_64-unknown-linux-gnu -lpj-x86_64-unknown-linux-gnu
 pjnath=-lpjnath-x86_64-unknown-linux-gnu -lpjlib-util-x86_64-unknown-linux-gnu -lpj-x86_64-unknown-linux-gnu
 pjsip=-lpjsip-x86_64-unknown-linux-gnu -lpjsip-ua-x86_64-unknown-linux-gnu -lpjsip-simple-x86_64-unknown-linux-gnu  -lpjmedia-codec-x86_64-unknown-linux-gnu -lpjmedia-videodev-x86_64-unknown-linux-gnu -lpjmedia-x86_64-unknown-linux-gnu -lpjmedia-audiodev-x86_64-unknown-linux-gnu -lpjlib-util-x86_64-unknown-linux-gnu -lpjnath-x86_64-unknown-linux-gnu -lpj-x86_64-unknown-linux-gnu
+#PJLIB_UTIL_LIB
+#PJLIB_LIB
 
 MACRO=-DPJ_AUTOCONF=1 -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1 -DPJMEDIA_HAS_SRTP=0
 EXTFLAGS=-Wall -Werror
