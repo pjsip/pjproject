@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,8 +45,8 @@ typedef struct pj_xml_node pj_xml_node;
 struct pj_xml_attr
 {
     PJ_DECL_LIST_MEMBER(pj_xml_attr);   /**< Standard list elements.    */
-    pj_str_t	name;	                /**< Attribute name.            */
-    pj_str_t	value;	                /**< Attribute value.           */
+    pj_str_t    name;                   /**< Attribute name.            */
+    pj_str_t    value;                  /**< Attribute value.           */
 };
 
 /** This structure describes XML node head inside XML node structure.
@@ -61,10 +60,10 @@ typedef struct pj_xml_node_head
 struct pj_xml_node
 {
     PJ_DECL_LIST_MEMBER(pj_xml_node);   /**< List @a prev and @a next member */
-    pj_str_t		name;		/**< Node name.                      */
-    pj_xml_attr		attr_head;      /**< Attribute list.                 */
-    pj_xml_node_head	node_head;      /**< Node list.                      */
-    pj_str_t		content;	/**< Node content.                   */
+    pj_str_t            name;           /**< Node name.                      */
+    pj_xml_attr         attr_head;      /**< Attribute list.                 */
+    pj_xml_node_head    node_head;      /**< Node list.                      */
+    pj_str_t            content;        /**< Node content.                   */
 };
 
 /**
@@ -76,11 +75,11 @@ struct pj_xml_node
  * Note that the XML message input buffer MUST be NULL terminated and have
  * length at least len+1 (len MUST NOT include the NULL terminator).
  *
- * @param pool	    Pool to allocate memory from.
- * @param msg	    The XML message to parse, MUST be NULL terminated.
- * @param len	    The length of the message, not including NULL terminator.
+ * @param pool      Pool to allocate memory from.
+ * @param msg       The XML message to parse, MUST be NULL terminated.
+ * @param len       The length of the message, not including NULL terminator.
  *
- * @return	    XML root node, or NULL if the XML document can not be parsed.
+ * @return          XML root node, or NULL if the XML document can not be parsed.
  */
 PJ_DECL(pj_xml_node*) pj_xml_parse( pj_pool_t *pool, char *msg, pj_size_t len);
 
@@ -89,24 +88,24 @@ PJ_DECL(pj_xml_node*) pj_xml_parse( pj_pool_t *pool, char *msg, pj_size_t len);
  * Print XML into XML message. Note that the function WILL NOT NULL terminate
  * the output.
  *
- * @param node	    The XML node to print.
- * @param buf	    Buffer to hold the output message.
- * @param len	    The length of the buffer.
+ * @param node      The XML node to print.
+ * @param buf       Buffer to hold the output message.
+ * @param len       The length of the buffer.
  * @param prolog    If set to nonzero, will print XML prolog ("<?xml..")
  *
- * @return	    The size of the printed message, or -1 if there is not 
- *		    sufficient space in the buffer to print the message.
+ * @return          The size of the printed message, or -1 if there is not 
+ *                  sufficient space in the buffer to print the message.
  */
 PJ_DECL(int) pj_xml_print( const pj_xml_node *node, char *buf, pj_size_t len,
-			   pj_bool_t prolog);
+                           pj_bool_t prolog);
 
 /**
  * Clone XML node and all subnodes.
  *
- * @param pool	    Pool to allocate memory for new nodes.
- * @param rhs	    The node to clone.
+ * @param pool      Pool to allocate memory for new nodes.
+ * @param rhs       The node to clone.
  *
- * @return	    Cloned XML node, or NULL on fail.
+ * @return          Cloned XML node, or NULL on fail.
  */
 PJ_DECL(pj_xml_node*) pj_xml_clone( pj_pool_t *pool, const pj_xml_node *rhs);
 
@@ -114,10 +113,10 @@ PJ_DECL(pj_xml_node*) pj_xml_clone( pj_pool_t *pool, const pj_xml_node *rhs);
 /**
  * Create an empty node.
  *
- * @param pool	    Pool.
- * @param name	    Node name.
+ * @param pool      Pool.
+ * @param name      Node name.
  *
- * @return	    The new node.
+ * @return          The new node.
  */
 PJ_DECL(pj_xml_node*) pj_xml_node_new(pj_pool_t *pool, const pj_str_t *name);
 
@@ -125,20 +124,20 @@ PJ_DECL(pj_xml_node*) pj_xml_node_new(pj_pool_t *pool, const pj_str_t *name);
 /**
  * Create new XML attribute.
  *
- * @param pool	    Pool.
- * @param name	    Attribute name.
- * @param value	    Attribute value.
+ * @param pool      Pool.
+ * @param name      Attribute name.
+ * @param value     Attribute value.
  *
- * @return	    The new XML attribute.
+ * @return          The new XML attribute.
  */
 PJ_DECL(pj_xml_attr*) pj_xml_attr_new(pj_pool_t *pool, const pj_str_t *name,
-				      const pj_str_t *value);
+                                      const pj_str_t *value);
 
 /**
  * Add node to another node.
  *
  * @param parent    Parent node.
- * @param node	    Node to be added to parent.
+ * @param node      Node to be added to parent.
  */
 PJ_DECL(void) pj_xml_add_node( pj_xml_node *parent, pj_xml_node *node );
 
@@ -146,8 +145,8 @@ PJ_DECL(void) pj_xml_add_node( pj_xml_node *parent, pj_xml_node *node );
 /**
  * Add attribute to a node.
  *
- * @param node	    Node.
- * @param attr	    Attribute to add to node.
+ * @param node      Node.
+ * @param attr      Attribute to add to node.
  */
 PJ_DECL(void) pj_xml_add_attr( pj_xml_node *node, pj_xml_attr *attr );
 
@@ -155,70 +154,70 @@ PJ_DECL(void) pj_xml_add_attr( pj_xml_node *node, pj_xml_attr *attr );
  * Find first direct child node with the specified name.
  *
  * @param parent    Parent node.
- * @param name	    Node name to find.
+ * @param name      Node name to find.
  *
- * @return	    XML node found or NULL.
+ * @return          XML node found or NULL.
  */
 PJ_DECL(pj_xml_node*) pj_xml_find_node(const pj_xml_node *parent, 
-				       const pj_str_t *name);
+                                       const pj_str_t *name);
 
 /**
  * Find next direct child node with the specified name.
  *
  * @param parent    Parent node.
- * @param node	    node->next is the starting point.
- * @param name	    Node name to find.
+ * @param node      node->next is the starting point.
+ * @param name      Node name to find.
  *
- * @return	    XML node found or NULL.
+ * @return          XML node found or NULL.
  */
 PJ_DECL(pj_xml_node*) pj_xml_find_next_node(const pj_xml_node *parent, 
-					    const pj_xml_node *node,
-					    const pj_str_t *name);
+                                            const pj_xml_node *node,
+                                            const pj_str_t *name);
 
 /**
  * Recursively find the first node with the specified name in the child nodes
  * and their children.
  *
  * @param parent    Parent node.
- * @param name	    Node name to find.
+ * @param name      Node name to find.
  *
- * @return	    XML node found or NULL.
+ * @return          XML node found or NULL.
  */
 PJ_DECL(pj_xml_node*) pj_xml_find_node_rec(const pj_xml_node *parent, 
-					   const pj_str_t *name);
+                                           const pj_str_t *name);
 
 
 /**
  * Find first attribute within a node with the specified name and optional 
  * value.
  *
- * @param node	    XML Node.
- * @param name	    Attribute name to find.
- * @param value	    Optional value to match.
+ * @param node      XML Node.
+ * @param name      Attribute name to find.
+ * @param value     Optional value to match.
  *
- * @return	    XML attribute found, or NULL.
+ * @return          XML attribute found, or NULL.
  */
 PJ_DECL(pj_xml_attr*) pj_xml_find_attr(const pj_xml_node *node, 
-				       const pj_str_t *name,
-				       const pj_str_t *value);
+                                       const pj_str_t *name,
+                                       const pj_str_t *value);
 
 
 /**
  * Find a direct child node with the specified name and match the function.
  *
  * @param parent    Parent node.
- * @param name	    Optional name. If this is NULL, the name will not be
- *		    matched.
- * @param data	    Data to be passed to matching function.
- * @param match	    Optional matching function.
+ * @param name      Optional name. If this is NULL, the name will not be
+ *                  matched.
+ * @param data      Data to be passed to matching function.
+ * @param match     Optional matching function.
  *
- * @return	    The first matched node, or NULL.
+ * @return          The first matched node, or NULL.
  */
 PJ_DECL(pj_xml_node*) pj_xml_find( const pj_xml_node *parent, 
-				   const pj_str_t *name,
-				   const void *data, 
-				   pj_bool_t (*match)(const pj_xml_node *, 
-						      const void*));
+                                   const pj_str_t *name,
+                                   const void *data, 
+                                   pj_bool_t (*match)(const pj_xml_node *, 
+                                                      const void*));
 
 
 /**
@@ -226,18 +225,18 @@ PJ_DECL(pj_xml_node*) pj_xml_find( const pj_xml_node *parent,
  * function.
  *
  * @param parent    Parent node.
- * @param name	    Optional name. If this is NULL, the name will not be
- *		    matched.
- * @param data	    Data to be passed to matching function.
- * @param match	    Optional matching function.
+ * @param name      Optional name. If this is NULL, the name will not be
+ *                  matched.
+ * @param data      Data to be passed to matching function.
+ * @param match     Optional matching function.
  *
- * @return	    The first matched node, or NULL.
+ * @return          The first matched node, or NULL.
  */
 PJ_DECL(pj_xml_node*) pj_xml_find_rec(const pj_xml_node *parent, 
-				      const pj_str_t *name,
-				      const void *data, 
-				      pj_bool_t (*match)(const pj_xml_node*, 
-							 const void*));
+                                      const pj_str_t *name,
+                                      const void *data, 
+                                      pj_bool_t (*match)(const pj_xml_node*, 
+                                                         const void*));
 
 
 /**
@@ -246,4 +245,4 @@ PJ_DECL(pj_xml_node*) pj_xml_find_rec(const pj_xml_node *parent,
 
 PJ_END_DECL
 
-#endif	/* __PJ_XML_H__ */
+#endif  /* __PJ_XML_H__ */

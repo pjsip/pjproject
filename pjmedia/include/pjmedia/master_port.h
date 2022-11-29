@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -69,28 +68,28 @@ typedef struct pjmedia_master_port pjmedia_master_port;
 /**
  * Create a master port.
  *
- * @param pool		Pool to allocate master port from.
- * @param u_port	Upstream port.
- * @param d_port	Downstream port.
- * @param options	Options flags, from bitmask combinations from
- *			pjmedia_clock_options.
- * @param p_m		Pointer to receive the master port instance.
+ * @param pool          Pool to allocate master port from.
+ * @param u_port        Upstream port.
+ * @param d_port        Downstream port.
+ * @param options       Options flags, from bitmask combinations from
+ *                      pjmedia_clock_options.
+ * @param p_m           Pointer to receive the master port instance.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_master_port_create(pj_pool_t *pool,
-						pjmedia_port *u_port,
-						pjmedia_port *d_port,
-						unsigned options,
-						pjmedia_master_port **p_m);
+                                                pjmedia_port *u_port,
+                                                pjmedia_port *d_port,
+                                                unsigned options,
+                                                pjmedia_master_port **p_m);
 
 
 /**
  * Start the media flow.
  *
- * @param m		The master port.
+ * @param m             The master port.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_master_port_start(pjmedia_master_port *m);
 
@@ -98,9 +97,9 @@ PJ_DECL(pj_status_t) pjmedia_master_port_start(pjmedia_master_port *m);
 /**
  * Stop the media flow.
  *
- * @param m		The master port.
+ * @param m             The master port.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m);
 
@@ -110,19 +109,19 @@ PJ_DECL(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m);
  * elapsed. This operation is only valid if the master port is created with
  * #PJMEDIA_CLOCK_NO_ASYNC flag.
  *
- * @param m		    The master port.
- * @param wait		    If non-zero, then the function will block until
- *			    a clock tick elapsed and callback has been called.
- * @param ts		    Optional argument to receive the current 
- *			    timestamp.
+ * @param m                 The master port.
+ * @param wait              If non-zero, then the function will block until
+ *                          a clock tick elapsed and callback has been called.
+ * @param ts                Optional argument to receive the current 
+ *                          timestamp.
  *
- * @return		    Non-zero if clock tick has elapsed, or FALSE if
- *			    the function returns before a clock tick has
- *			    elapsed.
+ * @return                  Non-zero if clock tick has elapsed, or FALSE if
+ *                          the function returns before a clock tick has
+ *                          elapsed.
  */
 PJ_DECL(pj_bool_t) pjmedia_master_port_wait(pjmedia_master_port *m,
-					    pj_bool_t wait,
-					    pj_timestamp *ts);
+                                            pj_bool_t wait,
+                                            pj_timestamp *ts);
 
 
 /**
@@ -130,21 +129,21 @@ PJ_DECL(pj_bool_t) pjmedia_master_port_wait(pjmedia_master_port *m,
  * current upstream port (the one that is going to be replaced with the
  * new port).
  *
- * @param m		The master port.
- * @param port		Port to be used for upstream port.
+ * @param m             The master port.
+ * @param port          Port to be used for upstream port.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_master_port_set_uport(pjmedia_master_port *m,
-						   pjmedia_port *port);
+                                                   pjmedia_port *port);
 
 
 /**
  * Get the upstream port.
  *
- * @param m		The master port.
+ * @param m             The master port.
  *
- * @return		The upstream port.
+ * @return              The upstream port.
  */
 PJ_DECL(pjmedia_port*) pjmedia_master_port_get_uport(pjmedia_master_port*m);
 
@@ -154,21 +153,21 @@ PJ_DECL(pjmedia_port*) pjmedia_master_port_get_uport(pjmedia_master_port*m);
  * current downstream port (the one that is going to be replaced with the
  * new port).
  *
- * @param m		The master port.
- * @param port		Port to be used for downstream port.
+ * @param m             The master port.
+ * @param port          Port to be used for downstream port.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_master_port_set_dport(pjmedia_master_port *m,
-						   pjmedia_port *port);
+                                                   pjmedia_port *port);
 
 
 /**
  * Get the downstream port.
  *
- * @param m		The master port.
+ * @param m             The master port.
  *
- * @return		The downstream port.
+ * @return              The downstream port.
  */
 PJ_DECL(pjmedia_port*) pjmedia_master_port_get_dport(pjmedia_master_port*m);
 
@@ -177,14 +176,14 @@ PJ_DECL(pjmedia_port*) pjmedia_master_port_get_dport(pjmedia_master_port*m);
  * Destroy the master port, and optionally destroy the upstream and 
  * downstream ports.
  *
- * @param m		The master port.
- * @param destroy_ports	If non-zero, the function will destroy both
- *			upstream and downstream ports too.
+ * @param m             The master port.
+ * @param destroy_ports If non-zero, the function will destroy both
+ *                      upstream and downstream ports too.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_master_port_destroy(pjmedia_master_port *m,
-						 pj_bool_t destroy_ports);
+                                                 pj_bool_t destroy_ports);
 
 
 
@@ -195,5 +194,5 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_MASTER_PORT_H__ */
+#endif  /* __PJMEDIA_MASTER_PORT_H__ */
 

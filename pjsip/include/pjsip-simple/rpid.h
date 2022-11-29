@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -78,16 +77,16 @@ typedef enum pjrpid_element_type
 typedef struct pjrpid_element
 {
     /** Element type. */
-    pjrpid_element_type	    type;
+    pjrpid_element_type     type;
 
     /** Optional id to set on the element. */
-    pj_str_t		    id;
+    pj_str_t                id;
 
     /** Activity type. */
-    pjrpid_activity	    activity;
+    pjrpid_activity         activity;
 
     /** Optional text describing the person/element. */
-    pj_str_t		    note;
+    pj_str_t                note;
 
 } pjrpid_element;
 
@@ -95,12 +94,12 @@ typedef struct pjrpid_element
 /**
  * Duplicate RPID element.
  *
- * @param pool	    Pool.
- * @param dst	    Destination structure.
- * @param src	    Source structure.
+ * @param pool      Pool.
+ * @param dst       Destination structure.
+ * @param src       Source structure.
  */
 PJ_DECL(void) pjrpid_element_dup(pj_pool_t *pool, pjrpid_element *dst,
-				 const pjrpid_element *src);
+                                 const pjrpid_element *src);
 
 
 /**
@@ -110,32 +109,32 @@ PJ_DECL(void) pjrpid_element_dup(pj_pool_t *pool, pjrpid_element *dst,
  * to the first <tuple> element of the PIDF document, if a <note> element
  * is not present.
  *
- * @param pres	    The PIDF presence document.
- * @param pool	    Pool.
+ * @param pres      The PIDF presence document.
+ * @param pool      Pool.
  * @param options   Currently unused, and must be zero.
- * @param elem	    RPID element information to be added into the PIDF
- *		    document.
+ * @param elem      RPID element information to be added into the PIDF
+ *                  document.
  *
  * @return PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjrpid_add_element(pjpidf_pres *pres,
-				        pj_pool_t *pool,
-					unsigned options,
-				        const pjrpid_element *elem);
+                                        pj_pool_t *pool,
+                                        unsigned options,
+                                        const pjrpid_element *elem);
 
 /**
  * Get RPID element information from PIDF document, if any.
  *
- * @param pres	    The PIDF document containing RPID elements.
- * @param pool	    Pool to duplicate the information.
- * @param elem	    Structure to receive the element information.
+ * @param pres      The PIDF document containing RPID elements.
+ * @param pool      Pool to duplicate the information.
+ * @param elem      Structure to receive the element information.
  *
- * @return PJ_SUCCESS	if the document does contain RPID element
- *			and the information has been parsed successfully.
+ * @return PJ_SUCCESS   if the document does contain RPID element
+ *                      and the information has been parsed successfully.
  */
 PJ_DECL(pj_status_t) pjrpid_get_element(const pjpidf_pres *pres,
-				        pj_pool_t *pool,
-				        pjrpid_element *elem);
+                                        pj_pool_t *pool,
+                                        pjrpid_element *elem);
 
 
 /**
@@ -146,5 +145,5 @@ PJ_DECL(pj_status_t) pjrpid_get_element(const pjpidf_pres *pres,
 PJ_END_DECL
 
 
-#endif	/* __PJSIP_SIMPLE_RPID_H__ */
+#endif  /* __PJSIP_SIMPLE_RPID_H__ */
 

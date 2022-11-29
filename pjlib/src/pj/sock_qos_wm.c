@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -41,18 +40,18 @@ static const int dscp_map[] =
 };
 
 PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
-					   pj_qos_params *param)
+                                           pj_qos_params *param)
 {
     PJ_UNUSED_ARG(sock);
     PJ_UNUSED_ARG(param);
 
     PJ_LOG(4,(THIS_FILE, "pj_sock_set_qos_params() is not implemented "
-			 "for this platform"));
+                         "for this platform"));
     return PJ_ENOTSUP;
 }
 
 PJ_DEF(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
-					 pj_qos_type type)
+                                         pj_qos_type type)
 {
     int value;
 
@@ -60,23 +59,23 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
 
     value = dscp_map[type];
     return pj_sock_setsockopt(sock, IPPROTO_IP, IP_DSCP_TRAFFIC_TYPE,
-			      &value, sizeof(value));
+                              &value, sizeof(value));
 }
 
 
 PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
-					   pj_qos_params *p_param)
+                                           pj_qos_params *p_param)
 {
     PJ_UNUSED_ARG(sock);
     PJ_UNUSED_ARG(p_param);
 
     PJ_LOG(4,(THIS_FILE, "pj_sock_get_qos_params() is not implemented "
-			 "for this platform"));
+                         "for this platform"));
     return PJ_ENOTSUP;
 }
 
 PJ_DEF(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
-					 pj_qos_type *p_type)
+                                         pj_qos_type *p_type)
 {
     pj_status_t status;
     int value, optlen;
@@ -85,19 +84,19 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
     optlen = sizeof(value);
     value = 0;
     status = pj_sock_getsockopt(sock, IPPROTO_IP, IP_DSCP_TRAFFIC_TYPE,
-			        &value, &optlen);
+                                &value, &optlen);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     *p_type = PJ_QOS_TYPE_BEST_EFFORT;
     for (i=0; i<PJ_ARRAY_SIZE(dscp_map); ++i) {
-	if (value == dscp_map[i]) {
-	    *p_type = (pj_qos_type)i;
-	    break;
-	}
+        if (value == dscp_map[i]) {
+            *p_type = (pj_qos_type)i;
+            break;
+        }
     }
 
     return PJ_SUCCESS;
 }
 
-#endif	/* PJ_QOS_IMPLEMENTATION */
+#endif  /* PJ_QOS_IMPLEMENTATION */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -27,51 +26,51 @@
     For complete table see:
     http://en.wikipedia.org/wiki/Million_instructions_per_second
 
-    Processor			    IPS/MHz
+    Processor                       IPS/MHz
     -------------------------------------------
-    PowerPC G3			    2.253 MIPS/MHz
-    Intel Pentium III		    2.708 MIPS/MHz
-    AMD Athlon			    2.967 MIPS/MHz
-    Pentium 4 Extreme Edition	    3.039 MIPS/MHz
-    AMD Athlon FX-57		    4.285 MIPS/MHz
+    PowerPC G3                      2.253 MIPS/MHz
+    Intel Pentium III               2.708 MIPS/MHz
+    AMD Athlon                      2.967 MIPS/MHz
+    Pentium 4 Extreme Edition       3.039 MIPS/MHz
+    AMD Athlon FX-57                4.285 MIPS/MHz
 
 
     From: http://en.wikipedia.org/wiki/ARM_architecture
 
-    Family	Arch		Core	    IPS/MHz
+    Family      Arch            Core        IPS/MHz
     -------------------------------------------------------
-    ARM7TDMI	ARMv4T		ARM7TDMI    0.892 MIPS/MHz
-				ARM710T	    0.900 MIPS/MHz
-				ARM720T	    1.003 MIPS/MHz
-    ARM9TDMI	ARMv4T		ARM920T	    1.111 MIPS/MHz
-    ARM9E	ARMv5TEJ	ARM926EJ-S  1.100 MIPS/MHz
-    XScale	ARMv5TE		PXA255	    1.000 MIPS/MHz (?)
-				PXA27x	    1.282 MIPS/MHz
-    Cortex	ARMv7-A		Cortex-A8   2.000 MIPS/MHz
-				Cortex-A9   2.000 MIPS/MHz
-		ARMv7-M		Cortex-M3   1.250 MIPS/MHz
+    ARM7TDMI    ARMv4T          ARM7TDMI    0.892 MIPS/MHz
+                                ARM710T     0.900 MIPS/MHz
+                                ARM720T     1.003 MIPS/MHz
+    ARM9TDMI    ARMv4T          ARM920T     1.111 MIPS/MHz
+    ARM9E       ARMv5TEJ        ARM926EJ-S  1.100 MIPS/MHz
+    XScale      ARMv5TE         PXA255      1.000 MIPS/MHz (?)
+                                PXA27x      1.282 MIPS/MHz
+    Cortex      ARMv7-A         Cortex-A8   2.000 MIPS/MHz
+                                Cortex-A9   2.000 MIPS/MHz
+                ARMv7-M         Cortex-M3   1.250 MIPS/MHz
     */
 
-#   define CPU_MHZ	    (2666)
-#   define CPU_IPS	    (3.039 * CPU_MHZ * MEGA)	/* P4 2.6GHz	*/
+#   define CPU_MHZ          (2666)
+#   define CPU_IPS          (3.039 * CPU_MHZ * MEGA)    /* P4 2.6GHz    */
 
-//#   define CPU_MHZ	    700
-//#   define CPU_IPS	    (700 * MEGA * 2.708)	/* P3 700Mhz	*/
+//#   define CPU_MHZ        700
+//#   define CPU_IPS        (700 * MEGA * 2.708)        /* P3 700Mhz    */
 
-//#   define CPU_MHZ	    180
-//#   define CPU_IPS	    (CPU_MHZ * MEGA * 1.1)	/* ARM926EJ-S */
+//#   define CPU_MHZ        180
+//#   define CPU_IPS        (CPU_MHZ * MEGA * 1.1)      /* ARM926EJ-S */
 
-//#   define CPU_MHZ	    312
-//#   define CPU_IPS	    (CPU_MHZ * MEGA * 1.282)	/* Dell Axim PDA */
+//#   define CPU_MHZ        312
+//#   define CPU_IPS        (CPU_MHZ * MEGA * 1.282)    /* Dell Axim PDA */
 
 #endif
 
 #define HAS_AUDIO_CODECS (PJMEDIA_HAS_G711_CODEC || PJMEDIA_HAS_G722_CODEC ||\
-	 		  PJMEDIA_HAS_GSM_CODEC || PJMEDIA_HAS_ILBC_CODEC || \
-			  PJMEDIA_HAS_SPEEX_CODEC|| PJMEDIA_HAS_G7221_CODEC||\
-			  PJMEDIA_HAS_OPENCORE_AMRNB_CODEC ||\
-			  PJMEDIA_HAS_OPENCORE_AMRWB_CODEC ||\
-			  PJMEDIA_HAS_L16_CODEC)
+                          PJMEDIA_HAS_GSM_CODEC || PJMEDIA_HAS_ILBC_CODEC || \
+                          PJMEDIA_HAS_SPEEX_CODEC|| PJMEDIA_HAS_G7221_CODEC||\
+                          PJMEDIA_HAS_OPENCORE_AMRNB_CODEC ||\
+                          PJMEDIA_HAS_OPENCORE_AMRWB_CODEC ||\
+                          PJMEDIA_HAS_L16_CODEC)
 
 
 /* Sample speech data, 360ms length, encoded at 8Khz */
@@ -366,11 +365,11 @@ static const pj_int16_t ref_signal[] = {
         88,  -140,   -37,   160,     0,   -92,    96,    24,   -84,     0,
 };
 
-#define THIS_FILE	    "mips_test.c"
-#define DURATION	    5000
-#define PTIME		    20	/* MUST be 20! */
-#define MEGA		    1000000
-#define GIGA		    1000000000
+#define THIS_FILE           "mips_test.c"
+#define DURATION            5000
+#define PTIME               20  /* MUST be 20! */
+#define MEGA                1000000
+#define GIGA                1000000000
 
 enum op
 {
@@ -382,69 +381,69 @@ enum op
 
 enum clock_rate
 {
-    K8	= 1,
-    K16	= 2,
-    K32	= 4,
+    K8  = 1,
+    K16 = 2,
+    K32 = 4,
 };
 
 
 struct test_entry
 {
-    const char	    *title;
-    unsigned	     valid_op;
-    unsigned	     valid_clock_rate;
+    const char      *title;
+    unsigned         valid_op;
+    unsigned         valid_clock_rate;
 
     pjmedia_port*  (*init)(pj_pool_t *pool,
-			  unsigned clock_rate,
-			  unsigned channel_count,
-			  unsigned samples_per_frame,
-			  unsigned flags,
-			  struct test_entry *);
-    void	   (*custom_run)(struct test_entry*);
-    void	   (*custom_deinit)(struct test_entry*);
+                          unsigned clock_rate,
+                          unsigned channel_count,
+                          unsigned samples_per_frame,
+                          unsigned flags,
+                          struct test_entry *);
+    void           (*custom_run)(struct test_entry*);
+    void           (*custom_deinit)(struct test_entry*);
 
-    void	    *pdata[4];
-    unsigned	     idata[4];
+    void            *pdata[4];
+    unsigned         idata[4];
 };
 
 
 /***************************************************************************/
 /* pjmedia_port to supply with continuous frames */
 static pjmedia_port* create_gen_port(pj_pool_t *pool,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     unsigned pct_level)
+                                     unsigned clock_rate,
+                                     unsigned channel_count,
+                                     unsigned samples_per_frame,
+                                     unsigned pct_level)
 {
     pjmedia_port *port;
     pj_status_t status;
 
     if (pct_level == 100 && channel_count==1) {
-	status = pjmedia_mem_player_create(pool, ref_signal, 
-					   sizeof(ref_signal), clock_rate, 
-					   channel_count, samples_per_frame,
-					   16, 0, &port);
+        status = pjmedia_mem_player_create(pool, ref_signal, 
+                                           sizeof(ref_signal), clock_rate, 
+                                           channel_count, samples_per_frame,
+                                           16, 0, &port);
     } else {
-	pj_int16_t *buf;
-	unsigned c;
+        pj_int16_t *buf;
+        unsigned c;
 
-	buf = (pj_int16_t*)
-	      pj_pool_alloc(pool, sizeof(ref_signal)*channel_count);
-	for (c=0; c<channel_count; ++c) {
-	    unsigned i;
-	    pj_int16_t *p;
+        buf = (pj_int16_t*)
+              pj_pool_alloc(pool, sizeof(ref_signal)*channel_count);
+        for (c=0; c<channel_count; ++c) {
+            unsigned i;
+            pj_int16_t *p;
 
-	    p = buf+c;
-	    for (i=0; i<PJ_ARRAY_SIZE(ref_signal); ++i) {
-		*p = (pj_int16_t)(ref_signal[i] * pct_level / 100);
-		p += channel_count;
-	    }
-	}
-	status = pjmedia_mem_player_create(pool, buf, 
-					   sizeof(ref_signal)*channel_count, 
-					   clock_rate,  channel_count, 
-					   samples_per_frame,
-					   16, 0, &port);
+            p = buf+c;
+            for (i=0; i<PJ_ARRAY_SIZE(ref_signal); ++i) {
+                *p = (pj_int16_t)(ref_signal[i] * pct_level / 100);
+                p += channel_count;
+            }
+        }
+        status = pjmedia_mem_player_create(pool, buf, 
+                                           sizeof(ref_signal)*channel_count, 
+                                           clock_rate,  channel_count, 
+                                           samples_per_frame,
+                                           16, 0, &port);
     }
 
     return status==PJ_SUCCESS? port : NULL;
@@ -452,27 +451,27 @@ static pjmedia_port* create_gen_port(pj_pool_t *pool,
 
 /***************************************************************************/
 static pjmedia_port* gen_port_test_init(pj_pool_t *pool,
-				        unsigned clock_rate,
-				        unsigned channel_count,
-				        unsigned samples_per_frame,
-				        unsigned flags,
-				        struct test_entry *te)
+                                        unsigned clock_rate,
+                                        unsigned channel_count,
+                                        unsigned samples_per_frame,
+                                        unsigned flags,
+                                        struct test_entry *te)
 {
     PJ_UNUSED_ARG(flags);
     PJ_UNUSED_ARG(te);
     return create_gen_port(pool, clock_rate, channel_count, samples_per_frame,
-			   100);
+                           100);
 }
 
 
 /***************************************************************************/
 static pjmedia_port* init_conf_port(unsigned nb_participant,
-				    pj_pool_t *pool,
-				    unsigned clock_rate,
-				    unsigned channel_count,
-				    unsigned samples_per_frame,
-				    unsigned flags,
-				    struct test_entry *te)
+                                    pj_pool_t *pool,
+                                    unsigned clock_rate,
+                                    unsigned channel_count,
+                                    unsigned samples_per_frame,
+                                    unsigned flags,
+                                    struct test_entry *te)
 {
     pjmedia_conf *conf;
     unsigned i;
@@ -483,53 +482,53 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
 
     /* Create conf */
     status = pjmedia_conf_create(pool, 2+nb_participant*2, clock_rate, 
-				 channel_count, samples_per_frame, 16, 
-				 PJMEDIA_CONF_NO_DEVICE, &conf);
+                                 channel_count, samples_per_frame, 16, 
+                                 PJMEDIA_CONF_NO_DEVICE, &conf);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     for (i=0; i<nb_participant; ++i) {
-	pjmedia_port *gen_port, *null_port;
-	unsigned slot1, slot2;
+        pjmedia_port *gen_port, *null_port;
+        unsigned slot1, slot2;
 
-	/* Create gen_port for source audio */
-	gen_port = create_gen_port(pool, clock_rate, channel_count,
-				   samples_per_frame, 100 / nb_participant);
-	if (!gen_port)
-	    return NULL;
+        /* Create gen_port for source audio */
+        gen_port = create_gen_port(pool, clock_rate, channel_count,
+                                   samples_per_frame, 100 / nb_participant);
+        if (!gen_port)
+            return NULL;
 
-	/* Add port */
-	status = pjmedia_conf_add_port(conf, pool, gen_port, NULL, &slot1);
-	if (status != PJ_SUCCESS)
-	    return NULL;
+        /* Add port */
+        status = pjmedia_conf_add_port(conf, pool, gen_port, NULL, &slot1);
+        if (status != PJ_SUCCESS)
+            return NULL;
 
-	/* Connect gen_port to sound dev */
-	status = pjmedia_conf_connect_port(conf, slot1, 0, 0);
-	if (status != PJ_SUCCESS)
-	    return NULL;
+        /* Connect gen_port to sound dev */
+        status = pjmedia_conf_connect_port(conf, slot1, 0, 0);
+        if (status != PJ_SUCCESS)
+            return NULL;
 
-	/* Create null sink frame */
-	status = pjmedia_null_port_create(pool, clock_rate, channel_count,
-					  samples_per_frame, 16, &null_port);
-	if (status != PJ_SUCCESS)
-	    return NULL;
+        /* Create null sink frame */
+        status = pjmedia_null_port_create(pool, clock_rate, channel_count,
+                                          samples_per_frame, 16, &null_port);
+        if (status != PJ_SUCCESS)
+            return NULL;
 
-	/* add null port */
-	status = pjmedia_conf_add_port(conf, pool, null_port, NULL, &slot2);
-	if (status != PJ_SUCCESS)
-	    return NULL;
+        /* add null port */
+        status = pjmedia_conf_add_port(conf, pool, null_port, NULL, &slot2);
+        if (status != PJ_SUCCESS)
+            return NULL;
 
-	/* connect sound to null sink port */
-	status = pjmedia_conf_connect_port(conf, 0, slot2, 0);
-	if (status != PJ_SUCCESS)
-	    return NULL;
+        /* connect sound to null sink port */
+        status = pjmedia_conf_connect_port(conf, 0, slot2, 0);
+        if (status != PJ_SUCCESS)
+            return NULL;
 
-	/* connect gen_port to null sink port */
+        /* connect gen_port to null sink port */
 #if 0
-	status = pjmedia_conf_connect_port(conf, slot1, slot2, 0);
-	if (status != PJ_SUCCESS)
-	    return NULL;
-#endif	
+        status = pjmedia_conf_connect_port(conf, slot1, slot2, 0);
+        if (status != PJ_SUCCESS)
+            return NULL;
+#endif  
     }
 
     return pjmedia_conf_get_master_port(conf);
@@ -539,80 +538,80 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
 /***************************************************************************/
 /* Benchmark conf with 1 participant, no mixing */
 static pjmedia_port* conf1_test_init(pj_pool_t *pool,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     unsigned flags,
-				     struct test_entry *te)
+                                     unsigned clock_rate,
+                                     unsigned channel_count,
+                                     unsigned samples_per_frame,
+                                     unsigned flags,
+                                     struct test_entry *te)
 {
     return init_conf_port(1, pool, clock_rate, channel_count, 
-			  samples_per_frame, flags, te);
+                          samples_per_frame, flags, te);
 }
 
 
 /***************************************************************************/
 /* Benchmark conf with 2 participants, mixing to/from snd dev */
 static pjmedia_port* conf2_test_init(pj_pool_t *pool,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     unsigned flags,
-				     struct test_entry *te)
+                                     unsigned clock_rate,
+                                     unsigned channel_count,
+                                     unsigned samples_per_frame,
+                                     unsigned flags,
+                                     struct test_entry *te)
 {
     return init_conf_port(2, pool, clock_rate, channel_count, 
-			  samples_per_frame, flags, te);
+                          samples_per_frame, flags, te);
 }
 
 /***************************************************************************/
 /* Benchmark conf with 4 participants, mixing to/from snd dev */
 static pjmedia_port* conf4_test_init(pj_pool_t *pool,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     unsigned flags,
-				     struct test_entry *te)
+                                     unsigned clock_rate,
+                                     unsigned channel_count,
+                                     unsigned samples_per_frame,
+                                     unsigned flags,
+                                     struct test_entry *te)
 {
     return init_conf_port(4, pool, clock_rate, channel_count, 
-			  samples_per_frame, flags, te);
+                          samples_per_frame, flags, te);
 }
 
 /***************************************************************************/
 /* Benchmark conf with 8 participants, mixing to/from snd dev */
 static pjmedia_port* conf8_test_init(pj_pool_t *pool,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     unsigned flags,
-				     struct test_entry *te)
+                                     unsigned clock_rate,
+                                     unsigned channel_count,
+                                     unsigned samples_per_frame,
+                                     unsigned flags,
+                                     struct test_entry *te)
 {
     return init_conf_port(8, pool, clock_rate, channel_count, 
-			  samples_per_frame, flags, te);
+                          samples_per_frame, flags, te);
 }
 
 /***************************************************************************/
 /* Benchmark conf with 16 participants, mixing to/from snd dev */
 static pjmedia_port* conf16_test_init(pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned flags,
-				      struct test_entry *te)
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned flags,
+                                      struct test_entry *te)
 {
     PJ_UNUSED_ARG(flags);
     return init_conf_port(16, pool, clock_rate, channel_count, 
-			  samples_per_frame, flags, te);
+                          samples_per_frame, flags, te);
 }
 
 /***************************************************************************/
 /* Up and downsample */
 static pjmedia_port* updown_resample_get(pj_pool_t *pool,
-					 pj_bool_t high_quality,
-					 pj_bool_t large_filter,
-				         unsigned clock_rate,
-				         unsigned channel_count,
-				         unsigned samples_per_frame,
-				         unsigned flags,
-				         struct test_entry *te)
+                                         pj_bool_t high_quality,
+                                         pj_bool_t large_filter,
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
 {
     pjmedia_port *gen_port, *up, *down;
     unsigned opt = 0;
@@ -622,56 +621,56 @@ static pjmedia_port* updown_resample_get(pj_pool_t *pool,
     PJ_UNUSED_ARG(te);
 
     if (!high_quality)
-	opt |= PJMEDIA_RESAMPLE_USE_LINEAR;
+        opt |= PJMEDIA_RESAMPLE_USE_LINEAR;
     if (!large_filter)
-	opt |= PJMEDIA_RESAMPLE_USE_SMALL_FILTER;
+        opt |= PJMEDIA_RESAMPLE_USE_SMALL_FILTER;
 
     gen_port = create_gen_port(pool, clock_rate, channel_count,
-			       samples_per_frame, 100);
+                               samples_per_frame, 100);
     status = pjmedia_resample_port_create(pool, gen_port, clock_rate*2, opt, &up);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
     status = pjmedia_resample_port_create(pool, up, clock_rate, opt, &down);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     return down;
 }
 
 /* Linear resampling */
 static pjmedia_port* linear_resample( pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned flags,
-				      struct test_entry *te)
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned flags,
+                                      struct test_entry *te)
 {
     return updown_resample_get(pool, PJ_FALSE, PJ_FALSE, clock_rate,
-			       channel_count, samples_per_frame, flags, te);
+                               channel_count, samples_per_frame, flags, te);
 }
 
 /* Small filter resampling */
 static pjmedia_port* small_filt_resample( pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     return updown_resample_get(pool, PJ_TRUE, PJ_FALSE, clock_rate,
-			       channel_count, samples_per_frame, flags, te);
+                               channel_count, samples_per_frame, flags, te);
 }
 
 /* Larger filter resampling */
 static pjmedia_port* large_filt_resample( pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     return updown_resample_get(pool, PJ_TRUE, PJ_TRUE, clock_rate,
-			       channel_count, samples_per_frame, flags, te);
+                               channel_count, samples_per_frame, flags, te);
 }
 
 
@@ -683,14 +682,14 @@ struct codec_port
     pjmedia_port     base;
     pjmedia_endpt   *endpt;
     pjmedia_codec   *codec;
-    pj_status_t	   (*codec_deinit)();
-    pj_uint8_t	     pkt[640];
-    pj_uint16_t	     pcm[32000 * PTIME / 1000];
+    pj_status_t    (*codec_deinit)();
+    pj_uint8_t       pkt[640];
+    pj_uint16_t      pcm[32000 * PTIME / 1000];
 };
 
 
 static pj_status_t codec_put_frame(struct pjmedia_port *this_port, 
-				   pjmedia_frame *frame)
+                                   pjmedia_frame *frame)
 {
     struct codec_port *cp = (struct codec_port*)this_port;
     pjmedia_frame out_frame;
@@ -699,26 +698,26 @@ static pj_status_t codec_put_frame(struct pjmedia_port *this_port,
     out_frame.buf = cp->pkt;
     out_frame.size = sizeof(cp->pkt);
     status = pjmedia_codec_encode(cp->codec, frame, sizeof(cp->pkt),
-				  &out_frame);
+                                  &out_frame);
     pj_assert(status == PJ_SUCCESS);
 
     if (out_frame.size != 0) {
-	pjmedia_frame parsed_frm[2], pcm_frm;
-	unsigned frame_cnt = PJ_ARRAY_SIZE(parsed_frm);
-	unsigned i;
+        pjmedia_frame parsed_frm[2], pcm_frm;
+        unsigned frame_cnt = PJ_ARRAY_SIZE(parsed_frm);
+        unsigned i;
 
-	status = pjmedia_codec_parse(cp->codec, out_frame.buf, 
-				     out_frame.size, &out_frame.timestamp,
-				     &frame_cnt, parsed_frm);
-	pj_assert(status == PJ_SUCCESS);
-	
-	for (i=0; i<frame_cnt; ++i) {
-	    pcm_frm.buf = cp->pcm;
-	    pcm_frm.size = sizeof(cp->pkt);
-	    status = pjmedia_codec_decode(cp->codec, &parsed_frm[i], 
-					  sizeof(cp->pcm), &pcm_frm);
-	    pj_assert(status == PJ_SUCCESS);
-	}
+        status = pjmedia_codec_parse(cp->codec, out_frame.buf, 
+                                     out_frame.size, &out_frame.timestamp,
+                                     &frame_cnt, parsed_frm);
+        pj_assert(status == PJ_SUCCESS);
+        
+        for (i=0; i<frame_cnt; ++i) {
+            pcm_frm.buf = cp->pcm;
+            pcm_frm.size = sizeof(cp->pkt);
+            status = pjmedia_codec_decode(cp->codec, &parsed_frm[i], 
+                                          sizeof(cp->pcm), &pcm_frm);
+            pj_assert(status == PJ_SUCCESS);
+        }
     }
 
     return status;
@@ -730,7 +729,7 @@ static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
 
     pjmedia_codec_close(cp->codec);
     pjmedia_codec_mgr_dealloc_codec(pjmedia_endpt_get_codec_mgr(cp->endpt),
-				    cp->codec);
+                                    cp->codec);
     cp->codec_deinit();
     pjmedia_endpt_destroy(cp->endpt);
     return PJ_SUCCESS;
@@ -738,14 +737,14 @@ static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
 
 #if HAS_AUDIO_CODECS
 static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
-					  const char *codec,
-					  pj_status_t (*codec_init)(pjmedia_endpt*),
-					  pj_status_t (*codec_deinit)(),
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          const char *codec,
+                                          pj_status_t (*codec_init)(pjmedia_endpt*),
+                                          pj_status_t (*codec_deinit)(),
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     struct codec_port *cp;
     pj_str_t codec_id;
@@ -760,42 +759,42 @@ static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
     codec_id = pj_str((char*)codec);
     cp = PJ_POOL_ZALLOC_T(pool, struct codec_port);
     pjmedia_port_info_init(&cp->base.info, &codec_id, 0x123456, clock_rate,
-			   channel_count, 16, samples_per_frame);
+                           channel_count, 16, samples_per_frame);
     cp->base.put_frame = &codec_put_frame;
     cp->base.on_destroy = &codec_on_destroy;
     cp->codec_deinit = codec_deinit;
 
     status = pjmedia_endpt_create(mem, NULL, 0, &cp->endpt);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     status = codec_init(cp->endpt);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     count = 1;
     status = pjmedia_codec_mgr_find_codecs_by_id(pjmedia_endpt_get_codec_mgr(cp->endpt),
-						 &codec_id, &count, ci, NULL);
+                                                 &codec_id, &count, ci, NULL);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     status = pjmedia_codec_mgr_alloc_codec(pjmedia_endpt_get_codec_mgr(cp->endpt),
-					   ci[0], &cp->codec);
+                                           ci[0], &cp->codec);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     status = pjmedia_codec_mgr_get_default_param(pjmedia_endpt_get_codec_mgr(cp->endpt),
-						 ci[0], &codec_param);
+                                                 ci[0], &codec_param);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     status = pjmedia_codec_init(cp->codec, pool);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     status = pjmedia_codec_open(cp->codec, &codec_param);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     return &cp->base;
 }
@@ -804,32 +803,32 @@ static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
 #if PJMEDIA_HAS_G711_CODEC
 /* G.711 benchmark */
 static pjmedia_port* g711_encode_decode(  pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     return codec_encode_decode(pool, "pcmu", &pjmedia_codec_g711_init, 
-			       &pjmedia_codec_g711_deinit,
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_g711_deinit,
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
 #endif
 
 /* GSM benchmark */
 #if PJMEDIA_HAS_GSM_CODEC
 static pjmedia_port* gsm_encode_decode(  pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned channel_count,
-					 unsigned samples_per_frame,
-					 unsigned flags,
-					 struct test_entry *te)
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
 {
     return codec_encode_decode(pool, "gsm", &pjmedia_codec_gsm_init, 
-			       &pjmedia_codec_gsm_deinit, 
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_gsm_deinit, 
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
 #endif
 
@@ -841,98 +840,98 @@ static pj_status_t ilbc_init(pjmedia_endpt *endpt)
 
 /* iLBC benchmark */
 static pjmedia_port* ilbc_encode_decode( pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned channel_count,
-					 unsigned samples_per_frame,
-					 unsigned flags,
-					 struct test_entry *te)
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
 {
     samples_per_frame = 30 * clock_rate / 1000;
     return codec_encode_decode(pool, "ilbc", &ilbc_init, 
-			       &pjmedia_codec_ilbc_deinit, clock_rate, 
-			       channel_count, samples_per_frame, flags, te);
+                               &pjmedia_codec_ilbc_deinit, clock_rate, 
+                               channel_count, samples_per_frame, flags, te);
 }
 #endif
 
 #if PJMEDIA_HAS_SPEEX_CODEC
 /* Speex narrowband benchmark */
 static pjmedia_port* speex8_encode_decode(pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     return codec_encode_decode(pool, "speex/8000", 
-			       &pjmedia_codec_speex_init_default, 
-			       &pjmedia_codec_speex_deinit, 
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_speex_init_default, 
+                               &pjmedia_codec_speex_deinit, 
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
 
 /* Speex wideband benchmark */
 static pjmedia_port* speex16_encode_decode(pj_pool_t *pool,
-					   unsigned clock_rate,
-					   unsigned channel_count,
-					   unsigned samples_per_frame,
-					   unsigned flags,
-					   struct test_entry *te)
+                                           unsigned clock_rate,
+                                           unsigned channel_count,
+                                           unsigned samples_per_frame,
+                                           unsigned flags,
+                                           struct test_entry *te)
 {
     return codec_encode_decode(pool, "speex/16000", 
-			       &pjmedia_codec_speex_init_default, 
-			       &pjmedia_codec_speex_deinit, 
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_speex_init_default, 
+                               &pjmedia_codec_speex_deinit, 
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
 #endif
 
 #if PJMEDIA_HAS_G722_CODEC
 /* G.722 benchmark benchmark */
 static pjmedia_port* g722_encode_decode(pj_pool_t *pool,
-					unsigned clock_rate,
-					unsigned channel_count,
-					unsigned samples_per_frame,
-					unsigned flags,
-					struct test_entry *te)
+                                        unsigned clock_rate,
+                                        unsigned channel_count,
+                                        unsigned samples_per_frame,
+                                        unsigned flags,
+                                        struct test_entry *te)
 {
     return codec_encode_decode(pool, "g722", &pjmedia_codec_g722_init, 
-			       &pjmedia_codec_g722_deinit, 
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_g722_deinit, 
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
 #endif
 
 #if PJMEDIA_HAS_G7221_CODEC
 /* G.722.1 benchmark benchmark */
 static pjmedia_port* g7221_encode_decode(pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned channel_count,
-					 unsigned samples_per_frame,
-					 unsigned flags,
-					 struct test_entry *te)
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
 {
     return codec_encode_decode(pool, "g7221/16000", 
-			       &pjmedia_codec_g7221_init,
-			       &pjmedia_codec_g7221_deinit,
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_g7221_init,
+                               &pjmedia_codec_g7221_deinit,
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
 
 /* G.722.1 Annex C benchmark benchmark */
 static pjmedia_port* g7221c_encode_decode(pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     return codec_encode_decode(pool, "g7221/32000", 
-			       &pjmedia_codec_g7221_init,
-			       &pjmedia_codec_g7221_deinit,
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_g7221_init,
+                               &pjmedia_codec_g7221_deinit,
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
-#endif	/* PJMEDIA_HAS_G7221_CODEC */
+#endif  /* PJMEDIA_HAS_G7221_CODEC */
 
 #if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
 /* AMR-NB benchmark benchmark */
@@ -944,12 +943,12 @@ static pjmedia_port* amr_encode_decode(pj_pool_t *pool,
                                        struct test_entry *te)
 {
     return codec_encode_decode(pool, "AMR/8000", 
-			       &pjmedia_codec_opencore_amrnb_init,
-			       &pjmedia_codec_opencore_amrnb_deinit,
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_opencore_amrnb_init,
+                               &pjmedia_codec_opencore_amrnb_deinit,
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
-#endif	/* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
+#endif  /* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
 
 #if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
 /* AMR-WB benchmark benchmark */
@@ -961,12 +960,12 @@ static pjmedia_port* amrwb_encode_decode(pj_pool_t *pool,
                                          struct test_entry *te)
 {
     return codec_encode_decode(pool, "AMR/16000",
-			       &pjmedia_codec_opencore_amr_init_default,
-			       &pjmedia_codec_opencore_amr_deinit,
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_opencore_amr_init_default,
+                               &pjmedia_codec_opencore_amr_deinit,
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
-#endif	/* PJMEDIA_HAS_OPENCORE_AMRWB_CODEC */
+#endif  /* PJMEDIA_HAS_OPENCORE_AMRWB_CODEC */
 
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
 static pj_status_t init_l16_default(pjmedia_endpt *endpt)
@@ -976,30 +975,30 @@ static pj_status_t init_l16_default(pjmedia_endpt *endpt)
 
 /* L16/8000/1 benchmark */
 static pjmedia_port* l16_8_encode_decode(pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned channel_count,
-					 unsigned samples_per_frame,
-					 unsigned flags,
-					 struct test_entry *te)
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
 {
     return codec_encode_decode(pool, "L16/8000/1", &init_l16_default, 
-			       &pjmedia_codec_l16_deinit, 
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_l16_deinit, 
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
 
 /* L16/16000/1 benchmark */
 static pjmedia_port* l16_16_encode_decode(pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     return codec_encode_decode(pool, "L16/16000/1", &init_l16_default, 
-			       &pjmedia_codec_l16_deinit, 
-			       clock_rate, channel_count,
-			       samples_per_frame, flags, te);
+                               &pjmedia_codec_l16_deinit, 
+                               clock_rate, channel_count,
+                               samples_per_frame, flags, te);
 }
 #endif
 
@@ -1011,30 +1010,30 @@ struct wsola_plc_port
     pjmedia_port     base;
     pjmedia_wsola   *wsola;
     pjmedia_port    *gen_port;
-    int		     loss_pct;
-    pj_bool_t	     prev_lost;
+    int              loss_pct;
+    pj_bool_t        prev_lost;
 };
 
 
 static pj_status_t wsola_plc_get_frame(struct pjmedia_port *this_port, 
-				       pjmedia_frame *frame)
+                                       pjmedia_frame *frame)
 {
     struct wsola_plc_port *wp = (struct wsola_plc_port*)this_port;
     pj_status_t status;
 
 
     if ((pj_rand() % 100) > wp->loss_pct) {
-	status = pjmedia_port_get_frame(wp->gen_port, frame);
-	pj_assert(status == PJ_SUCCESS);
+        status = pjmedia_port_get_frame(wp->gen_port, frame);
+        pj_assert(status == PJ_SUCCESS);
 
-	status = pjmedia_wsola_save(wp->wsola, (short*)frame->buf, 
-				    wp->prev_lost);
-	pj_assert(status == PJ_SUCCESS);
+        status = pjmedia_wsola_save(wp->wsola, (short*)frame->buf, 
+                                    wp->prev_lost);
+        pj_assert(status == PJ_SUCCESS);
 
-	wp->prev_lost = PJ_FALSE;
+        wp->prev_lost = PJ_FALSE;
     } else {
-	status = pjmedia_wsola_generate(wp->wsola, (short*)frame->buf);
-	wp->prev_lost = PJ_TRUE;
+        status = pjmedia_wsola_generate(wp->wsola, (short*)frame->buf);
+        wp->prev_lost = PJ_TRUE;
     }
 
     return status;
@@ -1049,12 +1048,12 @@ static pj_status_t wsola_plc_on_destroy(struct pjmedia_port *this_port)
 }
 
 static pjmedia_port* create_wsola_plc(unsigned loss_pct,
-				      pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned flags,
-				      struct test_entry *te)
+                                      pj_pool_t *pool,
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned flags,
+                                      struct test_entry *te)
 {
     struct wsola_plc_port *wp;
     pj_str_t name = pj_str("wsola");
@@ -1069,20 +1068,20 @@ static pjmedia_port* create_wsola_plc(unsigned loss_pct,
     wp->base.get_frame = &wsola_plc_get_frame;
     wp->base.on_destroy = &wsola_plc_on_destroy;
     pjmedia_port_info_init(&wp->base.info, &name, 0x4123, clock_rate, 
-			   channel_count, 16, samples_per_frame);
+                           channel_count, 16, samples_per_frame);
 
     if (loss_pct == 0)
-	opt |= PJMEDIA_WSOLA_NO_PLC;
+        opt |= PJMEDIA_WSOLA_NO_PLC;
 
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame,
-				  channel_count, opt, &wp->wsola);
+                                  channel_count, opt, &wp->wsola);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     wp->gen_port = create_gen_port(pool, clock_rate, channel_count, 
-				   samples_per_frame, 100);
+                                   samples_per_frame, 100);
     if (wp->gen_port == NULL)
-	return NULL;
+        return NULL;
 
     return &wp->base;
 }
@@ -1090,75 +1089,75 @@ static pjmedia_port* create_wsola_plc(unsigned loss_pct,
 
 /* WSOLA PLC with 0% packet loss */
 static pjmedia_port* wsola_plc_0( pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_wsola_plc(0, pool, clock_rate, channel_count, 
-			    samples_per_frame, flags, te);
+                            samples_per_frame, flags, te);
 }
 
 
 /* WSOLA PLC with 2% packet loss */
 static pjmedia_port* wsola_plc_2( pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_wsola_plc(2, pool, clock_rate, channel_count, 
-			    samples_per_frame, flags, te);
+                            samples_per_frame, flags, te);
 }
 
 /* WSOLA PLC with 5% packet loss */
 static pjmedia_port* wsola_plc_5( pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_wsola_plc(5, pool, clock_rate, channel_count, 
-			    samples_per_frame, flags, te);
+                            samples_per_frame, flags, te);
 }
 
 /* WSOLA PLC with 10% packet loss */
 static pjmedia_port* wsola_plc_10(pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_wsola_plc(10, pool, clock_rate, channel_count, 
-			    samples_per_frame, flags, te);
+                            samples_per_frame, flags, te);
 }
 
 /* WSOLA PLC with 20% packet loss */
 static pjmedia_port* wsola_plc_20(pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_wsola_plc(20, pool, clock_rate, channel_count, 
-			    samples_per_frame, flags, te);
+                            samples_per_frame, flags, te);
 }
 
 /* WSOLA PLC with 50% packet loss */
 static pjmedia_port* wsola_plc_50(pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_wsola_plc(50, pool, clock_rate, channel_count, 
-			    samples_per_frame, flags, te);
+                            samples_per_frame, flags, te);
 }
 
 
@@ -1168,46 +1167,46 @@ static pjmedia_port* wsola_plc_50(pj_pool_t *pool,
 enum { CIRC_BUF_FRAME_CNT = 4 };
 struct wsola_discard_port
 {
-    pjmedia_port	 base;
-    pjmedia_port	*gen_port;
-    pjmedia_wsola	*wsola;
-    pjmedia_circ_buf	*circbuf;
-    unsigned		 discard_pct;
+    pjmedia_port         base;
+    pjmedia_port        *gen_port;
+    pjmedia_wsola       *wsola;
+    pjmedia_circ_buf    *circbuf;
+    unsigned             discard_pct;
 };
 
 
 static pj_status_t wsola_discard_get_frame(struct pjmedia_port *this_port, 
-					   pjmedia_frame *frame)
+                                           pjmedia_frame *frame)
 {
     struct wsola_discard_port *wp = (struct wsola_discard_port*)this_port;
     pj_status_t status = PJ_SUCCESS;
 
     while (pjmedia_circ_buf_get_len(wp->circbuf) <
-		PJMEDIA_PIA_SPF(&wp->base.info) * (CIRC_BUF_FRAME_CNT-1))
+                PJMEDIA_PIA_SPF(&wp->base.info) * (CIRC_BUF_FRAME_CNT-1))
     {
-	status = pjmedia_port_get_frame(wp->gen_port, frame);
-	pj_assert(status==PJ_SUCCESS);
+        status = pjmedia_port_get_frame(wp->gen_port, frame);
+        pj_assert(status==PJ_SUCCESS);
 
-	status = pjmedia_circ_buf_write(wp->circbuf, (short*)frame->buf, 
-					PJMEDIA_PIA_SPF(&wp->base.info));
-	pj_assert(status==PJ_SUCCESS);
+        status = pjmedia_circ_buf_write(wp->circbuf, (short*)frame->buf, 
+                                        PJMEDIA_PIA_SPF(&wp->base.info));
+        pj_assert(status==PJ_SUCCESS);
     }
     
     if ((pj_rand() % 100) < (int)wp->discard_pct) {
-	pj_int16_t *reg1, *reg2;
-	unsigned reg1_len, reg2_len;
-	unsigned del_cnt;
+        pj_int16_t *reg1, *reg2;
+        unsigned reg1_len, reg2_len;
+        unsigned del_cnt;
 
-	pjmedia_circ_buf_get_read_regions(wp->circbuf, &reg1, &reg1_len,
-					  &reg2, &reg2_len);
+        pjmedia_circ_buf_get_read_regions(wp->circbuf, &reg1, &reg1_len,
+                                          &reg2, &reg2_len);
 
-	del_cnt = PJMEDIA_PIA_SPF(&wp->base.info);
-	status = pjmedia_wsola_discard(wp->wsola, reg1, reg1_len, reg2, 
-				       reg2_len, &del_cnt);
-	pj_assert(status==PJ_SUCCESS);
+        del_cnt = PJMEDIA_PIA_SPF(&wp->base.info);
+        status = pjmedia_wsola_discard(wp->wsola, reg1, reg1_len, reg2, 
+                                       reg2_len, &del_cnt);
+        pj_assert(status==PJ_SUCCESS);
 
-	status = pjmedia_circ_buf_adv_read_ptr(wp->circbuf, del_cnt);
-	pj_assert(status==PJ_SUCCESS);
+        status = pjmedia_circ_buf_adv_read_ptr(wp->circbuf, del_cnt);
+        pj_assert(status==PJ_SUCCESS);
     }
 
     return status;
@@ -1223,12 +1222,12 @@ static pj_status_t wsola_discard_on_destroy(struct pjmedia_port *this_port)
 
 
 static pjmedia_port* create_wsola_discard(unsigned discard_pct,
-					  pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          pj_pool_t *pool,
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     struct wsola_discard_port *wp;
     pj_str_t name = pj_str("wsola");
@@ -1243,40 +1242,40 @@ static pjmedia_port* create_wsola_discard(unsigned discard_pct,
     wp->base.get_frame = &wsola_discard_get_frame;
     wp->base.on_destroy = &wsola_discard_on_destroy;
     pjmedia_port_info_init(&wp->base.info, &name, 0x4123, clock_rate, 
-			   channel_count, 16, samples_per_frame);
+                           channel_count, 16, samples_per_frame);
 
     if (discard_pct == 0)
-	opt |= PJMEDIA_WSOLA_NO_DISCARD;
+        opt |= PJMEDIA_WSOLA_NO_DISCARD;
 
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame,
-				  channel_count, opt, &wp->wsola);
+                                  channel_count, opt, &wp->wsola);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     wp->gen_port = create_gen_port(pool, clock_rate, channel_count, 
-				   samples_per_frame, 100);
+                                   samples_per_frame, 100);
     if (wp->gen_port == NULL)
-	return NULL;
+        return NULL;
 
     status = pjmedia_circ_buf_create(pool, samples_per_frame * CIRC_BUF_FRAME_CNT, 
-				     &wp->circbuf);
+                                     &wp->circbuf);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     /* fill up the circbuf */
     for (i=0; i<CIRC_BUF_FRAME_CNT; ++i) {
-	short pcm[320];
-	pjmedia_frame frm;
+        short pcm[320];
+        pjmedia_frame frm;
 
-	pj_assert(PJ_ARRAY_SIZE(pcm) >= samples_per_frame);
-	frm.buf = pcm;
-	frm.size = samples_per_frame * 2;
+        pj_assert(PJ_ARRAY_SIZE(pcm) >= samples_per_frame);
+        frm.buf = pcm;
+        frm.size = samples_per_frame * 2;
 
-	status = pjmedia_port_get_frame(wp->gen_port, &frm);
-	pj_assert(status==PJ_SUCCESS);
+        status = pjmedia_port_get_frame(wp->gen_port, &frm);
+        pj_assert(status==PJ_SUCCESS);
 
-	status = pjmedia_circ_buf_write(wp->circbuf, pcm, samples_per_frame);
-	pj_assert(status==PJ_SUCCESS);
+        status = pjmedia_circ_buf_write(wp->circbuf, pcm, samples_per_frame);
+        pj_assert(status==PJ_SUCCESS);
     }
 
     return &wp->base;
@@ -1285,62 +1284,62 @@ static pjmedia_port* create_wsola_discard(unsigned discard_pct,
 
 /* WSOLA with 2% discard rate */
 static pjmedia_port* wsola_discard_2( pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned flags,
-				      struct test_entry *te)
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned flags,
+                                      struct test_entry *te)
 {
     return create_wsola_discard(2, pool, clock_rate, channel_count, 
-			        samples_per_frame, flags, te);
+                                samples_per_frame, flags, te);
 }
 
 /* WSOLA with 5% discard rate */
 static pjmedia_port* wsola_discard_5( pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned flags,
-				      struct test_entry *te)
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned flags,
+                                      struct test_entry *te)
 {
     return create_wsola_discard(5, pool, clock_rate, channel_count, 
-			        samples_per_frame, flags, te);
+                                samples_per_frame, flags, te);
 }
 
 /* WSOLA with 10% discard rate */
 static pjmedia_port* wsola_discard_10(pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned flags,
-				      struct test_entry *te)
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned flags,
+                                      struct test_entry *te)
 {
     return create_wsola_discard(10, pool, clock_rate, channel_count, 
-			        samples_per_frame, flags, te);
+                                samples_per_frame, flags, te);
 }
 
 /* WSOLA with 20% discard rate */
 static pjmedia_port* wsola_discard_20(pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned flags,
-				      struct test_entry *te)
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned flags,
+                                      struct test_entry *te)
 {
     return create_wsola_discard(20, pool, clock_rate, channel_count, 
-			        samples_per_frame, flags, te);
+                                samples_per_frame, flags, te);
 }
 
 /* WSOLA with 50% discard rate */
 static pjmedia_port* wsola_discard_50(pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned flags,
-				      struct test_entry *te)
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned flags,
+                                      struct test_entry *te)
 {
     return create_wsola_discard(50, pool, clock_rate, channel_count, 
-			        samples_per_frame, flags, te);
+                                samples_per_frame, flags, te);
 }
 
 
@@ -1348,12 +1347,12 @@ static pjmedia_port* wsola_discard_50(pj_pool_t *pool,
 /***************************************************************************/
 
 static pjmedia_port* ec_create(unsigned ec_tail_msec,
-			       pj_pool_t *pool,
-			       unsigned clock_rate,
-			       unsigned channel_count,
-			       unsigned samples_per_frame,
-			       unsigned flags,
-			       struct test_entry *te)
+                               pj_pool_t *pool,
+                               unsigned clock_rate,
+                               unsigned channel_count,
+                               unsigned samples_per_frame,
+                               unsigned flags,
+                               struct test_entry *te)
 {
     pjmedia_port *gen_port, *ec_port;
     pj_status_t status;
@@ -1361,267 +1360,267 @@ static pjmedia_port* ec_create(unsigned ec_tail_msec,
     PJ_UNUSED_ARG(te);
 
     gen_port = create_gen_port(pool, clock_rate, channel_count, 
-			       samples_per_frame, 100);
+                               samples_per_frame, 100);
     if (gen_port == NULL)
-	return NULL;
+        return NULL;
 
     status = pjmedia_echo_port_create(pool, gen_port, ec_tail_msec, 0,
-				      flags, &ec_port);
+                                      flags, &ec_port);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     return ec_port;
 }
 
 /* EC with 100ms tail length */
 static pjmedia_port* ec_create_100(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(100, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* EC with 128ms tail length */
 static pjmedia_port* ec_create_128(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(128, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* EC with 200ms tail length */
 static pjmedia_port* ec_create_200(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(200, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* EC with 256ms tail length */
 static pjmedia_port* ec_create_256(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(256, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 
 /* EC with 400ms tail length */
 static pjmedia_port* ec_create_400(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(400, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* EC with 500ms tail length */
 static pjmedia_port* ec_create_500(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(500, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* EC with 512ms tail length */
 static pjmedia_port* ec_create_512(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(512, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* EC with 600ms tail length */
 static pjmedia_port* ec_create_600(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(600, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* EC with 800ms tail length */
 static pjmedia_port* ec_create_800(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = 0;
     return ec_create(800, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 
 
 /* Echo suppressor with 100ms tail length */
 static pjmedia_port* es_create_100(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(100, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* Echo suppressor with 128ms tail length */
 static pjmedia_port* es_create_128(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(128, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* Echo suppressor with 200ms tail length */
 static pjmedia_port* es_create_200(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(200, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* Echo suppressor with 256ms tail length */
 static pjmedia_port* es_create_256(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(256, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 
 /* Echo suppressor with 400ms tail length */
 static pjmedia_port* es_create_400(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(400, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* Echo suppressor with 500ms tail length */
 static pjmedia_port* es_create_500(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(500, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* Echo suppressor with 512ms tail length */
 static pjmedia_port* es_create_512(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(512, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* Echo suppressor with 600ms tail length */
 static pjmedia_port* es_create_600(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(600, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 /* Echo suppressor with 800ms tail length */
 static pjmedia_port* es_create_800(pj_pool_t *pool,
-				   unsigned clock_rate,
-				   unsigned channel_count,
-				   unsigned samples_per_frame,
-				   unsigned flags,
-				   struct test_entry *te)
+                                   unsigned clock_rate,
+                                   unsigned channel_count,
+                                   unsigned samples_per_frame,
+                                   unsigned flags,
+                                   struct test_entry *te)
 {
     flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(800, pool, clock_rate, channel_count, samples_per_frame,
-		     flags, te);
+                     flags, te);
 }
 
 
 /***************************************************************************/
 /* Tone generator, single frequency */
 static pjmedia_port* create_tonegen(unsigned freq1,
-				    unsigned freq2,
-				    pj_pool_t *pool,
-				    unsigned clock_rate,
-				    unsigned channel_count,
-				    unsigned samples_per_frame,
-				    unsigned flags,
-				    struct test_entry *te)
+                                    unsigned freq2,
+                                    pj_pool_t *pool,
+                                    unsigned clock_rate,
+                                    unsigned channel_count,
+                                    unsigned samples_per_frame,
+                                    unsigned flags,
+                                    struct test_entry *te)
 {
     pjmedia_port *tonegen;
     pjmedia_tone_desc tones[2];
@@ -1631,10 +1630,10 @@ static pjmedia_port* create_tonegen(unsigned freq1,
     PJ_UNUSED_ARG(te);
 
     status = pjmedia_tonegen_create(pool, clock_rate, channel_count,
-				    samples_per_frame, 16, 
-				    PJMEDIA_TONEGEN_LOOP, &tonegen);
+                                    samples_per_frame, 16, 
+                                    PJMEDIA_TONEGEN_LOOP, &tonegen);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     pj_bzero(tones, sizeof(tones));
     tones[0].freq1 = (short)freq1;
@@ -1647,35 +1646,35 @@ static pjmedia_port* create_tonegen(unsigned freq1,
     tones[1].off_msec = 100;
 
     status = pjmedia_tonegen_play(tonegen, PJ_ARRAY_SIZE(tones), tones, 
-				  PJMEDIA_TONEGEN_LOOP);
+                                  PJMEDIA_TONEGEN_LOOP);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     return tonegen;
 }
 
 /* Tonegen with single frequency */
 static pjmedia_port* create_tonegen1(pj_pool_t *pool,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     unsigned flags,
-				     struct test_entry *te)
+                                     unsigned clock_rate,
+                                     unsigned channel_count,
+                                     unsigned samples_per_frame,
+                                     unsigned flags,
+                                     struct test_entry *te)
 {
     return create_tonegen(400, 0, pool, clock_rate, channel_count,
-			  samples_per_frame, flags, te);
+                          samples_per_frame, flags, te);
 }
 
 /* Tonegen with dual frequency */
 static pjmedia_port* create_tonegen2(pj_pool_t *pool,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     unsigned flags,
-				     struct test_entry *te)
+                                     unsigned clock_rate,
+                                     unsigned channel_count,
+                                     unsigned samples_per_frame,
+                                     unsigned flags,
+                                     struct test_entry *te)
 {
     return create_tonegen(400, 440, pool, clock_rate, channel_count,
-			  samples_per_frame, flags, te);
+                          samples_per_frame, flags, te);
 }
 
 
@@ -1685,11 +1684,11 @@ static pjmedia_port* create_tonegen2(pj_pool_t *pool,
 
 struct stream_port
 {
-    pjmedia_port	 base;
-    pj_status_t	       (*codec_deinit)();
-    pjmedia_endpt	*endpt;
-    pjmedia_stream	*stream;
-    pjmedia_transport	*transport;
+    pjmedia_port         base;
+    pj_status_t        (*codec_deinit)();
+    pjmedia_endpt       *endpt;
+    pjmedia_stream      *stream;
+    pjmedia_transport   *transport;
 };
 
 
@@ -1706,17 +1705,17 @@ static void stream_port_custom_deinit(struct test_entry *te)
 
 #if HAS_AUDIO_CODECS
 static pjmedia_port* create_stream( pj_pool_t *pool,
-				    const char *codec,
-				    pj_status_t (*codec_init)(pjmedia_endpt*),
-				    pj_status_t (*codec_deinit)(),
-				    pj_bool_t srtp_enabled,
-				    pj_bool_t srtp_80,
-				    pj_bool_t srtp_auth,
-				    unsigned clock_rate,
-				    unsigned channel_count,
-				    unsigned samples_per_frame,
-				    unsigned flags,
-				    struct test_entry *te)
+                                    const char *codec,
+                                    pj_status_t (*codec_init)(pjmedia_endpt*),
+                                    pj_status_t (*codec_deinit)(),
+                                    pj_bool_t srtp_enabled,
+                                    pj_bool_t srtp_80,
+                                    pj_bool_t srtp_auth,
+                                    unsigned clock_rate,
+                                    unsigned channel_count,
+                                    unsigned samples_per_frame,
+                                    unsigned flags,
+                                    struct test_entry *te)
 {
     struct stream_port *sp;
     pj_str_t codec_id;
@@ -1732,7 +1731,7 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     codec_id = pj_str((char*)codec);
     sp = PJ_POOL_ZALLOC_T(pool, struct stream_port);
     pjmedia_port_info_init(&sp->base.info, &codec_id, 0x123456, clock_rate,
-			   channel_count, 16, samples_per_frame);
+                           channel_count, 16, samples_per_frame);
 
     te->pdata[0] = sp;
     te->custom_deinit = &stream_port_custom_deinit;
@@ -1740,24 +1739,24 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
 
     status = pjmedia_endpt_create(mem, NULL, 0, &sp->endpt);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     status = codec_init(sp->endpt);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     count = 1;
     status = pjmedia_codec_mgr_find_codecs_by_id(pjmedia_endpt_get_codec_mgr(sp->endpt),
-						 &codec_id, &count, ci, NULL);
+                                                 &codec_id, &count, ci, NULL);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
 
 
     status = pjmedia_codec_mgr_get_default_param(pjmedia_endpt_get_codec_mgr(sp->endpt),
-						 ci[0], &codec_param);
+                                                 ci[0], &codec_param);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     /* Create stream info */
     pj_bzero(&si, sizeof(si));
@@ -1778,57 +1777,57 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     /* Create loop transport */
     status = pjmedia_transport_loop_create(sp->endpt, &sp->transport);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
 #if PJMEDIA_HAS_SRTP
     if (srtp_enabled) {
-	pjmedia_srtp_setting opt;
-	pjmedia_srtp_crypto crypto;
-	pjmedia_transport *srtp;
+        pjmedia_srtp_setting opt;
+        pjmedia_srtp_crypto crypto;
+        pjmedia_transport *srtp;
 
-	pjmedia_srtp_setting_default(&opt);
-	opt.close_member_tp = PJ_TRUE;
-	opt.use = PJMEDIA_SRTP_MANDATORY;
+        pjmedia_srtp_setting_default(&opt);
+        opt.close_member_tp = PJ_TRUE;
+        opt.use = PJMEDIA_SRTP_MANDATORY;
 
-	status = pjmedia_transport_srtp_create(sp->endpt, sp->transport, &opt,
-					       &srtp);
-	if (status != PJ_SUCCESS)
-	    return NULL;
+        status = pjmedia_transport_srtp_create(sp->endpt, sp->transport, &opt,
+                                               &srtp);
+        if (status != PJ_SUCCESS)
+            return NULL;
 
-	pj_bzero(&crypto, sizeof(crypto));
-	if (srtp_80) {
-	    crypto.key = pj_str("123456789012345678901234567890");
-	    crypto.name = pj_str("AES_CM_128_HMAC_SHA1_80");
-	} else {
-	    crypto.key = pj_str("123456789012345678901234567890");
-	    crypto.name = pj_str("AES_CM_128_HMAC_SHA1_32");
-	}
+        pj_bzero(&crypto, sizeof(crypto));
+        if (srtp_80) {
+            crypto.key = pj_str("123456789012345678901234567890");
+            crypto.name = pj_str("AES_CM_128_HMAC_SHA1_80");
+        } else {
+            crypto.key = pj_str("123456789012345678901234567890");
+            crypto.name = pj_str("AES_CM_128_HMAC_SHA1_32");
+        }
 
-	if (!srtp_auth)
-	    crypto.flags = PJMEDIA_SRTP_NO_AUTHENTICATION;
+        if (!srtp_auth)
+            crypto.flags = PJMEDIA_SRTP_NO_AUTHENTICATION;
 
-	status = pjmedia_transport_srtp_start(srtp, &crypto, &crypto);
-	if (status != PJ_SUCCESS)
-	    return NULL;
+        status = pjmedia_transport_srtp_start(srtp, &crypto, &crypto);
+        if (status != PJ_SUCCESS)
+            return NULL;
 
-	sp->transport = srtp;
+        sp->transport = srtp;
     }
 #endif
 
     /* Create stream */
     status = pjmedia_stream_create(sp->endpt, pool, &si, sp->transport, NULL, 
-				   &sp->stream);
+                                   &sp->stream);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     /* Start stream */
     status = pjmedia_stream_start(sp->stream);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     status = pjmedia_stream_get_port(sp->stream, &port);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     return port;
 }
@@ -1837,205 +1836,205 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
 #if PJMEDIA_HAS_G711_CODEC
 /* G.711 stream, no SRTP */
 static pjmedia_port* create_stream_pcmu( pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned channel_count,
-					 unsigned samples_per_frame,
-					 unsigned flags,
-					 struct test_entry *te)
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
 {
     return create_stream(pool, "pcmu", &pjmedia_codec_g711_init, 
-			 &pjmedia_codec_g711_deinit,
-			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_g711_deinit,
+                         PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* G.711 stream, SRTP 32bit key no auth */
 static pjmedia_port* create_stream_pcmu_srtp32_no_auth( pj_pool_t *pool,
-							unsigned clock_rate,
-							unsigned channel_count,
-							unsigned samples_per_frame,
-							unsigned flags,
-							struct test_entry *te)
+                                                        unsigned clock_rate,
+                                                        unsigned channel_count,
+                                                        unsigned samples_per_frame,
+                                                        unsigned flags,
+                                                        struct test_entry *te)
 {
     return create_stream(pool, "pcmu", &pjmedia_codec_g711_init, 
-			 &pjmedia_codec_g711_deinit,
-			 PJ_TRUE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_g711_deinit,
+                         PJ_TRUE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* G.711 stream, SRTP 32bit key with auth */
 static pjmedia_port* create_stream_pcmu_srtp32_with_auth(pj_pool_t *pool,
-							 unsigned clock_rate,
-							 unsigned channel_count,
-							 unsigned samples_per_frame,
-							 unsigned flags,
-							 struct test_entry *te)
+                                                         unsigned clock_rate,
+                                                         unsigned channel_count,
+                                                         unsigned samples_per_frame,
+                                                         unsigned flags,
+                                                         struct test_entry *te)
 {
     return create_stream(pool, "pcmu", &pjmedia_codec_g711_init, 
-			 &pjmedia_codec_g711_deinit,
-			 PJ_TRUE, PJ_FALSE, PJ_TRUE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_g711_deinit,
+                         PJ_TRUE, PJ_FALSE, PJ_TRUE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* G.711 stream, SRTP 80bit key no auth */
 static pjmedia_port* create_stream_pcmu_srtp80_no_auth( pj_pool_t *pool,
-							unsigned clock_rate,
-							unsigned channel_count,
-							unsigned samples_per_frame,
-							unsigned flags,
-							struct test_entry *te)
+                                                        unsigned clock_rate,
+                                                        unsigned channel_count,
+                                                        unsigned samples_per_frame,
+                                                        unsigned flags,
+                                                        struct test_entry *te)
 {
     return create_stream(pool, "pcmu", &pjmedia_codec_g711_init, 
-			 &pjmedia_codec_g711_deinit,
-			 PJ_TRUE, PJ_TRUE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_g711_deinit,
+                         PJ_TRUE, PJ_TRUE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* G.711 stream, SRTP 80bit key with auth */
 static pjmedia_port* create_stream_pcmu_srtp80_with_auth(pj_pool_t *pool,
-							 unsigned clock_rate,
-							 unsigned channel_count,
-							 unsigned samples_per_frame,
-							 unsigned flags,
-							 struct test_entry *te)
+                                                         unsigned clock_rate,
+                                                         unsigned channel_count,
+                                                         unsigned samples_per_frame,
+                                                         unsigned flags,
+                                                         struct test_entry *te)
 {
     return create_stream(pool, "pcmu", &pjmedia_codec_g711_init, 
-			 &pjmedia_codec_g711_deinit,
-			 PJ_TRUE, PJ_TRUE, PJ_TRUE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_g711_deinit,
+                         PJ_TRUE, PJ_TRUE, PJ_TRUE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 #endif
 
 #if PJMEDIA_HAS_GSM_CODEC
 /* GSM stream */
 static pjmedia_port* create_stream_gsm(  pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned channel_count,
-					 unsigned samples_per_frame,
-					 unsigned flags,
-					 struct test_entry *te)
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
 {
     return create_stream(pool, "gsm", &pjmedia_codec_gsm_init, 
-			 &pjmedia_codec_gsm_deinit, 
-			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_gsm_deinit, 
+                         PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* GSM stream, SRTP 32bit, no auth */
 static pjmedia_port* create_stream_gsm_srtp32_no_auth(pj_pool_t *pool,
-						      unsigned clock_rate,
-						      unsigned channel_count,
-						      unsigned samples_per_frame,
-						      unsigned flags,
-						      struct test_entry *te)
+                                                      unsigned clock_rate,
+                                                      unsigned channel_count,
+                                                      unsigned samples_per_frame,
+                                                      unsigned flags,
+                                                      struct test_entry *te)
 {
     return create_stream(pool, "gsm", &pjmedia_codec_gsm_init, 
-			 &pjmedia_codec_gsm_deinit, 
-			 PJ_TRUE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_gsm_deinit, 
+                         PJ_TRUE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* GSM stream, SRTP 32bit, with auth */
 static pjmedia_port* create_stream_gsm_srtp32_with_auth(pj_pool_t *pool,
-						        unsigned clock_rate,
-						        unsigned channel_count,
-						        unsigned samples_per_frame,
-						        unsigned flags,
-						        struct test_entry *te)
+                                                        unsigned clock_rate,
+                                                        unsigned channel_count,
+                                                        unsigned samples_per_frame,
+                                                        unsigned flags,
+                                                        struct test_entry *te)
 {
     return create_stream(pool, "gsm", &pjmedia_codec_gsm_init, 
-			 &pjmedia_codec_gsm_deinit, 
-			 PJ_TRUE, PJ_FALSE, PJ_TRUE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_gsm_deinit, 
+                         PJ_TRUE, PJ_FALSE, PJ_TRUE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* GSM stream, SRTP 80bit, no auth */
 static pjmedia_port* create_stream_gsm_srtp80_no_auth(pj_pool_t *pool,
-						      unsigned clock_rate,
-						      unsigned channel_count,
-						      unsigned samples_per_frame,
-						      unsigned flags,
-						      struct test_entry *te)
+                                                      unsigned clock_rate,
+                                                      unsigned channel_count,
+                                                      unsigned samples_per_frame,
+                                                      unsigned flags,
+                                                      struct test_entry *te)
 {
     return create_stream(pool, "gsm", &pjmedia_codec_gsm_init, 
-			 &pjmedia_codec_gsm_deinit, 
-			 PJ_TRUE, PJ_TRUE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_gsm_deinit, 
+                         PJ_TRUE, PJ_TRUE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* GSM stream, SRTP 80bit, with auth */
 static pjmedia_port* create_stream_gsm_srtp80_with_auth(pj_pool_t *pool,
-						        unsigned clock_rate,
-						        unsigned channel_count,
-						        unsigned samples_per_frame,
-						        unsigned flags,
-						        struct test_entry *te)
+                                                        unsigned clock_rate,
+                                                        unsigned channel_count,
+                                                        unsigned samples_per_frame,
+                                                        unsigned flags,
+                                                        struct test_entry *te)
 {
     return create_stream(pool, "gsm", &pjmedia_codec_gsm_init, 
-			 &pjmedia_codec_gsm_deinit, 
-			 PJ_TRUE, PJ_TRUE, PJ_TRUE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_gsm_deinit, 
+                         PJ_TRUE, PJ_TRUE, PJ_TRUE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 #endif
 
 #if PJMEDIA_HAS_G722_CODEC
 /* G722 stream */
 static pjmedia_port* create_stream_g722( pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned channel_count,
-					 unsigned samples_per_frame,
-					 unsigned flags,
-					 struct test_entry *te)
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
 {
     return create_stream(pool, "g722", &pjmedia_codec_g722_init, 
-			 &pjmedia_codec_g722_deinit, 
-			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_g722_deinit, 
+                         PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 #endif
 
 #if PJMEDIA_HAS_G7221_CODEC
 /* G722.1 stream */
 static pjmedia_port* create_stream_g7221( pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned flags,
-					  struct test_entry *te)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned flags,
+                                          struct test_entry *te)
 {
     return create_stream(pool, "g7221/16000", &pjmedia_codec_g7221_init, 
-			 &pjmedia_codec_g7221_deinit, 
-			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_g7221_deinit, 
+                         PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
 
 /* G722.1 Annex C stream */
 static pjmedia_port* create_stream_g7221c( pj_pool_t *pool,
-					   unsigned clock_rate,
-					   unsigned channel_count,
-					   unsigned samples_per_frame,
-					   unsigned flags,
-					   struct test_entry *te)
+                                           unsigned clock_rate,
+                                           unsigned channel_count,
+                                           unsigned samples_per_frame,
+                                           unsigned flags,
+                                           struct test_entry *te)
 {
     return create_stream(pool, "g7221/32000", &pjmedia_codec_g7221_init,
-			 &pjmedia_codec_g7221_deinit, 
-			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_g7221_deinit, 
+                         PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
-#endif	/* PJMEDIA_HAS_G7221_CODEC */ 
+#endif  /* PJMEDIA_HAS_G7221_CODEC */ 
 
 /* AMR-NB stream */
 #if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
@@ -2047,12 +2046,12 @@ static pjmedia_port* create_stream_amr( pj_pool_t *pool,
                                         struct test_entry *te)
 {
     return create_stream(pool, "AMR/8000", &pjmedia_codec_opencore_amrnb_init, 
-			 &pjmedia_codec_opencore_amrnb_deinit, 
-			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_opencore_amrnb_deinit, 
+                         PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
-#endif	/* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
+#endif  /* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
 
 /* AMR-WB stream */
 #if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
@@ -2065,27 +2064,27 @@ static pjmedia_port* create_stream_amrwb( pj_pool_t *pool,
 {
     return create_stream(pool, "AMR/16000",
                          &pjmedia_codec_opencore_amr_init_default,
-			 &pjmedia_codec_opencore_amr_deinit,
-			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
-			 clock_rate, channel_count,
-			 samples_per_frame, flags, te);
+                         &pjmedia_codec_opencore_amr_deinit,
+                         PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                         clock_rate, channel_count,
+                         samples_per_frame, flags, te);
 }
-#endif	/* PJMEDIA_HAS_OPENCORE_AMRWB_CODEC */
+#endif  /* PJMEDIA_HAS_OPENCORE_AMRWB_CODEC */
 
 /***************************************************************************/
 /* Delay buffer */
 enum {DELAY_BUF_MAX_DELAY = 80};
 struct delaybuf_port
 {
-    pjmedia_port	 base;
+    pjmedia_port         base;
     pjmedia_delay_buf   *delaybuf;
-    pjmedia_port	*gen_port;
-    int			 drift_pct;
+    pjmedia_port        *gen_port;
+    int                  drift_pct;
 };
 
 
 static pj_status_t delaybuf_get_frame(struct pjmedia_port *this_port, 
-				      pjmedia_frame *frame)
+                                      pjmedia_frame *frame)
 {
     struct delaybuf_port *dp = (struct delaybuf_port*)this_port;
     pj_status_t status;
@@ -2095,20 +2094,20 @@ static pj_status_t delaybuf_get_frame(struct pjmedia_port *this_port,
 
     /* Additional GET when drift_pct is negative */
     if (dp->drift_pct < 0) {
-	int rnd;
-	rnd = pj_rand() % 100;
+        int rnd;
+        rnd = pj_rand() % 100;
 
-	if (rnd < -dp->drift_pct) {
-	    status = pjmedia_delay_buf_get(dp->delaybuf, (pj_int16_t*)frame->buf);
-	    pj_assert(status == PJ_SUCCESS);
-	}
+        if (rnd < -dp->drift_pct) {
+            status = pjmedia_delay_buf_get(dp->delaybuf, (pj_int16_t*)frame->buf);
+            pj_assert(status == PJ_SUCCESS);
+        }
     }
 
     return status;
 }
 
 static pj_status_t delaybuf_put_frame(struct pjmedia_port *this_port, 
-				      pjmedia_frame *frame)
+                                      pjmedia_frame *frame)
 {
     struct delaybuf_port *dp = (struct delaybuf_port*)this_port;
     pj_status_t status;
@@ -2121,15 +2120,15 @@ static pj_status_t delaybuf_put_frame(struct pjmedia_port *this_port,
 
     /* Additional PUT when drift_pct is possitive */
     if (dp->drift_pct > 0) {
-	int rnd;
-	rnd = pj_rand() % 100;
+        int rnd;
+        rnd = pj_rand() % 100;
 
-	if (rnd < dp->drift_pct) {
-	    status = pjmedia_port_get_frame(dp->gen_port, &f);
-	    pj_assert(status == PJ_SUCCESS);
-	    status = pjmedia_delay_buf_put(dp->delaybuf, (pj_int16_t*)f.buf);
-	    pj_assert(status == PJ_SUCCESS);
-	}
+        if (rnd < dp->drift_pct) {
+            status = pjmedia_port_get_frame(dp->gen_port, &f);
+            pj_assert(status == PJ_SUCCESS);
+            status = pjmedia_delay_buf_put(dp->delaybuf, (pj_int16_t*)f.buf);
+            pj_assert(status == PJ_SUCCESS);
+        }
     }
 
     return status;
@@ -2144,12 +2143,12 @@ static pj_status_t delaybuf_on_destroy(struct pjmedia_port *this_port)
 }
 
 static pjmedia_port* create_delaybuf(int drift_pct,
-				     pj_pool_t *pool,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     unsigned flags,
-				     struct test_entry *te)
+                                     pj_pool_t *pool,
+                                     unsigned clock_rate,
+                                     unsigned channel_count,
+                                     unsigned samples_per_frame,
+                                     unsigned flags,
+                                     struct test_entry *te)
 {
     struct delaybuf_port *dp;
     pj_str_t name = pj_str("delaybuf");
@@ -2165,19 +2164,19 @@ static pjmedia_port* create_delaybuf(int drift_pct,
     dp->base.put_frame = &delaybuf_put_frame;
     dp->base.on_destroy = &delaybuf_on_destroy;
     pjmedia_port_info_init(&dp->base.info, &name, 0x5678, clock_rate, 
-			   channel_count, 16, samples_per_frame);
+                           channel_count, 16, samples_per_frame);
 
     status = pjmedia_delay_buf_create(pool, "mips_test", clock_rate, 
-				      samples_per_frame, channel_count, 
-				      DELAY_BUF_MAX_DELAY,
-				      opt, &dp->delaybuf);
+                                      samples_per_frame, channel_count, 
+                                      DELAY_BUF_MAX_DELAY,
+                                      opt, &dp->delaybuf);
     if (status != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     dp->gen_port = create_gen_port(pool, clock_rate, channel_count, 
-				   samples_per_frame, 100);
+                                   samples_per_frame, 100);
     if (dp->gen_port == NULL)
-	return NULL;
+        return NULL;
 
     return &dp->base;
 }
@@ -2185,111 +2184,111 @@ static pjmedia_port* create_delaybuf(int drift_pct,
 
 /* Delay buffer without drift */
 static pjmedia_port* delaybuf_0( pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(0, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 
 /* Delay buffer with 2% drift */
 static pjmedia_port* delaybuf_p2( pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(2, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 /* Delay buffer with 5% drift */
 static pjmedia_port* delaybuf_p5( pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(5, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 /* Delay buffer with 10% drift */
 static pjmedia_port* delaybuf_p10(pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(10, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 /* Delay buffer with 20% drift */
 static pjmedia_port* delaybuf_p20(pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(20, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 /* Delay buffer with -2% drift */
 static pjmedia_port* delaybuf_n2( pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(-2, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 /* Delay buffer with -5% drift */
 static pjmedia_port* delaybuf_n5( pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(-5, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 /* Delay buffer with -10% drift */
 static pjmedia_port* delaybuf_n10(pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(-10, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 /* Delay buffer with -20% drift */
 static pjmedia_port* delaybuf_n20(pj_pool_t *pool,
-				  unsigned clock_rate,
-				  unsigned channel_count,
-				  unsigned samples_per_frame,
-				  unsigned flags,
-				  struct test_entry *te)
+                                  unsigned clock_rate,
+                                  unsigned channel_count,
+                                  unsigned samples_per_frame,
+                                  unsigned flags,
+                                  struct test_entry *te)
 {
     return create_delaybuf(-20, pool, clock_rate, channel_count, 
-			   samples_per_frame, flags, te);
+                           samples_per_frame, flags, te);
 }
 
 
@@ -2310,71 +2309,71 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     pool = pj_pool_create(mem, "pool", 1024, 1024, NULL);
     port = e->init(pool, clock_rate, 1, samples_per_frame, 0, e);
     if (port == NULL) {
-	t0.u64 = 0;
-	pj_pool_release(pool);
-	PJ_LOG(1,(THIS_FILE, " init error"));
-	return t0;
+        t0.u64 = 0;
+        pj_pool_release(pool);
+        PJ_LOG(1,(THIS_FILE, " init error"));
+        return t0;
     }
 
     /* Port may decide to use different ptime (e.g. iLBC) */
     samples_per_frame = PJMEDIA_PIA_SPF(&port->info);
 
     gen_port = create_gen_port(pool, clock_rate, 1, 
-			       samples_per_frame, 100);
+                               samples_per_frame, 100);
     if (gen_port == NULL) {
-	t0.u64 = 0;
-	pj_pool_release(pool);
-	return t0;
+        t0.u64 = 0;
+        pj_pool_release(pool);
+        return t0;
     }
 
     pj_get_timestamp(&t0);
     for (j=0; j<DURATION*clock_rate/samples_per_frame/1000; ++j) {
-	pjmedia_frame frm;
+        pjmedia_frame frm;
 
-	if (e->valid_op==OP_GET_PUT) {
-	    frm.buf = (void*)pcm;
-	    frm.size = samples_per_frame * 2;
-	    frm.type = PJMEDIA_FRAME_TYPE_NONE;
+        if (e->valid_op==OP_GET_PUT) {
+            frm.buf = (void*)pcm;
+            frm.size = samples_per_frame * 2;
+            frm.type = PJMEDIA_FRAME_TYPE_NONE;
 
-	    status = pjmedia_port_get_frame(port, &frm);
-	    pj_assert(status == PJ_SUCCESS);
+            status = pjmedia_port_get_frame(port, &frm);
+            pj_assert(status == PJ_SUCCESS);
 
-	    status = pjmedia_port_put_frame(port, &frm);
-	    pj_assert(status == PJ_SUCCESS);
+            status = pjmedia_port_put_frame(port, &frm);
+            pj_assert(status == PJ_SUCCESS);
 
-	} else if (e->valid_op == OP_GET) {
-	    frm.buf = (void*)pcm;
-	    frm.size = samples_per_frame * 2;
-	    frm.type = PJMEDIA_FRAME_TYPE_NONE;
+        } else if (e->valid_op == OP_GET) {
+            frm.buf = (void*)pcm;
+            frm.size = samples_per_frame * 2;
+            frm.type = PJMEDIA_FRAME_TYPE_NONE;
 
-	    status = pjmedia_port_get_frame(port, &frm);
-	    pj_assert(status == PJ_SUCCESS);
+            status = pjmedia_port_get_frame(port, &frm);
+            pj_assert(status == PJ_SUCCESS);
 
-	} else if (e->valid_op == OP_PUT) {
-	    frm.buf = (void*)pcm;
-	    frm.size = samples_per_frame * 2;
-	    frm.type = PJMEDIA_FRAME_TYPE_NONE;
+        } else if (e->valid_op == OP_PUT) {
+            frm.buf = (void*)pcm;
+            frm.size = samples_per_frame * 2;
+            frm.type = PJMEDIA_FRAME_TYPE_NONE;
 
-	    status = pjmedia_port_get_frame(gen_port, &frm);
-	    pj_assert(status == PJ_SUCCESS);
+            status = pjmedia_port_get_frame(gen_port, &frm);
+            pj_assert(status == PJ_SUCCESS);
 
-	    status = pjmedia_port_put_frame(port, &frm);
-	    pj_assert(status == PJ_SUCCESS);
+            status = pjmedia_port_put_frame(port, &frm);
+            pj_assert(status == PJ_SUCCESS);
 
-	} else if (e->valid_op == OP_PUT_GET) {
-	    frm.buf = (void*)pcm;
-	    frm.size = samples_per_frame * 2;
-	    frm.type = PJMEDIA_FRAME_TYPE_NONE;
+        } else if (e->valid_op == OP_PUT_GET) {
+            frm.buf = (void*)pcm;
+            frm.size = samples_per_frame * 2;
+            frm.type = PJMEDIA_FRAME_TYPE_NONE;
 
-	    status = pjmedia_port_get_frame(gen_port, &frm);
-	    pj_assert(status == PJ_SUCCESS);
+            status = pjmedia_port_get_frame(gen_port, &frm);
+            pj_assert(status == PJ_SUCCESS);
 
-	    status = pjmedia_port_put_frame(port, &frm);
-	    pj_assert(status == PJ_SUCCESS);
+            status = pjmedia_port_put_frame(port, &frm);
+            pj_assert(status == PJ_SUCCESS);
 
-	    status = pjmedia_port_get_frame(port, &frm);
-	    pj_assert(status == PJ_SUCCESS);
-	}
+            status = pjmedia_port_get_frame(port, &frm);
+            pj_assert(status == PJ_SUCCESS);
+        }
     }
     PJ_UNUSED_ARG(status);
     pj_get_timestamp(&t1);
@@ -2382,7 +2381,7 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     pj_sub_timestamp(&t1, &t0);
 
     if (e->custom_deinit)
-	e->custom_deinit(e);
+        e->custom_deinit(e);
 
     pjmedia_port_destroy(port);
     pj_pool_release(pool);
@@ -2394,111 +2393,111 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
 int mips_test(void)
 {
     struct test_entry entries[] = {
-	{ "get from memplayer", OP_GET, K8|K16, &gen_port_test_init},
-	{ "conference bridge with 1 call", OP_GET_PUT, K8|K16, &conf1_test_init},
-	{ "conference bridge with 2 calls", OP_GET_PUT, K8|K16, &conf2_test_init},
-	{ "conference bridge with 4 calls", OP_GET_PUT, K8|K16, &conf4_test_init},
-	{ "conference bridge with 8 calls", OP_GET_PUT, K8|K16, &conf8_test_init},
-	{ "conference bridge with 16 calls", OP_GET_PUT, K8|K16, &conf16_test_init},
-	{ "upsample+downsample - linear", OP_GET, K8|K16, &linear_resample},
-	{ "upsample+downsample - small filter", OP_GET, K8|K16, &small_filt_resample},
-	{ "upsample+downsample - large filter", OP_GET, K8|K16, &large_filt_resample},
-	{ "WSOLA PLC - 0% loss", OP_GET, K8|K16, &wsola_plc_0},
-	{ "WSOLA PLC - 2% loss", OP_GET, K8|K16, &wsola_plc_2},
-	{ "WSOLA PLC - 5% loss", OP_GET, K8|K16, &wsola_plc_5},
-	{ "WSOLA PLC - 10% loss", OP_GET, K8|K16, &wsola_plc_10},
-	{ "WSOLA PLC - 20% loss", OP_GET, K8|K16, &wsola_plc_20},
-	{ "WSOLA PLC - 50% loss", OP_GET, K8|K16, &wsola_plc_50},
-	{ "WSOLA discard 2% excess", OP_GET, K8|K16, &wsola_discard_2},
-	{ "WSOLA discard 5% excess", OP_GET, K8|K16, &wsola_discard_5},
-	{ "WSOLA discard 10% excess", OP_GET, K8|K16, &wsola_discard_10},
-	{ "WSOLA discard 20% excess", OP_GET, K8|K16, &wsola_discard_20},
-	{ "WSOLA discard 50% excess", OP_GET, K8|K16, &wsola_discard_50},
-	{ "Delay buffer", OP_GET_PUT, K8|K16, &delaybuf_0},
-	{ "Delay buffer - drift -2%", OP_GET_PUT, K8|K16, &delaybuf_n2},
-	{ "Delay buffer - drift -5%", OP_GET_PUT, K8|K16, &delaybuf_n5},
-	{ "Delay buffer - drift -10%", OP_GET_PUT, K8|K16, &delaybuf_n10},
-	{ "Delay buffer - drift -20%", OP_GET_PUT, K8|K16, &delaybuf_n20},
-	{ "Delay buffer - drift +2%", OP_GET_PUT, K8|K16, &delaybuf_p2},
-	{ "Delay buffer - drift +5%", OP_GET_PUT, K8|K16, &delaybuf_p5},
-	{ "Delay buffer - drift +10%", OP_GET_PUT, K8|K16, &delaybuf_p10},
-	{ "Delay buffer - drift +20%", OP_GET_PUT, K8|K16, &delaybuf_p20},
-	{ "echo canceller 100ms tail len", OP_GET_PUT, K8|K16, &ec_create_100},
-	{ "echo canceller 128ms tail len", OP_GET_PUT, K8|K16, &ec_create_128},
-	{ "echo canceller 200ms tail len", OP_GET_PUT, K8|K16, &ec_create_200},
-	{ "echo canceller 256ms tail len", OP_GET_PUT, K8|K16, &ec_create_256},
-	{ "echo canceller 400ms tail len", OP_GET_PUT, K8|K16, &ec_create_400},
-	{ "echo canceller 500ms tail len", OP_GET_PUT, K8|K16, &ec_create_500},
-	{ "echo canceller 512ms tail len", OP_GET_PUT, K8|K16, &ec_create_512},
-	{ "echo canceller 600ms tail len", OP_GET_PUT, K8|K16, &ec_create_600},
-	{ "echo canceller 800ms tail len", OP_GET_PUT, K8|K16, &ec_create_800},
-	{ "echo suppressor 100ms tail len", OP_GET_PUT, K8|K16, &es_create_100},
-	{ "echo suppressor 128ms tail len", OP_GET_PUT, K8|K16, &es_create_128},
-	{ "echo suppressor 200ms tail len", OP_GET_PUT, K8|K16, &es_create_200},
-	{ "echo suppressor 256ms tail len", OP_GET_PUT, K8|K16, &es_create_256},
-	{ "echo suppressor 400ms tail len", OP_GET_PUT, K8|K16, &es_create_400},
-	{ "echo suppressor 500ms tail len", OP_GET_PUT, K8|K16, &es_create_500},
-	{ "echo suppressor 512ms tail len", OP_GET_PUT, K8|K16, &es_create_512},
-	{ "echo suppressor 600ms tail len", OP_GET_PUT, K8|K16, &es_create_600},
-	{ "echo suppressor 800ms tail len", OP_GET_PUT, K8|K16, &es_create_800},
-	{ "tone generator with single freq", OP_GET, K8|K16, &create_tonegen1},
-	{ "tone generator with dual freq", OP_GET, K8|K16, &create_tonegen2},
+        { "get from memplayer", OP_GET, K8|K16, &gen_port_test_init},
+        { "conference bridge with 1 call", OP_GET_PUT, K8|K16, &conf1_test_init},
+        { "conference bridge with 2 calls", OP_GET_PUT, K8|K16, &conf2_test_init},
+        { "conference bridge with 4 calls", OP_GET_PUT, K8|K16, &conf4_test_init},
+        { "conference bridge with 8 calls", OP_GET_PUT, K8|K16, &conf8_test_init},
+        { "conference bridge with 16 calls", OP_GET_PUT, K8|K16, &conf16_test_init},
+        { "upsample+downsample - linear", OP_GET, K8|K16, &linear_resample},
+        { "upsample+downsample - small filter", OP_GET, K8|K16, &small_filt_resample},
+        { "upsample+downsample - large filter", OP_GET, K8|K16, &large_filt_resample},
+        { "WSOLA PLC - 0% loss", OP_GET, K8|K16, &wsola_plc_0},
+        { "WSOLA PLC - 2% loss", OP_GET, K8|K16, &wsola_plc_2},
+        { "WSOLA PLC - 5% loss", OP_GET, K8|K16, &wsola_plc_5},
+        { "WSOLA PLC - 10% loss", OP_GET, K8|K16, &wsola_plc_10},
+        { "WSOLA PLC - 20% loss", OP_GET, K8|K16, &wsola_plc_20},
+        { "WSOLA PLC - 50% loss", OP_GET, K8|K16, &wsola_plc_50},
+        { "WSOLA discard 2% excess", OP_GET, K8|K16, &wsola_discard_2},
+        { "WSOLA discard 5% excess", OP_GET, K8|K16, &wsola_discard_5},
+        { "WSOLA discard 10% excess", OP_GET, K8|K16, &wsola_discard_10},
+        { "WSOLA discard 20% excess", OP_GET, K8|K16, &wsola_discard_20},
+        { "WSOLA discard 50% excess", OP_GET, K8|K16, &wsola_discard_50},
+        { "Delay buffer", OP_GET_PUT, K8|K16, &delaybuf_0},
+        { "Delay buffer - drift -2%", OP_GET_PUT, K8|K16, &delaybuf_n2},
+        { "Delay buffer - drift -5%", OP_GET_PUT, K8|K16, &delaybuf_n5},
+        { "Delay buffer - drift -10%", OP_GET_PUT, K8|K16, &delaybuf_n10},
+        { "Delay buffer - drift -20%", OP_GET_PUT, K8|K16, &delaybuf_n20},
+        { "Delay buffer - drift +2%", OP_GET_PUT, K8|K16, &delaybuf_p2},
+        { "Delay buffer - drift +5%", OP_GET_PUT, K8|K16, &delaybuf_p5},
+        { "Delay buffer - drift +10%", OP_GET_PUT, K8|K16, &delaybuf_p10},
+        { "Delay buffer - drift +20%", OP_GET_PUT, K8|K16, &delaybuf_p20},
+        { "echo canceller 100ms tail len", OP_GET_PUT, K8|K16, &ec_create_100},
+        { "echo canceller 128ms tail len", OP_GET_PUT, K8|K16, &ec_create_128},
+        { "echo canceller 200ms tail len", OP_GET_PUT, K8|K16, &ec_create_200},
+        { "echo canceller 256ms tail len", OP_GET_PUT, K8|K16, &ec_create_256},
+        { "echo canceller 400ms tail len", OP_GET_PUT, K8|K16, &ec_create_400},
+        { "echo canceller 500ms tail len", OP_GET_PUT, K8|K16, &ec_create_500},
+        { "echo canceller 512ms tail len", OP_GET_PUT, K8|K16, &ec_create_512},
+        { "echo canceller 600ms tail len", OP_GET_PUT, K8|K16, &ec_create_600},
+        { "echo canceller 800ms tail len", OP_GET_PUT, K8|K16, &ec_create_800},
+        { "echo suppressor 100ms tail len", OP_GET_PUT, K8|K16, &es_create_100},
+        { "echo suppressor 128ms tail len", OP_GET_PUT, K8|K16, &es_create_128},
+        { "echo suppressor 200ms tail len", OP_GET_PUT, K8|K16, &es_create_200},
+        { "echo suppressor 256ms tail len", OP_GET_PUT, K8|K16, &es_create_256},
+        { "echo suppressor 400ms tail len", OP_GET_PUT, K8|K16, &es_create_400},
+        { "echo suppressor 500ms tail len", OP_GET_PUT, K8|K16, &es_create_500},
+        { "echo suppressor 512ms tail len", OP_GET_PUT, K8|K16, &es_create_512},
+        { "echo suppressor 600ms tail len", OP_GET_PUT, K8|K16, &es_create_600},
+        { "echo suppressor 800ms tail len", OP_GET_PUT, K8|K16, &es_create_800},
+        { "tone generator with single freq", OP_GET, K8|K16, &create_tonegen1},
+        { "tone generator with dual freq", OP_GET, K8|K16, &create_tonegen2},
 #if PJMEDIA_HAS_G711_CODEC
-	{ "codec encode/decode - G.711", OP_PUT, K8, &g711_encode_decode},
+        { "codec encode/decode - G.711", OP_PUT, K8, &g711_encode_decode},
 #endif
 #if PJMEDIA_HAS_G722_CODEC
-	{ "codec encode/decode - G.722", OP_PUT, K16, &g722_encode_decode},
+        { "codec encode/decode - G.722", OP_PUT, K16, &g722_encode_decode},
 #endif
 #if PJMEDIA_HAS_GSM_CODEC
-	{ "codec encode/decode - GSM", OP_PUT, K8, &gsm_encode_decode},
+        { "codec encode/decode - GSM", OP_PUT, K8, &gsm_encode_decode},
 #endif
 #if PJMEDIA_HAS_ILBC_CODEC
-	{ "codec encode/decode - iLBC", OP_PUT, K8, &ilbc_encode_decode},
+        { "codec encode/decode - iLBC", OP_PUT, K8, &ilbc_encode_decode},
 #endif
 #if PJMEDIA_HAS_SPEEX_CODEC
-	{ "codec encode/decode - Speex 8Khz", OP_PUT, K8, &speex8_encode_decode},
-	{ "codec encode/decode - Speex 16Khz", OP_PUT, K16, &speex16_encode_decode},
+        { "codec encode/decode - Speex 8Khz", OP_PUT, K8, &speex8_encode_decode},
+        { "codec encode/decode - Speex 16Khz", OP_PUT, K16, &speex16_encode_decode},
 #endif
 #if PJMEDIA_HAS_G7221_CODEC
-	{ "codec encode/decode - G.722.1", OP_PUT, K16, &g7221_encode_decode},
-	{ "codec encode/decode - G.722.1c", OP_PUT, K32, &g7221c_encode_decode},
+        { "codec encode/decode - G.722.1", OP_PUT, K16, &g7221_encode_decode},
+        { "codec encode/decode - G.722.1c", OP_PUT, K32, &g7221c_encode_decode},
 #endif
 #if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
-	{ "codec encode/decode - AMR-NB", OP_PUT, K8, &amr_encode_decode},
+        { "codec encode/decode - AMR-NB", OP_PUT, K8, &amr_encode_decode},
 #endif
 #if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
-	{ "codec encode/decode - AMR-WB", OP_PUT, K16, &amrwb_encode_decode},
+        { "codec encode/decode - AMR-WB", OP_PUT, K16, &amrwb_encode_decode},
 #endif
 #if PJMEDIA_HAS_L16_CODEC
-	{ "codec encode/decode - L16/8000/1", OP_PUT, K8, &l16_8_encode_decode},
-	{ "codec encode/decode - L16/16000/1", OP_PUT, K16, &l16_16_encode_decode},
+        { "codec encode/decode - L16/8000/1", OP_PUT, K8, &l16_8_encode_decode},
+        { "codec encode/decode - L16/16000/1", OP_PUT, K16, &l16_16_encode_decode},
 #endif
 #if PJMEDIA_HAS_G711_CODEC
-	{ "stream TX/RX - G.711", OP_PUT_GET, K8, &create_stream_pcmu},
-	{ "stream TX/RX - G.711 SRTP 32bit", OP_PUT_GET, K8, &create_stream_pcmu_srtp32_no_auth},
-	{ "stream TX/RX - G.711 SRTP 32bit +auth", OP_PUT_GET, K8, &create_stream_pcmu_srtp32_with_auth},
-	{ "stream TX/RX - G.711 SRTP 80bit", OP_PUT_GET, K8, &create_stream_pcmu_srtp80_no_auth},
-	{ "stream TX/RX - G.711 SRTP 80bit +auth", OP_PUT_GET, K8, &create_stream_pcmu_srtp80_with_auth},
+        { "stream TX/RX - G.711", OP_PUT_GET, K8, &create_stream_pcmu},
+        { "stream TX/RX - G.711 SRTP 32bit", OP_PUT_GET, K8, &create_stream_pcmu_srtp32_no_auth},
+        { "stream TX/RX - G.711 SRTP 32bit +auth", OP_PUT_GET, K8, &create_stream_pcmu_srtp32_with_auth},
+        { "stream TX/RX - G.711 SRTP 80bit", OP_PUT_GET, K8, &create_stream_pcmu_srtp80_no_auth},
+        { "stream TX/RX - G.711 SRTP 80bit +auth", OP_PUT_GET, K8, &create_stream_pcmu_srtp80_with_auth},
 #endif
 #if PJMEDIA_HAS_G722_CODEC
-	{ "stream TX/RX - G.722", OP_PUT_GET, K16, &create_stream_g722},
+        { "stream TX/RX - G.722", OP_PUT_GET, K16, &create_stream_g722},
 #endif
 #if PJMEDIA_HAS_GSM_CODEC
-	{ "stream TX/RX - GSM", OP_PUT_GET, K8, &create_stream_gsm},
-	{ "stream TX/RX - GSM SRTP 32bit", OP_PUT_GET, K8, &create_stream_gsm_srtp32_no_auth},
-	{ "stream TX/RX - GSM SRTP 32bit + auth", OP_PUT_GET, K8, &create_stream_gsm_srtp32_with_auth},
-	{ "stream TX/RX - GSM SRTP 80bit", OP_PUT_GET, K8, &create_stream_gsm_srtp80_no_auth},
-	{ "stream TX/RX - GSM SRTP 80bit + auth", OP_PUT_GET, K8, &create_stream_gsm_srtp80_with_auth},
+        { "stream TX/RX - GSM", OP_PUT_GET, K8, &create_stream_gsm},
+        { "stream TX/RX - GSM SRTP 32bit", OP_PUT_GET, K8, &create_stream_gsm_srtp32_no_auth},
+        { "stream TX/RX - GSM SRTP 32bit + auth", OP_PUT_GET, K8, &create_stream_gsm_srtp32_with_auth},
+        { "stream TX/RX - GSM SRTP 80bit", OP_PUT_GET, K8, &create_stream_gsm_srtp80_no_auth},
+        { "stream TX/RX - GSM SRTP 80bit + auth", OP_PUT_GET, K8, &create_stream_gsm_srtp80_with_auth},
 #endif
 #if PJMEDIA_HAS_G7221_CODEC
-	{ "stream TX/RX - G.722.1", OP_PUT_GET, K16, &create_stream_g7221},
-	{ "stream TX/RX - G.722.1c", OP_PUT_GET, K32, &create_stream_g7221c},
+        { "stream TX/RX - G.722.1", OP_PUT_GET, K16, &create_stream_g7221},
+        { "stream TX/RX - G.722.1c", OP_PUT_GET, K32, &create_stream_g7221c},
 #endif
 #if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
-	{ "stream TX/RX - AMR-NB", OP_PUT_GET, K8, &create_stream_amr},
+        { "stream TX/RX - AMR-NB", OP_PUT_GET, K8, &create_stream_amr},
 #endif
 #if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
-	{ "stream TX/RX - AMR-WB", OP_PUT_GET, K16, &create_stream_amrwb},
+        { "stream TX/RX - AMR-WB", OP_PUT_GET, K16, &create_stream_amrwb},
 #endif
     };
 
@@ -2510,51 +2509,51 @@ int mips_test(void)
     PJ_LOG(3,(THIS_FILE, "----------------------------------------------------------------------"));
 
     for (c=0; c<PJ_ARRAY_SIZE(clock_rates); ++c) {
-	for (i=0; i<PJ_ARRAY_SIZE(entries); ++i) {
-	    enum 
-	    {
-		RETRY	= 5,	/* number of test retries */
-	    };
-	    struct test_entry *e = &entries[i];
-	    pj_timestamp times[RETRY], tzero;
-	    int usec;
-	    float cpu_pct, mips_val;
-	    unsigned j, clock_rate = clock_rates[c];
+        for (i=0; i<PJ_ARRAY_SIZE(entries); ++i) {
+            enum 
+            {
+                RETRY   = 5,    /* number of test retries */
+            };
+            struct test_entry *e = &entries[i];
+            pj_timestamp times[RETRY], tzero;
+            int usec;
+            float cpu_pct, mips_val;
+            unsigned j, clock_rate = clock_rates[c];
 
-	    if ((e->valid_clock_rate & clks[c]) == 0)
-		continue;
+            if ((e->valid_clock_rate & clks[c]) == 0)
+                continue;
 
-	    /* Run test */
-	    for (j=0; j<RETRY; ++j) {
-		pj_thread_sleep(1);
-		times[j] = run_entry(clock_rate, e);
-	    }
+            /* Run test */
+            for (j=0; j<RETRY; ++j) {
+                pj_thread_sleep(1);
+                times[j] = run_entry(clock_rate, e);
+            }
 
-	    /* Sort ascending */
-	    for (j=0; j<RETRY; ++j) {
-		unsigned k;
-		for (k=j+1; k<RETRY; ++k) {
-		    if (times[k].u64 < times[j].u64) {
-			pj_timestamp tmp = times[j];
-			times[j] = times[k];
-			times[k] = tmp;
-		    }
-		}
-	    }
+            /* Sort ascending */
+            for (j=0; j<RETRY; ++j) {
+                unsigned k;
+                for (k=j+1; k<RETRY; ++k) {
+                    if (times[k].u64 < times[j].u64) {
+                        pj_timestamp tmp = times[j];
+                        times[j] = times[k];
+                        times[k] = tmp;
+                    }
+                }
+            }
 
-	    /* Calculate usec elapsed as average of two best times */
-	    tzero.u32.hi = tzero.u32.lo = 0;
-	    usec = (pj_elapsed_usec(&tzero, &times[0]) + 
-		    pj_elapsed_usec(&tzero, &times[1])) / 2;
+            /* Calculate usec elapsed as average of two best times */
+            tzero.u32.hi = tzero.u32.lo = 0;
+            usec = (pj_elapsed_usec(&tzero, &times[0]) + 
+                    pj_elapsed_usec(&tzero, &times[1])) / 2;
 
-	    usec = usec / (DURATION / 1000);
+            usec = usec / (DURATION / 1000);
 
-	    mips_val = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
-	    cpu_pct = (float)(100.0 * usec / 1000000);
-	    PJ_LOG(3,(THIS_FILE, "%2dKHz %-38s % 8d %8.3f %7.2f", 
-		      clock_rate/1000, e->title, usec, cpu_pct, mips_val));
+            mips_val = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
+            cpu_pct = (float)(100.0 * usec / 1000000);
+            PJ_LOG(3,(THIS_FILE, "%2dKHz %-38s % 8d %8.3f %7.2f", 
+                      clock_rate/1000, e->title, usec, cpu_pct, mips_val));
 
-	}
+        }
     }
 
     return 0;

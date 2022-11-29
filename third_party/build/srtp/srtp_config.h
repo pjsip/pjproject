@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
  *
@@ -29,11 +28,11 @@
     defined(__x86_64__) || defined(__x86_64) || \
     defined(PJ_M_IA64) || defined(__ia64__) || defined(_IA64) || \
     defined(__IA64__) || defined(_M_IA64)
-#   define CPU_CISC	    1
-/* #   define HAVE_X86	    1   use X86 inlined assembly code */
+#   define CPU_CISC         1
+/* #   define HAVE_X86      1   use X86 inlined assembly code */
 #else
-/*#   define CPU_RISC	    1*/
-#   define CPU_CISC	    1
+/*#   define CPU_RISC       1*/
+#   define CPU_CISC         1
 #endif
 
 /* Define to compile in dynamic debugging system. */
@@ -55,7 +54,7 @@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #if defined(PJ_HAS_NETINET_IN_H) && PJ_HAS_NETINET_IN_H!=0
-#   define HAVE_NETINET_IN_H	1
+#   define HAVE_NETINET_IN_H    1
 #endif
 
 /* Define to 1 if you have the <stdlib.h> header file. */
@@ -70,7 +69,7 @@
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #if defined(PJ_HAS_SYS_SOCKET_H) && PJ_HAS_SYS_SOCKET_H!=0
-#   define HAVE_SYS_SOCKET_H	1
+#   define HAVE_SYS_SOCKET_H    1
 #endif
 
 /* Define to 1 if you have the <sys/types.h> header file. */
@@ -82,7 +81,7 @@
 /* Define to 1 if you have the `usleep' function. */
 #if defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H!=0
 #   define HAVE_UNISTD_H    1
-#   define HAVE_USLEEP	    1
+#   define HAVE_USLEEP      1
 #endif
 
 
@@ -96,45 +95,45 @@
 #   define HAVE_WINSOCK2_H  1
 #endif
 
-#define HAVE_INT16_T	    1
-#define HAVE_INT32_T	    1
-#define HAVE_INT8_T	    1
-#define HAVE_UINT8_T	    1
-#define HAVE_UINT16_T	    1
-#define HAVE_UINT32_T	    1
-#define HAVE_UINT64_T	    1
+#define HAVE_INT16_T        1
+#define HAVE_INT32_T        1
+#define HAVE_INT8_T         1
+#define HAVE_UINT8_T        1
+#define HAVE_UINT16_T       1
+#define HAVE_UINT32_T       1
+#define HAVE_UINT64_T       1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #if defined(PJ_HAS_STDINT_H) && PJ_HAS_STDINT_H!=0
 #   define HAVE_STDINT_H    1
 #else
-    typedef pj_uint8_t	    uint8_t;
-    typedef pj_uint16_t	    uint16_t;
-    typedef pj_uint32_t	    uint32_t;
-    typedef pj_uint64_t	    uint64_t;
-    typedef pj_int8_t	    int8_t;
-    typedef pj_int16_t	    int16_t;
-    typedef pj_int32_t	    int32_t;
-    typedef pj_int64_t	    int64_t;
+    typedef pj_uint8_t      uint8_t;
+    typedef pj_uint16_t     uint16_t;
+    typedef pj_uint32_t     uint32_t;
+    typedef pj_uint64_t     uint64_t;
+    typedef pj_int8_t       int8_t;
+    typedef pj_int16_t      int16_t;
+    typedef pj_int32_t      int32_t;
+    typedef pj_int64_t      int64_t;
 #endif
 
 /* These shouldn't really matter as long as HAVE_UINT64_T is set */
-#define SIZEOF_UNSIGNED_LONG	    (sizeof(unsigned long))
+#define SIZEOF_UNSIGNED_LONG        (sizeof(unsigned long))
 #define SIZEOF_UNSIGNED_LONG_LONG   8
 
 
 #if (_MSC_VER >= 1400) // VC8+
 #   ifndef _CRT_SECURE_NO_DEPRECATE
-#	define _CRT_SECURE_NO_DEPRECATE
+#       define _CRT_SECURE_NO_DEPRECATE
 #   endif
 #   ifndef _CRT_NONSTDC_NO_DEPRECATE
-#	define _CRT_NONSTDC_NO_DEPRECATE
+#       define _CRT_NONSTDC_NO_DEPRECATE
 #   endif
 #endif // VC8+
 
 #ifdef _MSC_VER
 #   ifndef __cplusplus
-#	define inline _inline
+#       define inline _inline
 #   endif
 
 #   pragma warning(disable:4311) // 'type cast': pointer truncation from 'unsigned char *' to 'unsigned long'
@@ -154,12 +153,12 @@
     /* clock() causes unresolved symbol on linking */
 #   define _CLOCK_T_DEFINED
 #   define CLOCKS_PER_SEC   1000
-#   define clock_t	    unsigned
+#   define clock_t          unsigned
 
     #include <windows.h>
     static clock_t clock(void)
     {
-	return GetTickCount();
+        return GetTickCount();
     }
 #endif
 
@@ -171,7 +170,7 @@
  * Try to open PJ_DEV_URANDOM if present
  */
 #if defined(PJ_HAS_FCNTL_H) && defined(PJ_HAS_UNISTD_H)
-#   define PJ_DEV_URANDOM	"/dev/urandom"
+#   define PJ_DEV_URANDOM       "/dev/urandom"
 #endif
 
 /* We have overridden libsrtp error mechanism, so these are not used. */
@@ -232,5 +231,5 @@
 #define PACKAGE_VERSION "2.1.0"
 
 
-#endif	/* __SRTP_CONFIG_H__ */
+#endif  /* __SRTP_CONFIG_H__ */
 

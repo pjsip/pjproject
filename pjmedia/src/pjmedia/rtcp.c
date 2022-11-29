@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,8 +35,8 @@
 #define RTCP_XR   207
 
 /* RTCP Feedbacks */
-#define RTCP_RTPFB	205
-#define RTCP_PSFB	206
+#define RTCP_RTPFB      205
+#define RTCP_PSFB       206
 
 enum {
     RTCP_SDES_NULL  = 0,
@@ -57,9 +56,9 @@ enum {
 
 
 #if 0
-#   define TRACE_(x)	PJ_LOG(3,x)
+#   define TRACE_(x)    PJ_LOG(3,x)
 #else
-#   define TRACE_(x)	;
+#   define TRACE_(x)    ;
 #endif
 
 
@@ -67,7 +66,7 @@ enum {
  * Get NTP time.
  */
 PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
-					      pjmedia_rtcp_ntp_rec *ntp)
+                                              pjmedia_rtcp_ntp_rec *ntp)
 {
 /* Seconds between 1900-01-01 to 1970-01-01 */
 #define JAN_1970  (2208988800UL)
@@ -78,7 +77,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
 
     /* Fill up the high 32bit part */
     ntp->hi = (pj_uint32_t)((ts.u64 - sess->ts_base.u64) / sess->ts_freq.u64)
-	      + sess->tv_base.sec + JAN_1970;
+              + sess->tv_base.sec + JAN_1970;
 
     /* Calculate seconds fractions */
     ts.u64 = (ts.u64 - sess->ts_base.u64) % sess->ts_freq.u64;
@@ -99,44 +98,44 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
      *   http://support.microsoft.com/default.aspx?scid=KB;EN-US;Q274323
      */
     {
-	/*
-	 * Compare elapsed time reported by timestamp with actual elapsed 
-	 * time. If the difference is too excessive, then we use system
-	 * time instead.
-	 */
+        /*
+         * Compare elapsed time reported by timestamp with actual elapsed 
+         * time. If the difference is too excessive, then we use system
+         * time instead.
+         */
 
-	/* MIN_DIFF needs to be large enough so that "normal" diff caused
-	 * by system activity or context switch doesn't trigger the time
-	 * correction.
-	 */
-	enum { MIN_DIFF = 400 };
+        /* MIN_DIFF needs to be large enough so that "normal" diff caused
+         * by system activity or context switch doesn't trigger the time
+         * correction.
+         */
+        enum { MIN_DIFF = 400 };
 
-	pj_time_val ts_time, elapsed, diff;
+        pj_time_val ts_time, elapsed, diff;
 
-	pj_gettimeofday(&elapsed);
+        pj_gettimeofday(&elapsed);
 
-	ts_time.sec = ntp->hi - sess->tv_base.sec - JAN_1970;
-	ts_time.msec = (long)(ntp->lo * 1000.0 / 0xFFFFFFFF);
+        ts_time.sec = ntp->hi - sess->tv_base.sec - JAN_1970;
+        ts_time.msec = (long)(ntp->lo * 1000.0 / 0xFFFFFFFF);
 
-	PJ_TIME_VAL_SUB(elapsed, sess->tv_base);
+        PJ_TIME_VAL_SUB(elapsed, sess->tv_base);
 
-	if (PJ_TIME_VAL_LT(ts_time, elapsed)) {
-	    diff = elapsed;
-	    PJ_TIME_VAL_SUB(diff, ts_time);
-	} else {
-	    diff = ts_time;
-	    PJ_TIME_VAL_SUB(diff, elapsed);
-	}
+        if (PJ_TIME_VAL_LT(ts_time, elapsed)) {
+            diff = elapsed;
+            PJ_TIME_VAL_SUB(diff, ts_time);
+        } else {
+            diff = ts_time;
+            PJ_TIME_VAL_SUB(diff, elapsed);
+        }
 
-	if (PJ_TIME_VAL_MSEC(diff) >= MIN_DIFF) {
+        if (PJ_TIME_VAL_MSEC(diff) >= MIN_DIFF) {
 
-	    TRACE_((sess->name, "RTCP NTP timestamp corrected by %d ms",
-		    PJ_TIME_VAL_MSEC(diff)));
+            TRACE_((sess->name, "RTCP NTP timestamp corrected by %d ms",
+                    PJ_TIME_VAL_MSEC(diff)));
 
 
-	    ntp->hi = elapsed.sec + sess->tv_base.sec + JAN_1970;
-	    ntp->lo = (elapsed.msec * 65536 / 1000) << 16;
-	}
+            ntp->hi = elapsed.sec + sess->tv_base.sec + JAN_1970;
+            ntp->lo = (elapsed.msec * 65536 / 1000) << 16;
+        }
 
     }
 #endif
@@ -149,7 +148,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
  * Initialize RTCP session setting.
  */
 PJ_DEF(void) pjmedia_rtcp_session_setting_default(
-				    pjmedia_rtcp_session_setting *settings)
+                                    pjmedia_rtcp_session_setting *settings)
 {
     pj_bzero(settings, sizeof(*settings));
 }
@@ -190,10 +189,10 @@ PJ_DEF(void) pjmedia_rtcp_init_stat(pjmedia_rtcp_stat *stat)
  * Initialize RTCP session.
  */
 PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess, 
-			       char *name,
-			       unsigned clock_rate,
-			       unsigned samples_per_frame,
-			       pj_uint32_t ssrc)
+                               char *name,
+                               unsigned clock_rate,
+                               unsigned samples_per_frame,
+                               pj_uint32_t ssrc)
 {
     pjmedia_rtcp_session_setting settings;
 
@@ -211,7 +210,7 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
  * Initialize RTCP session.
  */
 PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
-				 const pjmedia_rtcp_session_setting *settings)
+                                 const pjmedia_rtcp_session_setting *settings)
 {
     pjmedia_rtcp_sr_pkt *sr_pkt = &sess->rtcp_sr_pkt;
     pj_time_val now;
@@ -238,13 +237,13 @@ PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
     
     /* Copy to RTCP RR header */
     pj_memcpy(&sess->rtcp_rr_pkt.common, &sr_pkt->common, 
-	      sizeof(pjmedia_rtcp_common));
+              sizeof(pjmedia_rtcp_common));
     sess->rtcp_rr_pkt.common.pt = RTCP_RR;
     sess->rtcp_rr_pkt.common.length = pj_htons(7);
 
     /* Copy to RTCP FB common header */
     pj_memcpy(&sess->rtcp_fb_com, &sr_pkt->common, 
-	      sizeof(pjmedia_rtcp_common));
+              sizeof(pjmedia_rtcp_common));
     sess->rtcp_fb_com.ssrc_src = 0;
 
     /* Get time and timestamp base and frequency */
@@ -281,18 +280,18 @@ static void rtcp_init_seq(pjmedia_rtcp_session *sess)
 }
 
 PJ_DEF(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *sess, 
-				  unsigned seq, 
-				  unsigned rtp_ts,
-				  unsigned payload)
+                                  unsigned seq, 
+                                  unsigned rtp_ts,
+                                  unsigned payload)
 {
     pjmedia_rtcp_rx_rtp2(sess, seq, rtp_ts, payload, PJ_FALSE);
 }
 
 PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess, 
-				  unsigned seq, 
-				  unsigned rtp_ts,
-				  unsigned payload,
-				  pj_bool_t discarded)
+                                  unsigned seq, 
+                                  unsigned rtp_ts,
+                                  unsigned payload,
+                                  pj_bool_t discarded)
 {   
     pj_timestamp ts;
     pj_uint32_t arrival;
@@ -304,8 +303,8 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
 #endif
 
     if (sess->stat.rx.pkt == 0) {
-	/* Init sequence for the first time. */
-	pjmedia_rtp_seq_init(&sess->seq_ctrl, (pj_uint16_t)seq);
+        /* Init sequence for the first time. */
+        pjmedia_rtp_seq_init(&sess->seq_ctrl, (pj_uint16_t)seq);
     } 
 
     sess->stat.rx.pkt++;
@@ -315,33 +314,33 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
     pjmedia_rtp_seq_update(&sess->seq_ctrl, (pj_uint16_t)seq, &seq_st);
 
     if (seq_st.status.flag.restart) {
-	rtcp_init_seq(sess);
+        rtcp_init_seq(sess);
     }
     
     if (seq_st.status.flag.dup) {
-	sess->stat.rx.dup++;
-	TRACE_((sess->name, "Duplicate packet detected"));
+        sess->stat.rx.dup++;
+        TRACE_((sess->name, "Duplicate packet detected"));
     }
 
     if (seq_st.status.flag.outorder && !seq_st.status.flag.probation) {
-	sess->stat.rx.reorder++;
-	TRACE_((sess->name, "Out-of-order packet detected"));
+        sess->stat.rx.reorder++;
+        TRACE_((sess->name, "Out-of-order packet detected"));
     }
 
     if (seq_st.status.flag.bad) {
-	sess->stat.rx.discard++;
+        sess->stat.rx.discard++;
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-	pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
-			       -1,				 /* lost    */
-			       (seq_st.status.flag.dup? 1:0),	 /* dup     */
-			       (!seq_st.status.flag.dup? 1:-1),  /* discard */
-			       -1,				 /* jitter  */
-			       -1, 0);				 /* toh	    */
+        pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
+                               -1,                               /* lost    */
+                               (seq_st.status.flag.dup? 1:0),    /* dup     */
+                               (!seq_st.status.flag.dup? 1:-1),  /* discard */
+                               -1,                               /* jitter  */
+                               -1, 0);                           /* toh     */
 #endif
 
-	TRACE_((sess->name, "Bad packet discarded"));
-	return;
+        TRACE_((sess->name, "Bad packet discarded"));
+        return;
     }
 
     /* Only mark "good" packets */
@@ -349,21 +348,21 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
 
     /* Calculate loss periods. */
     if (seq_st.diff > 1) {
-	unsigned count = seq_st.diff - 1;
-	unsigned period;
+        unsigned count = seq_st.diff - 1;
+        unsigned period;
 
-	period = count * sess->pkt_size * 1000 / sess->clock_rate;
-	period *= 1000;
+        period = count * sess->pkt_size * 1000 / sess->clock_rate;
+        period *= 1000;
 
-	/* Update packet lost. 
-	 * The packet lost number will also be updated when we're sending
-	 * outbound RTCP RR.
-	 */
-	sess->stat.rx.loss += (seq_st.diff - 1);
-	TRACE_((sess->name, "%d packet(s) lost", seq_st.diff - 1));
+        /* Update packet lost. 
+         * The packet lost number will also be updated when we're sending
+         * outbound RTCP RR.
+         */
+        sess->stat.rx.loss += (seq_st.diff - 1);
+        TRACE_((sess->name, "%d packet(s) lost", seq_st.diff - 1));
 
-	/* Update loss period stat */
-	pj_math_stat_update(&sess->stat.rx.loss_period, period);
+        /* Update loss period stat */
+        pj_math_stat_update(&sess->stat.rx.loss_period, period);
     }
 
 
@@ -373,113 +372,113 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
      * (see RTP FAQ).
      */
     if (seq_st.diff == 1 && rtp_ts != sess->rtp_last_ts) {
-	/* Get arrival time and convert timestamp to samples */
-	pj_get_timestamp(&ts);
-	ts.u64 = ts.u64 * sess->clock_rate / sess->ts_freq.u64;
-	arrival = ts.u32.lo;
+        /* Get arrival time and convert timestamp to samples */
+        pj_get_timestamp(&ts);
+        ts.u64 = ts.u64 * sess->clock_rate / sess->ts_freq.u64;
+        arrival = ts.u32.lo;
 
-	transit = arrival - rtp_ts;
+        transit = arrival - rtp_ts;
     
-	/* Ignore the first N packets as they normally have bad jitter
-	 * due to other threads working to establish the call
-	 */
-	if (sess->transit == 0 || 
-	    sess->received < PJMEDIA_RTCP_IGNORE_FIRST_PACKETS) 
-	{
-	    sess->transit = transit;
-	    sess->stat.rx.jitter.min = (unsigned)-1;
-	} else {
-	    pj_int32_t d;
-	    pj_uint32_t jitter;
+        /* Ignore the first N packets as they normally have bad jitter
+         * due to other threads working to establish the call
+         */
+        if (sess->transit == 0 || 
+            sess->received < PJMEDIA_RTCP_IGNORE_FIRST_PACKETS) 
+        {
+            sess->transit = transit;
+            sess->stat.rx.jitter.min = (unsigned)-1;
+        } else {
+            pj_int32_t d;
+            pj_uint32_t jitter;
 
-	    d = transit - sess->transit;
-	    if (d < 0) 
-		d = -d;
-	    
-	    sess->jitter += d - ((sess->jitter + 8) >> 4);
+            d = transit - sess->transit;
+            if (d < 0) 
+                d = -d;
+            
+            sess->jitter += d - ((sess->jitter + 8) >> 4);
 
-	    /* Update jitter stat */
-	    jitter = sess->jitter >> 4;
-	    
-	    /* Convert jitter unit from samples to usec */
-	    if (jitter < 4294)
-		jitter = jitter * 1000000 / sess->clock_rate;
-	    else {
-		jitter = jitter * 1000 / sess->clock_rate;
-		jitter *= 1000;
-	    }
-	    pj_math_stat_update(&sess->stat.rx.jitter, jitter);
+            /* Update jitter stat */
+            jitter = sess->jitter >> 4;
+            
+            /* Convert jitter unit from samples to usec */
+            if (jitter < 4294)
+                jitter = jitter * 1000000 / sess->clock_rate;
+            else {
+                jitter = jitter * 1000 / sess->clock_rate;
+                jitter *= 1000;
+            }
+            pj_math_stat_update(&sess->stat.rx.jitter, jitter);
 
 
 #if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
-	    {
-		pj_uint32_t raw_jitter;
+            {
+                pj_uint32_t raw_jitter;
 
-		/* Convert raw jitter unit from samples to usec */
-		if (d < 4294)
-		    raw_jitter = d * 1000000 / sess->clock_rate;
-		else {
-		    raw_jitter = d * 1000 / sess->clock_rate;
-		    raw_jitter *= 1000;
-		}
-		
-		/* Update jitter stat */
-		pj_math_stat_update(&sess->stat.rx_raw_jitter, raw_jitter);
-	    }
+                /* Convert raw jitter unit from samples to usec */
+                if (d < 4294)
+                    raw_jitter = d * 1000000 / sess->clock_rate;
+                else {
+                    raw_jitter = d * 1000 / sess->clock_rate;
+                    raw_jitter *= 1000;
+                }
+                
+                /* Update jitter stat */
+                pj_math_stat_update(&sess->stat.rx_raw_jitter, raw_jitter);
+            }
 #endif
 
 
 #if defined(PJMEDIA_RTCP_STAT_HAS_IPDV) && PJMEDIA_RTCP_STAT_HAS_IPDV!=0
-	    {
-		pj_int32_t ipdv;
+            {
+                pj_int32_t ipdv;
 
-		ipdv = transit - sess->transit;
-		/* Convert IPDV unit from samples to usec */
-		if (ipdv > -2147 && ipdv < 2147)
-		    ipdv = ipdv * 1000000 / (int)sess->clock_rate;
-		else {
-		    ipdv = ipdv * 1000 / (int)sess->clock_rate;
-		    ipdv *= 1000;
-		}
-		
-		/* Update jitter stat */
-		pj_math_stat_update(&sess->stat.rx_ipdv, ipdv);
-	    }
+                ipdv = transit - sess->transit;
+                /* Convert IPDV unit from samples to usec */
+                if (ipdv > -2147 && ipdv < 2147)
+                    ipdv = ipdv * 1000000 / (int)sess->clock_rate;
+                else {
+                    ipdv = ipdv * 1000 / (int)sess->clock_rate;
+                    ipdv *= 1000;
+                }
+                
+                /* Update jitter stat */
+                pj_math_stat_update(&sess->stat.rx_ipdv, ipdv);
+            }
 #endif
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-	    pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
-				   0,			    /* lost    */
-				   0,			    /* dup     */
-				   discarded,		    /* discard */
-				   (sess->jitter >> 4),	    /* jitter  */
-				   -1, 0);		    /* toh     */
+            pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
+                                   0,                       /* lost    */
+                                   0,                       /* dup     */
+                                   discarded,               /* discard */
+                                   (sess->jitter >> 4),     /* jitter  */
+                                   -1, 0);                  /* toh     */
 #endif
 
-	    /* Update session transit */
-	    sess->transit = transit;
-	}
+            /* Update session transit */
+            sess->transit = transit;
+        }
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     } else if (seq_st.diff > 1) {
-	int i;
+        int i;
 
-	/* Report RTCP XR about packet losses */
-	for (i=seq_st.diff-1; i>0; --i) {
-	    pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq - i, 
-				   1,			    /* lost    */
-				   0,			    /* dup     */
-				   0,			    /* discard */
-				   -1,			    /* jitter  */
-				   -1, 0);		    /* toh     */
-	}
+        /* Report RTCP XR about packet losses */
+        for (i=seq_st.diff-1; i>0; --i) {
+            pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq - i, 
+                                   1,                       /* lost    */
+                                   0,                       /* dup     */
+                                   0,                       /* discard */
+                                   -1,                      /* jitter  */
+                                   -1, 0);                  /* toh     */
+        }
 
-	/* Report RTCP XR this packet */
-	pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
-			       0,			    /* lost    */
-			       0,			    /* dup     */
-			       discarded,		    /* discard */
-			       -1,			    /* jitter  */
-			       -1, 0);			    /* toh     */
+        /* Report RTCP XR this packet */
+        pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
+                               0,                           /* lost    */
+                               0,                           /* dup     */
+                               discarded,                   /* discard */
+                               -1,                          /* jitter  */
+                               -1, 0);                      /* toh     */
 #endif
     }
 
@@ -488,7 +487,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
 }
 
 PJ_DEF(void) pjmedia_rtcp_tx_rtp(pjmedia_rtcp_session *sess, 
-				 unsigned bytes_payload_size)
+                                 unsigned bytes_payload_size)
 {
     /* Update statistics */
     sess->stat.tx.pkt++;
@@ -497,8 +496,8 @@ PJ_DEF(void) pjmedia_rtcp_tx_rtp(pjmedia_rtcp_session *sess,
 
 
 static void parse_rtcp_report( pjmedia_rtcp_session *sess,
-			       const void *pkt,
-			       pj_size_t size)
+                               const void *pkt,
+                               pj_size_t size)
 {
     pjmedia_rtcp_common *common = (pjmedia_rtcp_common*) pkt;
     const pjmedia_rtcp_rr *rr = NULL;
@@ -508,89 +507,89 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
     /* Parse RTCP */
     if (common->pt == RTCP_SR) {
         if (sizeof (pjmedia_rtcp_common) + sizeof (pjmedia_rtcp_sr) > size) {
-	    TRACE_((sess->name, "Discarding RTCP SR due to truncated size "
-	    			"%d bytes", size));
+            TRACE_((sess->name, "Discarding RTCP SR due to truncated size "
+                                "%d bytes", size));
             return;
         }
-	sr = (pjmedia_rtcp_sr*) (((char*)pkt) + sizeof(pjmedia_rtcp_common));
-	if (common->count > 0 && size >= (sizeof(pjmedia_rtcp_sr_pkt))) {
-	    rr = (pjmedia_rtcp_rr*)(((char*)pkt) + (sizeof(pjmedia_rtcp_common)
-				    + sizeof(pjmedia_rtcp_sr)));
-	}
+        sr = (pjmedia_rtcp_sr*) (((char*)pkt) + sizeof(pjmedia_rtcp_common));
+        if (common->count > 0 && size >= (sizeof(pjmedia_rtcp_sr_pkt))) {
+            rr = (pjmedia_rtcp_rr*)(((char*)pkt) + (sizeof(pjmedia_rtcp_common)
+                                    + sizeof(pjmedia_rtcp_sr)));
+        }
     } else if (common->pt == RTCP_RR && common->count > 0) {
-	if (sizeof (pjmedia_rtcp_common) + sizeof (pjmedia_rtcp_rr) > size) {
-	    TRACE_((sess->name, "Discarding RTCP RR due to truncated size "
-	    			"%d bytes", size));
-	    return;
-	}
-	rr = (pjmedia_rtcp_rr*)(((char*)pkt) + sizeof(pjmedia_rtcp_common));
+        if (sizeof (pjmedia_rtcp_common) + sizeof (pjmedia_rtcp_rr) > size) {
+            TRACE_((sess->name, "Discarding RTCP RR due to truncated size "
+                                "%d bytes", size));
+            return;
+        }
+        rr = (pjmedia_rtcp_rr*)(((char*)pkt) + sizeof(pjmedia_rtcp_common));
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     } else if (common->pt == RTCP_XR) {
-	if (sess->xr_enabled)
-	    pjmedia_rtcp_xr_rx_rtcp_xr(&sess->xr_session, pkt, size);
+        if (sess->xr_enabled)
+            pjmedia_rtcp_xr_rx_rtcp_xr(&sess->xr_session, pkt, size);
 
-	return;
+        return;
 #endif
     }
 
 
     if (sr) {
-	/* Save LSR from NTP timestamp of RTCP packet */
-	sess->rx_lsr = ((pj_ntohl(sr->ntp_sec) & 0x0000FFFF) << 16) | 
-		       ((pj_ntohl(sr->ntp_frac) >> 16) & 0xFFFF);
+        /* Save LSR from NTP timestamp of RTCP packet */
+        sess->rx_lsr = ((pj_ntohl(sr->ntp_sec) & 0x0000FFFF) << 16) | 
+                       ((pj_ntohl(sr->ntp_frac) >> 16) & 0xFFFF);
 
-	/* Calculate SR arrival time for DLSR */
-	pj_get_timestamp(&sess->rx_lsr_time);
+        /* Calculate SR arrival time for DLSR */
+        pj_get_timestamp(&sess->rx_lsr_time);
 
-	TRACE_((sess->name, "Rx RTCP SR: ntp_ts=%p", 
-		sess->rx_lsr,
-		(pj_uint32_t)(sess->rx_lsr_time.u64*65536/sess->ts_freq.u64)));
+        TRACE_((sess->name, "Rx RTCP SR: ntp_ts=%p", 
+                sess->rx_lsr,
+                (pj_uint32_t)(sess->rx_lsr_time.u64*65536/sess->ts_freq.u64)));
     }
 
 
     /* Nothing more to do if there's no RR packet */
     if (rr == NULL)
-	return;
+        return;
 
 
     last_loss = sess->stat.tx.loss;
 
     /* Get packet loss */
     sess->stat.tx.loss = (rr->total_lost_2 << 16) +
-			 (rr->total_lost_1 << 8) +
-			  rr->total_lost_0;
+                         (rr->total_lost_1 << 8) +
+                          rr->total_lost_0;
 
     TRACE_((sess->name, "Rx RTCP RR: total_lost_2=%x, 1=%x, 0=%x, lost=%d", 
-	    (int)rr->total_lost_2,
-	    (int)rr->total_lost_1,
-	    (int)rr->total_lost_0,
-	    sess->stat.tx.loss));
+            (int)rr->total_lost_2,
+            (int)rr->total_lost_1,
+            (int)rr->total_lost_0,
+            sess->stat.tx.loss));
     
     /* We can't calculate the exact loss period for TX, so just give the
      * best estimation.
      */
     if (sess->stat.tx.loss > last_loss) {
-	unsigned period;
+        unsigned period;
 
-	/* Loss period in msec */
-	period = (sess->stat.tx.loss - last_loss) * sess->pkt_size *
-		 1000 / sess->clock_rate;
+        /* Loss period in msec */
+        period = (sess->stat.tx.loss - last_loss) * sess->pkt_size *
+                 1000 / sess->clock_rate;
 
-	/* Loss period in usec */
-	period *= 1000;
+        /* Loss period in usec */
+        period *= 1000;
 
-	/* Update loss period stat */
-	pj_math_stat_update(&sess->stat.tx.loss_period, period);
+        /* Update loss period stat */
+        pj_math_stat_update(&sess->stat.tx.loss_period, period);
     }
 
     /* Get jitter value in usec */
     jitter_samp = pj_ntohl(rr->jitter);
     /* Calculate jitter in usec, avoiding overflows */
     if (jitter_samp <= 4294)
-	jitter = jitter_samp * 1000000 / sess->clock_rate;
+        jitter = jitter_samp * 1000000 / sess->clock_rate;
     else {
-	jitter = jitter_samp * 1000 / sess->clock_rate;
-	jitter *= 1000;
+        jitter = jitter_samp * 1000 / sess->clock_rate;
+        jitter *= 1000;
     }
 
     /* Update jitter statistics */
@@ -598,84 +597,84 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
 
     /* Can only calculate if LSR and DLSR is present in RR */
     if (rr->lsr && rr->dlsr) {
-	pj_uint32_t lsr, now, dlsr;
-	pj_uint64_t eedelay;
-	pjmedia_rtcp_ntp_rec ntp;
+        pj_uint32_t lsr, now, dlsr;
+        pj_uint64_t eedelay;
+        pjmedia_rtcp_ntp_rec ntp;
 
-	/* LSR is the middle 32bit of NTP. It has 1/65536 second 
-	 * resolution 
-	 */
-	lsr = pj_ntohl(rr->lsr);
+        /* LSR is the middle 32bit of NTP. It has 1/65536 second 
+         * resolution 
+         */
+        lsr = pj_ntohl(rr->lsr);
 
-	/* DLSR is delay since LSR, also in 1/65536 resolution */
-	dlsr = pj_ntohl(rr->dlsr);
+        /* DLSR is delay since LSR, also in 1/65536 resolution */
+        dlsr = pj_ntohl(rr->dlsr);
 
-	/* Get current time, and convert to 1/65536 resolution */
-	pjmedia_rtcp_get_ntp_time(sess, &ntp);
-	now = ((ntp.hi & 0xFFFF) << 16) + (ntp.lo >> 16);
+        /* Get current time, and convert to 1/65536 resolution */
+        pjmedia_rtcp_get_ntp_time(sess, &ntp);
+        now = ((ntp.hi & 0xFFFF) << 16) + (ntp.lo >> 16);
 
-	/* End-to-end delay is (now-lsr-dlsr) */
-	eedelay = now - lsr - dlsr;
+        /* End-to-end delay is (now-lsr-dlsr) */
+        eedelay = now - lsr - dlsr;
 
-	/* Convert end to end delay to usec (keeping the calculation in
+        /* Convert end to end delay to usec (keeping the calculation in
          * 64bit space)::
-	 *   sess->ee_delay = (eedelay * 1000) / 65536;
-	 */
-	if (eedelay < 4294) {
-	    eedelay = (eedelay * 1000000) >> 16;
-	} else {
-	    eedelay = (eedelay * 1000) >> 16;
-	    eedelay *= 1000;
-	}
+         *   sess->ee_delay = (eedelay * 1000) / 65536;
+         */
+        if (eedelay < 4294) {
+            eedelay = (eedelay * 1000000) >> 16;
+        } else {
+            eedelay = (eedelay * 1000) >> 16;
+            eedelay *= 1000;
+        }
 
-	TRACE_((sess->name, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
-			   "now=%p, rtt=%p",
-		lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
-		now, (pj_uint32_t)eedelay));
-	
-	/* Only save calculation if "now" is greater than lsr, or
-	 * otherwise rtt will be invalid 
-	 */
-	if (now-dlsr >= lsr) {
-	    unsigned rtt = (pj_uint32_t)eedelay;
-	    
-	    /* Check that eedelay value really makes sense. 
-	     * We allow up to 30 seconds RTT!
-	     */
-	    if (eedelay > 30 * 1000 * 1000UL) {
+        TRACE_((sess->name, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
+                           "now=%p, rtt=%p",
+                lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
+                now, (pj_uint32_t)eedelay));
+        
+        /* Only save calculation if "now" is greater than lsr, or
+         * otherwise rtt will be invalid 
+         */
+        if (now-dlsr >= lsr) {
+            unsigned rtt = (pj_uint32_t)eedelay;
+            
+            /* Check that eedelay value really makes sense. 
+             * We allow up to 30 seconds RTT!
+             */
+            if (eedelay > 30 * 1000 * 1000UL) {
 
-		TRACE_((sess->name, "RTT not making any sense, ignored.."));
-		goto end_rtt_calc;
-	    }
+                TRACE_((sess->name, "RTT not making any sense, ignored.."));
+                goto end_rtt_calc;
+            }
 
 #if defined(PJMEDIA_RTCP_NORMALIZE_FACTOR) && PJMEDIA_RTCP_NORMALIZE_FACTOR!=0
-	    /* "Normalize" rtt value that is exceptionally high. For such
-	     * values, "normalize" the rtt to be PJMEDIA_RTCP_NORMALIZE_FACTOR
-	     * times the average value.
-	     */
-	    if (rtt > ((unsigned)sess->stat.rtt.mean *
-		       PJMEDIA_RTCP_NORMALIZE_FACTOR) && sess->stat.rtt.n!=0)
-	    {
-		unsigned orig_rtt = rtt;
-		rtt = sess->stat.rtt.mean * PJMEDIA_RTCP_NORMALIZE_FACTOR;
-		PJ_LOG(5,(sess->name,
-			  "RTT value %d usec is normalized to %d usec",
-			  orig_rtt, rtt));
-	    }
+            /* "Normalize" rtt value that is exceptionally high. For such
+             * values, "normalize" the rtt to be PJMEDIA_RTCP_NORMALIZE_FACTOR
+             * times the average value.
+             */
+            if (rtt > ((unsigned)sess->stat.rtt.mean *
+                       PJMEDIA_RTCP_NORMALIZE_FACTOR) && sess->stat.rtt.n!=0)
+            {
+                unsigned orig_rtt = rtt;
+                rtt = sess->stat.rtt.mean * PJMEDIA_RTCP_NORMALIZE_FACTOR;
+                PJ_LOG(5,(sess->name,
+                          "RTT value %d usec is normalized to %d usec",
+                          orig_rtt, rtt));
+            }
 #endif
-	    TRACE_((sess->name, "RTCP RTT is set to %d usec", rtt));
+            TRACE_((sess->name, "RTCP RTT is set to %d usec", rtt));
 
-	    /* Update RTT stat */
-	    pj_math_stat_update(&sess->stat.rtt, rtt);
+            /* Update RTT stat */
+            pj_math_stat_update(&sess->stat.rtt, rtt);
 
-	} else {
-	    PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "
-				   "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
-				   "diff=%d",
-				   lsr, now, dlsr, dlsr/65536,
-				   (dlsr%65536)*1000/65536,
-				   dlsr-(now-lsr)));
-	}
+        } else {
+            PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "
+                                   "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
+                                   "diff=%d",
+                                   lsr, now, dlsr, dlsr/65536,
+                                   (dlsr%65536)*1000/65536,
+                                   dlsr-(now-lsr)));
+        }
     }
 
 end_rtt_calc:
@@ -686,8 +685,8 @@ end_rtt_calc:
 
 
 static void parse_rtcp_sdes(pjmedia_rtcp_session *sess,
-			    const void *pkt,
-			    pj_size_t size)
+                            const void *pkt,
+                            pj_size_t size)
 {
     pjmedia_rtcp_sdes *sdes = &sess->stat.peer_sdes;
     char *p, *p_end;
@@ -701,100 +700,100 @@ static void parse_rtcp_sdes(pjmedia_rtcp_session *sess,
     b_end = b + sizeof(sess->stat.peer_sdes_buf_);
 
     while (p < p_end) {
-	pj_uint8_t sdes_type, sdes_len;
-	pj_str_t sdes_value = {NULL, 0};
+        pj_uint8_t sdes_type, sdes_len;
+        pj_str_t sdes_value = {NULL, 0};
 
-	sdes_type = *p++;
+        sdes_type = *p++;
 
-	/* Check for end of SDES item list */
-	if (sdes_type == RTCP_SDES_NULL || p == p_end)
-	    break;
+        /* Check for end of SDES item list */
+        if (sdes_type == RTCP_SDES_NULL || p == p_end)
+            break;
 
-	sdes_len = *p++;
+        sdes_len = *p++;
 
-	/* Check for corrupted SDES packet */
-	if (p + sdes_len > p_end)
-	    break;
+        /* Check for corrupted SDES packet */
+        if (p + sdes_len > p_end)
+            break;
 
-	/* Get SDES item */
-	if (b + sdes_len < b_end) {
-	    pj_memcpy(b, p, sdes_len);
-	    sdes_value.ptr = b;
-	    sdes_value.slen = sdes_len;
-	    b += sdes_len;
-	} else {
-	    /* Insufficient SDES buffer */
-	    PJ_LOG(5, (sess->name,
-		    "Unsufficient buffer to save RTCP SDES type %d:%.*s",
-		    sdes_type, sdes_len, p));
-	    p += sdes_len;
-	    continue;
-	}
+        /* Get SDES item */
+        if (b + sdes_len < b_end) {
+            pj_memcpy(b, p, sdes_len);
+            sdes_value.ptr = b;
+            sdes_value.slen = sdes_len;
+            b += sdes_len;
+        } else {
+            /* Insufficient SDES buffer */
+            PJ_LOG(5, (sess->name,
+                    "Unsufficient buffer to save RTCP SDES type %d:%.*s",
+                    sdes_type, sdes_len, p));
+            p += sdes_len;
+            continue;
+        }
 
-	switch (sdes_type) {
-	case RTCP_SDES_CNAME:
-	    sdes->cname = sdes_value;
-	    break;
-	case RTCP_SDES_NAME:
-	    sdes->name = sdes_value;
-	    break;
-	case RTCP_SDES_EMAIL:
-	    sdes->email = sdes_value;
-	    break;
-	case RTCP_SDES_PHONE:
-	    sdes->phone = sdes_value;
-	    break;
-	case RTCP_SDES_LOC:
-	    sdes->loc = sdes_value;
-	    break;
-	case RTCP_SDES_TOOL:
-	    sdes->tool = sdes_value;
-	    break;
-	case RTCP_SDES_NOTE:
-	    sdes->note = sdes_value;
-	    break;
-	default:
-	    TRACE_((sess->name, "Received unknown RTCP SDES type %d:%.*s",
-		    sdes_type, sdes_value.slen, sdes_value.ptr));
-	    break;
-	}
+        switch (sdes_type) {
+        case RTCP_SDES_CNAME:
+            sdes->cname = sdes_value;
+            break;
+        case RTCP_SDES_NAME:
+            sdes->name = sdes_value;
+            break;
+        case RTCP_SDES_EMAIL:
+            sdes->email = sdes_value;
+            break;
+        case RTCP_SDES_PHONE:
+            sdes->phone = sdes_value;
+            break;
+        case RTCP_SDES_LOC:
+            sdes->loc = sdes_value;
+            break;
+        case RTCP_SDES_TOOL:
+            sdes->tool = sdes_value;
+            break;
+        case RTCP_SDES_NOTE:
+            sdes->note = sdes_value;
+            break;
+        default:
+            TRACE_((sess->name, "Received unknown RTCP SDES type %d:%.*s",
+                    sdes_type, sdes_value.slen, sdes_value.ptr));
+            break;
+        }
 
-	p += sdes_len;
+        p += sdes_len;
     }
 }
 
 
 static void parse_rtcp_bye(pjmedia_rtcp_session *sess,
-			   const void *pkt,
-			   pj_size_t size)
+                           const void *pkt,
+                           pj_size_t size)
 {
     pj_str_t reason = {"-", 1};
 
     /* Check and get BYE reason */
     if (size > 8) {
-    	/* Make sure the BYE reason does not exceed:
-    	 * - the size of the available buffer
-    	 * - the declared reason's length
-    	 * - the actual packet size
-    	 */
-	reason.slen = PJ_MIN(sizeof(sess->stat.peer_sdes_buf_),
+        /* Make sure the BYE reason does not exceed:
+         * - the size of the available buffer
+         * - the declared reason's length
+         * - the actual packet size
+         */
+        reason.slen = PJ_MIN(sizeof(sess->stat.peer_sdes_buf_),
                              *((pj_uint8_t*)pkt+8));
         reason.slen = PJ_MIN(reason.slen, (pj_ssize_t)(size-9));
 
-	pj_memcpy(sess->stat.peer_sdes_buf_, ((pj_uint8_t*)pkt+9),
-		  reason.slen);
-	reason.ptr = sess->stat.peer_sdes_buf_;
+        pj_memcpy(sess->stat.peer_sdes_buf_, ((pj_uint8_t*)pkt+9),
+                  reason.slen);
+        reason.ptr = sess->stat.peer_sdes_buf_;
     }
 
     /* Just print RTCP BYE log */
     PJ_LOG(5, (sess->name, "Received RTCP BYE, reason: %.*s",
-	       reason.slen, reason.ptr));
+               reason.slen, reason.ptr));
 }
 
 
 static void parse_rtcp_fb(pjmedia_rtcp_session *sess,
-			  const void *pkt,
-			  pj_size_t size)
+                          const void *pkt,
+                          pj_size_t size)
 {
     unsigned cnt = 1;
     pjmedia_rtcp_fb_nack nack[1];
@@ -806,92 +805,92 @@ static void parse_rtcp_fb(pjmedia_rtcp_session *sess,
     if (size < sizeof(pjmedia_rtcp_fb_common)) {
         PJ_PERROR(3, (THIS_FILE, PJ_ETOOSMALL,
                       "Failed parsing RTCP FB, invalid packet length"));
-	return;
+        return;
     }    
 
     pj_get_timestamp(&ts_now);
 
     if (pjmedia_rtcp_fb_parse_nack(pkt, size, &cnt, nack)==PJ_SUCCESS)
     {
-	pjmedia_event_init(&ev, PJMEDIA_EVENT_RX_RTCP_FB, &ts_now, sess);
-	ev.data.rx_rtcp_fb.cap.type = PJMEDIA_RTCP_FB_NACK;
-	ev.data.rx_rtcp_fb.msg.nack = nack[0];
-	pjmedia_event_publish(NULL, sess, &ev, 0);
+        pjmedia_event_init(&ev, PJMEDIA_EVENT_RX_RTCP_FB, &ts_now, sess);
+        ev.data.rx_rtcp_fb.cap.type = PJMEDIA_RTCP_FB_NACK;
+        ev.data.rx_rtcp_fb.msg.nack = nack[0];
+        pjmedia_event_publish(NULL, sess, &ev, 0);
 
     } else if (pjmedia_rtcp_fb_parse_pli(pkt, size)==PJ_SUCCESS)
     {
-	pjmedia_event_init(&ev, PJMEDIA_EVENT_RX_RTCP_FB, &ts_now, sess);
-	ev.data.rx_rtcp_fb.cap.type = PJMEDIA_RTCP_FB_NACK;
-	pj_strset2(&ev.data.rx_rtcp_fb.cap.param, (char*)"pli");
-	pjmedia_event_publish(NULL, sess, &ev, 0);
+        pjmedia_event_init(&ev, PJMEDIA_EVENT_RX_RTCP_FB, &ts_now, sess);
+        ev.data.rx_rtcp_fb.cap.type = PJMEDIA_RTCP_FB_NACK;
+        pj_strset2(&ev.data.rx_rtcp_fb.cap.param, (char*)"pli");
+        pjmedia_event_publish(NULL, sess, &ev, 0);
 
-	/*  For other FB type implementations later
+        /*  For other FB type implementations later
     } else if (pjmedia_rtcp_fb_parse_sli(pkt, size, &cnt, sli)==PJ_SUCCESS)
     {
     } else if (pjmedia_rtcp_fb_parse_rpsi(pkt, size, &rpsi)==PJ_SUCCESS)
     {
-	*/
+        */
     } else {
-	/* Ignore unknown RTCP Feedback */
-	TRACE_((sess->name, "Received unknown RTCP feedback"));
+        /* Ignore unknown RTCP Feedback */
+        TRACE_((sess->name, "Received unknown RTCP feedback"));
     }
 }
 
 
 PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
-				   const void *pkt,
-				   pj_size_t size)
+                                   const void *pkt,
+                                   pj_size_t size)
 {
     pj_uint8_t *p, *p_end;
 
     p = (pj_uint8_t*)pkt;
     p_end = p + size;
     while (p < p_end) {
-	pjmedia_rtcp_common *common;
-	unsigned len;
+        pjmedia_rtcp_common *common;
+        unsigned len;
 
-	if (p + sizeof(pjmedia_rtcp_common) > p_end) {
-	    TRACE_((sess->name, "Receiving truncated RTCP packet (1)"));
-	    break;
-	}
-	common = (pjmedia_rtcp_common*)p;
+        if (p + sizeof(pjmedia_rtcp_common) > p_end) {
+            TRACE_((sess->name, "Receiving truncated RTCP packet (1)"));
+            break;
+        }
+        common = (pjmedia_rtcp_common*)p;
 
-	len = (pj_ntohs((pj_uint16_t)common->length)+1) * 4;
-	if (p + len > p_end) {
-	    TRACE_((sess->name, "Receiving truncated RTCP packet (2)"));
-	    break;
-	}
+        len = (pj_ntohs((pj_uint16_t)common->length)+1) * 4;
+        if (p + len > p_end) {
+            TRACE_((sess->name, "Receiving truncated RTCP packet (2)"));
+            break;
+        }
 
-	switch(common->pt) {
-	case RTCP_SR:
-	case RTCP_RR:
-	case RTCP_XR:
-	    parse_rtcp_report(sess, p, len);
-	    break;
-	case RTCP_SDES:
-	    parse_rtcp_sdes(sess, p, len);
-	    break;
-	case RTCP_BYE:
-	    parse_rtcp_bye(sess, p, len);
-	    break;
-	case RTCP_RTPFB:
-	case RTCP_PSFB:
-	    parse_rtcp_fb(sess, p, len);
-	    break;
-	default:
-	    /* Ignore unknown RTCP */
-	    TRACE_((sess->name, "Received unknown RTCP packet type=%d",
-		    common->pt));
-	    break;
-	}
+        switch(common->pt) {
+        case RTCP_SR:
+        case RTCP_RR:
+        case RTCP_XR:
+            parse_rtcp_report(sess, p, len);
+            break;
+        case RTCP_SDES:
+            parse_rtcp_sdes(sess, p, len);
+            break;
+        case RTCP_BYE:
+            parse_rtcp_bye(sess, p, len);
+            break;
+        case RTCP_RTPFB:
+        case RTCP_PSFB:
+            parse_rtcp_fb(sess, p, len);
+            break;
+        default:
+            /* Ignore unknown RTCP */
+            TRACE_((sess->name, "Received unknown RTCP packet type=%d",
+                    common->pt));
+            break;
+        }
 
-	p += len;
+        p += len;
     }
 }
 
 
 PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess, 
-				     void **ret_p_pkt, int *len)
+                                     void **ret_p_pkt, int *len)
 {
     pj_uint32_t expected, expected_interval, received_interval, lost_interval;
     pjmedia_rtcp_sr *sr;
@@ -908,44 +907,44 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
      * sent RTCP SR.
      */
     if (sess->stat.tx.pkt != pj_ntohl(sess->rtcp_sr_pkt.sr.sender_pcount)) {
-	pj_time_val ts_time;
-	pj_uint32_t rtp_ts;
+        pj_time_val ts_time;
+        pj_uint32_t rtp_ts;
 
-	/* So we should send RTCP SR */
-	*ret_p_pkt = (void*) &sess->rtcp_sr_pkt;
-	*len = sizeof(pjmedia_rtcp_sr_pkt);
-	rr = &sess->rtcp_sr_pkt.rr;
-	sr = &sess->rtcp_sr_pkt.sr;
+        /* So we should send RTCP SR */
+        *ret_p_pkt = (void*) &sess->rtcp_sr_pkt;
+        *len = sizeof(pjmedia_rtcp_sr_pkt);
+        rr = &sess->rtcp_sr_pkt.rr;
+        sr = &sess->rtcp_sr_pkt.sr;
 
-	/* Update packet count */
-	sr->sender_pcount = pj_htonl(sess->stat.tx.pkt);
+        /* Update packet count */
+        sr->sender_pcount = pj_htonl(sess->stat.tx.pkt);
 
-	/* Update octets count */
-	sr->sender_bcount = pj_htonl(sess->stat.tx.bytes);
+        /* Update octets count */
+        sr->sender_bcount = pj_htonl(sess->stat.tx.bytes);
 
-	/* Fill in NTP timestamp in SR. */
-	sr->ntp_sec = pj_htonl(ntp.hi);
-	sr->ntp_frac = pj_htonl(ntp.lo);
+        /* Fill in NTP timestamp in SR. */
+        sr->ntp_sec = pj_htonl(ntp.hi);
+        sr->ntp_frac = pj_htonl(ntp.lo);
 
-	/* Fill in RTP timestamp (corresponds to NTP timestamp) in SR. */
-	ts_time.sec = ntp.hi - sess->tv_base.sec - JAN_1970;
-	ts_time.msec = (long)(ntp.lo * 1000.0 / 0xFFFFFFFF);
-	rtp_ts = sess->rtp_ts_base +
-		 (pj_uint32_t)(sess->clock_rate*ts_time.sec) +
-		 (pj_uint32_t)(sess->clock_rate*ts_time.msec/1000);
-	sr->rtp_ts = pj_htonl(rtp_ts);
+        /* Fill in RTP timestamp (corresponds to NTP timestamp) in SR. */
+        ts_time.sec = ntp.hi - sess->tv_base.sec - JAN_1970;
+        ts_time.msec = (long)(ntp.lo * 1000.0 / 0xFFFFFFFF);
+        rtp_ts = sess->rtp_ts_base +
+                 (pj_uint32_t)(sess->clock_rate*ts_time.sec) +
+                 (pj_uint32_t)(sess->clock_rate*ts_time.msec/1000);
+        sr->rtp_ts = pj_htonl(rtp_ts);
 
-	TRACE_((sess->name, "TX RTCP SR: ntp_ts=%p", 
-			   ((ntp.hi & 0xFFFF) << 16) + ((ntp.lo & 0xFFFF0000) 
-				>> 16)));
+        TRACE_((sess->name, "TX RTCP SR: ntp_ts=%p", 
+                           ((ntp.hi & 0xFFFF) << 16) + ((ntp.lo & 0xFFFF0000) 
+                                >> 16)));
 
 
     } else {
-	/* We should send RTCP RR then */
-	*ret_p_pkt = (void*) &sess->rtcp_rr_pkt;
-	*len = sizeof(pjmedia_rtcp_rr_pkt);
-	rr = &sess->rtcp_rr_pkt.rr;
-	sr = NULL;
+        /* We should send RTCP RR then */
+        *ret_p_pkt = (void*) &sess->rtcp_rr_pkt;
+        *len = sizeof(pjmedia_rtcp_rr_pkt);
+        rr = &sess->rtcp_rr_pkt.rr;
+        sr = NULL;
     }
     
     /* SSRC and last_seq */
@@ -968,9 +967,9 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 
     /* This is bug: total lost already calculated on each incoming RTP!
     if (expected >= sess->received)
-	sess->stat.rx.loss = expected - sess->received;
+        sess->stat.rx.loss = expected - sess->received;
     else
-	sess->stat.rx.loss = 0;
+        sess->stat.rx.loss = 0;
     */
 
     rr->total_lost_2 = (sess->stat.rx.loss >> 16) & 0xFF;
@@ -985,53 +984,53 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     sess->rx_prior = sess->received;
     
     if (expected_interval >= received_interval)
-	lost_interval = expected_interval - received_interval;
+        lost_interval = expected_interval - received_interval;
     else
-	lost_interval = 0;
+        lost_interval = 0;
     
     if (expected_interval==0 || lost_interval == 0) {
-	rr->fract_lost = 0;
+        rr->fract_lost = 0;
     } else {
-	rr->fract_lost = (lost_interval << 8) / expected_interval;
+        rr->fract_lost = (lost_interval << 8) / expected_interval;
     }
     
     if (sess->rx_lsr_time.u64 == 0 || sess->rx_lsr == 0) {
-	rr->lsr = 0;
-	rr->dlsr = 0;
+        rr->lsr = 0;
+        rr->dlsr = 0;
     } else {
-	pj_timestamp ts;
-	pj_uint32_t lsr = sess->rx_lsr;
-	pj_uint64_t lsr_time = sess->rx_lsr_time.u64;
-	pj_uint32_t dlsr;
-	
-	/* Convert LSR time to 1/65536 seconds resolution */
-	lsr_time = (lsr_time << 16) / sess->ts_freq.u64;
+        pj_timestamp ts;
+        pj_uint32_t lsr = sess->rx_lsr;
+        pj_uint64_t lsr_time = sess->rx_lsr_time.u64;
+        pj_uint32_t dlsr;
+        
+        /* Convert LSR time to 1/65536 seconds resolution */
+        lsr_time = (lsr_time << 16) / sess->ts_freq.u64;
 
-	/* Fill in LSR.
-	   LSR is the middle 32bit of the last SR NTP time received.
-	 */
-	rr->lsr = pj_htonl(lsr);
-	
-	/* Fill in DLSR.
-	   DLSR is Delay since Last SR, in 1/65536 seconds.
-	 */
-	ts.u64 = ts_now.u64;
+        /* Fill in LSR.
+           LSR is the middle 32bit of the last SR NTP time received.
+         */
+        rr->lsr = pj_htonl(lsr);
+        
+        /* Fill in DLSR.
+           DLSR is Delay since Last SR, in 1/65536 seconds.
+         */
+        ts.u64 = ts_now.u64;
 
-	/* Convert interval to 1/65536 seconds value */
-	ts.u64 = (ts.u64 << 16) / sess->ts_freq.u64;
+        /* Convert interval to 1/65536 seconds value */
+        ts.u64 = (ts.u64 << 16) / sess->ts_freq.u64;
 
-	/* Get DLSR */
-	dlsr = (pj_uint32_t)(ts.u64 - lsr_time);
-	rr->dlsr = pj_htonl(dlsr);
+        /* Get DLSR */
+        dlsr = (pj_uint32_t)(ts.u64 - lsr_time);
+        rr->dlsr = pj_htonl(dlsr);
 
-	TRACE_((sess->name,"Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
-			   "(%ds:%03dms)",
-			   lsr, 
-			   (pj_uint32_t)lsr_time,
-			   (pj_uint32_t)ts.u64, 
-			   dlsr,
-			   dlsr/65536,
-			   (dlsr%65536)*1000/65536 ));
+        TRACE_((sess->name,"Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
+                           "(%ds:%03dms)",
+                           lsr, 
+                           (pj_uint32_t)lsr_time,
+                           (pj_uint32_t)ts.u64, 
+                           dlsr,
+                           dlsr/65536,
+                           (dlsr%65536)*1000/65536 ));
     }
     
     /* Update counter */
@@ -1041,10 +1040,10 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 
 
 PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
-					    pjmedia_rtcp_session *session, 
-					    void *buf,
-					    pj_size_t *length,
-					    const pjmedia_rtcp_sdes *sdes)
+                                            pjmedia_rtcp_session *session, 
+                                            void *buf,
+                                            pj_size_t *length,
+                                            const pjmedia_rtcp_sdes *sdes)
 {
     pjmedia_rtcp_common *hdr;
     pj_uint8_t *p;
@@ -1054,11 +1053,11 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
 
     /* Verify SDES item length */
     if (sdes->cname.slen > 255 || sdes->name.slen  > 255 ||
-	sdes->email.slen > 255 || sdes->phone.slen > 255 ||
-	sdes->loc.slen   > 255 || sdes->tool.slen  > 255 ||
-	sdes->note.slen  > 255)
+        sdes->email.slen > 255 || sdes->phone.slen > 255 ||
+        sdes->loc.slen   > 255 || sdes->tool.slen  > 255 ||
+        sdes->note.slen  > 255)
     {
-	return PJ_EINVAL;
+        return PJ_EINVAL;
     }
 
     /* Verify buffer length */
@@ -1073,7 +1072,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
     len++; /* null termination */
     len = ((len+3)/4) * 4;
     if (len > *length)
-	return PJ_ETOOSMALL;
+        return PJ_ETOOSMALL;
 
     /* Build RTCP SDES header */
     hdr = (pjmedia_rtcp_common*)buf;
@@ -1085,10 +1084,10 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
     p = (pj_uint8_t*)hdr + sizeof(*hdr);
 #define BUILD_SDES_ITEM(SDES_NAME, SDES_TYPE) \
     if (sdes->SDES_NAME.slen) { \
-	*p++ = SDES_TYPE; \
-	*p++ = (pj_uint8_t)sdes->SDES_NAME.slen; \
-	pj_memcpy(p, sdes->SDES_NAME.ptr, sdes->SDES_NAME.slen); \
-	p += sdes->SDES_NAME.slen; \
+        *p++ = SDES_TYPE; \
+        *p++ = (pj_uint8_t)sdes->SDES_NAME.slen; \
+        pj_memcpy(p, sdes->SDES_NAME.ptr, sdes->SDES_NAME.slen); \
+        p += sdes->SDES_NAME.slen; \
     }
     BUILD_SDES_ITEM(cname, RTCP_SDES_CNAME);
     BUILD_SDES_ITEM(name,  RTCP_SDES_NAME);
@@ -1104,7 +1103,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
 
     /* Pad to 32bit */
     while ((p-(pj_uint8_t*)buf) % 4)
-	*p++ = 0;
+        *p++ = 0;
 
     /* Finally */
     pj_assert((int)len == p-(pj_uint8_t*)buf);
@@ -1115,9 +1114,9 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
 
 
 PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_bye(pjmedia_rtcp_session *session,
-						void *buf,
-						pj_size_t *length,
-						const pj_str_t *reason)
+                                                void *buf,
+                                                pj_size_t *length,
+                                                const pj_str_t *reason)
 {
     pjmedia_rtcp_common *hdr;
     pj_uint8_t *p;
@@ -1127,14 +1126,14 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_bye(pjmedia_rtcp_session *session,
 
     /* Verify BYE reason length */
     if (reason && reason->slen > 255)
-	return PJ_EINVAL;
+        return PJ_EINVAL;
 
     /* Verify buffer length */
     len = sizeof(*hdr);
     if (reason && reason->slen) len += reason->slen + 1;
     len = ((len+3)/4) * 4;
     if (len > *length)
-	return PJ_ETOOSMALL;
+        return PJ_ETOOSMALL;
 
     /* Build RTCP BYE header */
     hdr = (pjmedia_rtcp_common*)buf;
@@ -1145,14 +1144,14 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_bye(pjmedia_rtcp_session *session,
     /* Write RTCP BYE reason */
     p = (pj_uint8_t*)hdr + sizeof(*hdr);
     if (reason && reason->slen) {
-	*p++ = (pj_uint8_t)reason->slen;
-	pj_memcpy(p, reason->ptr, reason->slen);
-	p += reason->slen;
+        *p++ = (pj_uint8_t)reason->slen;
+        pj_memcpy(p, reason->ptr, reason->slen);
+        p += reason->slen;
     }
 
     /* Pad to 32bit */
     while ((p-(pj_uint8_t*)buf) % 4)
-	*p++ = 0;
+        *p++ = 0;
 
     pj_assert((int)len == p-(pj_uint8_t*)buf);
     *length = len;
@@ -1162,17 +1161,17 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_bye(pjmedia_rtcp_session *session,
 
 
 PJ_DEF(pj_status_t) pjmedia_rtcp_enable_xr( pjmedia_rtcp_session *sess, 
-					    pj_bool_t enable)
+                                            pj_bool_t enable)
 {
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 
     /* Check if request won't change anything */
     if (!(enable ^ sess->xr_enabled))
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     if (!enable) {
-	sess->xr_enabled = PJ_FALSE;
-	return PJ_SUCCESS;
+        sess->xr_enabled = PJ_FALSE;
+        return PJ_SUCCESS;
     }
 
     pjmedia_rtcp_xr_init(&sess->xr_session, sess, 0, 1);

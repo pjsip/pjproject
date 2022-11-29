@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -23,21 +22,21 @@
 
 static const char *id = "config.c";
 
-#define PJ_MAKE_VERSION3_1(a,b,d) 	#a "." #b d
-#define PJ_MAKE_VERSION3_2(a,b,d)	PJ_MAKE_VERSION3_1(a,b,d)
+#define PJ_MAKE_VERSION3_1(a,b,d)       #a "." #b d
+#define PJ_MAKE_VERSION3_2(a,b,d)       PJ_MAKE_VERSION3_1(a,b,d)
 
-#define PJ_MAKE_VERSION4_1(a,b,c,d) 	#a "." #b "." #c d
-#define PJ_MAKE_VERSION4_2(a,b,c,d)	PJ_MAKE_VERSION4_1(a,b,c,d)
+#define PJ_MAKE_VERSION4_1(a,b,c,d)     #a "." #b "." #c d
+#define PJ_MAKE_VERSION4_2(a,b,c,d)     PJ_MAKE_VERSION4_1(a,b,c,d)
 
 #if PJ_VERSION_NUM_REV
 PJ_DEF_DATA(const char*) PJ_VERSION = PJ_MAKE_VERSION4_2(PJ_VERSION_NUM_MAJOR,
-						         PJ_VERSION_NUM_MINOR,
-						         PJ_VERSION_NUM_REV,
-						         PJ_VERSION_NUM_EXTRA);
+                                                         PJ_VERSION_NUM_MINOR,
+                                                         PJ_VERSION_NUM_REV,
+                                                         PJ_VERSION_NUM_EXTRA);
 #else
 PJ_DEF_DATA(const char*) PJ_VERSION = PJ_MAKE_VERSION3_2(PJ_VERSION_NUM_MAJOR,
-						         PJ_VERSION_NUM_MINOR,
-						         PJ_VERSION_NUM_EXTRA);
+                                                         PJ_VERSION_NUM_MINOR,
+                                                         PJ_VERSION_NUM_EXTRA);
 #endif
 
 /*
@@ -57,9 +56,9 @@ PJ_DEF(void) pj_dump_config(void)
     PJ_LOG(3, (id, " PJ_HAS_PENTIUM            : %d", PJ_HAS_PENTIUM));
     PJ_LOG(3, (id, " PJ_OS_NAME                : %s", PJ_OS_NAME));
     PJ_LOG(3, (id, " PJ_CC_NAME/VER_(1,2,3)    : %s-%d.%d.%d", PJ_CC_NAME,
-	       PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_3));
+               PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_3));
     PJ_LOG(3, (id, " PJ_IS_(BIG/LITTLE)_ENDIAN : %s", 
-	       (PJ_IS_BIG_ENDIAN?"big-endian":"little-endian")));
+               (PJ_IS_BIG_ENDIAN?"big-endian":"little-endian")));
     PJ_LOG(3, (id, " PJ_HAS_INT64              : %d", PJ_HAS_INT64));
     PJ_LOG(3, (id, " PJ_HAS_FLOATING_POINT     : %d", PJ_HAS_FLOATING_POINT));
     PJ_LOG(3, (id, " PJ_DEBUG                  : %d", PJ_DEBUG));

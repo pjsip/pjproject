@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -34,23 +33,23 @@
 #include <errno.h>
 #include <sys/mman.h>
 
-#define THIS_FILE		"v4l2_dev.c"
-#define DRIVER_NAME		"v4l2"
-#define V4L2_MAX_DEVS		4
-#define DEFAULT_WIDTH		640
-#define DEFAULT_HEIGHT		480
-#define DEFAULT_FPS		25
-#define DEFAULT_CLOCK_RATE	90000
-#define INVALID_FD		-1
-#define BUFFER_CNT		2
-#define MAX_IOCTL_RETRY		20
+#define THIS_FILE               "v4l2_dev.c"
+#define DRIVER_NAME             "v4l2"
+#define V4L2_MAX_DEVS           4
+#define DEFAULT_WIDTH           640
+#define DEFAULT_HEIGHT          480
+#define DEFAULT_FPS             25
+#define DEFAULT_CLOCK_RATE      90000
+#define INVALID_FD              -1
+#define BUFFER_CNT              2
+#define MAX_IOCTL_RETRY         20
 
 
 /* mapping between pjmedia_fmt_id and v4l2 pixel format */
 typedef struct vid4lin_fmt_map
 {
     pj_uint32_t pjmedia_fmt_id;
-    pj_uint32_t	v4l2_fmt_id;
+    pj_uint32_t v4l2_fmt_id;
 } vid4lin_fmt_map;
 
 /* I/O type being used */
@@ -72,51 +71,51 @@ typedef struct vid4lin_buffer
 /* v4l2 device info */
 typedef struct vid4lin_dev_info
 {
-    pjmedia_vid_dev_info	 info;
-    char			 dev_name[32];
-    struct v4l2_capability 	 v4l2_cap;
+    pjmedia_vid_dev_info         info;
+    char                         dev_name[32];
+    struct v4l2_capability       v4l2_cap;
 } vid4lin_dev_info;
 
 /* v4l2 factory */
 typedef struct vid4lin_factory
 {
-    pjmedia_vid_dev_factory	 base;
-    pj_pool_t			*pool;
-    pj_pool_t			*dev_pool;
-    pj_pool_factory		*pf;
+    pjmedia_vid_dev_factory      base;
+    pj_pool_t                   *pool;
+    pj_pool_t                   *dev_pool;
+    pj_pool_factory             *pf;
 
-    unsigned			 dev_count;
-    vid4lin_dev_info		*dev_info;
+    unsigned                     dev_count;
+    vid4lin_dev_info            *dev_info;
 } vid4lin_factory;
 
 /* Video stream. */
 typedef struct vid4lin_stream
 {
-    pjmedia_vid_dev_stream	 base;		/**< Base stream	*/
-    pjmedia_vid_dev_param	 param;		/**< Settings		*/
-    pj_pool_t           	*pool;		/**< Memory pool.	*/
+    pjmedia_vid_dev_stream       base;          /**< Base stream        */
+    pjmedia_vid_dev_param        param;         /**< Settings           */
+    pj_pool_t                   *pool;          /**< Memory pool.       */
 
-    int			 	 fd;		/**< Video fd.		*/
-    char			 name[64];	/**< Name for log	*/
-    enum vid4lin_io_type	 io_type;	/**< I/O method.	*/
-    unsigned			 buf_cnt;	/**< MMap buf cnt.  	*/
-    vid4lin_buffer		*buffers;	/**< MMap buffers.  	*/
-    pj_time_val			 start_time;	/**< Time when started	*/
+    int                          fd;            /**< Video fd.          */
+    char                         name[64];      /**< Name for log       */
+    enum vid4lin_io_type         io_type;       /**< I/O method.        */
+    unsigned                     buf_cnt;       /**< MMap buf cnt.      */
+    vid4lin_buffer              *buffers;       /**< MMap buffers.      */
+    pj_time_val                  start_time;    /**< Time when started  */
 
-    pjmedia_vid_dev_cb       	 vid_cb;	/**< Stream callback  	*/
-    void                	*user_data;	/**< Application data 	*/
+    pjmedia_vid_dev_cb           vid_cb;        /**< Stream callback    */
+    void                        *user_data;     /**< Application data   */
 } vid4lin_stream;
 
 /* Use this to convert between pjmedia_format_id and V4L2 fourcc */
 static vid4lin_fmt_map v4l2_fmt_maps[] =
 {
-    { PJMEDIA_FORMAT_RGB24,	V4L2_PIX_FMT_BGR24 },
-    { PJMEDIA_FORMAT_RGBA,	V4L2_PIX_FMT_BGR32 },
-    { PJMEDIA_FORMAT_RGB32,	V4L2_PIX_FMT_BGR32 },
-    { PJMEDIA_FORMAT_AYUV,	V4L2_PIX_FMT_YUV32 },
-    { PJMEDIA_FORMAT_YUY2,	V4L2_PIX_FMT_YUYV },
-    { PJMEDIA_FORMAT_UYVY,	V4L2_PIX_FMT_UYVY },
-    { PJMEDIA_FORMAT_I420,	V4L2_PIX_FMT_YUV420 }
+    { PJMEDIA_FORMAT_RGB24,     V4L2_PIX_FMT_BGR24 },
+    { PJMEDIA_FORMAT_RGBA,      V4L2_PIX_FMT_BGR32 },
+    { PJMEDIA_FORMAT_RGB32,     V4L2_PIX_FMT_BGR32 },
+    { PJMEDIA_FORMAT_AYUV,      V4L2_PIX_FMT_YUV32 },
+    { PJMEDIA_FORMAT_YUY2,      V4L2_PIX_FMT_YUYV },
+    { PJMEDIA_FORMAT_UYVY,      V4L2_PIX_FMT_UYVY },
+    { PJMEDIA_FORMAT_I420,      V4L2_PIX_FMT_YUV420 }
 };
 
 /* Prototypes */
@@ -125,26 +124,26 @@ static pj_status_t vid4lin_factory_destroy(pjmedia_vid_dev_factory *f);
 static pj_status_t vid4lin_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    vid4lin_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t vid4lin_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					        unsigned index,
-					        pjmedia_vid_dev_info *info);
+                                                unsigned index,
+                                                pjmedia_vid_dev_info *info);
 static pj_status_t vid4lin_factory_default_param(pj_pool_t *pool,
                                                  pjmedia_vid_dev_factory *f,
-					         unsigned index,
-					         pjmedia_vid_dev_param *param);
+                                                 unsigned index,
+                                                 pjmedia_vid_dev_param *param);
 static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
-						 pjmedia_vid_dev_param *prm,
-					         const pjmedia_vid_dev_cb *cb,
-					         void *user_data,
-					         pjmedia_vid_dev_stream **p);
+                                                 pjmedia_vid_dev_param *prm,
+                                                 const pjmedia_vid_dev_cb *cb,
+                                                 void *user_data,
+                                                 pjmedia_vid_dev_stream **p);
 
 static pj_status_t vid4lin_stream_get_param(pjmedia_vid_dev_stream *strm,
-					    pjmedia_vid_dev_param *param);
+                                            pjmedia_vid_dev_param *param);
 static pj_status_t vid4lin_stream_get_cap(pjmedia_vid_dev_stream *strm,
-				          pjmedia_vid_dev_cap cap,
-				          void *value);
+                                          pjmedia_vid_dev_cap cap,
+                                          void *value);
 static pj_status_t vid4lin_stream_set_cap(pjmedia_vid_dev_stream *strm,
-				          pjmedia_vid_dev_cap cap,
-				          const void *value);
+                                          pjmedia_vid_dev_cap cap,
+                                          const void *value);
 static pj_status_t vid4lin_stream_get_frame(pjmedia_vid_dev_stream *strm,
                                             pjmedia_frame *frame);
 static pj_status_t vid4lin_stream_start(pjmedia_vid_dev_stream *strm);
@@ -203,7 +202,7 @@ static pj_status_t xioctl(int fh, int request, void *arg)
     int r, c=0;
 
     do {
-	r = v4l2_ioctl(fh, request, arg);
+        r = v4l2_ioctl(fh, request, arg);
     } while (r==-1 && c++<RETRY && ((errno==EINTR) || (errno==EAGAIN)));
 
     return (r == -1) ? pj_get_os_error() : PJ_SUCCESS;
@@ -223,13 +222,13 @@ static vid4lin_fmt_map* get_v4l2_format_info(pjmedia_format_id id)
 
 /* Get the supported size */
 static void v4l2_get_supported_size(int fd,
-				    pj_uint32_t fmt_id,
-				    pjmedia_vid_dev_info *info)
+                                    pj_uint32_t fmt_id,
+                                    pjmedia_vid_dev_info *info)
 {
     int i=0;
     pjmedia_rect_size v4l_sizes[] =
     {
-	 /* Some webcam doesn't work well using size below 320x240 */
+         /* Some webcam doesn't work well using size below 320x240 */
          /*{ 128, 96 },  { 176, 144 },*/ { 320, 240 },   { 352, 240 },
          { 352, 288 },   { 352, 480 },   { 352, 576 },   { 640, 480 },
          { 704, 480 },   { 720, 480 },   { 704, 576 },   { 720, 576 },
@@ -243,35 +242,35 @@ static void v4l2_get_supported_size(int fd,
 
     const vid4lin_fmt_map *fmt_map = get_v4l2_format_info(fmt_id);
     if (fmt_map == NULL)
-	return;
+        return;
 
     for (;i<PJ_ARRAY_SIZE(v4l_sizes) &&
           info->fmt_cnt<PJMEDIA_VID_DEV_INFO_FMT_CNT;
          i++)
     {
-	struct v4l2_format v4l2_fmt;
-	pj_status_t status;
+        struct v4l2_format v4l2_fmt;
+        pj_status_t status;
 
-	pj_bzero(&v4l2_fmt, sizeof(v4l2_fmt));
-	v4l2_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	v4l2_fmt.fmt.pix.width       = v4l_sizes[i].w;
-	v4l2_fmt.fmt.pix.height      = v4l_sizes[i].h;
-	v4l2_fmt.fmt.pix.pixelformat = fmt_map->v4l2_fmt_id;
-	v4l2_fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
-	status = xioctl(fd, VIDIOC_TRY_FMT, &v4l2_fmt);
-	if (status != PJ_SUCCESS ||
-	    v4l2_fmt.fmt.pix.pixelformat != fmt_map->v4l2_fmt_id ||
-	    v4l2_fmt.fmt.pix.width != v4l_sizes[i].w ||
-	    v4l2_fmt.fmt.pix.height != v4l_sizes[i].h)
-	{
-	    continue;
-	}
+        pj_bzero(&v4l2_fmt, sizeof(v4l2_fmt));
+        v4l2_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        v4l2_fmt.fmt.pix.width       = v4l_sizes[i].w;
+        v4l2_fmt.fmt.pix.height      = v4l_sizes[i].h;
+        v4l2_fmt.fmt.pix.pixelformat = fmt_map->v4l2_fmt_id;
+        v4l2_fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
+        status = xioctl(fd, VIDIOC_TRY_FMT, &v4l2_fmt);
+        if (status != PJ_SUCCESS ||
+            v4l2_fmt.fmt.pix.pixelformat != fmt_map->v4l2_fmt_id ||
+            v4l2_fmt.fmt.pix.width != v4l_sizes[i].w ||
+            v4l2_fmt.fmt.pix.height != v4l_sizes[i].h)
+        {
+            continue;
+        }
 
-	pjmedia_format_init_video(&info->fmt[info->fmt_cnt++],
-				  fmt_id,
-				  v4l_sizes[i].w,
-				  v4l_sizes[i].h,
-				  DEFAULT_FPS, 1);
+        pjmedia_format_init_video(&info->fmt[info->fmt_cnt++],
+                                  fmt_id,
+                                  v4l_sizes[i].w,
+                                  v4l_sizes[i].h,
+                                  DEFAULT_FPS, 1);
     }
 }
 
@@ -294,97 +293,97 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
     f->dev_pool = pj_pool_create(f->pf, DRIVER_NAME, 500, 500, NULL);
 
     for (i=0; i<V4L2_MAX_DEVS && f->dev_count < V4L2_MAX_DEVS; ++i) {
-	int fd;
-	vid4lin_dev_info *pdi;
-	pj_uint32_t fmt_cap[8];
-	int j, fmt_cnt=0;
+        int fd;
+        vid4lin_dev_info *pdi;
+        pj_uint32_t fmt_cap[8];
+        int j, fmt_cnt=0;
 
-	pdi = &vdi[f->dev_count];
+        pdi = &vdi[f->dev_count];
 
-	snprintf(dev_name, sizeof(dev_name), "/dev/video%d", i);
-	if (!pj_file_exists(dev_name))
-	    continue;
+        snprintf(dev_name, sizeof(dev_name), "/dev/video%d", i);
+        if (!pj_file_exists(dev_name))
+            continue;
 
-	fd = v4l2_open(dev_name, O_RDWR, 0);
-	if (fd == -1)
-	    continue;
+        fd = v4l2_open(dev_name, O_RDWR, 0);
+        if (fd == -1)
+            continue;
 
-	status = xioctl(fd, VIDIOC_QUERYCAP, &pdi->v4l2_cap);
-	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(4,(THIS_FILE, status, "Error querying %s", dev_name));
-	    v4l2_close(fd);
-	    continue;
-	}
+        status = xioctl(fd, VIDIOC_QUERYCAP, &pdi->v4l2_cap);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4,(THIS_FILE, status, "Error querying %s", dev_name));
+            v4l2_close(fd);
+            continue;
+        }
 
-	if ((pdi->v4l2_cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
-	    v4l2_close(fd);
-	    continue;
-	}
+        if ((pdi->v4l2_cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
+            v4l2_close(fd);
+            continue;
+        }
 
-	PJ_LOG(5,(THIS_FILE, "Found capture device %s", pdi->v4l2_cap.card));
-	PJ_LOG(5,(THIS_FILE, "  Enumerating formats:"));
-	for (j=0; fmt_cnt<PJ_ARRAY_SIZE(fmt_cap); ++j) {
-	    struct v4l2_fmtdesc fdesc;
-	    unsigned k;
+        PJ_LOG(5,(THIS_FILE, "Found capture device %s", pdi->v4l2_cap.card));
+        PJ_LOG(5,(THIS_FILE, "  Enumerating formats:"));
+        for (j=0; fmt_cnt<PJ_ARRAY_SIZE(fmt_cap); ++j) {
+            struct v4l2_fmtdesc fdesc;
+            unsigned k;
 
-	    pj_bzero(&fdesc, sizeof(fdesc));
-	    fdesc.index = j;
-	    fdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            pj_bzero(&fdesc, sizeof(fdesc));
+            fdesc.index = j;
+            fdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-	    status = xioctl(fd, VIDIOC_ENUM_FMT, &fdesc);
-	    if (status != PJ_SUCCESS)
-		break;
+            status = xioctl(fd, VIDIOC_ENUM_FMT, &fdesc);
+            if (status != PJ_SUCCESS)
+                break;
 
-	    for (k=0; k<PJ_ARRAY_SIZE(v4l2_fmt_maps); ++k) {
-		if (v4l2_fmt_maps[k].v4l2_fmt_id == fdesc.pixelformat) {
-		    fmt_cap[fmt_cnt++] = v4l2_fmt_maps[k].pjmedia_fmt_id;
-		    PJ_LOG(5,(THIS_FILE, "   Supported: %s",
-			      fdesc.description));
-		    break;
-		}
-	    }
-	    if (k==PJ_ARRAY_SIZE(v4l2_fmt_maps)) {
-		PJ_LOG(5,(THIS_FILE, "   Unsupported: %s", fdesc.description));
-	    }
-	}
+            for (k=0; k<PJ_ARRAY_SIZE(v4l2_fmt_maps); ++k) {
+                if (v4l2_fmt_maps[k].v4l2_fmt_id == fdesc.pixelformat) {
+                    fmt_cap[fmt_cnt++] = v4l2_fmt_maps[k].pjmedia_fmt_id;
+                    PJ_LOG(5,(THIS_FILE, "   Supported: %s",
+                              fdesc.description));
+                    break;
+                }
+            }
+            if (k==PJ_ARRAY_SIZE(v4l2_fmt_maps)) {
+                PJ_LOG(5,(THIS_FILE, "   Unsupported: %s", fdesc.description));
+            }
+        }
 
-	if (fmt_cnt==0) {
-	    PJ_LOG(5,(THIS_FILE, "    Found no common format"));
-	    v4l2_close(fd);
-	    continue;
-	}
+        if (fmt_cnt==0) {
+            PJ_LOG(5,(THIS_FILE, "    Found no common format"));
+            v4l2_close(fd);
+            continue;
+        }
 
-	strncpy(pdi->dev_name, dev_name, sizeof(pdi->dev_name));
-	pdi->dev_name[sizeof(pdi->dev_name)-1] = '\0';
-	strncpy(pdi->info.name, (char*)pdi->v4l2_cap.card,
-		sizeof(pdi->info.name));
-	pdi->info.name[sizeof(pdi->info.name)-1] = '\0';
-	strncpy(pdi->info.driver, DRIVER_NAME, sizeof(pdi->info.driver));
-	pdi->info.driver[sizeof(pdi->info.driver)-1] = '\0';
-	pdi->info.dir = PJMEDIA_DIR_CAPTURE;
-	pdi->info.has_callback = PJ_FALSE;
-	pdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
+        strncpy(pdi->dev_name, dev_name, sizeof(pdi->dev_name));
+        pdi->dev_name[sizeof(pdi->dev_name)-1] = '\0';
+        strncpy(pdi->info.name, (char*)pdi->v4l2_cap.card,
+                sizeof(pdi->info.name));
+        pdi->info.name[sizeof(pdi->info.name)-1] = '\0';
+        strncpy(pdi->info.driver, DRIVER_NAME, sizeof(pdi->info.driver));
+        pdi->info.driver[sizeof(pdi->info.driver)-1] = '\0';
+        pdi->info.dir = PJMEDIA_DIR_CAPTURE;
+        pdi->info.has_callback = PJ_FALSE;
+        pdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
 
-	for (j=0; j<fmt_cnt; ++j) {
-	    v4l2_get_supported_size(fd, fmt_cap[j], &pdi->info);
-	}
+        for (j=0; j<fmt_cnt; ++j) {
+            v4l2_get_supported_size(fd, fmt_cap[j], &pdi->info);
+        }
 
-	v4l2_close(fd);
+        v4l2_close(fd);
 
-	if (j < fmt_cnt)
-	    continue;
+        if (j < fmt_cnt)
+            continue;
 
-	f->dev_count++;
+        f->dev_count++;
     }
 
     if (f->dev_count == 0)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     if (f->dev_count > old_count || f->dev_info == NULL) {
-	f->dev_info = (vid4lin_dev_info*)
-		      pj_pool_calloc(f->dev_pool,
-				     f->dev_count,
-				     sizeof(vid4lin_dev_info));
+        f->dev_info = (vid4lin_dev_info*)
+                      pj_pool_calloc(f->dev_pool,
+                                     f->dev_count,
+                                     sizeof(vid4lin_dev_info));
     }
     pj_memcpy(f->dev_info, vdi, f->dev_count * sizeof(vid4lin_dev_info));
 
@@ -407,8 +406,8 @@ static pj_status_t vid4lin_factory_destroy(pjmedia_vid_dev_factory *f)
     if (cf->dev_pool)
         pj_pool_release(cf->dev_pool);
     if (cf->pool) {
-	cf->pool = NULL;
-	pj_pool_release(pool);
+        cf->pool = NULL;
+        pj_pool_release(pool);
     }
 
     return PJ_SUCCESS;
@@ -422,10 +421,10 @@ static pj_status_t vid4lin_factory_refresh(pjmedia_vid_dev_factory *f)
 
     status = v4l2_scan_devs(cf);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     PJ_LOG(4, (THIS_FILE, "Video4Linux2 has %d devices",
-	       cf->dev_count));
+               cf->dev_count));
 
     return PJ_SUCCESS;
 }
@@ -439,8 +438,8 @@ static unsigned vid4lin_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 
 /* API: get device info */
 static pj_status_t vid4lin_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_info *info)
+                                             unsigned index,
+                                             pjmedia_vid_dev_info *info)
 {
     vid4lin_factory *cf = (vid4lin_factory*)f;
 
@@ -474,8 +473,8 @@ static pj_status_t vid4lin_factory_default_param(pj_pool_t *pool,
 
 /* util: setup format */
 static pj_status_t vid4lin_stream_init_fmt(vid4lin_stream *stream,
-					const pjmedia_vid_dev_param *param,
-					pj_uint32_t pix_fmt)
+                                        const pjmedia_vid_dev_param *param,
+                                        pj_uint32_t pix_fmt)
 {
     pjmedia_video_format_detail *vfd;
     struct v4l2_format v4l2_fmt;
@@ -483,7 +482,7 @@ static pj_status_t vid4lin_stream_init_fmt(vid4lin_stream *stream,
 
     vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
     if (vfd == NULL)
-	return PJMEDIA_EVID_BADFORMAT;
+        return PJMEDIA_EVID_BADFORMAT;
 
     pj_bzero(&v4l2_fmt, sizeof(v4l2_fmt));
     v4l2_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -493,19 +492,19 @@ static pj_status_t vid4lin_stream_init_fmt(vid4lin_stream *stream,
     v4l2_fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
     status = xioctl(stream->fd, VIDIOC_S_FMT, &v4l2_fmt);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     if (v4l2_fmt.fmt.pix.pixelformat != pix_fmt) {
-	status = PJMEDIA_EVID_BADFORMAT;
-	return status;
+        status = PJMEDIA_EVID_BADFORMAT;
+        return status;
     }
 
     if ((v4l2_fmt.fmt.pix.width != vfd->size.w) ||
-	(v4l2_fmt.fmt.pix.height != vfd->size.h))
+        (v4l2_fmt.fmt.pix.height != vfd->size.h))
     {
-	/* Size has changed */
-	vfd->size.w = v4l2_fmt.fmt.pix.width;
-	vfd->size.h = v4l2_fmt.fmt.pix.height;
+        /* Size has changed */
+        vfd->size.w = v4l2_fmt.fmt.pix.width;
+        vfd->size.h = v4l2_fmt.fmt.pix.height;
     }
 
     return PJ_SUCCESS;
@@ -524,37 +523,37 @@ static pj_status_t vid4lin_stream_init_streaming(vid4lin_stream *stream)
     req.memory = V4L2_MEMORY_MMAP;
     status = xioctl(stream->fd, VIDIOC_REQBUFS, &req);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     stream->buffers = pj_pool_calloc(stream->pool, req.count,
-				     sizeof(*stream->buffers));
+                                     sizeof(*stream->buffers));
     stream->buf_cnt = 0;
 
     for (i = 0; i < req.count; ++i) {
-	struct v4l2_buffer buf;
+        struct v4l2_buffer buf;
 
-	pj_bzero(&buf, sizeof(buf));
+        pj_bzero(&buf, sizeof(buf));
 
-	buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	buf.memory      = V4L2_MEMORY_MMAP;
-	buf.index       = i;
+        buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory      = V4L2_MEMORY_MMAP;
+        buf.index       = i;
 
-	status = xioctl(stream->fd, VIDIOC_QUERYBUF, &buf);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+        status = xioctl(stream->fd, VIDIOC_QUERYBUF, &buf);
+        if (status != PJ_SUCCESS)
+            goto on_error;
 
-	stream->buffers[i].length = buf.length;
-	stream->buffers[i].start = v4l2_mmap(NULL, buf.length,
-					     PROT_READ | PROT_WRITE,
-					     MAP_SHARED, stream->fd,
-					     buf.m.offset);
+        stream->buffers[i].length = buf.length;
+        stream->buffers[i].start = v4l2_mmap(NULL, buf.length,
+                                             PROT_READ | PROT_WRITE,
+                                             MAP_SHARED, stream->fd,
+                                             buf.m.offset);
 
-	if (MAP_FAILED == stream->buffers[i].start) {
-	    status = pj_get_os_error();
-	    goto on_error;
-	}
+        if (MAP_FAILED == stream->buffers[i].start) {
+            status = pj_get_os_error();
+            goto on_error;
+        }
 
-	stream->buf_cnt++;
+        stream->buf_cnt++;
     }
 
     PJ_LOG(5,(THIS_FILE, "  mmap streaming initialized"));
@@ -580,10 +579,10 @@ static pj_status_t vid4lin_stream_init_read_write(vid4lin_stream *stream)
 
 /* API: create stream */
 static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
-				      pjmedia_vid_dev_param *param,
-				      const pjmedia_vid_dev_cb *cb,
-				      void *user_data,
-				      pjmedia_vid_dev_stream **p_vid_strm)
+                                      pjmedia_vid_dev_param *param,
+                                      const pjmedia_vid_dev_cb *cb,
+                                      void *user_data,
+                                      pjmedia_vid_dev_stream **p_vid_strm)
 {
     vid4lin_factory *cf = (vid4lin_factory*)f;
     pj_pool_t *pool;
@@ -597,11 +596,11 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      param->dir == PJMEDIA_DIR_CAPTURE,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
     PJ_ASSERT_RETURN(param->cap_id >= 0 && param->cap_id < cf->dev_count,
-		     PJMEDIA_EVID_INVDEV);
+                     PJMEDIA_EVID_INVDEV);
 
     fmt_info = pjmedia_get_video_format_info(NULL, param->fmt.id);
     if (!fmt_info || (fmt_map=get_v4l2_format_info(param->fmt.id))==NULL)
@@ -626,25 +625,25 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
 
     stream->fd = v4l2_open(vdi->dev_name, O_RDWR, 0);
     if (stream->fd < 0)
-	goto on_error;
+        goto on_error;
 
     status = vid4lin_stream_init_fmt(stream, param, fmt_map->v4l2_fmt_id);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     if (vdi->v4l2_cap.capabilities & V4L2_CAP_STREAMING)
-	status = vid4lin_stream_init_streaming(stream);
+        status = vid4lin_stream_init_streaming(stream);
 
     if (status!=PJ_SUCCESS && vdi->v4l2_cap.capabilities & V4L2_CAP_STREAMING)
-	status = vid4lin_stream_init_streaming_user(stream);
+        status = vid4lin_stream_init_streaming_user(stream);
 
     if (status!=PJ_SUCCESS && vdi->v4l2_cap.capabilities & V4L2_CAP_READWRITE)
-	status = vid4lin_stream_init_read_write(stream);
+        status = vid4lin_stream_init_read_write(stream);
 
     if (status != PJ_SUCCESS) {
-	PJ_LOG(1,(THIS_FILE, "Error: unable to initiate I/O on %s",
-		  stream->name));
-	goto on_error;
+        PJ_LOG(1,(THIS_FILE, "Error: unable to initiate I/O on %s",
+                  stream->name));
+        goto on_error;
     }
 
     /* Done */
@@ -655,7 +654,7 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
 
 on_error:
     if (status == PJ_SUCCESS)
-	status = PJ_RETURN_OS_ERROR(errno);
+        status = PJ_RETURN_OS_ERROR(errno);
 
     vid4lin_stream_destroy(&stream->base);
     return status;
@@ -663,7 +662,7 @@ on_error:
 
 /* API: Get stream info. */
 static pj_status_t vid4lin_stream_get_param(pjmedia_vid_dev_stream *s,
-					    pjmedia_vid_dev_param *pi)
+                                            pjmedia_vid_dev_param *pi)
 {
     vid4lin_stream *strm = (vid4lin_stream*)s;
 
@@ -688,9 +687,9 @@ static pj_status_t vid4lin_stream_get_cap(pjmedia_vid_dev_stream *s,
     if (cap==PJMEDIA_VID_DEV_CAP_INPUT_SCALE)
     {
         return PJMEDIA_EVID_INVCAP;
-//	return PJ_SUCCESS;
+//      return PJ_SUCCESS;
     } else {
-	return PJMEDIA_EVID_INVCAP;
+        return PJMEDIA_EVID_INVCAP;
     }
 }
 
@@ -707,7 +706,7 @@ static pj_status_t vid4lin_stream_set_cap(pjmedia_vid_dev_stream *s,
     /*
     if (cap==PJMEDIA_VID_DEV_CAP_INPUT_SCALE)
     {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
     */
     PJ_UNUSED_ARG(strm);
@@ -731,13 +730,13 @@ static pj_status_t vid4lin_stream_get_frame_mmap(vid4lin_stream *stream,
     buf.memory = V4L2_MEMORY_MMAP;
     status = xioctl(stream->fd, VIDIOC_DQBUF, &buf);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     if (frame->size < buf.bytesused) {
-	/* supplied buffer is too small */
-	pj_assert(!"frame buffer is too small for v4l2");
-	status = PJ_ETOOSMALL;
-	goto on_return;
+        /* supplied buffer is too small */
+        pj_assert(!"frame buffer is too small for v4l2");
+        status = PJ_ETOOSMALL;
+        goto on_return;
     }
 
     time.sec = buf.timestamp.tv_sec;
@@ -748,7 +747,7 @@ static pj_status_t vid4lin_stream_get_frame_mmap(vid4lin_stream *stream,
     frame->bit_info = 0;
     frame->size = buf.bytesused;
     frame->timestamp.u64 = PJ_UINT64(1) * PJ_TIME_VAL_MSEC(time) *
-			   stream->param.clock_rate / PJ_UINT64(1000);
+                           stream->param.clock_rate / PJ_UINT64(1000);
     pj_memcpy(frame->buf, stream->buffers[buf.index].start, buf.bytesused);
 
 on_return:
@@ -769,10 +768,10 @@ static pj_status_t vid4lin_stream_get_frame(pjmedia_vid_dev_stream *strm,
     vid4lin_stream *stream = (vid4lin_stream*)strm;
 
     if (stream->io_type == IO_TYPE_MMAP)
-	return vid4lin_stream_get_frame_mmap(stream, frame);
+        return vid4lin_stream_get_frame_mmap(stream, frame);
     else {
-	pj_assert(!"Unsupported i/o type");
-	return PJ_EINVALIDOP;
+        pj_assert(!"Unsupported i/o type");
+        return PJ_EINVALIDOP;
     }
 }
 
@@ -792,34 +791,34 @@ static pj_status_t vid4lin_stream_start(pjmedia_vid_dev_stream *strm)
     pj_gettimeofday(&stream->start_time);
 
     for (i = 0; i < stream->buf_cnt; ++i) {
-	pj_bzero(&buf, sizeof(buf));
-	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	buf.memory = V4L2_MEMORY_MMAP;
-	buf.index = i;
-	status = xioctl(stream->fd, VIDIOC_QBUF, &buf);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+        pj_bzero(&buf, sizeof(buf));
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = V4L2_MEMORY_MMAP;
+        buf.index = i;
+        status = xioctl(stream->fd, VIDIOC_QBUF, &buf);
+        if (status != PJ_SUCCESS)
+            goto on_error;
     }
     type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     status = xioctl(stream->fd, VIDIOC_STREAMON, &type);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     return PJ_SUCCESS;
 
 on_error:
     if (i > 0) {
-	/* Dequeue already enqueued buffers. Can we do this while streaming
-	 * is not started?
-	 */
-	unsigned n = i;
-	for (i=0; i<n; ++i) {
-	    pj_bzero(&buf, sizeof(buf));
-	    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	    buf.memory = V4L2_MEMORY_MMAP;
-	    xioctl(stream->fd, VIDIOC_DQBUF, &buf);
-	}
+        /* Dequeue already enqueued buffers. Can we do this while streaming
+         * is not started?
+         */
+        unsigned n = i;
+        for (i=0; i<n; ++i) {
+            pj_bzero(&buf, sizeof(buf));
+            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            buf.memory = V4L2_MEMORY_MMAP;
+            xioctl(stream->fd, VIDIOC_DQBUF, &buf);
+        }
     }
     return status;
 }
@@ -832,14 +831,14 @@ static pj_status_t vid4lin_stream_stop(pjmedia_vid_dev_stream *strm)
     pj_status_t status;
 
     if (stream->fd < 0)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     PJ_LOG(4, (THIS_FILE, "Stopping v4l2 video stream %s", stream->name));
 
     type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     status = xioctl(stream->fd, VIDIOC_STREAMOFF, &type);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     return PJ_SUCCESS;
 }
@@ -858,19 +857,19 @@ static pj_status_t vid4lin_stream_destroy(pjmedia_vid_dev_stream *strm)
     PJ_LOG(4, (THIS_FILE, "Destroying v4l2 video stream %s", stream->name));
 
     for (i=0; i<stream->buf_cnt; ++i) {
-	if (stream->buffers[i].start != MAP_FAILED) {
-	    v4l2_munmap(stream->buffers[i].start, stream->buffers[i].length);
-	    stream->buffers[i].start = MAP_FAILED;
-	}
+        if (stream->buffers[i].start != MAP_FAILED) {
+            v4l2_munmap(stream->buffers[i].start, stream->buffers[i].length);
+            stream->buffers[i].start = MAP_FAILED;
+        }
     }
 
     if (stream->fd >= 0) {
-	v4l2_close(stream->fd);
-	stream->fd = -1;
+        v4l2_close(stream->fd);
+        stream->fd = -1;
     }
     pj_pool_release(stream->pool);
 
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_V4L2 */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_V4L2 */

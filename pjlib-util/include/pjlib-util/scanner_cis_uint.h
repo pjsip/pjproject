@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,7 +45,7 @@ typedef int pj_cis_buf_t;
  */
 typedef struct pj_cis_t
 {
-    PJ_CIS_ELEM_TYPE	cis_buf[256];	/**< Internal buffer.	*/
+    PJ_CIS_ELEM_TYPE    cis_buf[256];   /**< Internal buffer.   */
 } pj_cis_t;
 
 
@@ -81,4 +80,4 @@ typedef struct pj_cis_t
 
 PJ_END_DECL
 
-#endif	/* __PJLIB_UTIL_SCANNER_CIS_BIT_H__ */
+#endif  /* __PJLIB_UTIL_SCANNER_CIS_BIT_H__ */

@@ -31,7 +31,7 @@
 
 #include "echo_internal.h"
 
-#define THIS_FILE		"echo_webrtc.c"
+#define THIS_FILE               "echo_webrtc.c"
 
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE == 1
     #include <webrtc/modules/audio_processing/ns/include/noise_suppression_x.h>
@@ -57,20 +57,20 @@
 
 #endif
 
-#define BUF_LEN			160
+#define BUF_LEN                 160
 
 /* Set this to 0 to disable metrics calculation. */
-#define SHOW_DELAY_METRICS	1
+#define SHOW_DELAY_METRICS      1
 
 typedef struct webrtc_ec
 {
     void       *AEC_inst;
     NsHandle   *NS_inst;
     unsigned    options;
-    unsigned	samples_per_frame;
-    unsigned	tail;
+    unsigned    samples_per_frame;
+    unsigned    tail;
     unsigned    clock_rate;
-    unsigned	channel_count;
+    unsigned    channel_count;
     unsigned    subframe_len;
     sample      tmp_buf[BUF_LEN];
     sample      tmp_buf2[BUF_LEN];
@@ -94,13 +94,13 @@ static void set_config(void *AEC_inst, unsigned options)
     if (aggr_opt == PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE)
         aec_config.echoMode = 0;
     else if (aggr_opt == PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE)
-   	aec_config.echoMode = 4;
+        aec_config.echoMode = 4;
     aec_config.cngMode = AecmTrue;
 #else
     
     aec_config.nlpMode = kAecNlpModerate;
     if (aggr_opt == PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE)
-	aec_config.nlpMode = kAecNlpConservative;
+        aec_config.nlpMode = kAecNlpConservative;
     else if (aggr_opt == PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE)
         aec_config.nlpMode = kAecNlpAggressive;
     else
@@ -144,8 +144,8 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     
     /* Currently we only support mono. */
     if (channel_count != 1) {
-    	PJ_LOG(3, (THIS_FILE, "WebRTC AEC doesn't support stereo"));
-    	return PJ_ENOTSUP;
+        PJ_LOG(3, (THIS_FILE, "WebRTC AEC doesn't support stereo"));
+        return PJ_ENOTSUP;
     }
 
     echo->channel_count = channel_count;
@@ -156,13 +156,13 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     if (clock_rate > 8000)
         echo->subframe_len = 160;
     else
-    	echo->subframe_len = 80;
+        echo->subframe_len = 80;
     echo->options = options;
     
     /* Create WebRTC AEC */
     echo->AEC_inst = WebRtcAec_Create();
     if (!echo->AEC_inst) {
-    	return PJ_ENOMEM;
+        return PJ_ENOMEM;
     }
     
     /* Init WebRTC AEC */
@@ -170,7 +170,7 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     if (status != 0) {
         print_webrtc_aec_error("Init", echo->AEC_inst);
         WebRtcAec_Free(echo->AEC_inst);
-    	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
     }
 
     /* WebRtc is very dependent on delay calculation, which will be passed
@@ -205,10 +205,10 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
 
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
     PJ_LOG(3, (THIS_FILE, "WebRTC AEC mobile successfully created with "
-			  "options %d", options));
+                          "options %d", options));
 #else
     PJ_LOG(3, (THIS_FILE, "WebRTC AEC successfully created with "
-			  "options %d", options));
+                          "options %d", options));
 #endif
 
     /* Done */
@@ -227,8 +227,8 @@ PJ_DEF(pj_status_t) webrtc_aec_destroy(void *state )
     PJ_ASSERT_RETURN(echo, PJ_EINVAL);
     
     if (echo->AEC_inst) {
-    	WebRtcAec_Free(echo->AEC_inst);
-    	echo->AEC_inst = NULL;
+        WebRtcAec_Free(echo->AEC_inst);
+        echo->AEC_inst = NULL;
     }
     if (echo->NS_inst) {
         WebRtcNs_Free(echo->NS_inst);
@@ -266,10 +266,10 @@ PJ_DEF(void) webrtc_aec_reset(void *state )
  * Perform echo cancellation.
  */
 PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
-					    pj_int16_t *rec_frm,
-					    const pj_int16_t *play_frm,
-					    unsigned options,
-					    void *reserved )
+                                            pj_int16_t *rec_frm,
+                                            const pj_int16_t *play_frm,
+                                            unsigned options,
+                                            void *reserved )
 {
     webrtc_ec *echo = (webrtc_ec*) state;
     int status;
@@ -285,7 +285,7 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
     
     for(i = echo->samples_per_frame / echo->subframe_len; i > 0; i--) {
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
-	buf_ptr = &play_frm[frm_idx];
+        buf_ptr = &play_frm[frm_idx];
 #else
         for (j = 0; j < echo->subframe_len; j++) {
             echo->tmp_buf[j] = rec_frm[frm_idx+j];
@@ -302,13 +302,13 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
             return PJ_EUNKNOWN;
         }        
         
-	buf_ptr = echo->tmp_buf;
-	out_buf_ptr = echo->tmp_buf2;
+        buf_ptr = echo->tmp_buf;
+        out_buf_ptr = echo->tmp_buf2;
         if (echo->NS_inst) {
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
-	    buf_ptr = &rec_frm[frm_idx];
+            buf_ptr = &rec_frm[frm_idx];
             WebRtcNsx_Process(echo->NS_inst, &buf_ptr, echo->channel_count,
-            		      &out_buf_ptr);
+                              &out_buf_ptr);
             buf_ptr = out_buf_ptr;
             out_buf_ptr = echo->tmp_buf;
 #else
@@ -319,9 +319,9 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
         /* Process echo cancellation */
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
         status = WebRtcAecm_Process(echo->AEC_inst, &rec_frm[frm_idx],
-        			    (echo->NS_inst? buf_ptr: NULL),
-        			    out_buf_ptr, echo->subframe_len,
-        			    echo->tail);
+                                    (echo->NS_inst? buf_ptr: NULL),
+                                    out_buf_ptr, echo->subframe_len,
+                                    echo->tail);
 #else
         status = WebRtcAec_Process(echo->AEC_inst, &buf_ptr,
                                    echo->channel_count, &out_buf_ptr,
@@ -333,18 +333,18 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
         }
 
 #if !PJMEDIA_WEBRTC_AEC_USE_MOBILE
-    	if (echo->NS_inst) {
+        if (echo->NS_inst) {
             /* Noise suppression */
-	    buf_ptr = echo->tmp_buf2;
-	    out_buf_ptr = echo->tmp_buf;
+            buf_ptr = echo->tmp_buf2;
+            out_buf_ptr = echo->tmp_buf;
             WebRtcNs_Process(echo->NS_inst, &buf_ptr,
                              echo->channel_count, &out_buf_ptr);
-    	}
+        }
 #endif
     
-       	for (j = 0; j < echo->subframe_len; j++) {
- 	    rec_frm[frm_idx++] = (pj_int16_t)out_buf_ptr[j];
-    	}
+        for (j = 0; j < echo->subframe_len; j++) {
+            rec_frm[frm_idx++] = (pj_int16_t)out_buf_ptr[j];
+        }
     }
 
     return PJ_SUCCESS;
@@ -352,12 +352,12 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
 
 
 PJ_DEF(pj_status_t) webrtc_aec_get_stat(void *state,
-					pjmedia_echo_stat *p_stat)
+                                        pjmedia_echo_stat *p_stat)
 {
     webrtc_ec *echo = (webrtc_ec*) state;
 
     if (WebRtcAec_GetDelayMetrics(echo->AEC_inst, &p_stat->delay,
-    				  &p_stat->std, &p_stat->frac_delay) != 0)
+                                  &p_stat->std, &p_stat->frac_delay) != 0)
     {
         return PJ_EUNKNOWN;
     }
@@ -366,9 +366,9 @@ PJ_DEF(pj_status_t) webrtc_aec_get_stat(void *state,
     p_stat->stat_info.ptr = p_stat->buf_;
     p_stat->stat_info.slen =
         pj_ansi_snprintf(p_stat->buf_, sizeof(p_stat->buf_),
-		     	 "WebRTC delay metric: median=%d, std=%d, "
-            	     	 "frac of poor delay=%.02f",
-            	     	 p_stat->delay, p_stat->std, p_stat->frac_delay);
+                         "WebRTC delay metric: median=%d, std=%d, "
+                         "frac of poor delay=%.02f",
+                         p_stat->delay, p_stat->std, p_stat->frac_delay);
 
     return PJ_SUCCESS;
 }

@@ -45,19 +45,19 @@ VPX_LDFLAGS = @ac_vpx_ldflags@
 
 # PJMEDIA features exclusion
 export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@ \
-		 $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(DSHOW_CFLAGS) $(QT_CFLAGS) \
-		 $(DARWIN_CFLAGS) $(ANDROID_CFLAGS) \
-		 $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(OBOE_CFLAGS)
+                 $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(DSHOW_CFLAGS) $(QT_CFLAGS) \
+                 $(DARWIN_CFLAGS) $(ANDROID_CFLAGS) \
+                 $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(OBOE_CFLAGS)
 export LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) $(DSHOW_LDFLAGS) \
-		  $(OPENH264_LDFLAGS) $(VPX_LDFLAGS) $(OBOE_LDFLAGS)
+                  $(OPENH264_LDFLAGS) $(VPX_LDFLAGS) $(OBOE_LDFLAGS)
 
 # Define the desired sound device backend
 # Valid values are:
-#   - win32:	    	Win32 MME (wmme_dev.c)
-#   - coreaudio:	MaxOSX CoreAudio (coreaudio_dev.m)
-#   - alsa:		Unix ALSA (alsa_dev.c)
-#   - null:	    	Null sound device (nullsound.c)
-#   - external:		Link with no sounddev (app will provide)
+#   - win32:            Win32 MME (wmme_dev.c)
+#   - coreaudio:        MaxOSX CoreAudio (coreaudio_dev.m)
+#   - alsa:             Unix ALSA (alsa_dev.c)
+#   - null:             Null sound device (nullsound.c)
+#   - external:         Link with no sounddev (app will provide)
 AC_PJMEDIA_SND=@ac_pjmedia_snd@
 
 #
@@ -160,12 +160,12 @@ ifneq (@ac_external_srtp@,0)
 export CFLAGS += -DPJMEDIA_EXTERNAL_SRTP=@ac_external_srtp@
 # SRTP srtp_deinit()/srtp_shutdown() API availability settings
 export CFLAGS += -DPJMEDIA_SRTP_HAS_DEINIT=@ac_srtp_deinit_present@ \
-		 -DPJMEDIA_SRTP_HAS_SHUTDOWN=@ac_srtp_shutdown_present@
+                 -DPJMEDIA_SRTP_HAS_SHUTDOWN=@ac_srtp_shutdown_present@
 else
 # Our SRTP in third_party
 export CFLAGS += -I$(THIRD_PARTY)/build/srtp \
-	 -I$(THIRD_PARTY)/srtp/crypto/include \
-	 -I$(THIRD_PARTY)/srtp/include
+         -I$(THIRD_PARTY)/srtp/crypto/include \
+         -I$(THIRD_PARTY)/srtp/include
 
 endif
 
@@ -197,7 +197,7 @@ endif
 ifeq (@ac_external_pa@,1)
 # External PA
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=1 \
-		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
+                 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #
@@ -247,8 +247,8 @@ endif
 #
 ifneq ($(findstring coreaudio,$(AC_PJMEDIA_SND)),)
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_COREAUDIO=1 \
-		 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
-		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
+                 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
+                 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #
@@ -256,8 +256,8 @@ endif
 #
 ifneq ($(findstring alsa,$(AC_PJMEDIA_SND)),)
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_ALSA=1 \
-		 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
-		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
+                 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
+                 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #
@@ -265,7 +265,7 @@ endif
 #
 ifneq ($(findstring win32,$(AC_PJMEDIA_SND)),)
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_WMME=1 \
-		 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0
+                 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0
 else
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
@@ -275,7 +275,7 @@ endif
 #
 ifeq ($(AC_PJMEDIA_SND),null)
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
-		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
+                 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #
@@ -283,7 +283,7 @@ endif
 #
 ifeq ($(AC_PJMEDIA_SND),external)
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
-		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
+                 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #

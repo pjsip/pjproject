@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -25,8 +24,8 @@
 
 #if PJSUA_HAS_VIDEO
 
-#define THIS_FILE		"alt_pjsua_vid.c"
-#define UNIMPLEMENTED(func)	PJ_LOG(2,(THIS_FILE, "*** Call to unimplemented function %s ***", #func));
+#define THIS_FILE               "alt_pjsua_vid.c"
+#define UNIMPLEMENTED(func)     PJ_LOG(2,(THIS_FILE, "*** Call to unimplemented function %s ***", #func));
 
 /*****************************************************************************
  * Our video codec descriptors
@@ -35,21 +34,21 @@ struct alt_codec_desc
 {
     /* Predefined info */
     pjmedia_vid_codec_info       info;
-    pjmedia_format_id		 base_fmt_id;
-    pj_uint32_t			 avg_bps;
-    pj_uint32_t			 max_bps;
-    pjmedia_codec_fmtp		 dec_fmtp;
+    pjmedia_format_id            base_fmt_id;
+    pj_uint32_t                  avg_bps;
+    pj_uint32_t                  max_bps;
+    pjmedia_codec_fmtp           dec_fmtp;
 } alt_vid_codecs[] =
 {
     /* H.263+ */
     {
-	{PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9},
-	 {"H.263 codec", 11}, 90000, PJMEDIA_DIR_ENCODING_DECODING,
-	 0, {PJMEDIA_FORMAT_RGB24}, PJMEDIA_VID_PACKING_PACKETS
-	},
-	PJMEDIA_FORMAT_H263,	256000,    512000,
-	{2, { {{"CIF",3},   {"1",1}},
-	      {{"QCIF",4},  {"1",1}}, } },
+        {PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9},
+         {"H.263 codec", 11}, 90000, PJMEDIA_DIR_ENCODING_DECODING,
+         0, {PJMEDIA_FORMAT_RGB24}, PJMEDIA_VID_PACKING_PACKETS
+        },
+        PJMEDIA_FORMAT_H263,    256000,    512000,
+        {2, { {{"CIF",3},   {"1",1}},
+              {{"QCIF",4},  {"1",1}}, } },
     }
 };
 
@@ -57,11 +56,11 @@ static const struct alt_codec_desc* find_codec_desc_by_info(const pjmedia_vid_co
 {
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(alt_vid_codecs); ++i) {
-	struct alt_codec_desc *desc = &alt_vid_codecs[i];
-	if ((desc->info.fmt_id == info->fmt_id) &&
+        struct alt_codec_desc *desc = &alt_vid_codecs[i];
+        if ((desc->info.fmt_id == info->fmt_id) &&
             ((desc->info.dir & info->dir) == info->dir) &&
-	    (desc->info.pt == info->pt) &&
-	    (desc->info.packings & info->packings))
+            (desc->info.pt == info->pt) &&
+            (desc->info.packings & info->packings))
         {
             return desc;
         }
@@ -92,15 +91,15 @@ static pj_status_t alt_vid_codec_default_attr( pjmedia_vid_codec_factory *factor
     /* Scan the requested packings and use the lowest number */
     attr->packing = 0;
     for (i=0; i<15; ++i) {
-	unsigned packing = (1 << i);
-	if ((desc->info.packings & info->packings) & packing) {
-	    attr->packing = (pjmedia_vid_packing)packing;
-	    break;
-	}
+        unsigned packing = (1 << i);
+        if ((desc->info.packings & info->packings) & packing) {
+            attr->packing = (pjmedia_vid_packing)packing;
+            break;
+        }
     }
     if (attr->packing == 0) {
-	/* No supported packing in info */
-	return PJMEDIA_CODEC_EUNSUP;
+        /* No supported packing in info */
+        return PJMEDIA_CODEC_EUNSUP;
     }
 
     /* Direction */
@@ -130,8 +129,8 @@ static pj_status_t alt_vid_codec_default_attr( pjmedia_vid_codec_factory *factor
 
 
 static pj_status_t alt_vid_codec_enum_codecs( pjmedia_vid_codec_factory *factory,
-					      unsigned *count,
-					      pjmedia_vid_codec_info codecs[])
+                                              unsigned *count,
+                                              pjmedia_vid_codec_info codecs[])
 {
     unsigned i, max_cnt;
 
@@ -141,9 +140,9 @@ static pj_status_t alt_vid_codec_enum_codecs( pjmedia_vid_codec_factory *factory
     *count = 0;
 
     for (i=0; i<max_cnt; ++i) {
-	pj_memcpy(&codecs[*count], &alt_vid_codecs[i].info,
-		  sizeof(pjmedia_vid_codec_info));
-	(*count)++;
+        pj_memcpy(&codecs[*count], &alt_vid_codecs[i].info,
+                  sizeof(pjmedia_vid_codec_info));
+        (*count)++;
     }
 
     return PJ_SUCCESS;
@@ -151,8 +150,8 @@ static pj_status_t alt_vid_codec_enum_codecs( pjmedia_vid_codec_factory *factory
 
 
 static pj_status_t alt_vid_codec_alloc_codec( pjmedia_vid_codec_factory *factory,
-					      const pjmedia_vid_codec_info *info,
-					      pjmedia_vid_codec **p_codec)
+                                              const pjmedia_vid_codec_info *info,
+                                              pjmedia_vid_codec **p_codec)
 {
     /* This will never get called since we won't be using this codec */
     UNIMPLEMENTED(alt_vid_codec_alloc_codec)
@@ -194,17 +193,17 @@ pj_status_t pjsua_vid_subsys_init(void)
     /* Format manager singleton is needed */
     status = pjmedia_video_format_mgr_create(pjsua_var.pool, 64, 0, NULL);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error creating PJMEDIA video format manager"));
-	return status;
+        PJ_PERROR(1,(THIS_FILE, status,
+                     "Error creating PJMEDIA video format manager"));
+        return status;
     }
 
     /* Create video codec manager singleton */
     status = pjmedia_vid_codec_mgr_create(pjsua_var.pool, &mgr);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error creating PJMEDIA video codec manager"));
-	return status;
+        PJ_PERROR(1,(THIS_FILE, status,
+                     "Error creating PJMEDIA video codec manager"));
+        return status;
     }
 
     /* Register our codecs */
@@ -213,7 +212,7 @@ pj_status_t pjsua_vid_subsys_init(void)
 
     status = pjmedia_vid_codec_mgr_register_factory(mgr, &alt_vid_codec_factory.base);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /*
      * TODO: put your 3rd party library initialization routine here
@@ -235,10 +234,10 @@ pj_status_t pjsua_vid_subsys_start(void)
 pj_status_t pjsua_vid_subsys_destroy(void)
 {
     if (pjmedia_vid_codec_mgr_instance())
-	pjmedia_vid_codec_mgr_destroy(NULL);
+        pjmedia_vid_codec_mgr_destroy(NULL);
 
     if (pjmedia_video_format_mgr_instance())
-	pjmedia_video_format_mgr_destroy(NULL);
+        pjmedia_video_format_mgr_destroy(NULL);
 
     /*
      * TODO: put your 3rd party library cleanup routine here
@@ -261,7 +260,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     PJ_LOG(4,(THIS_FILE, "Stopping video stream.."));
 
     if (call_med->tp) {
-	pjmedia_transport_detach(call_med->tp, call_med);
+        pjmedia_transport_detach(call_med->tp, call_med);
     }
 
     /*
@@ -298,9 +297,9 @@ static void timer_to_send_vid_rtp(void *user_data)
     const char *pkt = "Not RTP packet";
 
     if (!call_med->call || !call_med->call->inv || !call_med->tp) {
-	/* Call has been disconnected. There is race condition here as
-	 * this cb may be called sometime after call has been disconnected */
-	return;
+        /* Call has been disconnected. There is race condition here as
+         * this cb may be called sometime after call has been disconnected */
+        return;
     }
 
     pjmedia_transport_send_rtp(call_med->tp, pkt, strlen(pkt));
@@ -314,9 +313,9 @@ static void timer_to_send_vid_rtcp(void *user_data)
     const char *pkt = "Not RTCP packet";
 
     if (!call_med->call || !call_med->call->inv || !call_med->tp) {
-	/* Call has been disconnected. There is race condition here as
-	 * this cb may be called sometime after call has been disconnected */
-	return;
+        /* Call has been disconnected. There is race condition here as
+         * this cb may be called sometime after call has been disconnected */
+        return;
     }
 
     pjmedia_transport_send_rtcp(call_med->tp, pkt, strlen(pkt));
@@ -326,10 +325,10 @@ static void timer_to_send_vid_rtcp(void *user_data)
 
 /* update video channel after SDP negotiation */
 pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
-				     pj_pool_t *tmp_pool,
-				     pjmedia_vid_stream_info *si,
-				     const pjmedia_sdp_session *local_sdp,
-				     const pjmedia_sdp_session *remote_sdp)
+                                     pj_pool_t *tmp_pool,
+                                     pjmedia_vid_stream_info *si,
+                                     const pjmedia_sdp_session *local_sdp,
+                                     const pjmedia_sdp_session *remote_sdp)
 {
     pj_status_t status;
     
@@ -338,22 +337,22 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 
     /* Check if no media is active */
     if (si->dir != PJMEDIA_DIR_NONE) {
-	/* Attach our RTP and RTCP callbacks to the media transport */
-	status = pjmedia_transport_attach(call_med->tp, call_med,
-	                                  &si->rem_addr, &si->rem_rtcp,
-	                                  pj_sockaddr_get_len(&si->rem_addr),
-	                                  &vid_rtp_cb, &vid_rtcp_cb);
-	/*
-	 * TODO:
-	 *   - Create and start your video stream based on the parameters
-	 *     in si
-	 */
+        /* Attach our RTP and RTCP callbacks to the media transport */
+        status = pjmedia_transport_attach(call_med->tp, call_med,
+                                          &si->rem_addr, &si->rem_rtcp,
+                                          pj_sockaddr_get_len(&si->rem_addr),
+                                          &vid_rtp_cb, &vid_rtcp_cb);
+        /*
+         * TODO:
+         *   - Create and start your video stream based on the parameters
+         *     in si
+         */
 
-	/* For a demonstration, let's use a timer to send "RTP" packet
-	 * periodically.
-	 */
-	pjsua_schedule_timer2(&timer_to_send_vid_rtp, call_med, 1000);
-	pjsua_schedule_timer2(&timer_to_send_vid_rtcp, call_med, 3500);
+        /* For a demonstration, let's use a timer to send "RTP" packet
+         * periodically.
+         */
+        pjsua_schedule_timer2(&timer_to_send_vid_rtp, call_med, 1000);
+        pjsua_schedule_timer2(&timer_to_send_vid_rtcp, call_med, 3500);
     }
 
     pj_log_pop_indent();
@@ -388,7 +387,7 @@ PJ_DEF(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id)
 
 /* Get video conference slot ID of the specified capture device. */
 PJ_DEF(pjsua_conf_port_id) pjsua_vid_preview_get_vid_conf_port(
-						    pjmedia_vid_dev_index id)
+                                                    pjmedia_vid_dev_index id)
 {
     UNIMPLEMENTED(pjsua_vid_preview_get_vid_conf_port)
     return PJSUA_INVALID_ID;
@@ -451,7 +450,7 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_get_info(pjmedia_vid_dev_index id,
 
 /* Enum all video devices installed in the system. */
 PJ_DEF(pj_status_t) pjsua_vid_enum_devs(pjmedia_vid_dev_info info[],
-					unsigned *count)
+                                        unsigned *count)
 {
     UNIMPLEMENTED(pjsua_vid_enum_devs)
     return PJ_ENOTSUP;
@@ -466,9 +465,9 @@ PJ_DEF(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id)
 
 /* Set the capability of the video device. */
 PJ_DEF(pj_status_t) pjsua_vid_dev_set_setting( pjmedia_vid_dev_index id,
-					       pjmedia_vid_dev_cap cap,
-					       const void *pval,
-					       pj_bool_t keep)
+                                               pjmedia_vid_dev_cap cap,
+                                               const void *pval,
+                                               pj_bool_t keep)
 {
     UNIMPLEMENTED(pjsua_vid_dev_set_setting)
     return PJ_ENOTSUP;
@@ -476,8 +475,8 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_set_setting( pjmedia_vid_dev_index id,
 
 /* Get the value of the video device capability. */
 PJ_DEF(pj_status_t) pjsua_vid_dev_get_setting( pjmedia_vid_dev_index id,
-					       pjmedia_vid_dev_cap cap,
-					       void *pval)
+                                               pjmedia_vid_dev_cap cap,
+                                               void *pval)
 {
     UNIMPLEMENTED(pjsua_vid_dev_get_setting)
     return PJ_ENOTSUP;
@@ -489,7 +488,7 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_get_setting( pjmedia_vid_dev_index id,
 
 /* Enum all supported video codecs in the system. */
 PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
-					   unsigned *p_count )
+                                           unsigned *p_count )
 {
     pjmedia_vid_codec_info info[32];
     unsigned i, j, count, prio[32];
@@ -498,25 +497,25 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
     count = PJ_ARRAY_SIZE(info);
     status = pjmedia_vid_codec_mgr_enum_codecs(NULL, &count, info, prio);
     if (status != PJ_SUCCESS) {
-	*p_count = 0;
-	return status;
+        *p_count = 0;
+        return status;
     }
     for (i=0, j=0; i<count && j<*p_count; ++i) {
-	if (info[i].packings & PJMEDIA_VID_PACKING_PACKETS) {
-	    pj_bzero(&id[j], sizeof(pjsua_codec_info));
+        if (info[i].packings & PJMEDIA_VID_PACKING_PACKETS) {
+            pj_bzero(&id[j], sizeof(pjsua_codec_info));
 
-	    pjmedia_vid_codec_info_to_id(&info[i], id[j].buf_, sizeof(id[j].buf_));
-	    id[j].codec_id = pj_str(id[j].buf_);
-	    id[j].priority = (pj_uint8_t) prio[i];
+            pjmedia_vid_codec_info_to_id(&info[i], id[j].buf_, sizeof(id[j].buf_));
+            id[j].codec_id = pj_str(id[j].buf_);
+            id[j].priority = (pj_uint8_t) prio[i];
 
-	    if (id[j].codec_id.slen < sizeof(id[j].buf_)) {
-		id[j].desc.ptr = id[j].codec_id.ptr + id[j].codec_id.slen + 1;
-		pj_strncpy(&id[j].desc, &info[i].encoding_desc,
-			   sizeof(id[j].buf_) - id[j].codec_id.slen - 1);
-	    }
+            if (id[j].codec_id.slen < sizeof(id[j].buf_)) {
+                id[j].desc.ptr = id[j].codec_id.ptr + id[j].codec_id.slen + 1;
+                pj_strncpy(&id[j].desc, &info[i].encoding_desc,
+                           sizeof(id[j].buf_) - id[j].codec_id.slen - 1);
+            }
 
-	    ++j;
-	}
+            ++j;
+        }
     }
 
     *p_count = j;
@@ -525,7 +524,7 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
 
 /* Change video codec priority. */
 PJ_DEF(pj_status_t) pjsua_vid_codec_set_priority( const pj_str_t *codec_id,
-						  pj_uint8_t priority )
+                                                  pj_uint8_t priority )
 {
     UNIMPLEMENTED(pjsua_vid_codec_set_priority)
     return PJ_ENOTSUP;
@@ -533,8 +532,8 @@ PJ_DEF(pj_status_t) pjsua_vid_codec_set_priority( const pj_str_t *codec_id,
 
 /* Get video codec parameters. */
 PJ_DEF(pj_status_t) pjsua_vid_codec_get_param(
-					const pj_str_t *codec_id,
-					pjmedia_vid_codec_param *param)
+                                        const pj_str_t *codec_id,
+                                        pjmedia_vid_codec_param *param)
 {
     UNIMPLEMENTED(pjsua_vid_codec_get_param)
     return PJ_ENOTSUP;
@@ -542,8 +541,8 @@ PJ_DEF(pj_status_t) pjsua_vid_codec_get_param(
 
 /* Set video codec parameters. */
 PJ_DEF(pj_status_t) pjsua_vid_codec_set_param(
-					const pj_str_t *codec_id,
-					const pjmedia_vid_codec_param *param)
+                                        const pj_str_t *codec_id,
+                                        const pjmedia_vid_codec_param *param)
 {
     UNIMPLEMENTED(pjsua_vid_codec_set_param)
     return PJ_ENOTSUP;
@@ -556,7 +555,7 @@ PJ_DEF(pj_status_t) pjsua_vid_codec_set_param(
 
 /* Enumerates all video windows. */
 PJ_DEF(pj_status_t) pjsua_vid_enum_wins( pjsua_vid_win_id wids[],
-					 unsigned *count)
+                                         unsigned *count)
 {
     UNIMPLEMENTED(pjsua_vid_enum_wins)
     return PJ_ENOTSUP;
@@ -596,8 +595,8 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_size( pjsua_vid_win_id wid,
 
 /* Set video window fullscreen. */
 PJ_DEF(pj_status_t) pjsua_vid_win_set_fullscreen(
-					pjsua_vid_win_id wid,
-					pjmedia_vid_dev_fullscreen_flag mode)
+                                        pjsua_vid_win_id wid,
+                                        pjmedia_vid_dev_fullscreen_flag mode)
 {
     UNIMPLEMENTED(pjsua_vid_win_set_fullscreen)
     return PJ_ENOTSUP;
@@ -621,9 +620,9 @@ PJ_DEF(pj_status_t) pjsua_vid_win_rotate( pjsua_vid_win_id wid,
 
 /* Start, stop, and/or manipulate video transmission for the specified call. */
 PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
-				pjsua_call_id call_id,
-				pjsua_call_vid_strm_op op,
-				const pjsua_call_vid_strm_op_param *param)
+                                pjsua_call_id call_id,
+                                pjsua_call_vid_strm_op op,
+                                const pjsua_call_vid_strm_op_param *param)
 {
     UNIMPLEMENTED(pjsua_call_set_vid_strm)
     return PJ_ENOTSUP;
@@ -650,7 +649,7 @@ PJ_DEF(pj_bool_t) pjsua_call_vid_stream_is_running( pjsua_call_id call_id,
 
 /* Enumerate all video conference ports. */
 PJ_DEF(pj_status_t) pjsua_vid_conf_enum_ports( pjsua_conf_port_id id[],
-					       unsigned *count)
+                                               unsigned *count)
 {
     UNIMPLEMENTED(pjsua_vid_conf_enum_ports)
     return PJ_ENOTSUP;
@@ -658,8 +657,8 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_enum_ports( pjsua_conf_port_id id[],
 
 /* Get information about the specified video conference port. */
 PJ_DEF(pj_status_t) pjsua_vid_conf_get_port_info(
-					    pjsua_conf_port_id port_id,
-					    pjsua_vid_conf_port_info *info)
+                                            pjsua_conf_port_id port_id,
+                                            pjsua_vid_conf_port_info *info)
 {
     UNIMPLEMENTED(pjsua_vid_conf_get_port_info)
     return PJ_ENOTSUP;
@@ -667,8 +666,8 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_get_port_info(
 
 /* Establish unidirectional video flow from souce to sink. */
 PJ_DEF(pj_status_t) pjsua_vid_conf_connect( pjsua_conf_port_id source,
-					    pjsua_conf_port_id sink,
-					    const void *param)
+                                            pjsua_conf_port_id sink,
+                                            const void *param)
 {
     UNIMPLEMENTED(pjsua_vid_conf_connect)
     return PJ_ENOTSUP;
@@ -676,7 +675,7 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_connect( pjsua_conf_port_id source,
 
 /* Disconnect video flow from the source to destination port. */
 PJ_DEF(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
-					      pjsua_conf_port_id sink)
+                                              pjsua_conf_port_id sink)
 {
     UNIMPLEMENTED(pjsua_vid_conf_disconnect)
     return PJ_ENOTSUP;
@@ -684,9 +683,9 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
 
 /* Add arbitrary video media port to PJSUA's video conference bridge. */
 PJ_DEF(pj_status_t) pjsua_vid_conf_add_port( pj_pool_t *pool,
-					     pjmedia_port *port,
-					     const void *param,
-					     pjsua_conf_port_id *p_id)
+                                             pjmedia_port *port,
+                                             const void *param,
+                                             pjsua_conf_port_id *p_id)
 {
     UNIMPLEMENTED(pjsua_vid_conf_add_port)
     return PJ_ENOTSUP;
@@ -706,5 +705,5 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_update_port(pjsua_conf_port_id id)
     return PJ_ENOTSUP;
 }
 
-#endif	/* PJSUA_HAS_VIDEO */
+#endif  /* PJSUA_HAS_VIDEO */
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -84,7 +83,7 @@ typedef enum pjmedia_vid_stream_rc_method
      * No sending rate control. All outgoing RTP packets will be transmitted
      * immediately right after encoding process is done.
      */
-    PJMEDIA_VID_STREAM_RC_NONE		    = 0,
+    PJMEDIA_VID_STREAM_RC_NONE              = 0,
 
     /**
      * Simple blocking. Each outgoing RTP packet transmission may be delayed
@@ -115,7 +114,7 @@ typedef struct pjmedia_vid_stream_rc_config
      *
      * Default: 0 (follow codec maximum bitrate).
      */
-    unsigned			    bandwidth;
+    unsigned                        bandwidth;
 
 } pjmedia_vid_stream_rc_config;
 
@@ -130,14 +129,14 @@ typedef struct pjmedia_vid_stream_sk_config
      *
      * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_CNT
      */
-    unsigned			    count;
+    unsigned                        count;
 
     /**
      * The keyframe sending interval after the stream is created.
      *
      * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC
      */
-    unsigned			    interval;
+    unsigned                        interval;
 
 } pjmedia_vid_stream_sk_config;
 
@@ -149,49 +148,49 @@ typedef struct pjmedia_vid_stream_sk_config
  */
 typedef struct pjmedia_vid_stream_info
 {
-    pjmedia_type	type;	    /**< Media type (audio, video)	    */
-    pjmedia_tp_proto	proto;	    /**< Transport protocol (RTP/AVP, etc.) */
-    pjmedia_dir		dir;	    /**< Media direction.		    */
-    pj_sockaddr		local_addr; /**< Local RTP address		    */
-    pj_sockaddr		rem_addr;   /**< Remote RTP address		    */
-    pj_sockaddr		rem_rtcp;   /**< Optional remote RTCP address. If
-					 sin_family is zero, the RTP address
-					 will be calculated from RTP.	    */
-    pj_bool_t		rtcp_mux;   /**< Use RTP and RTCP multiplexing.     */
-    pjmedia_rtcp_fb_info loc_rtcp_fb; /**< Local RTCP-FB info.		    */
-    pjmedia_rtcp_fb_info rem_rtcp_fb; /**< Remote RTCP-FB info.		    */
-    unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */
-    unsigned		rx_pt;	    /**< Incoming codec paylaod type.	    */
-    pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
-    pj_str_t		cname; 	    /**< RTCP CNAME.			    */
-    pj_bool_t		has_rem_ssrc;/**<Has remote RTP SSRC?		    */
-    pj_uint32_t		rem_ssrc;   /**< Remote RTP SSRC.		    */
-    pj_str_t		rem_cname;  /**< Remote RTCP CNAME.		    */
-    pj_uint32_t		rtp_ts;	    /**< Initial RTP timestamp.		    */
-    pj_uint16_t		rtp_seq;    /**< Initial RTP sequence number.	    */
-    pj_uint8_t		rtp_seq_ts_set;
-				    /**< Bitmask flags if initial RTP sequence 
-				         and/or timestamp for sender are set.
-					 bit 0/LSB : sequence flag 
-					 bit 1     : timestamp flag 	    */
-    int			jb_init;    /**< Jitter buffer init delay in msec.  
-					 (-1 for default).		    */
-    int			jb_min_pre; /**< Jitter buffer minimum prefetch
-					 delay in msec (-1 for default).    */
-    int			jb_max_pre; /**< Jitter buffer maximum prefetch
-					 delay in msec (-1 for default).    */
-    int			jb_max;	    /**< Jitter buffer max delay in msec.   */
+    pjmedia_type        type;       /**< Media type (audio, video)          */
+    pjmedia_tp_proto    proto;      /**< Transport protocol (RTP/AVP, etc.) */
+    pjmedia_dir         dir;        /**< Media direction.                   */
+    pj_sockaddr         local_addr; /**< Local RTP address                  */
+    pj_sockaddr         rem_addr;   /**< Remote RTP address                 */
+    pj_sockaddr         rem_rtcp;   /**< Optional remote RTCP address. If
+                                         sin_family is zero, the RTP address
+                                         will be calculated from RTP.       */
+    pj_bool_t           rtcp_mux;   /**< Use RTP and RTCP multiplexing.     */
+    pjmedia_rtcp_fb_info loc_rtcp_fb; /**< Local RTCP-FB info.              */
+    pjmedia_rtcp_fb_info rem_rtcp_fb; /**< Remote RTCP-FB info.             */
+    unsigned            tx_pt;      /**< Outgoing codec paylaod type.       */
+    unsigned            rx_pt;      /**< Incoming codec paylaod type.       */
+    pj_uint32_t         ssrc;       /**< RTP SSRC.                          */
+    pj_str_t            cname;      /**< RTCP CNAME.                        */
+    pj_bool_t           has_rem_ssrc;/**<Has remote RTP SSRC?               */
+    pj_uint32_t         rem_ssrc;   /**< Remote RTP SSRC.                   */
+    pj_str_t            rem_cname;  /**< Remote RTCP CNAME.                 */
+    pj_uint32_t         rtp_ts;     /**< Initial RTP timestamp.             */
+    pj_uint16_t         rtp_seq;    /**< Initial RTP sequence number.       */
+    pj_uint8_t          rtp_seq_ts_set;
+                                    /**< Bitmask flags if initial RTP sequence 
+                                         and/or timestamp for sender are set.
+                                         bit 0/LSB : sequence flag 
+                                         bit 1     : timestamp flag         */
+    int                 jb_init;    /**< Jitter buffer init delay in msec.  
+                                         (-1 for default).                  */
+    int                 jb_min_pre; /**< Jitter buffer minimum prefetch
+                                         delay in msec (-1 for default).    */
+    int                 jb_max_pre; /**< Jitter buffer maximum prefetch
+                                         delay in msec (-1 for default).    */
+    int                 jb_max;     /**< Jitter buffer max delay in msec.   */
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
-    pj_bool_t		use_ka;	    /**< Stream keep-alive and NAT hole punch
-					 (see #PJMEDIA_STREAM_ENABLE_KA)
-					 is enabled?			    */
+    pj_bool_t           use_ka;     /**< Stream keep-alive and NAT hole punch
+                                         (see #PJMEDIA_STREAM_ENABLE_KA)
+                                         is enabled?                        */
     pjmedia_stream_ka_config ka_cfg;
                                     /**< Stream send kep-alive settings.    */
 #endif
 
     pjmedia_vid_codec_info   codec_info;  /**< Incoming codec format info.  */
-    pjmedia_vid_codec_param *codec_param; /**< Optional codec param.	    */
+    pjmedia_vid_codec_param *codec_param; /**< Optional codec param.        */
 
     pj_bool_t           rtcp_sdes_bye_disabled; 
                                     /**< Disable automatic sending of RTCP
@@ -201,7 +200,7 @@ typedef struct pjmedia_vid_stream_info
                                     /**< Stream send rate control settings. */
 
     pjmedia_vid_stream_sk_config sk_cfg;
-				    /**< Stream send keyframe settings.	    */
+                                    /**< Stream send keyframe settings.     */
 } pjmedia_vid_stream_info;
 
 
@@ -212,28 +211,28 @@ typedef struct pjmedia_vid_stream_info
  * If socket info array is specified, the socket will be copied to the 
  * session info as well.
  *
- * @param si		Stream info structure to be initialized.
- * @param pool		Pool to allocate memory.
- * @param endpt		PJMEDIA endpoint instance.
- * @param local		Local SDP session descriptor.
- * @param remote	Remote SDP session descriptor.
- * @param stream_idx	Media stream index in the session descriptor.
+ * @param si            Stream info structure to be initialized.
+ * @param pool          Pool to allocate memory.
+ * @param endpt         PJMEDIA endpoint instance.
+ * @param local         Local SDP session descriptor.
+ * @param remote        Remote SDP session descriptor.
+ * @param stream_idx    Media stream index in the session descriptor.
  *
- * @return		PJ_SUCCESS if stream info is successfully initialized.
+ * @return              PJ_SUCCESS if stream info is successfully initialized.
  */
 PJ_DECL(pj_status_t)
 pjmedia_vid_stream_info_from_sdp(pjmedia_vid_stream_info *si,
-			         pj_pool_t *pool,
-				 pjmedia_endpt *endpt,
-				 const pjmedia_sdp_session *local,
-				 const pjmedia_sdp_session *remote,
-				 unsigned stream_idx);
+                                 pj_pool_t *pool,
+                                 pjmedia_endpt *endpt,
+                                 const pjmedia_sdp_session *local,
+                                 const pjmedia_sdp_session *remote,
+                                 unsigned stream_idx);
 
 
 /**
  * Initialize the video stream rate control with default settings.
  *
- * @param cfg		Video stream rate control structure to be initialized.
+ * @param cfg           Video stream rate control structure to be initialized.
  */
 PJ_DECL(void)
 pjmedia_vid_stream_rc_config_default(pjmedia_vid_stream_rc_config *cfg);
@@ -241,7 +240,7 @@ pjmedia_vid_stream_rc_config_default(pjmedia_vid_stream_rc_config *cfg);
 /**
  * Initialize the video stream send keyframe with default settings.
  *
- * @param cfg		Video stream send keyframe structure to be initialized.
+ * @param cfg           Video stream send keyframe structure to be initialized.
  */
 PJ_DECL(void)
 pjmedia_vid_stream_sk_config_default(pjmedia_vid_stream_sk_config *cfg);
@@ -263,39 +262,39 @@ typedef struct pjmedia_vid_stream pjmedia_vid_stream;
  * Without application calling put_frame() and get_frame(), there will be 
  * no media frames transmitted or received by the stream.
  *
- * @param endpt		Media endpoint.
- * @param pool		Optional pool to allocate memory for the stream. If
- * 			this is not specified, one will be created internally.
- * 			A large number of memory may be needed because jitter
- *			buffer needs to preallocate some storage.
- * @param info		Stream information to create the stream. Upon return,
- * 			this info will be updated with the information from
- * 			the instantiated codec. Note that if the "pool"
- * 			argument is NULL, some fields in this "info" parameter
- * 			will be allocated from the internal pool of the
- * 			stream, which means that they will only remain valid
- * 			as long as the stream is not destroyed.
- * @param tp		Media transport instance used to transmit and receive
- * 			RTP/RTCP packets to/from the underlying network.
- * @param user_data	Arbitrary user data (for future callback feature).
- * @param p_stream	Pointer to receive the video stream.
+ * @param endpt         Media endpoint.
+ * @param pool          Optional pool to allocate memory for the stream. If
+ *                      this is not specified, one will be created internally.
+ *                      A large number of memory may be needed because jitter
+ *                      buffer needs to preallocate some storage.
+ * @param info          Stream information to create the stream. Upon return,
+ *                      this info will be updated with the information from
+ *                      the instantiated codec. Note that if the "pool"
+ *                      argument is NULL, some fields in this "info" parameter
+ *                      will be allocated from the internal pool of the
+ *                      stream, which means that they will only remain valid
+ *                      as long as the stream is not destroyed.
+ * @param tp            Media transport instance used to transmit and receive
+ *                      RTP/RTCP packets to/from the underlying network.
+ * @param user_data     Arbitrary user data (for future callback feature).
+ * @param p_stream      Pointer to receive the video stream.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_create(
-					pjmedia_endpt *endpt,
-					pj_pool_t *pool,
-					pjmedia_vid_stream_info *info,
-					pjmedia_transport *tp,
-					void *user_data,
-					pjmedia_vid_stream **p_stream);
+                                        pjmedia_endpt *endpt,
+                                        pj_pool_t *pool,
+                                        pjmedia_vid_stream_info *info,
+                                        pjmedia_transport *tp,
+                                        void *user_data,
+                                        pjmedia_vid_stream **p_stream);
 
 /**
  * Destroy the video stream.
  *
- * @param stream	The video stream.
+ * @param stream        The video stream.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_destroy(pjmedia_vid_stream *stream);
 
@@ -308,47 +307,47 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_destroy(pjmedia_vid_stream *stream);
  * formats in the encoding and decoding direction, there are two media
  * ports exported by the video stream, one for each direction.
  *
- * @param stream	The video stream.
- * @param dir		The video direction.
- * @param p_port	Pointer to receive the port interface.
+ * @param stream        The video stream.
+ * @param dir           The video direction.
+ * @param p_port        Pointer to receive the port interface.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_get_port(
-					    pjmedia_vid_stream *stream,
-					    pjmedia_dir dir,
-					    pjmedia_port **p_port);
+                                            pjmedia_vid_stream *stream,
+                                            pjmedia_dir dir,
+                                            pjmedia_port **p_port);
 
 
 /**
  * Get the media transport object associated with this stream.
  *
- * @param st		The video stream.
+ * @param st            The video stream.
  *
- * @return		The transport object being used by the stream.
+ * @return              The transport object being used by the stream.
  */
 PJ_DECL(pjmedia_transport*) pjmedia_vid_stream_get_transport(
-					    pjmedia_vid_stream *st);
+                                            pjmedia_vid_stream *st);
 
 
 /**
  * Get the stream statistics. See also #pjmedia_stream_get_stat_jbuf()
  *
- * @param stream	The video stream.
- * @param stat		Media stream statistics.
+ * @param stream        The video stream.
+ * @param stat          Media stream statistics.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_get_stat(
-					    const pjmedia_vid_stream *stream,
-					    pjmedia_rtcp_stat *stat);
+                                            const pjmedia_vid_stream *stream,
+                                            pjmedia_rtcp_stat *stat);
 
 /**
  * Reset the video stream statistics.
  *
- * @param stream	The video stream.
+ * @param stream        The video stream.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_reset_stat(pjmedia_vid_stream *stream);
 
@@ -356,27 +355,27 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_reset_stat(pjmedia_vid_stream *stream);
 /**
  * Get current jitter buffer state. See also #pjmedia_stream_get_stat()
  *
- * @param stream	The video stream.
- * @param state		Jitter buffer state.
+ * @param stream        The video stream.
+ * @param state         Jitter buffer state.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_get_stat_jbuf(
-					    const pjmedia_vid_stream *stream,
-					    pjmedia_jb_state *state);
+                                            const pjmedia_vid_stream *stream,
+                                            pjmedia_jb_state *state);
 
 
 /**
  * Get the stream info.
  *
- * @param stream	The video stream.
- * @param info		Video stream info.
+ * @param stream        The video stream.
+ * @param info          Video stream info.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_get_info(
-					    const pjmedia_vid_stream *stream,
-					    pjmedia_vid_stream_info *info);
+                                            const pjmedia_vid_stream *stream,
+                                            pjmedia_vid_stream_info *info);
 
 
 /**
@@ -384,9 +383,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_get_info(
  * in the video stream, depending on the video direction that was set
  * when the stream was created.
  *
- * @param stream	The video stream.
+ * @param stream        The video stream.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream);
 
@@ -394,10 +393,10 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream);
 /**
  * Query if the stream is started on the specified direction.
  *
- * @param stream	The video stream.
- * @param dir 		The direction to be checked.
+ * @param stream        The video stream.
+ * @param dir           The direction to be checked.
  *
- * @return		PJ_TRUE if stream is started.
+ * @return              PJ_TRUE if stream is started.
  */
 PJ_DECL(pj_bool_t) pjmedia_vid_stream_is_running(pjmedia_vid_stream *stream,
                                                  pjmedia_dir dir);
@@ -405,68 +404,68 @@ PJ_DECL(pj_bool_t) pjmedia_vid_stream_is_running(pjmedia_vid_stream *stream,
 /**
  * Pause stream channels.
  *
- * @param stream	The video stream.
- * @param dir		Which channel direction to pause.
+ * @param stream        The video stream.
+ * @param dir           Which channel direction to pause.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_pause(pjmedia_vid_stream *stream,
-					      pjmedia_dir dir);
+                                              pjmedia_dir dir);
 
 /**
  * Resume stream channels.
  *
- * @param stream	The video stream.
- * @param dir		Which channel direction to resume.
+ * @param stream        The video stream.
+ * @param dir           Which channel direction to resume.
  *
- * @return		PJ_SUCCESS on success;
+ * @return              PJ_SUCCESS on success;
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_resume(pjmedia_vid_stream *stream,
-					       pjmedia_dir dir);
+                                               pjmedia_dir dir);
 
 
 /**
  * Force stream to send video keyframe on the next transmission.
  *
- * @param stream	The video stream.
+ * @param stream        The video stream.
  *
- * @return		PJ_SUCCESS on success;
+ * @return              PJ_SUCCESS on success;
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_send_keyframe(
-						pjmedia_vid_stream *stream);
+                                                pjmedia_vid_stream *stream);
 
 
 /**
  * Send RTCP SDES for the video stream.
  *
- * @param stream	The video stream.
+ * @param stream        The video stream.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_send_rtcp_sdes(
-						pjmedia_vid_stream *stream);
+                                                pjmedia_vid_stream *stream);
 
 
 /**
  * Send RTCP BYE for the video stream.
  *
- * @param stream	The video stream.
+ * @param stream        The video stream.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_send_rtcp_bye(
-						pjmedia_vid_stream *stream);
+                                                pjmedia_vid_stream *stream);
 
 
 /**
  * Send RTCP PLI for the video stream.
  *
- * @param stream	The video stream.
+ * @param stream        The video stream.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_send_rtcp_pli(
-						pjmedia_vid_stream *stream);
+                                                pjmedia_vid_stream *stream);
 
 
 /**
@@ -476,15 +475,15 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_send_rtcp_pli(
  * This will return the original pointer to the internal states of the stream,
  * and generally it is not advisable for app to modify them.
  * 
- * @param stream	The video media stream.
+ * @param stream        The video media stream.
  *
- * @param session_info	The stream session info.
+ * @param session_info  The stream session info.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_vid_stream_get_rtp_session_info(pjmedia_vid_stream *stream,
-				   pjmedia_stream_rtp_sess_info *session_info);
+                                   pjmedia_stream_rtp_sess_info *session_info);
 
 
 /**
@@ -494,4 +493,4 @@ pjmedia_vid_stream_get_rtp_session_info(pjmedia_vid_stream *stream,
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_VID_STREAM_H__ */
+#endif  /* __PJMEDIA_VID_STREAM_H__ */

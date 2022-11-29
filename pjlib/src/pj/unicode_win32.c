@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -24,17 +23,17 @@
 
 
 PJ_DEF(wchar_t*) pj_ansi_to_unicode(const char *s, int len,
-				    wchar_t *buf, int buf_count)
+                                    wchar_t *buf, int buf_count)
 {
     PJ_ASSERT_RETURN(s && buf, NULL);
 
     len = MultiByteToWideChar(CP_ACP, 0, s, len, 
-			      buf, buf_count);
+                              buf, buf_count);
     if (buf_count) {
-	if (len < buf_count)
-	    buf[len] = 0;
-	else
-	    buf[len-1] = 0;
+        if (len < buf_count)
+            buf[len] = 0;
+        else
+            buf[len-1] = 0;
     }
 
     return buf;
@@ -42,17 +41,17 @@ PJ_DEF(wchar_t*) pj_ansi_to_unicode(const char *s, int len,
 
 
 PJ_DEF(char*) pj_unicode_to_ansi( const wchar_t *wstr, pj_ssize_t len,
-				  char *buf, int buf_size)
+                                  char *buf, int buf_size)
 {
     PJ_ASSERT_RETURN(wstr && buf, NULL);
 
     len = WideCharToMultiByte(CP_ACP, 0, wstr, (int)len, buf, buf_size, 
-			      NULL, NULL);
+                              NULL, NULL);
     if (buf_size) {
-	if (len < buf_size)
-	    buf[len] = '\0';
-	else
-	    buf[len-1] = '\0';
+        if (len < buf_size)
+            buf[len] = '\0';
+        else
+            buf[len-1] = '\0';
     }
 
     return buf;

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -109,44 +108,44 @@ pjmedia_clock_src_get_time_msec( const pjmedia_clock_src *clocksrc )
 
 struct pjmedia_clock
 {
-    pj_pool_t		    *pool;
-    pj_timestamp	     freq;
-    pj_timestamp	     interval;
-    pj_timestamp	     next_tick;
-    pj_timestamp	     timestamp;
-    unsigned		     timestamp_inc;
-    unsigned		     options;
-    pj_uint64_t		     max_jump;
+    pj_pool_t               *pool;
+    pj_timestamp             freq;
+    pj_timestamp             interval;
+    pj_timestamp             next_tick;
+    pj_timestamp             timestamp;
+    unsigned                 timestamp_inc;
+    unsigned                 options;
+    pj_uint64_t              max_jump;
     pjmedia_clock_callback  *cb;
-    void		    *user_data;
-    pj_thread_t		    *thread;
-    pj_bool_t		     running;
-    pj_bool_t		     quitting;
-    pj_lock_t		    *lock;
+    void                    *user_data;
+    pj_thread_t             *thread;
+    pj_bool_t                running;
+    pj_bool_t                quitting;
+    pj_lock_t               *lock;
 };
 
 
 static int clock_thread(void *arg);
 
-#define MAX_JUMP_MSEC	500
-#define USEC_IN_SEC	(pj_uint64_t)1000000
+#define MAX_JUMP_MSEC   500
+#define USEC_IN_SEC     (pj_uint64_t)1000000
 
 /*
  * Create media clock.
  */
 PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned options,
-					  pjmedia_clock_callback *cb,
-					  void *user_data,
-					  pjmedia_clock **p_clock)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned options,
+                                          pjmedia_clock_callback *cb,
+                                          void *user_data,
+                                          pjmedia_clock **p_clock)
 {
     pjmedia_clock_param param;
 
     param.usec_interval = (unsigned)(samples_per_frame * USEC_IN_SEC /
-			             channel_count / clock_rate);
+                                     channel_count / clock_rate);
     param.clock_rate = clock_rate;
     return pjmedia_clock_create2(pool, &param, options, cb,
                                  user_data, p_clock);
@@ -154,10 +153,10 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
 
 PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
                                           const pjmedia_clock_param *param,
-				          unsigned options,
-				          pjmedia_clock_callback *cb,
-				          void *user_data,
-				          pjmedia_clock **p_clock)
+                                          unsigned options,
+                                          pjmedia_clock_callback *cb,
+                                          void *user_data,
+                                          pjmedia_clock **p_clock)
 {
     pjmedia_clock *clock;
     pj_status_t status;
@@ -170,7 +169,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
 
     status = pj_get_timestamp_freq(&clock->freq);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     clock->interval.u64 = param->usec_interval * clock->freq.u64 /
                           USEC_IN_SEC;
@@ -179,7 +178,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
     clock->max_jump = MAX_JUMP_MSEC * clock->freq.u64 / 1000;
     clock->timestamp_inc = (unsigned)(param->usec_interval *
                                       param->clock_rate /
-				      (unsigned)USEC_IN_SEC);
+                                      (unsigned)USEC_IN_SEC);
     clock->options = options;
     clock->cb = cb;
     clock->user_data = user_data;
@@ -190,7 +189,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
     /* I don't think we need a mutex, so we'll use null. */
     status = pj_lock_create_null_mutex(pool, "clock", &clock->lock);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     *p_clock = clock;
 
@@ -209,23 +208,23 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
     PJ_ASSERT_RETURN(clock != NULL, PJ_EINVAL);
 
     if (clock->running)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     status = pj_get_timestamp(&now);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     clock->next_tick.u64 = now.u64 + clock->interval.u64;
     clock->running = PJ_TRUE;
     clock->quitting = PJ_FALSE;
 
     if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0 && !clock->thread) {
-	status = pj_thread_create(clock->pool, "clock", &clock_thread, clock,
-				  0, 0, &clock->thread);
-	if (status != PJ_SUCCESS) {
-	    clock->running = PJ_FALSE;
-	    return status;
-	}
+        status = pj_thread_create(clock->pool, "clock", &clock_thread, clock,
+                                  0, 0, &clock->thread);
+        if (status != PJ_SUCCESS) {
+            clock->running = PJ_FALSE;
+            return status;
+        }
     }
 
     return PJ_SUCCESS;
@@ -243,13 +242,13 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
     clock->quitting = PJ_TRUE;
 
     if (clock->thread) {
-	if (pj_thread_join(clock->thread) == PJ_SUCCESS) {
-	    pj_thread_destroy(clock->thread);
-	    clock->thread = NULL;
-	    pj_pool_reset(clock->pool);
-	} else {
-	    clock->quitting = PJ_FALSE;
-	}
+        if (pj_thread_join(clock->thread) == PJ_SUCCESS) {
+            pj_thread_destroy(clock->thread);
+            clock->thread = NULL;
+            pj_pool_reset(clock->pool);
+        } else {
+            clock->quitting = PJ_FALSE;
+        }
     }
 
     return PJ_SUCCESS;
@@ -266,7 +265,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_modify(pjmedia_clock *clock,
                           USEC_IN_SEC;
     clock->timestamp_inc = (unsigned)(param->usec_interval *
                                       param->clock_rate /
-				      (unsigned)USEC_IN_SEC);
+                                      (unsigned)USEC_IN_SEC);
 
     return PJ_SUCCESS;
 }
@@ -274,11 +273,11 @@ PJ_DEF(pj_status_t) pjmedia_clock_modify(pjmedia_clock *clock,
 
 /* Calculate next tick */
 PJ_INLINE(void) clock_calc_next_tick(pjmedia_clock *clock,
-				     pj_timestamp *now)
+                                     pj_timestamp *now)
 {
     if (clock->next_tick.u64+clock->max_jump < now->u64) {
-	/* Timestamp has made large jump, adjust next_tick */
-	clock->next_tick.u64 = now->u64;
+        /* Timestamp has made large jump, adjust next_tick */
+        clock->next_tick.u64 = now->u64;
     }
     clock->next_tick.u64 += clock->interval.u64;
 
@@ -288,39 +287,39 @@ PJ_INLINE(void) clock_calc_next_tick(pjmedia_clock *clock,
  * Poll the clock. 
  */
 PJ_DEF(pj_bool_t) pjmedia_clock_wait( pjmedia_clock *clock,
-				      pj_bool_t wait,
-				      pj_timestamp *ts)
+                                      pj_bool_t wait,
+                                      pj_timestamp *ts)
 {
     pj_timestamp now;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(clock != NULL, PJ_FALSE);
     PJ_ASSERT_RETURN((clock->options & PJMEDIA_CLOCK_NO_ASYNC) != 0,
-		     PJ_FALSE);
+                     PJ_FALSE);
     PJ_ASSERT_RETURN(clock->running, PJ_FALSE);
 
     status = pj_get_timestamp(&now);
     if (status != PJ_SUCCESS)
-	return PJ_FALSE;
+        return PJ_FALSE;
 
     /* Wait for the next tick to happen */
     if (now.u64 < clock->next_tick.u64) {
-	unsigned msec;
+        unsigned msec;
 
-	if (!wait)
-	    return PJ_FALSE;
+        if (!wait)
+            return PJ_FALSE;
 
-	msec = pj_elapsed_msec(&now, &clock->next_tick);
-	pj_thread_sleep(msec);
+        msec = pj_elapsed_msec(&now, &clock->next_tick);
+        pj_thread_sleep(msec);
     }
 
     /* Call callback, if any */
     if (clock->cb)
-	(*clock->cb)(&clock->timestamp, clock->user_data);
+        (*clock->cb)(&clock->timestamp, clock->user_data);
 
     /* Report timestamp to caller */
     if (ts)
-	ts->u64 = clock->timestamp.u64;
+        ts->u64 = clock->timestamp.u64;
 
     /* Increment timestamp */
     clock->timestamp.u64 += clock->timestamp_inc;
@@ -343,9 +342,9 @@ static int clock_thread(void *arg)
 
     /* Set thread priority to maximum unless not wanted. */
     if ((clock->options & PJMEDIA_CLOCK_NO_HIGHEST_PRIO) == 0) {
-	int max = pj_thread_get_prio_max(pj_thread_this());
-	if (max > 0)
-	    pj_thread_set_prio(pj_thread_this(), max);
+        int max = pj_thread_get_prio_max(pj_thread_this());
+        if (max > 0)
+            pj_thread_set_prio(pj_thread_this(), max);
     }
 
     /* Get the first tick */
@@ -355,41 +354,41 @@ static int clock_thread(void *arg)
 
     while (!clock->quitting) {
 
-	pj_get_timestamp(&now);
+        pj_get_timestamp(&now);
 
-	/* Wait for the next tick to happen */
-	if (now.u64 < clock->next_tick.u64) {
-	    unsigned msec;
-	    msec = pj_elapsed_msec(&now, &clock->next_tick);
-	    pj_thread_sleep(msec);
-	}
+        /* Wait for the next tick to happen */
+        if (now.u64 < clock->next_tick.u64) {
+            unsigned msec;
+            msec = pj_elapsed_msec(&now, &clock->next_tick);
+            pj_thread_sleep(msec);
+        }
 
-	/* Skip if not running */
-	if (!clock->running) {
-	    /* Calculate next tick */
-	    clock_calc_next_tick(clock, &now);
-	    continue;
-	}
+        /* Skip if not running */
+        if (!clock->running) {
+            /* Calculate next tick */
+            clock_calc_next_tick(clock, &now);
+            continue;
+        }
 
-	pj_lock_acquire(clock->lock);
+        pj_lock_acquire(clock->lock);
 
-	/* Call callback, if any */
-	if (clock->cb)
-	    (*clock->cb)(&clock->timestamp, clock->user_data);
+        /* Call callback, if any */
+        if (clock->cb)
+            (*clock->cb)(&clock->timestamp, clock->user_data);
 
-	/* Best effort way to detect if we've been destroyed in the callback */
-	if (clock->quitting) {
-	    pj_lock_release(clock->lock);
-	    break;
-	}
+        /* Best effort way to detect if we've been destroyed in the callback */
+        if (clock->quitting) {
+            pj_lock_release(clock->lock);
+            break;
+        }
 
-	/* Increment timestamp */
-	clock->timestamp.u64 += clock->timestamp_inc;
+        /* Increment timestamp */
+        clock->timestamp.u64 += clock->timestamp_inc;
 
-	/* Calculate next tick */
-	clock_calc_next_tick(clock, &now);
+        /* Calculate next tick */
+        clock_calc_next_tick(clock, &now);
 
-	pj_lock_release(clock->lock);
+        pj_lock_release(clock->lock);
     }
 
     return 0;
@@ -407,14 +406,14 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
     clock->quitting = PJ_TRUE;
 
     if (clock->thread) {
-	pj_thread_join(clock->thread);
-	pj_thread_destroy(clock->thread);
-	clock->thread = NULL;
+        pj_thread_join(clock->thread);
+        pj_thread_destroy(clock->thread);
+        clock->thread = NULL;
     }
 
     if (clock->lock) {
-	pj_lock_destroy(clock->lock);
-	clock->lock = NULL;
+        pj_lock_destroy(clock->lock);
+        clock->lock = NULL;
     }
 
     pj_pool_safe_release(&clock->pool);

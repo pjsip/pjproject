@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -178,25 +177,25 @@ PJ_BEGIN_DECL
 typedef struct pjsip_server_addresses
 {
     /** Number of address records. */
-    unsigned	count;
+    unsigned    count;
 
     /** Address records. */
     struct
     {
-	/** Preferable transport to be used to contact this address. */
-	pjsip_transport_type_e	type;
+        /** Preferable transport to be used to contact this address. */
+        pjsip_transport_type_e  type;
 
-	/** Server priority (the lower the higher the priority). */
-	unsigned		priority;
+        /** Server priority (the lower the higher the priority). */
+        unsigned                priority;
 
-	/** Server weight (the higher the more load it can handle). */
-	unsigned		weight;
+        /** Server weight (the higher the more load it can handle). */
+        unsigned                weight;
 
-	/** The server's address. */
-	pj_sockaddr		addr;
+        /** The server's address. */
+        pj_sockaddr             addr;
 
-	/** Address length. */
-	int			addr_len;
+        /** Address length. */
+        int                     addr_len;
 
     } entry[PJSIP_MAX_RESOLVED_ADDRESSES];
 
@@ -207,13 +206,13 @@ typedef struct pjsip_server_addresses
  * The type of callback function to be called when resolver finishes the job.
  *
  * @param status    The status of the operation, which is zero on success.
- * @param token	    The token that was associated with the job when application
- *		    call the resolve function.
- * @param addr	    The addresses resolved by the operation.
+ * @param token     The token that was associated with the job when application
+ *                  call the resolve function.
+ * @param addr      The addresses resolved by the operation.
  */
 typedef void pjsip_resolver_callback(pj_status_t status,
-				     void *token,
-				     const struct pjsip_server_addresses *addr);
+                                     void *token,
+                                     const struct pjsip_server_addresses *addr);
 
 /**
  * This structure describes application callback to receive various event from 
@@ -243,13 +242,13 @@ typedef struct pjsip_ext_resolver
  * Create SIP resolver engine. Note that this function is normally called
  * internally by pjsip_endpoint instance.
  *
- * @param pool	    Pool to allocate memory from.
- * @param p_res	    Pointer to receive SIP resolver instance.
+ * @param pool      Pool to allocate memory from.
+ * @param p_res     Pointer to receive SIP resolver instance.
  *
- * @return	    PJ_SUCCESS when resolver can be successfully created.
+ * @return          PJ_SUCCESS when resolver can be successfully created.
  */
 PJ_DECL(pj_status_t) pjsip_resolver_create(pj_pool_t *pool,
-					   pjsip_resolver_t **p_res);
+                                           pjsip_resolver_t **p_res);
 
 /**
  * Set the DNS resolver instance of the SIP resolver engine. Before the
@@ -259,15 +258,15 @@ PJ_DECL(pj_status_t) pjsip_resolver_create(pj_pool_t *pool,
  * Note that application normally will use #pjsip_endpt_set_resolver() instead
  * since it does not normally have access to the SIP resolver instance.
  *
- * @param res	    The SIP resolver engine.
+ * @param res       The SIP resolver engine.
  * @param dns_res   The DNS resolver instance to be used by the SIP resolver.
- *		    This argument can be NULL to reset the internal DNS
- *		    instance.
+ *                  This argument can be NULL to reset the internal DNS
+ *                  instance.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_resolver_set_resolver(pjsip_resolver_t *res,
-						 pj_dns_resolver *dns_res);
+                                                 pj_dns_resolver *dns_res);
 
 
 /**
@@ -283,14 +282,14 @@ PJ_DECL(pj_status_t) pjsip_resolver_set_resolver(pjsip_resolver_t *res,
  *
  * @param res       The SIP resolver engine.
  * @param ext_res   The external resolver implementation callback. This argument
- *		    can be NULL to reset the whole external implementation. 
- *		    However, it is prohibited to reset individual callback.
+ *                  can be NULL to reset the whole external implementation. 
+ *                  However, it is prohibited to reset individual callback.
  * 
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_resolver_set_ext_resolver(
-						pjsip_resolver_t *res,
-					        pjsip_ext_resolver *ext_res);
+                                                pjsip_resolver_t *res,
+                                                pjsip_ext_resolver *ext_res);
 
 /**
  * Get the DNS resolver instance of the SIP resolver engine. 
@@ -298,9 +297,9 @@ PJ_DECL(pj_status_t) pjsip_resolver_set_ext_resolver(
  * Note that application normally will use #pjsip_endpt_get_resolver() instead
  * since it does not normally have access to the SIP resolver instance.
  *
- * @param res	    The SIP resolver engine.
+ * @param res       The SIP resolver engine.
  *
- * @return	    The DNS resolver instance (may be NULL)
+ * @return          The DNS resolver instance (may be NULL)
  */
 PJ_DECL(pj_dns_resolver*) pjsip_resolver_get_resolver(pjsip_resolver_t *res);
 
@@ -325,17 +324,17 @@ PJ_DECL(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver);
  * Note that application normally will use #pjsip_endpt_resolve() instead
  * since it does not normally have access to the SIP resolver instance.
  *
- * @param resolver	The resolver engine.
- * @param pool		The pool to allocate resolver job.
- * @param target	The target specification to be resolved.
- * @param token		A user defined token to be passed back to callback function.
- * @param cb		The callback function.
+ * @param resolver      The resolver engine.
+ * @param pool          The pool to allocate resolver job.
+ * @param target        The target specification to be resolved.
+ * @param token         A user defined token to be passed back to callback function.
+ * @param cb            The callback function.
  */
 PJ_DECL(void) pjsip_resolve( pjsip_resolver_t *resolver,
-			     pj_pool_t *pool,
-			     const pjsip_host_info *target,
-			     void *token,
-			     pjsip_resolver_callback *cb);
+                             pj_pool_t *pool,
+                             const pjsip_host_info *target,
+                             void *token,
+                             pjsip_resolver_callback *cb);
 
 /**
  * @}
@@ -343,4 +342,4 @@ PJ_DECL(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_RESOLVE_H__ */
+#endif  /* __PJSIP_SIP_RESOLVE_H__ */

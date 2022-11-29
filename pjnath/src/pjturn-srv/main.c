@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -20,10 +19,10 @@
 #include "turn.h"
 #include "auth.h"
 
-#define REALM		"pjsip.org"
-//#define TURN_PORT	PJ_STUN_TURN_PORT
-#define TURN_PORT	34780
-#define LOG_LEVEL	4
+#define REALM           "pjsip.org"
+//#define TURN_PORT     PJ_STUN_TURN_PORT
+#define TURN_PORT       34780
+#define LOG_LEVEL       4
 
 
 static pj_caching_pool g_cp;
@@ -45,23 +44,23 @@ static void dump_status(pj_turn_srv *srv)
     unsigned i;
 
     for (i=0; i<srv->core.lis_cnt; ++i) {
-	pj_turn_listener *lis = srv->core.listener[i];
-	printf("Server address : %s\n", lis->info);
+        pj_turn_listener *lis = srv->core.listener[i];
+        printf("Server address : %s\n", lis->info);
     }
 
     printf("Worker threads : %d\n", srv->core.thread_cnt);
     printf("Total mem usage: %u.%03uMB\n", (unsigned)(g_cp.used_size / 1000000), 
-	   (unsigned)((g_cp.used_size % 1000000)/1000));
+           (unsigned)((g_cp.used_size % 1000000)/1000));
     printf("UDP port range : %u %u %u (next/min/max)\n", srv->ports.next_udp,
-	   srv->ports.min_udp, srv->ports.max_udp);
+           srv->ports.min_udp, srv->ports.max_udp);
     printf("TCP port range : %u %u %u (next/min/max)\n", srv->ports.next_tcp,
-	   srv->ports.min_tcp, srv->ports.max_tcp);
+           srv->ports.min_tcp, srv->ports.max_tcp);
     printf("Clients #      : %u\n", pj_hash_count(srv->tables.alloc));
 
     puts("");
 
     if (pj_hash_count(srv->tables.alloc)==0) {
-	return;
+        return;
     }
 
     puts("#    Client addr.          Alloc addr.            Username Lftm Expy #prm #chl");
@@ -72,21 +71,21 @@ static void dump_status(pj_turn_srv *srv)
     it = pj_hash_first(srv->tables.alloc, &itbuf);
     i=1;
     while (it) {
-	pj_turn_allocation *alloc = (pj_turn_allocation*) 
-				    pj_hash_this(srv->tables.alloc, it);
-	printf("%-3d %-22s %-22s %-8.*s %-4d %-4ld %-4d %-4d\n",
-	       i,
-	       alloc->info,
-	       pj_sockaddr_print(&alloc->relay.hkey.addr, addr, sizeof(addr), 3),
-	       (int)alloc->cred.data.static_cred.username.slen,
-	       alloc->cred.data.static_cred.username.ptr,
-	       alloc->relay.lifetime,
-	       alloc->relay.expiry.sec - now.sec,
-	       pj_hash_count(alloc->peer_table), 
-	       pj_hash_count(alloc->ch_table));
+        pj_turn_allocation *alloc = (pj_turn_allocation*) 
+                                    pj_hash_this(srv->tables.alloc, it);
+        printf("%-3d %-22s %-22s %-8.*s %-4d %-4ld %-4d %-4d\n",
+               i,
+               alloc->info,
+               pj_sockaddr_print(&alloc->relay.hkey.addr, addr, sizeof(addr), 3),
+               (int)alloc->cred.data.static_cred.username.slen,
+               alloc->cred.data.static_cred.username.ptr,
+               alloc->relay.lifetime,
+               alloc->relay.expiry.sec - now.sec,
+               pj_hash_count(alloc->peer_table), 
+               pj_hash_count(alloc->ch_table));
 
-	it = pj_hash_next(srv->tables.alloc, it);
-	++i;
+        it = pj_hash_next(srv->tables.alloc, it);
+        ++i;
     }
 }
 
@@ -104,21 +103,21 @@ static void console_main(pj_turn_srv *srv)
     pj_bool_t quit = PJ_FALSE;
 
     while (!quit) {
-	char line[10];
-	
-	menu();
-	    
-	if (fgets(line, sizeof(line), stdin) == NULL)
-	    break;
+        char line[10];
+        
+        menu();
+            
+        if (fgets(line, sizeof(line), stdin) == NULL)
+            break;
 
-	switch (line[0]) {
-	case 'd':
-	    dump_status(srv);
-	    break;
-	case 'q':
-	    quit = PJ_TRUE;
-	    break;
-	}
+        switch (line[0]) {
+        case 'd':
+            dump_status(srv);
+            break;
+        case 'q':
+            quit = PJ_TRUE;
+            break;
+        }
     }
 }
 
@@ -130,7 +129,7 @@ int main()
 
     status = pj_init();
     if (status != PJ_SUCCESS)
-	return err("pj_init() error", status);
+        return err("pj_init() error", status);
 
     pjlib_util_init();
     pjnath_init();
@@ -141,23 +140,23 @@ int main()
 
     status = pj_turn_srv_create(&g_cp.factory, &srv);
     if (status != PJ_SUCCESS)
-	return err("Error creating server", status);
+        return err("Error creating server", status);
 
     status = pj_turn_listener_create_udp(srv, pj_AF_INET(), NULL, 
-					 TURN_PORT, 1, 0, &listener);
+                                         TURN_PORT, 1, 0, &listener);
     if (status != PJ_SUCCESS)
-	return err("Error creating UDP listener", status);
+        return err("Error creating UDP listener", status);
 
 #if PJ_HAS_TCP
     status = pj_turn_listener_create_tcp(srv, pj_AF_INET(), NULL, 
-					 TURN_PORT, 1, 0, &listener);
+                                         TURN_PORT, 1, 0, &listener);
     if (status != PJ_SUCCESS)
-	return err("Error creating listener", status);
+        return err("Error creating listener", status);
 #endif
 
     status = pj_turn_srv_add_listener(srv, listener);
     if (status != PJ_SUCCESS)
-	return err("Error adding listener", status);
+        return err("Error adding listener", status);
 
     puts("Server is running");
 

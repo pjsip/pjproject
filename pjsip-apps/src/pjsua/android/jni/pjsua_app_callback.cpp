@@ -38,12 +38,12 @@ void setVideoWindow(const WindowHandle& win)
    
     vhwnd.info.window = win.window;
     if (winId != PJSUA_INVALID_ID)
-    	pjsua_vid_win_set_win(winId, &vhwnd);
+        pjsua_vid_win_set_win(winId, &vhwnd);
 }
 
 extern const char *pjsua_app_def_argv[];
 
-#define THIS_FILE	"pjsua_app_callback.cpp"
+#define THIS_FILE       "pjsua_app_callback.cpp"
 
 extern "C" {
 static void log_writer(int level, const char *data, int len)
@@ -62,20 +62,20 @@ static void on_call_media_state(pjsua_call_id call_id)
 
     for (mi=0; mi<call_info.media_cnt; ++mi) {
         pjsua_call_media_info *med_info = &call_info.media[mi];
-	if (med_info->type == PJMEDIA_TYPE_VIDEO &&
-	    med_info->status == PJSUA_CALL_MEDIA_ACTIVE &&
-	    med_info->stream.vid.win_in != PJSUA_INVALID_ID)
-	{
-	    winId = med_info->stream.vid.win_in;
-	    registeredCallbackObject->onCallVideoStart();
-	    break;
-	}
+        if (med_info->type == PJMEDIA_TYPE_VIDEO &&
+            med_info->status == PJSUA_CALL_MEDIA_ACTIVE &&
+            med_info->stream.vid.win_in != PJSUA_INVALID_ID)
+        {
+            winId = med_info->stream.vid.win_in;
+            registeredCallbackObject->onCallVideoStart();
+            break;
+        }
     }
 #endif
     
     /* Forward to original callback */
     if (pjsua_cb_orig.on_call_media_state)
-	(*pjsua_cb_orig.on_call_media_state)(call_id);
+        (*pjsua_cb_orig.on_call_media_state)(call_id);
 }
 
 /** Callback wrapper **/
@@ -92,23 +92,23 @@ static void on_cli_started(pj_status_t status, const char *msg)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
     if (registeredCallbackObject) {
-	if ((status != PJ_SUCCESS) && (!msg || !*msg)) {
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    msg = errmsg;
-	}
-	registeredCallbackObject->onStarted(msg);
+        if ((status != PJ_SUCCESS) && (!msg || !*msg)) {
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            msg = errmsg;
+        }
+        registeredCallbackObject->onStarted(msg);
     }
 }
 
 static void on_cli_stopped(pj_bool_t restart, int argc, char **argv)
 {
     if (restart) {
-	restart_argc = argc;
-	restart_argv = argv;
+        restart_argc = argc;
+        restart_argv = argv;
     }
 
     if (registeredCallbackObject) {
-	registeredCallbackObject->onStopped(restart);
+        registeredCallbackObject->onStopped(restart);
     }
 }
 
@@ -120,9 +120,9 @@ static int initMain(int argc, char **argv)
 
     status = pjsua_app_init(&android_app_config);
     if (status == PJ_SUCCESS) {
-	status = pjsua_app_run(PJ_FALSE);
+        status = pjsua_app_run(PJ_FALSE);
     } else {
-	pjsua_app_destroy();
+        pjsua_app_destroy();
     }
 
     return status;

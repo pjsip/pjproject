@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,11 +34,11 @@ enum {
     SYNTAX_ERROR = 1,
 };
 // New token definition from RFC 4566 (SDP)
-#define TOKEN		"!#$%&'*+-.^_`{|}~"
-//#define TOKEN		"-.!%*_=`'~"
-//#define TOKEN		"'`-./:?\"#$&*;=@[]^_`{|}+~!"
-#define NTP_OFFSET	((pj_uint32_t)2208988800)
-#define THIS_FILE	"sdp.c"
+#define TOKEN           "!#$%&'*+-.^_`{|}~"
+//#define TOKEN         "-.!%*_=`'~"
+//#define TOKEN         "'`-./:?\"#$&*;=@[]^_`{|}+~!"
+#define NTP_OFFSET      ((pj_uint32_t)2208988800)
+#define THIS_FILE       "sdp.c"
 
 typedef struct parse_context
 { 
@@ -52,19 +51,19 @@ typedef struct parse_context
  */
 static void parse_version(pj_scanner *scanner, volatile parse_context *ctx);
 static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
-			 volatile parse_context *ctx);
+                         volatile parse_context *ctx);
 static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
-		       volatile parse_context *ctx);
+                       volatile parse_context *ctx);
 static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
-			       volatile parse_context *ctx);
+                               volatile parse_context *ctx);
 static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
-				  volatile parse_context *ctx);
+                                  volatile parse_context *ctx);
 static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
-				 volatile parse_context *ctx);
+                                 volatile parse_context *ctx);
 static pjmedia_sdp_attr *parse_attr(pj_pool_t *pool, pj_scanner *scanner,
-				    volatile parse_context *ctx);
+                                    volatile parse_context *ctx);
 static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
-			volatile parse_context *ctx);
+                        volatile parse_context *ctx);
 static void on_scanner_error(pj_scanner *scanner);
 
 /*
@@ -77,13 +76,13 @@ static pj_cis_t cs_digit, cs_token;
 static void init_sdp_parser(void)
 {
     if (is_initialized != 0)
-	return;
+        return;
 
     pj_enter_critical_section();
 
     if (is_initialized != 0) {
-	pj_leave_critical_section();
-	return;
+        pj_leave_critical_section();
+        return;
     }
     
     pj_cis_buf_init(&cis_buf);
@@ -101,8 +100,8 @@ static void init_sdp_parser(void)
 }
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create( pj_pool_t *pool,
-						   const char *name,
-						   const pj_str_t *value)
+                                                   const char *name,
+                                                   const pj_str_t *value)
 {
     pjmedia_sdp_attr *attr;
 
@@ -112,17 +111,17 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create( pj_pool_t *pool,
     pj_strdup2(pool, &attr->name, name);
 
     if (value)
-	pj_strdup_with_null(pool, &attr->value, value);
+        pj_strdup_with_null(pool, &attr->value, value);
     else {
-	attr->value.ptr = NULL;
-	attr->value.slen = 0;
+        attr->value.ptr = NULL;
+        attr->value.slen = 0;
     }
 
     return attr;
 }
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_clone(pj_pool_t *pool, 
-						 const pjmedia_sdp_attr *rhs)
+                                                 const pjmedia_sdp_attr *rhs)
 {
     pjmedia_sdp_attr *attr;
     
@@ -137,9 +136,9 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_clone(pj_pool_t *pool,
 }
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find (unsigned count, 
-				       pjmedia_sdp_attr *const attr_array[],
-				       const pj_str_t *name,
-				       const pj_str_t *c_fmt)
+                                       pjmedia_sdp_attr *const attr_array[],
+                                       const pj_str_t *name,
+                                       const pj_str_t *c_fmt)
 {
     unsigned i;
     unsigned c_pt = 0xFFFF;
@@ -147,27 +146,27 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find (unsigned count,
     PJ_ASSERT_RETURN(count <= PJMEDIA_MAX_SDP_ATTR, NULL);
 
     if (c_fmt)
-	c_pt = pj_strtoul(c_fmt);
+        c_pt = pj_strtoul(c_fmt);
 
     for (i=0; i<count; ++i) {
-	if (pj_strcmp(&attr_array[i]->name, name) == 0) {
-	    const pjmedia_sdp_attr *a = attr_array[i];
-	    if (c_fmt) {
-		unsigned pt = (unsigned) pj_strtoul2(&a->value, NULL, 10);
-		if (pt == c_pt) {
-		    return (pjmedia_sdp_attr*)a;
-		}
-	    } else 
-		return (pjmedia_sdp_attr*)a;
-	}
+        if (pj_strcmp(&attr_array[i]->name, name) == 0) {
+            const pjmedia_sdp_attr *a = attr_array[i];
+            if (c_fmt) {
+                unsigned pt = (unsigned) pj_strtoul2(&a->value, NULL, 10);
+                if (pt == c_pt) {
+                    return (pjmedia_sdp_attr*)a;
+                }
+            } else 
+                return (pjmedia_sdp_attr*)a;
+        }
     }
     return NULL;
 }
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find2(unsigned count, 
-				       pjmedia_sdp_attr *const attr_array[],
-				       const char *c_name,
-				       const pj_str_t *c_fmt)
+                                       pjmedia_sdp_attr *const attr_array[],
+                                       const char *c_name,
+                                       const pj_str_t *c_fmt)
 {
     pj_str_t name;
 
@@ -180,8 +179,8 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find2(unsigned count,
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_add(unsigned *count,
-					 pjmedia_sdp_attr *attr_array[],
-					 pjmedia_sdp_attr *attr)
+                                         pjmedia_sdp_attr *attr_array[],
+                                         pjmedia_sdp_attr *attr)
 {
     PJ_ASSERT_RETURN(count && attr_array && attr, PJ_EINVAL);
     PJ_ASSERT_RETURN(*count < PJMEDIA_MAX_SDP_ATTR, PJ_ETOOMANY);
@@ -194,8 +193,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_add(unsigned *count,
 
 
 PJ_DEF(unsigned) pjmedia_sdp_attr_remove_all(unsigned *count,
-					     pjmedia_sdp_attr *attr_array[],
-					     const char *name)
+                                             pjmedia_sdp_attr *attr_array[],
+                                             const char *name)
 {
     unsigned i, removed = 0;
     pj_str_t attr_name;
@@ -207,14 +206,14 @@ PJ_DEF(unsigned) pjmedia_sdp_attr_remove_all(unsigned *count,
     attr_name.slen = pj_ansi_strlen(name);
 
     for (i=0; i<*count; ) {
-	if (pj_strcmp(&attr_array[i]->name, &attr_name)==0) {
-	    pj_array_erase(attr_array, sizeof(pjmedia_sdp_attr*),
-			   *count, i);
-	    --(*count);
-	    ++removed;
-	} else {
-	    ++i;
-	}   
+        if (pj_strcmp(&attr_array[i]->name, &attr_name)==0) {
+            pj_array_erase(attr_array, sizeof(pjmedia_sdp_attr*),
+                           *count, i);
+            --(*count);
+            ++removed;
+        } else {
+            ++i;
+        }   
     }
 
     return removed;
@@ -222,8 +221,8 @@ PJ_DEF(unsigned) pjmedia_sdp_attr_remove_all(unsigned *count,
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_remove( unsigned *count,
-					     pjmedia_sdp_attr *attr_array[],
-					     pjmedia_sdp_attr *attr )
+                                             pjmedia_sdp_attr *attr_array[],
+                                             pjmedia_sdp_attr *attr )
 {
     unsigned i, removed=0;
 
@@ -231,14 +230,14 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_remove( unsigned *count,
     PJ_ASSERT_RETURN(*count <= PJMEDIA_MAX_SDP_ATTR, PJ_ETOOMANY);
 
     for (i=0; i<*count; ) {
-	if (attr_array[i] == attr) {
-	    pj_array_erase(attr_array, sizeof(pjmedia_sdp_attr*),
-			   *count, i);
-	    --(*count);
-	    ++removed;
-	} else {
-	    ++i;
-	}
+        if (attr_array[i] == attr) {
+            pj_array_erase(attr_array, sizeof(pjmedia_sdp_attr*),
+                           *count, i);
+            --(*count);
+            ++removed;
+        } else {
+            ++i;
+        }
     }
 
     return removed ? PJ_SUCCESS : PJ_ENOTFOUND;
@@ -246,7 +245,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_remove( unsigned *count,
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
-						 pjmedia_sdp_rtpmap *rtpmap)
+                                                 pjmedia_sdp_rtpmap *rtpmap)
 {
     pj_scanner scanner;
     pj_str_t token;
@@ -268,22 +267,22 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
      * null terminated.
      */
     if (attr->value.ptr[attr->value.slen] != 0 &&
-	attr->value.ptr[attr->value.slen] != '\r' &&
-	attr->value.ptr[attr->value.slen] != '\n')
+        attr->value.ptr[attr->value.slen] != '\r' &&
+        attr->value.ptr[attr->value.slen] != '\n')
     {
-	pj_assert(!"Shouldn't happen");
-	term = attr->value.ptr[attr->value.slen];
-	attr->value.ptr[attr->value.slen] = '\0';
+        pj_assert(!"Shouldn't happen");
+        term = attr->value.ptr[attr->value.slen];
+        attr->value.ptr[attr->value.slen] = '\0';
     }
 
     /* The buffer passed to the scanner is not guaranteed to be NULL
      * terminated, but should be safe. See ticket #2063.
      */    
     pj_scan_init(&scanner, (char*)attr->value.ptr, attr->value.slen,
-		 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
+                 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 
     /* rtpmap sample:
-     *	a=rtpmap:98 L16/16000/2.
+     *  a=rtpmap:98 L16/16000/2.
      */
 
     /* Init */
@@ -293,37 +292,37 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
     /* Parse */
     PJ_TRY {
 
-	/* Get payload type. */
-	pj_scan_get(&scanner, &cs_token, &rtpmap->pt);
+        /* Get payload type. */
+        pj_scan_get(&scanner, &cs_token, &rtpmap->pt);
 
 
-	/* Get encoding name. */
-	pj_scan_get(&scanner, &cs_token, &rtpmap->enc_name);
+        /* Get encoding name. */
+        pj_scan_get(&scanner, &cs_token, &rtpmap->enc_name);
 
-	/* Expecting '/' after encoding name. */
-	if (pj_scan_get_char(&scanner) != '/') {
-	    status = PJMEDIA_SDP_EINRTPMAP;
-	    goto on_return;
-	}
+        /* Expecting '/' after encoding name. */
+        if (pj_scan_get_char(&scanner) != '/') {
+            status = PJMEDIA_SDP_EINRTPMAP;
+            goto on_return;
+        }
 
 
-	/* Get the clock rate. */
-	pj_scan_get(&scanner, &cs_digit, &token);
-	rtpmap->clock_rate = pj_strtoul(&token);
+        /* Get the clock rate. */
+        pj_scan_get(&scanner, &cs_digit, &token);
+        rtpmap->clock_rate = pj_strtoul(&token);
 
-	/* Expecting either '/' or EOF */
-	if (*scanner.curptr == '/') {
-	    /* Skip the '/' */
-	    pj_scan_get_char(&scanner);
-	    pj_scan_get(&scanner, &cs_token, &rtpmap->param);
-	} else {
-	    rtpmap->param.slen = 0;
-	}
+        /* Expecting either '/' or EOF */
+        if (*scanner.curptr == '/') {
+            /* Skip the '/' */
+            pj_scan_get_char(&scanner);
+            pj_scan_get(&scanner, &cs_token, &rtpmap->param);
+        } else {
+            rtpmap->param.slen = 0;
+        }
 
-	status = PJ_SUCCESS;
+        status = PJ_SUCCESS;
     }
     PJ_CATCH_ANY {
-	status = PJMEDIA_SDP_EINRTPMAP;
+        status = PJMEDIA_SDP_EINRTPMAP;
     }
     PJ_END;
 
@@ -331,13 +330,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 on_return:
     pj_scan_fini(&scanner);
     if (term) {
-	attr->value.ptr[attr->value.slen] = term;
+        attr->value.ptr[attr->value.slen] = term;
     }
     return status;
 }
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_fmtp( const pjmedia_sdp_attr *attr,
-					       pjmedia_sdp_fmtp *fmtp)
+                                               pjmedia_sdp_fmtp *fmtp)
 {
     const char *p = attr->value.ptr;
     const char *end = attr->value.ptr + attr->value.slen;
@@ -349,16 +348,16 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_fmtp( const pjmedia_sdp_attr *attr,
         return PJMEDIA_SDP_EINATTR;
 
     /* fmtp BNF:
-     *	a=fmtp:<format> <format specific parameter>
+     *  a=fmtp:<format> <format specific parameter>
      */
 
     /* Get format. */
     token.ptr = (char*)p;
     while (pj_isdigit(*p) && p!=end)
-	++p;
+        ++p;
     token.slen = p - token.ptr;
     if (token.slen == 0)
-	return PJMEDIA_SDP_EINFMTP;
+        return PJMEDIA_SDP_EINFMTP;
 
     fmtp->fmt = token;
 
@@ -377,7 +376,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_fmtp( const pjmedia_sdp_attr *attr,
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
-					      pjmedia_sdp_rtcp_attr *rtcp)
+                                              pjmedia_sdp_rtcp_attr *rtcp)
 {
     pj_scanner scanner;
     pj_str_t token;
@@ -392,14 +391,14 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
     init_sdp_parser();
 
     /* fmtp BNF:
-     *	a=rtcp:<port> [nettype addrtype address]
+     *  a=rtcp:<port> [nettype addrtype address]
      */
 
     /* The buffer passed to the scanner is not guaranteed to be NULL
      * terminated, but should be safe. See ticket #2063.
      */
     pj_scan_init(&scanner, (char*)attr->value.ptr, attr->value.slen,
-		 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
+                 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 
     /* Init */
     rtcp->net_type.slen = rtcp->addr_type.slen = rtcp->addr.slen = 0;
@@ -407,30 +406,30 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
     /* Parse */
     PJ_TRY {
 
-	/* Get the port */
-	pj_scan_get(&scanner, &cs_token, &token);
-	rtcp->port = pj_strtoul(&token);
+        /* Get the port */
+        pj_scan_get(&scanner, &cs_token, &token);
+        rtcp->port = pj_strtoul(&token);
 
-	/* Have address? */
-	if (!pj_scan_is_eof(&scanner)) {
+        /* Have address? */
+        if (!pj_scan_is_eof(&scanner)) {
 
-	    /* Get network type */
-	    pj_scan_get(&scanner, &cs_token, &rtcp->net_type);
+            /* Get network type */
+            pj_scan_get(&scanner, &cs_token, &rtcp->net_type);
 
-	    /* Get address type */
-	    pj_scan_get(&scanner, &cs_token, &rtcp->addr_type);
+            /* Get address type */
+            pj_scan_get(&scanner, &cs_token, &rtcp->addr_type);
 
-	    /* Get the address */
-	    //pj_scan_get(&scanner, &cs_token, &rtcp->addr);
-	    pj_scan_get_until_chr(&scanner, "/ \t\r\n", &rtcp->addr);
+            /* Get the address */
+            //pj_scan_get(&scanner, &cs_token, &rtcp->addr);
+            pj_scan_get_until_chr(&scanner, "/ \t\r\n", &rtcp->addr);
 
-	}
+        }
 
-	status = PJ_SUCCESS;
+        status = PJ_SUCCESS;
 
     }
     PJ_CATCH_ANY {
-	status = PJMEDIA_SDP_EINRTCP;
+        status = PJMEDIA_SDP_EINRTCP;
     }
     PJ_END;
 
@@ -440,10 +439,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
-						       const pj_sockaddr *a)
+                                                       const pj_sockaddr *a)
 {
     enum {
-	ATTR_LEN = PJ_INET6_ADDRSTRLEN+16
+        ATTR_LEN = PJ_INET6_ADDRSTRLEN+16
     };
     char tmp_addr[PJ_INET6_ADDRSTRLEN];
     pjmedia_sdp_attr *attr;
@@ -452,23 +451,23 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
     attr->name = pj_str("rtcp");
     attr->value.ptr = (char*) pj_pool_alloc(pool, ATTR_LEN);
     if (a->addr.sa_family == pj_AF_INET()) {
-	attr->value.slen = 
-	    pj_ansi_snprintf(attr->value.ptr, ATTR_LEN,
-			    "%u IN IP4 %s",
-			    pj_sockaddr_get_port(a),
-			    pj_sockaddr_print(a, tmp_addr, 
-					      sizeof(tmp_addr), 0));
+        attr->value.slen = 
+            pj_ansi_snprintf(attr->value.ptr, ATTR_LEN,
+                            "%u IN IP4 %s",
+                            pj_sockaddr_get_port(a),
+                            pj_sockaddr_print(a, tmp_addr, 
+                                              sizeof(tmp_addr), 0));
     } else if (a->addr.sa_family == pj_AF_INET6()) {
-	attr->value.slen = 
-	    pj_ansi_snprintf(attr->value.ptr, ATTR_LEN,
-			    "%u IN IP6 %s",
-			    pj_sockaddr_get_port(a),
-			    pj_sockaddr_print(a, tmp_addr, 
-					      sizeof(tmp_addr), 0));
+        attr->value.slen = 
+            pj_ansi_snprintf(attr->value.ptr, ATTR_LEN,
+                            "%u IN IP6 %s",
+                            pj_sockaddr_get_port(a),
+                            pj_sockaddr_print(a, tmp_addr, 
+                                              sizeof(tmp_addr), 0));
 
     } else {
-	pj_assert(!"Unsupported address family");
-	return NULL;
+        pj_assert(!"Unsupported address family");
+        return NULL;
     }
 
     return attr;
@@ -476,7 +475,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
-					      pjmedia_sdp_ssrc_attr *ssrc)
+                                              pjmedia_sdp_ssrc_attr *ssrc)
 {
     pj_scanner scanner;
     pj_str_t token;
@@ -492,14 +491,14 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
 
     /* ssrc BNF:
      *  a=ssrc:<ssrc-id> <attribute>
-     *	a=ssrc:<ssrc-id> <attribute>:<value>
+     *  a=ssrc:<ssrc-id> <attribute>:<value>
      */
 
     /* The buffer passed to the scanner is not guaranteed to be NULL
      * terminated, but should be safe. See ticket #2063.
      */
     pj_scan_init(&scanner, (char*)attr->value.ptr, attr->value.slen,
-		 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
+                 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 
     /* Init */
     pj_bzero(ssrc, sizeof(*ssrc));
@@ -508,26 +507,26 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
     PJ_TRY {
         pj_str_t scan_attr;
 
-	/* Get the ssrc */
-	pj_scan_get(&scanner, &cs_digit, &token);
-	ssrc->ssrc = pj_strtoul(&token);
+        /* Get the ssrc */
+        pj_scan_get(&scanner, &cs_digit, &token);
+        ssrc->ssrc = pj_strtoul(&token);
 
-    	pj_scan_get_char(&scanner);
-	pj_scan_get(&scanner, &cs_token, &scan_attr);
-	
-	/* Get cname attribute, if any */
-	if (!pj_scan_is_eof(&scanner) &&
-	    pj_scan_get_char(&scanner) == ':' &&
-	    pj_strcmp2(&scan_attr, "cname"))
-	{
-	    pj_scan_get(&scanner, &cs_token, &ssrc->cname);
-	}
+        pj_scan_get_char(&scanner);
+        pj_scan_get(&scanner, &cs_token, &scan_attr);
+        
+        /* Get cname attribute, if any */
+        if (!pj_scan_is_eof(&scanner) &&
+            pj_scan_get_char(&scanner) == ':' &&
+            pj_strcmp2(&scan_attr, "cname"))
+        {
+            pj_scan_get(&scanner, &cs_token, &ssrc->cname);
+        }
 
-	status = PJ_SUCCESS;
+        status = PJ_SUCCESS;
 
     }
     PJ_CATCH_ANY {
-	status = PJMEDIA_SDP_EINSSRC;
+        status = PJMEDIA_SDP_EINSSRC;
     }
     PJ_END;
 
@@ -537,8 +536,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
 
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc( pj_pool_t *pool,
-							pj_uint32_t ssrc,
-							const pj_str_t *cname)
+                                                        pj_uint32_t ssrc,
+                                                        const pj_str_t *cname)
 {
     pjmedia_sdp_attr *attr;
 
@@ -548,19 +547,19 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc( pj_pool_t *pool,
     attr = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_attr);
     attr->name = pj_str("ssrc");
     attr->value.ptr = (char*) pj_pool_alloc(pool, cname->slen+7 /* " cname:"*/
-    						  + 10 /* 32-bit integer */
-    						  + 1 /* NULL */);
+                                                  + 10 /* 32-bit integer */
+                                                  + 1 /* NULL */);
     attr->value.slen = pj_ansi_snprintf(attr->value.ptr, cname->slen+18,
-    					"%u cname:%.*s", ssrc,
-			   	   	(int)cname->slen, cname->ptr);
+                                        "%u cname:%.*s", ssrc,
+                                        (int)cname->slen, cname->ptr);
 
     return attr;
 }
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
-					       const pjmedia_sdp_attr *attr,
-					       pjmedia_sdp_rtpmap **p_rtpmap)
+                                               const pjmedia_sdp_attr *attr,
+                                               pjmedia_sdp_rtpmap **p_rtpmap)
 {
     PJ_ASSERT_RETURN(pool && attr && p_rtpmap, PJ_EINVAL);
 
@@ -572,8 +571,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
-					       const pjmedia_sdp_rtpmap *rtpmap,
-					       pjmedia_sdp_attr **p_attr)
+                                               const pjmedia_sdp_rtpmap *rtpmap,
+                                               pjmedia_sdp_attr **p_attr)
 {
     pjmedia_sdp_attr *attr;
     char tempbuf[128];
@@ -584,7 +583,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 
     /* Check that mandatory attributes are specified. */
     PJ_ASSERT_RETURN(rtpmap->enc_name.slen && rtpmap->clock_rate,
-		     PJMEDIA_SDP_EINRTPMAP);
+                     PJMEDIA_SDP_EINRTPMAP);
 
 
     attr = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_attr);
@@ -595,18 +594,18 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 
     /* Format: ":pt enc_name/clock_rate[/param]" */
     len = pj_ansi_snprintf(tempbuf, sizeof(tempbuf), 
-			   "%.*s %.*s/%u%s%.*s",
-			   (int)rtpmap->pt.slen,
-			   rtpmap->pt.ptr,
-			   (int)rtpmap->enc_name.slen,
-			   rtpmap->enc_name.ptr,
-			   rtpmap->clock_rate,
-			   (rtpmap->param.slen ? "/" : ""),
-			   (int)rtpmap->param.slen,
-			   rtpmap->param.ptr);
+                           "%.*s %.*s/%u%s%.*s",
+                           (int)rtpmap->pt.slen,
+                           rtpmap->pt.ptr,
+                           (int)rtpmap->enc_name.slen,
+                           rtpmap->enc_name.ptr,
+                           rtpmap->clock_rate,
+                           (rtpmap->param.slen ? "/" : ""),
+                           (int)rtpmap->param.slen,
+                           rtpmap->param.ptr);
 
     if (len < 1 || len >= (int)sizeof(tempbuf))
-	return PJMEDIA_SDP_ERTPMAPTOOLONG;
+        return PJMEDIA_SDP_ERTPMAPTOOLONG;
 
     attr->value.slen = len;
     attr->value.ptr = (char*) pj_pool_alloc(pool, attr->value.slen+1);
@@ -622,21 +621,21 @@ static int print_connection_info( pjmedia_sdp_conn *c, char *buf, int len)
     int printed;
 
     printed = pj_ansi_snprintf(buf, len, "c=%.*s %.*s %.*s\r\n",
-			       (int)c->net_type.slen,
-			       c->net_type.ptr,
-			       (int)c->addr_type.slen,
-			       c->addr_type.ptr,
-			       (int)c->addr.slen,
-			       c->addr.ptr);
+                               (int)c->net_type.slen,
+                               c->net_type.ptr,
+                               (int)c->addr_type.slen,
+                               c->addr_type.ptr,
+                               (int)c->addr.slen,
+                               c->addr.ptr);
     if (printed < 1 || printed >= len)
-	return -1;
+        return -1;
 
     return printed;
 }
 
 
 PJ_DEF(pjmedia_sdp_conn*) pjmedia_sdp_conn_clone (pj_pool_t *pool, 
-						  const pjmedia_sdp_conn *rhs)
+                                                  const pjmedia_sdp_conn *rhs)
 {
     pjmedia_sdp_conn *c = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_conn);
     if (!c) return NULL;
@@ -650,7 +649,7 @@ PJ_DEF(pjmedia_sdp_conn*) pjmedia_sdp_conn_clone (pj_pool_t *pool,
 
 PJ_DEF(pjmedia_sdp_bandw*)
 pjmedia_sdp_bandw_clone (pj_pool_t *pool, 
-			 const pjmedia_sdp_bandw *rhs)
+                         const pjmedia_sdp_bandw *rhs)
 {
     pjmedia_sdp_bandw *b = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_bandw);
     if (!b) return NULL;
@@ -662,12 +661,12 @@ pjmedia_sdp_bandw_clone (pj_pool_t *pool,
 }
 
 static pj_ssize_t print_bandw(const pjmedia_sdp_bandw *bandw,
-			      char *buf, pj_size_t len)
+                              char *buf, pj_size_t len)
 {
     char *p = buf;
 
     if ((int)len < bandw->modifier.slen + 10 + 5)
-	return -1;
+        return -1;
 
     *p++ = 'b';
     *p++ = '=';
@@ -682,12 +681,12 @@ static pj_ssize_t print_bandw(const pjmedia_sdp_bandw *bandw,
 }
 
 static pj_ssize_t print_attr(const pjmedia_sdp_attr *attr, 
-			     char *buf, pj_size_t len)
+                             char *buf, pj_size_t len)
 {
     char *p = buf;
 
     if ((int)len < attr->name.slen + attr->value.slen + 10)
-	return -1;
+        return -1;
 
     *p++ = 'a';
     *p++ = '=';
@@ -696,9 +695,9 @@ static pj_ssize_t print_attr(const pjmedia_sdp_attr *attr,
     
 
     if (attr->value.slen) {
-	*p++ = ':';
-	pj_memcpy(p, attr->value.ptr, attr->value.slen);
-	p += attr->value.slen;
+        *p++ = ':';
+        pj_memcpy(p, attr->value.ptr, attr->value.slen);
+        p += attr->value.slen;
     }
 
     *p++ = '\r';
@@ -715,9 +714,9 @@ static int print_media_desc(const pjmedia_sdp_media *m, char *buf, pj_size_t len
 
     /* check length for the "m=" line. */
     if (len < (pj_size_t)m->desc.media.slen+m->desc.transport.slen+12+24) {
-	return -1;
+        return -1;
     }
-    *p++ = 'm';	    /* m= */
+    *p++ = 'm';     /* m= */
     *p++ = '=';
     pj_memcpy(p, m->desc.media.ptr, m->desc.media.slen);
     p += m->desc.media.slen;
@@ -725,69 +724,69 @@ static int print_media_desc(const pjmedia_sdp_media *m, char *buf, pj_size_t len
     printed = pj_utoa(m->desc.port, p);
     p += printed;
     if (m->desc.port_count > 1) {
-	*p++ = '/';
-	printed = pj_utoa(m->desc.port_count, p);
-	p += printed;
+        *p++ = '/';
+        printed = pj_utoa(m->desc.port_count, p);
+        p += printed;
     }
     *p++ = ' ';
     pj_memcpy(p, m->desc.transport.ptr, m->desc.transport.slen);
     p += m->desc.transport.slen;
     for (i=0; i<m->desc.fmt_count; ++i) {
-	if (end-p > m->desc.fmt[i].slen) {
-	    *p++ = ' ';
-	    pj_memcpy(p, m->desc.fmt[i].ptr, m->desc.fmt[i].slen);
-	    p += m->desc.fmt[i].slen;
-	} else {
-	    return -1;
-	}
+        if (end-p > m->desc.fmt[i].slen) {
+            *p++ = ' ';
+            pj_memcpy(p, m->desc.fmt[i].ptr, m->desc.fmt[i].slen);
+            p += m->desc.fmt[i].slen;
+        } else {
+            return -1;
+        }
     }
 
     if (end-p >= 2) {
-	*p++ = '\r';
-	*p++ = '\n';
+        *p++ = '\r';
+        *p++ = '\n';
     } else {
-	return -1;
+        return -1;
     }
 
     /* print connection info, if present. */
     if (m->conn) {
-	printed = print_connection_info(m->conn, p, (int)(end-p));
-	if (printed < 0) {
-	    return -1;
-	}
-	p += printed;
+        printed = print_connection_info(m->conn, p, (int)(end-p));
+        if (printed < 0) {
+            return -1;
+        }
+        p += printed;
     }
     
     /* print optional bandwidth info. */
     for (i=0; i<m->bandw_count; ++i) {
-	printed = (int)print_bandw(m->bandw[i], p, end-p);
-	if (printed < 0) {
-	    return -1;
-	}
-	p += printed;
+        printed = (int)print_bandw(m->bandw[i], p, end-p);
+        if (printed < 0) {
+            return -1;
+        }
+        p += printed;
     }
 
     /* print attributes. */
     for (i=0; i<m->attr_count; ++i) {
-	printed = (int)print_attr(m->attr[i], p, end-p);
-	if (printed < 0) {
-	    return -1;
-	}
-	p += printed;
+        printed = (int)print_attr(m->attr[i], p, end-p);
+        if (printed < 0) {
+            return -1;
+        }
+        p += printed;
     }
 
     return (int)(p-buf);
 }
 
 PJ_DEF(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media,
-			       char *buf, pj_size_t size)
+                               char *buf, pj_size_t size)
 {
-	return print_media_desc(media, buf, size);
+        return print_media_desc(media, buf, size);
 }
 
 PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
-						 pj_pool_t *pool, 
-						 const pjmedia_sdp_media *rhs)
+                                                 pj_pool_t *pool, 
+                                                 const pjmedia_sdp_media *rhs)
 {
     unsigned int i;
     pjmedia_sdp_media *m = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_media);
@@ -799,33 +798,33 @@ PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
     pj_strdup (pool, &m->desc.transport, &rhs->desc.transport);
     m->desc.fmt_count = rhs->desc.fmt_count;
     for (i=0; i<rhs->desc.fmt_count; ++i)
-	pj_strdup(pool, &m->desc.fmt[i], &rhs->desc.fmt[i]);
+        pj_strdup(pool, &m->desc.fmt[i], &rhs->desc.fmt[i]);
 
     if (rhs->conn) {
-	m->conn = pjmedia_sdp_conn_clone (pool, rhs->conn);
-	PJ_ASSERT_RETURN(m->conn != NULL, NULL);
+        m->conn = pjmedia_sdp_conn_clone (pool, rhs->conn);
+        PJ_ASSERT_RETURN(m->conn != NULL, NULL);
     } else {
-	m->conn = NULL;
+        m->conn = NULL;
     }
 
     m->bandw_count = rhs->bandw_count;
     for (i=0; i < rhs->bandw_count; ++i) {
-	m->bandw[i] = pjmedia_sdp_bandw_clone (pool, rhs->bandw[i]);
-	PJ_ASSERT_RETURN(m->bandw[i] != NULL, NULL);
+        m->bandw[i] = pjmedia_sdp_bandw_clone (pool, rhs->bandw[i]);
+        PJ_ASSERT_RETURN(m->bandw[i] != NULL, NULL);
     }
 
     m->attr_count = rhs->attr_count;
     for (i=0; i < rhs->attr_count; ++i) {
-	m->attr[i] = pjmedia_sdp_attr_clone (pool, rhs->attr[i]);
-	PJ_ASSERT_RETURN(m->attr[i] != NULL, NULL);
+        m->attr[i] = pjmedia_sdp_attr_clone (pool, rhs->attr[i]);
+        PJ_ASSERT_RETURN(m->attr[i] != NULL, NULL);
     }
 
     return m;
 }
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_media_find_attr(
-				const pjmedia_sdp_media *m,
-				const pj_str_t *name, const pj_str_t *fmt)
+                                const pjmedia_sdp_media *m,
+                                const pj_str_t *name, const pj_str_t *fmt)
 {
     PJ_ASSERT_RETURN(m && name, NULL);
     return pjmedia_sdp_attr_find(m->attr_count, m->attr, name, fmt);
@@ -834,8 +833,8 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_media_find_attr(
 
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_media_find_attr2(
-				const pjmedia_sdp_media *m,
-				const char *name, const pj_str_t *fmt)
+                                const pjmedia_sdp_media *m,
+                                const char *name, const pj_str_t *fmt)
 {
     PJ_ASSERT_RETURN(m && name, NULL);
     return pjmedia_sdp_attr_find2(m->attr_count, m->attr, name, fmt);
@@ -843,31 +842,31 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_media_find_attr2(
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_media_add_attr( pjmedia_sdp_media *m,
-						pjmedia_sdp_attr *attr)
+                                                pjmedia_sdp_attr *attr)
 {
     return pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 }
 
 PJ_DEF(pj_status_t) pjmedia_sdp_session_add_attr(pjmedia_sdp_session *s,
-						 pjmedia_sdp_attr *attr)
+                                                 pjmedia_sdp_attr *attr)
 {
     return pjmedia_sdp_attr_add(&s->attr_count, s->attr, attr);
 }
 
 PJ_DEF(unsigned) pjmedia_sdp_media_remove_all_attr(pjmedia_sdp_media *m,
-						   const char *name)
+                                                   const char *name)
 {
     return pjmedia_sdp_attr_remove_all(&m->attr_count, m->attr, name);
 }
 
 PJ_DEF(pj_status_t) pjmedia_sdp_media_remove_attr(pjmedia_sdp_media *m,
-			      			  pjmedia_sdp_attr *attr)
+                                                  pjmedia_sdp_attr *attr)
 {
     return pjmedia_sdp_attr_remove(&m->attr_count, m->attr, attr);
 }
 
 static int print_session(const pjmedia_sdp_session *ses, 
-			 char *buf, pj_ssize_t len)
+                         char *buf, pj_ssize_t len)
 {
     char *p = buf;
     char *end = buf+len;
@@ -876,10 +875,10 @@ static int print_session(const pjmedia_sdp_session *ses,
 
     /* Check length for v= and o= lines. */
     if (len < 5+ 
-	      2+ses->origin.user.slen+18+
-	      ses->origin.net_type.slen+ses->origin.addr.slen + 2)
+              2+ses->origin.user.slen+18+
+              ses->origin.net_type.slen+ses->origin.addr.slen + 2)
     {
-	return -1;
+        return -1;
     }
 
     /* SDP version (v= line) */
@@ -911,7 +910,7 @@ static int print_session(const pjmedia_sdp_session *ses,
 
     /* Session name (s=) line. */
     if ((end-p)  < 8+ses->name.slen) {
-	return -1;
+        return -1;
     }
     *p++ = 's';
     *p++ = '=';
@@ -922,25 +921,25 @@ static int print_session(const pjmedia_sdp_session *ses,
 
     /* Connection line (c=) if exist. */
     if (ses->conn) {
-	printed = print_connection_info(ses->conn, p, (int)(end-p));
-	if (printed < 1) {
-	    return -1;
-	}
-	p += printed;
+        printed = print_connection_info(ses->conn, p, (int)(end-p));
+        if (printed < 1) {
+            return -1;
+        }
+        p += printed;
     }
 
     /* print optional bandwidth info. */
     for (i=0; i<ses->bandw_count; ++i) {
-	printed = (int)print_bandw(ses->bandw[i], p, end-p);
-	if (printed < 1) {
-	    return -1;
-	}
-	p += printed;
+        printed = (int)print_bandw(ses->bandw[i], p, end-p);
+        if (printed < 1) {
+            return -1;
+        }
+        p += printed;
     }
 
     /* Time */
     if ((end-p) < 24) {
-	return -1;
+        return -1;
     }
     *p++ = 't';
     *p++ = '=';
@@ -954,20 +953,20 @@ static int print_session(const pjmedia_sdp_session *ses,
 
     /* Print all attribute (a=) lines. */
     for (i=0; i<ses->attr_count; ++i) {
-	printed = (int)print_attr(ses->attr[i], p, end-p);
-	if (printed < 0) {
-	    return -1;
-	}
-	p += printed;
+        printed = (int)print_attr(ses->attr[i], p, end-p);
+        if (printed < 0) {
+            return -1;
+        }
+        p += printed;
     }
 
     /* Print media (m=) lines. */
     for (i=0; i<ses->media_count; ++i) {
-	printed = print_media_desc(ses->media[i], p, (int)(end-p));
-	if (printed < 0) {
-	    return -1;
-	}
-	p += printed;
+        printed = print_media_desc(ses->media[i], p, (int)(end-p));
+        if (printed < 0) {
+            return -1;
+        }
+        p += printed;
     }
 
     return (int)(p-buf);
@@ -984,14 +983,14 @@ static void parse_version(pj_scanner *scanner,
 
     /* check equal sign */
     if (scanner->curptr+1 >= scanner->end || *(scanner->curptr+1) != '=') {
-	on_scanner_error(scanner);
-	return;
+        on_scanner_error(scanner);
+        return;
     }
 
     /* check version is 0 */
     if (scanner->curptr+2 >= scanner->end || *(scanner->curptr+2) != '0') {
-	on_scanner_error(scanner);
-	return;
+        on_scanner_error(scanner);
+        return;
     }
 
     /* We've got what we're looking for, skip anything until newline */
@@ -999,7 +998,7 @@ static void parse_version(pj_scanner *scanner,
 }
 
 static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
-			 volatile parse_context *ctx)
+                         volatile parse_context *ctx)
 {
     pj_str_t str;
 
@@ -1007,8 +1006,8 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
 
     /* check equal sign */
     if (scanner->curptr+1 >= scanner->end || *(scanner->curptr+1) != '=') {
-	on_scanner_error(scanner);
-	return;
+        on_scanner_error(scanner);
+        return;
     }
 
     /* o= */
@@ -1045,7 +1044,7 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
 }
 
 static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
-		       volatile parse_context *ctx)
+                       volatile parse_context *ctx)
 {
     pj_str_t str;
 
@@ -1053,8 +1052,8 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
 
     /* check equal sign */
     if (scanner->curptr+1 >= scanner->end || *(scanner->curptr+1) != '=') {
-	on_scanner_error(scanner);
-	return;
+        on_scanner_error(scanner);
+        return;
     }
 
     /* t= */
@@ -1075,14 +1074,14 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
 }
 
 static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
-			       volatile parse_context *ctx)
+                               volatile parse_context *ctx)
 {
     ctx->last_error = PJMEDIA_SDP_EINSDP;
 
     /* check equal sign */
     if ((scanner->curptr+1 >= scanner->end) || *(scanner->curptr+1) != '=') {
-	on_scanner_error(scanner);
-	return;
+        on_scanner_error(scanner);
+        return;
     }
 
     /* x= */
@@ -1096,7 +1095,7 @@ static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
 }
 
 static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
-				  volatile parse_context *ctx)
+                                  volatile parse_context *ctx)
 {
     ctx->last_error = PJMEDIA_SDP_EINCONN;
 
@@ -1120,7 +1119,7 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
 }
 
 static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
-				 volatile parse_context *ctx)
+                                 volatile parse_context *ctx)
 {
     pj_str_t str;
 
@@ -1142,7 +1141,7 @@ static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
 }
 
 static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
-			volatile parse_context *ctx)
+                        volatile parse_context *ctx)
 {
     pj_str_t str;
 
@@ -1150,8 +1149,8 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
 
     /* check the equal sign */
     if (scanner->curptr+1 >= scanner->end || *(scanner->curptr+1) != '=') {
-	on_scanner_error(scanner);
-	return;
+        on_scanner_error(scanner);
+        return;
     }
 
     /* m= */
@@ -1169,17 +1168,17 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
         return;
     }
     if (*scanner->curptr == '/') {
-	/* port count */
-	pj_scan_get_char(scanner);
-	pj_scan_get(scanner, &cs_token, &str);
-	med->desc.port_count = pj_strtoul(&str);
+        /* port count */
+        pj_scan_get_char(scanner);
+        pj_scan_get(scanner, &cs_token, &str);
+        med->desc.port_count = pj_strtoul(&str);
 
     } else {
-	med->desc.port_count = 0;
+        med->desc.port_count = 0;
     }
 
     if (pj_scan_get_char(scanner) != ' ') {
-	on_scanner_error(scanner);
+        on_scanner_error(scanner);
     }
 
     /* transport */
@@ -1188,22 +1187,22 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
     /* format list */
     med->desc.fmt_count = 0;
     while (scanner->curptr < scanner->end && *scanner->curptr == ' ') {
-	pj_str_t fmt;
+        pj_str_t fmt;
 
-	pj_scan_get_char(scanner);
+        pj_scan_get_char(scanner);
 
-	/* Check again for the end of the line */
-	if ((*scanner->curptr == '\r') || (*scanner->curptr == '\n'))
-		break;
+        /* Check again for the end of the line */
+        if ((*scanner->curptr == '\r') || (*scanner->curptr == '\n'))
+                break;
 
-	pj_scan_get(scanner, &cs_token, &fmt);
-	if (med->desc.fmt_count < PJMEDIA_MAX_SDP_FMT)
-	    med->desc.fmt[med->desc.fmt_count++] = fmt;
-	else
-	    PJ_PERROR(2,(THIS_FILE, PJ_ETOOMANY, 
-		         "Error adding SDP media format %.*s, "
-			 "format is ignored",
-			 (int)fmt.slen, fmt.ptr));
+        pj_scan_get(scanner, &cs_token, &fmt);
+        if (med->desc.fmt_count < PJMEDIA_MAX_SDP_FMT)
+            med->desc.fmt[med->desc.fmt_count++] = fmt;
+        else
+            PJ_PERROR(2,(THIS_FILE, PJ_ETOOMANY, 
+                         "Error adding SDP media format %.*s, "
+                         "format is ignored",
+                         (int)fmt.slen, fmt.ptr));
     }
 
     /* We've got what we're looking for, skip anything until newline */
@@ -1218,7 +1217,7 @@ static void on_scanner_error(pj_scanner *scanner)
 }
 
 static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
-				    volatile parse_context *ctx)
+                                    volatile parse_context *ctx)
 {
     pjmedia_sdp_attr *attr;
 
@@ -1228,8 +1227,8 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
 
     /* check equal sign */
     if (scanner->curptr+1 >= scanner->end || *(scanner->curptr+1) != '=') {
-	on_scanner_error(scanner);
-	return NULL;
+        on_scanner_error(scanner);
+        return NULL;
     }
 
     /* skip a= */
@@ -1239,23 +1238,23 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
     pj_scan_get(scanner, &cs_token, &attr->name);
 
     if (*scanner->curptr && *scanner->curptr != '\r' && 
-	*scanner->curptr != '\n') 
+        *scanner->curptr != '\n') 
     {
-	/* skip ':' if present. */
-	if (*scanner->curptr == ':')
-	    pj_scan_get_char(scanner);
+        /* skip ':' if present. */
+        if (*scanner->curptr == ':')
+            pj_scan_get_char(scanner);
 
-	/* get value */
-	if (!pj_scan_is_eof(scanner) && *scanner->curptr != '\r' && *scanner->curptr != '\n') {
-	    pj_scan_get_until_chr(scanner, "\r\n", &attr->value);
-	} else {
-	    attr->value.ptr = NULL;
-	    attr->value.slen = 0;
-	}
+        /* get value */
+        if (!pj_scan_is_eof(scanner) && *scanner->curptr != '\r' && *scanner->curptr != '\n') {
+            pj_scan_get_until_chr(scanner, "\r\n", &attr->value);
+        } else {
+            attr->value.ptr = NULL;
+            attr->value.slen = 0;
+        }
 
     } else {
-	attr->value.ptr = NULL;
-	attr->value.slen = 0;
+        attr->value.ptr = NULL;
+        attr->value.slen = 0;
     }
 
     /* We've got what we're looking for, skip anything until newline */
@@ -1282,42 +1281,42 @@ static void apply_media_direction(pjmedia_sdp_session *sdp)
      * direction "sendrecv".
      */
     for (i = 0; i < sdp->attr_count && !dir_attr; ++i) {
-	if (!pj_strcmp(&sdp->attr[i]->name, &sendonly) ||
-	    !pj_strcmp(&sdp->attr[i]->name, &recvonly) ||
-	    !pj_strcmp(&sdp->attr[i]->name, &inactive)) 
-	{
-	    dir_attr = sdp->attr[i];
-	}
+        if (!pj_strcmp(&sdp->attr[i]->name, &sendonly) ||
+            !pj_strcmp(&sdp->attr[i]->name, &recvonly) ||
+            !pj_strcmp(&sdp->attr[i]->name, &inactive)) 
+        {
+            dir_attr = sdp->attr[i];
+        }
     }
 
     /* Found the direction attribute */
     if (dir_attr) {
-	/* Remove the direction attribute in session */
-	pjmedia_sdp_attr_remove(&sdp->attr_count, sdp->attr, dir_attr);
+        /* Remove the direction attribute in session */
+        pjmedia_sdp_attr_remove(&sdp->attr_count, sdp->attr, dir_attr);
 
-	/* Apply the direction attribute to all media, but not overriding it
-	 * if media already has direction attribute.
-	 */
-	for (i = 0; i < sdp->media_count; ++i) {
-	    pjmedia_sdp_media *m;
-	    unsigned j;
+        /* Apply the direction attribute to all media, but not overriding it
+         * if media already has direction attribute.
+         */
+        for (i = 0; i < sdp->media_count; ++i) {
+            pjmedia_sdp_media *m;
+            unsigned j;
 
-	    /* Find direction attribute in this media */
-	    m = sdp->media[i];
-	    for (j = 0; j < m->attr_count; ++j) {
-		if (!pj_strcmp(&m->attr[j]->name, &sendrecv) ||
-		    !pj_strcmp(&m->attr[j]->name, &sendonly) ||
-		    !pj_strcmp(&m->attr[j]->name, &recvonly) ||
-		    !pj_strcmp(&m->attr[j]->name, &inactive)) 
-		{
-		    break;
-		}
-	    }
+            /* Find direction attribute in this media */
+            m = sdp->media[i];
+            for (j = 0; j < m->attr_count; ++j) {
+                if (!pj_strcmp(&m->attr[j]->name, &sendrecv) ||
+                    !pj_strcmp(&m->attr[j]->name, &sendonly) ||
+                    !pj_strcmp(&m->attr[j]->name, &recvonly) ||
+                    !pj_strcmp(&m->attr[j]->name, &inactive)) 
+                {
+                    break;
+                }
+            }
 
-	    /* Not found, apply direction attribute from session */
-	    if (j == m->attr_count)
-		pjmedia_sdp_media_add_attr(m, dir_attr);
-	}
+            /* Not found, apply direction attribute from session */
+            if (j == m->attr_count)
+                pjmedia_sdp_media_add_attr(m, dir_attr);
+        }
     }
 }
 
@@ -1326,8 +1325,8 @@ static void apply_media_direction(pjmedia_sdp_session *sdp)
  * Parse SDP message.
  */
 PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
-				       char *buf, pj_size_t len, 
-				       pjmedia_sdp_session **p_sdp)
+                                       char *buf, pj_size_t len, 
+                                       pjmedia_sdp_session **p_sdp)
 {
     pj_scanner scanner;
     pjmedia_sdp_session *session;
@@ -1350,122 +1349,122 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 
     /* Ignore leading newlines */
     while (*scanner.curptr=='\r' || *scanner.curptr=='\n')
-	pj_scan_get_char(&scanner);
+        pj_scan_get_char(&scanner);
 
     PJ_TRY {
-	while (!pj_scan_is_eof(&scanner)) {
-		cur_name = *scanner.curptr;
-		switch (cur_name) {
-		case 'a':
-		    attr = parse_attr(pool, &scanner, &ctx);
-		    if (attr) {
-			if (media) {
-			    if (media->attr_count < PJMEDIA_MAX_SDP_ATTR)
-				pjmedia_sdp_media_add_attr(media, attr);
-			    else
-				PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
-					      "Error adding media attribute, "
-					      "attribute is ignored"));
-			} else {
-			    if (session->attr_count < PJMEDIA_MAX_SDP_ATTR)
-				pjmedia_sdp_session_add_attr(session, attr);
-			    else
-				PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
-					      "Error adding session attribute"
-					      ", attribute is ignored"));
-			}
-		    }
-		    break;
-		case 'o':
-		    parse_origin(&scanner, session, &ctx);
-		    break;
-		case 's':
-		    parse_generic_line(&scanner, &session->name, &ctx);
-		    break;
-		case 'c':
-		    conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
-		    parse_connection_info(&scanner, conn, &ctx);
-		    if (media) {
-			media->conn = conn;
-		    } else {
-			session->conn = conn;
-		    }
-		    break;
-		case 't':
-		    parse_time(&scanner, session, &ctx);
-		    break;
-		case 'm':
-		    media = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
-		    parse_media(&scanner, media, &ctx);
-		    if (session->media_count < PJMEDIA_MAX_SDP_MEDIA)
-			session->media[ session->media_count++ ] = media;
-		    else
-			PJ_PERROR(2,(THIS_FILE, PJ_ETOOMANY,
-				     "Error adding media, media is ignored"));
-		    break;
-		case 'v':
-		    parse_version(&scanner, &ctx);
-		    break;
-		case 13:
-		case 10:
-		    pj_scan_get_char(&scanner);
-		    /* Allow empty newlines at the end of the message */
-		    while (!pj_scan_is_eof(&scanner)) {
-			if (*scanner.curptr != 13 && *scanner.curptr != 10) {
-			    ctx.last_error = PJMEDIA_SDP_EINSDP;
-			    on_scanner_error(&scanner);
-			}
-			pj_scan_get_char(&scanner);
-		    }
-		    break;
-		case 'b':
-		    bandw = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_bandw);
-		    parse_bandwidth_info(&scanner, bandw, &ctx);
-		    if (media) {
-			if (media->bandw_count < PJMEDIA_MAX_SDP_BANDW)
-			    media->bandw[media->bandw_count++] = bandw;
-			else
-			    PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
-					  "Error adding media bandwidth "
-					  "info, info is ignored"));
-		    } else {
-			if (session->bandw_count < PJMEDIA_MAX_SDP_BANDW)
-			    session->bandw[session->bandw_count++] = bandw;
-			else
-			    PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
-					  "Error adding session bandwidth "
-					  "info, info is ignored"));
-		    }
-		    break;
-		default:
-		    if (cur_name >= 'a' && cur_name <= 'z')
-			parse_generic_line(&scanner, &dummy, &ctx);
-		    else  {
-			ctx.last_error = PJMEDIA_SDP_EINSDP;
-			on_scanner_error(&scanner);
-		    }
-		    break;
-		}
-	}
+        while (!pj_scan_is_eof(&scanner)) {
+                cur_name = *scanner.curptr;
+                switch (cur_name) {
+                case 'a':
+                    attr = parse_attr(pool, &scanner, &ctx);
+                    if (attr) {
+                        if (media) {
+                            if (media->attr_count < PJMEDIA_MAX_SDP_ATTR)
+                                pjmedia_sdp_media_add_attr(media, attr);
+                            else
+                                PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
+                                              "Error adding media attribute, "
+                                              "attribute is ignored"));
+                        } else {
+                            if (session->attr_count < PJMEDIA_MAX_SDP_ATTR)
+                                pjmedia_sdp_session_add_attr(session, attr);
+                            else
+                                PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
+                                              "Error adding session attribute"
+                                              ", attribute is ignored"));
+                        }
+                    }
+                    break;
+                case 'o':
+                    parse_origin(&scanner, session, &ctx);
+                    break;
+                case 's':
+                    parse_generic_line(&scanner, &session->name, &ctx);
+                    break;
+                case 'c':
+                    conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+                    parse_connection_info(&scanner, conn, &ctx);
+                    if (media) {
+                        media->conn = conn;
+                    } else {
+                        session->conn = conn;
+                    }
+                    break;
+                case 't':
+                    parse_time(&scanner, session, &ctx);
+                    break;
+                case 'm':
+                    media = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+                    parse_media(&scanner, media, &ctx);
+                    if (session->media_count < PJMEDIA_MAX_SDP_MEDIA)
+                        session->media[ session->media_count++ ] = media;
+                    else
+                        PJ_PERROR(2,(THIS_FILE, PJ_ETOOMANY,
+                                     "Error adding media, media is ignored"));
+                    break;
+                case 'v':
+                    parse_version(&scanner, &ctx);
+                    break;
+                case 13:
+                case 10:
+                    pj_scan_get_char(&scanner);
+                    /* Allow empty newlines at the end of the message */
+                    while (!pj_scan_is_eof(&scanner)) {
+                        if (*scanner.curptr != 13 && *scanner.curptr != 10) {
+                            ctx.last_error = PJMEDIA_SDP_EINSDP;
+                            on_scanner_error(&scanner);
+                        }
+                        pj_scan_get_char(&scanner);
+                    }
+                    break;
+                case 'b':
+                    bandw = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_bandw);
+                    parse_bandwidth_info(&scanner, bandw, &ctx);
+                    if (media) {
+                        if (media->bandw_count < PJMEDIA_MAX_SDP_BANDW)
+                            media->bandw[media->bandw_count++] = bandw;
+                        else
+                            PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
+                                          "Error adding media bandwidth "
+                                          "info, info is ignored"));
+                    } else {
+                        if (session->bandw_count < PJMEDIA_MAX_SDP_BANDW)
+                            session->bandw[session->bandw_count++] = bandw;
+                        else
+                            PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
+                                          "Error adding session bandwidth "
+                                          "info, info is ignored"));
+                    }
+                    break;
+                default:
+                    if (cur_name >= 'a' && cur_name <= 'z')
+                        parse_generic_line(&scanner, &dummy, &ctx);
+                    else  {
+                        ctx.last_error = PJMEDIA_SDP_EINSDP;
+                        on_scanner_error(&scanner);
+                    }
+                    break;
+                }
+        }
 
-	ctx.last_error = PJ_SUCCESS;
+        ctx.last_error = PJ_SUCCESS;
 
     }
-    PJ_CATCH_ANY {		
-	PJ_PERROR(4, (THIS_FILE, ctx.last_error,
-		      "Error parsing SDP in line %d col %d",
-		      scanner.line, pj_scan_get_col(&scanner)));
+    PJ_CATCH_ANY {              
+        PJ_PERROR(4, (THIS_FILE, ctx.last_error,
+                      "Error parsing SDP in line %d col %d",
+                      scanner.line, pj_scan_get_col(&scanner)));
 
-	session = NULL;
+        session = NULL;
 
-	pj_assert(ctx.last_error != PJ_SUCCESS);
+        pj_assert(ctx.last_error != PJ_SUCCESS);
     }
     PJ_END;
 
     pj_scan_fini(&scanner);
 
     if (session)
-	apply_media_direction(session);
+        apply_media_direction(session);
 
     *p_sdp = session;
     return ctx.last_error;
@@ -1475,7 +1474,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
  * Print SDP description.
  */
 PJ_DEF(int) pjmedia_sdp_print( const pjmedia_sdp_session *desc, 
-			       char *buf, pj_size_t size)
+                               char *buf, pj_size_t size)
 {
     return print_session(desc, buf, size);
 }
@@ -1485,7 +1484,7 @@ PJ_DEF(int) pjmedia_sdp_print( const pjmedia_sdp_session *desc,
  * Clone session
  */
 PJ_DEF(pjmedia_sdp_session*) pjmedia_sdp_session_clone( pj_pool_t *pool,
-			   			const pjmedia_sdp_session *rhs)
+                                                const pjmedia_sdp_session *rhs)
 {
     pjmedia_sdp_session *sess;
     unsigned i;
@@ -1508,14 +1507,14 @@ PJ_DEF(pjmedia_sdp_session*) pjmedia_sdp_session_clone( pj_pool_t *pool,
 
     /* Clone connection line */
     if (rhs->conn) {
-	sess->conn = pjmedia_sdp_conn_clone(pool, rhs->conn);
-	PJ_ASSERT_RETURN(sess->conn != NULL, NULL);
+        sess->conn = pjmedia_sdp_conn_clone(pool, rhs->conn);
+        PJ_ASSERT_RETURN(sess->conn != NULL, NULL);
     }
 
     /* Duplicate bandwidth info */
     sess->bandw_count = rhs->bandw_count;
     for (i=0; i<rhs->bandw_count; ++i) {
-	sess->bandw[i] = pjmedia_sdp_bandw_clone(pool, rhs->bandw[i]);
+        sess->bandw[i] = pjmedia_sdp_bandw_clone(pool, rhs->bandw[i]);
     }
 
     /* Clone time line. */
@@ -1525,24 +1524,24 @@ PJ_DEF(pjmedia_sdp_session*) pjmedia_sdp_session_clone( pj_pool_t *pool,
     /* Duplicate session attributes. */
     sess->attr_count = rhs->attr_count;
     for (i=0; i<rhs->attr_count; ++i) {
-	sess->attr[i] = pjmedia_sdp_attr_clone(pool, rhs->attr[i]);
+        sess->attr[i] = pjmedia_sdp_attr_clone(pool, rhs->attr[i]);
     }
 
     /* Duplicate media descriptors. */
     sess->media_count = rhs->media_count;
     for (i=0; i<rhs->media_count; ++i) {
-	sess->media[i] = pjmedia_sdp_media_clone(pool, rhs->media[i]);
+        sess->media[i] = pjmedia_sdp_media_clone(pool, rhs->media[i]);
     }
 
     return sess;
 }
 
 
-#define CHECK(exp,ret)	do {			\
-			    /*pj_assert(exp);*/	\
-			    if (!(exp))		\
-				return ret;	\
-			} while (0)
+#define CHECK(exp,ret)  do {                    \
+                            /*pj_assert(exp);*/ \
+                            if (!(exp))         \
+                                return ret;     \
+                        } while (0)
 
 /* Validate SDP connetion info. */
 static pj_status_t validate_sdp_conn(const pjmedia_sdp_conn *c)
@@ -1550,8 +1549,8 @@ static pj_status_t validate_sdp_conn(const pjmedia_sdp_conn *c)
     CHECK( c, PJ_EINVAL);
     CHECK( pj_strcmp2(&c->net_type, "IN")==0, PJMEDIA_SDP_EINCONN);
     CHECK( pj_strcmp2(&c->addr_type, "IP4")==0 ||
-	   pj_strcmp2(&c->addr_type, "IP6")==0, 
-	   PJMEDIA_SDP_EINCONN);
+           pj_strcmp2(&c->addr_type, "IP6")==0, 
+           PJMEDIA_SDP_EINCONN);
     CHECK( c->addr.slen != 0, PJMEDIA_SDP_EINCONN);
 
     return PJ_SUCCESS;
@@ -1567,7 +1566,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 
 /* Validate SDP session descriptor. */
 PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
-					  pj_bool_t strict)
+                                          pj_bool_t strict)
 {
     unsigned i;
     const pj_str_t STR_RTPMAP = { "rtpmap", 6 };
@@ -1577,10 +1576,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
     /* Validate origin line. */
     CHECK( sdp->origin.user.slen != 0, PJMEDIA_SDP_EINORIGIN);
     CHECK( pj_strcmp2(&sdp->origin.net_type, "IN")==0, 
-	   PJMEDIA_SDP_EINORIGIN);
+           PJMEDIA_SDP_EINORIGIN);
     CHECK( pj_strcmp2(&sdp->origin.addr_type, "IP4")==0 ||
-	   pj_strcmp2(&sdp->origin.addr_type, "IP6")==0, 
-	   PJMEDIA_SDP_EINORIGIN);
+           pj_strcmp2(&sdp->origin.addr_type, "IP6")==0, 
+           PJMEDIA_SDP_EINORIGIN);
     CHECK( sdp->origin.addr.slen != 0, PJMEDIA_SDP_EINORIGIN);
 
     /* Validate subject line. */
@@ -1590,63 +1589,63 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
 
     /* If session level connection info is present, validate it. */
     if (sdp->conn) {
-	pj_status_t status = validate_sdp_conn(sdp->conn);
-	if (status != PJ_SUCCESS)
-	    return status;
+        pj_status_t status = validate_sdp_conn(sdp->conn);
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     /* Validate each media. */
     for (i=0; i<sdp->media_count; ++i) {
-	const pjmedia_sdp_media *m = sdp->media[i];
-	unsigned j;
+        const pjmedia_sdp_media *m = sdp->media[i];
+        unsigned j;
 
-	/* Validate the m= line. */
-	CHECK( m->desc.media.slen != 0, PJMEDIA_SDP_EINMEDIA);
-	CHECK( m->desc.transport.slen != 0, PJMEDIA_SDP_EINMEDIA);
-	CHECK( m->desc.fmt_count != 0 || m->desc.port==0, PJMEDIA_SDP_ENOFMT);
+        /* Validate the m= line. */
+        CHECK( m->desc.media.slen != 0, PJMEDIA_SDP_EINMEDIA);
+        CHECK( m->desc.transport.slen != 0, PJMEDIA_SDP_EINMEDIA);
+        CHECK( m->desc.fmt_count != 0 || m->desc.port==0, PJMEDIA_SDP_ENOFMT);
 
-	/* If media level connection info is present, validate it. */
-	if (m->conn) {
-	    pj_status_t status = validate_sdp_conn(m->conn);
-	    if (status != PJ_SUCCESS)
-		return status;
-	}
+        /* If media level connection info is present, validate it. */
+        if (m->conn) {
+            pj_status_t status = validate_sdp_conn(m->conn);
+            if (status != PJ_SUCCESS)
+                return status;
+        }
 
-	/* If media doesn't have connection info, then connection info
-	 * must be present in the session.
-	 */
-	if (m->conn == NULL) {
-	    if (sdp->conn == NULL)
-		if (strict || m->desc.port != 0)
-		    return PJMEDIA_SDP_EMISSINGCONN;
-	}
+        /* If media doesn't have connection info, then connection info
+         * must be present in the session.
+         */
+        if (m->conn == NULL) {
+            if (sdp->conn == NULL)
+                if (strict || m->desc.port != 0)
+                    return PJMEDIA_SDP_EMISSINGCONN;
+        }
 
-	/* Verify payload type. */
-	for (j=0; j<m->desc.fmt_count; ++j) {
+        /* Verify payload type. */
+        for (j=0; j<m->desc.fmt_count; ++j) {
 
-	    /* Arrgh noo!! Payload type can be non-numeric!!
-	     * RTC based programs sends "null" for instant messaging!
-	     */
-	    if (pj_isdigit(*m->desc.fmt[j].ptr)) {
-		unsigned long pt;
-		pj_status_t status = pj_strtoul3(&m->desc.fmt[j], &pt, 10);
+            /* Arrgh noo!! Payload type can be non-numeric!!
+             * RTC based programs sends "null" for instant messaging!
+             */
+            if (pj_isdigit(*m->desc.fmt[j].ptr)) {
+                unsigned long pt;
+                pj_status_t status = pj_strtoul3(&m->desc.fmt[j], &pt, 10);
 
-		/* Payload type is between 0 and 127. 
-		 */
-		CHECK( status == PJ_SUCCESS && pt <= 127, PJMEDIA_SDP_EINPT);
+                /* Payload type is between 0 and 127. 
+                 */
+                CHECK( status == PJ_SUCCESS && pt <= 127, PJMEDIA_SDP_EINPT);
 
-		/* If port is not zero, then for each dynamic payload type, an
-		 * rtpmap attribute must be specified.
-		 */
-		if (m->desc.port != 0 && pt >= 96) {
-		    const pjmedia_sdp_attr *a;
+                /* If port is not zero, then for each dynamic payload type, an
+                 * rtpmap attribute must be specified.
+                 */
+                if (m->desc.port != 0 && pt >= 96) {
+                    const pjmedia_sdp_attr *a;
 
-		    a = pjmedia_sdp_media_find_attr(m, &STR_RTPMAP, 
-						    &m->desc.fmt[j]);
-		    CHECK( a != NULL, PJMEDIA_SDP_EMISSINGRTPMAP);
-		}
-	    }
-	}
+                    a = pjmedia_sdp_media_find_attr(m, &STR_RTPMAP, 
+                                                    &m->desc.fmt[j]);
+                    CHECK( a != NULL, PJMEDIA_SDP_EMISSINGRTPMAP);
+                }
+            }
+        }
     }
 
     /* Looks good. */
@@ -1655,30 +1654,30 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_transport_cmp( const pj_str_t *t1,
-					       const pj_str_t *t2)
+                                               const pj_str_t *t2)
 {
     pj_uint32_t t1_proto, t2_proto;
 
     /* Exactly equal? */
     if (pj_stricmp(t1, t2) == 0)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     /* Check if boths are RTP/AVP based */
     t1_proto = pjmedia_sdp_transport_get_proto(t1);
     t2_proto = pjmedia_sdp_transport_get_proto(t2);
     if (PJMEDIA_TP_PROTO_HAS_FLAG(t1_proto, PJMEDIA_TP_PROTO_RTP_AVP) && 
-	PJMEDIA_TP_PROTO_HAS_FLAG(t2_proto, PJMEDIA_TP_PROTO_RTP_AVP))
+        PJMEDIA_TP_PROTO_HAS_FLAG(t2_proto, PJMEDIA_TP_PROTO_RTP_AVP))
     {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     /* Compatible? */
     //{
-    //	static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
-    //	static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
-    //	if ((!pj_stricmp(t1, &ID_RTP_AVP) || !pj_stricmp(t1, &ID_RTP_SAVP)) &&
+    //  static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
+    //  static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
+    //  if ((!pj_stricmp(t1, &ID_RTP_AVP) || !pj_stricmp(t1, &ID_RTP_SAVP)) &&
     //      (!pj_stricmp(t2, &ID_RTP_AVP) || !pj_stricmp(t2, &ID_RTP_SAVP)))
-    //	    return PJ_SUCCESS;
+    //      return PJ_SUCCESS;
     //}
 
     return PJMEDIA_SDP_ETPORTNOTEQUAL;
@@ -1697,41 +1696,41 @@ PJ_DEF(pj_uint32_t) pjmedia_sdp_transport_get_proto(const pj_str_t *tp)
 
     idx = pj_strtok2(tp, "/", &token, 0);
     if (idx != tp->slen)
-	pj_strset(&rest, tp->ptr + token.slen + 1, tp->slen - token.slen - 1);
+        pj_strset(&rest, tp->ptr + token.slen + 1, tp->slen - token.slen - 1);
 
     if (pj_stricmp2(&token, "RTP") == 0) {
-	/* Starts with "RTP" */
+        /* Starts with "RTP" */
 
-	/* RTP/AVP */
-	if (pj_stricmp2(&rest, "AVP") == 0)
-	    return PJMEDIA_TP_PROTO_RTP_AVP;
+        /* RTP/AVP */
+        if (pj_stricmp2(&rest, "AVP") == 0)
+            return PJMEDIA_TP_PROTO_RTP_AVP;
 
-	/* RTP/SAVP */
-	if (pj_stricmp2(&rest, "SAVP") == 0)
-	    return PJMEDIA_TP_PROTO_RTP_SAVP;
+        /* RTP/SAVP */
+        if (pj_stricmp2(&rest, "SAVP") == 0)
+            return PJMEDIA_TP_PROTO_RTP_SAVP;
 
-	/* RTP/AVPF */
-	if (pj_stricmp2(&rest, "AVPF") == 0)
-	    return PJMEDIA_TP_PROTO_RTP_AVPF;
+        /* RTP/AVPF */
+        if (pj_stricmp2(&rest, "AVPF") == 0)
+            return PJMEDIA_TP_PROTO_RTP_AVPF;
 
-	/* RTP/SAVPF */
-	if (pj_stricmp2(&rest, "SAVPF") == 0)
-	    return PJMEDIA_TP_PROTO_RTP_SAVPF;
+        /* RTP/SAVPF */
+        if (pj_stricmp2(&rest, "SAVPF") == 0)
+            return PJMEDIA_TP_PROTO_RTP_SAVPF;
 
     } else if (pj_stricmp2(&token, "UDP") == 0) {
-	/* Starts with "UDP" */
+        /* Starts with "UDP" */
 
-	/* Plain UDP */
-	if (rest.slen == 0)
-	    return PJMEDIA_TP_PROTO_UDP;
+        /* Plain UDP */
+        if (rest.slen == 0)
+            return PJMEDIA_TP_PROTO_UDP;
 
-	/* DTLS-SRTP */
-	if (pj_stricmp2(&rest, "TLS/RTP/SAVP") == 0)
-	    return PJMEDIA_TP_PROTO_DTLS_SRTP;
+        /* DTLS-SRTP */
+        if (pj_stricmp2(&rest, "TLS/RTP/SAVP") == 0)
+            return PJMEDIA_TP_PROTO_DTLS_SRTP;
 
-	/* DTLS-SRTP with RTCP-FB */
-	if (pj_stricmp2(&rest, "TLS/RTP/SAVPF") == 0)
-	    return PJMEDIA_TP_PROTO_DTLS_SRTPF;
+        /* DTLS-SRTP with RTCP-FB */
+        if (pj_stricmp2(&rest, "TLS/RTP/SAVPF") == 0)
+            return PJMEDIA_TP_PROTO_DTLS_SRTPF;
     }
 
     /* Unknown transport */
@@ -1740,7 +1739,7 @@ PJ_DEF(pj_uint32_t) pjmedia_sdp_transport_get_proto(const pj_str_t *tp)
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
-						 pjmedia_sdp_media *m)
+                                                 pjmedia_sdp_media *m)
 {
     PJ_ASSERT_RETURN(m, PJ_EINVAL);
     PJ_UNUSED_ARG(pool);
@@ -1756,8 +1755,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
 
 
 PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone_deactivate(
-						pj_pool_t *pool,
-						const pjmedia_sdp_media *rhs)
+                                                pj_pool_t *pool,
+                                                const pjmedia_sdp_media *rhs)
 {
     unsigned int i;
     pjmedia_sdp_media *m;
@@ -1771,17 +1770,17 @@ PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone_deactivate(
     pj_strdup (pool, &m->desc.media, &rhs->desc.media);
     pj_strdup (pool, &m->desc.transport, &rhs->desc.transport);
     for (i=0; i<rhs->desc.fmt_count; ++i)
-	pj_strdup(pool, &m->desc.fmt[i], &rhs->desc.fmt[i]);
+        pj_strdup(pool, &m->desc.fmt[i], &rhs->desc.fmt[i]);
 
     if (rhs->conn) {
-	m->conn = pjmedia_sdp_conn_clone (pool, rhs->conn);
-	PJ_ASSERT_RETURN(m->conn != NULL, NULL);
+        m->conn = pjmedia_sdp_conn_clone (pool, rhs->conn);
+        PJ_ASSERT_RETURN(m->conn != NULL, NULL);
     }
 
     m->bandw_count = rhs->bandw_count;
     for (i=0; i < rhs->bandw_count; ++i) {
-	m->bandw[i] = pjmedia_sdp_bandw_clone (pool, rhs->bandw[i]);
-	PJ_ASSERT_RETURN(m->bandw[i] != NULL, NULL);
+        m->bandw[i] = pjmedia_sdp_bandw_clone (pool, rhs->bandw[i]);
+        PJ_ASSERT_RETURN(m->bandw[i] != NULL, NULL);
     }
 
     /* And deactivate it */

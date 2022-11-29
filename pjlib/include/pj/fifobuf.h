@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -32,13 +31,13 @@ struct pj_fifobuf_t
     int full;
 };
 
-PJ_DECL(void)	     pj_fifobuf_init (pj_fifobuf_t *fb, void *buffer, unsigned size);
+PJ_DECL(void)        pj_fifobuf_init (pj_fifobuf_t *fb, void *buffer, unsigned size);
 PJ_DECL(unsigned)    pj_fifobuf_max_size (pj_fifobuf_t *fb);
-PJ_DECL(void*)	     pj_fifobuf_alloc (pj_fifobuf_t *fb, unsigned size);
+PJ_DECL(void*)       pj_fifobuf_alloc (pj_fifobuf_t *fb, unsigned size);
 PJ_DECL(pj_status_t) pj_fifobuf_unalloc (pj_fifobuf_t *fb, void *buf);
 PJ_DECL(pj_status_t) pj_fifobuf_free (pj_fifobuf_t *fb, void *buf);
 
 PJ_END_DECL
 
-#endif	/* __PJ_FIFOBUF_H__ */
+#endif  /* __PJ_FIFOBUF_H__ */
 

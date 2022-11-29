@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -31,18 +30,18 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#define THIS_FILE		"sip_replaces.c"
+#define THIS_FILE               "sip_replaces.c"
 
 
 /*
  * Replaces header vptr.
  */
 static int replaces_hdr_print( pjsip_replaces_hdr *hdr, 
-			       char *buf, pj_size_t size);
+                               char *buf, pj_size_t size);
 static pjsip_replaces_hdr* replaces_hdr_clone( pj_pool_t *pool, 
-					       const pjsip_replaces_hdr *hdr);
+                                               const pjsip_replaces_hdr *hdr);
 static pjsip_replaces_hdr* replaces_hdr_shallow_clone( pj_pool_t *pool,
-						       const pjsip_replaces_hdr*);
+                                                       const pjsip_replaces_hdr*);
 
 static pjsip_hdr_vptr replaces_hdr_vptr = 
 {
@@ -68,7 +67,7 @@ PJ_DEF(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool)
 }
 
 static int replaces_hdr_print( pjsip_replaces_hdr *hdr, 
-			       char *buf, pj_size_t size)
+                               char *buf, pj_size_t size)
 {
     char *p = buf;
     char *endbuf = buf+size;
@@ -84,22 +83,22 @@ static int replaces_hdr_print( pjsip_replaces_hdr *hdr,
     copy_advance_pair(p, ";from-tag=", 10, hdr->from_tag);
 
     if (hdr->early_only) {
-	const pj_str_t str_early_only = { ";early-only", 11 };
-	copy_advance(p, str_early_only);
+        const pj_str_t str_early_only = { ";early-only", 11 };
+        copy_advance(p, str_early_only);
     }
     
     printed = pjsip_param_print_on(&hdr->other_param, p, endbuf-p,
-				   &pc->pjsip_TOKEN_SPEC, 
-				   &pc->pjsip_TOKEN_SPEC, ';');
+                                   &pc->pjsip_TOKEN_SPEC, 
+                                   &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
-	return (int)printed;
+        return (int)printed;
 
     p += printed;
     return (int)(p - buf);
 }
 
 static pjsip_replaces_hdr* replaces_hdr_clone( pj_pool_t *pool, 
-					       const pjsip_replaces_hdr *rhs)
+                                               const pjsip_replaces_hdr *rhs)
 {
     pjsip_replaces_hdr *hdr = pjsip_replaces_hdr_create(pool);
     pj_strdup(pool, &hdr->call_id, &rhs->call_id);
@@ -112,7 +111,7 @@ static pjsip_replaces_hdr* replaces_hdr_clone( pj_pool_t *pool,
 
 static pjsip_replaces_hdr* 
 replaces_hdr_shallow_clone( pj_pool_t *pool,
-			    const pjsip_replaces_hdr *rhs )
+                            const pjsip_replaces_hdr *rhs )
 {
     pjsip_replaces_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_replaces_hdr);
     pj_memcpy(hdr, rhs, sizeof(*hdr));
@@ -138,23 +137,23 @@ static pjsip_hdr *parse_hdr_replaces(pjsip_parse_ctx *ctx)
     pj_scan_get_until_ch(ctx->scanner, ';', &hdr->call_id);
 
     while (*ctx->scanner->curptr == ';') {
-	pj_str_t pname, pvalue;
+        pj_str_t pname, pvalue;
 
-	pj_scan_get_char(ctx->scanner);
-	pjsip_parse_param_imp(ctx->scanner, ctx->pool, &pname, &pvalue, 0);
+        pj_scan_get_char(ctx->scanner);
+        pjsip_parse_param_imp(ctx->scanner, ctx->pool, &pname, &pvalue, 0);
 
-	if (pj_stricmp(&pname, &to_tag)==0) {
-	    hdr->to_tag = pvalue;
-	} else if (pj_stricmp(&pname, &from_tag)==0) {
-	    hdr->from_tag = pvalue;
-	} else if (pj_stricmp(&pname, &early_only_tag)==0) {
-	    hdr->early_only = PJ_TRUE;
-	} else {
-	    pjsip_param *param = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
-	    param->name = pname;
-	    param->value = pvalue;
-	    pj_list_push_back(&hdr->other_param, param);
-	}
+        if (pj_stricmp(&pname, &to_tag)==0) {
+            hdr->to_tag = pvalue;
+        } else if (pj_stricmp(&pname, &from_tag)==0) {
+            hdr->from_tag = pvalue;
+        } else if (pj_stricmp(&pname, &early_only_tag)==0) {
+            hdr->early_only = PJ_TRUE;
+        } else {
+            pjsip_param *param = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
+            param->name = pname;
+            param->value = pvalue;
+            pj_list_push_back(&hdr->other_param, param);
+        }
     }
     pjsip_parse_end_hdr_imp( ctx->scanner );
     return (pjsip_hdr*)hdr;
@@ -180,27 +179,27 @@ PJ_DEF(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt)
     the_endpt = endpt;
 
     if (is_initialized)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     /* Register Replaces header parser */
     status = pjsip_register_hdr_parser( "Replaces", NULL, 
-				        &parse_hdr_replaces);
+                                        &parse_hdr_replaces);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Register "replaces" capability */
     status = pjsip_endpt_add_capability(endpt, NULL, PJSIP_H_SUPPORTED, NULL,
-					1, &STR_REPLACES);
+                                        1, &STR_REPLACES);
 
     /* Register deinit module to be executed when PJLIB shutdown */
     if (pjsip_endpt_atexit(endpt, &pjsip_replaces_deinit_module) != PJ_SUCCESS)
     {
-	/* Failure to register this function may cause this module won't 
-	 * work properly when the stack is restarted (without quitting 
-	 * application).
-	 */
-	pj_assert(!"Failed to register Replaces deinit.");
-	PJ_LOG(1, (THIS_FILE, "Failed to register Replaces deinit."));
+        /* Failure to register this function may cause this module won't 
+         * work properly when the stack is restarted (without quitting 
+         * application).
+         */
+        pj_assert(!"Failed to register Replaces deinit.");
+        PJ_LOG(1, (THIS_FILE, "Failed to register Replaces deinit."));
     }
 
     is_initialized = PJ_TRUE;
@@ -212,9 +211,9 @@ PJ_DEF(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt)
  * Verify that incoming request with Replaces header can be processed.
  */
 PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
-						   pjsip_dialog **p_dlg,
-						   pj_bool_t lock_dlg,
-						   pjsip_tx_data **p_tdata)
+                                                   pjsip_dialog **p_dlg,
+                                                   pj_bool_t lock_dlg,
+                                                   pjsip_tx_data **p_tdata)
 {
     const pj_str_t STR_REPLACES = { "Replaces", 8 };
     pjsip_replaces_hdr *rep_hdr;
@@ -239,11 +238,11 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
 
     /* Find Replaces header */
     rep_hdr = (pjsip_replaces_hdr*) 
-	      pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_REPLACES, 
-					 NULL);
+              pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_REPLACES, 
+                                         NULL);
     if (!rep_hdr) {
-	/* No Replaces header. No further processing is necessary. */
-	return PJ_SUCCESS;
+        /* No Replaces header. No further processing is necessary. */
+        return PJ_SUCCESS;
     }
 
 
@@ -251,25 +250,25 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
      * if not. 
      */
     if (pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_REPLACES, 
-				   rep_hdr->next)) {
-	code = PJSIP_SC_BAD_REQUEST;
-	warn_text = "Found multiple Replaces headers";
-	goto on_return;
+                                   rep_hdr->next)) {
+        code = PJSIP_SC_BAD_REQUEST;
+        warn_text = "Found multiple Replaces headers";
+        goto on_return;
     }
 
     /* Find the dialog identified by Replaces header (and always lock the
      * dialog no matter what application wants).
      */
     dlg = pjsip_ua_find_dialog(&rep_hdr->call_id, &rep_hdr->to_tag,
-			       &rep_hdr->from_tag, PJ_TRUE);
+                               &rep_hdr->from_tag, PJ_TRUE);
 
     /* Respond with 481 "Call/Transaction Does Not Exist" response if
      * no dialog is found.
      */
     if (dlg == NULL) {
-	code = PJSIP_SC_CALL_TSX_DOES_NOT_EXIST;
-	warn_text = "No dialog found for Replaces request";
-	goto on_return;
+        code = PJSIP_SC_CALL_TSX_DOES_NOT_EXIST;
+        warn_text = "No dialog found for Replaces request";
+        goto on_return;
     }
 
     /* Get the invite session within the dialog */
@@ -277,18 +276,18 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
 
     /* Return 481 if no invite session is present. */
     if (inv == NULL) {
-	code = PJSIP_SC_CALL_TSX_DOES_NOT_EXIST;
-	warn_text = "No INVITE session found for Replaces request";
-	goto on_return;
+        code = PJSIP_SC_CALL_TSX_DOES_NOT_EXIST;
+        warn_text = "No INVITE session found for Replaces request";
+        goto on_return;
     }
 
     /* Return 603 Declined response if invite session has already 
      * terminated 
      */
     if (inv->state >= PJSIP_INV_STATE_DISCONNECTED) {
-	code = PJSIP_SC_DECLINE;
-	warn_text = "INVITE session already terminated";
-	goto on_return;
+        code = PJSIP_SC_DECLINE;
+        warn_text = "INVITE session already terminated";
+        goto on_return;
     }
 
     /* If "early-only" flag is present, check that the invite session
@@ -296,9 +295,9 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
      * return 486 "Busy Here" response.
      */
     if (rep_hdr->early_only && inv->state >= PJSIP_INV_STATE_CONNECTING) {
-	code = PJSIP_SC_BUSY_HERE;
-	warn_text = "INVITE session already established";
-	goto on_return;
+        code = PJSIP_SC_BUSY_HERE;
+        warn_text = "INVITE session already established";
+        goto on_return;
     }
 
     /* If the Replaces header field matches an early dialog that was not
@@ -307,17 +306,17 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
      */
     if (inv->state <= PJSIP_INV_STATE_EARLY && inv->role != PJSIP_ROLE_UAC)
     {
-	/* Really return 481 only if call haven't reached early state or
-	 * accept-replace-in-early-state (ticket #1587) is not allowed.
-	 */
-	if (inv->state != PJSIP_INV_STATE_EARLY ||
-	    pjsip_cfg()->endpt.accept_replace_in_early_state == PJ_FALSE)
-	{
-	    code = PJSIP_SC_CALL_TSX_DOES_NOT_EXIST;
-	    warn_text = "Found early INVITE session but not initiated by "
-			"this UA";
-	    goto on_return;
-	}
+        /* Really return 481 only if call haven't reached early state or
+         * accept-replace-in-early-state (ticket #1587) is not allowed.
+         */
+        if (inv->state != PJSIP_INV_STATE_EARLY ||
+            pjsip_cfg()->endpt.accept_replace_in_early_state == PJ_FALSE)
+        {
+            code = PJSIP_SC_CALL_TSX_DOES_NOT_EXIST;
+            warn_text = "Found early INVITE session but not initiated by "
+                        "this UA";
+            goto on_return;
+        }
     }
 
 
@@ -332,58 +331,58 @@ on_return:
 
     /* Create response if necessary */
     if (code != 200) {
-	/* If we have dialog we must unlock it */
-	if (dlg)
-	    pjsip_dlg_dec_lock(dlg);
+        /* If we have dialog we must unlock it */
+        if (dlg)
+            pjsip_dlg_dec_lock(dlg);
 
-	/* Create response */
-	if (p_tdata) {
-	    pjsip_tx_data *tdata;
-	    const pjsip_hdr *h;
+        /* Create response */
+        if (p_tdata) {
+            pjsip_tx_data *tdata;
+            const pjsip_hdr *h;
 
-	    status = pjsip_endpt_create_response(the_endpt, rdata, code, 
-						 NULL, &tdata);
+            status = pjsip_endpt_create_response(the_endpt, rdata, code, 
+                                                 NULL, &tdata);
 
-	    if (status != PJ_SUCCESS)
-		return status;
+            if (status != PJ_SUCCESS)
+                return status;
 
-	    /* Add response headers. */
-	    h = res_hdr_list.next;
-	    while (h != &res_hdr_list) {
-		pjsip_hdr *cloned;
+            /* Add response headers. */
+            h = res_hdr_list.next;
+            while (h != &res_hdr_list) {
+                pjsip_hdr *cloned;
 
-		cloned = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, h);
-		PJ_ASSERT_RETURN(cloned, PJ_ENOMEM);
+                cloned = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, h);
+                PJ_ASSERT_RETURN(cloned, PJ_ENOMEM);
 
-		pjsip_msg_add_hdr(tdata->msg, cloned);
+                pjsip_msg_add_hdr(tdata->msg, cloned);
 
-		h = h->next;
-	    }
+                h = h->next;
+            }
 
-	    /* Add warn text, if any */
-	    if (warn_text) {
-		pjsip_warning_hdr *warn_hdr;
-		pj_str_t warn_value = pj_str((char*)warn_text);
+            /* Add warn text, if any */
+            if (warn_text) {
+                pjsip_warning_hdr *warn_hdr;
+                pj_str_t warn_value = pj_str((char*)warn_text);
 
-		warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399, 
-						  pjsip_endpt_name(the_endpt),
-						  &warn_value);
-		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
-	    }
+                warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399, 
+                                                  pjsip_endpt_name(the_endpt),
+                                                  &warn_value);
+                pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
+            }
 
-	    *p_tdata = tdata;
-	}
+            *p_tdata = tdata;
+        }
 
-	/* Can not return PJ_SUCCESS when response message is produced.
-	 * Ref: PROTOS test ~#2490
-	 */
-	if (status == PJ_SUCCESS)
-	    status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
+        /* Can not return PJ_SUCCESS when response message is produced.
+         * Ref: PROTOS test ~#2490
+         */
+        if (status == PJ_SUCCESS)
+            status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
 
     } else {
-	/* If application doesn't want to lock the dialog, unlock it */
-	if (!lock_dlg)
-	    pjsip_dlg_dec_lock(dlg);
+        /* If application doesn't want to lock the dialog, unlock it */
+        if (!lock_dlg)
+            pjsip_dlg_dec_lock(dlg);
     }
 
     return status;

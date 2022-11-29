@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -24,9 +23,9 @@
 PJ_DEF(int) strcasecmp(const char *s1, const char *s2)
 {
     while ((*s1==*s2) || (pj_tolower(*s1)==pj_tolower(*s2))) {
-	if (!*s1++)
-	    return 0;
-	++s2;
+        if (!*s1++)
+            return 0;
+        ++s2;
     }
     return (pj_tolower(*s1) < pj_tolower(*s2)) ? -1 : 1;
 }
@@ -36,9 +35,9 @@ PJ_DEF(int) strncasecmp(const char *s1, const char *s2, int len)
     if (!len) return 0;
 
     while ((*s1==*s2) || (pj_tolower(*s1)==pj_tolower(*s2))) {
-	if (!*s1++ || --len <= 0)
-	    return 0;
-	++s2;
+        if (!*s1++ || --len <= 0)
+            return 0;
+        ++s2;
     }
     return (pj_tolower(*s1) < pj_tolower(*s2)) ? -1 : 1;
 }

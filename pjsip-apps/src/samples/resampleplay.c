@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -43,22 +42,22 @@
 
 
 static const char *desc = 
-" FILE		    						    \n"
-"		    						    \n"
-"  resampleplay.c	    					    \n"
-"		    						    \n"
-" PURPOSE	    						    \n"
-"		    						    \n"
+" FILE                                                              \n"
+"                                                                   \n"
+"  resampleplay.c                                                   \n"
+"                                                                   \n"
+" PURPOSE                                                           \n"
+"                                                                   \n"
 "  Demonstrate how use resample port to play a WAV file to sound    \n"
-"  device using different sampling rate.			    \n"
-"		    						    \n"
-" USAGE		    						    \n"
-"		    						    \n"
-"  resampleplay [options] FILE.WAV				    \n"
-"		    						    \n"
-" where options:						    \n"
+"  device using different sampling rate.                            \n"
+"                                                                   \n"
+" USAGE                                                             \n"
+"                                                                   \n"
+"  resampleplay [options] FILE.WAV                                  \n"
+"                                                                   \n"
+" where options:                                                    \n"
 SND_USAGE
-"		    						    \n"
+"                                                                   \n"
 "  The WAV file could have mono or stereo channels with arbitrary   \n"
 "  sampling rate, but MUST contain uncompressed (i.e. 16bit) PCM.   \n";
 
@@ -89,17 +88,17 @@ int main(int argc, char *argv[])
 
     /* Get options */
     if (get_snd_options(THIS_FILE, argc, argv, &dev_id, &sampling_rate,
-			&channel_count, &samples_per_frame, &bits_per_sample))
+                        &channel_count, &samples_per_frame, &bits_per_sample))
     {
-	puts("");
-	puts(desc);
-	return 1;
+        puts("");
+        puts(desc);
+        return 1;
     }
 
     if (!argv[pj_optind]) {
-	puts("Error: no file is specified");
-	puts(desc);
-	return 1;
+        puts("Error: no file is specified");
+        puts(desc);
+        return 1;
     }
 
     /* Must create a pool factory before we can allocate any memory. */
@@ -113,27 +112,27 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for our file player */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "app",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "app",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     /* Create the file port. */
     status = pjmedia_wav_player_port_create( pool, argv[pj_optind], 0, 0,
-					     0, &file_port);
+                                             0, &file_port);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open file", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to open file", status);
+        return 1;
     }
 
     /* File must have same number of channels. */
     if (PJMEDIA_PIA_CCNT(&file_port->info) != (unsigned)channel_count) {
-	PJ_LOG(3,(THIS_FILE, "Error: file has different number of channels. "
-			     "Perhaps you'd need -c option?"));
-	pjmedia_port_destroy(file_port);
-	return 1;
+        PJ_LOG(3,(THIS_FILE, "Error: file has different number of channels. "
+                             "Perhaps you'd need -c option?"));
+        pjmedia_port_destroy(file_port);
+        return 1;
     }
 
     /* Calculate number of samples per frame to be taken from file port */
@@ -141,35 +140,35 @@ int main(int argc, char *argv[])
 
     /* Create the resample port. */
     status = pjmedia_resample_port_create( pool, file_port,
-					   sampling_rate, 0,
-					   &resample_port);
+                                           sampling_rate, 0,
+                                           &resample_port);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to create resample port", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to create resample port", status);
+        return 1;
     }
 
     /* Create sound player port. */
     status = pjmedia_snd_port_create( 
-		 pool,			/* pool			    */
-		 dev_id,		/* device		    */
-		 dev_id,		/* device		    */
-		 sampling_rate,		/* clock rate.		    */
-		 channel_count,		/* # of channels.	    */
-		 samples_per_frame,	/* samples per frame.	    */
-		 bits_per_sample,	/* bits per sample.	    */
-		 0,			/* options		    */
-		 &snd_port		/* returned port	    */
-		 );
+                 pool,                  /* pool                     */
+                 dev_id,                /* device                   */
+                 dev_id,                /* device                   */
+                 sampling_rate,         /* clock rate.              */
+                 channel_count,         /* # of channels.           */
+                 samples_per_frame,     /* samples per frame.       */
+                 bits_per_sample,       /* bits per sample.         */
+                 0,                     /* options                  */
+                 &snd_port              /* returned port            */
+                 );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open sound device", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to open sound device", status);
+        return 1;
     }
 
     /* Connect resample port to sound device */
     status = pjmedia_snd_port_connect( snd_port, resample_port);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Error connecting sound ports", status);
-	return 1;
+        app_perror(THIS_FILE, "Error connecting sound ports", status);
+        return 1;
     }
 
 
@@ -186,13 +185,13 @@ int main(int argc, char *argv[])
 
 
     printf("Playing %s at sampling rate %d (original file sampling rate=%d)\n",
-	   argv[pj_optind], sampling_rate,
-	   PJMEDIA_PIA_SRATE(&file_port->info));
+           argv[pj_optind], sampling_rate,
+           PJMEDIA_PIA_SRATE(&file_port->info));
     puts("");
     puts("Press <ENTER> to stop playing and quit");
 
     if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
-	puts("EOF while reading stdin, will quit now..");
+        puts("EOF while reading stdin, will quit now..");
     }
     
     /* Start deinitialization: */

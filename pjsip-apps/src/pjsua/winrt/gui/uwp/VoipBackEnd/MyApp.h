@@ -27,245 +27,245 @@ namespace VoipBackEnd
 
     typedef Platform::Collections::Vector<Platform::String^> StringVector;
     typedef Windows::Foundation::Collections::IVector<Platform::String^> 
-	IStringVector;
+        IStringVector;
 
     typedef public enum class INV_STATE
     {
-	PJSIP_INV_STATE_NULL,	      /**< Before INVITE is sent or received */
-	PJSIP_INV_STATE_CALLING,      /**< After INVITE is sent		     */
-	PJSIP_INV_STATE_INCOMING,     /**< After INVITE is received.	     */
-	PJSIP_INV_STATE_EARLY,	      /**< After response with To tag.	     */
-	PJSIP_INV_STATE_CONNECTING,   /**< After 2xx is sent/received.	     */
-	PJSIP_INV_STATE_CONFIRMED,    /**< After ACK is sent/received.	     */
-	PJSIP_INV_STATE_DISCONNECTED, /**< Session is terminated.	     */
+        PJSIP_INV_STATE_NULL,         /**< Before INVITE is sent or received */
+        PJSIP_INV_STATE_CALLING,      /**< After INVITE is sent              */
+        PJSIP_INV_STATE_INCOMING,     /**< After INVITE is received.         */
+        PJSIP_INV_STATE_EARLY,        /**< After response with To tag.       */
+        PJSIP_INV_STATE_CONNECTING,   /**< After 2xx is sent/received.       */
+        PJSIP_INV_STATE_CONFIRMED,    /**< After ACK is sent/received.       */
+        PJSIP_INV_STATE_DISCONNECTED, /**< Session is terminated.            */
     } INV_STATE;
 
     class ImpLogWriter : public pj::LogWriter
     {
     public:
-	virtual void write(const pj::LogEntry &entry);
+        virtual void write(const pj::LogEntry &entry);
     };
 
     /* Account related data type. */
     public ref struct OnRegStateParamRT sealed
     {
-	OnRegStateParamRT();
+        OnRegStateParamRT();
 
-	property pj_status_t status
-	{
-	    pj_status_t get();
-	};
+        property pj_status_t status
+        {
+            pj_status_t get();
+        };
 
-	property unsigned code 
-	{
-	    unsigned get();
-	};
+        property unsigned code 
+        {
+            unsigned get();
+        };
 
-	property Platform::String^ reason
-	{
-	    Platform::String^ get();
-	};
+        property Platform::String^ reason
+        {
+            Platform::String^ get();
+        };
 
-	property int expiration
-	{
-	    int get();
-	};
+        property int expiration
+        {
+            int get();
+        };
 
     internal:
-	OnRegStateParamRT(const pj::OnRegStateParam& param);
+        OnRegStateParamRT(const pj::OnRegStateParam& param);
 
     private:
-	pj::OnRegStateParam* inPtr;	    
+        pj::OnRegStateParam* inPtr;         
 
-	~OnRegStateParamRT();
+        ~OnRegStateParamRT();
     };
 
     public ref struct CallInfoRT sealed
-    {	
-	property Platform::String^ localUri
-	{
-	    Platform::String^ get();
-	}
+    {   
+        property Platform::String^ localUri
+        {
+            Platform::String^ get();
+        }
 
-	property Platform::String^ localContact
-	{
-	    Platform::String^ get();	    
-	}
+        property Platform::String^ localContact
+        {
+            Platform::String^ get();        
+        }
 
-	property Platform::String^ remoteUri
-	{
-	    Platform::String^ get();
-	}
+        property Platform::String^ remoteUri
+        {
+            Platform::String^ get();
+        }
 
-	property Platform::String^ remoteContact
-	{
-	    Platform::String^ get();
-	}
+        property Platform::String^ remoteContact
+        {
+            Platform::String^ get();
+        }
 
-	property INV_STATE state
-	{
-	    INV_STATE get();
-	};
+        property INV_STATE state
+        {
+            INV_STATE get();
+        };
 
     internal:
-	CallInfoRT(const pj::CallInfo& info);
+        CallInfoRT(const pj::CallInfo& info);
 
     private:
-	pj::CallInfo* inPtr;
+        pj::CallInfo* inPtr;
 
-	~CallInfoRT();
+        ~CallInfoRT();
 
     };
 
     public interface class IntAccount
     {
     public:
-	virtual void onRegState(OnRegStateParamRT^ prm);
-	virtual void onIncomingCall(CallInfoRT^ info);
+        virtual void onRegState(OnRegStateParamRT^ prm);
+        virtual void onIncomingCall(CallInfoRT^ info);
     };
 
     class ImpAccount : public pj::Account
     {
     public:
-	void setCallback(IntAccount^ callback);
+        void setCallback(IntAccount^ callback);
 
-	virtual void onIncomingCall(pj::OnIncomingCallParam& prm);
-	virtual void onRegState(pj::OnRegStateParam& prm);
+        virtual void onIncomingCall(pj::OnIncomingCallParam& prm);
+        virtual void onRegState(pj::OnRegStateParam& prm);
 
-	~ImpAccount() {};
+        ~ImpAccount() {};
 
     private:
-	IntAccount^ cb;
+        IntAccount^ cb;
     };
 
     /* Call related data type. */
     public ref class CallOpParamRT sealed
     {
     public:
-	CallOpParamRT();
+        CallOpParamRT();
 
-	property unsigned statusCode
-	{
-	    unsigned get();
-	    void set(unsigned val);
-	}
+        property unsigned statusCode
+        {
+            unsigned get();
+            void set(unsigned val);
+        }
 
-	property Platform::String^ reason {
-	    Platform::String^ get();
-	    void set(Platform::String^ val);
-	}
+        property Platform::String^ reason {
+            Platform::String^ get();
+            void set(Platform::String^ val);
+        }
 
     internal:
-	pj::CallOpParam* getPtr();
+        pj::CallOpParam* getPtr();
 
     private:
-	pj::CallOpParam* inPtr;
+        pj::CallOpParam* inPtr;
 
-	~CallOpParamRT();
+        ~CallOpParamRT();
     };
 
     public interface class IntCall
     {
 
     public:
-	virtual void onCallState(CallInfoRT^ info);	    
+        virtual void onCallState(CallInfoRT^ info);         
     };
 
     class ImpCall : public pj::Call
-    {	    
-    public:	    	    
-	ImpCall(pj::Account& account, int call_id);
-	virtual ~ImpCall() {};
+    {       
+    public:                 
+        ImpCall(pj::Account& account, int call_id);
+        virtual ~ImpCall() {};
 
-	void setCallback(IntCall^ callback);
+        void setCallback(IntCall^ callback);
 
-	virtual void onCallState(pj::OnCallStateParam& prm);
-	virtual void onCallMediaState(pj::OnCallMediaStateParam& prm);	    
+        virtual void onCallState(pj::OnCallStateParam& prm);
+        virtual void onCallMediaState(pj::OnCallMediaStateParam& prm);      
 
     private:
-	IntCall^ cb;
+        IntCall^ cb;
     };
 
     public ref class AccountInfo sealed
     {
     public:
-	property Platform::String^ id {
-	    Platform::String^ get();
-	}
-	property Platform::String^ registrar {
-	    Platform::String^ get();
-	}
-	property Platform::String^ proxy {
-	    Platform::String^ get();
-	}
-	property Platform::String^ username {
-	    Platform::String^ get();
-	}
-	property Platform::String^ password {
-	    Platform::String^ get();
-	}
+        property Platform::String^ id {
+            Platform::String^ get();
+        }
+        property Platform::String^ registrar {
+            Platform::String^ get();
+        }
+        property Platform::String^ proxy {
+            Platform::String^ get();
+        }
+        property Platform::String^ username {
+            Platform::String^ get();
+        }
+        property Platform::String^ password {
+            Platform::String^ get();
+        }
     internal:
-	AccountInfo(pj::AccountConfig* accConfig);
+        AccountInfo(pj::AccountConfig* accConfig);
     private:
-	pj::AccountConfig* cfg;
+        pj::AccountConfig* cfg;
     };
 
     /* App class. */
     public ref class MyAppRT sealed
     {
     public:
-	static property MyAppRT^ Instance {
-	    MyAppRT^ get();
-	}
+        static property MyAppRT^ Instance {
+            MyAppRT^ get();
+        }
 
-	void init(IntAccount^ iAcc, IntCall^ iCall);
-	void deInit();
+        void init(IntAccount^ iAcc, IntCall^ iCall);
+        void deInit();
 
-	/* Util */
-	void writeLog(int level, Platform::String^ message);
+        /* Util */
+        void writeLog(int level, Platform::String^ message);
 
-	/* Call handling. */
-	void hangupCall();
-	void answerCall(CallOpParamRT^ prm);
-	void makeCall(Platform::String^ dst_uri);	
-	CallInfoRT^ getCallInfo();
+        /* Call handling. */
+        void hangupCall();
+        void answerCall(CallOpParamRT^ prm);
+        void makeCall(Platform::String^ dst_uri);       
+        CallInfoRT^ getCallInfo();
 
-	/* Thread handling. */
-	void registerThread(Platform::String^ name);
-	bool isThreadRegistered();
+        /* Thread handling. */
+        void registerThread(Platform::String^ name);
+        bool isThreadRegistered();
 
-	/* Account handling. */
-	AccountInfo^ getAccountInfo();
+        /* Account handling. */
+        AccountInfo^ getAccountInfo();
 
-	void modifyAccount(Platform::String^ id, Platform::String^ registrar, 
-			   Platform::String^ proxy, Platform::String^ username, 
-			   Platform::String^ password);
+        void modifyAccount(Platform::String^ id, Platform::String^ registrar, 
+                           Platform::String^ proxy, Platform::String^ username, 
+                           Platform::String^ password);
 
     internal:
-	pj_bool_t handleIncomingCall(int callId);
+        pj_bool_t handleIncomingCall(int callId);
 
     private:
-	MyAppRT();
-	~MyAppRT();
+        MyAppRT();
+        ~MyAppRT();
 
-	void loadConfig();
-	void saveConfig();
+        void loadConfig();
+        void saveConfig();
 
-	static MyAppRT^ singleton;
+        static MyAppRT^ singleton;
 
-	ImpLogWriter* logWriter;
-	pj::Endpoint ep;
+        ImpLogWriter* logWriter;
+        pj::Endpoint ep;
 
-	/* Configs */
-	pj::EpConfig* epConfig;
-	pj::AccountConfig* accConfig;
-	pj::TransportConfig* sipTpConfig;
+        /* Configs */
+        pj::EpConfig* epConfig;
+        pj::AccountConfig* accConfig;
+        pj::TransportConfig* sipTpConfig;
 
-	std::string appDir;
-	ImpAccount* account;
-	ImpCall* activeCall;
+        std::string appDir;
+        ImpAccount* account;
+        ImpCall* activeCall;
 
-	IntAccount^ intAcc;
-	IntCall^ intCall;
+        IntAccount^ intAcc;
+        IntCall^ intCall;
     };
 }

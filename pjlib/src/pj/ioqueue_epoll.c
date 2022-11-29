@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -42,17 +41,17 @@
 #include <errno.h>
 #include <unistd.h>
 
-#define epoll_data		data.ptr
-#define epoll_data_type		void*
-#define ioctl_val_type		unsigned long
-#define getsockopt_val_ptr	int*
-#define os_getsockopt		getsockopt
-#define os_ioctl		ioctl
-#define os_read			read
-#define os_close		close
-#define os_epoll_create		epoll_create
-#define os_epoll_ctl		epoll_ctl
-#define os_epoll_wait		epoll_wait
+#define epoll_data              data.ptr
+#define epoll_data_type         void*
+#define ioctl_val_type          unsigned long
+#define getsockopt_val_ptr      int*
+#define os_getsockopt           getsockopt
+#define os_ioctl                ioctl
+#define os_read                 read
+#define os_close                close
+#define os_epoll_create         epoll_create
+#define os_epoll_ctl            epoll_ctl
+#define os_epoll_wait           epoll_wait
 
 
 #define THIS_FILE   "ioq_epoll"
@@ -63,12 +62,12 @@
 /* Enable this during development to warn against stray events.
  * But don't enable this during production, for performance reason.
  */
-//#define TRACE_WARN(expr)	PJ_LOG(2,expr)
+//#define TRACE_WARN(expr)      PJ_LOG(2,expr)
 #define TRACE_WARN(expr)
 
 
 #ifndef EPOLLEXCLUSIVE
-#  define EPOLLEXCLUSIVE 	(1U << 28)
+#  define EPOLLEXCLUSIVE        (1U << 28)
 #endif
 
 enum { IO_MASK = EPOLLIN | EPOLLOUT | EPOLLERR };
@@ -91,7 +90,7 @@ struct pj_ioqueue_key_t
 
 struct queue
 {
-    pj_ioqueue_key_t	    *key;
+    pj_ioqueue_key_t        *key;
     enum ioqueue_event_type  event_type;
 };
 
@@ -102,17 +101,17 @@ struct pj_ioqueue_t
 {
     DECLARE_COMMON_IOQUEUE
 
-    unsigned		max, count;
-    //pj_ioqueue_key_t	hlist;
-    pj_ioqueue_key_t	active_list;    
-    int			epfd;
+    unsigned            max, count;
+    //pj_ioqueue_key_t  hlist;
+    pj_ioqueue_key_t    active_list;    
+    int                 epfd;
     //struct epoll_event *events;
     //struct queue       *queue;
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-    pj_mutex_t	       *ref_cnt_mutex;
-    pj_ioqueue_key_t	closing_list;
-    pj_ioqueue_key_t	free_list;
+    pj_mutex_t         *ref_cnt_mutex;
+    pj_ioqueue_key_t    closing_list;
+    pj_ioqueue_key_t    free_list;
 #endif
 };
 
@@ -155,22 +154,22 @@ static unsigned detect_epoll_support()
 
     /* Note: this function should be thread-safe */
     if (epoll_support != -1)
-	return epoll_support;
+        return epoll_support;
 
 #ifdef DISABLE_EXCLUSIVE_ONESHOT
     PJ_LOG(3,(THIS_FILE, "epoll EXCLUSIVE/ONESHOT support disabled, reason: %s",
-	      DISABLE_EXCLUSIVE_ONESHOT));
+              DISABLE_EXCLUSIVE_ONESHOT));
     epoll_support = 0;
     return epoll_support;
 #endif
 
     epfd = os_epoll_create(5);
     if (epfd < 0)
-	goto on_error;
+        goto on_error;
 
     evfd = eventfd(0, 0);
     if (evfd < 0)
-	goto on_error;
+        goto on_error;
 
     /*
      * Choose events that should cause an error on EPOLLEXCLUSIVE enabled
@@ -181,57 +180,57 @@ static unsigned detect_epoll_support()
     ev.events = EPOLLIN | EPOLLEXCLUSIVE | EPOLLONESHOT;
     rc = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
     if (rc == 0) {
-	/* The kernel has accepted our invalid request. Assume it probably
-	 * doesn't know about/support EPOLLEXCLUSIVE. But we assume that
-	 * it may still be able to support EPOLLONESHOT, since this was
-	 * added very long time ago.
-	 */
-	disable_exclusive = 1;
-	rc = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd, &ev);
-	if (rc != 0)
-	    goto on_error;
+        /* The kernel has accepted our invalid request. Assume it probably
+         * doesn't know about/support EPOLLEXCLUSIVE. But we assume that
+         * it may still be able to support EPOLLONESHOT, since this was
+         * added very long time ago.
+         */
+        disable_exclusive = 1;
+        rc = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd, &ev);
+        if (rc != 0)
+            goto on_error;
 
     } else if (errno != EINVAL) {
-	/* Unexpected error */
-	goto on_error;
+        /* Unexpected error */
+        goto on_error;
     }
 
     /* Check EPOLLEXCLUSIVE support */
     if (!disable_exclusive) {
-	ev.events = EPOLLIN | EPOLLEXCLUSIVE;
-	rc = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
-	if (rc == 0) {
-	    support_exclusive = 1;
-	    rc = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd, &ev);
-	    if (rc != 0)
-		goto on_error;
-	}
+        ev.events = EPOLLIN | EPOLLEXCLUSIVE;
+        rc = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
+        if (rc == 0) {
+            support_exclusive = 1;
+            rc = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd, &ev);
+            if (rc != 0)
+                goto on_error;
+        }
     }
 
     /* Check EPOLLONESHOT support */
     ev.events = EPOLLIN | EPOLLONESHOT;
     rc = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
     if (rc == 0) {
-	support_oneshot = 1;
-	rc = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd, &ev);
-	if (rc != 0)
-	    goto on_error;
+        support_oneshot = 1;
+        rc = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd, &ev);
+        if (rc != 0)
+            goto on_error;
     }
 
     tmp_epoll_support = 0;
     if (support_exclusive && !disable_exclusive)
-	tmp_epoll_support |= PJ_IOQUEUE_EPOLL_EXCLUSIVE;
+        tmp_epoll_support |= PJ_IOQUEUE_EPOLL_EXCLUSIVE;
     if (support_oneshot)
-	tmp_epoll_support |= PJ_IOQUEUE_EPOLL_ONESHOT;
+        tmp_epoll_support |= PJ_IOQUEUE_EPOLL_ONESHOT;
 
     pj_ansi_snprintf(ioq_name, sizeof(ioq_name), "epoll[0x%x]",
-		     tmp_epoll_support);
+                     tmp_epoll_support);
     epoll_support = tmp_epoll_support;
 
     if (epfd > 0)
-	os_close(epfd);
+        os_close(epfd);
     if (evfd > 0)
-	os_close(evfd);
+        os_close(evfd);
 
     return epoll_support;
 
@@ -239,9 +238,9 @@ on_error:
     rc = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     PJ_PERROR(2,(THIS_FILE, rc, "detect_epoll_support() error"));
     if (epfd >= 0)
-	os_close(epfd);
+        os_close(epfd);
     if (evfd >= 0)
-	os_close(evfd);
+        os_close(evfd);
     return 0;
 }
 
@@ -274,14 +273,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
                                        pj_size_t max_fd,
-				       const pj_ioqueue_cfg *cfg,
+                                       const pj_ioqueue_cfg *cfg,
                                        pj_ioqueue_t **p_ioqueue)
 {
     pj_ioqueue_t *ioqueue;
     pj_status_t rc;
     pj_lock_t *lock;
     const unsigned type_mask = PJ_IOQUEUE_EPOLL_EXCLUSIVE |
-			       PJ_IOQUEUE_EPOLL_ONESHOT;
+                               PJ_IOQUEUE_EPOLL_ONESHOT;
     unsigned epoll_support, valid_types;
     int i;
 
@@ -298,10 +297,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     ioqueue_init(ioqueue);
 
     if (cfg)
-	pj_memcpy(&ioqueue->cfg, cfg, sizeof(*cfg));
+        pj_memcpy(&ioqueue->cfg, cfg, sizeof(*cfg));
     else {
-	pj_ioqueue_cfg_default(&ioqueue->cfg);
-	cfg = &ioqueue->cfg;
+        pj_ioqueue_cfg_default(&ioqueue->cfg);
+        cfg = &ioqueue->cfg;
     }
     ioqueue->max = max_fd;
     ioqueue->count = 0;
@@ -317,14 +316,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
      */
     ioqueue->cfg.epoll_flags &= ~type_mask;
     if (valid_types & PJ_IOQUEUE_EPOLL_EXCLUSIVE) {
-	ioqueue->cfg.epoll_flags |= PJ_IOQUEUE_EPOLL_EXCLUSIVE;
+        ioqueue->cfg.epoll_flags |= PJ_IOQUEUE_EPOLL_EXCLUSIVE;
     } else if (valid_types & PJ_IOQUEUE_EPOLL_ONESHOT) {
-	ioqueue->cfg.epoll_flags |= PJ_IOQUEUE_EPOLL_ONESHOT;
+        ioqueue->cfg.epoll_flags |= PJ_IOQUEUE_EPOLL_ONESHOT;
     } else if ((cfg->epoll_flags & type_mask) == 0) {
-	/* user has disabled both EXCLUSIVE and ONESHOT */
+        /* user has disabled both EXCLUSIVE and ONESHOT */
     } else {
-	/* the requested epoll type is not available */
-	return PJ_EINVAL;
+        /* the requested epoll type is not available */
+        return PJ_EINVAL;
     }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -338,7 +337,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
      */
     rc = pj_mutex_create_simple(pool, NULL, &ioqueue->ref_cnt_mutex);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
 
     /* Init key list */
@@ -348,28 +347,28 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 
     /* Pre-create all keys according to max_fd */
     for ( i=0; i<max_fd; ++i) {
-	pj_ioqueue_key_t *key;
+        pj_ioqueue_key_t *key;
 
-	key = PJ_POOL_ALLOC_T(pool, pj_ioqueue_key_t);
-	key->ref_count = 0;
-	rc = pj_lock_create_recursive_mutex(pool, NULL, &key->lock);
-	if (rc != PJ_SUCCESS) {
-	    key = ioqueue->free_list.next;
-	    while (key != &ioqueue->free_list) {
-		pj_lock_destroy(key->lock);
-		key = key->next;
-	    }
-	    pj_mutex_destroy(ioqueue->ref_cnt_mutex);
-	    return rc;
-	}
+        key = PJ_POOL_ALLOC_T(pool, pj_ioqueue_key_t);
+        key->ref_count = 0;
+        rc = pj_lock_create_recursive_mutex(pool, NULL, &key->lock);
+        if (rc != PJ_SUCCESS) {
+            key = ioqueue->free_list.next;
+            while (key != &ioqueue->free_list) {
+                pj_lock_destroy(key->lock);
+                key = key->next;
+            }
+            pj_mutex_destroy(ioqueue->ref_cnt_mutex);
+            return rc;
+        }
 
-	pj_list_push_back(&ioqueue->free_list, key);
+        pj_list_push_back(&ioqueue->free_list, key);
     }
 #endif
 
     rc = pj_lock_create_simple_mutex(pool, "ioq%p", &lock);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
     rc = pj_ioqueue_set_lock(ioqueue, lock, PJ_TRUE);
     if (rc != PJ_SUCCESS)
@@ -377,9 +376,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 
     ioqueue->epfd = os_epoll_create(max_fd);
     if (ioqueue->epfd < 0) {
-    	pj_lock_acquire(ioqueue->lock);
-	ioqueue_destroy(ioqueue);
-	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+        pj_lock_acquire(ioqueue->lock);
+        ioqueue_destroy(ioqueue);
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
     
     /*ioqueue->events = pj_pool_calloc(pool, max_fd, sizeof(struct epoll_event));
@@ -390,7 +389,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
    */
 
     PJ_LOG(4, ("pjlib", "epoll I/O Queue created (flags:0x%x, ptr=%p)",
-	       ioqueue->cfg.epoll_flags, ioqueue));
+               ioqueue->cfg.epoll_flags, ioqueue));
 
     *p_ioqueue = ioqueue;
     return PJ_SUCCESS;
@@ -416,20 +415,20 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
     /* Destroy reference counters */
     key = ioqueue->active_list.next;
     while (key != &ioqueue->active_list) {
-	pj_lock_destroy(key->lock);
-	key = key->next;
+        pj_lock_destroy(key->lock);
+        key = key->next;
     }
 
     key = ioqueue->closing_list.next;
     while (key != &ioqueue->closing_list) {
-	pj_lock_destroy(key->lock);
-	key = key->next;
+        pj_lock_destroy(key->lock);
+        key = key->next;
     }
 
     key = ioqueue->free_list.next;
     while (key != &ioqueue->free_list) {
-	pj_lock_destroy(key->lock);
-	key = key->next;
+        pj_lock_destroy(key->lock);
+        key = key->next;
     }
 
     pj_mutex_destroy(ioqueue->ref_cnt_mutex);
@@ -443,11 +442,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
  * Register a socket to ioqueue.
  */
 PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
-					      pj_ioqueue_t *ioqueue,
-					      pj_sock_t sock,
-					      pj_grp_lock_t *grp_lock,
-					      void *user_data,
-					      const pj_ioqueue_callback *cb,
+                                              pj_ioqueue_t *ioqueue,
+                                              pj_sock_t sock,
+                                              pj_grp_lock_t *grp_lock,
+                                              void *user_data,
+                                              const pj_ioqueue_callback *cb,
                                               pj_ioqueue_key_t **p_key)
 {
     pj_ioqueue_key_t *key = NULL;
@@ -462,17 +461,17 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     if (ioqueue->count >= ioqueue->max) {
         status = PJ_ETOOMANY;
-	TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: too many files"));
-	goto on_return;
+        TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: too many files"));
+        goto on_return;
     }
 
     /* Set socket to nonblocking. */
     value = 1;
     if ((rc=os_ioctl(sock, FIONBIO, (ioctl_val_type)&value))) {
-	TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: ioctl rc=%d", 
+        TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: ioctl rc=%d", 
                 rc));
         status = pj_get_netos_error();
-	goto on_return;
+        goto on_return;
     }
 
     /* If safe unregistration (PJ_IOQUEUE_HAS_SAFE_UNREG) is used, get
@@ -485,8 +484,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     pj_assert(!pj_list_empty(&ioqueue->free_list));
     if (pj_list_empty(&ioqueue->free_list)) {
-	status = PJ_ETOOMANY;
-	goto on_return;
+        status = PJ_ETOOMANY;
+        goto on_return;
     }
 
     key = ioqueue->free_list.next;
@@ -498,32 +497,32 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     status = ioqueue_init_key(pool, ioqueue, key, sock, grp_lock, user_data, cb);
     if (status != PJ_SUCCESS) {
-	key = NULL;
-	goto on_return;
+        key = NULL;
+        goto on_return;
     }
     pj_bzero(&key->ev, sizeof(key->ev));
     key->ev.epoll_data = (epoll_data_type)key;
     key->ev.events = 0;
     if (ioqueue->cfg.epoll_flags & PJ_IOQUEUE_EPOLL_EXCLUSIVE)
-	key->ev.events |= EPOLLEXCLUSIVE;
+        key->ev.events |= EPOLLEXCLUSIVE;
     else if (ioqueue->cfg.epoll_flags & PJ_IOQUEUE_EPOLL_ONESHOT)
-	key->ev.events |= EPOLLONESHOT;
+        key->ev.events |= EPOLLONESHOT;
 
     /* Create key's mutex */
  /*   rc = pj_mutex_create_recursive(pool, NULL, &key->mutex);
     if (rc != PJ_SUCCESS) {
-	key = NULL;
-	goto on_return;
+        key = NULL;
+        goto on_return;
     }
 */
     /* os_epoll_ctl. */
     rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &key->ev);
     if (rc < 0) {
-	status = pj_get_os_error();
-	pj_lock_destroy(key->lock);
-	key = NULL;
-	PJ_PERROR(1,(THIS_FILE, status, "epol_ctl(ADD) error"));
-	goto on_return;
+        status = pj_get_os_error();
+        pj_lock_destroy(key->lock);
+        key = NULL;
+        PJ_PERROR(1,(THIS_FILE, status, "epol_ctl(ADD) error"));
+        goto on_return;
     }
     
     /* Register */
@@ -534,8 +533,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
 on_return:
     if (status != PJ_SUCCESS) {
-	if (key && key->grp_lock)
-	    pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
+        if (key && key->grp_lock)
+            pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
     }
     *p_key = key;
     pj_lock_release(ioqueue->lock);
@@ -544,11 +543,11 @@ on_return:
 }
 
 PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
-					      pj_ioqueue_t *ioqueue,
-					      pj_sock_t sock,
-					      void *user_data,
-					      const pj_ioqueue_callback *cb,
-					      pj_ioqueue_key_t **p_key)
+                                              pj_ioqueue_t *ioqueue,
+                                              pj_sock_t sock,
+                                              void *user_data,
+                                              const pj_ioqueue_callback *cb,
+                                              pj_ioqueue_key_t **p_key)
 {
     return pj_ioqueue_register_sock2(pool, ioqueue, sock, NULL, user_data,
                                      cb, p_key);
@@ -575,13 +574,13 @@ static void decrement_counter(pj_ioqueue_key_t *key)
     --key->ref_count;
     if (key->ref_count == 0) {
 
-	pj_assert(key->closing == 1);
-	pj_gettickcount(&key->free_time);
-	key->free_time.msec += PJ_IOQUEUE_KEY_FREE_DELAY;
-	pj_time_val_normalize(&key->free_time);
+        pj_assert(key->closing == 1);
+        pj_gettickcount(&key->free_time);
+        key->free_time.msec += PJ_IOQUEUE_KEY_FREE_DELAY;
+        pj_time_val_normalize(&key->free_time);
 
-	pj_list_erase(key);
-	pj_list_push_back(&key->ioqueue->closing_list, key);
+        pj_list_erase(key);
+        pj_list_push_back(&key->ioqueue->closing_list, key);
 
     }
     pj_mutex_unlock(key->ioqueue->ref_cnt_mutex);
@@ -611,8 +610,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     /* Best effort to avoid double key-unregistration */
     if (IS_CLOSING(key)) {
-	pj_ioqueue_unlock_key(key);
-	return PJ_SUCCESS;
+        pj_ioqueue_unlock_key(key);
+        return PJ_SUCCESS;
     }
 
     /* Also lock ioqueue */
@@ -620,13 +619,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     /* Avoid "negative" ioqueue count */
     if (ioqueue->count > 0) {
-	--ioqueue->count;
+        --ioqueue->count;
     } else {
-	/* If this happens, very likely there is double unregistration
-	 * of a key.
-	 */
-	pj_assert(!"Bad ioqueue count in key unregistration!");
-	PJ_LOG(1,(THIS_FILE, "Bad ioqueue count in key unregistration!"));
+        /* If this happens, very likely there is double unregistration
+         * of a key.
+         */
+        pj_assert(!"Bad ioqueue count in key unregistration!");
+        PJ_LOG(1,(THIS_FILE, "Bad ioqueue count in key unregistration!"));
     }
 
 #if !PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -640,10 +639,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     key->ev.events &= ~IO_MASK;
     status = os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &key->ev);
     if (status != 0) {
-	status = pj_get_os_error();
-	PJ_PERROR(2, (THIS_FILE, status,
-		      "Ignoring pj_ioqueue_unregister error: os_epoll_ctl"));
-	/* From epoll doc: "Closing a file descriptor cause it to be
+        status = pj_get_os_error();
+        PJ_PERROR(2, (THIS_FILE, status,
+                      "Ignoring pj_ioqueue_unregister error: os_epoll_ctl"));
+        /* From epoll doc: "Closing a file descriptor cause it to be
          * removed from all epoll interest lists". So we should just
          * proceed instead of returning failure here.
          */
@@ -667,30 +666,30 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     /* Done. */
     if (key->grp_lock) {
-	/* just dec_ref and unlock. we will set grp_lock to NULL
-	 * elsewhere */
-	pj_grp_lock_t *grp_lock = key->grp_lock;
-	// Don't set grp_lock to NULL otherwise the other thread
-	// will crash. Just leave it as dangling pointer, but this
-	// should be safe
-	//key->grp_lock = NULL;
-	pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
-	pj_grp_lock_release(grp_lock);
+        /* just dec_ref and unlock. we will set grp_lock to NULL
+         * elsewhere */
+        pj_grp_lock_t *grp_lock = key->grp_lock;
+        // Don't set grp_lock to NULL otherwise the other thread
+        // will crash. Just leave it as dangling pointer, but this
+        // should be safe
+        //key->grp_lock = NULL;
+        pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
+        pj_grp_lock_release(grp_lock);
     } else {
-	pj_ioqueue_unlock_key(key);
+        pj_ioqueue_unlock_key(key);
     }
 #else
     if (key->grp_lock) {
-	/* set grp_lock to NULL and unlock */
-	pj_grp_lock_t *grp_lock = key->grp_lock;
-	// Don't set grp_lock to NULL otherwise the other thread
-	// will crash. Just leave it as dangling pointer, but this
-	// should be safe
-	//key->grp_lock = NULL;
-	pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
-	pj_grp_lock_release(grp_lock);
+        /* set grp_lock to NULL and unlock */
+        pj_grp_lock_t *grp_lock = key->grp_lock;
+        // Don't set grp_lock to NULL otherwise the other thread
+        // will crash. Just leave it as dangling pointer, but this
+        // should be safe
+        //key->grp_lock = NULL;
+        pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
+        pj_grp_lock_release(grp_lock);
     } else {
-	pj_ioqueue_unlock_key(key);
+        pj_ioqueue_unlock_key(key);
     }
 
     pj_lock_destroy(key->lock);
@@ -702,7 +701,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
 static void update_epoll_event_set(pj_ioqueue_t *ioqueue,
                                    pj_ioqueue_key_t *key,
-				   pj_uint32_t events)
+                                   pj_uint32_t events)
 {
     int rc;
     /* From epoll_ctl(2):
@@ -710,18 +709,18 @@ static void update_epoll_event_set(pj_ioqueue_t *ioqueue,
      * attempts to employ it with EPOLL_CTL_MOD yield an error.
      */
     if (key->ev.events & EPOLLEXCLUSIVE) {
-	rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &key->ev);
-	key->ev.events = events;
-	rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &key->ev);
+        rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &key->ev);
+        key->ev.events = events;
+        rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &key->ev);
     } else {
-	key->ev.events = events;
-	rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &key->ev);
+        key->ev.events = events;
+        rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &key->ev);
     }
 
     if (rc != 0) {
-	pj_status_t status = pj_get_os_error();
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "epol_ctl(MOD) error (events=0x%x)", events));
+        pj_status_t status = pj_get_os_error();
+        PJ_PERROR(1,(THIS_FILE, status,
+                     "epol_ctl(MOD) error (events=0x%x)", events));
     }
 }
 
@@ -732,8 +731,8 @@ static void update_epoll_event_set(pj_ioqueue_t *ioqueue,
  * set for the specified event.
  */
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
-				     pj_ioqueue_key_t *key,
-				     enum ioqueue_event_type event_type )
+                                     pj_ioqueue_key_t *key,
+                                     enum ioqueue_event_type event_type )
 {
     ioqueue_remove_from_set2(ioqueue, key, event_type);
 }
@@ -745,9 +744,9 @@ static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
     pj_uint32_t events = key->ev.events;
 
     if (event_types & READABLE_EVENT)
-	events &= ~EPOLLIN;
+        events &= ~EPOLLIN;
     if (event_types & WRITEABLE_EVENT)
-	events &= ~EPOLLOUT;
+        events &= ~EPOLLOUT;
 
     /* Note that although EPOLLERR is removed, epoll will still report
      * EPOLLERR events to us and there is no way to disable it. But we
@@ -755,10 +754,10 @@ static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
      * in our own record.
      */
     if (event_types & EXCEPTION_EVENT)
-	events &= ~EPOLLERR;
+        events &= ~EPOLLERR;
 
     if (events != key->ev.events)
-	update_epoll_event_set(ioqueue, key, events);
+        update_epoll_event_set(ioqueue, key, events);
 }
 
 /*
@@ -769,26 +768,26 @@ static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
  */
 static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
-				enum ioqueue_event_type event_type )
+                                enum ioqueue_event_type event_type )
 {
     ioqueue_add_to_set2(ioqueue, key, event_type);
 }
 
 static void ioqueue_add_to_set2(pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
-				unsigned event_types )
+                                unsigned event_types )
 {
     pj_uint32_t events = key->ev.events;
 
     if (event_types & READABLE_EVENT)
-	events |= EPOLLIN;
+        events |= EPOLLIN;
     if (event_types & WRITEABLE_EVENT)
-	events |= EPOLLOUT;
+        events |= EPOLLOUT;
     if (event_types & EXCEPTION_EVENT)
-	events |= EPOLLERR;
+        events |= EPOLLERR;
 
     if (events != key->ev.events)
-	update_epoll_event_set(ioqueue, key, events);
+        update_epoll_event_set(ioqueue, key, events);
 }
 
 
@@ -802,19 +801,19 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
     pj_gettickcount(&now);
     h = ioqueue->closing_list.next;
     while (h != &ioqueue->closing_list) {
-	pj_ioqueue_key_t *next = h->next;
+        pj_ioqueue_key_t *next = h->next;
 
-	pj_assert(h->closing != 0);
+        pj_assert(h->closing != 0);
 
-	if (PJ_TIME_VAL_GTE(now, h->free_time)) {
-	    pj_list_erase(h);
-	    // Don't set grp_lock to NULL otherwise the other thread
-	    // will crash. Just leave it as dangling pointer, but this
-	    // should be safe
-	    //h->grp_lock = NULL;
-	    pj_list_push_back(&ioqueue->free_list, h);
-	}
-	h = next;
+        if (PJ_TIME_VAL_GTE(now, h->free_time)) {
+            pj_list_erase(h);
+            // Don't set grp_lock to NULL otherwise the other thread
+            // will crash. Just leave it as dangling pointer, but this
+            // should be safe
+            //h->grp_lock = NULL;
+            pj_list_push_back(&ioqueue->free_list, h);
+        }
+        h = next;
     }
 }
 #endif
@@ -849,139 +848,139 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      * pending closing keys.
      */
     if (count == 0 && !pj_list_empty(&ioqueue->closing_list)) {
-	pj_lock_acquire(ioqueue->lock);
-	scan_closing_keys(ioqueue);
-	pj_lock_release(ioqueue->lock);
+        pj_lock_acquire(ioqueue->lock);
+        scan_closing_keys(ioqueue);
+        pj_lock_release(ioqueue->lock);
     }
 #endif
-	TRACE_((THIS_FILE, "  os_epoll_wait timed out"));
-	return count;
+        TRACE_((THIS_FILE, "  os_epoll_wait timed out"));
+        return count;
     }
     else if (count < 0) {
-	TRACE_((THIS_FILE, "  os_epoll_wait error"));
-	return -pj_get_netos_error();
+        TRACE_((THIS_FILE, "  os_epoll_wait error"));
+        return -pj_get_netos_error();
     }
 
     pj_get_timestamp(&t2);
     TRACE_((THIS_FILE, "  os_epoll_wait returns %d, time=%d usec",
-		       count, pj_elapsed_usec(&t1, &t2)));
+                       count, pj_elapsed_usec(&t1, &t2)));
 
     /* Lock ioqueue. */
     pj_lock_acquire(ioqueue->lock);
 
     for (event_cnt=0, i=0; i<count; ++i) {
-	pj_ioqueue_key_t *h = (pj_ioqueue_key_t*)(epoll_data_type)
-				events[i].epoll_data;
+        pj_ioqueue_key_t *h = (pj_ioqueue_key_t*)(epoll_data_type)
+                                events[i].epoll_data;
 
-	TRACE_((THIS_FILE, "     event %d: events=%x", i, events[i].events));
+        TRACE_((THIS_FILE, "     event %d: events=%x", i, events[i].events));
 
-	/*
-	 * Check readability.
-	 */
-	if ((events[i].events & EPOLLIN) && 
-	    (key_has_pending_read(h) || key_has_pending_accept(h)) && !IS_CLOSING(h) ) {
-
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
-#endif
-	    queue[event_cnt].key = h;
-	    queue[event_cnt].event_type = READABLE_EVENT;
-	    ++event_cnt;
-	    continue;
-	}
-
-	/*
-	 * Check for writeability.
-	 */
-	if ((events[i].events & EPOLLOUT) && key_has_pending_write(h) && !IS_CLOSING(h)) {
+        /*
+         * Check readability.
+         */
+        if ((events[i].events & EPOLLIN) && 
+            (key_has_pending_read(h) || key_has_pending_accept(h)) && !IS_CLOSING(h) ) {
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
+            increment_counter(h);
 #endif
-	    queue[event_cnt].key = h;
-	    queue[event_cnt].event_type = WRITEABLE_EVENT;
-	    ++event_cnt;
-	    continue;
-	}
+            queue[event_cnt].key = h;
+            queue[event_cnt].event_type = READABLE_EVENT;
+            ++event_cnt;
+            continue;
+        }
+
+        /*
+         * Check for writeability.
+         */
+        if ((events[i].events & EPOLLOUT) && key_has_pending_write(h) && !IS_CLOSING(h)) {
+
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+            increment_counter(h);
+#endif
+            queue[event_cnt].key = h;
+            queue[event_cnt].event_type = WRITEABLE_EVENT;
+            ++event_cnt;
+            continue;
+        }
 
 #if PJ_HAS_TCP
-	/*
-	 * Check for completion of connect() operation.
-	 */
-	if ((events[i].events & EPOLLOUT) && (h->connecting) && !IS_CLOSING(h)) {
+        /*
+         * Check for completion of connect() operation.
+         */
+        if ((events[i].events & EPOLLOUT) && (h->connecting) && !IS_CLOSING(h)) {
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
+            increment_counter(h);
 #endif
-	    queue[event_cnt].key = h;
-	    queue[event_cnt].event_type = WRITEABLE_EVENT;
-	    ++event_cnt;
-	    continue;
-	}
+            queue[event_cnt].key = h;
+            queue[event_cnt].event_type = WRITEABLE_EVENT;
+            ++event_cnt;
+            continue;
+        }
 #endif /* PJ_HAS_TCP */
 
-	/*
-	 * Check for error condition.
-	 */
-	if ((events[i].events & EPOLLERR) && !IS_CLOSING(h)) {
-	    /*
-	     * We need to handle this exception event.  If it's related to us
-	     * connecting, report it as such.  If not, just report it as a
-	     * read event and the higher layers will handle it.
-	     */
-	    if (h->connecting) {
+        /*
+         * Check for error condition.
+         */
+        if ((events[i].events & EPOLLERR) && !IS_CLOSING(h)) {
+            /*
+             * We need to handle this exception event.  If it's related to us
+             * connecting, report it as such.  If not, just report it as a
+             * read event and the higher layers will handle it.
+             */
+            if (h->connecting) {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-		increment_counter(h);
+                increment_counter(h);
 #endif
-		queue[event_cnt].key = h;
-		queue[event_cnt].event_type = EXCEPTION_EVENT;
-		++event_cnt;
-	    } else if (key_has_pending_read(h) || key_has_pending_accept(h)) {
+                queue[event_cnt].key = h;
+                queue[event_cnt].event_type = EXCEPTION_EVENT;
+                ++event_cnt;
+            } else if (key_has_pending_read(h) || key_has_pending_accept(h)) {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-		increment_counter(h);
+                increment_counter(h);
 #endif
-		queue[event_cnt].key = h;
-		queue[event_cnt].event_type = READABLE_EVENT;
-		++event_cnt;
-	    }
-	    continue;
-	}
+                queue[event_cnt].key = h;
+                queue[event_cnt].event_type = READABLE_EVENT;
+                ++event_cnt;
+            }
+            continue;
+        }
 
-	if (ioqueue->cfg.epoll_flags & PJ_IOQUEUE_EPOLL_ONESHOT) {
-	    /* We are not processing this event, but we still need to rearm
-	     * to receive future events.
-	     */
-	    if (!IS_CLOSING(h))
-		update_epoll_event_set(ioqueue, h, h->ev.events);
-	}
+        if (ioqueue->cfg.epoll_flags & PJ_IOQUEUE_EPOLL_ONESHOT) {
+            /* We are not processing this event, but we still need to rearm
+             * to receive future events.
+             */
+            if (!IS_CLOSING(h))
+                update_epoll_event_set(ioqueue, h, h->ev.events);
+        }
 
-	/* There are some innocent cases where this might happen:
-	 * 1. TCP outgoing connection failure. Although app has handled the
-	 *    failure event, epoll will keep reporting EPOLLHUP until the
-	 *    socket is unregistered.
-	 * 2. Thread A and B are woken up for a single EPOLLIN, (or when
-	 *    EPOLLEXCLUSIVE is used, two packets arrives almost simultaneously,
-	 *    only single pending recv() was submitted. This also causes both
-	 *    threads to be woken up. This scenario can be observed in ioq_reg.c
-	 *    test)
-	 *    - Thread A is processing the event
-	 *    - Thread B waits for ioqueue lock
-	 *    - Thread A releases the ioqueue lock, acquires key lock, remove
-	 *      pending recv() from list, release key lock (because concurrency
-	 *      is enabled).
-	 *    - Thread B resumes, it finds no pending recv() op.
-	 * 3. Other scenarios involving TCP in normal operation using plain or
-	 *    EPOLLEXCLUSIVE (didn't happen with ONESHOT), for both EPOLLIN
-	 *    and EPOLLOUT events. Not sure what, but it happens only
-	 *    sporadically, so probably it's fine. This is reproducible with
-	 *    "tcp (multithreads)" test in ioq_stress_test.c.
-	 */
-	TRACE_WARN((THIS_FILE, "     UNHANDLED event %d: events=0x%x, h=%p",
-		    i, events[i].events, h));
+        /* There are some innocent cases where this might happen:
+         * 1. TCP outgoing connection failure. Although app has handled the
+         *    failure event, epoll will keep reporting EPOLLHUP until the
+         *    socket is unregistered.
+         * 2. Thread A and B are woken up for a single EPOLLIN, (or when
+         *    EPOLLEXCLUSIVE is used, two packets arrives almost simultaneously,
+         *    only single pending recv() was submitted. This also causes both
+         *    threads to be woken up. This scenario can be observed in ioq_reg.c
+         *    test)
+         *    - Thread A is processing the event
+         *    - Thread B waits for ioqueue lock
+         *    - Thread A releases the ioqueue lock, acquires key lock, remove
+         *      pending recv() from list, release key lock (because concurrency
+         *      is enabled).
+         *    - Thread B resumes, it finds no pending recv() op.
+         * 3. Other scenarios involving TCP in normal operation using plain or
+         *    EPOLLEXCLUSIVE (didn't happen with ONESHOT), for both EPOLLIN
+         *    and EPOLLOUT events. Not sure what, but it happens only
+         *    sporadically, so probably it's fine. This is reproducible with
+         *    "tcp (multithreads)" test in ioq_stress_test.c.
+         */
+        TRACE_WARN((THIS_FILE, "     UNHANDLED event %d: events=0x%x, h=%p",
+                    i, events[i].events, h));
     }
     for (i=0; i<event_cnt; ++i) {
-	if (queue[i].key->grp_lock)
-	    pj_grp_lock_add_ref_dbg(queue[i].key->grp_lock, "ioqueue", 0);
+        if (queue[i].key->grp_lock)
+            pj_grp_lock_add_ref_dbg(queue[i].key->grp_lock, "ioqueue", 0);
     }
 
     PJ_RACE_ME(5);
@@ -994,59 +993,59 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
     /* Now process the events. */
     for (i=0; i<event_cnt; ++i) {
-	/* Just do not exceed PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL */
-	if (processed_cnt < PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL) {
-	    pj_bool_t event_done = PJ_FALSE;
-	    switch (queue[i].event_type) {
-	    case READABLE_EVENT:
-		event_done = ioqueue_dispatch_read_event(ioqueue,queue[i].key);
+        /* Just do not exceed PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL */
+        if (processed_cnt < PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL) {
+            pj_bool_t event_done = PJ_FALSE;
+            switch (queue[i].event_type) {
+            case READABLE_EVENT:
+                event_done = ioqueue_dispatch_read_event(ioqueue,queue[i].key);
 
-		break;
-	    case WRITEABLE_EVENT:
-		event_done = ioqueue_dispatch_write_event(ioqueue,
-							  queue[i].key);
+                break;
+            case WRITEABLE_EVENT:
+                event_done = ioqueue_dispatch_write_event(ioqueue,
+                                                          queue[i].key);
 
-		break;
-	    case EXCEPTION_EVENT:
-		event_done = ioqueue_dispatch_exception_event(ioqueue,
-							      queue[i].key);
-		break;
-	    case NO_EVENT:
-		pj_assert(!"Invalid event!");
-		break;
-	    }
-	    if (event_done) {
-		++processed_cnt;
-	    }
-	}
+                break;
+            case EXCEPTION_EVENT:
+                event_done = ioqueue_dispatch_exception_event(ioqueue,
+                                                              queue[i].key);
+                break;
+            case NO_EVENT:
+                pj_assert(!"Invalid event!");
+                break;
+            }
+            if (event_done) {
+                ++processed_cnt;
+            }
+        }
 
-	/* Re-arm ONESHOT as long as there are pending requests. This is
-	 * necessary to deal with this case:
-	 * - thread A and B are calling ioqueue_recv()
-	 * - packet arrives, thread A is processing
-	 * - but thread A doesn't call ioqueue_recv() again
-	 * - if we don't rearm here, thread B will never get the event.
-	 *
-	 * On the other hand, if thread A calls ioqueue_recv() again above,
-	 * this will result in double epoll_ctl() calls. This should be okay,
-	 * albeit inefficient. We err on the safe side.
+        /* Re-arm ONESHOT as long as there are pending requests. This is
+         * necessary to deal with this case:
+         * - thread A and B are calling ioqueue_recv()
+         * - packet arrives, thread A is processing
+         * - but thread A doesn't call ioqueue_recv() again
+         * - if we don't rearm here, thread B will never get the event.
+         *
+         * On the other hand, if thread A calls ioqueue_recv() again above,
+         * this will result in double epoll_ctl() calls. This should be okay,
+         * albeit inefficient. We err on the safe side.
          */
-	if ((ioqueue->cfg.epoll_flags & PJ_IOQUEUE_EPOLL_ONESHOT) &&
-	    (queue[i].key->ev.events & IO_MASK))
-	{
-	    pj_ioqueue_lock_key(queue[i].key);
-	    update_epoll_event_set(ioqueue, queue[i].key,
-				   queue[i].key->ev.events);
-	    pj_ioqueue_unlock_key(queue[i].key);
-	}
+        if ((ioqueue->cfg.epoll_flags & PJ_IOQUEUE_EPOLL_ONESHOT) &&
+            (queue[i].key->ev.events & IO_MASK))
+        {
+            pj_ioqueue_lock_key(queue[i].key);
+            update_epoll_event_set(ioqueue, queue[i].key,
+                                   queue[i].key->ev.events);
+            pj_ioqueue_unlock_key(queue[i].key);
+        }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	decrement_counter(queue[i].key);
+        decrement_counter(queue[i].key);
 #endif
 
-	if (queue[i].key->grp_lock)
-	    pj_grp_lock_dec_ref_dbg(queue[i].key->grp_lock,
-	                            "ioqueue", 0);
+        if (queue[i].key->grp_lock)
+            pj_grp_lock_dec_ref_dbg(queue[i].key->grp_lock,
+                                    "ioqueue", 0);
     }
 
     /* Special case:
@@ -1056,25 +1055,25 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      * log message above.
      */
     if (count > 0 && !event_cnt && msec > 0) {
-	/* We need to sleep in order to avoid busy polling, such
+        /* We need to sleep in order to avoid busy polling, such
          * as in the case of the thread that doesn't process
          * the event as explained above.
          * Limit the duration of the sleep, as doing pj_thread_sleep() for
          * a long time is very inefficient. The main objective here is just
          * to avoid busy loop.
          */
-	int delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
+        int delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
         if (delay > 10) delay = 10;
-	if (delay > 0)
-	    pj_thread_sleep(delay);
+        if (delay > 0)
+            pj_thread_sleep(delay);
     }
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d",
-		       count, event_cnt, processed_cnt));
+                       count, event_cnt, processed_cnt));
 
     pj_get_timestamp(&t1);
     TRACE_((THIS_FILE, "ioqueue_poll() returns %d, time=%d usec",
-		       processed_cnt, pj_elapsed_usec(&t2, &t1)));
+                       processed_cnt, pj_elapsed_usec(&t2, &t1)));
 
     return processed_cnt;
 }

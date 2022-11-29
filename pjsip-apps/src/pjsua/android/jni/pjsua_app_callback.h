@@ -28,7 +28,7 @@ public:
 };
 
 typedef struct WindowHandle {
-    void    	*window;
+    void        *window;
 } WindowHandle;
 
 void setVideoWindow(const WindowHandle& win);

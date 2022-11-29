@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -38,7 +37,7 @@ PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *p_tv)
 
     rc = gettimeofday(&the_time, NULL);
     if (rc != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
 
     p_tv->sec = the_time.tv_sec;
     p_tv->msec = the_time.tv_usec / 1000;

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,20 +34,20 @@ int rand_test(void)
     int i;
 
     for (i=0; i<COUNT; ++i) {
-	int j;
+        int j;
 
-	values[i] = pj_rand();
-	for (j=0; j<i; ++j) {
-	    if (values[i] == values[j]) {
-		PJ_LOG(3,("test", "error: duplicate value %d at %d-th index",
-			 values[i], i));
-		return -10;
-	    }
-	}
+        values[i] = pj_rand();
+        for (j=0; j<i; ++j) {
+            if (values[i] == values[j]) {
+                PJ_LOG(3,("test", "error: duplicate value %d at %d-th index",
+                         values[i], i));
+                return -10;
+            }
+        }
     }
 
     return 0;
 }
 
-#endif	/* INCLUDE_RAND_TEST */
+#endif  /* INCLUDE_RAND_TEST */
 

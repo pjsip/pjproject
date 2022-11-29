@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -331,9 +330,9 @@ typedef enum pjmedia_mod_offer_flag
 /**
  * Get the state string description of the specified state.
  *
- * @param state		Negotiator state.
+ * @param state         Negotiator state.
  *
- * @return		String description of the state.
+ * @return              String description of the state.
  */
 PJ_DECL(const char*) pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_state state);
 
@@ -348,18 +347,18 @@ PJ_DECL(const char*) pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_state state);
  * to remote party using signaling protocol such as SIP and wait for SDP 
  * answer.
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param local		The initial local capability.
- * @param p_neg		Pointer to receive the negotiator instance.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param local         The initial local capability.
+ * @param p_neg         Pointer to receive the negotiator instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			code.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      code.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
-				      const pjmedia_sdp_session *local,
-				      pjmedia_sdp_neg **p_neg);
+                                      const pjmedia_sdp_session *local,
+                                      pjmedia_sdp_neg **p_neg);
 
 /**
  * Initialize the SDP negotiator with remote offer, and optionally
@@ -378,20 +377,20 @@ pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
  * local answer later with #pjmedia_sdp_neg_set_local_answer(), before
  * calling the negotiation function.
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param initial	Optional initial local capability.
- * @param remote	The remote offer.
- * @param p_neg		Pointer to receive the negotiator instance.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param initial       Optional initial local capability.
+ * @param remote        The remote offer.
+ * @param p_neg         Pointer to receive the negotiator instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			code.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      code.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
-				      const pjmedia_sdp_session *initial,
-				      const pjmedia_sdp_session *remote,
-				      pjmedia_sdp_neg **p_neg);
+                                      const pjmedia_sdp_session *initial,
+                                      const pjmedia_sdp_session *remote,
+                                      pjmedia_sdp_neg **p_neg);
 
 /**
  * This specifies the behavior of the SDP negotiator when responding to an
@@ -407,14 +406,14 @@ pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
  * By default, the value in PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER will
  * be used.
  *
- * @param neg		The SDP negotiator instance.
- * @param prefer_remote	If non-zero, the negotiator will use the codec
- *			order as specified in remote offer. If zero, it
- *			will prefer to use the local codec order.
+ * @param neg           The SDP negotiator instance.
+ * @param prefer_remote If non-zero, the negotiator will use the codec
+ *                      order as specified in remote offer. If zero, it
+ *                      will prefer to use the local codec order.
  */
 PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_set_prefer_remote_codec_order(pjmedia_sdp_neg *neg,
-					      pj_bool_t prefer_remote);
+                                              pj_bool_t prefer_remote);
 
 /**
  * This specifies the behavior of the SDP negotiator when responding to an
@@ -437,9 +436,9 @@ pjmedia_sdp_neg_set_answer_multiple_codecs(pjmedia_sdp_neg *neg,
 /**
  * Get SDP negotiator state.
  *
- * @param neg		The SDP negotiator instance.
+ * @param neg           The SDP negotiator instance.
  *
- * @return		The negotiator state.
+ * @return              The negotiator state.
  */
 PJ_DECL(pjmedia_sdp_neg_state)
 pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg );
@@ -450,14 +449,14 @@ pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg );
  * active SDPs. Calling this function will not change the state of the 
  * negotiator.
  *
- * @param neg		The SDP negotiator instance.
- * @param local		Pointer to receive the local active SDP.
+ * @param neg           The SDP negotiator instance.
+ * @param local         Pointer to receive the local active SDP.
  *
- * @return		PJ_SUCCESS if local active SDP is present.
+ * @return              PJ_SUCCESS if local active SDP is present.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
-				  const pjmedia_sdp_session **local);
+                                  const pjmedia_sdp_session **local);
 
 /**
  * Get the currently active remote SDP. Application can only call this
@@ -465,14 +464,14 @@ pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
  * active SDPs. Calling this function will not change the state of the 
  * negotiator.
  *
- * @param neg		The SDP negotiator instance.
- * @param remote	Pointer to receive the remote active SDP.
+ * @param neg           The SDP negotiator instance.
+ * @param remote        Pointer to receive the remote active SDP.
  *
- * @return		PJ_SUCCESS if remote active SDP is present.
+ * @return              PJ_SUCCESS if remote active SDP is present.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
-				   const pjmedia_sdp_session **remote);
+                                   const pjmedia_sdp_session **remote);
 
 
 /**
@@ -480,11 +479,11 @@ pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
  * last negotiation. This function can only be called in state
  * PJMEDIA_SDP_NEG_STATE_DONE.
  *
- * @param neg		The SDP negotiator instance.
+ * @param neg           The SDP negotiator instance.
  *
- * @return		Non-zero if it was remote who sent answer,
- *			otherwise zero if it was local who supplied
- *			answer.
+ * @return              Non-zero if it was remote who sent answer,
+ *                      otherwise zero if it was local who supplied
+ *                      answer.
  */
 PJ_DECL(pj_bool_t)
 pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg);
@@ -497,16 +496,16 @@ pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg);
  * SDP offer/answer. Calling this  function will not change the state 
  * of the negotiator.
  *
- * @param neg		The SDP negotiator instance.
- * @param remote	Pointer to receive the current remote offer or
- *			answer.
+ * @param neg           The SDP negotiator instance.
+ * @param remote        Pointer to receive the current remote offer or
+ *                      answer.
  *
- * @return		PJ_SUCCESS if the negotiator currently has
- *			remote offer or answer.
+ * @return              PJ_SUCCESS if the negotiator currently has
+ *                      remote offer or answer.
  */
 PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
-				const pjmedia_sdp_session **remote);
+                                const pjmedia_sdp_session **remote);
 
 
 /**
@@ -516,16 +515,16 @@ pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
  * SDP offer/answer. Calling this function will not change the state 
  * of the negotiator.
  *
- * @param neg		The SDP negotiator instance.
- * @param local		Pointer to receive the current local offer or
- *			answer.
+ * @param neg           The SDP negotiator instance.
+ * @param local         Pointer to receive the current local offer or
+ *                      answer.
  *
- * @return		PJ_SUCCESS if the negotiator currently has
- *			local offer or answer.
+ * @return              PJ_SUCCESS if the negotiator currently has
+ *                      local offer or answer.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
-			       const pjmedia_sdp_session **local);
+                               const pjmedia_sdp_session **local);
 
 /**
  * Modify local session with a new SDP and treat this as a new offer. 
@@ -536,18 +535,18 @@ pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
  * where it waits for SDP answer from remote. See also
  * #pjmedia_sdp_neg_modify_local_offer2()
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param neg		The SDP negotiator instance.
- * @param local		The new local SDP.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param neg           The SDP negotiator instance.
+ * @param local         The new local SDP.
  *
- * @return		PJ_SUCCESS on success, or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on success, or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
-				    pjmedia_sdp_neg *neg,
-				    const pjmedia_sdp_session *local);
+                                    pjmedia_sdp_neg *neg,
+                                    const pjmedia_sdp_session *local);
 
 /**
  * Modify local session with a new SDP and treat this as a new offer. 
@@ -557,20 +556,20 @@ pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
  * The negotiator state will move to PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
  * where it waits for SDP answer from remote.
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param neg		The SDP negotiator instance.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param neg           The SDP negotiator instance.
  * @param flags         Bitmask from pjmedia_mod_offer_flag.
- * @param local		The new local SDP.
+ * @param local         The new local SDP.
  *
- * @return		PJ_SUCCESS on success, or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on success, or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_modify_local_offer2( pj_pool_t *pool,
-				     pjmedia_sdp_neg *neg,
+                                     pjmedia_sdp_neg *neg,
                                      unsigned flags,
-				     const pjmedia_sdp_session *local);
+                                     const pjmedia_sdp_session *local);
 
 /**
  * This function can only be called in PJMEDIA_SDP_NEG_STATE_DONE state.
@@ -582,18 +581,18 @@ pjmedia_sdp_neg_modify_local_offer2( pj_pool_t *pool,
  * When SDP answer has been received from remote, application must call 
  * #pjmedia_sdp_neg_set_remote_answer().
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param neg		The SDP negotiator instance.
- * @param offer		Pointer to receive active local SDP to be
- *			offered to remote.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param neg           The SDP negotiator instance.
+ * @param offer         Pointer to receive active local SDP to be
+ *                      offered to remote.
  *
- * @return		PJ_SUCCESS if local offer can be created.
+ * @return              PJ_SUCCESS if local offer can be created.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
-			          pjmedia_sdp_neg *neg,
-				  const pjmedia_sdp_session **offer);
+                                  pjmedia_sdp_neg *neg,
+                                  const pjmedia_sdp_session **offer);
 
 /**
  * This function can only be called in PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER
@@ -603,17 +602,17 @@ pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
  * move to PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, and application can call the
  * negotiation function #pjmedia_sdp_neg_negotiate().
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param neg		The SDP negotiator instance.
- * @param remote	The remote answer.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param neg           The SDP negotiator instance.
+ * @param remote        The remote answer.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
-				   pjmedia_sdp_neg *neg,
-				   const pjmedia_sdp_session *remote);
+                                   pjmedia_sdp_neg *neg,
+                                   const pjmedia_sdp_session *remote);
 
 
 
@@ -625,17 +624,17 @@ pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
  * #pjmedia_sdp_neg_set_local_answer() to set local answer before it can
  * call the negotiation function.
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param neg		The SDP negotiator instance.
- * @param remote	The remote offer.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param neg           The SDP negotiator instance.
+ * @param remote        The remote offer.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
-				  pjmedia_sdp_neg *neg,
-				  const pjmedia_sdp_session *remote);
+                                  pjmedia_sdp_neg *neg,
+                                  const pjmedia_sdp_session *remote);
 
 
 
@@ -646,23 +645,23 @@ pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
  * move to PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, and application can call the
  * negotiation function #pjmedia_sdp_neg_negotiate().
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param neg		The SDP negotiator instance.
- * @param local		Optional local answer. If negotiator has initial
- *			local capability, application can specify NULL on
- *			this argument; in this case, the negotiator will
- *			create answer by by negotiating remote offer with
- *			initial local capability. If negotiator doesn't have
- *			initial local capability, application MUST specify
- *			local answer here.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param neg           The SDP negotiator instance.
+ * @param local         Optional local answer. If negotiator has initial
+ *                      local capability, application can specify NULL on
+ *                      this argument; in this case, the negotiator will
+ *                      create answer by by negotiating remote offer with
+ *                      initial local capability. If negotiator doesn't have
+ *                      initial local capability, application MUST specify
+ *                      local answer here.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
-				  pjmedia_sdp_neg *neg,
-				  const pjmedia_sdp_session *local);
+                                  pjmedia_sdp_neg *neg,
+                                  const pjmedia_sdp_session *local);
 
 
 /**
@@ -670,10 +669,10 @@ pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
  * state to see if it was local who is answering the offer (instead of
  * remote).
  *
- * @param neg		The negotiator.
+ * @param neg           The negotiator.
  *
- * @return		PJ_TRUE if it is local is answering an offer, PJ_FALSE
- *			if remote has answered local offer.
+ * @return              PJ_TRUE if it is local is answering an offer, PJ_FALSE
+ *                      if remote has answered local offer.
  */
 PJ_DECL(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg);
 
@@ -685,9 +684,9 @@ PJ_DECL(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg);
  * PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER or PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER
  * state.
  *
- * @param neg		The negotiator.
+ * @param neg           The negotiator.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg);
 
@@ -706,18 +705,18 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg);
  * If the negotiation fails, the active local and remote SDP will not
  * change.
  *
- * @param pool		Pool to allocate memory. The pool's lifetime needs
- *			to be valid for the duration of the negotiator.
- * @param neg		The SDP negotiator instance.
- * @param allow_asym	Should be zero.
+ * @param pool          Pool to allocate memory. The pool's lifetime needs
+ *                      to be valid for the duration of the negotiator.
+ * @param neg           The SDP negotiator instance.
+ * @param allow_asym    Should be zero.
  *
- * @return		PJ_SUCCESS when there is at least one media
- *			is actuve common in both offer and answer, or 
- *			failure code when negotiation has failed.
+ * @return              PJ_SUCCESS when there is at least one media
+ *                      is actuve common in both offer and answer, or 
+ *                      failure code when negotiation has failed.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
-					        pjmedia_sdp_neg *neg,
-						pj_bool_t allow_asym);
+                                                pjmedia_sdp_neg *neg,
+                                                pj_bool_t allow_asym);
 
 
 /**
@@ -742,22 +741,22 @@ typedef enum pjmedia_sdp_neg_fmt_match_flag
  * The declaration of customized SDP format matching callback. See
  * #pjmedia_sdp_neg_register_fmt_match_cb() for more info.
  *
- * @param pool		The memory pool.
- * @param offer		The SDP media offer.
- * @param o_fmt_idx	Index of the format in the SDP media offer.
- * @param answer	The SDP media answer.
- * @param a_fmt_idx	Index of the format in the SDP media answer.
- * @param option	The format matching option, see
- *			#pjmedia_sdp_neg_fmt_match_flag.
+ * @param pool          The memory pool.
+ * @param offer         The SDP media offer.
+ * @param o_fmt_idx     Index of the format in the SDP media offer.
+ * @param answer        The SDP media answer.
+ * @param a_fmt_idx     Index of the format in the SDP media answer.
+ * @param option        The format matching option, see
+ *                      #pjmedia_sdp_neg_fmt_match_flag.
  *
- * @return		PJ_SUCCESS when the formats in offer and answer match.
+ * @return              PJ_SUCCESS when the formats in offer and answer match.
  */
 typedef pj_status_t (*pjmedia_sdp_neg_fmt_match_cb)(pj_pool_t *pool,
-						    pjmedia_sdp_media *offer,
-						    unsigned o_fmt_idx,
-						    pjmedia_sdp_media *answer,
-						    unsigned a_fmt_idx,
-						    unsigned option);
+                                                    pjmedia_sdp_media *offer,
+                                                    unsigned o_fmt_idx,
+                                                    pjmedia_sdp_media *answer,
+                                                    unsigned a_fmt_idx,
+                                                    unsigned option);
 
 
 /**
@@ -773,17 +772,17 @@ typedef pj_status_t (*pjmedia_sdp_neg_fmt_match_cb)(pj_pool_t *pool,
  * To unregister the callback of specific format, just call this function with
  * parameter cb set to NULL.
  *
- * @param fmt_name	The format name, e.g: "H.264", "AMR", "G7221". Note
- *			that the string buffer must remain valid until the
- *			callback is unregistered.
- * @param cb		The customized SDP format negotiation callback or
- *			NULL to unregister the specified format callback.
+ * @param fmt_name      The format name, e.g: "H.264", "AMR", "G7221". Note
+ *                      that the string buffer must remain valid until the
+ *                      callback is unregistered.
+ * @param cb            The customized SDP format negotiation callback or
+ *                      NULL to unregister the specified format callback.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_neg_register_fmt_match_cb(
-					const pj_str_t *fmt_name,
-					pjmedia_sdp_neg_fmt_match_cb cb);
+                                        const pj_str_t *fmt_name,
+                                        pjmedia_sdp_neg_fmt_match_cb cb);
 
 
 /**
@@ -794,22 +793,22 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_register_fmt_match_cb(
  * #pjmedia_sdp_neg_register_fmt_match_cb(), it will be called for
  * more detail verification, e.g: format parameters specified in SDP fmtp.
  *
- * @param pool		The memory pool.
- * @param offer		The SDP media offer.
- * @param o_fmt_idx	Index of the format in the SDP media offer.
- * @param answer	The SDP media answer.
- * @param a_fmt_idx	Index of the format in the SDP media answer.
- * @param option	The format matching option, see
- *			#pjmedia_sdp_neg_fmt_match_flag.
+ * @param pool          The memory pool.
+ * @param offer         The SDP media offer.
+ * @param o_fmt_idx     Index of the format in the SDP media offer.
+ * @param answer        The SDP media answer.
+ * @param a_fmt_idx     Index of the format in the SDP media answer.
+ * @param option        The format matching option, see
+ *                      #pjmedia_sdp_neg_fmt_match_flag.
  *
- * @return		PJ_SUCCESS when the formats in offer and answer match.
+ * @return              PJ_SUCCESS when the formats in offer and answer match.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_neg_fmt_match( pj_pool_t *pool,
-					        pjmedia_sdp_media *offer,
-					        unsigned o_fmt_idx,
-					        pjmedia_sdp_media *answer,
-					        unsigned a_fmt_idx,
-					        unsigned option);
+                                                pjmedia_sdp_media *offer,
+                                                unsigned o_fmt_idx,
+                                                pjmedia_sdp_media *answer,
+                                                unsigned a_fmt_idx,
+                                                unsigned option);
 
 
 PJ_END_DECL
@@ -819,5 +818,5 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_SDP_NEG_H__ */
+#endif  /* __PJMEDIA_SDP_NEG_H__ */
 

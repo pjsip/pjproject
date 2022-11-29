@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -39,7 +38,7 @@
 
 #if INCLUDE_POOL_TEST
 
-#define SIZE	4096
+#define SIZE    4096
 
 /* Normally we should throw exception when memory alloc fails.
  * Here we do nothing so that the flow will go back to original caller,
@@ -52,7 +51,7 @@ static void null_callback(pj_pool_t *pool, pj_size_t size)
     PJ_UNUSED_ARG(size);
 }
 
-#define GET_FREE(p)	(pj_pool_get_capacity(p)-pj_pool_get_used_size(p))
+#define GET_FREE(p)     (pj_pool_get_capacity(p)-pj_pool_get_used_size(p))
 
 /* Test that the capacity and used size reported by the pool is correct. 
  */
@@ -64,15 +63,15 @@ static int capacity_test(void)
     PJ_LOG(3,("test", "...capacity_test()"));
 
     if (!pool)
-	return -200;
+        return -200;
 
     freesize = GET_FREE(pool);
 
     if (pj_pool_alloc(pool, freesize) == NULL) {
-	PJ_LOG(3,("test", "...error: wrong freesize %u reported",
-			  freesize));
-	pj_pool_release(pool);
-	return -210;
+        PJ_LOG(3,("test", "...error: wrong freesize %u reported",
+                          freesize));
+        pj_pool_release(pool);
+        return -210;
     }
 
     pj_pool_release(pool);
@@ -91,35 +90,35 @@ static int pool_alignment_test(void)
 
     pool = pj_pool_create(mem, NULL, PJ_POOL_SIZE+MEMSIZE, MEMSIZE, NULL);
     if (!pool)
-	return -300;
+        return -300;
 
-#define IS_ALIGNED(p)	((((unsigned long)(pj_ssize_t)p) & \
-			   (PJ_POOL_ALIGNMENT-1)) == 0)
+#define IS_ALIGNED(p)   ((((unsigned long)(pj_ssize_t)p) & \
+                           (PJ_POOL_ALIGNMENT-1)) == 0)
 
     for (i=0; i<LOOP; ++i) {
-	/* Test first allocation */
-	ptr = pj_pool_alloc(pool, 1);
-	if (!IS_ALIGNED(ptr)) {
-	    pj_pool_release(pool);
-	    return -310;
-	}
+        /* Test first allocation */
+        ptr = pj_pool_alloc(pool, 1);
+        if (!IS_ALIGNED(ptr)) {
+            pj_pool_release(pool);
+            return -310;
+        }
 
-	/* Test subsequent allocation */
-	ptr = pj_pool_alloc(pool, 1);
-	if (!IS_ALIGNED(ptr)) {
-	    pj_pool_release(pool);
-	    return -320;
-	}
+        /* Test subsequent allocation */
+        ptr = pj_pool_alloc(pool, 1);
+        if (!IS_ALIGNED(ptr)) {
+            pj_pool_release(pool);
+            return -320;
+        }
 
-	/* Test allocation after new block is created */
-	ptr = pj_pool_alloc(pool, MEMSIZE*2+1);
-	if (!IS_ALIGNED(ptr)) {
-	    pj_pool_release(pool);
-	    return -330;
-	}
+        /* Test allocation after new block is created */
+        ptr = pj_pool_alloc(pool, MEMSIZE*2+1);
+        if (!IS_ALIGNED(ptr)) {
+            pj_pool_release(pool);
+            return -330;
+        }
 
-	/* Reset the pool */
-	pj_pool_reset(pool);
+        /* Reset the pool */
+        pj_pool_reset(pool);
     }
 
     /* Done */
@@ -141,25 +140,25 @@ static int pool_buf_alignment_test(void)
 
     pool = pj_pool_create_on_buf(NULL, buf, sizeof(buf));
     if (!pool)
-	return -400;
+        return -400;
 
     for (i=0; i<LOOP; ++i) {
-	/* Test first allocation */
-	ptr = pj_pool_alloc(pool, 1);
-	if (!IS_ALIGNED(ptr)) {
-	    pj_pool_release(pool);
-	    return -410;
-	}
+        /* Test first allocation */
+        ptr = pj_pool_alloc(pool, 1);
+        if (!IS_ALIGNED(ptr)) {
+            pj_pool_release(pool);
+            return -410;
+        }
 
-	/* Test subsequent allocation */
-	ptr = pj_pool_alloc(pool, 1);
-	if (!IS_ALIGNED(ptr)) {
-	    pj_pool_release(pool);
-	    return -420;
-	}
+        /* Test subsequent allocation */
+        ptr = pj_pool_alloc(pool, 1);
+        if (!IS_ALIGNED(ptr)) {
+            pj_pool_release(pool);
+            return -420;
+        }
 
-	/* Reset the pool */
-	pj_pool_reset(pool);
+        /* Reset the pool */
+        pj_pool_reset(pool);
     }
 
     /* Done */
@@ -171,7 +170,7 @@ static int pool_buf_alignment_test(void)
 static int drain_test(pj_size_t size, pj_size_t increment)
 {
     pj_pool_t *pool = pj_pool_create(mem, NULL, size, increment, 
-				     &null_callback);
+                                     &null_callback);
     pj_size_t freesize;
     void *p;
     int status = 0;
@@ -179,49 +178,49 @@ static int drain_test(pj_size_t size, pj_size_t increment)
     PJ_LOG(3,("test", "...drain_test(%d,%d)", size, increment));
 
     if (!pool)
-	return -10;
+        return -10;
 
     /* Get free size */
     freesize = GET_FREE(pool);
     if (freesize < 1) {
-    	status=-15; 
-	goto on_error;
+        status=-15; 
+        goto on_error;
     }
 
     /* Drain the pool until there's nothing left. */
     while (freesize > 0) {
-	int size2;
+        int size2;
 
-	if (freesize > 255)
-	    size2 = ((pj_rand() & 0x000000FF) + PJ_POOL_ALIGNMENT) & 
-		   ~(PJ_POOL_ALIGNMENT - 1);
-	else
-	    size2 = (int)freesize;
+        if (freesize > 255)
+            size2 = ((pj_rand() & 0x000000FF) + PJ_POOL_ALIGNMENT) & 
+                   ~(PJ_POOL_ALIGNMENT - 1);
+        else
+            size2 = (int)freesize;
 
-	p = pj_pool_alloc(pool, size2);
-	if (!p) {
-	    status=-20; goto on_error;
-	}
+        p = pj_pool_alloc(pool, size2);
+        if (!p) {
+            status=-20; goto on_error;
+        }
 
-	freesize -= size2;
+        freesize -= size2;
     }
 
     /* Check that capacity is zero. */
     if (GET_FREE(pool) != 0) {
-	PJ_LOG(3,("test", "....error: returned free=%u (expecting 0)",
-		  GET_FREE(pool)));
-	status=-30; goto on_error;
+        PJ_LOG(3,("test", "....error: returned free=%u (expecting 0)",
+                  GET_FREE(pool)));
+        status=-30; goto on_error;
     }
 
     /* Try to allocate once more */
     p = pj_pool_alloc(pool, 257);
     if (!p) {
-	status=-40; goto on_error;
+        status=-40; goto on_error;
     }
 
     /* Check that capacity is NOT zero. */
     if (GET_FREE(pool) == 0) {
-	status=-50; goto on_error;
+        status=-50; goto on_error;
     }
 
 
@@ -236,7 +235,7 @@ static int pool_buf_test(void)
     enum { STATIC_BUF_SIZE = 40 };
     /* 16 is the internal struct in pool_buf */
     static char buf[ STATIC_BUF_SIZE + sizeof(pj_pool_t) + 
-		     sizeof(pj_pool_block) + 2 * PJ_POOL_ALIGNMENT];
+                     sizeof(pj_pool_block) + 2 * PJ_POOL_ALIGNMENT];
     pj_pool_t *pool;
     void *p;
     PJ_USE_EXCEPTION;
@@ -245,31 +244,31 @@ static int pool_buf_test(void)
 
     pool = pj_pool_create_on_buf("no name", buf, sizeof(buf));
     if (!pool)
-	return -70;
+        return -70;
 
     /* Drain the pool */
     PJ_TRY {
-	if ((p=pj_pool_alloc(pool, STATIC_BUF_SIZE/2)) == NULL)
-	    return -75;
+        if ((p=pj_pool_alloc(pool, STATIC_BUF_SIZE/2)) == NULL)
+            return -75;
 
-	if ((p=pj_pool_alloc(pool, STATIC_BUF_SIZE/2)) == NULL)
-	    return -76;
+        if ((p=pj_pool_alloc(pool, STATIC_BUF_SIZE/2)) == NULL)
+            return -76;
     }
     PJ_CATCH_ANY {
-	return -77;
+        return -77;
     }
     PJ_END;
 
     /* On the next alloc, exception should be thrown */
     PJ_TRY {
-	p = pj_pool_alloc(pool, STATIC_BUF_SIZE);
-	if (p != NULL) {
-	    /* This is unexpected, the alloc should fail */
-	    return -78;
-	}
+        p = pj_pool_alloc(pool, STATIC_BUF_SIZE);
+        if (p != NULL) {
+            /* This is unexpected, the alloc should fail */
+            return -78;
+        }
     }
     PJ_CATCH_ANY {
-	/* This is the expected result */
+        /* This is the expected result */
     }
     PJ_END;
 
@@ -294,20 +293,20 @@ int pool_test(void)
     if (rc) return rc;
 
     for (loop=0; loop<LOOP; ++loop) {
-	/* Test that the pool should grow automaticly. */
-	rc = drain_test(SIZE, SIZE);
-	if (rc != 0) return rc;
+        /* Test that the pool should grow automaticly. */
+        rc = drain_test(SIZE, SIZE);
+        if (rc != 0) return rc;
 
-	/* Test situation where pool is not allowed to grow. 
- 	 * We expect the test to return correct error.
-	 */
-	rc = drain_test(SIZE, 0);
-	if (rc != -40) return rc;
+        /* Test situation where pool is not allowed to grow. 
+         * We expect the test to return correct error.
+         */
+        rc = drain_test(SIZE, 0);
+        if (rc != -40) return rc;
     }
 
     rc = pool_buf_test();
     if (rc != 0)
-	return rc;
+        return rc;
 
 
     return 0;
@@ -318,5 +317,5 @@ int pool_test(void)
  * when this test is disabled. 
  */
 int dummy_pool_test;
-#endif	/* INCLUDE_POOL_TEST */
+#endif  /* INCLUDE_POOL_TEST */
 

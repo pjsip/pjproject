@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -21,7 +20,7 @@
 
 #if INCLUDE_HTTP_CLIENT_TEST
 
-#define THIS_FILE	    "test_http"
+#define THIS_FILE           "test_http"
 //#define VERBOSE
 #define STR_PREC(s) (int)s.slen, s.ptr
 #define USE_LOCAL_SERVER
@@ -29,23 +28,23 @@
 #include <pjlib.h>
 #include <pjlib-util.h>
 
-#define ACTION_REPLY	0
-#define ACTION_IGNORE	-1
+#define ACTION_REPLY    0
+#define ACTION_IGNORE   -1
 
 static struct server_t
 {
-    pj_sock_t	     sock;
-    pj_uint16_t	     port;
-    pj_thread_t	    *thread;
+    pj_sock_t        sock;
+    pj_uint16_t      port;
+    pj_thread_t     *thread;
 
     /* Action:
-     *	0:    reply with the response in resp.
+     *  0:    reply with the response in resp.
      * -1:    ignore query (to simulate timeout).
      * other: reply with that error
      */
-    int		    action;
+    int             action;
     pj_bool_t       send_content_length;
-    unsigned	    data_size;
+    unsigned        data_size;
     unsigned        buf_size;
 } g_server;
 
@@ -68,34 +67,34 @@ static int server_thread(void *p)
     pj_sock_t newsock = PJ_INVALID_SOCKET;
 
     while (!thread_quit) {
-	pj_ssize_t pkt_len;
-	int rc;
+        pj_ssize_t pkt_len;
+        int rc;
         pj_fd_set_t rset;
-	pj_time_val timeout = {0, 500};
+        pj_time_val timeout = {0, 500};
 
-	while (!thread_quit) {
-	    PJ_FD_ZERO(&rset);
-	    PJ_FD_SET(srv->sock, &rset);
-	    rc = pj_sock_select((int)srv->sock+1, &rset, NULL, NULL, &timeout);
-	    if (rc != 1) {
-		continue;
-	    }
+        while (!thread_quit) {
+            PJ_FD_ZERO(&rset);
+            PJ_FD_SET(srv->sock, &rset);
+            rc = pj_sock_select((int)srv->sock+1, &rset, NULL, NULL, &timeout);
+            if (rc != 1) {
+                continue;
+            }
 
-	    rc = pj_sock_accept(srv->sock, &newsock, NULL, NULL);
-	    if (rc == PJ_SUCCESS) {
-		break;
-	    }
-	}
+            rc = pj_sock_accept(srv->sock, &newsock, NULL, NULL);
+            if (rc == PJ_SUCCESS) {
+                break;
+            }
+        }
 
-	if (thread_quit)
-	    break;
+        if (thread_quit)
+            break;
 
-	while (!thread_quit) {
+        while (!thread_quit) {
             PJ_FD_ZERO(&rset);
             PJ_FD_SET(newsock, &rset);
             rc = pj_sock_select((int)newsock+1, &rset, NULL, NULL, &timeout);
             if (rc != 1) {
-        	PJ_LOG(3,("http test", "client timeout"));
+                PJ_LOG(3,("http test", "client timeout"));
                 continue;
             }
 
@@ -106,17 +105,17 @@ static int server_thread(void *p)
             }
         }
 
-	if (thread_quit)
-	    break;
+        if (thread_quit)
+            break;
 
-	/* Simulate network RTT */
-	pj_thread_sleep(50);
+        /* Simulate network RTT */
+        pj_thread_sleep(50);
 
-	if (srv->action == ACTION_IGNORE) {
-	    continue;
-	} else if (srv->action == ACTION_REPLY) {
+        if (srv->action == ACTION_IGNORE) {
+            continue;
+        } else if (srv->action == ACTION_REPLY) {
             pj_size_t send_len = 0;
-	    unsigned ctr = 0;
+            unsigned ctr = 0;
             pj_ansi_sprintf(pkt, "HTTP/1.0 200 OK\r\n");
             if (srv->send_content_length) {
                 pj_ansi_sprintf(pkt + pj_ansi_strlen(pkt), 
@@ -127,23 +126,23 @@ static int server_thread(void *p)
             pkt_len = pj_ansi_strlen(pkt);
             rc = pj_sock_send(newsock, pkt, &pkt_len, 0);
             if (rc != PJ_SUCCESS) {
-        	pj_sock_close(newsock);
-        	continue;
+                pj_sock_close(newsock);
+                continue;
             }
             while (send_len < srv->data_size) {
                 pkt_len = srv->data_size - send_len;
                 if (pkt_len > (signed)srv->buf_size)
                     pkt_len = srv->buf_size;
-		send_len += pkt_len;
+                send_len += pkt_len;
                 pj_create_random_string(pkt, pkt_len);
                 pj_ansi_sprintf(pkt, "\nPacket: %d", ++ctr);
                 pkt[pj_ansi_strlen(pkt)] = '\n';
-		rc = pj_sock_send(newsock, pkt, &pkt_len, 0);
-		if (rc != PJ_SUCCESS)
-		    break;
+                rc = pj_sock_send(newsock, pkt, &pkt_len, 0);
+                if (rc != PJ_SUCCESS)
+                    break;
             }
             pj_sock_close(newsock);
-	}
+        }
     }
 
     return 0;
@@ -228,10 +227,10 @@ static void on_response(pj_http_req *hreq, const pj_http_resp *resp)
 #endif
 
     if (test_cancel) {
-	/* Need to delay closing the client socket here, otherwise the
-	 * server will get SIGPIPE when sending response.
-	 */
-	pj_thread_sleep(100);
+        /* Need to delay closing the client socket here, otherwise the
+         * server will get SIGPIPE when sending response.
+         */
+        pj_thread_sleep(100);
         pj_http_req_cancel(hreq, PJ_TRUE);
         test_cancel = PJ_FALSE;
     }
@@ -260,16 +259,16 @@ static int parse_url_test()
 {
     struct test_data
     {
-	char *url;
-	pj_status_t result;
-	const char *username;
-	const char *passwd;
-	const char *host;
-	int port;
-	const char *path;
+        char *url;
+        pj_status_t result;
+        const char *username;
+        const char *passwd;
+        const char *host;
+        int port;
+        const char *path;
     } test_data[] =
     {
-	/* Simple URL without '/' in the end */
+        /* Simple URL without '/' in the end */
         {"http://www.pjsip.org", PJ_SUCCESS, "", "", "www.pjsip.org", 80, "/"},
 
         /* Simple URL with port number but without '/' in the end */
@@ -277,97 +276,97 @@ static int parse_url_test()
 
         /* URL with path */
         {"http://127.0.0.1:280/Joomla/index.php?option=com_content&task=view&id=5&Itemid=6",
-        	PJ_SUCCESS, "", "", "127.0.0.1", 280,
-        	"/Joomla/index.php?option=com_content&task=view&id=5&Itemid=6"},
+                PJ_SUCCESS, "", "", "127.0.0.1", 280,
+                "/Joomla/index.php?option=com_content&task=view&id=5&Itemid=6"},
 
-	/* URL with port and path */
-	{"http://pjsip.org:81/about-us/", PJ_SUCCESS, "", "", "pjsip.org", 81, "/about-us/"},
+        /* URL with port and path */
+        {"http://pjsip.org:81/about-us/", PJ_SUCCESS, "", "", "pjsip.org", 81, "/about-us/"},
 
-	/* unsupported protocol */
-	{"ftp://www.pjsip.org", PJ_ENOTSUP, "", "", "", 80, ""},
+        /* unsupported protocol */
+        {"ftp://www.pjsip.org", PJ_ENOTSUP, "", "", "", 80, ""},
 
-	/* invalid format */
-	{"http:/pjsip.org/about-us/", PJLIB_UTIL_EHTTPINURL, "", "", "", 80, ""},
+        /* invalid format */
+        {"http:/pjsip.org/about-us/", PJLIB_UTIL_EHTTPINURL, "", "", "", 80, ""},
 
-	/* invalid port number */
-	{"http://pjsip.org:xyz/", PJLIB_UTIL_EHTTPINPORT, "", "", "", 80, ""},
+        /* invalid port number */
+        {"http://pjsip.org:xyz/", PJLIB_UTIL_EHTTPINPORT, "", "", "", 80, ""},
 
-	/* with username and password */
-	{"http://user:pass@pjsip.org", PJ_SUCCESS, "user", "pass", "pjsip.org", 80, "/"},
+        /* with username and password */
+        {"http://user:pass@pjsip.org", PJ_SUCCESS, "user", "pass", "pjsip.org", 80, "/"},
 
-	/* password only*/
-	{"http://:pass@pjsip.org", PJ_SUCCESS, "", "pass", "pjsip.org", 80, "/"},
+        /* password only*/
+        {"http://:pass@pjsip.org", PJ_SUCCESS, "", "pass", "pjsip.org", 80, "/"},
 
-	/* user only*/
-	{"http://user:@pjsip.org", PJ_SUCCESS, "user", "", "pjsip.org", 80, "/"},
+        /* user only*/
+        {"http://user:@pjsip.org", PJ_SUCCESS, "user", "", "pjsip.org", 80, "/"},
 
-	/* empty username and passwd*/
-	{"http://:@pjsip.org", PJ_SUCCESS, "", "", "pjsip.org", 80, "/"},
+        /* empty username and passwd*/
+        {"http://:@pjsip.org", PJ_SUCCESS, "", "", "pjsip.org", 80, "/"},
 
-	/* '@' character in username and path */
-	{"http://user@pjsip.org/@", PJ_SUCCESS, "user", "", "pjsip.org", 80, "/@"},
+        /* '@' character in username and path */
+        {"http://user@pjsip.org/@", PJ_SUCCESS, "user", "", "pjsip.org", 80, "/@"},
 
-	/* '@' character in path */
-	{"http://pjsip.org/@", PJ_SUCCESS, "", "", "pjsip.org", 80, "/@"},
+        /* '@' character in path */
+        {"http://pjsip.org/@", PJ_SUCCESS, "", "", "pjsip.org", 80, "/@"},
 
-	/* '@' character in path */
-	{"http://pjsip.org/one@", PJ_SUCCESS, "", "", "pjsip.org", 80, "/one@"},
+        /* '@' character in path */
+        {"http://pjsip.org/one@", PJ_SUCCESS, "", "", "pjsip.org", 80, "/one@"},
 
-	/* Invalid URL */
-	{"http://:", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http://:", PJ_EINVAL, "", "", "", 0, ""},
 
-	/* Invalid URL */
-	{"http://@", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http://@", PJ_EINVAL, "", "", "", 0, ""},
 
-	/* Invalid URL */
-	{"http", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http", PJ_EINVAL, "", "", "", 0, ""},
 
-	/* Invalid URL */
-	{"http:/", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http:/", PJ_EINVAL, "", "", "", 0, ""},
 
-	/* Invalid URL */
-	{"http://", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http://", PJ_EINVAL, "", "", "", 0, ""},
 
-	/* Invalid URL */
-	{"http:///", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http:///", PJ_EINVAL, "", "", "", 0, ""},
 
-	/* Invalid URL */
-	{"http://@/", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http://@/", PJ_EINVAL, "", "", "", 0, ""},
 
-	/* Invalid URL */
-	{"http:///@", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http:///@", PJ_EINVAL, "", "", "", 0, ""},
 
-	/* Invalid URL */
-	{"http://:::", PJ_EINVAL, "", "", "", 0, ""},
+        /* Invalid URL */
+        {"http://:::", PJ_EINVAL, "", "", "", 0, ""},
     };
     unsigned i;
 
     for (i=0; i<PJ_ARRAY_SIZE(test_data); ++i) {
-	struct test_data *ptd;
-	pj_http_url hurl;
-	pj_status_t status;
+        struct test_data *ptd;
+        pj_http_url hurl;
+        pj_status_t status;
 
-	ptd = &test_data[i];
+        ptd = &test_data[i];
 
-	PJ_LOG(3, (THIS_FILE, ".. %s", ptd->url));
-	status = parse_url(ptd->url, &hurl);
+        PJ_LOG(3, (THIS_FILE, ".. %s", ptd->url));
+        status = parse_url(ptd->url, &hurl);
 
-	if (status != ptd->result) {
-	    PJ_LOG(3,(THIS_FILE, "%d", status));
-	    return -11;
-	}
-	if (status != PJ_SUCCESS)
-	    continue;
-	if (pj_strcmp2(&hurl.username, ptd->username))
-	    return -12;
-	if (pj_strcmp2(&hurl.passwd, ptd->passwd))
-	    return -13;
-	if (pj_strcmp2(&hurl.host, ptd->host))
-	    return -14;
-	if (hurl.port != ptd->port)
-	    return -15;
-	if (pj_strcmp2(&hurl.path, ptd->path))
-	    return -16;
+        if (status != ptd->result) {
+            PJ_LOG(3,(THIS_FILE, "%d", status));
+            return -11;
+        }
+        if (status != PJ_SUCCESS)
+            continue;
+        if (pj_strcmp2(&hurl.username, ptd->username))
+            return -12;
+        if (pj_strcmp2(&hurl.passwd, ptd->passwd))
+            return -13;
+        if (pj_strcmp2(&hurl.host, ptd->host))
+            return -14;
+        if (hurl.port != ptd->port)
+            return -15;
+        if (pj_strcmp2(&hurl.path, ptd->path))
+            return -16;
     }
 
     return 0;
@@ -418,16 +417,16 @@ int http_client_test1()
         return -43;
 
     {
-	pj_sockaddr_in addr2;
-	int addr_len = sizeof(addr2);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
-	if (sstatus != PJ_SUCCESS)
-	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr2);
-	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
-			 "http://127.0.0.1:%d/about-us/",
-			 g_server.port);
-	url = pj_str(urlbuf);
+        pj_sockaddr_in addr2;
+        int addr_len = sizeof(addr2);
+        sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
+        if (sstatus != PJ_SUCCESS)
+            return -44;
+        g_server.port = pj_sockaddr_in_get_port(&addr2);
+        pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+                         "http://127.0.0.1:%d/about-us/",
+                         g_server.port);
+        url = pj_str(urlbuf);
     }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
@@ -453,8 +452,8 @@ int http_client_test1()
 
     while (pj_http_req_is_running(http_req)) {
         pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
     if (pj_http_req_start(http_req))
@@ -462,8 +461,8 @@ int http_client_test1()
 
     while (pj_http_req_is_running(http_req)) {
         pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
 #ifdef USE_LOCAL_SERVER
@@ -530,16 +529,16 @@ int http_client_test2()
         return -43;
 
     {
-	pj_sockaddr_in addr2;
-	int addr_len = sizeof(addr2);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
-	if (sstatus != PJ_SUCCESS)
-	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr2);
-	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
-			 "http://127.0.0.1:%d",
-			 g_server.port);
-	url = pj_str(urlbuf);
+        pj_sockaddr_in addr2;
+        int addr_len = sizeof(addr2);
+        sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
+        if (sstatus != PJ_SUCCESS)
+            return -44;
+        g_server.port = pj_sockaddr_in_get_port(&addr2);
+        pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+                         "http://127.0.0.1:%d",
+                         g_server.port);
+        url = pj_str(urlbuf);
     }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
@@ -558,17 +557,17 @@ int http_client_test2()
 #endif
 
     pj_http_headers_add_elmt2(&param.headers, (char*)"Accept",
-			     (char*)"image/gif, image/x-xbitmap, image/jpeg, "
-				    "image/pjpeg, application/x-ms-application,"
-				    " application/vnd.ms-xpsdocument, "
-			            "application/xaml+xml, "
-			            "application/x-ms-xbap, "
-			            "application/x-shockwave-flash, "
-			            "application/vnd.ms-excel, "
-			            "application/vnd.ms-powerpoint, "
-			            "application/msword, */*");
+                             (char*)"image/gif, image/x-xbitmap, image/jpeg, "
+                                    "image/pjpeg, application/x-ms-application,"
+                                    " application/vnd.ms-xpsdocument, "
+                                    "application/xaml+xml, "
+                                    "application/x-ms-xbap, "
+                                    "application/x-shockwave-flash, "
+                                    "application/vnd.ms-excel, "
+                                    "application/vnd.ms-powerpoint, "
+                                    "application/msword, */*");
     pj_http_headers_add_elmt2(&param.headers, (char*)"Accept-Language",
-	                      (char*)"en-sg");
+                              (char*)"en-sg");
     pj_http_headers_add_elmt2(&param.headers, (char*)"User-Agent",
                               (char*)"Mozilla/4.0 (compatible; MSIE 7.0; "
                                      "Windows NT 6.0; SLCC1; "
@@ -583,8 +582,8 @@ int http_client_test2()
 
     while (pj_http_req_is_running(http_req)) {
         pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
 #ifdef USE_LOCAL_SERVER
@@ -598,8 +597,8 @@ int http_client_test2()
 
     while (pj_http_req_is_running(http_req)) {
         pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
 #ifdef USE_LOCAL_SERVER
@@ -659,16 +658,16 @@ int http_client_test_put1()
         return -43;
 
     {
-	pj_sockaddr_in addr2;
-	int addr_len = sizeof(addr2);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
-	if (sstatus != PJ_SUCCESS)
-	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr2);
-	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
-			 "http://127.0.0.1:%d/test/test.txt",
-			 g_server.port);
-	url = pj_str(urlbuf);
+        pj_sockaddr_in addr2;
+        int addr_len = sizeof(addr2);
+        sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
+        if (sstatus != PJ_SUCCESS)
+            return -44;
+        g_server.port = pj_sockaddr_in_get_port(&addr2);
+        pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+                         "http://127.0.0.1:%d/test/test.txt",
+                         g_server.port);
+        url = pj_str(urlbuf);
     }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
@@ -701,8 +700,8 @@ int http_client_test_put1()
 
     while (pj_http_req_is_running(http_req)) {
         pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
 #ifdef USE_LOCAL_SERVER
@@ -762,16 +761,16 @@ int http_client_test_put2()
         return -43;
 
     {
-	pj_sockaddr_in addr2;
-	int addr_len = sizeof(addr2);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
-	if (sstatus != PJ_SUCCESS)
-	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr2);
-	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
-			 "http://127.0.0.1:%d/test/test2.txt",
-			 g_server.port);
-	url = pj_str(urlbuf);
+        pj_sockaddr_in addr2;
+        int addr_len = sizeof(addr2);
+        sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
+        if (sstatus != PJ_SUCCESS)
+            return -44;
+        g_server.port = pj_sockaddr_in_get_port(&addr2);
+        pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+                         "http://127.0.0.1:%d/test/test2.txt",
+                         g_server.port);
+        url = pj_str(urlbuf);
     }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
@@ -802,8 +801,8 @@ int http_client_test_put2()
 
     while (pj_http_req_is_running(http_req)) {
         pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
 #ifdef USE_LOCAL_SERVER
@@ -857,16 +856,16 @@ int http_client_test_delete()
         return -43;
 
     {
-	pj_sockaddr_in addr2;
-	int addr_len = sizeof(addr2);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
-	if (sstatus != PJ_SUCCESS)
-	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr2);
-	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
-			 "http://127.0.0.1:%d/test/test2.txt",
-			 g_server.port);
-	url = pj_str(urlbuf);
+        pj_sockaddr_in addr2;
+        int addr_len = sizeof(addr2);
+        sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
+        if (sstatus != PJ_SUCCESS)
+            return -44;
+        g_server.port = pj_sockaddr_in_get_port(&addr2);
+        pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+                         "http://127.0.0.1:%d/test/test2.txt",
+                         g_server.port);
+        url = pj_str(urlbuf);
     }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
@@ -893,8 +892,8 @@ int http_client_test_delete()
 
     while (pj_http_req_is_running(http_req)) {
         pj_time_val delay = {0, 50};
-	pj_ioqueue_poll(ioqueue, &delay);
-	pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
+        pj_timer_heap_poll(timer_heap, NULL);
     }
 
 #ifdef USE_LOCAL_SERVER
@@ -953,4 +952,4 @@ int http_client_test()
  * when this test is disabled. 
  */
 int dummy_http_client_test;
-#endif	/* INCLUDE_HTTP_CLIENT_TEST */
+#endif  /* INCLUDE_HTTP_CLIENT_TEST */

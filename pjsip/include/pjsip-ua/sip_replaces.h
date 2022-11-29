@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -126,17 +125,17 @@
     //
     status = pjsip_replaces_verify_request(rdata, &replaced_dlg, PJ_FALSE, &response);
     if (status != PJ_SUCCESS) {
-	// Something wrong with Replaces request.
-	//
-	pj_status_t status;
-	if (response) {
-	    status = pjsip_endpt_send_response(endpt, rdata, response, NULL, NULL);
-	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
-	} else {
-	    // Respond with 500 (Internal Server Error)
-	    status = pjsip_endpt_respond_stateless(endpt, rdata, 500, NULL, NULL, NULL);
-	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
-	}
+        // Something wrong with Replaces request.
+        //
+        pj_status_t status;
+        if (response) {
+            status = pjsip_endpt_send_response(endpt, rdata, response, NULL, NULL);
+            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
+        } else {
+            // Respond with 500 (Internal Server Error)
+            status = pjsip_endpt_respond_stateless(endpt, rdata, 500, NULL, NULL, NULL);
+            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
+        }
     }
 
     // Create UAS Invite session as usual.
@@ -149,43 +148,43 @@
     //
     status = pjsip_inv_initial_answer(inv, rdata, 100, ..., &response);
     if (status == PJ_SUCCESS)
-	pjsip_inv_send_msg(inv, response);
+        pjsip_inv_send_msg(inv, response);
 
 
     // This is where processing is different between normal call
     // (without Replaces) and call with Replaces.
     //
     if (replaced_dlg) {
-	pjsip_inv_session *replaced_inv;
+        pjsip_inv_session *replaced_inv;
 
-	// Always answer the new INVITE with 200, regardless whether
-	// the replaced call is in early or confirmed state.
-	//
-	status = pjsip_inv_answer(inv, 200, NULL, NULL, &response);
-	if (status == PJ_SUCCESS)
-	    pjsip_inv_send_msg(inv, response);
-
-
-	// Get the INVITE session associated with the replaced dialog.
-	//
-	replaced_inv = pjsip_dlg_get_inv_session(replaced_dlg);
+        // Always answer the new INVITE with 200, regardless whether
+        // the replaced call is in early or confirmed state.
+        //
+        status = pjsip_inv_answer(inv, 200, NULL, NULL, &response);
+        if (status == PJ_SUCCESS)
+            pjsip_inv_send_msg(inv, response);
 
 
-	// Disconnect the "replaced" INVITE session.
-	//
-	status = pjsip_inv_end_session(replaced_inv, PJSIP_SC_GONE, NULL, &tdata);
-	if (status == PJ_SUCCESS && tdata)
-	    status = pjsip_inv_send_msg(replaced_inv, tdata);
+        // Get the INVITE session associated with the replaced dialog.
+        //
+        replaced_inv = pjsip_dlg_get_inv_session(replaced_dlg);
 
 
-	// It's up to application to associate the new INVITE session
-	// with the old (now terminated) session. For example, application
-	// may assign the same User Interface object for the new INVITE
-	// session.
+        // Disconnect the "replaced" INVITE session.
+        //
+        status = pjsip_inv_end_session(replaced_inv, PJSIP_SC_GONE, NULL, &tdata);
+        if (status == PJ_SUCCESS && tdata)
+            status = pjsip_inv_send_msg(replaced_inv, tdata);
+
+
+        // It's up to application to associate the new INVITE session
+        // with the old (now terminated) session. For example, application
+        // may assign the same User Interface object for the new INVITE
+        // session.
 
     } else {
-	// Process normal INVITE without Replaces.
-	...
+        // Process normal INVITE without Replaces.
+        ...
     }
   }
 
@@ -216,19 +215,19 @@ typedef struct pjsip_replaces_hdr
     PJSIP_DECL_HDR_MEMBER(struct pjsip_replaces_hdr);
 
     /** Call-Id */
-    pj_str_t	call_id;
+    pj_str_t    call_id;
 
     /** to-tag */
-    pj_str_t	to_tag;
+    pj_str_t    to_tag;
 
     /** from-tag */
-    pj_str_t	from_tag;
+    pj_str_t    from_tag;
 
     /** early-only? */
-    pj_bool_t	early_only;
+    pj_bool_t   early_only;
 
     /** Other parameters */
-    pjsip_param	other_param;
+    pjsip_param other_param;
 
 } pjsip_replaces_hdr;
 
@@ -238,9 +237,9 @@ typedef struct pjsip_replaces_hdr
  * Initialize Replaces support in PJSIP. This would, among other things, 
  * register the header parser for Replaces header.
  *
- * @param endpt	    The endpoint instance.
+ * @param endpt     The endpoint instance.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt);
 
@@ -248,9 +247,9 @@ PJ_DECL(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt);
 /**
  * Create Replaces header.
  *
- * @param pool	    Pool to allocate the header instance from.
+ * @param pool      Pool to allocate the header instance from.
  *
- * @return	    An empty Replaces header instance.
+ * @return          An empty Replaces header instance.
  */
 PJ_DECL(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool);
 
@@ -260,35 +259,35 @@ PJ_DECL(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool);
  * This function will perform all necessary checks according to RFC 3891
  * Section 3 "User Agent Server Behavior: Receiving a Replaces Header".
  *
- * @param rdata	    The incoming request to be verified.
- * @param p_dlg	    On return, it will be filled with the matching 
- *		    dialog.
+ * @param rdata     The incoming request to be verified.
+ * @param p_dlg     On return, it will be filled with the matching 
+ *                  dialog.
  * @param lock_dlg  Specifies whether this function should acquire lock
- *		    to the matching dialog. If yes (and should be yes!),
- *		    then application will need to release the dialog's
- *		    lock with #pjsip_dlg_dec_lock() when the function
- *		    returns PJ_SUCCESS and the \a p_dlg parameter is filled
- *		    with the dialog instance.
+ *                  to the matching dialog. If yes (and should be yes!),
+ *                  then application will need to release the dialog's
+ *                  lock with #pjsip_dlg_dec_lock() when the function
+ *                  returns PJ_SUCCESS and the \a p_dlg parameter is filled
+ *                  with the dialog instance.
  * @param p_tdata   Upon error, it will be filled with the final response
- *		    to be sent to the request sender.
+ *                  to be sent to the request sender.
  *
- * @return	    The function returns the following:
- *		    - If the request doesn't contain Replaces header, the
- *		      function returns PJ_SUCCESS and \a p_dlg parameter
- *		      will be set to NULL.
- *		    - If the request contains Replaces header and a valid,
- *		      matching dialog is found, the function returns 
- *		      PJ_SUCCESS and \a p_dlg parameter will be set to the
- *		      matching dialog instance.
- *		    - Upon error condition (as described by RFC 3891), the
- *		      function returns non-PJ_SUCCESS, and \a p_tdata 
- *		      parameter SHOULD be set with a final response message
- *		      to be sent to the sender of the request.
+ * @return          The function returns the following:
+ *                  - If the request doesn't contain Replaces header, the
+ *                    function returns PJ_SUCCESS and \a p_dlg parameter
+ *                    will be set to NULL.
+ *                  - If the request contains Replaces header and a valid,
+ *                    matching dialog is found, the function returns 
+ *                    PJ_SUCCESS and \a p_dlg parameter will be set to the
+ *                    matching dialog instance.
+ *                  - Upon error condition (as described by RFC 3891), the
+ *                    function returns non-PJ_SUCCESS, and \a p_tdata 
+ *                    parameter SHOULD be set with a final response message
+ *                    to be sent to the sender of the request.
  */
 PJ_DECL(pj_status_t) pjsip_replaces_verify_request(pjsip_rx_data *rdata,
-						   pjsip_dialog **p_dlg,
-						   pj_bool_t lock_dlg,
-						   pjsip_tx_data **p_tdata);
+                                                   pjsip_dialog **p_dlg,
+                                                   pj_bool_t lock_dlg,
+                                                   pjsip_tx_data **p_tdata);
 
 
 
@@ -300,5 +299,5 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJSIP_REPLACES_H__ */
+#endif  /* __PJSIP_REPLACES_H__ */
 

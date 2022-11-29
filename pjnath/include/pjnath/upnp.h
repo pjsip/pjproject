@@ -54,29 +54,29 @@ typedef struct pj_upnp_init_param
      *
      * If NULL, the library will use the first suitable interface found.
      */
-    const char 	       *if_name;
+    const char         *if_name;
 
     /**
      * The port number to use for all UPnP operations.
      *
      * If 0, the library will pick an arbitrary free port.
      */
-    unsigned  		port;
+    unsigned            port;
     
     /**
      * The time duration to search for IGD devices (in seconds).
      *
      * If 0, the library will use PJ_UPNP_DEFAULT_SEARCH_TIME.
      */
-    int			search_time;
+    int                 search_time;
 
     /**
      * The callback to notify application when the initialization
      * has completed.
      *
-     * @param status	The initialization status.
+     * @param status    The initialization status.
      */
-    void		(*upnp_cb)(pj_status_t status);
+    void                (*upnp_cb)(pj_status_t status);
 
 } pj_upnp_init_param;
 
@@ -86,10 +86,10 @@ typedef struct pj_upnp_init_param
  * Initialize UPnP library and initiate the search for valid Internet
  * Gateway Devices (IGD) in the network.
  *
- * @param param		The UPnP initialization parameter.
+ * @param param         The UPnP initialization parameter.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			status.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      status.
  */
 PJ_DECL(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param);
 
@@ -97,8 +97,8 @@ PJ_DECL(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param);
 /**
  * Deinitialize UPnP library.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			status.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      status.
  */
 PJ_DECL(pj_status_t) pj_upnp_deinit(void);
 
@@ -108,32 +108,32 @@ PJ_DECL(pj_status_t) pj_upnp_deinit(void);
  * the Internet Gateway Device will redirect communication received on
  * the specified external ports to the local sockets.
  *
- * @param sock_cnt	Number of sockets in the socket array.
- * @param sock		Array of local UDP sockets that will be mapped.
- * @param ext_port	(Optional) Array of external port numbers. If NULL,
- *			the external port numbers requested will be identical
- *			to the sockets' local port numbers.
- * @param mapped_addr	Array to receive the mapped public addresses and
- *			ports of the local UDP sockets, when the function
- *			returns PJ_SUCCESS.
+ * @param sock_cnt      Number of sockets in the socket array.
+ * @param sock          Array of local UDP sockets that will be mapped.
+ * @param ext_port      (Optional) Array of external port numbers. If NULL,
+ *                      the external port numbers requested will be identical
+ *                      to the sockets' local port numbers.
+ * @param mapped_addr   Array to receive the mapped public addresses and
+ *                      ports of the local UDP sockets, when the function
+ *                      returns PJ_SUCCESS.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			status.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      status.
  */
 PJ_DECL(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
-					     const pj_sock_t sock[],
-			 		     unsigned ext_port[],
-			 		     pj_sockaddr mapped_addr[]);
+                                             const pj_sock_t sock[],
+                                             unsigned ext_port[],
+                                             pj_sockaddr mapped_addr[]);
 
 
 /**
  * Send request to delete a port mapping.
  *
- * @param mapped_addr	The public address and external port mapping to
- *			be deleted.
+ * @param mapped_addr   The public address and external port mapping to
+ *                      be deleted.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			status.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      status.
  */
 PJ_DECL(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr);
 
@@ -144,4 +144,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJ_UPNP_H__ */
+#endif  /* __PJ_UPNP_H__ */
