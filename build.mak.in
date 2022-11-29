@@ -356,6 +356,7 @@ export PJ_INSTALL_CFLAGS := -I$(PJ_INSTALL_INC_DIR) -DPJ_AUTOCONF=1 @ac_cflags@
 export PJ_INSTALL_LDFLAGS_PRIVATE := $(APP_THIRD_PARTY_LIBS) $(APP_THIRD_PARTY_EXT) @LIBS@
 export PJ_INSTALL_LDFLAGS := -L$(PJ_INSTALL_LIB_DIR) $(filter-out $(PJ_INSTALL_LDFLAGS_PRIVATE),$(APP_LDXXLIBS))
 
+#Fuzzing 
 export DIR=cd tests/fuzz/ &&
 export EXTFLAGS=-Wall -Werror
 
