@@ -124,6 +124,22 @@ pjsua-test: cmp_wav
 cmp_wav:
 	cd tests/pjsua/tools && make
 
+fuzz:
+	$(DIR) $(CC) $(CFLAGS) $(EXTFLAGS) -c $(json).c
+	$(DIR) $(CC) $(CFLAGS) $(EXTFLAGS) -c $(xml).c
+	$(DIR) $(CC) $(CFLAGS) $(EXTFLAGS) -c $(sdp).c
+	$(DIR) $(CC) $(CFLAGS) $(EXTFLAGS) -c $(stun).c
+	$(DIR) $(CC) $(CFLAGS) $(EXTFLAGS) -c $(sip).c
+
+	$(DIR) $(CXX) $(CFLAGS) -o $(json) $(json).o $(LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjlib)
+	$(DIR) $(CXX) $(CFLAGS) -o $(xml) $(xml).o $(LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjlib)
+	$(DIR) $(CXX) $(CFLAGS) -o $(sdp) $(sdp).o $(LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjmedia)
+	$(DIR) $(CXX) $(CFLAGS) -o $(stun) $(stun).o $(LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjnath)
+	$(DIR) $(CXX) $(CFLAGS) -o $(sip) $(sip).o $(LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjsip)
+
+fuzz-clean:
+	$(DIR) rm $(json) $(xml) $(sdp) $(stun) $(sip) *.o
+
 install:
 	mkdir -p $(DESTDIR)$(libdir)/
 	if [ "$(PJ_EXCLUDE_PJSUA2)x" = "x" ] ; then \
