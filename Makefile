@@ -127,9 +127,6 @@ cmp_wav:
 fuzz:
 	cd tests/fuzz && make
 
-fuzz-clean:
-	$(DIR) rm $(json) $(xml) $(sdp) $(stun) $(sip) *.o
-
 install:
 	mkdir -p $(DESTDIR)$(libdir)/
 	if [ "$(PJ_EXCLUDE_PJSUA2)x" = "x" ] ; then \
