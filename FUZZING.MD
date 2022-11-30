@@ -28,6 +28,6 @@ make fuzz
 cd tests/fuzz
 mkdir cov-json
 unzip seed/fuzz-json_seed_corpus.zip
-./fuzz-json cov-json/ fuzz-xml_seed_corpus/
+./fuzz-json cov-json/ fuzz-json_seed_corpus/
 ```
 
