@@ -125,17 +125,7 @@ cmp_wav:
 	cd tests/pjsua/tools && make
 
 fuzz:
-	$(DIR) $(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(json).c
-	$(DIR) $(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(xml).c
-	$(DIR) $(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(sdp).c
-	$(DIR) $(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(stun).c
-	$(DIR) $(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(sip).c
-
-	$(DIR) $(CXX) $(PJ_CFLAGS) -o $(json) $(json).o $(PJ_LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjlib)
-	$(DIR) $(CXX) $(PJ_CFLAGS) -o $(xml) $(xml).o $(PJ_LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjlib)
-	$(DIR) $(CXX) $(PJ_CFLAGS) -o $(sdp) $(sdp).o $(PJ_LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjmedia)
-	$(DIR) $(CXX) $(PJ_CFLAGS) -o $(stun) $(stun).o $(PJ_LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjnath)
-	$(DIR) $(CXX) $(PJ_CFLAGS) -o $(sip) $(sip).o $(PJ_LDFLAGS) $(LIB_FUZZING_ENGINE) $(FUZZ_pjsip)
+	cd tests/fuzz && make
 
 fuzz-clean:
 	$(DIR) rm $(json) $(xml) $(sdp) $(stun) $(sip) *.o
