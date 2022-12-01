@@ -124,6 +124,9 @@ pjsua-test: cmp_wav
 cmp_wav:
 	cd tests/pjsua/tools && make
 
+fuzz:
+	cd tests/fuzz && make
+
 install:
 	mkdir -p $(DESTDIR)$(libdir)/
 	if [ "$(PJ_EXCLUDE_PJSUA2)x" = "x" ] ; then \
