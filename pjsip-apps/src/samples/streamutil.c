@@ -93,6 +93,12 @@ static const char *desc =
  "  --srtp-dtls-server    Use DTLS for SRTP keying, as DTLS server      \n"
 #endif
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+"  --opus-pt=PT           Opus payload type                             \n"
+"  --opus-ch=CH           Opus channel count                            \n"
+"  --opus-clock-rate=CR   Opus clock rate                               \n"
+#endif
+
  "\n"
 ;
 
@@ -137,6 +143,7 @@ static pj_status_t init_codecs(pjmedia_endpt *med_endpt)
 static pj_status_t create_stream( pj_pool_t *pool,
                                   pjmedia_endpt *med_endpt,
                                   const pjmedia_codec_info *codec_info,
+                                  const pjmedia_codec_param *codec_param,
                                   pjmedia_dir dir,
                                   pj_uint16_t local_port,
                                   const pj_sockaddr_in *rem_addr,
@@ -168,10 +175,11 @@ static pj_status_t create_stream( pj_pool_t *pool,
     info.type = PJMEDIA_TYPE_AUDIO;
     info.dir = dir;
     pj_memcpy(&info.fmt, codec_info, sizeof(pjmedia_codec_info));
-    info.tx_pt = codec_info->pt;
-    info.rx_pt = codec_info->pt;
+    info.param = (pjmedia_codec_param *)codec_param;
+    info.tx_pt = codec_param->info.pt;
+    info.rx_pt = codec_param->info.pt;
     info.ssrc = pj_rand();
-    
+
 #if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
     /* Set default RTCP XR enabled/disabled */
     info.rtcp_xr_enabled = PJ_TRUE;
@@ -390,6 +398,12 @@ int main(int argc, char *argv[])
     int tmp_key_len;
 #endif
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    int opus_pt = -1;
+    int opus_clock_rate = -1;
+    int opus_ch = -1;
+#endif
+
     /* Default values */
     const pjmedia_codec_info *codec_info;
     pjmedia_codec_param codec_param;
@@ -415,6 +429,11 @@ int main(int argc, char *argv[])
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
         OPT_USE_SRTP    = 'S',
 #endif
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+        OPT_OPUS_PT = 'P',
+        OPT_OPUS_CH = 'C',
+        OPT_OPUS_CLOCK_RATE = 'K',
+#endif
         OPT_SRTP_TX_KEY = 'x',
         OPT_SRTP_RX_KEY = 'y',
         OPT_SRTP_DTLS_CLIENT = 'd',
@@ -438,6 +457,11 @@ int main(int argc, char *argv[])
         { "srtp-rx-key",    1, 0, OPT_SRTP_RX_KEY },
         { "srtp-dtls-client", 0, 0, OPT_SRTP_DTLS_CLIENT },
         { "srtp-dtls-server", 0, 0, OPT_SRTP_DTLS_SERVER },
+#endif
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+        { "opus-pt", 1, 0, OPT_OPUS_PT },
+        { "opus-ch", 1, 0, OPT_OPUS_CH },
+        { "opus-clock-rate", 1, 0, OPT_OPUS_CLOCK_RATE },
 #endif
         { "help",           0, 0, OPT_HELP },
         { NULL, 0, 0, 0 },
@@ -555,6 +579,18 @@ int main(int argc, char *argv[])
             break;
 #endif
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+        case OPT_OPUS_PT:
+            opus_pt = atoi(pj_optarg);
+            break;
+        case OPT_OPUS_CLOCK_RATE:
+            opus_clock_rate = atoi(pj_optarg);
+            break;
+        case OPT_OPUS_CH:
+            opus_ch = atoi(pj_optarg);
+            break;
+#endif
+
         case OPT_HELP:
             usage();
             return 1;
@@ -643,9 +679,29 @@ int main(int argc, char *argv[])
     if (status != PJ_SUCCESS)
         goto on_exit;
 
+    /* Get codec default param for info */
+    status = pjmedia_codec_mgr_get_default_param(
+                                    pjmedia_endpt_get_codec_mgr(med_endpt),
+                                    codec_info,
+                                    &codec_param);
+    /* Should be ok, as create_stream() above succeeded */
+    pj_assert(status == PJ_SUCCESS);
+
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    /* Opus custom settings */
+    if (!pj_stricmp2(&codec_info->encoding_name, "opus")) {
+        if (opus_pt > 0)
+            codec_param.info.pt = opus_pt;
+        if (opus_clock_rate > 0)
+            codec_param.info.clock_rate = opus_clock_rate;
+        if (opus_ch > 0)
+            codec_param.info.channel_cnt = opus_ch;
+    }
+#endif
+
     /* Create stream based on program arguments */
-    status = create_stream(pool, med_endpt, codec_info, dir, local_port, 
-                           &remote_addr, mcast, &mcast_addr,
+    status = create_stream(pool, med_endpt, codec_info, &codec_param, dir,
+                           local_port, &remote_addr, mcast, &mcast_addr,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
                            use_srtp, &srtp_crypto_suite, 
                            &srtp_tx_key, &srtp_rx_key,
@@ -654,14 +710,6 @@ int main(int argc, char *argv[])
                            &stream);
     if (status != PJ_SUCCESS)
         goto on_exit;
-
-    /* Get codec default param for info */
-    status = pjmedia_codec_mgr_get_default_param(
-                                    pjmedia_endpt_get_codec_mgr(med_endpt), 
-                                    codec_info, 
-                                    &codec_param);
-    /* Should be ok, as create_stream() above succeeded */
-    pj_assert(status == PJ_SUCCESS);
 
     /* Get the port interface of the stream */
     status = pjmedia_stream_get_port( stream, &stream_port);

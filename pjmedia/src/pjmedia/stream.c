@@ -2437,12 +2437,23 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
                            16, 80);
     afd = pjmedia_format_get_audio_format_detail(&stream->port.info.fmt, 1);
 
+    /* Get codec param: */
+    if (info->param)
+        stream->codec_param = *stream->si.param;
+    else {
+        status = pjmedia_codec_mgr_get_default_param(stream->codec_mgr,
+                                                     &info->fmt,
+                                                     &stream->codec_param);
+        if (status != PJ_SUCCESS)
+            goto err_cleanup;
+    }
+
     /* Init port. */
 
     //No longer there in 2.0
     //pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
-    afd->clock_rate = info->fmt.clock_rate;
-    afd->channel_count = info->fmt.channel_cnt;
+    afd->clock_rate = stream->codec_param.info.clock_rate;
+    afd->channel_count = stream->codec_param.info.channel_cnt;
     stream->port.port_data.pdata = stream;
 
     /* Init stream: */
@@ -2495,18 +2506,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
-
-    /* Get codec param: */
-    if (info->param)
-        stream->codec_param = *stream->si.param;
-    else {
-        status = pjmedia_codec_mgr_get_default_param(stream->codec_mgr,
-                                                     &info->fmt,
-                                                     &stream->codec_param);
-        if (status != PJ_SUCCESS)
-            goto err_cleanup;
-    }
-
     /* Check for invalid max_bps. */
     if (stream->codec_param.info.max_bps < stream->codec_param.info.avg_bps)
         stream->codec_param.info.max_bps = stream->codec_param.info.avg_bps;
@@ -2526,9 +2525,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
      * it's negotiated in the SDP.
      */
     if (!pj_stricmp2(&info->fmt.encoding_name, "opus")) {
-        stream->codec_param.info.clock_rate = info->fmt.clock_rate;
-        stream->codec_param.info.channel_cnt = info->fmt.channel_cnt;
-
         /* Allocate decoding buffer as Opus can send a packet duration of
          * up to 120 ms.
          */
