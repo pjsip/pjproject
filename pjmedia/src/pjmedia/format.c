@@ -170,18 +170,20 @@ static pj_status_t apply_planar_420(const pjmedia_video_format_info *fi,
                                      pjmedia_video_apply_fmt_param *aparam)
 {
     unsigned i;
-    pj_size_t Y_bytes;
+    pj_size_t rounded_wxh, Y_bytes;
 
     PJ_UNUSED_ARG(fi);
 
-    /* Calculate memsize */
-    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
-    aparam->framebytes = Y_bytes + (Y_bytes>>1);
+    /* Calculate memsize, round up resolution to the nearest even number. */
+    rounded_wxh = (pj_size_t)((aparam->size.w + (aparam->size.w % 2)) *
+                              (aparam->size.h + (aparam->size.h % 2)));
+    aparam->framebytes = rounded_wxh + (rounded_wxh>>1);
 
     /* Planar formats use 3 plane */
     aparam->strides[0] = aparam->size.w;
     aparam->strides[1] = aparam->strides[2] = (aparam->size.w>>1);
 
+    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
     aparam->planes[0] = aparam->buffer;
     aparam->planes[1] = aparam->planes[0] + Y_bytes;
     aparam->planes[2] = aparam->planes[1] + (Y_bytes>>2);
@@ -203,18 +205,20 @@ static pj_status_t apply_planar_422(const pjmedia_video_format_info *fi,
                                      pjmedia_video_apply_fmt_param *aparam)
 {
     unsigned i;
-    pj_size_t Y_bytes;
+    pj_size_t rounded_wxh, Y_bytes;
 
     PJ_UNUSED_ARG(fi);
 
-    /* Calculate memsize */
-    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
-    aparam->framebytes = (Y_bytes << 1);
+    /* Calculate memsize, round up resolution to the nearest even number. */
+    rounded_wxh = (pj_size_t)((aparam->size.w + (aparam->size.w % 2)) *
+                              (aparam->size.h + (aparam->size.h % 2)));
+    aparam->framebytes = (rounded_wxh << 1);
 
     /* Planar formats use 3 plane */
     aparam->strides[0] = aparam->size.w;
     aparam->strides[1] = aparam->strides[2] = (aparam->size.w>>1);
 
+    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
     aparam->planes[0] = aparam->buffer;
     aparam->planes[1] = aparam->planes[0] + Y_bytes;
     aparam->planes[2] = aparam->planes[1] + (Y_bytes>>1);
@@ -236,18 +240,21 @@ static pj_status_t apply_planar_444(const pjmedia_video_format_info *fi,
                                     pjmedia_video_apply_fmt_param *aparam)
 {
     unsigned i;
-    pj_size_t Y_bytes;
+    pj_size_t rounded_wxh, Y_bytes;
 
     PJ_UNUSED_ARG(fi);
 
-    /* Calculate memsize */
-    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
-    aparam->framebytes = (Y_bytes * 3);
+    /* Calculate memsize, round up resolution to the nearest even number. */
+    rounded_wxh = (pj_size_t)((aparam->size.w + (aparam->size.w % 2)) *
+                              (aparam->size.h + (aparam->size.h % 2)));
+    aparam->framebytes = (rounded_wxh * 3);
 
     /* Planar formats use 3 plane */
     aparam->strides[0] = aparam->strides[1] = 
                          aparam->strides[2] = aparam->size.w;
 
+
+    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
     aparam->planes[0] = aparam->buffer;
     aparam->planes[1] = aparam->planes[0] + Y_bytes;
     aparam->planes[2] = aparam->planes[1] + Y_bytes;
@@ -269,18 +276,20 @@ static pj_status_t apply_biplanar_420(const pjmedia_video_format_info *fi,
                                       pjmedia_video_apply_fmt_param *aparam)
 {
     unsigned i;
-    pj_size_t Y_bytes;
+    pj_size_t rounded_wxh, Y_bytes;
 
     PJ_UNUSED_ARG(fi);
 
-    /* Calculate memsize */
-    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
-    aparam->framebytes = Y_bytes + (Y_bytes>>1);
+    /* Calculate memsize, round up resolution to the nearest even number. */
+    rounded_wxh = (pj_size_t)((aparam->size.w + (aparam->size.w % 2)) *
+                              (aparam->size.h + (aparam->size.h % 2)));
+    aparam->framebytes = rounded_wxh + (rounded_wxh>>1);
 
     /* Planar formats use 2 plane */
     aparam->strides[0] = aparam->size.w;
     aparam->strides[1] = aparam->size.w;
 
+    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
     aparam->planes[0] = aparam->buffer;
     aparam->planes[1] = aparam->planes[0] + Y_bytes;
 
