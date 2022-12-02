@@ -676,6 +676,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
     if (!pjmedia_vid_codec_info_to_id(info, (char*)&codec_id, sizeof(codec_id)))
         return PJ_EINVAL;
 
+    if (param && ((param->enc_fmt.det.vid.size.w % 2 == 1) ||
+        (param->enc_fmt.det.vid.size.w % 2 == 1)))
+    {
+        PJ_LOG(3, (THIS_FILE, "Video resolution must be even"));
+        return PJ_EINVALIDOP;
+    }
+
     pj_mutex_lock(mgr->mutex);
 
     /* Lookup codec desc */

@@ -611,8 +611,9 @@ pjmedia_vid_codec_mgr_get_default_param(pjmedia_vid_codec_mgr *mgr,
  *                  manager instance will be used.
  * @param info      The codec info, which default parameter's is being
  *                  updated.
- * @param param     The new default codec parameter. Set to NULL to reset
- *                  codec parameter to library default settings.
+ * @param param     The new default codec parameter. Note that video
+ *                  codec resolution must be even numbers. Set to NULL to
+ *                  reset codec parameter to library default settings.
  *
  * @return          PJ_SUCCESS on success.
  */
