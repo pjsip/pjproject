@@ -105,7 +105,7 @@ static const char *desc =
 
 
 
-#define THIS_FILE       "stream.c"
+#define THIS_FILE       "streamutil.c"
 
 
 
@@ -868,9 +868,7 @@ on_exit:
      * in this case are file_port and stream_port).
      */
     if (master_port) {
-        pjmedia_master_port_destroy(master_port, PJ_TRUE);
-        play_file_port = NULL;
-        stream = NULL;
+        pjmedia_master_port_destroy(master_port, PJ_FALSE);
     }
 
     /* Destroy stream */
