@@ -396,8 +396,8 @@ static pj_status_t g711_dealloc_codec(pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(priv);
 #endif
 
-    /* Reset last_tx */
-    priv->last_tx.u64 = 0;
+    /*  Re-init silence_period */
+    pj_set_timestamp32(&priv->last_tx, 0, 0);
 
     /* Lock mutex. */
     pj_mutex_lock(g711_factory.mutex);
