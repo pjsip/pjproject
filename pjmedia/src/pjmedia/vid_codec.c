@@ -677,7 +677,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
         return PJ_EINVAL;
 
     if (param && ((param->enc_fmt.det.vid.size.w % 2 == 1) ||
-        (param->enc_fmt.det.vid.size.w % 2 == 1)))
+        (param->enc_fmt.det.vid.size.h % 2 == 1)))
     {
         PJ_LOG(3, (THIS_FILE, "Video resolution must be even"));
         return PJ_EINVALIDOP;
