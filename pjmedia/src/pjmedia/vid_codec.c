@@ -186,6 +186,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_register_factory(
                                     pjmedia_vid_codec_factory *factory)
 {
     pjmedia_vid_codec_info info[PJMEDIA_CODEC_MGR_MAX_CODECS];
+    pjmedia_vid_codec_param param;
     unsigned i, count;
     pj_status_t status;
 
@@ -199,6 +200,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_register_factory(
     status = factory->op->enum_info(factory, &count, info);
     if (status != PJ_SUCCESS)
         return status;
+
+    if ((factory->op->test_alloc)(factory, info) == PJ_SUCCESS) {
+        status = (factory->op->default_attr)(factory, info, &param);
+        if (status == PJ_SUCCESS) {
+            if ((param.enc_fmt.det.vid.size.w % 2 == 1) ||
+                (param.enc_fmt.det.vid.size.h % 2 == 1))
+            {
+                PJ_LOG(3, (THIS_FILE, "Video resolution must be even"));
+                return PJ_EINVAL;
+            }
+        }
+    }
 
     pj_mutex_lock(mgr->mutex);
 

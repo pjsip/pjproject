@@ -611,11 +611,11 @@ pjmedia_vid_codec_mgr_get_default_param(pjmedia_vid_codec_mgr *mgr,
  *                  manager instance will be used.
  * @param info      The codec info, which default parameter's is being
  *                  updated.
- * @param param     The new default codec parameter. Note that video
+ * @param param     The new default codec parameter. Note that encoding video
  *                  codec resolution must be even numbers. Set to NULL to
  *                  reset codec parameter to library default settings.
  *
- * @return          PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_set_default_param(pjmedia_vid_codec_mgr *mgr,
@@ -680,13 +680,20 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_init( pjmedia_vid_codec *codec,
  * preferences via SDP fmtp).
  *
  * @param codec     The codec instance.
- * @param param     Codec initialization parameter.
+ * @param param     Codec initialization parameter. Note that encoding video
+ *                  codec resolution must be even numbers.
  *
- * @return          PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_vid_codec_open(pjmedia_vid_codec *codec,
                                               pjmedia_vid_codec_param *param)
 {
+    if (param && ((param->enc_fmt.det.vid.size.w % 2 == 1) ||
+        (param->enc_fmt.det.vid.size.h % 2 == 1)))
+    {
+        return PJ_EINVAL;
+    }
+
     return (*codec->op->open)(codec, param);
 }
 
@@ -711,15 +718,22 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_close( pjmedia_vid_codec *codec )
  * When the parameter cannot be changed, this function will return 
  * non-PJ_SUCCESS, and the original parameters will not be changed.
  *
- * @param codec The codec instance.
- * @param param The new codec parameter.
+ * @param codec         The codec instance.
+ * @param param         The new codec parameter. Note that encoding video
+ *                      codec resolution must be even numbers.
  *
- * @return              PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t)
 pjmedia_vid_codec_modify(pjmedia_vid_codec *codec,
                          const pjmedia_vid_codec_param *param)
 {
+    if (param && ((param->enc_fmt.det.vid.size.w % 2 == 1) ||
+        (param->enc_fmt.det.vid.size.h % 2 == 1)))
+    {
+        return PJ_EINVAL;
+    }
+
     return (*codec->op->modify)(codec, param);
 }
 
