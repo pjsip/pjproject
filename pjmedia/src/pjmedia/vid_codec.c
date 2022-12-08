@@ -593,7 +593,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_default_param(
                                         pjmedia_vid_codec_param *param )
 {
     pjmedia_vid_codec_factory *factory;
-    pj_status_t status;
+    pj_status_t status = PJMEDIA_CODEC_EUNSUP;
     pjmedia_codec_id codec_id;
     pjmedia_vid_codec_desc *codec_desc = NULL;
     unsigned i;
@@ -622,8 +622,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_default_param(
         pj_memcpy(param, codec_desc->def_param->param, 
                   sizeof(pjmedia_vid_codec_param));
 
-        pj_mutex_unlock(mgr->mutex);
-        return PJ_SUCCESS;
+        status = PJ_SUCCESS;
+        goto on_return;
     }
 
     /* Otherwise query the default param from codec factory */
@@ -638,8 +638,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_default_param(
                 //if (param->info.max_bps < param->info.avg_bps)
                 //    param->info.max_bps = param->info.avg_bps;
 
-                pj_mutex_unlock(mgr->mutex);
-                return PJ_SUCCESS;
+                status = PJ_SUCCESS;
+                goto on_return;
             }
 
         }
@@ -647,10 +647,21 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_default_param(
         factory = factory->next;
     }
 
+on_return:
     pj_mutex_unlock(mgr->mutex);
 
+    if (status == PJ_SUCCESS) {
+        if ((param->enc_fmt.det.vid.size.w % 2 == 1) ||
+            (param->enc_fmt.det.vid.size.h % 2 == 1))
+        {
+            PJ_LOG(4, (THIS_FILE, "Rounding up video resolution to "
+                                  "nearest even numbers"));
+            param->enc_fmt.det.vid.size.w += param->enc_fmt.det.vid.size.w % 2;
+            param->enc_fmt.det.vid.size.h += param->enc_fmt.det.vid.size.h % 2;
+        }
+    }
 
-    return PJMEDIA_CODEC_EUNSUP;
+    return status;
 }
 
 
@@ -675,6 +686,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
 
     if (!pjmedia_vid_codec_info_to_id(info, (char*)&codec_id, sizeof(codec_id)))
         return PJ_EINVAL;
+
+    if (param && ((param->enc_fmt.det.vid.size.w % 2 == 1) ||
+        (param->enc_fmt.det.vid.size.h % 2 == 1)))
+    {
+        PJ_LOG(3, (THIS_FILE, "Video resolution must be even"));
+        return PJ_EINVAL;
+    }
 
     pj_mutex_lock(mgr->mutex);
 
