@@ -272,11 +272,15 @@ PJ_DECL(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock);
 
 
 /**
- * Stop the clock.
+ * Stop the clock. When the function returns PJ_SUCCESS, it is guaranteed
+ * that the clock thread (if any) has stopped and the callback has completed.
+ * But if the function is called from within the clock's callback itself,
+ * the callback will still be running until completion. In that case, 
+ * the function will only stop future callbacks and returns PJ_EBUSY.
  *
  * @param clock             The media clock.
  *
- * @return                  PJ_SUCCES on success.
+ * @return                  PJ_SUCCES on success, or PJ_EBUSY.
  */
 PJ_DECL(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock);
 
