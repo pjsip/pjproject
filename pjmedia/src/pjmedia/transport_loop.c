@@ -45,8 +45,9 @@ struct transport_loop
     pjmedia_transport   base;           /**< Base transport.                */
 
     pj_pool_t          *pool;           /**< Memory pool                    */
+    unsigned            max_attach_cnt; /**< Max number of attachments      */
     unsigned            user_cnt;       /**< Number of attachments          */
-    struct tp_user      users[4];       /**< Array of users.                */
+    struct tp_user     *users;          /**< Array of users.                */
     pj_bool_t           disable_rx;     /**< Disable RX.                    */
 
     pjmedia_loop_tp_setting setting;    /**< Setting.                       */
@@ -138,6 +139,7 @@ PJ_DEF(void) pjmedia_loop_tp_setting_default(pjmedia_loop_tp_setting *opt)
     pj_bzero(opt, sizeof(pjmedia_loop_tp_setting));
     
     opt->af = pj_AF_INET();
+    opt->max_attach_cnt = 4;
 }
 
 
@@ -148,9 +150,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
                                                   pjmedia_transport **p_tp)
 {
     pjmedia_loop_tp_setting opt;
-    
-    pj_bzero(&opt, sizeof(opt));
-    opt.af = pj_AF_INET();
+
+    pjmedia_loop_tp_setting_default(&opt);
 
     return pjmedia_transport_loop_create2(endpt, &opt, p_tp);
 }
@@ -191,6 +192,12 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     }
     if (tp->setting.port == 0)
         tp->setting.port = 4000;
+
+    /* alloc users array */
+    tp->max_attach_cnt = opt->max_attach_cnt;
+    if (tp->max_attach_cnt == 0)
+        tp->max_attach_cnt = 1;
+    tp->users = (struct tp_user *)pj_pool_calloc(pool, tp->max_attach_cnt, sizeof(struct tp_user));
 
     /* Done */
     *p_tp = &tp->base;
@@ -274,8 +281,7 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
         PJ_ASSERT_RETURN(loop->users[i].user_data != user_data,
                          PJ_EINVALIDOP);
     }
-    PJ_ASSERT_RETURN(loop->user_cnt != PJ_ARRAY_SIZE(loop->users), 
-                     PJ_ETOOMANY);
+    PJ_ASSERT_RETURN(loop->user_cnt != loop->max_attach_cnt, PJ_ETOOMANY);
 
     PJ_UNUSED_ARG(rem_rtcp);
     PJ_UNUSED_ARG(rtcp_addr);
