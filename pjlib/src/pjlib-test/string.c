@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -23,7 +22,7 @@
 #include <pj/os.h>
 #include "test.h"
 
-#define THIS_FILE	"string.c"
+#define THIS_FILE       "string.c"
 
 /**
  * \page page_pjlib_string_test Test: String
@@ -64,11 +63,11 @@
 #   pragma warning(disable: 4204)
 #endif
 
-#define HELLO_WORLD	"Hello World"
-#define HELLO_WORLD_LEN	11
-#define JUST_HELLO	"Hello"
-#define JUST_HELLO_LEN	5
-#define UL_VALUE	3456789012UL
+#define HELLO_WORLD     "Hello World"
+#define HELLO_WORLD_LEN 11
+#define JUST_HELLO      "Hello"
+#define JUST_HELLO_LEN  5
+#define UL_VALUE        3456789012UL
 
 #if 1
 /* See if both integers have the same sign */
@@ -76,7 +75,7 @@ PJ_INLINE(int) cmp(const char *expr, int i, int j)
 {
     int r = !((i>0 && j>0) || (i<0 && j<0) || (i==0 && j==0));
     if (r) {
-	PJ_LOG(3,(THIS_FILE,"   error: %s: expecting %d, got %d", expr, j, i));
+        PJ_LOG(3,(THIS_FILE,"   error: %s: expecting %d, got %d", expr, j, i));
     }
     return r;
 }
@@ -89,7 +88,7 @@ PJ_INLINE(int) cmp(const char *expr, int i, int j)
 }
 #endif
 
-#define C(expr, res)	cmp(#expr, expr, res)
+#define C(expr, res)    cmp(#expr, expr, res)
 
 static int stricmp_test(void)
 {
@@ -97,24 +96,24 @@ static int stricmp_test(void)
  * In addition, it also tests pj_stricmp2(), pj_strnicmp(), and 
  * pj_strnicmp2().
  */
-#define STRTEST(res,res2,S1,S2,code)	\
-	    do { \
-		s1.ptr=S1; s1.slen=(S1)?len:0; \
-		s2.ptr=S2; s2.slen=(S2)?len:0; \
-		pj_get_timestamp(&t1); \
-	        if (C(pj_stricmp(&s1,&s2),res)) return code; \
-		pj_get_timestamp(&t2); \
-		pj_sub_timestamp(&t2, &t1); \
-		pj_add_timestamp(&e1, &t2); \
-		pj_get_timestamp(&t1); \
-	        if (C(pj_stricmp_alnum(&s1,&s2),res)) return code-1; \
-		pj_get_timestamp(&t2); \
-		pj_sub_timestamp(&t2, &t1); \
-		pj_add_timestamp(&e2, &t2); \
-		if (C(pj_stricmp2(&s1,S2),res2)) return code*10; \
-		if (C(pj_strnicmp(&s1,&s2,len),res)) return code*100; \
-		if (C(pj_strnicmp2(&s1,S2,len),res)) return code*1000; \
-	    } while (0)
+#define STRTEST(res,res2,S1,S2,code)    \
+            do { \
+                s1.ptr=S1; s1.slen=(S1)?len:0; \
+                s2.ptr=S2; s2.slen=(S2)?len:0; \
+                pj_get_timestamp(&t1); \
+                if (C(pj_stricmp(&s1,&s2),res)) return code; \
+                pj_get_timestamp(&t2); \
+                pj_sub_timestamp(&t2, &t1); \
+                pj_add_timestamp(&e1, &t2); \
+                pj_get_timestamp(&t1); \
+                if (C(pj_stricmp_alnum(&s1,&s2),res)) return code-1; \
+                pj_get_timestamp(&t2); \
+                pj_sub_timestamp(&t2, &t1); \
+                pj_add_timestamp(&e2, &t2); \
+                if (C(pj_stricmp2(&s1,S2),res2)) return code*10; \
+                if (C(pj_strnicmp(&s1,&s2,len),res)) return code*100; \
+                if (C(pj_strnicmp2(&s1,S2,len),res)) return code*1000; \
+            } while (0)
 
     char *buf;
     pj_str_t s1, s2;
@@ -237,17 +236,17 @@ static int stricmp_test(void)
     c2 = pj_elapsed_cycle(&zero, &e2);
 
     if (c1 < c2) {
-	PJ_LOG(3,("", "  info: pj_stricmp_alnum is slower than pj_stricmp!"));
-	//return -700;
+        PJ_LOG(3,("", "  info: pj_stricmp_alnum is slower than pj_stricmp!"));
+        //return -700;
     }
 
     /* Avoid division by zero */
     if (c2 == 0) c2=1;
     
     PJ_LOG(3, ("", "  time: stricmp=%u, stricmp_alnum=%u (speedup=%d.%02dx)", 
-		   c1, c2,
-		   (c1 * 100 / c2) / 100,
-		   (c1 * 100 / c2) % 100));
+                   c1, c2,
+                   (c1 * 100 / c2) / 100,
+                   (c1 * 100 / c2) % 100));
     return 0;
 #undef STRTEST
 }
@@ -256,14 +255,14 @@ static int stricmp_test(void)
 static int strcmp_test(void)
 {
 #define STR_TEST(res,S1,S2,code)    \
-	    do { \
-		s1.ptr=S1; s1.slen=S1?len:0; \
-		s2.ptr=S2; s2.slen=S2?len:0; \
-	        if (C(pj_strcmp(&s1,&s2),res)) return code; \
-		if (C(pj_strcmp2(&s1,S2),res)) return code-1; \
-		if (C(pj_strncmp(&s1,&s2,len),res)) return code-2; \
-		if (C(pj_strncmp2(&s1,S2,len),res)) return code-3; \
-	    } while (0)
+            do { \
+                s1.ptr=S1; s1.slen=S1?len:0; \
+                s2.ptr=S2; s2.slen=S2?len:0; \
+                if (C(pj_strcmp(&s1,&s2),res)) return code; \
+                if (C(pj_strcmp2(&s1,S2),res)) return code-1; \
+                if (C(pj_strncmp(&s1,&s2,len),res)) return code-2; \
+                if (C(pj_strncmp2(&s1,S2,len),res)) return code-3; \
+            } while (0)
 
     pj_str_t s1, s2;
     int len;
@@ -309,41 +308,41 @@ int string_test(void)
      */
     s1 = pj_str(HELLO_WORLD);
     if (pj_strcmp(&s1, &hello_world) != 0)
-	return -10;
+        return -10;
     if (pj_stricmp(&s1, &hello_world) != 0)
-	return -20;
+        return -20;
     if (pj_strcmp(&s1, &just_hello) <= 0)
-	return -30;
+        return -30;
     if (pj_stricmp(&s1, &just_hello) <= 0)
-	return -40;
+        return -40;
     if (pj_strlen(&s1) != strlen(HELLO_WORLD))
-	return -50;
+        return -50;
     if (pj_strncmp(&s1, &hello_world, 5) != 0)
-	return -60;
+        return -60;
     if (pj_strnicmp(&s1, &hello_world, 5) != 0)
-	return -70;
+        return -70;
     if (pj_strchr(&s1, HELLO_WORLD[1]) != s1.ptr+1)
-	return -80;
+        return -80;
 
     /* 
      * pj_strdup() 
      */
     if (!pj_strdup(pool, &s2, &s1))
-	return -100;
+        return -100;
     if (pj_strcmp(&s1, &s2) != 0)
-	return -110;
+        return -110;
     
     /* 
      * pj_strcpy(), pj_strcat() 
      */
     s3.ptr = (char*) pj_pool_alloc(pool, 256);
     if (!s3.ptr) 
-	return -200;
+        return -200;
     pj_strcpy(&s3, &s2);
     pj_strcat(&s3, &just_hello);
 
     if (pj_strcmp2(&s3, HELLO_WORLD JUST_HELLO) != 0)
-	return -210;
+        return -210;
 
     /* 
      * pj_strdup2(), pj_strtrim(). 
@@ -351,66 +350,66 @@ int string_test(void)
     pj_strdup2(pool, &s4, " " HELLO_WORLD "\t ");
     pj_strtrim(&s4);
     if (pj_strcmp2(&s4, HELLO_WORLD) != 0)
-	return -250;
+        return -250;
 
     /* 
      * pj_utoa() 
      */
     s5.ptr = (char*) pj_pool_alloc(pool, 16);
     if (!s5.ptr)
-	return -270;
+        return -270;
     s5.slen = pj_utoa(UL_VALUE, s5.ptr);
 
     /* 
      * pj_strtoul() 
      */
     if (pj_strtoul(&s5) != UL_VALUE)
-	return -280;
+        return -280;
 
     /*
      * pj_strtoul2()
      */
     s5 = pj_str("123456");
 
-    pj_strtoul2(&s5, SNULL, 10);	/* Crash test */
+    pj_strtoul2(&s5, SNULL, 10);        /* Crash test */
 
     if (pj_strtoul2(&s5, &s4, 10) != 123456UL)
-	return -290;
+        return -290;
     if (s4.slen != 0)
-	return -291;
+        return -291;
     if (pj_strtoul2(&s5, &s4, 16) != 0x123456UL)
-	return -292;
+        return -292;
 
     s5 = pj_str("0123ABCD");
     if (pj_strtoul2(&s5, &s4, 10) != 123)
-	return -293;
+        return -293;
     if (s4.slen != 4)
-	return -294;
+        return -294;
     if (s4.ptr == SNULL || *s4.ptr != 'A')
-	return -295;
+        return -295;
     if (pj_strtoul2(&s5, &s4, 16) != 0x123ABCDUL)
-	return -296;
+        return -296;
     if (s4.slen != 0)
-	return -297;
+        return -297;
 
     /* 
      * pj_create_random_string() 
      * Check that no duplicate strings are returned.
      */
     for (i=0; i<RCOUNT; ++i) {
-	int j;
-	
-	random[i].ptr = (char*) pj_pool_alloc(pool, RLEN);
-	if (!random[i].ptr)
-	    return -320;
+        int j;
+        
+        random[i].ptr = (char*) pj_pool_alloc(pool, RLEN);
+        if (!random[i].ptr)
+            return -320;
 
         random[i].slen = RLEN;
-	pj_create_random_string(random[i].ptr, RLEN);
+        pj_create_random_string(random[i].ptr, RLEN);
 
-	for (j=0; j<i; ++j) {
-	    if (pj_strcmp(&random[i], &random[j])==0)
-		return -330;
-	}
+        for (j=0; j<i; ++j) {
+            if (pj_strcmp(&random[i], &random[j])==0)
+                return -330;
+        }
     }
 
     /* Done. */
@@ -419,12 +418,12 @@ int string_test(void)
     /* Case sensitive comparison test. */
     i = strcmp_test();
     if (i != 0)
-	return i;
+        return i;
 
     /* Caseless comparison test. */
     i = stricmp_test();
     if (i != 0)
-	return i;
+        return i;
 
     return 0;
 }
@@ -434,5 +433,5 @@ int string_test(void)
  * when this test is disabled. 
  */
 int dummy_string_test;
-#endif	/* INCLUDE_STRING_TEST */
+#endif  /* INCLUDE_STRING_TEST */
 

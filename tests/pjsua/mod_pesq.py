@@ -1,4 +1,3 @@
-# $Id$
 
 # Quality test of media calls.
 # - UA1 calls UA2

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -27,18 +26,18 @@
 #define SIGNATURE   PJMEDIA_SIG_PORT_NULL
 
 static pj_status_t null_get_frame(pjmedia_port *this_port, 
-				  pjmedia_frame *frame);
+                                  pjmedia_frame *frame);
 static pj_status_t null_put_frame(pjmedia_port *this_port, 
-				  pjmedia_frame *frame);
+                                  pjmedia_frame *frame);
 static pj_status_t null_on_destroy(pjmedia_port *this_port);
 
 
 PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
-					      unsigned sampling_rate,
-					      unsigned channel_count,
-					      unsigned samples_per_frame,
-					      unsigned bits_per_sample,
-					      pjmedia_port **p_port )
+                                              unsigned sampling_rate,
+                                              unsigned channel_count,
+                                              unsigned samples_per_frame,
+                                              unsigned bits_per_sample,
+                                              pjmedia_port **p_port )
 {
     pjmedia_port *port;
     const pj_str_t name = pj_str("null-port");
@@ -49,7 +48,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
 
     pjmedia_port_info_init(&port->info, &name, SIGNATURE, sampling_rate,
-			   channel_count, bits_per_sample, samples_per_frame);
+                           channel_count, bits_per_sample, samples_per_frame);
 
     port->get_frame = &null_get_frame;
     port->put_frame = &null_put_frame;
@@ -67,7 +66,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
  * Put frame to file.
  */
 static pj_status_t null_put_frame(pjmedia_port *this_port, 
-				  pjmedia_frame *frame)
+                                  pjmedia_frame *frame)
 {
     PJ_UNUSED_ARG(this_port);
     PJ_UNUSED_ARG(frame);
@@ -79,13 +78,13 @@ static pj_status_t null_put_frame(pjmedia_port *this_port,
  * Get frame from file.
  */
 static pj_status_t null_get_frame(pjmedia_port *this_port, 
-				  pjmedia_frame *frame)
+                                  pjmedia_frame *frame)
 {
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->size = PJMEDIA_PIA_AVG_FSZ(&this_port->info);
     frame->timestamp.u32.lo += PJMEDIA_PIA_SPF(&this_port->info);
     pjmedia_zero_samples((pj_int16_t*)frame->buf, 
-			  PJMEDIA_PIA_SPF(&this_port->info));
+                          PJMEDIA_PIA_SPF(&this_port->info));
 
     return PJ_SUCCESS;
 }

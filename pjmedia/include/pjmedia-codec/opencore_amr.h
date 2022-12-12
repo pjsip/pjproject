@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2011-2013 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2011 Dan Arrhenius <dan@keystream.se>
@@ -36,8 +35,8 @@ PJ_BEGIN_DECL
  */
 enum pjmedia_amr_options
 {
-    PJMEDIA_AMR_NO_NB	    = 1,    /**< Disable narrowband mode.	*/
-    PJMEDIA_AMR_NO_WB	    = 2,    /**< Disable wideband mode.		*/
+    PJMEDIA_AMR_NO_NB       = 1,    /**< Disable narrowband mode.       */
+    PJMEDIA_AMR_NO_WB       = 2,    /**< Disable wideband mode.         */
 };
 
 /**
@@ -78,7 +77,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_opencore_amr_init(pjmedia_endpt* endpt,
  *
  * @param endpt The pjmedia endpoint.
  *
- * @return	PJ_SUCCESS on success.
+ * @return      PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_codec_opencore_amr_init_default(pjmedia_endpt* endpt);
@@ -87,7 +86,7 @@ pjmedia_codec_opencore_amr_init_default(pjmedia_endpt* endpt);
  * Unregister AMR codec factory from pjmedia endpoint and deinitialize
  * the OpenCORE codec library.
  *
- * @return	PJ_SUCCESS on success.
+ * @return      PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opencore_amr_deinit(void);
 
@@ -99,9 +98,9 @@ PJ_DECL(pj_status_t) pjmedia_codec_opencore_amr_deinit(void);
  * should call #pjmedia_codec_opencore_amr_init() instead if wishing to use
  * both modes.
  *
- * @param endpt	The pjmedia endpoint.
+ * @param endpt The pjmedia endpoint.
  *
- * @return	PJ_SUCCESS on success.
+ * @return      PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_init(pjmedia_endpt* endpt);
 
@@ -109,7 +108,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_init(pjmedia_endpt* endpt);
  * Unregister AMR-NB codec factory from pjmedia endpoint and deinitialize
  * the OpenCORE codec library.
  *
- * @return	PJ_SUCCESS on success.
+ * @return      PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_deinit(void);
 
@@ -117,20 +116,20 @@ PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_deinit(void);
 /**
  * Set AMR-NB parameters.
  *
- * @param cfg	The settings;
+ * @param cfg   The settings;
  *
- * @return	PJ_SUCCESS on success.
+ * @return      PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_set_config(
-				const pjmedia_codec_amrnb_config* cfg);
+                                const pjmedia_codec_amrnb_config* cfg);
 
 
 /**
  * Set AMR-WB parameters.
  *
- * @param cfg	The settings;
+ * @param cfg   The settings;
  *
- * @return	PJ_SUCCESS on success.
+ * @return      PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrwb_set_config(
                                         const pjmedia_codec_amrwb_config* cfg);
@@ -142,5 +141,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_OPENCORE_AMRNB_H__ */
+#endif  /* __PJMEDIA_CODEC_OPENCORE_AMRNB_H__ */
 

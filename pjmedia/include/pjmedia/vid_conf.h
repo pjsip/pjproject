@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2019 Teluu Inc. (http://www.teluu.com)
  *
@@ -97,7 +96,7 @@ typedef struct pjmedia_vid_conf_setting
      *
      * Default: 32
      */
-    unsigned		 max_slot_cnt;
+    unsigned             max_slot_cnt;
 
     /**
      * Frame rate the bridge will operate at. For video playback smoothness,
@@ -109,14 +108,14 @@ typedef struct pjmedia_vid_conf_setting
      *
      * Default: 60 (frames per second)
      */
-    unsigned		 frame_rate;
+    unsigned             frame_rate;
 
     /**
      * Layout setting, see pjmedia_vid_conf_layout.
      *
      * Default: PJMEDIA_VID_CONF_LAYOUT_DEFAULT
      */
-    unsigned		 layout;
+    unsigned             layout;
 
 } pjmedia_vid_conf_setting;
 
@@ -126,20 +125,20 @@ typedef struct pjmedia_vid_conf_setting
  */
 typedef struct pjmedia_vid_conf_port_info
 {
-    unsigned		 slot;		    /**< Slot index.		    */
-    pj_str_t		 name;		    /**< Port name.		    */
-    pjmedia_format	 format;	    /**< Format.		    */
-    unsigned		 listener_cnt;	    /**< Number of listeners.	    */
-    unsigned		*listener_slots;    /**< Array of listeners.	    */
-    unsigned		 transmitter_cnt;   /**< Number of transmitter.	    */
-    unsigned		*transmitter_slots; /**< Array of transmitter.	    */
+    unsigned             slot;              /**< Slot index.                */
+    pj_str_t             name;              /**< Port name.                 */
+    pjmedia_format       format;            /**< Format.                    */
+    unsigned             listener_cnt;      /**< Number of listeners.       */
+    unsigned            *listener_slots;    /**< Array of listeners.        */
+    unsigned             transmitter_cnt;   /**< Number of transmitter.     */
+    unsigned            *transmitter_slots; /**< Array of transmitter.      */
 } pjmedia_vid_conf_port_info;
 
 
 /**
  * Initialize video conference settings with default values.
  *
- * @param opt		The settings to be initialized.
+ * @param opt           The settings to be initialized.
  */
 PJ_DECL(void) pjmedia_vid_conf_setting_default(pjmedia_vid_conf_setting *opt);
 
@@ -147,25 +146,25 @@ PJ_DECL(void) pjmedia_vid_conf_setting_default(pjmedia_vid_conf_setting *opt);
 /**
  * Create a video conference bridge.
  *
- * @param pool		The memory pool.
- * @param opt		The video conference settings.
- * @param p_vid_conf	Pointer to receive the video conference bridge.
+ * @param pool          The memory pool.
+ * @param opt           The video conference settings.
+ * @param p_vid_conf    Pointer to receive the video conference bridge.
  *
- * @return		PJ_SUCCESS on success, or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on success, or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_create(
-					pj_pool_t *pool,
-					const pjmedia_vid_conf_setting *opt,
-					pjmedia_vid_conf **p_vid_conf);
+                                        pj_pool_t *pool,
+                                        const pjmedia_vid_conf_setting *opt,
+                                        pjmedia_vid_conf **p_vid_conf);
 
 
 /**
  * Destroy video conference bridge.
  *
- * @param vid_conf	The video conference bridge.
+ * @param vid_conf      The video conference bridge.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf);
 
@@ -173,48 +172,48 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf);
 /**
  * Add a media port to the video conference bridge.
  *
- * @param vid_conf	The video conference bridge.
- * @param pool		The memory pool, the brige will create new pool
- *			based on this pool factory for this media port.
- * @param port		The media port to be added.
- * @param name		Name to be assigned to the slot. If not set, it will
- *			be set to the media port name.
- * @param opt		The option, for future use, currently this must
- *			be NULL.
- * @param p_slot	Pointer to receive the slot index of the port in
- *			the conference bridge.
+ * @param vid_conf      The video conference bridge.
+ * @param pool          The memory pool, the brige will create new pool
+ *                      based on this pool factory for this media port.
+ * @param port          The media port to be added.
+ * @param name          Name to be assigned to the slot. If not set, it will
+ *                      be set to the media port name.
+ * @param opt           The option, for future use, currently this must
+ *                      be NULL.
+ * @param p_slot        Pointer to receive the slot index of the port in
+ *                      the conference bridge.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			code.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_add_port(pjmedia_vid_conf *vid_conf,
-					       pj_pool_t *pool,
-					       pjmedia_port *port,
-					       const pj_str_t *name,
-					       void *opt,
-					       unsigned *p_slot);
+                                               pj_pool_t *pool,
+                                               pjmedia_port *port,
+                                               const pj_str_t *name,
+                                               void *opt,
+                                               unsigned *p_slot);
 
 
 /**
  * Remove a media port from the video conference bridge.
  *
- * @param vid_conf	The video conference bridge.
- * @param slot		The media port's slot index to be removed.
+ * @param vid_conf      The video conference bridge.
+ * @param slot          The media port's slot index to be removed.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			code.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_remove_port(pjmedia_vid_conf *vid_conf,
-						  unsigned slot);
+                                                  unsigned slot);
 
 
 /**
  * Get number of ports currently registered in the video conference bridge.
  *
- * @param vid_conf	The video conference bridge.
+ * @param vid_conf      The video conference bridge.
  *
- * @return		Number of ports currently registered to the video
- *			conference bridge.
+ * @return              Number of ports currently registered to the video
+ *                      conference bridge.
  */
 PJ_DECL(unsigned) pjmedia_vid_conf_get_port_count(pjmedia_vid_conf *vid_conf);
 
@@ -222,67 +221,67 @@ PJ_DECL(unsigned) pjmedia_vid_conf_get_port_count(pjmedia_vid_conf *vid_conf);
 /**
  * Enumerate occupied slots in the video conference bridge.
  *
- * @param vid_conf		The video conference bridge.
- * @param slots		Array of slot to be filled in.
- * @param count		On input, specifies the maximum number of slot
- *			in the array. On return, it will be filled with
- *			the actual number of slot.
+ * @param vid_conf              The video conference bridge.
+ * @param slots         Array of slot to be filled in.
+ * @param count         On input, specifies the maximum number of slot
+ *                      in the array. On return, it will be filled with
+ *                      the actual number of slot.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_enum_ports(pjmedia_vid_conf *vid_conf,
-						 unsigned slots[],
-						 unsigned *count);
+                                                 unsigned slots[],
+                                                 unsigned *count);
 
 
 /**
  * Get port info.
  *
- * @param vid_conf	The video conference bridge.
- * @param slot		Slot index.
- * @param info		Pointer to receive the info.
+ * @param vid_conf      The video conference bridge.
+ * @param slot          Slot index.
+ * @param info          Pointer to receive the info.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_get_port_info(
-					    pjmedia_vid_conf *vid_conf,
-					    unsigned slot,
-					    pjmedia_vid_conf_port_info *info);
+                                            pjmedia_vid_conf *vid_conf,
+                                            unsigned slot,
+                                            pjmedia_vid_conf_port_info *info);
 
 
 /**
  * Enable unidirectional video flow from the specified source slot to
  * the specified sink slot.
  *
- * @param vid_conf		The video conference bridge.
- * @param src_slot	Source slot.
- * @param sink_slot	Sink slot.
- * @param opt		The option, for future use, currently this must
- *			be NULL.
+ * @param vid_conf              The video conference bridge.
+ * @param src_slot      Source slot.
+ * @param sink_slot     Sink slot.
+ * @param opt           The option, for future use, currently this must
+ *                      be NULL.
  *
- * @return		PJ_SUCCES on success.
+ * @return              PJ_SUCCES on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_connect_port(
-					    pjmedia_vid_conf *vid_conf,
-					    unsigned src_slot,
-					    unsigned sink_slot,
-					    void *opt);
+                                            pjmedia_vid_conf *vid_conf,
+                                            unsigned src_slot,
+                                            unsigned sink_slot,
+                                            void *opt);
 
 
 /**
  * Disconnect unidirectional video flow from the specified source to
  * the specified sink slot.
  *
- * @param vid_conf		The video conference bridge.
- * @param src_slot	Source slot.
- * @param sink_slot	Sink slot.
+ * @param vid_conf              The video conference bridge.
+ * @param src_slot      Source slot.
+ * @param sink_slot     Sink slot.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_disconnect_port(
-					    pjmedia_vid_conf *vid_conf,
-					    unsigned src_slot,
-					    unsigned sink_slot);
+                                            pjmedia_vid_conf *vid_conf,
+                                            unsigned src_slot,
+                                            unsigned sink_slot);
 
 
 /**
@@ -292,14 +291,14 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_disconnect_port(
  * has changed, video conference needs to be informed to update its
  * internal states.
  *
- * @param vid_conf	The video conference bridge.
- * @param slot		The media port's slot index to be updated.
+ * @param vid_conf      The video conference bridge.
+ * @param slot          The media port's slot index to be updated.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error
- *			code.
+ * @return              PJ_SUCCESS on success, or the appropriate error
+ *                      code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_update_port(pjmedia_vid_conf *vid_conf,
-						  unsigned slot);
+                                                  unsigned slot);
 
 
 PJ_END_DECL

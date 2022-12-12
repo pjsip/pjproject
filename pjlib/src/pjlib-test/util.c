@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -73,8 +72,8 @@ pj_status_t app_socketpair(int family, int type, int protocol,
 
     status = pj_sock_socketpair(family, type, protocol, sv);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1, (THIS_FILE, status, "socketpair error"));
-	return status;
+        PJ_PERROR(1, (THIS_FILE, status, "socketpair error"));
+        return status;
     }
 
     *serverfd = sv[0];

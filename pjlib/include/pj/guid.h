@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -96,16 +95,16 @@ PJ_DECL(pj_str_t*) pj_generate_unique_string_lower(pj_str_t *str);
 /**
  * Generate a unique string.
  *
- * @param pool	    Pool to allocate memory from.
- * @param str	    The string.
+ * @param pool      Pool to allocate memory from.
+ * @param str       The string.
  */
 PJ_DECL(void) pj_create_unique_string(pj_pool_t *pool, pj_str_t *str);
 
 /**
  * Generate a unique string in lowercase.
  *
- * @param pool	    Pool to allocate memory from.
- * @param str	    The string.
+ * @param pool      Pool to allocate memory from.
+ * @param str       The string.
  */
 PJ_DECL(void) pj_create_unique_string_lower(pj_pool_t *pool, pj_str_t *str);
 

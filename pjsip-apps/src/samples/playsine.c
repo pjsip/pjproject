@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -47,9 +46,9 @@
 #include <pjmedia.h>
 #include <pjlib.h>
 
-#include <stdlib.h>	/* atoi() */
+#include <stdlib.h>     /* atoi() */
 #include <stdio.h>
-#include <math.h>	/* sin()  */
+#include <math.h>       /* sin()  */
 
 /* For logging purpose. */
 #define THIS_FILE   "playsine.c"
@@ -57,7 +56,7 @@
 
 /* Util to display the error message for the specified error code  */
 static int app_perror( const char *sender, const char *title, 
-		       pj_status_t status)
+                       pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
@@ -73,13 +72,13 @@ static int app_perror( const char *sender, const char *title,
 /* Struct attached to sine generator */
 typedef struct
 {
-    pj_int16_t	*samples;	/* Sine samples.    */
+    pj_int16_t  *samples;       /* Sine samples.    */
 } port_data;
 
 
 /* This callback is called to feed more samples */
 static pj_status_t sine_get_frame( pjmedia_port *port, 
-				   pjmedia_frame *frame)
+                                   pjmedia_frame *frame)
 {
     port_data *sine = port->port_data.pdata;
     pj_int16_t *samples = frame->buf;
@@ -93,15 +92,15 @@ static pj_status_t sine_get_frame( pjmedia_port *port,
     right = 0;
 
     for (i=0; i<count; ++i) {
-	*samples++ = sine->samples[left];
-	++left;
+        *samples++ = sine->samples[left];
+        ++left;
 
-	if (PJMEDIA_PIA_CCNT(&port->info) == 2) {
-	    *samples++ = sine->samples[right];
-	    right += 2; /* higher pitch so we can distinguish left and right. */
-	    if (right >= count)
-		right = 0;
-	}
+        if (PJMEDIA_PIA_CCNT(&port->info) == 2) {
+            *samples++ = sine->samples[right];
+            right += 2; /* higher pitch so we can distinguish left and right. */
+            if (right >= count)
+                right = 0;
+        }
     }
 
     /* Must set frame->type correctly, otherwise the sound device
@@ -120,9 +119,9 @@ static pj_status_t sine_get_frame( pjmedia_port *port,
  * Create a media port to generate sine wave samples.
  */
 static pj_status_t create_sine_port(pj_pool_t *pool,
-				    unsigned sampling_rate,
-				    unsigned channel_count,
-				    pjmedia_port **p_port)
+                                    unsigned sampling_rate,
+                                    unsigned channel_count,
+                                    pjmedia_port **p_port)
 {
     pjmedia_port *port;
     unsigned i;
@@ -131,7 +130,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     port_data *sine;
 
     PJ_ASSERT_RETURN(pool && channel_count > 0 && channel_count <= 2, 
-		     PJ_EINVAL);
+                     PJ_EINVAL);
 
     port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
     PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
@@ -140,9 +139,9 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     name = pj_str("sine generator");
     pjmedia_port_info_init(&port->info, &name,
                            PJMEDIA_SIG_CLASS_PORT_AUD('s', 'i'),
-			   sampling_rate,
-			   channel_count,
-			   16, sampling_rate * 20 / 1000 * channel_count);
+                           sampling_rate,
+                           channel_count,
+                           16, sampling_rate * 20 / 1000 * channel_count);
     
     /* Set the function to feed frame */
     port->get_frame = &sine_get_frame;
@@ -159,7 +158,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     for( i=0; i<count; i++ )
     {
         sine->samples[i] = (pj_int16_t) (10000.0 * 
-		sin(((double)i/(double)count) * M_PI * 8.) );
+                sin(((double)i/(double)count) * M_PI * 8.) );
     }
 
     *p_port = port;
@@ -196,12 +195,12 @@ int main(int argc, char *argv[])
     pj_status_t status;
 
     if (argc == 2) {
-	channel_count = atoi(argv[1]);
-	if (channel_count < 1 || channel_count > 2) {
-	    puts("Error: invalid arguments");
-	    usage();
-	    return 1;
-	}
+        channel_count = atoi(argv[1]);
+        if (channel_count < 1 || channel_count > 2) {
+            puts("Error: invalid arguments");
+            usage();
+            return 1;
+        }
     }
 
     /* Must init PJLIB first: */
@@ -219,38 +218,38 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for our sine generator */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "wav",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "wav",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     /* Create a media port to generate sine wave samples. */
-    status = create_sine_port( pool,	    /* memory pool	    */
-			       11025,	    /* sampling rate	    */
-			       channel_count,/* # of channels	    */
-			       &sine_port   /* returned port	    */
-		             );
+    status = create_sine_port( pool,        /* memory pool          */
+                               11025,       /* sampling rate        */
+                               channel_count,/* # of channels       */
+                               &sine_port   /* returned port        */
+                             );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to create sine port", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to create sine port", status);
+        return 1;
     }
 
     /* Create sound player port. */
     status = pjmedia_snd_port_create_player( 
-		 pool,				    /* pool		    */
-		 -1,				    /* use default dev.	    */
-		 PJMEDIA_PIA_SRATE(&sine_port->info),/* clock rate.	    */
-		 PJMEDIA_PIA_CCNT(&sine_port->info),/* # of channels.	    */
-		 PJMEDIA_PIA_SPF(&sine_port->info), /* samples per frame.   */
-		 PJMEDIA_PIA_BITS(&sine_port->info),/* bits per sample.	    */
-		 0,				    /* options		    */
-		 &snd_port			    /* returned port	    */
-		 );
+                 pool,                              /* pool                 */
+                 -1,                                /* use default dev.     */
+                 PJMEDIA_PIA_SRATE(&sine_port->info),/* clock rate.         */
+                 PJMEDIA_PIA_CCNT(&sine_port->info),/* # of channels.       */
+                 PJMEDIA_PIA_SPF(&sine_port->info), /* samples per frame.   */
+                 PJMEDIA_PIA_BITS(&sine_port->info),/* bits per sample.     */
+                 0,                                 /* options              */
+                 &snd_port                          /* returned port        */
+                 );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open sound device", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to open sound device", status);
+        return 1;
     }
 
     /* Connect sine generator port to the sound player 
@@ -275,7 +274,7 @@ int main(int argc, char *argv[])
     puts("Press <ENTER> to stop playing and quit");
 
     if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
-	puts("EOF while reading stdin, will quit now..");
+        puts("EOF while reading stdin, will quit now..");
     }
 
     

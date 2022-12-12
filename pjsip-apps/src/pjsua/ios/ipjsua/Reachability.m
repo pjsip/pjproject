@@ -32,7 +32,7 @@ static void PrintReachabilityFlags(SCNetworkReachabilityFlags flags, const char*
 #if kShouldPrintReachabilityFlags
 
     NSLog(@"Reachability Flag Status: %c%c %c%c%c%c%c%c%c %s\n",
-          (flags & kSCNetworkReachabilityFlagsIsWWAN)				? 'W' : '-',
+          (flags & kSCNetworkReachabilityFlagsIsWWAN)                           ? 'W' : '-',
           (flags & kSCNetworkReachabilityFlagsReachable)            ? 'R' : '-',
 
           (flags & kSCNetworkReachabilityFlagsTransientConnection)  ? 't' : '-',
@@ -51,8 +51,8 @@ static void PrintReachabilityFlags(SCNetworkReachabilityFlags flags, const char*
 static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReachabilityFlags flags, void* info)
 {
 #pragma unused (target, flags)
-	NSCAssert(info != NULL, @"info was NULL in ReachabilityCallback");
-	NSCAssert([(__bridge NSObject*) info isKindOfClass: [Reachability class]], @"info was wrong class in ReachabilityCallback");
+        NSCAssert(info != NULL, @"info was NULL in ReachabilityCallback");
+        NSCAssert([(__bridge NSObject*) info isKindOfClass: [Reachability class]], @"info was wrong class in ReachabilityCallback");
 
     Reachability* noteObject = (__bridge Reachability *)info;
     // Post a notification to notify the client that the network reachability changed.
@@ -64,55 +64,55 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 
 @implementation Reachability
 {
-	SCNetworkReachabilityRef _reachabilityRef;
+        SCNetworkReachabilityRef _reachabilityRef;
 }
 
 + (instancetype)reachabilityWithHostName:(NSString *)hostName
 {
-	Reachability* returnValue = NULL;
-	SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(NULL, [hostName UTF8String]);
-	if (reachability != NULL)
-	{
-		returnValue= [[self alloc] init];
-		if (returnValue != NULL)
-		{
-			returnValue->_reachabilityRef = reachability;
-		}
+        Reachability* returnValue = NULL;
+        SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(NULL, [hostName UTF8String]);
+        if (reachability != NULL)
+        {
+                returnValue= [[self alloc] init];
+                if (returnValue != NULL)
+                {
+                        returnValue->_reachabilityRef = reachability;
+                }
         else {
             CFRelease(reachability);
         }
-	}
-	return returnValue;
+        }
+        return returnValue;
 }
 
 
 + (instancetype)reachabilityWithAddress:(const struct sockaddr *)hostAddress
 {
-	SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, hostAddress);
+        SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, hostAddress);
 
-	Reachability* returnValue = NULL;
+        Reachability* returnValue = NULL;
 
-	if (reachability != NULL)
-	{
-		returnValue = [[self alloc] init];
-		if (returnValue != NULL)
-		{
-			returnValue->_reachabilityRef = reachability;
-		}
+        if (reachability != NULL)
+        {
+                returnValue = [[self alloc] init];
+                if (returnValue != NULL)
+                {
+                        returnValue->_reachabilityRef = reachability;
+                }
         else {
             CFRelease(reachability);
         }
-	}
-	return returnValue;
+        }
+        return returnValue;
 }
 
 
 + (instancetype)reachabilityForInternetConnection
 {
-	struct sockaddr_in zeroAddress;
-	bzero(&zeroAddress, sizeof(zeroAddress));
-	zeroAddress.sin_len = sizeof(zeroAddress);
-	zeroAddress.sin_family = AF_INET;
+        struct sockaddr_in zeroAddress;
+        bzero(&zeroAddress, sizeof(zeroAddress));
+        zeroAddress.sin_len = sizeof(zeroAddress);
+        zeroAddress.sin_family = AF_INET;
     
     return [self reachabilityWithAddress: (const struct sockaddr *) &zeroAddress];
 }
@@ -127,37 +127,37 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 
 - (BOOL)startNotifier
 {
-	BOOL returnValue = NO;
-	SCNetworkReachabilityContext context = {0, (__bridge void *)(self), NULL, NULL, NULL};
+        BOOL returnValue = NO;
+        SCNetworkReachabilityContext context = {0, (__bridge void *)(self), NULL, NULL, NULL};
 
-	if (SCNetworkReachabilitySetCallback(_reachabilityRef, ReachabilityCallback, &context))
-	{
-		if (SCNetworkReachabilityScheduleWithRunLoop(_reachabilityRef, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode))
-		{
-			returnValue = YES;
-		}
-	}
+        if (SCNetworkReachabilitySetCallback(_reachabilityRef, ReachabilityCallback, &context))
+        {
+                if (SCNetworkReachabilityScheduleWithRunLoop(_reachabilityRef, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode))
+                {
+                        returnValue = YES;
+                }
+        }
     
-	return returnValue;
+        return returnValue;
 }
 
 
 - (void)stopNotifier
 {
-	if (_reachabilityRef != NULL)
-	{
-		SCNetworkReachabilityUnscheduleFromRunLoop(_reachabilityRef, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-	}
+        if (_reachabilityRef != NULL)
+        {
+                SCNetworkReachabilityUnscheduleFromRunLoop(_reachabilityRef, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+        }
 }
 
 
 - (void)dealloc
 {
-	[self stopNotifier];
-	if (_reachabilityRef != NULL)
-	{
-		CFRelease(_reachabilityRef);
-	}
+        [self stopNotifier];
+        if (_reachabilityRef != NULL)
+        {
+                CFRelease(_reachabilityRef);
+        }
 }
 
 
@@ -165,26 +165,26 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 
 - (NetworkStatus)networkStatusForFlags:(SCNetworkReachabilityFlags)flags
 {
-	PrintReachabilityFlags(flags, "networkStatusForFlags");
-	if ((flags & kSCNetworkReachabilityFlagsReachable) == 0)
-	{
-		// The target host is not reachable.
-		return NotReachable;
-	}
+        PrintReachabilityFlags(flags, "networkStatusForFlags");
+        if ((flags & kSCNetworkReachabilityFlagsReachable) == 0)
+        {
+                // The target host is not reachable.
+                return NotReachable;
+        }
 
     NetworkStatus returnValue = NotReachable;
 
-	if ((flags & kSCNetworkReachabilityFlagsConnectionRequired) == 0)
-	{
-		/*
+        if ((flags & kSCNetworkReachabilityFlagsConnectionRequired) == 0)
+        {
+                /*
          If the target host is reachable and no connection is required then we'll assume (for now) that you're on Wi-Fi...
          */
-		returnValue = ReachableViaWiFi;
-	}
+                returnValue = ReachableViaWiFi;
+        }
 
-	if ((((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) ||
+        if ((((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) ||
         (flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0))
-	{
+        {
         /*
          ... and the connection is on-demand (or on-traffic) if the calling application is using the CFSocketStream or higher APIs...
          */
@@ -198,27 +198,27 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
         }
     }
 
-	if ((flags & kSCNetworkReachabilityFlagsIsWWAN) == kSCNetworkReachabilityFlagsIsWWAN)
-	{
-		/*
+        if ((flags & kSCNetworkReachabilityFlagsIsWWAN) == kSCNetworkReachabilityFlagsIsWWAN)
+        {
+                /*
          ... but WWAN connections are OK if the calling application is using the CFNetwork APIs.
          */
-		returnValue = ReachableViaWWAN;
-	}
+                returnValue = ReachableViaWWAN;
+        }
     
-	return returnValue;
+        return returnValue;
 }
 
 
 - (BOOL)connectionRequired
 {
-	NSAssert(_reachabilityRef != NULL, @"connectionRequired called with NULL reachabilityRef");
-	SCNetworkReachabilityFlags flags;
+        NSAssert(_reachabilityRef != NULL, @"connectionRequired called with NULL reachabilityRef");
+        SCNetworkReachabilityFlags flags;
 
-	if (SCNetworkReachabilityGetFlags(_reachabilityRef, &flags))
-	{
-		return (flags & kSCNetworkReachabilityFlagsConnectionRequired);
-	}
+        if (SCNetworkReachabilityGetFlags(_reachabilityRef, &flags))
+        {
+                return (flags & kSCNetworkReachabilityFlagsConnectionRequired);
+        }
 
     return NO;
 }
@@ -226,16 +226,16 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 
 - (NetworkStatus)currentReachabilityStatus
 {
-	NSAssert(_reachabilityRef != NULL, @"currentNetworkStatus called with NULL SCNetworkReachabilityRef");
-	NetworkStatus returnValue = NotReachable;
-	SCNetworkReachabilityFlags flags;
+        NSAssert(_reachabilityRef != NULL, @"currentNetworkStatus called with NULL SCNetworkReachabilityRef");
+        NetworkStatus returnValue = NotReachable;
+        SCNetworkReachabilityFlags flags;
     
-	if (SCNetworkReachabilityGetFlags(_reachabilityRef, &flags))
-	{
+        if (SCNetworkReachabilityGetFlags(_reachabilityRef, &flags))
+        {
         returnValue = [self networkStatusForFlags:flags];
-	}
+        }
     
-	return returnValue;
+        return returnValue;
 }
 
 

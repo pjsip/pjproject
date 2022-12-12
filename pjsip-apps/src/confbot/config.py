@@ -1,4 +1,3 @@
-# $Id$
 #
 # Confbot settings
 #

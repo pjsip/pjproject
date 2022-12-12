@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -82,41 +81,41 @@ pj_status_t session_test (pj_pool_factory *pf)
 
     // Wait
     for (;;) {
-	int has_stat;
+        int has_stat;
 
-	printf("Enter q to exit, 1 or 2 to print statistics.\n");
-	fgets (buf, 10, stdin);
-	has_stat = 0;
+        printf("Enter q to exit, 1 or 2 to print statistics.\n");
+        fgets (buf, 10, stdin);
+        has_stat = 0;
 
-	switch (buf[0]) {
-	case 'q':
-	case 'Q':
-	    goto done;
-	    break;
-	case '1':
-	    pj_media_session_get_stat (s1, 0, &tx_stat, &rx_stat);
-	    has_stat = 1;
-	    break;
-	case '2':
-	    pj_media_session_get_stat (s2, 0, &tx_stat, &rx_stat);
-	    has_stat = 1;
-	    break;
-	}
+        switch (buf[0]) {
+        case 'q':
+        case 'Q':
+            goto done;
+            break;
+        case '1':
+            pj_media_session_get_stat (s1, 0, &tx_stat, &rx_stat);
+            has_stat = 1;
+            break;
+        case '2':
+            pj_media_session_get_stat (s2, 0, &tx_stat, &rx_stat);
+            has_stat = 1;
+            break;
+        }
 
-	if (has_stat) {
-	    pj_media_stream_stat *stat[2] = { &tx_stat, &rx_stat };
-	    const char *statname[2] = { "TX", "RX" };
-	    int i;
+        if (has_stat) {
+            pj_media_stream_stat *stat[2] = { &tx_stat, &rx_stat };
+            const char *statname[2] = { "TX", "RX" };
+            int i;
 
-	    for (i=0; i<2; ++i) {
-		printf("%s statistics:\n", statname[i]);
-		printf(" Pkt      TX=%d RX=%d\n", stat[i]->pkt_tx, stat[i]->pkt_rx);
-		printf(" Octets   TX=%d RX=%d\n", stat[i]->oct_tx, stat[i]->oct_rx);
-		printf(" Jitter   %d ms\n", stat[i]->jitter);
-		printf(" Pkt lost %d\n", stat[i]->pkt_lost);
-	    }
-	    printf("\n");
-	}
+            for (i=0; i<2; ++i) {
+                printf("%s statistics:\n", statname[i]);
+                printf(" Pkt      TX=%d RX=%d\n", stat[i]->pkt_tx, stat[i]->pkt_rx);
+                printf(" Octets   TX=%d RX=%d\n", stat[i]->oct_tx, stat[i]->oct_rx);
+                printf(" Jitter   %d ms\n", stat[i]->jitter);
+                printf(" Pkt lost %d\n", stat[i]->pkt_lost);
+            }
+            printf("\n");
+        }
     }
 
 done:

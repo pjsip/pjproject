@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -26,7 +25,7 @@
  * Convert ANSI strings to Unicode strings.
  */
 PJ_DEF(wchar_t*) pj_ansi_to_unicode( const char *str, pj_size_t len,
-				     wchar_t *wbuf, pj_size_t wbuf_count)
+                                     wchar_t *wbuf, pj_size_t wbuf_count)
 {
     TPtrC8 aForeign((const TUint8*)str, (TInt)len);
     TPtr16 aUnicode((TUint16*)wbuf, (TInt)(wbuf_count-1));
@@ -35,13 +34,13 @@ PJ_DEF(wchar_t*) pj_ansi_to_unicode( const char *str, pj_size_t len,
     left = PjSymbianOS::Instance()->ConvertToUnicode(aUnicode, aForeign);
 
     if (left != 0) {
-	// Error, or there are unconvertable characters
-	*wbuf = 0;
+        // Error, or there are unconvertable characters
+        *wbuf = 0;
     } else {
-	if (len < wbuf_count)
-	    wbuf[len] = 0;
-	else
-	    wbuf[len-1] = 0;
+        if (len < wbuf_count)
+            wbuf[len] = 0;
+        else
+            wbuf[len-1] = 0;
     }
 
     return wbuf;
@@ -52,7 +51,7 @@ PJ_DEF(wchar_t*) pj_ansi_to_unicode( const char *str, pj_size_t len,
  * Convert Unicode string to ANSI string.
  */
 PJ_DEF(char*) pj_unicode_to_ansi( const wchar_t *wstr, pj_size_t len,
-				  char *buf, pj_size_t buf_size)
+                                  char *buf, pj_size_t buf_size)
 {
     TPtrC16 aUnicode((const TUint16*)wstr, (TInt)len);
     TPtr8 aForeign((TUint8*)buf, (TInt)(buf_size-1));
@@ -61,13 +60,13 @@ PJ_DEF(char*) pj_unicode_to_ansi( const wchar_t *wstr, pj_size_t len,
     left = PjSymbianOS::Instance()->ConvertFromUnicode(aForeign, aUnicode);
 
     if (left != 0) {
-	// Error, or there are unconvertable characters
-	buf[0] = '\0';
+        // Error, or there are unconvertable characters
+        buf[0] = '\0';
     } else {
-	if (len < buf_size)
-	    buf[len] = '\0';
-	else
-	    buf[len-1] = '\0';
+        if (len < buf_size)
+            buf[len] = '\0';
+        else
+            buf[len-1] = '\0';
     }
 
     return buf;

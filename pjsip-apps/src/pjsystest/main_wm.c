@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -31,20 +30,20 @@
 #define MAINWINDOWTITLE TEXT("PJSYSTEST")
 
 typedef struct menu_handler_t {
-    UINT		 id;
-    gui_menu_handler	 handler;
+    UINT                 id;
+    gui_menu_handler     handler;
 } menu_handler_t;
 
-static HINSTANCE	 g_hInst;
-static HWND		 g_hWndMenuBar;
-static HWND		 g_hWndMain;
-static HWND		 g_hWndLog;
-static pj_thread_t	*g_log_thread;
-static gui_menu		*g_menu;
-static unsigned		 g_menu_handler_cnt;
-static menu_handler_t	 g_menu_handlers[64];
+static HINSTANCE         g_hInst;
+static HWND              g_hWndMenuBar;
+static HWND              g_hWndMain;
+static HWND              g_hWndLog;
+static pj_thread_t      *g_log_thread;
+static gui_menu         *g_menu;
+static unsigned          g_menu_handler_cnt;
+static menu_handler_t    g_menu_handlers[64];
 
-static pj_log_func	*g_log_writer_orig;
+static pj_log_func      *g_log_writer_orig;
 
 static pj_status_t gui_update_menu(gui_menu *menu);
 
@@ -58,18 +57,18 @@ static void log_writer(int level, const char *buffer, int len)
     pj_ansi_to_unicode(buffer, len, buf, 512);
 
     if (!g_hWndLog)
-	return;
+        return;
 
     /* For now, ignore log messages from other thread to avoid deadlock */
     if (g_log_thread == pj_thread_this()) {
-	cur_len = (int)SendMessage(g_hWndLog, WM_GETTEXTLENGTH, 0, 0);
-	SendMessage(g_hWndLog, EM_SETSEL, (WPARAM)cur_len, (LPARAM)cur_len);
-	SendMessage(g_hWndLog, EM_REPLACESEL, (WPARAM)0, (LPARAM)buf);
+        cur_len = (int)SendMessage(g_hWndLog, WM_GETTEXTLENGTH, 0, 0);
+        SendMessage(g_hWndLog, EM_SETSEL, (WPARAM)cur_len, (LPARAM)cur_len);
+        SendMessage(g_hWndLog, EM_REPLACESEL, (WPARAM)0, (LPARAM)buf);
     }
     
     //uncomment to forward to the original log writer
     if (g_log_writer_orig)
-	(*g_log_writer_orig)(level, buffer, len);
+        (*g_log_writer_orig)(level, buffer, len);
 }
 
 /* execute menu handler for id menu specified, return FALSE if menu handler 
@@ -80,11 +79,11 @@ static BOOL handle_menu(UINT id)
     unsigned i;
 
     for (i = 0; i < g_menu_handler_cnt; ++i) {
-	if (g_menu_handlers[i].id == id) {
-	    /* menu handler found, execute it */
-	    (*g_menu_handlers[i].handler)();
-	    return TRUE;
-	}
+        if (g_menu_handlers[i].id == id) {
+            /* menu handler found, execute it */
+            (*g_menu_handlers[i].handler)();
+            return TRUE;
+        }
     }
 
     return FALSE;
@@ -97,50 +96,50 @@ static UINT generate_submenu(HMENU parent, UINT id_start, gui_menu *menu)
     UINT id = id_start;
 
     if (!menu)
-	return id;
+        return id;
 
     /* generate submenu */
     for (i = 0; i < menu->submenu_cnt; ++i) {
 
-	if (menu->submenus[i] == NULL) {
+        if (menu->submenus[i] == NULL) {
 
-	    /* add separator */
-	    AppendMenu(parent, MF_SEPARATOR, 0, 0);
-	
-	}  else if (menu->submenus[i]->submenu_cnt != 0) {
-	    
-	    /* this submenu item has children, generate popup menu */
-	    HMENU hMenu;
-	    wchar_t buf[64];
-	    
-	    pj_ansi_to_unicode(menu->submenus[i]->title, 
-			       pj_ansi_strlen(menu->submenus[i]->title),
-			       buf, 64);
+            /* add separator */
+            AppendMenu(parent, MF_SEPARATOR, 0, 0);
+        
+        }  else if (menu->submenus[i]->submenu_cnt != 0) {
+            
+            /* this submenu item has children, generate popup menu */
+            HMENU hMenu;
+            wchar_t buf[64];
+            
+            pj_ansi_to_unicode(menu->submenus[i]->title, 
+                               pj_ansi_strlen(menu->submenus[i]->title),
+                               buf, 64);
 
-	    hMenu = CreatePopupMenu();
-	    AppendMenu(parent, MF_STRING|MF_ENABLED|MF_POPUP, (UINT)hMenu, buf);
-	    id = generate_submenu(hMenu, id, menu->submenus[i]);
+            hMenu = CreatePopupMenu();
+            AppendMenu(parent, MF_STRING|MF_ENABLED|MF_POPUP, (UINT)hMenu, buf);
+            id = generate_submenu(hMenu, id, menu->submenus[i]);
 
-	} else {
+        } else {
 
-	    /* this submenu item is leaf, register the handler */
-	    wchar_t buf[64];
-	    
-	    pj_ansi_to_unicode(menu->submenus[i]->title, 
-			       pj_ansi_strlen(menu->submenus[i]->title),
-			       buf, 64);
+            /* this submenu item is leaf, register the handler */
+            wchar_t buf[64];
+            
+            pj_ansi_to_unicode(menu->submenus[i]->title, 
+                               pj_ansi_strlen(menu->submenus[i]->title),
+                               buf, 64);
 
-	    AppendMenu(parent, MF_STRING, id, buf);
+            AppendMenu(parent, MF_STRING, id, buf);
 
-	    if (menu->submenus[i]->handler) {
-		g_menu_handlers[g_menu_handler_cnt].id = id;
-		g_menu_handlers[g_menu_handler_cnt].handler = 
-					menu->submenus[i]->handler;
-		++g_menu_handler_cnt;
-	    }
+            if (menu->submenus[i]->handler) {
+                g_menu_handlers[g_menu_handler_cnt].id = id;
+                g_menu_handlers[g_menu_handler_cnt].handler = 
+                                        menu->submenus[i]->handler;
+                ++g_menu_handler_cnt;
+            }
 
-	    ++id;
-	}
+            ++id;
+        }
     }
 
     return id;
@@ -150,53 +149,53 @@ BOOL InitDialog()
 {
     /* update menu */
     if (gui_update_menu(g_menu) != PJ_SUCCESS)
-	return FALSE;
+        return FALSE;
 
     return TRUE;
 }
 
 LRESULT CALLBACK DialogProc(const HWND hWnd,
-			    const UINT Msg, 
-			    const WPARAM wParam,
-			    const LPARAM lParam) 
+                            const UINT Msg, 
+                            const WPARAM wParam,
+                            const LPARAM lParam) 
 {   
     LRESULT res = 0;
 
     switch (Msg) {
     case WM_CREATE:
-	g_hWndMain = hWnd;
-	if (FALSE == InitDialog()){
-	    DestroyWindow(g_hWndMain);
-	}
-	break;
+        g_hWndMain = hWnd;
+        if (FALSE == InitDialog()){
+            DestroyWindow(g_hWndMain);
+        }
+        break;
 
     case WM_CLOSE:
-	DestroyWindow(g_hWndMain);
-	break;
+        DestroyWindow(g_hWndMain);
+        break;
 
     case WM_DESTROY:
-	if (g_hWndMenuBar)
-	    DestroyWindow(g_hWndMenuBar);
-	g_hWndMenuBar = NULL;
-	g_hWndMain = NULL;
+        if (g_hWndMenuBar)
+            DestroyWindow(g_hWndMenuBar);
+        g_hWndMenuBar = NULL;
+        g_hWndMain = NULL;
         PostQuitMessage(0);
         break;
 
     case WM_HOTKEY:
-	/* Exit app when back is pressed. */
-	if (VK_TBACK == HIWORD(lParam) && (0 != (MOD_KEYUP & LOWORD(lParam)))) {
-	    DestroyWindow(g_hWndMain);
-	} else {
-	    return DefWindowProc(hWnd, Msg, wParam, lParam);
-	}
-	break;
+        /* Exit app when back is pressed. */
+        if (VK_TBACK == HIWORD(lParam) && (0 != (MOD_KEYUP & LOWORD(lParam)))) {
+            DestroyWindow(g_hWndMain);
+        } else {
+            return DefWindowProc(hWnd, Msg, wParam, lParam);
+        }
+        break;
 
     case WM_COMMAND:
-	res = handle_menu(LOWORD(wParam));
-	break;
+        res = handle_menu(LOWORD(wParam));
+        break;
 
     default:
-	return DefWindowProc(hWnd, Msg, wParam, lParam);
+        return DefWindowProc(hWnd, Msg, wParam, lParam);
     }
 
     return res;
@@ -208,7 +207,7 @@ LRESULT CALLBACK DialogProc(const HWND hWnd,
 pj_status_t gui_init(gui_menu *menu)
 {
     WNDCLASS wc;
-    HWND hWnd = NULL;	
+    HWND hWnd = NULL;   
     RECT r;
     DWORD dwStyle;
 
@@ -218,8 +217,8 @@ pj_status_t gui_init(gui_menu *menu)
     hWnd = FindWindow(MAINWINDOWCLASS, MAINWINDOWTITLE);
 
     if (NULL != hWnd) {
-	SetForegroundWindow(hWnd);    
-	return status;
+        SetForegroundWindow(hWnd);    
+        return status;
     }
 
     g_menu = menu;
@@ -232,50 +231,50 @@ pj_status_t gui_init(gui_menu *menu)
     wc.hIcon = 0;
     wc.hCursor = 0;
     wc.hbrBackground = (HBRUSH) GetStockObject(WHITE_BRUSH);
-    wc.lpszMenuName	= 0;
+    wc.lpszMenuName     = 0;
     wc.lpszClassName = MAINWINDOWCLASS;
     
     if (!RegisterClass(&wc) != 0) {
-	DWORD err = GetLastError();
-	return PJ_RETURN_OS_ERROR(err);
+        DWORD err = GetLastError();
+        return PJ_RETURN_OS_ERROR(err);
     }
 
     /* Create the app. window */
     g_hWndMain = CreateWindow(MAINWINDOWCLASS, MAINWINDOWTITLE,
-			      WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 
-			      CW_USEDEFAULT, CW_USEDEFAULT,
-			      (HWND)NULL, NULL, g_hInst, (LPSTR)NULL);
+                              WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 
+                              CW_USEDEFAULT, CW_USEDEFAULT,
+                              (HWND)NULL, NULL, g_hInst, (LPSTR)NULL);
 
     /* Create edit control to print log */
     GetClientRect(g_hWndMain, &r);
     dwStyle = WS_CHILD | WS_VISIBLE | WS_VSCROLL |
-	      ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_LEFT;
+              ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_LEFT;
     g_hWndLog = CreateWindow(
                 TEXT("EDIT"),   // Class name
                 NULL,           // Window text
                 dwStyle,        // Window style
-                0,		// x-coordinate of the upper-left corner
+                0,              // x-coordinate of the upper-left corner
                 0,              // y-coordinate of the upper-left corner
-		r.right-r.left, // Width of the window for the edit
+                r.right-r.left, // Width of the window for the edit
                                 // control
-		r.bottom-r.top, // Height of the window for the edit
+                r.bottom-r.top, // Height of the window for the edit
                                 // control
                 g_hWndMain,     // Window handle to the parent window
-                (HMENU) 0,	// Control identifier
+                (HMENU) 0,      // Control identifier
                 g_hInst,        // Instance handle
                 NULL);          // Specify NULL for this parameter when 
                                 // you create a control
 
     /* Resize the log */
     if (g_hWndMenuBar) {
-	RECT r_menu = {0};
+        RECT r_menu = {0};
 
-	GetWindowRect(g_hWndLog, &r);
-	GetWindowRect(g_hWndMenuBar, &r_menu);
-	if (r.bottom > r_menu.top) {
-	    MoveWindow(g_hWndLog, 0, 0, r.right-r.left, 
-		       (r.bottom-r.top)-(r_menu.bottom-r_menu.top), TRUE);
-	}
+        GetWindowRect(g_hWndLog, &r);
+        GetWindowRect(g_hWndMenuBar, &r_menu);
+        if (r.bottom > r_menu.top) {
+            MoveWindow(g_hWndLog, 0, 0, r.right-r.left, 
+                       (r.bottom-r.top)-(r_menu.bottom-r_menu.top), TRUE);
+        }
     }
 
     /* Focus it, so SP user can scroll the log */
@@ -305,8 +304,8 @@ static pj_status_t gui_update_menu(gui_menu *menu)
 
     /* delete existing menu */
     if (g_hWndMenuBar) {
-	DestroyWindow(g_hWndMenuBar);
-	g_hWndMenuBar = NULL;
+        DestroyWindow(g_hWndMenuBar);
+        g_hWndMenuBar = NULL;
     }
 
     /* delete menu handler map */
@@ -323,12 +322,12 @@ static pj_status_t gui_update_menu(gui_menu *menu)
     ZeroMemory(&mbi, sizeof(SHMENUBARINFO));
     mbi.cbSize      = sizeof(SHMENUBARINFO);
     mbi.hwndParent  = g_hWndMain;
-    mbi.dwFlags	    = SHCMBF_HIDESIPBUTTON|SHCMBF_HMENU;
+    mbi.dwFlags     = SHCMBF_HIDESIPBUTTON|SHCMBF_HMENU;
     mbi.nToolBarId  = (UINT)hRootMenu;
     mbi.hInstRes    = g_hInst;
 
     if (FALSE == SHCreateMenuBar(&mbi)) {
-	DWORD err = GetLastError();
+        DWORD err = GetLastError();
         return PJ_RETURN_OS_ERROR(err);
     }
 
@@ -344,8 +343,8 @@ static pj_status_t gui_update_menu(gui_menu *menu)
 
     /* override back button */
     SendMessage(g_hWndMenuBar, SHCMBM_OVERRIDEKEY, VK_TBACK,
-	    MAKELPARAM(SHMBOF_NODEFAULT | SHMBOF_NOTIFY,
-	    SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
+            MAKELPARAM(SHMBOF_NODEFAULT | SHMBOF_NOTIFY,
+            SHMBOF_NODEFAULT | SHMBOF_NOTIFY));
 
 
     return PJ_SUCCESS;
@@ -363,27 +362,27 @@ enum gui_key gui_msgbox(const char *title, const char *message, enum gui_flag fl
 
     switch (flag) {
     case WITH_OK:
-	wflag = MB_OK;
-	break;
+        wflag = MB_OK;
+        break;
     case WITH_YESNO:
-	wflag = MB_YESNO;
-	break;
+        wflag = MB_YESNO;
+        break;
     case WITH_OKCANCEL:
-	wflag = MB_OKCANCEL;
-	break;
+        wflag = MB_OKCANCEL;
+        break;
     }
 
     retcode = MessageBox(g_hWndMain, buf_msg, buf_title, wflag);
 
     switch (retcode) {
     case IDOK:
-	return KEY_OK;
+        return KEY_OK;
     case IDYES:
-	return KEY_YES;
+        return KEY_YES;
     case IDNO:
-	return KEY_NO;
+        return KEY_NO;
     default:
-	return KEY_CANCEL;
+        return KEY_CANCEL;
     }
 }
 
@@ -409,8 +408,8 @@ pj_status_t gui_start(gui_menu *menu)
 void gui_destroy(void)
 {
     if (g_hWndMain) {
-	DestroyWindow(g_hWndMain);
-	g_hWndMain = NULL;
+        DestroyWindow(g_hWndMain);
+        g_hWndMain = NULL;
     }
 }
 
@@ -433,10 +432,10 @@ int WINAPI WinMain(
 
     status = systest_init();
     if (status != 0)
-	goto on_return;
+        goto on_return;
 
     status = systest_run();
-	
+        
 on_return:
     systest_deinit();
 

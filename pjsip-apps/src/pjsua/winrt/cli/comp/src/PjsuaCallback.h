@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -28,20 +27,20 @@ namespace PjsuaCLI
         // Forward declaration
         ref class Globals;
 
-	public ref class PjsuaCallback sealed
-	{	
-	public:
-	    void SetCallback(IPjsuaCallback^ cb);
+        public ref class PjsuaCallback sealed
+        {       
+        public:
+            void SetCallback(IPjsuaCallback^ cb);
 
-	    void OnStarted(Platform::String ^outStr);
-	    void OnStopped(int restart);
-	private:	    
-	    friend ref class PjsuaCLI::BackEnd::Globals;
+            void OnStarted(Platform::String ^outStr);
+            void OnStopped(int restart);
+        private:            
+            friend ref class PjsuaCLI::BackEnd::Globals;
 
-	    PjsuaCallback();
-	    ~PjsuaCallback();
+            PjsuaCallback();
+            ~PjsuaCallback();
 
-	    IPjsuaCallback^ callback;
-	};
+            IPjsuaCallback^ callback;
+        };
     }
 }

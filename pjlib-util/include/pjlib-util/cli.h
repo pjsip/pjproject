@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2010 Teluu Inc. (http://www.teluu.com)
  *
@@ -60,10 +59,10 @@ PJ_BEGIN_DECL
        </CMD>
 </CMD>
 <CMD name='disable_codec' id=0 desc="">
-	<ARG name='codec_list' type='choice' id='3'>
-	    <CHOICE value='g711'/>
-	    <CHOICE value='g722'/>
-	</ARG>
+        <ARG name='codec_list' type='choice' id='3'>
+            <CHOICE value='g711'/>
+            <CHOICE value='g722'/>
+        </ARG>
 </CMD>
 \endverbatim 
  */
@@ -299,10 +298,10 @@ typedef pj_status_t (*pj_cli_cmd_handler)(pj_cli_cmd_val *cval);
  * Write a log message to the CLI application. The CLI application
  * will send the log message to all the registered front-ends.
  *
- * @param cli		The CLI application instance.
- * @param level	        Verbosity level of this message message.
+ * @param cli           The CLI application instance.
+ * @param level         Verbosity level of this message message.
  * @param buffer        The message itself.
- * @param len 	        Length of this message.
+ * @param len           Length of this message.
  */
 PJ_DECL(void) pj_cli_write_log(pj_cli_t *cli,
                                int level,
@@ -312,10 +311,10 @@ PJ_DECL(void) pj_cli_write_log(pj_cli_t *cli,
 /**
  * Create a new CLI application instance.
  *
- * @param cfg		CLI application creation parameters.
- * @param p_cli		Pointer to receive the returned instance.
+ * @param cfg           CLI application creation parameters.
+ * @param p_cli         Pointer to receive the returned instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
                                    pj_cli_t **p_cli);
@@ -323,18 +322,18 @@ PJ_DECL(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
 /**
  * This specifies the function to get the id of the specified command
  * 
- * @param cmd		The specified command.
+ * @param cmd           The specified command.
  *
- * @return		The command id
+ * @return              The command id
  */
 PJ_DECL(pj_cli_cmd_id) pj_cli_get_cmd_id(const pj_cli_cmd_spec *cmd);
 
 /**
  * Get the internal parameter of the CLI instance.
  *
- * @param cli		The CLI application instance.
+ * @param cli           The CLI application instance.
  *
- * @return		CLI parameter instance.
+ * @return              CLI parameter instance.
  */
 PJ_DECL(pj_cli_cfg*) pj_cli_get_param(pj_cli_t *cli);
 
@@ -346,29 +345,29 @@ PJ_DECL(pj_cli_cfg*) pj_cli_get_param(pj_cli_t *cli);
  * See also pj_cli_sess_end_session() to end a session instead of quitting the
  * whole application.
  *
- * @param cli		The CLI application instance.
- * @param req		The session on which the shutdown request is
- * 			received.
- * @param restart	Indicate whether application restart is wanted.
+ * @param cli           The CLI application instance.
+ * @param req           The session on which the shutdown request is
+ *                      received.
+ * @param restart       Indicate whether application restart is wanted.
  */
 PJ_DECL(void) pj_cli_quit(pj_cli_t *cli, pj_cli_sess *req,
-			  pj_bool_t restart);
+                          pj_bool_t restart);
 /**
  * Check if application shutdown or restart has been requested.
  *
- * @param cli		The CLI application instance.
+ * @param cli           The CLI application instance.
  *
- * @return		PJ_TRUE if pj_cli_quit() has been called.
+ * @return              PJ_TRUE if pj_cli_quit() has been called.
  */
 PJ_DECL(pj_bool_t) pj_cli_is_quitting(pj_cli_t *cli);
 
 /**
  * Check if application restart has been requested.
  *
- * @param cli		The CLI application instance.
+ * @param cli           The CLI application instance.
  *
- * @return		PJ_TRUE if pj_cli_quit() has been called with
- * 			restart parameter set.
+ * @return              PJ_TRUE if pj_cli_quit() has been called with
+ *                      restart parameter set.
  */
 PJ_DECL(pj_bool_t) pj_cli_is_restarting(pj_cli_t *cli);
 
@@ -376,7 +375,7 @@ PJ_DECL(pj_bool_t) pj_cli_is_restarting(pj_cli_t *cli);
  * Destroy a CLI application instance. This would also close all sessions
  * currently running for this CLI application.
  *
- * @param cli		The CLI application.
+ * @param cli           The CLI application.
  */
 PJ_DECL(void) pj_cli_destroy(pj_cli_t *cli);
 
@@ -390,8 +389,8 @@ PJ_DECL(void) pj_cli_cfg_default(pj_cli_cfg *param);
 /**
  * Register a front end to the CLI application.
  *
- * @param cli		The CLI application.
- * @param fe		The CLI front end to be registered.
+ * @param cli           The CLI application.
+ * @param fe            The CLI front end to be registered.
  */
 PJ_DECL(void) pj_cli_register_front_end(pj_cli_t *cli,
                                         pj_cli_front_end *fe);
@@ -402,44 +401,44 @@ PJ_DECL(void) pj_cli_register_front_end(pj_cli_t *cli,
  *
  * Note that the input string MUST be NULL terminated.
  *
- * @param cli		The CLI application.
- * @param group		Optional group to which this command will be added
- * 			to, or specify NULL if this command is a root
- * 			command.
- * @param xml		Input string containing XML node text for the
- * 			command, MUST be NULL terminated.
- * @param handler	Function handler for the command. This must be NULL
- * 			if the command specifies a command group.
- * @param p_cmd		Optional pointer to store the newly created
- * 			specification.
- * @param get_choice	Function handler for the argument. Specify this for 
- *			dynamic choice type arguments.
+ * @param cli           The CLI application.
+ * @param group         Optional group to which this command will be added
+ *                      to, or specify NULL if this command is a root
+ *                      command.
+ * @param xml           Input string containing XML node text for the
+ *                      command, MUST be NULL terminated.
+ * @param handler       Function handler for the command. This must be NULL
+ *                      if the command specifies a command group.
+ * @param p_cmd         Optional pointer to store the newly created
+ *                      specification.
+ * @param get_choice    Function handler for the argument. Specify this for 
+ *                      dynamic choice type arguments.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
-					     pj_cli_cmd_spec *group,
+                                             pj_cli_cmd_spec *group,
                                              const pj_str_t *xml,
                                              pj_cli_cmd_handler handler,
                                              pj_cli_cmd_spec **p_cmd, 
-					     pj_cli_get_dyn_choice get_choice);
+                                             pj_cli_get_dyn_choice get_choice);
 /**
  * Initialize pj_cli_exec_info with its default values.
  *
- * @param param		The param to be initialized.
+ * @param param         The param to be initialized.
  */
 PJ_DECL(void) pj_cli_exec_info_default(pj_cli_exec_info *param);
 
 /**
  * Write a log message to the specific CLI session. 
  *
- * @param sess		The CLI active session.
+ * @param sess          The CLI active session.
  * @param buffer        The message itself.
- * @param len 	        Length of this message.
+ * @param len           Length of this message.
  */
 PJ_DECL(void) pj_cli_sess_write_msg(pj_cli_sess *sess,                               
-				    const char *buffer,
-				    pj_size_t len);
+                                    const char *buffer,
+                                    pj_size_t len);
 
 /**
  * Parse an input cmdline string. The first word of the command line is the
@@ -459,29 +458,29 @@ PJ_DECL(void) pj_cli_sess_write_msg(pj_cli_sess *sess,
  * which will be removed by the function. However any more characters
  * following this newline will cause an error to be returned.
  *
- * @param sess		The CLI session.
- * @param cmdline	The command line string to be parsed.
- * @param val		Structure to store the parsing result.
- * @param pool		The pool to allocate memory from.
- * @param info		Additional info to be returned regarding the parsing.
+ * @param sess          The CLI session.
+ * @param cmdline       The command line string to be parsed.
+ * @param val           Structure to store the parsing result.
+ * @param pool          The pool to allocate memory from.
+ * @param info          Additional info to be returned regarding the parsing.
  *
- * @return		This function returns the status of the parsing,
- * 			which can be one of the following :
- *			  - PJ_SUCCESS: a command was executed successfully.
- *			  - PJ_EINVAL: invalid parameter to this function.
- *			  - PJ_ENOTFOUND: command is not found.
- *			  - PJ_CLI_EAMBIGUOUS: command/argument is ambiguous.
- *			  - PJ_CLI_EMISSINGARG: missing argument.
- *			  - PJ_CLI_EINVARG: invalid command argument.
- *			  - PJ_CLI_EEXIT: "exit" has been called to end
- *			      the current session. This is a signal for the
- *			      application to end it's main loop.
+ * @return              This function returns the status of the parsing,
+ *                      which can be one of the following :
+ *                        - PJ_SUCCESS: a command was executed successfully.
+ *                        - PJ_EINVAL: invalid parameter to this function.
+ *                        - PJ_ENOTFOUND: command is not found.
+ *                        - PJ_CLI_EAMBIGUOUS: command/argument is ambiguous.
+ *                        - PJ_CLI_EMISSINGARG: missing argument.
+ *                        - PJ_CLI_EINVARG: invalid command argument.
+ *                        - PJ_CLI_EEXIT: "exit" has been called to end
+ *                            the current session. This is a signal for the
+ *                            application to end it's main loop.
  */
 PJ_DECL(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
-				       char *cmdline,
-				       pj_cli_cmd_val *val,
-				       pj_pool_t *pool,
-				       pj_cli_exec_info *info);
+                                       char *cmdline,
+                                       pj_cli_cmd_val *val,
+                                       pj_pool_t *pool,
+                                       pj_cli_exec_info *info);
 
 /**
  * End the specified session, and destroy it to release all resources used
@@ -491,7 +490,7 @@ PJ_DECL(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
  * creation process.
  * See also pj_cli_quit() to quit the whole application instead.
  *
- * @param sess		The CLI session to be destroyed.
+ * @param sess          The CLI session to be destroyed.
  */
 PJ_DECL(void) pj_cli_sess_end_session(pj_cli_sess *sess);
 
@@ -504,23 +503,23 @@ PJ_DECL(void) pj_cli_sess_end_session(pj_cli_sess *sess);
  *
  * See also pj_cli_sess_parse() for more info regarding the cmdline format.
  *
- * @param sess		The CLI session.
- * @param cmdline	The command line string to be executed. 
- * @param pool		The pool to allocate memory from.
- * @param info		Optional pointer to receive additional information
- * 			related to the execution of the command (such as
- * 			the command return value).
+ * @param sess          The CLI session.
+ * @param cmdline       The command line string to be executed. 
+ * @param pool          The pool to allocate memory from.
+ * @param info          Optional pointer to receive additional information
+ *                      related to the execution of the command (such as
+ *                      the command return value).
  *
- * @return		This function returns the status of the command
- * 			parsing and execution (note that the return value
- * 			of the handler itself will be returned in \a info
- * 			argument, if specified). Please see the return value
- * 			of pj_cli_sess_parse() for possible return values.
+ * @return              This function returns the status of the command
+ *                      parsing and execution (note that the return value
+ *                      of the handler itself will be returned in \a info
+ *                      argument, if specified). Please see the return value
+ *                      of pj_cli_sess_parse() for possible return values.
  */
 PJ_DECL(pj_status_t) pj_cli_sess_exec(pj_cli_sess *sess,
-				      char *cmdline,
-				      pj_pool_t *pool,
-				      pj_cli_exec_info *info);
+                                      char *cmdline,
+                                      pj_pool_t *pool,
+                                      pj_cli_exec_info *info);
 
 /**
  * @}

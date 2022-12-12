@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -26,42 +25,42 @@
 struct pjpidf_op_desc pjpidf_op = 
 {
     {
-	&pjpidf_pres_construct,
-	&pjpidf_pres_add_tuple,
-	&pjpidf_pres_get_first_tuple,
-	&pjpidf_pres_get_next_tuple,
-	&pjpidf_pres_find_tuple,
-	&pjpidf_pres_remove_tuple,
-	&pjpidf_pres_add_note,
-	&pjpidf_pres_get_first_note,
-	&pjpidf_pres_get_next_note
+        &pjpidf_pres_construct,
+        &pjpidf_pres_add_tuple,
+        &pjpidf_pres_get_first_tuple,
+        &pjpidf_pres_get_next_tuple,
+        &pjpidf_pres_find_tuple,
+        &pjpidf_pres_remove_tuple,
+        &pjpidf_pres_add_note,
+        &pjpidf_pres_get_first_note,
+        &pjpidf_pres_get_next_note
     },
     {
-	&pjpidf_tuple_construct,
-	&pjpidf_tuple_get_id,
-	&pjpidf_tuple_set_id,
-	&pjpidf_tuple_get_status,
-	&pjpidf_tuple_get_contact,
-	&pjpidf_tuple_set_contact,
-	&pjpidf_tuple_set_contact_prio,
-	&pjpidf_tuple_get_contact_prio,
-	&pjpidf_tuple_add_note,
-	&pjpidf_tuple_get_first_note,
-	&pjpidf_tuple_get_next_note,
-	&pjpidf_tuple_get_timestamp,
-	&pjpidf_tuple_set_timestamp,
-	&pjpidf_tuple_set_timestamp_np
+        &pjpidf_tuple_construct,
+        &pjpidf_tuple_get_id,
+        &pjpidf_tuple_set_id,
+        &pjpidf_tuple_get_status,
+        &pjpidf_tuple_get_contact,
+        &pjpidf_tuple_set_contact,
+        &pjpidf_tuple_set_contact_prio,
+        &pjpidf_tuple_get_contact_prio,
+        &pjpidf_tuple_add_note,
+        &pjpidf_tuple_get_first_note,
+        &pjpidf_tuple_get_next_note,
+        &pjpidf_tuple_get_timestamp,
+        &pjpidf_tuple_set_timestamp,
+        &pjpidf_tuple_set_timestamp_np
     },
     {
-	&pjpidf_status_construct,
-	&pjpidf_status_is_basic_open,
-	&pjpidf_status_set_basic_open
+        &pjpidf_status_construct,
+        &pjpidf_status_is_basic_open,
+        &pjpidf_status_set_basic_open
     }
 };
 
 static pj_str_t PRESENCE = { "presence", 8 };
 static pj_str_t ENTITY = { "entity", 6};
-static pj_str_t	TUPLE = { "tuple", 5 };
+static pj_str_t TUPLE = { "tuple", 5 };
 static pj_str_t ID = { "id", 2 };
 static pj_str_t NOTE = { "note", 4 };
 static pj_str_t STATUS = { "status", 6 };
@@ -77,7 +76,7 @@ static pj_str_t XMLNS = { "xmlns", 5 };
 static pj_str_t PIDF_XMLNS = { "urn:ietf:params:xml:ns:pidf", 27 };
 
 static void xml_init_node(pj_pool_t *pool, pj_xml_node *node,
-			  pj_str_t *name, const pj_str_t *value)
+                          pj_str_t *name, const pj_str_t *value)
 {
     pj_list_init(&node->attr_head);
     pj_list_init(&node->node_head);
@@ -87,7 +86,7 @@ static void xml_init_node(pj_pool_t *pool, pj_xml_node *node,
 }
 
 static pj_xml_attr* xml_create_attr(pj_pool_t *pool, pj_str_t *name,
-				    const pj_str_t *value)
+                                    const pj_str_t *value)
 {
     pj_xml_attr *attr = PJ_POOL_ALLOC_T(pool, pj_xml_attr);
     attr->name = *name;
@@ -97,7 +96,7 @@ static pj_xml_attr* xml_create_attr(pj_pool_t *pool, pj_str_t *name,
 
 /* Presence */
 PJ_DEF(void) pjpidf_pres_construct(pj_pool_t *pool, pjpidf_pres *pres,
-				   const pj_str_t *entity)
+                                   const pj_str_t *entity)
 {
     pj_xml_attr *attr;
 
@@ -109,7 +108,7 @@ PJ_DEF(void) pjpidf_pres_construct(pj_pool_t *pool, pjpidf_pres *pres,
 }
 
 PJ_DEF(pjpidf_tuple*) pjpidf_pres_add_tuple(pj_pool_t *pool, pjpidf_pres *pres,
-					    const pj_str_t *id)
+                                            const pj_str_t *id)
 {
     pjpidf_tuple *t = PJ_POOL_ALLOC_T(pool, pjpidf_tuple);
     pjpidf_tuple_construct(pool, t, id);
@@ -123,7 +122,7 @@ PJ_DEF(pjpidf_tuple*) pjpidf_pres_get_first_tuple(pjpidf_pres *pres)
 }
 
 PJ_DEF(pjpidf_tuple*) pjpidf_pres_get_next_tuple(pjpidf_pres *pres, 
-						 pjpidf_tuple *tuple)
+                                                 pjpidf_tuple *tuple)
 {
     return pj_xml_find_next_node(pres, tuple, &TUPLE);
 }
@@ -145,7 +144,7 @@ PJ_DEF(void) pjpidf_pres_remove_tuple(pjpidf_pres *pres, pjpidf_tuple *t)
 }
 
 PJ_DEF(pjpidf_note*) pjpidf_pres_add_note(pj_pool_t *pool, pjpidf_pres *pres, 
-					  const pj_str_t *text)
+                                          const pj_str_t *text)
 {
     pjpidf_note *note = PJ_POOL_ALLOC_T(pool, pjpidf_note);
     xml_init_node(pool, note, &NOTE, text);
@@ -166,7 +165,7 @@ PJ_DEF(pjpidf_note*) pjpidf_pres_get_next_note(pjpidf_pres *t, pjpidf_note *note
 
 /* Tuple */
 PJ_DEF(void) pjpidf_tuple_construct(pj_pool_t *pool, pjpidf_tuple *t,
-				    const pj_str_t *id)
+                                    const pj_str_t *id)
 {
     pj_xml_attr *attr;
     pjpidf_status *st;
@@ -206,40 +205,40 @@ PJ_DEF(const pj_str_t*) pjpidf_tuple_get_contact(const pjpidf_tuple *t)
 {
     pj_xml_node *node = pj_xml_find_node((pj_xml_node*)t, &CONTACT);
     if (!node)
-	return &EMPTY_STRING;
+        return &EMPTY_STRING;
     return &node->content;
 }
 
 PJ_DEF(void) pjpidf_tuple_set_contact(pj_pool_t *pool, pjpidf_tuple *t, 
-				      const pj_str_t *contact)
+                                      const pj_str_t *contact)
 {
     pj_xml_node *node = pj_xml_find_node(t, &CONTACT);
     if (!node) {
-	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
-	xml_init_node(pool, node, &CONTACT, contact);
-	pj_xml_add_node(t, node);
+        node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
+        xml_init_node(pool, node, &CONTACT, contact);
+        pj_xml_add_node(t, node);
     } else {
-	pj_strdup(pool, &node->content, contact);
+        pj_strdup(pool, &node->content, contact);
     }
 }
 
 PJ_DEF(void) pjpidf_tuple_set_contact_prio(pj_pool_t *pool, pjpidf_tuple *t, 
-					   const pj_str_t *prio)
+                                           const pj_str_t *prio)
 {
     pj_xml_node *node = pj_xml_find_node(t, &CONTACT);
     pj_xml_attr *attr;
 
     if (!node) {
-	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
-	xml_init_node(pool, node, &CONTACT, NULL);
-	pj_xml_add_node(t, node);
+        node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
+        xml_init_node(pool, node, &CONTACT, NULL);
+        pj_xml_add_node(t, node);
     }
     attr = pj_xml_find_attr(node, &PRIORITY, NULL);
     if (!attr) {
-	attr = xml_create_attr(pool, &PRIORITY, prio);
-	pj_xml_add_attr(node, attr);
+        attr = xml_create_attr(pool, &PRIORITY, prio);
+        pj_xml_add_attr(node, attr);
     } else {
-	pj_strdup(pool, &attr->value, prio);
+        pj_strdup(pool, &attr->value, prio);
     }
 }
 
@@ -249,16 +248,16 @@ PJ_DEF(const pj_str_t*) pjpidf_tuple_get_contact_prio(const pjpidf_tuple *t)
     pj_xml_attr *attr;
 
     if (!node)
-	return &EMPTY_STRING;
+        return &EMPTY_STRING;
     attr = pj_xml_find_attr(node, &PRIORITY, NULL);
     if (!attr)
-	return &EMPTY_STRING;
+        return &EMPTY_STRING;
     return &attr->value;
 }
 
 
 PJ_DEF(pjpidf_note*) pjpidf_tuple_add_note(pj_pool_t *pool, pjpidf_tuple *t,
-					   const pj_str_t *text)
+                                           const pj_str_t *text)
 {
     pjpidf_note *note = PJ_POOL_ALLOC_T(pool, pjpidf_note);
     xml_init_node(pool, note, &NOTE, text);
@@ -284,28 +283,28 @@ PJ_DEF(const pj_str_t*) pjpidf_tuple_get_timestamp(const pjpidf_tuple *t)
 }
 
 PJ_DEF(void) pjpidf_tuple_set_timestamp(pj_pool_t *pool, pjpidf_tuple *t,
-					const pj_str_t *ts)
+                                        const pj_str_t *ts)
 {
     pj_xml_node *node = pj_xml_find_node(t, &TIMESTAMP);
     if (!node) {
-	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
-	xml_init_node(pool, node, &TIMESTAMP, ts);
-	pj_xml_add_node(t, node);
+        node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
+        xml_init_node(pool, node, &TIMESTAMP, ts);
+        pj_xml_add_node(t, node);
     } else {
-	pj_strdup(pool, &node->content, ts);
+        pj_strdup(pool, &node->content, ts);
     }
 }
 
 
 PJ_DEF(void) pjpidf_tuple_set_timestamp_np(pj_pool_t *pool, pjpidf_tuple *t, 
-					   pj_str_t *ts)
+                                           pj_str_t *ts)
 {
     pj_xml_node *node = pj_xml_find_node(t, &TIMESTAMP);
     if (!node) {
-	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
-	xml_init_node(pool, node, &TIMESTAMP, ts);
+        node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
+        xml_init_node(pool, node, &TIMESTAMP, ts);
     } else {
-	node->content = *ts;
+        node->content = *ts;
     }
 }
 
@@ -325,7 +324,7 @@ PJ_DEF(pj_bool_t) pjpidf_status_is_basic_open(const pjpidf_status *st)
 {
     pj_xml_node *node = pj_xml_find_node((pj_xml_node*)st, &BASIC);
     if (!node)
-	return PJ_FALSE;
+        return PJ_FALSE;
     return pj_stricmp(&node->content, &OPEN)==0;
 }
 
@@ -333,7 +332,7 @@ PJ_DEF(void) pjpidf_status_set_basic_open(pjpidf_status *st, pj_bool_t open)
 {
     pj_xml_node *node = pj_xml_find_node(st, &BASIC);
     if (node)
-	node->content = open ? OPEN : CLOSED;
+        node->content = open ? OPEN : CLOSED;
 }
 
 PJ_DEF(pjpidf_pres*) pjpidf_create(pj_pool_t *pool, const pj_str_t *entity)
@@ -347,13 +346,13 @@ PJ_DEF(pjpidf_pres*) pjpidf_parse(pj_pool_t *pool, char *text, int len)
 {
     pjpidf_pres *pres = pj_xml_parse(pool, text, len);
     if (pres && pres->name.slen >= 8) {
-	pj_str_t name;
+        pj_str_t name;
 
-	name.ptr = pres->name.ptr + (pres->name.slen - 8);
-	name.slen = 8;
+        name.ptr = pres->name.ptr + (pres->name.slen - 8);
+        name.slen = 8;
 
-	if (pj_stricmp(&name, &PRESENCE) == 0)
-	    return pres;
+        if (pj_stricmp(&name, &PRESENCE) == 0)
+            return pres;
     }
     return NULL;
 }

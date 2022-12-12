@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -29,10 +28,10 @@
 #  include <setjmp.h>
    typedef jmp_buf pj_jmp_buf;
 #  ifndef pj_setjmp
-#    define pj_setjmp(buf)	setjmp(buf)
+#    define pj_setjmp(buf)      setjmp(buf)
 #  endif
 #  ifndef pj_longjmp
-#    define pj_longjmp(buf,d)	longjmp(buf,d)
+#    define pj_longjmp(buf,d)   longjmp(buf,d)
 #  endif
 
 #elif defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
@@ -41,10 +40,10 @@
 #else
 #  warning "setjmp()/longjmp() is not implemented"
    typedef int pj_jmp_buf[1];
-#  define pj_setjmp(buf)	0
-#  define pj_longjmp(buf,d)	0
+#  define pj_setjmp(buf)        0
+#  define pj_longjmp(buf,d)     0
 #endif
 
 
-#endif	/* __PJ_COMPAT_SETJMP_H__ */
+#endif  /* __PJ_COMPAT_SETJMP_H__ */
 

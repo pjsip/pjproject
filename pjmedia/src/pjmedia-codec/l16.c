@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -34,7 +33,7 @@
  */
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC != 0
 
-#define PLC_DISABLED	0
+#define PLC_DISABLED    0
 
 
 static const pj_str_t STR_L16 = { "L16", 3 };
@@ -42,50 +41,50 @@ static const pj_str_t STR_L16 = { "L16", 3 };
 /* To keep frame size below 1400 MTU, set ptime to 10ms for
  * sampling rate > 35 KHz
  */
-#define GET_PTIME(clock_rate)	((pj_uint16_t)(clock_rate > 35000 ? 10 : 20))
+#define GET_PTIME(clock_rate)   ((pj_uint16_t)(clock_rate > 35000 ? 10 : 20))
 
 
 /* Prototypes for L16 factory */
 static pj_status_t l16_test_alloc( pjmedia_codec_factory *factory, 
-				    const pjmedia_codec_info *id );
+                                    const pjmedia_codec_info *id );
 static pj_status_t l16_default_attr( pjmedia_codec_factory *factory, 
-				      const pjmedia_codec_info *id, 
-				      pjmedia_codec_param *attr );
+                                      const pjmedia_codec_info *id, 
+                                      pjmedia_codec_param *attr );
 static pj_status_t l16_enum_codecs (pjmedia_codec_factory *factory, 
-				     unsigned *count, 
-				     pjmedia_codec_info codecs[]);
+                                     unsigned *count, 
+                                     pjmedia_codec_info codecs[]);
 static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory, 
-				     const pjmedia_codec_info *id, 
-				     pjmedia_codec **p_codec);
+                                     const pjmedia_codec_info *id, 
+                                     pjmedia_codec **p_codec);
 static pj_status_t l16_dealloc_codec( pjmedia_codec_factory *factory, 
-				       pjmedia_codec *codec );
+                                       pjmedia_codec *codec );
 
 /* Prototypes for L16 implementation. */
 static pj_status_t  l16_init( pjmedia_codec *codec, 
-			       pj_pool_t *pool );
+                               pj_pool_t *pool );
 static pj_status_t  l16_open( pjmedia_codec *codec, 
-			      pjmedia_codec_param *attr );
+                              pjmedia_codec_param *attr );
 static pj_status_t  l16_close( pjmedia_codec *codec );
 static pj_status_t  l16_modify(pjmedia_codec *codec, 
-			       const pjmedia_codec_param *attr );
+                               const pjmedia_codec_param *attr );
 static pj_status_t  l16_parse(pjmedia_codec *codec,
-			      void *pkt,
-			      pj_size_t pkt_size,
-			      const pj_timestamp *ts,
-			      unsigned *frame_cnt,
-			      pjmedia_frame frames[]);
+                              void *pkt,
+                              pj_size_t pkt_size,
+                              const pj_timestamp *ts,
+                              unsigned *frame_cnt,
+                              pjmedia_frame frames[]);
 static pj_status_t  l16_encode( pjmedia_codec *codec, 
-				 const struct pjmedia_frame *input,
-				 unsigned output_buf_len, 
-				 struct pjmedia_frame *output);
+                                 const struct pjmedia_frame *input,
+                                 unsigned output_buf_len, 
+                                 struct pjmedia_frame *output);
 static pj_status_t  l16_decode( pjmedia_codec *codec, 
-				 const struct pjmedia_frame *input,
-				 unsigned output_buf_len, 
-				 struct pjmedia_frame *output);
+                                 const struct pjmedia_frame *input,
+                                 unsigned output_buf_len, 
+                                 struct pjmedia_frame *output);
 #if !PLC_DISABLED
 static pj_status_t  l16_recover(pjmedia_codec *codec,
-				unsigned output_buf_len,
-				struct pjmedia_frame *output);
+                                unsigned output_buf_len,
+                                struct pjmedia_frame *output);
 #endif
 
 /* Definition for L16 codec operations. */
@@ -119,33 +118,33 @@ static pjmedia_codec_factory_op l16_factory_op =
 /* L16 factory private data */
 static struct l16_factory
 {
-    pjmedia_codec_factory	base;
-    pjmedia_endpt	       *endpt;
-    pj_pool_t		       *pool;
-    pj_mutex_t		       *mutex;
+    pjmedia_codec_factory       base;
+    pjmedia_endpt              *endpt;
+    pj_pool_t                  *pool;
+    pj_mutex_t                 *mutex;
 } l16_factory;
 
 
 /* L16 codec private data. */
 struct l16_data
 {
-    pj_pool_t		*pool;
-    unsigned		 frame_size;    /* Frame size, in bytes */
-    unsigned		 clock_rate;    /* Clock rate */
+    pj_pool_t           *pool;
+    unsigned             frame_size;    /* Frame size, in bytes */
+    unsigned             clock_rate;    /* Clock rate */
 
 #if !PLC_DISABLED
-    pj_bool_t		 plc_enabled;
-    pjmedia_plc		*plc;
+    pj_bool_t            plc_enabled;
+    pjmedia_plc         *plc;
 #endif
-    pj_bool_t		 vad_enabled;
-    pjmedia_silence_det	*vad;
-    pj_timestamp	 last_tx;
+    pj_bool_t            vad_enabled;
+    pjmedia_silence_det *vad;
+    pj_timestamp         last_tx;
 };
 
 
 
 PJ_DEF(pj_status_t) pjmedia_codec_l16_init(pjmedia_endpt *endpt,
-					   unsigned options)
+                                           unsigned options)
 {
     pjmedia_codec_mgr *codec_mgr;
     pj_status_t status;
@@ -155,8 +154,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_init(pjmedia_endpt *endpt,
 
 
     if (l16_factory.endpt != NULL) {
-	/* Already initialized. */
-	return PJ_SUCCESS;
+        /* Already initialized. */
+        return PJ_SUCCESS;
     }
 
     /* Init factory */
@@ -167,37 +166,37 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_init(pjmedia_endpt *endpt,
     /* Create pool */
     l16_factory.pool = pjmedia_endpt_create_pool(endpt, "l16", 4000, 4000);
     if (!l16_factory.pool)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
     /* Create mutex. */
     status = pj_mutex_create_simple(l16_factory.pool, "l16", 
-				    &l16_factory.mutex);
+                                    &l16_factory.mutex);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
     if (!codec_mgr) {
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
     }
 
     /* Register codec factory to endpoint. */
     status = pjmedia_codec_mgr_register_factory(codec_mgr, 
-						&l16_factory.base);
+                                                &l16_factory.base);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
 
     return PJ_SUCCESS;
 
 on_error:
     if (l16_factory.mutex) {
-	pj_mutex_destroy(l16_factory.mutex);
-	l16_factory.mutex = NULL;
+        pj_mutex_destroy(l16_factory.mutex);
+        l16_factory.mutex = NULL;
     }
     if (l16_factory.pool) {
-	pj_pool_release(l16_factory.pool);
-	l16_factory.pool = NULL;
+        pj_pool_release(l16_factory.pool);
+        l16_factory.pool = NULL;
     }
     return status;
 }
@@ -208,8 +207,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_deinit(void)
     pj_status_t status;
 
     if (l16_factory.endpt == NULL) {
-	/* Not registered. */
-	return PJ_SUCCESS;
+        /* Not registered. */
+        return PJ_SUCCESS;
     }
 
     /* Lock mutex. */
@@ -218,14 +217,14 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_deinit(void)
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(l16_factory.endpt);
     if (!codec_mgr) {
-	l16_factory.endpt = NULL;
-	pj_mutex_unlock(l16_factory.mutex);
-	return PJ_EINVALIDOP;
+        l16_factory.endpt = NULL;
+        pj_mutex_unlock(l16_factory.mutex);
+        return PJ_EINVALIDOP;
     }
 
     /* Unregister L16 codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
-						  &l16_factory.base);
+                                                  &l16_factory.base);
     l16_factory.endpt = NULL;
 
     /* Destroy mutex. */
@@ -243,21 +242,21 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_deinit(void)
 }
 
 static pj_status_t l16_test_alloc(pjmedia_codec_factory *factory, 
-				  const pjmedia_codec_info *id )
+                                  const pjmedia_codec_info *id )
 {
     PJ_UNUSED_ARG(factory);
 
     if (pj_stricmp(&id->encoding_name, &STR_L16)==0) {
-	/* Match! */
-	return PJ_SUCCESS;
+        /* Match! */
+        return PJ_SUCCESS;
     }
 
     return -1;
 }
 
 static pj_status_t l16_default_attr( pjmedia_codec_factory *factory, 
-				     const pjmedia_codec_info *id, 
-				     pjmedia_codec_param *attr )
+                                     const pjmedia_codec_info *id, 
+                                     pjmedia_codec_param *attr )
 {
     PJ_UNUSED_ARG(factory);
 
@@ -285,169 +284,169 @@ static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
 }
 
 static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory, 
-				    unsigned *max_count, 
-				    pjmedia_codec_info codecs[])
+                                    unsigned *max_count, 
+                                    pjmedia_codec_info codecs[])
 {
     unsigned count = 0;
 
     PJ_UNUSED_ARG(factory);
 
     if (count < *max_count) {
-	/* Register 44100Hz 1 channel L16 codec */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_1;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 44100;
-	codecs[count].channel_cnt = 1;
-	++count;
+        /* Register 44100Hz 1 channel L16 codec */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_1;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 44100;
+        codecs[count].channel_cnt = 1;
+        ++count;
     }
 
     if (count < *max_count) {
-	/* Register 44100Hz 2 channels L16 codec */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_2;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 44100;
-	codecs[count].channel_cnt = 2;
-	++count;
+        /* Register 44100Hz 2 channels L16 codec */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_2;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 44100;
+        codecs[count].channel_cnt = 2;
+        ++count;
     }
 
 #if PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
     if (count < *max_count) {
-	/* 8KHz mono */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_8KHZ_MONO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 8000;
-	codecs[count].channel_cnt = 1;
-	++count;
+        /* 8KHz mono */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_8KHZ_MONO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 8000;
+        codecs[count].channel_cnt = 1;
+        ++count;
     }
 #endif
 
 #if PJMEDIA_CODEC_L16_HAS_8KHZ_STEREO
     if (count < *max_count) {
-	/* 8KHz stereo */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_8KHZ_STEREO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 8000;
-	codecs[count].channel_cnt = 2;
-	++count;
+        /* 8KHz stereo */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_8KHZ_STEREO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 8000;
+        codecs[count].channel_cnt = 2;
+        ++count;
     }
 #endif
 
 // disable some L16 modes
 #if 0
     if (count < *max_count) {
-	/* 11025 Hz mono */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_11KHZ_MONO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 11025;
-	codecs[count].channel_cnt = 1;
-	++count;
+        /* 11025 Hz mono */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_11KHZ_MONO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 11025;
+        codecs[count].channel_cnt = 1;
+        ++count;
     }
 
     if (count < *max_count) {
-	/* 11025 Hz stereo */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_11KHZ_STEREO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 11025;
-	codecs[count].channel_cnt = 2;
-	++count;
+        /* 11025 Hz stereo */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_11KHZ_STEREO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 11025;
+        codecs[count].channel_cnt = 2;
+        ++count;
     }
 #endif
 
 #if PJMEDIA_CODEC_L16_HAS_16KHZ_MONO
     if (count < *max_count) {
-	/* 16000 Hz mono */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_16KHZ_MONO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 16000;
-	codecs[count].channel_cnt = 1;
-	++count;
+        /* 16000 Hz mono */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_16KHZ_MONO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 16000;
+        codecs[count].channel_cnt = 1;
+        ++count;
     }
 #endif
 
 #if PJMEDIA_CODEC_L16_HAS_16KHZ_STEREO
     if (count < *max_count) {
-	/* 16000 Hz stereo */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_16KHZ_STEREO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 16000;
-	codecs[count].channel_cnt = 2;
-	++count;
+        /* 16000 Hz stereo */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_16KHZ_STEREO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 16000;
+        codecs[count].channel_cnt = 2;
+        ++count;
     }
 #endif
 
 // disable some L16 modes
 #if 0
     if (count < *max_count) {
-	/* 22050 Hz mono */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_22KHZ_MONO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 22050;
-	codecs[count].channel_cnt = 1;
-	++count;
+        /* 22050 Hz mono */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_22KHZ_MONO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 22050;
+        codecs[count].channel_cnt = 1;
+        ++count;
     }
 
 
     if (count < *max_count) {
-	/* 22050 Hz stereo */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_22KHZ_STEREO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 22050;
-	codecs[count].channel_cnt = 2;
-	++count;
+        /* 22050 Hz stereo */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_22KHZ_STEREO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 22050;
+        codecs[count].channel_cnt = 2;
+        ++count;
     }
 
     if (count < *max_count) {
-	/* 32000 Hz mono */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_32KHZ_MONO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 32000;
-	codecs[count].channel_cnt = 1;
-	++count;
+        /* 32000 Hz mono */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_32KHZ_MONO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 32000;
+        codecs[count].channel_cnt = 1;
+        ++count;
     }
 
     if (count < *max_count) {
-	/* 32000 Hz stereo */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_32KHZ_STEREO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 32000;
-	codecs[count].channel_cnt = 2;
-	++count;
+        /* 32000 Hz stereo */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_32KHZ_STEREO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 32000;
+        codecs[count].channel_cnt = 2;
+        ++count;
     }
 #endif
 
 #if PJMEDIA_CODEC_L16_HAS_48KHZ_MONO
     if (count < *max_count) {
-	/* 48KHz mono */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_48KHZ_MONO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 48000;
-	codecs[count].channel_cnt = 1;
-	++count;
+        /* 48KHz mono */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_48KHZ_MONO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 48000;
+        codecs[count].channel_cnt = 1;
+        ++count;
     }
 #endif
 
 #if PJMEDIA_CODEC_L16_HAS_48KHZ_STEREO
     if (count < *max_count) {
-	/* 48KHz stereo */
-	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_48KHZ_STEREO;
-	codecs[count].encoding_name = STR_L16;
-	codecs[count].clock_rate = 48000;
-	codecs[count].channel_cnt = 2;
-	++count;
+        /* 48KHz stereo */
+        codecs[count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[count].pt = PJMEDIA_RTP_PT_L16_48KHZ_STEREO;
+        codecs[count].encoding_name = STR_L16;
+        codecs[count].clock_rate = 48000;
+        codecs[count].channel_cnt = 2;
+        ++count;
     }
 #endif
 
@@ -458,8 +457,8 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
 }
 
 static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory, 
-				    const pjmedia_codec_info *id,
-				    pjmedia_codec **p_codec)
+                                    const pjmedia_codec_info *id,
+                                    pjmedia_codec **p_codec)
 {
     pjmedia_codec *codec = NULL;
     struct l16_data *data;
@@ -490,21 +489,21 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
 #if !PLC_DISABLED
     /* Create PLC */
     status = pjmedia_plc_create(pool, id->clock_rate, 
-				data->frame_size >> 1, 0, 
-				&data->plc);
+                                data->frame_size >> 1, 0, 
+                                &data->plc);
     if (status != PJ_SUCCESS) {
-	pj_mutex_unlock(l16_factory.mutex);
-	return status;
+        pj_mutex_unlock(l16_factory.mutex);
+        return status;
     }
 #endif
 
     /* Create silence detector */
     status = pjmedia_silence_det_create(pool, id->clock_rate, 
-					data->frame_size >> 1,
-					&data->vad);
+                                        data->frame_size >> 1,
+                                        &data->vad);
     if (status != PJ_SUCCESS) {
-	pj_mutex_unlock(l16_factory.mutex);
-	return status;
+        pj_mutex_unlock(l16_factory.mutex);
+        return status;
     }
 
     *p_codec = codec;
@@ -516,7 +515,7 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
 }
 
 static pj_status_t l16_dealloc_codec(pjmedia_codec_factory *factory, 
-				     pjmedia_codec *codec )
+                                     pjmedia_codec *codec )
 {
     struct l16_data *data;
 
@@ -547,7 +546,7 @@ static pj_status_t l16_init( pjmedia_codec *codec, pj_pool_t *pool )
 }
 
 static pj_status_t l16_open(pjmedia_codec *codec, 
-			    pjmedia_codec_param *attr )
+                            pjmedia_codec_param *attr )
 {
     struct l16_data *data = NULL;
     
@@ -571,7 +570,7 @@ static pj_status_t l16_close( pjmedia_codec *codec )
 }
 
 static pj_status_t  l16_modify(pjmedia_codec *codec, 
-			       const pjmedia_codec_param *attr )
+                               const pjmedia_codec_param *attr )
 {
     struct l16_data *data = (struct l16_data*) codec->codec_data;
 
@@ -586,11 +585,11 @@ static pj_status_t  l16_modify(pjmedia_codec *codec,
 }
 
 static pj_status_t  l16_parse( pjmedia_codec *codec,
-			       void *pkt,
-			       pj_size_t pkt_size,
-			       const pj_timestamp *ts,
-			       unsigned *frame_cnt,
-			       pjmedia_frame frames[])
+                               void *pkt,
+                               pj_size_t pkt_size,
+                               const pj_timestamp *ts,
+                               unsigned *frame_cnt,
+                               pjmedia_frame frames[])
 {
     unsigned count = 0;
     struct l16_data *data = (struct l16_data*) codec->codec_data;
@@ -599,15 +598,15 @@ static pj_status_t  l16_parse( pjmedia_codec *codec,
     PJ_ASSERT_RETURN(frame_cnt, PJ_EINVAL);
 
     while (pkt_size >= data->frame_size && count < *frame_cnt) {
-	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frames[count].buf = pkt;
-	frames[count].size = data->frame_size;
-	frames[count].timestamp.u64 = ts->u64 + (count * data->frame_size >> 1);
+        frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
+        frames[count].buf = pkt;
+        frames[count].size = data->frame_size;
+        frames[count].timestamp.u64 = ts->u64 + (count * data->frame_size >> 1);
 
-	pkt = ((char*)pkt) + data->frame_size;
-	pkt_size -= data->frame_size;
+        pkt = ((char*)pkt) + data->frame_size;
+        pkt_size -= data->frame_size;
 
-	++count;
+        ++count;
     }
 
     *frame_cnt = count;
@@ -615,9 +614,9 @@ static pj_status_t  l16_parse( pjmedia_codec *codec,
 }
 
 static pj_status_t l16_encode(pjmedia_codec *codec, 
-			      const struct pjmedia_frame *input,
-			      unsigned output_buf_len, 
-			      struct pjmedia_frame *output)
+                              const struct pjmedia_frame *input,
+                              unsigned output_buf_len, 
+                              struct pjmedia_frame *output)
 {
     struct l16_data *data = (struct l16_data*) codec->codec_data;
     const pj_int16_t *samp = (const pj_int16_t*) input->buf;
@@ -628,39 +627,39 @@ static pj_status_t l16_encode(pjmedia_codec *codec,
 
     /* Check output buffer length */
     if (output_buf_len < input->size)
-	return PJMEDIA_CODEC_EFRMTOOSHORT;
+        return PJMEDIA_CODEC_EFRMTOOSHORT;
 
     /* Detect silence */
     if (data->vad_enabled) {
-	pj_bool_t is_silence;
-	pj_int32_t silence_duration;
+        pj_bool_t is_silence;
+        pj_int32_t silence_duration;
 
-	silence_duration = pj_timestamp_diff32(&data->last_tx, 
-					       &input->timestamp);
+        silence_duration = pj_timestamp_diff32(&data->last_tx, 
+                                               &input->timestamp);
 
-	is_silence = pjmedia_silence_det_detect(data->vad, 
-					        (const pj_int16_t*) input->buf,
-						(input->size >> 1),
-						NULL);
-	if (is_silence &&
-	    (PJMEDIA_CODEC_MAX_SILENCE_PERIOD == -1 ||
-	     silence_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*
-			        (int)data->clock_rate/1000))
-	{
-	    output->type = PJMEDIA_FRAME_TYPE_NONE;
-	    output->buf = NULL;
-	    output->size = 0;
-	    output->timestamp = input->timestamp;
-	    return PJ_SUCCESS;
-	} else {
-	    data->last_tx = input->timestamp;
-	}
+        is_silence = pjmedia_silence_det_detect(data->vad, 
+                                                (const pj_int16_t*) input->buf,
+                                                (input->size >> 1),
+                                                NULL);
+        if (is_silence &&
+            (PJMEDIA_CODEC_MAX_SILENCE_PERIOD == -1 ||
+             silence_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*
+                                (int)data->clock_rate/1000))
+        {
+            output->type = PJMEDIA_FRAME_TYPE_NONE;
+            output->buf = NULL;
+            output->size = 0;
+            output->timestamp = input->timestamp;
+            return PJ_SUCCESS;
+        } else {
+            data->last_tx = input->timestamp;
+        }
     }
 
     /* Encode */
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
     while (samp!=samp_end)
-	*samp_out++ = pj_htons(*samp++);
+        *samp_out++ = pj_htons(*samp++);
 #else
     pjmedia_copy_samples(samp_out, samp, input->size >> 1);
 #endif
@@ -675,9 +674,9 @@ static pj_status_t l16_encode(pjmedia_codec *codec,
 }
 
 static pj_status_t l16_decode(pjmedia_codec *codec, 
-			      const struct pjmedia_frame *input,
-			      unsigned output_buf_len, 
-			      struct pjmedia_frame *output)
+                              const struct pjmedia_frame *input,
+                              unsigned output_buf_len, 
+                              struct pjmedia_frame *output)
 {
     struct l16_data *l16_data = (struct l16_data*) codec->codec_data;
     const pj_int16_t *samp = (const pj_int16_t*) input->buf;
@@ -690,13 +689,13 @@ static pj_status_t l16_decode(pjmedia_codec *codec,
 
     /* Check output buffer length */
     if (output_buf_len < input->size)
-	return PJMEDIA_CODEC_EPCMTOOSHORT;
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
 
 
     /* Decode */
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
     while (samp!=samp_end)
-	*samp_out++ = pj_ntohs(*samp++);
+        *samp_out++ = pj_ntohs(*samp++);
 #else
     pjmedia_copy_samples(samp_out, samp, input->size >> 1);
 #endif
@@ -708,7 +707,7 @@ static pj_status_t l16_decode(pjmedia_codec *codec,
 
 #if !PLC_DISABLED
     if (l16_data->plc_enabled)
-	pjmedia_plc_save( l16_data->plc, (pj_int16_t*)output->buf);
+        pjmedia_plc_save( l16_data->plc, (pj_int16_t*)output->buf);
 #endif
 
     return PJ_SUCCESS;
@@ -719,15 +718,15 @@ static pj_status_t l16_decode(pjmedia_codec *codec,
  * Recover lost frame.
  */
 static pj_status_t  l16_recover(pjmedia_codec *codec,
-				      unsigned output_buf_len,
-				      struct pjmedia_frame *output)
+                                      unsigned output_buf_len,
+                                      struct pjmedia_frame *output)
 {
     struct l16_data *data = (struct l16_data*) codec->codec_data;
 
     PJ_ASSERT_RETURN(data->plc_enabled, PJ_EINVALIDOP);
 
     PJ_ASSERT_RETURN(output_buf_len >= data->frame_size, 
-		     PJMEDIA_CODEC_EPCMTOOSHORT);
+                     PJMEDIA_CODEC_EPCMTOOSHORT);
 
     pjmedia_plc_generate(data->plc, (pj_int16_t*)output->buf);
     output->size = data->frame_size;
@@ -736,6 +735,6 @@ static pj_status_t  l16_recover(pjmedia_codec *codec,
 }
 #endif
 
-#endif	/* PJMEDIA_HAS_L16_CODEC */
+#endif  /* PJMEDIA_HAS_L16_CODEC */
 
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -58,18 +57,18 @@ PJ_IDEF(void) pj_list_insert_nodes_before(pj_list_type *pos, pj_list_type *lst)
 PJ_IDEF(void) pj_list_merge_last(pj_list_type *lst1, pj_list_type *lst2)
 {
     if (!pj_list_empty(lst2)) {
-	pj_link_node(((pj_list*)lst1)->prev, ((pj_list*)lst2)->next);
-	pj_link_node(((pj_list*)lst2)->prev, lst1);
-	pj_list_init(lst2);
+        pj_link_node(((pj_list*)lst1)->prev, ((pj_list*)lst2)->next);
+        pj_link_node(((pj_list*)lst2)->prev, lst1);
+        pj_list_init(lst2);
     }
 }
 
 PJ_IDEF(void) pj_list_merge_first(pj_list_type *lst1, pj_list_type *lst2)
 {
     if (!pj_list_empty(lst2)) {
-	pj_link_node(((pj_list*)lst2)->prev, ((pj_list*)lst1)->next);
-	pj_link_node(((pj_list*)lst1), ((pj_list*)lst2)->next);
-	pj_list_init(lst2);
+        pj_link_node(((pj_list*)lst2)->prev, ((pj_list*)lst1)->next);
+        pj_link_node(((pj_list*)lst1), ((pj_list*)lst2)->next);
+        pj_list_init(lst2);
     }
 }
 
@@ -89,18 +88,18 @@ PJ_IDEF(pj_list_type*) pj_list_find_node(pj_list_type *list, pj_list_type *node)
 {
     pj_list *p = (pj_list *) ((pj_list*)list)->next;
     while (p != list && p != node)
-	p = (pj_list *) p->next;
+        p = (pj_list *) p->next;
 
     return p==node ? p : NULL;
 }
 
 
 PJ_IDEF(pj_list_type*) pj_list_search(pj_list_type *list, void *value,
-	       		int (*comp)(void *value, const pj_list_type *node))
+                        int (*comp)(void *value, const pj_list_type *node))
 {
     pj_list *p = (pj_list *) ((pj_list*)list)->next;
     while (p != list && (*comp)(value, p) != 0)
-	p = (pj_list *) p->next;
+        p = (pj_list *) p->next;
 
     return p==list ? NULL : p;
 }
@@ -112,8 +111,8 @@ PJ_IDEF(pj_size_t) pj_list_size(const pj_list_type *list)
     pj_size_t count = 0;
 
     while (node != list) {
-	++count;
-	node = (pj_list*)node->next;
+        ++count;
+        node = (pj_list*)node->next;
     }
 
     return count;

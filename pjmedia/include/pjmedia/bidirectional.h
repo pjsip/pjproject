@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -42,17 +41,17 @@ PJ_BEGIN_DECL
 /**
  * Create bidirectional port from two unidirectional ports
  *
- * @param pool		Pool to allocate memory.
- * @param get_port	Port where get_frame() will be directed to.
- * @param put_port	Port where put_frame() will be directed to.
- * @param p_port	Pointer to receive the port instance.
+ * @param pool          Pool to allocate memory.
+ * @param get_port      Port where get_frame() will be directed to.
+ * @param put_port      Port where put_frame() will be directed to.
+ * @param p_port        Pointer to receive the port instance.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_bidirectional_port_create(pj_pool_t *pool,
-						       pjmedia_port *get_port,
-						       pjmedia_port *put_port,
-						       pjmedia_port **p_port );
+                                                       pjmedia_port *get_port,
+                                                       pjmedia_port *put_port,
+                                                       pjmedia_port **p_port );
 
 
 
@@ -63,5 +62,5 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_BIDIRECTIONAL_H__ */
+#endif  /* __PJMEDIA_BIDIRECTIONAL_H__ */
 

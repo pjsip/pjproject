@@ -1,4 +1,3 @@
-# $Id$
 #
 # pjsua Python GUI Demo
 #

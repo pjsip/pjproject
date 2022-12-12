@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,7 +45,7 @@ public:
     Pj_Async_Op()
         : handler_(NULL)
     {
-	pj_ioqueue_op_key_init(this, sizeof(*this));
+        pj_ioqueue_op_key_init(this, sizeof(*this));
     }
 
     //
@@ -55,7 +54,7 @@ public:
     explicit Pj_Async_Op(Pj_Event_Handler *handler)
         : handler_(handler)
     {
-	pj_ioqueue_op_key_init(this, sizeof(*this));
+        pj_ioqueue_op_key_init(this, sizeof(*this));
     }
 
     //
@@ -319,7 +318,7 @@ public:
     // Create proactor.
     //
     pj_status_t create( Pj_Pool *pool, pj_size_t max_fd, 
-			pj_size_t timer_entry_count)
+                        pj_size_t timer_entry_count)
     {
         pj_status_t status;
 
@@ -413,7 +412,7 @@ public:
          * with the timeout to wait from timer, and use the minimum value.
          */
         if (max_timeout && timeout >= *max_timeout) {
-	    timeout = *max_timeout;
+            timeout = *max_timeout;
         }
 
         /* Poll events in ioqueue. */
@@ -421,7 +420,7 @@ public:
 
         ioqueue_count = pj_ioqueue_poll(ioq_, &timeout);
         if (ioqueue_count < 0)
-	    return ioqueue_count;
+            return ioqueue_count;
 
         return ioqueue_count + timer_count;
     }
@@ -449,7 +448,7 @@ private:
 
     static bool schedule_timer( pj_timer_heap_t *timer, 
                                 Pj_Event_Handler *handler,
-				const Pj_Time_Val &delay, 
+                                const Pj_Time_Val &delay, 
                                 int id=-1)
     {
         handler->timer_.id = id;
@@ -465,7 +464,7 @@ private:
                                   pj_ssize_t bytes_read)
     {
         Pj_Event_Handler *handler = 
-	    (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
+            (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
 
         handler->on_read_complete((Pj_Async_Op*)op_key, bytes_read);
     }
@@ -478,7 +477,7 @@ private:
                                   pj_ssize_t bytes_sent)
     {
         Pj_Event_Handler *handler = 
-	    (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
+            (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
 
         handler->on_write_complete((Pj_Async_Op*)op_key, bytes_sent);
     }
@@ -492,7 +491,7 @@ private:
                                    pj_status_t status)
     {
         Pj_Event_Handler *handler = 
-	    (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
+            (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
 
         handler->on_accept_complete((Pj_Async_Op*)op_key, new_sock, status);
     }
@@ -504,12 +503,12 @@ private:
                                     pj_status_t status)
     {
         Pj_Event_Handler *handler = 
-	    (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
+            (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
 
         handler->on_connect_complete(status);
     }
 
 };
 
-#endif	/* __PJPP_PROACTOR_HPP__ */
+#endif  /* __PJPP_PROACTOR_HPP__ */
 

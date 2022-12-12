@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2014 Teluu Inc. (http://www.teluu.com)
  *
@@ -38,32 +37,32 @@ const char* find_gcc(const char *gcc_exe)
 
     p = getenv("PATH");
     if (strlen(p) >= sizeof(spath)) {
-	printf("Error: find_gcc() not enough buffer 1\n");
-	return NULL;
+        printf("Error: find_gcc() not enough buffer 1\n");
+        return NULL;
     }
 
     strncpy(spath, p, sizeof(spath));
     p = strtok(spath, ";");
     while (p) {
-	int len;
+        int len;
 
-	/* Skip current dir */
-	if (strcmp(p, ".") == 0) {
-	    p = strtok(NULL, ";");
-	    continue;
-	}
+        /* Skip current dir */
+        if (strcmp(p, ".") == 0) {
+            p = strtok(NULL, ";");
+            continue;
+        }
 
-	len = snprintf(fname, sizeof(fname), "%s\\%s", p, gcc_exe);
-	if (len < 0 || len >= sizeof(fname)) {
-	    printf("Error: find_gcc() not enough buffer 2\n");
-	    return NULL;
-	}
+        len = snprintf(fname, sizeof(fname), "%s\\%s", p, gcc_exe);
+        if (len < 0 || len >= sizeof(fname)) {
+            printf("Error: find_gcc() not enough buffer 2\n");
+            return NULL;
+        }
 
-	if (access(fname, F_OK | X_OK) != -1) {
-	    return fname;
-	}
-	
-	p = strtok(NULL, ";");
+        if (access(fname, F_OK | X_OK) != -1) {
+            return fname;
+        }
+        
+        p = strtok(NULL, ";");
     }
 
     return NULL;
@@ -79,13 +78,13 @@ int check_gcc_reject_mno_cygwin(const char *gcc_path)
     snprintf(tmp, sizeof(tmp), "%s -mno-cygwin 2>&1", gcc_path);
     fp = popen(tmp, "r");
     if (fp == NULL) {
-	printf("Error: failed to run gcc\n" );
-	return -1;
+        printf("Error: failed to run gcc\n" );
+        return -1;
     }
 
     while (fgets(tmp, sizeof(tmp), fp) != NULL) {
-	if (strstr(tmp, "unrecognized") && strstr(tmp, "-mno-cygwin"))
-	    return 1;
+        if (strstr(tmp, "unrecognized") && strstr(tmp, "-mno-cygwin"))
+            return 1;
     }
 
     pclose(fp);
@@ -102,48 +101,48 @@ int main(int argc, const char const **argv)
     int remove_mno_cygwin;
 
     if (strstr(argv[0], "gcc") || strstr(argv[0], "GCC")) {
-	gcc_exe = "gcc.exe";
+        gcc_exe = "gcc.exe";
     } else if (strstr(argv[0], "g++") || strstr(argv[0], "G++")) {
-	gcc_exe = "g++.exe";
+        gcc_exe = "g++.exe";
     } else {
-	printf("Error: app name not gcc/g++\n");
-	return -10;
+        printf("Error: app name not gcc/g++\n");
+        return -10;
     }
 
     /* Resolve GCC path from PATH env var */
     gcc_exe = find_gcc(gcc_exe);
     if (!gcc_exe) {
-	printf("Error: real gcc/g++ not found\n");
-	return -20;
+        printf("Error: real gcc/g++ not found\n");
+        return -20;
     }
 
     /* Check if GCC rejects '-mno-cygwin' option */
     remove_mno_cygwin = check_gcc_reject_mno_cygwin(gcc_exe);
     if (remove_mno_cygwin < 0)
-	return -30;
+        return -30;
     
     len = snprintf(cmd, sizeof(cmd), "%s", gcc_exe);
     p = cmd + len;
     sz = sizeof(cmd) - len;
     for (i = 1; i < argc && sz > 0; ++i) {
 
-	if (remove_mno_cygwin && strcmp(argv[i], "-mno-cygwin") == 0) {
-	    printf("Removed option '-mno-cygwin'.\n");
-	    continue;
-	}
+        if (remove_mno_cygwin && strcmp(argv[i], "-mno-cygwin") == 0) {
+            printf("Removed option '-mno-cygwin'.\n");
+            continue;
+        }
 
-	len = snprintf(p, sz, " %s", argv[i]);
-	if (len < 0 || len >= sz) {
-	    ret = E2BIG;
-	    break;
-	}
-	p += len;
-	sz -= len;
+        len = snprintf(p, sz, " %s", argv[i]);
+        if (len < 0 || len >= sz) {
+            ret = E2BIG;
+            break;
+        }
+        p += len;
+        sz -= len;
     }
     
     if (!ret) {
-	//printf("cmd = %s\n", cmd);
-	ret = system(cmd);
+        //printf("cmd = %s\n", cmd);
+        ret = system(cmd);
     }
 
     if (ret) {

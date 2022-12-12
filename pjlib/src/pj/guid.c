@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -27,7 +26,7 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string_lower(pj_str_t *str)
 
     pj_generate_unique_string(str);
     for (i = 0; i < str->slen; i++)
-	str->ptr[i] = (char)pj_tolower(str->ptr[i]);
+        str->ptr[i] = (char)pj_tolower(str->ptr[i]);
 
     return str;
 }
@@ -44,5 +43,5 @@ PJ_DEF(void) pj_create_unique_string_lower(pj_pool_t *pool, pj_str_t *str)
 
     pj_create_unique_string(pool, str);
     for (i = 0; i < str->slen; i++)
-	str->ptr[i] = (char)pj_tolower(str->ptr[i]);
+        str->ptr[i] = (char)pj_tolower(str->ptr[i]);
 }

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -93,33 +92,33 @@
   
       // Create the file player port.
       status = pjmedia_wav_player_port_create(pool, 
-  					      "Input.WAV",	    // file name
-  					      20,		    // ptime.
-  					      PJMEDIA_FILE_NO_LOOP, // flags
-  					      0,		    // buffer size
-  					      NULL,		    // user data.
-  					      &player );
+                                              "Input.WAV",          // file name
+                                              20,                   // ptime.
+                                              PJMEDIA_FILE_NO_LOOP, // flags
+                                              0,                    // buffer size
+                                              NULL,                 // user data.
+                                              &player );
       PJ_ASSERT_RETURN(status==PJ_SUCCESS, PJ_SUCCESS);
   
       // Create the resample port with specifying the target sampling rate, 
       // and with the file port as the source. This will effectively
       // connect the resample port with the player port.
       status = pjmedia_resample_port_create( pool, player, 8000, 
-  					     0, &resample);
+                                             0, &resample);
       PJ_ASSERT_RETURN(status==PJ_SUCCESS, PJ_SUCCESS);
   
       // Create the file writer, specifying the resample port's configuration
       // as the WAV parameters.
       status pjmedia_wav_writer_port_create(pool, 
-  					    "Output.WAV",  // file name.
-  					    resample->info.clock_rate,
-  					    resample->info.channel_count,
-  					    resample->info.samples_per_frame,
-  					    resample->info.bits_per_sample,
-  					    0,		// flags
-  					    0,		// buffer size
-  					    NULL,	// user data.
-  					    &writer);
+                                            "Output.WAV",  // file name.
+                                            resample->info.clock_rate,
+                                            resample->info.channel_count,
+                                            resample->info.samples_per_frame,
+                                            resample->info.bits_per_sample,
+                                            0,          // flags
+                                            0,          // buffer size
+                                            NULL,       // user data.
+                                            &writer);
   
   \endcode
 
@@ -129,29 +128,29 @@
  
   \code
   
-  	pj_int16_t samplebuf[MAX_FRAME];
-  	
-  	while (1) {
-  	    pjmedia_frame frame;
-  	    pj_status_t status;
+        pj_int16_t samplebuf[MAX_FRAME];
+        
+        while (1) {
+            pjmedia_frame frame;
+            pj_status_t status;
   
-  	    frame.buf = samplebuf;
-  	    frame.size = sizeof(samplebuf);
+            frame.buf = samplebuf;
+            frame.size = sizeof(samplebuf);
   
-  	    // Get the frame from resample port.
-  	    status = pjmedia_port_get_frame(resample, &frame);
-  	    if (status != PJ_SUCCESS || frame.type == PJMEDIA_FRAME_TYPE_NONE) {
-  		// End-of-file, end the conversion.
-  		break;
-  	    }
+            // Get the frame from resample port.
+            status = pjmedia_port_get_frame(resample, &frame);
+            if (status != PJ_SUCCESS || frame.type == PJMEDIA_FRAME_TYPE_NONE) {
+                // End-of-file, end the conversion.
+                break;
+            }
   
-  	    // Put the frame to write port.
-  	    status = pjmedia_port_put_frame(writer, &frame);
-  	    if (status != PJ_SUCCESS) {
-  		// Error in writing the file.
-  		break;
-  	    }
-  	}
+            // Put the frame to write port.
+            status = pjmedia_port_put_frame(writer, &frame);
+            if (status != PJ_SUCCESS) {
+                // Error in writing the file.
+                break;
+            }
+        }
   
   \endcode
  
@@ -159,10 +158,10 @@
   application would need to destroy the ports:
   
   \code
-	// Note: by default, destroying resample port will destroy the
-	//	 the downstream port too.
-  	pjmedia_port_destroy(resample);
-  	pjmedia_port_destroy(writer);
+        // Note: by default, destroying resample port will destroy the
+        //       the downstream port too.
+        pjmedia_port_destroy(resample);
+        pjmedia_port_destroy(writer);
   \endcode
  
  
@@ -197,14 +196,14 @@ PJ_BEGIN_DECL
  * See also https://github.com/pjsip/pjproject/issues/2251.
  */
 #ifndef DEPRECATED_FOR_TICKET_2251
-#  define DEPRECATED_FOR_TICKET_2251	0
+#  define DEPRECATED_FOR_TICKET_2251    0
 #endif
 
 
 /**
  * Create 32bit port signature from ASCII characters.
  */
-#define PJMEDIA_PORT_SIG(a,b,c,d)	    	PJMEDIA_OBJ_SIG(a,b,c,d)
+#define PJMEDIA_PORT_SIG(a,b,c,d)               PJMEDIA_OBJ_SIG(a,b,c,d)
 
 
 /**
@@ -242,49 +241,49 @@ typedef enum pjmedia_port_op
  */
 typedef struct pjmedia_port_info
 {
-    pj_str_t	    name;		/**< Port name.			    */
-    pj_uint32_t	    signature;		/**< Port signature.		    */
+    pj_str_t        name;               /**< Port name.                     */
+    pj_uint32_t     signature;          /**< Port signature.                */
     pjmedia_dir     dir;                /**< Port direction.                */
-    pjmedia_format  fmt;                /**< Format.		            */
+    pjmedia_format  fmt;                /**< Format.                        */
 } pjmedia_port_info;
 
 /**
  * Utility to retrieve audio clock rate/sampling rate value from
  * pjmedia_port_info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Audio clock rate.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Audio clock rate.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_SRATE(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return pia->fmt.det.aud.clock_rate;
 }
 
 /**
  * Utility to retrieve audio channel count value from pjmedia_port_info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Audio channel count.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Audio channel count.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_CCNT(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return pia->fmt.det.aud.channel_count;
 }
 
 /**
  * Utility to retrieve audio bits per sample value from pjmedia_port_info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Number of bits per sample.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Number of bits per sample.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_BITS(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return pia->fmt.det.aud.bits_per_sample;
 }
 
@@ -292,13 +291,13 @@ PJ_INLINE(unsigned) PJMEDIA_PIA_BITS(const pjmedia_port_info *pia)
  * Utility to retrieve audio frame interval (ptime) value from
  * pjmedia_port_info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Frame interval in msec.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Frame interval in msec.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_PTIME(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return pia->fmt.det.aud.frame_time_usec / 1000;
 }
 
@@ -306,13 +305,13 @@ PJ_INLINE(unsigned) PJMEDIA_PIA_PTIME(const pjmedia_port_info *pia)
  * This is a utility routine to retrieve the audio samples_per_frame value
  * from port info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Samples per frame value.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Samples per frame value.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_SPF(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return PJMEDIA_AFD_SPF(&pia->fmt.det.aud);
 }
 
@@ -320,13 +319,13 @@ PJ_INLINE(unsigned) PJMEDIA_PIA_SPF(const pjmedia_port_info *pia)
  * This is a utility routine to retrieve the average bitrate value
  * from port info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Bitrate, in bits per second.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Bitrate, in bits per second.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_AVG_BPS(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return pia->fmt.det.aud.avg_bps;
 }
 
@@ -334,13 +333,13 @@ PJ_INLINE(unsigned) PJMEDIA_PIA_AVG_BPS(const pjmedia_port_info *pia)
  * This is a utility routine to retrieve the maximum bitrate value
  * from port info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Bitrate, in bits per second.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Bitrate, in bits per second.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_MAX_BPS(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return pia->fmt.det.aud.max_bps;
 }
 
@@ -348,13 +347,13 @@ PJ_INLINE(unsigned) PJMEDIA_PIA_MAX_BPS(const pjmedia_port_info *pia)
  * This is a utility routine to retrieve the average audio frame size value
  * from pjmedia_port_info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Frame size in bytes.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Frame size in bytes.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_AVG_FSZ(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return PJMEDIA_AFD_AVG_FSZ(&pia->fmt.det.aud);
 }
 
@@ -362,13 +361,13 @@ PJ_INLINE(unsigned) PJMEDIA_PIA_AVG_FSZ(const pjmedia_port_info *pia)
  * Utility to retrieve audio frame size from maximum bitrate from
  * pjmedia_port_info.
  *
- * @param pia		Pointer to port info containing audio format.
- * @return		Frame size in bytes.
+ * @param pia           Pointer to port info containing audio format.
+ * @return              Frame size in bytes.
  */
 PJ_INLINE(unsigned) PJMEDIA_PIA_MAX_FSZ(const pjmedia_port_info *pia)
 {
     pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
-	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+              pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
     return PJMEDIA_AFD_MAX_FSZ(&pia->fmt.det.aud);
 }
 
@@ -377,14 +376,14 @@ PJ_INLINE(unsigned) PJMEDIA_PIA_MAX_FSZ(const pjmedia_port_info *pia)
  */
 typedef struct pjmedia_port
 {
-    pjmedia_port_info	 info;		    /**< Port information.  */
+    pjmedia_port_info    info;              /**< Port information.  */
 
     /** Port data can be used by the port creator to attach arbitrary
      *  value to be associated with the port.
      */
     struct port_data {
-	void		*pdata;		    /**< Pointer data.	    */
-	long		 ldata;		    /**< Long data.	    */
+        void            *pdata;             /**< Pointer data.      */
+        long             ldata;             /**< Long data.         */
     } port_data;
 
     /**
@@ -393,7 +392,7 @@ typedef struct pjmedia_port
      * This is optional, but if this port is registered to the audio/video
      * conference bridge, the bridge will create one if the port has none.
      */
-    pj_grp_lock_t	*grp_lock;
+    pj_grp_lock_t       *grp_lock;
 
     /**
      * Get clock source.
@@ -407,14 +406,14 @@ typedef struct pjmedia_port
      * This should only be called by #pjmedia_port_put_frame().
      */
     pj_status_t (*put_frame)(struct pjmedia_port *this_port, 
-			     pjmedia_frame *frame);
+                             pjmedia_frame *frame);
 
     /**
      * Source interface. 
      * This should only be called by #pjmedia_port_get_frame().
      */
     pj_status_t (*get_frame)(struct pjmedia_port *this_port, 
-			     pjmedia_frame *frame);
+                             pjmedia_frame *frame);
 
     /**
      * Called to destroy this port.
@@ -428,50 +427,50 @@ typedef struct pjmedia_port
  * This is an auxiliary function to initialize port info for
  * ports which deal with PCM audio.
  *
- * @param info		    The port info to be initialized.
- * @param name		    Port name.
- * @param signature	    Port signature.
- * @param clock_rate	    Port's clock rate.
- * @param channel_count	    Number of channels.
+ * @param info              The port info to be initialized.
+ * @param name              Port name.
+ * @param signature         Port signature.
+ * @param clock_rate        Port's clock rate.
+ * @param channel_count     Number of channels.
  * @param bits_per_sample   Bits per sample.
  * @param samples_per_frame Number of samples per frame.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_port_info_init( pjmedia_port_info *info,
-					     const pj_str_t *name,
-					     unsigned signature,
-					     unsigned clock_rate,
-					     unsigned channel_count,
-					     unsigned bits_per_sample,
-					     unsigned samples_per_frame);
+                                             const pj_str_t *name,
+                                             unsigned signature,
+                                             unsigned clock_rate,
+                                             unsigned channel_count,
+                                             unsigned bits_per_sample,
+                                             unsigned samples_per_frame);
 
 /**
  * This is an auxiliary function to initialize port info for
  * ports which deal with PCM audio.
  *
- * @param info		    The port info to be initialized.
- * @param name		    Port name.
- * @param signature	    Port signature.
- * @param dir	            Port's direction.
- * @param fmt	            Port's media format.
+ * @param info              The port info to be initialized.
+ * @param name              Port name.
+ * @param signature         Port signature.
+ * @param dir               Port's direction.
+ * @param fmt               Port's media format.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_port_info_init2(pjmedia_port_info *info,
-					     const pj_str_t *name,
-					     unsigned signature,
-					     pjmedia_dir dir,
-					     const pjmedia_format *fmt);
+                                             const pj_str_t *name,
+                                             unsigned signature,
+                                             pjmedia_dir dir,
+                                             const pjmedia_format *fmt);
 
 
 /**
  * Get a clock source from the port.
  *
- * @param port	    The media port.
+ * @param port      The media port.
  * @param dir       Media port's direction.
  *
- * @return	    The clock source or NULL if clock source is not present
+ * @return          The clock source or NULL if clock source is not present
  *                  in the port.
  */
 PJ_DECL(pjmedia_clock_src *) pjmedia_port_get_clock_src( pjmedia_port *port,
@@ -481,24 +480,24 @@ PJ_DECL(pjmedia_clock_src *) pjmedia_port_get_clock_src( pjmedia_port *port,
 /**
  * Get a frame from the port (and subsequent downstream ports).
  *
- * @param port	    The media port.
- * @param frame	    Frame to store samples.
+ * @param port      The media port.
+ * @param frame     Frame to store samples.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
-					     pjmedia_frame *frame );
+                                             pjmedia_frame *frame );
 
 /**
  * Put a frame to the port (and subsequent downstream ports).
  *
- * @param port	    The media port.
- * @param frame	    Frame to the put to the port.
+ * @param port      The media port.
+ * @param frame     Frame to the put to the port.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
-					     pjmedia_frame *frame );
+                                             pjmedia_frame *frame );
 
 /**
  * Destroy port (and subsequent downstream ports).
@@ -506,9 +505,9 @@ PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
  * Note that if the port has group lock, instead of destroying the port
  * immediately, this function will just decrease the reference counter.
  *
- * @param port	    The media port.
+ * @param port      The media port.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
 
@@ -522,26 +521,26 @@ PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
  * This function should only be called by a media port implementation and
  * after port's on_destroy() function has been assigned.
  *
- * @param port		    The pjmedia port to be initialized.
- * @param pool		    The pool, this can be a temporary pool as
- *			    group lock will create and use its internal pool.
- * @param glock		    The group lock, or create a new one if NULL.
+ * @param port              The pjmedia port to be initialized.
+ * @param pool              The pool, this can be a temporary pool as
+ *                          group lock will create and use its internal pool.
+ * @param glock             The group lock, or create a new one if NULL.
  *
- * @return		    PJ_SUCCESS on success, PJ_EEXISTS if group lock
- *			    is already initialized, or the other appropriate
- *			    error code.
+ * @return                  PJ_SUCCESS on success, PJ_EEXISTS if group lock
+ *                          is already initialized, or the other appropriate
+ *                          error code.
  */
 PJ_DECL(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
-						 pj_pool_t *pool,
-						 pj_grp_lock_t *glock );
+                                                 pj_pool_t *pool,
+                                                 pj_grp_lock_t *glock );
 
 
 /**
  * This is a helper function to increase the port reference counter.
  *
- * @param port		    The PJMEDIA port.
+ * @param port              The PJMEDIA port.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_port_add_ref( pjmedia_port *port );
 
@@ -549,9 +548,9 @@ PJ_DECL(pj_status_t) pjmedia_port_add_ref( pjmedia_port *port );
 /**
  * This is a helper function to decrease the port reference counter.
  *
- * @param port		    The PJMEDIA port.
+ * @param port              The PJMEDIA port.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_port_dec_ref( pjmedia_port *port );
 
@@ -562,5 +561,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_PORT_H__ */
+#endif  /* __PJMEDIA_PORT_H__ */
 

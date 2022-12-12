@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -23,9 +22,9 @@
 #include <pjsip/sip_types.h>
 
 
-#define PJSIP_EVSUB_POOL_LEN	4000
-#define PJSIP_EVSUB_POOL_INC	4000
+#define PJSIP_EVSUB_POOL_LEN    4000
+#define PJSIP_EVSUB_POOL_INC    4000
 
 
-#endif	/* __PJSIP_SIMPLE_TYPES_H__ */
+#endif  /* __PJSIP_SIMPLE_TYPES_H__ */
 

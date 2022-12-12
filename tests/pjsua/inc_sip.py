@@ -1,4 +1,3 @@
-# $Id$
 #
 from socket import *
 import re

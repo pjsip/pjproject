@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -43,7 +42,7 @@ public:
     //
     pj_uint16_t get_port_number() const
     {
-	return pj_sockaddr_in_get_port(this);
+        return pj_sockaddr_in_get_port(this);
     }
 
     //
@@ -51,8 +50,8 @@ public:
     //
     void set_port_number(pj_uint16_t port)
     {
-	sin_family = PJ_AF_INET;
-	pj_sockaddr_in_set_port(this, port);
+        sin_family = PJ_AF_INET;
+        pj_sockaddr_in_set_port(this, port);
     }
 
     //
@@ -60,7 +59,7 @@ public:
     //
     pj_uint32_t get_ip_address() const
     {
-	return pj_sockaddr_in_get_addr(this).s_addr;
+        return pj_sockaddr_in_get_addr(this).s_addr;
     }
 
     //
@@ -68,7 +67,7 @@ public:
     //
     const char *get_address() const
     {
-	return pj_inet_ntoa(sin_addr);
+        return pj_inet_ntoa(sin_addr);
     }
 
     //
@@ -76,8 +75,8 @@ public:
     //
     void set_ip_address(pj_uint32_t addr)
     {
-	sin_family = PJ_AF_INET;
-	pj_sockaddr_in_set_addr(this, addr);
+        sin_family = PJ_AF_INET;
+        pj_sockaddr_in_set_addr(this, addr);
     }
 
     //
@@ -85,7 +84,7 @@ public:
     //
     pj_status_t set_address(const pj_str_t *addr)
     {
-	return pj_sockaddr_in_set_str_addr(this, addr);
+        return pj_sockaddr_in_set_str_addr(this, addr);
     }
 
     //
@@ -94,7 +93,7 @@ public:
     pj_status_t set_address(const char *addr)
     {
         pj_str_t s;
-	return pj_sockaddr_in_set_str_addr(this, pj_cstr(&s, addr));
+        return pj_sockaddr_in_set_str_addr(this, pj_cstr(&s, addr));
     }
 
     //
@@ -102,7 +101,7 @@ public:
     //
     bool operator==(const Pj_Inet_Addr &rhs) const
     {
-	return sin_family == rhs.sin_family &&
+        return sin_family == rhs.sin_family &&
                sin_addr.s_addr == rhs.sin_addr.s_addr &&
                sin_port == rhs.sin_port;
     }
@@ -166,7 +165,7 @@ public:
     //
     void set_handle(pj_sock_t sock)
     {
-	sock_ = sock;
+        sock_ = sock;
     }
 
     //
@@ -174,7 +173,7 @@ public:
     //
     pj_sock_t get_handle() const
     {
-	return sock_;
+        return sock_;
     }
 
     //
@@ -182,7 +181,7 @@ public:
     //
     pj_sock_t& get_handle()
     {
-	return sock_;
+        return sock_;
     }
 
     //
@@ -198,7 +197,7 @@ public:
     //
     pj_status_t create(int af, int type, int proto)
     {
-	return pj_sock_socket(af, type, proto, &sock_);
+        return pj_sock_socket(af, type, proto, &sock_);
     }
 
     //
@@ -206,7 +205,7 @@ public:
     //
     pj_status_t bind(const Pj_Inet_Addr &addr)
     {
-	return pj_sock_bind(sock_, &addr, sizeof(Pj_Inet_Addr));
+        return pj_sock_bind(sock_, &addr, sizeof(Pj_Inet_Addr));
     }
 
     //
@@ -214,7 +213,7 @@ public:
     //
     pj_status_t close()
     {
-	pj_sock_close(sock_);
+        pj_sock_close(sock_);
     }
 
     //
@@ -222,7 +221,7 @@ public:
     //
     pj_status_t getpeername(Pj_Inet_Addr *addr)
     {
-	return pj_sock_getpeername(sock_, addr, &addr->addrlen_);
+        return pj_sock_getpeername(sock_, addr, &addr->addrlen_);
     }
 
     //
@@ -230,7 +229,7 @@ public:
     //
     pj_status_t getsockname(Pj_Inet_Addr *addr)
     {
-	return pj_sock_getsockname(sock_, addr, &addr->addrlen_);
+        return pj_sock_getsockname(sock_, addr, &addr->addrlen_);
     }
 
     //
@@ -239,7 +238,7 @@ public:
     pj_status_t getsockopt(pj_uint16_t level, pj_uint16_t optname, 
                            void *optval, int *optlen)
     {
-	return pj_sock_getsockopt(sock_, level, optname, optval, optlen);
+        return pj_sock_getsockopt(sock_, level, optname, optval, optlen);
     }
 
     //
@@ -248,7 +247,7 @@ public:
     pj_status_t setsockopt(pj_uint16_t level, pj_uint16_t optname, 
                            const void *optval, int optlen)
     {
-	return pj_sock_setsockopt(sock_, level, optname, optval, optlen);
+        return pj_sock_setsockopt(sock_, level, optname, optval, optlen);
     }
 
     //
@@ -257,7 +256,7 @@ public:
     pj_ssize_t recv(void *buf, pj_size_t len, int flag = 0)
     {
         pj_ssize_t bytes = len;
-	if (pj_sock_recv(sock_, buf, &bytes, flag) != PJ_SUCCESS)
+        if (pj_sock_recv(sock_, buf, &bytes, flag) != PJ_SUCCESS)
             return -1;
         return bytes;
     }
@@ -268,7 +267,7 @@ public:
     pj_ssize_t send(const void *buf, pj_ssize_t len, int flag = 0)
     {
         pj_ssize_t bytes = len;
-	if (pj_sock_send(sock_, buf, &bytes, flag) != PJ_SUCCESS)
+        if (pj_sock_send(sock_, buf, &bytes, flag) != PJ_SUCCESS)
             return -1;
         return bytes;
     }
@@ -278,7 +277,7 @@ public:
     //
     pj_status_t connect(const Pj_Inet_Addr &addr)
     {
-	return pj_sock_connect(sock_, &addr, sizeof(Pj_Inet_Addr));
+        return pj_sock_connect(sock_, &addr, sizeof(Pj_Inet_Addr));
     }
 
     //
@@ -339,7 +338,7 @@ public:
     //
     pj_status_t listen(int backlog = 5)
     {
-	return pj_sock_listen(sock_, backlog);
+        return pj_sock_listen(sock_, backlog);
     }
 
     //
@@ -363,7 +362,7 @@ public:
     //
     pj_status_t shutdown(int how = PJ_SHUT_RDWR)
     {
-	return pj_sock_shutdown(sock_, how);
+        return pj_sock_shutdown(sock_, how);
     }
 
 };
@@ -415,7 +414,7 @@ public:
     {
         pj_ssize_t bytes = len;
         int *addrlen = fromaddr ? &fromaddr->addrlen_ : NULL;
-	if (pj_sock_recvfrom( sock_, buf, &bytes, flag, 
+        if (pj_sock_recvfrom( sock_, buf, &bytes, flag, 
                               fromaddr, addrlen) != PJ_SUCCESS)
         {
             return -1;
@@ -430,7 +429,7 @@ public:
                        const Pj_Inet_Addr &addr)
     {
         pj_ssize_t bytes = len;
-	if (pj_sock_sendto( sock_, buf, &bytes, flag, 
+        if (pj_sock_sendto( sock_, buf, &bytes, flag, 
                             &addr, sizeof(pj_sockaddr_in)) != PJ_SUCCESS)
         {
             return -1;
@@ -440,5 +439,5 @@ public:
 };
 
 
-#endif	/* __PJPP_SOCK_HPP__ */
+#endif  /* __PJPP_SOCK_HPP__ */
 

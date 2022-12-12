@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -61,46 +60,46 @@ typedef struct pjmedia_plc pjmedia_plc;
  * Create PLC session. This function will select the PLC algorithm to
  * use based on the arguments.
  *
- * @param pool		    Pool to allocate memory for the PLC.
- * @param clock_rate	    Media sampling rate.
+ * @param pool              Pool to allocate memory for the PLC.
+ * @param clock_rate        Media sampling rate.
  * @param samples_per_frame Number of samples per frame.
- * @param options	    Must be zero for now.
- * @param p_plc		    Pointer to receive the PLC instance.
+ * @param options           Must be zero for now.
+ * @param p_plc             Pointer to receive the PLC instance.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_plc_create( pj_pool_t *pool,
-					 unsigned clock_rate,
-					 unsigned samples_per_frame,
-					 unsigned options,
-					 pjmedia_plc **p_plc);
+                                         unsigned clock_rate,
+                                         unsigned samples_per_frame,
+                                         unsigned options,
+                                         pjmedia_plc **p_plc);
 
 
 /**
  * Save a good frame to PLC.
  *
- * @param plc		    The PLC session.
- * @param frame		    The good frame to be stored to PLC. This frame
- *			    must have the same length as the configured
- *			    samples per frame.
+ * @param plc               The PLC session.
+ * @param frame             The good frame to be stored to PLC. This frame
+ *                          must have the same length as the configured
+ *                          samples per frame.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_plc_save( pjmedia_plc *plc,
-				       pj_int16_t *frame );
+                                       pj_int16_t *frame );
 
 
 /**
  * Generate a replacement for lost frame.
  *
- * @param plc		    The PLC session.
- * @param frame		    Buffer to receive the generated frame. This buffer
- *			    must be able to store the frame.
+ * @param plc               The PLC session.
+ * @param frame             Buffer to receive the generated frame. This buffer
+ *                          must be able to store the frame.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_plc_generate( pjmedia_plc *plc,
-					   pj_int16_t *frame );
+                                           pj_int16_t *frame );
 
 
 
@@ -111,5 +110,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_PLC_H__ */
+#endif  /* __PJMEDIA_PLC_H__ */
 

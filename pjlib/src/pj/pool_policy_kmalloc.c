@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -31,7 +30,7 @@ static void *default_block_alloc(pj_pool_factory *factory, pj_size_t size)
 }
 
 static void default_block_free(pj_pool_factory *factory, 
-			       void *mem, pj_size_t size)
+                               void *mem, pj_size_t size)
 {
     PJ_CHECK_STACK();
     PJ_UNUSED_ARG(factory);

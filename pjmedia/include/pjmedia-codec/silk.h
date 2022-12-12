@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
  * Contributed by Regis Montoya (aka r3gis - www.r3gis.fr)
@@ -68,11 +67,11 @@ PJ_BEGIN_DECL
 
 typedef struct pjmedia_codec_silk_setting
 {
-    pj_bool_t	enabled;    /**< Enable/disable.			    */
-    int		quality;    /**< Encoding quality, or use -1 for default 
- 				 (@see PJMEDIA_CODEC_SILK_DEFAULT_QUALITY). */
-    int 	complexity; /**< Encoding complexity, or use -1 for default
-			         (@see PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY)*/
+    pj_bool_t   enabled;    /**< Enable/disable.                            */
+    int         quality;    /**< Encoding quality, or use -1 for default 
+                                 (@see PJMEDIA_CODEC_SILK_DEFAULT_QUALITY). */
+    int         complexity; /**< Encoding complexity, or use -1 for default
+                                 (@see PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY)*/
 } pjmedia_codec_silk_setting;
 
 
@@ -84,9 +83,9 @@ typedef struct pjmedia_codec_silk_setting
  * and #PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY), application may modify these
  * settings via #pjmedia_codec_silk_set_config().
  *
- * @param endpt		The pjmedia endpoint.
+ * @param endpt         The pjmedia endpoint.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_silk_init(pjmedia_endpt *endpt);
 
@@ -95,23 +94,23 @@ PJ_DECL(pj_status_t) pjmedia_codec_silk_init(pjmedia_endpt *endpt);
  * Change the configuration setting of the SILK codec for the specified
  * clock rate.
  *
- * @param clock_rate	PCM sampling rate, in Hz, valid values are 8000,
- *			12000, 16000 and 24000.
- * @param opt		The setting to be applied for the specified
- *			clock rate.
+ * @param clock_rate    PCM sampling rate, in Hz, valid values are 8000,
+ *                      12000, 16000 and 24000.
+ * @param opt           The setting to be applied for the specified
+ *                      clock rate.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_silk_set_config(
-				    unsigned clock_rate, 
-				    const pjmedia_codec_silk_setting *opt);
+                                    unsigned clock_rate, 
+                                    const pjmedia_codec_silk_setting *opt);
 
 
 /**
  * Unregister SILK codec factory from pjmedia endpoint and deinitialize
  * the SILK codec library.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_silk_deinit(void);
 
@@ -123,5 +122,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_SILK_H__ */
+#endif  /* __PJMEDIA_CODEC_SILK_H__ */
 
