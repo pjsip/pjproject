@@ -165,7 +165,7 @@ struct pjsip_dialog
     pj_bool_t           route_set_frozen; /**< Route set has been set.      */
     pjsip_auth_clt_sess auth_sess;  /**< Client authentication session.     */
     pj_str_t            initial_dest;/**< Initial destination host (used for
-				          verifying remote TLS cert).	    */
+                                          verifying remote TLS cert).       */
 
     /** Session counter. */
     int                 sess_count; /**< Number of sessions.                */
