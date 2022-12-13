@@ -885,7 +885,7 @@
  * supported.
  */
 #ifndef PJMEDIA_RTP_PT_TELEPHONE_EVENTS
-#   define PJMEDIA_RTP_PT_TELEPHONE_EVENTS          120
+#   define PJMEDIA_RTP_PT_TELEPHONE_EVENTS	      101
 #endif
 
 
@@ -899,7 +899,7 @@
  * Default: 1 (yes)
  */
 #ifndef PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES
-#   define PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES   1
+#   define PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES   0
 #endif
 
 
