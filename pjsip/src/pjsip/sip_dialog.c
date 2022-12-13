@@ -1834,7 +1834,7 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
     if (dlg->role == PJSIP_ROLE_UAC) {
         /* Update initial destination host from transport's info. */
         if (rdata->tp_info.transport->dir == PJSIP_TP_DIR_OUTGOING)
-	{
+        {
             pj_strdup(dlg->pool, &dlg->initial_dest,
                       &rdata->tp_info.transport->remote_name.host);
         }
