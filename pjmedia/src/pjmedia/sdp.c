@@ -183,7 +183,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_add(unsigned *count,
                                          pjmedia_sdp_attr *attr)
 {
     PJ_ASSERT_RETURN(count && attr_array && attr, PJ_EINVAL);
-    PJ_ASSERT_RETURN(*count < PJMEDIA_MAX_SDP_ATTR, PJ_ETOOMANY);
+
+    if (*count >= PJMEDIA_MAX_SDP_ATTR) {
+        PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY, 
+                  "Error adding SDP attribute %.*s, "
+                  "attr is ignored",
+                  (int)attr->name.slen, attr->name.ptr));
+
+        return PJ_ETOOMANY;
+    }
 
     attr_array[*count] = attr;
     (*count)++;
