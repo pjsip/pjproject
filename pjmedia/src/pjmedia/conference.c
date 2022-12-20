@@ -1718,7 +1718,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     /* Skip port if it is disabled */
-    if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
+    if (cport->tx_setting == PJMEDIA_PORT_DISABLE) {
         cport->tx_level = 0;
         *frm_type = PJMEDIA_FRAME_TYPE_NONE;
         return PJ_SUCCESS;
