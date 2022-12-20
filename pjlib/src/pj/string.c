@@ -301,7 +301,7 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
         return PJ_ETOOSMALL;
     }
 
-    *value = is_negative ? -(long)retval : retval;
+    *value = is_negative ? (long)-retval : retval;
 
     return PJ_SUCCESS;
 }
