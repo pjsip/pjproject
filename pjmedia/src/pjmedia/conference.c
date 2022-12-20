@@ -1975,6 +1975,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         /* Var "ci" is to count how many ports have been visited so far. */
         ++ci;
 
+        /* Skip if we're not allowed to transmit to this port. */
+        if (conf_port->tx_setting != PJMEDIA_PORT_ENABLE)
+            continue;
+
         /* Reset buffer (only necessary if the port has transmitter) and
          * reset auto adjustment level for mixed signal.
          */
