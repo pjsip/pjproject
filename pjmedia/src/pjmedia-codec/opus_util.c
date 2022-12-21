@@ -178,5 +178,6 @@ int Opus_PacketHasFec2(const uint8_t* payload, size_t payload_length_bytes) {
 
     return 0;
 }
-
+#else
+#    warning "No OPUS codec and utils will be provided at current builds."
 #endif /* PJMEDIA_HAS_OPUS_CODEC */
