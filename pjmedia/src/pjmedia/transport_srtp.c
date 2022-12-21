@@ -1930,16 +1930,16 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
 
     srtp->started = PJ_FALSE;
 
-    /* Invoke media_stop() of all keying methods */
-    for (i=0; i < srtp->keying_cnt; ++i) {
-        pjmedia_transport_media_stop(srtp->keying[i]);
-    }
-
     /* Invoke media_stop() of member tp */
     status = pjmedia_transport_media_stop(srtp->member_tp);
     if (status != PJ_SUCCESS)
         PJ_PERROR(4, (srtp->pool->obj_name, status,
                       "SRTP failed stop underlying media transport."));
+
+    /* Invoke media_stop() of all keying methods */
+    for (i=0; i < srtp->keying_cnt; ++i) {
+        pjmedia_transport_media_stop(srtp->keying[i]);
+    }
 
     /* Finally, stop SRTP */
     return pjmedia_transport_srtp_stop(tp);
