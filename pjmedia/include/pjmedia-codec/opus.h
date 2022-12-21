@@ -105,6 +105,19 @@ typedef struct pjmedia_codec_opus_config
     pj_bool_t  cbr;         /**< Constant bit rate?                     */
 } pjmedia_codec_opus_config;
 
+/**
+ * Opus codec statistics.
+ */
+typedef struct pjmedia_codec_opus_stat
+{
+    unsigned  pkt_cnt;                 /**< Packet count                   */
+    unsigned  pkt_with_fec_cnt;        /**< Packet with FEC count          */
+    unsigned  aud_cnt;                 /**< Audio packet count             */
+    unsigned  fec_cnt;                 /**< FEC count                      */
+    unsigned  recover_with_copy_cnt;   /**< Recoverwith copy               */
+    unsigned  recover_with_plc_cnt;    /**< Recover with PLC packet count  */
+    unsigned  recover_with_fec_cnt;    /**< Recover with FEC packet count  */
+} pjmedia_codec_opus_stat;
 
 /**
  * Initialize and register Opus codec factory to pjmedia endpoint.
@@ -149,6 +162,25 @@ pjmedia_codec_opus_get_config( pjmedia_codec_opus_config *cfg );
 PJ_DECL(pj_status_t)
 pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
                                      pjmedia_codec_param *param );
+
+/**
+ * Reset OPUS statistics
+ *
+ * @param stat          Opus codec statistics.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_opus_reset_stat( pjmedia_codec_opus_stat *pstat );
+
+/**
+ * Get OPUS statistics
+ *
+ * @param codec         Opus codec.
+ * @param stat          Opus codec statistics.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_opus_get_stat( pjmedia_codec *codec, pjmedia_codec_opus_stat *pstat );
 
 PJ_END_DECL
 
