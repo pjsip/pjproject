@@ -1,20 +1,21 @@
 
-#include <stddef.h>
-#include <stdint.h>
-#include <assert.h>
-#include <stdio.h>
+#include <pjmedia-codec/opus.h>
+#include <pjmedia/errno.h>
+#include <pjmedia/endpoint.h>
+#include <pj/log.h>
+#include <pj/math.h>
 
 #if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
-
-#define THIS_FILE "opus_util.c"
 
 #include <opus/opus.h>
 
 #include "opus_util.h"
 
-enum OpusMode Opus_GetMode(const uint8_t* payload, size_t payload_length_bytes) {
-    uint8_t toc = payload[0];
-    uint8_t config = toc >> 3;
+#define THIS_FILE "opus_util.c"
+
+enum OpusMode Opus_GetMode(const pj_uint8_t* payload, pj_size_t payload_length_bytes) {
+    pj_uint8_t toc = payload[0];
+    pj_uint8_t config = toc >> 3;
     if (config < 12) {
         return OPUS_MODE_SILK;
     } else if (config < 16) {
@@ -37,7 +38,7 @@ const char *Opus_GetModeName(enum OpusMode mode) {
     }
 }
 
-int Opus_NumSilkFrames(const uint8_t* payload, size_t payload_length_bytes) {
+int Opus_NumSilkFrames(const pj_uint8_t* payload, pj_size_t payload_length_bytes) {
     // For computing the payload length in ms, the sample rate is not important
     // since it cancels out. We use 48 kHz, but any valid sample rate would work.
     int payload_length_ms = opus_packet_get_samples_per_frame(payload, 48000) / 48;
@@ -67,7 +68,7 @@ int Opus_NumSilkFrames(const uint8_t* payload, size_t payload_length_bytes) {
  * Check FEC by FreeSwitch
  *
 **/
-int Opus_PacketHasFec1(const uint8_t* payload, size_t payload_length_bytes) {
+int Opus_PacketHasFec1(const pj_uint8_t* payload, pj_size_t payload_length_bytes) {
     /* nb_silk_frames: number of silk-frames (10 or 20 ms) in an opus frame:  0, 1, 2 or 3 */
     /* computed from the 5 MSB (configuration) of the TOC byte (payload[0]) */
     /* nb_opus_frames: number of opus frames in the packet */
@@ -80,16 +81,16 @@ int Opus_PacketHasFec1(const uint8_t* payload, size_t payload_length_bytes) {
     const unsigned char *frame_data[48];
 
     if ((payload == NULL) || (payload_length_bytes <= 0)) {
-        fprintf(stdout, "warning: corrupted packet (invalid size)\n");
+        PJ_LOG(2, (THIS_FILE, "Corrupted packet (invalid size)"));
         return 0;
     }
     if (payload[0] & 0x80) {
-        fprintf(stdout, "warning: No FEC in CELT_ONLY mode.\n");
+        PJ_LOG(2, (THIS_FILE, "No FEC in CELT_ONLY mode"));
         return 0;
     }
 
     if ((nb_opus_frames = opus_packet_parse(payload, payload_length_bytes, NULL, frame_data, frame_sizes, NULL)) <= 0) {
-        fprintf(stdout, "warning: OPUS_INVALID_PACKET ! nb_opus_frames: %d\n", nb_opus_frames);
+        PJ_LOG(2, (THIS_FILE, "OPUS_INVALID_PACKET ! nb_opus_frames: %d", nb_opus_frames));
         return 0;
     }
 
@@ -128,7 +129,7 @@ int Opus_PacketHasFec1(const uint8_t* payload, size_t payload_length_bytes) {
  * parsing the LP layer of an Opus packet, particularly the LBRR flag.
  *
  */
-int Opus_PacketHasFec2(const uint8_t* payload, size_t payload_length_bytes) {
+int Opus_PacketHasFec2(const pj_uint8_t* payload, pj_size_t payload_length_bytes) {
     if (payload == NULL || payload_length_bytes == 0) {
         return 0;
     }
@@ -147,7 +148,7 @@ int Opus_PacketHasFec2(const uint8_t* payload, size_t payload_length_bytes) {
     assert((channels == 1) || (channels == 2));
 
     // Max number of frames in an Opus packet is 48.
-    int16_t frame_sizes[48];
+    pj_int16_t frame_sizes[48];
     const unsigned char* frame_data[48];
 
     // Parse packet to get the frames. But we only care about the first frame,

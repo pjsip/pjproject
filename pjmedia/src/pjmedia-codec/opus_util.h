@@ -8,11 +8,11 @@ enum OpusMode {
     OPUS_MODE_CELT    = 0x03,
 };
 
-enum OpusMode Opus_GetMode(const uint8_t* payload, size_t payload_length_bytes);
+enum OpusMode Opus_GetMode(const pj_uint8_t* payload, pj_size_t payload_length_bytes);
 const char *Opus_GetModeName(enum OpusMode mode);
-int Opus_NumSilkFrames(const uint8_t* payload, size_t payload_length_bytes);
-int Opus_PacketHasFec1(const uint8_t* payload, size_t payload_length_bytes); // by FreeSwitch
-int Opus_PacketHasFec2(const uint8_t* payload, size_t payload_length_bytes); // by WebRTC
+int Opus_NumSilkFrames(const pj_uint8_t* payload, pj_size_t payload_length_bytes);
+int Opus_PacketHasFec1(const pj_uint8_t* payload, pj_size_t payload_length_bytes); // by FreeSwitch
+int Opus_PacketHasFec2(const pj_uint8_t* payload, pj_size_t payload_length_bytes); // by WebRTC
 
 #if defined(ENABLE_OPUS_FEC_WEBRTC) && ENABLE_OPUS_FEC_WEBRTC==1
 # define Opus_PacketHasFec Opus_PacketHasFec1
