@@ -4,6 +4,10 @@
 #include <assert.h>
 #include <stdio.h>
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+
+#define THIS_FILE "opus_util.c"
+
 #include <opus/opus.h>
 
 #include "opus_util.h"
@@ -174,3 +178,5 @@ int Opus_PacketHasFec2(const uint8_t* payload, size_t payload_length_bytes) {
 
     return 0;
 }
+
+#endif /* PJMEDIA_HAS_OPUS_CODEC */
