@@ -750,8 +750,8 @@ PJ_DEF(int) pj_stun_set_padding_char(int chr)
 
 static pj_uint16_t GETVAL16H(const pj_uint8_t *buf, unsigned pos)
 {
-    return (pj_uint16_t) ((buf[pos + 0] << 8) | \
-                          (buf[pos + 1] << 0));
+    return (pj_uint16_t) (((pj_uint16_t)buf[pos + 0] << 8) | \
+                          ((pj_uint16_t)buf[pos + 1] << 0));
 }
 
 /*unused PJ_INLINE(pj_uint16_t) GETVAL16N(const pj_uint8_t *buf, unsigned pos)
@@ -767,10 +767,10 @@ static void PUTVAL16H(pj_uint8_t *buf, unsigned pos, pj_uint16_t hval)
 
 PJ_INLINE(pj_uint32_t) GETVAL32H(const pj_uint8_t *buf, unsigned pos)
 {
-    return (pj_uint32_t) ((buf[pos + 0] << 24UL) | \
-                          (buf[pos + 1] << 16UL) | \
-                          (buf[pos + 2] <<  8UL) | \
-                          (buf[pos + 3] <<  0UL));
+    return (pj_uint32_t) (((pj_uint32_t)buf[pos + 0] << 24UL) | \
+                          ((pj_uint32_t)buf[pos + 1] << 16UL) | \
+                          ((pj_uint32_t)buf[pos + 2] <<  8UL) | \
+                          ((pj_uint32_t)buf[pos + 3] <<  0UL));
 }
 
 /*unused PJ_INLINE(pj_uint32_t) GETVAL32N(const pj_uint8_t *buf, unsigned pos)
