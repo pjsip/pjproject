@@ -1438,11 +1438,11 @@ static pj_status_t decode_uint_attr(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_uint_attr);
     GETATTRHDR(buf, &attr->hdr);
 
-    attr->value = GETVAL32H(buf, 4);
-
     /* Check that the attribute length is valid */
     if (attr->hdr.length != 4)
         return PJNATH_ESTUNINATTRLEN;
+
+    attr->value = GETVAL32H(buf, 4);
 
     /* Done */
     *p_attr = attr;
@@ -1757,14 +1757,15 @@ static pj_status_t decode_errcode_attr(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_errcode_attr);
     GETATTRHDR(buf, &attr->hdr);
 
+    /* Check that the attribute length is valid */
+    if (attr->hdr.length < 4)
+        return PJNATH_ESTUNINATTRLEN;
+
     attr->err_code = buf[6] * 100 + buf[7];
 
     /* Get pointer to the string in the message */
     value.ptr = ((char*)buf + ATTR_HDR_LEN + 4);
     value.slen = attr->hdr.length - 4;
-    /* Make sure the length is never negative */
-    if (value.slen < 0)
-        value.slen = 0;
 
     /* Copy the string to the attribute */
     pj_strdup(pool, &attr->reason, &value);
