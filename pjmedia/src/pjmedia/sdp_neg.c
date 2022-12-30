@@ -41,7 +41,11 @@ struct pjmedia_sdp_neg
                         *active_local_sdp,  /**< Currently active local SDP. */
                         *active_remote_sdp, /**< Currently active remote's.  */
                         *neg_local_sdp,     /**< Temporary local SDP.        */
-                        *neg_remote_sdp;    /**< Temporary remote SDP.       */
+                        *neg_remote_sdp,    /**< Temporary remote SDP.       */
+                        *prev_sent;         /**< Previously sent SDP based on the nego or
+                                                 changes on the local SDP. 
+                                                 Note that application might change the
+                                                 actual SDP sent using PJSIP module. */
 };
 
 static const char *state_str[] = 
@@ -118,6 +122,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
     neg->answer_with_multiple_codecs = PJMEDIA_SDP_NEG_ANSWER_MULTIPLE_CODECS;
     neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
+    neg->prev_sent = neg->initial_sdp;
 
     *p_neg = neg;
     return PJ_SUCCESS;
@@ -412,7 +417,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
 #if PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
     new_offer->origin.version = old_offer->origin.version;
 
-    if (pjmedia_sdp_session_cmp(new_offer, neg->initial_sdp, 0) != PJ_SUCCESS)
+    if (pjmedia_sdp_session_cmp(new_offer, neg->prev_sent, 0) != PJ_SUCCESS)
     {
         ++new_offer->origin.version;
     }    
@@ -423,6 +428,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     neg->initial_sdp_tmp = neg->initial_sdp;
     neg->initial_sdp = new_offer;
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, new_offer);
+    neg->prev_sent = new_offer;
 
     return PJ_SUCCESS;
 }
@@ -464,6 +470,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
          * In this case set the neg_local_sdp as the offer.
          */
         *offer = neg->neg_local_sdp;
+    }
+
+    if (pjmedia_sdp_session_cmp(neg->prev_sent, *offer, 0) != PJ_SUCCESS) {
+        neg->prev_sent = neg->neg_local_sdp;
     }
 
     return PJ_SUCCESS;
@@ -1588,6 +1598,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 #endif
 
         }
+        neg->prev_sent = neg->neg_local_sdp;
     } else {
         pjmedia_sdp_session *answer = NULL;
 
@@ -1619,6 +1630,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
             neg->active_local_sdp = answer;
             neg->active_remote_sdp = neg->neg_remote_sdp;
         }
+        neg->prev_sent = neg->active_local_sdp;
     }
 
     /* State is DONE regardless */
