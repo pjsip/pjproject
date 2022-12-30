@@ -414,21 +414,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     }
 
     /* New_offer fixed */
-#if PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
     new_offer->origin.version = old_offer->origin.version;
 
-    if (pjmedia_sdp_session_cmp(new_offer, neg->prev_sent, 0) != PJ_SUCCESS)
-    {
+    if (pjmedia_sdp_session_cmp(neg->prev_sent, new_offer, 0) != PJ_SUCCESS) {
         ++new_offer->origin.version;
-    }    
-#else
-    new_offer->origin.version = old_offer->origin.version + 1;
-#endif
-    
+    }
     neg->initial_sdp_tmp = neg->initial_sdp;
     neg->initial_sdp = new_offer;
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, new_offer);
-    neg->prev_sent = new_offer;
+    neg->prev_sent = neg->neg_local_sdp;
 
     return PJ_SUCCESS;
 }
@@ -1587,16 +1581,11 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
             neg->active_local_sdp = active;
             neg->active_remote_sdp = neg->neg_remote_sdp;
 
-#if PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
-            if (pjmedia_sdp_session_cmp(neg->neg_local_sdp, 
+            if (pjmedia_sdp_session_cmp(neg->prev_sent, 
                                         neg->active_local_sdp, 0) != PJ_SUCCESS)
             {
                 ++neg->active_local_sdp->origin.version;
             }
-#else
-            ++neg->active_local_sdp->origin.version;
-#endif
-
         }
         neg->prev_sent = neg->neg_local_sdp;
     } else {
@@ -1614,18 +1603,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
             else
                 active_ver = neg->initial_sdp->origin.version;
 
-#if PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
             answer->origin.version = active_ver;
 
-            if ((neg->active_local_sdp == NULL) || 
-                (pjmedia_sdp_session_cmp(answer, neg->active_local_sdp, 0) 
-                                                                != PJ_SUCCESS))
+            if ((neg->prev_sent == NULL) ||
+                (pjmedia_sdp_session_cmp(neg->prev_sent, answer, 0) != PJ_SUCCESS)) 
             {
                 ++answer->origin.version;
             }
-#else
-            answer->origin.version = active_ver + 1;
-#endif      
             /* Only update active SDPs when negotiation is successfull */
             neg->active_local_sdp = answer;
             neg->active_remote_sdp = neg->neg_remote_sdp;
