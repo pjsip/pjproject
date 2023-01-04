@@ -84,6 +84,8 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_channel pjmedia_channel;
 
+typedef struct pjmedia_codec_opus_stat pjmedia_codec_opus_stat;
+
 /**
  * This structure describes media stream information. Each media stream
  * corresponds to one "m=" line in SDP session descriptor, and it has
@@ -346,6 +348,16 @@ PJ_DECL(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
  */
 PJ_DECL(pj_status_t) pjmedia_stream_reset_stat(pjmedia_stream *stream);
 
+/**
+ * Get the stream OPUS codec statistics.
+ *
+ * @param stream        The media stream.
+ * @param stat          Media stream statistics.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_get_stat_codec( const pjmedia_stream *stream,
+                                                   pjmedia_codec_opus_stat *codec_stat );
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 /**

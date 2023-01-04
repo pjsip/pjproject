@@ -30,6 +30,8 @@
 
 #include <opus/opus.h>
 
+#include "opus_util.h"
+
 #define THIS_FILE "opus.c"
 
 /* Default packet loss concealment setting. */
@@ -142,6 +144,7 @@ struct opus_data
     unsigned                     dec_ptime;
     pjmedia_frame                dec_frame[2];
     int                          dec_frame_index;
+    pjmedia_codec_opus_stat      stat;
 };
 
 /* Codec factory instance */
@@ -586,6 +589,9 @@ static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
     codec->factory       = factory;
     codec->codec_data    = opus_data;
 
+    /* Reset summary */
+    pjmedia_codec_opus_reset_stat(&opus_data->stat);
+
     *p_codec = codec;
     return PJ_SUCCESS;
 }
@@ -621,6 +627,7 @@ static pj_status_t codec_init( pjmedia_codec *codec,
 {
     PJ_UNUSED_ARG(codec);
     PJ_UNUSED_ARG(pool);
+    PJ_LOG(4, (THIS_FILE, "Initialize Opus codec."));
     return PJ_SUCCESS;
 }
 
@@ -801,7 +808,15 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
  */
 static pj_status_t  codec_close( pjmedia_codec *codec )
 {
-    PJ_UNUSED_ARG(codec);
+    struct opus_data *opus_data = (struct opus_data *)codec->codec_data; // PJ_UNUSED_ARG(codec);
+
+    PJ_LOG(4, (THIS_FILE, "Close Opus codec. Stat: pkt_cnt = %d, pkt_with_fec_cnt = %d,\n"
+                          "    aud_cnt = %d, fec_cnt = %d,\n"
+                          "    recover_with_plc_cnt = %d, recover_with_fec_cnt = %d",
+                          opus_data->stat.pkt_cnt, opus_data->stat.pkt_with_fec_cnt,
+                          opus_data->stat.aud_cnt, opus_data->stat.fec_cnt,
+                          opus_data->stat.recover_with_plc_cnt, opus_data->stat.recover_with_fec_cnt));
+
     return PJ_SUCCESS;
 }
 
@@ -1090,6 +1105,8 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
                           opus_data->cfg.sample_rate *
                           opus_data->dec_ptime / 1000);
     }
+    pj_uint16_t packet_has_fec = Opus_PacketHasFec(inframe->buf, inframe->size);
+    TRACE_((THIS_FILE, "Opus codec decode: type = %u size = %u fec = %u pkt_has_fec = %u", inframe->type, inframe->size, fec, packet_has_fec));
     decoded_samples = opus_decode( opus_data->dec,
                                    inframe->type==PJMEDIA_FRAME_TYPE_AUDIO ?
                                    inframe->buf : NULL,
@@ -1099,7 +1116,16 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
                                    frm_size,
                                    fec);
     output->timestamp = inframe->timestamp;
-     
+
+    /* Update statistics */
+    opus_data->stat.pkt_cnt += 1;
+    opus_data->stat.pkt_with_fec_cnt += packet_has_fec ? 1 : 0;
+    opus_data->stat.aud_cnt += (inframe->type==PJMEDIA_FRAME_TYPE_AUDIO) ? 1 : 0;
+    opus_data->stat.fec_cnt += (fec == 1) ? 1 : 0;
+    opus_data->stat.recover_with_fec_cnt += (fec == 1) && (packet_has_fec == 1) ? 1 : 0;
+    pj_bool_t empty_buf = (inframe->buf == NULL) || (inframe->type!=PJMEDIA_FRAME_TYPE_AUDIO);
+    opus_data->stat.recover_with_plc_cnt += (((empty_buf) || (fec == 1)) && (packet_has_fec == 0)) ? 1 : 0;
+
     if (inframe->type == PJMEDIA_FRAME_TYPE_AUDIO) {
         /* Mark current indexed frame as invalid */
         inframe->type = PJMEDIA_FRAME_TYPE_NONE;
@@ -1165,6 +1191,8 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
         frm_size = PJ_MIN((unsigned)frm_size, opus_data->cfg.sample_rate *
                           opus_data->dec_ptime/1000);
     }
+    pj_uint16_t packet_has_fec = Opus_PacketHasFec(inframe->buf, inframe->size);
+    TRACE_((THIS_FILE, "Opus codec recover: type = %u size = %u fec = %u pkt_has_fec = %u", inframe->type, inframe->size, 0, packet_has_fec));
     decoded_samples = opus_decode(opus_data->dec,
                                   inframe->type==PJMEDIA_FRAME_TYPE_AUDIO ?
                                   inframe->buf : NULL,
@@ -1173,6 +1201,11 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
                                   (opus_int16*)output->buf,
                                   frm_size,
                                   0);
+
+    /* Update statistics */
+    opus_data->stat.recover_with_copy_cnt += (inframe->type==PJMEDIA_FRAME_TYPE_AUDIO) ? 1 : 0;
+    pj_bool_t empty_buf = (inframe->buf == NULL) || (inframe->type!=PJMEDIA_FRAME_TYPE_AUDIO);
+    opus_data->stat.recover_with_plc_cnt += empty_buf ? 1 : 0;
 
     /* Mark current indexed frame as invalid */
     inframe->type = PJMEDIA_FRAME_TYPE_NONE;
@@ -1196,6 +1229,38 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = inframe->timestamp;
 
+    pj_mutex_unlock (opus_data->mutex);
+    return PJ_SUCCESS;
+}
+
+/**
+ * Reset OPUS codec status structure
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_opus_reset_stat( pjmedia_codec_opus_stat *stat )
+{
+    PJ_ASSERT_RETURN(stat, PJ_EINVAL);
+    stat->pkt_cnt = 0;
+    stat->pkt_with_fec_cnt = 0;
+    stat->aud_cnt = 0;
+    stat->fec_cnt = 0;
+    stat->recover_with_copy_cnt = 0;
+    stat->recover_with_plc_cnt = 0;
+    stat->recover_with_fec_cnt = 0;
+    return PJ_SUCCESS;
+}
+
+/**
+ * Get OPUS status structure
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_opus_get_stat( pjmedia_codec *codec, pjmedia_codec_opus_stat *pstat )
+{
+    PJ_ASSERT_RETURN(codec && pstat, PJ_EINVAL);
+    if (codec->op != &opus_op) {
+        return PJ_EINVAL;
+    }
+    struct opus_data *opus_data = (struct opus_data *)codec->codec_data;
+    pj_mutex_lock (opus_data->mutex);
+    pj_memcpy(pstat, &opus_data->stat, sizeof(struct pjmedia_codec_opus_stat));
     pj_mutex_unlock (opus_data->mutex);
     return PJ_SUCCESS;
 }

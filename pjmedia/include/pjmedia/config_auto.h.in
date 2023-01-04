@@ -29,14 +29,15 @@
  *      The configuration in config_site.h overrides any other settings,
  *      including the setting as detected by autoconf. 
  */
- 
+
 /* G711 codec */
 #ifndef PJMEDIA_HAS_G711_CODEC
 #undef PJMEDIA_HAS_G711_CODEC
 #endif
 
+/* OPUS codec */
+#ifndef PJMEDIA_HAS_OPUS_CODEC
+#undef PJMEDIA_HAS_OPUS_CODEC
+#endif
 
 #endif  /* __PJMEDIA_CONFIG_AUTO_H_ */
-
-
-

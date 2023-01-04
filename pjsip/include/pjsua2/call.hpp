@@ -669,6 +669,31 @@ public:
     void fromPj(const pjsua_stream_info &info);
 };
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+
+/**
+ * OPUS codec status.
+ */
+struct CodecOpusStat
+{
+
+    unsigned  pktCnt;               /**< Packet count                   */
+    unsigned  pktWithFecCnt;        /**< Packet with FEC count          */
+    unsigned  audCnt;               /**< Audio packet count             */
+    unsigned  fecCnt;               /**< FEC count                      */
+    unsigned  recoverWithCopyCnt;   /**< Recoverwith copy               */
+    unsigned  recoverWithPlcCnt;    /**< Recover with PLC packet count  */
+    unsigned  recoverWithFecCnt;    /**< Recover with FEC packet count  */
+
+public:
+    /**
+     * Convert from pjsip
+     */
+    void fromPj(const pjmedia_codec_opus_stat &opus_stat);
+};
+
+#endif
+
 /**
  * Media stream statistic.
  */
@@ -683,6 +708,15 @@ struct StreamStat
      * Jitter buffer statistic.
      */
     JbufState   jbuf;
+
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+
+    /**
+     * OPUS codec stat
+     */
+    CodecOpusStat opusStat;
+
+#endif
 
 public:
     /**

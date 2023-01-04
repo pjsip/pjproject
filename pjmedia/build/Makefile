@@ -138,7 +138,7 @@ export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += audio_codecs.o ffmpeg_vid_codecs.o openh264.o \
 			h263_packetizer.o h264_packetizer.o vpx_packetizer.o \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			ipp_codecs.o silk.o opus.o $(CODEC_OBJS) \
+			ipp_codecs.o silk.o opus.o opus_util.o $(CODEC_OBJS) \
                         g7221_sdp_match.o amr_sdp_match.o passthrough.o \
                         vpx.o
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \

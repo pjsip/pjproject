@@ -511,6 +511,17 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 }
 #endif  /* defined(PJMEDIA_STREAM_ENABLE_KA) */
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+
+pj_status_t pjmedia_codec_opus_get_stat( const pjmedia_codec *codec, pjmedia_codec_opus_stat *codec_stat);
+PJ_DEF(pj_status_t) pjmedia_stream_get_stat_codec(const pjmedia_stream *stream, pjmedia_codec_opus_stat *codec_stat) {
+    PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(stream->codec != NULL, PJ_EINVAL);
+    return pjmedia_codec_opus_get_stat( stream->codec, codec_stat );
+}
+
+#endif /* PJMEDIA_HAS_OPUS_CODEC */
+
 /*
  * play_callback()
  *
