@@ -1603,16 +1603,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
                                neg->neg_local_sdp, neg->neg_remote_sdp,
                                &answer);
         if (status == PJ_SUCCESS) {
-            pj_uint32_t active_ver;
+            if (neg->last_sent)
+                answer->origin.version = neg->last_sent->origin.version;
 
-            if (neg->active_local_sdp)
-                active_ver = neg->active_local_sdp->origin.version;
-            else
-                active_ver = neg->initial_sdp->origin.version;
-
-            answer->origin.version = active_ver;
-
-            if (neg->last_sent &&
+            if (!neg->last_sent ||
                 pjmedia_sdp_session_cmp(neg->last_sent, answer, 0) !=
                 PJ_SUCCESS)
             {
