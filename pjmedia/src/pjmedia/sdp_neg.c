@@ -126,6 +126,11 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
     neg->last_sent = neg->initial_sdp;
 
+    /* Init last_sent's pool to app's pool, will be updated to active
+     * SDPs pool after a successful SDP nego.
+     */
+    neg->pool_active = pool;
+
     *p_neg = neg;
     return PJ_SUCCESS;
 }
@@ -173,6 +178,11 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
         neg->state = PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER;
 
     }
+
+    /* Init last_sent's pool to app's pool, will be updated to active
+     * SDPs pool after a successful SDP nego.
+     */
+    neg->pool_active = pool;
 
     *p_neg = neg;
     return PJ_SUCCESS;
