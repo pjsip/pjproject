@@ -46,6 +46,8 @@ struct pjmedia_sdp_neg
                                                  Note that application might
                                                  change the actual SDP sent
                                                  using PJSIP module.         */
+    pj_pool_t *pool_active;                 /**< Pool used by active SDPs, used
+                                                 for retaining last_sent.    */
 };
 
 static const char *state_str[] = 
@@ -1594,6 +1596,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
             /* Only update active SDPs when negotiation is successfull */
             neg->active_local_sdp = active;
             neg->active_remote_sdp = neg->neg_remote_sdp;
+
+            /* Keep the pool used for allocating the active SDPs */
+            neg->pool_active = pool;
+        } else {
+            /* SDP nego failed, retain the last_sdp. */
+            neg->last_sent = pjmedia_sdp_session_clone(neg->pool_active,
+                                                       neg->last_sent);
         }
     } else {
         pjmedia_sdp_session *answer = NULL;
@@ -1619,6 +1628,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 
             /* This answer will be sent, so update the last sent SDP */
             neg->last_sent = answer;
+
+            /* Keep the pool used for allocating the active SDPs */
+            neg->pool_active = pool;
         }
     }
 
