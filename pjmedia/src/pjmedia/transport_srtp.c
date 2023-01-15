@@ -1530,8 +1530,8 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         pjmedia_srtp_crypto tx, rx;
         pj_status_t status;
 
-        tx = srtp->tx_policy;
-        rx = srtp->rx_policy;
+        tx = srtp->tx_policy_neg;
+        rx = srtp->rx_policy_neg;
 
         /* Stop SRTP first, otherwise srtp_start() will maintain current
          * roll-over counter.
