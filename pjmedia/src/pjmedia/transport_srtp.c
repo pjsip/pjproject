@@ -892,7 +892,10 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
 
     /* If all options points to 'NULL' method, just bypass SRTP */
     if (cr_tx_idx == 0 && cr_rx_idx == 0 && au_tx_idx == 0 && au_rx_idx == 0) {
-        srtp->bypass_srtp = PJ_TRUE;
+        srtp->bypass_srtp = srtp->setting.use != PJMEDIA_SRTP_MANDATORY ? PJ_FALSE : PJ_TRUE;
+
+        PJ_LOG(4, (THIS_FILE, "SRTP bypass flag has been %s",
+            srtp->bypass_srtp == PJ_TRUE ? "enabled" : "disabled"));
         goto on_return;
     }
 
