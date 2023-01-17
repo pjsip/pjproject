@@ -810,7 +810,8 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
      */
     pj_bzero(dest_info, sizeof(*dest_info));
 
-    /* When request URI uses sips scheme, TLS must always be used regardless
+    /* When request URI uses sips scheme, secure transport
+     * (the default is TLS) must always be used regardless
      * of the target scheme or transport type (see ticket #1740).
      */
     if (PJSIP_URI_SCHEME_IS_SIPS(target_uri) || 
@@ -822,7 +823,7 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
         unsigned flag;
 
         if (!PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
-            PJ_LOG(4,(THIS_FILE, "Automatic switch to TLS transport as "
+            PJ_LOG(4,(THIS_FILE, "Automatic switch to secure transport as "
                                  "request-URI uses ""sips"" scheme."));
         }
 

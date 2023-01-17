@@ -3425,12 +3425,21 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     }
 
     /* Get transport type of the URI */
-    if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri))
-        tp_type = PJSIP_TRANSPORT_TLS;
-    else if (sip_uri->transport_param.slen == 0) {
+    if (sip_uri->transport_param.slen == 0) {
         tp_type = PJSIP_TRANSPORT_UDP;
     } else
         tp_type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
+
+    /* If the URI uses sips scheme, make sure we use secure transport. */
+    if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
+        unsigned flag, tp_flag;
+
+        tp_flag = (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
+        flag  = pjsip_transport_get_flag_from_type(tp_type);
+        if ((flag & tp_flag) != tp_flag) {
+            tp_type = pjsip_transport_get_type_from_flag(tp_flag);
+        }
+    }
 
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
         return PJSIP_EUNSUPTRANSPORT;
@@ -3799,12 +3808,21 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     }
 
     /* Get transport type of the URI */
-    if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri))
-        tp_type = PJSIP_TRANSPORT_TLS;
-    else if (sip_uri->transport_param.slen == 0) {
+    if (sip_uri->transport_param.slen == 0) {
         tp_type = PJSIP_TRANSPORT_UDP;
     } else
         tp_type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
+
+    /* If the URI uses sips scheme, make sure we use secure transport. */
+    if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
+        unsigned flag, tp_flag;
+
+        tp_flag = (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
+        flag  = pjsip_transport_get_flag_from_type(tp_type);
+        if ((flag & tp_flag) != tp_flag) {
+            tp_type = pjsip_transport_get_type_from_flag(tp_flag);
+        }
+    }
 
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
         return PJSIP_EUNSUPTRANSPORT;
