@@ -2403,6 +2403,13 @@ struct pjsua_msg_data
     pj_str_t    target_uri;
 
     /**
+     * Optional local URI (i.e. From header). If NULL, the account ID
+     * \a pjsua_acc_config.id is used for the From header. This field is
+     * currently used only by pjsua_call_make_call() and pjsua_im_send().
+     */
+    pj_str_t    local_uri;
+
+    /**
      * Additional message headers as linked list. Application can add
      * headers to the list by creating the header, either from the heap/pool
      * or from temporary local variable, and add the header using

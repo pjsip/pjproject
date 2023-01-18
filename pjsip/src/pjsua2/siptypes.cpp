@@ -600,14 +600,16 @@ TsxStateEvent::TsxStateEvent()
 
 bool SipTxOption::isEmpty() const
 {
-    return (targetUri == "" && headers.size() == 0 && contentType == "" &&
-            msgBody == "" && multipartContentType.type == "" &&
+    return (targetUri == "" && localUri == "" &&  headers.size() == 0 &&
+            contentType == "" && msgBody == "" && multipartContentType.type == "" &&
             multipartContentType.subType == "" && multipartParts.size() == 0);
 }
 
 void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
 {
     targetUri = pj2Str(prm.target_uri);
+
+    localUri = pj2Str(prm.local_uri);
 
     headers.clear();
     pjsip_hdr* pj_hdr = prm.hdr_list.next;
@@ -639,6 +641,8 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
     pjsua_msg_data_init(&msg_data);
 
     msg_data.target_uri = str2Pj(targetUri);
+
+    msg_data.local_uri = str2Pj(localUri);
 
     pj_list_init(&msg_data.hdr_list);
     for (i = 0; i < headers.size(); i++) {

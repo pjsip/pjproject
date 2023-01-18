@@ -838,6 +838,13 @@ struct SipTxOption
     string                  targetUri;
 
     /**
+     * Optional local URI (i.e. From header). If empty (""), the
+     * \a AccountConfig::idUri is used for the From header. At the moment this
+     * field is only used when sending initial INVITE and MESSAGE requests.
+     */
+    string                  localUri;
+
+    /**
      * Additional message headers to be included in the outgoing message.
      */
     SipHeaderVector         headers;
