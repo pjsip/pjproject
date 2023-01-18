@@ -827,7 +827,11 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
                                  "request-URI uses ""sips"" scheme."));
         }
 
-        dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
+        dest_info->flag |= PJSIP_TRANSPORT_SECURE;
+        /* There doesn't seem to be any requirement for SIPS to use
+         * reliable transport though, so we disable this.
+         */
+        // dest_info->flag |= PJSIP_TRANSPORT_RELIABLE;
         if (url->maddr_param.slen)
             pj_strdup(pool, &dest_info->addr.host, &url->maddr_param);
         else

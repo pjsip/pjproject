@@ -3434,7 +3434,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
         unsigned flag, tp_flag;
 
-        tp_flag = (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
+        tp_flag = PJSIP_TRANSPORT_SECURE;
         flag  = pjsip_transport_get_flag_from_type(tp_type);
         if ((flag & tp_flag) != tp_flag) {
             tp_type = pjsip_transport_get_type_from_flag(tp_flag);
@@ -3817,7 +3817,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
         unsigned flag, tp_flag;
 
-        tp_flag = (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
+        tp_flag = PJSIP_TRANSPORT_SECURE;
         flag  = pjsip_transport_get_flag_from_type(tp_type);
         if ((flag & tp_flag) != tp_flag) {
             tp_type = pjsip_transport_get_type_from_flag(tp_flag);
