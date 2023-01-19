@@ -372,7 +372,7 @@ PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_flag(unsigned flag)
 
     /* Get the transport type for the specified flags. */
     for (i=0; i<PJ_ARRAY_SIZE(transport_names); ++i) {
-        if (transport_names[i].flag == flag) {
+        if ((transport_names[i].flag & flag) == flag) {
             return transport_names[i].type;
         }
     }
