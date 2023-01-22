@@ -1350,6 +1350,7 @@ static pj_status_t app_init(void)
     pjsua_transport_id transport_id = -1;
     pjsua_transport_config tcp_cfg;
     unsigned i;
+    int enabled = 1;
     pj_pool_t *tmp_pool;
     pj_status_t status;
 
@@ -1505,6 +1506,20 @@ static pj_status_t app_init(void)
     }
 
     pj_memcpy(&tcp_cfg, &app_config.udp_cfg, sizeof(tcp_cfg));
+
+    /* Use SO_REUSEADDR for SIP UDP transports */
+    {
+        pj_sockopt_params *so_prm;
+
+        so_prm = &app_config.udp_cfg.sockopt_params;
+        pj_assert(so_prm->cnt < PJ_MAX_SOCKOPT_PARAMS);
+
+        so_prm->options[so_prm->cnt].level = pj_SOL_SOCKET();
+        so_prm->options[so_prm->cnt].optname = pj_SO_REUSEADDR();
+        so_prm->options[so_prm->cnt].optval = &enabled;
+        so_prm->options[so_prm->cnt].optlen = sizeof(enabled);
+        so_prm->cnt++;
+    }
 
     /* Create ringback tones */
     if (app_config.no_tones == PJ_FALSE) {
