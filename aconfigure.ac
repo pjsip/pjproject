@@ -1379,7 +1379,7 @@ AC_ARG_ENABLE(ffmpeg,
 				av_pkg="$av_pkg libavutil"
 			fi
 			
-			if test "x$av_pkg" == "x"; then
+			if test "x$av_pkg" = "x"; then
 			   AC_MSG_RESULT([none detected (check the prefix)! **])
 			else
 			   AC_MSG_RESULT([$av_pkg])

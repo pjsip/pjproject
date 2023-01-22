@@ -124,7 +124,7 @@ PJ_DECL(pjsip_transport_type_e)
 pjsip_transport_get_type_from_name(const pj_str_t *name);
 
 /**
- * Get the transport type for the specified flags.
+ * Get the first transport type that has the specified flags.
  *
  * @param flag      The transport flag.
  *

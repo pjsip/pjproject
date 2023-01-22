@@ -468,9 +468,10 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
     
     /* Save initial destination host from transport's info */
-    pj_strdup(dlg->pool, &dlg->initial_dest,
-              &rdata->tp_info.transport->remote_name.host);
-
+    if (rdata->tp_info.transport->dir == PJSIP_TP_DIR_OUTGOING) {
+        pj_strdup(dlg->pool, &dlg->initial_dest,
+                  &rdata->tp_info.transport->remote_name.host);
+    }
 
     /* Init remote's contact from Contact header.
      * Iterate the Contact URI until we find sip: or sips: scheme.
@@ -1831,8 +1832,9 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
      * transaction as the initial transaction that establishes dialog.
      */
     if (dlg->role == PJSIP_ROLE_UAC) {
-        /* Save initial destination host from transport's info. */
-        if (!dlg->initial_dest.slen) {
+        /* Update initial destination host from transport's info. */
+        if (rdata->tp_info.transport->dir == PJSIP_TP_DIR_OUTGOING)
+        {
             pj_strdup(dlg->pool, &dlg->initial_dest,
                       &rdata->tp_info.transport->remote_name.host);
         }
