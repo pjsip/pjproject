@@ -1251,9 +1251,12 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
         }
     }
 
-    /* The buffer may be originally NV21, i.e: V/U is interleaved */
-    else if (p1-p2==1 && pixStride0==1 &&  pixStride1==2 && pixStride2==2)
+    /* The buffer may be originally NV21/NV12, i.e: VU/UV is interleaved */
+    else if ((p1-p2==1 || p2-p1==1) &&
+             pixStride0==1 &&  pixStride1==2 && pixStride2==2)
     {
+        pj_bool_t nv21 = p1 > p2;
+
         /* Strip out Y padding */
         if (rowStride0 > strm->cam_size.w) {
             strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
@@ -1262,18 +1265,29 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 
         /* Get U & V, and strip if needed */
         {
-            pj_uint8_t *src = p2;
             pj_uint8_t *dst_u = U;
             pj_uint8_t *dst_v = strm->convert_buf;
             int diff = rowStride1 - strm->cam_size.w;
-            int i;
-            for (i = 0; i < strm->cam_size.h/2; ++i) {
-                int j;
-                for (j = 0; j < strm->cam_size.w/2; ++j) {
-                    *dst_v++ = *src++;
-                    *dst_u++ = *src++;
+            int i, j;
+
+            if (nv21) {
+                pj_uint8_t *src = p2;
+                for (i = 0; i < strm->cam_size.h/2; ++i) {
+                    for (j = 0; j < strm->cam_size.w/2; ++j) {
+                        *dst_v++ = *src++;
+                        *dst_u++ = *src++;
+                    }
+                    src += diff; /* stripping any padding */
                 }
-                src += diff; /* stripping any padding */
+            } else {
+                pj_uint8_t *src = p1;
+                for (i = 0; i < strm->cam_size.h/2; ++i) {
+                    for (j = 0; j < strm->cam_size.w/2; ++j) {
+                        *dst_u++ = *src++;
+                        *dst_v++ = *src++;
+                    }
+                    src += diff; /* stripping any padding */
+                }
             }
             pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
         }
