@@ -1,5 +1,7 @@
 
-[![C/C++ CI](https://github.com/pjsip/pjproject/actions/workflows/ccpp.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/ccpp.yml)
+[![CI Linux](https://github.com/pjsip/pjproject/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/ci-linux.yml)
+[![CI Mac](https://github.com/pjsip/pjproject/actions/workflows/ci-mac.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/ci-mac.yml)
+[![CI Windows](https://github.com/pjsip/pjproject/actions/workflows/ci-win.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/ci-win.yml)
 [![CodeQL](https://github.com/pjsip/pjproject/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/codeql-analysis.yml)
 
 
