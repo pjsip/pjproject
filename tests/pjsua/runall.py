@@ -84,6 +84,7 @@ for f in os.listdir("scripts-sipp"):
 
 
 resume_script=""
+retry_num=0
 shell_cmd=""
 with_log=True
 
@@ -104,6 +105,9 @@ while len(sys.argv):
         print "    If this argument is omited, tests will start from the beginning."
         print "  --disable,-d TEST_NAME"
         print "    Disable a specific test that contains the specified TEST_NAME."
+        print "  --retry,-t RETRY_NUM"
+        print "    Retry a specific test RETRY_NUM times before marking it as failed."
+        print "    Default is 0 (no retry)."
         print "  --shell,-s SHELL"
         print "    Run the tests with the specified SHELL cmd. This can also be"
         print "    used to run the test with ccdash. Example:"
@@ -117,6 +121,15 @@ while len(sys.argv):
     elif sys.argv[0] == '-r' or sys.argv[0] == '--resume':
         if len(sys.argv) > 1:
             resume_script=sys.argv[1]
+            sys.argv.pop(0)
+            sys.argv.pop(0)
+        else:
+            sys.argv.pop(0)
+            sys.stderr.write("Error: argument value required")
+            sys.exit(1)
+    elif sys.argv[0] == '-t' or sys.argv[0] == '--retry':
+        if len(sys.argv) > 1:
+            retry_num=int(sys.argv[1])
             sys.argv.pop(0)
             sys.argv.pop(0)
         else:
@@ -157,7 +170,7 @@ while len(sys.argv):
         else:
             sys.argv.pop(0)
             sys.stderr.write("Error: argument value required")
-            sys.exit(1)        	
+            sys.exit(1)
     elif sys.argv[0] == '--no-log':
         sys.argv.pop(0)
         with_log=False
@@ -188,31 +201,35 @@ for t in tests:
     cmdline = "python run.py " + argv_st + t
     if shell_cmd:
         cmdline = "%s '%s'" % (shell_cmd, cmdline)
-    t0 = time.time()
-    msg = "Running %3d/%d: %s..." % (tests_cnt+1, total_cnt, cmdline)
-    sys.stdout.write(msg)
-    sys.stdout.flush()
-    if with_log:
-        logname = re.search(".*\s+(.*)", t).group(1)
-        logname = re.sub("[\\\/]", "_", logname)
-        logname = re.sub("\.py$", ".log", logname)
-        logname = re.sub("\.xml$", ".log", logname)
-        logname = "logs/" + logname
-    else:
-        logname = os.devnull
-    ret = os.system(cmdline + " > " + logname)
-    t1 = time.time()
-    if ret != 0:
-        dur = int(t1 - t0)
-        print " failed!! [" + str(dur) + "s]"
+    for i in range(1, retry_num+2):
+        t0 = time.time()
+        msg = "Running %3d/%d (#%d): %s..." % (tests_cnt+1, total_cnt, i, cmdline)
+        sys.stdout.write(msg)
+        sys.stdout.flush()
         if with_log:
-            lines = open(logname, "r").readlines()
-            print ''.join(lines)
-            print "Log file: '" + logname + "'."
-        fails_cnt += 1
-    else:
-        dur = int(t1 - t0)
-        print " ok [" + str(dur) + "s]"
+            logname = re.search(".*\s+(.*)", t).group(1)
+            logname = re.sub("[\\\/]", "_", logname)
+            logname = re.sub("\.py$", ".log", logname)
+            logname = re.sub("\.xml$", ".log", logname)
+            logname = "logs/" + logname
+        else:
+            logname = os.devnull
+        ret = os.system(cmdline + " > " + logname)
+        t1 = time.time()
+        if ret != 0:
+            dur = int(t1 - t0)
+            print " failed!! [" + str(dur) + "s]"
+            if (i < retry_num + 1):
+                continue
+            if with_log:
+                lines = open(logname, "r").readlines()
+                print ''.join(lines)
+                print "Log file: '" + logname + "'."
+            fails_cnt += 1
+        else:
+            dur = int(t1 - t0)
+            print " ok [" + str(dur) + "s]"
+            break
     tests_cnt += 1
 
 if fails_cnt == 0:
