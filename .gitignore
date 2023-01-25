@@ -68,6 +68,10 @@ tests/pjsua/wavs/tmp*.wav
 tests/pjsua/tools/cmp_wav
 tests/pjsua/tools/cmp_wav.dSYM
 tests/pjsua/logs
+tests/fuzz/*
+!tests/fuzz/**/
+!tests/fuzz/*.*
+tests/fuzz/*.o
 # benchmark output
 *bench*.htm
 
