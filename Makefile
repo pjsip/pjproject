@@ -119,7 +119,7 @@ pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
 	cd pjsip/build && ../bin/pjsip-test-$(TARGET_NAME)
 
 pjsua-test: cmp_wav
-	cd tests/pjsua && python runall.py
+	cd tests/pjsua && python runall.py -t 2
 
 cmp_wav:
 	cd tests/pjsua/tools && make
