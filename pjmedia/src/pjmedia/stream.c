@@ -2441,14 +2441,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     //No longer there in 2.0
     //pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
-    if (info->param) {
-        afd->clock_rate = info->param->info.clock_rate;
-        afd->channel_count = info->param->info.channel_cnt;
-    }
-    else {
-        afd->clock_rate = info->fmt.clock_rate;
-        afd->channel_count = info->fmt.channel_cnt;
-    }
+    afd->clock_rate = info->fmt.clock_rate;
+    afd->channel_count = info->fmt.channel_cnt;
     stream->port.port_data.pdata = stream;
 
     /* Init stream: */
@@ -2532,8 +2526,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
      * it's negotiated in the SDP.
      */
     if (!pj_stricmp2(&info->fmt.encoding_name, "opus")) {
-        stream->codec_param.info.clock_rate = afd->clock_rate;
-        stream->codec_param.info.channel_cnt = afd->channel_count;
+        stream->codec_param.info.clock_rate = info->fmt.clock_rate;
+        stream->codec_param.info.channel_cnt = info->fmt.channel_cnt;
 
         /* Allocate decoding buffer as Opus can send a packet duration of
          * up to 120 ms.
