@@ -3,6 +3,7 @@
 [![CI Mac](https://github.com/pjsip/pjproject/actions/workflows/ci-mac.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/ci-mac.yml)
 [![CI Windows](https://github.com/pjsip/pjproject/actions/workflows/ci-win.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/ci-win.yml)
 [![CodeQL](https://github.com/pjsip/pjproject/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/codeql-analysis.yml)
+[![docs.pjsip.org](https://readthedocs.org/projects/pjsip/badge/?version=latest)](https://docs.pjsip.org/en/latest/)
 
 
 # PJSIP
