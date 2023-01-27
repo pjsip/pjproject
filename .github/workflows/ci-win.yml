@@ -40,13 +40,13 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get openssl
-      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1q.zip" -OutFile ".\openssl.zip"
+      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/openssl-1.1.1s-win.zip" -OutFile ".\openssl.zip"
       shell: powershell
     - name: expand openssl
       run: |
-        Expand-Archive -LiteralPath .\openssl.zip -DestinationPath .\openssl_build\;
-        cd openssl_build\openssl-1.1\x86
-        Add-Content ..\..\..\openssl_dir.txt $pwd.Path
+        Expand-Archive -LiteralPath .\openssl.zip -DestinationPath .;
+        cd openssl_build
+        Add-Content ..\openssl_dir.txt $pwd.Path
       shell: powershell
     - name: check openssl folder
       run: |
@@ -84,13 +84,13 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get openssl
-      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1q.zip" -OutFile ".\openssl.zip"
+      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/openssl-1.1.1s-win.zip" -OutFile ".\openssl.zip"
       shell: powershell
     - name: expand openssl
       run: |
-        Expand-Archive -LiteralPath .\openssl.zip -DestinationPath .\openssl_build\; pwd
-        cd openssl_build\openssl-1.1\x86
-        Add-Content ..\..\..\openssl_dir.txt $pwd.Path
+        Expand-Archive -LiteralPath .\openssl.zip -DestinationPath .; pwd
+        cd openssl_build
+        Add-Content ..\openssl_dir.txt $pwd.Path
       shell: powershell
     - name: check openssl folder
       run: |
@@ -140,19 +140,19 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get gnutls
-      run: Invoke-WebRequest -Uri "https://github.com/ShiftMediaProject/gnutls/releases/download/gnutls_3_6_11/libgnutls_gnutls_3_6_11_msvc14.zip" -Outfile ".\libgnutls.zip"
+      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/gnutls-3.5.17-win.zip" -Outfile ".\gnutls.zip"
       shell: powershell
     - name: expand gnutls
       run: |
-        Expand-Archive -LiteralPath .\libgnutls.zip -DestinationPath .\libgnutls_build\; pwd
-        cd libgnutls_build
-        Add-Content ..\libgnutls_dir.txt $pwd.Path
+        Expand-Archive -LiteralPath .\gnutls.zip -DestinationPath .; pwd
+        cd gnutls_build
+        Add-Content ..\gnutls_dir.txt $pwd.Path
       shell: powershell
     - name: check gnutls folder
       run: |
-        set /P LIBGNUTLS_DIR=<libgnutls_dir.txt
-        dir "%LIBGNUTLS_DIR%\include"
-        dir "%LIBGNUTLS_DIR%\lib\x86"
+        set /P GNUTLS_DIR=<gnutls_dir.txt
+        dir "%GNUTLS_DIR%\include"
+        dir "%GNUTLS_DIR%\lib\"
       shell: cmd
     - name: config site
       run: |
@@ -166,10 +166,10 @@ jobs:
     - name: MSBuild
       working-directory: .
       run: |
-        set /P LIBGNUTLS_DIR=<gnutls_dir.txt
+        set /P GNUTLS_DIR=<gnutls_dir.txt
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        set INCLUDE=%INCLUDE%;%LIBGNUTLS_DIR%\include
-        set LIB=%LIB%;%LIBGNUTLS_DIR%\lib\x86
+        set INCLUDE=%INCLUDE%;%GNUTLS_DIR%\include
+        set LIB=%LIB%;%GNUTLS_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
@@ -178,13 +178,13 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get openssl
-      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1q.zip" -OutFile ".\openssl.zip"
+      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/openssl-1.1.1s-win.zip" -OutFile ".\openssl.zip"
       shell: powershell
     - name: expand openssl
       run: |
-        Expand-Archive -LiteralPath .\openssl.zip -DestinationPath .\openssl_build\; pwd
-        cd openssl_build\openssl-1.1\x86
-        Add-Content ..\..\..\openssl_dir.txt $pwd.Path
+        Expand-Archive -LiteralPath .\openssl.zip -DestinationPath .; pwd
+        cd openssl_build
+        Add-Content ..\openssl_dir.txt $pwd.Path
       shell: powershell
     - name: check openssl folder
       run: |
@@ -192,35 +192,35 @@ jobs:
         dir "%OPENSSL_DIR%\include"
         dir "%OPENSSL_DIR%\lib"
       shell: cmd
-    - name: get libvpx
-      run: Invoke-WebRequest -Uri "https://github.com/ShiftMediaProject/libvpx/releases/download/v1.8.2/libvpx_v1.8.2_msvc14.zip" -Outfile "libvpx.zip"
+    - name: get vpx
+      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/vpx-1.12-win.zip" -Outfile "vpx.zip"
       shell: powershell
     - name: expand libvpx
       run: |
-        Expand-Archive -LiteralPath .\libvpx.zip -DestinationPath .\libvpx_build\; pwd
-        cd libvpx_build
-        Add-Content ..\libvpx_dir.txt $pwd.Path
+        Expand-Archive -LiteralPath .\vpx.zip -DestinationPath .; pwd
+        cd vpx_build
+        Add-Content ..\vpx_dir.txt $pwd.Path
       shell: powershell
-    - name: check libvpx folder
+    - name: check vpx folder
       run: |
-        set /P LIBVPX_DIR=<libvpx_dir.txt
-        dir "%LIBVPX_DIR%\include"
-        dir "%LIBVPX_DIR%\lib\x86"
+        set /P VPX_DIR=<vpx_dir.txt
+        dir "%VPX_DIR%\include"
+        dir "%VPX_DIR%\lib"
       shell: cmd
-    - name: get libsdl
-      run: Invoke-WebRequest -Uri "https://github.com/ShiftMediaProject/SDL/releases/download/release-2.0.9/libsdl_release-2.0.9_msvc14.zip" -Outfile ".\libsdl.zip"
+    - name: get sdl
+      run: Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.26.2/SDL2-devel-2.26.2-VC.zip" -Outfile ".\sdl.zip"
       shell: powershell
-    - name: expand libsdl
+    - name: expand sdl
       run: |
-        Expand-Archive -LiteralPath .\libsdl.zip -DestinationPath .\libsdl_build\; pwd
-        cd libsdl_build
-        Add-Content ..\libsdl_dir.txt $pwd.Path
+        Expand-Archive -LiteralPath .\sdl.zip -DestinationPath .\sdl_build\; pwd
+        cd sdl_build\SDL2-2.26.2
+        Add-Content ..\..\sdl_dir.txt $pwd.Path
       shell: powershell
-    - name: check libsdl folder
+    - name: check sdl folder
       run: |
-        set /P LIBSDL_DIR=<libsdl_dir.txt
-        dir "%LIBSDL_DIR%\include\SDL"
-        dir "%LIBSDL_DIR%\lib\x86"
+        set /P SDL_DIR=<sdl_dir.txt
+        dir "%SDL_DIR%\include"
+        dir "%SDL_DIR%\lib\x86"
       shell: cmd
     - name: config site
       run: |
@@ -239,21 +239,21 @@ jobs:
       working-directory: .
       run: |
         set /P OPENSSL_DIR=<openssl_dir.txt
-        set /P LIBVPX_DIR=<libvpx_dir.txt
-        set /P LIBSDL_DIR=<libsdl_dir.txt
+        set /P VPX_DIR=<vpx_dir.txt
+        set /P SDL_DIR=<sdl_dir.txt
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%LIBVPX_DIR%\include;%LIBSDL_DIR%\include\SDL
-        set LIB=%LIB%;%OPENSSL_DIR%\lib;%LIBVPX_DIR%\lib\x86;%LIBSDL_DIR%\lib\x86
+        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
+        set LIB=%LIB%;%OPENSSL_DIR%\lib;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
     - name: build test tools cmp_wav
       run: |
         set /P OPENSSL_DIR=<openssl_dir.txt
-        set /P LIBVPX_DIR=<libvpx_dir.txt
-        set /P LIBSDL_DIR=<libsdl_dir.txt
+        set /P VPX_DIR=<vpx_dir.txt
+        set /P SDL_DIR=<sdl_dir.txt
         cd tests/pjsua/tools
-        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%LIBVPX_DIR%\include;%LIBSDL_DIR%\include\SDL
-        set LIB=%LIB%;%OPENSSL_DIR%\lib;%LIBVPX_DIR%\lib\x86;%LIBSDL_DIR%\lib\x86
+        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
+        set LIB=%LIB%;%OPENSSL_DIR%\lib;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
@@ -264,10 +264,9 @@ jobs:
     - name: unit tests
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
-        $env:LIBVPX_DIR = Get-Content .\libvpx_dir.txt
-        $env:LIBSDL_DIR = Get-Content .\libsdl_dir.txt
-        $env:PATH+=";$env:OPENSSL_DIR\bin;$env:LIBVPX_DIR\bin\x86;$env:LIBSDL_DIR\bin\x86;"
-        cd tests/pjsua; python runall.py        
+        $env:SDL_DIR = Get-Content .\sdl_dir.txt
+        $env:PATH+=";$env:OPENSSL_DIR\bin;$env:SDL_DIR\lib\x86;"
+        cd tests/pjsua; python runall.py
         cd ../../pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe
         cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe
         cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe
@@ -278,49 +277,34 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get ffmpeg
-      run: Invoke-WebRequest -Uri "https://github.com/ShiftMediaProject/FFmpeg/releases/download/4.3.r96746/libffmpeg_4.3.r96746_msvc14_x86.zip" -Outfile "libffmpeg.zip"
+      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/ffmpeg-5.1.2-win.zip" -Outfile "ffmpeg.zip"
       shell: powershell
     - name: expand ffmpeg
       run: |
-        Expand-Archive -LiteralPath .\libffmpeg.zip -DestinationPath .\libffmpeg_build\; pwd
-        cd libffmpeg_build
-        Add-Content ..\libffmpeg_dir.txt $pwd.Path
+        Expand-Archive -LiteralPath .\ffmpeg.zip -DestinationPath .; pwd
+        cd ffmpeg_build
+        Add-Content ..\ffmpeg_dir.txt $pwd.Path
       shell: powershell
     - name: check ffmpeg folder
       run: |
-        set /P LIBFFMPEG_DIR=<libffmpeg_dir.txt
-        dir "%LIBFFMPEG_DIR%\include"
-        dir "%LIBFFMPEG_DIR%\lib\x86"
+        set /P FFMPEG_DIR=<ffmpeg_dir.txt
+        dir "%FFMPEG_DIR%\include"
+        dir "%FFMPEG_DIR%\lib"
       shell: cmd
-    - name: get libx264
-      run: Invoke-WebRequest -Uri "https://github.com/ShiftMediaProject/x264/releases/download/0.159.r2991/libx264_0.159.r2991_msvc14.zip" -Outfile ".\libx264.zip"
+    - name: get sdl
+      run: Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.26.2/SDL2-devel-2.26.2-VC.zip" -Outfile ".\sdl.zip"
       shell: powershell
-    - name: expand libx264
+    - name: expand sdl
       run: |
-        Expand-Archive -LiteralPath .\libx264.zip -DestinationPath .\libx264_build\; pwd
-        cd libx264_build
-        Add-Content ..\libx264_dir.txt $pwd.Path
+        Expand-Archive -LiteralPath .\sdl.zip -DestinationPath .\sdl_build\; pwd
+        cd sdl_build\SDL2-2.26.2
+        Add-Content ..\..\sdl_dir.txt $pwd.Path
       shell: powershell
-    - name: check libx264 folder
+    - name: check sdl folder
       run: |
-        set /P LIBX264_DIR=<libx264_dir.txt
-        dir "%LIBX264_DIR%\include"
-        dir "%LIBX264_DIR%\lib\x86"
-      shell: cmd
-    - name: get libsdl
-      run: Invoke-WebRequest -Uri "https://github.com/ShiftMediaProject/SDL/releases/download/release-2.0.9/libsdl_release-2.0.9_msvc14.zip" -Outfile ".\libsdl.zip"
-      shell: powershell
-    - name: expand libsdl
-      run: |
-        Expand-Archive -LiteralPath .\libsdl.zip -DestinationPath .\libsdl_build\; pwd
-        cd libsdl_build
-        Add-Content ..\libsdl_dir.txt $pwd.Path
-      shell: powershell
-    - name: check libsdl folder
-      run: |
-        set /P LIBSDL_DIR=<libsdl_dir.txt
-        dir "%LIBSDL_DIR%\include\SDL"
-        dir "%LIBSDL_DIR%\lib\x86"
+        set /P SDL_DIR=<sdl_dir.txt
+        dir "%SDL_DIR%\include\SDL"
+        dir "%SDL_DIR%\lib\x86"
       shell: cmd
     - name: config site
       run: |
@@ -337,11 +321,10 @@ jobs:
     - name: MSBuild
       working-directory: .
       run: |
-        set /P LIBFFMPEG_DIR=<libffmpeg_dir.txt
-        set /P LIBX264_DIR=<libx264_dir.txt
-        set /P LIBSDL_DIR=<libsdl_dir.txt
+        set /P FFMPEG_DIR=<ffmpeg_dir.txt        
+        set /P LIBSDL_DIR=<sdl_dir.txt
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        set INCLUDE=%INCLUDE%;%LIBFFMPEG_DIR%\include;%LIBX264_DIR%\include;%LIBSDL_DIR%\include\SDL
-        set LIB=%LIB%;%LIBFFMPEG_DIR%\lib\x86;%LIBX264_DIR%\lib\x86;%LIBSDL_DIR%\lib\x86
+        set INCLUDE=%INCLUDE%;%LIBFFMPEG_DIR%\include;%SDL_DIR%\include
+        set LIB=%LIB%;%FFMPEG_DIR%\lib;%SDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
