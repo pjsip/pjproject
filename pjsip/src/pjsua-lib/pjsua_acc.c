@@ -3192,11 +3192,22 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
 /*
  * This is an internal function to find the most appropriate account to be
  * used to handle incoming calls.
+ *
+ * If the To header contains a SIP(S) URI, then it will be used for
+ * finding a appropriate account, else the request URI.
+ * The function selects an account by weighted score.
+ *
+ * The matching priority order is: transport type (matched or not set),
+ * domain part, user part, and the user part of the request URI (if it is
+ * a SIP URI). Note that the transport type has higher priority as 
+ * unmatched transport type may cause failure in sending response.
  */
 PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 {
     pjsip_uri *uri;
+    pjsip_uri *request_uri;
     pjsip_sip_uri *sip_uri;
+    pjsip_sip_uri *request_sip_uri = NULL;
     pjsua_acc_id id = PJSUA_INVALID_ID;
     int max_score;
     unsigned i;
@@ -3209,10 +3220,10 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
     }
 
     uri = rdata->msg_info.to->uri;
+    request_uri = rdata->msg_info.msg->line.req.uri;
 
     PJSUA_LOCK();
 
-    /* Use Req URI if To URI is not SIP */
     if (!PJSIP_URI_SCHEME_IS_SIP(uri) &&
         !PJSIP_URI_SCHEME_IS_SIPS(uri))
     {
@@ -3222,20 +3233,20 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
             goto on_return;
     }
 
-    /* Just return default account if both To and Req URI are not SIP: */
-    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
-        !PJSIP_URI_SCHEME_IS_SIPS(uri)) 
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) &&
+        !PJSIP_URI_SCHEME_IS_SIPS(uri))
     {
         goto on_return;
     }
 
     sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
 
-    /* Select account by weighted score. Matching priority order is:
-     * transport type (matched or not set), domain part, and user part.
-     * Note that the transport type has higher priority as unmatched
-     * transport type may cause failure in sending response.
-     */
+    if (PJSIP_URI_SCHEME_IS_SIP(request_uri) ||
+        PJSIP_URI_SCHEME_IS_SIPS(request_uri))
+    {
+        request_sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(request_uri);
+    }
+
     max_score = 0;
     for (i=0; i < pjsua_var.acc_cnt; ++i) {
         unsigned acc_id = pjsua_var.acc_ids[i];
@@ -3249,16 +3260,21 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
         if (acc->tp_type == rdata->tp_info.transport->key.type ||
             acc->tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
         {
-            score |= 4;
+            score |= 8;
         }
 
         /* Match domain */
         if (pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) {
-            score |= 2;
+            score |= 4;
         }
 
         /* Match username */
         if (pj_stricmp(&acc->user_part, &sip_uri->user)==0) {
+            score |= 2;
+        }
+
+        /* Match username of request URI */
+        if (request_sip_uri && pj_stricmp(&acc->user_part, &request_sip_uri->user)==0) {
             score |= 1;
         }
 
@@ -3267,6 +3283,8 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
             max_score = score;
         }
     }
+
+    PJ_LOG(6,(THIS_FILE, "Account selected for incoming call: #%u, score: %d", id, max_score));
 
 on_return:
     PJSUA_UNLOCK();
