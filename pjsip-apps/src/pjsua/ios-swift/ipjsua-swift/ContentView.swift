@@ -19,7 +19,7 @@
 import SwiftUI
 
 struct VidView: UIViewRepresentable {
-    @Binding var vidWin: UIView?
+    @Binding var vid_view: UIView?
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView();
@@ -28,27 +28,16 @@ struct VidView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
-        if let vid_win = vidWin {
+        if let vid_win = vid_view {
             /* Add the video window as subview */
             if (!vid_win.isDescendant(of: uiView)) {
-                uiView.addSubview(vid_win)
-                /* Resize it to fit width */
-                vid_win.bounds = CGRect(x:0, y:0, width:uiView.bounds.size.width,
-                                        height:(uiView.bounds.size.height *
-                                                1.0 * uiView.bounds.size.width /
-                                                vid_win.bounds.size.width));
-                /* Center it horizontally */
-                vid_win.center = CGPoint(x:uiView.bounds.size.width / 2.0,
-                                         y:vid_win.bounds.size.height / 2.0);
+                uiView.addSubview(vid_win);
+                vid_win.center = uiView.center;
+                uiView.autoresizesSubviews = true;
+                vid_win.autoresizingMask = [.flexibleWidth, .flexibleHeight];
             }
         }
     }
-}
-
-class PjsipVars: ObservableObject {
-    @Published var calling = false
-    var dest: String = "sip:test@pjsip.org"
-    var call_id: pjsua_call_id = PJSUA_INVALID_ID.rawValue
 }
 
 private func call_func(user_data: UnsafeMutableRawPointer?) {
@@ -81,8 +70,7 @@ private func call_func(user_data: UnsafeMutableRawPointer?) {
 }
 
 struct ContentView: View {
-    @StateObject var pjsip_vars = PjsipVars()
-    @EnvironmentObject var vinfo: VidInfo;
+    @EnvironmentObject var pjsip_vars: PjsipVars;
 
     var body: some View {
         VStack(alignment: .center) {
@@ -121,7 +109,7 @@ struct ContentView: View {
                 .padding(.all, 8.0)
                 .background(Color.green);
 
-            VidView(vidWin: $vinfo.vid_win)
+            VidView(vid_view: $pjsip_vars.vid_win)
         }
     }
 }
