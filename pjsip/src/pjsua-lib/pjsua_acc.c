@@ -4281,6 +4281,31 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
                                                              status,
                                                              &info);
                 }
+            }
+            else if (call_info.role==PJSIP_ROLE_UAC &&
+                     call_info.state < PJSIP_INV_STATE_CONFIRMED)
+            {
+                /* Hangup not yet confirmed outgoing calls */
+                acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS;
+                PJ_LOG(3, (THIS_FILE, "Unconfirmed outgoing call to %.*s: "
+                           "hangup triggered by IP change",
+                           (int)call_info.remote_info.slen,
+                           call_info.remote_info.ptr));
+
+                status = pjsua_call_hangup(i, PJSIP_SC_GONE, NULL, NULL);
+
+                if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+                    pjsua_ip_change_op_info info;
+
+                    pj_bzero(&info, sizeof(info));
+                    info.acc_hangup_calls.acc_id = acc->index;
+                    info.acc_hangup_calls.call_id = call_info.id;
+
+                    pjsua_var.ua_cfg.cb.on_ip_change_progress(
+                                                             acc->ip_change_op,
+                                                             status,
+                                                             &info);
+                }
             } else if ((acc->cfg.ip_change_cfg.reinvite_flags) &&
                 (call_info.state == PJSIP_INV_STATE_CONFIRMED))
             {
