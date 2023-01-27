@@ -1078,3 +1078,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     return processed_cnt;
 }
 
+PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
+{
+    return ioqueue ? (pj_oshandle_t)&ioqueue->epfd : NULL;
+}
