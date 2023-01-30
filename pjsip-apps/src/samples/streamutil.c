@@ -93,13 +93,19 @@ static const char *desc =
  "  --srtp-dtls-server    Use DTLS for SRTP keying, as DTLS server      \n"
 #endif
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+"  --opus-pt=PT           Opus payload type                             \n"
+"  --opus-ch=CH           Opus channel count                            \n"
+"  --opus-clock-rate=CR   Opus clock rate                               \n"
+#endif
+
  "\n"
 ;
 
 
 
 
-#define THIS_FILE       "stream.c"
+#define THIS_FILE       "streamutil.c"
 
 
 
@@ -171,7 +177,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
     info.tx_pt = codec_info->pt;
     info.rx_pt = codec_info->pt;
     info.ssrc = pj_rand();
-    
+
 #if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
     /* Set default RTCP XR enabled/disabled */
     info.rtcp_xr_enabled = PJ_TRUE;
@@ -390,6 +396,12 @@ int main(int argc, char *argv[])
     int tmp_key_len;
 #endif
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    int opus_pt = -1;
+    int opus_clock_rate = -1;
+    int opus_ch = -1;
+#endif
+
     /* Default values */
     const pjmedia_codec_info *codec_info;
     pjmedia_codec_param codec_param;
@@ -415,6 +427,11 @@ int main(int argc, char *argv[])
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
         OPT_USE_SRTP    = 'S',
 #endif
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+        OPT_OPUS_PT = 'P',
+        OPT_OPUS_CH = 'C',
+        OPT_OPUS_CLOCK_RATE = 'K',
+#endif
         OPT_SRTP_TX_KEY = 'x',
         OPT_SRTP_RX_KEY = 'y',
         OPT_SRTP_DTLS_CLIENT = 'd',
@@ -438,6 +455,11 @@ int main(int argc, char *argv[])
         { "srtp-rx-key",    1, 0, OPT_SRTP_RX_KEY },
         { "srtp-dtls-client", 0, 0, OPT_SRTP_DTLS_CLIENT },
         { "srtp-dtls-server", 0, 0, OPT_SRTP_DTLS_SERVER },
+#endif
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+        { "opus-pt", 1, 0, OPT_OPUS_PT },
+        { "opus-ch", 1, 0, OPT_OPUS_CH },
+        { "opus-clock-rate", 1, 0, OPT_OPUS_CLOCK_RATE },
 #endif
         { "help",           0, 0, OPT_HELP },
         { NULL, 0, 0, 0 },
@@ -555,6 +577,18 @@ int main(int argc, char *argv[])
             break;
 #endif
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+        case OPT_OPUS_PT:
+            opus_pt = atoi(pj_optarg);
+            break;
+        case OPT_OPUS_CLOCK_RATE:
+            opus_clock_rate = atoi(pj_optarg);
+            break;
+        case OPT_OPUS_CH:
+            opus_ch = atoi(pj_optarg);
+            break;
+#endif
+
         case OPT_HELP:
             usage();
             return 1;
@@ -643,11 +677,30 @@ int main(int argc, char *argv[])
     if (status != PJ_SUCCESS)
         goto on_exit;
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    /* Opus custom settings */
+    if (!pj_stricmp2(&codec_info->encoding_name, "opus")) {
+        /* Alloc temp codec info to update settings */
+        pjmedia_codec_info *tmp = PJ_POOL_ALLOC_T(pool, pjmedia_codec_info);
+        pj_memcpy(tmp, codec_info, sizeof(pjmedia_codec_info));
+
+        if (opus_pt > 0)
+            tmp->pt = opus_pt;
+        if (opus_clock_rate > 0)
+            tmp->clock_rate = opus_clock_rate;
+        if (opus_ch > 0)
+            tmp->channel_cnt = opus_ch;
+
+        /* Use the temp codec info  */
+        codec_info = tmp;
+    }
+#endif
+
     /* Create stream based on program arguments */
-    status = create_stream(pool, med_endpt, codec_info, dir, local_port, 
+    status = create_stream(pool, med_endpt, codec_info, dir, local_port,
                            &remote_addr, mcast, &mcast_addr,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-                           use_srtp, &srtp_crypto_suite, 
+                           use_srtp, &srtp_crypto_suite,
                            &srtp_tx_key, &srtp_rx_key,
                            is_dtls_client, is_dtls_server,
 #endif
@@ -657,8 +710,8 @@ int main(int argc, char *argv[])
 
     /* Get codec default param for info */
     status = pjmedia_codec_mgr_get_default_param(
-                                    pjmedia_endpt_get_codec_mgr(med_endpt), 
-                                    codec_info, 
+                                    pjmedia_endpt_get_codec_mgr(med_endpt),
+                                    codec_info,
                                     &codec_param);
     /* Should be ok, as create_stream() above succeeded */
     pj_assert(status == PJ_SUCCESS);
@@ -804,8 +857,6 @@ int main(int argc, char *argv[])
 
     }
 
-
-
     /* Start deinitialization: */
 on_exit:
 
@@ -815,14 +866,9 @@ on_exit:
         PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }
 
-    /* If there is master port, then we just need to destroy master port
-     * (it will recursively destroy upstream and downstream ports, which
-     * in this case are file_port and stream_port).
-     */
+    /* Destroy master port */
     if (master_port) {
-        pjmedia_master_port_destroy(master_port, PJ_TRUE);
-        play_file_port = NULL;
-        stream = NULL;
+        pjmedia_master_port_destroy(master_port, PJ_FALSE);
     }
 
     /* Destroy stream */
