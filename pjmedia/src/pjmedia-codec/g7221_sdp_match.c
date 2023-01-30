@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -25,29 +24,29 @@
 
 #define GET_FMTP_IVAL_BASE(ival, base, fmtp, param, default_val) \
     do { \
-	pj_str_t s; \
-	char *p; \
-	p = pj_stristr(&fmtp.fmt_param, &param); \
-	if (!p) { \
-	    ival = default_val; \
-	    break; \
-	} \
-	pj_strset(&s, p + param.slen, fmtp.fmt_param.slen - \
-		  (p - fmtp.fmt_param.ptr) - param.slen); \
-	ival = pj_strtoul2(&s, NULL, base); \
+        pj_str_t s; \
+        char *p; \
+        p = pj_stristr(&fmtp.fmt_param, &param); \
+        if (!p) { \
+            ival = default_val; \
+            break; \
+        } \
+        pj_strset(&s, p + param.slen, fmtp.fmt_param.slen - \
+                  (p - fmtp.fmt_param.ptr) - param.slen); \
+        ival = pj_strtoul2(&s, NULL, base); \
     } while (0)
 
 #define GET_FMTP_IVAL(ival, fmtp, param, default_val) \
-	GET_FMTP_IVAL_BASE(ival, 10, fmtp, param, default_val)
+        GET_FMTP_IVAL_BASE(ival, 10, fmtp, param, default_val)
 
 
 
 PJ_DEF(pj_status_t) pjmedia_codec_g7221_match_sdp(pj_pool_t *pool,
-						  pjmedia_sdp_media *offer,
-						  unsigned o_fmt_idx,
-						  pjmedia_sdp_media *answer,
-						  unsigned a_fmt_idx,
-						  unsigned option)
+                                                  pjmedia_sdp_media *offer,
+                                                  unsigned o_fmt_idx,
+                                                  pjmedia_sdp_media *answer,
+                                                  unsigned a_fmt_idx,
+                                                  unsigned option)
 {
     const pjmedia_sdp_attr *attr_ans;
     const pjmedia_sdp_attr *attr_ofr;
@@ -61,31 +60,31 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_match_sdp(pj_pool_t *pool,
 
     /* Parse offer */
     attr_ofr = pjmedia_sdp_media_find_attr2(offer, "fmtp", 
-					    &offer->desc.fmt[o_fmt_idx]);
+                                            &offer->desc.fmt[o_fmt_idx]);
     if (!attr_ofr)
-	return PJMEDIA_SDP_EINFMTP;
+        return PJMEDIA_SDP_EINFMTP;
 
     status = pjmedia_sdp_attr_get_fmtp(attr_ofr, &fmtp);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     GET_FMTP_IVAL(o_bitrate, fmtp, bitrate, 0);
 
     /* Parse answer */
     attr_ans = pjmedia_sdp_media_find_attr2(answer, "fmtp", 
-					    &answer->desc.fmt[a_fmt_idx]);
+                                            &answer->desc.fmt[a_fmt_idx]);
     if (!attr_ans)
-	return PJMEDIA_SDP_EINFMTP;
+        return PJMEDIA_SDP_EINFMTP;
 
     status = pjmedia_sdp_attr_get_fmtp(attr_ans, &fmtp);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     GET_FMTP_IVAL(a_bitrate, fmtp, bitrate, 0);
 
     /* Compare bitrate in answer and offer. */
     if (a_bitrate != o_bitrate)
-	return PJMEDIA_SDP_EFORMATNOTEQUAL;
+        return PJMEDIA_SDP_EFORMATNOTEQUAL;
 
     return PJ_SUCCESS;
 }

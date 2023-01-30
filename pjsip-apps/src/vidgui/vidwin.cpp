@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -19,12 +18,12 @@
 #include "vidwin.h"
 #include <QEvent>
 
-#define THIS_FILE	"vidwin.cpp"
-#define TRACE_(...)	PJ_LOG(4,(THIS_FILE, __VA_ARGS__))
+#define THIS_FILE       "vidwin.cpp"
+#define TRACE_(...)     PJ_LOG(4,(THIS_FILE, __VA_ARGS__))
 
 VidWin::VidWin(const pjmedia_vid_dev_hwnd *hwnd_,
-	       QWidget* parent,
-	       Qt::WindowFlags f) :
+               QWidget* parent,
+               Qt::WindowFlags f) :
     QWidget(parent, f), orig_parent(NULL),
     size_hint(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX)
 {
@@ -40,7 +39,7 @@ VidWin::VidWin(const pjmedia_vid_dev_hwnd *hwnd_,
 
     pj_bzero(&hwnd, sizeof(hwnd));
     if (hwnd_) {
-	hwnd = *hwnd_;
+        hwnd = *hwnd_;
     }
 }
 
@@ -63,34 +62,34 @@ bool VidWin::event(QEvent *e)
     switch(e->type()) {
 
     case QEvent::Resize:
-	set_size();
-	break;
+        set_size();
+        break;
 
     case QEvent::ParentChange:
-	get_size();
-	if (0) {
-	    QRect qr = rect();
-	    if (qr.width() > size_hint.width())
-		size_hint.setWidth(qr.width());
-	    if (qr.height() > size_hint.height())
-		size_hint.setWidth(qr.height());
-	}
-	setFixedSize(size_hint);
-	attach();
-	break;
+        get_size();
+        if (0) {
+            QRect qr = rect();
+            if (qr.width() > size_hint.width())
+                size_hint.setWidth(qr.width());
+            if (qr.height() > size_hint.height())
+                size_hint.setWidth(qr.height());
+        }
+        setFixedSize(size_hint);
+        attach();
+        break;
 
     case QEvent::Show:
-	show_sdl(true);
-	// revert to default size hint, make it resizable
-	setFixedSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-	break;
+        show_sdl(true);
+        // revert to default size hint, make it resizable
+        setFixedSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        break;
 
     case QEvent::Hide:
-	show_sdl(false);
-	break;
+        show_sdl(false);
+        break;
 
     default:
-	break;
+        break;
     }
 
     return QWidget::event(e);
@@ -142,7 +141,7 @@ void VidWin::get_size()
     HWND w = (HWND)hwnd.info.win.hwnd;
     RECT r;
     if (GetWindowRect(w, &r))
-	size_hint = QSize(r.right-r.left+1, r.bottom-r.top+1);
+        size_hint = QSize(r.right-r.left+1, r.bottom-r.top+1);
     TRACE_("%p size = %dx%d", w, size_hint.width(), size_hint.height());
 }
 
@@ -237,8 +236,8 @@ void VidWin::show_sdl(bool visible)
 #include <QX11Info>
 #include <stdio.h>
 
-#define GET_DISPLAY()	QX11Info::display()
-//#define GET_DISPLAY()	(Display*)hwnd.info.x11.display
+#define GET_DISPLAY()   QX11Info::display()
+//#define GET_DISPLAY() (Display*)hwnd.info.x11.display
 
 void VidWin::attach()
 {
@@ -254,7 +253,7 @@ void VidWin::attach()
     Window parent = (Window)this->winId();
     int err = XReparentWindow(d, w, parent, 0, 0);
     TRACE_("%p new parent handle = %p, err = %d",
-	   (void*)w,(void*)parent, err);
+           (void*)w,(void*)parent, err);
 }
 
 
@@ -274,7 +273,7 @@ void VidWin::set_size()
 
     int err = XResizeWindow(d, w, qr.width(), qr.height());
     TRACE_("[%p,%p] new size = %dx%d, err = %d",
-	   (void*)d, (void*)w, qr.width(), qr.height(), err);
+           (void*)d, (void*)w, qr.width(), qr.height(), err);
 }
 
 void VidWin::get_size()
@@ -298,9 +297,9 @@ void VidWin::show_sdl(bool visible)
     Window w = (Window)hwnd.info.x11.window;
 
     if (visible) {
-	XMapRaised(d, w);
+        XMapRaised(d, w);
     } else {
-	XUnmapWindow(d, w);
+        XUnmapWindow(d, w);
     }
 
     XFlush(d);

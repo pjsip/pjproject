@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -87,15 +86,15 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register iLBC codec factory to pjmedia endpoint.
  *
- * @param endpt	    The pjmedia endpoint.
- * @param mode	    Default decoder mode to be used. Valid values are
- *		    20 and 30 ms. Note that encoder mode follows the
- *		    setting advertised in the remote's SDP.
+ * @param endpt     The pjmedia endpoint.
+ * @param mode      Default decoder mode to be used. Valid values are
+ *                  20 and 30 ms. Note that encoder mode follows the
+ *                  setting advertised in the remote's SDP.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_ilbc_init( pjmedia_endpt *endpt,
-					      int mode );
+                                              int mode );
 
 
 
@@ -103,7 +102,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_ilbc_init( pjmedia_endpt *endpt,
  * Unregister iLBC codec factory from pjmedia endpoint and deinitialize
  * the iLBC codec library.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_ilbc_deinit(void);
 
@@ -115,5 +114,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_ILBC_H__ */
+#endif  /* __PJMEDIA_CODEC_ILBC_H__ */
 

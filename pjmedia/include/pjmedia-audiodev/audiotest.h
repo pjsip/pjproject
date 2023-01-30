@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -102,7 +101,7 @@ typedef struct pjmedia_aud_test_results
  * Perform audio device testing.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_test(const pjmedia_aud_param *param,
-				      pjmedia_aud_test_results *result);
+                                      pjmedia_aud_test_results *result);
 
 /**
  * @}
@@ -111,6 +110,6 @@ PJ_DECL(pj_status_t) pjmedia_aud_test(const pjmedia_aud_param *param,
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_AUDIODEV_AUDIOTEST_H__ */
+#endif  /* __PJMEDIA_AUDIODEV_AUDIOTEST_H__ */
 
 

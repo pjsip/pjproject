@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -94,4 +93,4 @@ typedef struct pj_cis_t
 
 PJ_END_DECL
 
-#endif	/* __PJLIB_UTIL_SCANNER_CIS_BIT_H__ */
+#endif  /* __PJLIB_UTIL_SCANNER_CIS_BIT_H__ */

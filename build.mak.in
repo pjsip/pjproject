@@ -223,7 +223,7 @@ OBOE_CFLAGS = @ac_oboe_cflags@
 
 # PJMEDIA features exclusion
 PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(DSHOW_CFLAGS) $(QT_CFLAGS) \
-		   $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(DARWIN_CFLAGS)
+                   $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(DARWIN_CFLAGS)
 PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) $(DSHOW_LDFLAGS) \
                    $(OPENH264_LDFLAGS) $(VPX_LDFLAGS)
 
@@ -231,40 +231,40 @@ PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) $(DSHOW_LDF
 export APP_CC := @CC@
 export APP_CXX := @CXX@
 export APP_CFLAGS := -DPJ_AUTOCONF=1\
-	@CFLAGS@\
-	$(PJ_VIDEO_CFLAGS) \
-	-I$(PJDIR)/pjlib/include\
-	-I$(PJDIR)/pjlib-util/include\
-	-I$(PJDIR)/pjnath/include\
-	-I$(PJDIR)/pjmedia/include\
-	-I$(PJDIR)/pjsip/include
+        @CFLAGS@\
+        $(PJ_VIDEO_CFLAGS) \
+        -I$(PJDIR)/pjlib/include\
+        -I$(PJDIR)/pjlib-util/include\
+        -I$(PJDIR)/pjnath/include\
+        -I$(PJDIR)/pjmedia/include\
+        -I$(PJDIR)/pjsip/include
 export APP_CXXFLAGS := @CXXFLAGS@ $(APP_CFLAGS)
 export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
-	-L$(PJDIR)/pjlib-util/lib\
-	-L$(PJDIR)/pjnath/lib\
-	-L$(PJDIR)/pjmedia/lib\
-	-L$(PJDIR)/pjsip/lib\
-	-L$(PJDIR)/third_party/lib\
-	$(PJ_VIDEO_LDFLAGS) \
-	@LDFLAGS@
+        -L$(PJDIR)/pjlib-util/lib\
+        -L$(PJDIR)/pjnath/lib\
+        -L$(PJDIR)/pjmedia/lib\
+        -L$(PJDIR)/pjsip/lib\
+        -L$(PJDIR)/third_party/lib\
+        $(PJ_VIDEO_LDFLAGS) \
+        @LDFLAGS@
 export APP_LDXXFLAGS := $(APP_LDFLAGS)
 
 export APP_LIB_FILES := \
-	$(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjsip/lib/libpjsip-ua-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjsip/lib/libpjsip-simple-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjsip/lib/libpjsip-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjmedia/lib/libpjmedia-codec-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjmedia/lib/libpjmedia-videodev-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjmedia/lib/libpjmedia-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjnath/lib/libpjnath-$(LIB_SUFFIX) \
-	$(PJ_DIR)/pjlib-util/lib/libpjlib-util-$(LIB_SUFFIX) \
-	$(APP_THIRD_PARTY_LIB_FILES) \
-	$(PJ_DIR)/pjlib/lib/libpj-$(LIB_SUFFIX)
+        $(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjsip/lib/libpjsip-ua-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjsip/lib/libpjsip-simple-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjsip/lib/libpjsip-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjmedia/lib/libpjmedia-codec-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjmedia/lib/libpjmedia-videodev-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjmedia/lib/libpjmedia-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjnath/lib/libpjnath-$(LIB_SUFFIX) \
+        $(PJ_DIR)/pjlib-util/lib/libpjlib-util-$(LIB_SUFFIX) \
+        $(APP_THIRD_PARTY_LIB_FILES) \
+        $(PJ_DIR)/pjlib/lib/libpj-$(LIB_SUFFIX)
 export APP_LIBXX_FILES := \
-	$(PJ_DIR)/pjsip/lib/libpjsua2-$(LIB_SUFFIX) \
-	$(APP_LIB_FILES)
+        $(PJ_DIR)/pjsip/lib/libpjsua2-$(LIB_SUFFIX) \
+        $(APP_LIB_FILES)
 
 ifeq ($(PJ_SHARED_LIBRARIES),)
 export PJLIB_LDLIB := -lpj-$(TARGET_NAME)
@@ -294,21 +294,21 @@ export PJSUA_LIB_LDLIB := -lpjsua
 export PJSUA2_LIB_LDLIB := -lpjsua2
 
 export ADD_LIB_FILES := $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjsip/lib/libpjsip-simple.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-simple.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjsip/lib/libpjsip.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjmedia/lib/libpjmedia-codec.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-codec.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjmedia/lib/libpjmedia-videodev.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-videodev.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjmedia/lib/libpjmedia.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjnath/lib/libpjnath.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjnath/lib/libpjnath.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjlib-util/lib/libpjlib-util.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib-util/lib/libpjlib-util.$(SHLIB_SUFFIX) \
-	$(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX)
+        $(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjsip/lib/libpjsip-simple.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-simple.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjsip/lib/libpjsip.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjmedia/lib/libpjmedia-codec.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-codec.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjmedia/lib/libpjmedia-videodev.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-videodev.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjmedia/lib/libpjmedia.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjnath/lib/libpjnath.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjnath/lib/libpjnath.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjlib-util/lib/libpjlib-util.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib-util/lib/libpjlib-util.$(SHLIB_SUFFIX) \
+        $(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX)
 
 APP_LIB_FILES += $(ADD_LIB_FILES)
 
 APP_LIBXX_FILES += $(PJ_DIR)/pjsip/lib/libpjsua2.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsua2.$(SHLIB_SUFFIX) \
-	$(ADD_LIB_FILES)
+        $(ADD_LIB_FILES)
 endif
 
 ifeq ($(PJ_EXCLUDE_PJSUA2),1)
@@ -316,23 +316,23 @@ export PJSUA2_LIB_LDLIB :=
 endif
 
 export APP_LDLIBS := $(PJSUA_LIB_LDLIB) \
-	$(PJSIP_UA_LDLIB) \
-	$(PJSIP_SIMPLE_LDLIB) \
-	$(PJSIP_LDLIB) \
-	$(PJMEDIA_CODEC_LDLIB) \
-	$(PJMEDIA_LDLIB) \
-	$(PJMEDIA_VIDEODEV_LDLIB) \
-	$(PJMEDIA_AUDIODEV_LDLIB) \
-	$(PJMEDIA_LDLIB) \
-	$(PJNATH_LDLIB) \
-	$(PJLIB_UTIL_LDLIB) \
-	$(APP_THIRD_PARTY_LIBS)\
-	$(APP_THIRD_PARTY_EXT)\
-	$(PJLIB_LDLIB) \
-	@LIBS@
+        $(PJSIP_UA_LDLIB) \
+        $(PJSIP_SIMPLE_LDLIB) \
+        $(PJSIP_LDLIB) \
+        $(PJMEDIA_CODEC_LDLIB) \
+        $(PJMEDIA_LDLIB) \
+        $(PJMEDIA_VIDEODEV_LDLIB) \
+        $(PJMEDIA_AUDIODEV_LDLIB) \
+        $(PJMEDIA_LDLIB) \
+        $(PJNATH_LDLIB) \
+        $(PJLIB_UTIL_LDLIB) \
+        $(APP_THIRD_PARTY_LIBS)\
+        $(APP_THIRD_PARTY_EXT)\
+        $(PJLIB_LDLIB) \
+        @LIBS@
 export APP_LDXXLIBS := $(PJSUA2_LIB_LDLIB) \
-	-lstdc++ \
-	$(APP_LDLIBS)
+        -lstdc++ \
+        $(APP_LDLIBS)
 
 # Here are the variables to use if application is using the library
 # from within the source distribution

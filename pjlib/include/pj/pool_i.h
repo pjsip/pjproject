@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -32,8 +31,8 @@ PJ_IDEF(pj_size_t) pj_pool_get_used_size( pj_pool_t *pool )
     pj_pool_block *b = pool->block_list.next;
     pj_size_t used_size = sizeof(pj_pool_t);
     while (b != &pool->block_list) {
-	used_size += (b->cur - b->buf) + sizeof(pj_pool_block);
-	b = b->next;
+        used_size += (b->cur - b->buf) + sizeof(pj_pool_block);
+        b = b->next;
     }
     return used_size;
 }
@@ -45,12 +44,12 @@ PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t size )
      * memory address, but no memory will be allocated.
      */
     if (size & (PJ_POOL_ALIGNMENT-1)) {
-	size = (size + PJ_POOL_ALIGNMENT) & ~(PJ_POOL_ALIGNMENT-1);
+        size = (size + PJ_POOL_ALIGNMENT) & ~(PJ_POOL_ALIGNMENT-1);
     }
     if ((pj_size_t)(block->end - block->cur) >= size) {
-	void *ptr = block->cur;
-	block->cur += size;
-	return ptr;
+        void *ptr = block->cur;
+        block->cur += size;
+        return ptr;
     }
     return NULL;
 }
@@ -59,7 +58,7 @@ PJ_IDEF(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size)
 {
     void *ptr = pj_pool_alloc_from_block(pool->block_list.next, size);
     if (!ptr)
-	ptr = pj_pool_allocate_find(pool, size);
+        ptr = pj_pool_allocate_find(pool, size);
     return ptr;
 }
 
@@ -68,7 +67,7 @@ PJ_IDEF(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count, pj_size_t size)
 {
     void *buf = pj_pool_alloc( pool, size*count);
     if (buf)
-	pj_bzero(buf, size * count);
+        pj_bzero(buf, size * count);
     return buf;
 }
 
@@ -78,10 +77,10 @@ PJ_IDEF(const char *) pj_pool_getobjname( const pj_pool_t *pool )
 }
 
 PJ_IDEF(pj_pool_t*) pj_pool_create( pj_pool_factory *f, 
-				    const char *name,
-				    pj_size_t initial_size, 
-				    pj_size_t increment_size,
-				    pj_pool_callback *callback)
+                                    const char *name,
+                                    pj_size_t initial_size, 
+                                    pj_size_t increment_size,
+                                    pj_pool_callback *callback)
 {
     return (*f->create_pool)(f, name, initial_size, increment_size, callback);
 }
@@ -93,14 +92,14 @@ PJ_IDEF(void) pj_pool_release( pj_pool_t *pool )
 
     b = pool->block_list.next;
     while (b != &pool->block_list) {
-	volatile unsigned char *p = b->buf;
-	while (p < b->end) *p++ = 0;
-	b = b->next;
+        volatile unsigned char *p = b->buf;
+        while (p < b->end) *p++ = 0;
+        b = b->next;
     }
 #endif
 
     if (pool->factory->release_pool)
-	(*pool->factory->release_pool)(pool->factory, pool);
+        (*pool->factory->release_pool)(pool->factory, pool);
 }
 
 
@@ -109,7 +108,7 @@ PJ_IDEF(void) pj_pool_safe_release( pj_pool_t **ppool )
     pj_pool_t *pool = *ppool;
     *ppool = NULL;
     if (pool)
-	pj_pool_release(pool);
+        pj_pool_release(pool);
 }
 
 PJ_IDEF(void) pj_pool_secure_release( pj_pool_t **ppool )
@@ -119,13 +118,13 @@ PJ_IDEF(void) pj_pool_secure_release( pj_pool_t **ppool )
     *ppool = NULL;
 
     if (!pool)
-	return;
+        return;
 
     b = pool->block_list.next;
     while (b != &pool->block_list) {
-	volatile unsigned char *p = b->buf;
-	while (p < b->end) *p++ = 0;
-	b = b->next;
+        volatile unsigned char *p = b->buf;
+        while (p < b->end) *p++ = 0;
+        b = b->next;
     }
 
     pj_pool_release(pool);

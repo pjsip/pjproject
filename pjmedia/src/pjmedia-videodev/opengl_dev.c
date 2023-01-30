@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013-2014 Teluu Inc. (http://www.teluu.com)
  *
@@ -29,9 +28,9 @@
 #   if PJ_ANDROID
 #       include <GLES2/gl2.h>
 #       include <GLES2/gl2ext.h>
-#	undef GL_RGBA
-#	define GL_RGBA GL_BGRA_EXT
-#	define GL_BGRA GL_BGRA_EXT
+#       undef GL_RGBA
+#       define GL_RGBA GL_BGRA_EXT
+#       define GL_BGRA GL_BGRA_EXT
 #   else
 #       include <OpenGLES/ES2/gl.h>
 #       include <OpenGLES/ES2/glext.h>
@@ -41,11 +40,11 @@
 #   include <GL/glext.h>
 #endif
 
-#define THIS_FILE		"opengl_dev.c"
-#define DEFAULT_CLOCK_RATE	90000
-#define DEFAULT_WIDTH		480
-#define DEFAULT_HEIGHT		360
-#define DEFAULT_FPS		15
+#define THIS_FILE               "opengl_dev.c"
+#define DEFAULT_CLOCK_RATE      90000
+#define DEFAULT_WIDTH           480
+#define DEFAULT_HEIGHT          360
+#define DEFAULT_FPS             15
 
 #if PJ_ANDROID
 #    define LOG(a) PJ_LOG(3, (THIS_FILE, a))
@@ -81,14 +80,14 @@ void main() \
 
 /* OpenGL buffers structure. */
 struct gl_buffers {
-    GLuint 	frameBuf;
-    GLuint  	rendBuf;
-    GLuint  	rendTex;
-    GLuint  	directProg;
+    GLuint      frameBuf;
+    GLuint      rendBuf;
+    GLuint      rendTex;
+    GLuint      directProg;
     
-    int     	rendBufW;
-    int     	rendBufH;
-    pj_bool_t 	direct;
+    int         rendBufW;
+    int         rendBufH;
+    pj_bool_t   direct;
 };
 
 /* Supported formats */
@@ -97,18 +96,18 @@ static pjmedia_format_id opengl_fmts[] = {PJMEDIA_FORMAT_BGRA};
 /* opengl device info */
 struct opengl_dev_info
 {
-    pjmedia_vid_dev_info	 info;
+    pjmedia_vid_dev_info         info;
 };
 
 /* opengl factory */
 struct opengl_factory
 {
-    pjmedia_vid_dev_factory	 base;
-    pj_pool_t			*pool;
-    pj_pool_factory		*pf;
+    pjmedia_vid_dev_factory      base;
+    pj_pool_t                   *pool;
+    pj_pool_factory             *pf;
     
-    unsigned			 dev_count;
-    struct opengl_dev_info	*dev_info;
+    unsigned                     dev_count;
+    struct opengl_dev_info      *dev_info;
 };
 
 /* Prototypes */
@@ -215,7 +214,7 @@ GLint create_program(const GLchar *vertSource, const GLchar *fragSource,
 }
 
 void pjmedia_vid_dev_opengl_create_buffers(pj_pool_t *pool, pj_bool_t direct,
-					   gl_buffers **glb)
+                                           gl_buffers **glb)
 {
     gl_buffers *glbuf = PJ_POOL_ZALLOC_T(pool, gl_buffers);
     
@@ -223,11 +222,11 @@ void pjmedia_vid_dev_opengl_create_buffers(pj_pool_t *pool, pj_bool_t direct,
     glDisable(GL_DEPTH_TEST);
     
     if (!(glbuf->direct = direct)) {
-    	glGenFramebuffers(1, &glbuf->frameBuf);
-    	glBindFramebuffer(GL_FRAMEBUFFER, glbuf->frameBuf);
+        glGenFramebuffers(1, &glbuf->frameBuf);
+        glBindFramebuffer(GL_FRAMEBUFFER, glbuf->frameBuf);
     
-    	glGenRenderbuffers(1, &glbuf->rendBuf);
-    	glBindRenderbuffer(GL_RENDERBUFFER, glbuf->rendBuf);
+        glGenRenderbuffers(1, &glbuf->rendBuf);
+        glBindRenderbuffer(GL_RENDERBUFFER, glbuf->rendBuf);
     }
     
     glGenTextures(1, &glbuf->rendTex);
@@ -241,14 +240,14 @@ pj_status_t pjmedia_vid_dev_opengl_init_buffers(gl_buffers *glb)
     GLchar *attribName[NUM_ATTRIBUTES] = { "position", "texCoord" };
     
     if (!glb->direct ) {
-    	glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH,
+        glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH,
                                      &glb->rendBufW);
-    	glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT,
+        glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT,
                                      &glb->rendBufH);
     
-    	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                   GL_RENDERBUFFER, glb->rendBuf);
-    	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             LOG("Unable to create frame buffer");
             return -1;
         }
@@ -288,7 +287,7 @@ pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb, unsigned int width,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height,
-    		 0, GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid *)pixels);
+                 0, GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid *)pixels);
     
     glFlush();
     
@@ -384,7 +383,7 @@ static pj_status_t opengl_factory_init(pjmedia_vid_dev_factory *f)
     qdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
     qdi->info.fmt_cnt = PJ_ARRAY_SIZE(opengl_fmts);
     qdi->info.caps |= pjmedia_vid_dev_opengl_imp_get_cap();
-	
+        
     for (l = 0; l < PJ_ARRAY_SIZE(opengl_fmts); l++) {
         pjmedia_format *fmt = &qdi->info.fmt[l];
         pjmedia_format_init_video(fmt, opengl_fmts[l], DEFAULT_WIDTH,
@@ -451,11 +450,11 @@ static pj_status_t opengl_factory_default_param(pj_pool_t *pool,
     
     pj_bzero(param, sizeof(*param));
     if (di->info.dir & PJMEDIA_DIR_RENDER) {
-	param->dir = PJMEDIA_DIR_RENDER;
-	param->rend_id = index;
-	param->cap_id = PJMEDIA_VID_INVALID_DEV;
+        param->dir = PJMEDIA_DIR_RENDER;
+        param->rend_id = index;
+        param->cap_id = PJMEDIA_VID_INVALID_DEV;
     } else {
-	return PJMEDIA_EVID_INVDEV;
+        return PJMEDIA_EVID_INVDEV;
     }
     
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
@@ -479,10 +478,10 @@ opengl_factory_create_stream(pjmedia_vid_dev_factory *f,
     
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      (param->dir == PJMEDIA_DIR_CAPTURE ||
                       param->dir == PJMEDIA_DIR_RENDER),
-		     PJ_EINVAL);
+                     PJ_EINVAL);
     
     vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
     if (!vfi)
@@ -496,4 +495,4 @@ opengl_factory_create_stream(pjmedia_vid_dev_factory *f,
                                                     user_data, p_vid_strm);
 }
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_OPENGL */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_OPENGL */

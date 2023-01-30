@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2012-2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -84,8 +83,8 @@ public:
  */
 struct LossType
 {
-    unsigned        burst;	/**< Burst/sequential packet lost detected  */
-    unsigned        random;	/**< Random packet lost detected.	    */
+    unsigned        burst;      /**< Burst/sequential packet lost detected  */
+    unsigned        random;     /**< Random packet lost detected.           */
 };
 
 /**
@@ -93,20 +92,20 @@ struct LossType
  */
 struct RtcpStreamStat
 {
-    TimeVal	    update;	/**< Time of last update.		    */
-    unsigned	    updateCount;/**< Number of updates (to calculate avg)   */
-    unsigned	    pkt;	/**< Total number of packets		    */
-    unsigned	    bytes;	/**< Total number of payload/bytes	    */
-    unsigned	    discard;	/**< Total number of discarded packets.	    */
-    unsigned	    loss;	/**< Total number of packets lost	    */
-    unsigned	    reorder;	/**< Total number of out of order packets   */
-    unsigned	    dup;	/**< Total number of duplicates packets	    */
+    TimeVal         update;     /**< Time of last update.                   */
+    unsigned        updateCount;/**< Number of updates (to calculate avg)   */
+    unsigned        pkt;        /**< Total number of packets                */
+    unsigned        bytes;      /**< Total number of payload/bytes          */
+    unsigned        discard;    /**< Total number of discarded packets.     */
+    unsigned        loss;       /**< Total number of packets lost           */
+    unsigned        reorder;    /**< Total number of out of order packets   */
+    unsigned        dup;        /**< Total number of duplicates packets     */
     
-    MathStat        lossPeriodUsec; /**< Loss period statistics 	    */
+    MathStat        lossPeriodUsec; /**< Loss period statistics             */
 
     LossType        lossType;   /**< Types of loss detected.                */
     
-    MathStat        jitterUsec;	/**< Jitter statistics                      */
+    MathStat        jitterUsec; /**< Jitter statistics                      */
     
 public:
     /**
@@ -120,13 +119,13 @@ public:
  */
 struct RtcpSdes
 {
-    string	cname;		/**< RTCP SDES type CNAME.	*/
-    string	name;		/**< RTCP SDES type NAME.	*/
-    string	email;		/**< RTCP SDES type EMAIL.	*/
-    string	phone;		/**< RTCP SDES type PHONE.	*/
-    string	loc;		/**< RTCP SDES type LOC.	*/
-    string	tool;		/**< RTCP SDES type TOOL.	*/
-    string	note;		/**< RTCP SDES type NOTE.	*/
+    string      cname;          /**< RTCP SDES type CNAME.      */
+    string      name;           /**< RTCP SDES type NAME.       */
+    string      email;          /**< RTCP SDES type EMAIL.      */
+    string      phone;          /**< RTCP SDES type PHONE.      */
+    string      loc;            /**< RTCP SDES type LOC.        */
+    string      tool;           /**< RTCP SDES type TOOL.       */
+    string      note;           /**< RTCP SDES type NOTE.       */
 
 public:
     /**
@@ -140,15 +139,15 @@ public:
  */
 struct RtcpStat
 {
-    TimeVal		start;          /**< Time when session was created  */
+    TimeVal             start;          /**< Time when session was created  */
     
-    RtcpStreamStat      txStat;         /**< Encoder stream statistics.	    */
-    RtcpStreamStat      rxStat;         /**< Decoder stream statistics.	    */
+    RtcpStreamStat      txStat;         /**< Encoder stream statistics.     */
+    RtcpStreamStat      rxStat;         /**< Decoder stream statistics.     */
     
     MathStat            rttUsec;        /**< Round trip delay statistic.    */
     
-    pj_uint32_t		rtpTxLastTs;    /**< Last TX RTP timestamp.         */
-    pj_uint16_t		rtpTxLastSeq;   /**< Last TX RTP sequence.          */
+    pj_uint32_t         rtpTxLastTs;    /**< Last TX RTP timestamp.         */
+    pj_uint16_t         rtpTxLastSeq;   /**< Last TX RTP sequence.          */
 
     MathStat            rxIpdvUsec;     /**< Statistics of IP packet delay
                                              variation in receiving
@@ -162,7 +161,7 @@ struct RtcpStat
                                              PJMEDIA_RTCP_STAT_HAS_RAW_JITTER
                                              is set to non-zero.            */
     
-    RtcpSdes            peerSdes;       /**< Peer SDES.			    */
+    RtcpSdes            peerSdes;       /**< Peer SDES.                     */
 
 public:
     /**
@@ -177,24 +176,24 @@ public:
 struct JbufState
 {
     /* Setting */
-    unsigned	frameSize;	    /**< Individual frame size, in bytes.   */
-    unsigned	minPrefetch;	    /**< Minimum allowed prefetch, in frms. */
-    unsigned	maxPrefetch;	    /**< Maximum allowed prefetch, in frms. */
+    unsigned    frameSize;          /**< Individual frame size, in bytes.   */
+    unsigned    minPrefetch;        /**< Minimum allowed prefetch, in frms. */
+    unsigned    maxPrefetch;        /**< Maximum allowed prefetch, in frms. */
     
     /* Status */
-    unsigned	burst;		    /**< Current burst level, in frames	    */
-    unsigned	prefetch;	    /**< Current prefetch value, in frames  */
-    unsigned	size;		    /**< Current buffer size, in frames.    */
+    unsigned    burst;              /**< Current burst level, in frames     */
+    unsigned    prefetch;           /**< Current prefetch value, in frames  */
+    unsigned    size;               /**< Current buffer size, in frames.    */
     
     /* Statistic */
-    unsigned	avgDelayMsec;	    /**< Average delay, in ms.		    */
-    unsigned	minDelayMsec;	    /**< Minimum delay, in ms.		    */
-    unsigned	maxDelayMsec;	    /**< Maximum delay, in ms.		    */
-    unsigned	devDelayMsec;	    /**< Standard deviation of delay, in ms.*/
-    unsigned	avgBurst;	    /**< Average burst, in frames.	    */
-    unsigned	lost;		    /**< Number of lost frames.		    */
-    unsigned	discard;	    /**< Number of discarded frames.	    */
-    unsigned	empty;		    /**< Number of empty on GET events.	    */
+    unsigned    avgDelayMsec;       /**< Average delay, in ms.              */
+    unsigned    minDelayMsec;       /**< Minimum delay, in ms.              */
+    unsigned    maxDelayMsec;       /**< Maximum delay, in ms.              */
+    unsigned    devDelayMsec;       /**< Standard deviation of delay, in ms.*/
+    unsigned    avgBurst;           /**< Average burst, in frames.          */
+    unsigned    lost;               /**< Number of lost frames.             */
+    unsigned    discard;            /**< Number of discarded frames.        */
+    unsigned    empty;              /**< Number of empty on GET events.     */
     
 public:
     /**
@@ -284,7 +283,7 @@ struct CallSetting
      *
      * Default: PJSUA_CALL_INCLUDE_DISABLED_MEDIA
      */
-    unsigned	    flag;
+    unsigned        flag;
     
     /**
      * This flag controls what methods to request keyframe are allowed on
@@ -293,7 +292,7 @@ struct CallSetting
      * Default: PJSUA_VID_REQ_KEYFRAME_SIP_INFO |
      *          PJSUA_VID_REQ_KEYFRAME_RTCP_PLI
      */
-    unsigned	    reqKeyframeMethod;
+    unsigned        reqKeyframeMethod;
     
     /**
      * Number of simultaneous active audio streams for this call. Setting
@@ -402,14 +401,14 @@ struct CallMediaInfo
      * The window id for incoming video, if any, or
      * PJSUA_INVALID_ID. Only valid if the media type is video.
      */
-    pjsua_vid_win_id	    videoIncomingWindowId;
+    pjsua_vid_win_id        videoIncomingWindowId;
     
     /**
      * The video window instance for incoming video. Only valid if
      * videoIncomingWindowId is not PJSUA_INVALID_ID and
      * the media type is video.
      */
-    VideoWindow	    	    videoWindow;
+    VideoWindow             videoWindow;
 
     /**
      * The video capture device for outgoing transmission, if any,
@@ -441,42 +440,42 @@ struct CallInfo
     /**
      * Call identification.
      */
-    pjsua_call_id	id;
+    pjsua_call_id       id;
     
     /**
      * Initial call role (UAC == caller)
      */
-    pjsip_role_e	role;
+    pjsip_role_e        role;
     
     /**
      * The account ID where this call belongs.
      */
-    pjsua_acc_id	accId;
+    pjsua_acc_id        accId;
     
     /**
      * Local URI
      */
-    string		localUri;
+    string              localUri;
     
     /**
      * Local Contact
      */
-    string		localContact;
+    string              localContact;
     
     /**
      * Remote URI
      */
-    string		remoteUri;
+    string              remoteUri;
     
     /**
      * Remote contact
      */
-    string		remoteContact;
+    string              remoteContact;
     
     /**
      * Dialog Call-ID string.
      */
-    string		callIdString;
+    string              callIdString;
     
     /**
      * Call setting
@@ -486,22 +485,22 @@ struct CallInfo
     /**
      * Call state
      */
-    pjsip_inv_state	state;
+    pjsip_inv_state     state;
     
     /**
      * Text describing the state
      */
-    string		stateText;
+    string              stateText;
     
     /**
      * Last status code heard, which can be used as cause code
      */
-    pjsip_status_code	lastStatusCode;
+    pjsip_status_code   lastStatusCode;
     
     /**
      * The reason phrase describing the last status.
      */
-    string		lastReason;
+    string              lastReason;
     
     /**
      * Array of active media information.
@@ -519,36 +518,36 @@ struct CallInfo
      * Up-to-date call connected duration (zero when call is not
      * established)
      */
-    TimeVal		connectDuration;
+    TimeVal             connectDuration;
     
     /**
      * Total call duration, including set-up time
      */
-    TimeVal		totalDuration;
+    TimeVal             totalDuration;
     
     /**
      * Flag if remote was SDP offerer
      */
-    bool		remOfferer;
+    bool                remOfferer;
     
     /**
      * Number of audio streams offered by remote
      */
-    unsigned		remAudioCount;
+    unsigned            remAudioCount;
     
     /**
      * Number of video streams offered by remote
      */
-    unsigned		remVideoCount;
+    unsigned            remVideoCount;
 
 public:
     /**
      * Default constructor
      */
     CallInfo() : id(PJSUA_INVALID_ID),
-		 role(PJSIP_ROLE_UAC),
-		 state(PJSIP_INV_STATE_NULL),
-		 lastStatusCode(PJSIP_SC_NULL)
+                 role(PJSIP_ROLE_UAC),
+                 state(PJSIP_INV_STATE_NULL),
+                 lastStatusCode(PJSIP_SC_NULL)
     {}
 
     /**
@@ -570,32 +569,32 @@ struct StreamInfo
     /**
      * Transport protocol (RTP/AVP, etc.)
      */
-    pjmedia_tp_proto	proto;
+    pjmedia_tp_proto    proto;
     
     /**
      * Media direction.
      */
-    pjmedia_dir		dir;
+    pjmedia_dir         dir;
     
     /**
      * Remote RTP address
      */
-    SocketAddress	remoteRtpAddress;
+    SocketAddress       remoteRtpAddress;
     
     /**
      * Optional remote RTCP address
      */
-    SocketAddress	remoteRtcpAddress;
+    SocketAddress       remoteRtcpAddress;
     
     /**
      * Outgoing codec payload type.
      */
-    unsigned		txPt;
+    unsigned            txPt;
     
     /**
      * Incoming codec payload type.
      */
-    unsigned		rxPt;
+    unsigned            rxPt;
     
     /**
      * Codec name.
@@ -660,8 +659,8 @@ public:
      * Default constructor
      */
     StreamInfo() : type(PJMEDIA_TYPE_NONE),
-		   proto(PJMEDIA_TP_PROTO_NONE),
-		   dir(PJMEDIA_DIR_NONE)
+                   proto(PJMEDIA_TP_PROTO_NONE),
+                   dir(PJMEDIA_DIR_NONE)
     {}
 
     /**
@@ -678,12 +677,12 @@ struct StreamStat
     /**
      * RTCP statistic.
      */
-    RtcpStat	rtcp;
+    RtcpStat    rtcp;
     
     /**
      * Jitter buffer statistic.
      */
-    JbufState	jbuf;
+    JbufState   jbuf;
 
 public:
     /**
@@ -778,7 +777,7 @@ struct OnStreamCreatedParam
      *
      * Default: PJ_FALSE
      */
-    bool 	destroyPort;
+    bool        destroyPort;
 
     /**
      * On input, it specifies the audio media port of the stream. Application
@@ -814,18 +813,18 @@ struct OnDtmfDigitParam
     /**
      * DTMF sending method.
      */
-    pjsua_dtmf_method	method;
+    pjsua_dtmf_method   method;
 
     /**
      * DTMF ASCII digit.
      */
-    string		digit;
+    string              digit;
 
     /**
      * DTMF signal duration. If the duration is unknown, this value is set to
      * PJSUA_UNKNOWN_DTMF_DURATION.
      */
-    unsigned		duration;
+    unsigned            duration;
 };
 
 /**
@@ -905,7 +904,7 @@ struct OnCallTransferRequestParam
      * New Call derived object instantiated by application when the call
      * transfer is about to be accepted.
      */
-    Call		*newCall;
+    Call                *newCall;
 };
 
 /**
@@ -969,7 +968,7 @@ struct OnCallReplaceRequestParam
     /**
      * New Call derived object instantiated by application.
      */
-    Call		*newCall;
+    Call                *newCall;
 };
 
 /**
@@ -985,7 +984,7 @@ struct OnCallReplacedParam
     /**
      * New Call derived object instantiated by application.
      */
-    Call		*newCall;
+    Call                *newCall;
 };
 
 /**
@@ -1031,7 +1030,7 @@ struct OnCallRxReinviteParam
      * On input, it is false. Set to true if app wants to manually answer
      * the re-INVITE.
      */
-    bool		isAsync;
+    bool                isAsync;
     
     /**
      * Status code to be returned for answering the offer. On input,
@@ -1158,7 +1157,7 @@ struct OnCreateMediaTransportSrtpParam
      * The media index in the SDP for which the SRTP media transport
      * will be used.
      */
-    unsigned        		mediaIdx;
+    unsigned                    mediaIdx;
     
     /**
      * Specify whether secure media transport should be used. Application
@@ -1166,13 +1165,13 @@ struct OnCreateMediaTransportSrtpParam
      * Valid values are PJMEDIA_SRTP_DISABLED, PJMEDIA_SRTP_OPTIONAL, and
      * PJMEDIA_SRTP_MANDATORY.
      */
-    pjmedia_srtp_use		srtpUse;
+    pjmedia_srtp_use            srtpUse;
     
     /**
      * Application can modify this to specify the cryptos and keys
      * which are going to be used.
      */
-    SrtpCryptoVector		cryptos;
+    SrtpCryptoVector            cryptos;
 };
 
 /**
@@ -1221,7 +1220,7 @@ struct CallOpParam
     /**
      * SDP answer. Currently only used for Call::answer().
      */
-    SdpSession		sdp;
+    SdpSession          sdp;
     
 public:
     /**
@@ -1426,8 +1425,8 @@ public:
      * is receive only, exception will be thrown.
      *
      * @param med_idx       Media index, or -1 to specify any first video
-     *			    media with encoding direction registered in the
-     *			    conference bridge.
+     *                      media with encoding direction registered in the
+     *                      conference bridge.
      *
      * @return              The video media.
      */
@@ -1439,8 +1438,8 @@ public:
      * is send only, exception will be thrown.
      *
      * @param med_idx       Media index, or -1 to specify any first video
-     *			    media with decoding direction registered in the
-     *			    conference bridge.
+     *                      media with decoding direction registered in the
+     *                      conference bridge.
      *
      * @return              The video media.
      */
@@ -1515,7 +1514,7 @@ public:
      *                      request.
      */
     void makeCall(const string &dst_uri, const CallOpParam &prm)
-		  PJSUA2_THROW(Error);
+                  PJSUA2_THROW(Error);
 
     /**
      * Send response to incoming INVITE request with call setting param.
@@ -1669,7 +1668,7 @@ public:
     /**
      * Send DTMF digits to remote.
      *
-     * @param param	The send DTMF parameter.
+     * @param param     The send DTMF parameter.
      */
     void sendDtmf(const CallSendDtmfParam &param) PJSUA2_THROW(Error);
     
@@ -1686,7 +1685,7 @@ public:
      *                      the IM callback is called.
      */
     void sendInstantMessage(const SendInstantMessageParam& prm)
-			    PJSUA2_THROW(Error);
+                            PJSUA2_THROW(Error);
     
     /**
      * Send IM typing indication inside INVITE session.
@@ -1766,14 +1765,14 @@ public:
      * such as bitrate and bandwidth, while other codecs may only be able to
      * modify minor settings such as VAD or PLC.
      *
-     * @param med_idx	    Media stream index, or -1 to specify default audio
-     * 			    media.
-     * @param param	    The new codec parameter.
+     * @param med_idx       Media stream index, or -1 to specify default audio
+     *                      media.
+     * @param param         The new codec parameter.
      *
-     * @return		    PJ_SUCCESS on success.
+     * @return              PJ_SUCCESS on success.
      */
     void audStreamModifyCodecParam(int med_idx, const CodecParam &param)
-    				   PJSUA2_THROW(Error);
+                                   PJSUA2_THROW(Error);
 
     /**
      * Get media stream info for the specified media index.
@@ -1801,7 +1800,7 @@ public:
      * @return              The transport info.
      */
     MediaTransportInfo getMedTransportInfo(unsigned med_idx) const
-					   PJSUA2_THROW(Error);
+                                           PJSUA2_THROW(Error);
 
     /**
      * Internal function (callled by Endpoint( to process update to call
@@ -1823,7 +1822,7 @@ public:
      * Application may then query the call info to get the
      * detail call states by calling getInfo() function.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallState(OnCallStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1835,7 +1834,7 @@ public:
      * outgoing requests, or to answer unhandled incoming requests
      * (such as INFO) with a final response.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallTsxState(OnCallTsxStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1847,7 +1846,7 @@ public:
      * this callback will also be called to report ICE negotiation
      * failure.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallMediaState(OnCallMediaStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1859,7 +1858,7 @@ public:
      * negotiated with remote SDP, for example to apply per account/call
      * basis codecs priority or to add custom/proprietary SDP attributes.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallSdpCreated(OnCallSdpCreatedParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1883,7 +1882,7 @@ public:
      * audio media port if it has added media processing port to the stream.
      * This media port then will be added to the conference bridge instead.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onStreamCreated(OnStreamCreatedParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1892,7 +1891,7 @@ public:
      * Notify application when audio media session has been unregistered from
      * the conference bridge and about to be destroyed.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onStreamDestroyed(OnStreamDestroyedParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1900,7 +1899,7 @@ public:
     /**
      * Notify application upon incoming DTMF digits.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onDtmfDigit(OnDtmfDigitParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1908,7 +1907,7 @@ public:
     /**
      * Notify application upon incoming DTMF events.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onDtmfEvent(OnDtmfEventParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1933,7 +1932,7 @@ public:
      * be careful to not destroy the Call object when receiving disconnection
      * event of the transferred call after the transfer process is completed.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallTransferRequest(OnCallTransferRequestParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1944,7 +1943,7 @@ public:
      * call transfer request, for example to decide whether to
      * terminate existing call.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallTransferStatus(OnCallTransferStatusParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1966,7 +1965,7 @@ public:
      * receiving disconnection event of the replaced call after the transfer
      * process is completed.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallReplaceRequest(OnCallReplaceRequestParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1996,7 +1995,7 @@ public:
      * receiving disconnection event of the replaced call after the transfer
      * process is completed.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallReplaced(OnCallReplacedParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2010,7 +2009,7 @@ public:
      * not implemented, the default behavior is to accept the offer using
      * current call setting.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallRxOffer(OnCallRxOfferParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2053,7 +2052,7 @@ public:
      * SDP offer using current active media session (with all enabled codecs
      * on each media type).
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallTxOffer(OnCallTxOfferParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2061,7 +2060,7 @@ public:
     /**
      * Notify application on incoming MESSAGE request.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onInstantMessage(OnInstantMessageParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2070,7 +2069,7 @@ public:
      * Notify application about the delivery status of outgoing MESSAGE
      * request.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onInstantMessageStatus(OnInstantMessageStatusParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2078,7 +2077,7 @@ public:
     /**
      * Notify application about typing indication.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onTypingIndication(OnTypingIndicationParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2097,43 +2096,43 @@ public:
      * This callback is optional,
      * the default behavior is to NOT follow the redirection response.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      *
-     * @return		Action to be performed for the target. Set this
-     *			parameter to one of the value below:
-     *			- PJSIP_REDIRECT_ACCEPT: immediately accept the
-     *			  redirection. When set, the call will immediately
-     *			  resend INVITE request to the target.
-     *			- PJSIP_REDIRECT_ACCEPT_REPLACE: immediately accept
-     *			  the redirection and replace the To header with the
-     *			  current target. When set, the call will immediately
-     *			  resend INVITE request to the target.
-     *			- PJSIP_REDIRECT_REJECT: immediately reject this
-     *			  target. The call will continue retrying with
-     *			  next target if present, or disconnect the call
-     *			  if there is no more target to try.
-     *			- PJSIP_REDIRECT_STOP: stop the whole redirection
-     *			  process and immediately disconnect the call. The
-     *			  onCallState() callback will be called with
-     *			  PJSIP_INV_STATE_DISCONNECTED state immediately
-     *			  after this callback returns.
-     *			- PJSIP_REDIRECT_PENDING: set to this value if
-     *			  no decision can be made immediately (for example
-     *			  to request confirmation from user). Application
-     *			  then MUST call processRedirect()
-     *			  to either accept or reject the redirection upon
-     *			  getting user decision.
+     * @return          Action to be performed for the target. Set this
+     *                  parameter to one of the value below:
+     *                  - PJSIP_REDIRECT_ACCEPT: immediately accept the
+     *                    redirection. When set, the call will immediately
+     *                    resend INVITE request to the target.
+     *                  - PJSIP_REDIRECT_ACCEPT_REPLACE: immediately accept
+     *                    the redirection and replace the To header with the
+     *                    current target. When set, the call will immediately
+     *                    resend INVITE request to the target.
+     *                  - PJSIP_REDIRECT_REJECT: immediately reject this
+     *                    target. The call will continue retrying with
+     *                    next target if present, or disconnect the call
+     *                    if there is no more target to try.
+     *                  - PJSIP_REDIRECT_STOP: stop the whole redirection
+     *                    process and immediately disconnect the call. The
+     *                    onCallState() callback will be called with
+     *                    PJSIP_INV_STATE_DISCONNECTED state immediately
+     *                    after this callback returns.
+     *                  - PJSIP_REDIRECT_PENDING: set to this value if
+     *                    no decision can be made immediately (for example
+     *                    to request confirmation from user). Application
+     *                    then MUST call processRedirect()
+     *                    to either accept or reject the redirection upon
+     *                    getting user decision.
      */
     virtual pjsip_redirect_op onCallRedirected(OnCallRedirectedParam &prm)
     {
-	PJ_UNUSED_ARG(prm);
+        PJ_UNUSED_ARG(prm);
         return PJSIP_REDIRECT_STOP;
     }
     
     /**
      * This callback is called when media transport state is changed.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallMediaTransportState(OnCallMediaTransportStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2146,7 +2145,7 @@ public:
      * callback. If application needs to perform more complex tasks to
      * handle the event, it should post the task to another thread.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void onCallMediaEvent(OnCallMediaEventParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -2161,7 +2160,7 @@ public:
      * \a mediaTp argument of this callback. The callback may change it
      * with the instance of media transport to be used by the call.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void
     onCreateMediaTransport(OnCreateMediaTransportParam &prm)
@@ -2180,7 +2179,7 @@ public:
      * \a pjmedia_srtp_setting.close_member_tp and can only modify
      * the field \a pjmedia_srtp_setting.use for initial INVITE.
      *
-     * @param prm	Callback parameter.
+     * @param prm       Callback parameter.
      */
     virtual void
     onCreateMediaTransportSrtp(OnCreateMediaTransportSrtpParam &prm)
@@ -2190,11 +2189,11 @@ private:
     friend class Endpoint;
 
     Account             &acc;
-    pjsua_call_id 	 id;
+    pjsua_call_id        id;
     Token                userData;
     std::vector<Media *> medias;
-    pj_pool_t		*sdp_pool;
-    Call		*child;	    /* New outgoing call in call transfer.  */
+    pj_pool_t           *sdp_pool;
+    Call                *child;     /* New outgoing call in call transfer.  */
 };
 
 /**
@@ -2203,5 +2202,5 @@ private:
 
 } // namespace pj
 
-#endif	/* __PJSUA2_CALL_HPP__ */
+#endif  /* __PJSUA2_CALL_HPP__ */
 

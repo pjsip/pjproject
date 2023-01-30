@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -80,7 +79,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * General/unknown PJMEDIA error.
  */
-#define PJMEDIA_ERROR		    (PJMEDIA_ERRNO_START+1)	/* 220001 */
+#define PJMEDIA_ERROR               (PJMEDIA_ERRNO_START+1)     /* 220001 */
 
 
 /************************************************************
@@ -90,32 +89,32 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Generic invalid SDP descriptor.
  */
-#define PJMEDIA_SDP_EINSDP	    (PJMEDIA_ERRNO_START+20)    /* 220020 */
+#define PJMEDIA_SDP_EINSDP          (PJMEDIA_ERRNO_START+20)    /* 220020 */
 /**
  * @hideinitializer
  * Invalid SDP version.
  */
-#define PJMEDIA_SDP_EINVER	    (PJMEDIA_ERRNO_START+21)    /* 220021 */
+#define PJMEDIA_SDP_EINVER          (PJMEDIA_ERRNO_START+21)    /* 220021 */
 /**
  * @hideinitializer
  * Invalid SDP origin (o=) line.
  */
-#define PJMEDIA_SDP_EINORIGIN	    (PJMEDIA_ERRNO_START+22)    /* 220022 */
+#define PJMEDIA_SDP_EINORIGIN       (PJMEDIA_ERRNO_START+22)    /* 220022 */
 /**
  * @hideinitializer
  * Invalid SDP time (t=) line.
  */
-#define PJMEDIA_SDP_EINTIME	    (PJMEDIA_ERRNO_START+23)    /* 220023 */
+#define PJMEDIA_SDP_EINTIME         (PJMEDIA_ERRNO_START+23)    /* 220023 */
 /**
  * @hideinitializer
  * Empty SDP subject/name (s=) line.
  */
-#define PJMEDIA_SDP_EINNAME	    (PJMEDIA_ERRNO_START+24)    /* 220024 */
+#define PJMEDIA_SDP_EINNAME         (PJMEDIA_ERRNO_START+24)    /* 220024 */
 /**
  * @hideinitializer
  * Invalid SDP connection info (c=) line.
  */
-#define PJMEDIA_SDP_EINCONN	    (PJMEDIA_ERRNO_START+25)    /* 220025 */
+#define PJMEDIA_SDP_EINCONN         (PJMEDIA_ERRNO_START+25)    /* 220025 */
 /**
  * @hideinitializer
  * Missing SDP connection info line.
@@ -125,12 +124,12 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Invalid attribute (a=) line.
  */
-#define PJMEDIA_SDP_EINATTR	    (PJMEDIA_ERRNO_START+27)    /* 220027 */
+#define PJMEDIA_SDP_EINATTR         (PJMEDIA_ERRNO_START+27)    /* 220027 */
 /**
  * @hideinitializer
  * Invalid rtpmap attribute.
  */
-#define PJMEDIA_SDP_EINRTPMAP	    (PJMEDIA_ERRNO_START+28)    /* 220028 */
+#define PJMEDIA_SDP_EINRTPMAP       (PJMEDIA_ERRNO_START+28)    /* 220028 */
 /**
  * @hideinitializer
  * rtpmap attribute is too long.
@@ -145,42 +144,42 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Invalid SDP media (m=) line.
  */
-#define PJMEDIA_SDP_EINMEDIA	    (PJMEDIA_ERRNO_START+31)    /* 220031 */
+#define PJMEDIA_SDP_EINMEDIA        (PJMEDIA_ERRNO_START+31)    /* 220031 */
 /**
  * @hideinitializer
  * No payload format in the media stream.
  */
-#define PJMEDIA_SDP_ENOFMT	    (PJMEDIA_ERRNO_START+32)    /* 220032 */
+#define PJMEDIA_SDP_ENOFMT          (PJMEDIA_ERRNO_START+32)    /* 220032 */
 /**
  * @hideinitializer
  * Invalid payload type in media.
  */
-#define PJMEDIA_SDP_EINPT	    (PJMEDIA_ERRNO_START+33)    /* 220033 */
+#define PJMEDIA_SDP_EINPT           (PJMEDIA_ERRNO_START+33)    /* 220033 */
 /**
  * @hideinitializer
  * Invalid SDP "fmtp" attribute.
  */
-#define PJMEDIA_SDP_EINFMTP	    (PJMEDIA_ERRNO_START+34)    /* 220034 */
+#define PJMEDIA_SDP_EINFMTP         (PJMEDIA_ERRNO_START+34)    /* 220034 */
 /**
  * @hideinitializer
  * Invalid SDP "rtcp" attribute.
  */
-#define PJMEDIA_SDP_EINRTCP	    (PJMEDIA_ERRNO_START+35)    /* 220035 */
+#define PJMEDIA_SDP_EINRTCP         (PJMEDIA_ERRNO_START+35)    /* 220035 */
 /**
  * @hideinitializer
  * Invalid SDP media transport protocol.
  */
-#define PJMEDIA_SDP_EINPROTO	    (PJMEDIA_ERRNO_START+36)    /* 220036 */
+#define PJMEDIA_SDP_EINPROTO        (PJMEDIA_ERRNO_START+36)    /* 220036 */
 /**
  * @hideinitializer
  * Invalid SDP bandwidth info (b=) line.
  */
-#define PJMEDIA_SDP_EINBANDW	    (PJMEDIA_ERRNO_START+37)    /* 220037 */
+#define PJMEDIA_SDP_EINBANDW        (PJMEDIA_ERRNO_START+37)    /* 220037 */
 /**
  * @hideinitializer
  * Invalid SDP "ssrc" attribute.
  */
-#define PJMEDIA_SDP_EINSSRC	    (PJMEDIA_ERRNO_START+38)    /* 220038 */
+#define PJMEDIA_SDP_EINSSRC         (PJMEDIA_ERRNO_START+38)    /* 220038 */
 
 
 /************************************************************
@@ -190,7 +189,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Invalid state to perform the specified operation.
  */
-#define PJMEDIA_SDPNEG_EINSTATE	    (PJMEDIA_ERRNO_START+40)    /* 220040 */
+#define PJMEDIA_SDPNEG_EINSTATE     (PJMEDIA_ERRNO_START+40)    /* 220040 */
 /**
  * @hideinitializer
  * No initial local SDP.
@@ -205,7 +204,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * No current offer or answer.
  */
-#define PJMEDIA_SDPNEG_ENONEG	    (PJMEDIA_ERRNO_START+43)    /* 220043 */
+#define PJMEDIA_SDPNEG_ENONEG       (PJMEDIA_ERRNO_START+43)    /* 220043 */
 /**
  * @hideinitializer
  * Media count mismatch in offer and answer.
@@ -230,7 +229,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * No media is active after negotiation.
  */
-#define PJMEDIA_SDPNEG_ENOMEDIA	    (PJMEDIA_ERRNO_START+48)    /* 220048 */
+#define PJMEDIA_SDPNEG_ENOMEDIA     (PJMEDIA_ERRNO_START+48)    /* 220048 */
 /**
  * @hideinitializer
  * No suitable codec for remote offer.
@@ -325,12 +324,12 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Unsupported codec.
  */
-#define PJMEDIA_CODEC_EUNSUP	    (PJMEDIA_ERRNO_START+80)    /* 220080 */
+#define PJMEDIA_CODEC_EUNSUP        (PJMEDIA_ERRNO_START+80)    /* 220080 */
 /**
  * @hideinitializer
  * Codec internal creation error.
  */
-#define PJMEDIA_CODEC_EFAILED	    (PJMEDIA_ERRNO_START+81)    /* 220081 */
+#define PJMEDIA_CODEC_EFAILED       (PJMEDIA_ERRNO_START+81)    /* 220081 */
 /**
  * @hideinitializer
  * Codec frame is too short.
@@ -345,7 +344,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Invalid codec frame length.
  */
-#define PJMEDIA_CODEC_EFRMINLEN	    (PJMEDIA_ERRNO_START+84)    /* 220084 */
+#define PJMEDIA_CODEC_EFRMINLEN     (PJMEDIA_ERRNO_START+84)    /* 220084 */
 /**
  * @hideinitializer
  * Invalid PCM frame length.
@@ -355,7 +354,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Invalid mode.
  */
-#define PJMEDIA_CODEC_EINMODE	    (PJMEDIA_ERRNO_START+86)    /* 220086 */
+#define PJMEDIA_CODEC_EINMODE       (PJMEDIA_ERRNO_START+86)    /* 220086 */
 /**
  * @hideinitializer
  * Bad or corrupted bitstream.
@@ -370,22 +369,22 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Invalid remote IP address (in SDP).
  */
-#define PJMEDIA_EINVALIDIP	    (PJMEDIA_ERRNO_START+100)    /* 220100 */
+#define PJMEDIA_EINVALIDIP          (PJMEDIA_ERRNO_START+100)    /* 220100 */
 /**
  * @hideinitializer
  * Asymetric codec is not supported.
  */
-#define PJMEDIA_EASYMCODEC	    (PJMEDIA_ERRNO_START+101)    /* 220101 */
+#define PJMEDIA_EASYMCODEC          (PJMEDIA_ERRNO_START+101)    /* 220101 */
 /**
  * @hideinitializer
  * Invalid payload type.
  */
-#define PJMEDIA_EINVALIDPT	    (PJMEDIA_ERRNO_START+102)    /* 220102 */
+#define PJMEDIA_EINVALIDPT          (PJMEDIA_ERRNO_START+102)    /* 220102 */
 /**
  * @hideinitializer
  * Missing rtpmap.
  */
-#define PJMEDIA_EMISSINGRTPMAP	    (PJMEDIA_ERRNO_START+103)    /* 220103 */
+#define PJMEDIA_EMISSINGRTPMAP      (PJMEDIA_ERRNO_START+103)    /* 220103 */
 /**
  * @hideinitializer
  * Invalid media type.
@@ -395,12 +394,12 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Remote does not support DTMF.
  */
-#define PJMEDIA_EREMOTENODTMF	    (PJMEDIA_ERRNO_START+105)    /* 220105 */
+#define PJMEDIA_EREMOTENODTMF       (PJMEDIA_ERRNO_START+105)    /* 220105 */
 /**
  * @hideinitializer
  * Invalid DTMF digit.
  */
-#define PJMEDIA_RTP_EINDTMF	    (PJMEDIA_ERRNO_START+106)    /* 220106 */
+#define PJMEDIA_RTP_EINDTMF         (PJMEDIA_ERRNO_START+106)    /* 220106 */
 /**
  * @hideinitializer
  * Remote does not support RFC 2833
@@ -424,32 +423,32 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * General invalid RTP packet error.
  */
-#define PJMEDIA_RTP_EINPKT	    (PJMEDIA_ERRNO_START+120)    /* 220120 */
+#define PJMEDIA_RTP_EINPKT          (PJMEDIA_ERRNO_START+120)    /* 220120 */
 /**
  * @hideinitializer
  * Invalid RTP packet packing.
  */
-#define PJMEDIA_RTP_EINPACK	    (PJMEDIA_ERRNO_START+121)    /* 220121 */
+#define PJMEDIA_RTP_EINPACK         (PJMEDIA_ERRNO_START+121)    /* 220121 */
 /**
  * @hideinitializer
  * Invalid RTP packet version.
  */
-#define PJMEDIA_RTP_EINVER	    (PJMEDIA_ERRNO_START+122)    /* 220122 */
+#define PJMEDIA_RTP_EINVER          (PJMEDIA_ERRNO_START+122)    /* 220122 */
 /**
  * @hideinitializer
  * RTP SSRC id mismatch.
  */
-#define PJMEDIA_RTP_EINSSRC	    (PJMEDIA_ERRNO_START+123)    /* 220123 */
+#define PJMEDIA_RTP_EINSSRC         (PJMEDIA_ERRNO_START+123)    /* 220123 */
 /**
  * @hideinitializer
  * RTP payload type mismatch.
  */
-#define PJMEDIA_RTP_EINPT	    (PJMEDIA_ERRNO_START+124)    /* 220124 */
+#define PJMEDIA_RTP_EINPT           (PJMEDIA_ERRNO_START+124)    /* 220124 */
 /**
  * @hideinitializer
  * Invalid RTP packet length.
  */
-#define PJMEDIA_RTP_EINLEN	    (PJMEDIA_ERRNO_START+125)    /* 220125 */
+#define PJMEDIA_RTP_EINLEN          (PJMEDIA_ERRNO_START+125)    /* 220125 */
 /**
  * @hideinitializer
  * RTP session restarted.
@@ -464,17 +463,17 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Bad RTP sequence number
  */
-#define PJMEDIA_RTP_EBADSEQ	    (PJMEDIA_ERRNO_START+132)    /* 220132 */
+#define PJMEDIA_RTP_EBADSEQ         (PJMEDIA_ERRNO_START+132)    /* 220132 */
 /**
  * @hideinitializer
  * RTP media port destination is not configured
  */
-#define PJMEDIA_RTP_EBADDEST	    (PJMEDIA_ERRNO_START+133)    /* 220133 */
+#define PJMEDIA_RTP_EBADDEST        (PJMEDIA_ERRNO_START+133)    /* 220133 */
 /**
  * @hideinitializer
  * RTP is not configured.
  */
-#define PJMEDIA_RTP_ENOCONFIG	    (PJMEDIA_ERRNO_START+134)    /* 220134 */
+#define PJMEDIA_RTP_ENOCONFIG       (PJMEDIA_ERRNO_START+134)    /* 220134 */
 
 
 /************************************************************
@@ -484,12 +483,12 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Generic incompatible port error.
  */
-#define PJMEDIA_ENOTCOMPATIBLE	    (PJMEDIA_ERRNO_START+160)    /* 220160 */
+#define PJMEDIA_ENOTCOMPATIBLE      (PJMEDIA_ERRNO_START+160)    /* 220160 */
 /**
  * @hideinitializer
  * Incompatible clock rate
  */
-#define PJMEDIA_ENCCLOCKRATE	    (PJMEDIA_ERRNO_START+161)    /* 220161 */
+#define PJMEDIA_ENCCLOCKRATE        (PJMEDIA_ERRNO_START+161)    /* 220161 */
 /**
  * @hideinitializer
  * Incompatible samples per frame
@@ -499,22 +498,22 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Incompatible media type
  */
-#define PJMEDIA_ENCTYPE		    (PJMEDIA_ERRNO_START+163)    /* 220163 */
+#define PJMEDIA_ENCTYPE             (PJMEDIA_ERRNO_START+163)    /* 220163 */
 /**
  * @hideinitializer
  * Incompatible bits per sample
  */
-#define PJMEDIA_ENCBITS		    (PJMEDIA_ERRNO_START+164)    /* 220164 */
+#define PJMEDIA_ENCBITS             (PJMEDIA_ERRNO_START+164)    /* 220164 */
 /**
  * @hideinitializer
  * Incompatible bytes per frame
  */
-#define PJMEDIA_ENCBYTES	    (PJMEDIA_ERRNO_START+165)    /* 220165 */
+#define PJMEDIA_ENCBYTES            (PJMEDIA_ERRNO_START+165)    /* 220165 */
 /**
  * @hideinitializer
  * Incompatible number of channels
  */
-#define PJMEDIA_ENCCHANNEL	    (PJMEDIA_ERRNO_START+166)    /* 220166 */
+#define PJMEDIA_ENCCHANNEL          (PJMEDIA_ERRNO_START+166)    /* 220166 */
 
 
 /************************************************************
@@ -524,27 +523,27 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Not a valid WAVE file.
  */
-#define PJMEDIA_ENOTVALIDWAVE	    (PJMEDIA_ERRNO_START+180)    /* 220180 */
+#define PJMEDIA_ENOTVALIDWAVE       (PJMEDIA_ERRNO_START+180)    /* 220180 */
 /**
  * @hideinitializer
  * Unsupported WAVE file.
  */
-#define PJMEDIA_EWAVEUNSUPP	    (PJMEDIA_ERRNO_START+181)    /* 220181 */
+#define PJMEDIA_EWAVEUNSUPP         (PJMEDIA_ERRNO_START+181)    /* 220181 */
 /**
  * @hideinitializer
  * Wave file too short.
  */
-#define PJMEDIA_EWAVETOOSHORT	    (PJMEDIA_ERRNO_START+182)    /* 220182 */
+#define PJMEDIA_EWAVETOOSHORT       (PJMEDIA_ERRNO_START+182)    /* 220182 */
 /**
  * @hideinitializer
  * Sound frame is too large for file buffer.
  */
-#define PJMEDIA_EFRMFILETOOBIG	    (PJMEDIA_ERRNO_START+183)    /* 220183 */
+#define PJMEDIA_EFRMFILETOOBIG      (PJMEDIA_ERRNO_START+183)    /* 220183 */
 /**
  * @hideinitializer
  * Unsupported AVI file.
  */
-#define PJMEDIA_EAVIUNSUPP	    (PJMEDIA_ERRNO_START+191)    /* 220191 */
+#define PJMEDIA_EAVIUNSUPP          (PJMEDIA_ERRNO_START+191)    /* 220191 */
 
 
 /************************************************************
@@ -554,22 +553,22 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * No suitable audio capture device.
  */
-#define PJMEDIA_ENOSNDREC	    (PJMEDIA_ERRNO_START+200)    /* 220200 */
+#define PJMEDIA_ENOSNDREC           (PJMEDIA_ERRNO_START+200)    /* 220200 */
 /**
  * @hideinitializer
  * No suitable audio playback device.
  */
-#define PJMEDIA_ENOSNDPLAY	    (PJMEDIA_ERRNO_START+201)    /* 220201 */
+#define PJMEDIA_ENOSNDPLAY          (PJMEDIA_ERRNO_START+201)    /* 220201 */
 /**
  * @hideinitializer
  * Invalid sound device ID.
  */
-#define PJMEDIA_ESNDINDEVID	    (PJMEDIA_ERRNO_START+202)    /* 220202 */
+#define PJMEDIA_ESNDINDEVID         (PJMEDIA_ERRNO_START+202)    /* 220202 */
 /**
  * @hideinitializer
  * Invalid sample format for sound device.
  */
-#define PJMEDIA_ESNDINSAMPLEFMT	    (PJMEDIA_ERRNO_START+203)    /* 220203 */
+#define PJMEDIA_ESNDINSAMPLEFMT     (PJMEDIA_ERRNO_START+203)    /* 220203 */
 
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -585,7 +584,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Invalid SRTP key length for specific crypto.
  */
-#define PJMEDIA_SRTP_EINKEYLEN	    (PJMEDIA_ERRNO_START+221)    /* 220221 */
+#define PJMEDIA_SRTP_EINKEYLEN      (PJMEDIA_ERRNO_START+221)    /* 220221 */
 /**
  * @hideinitializer
  * Unsupported SRTP crypto-suite.
@@ -630,7 +629,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * SRTP parameters negotiation still in progress.
  */
-#define PJMEDIA_SRTP_EKEYNOTREADY   (PJMEDIA_ERRNO_START+230)	 /* 220230 */
+#define PJMEDIA_SRTP_EKEYNOTREADY   (PJMEDIA_ERRNO_START+230)    /* 220230 */
 
 /**
  * @hideinitializer
@@ -654,7 +653,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * Fingerprint not found.
  */
-#define PJMEDIA_SRTP_DTLS_ENOFPRINT (PJMEDIA_ERRNO_START+243)	/* 220243 */
+#define PJMEDIA_SRTP_DTLS_ENOFPRINT (PJMEDIA_ERRNO_START+243)   /* 220243 */
 
 /**
  * @hideinitializer
@@ -676,11 +675,11 @@ PJ_BEGIN_DECL
  * @param buffer    The buffer where to put the error message.
  * @param bufsize   Size of the buffer.
  *
- * @return	    The error message as NULL terminated string,
+ * @return          The error message as NULL terminated string,
  *                  wrapped with pj_str_t.
  */
 PJ_DECL(pj_str_t) pjmedia_strerror( pj_status_t status, char *buffer,
-				    pj_size_t bufsize);
+                                    pj_size_t bufsize);
 
 
 PJ_END_DECL
@@ -690,5 +689,5 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_ERRNO_H__ */
+#endif  /* __PJMEDIA_ERRNO_H__ */
 

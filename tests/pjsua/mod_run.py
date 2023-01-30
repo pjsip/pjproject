@@ -1,4 +1,3 @@
-# $Id$
 import imp
 import sys
 

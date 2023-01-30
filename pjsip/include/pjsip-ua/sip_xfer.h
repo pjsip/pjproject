@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -80,90 +79,90 @@ PJ_DECL(pj_status_t) pjsip_xfer_init_module(pjsip_endpoint *endpt);
 /**
  * Create transferer (sender of REFER request).
  *
- * @param dlg		The underlying dialog to use.
- * @param user_cb	Pointer to callbacks to receive presence subscription
- *			events.
- * @param p_evsub	Pointer to receive the presence subscription
- *			session.
+ * @param dlg           The underlying dialog to use.
+ * @param user_cb       Pointer to callbacks to receive presence subscription
+ *                      events.
+ * @param p_evsub       Pointer to receive the presence subscription
+ *                      session.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_xfer_create_uac( pjsip_dialog *dlg,
-					    const pjsip_evsub_user *user_cb,
-					    pjsip_evsub **p_evsub );
+                                            const pjsip_evsub_user *user_cb,
+                                            pjsip_evsub **p_evsub );
 
 
 /**
  * Create transferee (receiver of REFER request).
  *
- * @param dlg		The underlying dialog to use.
- * @param user_cb	Pointer to callbacks to receive presence subscription
- *			events.
- * @param rdata		The incoming SUBSCRIBE request that creates the event 
- *			subscription.
- * @param p_evsub	Pointer to receive the presence subscription
- *			session.
+ * @param dlg           The underlying dialog to use.
+ * @param user_cb       Pointer to callbacks to receive presence subscription
+ *                      events.
+ * @param rdata         The incoming SUBSCRIBE request that creates the event 
+ *                      subscription.
+ * @param p_evsub       Pointer to receive the presence subscription
+ *                      session.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_xfer_create_uas( pjsip_dialog *dlg,
-					    const pjsip_evsub_user *user_cb,
-					    pjsip_rx_data *rdata,
-					    pjsip_evsub **p_evsub );
+                                            const pjsip_evsub_user *user_cb,
+                                            pjsip_rx_data *rdata,
+                                            pjsip_evsub **p_evsub );
 
 /**
  * Call this function to create request to initiate REFER subscription,
  * to refresh subscription, or to unsubscribe. For request other than
  * the initial REFER request, "refer_to_uri" argument may be NULL.
  *
- * @param sub		Client subscription instance.
- * @param refer_to_uri	URI to be put to the Refer-To header. This argument
- *			may be NULL for subsequent REFER requests.
- * @param p_tdata	Pointer to receive the request.
+ * @param sub           Client subscription instance.
+ * @param refer_to_uri  URI to be put to the Refer-To header. This argument
+ *                      may be NULL for subsequent REFER requests.
+ * @param p_tdata       Pointer to receive the request.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_xfer_initiate( pjsip_evsub *sub,
-					  const pj_str_t *refer_to_uri,
-					  pjsip_tx_data **p_tdata);
+                                          const pj_str_t *refer_to_uri,
+                                          pjsip_tx_data **p_tdata);
 
 
 /**
  * Accept the incoming REFER request by sending 2xx response.
  *
- * @param sub		Server subscription instance.
- * @param rdata		The incoming subscription request message.
- * @param st_code	Status code, which MUST be 2xx.
- * @param hdr_list	Optional list of headers to be added in the response.
+ * @param sub           Server subscription instance.
+ * @param rdata         The incoming subscription request message.
+ * @param st_code       Status code, which MUST be 2xx.
+ * @param hdr_list      Optional list of headers to be added in the response.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_xfer_accept( pjsip_evsub *sub,
-					pjsip_rx_data *rdata,
-				        int st_code,
-					const pjsip_hdr *hdr_list );
+                                        pjsip_rx_data *rdata,
+                                        int st_code,
+                                        const pjsip_hdr *hdr_list );
 
 
 /**
  * For notifier, create NOTIFY request to subscriber, and set the state 
  * of the subscription. 
  *
- * @param sub		The server subscription (notifier) instance.
- * @param state		New state to set.
- * @param xfer_st_code	The call status code to be reported with the NOTIFY
- *			request.
- * @param xfer_st_text	Optional call status text to be reported with the 
- *			NOTIFY request. If the value is NULL, default 
- *			status text will be used.
- * @param p_tdata	Pointer to receive the request.
+ * @param sub           The server subscription (notifier) instance.
+ * @param state         New state to set.
+ * @param xfer_st_code  The call status code to be reported with the NOTIFY
+ *                      request.
+ * @param xfer_st_text  Optional call status text to be reported with the 
+ *                      NOTIFY request. If the value is NULL, default 
+ *                      status text will be used.
+ * @param p_tdata       Pointer to receive the request.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
-					pjsip_evsub_state state,
-					int xfer_st_code,
-					const pj_str_t *xfer_st_text,
-					pjsip_tx_data **p_tdata);
+                                        pjsip_evsub_state state,
+                                        int xfer_st_code,
+                                        const pj_str_t *xfer_st_text,
+                                        pjsip_tx_data **p_tdata);
 
 
 /**
@@ -172,13 +171,13 @@ PJ_DECL(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
  * This will also re-send the last "message/sipfrag" body that was sent
  * in the previous NOTIFY.
  *
- * @param sub		Server subscription object.
- * @param p_tdata	Pointer to receive request.
+ * @param sub           Server subscription object.
+ * @param p_tdata       Pointer to receive request.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_xfer_current_notify( pjsip_evsub *sub,
-					        pjsip_tx_data **p_tdata );
+                                                pjsip_tx_data **p_tdata );
 
 
 
@@ -189,13 +188,13 @@ PJ_DECL(pj_status_t) pjsip_xfer_current_notify( pjsip_evsub *sub,
  * that creates/refresh subscription or NOTIFY request.
  *
  *
- * @param sub		The event subscription object.
- * @param tdata		Request message to be send.
+ * @param sub           The event subscription object.
+ * @param tdata         Request message to be send.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_xfer_send_request( pjsip_evsub *sub,
-					      pjsip_tx_data *tdata);
+                                              pjsip_tx_data *tdata);
 
 
 PJ_END_DECL
@@ -204,5 +203,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJSIP_XFER_H__ */
+#endif  /* __PJSIP_XFER_H__ */
 

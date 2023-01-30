@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -81,88 +80,88 @@ typedef enum pjmedia_delay_buf_flag
  * enter learning state unless the delay argument is specified, which
  * in this case it will directly enter the running state.
  *
- * @param pool		    Pool where the delay buffer will be allocated
- *			    from.
- * @param name		    Optional name for the buffer for log 
- *			    identification.
- * @param clock_rate	    Number of samples processed per second.
+ * @param pool              Pool where the delay buffer will be allocated
+ *                          from.
+ * @param name              Optional name for the buffer for log 
+ *                          identification.
+ * @param clock_rate        Number of samples processed per second.
  * @param samples_per_frame Number of samples per frame.
- * @param channel_count	    Number of channel per frame.
- * @param max_delay	    Maximum number of delay to be accommodated,
- *			    in ms, if this value is negative or less than 
- *			    one frame time, default maximum delay used is
- *			    400 ms.
- * @param options	    Options. If PJMEDIA_DELAY_BUF_SIMPLE_FIFO is
+ * @param channel_count     Number of channel per frame.
+ * @param max_delay         Maximum number of delay to be accommodated,
+ *                          in ms, if this value is negative or less than 
+ *                          one frame time, default maximum delay used is
+ *                          400 ms.
+ * @param options           Options. If PJMEDIA_DELAY_BUF_SIMPLE_FIFO is
  *                          specified, then a simple FIFO mechanism
- *			    will be used instead of the adaptive
+ *                          will be used instead of the adaptive
  *                          implementation (which uses WSOLA to expand
  *                          or shrink audio samples).
- *			    See #pjmedia_delay_buf_flag for other options.
- * @param p_b		    Pointer to receive the delay buffer instance.
+ *                          See #pjmedia_delay_buf_flag for other options.
+ * @param p_b               Pointer to receive the delay buffer instance.
  *
- * @return		    PJ_SUCCESS if the delay buffer has been
- *			    created successfully, otherwise the appropriate
- *			    error will be returned.
+ * @return                  PJ_SUCCESS if the delay buffer has been
+ *                          created successfully, otherwise the appropriate
+ *                          error will be returned.
  */
 PJ_DECL(pj_status_t) pjmedia_delay_buf_create(pj_pool_t *pool,
-					      const char *name,
-					      unsigned clock_rate,
-					      unsigned samples_per_frame,
-					      unsigned channel_count,
-					      unsigned max_delay,
-					      unsigned options,
-					      pjmedia_delay_buf **p_b);
+                                              const char *name,
+                                              unsigned clock_rate,
+                                              unsigned samples_per_frame,
+                                              unsigned channel_count,
+                                              unsigned max_delay,
+                                              unsigned options,
+                                              pjmedia_delay_buf **p_b);
 
 /**
  * Put one frame into the buffer.
  *
- * @param b		    The delay buffer.
- * @param frame		    Frame to be put into the buffer. This frame
- *			    must have samples_per_frame length.
+ * @param b                 The delay buffer.
+ * @param frame             Frame to be put into the buffer. This frame
+ *                          must have samples_per_frame length.
  *
- * @return		    PJ_SUCCESS if frames can be put successfully.
- *			    PJ_EPENDING if the buffer is still at learning
- *			    state. PJ_ETOOMANY if the number of frames
- *			    will exceed maximum delay level, which in this
- *			    case the new frame will overwrite the oldest
- *			    frame in the buffer.
+ * @return                  PJ_SUCCESS if frames can be put successfully.
+ *                          PJ_EPENDING if the buffer is still at learning
+ *                          state. PJ_ETOOMANY if the number of frames
+ *                          will exceed maximum delay level, which in this
+ *                          case the new frame will overwrite the oldest
+ *                          frame in the buffer.
  */
 PJ_DECL(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
-					   pj_int16_t frame[]);
+                                           pj_int16_t frame[]);
 
 /**
  * Get one frame from the buffer.
  *
- * @param b		    The delay buffer.
- * @param frame		    Buffer to receive the frame from the delay
- *			    buffer.
+ * @param b                 The delay buffer.
+ * @param frame             Buffer to receive the frame from the delay
+ *                          buffer.
  *
- * @return		    PJ_SUCCESS if frame has been copied successfully.
- *			    PJ_EPENDING if no frame is available, either
- *			    because the buffer is still at learning state or
- *			    no buffer is available during running state.
- *			    On non-successful return, the frame will be
- *			    filled with zeroes.
+ * @return                  PJ_SUCCESS if frame has been copied successfully.
+ *                          PJ_EPENDING if no frame is available, either
+ *                          because the buffer is still at learning state or
+ *                          no buffer is available during running state.
+ *                          On non-successful return, the frame will be
+ *                          filled with zeroes.
  */
 PJ_DECL(pj_status_t) pjmedia_delay_buf_get(pjmedia_delay_buf *b,
-					   pj_int16_t frame[]);
+                                           pj_int16_t frame[]);
 
 /**
  * Reset delay buffer. This will clear the buffer's content. But keep
  * the learning result.
  *
- * @param b		    The delay buffer.
+ * @param b                 The delay buffer.
  *
- * @return		    PJ_SUCCESS on success or the appropriate error.
+ * @return                  PJ_SUCCESS on success or the appropriate error.
  */
 PJ_DECL(pj_status_t) pjmedia_delay_buf_reset(pjmedia_delay_buf *b);
 
 /**
  * Destroy delay buffer.
  *
- * @param b	    Delay buffer session.
+ * @param b         Delay buffer session.
  *
- * @return	    PJ_SUCCESS normally.
+ * @return          PJ_SUCCESS normally.
  */
 PJ_DECL(pj_status_t) pjmedia_delay_buf_destroy(pjmedia_delay_buf *b);
 
@@ -173,4 +172,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_DELAYBUF_H__ */
+#endif  /* __PJMEDIA_DELAYBUF_H__ */

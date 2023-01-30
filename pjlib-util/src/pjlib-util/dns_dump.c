@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -23,51 +22,51 @@
 #include <pj/string.h>
 
 #define THIS_FILE   "dns_dump.c"
-#define LEVEL	    3
+#define LEVEL       3
 
 static const char *spell_ttl(char *buf, int size, unsigned ttl)
 {
-#define DAY	(3600*24)
-#define HOUR	(3600)
-#define MINUTE	(60)
+#define DAY     (3600*24)
+#define HOUR    (3600)
+#define MINUTE  (60)
 
     char *p = buf;
     int len;
 
     if (ttl > DAY) {
-	len = pj_ansi_snprintf(p, size, "%dd ", ttl/DAY);
-	if (len < 1 || len >= size)
-	    return "-err-";
-	size -= len;
-	p += len;
-	ttl %= DAY;
+        len = pj_ansi_snprintf(p, size, "%dd ", ttl/DAY);
+        if (len < 1 || len >= size)
+            return "-err-";
+        size -= len;
+        p += len;
+        ttl %= DAY;
     }
 
     if (ttl > HOUR) {
-	len = pj_ansi_snprintf(p, size, "%dh ", ttl/HOUR);
-	if (len < 1 || len >= size)
-	    return "-err-";
-	size -= len;
-	p += len;
-	ttl %= HOUR;
+        len = pj_ansi_snprintf(p, size, "%dh ", ttl/HOUR);
+        if (len < 1 || len >= size)
+            return "-err-";
+        size -= len;
+        p += len;
+        ttl %= HOUR;
     }
 
     if (ttl > MINUTE) {
-	len = pj_ansi_snprintf(p, size, "%dm ", ttl/MINUTE);
-	if (len < 1 || len >= size)
-	    return "-err-";
-	size -= len;
-	p += len;
-	ttl %= MINUTE;
+        len = pj_ansi_snprintf(p, size, "%dm ", ttl/MINUTE);
+        if (len < 1 || len >= size)
+            return "-err-";
+        size -= len;
+        p += len;
+        ttl %= MINUTE;
     }
 
     if (ttl > 0) {
-	len = pj_ansi_snprintf(p, size, "%ds ", ttl);
-	if (len < 1 || len >= size)
-	    return "-err-";
-	size -= len;
-	p += len;
-	ttl = 0;
+        len = pj_ansi_snprintf(p, size, "%ds ", ttl);
+        if (len < 1 || len >= size)
+            return "-err-";
+        size -= len;
+        p += len;
+        ttl = 0;
     }
 
     *p = '\0';
@@ -78,11 +77,11 @@ static const char *spell_ttl(char *buf, int size, unsigned ttl)
 static void dump_query(unsigned index, const pj_dns_parsed_query *q)
 {
     PJ_LOG(3,(THIS_FILE, " %d. Name: %.*s", 
-			 index, (int)q->name.slen, q->name.ptr));
+                         index, (int)q->name.slen, q->name.ptr));
     PJ_LOG(3,(THIS_FILE, "    Type: %s (%d)", 
-			 pj_dns_get_type_name(q->type), q->type));
+                         pj_dns_get_type_name(q->type), q->type));
     PJ_LOG(3,(THIS_FILE, "    Class: %s (%d)", 
-		         (q->dnsclass==1 ? "IN" : "<Unknown>"), q->dnsclass));
+                         (q->dnsclass==1 ? "IN" : "<Unknown>"), q->dnsclass));
 }
 
 static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
@@ -93,37 +92,37 @@ static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
     char addr[PJ_INET6_ADDRSTRLEN];
 
     if (name->slen == 0)
-	name = &root_name;
+        name = &root_name;
 
     PJ_LOG(3,(THIS_FILE, " %d. %s record (type=%d)", 
-			 index, pj_dns_get_type_name(rr->type),
-			rr->type));
+                         index, pj_dns_get_type_name(rr->type),
+                        rr->type));
     PJ_LOG(3,(THIS_FILE, "    Name: %.*s", (int)name->slen, name->ptr));
     PJ_LOG(3,(THIS_FILE, "    TTL: %u (%s)", rr->ttl, 
-			  spell_ttl(ttl_words, sizeof(ttl_words), rr->ttl)));
+                          spell_ttl(ttl_words, sizeof(ttl_words), rr->ttl)));
     PJ_LOG(3,(THIS_FILE, "    Data length: %u", rr->rdlength));
 
     if (rr->type == PJ_DNS_TYPE_SRV) {
-	PJ_LOG(3,(THIS_FILE, "    SRV: prio=%d, weight=%d %.*s:%d", 
-			     rr->rdata.srv.prio, rr->rdata.srv.weight,
-			     (int)rr->rdata.srv.target.slen, 
-			     rr->rdata.srv.target.ptr,
-			     rr->rdata.srv.port));
+        PJ_LOG(3,(THIS_FILE, "    SRV: prio=%d, weight=%d %.*s:%d", 
+                             rr->rdata.srv.prio, rr->rdata.srv.weight,
+                             (int)rr->rdata.srv.target.slen, 
+                             rr->rdata.srv.target.ptr,
+                             rr->rdata.srv.port));
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
-	       rr->type == PJ_DNS_TYPE_NS ||
-	       rr->type == PJ_DNS_TYPE_PTR) 
+               rr->type == PJ_DNS_TYPE_NS ||
+               rr->type == PJ_DNS_TYPE_PTR) 
     {
-	PJ_LOG(3,(THIS_FILE, "    Name: %.*s",
-		  (int)rr->rdata.cname.name.slen,
-		  rr->rdata.cname.name.ptr));
+        PJ_LOG(3,(THIS_FILE, "    Name: %.*s",
+                  (int)rr->rdata.cname.name.slen,
+                  rr->rdata.cname.name.ptr));
     } else if (rr->type == PJ_DNS_TYPE_A) {
-	PJ_LOG(3,(THIS_FILE, "    IP address: %s",
-		  pj_inet_ntop2(pj_AF_INET(), &rr->rdata.a.ip_addr,
-		  		addr, sizeof(addr))));
+        PJ_LOG(3,(THIS_FILE, "    IP address: %s",
+                  pj_inet_ntop2(pj_AF_INET(), &rr->rdata.a.ip_addr,
+                                addr, sizeof(addr))));
     } else if (rr->type == PJ_DNS_TYPE_AAAA) {
-	PJ_LOG(3,(THIS_FILE, "    IPv6 address: %s",
-		  pj_inet_ntop2(pj_AF_INET6(), &rr->rdata.aaaa.ip_addr,
-			        addr, sizeof(addr))));
+        PJ_LOG(3,(THIS_FILE, "    IPv6 address: %s",
+                  pj_inet_ntop2(pj_AF_INET6(), &rr->rdata.aaaa.ip_addr,
+                                addr, sizeof(addr))));
     }
 }
 
@@ -136,14 +135,14 @@ PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
 
     /* Header part */
     PJ_LOG(3,(THIS_FILE, "Domain Name System packet (%s):",
-		(PJ_DNS_GET_QR(res->hdr.flags) ? "response" : "query")));
+                (PJ_DNS_GET_QR(res->hdr.flags) ? "response" : "query")));
     PJ_LOG(3,(THIS_FILE, " Transaction ID: %d", res->hdr.id));
     PJ_LOG(3,(THIS_FILE, 
-	      " Flags: opcode=%d, authoritative=%d, truncated=%d, rcode=%d",
-		 PJ_DNS_GET_OPCODE(res->hdr.flags),
-		 PJ_DNS_GET_AA(res->hdr.flags),
-		 PJ_DNS_GET_TC(res->hdr.flags),
-		 PJ_DNS_GET_RCODE(res->hdr.flags)));
+              " Flags: opcode=%d, authoritative=%d, truncated=%d, rcode=%d",
+                 PJ_DNS_GET_OPCODE(res->hdr.flags),
+                 PJ_DNS_GET_AA(res->hdr.flags),
+                 PJ_DNS_GET_TC(res->hdr.flags),
+                 PJ_DNS_GET_RCODE(res->hdr.flags)));
     PJ_LOG(3,(THIS_FILE, " Nb of queries: %d", res->hdr.qdcount));
     PJ_LOG(3,(THIS_FILE, " Nb of answer RR: %d", res->hdr.anscount));
     PJ_LOG(3,(THIS_FILE, " Nb of authority RR: %d", res->hdr.nscount));
@@ -152,42 +151,42 @@ PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
 
     /* Dump queries */
     if (res->hdr.qdcount) {
-	PJ_LOG(3,(THIS_FILE, " Queries:"));
+        PJ_LOG(3,(THIS_FILE, " Queries:"));
 
-	for (i=0; i<res->hdr.qdcount; ++i) {
-	    dump_query(i, &res->q[i]);
-	}
-	PJ_LOG(3,(THIS_FILE, ""));
+        for (i=0; i<res->hdr.qdcount; ++i) {
+            dump_query(i, &res->q[i]);
+        }
+        PJ_LOG(3,(THIS_FILE, ""));
     }
 
     /* Dump answers */
     if (res->hdr.anscount) {
-	PJ_LOG(3,(THIS_FILE, " Answers RR:"));
+        PJ_LOG(3,(THIS_FILE, " Answers RR:"));
 
-	for (i=0; i<res->hdr.anscount; ++i) {
-	    dump_answer(i, &res->ans[i]);
-	}
-	PJ_LOG(3,(THIS_FILE, ""));
+        for (i=0; i<res->hdr.anscount; ++i) {
+            dump_answer(i, &res->ans[i]);
+        }
+        PJ_LOG(3,(THIS_FILE, ""));
     }
 
     /* Dump NS sections */
     if (res->hdr.nscount) {
-	PJ_LOG(3,(THIS_FILE, " NS Authority RR:"));
+        PJ_LOG(3,(THIS_FILE, " NS Authority RR:"));
 
-	for (i=0; i<res->hdr.nscount; ++i) {
-	    dump_answer(i, &res->ns[i]);
-	}
-	PJ_LOG(3,(THIS_FILE, ""));
+        for (i=0; i<res->hdr.nscount; ++i) {
+            dump_answer(i, &res->ns[i]);
+        }
+        PJ_LOG(3,(THIS_FILE, ""));
     }
 
     /* Dump Additional info sections */
     if (res->hdr.arcount) {
-	PJ_LOG(3,(THIS_FILE, " Additional Info RR:"));
+        PJ_LOG(3,(THIS_FILE, " Additional Info RR:"));
 
-	for (i=0; i<res->hdr.arcount; ++i) {
-	    dump_answer(i, &res->arr[i]);
-	}
-	PJ_LOG(3,(THIS_FILE, ""));
+        for (i=0; i<res->hdr.arcount; ++i) {
+            dump_answer(i, &res->arr[i]);
+        }
+        PJ_LOG(3,(THIS_FILE, ""));
     }
 
 }

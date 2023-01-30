@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -39,7 +38,7 @@
 class CPjSocketReader;
 
 #ifndef PJ_SYMBIAN_TIMER_PRIORITY
-#    define PJ_SYMBIAN_TIMER_PRIORITY	EPriorityNormal
+#    define PJ_SYMBIAN_TIMER_PRIORITY   EPriorityNormal
 #endif
 
 //
@@ -50,13 +49,13 @@ class CPjSocket
 public:
     enum
     {
-	MAX_LEN = 1500,
+        MAX_LEN = 1500,
     };
 
     // Construct CPjSocket
     CPjSocket(int af, int sock_type, RSocket &sock)
-	: af_(af), sock_(sock), sock_type_(sock_type), connected_(false), 
-	  sockReader_(NULL)
+        : af_(af), sock_(sock), sock_type_(sock_type), connected_(false), 
+          sockReader_(NULL)
     { 
     }
 
@@ -66,44 +65,44 @@ public:
     // Get address family
     int GetAf() const 
     {
-    	return af_;	
+        return af_;     
     }
     
     // Get the internal RSocket
     RSocket& Socket()
     {
-	return sock_;
+        return sock_;
     }
 
     // Get socket connected flag.
     bool IsConnected() const
     {
-	return connected_;
+        return connected_;
     }
 
     // Set socket connected flag.
     void SetConnected(bool connected)
     {
-	connected_ = connected;
+        connected_ = connected;
     }
 
     // Get socket type
     int GetSockType() const
     {
-	return sock_type_;
+        return sock_type_;
     }
     
     // Returns true if socket is a datagram
     bool IsDatagram() const
     {
-	return sock_type_ == KSockDatagram;
+        return sock_type_ == KSockDatagram;
     }
     
     // Get socket reader, if any.
     // May return NULL.
     CPjSocketReader *Reader()
     {
-	return sockReader_;
+        return sockReader_;
     }
 
     // Create socket reader.
@@ -113,12 +112,12 @@ public:
     void DestroyReader();
     
 private:
-    int		     af_;
-    RSocket	     sock_;	    // Must not be reference, or otherwise
-				    // it may point to local variable!
-    unsigned   	     sock_type_;
+    int              af_;
+    RSocket          sock_;         // Must not be reference, or otherwise
+                                    // it may point to local variable!
+    unsigned         sock_type_;
     
-    bool	     connected_;
+    bool             connected_;
     CPjSocketReader *sockReader_;
 };
 
@@ -137,16 +136,16 @@ public:
 
     // Start asynchronous read from the socket.
     void StartRecv(void (*cb)(void *key)=NULL, 
-		   void *key=NULL, 
-		   TDes8 *aDesc = NULL,
-		   TUint flags = 0);
+                   void *key=NULL, 
+                   TDes8 *aDesc = NULL,
+                   TUint flags = 0);
 
     // Start asynchronous read from the socket.
     void StartRecvFrom(void (*cb)(void *key)=NULL, 
-		       void *key=NULL, 
-		       TDes8 *aDesc = NULL,
-		       TUint flags = 0,
-		       TSockAddr *fromAddr = NULL);
+                       void *key=NULL, 
+                       TDes8 *aDesc = NULL,
+                       TUint flags = 0,
+                       TSockAddr *fromAddr = NULL);
 
     // Cancel asynchronous read.
     void DoCancel();
@@ -157,7 +156,7 @@ public:
     // Check if there's pending data.
     bool HasData() const
     {
-	return buffer_.Length() != 0;
+        return buffer_.Length() != 0;
     }
 
     // Append data to aDesc, up to aDesc's maximum size.
@@ -165,13 +164,13 @@ public:
     void ReadData(TDes8 &aDesc, TInetAddr *addr=NULL);
 
 private:
-    CPjSocket	   &sock_;
-    bool	    isDatagram_;
-    TPtr8	    buffer_;
-    TInetAddr	    recvAddr_;
+    CPjSocket      &sock_;
+    bool            isDatagram_;
+    TPtr8           buffer_;
+    TInetAddr       recvAddr_;
 
-    void	   (*readCb_)(void *key);
-    void	    *key_;
+    void           (*readCb_)(void *key);
+    void            *key_;
 
     //
     // Constructor
@@ -200,8 +199,8 @@ protected:
     virtual TInt RunError(TInt aError);
 
 private:
-    RTimer	timer_;
-    pj_bool_t	hasTimedOut_;
+    RTimer      timer_;
+    pj_bool_t   hasTimedOut_;
 
     CPjTimeoutTimer();
     void ConstructL();
@@ -243,74 +242,74 @@ public:
     // Get RSocketServ instance to be used by all sockets.
     RSocketServ &SocketServ()
     {
-	return appSocketServ_ ? *appSocketServ_ : socketServ_;
+        return appSocketServ_ ? *appSocketServ_ : socketServ_;
     }
 
     // Get RConnection instance, if any.
     RConnection *Connection() 
     {
-    	return appConnection_;
+        return appConnection_;
     }
     
     // Convert TInetAddr to pj_sockaddr_in
     static inline pj_status_t Addr2pj(const TInetAddr & sym_addr,
-			       	      pj_sockaddr &pj_addr,
-			       	      int *addr_len,
-			       	      pj_bool_t convert_ipv4_mapped_addr = PJ_FALSE)
+                                      pj_sockaddr &pj_addr,
+                                      int *addr_len,
+                                      pj_bool_t convert_ipv4_mapped_addr = PJ_FALSE)
     {
     TUint fam = sym_addr.Family();
-	pj_bzero(&pj_addr, *addr_len);
-	if (fam == PJ_AF_INET || 
-			(convert_ipv4_mapped_addr && 
-			 fam == PJ_AF_INET6 && 
-			 sym_addr.IsV4Mapped())) 
-	{
-		pj_addr.addr.sa_family = PJ_AF_INET;
-	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
-	    pj_addr.ipv4.sin_addr.s_addr = pj_htonl(sym_addr.Address());
-	    pj_addr.ipv4.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
-	    *addr_len = sizeof(pj_sockaddr_in);
-	} else if (fam == PJ_AF_INET6) {
-	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in6), PJ_ETOOSMALL);
-	    const TIp6Addr & ip6 = sym_addr.Ip6Address();
-	    pj_addr.addr.sa_family = PJ_AF_INET6;
-	    pj_memcpy(&pj_addr.ipv6.sin6_addr, ip6.u.iAddr8, 16);
-	    pj_addr.ipv6.sin6_port = pj_htons((pj_uint16_t) sym_addr.Port());
-	    pj_addr.ipv6.sin6_scope_id = pj_htonl(sym_addr.Scope());
-	    pj_addr.ipv6.sin6_flowinfo = pj_htonl(sym_addr.FlowLabel());
-	    *addr_len = sizeof(pj_sockaddr_in6);
-	} else {
-	    pj_assert(!"Unsupported address family");
-	    return PJ_EAFNOTSUP;
-	}
-	
-	return PJ_SUCCESS;
+        pj_bzero(&pj_addr, *addr_len);
+        if (fam == PJ_AF_INET || 
+                        (convert_ipv4_mapped_addr && 
+                         fam == PJ_AF_INET6 && 
+                         sym_addr.IsV4Mapped())) 
+        {
+                pj_addr.addr.sa_family = PJ_AF_INET;
+            PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
+            pj_addr.ipv4.sin_addr.s_addr = pj_htonl(sym_addr.Address());
+            pj_addr.ipv4.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
+            *addr_len = sizeof(pj_sockaddr_in);
+        } else if (fam == PJ_AF_INET6) {
+            PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in6), PJ_ETOOSMALL);
+            const TIp6Addr & ip6 = sym_addr.Ip6Address();
+            pj_addr.addr.sa_family = PJ_AF_INET6;
+            pj_memcpy(&pj_addr.ipv6.sin6_addr, ip6.u.iAddr8, 16);
+            pj_addr.ipv6.sin6_port = pj_htons((pj_uint16_t) sym_addr.Port());
+            pj_addr.ipv6.sin6_scope_id = pj_htonl(sym_addr.Scope());
+            pj_addr.ipv6.sin6_flowinfo = pj_htonl(sym_addr.FlowLabel());
+            *addr_len = sizeof(pj_sockaddr_in6);
+        } else {
+            pj_assert(!"Unsupported address family");
+            return PJ_EAFNOTSUP;
+        }
+        
+        return PJ_SUCCESS;
     }
 
 
     // Convert pj_sockaddr_in to TInetAddr
     static inline pj_status_t pj2Addr(const pj_sockaddr &pj_addr,
-    				      int addrlen,
-			       	      TInetAddr & sym_addr)
+                                      int addrlen,
+                                      TInetAddr & sym_addr)
     {
-    	if (pj_addr.addr.sa_family == PJ_AF_INET) {
-    	    PJ_ASSERT_RETURN(addrlen >= (int)sizeof(pj_sockaddr_in), PJ_EINVAL);
-	    sym_addr.Init(KAfInet);
-    	    sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.ipv4.sin_addr.s_addr));
-    	    sym_addr.SetPort(pj_ntohs(pj_addr.ipv4.sin_port));
-    	} else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
-    	    TIp6Addr ip6;
-    	
-    	    PJ_ASSERT_RETURN(addrlen>=(int)sizeof(pj_sockaddr_in6), PJ_EINVAL);
-    	    pj_memcpy(ip6.u.iAddr8, &pj_addr.ipv6.sin6_addr, 16);
-    	    sym_addr.Init(KAfInet6);
-    	    sym_addr.SetAddress(ip6);
-    	    sym_addr.SetScope(pj_ntohl(pj_addr.ipv6.sin6_scope_id));
-    	    sym_addr.SetFlowLabel(pj_ntohl(pj_addr.ipv6.sin6_flowinfo));
-    	} else {
-    	    pj_assert(!"Unsupported address family");
-    	}
-    	return PJ_SUCCESS;
+        if (pj_addr.addr.sa_family == PJ_AF_INET) {
+            PJ_ASSERT_RETURN(addrlen >= (int)sizeof(pj_sockaddr_in), PJ_EINVAL);
+            sym_addr.Init(KAfInet);
+            sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.ipv4.sin_addr.s_addr));
+            sym_addr.SetPort(pj_ntohs(pj_addr.ipv4.sin_port));
+        } else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
+            TIp6Addr ip6;
+        
+            PJ_ASSERT_RETURN(addrlen>=(int)sizeof(pj_sockaddr_in6), PJ_EINVAL);
+            pj_memcpy(ip6.u.iAddr8, &pj_addr.ipv6.sin6_addr, 16);
+            sym_addr.Init(KAfInet6);
+            sym_addr.SetAddress(ip6);
+            sym_addr.SetScope(pj_ntohl(pj_addr.ipv6.sin6_scope_id));
+            sym_addr.SetFlowLabel(pj_ntohl(pj_addr.ipv6.sin6_flowinfo));
+        } else {
+            pj_assert(!"Unsupported address family");
+        }
+        return PJ_SUCCESS;
     }
 
 
@@ -321,11 +320,11 @@ public:
     // Get RHostResolver instance
     RHostResolver & GetResolver(int af)
     {
-    	if (af==PJ_AF_INET6) {
-    	    return appHostResolver6_ ? *appHostResolver6_ : hostResolver6_;
-    	} else {
-    	    return appHostResolver_ ? *appHostResolver_ : hostResolver_;
-    	}
+        if (af==PJ_AF_INET6) {
+            return appHostResolver6_ ? *appHostResolver6_ : hostResolver6_;
+        } else {
+            return appHostResolver_ ? *appHostResolver_ : hostResolver_;
+        }
     }
 
     //
@@ -333,7 +332,7 @@ public:
     //
     bool IsConnectionUp() const
     {
-	return isConnectionUp_;
+        return isConnectionUp_;
     }
 
     //
@@ -341,7 +340,7 @@ public:
     //
     void SetConnectionStatus(bool up)
     {
-	isConnectionUp_ = up;
+        isConnectionUp_ = up;
     }
 
     //
@@ -361,7 +360,7 @@ public:
     // Get console
     CConsoleBase *Console()
     {
-	return console_;
+        return console_;
     }
     
     //
@@ -369,7 +368,7 @@ public:
     //
     CPjTimeoutTimer *SelectTimeoutTimer()
     {
-	return selectTimeoutTimer_;
+        return selectTimeoutTimer_;
     }
 
     //
@@ -377,9 +376,9 @@ public:
     //
     void WaitForActiveObjects(TInt aPriority = CActive::EPriorityStandard)
     {
-	TInt aError;
-	CActiveScheduler::Current()->WaitForAnyRequest();
-	CActiveScheduler::RunIfReady(aError, aPriority);
+        TInt aError;
+        CActiveScheduler::Current()->WaitForAnyRequest();
+        CActiveScheduler::RunIfReady(aError, aPriority);
     }
 
 private:
@@ -414,9 +413,9 @@ private:
 
 #define PJ_SYMBIAN_CHECK_CONNECTION2(retval) \
     do { \
-	if (!PjSymbianOS::Instance()->IsConnectionUp()) \
-	    return retval; \
+        if (!PjSymbianOS::Instance()->IsConnectionUp()) \
+            return retval; \
     } while (0);
 
-#endif	/* __OS_SYMBIAN_H__ */
+#endif  /* __OS_SYMBIAN_H__ */
 

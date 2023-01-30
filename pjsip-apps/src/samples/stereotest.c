@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -38,11 +37,11 @@
 
 #include "util.h"
 
-#define REC_CLOCK_RATE	    16000
-#define PTIME		    20
+#define REC_CLOCK_RATE      16000
+#define PTIME               20
 
-#define MODE_PLAY	    1
-#define MODE_RECORD	    2
+#define MODE_PLAY           1
+#define MODE_RECORD         2
 
 
 /* For logging purpose. */
@@ -50,25 +49,25 @@
 
 
 static const char *desc = 
-" FILE		    						    \n"
-"		    						    \n"
-"  stereotest.c	    						    \n"
-"		    						    \n"
-" PURPOSE	    						    \n"
-"		    						    \n"
-"  Demonstrate how use stereo port to play a WAV file to sound	    \n"
+" FILE                                                              \n"
+"                                                                   \n"
+"  stereotest.c                                                     \n"
+"                                                                   \n"
+" PURPOSE                                                           \n"
+"                                                                   \n"
+"  Demonstrate how use stereo port to play a WAV file to sound      \n"
 "  device or record to a WAV file from sound device with different  \n"
-"  channel count.    						    \n"
-"		    						    \n"
-" USAGE		    						    \n"
-"		    						    \n"
-"  stereotest [options]	WAV					    \n"
-"		    						    \n"
-"  Options:							    \n"
+"  channel count.                                                   \n"
+"                                                                   \n"
+" USAGE                                                             \n"
+"                                                                   \n"
+"  stereotest [options] WAV                                         \n"
+"                                                                   \n"
+"  Options:                                                         \n"
 "  -m, --mode=N          Operation mode: 1 = playing, 2 = recording.\n"
-"  -C, --rec-ch-cnt=N    Number of channel for recording file.	    \n"
+"  -C, --rec-ch-cnt=N    Number of channel for recording file.      \n"
 "  -c, --snd-ch-cnt=N    Number of channel for opening sound device.\n"
-"		    						    \n";
+"                                                                   \n";
 
 int main(int argc, char *argv[])
 {
@@ -90,16 +89,16 @@ int main(int argc, char *argv[])
     unsigned snd_ch_cnt = 2;
 
     enum {
-	OPT_MODE	= 'm',
-	OPT_REC_CHANNEL = 'C',
-	OPT_SND_CHANNEL = 'c',
+        OPT_MODE        = 'm',
+        OPT_REC_CHANNEL = 'C',
+        OPT_SND_CHANNEL = 'c',
     };
 
     struct pj_getopt_option long_options[] = {
-	{ "mode",	    1, 0, OPT_MODE },
-	{ "rec-ch-cnt",	    1, 0, OPT_REC_CHANNEL },
-	{ "snd-ch-cnt",	    1, 0, OPT_SND_CHANNEL },
-	{ NULL, 0, 0, 0 },
+        { "mode",           1, 0, OPT_MODE },
+        { "rec-ch-cnt",     1, 0, OPT_REC_CHANNEL },
+        { "snd-ch-cnt",     1, 0, OPT_SND_CHANNEL },
+        { NULL, 0, 0, 0 },
     };
 
     int c;
@@ -113,29 +112,29 @@ int main(int argc, char *argv[])
     pj_optind = 0;
     while((c=pj_getopt_long(argc,argv, "m:C:c:", long_options, &option_index))!=-1) {
 
-	switch (c) {
-	case OPT_MODE:
-	    if (mode) {
-		app_perror(THIS_FILE, "Cannot record and play at once!", 
-			   PJ_EINVAL);
-		return 1;
-	    }
-	    mode = atoi(pj_optarg);
-	    break;
+        switch (c) {
+        case OPT_MODE:
+            if (mode) {
+                app_perror(THIS_FILE, "Cannot record and play at once!", 
+                           PJ_EINVAL);
+                return 1;
+            }
+            mode = atoi(pj_optarg);
+            break;
 
-	case OPT_REC_CHANNEL:
-	    rec_ch_cnt = atoi(pj_optarg);
-	    break;
+        case OPT_REC_CHANNEL:
+            rec_ch_cnt = atoi(pj_optarg);
+            break;
 
-	case OPT_SND_CHANNEL:
-	    snd_ch_cnt = atoi(pj_optarg);
-	    break;
+        case OPT_SND_CHANNEL:
+            snd_ch_cnt = atoi(pj_optarg);
+            break;
 
-	default:
-	    printf("Invalid options %s\n", argv[pj_optind]);
-	    puts(desc);
-	    return 1;
-	}
+        default:
+            printf("Invalid options %s\n", argv[pj_optind]);
+            puts(desc);
+            return 1;
+        }
 
     }
 
@@ -143,19 +142,19 @@ int main(int argc, char *argv[])
 
     /* Verify arguments. */
     if (!wav_file) {
-	app_perror(THIS_FILE, "WAV file not specified!", PJ_EINVAL);
-	puts(desc);
-	return 1;
+        app_perror(THIS_FILE, "WAV file not specified!", PJ_EINVAL);
+        puts(desc);
+        return 1;
     }
     if (!snd_ch_cnt || !rec_ch_cnt || rec_ch_cnt > 6) {
-	app_perror(THIS_FILE, "Invalid or too many channel count!", PJ_EINVAL);
-	puts(desc);
-	return 1;
+        app_perror(THIS_FILE, "Invalid or too many channel count!", PJ_EINVAL);
+        puts(desc);
+        return 1;
     }
     if (mode != MODE_RECORD && mode != MODE_PLAY) {
-	app_perror(THIS_FILE, "Invalid operation mode!", PJ_EINVAL);
-	puts(desc);
-	return 1;
+        app_perror(THIS_FILE, "Invalid operation mode!", PJ_EINVAL);
+        puts(desc);
+        return 1;
     }
 
     /* Must create a pool factory before we can allocate any memory. */
@@ -169,112 +168,112 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for our file player */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "app",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "app",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     if (mode == MODE_PLAY) {
-	/* Create WAVE file player port. */
-	status = pjmedia_wav_player_port_create( pool, wav_file, PTIME, 0,
-						 0, &file_port);
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to open file", status);
-	    return 1;
-	}
+        /* Create WAVE file player port. */
+        status = pjmedia_wav_player_port_create( pool, wav_file, PTIME, 0,
+                                                 0, &file_port);
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to open file", status);
+            return 1;
+        }
 
-	/* Create sound player port. */
-	status = pjmedia_snd_port_create_player( 
-		     pool,				/* pool		      */
-		     dev_id,				/* device id.	      */
-		     PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.	      */
-		     snd_ch_cnt,			/* # of channels.     */
-		     snd_ch_cnt * PTIME *		/* samples per frame. */
-		     PJMEDIA_PIA_SRATE(&file_port->info) / 1000,
-		     PJMEDIA_PIA_BITS(&file_port->info),/* bits per sample.   */
-		     0,					/* options	      */
-		     &snd_port				/* returned port      */
-		     );
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to open sound device", status);
-	    return 1;
-	}
+        /* Create sound player port. */
+        status = pjmedia_snd_port_create_player( 
+                     pool,                              /* pool               */
+                     dev_id,                            /* device id.         */
+                     PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.       */
+                     snd_ch_cnt,                        /* # of channels.     */
+                     snd_ch_cnt * PTIME *               /* samples per frame. */
+                     PJMEDIA_PIA_SRATE(&file_port->info) / 1000,
+                     PJMEDIA_PIA_BITS(&file_port->info),/* bits per sample.   */
+                     0,                                 /* options            */
+                     &snd_port                          /* returned port      */
+                     );
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to open sound device", status);
+            return 1;
+        }
 
-	if (snd_ch_cnt != PJMEDIA_PIA_CCNT(&file_port->info)) {
-	    status = pjmedia_stereo_port_create( pool,
-						 file_port,
-						 snd_ch_cnt,
-						 0,
-						 &stereo_port);
-	    if (status != PJ_SUCCESS) {
-		app_perror(THIS_FILE, "Unable to create stereo port", status);
-		return 1;
-	    }
+        if (snd_ch_cnt != PJMEDIA_PIA_CCNT(&file_port->info)) {
+            status = pjmedia_stereo_port_create( pool,
+                                                 file_port,
+                                                 snd_ch_cnt,
+                                                 0,
+                                                 &stereo_port);
+            if (status != PJ_SUCCESS) {
+                app_perror(THIS_FILE, "Unable to create stereo port", status);
+                return 1;
+            }
 
-	    status = pjmedia_snd_port_connect(snd_port, stereo_port);
-	} else {
-	    status = pjmedia_snd_port_connect(snd_port, file_port);
-	}
+            status = pjmedia_snd_port_connect(snd_port, stereo_port);
+        } else {
+            status = pjmedia_snd_port_connect(snd_port, file_port);
+        }
 
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to connect sound port", status);
-	    return 1;
-	}
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to connect sound port", status);
+            return 1;
+        }
 
     } else {
-	/* Create WAVE file writer port. */
-	status = pjmedia_wav_writer_port_create(pool, wav_file,
-						REC_CLOCK_RATE,
-						rec_ch_cnt,
-						rec_ch_cnt * PTIME * 
-						REC_CLOCK_RATE / 1000,
-						NBITS,
-						0, 0, 
-						&file_port);
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to open file", status);
-	    return 1;
-	}
+        /* Create WAVE file writer port. */
+        status = pjmedia_wav_writer_port_create(pool, wav_file,
+                                                REC_CLOCK_RATE,
+                                                rec_ch_cnt,
+                                                rec_ch_cnt * PTIME * 
+                                                REC_CLOCK_RATE / 1000,
+                                                NBITS,
+                                                0, 0, 
+                                                &file_port);
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to open file", status);
+            return 1;
+        }
 
-	/* Create sound player port. */
-	status = pjmedia_snd_port_create_rec( 
-			 pool,			    /* pool		    */
-			 dev_id,		    /* device id.	    */
-			 REC_CLOCK_RATE,	    /* clock rate.	    */
-			 snd_ch_cnt,		    /* # of channels.	    */
-			 snd_ch_cnt * PTIME * 
-			 REC_CLOCK_RATE / 1000,	    /* samples per frame.   */
-			 NBITS,			    /* bits per sample.	    */
-			 0,			    /* options		    */
-			 &snd_port		    /* returned port	    */
-		     );
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to open sound device", status);
-	    return 1;
-	}
+        /* Create sound player port. */
+        status = pjmedia_snd_port_create_rec( 
+                         pool,                      /* pool                 */
+                         dev_id,                    /* device id.           */
+                         REC_CLOCK_RATE,            /* clock rate.          */
+                         snd_ch_cnt,                /* # of channels.       */
+                         snd_ch_cnt * PTIME * 
+                         REC_CLOCK_RATE / 1000,     /* samples per frame.   */
+                         NBITS,                     /* bits per sample.     */
+                         0,                         /* options              */
+                         &snd_port                  /* returned port        */
+                     );
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to open sound device", status);
+            return 1;
+        }
 
-	if (rec_ch_cnt != snd_ch_cnt) {
-	    status = pjmedia_stereo_port_create( pool,
-						 file_port,
-						 snd_ch_cnt,
-						 0,
-						 &stereo_port);
-	    if (status != PJ_SUCCESS) {
-		app_perror(THIS_FILE, "Unable to create stereo port", status);
-		return 1;
-	    }
+        if (rec_ch_cnt != snd_ch_cnt) {
+            status = pjmedia_stereo_port_create( pool,
+                                                 file_port,
+                                                 snd_ch_cnt,
+                                                 0,
+                                                 &stereo_port);
+            if (status != PJ_SUCCESS) {
+                app_perror(THIS_FILE, "Unable to create stereo port", status);
+                return 1;
+            }
 
-	    status = pjmedia_snd_port_connect(snd_port, stereo_port);
-	} else {
-	    status = pjmedia_snd_port_connect(snd_port, file_port);
-	}
+            status = pjmedia_snd_port_connect(snd_port, stereo_port);
+        } else {
+            status = pjmedia_snd_port_connect(snd_port, file_port);
+        }
 
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to connect sound port", status);
-	    return 1;
-	}
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to connect sound port", status);
+            return 1;
+        }
     }
 
     /* Dump memory usage */
@@ -291,12 +290,12 @@ int main(int argc, char *argv[])
     printf("Mode = %s\n", (mode == MODE_PLAY? "playing" : "recording") );
     printf("File  port channel count = %d\n", PJMEDIA_PIA_CCNT(&file_port->info));
     printf("Sound port channel count = %d\n", 
-	    PJMEDIA_PIA_CCNT(&pjmedia_snd_port_get_port(snd_port)->info));
+            PJMEDIA_PIA_CCNT(&pjmedia_snd_port_get_port(snd_port)->info));
     puts("");
     puts("Press <ENTER> to stop and quit");
 
     if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
-	puts("EOF while reading stdin, will quit now..");
+        puts("EOF while reading stdin, will quit now..");
     }
     
     /* Start deinitialization: */

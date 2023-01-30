@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -18,7 +17,7 @@
  */
 #include "test.h"
 
-#define THIS_FILE	"json_test.c"
+#define THIS_FILE       "json_test.c"
 
 #if INCLUDE_JSON_TEST
 
@@ -40,12 +39,12 @@ static char json_doc1[] =
        },\
        \"Array1\": [116, false, \"string\", {}],\
        \"Array2\": [\
-	    {\
-        	   \"Float\": 123.,\
-	    },\
-	    {\
-		   \"Float\": 123.,\
-	    }\
+            {\
+                   \"Float\": 123.,\
+            },\
+            {\
+                   \"Float\": 123.,\
+            }\
        ]\
      },\
    \"Integer\":  800,\
@@ -66,16 +65,16 @@ static int json_verify_1()
     size = (unsigned)strlen(json_doc1);
     elem = pj_json_parse(pool, json_doc1, &size, &err);
     if (!elem) {
-	PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() parse error"));
-	goto on_error;
+        PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() parse error"));
+        goto on_error;
     }
 
     size = (unsigned)strlen(json_doc1) * 2;
     out_buf = pj_pool_alloc(pool, size);
 
     if (pj_json_write(elem, out_buf, &size)) {
-	PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() write error"));
-	goto on_error;
+        PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() write error"));
+        goto on_error;
     }
 
     PJ_LOG(3,(THIS_FILE, "Json document:\n%s", out_buf));
@@ -94,7 +93,7 @@ int json_test(void)
 
     rc = json_verify_1();
     if (rc)
-	return rc;
+        return rc;
 
     return 0;
 }

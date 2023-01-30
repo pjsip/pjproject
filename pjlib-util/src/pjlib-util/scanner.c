@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -28,10 +27,10 @@
 
 #define THIS_FILE   "scanner.c"
 
-#define PJ_SCAN_IS_SPACE(c)		((c)==' ' || (c)=='\t')
-#define PJ_SCAN_IS_NEWLINE(c)		((c)=='\r' || (c)=='\n')
-#define PJ_SCAN_IS_PROBABLY_SPACE(c)	((c) <= 32)
-#define PJ_SCAN_CHECK_EOF(s)		(s != scanner->end)
+#define PJ_SCAN_IS_SPACE(c)             ((c)==' ' || (c)=='\t')
+#define PJ_SCAN_IS_NEWLINE(c)           ((c)=='\r' || (c)=='\n')
+#define PJ_SCAN_IS_PROBABLY_SPACE(c)    ((c) <= 32)
+#define PJ_SCAN_CHECK_EOF(s)            (s != scanner->end)
 
 
 #if defined(PJ_SCANNER_USE_BITWISE) && PJ_SCANNER_USE_BITWISE != 0
@@ -54,7 +53,7 @@ PJ_DEF(void) pj_cis_add_range(pj_cis_t *cis, int cstart, int cend)
 
     while (cstart != cend) {
         PJ_CIS_SET(cis, cstart);
-	++cstart;
+        ++cstart;
     }
 }
 
@@ -73,7 +72,7 @@ PJ_DEF(void) pj_cis_add_str( pj_cis_t *cis, const char *str)
 {
     while (*str) {
         PJ_CIS_SET(cis, *str);
-	++str;
+        ++str;
     }
 }
 
@@ -81,8 +80,8 @@ PJ_DEF(void) pj_cis_add_cis( pj_cis_t *cis, const pj_cis_t *rhs)
 {
     int i;
     for (i=0; i<256; ++i) {
-	if (PJ_CIS_ISSET(rhs, i))
-	    PJ_CIS_SET(cis, i);
+        if (PJ_CIS_ISSET(rhs, i))
+            PJ_CIS_SET(cis, i);
     }
 }
 
@@ -98,7 +97,7 @@ PJ_DEF(void) pj_cis_del_str( pj_cis_t *cis, const char *str)
 {
     while (*str) {
         PJ_CIS_CLR(cis, *str);
-	++str;
+        ++str;
     }
 }
 
@@ -107,7 +106,7 @@ PJ_DEF(void) pj_cis_invert( pj_cis_t *cis )
     unsigned i;
     /* Can not set zero. This is the requirement of the parser. */
     for (i=1; i<256; ++i) {
-	if (PJ_CIS_ISSET(cis,i))
+        if (PJ_CIS_ISSET(cis,i))
             PJ_CIS_CLR(cis,i);
         else
             PJ_CIS_SET(cis,i);
@@ -115,8 +114,8 @@ PJ_DEF(void) pj_cis_invert( pj_cis_t *cis )
 }
 
 PJ_DEF(void) pj_scan_init( pj_scanner *scanner, char *bufstart, 
-			   pj_size_t buflen, unsigned options, 
-			   pj_syn_err_func_ptr callback )
+                           pj_size_t buflen, unsigned options, 
+                           pj_syn_err_func_ptr callback )
 {
     PJ_CHECK_STACK();
 
@@ -128,7 +127,7 @@ PJ_DEF(void) pj_scan_init( pj_scanner *scanner, char *bufstart,
     scanner->skip_ws = options;
 
     if (scanner->skip_ws) 
-	pj_scan_skip_whitespace(scanner);
+        pj_scan_skip_whitespace(scanner);
 }
 
 
@@ -143,53 +142,53 @@ PJ_DEF(void) pj_scan_skip_whitespace( pj_scanner *scanner )
     register char *s = scanner->curptr;
 
     while (PJ_SCAN_IS_SPACE(*s)) {
-	++s;
+        ++s;
     }
 
     if (PJ_SCAN_IS_NEWLINE(*s) && (scanner->skip_ws & PJ_SCAN_AUTOSKIP_NEWLINE)) {
-	for (;;) {
-	    if (*s == '\r') {
-		++s;
-		if (*s == '\n') ++s;
-		++scanner->line;
-		scanner->curptr = scanner->start_line = s;
-	    } else if (*s == '\n') {
-		++s;
-		++scanner->line;
-		scanner->curptr = scanner->start_line = s;
-	    } else if (PJ_SCAN_IS_SPACE(*s)) {
-		do {
-		    ++s;
-		} while (PJ_SCAN_IS_SPACE(*s));
-	    } else {
-		break;
-	    }
-	}
+        for (;;) {
+            if (*s == '\r') {
+                ++s;
+                if (*s == '\n') ++s;
+                ++scanner->line;
+                scanner->curptr = scanner->start_line = s;
+            } else if (*s == '\n') {
+                ++s;
+                ++scanner->line;
+                scanner->curptr = scanner->start_line = s;
+            } else if (PJ_SCAN_IS_SPACE(*s)) {
+                do {
+                    ++s;
+                } while (PJ_SCAN_IS_SPACE(*s));
+            } else {
+                break;
+            }
+        }
     }
 
     if (PJ_SCAN_IS_NEWLINE(*s) && (scanner->skip_ws & PJ_SCAN_AUTOSKIP_WS_HEADER)==PJ_SCAN_AUTOSKIP_WS_HEADER) {
-	/* Check for header continuation. */
-	scanner->curptr = s;
+        /* Check for header continuation. */
+        scanner->curptr = s;
 
-	if (*s == '\r') {
-	    ++s;
-	}
-	if (*s == '\n') {
-	    ++s;
-	}
-	scanner->start_line = s;
+        if (*s == '\r') {
+            ++s;
+        }
+        if (*s == '\n') {
+            ++s;
+        }
+        scanner->start_line = s;
 
-	if (PJ_SCAN_IS_SPACE(*s)) {
-	    register char *t = s;
-	    do {
-		++t;
-	    } while (PJ_SCAN_IS_SPACE(*t));
+        if (PJ_SCAN_IS_SPACE(*s)) {
+            register char *t = s;
+            do {
+                ++t;
+            } while (PJ_SCAN_IS_SPACE(*t));
 
-	    ++scanner->line;
-	    scanner->curptr = t;
-	}
+            ++scanner->line;
+            scanner->curptr = t;
+        }
     } else {
-	scanner->curptr = s;
+        scanner->curptr = s;
     }
 }
 
@@ -203,26 +202,26 @@ PJ_DEF(void) pj_scan_skip_line( pj_scanner *scanner )
 
     s = pj_memchr(scanner->curptr, '\n', scanner->end - scanner->curptr);
     if (!s) {
-	scanner->curptr = scanner->end;
+        scanner->curptr = scanner->end;
     } else {
-	scanner->curptr = scanner->start_line = s+1;
-	scanner->line++;
+        scanner->curptr = scanner->start_line = s+1;
+        scanner->line++;
    }
 }
 
 PJ_DEF(int) pj_scan_peek( pj_scanner *scanner,
-			  const pj_cis_t *spec, pj_str_t *out)
+                          const pj_cis_t *spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
 
     if (s >= scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return -1;
+        pj_scan_syntax_err(scanner);
+        return -1;
     }
 
     /* Don't need to check EOF with PJ_SCAN_CHECK_EOF(s) */
     while (pj_cis_match(spec, *s))
-	++s;
+        ++s;
 
     pj_strset3(out, scanner->curptr, s);
     return *s;
@@ -230,13 +229,13 @@ PJ_DEF(int) pj_scan_peek( pj_scanner *scanner,
 
 
 PJ_DEF(int) pj_scan_peek_n( pj_scanner *scanner,
-			     pj_size_t len, pj_str_t *out)
+                             pj_size_t len, pj_str_t *out)
 {
     char *endpos = scanner->curptr + len;
 
     if (endpos > scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return -1;
+        pj_scan_syntax_err(scanner);
+        return -1;
     }
 
     pj_strset(out, scanner->curptr, len);
@@ -245,18 +244,18 @@ PJ_DEF(int) pj_scan_peek_n( pj_scanner *scanner,
 
 
 PJ_DEF(int) pj_scan_peek_until( pj_scanner *scanner,
-				const pj_cis_t *spec, 
-				pj_str_t *out)
+                                const pj_cis_t *spec, 
+                                pj_str_t *out)
 {
     register char *s = scanner->curptr;
 
     if (s >= scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return -1;
+        pj_scan_syntax_err(scanner);
+        return -1;
     }
 
     while (PJ_SCAN_CHECK_EOF(s) && !pj_cis_match( spec, *s))
-	++s;
+        ++s;
 
     pj_strset3(out, scanner->curptr, s);
     return *s;
@@ -264,19 +263,19 @@ PJ_DEF(int) pj_scan_peek_until( pj_scanner *scanner,
 
 
 PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
-			  const pj_cis_t *spec, pj_str_t *out)
+                          const pj_cis_t *spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
 
     pj_assert(pj_cis_match(spec,0)==0);
 
     if (pj_scan_is_eof(scanner) || !pj_cis_match(spec, *s)) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
 
     do {
-	++s;
+        ++s;
     } while (pj_cis_match(spec, *s));
     /* No need to check EOF here (PJ_SCAN_CHECK_EOF(s)) because
      * buffer is NULL terminated and pj_cis_match(spec,0) should be
@@ -288,13 +287,13 @@ PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
     scanner->curptr = s;
 
     if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
-	pj_scan_skip_whitespace(scanner);    
+        pj_scan_skip_whitespace(scanner);    
     }
 }
 
 
 PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
-				   const pj_cis_t *spec, pj_str_t *out)
+                                   const pj_cis_t *spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
     char *dst = s;
@@ -304,52 +303,52 @@ PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
     /* Must not match character '%' */
     pj_assert(pj_cis_match(spec,'%')==0);
 
-    if (pj_scan_is_eof(scanner) || !pj_cis_match(spec, *s) && *s != '%') {
-	pj_scan_syntax_err(scanner);
-	return;
+    if (pj_scan_is_eof(scanner) || (!pj_cis_match(spec, *s) && *s != '%')) {
+        pj_scan_syntax_err(scanner);
+        return;
     }
 
     out->ptr = s;
     do {
-	if (*s == '%') {
-	    if (s+3 <= scanner->end && pj_isxdigit(*(s+1)) && 
-		pj_isxdigit(*(s+2))) 
-	    {
-		*dst = (pj_uint8_t) ((pj_hex_digit_to_val(*(s+1)) << 4) +
-				      pj_hex_digit_to_val(*(s+2)));
-		++dst;
-		s += 3;
-	    } else {
-		*dst++ = *s++;
-		*dst++ = *s++;
-		break;
-	    }
-	}
-	
-	if (pj_cis_match(spec, *s)) {
-	    char *start = s;
-	    do {
-		++s;
-	    } while (pj_cis_match(spec, *s));
+        if (*s == '%') {
+            if (s+3 <= scanner->end && pj_isxdigit(*(s+1)) && 
+                pj_isxdigit(*(s+2))) 
+            {
+                *dst = (pj_uint8_t) ((pj_hex_digit_to_val(*(s+1)) << 4) +
+                                      pj_hex_digit_to_val(*(s+2)));
+                ++dst;
+                s += 3;
+            } else {
+                *dst++ = *s++;
+                *dst++ = *s++;
+                break;
+            }
+        }
+        
+        if (pj_cis_match(spec, *s)) {
+            char *start = s;
+            do {
+                ++s;
+            } while (pj_cis_match(spec, *s));
 
-	    if (dst != start) pj_memmove(dst, start, s-start);
-	    dst += (s-start);
-	} 
-	
+            if (dst != start) pj_memmove(dst, start, s-start);
+            dst += (s-start);
+        } 
+        
     } while (*s == '%');
 
     scanner->curptr = s;
     out->slen = (dst - out->ptr);
 
     if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
-	pj_scan_skip_whitespace(scanner);    
+        pj_scan_skip_whitespace(scanner);    
     }
 }
 
 
 PJ_DEF(void) pj_scan_get_quote( pj_scanner *scanner,
-				int begin_quote, int end_quote, 
-				pj_str_t *out)
+                                int begin_quote, int end_quote, 
+                                pj_str_t *out)
 {
     char beg = (char)begin_quote;
     char end = (char)end_quote;
@@ -368,53 +367,53 @@ PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
 
     /* Check and eat the begin_quote. */
     for (i = 0; i < qsize; ++i) {
-	if (*s == begin_quote[i]) {
-	    qpair = i;
-	    break;
-	}
+        if (*s == begin_quote[i]) {
+            qpair = i;
+            break;
+        }
     }
     if (qpair == -1) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
     ++s;
 
     /* Loop until end_quote is found. 
      */
     do {
-	/* loop until end_quote is found. */
-	while (PJ_SCAN_CHECK_EOF(s) && *s != '\n' && *s != end_quote[qpair]) {
-	    ++s;
-	}
+        /* loop until end_quote is found. */
+        while (PJ_SCAN_CHECK_EOF(s) && *s != '\n' && *s != end_quote[qpair]) {
+            ++s;
+        }
 
-	/* check that no backslash character precedes the end_quote. */
-	if (*s == end_quote[qpair]) {
-	    if (*(s-1) == '\\') {
-		char *q = s-2;
-		char *r = s-2;
+        /* check that no backslash character precedes the end_quote. */
+        if (*s == end_quote[qpair]) {
+            if (*(s-1) == '\\') {
+                char *q = s-2;
+                char *r = s-2;
 
-		while (r != scanner->begin && *r == '\\') {
-		    --r;
-		}
-		/* break from main loop if we have odd number of backslashes */
-		if (((unsigned)(q-r) & 0x01) == 1) {
-		    break;
-		}
-		++s;
-	    } else {
-		/* end_quote is not preceeded by backslash. break now. */
-		break;
-	    }
-	} else {
-	    /* loop ended by non-end_quote character. break now. */
-	    break;
-	}
+                while (r != scanner->begin && *r == '\\') {
+                    --r;
+                }
+                /* break from main loop if we have odd number of backslashes */
+                if (((unsigned)(q-r) & 0x01) == 1) {
+                    break;
+                }
+                ++s;
+            } else {
+                /* end_quote is not preceeded by backslash. break now. */
+                break;
+            }
+        } else {
+            /* loop ended by non-end_quote character. break now. */
+            break;
+        }
     } while (1);
 
     /* Check and eat the end quote. */
     if (*s != end_quote[qpair]) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
     ++s;
 
@@ -423,17 +422,17 @@ PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
     scanner->curptr = s;
 
     if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
-	pj_scan_skip_whitespace(scanner);
+        pj_scan_skip_whitespace(scanner);
     }
 }
 
 
 PJ_DEF(void) pj_scan_get_n( pj_scanner *scanner,
-			    unsigned N, pj_str_t *out)
+                            unsigned N, pj_str_t *out)
 {
     if (scanner->curptr + N > scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
 
     pj_strset(out, scanner->curptr, N);
@@ -441,9 +440,9 @@ PJ_DEF(void) pj_scan_get_n( pj_scanner *scanner,
     scanner->curptr += N;
 
     if (!pj_scan_is_eof(scanner) &&
-	PJ_SCAN_IS_PROBABLY_SPACE(*scanner->curptr) && scanner->skip_ws)
+        PJ_SCAN_IS_PROBABLY_SPACE(*scanner->curptr) && scanner->skip_ws)
     {
-	pj_scan_skip_whitespace(scanner);
+        pj_scan_skip_whitespace(scanner);
     }
 }
 
@@ -454,8 +453,8 @@ PJ_DEF(int) pj_scan_get_char( pj_scanner *scanner )
     int chr;
 
     if (s >= scanner->end || !*s) {
-	pj_scan_syntax_err(scanner);
-	return 0;
+        pj_scan_syntax_err(scanner);
+        return 0;
     }
 
     chr = *s;
@@ -463,9 +462,9 @@ PJ_DEF(int) pj_scan_get_char( pj_scanner *scanner )
     ++s;
     scanner->curptr = s;
     if (PJ_SCAN_CHECK_EOF(s) && PJ_SCAN_IS_PROBABLY_SPACE(*s) &&
-    	scanner->skip_ws)
+        scanner->skip_ws)
     {
-	pj_scan_skip_whitespace(scanner);
+        pj_scan_skip_whitespace(scanner);
     }
     return chr;
 }
@@ -474,16 +473,16 @@ PJ_DEF(int) pj_scan_get_char( pj_scanner *scanner )
 PJ_DEF(void) pj_scan_get_newline( pj_scanner *scanner )
 {
     if (pj_scan_is_eof(scanner) || !PJ_SCAN_IS_NEWLINE(*scanner->curptr)) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
 
     /* We have checked scanner->curptr validity above */
     if (*scanner->curptr == '\r') {
-	++scanner->curptr;
+        ++scanner->curptr;
     }
     if (!pj_scan_is_eof(scanner) && *scanner->curptr == '\n') {
-	++scanner->curptr;
+        ++scanner->curptr;
     }
 
     ++scanner->line;
@@ -494,9 +493,9 @@ PJ_DEF(void) pj_scan_get_newline( pj_scanner *scanner )
      * This would cause scanner to incorrectly eat two new lines, e.g.
      * when parsing:
      *   
-     *	Content-Length: 120\r\n
-     *	\r\n
-     *	<space><space><space>...
+     *  Content-Length: 120\r\n
+     *  \r\n
+     *  <space><space><space>...
      *
      * When pj_scan_get_newline() is called to parse the first newline
      * in the Content-Length header, it will eat the second newline
@@ -510,17 +509,17 @@ PJ_DEF(void) pj_scan_get_newline( pj_scanner *scanner )
 
 
 PJ_DEF(void) pj_scan_get_until( pj_scanner *scanner,
-				const pj_cis_t *spec, pj_str_t *out)
+                                const pj_cis_t *spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
 
     if (s >= scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
 
     while (PJ_SCAN_CHECK_EOF(s) && !pj_cis_match(spec, *s)) {
-	++s;
+        ++s;
     }
 
     pj_strset3(out, scanner->curptr, s);
@@ -528,25 +527,25 @@ PJ_DEF(void) pj_scan_get_until( pj_scanner *scanner,
     scanner->curptr = s;
 
     if (!pj_scan_is_eof(scanner) && PJ_SCAN_IS_PROBABLY_SPACE(*s) &&
-	scanner->skip_ws)
+        scanner->skip_ws)
     {
-	pj_scan_skip_whitespace(scanner);
+        pj_scan_skip_whitespace(scanner);
     }
 }
 
 
 PJ_DEF(void) pj_scan_get_until_ch( pj_scanner *scanner, 
-				   int until_char, pj_str_t *out)
+                                   int until_char, pj_str_t *out)
 {
     register char *s = scanner->curptr;
 
     if (s >= scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
 
     while (PJ_SCAN_CHECK_EOF(s) && *s != until_char) {
-	++s;
+        ++s;
     }
 
     pj_strset3(out, scanner->curptr, s);
@@ -554,27 +553,27 @@ PJ_DEF(void) pj_scan_get_until_ch( pj_scanner *scanner,
     scanner->curptr = s;
 
     if (!pj_scan_is_eof(scanner) && PJ_SCAN_IS_PROBABLY_SPACE(*s) &&
-	scanner->skip_ws)
+        scanner->skip_ws)
     {
-	pj_scan_skip_whitespace(scanner);
+        pj_scan_skip_whitespace(scanner);
     }
 }
 
 
 PJ_DEF(void) pj_scan_get_until_chr( pj_scanner *scanner,
-				     const char *until_spec, pj_str_t *out)
+                                     const char *until_spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
     pj_size_t speclen;
 
     if (s >= scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
 
     speclen = strlen(until_spec);
     while (PJ_SCAN_CHECK_EOF(s) && !memchr(until_spec, *s, speclen)) {
-	++s;
+        ++s;
     }
 
     pj_strset3(out, scanner->curptr, s);
@@ -582,26 +581,26 @@ PJ_DEF(void) pj_scan_get_until_chr( pj_scanner *scanner,
     scanner->curptr = s;
 
     if (!pj_scan_is_eof(scanner) && PJ_SCAN_IS_PROBABLY_SPACE(*s) &&
-	scanner->skip_ws)
+        scanner->skip_ws)
     {
-	pj_scan_skip_whitespace(scanner);
+        pj_scan_skip_whitespace(scanner);
     }
 }
 
 PJ_DEF(void) pj_scan_advance_n( pj_scanner *scanner,
-				 unsigned N, pj_bool_t skip_ws)
+                                 unsigned N, pj_bool_t skip_ws)
 {
     if (scanner->curptr + N > scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return;
+        pj_scan_syntax_err(scanner);
+        return;
     }
 
     scanner->curptr += N;
 
     if (!pj_scan_is_eof(scanner) && 
-	PJ_SCAN_IS_PROBABLY_SPACE(*scanner->curptr) && skip_ws)
+        PJ_SCAN_IS_PROBABLY_SPACE(*scanner->curptr) && skip_ws)
     {
-	pj_scan_skip_whitespace(scanner);
+        pj_scan_skip_whitespace(scanner);
     }
 }
 
@@ -609,8 +608,8 @@ PJ_DEF(void) pj_scan_advance_n( pj_scanner *scanner,
 PJ_DEF(int) pj_scan_strcmp( pj_scanner *scanner, const char *s, int len)
 {
     if (scanner->curptr + len > scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return -1;
+        pj_scan_syntax_err(scanner);
+        return -1;
     }
     return strncmp(scanner->curptr, s, len);
 }
@@ -619,24 +618,24 @@ PJ_DEF(int) pj_scan_strcmp( pj_scanner *scanner, const char *s, int len)
 PJ_DEF(int) pj_scan_stricmp( pj_scanner *scanner, const char *s, int len)
 {
     if (scanner->curptr + len > scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return -1;
+        pj_scan_syntax_err(scanner);
+        return -1;
     }
     return pj_ansi_strnicmp(scanner->curptr, s, len);
 }
 
 PJ_DEF(int) pj_scan_stricmp_alnum( pj_scanner *scanner, const char *s, 
-				   int len)
+                                   int len)
 {
     if (scanner->curptr + len > scanner->end) {
-	pj_scan_syntax_err(scanner);
-	return -1;
+        pj_scan_syntax_err(scanner);
+        return -1;
     }
     return strnicmp_alnum(scanner->curptr, s, len);
 }
 
 PJ_DEF(void) pj_scan_save_state( const pj_scanner *scanner, 
-				 pj_scan_state *state)
+                                 pj_scan_state *state)
 {
     state->curptr = scanner->curptr;
     state->line = scanner->line;
@@ -645,7 +644,7 @@ PJ_DEF(void) pj_scan_save_state( const pj_scanner *scanner,
 
 
 PJ_DEF(void) pj_scan_restore_state( pj_scanner *scanner, 
-				    pj_scan_state *state)
+                                    pj_scan_state *state)
 {
     scanner->curptr = state->curptr;
     scanner->line = state->line;

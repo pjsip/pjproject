@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -65,12 +64,12 @@ typedef struct pjmedia_avi_streams pjmedia_avi_streams;
  * reading AVI file with uncompressed video format and 
  * 16 bit PCM or compressed G.711 A-law/U-law audio format.
  *
- * @param pool		Pool to create the streams.
- * @param filename	File name to open.
- * @param flags		Avi streams creation flags.
- * @param p_streams	Pointer to receive the avi streams instance.
+ * @param pool          Pool to create the streams.
+ * @param filename      File name to open.
+ * @param flags         Avi streams creation flags.
+ * @param p_streams     Pointer to receive the avi streams instance.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_avi_player_create_streams(pj_pool_t *pool,
@@ -81,9 +80,9 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
 /**
  * Get the number of AVI stream.
  *
- * @param streams	The AVI streams.
+ * @param streams       The AVI streams.
  *
- * @return		The number of AVI stream.
+ * @return              The number of AVI stream.
  */
 PJ_DECL(unsigned)
 pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams);
@@ -91,10 +90,10 @@ pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams);
 /**
  * Return the idx-th stream of the AVI streams.
  *
- * @param streams	The AVI streams.
- * @param idx	        The stream index.
+ * @param streams       The AVI streams.
+ * @param idx           The stream index.
  *
- * @return		The AVI stream or NULL if it does not exist.
+ * @return              The AVI stream or NULL if it does not exist.
  */
 PJ_DECL(pjmedia_avi_stream *)
 pjmedia_avi_streams_get_stream(pjmedia_avi_streams *streams,
@@ -103,11 +102,11 @@ pjmedia_avi_streams_get_stream(pjmedia_avi_streams *streams,
 /**
  * Return an AVI stream with a certain media type from the AVI streams.
  *
- * @param streams	The AVI streams.
+ * @param streams       The AVI streams.
  * @param start_idx     The starting index.
  * @param media_type    The media type of the stream.
  *
- * @return		The AVI stream or NULL if it does not exist.
+ * @return              The AVI stream or NULL if it does not exist.
  */
 PJ_DECL(pjmedia_avi_stream *)
 pjmedia_avi_streams_get_stream_by_media(pjmedia_avi_streams *streams,
@@ -117,9 +116,9 @@ pjmedia_avi_streams_get_stream_by_media(pjmedia_avi_streams *streams,
 /**
  * Return the media port of an AVI stream.
  *
- * @param stream	The AVI stream.
+ * @param stream        The AVI stream.
  *
- * @return		The media port.
+ * @return              The media port.
  */
 PJ_INLINE(pjmedia_port *)
 pjmedia_avi_stream_get_port(pjmedia_avi_stream *stream)
@@ -132,8 +131,8 @@ pjmedia_avi_stream_get_port(pjmedia_avi_stream *stream)
  *
  * @param stream        The AVI stream.
  *
- * @return		The length of the data, in bytes. Upon error it will
- *			return negative value.
+ * @return              The length of the data, in bytes. Upon error it will
+ *                      return negative value.
  */
 PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream);
 
@@ -145,20 +144,20 @@ PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream);
  * will be called multiple times. Note that only one callback can be 
  * registered for each AVI stream.
  *
- * @param stream	The AVI stream.
- * @param user_data	User data to be specified in the callback
- * @param cb		Callback to be called. If the callback returns non-
- *			PJ_SUCCESS, the playback will stop. Note that if
- *			application destroys the file port in the callback,
- *			it must return non-PJ_SUCCESS here.
+ * @param stream        The AVI stream.
+ * @param user_data     User data to be specified in the callback
+ * @param cb            Callback to be called. If the callback returns non-
+ *                      PJ_SUCCESS, the playback will stop. Note that if
+ *                      application destroys the file port in the callback,
+ *                      it must return non-PJ_SUCCESS here.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream *stream,
-			      void *user_data,
-			      pj_status_t (*cb)(pjmedia_avi_stream *stream,
-					        void *usr_data));
+                              void *user_data,
+                              pj_status_t (*cb)(pjmedia_avi_stream *stream,
+                                                void *usr_data));
 #endif
 
 
@@ -168,21 +167,21 @@ pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream *stream,
  * will be called multiple times. Note that only one callback can be 
  * registered for each AVI stream.
  *
- * @param stream	The AVI stream.
- * @param user_data	User data to be specified in the callback
- * @param cb		Callback to be called. Note that if
- *			application wishes to stop the playback, it
- *			can disconnect the port in the callback, and
- *			only after all connections have been removed
- *			could the application safely destroy the port.
+ * @param stream        The AVI stream.
+ * @param user_data     User data to be specified in the callback
+ * @param cb            Callback to be called. Note that if
+ *                      application wishes to stop the playback, it
+ *                      can disconnect the port in the callback, and
+ *                      only after all connections have been removed
+ *                      could the application safely destroy the port.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_avi_stream_set_eof_cb2(pjmedia_avi_stream *stream,
-			       void *user_data,
-			       void (*cb)(pjmedia_avi_stream *stream,
-					  void *usr_data));
+                               void *user_data,
+                               void (*cb)(pjmedia_avi_stream *stream,
+                                          void *usr_data));
 
 
 /**
@@ -193,4 +192,4 @@ pjmedia_avi_stream_set_eof_cb2(pjmedia_avi_stream *stream,
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_AVI_STREAM_H__ */
+#endif  /* __PJMEDIA_AVI_STREAM_H__ */

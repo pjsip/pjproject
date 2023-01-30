@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -44,23 +43,23 @@ PJ_BEGIN_DECL
 /**
  * Create echo canceller port. 
  *
- * @param pool		Pool to allocate memory.
- * @param dn_port	Downstream port.
- * @param tail_ms	Tail length in miliseconds.
- * @param latency_ms	Total lacency introduced by playback and 
- *			recording device. Set to zero if the latency
- *			is not known.
- * @param options	Options, as in #pjmedia_echo_create().
- * @param p_port	Pointer to receive the port instance.
+ * @param pool          Pool to allocate memory.
+ * @param dn_port       Downstream port.
+ * @param tail_ms       Tail length in miliseconds.
+ * @param latency_ms    Total lacency introduced by playback and 
+ *                      recording device. Set to zero if the latency
+ *                      is not known.
+ * @param options       Options, as in #pjmedia_echo_create().
+ * @param p_port        Pointer to receive the port instance.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
-					      pjmedia_port *dn_port,
-					      unsigned tail_ms,
-					      unsigned latency_ms,
-					      unsigned options,
-					      pjmedia_port **p_port );
+                                              pjmedia_port *dn_port,
+                                              unsigned tail_ms,
+                                              unsigned latency_ms,
+                                              unsigned options,
+                                              pjmedia_port **p_port );
 
 
 
@@ -71,4 +70,4 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_AEC_PORT_H__ */
+#endif  /* __PJMEDIA_AEC_PORT_H__ */

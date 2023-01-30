@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2015-2016 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2012-2015 Zaark Technology AB
@@ -99,20 +98,20 @@ typedef struct pjmedia_codec_opus_config
 {
     unsigned   sample_rate; /**< Sample rate in Hz.                     */
     unsigned   channel_cnt; /**< Number of channels.                    */
-    unsigned   frm_ptime;   /**< Frame time in msec.   			*/
-    unsigned   bit_rate;    /**< Encoder bit rate in bps.		*/
-    unsigned   packet_loss; /**< Encoder's expected packet loss pct.	*/
+    unsigned   frm_ptime;   /**< Frame time in msec.                    */
+    unsigned   bit_rate;    /**< Encoder bit rate in bps.               */
+    unsigned   packet_loss; /**< Encoder's expected packet loss pct.    */
     unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/
-    pj_bool_t  cbr;         /**< Constant bit rate?			*/
+    pj_bool_t  cbr;         /**< Constant bit rate?                     */
 } pjmedia_codec_opus_config;
 
 
 /**
  * Initialize and register Opus codec factory to pjmedia endpoint.
  *
- * @param endpt		The pjmedia endpoint.
+ * @param endpt         The pjmedia endpoint.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opus_init( pjmedia_endpt *endpt );
 
@@ -120,16 +119,16 @@ PJ_DECL(pj_status_t) pjmedia_codec_opus_init( pjmedia_endpt *endpt );
  * Unregister Opus codec factory from pjmedia endpoint and deinitialize
  * the Opus codec library.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opus_deinit( void );
 
 /**
  * Get the default Opus configuration.
  *
- * @param cfg		Opus codec configuration.
+ * @param cfg           Opus codec configuration.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_codec_opus_get_config( pjmedia_codec_opus_config *cfg );
@@ -138,18 +137,18 @@ pjmedia_codec_opus_get_config( pjmedia_codec_opus_config *cfg );
  * Set the default Opus configuration and set the default Opus codec param.
  * Note that the function will call #pjmedia_codec_mgr_set_default_param().
  *
- * @param cfg		Opus codec configuration.
- * @param param	    	On input, the default Opus codec parameter to be set.
- *			On output, the current default Opus codec parameter
- *			after setting. This may be different from the input
- *			because some settings can be rejected, or overwritten
- *			by the Opus codec configuration above.
+ * @param cfg           Opus codec configuration.
+ * @param param         On input, the default Opus codec parameter to be set.
+ *                      On output, the current default Opus codec parameter
+ *                      after setting. This may be different from the input
+ *                      because some settings can be rejected, or overwritten
+ *                      by the Opus codec configuration above.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
-				     pjmedia_codec_param *param );
+                                     pjmedia_codec_param *param );
 
 PJ_END_DECL
 
@@ -157,4 +156,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_OPUS_H__ */
+#endif  /* __PJMEDIA_CODEC_OPUS_H__ */
