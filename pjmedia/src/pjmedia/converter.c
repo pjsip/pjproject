@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -20,7 +19,7 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 
-#define THIS_FILE	"converter.c"
+#define THIS_FILE       "converter.c"
 
 struct pjmedia_converter_mgr
 {
@@ -42,7 +41,7 @@ pjmedia_libyuv_converter_init(pjmedia_converter_mgr *mgr);
 #endif
 
 PJ_DEF(pj_status_t) pjmedia_converter_mgr_create(pj_pool_t *pool,
-					         pjmedia_converter_mgr **p_mgr)
+                                                 pjmedia_converter_mgr **p_mgr)
 {
     pjmedia_converter_mgr *mgr;
     pj_status_t status = PJ_SUCCESS;
@@ -51,14 +50,14 @@ PJ_DEF(pj_status_t) pjmedia_converter_mgr_create(pj_pool_t *pool,
     pj_list_init(&mgr->factory_list);
 
     if (!converter_manager_instance)
-	converter_manager_instance = mgr;
+        converter_manager_instance = mgr;
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
     defined(PJMEDIA_HAS_LIBSWSCALE) && (PJMEDIA_HAS_LIBSWSCALE != 0)
     status = pjmedia_libswscale_converter_init(mgr);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(4,(THIS_FILE, status,
-		     "Error initializing libswscale converter"));
+        PJ_PERROR(4,(THIS_FILE, status,
+                     "Error initializing libswscale converter"));
     }
 #endif
 
@@ -66,13 +65,13 @@ PJ_DEF(pj_status_t) pjmedia_converter_mgr_create(pj_pool_t *pool,
     defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
     status = pjmedia_libyuv_converter_init(mgr);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(4,(THIS_FILE, status,
-		     "Error initializing libyuv converter"));
+        PJ_PERROR(4,(THIS_FILE, status,
+                     "Error initializing libyuv converter"));
     }
 #endif
 
     if (p_mgr)
-	*p_mgr = mgr;
+        *p_mgr = mgr;
 
     return status;
 }
@@ -98,19 +97,19 @@ PJ_DEF(void) pjmedia_converter_mgr_destroy(pjmedia_converter_mgr *mgr)
 
     f = mgr->factory_list.next;
     while (f != &mgr->factory_list) {
-	pjmedia_converter_factory *next = f->next;
-	pj_list_erase(f);
-	(*f->op->destroy_factory)(f);
-	f = next;
+        pjmedia_converter_factory *next = f->next;
+        pj_list_erase(f);
+        (*f->op->destroy_factory)(f);
+        f = next;
     }
 
     if (converter_manager_instance == mgr)
-	converter_manager_instance = NULL;
+        converter_manager_instance = NULL;
 }
 
 PJ_DEF(pj_status_t)
 pjmedia_converter_mgr_register_factory(pjmedia_converter_mgr *mgr,
-				       pjmedia_converter_factory *factory)
+                                       pjmedia_converter_factory *factory)
 {
     pjmedia_converter_factory *pf;
 
@@ -119,13 +118,13 @@ pjmedia_converter_mgr_register_factory(pjmedia_converter_mgr *mgr,
     PJ_ASSERT_RETURN(mgr != NULL, PJ_EINVAL);
 
     PJ_ASSERT_RETURN(!pj_list_find_node(&mgr->factory_list, factory),
-		     PJ_EEXISTS);
+                     PJ_EEXISTS);
 
     pf = mgr->factory_list.next;
     while (pf != &mgr->factory_list) {
-	if (pf->priority > factory->priority)
-	    break;
-	pf = pf->next;
+        if (pf->priority > factory->priority)
+            break;
+        pf = pf->next;
     }
     pj_list_insert_before(pf, factory);
     return PJ_SUCCESS;
@@ -134,8 +133,8 @@ pjmedia_converter_mgr_register_factory(pjmedia_converter_mgr *mgr,
 
 PJ_DEF(pj_status_t)
 pjmedia_converter_mgr_unregister_factory(pjmedia_converter_mgr *mgr,
-				         pjmedia_converter_factory *f,
-				         pj_bool_t destroy)
+                                         pjmedia_converter_factory *f,
+                                         pj_bool_t destroy)
 {
     if (!mgr) mgr = pjmedia_converter_mgr_instance();
 
@@ -144,14 +143,14 @@ pjmedia_converter_mgr_unregister_factory(pjmedia_converter_mgr *mgr,
     PJ_ASSERT_RETURN(pj_list_find_node(&mgr->factory_list, f), PJ_ENOTFOUND);
     pj_list_erase(f);
     if (destroy)
-	(*f->op->destroy_factory)(f);
+        (*f->op->destroy_factory)(f);
     return PJ_SUCCESS;
 }
 
 PJ_DEF(pj_status_t) pjmedia_converter_create(pjmedia_converter_mgr *mgr,
-					      pj_pool_t *pool,
-					      pjmedia_conversion_param *param,
-					      pjmedia_converter **p_cv)
+                                              pj_pool_t *pool,
+                                              pjmedia_conversion_param *param,
+                                              pjmedia_converter **p_cv)
 {
     pjmedia_converter_factory *f;
     pjmedia_converter *cv = NULL;
@@ -165,14 +164,14 @@ PJ_DEF(pj_status_t) pjmedia_converter_create(pjmedia_converter_mgr *mgr,
 
     f = mgr->factory_list.next;
     while (f != &mgr->factory_list) {
-	status = (*f->op->create_converter)(f, pool, param, &cv);
-	if (status == PJ_SUCCESS)
-	    break;
-	f = f->next;
+        status = (*f->op->create_converter)(f, pool, param, &cv);
+        if (status == PJ_SUCCESS)
+            break;
+        f = f->next;
     }
 
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     *p_cv = cv;
 
@@ -180,8 +179,8 @@ PJ_DEF(pj_status_t) pjmedia_converter_create(pjmedia_converter_mgr *mgr,
 }
 
 PJ_DEF(pj_status_t) pjmedia_converter_convert(pjmedia_converter *cv,
-					       pjmedia_frame *src_frame,
-					       pjmedia_frame *dst_frame)
+                                               pjmedia_frame *src_frame,
+                                               pjmedia_frame *dst_frame)
 {
     return (*cv->op->convert)(cv, src_frame, dst_frame);
 }
@@ -192,19 +191,19 @@ PJ_DEF(void) pjmedia_converter_destroy(pjmedia_converter *cv)
 }
 
 PJ_DEF(pj_status_t) pjmedia_converter_convert2(
-				    pjmedia_converter	    *cv,
-				    pjmedia_frame	    *src_frame,
-				    const pjmedia_rect_size *src_frame_size,
-				    const pjmedia_coord	    *src_pos,
-				    pjmedia_frame	    *dst_frame,
-				    const pjmedia_rect_size *dst_frame_size,
-				    const pjmedia_coord	    *dst_pos,
-				    void		    *param)
+                                    pjmedia_converter       *cv,
+                                    pjmedia_frame           *src_frame,
+                                    const pjmedia_rect_size *src_frame_size,
+                                    const pjmedia_coord     *src_pos,
+                                    pjmedia_frame           *dst_frame,
+                                    const pjmedia_rect_size *dst_frame_size,
+                                    const pjmedia_coord     *dst_pos,
+                                    void                    *param)
 {
     if (!cv->op->convert2)
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
 
     return (*cv->op->convert2)(cv, src_frame, src_frame_size, src_pos,
-			       dst_frame, dst_frame_size, dst_pos, param);
+                               dst_frame, dst_frame_size, dst_pos, param);
 }
 

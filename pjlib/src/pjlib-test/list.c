@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -60,7 +59,7 @@ static int compare_node(void *value, const pj_list_type *nd)
     return ((long)(pj_ssize_t)value == node->value) ? 0 : -1;
 }
 
-#define PJ_SIGNED_ARRAY_SIZE(a)	((int)PJ_ARRAY_SIZE(a))
+#define PJ_SIGNED_ARRAY_SIZE(a) ((int)PJ_ARRAY_SIZE(a))
 
 int list_test()
 {
@@ -76,15 +75,15 @@ int list_test()
     list.value = (unsigned)-1;
     pj_list_init(&list);
     for (i=0; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i) {
-	nodes[i].value = i;
-	pj_list_insert_before(&list, &nodes[i]);
+        nodes[i].value = i;
+        pj_list_insert_before(&list, &nodes[i]);
     }
     // check.
     for (i=0, p=list.next; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i, p=p->next) {
-	pj_assert(p->value == i);
-	if (p->value != i) {
-	    return -1;
-	}
+        pj_assert(p->value == i);
+        if (p->value != i) {
+            return -1;
+        }
     }
 
     //
@@ -92,14 +91,14 @@ int list_test()
     //
     pj_list_init(&list);
     for (i=PJ_SIGNED_ARRAY_SIZE(nodes)-1; i>=0; --i) {
-	pj_list_insert_after(&list, &nodes[i]);
+        pj_list_insert_after(&list, &nodes[i]);
     }
     // check.
     for (i=0, p=list.next; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i, p=p->next) {
-	pj_assert(p->value == i);
-	if (p->value != i) {
-	    return -1;
-	}
+        pj_assert(p->value == i);
+        if (p->value != i) {
+            return -1;
+        }
     }
 
     //
@@ -109,24 +108,24 @@ int list_test()
     pj_list_init(&list);
     pj_list_init(&list2);
     for (i=0; i<PJ_SIGNED_ARRAY_SIZE(nodes)/2; ++i) {
-	pj_list_insert_before(&list, &nodes[i]);
+        pj_list_insert_before(&list, &nodes[i]);
     }
     for (i=PJ_SIGNED_ARRAY_SIZE(nodes)/2; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i) {
-	pj_list_insert_before(&list2, &nodes[i]);
+        pj_list_insert_before(&list2, &nodes[i]);
     }
     // merge
     pj_list_merge_last(&list, &list2);
     // check.
     for (i=0, p=list.next; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i, p=p->next) {
-	pj_assert(p->value == i);
-	if (p->value != i) {
-	    return -1;
-	}
+        pj_assert(p->value == i);
+        if (p->value != i) {
+            return -1;
+        }
     }
     // check list is empty
     pj_assert( pj_list_empty(&list2) );
     if (!pj_list_empty(&list2)) {
-	return -1;
+        return -1;
     }
 
     // 
@@ -135,24 +134,24 @@ int list_test()
     pj_list_init(&list);
     pj_list_init(&list2);
     for (i=0; i<PJ_SIGNED_ARRAY_SIZE(nodes)/2; ++i) {
-	pj_list_insert_before(&list, &nodes[i]);
+        pj_list_insert_before(&list, &nodes[i]);
     }
     for (i=PJ_SIGNED_ARRAY_SIZE(nodes)/2; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i) {
-	pj_list_insert_before(&list2, &nodes[i]);
+        pj_list_insert_before(&list2, &nodes[i]);
     }
     // merge
     pj_list_merge_first(&list2, &list);
     // check (list2).
     for (i=0, p=list2.next; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i, p=p->next) {
-	pj_assert(p->value == i);
-	if (p->value != i) {
-	    return -1;
-	}
+        pj_assert(p->value == i);
+        if (p->value != i) {
+            return -1;
+        }
     }
     // check list is empty
     pj_assert( pj_list_empty(&list) );
     if (!pj_list_empty(&list)) {
-	return -1;
+        return -1;
     }
 
     //
@@ -161,58 +160,58 @@ int list_test()
     // init list
     pj_list_init(&list);
     for (i=0; i<PJ_SIGNED_ARRAY_SIZE(nodes)/2; ++i) {
-	pj_list_insert_before(&list, &nodes[i]);
+        pj_list_insert_before(&list, &nodes[i]);
     }
     // chain remaining nodes
     pj_list_init(&nodes[PJ_SIGNED_ARRAY_SIZE(nodes)/2]);
     for (i=PJ_SIGNED_ARRAY_SIZE(nodes)/2+1; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i) {
-	pj_list_insert_before(&nodes[PJ_SIGNED_ARRAY_SIZE(nodes)/2], &nodes[i]);
+        pj_list_insert_before(&nodes[PJ_SIGNED_ARRAY_SIZE(nodes)/2], &nodes[i]);
     }
     // insert nodes
     pj_list_insert_nodes_before(&list, &nodes[PJ_SIGNED_ARRAY_SIZE(nodes)/2]);
     // check
     for (i=0, p=list.next; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i, p=p->next) {
-	pj_assert(p->value == i);
-	if (p->value != i) {
-	    return -1;
-	}
+        pj_assert(p->value == i);
+        if (p->value != i) {
+            return -1;
+        }
     }
 
     // erase test.
     pj_list_init(&list);
     for (i=0; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i) {
-	nodes[i].value = i;
-	pj_list_insert_before(&list, &nodes[i]);
+        nodes[i].value = i;
+        pj_list_insert_before(&list, &nodes[i]);
     }
     for (i=PJ_SIGNED_ARRAY_SIZE(nodes)-1; i>=0; --i) {
-	int j;
-	pj_list_erase(&nodes[i]);
-	for (j=0, p=list.next; j<i; ++j, p=p->next) {
-	    pj_assert(p->value == j);
-	    if (p->value != j) {
-		return -1;
-	    }
-	}
+        int j;
+        pj_list_erase(&nodes[i]);
+        for (j=0, p=list.next; j<i; ++j, p=p->next) {
+            pj_assert(p->value == j);
+            if (p->value != j) {
+                return -1;
+            }
+        }
     }
 
     // find and search
     pj_list_init(&list);
     for (i=0; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i) {
-	nodes[i].value = i;
-	pj_list_insert_before(&list, &nodes[i]);
+        nodes[i].value = i;
+        pj_list_insert_before(&list, &nodes[i]);
     }
     for (i=0; i<PJ_SIGNED_ARRAY_SIZE(nodes); ++i) {
-	p = (list_node*) pj_list_find_node(&list, &nodes[i]);
-	pj_assert( p == &nodes[i] );
-	if (p != &nodes[i]) {
-	    return -1;
-	}
-	p = (list_node*) pj_list_search(&list, (void*)(pj_ssize_t)i, 
-					&compare_node);
-	pj_assert( p == &nodes[i] );
-	if (p != &nodes[i]) {
-	    return -1;
-	}
+        p = (list_node*) pj_list_find_node(&list, &nodes[i]);
+        pj_assert( p == &nodes[i] );
+        if (p != &nodes[i]) {
+            return -1;
+        }
+        p = (list_node*) pj_list_search(&list, (void*)(pj_ssize_t)i, 
+                                        &compare_node);
+        pj_assert( p == &nodes[i] );
+        if (p != &nodes[i]) {
+            return -1;
+        }
     }
     return 0;
 }
@@ -222,6 +221,6 @@ int list_test()
  * when this test is disabled. 
  */
 int dummy_list_test;
-#endif	/* INCLUDE_LIST_TEST */
+#endif  /* INCLUDE_LIST_TEST */
 
 

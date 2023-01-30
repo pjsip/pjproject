@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -33,31 +32,31 @@
 ////////////////////////////////////////////////////////////////////////////
 
 
-#define ACTION_REPLY	0
-#define ACTION_IGNORE	-1
-#define ACTION_CB	-2
+#define ACTION_REPLY    0
+#define ACTION_IGNORE   -1
+#define ACTION_CB       -2
 
 #undef s6_addr32
 #define s6_addr32(addr, idx) *((pj_uint32_t *)(addr.s6_addr + idx*4))
 
 static struct server_t
 {
-    pj_sock_t	     sock;
-    pj_uint16_t	     port;
-    pj_thread_t	    *thread;
+    pj_sock_t        sock;
+    pj_uint16_t      port;
+    pj_thread_t     *thread;
 
     /* Action:
-     *	0:    reply with the response in resp.
+     *  0:    reply with the response in resp.
      * -1:    ignore query (to simulate timeout).
      * other: reply with that error
      */
-    int		    action;
+    int             action;
 
     pj_dns_parsed_packet    resp;
-    void		  (*action_cb)(const pj_dns_parsed_packet *pkt,
-				       pj_dns_parsed_packet **p_res);
+    void                  (*action_cb)(const pj_dns_parsed_packet *pkt,
+                                       pj_dns_parsed_packet **p_res);
 
-    unsigned	    pkt_count;
+    unsigned        pkt_count;
 
 } g_server[2];
 
@@ -77,8 +76,8 @@ struct label_tab
     unsigned count;
 
     struct {
-	unsigned pos;
-	pj_str_t label;
+        unsigned pos;
+        pj_str_t label;
     } a[MAX_LABEL];
 };
 
@@ -95,8 +94,8 @@ static void write32(pj_uint8_t *p, pj_uint32_t val)
 }
 
 static int print_name(pj_uint8_t *pkt, int size,
-		      pj_uint8_t *pos, const pj_str_t *name,
-		      struct label_tab *tab)
+                      pj_uint8_t *pos, const pj_str_t *name,
+                      struct label_tab *tab)
 {
     pj_uint8_t *p = pos;
     const char *endlabel, *endname;
@@ -105,20 +104,20 @@ static int print_name(pj_uint8_t *pkt, int size,
 
     /* Check if name is in the table */
     for (i=0; i<tab->count; ++i) {
-	if (pj_strcmp(&tab->a[i].label, name)==0)
-	    break;
+        if (pj_strcmp(&tab->a[i].label, name)==0)
+            break;
     }
 
     if (i != tab->count) {
-	write16(p, (pj_uint16_t)(tab->a[i].pos | (0xc0 << 8)));
-	return 2;
+        write16(p, (pj_uint16_t)(tab->a[i].pos | (0xc0 << 8)));
+        return 2;
     } else {
-	if (tab->count < MAX_LABEL) {
-	    tab->a[tab->count].pos = (unsigned)(p-pkt);
-	    tab->a[tab->count].label.ptr = (char*)(p+1);
-	    tab->a[tab->count].label.slen = name->slen;
-	    ++tab->count;
-	}
+        if (tab->count < MAX_LABEL) {
+            tab->a[tab->count].pos = (unsigned)(p-pkt);
+            tab->a[tab->count].label.ptr = (char*)(p+1);
+            tab->a[tab->count].label.slen = name->slen;
+            ++tab->count;
+        }
     }
 
     endlabel = name->ptr;
@@ -128,27 +127,27 @@ static int print_name(pj_uint8_t *pkt, int size,
 
     while (endlabel != endname) {
 
-	while (endlabel != endname && *endlabel != '.')
-	    ++endlabel;
+        while (endlabel != endname && *endlabel != '.')
+            ++endlabel;
 
-	label.slen = (endlabel - label.ptr);
+        label.slen = (endlabel - label.ptr);
 
-	if (size < label.slen+1)
-	    return -1;
+        if (size < label.slen+1)
+            return -1;
 
-	*p = (pj_uint8_t)label.slen;
-	pj_memcpy(p+1, label.ptr, label.slen);
+        *p = (pj_uint8_t)label.slen;
+        pj_memcpy(p+1, label.ptr, label.slen);
 
-	size -= (int)(label.slen+1);
-	p += (label.slen+1);
+        size -= (int)(label.slen+1);
+        p += (label.slen+1);
 
-	if (endlabel != endname && *endlabel == '.')
-	    ++endlabel;
-	label.ptr = (char*)endlabel;
+        if (endlabel != endname && *endlabel == '.')
+            ++endlabel;
+        label.ptr = (char*)endlabel;
     }
 
     if (size == 0)
-	return -1;
+        return -1;
 
     *p++ = '\0';
 
@@ -156,104 +155,104 @@ static int print_name(pj_uint8_t *pkt, int size,
 }
 
 static int print_rr(pj_uint8_t *pkt, int size, pj_uint8_t *pos,
-		    const pj_dns_parsed_rr *rr, struct label_tab *tab)
+                    const pj_dns_parsed_rr *rr, struct label_tab *tab)
 {
     pj_uint8_t *p = pos;
     int len;
 
     len = print_name(pkt, size, pos, &rr->name, tab);
     if (len < 0)
-	return -1;
+        return -1;
 
     p += len;
     size -= len;
 
     if (size < 8)
-	return -1;
+        return -1;
 
     pj_assert(rr->dnsclass == 1);
 
-    write16(p+0, (pj_uint16_t)rr->type);	/* type	    */
-    write16(p+2, (pj_uint16_t)rr->dnsclass);	/* class    */
-    write32(p+4, rr->ttl);			/* TTL	    */
+    write16(p+0, (pj_uint16_t)rr->type);        /* type     */
+    write16(p+2, (pj_uint16_t)rr->dnsclass);    /* class    */
+    write32(p+4, rr->ttl);                      /* TTL      */
 
     p += 8;
     size -= 8;
 
     if (rr->type == PJ_DNS_TYPE_A) {
 
-	if (size < 6)
-	    return -1;
+        if (size < 6)
+            return -1;
 
-	/* RDLEN is 4 */
-	write16(p, 4);
+        /* RDLEN is 4 */
+        write16(p, 4);
 
-	/* Address */
-	pj_memcpy(p+2, &rr->rdata.a.ip_addr, 4);
+        /* Address */
+        pj_memcpy(p+2, &rr->rdata.a.ip_addr, 4);
 
-	p += 6;
-	size -= 6;
+        p += 6;
+        size -= 6;
 
     } else if (rr->type == PJ_DNS_TYPE_AAAA) {
 
-	if (size < 18)
-	    return -1;
+        if (size < 18)
+            return -1;
 
-	/* RDLEN is 16 */
-	write16(p, 16);
+        /* RDLEN is 16 */
+        write16(p, 16);
 
-	/* Address */
-	pj_memcpy(p+2, &rr->rdata.aaaa.ip_addr, 16);
+        /* Address */
+        pj_memcpy(p+2, &rr->rdata.aaaa.ip_addr, 16);
 
-	p += 18;
-	size -= 18;
+        p += 18;
+        size -= 18;
 
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
-	       rr->type == PJ_DNS_TYPE_NS ||
-	       rr->type == PJ_DNS_TYPE_PTR) {
+               rr->type == PJ_DNS_TYPE_NS ||
+               rr->type == PJ_DNS_TYPE_PTR) {
 
-	if (size < 4)
-	    return -1;
+        if (size < 4)
+            return -1;
 
-	len = print_name(pkt, size-2, p+2, &rr->rdata.cname.name, tab);
-	if (len < 0)
-	    return -1;
+        len = print_name(pkt, size-2, p+2, &rr->rdata.cname.name, tab);
+        if (len < 0)
+            return -1;
 
-	write16(p, (pj_uint16_t)len);
+        write16(p, (pj_uint16_t)len);
 
-	p += (len + 2);
-	size -= (len + 2);
+        p += (len + 2);
+        size -= (len + 2);
 
     } else if (rr->type == PJ_DNS_TYPE_SRV) {
 
-	if (size < 10)
-	    return -1;
+        if (size < 10)
+            return -1;
 
-	write16(p+2, rr->rdata.srv.prio);   /* Priority */
-	write16(p+4, rr->rdata.srv.weight); /* Weight */
-	write16(p+6, rr->rdata.srv.port);   /* Port */
+        write16(p+2, rr->rdata.srv.prio);   /* Priority */
+        write16(p+4, rr->rdata.srv.weight); /* Weight */
+        write16(p+6, rr->rdata.srv.port);   /* Port */
 
-	/* Target */
-	len = print_name(pkt, size-8, p+8, &rr->rdata.srv.target, tab);
-	if (len < 0)
-	    return -1;
+        /* Target */
+        len = print_name(pkt, size-8, p+8, &rr->rdata.srv.target, tab);
+        if (len < 0)
+            return -1;
 
-	/* RDLEN */
-	write16(p, (pj_uint16_t)(len + 6));
+        /* RDLEN */
+        write16(p, (pj_uint16_t)(len + 6));
 
-	p += (len + 8);
-	size -= (len + 8);
+        p += (len + 8);
+        size -= (len + 8);
 
     } else {
-	pj_assert(!"Not supported");
-	return -1;
+        pj_assert(!"Not supported");
+        return -1;
     }
 
     return (int)(p-pos);
 }
 
 static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
-			int size)
+                        int size)
 {
     pj_uint8_t *p = pkt;
     struct label_tab tab;
@@ -270,7 +269,7 @@ static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
 
     pj_assert(sizeof(pj_dns_hdr)==12);
     if (size < (int)sizeof(pj_dns_hdr))
-	return -1;
+        return -1;
 
     /* Initialize header */
     write16(p+0,  rec->hdr.id);
@@ -286,54 +285,54 @@ static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
     /* Print queries */
     for (i=0; i<rec->hdr.qdcount; ++i) {
 
-	len = print_name(pkt, size, p, &rec->q[i].name, &tab);
-	if (len < 0)
-	    return -1;
+        len = print_name(pkt, size, p, &rec->q[i].name, &tab);
+        if (len < 0)
+            return -1;
 
-	p += len;
-	size -= len;
+        p += len;
+        size -= len;
 
-	if (size < 4)
-	    return -1;
+        if (size < 4)
+            return -1;
 
-	/* Set type */
-	write16(p+0, (pj_uint16_t)rec->q[i].type);
+        /* Set type */
+        write16(p+0, (pj_uint16_t)rec->q[i].type);
 
-	/* Set class (IN=1) */
-	pj_assert(rec->q[i].dnsclass == 1);
-	write16(p+2, rec->q[i].dnsclass);
+        /* Set class (IN=1) */
+        pj_assert(rec->q[i].dnsclass == 1);
+        write16(p+2, rec->q[i].dnsclass);
 
-	p += 4;
+        p += 4;
     }
 
     /* Print answers */
     for (i=0; i<rec->hdr.anscount; ++i) {
-	len = print_rr(pkt, size, p, &rec->ans[i], &tab);
-	if (len < 0)
-	    return -1;
+        len = print_rr(pkt, size, p, &rec->ans[i], &tab);
+        if (len < 0)
+            return -1;
 
-	p += len;
-	size -= len;
+        p += len;
+        size -= len;
     }
 
     /* Print NS records */
     for (i=0; i<rec->hdr.nscount; ++i) {
-	len = print_rr(pkt, size, p, &rec->ns[i], &tab);
-	if (len < 0)
-	    return -1;
+        len = print_rr(pkt, size, p, &rec->ns[i], &tab);
+        if (len < 0)
+            return -1;
 
-	p += len;
-	size -= len;
+        p += len;
+        size -= len;
     }
 
     /* Print additional records */
     for (i=0; i<rec->hdr.arcount; ++i) {
-	len = print_rr(pkt, size, p, &rec->arr[i], &tab);
-	if (len < 0)
-	    return -1;
+        len = print_rr(pkt, size, p, &rec->arr[i], &tab);
+        if (len < 0)
+            return -1;
 
-	p += len;
-	size -= len;
+        p += len;
+        size -= len;
     }
 
     return (int)(p - pkt);
@@ -345,70 +344,70 @@ static int server_thread(void *p)
     struct server_t *srv = (struct server_t*)p;
 
     while (!thread_quit) {
-	pj_fd_set_t rset;
-	pj_time_val timeout = {0, 500};
-	pj_sockaddr src_addr;
-	pj_dns_parsed_packet *req;
-	char pkt[1024];
-	pj_ssize_t pkt_len;
-	int rc, src_len;
+        pj_fd_set_t rset;
+        pj_time_val timeout = {0, 500};
+        pj_sockaddr src_addr;
+        pj_dns_parsed_packet *req;
+        char pkt[1024];
+        pj_ssize_t pkt_len;
+        int rc, src_len;
 
-	PJ_FD_ZERO(&rset);
-	PJ_FD_SET(srv->sock, &rset);
+        PJ_FD_ZERO(&rset);
+        PJ_FD_SET(srv->sock, &rset);
 
-	rc = pj_sock_select((int)(srv->sock+1), &rset, NULL, NULL, &timeout);
-	if (rc != 1)
-	    continue;
+        rc = pj_sock_select((int)(srv->sock+1), &rset, NULL, NULL, &timeout);
+        if (rc != 1)
+            continue;
 
-	src_len = sizeof(src_addr);
-	pkt_len = sizeof(pkt);
-	rc = pj_sock_recvfrom(srv->sock, pkt, &pkt_len, 0, 
-			      &src_addr, &src_len);
-	if (rc != 0) {
-	    app_perror("Server error receiving packet", rc);
-	    continue;
-	}
+        src_len = sizeof(src_addr);
+        pkt_len = sizeof(pkt);
+        rc = pj_sock_recvfrom(srv->sock, pkt, &pkt_len, 0, 
+                              &src_addr, &src_len);
+        if (rc != 0) {
+            app_perror("Server error receiving packet", rc);
+            continue;
+        }
 
-	PJ_LOG(5,(THIS_FILE, "Server %d processing packet", srv - &g_server[0]));
-	srv->pkt_count++;
+        PJ_LOG(5,(THIS_FILE, "Server %d processing packet", srv - &g_server[0]));
+        srv->pkt_count++;
 
-	rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
-	if (rc != PJ_SUCCESS) {
-	    app_perror("server error parsing packet", rc);
-	    continue;
-	}
+        rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
+        if (rc != PJ_SUCCESS) {
+            app_perror("server error parsing packet", rc);
+            continue;
+        }
 
-	/* Verify packet */
-	if (req->hdr.qdcount != 1) {
-	    PJ_LOG(5,(THIS_FILE, "server receive multiple queries in a packet"));
-	    continue;
-	}
+        /* Verify packet */
+        if (req->hdr.qdcount != 1) {
+            PJ_LOG(5,(THIS_FILE, "server receive multiple queries in a packet"));
+            continue;
+        }
 
-	if (req->q[0].dnsclass != 1) {
-	    PJ_LOG(5,(THIS_FILE, "server receive query with invalid DNS class"));
-	    continue;
-	}
+        if (req->q[0].dnsclass != 1) {
+            PJ_LOG(5,(THIS_FILE, "server receive query with invalid DNS class"));
+            continue;
+        }
 
-	/* Simulate network RTT */
-	pj_thread_sleep(50);
+        /* Simulate network RTT */
+        pj_thread_sleep(50);
 
-	if (srv->action == ACTION_IGNORE) {
-	    continue;
-	} else if (srv->action == ACTION_REPLY) {
-	    srv->resp.hdr.id = req->hdr.id;
-	    pkt_len = print_packet(&srv->resp, (pj_uint8_t*)pkt, sizeof(pkt));
-	    pj_sock_sendto(srv->sock, pkt, &pkt_len, 0, &src_addr, src_len);
-	} else if (srv->action == ACTION_CB) {
-	    pj_dns_parsed_packet *resp;
-	    (*srv->action_cb)(req, &resp);
-	    resp->hdr.id = req->hdr.id;
-	    pkt_len = print_packet(resp, (pj_uint8_t*)pkt, sizeof(pkt));
-	    pj_sock_sendto(srv->sock, pkt, &pkt_len, 0, &src_addr, src_len);
-	} else if (srv->action > 0) {
-	    req->hdr.flags |= PJ_DNS_SET_RCODE(srv->action);
-	    pkt_len = print_packet(req, (pj_uint8_t*)pkt, sizeof(pkt));
-	    pj_sock_sendto(srv->sock, pkt, &pkt_len, 0, &src_addr, src_len);
-	}
+        if (srv->action == ACTION_IGNORE) {
+            continue;
+        } else if (srv->action == ACTION_REPLY) {
+            srv->resp.hdr.id = req->hdr.id;
+            pkt_len = print_packet(&srv->resp, (pj_uint8_t*)pkt, sizeof(pkt));
+            pj_sock_sendto(srv->sock, pkt, &pkt_len, 0, &src_addr, src_len);
+        } else if (srv->action == ACTION_CB) {
+            pj_dns_parsed_packet *resp;
+            (*srv->action_cb)(req, &resp);
+            resp->hdr.id = req->hdr.id;
+            pkt_len = print_packet(resp, (pj_uint8_t*)pkt, sizeof(pkt));
+            pj_sock_sendto(srv->sock, pkt, &pkt_len, 0, &src_addr, src_len);
+        } else if (srv->action > 0) {
+            req->hdr.flags |= PJ_DNS_SET_RCODE(srv->action);
+            pkt_len = print_packet(req, (pj_uint8_t*)pkt, sizeof(pkt));
+            pj_sock_sendto(srv->sock, pkt, &pkt_len, 0, &src_addr, src_len);
+        }
     }
 
     return 0;
@@ -419,9 +418,9 @@ static int poll_worker_thread(void *p)
     PJ_UNUSED_ARG(p);
 
     while (!thread_quit) {
-	pj_time_val delay = {0, 100};
-	pj_timer_heap_poll(timer_heap, NULL);
-	pj_ioqueue_poll(ioqueue, &delay);
+        pj_time_val delay = {0, 100};
+        pj_timer_heap_poll(timer_heap, NULL);
+        pj_ioqueue_poll(ioqueue, &delay);
     }
 
     return 0;
@@ -437,11 +436,11 @@ static int init(pj_bool_t use_ipv6)
     int i;
 
     if (use_ipv6) {
-	nameservers[0] = pj_str("::1");
-	nameservers[1] = pj_str("::1");
+        nameservers[0] = pj_str("::1");
+        nameservers[1] = pj_str("::1");
     } else {
-	nameservers[0] = pj_str("127.0.0.1");
-	nameservers[1] = pj_str("127.0.0.1");
+        nameservers[0] = pj_str("127.0.0.1");
+        nameservers[1] = pj_str("127.0.0.1");
     }
     ports[0] = 5553;
     ports[1] = 5554;
@@ -457,24 +456,24 @@ static int init(pj_bool_t use_ipv6)
     thread_quit = PJ_FALSE;
 
     for (i=0; i<2; ++i) {
-	pj_sockaddr addr;
+        pj_sockaddr addr;
 
-	status = pj_sock_socket((use_ipv6? pj_AF_INET6() : pj_AF_INET()),
-				pj_SOCK_DGRAM(), 0, &g_server[i].sock);
-	if (status != PJ_SUCCESS)
-	    return -10;
+        status = pj_sock_socket((use_ipv6? pj_AF_INET6() : pj_AF_INET()),
+                                pj_SOCK_DGRAM(), 0, &g_server[i].sock);
+        if (status != PJ_SUCCESS)
+            return -10;
 
-	pj_sockaddr_init((use_ipv6? pj_AF_INET6() : pj_AF_INET()),
-			 &addr, NULL, (pj_uint16_t)g_server[i].port);
+        pj_sockaddr_init((use_ipv6? pj_AF_INET6() : pj_AF_INET()),
+                         &addr, NULL, (pj_uint16_t)g_server[i].port);
 
-	status = pj_sock_bind(g_server[i].sock, &addr, pj_sockaddr_get_len(&addr));
-	if (status != PJ_SUCCESS)
-	    return -20;
+        status = pj_sock_bind(g_server[i].sock, &addr, pj_sockaddr_get_len(&addr));
+        if (status != PJ_SUCCESS)
+            return -20;
 
-	status = pj_thread_create(pool, NULL, &server_thread, &g_server[i],
-				  0, 0, &g_server[i].thread);
-	if (status != PJ_SUCCESS)
-	    return -30;
+        status = pj_thread_create(pool, NULL, &server_thread, &g_server[i],
+                                  0, 0, &g_server[i].thread);
+        if (status != PJ_SUCCESS)
+            return -30;
     }
 
     status = pj_timer_heap_create(pool, 16, &timer_heap);
@@ -485,7 +484,7 @@ static int init(pj_bool_t use_ipv6)
 
     status = pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue, &resolver);
     if (status != PJ_SUCCESS)
-	return -40;
+        return -40;
 
     pj_dns_resolver_get_settings(resolver, &set);
     set.good_ns_ttl = 20;
@@ -509,8 +508,8 @@ static void destroy(void)
     thread_quit = PJ_TRUE;
 
     for (i=0; i<2; ++i) {
-	pj_thread_join(g_server[i].thread);
-	pj_sock_close(g_server[i].sock);
+        pj_thread_join(g_server[i].thread);
+        pj_sock_close(g_server[i].sock);
     }
 
     pj_thread_join(poll_thread);
@@ -536,7 +535,7 @@ static int a_parser_test(void)
 
     pkt.q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     pkt.ans = (pj_dns_parsed_rr*)
-	      pj_pool_calloc(pool, 32, sizeof(pj_dns_parsed_rr));
+              pj_pool_calloc(pool, 32, sizeof(pj_dns_parsed_rr));
 
     /* Simple answer with direct A record, but with addition of
      * a CNAME and another A to confuse the parser.
@@ -738,7 +737,7 @@ static int addr_parser_test(void)
 
     pkt.q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     pkt.ans = (pj_dns_parsed_rr*)
-	      pj_pool_calloc(pool, 32, sizeof(pj_dns_parsed_rr));
+              pj_pool_calloc(pool, 32, sizeof(pj_dns_parsed_rr));
 
     /* Simple answer with direct A record, but with addition of
      * a CNAME and another A to confuse the parser.
@@ -941,8 +940,8 @@ static int addr_parser_test(void)
 #define IP_ADDR0    0x00010203
 
 static void dns_callback(void *user_data,
-			 pj_status_t status,
-			 pj_dns_parsed_packet *resp)
+                         pj_status_t status,
+                         pj_dns_parsed_packet *resp)
 {
     PJ_UNUSED_ARG(user_data);
 
@@ -997,9 +996,9 @@ static int simple_test(void)
     r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR0;
 
     status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-					 &dns_callback, NULL, NULL);
+                                         &dns_callback, NULL, NULL);
     if (status != PJ_SUCCESS)
-	return -1000;
+        return -1000;
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
@@ -1017,8 +1016,8 @@ static int simple_test(void)
 /* DNS nameserver fail-over test */
 
 static void dns_callback_1b(void *user_data,
-			    pj_status_t status,
-			    pj_dns_parsed_packet *resp)
+                            pj_status_t status,
+                            pj_dns_parsed_packet *resp)
 {
     PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(resp);
@@ -1026,7 +1025,7 @@ static void dns_callback_1b(void *user_data,
     pj_sem_post(sem);
 
     PJ_ASSERT_ON_FAIL(status==PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN),
-		      return);
+                      return);
 }
 
 
@@ -1047,9 +1046,9 @@ static int dns_test(void)
     g_server[1].action = PJ_DNS_RCODE_NXDOMAIN;
 
     status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-					 &dns_callback_1b, NULL, NULL);
+                                         &dns_callback_1b, NULL, NULL);
     if (status != PJ_SUCCESS)
-	return -1000;
+        return -1000;
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
@@ -1061,7 +1060,7 @@ static int dns_test(void)
 
     /* Wait to allow active period to complete and get into probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
-			 set.good_ns_ttl));
+                         set.good_ns_ttl));
     pj_thread_sleep(set.good_ns_ttl * 1000);
 
     /* 
@@ -1076,9 +1075,9 @@ static int dns_test(void)
 
     name = pj_str("name01");
     status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-					 &dns_callback_1b, NULL, NULL);
+                                         &dns_callback_1b, NULL, NULL);
     if (status != PJ_SUCCESS)
-	return -1000;
+        return -1000;
 
     pj_sem_wait(sem);
 
@@ -1098,9 +1097,9 @@ static int dns_test(void)
 
     name = pj_str("name02");
     status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-					 &dns_callback_1b, NULL, NULL);
+                                         &dns_callback_1b, NULL, NULL);
     if (status != PJ_SUCCESS)
-	return -1000;
+        return -1000;
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
@@ -1110,8 +1109,8 @@ static int dns_test(void)
 
     /* Wait to allow probing period to complete, server 0 will be in bad state */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state to end (%d sec)",
-			 set.qretr_delay * 
-			 (set.qretr_count+2) / 1000));
+                         set.qretr_delay * 
+                         (set.qretr_count+2) / 1000));
     pj_thread_sleep(set.qretr_delay * (set.qretr_count + 2));
 
 
@@ -1127,9 +1126,9 @@ static int dns_test(void)
 
     name = pj_str("name03");
     status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-					 &dns_callback_1b, NULL, NULL);
+                                         &dns_callback_1b, NULL, NULL);
     if (status != PJ_SUCCESS)
-	return -1000;
+        return -1000;
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
@@ -1140,7 +1139,7 @@ static int dns_test(void)
 
     /* Wait to allow active & bad period to complete, both will be in probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
-			 set.good_ns_ttl));
+                         set.good_ns_ttl));
     pj_thread_sleep(set.good_ns_ttl * 1000);
 
     /*
@@ -1154,15 +1153,15 @@ static int dns_test(void)
 
     name = pj_str("name04");
     status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-					 &dns_callback_1b, NULL, NULL);
+                                         &dns_callback_1b, NULL, NULL);
     if (status != PJ_SUCCESS)
-	return -1000;
+        return -1000;
 
     pj_sem_wait(sem);
 
     /* Wait to allow probing period to complete, server 0 remains active, server 1 will be bad */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state (%d sec)",
-			 set.qretr_delay * (set.qretr_count+2) / 1000));
+                         set.qretr_delay * (set.qretr_count+2) / 1000));
     pj_thread_sleep(1000 + set.qretr_delay * (set.qretr_count + 2));
 
     /*
@@ -1177,9 +1176,9 @@ static int dns_test(void)
 
     name = pj_str("name05");
     status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-					 &dns_callback_1b, NULL, NULL);
+                                         &dns_callback_1b, NULL, NULL);
     if (status != PJ_SUCCESS)
-	return -1000;
+        return -1000;
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
@@ -1196,10 +1195,10 @@ static int dns_test(void)
 ////////////////////////////////////////////////////////////////////////////
 /* Resolver test, normal, with CNAME */
 #define IP_ADDR1    0x02030405
-#define PORT1	    50061
+#define PORT1       50061
 
 static void action1_1(const pj_dns_parsed_packet *pkt,
-		      pj_dns_parsed_packet **p_res)
+                      pj_dns_parsed_packet **p_res)
 {
     pj_dns_parsed_packet *res;
     char *target = "sip.somedomain.com";
@@ -1207,11 +1206,11 @@ static void action1_1(const pj_dns_parsed_packet *pkt,
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     if (res->q == NULL) {
-	res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+        res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     }
     if (res->ans == NULL) {
-	res->ans = (pj_dns_parsed_rr*) 
-		  pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
+        res->ans = (pj_dns_parsed_rr*) 
+                  pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
     }
 
     res->hdr.qdcount = 1;
@@ -1221,64 +1220,64 @@ static void action1_1(const pj_dns_parsed_packet *pkt,
 
     if (pkt->q[0].type == PJ_DNS_TYPE_SRV) {
 
-	pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp.somedomain.com")==0);
+        pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp.somedomain.com")==0);
 
-	res->hdr.anscount = 1;
-	res->ans[0].type = PJ_DNS_TYPE_SRV;
-	res->ans[0].dnsclass = 1;
-	res->ans[0].name = res->q[0].name;
-	res->ans[0].ttl = 1;
-	res->ans[0].rdata.srv.prio = 1;
-	res->ans[0].rdata.srv.weight = 2;
-	res->ans[0].rdata.srv.port = PORT1;
-	res->ans[0].rdata.srv.target = pj_str(target);
+        res->hdr.anscount = 1;
+        res->ans[0].type = PJ_DNS_TYPE_SRV;
+        res->ans[0].dnsclass = 1;
+        res->ans[0].name = res->q[0].name;
+        res->ans[0].ttl = 1;
+        res->ans[0].rdata.srv.prio = 1;
+        res->ans[0].rdata.srv.weight = 2;
+        res->ans[0].rdata.srv.port = PORT1;
+        res->ans[0].rdata.srv.target = pj_str(target);
 
     } else if (pkt->q[0].type == PJ_DNS_TYPE_A) {
-	char *alias = "sipalias.somedomain.com";
+        char *alias = "sipalias.somedomain.com";
 
-	pj_assert(pj_strcmp2(&res->q[0].name, target)==0);
+        pj_assert(pj_strcmp2(&res->q[0].name, target)==0);
 
-	res->hdr.anscount = 2;
-	res->ans[0].type = PJ_DNS_TYPE_CNAME;
-	res->ans[0].dnsclass = 1;
-	res->ans[0].ttl = 1000;	/* resolver should select minimum TTL */
-	res->ans[0].name = res->q[0].name;
-	res->ans[0].rdata.cname.name = pj_str(alias);
+        res->hdr.anscount = 2;
+        res->ans[0].type = PJ_DNS_TYPE_CNAME;
+        res->ans[0].dnsclass = 1;
+        res->ans[0].ttl = 1000; /* resolver should select minimum TTL */
+        res->ans[0].name = res->q[0].name;
+        res->ans[0].rdata.cname.name = pj_str(alias);
 
-	res->ans[1].type = PJ_DNS_TYPE_A;
-	res->ans[1].dnsclass = 1;
-	res->ans[1].ttl = 1;
-	res->ans[1].name = pj_str(alias);
-	res->ans[1].rdata.a.ip_addr.s_addr = IP_ADDR1;
+        res->ans[1].type = PJ_DNS_TYPE_A;
+        res->ans[1].dnsclass = 1;
+        res->ans[1].ttl = 1;
+        res->ans[1].name = pj_str(alias);
+        res->ans[1].rdata.a.ip_addr.s_addr = IP_ADDR1;
 
     } else if (pkt->q[0].type == PJ_DNS_TYPE_AAAA) {
-	char *alias = "sipalias.somedomain.com";
+        char *alias = "sipalias.somedomain.com";
 
-	pj_assert(pj_strcmp2(&res->q[0].name, target)==0);
+        pj_assert(pj_strcmp2(&res->q[0].name, target)==0);
 
-	res->hdr.anscount = 2;
-	res->ans[0].type = PJ_DNS_TYPE_CNAME;
-	res->ans[0].dnsclass = 1;
-	res->ans[0].ttl = 1000;	/* resolver should select minimum TTL */
-	res->ans[0].name = res->q[0].name;
-	res->ans[0].rdata.cname.name = pj_str(alias);
+        res->hdr.anscount = 2;
+        res->ans[0].type = PJ_DNS_TYPE_CNAME;
+        res->ans[0].dnsclass = 1;
+        res->ans[0].ttl = 1000; /* resolver should select minimum TTL */
+        res->ans[0].name = res->q[0].name;
+        res->ans[0].rdata.cname.name = pj_str(alias);
 
-	res->ans[1].type = PJ_DNS_TYPE_AAAA;
-	res->ans[1].dnsclass = 1;
-	res->ans[1].ttl = 1;
-	res->ans[1].name = pj_str(alias);
-	s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 0) = IP_ADDR1;
-	s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 1) = IP_ADDR1;
-	s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 2) = IP_ADDR1;
-	s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 3) = IP_ADDR1;
+        res->ans[1].type = PJ_DNS_TYPE_AAAA;
+        res->ans[1].dnsclass = 1;
+        res->ans[1].ttl = 1;
+        res->ans[1].name = pj_str(alias);
+        s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 0) = IP_ADDR1;
+        s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 1) = IP_ADDR1;
+        s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 2) = IP_ADDR1;
+        s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 3) = IP_ADDR1;
     }
 
     *p_res = res;
 }
 
 static void srv_cb_1(void *user_data,
-		     pj_status_t status,
-		     const pj_dns_srv_record *rec)
+                     pj_status_t status,
+                     const pj_dns_srv_record *rec)
 {
     PJ_UNUSED_ARG(user_data);
 
@@ -1289,9 +1288,9 @@ static void srv_cb_1(void *user_data,
     PJ_ASSERT_ON_FAIL(rec->entry[0].priority == 1, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].weight == 2, return);
     PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.name, "sip.somedomain.com")==0,
-		      return);
+                      return);
     PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.alias, "sipalias.somedomain.com")==0,
-		      return);
+                      return);
 
     /* IPv4 only */
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 1, return);
@@ -1303,22 +1302,22 @@ static void srv_cb_1(void *user_data,
 
 
 static void srv_cb_1b(void *user_data,
-		      pj_status_t status,
-		      const pj_dns_srv_record *rec)
+                      pj_status_t status,
+                      const pj_dns_srv_record *rec)
 {
     PJ_UNUSED_ARG(user_data);
 
     pj_sem_post(sem);
 
     PJ_ASSERT_ON_FAIL(status==PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN),
-		      return);
+                      return);
     PJ_ASSERT_ON_FAIL(rec->count == 0, return);
 }
 
 
 static void srv_cb_1c(void *user_data,
-		      pj_status_t status,
-		      const pj_dns_srv_record *rec)
+                      pj_status_t status,
+                      const pj_dns_srv_record *rec)
 {
     PJ_UNUSED_ARG(user_data);
 
@@ -1330,23 +1329,23 @@ static void srv_cb_1c(void *user_data,
     PJ_ASSERT_ON_FAIL(rec->entry[0].weight == 2, return);
 
     PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.name, "sip.somedomain.com")==0,
-		      return);
+                      return);
     PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.alias, "sipalias.somedomain.com")==0,
-		      return);
+                      return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT1, return);
 
     /* IPv4 and IPv6 */
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 2, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
-		      rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR1, return);
+                      rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR1, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[1].af == pj_AF_INET6() &&
-		      s6_addr32(rec->entry[0].server.addr[1].ip.v6, 0) == IP_ADDR1, return);
+                      s6_addr32(rec->entry[0].server.addr[1].ip.v6, 0) == IP_ADDR1, return);
 }
 
 
 static void srv_cb_1d(void *user_data,
-		      pj_status_t status,
-		      const pj_dns_srv_record *rec)
+                      pj_status_t status,
+                      const pj_dns_srv_record *rec)
 {
     PJ_UNUSED_ARG(user_data);
 
@@ -1358,15 +1357,15 @@ static void srv_cb_1d(void *user_data,
     PJ_ASSERT_ON_FAIL(rec->entry[0].weight == 2, return);
 
     PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.name, "sip.somedomain.com")==0,
-		      return);
+                      return);
     PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.alias, "sipalias.somedomain.com")==0,
-		      return);
+                      return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT1, return);
 
     /* IPv6 only */
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 1, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].af == pj_AF_INET6() &&
-		      s6_addr32(rec->entry[0].server.addr[0].ip.v6, 0) == IP_ADDR1, return);
+                      s6_addr32(rec->entry[0].server.addr[0].ip.v6, 0) == IP_ADDR1, return);
 }
 
 
@@ -1390,7 +1389,7 @@ static int srv_resolver_test(void)
     g_server[1].pkt_count = 0;
 
     status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver, PJ_TRUE,
-				NULL, &srv_cb_1, NULL);
+                                NULL, &srv_cb_1, NULL);
     pj_assert(status == PJ_SUCCESS);
 
     pj_sem_wait(sem);
@@ -1417,8 +1416,8 @@ static int srv_resolver_test(void)
     g_server[1].pkt_count = 0;
 
     status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver,
-				PJ_DNS_SRV_RESOLVE_AAAA,
-				NULL, &srv_cb_1c, NULL);
+                                PJ_DNS_SRV_RESOLVE_AAAA,
+                                NULL, &srv_cb_1c, NULL);
     pj_assert(status == PJ_SUCCESS);
 
     pj_sem_wait(sem);
@@ -1436,8 +1435,8 @@ static int srv_resolver_test(void)
     g_server[1].pkt_count = 0;
 
     status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver,
-				PJ_DNS_SRV_RESOLVE_AAAA_ONLY,
-				NULL, &srv_cb_1d, NULL);
+                                PJ_DNS_SRV_RESOLVE_AAAA_ONLY,
+                                NULL, &srv_cb_1d, NULL);
     pj_assert(status == PJ_SUCCESS);
 
     pj_sem_wait(sem);
@@ -1450,12 +1449,12 @@ static int srv_resolver_test(void)
     g_server[1].pkt_count = 0;
 
     status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver, PJ_TRUE,
-				NULL, &srv_cb_1, NULL);
+                                NULL, &srv_cb_1, NULL);
     pj_assert(status == PJ_SUCCESS);
 
 
     status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver, PJ_TRUE,
-				NULL, &srv_cb_1, NULL);
+                                NULL, &srv_cb_1, NULL);
     pj_assert(status == PJ_SUCCESS);
 
     pj_sem_wait(sem);
@@ -1474,7 +1473,7 @@ static int srv_resolver_test(void)
     g_server[1].action = PJ_DNS_RCODE_NXDOMAIN;
 
     status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver, PJ_TRUE,
-				NULL, &srv_cb_1b, NULL);
+                                NULL, &srv_cb_1b, NULL);
     pj_assert(status == PJ_SUCCESS);
 
     pj_sem_wait(sem);
@@ -1486,12 +1485,12 @@ static int srv_resolver_test(void)
 
 ////////////////////////////////////////////////////////////////////////////
 /* Fallback because there's no SRV in answer */
-#define TARGET	    "domain2.com"
+#define TARGET      "domain2.com"
 #define IP_ADDR2    0x02030405
-#define PORT2	    50062
+#define PORT2       50062
 
 static void action2_1(const pj_dns_parsed_packet *pkt,
-		      pj_dns_parsed_packet **p_res)
+                      pj_dns_parsed_packet **p_res)
 {
     pj_dns_parsed_packet *res;
 
@@ -1499,7 +1498,7 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
 
     res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     res->ans = (pj_dns_parsed_rr*) 
-	       pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
+               pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
 
     res->hdr.qdcount = 1;
     res->q[0].type = pkt->q[0].type;
@@ -1508,56 +1507,56 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
 
     if (pkt->q[0].type == PJ_DNS_TYPE_SRV) {
 
-	pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp." TARGET)==0);
+        pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp." TARGET)==0);
 
-	res->hdr.anscount = 1;
-	res->ans[0].type = PJ_DNS_TYPE_A;    // <-- this will cause the fallback
-	res->ans[0].dnsclass = 1;
-	res->ans[0].name = res->q[0].name;
-	res->ans[0].ttl = 1;
-	res->ans[0].rdata.srv.prio = 1;
-	res->ans[0].rdata.srv.weight = 2;
-	res->ans[0].rdata.srv.port = PORT2;
-	res->ans[0].rdata.srv.target = pj_str("sip01." TARGET);
+        res->hdr.anscount = 1;
+        res->ans[0].type = PJ_DNS_TYPE_A;    // <-- this will cause the fallback
+        res->ans[0].dnsclass = 1;
+        res->ans[0].name = res->q[0].name;
+        res->ans[0].ttl = 1;
+        res->ans[0].rdata.srv.prio = 1;
+        res->ans[0].rdata.srv.weight = 2;
+        res->ans[0].rdata.srv.port = PORT2;
+        res->ans[0].rdata.srv.target = pj_str("sip01." TARGET);
 
     } else if (pkt->q[0].type == PJ_DNS_TYPE_A) {
-	char *alias = "sipalias01." TARGET;
+        char *alias = "sipalias01." TARGET;
 
-	pj_assert(pj_strcmp2(&res->q[0].name, TARGET)==0);
+        pj_assert(pj_strcmp2(&res->q[0].name, TARGET)==0);
 
-	res->hdr.anscount = 2;
-	res->ans[0].type = PJ_DNS_TYPE_CNAME;
-	res->ans[0].dnsclass = 1;
-	res->ans[0].name = res->q[0].name;
-	res->ans[0].ttl = 1;
-	res->ans[0].rdata.cname.name = pj_str(alias);
+        res->hdr.anscount = 2;
+        res->ans[0].type = PJ_DNS_TYPE_CNAME;
+        res->ans[0].dnsclass = 1;
+        res->ans[0].name = res->q[0].name;
+        res->ans[0].ttl = 1;
+        res->ans[0].rdata.cname.name = pj_str(alias);
 
-	res->ans[1].type = PJ_DNS_TYPE_A;
-	res->ans[1].dnsclass = 1;
-	res->ans[1].name = pj_str(alias);
-	res->ans[1].ttl = 1;
-	res->ans[1].rdata.a.ip_addr.s_addr = IP_ADDR2;
+        res->ans[1].type = PJ_DNS_TYPE_A;
+        res->ans[1].dnsclass = 1;
+        res->ans[1].name = pj_str(alias);
+        res->ans[1].ttl = 1;
+        res->ans[1].rdata.a.ip_addr.s_addr = IP_ADDR2;
 
     } else if (pkt->q[0].type == PJ_DNS_TYPE_AAAA) {
-	char *alias = "sipalias01." TARGET;
+        char *alias = "sipalias01." TARGET;
 
-	pj_assert(pj_strcmp2(&res->q[0].name, TARGET)==0);
+        pj_assert(pj_strcmp2(&res->q[0].name, TARGET)==0);
 
-	res->hdr.anscount = 2;
-	res->ans[0].type = PJ_DNS_TYPE_CNAME;
-	res->ans[0].dnsclass = 1;
-	res->ans[0].name = res->q[0].name;
-	res->ans[0].ttl = 1;
-	res->ans[0].rdata.cname.name = pj_str(alias);
+        res->hdr.anscount = 2;
+        res->ans[0].type = PJ_DNS_TYPE_CNAME;
+        res->ans[0].dnsclass = 1;
+        res->ans[0].name = res->q[0].name;
+        res->ans[0].ttl = 1;
+        res->ans[0].rdata.cname.name = pj_str(alias);
 
-	res->ans[1].type = PJ_DNS_TYPE_AAAA;
-	res->ans[1].dnsclass = 1;
-	res->ans[1].ttl = 1;
-	res->ans[1].name = pj_str(alias);
-	s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 0) = IP_ADDR2;
-	s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 1) = IP_ADDR2;
-	s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 2) = IP_ADDR2;
-	s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 3) = IP_ADDR2;
+        res->ans[1].type = PJ_DNS_TYPE_AAAA;
+        res->ans[1].dnsclass = 1;
+        res->ans[1].ttl = 1;
+        res->ans[1].name = pj_str(alias);
+        s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 0) = IP_ADDR2;
+        s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 1) = IP_ADDR2;
+        s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 2) = IP_ADDR2;
+        s6_addr32(res->ans[1].rdata.aaaa.ip_addr, 3) = IP_ADDR2;
     }
 
     *p_res = res;
@@ -1566,8 +1565,8 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
 #define SRV_CB_CHECK(cond, err) if(!(cond)) { *cb_err=err; goto on_return; }
 
 static void srv_cb_2(void *user_data,
-		     pj_status_t status,
-		     const pj_dns_srv_record *rec)
+                     pj_status_t status,
+                     const pj_dns_srv_record *rec)
 {
     int *cb_err = (int*)user_data;
 
@@ -1577,21 +1576,21 @@ static void srv_cb_2(void *user_data,
     SRV_CB_CHECK(rec->entry[0].weight == 0, -40);
     SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0, -50);
     SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.alias,
-			    "sipalias01." TARGET)==0, -60);
+                            "sipalias01." TARGET)==0, -60);
     SRV_CB_CHECK(rec->entry[0].port == PORT2, -70);
 
     /* IPv4 only */
     SRV_CB_CHECK(rec->entry[0].server.addr_count == 1, -80);
     SRV_CB_CHECK(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
-		 rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, -90);
+                 rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, -90);
 
 on_return:
     pj_sem_post(sem);
 }
 
 static void srv_cb_2a(void *user_data,
-		      pj_status_t status,
-		      const pj_dns_srv_record *rec)
+                      pj_status_t status,
+                      const pj_dns_srv_record *rec)
 {
     int *cb_err = (int*)user_data;
 
@@ -1601,24 +1600,24 @@ static void srv_cb_2a(void *user_data,
     SRV_CB_CHECK(rec->entry[0].weight == 0, -40);
     SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0, -50);
     SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.alias,
-			    "sipalias01." TARGET)==0, -60);
+                            "sipalias01." TARGET)==0, -60);
     SRV_CB_CHECK(rec->entry[0].port == PORT2, -70);
 
     /* IPv4 and IPv6 */
     SRV_CB_CHECK(rec->entry[0].server.addr_count == 2, -80);
     SRV_CB_CHECK(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
-		 rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, -90);
+                 rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, -90);
     SRV_CB_CHECK(rec->entry[0].server.addr[1].af == pj_AF_INET6() &&
-		 s6_addr32(rec->entry[0].server.addr[1].ip.v6, 0) == IP_ADDR2,
-		 -100);
+                 s6_addr32(rec->entry[0].server.addr[1].ip.v6, 0) == IP_ADDR2,
+                 -100);
 
 on_return:
     pj_sem_post(sem);
 }
 
 static void srv_cb_2b(void *user_data,
-		      pj_status_t status,
-		      const pj_dns_srv_record *rec)
+                      pj_status_t status,
+                      const pj_dns_srv_record *rec)
 {
     int *cb_err = (int*)user_data;
 
@@ -1628,14 +1627,14 @@ static void srv_cb_2b(void *user_data,
     SRV_CB_CHECK(rec->entry[0].weight == 0, -40);
     SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0, -50);
     SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.alias,
-			    "sipalias01." TARGET)==0, -60);
+                            "sipalias01." TARGET)==0, -60);
     SRV_CB_CHECK(rec->entry[0].port == PORT2, -70);
 
     /* IPv6 only */
     SRV_CB_CHECK(rec->entry[0].server.addr_count == 1, -80);
     SRV_CB_CHECK(rec->entry[0].server.addr[0].af == pj_AF_INET6() &&
-		 s6_addr32(rec->entry[0].server.addr[0].ip.v6, 0) == IP_ADDR2,
-		 -90);
+                 s6_addr32(rec->entry[0].server.addr[0].ip.v6, 0) == IP_ADDR2,
+                 -90);
 
 on_return:
     pj_sem_post(sem);
@@ -1657,17 +1656,17 @@ static int srv_resolver_fallback_test(void)
     g_server[1].action_cb = &action2_1;
 
     status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver, PJ_TRUE,
-				&cb_err, &srv_cb_2, NULL);
+                                &cb_err, &srv_cb_2, NULL);
     if (status != PJ_SUCCESS) {
-	app_perror("   srv_resolve error", status);
-	return -10;
+        app_perror("   srv_resolve error", status);
+        return -10;
     }
 
     pj_sem_wait(sem);
 
     if (cb_err != 0) {
-	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-	return -20;
+        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+        return -20;
     }
 
     /* Subsequent query should just get the response from the cache */
@@ -1676,22 +1675,22 @@ static int srv_resolver_fallback_test(void)
     g_server[1].pkt_count = 0;
 
     status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver, PJ_TRUE,
-				&cb_err, &srv_cb_2, NULL);
+                                &cb_err, &srv_cb_2, NULL);
     if (status != PJ_SUCCESS) {
-	app_perror("   srv_resolve error", status);
-	return -30;
+        app_perror("   srv_resolve error", status);
+        return -30;
     }
 
     pj_sem_wait(sem);
 
     if (cb_err != 0) {
-	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-	return -40;
+        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+        return -40;
     }
 
     if (g_server[0].pkt_count != 0 || g_server[1].pkt_count != 0) {
-	PJ_LOG(3,("test", "   srv_resolve() not from cache"));
-	return -50;
+        PJ_LOG(3,("test", "   srv_resolve() not from cache"));
+        return -50;
     }
 
     /* Clear cache */
@@ -1706,18 +1705,18 @@ static int srv_resolver_fallback_test(void)
     g_server[1].action_cb = &action2_1;
 
     status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver,
-				PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA,
-				&cb_err, &srv_cb_2a, NULL);
+                                PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA,
+                                &cb_err, &srv_cb_2a, NULL);
     if (status != PJ_SUCCESS) {
-	app_perror("   srv_resolve error", status);
-	return -60;
+        app_perror("   srv_resolve error", status);
+        return -60;
     }
 
     pj_sem_wait(sem);
 
     if (cb_err != 0) {
-	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-	return -70;
+        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+        return -70;
     }
 
     /* Clear cache */
@@ -1732,18 +1731,18 @@ static int srv_resolver_fallback_test(void)
     g_server[1].action_cb = &action2_1;
 
     status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver,
-				PJ_DNS_SRV_FALLBACK_AAAA,
-				&cb_err, &srv_cb_2b, NULL);
+                                PJ_DNS_SRV_FALLBACK_AAAA,
+                                &cb_err, &srv_cb_2b, NULL);
     if (status != PJ_SUCCESS) {
-	app_perror("   srv_resolve error", status);
-	return -80;
+        app_perror("   srv_resolve error", status);
+        return -80;
     }
 
     pj_sem_wait(sem);
 
     if (cb_err != 0) {
-	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-	return -90;
+        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+        return -90;
     }
 
     /* Clear cache */
@@ -1755,14 +1754,14 @@ static int srv_resolver_fallback_test(void)
 
 ////////////////////////////////////////////////////////////////////////////
 /* Too many SRV or A entries */
-#define DOMAIN3	    "d3"
+#define DOMAIN3     "d3"
 #define SRV_COUNT3  (PJ_DNS_SRV_MAX_ADDR+1)
 #define A_COUNT3    (PJ_DNS_MAX_IP_IN_A_REC+1)
-#define PORT3	    50063
+#define PORT3       50063
 #define IP_ADDR3    0x03030303
 
 static void action3_1(const pj_dns_parsed_packet *pkt,
-		      pj_dns_parsed_packet **p_res)
+                      pj_dns_parsed_packet **p_res)
 {
     pj_dns_parsed_packet *res;
     unsigned i;
@@ -1770,7 +1769,7 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     if (res->q == NULL) {
-	res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
+        res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     }
 
     res->hdr.qdcount = 1;
@@ -1780,51 +1779,51 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
 
     if (pkt->q[0].type == PJ_DNS_TYPE_SRV) {
 
-	pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp." DOMAIN3)==0);
+        pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp." DOMAIN3)==0);
 
-	res->hdr.anscount = SRV_COUNT3;
-	res->ans = (pj_dns_parsed_rr*) 
-		   pj_pool_calloc(pool, SRV_COUNT3, sizeof(pj_dns_parsed_rr));
+        res->hdr.anscount = SRV_COUNT3;
+        res->ans = (pj_dns_parsed_rr*) 
+                   pj_pool_calloc(pool, SRV_COUNT3, sizeof(pj_dns_parsed_rr));
 
-	for (i=0; i<SRV_COUNT3; ++i) {
-	    char *target;
+        for (i=0; i<SRV_COUNT3; ++i) {
+            char *target;
 
-	    res->ans[i].type = PJ_DNS_TYPE_SRV;
-	    res->ans[i].dnsclass = 1;
-	    res->ans[i].name = res->q[0].name;
-	    res->ans[i].ttl = 1;
-	    res->ans[i].rdata.srv.prio = (pj_uint16_t)i;
-	    res->ans[i].rdata.srv.weight = 2;
-	    res->ans[i].rdata.srv.port = (pj_uint16_t)(PORT3+i);
+            res->ans[i].type = PJ_DNS_TYPE_SRV;
+            res->ans[i].dnsclass = 1;
+            res->ans[i].name = res->q[0].name;
+            res->ans[i].ttl = 1;
+            res->ans[i].rdata.srv.prio = (pj_uint16_t)i;
+            res->ans[i].rdata.srv.weight = 2;
+            res->ans[i].rdata.srv.port = (pj_uint16_t)(PORT3+i);
 
-	    target = (char*)pj_pool_alloc(pool, 16);
-	    sprintf(target, "sip%02d." DOMAIN3, i);
-	    res->ans[i].rdata.srv.target = pj_str(target);
-	}
+            target = (char*)pj_pool_alloc(pool, 16);
+            sprintf(target, "sip%02d." DOMAIN3, i);
+            res->ans[i].rdata.srv.target = pj_str(target);
+        }
 
     } else if (pkt->q[0].type == PJ_DNS_TYPE_A) {
 
-	//pj_assert(pj_strcmp2(&res->q[0].name, "sip." DOMAIN3)==0);
+        //pj_assert(pj_strcmp2(&res->q[0].name, "sip." DOMAIN3)==0);
 
-	res->hdr.anscount = A_COUNT3;
-	res->ans = (pj_dns_parsed_rr*) 
-		   pj_pool_calloc(pool, A_COUNT3, sizeof(pj_dns_parsed_rr));
+        res->hdr.anscount = A_COUNT3;
+        res->ans = (pj_dns_parsed_rr*) 
+                   pj_pool_calloc(pool, A_COUNT3, sizeof(pj_dns_parsed_rr));
 
-	for (i=0; i<A_COUNT3; ++i) {
-	    res->ans[i].type = PJ_DNS_TYPE_A;
-	    res->ans[i].dnsclass = 1;
-	    res->ans[i].ttl = 1;
-	    res->ans[i].name = res->q[0].name;
-	    res->ans[i].rdata.a.ip_addr.s_addr = IP_ADDR3+i;
-	}
+        for (i=0; i<A_COUNT3; ++i) {
+            res->ans[i].type = PJ_DNS_TYPE_A;
+            res->ans[i].dnsclass = 1;
+            res->ans[i].ttl = 1;
+            res->ans[i].name = res->q[0].name;
+            res->ans[i].rdata.a.ip_addr.s_addr = IP_ADDR3+i;
+        }
     }
 
     *p_res = res;
 }
 
 static void srv_cb_3(void *user_data,
-		     pj_status_t status,
-		     const pj_dns_srv_record *rec)
+                     pj_status_t status,
+                     const pj_dns_srv_record *rec)
 {
     unsigned i;
     int *cb_err = (int*)user_data;
@@ -1836,19 +1835,19 @@ static void srv_cb_3(void *user_data,
     SRV_CB_CHECK(rec->count == PJ_DNS_SRV_MAX_ADDR, -20);
 
     for (i=0; i<PJ_DNS_SRV_MAX_ADDR; ++i) {
-	unsigned j;
+        unsigned j;
 
-	SRV_CB_CHECK(rec->entry[i].priority == i, -30);
-	SRV_CB_CHECK(rec->entry[i].weight == 2, -40);
-	//pj_assert(pj_strcmp2(&rec->entry[i].server.name, "sip." DOMAIN3)==0);
-	SRV_CB_CHECK(rec->entry[i].server.alias.slen == 0, -50);
-	SRV_CB_CHECK(rec->entry[i].port == PORT3+i, -60);
+        SRV_CB_CHECK(rec->entry[i].priority == i, -30);
+        SRV_CB_CHECK(rec->entry[i].weight == 2, -40);
+        //pj_assert(pj_strcmp2(&rec->entry[i].server.name, "sip." DOMAIN3)==0);
+        SRV_CB_CHECK(rec->entry[i].server.alias.slen == 0, -50);
+        SRV_CB_CHECK(rec->entry[i].port == PORT3+i, -60);
 
-	SRV_CB_CHECK(rec->entry[i].server.addr_count == PJ_DNS_MAX_IP_IN_A_REC, -70);
+        SRV_CB_CHECK(rec->entry[i].server.addr_count == PJ_DNS_MAX_IP_IN_A_REC, -70);
 
-	for (j=0; j<PJ_DNS_MAX_IP_IN_A_REC; ++j) {
-	    SRV_CB_CHECK(rec->entry[i].server.addr[j].ip.v4.s_addr == IP_ADDR3+j, -80);
-	}
+        for (j=0; j<PJ_DNS_MAX_IP_IN_A_REC; ++j) {
+            SRV_CB_CHECK(rec->entry[i].server.addr[j].ip.v4.s_addr == IP_ADDR3+j, -80);
+        }
     }
 
 on_return:
@@ -1874,17 +1873,17 @@ static int srv_resolver_many_test(void)
     g_server[1].pkt_count = 0;
 
     status = pj_dns_srv_resolve(&domain, &res_name, 1, pool, resolver, PJ_TRUE,
-				&cb_err, &srv_cb_3, NULL);
+                                &cb_err, &srv_cb_3, NULL);
     if (status != PJ_SUCCESS) {
-	app_perror("   srv_resolve error", status);
-	return -10;
+        app_perror("   srv_resolve error", status);
+        return -10;
     }
 
     pj_sem_wait(sem);
 
     if (cb_err != 0) {
-	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-	return -20;
+        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+        return -20;
     }
 
     return 0;
@@ -1900,35 +1899,35 @@ int resolver_test(void)
     
     rc = init(PJ_FALSE);
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = a_parser_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = addr_parser_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = simple_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = dns_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = srv_resolver_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = srv_resolver_fallback_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = srv_resolver_many_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     destroy();
 
@@ -1939,27 +1938,27 @@ int resolver_test(void)
 
     rc = init(PJ_TRUE);
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = simple_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = dns_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = srv_resolver_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = srv_resolver_fallback_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     rc = srv_resolver_many_test();
     if (rc != 0)
-	goto on_error;
+        goto on_error;
 
     destroy();
 #endif

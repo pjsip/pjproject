@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -26,38 +25,38 @@
 #include <libswscale/swscale.h>
 
 static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
-					    pj_pool_t *pool,
-					    const pjmedia_conversion_param*prm,
-					    pjmedia_converter **p_cv);
+                                            pj_pool_t *pool,
+                                            const pjmedia_conversion_param*prm,
+                                            pjmedia_converter **p_cv);
 static void factory_destroy_factory(pjmedia_converter_factory *cf);
 static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
-					   pjmedia_frame *src_frame,
-					   pjmedia_frame *dst_frame);
+                                           pjmedia_frame *src_frame,
+                                           pjmedia_frame *dst_frame);
 static pj_status_t libswscale_conv_convert2(
-				    pjmedia_converter	    *converter,
-				    pjmedia_frame	    *src_frame,
-				    const pjmedia_rect_size *src_frame_size,
-				    const pjmedia_coord	    *src_pos,
-				    pjmedia_frame	    *dst_frame,
-				    const pjmedia_rect_size *dst_frame_size,
-				    const pjmedia_coord	    *dst_pos,
-				    pjmedia_converter_convert_setting
-							    *param);
+                                    pjmedia_converter       *converter,
+                                    pjmedia_frame           *src_frame,
+                                    const pjmedia_rect_size *src_frame_size,
+                                    const pjmedia_coord     *src_pos,
+                                    pjmedia_frame           *dst_frame,
+                                    const pjmedia_rect_size *dst_frame_size,
+                                    const pjmedia_coord     *dst_pos,
+                                    pjmedia_converter_convert_setting
+                                                            *param);
 static void libswscale_conv_destroy(pjmedia_converter *converter);
 
 
 struct fmt_info
 {
-    const pjmedia_video_format_info 	*fmt_info;
-    pjmedia_video_apply_fmt_param 	 apply_param;
+    const pjmedia_video_format_info     *fmt_info;
+    pjmedia_video_apply_fmt_param        apply_param;
 };
 
 struct ffmpeg_converter
 {
-    pjmedia_converter 			 base;
-    struct SwsContext 			*sws_ctx;
-    struct fmt_info			 src,
-					 dst;
+    pjmedia_converter                    base;
+    struct SwsContext                   *sws_ctx;
+    struct fmt_info                      src,
+                                         dst;
 };
 
 static pjmedia_converter_factory_op libswscale_factory_op =
@@ -74,9 +73,9 @@ static pjmedia_converter_op liswscale_converter_op =
 };
 
 static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
-					    pj_pool_t *pool,
-					    const pjmedia_conversion_param *prm,
-					    pjmedia_converter **p_cv)
+                                            pj_pool_t *pool,
+                                            const pjmedia_conversion_param *prm,
+                                            pjmedia_converter **p_cv)
 {
     enum AVPixelFormat srcFormat, dstFormat;
     const pjmedia_video_format_detail *src_detail, *dst_detail;
@@ -89,44 +88,44 @@ static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
 
     /* Only supports video */
     if (prm->src.type != PJMEDIA_TYPE_VIDEO ||
-	prm->dst.type != prm->src.type ||
-	prm->src.detail_type != PJMEDIA_FORMAT_DETAIL_VIDEO ||
-	prm->dst.detail_type != prm->src.detail_type)
+        prm->dst.type != prm->src.type ||
+        prm->src.detail_type != PJMEDIA_FORMAT_DETAIL_VIDEO ||
+        prm->dst.detail_type != prm->src.detail_type)
     {
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
     }
 
     /* lookup source format info */
     src_fmt_info = pjmedia_get_video_format_info(
-		      pjmedia_video_format_mgr_instance(),
-		      prm->src.id);
+                      pjmedia_video_format_mgr_instance(),
+                      prm->src.id);
     if (!src_fmt_info)
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
 
     /* lookup destination format info */
     dst_fmt_info = pjmedia_get_video_format_info(
-		      pjmedia_video_format_mgr_instance(),
-		      prm->dst.id);
+                      pjmedia_video_format_mgr_instance(),
+                      prm->dst.id);
     if (!dst_fmt_info)
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
 
     src_detail = pjmedia_format_get_video_format_detail(&prm->src, PJ_TRUE);
     dst_detail = pjmedia_format_get_video_format_detail(&prm->dst, PJ_TRUE);
 
     status = pjmedia_format_id_to_PixelFormat(prm->src.id, &srcFormat);
     if (status != PJ_SUCCESS)
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
 
     status = pjmedia_format_id_to_PixelFormat(prm->dst.id, &dstFormat);
     if (status != PJ_SUCCESS)
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
 
     sws_ctx = sws_getContext(src_detail->size.w, src_detail->size.h, srcFormat,
-		             dst_detail->size.w, dst_detail->size.h, dstFormat,
-			     SWS_BICUBIC,
-			     NULL, NULL, NULL);
+                             dst_detail->size.w, dst_detail->size.h, dstFormat,
+                             SWS_BICUBIC,
+                             NULL, NULL, NULL);
     if (sws_ctx == NULL)
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
 
     fcv = PJ_POOL_ZALLOC_T(pool, struct ffmpeg_converter);
     fcv->base.op = &liswscale_converter_op;
@@ -147,12 +146,12 @@ static void factory_destroy_factory(pjmedia_converter_factory *cf)
 }
 
 static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
-					   pjmedia_frame *src_frame,
-					   pjmedia_frame *dst_frame)
+                                           pjmedia_frame *src_frame,
+                                           pjmedia_frame *dst_frame)
 {
     struct ffmpeg_converter *fcv = (struct ffmpeg_converter*)converter;
     struct fmt_info *src = &fcv->src,
-	            *dst = &fcv->dst;
+                    *dst = &fcv->dst;
     int h;
 
     src->apply_param.buffer = src_frame->buf;
@@ -162,10 +161,10 @@ static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
     (*dst->fmt_info->apply_fmt)(dst->fmt_info, &dst->apply_param);
 
     h = sws_scale(fcv->sws_ctx,
-	          (const uint8_t* const *)src->apply_param.planes,
-	          src->apply_param.strides,
-		  0, src->apply_param.size.h,
-		  dst->apply_param.planes, dst->apply_param.strides);
+                  (const uint8_t* const *)src->apply_param.planes,
+                  src->apply_param.strides,
+                  0, src->apply_param.size.h,
+                  dst->apply_param.planes, dst->apply_param.strides);
 
     //sws_scale() return value can't be trusted? There are cases when
     //sws_scale() returns zero but conversion seems to work okay.
@@ -176,19 +175,19 @@ static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
 }
 
 static pj_status_t libswscale_conv_convert2(
-				    pjmedia_converter	    *converter,
-				    pjmedia_frame	    *src_frame,
-				    const pjmedia_rect_size *src_frame_size,
-				    const pjmedia_coord	    *src_pos,
-				    pjmedia_frame	    *dst_frame,
-				    const pjmedia_rect_size *dst_frame_size,
-				    const pjmedia_coord	    *dst_pos,
-				    pjmedia_converter_convert_setting
-							    *param)
+                                    pjmedia_converter       *converter,
+                                    pjmedia_frame           *src_frame,
+                                    const pjmedia_rect_size *src_frame_size,
+                                    const pjmedia_coord     *src_pos,
+                                    pjmedia_frame           *dst_frame,
+                                    const pjmedia_rect_size *dst_frame_size,
+                                    const pjmedia_coord     *dst_pos,
+                                    pjmedia_converter_convert_setting
+                                                            *param)
 {
     struct ffmpeg_converter *fcv = (struct ffmpeg_converter*)converter;
     struct fmt_info *src = &fcv->src,
-	            *dst = &fcv->dst;
+                    *dst = &fcv->dst;
     int h;
     unsigned j;
     pjmedia_rect_size orig_src_size;
@@ -211,19 +210,19 @@ static pj_status_t libswscale_conv_convert2(
     (*dst->fmt_info->apply_fmt)(dst->fmt_info, &dst->apply_param);
 
     for (j = 0; j < src->fmt_info->plane_cnt; ++j) {
-	pjmedia_video_apply_fmt_param *ap = &src->apply_param;
-	int y = src_pos->y * ap->plane_bytes[j] / ap->strides[j] /
-		ap->size.h;
-	ap->planes[j] += y * ap->strides[j] +
-			 src_pos->x * ap->strides[j] / ap->size.w;
+        pjmedia_video_apply_fmt_param *ap = &src->apply_param;
+        int y = src_pos->y * ap->plane_bytes[j] / ap->strides[j] /
+                ap->size.h;
+        ap->planes[j] += y * ap->strides[j] +
+                         src_pos->x * ap->strides[j] / ap->size.w;
     }
 
     for (j = 0; j < dst->fmt_info->plane_cnt; ++j) {
-	pjmedia_video_apply_fmt_param *ap = &dst->apply_param;
-	int y = dst_pos->y * ap->plane_bytes[j] / ap->strides[j] /
-		ap->size.h;
-	ap->planes[j] += y * ap->strides[j] +
-			 dst_pos->x * ap->strides[j] / ap->size.w;
+        pjmedia_video_apply_fmt_param *ap = &dst->apply_param;
+        int y = dst_pos->y * ap->plane_bytes[j] / ap->strides[j] /
+                ap->size.h;
+        ap->planes[j] += y * ap->strides[j] +
+                         dst_pos->x * ap->strides[j] / ap->size.w;
     }
 
     /* Return back the original conversion size */
@@ -231,10 +230,10 @@ static pj_status_t libswscale_conv_convert2(
     dst->apply_param.size = orig_dst_size;
 
     h = sws_scale(fcv->sws_ctx,
-	          (const uint8_t* const *)src->apply_param.planes,
-	          src->apply_param.strides,
-		  0, src->apply_param.size.h,
-		  dst->apply_param.planes, dst->apply_param.strides);
+                  (const uint8_t* const *)src->apply_param.planes,
+                  src->apply_param.strides,
+                  0, src->apply_param.size.h,
+                  dst->apply_param.planes, dst->apply_param.strides);
 
     //sws_scale() return value can't be trusted? There are cases when
     //sws_scale() returns zero but conversion seems to work okay.
@@ -248,18 +247,18 @@ static void libswscale_conv_destroy(pjmedia_converter *converter)
 {
     struct ffmpeg_converter *fcv = (struct ffmpeg_converter*)converter;
     if (fcv->sws_ctx) {
-	struct SwsContext *tmp = fcv->sws_ctx;
-	fcv->sws_ctx = NULL;
-	sws_freeContext(tmp);
+        struct SwsContext *tmp = fcv->sws_ctx;
+        fcv->sws_ctx = NULL;
+        sws_freeContext(tmp);
     }
 }
 
 static pjmedia_converter_factory libswscale_factory =
 {
-    NULL, NULL,					/* list */
-    "libswscale",				/* name */
-    PJMEDIA_CONVERTER_PRIORITY_NORMAL+1,	/* priority */
-    NULL					/* op will be init-ed later  */
+    NULL, NULL,                                 /* list */
+    "libswscale",                               /* name */
+    PJMEDIA_CONVERTER_PRIORITY_NORMAL+1,        /* priority */
+    NULL                                        /* op will be init-ed later  */
 };
 
 PJ_DEF(pj_status_t)
@@ -273,12 +272,12 @@ pjmedia_libswscale_converter_init(pjmedia_converter_mgr *mgr)
 
 PJ_DEF(pj_status_t)
 pjmedia_libswscale_converter_shutdown(pjmedia_converter_mgr *mgr,
-				      pj_pool_t *pool)
+                                      pj_pool_t *pool)
 {
     PJ_UNUSED_ARG(pool);
     pjmedia_ffmpeg_dec_ref();
     return pjmedia_converter_mgr_unregister_factory(mgr, &libswscale_factory,
-						    PJ_TRUE);
+                                                    PJ_TRUE);
 }
 
 #ifdef _MSC_VER

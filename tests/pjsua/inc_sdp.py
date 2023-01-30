@@ -1,4 +1,3 @@
-# $Id$
 
 # SDP template
 sdp_templ = \

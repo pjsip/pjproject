@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -129,23 +128,23 @@ typedef struct pj_stun_nat_detect_result
      * the detection has failed and \a nat_type field will contain
      * PJ_STUN_NAT_TYPE_UNKNOWN.
      */
-    pj_status_t		 status;
+    pj_status_t          status;
 
     /**
      * The text describing the status, if the status is not PJ_SUCCESS.
      */
-    const char		*status_text;
+    const char          *status_text;
 
     /**
      * This contains the NAT type as detected by the detection procedure.
      * This value is only valid when the \a status is PJ_SUCCESS.
      */
-    pj_stun_nat_type	 nat_type;
+    pj_stun_nat_type     nat_type;
 
     /**
      * Text describing that NAT type.
      */
-    const char		*nat_type_name;
+    const char          *nat_type_name;
 
 } pj_stun_nat_detect_result;
 
@@ -155,15 +154,15 @@ typedef struct pj_stun_nat_detect_result
  * completed.
  */
 typedef void pj_stun_nat_detect_cb(void *user_data,
-				   const pj_stun_nat_detect_result *res);
+                                   const pj_stun_nat_detect_result *res);
 
 
 /**
  * Get the NAT name from the specified NAT type.
  *
- * @param type		NAT type.
+ * @param type          NAT type.
  *
- * @return		NAT name.
+ * @return              NAT name.
  */
 PJ_DECL(const char*) pj_stun_get_nat_name(pj_stun_nat_type type);
 
@@ -177,49 +176,49 @@ PJ_DECL(const char*) pj_stun_get_nat_name(pj_stun_nat_type type);
  *
  * See also #pj_stun_detect_nat_type2() which supports IPv6.
  *
- * @param server	STUN server address.
- * @param stun_cfg	A structure containing various STUN configurations,
- *			such as the ioqueue and timer heap instance used
- *			to receive network I/O and timer events.
- * @param user_data	Application data, which will be returned back
- *			in the callback.
- * @param cb		Callback to be registered to receive notification
- *			about detection result.
+ * @param server        STUN server address.
+ * @param stun_cfg      A structure containing various STUN configurations,
+ *                      such as the ioqueue and timer heap instance used
+ *                      to receive network I/O and timer events.
+ * @param user_data     Application data, which will be returned back
+ *                      in the callback.
+ * @param cb            Callback to be registered to receive notification
+ *                      about detection result.
  *
- * @return		If this function returns PJ_SUCCESS, the procedure
- *			will complete asynchronously and callback will be
- *			called when it completes. For other return
- *			values, it means that an error has occured and
- *			the procedure did not start.
+ * @return              If this function returns PJ_SUCCESS, the procedure
+ *                      will complete asynchronously and callback will be
+ *                      called when it completes. For other return
+ *                      values, it means that an error has occured and
+ *                      the procedure did not start.
  */
 PJ_DECL(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
-					     pj_stun_config *stun_cfg,
-					     void *user_data,
-					     pj_stun_nat_detect_cb *cb);
+                                             pj_stun_config *stun_cfg,
+                                             void *user_data,
+                                             pj_stun_nat_detect_cb *cb);
 
 
 /**
  * Variant of #pj_stun_detect_nat_type() that supports IPv6.
  *
- * @param server	STUN server address.
- * @param stun_cfg	A structure containing various STUN configurations,
- *			such as the ioqueue and timer heap instance used
- *			to receive network I/O and timer events.
- * @param user_data	Application data, which will be returned back
- *			in the callback.
- * @param cb		Callback to be registered to receive notification
- *			about detection result.
+ * @param server        STUN server address.
+ * @param stun_cfg      A structure containing various STUN configurations,
+ *                      such as the ioqueue and timer heap instance used
+ *                      to receive network I/O and timer events.
+ * @param user_data     Application data, which will be returned back
+ *                      in the callback.
+ * @param cb            Callback to be registered to receive notification
+ *                      about detection result.
  *
- * @return		If this function returns PJ_SUCCESS, the procedure
- *			will complete asynchronously and callback will be
- *			called when it completes. For other return
- *			values, it means that an error has occured and
- *			the procedure did not start.
+ * @return              If this function returns PJ_SUCCESS, the procedure
+ *                      will complete asynchronously and callback will be
+ *                      called when it completes. For other return
+ *                      values, it means that an error has occured and
+ *                      the procedure did not start.
  */
 PJ_DECL(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
-					      pj_stun_config *stun_cfg,
-					      void *user_data,
-					      pj_stun_nat_detect_cb *cb);
+                                              pj_stun_config *stun_cfg,
+                                              void *user_data,
+                                              pj_stun_nat_detect_cb *cb);
 
 
 /**
@@ -230,5 +229,5 @@ PJ_DECL(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
 PJ_END_DECL
 
 
-#endif	/* __PJNATH_NAT_DETECT_H__ */
+#endif  /* __PJNATH_NAT_DETECT_H__ */
 

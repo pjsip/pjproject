@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -55,25 +54,25 @@ PJ_BEGIN_DECL
  * of the splitter/combiner. Application needs to supply the splitter/
  * combiner with a media port for each audio channels.
  *
- * @param pool		    Pool to allocate memory to create the splitter/
- *			    combiner.
- * @param clock_rate	    Audio clock rate/sampling rate.
- * @param channel_count	    Number of channels.
+ * @param pool              Pool to allocate memory to create the splitter/
+ *                          combiner.
+ * @param clock_rate        Audio clock rate/sampling rate.
+ * @param channel_count     Number of channels.
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Bits per sample.
- * @param options	    Optional flags.
- * @param p_splitcomb	    Pointer to receive the splitter/combiner.
+ * @param options           Optional flags.
+ * @param p_splitcomb       Pointer to receive the splitter/combiner.
  *
- * @return		    PJ_SUCCESS on success, or the appropriate
- *			    error code.
+ * @return                  PJ_SUCCESS on success, or the appropriate
+ *                          error code.
  */
 PJ_DECL(pj_status_t) pjmedia_splitcomb_create(pj_pool_t *pool,
-					      unsigned clock_rate,
-					      unsigned channel_count,
-					      unsigned samples_per_frame,
-					      unsigned bits_per_sample,
-					      unsigned options,
-					      pjmedia_port **p_splitcomb);
+                                              unsigned clock_rate,
+                                              unsigned channel_count,
+                                              unsigned samples_per_frame,
+                                              unsigned bits_per_sample,
+                                              unsigned options,
+                                              pjmedia_port **p_splitcomb);
 
 /**
  * Supply the splitter/combiner with media port for the specified channel 
@@ -82,18 +81,18 @@ PJ_DECL(pj_status_t) pjmedia_splitcomb_create(pj_pool_t *pool,
  * calls get_frame() of the splitter/combiner, it will call get_frame()
  * for all ports that have the same phase. And similarly for put_frame().
  *
- * @param splitcomb	    The splitter/combiner.
- * @param ch_num	    Audio channel starting number (zero based).
- * @param options	    Must be zero at the moment.
- * @param port		    The media port.
+ * @param splitcomb         The splitter/combiner.
+ * @param ch_num            Audio channel starting number (zero based).
+ * @param options           Must be zero at the moment.
+ * @param port              The media port.
  *
- * @return		    PJ_SUCCESS on success, or the appropriate error
- *			    code.
+ * @return                  PJ_SUCCESS on success, or the appropriate error
+ *                          code.
  */
 PJ_DECL(pj_status_t) pjmedia_splitcomb_set_channel(pjmedia_port *splitcomb,
-						   unsigned ch_num,
-						   unsigned options,
-						   pjmedia_port *port);
+                                                   unsigned ch_num,
+                                                   unsigned options,
+                                                   pjmedia_port *port);
 
 /**
  * Create a reverse phase media port for the specified channel number.
@@ -106,29 +105,29 @@ PJ_DECL(pj_status_t) pjmedia_splitcomb_set_channel(pjmedia_port *splitcomb,
  * will be returned when application calls get_frame() to the splitter's 
  * media port. So this effectively reverse the phase of the media port.
  *
- * @param pool		    The pool to allocate memory for the port and
- *			    buffers.
- * @param splitcomb	    The splitter/combiner.
- * @param ch_num	    Audio channel starting number (zero based).
- * @param options	    Normally is zero, but the lower 8-bit of the 
- *			    options can be used to specify the number of 
- *			    buffers in the circular buffer. If zero, then
- *			    default number will be used (default: 8). The second
- *			    lowest 8 bits can be used to specify the options for
- *			    the underlying delay buffer (see
- *			    #pjmedia_delay_buf_flag for the possible options).
- * @param p_chport	    The media port created with reverse phase for
- *			    the specified audio channel.
+ * @param pool              The pool to allocate memory for the port and
+ *                          buffers.
+ * @param splitcomb         The splitter/combiner.
+ * @param ch_num            Audio channel starting number (zero based).
+ * @param options           Normally is zero, but the lower 8-bit of the 
+ *                          options can be used to specify the number of 
+ *                          buffers in the circular buffer. If zero, then
+ *                          default number will be used (default: 8). The second
+ *                          lowest 8 bits can be used to specify the options for
+ *                          the underlying delay buffer (see
+ *                          #pjmedia_delay_buf_flag for the possible options).
+ * @param p_chport          The media port created with reverse phase for
+ *                          the specified audio channel.
  *
- * @return		    PJ_SUCCESS on success, or the appropriate error
- *			    code.
+ * @return                  PJ_SUCCESS on success, or the appropriate error
+ *                          code.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
-				      pjmedia_port *splitcomb,
-				      unsigned ch_num,
-				      unsigned options,
-				      pjmedia_port **p_chport);
+                                      pjmedia_port *splitcomb,
+                                      unsigned ch_num,
+                                      unsigned options,
+                                      pjmedia_port **p_chport);
 
 
 
@@ -138,6 +137,6 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_SPLITCOMB_H__ */
+#endif  /* __PJMEDIA_SPLITCOMB_H__ */
 
 

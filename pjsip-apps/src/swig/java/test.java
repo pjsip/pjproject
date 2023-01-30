@@ -8,10 +8,10 @@ public class test {
 
   public static void main(String argv[]) {
 
-	AuthCredInfo cred = new AuthCredInfo();
+        AuthCredInfo cred = new AuthCredInfo();
 
-	cred.setRealm("Hello world");
+        cred.setRealm("Hello world");
     
-	System.out.println(cred.getRealm());
+        System.out.println(cred.getRealm());
   }
 }

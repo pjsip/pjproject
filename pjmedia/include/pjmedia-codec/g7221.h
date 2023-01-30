@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -33,8 +32,8 @@
  * @brief Implementation of G.722.1 codec
  * @{
  *
- * <b>G.722.1 licensed from Polycom®</b><br />
- * <b>G.722.1 Annex C licensed from Polycom®</b>
+ * <b>G.722.1 licensed from Polycomï¿½</b><br />
+ * <b>G.722.1 Annex C licensed from Polycomï¿½</b>
  *
  * This section describes functions to initialize and register G.722.1 codec
  * factory to the codec manager. After the codec factory has been registered,
@@ -48,19 +47,19 @@
  * used with speech or music inputs.
  *
  *
- * \section codec_setting Codec Settings
+ * \section g7221_codec_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection g7221_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection g7221_specific_setting Codec Specific Settings
  *
  * The following settings are applicable for this codec.
  *
- * \subsubsection bitrate Bitrate
+ * \subsubsection g7221_bitrate Bitrate
  *
  * The codec implementation supports standard and non-standard bitrates.
  * Use #pjmedia_codec_g7221_set_mode() to enable or disable the bitrates.
@@ -97,9 +96,9 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register G.722.1 codec factory to pjmedia endpoint.
  *
- * @param endpt	    The pjmedia endpoint.
+ * @param endpt     The pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g7221_init( pjmedia_endpt *endpt );
 
@@ -113,18 +112,18 @@ PJ_DECL(pj_status_t) pjmedia_codec_g7221_init( pjmedia_endpt *endpt );
  * Note that currently only up to two non-standard modes can be enabled
  * at one time.
  *
- * @param sample_rate	PCM sampling rate, in Hz, valid values are only 
- *			16000 and 32000.
- * @param bitrate	G722.1 bitrate, in bps, the valid values are
- *			standard and non-standard bitrates as described 
- *			above.
- * @param enabled	PJ_TRUE for enabling specified mode.
+ * @param sample_rate   PCM sampling rate, in Hz, valid values are only 
+ *                      16000 and 32000.
+ * @param bitrate       G722.1 bitrate, in bps, the valid values are
+ *                      standard and non-standard bitrates as described 
+ *                      above.
+ * @param enabled       PJ_TRUE for enabling specified mode.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate, 
-						  unsigned bitrate, 
-						  pj_bool_t enabled);
+                                                  unsigned bitrate, 
+                                                  pj_bool_t enabled);
 
 /**
  * Set the G.722.1 codec encoder and decoder level adjustment. 
@@ -138,9 +137,9 @@ PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
  *
  * Default value is PJMEDIA_G7221_DEFAULT_PCM_SHIFT.
  *
- * @param val		The value
+ * @param val           The value
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_pcm_shift(int val);
 
@@ -149,7 +148,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_pcm_shift(int val);
 /**
  * Unregister G.722.1 codecs factory from pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g7221_deinit(void);
 
@@ -161,5 +160,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODECS_G7221_H__ */
+#endif  /* __PJMEDIA_CODECS_G7221_H__ */
 

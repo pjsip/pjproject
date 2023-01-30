@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,7 +34,7 @@ PJ_DEF(unsigned) pj_GUID_STRING_LENGTH()
 PJ_INLINE(void) hex2digit(unsigned value, char *p)
 {
     static char hex[] = {'0', '1', '2', '3', '4', '5', '6', '7',
-			 '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+                         '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
     *p++ = hex[ (value & 0xF0) >> 4 ];
     *p++ = hex[ (value & 0x0F) ];
 }
@@ -51,9 +50,9 @@ static void guid_to_str( GUID *guid, pj_str_t *str )
     guid->Data3 = pj_ntohs(guid->Data3);
 
     for (i=0; i<16; ++i) {
-	hex2digit( *src, dst );
-	dst += 2;
-	++src;
+        hex2digit( *src, dst );
+        dst += 2;
+        ++src;
     }
     str->slen = 32;
 }

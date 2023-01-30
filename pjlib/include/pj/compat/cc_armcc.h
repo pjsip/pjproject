@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -29,30 +28,30 @@
 #  error "This file is only for armcc!"
 #endif
 
-#define PJ_CC_NAME		"armcc"
+#define PJ_CC_NAME              "armcc"
 #define PJ_CC_VER_1             (__ARMCC_VERSION/100000)
 #define PJ_CC_VER_2             ((__ARMCC_VERSION%100000)/10000)
 #define PJ_CC_VER_3             (__ARMCC_VERSION%10000)
 
 #ifdef __cplusplus
-#  define PJ_INLINE_SPECIFIER	inline
+#  define PJ_INLINE_SPECIFIER   inline
 #else
-#  define PJ_INLINE_SPECIFIER	static __inline
+#  define PJ_INLINE_SPECIFIER   static __inline
 #endif
 
-#define PJ_THREAD_FUNC	
-#define PJ_NORETURN		
-#define PJ_ATTR_NORETURN	__attribute__ ((noreturn))
-#define PJ_ATTR_MAY_ALIAS	__attribute__ ((__may_alias__))
+#define PJ_THREAD_FUNC  
+#define PJ_NORETURN             
+#define PJ_ATTR_NORETURN        __attribute__ ((noreturn))
+#define PJ_ATTR_MAY_ALIAS       __attribute__ ((__may_alias__))
 
-#define PJ_HAS_INT64		1
+#define PJ_HAS_INT64            1
 
 typedef long long pj_int64_t;
 typedef unsigned long long pj_uint64_t;
 
-#define PJ_INT64_FMT		"L"
+#define PJ_INT64_FMT            "L"
 
-#define PJ_UNREACHED(x)	    	
+#define PJ_UNREACHED(x)         
 
-#endif	/* __PJ_COMPAT_CC_ARMCC_H__ */
+#endif  /* __PJ_COMPAT_CC_ARMCC_H__ */
 

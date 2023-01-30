@@ -219,6 +219,18 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
         #echo "--- found RANLIB=${NDK_RANLIB}"
       #fi
     fi
+
+    # Get STD C++ lib path
+    if test "x${STD_CPP_LIB}" = "x"; then
+      if test "x`echo $i | grep 'libc++_shared.so'`" != "x"; then
+        MY_CONF_TMP=`echo ${i} | sed -e 's/\\\/\\//g' | sed -e 's/\\"//g'`
+        if test -e $MY_CONF_TMP; then
+          STD_CPP_LIB=$MY_CONF_TMP
+        #else
+          #echo "--- not good path for libc++_shared.so: ${MY_CONF_TMP}"
+        fi
+      fi
+    fi
   done
 
   # Get target host from NDK toolchain dir name
@@ -326,7 +338,8 @@ if test "${IS_USING_LLVM}" = "1"; then
   STDCPP_TC="${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++"
   #STDCPP_CFLAGS="-I${STDCPP_TC}/include"
   #STDCPP_LIBS="-lc++_static -lc++abi"
-  STDCPP_LIBS="${STDCPP_TC}/libs/${TARGET_ABI}/libc++_shared.so"
+  #STDCPP_LIBS="${STDCPP_TC}/libs/${TARGET_ABI}/libc++_shared.so"
+  STDCPP_LIBS="${STD_CPP_LIB}"
   #STDCPP_LDFLAGS="-L${STDCPP_TC}/libs/${TARGET_ABI}/"
 else
   # gnustl
@@ -334,6 +347,10 @@ else
   STDCPP_CFLAGS="-I${STDCPP_TC_VER}/include -I${STDCPP_TC_VER}/libs/${TARGET_ABI}/include"
   STDCPP_LIBS="-lgnustl_static"
   STDCPP_LDFLAGS="-L${STDCPP_TC_VER}/libs/${TARGET_ABI}/"
+fi
+
+if test "x$AR_FLAGS" = "x"; then
+  AR_FLAGS="rvc"
 fi
 
 # stlport
@@ -346,6 +363,8 @@ export LIBS="${LIBS} ${STDCPP_LIBS}"
 export LDFLAGS="${LDFLAGS} ${STDCPP_LDFLAGS}"
 export CPPFLAGS="${CPPFLAGS}"
 export CXXFLAGS="${CXXFLAGS} ${STDCPP_CFLAGS}"
+export STD_CPP_LIB="${STD_CPP_LIB}"
+export AR_FLAGS="${AR_FLAGS}"
 
 # Print settings
 if test "1" = "1"; then
@@ -355,9 +374,11 @@ if test "1" = "1"; then
   echo " CXX = ${CXX}"
   echo " CFLAGS = ${CFLAGS}"
   echo " CXXFLAGS = ${CXXFLAGS}"
+  echo " STD_CPP_LIB = ${STD_CPP_LIB}"
   echo " LDFLAGS = ${LDFLAGS}"
   echo " LIBS = ${LIBS}"
   echo " AR = ${AR}"
+  echo " AR_FLAGS = ${AR_FLAGS}"
   echo " RANLIB = ${RANLIB}"
   echo " TARGET_HOST = ${TARGET_HOST}"
   echo " TARGET_ABI = ${TARGET_ABI}"

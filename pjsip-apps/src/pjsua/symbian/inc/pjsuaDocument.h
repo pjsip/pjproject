@@ -10,27 +10,27 @@
 #define PJSUADOCUMENT_H
 
 #include <akndoc.h>
-		
+                
 class CEikAppUi;
 
 /**
-* @class	CpjsuaDocument pjsuaDocument.h
-* @brief	A CAknDocument-derived class is required by the S60 application 
+* @class        CpjsuaDocument pjsuaDocument.h
+* @brief        A CAknDocument-derived class is required by the S60 application 
 *           framework. It is responsible for creating the AppUi object. 
 */
 class CpjsuaDocument : public CAknDocument
-	{
+        {
 public: 
-	// constructor
-	static CpjsuaDocument* NewL( CEikApplication& aApp );
+        // constructor
+        static CpjsuaDocument* NewL( CEikApplication& aApp );
 
 private: 
-	// constructors
-	CpjsuaDocument( CEikApplication& aApp );
-	void ConstructL();
-	
+        // constructors
+        CpjsuaDocument( CEikApplication& aApp );
+        void ConstructL();
+        
 public: 
-	// from base class CEikDocument
-	CEikAppUi* CreateAppUiL();
-	};
+        // from base class CEikDocument
+        CEikAppUi* CreateAppUiL();
+        };
 #endif // PJSUADOCUMENT_H

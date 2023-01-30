@@ -16,7 +16,7 @@
 <!-- Free Software Foundation, Inc.,                                    -->
 <!-- 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             -->
 <!--                                                                    -->
-<!-- See https://trac.pjsip.org/repos/ticket/1146                       -->
+<!-- See https://github.com/pjsip/pjproject/issues/1146                       -->
 <!--                                                                    -->
 
 <scenario name="SUBSCRIBE tests">

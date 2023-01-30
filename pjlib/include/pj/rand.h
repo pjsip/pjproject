@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -43,7 +42,7 @@ PJ_BEGIN_DECL
 /**
  * Put in seed to random number generator.
  *
- * @param seed	    Seed value.
+ * @param seed      Seed value.
  */
 PJ_DECL(void) pj_srand(unsigned int seed);
 
@@ -62,5 +61,5 @@ PJ_DECL(int) pj_rand(void);
 PJ_END_DECL
 
 
-#endif	/* __PJ_RAND_H__ */
+#endif  /* __PJ_RAND_H__ */
 

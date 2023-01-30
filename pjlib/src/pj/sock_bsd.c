@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -26,25 +25,25 @@
 #include <pj/errno.h>
 #include <pj/unicode.h>
 
-#define THIS_FILE	"sock_bsd.c"
+#define THIS_FILE       "sock_bsd.c"
 
 /*
  * Address families conversion.
  * The values here are indexed based on pj_addr_family.
  */
-const pj_uint16_t PJ_AF_UNSPEC	= AF_UNSPEC;
-const pj_uint16_t PJ_AF_UNIX	= AF_UNIX;
-const pj_uint16_t PJ_AF_INET	= AF_INET;
-const pj_uint16_t PJ_AF_INET6	= AF_INET6;
+const pj_uint16_t PJ_AF_UNSPEC  = AF_UNSPEC;
+const pj_uint16_t PJ_AF_UNIX    = AF_UNIX;
+const pj_uint16_t PJ_AF_INET    = AF_INET;
+const pj_uint16_t PJ_AF_INET6   = AF_INET6;
 #ifdef AF_PACKET
-const pj_uint16_t PJ_AF_PACKET	= AF_PACKET;
+const pj_uint16_t PJ_AF_PACKET  = AF_PACKET;
 #else
-const pj_uint16_t PJ_AF_PACKET	= 0xFFFF;
+const pj_uint16_t PJ_AF_PACKET  = 0xFFFF;
 #endif
 #ifdef AF_IRDA
-const pj_uint16_t PJ_AF_IRDA	= AF_IRDA;
+const pj_uint16_t PJ_AF_IRDA    = AF_IRDA;
 #else
-const pj_uint16_t PJ_AF_IRDA	= 0xFFFF;
+const pj_uint16_t PJ_AF_IRDA    = 0xFFFF;
 #endif
 
 /*
@@ -52,83 +51,83 @@ const pj_uint16_t PJ_AF_IRDA	= 0xFFFF;
  * The values here are indexed based on pj_sock_type
  */
 const pj_uint16_t PJ_SOCK_STREAM= SOCK_STREAM;
-const pj_uint16_t PJ_SOCK_DGRAM	= SOCK_DGRAM;
-const pj_uint16_t PJ_SOCK_RAW	= SOCK_RAW;
-const pj_uint16_t PJ_SOCK_RDM	= SOCK_RDM;
+const pj_uint16_t PJ_SOCK_DGRAM = SOCK_DGRAM;
+const pj_uint16_t PJ_SOCK_RAW   = SOCK_RAW;
+const pj_uint16_t PJ_SOCK_RDM   = SOCK_RDM;
 
 /*
  * Socket level values.
  */
-const pj_uint16_t PJ_SOL_SOCKET	= SOL_SOCKET;
-#ifdef SOL_IP
-const pj_uint16_t PJ_SOL_IP	= SOL_IP;
-#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) || \
+const pj_uint16_t PJ_SOL_SOCKET = SOL_SOCKET;
+#if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) || \
       (defined (IPPROTO_IP))
-const pj_uint16_t PJ_SOL_IP	= IPPROTO_IP;
+const pj_uint16_t PJ_SOL_IP     = IPPROTO_IP;
+#elif defined(SOL_IP)
+const pj_uint16_t PJ_SOL_IP     = SOL_IP;
 #else
-const pj_uint16_t PJ_SOL_IP	= 0;
+const pj_uint16_t PJ_SOL_IP     = 0;
 #endif /* SOL_IP */
 
 #if defined(SOL_TCP)
-const pj_uint16_t PJ_SOL_TCP	= SOL_TCP;
+const pj_uint16_t PJ_SOL_TCP    = SOL_TCP;
 #elif defined(IPPROTO_TCP)
-const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
+const pj_uint16_t PJ_SOL_TCP    = IPPROTO_TCP;
 #elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
-const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
+const pj_uint16_t PJ_SOL_TCP    = IPPROTO_TCP;
 #else
-const pj_uint16_t PJ_SOL_TCP	= 6;
+const pj_uint16_t PJ_SOL_TCP    = 6;
 #endif /* SOL_TCP */
 
 #ifdef SOL_UDP
-const pj_uint16_t PJ_SOL_UDP	= SOL_UDP;
+const pj_uint16_t PJ_SOL_UDP    = SOL_UDP;
 #elif defined(IPPROTO_UDP)
-const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
+const pj_uint16_t PJ_SOL_UDP    = IPPROTO_UDP;
 #elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
-const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
+const pj_uint16_t PJ_SOL_UDP    = IPPROTO_UDP;
 #else
-const pj_uint16_t PJ_SOL_UDP	= 17;
+const pj_uint16_t PJ_SOL_UDP    = 17;
 #endif /* SOL_UDP */
 
 #ifdef SOL_IPV6
-const pj_uint16_t PJ_SOL_IPV6	= SOL_IPV6;
+const pj_uint16_t PJ_SOL_IPV6   = SOL_IPV6;
 #elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
 #   if defined(IPPROTO_IPV6) || (_WIN32_WINNT >= 0x0501)
-	const pj_uint16_t PJ_SOL_IPV6	= IPPROTO_IPV6;
+        const pj_uint16_t PJ_SOL_IPV6   = IPPROTO_IPV6;
 #   else
-	const pj_uint16_t PJ_SOL_IPV6	= 41;
+        const pj_uint16_t PJ_SOL_IPV6   = 41;
 #   endif
 #else
-const pj_uint16_t PJ_SOL_IPV6	= 41;
+const pj_uint16_t PJ_SOL_IPV6   = 41;
 #endif /* SOL_IPV6 */
 
 /* IP_TOS */
 #ifdef IP_TOS
-const pj_uint16_t PJ_IP_TOS	= IP_TOS;
+const pj_uint16_t PJ_IP_TOS     = IP_TOS;
 #else
-const pj_uint16_t PJ_IP_TOS	= 1;
+const pj_uint16_t PJ_IP_TOS     = 1;
 #endif
 
 
 /* TOS settings (declared in netinet/ip.h) */
 #ifdef IPTOS_LOWDELAY
-const pj_uint16_t PJ_IPTOS_LOWDELAY	= IPTOS_LOWDELAY;
+const pj_uint16_t PJ_IPTOS_LOWDELAY     = IPTOS_LOWDELAY;
 #else
-const pj_uint16_t PJ_IPTOS_LOWDELAY	= 0x10;
+const pj_uint16_t PJ_IPTOS_LOWDELAY     = 0x10;
 #endif
 #ifdef IPTOS_THROUGHPUT
-const pj_uint16_t PJ_IPTOS_THROUGHPUT	= IPTOS_THROUGHPUT;
+const pj_uint16_t PJ_IPTOS_THROUGHPUT   = IPTOS_THROUGHPUT;
 #else
-const pj_uint16_t PJ_IPTOS_THROUGHPUT	= 0x08;
+const pj_uint16_t PJ_IPTOS_THROUGHPUT   = 0x08;
 #endif
 #ifdef IPTOS_RELIABILITY
-const pj_uint16_t PJ_IPTOS_RELIABILITY	= IPTOS_RELIABILITY;
+const pj_uint16_t PJ_IPTOS_RELIABILITY  = IPTOS_RELIABILITY;
 #else
-const pj_uint16_t PJ_IPTOS_RELIABILITY	= 0x04;
+const pj_uint16_t PJ_IPTOS_RELIABILITY  = 0x04;
 #endif
 #ifdef IPTOS_MINCOST
-const pj_uint16_t PJ_IPTOS_MINCOST	= IPTOS_MINCOST;
+const pj_uint16_t PJ_IPTOS_MINCOST      = IPTOS_MINCOST;
 #else
-const pj_uint16_t PJ_IPTOS_MINCOST	= 0x02;
+const pj_uint16_t PJ_IPTOS_MINCOST      = 0x02;
 #endif
 
 
@@ -174,9 +173,9 @@ const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = 0xFFFF;
 #endif
 
 /* recv() and send() flags */
-const int PJ_MSG_OOB		= MSG_OOB;
-const int PJ_MSG_PEEK		= MSG_PEEK;
-const int PJ_MSG_DONTROUTE	= MSG_DONTROUTE;
+const int PJ_MSG_OOB            = MSG_OOB;
+const int PJ_MSG_PEEK           = MSG_PEEK;
+const int PJ_MSG_DONTROUTE      = MSG_DONTROUTE;
 
 
 #if 0
@@ -184,7 +183,7 @@ static void CHECK_ADDR_LEN(const pj_sockaddr *addr, int len)
 {
     pj_sockaddr *a = (pj_sockaddr*)addr;
     pj_assert((a->addr.sa_family==PJ_AF_INET && len==sizeof(pj_sockaddr_in)) ||
-	      (a->addr.sa_family==PJ_AF_INET6 && len==sizeof(pj_sockaddr_in6)));
+              (a->addr.sa_family==PJ_AF_INET6 && len==sizeof(pj_sockaddr_in6)));
 
 }
 #else
@@ -255,12 +254,12 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp)
     inp->s_addr = PJ_INADDR_NONE;
 
     /* Caution:
-     *	this function might be called with cp->slen >= 16
+     *  this function might be called with cp->slen >= 16
      *  (i.e. when called with hostname to check if it's an IP addr).
      */
     PJ_ASSERT_RETURN(cp && cp->slen && inp, 0);
     if (cp->slen >= PJ_INET_ADDRSTRLEN) {
-	return 0;
+        return 0;
     }
 
     pj_memcpy(tempaddr, cp->ptr, cp->slen);
@@ -288,15 +287,15 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
      * compatible with pj_inet_aton()
      */
     if (af==PJ_AF_INET) {
-	((pj_in_addr*)dst)->s_addr = PJ_INADDR_NONE;
+        ((pj_in_addr*)dst)->s_addr = PJ_INADDR_NONE;
     }
 
     /* Caution:
-     *	this function might be called with cp->slen >= 46
+     *  this function might be called with cp->slen >= 46
      *  (i.e. when called with hostname to check if it's an IP addr).
      */
     if (src->slen >= PJ_INET6_ADDRSTRLEN) {
-	return PJ_ENAMETOOLONG;
+        return PJ_ENAMETOOLONG;
     }
 
     pj_memcpy(tempaddr, src->ptr, src->slen);
@@ -307,11 +306,11 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
      * Implementation using inet_pton()
      */
     if (inet_pton(af, tempaddr, dst) != 1) {
-	pj_status_t status = pj_get_netos_error();
-	if (status == PJ_SUCCESS)
-	    status = PJ_EUNKNOWN;
+        pj_status_t status = pj_get_netos_error();
+        if (status == PJ_SUCCESS)
+            status = PJ_EUNKNOWN;
 
-	return status;
+        return status;
     }
 
     return PJ_SUCCESS;
@@ -322,37 +321,37 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
      * Should also work on Unicode systems.
      */
     {
-	PJ_DECL_UNICODE_TEMP_BUF(wtempaddr,PJ_INET6_ADDRSTRLEN)
-	pj_sockaddr sock_addr;
-	int addr_len = sizeof(sock_addr);
-	int rc;
+        PJ_DECL_UNICODE_TEMP_BUF(wtempaddr,PJ_INET6_ADDRSTRLEN)
+        pj_sockaddr sock_addr;
+        int addr_len = sizeof(sock_addr);
+        int rc;
 
-	sock_addr.addr.sa_family = (pj_uint16_t)af;
-	rc = WSAStringToAddress(
-		PJ_STRING_TO_NATIVE(tempaddr,wtempaddr,sizeof(wtempaddr)), 
-		af, NULL, (LPSOCKADDR)&sock_addr, &addr_len);
-	if (rc != 0) {
-	    /* If you get rc 130022 Invalid argument (WSAEINVAL) with IPv6,
-	     * check that you have IPv6 enabled (install it in the network
-	     * adapter).
-	     */
-	    pj_status_t status = pj_get_netos_error();
-	    if (status == PJ_SUCCESS)
-		status = PJ_EUNKNOWN;
+        sock_addr.addr.sa_family = (pj_uint16_t)af;
+        rc = WSAStringToAddress(
+                PJ_STRING_TO_NATIVE(tempaddr,wtempaddr,sizeof(wtempaddr)), 
+                af, NULL, (LPSOCKADDR)&sock_addr, &addr_len);
+        if (rc != 0) {
+            /* If you get rc 130022 Invalid argument (WSAEINVAL) with IPv6,
+             * check that you have IPv6 enabled (install it in the network
+             * adapter).
+             */
+            pj_status_t status = pj_get_netos_error();
+            if (status == PJ_SUCCESS)
+                status = PJ_EUNKNOWN;
 
-	    return status;
-	}
+            return status;
+        }
 
-	if (sock_addr.addr.sa_family == PJ_AF_INET) {
-	    pj_memcpy(dst, &sock_addr.ipv4.sin_addr, 4);
-	    return PJ_SUCCESS;
-	} else if (sock_addr.addr.sa_family == PJ_AF_INET6) {
-	    pj_memcpy(dst, &sock_addr.ipv6.sin6_addr, 16);
-	    return PJ_SUCCESS;
-	} else {
-	    pj_assert(!"Shouldn't happen");
-	    return PJ_EBUG;
-	}
+        if (sock_addr.addr.sa_family == PJ_AF_INET) {
+            pj_memcpy(dst, &sock_addr.ipv4.sin_addr, 4);
+            return PJ_SUCCESS;
+        } else if (sock_addr.addr.sa_family == PJ_AF_INET6) {
+            pj_memcpy(dst, &sock_addr.ipv6.sin6_addr, 16);
+            return PJ_SUCCESS;
+        } else {
+            pj_assert(!"Shouldn't happen");
+            return PJ_EBUG;
+        }
     }
 #elif !defined(PJ_HAS_IPV6) || PJ_HAS_IPV6==0
     /* IPv6 support is disabled, just return error without raising assertion */
@@ -367,7 +366,7 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
  * Convert IPv4/IPv6 address to text.
  */
 PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
-				 char *dst, int size)
+                                 char *dst, int size)
 
 {
     PJ_ASSERT_RETURN(src && dst && size, PJ_EINVAL);
@@ -381,11 +380,11 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
      * Implementation using inet_ntop()
      */
     if (inet_ntop(af, src, dst, size) == NULL) {
-	pj_status_t status = pj_get_netos_error();
-	if (status == PJ_SUCCESS)
-	    status = PJ_EUNKNOWN;
+        pj_status_t status = pj_get_netos_error();
+        if (status == PJ_SUCCESS)
+            status = PJ_EUNKNOWN;
 
-	return status;
+        return status;
     }
 
     return PJ_SUCCESS;
@@ -396,50 +395,50 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
      * Should also work on Unicode systems.
      */
     {
-	PJ_DECL_UNICODE_TEMP_BUF(wtempaddr,PJ_INET6_ADDRSTRLEN)
-	pj_sockaddr sock_addr;
-	DWORD addr_len, addr_str_len;
-	int rc;
+        PJ_DECL_UNICODE_TEMP_BUF(wtempaddr,PJ_INET6_ADDRSTRLEN)
+        pj_sockaddr sock_addr;
+        DWORD addr_len, addr_str_len;
+        int rc;
 
-	pj_bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.addr.sa_family = (pj_uint16_t)af;
-	if (af == PJ_AF_INET) {
-	    if (size < PJ_INET_ADDRSTRLEN)
-		return PJ_ETOOSMALL;
-	    pj_memcpy(&sock_addr.ipv4.sin_addr, src, 4);
-	    addr_len = sizeof(pj_sockaddr_in);
-	    addr_str_len = PJ_INET_ADDRSTRLEN;
-	} else if (af == PJ_AF_INET6) {
-	    if (size < PJ_INET6_ADDRSTRLEN)
-		return PJ_ETOOSMALL;
-	    pj_memcpy(&sock_addr.ipv6.sin6_addr, src, 16);
-	    addr_len = sizeof(pj_sockaddr_in6);
-	    addr_str_len = PJ_INET6_ADDRSTRLEN;
-	} else {
-	    pj_assert(!"Unsupported address family");
-	    return PJ_EAFNOTSUP;
-	}
+        pj_bzero(&sock_addr, sizeof(sock_addr));
+        sock_addr.addr.sa_family = (pj_uint16_t)af;
+        if (af == PJ_AF_INET) {
+            if (size < PJ_INET_ADDRSTRLEN)
+                return PJ_ETOOSMALL;
+            pj_memcpy(&sock_addr.ipv4.sin_addr, src, 4);
+            addr_len = sizeof(pj_sockaddr_in);
+            addr_str_len = PJ_INET_ADDRSTRLEN;
+        } else if (af == PJ_AF_INET6) {
+            if (size < PJ_INET6_ADDRSTRLEN)
+                return PJ_ETOOSMALL;
+            pj_memcpy(&sock_addr.ipv6.sin6_addr, src, 16);
+            addr_len = sizeof(pj_sockaddr_in6);
+            addr_str_len = PJ_INET6_ADDRSTRLEN;
+        } else {
+            pj_assert(!"Unsupported address family");
+            return PJ_EAFNOTSUP;
+        }
 
 #if PJ_NATIVE_STRING_IS_UNICODE
-	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
-				NULL, wtempaddr, &addr_str_len);
-	if (rc == 0) {
-	    pj_unicode_to_ansi(wtempaddr, wcslen(wtempaddr), dst, size);
-	}
+        rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
+                                NULL, wtempaddr, &addr_str_len);
+        if (rc == 0) {
+            pj_unicode_to_ansi(wtempaddr, wcslen(wtempaddr), dst, size);
+        }
 #else
-	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
-				NULL, dst, &addr_str_len);
+        rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
+                                NULL, dst, &addr_str_len);
 #endif
 
-	if (rc != 0) {
-	    pj_status_t status = pj_get_netos_error();
-	    if (status == PJ_SUCCESS)
-		status = PJ_EUNKNOWN;
+        if (rc != 0) {
+            pj_status_t status = pj_get_netos_error();
+            if (status == PJ_SUCCESS)
+                status = PJ_EUNKNOWN;
 
-	    return status;
-	}
+            return status;
+        }
 
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
 #elif !defined(PJ_HAS_IPV6) || PJ_HAS_IPV6==0
@@ -462,13 +461,13 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
     PJ_CHECK_STACK();
 
     if (hostname.ptr == NULL) {
-	hostname.ptr = buf;
-	if (gethostname(buf, sizeof(buf)) != 0) {
-	    hostname.ptr[0] = '\0';
-	    hostname.slen = 0;
-	} else {
+        hostname.ptr = buf;
+        if (gethostname(buf, sizeof(buf)) != 0) {
+            hostname.ptr[0] = '\0';
+            hostname.slen = 0;
+        } else {
             hostname.slen = strlen(buf);
-	}
+        }
     }
     return &hostname;
 }
@@ -478,9 +477,9 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
  * Create new socket/endpoint for communication and returns a descriptor.
  */
 PJ_DEF(pj_status_t) pj_sock_socket(int af, 
-				   int type, 
-				   int proto,
-				   pj_sock_t *sock)
+                                   int type, 
+                                   int proto,
+                                   pj_sock_t *sock)
 {
     PJ_CHECK_STACK();
 
@@ -492,7 +491,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     *sock = WSASocket(af, type, proto, NULL, 0, WSA_FLAG_OVERLAPPED);
 
     if (*sock == PJ_INVALID_SOCKET) 
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     
 #if PJ_SOCK_DISABLE_WSAECONNRESET && \
     (!defined(PJ_WIN32_WINCE) || PJ_WIN32_WINCE==0)
@@ -502,21 +501,21 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 #endif
 
     /* Disable WSAECONNRESET for UDP.
-     * See https://trac.pjsip.org/repos/ticket/1197
+     * See https://github.com/pjsip/pjproject/issues/1197
      */
     if (type==PJ_SOCK_DGRAM) {
-	DWORD dwBytesReturned = 0;
-	BOOL bNewBehavior = FALSE;
-	DWORD rc;
+        DWORD dwBytesReturned = 0;
+        BOOL bNewBehavior = FALSE;
+        DWORD rc;
 
-	rc = WSAIoctl(*sock, SIO_UDP_CONNRESET,
-		      &bNewBehavior, sizeof(bNewBehavior),
-		      NULL, 0, &dwBytesReturned,
-		      NULL, NULL);
+        rc = WSAIoctl(*sock, SIO_UDP_CONNRESET,
+                      &bNewBehavior, sizeof(bNewBehavior),
+                      NULL, 0, &dwBytesReturned,
+                      NULL, NULL);
 
-	if (rc==SOCKET_ERROR) {
-	    // Ignored..
-	}
+        if (rc==SOCKET_ERROR) {
+            // Ignored..
+        }
     }
 #endif
 
@@ -528,9 +527,9 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
  * Create new socket/endpoint for communication and returns a descriptor.
  */
 PJ_DEF(pj_status_t) pj_sock_socket(int af, 
-				   int type, 
-				   int proto, 
-				   pj_sock_t *sock)
+                                   int type, 
+                                   int proto, 
+                                   pj_sock_t *sock)
 {
 
     PJ_CHECK_STACK();
@@ -542,27 +541,27 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     
     *sock = socket(af, type, proto);
     if (*sock == PJ_INVALID_SOCKET)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
-	pj_int32_t val = 1;
-	if (type == pj_SOCK_STREAM()) {
-	    pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
-			       &val, sizeof(val));
-	}
+        pj_int32_t val = 1;
+        if (type == pj_SOCK_STREAM()) {
+            pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
+                               &val, sizeof(val));
+        }
 #if defined(PJ_SOCK_HAS_IPV6_V6ONLY) && PJ_SOCK_HAS_IPV6_V6ONLY != 0
-	if (af == PJ_AF_INET6) {
-	    pj_sock_setsockopt(*sock, PJ_SOL_IPV6, IPV6_V6ONLY,
-			       &val, sizeof(val));
-	}
+        if (af == PJ_AF_INET6) {
+            pj_sock_setsockopt(*sock, PJ_SOL_IPV6, IPV6_V6ONLY,
+                               &val, sizeof(val));
+        }
 #endif
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
-	if (type == pj_SOCK_DGRAM()) {
-	    pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), SO_NOSIGPIPE, 
-			       &val, sizeof(val));
-	}
+        if (type == pj_SOCK_DGRAM()) {
+            pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), SO_NOSIGPIPE, 
+                               &val, sizeof(val));
+        }
 #endif
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 }
 #endif
@@ -571,8 +570,8 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
  * Bind socket.
  */
 PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock, 
-				  const pj_sockaddr_t *addr,
-				  int len)
+                                  const pj_sockaddr_t *addr,
+                                  int len)
 {
     PJ_CHECK_STACK();
 
@@ -581,9 +580,9 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
     CHECK_ADDR_LEN(addr, len);
 
     if (bind(sock, (struct sockaddr*)addr, len) != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 
@@ -591,8 +590,8 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
  * Bind socket.
  */
 PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock, 
-				     pj_uint32_t addr32,
-				     pj_uint16_t port)
+                                     pj_uint32_t addr32,
+                                     pj_uint16_t port)
 {
     pj_sockaddr_in addr;
 
@@ -625,24 +624,24 @@ PJ_DEF(pj_status_t) pj_sock_close(pj_sock_t sock)
 #endif
 
     if (rc != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 /*
  * Get remote's name.
  */
 PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
-					 pj_sockaddr_t *addr,
-					 int *namelen)
+                                         pj_sockaddr_t *addr,
+                                         int *namelen)
 {
     PJ_CHECK_STACK();
     if (getpeername(sock, (struct sockaddr*)addr, (socklen_t*)namelen) != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
-	PJ_SOCKADDR_RESET_LEN(addr);
-	return PJ_SUCCESS;
+        PJ_SOCKADDR_RESET_LEN(addr);
+        return PJ_SUCCESS;
     }
 }
 
@@ -650,15 +649,15 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
  * Get socket name.
  */
 PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
-					 pj_sockaddr_t *addr,
-					 int *namelen)
+                                         pj_sockaddr_t *addr,
+                                         int *namelen)
 {
     PJ_CHECK_STACK();
     if (getsockname(sock, (struct sockaddr*)addr, (socklen_t*)namelen) != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
-	PJ_SOCKADDR_RESET_LEN(addr);
-	return PJ_SUCCESS;
+        PJ_SOCKADDR_RESET_LEN(addr);
+        return PJ_SUCCESS;
     }
 }
 
@@ -666,24 +665,24 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
  * Send data
  */
 PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
-				 const void *buf,
-				 pj_ssize_t *len,
-				 unsigned flags)
+                                 const void *buf,
+                                 pj_ssize_t *len,
+                                 unsigned flags)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(len, PJ_EINVAL);
 
 #ifdef MSG_NOSIGNAL
-    /* Suppress SIGPIPE. See https://trac.pjsip.org/repos/ticket/1538 */
+    /* Suppress SIGPIPE. See https://github.com/pjsip/pjproject/issues/1538 */
     flags |= MSG_NOSIGNAL;
 #endif
 
     *len = send(sock, (const char*)buf, (int)(*len), flags);
 
     if (*len < 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 
@@ -691,11 +690,11 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
  * Send data.
  */
 PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
-				   const void *buf,
-				   pj_ssize_t *len,
-				   unsigned flags,
-				   const pj_sockaddr_t *to,
-				   int tolen)
+                                   const void *buf,
+                                   pj_ssize_t *len,
+                                   unsigned flags,
+                                   const pj_sockaddr_t *to,
+                                   int tolen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(len, PJ_EINVAL);
@@ -703,21 +702,21 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     CHECK_ADDR_LEN(to, tolen);
 
     *len = sendto(sock, (const char*)buf, (int)(*len), flags, 
-		  (const struct sockaddr*)to, tolen);
+                  (const struct sockaddr*)to, tolen);
 
     if (*len < 0) 
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else 
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 /*
  * Receive data.
  */
 PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
-				 void *buf,
-				 pj_ssize_t *len,
-				 unsigned flags)
+                                 void *buf,
+                                 pj_ssize_t *len,
+                                 unsigned flags)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(buf && len, PJ_EINVAL);
@@ -725,34 +724,34 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
     *len = recv(sock, (char*)buf, (int)(*len), flags);
 
     if (*len < 0) 
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 /*
  * Receive data.
  */
 PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
-				     void *buf,
-				     pj_ssize_t *len,
-				     unsigned flags,
-				     pj_sockaddr_t *from,
-				     int *fromlen)
+                                     void *buf,
+                                     pj_ssize_t *len,
+                                     unsigned flags,
+                                     pj_sockaddr_t *from,
+                                     int *fromlen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(buf && len, PJ_EINVAL);
 
     *len = recvfrom(sock, (char*)buf, (int)(*len), flags, 
-		    (struct sockaddr*)from, (socklen_t*)fromlen);
+                    (struct sockaddr*)from, (socklen_t*)fromlen);
 
     if (*len < 0) 
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
         if (from) {
             PJ_SOCKADDR_RESET_LEN(from);
         }
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 }
 
@@ -760,28 +759,28 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
  * Get socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_getsockopt( pj_sock_t sock,
-					pj_uint16_t level,
-					pj_uint16_t optname,
-					void *optval,
-					int *optlen)
+                                        pj_uint16_t level,
+                                        pj_uint16_t optname,
+                                        void *optval,
+                                        int *optlen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(optval && optlen, PJ_EINVAL);
 
     if (getsockopt(sock, level, optname, (char*)optval, (socklen_t*)optlen)!=0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 /*
  * Set socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
-					pj_uint16_t level,
-					pj_uint16_t optname,
-					const void *optval,
-					int optlen)
+                                        pj_uint16_t level,
+                                        pj_uint16_t optname,
+                                        const void *optval,
+                                        int optlen)
 {
     int status;
     PJ_CHECK_STACK();
@@ -789,24 +788,24 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
 #if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_SUNOS) && PJ_SUNOS)
     /* Some opt may still need int value (e.g:SO_EXCLUSIVEADDRUSE in win32). */
     status = setsockopt(sock, 
-		     level, 
-		     ((optname&0xff00)==0xff00)?(int)optname|0xffff0000:optname, 		     
-		     (const char*)optval, optlen);
+                     level, 
+                     ((optname&0xff00)==0xff00)?(int)optname|0xffff0000:optname,                     
+                     (const char*)optval, optlen);
 #else
     status = setsockopt(sock, level, optname, (const char*)optval, optlen);
 #endif
 
     if (status != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 /*
  * Set socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
-					       const pj_sockopt_params *params)
+                                               const pj_sockopt_params *params)
 {
     unsigned int i = 0;
     pj_status_t retval = PJ_SUCCESS;
@@ -814,17 +813,17 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
     PJ_ASSERT_RETURN(params, PJ_EINVAL);
     
     for (;i<params->cnt && i<PJ_MAX_SOCKOPT_PARAMS;++i) {
-	pj_status_t status = pj_sock_setsockopt(sockfd, 
-					(pj_uint16_t)params->options[i].level,
-					(pj_uint16_t)params->options[i].optname,
-					params->options[i].optval, 
-					params->options[i].optlen);
-	if (status != PJ_SUCCESS) {
-	    retval = status;
-	    PJ_PERROR(4,(THIS_FILE, status,
-			 "Warning: error applying sock opt %d",
-			 params->options[i].optname));
-	}
+        pj_status_t status = pj_sock_setsockopt(sockfd, 
+                                        (pj_uint16_t)params->options[i].level,
+                                        (pj_uint16_t)params->options[i].optname,
+                                        params->options[i].optval, 
+                                        params->options[i].optlen);
+        if (status != PJ_SUCCESS) {
+            retval = status;
+            PJ_PERROR(4,(THIS_FILE, status,
+                         "Warning: error applying sock opt %d",
+                         params->options[i].optname));
+        }
     }
 
     return retval;
@@ -834,14 +833,14 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
  * Connect socket.
  */
 PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
-				     const pj_sockaddr_t *addr,
-				     int namelen)
+                                     const pj_sockaddr_t *addr,
+                                     int namelen)
 {
     PJ_CHECK_STACK();
     if (connect(sock, (struct sockaddr*)addr, namelen) != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 
@@ -850,59 +849,59 @@ PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
  */
 #if PJ_HAS_TCP
 PJ_DEF(pj_status_t) pj_sock_shutdown( pj_sock_t sock,
-				      int how)
+                                      int how)
 {
     PJ_CHECK_STACK();
     if (shutdown(sock, how) != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 /*
  * Start listening to incoming connections.
  */
 PJ_DEF(pj_status_t) pj_sock_listen( pj_sock_t sock,
-				    int backlog)
+                                    int backlog)
 {
     PJ_CHECK_STACK();
     if (listen(sock, backlog) != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 /*
  * Accept incoming connections
  */
 PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
-				    pj_sock_t *newsock,
-				    pj_sockaddr_t *addr,
-				    int *addrlen)
+                                    pj_sock_t *newsock,
+                                    pj_sockaddr_t *addr,
+                                    int *addrlen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(newsock != NULL, PJ_EINVAL);
 
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
     if (addr) {
-	PJ_SOCKADDR_SET_LEN(addr, *addrlen);
+        PJ_SOCKADDR_SET_LEN(addr, *addrlen);
     }
 #endif
     
     *newsock = accept(serverfd, (struct sockaddr*)addr, (socklen_t*)addrlen);
     if (*newsock==PJ_INVALID_SOCKET)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
-	
+        
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-	if (addr) {
-	    PJ_SOCKADDR_RESET_LEN(addr);
-	}
+        if (addr) {
+            PJ_SOCKADDR_RESET_LEN(addr);
+        }
 #endif
-	    
-	return PJ_SUCCESS;
+            
+        return PJ_SUCCESS;
     }
 }
-#endif	/* PJ_HAS_TCP */
+#endif  /* PJ_HAS_TCP */
 
 

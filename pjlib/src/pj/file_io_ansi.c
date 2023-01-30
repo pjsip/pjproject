@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -170,7 +169,7 @@ PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
 
     rc = fflush((FILE*)fd);
     if (rc == EOF) {
-	return PJ_RETURN_OS_ERROR(errno);
+        return PJ_RETURN_OS_ERROR(errno);
     }
 
     return PJ_SUCCESS;

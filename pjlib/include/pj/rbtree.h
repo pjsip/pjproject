@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -51,8 +50,14 @@ typedef enum pj_rbcolor_t
  */
 typedef struct pj_rbtree_node 
 {
-    /** Pointers to the node's parent, and left and right siblings. */
-    struct pj_rbtree_node *parent, *left, *right;
+    /** Pointers to the node's parent. */
+    struct pj_rbtree_node *parent;
+
+    /** Pointers to the node's left sibling. */
+    struct pj_rbtree_node *left;
+
+    /** Pointers to the node's right sibling. */
+    struct pj_rbtree_node *right;
 
     /** Key associated with the node. */
     const void *key;
@@ -97,13 +102,13 @@ typedef struct pj_rbtree
 /**
  * Guidance on how much memory required for each of the node.
  */
-#define PJ_RBTREE_NODE_SIZE	    (sizeof(pj_rbtree_node))
+#define PJ_RBTREE_NODE_SIZE         (sizeof(pj_rbtree_node))
 
 
 /**
  * Guidance on memory required for the tree.
  */
-#define PJ_RBTREE_SIZE		    (sizeof(pj_rbtree))
+#define PJ_RBTREE_SIZE              (sizeof(pj_rbtree))
 
 
 /**
@@ -139,7 +144,7 @@ PJ_DECL(pj_rbtree_node*) pj_rbtree_last( pj_rbtree *tree );
  * @return the successive node, or NULL if the node has no successor.
  */
 PJ_DECL(pj_rbtree_node*) pj_rbtree_next( pj_rbtree *tree, 
-					 pj_rbtree_node *node );
+                                         pj_rbtree_node *node );
 
 /**
  * The the previous node for the specified node.
@@ -149,7 +154,7 @@ PJ_DECL(pj_rbtree_node*) pj_rbtree_next( pj_rbtree *tree,
  * @return the previous node, or NULL if the node has no previous node.
  */
 PJ_DECL(pj_rbtree_node*) pj_rbtree_prev( pj_rbtree *tree, 
-					 pj_rbtree_node *node );
+                                         pj_rbtree_node *node );
 
 /**
  * Insert a new node. 
@@ -160,7 +165,7 @@ PJ_DECL(pj_rbtree_node*) pj_rbtree_prev( pj_rbtree *tree,
  * @return zero on success, or -1 if the key already exist.
  */
 PJ_DECL(int) pj_rbtree_insert( pj_rbtree *tree, 
-			       pj_rbtree_node *node );
+                               pj_rbtree_node *node );
 
 /**
  * Find a node which has the specified key.
@@ -170,7 +175,7 @@ PJ_DECL(int) pj_rbtree_insert( pj_rbtree *tree,
  *         be found.
  */
 PJ_DECL(pj_rbtree_node*) pj_rbtree_find( pj_rbtree *tree,
-					 const void *key );
+                                         const void *key );
 
 /**
  * Erase a node from the tree.
@@ -179,7 +184,7 @@ PJ_DECL(pj_rbtree_node*) pj_rbtree_find( pj_rbtree *tree,
  * @return the tree node itself.
  */
 PJ_DECL(pj_rbtree_node*) pj_rbtree_erase( pj_rbtree *tree,
-					  pj_rbtree_node *node );
+                                          pj_rbtree_node *node );
 
 /**
  * Get the maximum tree height from the specified node.
@@ -188,7 +193,7 @@ PJ_DECL(pj_rbtree_node*) pj_rbtree_erase( pj_rbtree *tree,
  * @return the maximum height, which should be at most lg(N)
  */
 PJ_DECL(unsigned) pj_rbtree_max_height( pj_rbtree *tree,
-					pj_rbtree_node *node );
+                                        pj_rbtree_node *node );
 
 /**
  * Get the minumum tree height from the specified node.
@@ -197,7 +202,7 @@ PJ_DECL(unsigned) pj_rbtree_max_height( pj_rbtree *tree,
  * @return the height
  */
 PJ_DECL(unsigned) pj_rbtree_min_height( pj_rbtree *tree,
-					pj_rbtree_node *node );
+                                        pj_rbtree_node *node );
 
 
 /**
@@ -206,5 +211,5 @@ PJ_DECL(unsigned) pj_rbtree_min_height( pj_rbtree *tree,
 
 PJ_END_DECL
 
-#endif	/* __PJ_RBTREE_H__ */
+#endif  /* __PJ_RBTREE_H__ */
 

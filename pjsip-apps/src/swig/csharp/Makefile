@@ -27,9 +27,12 @@ ARCH=$(TARGET_ARCH)
 ifeq ($(OS),android)
     LIBPJSUA2_DIR=$(PROJ_NAME)/Droid/lib/$(ARCH)
     LIBPJSUA2=$(LIBPJSUA2_DIR)/libpjsua2.so
-endif
-ifeq ($(OS),ios)
-    LIBPJSUA2_DIR=$(PROJ_NAME)/iOS/lib/$(ARCH)
+else
+    ifeq ($(OS),ios)
+        LIBPJSUA2_DIR=$(PROJ_NAME)/iOS/lib/$(ARCH)
+    else
+        LIBPJSUA2_DIR=$(PROJ_NAME)/lib
+    endif
     LIBPJSUA2=$(LIBPJSUA2_DIR)/libpjsua2.a
 endif
 
@@ -47,9 +50,8 @@ ifeq ($(OS),android)
 	$(PJ_CXX) -shared -o $(LIBPJSUA2) $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_CFLAGS) $(MY_LDFLAGS)
 	# copy libc++_shared.so manually
-	cp -f ${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${TARGET_ARCH}/libc++_shared.so $(LIBPJSUA2_DIR)
-endif
-ifeq ($(OS),ios)
+	cp -f ${STD_CPP_LIB} $(LIBPJSUA2_DIR)
+else
 	$(AR) $(LIBPJSUA2) $(AR_FLAGS) $(OUT_DIR)/pjsua2_wrap.o $(PJ_LIBXX_FILES)
 endif
 
@@ -66,8 +68,8 @@ sample: sample.cs
 	cp sample.cs $(PROJ_NAME)/$(PROJ_NAME)
 
 clean distclean realclean:
-	rm -rf $(OUT_DIR)/*
-	rm -rf $(LIBPJSUA2_DIR)/*
+	rm -rf ./$(OUT_DIR)/*
+	rm -rf ./$(LIBPJSUA2_DIR)/*
 
 install:
 

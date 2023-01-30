@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
  *
@@ -32,58 +31,58 @@
 #include <bcg729/encoder.h>
 #include <bcg729/decoder.h>
 
-#define THIS_FILE		"bcg729.c"
+#define THIS_FILE               "bcg729.c"
 
 /* Prototypes for BCG729 factory */
 static pj_status_t bcg729_test_alloc(pjmedia_codec_factory *factory,
-				     const pjmedia_codec_info *id);
+                                     const pjmedia_codec_info *id);
 static pj_status_t bcg729_default_attr(pjmedia_codec_factory *factory,
-				       const pjmedia_codec_info *id,
-				       pjmedia_codec_param *attr);
+                                       const pjmedia_codec_info *id,
+                                       pjmedia_codec_param *attr);
 static pj_status_t bcg729_enum_codecs (pjmedia_codec_factory *factory,
-				       unsigned *count,
-				       pjmedia_codec_info codecs[]);
+                                       unsigned *count,
+                                       pjmedia_codec_info codecs[]);
 static pj_status_t bcg729_alloc_codec(pjmedia_codec_factory *factory,
-				      const pjmedia_codec_info *id,
-				      pjmedia_codec **p_codec);
+                                      const pjmedia_codec_info *id,
+                                      pjmedia_codec **p_codec);
 static pj_status_t bcg729_dealloc_codec(pjmedia_codec_factory *factory,
-				        pjmedia_codec *codec);
+                                        pjmedia_codec *codec);
 
 /* Prototypes for BCG729 implementation. */
 static pj_status_t  bcg729_codec_init(pjmedia_codec *codec,
-				      pj_pool_t *pool );
+                                      pj_pool_t *pool );
 static pj_status_t  bcg729_codec_open(pjmedia_codec *codec,
-				      pjmedia_codec_param *attr);
+                                      pjmedia_codec_param *attr);
 static pj_status_t  bcg729_codec_close(pjmedia_codec *codec);
 static pj_status_t  bcg729_codec_modify(pjmedia_codec *codec,
-				        const pjmedia_codec_param *attr);
+                                        const pjmedia_codec_param *attr);
 static pj_status_t  bcg729_codec_parse(pjmedia_codec *codec,
-				       void *pkt,
-				       pj_size_t pkt_size,
-				       const pj_timestamp *timestamp,
-				       unsigned *frame_cnt,
-				       pjmedia_frame frames[]);
+                                       void *pkt,
+                                       pj_size_t pkt_size,
+                                       const pj_timestamp *timestamp,
+                                       unsigned *frame_cnt,
+                                       pjmedia_frame frames[]);
 static pj_status_t  bcg729_codec_encode(pjmedia_codec *codec,
-				        const struct pjmedia_frame *input,
-				        unsigned output_buf_len,
-				        struct pjmedia_frame *output);
+                                        const struct pjmedia_frame *input,
+                                        unsigned output_buf_len,
+                                        struct pjmedia_frame *output);
 static pj_status_t  bcg729_codec_decode(pjmedia_codec *codec,
-				        const struct pjmedia_frame *input,
-				        unsigned output_buf_len,
-				        struct pjmedia_frame *output);
+                                        const struct pjmedia_frame *input,
+                                        unsigned output_buf_len,
+                                        struct pjmedia_frame *output);
 static pj_status_t  bcg729_codec_recover(pjmedia_codec *codec,
-					 unsigned output_buf_len,
-					 struct pjmedia_frame *output);
+                                         unsigned output_buf_len,
+                                         struct pjmedia_frame *output);
 
 /* Codec const. */
-#define G729_TAG 		"G729"
-#define G729_CLOCK_RATE 	8000
-#define G729_CHANNEL_COUNT 	1
-#define G729_SAMPLES_PER_FRAME	80
-#define G729_DEFAULT_BIT_RATE	8000
-#define G729_MAX_BIT_RATE	11800
-#define G729_FRAME_PER_PACKET	2
-#define G729_FRAME_SIZE		10
+#define G729_TAG                "G729"
+#define G729_CLOCK_RATE         8000
+#define G729_CHANNEL_COUNT      1
+#define G729_SAMPLES_PER_FRAME  80
+#define G729_DEFAULT_BIT_RATE   8000
+#define G729_MAX_BIT_RATE       11800
+#define G729_FRAME_PER_PACKET   2
+#define G729_FRAME_SIZE         10
 
 /* Definition for BCG729 codec operations. */
 static pjmedia_codec_op bcg729_op =
@@ -113,23 +112,23 @@ static pjmedia_codec_factory_op bcg729_factory_op =
 /* BCG729 factory private data */
 static struct bcg729_factory
 {
-    pjmedia_codec_factory	base;
-    pjmedia_endpt	       *endpt;
-    pj_pool_t		       *pool;
-    pj_mutex_t		       *mutex;
+    pjmedia_codec_factory       base;
+    pjmedia_endpt              *endpt;
+    pj_pool_t                  *pool;
+    pj_mutex_t                 *mutex;
 } bcg729_factory;
 
 
 /* BCG729 codec private data. */
 typedef struct bcg729_private
 {
-    pj_pool_t	*pool;		/**< Pool for each instance.    */
+    pj_pool_t   *pool;          /**< Pool for each instance.    */
 
-    bcg729EncoderChannelContextStruct	*encoder;
-    bcg729DecoderChannelContextStruct	*decoder;
+    bcg729EncoderChannelContextStruct   *encoder;
+    bcg729DecoderChannelContextStruct   *decoder;
 
-    pj_bool_t		 vad_enabled;
-    pj_bool_t		 plc_enabled;
+    pj_bool_t            vad_enabled;
+    pj_bool_t            plc_enabled;
 } bcg729_private;
 
 
@@ -139,8 +138,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt *endpt)
     pj_status_t status;
 
     if (bcg729_factory.endpt != NULL) {
-	/* Already initialized. */
-	return PJ_SUCCESS;
+        /* Already initialized. */
+        return PJ_SUCCESS;
     }
 
     /* Init factory */
@@ -151,40 +150,40 @@ PJ_DEF(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt *endpt)
 
     /* Create pool */
     bcg729_factory.pool = pjmedia_endpt_create_pool(endpt, "bcg729", 4000,
-						    4000);
+                                                    4000);
     if (!bcg729_factory.pool)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
     /* Create mutex. */
     status = pj_mutex_create_simple(bcg729_factory.pool, "bcg729",
-				    &bcg729_factory.mutex);
+                                    &bcg729_factory.mutex);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
     if (!codec_mgr) {
-	status = PJ_EINVALIDOP;
-	goto on_error;
+        status = PJ_EINVALIDOP;
+        goto on_error;
     }
 
     /* Register codec factory to endpoint. */
     status = pjmedia_codec_mgr_register_factory(codec_mgr,
-						&bcg729_factory.base);
+                                                &bcg729_factory.base);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     PJ_LOG(4,(THIS_FILE, "BCG729 codec initialized"));
     return PJ_SUCCESS;
 
 on_error:
     if (bcg729_factory.mutex) {
-	pj_mutex_destroy(bcg729_factory.mutex);
-	bcg729_factory.mutex = NULL;
+        pj_mutex_destroy(bcg729_factory.mutex);
+        bcg729_factory.mutex = NULL;
     }
     if (bcg729_factory.pool) {
-	pj_pool_release(bcg729_factory.pool);
-	bcg729_factory.pool = NULL;
+        pj_pool_release(bcg729_factory.pool);
+        bcg729_factory.pool = NULL;
     }
 
     return status;
@@ -200,8 +199,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_bcg729_deinit(void)
     pj_status_t status;
 
     if (bcg729_factory.endpt == NULL) {
-	/* Not registered. */
-	return PJ_SUCCESS;
+        /* Not registered. */
+        return PJ_SUCCESS;
     }
 
     /* Lock mutex. */
@@ -210,14 +209,14 @@ PJ_DEF(pj_status_t) pjmedia_codec_bcg729_deinit(void)
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(bcg729_factory.endpt);
     if (!codec_mgr) {
-	bcg729_factory.endpt = NULL;
-	pj_mutex_unlock(bcg729_factory.mutex);
-	return PJ_EINVALIDOP;
+        bcg729_factory.endpt = NULL;
+        pj_mutex_unlock(bcg729_factory.mutex);
+        return PJ_EINVALIDOP;
     }
 
     /* Unregister bcg729 codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
-						  &bcg729_factory.base);
+                                                  &bcg729_factory.base);
     bcg729_factory.endpt = NULL;
 
     /* Destroy mutex. */
@@ -237,7 +236,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_bcg729_deinit(void)
  * Check if factory can allocate the specified codec.
  */
 static pj_status_t bcg729_test_alloc(pjmedia_codec_factory *factory,
-				     const pjmedia_codec_info *info )
+                                     const pjmedia_codec_info *info )
 {
     pj_str_t g729_tag = pj_str(G729_TAG);
     PJ_UNUSED_ARG(factory);
@@ -245,19 +244,19 @@ static pj_status_t bcg729_test_alloc(pjmedia_codec_factory *factory,
 
     /* Type MUST be audio. */
     if (info->type != PJMEDIA_TYPE_AUDIO)
-	return PJMEDIA_CODEC_EUNSUP;
+        return PJMEDIA_CODEC_EUNSUP;
 
     /* Check encoding name. */
     if (pj_stricmp(&info->encoding_name, &g729_tag) != 0)
-	return PJMEDIA_CODEC_EUNSUP;
+        return PJMEDIA_CODEC_EUNSUP;
 
     /* Channel count must be one */
     if (info->channel_cnt != G729_CHANNEL_COUNT)
-	return PJMEDIA_CODEC_EUNSUP;
+        return PJMEDIA_CODEC_EUNSUP;
 
     /* Check clock-rate */
     if (info->clock_rate != G729_CLOCK_RATE)
-	return PJMEDIA_CODEC_EUNSUP;	
+        return PJMEDIA_CODEC_EUNSUP;    
 
     return PJ_SUCCESS;
 }
@@ -267,13 +266,13 @@ static pj_status_t bcg729_test_alloc(pjmedia_codec_factory *factory,
  * Generate default attribute.
  */
 static pj_status_t bcg729_default_attr(pjmedia_codec_factory *factory,
-				       const pjmedia_codec_info *id,
-				       pjmedia_codec_param *attr )
+                                       const pjmedia_codec_info *id,
+                                       pjmedia_codec_param *attr )
 {    
     PJ_ASSERT_RETURN(factory==&bcg729_factory.base, PJ_EINVAL);
 
     if (id->pt != PJMEDIA_RTP_PT_G729)
-	return PJMEDIA_CODEC_EUNSUP;
+        return PJMEDIA_CODEC_EUNSUP;
 
     pj_bzero(attr, sizeof(pjmedia_codec_param));
     attr->info.pt = PJMEDIA_RTP_PT_G729;
@@ -284,9 +283,9 @@ static pj_status_t bcg729_default_attr(pjmedia_codec_factory *factory,
 
     attr->info.pcm_bits_per_sample = G729_FRAME_PER_PACKET * 8;
     attr->info.frm_ptime =  (pj_uint16_t)
-			    (G729_SAMPLES_PER_FRAME * 1000 /
-			     G729_CHANNEL_COUNT /
-			     G729_CLOCK_RATE);
+                            (G729_SAMPLES_PER_FRAME * 1000 /
+                             G729_CHANNEL_COUNT /
+                             G729_CLOCK_RATE);
     attr->setting.frm_per_pkt = G729_FRAME_PER_PACKET;
 
     /* Default flags. */
@@ -296,9 +295,9 @@ static pj_status_t bcg729_default_attr(pjmedia_codec_factory *factory,
     attr->setting.cng = attr->setting.vad;
 
     if (attr->setting.vad == 0) {
-	attr->setting.dec_fmtp.cnt = 1;
-	pj_strset2(&attr->setting.dec_fmtp.param[0].name, "annexb");
-	pj_strset2(&attr->setting.dec_fmtp.param[0].val, "no");
+        attr->setting.dec_fmtp.cnt = 1;
+        pj_strset2(&attr->setting.dec_fmtp.param[0].name, "annexb");
+        pj_strset2(&attr->setting.dec_fmtp.param[0].val, "no");
     }
     return PJ_SUCCESS;
 }
@@ -308,8 +307,8 @@ static pj_status_t bcg729_default_attr(pjmedia_codec_factory *factory,
  * Enum codecs supported by this factory.
  */
 static pj_status_t bcg729_enum_codecs(pjmedia_codec_factory *factory,
-				    unsigned *count,
-				    pjmedia_codec_info codecs[])
+                                    unsigned *count,
+                                    pjmedia_codec_info codecs[])
 {
     PJ_ASSERT_RETURN(factory==&bcg729_factory.base, PJ_EINVAL);
     PJ_ASSERT_RETURN(codecs && *count > 0, PJ_EINVAL);
@@ -331,8 +330,8 @@ static pj_status_t bcg729_enum_codecs(pjmedia_codec_factory *factory,
  * Allocate a new BCG729 codec instance.
  */
 static pj_status_t bcg729_alloc_codec(pjmedia_codec_factory *factory,
-				      const pjmedia_codec_info *id,
-				      pjmedia_codec **p_codec)
+                                      const pjmedia_codec_info *id,
+                                      pjmedia_codec **p_codec)
 {
     pj_pool_t *pool;
     pjmedia_codec *codec;
@@ -365,7 +364,7 @@ static pj_status_t bcg729_alloc_codec(pjmedia_codec_factory *factory,
  * Free codec.
  */
 static pj_status_t bcg729_dealloc_codec(pjmedia_codec_factory *factory,
-				        pjmedia_codec *codec )
+                                        pjmedia_codec *codec )
 {
     bcg729_private *bcg729_data;
 
@@ -376,7 +375,7 @@ static pj_status_t bcg729_dealloc_codec(pjmedia_codec_factory *factory,
 
     /* Close codec, if it's not closed. */
     if (bcg729_data->encoder || bcg729_data->decoder) {
-    	bcg729_codec_close(codec);
+        bcg729_codec_close(codec);
     }
 
     pj_pool_release(bcg729_data->pool);
@@ -389,7 +388,7 @@ static pj_status_t bcg729_dealloc_codec(pjmedia_codec_factory *factory,
  * Init codec.
  */
 static pj_status_t bcg729_codec_init(pjmedia_codec *codec,
-				   pj_pool_t *pool )
+                                   pj_pool_t *pool )
 {
     PJ_UNUSED_ARG(codec);
     PJ_UNUSED_ARG(pool);
@@ -401,7 +400,7 @@ static pj_status_t bcg729_codec_init(pjmedia_codec *codec,
  * Open codec.
  */
 static pj_status_t bcg729_codec_open(pjmedia_codec *codec,
-				     pjmedia_codec_param *attr )
+                                     pjmedia_codec_param *attr )
 {
     bcg729_private *bcg729_data;
     unsigned i;
@@ -412,26 +411,26 @@ static pj_status_t bcg729_codec_open(pjmedia_codec *codec,
 
     /* Already open? */
     if (bcg729_data->encoder && bcg729_data->decoder)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     bcg729_data->vad_enabled = (attr->setting.vad != 0);
     bcg729_data->plc_enabled = (attr->setting.plc != 0);
 
     /* Check if G729 Annex B is signaled to be disabled */
     for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
-	if (pj_stricmp2(&attr->setting.enc_fmtp.param[i].name, "annexb")==0)
-	{
-	    if (pj_stricmp2(&attr->setting.enc_fmtp.param[i].val, "no")==0)
-	    {
-		attr->setting.vad = 0;
-		bcg729_data->vad_enabled = PJ_FALSE;
-	    }
-	    break;
-	}
+        if (pj_stricmp2(&attr->setting.enc_fmtp.param[i].name, "annexb")==0)
+        {
+            if (pj_stricmp2(&attr->setting.enc_fmtp.param[i].val, "no")==0)
+            {
+                attr->setting.vad = 0;
+                bcg729_data->vad_enabled = PJ_FALSE;
+            }
+            break;
+        }
     }
 
     bcg729_data->encoder = initBcg729EncoderChannel(
-						 bcg729_data->vad_enabled?1:0);
+                                                 bcg729_data->vad_enabled?1:0);
     if (!bcg729_data->encoder)
         return PJMEDIA_CODEC_EFAILED;
 
@@ -471,11 +470,11 @@ static pj_status_t bcg729_codec_close( pjmedia_codec *codec )
  * Get frames in the packet.
  */
 static pj_status_t  bcg729_codec_parse(pjmedia_codec *codec,
-				       void *pkt,
-				       pj_size_t pkt_size,
-				       const pj_timestamp *ts,
-				       unsigned *frame_cnt,
-				       pjmedia_frame frames[])
+                                       void *pkt,
+                                       pj_size_t pkt_size,
+                                       const pj_timestamp *ts,
+                                       unsigned *frame_cnt,
+                                       pjmedia_frame frames[])
 {
     unsigned count = 0;
     PJ_UNUSED_ARG(codec);
@@ -503,7 +502,7 @@ static pj_status_t  bcg729_codec_parse(pjmedia_codec *codec,
  * Modify codec settings.
  */
 static pj_status_t  bcg729_codec_modify(pjmedia_codec *codec,
-				        const pjmedia_codec_param *attr )
+                                        const pjmedia_codec_param *attr )
 {
     PJ_UNUSED_ARG(codec);
     PJ_UNUSED_ARG(attr);
@@ -516,9 +515,9 @@ static pj_status_t  bcg729_codec_modify(pjmedia_codec *codec,
  * Encode frame.
  */
 static pj_status_t bcg729_codec_encode(pjmedia_codec *codec,
-				       const struct pjmedia_frame *input,
-				       unsigned output_buf_len,
-				       struct pjmedia_frame *output)
+                                       const struct pjmedia_frame *input,
+                                       unsigned output_buf_len,
+                                       struct pjmedia_frame *output)
 {
     bcg729_private *bcg729_data;
     pj_int16_t *pcm_in;
@@ -539,19 +538,19 @@ static pj_status_t bcg729_codec_encode(pjmedia_codec *codec,
         bcg729Encoder(bcg729_data->encoder, pcm_in,
                       (unsigned char*)output->buf + output->size, &stream_len);
 
-	pcm_in += G729_SAMPLES_PER_FRAME;
-	nsamples -= G729_SAMPLES_PER_FRAME;
+        pcm_in += G729_SAMPLES_PER_FRAME;
+        nsamples -= G729_SAMPLES_PER_FRAME;
 
-	if (stream_len == 0) {
-	    /* Untransmitted */
-	    break;
-	} else {
-	    output->size += stream_len;
-	    if (stream_len == 2) {
-		/* SID */
-		break;
+        if (stream_len == 0) {
+            /* Untransmitted */
+            break;
+        } else {
+            output->size += stream_len;
+            if (stream_len == 2) {
+                /* SID */
+                break;
             }
-	}
+        }
     }
     
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -562,9 +561,9 @@ static pj_status_t bcg729_codec_encode(pjmedia_codec *codec,
 
 
 static pj_status_t bcg729_codec_decode(pjmedia_codec *codec,
-				       const struct pjmedia_frame *input,
-				       unsigned output_buf_len,
-				       struct pjmedia_frame *output)
+                                       const struct pjmedia_frame *input,
+                                       unsigned output_buf_len,
+                                       struct pjmedia_frame *output)
 {
     bcg729_private *bcg729_data;
 
@@ -592,8 +591,8 @@ static pj_status_t bcg729_codec_decode(pjmedia_codec *codec,
  * Recover lost frame.
  */
 static pj_status_t  bcg729_codec_recover(pjmedia_codec *codec,
-				         unsigned output_buf_len,
-				         struct pjmedia_frame *output)
+                                         unsigned output_buf_len,
+                                         struct pjmedia_frame *output)
 {
     bcg729_private *bcg729_data;
 
@@ -605,15 +604,15 @@ static pj_status_t  bcg729_codec_recover(pjmedia_codec *codec,
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     if (bcg729_data->plc_enabled) {
-	bcg729Decoder(bcg729_data->decoder,
-		      NULL,
-		      G729_FRAME_SIZE,
-		      1,
-		      0,
-		      0,
-		      (short*)output->buf);
+        bcg729Decoder(bcg729_data->decoder,
+                      NULL,
+                      G729_FRAME_SIZE,
+                      1,
+                      0,
+                      0,
+                      (short*)output->buf);
     } else {
-	pjmedia_zero_samples((pj_int16_t*)output->buf, G729_SAMPLES_PER_FRAME);
+        pjmedia_zero_samples((pj_int16_t*)output->buf, G729_SAMPLES_PER_FRAME);
     }
 
     return PJ_SUCCESS;

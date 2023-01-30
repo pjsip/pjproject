@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -43,10 +42,10 @@ PJ_DEF(void) pj_throw_exception_(int exception_id)
     struct pj_exception_state_t *handler;
 
     handler = (struct pj_exception_state_t*) 
-	      pj_thread_local_get(thread_local_id);
+              pj_thread_local_get(thread_local_id);
     if (handler == NULL) {
         PJ_LOG(1,("except.c", "!!!FATAL: unhandled exception %s!\n", 
-		   pj_exception_id_name(exception_id)));
+                   pj_exception_id_name(exception_id)));
         pj_assert(handler != NULL);
         /* This will crash the system! */
     }
@@ -57,15 +56,15 @@ PJ_DEF(void) pj_throw_exception_(int exception_id)
 static void exception_cleanup(void)
 {
     if (thread_local_id != -1) {
-	pj_thread_local_free(thread_local_id);
-	thread_local_id = -1;
+        pj_thread_local_free(thread_local_id);
+        thread_local_id = -1;
     }
 
 #if defined(PJ_HAS_EXCEPTION_NAMES) && PJ_HAS_EXCEPTION_NAMES != 0
     {
-	unsigned i;
-	for (i=0; i<PJ_MAX_EXCEPTION_ID; ++i)
-	    exception_id_names[i] = NULL;
+        unsigned i;
+        for (i=0; i<PJ_MAX_EXCEPTION_ID; ++i)
+            exception_id_names[i] = NULL;
     }
 #else
     last_exception_id = 1;
@@ -77,12 +76,12 @@ PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)
     struct pj_exception_state_t *parent_handler = NULL;
 
     if (thread_local_id == -1) {
-	pj_thread_local_alloc(&thread_local_id);
-	pj_assert(thread_local_id != -1);
-	pj_atexit(&exception_cleanup);
+        pj_thread_local_alloc(&thread_local_id);
+        pj_assert(thread_local_id != -1);
+        pj_atexit(&exception_cleanup);
     }
     parent_handler = (struct pj_exception_state_t *)
-		      pj_thread_local_get(thread_local_id);
+                      pj_thread_local_get(thread_local_id);
     rec->prev = parent_handler;
     pj_thread_local_set(thread_local_id, rec);
 }
@@ -92,9 +91,9 @@ PJ_DEF(void) pj_pop_exception_handler_(struct pj_exception_state_t *rec)
     struct pj_exception_state_t *handler;
 
     handler = (struct pj_exception_state_t *)
-	      pj_thread_local_get(thread_local_id);
+              pj_thread_local_get(thread_local_id);
     if (handler && handler==rec) {
-	pj_thread_local_set(thread_local_id, handler->prev);
+        pj_thread_local_set(thread_local_id, handler->prev);
     }
 }
 #endif
@@ -152,8 +151,8 @@ PJ_DEF(const char*) pj_exception_id_name(pj_exception_id_t id)
 
     if (exception_id_names[id] == NULL) {
         pj_ansi_snprintf(unknown_name, sizeof(unknown_name), 
-			 "exception %d", id);
-	return unknown_name;
+                         "exception %d", id);
+        return unknown_name;
     }
 
     return exception_id_names[id];

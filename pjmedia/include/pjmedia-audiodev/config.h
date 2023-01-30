@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -50,9 +49,9 @@ PJ_BEGIN_DECL
 #ifndef PJMEDIA_AUD_DEV_INFO_NAME_LEN
 #   if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
        (defined(PJ_WIN64) && PJ_WIN64!=0)
-#	define PJMEDIA_AUD_DEV_INFO_NAME_LEN 128
+#       define PJMEDIA_AUD_DEV_INFO_NAME_LEN 128
 #   else
-#	define PJMEDIA_AUD_DEV_INFO_NAME_LEN 64
+#       define PJMEDIA_AUD_DEV_INFO_NAME_LEN 64
 #   endif
 #endif
 
@@ -62,7 +61,7 @@ PJ_BEGIN_DECL
  * By default it is disabled.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
-#   define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO	0
+#   define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO      0
 #endif
 
 /**
@@ -70,7 +69,7 @@ PJ_BEGIN_DECL
  * included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_OPENSL
-#   define PJMEDIA_AUDIO_DEV_HAS_OPENSL		0
+#   define PJMEDIA_AUDIO_DEV_HAS_OPENSL         0
 #endif
 
 /**
@@ -86,7 +85,7 @@ PJ_BEGIN_DECL
  * included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_OBOE
-#   define PJMEDIA_AUDIO_DEV_HAS_OBOE		0
+#   define PJMEDIA_AUDIO_DEV_HAS_OBOE           0
 #endif
 
 /**
@@ -94,14 +93,14 @@ PJ_BEGIN_DECL
  * should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_BB10
-#   define PJMEDIA_AUDIO_DEV_HAS_BB10		0
+#   define PJMEDIA_AUDIO_DEV_HAS_BB10           0
 #endif
 
 /**
  * This setting controls whether native ALSA support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_ALSA
-#   define PJMEDIA_AUDIO_DEV_HAS_ALSA		0
+#   define PJMEDIA_AUDIO_DEV_HAS_ALSA           0
 #endif
 
 
@@ -109,7 +108,7 @@ PJ_BEGIN_DECL
  * This setting controls whether null audio support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO
-#   define PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO	0
+#   define PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO     0
 #endif
 
 
@@ -117,7 +116,7 @@ PJ_BEGIN_DECL
  * This setting controls whether coreaudio support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_COREAUDIO
-#   define PJMEDIA_AUDIO_DEV_HAS_COREAUDIO	0
+#   define PJMEDIA_AUDIO_DEV_HAS_COREAUDIO      0
 #endif
 
 
@@ -127,9 +126,9 @@ PJ_BEGIN_DECL
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WMME
 #  if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
       (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
-#    define PJMEDIA_AUDIO_DEV_HAS_WMME		0
+#    define PJMEDIA_AUDIO_DEV_HAS_WMME          0
 #  else
-#    define PJMEDIA_AUDIO_DEV_HAS_WMME		1
+#    define PJMEDIA_AUDIO_DEV_HAS_WMME          1
 #  endif
 #endif
 
@@ -141,9 +140,9 @@ PJ_BEGIN_DECL
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WASAPI
 #  if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
       (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
-#    define PJMEDIA_AUDIO_DEV_HAS_WASAPI	1
+#    define PJMEDIA_AUDIO_DEV_HAS_WASAPI        1
 #  else
-#    define PJMEDIA_AUDIO_DEV_HAS_WASAPI	0
+#    define PJMEDIA_AUDIO_DEV_HAS_WASAPI        0
 #  endif
 #endif
 
@@ -152,7 +151,7 @@ PJ_BEGIN_DECL
  * This setting controls whether BDIMAD support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_BDIMAD
-#	define PJMEDIA_AUDIO_DEV_HAS_BDIMAD	0
+#       define PJMEDIA_AUDIO_DEV_HAS_BDIMAD     0
 #endif
 
 
@@ -160,7 +159,7 @@ PJ_BEGIN_DECL
  * This setting controls whether Symbian APS support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_SYMB_APS
-#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_APS	0
+#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_APS       0
 #endif
 
 
@@ -187,7 +186,7 @@ PJ_BEGIN_DECL
  * This setting controls whether Symbian VAS support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS
-#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS	0
+#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS       0
 #endif
 
 /**
@@ -197,7 +196,7 @@ PJ_BEGIN_DECL
  * Default: 1 (VAS version 1.0)
  */
 #ifndef PJMEDIA_AUDIO_DEV_SYMB_VAS_VERSION
-#   define PJMEDIA_AUDIO_DEV_SYMB_VAS_VERSION	1
+#   define PJMEDIA_AUDIO_DEV_SYMB_VAS_VERSION   1
 #endif
 
 
@@ -206,7 +205,7 @@ PJ_BEGIN_DECL
  * framework) support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA
-#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA	PJ_SYMBIAN
+#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA       PJ_SYMBIAN
 #endif
 
 
@@ -221,7 +220,7 @@ PJ_BEGIN_DECL
  * Default: 1 (yes)
  */
 #ifndef PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START
-#   define PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START	1
+#   define PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START 1
 #endif
 
 
@@ -240,7 +239,7 @@ PJ_BEGIN_DECL
  * info.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_LEGACY_DEVICE
-#   define PJMEDIA_AUDIO_DEV_HAS_LEGACY_DEVICE	0
+#   define PJMEDIA_AUDIO_DEV_HAS_LEGACY_DEVICE  0
 #endif
 
 
@@ -251,7 +250,7 @@ PJ_BEGIN_DECL
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_AUDIODEV_CONFIG_H__ */
+#endif  /* __PJMEDIA_AUDIODEV_CONFIG_H__ */
 
 /*
  --------------------- DOCUMENTATION FOLLOWS ---------------------------
@@ -265,10 +264,18 @@ PJMEDIA Audio Device API is a cross-platform audio API appropriate for use with
 VoIP applications and many other types of audio streaming applications. 
 
 The API abstracts many different audio API's on various platforms, such as:
- - PortAudio back-end for Win32, Windows Mobile, Linux, Unix, dan MacOS X.
- - native WMME audio for Win32 and Windows Mobile devices
- - native Symbian audio streaming/multimedia framework (MMF) implementation
- - native Nokia Audio Proxy Server (APS) implementation
+ - WMME audio for Windows and Windows Mobile devices
+ - Windows Audio Session API (WASAPI)
+ - CoreAudio for Mac and iPhone
+ - ALSA for Linux
+ - Android OpenSL
+ - Android JNI
+ - Android Oboe
+ - PortAudio for Windows, Windows Mobile, Linux, Unix, dan MacOS X.
+ - BDIMAP
+ - Blackberry BB10
+ - Symbian audio streaming/multimedia framework (MMF) implementation
+ - Nokia Audio Proxy Server (APS) implementation
  - null-audio implementation
  - and more to be implemented in the future
 
@@ -349,12 +356,12 @@ contains many enhancements:
     printf("Got %d audio devices\n", dev_count);
 
     for (dev_idx=0; dev_idx<dev_count; ++i) {
-	pjmedia_aud_dev_info info;
+        pjmedia_aud_dev_info info;
 
-	status = pjmedia_aud_dev_get_info(dev_idx, &info);
-	printf("%d. %s (in=%d, out=%d)\n",
-	       dev_idx, info.name, 
-	       info.input_count, info.output_count);
+        status = pjmedia_aud_dev_get_info(dev_idx, &info);
+        printf("%d. %s (in=%d, out=%d)\n",
+               dev_idx, info.name, 
+               info.input_count, info.output_count);
     }
     \endcode\n
  -# Info: The #PJMEDIA_AUD_DEFAULT_CAPTURE_DEV and #PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV
@@ -365,13 +372,13 @@ contains many enhancements:
     used by your application. You can then retrieve the device index
     for the device by calling:
     \code
-	const char *drv_name = "WMME";
-	const char *dev_name = "Wave mapper";
-	pjmedia_aud_dev_index dev_idx;
+        const char *drv_name = "WMME";
+        const char *dev_name = "Wave mapper";
+        pjmedia_aud_dev_index dev_idx;
 
         status = pjmedia_aud_dev_lookup(drv_name, dev_name, &dev_idx);
-	if (status==PJ_SUCCESS)
-	    printf("Device index is %d\n", dev_idx);
+        if (status==PJ_SUCCESS)
+            printf("Device index is %d\n", dev_idx);
     \endcode
 
 @subsection caps Device capabilities
@@ -386,13 +393,13 @@ Capabilities are encoded as #pjmedia_aud_dev_cap enumeration. Please see
 
     status = pjmedia_aud_dev_get_info(PJMEDIA_AUD_DEFAULT_CAPTURE_DEV, &info);
     if (status == PJ_SUCCESS) {
-	unsigned i;
-	// Enumerate capability bits
-	printf("Device capabilities: ");
-	for (i=0; i<32; ++i) {
-	    if (info.caps & (1 << i))
-		printf("%s ", pjmedia_aud_dev_cap_name(1 << i, NULL));
-	}
+        unsigned i;
+        // Enumerate capability bits
+        printf("Device capabilities: ");
+        for (i=0; i<32; ++i) {
+            if (info.caps & (1 << i))
+                printf("%s ", pjmedia_aud_dev_cap_name(1 << i, NULL));
+        }
     }
     \endcode\n
  -# Info: You can set the device settings when opening audio stream by setting
@@ -438,13 +445,13 @@ or both.
 
     // Make sure Ulaw is supported
     if ((info.caps & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT) == 0)
-	error("Device does not support extended formats");
+        error("Device does not support extended formats");
     for (i = 0; i < info.ext_fmt_cnt; ++i) {
-	if (info.ext_fmt[i].id == PJMEDIA_FORMAT_ULAW)
-	    break;
+        if (info.ext_fmt[i].id == PJMEDIA_FORMAT_ULAW)
+            break;
     }
     if (i == info.ext_fmt_cnt)
-	error("Device does not support Ulaw format");
+        error("Device does not support Ulaw format");
 
     // Set Ulaw format
     param.flags |= PJMEDIA_AUD_DEV_CAP_EXT_FORMAT;
@@ -462,8 +469,8 @@ or both.
     when calling #pjmedia_aud_dev_default_param() above):
     \code
     if (info.caps & PJMEDIA_AUD_DEV_CAP_EC) {
-	param.flags |= PJMEDIA_AUD_DEV_CAP_EC;
-	param.ec_enabled = PJ_TRUE;
+        param.flags |= PJMEDIA_AUD_DEV_CAP_EC;
+        param.ec_enabled = PJ_TRUE;
     }
     \endcode
  -# Open the audio stream, specifying the capture and/or playback callback
@@ -479,15 +486,15 @@ or both.
 
  -# To start the audio stream:
     \code
-	status = pjmedia_aud_stream_start(stream);
+        status = pjmedia_aud_stream_start(stream);
     \endcode\n
     To stop the stream:
     \code
-	status = pjmedia_aud_stream_stop(stream);
+        status = pjmedia_aud_stream_stop(stream);
     \endcode\n
     And to destroy the stream:
     \code
-	status = pjmedia_aud_stream_destroy(stream);
+        status = pjmedia_aud_stream_destroy(stream);
     \endcode\n
  -# Info: The following shows how to retrieve the capability value of the
     stream (in this case, the current output volume setting).
@@ -495,8 +502,8 @@ or both.
     // Volume setting is an unsigned integer showing the level in percent.
     unsigned vol;
     status = pjmedia_aud_stream_get_cap(stream, 
-					PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
-					&vol);
+                                        PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+                                        &vol);
     \endcode
  -# Info: And following shows how to modify the capability value of the
     stream (in this case, the current output volume setting).
@@ -504,8 +511,8 @@ or both.
     // Volume setting is an unsigned integer showing the level in percent.
     unsigned vol = 50;
     status = pjmedia_aud_stream_set_cap(stream, 
-					PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
-					&vol);
+                                        PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+                                        &vol);
     \endcode
 
 

@@ -1,4 +1,3 @@
-# $Id$
 import random
 import config_site
 import socket

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -45,34 +44,41 @@ PJ_BEGIN_DECL
 /**
  * Mathematical constants
  */
-#define PJ_PI		    3.14159265358979323846	/* pi	    */
-#define PJ_1_PI		    0.318309886183790671538	/* 1/pi	    */
+/** pi */
+#define PJ_PI               3.14159265358979323846      /* pi       */
+/** 1/pi */
+#define PJ_1_PI             0.318309886183790671538     /* 1/pi     */
 
 /**
- * Mathematical macro
+ * Mathematical macros
  */
-#define	PJ_ABS(x)	((x) >  0 ? (x) : -(x))
-#define	PJ_MAX(x, y)	((x) > (y)? (x) : (y))
-#define	PJ_MIN(x, y)	((x) < (y)? (x) : (y))
+/** Get the absolute value */
+#define PJ_ABS(x)       ((x) >  0 ? (x) : -(x))
+
+/** Get the maximum of two values */
+#define PJ_MAX(x, y)    ((x) > (y)? (x) : (y))
+
+/** Get the minimum of two values */
+#define PJ_MIN(x, y)    ((x) < (y)? (x) : (y))
 
 /**
  * This structure describes statistics state.
  */
 typedef struct pj_math_stat
 {
-    int		     n;		/* number of samples	*/
-    int		     max;	/* maximum value	*/
-    int		     min;	/* minimum value	*/
-    int		     last;	/* last value		*/
-    int		     mean;	/* mean			*/
+    int              n;         /**< number of samples  */
+    int              max;       /**< maximum value      */
+    int              min;       /**< minimum value      */
+    int              last;      /**< last value         */
+    int              mean;      /**< mean               */
 
     /* Private members */
 #if PJ_HAS_FLOATING_POINT
-    float	     fmean_;	/* mean(floating point) */
+    float            fmean_;    /**< mean(floating point) */
 #else
-    int		     mean_res_;	/* mean residu		*/
+    int              mean_res_; /**< mean residue       */
 #endif
-    pj_highprec_t    m2_;	/* variance * n		*/
+    pj_highprec_t    m2_;       /**< variance * n       */
 } pj_math_stat;
 
 /**
@@ -89,14 +95,14 @@ PJ_INLINE(unsigned) pj_isqrt(unsigned i)
     /* Rough guess, calculate half bit of input */
     prev = i >> 2;
     while (prev) {
-	prev >>= 2;
-	res <<= 1;
+        prev >>= 2;
+        res <<= 1;
     }
 
     /* Babilonian method */
     do {
-	prev = res;
-	res = (prev + i/prev) >> 1;
+        prev = res;
+        res = (prev + i/prev) >> 1;
     } while ((prev+res)>>1 != res);
 
     return res;
@@ -105,7 +111,7 @@ PJ_INLINE(unsigned) pj_isqrt(unsigned i)
 /**
  * Initialize statistics state.
  *
- * @param stat	    Statistic state.
+ * @param stat      Statistic state.
  */
 PJ_INLINE(void) pj_math_stat_init(pj_math_stat *stat)
 {
@@ -115,26 +121,26 @@ PJ_INLINE(void) pj_math_stat_init(pj_math_stat *stat)
 /**
  * Update statistics state as a new sample comes.
  *
- * @param stat	    Statistic state.
- * @param val	    The new sample data.
+ * @param stat      Statistic state.
+ * @param val       The new sample data.
  */
 PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
 {
 #if PJ_HAS_FLOATING_POINT
-    float	     delta;
+    float            delta;
 #else
-    int		     delta;
+    int              delta;
 #endif
 
     stat->last = val;
     
     if (stat->n++) {
-	if (stat->min > val)
-	    stat->min = val;
-	if (stat->max < val)
-	    stat->max = val;
+        if (stat->min > val)
+            stat->min = val;
+        if (stat->max < val)
+            stat->max = val;
     } else {
-	stat->min = stat->max = val;
+        stat->min = stat->max = val;
     }
 
 #if PJ_HAS_FLOATING_POINT
@@ -150,11 +156,11 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
     stat->mean += delta/stat->n;
     stat->mean_res_ += delta % stat->n;
     if (stat->mean_res_ >= stat->n) {
-	++stat->mean;
-	stat->mean_res_ -= stat->n;
+        ++stat->mean;
+        stat->mean_res_ -= stat->n;
     } else if (stat->mean_res_ <= -stat->n) {
-	--stat->mean;
-	stat->mean_res_ += stat->n;
+        --stat->mean;
+        stat->mean_res_ += stat->n;
     }
 
     stat->m2_ += delta * (val-stat->mean);
@@ -164,9 +170,9 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
 /**
  * Get the standard deviation of specified statistics state.
  *
- * @param stat	    Statistic state.
+ * @param stat      Statistic state.
  *
- * @return	    The standard deviation.
+ * @return          The standard deviation.
  */
 PJ_INLINE(unsigned) pj_math_stat_get_stddev(const pj_math_stat *stat)
 {
@@ -179,14 +185,14 @@ PJ_INLINE(unsigned) pj_math_stat_get_stddev(const pj_math_stat *stat)
  * the statistic state is operated in 'read-only' mode as a storage of 
  * statistical data.
  *
- * @param stat	    Statistic state.
+ * @param stat      Statistic state.
  *
- * @param dev	    The standard deviation.
+ * @param dev       The standard deviation.
  */
 PJ_INLINE(void) pj_math_stat_set_stddev(pj_math_stat *stat, unsigned dev)
 {
     if (stat->n == 0) 
-	stat->n = 1;
+        stat->n = 1;
     stat->m2_ = dev*dev*stat->n;
 }
 

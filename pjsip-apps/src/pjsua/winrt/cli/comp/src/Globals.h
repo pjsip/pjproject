@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,9 +22,9 @@ namespace PjsuaCLI
 {
     namespace BackEnd
     {        
-	ref class PjsuaCallback;
+        ref class PjsuaCallback;
 
-	public ref class Globals sealed
+        public ref class Globals sealed
         {
         public:
             // Get the single instance of this class
@@ -33,17 +32,17 @@ namespace PjsuaCLI
             {
                 Globals^ get();
             }
-	    
+            
             // Get the callback singleton object
-	    property PjsuaCLI::BackEnd::PjsuaCallback^ PjsuaCallback
+            property PjsuaCLI::BackEnd::PjsuaCallback^ PjsuaCallback
             {
-		PjsuaCLI::BackEnd::PjsuaCallback^ get();
+                PjsuaCLI::BackEnd::PjsuaCallback^ get();
             }
 
-	    /* pjsua method */
-	    int pjsuaStart();
-	    void pjsuaDestroy();
-	    int pjsuaRestart();
+            /* pjsua method */
+            int pjsuaStart();
+            void pjsuaDestroy();
+            int pjsuaRestart();
 
         private:
             // Default constructor
@@ -52,9 +51,9 @@ namespace PjsuaCLI
             // Destructor
             ~Globals();
 
-	    static Globals^ singleton;
+            static Globals^ singleton;
 
-	    PjsuaCLI::BackEnd::PjsuaCallback^ callback;
+            PjsuaCLI::BackEnd::PjsuaCallback^ callback;
         };
     }
 }

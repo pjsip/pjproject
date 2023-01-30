@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -28,19 +27,25 @@
  * This file is NOT supposed to be compiled as stand-alone source.
  */
 
-#define PENDING_RETRY	2
+#define PENDING_RETRY   2
+
+PJ_DEF(void) pj_ioqueue_cfg_default(pj_ioqueue_cfg *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS;
+    cfg->default_concurrency = PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY;
+}
 
 static void ioqueue_init( pj_ioqueue_t *ioqueue )
 {
     ioqueue->lock = NULL;
     ioqueue->auto_delete_lock = 0;
-    ioqueue->default_concurrency = PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY;
 }
 
 static pj_status_t ioqueue_destroy(pj_ioqueue_t *ioqueue)
 {
     if (ioqueue->auto_delete_lock && ioqueue->lock ) {
-	pj_lock_release(ioqueue->lock);
+        pj_lock_release(ioqueue->lock);
         return pj_lock_destroy(ioqueue->lock);
     }
     
@@ -51,8 +56,8 @@ static pj_status_t ioqueue_destroy(pj_ioqueue_t *ioqueue)
  * pj_ioqueue_set_lock()
  */
 PJ_DEF(pj_status_t) pj_ioqueue_set_lock( pj_ioqueue_t *ioqueue, 
-					 pj_lock_t *lock,
-					 pj_bool_t auto_delete )
+                                         pj_lock_t *lock,
+                                         pj_bool_t auto_delete )
 {
     PJ_ASSERT_RETURN(ioqueue && lock, PJ_EINVAL);
 
@@ -100,9 +105,9 @@ static pj_status_t ioqueue_init_key( pj_pool_t *pool,
     key->closing = 0;
 #endif
 
-    rc = pj_ioqueue_set_concurrency(key, ioqueue->default_concurrency);
+    rc = pj_ioqueue_set_concurrency(key, ioqueue->cfg.default_concurrency);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
     /* Get socket type. When socket type is datagram, some optimization
      * will be performed during send to allow parallel send operations.
@@ -117,13 +122,13 @@ static pj_status_t ioqueue_init_key( pj_pool_t *pool,
 #if !PJ_IOQUEUE_HAS_SAFE_UNREG
     rc = pj_lock_create_simple_mutex(pool, NULL, &key->lock);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 #endif
 
     /* Group lock */
     key->grp_lock = grp_lock;
     if (key->grp_lock) {
-	pj_grp_lock_add_ref_dbg(key->grp_lock, "ioqueue", 0);
+        pj_grp_lock_add_ref_dbg(key->grp_lock, "ioqueue", 0);
     }
     
     return PJ_SUCCESS;
@@ -196,106 +201,105 @@ PJ_INLINE(int) key_has_pending_connect(pj_ioqueue_key_t *key)
  * framework.
  */
 pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
-				        pj_ioqueue_key_t *h)
+                                        pj_ioqueue_key_t *h)
 {
     pj_status_t rc;
 
     /* Try lock the key. */
     rc = pj_ioqueue_trylock_key(h);
     if (rc != PJ_SUCCESS) {
-	return PJ_FALSE;
+        return PJ_FALSE;
     }
 
     if (IS_CLOSING(h)) {
-	pj_ioqueue_unlock_key(h);
-	return PJ_TRUE;
+        pj_ioqueue_unlock_key(h);
+        return PJ_TRUE;
     }
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
     if (h->connecting) {
-	/* Completion of connect() operation */
-	pj_status_t status;
-	pj_bool_t has_lock;
+        /* Completion of connect() operation */
+        pj_status_t status;
+        pj_bool_t has_lock;
 
-	/* Clear operation. */
-	h->connecting = 0;
+        /* Clear operation. */
+        h->connecting = 0;
 
-        ioqueue_remove_from_set(ioqueue, h, WRITEABLE_EVENT);
-        ioqueue_remove_from_set(ioqueue, h, EXCEPTION_EVENT);
+        ioqueue_remove_from_set2(ioqueue, h, WRITEABLE_EVENT|EXCEPTION_EVENT);
 
 
 #if (defined(PJ_HAS_SO_ERROR) && PJ_HAS_SO_ERROR!=0)
-	/* from connect(2): 
-	 * On Linux, use getsockopt to read the SO_ERROR option at
-	 * level SOL_SOCKET to determine whether connect() completed
-	 * successfully (if SO_ERROR is zero).
-	 */
-	{
-	  int value;
-	  int vallen = sizeof(value);
-	  int gs_rc = pj_sock_getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
-					 &value, &vallen);
-	  if (gs_rc != 0) {
-	    /* Argh!! What to do now??? 
-	     * Just indicate that the socket is connected. The
-	     * application will get error as soon as it tries to use
-	     * the socket to send/receive.
-	     */
-	      status = PJ_SUCCESS;
-	  } else {
-	      status = PJ_STATUS_FROM_OS(value);
-	  }
- 	}
+        /* from connect(2): 
+         * On Linux, use getsockopt to read the SO_ERROR option at
+         * level SOL_SOCKET to determine whether connect() completed
+         * successfully (if SO_ERROR is zero).
+         */
+        {
+          int value;
+          int vallen = sizeof(value);
+          int gs_rc = pj_sock_getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
+                                         &value, &vallen);
+          if (gs_rc != 0) {
+            /* Argh!! What to do now??? 
+             * Just indicate that the socket is connected. The
+             * application will get error as soon as it tries to use
+             * the socket to send/receive.
+             */
+              status = PJ_SUCCESS;
+          } else {
+              status = PJ_STATUS_FROM_OS(value);
+          }
+        }
 #elif (defined(PJ_WIN32) && PJ_WIN32!=0) || (defined(PJ_WIN64) && PJ_WIN64!=0) 
-	status = PJ_SUCCESS; /* success */
+        status = PJ_SUCCESS; /* success */
 #else
-	/* Excellent information in D.J. Bernstein page:
-	 * http://cr.yp.to/docs/connect.html
-	 *
-	 * Seems like the most portable way of detecting connect()
-	 * failure is to call getpeername(). If socket is connected,
-	 * getpeername() will return 0. If the socket is not connected,
-	 * it will return ENOTCONN, and read(fd, &ch, 1) will produce
-	 * the right errno through error slippage. This is a combination
-	 * of suggestions from Douglas C. Schmidt and Ken Keys.
-	 */
-	{
-	    struct sockaddr_in addr;
-	    int addrlen = sizeof(addr);
+        /* Excellent information in D.J. Bernstein page:
+         * http://cr.yp.to/docs/connect.html
+         *
+         * Seems like the most portable way of detecting connect()
+         * failure is to call getpeername(). If socket is connected,
+         * getpeername() will return 0. If the socket is not connected,
+         * it will return ENOTCONN, and read(fd, &ch, 1) will produce
+         * the right errno through error slippage. This is a combination
+         * of suggestions from Douglas C. Schmidt and Ken Keys.
+         */
+        {
+            struct sockaddr_in addr;
+            int addrlen = sizeof(addr);
 
-	    status = pj_sock_getpeername(h->fd, (struct sockaddr*)&addr,
-				         &addrlen);
-	}
+            status = pj_sock_getpeername(h->fd, (struct sockaddr*)&addr,
+                                         &addrlen);
+        }
 #endif
 
         /* Unlock; from this point we don't need to hold key's mutex
-	 * (unless concurrency is disabled, which in this case we should
-	 * hold the mutex while calling the callback) */
-	if (h->allow_concurrent) {
-	    /* concurrency may be changed while we're in the callback, so
-	     * save it to a flag.
-	     */
-	    has_lock = PJ_FALSE;
-	    pj_ioqueue_unlock_key(h);
-	} else {
-	    has_lock = PJ_TRUE;
-	}
+         * (unless concurrency is disabled, which in this case we should
+         * hold the mutex while calling the callback) */
+        if (h->allow_concurrent) {
+            /* concurrency may be changed while we're in the callback, so
+             * save it to a flag.
+             */
+            has_lock = PJ_FALSE;
+            pj_ioqueue_unlock_key(h);
+        } else {
+            has_lock = PJ_TRUE;
+        }
 
-	/* Call callback. */
+        /* Call callback. */
         if (h->cb.on_connect_complete && !IS_CLOSING(h))
-	    (*h->cb.on_connect_complete)(h, status);
+            (*h->cb.on_connect_complete)(h, status);
 
-	/* Unlock if we still hold the lock */
-	if (has_lock) {
-	    pj_ioqueue_unlock_key(h);
-	}
+        /* Unlock if we still hold the lock */
+        if (has_lock) {
+            pj_ioqueue_unlock_key(h);
+        }
 
         /* Done. */
 
     } else 
 #endif /* PJ_HAS_TCP */
     if (key_has_pending_write(h)) {
-	/* Socket is writable. */
+        /* Socket is writable. */
         struct write_operation *write_op;
         pj_ssize_t sent;
         pj_status_t send_rc = PJ_SUCCESS;
@@ -322,41 +326,41 @@ pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
         if (write_op->op == PJ_IOQUEUE_OP_SEND) {
             send_rc = pj_sock_send(h->fd, write_op->buf+write_op->written,
                                    &sent, write_op->flags);
-	    /* Can't do this. We only clear "op" after we're finished sending
-	     * the whole buffer.
-	     */
-	    //write_op->op = 0;
+            /* Can't do this. We only clear "op" after we're finished sending
+             * the whole buffer.
+             */
+            //write_op->op = 0;
         } else if (write_op->op == PJ_IOQUEUE_OP_SEND_TO) {
-	    int retry = 2;
-	    while (--retry >= 0) {
-		send_rc = pj_sock_sendto(h->fd, 
-					 write_op->buf+write_op->written,
-					 &sent, write_op->flags,
-					 &write_op->rmt_addr, 
-					 write_op->rmt_addrlen);
+            int retry = 2;
+            while (--retry >= 0) {
+                send_rc = pj_sock_sendto(h->fd, 
+                                         write_op->buf+write_op->written,
+                                         &sent, write_op->flags,
+                                         &write_op->rmt_addr, 
+                                         write_op->rmt_addrlen);
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
-		/* Special treatment for dead UDP sockets here, see ticket #1107 */
-		if (send_rc==PJ_STATUS_FROM_OS(EPIPE) && !IS_CLOSING(h) &&
-		    h->fd_type==pj_SOCK_DGRAM())
-		{
-		    PJ_PERROR(4,(THIS_FILE, send_rc,
-				 "Send error for socket %d, retrying",
-				 h->fd));
-		    send_rc = replace_udp_sock(h);
-		    continue;
-		}
+            PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+                /* Special treatment for dead UDP sockets here, see ticket #1107 */
+                if (send_rc==PJ_STATUS_FROM_OS(EPIPE) && !IS_CLOSING(h) &&
+                    h->fd_type==pj_SOCK_DGRAM())
+                {
+                    PJ_PERROR(4,(THIS_FILE, send_rc,
+                                 "Send error for socket %d, retrying",
+                                 h->fd));
+                    send_rc = replace_udp_sock(h);
+                    continue;
+                }
 #endif
-		break;
-	    }
+                break;
+            }
 
-	    /* Can't do this. We only clear "op" after we're finished sending
-	     * the whole buffer.
-	     */
-	    //write_op->op = 0;
+            /* Can't do this. We only clear "op" after we're finished sending
+             * the whole buffer.
+             */
+            //write_op->op = 0;
         } else {
             pj_assert(!"Invalid operation type!");
-	    write_op->op = PJ_IOQUEUE_OP_NONE;
+            write_op->op = PJ_IOQUEUE_OP_NONE;
             send_rc = PJ_EBUG;
         }
 
@@ -372,9 +376,9 @@ pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
             write_op->written == (pj_ssize_t)write_op->size ||
             h->fd_type == pj_SOCK_DGRAM()) 
         {
-	    pj_bool_t has_lock;
+            pj_bool_t has_lock;
 
-	    write_op->op = PJ_IOQUEUE_OP_NONE;
+            write_op->op = PJ_IOQUEUE_OP_NONE;
 
             if (h->fd_type != pj_SOCK_DGRAM()) {
                 /* Write completion of the whole stream. */
@@ -386,30 +390,30 @@ pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
 
             }
 
-	    /* Unlock; from this point we don't need to hold key's mutex
-	     * (unless concurrency is disabled, which in this case we should
-	     * hold the mutex while calling the callback) */
-	    if (h->allow_concurrent) {
-		/* concurrency may be changed while we're in the callback, so
-		 * save it to a flag.
-		 */
-		has_lock = PJ_FALSE;
-		pj_ioqueue_unlock_key(h);
-		PJ_RACE_ME(5);
-	    } else {
-		has_lock = PJ_TRUE;
-	    }
+            /* Unlock; from this point we don't need to hold key's mutex
+             * (unless concurrency is disabled, which in this case we should
+             * hold the mutex while calling the callback) */
+            if (h->allow_concurrent) {
+                /* concurrency may be changed while we're in the callback, so
+                 * save it to a flag.
+                 */
+                has_lock = PJ_FALSE;
+                pj_ioqueue_unlock_key(h);
+                PJ_RACE_ME(5);
+            } else {
+                has_lock = PJ_TRUE;
+            }
 
-	    /* Call callback. */
+            /* Call callback. */
             if (h->cb.on_write_complete && !IS_CLOSING(h)) {
-	        (*h->cb.on_write_complete)(h, 
+                (*h->cb.on_write_complete)(h, 
                                            (pj_ioqueue_op_key_t*)write_op,
                                            write_op->written);
             }
 
-	    if (has_lock) {
-		pj_ioqueue_unlock_key(h);
-	    }
+            if (has_lock) {
+                pj_ioqueue_unlock_key(h);
+            }
 
         } else {
             pj_ioqueue_unlock_key(h);
@@ -422,84 +426,84 @@ pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
          * are signalled for the same event, but only one thread eventually
          * able to process the event.
          */
-	pj_ioqueue_unlock_key(h);
+        pj_ioqueue_unlock_key(h);
 
-	return PJ_FALSE;
+        return PJ_FALSE;
     }
 
     return PJ_TRUE;
 }
 
 pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
-				       pj_ioqueue_key_t *h )
+                                       pj_ioqueue_key_t *h )
 {
     pj_status_t rc;
 
     /* Try lock the key. */
     rc = pj_ioqueue_trylock_key(h);
     if (rc != PJ_SUCCESS) {
-	return PJ_FALSE;
+        return PJ_FALSE;
     }
 
     if (IS_CLOSING(h)) {
-	pj_ioqueue_unlock_key(h);
-	return PJ_TRUE;
+        pj_ioqueue_unlock_key(h);
+        return PJ_TRUE;
     }
 
 #   if PJ_HAS_TCP
     if (!pj_list_empty(&h->accept_list)) {
 
         struct accept_operation *accept_op;
-	pj_bool_t has_lock;
-	
+        pj_bool_t has_lock;
+        
         /* Get one accept operation from the list. */
-	accept_op = h->accept_list.next;
+        accept_op = h->accept_list.next;
         pj_list_erase(accept_op);
         accept_op->op = PJ_IOQUEUE_OP_NONE;
 
-	/* Clear bit in fdset if there is no more pending accept */
+        /* Clear bit in fdset if there is no more pending accept */
         if (pj_list_empty(&h->accept_list))
             ioqueue_remove_from_set(ioqueue, h, READABLE_EVENT);
 
-	rc=pj_sock_accept(h->fd, accept_op->accept_fd, 
+        rc=pj_sock_accept(h->fd, accept_op->accept_fd, 
                           accept_op->rmt_addr, accept_op->addrlen);
-	if (rc==PJ_SUCCESS && accept_op->local_addr) {
-	    rc = pj_sock_getsockname(*accept_op->accept_fd, 
+        if (rc==PJ_SUCCESS && accept_op->local_addr) {
+            rc = pj_sock_getsockname(*accept_op->accept_fd, 
                                      accept_op->local_addr,
-				     accept_op->addrlen);
-	}
+                                     accept_op->addrlen);
+        }
 
-	/* Unlock; from this point we don't need to hold key's mutex
-	 * (unless concurrency is disabled, which in this case we should
-	 * hold the mutex while calling the callback) */
-	if (h->allow_concurrent) {
-	    /* concurrency may be changed while we're in the callback, so
-	     * save it to a flag.
-	     */
-	    has_lock = PJ_FALSE;
-	    pj_ioqueue_unlock_key(h);
-	    PJ_RACE_ME(5);
-	} else {
-	    has_lock = PJ_TRUE;
-	}
+        /* Unlock; from this point we don't need to hold key's mutex
+         * (unless concurrency is disabled, which in this case we should
+         * hold the mutex while calling the callback) */
+        if (h->allow_concurrent) {
+            /* concurrency may be changed while we're in the callback, so
+             * save it to a flag.
+             */
+            has_lock = PJ_FALSE;
+            pj_ioqueue_unlock_key(h);
+            PJ_RACE_ME(5);
+        } else {
+            has_lock = PJ_TRUE;
+        }
 
-	/* Call callback. */
+        /* Call callback. */
         if (h->cb.on_accept_complete && !IS_CLOSING(h)) {
-	    (*h->cb.on_accept_complete)(h, 
+            (*h->cb.on_accept_complete)(h, 
                                         (pj_ioqueue_op_key_t*)accept_op,
                                         *accept_op->accept_fd, rc);
-	}
+        }
 
-	if (has_lock) {
-	    pj_ioqueue_unlock_key(h);
-	}
+        if (has_lock) {
+            pj_ioqueue_unlock_key(h);
+        }
     }
     else
 #   endif
     if (key_has_pending_read(h)) {
         struct read_operation *read_op;
         pj_ssize_t bytes_read;
-	pj_bool_t has_lock;
+        pj_bool_t has_lock;
 
         /* Get one pending read operation from the list. */
         read_op = h->read_list.next;
@@ -511,19 +515,19 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
 
         bytes_read = read_op->size;
 
-	if (read_op->op == PJ_IOQUEUE_OP_RECV_FROM) {
-	    read_op->op = PJ_IOQUEUE_OP_NONE;
-	    rc = pj_sock_recvfrom(h->fd, read_op->buf, &bytes_read, 
-				  read_op->flags,
-				  read_op->rmt_addr, 
+        if (read_op->op == PJ_IOQUEUE_OP_RECV_FROM) {
+            read_op->op = PJ_IOQUEUE_OP_NONE;
+            rc = pj_sock_recvfrom(h->fd, read_op->buf, &bytes_read, 
+                                  read_op->flags,
+                                  read_op->rmt_addr, 
                                   read_op->rmt_addrlen);
-	} else if (read_op->op == PJ_IOQUEUE_OP_RECV) {
-	    read_op->op = PJ_IOQUEUE_OP_NONE;
-	    rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 
-			      read_op->flags);
+        } else if (read_op->op == PJ_IOQUEUE_OP_RECV) {
+            read_op->op = PJ_IOQUEUE_OP_NONE;
+            rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 
+                              read_op->flags);
         } else {
             pj_assert(read_op->op == PJ_IOQUEUE_OP_READ);
-	    read_op->op = PJ_IOQUEUE_OP_NONE;
+            read_op->op = PJ_IOQUEUE_OP_NONE;
             /*
              * User has specified pj_ioqueue_read().
              * On Win32, we should do ReadFile(). But because we got
@@ -536,11 +540,11 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
              * read(). That's why we only specify PJ_LINUX here so
              * that error is easier to catch.
              */
-#	    if defined(PJ_WIN32) && PJ_WIN32 != 0 || \
-	       defined(PJ_WIN64) && PJ_WIN64 != 0 || \
-	       defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0
+#           if defined(PJ_WIN32) && PJ_WIN32 != 0 || \
+               defined(PJ_WIN64) && PJ_WIN64 != 0 || \
+               defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0
                 rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 
-				  read_op->flags);
+                                  read_op->flags);
                 //rc = ReadFile((HANDLE)h->fd, read_op->buf, read_op->size,
                 //              &bytes_read, NULL);
 #           elif (defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H != 0)
@@ -550,66 +554,66 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
 #               error "Implement read() for this platform!"
 #           endif
         }
-	
-	if (rc != PJ_SUCCESS) {
-#	    if (defined(PJ_WIN32) && PJ_WIN32 != 0) || \
-	       (defined(PJ_WIN64) && PJ_WIN64 != 0) 
-	    /* On Win32, for UDP, WSAECONNRESET on the receive side 
-	     * indicates that previous sending has triggered ICMP Port 
-	     * Unreachable message.
-	     * But we wouldn't know at this point which one of previous 
-	     * key that has triggered the error, since UDP socket can
-	     * be shared!
-	     * So we'll just ignore it!
-	     */
+        
+        if (rc != PJ_SUCCESS) {
+#           if (defined(PJ_WIN32) && PJ_WIN32 != 0) || \
+               (defined(PJ_WIN64) && PJ_WIN64 != 0) 
+            /* On Win32, for UDP, WSAECONNRESET on the receive side 
+             * indicates that previous sending has triggered ICMP Port 
+             * Unreachable message.
+             * But we wouldn't know at this point which one of previous 
+             * key that has triggered the error, since UDP socket can
+             * be shared!
+             * So we'll just ignore it!
+             */
 
-	    if (rc == PJ_STATUS_FROM_OS(WSAECONNRESET)) {
-		//PJ_LOG(4,(THIS_FILE, 
+            if (rc == PJ_STATUS_FROM_OS(WSAECONNRESET)) {
+                //PJ_LOG(4,(THIS_FILE, 
                 //          "Ignored ICMP port unreach. on key=%p", h));
-	    }
-#	    endif
+            }
+#           endif
 
             /* In any case we would report this to caller. */
             bytes_read = -rc;
 
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
-	    /* Special treatment for dead UDP sockets here, see ticket #1107 */
-	    if (rc == PJ_STATUS_FROM_OS(ENOTCONN) && !IS_CLOSING(h) &&
-		h->fd_type==pj_SOCK_DGRAM())
-	    {
-		rc = replace_udp_sock(h);
-		if (rc != PJ_SUCCESS) {
-		    bytes_read = -rc;
-		}
-	    }
+            /* Special treatment for dead UDP sockets here, see ticket #1107 */
+            if (rc == PJ_STATUS_FROM_OS(ENOTCONN) && !IS_CLOSING(h) &&
+                h->fd_type==pj_SOCK_DGRAM())
+            {
+                rc = replace_udp_sock(h);
+                if (rc != PJ_SUCCESS) {
+                    bytes_read = -rc;
+                }
+            }
 #endif
-	}
+        }
 
-	/* Unlock; from this point we don't need to hold key's mutex
-	 * (unless concurrency is disabled, which in this case we should
-	 * hold the mutex while calling the callback) */
-	if (h->allow_concurrent) {
-	    /* concurrency may be changed while we're in the callback, so
-	     * save it to a flag.
-	     */
-	    has_lock = PJ_FALSE;
-	    pj_ioqueue_unlock_key(h);
-	    PJ_RACE_ME(5);
-	} else {
-	    has_lock = PJ_TRUE;
-	}
+        /* Unlock; from this point we don't need to hold key's mutex
+         * (unless concurrency is disabled, which in this case we should
+         * hold the mutex while calling the callback) */
+        if (h->allow_concurrent) {
+            /* concurrency may be changed while we're in the callback, so
+             * save it to a flag.
+             */
+            has_lock = PJ_FALSE;
+            pj_ioqueue_unlock_key(h);
+            PJ_RACE_ME(5);
+        } else {
+            has_lock = PJ_TRUE;
+        }
 
-	/* Call callback. */
+        /* Call callback. */
         if (h->cb.on_read_complete && !IS_CLOSING(h)) {
-	    (*h->cb.on_read_complete)(h, 
+            (*h->cb.on_read_complete)(h, 
                                       (pj_ioqueue_op_key_t*)read_op,
                                       bytes_read);
         }
 
-	if (has_lock) {
-	    pj_ioqueue_unlock_key(h);
-	}
+        if (has_lock) {
+            pj_ioqueue_unlock_key(h);
+        }
 
     } else {
         /*
@@ -617,9 +621,9 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
          * are signalled for the same event, but only one thread eventually
          * able to process the event.
          */
-	pj_ioqueue_unlock_key(h);
+        pj_ioqueue_unlock_key(h);
 
-	return PJ_FALSE;
+        return PJ_FALSE;
     }
 
     return PJ_TRUE;
@@ -627,7 +631,7 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
 
 
 pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
-					    pj_ioqueue_key_t *h )
+                                            pj_ioqueue_key_t *h )
 {
     pj_bool_t has_lock;
     pj_status_t rc;
@@ -635,7 +639,7 @@ pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
     /* Try lock the key. */
     rc = pj_ioqueue_trylock_key(h);
     if (rc != PJ_SUCCESS) {
-	return PJ_FALSE;
+        return PJ_FALSE;
     }
 
     if (!h->connecting) {
@@ -643,53 +647,52 @@ pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
          * the remaining thread will see h->connecting as zero because
          * it has been processed by other thread.
          */
-	pj_ioqueue_unlock_key(h);
-	return PJ_TRUE;
+        pj_ioqueue_unlock_key(h);
+        return PJ_TRUE;
     }
 
     if (IS_CLOSING(h)) {
-	pj_ioqueue_unlock_key(h);
-	return PJ_TRUE;
+        pj_ioqueue_unlock_key(h);
+        return PJ_TRUE;
     }
 
     /* Clear operation. */
     h->connecting = 0;
 
-    ioqueue_remove_from_set(ioqueue, h, WRITEABLE_EVENT);
-    ioqueue_remove_from_set(ioqueue, h, EXCEPTION_EVENT);
+    ioqueue_remove_from_set2(ioqueue, h, WRITEABLE_EVENT|EXCEPTION_EVENT);
 
     /* Unlock; from this point we don't need to hold key's mutex
      * (unless concurrency is disabled, which in this case we should
      * hold the mutex while calling the callback) */
     if (h->allow_concurrent) {
-	/* concurrency may be changed while we're in the callback, so
-	 * save it to a flag.
-	 */
-	has_lock = PJ_FALSE;
-	pj_ioqueue_unlock_key(h);
-	PJ_RACE_ME(5);
+        /* concurrency may be changed while we're in the callback, so
+         * save it to a flag.
+         */
+        has_lock = PJ_FALSE;
+        pj_ioqueue_unlock_key(h);
+        PJ_RACE_ME(5);
     } else {
-	has_lock = PJ_TRUE;
+        has_lock = PJ_TRUE;
     }
 
     /* Call callback. */
     if (h->cb.on_connect_complete && !IS_CLOSING(h)) {
-	pj_status_t status = -1;
+        pj_status_t status = -1;
 #if (defined(PJ_HAS_SO_ERROR) && PJ_HAS_SO_ERROR!=0)
-	int value;
-	int vallen = sizeof(value);
-	int gs_rc = pj_sock_getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
-				       &value, &vallen);
-	if (gs_rc == 0) {
-	    status = PJ_RETURN_OS_ERROR(value);
-	}
+        int value;
+        int vallen = sizeof(value);
+        int gs_rc = pj_sock_getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
+                                       &value, &vallen);
+        if (gs_rc == 0) {
+            status = PJ_RETURN_OS_ERROR(value);
+        }
 #endif
 
-	(*h->cb.on_connect_complete)(h, status);
+        (*h->cb.on_connect_complete)(h, status);
     }
 
     if (has_lock) {
-	pj_ioqueue_unlock_key(h);
+        pj_ioqueue_unlock_key(h);
     }
 
     return PJ_TRUE;
@@ -702,9 +705,9 @@ pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
                                       pj_ioqueue_op_key_t *op_key,
-				      void *buffer,
-				      pj_ssize_t *length,
-				      unsigned flags )
+                                      void *buffer,
+                                      pj_ssize_t *length,
+                                      unsigned flags )
 {
     struct read_operation *read_op;
 
@@ -716,7 +719,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
      * #469).
      */
     if (IS_CLOSING(key))
-	return PJ_ECANCELLED;
+        return PJ_ECANCELLED;
 
     read_op = (struct read_operation*)op_key;
     PJ_ASSERT_RETURN(read_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
@@ -725,22 +728,22 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     /* Try to see if there's data immediately available. 
      */
     if ((flags & PJ_IOQUEUE_ALWAYS_ASYNC) == 0) {
-	pj_status_t status;
-	pj_ssize_t size;
+        pj_status_t status;
+        pj_ssize_t size;
 
-	size = *length;
-	status = pj_sock_recv(key->fd, buffer, &size, flags);
-	if (status == PJ_SUCCESS) {
-	    /* Yes! Data is available! */
-	    *length = size;
-	    return PJ_SUCCESS;
-	} else {
-	    /* If error is not EWOULDBLOCK (or EAGAIN on Linux), report
-	     * the error to caller.
-	     */
-	    if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
-		return status;
-	}
+        size = *length;
+        status = pj_sock_recv(key->fd, buffer, &size, flags);
+        if (status == PJ_SUCCESS) {
+            /* Yes! Data is available! */
+            *length = size;
+            return PJ_SUCCESS;
+        } else {
+            /* If error is not EWOULDBLOCK (or EAGAIN on Linux), report
+             * the error to caller.
+             */
+            if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
+                return status;
+        }
     }
 
     flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -760,8 +763,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
      * corrupt the ioqueue set. See #913
      */
     if (IS_CLOSING(key)) {
-	pj_ioqueue_unlock_key(key);
-	return PJ_ECANCELLED;
+        pj_ioqueue_unlock_key(key);
+        return PJ_ECANCELLED;
     }
     pj_list_insert_before(&key->read_list, read_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
@@ -777,11 +780,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
                                          pj_ioqueue_op_key_t *op_key,
-				         void *buffer,
-				         pj_ssize_t *length,
+                                         void *buffer,
+                                         pj_ssize_t *length,
                                          unsigned flags,
-				         pj_sockaddr_t *addr,
-				         int *addrlen)
+                                         pj_sockaddr_t *addr,
+                                         int *addrlen)
 {
     struct read_operation *read_op;
 
@@ -790,7 +793,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 
     /* Check if key is closing. */
     if (IS_CLOSING(key))
-	return PJ_ECANCELLED;
+        return PJ_ECANCELLED;
 
     read_op = (struct read_operation*)op_key;
     PJ_ASSERT_RETURN(read_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
@@ -799,23 +802,23 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     /* Try to see if there's data immediately available. 
      */
     if ((flags & PJ_IOQUEUE_ALWAYS_ASYNC) == 0) {
-	pj_status_t status;
-	pj_ssize_t size;
+        pj_status_t status;
+        pj_ssize_t size;
 
-	size = *length;
-	status = pj_sock_recvfrom(key->fd, buffer, &size, flags,
-				  addr, addrlen);
-	if (status == PJ_SUCCESS) {
-	    /* Yes! Data is available! */
-	    *length = size;
-	    return PJ_SUCCESS;
-	} else {
-	    /* If error is not EWOULDBLOCK (or EAGAIN on Linux), report
-	     * the error to caller.
-	     */
-	    if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
-		return status;
-	}
+        size = *length;
+        status = pj_sock_recvfrom(key->fd, buffer, &size, flags,
+                                  addr, addrlen);
+        if (status == PJ_SUCCESS) {
+            /* Yes! Data is available! */
+            *length = size;
+            return PJ_SUCCESS;
+        } else {
+            /* If error is not EWOULDBLOCK (or EAGAIN on Linux), report
+             * the error to caller.
+             */
+            if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
+                return status;
+        }
     }
 
     flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -837,8 +840,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
      * corrupt the ioqueue set. See #913
      */
     if (IS_CLOSING(key)) {
-	pj_ioqueue_unlock_key(key);
-	return PJ_ECANCELLED;
+        pj_ioqueue_unlock_key(key);
+        return PJ_ECANCELLED;
     }
     pj_list_insert_before(&key->read_list, read_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
@@ -854,8 +857,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
                                      pj_ioqueue_op_key_t *op_key,
-			             const void *data,
-			             pj_ssize_t *length,
+                                     const void *data,
+                                     pj_ssize_t *length,
                                      unsigned flags)
 {
     struct write_operation *write_op;
@@ -868,7 +871,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
 
     /* Check if key is closing. */
     if (IS_CLOSING(key))
-	return PJ_ECANCELLED;
+        return PJ_ECANCELLED;
 
     /* We can not use PJ_IOQUEUE_ALWAYS_ASYNC for socket write. */
     flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -914,29 +917,29 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
 
     /* Spin if write_op has pending operation */
     for (retry=0; write_op->op != 0 && retry<PENDING_RETRY; ++retry)
-	pj_thread_sleep(0);
+        pj_thread_sleep(0);
 
     /* Last chance */
     if (write_op->op) {
-	/* Unable to send packet because there is already pending write in the
-	 * write_op. We could not put the operation into the write_op
-	 * because write_op already contains a pending operation! And
-	 * we could not send the packet directly with send() either,
-	 * because that will break the order of the packet. So we can
-	 * only return error here.
-	 *
-	 * This could happen for example in multithreads program,
-	 * where polling is done by one thread, while other threads are doing
-	 * the sending only. If the polling thread runs on lower priority
-	 * than the sending thread, then it's possible that the pending
-	 * write flag is not cleared in-time because clearing is only done
-	 * during polling. 
-	 *
-	 * Aplication should specify multiple write operation keys on
-	 * situation like this.
-	 */
-	//pj_assert(!"ioqueue: there is pending operation on this key!");
-	return PJ_EBUSY;
+        /* Unable to send packet because there is already pending write in the
+         * write_op. We could not put the operation into the write_op
+         * because write_op already contains a pending operation! And
+         * we could not send the packet directly with send() either,
+         * because that will break the order of the packet. So we can
+         * only return error here.
+         *
+         * This could happen for example in multithreads program,
+         * where polling is done by one thread, while other threads are doing
+         * the sending only. If the polling thread runs on lower priority
+         * than the sending thread, then it's possible that the pending
+         * write flag is not cleared in-time because clearing is only done
+         * during polling. 
+         *
+         * Aplication should specify multiple write operation keys on
+         * situation like this.
+         */
+        //pj_assert(!"ioqueue: there is pending operation on this key!");
+        return PJ_EBUSY;
     }
 
     write_op->op = PJ_IOQUEUE_OP_SEND;
@@ -951,8 +954,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
      * corrupt the ioqueue set. See #913
      */
     if (IS_CLOSING(key)) {
-	pj_ioqueue_unlock_key(key);
-	return PJ_ECANCELLED;
+        pj_ioqueue_unlock_key(key);
+        return PJ_ECANCELLED;
     }
     pj_list_insert_before(&key->write_list, write_op);
     ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
@@ -969,11 +972,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
                                        pj_ioqueue_op_key_t *op_key,
-			               const void *data,
-			               pj_ssize_t *length,
+                                       const void *data,
+                                       pj_ssize_t *length,
                                        pj_uint32_t flags,
-			               const pj_sockaddr_t *addr,
-			               int addrlen)
+                                       const pj_sockaddr_t *addr,
+                                       int addrlen)
 {
     struct write_operation *write_op;
     unsigned retry;
@@ -985,14 +988,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
 
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+            PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 retry_on_restart:
 #else
     PJ_UNUSED_ARG(restart_retry);
 #endif
     /* Check if key is closing. */
     if (IS_CLOSING(key))
-	return PJ_ECANCELLED;
+        return PJ_ECANCELLED;
 
     /* We can not use PJ_IOQUEUE_ALWAYS_ASYNC for socket write */
     flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -1027,23 +1030,23 @@ retry_on_restart:
              */
             if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)) {
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
-		/* Special treatment for dead UDP sockets here, see ticket #1107 */
-		if (status == PJ_STATUS_FROM_OS(EPIPE) && !IS_CLOSING(key) &&
-		    key->fd_type == pj_SOCK_DGRAM())
-		{
-		    if (!restart_retry) {
-			PJ_PERROR(4, (THIS_FILE, status,
-				      "Send error for socket %d, retrying",
-				      key->fd));
-			status = replace_udp_sock(key);
-			if (status == PJ_SUCCESS) {
-			    restart_retry = PJ_TRUE;
-			    goto retry_on_restart;
-			}
-		    }
-		    status = PJ_ESOCKETSTOP;
-		}
+            PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+                /* Special treatment for dead UDP sockets here, see ticket #1107 */
+                if (status == PJ_STATUS_FROM_OS(EPIPE) && !IS_CLOSING(key) &&
+                    key->fd_type == pj_SOCK_DGRAM())
+                {
+                    if (!restart_retry) {
+                        PJ_PERROR(4, (THIS_FILE, status,
+                                      "Send error for socket %d, retrying",
+                                      key->fd));
+                        status = replace_udp_sock(key);
+                        if (status == PJ_SUCCESS) {
+                            restart_retry = PJ_TRUE;
+                            goto retry_on_restart;
+                        }
+                    }
+                    status = PJ_ESOCKETSTOP;
+                }
 #endif
                 return status;
             }
@@ -1062,29 +1065,29 @@ retry_on_restart:
     
     /* Spin if write_op has pending operation */
     for (retry=0; write_op->op != 0 && retry<PENDING_RETRY; ++retry)
-	pj_thread_sleep(0);
+        pj_thread_sleep(0);
 
     /* Last chance */
     if (write_op->op) {
-	/* Unable to send packet because there is already pending write on the
-	 * write_op. We could not put the operation into the write_op
-	 * because write_op already contains a pending operation! And
-	 * we could not send the packet directly with sendto() either,
-	 * because that will break the order of the packet. So we can
-	 * only return error here.
-	 *
-	 * This could happen for example in multithreads program,
-	 * where polling is done by one thread, while other threads are doing
-	 * the sending only. If the polling thread runs on lower priority
-	 * than the sending thread, then it's possible that the pending
-	 * write flag is not cleared in-time because clearing is only done
-	 * during polling. 
-	 *
-	 * Aplication should specify multiple write operation keys on
-	 * situation like this.
-	 */
-	//pj_assert(!"ioqueue: there is pending operation on this key!");
-	return PJ_EBUSY;
+        /* Unable to send packet because there is already pending write on the
+         * write_op. We could not put the operation into the write_op
+         * because write_op already contains a pending operation! And
+         * we could not send the packet directly with sendto() either,
+         * because that will break the order of the packet. So we can
+         * only return error here.
+         *
+         * This could happen for example in multithreads program,
+         * where polling is done by one thread, while other threads are doing
+         * the sending only. If the polling thread runs on lower priority
+         * than the sending thread, then it's possible that the pending
+         * write flag is not cleared in-time because clearing is only done
+         * during polling. 
+         *
+         * Aplication should specify multiple write operation keys on
+         * situation like this.
+         */
+        //pj_assert(!"ioqueue: there is pending operation on this key!");
+        return PJ_EBUSY;
     }
 
     write_op->op = PJ_IOQUEUE_OP_SEND_TO;
@@ -1101,8 +1104,8 @@ retry_on_restart:
      * corrupt the ioqueue set. See #913
      */
     if (IS_CLOSING(key)) {
-	pj_ioqueue_unlock_key(key);
-	return PJ_ECANCELLED;
+        pj_ioqueue_unlock_key(key);
+        return PJ_ECANCELLED;
     }
     pj_list_insert_before(&key->write_list, write_op);
     ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
@@ -1117,10 +1120,10 @@ retry_on_restart:
  */
 PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
                                        pj_ioqueue_op_key_t *op_key,
-			               pj_sock_t *new_sock,
-			               pj_sockaddr_t *local,
-			               pj_sockaddr_t *remote,
-			               int *addrlen)
+                                       pj_sock_t *new_sock,
+                                       pj_sockaddr_t *local,
+                                       pj_sockaddr_t *remote,
+                                       int *addrlen)
 {
     struct accept_operation *accept_op;
     pj_status_t status;
@@ -1130,7 +1133,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 
     /* Check if key is closing. */
     if (IS_CLOSING(key))
-	return PJ_ECANCELLED;
+        return PJ_ECANCELLED;
 
     accept_op = (struct accept_operation*)op_key;
     PJ_ASSERT_RETURN(accept_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
@@ -1179,8 +1182,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
      * corrupt the ioqueue set. See #913
      */
     if (IS_CLOSING(key)) {
-	pj_ioqueue_unlock_key(key);
-	return PJ_ECANCELLED;
+        pj_ioqueue_unlock_key(key);
+        return PJ_ECANCELLED;
     }
     pj_list_insert_before(&key->accept_list, accept_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
@@ -1194,8 +1197,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
  * since there's no overlapped version of connect()).
  */
 PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
-					const pj_sockaddr_t *addr,
-					int addrlen )
+                                        const pj_sockaddr_t *addr,
+                                        int addrlen )
 {
     pj_status_t status;
     
@@ -1204,7 +1207,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 
     /* Check if key is closing. */
     if (IS_CLOSING(key))
-	return PJ_ECANCELLED;
+        return PJ_ECANCELLED;
 
     /* Check if socket has not been marked for connecting */
     if (key->connecting != 0)
@@ -1212,35 +1215,35 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
     
     status = pj_sock_connect(key->fd, addr, addrlen);
     if (status == PJ_SUCCESS) {
-	/* Connected! */
-	return PJ_SUCCESS;
+        /* Connected! */
+        return PJ_SUCCESS;
     } else {
-	if (status == PJ_STATUS_FROM_OS(PJ_BLOCKING_CONNECT_ERROR_VAL)) {
-	    /* Pending! */
-	    pj_ioqueue_lock_key(key);
-	    /* Check again. Handle may have been closed after the previous 
-	     * check in multithreaded app. See #913
-	     */
-	    if (IS_CLOSING(key)) {
-		pj_ioqueue_unlock_key(key);
-		return PJ_ECANCELLED;
-	    }
-	    key->connecting = PJ_TRUE;
-            ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
-            ioqueue_add_to_set(key->ioqueue, key, EXCEPTION_EVENT);
+        if (status == PJ_STATUS_FROM_OS(PJ_BLOCKING_CONNECT_ERROR_VAL)) {
+            /* Pending! */
+            pj_ioqueue_lock_key(key);
+            /* Check again. Handle may have been closed after the previous 
+             * check in multithreaded app. See #913
+             */
+            if (IS_CLOSING(key)) {
+                pj_ioqueue_unlock_key(key);
+                return PJ_ECANCELLED;
+            }
+            key->connecting = PJ_TRUE;
+            ioqueue_add_to_set2(key->ioqueue, key,
+                                WRITEABLE_EVENT|EXCEPTION_EVENT);
             pj_ioqueue_unlock_key(key);
-	    return PJ_EPENDING;
-	} else {
-	    /* Error! */
-	    return status;
-	}
+            return PJ_EPENDING;
+        } else {
+            /* Error! */
+            return status;
+        }
     }
 }
-#endif	/* PJ_HAS_TCP */
+#endif  /* PJ_HAS_TCP */
 
 
 PJ_DEF(void) pj_ioqueue_op_key_init( pj_ioqueue_op_key_t *op_key,
-				     pj_size_t size )
+                                     pj_size_t size )
 {
     pj_bzero(op_key, size);
 }
@@ -1286,7 +1289,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
             pj_ioqueue_unlock_key(key);
 
             if (key->cb.on_read_complete)
-            	(*key->cb.on_read_complete)(key, op_key, bytes_status);
+                (*key->cb.on_read_complete)(key, op_key, bytes_status);
             return PJ_SUCCESS;
         }
         op_rec = op_rec->next;
@@ -1302,7 +1305,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
             pj_ioqueue_unlock_key(key);
 
             if (key->cb.on_write_complete)
-            	(*key->cb.on_write_complete)(key, op_key, bytes_status);
+                (*key->cb.on_write_complete)(key, op_key, bytes_status);
             return PJ_SUCCESS;
         }
         op_rec = op_rec->next;
@@ -1317,7 +1320,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
             pj_ioqueue_unlock_key(key);
 
             if (key->cb.on_accept_complete) {
-            	(*key->cb.on_accept_complete)(key, op_key, 
+                (*key->cb.on_accept_complete)(key, op_key, 
                                               PJ_INVALID_SOCKET,
                                               (pj_status_t)bytes_status);
             }
@@ -1329,8 +1332,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
     /* Clear connecting operation. */
     if (key->connecting) {
         key->connecting = 0;
-        ioqueue_remove_from_set(key->ioqueue, key, WRITEABLE_EVENT);
-        ioqueue_remove_from_set(key->ioqueue, key, EXCEPTION_EVENT);
+        ioqueue_remove_from_set2(key->ioqueue, key,
+                                 WRITEABLE_EVENT|EXCEPTION_EVENT);
     }
 
     pj_ioqueue_unlock_key(key);
@@ -1352,9 +1355,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
     key->connecting = 0;
 
     /* Remove key from sets */
-    ioqueue_remove_from_set(key->ioqueue, key, READABLE_EVENT);
-    ioqueue_remove_from_set(key->ioqueue, key, WRITEABLE_EVENT);
-    ioqueue_remove_from_set(key->ioqueue, key, EXCEPTION_EVENT);
+    ioqueue_remove_from_set2(key->ioqueue, key,
+                             READABLE_EVENT|WRITEABLE_EVENT|EXCEPTION_EVENT);
 
     pj_ioqueue_unlock_key(key);
 
@@ -1364,16 +1366,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
 
 
 PJ_DEF(pj_status_t) pj_ioqueue_set_default_concurrency( pj_ioqueue_t *ioqueue,
-							pj_bool_t allow)
+                                                        pj_bool_t allow)
 {
     PJ_ASSERT_RETURN(ioqueue != NULL, PJ_EINVAL);
-    ioqueue->default_concurrency = allow;
+    ioqueue->cfg.default_concurrency = allow;
     return PJ_SUCCESS;
 }
 
 
 PJ_DEF(pj_status_t) pj_ioqueue_set_concurrency(pj_ioqueue_key_t *key,
-					       pj_bool_t allow)
+                                               pj_bool_t allow)
 {
     PJ_ASSERT_RETURN(key, PJ_EINVAL);
 
@@ -1389,25 +1391,25 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_concurrency(pj_ioqueue_key_t *key,
 PJ_DEF(pj_status_t) pj_ioqueue_lock_key(pj_ioqueue_key_t *key)
 {
     if (key->grp_lock)
-	return pj_grp_lock_acquire(key->grp_lock);
+        return pj_grp_lock_acquire(key->grp_lock);
     else
-	return pj_lock_acquire(key->lock);
+        return pj_lock_acquire(key->lock);
 }
 
 PJ_DEF(pj_status_t) pj_ioqueue_trylock_key(pj_ioqueue_key_t *key)
 {
     if (key->grp_lock)
-	return pj_grp_lock_tryacquire(key->grp_lock);
+        return pj_grp_lock_tryacquire(key->grp_lock);
     else
-	return pj_lock_tryacquire(key->lock);
+        return pj_lock_tryacquire(key->lock);
 }
 
 PJ_DEF(pj_status_t) pj_ioqueue_unlock_key(pj_ioqueue_key_t *key)
 {
     if (key->grp_lock)
-	return pj_grp_lock_release(key->grp_lock);
+        return pj_grp_lock_release(key->grp_lock);
     else
-	return pj_lock_release(key->lock);
+        return pj_lock_release(key->lock);
 }
 
 

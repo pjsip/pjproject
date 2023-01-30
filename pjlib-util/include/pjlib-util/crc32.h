@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -40,49 +39,49 @@ PJ_BEGIN_DECL
 /** CRC32 context. */
 typedef struct pj_crc32_context
 {
-    pj_uint32_t	crc_state;	/**< Current state. */
+    pj_uint32_t crc_state;      /**< Current state. */
 } pj_crc32_context;
 
 
 /**
  * Initialize CRC32 context.
  *
- * @param ctx	    CRC32 context.
+ * @param ctx       CRC32 context.
  */
 PJ_DECL(void) pj_crc32_init(pj_crc32_context *ctx);
 
 /**
  * Feed data incrementally to the CRC32 algorithm.
  *
- * @param ctx	    CRC32 context.
- * @param data	    Input data.
+ * @param ctx       CRC32 context.
+ * @param data      Input data.
  * @param nbytes    Length of the input data.
  *
- * @return	    The current CRC32 value.
+ * @return          The current CRC32 value.
  */
 PJ_DECL(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx, 
-				     const pj_uint8_t *data,
-				     pj_size_t nbytes);
+                                     const pj_uint8_t *data,
+                                     pj_size_t nbytes);
 
 /**
  * Finalize CRC32 calculation and retrieve the CRC32 value.
  *
- * @param ctx	    CRC32 context.
+ * @param ctx       CRC32 context.
  *
- * @return	    The current CRC value.
+ * @return          The current CRC value.
  */
 PJ_DECL(pj_uint32_t) pj_crc32_final(pj_crc32_context *ctx);
 
 /**
  * Perform one-off CRC32 calculation to the specified data.
  *
- * @param data	    Input data.
+ * @param data      Input data.
  * @param nbytes    Length of input data.
  *
- * @return	    CRC value of the data.
+ * @return          CRC value of the data.
  */
 PJ_DECL(pj_uint32_t) pj_crc32_calc(const pj_uint8_t *data,
-				   pj_size_t nbytes);
+                                   pj_size_t nbytes);
 
 
 /**
@@ -92,5 +91,5 @@ PJ_DECL(pj_uint32_t) pj_crc32_calc(const pj_uint8_t *data,
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_CRC32_H__ */
+#endif  /* __PJLIB_UTIL_CRC32_H__ */
 

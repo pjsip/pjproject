@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -20,7 +19,7 @@
 #include "os_symbian.h"
 
 PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
-					   pj_qos_params *param)
+                                           pj_qos_params *param)
 {
     PJ_ASSERT_RETURN(sock!=0 && sock!=PJ_INVALID_SOCKET, PJ_EINVAL);
     
@@ -32,35 +31,35 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
     param->flags &= ~(PJ_QOS_PARAM_HAS_SO_PRIO | PJ_QOS_PARAM_HAS_WMM);
     
     if (param->flags & PJ_QOS_PARAM_HAS_DSCP) {
-	TInt err;
-	
-	err = rsock.SetOpt(KSoIpTOS, KProtocolInetIp,
-		           (param->dscp_val << 2));
-	if (err != KErrNone) {
-	    last_err = PJ_RETURN_OS_ERROR(err);
-	    param->flags &= ~(PJ_QOS_PARAM_HAS_DSCP);
-	}
+        TInt err;
+        
+        err = rsock.SetOpt(KSoIpTOS, KProtocolInetIp,
+                           (param->dscp_val << 2));
+        if (err != KErrNone) {
+            last_err = PJ_RETURN_OS_ERROR(err);
+            param->flags &= ~(PJ_QOS_PARAM_HAS_DSCP);
+        }
     }
     
     return param->flags ? PJ_SUCCESS : last_err;
 }
 
 PJ_DEF(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
-					 pj_qos_type type)
+                                         pj_qos_type type)
 {
     pj_qos_params param;
     pj_status_t status;
     
     status = pj_qos_get_params(type, &param);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
     
     return pj_sock_set_qos_params(sock, &param);
 }
 
 
 PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
-					   pj_qos_params *p_param)
+                                           pj_qos_params *p_param)
 {
     PJ_ASSERT_RETURN(sock!=0 && sock!=PJ_INVALID_SOCKET, PJ_EINVAL);
     
@@ -72,23 +71,23 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
 
     err = rsock.GetOpt(KSoIpTOS, KProtocolInetIp, dscp);
     if (err == KErrNone) {
-	p_param->flags |= PJ_QOS_PARAM_HAS_DSCP;
-	p_param->dscp_val = (dscp >> 2);
-	return PJ_SUCCESS;
+        p_param->flags |= PJ_QOS_PARAM_HAS_DSCP;
+        p_param->dscp_val = (dscp >> 2);
+        return PJ_SUCCESS;
     } else {
-	return PJ_RETURN_OS_ERROR(err);
+        return PJ_RETURN_OS_ERROR(err);
     }
 }
 
 PJ_DEF(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
-					 pj_qos_type *p_type)
+                                         pj_qos_type *p_type)
 {
     pj_qos_params param;
     pj_status_t status;
     
     status = pj_sock_get_qos_params(sock, &param);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
     
     return pj_qos_get_type(&param, p_type);
 }

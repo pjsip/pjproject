@@ -47,11 +47,11 @@ struct read_operation
     PJ_DECL_LIST_MEMBER(struct read_operation);
     pj_ioqueue_operation_e  op;
 
-    void		   *buf;
-    pj_size_t		    size;
+    void                   *buf;
+    pj_size_t               size;
     unsigned                flags;
-    pj_sockaddr_t	   *rmt_addr;
-    int			   *rmt_addrlen;
+    pj_sockaddr_t          *rmt_addr;
+    int                    *rmt_addrlen;
 };
 
 struct write_operation
@@ -59,12 +59,12 @@ struct write_operation
     PJ_DECL_LIST_MEMBER(struct write_operation);
     pj_ioqueue_operation_e  op;
 
-    char		   *buf;
-    pj_size_t		    size;
+    char                   *buf;
+    pj_size_t               size;
     pj_ssize_t              written;
     unsigned                flags;
-    pj_sockaddr_in	    rmt_addr;
-    int			    rmt_addrlen;
+    pj_sockaddr_in          rmt_addr;
+    int                     rmt_addrlen;
 };
 
 struct accept_operation
@@ -73,9 +73,9 @@ struct accept_operation
     pj_ioqueue_operation_e  op;
 
     pj_sock_t              *accept_fd;
-    pj_sockaddr_t	   *local_addr;
-    pj_sockaddr_t	   *rmt_addr;
-    int			   *addrlen;
+    pj_sockaddr_t          *local_addr;
+    pj_sockaddr_t          *rmt_addr;
+    int                    *addrlen;
 };
 
 union operation_key
@@ -89,11 +89,11 @@ union operation_key
 };
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-#   define UNREG_FIELDS			\
-	unsigned	    ref_count;	\
-	pj_bool_t	    closing;	\
-	pj_time_val	    free_time;	\
-	
+#   define UNREG_FIELDS                 \
+        unsigned            ref_count;  \
+        pj_bool_t           closing;    \
+        pj_time_val         free_time;  \
+        
 #else
 #   define UNREG_FIELDS
 #endif
@@ -101,40 +101,46 @@ union operation_key
 #define DECLARE_COMMON_KEY                          \
     PJ_DECL_LIST_MEMBER(struct pj_ioqueue_key_t);   \
     pj_ioqueue_t           *ioqueue;                \
-    pj_grp_lock_t 	   *grp_lock;		    \
+    pj_grp_lock_t          *grp_lock;               \
     pj_lock_t              *lock;                   \
-    pj_bool_t		    inside_callback;	    \
-    pj_bool_t		    destroy_requested;	    \
-    pj_bool_t		    allow_concurrent;	    \
-    pj_sock_t		    fd;                     \
+    pj_bool_t               inside_callback;        \
+    pj_bool_t               destroy_requested;      \
+    pj_bool_t               allow_concurrent;       \
+    pj_sock_t               fd;                     \
     int                     fd_type;                \
-    void		   *user_data;              \
-    pj_ioqueue_callback	    cb;                     \
+    void                   *user_data;              \
+    pj_ioqueue_callback     cb;                     \
     int                     connecting;             \
     struct read_operation   read_list;              \
     struct write_operation  write_list;             \
-    struct accept_operation accept_list;	    \
+    struct accept_operation accept_list;            \
     UNREG_FIELDS
 
 
 #define DECLARE_COMMON_IOQUEUE                      \
     pj_lock_t          *lock;                       \
-    pj_bool_t           auto_delete_lock;	    \
-    pj_bool_t		default_concurrency;
+    pj_bool_t           auto_delete_lock;           \
+    pj_ioqueue_cfg      cfg;
 
 
 enum ioqueue_event_type
 {
     NO_EVENT,
-    READABLE_EVENT,
-    WRITEABLE_EVENT,
-    EXCEPTION_EVENT,
+    READABLE_EVENT  = 1,
+    WRITEABLE_EVENT = 2,
+    EXCEPTION_EVENT = 4,
 };
 
 static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type );
+static void ioqueue_add_to_set2(pj_ioqueue_t *ioqueue,
+                                pj_ioqueue_key_t *key,
+                                unsigned event_types );
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
                                      pj_ioqueue_key_t *key, 
                                      enum ioqueue_event_type event_type);
+static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
+                                     pj_ioqueue_key_t *key,
+                                     unsigned event_types);
 

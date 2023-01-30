@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -24,100 +23,100 @@
 #include <pjlib.h>
 
 #define THIS_FILE   "inv_offer_answer_test.c"
-#define PORT	    5068
-#define CONTACT	    "sip:127.0.0.1:5068"
+#define PORT        5068
+#define CONTACT     "sip:127.0.0.1:5068"
 #define TRACE_(x)   PJ_LOG(3,x)
 
 static struct oa_sdp_t
 {
     const char *offer;
     const char *answer;
-    unsigned	pt_result;
+    unsigned    pt_result;
 } oa_sdp[] = 
 {
     {
-	/* Offer: */
-	"v=0\r\n"
-	"o=alice 1 1 IN IP4 host.anywhere.com\r\n"
-	"s= \r\n"
-	"c=IN IP4 host.anywhere.com\r\n"
-	"t=0 0\r\n"
-	"m=audio 49170 RTP/AVP 0\r\n"
-	"a=rtpmap:0 PCMU/8000\r\n",
+        /* Offer: */
+        "v=0\r\n"
+        "o=alice 1 1 IN IP4 host.anywhere.com\r\n"
+        "s= \r\n"
+        "c=IN IP4 host.anywhere.com\r\n"
+        "t=0 0\r\n"
+        "m=audio 49170 RTP/AVP 0\r\n"
+        "a=rtpmap:0 PCMU/8000\r\n",
 
-	/* Answer: */
-	"v=0\r\n"
-	"o=bob 1 1 IN IP4 host.example.com\r\n"
-	"s= \r\n"
-	"c=IN IP4 host.example.com\r\n"
-	"t=0 0\r\n"
-	"m=audio 49920 RTP/AVP 0\r\n"
-	"a=rtpmap:0 PCMU/8000\r\n"
-	"m=video 0 RTP/AVP 31\r\n",
+        /* Answer: */
+        "v=0\r\n"
+        "o=bob 1 1 IN IP4 host.example.com\r\n"
+        "s= \r\n"
+        "c=IN IP4 host.example.com\r\n"
+        "t=0 0\r\n"
+        "m=audio 49920 RTP/AVP 0\r\n"
+        "a=rtpmap:0 PCMU/8000\r\n"
+        "m=video 0 RTP/AVP 31\r\n",
 
-	0
+        0
       },
 
       {
-	/* Offer: */
-	"v=0\r\n"
-	"o=alice 2 2 IN IP4 host.anywhere.com\r\n"
-	"s= \r\n"
-	"c=IN IP4 host.anywhere.com\r\n"
-	"t=0 0\r\n"
-	"m=audio 49170 RTP/AVP 8\r\n"
-	"a=rtpmap:0 PCMA/8000\r\n",
+        /* Offer: */
+        "v=0\r\n"
+        "o=alice 2 2 IN IP4 host.anywhere.com\r\n"
+        "s= \r\n"
+        "c=IN IP4 host.anywhere.com\r\n"
+        "t=0 0\r\n"
+        "m=audio 49170 RTP/AVP 8\r\n"
+        "a=rtpmap:0 PCMA/8000\r\n",
 
-	/* Answer: */
-	"v=0\r\n"
-	"o=bob 2 2 IN IP4 host.example.com\r\n"
-	"s= \r\n"
-	"c=IN IP4 host.example.com\r\n"
-	"t=0 0\r\n"
-	"m=audio 49920 RTP/AVP 8\r\n"
-	"a=rtpmap:0 PCMA/8000\r\n",
+        /* Answer: */
+        "v=0\r\n"
+        "o=bob 2 2 IN IP4 host.example.com\r\n"
+        "s= \r\n"
+        "c=IN IP4 host.example.com\r\n"
+        "t=0 0\r\n"
+        "m=audio 49920 RTP/AVP 8\r\n"
+        "a=rtpmap:0 PCMA/8000\r\n",
 
-	8
+        8
       },
 
       {
-	/* Offer: */
-	"v=0\r\n"
-	"o=alice 3 3 IN IP4 host.anywhere.com\r\n"
-	"s= \r\n"
-	"c=IN IP4 host.anywhere.com\r\n"
-	"t=0 0\r\n"
-	"m=audio 49170 RTP/AVP 3\r\n",
+        /* Offer: */
+        "v=0\r\n"
+        "o=alice 3 3 IN IP4 host.anywhere.com\r\n"
+        "s= \r\n"
+        "c=IN IP4 host.anywhere.com\r\n"
+        "t=0 0\r\n"
+        "m=audio 49170 RTP/AVP 3\r\n",
 
-	/* Answer: */
-	"v=0\r\n"
-	"o=bob 3 3 IN IP4 host.example.com\r\n"
-	"s= \r\n"
-	"c=IN IP4 host.example.com\r\n"
-	"t=0 0\r\n"
-	"m=audio 49920 RTP/AVP 3\r\n",
+        /* Answer: */
+        "v=0\r\n"
+        "o=bob 3 3 IN IP4 host.example.com\r\n"
+        "s= \r\n"
+        "c=IN IP4 host.example.com\r\n"
+        "t=0 0\r\n"
+        "m=audio 49920 RTP/AVP 3\r\n",
 
-	3
+        3
       },
 
       {
-	/* Offer: */
-	"v=0\r\n"
-	"o=alice 4 4 IN IP4 host.anywhere.com\r\n"
-	"s= \r\n"
-	"c=IN IP4 host.anywhere.com\r\n"
-	"t=0 0\r\n"
-	"m=audio 49170 RTP/AVP 4\r\n",
+        /* Offer: */
+        "v=0\r\n"
+        "o=alice 4 4 IN IP4 host.anywhere.com\r\n"
+        "s= \r\n"
+        "c=IN IP4 host.anywhere.com\r\n"
+        "t=0 0\r\n"
+        "m=audio 49170 RTP/AVP 4\r\n",
 
-	/* Answer: */
-	"v=0\r\n"
-	"o=bob 4 4 IN IP4 host.example.com\r\n"
-	"s= \r\n"
-	"c=IN IP4 host.example.com\r\n"
-	"t=0 0\r\n"
-	"m=audio 49920 RTP/AVP 4\r\n",
+        /* Answer: */
+        "v=0\r\n"
+        "o=bob 4 4 IN IP4 host.example.com\r\n"
+        "s= \r\n"
+        "c=IN IP4 host.example.com\r\n"
+        "t=0 0\r\n"
+        "m=audio 49920 RTP/AVP 4\r\n",
 
-	4
+        4
     }
 };
 
@@ -133,32 +132,32 @@ typedef enum oa_t
 typedef struct inv_test_param_t
 {
     char       *title;
-    unsigned	inv_option;
-    pj_bool_t	need_established;
-    unsigned	count;
-    oa_t	oa[4];
-    pj_bool_t	multipart_body;
+    unsigned    inv_option;
+    pj_bool_t   need_established;
+    unsigned    count;
+    oa_t        oa[4];
+    pj_bool_t   multipart_body;
 } inv_test_param_t;
 
 typedef struct inv_test_t
 {
-    inv_test_param_t	param;
+    inv_test_param_t    param;
     pjsip_inv_session  *uac;
     pjsip_inv_session  *uas;
 
-    pj_bool_t		complete;
-    pj_bool_t		uas_complete,
-			uac_complete;
+    pj_bool_t           complete;
+    pj_bool_t           uas_complete,
+                        uac_complete;
 
-    unsigned		oa_index;
-    unsigned		uac_update_cnt,
-			uas_update_cnt;
+    unsigned            oa_index;
+    unsigned            uac_update_cnt,
+                        uas_update_cnt;
 } inv_test_t;
 
 
 /**************** GLOBALS ******************/
 static inv_test_t   inv_test;
-static unsigned	    job_cnt;
+static unsigned     job_cnt;
 
 typedef enum job_type
 {
@@ -168,7 +167,7 @@ typedef enum job_type
 
 typedef struct job_t
 {
-    job_type	    type;
+    job_type        type;
     pjsip_role_e    who;
 } job_t;
 
@@ -192,7 +191,7 @@ static pjmedia_sdp_session *create_sdp(pj_pool_t *pool, const char *body)
 
 /**************** INVITE SESSION CALLBACKS ******************/
 static void on_rx_offer(pjsip_inv_session *inv,
-			const pjmedia_sdp_session *offer)
+                        const pjmedia_sdp_session *offer)
 {
     pjmedia_sdp_session *sdp;
 
@@ -202,17 +201,17 @@ static void on_rx_offer(pjsip_inv_session *inv,
     pjsip_inv_set_sdp_answer(inv, sdp);
 
     if (inv_test.oa_index == inv_test.param.count-1 &&
-	inv_test.param.need_established) 
+        inv_test.param.need_established) 
     {
-	jobs[job_cnt].type = ESTABLISH_CALL;
-	jobs[job_cnt].who = PJSIP_ROLE_UAS;
-	job_cnt++;
+        jobs[job_cnt].type = ESTABLISH_CALL;
+        jobs[job_cnt].who = PJSIP_ROLE_UAS;
+        job_cnt++;
     }
 }
 
 
 static void on_create_offer(pjsip_inv_session *inv,
-			    pjmedia_sdp_session **p_offer)
+                            pjmedia_sdp_session **p_offer)
 {
     PJ_UNUSED_ARG(inv);
     PJ_UNUSED_ARG(p_offer);
@@ -221,55 +220,55 @@ static void on_create_offer(pjsip_inv_session *inv,
 }
 
 static void on_media_update(pjsip_inv_session *inv_ses, 
-			    pj_status_t status)
+                            pj_status_t status)
 {
     PJ_UNUSED_ARG(status);
 
     if (inv_ses == inv_test.uas) {
-	inv_test.uas_update_cnt++;
-	pj_assert(inv_test.uas_update_cnt - inv_test.uac_update_cnt <= 1);
-	TRACE_((THIS_FILE, "      Callee media is established"));
+        inv_test.uas_update_cnt++;
+        pj_assert(inv_test.uas_update_cnt - inv_test.uac_update_cnt <= 1);
+        TRACE_((THIS_FILE, "      Callee media is established"));
     } else if (inv_ses == inv_test.uac) {
-	inv_test.uac_update_cnt++;
-	pj_assert(inv_test.uac_update_cnt - inv_test.uas_update_cnt <= 1);
-	TRACE_((THIS_FILE, "      Caller media is established"));
-	
+        inv_test.uac_update_cnt++;
+        pj_assert(inv_test.uac_update_cnt - inv_test.uas_update_cnt <= 1);
+        TRACE_((THIS_FILE, "      Caller media is established"));
+        
     } else {
-	pj_assert(!"Unknown session!");
+        pj_assert(!"Unknown session!");
     }
 
     if (inv_test.uac_update_cnt == inv_test.uas_update_cnt) {
-	inv_test.oa_index++;
+        inv_test.oa_index++;
 
-	if (inv_test.oa_index < inv_test.param.count) {
-	    switch (inv_test.param.oa[inv_test.oa_index]) {
-	    case OFFERER_UAC:
-		jobs[job_cnt].type = SEND_OFFER;
-		jobs[job_cnt].who = PJSIP_ROLE_UAC;
-		job_cnt++;
-		break;
-	    case OFFERER_UAS:
-		jobs[job_cnt].type = SEND_OFFER;
-		jobs[job_cnt].who = PJSIP_ROLE_UAS;
-		job_cnt++;
-		break;
-	    default:
-		pj_assert(!"Invalid oa");
-	    }
-	}
+        if (inv_test.oa_index < inv_test.param.count) {
+            switch (inv_test.param.oa[inv_test.oa_index]) {
+            case OFFERER_UAC:
+                jobs[job_cnt].type = SEND_OFFER;
+                jobs[job_cnt].who = PJSIP_ROLE_UAC;
+                job_cnt++;
+                break;
+            case OFFERER_UAS:
+                jobs[job_cnt].type = SEND_OFFER;
+                jobs[job_cnt].who = PJSIP_ROLE_UAS;
+                job_cnt++;
+                break;
+            default:
+                pj_assert(!"Invalid oa");
+            }
+        }
 
-	/* Special handling for standard offer/answer */
-	if (inv_test.param.count == 1 &&
-	    inv_test.param.oa[0] == OFFERER_UAC &&
-	    inv_test.param.need_established)
-	{
-	    jobs[job_cnt].type = ESTABLISH_CALL;
-	    jobs[job_cnt].who = PJSIP_ROLE_UAS;
-	    job_cnt++;
-	    TRACE_((THIS_FILE, "      C+++"));
-	}
+        /* Special handling for standard offer/answer */
+        if (inv_test.param.count == 1 &&
+            inv_test.param.oa[0] == OFFERER_UAC &&
+            inv_test.param.need_established)
+        {
+            jobs[job_cnt].type = ESTABLISH_CALL;
+            jobs[job_cnt].who = PJSIP_ROLE_UAS;
+            job_cnt++;
+            TRACE_((THIS_FILE, "      C+++"));
+        }
 
-	pj_assert(job_cnt <= PJ_ARRAY_SIZE(jobs));
+        pj_assert(job_cnt <= PJ_ARRAY_SIZE(jobs));
     }
 }
 
@@ -280,27 +279,27 @@ static void on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
     PJ_UNUSED_ARG(e);
 
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
-	TRACE_((THIS_FILE, "      %s call disconnected",
-		(inv==inv_test.uas ? "Callee" : "Caller")));
-	return;
+        TRACE_((THIS_FILE, "      %s call disconnected",
+                (inv==inv_test.uas ? "Callee" : "Caller")));
+        return;
     }
 
     if (inv->state != PJSIP_INV_STATE_CONFIRMED)
-	return;
+        return;
 
     if (inv == inv_test.uas) {
-	inv_test.uas_complete = PJ_TRUE;
-	who = "Callee";
+        inv_test.uas_complete = PJ_TRUE;
+        who = "Callee";
     } else if (inv == inv_test.uac) {
-	inv_test.uac_complete = PJ_TRUE;
-	who = "Caller";
+        inv_test.uac_complete = PJ_TRUE;
+        who = "Caller";
     } else
-	pj_assert(!"No session");
+        pj_assert(!"No session");
 
     TRACE_((THIS_FILE, "      %s call is confirmed", who));
 
     if (inv_test.uac_complete && inv_test.uas_complete)
-	inv_test.complete = PJ_TRUE;
+        inv_test.complete = PJ_TRUE;
 }
 
 
@@ -309,55 +308,55 @@ static void on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 {
     if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG &&
-	rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD)
+        rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD)
     {
-	pjsip_dialog *dlg;
-	pjmedia_sdp_session *sdp = NULL;
-	pj_str_t uri;
-	pjsip_tx_data *tdata;
-	pj_status_t status;
+        pjsip_dialog *dlg;
+        pjmedia_sdp_session *sdp = NULL;
+        pj_str_t uri;
+        pjsip_tx_data *tdata;
+        pj_status_t status;
 
-	/*
-	 * Create UAS
-	 */
-	uri = pj_str(CONTACT);
-	status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
-						   &uri, &dlg);
-	pj_assert(status == PJ_SUCCESS);
+        /*
+         * Create UAS
+         */
+        uri = pj_str(CONTACT);
+        status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
+                                                   &uri, &dlg);
+        pj_assert(status == PJ_SUCCESS);
 
-	if (inv_test.param.oa[0] == OFFERER_UAC)
-	    sdp = create_sdp(rdata->tp_info.pool, oa_sdp[0].answer);
-	else if (inv_test.param.oa[0] == OFFERER_UAS)
-	    sdp = create_sdp(rdata->tp_info.pool, oa_sdp[0].offer);
-	else
-	    pj_assert(!"Invalid offerer type");
+        if (inv_test.param.oa[0] == OFFERER_UAC)
+            sdp = create_sdp(rdata->tp_info.pool, oa_sdp[0].answer);
+        else if (inv_test.param.oa[0] == OFFERER_UAS)
+            sdp = create_sdp(rdata->tp_info.pool, oa_sdp[0].offer);
+        else
+            pj_assert(!"Invalid offerer type");
 
-	status = pjsip_inv_create_uas(dlg, rdata, sdp, inv_test.param.inv_option, &inv_test.uas);
-	pj_assert(status == PJ_SUCCESS);
-	pjsip_dlg_dec_lock(dlg);
+        status = pjsip_inv_create_uas(dlg, rdata, sdp, inv_test.param.inv_option, &inv_test.uas);
+        pj_assert(status == PJ_SUCCESS);
+        pjsip_dlg_dec_lock(dlg);
 
-	TRACE_((THIS_FILE, "    Sending 183 with SDP"));
+        TRACE_((THIS_FILE, "    Sending 183 with SDP"));
 
-	/*
-	 * Answer with 183
-	 */
-	status = pjsip_inv_initial_answer(inv_test.uas, rdata, 183, NULL,
-					  NULL, &tdata);
-	pj_assert(status == PJ_SUCCESS);
+        /*
+         * Answer with 183
+         */
+        status = pjsip_inv_initial_answer(inv_test.uas, rdata, 183, NULL,
+                                          NULL, &tdata);
+        pj_assert(status == PJ_SUCCESS);
 
-	/* Use multipart body, if configured */
-	if (sdp && inv_test.param.multipart_body) {
-	     status = pjsip_create_multipart_sdp_body(
-				tdata->pool,
-				pjmedia_sdp_session_clone(tdata->pool, sdp),
-				&tdata->msg->body);
-	}
-	pj_assert(status == PJ_SUCCESS);
+        /* Use multipart body, if configured */
+        if (sdp && inv_test.param.multipart_body) {
+             status = pjsip_create_multipart_sdp_body(
+                                tdata->pool,
+                                pjmedia_sdp_session_clone(tdata->pool, sdp),
+                                &tdata->msg->body);
+        }
+        pj_assert(status == PJ_SUCCESS);
 
-	status = pjsip_inv_send_msg(inv_test.uas, tdata);
-	pj_assert(status == PJ_SUCCESS);
+        status = pjsip_inv_send_msg(inv_test.uas, tdata);
+        pj_assert(status == PJ_SUCCESS);
 
-	return (status == PJ_SUCCESS);
+        return (status == PJ_SUCCESS);
     }
 
     return PJ_FALSE;
@@ -365,19 +364,19 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 
 static pjsip_module mod_inv_oa_test =
 {
-    NULL, NULL,			    /* prev, next.		*/
-    { "mod-inv-oa-test", 15 },	    /* Name.			*/
-    -1,				    /* Id			*/
-    PJSIP_MOD_PRIORITY_APPLICATION, /* Priority			*/
-    NULL,			    /* load()			*/
-    NULL,			    /* start()			*/
-    NULL,			    /* stop()			*/
-    NULL,			    /* unload()			*/
-    &on_rx_request,		    /* on_rx_request()		*/
-    NULL,			    /* on_rx_response()		*/
-    NULL,			    /* on_tx_request.		*/
-    NULL,			    /* on_tx_response()		*/
-    NULL,			    /* on_tsx_state()		*/
+    NULL, NULL,                     /* prev, next.              */
+    { "mod-inv-oa-test", 15 },      /* Name.                    */
+    -1,                             /* Id                       */
+    PJSIP_MOD_PRIORITY_APPLICATION, /* Priority                 */
+    NULL,                           /* load()                   */
+    NULL,                           /* start()                  */
+    NULL,                           /* stop()                   */
+    NULL,                           /* unload()                 */
+    &on_rx_request,                 /* on_rx_request()          */
+    NULL,                           /* on_rx_response()         */
+    NULL,                           /* on_tx_request.           */
+    NULL,                           /* on_tx_response()         */
+    NULL,                           /* on_tsx_state()           */
 };
 
 
@@ -390,29 +389,29 @@ static void run_job(job_t *j)
     pj_status_t status;
 
     if (j->who == PJSIP_ROLE_UAC)
-	inv = inv_test.uac;
+        inv = inv_test.uac;
     else
-	inv = inv_test.uas;
+        inv = inv_test.uas;
 
     switch (j->type) {
     case SEND_OFFER:
-	sdp = create_sdp(inv->dlg->pool, oa_sdp[inv_test.oa_index].offer);
+        sdp = create_sdp(inv->dlg->pool, oa_sdp[inv_test.oa_index].offer);
 
-	TRACE_((THIS_FILE, "    Sending UPDATE with offer"));
-	status = pjsip_inv_update(inv, NULL, sdp, &tdata);
-	pj_assert(status == PJ_SUCCESS);
+        TRACE_((THIS_FILE, "    Sending UPDATE with offer"));
+        status = pjsip_inv_update(inv, NULL, sdp, &tdata);
+        pj_assert(status == PJ_SUCCESS);
 
-	status = pjsip_inv_send_msg(inv, tdata);
-	pj_assert(status == PJ_SUCCESS);
-	break;
+        status = pjsip_inv_send_msg(inv, tdata);
+        pj_assert(status == PJ_SUCCESS);
+        break;
     case ESTABLISH_CALL:
-	TRACE_((THIS_FILE, "    Sending 200/OK"));
-	status = pjsip_inv_answer(inv, 200, NULL, NULL, &tdata);
-	pj_assert(status == PJ_SUCCESS);
+        TRACE_((THIS_FILE, "    Sending 200/OK"));
+        status = pjsip_inv_answer(inv, 200, NULL, NULL, &tdata);
+        pj_assert(status == PJ_SUCCESS);
 
-	status = pjsip_inv_send_msg(inv, tdata);
-	pj_assert(status == PJ_SUCCESS);
-	break;
+        status = pjsip_inv_send_msg(inv, tdata);
+        pj_assert(status == PJ_SUCCESS);
+        break;
     }
     PJ_UNUSED_ARG(status);
 }
@@ -438,13 +437,13 @@ static int perform_test(inv_test_param_t *param)
      * Create UAC
      */
     status = pjsip_dlg_create_uac(pjsip_ua_instance(), 
-				  &uri, &uri, &uri, &uri, &dlg);
+                                  &uri, &uri, &uri, &uri, &dlg);
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, -10);
 
     if (inv_test.param.oa[0] == OFFERER_UAC)
-	sdp = create_sdp(dlg->pool, oa_sdp[0].offer);
+        sdp = create_sdp(dlg->pool, oa_sdp[0].offer);
     else
-	sdp = NULL;
+        sdp = NULL;
 
     status = pjsip_inv_create_uac(dlg, sdp, inv_test.param.inv_option, &inv_test.uac);
     //inv_test.uac->create_multipart = param->multipart_body;
@@ -460,10 +459,10 @@ static int perform_test(inv_test_param_t *param)
 
     /* Use multipart body, if configured */
     if (sdp && param->multipart_body) {
-	 status = pjsip_create_multipart_sdp_body(
-			    tdata->pool,
-			    pjmedia_sdp_session_clone(tdata->pool, sdp),
-			    &tdata->msg->body);
+         status = pjsip_create_multipart_sdp_body(
+                            tdata->pool,
+                            pjmedia_sdp_session_clone(tdata->pool, sdp),
+                            &tdata->msg->body);
     }
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, -40);
 
@@ -474,19 +473,19 @@ static int perform_test(inv_test_param_t *param)
      * Wait until test completes
      */
     while (!inv_test.complete) {
-	pj_time_val delay = {0, 20};
+        pj_time_val delay = {0, 20};
 
-	pjsip_endpt_handle_events(endpt, &delay);
+        pjsip_endpt_handle_events(endpt, &delay);
 
-	while (job_cnt) {
-	    job_t j;
+        while (job_cnt) {
+            job_t j;
 
-	    j = jobs[0];
-	    pj_array_erase(jobs, sizeof(jobs[0]), job_cnt, 0);
-	    --job_cnt;
+            j = jobs[0];
+            pj_array_erase(jobs, sizeof(jobs[0]), job_cnt, 0);
+            --job_cnt;
 
-	    run_job(&j);
-	}
+            run_job(&j);
+        }
     }
 
     flush_events(100);
@@ -499,8 +498,8 @@ static int perform_test(inv_test_param_t *param)
     pj_assert(status == PJ_SUCCESS);
 
     if (tdata) {
-    	status = pjsip_inv_send_msg(inv_test.uas, tdata);
-    	pj_assert(status == PJ_SUCCESS);
+        status = pjsip_inv_send_msg(inv_test.uas, tdata);
+        pj_assert(status == PJ_SUCCESS);
     }
 
     flush_events(500);
@@ -515,17 +514,17 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
     char info[80];
 
     if (msg->type == PJSIP_REQUEST_MSG)
-	pj_ansi_snprintf(info, sizeof(info), "%.*s", 
-	    (int)msg->line.req.method.name.slen,
-	    msg->line.req.method.name.ptr);
+        pj_ansi_snprintf(info, sizeof(info), "%.*s", 
+            (int)msg->line.req.method.name.slen,
+            msg->line.req.method.name.ptr);
     else
-	pj_ansi_snprintf(info, sizeof(info), "%d/%.*s",
-	    msg->line.status.code,
-	    (int)rdata->msg_info.cseq->method.name.slen,
-	    rdata->msg_info.cseq->method.name.ptr);
+        pj_ansi_snprintf(info, sizeof(info), "%d/%.*s",
+            msg->line.status.code,
+            (int)rdata->msg_info.cseq->method.name.slen,
+            rdata->msg_info.cseq->method.name.ptr);
 
     TRACE_((THIS_FILE, "      Received %s %s sdp", info,
-	(msg->body ? "with" : "without")));
+        (msg->body ? "with" : "without")));
 
     return PJ_FALSE;
 }
@@ -534,180 +533,180 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
 /* Message logger module. */
 static pjsip_module mod_msg_logger = 
 {
-    NULL, NULL,				/* prev and next	*/
-    { "mod-msg-loggee", 14},		/* Name.		*/
-    -1,					/* Id			*/
-    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority		*/
-    NULL,				/* load()		*/
-    NULL,				/* start()		*/
-    NULL,				/* stop()		*/
-    NULL,				/* unload()		*/
-    &log_on_rx_msg,			/* on_rx_request()	*/
-    &log_on_rx_msg,			/* on_rx_response()	*/
-    NULL,				/* on_tx_request()	*/
-    NULL,				/* on_tx_response()	*/
-    NULL,				/* on_tsx_state()	*/
+    NULL, NULL,                         /* prev and next        */
+    { "mod-msg-loggee", 14},            /* Name.                */
+    -1,                                 /* Id                   */
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority            */
+    NULL,                               /* load()               */
+    NULL,                               /* start()              */
+    NULL,                               /* stop()               */
+    NULL,                               /* unload()             */
+    &log_on_rx_msg,                     /* on_rx_request()      */
+    &log_on_rx_msg,                     /* on_rx_response()     */
+    NULL,                               /* on_tx_request()      */
+    NULL,                               /* on_tx_response()     */
+    NULL,                               /* on_tsx_state()       */
 };
 
 static inv_test_param_t test_params[] =
 {
 /* Normal scenario:
 
-				UAC		UAS
-    INVITE (offer)	-->
-    200/INVITE (answer)	<--
-    ACK    		-->
+                                UAC             UAS
+    INVITE (offer)      -->
+    200/INVITE (answer) <--
+    ACK                 -->
  */
 #if 1
     {
-	"Standard INVITE with offer",
-	0,
-	PJ_TRUE,
-	1,
-	{ OFFERER_UAC },
-	PJ_FALSE
+        "Standard INVITE with offer",
+        0,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAC },
+        PJ_FALSE
     },
 
     {
-	"Standard INVITE with offer, with 100rel",
-	PJSIP_INV_REQUIRE_100REL,
-	PJ_TRUE,
-	1,
-	{ OFFERER_UAC },
-	PJ_FALSE
+        "Standard INVITE with offer, with 100rel",
+        PJSIP_INV_REQUIRE_100REL,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAC },
+        PJ_FALSE
     },
     {
-	"Standard INVITE with offer, with Multipart",
-	0,
-	PJ_TRUE,
-	1,
-	{ OFFERER_UAC },
-	PJ_TRUE
+        "Standard INVITE with offer, with Multipart",
+        0,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAC },
+        PJ_TRUE
     },
 
     {
-	"Standard INVITE with offer, with 100rel, with Multipart",
-	PJSIP_INV_REQUIRE_100REL,
-	PJ_TRUE,
-	1,
-	{ OFFERER_UAC },
-	PJ_TRUE
+        "Standard INVITE with offer, with 100rel, with Multipart",
+        PJSIP_INV_REQUIRE_100REL,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAC },
+        PJ_TRUE
     },
 #endif
 
 /* Delayed offer:
-				UAC		UAS
-    INVITE (no SDP) 	-->
-    200/INVITE (offer) 	<--
-    ACK (answer)   	-->
+                                UAC             UAS
+    INVITE (no SDP)     -->
+    200/INVITE (offer)  <--
+    ACK (answer)        -->
  */
 #if 1
     {
-	"INVITE with no offer",
-	0,
-	PJ_TRUE,
-	1,
-	{ OFFERER_UAS },
-	PJ_FALSE
+        "INVITE with no offer",
+        0,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAS },
+        PJ_FALSE
     },
 
     {
-	"INVITE with no offer, with 100rel",
-	PJSIP_INV_REQUIRE_100REL,
-	PJ_TRUE,
-	1,
-	{ OFFERER_UAS },
-	PJ_FALSE
+        "INVITE with no offer, with 100rel",
+        PJSIP_INV_REQUIRE_100REL,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAS },
+        PJ_FALSE
     },
     {
-	"INVITE with no offer, with Multipart",
-	0,
-	PJ_TRUE,
-	1,
-	{ OFFERER_UAS },
-	PJ_TRUE
+        "INVITE with no offer, with Multipart",
+        0,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAS },
+        PJ_TRUE
     },
 
     {
-	"INVITE with no offer, with 100rel, with Multipart",
-	PJSIP_INV_REQUIRE_100REL,
-	PJ_TRUE,
-	1,
-	{ OFFERER_UAS },
-	PJ_TRUE
+        "INVITE with no offer, with 100rel, with Multipart",
+        PJSIP_INV_REQUIRE_100REL,
+        PJ_TRUE,
+        1,
+        { OFFERER_UAS },
+        PJ_TRUE
     },
 #endif
 
 /* Subsequent UAC offer with UPDATE:
 
-				UAC		UAS
-    INVITE (offer)	-->
-    180/rel (answer)	<--
-    UPDATE (offer)	-->	inv_update()	on_rx_offer()
-						set_sdp_answer()
-    200/UPDATE (answer)	<--
-    200/INVITE		<--
-    ACK	-->
+                                UAC             UAS
+    INVITE (offer)      -->
+    180/rel (answer)    <--
+    UPDATE (offer)      -->     inv_update()    on_rx_offer()
+                                                set_sdp_answer()
+    200/UPDATE (answer) <--
+    200/INVITE          <--
+    ACK -->
 */
 #if 1
 #if !PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE
     {
-	"INVITE and UPDATE by UAC",
-	0,
-	PJ_TRUE,
-	2,
-	{ OFFERER_UAC, OFFERER_UAC },
-	PJ_FALSE
+        "INVITE and UPDATE by UAC",
+        0,
+        PJ_TRUE,
+        2,
+        { OFFERER_UAC, OFFERER_UAC },
+        PJ_FALSE
     },
 #endif
     {
-	"INVITE and UPDATE by UAC, with Multipart, with 100rel",
-	PJSIP_INV_REQUIRE_100REL,
-	PJ_TRUE,
-	2,
-	{ OFFERER_UAC, OFFERER_UAC },
-	PJ_TRUE
+        "INVITE and UPDATE by UAC, with Multipart, with 100rel",
+        PJSIP_INV_REQUIRE_100REL,
+        PJ_TRUE,
+        2,
+        { OFFERER_UAC, OFFERER_UAC },
+        PJ_TRUE
     },
     {
-	"INVITE and UPDATE by UAC, with 100rel",
-	PJSIP_INV_REQUIRE_100REL,
-	PJ_TRUE,
-	2,
-	{ OFFERER_UAC, OFFERER_UAC },
-	PJ_FALSE
+        "INVITE and UPDATE by UAC, with 100rel",
+        PJSIP_INV_REQUIRE_100REL,
+        PJ_TRUE,
+        2,
+        { OFFERER_UAC, OFFERER_UAC },
+        PJ_FALSE
     },
 #endif
 
 /* Subsequent UAS offer with UPDATE:
 
-    INVITE (offer	-->
-    180/rel (answer)	<--
-    UPDATE (offer)	<--			inv_update()
-				on_rx_offer()
-				set_sdp_answer()
+    INVITE (offer       -->
+    180/rel (answer)    <--
+    UPDATE (offer)      <--                     inv_update()
+                                on_rx_offer()
+                                set_sdp_answer()
     200/UPDATE (answer) -->
-    UPDATE (offer)	-->			on_rx_offer()
-						set_sdp_answer()
+    UPDATE (offer)      -->                     on_rx_offer()
+                                                set_sdp_answer()
     200/UPDATE (answer) <--
-    200/INVITE		<--
-    ACK			-->
+    200/INVITE          <--
+    ACK                 -->
 
  */
 
     {
-	"INVITE and many UPDATE by UAC and UAS, with 100rel",
-	PJSIP_INV_REQUIRE_100REL,
-	PJ_TRUE,
-	4,
-	{ OFFERER_UAC, OFFERER_UAS, OFFERER_UAC, OFFERER_UAS }
+        "INVITE and many UPDATE by UAC and UAS, with 100rel",
+        PJSIP_INV_REQUIRE_100REL,
+        PJ_TRUE,
+        4,
+        { OFFERER_UAC, OFFERER_UAS, OFFERER_UAC, OFFERER_UAS }
     },
     {
-	"INVITE and many UPDATE by UAC and UAS, with Multipart, with 100rel",
-	PJSIP_INV_REQUIRE_100REL,
-	PJ_TRUE,
-	4,
-	{ OFFERER_UAC, OFFERER_UAS, OFFERER_UAC, OFFERER_UAS },
-	PJ_TRUE
+        "INVITE and many UPDATE by UAC and UAS, with Multipart, with 100rel",
+        PJSIP_INV_REQUIRE_100REL,
+        PJ_TRUE,
+        4,
+        { OFFERER_UAC, OFFERER_UAS, OFFERER_UAC, OFFERER_UAS },
+        PJ_TRUE
     },
 
 };
@@ -736,22 +735,22 @@ int inv_offer_answer_test(void)
 
     /* Init UA layer */
     if (pjsip_ua_instance()->id == -1) {
-	pjsip_ua_init_param ua_param;
-	pj_bzero(&ua_param, sizeof(ua_param));
-	ua_param.on_dlg_forked = &on_dlg_forked;
-	pjsip_ua_init_module(endpt, &ua_param);
+        pjsip_ua_init_param ua_param;
+        pj_bzero(&ua_param, sizeof(ua_param));
+        ua_param.on_dlg_forked = &on_dlg_forked;
+        pjsip_ua_init_module(endpt, &ua_param);
     }
 
     /* Init inv-usage */
     if (pjsip_inv_usage_instance()->id == -1) {
-	pjsip_inv_callback inv_cb;
-	pj_bzero(&inv_cb, sizeof(inv_cb));
-	inv_cb.on_media_update = &on_media_update;
-	inv_cb.on_rx_offer = &on_rx_offer;
-	inv_cb.on_create_offer = &on_create_offer;
-	inv_cb.on_state_changed = &on_state_changed;
-	inv_cb.on_new_session = &on_new_session;
-	pjsip_inv_usage_init(endpt, &inv_cb);
+        pjsip_inv_callback inv_cb;
+        pj_bzero(&inv_cb, sizeof(inv_cb));
+        inv_cb.on_media_update = &on_media_update;
+        inv_cb.on_rx_offer = &on_rx_offer;
+        inv_cb.on_create_offer = &on_create_offer;
+        inv_cb.on_state_changed = &on_state_changed;
+        inv_cb.on_new_session = &on_new_session;
+        pjsip_inv_usage_init(endpt, &inv_cb);
     }
 
     /* 100rel module */
@@ -763,21 +762,21 @@ int inv_offer_answer_test(void)
 
     /* Create SIP UDP transport */
     {
-	pj_sockaddr_in addr;
-	pjsip_transport *tp;
-	pj_status_t status;
+        pj_sockaddr_in addr;
+        pjsip_transport *tp;
+        pj_status_t status;
 
-	pj_sockaddr_in_init(&addr, NULL, PORT);
-	status = pjsip_udp_transport_start(endpt, &addr, NULL, 1, &tp);
-	pj_assert(status == PJ_SUCCESS);
-	PJ_UNUSED_ARG(status);
+        pj_sockaddr_in_init(&addr, NULL, PORT);
+        status = pjsip_udp_transport_start(endpt, &addr, NULL, 1, &tp);
+        pj_assert(status == PJ_SUCCESS);
+        PJ_UNUSED_ARG(status);
     }
 
     /* Do tests */
     for (i=0; i<PJ_ARRAY_SIZE(test_params); ++i) {
-	rc = perform_test(&test_params[i]);
-	if (rc != 0)
-	    goto on_return;
+        rc = perform_test(&test_params[i]);
+        if (rc != 0)
+            goto on_return;
     }
 
 

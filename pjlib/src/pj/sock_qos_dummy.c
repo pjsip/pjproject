@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -29,48 +28,48 @@
 
 
 PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
-					   pj_qos_params *param)
+                                           pj_qos_params *param)
 {
     PJ_UNUSED_ARG(sock);
     PJ_UNUSED_ARG(param);
 
     PJ_LOG(4,(THIS_FILE, "pj_sock_set_qos_params() is not implemented "
-			 "for this platform"));
+                         "for this platform"));
     return PJ_ENOTSUP;
 }
 
 PJ_DEF(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
-					 pj_qos_type type)
+                                         pj_qos_type type)
 {
     PJ_UNUSED_ARG(sock);
     PJ_UNUSED_ARG(type);
 
     PJ_LOG(4,(THIS_FILE, "pj_sock_set_qos_type() is not implemented "
-			 "for this platform"));
+                         "for this platform"));
     return PJ_ENOTSUP;
 }
 
 
 PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
-					   pj_qos_params *p_param)
+                                           pj_qos_params *p_param)
 {
     PJ_UNUSED_ARG(sock);
     PJ_UNUSED_ARG(p_param);
 
     PJ_LOG(4,(THIS_FILE, "pj_sock_get_qos_params() is not implemented "
-			 "for this platform"));
+                         "for this platform"));
     return PJ_ENOTSUP;
 }
 
 PJ_DEF(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
-					 pj_qos_type *p_type)
+                                         pj_qos_type *p_type)
 {
     PJ_UNUSED_ARG(sock);
     PJ_UNUSED_ARG(p_type);
 
     PJ_LOG(4,(THIS_FILE, "pj_sock_get_qos_type() is not implemented "
-			 "for this platform"));
+                         "for this platform"));
     return PJ_ENOTSUP;
 }
 
-#endif	/* PJ_QOS_DUMMY */
+#endif  /* PJ_QOS_DUMMY */

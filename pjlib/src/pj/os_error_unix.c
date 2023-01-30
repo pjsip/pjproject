@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -44,7 +43,7 @@ PJ_DEF(void) pj_set_netos_error(pj_status_t code)
 PJ_BEGIN_DECL
 
     PJ_DECL(int) platform_strerror(pj_os_err_type code, 
-                              	   char *buf, pj_size_t bufsize );
+                                   char *buf, pj_size_t bufsize );
 PJ_END_DECL
 
 /* 
@@ -61,7 +60,7 @@ int platform_strerror( pj_os_err_type os_errcode,
 
     if (len >= bufsize) len = bufsize - 1;
     if (len > 0)
-	pj_memcpy(buf, syserr, len);
+        pj_memcpy(buf, syserr, len);
     buf[len] = '\0';
     return len;
 }

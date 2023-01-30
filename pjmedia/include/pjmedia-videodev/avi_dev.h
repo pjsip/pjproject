@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -46,14 +45,14 @@ typedef struct pjmedia_avi_dev_param
     /**
      * Specifies the full path of the AVI file to be played.
      */
-    pj_str_t	path;
+    pj_str_t    path;
 
     /**
      * If this setting is specified when setting the device, this specifies
      * the title to be assigned as the device name. If this setting not
      * specified, the filename part of the path will be used.
      */
-    pj_str_t	title;
+    pj_str_t    title;
 
     /**
      * The underlying AVI streams created by the device. If the value is NULL,
@@ -70,7 +69,7 @@ typedef struct pjmedia_avi_dev_param
  * Reset pjmedia_avi_dev_param with the default settings. This mostly will
  * reset all values to NULL or zero.
  *
- * @param p	The parameter to be initialized.
+ * @param p     The parameter to be initialized.
  */
 PJ_DECL(void) pjmedia_avi_dev_param_default(pjmedia_avi_dev_param *p);
 
@@ -81,28 +80,29 @@ PJ_DECL(void) pjmedia_avi_dev_param_default(pjmedia_avi_dev_param *p);
  * device can be allocated and used, and normally only one factory is
  * needed per application.
  *
- * @param pf		Pool factory to be used.
- * @param max_dev	Number of devices to be reserved.
- * @param p_ret		Pointer to return the factory instance, to be
- * 			used when allocating a virtual device.
+ * @param pf            Pool factory to be used.
+ * @param max_dev       Number of devices to be reserved.
+ * @param p_ret         Pointer to return the factory instance, to be
+ *                      used when allocating a virtual device.
  *
- * @return		PJ_SUCCESS on success or the appropriate error code.
+ * @return              PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_avi_dev_create_factory(
-				    pj_pool_factory *pf,
-				    unsigned max_dev,
-				    pjmedia_vid_dev_factory **p_ret);
+                                    pj_pool_factory *pf,
+                                    unsigned max_dev,
+                                    pjmedia_vid_dev_factory **p_ret);
 
 /**
  * Allocate one device ID to be used to play the specified AVI file in
  * the parameter.
  *
- * @param param		The parameter, with at least the AVI file path
- * 			set.
- * @param p_id		Optional pointer to receive device ID to play
- * 			the file.
+ * @param f             The factory.
+ * @param param         The parameter, with at least the AVI file path
+ *                      set.
+ * @param p_id          Optional pointer to receive device ID to play
+ *                      the file.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  *
  */
 PJ_DECL(pj_status_t) pjmedia_avi_dev_alloc(pjmedia_vid_dev_factory *f,
@@ -112,10 +112,10 @@ PJ_DECL(pj_status_t) pjmedia_avi_dev_alloc(pjmedia_vid_dev_factory *f,
 /**
  * Retrieve the parameters set for the virtual device.
  *
- * @param id		Device ID.
- * @param param		Structure to receive the settings.
+ * @param id            Device ID.
+ * @param param         Structure to receive the settings.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_avi_dev_get_param(pjmedia_vid_dev_index id,
                                                pjmedia_avi_dev_param *param);
@@ -123,9 +123,9 @@ PJ_DECL(pj_status_t) pjmedia_avi_dev_get_param(pjmedia_vid_dev_index id,
 /**
  * Free the resources associated with the virtual device.
  *
- * @param id		The device ID.
+ * @param id            The device ID.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_avi_dev_free(pjmedia_vid_dev_index id);
 

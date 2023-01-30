@@ -1,4 +1,3 @@
-# $Id$
 #
 # Sample and simple Python script to make and receive calls, and do
 # presence and instant messaging/IM using PJSUA-API binding for Python.

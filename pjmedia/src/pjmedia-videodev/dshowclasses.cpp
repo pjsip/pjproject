@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -239,4 +238,4 @@ extern "C" void SourceFilter_SetMediaType(SourceFilter *src,
 }
 
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_DSHOW */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

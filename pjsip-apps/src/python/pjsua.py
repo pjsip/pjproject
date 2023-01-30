@@ -1,4 +1,3 @@
-# $Id$
 #
 # Object oriented PJSUA wrapper.
 #

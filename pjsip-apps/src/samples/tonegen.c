@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,8 +35,8 @@
 #include <pjlib.h>
 
 #define SAMPLES_PER_FRAME   64
-#define ON_DURATION	    100
-#define OFF_DURATION	    100
+#define ON_DURATION         100
+#define OFF_DURATION        100
 
 
 /*
@@ -68,74 +67,74 @@ int main()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for our file player */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "app",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "app",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     status = pjmedia_tonegen_create(pool, 8000, 1, SAMPLES_PER_FRAME, 16, 0, &port);
     if (status != PJ_SUCCESS)
-	return 1;
+        return 1;
 
     {
-	pjmedia_tone_desc tones[3];
+        pjmedia_tone_desc tones[3];
 
-	tones[0].freq1 = 200;
-	tones[0].freq2 = 0;
-	tones[0].on_msec = ON_DURATION;
-	tones[0].off_msec = OFF_DURATION;
+        tones[0].freq1 = 200;
+        tones[0].freq2 = 0;
+        tones[0].on_msec = ON_DURATION;
+        tones[0].off_msec = OFF_DURATION;
 
-	tones[1].freq1 = 400;
-	tones[1].freq2 = 0;
-	tones[1].on_msec = ON_DURATION;
-	tones[1].off_msec = OFF_DURATION;
+        tones[1].freq1 = 400;
+        tones[1].freq2 = 0;
+        tones[1].on_msec = ON_DURATION;
+        tones[1].off_msec = OFF_DURATION;
 
-	tones[2].freq1 = 800;
-	tones[2].freq2 = 0;
-	tones[2].on_msec = ON_DURATION;
-	tones[2].off_msec = OFF_DURATION;
+        tones[2].freq1 = 800;
+        tones[2].freq2 = 0;
+        tones[2].on_msec = ON_DURATION;
+        tones[2].off_msec = OFF_DURATION;
 
-	status = pjmedia_tonegen_play(port, 3, tones, 0);
-	PJ_ASSERT_RETURN(status==PJ_SUCCESS, 1);
+        status = pjmedia_tonegen_play(port, 3, tones, 0);
+        PJ_ASSERT_RETURN(status==PJ_SUCCESS, 1);
     }
 
     {
-	pjmedia_tone_digit digits[2];
+        pjmedia_tone_digit digits[2];
 
-	digits[0].digit = '0';
-	digits[0].on_msec = ON_DURATION;
-	digits[0].off_msec = OFF_DURATION;
+        digits[0].digit = '0';
+        digits[0].on_msec = ON_DURATION;
+        digits[0].off_msec = OFF_DURATION;
 
-	digits[1].digit = '0';
-	digits[1].on_msec = ON_DURATION;
-	digits[1].off_msec = OFF_DURATION;
+        digits[1].digit = '0';
+        digits[1].on_msec = ON_DURATION;
+        digits[1].off_msec = OFF_DURATION;
 
-	status = pjmedia_tonegen_play_digits(port, 2, digits, 0);
-	PJ_ASSERT_RETURN(status==PJ_SUCCESS, 1);
+        status = pjmedia_tonegen_play_digits(port, 2, digits, 0);
+        PJ_ASSERT_RETURN(status==PJ_SUCCESS, 1);
     }
 
     {
-	pjmedia_frame frm;
-	FILE *f;
-	void *buf;
+        pjmedia_frame frm;
+        FILE *f;
+        void *buf;
 
-	buf = pj_pool_alloc(pool, 2*8000);
-	frm.buf = buf;
+        buf = pj_pool_alloc(pool, 2*8000);
+        frm.buf = buf;
 
-	f = fopen("tonegen.pcm", "wb");
+        f = fopen("tonegen.pcm", "wb");
 
-	for (i=0; i<8000/SAMPLES_PER_FRAME; ++i) {
-	    pj_size_t count;
-	    pjmedia_port_get_frame(port, &frm);
-	    count = fwrite(buf, SAMPLES_PER_FRAME, 2, f);
-	    if (count != 2)
-		break;
-	}
+        for (i=0; i<8000/SAMPLES_PER_FRAME; ++i) {
+            pj_size_t count;
+            pjmedia_port_get_frame(port, &frm);
+            count = fwrite(buf, SAMPLES_PER_FRAME, 2, f);
+            if (count != 2)
+                break;
+        }
 
-	pj_assert(pjmedia_tonegen_is_busy(port) == 0);
-	fclose(f);
+        pj_assert(pjmedia_tonegen_is_busy(port) == 0);
+        fclose(f);
     }
 
     /* Delete port */
