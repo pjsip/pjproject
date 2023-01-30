@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -102,14 +101,14 @@
 #   define PJ_WIN32 1
 
 #elif defined(PJ_WIN32) || defined(_WIN32) || defined(__WIN32__) || \
-	defined(WIN32) || defined(PJ_WIN64) || defined(_WIN64) || \
-	defined(WIN64) || defined(__TOS_WIN__) 
+        defined(WIN32) || defined(PJ_WIN64) || defined(_WIN64) || \
+        defined(WIN64) || defined(__TOS_WIN__) 
 #   if defined(PJ_WIN64) || defined(_WIN64) || defined(WIN64)
-	/*
-	 * Win64
-	 */
-#	undef PJ_WIN64
-#	define PJ_WIN64 1
+        /*
+         * Win64
+         */
+#       undef PJ_WIN64
+#       define PJ_WIN64 1
 #   endif
 #   undef PJ_WIN32
 #   define PJ_WIN32 1
@@ -120,7 +119,7 @@
      * Linux
      */
 #   undef PJ_LINUX
-#   define PJ_LINUX	    1
+#   define PJ_LINUX         1
 #   include <pj/compat/os_linux.h>
 
 #elif defined(PJ_PALMOS) && PJ_PALMOS!=0
@@ -134,7 +133,7 @@
      * SunOS
      */
 #   undef PJ_SUNOS
-#   define PJ_SUNOS	    1
+#   define PJ_SUNOS         1
 #   include <pj/compat/os_sunos.h>
 
 #elif defined(PJ_DARWINOS) || defined(__MACOSX__) || \
@@ -143,7 +142,7 @@
      * MacOS X
      */
 #   undef PJ_DARWINOS
-#   define PJ_DARWINOS	    1
+#   define PJ_DARWINOS      1
 #   include <pj/compat/os_darwinos.h>
 
 #elif defined(PJ_RTEMS) && PJ_RTEMS!=0
@@ -166,42 +165,42 @@
 #include <pj/compat/m_auto.h>
 
 #elif defined (PJ_M_I386) || defined(_i386_) || defined(i_386_) || \
-	defined(_X86_) || defined(x86) || defined(__i386__) || \
-	defined(__i386) || defined(_M_IX86) || defined(__I86__)
+        defined(_X86_) || defined(x86) || defined(__i386__) || \
+        defined(__i386) || defined(_M_IX86) || defined(__I86__)
     /*
      * Generic i386 processor family, little-endian
      */
 #   undef PJ_M_I386
-#   define PJ_M_I386		1
-#   define PJ_M_NAME		"i386"
-#   define PJ_HAS_PENTIUM	1
-#   define PJ_IS_LITTLE_ENDIAN	1
-#   define PJ_IS_BIG_ENDIAN	0
+#   define PJ_M_I386            1
+#   define PJ_M_NAME            "i386"
+#   define PJ_HAS_PENTIUM       1
+#   define PJ_IS_LITTLE_ENDIAN  1
+#   define PJ_IS_BIG_ENDIAN     0
 
 #elif defined (PJ_M_X86_64) || defined(__amd64__) || defined(__amd64) || \
-	defined(__x86_64__) || defined(__x86_64) || \
-	defined(_M_X64) || defined(_M_AMD64)
+        defined(__x86_64__) || defined(__x86_64) || \
+        defined(_M_X64) || defined(_M_AMD64)
     /*
      * AMD 64bit processor, little endian
      */
 #   undef PJ_M_X86_64
-#   define PJ_M_X86_64		1
-#   define PJ_M_NAME		"x86_64"
-#   define PJ_HAS_PENTIUM	1
-#   define PJ_IS_LITTLE_ENDIAN	1
-#   define PJ_IS_BIG_ENDIAN	0
+#   define PJ_M_X86_64          1
+#   define PJ_M_NAME            "x86_64"
+#   define PJ_HAS_PENTIUM       1
+#   define PJ_IS_LITTLE_ENDIAN  1
+#   define PJ_IS_BIG_ENDIAN     0
 
 #elif defined(PJ_M_IA64) || defined(__ia64__) || defined(_IA64) || \
-	defined(__IA64__) || defined( 	_M_IA64)
+        defined(__IA64__) || defined(   _M_IA64)
     /*
      * Intel IA64 processor, default to little endian
      */
 #   undef PJ_M_IA64
-#   define PJ_M_IA64		1
-#   define PJ_M_NAME		"ia64"
-#   define PJ_HAS_PENTIUM	1
-#   define PJ_IS_LITTLE_ENDIAN	1
-#   define PJ_IS_BIG_ENDIAN	0
+#   define PJ_M_IA64            1
+#   define PJ_M_NAME            "ia64"
+#   define PJ_HAS_PENTIUM       1
+#   define PJ_IS_LITTLE_ENDIAN  1
+#   define PJ_IS_BIG_ENDIAN     0
 
 #elif defined (PJ_M_M68K) && PJ_M_M68K != 0
 
@@ -209,86 +208,86 @@
      * Motorola m68k processor, big endian
      */
 #   undef PJ_M_M68K
-#   define PJ_M_M68K		1
-#   define PJ_M_NAME		"m68k"
-#   define PJ_HAS_PENTIUM	0
-#   define PJ_IS_LITTLE_ENDIAN	0
-#   define PJ_IS_BIG_ENDIAN	1
+#   define PJ_M_M68K            1
+#   define PJ_M_NAME            "m68k"
+#   define PJ_HAS_PENTIUM       0
+#   define PJ_IS_LITTLE_ENDIAN  0
+#   define PJ_IS_BIG_ENDIAN     1
 
 
 #elif defined (PJ_M_ALPHA) || defined (__alpha__) || defined (__alpha) || \
-	defined (_M_ALPHA)
+        defined (_M_ALPHA)
     /*
      * DEC Alpha processor, little endian
      */
 #   undef PJ_M_ALPHA
-#   define PJ_M_ALPHA		1
-#   define PJ_M_NAME		"alpha"
-#   define PJ_HAS_PENTIUM	0
-#   define PJ_IS_LITTLE_ENDIAN	1
-#   define PJ_IS_BIG_ENDIAN	0
+#   define PJ_M_ALPHA           1
+#   define PJ_M_NAME            "alpha"
+#   define PJ_HAS_PENTIUM       0
+#   define PJ_IS_LITTLE_ENDIAN  1
+#   define PJ_IS_BIG_ENDIAN     0
 
 
 #elif defined(PJ_M_MIPS) || defined(__mips__) || defined(__mips) || \
-	defined(__MIPS__) || defined(MIPS) || defined(_MIPS_)
+        defined(__MIPS__) || defined(MIPS) || defined(_MIPS_)
     /*
      * MIPS, bi-endian, so raise error if endianness is not configured
      */
 #   undef PJ_M_MIPS
-#   define PJ_M_MIPS		1
-#   define PJ_M_NAME		"mips"
-#   define PJ_HAS_PENTIUM	0
+#   define PJ_M_MIPS            1
+#   define PJ_M_NAME            "mips"
+#   define PJ_HAS_PENTIUM       0
 #   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
-#   	error Endianness must be declared for this processor
+#       error Endianness must be declared for this processor
 #   endif
 
 
-#elif defined (PJ_M_SPARC) || defined( 	__sparc__) || defined(__sparc)
+#elif defined (PJ_M_SPARC) || defined(  __sparc__) || defined(__sparc)
     /*
      * Sun Sparc, big endian
      */
 #   undef PJ_M_SPARC
-#   define PJ_M_SPARC		1
-#   define PJ_M_NAME		"sparc"
-#   define PJ_HAS_PENTIUM	0
-#   define PJ_IS_LITTLE_ENDIAN	0
-#   define PJ_IS_BIG_ENDIAN	1
+#   define PJ_M_SPARC           1
+#   define PJ_M_NAME            "sparc"
+#   define PJ_HAS_PENTIUM       0
+#   define PJ_IS_LITTLE_ENDIAN  0
+#   define PJ_IS_BIG_ENDIAN     1
 
 #elif defined(ARM) || defined(_ARM_) ||  defined(__arm__) || \
        defined(_M_ARM) || defined(_M_ARM64) || defined(__aarch64__)
-#   define PJ_HAS_PENTIUM	0
+#   define PJ_HAS_PENTIUM       0
     /*
      * ARM, bi-endian, so raise error if endianness is not configured
      */
 #   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
-#   	error Endianness must be declared for this processor
+#       error Endianness must be declared for this processor
 #   endif
 #   if defined (PJ_M_ARMV7) || defined(ARMV7)
-#	undef PJ_M_ARMV7
-#	define PJ_M_ARM7		1
-#	define PJ_M_NAME		"armv7"
+#       undef PJ_M_ARMV7
+#       define PJ_M_ARM7                1
+#       define PJ_M_NAME                "armv7"
 #   elif defined (PJ_M_ARMV4) || defined(ARMV4)
-#	undef PJ_M_ARMV4
-#	define PJ_M_ARMV4		1
-#	define PJ_M_NAME		"armv4"
+#       undef PJ_M_ARMV4
+#       define PJ_M_ARMV4               1
+#       define PJ_M_NAME                "armv4"
 #   elif defined (PJ_M_ARM64) || defined(ARM64) || defined(__aarch64__)
-#	undef PJ_M_ARM64
-#	define PJ_M_ARM64		1
-#	define PJ_M_NAME		"arm64"
+#       undef PJ_M_ARM64
+#       define PJ_M_ARM64               1
+#       define PJ_M_NAME                "arm64"
 #   endif 
 
 #elif defined (PJ_M_POWERPC) || defined(__powerpc) || defined(__powerpc__) || \
-	defined(__POWERPC__) || defined(__ppc__) || defined(_M_PPC) || \
-	defined(_ARCH_PPC)
+        defined(__POWERPC__) || defined(__ppc__) || defined(_M_PPC) || \
+        defined(_ARCH_PPC)
     /*
      * PowerPC, bi-endian, so raise error if endianness is not configured
      */
 #   undef PJ_M_POWERPC
-#   define PJ_M_POWERPC		1
-#   define PJ_M_NAME		"powerpc"
-#   define PJ_HAS_PENTIUM	0
+#   define PJ_M_POWERPC         1
+#   define PJ_M_NAME            "powerpc"
+#   define PJ_HAS_PENTIUM       0
 #   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
-#   	error Endianness must be declared for this processor
+#       error Endianness must be declared for this processor
 #   endif
 
 #elif defined (PJ_M_NIOS2) || defined(__nios2) || defined(__nios2__) || \
@@ -297,12 +296,12 @@
      * Nios2, little endian
      */
 #   undef PJ_M_NIOS2
-#   define PJ_M_NIOS2		1
-#   define PJ_M_NAME		"nios2"
-#   define PJ_HAS_PENTIUM	0
-#   define PJ_IS_LITTLE_ENDIAN	1
-#   define PJ_IS_BIG_ENDIAN	0
-		
+#   define PJ_M_NIOS2           1
+#   define PJ_M_NAME            "nios2"
+#   define PJ_HAS_PENTIUM       0
+#   define PJ_IS_LITTLE_ENDIAN  1
+#   define PJ_IS_BIG_ENDIAN     0
+                
 #else
 #   error "Please specify target machine."
 #endif
@@ -337,7 +336,7 @@
 #   undef PJ_EXCEPTION_USE_WIN32_SEH
 #   undef PJ_HAS_ERROR_STRING
 
-#   define PJ_HAS_IPV6	1
+#   define PJ_HAS_IPV6  1
 #endif
 
 /**
@@ -359,9 +358,9 @@
  */
 #ifndef PJ_DEBUG
 #  ifndef NDEBUG
-#    define PJ_DEBUG		    1
+#    define PJ_DEBUG                1
 #  else
-#    define PJ_DEBUG		    0
+#    define PJ_DEBUG                0
 #  endif
 #endif
 
@@ -374,7 +373,7 @@
  * Default: 0
  */
 #ifndef PJ_DEBUG_MUTEX
-#   define PJ_DEBUG_MUTEX	    0
+#   define PJ_DEBUG_MUTEX           0
 #endif
 
 /**
@@ -392,7 +391,7 @@
  * Default: 1.
  */
 #ifndef PJ_HAS_FLOATING_POINT
-#  define PJ_HAS_FLOATING_POINT	    1
+#  define PJ_HAS_FLOATING_POINT     1
 #endif
 
 /**
@@ -425,7 +424,7 @@
  * Default: 4000
  */
 #ifndef PJ_LOG_MAX_SIZE
-#  define PJ_LOG_MAX_SIZE	    4000
+#  define PJ_LOG_MAX_SIZE           4000
 #endif
 
 /**
@@ -465,7 +464,7 @@
  * Default: space
  */
 #ifndef PJ_LOG_INDENT_CHAR
-#   define PJ_LOG_INDENT_CHAR	    '.'
+#   define PJ_LOG_INDENT_CHAR       '.'
 #endif
 
 /**
@@ -492,7 +491,7 @@
  * Default: 12
  */
 #ifndef PJ_LOG_THREAD_WIDTH
-#   define PJ_LOG_THREAD_WIDTH	    12
+#   define PJ_LOG_THREAD_WIDTH      12
 #endif
 
 /**
@@ -501,7 +500,7 @@
  * Default: 1
  */
 #ifndef PJ_TERM_HAS_COLOR
-#  define PJ_TERM_HAS_COLOR	    1
+#  define PJ_TERM_HAS_COLOR         1
 #endif
 
 
@@ -517,7 +516,7 @@
  * Default: 0
  */
 #ifndef PJ_SAFE_POOL
-#   define PJ_SAFE_POOL		    0
+#   define PJ_SAFE_POOL             0
 #endif
 
 
@@ -530,7 +529,7 @@
  * Default: 0
  */
 #ifndef PJ_POOL_DEBUG
-#  define PJ_POOL_DEBUG		    0
+#  define PJ_POOL_DEBUG             0
 #endif
 
 
@@ -541,7 +540,7 @@
  * Default: 0
  */
 #ifndef PJ_POOL_RELEASE_WIPE_DATA
-#  define PJ_POOL_RELEASE_WIPE_DATA 	0
+#  define PJ_POOL_RELEASE_WIPE_DATA     0
 #endif
 
 
@@ -549,12 +548,12 @@
  * Enable timer debugging facility. When this is enabled, application
  * can call pj_timer_heap_dump() to show the contents of the timer
  * along with the source location where the timer entries were scheduled.
- * See https://trac.pjsip.org/repos/ticket/1527 for more info.
+ * See https://github.com/pjsip/pjproject/issues/1527 for more info.
  *
  * Default: 1
  */
 #ifndef PJ_TIMER_DEBUG
-#  define PJ_TIMER_DEBUG	    1
+#  define PJ_TIMER_DEBUG            1
 #endif
 
 
@@ -594,7 +593,7 @@
  * Set this to 1 to enable debugging on the group lock. Default: 0
  */
 #ifndef PJ_GRP_LOCK_DEBUG
-#  define PJ_GRP_LOCK_DEBUG	0
+#  define PJ_GRP_LOCK_DEBUG     0
 #endif
 
 
@@ -617,7 +616,7 @@
  * tracks the filename and line number of each functions.
  */
 #ifndef PJ_OS_HAS_CHECK_STACK
-#	define PJ_OS_HAS_CHECK_STACK		0
+#       define PJ_OS_HAS_CHECK_STACK            0
 #endif
 
 /**
@@ -626,7 +625,7 @@
  * Default: 0
  */
 #ifndef PJ_HAS_POOL_ALT_API
-#   define PJ_HAS_POOL_ALT_API	    PJ_POOL_DEBUG
+#   define PJ_HAS_POOL_ALT_API      PJ_POOL_DEBUG
 #endif
 
 
@@ -637,7 +636,7 @@
  * Default: 1
  */
 #ifndef PJ_HAS_TCP
-#  define PJ_HAS_TCP		    1
+#  define PJ_HAS_TCP                1
 #endif
 
 /**
@@ -647,7 +646,7 @@
  * Default: 0 (disabled, for now)
  */
 #ifndef PJ_HAS_IPV6
-#  define PJ_HAS_IPV6		    0
+#  define PJ_HAS_IPV6               0
 #endif
 
  /**
@@ -658,7 +657,7 @@
  * Default: 128
  */
 #ifndef PJ_MAX_HOSTNAME
-#  define PJ_MAX_HOSTNAME	    (128)
+#  define PJ_MAX_HOSTNAME           (128)
 #endif
 
 /**
@@ -679,7 +678,7 @@
  * the underlying implementation changes.
  */
 #ifndef PJ_IOQUEUE_MAX_HANDLES
-#   define PJ_IOQUEUE_MAX_HANDLES	(64)
+#   define PJ_IOQUEUE_MAX_HANDLES       (64)
 #endif
 
 
@@ -700,7 +699,7 @@
  * Default: 1
  */
 #ifndef PJ_IOQUEUE_HAS_SAFE_UNREG
-#   define PJ_IOQUEUE_HAS_SAFE_UNREG	1
+#   define PJ_IOQUEUE_HAS_SAFE_UNREG    1
 #endif
 
 
@@ -726,7 +725,7 @@
  */
 #if (PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY==0) && (PJ_IOQUEUE_HAS_SAFE_UNREG==0)
 #   error PJ_IOQUEUE_HAS_SAFE_UNREG must be enabled if ioqueue concurrency \
-	  is disabled
+          is disabled
 #endif
 
 
@@ -740,7 +739,18 @@
  * Default: 500 msec.
  */
 #ifndef PJ_IOQUEUE_KEY_FREE_DELAY
-#   define PJ_IOQUEUE_KEY_FREE_DELAY	500
+#   define PJ_IOQUEUE_KEY_FREE_DELAY    500
+#endif
+
+
+/**
+ * Default flags for epoll_flags member of  pj_ioqueue_cfg structure.
+ * The values are combination of pj_ioqueue_epoll_flag constants.
+ *
+ * Default: PJ_IOQUEUE_EPOLL_AUTO
+ */
+#ifndef PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS
+#   define PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS PJ_IOQUEUE_EPOLL_AUTO
 #endif
 
 
@@ -752,9 +762,9 @@
 #ifndef PJ_FD_SETSIZE_SETABLE
 #   if (defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H!=0) || \
        (defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H!=0)
-#	define PJ_FD_SETSIZE_SETABLE	1
+#       define PJ_FD_SETSIZE_SETABLE    1
 #   else
-#	define PJ_FD_SETSIZE_SETABLE	0
+#       define PJ_FD_SETSIZE_SETABLE    0
 #   endif
 #endif
 
@@ -767,7 +777,7 @@
 #if PJ_FD_SETSIZE_SETABLE
     /* Only override FD_SETSIZE if the value has not been set */
 #   ifndef FD_SETSIZE
-#	define FD_SETSIZE		PJ_IOQUEUE_MAX_HANDLES
+#       define FD_SETSIZE               PJ_IOQUEUE_MAX_HANDLES
 #   endif
 #else
     /* When FD_SETSIZE is not changeable, check if PJ_IOQUEUE_MAX_HANDLES
@@ -779,9 +789,9 @@
      */
 /*
 #   ifdef FD_SETSIZE
-#	if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
-#	    error "PJ_IOQUEUE_MAX_HANDLES is greater than FD_SETSIZE"
-#	endif
+#       if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
+#           error "PJ_IOQUEUE_MAX_HANDLES is greater than FD_SETSIZE"
+#       endif
 #   endif
 */
 #endif
@@ -794,7 +804,7 @@
  * Default: 1
  */
 #ifndef PJ_IP_HELPER_IGNORE_LOOPBACK_IF
-#   define PJ_IP_HELPER_IGNORE_LOOPBACK_IF	1
+#   define PJ_IP_HELPER_IGNORE_LOOPBACK_IF      1
 #endif
 
 
@@ -804,7 +814,7 @@
  * Default: 1
  */
 #ifndef PJ_HAS_SEMAPHORE
-#  define PJ_HAS_SEMAPHORE	    1
+#  define PJ_HAS_SEMAPHORE          1
 #endif
 
 /**
@@ -814,9 +824,9 @@
  */
 #ifndef PJ_SEMAPHORE_USE_DISPATCH_SEM
 #   if defined(PJ_DARWINOS) && PJ_DARWINOS != 0
-#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	1
+#       define PJ_SEMAPHORE_USE_DISPATCH_SEM    1
 #   else
-#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	0
+#       define PJ_SEMAPHORE_USE_DISPATCH_SEM    0
 #   endif
 #endif
 
@@ -827,7 +837,7 @@
  * Default: 1
  */
 #ifndef PJ_HAS_EVENT_OBJ
-#  define PJ_HAS_EVENT_OBJ	    1
+#  define PJ_HAS_EVENT_OBJ          1
 #endif
 
 
@@ -835,7 +845,7 @@
  * Maximum file name length.
  */
 #ifndef PJ_MAXPATH
-#   define PJ_MAXPATH		    260
+#   define PJ_MAXPATH               260
 #endif
 
 
@@ -900,7 +910,7 @@
  * Default: 1
  */
 #ifndef PJ_HAS_ERROR_STRING
-#   define PJ_HAS_ERROR_STRING	    1
+#   define PJ_HAS_ERROR_STRING      1
 #endif
 
 
@@ -913,7 +923,7 @@
  * Default: 0
  */
 #ifndef PJ_HAS_STRICMP_ALNUM
-#   define PJ_HAS_STRICMP_ALNUM	    0
+#   define PJ_HAS_STRICMP_ALNUM     0
 #endif
 
 /*
@@ -923,10 +933,10 @@
  */
 #if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK==0
 #   ifdef _MSC_VER
-#	pragma message("Warning: PJ_ENABLE_EXTRA_CHECK macro is deprecated"\
-		       " and has no effect")
+#       pragma message("Warning: PJ_ENABLE_EXTRA_CHECK macro is deprecated"\
+                       " and has no effect")
 #   else
-#	warning "PJ_ENABLE_EXTRA_CHECK macro is deprecated and has no effect"
+#       warning "PJ_ENABLE_EXTRA_CHECK macro is deprecated and has no effect"
 #   endif
 #endif
 
@@ -939,30 +949,30 @@
  * Dummy QoS backend implementation, will always return error on all
  * the APIs.
  */
-#define PJ_QOS_DUMMY	    1
+#define PJ_QOS_DUMMY        1
 
 /** QoS backend based on setsockopt(IP_TOS) */
-#define PJ_QOS_BSD	    2
+#define PJ_QOS_BSD          2
 
 /** QoS backend for Windows Mobile 6 */
-#define PJ_QOS_WM	    3
+#define PJ_QOS_WM           3
 
 /** QoS backend for Symbian */
-#define PJ_QOS_SYMBIAN	    4
+#define PJ_QOS_SYMBIAN      4
 
 /** QoS backend for Darwin */
-#define PJ_QOS_DARWIN	    5
+#define PJ_QOS_DARWIN       5
 
 /**
  * Force the use of some QoS backend API for some platforms.
  */
 #ifndef PJ_QOS_IMPLEMENTATION
 #   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE && _WIN32_WCE >= 0x502
-	/* Windows Mobile 6 or later */
-#	define PJ_QOS_IMPLEMENTATION    PJ_QOS_WM
+        /* Windows Mobile 6 or later */
+#       define PJ_QOS_IMPLEMENTATION    PJ_QOS_WM
 #   elif defined(PJ_DARWINOS)
-	/* Darwin OS (e.g: iOS, MacOS, tvOS) */
-#	define PJ_QOS_IMPLEMENTATION    PJ_QOS_DARWIN
+        /* Darwin OS (e.g: iOS, MacOS, tvOS) */
+#       define PJ_QOS_IMPLEMENTATION    PJ_QOS_DARWIN
 #   endif
 #endif
 
@@ -976,7 +986,7 @@
  * Default: 0 (for now)
  */
 #ifndef PJ_HAS_SSL_SOCK
-#  define PJ_HAS_SSL_SOCK	    0
+#  define PJ_HAS_SSL_SOCK           0
 #endif
 
 
@@ -984,14 +994,14 @@
  * Secure socket implementation.
  * Select one of these implementations in PJ_SSL_SOCK_IMP.
  */
-#define PJ_SSL_SOCK_IMP_NONE 	    0	/**< Disable SSL socket.    */
-#define PJ_SSL_SOCK_IMP_OPENSSL	    1	/**< Using OpenSSL.	    */
-#define PJ_SSL_SOCK_IMP_GNUTLS      2	/**< Using GnuTLS.	    */
-#define PJ_SSL_SOCK_IMP_DARWIN      3	/**< Using Apple's Secure
-					     Transport (deprecated in
-					     MacOS 10.15 & iOS 13.0)*/
-#define PJ_SSL_SOCK_IMP_APPLE       4	/**< Using Apple's Network 
-					     framework.	    	    */
+#define PJ_SSL_SOCK_IMP_NONE        0   /**< Disable SSL socket.    */
+#define PJ_SSL_SOCK_IMP_OPENSSL     1   /**< Using OpenSSL.         */
+#define PJ_SSL_SOCK_IMP_GNUTLS      2   /**< Using GnuTLS.          */
+#define PJ_SSL_SOCK_IMP_DARWIN      3   /**< Using Apple's Secure
+                                             Transport (deprecated in
+                                             MacOS 10.15 & iOS 13.0)*/
+#define PJ_SSL_SOCK_IMP_APPLE       4   /**< Using Apple's Network 
+                                             framework.             */
 
 /**
  * Select which SSL socket implementation to use. Currently pjlib supports
@@ -1004,9 +1014,9 @@
  */
 #ifndef PJ_SSL_SOCK_IMP
 #   if PJ_HAS_SSL_SOCK==0
-#	define PJ_SSL_SOCK_IMP		    PJ_SSL_SOCK_IMP_NONE
+#       define PJ_SSL_SOCK_IMP              PJ_SSL_SOCK_IMP_NONE
 #   else
-#	define PJ_SSL_SOCK_IMP		    PJ_SSL_SOCK_IMP_OPENSSL
+#       define PJ_SSL_SOCK_IMP              PJ_SSL_SOCK_IMP_OPENSSL
 #   endif
 #endif
 
@@ -1057,7 +1067,7 @@
 
 /**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
- * https://trac.pjsip.org/repos/ticket/1197.
+ * https://github.com/pjsip/pjproject/issues/1197.
  *
  * Default: 1
  */
@@ -1072,7 +1082,7 @@
  * Default: 4
  */
 #ifndef PJ_MAX_SOCKOPT_PARAMS
-#   define PJ_MAX_SOCKOPT_PARAMS	    4
+#   define PJ_MAX_SOCKOPT_PARAMS            4
 #endif
 
 
@@ -1146,8 +1156,8 @@
  *    macros.
  *  - Declare these macros in your <tt>config_site.h</tt>:
  \verbatim
-	#define PJ_EXPORT_SPECIFIER  __declspec(dllexport)
-	#define PJ_IMPORT_SPECIFIER  __declspec(dllimport)
+        #define PJ_EXPORT_SPECIFIER  __declspec(dllexport)
+        #define PJ_IMPORT_SPECIFIER  __declspec(dllimport)
  \endverbatim
  *  - And in the application (that links with the DLL) project, add 
  *    <tt>PJ_DLL</tt> in the macro declarations.
@@ -1165,7 +1175,7 @@
  * @param type The return type of the function.
  * Expand the function as inline.
  */
-#define PJ_INLINE(type)	  PJ_INLINE_SPECIFIER type
+#define PJ_INLINE(type)   PJ_INLINE_SPECIFIER type
 
 /**
  * This macro declares platform/compiler specific specifier prefix
@@ -1220,15 +1230,15 @@
  */
 #if defined(PJ_DLL)
 #   if defined(PJ_EXPORTING)
-#	define PJ_DECL(type)	    PJ_EXPORT_DECL_SPECIFIER type
+#       define PJ_DECL(type)        PJ_EXPORT_DECL_SPECIFIER type
 #   else
-#	define PJ_DECL(type)	    PJ_IMPORT_DECL_SPECIFIER type
+#       define PJ_DECL(type)        PJ_IMPORT_DECL_SPECIFIER type
 #   endif
 #elif !defined(PJ_DECL)
 #   if defined(__cplusplus)
-#	define PJ_DECL(type)	    type
+#       define PJ_DECL(type)        type
 #   else
-#	define PJ_DECL(type)	    extern type
+#       define PJ_DECL(type)        extern type
 #   endif
 #endif
 
@@ -1239,9 +1249,9 @@
  * Define a function.
  */
 #if defined(PJ_DLL) && defined(PJ_EXPORTING)
-#   define PJ_DEF(type)		    PJ_EXPORT_DEF_SPECIFIER type
+#   define PJ_DEF(type)             PJ_EXPORT_DEF_SPECIFIER type
 #elif !defined(PJ_DEF)
-#   define PJ_DEF(type)		    type
+#   define PJ_DEF(type)             type
 #endif
 
 
@@ -1266,8 +1276,8 @@
 #ifdef __cplusplus
 #  define PJ_DECL_NO_RETURN(type)   PJ_DECL(type) PJ_NORETURN
 #  define PJ_IDECL_NO_RETURN(type)  PJ_INLINE(type) PJ_NORETURN
-#  define PJ_BEGIN_DECL		    extern "C" {
-#  define PJ_END_DECL		    }
+#  define PJ_BEGIN_DECL             extern "C" {
+#  define PJ_END_DECL               }
 #else
 #  define PJ_DECL_NO_RETURN(type)   PJ_NORETURN PJ_DECL(type)
 #  define PJ_IDECL_NO_RETURN(type)  PJ_NORETURN PJ_INLINE(type)
@@ -1284,12 +1294,12 @@
  */ 
 #if defined(PJ_DLL)
 #   if defined(PJ_EXPORTING)
-#	define PJ_DECL_DATA(type)   PJ_EXPORT_DECL_SPECIFIER extern type
+#       define PJ_DECL_DATA(type)   PJ_EXPORT_DECL_SPECIFIER extern type
 #   else
-#	define PJ_DECL_DATA(type)   PJ_IMPORT_DECL_SPECIFIER extern type
+#       define PJ_DECL_DATA(type)   PJ_IMPORT_DECL_SPECIFIER extern type
 #   endif
 #elif !defined(PJ_DECL_DATA)
-#   define PJ_DECL_DATA(type)	    extern type
+#   define PJ_DECL_DATA(type)       extern type
 #endif
 
 
@@ -1299,9 +1309,9 @@
  * Define a global data.
  */ 
 #if defined(PJ_DLL) && defined(PJ_EXPORTING)
-#   define PJ_DEF_DATA(type)	    PJ_EXPORT_DEF_SPECIFIER type
+#   define PJ_DEF_DATA(type)        PJ_EXPORT_DEF_SPECIFIER type
 #elif !defined(PJ_DEF_DATA)
-#   define PJ_DEF_DATA(type)	    type
+#   define PJ_DEF_DATA(type)        type
 #endif
 
 
@@ -1339,7 +1349,7 @@
  * Example: PJ_TODO(CLEAN_UP_ERROR);
  */
 #ifndef PJ_TODO
-#  define PJ_TODO(id)	    TODO___##id:
+#  define PJ_TODO(id)       TODO___##id:
 #endif
 
 /**
@@ -1393,10 +1403,10 @@
 PJ_BEGIN_DECL
 
 /** PJLIB version major number. */
-#define PJ_VERSION_NUM_MAJOR	2
+#define PJ_VERSION_NUM_MAJOR    2
 
 /** PJLIB version minor number. */
-#define PJ_VERSION_NUM_MINOR	12
+#define PJ_VERSION_NUM_MINOR    13
 
 /** PJLIB version revision number. */
 #define PJ_VERSION_NUM_REV      0
@@ -1405,16 +1415,16 @@ PJ_BEGIN_DECL
  * Extra suffix for the version (e.g. "-trunk"), or empty for
  * web release version.
  */
-#define PJ_VERSION_NUM_EXTRA	"-dev"
+#define PJ_VERSION_NUM_EXTRA    "-dev"
 
 /**
  * PJLIB version number consists of three bytes with the following format:
  * 0xMMIIRR00, where MM: major number, II: minor number, RR: revision
  * number, 00: always zero for now.
  */
-#define PJ_VERSION_NUM	((PJ_VERSION_NUM_MAJOR << 24) |	\
-			 (PJ_VERSION_NUM_MINOR << 16) | \
-			 (PJ_VERSION_NUM_REV << 8))
+#define PJ_VERSION_NUM  ((PJ_VERSION_NUM_MAJOR << 24) | \
+                         (PJ_VERSION_NUM_MINOR << 16) | \
+                         (PJ_VERSION_NUM_REV << 8))
 
 /**
  * PJLIB version string constant. @see pj_get_version()
@@ -1436,5 +1446,5 @@ PJ_DECL(void) pj_dump_config(void);
 PJ_END_DECL
 
 
-#endif	/* __PJ_CONFIG_H__ */
+#endif  /* __PJ_CONFIG_H__ */
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -83,12 +82,12 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL
-#  define PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL	0
+#  define PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL      0
 #else
 #  if defined(PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL) && \
-	      PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL != 0
+              PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL != 0
 #    undef  PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES
-#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES	1
+#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES     1
 #  endif
 #endif
 
@@ -99,12 +98,12 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL
-#  define PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL	0
+#  define PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL  0
 #else
 #  if defined(PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL) && \
-	      PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL != 0
+              PJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL != 0
 #    undef  PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES
-#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES	1
+#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES     1
 #  endif
 #endif
 
@@ -115,12 +114,12 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES
-#  define PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES	0
+#  define PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES       0
 #else
 #  if defined(PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES) && \
-	      PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES != 0
+              PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES != 0
 #    undef  PJMEDIA_VIDEO_DEV_HAS_OPENGL
-#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL	1
+#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL        1
 #  endif
 #endif
 
@@ -133,12 +132,12 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_OPENGL
-#   define PJMEDIA_VIDEO_DEV_HAS_OPENGL		0
+#   define PJMEDIA_VIDEO_DEV_HAS_OPENGL         0
 #else
 #  if defined(PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES) && \
-	      PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES == 0
+              PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES == 0
 #    undef  PJMEDIA_VIDEO_DEV_HAS_OPENGL
-#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL	0
+#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL        0
 #  endif
 #endif
 
@@ -149,7 +148,7 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_SDL
-#   define PJMEDIA_VIDEO_DEV_HAS_SDL		0
+#   define PJMEDIA_VIDEO_DEV_HAS_SDL            0
 #endif
 
 
@@ -159,7 +158,7 @@ PJ_BEGIN_DECL
  * Default: 0
  */
 #ifndef PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
-#   define PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL	0
+#   define PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL     0
 #endif
 
 
@@ -169,7 +168,7 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_QT
-#   define PJMEDIA_VIDEO_DEV_HAS_QT		0
+#   define PJMEDIA_VIDEO_DEV_HAS_QT             0
 #endif
 
 
@@ -179,7 +178,7 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_IOS
-#   define PJMEDIA_VIDEO_DEV_HAS_IOS		0
+#   define PJMEDIA_VIDEO_DEV_HAS_IOS            0
 #endif
 
 
@@ -189,7 +188,7 @@ PJ_BEGIN_DECL
  * Default: 0 (unfinished)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_DSHOW
-#   define PJMEDIA_VIDEO_DEV_HAS_DSHOW		0 //PJ_WIN32
+#   define PJMEDIA_VIDEO_DEV_HAS_DSHOW          0 //PJ_WIN32
 #endif
 
 
@@ -199,7 +198,7 @@ PJ_BEGIN_DECL
  * Default: 1
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC
-#   define PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC	1
+#   define PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC       1
 #endif
 
 
@@ -209,7 +208,7 @@ PJ_BEGIN_DECL
  * Default: 0 (unfinished)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_FFMPEG
-#   define PJMEDIA_VIDEO_DEV_HAS_FFMPEG	        0
+#   define PJMEDIA_VIDEO_DEV_HAS_FFMPEG         0
 #endif
 
 
@@ -219,7 +218,7 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_V4L2
-#   define PJMEDIA_VIDEO_DEV_HAS_V4L2		0
+#   define PJMEDIA_VIDEO_DEV_HAS_V4L2           0
 #endif
 
 
@@ -229,7 +228,7 @@ PJ_BEGIN_DECL
  * Default: 1
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_AVI
-#   define PJMEDIA_VIDEO_DEV_HAS_AVI		1
+#   define PJMEDIA_VIDEO_DEV_HAS_AVI            1
 #endif
 
 
@@ -239,7 +238,7 @@ PJ_BEGIN_DECL
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_ANDROID
-#   define PJMEDIA_VIDEO_DEV_HAS_ANDROID	0
+#   define PJMEDIA_VIDEO_DEV_HAS_ANDROID        0
 #endif
 
 
@@ -264,7 +263,7 @@ PJ_BEGIN_DECL
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_VIDEODEV_CONFIG_H__ */
+#endif  /* __PJMEDIA_VIDEODEV_CONFIG_H__ */
 
 /*
  --------------------- DOCUMENTATION FOLLOWS ---------------------------

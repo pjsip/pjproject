@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -74,33 +73,33 @@ typedef enum pjmedia_vid_tee_flag
  * should destroy the tee with pjmedia_port_destroy() as usual. Note that
  * destroying the tee does not destroy its destination ports.
  *
- * @param pool		    The pool.
- * @param fmt		    The source media port's format.
- * @param max_dst_cnt	    The maximum number of destination ports supported.
- * @param p_vid_tee	    Pointer to receive the video tee port.
+ * @param pool              The pool.
+ * @param fmt               The source media port's format.
+ * @param max_dst_cnt       The maximum number of destination ports supported.
+ * @param p_vid_tee         Pointer to receive the video tee port.
  *
- * @return		    PJ_SUCCESS on success, or the appropriate
- *			    error code.
+ * @return                  PJ_SUCCESS on success, or the appropriate
+ *                          error code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_tee_create(pj_pool_t *pool,
-					    const pjmedia_format *fmt,
-					    unsigned max_dst_cnt,
-					    pjmedia_port **p_vid_tee);
+                                            const pjmedia_format *fmt,
+                                            unsigned max_dst_cnt,
+                                            pjmedia_port **p_vid_tee);
 
 /**
  * Add a destination media port to the video tee. For this function, the
  * destination port's media format must match the source format.
  *
- * @param vid_tee	    The video tee.
- * @param option	    Video tee option, see @pjmedia_vid_tee_flag.
- * @param port		    The destination media port.
+ * @param vid_tee           The video tee.
+ * @param option            Video tee option, see pjmedia_vid_tee_flag.
+ * @param port              The destination media port.
  *
- * @return		    PJ_SUCCESS on success, or the appropriate error
- *			    code.
+ * @return                  PJ_SUCCESS on success, or the appropriate error
+ *                          code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
-						  unsigned option,
-						  pjmedia_port *port);
+                                                  unsigned option,
+                                                  pjmedia_port *port);
 
 
 /**
@@ -108,29 +107,29 @@ PJ_DECL(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
  * create a converter if the destination port's media format does not match
  * the source format.
  *
- * @param vid_tee	    The video tee.
- * @param option	    Video tee option, see @pjmedia_vid_tee_flag.
- * @param port		    The destination media port.
+ * @param vid_tee           The video tee.
+ * @param option            Video tee option, see pjmedia_vid_tee_flag.
+ * @param port              The destination media port.
  *
- * @return		    PJ_SUCCESS on success, or the appropriate error
- *			    code.
+ * @return                  PJ_SUCCESS on success, or the appropriate error
+ *                          code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
                                                    unsigned option,
-						   pjmedia_port *port);
+                                                   pjmedia_port *port);
 
 
 /**
  * Remove a destination media port from the video tee.
  *
- * @param vid_tee	    The video tee.
- * @param port		    The destination media port to be removed.
+ * @param vid_tee           The video tee.
+ * @param port              The destination media port to be removed.
  *
- * @return		    PJ_SUCCESS on success, or the appropriate error
- *			    code.
+ * @return                  PJ_SUCCESS on success, or the appropriate error
+ *                          code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_tee_remove_dst_port(pjmedia_port *vid_tee,
-						     pjmedia_port *port);
+                                                     pjmedia_port *port);
 
 
 PJ_END_DECL

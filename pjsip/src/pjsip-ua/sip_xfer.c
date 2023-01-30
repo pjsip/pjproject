@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -30,7 +29,7 @@
 
 /* Subscription expiration */
 #ifndef PJSIP_XFER_EXPIRES
-#   define PJSIP_XFER_EXPIRES	    600
+#   define PJSIP_XFER_EXPIRES       600
 #endif
 
 
@@ -39,19 +38,19 @@
  */
 static struct pjsip_module mod_xfer = 
 {
-    NULL, NULL,				/* prev, next.			*/
-    { "mod-refer", 9 },			/* Name.			*/
-    -1,					/* Id				*/
-    PJSIP_MOD_PRIORITY_DIALOG_USAGE,	/* Priority			*/
-    NULL,				/* load()			*/
-    NULL,				/* start()			*/
-    NULL,				/* stop()			*/
-    NULL,				/* unload()			*/
-    NULL,				/* on_rx_request()		*/
-    NULL,				/* on_rx_response()		*/
-    NULL,				/* on_tx_request.		*/
-    NULL,				/* on_tx_response()		*/
-    NULL,				/* on_tsx_state()		*/
+    NULL, NULL,                         /* prev, next.                  */
+    { "mod-refer", 9 },                 /* Name.                        */
+    -1,                                 /* Id                           */
+    PJSIP_MOD_PRIORITY_DIALOG_USAGE,    /* Priority                     */
+    NULL,                               /* load()                       */
+    NULL,                               /* start()                      */
+    NULL,                               /* stop()                       */
+    NULL,                               /* unload()                     */
+    NULL,                               /* on_rx_request()              */
+    NULL,                               /* on_rx_response()             */
+    NULL,                               /* on_tx_request.               */
+    NULL,                               /* on_tx_response()             */
+    NULL,                               /* on_tsx_state()               */
 };
 
 
@@ -86,12 +85,12 @@ static const pj_str_t STR_SIPFRAG = { "sipfrag", 7 };
  */
 struct pjsip_xfer
 {
-    pjsip_evsub		*sub;		/**< Event subscribtion record.	    */
-    pjsip_dialog	*dlg;		/**< The dialog.		    */
-    pjsip_evsub_user	 user_cb;	/**< The user callback.		    */
-    pj_str_t		 refer_to_uri;	/**< The full Refer-To URI.	    */
-    int			 last_st_code;	/**< st_code sent in last NOTIFY    */
-    pj_str_t		 last_st_text;	/**< st_text sent in last NOTIFY    */
+    pjsip_evsub         *sub;           /**< Event subscribtion record.     */
+    pjsip_dialog        *dlg;           /**< The dialog.                    */
+    pjsip_evsub_user     user_cb;       /**< The user callback.             */
+    pj_str_t             refer_to_uri;  /**< The full Refer-To URI.         */
+    int                  last_st_code;  /**< st_code sent in last NOTIFY    */
+    pj_str_t             last_st_text;  /**< st_text sent in last NOTIFY    */
 };
 
 
@@ -104,19 +103,19 @@ typedef struct pjsip_xfer pjsip_xfer;
  */
 static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 static void xfer_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
-				     pjsip_event *event);
+                                     pjsip_event *event);
 static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub, 
-				      pjsip_rx_data *rdata,
-				      int *p_st_code,
-				      pj_str_t **p_st_text,
-				      pjsip_hdr *res_hdr,
-				      pjsip_msg_body **p_body);
+                                      pjsip_rx_data *rdata,
+                                      int *p_st_code,
+                                      pj_str_t **p_st_text,
+                                      pjsip_hdr *res_hdr,
+                                      pjsip_msg_body **p_body);
 static void xfer_on_evsub_rx_notify( pjsip_evsub *sub, 
-				     pjsip_rx_data *rdata,
-				     int *p_st_code,
-				     pj_str_t **p_st_text,
-				     pjsip_hdr *res_hdr,
-				     pjsip_msg_body **p_body);
+                                     pjsip_rx_data *rdata,
+                                     int *p_st_code,
+                                     pj_str_t **p_st_text,
+                                     pjsip_hdr *res_hdr,
+                                     pjsip_msg_body **p_body);
 static void xfer_on_evsub_client_refresh(pjsip_evsub *sub);
 static void xfer_on_evsub_server_timeout(pjsip_evsub *sub);
 
@@ -150,18 +149,18 @@ PJ_DEF(pj_status_t) pjsip_xfer_init_module(pjsip_endpoint *endpt)
 
     status = pjsip_endpt_register_module(endpt, &mod_xfer);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     status = pjsip_endpt_add_capability( endpt, &mod_xfer, PJSIP_H_ALLOW, 
-					 NULL, 1, 
-					 &pjsip_get_refer_method()->name);
+                                         NULL, 1, 
+                                         &pjsip_get_refer_method()->name);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     status = pjsip_evsub_register_pkg(&mod_xfer, &STR_REFER, 
-				      PJSIP_XFER_EXPIRES, 1, &accept);
+                                      PJSIP_XFER_EXPIRES, 1, &accept);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     return PJ_SUCCESS;
 }
@@ -172,8 +171,8 @@ PJ_DEF(pj_status_t) pjsip_xfer_init_module(pjsip_endpoint *endpt)
  *
  */
 PJ_DEF(pj_status_t) pjsip_xfer_create_uac( pjsip_dialog *dlg,
-					   const pjsip_evsub_user *user_cb,
-					   pjsip_evsub **p_evsub )
+                                           const pjsip_evsub_user *user_cb,
+                                           pjsip_evsub **p_evsub )
 {
     pj_status_t status;
     pjsip_xfer *xfer;
@@ -185,16 +184,16 @@ PJ_DEF(pj_status_t) pjsip_xfer_create_uac( pjsip_dialog *dlg,
 
     /* Create event subscription */
     status = pjsip_evsub_create_uac( dlg,  &xfer_user, &STR_REFER, 
-				     PJSIP_EVSUB_NO_EVENT_ID, &sub);
+                                     PJSIP_EVSUB_NO_EVENT_ID, &sub);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /* Create xfer session */
     xfer = PJ_POOL_ZALLOC_T(dlg->pool, pjsip_xfer);
     xfer->dlg = dlg;
     xfer->sub = sub;
     if (user_cb)
-	pj_memcpy(&xfer->user_cb, user_cb, sizeof(pjsip_evsub_user));
+        pj_memcpy(&xfer->user_cb, user_cb, sizeof(pjsip_evsub_user));
 
     /* Attach to evsub */
     pjsip_evsub_set_mod_data(sub, mod_xfer.id, xfer);
@@ -215,9 +214,9 @@ on_return:
  *
  */
 PJ_DEF(pj_status_t) pjsip_xfer_create_uas( pjsip_dialog *dlg,
-					   const pjsip_evsub_user *user_cb,
-					   pjsip_rx_data *rdata,
-					   pjsip_evsub **p_evsub )
+                                           const pjsip_evsub_user *user_cb,
+                                           pjsip_rx_data *rdata,
+                                           pjsip_evsub **p_evsub )
 {
     pjsip_evsub *sub;
     pjsip_xfer *xfer;
@@ -230,12 +229,12 @@ PJ_DEF(pj_status_t) pjsip_xfer_create_uas( pjsip_dialog *dlg,
 
     /* Must be request message */
     PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
-		     PJSIP_ENOTREQUESTMSG);
+                     PJSIP_ENOTREQUESTMSG);
 
     /* Check that request is REFER */
     PJ_ASSERT_RETURN(pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
-				      pjsip_get_refer_method())==0,
-		     PJSIP_ENOTREFER);
+                                      pjsip_get_refer_method())==0,
+                     PJSIP_ENOTREFER);
 
     /* Lock dialog */
     pjsip_dlg_inc_lock(dlg);
@@ -245,25 +244,25 @@ PJ_DEF(pj_status_t) pjsip_xfer_create_uas( pjsip_dialog *dlg,
      * So create a dummy Event header.
      */
     if (pjsip_msg_find_hdr_by_name(rdata->msg_info.msg,
-				   &STR_EVENT, NULL)==NULL)
+                                   &STR_EVENT, NULL)==NULL)
     {
-	event_hdr = pjsip_event_hdr_create(rdata->tp_info.pool);
-	event_hdr->event_type = STR_REFER;
-	pjsip_msg_add_hdr(rdata->msg_info.msg, (pjsip_hdr*)event_hdr);
+        event_hdr = pjsip_event_hdr_create(rdata->tp_info.pool);
+        event_hdr->event_type = STR_REFER;
+        pjsip_msg_add_hdr(rdata->msg_info.msg, (pjsip_hdr*)event_hdr);
     }
 
     /* Create server subscription */
     status = pjsip_evsub_create_uas( dlg, &xfer_user, rdata, 
-				     PJSIP_EVSUB_NO_EVENT_ID, &sub);
+                                     PJSIP_EVSUB_NO_EVENT_ID, &sub);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /* Create server xfer subscription */
     xfer = PJ_POOL_ZALLOC_T(dlg->pool, pjsip_xfer);
     xfer->dlg = dlg;
     xfer->sub = sub;
     if (user_cb)
-	pj_memcpy(&xfer->user_cb, user_cb, sizeof(pjsip_evsub_user));
+        pj_memcpy(&xfer->user_cb, user_cb, sizeof(pjsip_evsub_user));
 
     /* Attach to evsub */
     pjsip_evsub_set_mod_data(sub, mod_xfer.id, xfer);
@@ -283,8 +282,8 @@ on_return:
  *
  */
 PJ_DEF(pj_status_t) pjsip_xfer_initiate( pjsip_evsub *sub,
-					 const pj_str_t *refer_to_uri,
-					 pjsip_tx_data **p_tdata)
+                                         const pj_str_t *refer_to_uri,
+                                         pjsip_tx_data **p_tdata)
 {
     pjsip_xfer *xfer;
     const pj_str_t refer_to = { "Refer-To", 8};
@@ -310,24 +309,24 @@ PJ_DEF(pj_status_t) pjsip_xfer_initiate( pjsip_evsub *sub,
 
     /* Create basic REFER request */
     status = pjsip_evsub_initiate(sub, pjsip_get_refer_method(),
-    				  PJSIP_EXPIRES_NOT_SPECIFIED, &tdata);
+                                  PJSIP_EXPIRES_NOT_SPECIFIED, &tdata);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /* Save Refer-To URI. */
     if (refer_to_uri == NULL) {
-	refer_to_uri = &xfer->refer_to_uri;
+        refer_to_uri = &xfer->refer_to_uri;
     } else {
-	pj_strdup(xfer->dlg->pool, &xfer->refer_to_uri, refer_to_uri);
+        pj_strdup(xfer->dlg->pool, &xfer->refer_to_uri, refer_to_uri);
     }
 
     /* Create and add Refer-To header. */
     hdr = pjsip_generic_string_hdr_create(tdata->pool, &refer_to,
-					  refer_to_uri);
+                                          refer_to_uri);
     if (!hdr) {
-	pjsip_tx_data_dec_ref(tdata);
-	status = PJ_ENOMEM;
-	goto on_return;
+        pjsip_tx_data_dec_ref(tdata);
+        status = PJ_ENOMEM;
+        goto on_return;
     }
 
     pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hdr);
@@ -349,9 +348,9 @@ on_return:
  *
  */
 PJ_DEF(pj_status_t) pjsip_xfer_accept( pjsip_evsub *sub,
-				       pjsip_rx_data *rdata,
-				       int st_code,
-				       const pjsip_hdr *hdr_list )
+                                       pjsip_rx_data *rdata,
+                                       int st_code,
+                                       const pjsip_hdr *hdr_list )
 {
     /*
      * Don't need to add custom headers, so just call basic
@@ -366,10 +365,10 @@ PJ_DEF(pj_status_t) pjsip_xfer_accept( pjsip_evsub *sub,
  * of the subscription. 
  */
 PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
-				       pjsip_evsub_state state,
-				       int xfer_st_code,
-				       const pj_str_t *xfer_st_text,
-				       pjsip_tx_data **p_tdata)
+                                       pjsip_evsub_state state,
+                                       int xfer_st_code,
+                                       const pj_str_t *xfer_st_text,
+                                       pjsip_tx_data **p_tdata)
 {
     pjsip_tx_data *tdata;
     pjsip_xfer *xfer;
@@ -398,12 +397,12 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
      */
     status = pjsip_evsub_notify( sub, state, NULL, &reason, &tdata);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
 
     /* Check status text */
     if (xfer_st_text==NULL || xfer_st_text->slen==0)
-	xfer_st_text = pjsip_get_status_text(xfer_st_code);
+        xfer_st_text = pjsip_get_status_text(xfer_st_code);
 
     /* Save st_code and st_text, for current_notify() */
     xfer->last_st_code = xfer_st_code;
@@ -412,18 +411,18 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
     /* Create sipfrag content. */
     body = (char*) pj_pool_alloc(tdata->pool, 128);
     bodylen = pj_ansi_snprintf(body, 128, "SIP/2.0 %u %.*s\r\n",
-			       xfer_st_code,
-			       (int)xfer_st_text->slen,
-			       xfer_st_text->ptr);
+                               xfer_st_code,
+                               (int)xfer_st_text->slen,
+                               xfer_st_text->ptr);
     PJ_ASSERT_ON_FAIL(bodylen > 0 && bodylen < 128, 
-			{status=PJ_EBUG; pjsip_tx_data_dec_ref(tdata); 
-			 goto on_return; });
+                        {status=PJ_EBUG; pjsip_tx_data_dec_ref(tdata); 
+                         goto on_return; });
 
 
     /* Create SIP message body. */
     msg_body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
     pjsip_media_type_init(&msg_body->content_type, (pj_str_t*)&STR_MESSAGE,
-			  (pj_str_t*)&STR_SIPFRAG);
+                          (pj_str_t*)&STR_SIPFRAG);
     msg_body->data = body;
     msg_body->len = bodylen;
     msg_body->print_body = &pjsip_print_text_body;
@@ -453,7 +452,7 @@ on_return:
  * Send current state and the last sipfrag body.
  */
 PJ_DEF(pj_status_t) pjsip_xfer_current_notify( pjsip_evsub *sub,
-					       pjsip_tx_data **p_tdata )
+                                               pjsip_tx_data **p_tdata )
 {
     pjsip_xfer *xfer;
     pj_status_t status;
@@ -469,8 +468,8 @@ PJ_DEF(pj_status_t) pjsip_xfer_current_notify( pjsip_evsub *sub,
     pjsip_dlg_inc_lock(xfer->dlg);
 
     status = pjsip_xfer_notify(sub, pjsip_evsub_get_state(sub),
-			       xfer->last_st_code, &xfer->last_st_text,
-			       p_tdata);
+                               xfer->last_st_code, &xfer->last_st_text,
+                               p_tdata);
 
     pjsip_dlg_dec_lock(xfer->dlg);
 
@@ -482,7 +481,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_current_notify( pjsip_evsub *sub,
  * Send request message. 
  */
 PJ_DEF(pj_status_t) pjsip_xfer_send_request( pjsip_evsub *sub,
-					     pjsip_tx_data *tdata)
+                                             pjsip_tx_data *tdata)
 {
     return pjsip_evsub_send_request(sub, tdata);
 }
@@ -500,7 +499,7 @@ static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_evsub_state)
-	(*xfer->user_cb.on_evsub_state)(sub, event);
+        (*xfer->user_cb.on_evsub_state)(sub, event);
 
 }
 
@@ -508,7 +507,7 @@ static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
  * Called when transaction state has changed.
  */
 static void xfer_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
-				     pjsip_event *event)
+                                     pjsip_event *event)
 {
     pjsip_xfer *xfer;
 
@@ -516,18 +515,18 @@ static void xfer_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_tsx_state)
-	(*xfer->user_cb.on_tsx_state)(sub, tsx, event);
+        (*xfer->user_cb.on_tsx_state)(sub, tsx, event);
 }
 
 /*
  * Called when REFER is received to refresh subscription.
  */
 static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub, 
-				      pjsip_rx_data *rdata,
-				      int *p_st_code,
-				      pj_str_t **p_st_text,
-				      pjsip_hdr *res_hdr,
-				      pjsip_msg_body **p_body)
+                                      pjsip_rx_data *rdata,
+                                      int *p_st_code,
+                                      pj_str_t **p_st_text,
+                                      pjsip_hdr *res_hdr,
+                                      pjsip_msg_body **p_body)
 {
     pjsip_xfer *xfer;
 
@@ -535,27 +534,27 @@ static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub,
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_rx_refresh) {
-	(*xfer->user_cb.on_rx_refresh)(sub, rdata, p_st_code, p_st_text,
-				       res_hdr, p_body);
+        (*xfer->user_cb.on_rx_refresh)(sub, rdata, p_st_code, p_st_text,
+                                       res_hdr, p_body);
 
     } else {
-	/* Implementors MUST send NOTIFY if it implements on_rx_refresh
-	 * (implementor == "us" from evsub point of view.
-	 */
-	pjsip_tx_data *tdata;
-	pj_status_t status;
+        /* Implementors MUST send NOTIFY if it implements on_rx_refresh
+         * (implementor == "us" from evsub point of view.
+         */
+        pjsip_tx_data *tdata;
+        pj_status_t status;
 
-	if (pjsip_evsub_get_state(sub)==PJSIP_EVSUB_STATE_TERMINATED) {
-	    status = pjsip_xfer_notify( sub, PJSIP_EVSUB_STATE_TERMINATED,
-					xfer->last_st_code,
-					&xfer->last_st_text, 
-					&tdata);
-	} else {
-	    status = pjsip_xfer_current_notify(sub, &tdata);
-	}
+        if (pjsip_evsub_get_state(sub)==PJSIP_EVSUB_STATE_TERMINATED) {
+            status = pjsip_xfer_notify( sub, PJSIP_EVSUB_STATE_TERMINATED,
+                                        xfer->last_st_code,
+                                        &xfer->last_st_text, 
+                                        &tdata);
+        } else {
+            status = pjsip_xfer_current_notify(sub, &tdata);
+        }
 
-	if (status == PJ_SUCCESS)
-	    pjsip_xfer_send_request(sub, tdata);
+        if (status == PJ_SUCCESS)
+            pjsip_xfer_send_request(sub, tdata);
     }
 }
 
@@ -564,11 +563,11 @@ static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub,
  * Called when NOTIFY is received.
  */
 static void xfer_on_evsub_rx_notify( pjsip_evsub *sub, 
-				     pjsip_rx_data *rdata,
-				     int *p_st_code,
-				     pj_str_t **p_st_text,
-				     pjsip_hdr *res_hdr,
-				     pjsip_msg_body **p_body)
+                                     pjsip_rx_data *rdata,
+                                     int *p_st_code,
+                                     pj_str_t **p_st_text,
+                                     pjsip_hdr *res_hdr,
+                                     pjsip_msg_body **p_body)
 {
     pjsip_xfer *xfer;
 
@@ -576,8 +575,8 @@ static void xfer_on_evsub_rx_notify( pjsip_evsub *sub,
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_rx_notify)
-	(*xfer->user_cb.on_rx_notify)(sub, rdata, p_st_code, p_st_text,
-				      res_hdr, p_body);
+        (*xfer->user_cb.on_rx_notify)(sub, rdata, p_st_code, p_st_text,
+                                      res_hdr, p_body);
 }
 
 /*
@@ -591,14 +590,14 @@ static void xfer_on_evsub_client_refresh(pjsip_evsub *sub)
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_client_refresh) {
-	(*xfer->user_cb.on_client_refresh)(sub);
+        (*xfer->user_cb.on_client_refresh)(sub);
     } else {
-	pj_status_t status;
-	pjsip_tx_data *tdata;
+        pj_status_t status;
+        pjsip_tx_data *tdata;
 
-	status = pjsip_evsub_initiate(sub, NULL, PJSIP_XFER_EXPIRES, &tdata);
-	if (status == PJ_SUCCESS)
-	    pjsip_xfer_send_request(sub, tdata);
+        status = pjsip_evsub_initiate(sub, NULL, PJSIP_XFER_EXPIRES, &tdata);
+        if (status == PJ_SUCCESS)
+            pjsip_xfer_send_request(sub, tdata);
     }
 }
 
@@ -614,16 +613,16 @@ static void xfer_on_evsub_server_timeout(pjsip_evsub *sub)
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_server_timeout) {
-	(*xfer->user_cb.on_server_timeout)(sub);
+        (*xfer->user_cb.on_server_timeout)(sub);
     } else {
-	pj_status_t status;
-	pjsip_tx_data *tdata;
+        pj_status_t status;
+        pjsip_tx_data *tdata;
 
-	status = pjsip_xfer_notify(sub, PJSIP_EVSUB_STATE_TERMINATED,
-				   xfer->last_st_code, 
-				   &xfer->last_st_text, &tdata);
-	if (status == PJ_SUCCESS)
-	    pjsip_xfer_send_request(sub, tdata);
+        status = pjsip_xfer_notify(sub, PJSIP_EVSUB_STATE_TERMINATED,
+                                   xfer->last_st_code, 
+                                   &xfer->last_st_text, &tdata);
+        if (status == PJ_SUCCESS)
+            pjsip_xfer_send_request(sub, tdata);
     }
 }
 

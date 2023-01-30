@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -31,7 +30,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup s2_audio_device_reference Audio Subsystem API Reference
+ * @defgroup PJMEDIA_AUDIODEV_SUBSYSTEM_API Audio Subsystem API Reference
  * @ingroup audio_subsystem_api
  * @brief API Reference
  * @{
@@ -44,10 +43,10 @@ PJ_BEGIN_DECL
  * more than once, but each call to this function must have the
  * corresponding #pjmedia_aud_subsys_shutdown() call.
  *
- * @param pf		The pool factory.
+ * @param pf            The pool factory.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf);
 
@@ -55,7 +54,7 @@ PJ_DECL(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf);
 /**
  * Get the pool factory registered to the audio subsystem.
  *
- * @return		The pool factory.
+ * @return              The pool factory.
  */
 PJ_DECL(pj_pool_factory*) pjmedia_aud_subsys_get_pool_factory(void);
 
@@ -66,8 +65,8 @@ PJ_DECL(pj_pool_factory*) pjmedia_aud_subsys_get_pool_factory(void);
  * may or may not be closed, depending on the implementation of the audio
  * device factories.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_subsys_shutdown(void);
 
@@ -76,10 +75,10 @@ PJ_DECL(pj_status_t) pjmedia_aud_subsys_shutdown(void);
  * Register a supported audio device factory to the audio subsystem. This
  * function can only be called after calling #pjmedia_aud_subsys_init().
  *
- * @param adf		The audio device factory.
+ * @param adf           The audio device factory.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t)
 pjmedia_aud_register_factory(pjmedia_aud_dev_factory_create_func_ptr adf);
@@ -91,10 +90,10 @@ pjmedia_aud_register_factory(pjmedia_aud_dev_factory_create_func_ptr adf);
  * Devices from this factory will be unlisted. If a device from this factory
  * is currently in use, then the behavior is undefined.
  *
- * @param adf		The audio device factory.
+ * @param adf           The audio device factory.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t)
 pjmedia_aud_unregister_factory(pjmedia_aud_dev_factory_create_func_ptr adf);
@@ -107,5 +106,5 @@ pjmedia_aud_unregister_factory(pjmedia_aud_dev_factory_create_func_ptr adf);
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_AUDIODEV_AUDIODEV_H__ */
+#endif  /* __PJMEDIA_AUDIODEV_AUDIODEV_H__ */
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -21,18 +20,18 @@
 #include <pj/string.h>
 
 #if PJ_SAFE_POOL
-#   define SIG_SIZE		sizeof(pj_uint32_t)
+#   define SIG_SIZE             sizeof(pj_uint32_t)
 
 static void apply_signature(void *p, pj_size_t size);
 static void check_pool_signature(void *p, pj_size_t size);
 
-#   define APPLY_SIG(p,sz)	apply_signature(p,sz), \
-				p=(void*)(((char*)p)+SIG_SIZE)
-#   define REMOVE_SIG(p,sz)	check_pool_signature(p,sz), \
-				p=(void*)(((char*)p)-SIG_SIZE)
+#   define APPLY_SIG(p,sz)      apply_signature(p,sz), \
+                                p=(void*)(((char*)p)+SIG_SIZE)
+#   define REMOVE_SIG(p,sz)     check_pool_signature(p,sz), \
+                                p=(void*)(((char*)p)-SIG_SIZE)
 
-#   define SIG_BEGIN	    0x600DC0DE
-#   define SIG_END	    0x0BADC0DE
+#   define SIG_BEGIN        0x600DC0DE
+#   define SIG_END          0x0BADC0DE
 
 static void apply_signature(void *p, pj_size_t size)
 {
@@ -62,7 +61,7 @@ static void check_pool_signature(void *p, pj_size_t size)
 }
 
 #else
-#   define SIG_SIZE	    0
+#   define SIG_SIZE         0
 #   define APPLY_SIG(p,sz)
 #   define REMOVE_SIG(p,sz)
 #endif

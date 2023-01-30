@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2015 Teluu Inc. (http://www.teluu.com)
  *
@@ -30,25 +29,25 @@
 
 #include <jni.h>
 
-#define THIS_FILE		"android_dev.c"
+#define THIS_FILE               "android_dev.c"
 
 /* Default video params */
-#define DEFAULT_CLOCK_RATE	90000
-#define DEFAULT_WIDTH		352
-#define DEFAULT_HEIGHT		288
-#define DEFAULT_FPS		15
-#define ALIGN16(x)		((((x)+15) >> 4) << 4)
+#define DEFAULT_CLOCK_RATE      90000
+#define DEFAULT_WIDTH           352
+#define DEFAULT_HEIGHT          288
+#define DEFAULT_FPS             15
+#define ALIGN16(x)              ((((x)+15) >> 4) << 4)
 
 /* Define whether we should maintain the aspect ratio when rotating the image.
  * For more details, please refer to util.h.
  */
-#define MAINTAIN_ASPECT_RATIO 	PJ_TRUE
+#define MAINTAIN_ASPECT_RATIO   PJ_TRUE
 
 /* Format map info */
 typedef struct and_fmt_map
 {
     pjmedia_format_id   fmt_id;
-    pj_uint32_t		and_fmt_id;
+    pj_uint32_t         and_fmt_id;
 } and_fmt_map;
 
 
@@ -69,62 +68,62 @@ static and_fmt_map fmt_map[] =
 /* Device info */
 typedef struct and_dev_info
 {
-    pjmedia_vid_dev_info	 info;		/**< Base info         */
-    unsigned			 dev_idx;	/**< Original dev ID   */
-    pj_bool_t			 facing;	/**< Front/back camera?*/
-    unsigned			 sup_size_cnt;	/**< # of supp'd size  */
-    pjmedia_rect_size		*sup_size;	/**< Supported size    */
-    unsigned			 sup_fps_cnt;	/**< # of supp'd FPS   */
-    pjmedia_rect_size		*sup_fps;	/**< Supported FPS     */
-    pj_bool_t			 has_yv12;	/**< Support YV12?     */
-    pj_bool_t			 has_nv21;	/**< Support NV21?     */
-    pj_bool_t			 forced_i420;	/**< Support I420 with
-						     conversion		*/
+    pjmedia_vid_dev_info         info;          /**< Base info         */
+    unsigned                     dev_idx;       /**< Original dev ID   */
+    pj_bool_t                    facing;        /**< Front/back camera?*/
+    unsigned                     sup_size_cnt;  /**< # of supp'd size  */
+    pjmedia_rect_size           *sup_size;      /**< Supported size    */
+    unsigned                     sup_fps_cnt;   /**< # of supp'd FPS   */
+    pjmedia_rect_size           *sup_fps;       /**< Supported FPS     */
+    pj_bool_t                    has_yv12;      /**< Support YV12?     */
+    pj_bool_t                    has_nv21;      /**< Support NV21?     */
+    pj_bool_t                    forced_i420;   /**< Support I420 with
+                                                     conversion         */
 } and_dev_info;
 
 
 /* Video factory */
 typedef struct and_factory
 {
-    pjmedia_vid_dev_factory	 base;		/**< Base factory      */
-    pj_pool_t			*pool;		/**< Memory pool       */
-    pj_pool_factory		*pf;		/**< Pool factory      */
+    pjmedia_vid_dev_factory      base;          /**< Base factory      */
+    pj_pool_t                   *pool;          /**< Memory pool       */
+    pj_pool_factory             *pf;            /**< Pool factory      */
 
-    pj_pool_t			*dev_pool;	/**< Device list pool  */
-    unsigned			 dev_count;	/**< Device count      */
-    and_dev_info		*dev_info;	/**< Device info list  */
+    pj_pool_t                   *dev_pool;      /**< Device list pool  */
+    unsigned                     dev_count;     /**< Device count      */
+    and_dev_info                *dev_info;      /**< Device info list  */
 } and_factory;
 
 
 /* Video stream. */
 typedef struct and_stream
 {
-    pjmedia_vid_dev_stream  base;		/**< Base stream       */
-    pjmedia_vid_dev_param   param;		/**< Settings	       */
-    pj_pool_t		   *pool;		/**< Memory pool       */
-    and_factory		   *factory;            /**< Factory           */
+    pjmedia_vid_dev_stream  base;               /**< Base stream       */
+    pjmedia_vid_dev_param   param;              /**< Settings          */
+    pj_pool_t              *pool;               /**< Memory pool       */
+    and_factory            *factory;            /**< Factory           */
     
-    pjmedia_vid_dev_cb	    vid_cb;		/**< Stream callback   */
-    void		   *user_data;          /**< Application data  */
-    pj_bool_t		    is_running;		/**< Stream running?   */
+    pjmedia_vid_dev_cb      vid_cb;             /**< Stream callback   */
+    void                   *user_data;          /**< Application data  */
+    pj_bool_t               is_running;         /**< Stream running?   */
     
-    jobject		    jcam;		/**< PjCamera instance */
+    jobject                 jcam;               /**< PjCamera instance */
 
-    pj_timestamp            frame_ts;		/**< Current timestamp */
-    unsigned                ts_inc;		/**< Timestamp interval*/
-    unsigned		    convert_to_i420;	/**< Need to convert to I420?
-						     0: no
-						     1: from NV21
-						     2: from YV12	*/
+    pj_timestamp            frame_ts;           /**< Current timestamp */
+    unsigned                ts_inc;             /**< Timestamp interval*/
+    unsigned                convert_to_i420;    /**< Need to convert to I420?
+                                                     0: no
+                                                     1: from NV21
+                                                     2: from YV12       */
     
     /** Capture thread info */
-    pj_bool_t		    thread_initialized;
-    pj_thread_desc	    thread_desc;
-    pj_thread_t		   *thread;
+    pj_bool_t               thread_initialized;
+    pj_thread_desc          thread_desc;
+    pj_thread_t            *thread;
 
     /** NV21/YV12 -> I420 Conversion buffer  */
-    pj_uint8_t		   *convert_buf;
-    pjmedia_rect_size	    cam_size;
+    pj_uint8_t             *convert_buf;
+    pjmedia_rect_size       cam_size;
     
     /** Converter to rotate frame  */
     pjmedia_vid_dev_conv    conv;
@@ -140,18 +139,18 @@ static pj_status_t and_factory_destroy(pjmedia_vid_dev_factory *f);
 static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *f); 
 static unsigned    and_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t and_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					    unsigned index,
-					    pjmedia_vid_dev_info *info);
+                                            unsigned index,
+                                            pjmedia_vid_dev_info *info);
 static pj_status_t and_factory_default_param(pj_pool_t *pool,
                                              pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_param *param);
+                                             unsigned index,
+                                             pjmedia_vid_dev_param *param);
 static pj_status_t and_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm);
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm);
 
 
 static pj_status_t and_stream_get_param(pjmedia_vid_dev_stream *strm,
@@ -198,40 +197,40 @@ static pjmedia_vid_dev_stream_op stream_op =
 extern JavaVM *pj_jni_jvm;
 
 /* Use camera2 (since Android API level 21) */
-#define USE_CAMERA2	1
+#define USE_CAMERA2     1
 
 #if USE_CAMERA2
-#define PJ_CAMERA			"PjCamera2"
-#define PJ_CAMERA_INFO			"PjCameraInfo2"
+#define PJ_CAMERA                       "PjCamera2"
+#define PJ_CAMERA_INFO                  "PjCameraInfo2"
 #else
-#define PJ_CAMERA			"PjCamera"
-#define PJ_CAMERA_INFO			"PjCameraInfo"
+#define PJ_CAMERA                       "PjCamera"
+#define PJ_CAMERA_INFO                  "PjCameraInfo"
 #endif
 
-#define PJ_CLASS_PATH			"org/pjsip/"
-#define PJ_CAMERA_CLASS_PATH		PJ_CLASS_PATH PJ_CAMERA
-#define PJ_CAMERA_INFO_CLASS_PATH	PJ_CLASS_PATH PJ_CAMERA_INFO
+#define PJ_CLASS_PATH                   "org/pjsip/"
+#define PJ_CAMERA_CLASS_PATH            PJ_CLASS_PATH PJ_CAMERA
+#define PJ_CAMERA_INFO_CLASS_PATH       PJ_CLASS_PATH PJ_CAMERA_INFO
 
 
 static struct jni_objs_t
 {
     struct {
-	jclass		 cls;
-	jmethodID	 m_init;
-	jmethodID	 m_start;
-	jmethodID	 m_stop;
-	jmethodID	 m_switch;
+        jclass           cls;
+        jmethodID        m_init;
+        jmethodID        m_start;
+        jmethodID        m_stop;
+        jmethodID        m_switch;
     } cam;
 
     struct {
-	jclass		 cls;
-	jmethodID	 m_get_cnt;
-	jmethodID	 m_get_info;
-	jfieldID	 f_facing;
-	jfieldID	 f_orient;
-	jfieldID	 f_sup_size;
-	jfieldID	 f_sup_fmt;
-	jfieldID	 f_sup_fps;
+        jclass           cls;
+        jmethodID        m_get_cnt;
+        jmethodID        m_get_info;
+        jfieldID         f_facing;
+        jfieldID         f_orient;
+        jfieldID         f_sup_size;
+        jfieldID         f_sup_fmt;
+        jfieldID         f_sup_fps;
     } cam_info;
 
 } jobjs;
@@ -239,14 +238,14 @@ static struct jni_objs_t
 
 #if USE_CAMERA2
 static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
-				jlong user_data,
-				jobject plane0, jint rowStride0, jint pixStride0,
-				jobject plane1, jint rowStride1, jint pixStride1,
-				jobject plane2, jint rowStride2, jint pixStride2);
+                                jlong user_data,
+                                jobject plane0, jint rowStride0, jint pixStride0,
+                                jobject plane1, jint rowStride1, jint pixStride1,
+                                jobject plane2, jint rowStride2, jint pixStride2);
 #else
 static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jbyteArray data, jint length,
-			       jlong user_data);
+                               jlong user_data);
 #endif
 
 
@@ -260,8 +259,8 @@ static pj_bool_t jni_get_env(JNIEnv **jni_env)
         {
             *jni_env = NULL;
         } else {
-	    with_attach = PJ_TRUE;
-	}
+            with_attach = PJ_TRUE;
+        }
     }
     
     return with_attach;
@@ -289,27 +288,27 @@ static pj_status_t jni_init_ids()
 #define GET_CLASS(class_path, class_name, cls) \
     cls = (*jni_env)->FindClass(jni_env, class_path); \
     if (cls == NULL || (*jni_env)->ExceptionCheck(jni_env)) { \
-	(*jni_env)->ExceptionClear(jni_env); \
+        (*jni_env)->ExceptionClear(jni_env); \
         PJ_LOG(3, (THIS_FILE, "[JNI] Unable to find class '" \
-			      class_name "'")); \
+                              class_name "'")); \
         status = PJMEDIA_EVID_SYSERR; \
         goto on_return; \
     } else { \
         jclass tmp = cls; \
-	cls = (jclass)(*jni_env)->NewGlobalRef(jni_env, tmp); \
-	(*jni_env)->DeleteLocalRef(jni_env, tmp); \
-	if (cls == NULL) { \
-	    PJ_LOG(3, (THIS_FILE, "[JNI] Unable to get global ref for " \
-				  "class '" class_name "'")); \
-	    status = PJMEDIA_EVID_SYSERR; \
-	    goto on_return; \
-	} \
+        cls = (jclass)(*jni_env)->NewGlobalRef(jni_env, tmp); \
+        (*jni_env)->DeleteLocalRef(jni_env, tmp); \
+        if (cls == NULL) { \
+            PJ_LOG(3, (THIS_FILE, "[JNI] Unable to get global ref for " \
+                                  "class '" class_name "'")); \
+            status = PJMEDIA_EVID_SYSERR; \
+            goto on_return; \
+        } \
     }
 #define GET_METHOD_ID(cls, class_name, method_name, signature, id) \
     id = (*jni_env)->GetMethodID(jni_env, cls, method_name, signature); \
     if (id == 0) { \
         PJ_LOG(3, (THIS_FILE, "[JNI] Unable to find method '" method_name \
-			      "' in class '" class_name "'")); \
+                              "' in class '" class_name "'")); \
         status = PJMEDIA_EVID_SYSERR; \
         goto on_return; \
     }
@@ -317,7 +316,7 @@ static pj_status_t jni_init_ids()
     id = (*jni_env)->GetStaticMethodID(jni_env, cls, method_name, signature); \
     if (id == 0) { \
         PJ_LOG(3, (THIS_FILE, "[JNI] Unable to find static method '" \
-			      method_name "' in class '" class_name "'")); \
+                              method_name "' in class '" class_name "'")); \
         status = PJMEDIA_EVID_SYSERR; \
         goto on_return; \
     }
@@ -325,7 +324,7 @@ static pj_status_t jni_init_ids()
     id = (*jni_env)->GetFieldID(jni_env, cls, field_name, signature); \
     if (id == 0) { \
         PJ_LOG(3, (THIS_FILE, "[JNI] Unable to find field '" field_name \
-			      "' in class '" class_name "'")); \
+                              "' in class '" class_name "'")); \
         status = PJMEDIA_EVID_SYSERR; \
         goto on_return; \
     }
@@ -333,32 +332,32 @@ static pj_status_t jni_init_ids()
     /* PjCamera class info */
     GET_CLASS(PJ_CAMERA_CLASS_PATH, PJ_CAMERA, jobjs.cam.cls);
     GET_METHOD_ID(jobjs.cam.cls, PJ_CAMERA, "<init>",
-		  "(IIIIIJLandroid/view/SurfaceView;)V",
-		  jobjs.cam.m_init);
+                  "(IIIIIJLandroid/view/SurfaceView;)V",
+                  jobjs.cam.m_init);
     GET_METHOD_ID(jobjs.cam.cls, PJ_CAMERA, "Start", "()I",
-		  jobjs.cam.m_start);
+                  jobjs.cam.m_start);
     GET_METHOD_ID(jobjs.cam.cls, PJ_CAMERA, "Stop", "()V",
-		  jobjs.cam.m_stop);
+                  jobjs.cam.m_stop);
     GET_METHOD_ID(jobjs.cam.cls, PJ_CAMERA, "SwitchDevice", "(I)I",
-		  jobjs.cam.m_switch);
+                  jobjs.cam.m_switch);
 
     /* PjCameraInfo class info */
     GET_CLASS(PJ_CAMERA_INFO_CLASS_PATH, PJ_CAMERA_INFO, jobjs.cam_info.cls);
     GET_SMETHOD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "GetCameraCount", "()I",
-		   jobjs.cam_info.m_get_cnt);
+                   jobjs.cam_info.m_get_cnt);
     GET_SMETHOD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "GetCameraInfo",
-		   "(I)L" PJ_CAMERA_INFO_CLASS_PATH ";",
-		   jobjs.cam_info.m_get_info);
+                   "(I)L" PJ_CAMERA_INFO_CLASS_PATH ";",
+                   jobjs.cam_info.m_get_info);
     GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "facing", "I",
-		 jobjs.cam_info.f_facing);
+                 jobjs.cam_info.f_facing);
     GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "orient", "I",
-		 jobjs.cam_info.f_orient);
+                 jobjs.cam_info.f_orient);
     GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "supportedSize", "[I",
-		 jobjs.cam_info.f_sup_size);
+                 jobjs.cam_info.f_sup_size);
     GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "supportedFormat", "[I",
-		 jobjs.cam_info.f_sup_fmt);
+                 jobjs.cam_info.f_sup_fmt);
     GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "supportedFps1000", "[I",
-		 jobjs.cam_info.f_sup_fps);
+                 jobjs.cam_info.f_sup_fps);
 
 #undef GET_CLASS_ID
 #undef GET_METHOD_ID
@@ -368,15 +367,15 @@ static pj_status_t jni_init_ids()
     /* Register native function */
     {
 #if USE_CAMERA2
-	JNINativeMethod m = { "PushFrame2", "(JLjava/nio/ByteBuffer;IILjava/nio/ByteBuffer;IILjava/nio/ByteBuffer;II)V", (void*)&OnGetFrame2 };
+        JNINativeMethod m = { "PushFrame2", "(JLjava/nio/ByteBuffer;IILjava/nio/ByteBuffer;IILjava/nio/ByteBuffer;II)V", (void*)&OnGetFrame2 };
 #else
-	JNINativeMethod m = { "PushFrame", "([BIJ)V", (void*)&OnGetFrame };
+        JNINativeMethod m = { "PushFrame", "([BIJ)V", (void*)&OnGetFrame };
 #endif
-	if ((*jni_env)->RegisterNatives(jni_env, jobjs.cam.cls, &m, 1)) {
-	    PJ_LOG(3, (THIS_FILE, "[JNI] Failed in registering native "
-				  "function 'OnGetFrame()'"));
-	    status = PJMEDIA_EVID_SYSERR;
-	}
+        if ((*jni_env)->RegisterNatives(jni_env, jobjs.cam.cls, &m, 1)) {
+            PJ_LOG(3, (THIS_FILE, "[JNI] Failed in registering native "
+                                  "function 'OnGetFrame()'"));
+            status = PJMEDIA_EVID_SYSERR;
+        }
     }
 
 on_return:
@@ -391,13 +390,13 @@ static void jni_deinit_ids()
     pj_bool_t with_attach = jni_get_env(&jni_env);
 
     if (jobjs.cam.cls) {
-	(*jni_env)->DeleteGlobalRef(jni_env, jobjs.cam.cls);
-	jobjs.cam.cls = NULL;
+        (*jni_env)->DeleteGlobalRef(jni_env, jobjs.cam.cls);
+        jobjs.cam.cls = NULL;
     }
 
     if (jobjs.cam_info.cls) {
-	(*jni_env)->DeleteGlobalRef(jni_env, jobjs.cam_info.cls);
-	jobjs.cam_info.cls = NULL;
+        (*jni_env)->DeleteGlobalRef(jni_env, jobjs.cam_info.cls);
+        jobjs.cam_info.cls = NULL;
     }
 
     jni_detach_env(with_attach);
@@ -457,11 +456,11 @@ static pj_status_t and_factory_init(pjmedia_vid_dev_factory *ff)
 
     status = jni_init_ids();
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     status = and_factory_refresh(ff);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     return PJ_SUCCESS;
 }
@@ -498,7 +497,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
     
     /* dev_count = PjCameraInfo::GetCameraCount() */
     dev_count = (*jni_env)->CallStaticIntMethod(jni_env, jobjs.cam_info.cls,
-						jobjs.cam_info.m_get_cnt);
+                                                jobjs.cam_info.m_get_cnt);
     if (dev_count < 0) {
         PJ_LOG(3, (THIS_FILE, "Failed to get camera count"));
         status = PJMEDIA_EVID_SYSERR;
@@ -507,212 +506,212 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 
     /* Start querying device info */
     f->dev_info = (and_dev_info*)
- 		  pj_pool_calloc(f->dev_pool, dev_count,
- 				 sizeof(and_dev_info));
+                  pj_pool_calloc(f->dev_pool, dev_count,
+                                 sizeof(and_dev_info));
 
     for (i = 0; i < dev_count; i++) {
-	and_dev_info *adi = &f->dev_info[f->dev_count];
-	pjmedia_vid_dev_info *vdi = &adi->info;
+        and_dev_info *adi = &f->dev_info[f->dev_count];
+        pjmedia_vid_dev_info *vdi = &adi->info;
         jobject jdev_info;
-	jobject jtmp;
-	int facing, max_fmt_cnt = PJMEDIA_VID_DEV_INFO_FMT_CNT;
+        jobject jtmp;
+        int facing, max_fmt_cnt = PJMEDIA_VID_DEV_INFO_FMT_CNT;
 
-	/* jdev_info = PjCameraInfo::GetCameraInfo(i) */
-	jdev_info = (*jni_env)->CallStaticObjectMethod(
-					    jni_env,
-					    jobjs.cam_info.cls,
-					    jobjs.cam_info.m_get_info,
-					    i);
-	if (jdev_info == NULL)
-	    continue;
+        /* jdev_info = PjCameraInfo::GetCameraInfo(i) */
+        jdev_info = (*jni_env)->CallStaticObjectMethod(
+                                            jni_env,
+                                            jobjs.cam_info.cls,
+                                            jobjs.cam_info.m_get_info,
+                                            i);
+        if (jdev_info == NULL)
+            continue;
 
-	/* Get camera facing: 0=back 1=front */
-	facing = (*jni_env)->GetIntField(jni_env, jdev_info,
-					 jobjs.cam_info.f_facing);
-	if (facing < 0)
-	    goto on_skip_dev;
-	
-	/* Set device ID, direction, and has_callback info */
-	adi->dev_idx = i;
-	vdi->id = f->dev_count;
-	vdi->dir = PJMEDIA_DIR_CAPTURE;
-	vdi->has_callback = PJ_TRUE;
-	vdi->caps = PJMEDIA_VID_DEV_CAP_SWITCH |
-		    PJMEDIA_VID_DEV_CAP_ORIENTATION;
+        /* Get camera facing: 0=back 1=front */
+        facing = (*jni_env)->GetIntField(jni_env, jdev_info,
+                                         jobjs.cam_info.f_facing);
+        if (facing < 0)
+            goto on_skip_dev;
+        
+        /* Set device ID, direction, and has_callback info */
+        adi->dev_idx = i;
+        vdi->id = f->dev_count;
+        vdi->dir = PJMEDIA_DIR_CAPTURE;
+        vdi->has_callback = PJ_TRUE;
+        vdi->caps = PJMEDIA_VID_DEV_CAP_SWITCH |
+                    PJMEDIA_VID_DEV_CAP_ORIENTATION;
 
-	/* Set driver & name info */
-	pj_ansi_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
-	adi->facing = facing;
-	if (facing == 0) {
-	    pj_ansi_strncpy(vdi->name, "Back camera", sizeof(vdi->name));
-	} else {
-	    pj_ansi_strncpy(vdi->name, "Front camera", sizeof(vdi->name));
-	}
+        /* Set driver & name info */
+        pj_ansi_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
+        adi->facing = facing;
+        if (facing == 0) {
+            pj_ansi_strncpy(vdi->name, "Back camera", sizeof(vdi->name));
+        } else {
+            pj_ansi_strncpy(vdi->name, "Front camera", sizeof(vdi->name));
+        }
 
-	/* Get supported sizes */
-	jtmp = (*jni_env)->GetObjectField(jni_env, jdev_info,
-					  jobjs.cam_info.f_sup_size);
-	if (jtmp) {
-	    jintArray jiarray = (jintArray*)jtmp;
-	    jint *sizes;
-	    jsize cnt, j;
+        /* Get supported sizes */
+        jtmp = (*jni_env)->GetObjectField(jni_env, jdev_info,
+                                          jobjs.cam_info.f_sup_size);
+        if (jtmp) {
+            jintArray jiarray = (jintArray*)jtmp;
+            jint *sizes;
+            jsize cnt, j;
 
-	    cnt = (*jni_env)->GetArrayLength(jni_env, jiarray);
-	    sizes = (*jni_env)->GetIntArrayElements(jni_env, jiarray, 0);
-	    
-	    adi->sup_size_cnt = cnt/2;
-	    adi->sup_size = pj_pool_calloc(f->dev_pool, adi->sup_size_cnt,
-					   sizeof(adi->sup_size[0]));
-	    for (j = 0; j < adi->sup_size_cnt; j++) {
-		adi->sup_size[j].w = sizes[j*2];
-		adi->sup_size[j].h = sizes[j*2+1];
-	    }
-	    (*jni_env)->ReleaseIntArrayElements(jni_env, jiarray, sizes, 0);
-	    (*jni_env)->DeleteLocalRef(jni_env, jtmp);
-	} else {
-	    goto on_skip_dev;
-	}
+            cnt = (*jni_env)->GetArrayLength(jni_env, jiarray);
+            sizes = (*jni_env)->GetIntArrayElements(jni_env, jiarray, 0);
+            
+            adi->sup_size_cnt = cnt/2;
+            adi->sup_size = pj_pool_calloc(f->dev_pool, adi->sup_size_cnt,
+                                           sizeof(adi->sup_size[0]));
+            for (j = 0; j < adi->sup_size_cnt; j++) {
+                adi->sup_size[j].w = sizes[j*2];
+                adi->sup_size[j].h = sizes[j*2+1];
+            }
+            (*jni_env)->ReleaseIntArrayElements(jni_env, jiarray, sizes, 0);
+            (*jni_env)->DeleteLocalRef(jni_env, jtmp);
+        } else {
+            goto on_skip_dev;
+        }
 
-	/* Get supported formats */
-	jtmp = (*jni_env)->GetObjectField(jni_env, jdev_info,
-					  jobjs.cam_info.f_sup_fmt);
-	if (jtmp) {
-	    jintArray jiarray = (jintArray*)jtmp;
-	    jint *fmts;
-	    jsize cnt, j;
-	    pj_bool_t has_i420 = PJ_FALSE;
-	    int k;
+        /* Get supported formats */
+        jtmp = (*jni_env)->GetObjectField(jni_env, jdev_info,
+                                          jobjs.cam_info.f_sup_fmt);
+        if (jtmp) {
+            jintArray jiarray = (jintArray*)jtmp;
+            jint *fmts;
+            jsize cnt, j;
+            pj_bool_t has_i420 = PJ_FALSE;
+            int k;
 
-	    cnt = (*jni_env)->GetArrayLength(jni_env, jiarray);
-	    fmts = (*jni_env)->GetIntArrayElements(jni_env, jiarray, 0);
-	    for (j = 0; j < cnt; j++) {
-		pjmedia_format_id fmt = and_fmt_to_pj((pj_uint32_t)fmts[j]);
+            cnt = (*jni_env)->GetArrayLength(jni_env, jiarray);
+            fmts = (*jni_env)->GetIntArrayElements(jni_env, jiarray, 0);
+            for (j = 0; j < cnt; j++) {
+                pjmedia_format_id fmt = and_fmt_to_pj((pj_uint32_t)fmts[j]);
 
-		/* Make sure we recognize this format */
-		if (fmt == 0)
-		    continue;
+                /* Make sure we recognize this format */
+                if (fmt == 0)
+                    continue;
 
-		/* Check formats for I420 conversion */
-		if (fmt == PJMEDIA_FORMAT_I420) has_i420 = PJ_TRUE;
-		else if (fmt == PJMEDIA_FORMAT_YV12) adi->has_yv12 = PJ_TRUE;
-		else if (fmt == PJMEDIA_FORMAT_NV21) adi->has_nv21 = PJ_TRUE;
-	    }
-	    (*jni_env)->ReleaseIntArrayElements(jni_env, jiarray, fmts,
-						JNI_ABORT);
-	    (*jni_env)->DeleteLocalRef(jni_env, jtmp);
+                /* Check formats for I420 conversion */
+                if (fmt == PJMEDIA_FORMAT_I420) has_i420 = PJ_TRUE;
+                else if (fmt == PJMEDIA_FORMAT_YV12) adi->has_yv12 = PJ_TRUE;
+                else if (fmt == PJMEDIA_FORMAT_NV21) adi->has_nv21 = PJ_TRUE;
+            }
+            (*jni_env)->ReleaseIntArrayElements(jni_env, jiarray, fmts,
+                                                JNI_ABORT);
+            (*jni_env)->DeleteLocalRef(jni_env, jtmp);
 
-	    /* Always put I420/IYUV and in the first place, for better
-	     * compatibility.
-	     */
-	    adi->forced_i420 = !has_i420;
-	    for (k = 0; k < adi->sup_size_cnt &&
-			vdi->fmt_cnt < max_fmt_cnt-1; k++)
-	    {
-		/* Landscape video */
-		pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					  PJMEDIA_FORMAT_I420,
-					  adi->sup_size[k].w,
-					  adi->sup_size[k].h,
-					  DEFAULT_FPS, 1);
-		/* Portrait video */
-		pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					  PJMEDIA_FORMAT_I420,
-					  adi->sup_size[k].h,
-					  adi->sup_size[k].w,
-					  DEFAULT_FPS, 1);
-	    }
+            /* Always put I420/IYUV and in the first place, for better
+             * compatibility.
+             */
+            adi->forced_i420 = !has_i420;
+            for (k = 0; k < adi->sup_size_cnt &&
+                        vdi->fmt_cnt < max_fmt_cnt-1; k++)
+            {
+                /* Landscape video */
+                pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+                                          PJMEDIA_FORMAT_I420,
+                                          adi->sup_size[k].w,
+                                          adi->sup_size[k].h,
+                                          DEFAULT_FPS, 1);
+                /* Portrait video */
+                pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+                                          PJMEDIA_FORMAT_I420,
+                                          adi->sup_size[k].h,
+                                          adi->sup_size[k].w,
+                                          DEFAULT_FPS, 1);
+            }
 
 /* Camera2 supports only I420 for now */
 #if !USE_CAMERA2
-	    /* YV12 */
-	    if (adi->has_yv12) {
-		for (k = 0; k < adi->sup_size_cnt &&
-			    vdi->fmt_cnt < max_fmt_cnt-1; k++)
-		{
-		    /* Landscape video */
-		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					      PJMEDIA_FORMAT_YV12,
-					      adi->sup_size[k].w,
-					      adi->sup_size[k].h,
-					      DEFAULT_FPS, 1);
-		    /* Portrait video */
-		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					      PJMEDIA_FORMAT_YV12,
-					      adi->sup_size[k].h,
-					      adi->sup_size[k].w,
-					      DEFAULT_FPS, 1);
-		}
-	    }
-	    
-	    /* NV21 */
-	    if (adi->has_nv21) {
-		for (k = 0; k < adi->sup_size_cnt &&
-			    vdi->fmt_cnt < max_fmt_cnt-1; k++)
-		{
-		    /* Landscape video */
-		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					      PJMEDIA_FORMAT_NV21,
-					      adi->sup_size[k].w,
-					      adi->sup_size[k].h,
-					      DEFAULT_FPS, 1);
-		    /* Portrait video */
-		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					      PJMEDIA_FORMAT_NV21,
-					      adi->sup_size[k].h,
-					      adi->sup_size[k].w,
-					      DEFAULT_FPS, 1);
-		}
-	    }
+            /* YV12 */
+            if (adi->has_yv12) {
+                for (k = 0; k < adi->sup_size_cnt &&
+                            vdi->fmt_cnt < max_fmt_cnt-1; k++)
+                {
+                    /* Landscape video */
+                    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+                                              PJMEDIA_FORMAT_YV12,
+                                              adi->sup_size[k].w,
+                                              adi->sup_size[k].h,
+                                              DEFAULT_FPS, 1);
+                    /* Portrait video */
+                    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+                                              PJMEDIA_FORMAT_YV12,
+                                              adi->sup_size[k].h,
+                                              adi->sup_size[k].w,
+                                              DEFAULT_FPS, 1);
+                }
+            }
+            
+            /* NV21 */
+            if (adi->has_nv21) {
+                for (k = 0; k < adi->sup_size_cnt &&
+                            vdi->fmt_cnt < max_fmt_cnt-1; k++)
+                {
+                    /* Landscape video */
+                    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+                                              PJMEDIA_FORMAT_NV21,
+                                              adi->sup_size[k].w,
+                                              adi->sup_size[k].h,
+                                              DEFAULT_FPS, 1);
+                    /* Portrait video */
+                    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+                                              PJMEDIA_FORMAT_NV21,
+                                              adi->sup_size[k].h,
+                                              adi->sup_size[k].w,
+                                              DEFAULT_FPS, 1);
+                }
+            }
 #endif
-	    
-	} else {
-	    goto on_skip_dev;
-	}
-	
-	/* If this is front camera, set it as first/default (if not yet) */
-	if (facing == 1) {
-	    if (!found_front && f->dev_count > 0) {
-		/* Swap this front cam info with one whose idx==0 */
-	        and_dev_info tmp_adi;
-		pj_memcpy(&tmp_adi, &f->dev_info[0], sizeof(tmp_adi));
-		pj_memcpy(&f->dev_info[0], adi, sizeof(tmp_adi));
-		pj_memcpy(adi, &tmp_adi, sizeof(tmp_adi));
-		f->dev_info[0].info.id = 0;
-		f->dev_info[f->dev_count].info.id = f->dev_count;
-	    }
-	    found_front = PJ_TRUE;
-	}
-	
-	f->dev_count++;
+            
+        } else {
+            goto on_skip_dev;
+        }
+        
+        /* If this is front camera, set it as first/default (if not yet) */
+        if (facing == 1) {
+            if (!found_front && f->dev_count > 0) {
+                /* Swap this front cam info with one whose idx==0 */
+                and_dev_info tmp_adi;
+                pj_memcpy(&tmp_adi, &f->dev_info[0], sizeof(tmp_adi));
+                pj_memcpy(&f->dev_info[0], adi, sizeof(tmp_adi));
+                pj_memcpy(adi, &tmp_adi, sizeof(tmp_adi));
+                f->dev_info[0].info.id = 0;
+                f->dev_info[f->dev_count].info.id = f->dev_count;
+            }
+            found_front = PJ_TRUE;
+        }
+        
+        f->dev_count++;
 
     on_skip_dev:
-	(*jni_env)->DeleteLocalRef(jni_env, jdev_info);
+        (*jni_env)->DeleteLocalRef(jni_env, jdev_info);
     }
 
     PJ_LOG(4, (THIS_FILE,
-	       "Android video capture initialized with %d device(s):",
-	       f->dev_count));
+               "Android video capture initialized with %d device(s):",
+               f->dev_count));
     for (i = 0; i < f->dev_count; i++) {
-	and_dev_info *adi = &f->dev_info[i];
-	char tmp_str[2048], *p;
-	int j, plen, slen;
-	PJ_LOG(4, (THIS_FILE, "%2d: %s", i, f->dev_info[i].info.name));
+        and_dev_info *adi = &f->dev_info[i];
+        char tmp_str[2048], *p;
+        int j, plen, slen;
+        PJ_LOG(4, (THIS_FILE, "%2d: %s", i, f->dev_info[i].info.name));
 
-	/* Print supported formats */
-	p = tmp_str;
-	plen = sizeof(tmp_str);
-	for (j = 0; j < adi->info.fmt_cnt; j++) {
-	    char tmp_str2[5];
-	    const pjmedia_video_format_detail *vfd =
-		pjmedia_format_get_video_format_detail(&adi->info.fmt[j], 0);
-	    pjmedia_fourcc_name(adi->info.fmt[j].id, tmp_str2);
-	    slen = pj_ansi_snprintf(p, plen, "%s/%dx%d ",
-				    tmp_str2, vfd->size.w, vfd->size.h);
-	    if (slen < 0 || slen >= plen) break;
-	    plen -= slen;
-	    p += slen;
-	}
-	PJ_LOG(4, (THIS_FILE, "     supported format = %s", tmp_str));
+        /* Print supported formats */
+        p = tmp_str;
+        plen = sizeof(tmp_str);
+        for (j = 0; j < adi->info.fmt_cnt; j++) {
+            char tmp_str2[5];
+            const pjmedia_video_format_detail *vfd =
+                pjmedia_format_get_video_format_detail(&adi->info.fmt[j], 0);
+            pjmedia_fourcc_name(adi->info.fmt[j].id, tmp_str2);
+            slen = pj_ansi_snprintf(p, plen, "%s/%dx%d ",
+                                    tmp_str2, vfd->size.w, vfd->size.h);
+            if (slen < 0 || slen >= plen) break;
+            plen -= slen;
+            p += slen;
+        }
+        PJ_LOG(4, (THIS_FILE, "     supported format = %s", tmp_str));
     }
 
 on_return:
@@ -731,8 +730,8 @@ static unsigned and_factory_get_dev_count(pjmedia_vid_dev_factory *ff)
 
 /* API: get device info */
 static pj_status_t and_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					    unsigned index,
-					    pjmedia_vid_dev_info *info)
+                                            unsigned index,
+                                            pjmedia_vid_dev_info *info)
 {
     and_factory *cf = (and_factory*)f;
 
@@ -747,8 +746,8 @@ static pj_status_t and_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 /* API: create default device parameter */
 static pj_status_t and_factory_default_param(pj_pool_t *pool,
                                              pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_param *param)
+                                             unsigned index,
+                                             pjmedia_vid_dev_param *param)
 {
     and_factory *cf = (and_factory*)f;
     and_dev_info *di = &cf->dev_info[index];
@@ -771,11 +770,11 @@ static pj_status_t and_factory_default_param(pj_pool_t *pool,
 
 /* API: create stream */
 static pj_status_t and_factory_create_stream(
-					pjmedia_vid_dev_factory *ff,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm)
+                                        pjmedia_vid_dev_factory *ff,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm)
 {
     and_factory *f = (and_factory*)ff;
     pj_pool_t *pool;
@@ -794,9 +793,9 @@ static pj_status_t and_factory_create_stream(
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      param->dir == PJMEDIA_DIR_CAPTURE,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
 
 /* Camera2 supports only I420 for now */
 #if USE_CAMERA2
@@ -810,17 +809,17 @@ static pj_status_t and_factory_create_stream(
     vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
 
     if (param->fmt.id == PJMEDIA_FORMAT_I420 && adi->forced_i420) {
-	/* Not really support I420, need to convert it from YV12/NV21 */
-	if (adi->has_nv21) {
-	    and_fmt = pj_fmt_to_and(PJMEDIA_FORMAT_NV21);
-	    convert_to_i420 = 1;
-	} else if (adi->has_yv12) {
-	    and_fmt = pj_fmt_to_and(PJMEDIA_FORMAT_YV12);
-	    convert_to_i420 = 2;
-	} else
-	    pj_assert(!"Bug!");
+        /* Not really support I420, need to convert it from YV12/NV21 */
+        if (adi->has_nv21) {
+            and_fmt = pj_fmt_to_and(PJMEDIA_FORMAT_NV21);
+            convert_to_i420 = 1;
+        } else if (adi->has_yv12) {
+            and_fmt = pj_fmt_to_and(PJMEDIA_FORMAT_YV12);
+            convert_to_i420 = 2;
+        } else
+            pj_assert(!"Bug!");
     } else {
-	and_fmt = pj_fmt_to_and(param->fmt.id);
+        and_fmt = pj_fmt_to_and(param->fmt.id);
     }
     if (!vfi || !and_fmt)
         return PJMEDIA_EVID_BADFORMAT;
@@ -849,9 +848,9 @@ static pj_status_t and_factory_create_stream(
      * we should always check and conversion buffer may be needed.
      */
     if (USE_CAMERA2 || convert_to_i420) {
-	pj_assert(vfi->plane_cnt > 1);
-	strm->convert_to_i420 = convert_to_i420;
-	strm->convert_buf = pj_pool_alloc(pool, vafp.plane_bytes[1]);
+        pj_assert(vfi->plane_cnt > 1);
+        strm->convert_to_i420 = convert_to_i420;
+        strm->convert_buf = pj_pool_alloc(pool, vafp.plane_bytes[1]);
     }
 
     /* Native preview */
@@ -864,30 +863,30 @@ static pj_status_t and_factory_create_stream(
     strm->cam_size.w = (vfd->size.w > vfd->size.h? vfd->size.w: vfd->size.h);
     strm->cam_size.h = (vfd->size.w > vfd->size.h? vfd->size.h: vfd->size.w);
     jcam = (*jni_env)->NewObject(jni_env, jobjs.cam.cls, jobjs.cam.m_init,
-				 adi->dev_idx,		/* idx */
-				 strm->cam_size.w,	/* w */
-				 strm->cam_size.h,	/* h */
-				 and_fmt,		/* fmt */
+                                 adi->dev_idx,          /* idx */
+                                 strm->cam_size.w,      /* w */
+                                 strm->cam_size.h,      /* h */
+                                 and_fmt,               /* fmt */
 #if USE_CAMERA2
-				 vfd->fps.num/
+                                 vfd->fps.num/
 #else
-				 vfd->fps.num*1000/
+                                 vfd->fps.num*1000/
 #endif
-				 vfd->fps.denum,	/* fps */
-				 (jlong)(intptr_t)strm,	/* user data */
-				 NULL			/* SurfaceView */
-				 );	   
+                                 vfd->fps.denum,        /* fps */
+                                 (jlong)(intptr_t)strm, /* user data */
+                                 NULL                   /* SurfaceView */
+                                 );        
     if (jcam == NULL) {
         PJ_LOG(3, (THIS_FILE, "Unable to create PjCamera instance"));
         status = PJMEDIA_EVID_SYSERR;
-	goto on_return;
+        goto on_return;
     }
     strm->jcam = (jobject)(*jni_env)->NewGlobalRef(jni_env, jcam);
     (*jni_env)->DeleteLocalRef(jni_env, jcam);
     if (strm->jcam == NULL) {
         PJ_LOG(3, (THIS_FILE, "Unable to create global ref to PjCamera"));
         status = PJMEDIA_EVID_SYSERR;
-	goto on_return;
+        goto on_return;
     }
     
     /* Video orientation.
@@ -898,9 +897,9 @@ static pj_status_t and_factory_create_stream(
         (vfd->size.h > vfd->size.w))
     {
         if (param->orient == PJMEDIA_ORIENT_UNKNOWN)
-    	    param->orient = PJMEDIA_ORIENT_NATURAL;
+            param->orient = PJMEDIA_ORIENT_NATURAL;
         and_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
-    		           &param->orient);
+                           &param->orient);
     }
 
 on_return:
@@ -908,8 +907,8 @@ on_return:
 
     /* Success */
     if (status == PJ_SUCCESS) {
-	strm->base.op = &stream_op;
-	*p_vid_strm = &strm->base;
+        strm->base.op = &stream_op;
+        *p_vid_strm = &strm->base;
     }
 
     return status;
@@ -975,43 +974,43 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     switch (cap) {
-	case PJMEDIA_VID_DEV_CAP_SWITCH:
-	{
-	    pjmedia_vid_dev_switch_param *p = (pjmedia_vid_dev_switch_param*)
-					      pval;
-	    and_dev_info *adi;
-	    int res;
+        case PJMEDIA_VID_DEV_CAP_SWITCH:
+        {
+            pjmedia_vid_dev_switch_param *p = (pjmedia_vid_dev_switch_param*)
+                                              pval;
+            and_dev_info *adi;
+            int res;
             
-	    /* Just return if current and target device are the same */
+            /* Just return if current and target device are the same */
             if (strm->param.cap_id == p->target_id)
                 return PJ_SUCCESS;
 
-	    /* Verify target capture ID */
-	    if (p->target_id < 0 || p->target_id >= strm->factory->dev_count)
-		return PJ_EINVAL;
+            /* Verify target capture ID */
+            if (p->target_id < 0 || p->target_id >= strm->factory->dev_count)
+                return PJ_EINVAL;
 
-	    /* Ok, let's do the switch */
-	    adi = &strm->factory->dev_info[p->target_id];
-	    PJ_LOG(4, (THIS_FILE, "Switching camera to %s..", adi->info.name));
+            /* Ok, let's do the switch */
+            adi = &strm->factory->dev_info[p->target_id];
+            PJ_LOG(4, (THIS_FILE, "Switching camera to %s..", adi->info.name));
 
-	    /* Call PjCamera::Start() method */
-	    with_attach = jni_get_env(&jni_env);
-	    res = (*jni_env)->CallIntMethod(jni_env, strm->jcam,
-					    jobjs.cam.m_switch, adi->dev_idx);
-	    if (res < 0) {
-		PJ_LOG(3, (THIS_FILE, "Failed to switch camera (err=%d)",
-			   res));
-		status = PJMEDIA_EVID_SYSERR;
-	    } else {
-		strm->param.cap_id = p->target_id;
-		
-		/* If successful, set the orientation as well */
-		and_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
-            		       	   &strm->param.orient);
-	    }
-	    jni_detach_env(with_attach);
-	    break;
-	}
+            /* Call PjCamera::Start() method */
+            with_attach = jni_get_env(&jni_env);
+            res = (*jni_env)->CallIntMethod(jni_env, strm->jcam,
+                                            jobjs.cam.m_switch, adi->dev_idx);
+            if (res < 0) {
+                PJ_LOG(3, (THIS_FILE, "Failed to switch camera (err=%d)",
+                           res));
+                status = PJMEDIA_EVID_SYSERR;
+            } else {
+                strm->param.cap_id = p->target_id;
+                
+                /* If successful, set the orientation as well */
+                and_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+                                   &strm->param.orient);
+            }
+            jni_detach_env(with_attach);
+            break;
+        }
 
         case PJMEDIA_VID_DEV_CAP_ORIENTATION:
         {
@@ -1019,8 +1018,8 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
             pjmedia_orient eff_ori;
             and_dev_info *adi;
 
-	    pj_assert(orient >= PJMEDIA_ORIENT_UNKNOWN &&
-	              orient <= PJMEDIA_ORIENT_ROTATE_270DEG);
+            pj_assert(orient >= PJMEDIA_ORIENT_UNKNOWN &&
+                      orient <= PJMEDIA_ORIENT_ROTATE_270DEG);
 
             if (orient == PJMEDIA_ORIENT_UNKNOWN)
                 return PJ_EINVAL;
@@ -1028,39 +1027,39 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
             pj_memcpy(&strm->param.orient, pval,
                       sizeof(strm->param.orient));
 
-	    if (!strm->conv.conv) {
-	        status = pjmedia_vid_dev_conv_create_converter(
-	        				 &strm->conv, strm->pool,
-	        		        	 &strm->param.fmt,
-	        		        	 strm->cam_size,
-	        		        	 strm->param.fmt.det.vid.size,
-	        		        	 PJ_TRUE,
-	        		        	 MAINTAIN_ASPECT_RATIO);
-	    	
-	    	if (status != PJ_SUCCESS)
-	    	    return status;
-	    }
-	    
-	    eff_ori = strm->param.orient;
-	    adi = &strm->factory->dev_info[strm->param.cap_id];
-	    /* Normalize the orientation for back-facing camera */
-	    if (!adi->facing) {
-		if (eff_ori == PJMEDIA_ORIENT_ROTATE_90DEG)
-		    eff_ori = PJMEDIA_ORIENT_ROTATE_270DEG;
-		else if (eff_ori == PJMEDIA_ORIENT_ROTATE_270DEG)
-		    eff_ori = PJMEDIA_ORIENT_ROTATE_90DEG;
-	    }
-	    pjmedia_vid_dev_conv_set_rotation(&strm->conv, eff_ori);
-	    
-	    PJ_LOG(4, (THIS_FILE, "Video capture orientation set to %d",
-	    			  strm->param.orient));
+            if (!strm->conv.conv) {
+                status = pjmedia_vid_dev_conv_create_converter(
+                                                 &strm->conv, strm->pool,
+                                                 &strm->param.fmt,
+                                                 strm->cam_size,
+                                                 strm->param.fmt.det.vid.size,
+                                                 PJ_TRUE,
+                                                 MAINTAIN_ASPECT_RATIO);
+                
+                if (status != PJ_SUCCESS)
+                    return status;
+            }
+            
+            eff_ori = strm->param.orient;
+            adi = &strm->factory->dev_info[strm->param.cap_id];
+            /* Normalize the orientation for back-facing camera */
+            if (!adi->facing) {
+                if (eff_ori == PJMEDIA_ORIENT_ROTATE_90DEG)
+                    eff_ori = PJMEDIA_ORIENT_ROTATE_270DEG;
+                else if (eff_ori == PJMEDIA_ORIENT_ROTATE_270DEG)
+                    eff_ori = PJMEDIA_ORIENT_ROTATE_90DEG;
+            }
+            pjmedia_vid_dev_conv_set_rotation(&strm->conv, eff_ori);
+            
+            PJ_LOG(4, (THIS_FILE, "Video capture orientation set to %d",
+                                  strm->param.orient));
 
             break;
         }
 
-	default:
-	    status = PJMEDIA_EVID_INVCAP;
-	    break;
+        default:
+            status = PJMEDIA_EVID_INVCAP;
+            break;
     }
     
     return status;
@@ -1133,11 +1132,11 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
     with_attach = jni_get_env(&jni_env);
 
     if (strm->is_running)
-	and_stream_stop(s);
+        and_stream_stop(s);
 
     if (strm->jcam) {
-	(*jni_env)->DeleteGlobalRef(jni_env, strm->jcam);
-	strm->jcam = NULL;
+        (*jni_env)->DeleteGlobalRef(jni_env, strm->jcam);
+        strm->jcam = NULL;
     }
     
     jni_detach_env(with_attach);
@@ -1145,7 +1144,7 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
     pjmedia_vid_dev_conv_destroy_converter(&strm->conv);
     
     if (strm->pool)
-	pj_pool_release(strm->pool);
+        pj_pool_release(strm->pool);
 
     PJ_LOG(4, (THIS_FILE, "Android camera stream destroyed"));
 
@@ -1158,17 +1157,17 @@ PJ_INLINE(void) strip_padding(void *dst, void *src, int w, int h, int stride)
 {
     int i;
     for (i = 0; i < h; ++i) {
-	pj_memmove(dst, src, w);
-	src += stride;
-	dst += w;
+        pj_memmove(dst, src, w);
+        src += stride;
+        dst += w;
     }
 }
 
 static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
-				jlong user_data,
-				jobject plane0, jint rowStride0, jint pixStride0,
-				jobject plane1, jint rowStride1, jint pixStride1,
-				jobject plane2, jint rowStride2, jint pixStride2)
+                                jlong user_data,
+                                jobject plane0, jint rowStride0, jint pixStride0,
+                                jobject plane1, jint rowStride1, jint pixStride1,
+                                jobject plane2, jint rowStride2, jint pixStride2)
 {
     and_stream *strm = (and_stream*)(intptr_t)user_data;
     pjmedia_frame f;
@@ -1179,17 +1178,17 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     
     strm->frame_ts.u64 += strm->ts_inc;
     if (!strm->vid_cb.capture_cb)
-	return;
+        return;
 
     if (strm->thread_initialized == 0 || !pj_thread_is_registered()) {
-	pj_status_t status;
-	pj_bzero(strm->thread_desc, sizeof(pj_thread_desc));
-	status = pj_thread_register("and_cam", strm->thread_desc,
-				    &strm->thread);
-	if (status != PJ_SUCCESS)
-	    return;
-	strm->thread_initialized = 1;
-	PJ_LOG(5,(THIS_FILE, "Android camera thread registered"));
+        pj_status_t status;
+        pj_bzero(strm->thread_desc, sizeof(pj_thread_desc));
+        status = pj_thread_register("and_cam", strm->thread_desc,
+                                    &strm->thread);
+        if (status != PJ_SUCCESS)
+            return;
+        strm->thread_initialized = 1;
+        PJ_LOG(5,(THIS_FILE, "Android camera thread registered"));
     }
 
     p0 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane0);
@@ -1231,53 +1230,67 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     /* I420 with padding, remove padding */
     else if (pixStride1==1 && pixStride2==1 && p2 > p1 && p1 > p0)
     {
-	/* Strip out Y padding */
-	if (rowStride0 > strm->cam_size.w) {
-	    strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
-			  rowStride0);
-	}
+        /* Strip out Y padding */
+        if (rowStride0 > strm->cam_size.w) {
+            strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
+                          rowStride0);
+        }
 
-	/* Get U & V planes */
+        /* Get U & V planes */
 
-	if (rowStride1 == strm->cam_size.w/2) {
-	    /* No padding, simply bulk memmove U & V */
-	    pj_memmove(U, p1, strm->vafp.plane_bytes[1]);
-	    pj_memmove(V, p2, strm->vafp.plane_bytes[2]);
-	} else if (rowStride1 > strm->cam_size.w/2) {
-	    /* Strip padding */
-	    strip_padding(U, p1, strm->cam_size.w/2, strm->cam_size.h/2,
-			  rowStride1);
-	    strip_padding(V, p2, strm->cam_size.w/2, strm->cam_size.h/2,
-			  rowStride2);
-	}
+        if (rowStride1 == strm->cam_size.w/2) {
+            /* No padding, simply bulk memmove U & V */
+            pj_memmove(U, p1, strm->vafp.plane_bytes[1]);
+            pj_memmove(V, p2, strm->vafp.plane_bytes[2]);
+        } else if (rowStride1 > strm->cam_size.w/2) {
+            /* Strip padding */
+            strip_padding(U, p1, strm->cam_size.w/2, strm->cam_size.h/2,
+                          rowStride1);
+            strip_padding(V, p2, strm->cam_size.w/2, strm->cam_size.h/2,
+                          rowStride2);
+        }
     }
 
-    /* The buffer may be originally NV21, i.e: V/U is interleaved */
-    else if (p1-p2==1 && pixStride0==1 &&  pixStride1==2 && pixStride2==2)
+    /* The buffer may be originally NV21/NV12, i.e: VU/UV is interleaved */
+    else if ((p1-p2==1 || p2-p1==1) &&
+             pixStride0==1 &&  pixStride1==2 && pixStride2==2)
     {
-	/* Strip out Y padding */
-	if (rowStride0 > strm->cam_size.w) {
-	    strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
-			  rowStride0);
-	}
+        pj_bool_t nv21 = p1 > p2;
 
-	/* Get U & V, and strip if needed */
-	{
-	    pj_uint8_t *src = p2;
-	    pj_uint8_t *dst_u = U;
-	    pj_uint8_t *dst_v = strm->convert_buf;
-	    int diff = rowStride1 - strm->cam_size.w;
-	    int i;
-	    for (i = 0; i < strm->cam_size.h/2; ++i) {
-		int j;
-		for (j = 0; j < strm->cam_size.w/2; ++j) {
-		    *dst_v++ = *src++;
-		    *dst_u++ = *src++;
-		}
-		src += diff; /* stripping any padding */
-	    }
-	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
-	}
+        /* Strip out Y padding */
+        if (rowStride0 > strm->cam_size.w) {
+            strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
+                          rowStride0);
+        }
+
+        /* Get U & V, and strip if needed */
+        {
+            pj_uint8_t *dst_u = U;
+            pj_uint8_t *dst_v = strm->convert_buf;
+            int diff = rowStride1 - strm->cam_size.w;
+            int i, j;
+
+            if (nv21) {
+                pj_uint8_t *src = p2;
+                for (i = 0; i < strm->cam_size.h/2; ++i) {
+                    for (j = 0; j < strm->cam_size.w/2; ++j) {
+                        *dst_v++ = *src++;
+                        *dst_u++ = *src++;
+                    }
+                    src += diff; /* stripping any padding */
+                }
+            } else {
+                pj_uint8_t *src = p1;
+                for (i = 0; i < strm->cam_size.h/2; ++i) {
+                    for (j = 0; j < strm->cam_size.w/2; ++j) {
+                        *dst_u++ = *src++;
+                        *dst_v++ = *src++;
+                    }
+                    src += diff; /* stripping any padding */
+                }
+            }
+            pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+        }
     }
     
     /* The buffer may be originally YV12, i.e: U & V planes are swapped.
@@ -1285,89 +1298,89 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
      */
     else if (pixStride1==1 && pixStride2==1 && p1 > p2 && p2 > p0)
     {
-	/* Strip out Y padding */
-	if (rowStride0 > strm->cam_size.w) {
-	    strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
-			  rowStride0);
-	}
+        /* Strip out Y padding */
+        if (rowStride0 > strm->cam_size.w) {
+            strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
+                          rowStride0);
+        }
 
-	/* Swap U & V planes */
-	if (rowStride1 == strm->cam_size.w/2) {
+        /* Swap U & V planes */
+        if (rowStride1 == strm->cam_size.w/2) {
 
-	    /* No padding, note Y plane should be no padding too! */
-	    pj_assert(rowStride0 == strm->cam_size.w);
-	    pj_memcpy(strm->convert_buf, p1, strm->vafp.plane_bytes[1]);
-	    pj_memmove(U, p1, strm->vafp.plane_bytes[1]);
-	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[1]);
+            /* No padding, note Y plane should be no padding too! */
+            pj_assert(rowStride0 == strm->cam_size.w);
+            pj_memcpy(strm->convert_buf, p1, strm->vafp.plane_bytes[1]);
+            pj_memmove(U, p1, strm->vafp.plane_bytes[1]);
+            pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[1]);
 
-	} else if (rowStride1 > strm->cam_size.w/2) {
+        } else if (rowStride1 > strm->cam_size.w/2) {
 
-	    /* Strip padding */
-	    strip_padding(strm->convert_buf, p1, strm->cam_size.w/2,
-			  strm->cam_size.h/2, rowStride1);
-	    strip_padding(V, p2, strm->cam_size.w/2, strm->cam_size.h/2,
-			  rowStride2);
+            /* Strip padding */
+            strip_padding(strm->convert_buf, p1, strm->cam_size.w/2,
+                          strm->cam_size.h/2, rowStride1);
+            strip_padding(V, p2, strm->cam_size.w/2, strm->cam_size.h/2,
+                          rowStride2);
 
-	    /* Get V plane data from conversion buffer */
-	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+            /* Get V plane data from conversion buffer */
+            pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
 
-	}
+        }
     }
     
     /* Else, let's just print log for now */
     else {
-	jlong p0_len, p1_len, p2_len;
+        jlong p0_len, p1_len, p2_len;
 
-	p0_len = (*env)->GetDirectBufferCapacity(env, plane0);
-	p1_len = (*env)->GetDirectBufferCapacity(env, plane1);
-	p2_len = (*env)->GetDirectBufferCapacity(env, plane2);
+        p0_len = (*env)->GetDirectBufferCapacity(env, plane0);
+        p1_len = (*env)->GetDirectBufferCapacity(env, plane1);
+        p2_len = (*env)->GetDirectBufferCapacity(env, plane2);
 
-	PJ_LOG(1,(THIS_FILE, "Unrecognized image format from Android camera2, "
-			     "please report the following plane format:"));
-	PJ_LOG(1,(THIS_FILE, " Planes (buf/len/row_stride/pix_stride):"
-			     " p0=%p/%d/%d/%d p1=%p/%d/%d/%d p2=%p/%d/%d/%d",
-			     p0, p0_len, rowStride0, pixStride0,
-			     p1, p1_len, rowStride1, pixStride1,
-			     p2, p2_len, rowStride2, pixStride2));
+        PJ_LOG(1,(THIS_FILE, "Unrecognized image format from Android camera2, "
+                             "please report the following plane format:"));
+        PJ_LOG(1,(THIS_FILE, " Planes (buf/len/row_stride/pix_stride):"
+                             " p0=%p/%d/%d/%d p1=%p/%d/%d/%d p2=%p/%d/%d/%d",
+                             p0, p0_len, rowStride0, pixStride0,
+                             p1, p1_len, rowStride1, pixStride1,
+                             p2, p2_len, rowStride2, pixStride2));
 
 #if 1
-	/* Generic converter to I420, based on row stride & pixel stride */
+        /* Generic converter to I420, based on row stride & pixel stride */
 
-	/* Strip out Y padding */
-	if (rowStride0 > strm->cam_size.w) {
-	    strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
-			  rowStride0);
-	}
+        /* Strip out Y padding */
+        if (rowStride0 > strm->cam_size.w) {
+            strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
+                          rowStride0);
+        }
 
-	/* Get U & V, and strip if needed */
-	{
-	    pj_uint8_t *src_u = p1;
-	    pj_uint8_t *src_v = p2;
-	    pj_uint8_t *dst_u = U;
-	    pj_uint8_t *dst_v = strm->convert_buf;
-	    int i;
+        /* Get U & V, and strip if needed */
+        {
+            pj_uint8_t *src_u = p1;
+            pj_uint8_t *src_v = p2;
+            pj_uint8_t *dst_u = U;
+            pj_uint8_t *dst_v = strm->convert_buf;
+            int i;
 
-	    /* Note, we use convert buffer for V, just in case U & V are
-	     * swapped.
-	     */
-	    for (i = 0; i < strm->cam_size.h/2; ++i) {
-		int j;
-		for (j = 0; j < strm->cam_size.w/2; ++j) {
-		    *dst_v++ = *(src_v + j*pixStride2);
-		    *dst_u++ = *(src_u + j*pixStride1);
-		}
-		src_u += rowStride1;
-		src_v += rowStride2;
-	    }
-	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
-	}
+            /* Note, we use convert buffer for V, just in case U & V are
+             * swapped.
+             */
+            for (i = 0; i < strm->cam_size.h/2; ++i) {
+                int j;
+                for (j = 0; j < strm->cam_size.w/2; ++j) {
+                    *dst_v++ = *(src_v + j*pixStride2);
+                    *dst_u++ = *(src_u + j*pixStride1);
+                }
+                src_u += rowStride1;
+                src_v += rowStride2;
+            }
+            pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+        }
 #endif
 
     }
 
     status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv, 
-    						    f.buf,
-    				       		    &frame_buf);
+                                                    f.buf,
+                                                    &frame_buf);
     if (status == PJ_SUCCESS) {
         f.buf = frame_buf;
     }
@@ -1379,7 +1392,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 
 static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jbyteArray data, jint length,
-			       jlong user_data)
+                               jlong user_data)
 {
     and_stream *strm = (and_stream*)(intptr_t)user_data;
     pjmedia_frame f;
@@ -1389,17 +1402,17 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
     
     strm->frame_ts.u64 += strm->ts_inc;
     if (!strm->vid_cb.capture_cb)
-	return;
+        return;
 
     if (strm->thread_initialized == 0 || !pj_thread_is_registered()) {
-	pj_status_t status;
-	pj_bzero(strm->thread_desc, sizeof(pj_thread_desc));
-	status = pj_thread_register("and_cam", strm->thread_desc,
-				    &strm->thread);
-	if (status != PJ_SUCCESS)
-	    return;
-	strm->thread_initialized = 1;
-	PJ_LOG(5,(THIS_FILE, "Android camera thread registered"));
+        pj_status_t status;
+        pj_bzero(strm->thread_desc, sizeof(pj_thread_desc));
+        status = pj_thread_register("and_cam", strm->thread_desc,
+                                    &strm->thread);
+        if (status != PJ_SUCCESS)
+            return;
+        strm->thread_initialized = 1;
+        PJ_LOG(5,(THIS_FILE, "Android camera thread registered"));
     }
 
     f.type = PJMEDIA_FRAME_TYPE_VIDEO;
@@ -1415,76 +1428,76 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
      * into U & V planes.
      */
     if (strm->convert_to_i420 == 1) {
-	pj_uint8_t *src = U;
-	pj_uint8_t *dst_u = U;
-	pj_uint8_t *end_u = U + strm->vafp.plane_bytes[1];
-	pj_uint8_t *dst_v = strm->convert_buf;
-	while (dst_u < end_u) {
-	    *dst_v++ = *src++;
-	    *dst_u++ = *src++;
-	}
-	pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+        pj_uint8_t *src = U;
+        pj_uint8_t *dst_u = U;
+        pj_uint8_t *end_u = U + strm->vafp.plane_bytes[1];
+        pj_uint8_t *dst_v = strm->convert_buf;
+        while (dst_u < end_u) {
+            *dst_v++ = *src++;
+            *dst_u++ = *src++;
+        }
+        pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
     }
 
     /* Convert YV12 -> I420, i.e: swap U & V planes. We also need to
      * strip out padding, if any.
      */
     else if (strm->convert_to_i420 == 2) {
-	int y_stride  = ALIGN16(strm->vafp.size.w);
-	int uv_stride = ALIGN16(strm->vafp.size.w/2);
+        int y_stride  = ALIGN16(strm->vafp.size.w);
+        int uv_stride = ALIGN16(strm->vafp.size.w/2);
 
-	/* Strip out Y padding */
-	if (y_stride > strm->vafp.size.w) {
-	    int i;
-	    pj_uint8_t *src = Y + y_stride;
-	    pj_uint8_t *dst = Y + strm->vafp.size.w;
+        /* Strip out Y padding */
+        if (y_stride > strm->vafp.size.w) {
+            int i;
+            pj_uint8_t *src = Y + y_stride;
+            pj_uint8_t *dst = Y + strm->vafp.size.w;
 
-	    for (i = 1; i < strm->vafp.size.h; ++i) {
-		memmove(dst, src, strm->vafp.size.w);
-		src += y_stride;
-		dst += strm->vafp.size.w;
-	    }
-	}
+            for (i = 1; i < strm->vafp.size.h; ++i) {
+                memmove(dst, src, strm->vafp.size.w);
+                src += y_stride;
+                dst += strm->vafp.size.w;
+            }
+        }
 
-	/* Swap U & V planes */
-	if (uv_stride == strm->vafp.size.w/2) {
+        /* Swap U & V planes */
+        if (uv_stride == strm->vafp.size.w/2) {
 
-	    /* No padding, note Y plane should be no padding too! */
-	    pj_assert(y_stride == strm->vafp.size.w);
-	    pj_memcpy(strm->convert_buf, U, strm->vafp.plane_bytes[1]);
-	    pj_memmove(U, V, strm->vafp.plane_bytes[1]);
-	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[1]);
+            /* No padding, note Y plane should be no padding too! */
+            pj_assert(y_stride == strm->vafp.size.w);
+            pj_memcpy(strm->convert_buf, U, strm->vafp.plane_bytes[1]);
+            pj_memmove(U, V, strm->vafp.plane_bytes[1]);
+            pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[1]);
 
-	} else if (uv_stride > strm->vafp.size.w/2) {
+        } else if (uv_stride > strm->vafp.size.w/2) {
 
-	    /* Strip & copy V plane into conversion buffer */
-	    pj_uint8_t *src = Y + y_stride*strm->vafp.size.h;
-	    pj_uint8_t *dst = strm->convert_buf;
-	    unsigned dst_stride = strm->vafp.size.w/2;
-	    int i;
-	    for (i = 0; i < strm->vafp.size.h/2; ++i) {
-		memmove(dst, src, dst_stride);
-		src += uv_stride;
-		dst += dst_stride;
-	    }
+            /* Strip & copy V plane into conversion buffer */
+            pj_uint8_t *src = Y + y_stride*strm->vafp.size.h;
+            pj_uint8_t *dst = strm->convert_buf;
+            unsigned dst_stride = strm->vafp.size.w/2;
+            int i;
+            for (i = 0; i < strm->vafp.size.h/2; ++i) {
+                memmove(dst, src, dst_stride);
+                src += uv_stride;
+                dst += dst_stride;
+            }
 
-	    /* Strip U plane */
-	    dst = U;
-	    for (i = 0; i < strm->vafp.size.h/2; ++i) {
-		memmove(dst, src, dst_stride);
-		src += uv_stride;
-		dst += dst_stride;
-	    }
+            /* Strip U plane */
+            dst = U;
+            for (i = 0; i < strm->vafp.size.h/2; ++i) {
+                memmove(dst, src, dst_stride);
+                src += uv_stride;
+                dst += dst_stride;
+            }
 
-	    /* Get V plane data from conversion buffer */
-	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+            /* Get V plane data from conversion buffer */
+            pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
 
-	}
+        }
     }
     
     status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv, 
-    						    f.buf,
-    				       		    &frame_buf);
+                                                    f.buf,
+                                                    &frame_buf);
     if (status == PJ_SUCCESS) {
         f.buf = frame_buf;
     }
@@ -1495,4 +1508,4 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
 
 #endif /* USE_CAMERA2 */
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_ANDROID */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_ANDROID */

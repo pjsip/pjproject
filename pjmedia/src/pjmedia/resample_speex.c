@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -33,37 +32,37 @@
 struct pjmedia_resample
 {
     SpeexResamplerState *state;
-    unsigned		 in_samples_per_frame;
-    unsigned		 out_samples_per_frame;
+    unsigned             in_samples_per_frame;
+    unsigned             out_samples_per_frame;
 };
 
 
 PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
-					     pj_bool_t high_quality,
-					     pj_bool_t large_filter,
-					     unsigned channel_count,
-					     unsigned rate_in,
-					     unsigned rate_out,
-					     unsigned samples_per_frame,
-					     pjmedia_resample **p_resample)
+                                             pj_bool_t high_quality,
+                                             pj_bool_t large_filter,
+                                             unsigned channel_count,
+                                             unsigned rate_in,
+                                             unsigned rate_out,
+                                             unsigned samples_per_frame,
+                                             pjmedia_resample **p_resample)
 {
     pjmedia_resample *resample;
     int quality;
     int err;
 
     PJ_ASSERT_RETURN(pool && p_resample && rate_in &&
-		     rate_out && samples_per_frame, PJ_EINVAL);
+                     rate_out && samples_per_frame, PJ_EINVAL);
 
     resample = PJ_POOL_ZALLOC_T(pool, pjmedia_resample);
     PJ_ASSERT_RETURN(resample, PJ_ENOMEM);
 
     if (high_quality) {
-	if (large_filter)
-	    quality = 10;
-	else
-	    quality = 7;
+        if (large_filter)
+            quality = 10;
+        else
+            quality = 7;
     } else {
-	quality = 3;
+        quality = 3;
     }
 
     resample->in_samples_per_frame = samples_per_frame;
@@ -71,21 +70,21 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     resample->state = speex_resampler_init(channel_count,  rate_in, rate_out, 
                                            quality, &err);
     if (resample->state == NULL || err != RESAMPLER_ERR_SUCCESS)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
 
     *p_resample = resample;
 
     PJ_LOG(5,(THIS_FILE, 
-	      "resample created: quality=%d, ch=%d, in/out rate=%d/%d", 
-	      quality, channel_count, rate_in, rate_out));
+              "resample created: quality=%d, ch=%d, in/out rate=%d/%d", 
+              quality, channel_count, rate_in, rate_out));
     return PJ_SUCCESS;
 }
 
 
 PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
-				   const pj_int16_t *input,
-				   pj_int16_t *output )
+                                   const pj_int16_t *input,
+                                   pj_int16_t *output )
 {
     spx_uint32_t in_length, out_length;
 
@@ -95,9 +94,9 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
     out_length = resample->out_samples_per_frame;
 
     speex_resampler_process_interleaved_int(resample->state,
-					    (const spx_int16_t *)input,
-					    &in_length, (spx_int16_t *)output,
-					    &out_length);
+                                            (const spx_int16_t *)input,
+                                            &in_length, (spx_int16_t *)output,
+                                            &out_length);
 
     pj_assert(in_length == resample->in_samples_per_frame);
     pj_assert(out_length == resample->out_samples_per_frame);
@@ -115,8 +114,8 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
 {
     PJ_ASSERT_ON_FAIL(resample, return);
     if (resample->state) {
-	speex_resampler_destroy(resample->state);
-	resample->state = NULL;
+        speex_resampler_destroy(resample->state);
+        resample->state = NULL;
     }
 }
 
@@ -124,5 +123,5 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
 
 int pjmedia_resample_speex_excluded;
 
-#endif	/* PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_SPEEX */
+#endif  /* PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_SPEEX */
 

@@ -733,6 +733,7 @@
     <ClCompile Include="..\src\pjnath\stun_transaction.c" />
     <ClCompile Include="..\src\pjnath\turn_session.c" />
     <ClCompile Include="..\src\pjnath\turn_sock.c" />
+    <ClCompile Include="..\src\pjnath\upnp.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\docs\doc_ice.h" />
@@ -755,6 +756,7 @@
     <ClInclude Include="..\include\pjnath\turn_session.h" />
     <ClInclude Include="..\include\pjnath\turn_sock.h" />
     <ClInclude Include="..\include\pjnath\types.h" />
+    <ClInclude Include="..\include\pjnath\upnp.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

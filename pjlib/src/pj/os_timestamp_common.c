@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -27,7 +26,7 @@
 #define USEC    (1000000UL)
 #define MSEC    (1000)
 
-#define u64tohighprec(u64)	((pj_highprec_t)((pj_int64_t)(u64)))
+#define u64tohighprec(u64)      ((pj_highprec_t)((pj_int64_t)(u64)))
 
 static pj_highprec_t get_elapsed( const pj_timestamp *start,
                                   const pj_timestamp *stop )

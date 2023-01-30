@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -20,8 +19,8 @@
 #include "test.h"
 #include "server.h"
 
-#define SRV_DOMAIN	"pjsip.lab.domain"
-#define KA_INTERVAL	50
+#define SRV_DOMAIN      "pjsip.lab.domain"
+#define KA_INTERVAL     50
 
 struct test_result
 {
@@ -31,77 +30,77 @@ struct test_result
 
 struct test_session
 {
-    pj_pool_t		*pool;
-    pj_stun_config	*stun_cfg;
-    pj_turn_sock	*turn_sock;
-    pj_dns_resolver	*resolver;
-    test_server		*test_srv;
+    pj_pool_t           *pool;
+    pj_stun_config      *stun_cfg;
+    pj_turn_sock        *turn_sock;
+    pj_dns_resolver     *resolver;
+    test_server         *test_srv;
 
-    pj_bool_t		 destroy_called;
-    int			 destroy_on_state;
-    struct test_result	 result;
+    pj_bool_t            destroy_called;
+    int                  destroy_on_state;
+    struct test_result   result;
 };
 
 struct test_session_cfg
 {
     struct {
-	pj_bool_t	enable_dns_srv;
-	int		destroy_on_state;
+        pj_bool_t       enable_dns_srv;
+        int             destroy_on_state;
     } client;
 
     struct {
-	pj_uint32_t	flags;
-	pj_bool_t	respond_allocate;
-	pj_bool_t	respond_refresh;
+        pj_uint32_t     flags;
+        pj_bool_t       respond_allocate;
+        pj_bool_t       respond_refresh;
     } srv;
 };
 
 static void turn_on_rx_data(pj_turn_sock *turn_sock,
-			    void *pkt,
-			    unsigned pkt_len,
-			    const pj_sockaddr_t *peer_addr,
-			    unsigned addr_len);
+                            void *pkt,
+                            unsigned pkt_len,
+                            const pj_sockaddr_t *peer_addr,
+                            unsigned addr_len);
 static void turn_on_state(pj_turn_sock *turn_sock, 
-			  pj_turn_state_t old_state,
-			  pj_turn_state_t new_state);
+                          pj_turn_state_t old_state,
+                          pj_turn_state_t new_state);
 
 static void destroy_session(struct test_session *sess)
 {
     if (sess->resolver) {
-	pj_dns_resolver_destroy(sess->resolver, PJ_TRUE);
-	sess->resolver = NULL;
+        pj_dns_resolver_destroy(sess->resolver, PJ_TRUE);
+        sess->resolver = NULL;
     }
 
     if (sess->turn_sock) {
-	if (!sess->destroy_called) {
-	    sess->destroy_called = PJ_TRUE;
-	    pj_turn_sock_destroy(sess->turn_sock);
-	}
-	sess->turn_sock = NULL;
+        if (!sess->destroy_called) {
+            sess->destroy_called = PJ_TRUE;
+            pj_turn_sock_destroy(sess->turn_sock);
+        }
+        sess->turn_sock = NULL;
     }
 
     if (sess->test_srv) {
-	destroy_test_server(sess->test_srv);
-	sess->test_srv = NULL;
+        destroy_test_server(sess->test_srv);
+        sess->test_srv = NULL;
     }
 
     if (sess->pool) {
-	pj_pool_release(sess->pool);
+        pj_pool_release(sess->pool);
     }
 }
 
 pj_turn_tp_type get_turn_tp_type(pj_uint32_t flag) {
     if (flag & TURN_TCP) {
-	return PJ_TURN_TP_TCP;
+        return PJ_TURN_TP_TCP;
     } else if (flag & TURN_TLS) {
-	return PJ_TURN_TP_TLS;
+        return PJ_TURN_TP_TLS;
     } 
     return PJ_TURN_TP_UDP;
 }
 
 static int create_test_session(pj_stun_config  *stun_cfg,
-			       const struct test_session_cfg *cfg,
-			       struct test_session **p_sess)
+                               const struct test_session_cfg *cfg,
+                               struct test_session **p_sess)
 {
     struct test_session *sess;
     pj_pool_t *pool;
@@ -123,23 +122,23 @@ static int create_test_session(pj_stun_config  *stun_cfg,
     turn_sock_cb.on_rx_data = &turn_on_rx_data;
     turn_sock_cb.on_state = &turn_on_state;
     status = pj_turn_sock_create(sess->stun_cfg,
-				 GET_AF(use_ipv6),
-				 tp_type, 
-				 &turn_sock_cb, 
-				 0, 
-				 sess, 
-				 &sess->turn_sock);
+                                 GET_AF(use_ipv6),
+                                 tp_type, 
+                                 &turn_sock_cb, 
+                                 0, 
+                                 sess, 
+                                 &sess->turn_sock);
     if (status != PJ_SUCCESS) {
-	destroy_session(sess);
-	return -20;
+        destroy_session(sess);
+        return -20;
     }
 
     /* Create test server */
     status = create_test_server(sess->stun_cfg, cfg->srv.flags, SRV_DOMAIN, 
-				&sess->test_srv);
+                                &sess->test_srv);
     if (status != PJ_SUCCESS) {
-	destroy_session(sess);
-	return -30;
+        destroy_session(sess);
+        return -30;
     }
 
     sess->test_srv->turn_respond_allocate = cfg->srv.respond_allocate;
@@ -147,20 +146,20 @@ static int create_test_session(pj_stun_config  *stun_cfg,
 
     /* Create client resolver */
     status = pj_dns_resolver_create(mem, "resolver", 0, sess->stun_cfg->timer_heap,
-				    sess->stun_cfg->ioqueue, &sess->resolver);
+                                    sess->stun_cfg->ioqueue, &sess->resolver);
     if (status != PJ_SUCCESS) {
-	destroy_session(sess);
-	return -40;
+        destroy_session(sess);
+        return -40;
 
     } else {
-	pj_str_t dns_srv = use_ipv6?pj_str("::1") : pj_str("127.0.0.1");
-	pj_uint16_t dns_srv_port = (pj_uint16_t) DNS_SERVER_PORT;
-	status = pj_dns_resolver_set_ns(sess->resolver, 1, &dns_srv, &dns_srv_port);
+        pj_str_t dns_srv = use_ipv6?pj_str("::1") : pj_str("127.0.0.1");
+        pj_uint16_t dns_srv_port = (pj_uint16_t) DNS_SERVER_PORT;
+        status = pj_dns_resolver_set_ns(sess->resolver, 1, &dns_srv, &dns_srv_port);
 
-	if (status != PJ_SUCCESS) {
-	    destroy_session(sess);
-	    return -50;
-	}
+        if (status != PJ_SUCCESS) {
+            destroy_session(sess);
+            return -50;
+        }
     }
 
     /* Init TURN credential */
@@ -177,24 +176,24 @@ static int create_test_session(pj_stun_config  *stun_cfg,
 
     /* Start the client */
     if (cfg->client.enable_dns_srv) {
-	/* Use DNS SRV to resolve server, may fallback to DNS A */
-	pj_str_t domain = pj_str(SRV_DOMAIN);
-	status = pj_turn_sock_alloc(sess->turn_sock, &domain, TURN_SERVER_PORT,
-				    sess->resolver, &cred, &alloc_param);
+        /* Use DNS SRV to resolve server, may fallback to DNS A */
+        pj_str_t domain = pj_str(SRV_DOMAIN);
+        status = pj_turn_sock_alloc(sess->turn_sock, &domain, TURN_SERVER_PORT,
+                                    sess->resolver, &cred, &alloc_param);
 
     } else {
-	/* Explicitly specify server address */
-	pj_str_t host = use_ipv6?pj_str("::1") : pj_str("127.0.0.1");
-	status = pj_turn_sock_alloc(sess->turn_sock, &host, TURN_SERVER_PORT,
-				    NULL, &cred, &alloc_param);
+        /* Explicitly specify server address */
+        pj_str_t host = use_ipv6?pj_str("::1") : pj_str("127.0.0.1");
+        status = pj_turn_sock_alloc(sess->turn_sock, &host, TURN_SERVER_PORT,
+                                    NULL, &cred, &alloc_param);
 
     }
 
     if (status != PJ_SUCCESS) {
-	if (cfg->client.destroy_on_state >= PJ_TURN_STATE_READY) {
-	    destroy_session(sess);
-	    return -70;
-	}
+        if (cfg->client.destroy_on_state >= PJ_TURN_STATE_READY) {
+            destroy_session(sess);
+            return -70;
+        }
     }
 
     *p_sess = sess;
@@ -203,10 +202,10 @@ static int create_test_session(pj_stun_config  *stun_cfg,
 
 
 static void turn_on_rx_data(pj_turn_sock *turn_sock,
-			    void *pkt,
-			    unsigned pkt_len,
-			    const pj_sockaddr_t *peer_addr,
-			    unsigned addr_len)
+                            void *pkt,
+                            unsigned pkt_len,
+                            const pj_sockaddr_t *peer_addr,
+                            unsigned addr_len)
 {
     struct test_session *sess;
 
@@ -217,15 +216,15 @@ static void turn_on_rx_data(pj_turn_sock *turn_sock,
 
     sess = (struct test_session*) pj_turn_sock_get_user_data(turn_sock);
     if (sess == NULL)
-	return;
+        return;
 
     sess->result.rx_data_cnt++;
 }
 
 
 static void turn_on_state(pj_turn_sock *turn_sock, 
-			  pj_turn_state_t old_state,
-			  pj_turn_state_t new_state)
+                          pj_turn_state_t old_state,
+                          pj_turn_state_t new_state)
 {
     struct test_session *sess;
     unsigned i, mask;
@@ -234,7 +233,7 @@ static void turn_on_state(pj_turn_sock *turn_sock,
 
     sess = (struct test_session*) pj_turn_sock_get_user_data(turn_sock);
     if (sess == NULL)
-	return;
+        return;
 
     /* This state must not be called before */
     pj_assert((sess->result.state_called & (1<<new_state)) == 0);
@@ -251,13 +250,13 @@ static void turn_on_state(pj_turn_sock *turn_sock,
     sess->result.state_called |= (1 << new_state);
 
     if (new_state >= sess->destroy_on_state && !sess->destroy_called) {
-	sess->destroy_called = PJ_TRUE;
-	pj_turn_sock_destroy(turn_sock);
+        sess->destroy_called = PJ_TRUE;
+        pj_turn_sock_destroy(turn_sock);
     }
 
     if (new_state >= PJ_TURN_STATE_DESTROYING) {
-	pj_turn_sock_set_user_data(sess->turn_sock, NULL);
-	sess->turn_sock = NULL;
+        pj_turn_sock_set_user_data(sess->turn_sock, NULL);
+        sess->turn_sock = NULL;
     }
 }
 
@@ -265,158 +264,158 @@ static void turn_on_state(pj_turn_sock *turn_sock,
 /////////////////////////////////////////////////////////////////////
 
 static void set_server_flag(struct test_session_cfg *test_cfg, 
-			    pj_bool_t use_ipv6,
-			    pj_turn_tp_type tp_type)
+                            pj_bool_t use_ipv6,
+                            pj_turn_tp_type tp_type)
 {
     pj_uint32_t flag = TURN_UDP;
     test_cfg->srv.flags &= ~(SERVER_IPV4+SERVER_IPV6+
-			     TURN_UDP+TURN_TCP+TURN_TLS);    
+                             TURN_UDP+TURN_TCP+TURN_TLS);    
     switch (tp_type) {
-	case PJ_TURN_TP_TCP:
-	    flag = TURN_TCP;
-	    break;
-	case PJ_TURN_TP_TLS:
-	    flag = TURN_TLS;
-	    break;
-	default:
-	    break;
+        case PJ_TURN_TP_TCP:
+            flag = TURN_TCP;
+            break;
+        case PJ_TURN_TP_TLS:
+            flag = TURN_TLS;
+            break;
+        default:
+            break;
     }
     test_cfg->srv.flags |= ((use_ipv6)?SERVER_IPV6:SERVER_IPV4)+flag;
 }
 
 static int state_progression_test(pj_stun_config  *stun_cfg, 
-				  pj_bool_t use_ipv6,
-				  pj_turn_tp_type tp_type)
+                                  pj_bool_t use_ipv6,
+                                  pj_turn_tp_type tp_type)
 {
     struct test_session_cfg test_cfg = 
     {
-	{   /* Client cfg */			
-	    PJ_TRUE,	    /* DNS SRV */       
-	    0xFFFF	    /* Destroy on state */
-	},
-	{   /* Server cfg */
-	    0xFFFFFFFF,	    /* flags */
-	    PJ_TRUE,	    /* respond to allocate  */
-	    PJ_TRUE	    /* respond to refresh   */
-	}
+        {   /* Client cfg */                    
+            PJ_TRUE,        /* DNS SRV */       
+            0xFFFF          /* Destroy on state */
+        },
+        {   /* Server cfg */
+            0xFFFFFFFF,     /* flags */
+            PJ_TRUE,        /* respond to allocate  */
+            PJ_TRUE         /* respond to refresh   */
+        }
     };
     struct test_session *sess;
     unsigned i;
     int rc = 0;
 
     PJ_LOG(3,("", "  state progression tests - (%s) (%s)",
-	      use_ipv6?"IPv6":"IPv4",
-	      (tp_type==PJ_TURN_TP_UDP)?"UDP":
-		(tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
+              use_ipv6?"IPv6":"IPv4",
+              (tp_type==PJ_TURN_TP_UDP)?"UDP":
+                (tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
     
     set_server_flag(&test_cfg, use_ipv6, tp_type);
     for (i=0; i<=1; ++i) {
-	enum { TIMEOUT = 60 };
-	pjlib_state pjlib_state;
-	pj_turn_session_info info;
-	struct test_result result;
-	pj_time_val tstart;
+        enum { TIMEOUT = 60 };
+        pjlib_state pjlib_state;
+        pj_turn_session_info info;
+        struct test_result result;
+        pj_time_val tstart;
 
-	PJ_LOG(3,("", "   %s DNS SRV resolution",
-	              (i==0? "without" : "with")));
+        PJ_LOG(3,("", "   %s DNS SRV resolution",
+                      (i==0? "without" : "with")));
 
-	capture_pjlib_state(stun_cfg, &pjlib_state);
+        capture_pjlib_state(stun_cfg, &pjlib_state);
 
-	test_cfg.client.enable_dns_srv = i;
+        test_cfg.client.enable_dns_srv = i;
 
-	rc = create_test_session(stun_cfg, &test_cfg, &sess);
-	if (rc != 0)
-	    return rc;
+        rc = create_test_session(stun_cfg, &test_cfg, &sess);
+        if (rc != 0)
+            return rc;
 
-	pj_bzero(&info, sizeof(info));
+        pj_bzero(&info, sizeof(info));
 
-	/* Wait until state is READY */
-	pj_gettimeofday(&tstart);
-	while (sess->turn_sock) {
-	    pj_time_val now;
+        /* Wait until state is READY */
+        pj_gettimeofday(&tstart);
+        while (sess->turn_sock) {
+            pj_time_val now;
 
-	    poll_events(stun_cfg, 10, PJ_FALSE);
-	    if (sess->turn_sock == NULL) {
-		break;
-	    }
-	    rc = pj_turn_sock_get_info(sess->turn_sock, &info);
-	    if (rc!=PJ_SUCCESS)
-		break;
+            poll_events(stun_cfg, 10, PJ_FALSE);
+            if (sess->turn_sock == NULL) {
+                break;
+            }
+            rc = pj_turn_sock_get_info(sess->turn_sock, &info);
+            if (rc!=PJ_SUCCESS)
+                break;
 
-	    if (info.state >= PJ_TURN_STATE_READY)
-		break;
+            if (info.state >= PJ_TURN_STATE_READY)
+                break;
 
-	    pj_gettimeofday(&now);
-	    if (now.sec - tstart.sec > TIMEOUT) {
-		PJ_LOG(3,("", "    timed-out"));
-		break;
-	    }
-	}
+            pj_gettimeofday(&now);
+            if (now.sec - tstart.sec > TIMEOUT) {
+                PJ_LOG(3,("", "    timed-out"));
+                break;
+            }
+        }
 
-	if (info.state != PJ_TURN_STATE_READY) {
-	    PJ_LOG(3,("", "    error: state is not READY"));
-	    destroy_session(sess);
-	    return -130;
-	}
+        if (info.state != PJ_TURN_STATE_READY) {
+            PJ_LOG(3,("", "    error: state is not READY"));
+            destroy_session(sess);
+            return -130;
+        }
 
-	/* Deallocate */
-	pj_turn_sock_destroy(sess->turn_sock);
+        /* Deallocate */
+        pj_turn_sock_destroy(sess->turn_sock);
 
-	/* Wait for couple of seconds.
-	 * We can't poll the session info since the session may have
-	 * been destroyed
-	 */
-	poll_events(stun_cfg, 2000, PJ_FALSE);
-	sess->turn_sock = NULL;
-	pj_memcpy(&result, &sess->result, sizeof(result));
-	destroy_session(sess);
+        /* Wait for couple of seconds.
+         * We can't poll the session info since the session may have
+         * been destroyed
+         */
+        poll_events(stun_cfg, 2000, PJ_FALSE);
+        sess->turn_sock = NULL;
+        pj_memcpy(&result, &sess->result, sizeof(result));
+        destroy_session(sess);
 
-	/* Check the result */
-	if ((result.state_called & (1<<PJ_TURN_STATE_RESOLVING)) == 0) {
-	    PJ_LOG(3,("", "    error: PJ_TURN_STATE_RESOLVING is not called"));
-	    return -140;
-	}
+        /* Check the result */
+        if ((result.state_called & (1<<PJ_TURN_STATE_RESOLVING)) == 0) {
+            PJ_LOG(3,("", "    error: PJ_TURN_STATE_RESOLVING is not called"));
+            return -140;
+        }
 
-	if ((result.state_called & (1<<PJ_TURN_STATE_RESOLVED)) == 0) {
-	    PJ_LOG(3,("", "    error: PJ_TURN_STATE_RESOLVED is not called"));
-	    return -150;
-	}
+        if ((result.state_called & (1<<PJ_TURN_STATE_RESOLVED)) == 0) {
+            PJ_LOG(3,("", "    error: PJ_TURN_STATE_RESOLVED is not called"));
+            return -150;
+        }
 
-	if ((result.state_called & (1<<PJ_TURN_STATE_ALLOCATING)) == 0) {
-	    PJ_LOG(3,("", "    error: PJ_TURN_STATE_ALLOCATING is not called"));
-	    return -155;
-	}
+        if ((result.state_called & (1<<PJ_TURN_STATE_ALLOCATING)) == 0) {
+            PJ_LOG(3,("", "    error: PJ_TURN_STATE_ALLOCATING is not called"));
+            return -155;
+        }
 
-	if ((result.state_called & (1<<PJ_TURN_STATE_READY)) == 0) {
-	    PJ_LOG(3,("", "    error: PJ_TURN_STATE_READY is not called"));
-	    return -160;
-	}
+        if ((result.state_called & (1<<PJ_TURN_STATE_READY)) == 0) {
+            PJ_LOG(3,("", "    error: PJ_TURN_STATE_READY is not called"));
+            return -160;
+        }
 
-	if ((result.state_called & (1<<PJ_TURN_STATE_DEALLOCATING)) == 0) {
-	    PJ_LOG(3,("", "    error: PJ_TURN_STATE_DEALLOCATING is not called"));
-	    return -170;
-	}
+        if ((result.state_called & (1<<PJ_TURN_STATE_DEALLOCATING)) == 0) {
+            PJ_LOG(3,("", "    error: PJ_TURN_STATE_DEALLOCATING is not called"));
+            return -170;
+        }
 
-	if ((result.state_called & (1<<PJ_TURN_STATE_DEALLOCATED)) == 0) {
-	    PJ_LOG(3,("", "    error: PJ_TURN_STATE_DEALLOCATED is not called"));
-	    return -180;
-	}
+        if ((result.state_called & (1<<PJ_TURN_STATE_DEALLOCATED)) == 0) {
+            PJ_LOG(3,("", "    error: PJ_TURN_STATE_DEALLOCATED is not called"));
+            return -180;
+        }
 
-	if ((result.state_called & (1<<PJ_TURN_STATE_DESTROYING)) == 0) {
-	    PJ_LOG(3,("", "    error: PJ_TURN_STATE_DESTROYING is not called"));
-	    return -190;
-	}
+        if ((result.state_called & (1<<PJ_TURN_STATE_DESTROYING)) == 0) {
+            PJ_LOG(3,("", "    error: PJ_TURN_STATE_DESTROYING is not called"));
+            return -190;
+        }
 
-	poll_events(stun_cfg, 500, PJ_FALSE);
-	rc = check_pjlib_state(stun_cfg, &pjlib_state);
-	if (rc != 0) {
-	    PJ_LOG(3,("", "    error: memory/timer-heap leak detected"));
-	    return rc;
-	}
+        poll_events(stun_cfg, 500, PJ_FALSE);
+        rc = check_pjlib_state(stun_cfg, &pjlib_state);
+        if (rc != 0) {
+            PJ_LOG(3,("", "    error: memory/timer-heap leak detected"));
+            return rc;
+        }
     }
 
     if (use_ipv6)
-	rc = state_progression_test(stun_cfg, 0, tp_type);
+        rc = state_progression_test(stun_cfg, 0, tp_type);
 
     return rc;
 }
@@ -425,105 +424,105 @@ static int state_progression_test(pj_stun_config  *stun_cfg,
 /////////////////////////////////////////////////////////////////////
 
 static int destroy_test(pj_stun_config  *stun_cfg,
-			pj_bool_t with_dns_srv,
-			pj_bool_t in_callback,
-			pj_bool_t use_ipv6,
-			pj_turn_tp_type tp_type)
+                        pj_bool_t with_dns_srv,
+                        pj_bool_t in_callback,
+                        pj_bool_t use_ipv6,
+                        pj_turn_tp_type tp_type)
 {
     struct test_session_cfg test_cfg = 
     {
-	{   /* Client cfg */	    
-	    PJ_TRUE,	    /* DNS SRV */   
-	    0xFFFF	    /* Destroy on state */
-	},
-	{   /* Server cfg */
-	    0xFFFFFFFF,	    /* flags */
-	    PJ_TRUE,	    /* respond to allocate  */
-	    PJ_TRUE	    /* respond to refresh   */
-	}
+        {   /* Client cfg */        
+            PJ_TRUE,        /* DNS SRV */   
+            0xFFFF          /* Destroy on state */
+        },
+        {   /* Server cfg */
+            0xFFFFFFFF,     /* flags */
+            PJ_TRUE,        /* respond to allocate  */
+            PJ_TRUE         /* respond to refresh   */
+        }
     };
     struct test_session *sess;
     int target_state;
     int rc;
 
     PJ_LOG(3,("", "  destroy test %s %s (%s)",
-	          (in_callback? "in callback" : ""),
-		  (with_dns_srv? "with DNS srv" : ""),
-		  (tp_type==PJ_TURN_TP_UDP)?"UDP":
-		    (tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
+                  (in_callback? "in callback" : ""),
+                  (with_dns_srv? "with DNS srv" : ""),
+                  (tp_type==PJ_TURN_TP_UDP)?"UDP":
+                    (tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
 
     test_cfg.client.enable_dns_srv = with_dns_srv;
     set_server_flag(&test_cfg, use_ipv6, tp_type);    
 
     for (target_state=PJ_TURN_STATE_RESOLVING; target_state<=PJ_TURN_STATE_READY; ++target_state) {
-	enum { TIMEOUT = 60 };
-	pjlib_state pjlib_state;
-	pj_turn_session_info info;
-	pj_time_val tstart;
+        enum { TIMEOUT = 60 };
+        pjlib_state pjlib_state;
+        pj_turn_session_info info;
+        pj_time_val tstart;
 
-	capture_pjlib_state(stun_cfg, &pjlib_state);
+        capture_pjlib_state(stun_cfg, &pjlib_state);
 
-	PJ_LOG(3,("", "   %s", pj_turn_state_name((pj_turn_state_t)target_state)));
+        PJ_LOG(3,("", "   %s", pj_turn_state_name((pj_turn_state_t)target_state)));
 
-	if (in_callback)
-	    test_cfg.client.destroy_on_state = target_state;
+        if (in_callback)
+            test_cfg.client.destroy_on_state = target_state;
 
-	rc = create_test_session(stun_cfg, &test_cfg, &sess);
-	if (rc != 0)
-	    return rc;
+        rc = create_test_session(stun_cfg, &test_cfg, &sess);
+        if (rc != 0)
+            return rc;
 
-	if (in_callback) {
-	    pj_gettimeofday(&tstart);
-	    rc = 0;
-	    while (sess->turn_sock) {
-		pj_time_val now;
+        if (in_callback) {
+            pj_gettimeofday(&tstart);
+            rc = 0;
+            while (sess->turn_sock) {
+                pj_time_val now;
 
-		poll_events(stun_cfg, 100, PJ_FALSE);
+                poll_events(stun_cfg, 100, PJ_FALSE);
 
-		pj_gettimeofday(&now);
-		if (now.sec - tstart.sec > TIMEOUT) {
-		    rc = -7;
-		    break;
-		}
-	    }
+                pj_gettimeofday(&now);
+                if (now.sec - tstart.sec > TIMEOUT) {
+                    rc = -7;
+                    break;
+                }
+            }
 
-	} else {
-	    pj_gettimeofday(&tstart);
-	    rc = 0;
-	    while (sess->turn_sock) {
-		pj_time_val now;
+        } else {
+            pj_gettimeofday(&tstart);
+            rc = 0;
+            while (sess->turn_sock) {
+                pj_time_val now;
 
-		poll_events(stun_cfg, 1, PJ_FALSE);
+                poll_events(stun_cfg, 1, PJ_FALSE);
 
-		pj_turn_sock_get_info(sess->turn_sock, &info);
-		
-		if (info.state >= target_state) {
-		    pj_turn_sock_destroy(sess->turn_sock);
-		    break;
-		}
+                pj_turn_sock_get_info(sess->turn_sock, &info);
+                
+                if (info.state >= target_state) {
+                    pj_turn_sock_destroy(sess->turn_sock);
+                    break;
+                }
 
-		pj_gettimeofday(&now);
-		if (now.sec - tstart.sec > TIMEOUT) {
-		    rc = -8;
-		    break;
-		}
-	    }
-	}
+                pj_gettimeofday(&now);
+                if (now.sec - tstart.sec > TIMEOUT) {
+                    rc = -8;
+                    break;
+                }
+            }
+        }
 
 
-	if (rc != 0) {
-	    PJ_LOG(3,("", "    error: timeout"));
-	    return rc;
-	}
+        if (rc != 0) {
+            PJ_LOG(3,("", "    error: timeout"));
+            return rc;
+        }
 
-	poll_events(stun_cfg, 1000, PJ_FALSE);
-	destroy_session(sess);
+        poll_events(stun_cfg, 1000, PJ_FALSE);
+        destroy_session(sess);
 
-	rc = check_pjlib_state(stun_cfg, &pjlib_state);
-	if (rc != 0) {
-	    PJ_LOG(3,("", "    error: memory/timer-heap leak detected"));
-	    return rc;
-	}
+        rc = check_pjlib_state(stun_cfg, &pjlib_state);
+        if (rc != 0) {
+            PJ_LOG(3,("", "    error: memory/timer-heap leak detected"));
+            return rc;
+        }
     }
 
     return 0;
@@ -541,36 +540,36 @@ int turn_sock_test(void)
     pool = pj_pool_create(mem, "turntest", 512, 512, NULL);
     rc = create_stun_config(pool, &stun_cfg);
     if (rc != PJ_SUCCESS) {
-	pj_pool_release(pool);
-	return -2;
+        pj_pool_release(pool);
+        return -2;
     }
 
     for (n = 0; n <= 2; ++n) {
-	pj_turn_tp_type tp_type = PJ_TURN_TP_UDP;
+        pj_turn_tp_type tp_type = PJ_TURN_TP_UDP;
 
-	if ((n == 2) && !USE_TLS)
-	    break;
+        if ((n == 2) && !USE_TLS)
+            break;
 
-	switch (n) {
-	case 1:
-	    tp_type = PJ_TURN_TP_TCP;
-	    break;
-	case 2:
-	    tp_type = PJ_TURN_TP_TLS;
-	}
+        switch (n) {
+        case 1:
+            tp_type = PJ_TURN_TP_TCP;
+            break;
+        case 2:
+            tp_type = PJ_TURN_TP_TLS;
+        }
 
-	rc = state_progression_test(&stun_cfg, USE_IPV6, tp_type);
-	if (rc != 0) 
-	    goto on_return;
+        rc = state_progression_test(&stun_cfg, USE_IPV6, tp_type);
+        if (rc != 0) 
+            goto on_return;
 
-	for (i=0; i<=1; ++i) {
-	    int j;
-	    for (j=0; j<=1; ++j) {
-		rc = destroy_test(&stun_cfg, i, j, USE_IPV6, tp_type);
-		if (rc != 0)
-		    goto on_return;
-	    }
-	}
+        for (i=0; i<=1; ++i) {
+            int j;
+            for (j=0; j<=1; ++j) {
+                rc = destroy_test(&stun_cfg, i, j, USE_IPV6, tp_type);
+                if (rc != 0)
+                    goto on_return;
+            }
+        }
     }
 
 on_return:

@@ -1,4 +1,3 @@
-# $Id$
 #
 # SIP Conference Bot
 #

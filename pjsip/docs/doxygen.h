@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -25,7 +24,7 @@
 
 /*////////////////////////////////////////////////////////////////////////// */
 /*
-	INTRODUCTION PAGE
+        INTRODUCTION PAGE
  */
 
 /**
@@ -35,7 +34,7 @@
 
   \n
   \n
-  @section intro_sec Introduction
+  @section pjsip_intro_sec Introduction
 
   PJSIP is an Open Source SIP prototol stack, designed to be very small in 
   footprint, have high performance, and very flexible.
@@ -184,28 +183,28 @@
  I wish I could write more samples, but for now here are some samples or
  working applications that are available from the source tree:
 
-  - @ref page_pjsip_sample_sipstateless_c\n
+  - @ref page_pjsip_sample_sipstateless_c \n
     This is about the simplest SIP application with PJSIP, all it does is
     respond all incoming requests with 501 (Not Implemented) response
     statelessly.
 
-  - @ref page_pjsip_sample_simple_ua_c\n
+  - @ref page_pjsip_sample_simple_ua_c \n
     This is a very simple SIP User Agent application that only use PJSIP
     (without PJSIP-UA). It's able to make and receive call, and play
     media to the sound device.
     
-  - @ref page_pjsip_sample_simple_pjsuaua_c\n
+  - @ref page_pjsip_sample_simple_pjsuaua_c \n
     Very simple SIP User Agent with registration, call, and media, using
     PJSUA-API, all in under 200 lines of code.
 
-  - @ref page_pjsip_samples_pjsua\n
+  - @ref page_pjsip_samples_pjsua \n
     This is the reference implementation for PJSIP and PJMEDIA.
     PJSUA is a console based application, designed to be simple enough
     to be readble, but powerful enough to demonstrate all features
     available in PJSIP and PJMEDIA.\n
     Screenshot on WinXP: \image html pjsua.jpg "pjsua on WinXP"
 
-  - @ref page_pjmedia_samples_siprtp_c\n
+  - @ref page_pjmedia_samples_siprtp_c \n
     This is a useful program (integrated with PJSIP) to actively measure 
     the network quality/impairment parameters by making one or more SIP 
     calls (or receiving one or more SIP calls) and display the network
@@ -217,7 +216,7 @@
     is recommended.\n
     Screenshots on WinXP: \image html siprtp.jpg "siprtp screenshot on WinXP"
 
-  - @ref page_pjsip_perf_c\n
+  - @ref page_pjsip_perf_c \n
     This sample contains a complete implementation of a SIP performance
     measurement tool. Unlike other tool such SIPp, pjsip-perf is geared
     more towards finding the performance of an endpoint by flooding the
@@ -270,7 +269,7 @@
  */
 
 /**
- * \page page_pjmedia_samples_siprtp_c Samples: siprtp - SIP with RTCP Quality Monitoring
+ * \page page_pjsip_samples_siprtp_c Samples: siprtp - SIP with RTCP Quality Monitoring
  *
  * This source is an example to demonstrate using SIP and RTP/RTCP framework
  * to measure the network quality/impairment from the SIP call. This

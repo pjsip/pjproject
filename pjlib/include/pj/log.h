@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -69,18 +68,18 @@ PJ_BEGIN_DECL
  */
 enum pj_log_decoration
 {
-    PJ_LOG_HAS_DAY_NAME   =    1, /**< Include day name [default: no] 	      */
-    PJ_LOG_HAS_YEAR       =    2, /**< Include year digit [no]		      */
-    PJ_LOG_HAS_MONTH	  =    4, /**< Include month [no]		      */
-    PJ_LOG_HAS_DAY_OF_MON =    8, /**< Include day of month [no]	      */
-    PJ_LOG_HAS_TIME	  =   16, /**< Include time [yes]		      */
+    PJ_LOG_HAS_DAY_NAME   =    1, /**< Include day name [default: no]         */
+    PJ_LOG_HAS_YEAR       =    2, /**< Include year digit [no]                */
+    PJ_LOG_HAS_MONTH      =    4, /**< Include month [no]                     */
+    PJ_LOG_HAS_DAY_OF_MON =    8, /**< Include day of month [no]              */
+    PJ_LOG_HAS_TIME       =   16, /**< Include time [yes]                     */
     PJ_LOG_HAS_MICRO_SEC  =   32, /**< Include microseconds [yes]             */
-    PJ_LOG_HAS_SENDER	  =   64, /**< Include sender in the log [yes] 	      */
-    PJ_LOG_HAS_NEWLINE	  =  128, /**< Terminate each call with newline [yes] */
-    PJ_LOG_HAS_CR	  =  256, /**< Include carriage return [no] 	      */
-    PJ_LOG_HAS_SPACE	  =  512, /**< Include two spaces before log [yes]    */
-    PJ_LOG_HAS_COLOR	  = 1024, /**< Colorize logs [yes on win32]	      */
-    PJ_LOG_HAS_LEVEL_TEXT = 2048, /**< Include level text string [no]	      */
+    PJ_LOG_HAS_SENDER     =   64, /**< Include sender in the log [yes]        */
+    PJ_LOG_HAS_NEWLINE    =  128, /**< Terminate each call with newline [yes] */
+    PJ_LOG_HAS_CR         =  256, /**< Include carriage return [no]           */
+    PJ_LOG_HAS_SPACE      =  512, /**< Include two spaces before log [yes]    */
+    PJ_LOG_HAS_COLOR      = 1024, /**< Colorize logs [yes on win32]           */
+    PJ_LOG_HAS_LEVEL_TEXT = 2048, /**< Include level text string [no]         */
     PJ_LOG_HAS_THREAD_ID  = 4096, /**< Include thread identification [no]     */
     PJ_LOG_HAS_THREAD_SWC = 8192, /**< Add mark when thread has switched [yes]*/
     PJ_LOG_HAS_INDENT     =16384  /**< Indentation. Say yes! [yes]            */
@@ -90,13 +89,13 @@ enum pj_log_decoration
  * Write log message.
  * This is the main macro used to write text to the logging backend. 
  *
- * @param level	    The logging verbosity level. Lower number indicates higher
- *		    importance, with level zero indicates fatal error. Only
- *		    numeral argument is permitted (e.g. not variable).
- * @param arg	    Enclosed 'printf' like arguments, with the first 
- *		    argument is the sender, the second argument is format 
- *		    string and the following arguments are variable number of 
- *		    arguments suitable for the format string.
+ * @param level     The logging verbosity level. Lower number indicates higher
+ *                  importance, with level zero indicates fatal error. Only
+ *                  numeral argument is permitted (e.g. not variable).
+ * @param arg       Enclosed 'printf' like arguments, with the first 
+ *                  argument is the sender, the second argument is format 
+ *                  string and the following arguments are variable number of 
+ *                  arguments suitable for the format string.
  *
  * Sample:
  * \verbatim
@@ -104,19 +103,19 @@ enum pj_log_decoration
    \endverbatim
  * @hideinitializer
  */
-#define PJ_LOG(level,arg)	do { \
-				    if (level <= pj_log_get_level()) { \
-					pj_log_wrapper_##level(arg); \
-				    } \
-				} while (0)
+#define PJ_LOG(level,arg)       do { \
+                                    if (level <= pj_log_get_level()) { \
+                                        pj_log_wrapper_##level(arg); \
+                                    } \
+                                } while (0)
 
 /**
  * Signature for function to be registered to the logging subsystem to
  * write the actual log message to some output device.
  *
- * @param level	    Log level.
- * @param data	    Log message, which will be NULL terminated.
- * @param len	    Message length.
+ * @param level     Log level.
+ * @param data      Log message, which will be NULL terminated.
+ * @param len       Message length.
  */
 typedef void pj_log_func(int level, const char *data, int len);
 
@@ -126,9 +125,9 @@ typedef void pj_log_func(int level, const char *data, int len);
  * Application normally should NOT need to call this function, but
  * rather use the PJ_LOG macro.
  *
- * @param level	    Log level.
+ * @param level     Log level.
  * @param buffer    Log message.
- * @param len	    Message length.
+ * @param len       Message length.
  */
 PJ_DECL(void) pj_log_write(int level, const char *buffer, int len);
 
@@ -139,12 +138,12 @@ PJ_DECL(void) pj_log_write(int level, const char *buffer, int len);
  * Write to log.
  *
  * @param sender    Source of the message.
- * @param level	    Verbosity level.
+ * @param level     Verbosity level.
  * @param format    Format.
  * @param marker    Marker.
  */
 PJ_DECL(void) pj_log(const char *sender, int level, 
-		     const char *format, va_list marker);
+                     const char *format, va_list marker);
 
 /**
  * Change log output function. The front-end logging functions will call
@@ -152,15 +151,15 @@ PJ_DECL(void) pj_log(const char *sender, int level,
  * By default, the front-end functions use pj_log_write() to write
  * the messages, unless it's changed by calling this function.
  *
- * @param func	    The function that will be called to write the log
- *		    messages to the desired device.
+ * @param func      The function that will be called to write the log
+ *                  messages to the desired device.
  */
 PJ_DECL(void) pj_log_set_log_func( pj_log_func *func );
 
 /**
  * Get the current log output function that is used to write log messages.
  *
- * @return	    Current log output function.
+ * @return          Current log output function.
  */
 PJ_DECL(pj_log_func*) pj_log_get_log_func(void);
 
@@ -171,15 +170,15 @@ PJ_DECL(pj_log_func*) pj_log_get_log_func(void);
  * the maximum level of verbosity can not exceed compile time value of
  * PJ_LOG_MAX_LEVEL.
  *
- * @param level	    The maximum level of verbosity of the logging
- *		    messages (6=very detailed..1=error only, 0=disabled)
+ * @param level     The maximum level of verbosity of the logging
+ *                  messages (6=very detailed..1=error only, 0=disabled)
  */
 PJ_DECL(void) pj_log_set_level(int level);
 
 /**
  * Get current maximum log verbositylevel.
  *
- * @return	    Current log maximum level.
+ * @return          Current log maximum level.
  */
 #if 1
 PJ_DECL(int) pj_log_get_level(void);
@@ -194,15 +193,15 @@ PJ_DECL_DATA(int) pj_log_max_level;
  * can specify that date/time information should be displayed with each
  * log message.
  *
- * @param decor	    Bitmask combination of #pj_log_decoration to control
- *		    the layout of the log message.
+ * @param decor     Bitmask combination of #pj_log_decoration to control
+ *                  the layout of the log message.
  */
 PJ_DECL(void) pj_log_set_decor(unsigned decor);
 
 /**
  * Get current log decoration flag.
  *
- * @return	    Log decoration flag.
+ * @return          Log decoration flag.
  */
 PJ_DECL(unsigned) pj_log_get_decor(void);
 
@@ -211,34 +210,48 @@ PJ_DECL(unsigned) pj_log_get_decor(void);
  * before the message, and is useful to show the depth of function calls.
  *
  * @param indent    The indentation to add or substract. Positive value
- * 		    adds current indent, negative value subtracts current
- * 		    indent.
+ *                  adds current indent, negative value subtracts current
+ *                  indent.
  */
 PJ_DECL(void) pj_log_add_indent(int indent);
 
 /**
- * Push indentation to the right by default value (PJ_LOG_INDENT).
+ * Set indentation to specific value.
+ *
+ * @param indent    The indentation value.
+ */
+PJ_DECL(void) pj_log_set_indent(int indent);
+
+/**
+ * Get current indentation value.
+ *
+ * @return          Current indentation value.
+ */
+PJ_DECL(int) pj_log_get_indent(void);
+
+/**
+ * Push indentation to the right by default value (PJ_LOG_INDENT_SIZE).
  */
 PJ_DECL(void) pj_log_push_indent(void);
 
 /**
- * Pop indentation (to the left) by default value (PJ_LOG_INDENT).
+ * Pop indentation (to the left) by default value (PJ_LOG_INDENT_SIZE).
  */
 PJ_DECL(void) pj_log_pop_indent(void);
 
 /**
  * Set color of log messages.
  *
- * @param level	    Log level which color will be changed.
- * @param color	    Desired color.
+ * @param level     Log level which color will be changed.
+ * @param color     Desired color.
  */
 PJ_DECL(void) pj_log_set_color(int level, pj_color_t color);
 
 /**
  * Get color of log messages.
  *
- * @param level	    Log level which color will be returned.
- * @return	    Log color.
+ * @param level     Log level which color will be returned.
+ * @return          Log color.
  */
 PJ_DECL(pj_color_t) pj_log_get_color(int level);
 
@@ -247,7 +260,7 @@ PJ_DECL(pj_color_t) pj_log_get_color(int level);
  */
 pj_status_t pj_log_init(void);
 
-#else	/* #if PJ_LOG_MAX_LEVEL >= 1 */
+#else   /* #if PJ_LOG_MAX_LEVEL >= 1 */
 
 /**
  * Change log output function. The front-end logging functions will call
@@ -255,8 +268,8 @@ pj_status_t pj_log_init(void);
  * By default, the front-end functions use pj_log_write() to write
  * the messages, unless it's changed by calling this function.
  *
- * @param func	    The function that will be called to write the log
- *		    messages to the desired device.
+ * @param func      The function that will be called to write the log
+ *                  messages to the desired device.
  */
 #  define pj_log_set_log_func(func)
 
@@ -264,7 +277,7 @@ pj_status_t pj_log_init(void);
  * Write to log.
  *
  * @param sender    Source of the message.
- * @param level	    Verbosity level.
+ * @param level     Verbosity level.
  * @param format    Format.
  * @param marker    Marker.
  */
@@ -277,8 +290,8 @@ pj_status_t pj_log_init(void);
  * the maximum level of verbosity can not exceed compile time value of
  * PJ_LOG_MAX_LEVEL.
  *
- * @param level	    The maximum level of verbosity of the logging
- *		    messages (6=very detailed..1=error only, 0=disabled)
+ * @param level     The maximum level of verbosity of the logging
+ *                  messages (6=very detailed..1=error only, 0=disabled)
  */
 #  define pj_log_set_level(level)
 
@@ -288,8 +301,8 @@ pj_status_t pj_log_init(void);
  * can specify that date/time information should be displayed with each
  * log message.
  *
- * @param decor	    Bitmask combination of #pj_log_decoration to control
- *		    the layout of the log message.
+ * @param decor     Bitmask combination of #pj_log_decoration to control
+ *                  the layout of the log message.
  */
 #  define pj_log_set_decor(decor)
 
@@ -298,48 +311,62 @@ pj_status_t pj_log_init(void);
  * before the message, and is useful to show the depth of function calls.
  *
  * @param indent    The indentation to add or substract. Positive value
- * 		    adds current indent, negative value subtracts current
- * 		    indent.
+ *                  adds current indent, negative value subtracts current
+ *                  indent.
  */
 #  define pj_log_add_indent(indent)
 
 /**
- * Push indentation to the right by default value (PJ_LOG_INDENT).
+ * Set indentation to specific value.
+ *
+ * @param indent    The indentation value.
+ */
+#  define pj_log_set_indent(indent)
+
+/**
+ * Get current indentation value.
+ *
+ * @return          Current indentation value.
+ */
+#  define pj_log_get_indent()   0
+
+/**
+ * Push indentation to the right by default value (PJ_LOG_INDENT_SIZE).
  */
 #  define pj_log_push_indent()
 
 /**
- * Pop indentation (to the left) by default value (PJ_LOG_INDENT).
+ * Pop indentation (to the left) by default value (PJ_LOG_INDENT_SIZE).
  */
 #  define pj_log_pop_indent()
 
 /**
  * Set color of log messages.
  *
- * @param level	    Log level which color will be changed.
- * @param color	    Desired color.
+ * @param level     Log level which color will be changed.
+ * @param color     Desired color.
  */
 #  define pj_log_set_color(level, color)
 
 /**
  * Get current maximum log verbositylevel.
  *
- * @return	    Current log maximum level.
+ * @return          Current log maximum level.
  */
-#  define pj_log_get_level()	0
+#  define pj_log_get_level()    0
 
 /**
  * Get current log decoration flag.
  *
- * @return	    Log decoration flag.
+ * @return          Log decoration flag.
  */
-#  define pj_log_get_decor()	0
+#  define pj_log_get_decor()    0
 
 /**
  * Get color of log messages.
  *
- * @param level	    Log level which color will be returned.
- * @return	    Log color.
+ * @param level     Log level which color will be returned.
+ * @return          Log color.
  */
 #  define pj_log_get_color(level) 0
 
@@ -347,9 +374,9 @@ pj_status_t pj_log_init(void);
 /**
  * Internal.
  */
-#   define pj_log_init()	PJ_SUCCESS
+#   define pj_log_init()        PJ_SUCCESS
 
-#endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */
+#endif  /* #if PJ_LOG_MAX_LEVEL >= 1 */
 
 /** 
  * @}
@@ -370,7 +397,7 @@ pj_status_t pj_log_init(void);
  * @param arg       Log expression.
  */
 #if PJ_LOG_MAX_LEVEL >= 1
-    #define pj_log_wrapper_1(arg)	pj_log_1 arg
+    #define pj_log_wrapper_1(arg)       pj_log_1 arg
     /** Internal function. */
     PJ_DECL(void) pj_log_1(const char *src, const char *format, ...);
 #else
@@ -384,7 +411,7 @@ pj_status_t pj_log_init(void);
  * @param arg       Log expression.
  */
 #if PJ_LOG_MAX_LEVEL >= 2
-    #define pj_log_wrapper_2(arg)	pj_log_2 arg
+    #define pj_log_wrapper_2(arg)       pj_log_2 arg
     /** Internal function. */
     PJ_DECL(void) pj_log_2(const char *src, const char *format, ...);
 #else
@@ -398,7 +425,7 @@ pj_status_t pj_log_init(void);
  * @param arg       Log expression.
  */
 #if PJ_LOG_MAX_LEVEL >= 3
-    #define pj_log_wrapper_3(arg)	pj_log_3 arg
+    #define pj_log_wrapper_3(arg)       pj_log_3 arg
     /** Internal function. */
     PJ_DECL(void) pj_log_3(const char *src, const char *format, ...);
 #else
@@ -412,7 +439,7 @@ pj_status_t pj_log_init(void);
  * @param arg       Log expression.
  */
 #if PJ_LOG_MAX_LEVEL >= 4
-    #define pj_log_wrapper_4(arg)	pj_log_4 arg
+    #define pj_log_wrapper_4(arg)       pj_log_4 arg
     /** Internal function. */
     PJ_DECL(void) pj_log_4(const char *src, const char *format, ...);
 #else
@@ -426,7 +453,7 @@ pj_status_t pj_log_init(void);
  * @param arg       Log expression.
  */
 #if PJ_LOG_MAX_LEVEL >= 5
-    #define pj_log_wrapper_5(arg)	pj_log_5 arg
+    #define pj_log_wrapper_5(arg)       pj_log_5 arg
     /** Internal function. */
     PJ_DECL(void) pj_log_5(const char *src, const char *format, ...);
 #else
@@ -440,7 +467,7 @@ pj_status_t pj_log_init(void);
  * @param arg       Log expression.
  */
 #if PJ_LOG_MAX_LEVEL >= 6
-    #define pj_log_wrapper_6(arg)	pj_log_6 arg
+    #define pj_log_wrapper_6(arg)       pj_log_6 arg
     /** Internal function. */
     PJ_DECL(void) pj_log_6(const char *src, const char *format, ...);
 #else

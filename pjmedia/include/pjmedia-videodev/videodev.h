@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -29,7 +28,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup video_device_reference Video Subsystem API Reference
+ * @defgroup video_device_reference Video Device API Reference
  * @ingroup video_subsystem_api
  * @brief API Reference
  * @{
@@ -79,9 +78,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void);
  * #pjmedia_vid_dev_subsys_init().
  *
  * @param vdf       The factory creation function. Either vdf or factory
- * 		    argument must be specified.
+ *                  argument must be specified.
  * @param factory   Factory instance. Either vdf or factory
- * 		    argument must be specified.
+ *                  argument must be specified.
  *
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
@@ -98,9 +97,9 @@ pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr vdf,
  * is currently in use, then the behavior is undefined.
  *
  * @param vdf       The video device factory. Either vdf or factory argument
- * 		    must be specified.
+ *                  must be specified.
  * @param factory   The factory instance. Either vdf or factory argument
- * 		    must be specified.
+ *                  must be specified.
  *
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.

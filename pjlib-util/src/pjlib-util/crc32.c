@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * This is an implementation of CRC32. See ISO 3309 and ITU-T V.42 
  * for a formal specification
@@ -20,7 +19,7 @@
 /* Table of CRC-32's of all single byte values (made by makecrc.c) */
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN != 0
 
-#define CRC32_INDEX(c)	    (c & 0xff)
+#define CRC32_INDEX(c)      (c & 0xff)
 #define CRC32_SHIFTED(c)    (c >> 8)
 #define CRC32_SWAP(c)       (c)
 
@@ -81,7 +80,7 @@ static const pj_uint32_t crc_tab[] = {
 
 
 #elif defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN != 0
-#define CRC32_INDEX(c)	    (c >> 24)
+#define CRC32_INDEX(c)      (c >> 24)
 #define CRC32_SHIFTED(c)    (c << 8)
 #define CRC32_SWAP(c)       ((((c) & 0xff000000) >> 24) | \
                              (((c) & 0x00ff0000) >>  8) | \
@@ -154,27 +153,27 @@ PJ_DEF(void) pj_crc32_init(pj_crc32_context *ctx)
 }
 
 PJ_DEF(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx, 
-				    const pj_uint8_t *data,
-				    pj_size_t nbytes)
+                                    const pj_uint8_t *data,
+                                    pj_size_t nbytes)
 {
     pj_uint32_t crc = ctx->crc_state ^ CRC32_NEGL;
 
     for( ; (((unsigned long)(pj_ssize_t)data) & 0x03) && nbytes > 0; --nbytes) {
-	crc = crc_tab[CRC32_INDEX(crc) ^ *data++] ^ CRC32_SHIFTED(crc);
+        crc = crc_tab[CRC32_INDEX(crc) ^ *data++] ^ CRC32_SHIFTED(crc);
     }
 
     while (nbytes >= 4) {
-	crc ^= *(const pj_uint32_t *)data;
-	crc = crc_tab[CRC32_INDEX(crc)] ^ CRC32_SHIFTED(crc);
-	crc = crc_tab[CRC32_INDEX(crc)] ^ CRC32_SHIFTED(crc);
-	crc = crc_tab[CRC32_INDEX(crc)] ^ CRC32_SHIFTED(crc);
-	crc = crc_tab[CRC32_INDEX(crc)] ^ CRC32_SHIFTED(crc);
-	nbytes -= 4;
-	data += 4;
+        crc ^= *(const pj_uint32_t *)data;
+        crc = crc_tab[CRC32_INDEX(crc)] ^ CRC32_SHIFTED(crc);
+        crc = crc_tab[CRC32_INDEX(crc)] ^ CRC32_SHIFTED(crc);
+        crc = crc_tab[CRC32_INDEX(crc)] ^ CRC32_SHIFTED(crc);
+        crc = crc_tab[CRC32_INDEX(crc)] ^ CRC32_SHIFTED(crc);
+        nbytes -= 4;
+        data += 4;
     }
 
     while (nbytes--) {
-	crc = crc_tab[CRC32_INDEX(crc) ^ *data++] ^ CRC32_SHIFTED(crc);
+        crc = crc_tab[CRC32_INDEX(crc) ^ *data++] ^ CRC32_SHIFTED(crc);
     }
 
     ctx->crc_state = crc ^ CRC32_NEGL;
@@ -197,25 +196,25 @@ PJ_DEF(void) pj_crc32_init(pj_crc32_context *ctx)
 
 
 PJ_DEF(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx, 
-				    const pj_uint8_t *octets,
-				    pj_size_t len)
+                                    const pj_uint8_t *octets,
+                                    pj_size_t len)
 
 {
     pj_uint32_t crc = ctx->crc_state;
     
     while (len--) {
-	pj_uint32_t temp;
-	int j;
+        pj_uint32_t temp;
+        int j;
 
-	temp = (pj_uint32_t)((crc & 0xFF) ^ *octets++);
-	for (j = 0; j < 8; j++)
-	{
-	    if (temp & 0x1)
-		temp = (temp >> 1) ^ 0xEDB88320;
-	    else
-		temp >>= 1;
-	}
-	crc = (crc >> 8) ^ temp;
+        temp = (pj_uint32_t)((crc & 0xFF) ^ *octets++);
+        for (j = 0; j < 8; j++)
+        {
+            if (temp & 0x1)
+                temp = (temp >> 1) ^ 0xEDB88320;
+            else
+                temp >>= 1;
+        }
+        crc = (crc >> 8) ^ temp;
     }
     ctx->crc_state = crc;
 
@@ -232,7 +231,7 @@ PJ_DEF(pj_uint32_t) pj_crc32_final(pj_crc32_context *ctx)
 
 
 PJ_DEF(pj_uint32_t) pj_crc32_calc( const pj_uint8_t *data,
-				   pj_size_t nbytes)
+                                   pj_size_t nbytes)
 {
     pj_crc32_context ctx;
 

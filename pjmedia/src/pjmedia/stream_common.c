@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -19,7 +18,7 @@
 #include <pjmedia/stream_common.h>
 #include <pj/log.h>
 
-#define THIS_FILE	"stream_common.c"
+#define THIS_FILE       "stream_common.c"
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
 
@@ -38,9 +37,9 @@ pjmedia_stream_ka_config_default(pjmedia_stream_ka_config *cfg)
  * Parse fmtp for specified format/payload type.
  */
 PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
-						    const pjmedia_sdp_media *m,
-						    unsigned pt,
-						    pjmedia_codec_fmtp *fmtp)
+                                                    const pjmedia_sdp_media *m,
+                                                    unsigned pt,
+                                                    pjmedia_codec_fmtp *fmtp)
 {
     const pjmedia_sdp_attr *attr;
     pjmedia_sdp_fmtp sdp_fmtp;
@@ -57,12 +56,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
     fmt = pj_str(fmt_buf);
     attr = pjmedia_sdp_media_find_attr2(m, "fmtp", &fmt);
     if (attr == NULL)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     /* Parse "fmtp" attribute */
     status = pjmedia_sdp_attr_get_fmtp(attr, &sdp_fmtp);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Prepare parsing */
     p = sdp_fmtp.fmt_param.ptr;
@@ -70,53 +69,53 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
 
     /* Parse */
     while (p < p_end) {
-	char *token, *start, *end;
+        char *token, *start, *end;
 
-	if (fmtp->cnt >= PJMEDIA_CODEC_MAX_FMTP_CNT) {
-	    PJ_LOG(4,(THIS_FILE,
-		      "Warning: fmtp parameter count exceeds "
-		      "PJMEDIA_CODEC_MAX_FMTP_CNT"));
-	    return PJ_SUCCESS;
-	}
+        if (fmtp->cnt >= PJMEDIA_CODEC_MAX_FMTP_CNT) {
+            PJ_LOG(4,(THIS_FILE,
+                      "Warning: fmtp parameter count exceeds "
+                      "PJMEDIA_CODEC_MAX_FMTP_CNT"));
+            return PJ_SUCCESS;
+        }
 
-	/* Skip whitespaces */
-	while (p < p_end && (*p == ' ' || *p == '\t')) ++p;
-	if (p == p_end)
-	    break;
+        /* Skip whitespaces */
+        while (p < p_end && (*p == ' ' || *p == '\t')) ++p;
+        if (p == p_end)
+            break;
 
-	/* Get token */
-	start = p;
-	while (p < p_end && *p != ';' && *p != '=') ++p;
-	end = p - 1;
+        /* Get token */
+        start = p;
+        while (p < p_end && *p != ';' && *p != '=') ++p;
+        end = p - 1;
 
-	/* Right trim */
-	while (end >= start && (*end == ' '  || *end == '\t' || 
-				*end == '\r' || *end == '\n' ))
-	    --end;
+        /* Right trim */
+        while (end >= start && (*end == ' '  || *end == '\t' || 
+                                *end == '\r' || *end == '\n' ))
+            --end;
 
-	/* Forward a char after trimming */
-	++end;
+        /* Forward a char after trimming */
+        ++end;
 
-	/* Store token */
-	if (end > start) {
-	    if (pool) {
-		token = (char*)pj_pool_alloc(pool, end - start);
-		pj_ansi_strncpy(token, start, end - start);
-	    } else {
-		token = start;
-	    }
-	    if (*p == '=')
-		/* Got param name */
-		pj_strset(&fmtp->param[fmtp->cnt].name, token, end - start);
-	    else
-		/* Got param value */
-		pj_strset(&fmtp->param[fmtp->cnt++].val, token, end - start);
-	} else if (*p != '=') {
-	    ++fmtp->cnt;
-	}
+        /* Store token */
+        if (end > start) {
+            if (pool) {
+                token = (char*)pj_pool_alloc(pool, end - start);
+                pj_ansi_strncpy(token, start, end - start);
+            } else {
+                token = start;
+            }
+            if (*p == '=')
+                /* Got param name */
+                pj_strset(&fmtp->param[fmtp->cnt].name, token, end - start);
+            else
+                /* Got param value */
+                pj_strset(&fmtp->param[fmtp->cnt++].val, token, end - start);
+        } else if (*p != '=') {
+            ++fmtp->cnt;
+        }
 
-	/* Next */
-	++p;
+        /* Next */
+        ++p;
     }
 
     return PJ_SUCCESS;

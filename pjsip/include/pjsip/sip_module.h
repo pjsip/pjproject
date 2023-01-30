@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -84,8 +83,8 @@ struct pjsip_module
      * will be called by endpoint during module registration. If the value
      * is NULL, then it's equal to returning PJ_SUCCESS.
      *
-     * @param endpt	The endpoint instance.
-     * @return		Module should return PJ_SUCCESS to indicate success.
+     * @param endpt     The endpoint instance.
+     * @return          Module should return PJ_SUCCESS to indicate success.
      */
     pj_status_t (*load)(pjsip_endpoint *endpt);
 
@@ -94,7 +93,7 @@ struct pjsip_module
      * will be called by endpoint during module registration. If the value
      * is NULL, then it's equal to returning PJ_SUCCESS.
      *
-     * @return		Module should return zero to indicate success.
+     * @return          Module should return zero to indicate success.
      */
     pj_status_t (*start)(void);
 
@@ -104,7 +103,7 @@ struct pjsip_module
      * module unregistration. If the value is NULL, then it's equal to 
      * returning PJ_SUCCESS.
      *
-     * @return		Module should return PJ_SUCCESS to indicate success.
+     * @return          Module should return PJ_SUCCESS to indicate success.
      */
     pj_status_t (*stop)(void);
 
@@ -114,31 +113,31 @@ struct pjsip_module
      * module unregistration. If the value is NULL, then it's equal to 
      * returning PJ_SUCCESS.
      *
-     * @param mod	The module.
+     * @param mod       The module.
      *
-     * @return		Module should return PJ_SUCCESS to indicate success.
+     * @return          Module should return PJ_SUCCESS to indicate success.
      */
     pj_status_t (*unload)(void);
 
     /**
      * Optional function to be called to process incoming request message.
      *
-     * @param rdata	The incoming message.
+     * @param rdata     The incoming message.
      *
-     * @return		Module should return PJ_TRUE if it handles the request,
-     *			or otherwise it should return PJ_FALSE to allow other
-     *			modules to handle the request.
+     * @return          Module should return PJ_TRUE if it handles the request,
+     *                  or otherwise it should return PJ_FALSE to allow other
+     *                  modules to handle the request.
      */
     pj_bool_t (*on_rx_request)(pjsip_rx_data *rdata);
 
     /**
      * Optional function to be called to process incoming response message.
      *
-     * @param rdata	The incoming message.
+     * @param rdata     The incoming message.
      *
-     * @return		Module should return PJ_TRUE if it handles the 
-     *			response, or otherwise it should return PJ_FALSE to 
-     *			allow other modules to handle the response.
+     * @return          Module should return PJ_TRUE if it handles the 
+     *                  response, or otherwise it should return PJ_FALSE to 
+     *                  allow other modules to handle the response.
      */
     pj_bool_t (*on_rx_response)(pjsip_rx_data *rdata);
 
@@ -146,11 +145,11 @@ struct pjsip_module
      * Optional function to be called when transport layer is about to
      * transmit outgoing request message.
      *
-     * @param tdata	The outgoing request message.
+     * @param tdata     The outgoing request message.
      *
-     * @return		Module should return PJ_SUCCESS in all cases. 
-     *			If non-zero is returned, the message 
-     *			will not be sent.
+     * @return          Module should return PJ_SUCCESS in all cases. 
+     *                  If non-zero is returned, the message 
+     *                  will not be sent.
      */
     pj_status_t (*on_tx_request)(pjsip_tx_data *tdata);
 
@@ -158,11 +157,11 @@ struct pjsip_module
      * Optional function to be called when transport layer is about to
      * transmit outgoing response message.
      *
-     * @param tdata	The outgoing response message.
+     * @param tdata     The outgoing response message.
      *
-     * @return		Module should return PJ_SUCCESS in all cases. 
-     *			If non-zero is returned, the message 
-     *			will not be sent.
+     * @return          Module should return PJ_SUCCESS in all cases. 
+     *                  If non-zero is returned, the message 
+     *                  will not be sent.
      */
     pj_status_t (*on_tx_response)(pjsip_tx_data *tdata);
 
@@ -171,9 +170,9 @@ struct pjsip_module
      * transaction user for the specified transaction, when the 
      * transaction's state has changed.
      *
-     * @param tsx	The transaction.
-     * @param event	The event which has caused the transaction state
-     *			to change.
+     * @param tsx       The transaction.
+     * @param event     The event which has caused the transaction state
+     *                  to change.
      */
     void (*on_tsx_state)(pjsip_transaction *tsx, pjsip_event *event);
 
@@ -188,27 +187,27 @@ enum pjsip_module_priority
     /** 
      * This is the priority used by transport layer.
      */
-    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER	= 8,
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER  = 8,
 
     /**
      * This is the priority used by transaction layer.
      */
-    PJSIP_MOD_PRIORITY_TSX_LAYER	= 16,
+    PJSIP_MOD_PRIORITY_TSX_LAYER        = 16,
 
     /**
      * This is the priority used by the user agent and proxy layer.
      */
-    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER	= 32,
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER   = 32,
 
     /**
      * This is the priority used by the dialog usages.
      */
-    PJSIP_MOD_PRIORITY_DIALOG_USAGE	= 48,
+    PJSIP_MOD_PRIORITY_DIALOG_USAGE     = 48,
 
     /**
      * This is the recommended priority to be used by applications.
      */
-    PJSIP_MOD_PRIORITY_APPLICATION	= 64
+    PJSIP_MOD_PRIORITY_APPLICATION      = 64
 };
 
 
@@ -218,5 +217,5 @@ enum pjsip_module_priority
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_MODULE_H__ */
+#endif  /* __PJSIP_SIP_MODULE_H__ */
 

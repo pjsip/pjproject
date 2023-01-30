@@ -1,8 +1,7 @@
-# $Id$
 import inc_sip as sip
 import inc_sdp as sdp
 
-# Ticket http://trac.pjsip.org/repos/ticket/623, based on
+# Ticket https://github.com/pjsip/pjproject/issues/623, based on
 # http://lists.pjsip.org/pipermail/pjsip_lists.pjsip.org/2008-September/004709.html:
 #
 # Assertion when receiving SUBSCRIBE with non-presence Event.

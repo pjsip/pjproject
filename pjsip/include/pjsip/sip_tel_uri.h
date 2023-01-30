@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -42,21 +41,21 @@ PJ_BEGIN_DECL
  */
 typedef struct pjsip_tel_uri
 {
-    pjsip_uri_vptr *vptr;	/**< Pointer to virtual function table.	*/
-    pj_str_t	    number;	/**< Global or local phone number	*/
-    pj_str_t	    context;	/**< Phone context (for local number).	*/
-    pj_str_t	    ext_param;	/**< Extension param.			*/
-    pj_str_t	    isub_param;	/**< ISDN sub-address param.		*/
-    pjsip_param	    other_param;/**< Other parameter.			*/
+    pjsip_uri_vptr *vptr;       /**< Pointer to virtual function table. */
+    pj_str_t        number;     /**< Global or local phone number       */
+    pj_str_t        context;    /**< Phone context (for local number).  */
+    pj_str_t        ext_param;  /**< Extension param.                   */
+    pj_str_t        isub_param; /**< ISDN sub-address param.            */
+    pjsip_param     other_param;/**< Other parameter.                   */
 } pjsip_tel_uri;
 
 
 /**
  * Create a new tel: URI.
  *
- * @param pool	    The pool.
+ * @param pool      The pool.
  *
- * @return	    New instance of tel: URI.
+ * @return          New instance of tel: URI.
  */
 PJ_DECL(pjsip_tel_uri*) pjsip_tel_uri_create(pj_pool_t *pool);
 
@@ -64,11 +63,11 @@ PJ_DECL(pjsip_tel_uri*) pjsip_tel_uri_create(pj_pool_t *pool);
  * This function compares two numbers for equality, according to rules as
  * specified in RFC 3966.
  *
- * @param nb1	    The first number.
- * @param nb2	    The second number.
+ * @param nb1       The first number.
+ * @param nb2       The second number.
  *
- * @return	    Zero if equal, -1 if nb1 is less than nb2, or +1 if
- *		    nb1 is greater than nb2.
+ * @return          Zero if equal, -1 if nb1 is less than nb2, or +1 if
+ *                  nb1 is greater than nb2.
  */
 PJ_DECL(int) pjsip_tel_nb_cmp(const pj_str_t *nb1, const pj_str_t *nb2);
 
@@ -81,4 +80,4 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJSIP_TEL_URI_H__ */
+#endif  /* __PJSIP_TEL_URI_H__ */

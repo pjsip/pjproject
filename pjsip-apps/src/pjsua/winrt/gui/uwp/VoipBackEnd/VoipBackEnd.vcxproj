@@ -92,7 +92,7 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="..\..\..\..\..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
     <Import Project="..\..\..\..\..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
-  </ImportGroup>  
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Import Project="..\..\..\..\..\..\..\build\vs\pjproject-vs14-arm-common-defaults.props" />
     <Import Project="..\..\..\..\..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
@@ -104,7 +104,7 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="..\..\..\..\..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
     <Import Project="..\..\..\..\..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
-  </ImportGroup>  
+  </ImportGroup>
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
@@ -197,6 +197,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <AdditionalDependencies>kernel32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">

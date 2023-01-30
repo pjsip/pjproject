@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -50,22 +49,22 @@ typedef enum pjmedia_event_type
     /**
      * Media format has changed event.
      */
-    PJMEDIA_EVENT_FMT_CHANGED	= PJMEDIA_FOURCC('F', 'M', 'C', 'H'),
+    PJMEDIA_EVENT_FMT_CHANGED   = PJMEDIA_FOURCC('F', 'M', 'C', 'H'),
 
     /**
      * Video window is being closed.
      */
-    PJMEDIA_EVENT_WND_CLOSING	= PJMEDIA_FOURCC('W', 'N', 'C', 'L'),
+    PJMEDIA_EVENT_WND_CLOSING   = PJMEDIA_FOURCC('W', 'N', 'C', 'L'),
 
     /**
      * Video window has been closed event.
      */
-    PJMEDIA_EVENT_WND_CLOSED	= PJMEDIA_FOURCC('W', 'N', 'C', 'O'),
+    PJMEDIA_EVENT_WND_CLOSED    = PJMEDIA_FOURCC('W', 'N', 'C', 'O'),
 
     /**
      * Video window has been resized event.
      */
-    PJMEDIA_EVENT_WND_RESIZED	= PJMEDIA_FOURCC('W', 'N', 'R', 'Z'),
+    PJMEDIA_EVENT_WND_RESIZED   = PJMEDIA_FOURCC('W', 'N', 'R', 'Z'),
 
     /**
      * Mouse button has been pressed event.
@@ -121,10 +120,10 @@ typedef enum pjmedia_event_type
 typedef struct pjmedia_event_fmt_changed_data
 {
     /** The media flow direction */
-    pjmedia_dir		dir;
+    pjmedia_dir         dir;
 
     /** The new media format. */
-    pjmedia_format	new_fmt;
+    pjmedia_format      new_fmt;
 } pjmedia_event_fmt_changed_data;
 
 /**
@@ -133,7 +132,7 @@ typedef struct pjmedia_event_fmt_changed_data
 typedef struct pjmedia_event_dummy_data
 {
     /** Dummy data */
-    int			dummy;
+    int                 dummy;
 } pjmedia_event_dummy_data;
 
 /**
@@ -145,7 +144,7 @@ typedef struct pjmedia_event_wnd_resized_data
     /**
      * The new window size.
      */
-    pjmedia_rect_size	new_size;
+    pjmedia_rect_size   new_size;
 } pjmedia_event_wnd_resized_data;
 
 /**
@@ -154,7 +153,7 @@ typedef struct pjmedia_event_wnd_resized_data
 typedef struct pjmedia_event_wnd_closing_data
 {
     /** Consumer may set this field to PJ_TRUE to cancel the closing */
-    pj_bool_t		cancel;
+    pj_bool_t           cancel;
 } pjmedia_event_wnd_closing_data;
 
 /**
@@ -163,13 +162,13 @@ typedef struct pjmedia_event_wnd_closing_data
 typedef struct pjmedia_event_aud_dev_err_data
 {
     /** The media direction that fails */
-    pjmedia_dir		     dir;
+    pjmedia_dir              dir;
 
     /** The audio device ID */
     pjmedia_aud_dev_index    id;
 
     /** The error code */
-    pj_status_t		     status;
+    pj_status_t              status;
 
 } pjmedia_event_aud_dev_err_data;
 
@@ -179,13 +178,13 @@ typedef struct pjmedia_event_aud_dev_err_data
 typedef struct pjmedia_event_vid_dev_err_data
 {
     /** The media direction that fails */
-    pjmedia_dir		     dir;
+    pjmedia_dir              dir;
 
     /** The video device ID */
     pjmedia_vid_dev_index    id;
 
     /** The error code */
-    pj_status_t		     status;
+    pj_status_t              status;
 
 } pjmedia_event_vid_dev_err_data;
 
@@ -194,17 +193,17 @@ typedef struct pjmedia_event_vid_dev_err_data
  */
 typedef struct pjmedia_event_media_tp_err_data
 {
-    /** The media type		*/
-    pjmedia_type	    type;
+    /** The media type          */
+    pjmedia_type            type;
 
-    /** RTP/RTCP?		*/
-    pj_bool_t		    is_rtp;
+    /** RTP/RTCP?               */
+    pj_bool_t               is_rtp;
 
-    /** Media direction		*/
-    pjmedia_dir		    dir;
+    /** Media direction         */
+    pjmedia_dir             dir;
 
-    /** The error code		*/
-    pj_status_t		    status;
+    /** The error code          */
+    pj_status_t             status;
 
 } pjmedia_event_media_tp_err_data;
 
@@ -224,7 +223,7 @@ typedef pjmedia_event_dummy_data pjmedia_event_keyframe_missing_data;
 /**
  * Maximum size of additional parameters section in pjmedia_event structure
  */
-#define PJMEDIA_EVENT_DATA_MAX_SIZE	sizeof(pjmedia_event_fmt_changed_data)
+#define PJMEDIA_EVENT_DATA_MAX_SIZE     sizeof(pjmedia_event_fmt_changed_data)
 
 /** Type of storage to hold user data in pjmedia_event structure */
 typedef char pjmedia_event_user_data[PJMEDIA_EVENT_DATA_MAX_SIZE];
@@ -240,12 +239,12 @@ typedef struct pjmedia_event
     /**
      * The event type.
      */
-    pjmedia_event_type			 type;
+    pjmedia_event_type                   type;
 
     /**
      * The media timestamp when the event occurs.
      */
-    pj_timestamp		 	 timestamp;
+    pj_timestamp                         timestamp;
 
     /**
      * Pointer information about the source of this event. This field
@@ -254,7 +253,7 @@ typedef struct pjmedia_event
      * pointer for other purpose may require special care such as mutex
      * locking or checking whether the object is already destroyed.
      */
-    const void	                        *src;
+    const void                          *src;
 
     /**
      * Pointer information about the publisher of this event. This field
@@ -263,64 +262,64 @@ typedef struct pjmedia_event
      * pointer for other purpose may require special care such as mutex
      * locking or checking whether the object is already destroyed.
      */
-    const void	                        *epub;
+    const void                          *epub;
 
     /**
      * Additional data/parameters about the event. The type of data
      * will be specific to the event type being reported.
      */
     union {
-	/** Media format changed event data. */
-	pjmedia_event_fmt_changed_data		fmt_changed;
+        /** Media format changed event data. */
+        pjmedia_event_fmt_changed_data          fmt_changed;
 
-	/** Window resized event data */
-	pjmedia_event_wnd_resized_data		wnd_resized;
+        /** Window resized event data */
+        pjmedia_event_wnd_resized_data          wnd_resized;
 
-	/** Window closing event data. */
-	pjmedia_event_wnd_closing_data		wnd_closing;
+        /** Window closing event data. */
+        pjmedia_event_wnd_closing_data          wnd_closing;
 
-	/** Window closed event data */
-	pjmedia_event_wnd_closed_data		wnd_closed;
+        /** Window closed event data */
+        pjmedia_event_wnd_closed_data           wnd_closed;
 
-	/** Mouse button down event data */
-	pjmedia_event_mouse_btn_down_data	mouse_btn_down;
+        /** Mouse button down event data */
+        pjmedia_event_mouse_btn_down_data       mouse_btn_down;
 
-	/** Keyframe found event data */
-	pjmedia_event_keyframe_found_data	keyframe_found;
+        /** Keyframe found event data */
+        pjmedia_event_keyframe_found_data       keyframe_found;
 
-	/** Keyframe missing event data */
-	pjmedia_event_keyframe_missing_data	keyframe_missing;
+        /** Keyframe missing event data */
+        pjmedia_event_keyframe_missing_data     keyframe_missing;
 
-	/** Audio device error event data */
-	pjmedia_event_aud_dev_err_data		aud_dev_err;
+        /** Audio device error event data */
+        pjmedia_event_aud_dev_err_data          aud_dev_err;
 
-	/** Video device error event data */
-	pjmedia_event_vid_dev_err_data		vid_dev_err;
+        /** Video device error event data */
+        pjmedia_event_vid_dev_err_data          vid_dev_err;
 
-	/** Storage for user event data */
-	pjmedia_event_user_data			user;
+        /** Storage for user event data */
+        pjmedia_event_user_data                 user;
 
-	/** Media transport error event data */
-	pjmedia_event_media_tp_err_data		med_tp_err;
+        /** Media transport error event data */
+        pjmedia_event_media_tp_err_data         med_tp_err;
 
-	/** Receiving RTCP-FB event data */
-	pjmedia_event_rx_rtcp_fb_data		rx_rtcp_fb;
+        /** Receiving RTCP-FB event data */
+        pjmedia_event_rx_rtcp_fb_data           rx_rtcp_fb;
 
-	/** Pointer to storage to user event data, if it's outside
-	 * this struct
-	 */
-	void					*ptr;
+        /** Pointer to storage to user event data, if it's outside
+         * this struct
+         */
+        void                                    *ptr;
     } data;
 } pjmedia_event;
 
 /**
  * The callback to receive media events.
  *
- * @param event		The media event.
- * @param user_data	The user data associated with the callback.
+ * @param event         The media event.
+ * @param user_data     The user data associated with the callback.
  *
- * @return		If the callback returns non-PJ_SUCCESS, this return
- * 			code may be propagated back to the caller.
+ * @return              If the callback returns non-PJ_SUCCESS, this return
+ *                      code may be propagated back to the caller.
  */
 typedef pj_status_t pjmedia_event_cb(pjmedia_event *event,
                                      void *user_data);
@@ -369,21 +368,21 @@ typedef struct pjmedia_event_mgr pjmedia_event_mgr;
  * Create a new event manager instance. This will also set the pointer
  * to the singleton instance if the value is still NULL.
  *
- * @param pool		Pool to allocate memory from.
+ * @param pool          Pool to allocate memory from.
  * @param options       Options. Bitmask flags from #pjmedia_event_mgr_flag
- * @param mgr		Pointer to hold the created instance of the
- * 			event manager.
+ * @param mgr           Pointer to hold the created instance of the
+ *                      event manager.
  *
- * @return		PJ_SUCCESS on success or the appropriate error code.
+ * @return              PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
                                               unsigned options,
-				              pjmedia_event_mgr **mgr);
+                                              pjmedia_event_mgr **mgr);
 
 /**
  * Get the singleton instance of the event manager.
  *
- * @return		The instance.
+ * @return              The instance.
  */
 PJ_DECL(pjmedia_event_mgr*) pjmedia_event_mgr_instance(void);
 
@@ -393,9 +392,9 @@ PJ_DECL(pjmedia_event_mgr*) pjmedia_event_mgr_instance(void);
  * going to be created, as the library automatically assign the singleton
  * instance.
  *
- * @param mgr		The instance to be used as the singleton instance.
- * 			Application may specify NULL to clear the singleton
- * 			singleton instance.
+ * @param mgr           The instance to be used as the singleton instance.
+ *                      Application may specify NULL to clear the singleton
+ *                      singleton instance.
  */
 PJ_DECL(void) pjmedia_event_mgr_set_instance(pjmedia_event_mgr *mgr);
 
@@ -403,19 +402,19 @@ PJ_DECL(void) pjmedia_event_mgr_set_instance(pjmedia_event_mgr *mgr);
  * Destroy an event manager. If the manager happens to be the singleton
  * instance, the singleton instance will be set to NULL.
  *
- * @param mgr		The eventmanager. Specify NULL to use
- * 			the singleton instance.
+ * @param mgr           The eventmanager. Specify NULL to use
+ *                      the singleton instance.
  */
 PJ_DECL(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr);
 
 /**
  * Initialize event structure with basic data about the event.
  *
- * @param event		The event to be initialized.
- * @param type		The event type to be set for this event.
- * @param ts		Event timestamp. May be set to NULL to set the event
- * 			timestamp to zero.
- * @param src		Event source.
+ * @param event         The event to be initialized.
+ * @param type          The event type to be set for this event.
+ * @param ts            Event timestamp. May be set to NULL to set the event
+ *                      timestamp to zero.
+ * @param src           Event source.
  */
 PJ_DECL(void) pjmedia_event_init(pjmedia_event *event,
                                  pjmedia_event_type type,
@@ -429,13 +428,13 @@ PJ_DECL(void) pjmedia_event_init(pjmedia_event *event,
  * publishers contained by the publisher, if the publisher is republishing
  * events from other publishers.
  *
- * @param mgr		The event manager.
+ * @param mgr           The event manager.
  * @param cb            The callback function to receive the event.
  * @param user_data     The user data to be associated with the callback
  *                      function.
- * @param epub		The event publisher.
+ * @param epub          The event publisher.
  *
- * @return		PJ_SUCCESS on success or the appropriate error code.
+ * @return              PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_event_subscribe(pjmedia_event_mgr *mgr,
                                              pjmedia_event_cb *cb,
@@ -448,13 +447,13 @@ PJ_DECL(pj_status_t) pjmedia_event_subscribe(pjmedia_event_mgr *mgr,
  * unsubscription for all user data. If the publisher, epub, is not
  * specified, this function will do the unsubscription from all publishers.
  *
- * @param mgr		The event manager.
+ * @param mgr           The event manager.
  * @param cb            The callback function.
  * @param user_data     The user data associated with the callback
  *                      function, can be NULL.
- * @param epub		The event publisher, can be NULL.
+ * @param epub          The event publisher, can be NULL.
  *
- * @return		PJ_SUCCESS on success or the appropriate error code.
+ * @return              PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t)
 pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
@@ -470,13 +469,13 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
  * to the event manager and return immediately. It is the event manager
  * that will later notify all the publisher's subscribers.
  *
- * @param mgr		The event manager.
- * @param epub		The event publisher.
- * @param event		The event to be published.
+ * @param mgr           The event manager.
+ * @param epub          The event publisher.
+ * @param event         The event to be published.
  * @param flag          Publication flag.
  *
- * @return		PJ_SUCCESS only if all subscription callbacks returned
- * 			PJ_SUCCESS.
+ * @return              PJ_SUCCESS only if all subscription callbacks returned
+ *                      PJ_SUCCESS.
  */
 PJ_DECL(pj_status_t) pjmedia_event_publish(pjmedia_event_mgr *mgr,
                                            void *epub,
@@ -491,4 +490,4 @@ PJ_DECL(pj_status_t) pjmedia_event_publish(pjmedia_event_mgr *mgr,
 
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_EVENT_H__ */
+#endif  /* __PJMEDIA_EVENT_H__ */

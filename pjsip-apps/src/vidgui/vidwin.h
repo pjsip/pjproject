@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -29,8 +28,8 @@ class VidWin : public QWidget
 
 public:
     VidWin(const pjmedia_vid_dev_hwnd *hwnd,
-	   QWidget* parent = 0,
-	   Qt::WindowFlags f = 0);
+           QWidget* parent = 0,
+           Qt::WindowFlags f = 0);
     virtual ~VidWin();
     QSize sizeHint() const { return size_hint; }
 

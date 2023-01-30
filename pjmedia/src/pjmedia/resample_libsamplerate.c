@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -39,56 +38,56 @@
 
 #if defined(_MSC_VER)
 #   ifdef _DEBUG
-#	pragma comment( lib, "../../third_party/lib/libsamplerate-i386-win32-vc-debug.lib")
+#       pragma comment( lib, "../../third_party/lib/libsamplerate-i386-win32-vc-debug.lib")
 #   else
-#	pragma comment( lib, "../../third_party/lib/libsamplerate-i386-win32-vc-release.lib")
+#       pragma comment( lib, "../../third_party/lib/libsamplerate-i386-win32-vc-release.lib")
 #   endif
 #endif
 
 
 struct pjmedia_resample
 {
-    SRC_STATE	*state;
-    unsigned	 in_samples;
-    unsigned	 out_samples;
-    float	*frame_in, *frame_out;
-    unsigned	 in_extra, out_extra;
-    double	 ratio;
+    SRC_STATE   *state;
+    unsigned     in_samples;
+    unsigned     out_samples;
+    float       *frame_in, *frame_out;
+    unsigned     in_extra, out_extra;
+    double       ratio;
 };
 
 
 PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
-					     pj_bool_t high_quality,
-					     pj_bool_t large_filter,
-					     unsigned channel_count,
-					     unsigned rate_in,
-					     unsigned rate_out,
-					     unsigned samples_per_frame,
-					     pjmedia_resample **p_resample)
+                                             pj_bool_t high_quality,
+                                             pj_bool_t large_filter,
+                                             unsigned channel_count,
+                                             unsigned rate_in,
+                                             unsigned rate_out,
+                                             unsigned samples_per_frame,
+                                             pjmedia_resample **p_resample)
 {
     pjmedia_resample *resample;
     int type, err, i=0;
     enum { MAX_KICKOFF = 10 };
 
     PJ_ASSERT_RETURN(pool && p_resample && rate_in &&
-		     rate_out && samples_per_frame, PJ_EINVAL);
+                     rate_out && samples_per_frame, PJ_EINVAL);
 
     resample = PJ_POOL_ZALLOC_T(pool, pjmedia_resample);
     PJ_ASSERT_RETURN(resample, PJ_ENOMEM);
 
     /* Select conversion type */
     if (high_quality) {
-	type = large_filter ? SRC_SINC_BEST_QUALITY : SRC_SINC_MEDIUM_QUALITY;
+        type = large_filter ? SRC_SINC_BEST_QUALITY : SRC_SINC_MEDIUM_QUALITY;
     } else {
-	type = large_filter ? SRC_SINC_FASTEST : SRC_LINEAR;
+        type = large_filter ? SRC_SINC_FASTEST : SRC_LINEAR;
     }
 
     /* Create converter */
     resample->state = src_new(type, channel_count, &err);
     if (resample->state == NULL) {
-	PJ_LOG(4,(THIS_FILE, "Error creating resample: %s", 
-		  src_strerror(err)));
-	return PJMEDIA_ERROR;
+        PJ_LOG(4,(THIS_FILE, "Error creating resample: %s", 
+                  src_strerror(err)));
+        return PJMEDIA_ERROR;
     }
 
     /* Calculate ratio */
@@ -99,21 +98,21 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     resample->out_samples = rate_out / (rate_in / samples_per_frame);
 
     resample->frame_in = (float*) 
-			 pj_pool_calloc(pool, 
-					resample->in_samples + 8, 
-					sizeof(float));
+                         pj_pool_calloc(pool, 
+                                        resample->in_samples + 8, 
+                                        sizeof(float));
 
     resample->frame_out = (float*) 
-			  pj_pool_calloc(pool, 
-					 resample->out_samples + 8, 
-					 sizeof(float));
+                          pj_pool_calloc(pool, 
+                                         resample->out_samples + 8, 
+                                         sizeof(float));
 
     /* Set the converter ratio */
     err = src_set_ratio(resample->state, resample->ratio);
     if (err != 0) {
-	PJ_LOG(4,(THIS_FILE, "Error creating resample: %s", 
-		  src_strerror(err)));
-	return PJMEDIA_ERROR;
+        PJ_LOG(4,(THIS_FILE, "Error creating resample: %s", 
+                  src_strerror(err)));
+        return PJMEDIA_ERROR;
     }
 
     /* Kick off. Some initial processes may return samples less than
@@ -123,31 +122,31 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
      * audio frames, until full frame is returned, to avoid that.
      */
     while (++i <= MAX_KICKOFF) {
-	SRC_DATA src_data;
-	pj_bzero(&src_data, sizeof(src_data));
-	src_data.data_in = resample->frame_in;
-	src_data.data_out = resample->frame_out;
-	src_data.input_frames = resample->in_samples;
-	src_data.output_frames = resample->out_samples;
-	src_data.src_ratio = resample->ratio;
-	src_process(resample->state, &src_data);
-	if (src_data.output_frames_gen == (int)resample->out_samples)
-	    break;
+        SRC_DATA src_data;
+        pj_bzero(&src_data, sizeof(src_data));
+        src_data.data_in = resample->frame_in;
+        src_data.data_out = resample->frame_out;
+        src_data.input_frames = resample->in_samples;
+        src_data.output_frames = resample->out_samples;
+        src_data.src_ratio = resample->ratio;
+        src_process(resample->state, &src_data);
+        if (src_data.output_frames_gen == (int)resample->out_samples)
+            break;
 
-	PJ_LOG(5,(THIS_FILE,
-	       "Resample kickoff #%d: output_frames_gen=%d (expected=%d)%s",
-	       i, src_data.output_frames_gen, resample->out_samples,
-	       (i==MAX_KICKOFF?", warning: kickoff failed!":"")));
+        PJ_LOG(5,(THIS_FILE,
+               "Resample kickoff #%d: output_frames_gen=%d (expected=%d)%s",
+               i, src_data.output_frames_gen, resample->out_samples,
+               (i==MAX_KICKOFF?", warning: kickoff failed!":"")));
     }
 
     /* Done */
 
     PJ_LOG(5,(THIS_FILE, 
-	      "Resample using libsamplerate %s, type=%s (%s), "
-	      "ch=%d, in/out rate=%d/%d", 
-	      src_get_version(),
-	      src_get_name(type), src_get_description(type),
-	      channel_count, rate_in, rate_out));
+              "Resample using libsamplerate %s, type=%s (%s), "
+              "ch=%d, in/out rate=%d/%d", 
+              src_get_version(),
+              src_get_name(type), src_get_description(type),
+              channel_count, rate_in, rate_out));
 
     *p_resample = resample;
 
@@ -156,21 +155,21 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
 
 PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
-				   const pj_int16_t *input,
-				   pj_int16_t *output )
+                                   const pj_int16_t *input,
+                                   pj_int16_t *output )
 {
     SRC_DATA src_data;
 
     /* Convert samples to float */
     src_short_to_float_array(input, resample->frame_in, 
-			     resample->in_samples);
+                             resample->in_samples);
 
     if (resample->in_extra) {
-	unsigned i;
+        unsigned i;
 
-	for (i=0; i<resample->in_extra; ++i)
-	    resample->frame_in[resample->in_samples+i] =
-		resample->frame_in[resample->in_samples-1];
+        for (i=0; i<resample->in_extra; ++i)
+            resample->frame_in[resample->in_samples+i] =
+                resample->frame_in[resample->in_samples-1];
     }
 
     /* Prepare SRC_DATA */
@@ -186,22 +185,22 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 
     /* Convert output back to short */
     src_float_to_short_array(resample->frame_out, output,
-			     src_data.output_frames_gen);
+                             src_data.output_frames_gen);
 
     /* Replay last sample if conversion couldn't fill up the whole 
      * frame. This could happen for example with 22050 to 16000 conversion.
      */
     if (src_data.output_frames_gen < (int)resample->out_samples) {
-	unsigned i;
+        unsigned i;
 
-	if (resample->in_extra < 4)
-	    resample->in_extra++;
+        if (resample->in_extra < 4)
+            resample->in_extra++;
 
-	for (i=src_data.output_frames_gen; 
-	     i<resample->out_samples; ++i)
-	{
-	    output[i] = output[src_data.output_frames_gen-1];
-	}
+        for (i=src_data.output_frames_gen; 
+             i<resample->out_samples; ++i)
+        {
+            output[i] = output[src_data.output_frames_gen-1];
+        }
     }
 }
 
@@ -217,10 +216,10 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
 {
     PJ_ASSERT_ON_FAIL(resample, return);
     if (resample->state) {
-	src_delete(resample->state);
-	resample->state = NULL;
+        src_delete(resample->state);
+        resample->state = NULL;
 
-	PJ_LOG(5,(THIS_FILE, "Resample destroyed"));
+        PJ_LOG(5,(THIS_FILE, "Resample destroyed"));
     }
 }
 
@@ -228,5 +227,5 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
 
 int pjmedia_libsamplerate_excluded;
 
-#endif	/* PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_LIBSAMPLERATE */
+#endif  /* PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_LIBSAMPLERATE */
 

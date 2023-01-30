@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -26,9 +25,9 @@ static int endianness_test32(void)
 {
     union t
     {
-	pj_uint32_t u32;
-	pj_uint16_t u16[2];
-	pj_uint8_t u8[4];
+        pj_uint32_t u32;
+        pj_uint16_t u16[2];
+        pj_uint8_t u8[4];
     } t;
 
     PJ_LOG(3,("", " Testing endianness.."));
@@ -43,40 +42,40 @@ static int endianness_test32(void)
 #  endif
 
     if ((t.u16[0] & 0xFFFF) != 0x3344 ||
-	(t.u16[1] & 0xFFFF) != 0x1122)
+        (t.u16[1] & 0xFFFF) != 0x1122)
     {
-	PJ_LOG(3,("", "   Error: wrong 16bit values 0x%x and 0x%x",
-		      (t.u16[0] & 0xFFFF), (t.u16[1] & 0xFFFF)));
-	return 10;
+        PJ_LOG(3,("", "   Error: wrong 16bit values 0x%x and 0x%x",
+                      (t.u16[0] & 0xFFFF), (t.u16[1] & 0xFFFF)));
+        return 10;
     }
 
     if ((t.u8[0] & 0xFF) != 0x44 ||
-	(t.u8[1] & 0xFF) != 0x33 ||
-	(t.u8[2] & 0xFF) != 0x22 ||
-	(t.u8[3] & 0xFF) != 0x11)
+        (t.u8[1] & 0xFF) != 0x33 ||
+        (t.u8[2] & 0xFF) != 0x22 ||
+        (t.u8[3] & 0xFF) != 0x11)
     {
-	PJ_LOG(3,("", "   Error: wrong 8bit values"));
-	return 12;
+        PJ_LOG(3,("", "   Error: wrong 8bit values"));
+        return 12;
     }
 
 #elif defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN
     PJ_LOG(3,("", "   Library is set to big endian"));
 
     if ((t.u16[0] & 0xFFFF) != 0x1122 ||
-	(t.u16[1] & 0xFFFF) != 0x3344)
+        (t.u16[1] & 0xFFFF) != 0x3344)
     {
-	PJ_LOG(3,("", "   Error: wrong 16bit values 0x%x and 0x%x",
-		      (t.u16[0] & 0xFFFF), (t.u16[1] & 0xFFFF)));
-	return 20;
+        PJ_LOG(3,("", "   Error: wrong 16bit values 0x%x and 0x%x",
+                      (t.u16[0] & 0xFFFF), (t.u16[1] & 0xFFFF)));
+        return 20;
     }
 
     if ((t.u8[0] & 0xFF) != 0x11 ||
-	(t.u8[1] & 0xFF) != 0x22 ||
-	(t.u8[2] & 0xFF) != 0x33 ||
-	(t.u8[3] & 0xFF) != 0x44)
+        (t.u8[1] & 0xFF) != 0x22 ||
+        (t.u8[2] & 0xFF) != 0x33 ||
+        (t.u8[3] & 0xFF) != 0x44)
     {
-	PJ_LOG(3,("", "   Error: wrong 8bit values"));
-	return 22;
+        PJ_LOG(3,("", "   Error: wrong 8bit values"));
+        return 22;
     }
 
 #  if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -36,7 +35,7 @@ typedef struct pjmedia_vid_dev_factory_op
     /**
      * Initialize the video device factory.
      *
-     * @param f		The video device factory.
+     * @param f         The video device factory.
      */
     pj_status_t (*init)(pjmedia_vid_dev_factory *f);
 
@@ -44,57 +43,57 @@ typedef struct pjmedia_vid_dev_factory_op
      * Close this video device factory and release all resources back to the
      * operating system.
      *
-     * @param f		The video device factory.
+     * @param f         The video device factory.
      */
     pj_status_t (*destroy)(pjmedia_vid_dev_factory *f);
 
     /**
      * Get the number of video devices installed in the system.
      *
-     * @param f		The video device factory.
+     * @param f         The video device factory.
      */
     unsigned (*get_dev_count)(pjmedia_vid_dev_factory *f);
 
     /**
      * Get the video device information and capabilities.
      *
-     * @param f		The video device factory.
-     * @param index	Device index.
-     * @param info	The video device information structure which will be
-     *			initialized by this function once it returns 
-     *			successfully.
+     * @param f         The video device factory.
+     * @param index     Device index.
+     * @param info      The video device information structure which will be
+     *                  initialized by this function once it returns 
+     *                  successfully.
      */
-    pj_status_t	(*get_dev_info)(pjmedia_vid_dev_factory *f, 
-				unsigned index,
-				pjmedia_vid_dev_info *info);
+    pj_status_t (*get_dev_info)(pjmedia_vid_dev_factory *f, 
+                                unsigned index,
+                                pjmedia_vid_dev_info *info);
 
     /**
      * Initialize the specified video device parameter with the default
      * values for the specified device.
      *
-     * @param f		The video device factory.
-     * @param index	Device index.
-     * @param param	The video device parameter.
+     * @param f         The video device factory.
+     * @param index     Device index.
+     * @param param     The video device parameter.
      */
     pj_status_t (*default_param)(pj_pool_t *pool,
                                  pjmedia_vid_dev_factory *f,
-				 unsigned index,
-				 pjmedia_vid_dev_param *param);
+                                 unsigned index,
+                                 pjmedia_vid_dev_param *param);
 
     /**
      * Open the video device and create video stream. See
      * #pjmedia_vid_dev_stream_create()
      */
     pj_status_t (*create_stream)(pjmedia_vid_dev_factory *f,
-				 pjmedia_vid_dev_param *param,
-				 const pjmedia_vid_dev_cb *cb,
-				 void *user_data,
-				 pjmedia_vid_dev_stream **p_vid_strm);
+                                 pjmedia_vid_dev_param *param,
+                                 const pjmedia_vid_dev_cb *cb,
+                                 void *user_data,
+                                 pjmedia_vid_dev_stream **p_vid_strm);
 
     /**
      * Refresh the list of video devices installed in the system.
      *
-     * @param f		The video device factory.
+     * @param f         The video device factory.
      */
     pj_status_t (*refresh)(pjmedia_vid_dev_factory *f);
 
@@ -108,8 +107,8 @@ struct pjmedia_vid_dev_factory
 {
     /** Internal data to be initialized by video subsystem. */
     struct {
-	/** Driver index */
-	unsigned drv_idx;
+        /** Driver index */
+        unsigned drv_idx;
     } sys;
 
     /** Operations */
@@ -126,21 +125,21 @@ typedef struct pjmedia_vid_dev_stream_op
      * See #pjmedia_vid_dev_stream_get_param()
      */
     pj_status_t (*get_param)(pjmedia_vid_dev_stream *strm,
-			     pjmedia_vid_dev_param *param);
+                             pjmedia_vid_dev_param *param);
 
     /**
      * See #pjmedia_vid_dev_stream_get_cap()
      */
     pj_status_t (*get_cap)(pjmedia_vid_dev_stream *strm,
-			   pjmedia_vid_dev_cap cap,
-			   void *value);
+                           pjmedia_vid_dev_cap cap,
+                           void *value);
 
     /**
      * See #pjmedia_vid_dev_stream_set_cap()
      */
     pj_status_t (*set_cap)(pjmedia_vid_dev_stream *strm,
-			   pjmedia_vid_dev_cap cap,
-			   const void *value);
+                           pjmedia_vid_dev_cap cap,
+                           const void *value);
 
     /**
      * See #pjmedia_vid_dev_stream_start()
@@ -179,11 +178,11 @@ struct pjmedia_vid_dev_stream
 {
     /** Internal data to be initialized by video subsystem */
     struct {
-	/** Driver index */
-	unsigned drv_idx;
+        /** Driver index */
+        unsigned drv_idx;
 
-	/** Has it been started? */
-	pj_bool_t is_running;
+        /** Has it been started? */
+        pj_bool_t is_running;
     } sys;
 
     /** Operations */
@@ -195,11 +194,11 @@ struct pjmedia_vid_dev_stream
  * Internal API: return the factory instance and device index that's local
  * to the factory for a given device ID.
  *
- * @param id		Device id.
- * @param p_f		Out: factory instance
+ * @param id            Device id.
+ * @param p_f           Out: factory instance
  * @param p_local_index Out: device index within the factory
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_vid_dev_get_local_index(pjmedia_vid_dev_index id,
@@ -210,11 +209,11 @@ pjmedia_vid_dev_get_local_index(pjmedia_vid_dev_index id,
  * Internal API: return the global device index given a factory instance and
  * a local device index.
  *
- * @param f		Factory.
- * @param local_idx	Local index.
- * @param pid		Returned global index.
+ * @param f             Factory.
+ * @param local_idx     Local index.
+ * @param pid           Returned global index.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DEF(pj_status_t)
 pjmedia_vid_dev_get_global_index(const pjmedia_vid_dev_factory *f,

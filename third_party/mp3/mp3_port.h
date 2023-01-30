@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
  *
@@ -63,7 +62,7 @@ typedef struct pjmedia_mp3_encoder_option
      *  would normally produce better quality at the expense of probably
      *  larger file.
      */
-    pj_bool_t	vbr;
+    pj_bool_t   vbr;
 
     /** Target bitrate, in bps. If VBR is enabled, this settings specifies 
      *  the  average bit-rate requested, and will make the encoder ignore 
@@ -71,12 +70,12 @@ typedef struct pjmedia_mp3_encoder_option
      *  and if this option is zero, it will be set to the sampling rate
      *  multiplied by number of channels.
      */
-    unsigned	bit_rate;
+    unsigned    bit_rate;
 
     /** Encoding quality, 0-9, with 0 is the highest quality. For VBR, the 
      *  quality setting will only take effect when bit_rate setting is zero.
      */
-    unsigned	quality;
+    unsigned    quality;
 
 } pjmedia_mp3_encoder_option;
 
@@ -91,26 +90,26 @@ typedef struct pjmedia_mp3_encoder_option
  * media port with #pjmedia_port_destroy() so that the MP3 file can be
  * closed properly.
  *
- * @param pool		    Pool to create memory buffers for this port.
- * @param filename	    File name.
- * @param clock_rate	    The sampling rate.
- * @param channel_count	    Number of channels.
+ * @param pool              Pool to create memory buffers for this port.
+ * @param filename          File name.
+ * @param clock_rate        The sampling rate.
+ * @param channel_count     Number of channels.
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample (eg 16).
- * @param option	    Optional option to set encoding parameters.
- * @param p_port	    Pointer to receive the file port instance.
+ * @param option            Optional option to set encoding parameters.
+ * @param p_port            Pointer to receive the file port instance.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_mp3_writer_port_create(pj_pool_t *pool,
-			       const char *filename,
-			       unsigned clock_rate,
-			       unsigned channel_count,
-			       unsigned samples_per_frame,
-			       unsigned bits_per_sample,
-			       const pjmedia_mp3_encoder_option *option,
-			       pjmedia_port **p_port );
+                               const char *filename,
+                               unsigned clock_rate,
+                               unsigned channel_count,
+                               unsigned samples_per_frame,
+                               unsigned bits_per_sample,
+                               const pjmedia_mp3_encoder_option *option,
+                               pjmedia_port **p_port );
 
 
 #if !DEPRECATED_FOR_TICKET_2251
@@ -119,23 +118,23 @@ pjmedia_mp3_writer_port_create(pj_pool_t *pool,
  * certain size. Application can use this callback, for example, to limit
  * the size of the output file.
  *
- * @param port		The file writer port.
- * @param pos		The file position on which the callback will be called.
- * @param user_data	User data to be specified in the callback, and will be
- *			given on the callback.
- * @param cb		Callback to be called. If the callback returns non-
- *			PJ_SUCCESS, the writing will stop. Note that if 
- *			application destroys the port in the callback, it must
- *			return non-PJ_SUCCESS here.
+ * @param port          The file writer port.
+ * @param pos           The file position on which the callback will be called.
+ * @param user_data     User data to be specified in the callback, and will be
+ *                      given on the callback.
+ * @param cb            Callback to be called. If the callback returns non-
+ *                      PJ_SUCCESS, the writing will stop. Note that if 
+ *                      application destroys the port in the callback, it must
+ *                      return non-PJ_SUCCESS here.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_mp3_writer_port_set_cb( pjmedia_port *port,
-				pj_size_t pos,
-				void *user_data,
-				pj_status_t (*cb)(pjmedia_port *port,
-						  void *usr_data));
+                                pj_size_t pos,
+                                void *user_data,
+                                pj_status_t (*cb)(pjmedia_port *port,
+                                                  void *usr_data));
 #endif
 
 
@@ -144,24 +143,24 @@ pjmedia_mp3_writer_port_set_cb( pjmedia_port *port,
  * certain size. Application can use this callback, for example, to limit
  * the size of the output file.
  *
- * @param port		The file writer port.
- * @param pos		The file position on which the callback will be called.
- * @param user_data	User data to be specified in the callback, and will be
- *			given on the callback.
- * @param cb		Callback to be called. Note that if
- *			application wishes to stop the playback, it
- *			can disconnect the port in the callback, and
- *			only after all connections have been removed
- *			could the application safely destroy the port.
+ * @param port          The file writer port.
+ * @param pos           The file position on which the callback will be called.
+ * @param user_data     User data to be specified in the callback, and will be
+ *                      given on the callback.
+ * @param cb            Callback to be called. Note that if
+ *                      application wishes to stop the playback, it
+ *                      can disconnect the port in the callback, and
+ *                      only after all connections have been removed
+ *                      could the application safely destroy the port.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_mp3_writer_port_set_cb2(pjmedia_port *port,
-				pj_size_t pos,
-				void *user_data,
-				void (*cb)(pjmedia_port *port,
-					   void *usr_data));
+                                pj_size_t pos,
+                                void *user_data,
+                                void (*cb)(pjmedia_port *port,
+                                           void *usr_data));
 
 
 /**
@@ -171,5 +170,5 @@ pjmedia_mp3_writer_port_set_cb2(pjmedia_port *port,
 
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_MP3_PORT_H__ */
+#endif  /* __PJMEDIA_MP3_PORT_H__ */
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -38,5 +37,5 @@
 #endif
 
 
-#endif	/* __PJ_COMPAT_TIME_H__ */
+#endif  /* __PJ_COMPAT_TIME_H__ */
 

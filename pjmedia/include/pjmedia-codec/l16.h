@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -37,15 +36,15 @@
  * L16 codec types to codec manager (different combinations of clock
  * rate and number of channels).
  *
- * \section codec_setting Codec Settings
+ * \section l16_codec_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection l16_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection l16_specific_setting Codec Specific Settings
  *
  * Currently none.
  */
@@ -56,26 +55,29 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register L16 codec factory to pjmedia endpoint.
  *
- * @param endpt	    The pjmedia endpoint.
+ * @param endpt     The pjmedia endpoint.
  * @param options   Must be zero for now.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_l16_init( pjmedia_endpt *endpt,
-					     unsigned options);
+                                             unsigned options);
 
 
 
 /**
  * Unregister L16 codec factory from pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_l16_deinit(void);
 
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
-#endif	/* __PJMEDIA_CODEC_L16_H__ */
+#endif  /* __PJMEDIA_CODEC_L16_H__ */
 

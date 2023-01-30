@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -120,12 +119,12 @@ PJ_BEGIN_DECL
     \code
      typedef enum pj_qos_type
      {
-	PJ_QOS_TYPE_BEST_EFFORT,
-	PJ_QOS_TYPE_BACKGROUND,	
-	PJ_QOS_TYPE_VIDEO,
-	PJ_QOS_TYPE_VOICE,
-	PJ_QOS_TYPE_CONTROL,
-	PJ_QOS_TYPE_SIGNALLING
+        PJ_QOS_TYPE_BEST_EFFORT,
+        PJ_QOS_TYPE_BACKGROUND, 
+        PJ_QOS_TYPE_VIDEO,
+        PJ_QOS_TYPE_VOICE,
+        PJ_QOS_TYPE_CONTROL,
+        PJ_QOS_TYPE_SIGNALLING
      } pj_qos_type;
     \endcode
 
@@ -135,14 +134,14 @@ PJ_BEGIN_DECL
 
     \code
     =================================================================
-    PJLIB Traffic Type 	IP DSCP 	WMM 		    802.1p
+    PJLIB Traffic Type  IP DSCP         WMM                 802.1p
     -----------------------------------------------------------------
-    BEST_EFFORT 	0x00 		BE (Bulk Effort) 	0
-    BACKGROUND 		0x08 		BK (Bulk) 		2
-    VIDEO 		0x28 		VI (Video) 		5
-    VOICE 		0x30 		VO (Voice) 		6
-    CONTROL 		0x38 		VO (Voice) 		7
-    SIGNALLING 		0x28 		VI (Video) 		5
+    BEST_EFFORT         0x00            BE (Bulk Effort)        0
+    BACKGROUND          0x08            BK (Bulk)               2
+    VIDEO               0x28            VI (Video)              5
+    VOICE               0x30            VO (Voice)              6
+    CONTROL             0x38            VO (Voice)              7
+    SIGNALLING          0x28            VI (Video)              5
     =================================================================
     \endcode
 
@@ -155,11 +154,11 @@ PJ_BEGIN_DECL
     \code
      // Set QoS parameters
      PJ_DECL(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
-					       pj_qos_type val);
+                                               pj_qos_type val);
 
      // Get QoS parameters
      PJ_DECL(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
-					       pj_qos_type *p_val);
+                                               pj_qos_type *p_val);
     \endcode
 
     The API will set the traffic type according to the DSCP class, for both 
@@ -180,26 +179,26 @@ PJ_BEGIN_DECL
     \code
      typedef enum pj_qos_flag
      {
-	PJ_QOS_PARAM_HAS_DSCP = 1,
-	PJ_QOS_PARAM_HAS_SO_PRIO = 2,
-	PJ_QOS_PARAM_HAS_WMM = 4
+        PJ_QOS_PARAM_HAS_DSCP = 1,
+        PJ_QOS_PARAM_HAS_SO_PRIO = 2,
+        PJ_QOS_PARAM_HAS_WMM = 4
      } pj_qos_flag;
 
      typedef enum pj_qos_wmm_prio
      {
-	PJ_QOS_WMM_PRIO_BULK_EFFORT,
-	PJ_QOS_WMM_PRIO_BULK,
-	PJ_QOS_WMM_PRIO_VIDEO,
-	PJ_QOS_WMM_PRIO_VOICE
+        PJ_QOS_WMM_PRIO_BULK_EFFORT,
+        PJ_QOS_WMM_PRIO_BULK,
+        PJ_QOS_WMM_PRIO_VIDEO,
+        PJ_QOS_WMM_PRIO_VOICE
      } pj_qos_wmm_prio;
 
      typedef struct pj_qos_params
      {
-	pj_uint8_t      flags;    // Determines which values to 
-				  // set, bitmask of pj_qos_flag
-	pj_uint8_t      dscp_val; // The 6 bits DSCP value to set
-	pj_uint8_t      so_prio;  // SO_PRIORITY value
-	pj_qos_wmm_prio wmm_prio; // WMM priority value
+        pj_uint8_t      flags;    // Determines which values to 
+                                  // set, bitmask of pj_qos_flag
+        pj_uint8_t      dscp_val; // The 6 bits DSCP value to set
+        pj_uint8_t      so_prio;  // SO_PRIORITY value
+        pj_qos_wmm_prio wmm_prio; // WMM priority value
      } pj_qos_params;
     \endcode
 
@@ -209,15 +208,15 @@ PJ_BEGIN_DECL
     \code
      // Retrieve QoS params for the specified traffic type
      PJ_DECL(pj_status_t) pj_qos_get_params(pj_qos_type type, 
-					    pj_qos_params *p);
+                                            pj_qos_params *p);
 
      // Set QoS parameters to the socket
      PJ_DECL(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
-						 const pj_qos_params *p);
+                                                 const pj_qos_params *p);
 
      // Get QoS parameters from the socket
      PJ_DECL(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
-						 pj_qos_params *p);
+                                                 pj_qos_params *p);
     \endcode
 
 
@@ -234,14 +233,14 @@ PJ_BEGIN_DECL
  */
 typedef enum pj_qos_type
 {
-    PJ_QOS_TYPE_BEST_EFFORT,	/**< Best effort traffic (default value).
-				     Any QoS function calls with specifying
-				     this value are effectively no-op	*/
-    PJ_QOS_TYPE_BACKGROUND,	/**< Background traffic.		*/    
-    PJ_QOS_TYPE_VIDEO,		/**< Video traffic.			*/
-    PJ_QOS_TYPE_VOICE,		/**< Voice traffic.			*/
-    PJ_QOS_TYPE_CONTROL,	/**< Control traffic.			*/
-    PJ_QOS_TYPE_SIGNALLING	/**< Signalling traffic.		*/
+    PJ_QOS_TYPE_BEST_EFFORT,    /**< Best effort traffic (default value).
+                                     Any QoS function calls with specifying
+                                     this value are effectively no-op   */
+    PJ_QOS_TYPE_BACKGROUND,     /**< Background traffic.                */    
+    PJ_QOS_TYPE_VIDEO,          /**< Video traffic.                     */
+    PJ_QOS_TYPE_VOICE,          /**< Voice traffic.                     */
+    PJ_QOS_TYPE_CONTROL,        /**< Control traffic.                   */
+    PJ_QOS_TYPE_SIGNALLING      /**< Signalling traffic.                */
 } pj_qos_type;
 
 /**
@@ -250,9 +249,9 @@ typedef enum pj_qos_type
  */
 typedef enum pj_qos_flag
 {
-    PJ_QOS_PARAM_HAS_DSCP = 1,	    /**< DSCP field is set.	    */
-    PJ_QOS_PARAM_HAS_SO_PRIO = 2,   /**< Socket SO_PRIORITY	    */
-    PJ_QOS_PARAM_HAS_WMM = 4	    /**< WMM  field is set. 	    */
+    PJ_QOS_PARAM_HAS_DSCP = 1,      /**< DSCP field is set.         */
+    PJ_QOS_PARAM_HAS_SO_PRIO = 2,   /**< Socket SO_PRIORITY         */
+    PJ_QOS_PARAM_HAS_WMM = 4        /**< WMM  field is set.         */
 } pj_qos_flag;
 
 
@@ -261,10 +260,10 @@ typedef enum pj_qos_flag
  */
 typedef enum pj_qos_wmm_prio
 {
-    PJ_QOS_WMM_PRIO_BULK_EFFORT,	/**< Bulk effort priority   */
-    PJ_QOS_WMM_PRIO_BULK,		/**< Bulk priority.	    */
-    PJ_QOS_WMM_PRIO_VIDEO,		/**< Video priority	    */
-    PJ_QOS_WMM_PRIO_VOICE		/**< Voice priority	    */
+    PJ_QOS_WMM_PRIO_BULK_EFFORT,        /**< Bulk effort priority   */
+    PJ_QOS_WMM_PRIO_BULK,               /**< Bulk priority.         */
+    PJ_QOS_WMM_PRIO_VIDEO,              /**< Video priority         */
+    PJ_QOS_WMM_PRIO_VOICE               /**< Voice priority         */
 } pj_qos_wmm_prio;
 
 
@@ -274,10 +273,10 @@ typedef enum pj_qos_wmm_prio
 typedef struct pj_qos_params
 {
     pj_uint8_t      flags;    /**< Determines which values to 
-				   set, bitmask of pj_qos_flag	    */
-    pj_uint8_t      dscp_val; /**< The 6 bits DSCP value to set	    */
-    pj_uint8_t      so_prio;  /**< SO_PRIORITY value		    */
-    pj_qos_wmm_prio wmm_prio; /**< WMM priority value		    */
+                                   set, bitmask of pj_qos_flag      */
+    pj_uint8_t      dscp_val; /**< The 6 bits DSCP value to set     */
+    pj_uint8_t      so_prio;  /**< SO_PRIORITY value                */
+    pj_qos_wmm_prio wmm_prio; /**< WMM priority value               */
 } pj_qos_params;
 
 
@@ -286,15 +285,15 @@ typedef struct pj_qos_params
  * This is the high level and portable API to enable QoS on the specified 
  * socket, by setting the traffic type to the specified parameter.
  *
- * @param sock	    The socket.
- * @param type	    Traffic type to be set.
+ * @param sock      The socket.
+ * @param type      Traffic type to be set.
  *
- * @return	    PJ_SUCCESS if at least Layer 2 or Layer 3 setting is
- *		    successfully set. If both Layer 2 and Layer 3 settings
- *		    can't be set, this function will return error.
+ * @return          PJ_SUCCESS if at least Layer 2 or Layer 3 setting is
+ *                  successfully set. If both Layer 2 and Layer 3 settings
+ *                  can't be set, this function will return error.
  */
 PJ_DECL(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
-					  pj_qos_type type);
+                                          pj_qos_type type);
 
 /**
  * This is the high level and portable API to get the traffic type that has
@@ -302,14 +301,14 @@ PJ_DECL(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
  * were modified by using low level API, this function may return approximation
  * of the closest QoS type that matches the settings.
  *
- * @param sock	    The socket.
+ * @param sock      The socket.
  * @param p_type    Pointer to receive the traffic type of the socket.
  *
- * @return	    PJ_SUCCESS if traffic type for the socket can be obtained
- *		    or approximated..
+ * @return          PJ_SUCCESS if traffic type for the socket can be obtained
+ *                  or approximated..
  */
 PJ_DECL(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
-					  pj_qos_type *p_type);
+                                          pj_qos_type *p_type);
 
 
 /**
@@ -317,31 +316,31 @@ PJ_DECL(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
  * logging if the operations failed. Both QoS traffic type and the low level
  * QoS parameters can be applied with this function.
  *
- * @param sock		The socket handle.
- * @param qos_type	QoS traffic type. The QoS traffic type will be applied
- *			only if the value is not PJ_QOS_TYPE_BEST_EFFORT,
- * @param qos_params	Optional low-level QoS parameters. This will be 
- *			applied only if this argument is not NULL and the 
- *			flags inside the structure is non-zero. Upon return, 
- *			the flags will indicate which parameters have been 
- *			applied successfully.
- * @param log_level	This function will print to log at this level upon
- *			encountering errors.
- * @param log_sender	Optional sender name in the log.
- * @param sock_name	Optional name to help identify the socket in the log.
+ * @param sock          The socket handle.
+ * @param qos_type      QoS traffic type. The QoS traffic type will be applied
+ *                      only if the value is not PJ_QOS_TYPE_BEST_EFFORT,
+ * @param qos_params    Optional low-level QoS parameters. This will be 
+ *                      applied only if this argument is not NULL and the 
+ *                      flags inside the structure is non-zero. Upon return, 
+ *                      the flags will indicate which parameters have been 
+ *                      applied successfully.
+ * @param log_level     This function will print to log at this level upon
+ *                      encountering errors.
+ * @param log_sender    Optional sender name in the log.
+ * @param sock_name     Optional name to help identify the socket in the log.
  *
- * @return		PJ_SUCCESS if at least Layer 2 or Layer 3 setting is
- *			successfully set. If both Layer 2 and Layer 3 settings
- *			can't be set, this function will return error.
+ * @return              PJ_SUCCESS if at least Layer 2 or Layer 3 setting is
+ *                      successfully set. If both Layer 2 and Layer 3 settings
+ *                      can't be set, this function will return error.
  *
  * @see pj_sock_apply_qos2()
  */
 PJ_DECL(pj_status_t) pj_sock_apply_qos(pj_sock_t sock,
-				       pj_qos_type qos_type,
-				       pj_qos_params *qos_params,
-				       unsigned log_level,
-				       const char *log_sender,
-				       const char *sock_name);
+                                       pj_qos_type qos_type,
+                                       pj_qos_params *qos_params,
+                                       unsigned log_level,
+                                       const char *log_sender,
+                                       const char *sock_name);
 
 /**
  * Variant of #pj_sock_apply_qos() where the \a qos_params parameter is
@@ -350,24 +349,24 @@ PJ_DECL(pj_status_t) pj_sock_apply_qos(pj_sock_t sock,
  * @see pj_sock_apply_qos()
  */
 PJ_DECL(pj_status_t) pj_sock_apply_qos2(pj_sock_t sock,
- 				        pj_qos_type qos_type,
-				        const pj_qos_params *qos_params,
-				        unsigned log_level,
-				        const char *log_sender,
-				        const char *sock_name);
+                                        pj_qos_type qos_type,
+                                        const pj_qos_params *qos_params,
+                                        unsigned log_level,
+                                        const char *log_sender,
+                                        const char *sock_name);
 
 /**
  * Retrieve the standard mapping of QoS params for the specified traffic
  * type.
  *
- * @param type	    The traffic type from which the QoS parameters
- *		    are to be retrieved.
+ * @param type      The traffic type from which the QoS parameters
+ *                  are to be retrieved.
  * @param p_param   Pointer to receive the QoS parameters.
  *
- * @return	    PJ_SUCCESS on success or the appropriate error code.
+ * @return          PJ_SUCCESS on success or the appropriate error code.
  */ 
 PJ_DECL(pj_status_t) pj_qos_get_params(pj_qos_type type, 
-				       pj_qos_params *p_param);
+                                       pj_qos_params *p_param);
 
 
 /**
@@ -376,47 +375,47 @@ PJ_DECL(pj_status_t) pj_qos_get_params(pj_qos_type type,
  * approximation of the closest matching traffic type for the specified
  * QoS parameters.
  *
- * @param param	    Structure containing QoS parameters to map into
- *		    "standard" traffic types.
+ * @param param     Structure containing QoS parameters to map into
+ *                  "standard" traffic types.
  * @param p_type    Pointer to receive the traffic type.
  *
- * @return	    PJ_SUCCESS on success or the appropriate error code.
+ * @return          PJ_SUCCESS on success or the appropriate error code.
  */ 
 PJ_DECL(pj_status_t) pj_qos_get_type(const pj_qos_params *param,
-				     pj_qos_type *p_type);
+                                     pj_qos_type *p_type);
 
 
 /**
  * This is a low level API to set QoS parameters to the socket.
  *
- * @param sock	    The socket.
- * @param param	    Structure containing QoS parameters to be applied
- *		    to the socket. Upon return, the \a flags field
- *		    of this structure will be set with bitmask value
- *		    indicating which QoS settings have successfully
- *		    been applied to the socket.
+ * @param sock      The socket.
+ * @param param     Structure containing QoS parameters to be applied
+ *                  to the socket. Upon return, the \a flags field
+ *                  of this structure will be set with bitmask value
+ *                  indicating which QoS settings have successfully
+ *                  been applied to the socket.
  *
- * @return	    PJ_SUCCESS if at least one field setting has been
- *		    successfully set. If no setting can't be set, 
- *		    this function will return error.
+ * @return          PJ_SUCCESS if at least one field setting has been
+ *                  successfully set. If no setting can't be set, 
+ *                  this function will return error.
  */ 
 PJ_DECL(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
-					    pj_qos_params *param);
+                                            pj_qos_params *param);
 
 /**
  * This is a low level API to get QoS parameters from the socket.
  *
- * @param sock	    The socket.
+ * @param sock      The socket.
  * @param p_param   Pointer to receive the parameters. Upon returning
- *		    successfully, the \a flags field of this structure
- *		    will be initialized with the appropriate bitmask
- *		    to indicate which fields have been successfully
- *		    retrieved.
+ *                  successfully, the \a flags field of this structure
+ *                  will be initialized with the appropriate bitmask
+ *                  to indicate which fields have been successfully
+ *                  retrieved.
  *
- * @return	    PJ_SUCCESS on success or the appropriate error code.
+ * @return          PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
-					    pj_qos_params *p_param);
+                                            pj_qos_params *p_param);
 
 
 /**
@@ -426,5 +425,5 @@ PJ_DECL(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
 
 PJ_END_DECL
 
-#endif	/* __PJ_SOCK_QOS_H__ */
+#endif  /* __PJ_SOCK_QOS_H__ */
 

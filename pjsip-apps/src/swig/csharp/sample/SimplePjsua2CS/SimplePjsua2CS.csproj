@@ -1,0 +1,362 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{3DCDD02D-C3CF-40EB-A66C-F7C2DAD93FD9}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>SimplePjsua2CS</RootNamespace>
+    <AssemblyName>SimplePjsua2CS</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="pjsua2">
+      <HintPath>..\..\output\pjsua2.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="PjSample.cs" />
+    <Compile Include="pjsua2\Account.cs" />
+    <Compile Include="pjsua2\AccountCallConfig.cs" />
+    <Compile Include="pjsua2\AccountConfig.cs" />
+    <Compile Include="pjsua2\AccountInfo.cs" />
+    <Compile Include="pjsua2\AccountIpChangeConfig.cs" />
+    <Compile Include="pjsua2\AccountMediaConfig.cs" />
+    <Compile Include="pjsua2\AccountMwiConfig.cs" />
+    <Compile Include="pjsua2\AccountNatConfig.cs" />
+    <Compile Include="pjsua2\AccountPresConfig.cs" />
+    <Compile Include="pjsua2\AccountRegConfig.cs" />
+    <Compile Include="pjsua2\AccountSipConfig.cs" />
+    <Compile Include="pjsua2\AccountVideoConfig.cs" />
+    <Compile Include="pjsua2\AudDevErrorEvent.cs" />
+    <Compile Include="pjsua2\AudDevManager.cs" />
+    <Compile Include="pjsua2\AudioDevInfo.cs" />
+    <Compile Include="pjsua2\AudioDevInfoVector.cs" />
+    <Compile Include="pjsua2\AudioDevInfoVector2.cs" />
+    <Compile Include="pjsua2\AudioMedia.cs" />
+    <Compile Include="pjsua2\AudioMediaPlayer.cs" />
+    <Compile Include="pjsua2\AudioMediaPlayerInfo.cs" />
+    <Compile Include="pjsua2\AudioMediaRecorder.cs" />
+    <Compile Include="pjsua2\AudioMediaTransmitParam.cs" />
+    <Compile Include="pjsua2\AudioMediaVector.cs" />
+    <Compile Include="pjsua2\AudioMediaVector2.cs" />
+    <Compile Include="pjsua2\AuthCredInfo.cs" />
+    <Compile Include="pjsua2\AuthCredInfoVector.cs" />
+    <Compile Include="pjsua2\Buddy.cs" />
+    <Compile Include="pjsua2\BuddyConfig.cs" />
+    <Compile Include="pjsua2\BuddyInfo.cs" />
+    <Compile Include="pjsua2\BuddyVector.cs" />
+    <Compile Include="pjsua2\BuddyVector2.cs" />
+    <Compile Include="pjsua2\Call.cs" />
+    <Compile Include="pjsua2\CallInfo.cs" />
+    <Compile Include="pjsua2\CallMediaInfo.cs" />
+    <Compile Include="pjsua2\CallMediaInfoVector.cs" />
+    <Compile Include="pjsua2\CallOpParam.cs" />
+    <Compile Include="pjsua2\CallSendDtmfParam.cs" />
+    <Compile Include="pjsua2\CallSendRequestParam.cs" />
+    <Compile Include="pjsua2\CallSetting.cs" />
+    <Compile Include="pjsua2\CallVidSetStreamParam.cs" />
+    <Compile Include="pjsua2\CodecFmtp.cs" />
+    <Compile Include="pjsua2\CodecFmtpVector.cs" />
+    <Compile Include="pjsua2\CodecInfo.cs" />
+    <Compile Include="pjsua2\CodecInfoVector.cs" />
+    <Compile Include="pjsua2\CodecInfoVector2.cs" />
+    <Compile Include="pjsua2\CodecOpusConfig.cs" />
+    <Compile Include="pjsua2\CodecParam.cs" />
+    <Compile Include="pjsua2\CodecParamInfo.cs" />
+    <Compile Include="pjsua2\CodecParamSetting.cs" />
+    <Compile Include="pjsua2\ConfPortInfo.cs" />
+    <Compile Include="pjsua2\ContainerNode.cs" />
+    <Compile Include="pjsua2\DigestChallenge.cs" />
+    <Compile Include="pjsua2\DigestCredential.cs" />
+    <Compile Include="pjsua2\Endpoint.cs" />
+    <Compile Include="pjsua2\EpConfig.cs" />
+    <Compile Include="pjsua2\Error.cs" />
+    <Compile Include="pjsua2\ExtraAudioDevice.cs" />
+    <Compile Include="pjsua2\FindBuddyMatch.cs" />
+    <Compile Include="pjsua2\IntVector.cs" />
+    <Compile Include="pjsua2\IpChangeParam.cs" />
+    <Compile Include="pjsua2\JbufState.cs" />
+    <Compile Include="pjsua2\JsonDocument.cs" />
+    <Compile Include="pjsua2\LogConfig.cs" />
+    <Compile Include="pjsua2\LogEntry.cs" />
+    <Compile Include="pjsua2\LogWriter.cs" />
+    <Compile Include="pjsua2\LossType.cs" />
+    <Compile Include="pjsua2\MathStat.cs" />
+    <Compile Include="pjsua2\Media.cs" />
+    <Compile Include="pjsua2\MediaConfig.cs" />
+    <Compile Include="pjsua2\MediaCoordinate.cs" />
+    <Compile Include="pjsua2\MediaEvent.cs" />
+    <Compile Include="pjsua2\MediaEventData.cs" />
+    <Compile Include="pjsua2\MediaFmtChangedEvent.cs" />
+    <Compile Include="pjsua2\MediaFormat.cs" />
+    <Compile Include="pjsua2\MediaFormatAudio.cs" />
+    <Compile Include="pjsua2\MediaFormatAudioVector.cs" />
+    <Compile Include="pjsua2\MediaFormatVideo.cs" />
+    <Compile Include="pjsua2\MediaFormatVideoVector.cs" />
+    <Compile Include="pjsua2\MediaSize.cs" />
+    <Compile Include="pjsua2\MediaTransportInfo.cs" />
+    <Compile Include="pjsua2\OnBuddyEvSubStateParam.cs" />
+    <Compile Include="pjsua2\OnCallMediaEventParam.cs" />
+    <Compile Include="pjsua2\OnCallMediaStateParam.cs" />
+    <Compile Include="pjsua2\OnCallMediaTransportStateParam.cs" />
+    <Compile Include="pjsua2\OnCallRedirectedParam.cs" />
+    <Compile Include="pjsua2\OnCallReplacedParam.cs" />
+    <Compile Include="pjsua2\OnCallReplaceRequestParam.cs" />
+    <Compile Include="pjsua2\OnCallRxOfferParam.cs" />
+    <Compile Include="pjsua2\OnCallRxReinviteParam.cs" />
+    <Compile Include="pjsua2\OnCallSdpCreatedParam.cs" />
+    <Compile Include="pjsua2\OnCallStateParam.cs" />
+    <Compile Include="pjsua2\OnCallTransferRequestParam.cs" />
+    <Compile Include="pjsua2\OnCallTransferStatusParam.cs" />
+    <Compile Include="pjsua2\OnCallTsxStateParam.cs" />
+    <Compile Include="pjsua2\OnCallTxOfferParam.cs" />
+    <Compile Include="pjsua2\OnCreateMediaTransportParam.cs" />
+    <Compile Include="pjsua2\OnCreateMediaTransportSrtpParam.cs" />
+    <Compile Include="pjsua2\OnCredAuthParam.cs" />
+    <Compile Include="pjsua2\OnDtmfDigitParam.cs" />
+    <Compile Include="pjsua2\OnDtmfEventParam.cs" />
+    <Compile Include="pjsua2\OnIncomingCallParam.cs" />
+    <Compile Include="pjsua2\OnIncomingSubscribeParam.cs" />
+    <Compile Include="pjsua2\OnInstantMessageParam.cs" />
+    <Compile Include="pjsua2\OnInstantMessageStatusParam.cs" />
+    <Compile Include="pjsua2\OnIpChangeProgressParam.cs" />
+    <Compile Include="pjsua2\OnMediaEventParam.cs" />
+    <Compile Include="pjsua2\OnMwiInfoParam.cs" />
+    <Compile Include="pjsua2\OnNatCheckStunServersCompleteParam.cs" />
+    <Compile Include="pjsua2\OnNatDetectionCompleteParam.cs" />
+    <Compile Include="pjsua2\OnRegStartedParam.cs" />
+    <Compile Include="pjsua2\OnRegStateParam.cs" />
+    <Compile Include="pjsua2\OnSelectAccountParam.cs" />
+    <Compile Include="pjsua2\OnStreamCreatedParam.cs" />
+    <Compile Include="pjsua2\OnStreamDestroyedParam.cs" />
+    <Compile Include="pjsua2\OnStreamPreCreateParam.cs" />
+    <Compile Include="pjsua2\OnTimerParam.cs" />
+    <Compile Include="pjsua2\OnTransportStateParam.cs" />
+    <Compile Include="pjsua2\OnTypingIndicationParam.cs" />
+    <Compile Include="pjsua2\PendingJob.cs" />
+    <Compile Include="pjsua2\PersistentDocument.cs" />
+    <Compile Include="pjsua2\PersistentObject.cs" />
+    <Compile Include="pjsua2\pjmedia_aud_dev_cap.cs" />
+    <Compile Include="pjsua2\pjmedia_aud_dev_route.cs" />
+    <Compile Include="pjsua2\pjmedia_dir.cs" />
+    <Compile Include="pjsua2\pjmedia_echo_flag.cs" />
+    <Compile Include="pjsua2\pjmedia_event_type.cs" />
+    <Compile Include="pjsua2\pjmedia_file_player_option.cs" />
+    <Compile Include="pjsua2\pjmedia_file_writer_option.cs" />
+    <Compile Include="pjsua2\pjmedia_format_id.cs" />
+    <Compile Include="pjsua2\pjmedia_orient.cs" />
+    <Compile Include="pjsua2\pjmedia_rtcp_fb_type.cs" />
+    <Compile Include="pjsua2\pjmedia_srtp_crypto_option.cs" />
+    <Compile Include="pjsua2\pjmedia_srtp_keying_method.cs" />
+    <Compile Include="pjsua2\pjmedia_srtp_use.cs" />
+    <Compile Include="pjsua2\pjmedia_tone_desc.cs" />
+    <Compile Include="pjsua2\pjmedia_tone_digit.cs" />
+    <Compile Include="pjsua2\pjmedia_tone_digit_map.cs" />
+    <Compile Include="pjsua2\pjmedia_tp_proto.cs" />
+    <Compile Include="pjsua2\pjmedia_type.cs" />
+    <Compile Include="pjsua2\pjmedia_vid_dev_cap.cs" />
+    <Compile Include="pjsua2\pjmedia_vid_dev_fullscreen_flag.cs" />
+    <Compile Include="pjsua2\pjmedia_vid_dev_std_index.cs" />
+    <Compile Include="pjsua2\pjmedia_vid_packing.cs" />
+    <Compile Include="pjsua2\pjmedia_vid_stream_rc_method.cs" />
+    <Compile Include="pjsua2\pjrpid_activity.cs" />
+    <Compile Include="pjsua2\pjsip_cred_data_type.cs" />
+    <Compile Include="pjsua2\pjsip_dialog_cap_status.cs" />
+    <Compile Include="pjsua2\pjsip_event_id_e.cs" />
+    <Compile Include="pjsua2\pjsip_evsub_state.cs" />
+    <Compile Include="pjsua2\pjsip_hdr_e.cs" />
+    <Compile Include="pjsua2\pjsip_inv_state.cs" />
+    <Compile Include="pjsua2\pjsip_redirect_op.cs" />
+    <Compile Include="pjsua2\pjsip_role_e.cs" />
+    <Compile Include="pjsua2\pjsip_ssl_method.cs" />
+    <Compile Include="pjsua2\pjsip_status_code.cs" />
+    <Compile Include="pjsua2\pjsip_transport_flags_e.cs" />
+    <Compile Include="pjsua2\pjsip_transport_state.cs" />
+    <Compile Include="pjsua2\pjsip_transport_type_e.cs" />
+    <Compile Include="pjsua2\pjsip_tsx_state_e.cs" />
+    <Compile Include="pjsua2\pjsua2.cs" />
+    <Compile Include="pjsua2\pjsua2PINVOKE.cs" />
+    <Compile Include="pjsua2\pjsua_100rel_use.cs" />
+    <Compile Include="pjsua2\pjsua_buddy_status.cs" />
+    <Compile Include="pjsua2\pjsua_call_flag.cs" />
+    <Compile Include="pjsua2\pjsua_call_hold_type.cs" />
+    <Compile Include="pjsua2\pjsua_call_media_status.cs" />
+    <Compile Include="pjsua2\pjsua_call_vid_strm_op.cs" />
+    <Compile Include="pjsua2\pjsua_create_media_transport_flag.cs" />
+    <Compile Include="pjsua2\pjsua_destroy_flag.cs" />
+    <Compile Include="pjsua2\pjsua_dtmf_method.cs" />
+    <Compile Include="pjsua2\pjsua_invalid_id_const_.cs" />
+    <Compile Include="pjsua2\pjsua_ipv6_use.cs" />
+    <Compile Include="pjsua2\pjsua_ip_change_op.cs" />
+    <Compile Include="pjsua2\pjsua_med_tp_st.cs" />
+    <Compile Include="pjsua2\pjsua_nat64_opt.cs" />
+    <Compile Include="pjsua2\pjsua_sip_timer_use.cs" />
+    <Compile Include="pjsua2\pjsua_snd_dev_id.cs" />
+    <Compile Include="pjsua2\pjsua_snd_dev_mode.cs" />
+    <Compile Include="pjsua2\pjsua_state.cs" />
+    <Compile Include="pjsua2\pjsua_stun_use.cs" />
+    <Compile Include="pjsua2\pjsua_upnp_use.cs" />
+    <Compile Include="pjsua2\pjsua_vid_req_keyframe_method.cs" />
+    <Compile Include="pjsua2\pj_constants_.cs" />
+    <Compile Include="pjsua2\pj_file_access.cs" />
+    <Compile Include="pjsua2\pj_ice_sess_trickle.cs" />
+    <Compile Include="pjsua2\pj_log_decoration.cs" />
+    <Compile Include="pjsua2\pj_qos_flag.cs" />
+    <Compile Include="pjsua2\pj_qos_params.cs" />
+    <Compile Include="pjsua2\pj_qos_type.cs" />
+    <Compile Include="pjsua2\pj_qos_wmm_prio.cs" />
+    <Compile Include="pjsua2\pj_ssl_cert_name_type.cs" />
+    <Compile Include="pjsua2\pj_ssl_cert_verify_flag_t.cs" />
+    <Compile Include="pjsua2\pj_ssl_cipher.cs" />
+    <Compile Include="pjsua2\pj_ssl_sock_proto.cs" />
+    <Compile Include="pjsua2\pj_stun_nat_type.cs" />
+    <Compile Include="pjsua2\pj_turn_tp_type.cs" />
+    <Compile Include="pjsua2\PresenceStatus.cs" />
+    <Compile Include="pjsua2\PresNotifyParam.cs" />
+    <Compile Include="pjsua2\RegProgressParam.cs" />
+    <Compile Include="pjsua2\RtcpFbCap.cs" />
+    <Compile Include="pjsua2\RtcpFbCapVector.cs" />
+    <Compile Include="pjsua2\RtcpFbConfig.cs" />
+    <Compile Include="pjsua2\RtcpSdes.cs" />
+    <Compile Include="pjsua2\RtcpStat.cs" />
+    <Compile Include="pjsua2\RtcpStreamStat.cs" />
+    <Compile Include="pjsua2\RxMsgEvent.cs" />
+    <Compile Include="pjsua2\SdpSession.cs" />
+    <Compile Include="pjsua2\SendInstantMessageParam.cs" />
+    <Compile Include="pjsua2\SendTypingIndicationParam.cs" />
+    <Compile Include="pjsua2\SipEvent.cs" />
+    <Compile Include="pjsua2\SipEventBody.cs" />
+    <Compile Include="pjsua2\SipHeader.cs" />
+    <Compile Include="pjsua2\SipHeaderVector.cs" />
+    <Compile Include="pjsua2\SipMediaType.cs" />
+    <Compile Include="pjsua2\SipMultipartPart.cs" />
+    <Compile Include="pjsua2\SipMultipartPartVector.cs" />
+    <Compile Include="pjsua2\SipRxData.cs" />
+    <Compile Include="pjsua2\SipTransaction.cs" />
+    <Compile Include="pjsua2\SipTxData.cs" />
+    <Compile Include="pjsua2\SipTxOption.cs" />
+    <Compile Include="pjsua2\SrtpCrypto.cs" />
+    <Compile Include="pjsua2\SrtpCryptoVector.cs" />
+    <Compile Include="pjsua2\SrtpOpt.cs" />
+    <Compile Include="pjsua2\SslCertInfo.cs" />
+    <Compile Include="pjsua2\SslCertName.cs" />
+    <Compile Include="pjsua2\SslCertNameVector.cs" />
+    <Compile Include="pjsua2\StreamInfo.cs" />
+    <Compile Include="pjsua2\StreamStat.cs" />
+    <Compile Include="pjsua2\StringToStringMap.cs" />
+    <Compile Include="pjsua2\StringVector.cs" />
+    <Compile Include="pjsua2\SWIGTYPE_p_pjmedia_jb_discard_algo.cs" />
+    <Compile Include="pjsua2\SWIGTYPE_p_pjmedia_vid_dev_hwnd_type.cs" />
+    <Compile Include="pjsua2\SWIGTYPE_p_p_void.cs" />
+    <Compile Include="pjsua2\SWIGTYPE_p_unsigned_char.cs" />
+    <Compile Include="pjsua2\SWIGTYPE_p_void.cs" />
+    <Compile Include="pjsua2\TimerEvent.cs" />
+    <Compile Include="pjsua2\TimeVal.cs" />
+    <Compile Include="pjsua2\TlsConfig.cs" />
+    <Compile Include="pjsua2\TlsInfo.cs" />
+    <Compile Include="pjsua2\ToneDesc.cs" />
+    <Compile Include="pjsua2\ToneDescVector.cs" />
+    <Compile Include="pjsua2\ToneDigit.cs" />
+    <Compile Include="pjsua2\ToneDigitMapDigit.cs" />
+    <Compile Include="pjsua2\ToneDigitMapVector.cs" />
+    <Compile Include="pjsua2\ToneDigitVector.cs" />
+    <Compile Include="pjsua2\ToneGenerator.cs" />
+    <Compile Include="pjsua2\TransportConfig.cs" />
+    <Compile Include="pjsua2\TransportInfo.cs" />
+    <Compile Include="pjsua2\TsxStateEvent.cs" />
+    <Compile Include="pjsua2\TsxStateEventSrc.cs" />
+    <Compile Include="pjsua2\TxErrorEvent.cs" />
+    <Compile Include="pjsua2\TxMsgEvent.cs" />
+    <Compile Include="pjsua2\UaConfig.cs" />
+    <Compile Include="pjsua2\UserEvent.cs" />
+    <Compile Include="pjsua2\Version.cs" />
+    <Compile Include="pjsua2\VidCodecParam.cs" />
+    <Compile Include="pjsua2\VidConfPortInfo.cs" />
+    <Compile Include="pjsua2\VidDevManager.cs" />
+    <Compile Include="pjsua2\VideoDevInfo.cs" />
+    <Compile Include="pjsua2\VideoDevInfoVector.cs" />
+    <Compile Include="pjsua2\VideoDevInfoVector2.cs" />
+    <Compile Include="pjsua2\VideoMedia.cs" />
+    <Compile Include="pjsua2\VideoMediaTransmitParam.cs" />
+    <Compile Include="pjsua2\VideoMediaVector.cs" />
+    <Compile Include="pjsua2\VideoPreview.cs" />
+    <Compile Include="pjsua2\VideoPreviewOpParam.cs" />
+    <Compile Include="pjsua2\VideoSwitchParam.cs" />
+    <Compile Include="pjsua2\VideoWindow.cs" />
+    <Compile Include="pjsua2\VideoWindowHandle.cs" />
+    <Compile Include="pjsua2\VideoWindowInfo.cs" />
+    <Compile Include="pjsua2\WindowHandle.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
