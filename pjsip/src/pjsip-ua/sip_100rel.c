@@ -483,12 +483,6 @@ PJ_DEF(pj_status_t) pjsip_100rel_on_rx_prack( pjsip_inv_session *inv,
         return PJSIP_ENOTINITIALIZED;
     }
 
-    /* Always reply with 200/OK for PRACK */
-    status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
-    if (status == PJ_SUCCESS) {
-        status = pjsip_dlg_send_response(inv->dlg, tsx, tdata);
-    }
-
     /* Ignore if we don't have pending transmission */
     if (dd->uas_state == NULL || pj_list_empty(&dd->uas_state->tx_data_list)) {
         PJ_LOG(4,(dd->inv->dlg->obj_name, 
