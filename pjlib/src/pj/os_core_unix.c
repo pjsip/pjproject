@@ -150,7 +150,7 @@ struct pj_event_t
 static int initialized;
 
 #if PJ_HAS_THREADS
-    static pj_thread_desc main_thread;
+    static pj_thread_desc main_thread_desc;
     static long thread_tls_id;
     static pj_mutex_t critical_section;
 #else
@@ -277,7 +277,7 @@ PJ_DEF(void) pj_shutdown()
     }
 
     /* Ticket #1132: Assertion when (re)starting PJLIB on different thread */
-    pj_bzero(&main_thread, sizeof(main_thread));
+    pj_bzero(main_thread_desc, sizeof(pj_thread_desc));
 #endif
 
     /* Clear static variables */
@@ -611,7 +611,7 @@ pj_status_t pj_thread_init(void)
     if (rc != PJ_SUCCESS) {
         return rc;
     }
-    return pj_thread_register("thr%p", (long*)&main_thread, &dummy);
+    return pj_thread_register("thr%p", main_thread_desc, &dummy);
 #else
     PJ_LOG(2,(THIS_FILE, "Thread init error. Threading is not enabled!"));
     return PJ_EINVALIDOP;
