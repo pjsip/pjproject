@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -18,7 +17,7 @@
  */
 @interface ipjsystestAppDelegate : NSObject <UIApplicationDelegate> {
     
-    UIWindow		    *window;
+    UIWindow                *window;
     UINavigationController  *navigationController;
 }
 

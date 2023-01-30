@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,7 +34,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup s2_audio_device_reference Audio Device API Reference
+ * @defgroup PJMEDIA_AUDIODEV_API Audio Device API Reference
  * @ingroup audio_device_api
  * @brief Documentation and API Reference
  * @{
@@ -77,10 +76,10 @@ typedef pj_int32_t pjmedia_aud_dev_index;
 /**
  * Constant to denote invalid device index.
  */
-#define PJMEDIA_AUD_INVALID_DEV	    -3
+#define PJMEDIA_AUD_INVALID_DEV     -3
 
-#define PJMEDIA_AUD_MAX_DRIVERS	16
-#define PJMEDIA_AUD_MAX_DEVS	64
+#define PJMEDIA_AUD_MAX_DRIVERS 16
+#define PJMEDIA_AUD_MAX_DEVS    64
 
 
 /** Forward declaration for pjmedia_aud_stream */
@@ -98,27 +97,27 @@ typedef pjmedia_aud_dev_factory*
 typedef struct pjmedia_aud_driver
 {
     pjmedia_aud_dev_factory_create_func_ptr create; /* Creation function    */
-    pjmedia_aud_dev_factory *f;		  /* Factory instance		    */
-    char		     name[32];	  /* Driver name		    */
-    unsigned		     dev_cnt;	  /* Number of devices		    */
-    unsigned		     start_idx;	  /* Start index in global list	    */
-    int			     rec_dev_idx; /* Default capture device.	    */
-    int			     play_dev_idx;/* Default playback device	    */
-    int			     dev_idx;	  /* Default device.		    */
+    pjmedia_aud_dev_factory *f;           /* Factory instance               */
+    char                     name[32];    /* Driver name                    */
+    unsigned                 dev_cnt;     /* Number of devices              */
+    unsigned                 start_idx;   /* Start index in global list     */
+    int                      rec_dev_idx; /* Default capture device.        */
+    int                      play_dev_idx;/* Default playback device        */
+    int                      dev_idx;     /* Default device.                */
 } pjmedia_aud_driver;
 
 
 /* Audio subsystem structure */
 typedef struct pjmedia_aud_subsys
 {
-    unsigned	     	init_count;	/* How many times init() is called  */
-    pj_pool_factory    *pf;		/* The pool factory.		    */
+    unsigned            init_count;     /* How many times init() is called  */
+    pj_pool_factory    *pf;             /* The pool factory.                */
 
-    unsigned	     	drv_cnt;	/* Number of drivers.		    */
+    unsigned            drv_cnt;        /* Number of drivers.               */
     pjmedia_aud_driver  drv[PJMEDIA_AUD_MAX_DRIVERS];/* Array of drivers.   */
 
-    unsigned	     	dev_cnt;	/* Total number of devices.	    */
-    pj_uint32_t	     	dev_list[PJMEDIA_AUD_MAX_DEVS];/* Array of dev IDs. */
+    unsigned            dev_cnt;        /* Total number of devices.         */
+    pj_uint32_t         dev_list[PJMEDIA_AUD_MAX_DEVS];/* Array of dev IDs. */
 
 } pjmedia_aud_subsys;
 
@@ -280,7 +279,7 @@ typedef enum pjmedia_aud_dev_route
      *   // 6 is VOICE_RECOGNITION
      *   unsigned aud_source = PJMEDIA_AUD_DEV_ROUTE_CUSTOM | 6;
      *   pjmedia_aud_param_set_cap(&param, PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE,
-     *				   &aud_source);
+     *                             &aud_source);
      */
     PJMEDIA_AUD_DEV_ROUTE_CUSTOM = 128
 
@@ -354,33 +353,33 @@ typedef struct pjmedia_aud_dev_info
  * buffer with audio samples.
  *
  * The frame argument contains the following values:
- *  - timestamp	    Playback timestamp, in samples.
- *  - buf	    Buffer to be filled out by application.
- *  - size	    The size requested in bytes, which will be equal to
- *		    the size of one whole packet.
+ *  - timestamp     Playback timestamp, in samples.
+ *  - buf           Buffer to be filled out by application.
+ *  - size          The size requested in bytes, which will be equal to
+ *                  the size of one whole packet.
  *
  * @param user_data User data associated with the stream.
- * @param frame	    Audio frame, which buffer is to be filled in by
- *		    the application.
+ * @param frame     Audio frame, which buffer is to be filled in by
+ *                  the application.
  *
- * @return	    Returning non-PJ_SUCCESS will cause the audio stream
- *		    to stop
+ * @return          Returning non-PJ_SUCCESS will cause the audio stream
+ *                  to stop
  */
 typedef pj_status_t (*pjmedia_aud_play_cb)(void *user_data,
-					   pjmedia_frame *frame);
+                                           pjmedia_frame *frame);
 
 /**
  * This callback is called by recorder stream when it has captured the whole
  * packet worth of audio samples.
  *
  * @param user_data User data associated with the stream.
- * @param frame	    Captured frame.
+ * @param frame     Captured frame.
  *
- * @return	    Returning non-PJ_SUCCESS will cause the audio stream
- *		    to stop
+ * @return          Returning non-PJ_SUCCESS will cause the audio stream
+ *                  to stop
  */
 typedef pj_status_t (*pjmedia_aud_rec_cb)(void *user_data,
-					  pjmedia_frame *frame);
+                                          pjmedia_frame *frame);
 
 /**
  * This structure specifies the parameters to open the audio stream.
@@ -513,26 +512,26 @@ typedef struct pjmedia_aud_param
 /**
  * Get the audio subsystem.
  *
- * @return		The audio subsystem.
+ * @return              The audio subsystem.
  */
 PJ_DECL(pjmedia_aud_subsys*) pjmedia_get_aud_subsys(void);
 
 /**
  * Initialize the audio driver.
  *
- * @param drv_idx	The index of the audio driver.
- * @param refresh	Specify non-zero to refresh the audio driver.
+ * @param drv_idx       The index of the audio driver.
+ * @param refresh       Specify non-zero to refresh the audio driver.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_driver_init(unsigned drv_idx,
-					     pj_bool_t refresh);
+                                             pj_bool_t refresh);
 
 /**
  * Deinitialize the audio driver.
  *
- * @param drv_idx	The index of the audio driver.
+ * @param drv_idx       The index of the audio driver.
  */
 PJ_DECL(void) pjmedia_aud_driver_deinit(unsigned drv_idx);
 
@@ -540,31 +539,31 @@ PJ_DECL(void) pjmedia_aud_driver_deinit(unsigned drv_idx);
 /**
  * Get string info for the specified capability.
  *
- * @param cap		The capability ID.
- * @param p_desc	Optional pointer which will be filled with longer 
- *			description about the capability.
+ * @param cap           The capability ID.
+ * @param p_desc        Optional pointer which will be filled with longer 
+ *                      description about the capability.
  *
- * @return		Capability name.
+ * @return              Capability name.
  */
 PJ_DECL(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
-					      const char **p_desc);
+                                              const char **p_desc);
 
 
 /**
  * Set a capability field value in #pjmedia_aud_param structure. This will
  * also set the flags field for the specified capability in the structure.
  *
- * @param param		The structure.
- * @param cap		The audio capability which value is to be set.
- * @param pval		Pointer to value. Please see the type of value to
- *			be supplied in the pjmedia_aud_dev_cap documentation.
+ * @param param         The structure.
+ * @param cap           The audio capability which value is to be set.
+ * @param pval          Pointer to value. Please see the type of value to
+ *                      be supplied in the pjmedia_aud_dev_cap documentation.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_param_set_cap(pjmedia_aud_param *param,
-					       pjmedia_aud_dev_cap cap,
-					       const void *pval);
+                                               pjmedia_aud_dev_cap cap,
+                                               const void *pval);
 
 
 /**
@@ -572,17 +571,17 @@ PJ_DECL(pj_status_t) pjmedia_aud_param_set_cap(pjmedia_aud_param *param,
  * function will return PJMEDIA_EAUD_INVCAP error if the flag for that
  * capability is not set in the flags field in the structure.
  *
- * @param param		The structure.
- * @param cap		The audio capability which value is to be retrieved.
- * @param pval		Pointer to value. Please see the type of value to
- *			be supplied in the pjmedia_aud_dev_cap documentation.
+ * @param param         The structure.
+ * @param cap           The audio capability which value is to be retrieved.
+ * @param pval          Pointer to value. Please see the type of value to
+ *                      be supplied in the pjmedia_aud_dev_cap documentation.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_param_get_cap(const pjmedia_aud_param *param,
-					       pjmedia_aud_dev_cap cap,
-					       void *pval);
+                                               pjmedia_aud_dev_cap cap,
+                                               void *pval);
 
 
 /**
@@ -593,8 +592,8 @@ PJ_DECL(pj_status_t) pjmedia_aud_param_get_cap(const pjmedia_aud_param *param,
  * pjmedia_aud_dev_index) before calling any function that accepts audio device
  * index as its parameter.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_dev_refresh(void);
 
@@ -602,7 +601,7 @@ PJ_DECL(pj_status_t) pjmedia_aud_dev_refresh(void);
 /**
  * Get the number of sound devices installed in the system.
  *
- * @return		The number of sound devices installed in the system.
+ * @return              The number of sound devices installed in the system.
  */
 PJ_DECL(unsigned) pjmedia_aud_dev_count(void);
 
@@ -610,138 +609,138 @@ PJ_DECL(unsigned) pjmedia_aud_dev_count(void);
 /**
  * Get device information.
  *
- * @param id		The audio device ID.
- * @param info		The device information which will be filled in by this
- *			function once it returns successfully.
+ * @param id            The audio device ID.
+ * @param info          The device information which will be filled in by this
+ *                      function once it returns successfully.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_index id,
-					      pjmedia_aud_dev_info *info);
+                                              pjmedia_aud_dev_info *info);
 
 
 /**
  * Lookup device index based on the driver and device name.
  *
- * @param drv_name	The driver name.
- * @param dev_name	The device name.
- * @param id		Pointer to store the returned device ID.
+ * @param drv_name      The driver name.
+ * @param dev_name      The device name.
+ * @param id            Pointer to store the returned device ID.
  *
- * @return		PJ_SUCCESS if the device can be found.
+ * @return              PJ_SUCCESS if the device can be found.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_dev_lookup(const char *drv_name,
-					    const char *dev_name,
-					    pjmedia_aud_dev_index *id);
+                                            const char *dev_name,
+                                            pjmedia_aud_dev_index *id);
 
 
 /**
  * Initialize the audio device parameters with default values for the
  * specified device.
  *
- * @param id		The audio device ID.
- * @param param		The audio device parameters which will be initialized
- *			by this function once it returns successfully.
+ * @param id            The audio device ID.
+ * @param param         The audio device parameters which will be initialized
+ *                      by this function once it returns successfully.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_dev_default_param(pjmedia_aud_dev_index id,
-						   pjmedia_aud_param *param);
+                                                   pjmedia_aud_param *param);
 
 
 /**
  * Open audio stream object using the specified parameters.
  *
- * @param param		Sound device parameters to be used for the stream.
- * @param rec_cb	Callback to be called on every input frame captured.
- * @param play_cb	Callback to be called everytime the sound device needs
- *			audio frames to be played back.
- * @param user_data	Arbitrary user data, which will be given back in the
- *			callbacks.
- * @param p_strm	Pointer to receive the audio stream.
+ * @param param         Sound device parameters to be used for the stream.
+ * @param rec_cb        Callback to be called on every input frame captured.
+ * @param play_cb       Callback to be called everytime the sound device needs
+ *                      audio frames to be played back.
+ * @param user_data     Arbitrary user data, which will be given back in the
+ *                      callbacks.
+ * @param p_strm        Pointer to receive the audio stream.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *param,
-					       pjmedia_aud_rec_cb rec_cb,
-					       pjmedia_aud_play_cb play_cb,
-					       void *user_data,
-					       pjmedia_aud_stream **p_strm);
+                                               pjmedia_aud_rec_cb rec_cb,
+                                               pjmedia_aud_play_cb play_cb,
+                                               void *user_data,
+                                               pjmedia_aud_stream **p_strm);
 
 /**
  * Get the running parameters for the specified audio stream.
  *
- * @param strm		The audio stream.
- * @param param		Audio stream parameters to be filled in by this 
- *			function once it returns successfully.
+ * @param strm          The audio stream.
+ * @param param         Audio stream parameters to be filled in by this 
+ *                      function once it returns successfully.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_stream_get_param(pjmedia_aud_stream *strm,
-						  pjmedia_aud_param *param);
+                                                  pjmedia_aud_param *param);
 
 /**
  * Get the value of a specific capability of the audio stream.
  *
- * @param strm		The audio stream.
- * @param cap		The audio capability which value is to be retrieved.
- * @param value		Pointer to value to be filled in by this function 
- *			once it returns successfully.  Please see the type 
- *			of value to be supplied in the pjmedia_aud_dev_cap
- *			documentation.
+ * @param strm          The audio stream.
+ * @param cap           The audio capability which value is to be retrieved.
+ * @param value         Pointer to value to be filled in by this function 
+ *                      once it returns successfully.  Please see the type 
+ *                      of value to be supplied in the pjmedia_aud_dev_cap
+ *                      documentation.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_stream_get_cap(pjmedia_aud_stream *strm,
-						pjmedia_aud_dev_cap cap,
-						void *value);
+                                                pjmedia_aud_dev_cap cap,
+                                                void *value);
 
 /**
  * Set the value of a specific capability of the audio stream.
  *
- * @param strm		The audio stream.
- * @param cap		The audio capability which value is to be set.
- * @param value		Pointer to value. Please see the type of value to
- *			be supplied in the pjmedia_aud_dev_cap documentation.
+ * @param strm          The audio stream.
+ * @param cap           The audio capability which value is to be set.
+ * @param value         Pointer to value. Please see the type of value to
+ *                      be supplied in the pjmedia_aud_dev_cap documentation.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_stream_set_cap(pjmedia_aud_stream *strm,
-						pjmedia_aud_dev_cap cap,
-						const void *value);
+                                                pjmedia_aud_dev_cap cap,
+                                                const void *value);
 
 /**
  * Start the stream.
  *
- * @param strm		The audio stream.
+ * @param strm          The audio stream.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_stream_start(pjmedia_aud_stream *strm);
 
 /**
  * Stop the stream.
  *
- * @param strm		The audio stream.
+ * @param strm          The audio stream.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_stream_stop(pjmedia_aud_stream *strm);
 
 /**
  * Destroy the stream.
  *
- * @param strm		The audio stream.
+ * @param strm          The audio stream.
  *
- * @return		PJ_SUCCESS on successful operation or the appropriate
- *			error code.
+ * @return              PJ_SUCCESS on successful operation or the appropriate
+ *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_stream_destroy(pjmedia_aud_stream *strm);
 
@@ -753,5 +752,5 @@ PJ_DECL(pj_status_t) pjmedia_aud_stream_destroy(pjmedia_aud_stream *strm);
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_AUDIO_DEV_H__ */
+#endif  /* __PJMEDIA_AUDIO_DEV_H__ */
 

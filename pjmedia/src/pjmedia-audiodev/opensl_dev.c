@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2010-2012 Regis Montoya (aka r3gis - www.r3gis.fr)
@@ -49,8 +48,8 @@
     #define W_SL_IID_BUFFERQUEUE SL_IID_BUFFERQUEUE
 #endif
 
-#define THIS_FILE	"opensl_dev.c"
-#define DRIVER_NAME	"OpenSL"
+#define THIS_FILE       "opensl_dev.c"
+#define DRIVER_NAME     "OpenSL"
 
 #define NUM_BUFFERS 2
 
@@ -83,15 +82,15 @@ struct opensl_aud_stream
     pjmedia_aud_rec_cb  rec_cb;
     pjmedia_aud_play_cb play_cb;
 
-    pj_timestamp	play_timestamp;
-    pj_timestamp	rec_timestamp;
+    pj_timestamp        play_timestamp;
+    pj_timestamp        rec_timestamp;
     
-    pj_bool_t		rec_thread_initialized;
-    pj_thread_desc	rec_thread_desc;
+    pj_bool_t           rec_thread_initialized;
+    pj_thread_desc      rec_thread_desc;
     pj_thread_t        *rec_thread;
     
-    pj_bool_t		play_thread_initialized;
-    pj_thread_desc	play_thread_desc;
+    pj_bool_t           play_thread_initialized;
+    pj_thread_desc      play_thread_desc;
     pj_thread_t        *play_thread;
     
     /* Player */
@@ -177,11 +176,11 @@ void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
 
     if (stream->play_thread_initialized == 0 || !pj_thread_is_registered())
     {
-	pj_bzero(stream->play_thread_desc, sizeof(pj_thread_desc));
-	status = pj_thread_register("opensl_play", stream->play_thread_desc,
-				    &stream->play_thread);
-	stream->play_thread_initialized = 1;
-	PJ_LOG(5, (THIS_FILE, "Player thread started"));
+        pj_bzero(stream->play_thread_desc, sizeof(pj_thread_desc));
+        status = pj_thread_register("opensl_play", stream->play_thread_desc,
+                                    &stream->play_thread);
+        stream->play_thread_initialized = 1;
+        PJ_LOG(5, (THIS_FILE, "Player thread started"));
     }
     
     if (!stream->quit_flag) {
@@ -223,12 +222,12 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
 
     if (stream->rec_thread_initialized == 0 || !pj_thread_is_registered())
     {
-	pj_bzero(stream->rec_thread_desc, sizeof(pj_thread_desc));
-	status = pj_thread_register("opensl_rec", stream->rec_thread_desc,
-				    &stream->rec_thread);
-	PJ_UNUSED_ARG(status);  /* Unused for now.. */
-	stream->rec_thread_initialized = 1;
-	PJ_LOG(5, (THIS_FILE, "Recorder thread started")); 
+        pj_bzero(stream->rec_thread_desc, sizeof(pj_thread_desc));
+        status = pj_thread_register("opensl_rec", stream->rec_thread_desc,
+                                    &stream->rec_thread);
+        PJ_UNUSED_ARG(status);  /* Unused for now.. */
+        stream->rec_thread_initialized = 1;
+        PJ_LOG(5, (THIS_FILE, "Recorder thread started")); 
     }
     
     if (!stream->quit_flag) {
@@ -260,23 +259,23 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
 pj_status_t opensl_to_pj_error(SLresult code)
 {
     switch(code) {
-	case SL_RESULT_SUCCESS:
+        case SL_RESULT_SUCCESS:
             return PJ_SUCCESS;
-	case SL_RESULT_PRECONDITIONS_VIOLATED:
-	case SL_RESULT_PARAMETER_INVALID:
-	case SL_RESULT_CONTENT_CORRUPTED:
-	case SL_RESULT_FEATURE_UNSUPPORTED:
+        case SL_RESULT_PRECONDITIONS_VIOLATED:
+        case SL_RESULT_PARAMETER_INVALID:
+        case SL_RESULT_CONTENT_CORRUPTED:
+        case SL_RESULT_FEATURE_UNSUPPORTED:
             return PJMEDIA_EAUD_INVOP;
-	case SL_RESULT_MEMORY_FAILURE:
-	case SL_RESULT_BUFFER_INSUFFICIENT:
+        case SL_RESULT_MEMORY_FAILURE:
+        case SL_RESULT_BUFFER_INSUFFICIENT:
             return PJ_ENOMEM;
-	case SL_RESULT_RESOURCE_ERROR:
-	case SL_RESULT_RESOURCE_LOST:
-	case SL_RESULT_CONTROL_LOST:
+        case SL_RESULT_RESOURCE_ERROR:
+        case SL_RESULT_RESOURCE_LOST:
+        case SL_RESULT_CONTROL_LOST:
             return PJMEDIA_EAUD_NOTREADY;
-	case SL_RESULT_CONTENT_UNSUPPORTED:
+        case SL_RESULT_CONTENT_UNSUPPORTED:
             return PJ_ENOTSUP;
-	default:
+        default:
             return PJMEDIA_EAUD_ERR;
     }
 }
@@ -423,7 +422,7 @@ static pj_status_t opensl_default_param(pjmedia_aud_dev_factory *f,
     
     status = opensl_get_dev_info(f, index, &adi);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
     
     pj_bzero(param, sizeof(*param));
     if (adi.input_count && adi.output_count) {
@@ -471,7 +470,6 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
     struct opensl_aud_factory *pa = (struct opensl_aud_factory*)f;
     pj_pool_t *pool;
     struct opensl_aud_stream *stream;
-    pj_status_t status = PJ_SUCCESS;
     int i, bufferSize;
     SLresult result;
     SLDataFormat_PCM format_pcm;
@@ -646,12 +644,12 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         if (result == SL_RESULT_SUCCESS) {
             SLint32 streamType = SL_ANDROID_RECORDING_PRESET_GENERIC;
 #if __ANDROID_API__ >= 14
-	    streamType = SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION;
+            streamType = SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION;
 #endif
 #if 0
             /* Android-L (android-21) removes __system_property_get
              * from the NDK.
-	     */
+             */
             char sdk_version[PROP_VALUE_MAX];
             pj_str_t pj_sdk_version;
             int sdk_v;
@@ -719,7 +717,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
     }
     
     if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
-	strm_set_cap(&stream->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+        strm_set_cap(&stream->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
                      &param->output_vol);
     }
     
@@ -730,7 +728,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
     
 on_error:
     strm_destroy(&stream->base);
-    return status;
+    return opensl_to_pj_error(result);
 }
 
 /* API: Get stream parameters */
@@ -761,7 +759,7 @@ static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
     
     if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
-	(strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+        (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
         if (strm->playerVol) {
             SLresult res;
@@ -794,7 +792,7 @@ static pj_status_t strm_set_cap(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(s && value, PJ_EINVAL);
 
     if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
-	(strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+        (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
         if (strm->playerVol) {
             SLresult res;
@@ -953,4 +951,4 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_AUDIO_DEV_HAS_OPENSL */
+#endif  /* PJMEDIA_AUDIO_DEV_HAS_OPENSL */

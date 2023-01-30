@@ -718,6 +718,7 @@
     <ClCompile Include="..\src\pjlib-test\file.c" />
     <ClCompile Include="..\src\pjlib-test\hash_test.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_perf.c" />
+    <ClCompile Include="..\src\pjlib-test\ioq_stress_test.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_tcp.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_udp.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_unreg.c" />

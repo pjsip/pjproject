@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -33,7 +32,7 @@ static void init_signals()
     sigaction(SIGALRM, &act, NULL);
 }
 
-#elif PJ_LINUX || PJ_DARWINOS
+#elif (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0
 
 #include <execinfo.h>
 #include <signal.h>
@@ -76,26 +75,26 @@ int main(int argc, char *argv[])
     while (argc > 1) {
         char *arg = argv[--argc];
 
-	if (*arg=='-' && *(arg+1)=='i') {
-	    interractive = 1;
+        if (*arg=='-' && *(arg+1)=='i') {
+            interractive = 1;
 
-	} else if (*arg=='-' && *(arg+1)=='n') {
-	    no_trap = 1;
-	}
+        } else if (*arg=='-' && *(arg+1)=='n') {
+            no_trap = 1;
+        }
     }
 
     if (!no_trap) {
-	init_signals();
+        init_signals();
     }
 
     rc = test_main();
 
     if (interractive) {
-	char s[10];
-	puts("");
-	puts("Press <ENTER> to exit");
-	if (!fgets(s, sizeof(s), stdin))
-	    return rc;
+        char s[10];
+        puts("");
+        puts("Press <ENTER> to exit");
+        if (!fgets(s, sizeof(s), stdin))
+            return rc;
     }
 
     return rc;

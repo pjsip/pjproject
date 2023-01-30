@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -86,7 +85,7 @@ typedef enum pjmedia_vid_frm_bit_info
     /**
      * The video frame is keyframe.
      */
-    PJMEDIA_VID_FRM_KEYFRAME	= 1
+    PJMEDIA_VID_FRM_KEYFRAME    = 1
 
 } pjmedia_vid_frm_bit_info;
 
@@ -114,23 +113,23 @@ typedef struct pjmedia_vid_encode_opt
 typedef struct pjmedia_vid_codec_info
 {
     pjmedia_format_id   fmt_id;         /**< Encoded format ID              */
-    unsigned            pt;             /**< Payload type		    */
-    pj_str_t	        encoding_name;  /**< Encoding name                  */
-    pj_str_t	        encoding_desc;	/**< Encoding desc		    */
-    unsigned            clock_rate;     /**< Clock rate			    */
+    unsigned            pt;             /**< Payload type                   */
+    pj_str_t            encoding_name;  /**< Encoding name                  */
+    pj_str_t            encoding_desc;  /**< Encoding desc                  */
+    unsigned            clock_rate;     /**< Clock rate                     */
     pjmedia_dir         dir;            /**< Direction                      */
     unsigned            dec_fmt_id_cnt; /**< # of supported encoding source 
                                              format IDs                     */
     pjmedia_format_id   dec_fmt_id[PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT];
                                         /**< Supported encoding source 
                                              format IDs                     */
-    unsigned		packings;	/**< Supported or requested packings,
-					     strategies, bitmask from
-					     pjmedia_vid_packing	    */
+    unsigned            packings;       /**< Supported or requested packings,
+                                             strategies, bitmask from
+                                             pjmedia_vid_packing            */
     unsigned            fps_cnt;        /**< # of supported frame-rates, can be
-					     zero (support any frame-rate)  */
+                                             zero (support any frame-rate)  */
     pjmedia_ratio       fps[PJMEDIA_VID_CODEC_MAX_FPS_CNT];
-                                        /**< Supported frame-rates	    */
+                                        /**< Supported frame-rates          */
 
 } pjmedia_vid_codec_info;
 
@@ -148,19 +147,19 @@ typedef struct pjmedia_vid_codec_info
 typedef struct pjmedia_vid_codec_param
 {
     pjmedia_dir         dir;            /**< Direction                      */
-    pjmedia_vid_packing packing; 	/**< Packetization strategy.	    */
+    pjmedia_vid_packing packing;        /**< Packetization strategy.        */
 
-    pjmedia_format      enc_fmt;        /**< Encoded format	            */
-    pjmedia_codec_fmtp  enc_fmtp;       /**< Encoder fmtp params	    */
+    pjmedia_format      enc_fmt;        /**< Encoded format                 */
+    pjmedia_codec_fmtp  enc_fmtp;       /**< Encoder fmtp params            */
     unsigned            enc_mtu;        /**< MTU or max payload size setting*/
 
-    pjmedia_format      dec_fmt;        /**< Decoded format	            */
-    pjmedia_codec_fmtp  dec_fmtp;       /**< Decoder fmtp params	    */
+    pjmedia_format      dec_fmt;        /**< Decoded format                 */
+    pjmedia_codec_fmtp  dec_fmtp;       /**< Decoder fmtp params            */
 
-    pj_bool_t		ignore_fmtp;	/**< Ignore fmtp params. If set to
-					     PJ_TRUE, the codec will apply
-					     format settings specified in
-					     enc_fmt and dec_fmt only.	    */
+    pj_bool_t           ignore_fmtp;    /**< Ignore fmtp params. If set to
+                                             PJ_TRUE, the codec will apply
+                                             format settings specified in
+                                             enc_fmt and dec_fmt only.      */
 
 } pjmedia_vid_codec_param;
 
@@ -168,14 +167,14 @@ typedef struct pjmedia_vid_codec_param
 /**
  * Duplicate video codec parameter.
  *
- * @param pool	    The pool.
- * @param src	    The video codec parameter to be duplicated.
+ * @param pool      The pool.
+ * @param src       The video codec parameter to be duplicated.
  *
- * @return	    Duplicated codec parameter.
+ * @return          Duplicated codec parameter.
  */
 PJ_DECL(pjmedia_vid_codec_param*) pjmedia_vid_codec_param_clone(
-					pj_pool_t *pool, 
-					const pjmedia_vid_codec_param *src);
+                                        pj_pool_t *pool, 
+                                        const pjmedia_vid_codec_param *src);
 
 /**
  * Forward declaration for video codec.
@@ -192,14 +191,14 @@ typedef struct pjmedia_vid_codec_op
     /** 
      * See #pjmedia_vid_codec_init().
      */
-    pj_status_t	(*init)(pjmedia_vid_codec *codec, 
-			pj_pool_t *pool );
+    pj_status_t (*init)(pjmedia_vid_codec *codec, 
+                        pj_pool_t *pool );
 
     /** 
      * See #pjmedia_vid_codec_open().
      */
-    pj_status_t	(*open)(pjmedia_vid_codec *codec, 
-			pjmedia_vid_codec_param *param );
+    pj_status_t (*open)(pjmedia_vid_codec *codec, 
+                        pjmedia_vid_codec_param *param );
 
     /** 
      * See #pjmedia_vid_codec_close().
@@ -209,49 +208,49 @@ typedef struct pjmedia_vid_codec_op
     /** 
      * See #pjmedia_vid_codec_modify().
      */
-    pj_status_t	(*modify)(pjmedia_vid_codec *codec,
-			  const pjmedia_vid_codec_param *param);
+    pj_status_t (*modify)(pjmedia_vid_codec *codec,
+                          const pjmedia_vid_codec_param *param);
 
     /** 
      * See #pjmedia_vid_codec_get_param().
      */
-    pj_status_t	(*get_param)(pjmedia_vid_codec *codec,
-			     pjmedia_vid_codec_param *param);
+    pj_status_t (*get_param)(pjmedia_vid_codec *codec,
+                             pjmedia_vid_codec_param *param);
 
     /**
      * See #pjmedia_vid_codec_encode_begin().
      */
     pj_status_t (*encode_begin)(pjmedia_vid_codec *codec,
-				const pjmedia_vid_encode_opt *opt,
-				const pjmedia_frame *input,
-				unsigned out_size,
-				pjmedia_frame *output,
-				pj_bool_t *has_more);
+                                const pjmedia_vid_encode_opt *opt,
+                                const pjmedia_frame *input,
+                                unsigned out_size,
+                                pjmedia_frame *output,
+                                pj_bool_t *has_more);
 
     /**
      * See #pjmedia_vid_codec_encode_more()
      */
     pj_status_t (*encode_more)(pjmedia_vid_codec *codec,
-			       unsigned out_size,
-			       pjmedia_frame *output,
-			       pj_bool_t *has_more);
+                               unsigned out_size,
+                               pjmedia_frame *output,
+                               pj_bool_t *has_more);
 
 
     /*
      * See #pjmedia_vid_codec_decode().
      */
     pj_status_t (*decode)(pjmedia_vid_codec *codec,
-			  pj_size_t count,
-			  pjmedia_frame packets[],
-			  unsigned out_size,
-			  pjmedia_frame *output);
+                          pj_size_t count,
+                          pjmedia_frame packets[],
+                          unsigned out_size,
+                          pjmedia_frame *output);
 
     /**
      * See #pjmedia_vid_codec_recover()
      */
     pj_status_t (*recover)(pjmedia_vid_codec *codec,
-			   unsigned out_size,
-			   pjmedia_frame *output);
+                           unsigned out_size,
+                           pjmedia_frame *output);
 
 } pjmedia_vid_codec_op;
 
@@ -274,13 +273,13 @@ struct pjmedia_vid_codec
     PJ_DECL_LIST_MEMBER(struct pjmedia_vid_codec);
 
     /** Codec's private data. */
-    void			*codec_data;
+    void                        *codec_data;
 
     /** Codec factory where this codec was allocated. */
     pjmedia_vid_codec_factory   *factory;
 
     /** Operations to codec. */
-    pjmedia_vid_codec_op	*op;
+    pjmedia_vid_codec_op        *op;
 };
 
 
@@ -295,70 +294,70 @@ typedef struct pjmedia_vid_codec_factory_op
      * Check whether the factory can create codec with the specified 
      * codec info.
      *
-     * @param factory	The codec factory.
-     * @param info	The codec info.
+     * @param factory   The codec factory.
+     * @param info      The codec info.
      *
-     * @return		PJ_SUCCESS if this factory is able to create an
-     *			instance of codec with the specified info.
+     * @return          PJ_SUCCESS if this factory is able to create an
+     *                  instance of codec with the specified info.
      */
-    pj_status_t	(*test_alloc)(pjmedia_vid_codec_factory *factory, 
-			      const pjmedia_vid_codec_info *info );
+    pj_status_t (*test_alloc)(pjmedia_vid_codec_factory *factory, 
+                              const pjmedia_vid_codec_info *info );
 
     /** 
      * Create default attributes for the specified codec ID. This function
      * can be called by application to get the capability of the codec.
      *
-     * @param factory	The codec factory.
-     * @param info	The codec info.
-     * @param attr	The attribute to be initialized.
+     * @param factory   The codec factory.
+     * @param info      The codec info.
+     * @param attr      The attribute to be initialized.
      *
-     * @return		PJ_SUCCESS if success.
+     * @return          PJ_SUCCESS if success.
      */
     pj_status_t (*default_attr)(pjmedia_vid_codec_factory *factory, 
-    				const pjmedia_vid_codec_info *info,
-    				pjmedia_vid_codec_param *attr );
+                                const pjmedia_vid_codec_info *info,
+                                pjmedia_vid_codec_param *attr );
 
     /** 
      * Enumerate supported codecs that can be created using this factory.
      * 
-     *  @param factory	The codec factory.
-     *  @param count	On input, specifies the number of elements in
-     *			the array. On output, the value will be set to
-     *			the number of elements that have been initialized
-     *			by this function.
-     *  @param info	The codec info array, which contents will be 
-     *			initialized upon return.
+     *  @param factory  The codec factory.
+     *  @param count    On input, specifies the number of elements in
+     *                  the array. On output, the value will be set to
+     *                  the number of elements that have been initialized
+     *                  by this function.
+     *  @param info     The codec info array, which contents will be 
+     *                  initialized upon return.
      *
-     *  @return		PJ_SUCCESS on success.
+     *  @return         PJ_SUCCESS on success.
      */
     pj_status_t (*enum_info)(pjmedia_vid_codec_factory *factory, 
-			     unsigned *count, 
-			     pjmedia_vid_codec_info codecs[]);
+                             unsigned *count, 
+                             pjmedia_vid_codec_info codecs[]);
 
     /** 
      * Create one instance of the codec with the specified codec info.
      *
-     * @param factory	The codec factory.
-     * @param info	The codec info.
-     * @param p_codec	Pointer to receive the codec instance.
+     * @param factory   The codec factory.
+     * @param info      The codec info.
+     * @param p_codec   Pointer to receive the codec instance.
      *
-     * @return		PJ_SUCCESS on success.
+     * @return          PJ_SUCCESS on success.
      */
     pj_status_t (*alloc_codec)(pjmedia_vid_codec_factory *factory, 
-			       const pjmedia_vid_codec_info *info,
-			       pjmedia_vid_codec **p_codec);
+                               const pjmedia_vid_codec_info *info,
+                               pjmedia_vid_codec **p_codec);
 
     /** 
      * This function is called by codec manager to return a particular 
      * instance of codec back to the codec factory.
      *
-     * @param factory	The codec factory.
-     * @param codec	The codec instance to be returned.
+     * @param factory   The codec factory.
+     * @param codec     The codec instance to be returned.
      *
-     * @return		PJ_SUCCESS on success.
+     * @return          PJ_SUCCESS on success.
      */
     pj_status_t (*dealloc_codec)(pjmedia_vid_codec_factory *factory, 
-				 pjmedia_vid_codec *codec );
+                                 pjmedia_vid_codec *codec );
 
 } pjmedia_vid_codec_factory_op;
 
@@ -375,7 +374,7 @@ struct pjmedia_vid_codec_factory
     PJ_DECL_LIST_MEMBER(struct pjmedia_vid_codec_factory);
 
     /** The factory's private data. */
-    void		     *factory_data;
+    void                     *factory_data;
 
     /** Operations to the factory. */
     pjmedia_vid_codec_factory_op *op;
@@ -391,7 +390,7 @@ typedef struct pjmedia_vid_codec_mgr pjmedia_vid_codec_mgr;
 /**
  * Declare maximum codecs
  */
-#define PJMEDIA_VID_CODEC_MGR_MAX_CODECS	    32
+#define PJMEDIA_VID_CODEC_MGR_MAX_CODECS            32
 
 
 /**
@@ -400,10 +399,10 @@ typedef struct pjmedia_vid_codec_mgr pjmedia_vid_codec_mgr;
  * the new codec manager instance. Normally this function is called by pjmedia
  * endpoint's initialization code.
  *
- * @param pool	    The pool instance.
- * @param mgr	    The pointer to the new codec manager instance.
+ * @param pool      The pool instance.
+ * @param mgr       The pointer to the new codec manager instance.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_create(pj_pool_t *pool,
                                                   pjmedia_vid_codec_mgr **mgr);
@@ -413,10 +412,10 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_create(pj_pool_t *pool,
  * Destroy codec manager. Normally this function is called by pjmedia
  * endpoint's deinitialization code.
  *
- * @param mgr	    Codec manager instance.  If NULL, it is the default codec
- *		    manager instance will be destroyed.
+ * @param mgr       Codec manager instance.  If NULL, it is the default codec
+ *                  manager instance will be destroyed.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_destroy(pjmedia_vid_codec_mgr *mgr);
 
@@ -424,7 +423,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_destroy(pjmedia_vid_codec_mgr *mgr);
 /**
  * Get the default codec manager instance.
  *
- * @return	    The default codec manager instance or NULL if none.
+ * @return          The default codec manager instance or NULL if none.
  */
 PJ_DECL(pjmedia_vid_codec_mgr*) pjmedia_vid_codec_mgr_instance(void);
 
@@ -432,7 +431,7 @@ PJ_DECL(pjmedia_vid_codec_mgr*) pjmedia_vid_codec_mgr_instance(void);
 /**
  * Set the default codec manager instance.
  *
- * @param mgr	    The codec manager instance.
+ * @param mgr       The codec manager instance.
  */
 PJ_DECL(void) pjmedia_vid_codec_mgr_set_instance(pjmedia_vid_codec_mgr* mgr);
 
@@ -441,85 +440,85 @@ PJ_DECL(void) pjmedia_vid_codec_mgr_set_instance(pjmedia_vid_codec_mgr* mgr);
  * Register codec factory to codec manager. This will also register
  * all supported codecs in the factory to the codec manager.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
  * @param factory   The codec factory to be registered.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_register_factory( pjmedia_vid_codec_mgr *mgr,
-				        pjmedia_vid_codec_factory *factory);
+                                        pjmedia_vid_codec_factory *factory);
 
 /**
  * Unregister codec factory from the codec manager. This will also
  * remove all the codecs registered by the codec factory from the
  * codec manager's list of supported codecs.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
  * @param factory   The codec factory to be unregistered.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_unregister_factory( pjmedia_vid_codec_mgr *mgr, 
-				          pjmedia_vid_codec_factory *factory);
+                                          pjmedia_vid_codec_factory *factory);
 
 /**
  * Enumerate all supported codecs that have been registered to the
  * codec manager by codec factories.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
- * @param count	    On input, specifies the number of elements in
- *		    the array. On output, the value will be set to
- *		    the number of elements that have been initialized
- *		    by this function.
- * @param info	    The codec info array, which contents will be 
- *		    initialized upon return.
- * @param prio	    Optional pointer to receive array of codec priorities.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
+ * @param count     On input, specifies the number of elements in
+ *                  the array. On output, the value will be set to
+ *                  the number of elements that have been initialized
+ *                  by this function.
+ * @param info      The codec info array, which contents will be 
+ *                  initialized upon return.
+ * @param prio      Optional pointer to receive array of codec priorities.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
 pjmedia_vid_codec_mgr_enum_codecs(pjmedia_vid_codec_mgr *mgr,
-				  unsigned *count,
-				  pjmedia_vid_codec_info info[],
-				  unsigned *prio);
+                                  unsigned *count,
+                                  pjmedia_vid_codec_info info[],
+                                  unsigned *prio);
 
 
 /**
  * Get codec info for the specified payload type. The payload type must be
  * static or locally defined in #pjmedia_video_pt.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
- * @param pt	    The payload type/number.
- * @param info	    Pointer to receive codec info.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
+ * @param pt        The payload type/number.
+ * @param info      Pointer to receive codec info.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_get_codec_info( pjmedia_vid_codec_mgr *mgr,
-				      unsigned pt,
-				      const pjmedia_vid_codec_info **info);
+                                      unsigned pt,
+                                      const pjmedia_vid_codec_info **info);
 
 
 /**
  * Get codec info for the specified format ID.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
  * @param fmt_id    Format ID. See #pjmedia_format_id
- * @param info	    Pointer to receive codec info.
+ * @param info      Pointer to receive codec info.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_get_codec_info2(pjmedia_vid_codec_mgr *mgr,
-				      pjmedia_format_id fmt_id,
-				      const pjmedia_vid_codec_info **info);
+                                      pjmedia_format_id fmt_id,
+                                      const pjmedia_vid_codec_info **info);
 
 
 /**
@@ -527,12 +526,12 @@ pjmedia_vid_codec_mgr_get_codec_info2(pjmedia_vid_codec_mgr *mgr,
  * A codec identifier looks something like "H263/34", where "H263" is the
  * codec name and "34" is the (default) payload type.
  *
- * @param info	    The codec info
- * @param id	    Buffer to put the codec info string.
+ * @param info      The codec info
+ * @param id        Buffer to put the codec info string.
  * @param max_len   The length of the buffer.
  *
- * @return	    The null terminated codec info string, or NULL if
- *		    the buffer is not long enough.
+ * @return          The null terminated codec info string, or NULL if
+ *                  the buffer is not long enough.
  */
 PJ_DECL(char*) pjmedia_vid_codec_info_to_id(const pjmedia_vid_codec_info *info,
                                             char *id, unsigned max_len );
@@ -544,25 +543,25 @@ PJ_DECL(char*) pjmedia_vid_codec_info_to_id(const pjmedia_vid_codec_info *info,
  * "H26" is specified, then it will find "H263", "H264", and so on,
  * up to the maximum count specified in the argument.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
  * @param codec_id  The full codec ID or codec ID prefix. If an empty
- *		    string is given, it will match all codecs.
- * @param count	    Maximum number of codecs to find. On return, it
- *		    contains the actual number of codecs found.
+ *                  string is given, it will match all codecs.
+ * @param count     Maximum number of codecs to find. On return, it
+ *                  contains the actual number of codecs found.
  * @param p_info    Array of pointer to codec info to be filled. This
- *		    argument may be NULL, which in this case, only
- *		    codec count will be returned.
- * @param prio	    Optional array of codec priorities.
+ *                  argument may be NULL, which in this case, only
+ *                  codec count will be returned.
+ * @param prio      Optional array of codec priorities.
  *
- * @return	    PJ_SUCCESS if at least one codec info is found.
+ * @return          PJ_SUCCESS if at least one codec info is found.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_find_codecs_by_id(pjmedia_vid_codec_mgr *mgr,
-					const pj_str_t *codec_id,
-					unsigned *count,
-					const pjmedia_vid_codec_info *p_info[],
-					unsigned prio[]);
+                                        const pj_str_t *codec_id,
+                                        unsigned *count,
+                                        const pjmedia_vid_codec_info *p_info[],
+                                        unsigned prio[]);
 
 
 /**
@@ -571,56 +570,57 @@ pjmedia_vid_codec_mgr_find_codecs_by_id(pjmedia_vid_codec_mgr *mgr,
  * are found with the same codec_id prefix, then the function sets the
  * priorities of all those codecs.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
  * @param codec_id  The full codec ID or codec ID prefix. If an empty
- *		    string is given, it will match all codecs.
- * @param prio	    Priority to be set. The priority can have any value
- *		    between 1 to 255. When the priority is set to zero,
- *		    the codec will be disabled.
+ *                  string is given, it will match all codecs.
+ * @param prio      Priority to be set. The priority can have any value
+ *                  between 1 to 255. When the priority is set to zero,
+ *                  the codec will be disabled.
  *
- * @return	    PJ_SUCCESS if at least one codec info is found.
+ * @return          PJ_SUCCESS if at least one codec info is found.
  */
 PJ_DECL(pj_status_t)
 pjmedia_vid_codec_mgr_set_codec_priority(pjmedia_vid_codec_mgr *mgr, 
-					 const pj_str_t *codec_id,
-					 pj_uint8_t prio);
+                                         const pj_str_t *codec_id,
+                                         pj_uint8_t prio);
 
 
 /**
  * Get default codec param for the specified codec info.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
- * @param info	    The codec info, which default parameter's is being
- *		    queried.
- * @param param	    On return, will be filled with the default codec
- *		    parameter.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
+ * @param info      The codec info, which default parameter's is being
+ *                  queried.
+ * @param param     On return, will be filled with the default codec
+ *                  parameter.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_get_default_param(pjmedia_vid_codec_mgr *mgr,
-					const pjmedia_vid_codec_info *info,
-					pjmedia_vid_codec_param *param);
+                                        const pjmedia_vid_codec_info *info,
+                                        pjmedia_vid_codec_param *param);
 
 
 /**
  * Set default codec param for the specified codec info.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
- * @param info	    The codec info, which default parameter's is being
- *		    updated.
- * @param param	    The new default codec parameter. Set to NULL to reset
- *		    codec parameter to library default settings.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
+ * @param info      The codec info, which default parameter's is being
+ *                  updated.
+ * @param param     The new default codec parameter. Note that encoding video
+ *                  codec resolution must be even numbers. Set to NULL to
+ *                  reset codec parameter to library default settings.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_set_default_param(pjmedia_vid_codec_mgr *mgr,
-				        const pjmedia_vid_codec_info *info,
-				        const pjmedia_vid_codec_param *param);
+                                        const pjmedia_vid_codec_info *info,
+                                        const pjmedia_vid_codec_param *param);
 
 
 /**
@@ -628,45 +628,45 @@ pjmedia_vid_codec_mgr_set_default_param(pjmedia_vid_codec_mgr *mgr,
  * specified codec info. The codec will enumerate all codec factories
  * until it finds factory that is able to create the specified codec.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
- * @param info	    The information about the codec to be created.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
+ * @param info      The information about the codec to be created.
  * @param p_codec   Pointer to receive the codec instance.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_alloc_codec( pjmedia_vid_codec_mgr *mgr, 
-			           const pjmedia_vid_codec_info *info,
-			           pjmedia_vid_codec **p_codec);
+                                   const pjmedia_vid_codec_info *info,
+                                   pjmedia_vid_codec **p_codec);
 
 /**
  * Deallocate the specified codec instance. The codec manager will return
  * the instance of the codec back to its factory.
  *
- * @param mgr	    The codec manager instance. If NULL, the default codec
- *		    manager instance will be used.
- * @param codec	    The codec instance.
+ * @param mgr       The codec manager instance. If NULL, the default codec
+ *                  manager instance will be used.
+ * @param codec     The codec instance.
  *
- * @return	    PJ_SUCESS on success.
+ * @return          PJ_SUCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_dealloc_codec(
                                                 pjmedia_vid_codec_mgr *mgr, 
-						pjmedia_vid_codec *codec);
+                                                pjmedia_vid_codec *codec);
 
 
 
 /** 
  * Initialize codec using the specified attribute.
  *
- * @param codec	    The codec instance.
- * @param pool	    Pool to use when the codec needs to allocate
- *		    some memory.
+ * @param codec     The codec instance.
+ * @param pool      Pool to use when the codec needs to allocate
+ *                  some memory.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_vid_codec_init( pjmedia_vid_codec *codec, 
-					       pj_pool_t *pool )
+                                               pj_pool_t *pool )
 {
     return (*codec->op->init)(codec, pool);
 }
@@ -679,14 +679,21 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_init( pjmedia_vid_codec *codec,
  * the encoder format, as it may need to be negotiated with remote
  * preferences via SDP fmtp).
  *
- * @param codec	    The codec instance.
- * @param param	    Codec initialization parameter.
+ * @param codec     The codec instance.
+ * @param param     Codec initialization parameter. Note that encoding video
+ *                  codec resolution must be even numbers.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_vid_codec_open(pjmedia_vid_codec *codec,
                                               pjmedia_vid_codec_param *param)
 {
+    if (param && ((param->enc_fmt.det.vid.size.w % 2 == 1) ||
+        (param->enc_fmt.det.vid.size.h % 2 == 1)))
+    {
+        return PJ_EINVAL;
+    }
+
     return (*codec->op->open)(codec, param);
 }
 
@@ -695,9 +702,9 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_open(pjmedia_vid_codec *codec,
  * Close and shutdown codec, releasing all resources allocated by
  * this codec, if any.
  *
- * @param codec	    The codec instance.
+ * @param codec     The codec instance.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_vid_codec_close( pjmedia_vid_codec *codec )
 {
@@ -711,15 +718,22 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_close( pjmedia_vid_codec *codec )
  * When the parameter cannot be changed, this function will return 
  * non-PJ_SUCCESS, and the original parameters will not be changed.
  *
- * @param codec	The codec instance.
- * @param param	The new codec parameter.
+ * @param codec         The codec instance.
+ * @param param         The new codec parameter. Note that encoding video
+ *                      codec resolution must be even numbers.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t)
 pjmedia_vid_codec_modify(pjmedia_vid_codec *codec,
                          const pjmedia_vid_codec_param *param)
 {
+    if (param && ((param->enc_fmt.det.vid.size.w % 2 == 1) ||
+        (param->enc_fmt.det.vid.size.h % 2 == 1)))
+    {
+        return PJ_EINVAL;
+    }
+
     return (*codec->op->modify)(codec, param);
 }
 
@@ -727,14 +741,14 @@ pjmedia_vid_codec_modify(pjmedia_vid_codec *codec,
 /** 
  * Get the codec parameter after the codec is opened. 
  *
- * @param codec	The codec instance.
- * @param param	The codec parameter.
+ * @param codec The codec instance.
+ * @param param The codec parameter.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t)
 pjmedia_vid_codec_get_param(pjmedia_vid_codec *codec,
-			    pjmedia_vid_codec_param *param)
+                            pjmedia_vid_codec_param *param)
 {
     return (*codec->op->get_param)(codec, param);
 }
@@ -749,29 +763,29 @@ pjmedia_vid_codec_get_param(pjmedia_vid_codec *codec,
  * call pjmedia_vid_codec_encode_more() to get the remaining results from the
  * codec.
  *
- * @param codec		The codec instance.
- * @param opt		Optional encoding options.
- * @param input		The input frame.
- * @param out_size	The length of buffer in the output frame. This
- * 			should be at least the same as the configured
- * 			encoding MTU of the codec.
- * @param output	The output frame.
- * @param has_more	PJ_TRUE if more payloads are available; application
- * 			should then call pjmedia_vid_codec_encode_more()
- * 			to retrieve the remaining results.
+ * @param codec         The codec instance.
+ * @param opt           Optional encoding options.
+ * @param input         The input frame.
+ * @param out_size      The length of buffer in the output frame. This
+ *                      should be at least the same as the configured
+ *                      encoding MTU of the codec.
+ * @param output        The output frame.
+ * @param has_more      PJ_TRUE if more payloads are available; application
+ *                      should then call pjmedia_vid_codec_encode_more()
+ *                      to retrieve the remaining results.
  *
- * @return		PJ_SUCCESS on success;
+ * @return              PJ_SUCCESS on success;
  */
 PJ_INLINE(pj_status_t)
 pjmedia_vid_codec_encode_begin( pjmedia_vid_codec *codec,
-				const pjmedia_vid_encode_opt *opt,
-				const pjmedia_frame *input,
-				unsigned out_size,
-				pjmedia_frame *output,
-				pj_bool_t *has_more)
+                                const pjmedia_vid_encode_opt *opt,
+                                const pjmedia_frame *input,
+                                unsigned out_size,
+                                pjmedia_frame *output,
+                                pj_bool_t *has_more)
 {
     return (*codec->op->encode_begin)(codec, opt, input, out_size, output,
-				      has_more);
+                                      has_more);
 }
 
 /**
@@ -779,22 +793,22 @@ pjmedia_vid_codec_encode_begin( pjmedia_vid_codec *codec,
  * should call this function repeatedly until \a has_more flag is set
  * to PJ_FALSE.
  *
- * @param codec		The codec instance.
- * @param out_size	The length of buffer in the output frame. This
- * 			should be at least the same as as the configured
- * 			encoding MTU of the codec.
- * @param output	The output frame.
- * @param has_more	PJ_TRUE if more payloads are available, which in
- * 			this case application should call \a encode_more()
- * 			to retrieve them.
+ * @param codec         The codec instance.
+ * @param out_size      The length of buffer in the output frame. This
+ *                      should be at least the same as as the configured
+ *                      encoding MTU of the codec.
+ * @param output        The output frame.
+ * @param has_more      PJ_TRUE if more payloads are available, which in
+ *                      this case application should call \a encode_more()
+ *                      to retrieve them.
  *
- * @return		PJ_SUCCESS on success;
+ * @return              PJ_SUCCESS on success;
  */
 PJ_INLINE(pj_status_t)
 pjmedia_vid_codec_encode_more( pjmedia_vid_codec *codec,
-			       unsigned out_size,
-			       pjmedia_frame *output,
-			       pj_bool_t *has_more)
+                               unsigned out_size,
+                               pjmedia_frame *output,
+                               pj_bool_t *has_more)
 {
     return (*codec->op->encode_more)(codec, out_size, output, has_more);
 }
@@ -814,20 +828,20 @@ pjmedia_vid_codec_encode_more( pjmedia_vid_codec *codec,
  * also be updated, and application can query the format by using
  * pjmedia_vid_codec_get_param().
  *
- * @param codec		The codec instance.
- * @param pkt_count	Number of packets in the input.
- * @param packets	Array of input packets, each containing an encoded
- * 			frame.
- * @param out_size	The length of buffer in the output frame.
- * @param output	The output frame.
+ * @param codec         The codec instance.
+ * @param pkt_count     Number of packets in the input.
+ * @param packets       Array of input packets, each containing an encoded
+ *                      frame.
+ * @param out_size      The length of buffer in the output frame.
+ * @param output        The output frame.
  *
- * @return		PJ_SUCCESS on success;
+ * @return              PJ_SUCCESS on success;
  */
 PJ_INLINE(pj_status_t) pjmedia_vid_codec_decode(pjmedia_vid_codec *codec,
-						pj_size_t pkt_count,
-						pjmedia_frame packets[],
-						unsigned out_size,
-						pjmedia_frame *output)
+                                                pj_size_t pkt_count,
+                                                pjmedia_frame packets[],
+                                                unsigned out_size,
+                                                pjmedia_frame *output)
 {
     return (*codec->op->decode)(codec, pkt_count, packets, out_size, output);
 }
@@ -835,21 +849,21 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_decode(pjmedia_vid_codec *codec,
 /**
  * Recover a missing frame.
  *
- * @param codec		The codec instance.
- * @param out_size	The length of buffer in the output frame.
- * @param output	The output frame where generated signal
- *			will be placed.
+ * @param codec         The codec instance.
+ * @param out_size      The length of buffer in the output frame.
+ * @param output        The output frame where generated signal
+ *                      will be placed.
  *
- * @return		PJ_SUCCESS on success;
+ * @return              PJ_SUCCESS on success;
  */
 PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(pjmedia_vid_codec *codec,
                                                  unsigned out_size,
                                                  pjmedia_frame *output)
 {
     if (codec->op && codec->op->recover)
-	return (*codec->op->recover)(codec, out_size, output);
+        return (*codec->op->recover)(codec, out_size, output);
     else
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
 }
 
 
@@ -868,4 +882,4 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(pjmedia_vid_codec *codec,
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_VID_CODEC_H__ */
+#endif  /* __PJMEDIA_VID_CODEC_H__ */

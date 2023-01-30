@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,7 +34,7 @@
 #include <pj/timer.h>
 
 
-#define THIS_FILE	    "resolver.c"
+#define THIS_FILE           "resolver.c"
 
 
 /* Check that maximum DNS nameservers is not too large. 
@@ -46,15 +45,15 @@
 #endif
 
 
-#define RES_HASH_TABLE_SIZE 127		/**< Hash table size (must be 2^n-1 */
-#define PORT		    53		/**< Default NS port.		    */
-#define Q_HASH_TABLE_SIZE   127		/**< Query hash table size	    */
-#define TIMER_SIZE	    127		/**< Initial number of timers.	    */
-#define MAX_FD		    3		/**< Maximum internal sockets.	    */
+#define RES_HASH_TABLE_SIZE 127         /**< Hash table size (must be 2^n-1 */
+#define PORT                53          /**< Default NS port.               */
+#define Q_HASH_TABLE_SIZE   127         /**< Query hash table size          */
+#define TIMER_SIZE          127         /**< Initial number of timers.      */
+#define MAX_FD              3           /**< Maximum internal sockets.      */
 
-#define RES_BUF_SZ	    PJ_DNS_RESOLVER_RES_BUF_SIZE
-#define UDPSZ		    PJ_DNS_RESOLVER_MAX_UDP_SIZE
-#define TMP_SZ		    PJ_DNS_RESOLVER_TMP_BUF_SIZE
+#define RES_BUF_SZ          PJ_DNS_RESOLVER_RES_BUF_SIZE
+#define UDPSZ               PJ_DNS_RESOLVER_MAX_UDP_SIZE
+#define TMP_SZ              PJ_DNS_RESOLVER_TMP_BUF_SIZE
 
 
 /* Nameserver state */
@@ -80,16 +79,16 @@ static const char *state_names[3] =
  */
 struct nameserver
 {
-    pj_sockaddr     addr;		/**< Server address.		    */
+    pj_sockaddr     addr;               /**< Server address.                */
 
-    enum ns_state   state;		/**< Nameserver state.		    */
-    pj_time_val	    state_expiry;	/**< Time set next state.	    */
-    pj_time_val	    rt_delay;		/**< Response time.		    */
+    enum ns_state   state;              /**< Nameserver state.              */
+    pj_time_val     state_expiry;       /**< Time set next state.           */
+    pj_time_val     rt_delay;           /**< Response time.                 */
     
 
     /* For calculating rt_delay: */
-    pj_uint16_t	    q_id;		/**< Query ID.			    */
-    pj_time_val	    sent_time;		/**< Time this query is sent.	    */
+    pj_uint16_t     q_id;               /**< Query ID.                      */
+    pj_time_val     sent_time;          /**< Time this query is sent.       */
 };
 
 
@@ -105,8 +104,8 @@ struct query_head
 /* Key to look for outstanding query and/or cached response */
 struct res_key
 {
-    pj_uint16_t		     qtype;		    /**< Query type.	    */
-    char		     name[PJ_MAX_HOSTNAME]; /**< Name being queried */
+    pj_uint16_t              qtype;                 /**< Query type.        */
+    char                     name[PJ_MAX_HOSTNAME]; /**< Name being queried */
 };
 
 
@@ -128,21 +127,21 @@ struct res_key
  */
 struct pj_dns_async_query
 {
-    PJ_DECL_LIST_MEMBER(pj_dns_async_query);	/**< List member.	    */
+    PJ_DECL_LIST_MEMBER(pj_dns_async_query);    /**< List member.           */
 
-    pj_dns_resolver	*resolver;	/**< The resolver instance.	    */
-    pj_uint16_t		 id;		/**< Transaction ID.		    */
+    pj_dns_resolver     *resolver;      /**< The resolver instance.         */
+    pj_uint16_t          id;            /**< Transaction ID.                */
 
-    unsigned		 transmit_cnt;	/**< Number of transmissions.	    */
+    unsigned             transmit_cnt;  /**< Number of transmissions.       */
 
-    struct res_key	 key;		/**< Key to index this query.	    */
-    pj_hash_entry_buf	 hbufid;	/**< Hash buffer 1		    */
-    pj_hash_entry_buf	 hbufkey;	/**< Hash buffer 2		    */
-    pj_timer_entry	 timer_entry;	/**< Timer to manage timeouts	    */
-    unsigned		 options;	/**< Query options.		    */
-    void		*user_data;	/**< Application data.		    */
-    pj_dns_callback	*cb;		/**< Callback to be called.	    */
-    struct query_head	 child_head;	/**< Child queries list head.	    */
+    struct res_key       key;           /**< Key to index this query.       */
+    pj_hash_entry_buf    hbufid;        /**< Hash buffer 1                  */
+    pj_hash_entry_buf    hbufkey;       /**< Hash buffer 2                  */
+    pj_timer_entry       timer_entry;   /**< Timer to manage timeouts       */
+    unsigned             options;       /**< Query options.                 */
+    void                *user_data;     /**< Application data.              */
+    pj_dns_callback     *cb;            /**< Callback to be called.         */
+    struct query_head    child_head;    /**< Child queries list head.       */
 };
 
 
@@ -153,72 +152,72 @@ struct cached_res
 {
     PJ_DECL_LIST_MEMBER(struct cached_res);
 
-    pj_pool_t		    *pool;	    /**< Cache's pool.		    */
-    struct res_key	     key;	    /**< Resource key.		    */
-    pj_hash_entry_buf	     hbuf;	    /**< Hash buffer		    */
-    pj_time_val		     expiry_time;   /**< Expiration time.	    */
-    pj_dns_parsed_packet    *pkt;	    /**< The response packet.	    */
-    unsigned		     ref_cnt;	    /**< Reference counter.	    */
+    pj_pool_t               *pool;          /**< Cache's pool.              */
+    struct res_key           key;           /**< Resource key.              */
+    pj_hash_entry_buf        hbuf;          /**< Hash buffer                */
+    pj_time_val              expiry_time;   /**< Expiration time.           */
+    pj_dns_parsed_packet    *pkt;           /**< The response packet.       */
+    unsigned                 ref_cnt;       /**< Reference counter.         */
 };
 
 
 /* Resolver entry */
 struct pj_dns_resolver
 {
-    pj_str_t		 name;		/**< Resolver instance name for id. */
+    pj_str_t             name;          /**< Resolver instance name for id. */
 
     /* Internals */
-    pj_pool_t		*pool;		/**< Internal pool.		    */
-    pj_grp_lock_t	*grp_lock;	/**< Group lock protection.	    */
-    pj_bool_t		 own_timer;	/**< Do we own timer?		    */
-    pj_timer_heap_t	*timer;		/**< Timer instance.		    */
-    pj_bool_t		 own_ioqueue;	/**< Do we own ioqueue?		    */
-    pj_ioqueue_t	*ioqueue;	/**< Ioqueue instance.		    */
-    char		 tmp_pool[TMP_SZ];/**< Temporary pool buffer.	    */
+    pj_pool_t           *pool;          /**< Internal pool.                 */
+    pj_grp_lock_t       *grp_lock;      /**< Group lock protection.         */
+    pj_bool_t            own_timer;     /**< Do we own timer?               */
+    pj_timer_heap_t     *timer;         /**< Timer instance.                */
+    pj_bool_t            own_ioqueue;   /**< Do we own ioqueue?             */
+    pj_ioqueue_t        *ioqueue;       /**< Ioqueue instance.              */
+    char                 tmp_pool[TMP_SZ];/**< Temporary pool buffer.       */
 
     /* Socket */
-    pj_sock_t		 udp_sock;	/**< UDP socket.		    */
-    pj_ioqueue_key_t	*udp_key;	/**< UDP socket ioqueue key.	    */
-    unsigned char	 udp_rx_pkt[UDPSZ];/**< UDP receive buffer.	    */
-    unsigned char	 udp_tx_pkt[UDPSZ];/**< UDP transmit buffer.	    */
-    pj_ioqueue_op_key_t	 udp_op_rx_key;	/**< UDP read operation key.	    */
-    pj_ioqueue_op_key_t	 udp_op_tx_key;	/**< UDP write operation key.	    */
-    pj_sockaddr		 udp_src_addr;	/**< Source address of packet	    */
-    int			 udp_addr_len;	/**< Source address length.	    */
+    pj_sock_t            udp_sock;      /**< UDP socket.                    */
+    pj_ioqueue_key_t    *udp_key;       /**< UDP socket ioqueue key.        */
+    unsigned char        udp_rx_pkt[UDPSZ];/**< UDP receive buffer.         */
+    unsigned char        udp_tx_pkt[UDPSZ];/**< UDP transmit buffer.        */
+    pj_ioqueue_op_key_t  udp_op_rx_key; /**< UDP read operation key.        */
+    pj_ioqueue_op_key_t  udp_op_tx_key; /**< UDP write operation key.       */
+    pj_sockaddr          udp_src_addr;  /**< Source address of packet       */
+    int                  udp_addr_len;  /**< Source address length.         */
 
 #if PJ_HAS_IPV6
     /* IPv6 socket */
-    pj_sock_t		 udp6_sock;	/**< UDP socket.		    */
-    pj_ioqueue_key_t	*udp6_key;	/**< UDP socket ioqueue key.	    */
-    unsigned char	 udp6_rx_pkt[UDPSZ];/**< UDP receive buffer.	    */
-    //unsigned char	 udp6_tx_pkt[UDPSZ];/**< UDP transmit buffer.	    */
-    pj_ioqueue_op_key_t	 udp6_op_rx_key;/**< UDP read operation key.	    */
-    pj_ioqueue_op_key_t	 udp6_op_tx_key;/**< UDP write operation key.	    */
-    pj_sockaddr		 udp6_src_addr;	/**< Source address of packet	    */
-    int			 udp6_addr_len;	/**< Source address length.	    */
+    pj_sock_t            udp6_sock;     /**< UDP socket.                    */
+    pj_ioqueue_key_t    *udp6_key;      /**< UDP socket ioqueue key.        */
+    unsigned char        udp6_rx_pkt[UDPSZ];/**< UDP receive buffer.        */
+    //unsigned char      udp6_tx_pkt[UDPSZ];/**< UDP transmit buffer.       */
+    pj_ioqueue_op_key_t  udp6_op_rx_key;/**< UDP read operation key.        */
+    pj_ioqueue_op_key_t  udp6_op_tx_key;/**< UDP write operation key.       */
+    pj_sockaddr          udp6_src_addr; /**< Source address of packet       */
+    int                  udp6_addr_len; /**< Source address length.         */
 #endif
 
     /* Settings */
-    pj_dns_settings	 settings;	/**< Resolver settings.		    */
+    pj_dns_settings      settings;      /**< Resolver settings.             */
 
     /* Nameservers */
-    unsigned		 ns_count;	/**< Number of name servers.	    */
-    struct nameserver	 ns[PJ_DNS_RESOLVER_MAX_NS];	/**< Array of NS.   */
+    unsigned             ns_count;      /**< Number of name servers.        */
+    struct nameserver    ns[PJ_DNS_RESOLVER_MAX_NS];    /**< Array of NS.   */
 
     /* Last DNS transaction ID used. */
-    pj_uint16_t		 last_id;
+    pj_uint16_t          last_id;
 
     /* Hash table for cached response */
-    pj_hash_table_t	*hrescache;	/**< Cached response in hash table  */
+    pj_hash_table_t     *hrescache;     /**< Cached response in hash table  */
 
     /* Pending asynchronous query, hashed by transaction ID. */
-    pj_hash_table_t	*hquerybyid;
+    pj_hash_table_t     *hquerybyid;
 
     /* Pending asynchronous query, hashed by "res_key" */
-    pj_hash_table_t	*hquerybyres;
+    pj_hash_table_t     *hquerybyres;
 
     /* Query entries free list */
-    struct query_head	 query_free_nodes;
+    struct query_head    query_free_nodes;
 };
 
 
@@ -229,12 +228,12 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
 /* Callback to be called when query has timed out */
 static void on_timeout( pj_timer_heap_t *timer_heap,
-			struct pj_timer_entry *entry);
+                        struct pj_timer_entry *entry);
 
 /* Select which nameserver to use */
 static pj_status_t select_nameservers(pj_dns_resolver *resolver,
-				      unsigned *count,
-				      unsigned servers[]);
+                                      unsigned *count,
+                                      unsigned servers[]);
 
 /* Destructor */
 static void dns_resolver_on_destroy(void *member);
@@ -244,22 +243,22 @@ static void close_sock(pj_dns_resolver *resv)
 {
     /* Close existing socket */
     if (resv->udp_key != NULL) {
-	pj_ioqueue_unregister(resv->udp_key);
-	resv->udp_key = NULL;
-	resv->udp_sock = PJ_INVALID_SOCKET;
+        pj_ioqueue_unregister(resv->udp_key);
+        resv->udp_key = NULL;
+        resv->udp_sock = PJ_INVALID_SOCKET;
     } else if (resv->udp_sock != PJ_INVALID_SOCKET) {
-	pj_sock_close(resv->udp_sock);
-	resv->udp_sock = PJ_INVALID_SOCKET;
+        pj_sock_close(resv->udp_sock);
+        resv->udp_sock = PJ_INVALID_SOCKET;
     }
 
 #if PJ_HAS_IPV6
     if (resv->udp6_key != NULL) {
-	pj_ioqueue_unregister(resv->udp6_key);
-	resv->udp6_key = NULL;
-	resv->udp6_sock = PJ_INVALID_SOCKET;
+        pj_ioqueue_unregister(resv->udp6_key);
+        resv->udp6_key = NULL;
+        resv->udp6_sock = PJ_INVALID_SOCKET;
     } else if (resv->udp6_sock != PJ_INVALID_SOCKET) {
-	pj_sock_close(resv->udp6_sock);
-	resv->udp6_sock = PJ_INVALID_SOCKET;
+        pj_sock_close(resv->udp6_sock);
+        resv->udp6_sock = PJ_INVALID_SOCKET;
     }
 #endif
 }
@@ -276,21 +275,21 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     /* Create the UDP socket */
     status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &resv->udp_sock);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Bind to any address/port */
     status = pj_sock_bind_in(resv->udp_sock, 0, 0);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Register to ioqueue */
     pj_bzero(&socket_cb, sizeof(socket_cb));
     socket_cb.on_read_complete = &on_read_complete;
     status = pj_ioqueue_register_sock2(resv->pool, resv->ioqueue,
-				       resv->udp_sock, resv->grp_lock,
-				       resv, &socket_cb, &resv->udp_key);
+                                       resv->udp_sock, resv->grp_lock,
+                                       resv, &socket_cb, &resv->udp_key);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     pj_ioqueue_op_key_init(&resv->udp_op_rx_key, sizeof(resv->udp_op_rx_key));
     pj_ioqueue_op_key_init(&resv->udp_op_tx_key, sizeof(resv->udp_op_tx_key));
@@ -299,11 +298,11 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     rx_pkt_size = sizeof(resv->udp_rx_pkt);
     resv->udp_addr_len = sizeof(resv->udp_src_addr);
     status = pj_ioqueue_recvfrom(resv->udp_key, &resv->udp_op_rx_key,
-				 resv->udp_rx_pkt, &rx_pkt_size,
-				 PJ_IOQUEUE_ALWAYS_ASYNC,
-				 &resv->udp_src_addr, &resv->udp_addr_len);
+                                 resv->udp_rx_pkt, &rx_pkt_size,
+                                 PJ_IOQUEUE_ALWAYS_ASYNC,
+                                 &resv->udp_src_addr, &resv->udp_addr_len);
     if (status != PJ_EPENDING)
-	return status;
+        return status;
 
 
 #if PJ_HAS_IPV6
@@ -311,48 +310,48 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
 
     /* Create the UDP socket */
     status = pj_sock_socket(pj_AF_INET6(), pj_SOCK_DGRAM(), 0,
-			    &resv->udp6_sock);
+                            &resv->udp6_sock);
     if (status != PJ_SUCCESS) {
-	/* Skip IPv6 socket on system without IPv6 (see ticket #1953) */
-	if (status == PJ_STATUS_FROM_OS(OSERR_EAFNOSUPPORT)) {
-	    PJ_LOG(3,(resv->name.ptr,
-		      "System does not support IPv6, resolver will "
-		      "ignore any IPv6 nameservers"));
-	    return PJ_SUCCESS;
-	}
-	return status;
+        /* Skip IPv6 socket on system without IPv6 (see ticket #1953) */
+        if (status == PJ_STATUS_FROM_OS(OSERR_EAFNOSUPPORT)) {
+            PJ_LOG(3,(resv->name.ptr,
+                      "System does not support IPv6, resolver will "
+                      "ignore any IPv6 nameservers"));
+            return PJ_SUCCESS;
+        }
+        return status;
     }
 
     /* Bind to any address/port */
     pj_sockaddr_init(pj_AF_INET6(), &bound_addr, NULL, 0);
     status = pj_sock_bind(resv->udp6_sock, &bound_addr,
-			  pj_sockaddr_get_len(&bound_addr));
+                          pj_sockaddr_get_len(&bound_addr));
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Register to ioqueue */
     pj_bzero(&socket_cb, sizeof(socket_cb));
     socket_cb.on_read_complete = &on_read_complete;
     status = pj_ioqueue_register_sock2(resv->pool, resv->ioqueue,
-				       resv->udp6_sock, resv->grp_lock,
-				       resv, &socket_cb, &resv->udp6_key);
+                                       resv->udp6_sock, resv->grp_lock,
+                                       resv, &socket_cb, &resv->udp6_key);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     pj_ioqueue_op_key_init(&resv->udp6_op_rx_key,
-			   sizeof(resv->udp6_op_rx_key));
+                           sizeof(resv->udp6_op_rx_key));
     pj_ioqueue_op_key_init(&resv->udp6_op_tx_key,
-			   sizeof(resv->udp6_op_tx_key));
+                           sizeof(resv->udp6_op_tx_key));
 
     /* Start asynchronous read to the UDP socket */
     rx_pkt_size = sizeof(resv->udp6_rx_pkt);
     resv->udp6_addr_len = sizeof(resv->udp6_src_addr);
     status = pj_ioqueue_recvfrom(resv->udp6_key, &resv->udp6_op_rx_key,
-				 resv->udp6_rx_pkt, &rx_pkt_size,
-				 PJ_IOQUEUE_ALWAYS_ASYNC,
-				 &resv->udp6_src_addr, &resv->udp6_addr_len);
+                                 resv->udp6_rx_pkt, &rx_pkt_size,
+                                 PJ_IOQUEUE_ALWAYS_ASYNC,
+                                 &resv->udp6_src_addr, &resv->udp6_addr_len);
     if (status != PJ_EPENDING)
-	return status;
+        return status;
 #else
     PJ_UNUSED_ARG(bound_addr);
 #endif
@@ -377,11 +376,11 @@ PJ_DEF(void) pj_dns_settings_default(pj_dns_settings *s)
  * Create the resolver.
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
-					    const char *name,
-					    unsigned options,
-					    pj_timer_heap_t *timer,
-					    pj_ioqueue_t *ioqueue,
-					    pj_dns_resolver **p_resolver)
+                                            const char *name,
+                                            unsigned options,
+                                            pj_timer_heap_t *timer,
+                                            pj_ioqueue_t *ioqueue,
+                                            pj_dns_resolver **p_resolver)
 {
     pj_pool_t *pool;
     pj_dns_resolver *resv;
@@ -391,12 +390,12 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     PJ_ASSERT_RETURN(pf && p_resolver, PJ_EINVAL);
 
     if (name == NULL)
-	name = THIS_FILE;
+        name = THIS_FILE;
 
     /* Create and initialize resolver instance */
     pool = pj_pool_create(pf, name, 4000, 4000, NULL);
     if (!pool)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
     /* Create pool and name */
     resv = PJ_POOL_ZALLOC_T(pool, struct pj_dns_resolver);
@@ -406,10 +405,10 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     
     /* Create group lock */
     status = pj_grp_lock_create_w_handler(pool, NULL, resv,
-					  &dns_resolver_on_destroy,
-					  &resv->grp_lock); 
+                                          &dns_resolver_on_destroy,
+                                          &resv->grp_lock); 
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     pj_grp_lock_add_ref(resv->grp_lock);
 
@@ -423,18 +422,18 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
 
     /* Create the timer heap if one is not specified */
     if (resv->timer == NULL) {
-	resv->own_timer = PJ_TRUE;
-	status = pj_timer_heap_create(pool, TIMER_SIZE, &resv->timer);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+        resv->own_timer = PJ_TRUE;
+        status = pj_timer_heap_create(pool, TIMER_SIZE, &resv->timer);
+        if (status != PJ_SUCCESS)
+            goto on_error;
     }
 
     /* Create the ioqueue if one is not specified */
     if (resv->ioqueue == NULL) {
-	resv->own_ioqueue = PJ_TRUE;
-	status = pj_ioqueue_create(pool, MAX_FD, &resv->ioqueue);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+        resv->own_ioqueue = PJ_TRUE;
+        status = pj_ioqueue_create(pool, MAX_FD, &resv->ioqueue);
+        if (status != PJ_SUCCESS)
+            goto on_error;
     }
 
     /* Response cache hash table */
@@ -448,7 +447,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     /* Initialize the UDP socket */
     status = init_sock(resv);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Looks like everything is okay */
     *p_resolver = resv;
@@ -471,56 +470,56 @@ void dns_resolver_on_destroy(void *member)
  * Destroy DNS resolver instance.
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
-					     pj_bool_t notify)
+                                             pj_bool_t notify)
 {
     pj_hash_iterator_t it_buf, *it;
     PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
 
     if (notify) {
-	/*
-	 * Notify pending queries if requested.
-	 */
-	it = pj_hash_first(resolver->hquerybyid, &it_buf);
-	while (it) {
-	    pj_dns_async_query *q = (pj_dns_async_query *)
-	    			    pj_hash_this(resolver->hquerybyid, it);
-	    pj_dns_async_query *cq;
-	    if (q->cb)
-		(*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
+        /*
+         * Notify pending queries if requested.
+         */
+        it = pj_hash_first(resolver->hquerybyid, &it_buf);
+        while (it) {
+            pj_dns_async_query *q = (pj_dns_async_query *)
+                                    pj_hash_this(resolver->hquerybyid, it);
+            pj_dns_async_query *cq;
+            if (q->cb)
+                (*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
 
-	    cq = q->child_head.next;
-	    while (cq != (pj_dns_async_query*)&q->child_head) {
-		if (cq->cb)
-		    (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
-		cq = cq->next;
-	    }
-	    it = pj_hash_next(resolver->hquerybyid, it);
-	}
+            cq = q->child_head.next;
+            while (cq != (pj_dns_async_query*)&q->child_head) {
+                if (cq->cb)
+                    (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
+                cq = cq->next;
+            }
+            it = pj_hash_next(resolver->hquerybyid, it);
+        }
     }
 
     /* Destroy cached entries */
     it = pj_hash_first(resolver->hrescache, &it_buf);
     while (it) {
-	struct cached_res *cache;
+        struct cached_res *cache;
 
-	cache = (struct cached_res*) pj_hash_this(resolver->hrescache, it);
-	pj_hash_set(NULL, resolver->hrescache, &cache->key, 
-		    sizeof(cache->key), 0, NULL);
-	pj_pool_release(cache->pool);
+        cache = (struct cached_res*) pj_hash_this(resolver->hrescache, it);
+        pj_hash_set(NULL, resolver->hrescache, &cache->key, 
+                    sizeof(cache->key), 0, NULL);
+        pj_pool_release(cache->pool);
 
-	it = pj_hash_first(resolver->hrescache, &it_buf);
+        it = pj_hash_first(resolver->hrescache, &it_buf);
     }
 
     if (resolver->own_timer && resolver->timer) {
-	pj_timer_heap_destroy(resolver->timer);
-	resolver->timer = NULL;
+        pj_timer_heap_destroy(resolver->timer);
+        resolver->timer = NULL;
     }
 
     close_sock(resolver);
 
     if (resolver->own_ioqueue && resolver->ioqueue) {
-	pj_ioqueue_destroy(resolver->ioqueue);
-	resolver->ioqueue = NULL;
+        pj_ioqueue_destroy(resolver->ioqueue);
+        resolver->ioqueue = NULL;
     }
 
     pj_grp_lock_dec_ref(resolver->grp_lock);
@@ -534,9 +533,9 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
  * Configure name servers for the DNS resolver. 
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
-					    unsigned count,
-					    const pj_str_t servers[],
-					    const pj_uint16_t ports[])
+                                            unsigned count,
+                                            const pj_str_t servers[],
+                                            const pj_uint16_t ports[])
 {
     unsigned i;
     pj_time_val now;
@@ -548,7 +547,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     pj_grp_lock_acquire(resolver->grp_lock);
 
     if (count > PJ_DNS_RESOLVER_MAX_NS)
-	count = PJ_DNS_RESOLVER_MAX_NS;
+        count = PJ_DNS_RESOLVER_MAX_NS;
 
     resolver->ns_count = 0;
     pj_bzero(resolver->ns, sizeof(resolver->ns));
@@ -556,21 +555,21 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     pj_gettimeofday(&now);
 
     for (i=0; i<count; ++i) {
-	struct nameserver *ns = &resolver->ns[i];
+        struct nameserver *ns = &resolver->ns[i];
 
-	status = pj_sockaddr_init(pj_AF_INET(), &ns->addr, &servers[i], 
-				  (pj_uint16_t)(ports ? ports[i] : PORT));
-	if (status != PJ_SUCCESS)
-	    status = pj_sockaddr_init(pj_AF_INET6(), &ns->addr, &servers[i], 
-				      (pj_uint16_t)(ports ? ports[i] : PORT));
-	if (status != PJ_SUCCESS) {
-	    pj_grp_lock_release(resolver->grp_lock);
-	    return PJLIB_UTIL_EDNSINNSADDR;
-	}
+        status = pj_sockaddr_init(pj_AF_INET(), &ns->addr, &servers[i], 
+                                  (pj_uint16_t)(ports ? ports[i] : PORT));
+        if (status != PJ_SUCCESS)
+            status = pj_sockaddr_init(pj_AF_INET6(), &ns->addr, &servers[i], 
+                                      (pj_uint16_t)(ports ? ports[i] : PORT));
+        if (status != PJ_SUCCESS) {
+            pj_grp_lock_release(resolver->grp_lock);
+            return PJLIB_UTIL_EDNSINNSADDR;
+        }
 
-	ns->state = STATE_ACTIVE;
-	ns->state_expiry = now;
-	ns->rt_delay.sec = 10;
+        ns->state = STATE_ACTIVE;
+        ns->state_expiry = now;
+        ns->rt_delay.sec = 10;
     }
     
     resolver->ns_count = count;
@@ -585,7 +584,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
  * Modify the resolver settings.
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_set_settings(pj_dns_resolver *resolver,
-						 const pj_dns_settings *st)
+                                                 const pj_dns_settings *st)
 {
     PJ_ASSERT_RETURN(resolver && st, PJ_EINVAL);
 
@@ -600,7 +599,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_settings(pj_dns_resolver *resolver,
  * Get the resolver current settings.
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_get_settings( pj_dns_resolver *resolver,
-						  pj_dns_settings *st)
+                                                  pj_dns_settings *st)
 {
     PJ_ASSERT_RETURN(resolver && st, PJ_EINVAL);
 
@@ -615,7 +614,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_get_settings( pj_dns_resolver *resolver,
  * Poll for events from the resolver. 
  */
 PJ_DEF(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
-					   const pj_time_val *timeout)
+                                           const pj_time_val *timeout)
 {
     PJ_ASSERT_ON_FAIL(resolver, return);
 
@@ -631,9 +630,9 @@ PJ_DEF(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
  * a new one.
  */
 static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
-				       unsigned options,
-				       void *user_data,
-				       pj_dns_callback *cb)
+                                       unsigned options,
+                                       void *user_data,
+                                       pj_dns_callback *cb)
 {
     pj_dns_async_query *q;
 
@@ -641,11 +640,11 @@ static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
     options |= resolver->settings.options;
 
     if (!pj_list_empty(&resolver->query_free_nodes)) {
-	q = resolver->query_free_nodes.next;
-	pj_list_erase(q);
-	pj_bzero(q, sizeof(*q));
+        q = resolver->query_free_nodes.next;
+        pj_list_erase(q);
+        pj_bzero(q, sizeof(*q));
     } else {
-	q = PJ_POOL_ZALLOC_T(resolver->pool, pj_dns_async_query);
+        q = PJ_POOL_ZALLOC_T(resolver->pool, pj_dns_async_query);
     }
 
     /* Init query */
@@ -663,7 +662,7 @@ static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
  * Transmit query.
  */
 static pj_status_t transmit_query(pj_dns_resolver *resolver,
-				  pj_dns_async_query *q)
+                                  pj_dns_async_query *q)
 {
     unsigned pkt_size;
     unsigned i, server_cnt, send_cnt;
@@ -677,11 +676,11 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
     server_cnt = PJ_ARRAY_SIZE(servers);
     status = select_nameservers(resolver, &server_cnt, servers);
     if (status != PJ_SUCCESS) {
-	return status;
+        return status;
     }
 
     if (server_cnt == 0) {
-	return PJLIB_UTIL_EDNSNOWORKINGNS;
+        return PJLIB_UTIL_EDNSNOWORKINGNS;
     }
 
     /* Start retransmit/timeout timer for the query */
@@ -694,40 +693,40 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
     delay.msec = resolver->settings.qretr_delay;
     pj_time_val_normalize(&delay);
     status = pj_timer_heap_schedule_w_grp_lock(resolver->timer,
-					       &q->timer_entry,
-					       &delay, 1,
-					       resolver->grp_lock);
+                                               &q->timer_entry,
+                                               &delay, 1,
+                                               resolver->grp_lock);
     if (status != PJ_SUCCESS) {
-	return status;
+        return status;
     }
 
     /* Check if the socket is available for sending */
     if (pj_ioqueue_is_pending(resolver->udp_key, &resolver->udp_op_tx_key)
 #if PJ_HAS_IPV6
-	|| (resolver->udp6_key &&
-	    pj_ioqueue_is_pending(resolver->udp6_key,
-				  &resolver->udp6_op_tx_key))
+        || (resolver->udp6_key &&
+            pj_ioqueue_is_pending(resolver->udp6_key,
+                                  &resolver->udp6_op_tx_key))
 #endif
-	)
+        )
     {
-	++q->transmit_cnt;
-	PJ_LOG(4,(resolver->name.ptr,
-		  "Socket busy in transmitting DNS %s query for %s%s",
-		  pj_dns_get_type_name(q->key.qtype),
-		  q->key.name,
-		  (q->transmit_cnt < resolver->settings.qretr_count?
-		   ", will try again later":"")));
-	return PJ_SUCCESS;
+        ++q->transmit_cnt;
+        PJ_LOG(4,(resolver->name.ptr,
+                  "Socket busy in transmitting DNS %s query for %s%s",
+                  pj_dns_get_type_name(q->key.qtype),
+                  q->key.name,
+                  (q->transmit_cnt < resolver->settings.qretr_count?
+                   ", will try again later":"")));
+        return PJ_SUCCESS;
     }
 
     /* Create DNS query packet */
     pkt_size = sizeof(resolver->udp_tx_pkt);
     name = pj_str(q->key.name);
     status = pj_dns_make_query(resolver->udp_tx_pkt, &pkt_size,
-			       q->id, q->key.qtype, &name);
+                               q->id, q->key.qtype, &name);
     if (status != PJ_SUCCESS) {
-	pj_timer_heap_cancel(resolver->timer, &q->timer_entry);
-	return status;
+        pj_timer_heap_cancel(resolver->timer, &q->timer_entry);
+        return status;
     }
 
     /* Get current time. */
@@ -737,51 +736,51 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
     send_cnt = 0;
     for (i=0; i<server_cnt; ++i) {
         char addr[PJ_INET6_ADDRSTRLEN];
-	pj_ssize_t sent  = (pj_ssize_t) pkt_size;
-	struct nameserver *ns = &resolver->ns[servers[i]];
+        pj_ssize_t sent  = (pj_ssize_t) pkt_size;
+        struct nameserver *ns = &resolver->ns[servers[i]];
 
-	if (ns->addr.addr.sa_family == pj_AF_INET()) {
-	    status = pj_ioqueue_sendto(resolver->udp_key,
-				       &resolver->udp_op_tx_key,
-				       resolver->udp_tx_pkt, &sent, 0,
-				       &ns->addr,
-				       pj_sockaddr_get_len(&ns->addr));
-	    if (status == PJ_SUCCESS || status == PJ_EPENDING)
-		send_cnt++;
-	}
+        if (ns->addr.addr.sa_family == pj_AF_INET()) {
+            status = pj_ioqueue_sendto(resolver->udp_key,
+                                       &resolver->udp_op_tx_key,
+                                       resolver->udp_tx_pkt, &sent, 0,
+                                       &ns->addr,
+                                       pj_sockaddr_get_len(&ns->addr));
+            if (status == PJ_SUCCESS || status == PJ_EPENDING)
+                send_cnt++;
+        }
 #if PJ_HAS_IPV6
-	else if (resolver->udp6_key) {
-	    status = pj_ioqueue_sendto(resolver->udp6_key,
-				       &resolver->udp6_op_tx_key,
-				       resolver->udp_tx_pkt, &sent, 0,
-				       &ns->addr,
-				       pj_sockaddr_get_len(&ns->addr));
-	    if (status == PJ_SUCCESS || status == PJ_EPENDING)
-		send_cnt++;
-	}
+        else if (resolver->udp6_key) {
+            status = pj_ioqueue_sendto(resolver->udp6_key,
+                                       &resolver->udp6_op_tx_key,
+                                       resolver->udp_tx_pkt, &sent, 0,
+                                       &ns->addr,
+                                       pj_sockaddr_get_len(&ns->addr));
+            if (status == PJ_SUCCESS || status == PJ_EPENDING)
+                send_cnt++;
+        }
 #endif
-	else {
-	    continue;
-	}
+        else {
+            continue;
+        }
 
-	PJ_PERROR(4,(resolver->name.ptr, status,
-		  "%s %d bytes to NS %d (%s:%d): DNS %s query for %s",
-		  (q->transmit_cnt==0? "Transmitting":"Re-transmitting"),
-		  (int)pkt_size, servers[i],
-		  pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
-		  pj_sockaddr_get_port(&ns->addr),
-		  pj_dns_get_type_name(q->key.qtype), 
-		  q->key.name));
+        PJ_PERROR(4,(resolver->name.ptr, status,
+                  "%s %d bytes to NS %d (%s:%d): DNS %s query for %s",
+                  (q->transmit_cnt==0? "Transmitting":"Re-transmitting"),
+                  (int)pkt_size, servers[i],
+                  pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
+                  pj_sockaddr_get_port(&ns->addr),
+                  pj_dns_get_type_name(q->key.qtype), 
+                  q->key.name));
 
-	if (ns->q_id == 0) {
-	    ns->q_id = q->id;
-	    ns->sent_time = now;
-	}
+        if (ns->q_id == 0) {
+            ns->q_id = q->id;
+            ns->sent_time = now;
+        }
     }
 
     if (send_cnt == 0) {
         pj_timer_heap_cancel(resolver->timer, &q->timer_entry);
-	return PJLIB_UTIL_EDNSNOWORKINGNS;
+        return PJLIB_UTIL_EDNSNOWORKINGNS;
     }
 
     ++q->transmit_cnt;
@@ -808,7 +807,7 @@ static void init_res_key(struct res_key *key, int type, const pj_str_t *name)
 
     /* Copy key, in lowercase */
     for (i=0; i<len; ++i) {
-	*dst++ = (char)pj_tolower(*src++);
+        *dst++ = (char)pj_tolower(*src++);
     }
 }
 
@@ -820,7 +819,7 @@ static struct cached_res *alloc_entry(pj_dns_resolver *resolver)
     struct cached_res *cache;
 
     pool = pj_pool_create(resolver->pool->factory, "dnscache",
-			  RES_BUF_SZ, 256, NULL);
+                          RES_BUF_SZ, 256, NULL);
     cache = PJ_POOL_ZALLOC_T(pool, struct cached_res);
     cache->pool = pool;
     cache->ref_cnt = 1;
@@ -858,12 +857,12 @@ static void free_entry(pj_dns_resolver *resolver, struct cached_res *cache)
  * Create and start asynchronous DNS query for a single resource.
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
-						 const pj_str_t *name,
-						 int type,
-						 unsigned options,
-						 pj_dns_callback *cb,
-						 void *user_data,
-						 pj_dns_async_query **p_query)
+                                                 const pj_str_t *name,
+                                                 int type,
+                                                 unsigned options,
+                                                 pj_dns_callback *cb,
+                                                 void *user_data,
+                                                 pj_dns_async_query **p_query)
 {
     pj_time_val now;
     struct res_key key;
@@ -877,7 +876,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 
     /* Check name is not too long. */
     PJ_ASSERT_RETURN(name->slen>0 && name->slen < PJ_MAX_HOSTNAME,
-		     PJ_ENAMETOOLONG);
+                     PJ_ENAMETOOLONG);
 
     /* Check type */
     PJ_ASSERT_RETURN(type > 0 && type < 0xFFFF, PJ_EINVAL);
@@ -896,92 +895,92 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
      */
     hval = 0;
     cache = (struct cached_res *) pj_hash_get(resolver->hrescache, &key, 
-    					      sizeof(key), &hval);
+                                              sizeof(key), &hval);
     if (cache) {
-	/* We've found a cached entry. */
+        /* We've found a cached entry. */
 
-	/* Check for expiration */
-	if (PJ_TIME_VAL_GT(cache->expiry_time, now)) {
+        /* Check for expiration */
+        if (PJ_TIME_VAL_GT(cache->expiry_time, now)) {
 
-	    /* Log */
-	    PJ_LOG(5,(resolver->name.ptr, 
-		      "Picked up DNS %s record for %.*s from cache, ttl=%d",
-		      pj_dns_get_type_name(type),
-		      (int)name->slen, name->ptr,
-		      (int)(cache->expiry_time.sec - now.sec)));
+            /* Log */
+            PJ_LOG(5,(resolver->name.ptr, 
+                      "Picked up DNS %s record for %.*s from cache, ttl=%d",
+                      pj_dns_get_type_name(type),
+                      (int)name->slen, name->ptr,
+                      (int)(cache->expiry_time.sec - now.sec)));
 
-	    /* Map DNS Rcode in the response into PJLIB status name space */
-	    status = PJ_DNS_GET_RCODE(cache->pkt->hdr.flags);
-	    status = PJ_STATUS_FROM_DNS_RCODE(status);
+            /* Map DNS Rcode in the response into PJLIB status name space */
+            status = PJ_DNS_GET_RCODE(cache->pkt->hdr.flags);
+            status = PJ_STATUS_FROM_DNS_RCODE(status);
 
-	    /* Workaround for deadlock problem. Need to increment the cache's
-	     * ref counter first before releasing mutex, so the cache won't be
-	     * destroyed by other thread while in callback.
-	     */
-	    cache->ref_cnt++;
-	    pj_grp_lock_release(resolver->grp_lock);
+            /* Workaround for deadlock problem. Need to increment the cache's
+             * ref counter first before releasing mutex, so the cache won't be
+             * destroyed by other thread while in callback.
+             */
+            cache->ref_cnt++;
+            pj_grp_lock_release(resolver->grp_lock);
 
-	    /* This cached response is still valid. Just return this
-	     * response to caller.
-	     */
-	    if (cb) {
-		(*cb)(user_data, status, cache->pkt);
-	    }
+            /* This cached response is still valid. Just return this
+             * response to caller.
+             */
+            if (cb) {
+                (*cb)(user_data, status, cache->pkt);
+            }
 
-	    /* Done. No host resolution is necessary */
-	    pj_grp_lock_acquire(resolver->grp_lock);
+            /* Done. No host resolution is necessary */
+            pj_grp_lock_acquire(resolver->grp_lock);
 
-	    /* Decrement the ref counter. Also check if it is time to free
-	     * the cache (as it has been expired).
-	     */
-	    cache->ref_cnt--;
-	    if (cache->ref_cnt <= 0)
-		free_entry(resolver, cache);
+            /* Decrement the ref counter. Also check if it is time to free
+             * the cache (as it has been expired).
+             */
+            cache->ref_cnt--;
+            if (cache->ref_cnt <= 0)
+                free_entry(resolver, cache);
 
-	    /* Must return PJ_SUCCESS */
-	    status = PJ_SUCCESS;
+            /* Must return PJ_SUCCESS */
+            status = PJ_SUCCESS;
 
-	    /*
-	     * We cannot write to *p_query after calling cb because what
-	     * p_query points to may have been freed by cb.
+            /*
+             * We cannot write to *p_query after calling cb because what
+             * p_query points to may have been freed by cb.
              * Refer to ticket #1974.
-	     */
-	    pj_grp_lock_release(resolver->grp_lock);
-	    return status;
-	}
+             */
+            pj_grp_lock_release(resolver->grp_lock);
+            return status;
+        }
 
-	/* At this point, we have a cached entry, but this entry has expired.
-	 * Remove this entry from the cached list.
-	 */
-	pj_hash_set(NULL, resolver->hrescache, &key, sizeof(key), 0, NULL);
+        /* At this point, we have a cached entry, but this entry has expired.
+         * Remove this entry from the cached list.
+         */
+        pj_hash_set(NULL, resolver->hrescache, &key, sizeof(key), 0, NULL);
 
-	/* Also free the cache, if it is not being used (by callback). */
-	cache->ref_cnt--;
-	if (cache->ref_cnt <= 0)
-	    free_entry(resolver, cache);
+        /* Also free the cache, if it is not being used (by callback). */
+        cache->ref_cnt--;
+        if (cache->ref_cnt <= 0)
+            free_entry(resolver, cache);
 
-	/* Must continue with creating a query now */
+        /* Must continue with creating a query now */
     }
 
     /* Next, check if we have pending query on the same resource */
     q = (pj_dns_async_query *) pj_hash_get(resolver->hquerybyres, &key, 
-    					   sizeof(key), NULL);
+                                           sizeof(key), NULL);
     if (q) {
-	/* Yes, there's another pending query to the same key.
-	 * Just create a new child query and add this query to
-	 * pending query's child queries.
-	 */
-	pj_dns_async_query *nq;
+        /* Yes, there's another pending query to the same key.
+         * Just create a new child query and add this query to
+         * pending query's child queries.
+         */
+        pj_dns_async_query *nq;
 
-	nq = alloc_qnode(resolver, options, user_data, cb);
-	pj_list_push_back(&q->child_head, nq);
+        nq = alloc_qnode(resolver, options, user_data, cb);
+        pj_list_push_back(&q->child_head, nq);
 
-	/* Done. This child query will be notified once the "parent"
-	 * query completes.
-	 */
-	p_q = nq;
-	status = PJ_SUCCESS;
-	goto on_return;
+        /* Done. This child query will be notified once the "parent"
+         * query completes.
+         */
+        p_q = nq;
+        status = PJ_SUCCESS;
+        goto on_return;
     } 
 
     /* There's no pending query to the same key, initiate a new one. */
@@ -991,27 +990,27 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     /* TODO: dnsext-forgery-resilient: randomize id for security */
     q->id = resolver->last_id++;
     if (resolver->last_id == 0)
-	resolver->last_id = 1;
+        resolver->last_id = 1;
     pj_memcpy(&q->key, &key, sizeof(struct res_key));
 
     /* Send the query */
     status = transmit_query(resolver, q);
     if (status != PJ_SUCCESS) {
-	pj_list_push_back(&resolver->query_free_nodes, q);
-	goto on_return;
+        pj_list_push_back(&resolver->query_free_nodes, q);
+        goto on_return;
     }
 
     /* Add query entry to the hash tables */
     pj_hash_set_np(resolver->hquerybyid, &q->id, sizeof(q->id), 
-		   0, q->hbufid, q);
+                   0, q->hbufid, q);
     pj_hash_set_np(resolver->hquerybyres, &q->key, sizeof(q->key),
-		   0, q->hbufkey, q);
+                   0, q->hbufkey, q);
 
     p_q = q;
 
 on_return:
     if (p_query)
-	*p_query = p_q;
+        *p_query = p_q;
 
     pj_grp_lock_release(resolver->grp_lock);
     return status;
@@ -1022,7 +1021,7 @@ on_return:
  * Cancel a pending query.
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
-						 pj_bool_t notify)
+                                                 pj_bool_t notify)
 {
     pj_dns_callback *cb;
 
@@ -1031,15 +1030,15 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
     pj_grp_lock_acquire(query->resolver->grp_lock);
 
     if (query->timer_entry.id == 1) {
-	pj_timer_heap_cancel_if_active(query->resolver->timer,
-				       &query->timer_entry, 0);
+        pj_timer_heap_cancel_if_active(query->resolver->timer,
+                                       &query->timer_entry, 0);
     }
 
     cb = query->cb;
     query->cb = NULL;
 
     if (notify)
-	(*cb)(query->user_data, PJ_ECANCELLED, NULL);
+        (*cb)(query->user_data, PJ_ECANCELLED, NULL);
 
     pj_grp_lock_release(query->resolver->grp_lock);
     return PJ_SUCCESS;
@@ -1050,7 +1049,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
  * DNS response containing A packet. 
  */
 PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
-					    pj_dns_a_record *rec)
+                                            pj_dns_a_record *rec)
 {
     enum { MAX_SEARCH = 20 };
     pj_str_t hostname, alias = {NULL, 0}, *resname;
@@ -1065,22 +1064,22 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
 
     /* Return error if there's error in the packet. */
     if (PJ_DNS_GET_RCODE(pkt->hdr.flags))
-	return PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_GET_RCODE(pkt->hdr.flags));
+        return PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_GET_RCODE(pkt->hdr.flags));
 
     /* Return error if there's no query section */
     if (pkt->hdr.qdcount == 0)
-	return PJLIB_UTIL_EDNSINANSWER;
+        return PJLIB_UTIL_EDNSINANSWER;
 
     /* Return error if there's no answer */
     if (pkt->hdr.anscount == 0)
-	return PJLIB_UTIL_EDNSNOANSWERREC;
+        return PJLIB_UTIL_EDNSNOANSWERREC;
 
     /* Get the hostname from the query. */
     hostname = pkt->q[0].name;
 
     /* Copy hostname to the record */
     if (hostname.slen > (int)bufleft) {
-	return PJ_ENAMETOOLONG;
+        return PJ_ENAMETOOLONG;
     }
 
     pj_memcpy(&rec->buf_[bufstart], hostname.ptr, hostname.slen);
@@ -1092,68 +1091,68 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
 
     /* Find the first RR which name matches the hostname */
     for (ansidx=0; ansidx < pkt->hdr.anscount; ++ansidx) {
-	if (pj_stricmp(&pkt->ans[ansidx].name, &hostname)==0)
-	    break;
+        if (pj_stricmp(&pkt->ans[ansidx].name, &hostname)==0)
+            break;
     }
 
     if (ansidx == pkt->hdr.anscount)
-	return PJLIB_UTIL_EDNSNOANSWERREC;
+        return PJLIB_UTIL_EDNSNOANSWERREC;
 
     resname = &hostname;
 
     /* Keep following CNAME records. */
     while (pkt->ans[ansidx].type == PJ_DNS_TYPE_CNAME &&
-	   search_cnt++ < MAX_SEARCH)
+           search_cnt++ < MAX_SEARCH)
     {
-	resname = &pkt->ans[ansidx].rdata.cname.name;
+        resname = &pkt->ans[ansidx].rdata.cname.name;
 
-	if (!alias.slen)
-	    alias = *resname;
+        if (!alias.slen)
+            alias = *resname;
 
-	for (i=0; i < pkt->hdr.anscount; ++i) {
-	    if (pj_stricmp(resname, &pkt->ans[i].name)==0) {
-		break;
-	    }
-	}
+        for (i=0; i < pkt->hdr.anscount; ++i) {
+            if (pj_stricmp(resname, &pkt->ans[i].name)==0) {
+                break;
+            }
+        }
 
-	if (i==pkt->hdr.anscount)
-	    return PJLIB_UTIL_EDNSNOANSWERREC;
+        if (i==pkt->hdr.anscount)
+            return PJLIB_UTIL_EDNSNOANSWERREC;
 
-	ansidx = i;
+        ansidx = i;
     }
 
     if (search_cnt >= MAX_SEARCH)
-	return PJLIB_UTIL_EDNSINANSWER;
+        return PJLIB_UTIL_EDNSINANSWER;
 
     if (pkt->ans[ansidx].type != PJ_DNS_TYPE_A)
-	return PJLIB_UTIL_EDNSINANSWER;
+        return PJLIB_UTIL_EDNSINANSWER;
 
     /* Copy alias to the record, if present. */
     if (alias.slen) {
-	if (alias.slen > (int)bufleft)
-	    return PJ_ENAMETOOLONG;
+        if (alias.slen > (int)bufleft)
+            return PJ_ENAMETOOLONG;
 
-	pj_memcpy(&rec->buf_[bufstart], alias.ptr, alias.slen);
-	rec->alias.ptr = &rec->buf_[bufstart];
-	rec->alias.slen = alias.slen;
+        pj_memcpy(&rec->buf_[bufstart], alias.ptr, alias.slen);
+        rec->alias.ptr = &rec->buf_[bufstart];
+        rec->alias.slen = alias.slen;
 
-	bufstart += alias.slen;
-	bufleft -= alias.slen;
+        bufstart += alias.slen;
+        bufleft -= alias.slen;
     }
 
     /* Get the IP addresses. */
     for (i=0; i < pkt->hdr.anscount; ++i) {
-	if (pkt->ans[i].type == PJ_DNS_TYPE_A &&
-	    pj_stricmp(&pkt->ans[i].name, resname)==0 &&
-	    rec->addr_count < PJ_DNS_MAX_IP_IN_A_REC)
-	{
-	    rec->addr[rec->addr_count++].s_addr =
-		pkt->ans[i].rdata.a.ip_addr.s_addr;
-	}
+        if (pkt->ans[i].type == PJ_DNS_TYPE_A &&
+            pj_stricmp(&pkt->ans[i].name, resname)==0 &&
+            rec->addr_count < PJ_DNS_MAX_IP_IN_A_REC)
+        {
+            rec->addr[rec->addr_count++].s_addr =
+                pkt->ans[i].rdata.a.ip_addr.s_addr;
+        }
     }
 
     if (rec->addr_count == 0)
-	return PJLIB_UTIL_EDNSNOANSWERREC;
+        return PJLIB_UTIL_EDNSNOANSWERREC;
 
     return PJ_SUCCESS;
 }
@@ -1163,8 +1162,8 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
  * DNS response containing A and/or AAAA packet. 
  */
 PJ_DEF(pj_status_t) pj_dns_parse_addr_response(
-					    const pj_dns_parsed_packet *pkt,
-					    pj_dns_addr_record *rec)
+                                            const pj_dns_parsed_packet *pkt,
+                                            pj_dns_addr_record *rec)
 {
     enum { MAX_SEARCH = 20 };
     pj_str_t hostname, alias = {NULL, 0}, *resname;
@@ -1181,22 +1180,22 @@ PJ_DEF(pj_status_t) pj_dns_parse_addr_response(
 
     /* Return error if there's error in the packet. */
     if (PJ_DNS_GET_RCODE(pkt->hdr.flags))
-	return PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_GET_RCODE(pkt->hdr.flags));
+        return PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_GET_RCODE(pkt->hdr.flags));
 
     /* Return error if there's no query section */
     if (pkt->hdr.qdcount == 0)
-	return PJLIB_UTIL_EDNSINANSWER;
+        return PJLIB_UTIL_EDNSINANSWER;
 
     /* Return error if there's no answer */
     if (pkt->hdr.anscount == 0)
-	return PJLIB_UTIL_EDNSNOANSWERREC;
+        return PJLIB_UTIL_EDNSNOANSWERREC;
 
     /* Get the hostname from the query. */
     hostname = pkt->q[0].name;
 
     /* Copy hostname to the record */
     if (hostname.slen > (int)bufleft) {
-	return PJ_ENAMETOOLONG;
+        return PJ_ENAMETOOLONG;
     }
 
     pj_memcpy(&rec->buf_[bufstart], hostname.ptr, hostname.slen);
@@ -1208,78 +1207,78 @@ PJ_DEF(pj_status_t) pj_dns_parse_addr_response(
 
     /* Find the first RR which name matches the hostname. */
     for (ansidx=0; ansidx < pkt->hdr.anscount; ++ansidx) {
-	if (pj_stricmp(&pkt->ans[ansidx].name, &hostname)==0)
-	    break;
+        if (pj_stricmp(&pkt->ans[ansidx].name, &hostname)==0)
+            break;
     }
 
     if (ansidx == pkt->hdr.anscount)
-	return PJLIB_UTIL_EDNSNOANSWERREC;
+        return PJLIB_UTIL_EDNSNOANSWERREC;
 
     resname = &hostname;
 
     /* Keep following CNAME records. */
     while (pkt->ans[ansidx].type == PJ_DNS_TYPE_CNAME &&
-	   cnt++ < MAX_SEARCH)
+           cnt++ < MAX_SEARCH)
     {
-	resname = &pkt->ans[ansidx].rdata.cname.name;
+        resname = &pkt->ans[ansidx].rdata.cname.name;
 
-	if (!alias.slen)
-	    alias = *resname;
+        if (!alias.slen)
+            alias = *resname;
 
-	for (i=0; i < pkt->hdr.anscount; ++i) {
-	    if (pj_stricmp(resname, &pkt->ans[i].name)==0)
-		break;
-	}
+        for (i=0; i < pkt->hdr.anscount; ++i) {
+            if (pj_stricmp(resname, &pkt->ans[i].name)==0)
+                break;
+        }
 
-	if (i==pkt->hdr.anscount)
-	    return PJLIB_UTIL_EDNSNOANSWERREC;
+        if (i==pkt->hdr.anscount)
+            return PJLIB_UTIL_EDNSNOANSWERREC;
 
-	ansidx = i;
+        ansidx = i;
     }
 
     if (cnt >= MAX_SEARCH)
-	return PJLIB_UTIL_EDNSINANSWER;
+        return PJLIB_UTIL_EDNSINANSWER;
 
     if (pkt->ans[ansidx].type != PJ_DNS_TYPE_A &&
-	pkt->ans[ansidx].type != PJ_DNS_TYPE_AAAA)
+        pkt->ans[ansidx].type != PJ_DNS_TYPE_AAAA)
     {
-	return PJLIB_UTIL_EDNSINANSWER;
+        return PJLIB_UTIL_EDNSINANSWER;
     }
 
     /* Copy alias to the record, if present. */
     if (alias.slen) {
-	if (alias.slen > (int)bufleft)
-	    return PJ_ENAMETOOLONG;
+        if (alias.slen > (int)bufleft)
+            return PJ_ENAMETOOLONG;
 
-	pj_memcpy(&rec->buf_[bufstart], alias.ptr, alias.slen);
-	rec->alias.ptr = &rec->buf_[bufstart];
-	rec->alias.slen = alias.slen;
+        pj_memcpy(&rec->buf_[bufstart], alias.ptr, alias.slen);
+        rec->alias.ptr = &rec->buf_[bufstart];
+        rec->alias.slen = alias.slen;
 
-	bufstart += alias.slen;
-	bufleft -= alias.slen;
+        bufstart += alias.slen;
+        bufleft -= alias.slen;
     }
 
     /* Get the IP addresses. */
     cnt = 0;
     for (i=0; i < pkt->hdr.anscount && cnt < PJ_DNS_MAX_IP_IN_A_REC ; ++i) {
-	if ((pkt->ans[i].type == PJ_DNS_TYPE_A ||
-	     pkt->ans[i].type == PJ_DNS_TYPE_AAAA) &&
-	    pj_stricmp(&pkt->ans[i].name, resname)==0)
-	{
-	    if (pkt->ans[i].type == PJ_DNS_TYPE_A) {
-		rec->addr[cnt].af = pj_AF_INET();
-		rec->addr[cnt].ip.v4 = pkt->ans[i].rdata.a.ip_addr;
-	    } else {
-		rec->addr[cnt].af = pj_AF_INET6();
-		rec->addr[cnt].ip.v6 = pkt->ans[i].rdata.aaaa.ip_addr;
-	    }
-	    ++cnt;
-	}
+        if ((pkt->ans[i].type == PJ_DNS_TYPE_A ||
+             pkt->ans[i].type == PJ_DNS_TYPE_AAAA) &&
+            pj_stricmp(&pkt->ans[i].name, resname)==0)
+        {
+            if (pkt->ans[i].type == PJ_DNS_TYPE_A) {
+                rec->addr[cnt].af = pj_AF_INET();
+                rec->addr[cnt].ip.v4 = pkt->ans[i].rdata.a.ip_addr;
+            } else {
+                rec->addr[cnt].af = pj_AF_INET6();
+                rec->addr[cnt].ip.v6 = pkt->ans[i].rdata.aaaa.ip_addr;
+            }
+            ++cnt;
+        }
     }
     rec->addr_count = cnt;
 
     if (cnt == 0)
-	return PJLIB_UTIL_EDNSNOANSWERREC;
+        return PJLIB_UTIL_EDNSNOANSWERREC;
 
     return PJ_SUCCESS;
 }
@@ -1287,9 +1286,9 @@ PJ_DEF(pj_status_t) pj_dns_parse_addr_response(
 
 /* Set nameserver state */
 static void set_nameserver_state(pj_dns_resolver *resolver,
-				 unsigned index,
-				 enum ns_state state,
-				 const pj_time_val *now)
+                                 unsigned index,
+                                 enum ns_state state,
+                                 const pj_time_val *now)
 {
     struct nameserver *ns = &resolver->ns[index];
     enum ns_state old_state = ns->state;
@@ -1299,17 +1298,17 @@ static void set_nameserver_state(pj_dns_resolver *resolver,
     ns->state_expiry = *now;
 
     if (state == STATE_PROBING)
-	ns->state_expiry.sec += ((resolver->settings.qretr_count + 2) *
-				 resolver->settings.qretr_delay) / 1000;
+        ns->state_expiry.sec += ((resolver->settings.qretr_count + 2) *
+                                 resolver->settings.qretr_delay) / 1000;
     else if (state == STATE_ACTIVE)
-	ns->state_expiry.sec += resolver->settings.good_ns_ttl;
+        ns->state_expiry.sec += resolver->settings.good_ns_ttl;
     else
-	ns->state_expiry.sec += resolver->settings.bad_ns_ttl;
+        ns->state_expiry.sec += resolver->settings.bad_ns_ttl;
 
     PJ_LOG(5, (resolver->name.ptr, "Nameserver %s:%d state changed %s --> %s",
-	       pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
-	       pj_sockaddr_get_port(&ns->addr),
-	       state_names[old_state], state_names[state]));
+               pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
+               pj_sockaddr_get_port(&ns->addr),
+               state_names[old_state], state_names[state]));
 }
 
 
@@ -1326,8 +1325,8 @@ static void set_nameserver_state(pj_dns_resolver *resolver,
  *    also include the NS to re-check again that the server is still bad.
  */
 static pj_status_t select_nameservers(pj_dns_resolver *resolver,
-				      unsigned *count,
-				      unsigned servers[])
+                                      unsigned *count,
+                                      unsigned servers[])
 {
     unsigned i, max_count=*count;
     int min;
@@ -1340,45 +1339,45 @@ static pj_status_t select_nameservers(pj_dns_resolver *resolver,
 
     /* Check that nameservers are configured. */
     if (resolver->ns_count == 0)
-	return PJLIB_UTIL_EDNSNONS;
+        return PJLIB_UTIL_EDNSNONS;
 
     pj_gettimeofday(&now);
 
     /* Select one Active nameserver with best response time. */
     for (min=-1, i=0; i<resolver->ns_count; ++i) {
-	struct nameserver *ns = &resolver->ns[i];
+        struct nameserver *ns = &resolver->ns[i];
 
-	if (ns->state != STATE_ACTIVE)
-	    continue;
+        if (ns->state != STATE_ACTIVE)
+            continue;
 
-	if (min == -1)
-	    min = i;
-	else if (PJ_TIME_VAL_LT(ns->rt_delay, resolver->ns[min].rt_delay))
-	    min = i;
+        if (min == -1)
+            min = i;
+        else if (PJ_TIME_VAL_LT(ns->rt_delay, resolver->ns[min].rt_delay))
+            min = i;
     }
     if (min != -1) {
-	servers[0] = min;
-	++(*count);
+        servers[0] = min;
+        ++(*count);
     }
 
     /* Scan nameservers. */
     for (i=0; i<resolver->ns_count && *count < max_count; ++i) {
-	struct nameserver *ns = &resolver->ns[i];
+        struct nameserver *ns = &resolver->ns[i];
 
-	if (PJ_TIME_VAL_LTE(ns->state_expiry, now)) {
-	    if (ns->state == STATE_PROBING) {
-		set_nameserver_state(resolver, i, STATE_BAD, &now);
-	    } else {
-		set_nameserver_state(resolver, i, STATE_PROBING, &now);
-		if ((int)i != min) {
-		    servers[*count] = i;
-		    ++(*count);
-		}
-	    }
-	} else if (ns->state == STATE_PROBING && (int)i != min) {
-	    servers[*count] = i;
-	    ++(*count);
-	}
+        if (PJ_TIME_VAL_LTE(ns->state_expiry, now)) {
+            if (ns->state == STATE_PROBING) {
+                set_nameserver_state(resolver, i, STATE_BAD, &now);
+            } else {
+                set_nameserver_state(resolver, i, STATE_PROBING, &now);
+                if ((int)i != min) {
+                    servers[*count] = i;
+                    ++(*count);
+                }
+            }
+        } else if (ns->state == STATE_PROBING && (int)i != min) {
+            servers[*count] = i;
+            ++(*count);
+        }
     }
 
     return PJ_SUCCESS;
@@ -1387,8 +1386,8 @@ static pj_status_t select_nameservers(pj_dns_resolver *resolver,
 
 /* Update name server status */
 static void report_nameserver_status(pj_dns_resolver *resolver,
-				     const pj_sockaddr *ns_addr,
-				     const pj_dns_parsed_packet *pkt)
+                                     const pj_sockaddr *ns_addr,
+                                     const pj_dns_parsed_packet *pkt)
 {
     unsigned i;
     int rcode;
@@ -1400,11 +1399,11 @@ static void report_nameserver_status(pj_dns_resolver *resolver,
      * it returned the following status codes
      */
     if (pkt) {
-	rcode = PJ_DNS_GET_RCODE(pkt->hdr.flags);
-	q_id = pkt->hdr.id;
+        rcode = PJ_DNS_GET_RCODE(pkt->hdr.flags);
+        q_id = pkt->hdr.id;
     } else {
-	rcode = 0;
-	q_id = (pj_uint32_t)-1;
+        rcode = 0;
+        q_id = (pj_uint32_t)-1;
     }
 
     /* Some nameserver is reported to respond with PJ_DNS_RCODE_SERVFAIL for
@@ -1413,12 +1412,12 @@ static void report_nameserver_status(pj_dns_resolver *resolver,
      * queries. So let's not mark nameserver as bad for SERVFAIL response.
      */
     if (!pkt || /* rcode == PJ_DNS_RCODE_SERVFAIL || */
-	        rcode == PJ_DNS_RCODE_REFUSED ||
-	        rcode == PJ_DNS_RCODE_NOTAUTH) 
+                rcode == PJ_DNS_RCODE_REFUSED ||
+                rcode == PJ_DNS_RCODE_NOTAUTH) 
     {
-	is_good = PJ_FALSE;
+        is_good = PJ_FALSE;
     } else {
-	is_good = PJ_TRUE;
+        is_good = PJ_TRUE;
     }
 
 
@@ -1427,105 +1426,105 @@ static void report_nameserver_status(pj_dns_resolver *resolver,
 
     /* Recheck all nameservers. */
     for (i=0; i<resolver->ns_count; ++i) {
-	struct nameserver *ns = &resolver->ns[i];
+        struct nameserver *ns = &resolver->ns[i];
 
-	if (pj_sockaddr_cmp(&ns->addr, ns_addr) == 0) {
-	    if (q_id == ns->q_id) {
-		/* Calculate response time */
-		pj_time_val rt = now;
-		PJ_TIME_VAL_SUB(rt, ns->sent_time);
-		ns->rt_delay = rt;
-		ns->q_id = 0;
-	    }
-	    set_nameserver_state(resolver, i, 
-				 (is_good ? STATE_ACTIVE : STATE_BAD), &now);
-	    break;
-	}
+        if (pj_sockaddr_cmp(&ns->addr, ns_addr) == 0) {
+            if (q_id == ns->q_id) {
+                /* Calculate response time */
+                pj_time_val rt = now;
+                PJ_TIME_VAL_SUB(rt, ns->sent_time);
+                ns->rt_delay = rt;
+                ns->q_id = 0;
+            }
+            set_nameserver_state(resolver, i, 
+                                 (is_good ? STATE_ACTIVE : STATE_BAD), &now);
+            break;
+        }
     }
 }
 
 
 /* Update response cache */
 static void update_res_cache(pj_dns_resolver *resolver,
-			     const struct res_key *key,
-			     pj_status_t status,
-			     pj_bool_t set_expiry,
-			     const pj_dns_parsed_packet *pkt)
+                             const struct res_key *key,
+                             pj_status_t status,
+                             pj_bool_t set_expiry,
+                             const pj_dns_parsed_packet *pkt)
 {
     struct cached_res *cache;
     pj_uint32_t hval=0, ttl;
 
     /* If status is unsuccessful, clear the same entry from the cache */
     if (status != PJ_SUCCESS) {
-	cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
-						  sizeof(*key), &hval);
-	/* Remove the entry before releasing its pool (see ticket #1710) */
-	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
-	
-	/* Free the entry */
-	if (cache && --cache->ref_cnt <= 0)
-	    free_entry(resolver, cache);
+        cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
+                                                  sizeof(*key), &hval);
+        /* Remove the entry before releasing its pool (see ticket #1710) */
+        pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
+        
+        /* Free the entry */
+        if (cache && --cache->ref_cnt <= 0)
+            free_entry(resolver, cache);
     }
 
 
     /* Calculate expiration time. */
     if (set_expiry) {
-	if (pkt->hdr.anscount == 0 || status != PJ_SUCCESS) {
-	    /* If we don't have answers for the name, then give a different
-	     * ttl value (note: PJ_DNS_RESOLVER_INVALID_TTL may be zero, 
-	     * which means that invalid names won't be kept in the cache)
-	     */
-	    ttl = PJ_DNS_RESOLVER_INVALID_TTL;
+        if (pkt->hdr.anscount == 0 || status != PJ_SUCCESS) {
+            /* If we don't have answers for the name, then give a different
+             * ttl value (note: PJ_DNS_RESOLVER_INVALID_TTL may be zero, 
+             * which means that invalid names won't be kept in the cache)
+             */
+            ttl = PJ_DNS_RESOLVER_INVALID_TTL;
 
-	} else {
-	    /* Otherwise get the minimum TTL from the answers */
-	    unsigned i;
-	    ttl = 0xFFFFFFFF;
-	    for (i=0; i<pkt->hdr.anscount; ++i) {
-		if (pkt->ans[i].ttl < ttl)
-		    ttl = pkt->ans[i].ttl;
-	    }
-	}
+        } else {
+            /* Otherwise get the minimum TTL from the answers */
+            unsigned i;
+            ttl = 0xFFFFFFFF;
+            for (i=0; i<pkt->hdr.anscount; ++i) {
+                if (pkt->ans[i].ttl < ttl)
+                    ttl = pkt->ans[i].ttl;
+            }
+        }
     } else {
-	ttl = 0xFFFFFFFF;
+        ttl = 0xFFFFFFFF;
     }
 
     /* Apply maximum TTL */
     if (ttl > resolver->settings.cache_max_ttl)
-	ttl = resolver->settings.cache_max_ttl;
+        ttl = resolver->settings.cache_max_ttl;
 
     /* Get a cache response entry */
     cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key,
-    					      sizeof(*key), &hval);
+                                              sizeof(*key), &hval);
 
     /* If TTL is zero, clear the same entry in the hash table */
     if (ttl == 0) {
-	/* Remove the entry before releasing its pool (see ticket #1710) */
-	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
+        /* Remove the entry before releasing its pool (see ticket #1710) */
+        pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
 
-	/* Free the entry */
-	if (cache && --cache->ref_cnt <= 0)
-	    free_entry(resolver, cache);
-	return;
+        /* Free the entry */
+        if (cache && --cache->ref_cnt <= 0)
+            free_entry(resolver, cache);
+        return;
     }
 
     if (cache == NULL) {
-	cache = alloc_entry(resolver);
+        cache = alloc_entry(resolver);
     } else {
-	/* Remove the entry before resetting its pool (see ticket #1710) */
-	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
+        /* Remove the entry before resetting its pool (see ticket #1710) */
+        pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
 
-	if (cache->ref_cnt > 1) {
-	    /* When cache entry is being used by callback (to app),
-	     * just decrement ref_cnt so it will be freed after
-	     * the callback returns and allocate new entry.
-	     */
-	    cache->ref_cnt--;
-	    cache = alloc_entry(resolver);
-	} else {
-	    /* Reset cache to avoid bloated cache pool */
-	    reset_entry(&cache);
-	}
+        if (cache->ref_cnt > 1) {
+            /* When cache entry is being used by callback (to app),
+             * just decrement ref_cnt so it will be freed after
+             * the callback returns and allocate new entry.
+             */
+            cache->ref_cnt--;
+            cache = alloc_entry(resolver);
+        } else {
+            /* Reset cache to avoid bloated cache pool */
+            reset_entry(&cache);
+        }
     }
 
     /* Duplicate the packet.
@@ -1535,16 +1534,16 @@ static void update_res_cache(pj_dns_resolver *resolver,
      * the name being requested.
      */
     pj_dns_packet_dup(cache->pool, pkt, 
-		      PJ_DNS_NO_NS | PJ_DNS_NO_AR,
-		      &cache->pkt);
+                      PJ_DNS_NO_NS | PJ_DNS_NO_AR,
+                      &cache->pkt);
 
     /* Calculate expiration time */
     if (set_expiry) {
-	pj_gettimeofday(&cache->expiry_time);
-	cache->expiry_time.sec += ttl;
+        pj_gettimeofday(&cache->expiry_time);
+        cache->expiry_time.sec += ttl;
     } else {
-	cache->expiry_time.sec = 0x7FFFFFFFL;
-	cache->expiry_time.msec = 0;
+        cache->expiry_time.sec = 0x7FFFFFFFL;
+        cache->expiry_time.msec = 0;
     }
 
     /* Copy key to the cached response */
@@ -1552,14 +1551,14 @@ static void update_res_cache(pj_dns_resolver *resolver,
 
     /* Update the hash table */
     pj_hash_set_np(resolver->hrescache, &cache->key, sizeof(*key), hval,
-		   cache->hbuf, cache);
+                   cache->hbuf, cache);
 
 }
 
 
 /* Callback to be called when query has timed out */
 static void on_timeout( pj_timer_heap_t *timer_heap,
-			struct pj_timer_entry *entry)
+                        struct pj_timer_entry *entry)
 {
     pj_dns_resolver *resolver;
     pj_dns_async_query *q, *cq;
@@ -1577,9 +1576,9 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
      * response arrives)
      */
     if (pj_hash_get(resolver->hquerybyid, &q->id, sizeof(q->id), NULL)==NULL) {
-	/* Yeah, this query is done. */
-	pj_grp_lock_release(resolver->grp_lock);
-	return;
+        /* Yeah, this query is done. */
+        pj_grp_lock_release(resolver->grp_lock);
+        return;
     }
 
     /* Invalidate id. */
@@ -1587,17 +1586,17 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 
     /* Check to see if we should retransmit instead of time out */
     if (q->transmit_cnt < resolver->settings.qretr_count) {
-	status = transmit_query(resolver, q);
-	if (status == PJ_SUCCESS) {
-	    pj_grp_lock_release(resolver->grp_lock);
-	    return;
-	} else {
-	    /* Error occurs */
-	    PJ_PERROR(4,(resolver->name.ptr, status,
-			 "Error transmitting request"));
+        status = transmit_query(resolver, q);
+        if (status == PJ_SUCCESS) {
+            pj_grp_lock_release(resolver->grp_lock);
+            return;
+        } else {
+            /* Error occurs */
+            PJ_PERROR(4,(resolver->name.ptr, status,
+                         "Error transmitting request"));
 
-	    /* Let it fallback to timeout section below */
-	}
+            /* Let it fallback to timeout section below */
+        }
     }
 
     /* Clear hash table entries */
@@ -1609,14 +1608,14 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 
     /* Call application callback, if any. */
     if (q->cb)
-	(*q->cb)(q->user_data, PJ_ETIMEDOUT, NULL);
+        (*q->cb)(q->user_data, PJ_ETIMEDOUT, NULL);
 
     /* Call application callback for child queries. */
     cq = q->child_head.next;
     while (cq != (void*)&q->child_head) {
-	if (cq->cb)
-	    (*cq->cb)(cq->user_data, PJ_ETIMEDOUT, NULL);
-	cq = cq->next;
+        if (cq->cb)
+            (*cq->cb)(cq->user_data, PJ_ETIMEDOUT, NULL);
+        cq = cq->next;
     }
 
     /* Workaround for deadlock problem in #1565 (similar to #1108) */
@@ -1629,9 +1628,9 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     /* Put child entries into recycle list */
     cq = q->child_head.next;
     while (cq != (void*)&q->child_head) {
-	pj_dns_async_query *next = cq->next;
-	pj_list_push_back(&resolver->query_free_nodes, cq);
-	cq = next;
+        pj_dns_async_query *next = cq->next;
+        pj_list_push_back(&resolver->query_free_nodes, cq);
+        cq = next;
     }
 
     /* Put query entry into recycle list */
@@ -1664,17 +1663,17 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
 #if PJ_HAS_IPV6
     if (key == resolver->udp6_key) {
-	src_addr = &resolver->udp6_src_addr;
-	src_addr_len = &resolver->udp6_addr_len;
-	rx_pkt = resolver->udp6_rx_pkt;
-	rx_pkt_size = sizeof(resolver->udp6_rx_pkt);
+        src_addr = &resolver->udp6_src_addr;
+        src_addr_len = &resolver->udp6_addr_len;
+        rx_pkt = resolver->udp6_rx_pkt;
+        rx_pkt_size = sizeof(resolver->udp6_rx_pkt);
     } else 
 #endif
     {
-	src_addr = &resolver->udp_src_addr;
-	src_addr_len = &resolver->udp_addr_len;
-	rx_pkt = resolver->udp_rx_pkt;
-	rx_pkt_size = sizeof(resolver->udp_rx_pkt);
+        src_addr = &resolver->udp_src_addr;
+        src_addr_len = &resolver->udp_addr_len;
+        rx_pkt = resolver->udp_rx_pkt;
+        rx_pkt_size = sizeof(resolver->udp_rx_pkt);
     }
 
     pj_grp_lock_acquire(resolver->grp_lock);
@@ -1682,36 +1681,36 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     /* Check for errors */
     if (bytes_read < 0) {
-	status = (pj_status_t)-bytes_read;
-	PJ_PERROR(4,(resolver->name.ptr, status, "DNS resolver read error"));
+        status = (pj_status_t)-bytes_read;
+        PJ_PERROR(4,(resolver->name.ptr, status, "DNS resolver read error"));
 
-	goto read_next_packet;
+        goto read_next_packet;
     }
 
     PJ_LOG(5,(resolver->name.ptr, 
-	      "Received %d bytes DNS response from %s:%d",
-	      (int)bytes_read, 
-	      pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
-	      pj_sockaddr_get_port(src_addr)));
+              "Received %d bytes DNS response from %s:%d",
+              (int)bytes_read, 
+              pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
+              pj_sockaddr_get_port(src_addr)));
 
 
     /* Check for zero packet */
     if (bytes_read == 0)
-	goto read_next_packet;
+        goto read_next_packet;
 
     /* Create temporary pool from a fixed buffer */
     pool = pj_pool_create_on_buf("restmp", resolver->tmp_pool, 
-				 sizeof(resolver->tmp_pool));
+                                 sizeof(resolver->tmp_pool));
 
     /* Parse DNS response */
     status = -1;
     dns_pkt = NULL;
     PJ_TRY {
-	status = pj_dns_parse_packet(pool, rx_pkt, 
-				     (unsigned)bytes_read, &dns_pkt);
+        status = pj_dns_parse_packet(pool, rx_pkt, 
+                                     (unsigned)bytes_read, &dns_pkt);
     }
     PJ_CATCH_ANY {
-	status = PJ_ENOMEM;
+        status = PJ_ENOMEM;
     }
     PJ_END;
 
@@ -1720,24 +1719,24 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     /* Handle parse error */
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(3,(resolver->name.ptr, status,
-		     "Error parsing DNS response from %s:%d", 
-		     pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
-		     pj_sockaddr_get_port(src_addr)));
-	goto read_next_packet;
+        PJ_PERROR(3,(resolver->name.ptr, status,
+                     "Error parsing DNS response from %s:%d", 
+                     pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
+                     pj_sockaddr_get_port(src_addr)));
+        goto read_next_packet;
     }
 
     /* Find the query based on the transaction ID */
     q = (pj_dns_async_query*) 
         pj_hash_get(resolver->hquerybyid, &dns_pkt->hdr.id,
-		    sizeof(dns_pkt->hdr.id), NULL);
+                    sizeof(dns_pkt->hdr.id), NULL);
     if (!q) {
-	PJ_LOG(5,(resolver->name.ptr, 
-		  "DNS response from %s:%d id=%d discarded",
-		  pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
-		  pj_sockaddr_get_port(src_addr),
-		  (unsigned)dns_pkt->hdr.id));
-	goto read_next_packet;
+        PJ_LOG(5,(resolver->name.ptr, 
+                  "DNS response from %s:%d id=%d discarded",
+                  pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
+                  pj_sockaddr_get_port(src_addr),
+                  (unsigned)dns_pkt->hdr.id));
+        goto read_next_packet;
     }
 
     /* Map DNS Rcode in the response into PJLIB status name space */
@@ -1759,18 +1758,18 @@ static void on_read_complete(pj_ioqueue_key_t *key,
      * record before it is saved to the hash table.
      */
     if (q->cb)
-	(*q->cb)(q->user_data, status, dns_pkt);
+        (*q->cb)(q->user_data, status, dns_pkt);
 
     /* If query has subqueries, notify subqueries's application callback */
     if (!pj_list_empty(&q->child_head)) {
-	pj_dns_async_query *child_q;
+        pj_dns_async_query *child_q;
 
-	child_q = q->child_head.next;
-	while (child_q != (pj_dns_async_query*)&q->child_head) {
-	    if (child_q->cb)
-		(*child_q->cb)(child_q->user_data, status, dns_pkt);
-	    child_q = child_q->next;
-	}
+        child_q = q->child_head.next;
+        while (child_q != (pj_dns_async_query*)&q->child_head) {
+            if (child_q->cb)
+                (*child_q->cb)(child_q->user_data, status, dns_pkt);
+            child_q = child_q->next;
+        }
     }
 
     /* Workaround for deadlock problem in #1108 */
@@ -1778,39 +1777,39 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     /* Truncated responses MUST NOT be saved (cached). */
     if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0) {
-	/* Save/update response cache. */
-	update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
+        /* Save/update response cache. */
+        update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
     }
 
     /* Recycle query objects, starting with the child queries */
     if (!pj_list_empty(&q->child_head)) {
-	pj_dns_async_query *child_q;
+        pj_dns_async_query *child_q;
 
-	child_q = q->child_head.next;
-	while (child_q != (pj_dns_async_query*)&q->child_head) {
-	    pj_dns_async_query *next = child_q->next;
-	    pj_list_erase(child_q);
-	    pj_list_push_back(&resolver->query_free_nodes, child_q);
-	    child_q = next;
-	}
+        child_q = q->child_head.next;
+        while (child_q != (pj_dns_async_query*)&q->child_head) {
+            pj_dns_async_query *next = child_q->next;
+            pj_list_erase(child_q);
+            pj_list_push_back(&resolver->query_free_nodes, child_q);
+            child_q = next;
+        }
     }
     pj_list_push_back(&resolver->query_free_nodes, q);
 
 read_next_packet:
     if (pool) {
-	/* needed just in case PJ_HAS_POOL_ALT_API is set */
-	pj_pool_release(pool);
+        /* needed just in case PJ_HAS_POOL_ALT_API is set */
+        pj_pool_release(pool);
     }
 
     status = pj_ioqueue_recvfrom(key, op_key, rx_pkt, &rx_pkt_size,
-				 PJ_IOQUEUE_ALWAYS_ASYNC,
-				 src_addr, src_addr_len);
+                                 PJ_IOQUEUE_ALWAYS_ASYNC,
+                                 src_addr, src_addr_len);
 
     if (status != PJ_EPENDING && status != PJ_ECANCELLED) {
-	PJ_PERROR(4,(resolver->name.ptr, status,
-		     "DNS resolver ioqueue read error"));
+        PJ_PERROR(4,(resolver->name.ptr, status,
+                     "DNS resolver ioqueue read error"));
 
-	pj_assert(!"Unhandled error");
+        pj_assert(!"Unhandled error");
     }
 
     pj_grp_lock_release(resolver->grp_lock);
@@ -1823,8 +1822,8 @@ read_next_packet:
  * into the resolver.
  */
 PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
-					       const pj_dns_parsed_packet *pkt,
-					       pj_bool_t set_ttl)
+                                               const pj_dns_parsed_packet *pkt,
+                                               pj_bool_t set_ttl)
 {
     struct res_key key;
 
@@ -1836,26 +1835,26 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
 
     /* Make sure there are answers in the packet */
     PJ_ASSERT_RETURN((pkt->hdr.anscount && pkt->ans) ||
-		      (pkt->hdr.qdcount && pkt->q),
-		     PJLIB_UTIL_EDNSNOANSWERREC);
+                      (pkt->hdr.qdcount && pkt->q),
+                     PJLIB_UTIL_EDNSNOANSWERREC);
 
     pj_grp_lock_acquire(resolver->grp_lock);
 
     /* Build resource key for looking up hash tables */
     pj_bzero(&key, sizeof(struct res_key));
     if (pkt->hdr.anscount) {
-	/* Make sure name is not too long. */
-	PJ_ASSERT_RETURN(pkt->ans[0].name.slen < PJ_MAX_HOSTNAME, 
-			 PJ_ENAMETOOLONG);
+        /* Make sure name is not too long. */
+        PJ_ASSERT_RETURN(pkt->ans[0].name.slen < PJ_MAX_HOSTNAME, 
+                         PJ_ENAMETOOLONG);
 
-	init_res_key(&key, pkt->ans[0].type, &pkt->ans[0].name);
+        init_res_key(&key, pkt->ans[0].type, &pkt->ans[0].name);
 
     } else {
-	/* Make sure name is not too long. */
-	PJ_ASSERT_RETURN(pkt->q[0].name.slen < PJ_MAX_HOSTNAME, 
-			 PJ_ENAMETOOLONG);
+        /* Make sure name is not too long. */
+        PJ_ASSERT_RETURN(pkt->q[0].name.slen < PJ_MAX_HOSTNAME, 
+                         PJ_ENAMETOOLONG);
 
-	init_res_key(&key, pkt->q[0].type, &pkt->q[0].name);
+        init_res_key(&key, pkt->q[0].type, &pkt->q[0].name);
     }
 
     /* Insert entry. */
@@ -1888,7 +1887,7 @@ PJ_DEF(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver)
  * Dump resolver state to the log.
  */
 PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
-				  pj_bool_t detail)
+                                  pj_bool_t detail)
 {
 #if PJ_LOG_MAX_LEVEL >= 3
     unsigned i;
@@ -1902,57 +1901,57 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
 
     PJ_LOG(3,(resolver->name.ptr, "  Name servers:"));
     for (i=0; i<resolver->ns_count; ++i) {
-	char addr[PJ_INET6_ADDRSTRLEN];
-	struct nameserver *ns = &resolver->ns[i];
+        char addr[PJ_INET6_ADDRSTRLEN];
+        struct nameserver *ns = &resolver->ns[i];
 
-	PJ_LOG(3,(resolver->name.ptr,
-		  "   NS %d: %s:%d (state=%s until %ds, rtt=%d ms)",
-		  i,
-		  pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
-		  pj_sockaddr_get_port(&ns->addr),
-		  state_names[ns->state],
-		  ns->state_expiry.sec - now.sec,
-		  PJ_TIME_VAL_MSEC(ns->rt_delay)));
+        PJ_LOG(3,(resolver->name.ptr,
+                  "   NS %d: %s:%d (state=%s until %ds, rtt=%d ms)",
+                  i,
+                  pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
+                  pj_sockaddr_get_port(&ns->addr),
+                  state_names[ns->state],
+                  ns->state_expiry.sec - now.sec,
+                  PJ_TIME_VAL_MSEC(ns->rt_delay)));
     }
 
     PJ_LOG(3,(resolver->name.ptr, "  Nb. of cached responses: %u",
-	      pj_hash_count(resolver->hrescache)));
+              pj_hash_count(resolver->hrescache)));
     if (detail) {
-	pj_hash_iterator_t itbuf, *it;
-	it = pj_hash_first(resolver->hrescache, &itbuf);
-	while (it) {
-	    struct cached_res *cache;
-	    cache = (struct cached_res*)pj_hash_this(resolver->hrescache, it);
-	    PJ_LOG(3,(resolver->name.ptr, 
-		      "   Type %s: %s",
-		      pj_dns_get_type_name(cache->key.qtype), 
-		      cache->key.name));
-	    it = pj_hash_next(resolver->hrescache, it);
-	}
+        pj_hash_iterator_t itbuf, *it;
+        it = pj_hash_first(resolver->hrescache, &itbuf);
+        while (it) {
+            struct cached_res *cache;
+            cache = (struct cached_res*)pj_hash_this(resolver->hrescache, it);
+            PJ_LOG(3,(resolver->name.ptr, 
+                      "   Type %s: %s",
+                      pj_dns_get_type_name(cache->key.qtype), 
+                      cache->key.name));
+            it = pj_hash_next(resolver->hrescache, it);
+        }
     }
     PJ_LOG(3,(resolver->name.ptr, "  Nb. of pending queries: %u (%u)",
-	      pj_hash_count(resolver->hquerybyid),
-	      pj_hash_count(resolver->hquerybyres)));
+              pj_hash_count(resolver->hquerybyid),
+              pj_hash_count(resolver->hquerybyres)));
     if (detail) {
-	pj_hash_iterator_t itbuf, *it;
-	it = pj_hash_first(resolver->hquerybyid, &itbuf);
-	while (it) {
-	    struct pj_dns_async_query *q;
-	    q = (pj_dns_async_query*) pj_hash_this(resolver->hquerybyid, it);
-	    PJ_LOG(3,(resolver->name.ptr, 
-		      "   Type %s: %s",
-		      pj_dns_get_type_name(q->key.qtype), 
-		      q->key.name));
-	    it = pj_hash_next(resolver->hquerybyid, it);
-	}
+        pj_hash_iterator_t itbuf, *it;
+        it = pj_hash_first(resolver->hquerybyid, &itbuf);
+        while (it) {
+            struct pj_dns_async_query *q;
+            q = (pj_dns_async_query*) pj_hash_this(resolver->hquerybyid, it);
+            PJ_LOG(3,(resolver->name.ptr, 
+                      "   Type %s: %s",
+                      pj_dns_get_type_name(q->key.qtype), 
+                      q->key.name));
+            it = pj_hash_next(resolver->hquerybyid, it);
+        }
     }
     PJ_LOG(3,(resolver->name.ptr, "  Nb. of pending query free nodes: %u",
-	      pj_list_size(&resolver->query_free_nodes)));
+              pj_list_size(&resolver->query_free_nodes)));
     PJ_LOG(3,(resolver->name.ptr, "  Nb. of timer entries: %u",
-	      pj_timer_heap_count(resolver->timer)));
+              pj_timer_heap_count(resolver->timer)));
     PJ_LOG(3,(resolver->name.ptr, "  Pool capacity: %d, used size: %d",
-	      pj_pool_get_capacity(resolver->pool),
-	      pj_pool_get_used_size(resolver->pool)));
+              pj_pool_get_capacity(resolver->pool),
+              pj_pool_get_used_size(resolver->pool)));
 
     pj_grp_lock_release(resolver->grp_lock);
 #endif

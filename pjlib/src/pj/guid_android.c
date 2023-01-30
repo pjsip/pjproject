@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2015-2016 Teluu Inc. (http://www.teluu.com)
  *
@@ -81,23 +80,23 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
         goto on_error;
 
     javaUuid = (*jni_env)->CallStaticObjectMethod(jni_env, uuid_class, 
-    						  get_uuid_method);
+                                                  get_uuid_method);
     if (javaUuid == 0)
         goto on_error;
 
     to_string_method = (*jni_env)->GetMethodID(jni_env, uuid_class,
-    						"toString",
-    						"()Ljava/lang/String;");
+                                                "toString",
+                                                "()Ljava/lang/String;");
     if (to_string_method == 0)
         goto on_error;
 
     uuid_string = (*jni_env)->CallObjectMethod(jni_env, javaUuid,
-    					       to_string_method);
+                                               to_string_method);
     if (uuid_string == 0)
         goto on_error;
 
     native_string = (*jni_env)->GetStringUTFChars(jni_env, uuid_string,
-    						  JNI_FALSE);
+                                                  JNI_FALSE);
     if (native_string == 0)
         goto on_error;
 

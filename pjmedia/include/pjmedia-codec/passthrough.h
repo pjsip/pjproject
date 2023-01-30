@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -53,7 +52,7 @@
  * G.729 supports 16-bit PCM audio signal with sampling rate 8000Hz, 
  * frame length 10ms, and resulting in bitrate 8000bps.
  *
- * \subsection codec_setting Codec Settings
+ * \subsection passthrough_codec_setting Codec Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
@@ -62,7 +61,7 @@
  * Note that G.729 VAD status should be signalled in SDP, see more
  * description below.
  *
- * \subsubsection annexb Annex B
+ * \subsubsection passthrough_g729_annexb Annex B
  *
  * The capability of VAD/DTX is specified in Annex B.
  *
@@ -107,13 +106,13 @@
  * 8000Hz operating at two modes: 20ms and 30ms frame length modes, resulting
  * in bitrates of 15.2kbps for 20ms mode and 13.33kbps for 30ms mode.
  *
- * \subsection codec_setting Codec Settings
+ * \subsection passthrough_ilbc_codec_setting Codec Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsubsection mode Mode
+ * \subsubsection passthrough_ilbc_mode Mode
  *
  * The default mode should be set upon initialization, see
  * #pjmedia_codec_passthrough_init2(). After the codec is initialized, the
@@ -142,13 +141,13 @@
  * 20ms frame length and producing various bitrates that ranges from 4.75kbps
  * to 12.2kbps.
  *
- * \subsection codec_setting Codec Settings
+ * \subsection passthrough_amr_codec_setting Codec Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsubsection bitrate Bitrate
+ * \subsubsection passthrough_amr_bitrate Bitrate
  *
  * By default, encoding bitrate is 7400bps. This default setting can be 
  * modified using #pjmedia_codec_mgr_set_default_param() by specifying 
@@ -156,7 +155,7 @@
  * #pjmedia_codec_param. Valid bitrates could be seen in 
  * #pjmedia_codec_amrnb_bitrates.
  *
- * \subsubsection payload_format Payload Format
+ * \subsubsection passthrough_amr_payload_format Payload Format
  *
  * There are two AMR payload format types, bandwidth-efficient and
  * octet-aligned. Default setting is using octet-aligned. This default payload
@@ -167,7 +166,7 @@
  * decoding direction. Valid values are "0" (for bandwidth efficient mode)
  * and "1" (for octet-aligned mode).
  *
- * \subsubsection mode_set Mode-Set
+ * \subsubsection passthrough_amr_mode_set Mode-Set
  * 
  * Mode-set is used for restricting AMR modes in decoding direction.
  *
@@ -210,7 +209,7 @@
  * The factory contains two main compression algorithms, PCMU/u-Law and 
  * PCMA/A-Law.
  *
- * \subsection codec_setting Codec Settings
+ * \subsection passthrough_g711_codec_setting Codec Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
@@ -225,11 +224,11 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_codec_passthrough_setting
 {
-    unsigned		 fmt_cnt;	/**< Number of encoding formats
-					     to be enabled.		*/
-    pjmedia_format	*fmts;		/**< Encoding formats to be 
-					     enabled.			*/
-    unsigned		 ilbc_mode;	/**< iLBC default mode.		*/
+    unsigned             fmt_cnt;       /**< Number of encoding formats
+                                             to be enabled.             */
+    pjmedia_format      *fmts;          /**< Encoding formats to be 
+                                             enabled.                   */
+    unsigned             ilbc_mode;     /**< iLBC default mode.         */
 } pjmedia_codec_passthrough_setting;
 
 
@@ -237,9 +236,9 @@ typedef struct pjmedia_codec_passthrough_setting
  * Initialize and register passthrough codecs factory to pjmedia endpoint,
  * all supported encoding formats will be enabled.
  *
- * @param endpt	    The pjmedia endpoint.
+ * @param endpt     The pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_passthrough_init( pjmedia_endpt *endpt );
 
@@ -248,20 +247,20 @@ PJ_DECL(pj_status_t) pjmedia_codec_passthrough_init( pjmedia_endpt *endpt );
  * Initialize and register passthrough codecs factory to pjmedia endpoint
  * with only specified encoding formats enabled.
  *
- * @param endpt	    The pjmedia endpoint.
+ * @param endpt     The pjmedia endpoint.
  * @param setting   The settings.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_passthrough_init2(
-		       pjmedia_endpt *endpt,
-		       const pjmedia_codec_passthrough_setting *setting);
+                       pjmedia_endpt *endpt,
+                       const pjmedia_codec_passthrough_setting *setting);
 
 
 /**
  * Unregister passthrough codecs factory from pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_passthrough_deinit(void);
 
@@ -273,5 +272,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODECS_PASSTHROUGH_H__ */
+#endif  /* __PJMEDIA_CODECS_PASSTHROUGH_H__ */
 

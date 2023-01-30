@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -138,13 +137,13 @@ PJ_INLINE(int) pj_isxdigit(unsigned char c){ return isxdigit(c); }
  * Array of hex digits, in lowerspace.
  */
 /*extern char pj_hex_digits[];*/
-#define pj_hex_digits	"0123456789abcdef"
+#define pj_hex_digits   "0123456789abcdef"
 
 /**
  * Convert a value to hex representation.
- * @param value	    Integral value to convert.
- * @param p	    Buffer to hold the hex representation, which must be
- *		    at least two bytes length.
+ * @param value     Integral value to convert.
+ * @param p         Buffer to hold the hex representation, which must be
+ *                  at least two bytes length.
  */
 PJ_INLINE(void) pj_val_to_hex_digit(unsigned value, char *p)
 {
@@ -154,22 +153,22 @@ PJ_INLINE(void) pj_val_to_hex_digit(unsigned value, char *p)
 
 /**
  * Convert hex digit c to integral value.
- * @param c	The hex digit character.
- * @return	The integral value between 0 and 15.
+ * @param c     The hex digit character.
+ * @return      The integral value between 0 and 15.
  */
 PJ_INLINE(unsigned) pj_hex_digit_to_val(unsigned char c)
 {
     if (c <= '9')
-	return (c-'0') & 0x0F;
+        return (c-'0') & 0x0F;
     else if (c <= 'F')
-	return  (c-'A'+10) & 0x0F;
+        return  (c-'A'+10) & 0x0F;
     else
-	return (c-'a'+10) & 0x0F;
+        return (c-'a'+10) & 0x0F;
 }
 
 /** @} */
 
 PJ_END_DECL
 
-#endif	/* __PJ_CTYPE_H__ */
+#endif  /* __PJ_CTYPE_H__ */
 

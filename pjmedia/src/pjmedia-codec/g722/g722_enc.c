@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,10 +35,10 @@
 
 /* QMF tap coefficients */
 const int g722_qmf_coeff[24] = {
-     3,	    -11,    -11,    53,	    12,	    -156,
-    32,	    362,    -210,   -805,   951,    3876,
+     3,     -11,    -11,    53,     12,     -156,
+    32,     362,    -210,   -805,   951,    3876,
     3876,   951,    -805,   -210,   362,    32,
-    -156,   12,	    53,	    -11,    -11,    3
+    -156,   12,     53,     -11,    -11,    3
 };
 
 
@@ -50,22 +49,22 @@ static int block1l (int xl, int sl, int detl)
     int i, el, sil, mil, wd, wd1, hdu ;
 
     static const int q6[32] = {
-	0, 35, 72, 110, 150, 190, 233, 276, 323,
-	370, 422, 473, 530, 587, 650, 714, 786,
-	858, 940, 1023, 1121, 1219, 1339, 1458,
-	1612, 1765, 1980, 2195, 2557, 2919, 0, 0
+        0, 35, 72, 110, 150, 190, 233, 276, 323,
+        370, 422, 473, 530, 587, 650, 714, 786,
+        858, 940, 1023, 1121, 1219, 1339, 1458,
+        1612, 1765, 1980, 2195, 2557, 2919, 0, 0
     };
 
     static const int iln[32] = {
-	0, 63, 62, 31, 30, 29, 28, 27, 26, 25,
-	24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14,
-	13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 0 
+        0, 63, 62, 31, 30, 29, 28, 27, 26, 25,
+        24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14,
+        13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 0 
     };
 
     static const int ilp[32] = {
-	0, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52,
-	51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41,
-	40, 39, 38, 37, 36, 35, 34, 33, 32, 0 
+        0, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52,
+        51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41,
+        40, 39, 38, 37, 36, 35, 34, 33, 32, 0 
     };
 
     /* SUBTRA */
@@ -82,10 +81,10 @@ static int block1l (int xl, int sl, int detl)
     mil = 1 ;
 
     for (i = 1; i < 30; i++) {
-	hdu = (q6[i] << 3) * detl;
-	wd1 = (hdu >> 15) ;
-	if (wd >= wd1)  mil = (i + 1) ;
-	else break ;
+        hdu = (q6[i] << 3) * detl;
+        wd1 = (hdu >> 15) ;
+        if (wd >= wd1)  mil = (i + 1) ;
+        else break ;
     }
 
     if (sil == -1 ) il = iln[mil] ;
@@ -99,10 +98,10 @@ static int block2l (int il, int detl)
     int dlt;
     int ril, wd2 ;
     static const int qm4[16] = {
-	0,	-20456,	-12896,	-8968,
-	-6288,	-4240,	-2584,	-1200,
-	20456,	12896,	8968,	6288,
-	4240,	2584,	1200,	0
+        0,      -20456, -12896, -8968,
+        -6288,  -4240,  -2584,  -1200,
+        20456,  12896,  8968,   6288,
+        4240,   2584,   1200,   0
     };
 
     /* INVQAL */
@@ -118,17 +117,17 @@ static int block3l (g722_enc_t *enc, int il)
     int detl;
     int ril, il4, wd, wd1, wd2, wd3, nbpl, depl ;
     static int const wl[8] = {
-	-60, -30, 58, 172, 334, 538, 1198, 3042
+        -60, -30, 58, 172, 334, 538, 1198, 3042
     } ;
     static int const rl42[16] = {
-	0, 7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1, 0
+        0, 7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1, 0
     };
     static const int ilb[32] = {
-	2048, 2093, 2139, 2186, 2233, 2282, 2332,
-	2383, 2435, 2489, 2543, 2599, 2656, 2714,
-	2774, 2834, 2896, 2960, 3025, 3091, 3158,
-	3228, 3298, 3371, 3444, 3520, 3597, 3676,
-	3756, 3838, 3922, 4008
+        2048, 2093, 2139, 2186, 2233, 2282, 2332,
+        2383, 2435, 2489, 2543, 2599, 2656, 2714,
+        2774, 2834, 2896, 2960, 3025, 3091, 3158,
+        3228, 3298, 3371, 3444, 3520, 3597, 3676,
+        3756, 3838, 3922, 4008
     };
 
     /* LOGSCL */
@@ -157,10 +156,10 @@ static int block3l (g722_enc_t *enc, int il)
     detl = depl ;
 
 #ifdef DEBUG_VERBOSE
-	printf ("BLOCK3L il=%4d, ril=%4d, il4=%4d, nbl=%4d, wd=%4d, nbpl=%4d\n",
-		 il, ril, il4, enc->nbl, wd, nbpl) ;
-	printf ("wd1=%4d, wd2=%4d, wd3=%4d, depl=%4d, detl=%4d\n",
-		wd1, wd2, wd3, depl, detl) ;
+        printf ("BLOCK3L il=%4d, ril=%4d, il4=%4d, nbl=%4d, wd=%4d, nbpl=%4d\n",
+                 il, ril, il4, enc->nbl, wd, nbpl) ;
+        printf ("wd1=%4d, wd2=%4d, wd3=%4d, depl=%4d, detl=%4d\n",
+                wd1, wd2, wd3, depl, detl) ;
 #endif
 
     return (detl) ;
@@ -235,25 +234,25 @@ static int block4l (g722_enc_t *enc, int dl)
     enc->sgl[0] = enc->dlt[0] >> 15 ;
 
     for ( i = 1; i < 7; i++ ) {
-	enc->sgl[i] = enc->dlt[i] >> 15 ;
-	if ( enc->sgl[i] == enc->sgl[0] )  wd2 = wd1 ;
-	else wd2 = - wd1 ;
-	wd3 = (enc->bl[i] * 32640) >> 15 ;
-	enc->bpl[i] = wd2 + wd3 ;
-	SATURATE(enc->bpl[i], 32767, -32768);
+        enc->sgl[i] = enc->dlt[i] >> 15 ;
+        if ( enc->sgl[i] == enc->sgl[0] )  wd2 = wd1 ;
+        else wd2 = - wd1 ;
+        wd3 = (enc->bl[i] * 32640) >> 15 ;
+        enc->bpl[i] = wd2 + wd3 ;
+        SATURATE(enc->bpl[i], 32767, -32768);
     }
 
     /* DELAYA */
 
     for ( i = 6; i > 0; i-- ) {
-	enc->dlt[i] = enc->dlt[i-1] ;
-	enc->bl[i]  = enc->bpl[i] ;
+        enc->dlt[i] = enc->dlt[i-1] ;
+        enc->bl[i]  = enc->bpl[i] ;
     }
 
     for ( i = 2; i > 0; i-- ) {
-	enc->rlt[i] = enc->rlt[i-1] ;
-	enc->plt[i] = enc->plt[i-1] ;
-	enc->al[i] = enc->apl[i] ;
+        enc->rlt[i] = enc->rlt[i-1] ;
+        enc->plt[i] = enc->plt[i-1] ;
+        enc->al[i] = enc->apl[i] ;
     }
 
     /* FILTEP */
@@ -273,10 +272,10 @@ static int block4l (g722_enc_t *enc, int dl)
 
     enc->szl = 0 ;
     for (i=6; i>0; i--) {
-	wd = enc->dlt[i] + enc->dlt[i];
-	SATURATE(wd, 32767, -32768);
-	enc->szl += (enc->bl[i] * wd) >> 15 ;
-	SATURATE(enc->szl, 32767, -32768);
+        wd = enc->dlt[i] + enc->dlt[i];
+        SATURATE(wd, 32767, -32768);
+        enc->szl += (enc->bl[i] * wd) >> 15 ;
+        SATURATE(enc->szl, 32767, -32768);
     }
 
     /* PREDIC */
@@ -339,11 +338,11 @@ static int block3h (g722_enc_t *enc, int ih)
     static const int wh[3] = {0, -214, 798} ;
     static const int rh2[4] = {2, 1, 2, 1} ;
     static const int ilb[32] = {
-	2048, 2093, 2139, 2186, 2233, 2282, 2332,
-	2383, 2435, 2489, 2543, 2599, 2656, 2714,
-	2774, 2834, 2896, 2960, 3025, 3091, 3158,
-	3228, 3298, 3371, 3444, 3520, 3597, 3676,
-	3756, 3838, 3922, 4008
+        2048, 2093, 2139, 2186, 2233, 2282, 2332,
+        2383, 2435, 2489, 2543, 2599, 2656, 2714,
+        2774, 2834, 2896, 2960, 3025, 3091, 3158,
+        3228, 3298, 3371, 3444, 3520, 3597, 3676,
+        3756, 3838, 3922, 4008
     };
 
     /* LOGSCH */
@@ -440,24 +439,24 @@ static int block4h (g722_enc_t *enc, int d)
     enc->sgh[0] = enc->dh[0] >> 15 ;
 
     for ( i = 1; i < 7; i++ ) {
-	enc->sgh[i] = enc->dh[i] >> 15 ;
-	if ( enc->sgh[i] == enc->sgh[0] )  wd2 = wd1 ;
-	else wd2 = - wd1 ;
-	wd3 = (enc->bh[i] * 32640) >> 15 ;
-	enc->bph[i] = wd2 + wd3 ;
-	SATURATE(enc->bph[i], 32767, -32768);
+        enc->sgh[i] = enc->dh[i] >> 15 ;
+        if ( enc->sgh[i] == enc->sgh[0] )  wd2 = wd1 ;
+        else wd2 = - wd1 ;
+        wd3 = (enc->bh[i] * 32640) >> 15 ;
+        enc->bph[i] = wd2 + wd3 ;
+        SATURATE(enc->bph[i], 32767, -32768);
     }
 
     /* DELAYA */
     for ( i = 6; i > 0; i-- ) {
-	enc->dh[i] = enc->dh[i-1] ;
-	enc->bh[i]  = enc->bph[i] ;
+        enc->dh[i] = enc->dh[i-1] ;
+        enc->bh[i]  = enc->bph[i] ;
     }
 
     for ( i = 2; i > 0; i-- ) {
-	enc->rh[i] = enc->rh[i-1] ;
-	enc->ph[i] = enc->ph[i-1] ;
-	enc->ah[i] = enc->aph[i] ;
+        enc->rh[i] = enc->rh[i-1] ;
+        enc->ph[i] = enc->ph[i-1] ;
+        enc->ah[i] = enc->aph[i] ;
     }
 
     /* FILTEP */
@@ -477,10 +476,10 @@ static int block4h (g722_enc_t *enc, int d)
 
     enc->szh = 0 ;
     for (i=6; i>0; i--) {
-	wd = enc->dh[i] + enc->dh[i];
-	SATURATE(wd, 32767, -32768);
-	enc->szh += (enc->bh[i] * wd) >> 15 ;
-	SATURATE(enc->szh, 32767, -32768);
+        wd = enc->dh[i] + enc->dh[i];
+        SATURATE(wd, 32767, -32768);
+        enc->szh += (enc->bh[i] * wd) >> 15 ;
+        SATURATE(enc->szh, 32767, -32768);
     }
 
     /* PREDIC */
@@ -528,10 +527,10 @@ PJ_DEF(pj_status_t) g722_enc_init(g722_enc_t *enc)
 }
 
 PJ_DEF(pj_status_t) g722_enc_encode( g722_enc_t *enc, 
-				     pj_int16_t in[], 
-				     pj_size_t nsamples,
-				     void *out,
-				     pj_size_t *out_size)
+                                     pj_int16_t in[], 
+                                     pj_size_t nsamples,
+                                     void *out,
+                                     pj_size_t *out_size)
 {
     unsigned i;
     int xlow, ilow, dlowt;
@@ -543,22 +542,22 @@ PJ_DEF(pj_status_t) g722_enc_encode( g722_enc_t *enc,
     PJ_ASSERT_RETURN(*out_size >= (nsamples >> 1), PJ_ETOOSMALL);
     
     for(i = 0; i < nsamples; i += 2) {
-	tx_qmf(enc, in[i], in[i+1], &xlow, &xhigh);
+        tx_qmf(enc, in[i], in[i+1], &xlow, &xhigh);
 
-	/* low band encoder */
-	ilow = block1l (xlow, enc->slow, enc->detlow) ;
-	dlowt = block2l (ilow, enc->detlow) ;
-	enc->detlow = block3l (enc, ilow) ;
-	enc->slow = block4l (enc, dlowt) ;
+        /* low band encoder */
+        ilow = block1l (xlow, enc->slow, enc->detlow) ;
+        dlowt = block2l (ilow, enc->detlow) ;
+        enc->detlow = block3l (enc, ilow) ;
+        enc->slow = block4l (enc, dlowt) ;
 
-	/* high band encoder */
-	ihigh = block1h (xhigh, enc->shigh, enc->dethigh) ;
-	dhigh = block2h (ihigh, enc->dethigh) ;
-	enc->dethigh = block3h (enc, ihigh) ;
-	enc->shigh = block4h (enc, dhigh) ;
+        /* high band encoder */
+        ihigh = block1h (xhigh, enc->shigh, enc->dethigh) ;
+        dhigh = block2h (ihigh, enc->dethigh) ;
+        enc->dethigh = block3h (enc, ihigh) ;
+        enc->shigh = block4h (enc, dhigh) ;
 
-	/* bits mix low & high adpcm */
-	out_[i/2] = (pj_uint8_t)((ihigh << 6) | ilow);
+        /* bits mix low & high adpcm */
+        out_[i/2] = (pj_uint8_t)((ihigh << 6) | ilow);
     }
 
     *out_size = nsamples >> 1;

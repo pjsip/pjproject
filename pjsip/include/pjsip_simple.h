@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -43,4 +42,4 @@
 #include <pjsip-simple/publish.h>
 #include <pjsip-simple/xpidf.h>
 
-#endif	/* __PJSIP_SIMPLE_H__ */
+#endif  /* __PJSIP_SIMPLE_H__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -86,9 +85,9 @@ PJ_BEGIN_DECL
       }
       PJ_CATCH_ANY {
          if (PJ_GET_EXCEPTION() == NO_MEMORY)
-	    ...; // handle no memory situation
-	 else if (PJ_GET_EXCEPTION() == SYNTAX_ERROR)
-	    ...; // handle syntax error
+            ...; // handle no memory situation
+         else if (PJ_GET_EXCEPTION() == SYNTAX_ERROR)
+            ...; // handle syntax error
       }
       PJ_END;
    }
@@ -123,31 +122,31 @@ PJ_BEGIN_DECL
  *  - You CAN NOT make nested exception in one single function without using
  *    a nested PJ_USE_EXCEPTION. Samples:
   \verbatim
-	void wrong_sample()
-	{
-	    PJ_USE_EXCEPTION;
+        void wrong_sample()
+        {
+            PJ_USE_EXCEPTION;
 
-	    PJ_TRY {
-		// Do stuffs
-		...
-	    }
-	    PJ_CATCH_ANY {
-		// Do other stuffs
-		....
-		..
+            PJ_TRY {
+                // Do stuffs
+                ...
+            }
+            PJ_CATCH_ANY {
+                // Do other stuffs
+                ....
+                ..
 
-		// The following block is WRONG! You MUST declare 
-		// PJ_USE_EXCEPTION once again in this block.
-		PJ_TRY {
-		    ..
-		}
-		PJ_CATCH_ANY {
-		    ..
-		}
-		PJ_END;
-	    }
-	    PJ_END;
-	}
+                // The following block is WRONG! You MUST declare 
+                // PJ_USE_EXCEPTION once again in this block.
+                PJ_TRY {
+                    ..
+                }
+                PJ_CATCH_ANY {
+                    ..
+                }
+                PJ_END;
+            }
+            PJ_END;
+        }
 
   \endverbatim
 
@@ -157,18 +156,18 @@ PJ_BEGIN_DECL
  *    but rather in the subsequent execution of PJ_TRY block:
   \verbatim
         void wrong_sample()
-	{
-	    PJ_USE_EXCEPTION;
+        {
+            PJ_USE_EXCEPTION;
 
-	    PJ_TRY {
-		// do some stuffs
-		...
-		return;	        <======= DO NOT DO THIS!
-	    }
-	    PJ_CATCH_ANY {
-	    }
-	    PJ_END;
-	}
+            PJ_TRY {
+                // do some stuffs
+                ...
+                return;         <======= DO NOT DO THIS!
+            }
+            PJ_CATCH_ANY {
+            }
+            PJ_END;
+        }
   \endverbatim
   
  *  - You can not provide more than PJ_CATCH or PJ_CATCH_ANY nor use PJ_CATCH
@@ -279,13 +278,13 @@ pj_throw_exception_(pj_exception_id_t id) PJ_ATTR_NORETURN
 }
 
 #define PJ_USE_EXCEPTION    
-#define PJ_TRY		    __try
-#define PJ_CATCH(id)	    __except(GetExceptionCode()==id ? \
-				      EXCEPTION_EXECUTE_HANDLER : \
-				      EXCEPTION_CONTINUE_SEARCH)
-#define PJ_CATCH_ANY	    __except(EXCEPTION_EXECUTE_HANDLER)
-#define PJ_END		    
-#define PJ_THROW(id)	    pj_throw_exception_(id)
+#define PJ_TRY              __try
+#define PJ_CATCH(id)        __except(GetExceptionCode()==id ? \
+                                      EXCEPTION_EXECUTE_HANDLER : \
+                                      EXCEPTION_CONTINUE_SEARCH)
+#define PJ_CATCH_ANY        __except(EXCEPTION_EXECUTE_HANDLER)
+#define PJ_END              
+#define PJ_THROW(id)        pj_throw_exception_(id)
 #define PJ_GET_EXCEPTION()  GetExceptionCode()
 
 
@@ -308,24 +307,24 @@ public:
 };
 
 #define PJ_USE_EXCEPTION
-#define PJ_TRY			try
-//#define PJ_CATCH(id)		
-#define PJ_CATCH_ANY		catch (const TPjException & pj_excp_)
+#define PJ_TRY                  try
+//#define PJ_CATCH(id)          
+#define PJ_CATCH_ANY            catch (const TPjException & pj_excp_)
 #define PJ_END
-#define PJ_THROW(x_id)		do { TPjException e; e.code_=x_id; throw e;} \
-				while (0)
-#define PJ_GET_EXCEPTION()	pj_excp_.code_
+#define PJ_THROW(x_id)          do { TPjException e; e.code_=x_id; throw e;} \
+                                while (0)
+#define PJ_GET_EXCEPTION()      pj_excp_.code_
 
 #else
 
 #define PJ_USE_EXCEPTION
-#define PJ_TRY				
-#define PJ_CATCH_ANY		if (0)
+#define PJ_TRY                          
+#define PJ_CATCH_ANY            if (0)
 #define PJ_END
-#define PJ_THROW(x_id)		do { PJ_LOG(1,("PJ_THROW"," error code = %d",x_id)); } while (0)
-#define PJ_GET_EXCEPTION()	0
+#define PJ_THROW(x_id)          do { PJ_LOG(1,("PJ_THROW"," error code = %d",x_id)); } while (0)
+#define PJ_GET_EXCEPTION()      0
 
-#endif	/* __cplusplus */
+#endif  /* __cplusplus */
 
 #else
 /*****************************************************************************
@@ -371,51 +370,51 @@ PJ_DECL(void) pj_pop_exception_handler_(struct pj_exception_state_t *rec);
  * Start exception specification block.
  * @hideinitializer
  */
-#define PJ_TRY		    if (1) { \
-				pj_push_exception_handler_(&pj_x_except__); \
-				pj_x_code__ = pj_setjmp(pj_x_except__.state); \
-				if (pj_x_code__ == 0)
+#define PJ_TRY              if (1) { \
+                                pj_push_exception_handler_(&pj_x_except__); \
+                                pj_x_code__ = pj_setjmp(pj_x_except__.state); \
+                                if (pj_x_code__ == 0)
 /**
  * Catch the specified exception Id.
  * @param id    The exception number to catch.
  * @hideinitializer
  */
-#define PJ_CATCH(id)	    else if (pj_x_code__ == (id))
+#define PJ_CATCH(id)        else if (pj_x_code__ == (id))
 
 /**
  * Catch any exception number.
  * @hideinitializer
  */
-#define PJ_CATCH_ANY	    else
+#define PJ_CATCH_ANY        else
 
 /**
  * End of exception specification block.
  * @hideinitializer
  */
-#define PJ_END			pj_pop_exception_handler_(&pj_x_except__); \
-			    } else {}
+#define PJ_END                  pj_pop_exception_handler_(&pj_x_except__); \
+                            } else {}
 
 /**
  * Throw exception.
  * @param exception_id  The exception number.
  * @hideinitializer
  */
-#define PJ_THROW(exception_id)	pj_throw_exception_(exception_id)
+#define PJ_THROW(exception_id)  pj_throw_exception_(exception_id)
 
 /**
  * Get current exception.
  * @return      Current exception code.
  * @hideinitializer
  */
-#define PJ_GET_EXCEPTION()	(pj_x_code__)
+#define PJ_GET_EXCEPTION()      (pj_x_code__)
 
-#endif	/* PJ_EXCEPTION_USE_WIN32_SEH */
+#endif  /* PJ_EXCEPTION_USE_WIN32_SEH */
 
 
 PJ_END_DECL
 
 
 
-#endif	/* __PJ_EXCEPTION_H__ */
+#endif  /* __PJ_EXCEPTION_H__ */
 
 

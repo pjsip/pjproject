@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -65,11 +64,11 @@ PJ_BEGIN_DECL
 /** Address family is unspecified. @see pj_AF_UNSPEC() */
 extern const pj_uint16_t PJ_AF_UNSPEC;
 
-/** Unix domain socket.	@see pj_AF_UNIX() */
+/** Unix domain socket. @see pj_AF_UNIX() */
 extern const pj_uint16_t PJ_AF_UNIX;
 
-/** POSIX name for AF_UNIX	*/
-#define PJ_AF_LOCAL	 PJ_AF_UNIX;
+/** POSIX name for AF_UNIX      */
+#define PJ_AF_LOCAL      PJ_AF_UNIX;
 
 /** Internet IP protocol. @see pj_AF_INET() */
 extern const pj_uint16_t PJ_AF_INET;
@@ -109,15 +108,15 @@ extern const pj_uint16_t PJ_AF_IRDA;
     /** Get #PJ_AF_UNSPEC value */
 #   define pj_AF_UNSPEC()   PJ_AF_UNSPEC
     /** Get #PJ_AF_UNIX value. */
-#   define pj_AF_UNIX()	    PJ_AF_UNIX
+#   define pj_AF_UNIX()     PJ_AF_UNIX
     /** Get #PJ_AF_INET value. */
-#   define pj_AF_INET()	    PJ_AF_INET
+#   define pj_AF_INET()     PJ_AF_INET
     /** Get #PJ_AF_INET6 value. */
 #   define pj_AF_INET6()    PJ_AF_INET6
     /** Get #PJ_AF_PACKET value. */
 #   define pj_AF_PACKET()   PJ_AF_PACKET
     /** Get #PJ_AF_IRDA value. */
-#   define pj_AF_IRDA()	    PJ_AF_IRDA
+#   define pj_AF_IRDA()     PJ_AF_IRDA
 #endif
 
 
@@ -204,11 +203,11 @@ extern const pj_uint16_t PJ_SOL_IPV6;
     /** Get #PJ_SOL_SOCKET constant */
 #   define pj_SOL_SOCKET()  PJ_SOL_SOCKET
     /** Get #PJ_SOL_IP constant */
-#   define pj_SOL_IP()	    PJ_SOL_IP
+#   define pj_SOL_IP()      PJ_SOL_IP
     /** Get #PJ_SOL_TCP constant */
-#   define pj_SOL_TCP()	    PJ_SOL_TCP
+#   define pj_SOL_TCP()     PJ_SOL_TCP
     /** Get #PJ_SOL_UDP constant */
-#   define pj_SOL_UDP()	    PJ_SOL_UDP
+#   define pj_SOL_UDP()     PJ_SOL_UDP
     /** Get #PJ_SOL_IPV6 constant */
 #   define pj_SOL_IPV6()    PJ_SOL_IPV6
 #endif
@@ -261,10 +260,10 @@ extern const pj_uint16_t PJ_IPTOS_MINCOST;
     PJ_DECL(int) pj_IPTOS_MINCOST(void);
 #else
     /** Get #PJ_IP_TOS constant */
-#   define pj_IP_TOS()		PJ_IP_TOS
+#   define pj_IP_TOS()          PJ_IP_TOS
 
     /** Get #PJ_IPTOS_LOWDELAY constant */
-#   define pj_IPTOS_LOWDELAY()	PJ_IP_TOS_LOWDELAY
+#   define pj_IPTOS_LOWDELAY()  PJ_IP_TOS_LOWDELAY
 
     /** Get #PJ_IPTOS_THROUGHPUT constant */
 #   define pj_IPTOS_THROUGHPUT() PJ_IP_TOS_THROUGHPUT
@@ -273,7 +272,7 @@ extern const pj_uint16_t PJ_IPTOS_MINCOST;
 #   define pj_IPTOS_RELIABILITY() PJ_IP_TOS_RELIABILITY
 
     /** Get #PJ_IPTOS_MINCOST constant */
-#   define pj_IPTOS_MINCOST()	PJ_IP_TOS_MINCOST
+#   define pj_IPTOS_MINCOST()   PJ_IP_TOS_MINCOST
 #endif
 
 
@@ -286,7 +285,7 @@ extern const pj_uint16_t PJ_IPV6_TCLASS;
     PJ_DECL(int) pj_IPV6_TCLASS(void);
 #else
     /** Get #PJ_IPV6_TCLASS constant */
-#   define pj_IPV6_TCLASS()	PJ_IPV6_TCLASS
+#   define pj_IPV6_TCLASS()     PJ_IPV6_TCLASS
 #endif
 
 
@@ -372,7 +371,7 @@ extern const pj_uint16_t PJ_IP_DROP_MEMBERSHIP;
     PJ_DECL(pj_uint16_t) pj_IP_DROP_MEMBERSHIP(void);
 #else
     /** Get #PJ_SO_TYPE constant */
-#   define pj_SO_TYPE()	    PJ_SO_TYPE
+#   define pj_SO_TYPE()     PJ_SO_TYPE
 
     /** Get #PJ_SO_RCVBUF constant */
 #   define pj_SO_RCVBUF()   PJ_SO_RCVBUF
@@ -434,13 +433,13 @@ extern const int PJ_MSG_DONTROUTE;
     PJ_DECL(int) pj_MSG_DONTROUTE(void);
 #else
     /** Get #PJ_MSG_OOB constant */
-#   define pj_MSG_OOB()		PJ_MSG_OOB
+#   define pj_MSG_OOB()         PJ_MSG_OOB
 
     /** Get #PJ_MSG_PEEK constant */
-#   define pj_MSG_PEEK()	PJ_MSG_PEEK
+#   define pj_MSG_PEEK()        PJ_MSG_PEEK
 
     /** Get #PJ_MSG_DONTROUTE constant */
-#   define pj_MSG_DONTROUTE()	PJ_MSG_DONTROUTE
+#   define pj_MSG_DONTROUTE()   PJ_MSG_DONTROUTE
 #endif
 
 
@@ -449,21 +448,21 @@ extern const int PJ_MSG_DONTROUTE;
  */
 typedef enum pj_socket_sd_type
 {
-    PJ_SD_RECEIVE   = 0,    /**< No more receive.	    */
-    PJ_SHUT_RD	    = 0,    /**< Alias for SD_RECEIVE.	    */
-    PJ_SD_SEND	    = 1,    /**< No more sending.	    */
-    PJ_SHUT_WR	    = 1,    /**< Alias for SD_SEND.	    */
-    PJ_SD_BOTH	    = 2,    /**< No more send and receive.  */
-    PJ_SHUT_RDWR    = 2     /**< Alias for SD_BOTH.	    */
+    PJ_SD_RECEIVE   = 0,    /**< No more receive.           */
+    PJ_SHUT_RD      = 0,    /**< Alias for SD_RECEIVE.      */
+    PJ_SD_SEND      = 1,    /**< No more sending.           */
+    PJ_SHUT_WR      = 1,    /**< Alias for SD_SEND.         */
+    PJ_SD_BOTH      = 2,    /**< No more send and receive.  */
+    PJ_SHUT_RDWR    = 2     /**< Alias for SD_BOTH.         */
 } pj_socket_sd_type;
 
 
 
 /** Address to accept any incoming messages. */
-#define PJ_INADDR_ANY	    ((pj_uint32_t)0)
+#define PJ_INADDR_ANY       ((pj_uint32_t)0)
 
 /** Address indicating an error return */
-#define PJ_INADDR_NONE	    ((pj_uint32_t)0xffffffff)
+#define PJ_INADDR_NONE      ((pj_uint32_t)0xffffffff)
 
 /** Address to send to all hosts. */
 #define PJ_INADDR_BROADCAST ((pj_uint32_t)0xffffffff)
@@ -475,7 +474,7 @@ typedef enum pj_socket_sd_type
  * denominator (five, in Win32 systems) will be used.
  */
 #if !defined(PJ_SOMAXCONN)
-#  define PJ_SOMAXCONN	5
+#  define PJ_SOMAXCONN  5
 #endif
 
 
@@ -493,34 +492,34 @@ typedef enum pj_socket_sd_type
 /* Must undefine s_addr because of pj_in_addr below */
 #undef s_addr
 
-/**
- * This structure describes Internet address.
- */
 typedef struct pj_in_addr
 {
-    pj_uint32_t	s_addr;		/**< The 32bit IP address.	    */
+    pj_uint32_t s_addr;         /**< The 32bit IP address.          */
 } pj_in_addr;
 
 #else
+/**
+ * This structure describes Internet address.
+ */
 typedef struct in_addr pj_in_addr;
 #endif
 
 /**
  * Maximum length of text representation of an IPv4 address.
  */
-#define PJ_INET_ADDRSTRLEN	16
+#define PJ_INET_ADDRSTRLEN      16
 
 /**
  * Maximum length of text representation of an IPv6 address.
  */
-#define PJ_INET6_ADDRSTRLEN	46
+#define PJ_INET6_ADDRSTRLEN     46
 
 /**
  * The size of sin_zero field in pj_sockaddr_in structure. Most OSes
  * use 8, but others such as the BSD TCP/IP stack in eCos uses 24.
  */
 #ifndef PJ_SOCKADDR_IN_SIN_ZERO_LEN
-#   define PJ_SOCKADDR_IN_SIN_ZERO_LEN	8
+#   define PJ_SOCKADDR_IN_SIN_ZERO_LEN  8
 #endif
 
 /**
@@ -534,14 +533,14 @@ typedef struct in_addr pj_in_addr;
 struct pj_sockaddr_in
 {
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-    pj_uint8_t  sin_zero_len;	/**< Just ignore this.		    */
-    pj_uint8_t  sin_family;	/**< Address family.		    */
+    pj_uint8_t  sin_zero_len;   /**< Just ignore this.              */
+    pj_uint8_t  sin_family;     /**< Address family.                */
 #else
-    pj_uint16_t	sin_family;	/**< Address family.		    */
+    pj_uint16_t sin_family;     /**< Address family.                */
 #endif
-    pj_uint16_t	sin_port;	/**< Transport layer port number.   */
-    pj_in_addr	sin_addr;	/**< IP address.		    */
-    char	sin_zero_pad[PJ_SOCKADDR_IN_SIN_ZERO_LEN]; /**< Padding.*/
+    pj_uint16_t sin_port;       /**< Transport layer port number.   */
+    pj_in_addr  sin_addr;       /**< IP address.                    */
+    char        sin_zero_pad[PJ_SOCKADDR_IN_SIN_ZERO_LEN]; /**< Padding.*/
 };
 
 
@@ -552,29 +551,29 @@ struct pj_sockaddr_in
 #if 0
 #undef s6_addr
 
-/**
- * This structure describes IPv6 address.
- */
 typedef union pj_in6_addr
 {
     /* This is the main entry */
     pj_uint8_t  s6_addr[16];   /**< 8-bit array */
 
     /* While these are used for proper alignment */
-    pj_uint32_t	u6_addr32[4];
+    pj_uint32_t u6_addr32[4];
 
     /* Do not use this with Winsock2, as this will align pj_sockaddr_in6
      * to 64-bit boundary and Winsock2 doesn't like it!
      * Update 26/04/2010:
-     *  This is now disabled, see http://trac.pjsip.org/repos/ticket/1058
+     *  This is now disabled, see https://github.com/pjsip/pjproject/issues/1058
      */
 #if 0 && defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0 && \
     (!defined(PJ_WIN32) || PJ_WIN32==0)
-    pj_int64_t	u6_addr64[2];
+    pj_int64_t  u6_addr64[2];
 #endif
 
 } pj_in6_addr;
 #else
+/**
+ * This structure describes IPv6 address.
+ */
 typedef struct in6_addr pj_in6_addr;
 #endif
 
@@ -596,15 +595,15 @@ typedef struct in6_addr pj_in6_addr;
 typedef struct pj_sockaddr_in6
 {
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-    pj_uint8_t  sin6_zero_len;	    /**< Just ignore this.	   */
-    pj_uint8_t  sin6_family;	    /**< Address family.	   */
+    pj_uint8_t  sin6_zero_len;      /**< Just ignore this.         */
+    pj_uint8_t  sin6_family;        /**< Address family.           */
 #else
-    pj_uint16_t	sin6_family;	    /**< Address family		    */
+    pj_uint16_t sin6_family;        /**< Address family             */
 #endif
-    pj_uint16_t	sin6_port;	    /**< Transport layer port number. */
-    pj_uint32_t	sin6_flowinfo;	    /**< IPv6 flow information	    */
-    pj_in6_addr sin6_addr;	    /**< IPv6 address.		    */
-    pj_uint32_t sin6_scope_id;	    /**< Set of interfaces for a scope	*/
+    pj_uint16_t sin6_port;          /**< Transport layer port number. */
+    pj_uint32_t sin6_flowinfo;      /**< IPv6 flow information      */
+    pj_in6_addr sin6_addr;          /**< IPv6 address.              */
+    pj_uint32_t sin6_scope_id;      /**< Set of interfaces for a scope  */
 } pj_sockaddr_in6;
 
 
@@ -622,7 +621,7 @@ typedef struct pj_addr_hdr
     pj_uint8_t  sa_zero_len;
     pj_uint8_t  sa_family;
 #else
-    pj_uint16_t	sa_family;	/**< Common data: address family.   */
+    pj_uint16_t sa_family;      /**< Common data: address family.   */
 #endif
 } pj_addr_hdr;
 
@@ -632,9 +631,9 @@ typedef struct pj_addr_hdr
  */
 typedef union pj_sockaddr
 {
-    pj_addr_hdr	    addr;	/**< Generic transport address.	    */
-    pj_sockaddr_in  ipv4;	/**< IPv4 transport address.	    */
-    pj_sockaddr_in6 ipv6;	/**< IPv6 transport address.	    */
+    pj_addr_hdr     addr;       /**< Generic transport address.     */
+    pj_sockaddr_in  ipv4;       /**< IPv4 transport address.        */
+    pj_sockaddr_in6 ipv6;       /**< IPv6 transport address.        */
 } pj_sockaddr;
 
 
@@ -642,8 +641,8 @@ typedef union pj_sockaddr
  * This structure provides multicast group information for IPv4 addresses.
  */
 typedef struct pj_ip_mreq {
-    pj_in_addr imr_multiaddr;	/**< IP multicast address of group. */
-    pj_in_addr imr_interface;	/**< local IP address of interface. */
+    pj_in_addr imr_multiaddr;   /**< IP multicast address of group. */
+    pj_in_addr imr_interface;   /**< local IP address of interface. */
 } pj_ip_mreq;
 
 
@@ -652,22 +651,22 @@ typedef struct pj_ip_mreq {
  */
 typedef struct pj_sockopt_params
 {
-    /* The number of options to be applied. */
+    /** The number of options to be applied. */
     unsigned cnt;
 
-    /* Array of options to be applied. */
+    /** Array of options to be applied. */
     struct {
-	/* The level at which the option is defined. */
-	int level;
+        /** The level at which the option is defined. */
+        int level;
 
-	/* Option name. */
-	int optname;
+        /** Option name. */
+        int optname;
 
-	/* Pointer to the buffer in which the option is specified. */
-	void *optval;
+        /** Pointer to the buffer in which the option is specified. */
+        void *optval;
 
-	/* Buffer size of the buffer pointed by optval. */
-	int optlen;
+        /** Buffer size of the buffer pointed by optval. */
+        int optlen;
     } options[PJ_MAX_SOCKOPT_PARAMS];
 } pj_sockopt_params;
 
@@ -682,7 +681,7 @@ typedef struct pj_sockopt_params
  * Convert 16-bit value from network byte order to host byte order.
  *
  * @param netshort  16-bit network value.
- * @return	    16-bit host value.
+ * @return          16-bit host value.
  */
 PJ_DECL(pj_uint16_t) pj_ntohs(pj_uint16_t netshort);
 
@@ -690,7 +689,7 @@ PJ_DECL(pj_uint16_t) pj_ntohs(pj_uint16_t netshort);
  * Convert 16-bit value from host byte order to network byte order.
  *
  * @param hostshort 16-bit host value.
- * @return	    16-bit network value.
+ * @return          16-bit network value.
  */
 PJ_DECL(pj_uint16_t) pj_htons(pj_uint16_t hostshort);
 
@@ -698,7 +697,7 @@ PJ_DECL(pj_uint16_t) pj_htons(pj_uint16_t hostshort);
  * Convert 32-bit value from network byte order to host byte order.
  *
  * @param netlong   32-bit network value.
- * @return	    32-bit host value.
+ * @return          32-bit host value.
  */
 PJ_DECL(pj_uint32_t) pj_ntohl(pj_uint32_t netlong);
 
@@ -706,7 +705,7 @@ PJ_DECL(pj_uint32_t) pj_ntohl(pj_uint32_t netlong);
  * Convert 32-bit value from host byte order to network byte order.
  *
  * @param hostlong  32-bit host value.
- * @return	    32-bit network value.
+ * @return          32-bit network value.
  */
 PJ_DECL(pj_uint32_t) pj_htonl(pj_uint32_t hostlong);
 
@@ -715,7 +714,7 @@ PJ_DECL(pj_uint32_t) pj_htonl(pj_uint32_t hostlong);
  * to string in standard numbers and dots notation.
  *
  * @param inaddr    The host address.
- * @return	    The string address.
+ * @return          The string address.
  */
 PJ_DECL(char*) pj_inet_ntoa(pj_in_addr inaddr);
 
@@ -724,10 +723,10 @@ PJ_DECL(char*) pj_inet_ntoa(pj_in_addr inaddr);
  * numbers-and-dots notation into binary data and stores it in the structure
  * that inp points to. 
  *
- * @param cp	IP address in standard numbers-and-dots notation.
- * @param inp	Structure that holds the output of the conversion.
+ * @param cp    IP address in standard numbers-and-dots notation.
+ * @param inp   Structure that holds the output of the conversion.
  *
- * @return	nonzero if the address is valid, zero if not.
+ * @return      nonzero if the address is valid, zero if not.
  */
 PJ_DECL(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp);
 
@@ -736,15 +735,15 @@ PJ_DECL(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp);
  * into its numeric binary form. It supports both IPv4 and IPv6 address
  * conversion.
  *
- * @param af	Specify the family of the address.  The PJ_AF_INET and 
- *		PJ_AF_INET6 address families shall be supported.  
- * @param src	Points to the string being passed in. 
- * @param dst	Points to a buffer into which the function stores the 
- *		numeric address; this shall be large enough to hold the
- *		numeric address (32 bits for PJ_AF_INET, 128 bits for
- *		PJ_AF_INET6).  
+ * @param af    Specify the family of the address.  The PJ_AF_INET and 
+ *              PJ_AF_INET6 address families shall be supported.  
+ * @param src   Points to the string being passed in. 
+ * @param dst   Points to a buffer into which the function stores the 
+ *              numeric address; this shall be large enough to hold the
+ *              numeric address (32 bits for PJ_AF_INET, 128 bits for
+ *              PJ_AF_INET6).  
  *
- * @return	PJ_SUCCESS if conversion was successful.
+ * @return      PJ_SUCCESS if conversion was successful.
  */
 PJ_DECL(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst);
 
@@ -754,65 +753,65 @@ PJ_DECL(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst);
  * conversion. 
  * @see pj_sockaddr_print()
  *
- * @param af	Specify the family of the address. This can be PJ_AF_INET
- *		or PJ_AF_INET6.
- * @param src	Points to a buffer holding an IPv4 address if the af argument
- *		is PJ_AF_INET, or an IPv6 address if the af argument is
- *		PJ_AF_INET6; the address must be in network byte order.  
- * @param dst	Points to a buffer where the function stores the resulting
- *		text string; it shall not be NULL.  
- * @param size	Specifies the size of this buffer, which shall be large 
- *		enough to hold the text string (PJ_INET_ADDRSTRLEN characters
- *		for IPv4, PJ_INET6_ADDRSTRLEN characters for IPv6).
+ * @param af    Specify the family of the address. This can be PJ_AF_INET
+ *              or PJ_AF_INET6.
+ * @param src   Points to a buffer holding an IPv4 address if the af argument
+ *              is PJ_AF_INET, or an IPv6 address if the af argument is
+ *              PJ_AF_INET6; the address must be in network byte order.  
+ * @param dst   Points to a buffer where the function stores the resulting
+ *              text string; it shall not be NULL.  
+ * @param size  Specifies the size of this buffer, which shall be large 
+ *              enough to hold the text string (PJ_INET_ADDRSTRLEN characters
+ *              for IPv4, PJ_INET6_ADDRSTRLEN characters for IPv6).
  *
- * @return	PJ_SUCCESS if conversion was successful.
+ * @return      PJ_SUCCESS if conversion was successful.
  */
 PJ_DECL(pj_status_t) pj_inet_ntop(int af, const void *src,
-				  char *dst, int size);
+                                  char *dst, int size);
 
 /**
  * Converts numeric address into its text string representation.
  * @see pj_sockaddr_print()
  *
- * @param af	Specify the family of the address. This can be PJ_AF_INET
- *		or PJ_AF_INET6.
- * @param src	Points to a buffer holding an IPv4 address if the af argument
- *		is PJ_AF_INET, or an IPv6 address if the af argument is
- *		PJ_AF_INET6; the address must be in network byte order.  
- * @param dst	Points to a buffer where the function stores the resulting
- *		text string; it shall not be NULL.  
- * @param size	Specifies the size of this buffer, which shall be large 
- *		enough to hold the text string (PJ_INET_ADDRSTRLEN characters
- *		for IPv4, PJ_INET6_ADDRSTRLEN characters for IPv6).
+ * @param af    Specify the family of the address. This can be PJ_AF_INET
+ *              or PJ_AF_INET6.
+ * @param src   Points to a buffer holding an IPv4 address if the af argument
+ *              is PJ_AF_INET, or an IPv6 address if the af argument is
+ *              PJ_AF_INET6; the address must be in network byte order.  
+ * @param dst   Points to a buffer where the function stores the resulting
+ *              text string; it shall not be NULL.  
+ * @param size  Specifies the size of this buffer, which shall be large 
+ *              enough to hold the text string (PJ_INET_ADDRSTRLEN characters
+ *              for IPv4, PJ_INET6_ADDRSTRLEN characters for IPv6).
  *
- * @return	The address string or NULL if failed.
+ * @return      The address string or NULL if failed.
  */
 PJ_DECL(char*) pj_inet_ntop2(int af, const void *src,
-			     char *dst, int size);
+                             char *dst, int size);
 
 /**
  * Print socket address.
  *
- * @param addr	The socket address.
- * @param buf	Text buffer.
- * @param size	Size of buffer.
- * @param flags	Bitmask combination of these value:
- *		  - 1: port number is included.
- *		  - 2: square bracket is included for IPv6 address.
+ * @param addr  The socket address.
+ * @param buf   Text buffer.
+ * @param size  Size of buffer.
+ * @param flags Bitmask combination of these value:
+ *                - 1: port number is included.
+ *                - 2: square bracket is included for IPv6 address.
  *
- * @return	The address string.
+ * @return      The address string.
  */
 PJ_DECL(char*) pj_sockaddr_print(const pj_sockaddr_t *addr,
-				 char *buf, int size,
-				 unsigned flags);
+                                 char *buf, int size,
+                                 unsigned flags);
 
 /**
  * Convert address string with numbers and dots to binary IP address.
  * 
- * @param cp	    The IP address in numbers and dots notation.
- * @return	    If success, the IP address is returned in network
- *		    byte order. If failed, PJ_INADDR_NONE will be
- *		    returned.
+ * @param cp        The IP address in numbers and dots notation.
+ * @return          If success, the IP address is returned in network
+ *                  byte order. If failed, PJ_INADDR_NONE will be
+ *                  returned.
  * @remark
  * This is an obsolete interface to #pj_inet_aton(); it is obsolete
  * because -1 is a valid address (255.255.255.255), and #pj_inet_aton()
@@ -823,10 +822,10 @@ PJ_DECL(pj_in_addr) pj_inet_addr(const pj_str_t *cp);
 /**
  * Convert address string with numbers and dots to binary IP address.
  * 
- * @param cp	    The IP address in numbers and dots notation.
- * @return	    If success, the IP address is returned in network
- *		    byte order. If failed, PJ_INADDR_NONE will be
- *		    returned.
+ * @param cp        The IP address in numbers and dots notation.
+ * @return          If success, the IP address is returned in network
+ *                  byte order. If failed, PJ_INADDR_NONE will be
+ *                  returned.
  * @remark
  * This is an obsolete interface to #pj_inet_aton(); it is obsolete
  * because -1 is a valid address (255.255.255.255), and #pj_inet_aton()
@@ -842,16 +841,16 @@ PJ_DECL(pj_in_addr) pj_inet_addr2(const char *cp);
  *
  * @see pj_sockaddr_init()
  *
- * @param addr	    The IP socket address to be set.
- * @param cp	    The address string, which can be in a standard 
- *		    dotted numbers or a hostname to be resolved.
- * @param port	    The port number, in host byte order.
+ * @param addr      The IP socket address to be set.
+ * @param cp        The address string, which can be in a standard 
+ *                  dotted numbers or a hostname to be resolved.
+ * @param port      The port number, in host byte order.
  *
- * @return	    Zero on success.
+ * @return          Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
-				          const pj_str_t *cp,
-					  pj_uint16_t port);
+                                          const pj_str_t *cp,
+                                          pj_uint16_t port);
 
 /**
  * Initialize IP socket address based on the address and port info.
@@ -861,47 +860,47 @@ PJ_DECL(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
  *
  * @see pj_sockaddr_in_init()
  *
- * @param af	    Internet address family.
- * @param addr	    The IP socket address to be set.
- * @param cp	    The address string, which can be in a standard 
- *		    dotted numbers or a hostname to be resolved.
- * @param port	    The port number, in host byte order.
+ * @param af        Internet address family.
+ * @param addr      The IP socket address to be set.
+ * @param cp        The address string, which can be in a standard 
+ *                  dotted numbers or a hostname to be resolved.
+ * @param port      The port number, in host byte order.
  *
- * @return	    Zero on success.
+ * @return          Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sockaddr_init(int af, 
-				      pj_sockaddr *addr,
-				      const pj_str_t *cp,
-				      pj_uint16_t port);
+                                      pj_sockaddr *addr,
+                                      const pj_str_t *cp,
+                                      pj_uint16_t port);
 
 /**
  * Compare two socket addresses.
  *
- * @param addr1	    First address.
- * @param addr2	    Second address.
+ * @param addr1     First address.
+ * @param addr2     Second address.
  *
- * @return	    Zero on equal, -1 if addr1 is less than addr2,
- *		    and +1 if addr1 is more than addr2.
+ * @return          Zero on equal, -1 if addr1 is less than addr2,
+ *                  and +1 if addr1 is more than addr2.
  */
 PJ_DECL(int) pj_sockaddr_cmp(const pj_sockaddr_t *addr1,
-			     const pj_sockaddr_t *addr2);
+                             const pj_sockaddr_t *addr2);
 
 /**
  * Get pointer to the address part of a socket address.
  * 
- * @param addr	    Socket address.
+ * @param addr      Socket address.
  *
- * @return	    Pointer to address part (sin_addr or sin6_addr,
- *		    depending on address family)
+ * @return          Pointer to address part (sin_addr or sin6_addr,
+ *                  depending on address family)
  */
 PJ_DECL(void*) pj_sockaddr_get_addr(const pj_sockaddr_t *addr);
 
 /**
  * Check that a socket address contains a non-zero address part.
  *
- * @param addr	    Socket address.
+ * @param addr      Socket address.
  *
- * @return	    Non-zero if address is set to non-zero.
+ * @return          Non-zero if address is set to non-zero.
  */
 PJ_DECL(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr);
 
@@ -910,9 +909,9 @@ PJ_DECL(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr);
  * family. For PJ_AF_INET, the length will be sizeof(pj_in_addr), and
  * for PJ_AF_INET6, the length will be sizeof(pj_in6_addr).
  * 
- * @param addr	    Socket address.
+ * @param addr      Socket address.
  *
- * @return	    Length in bytes.
+ * @return          Length in bytes.
  */
 PJ_DECL(unsigned) pj_sockaddr_get_addr_len(const pj_sockaddr_t *addr);
 
@@ -921,68 +920,68 @@ PJ_DECL(unsigned) pj_sockaddr_get_addr_len(const pj_sockaddr_t *addr);
  * family. For PJ_AF_INET, the length will be sizeof(pj_sockaddr_in), and
  * for PJ_AF_INET6, the length will be sizeof(pj_sockaddr_in6).
  * 
- * @param addr	    Socket address.
+ * @param addr      Socket address.
  *
- * @return	    Length in bytes.
+ * @return          Length in bytes.
  */
 PJ_DECL(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr);
 
 /** 
  * Copy only the address part (sin_addr/sin6_addr) of a socket address.
  *
- * @param dst	    Destination socket address.
- * @param src	    Source socket address.
+ * @param dst       Destination socket address.
+ * @param src       Source socket address.
  *
- * @see @pj_sockaddr_cp()
+ * @see pj_sockaddr_cp()
  */
 PJ_DECL(void) pj_sockaddr_copy_addr(pj_sockaddr *dst,
-				    const pj_sockaddr *src);
+                                    const pj_sockaddr *src);
 /**
  * Copy socket address. This will copy the whole structure depending
  * on the address family of the source socket address.
  *
- * @param dst	    Destination socket address.
- * @param src	    Source socket address.
+ * @param dst       Destination socket address.
+ * @param src       Source socket address.
  *
- * @see @pj_sockaddr_copy_addr()
+ * @see pj_sockaddr_copy_addr()
  */
 PJ_DECL(void) pj_sockaddr_cp(pj_sockaddr_t *dst, const pj_sockaddr_t *src);
 
-/*
+/**
  * If the source's and desired address family matches, copy the address,
  * otherwise synthesize a new address with the desired address family,
  * from the source address. This can be useful to generate an IPv4-mapped
  * IPv6 address.
  *
  * @param dst_af    Desired address family.
- * @param dst	    Destination socket address, invalid if synthesis is
- *		    required and failed.
- * @param src	    Source socket address.
+ * @param dst       Destination socket address, invalid if synthesis is
+ *                  required and failed.
+ * @param src       Source socket address.
  *
- * @return	    PJ_SUCCESS on success, or the error status
- *		    if synthesis is required and failed.
+ * @return          PJ_SUCCESS on success, or the error status
+ *                  if synthesis is required and failed.
  */
 PJ_DECL(pj_status_t) pj_sockaddr_synthesize(int dst_af,
-				            pj_sockaddr_t *dst,
-				            const pj_sockaddr_t *src);
+                                            pj_sockaddr_t *dst,
+                                            const pj_sockaddr_t *src);
 
 /**
  * Get the IP address of an IPv4 socket address.
  * The address is returned as 32bit value in host byte order.
  *
- * @param addr	    The IP socket address.
- * @return	    32bit address, in host byte order.
+ * @param addr      The IP socket address.
+ * @return          32bit address, in host byte order.
  */
 PJ_DECL(pj_in_addr) pj_sockaddr_in_get_addr(const pj_sockaddr_in *addr);
 
 /**
  * Set the IP address of an IPv4 socket address.
  *
- * @param addr	    The IP socket address.
+ * @param addr      The IP socket address.
  * @param hostaddr  The host address, in host byte order.
  */
 PJ_DECL(void) pj_sockaddr_in_set_addr(pj_sockaddr_in *addr,
-				      pj_uint32_t hostaddr);
+                                      pj_uint32_t hostaddr);
 
 /**
  * Set the IP address of an IP socket address from string address, 
@@ -993,14 +992,14 @@ PJ_DECL(void) pj_sockaddr_in_set_addr(pj_sockaddr_in *addr,
  *
  * @see pj_sockaddr_set_str_addr()
  *
- * @param addr	    The IP socket address to be set.
- * @param cp	    The address string, which can be in a standard 
- *		    dotted numbers or a hostname to be resolved.
+ * @param addr      The IP socket address to be set.
+ * @param cp        The address string, which can be in a standard 
+ *                  dotted numbers or a hostname to be resolved.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
-					          const pj_str_t *cp);
+                                                  const pj_str_t *cp);
 
 /**
  * Set the IP address of an IPv4 or IPv6 socket address from string address,
@@ -1009,24 +1008,24 @@ PJ_DECL(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
  * is specified, then the function will resolve the host into the IP
  * address according to the address family.
  *
- * @param af	    Address family.
- * @param addr	    The IP socket address to be set.
- * @param cp	    The address string, which can be in a standard 
- *		    IP numbers (IPv4 or IPv6) or a hostname to be resolved.
+ * @param af        Address family.
+ * @param addr      The IP socket address to be set.
+ * @param cp        The address string, which can be in a standard 
+ *                  IP numbers (IPv4 or IPv6) or a hostname to be resolved.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pj_sockaddr_set_str_addr(int af,
-					      pj_sockaddr *addr,
-					      const pj_str_t *cp);
+                                              pj_sockaddr *addr,
+                                              const pj_str_t *cp);
 
 /**
  * Get the port number of a socket address, in host byte order. 
  * This function can be used for both IPv4 and IPv6 socket address.
  * 
- * @param addr	    Socket address.
+ * @param addr      Socket address.
  *
- * @return	    Port number, in host byte order.
+ * @return          Port number, in host byte order.
  */
 PJ_DECL(pj_uint16_t) pj_sockaddr_get_port(const pj_sockaddr_t *addr);
 
@@ -1034,30 +1033,30 @@ PJ_DECL(pj_uint16_t) pj_sockaddr_get_port(const pj_sockaddr_t *addr);
  * Get the transport layer port number of an Internet socket address.
  * The port is returned in host byte order.
  *
- * @param addr	    The IP socket address.
- * @return	    Port number, in host byte order.
+ * @param addr      The IP socket address.
+ * @return          Port number, in host byte order.
  */
 PJ_DECL(pj_uint16_t) pj_sockaddr_in_get_port(const pj_sockaddr_in *addr);
 
 /**
  * Set the port number of an Internet socket address.
  *
- * @param addr	    The socket address.
+ * @param addr      The socket address.
  * @param hostport  The port number, in host byte order.
  */
 PJ_DECL(pj_status_t) pj_sockaddr_set_port(pj_sockaddr *addr, 
-					  pj_uint16_t hostport);
+                                          pj_uint16_t hostport);
 
 /**
  * Set the port number of an IPv4 socket address.
  *
  * @see pj_sockaddr_set_port()
  *
- * @param addr	    The IP socket address.
+ * @param addr      The IP socket address.
  * @param hostport  The port number, in host byte order.
  */
 PJ_DECL(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 
-				      pj_uint16_t hostport);
+                                      pj_uint16_t hostport);
 
 /**
  * Parse string containing IP address and optional port into socket address,
@@ -1096,22 +1095,22 @@ PJ_DECL(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr,
  * otherwise the port number will be included as part of the IP address
  * (see "fec0::01:80" example above).
  *
- * @param af	    Optionally specify the address family to be used. If the
- *		    address family is to be deducted from the input, specify
- *		    pj_AF_UNSPEC() here. Other supported values are
- *		    #pj_AF_INET() and #pj_AF_INET6()
+ * @param af        Optionally specify the address family to be used. If the
+ *                  address family is to be deducted from the input, specify
+ *                  pj_AF_UNSPEC() here. Other supported values are
+ *                  #pj_AF_INET() and #pj_AF_INET6()
  * @param options   Additional options to assist the parsing, must be zero
- *		    for now.
- * @param str	    The input string to be parsed.
- * @param addr	    Pointer to store the result.
+ *                  for now.
+ * @param str       The input string to be parsed.
+ * @param addr      Pointer to store the result.
  *
- * @return	    PJ_SUCCESS if the parsing is successful.
+ * @return          PJ_SUCCESS if the parsing is successful.
  *
  * @see pj_sockaddr_parse2()
  */
 PJ_DECL(pj_status_t) pj_sockaddr_parse(int af, unsigned options,
-				       const pj_str_t *str,
-				       pj_sockaddr *addr);
+                                       const pj_str_t *str,
+                                       pj_sockaddr *addr);
 
 /**
  * This function is similar to #pj_sockaddr_parse(), except that it will not
@@ -1123,29 +1122,29 @@ PJ_DECL(pj_status_t) pj_sockaddr_parse(int af, unsigned options,
  * address MUST be enclosed in square brackets, otherwise the port number will
  * be considered as part of the IPv6 IP address.
  *
- * @param af	    Optionally specify the address family to be used. If the
- *		    address family is to be deducted from the input, specify
- *		    #pj_AF_UNSPEC() here. Other supported values are
- *		    #pj_AF_INET() and #pj_AF_INET6()
+ * @param af        Optionally specify the address family to be used. If the
+ *                  address family is to be deducted from the input, specify
+ *                  #pj_AF_UNSPEC() here. Other supported values are
+ *                  #pj_AF_INET() and #pj_AF_INET6()
  * @param options   Additional options to assist the parsing, must be zero
- *		    for now.
- * @param str	    The input string to be parsed.
+ *                  for now.
+ * @param str       The input string to be parsed.
  * @param hostpart  Optional pointer to store the host part of the socket 
- *		    address, with any brackets removed.
- * @param port	    Optional pointer to store the port number. If port number
- *		    is not found, this will be set to zero upon return.
- * @param raf	    Optional pointer to store the detected address family of
- *		    the input address.
+ *                  address, with any brackets removed.
+ * @param port      Optional pointer to store the port number. If port number
+ *                  is not found, this will be set to zero upon return.
+ * @param raf       Optional pointer to store the detected address family of
+ *                  the input address.
  *
- * @return	    PJ_SUCCESS if the parsing is successful.
+ * @return          PJ_SUCCESS if the parsing is successful.
  *
  * @see pj_sockaddr_parse()
  */
 PJ_DECL(pj_status_t) pj_sockaddr_parse2(int af, unsigned options,
-				        const pj_str_t *str,
-				        pj_str_t *hostpart,
-				        pj_uint16_t *port,
-					int *raf);
+                                        const pj_str_t *str,
+                                        pj_str_t *hostpart,
+                                        pj_uint16_t *port,
+                                        int *raf);
 
 /*****************************************************************************
  *
@@ -1157,8 +1156,8 @@ PJ_DECL(pj_status_t) pj_sockaddr_parse2(int af, unsigned options,
 /**
  * Get system's host name.
  *
- * @return	    The hostname, or empty string if the hostname can not
- *		    be identified.
+ * @return          The hostname, or empty string if the hostname can not
+ *                  be identified.
  */
 PJ_DECL(const pj_str_t*) pj_gethostname(void);
 
@@ -1166,8 +1165,8 @@ PJ_DECL(const pj_str_t*) pj_gethostname(void);
  * Get host's IP address, which the the first IP address that is resolved
  * from the hostname.
  *
- * @return	    The host's IP address, PJ_INADDR_NONE if the host
- *		    IP address can not be identified.
+ * @return          The host's IP address, PJ_INADDR_NONE if the host
+ *                  IP address can not be identified.
  */
 PJ_DECL(pj_in_addr) pj_gethostaddr(void);
 
@@ -1183,28 +1182,28 @@ PJ_DECL(pj_in_addr) pj_gethostaddr(void);
  * Create new socket/endpoint for communication.
  *
  * @param family    Specifies a communication domain; this selects the
- *		    protocol family which will be used for communication.
- * @param type	    The socket has the indicated type, which specifies the 
- *		    communication semantics.
+ *                  protocol family which will be used for communication.
+ * @param type      The socket has the indicated type, which specifies the 
+ *                  communication semantics.
  * @param protocol  Specifies  a  particular  protocol  to  be used with the
- *		    socket.  Normally only a single protocol exists to support 
- *		    a particular socket  type  within  a given protocol family, 
- *		    in which a case protocol can be specified as 0.
- * @param sock	    New socket descriptor, or PJ_INVALID_SOCKET on error.
+ *                  socket.  Normally only a single protocol exists to support 
+ *                  a particular socket  type  within  a given protocol family, 
+ *                  in which a case protocol can be specified as 0.
+ * @param sock      New socket descriptor, or PJ_INVALID_SOCKET on error.
  *
- * @return	    Zero on success.
+ * @return          Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_socket(int family, 
-				    int type, 
-				    int protocol,
-				    pj_sock_t *sock);
+                                    int type, 
+                                    int protocol,
+                                    pj_sock_t *sock);
 
 /**
  * Close the socket descriptor.
  *
  * @param sockfd    The socket descriptor.
  *
- * @return	    Zero on success.
+ * @return          Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_close(pj_sock_t sockfd);
 
@@ -1219,42 +1218,42 @@ PJ_DECL(pj_status_t) pj_sock_close(pj_sock_t sockfd);
  * @param my_addr   The local address to bind the socket to.
  * @param addrlen   The length of the address.
  *
- * @return	    Zero on success.
+ * @return          Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_bind( pj_sock_t sockfd, 
-				   const pj_sockaddr_t *my_addr,
-				   int addrlen);
+                                   const pj_sockaddr_t *my_addr,
+                                   int addrlen);
 
 /**
  * Bind the IP socket sockfd to the given address and port.
  *
  * @param sockfd    The socket descriptor.
- * @param addr	    Local address to bind the socket to, in host byte order.
- * @param port	    The local port to bind the socket to, in host byte order.
+ * @param addr      Local address to bind the socket to, in host byte order.
+ * @param port      The local port to bind the socket to, in host byte order.
  *
- * @return	    Zero on success.
+ * @return          Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_bind_in( pj_sock_t sockfd, 
-				      pj_uint32_t addr,
-				      pj_uint16_t port);
+                                      pj_uint32_t addr,
+                                      pj_uint16_t port);
 
 /**
  * Bind the IP socket sockfd to the given address and a random port in the
  * specified range.
  *
- * @param sockfd    	The socket desriptor.
- * @param addr      	The local address and port to bind the socket to.
- * @param port_range	The port range, relative the to start port number
- * 			specified in port field in #addr. Note that if the
- * 			port is zero, this param will be ignored.
- * @param max_try   	Maximum retries.
+ * @param sockfd        The socket desriptor.
+ * @param addr          The local address and port to bind the socket to.
+ * @param port_range    The port range, relative the to start port number
+ *                      specified in port field in addr. Note that if the
+ *                      port is zero, this param will be ignored.
+ * @param max_try       Maximum retries.
  *
- * @return	    	Zero on success.
+ * @return              Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_bind_random( pj_sock_t sockfd,
-				          const pj_sockaddr_t *addr,
-				          pj_uint16_t port_range,
-				          pj_uint16_t max_try);
+                                          const pj_sockaddr_t *addr,
+                                          pj_uint16_t port_range,
+                                          pj_uint16_t max_try);
 
 #if PJ_HAS_TCP
 /**
@@ -1262,31 +1261,31 @@ PJ_DECL(pj_status_t) pj_sock_bind_random( pj_sock_t sockfd,
  * oriented sockets (such as PJ_SOCK_STREAM or PJ_SOCK_SEQPACKET), and it
  * indicates the willingness to accept incoming connections.
  *
- * @param sockfd	The socket descriptor.
- * @param backlog	Defines the maximum length the queue of pending
- *			connections may grow to.
+ * @param sockfd        The socket descriptor.
+ * @param backlog       Defines the maximum length the queue of pending
+ *                      connections may grow to.
  *
- * @return		Zero on success.
+ * @return              Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_listen( pj_sock_t sockfd, 
-				     int backlog );
+                                     int backlog );
 
 /**
  * Accept new connection on the specified connection oriented server socket.
  *
  * @param serverfd  The server socket.
  * @param newsock   New socket on success, of PJ_INVALID_SOCKET if failed.
- * @param addr	    A pointer to sockaddr type. If the argument is not NULL,
- *		    it will be filled by the address of connecting entity.
+ * @param addr      A pointer to sockaddr type. If the argument is not NULL,
+ *                  it will be filled by the address of connecting entity.
  * @param addrlen   Initially specifies the length of the address, and upon
- *		    return will be filled with the exact address length.
+ *                  return will be filled with the exact address length.
  *
- * @return	    Zero on success, or the error number.
+ * @return          Zero on success, or the error number.
  */
 PJ_DECL(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
-				     pj_sock_t *newsock,
-				     pj_sockaddr_t *addr,
-				     int *addrlen);
+                                     pj_sock_t *newsock,
+                                     pj_sockaddr_t *addr,
+                                     int *addrlen);
 #endif
 
 /**
@@ -1299,209 +1298,209 @@ PJ_DECL(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
  * addrlen) in the communications space of the  socket.  Each  communications
  * space interprets the serv_addr parameter in its own way.
  *
- * @param sockfd	The socket descriptor.
- * @param serv_addr	Server address to connect to.
- * @param addrlen	The length of server address.
+ * @param sockfd        The socket descriptor.
+ * @param serv_addr     Server address to connect to.
+ * @param addrlen       The length of server address.
  *
- * @return		Zero on success.
+ * @return              Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_connect( pj_sock_t sockfd,
-				      const pj_sockaddr_t *serv_addr,
-				      int addrlen);
+                                      const pj_sockaddr_t *serv_addr,
+                                      int addrlen);
 
 /**
  * Return the address of peer which is connected to socket sockfd.
  *
- * @param sockfd	The socket descriptor.
- * @param addr		Pointer to sockaddr structure to which the address
- *			will be returned.
- * @param namelen	Initially the length of the addr. Upon return the value
- *			will be set to the actual length of the address.
+ * @param sockfd        The socket descriptor.
+ * @param addr          Pointer to sockaddr structure to which the address
+ *                      will be returned.
+ * @param namelen       Initially the length of the addr. Upon return the value
+ *                      will be set to the actual length of the address.
  *
- * @return		Zero on success.
+ * @return              Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_getpeername(pj_sock_t sockfd,
-					  pj_sockaddr_t *addr,
-					  int *namelen);
+                                          pj_sockaddr_t *addr,
+                                          int *namelen);
 
 /**
  * Return the current name of the specified socket.
  *
- * @param sockfd	The socket descriptor.
- * @param addr		Pointer to sockaddr structure to which the address
- *			will be returned.
- * @param namelen	Initially the length of the addr. Upon return the value
- *			will be set to the actual length of the address.
+ * @param sockfd        The socket descriptor.
+ * @param addr          Pointer to sockaddr structure to which the address
+ *                      will be returned.
+ * @param namelen       Initially the length of the addr. Upon return the value
+ *                      will be set to the actual length of the address.
  *
- * @return		Zero on success.
+ * @return              Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_getsockname( pj_sock_t sockfd,
-					  pj_sockaddr_t *addr,
-					  int *namelen);
+                                          pj_sockaddr_t *addr,
+                                          int *namelen);
 
 /**
  * Get socket option associated with a socket. Options may exist at multiple
  * protocol levels; they are always present at the uppermost socket level.
  *
- * @param sockfd	The socket descriptor.
- * @param level		The level which to get the option from.
- * @param optname	The option name.
- * @param optval	Identifies the buffer which the value will be
- *			returned.
- * @param optlen	Initially contains the length of the buffer, upon
- *			return will be set to the actual size of the value.
+ * @param sockfd        The socket descriptor.
+ * @param level         The level which to get the option from.
+ * @param optname       The option name.
+ * @param optval        Identifies the buffer which the value will be
+ *                      returned.
+ * @param optlen        Initially contains the length of the buffer, upon
+ *                      return will be set to the actual size of the value.
  *
- * @return		Zero on success.
+ * @return              Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_getsockopt( pj_sock_t sockfd,
-					 pj_uint16_t level,
-					 pj_uint16_t optname,
-					 void *optval,
-					 int *optlen);
+                                         pj_uint16_t level,
+                                         pj_uint16_t optname,
+                                         void *optval,
+                                         int *optlen);
 /**
  * Manipulate the options associated with a socket. Options may exist at 
  * multiple protocol levels; they are always present at the uppermost socket 
  * level.
  *
- * @param sockfd	The socket descriptor.
- * @param level		The level which to get the option from.
- * @param optname	The option name.
- * @param optval	Identifies the buffer which contain the value.
- * @param optlen	The length of the value.
+ * @param sockfd        The socket descriptor.
+ * @param level         The level which to get the option from.
+ * @param optname       The option name.
+ * @param optval        Identifies the buffer which contain the value.
+ * @param optlen        The length of the value.
  *
- * @return		PJ_SUCCESS or the status code.
+ * @return              PJ_SUCCESS or the status code.
  */
 PJ_DECL(pj_status_t) pj_sock_setsockopt( pj_sock_t sockfd,
-					 pj_uint16_t level,
-					 pj_uint16_t optname,
-					 const void *optval,
-					 int optlen);
+                                         pj_uint16_t level,
+                                         pj_uint16_t optname,
+                                         const void *optval,
+                                         int optlen);
 
 /**
  * Set socket options associated with a socket. This method will apply all the 
  * options specified, and ignore any errors that might be raised.
  *
- * @param sockfd	The socket descriptor.
- * @param params	The socket options.
+ * @param sockfd        The socket descriptor.
+ * @param params        The socket options.
  *
- * @return		PJ_SUCCESS or the last error code. 
+ * @return              PJ_SUCCESS or the last error code. 
  */
 PJ_DECL(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
-					       const pj_sockopt_params *params);					       
+                                               const pj_sockopt_params *params);                                               
 
 /**
  * Helper function to set socket buffer size using #pj_sock_setsockopt()
  * with capability to auto retry with lower buffer setting value until
  * the highest possible value is successfully set.
  *
- * @param sockfd	The socket descriptor.
- * @param optname	The option name, valid values are pj_SO_RCVBUF()
- *			and pj_SO_SNDBUF().
- * @param auto_retry	Option whether auto retry with lower value is
- *			enabled.
- * @param buf_size	On input, specify the prefered buffer size setting,
- *			on output, the buffer size setting applied.
+ * @param sockfd        The socket descriptor.
+ * @param optname       The option name, valid values are pj_SO_RCVBUF()
+ *                      and pj_SO_SNDBUF().
+ * @param auto_retry    Option whether auto retry with lower value is
+ *                      enabled.
+ * @param buf_size      On input, specify the prefered buffer size setting,
+ *                      on output, the buffer size setting applied.
  *
- * @return		PJ_SUCCESS or the status code.
+ * @return              PJ_SUCCESS or the status code.
  */
 PJ_DECL(pj_status_t) pj_sock_setsockopt_sobuf( pj_sock_t sockfd,
-					       pj_uint16_t optname,
-					       pj_bool_t auto_retry,
-					       unsigned *buf_size);
+                                               pj_uint16_t optname,
+                                               pj_bool_t auto_retry,
+                                               unsigned *buf_size);
 
 
 /**
  * Receives data stream or message coming to the specified socket.
  *
- * @param sockfd	The socket descriptor.
- * @param buf		The buffer to receive the data or message.
- * @param len		On input, the length of the buffer. On return,
- *			contains the length of data received.
- * @param flags		Flags (such as pj_MSG_PEEK()).
+ * @param sockfd        The socket descriptor.
+ * @param buf           The buffer to receive the data or message.
+ * @param len           On input, the length of the buffer. On return,
+ *                      contains the length of data received.
+ * @param flags         Flags (such as pj_MSG_PEEK()).
  *
- * @return		PJ_SUCCESS or the error code.
+ * @return              PJ_SUCCESS or the error code.
  */
 PJ_DECL(pj_status_t) pj_sock_recv(pj_sock_t sockfd,
-				  void *buf,
-				  pj_ssize_t *len,
-				  unsigned flags);
+                                  void *buf,
+                                  pj_ssize_t *len,
+                                  unsigned flags);
 
 /**
  * Receives data stream or message coming to the specified socket.
  *
- * @param sockfd	The socket descriptor.
- * @param buf		The buffer to receive the data or message.
- * @param len		On input, the length of the buffer. On return,
- *			contains the length of data received.
- * @param flags		Flags (such as pj_MSG_PEEK()).
- * @param from		If not NULL, it will be filled with the source
- *			address of the connection.
- * @param fromlen	Initially contains the length of from address,
- *			and upon return will be filled with the actual
- *			length of the address.
+ * @param sockfd        The socket descriptor.
+ * @param buf           The buffer to receive the data or message.
+ * @param len           On input, the length of the buffer. On return,
+ *                      contains the length of data received.
+ * @param flags         Flags (such as pj_MSG_PEEK()).
+ * @param from          If not NULL, it will be filled with the source
+ *                      address of the connection.
+ * @param fromlen       Initially contains the length of from address,
+ *                      and upon return will be filled with the actual
+ *                      length of the address.
  *
- * @return		PJ_SUCCESS or the error code.
+ * @return              PJ_SUCCESS or the error code.
  */
 PJ_DECL(pj_status_t) pj_sock_recvfrom( pj_sock_t sockfd,
-				      void *buf,
-				      pj_ssize_t *len,
-				      unsigned flags,
-				      pj_sockaddr_t *from,
-				      int *fromlen);
+                                      void *buf,
+                                      pj_ssize_t *len,
+                                      unsigned flags,
+                                      pj_sockaddr_t *from,
+                                      int *fromlen);
 
 /**
  * Transmit data to the socket.
  *
- * @param sockfd	Socket descriptor.
- * @param buf		Buffer containing data to be sent.
- * @param len		On input, the length of the data in the buffer.
- *			Upon return, it will be filled with the length
- *			of data sent.
- * @param flags		Flags (such as pj_MSG_DONTROUTE()).
+ * @param sockfd        Socket descriptor.
+ * @param buf           Buffer containing data to be sent.
+ * @param len           On input, the length of the data in the buffer.
+ *                      Upon return, it will be filled with the length
+ *                      of data sent.
+ * @param flags         Flags (such as pj_MSG_DONTROUTE()).
  *
- * @return		PJ_SUCCESS or the status code.
+ * @return              PJ_SUCCESS or the status code.
  */
 PJ_DECL(pj_status_t) pj_sock_send(pj_sock_t sockfd,
-				  const void *buf,
-				  pj_ssize_t *len,
-				  unsigned flags);
+                                  const void *buf,
+                                  pj_ssize_t *len,
+                                  unsigned flags);
 
 /**
  * Transmit data to the socket to the specified address.
  *
- * @param sockfd	Socket descriptor.
- * @param buf		Buffer containing data to be sent.
- * @param len		On input, the length of the data in the buffer.
- *			Upon return, it will be filled with the length
- *			of data sent.
- * @param flags		Flags (such as pj_MSG_DONTROUTE()).
- * @param to		The address to send.
- * @param tolen		The length of the address in bytes.
+ * @param sockfd        Socket descriptor.
+ * @param buf           Buffer containing data to be sent.
+ * @param len           On input, the length of the data in the buffer.
+ *                      Upon return, it will be filled with the length
+ *                      of data sent.
+ * @param flags         Flags (such as pj_MSG_DONTROUTE()).
+ * @param to            The address to send.
+ * @param tolen         The length of the address in bytes.
  *
- * @return		PJ_SUCCESS or the status code.
+ * @return              PJ_SUCCESS or the status code.
  */
 PJ_DECL(pj_status_t) pj_sock_sendto(pj_sock_t sockfd,
-				    const void *buf,
-				    pj_ssize_t *len,
-				    unsigned flags,
-				    const pj_sockaddr_t *to,
-				    int tolen);
+                                    const void *buf,
+                                    pj_ssize_t *len,
+                                    unsigned flags,
+                                    const pj_sockaddr_t *to,
+                                    int tolen);
 
 #if PJ_HAS_TCP
 /**
  * The shutdown call causes all or part of a full-duplex connection on the
  * socket associated with sockfd to be shut down.
  *
- * @param sockfd	The socket descriptor.
- * @param how		If how is PJ_SHUT_RD, further receptions will be 
- *			disallowed. If how is PJ_SHUT_WR, further transmissions
- *			will be disallowed. If how is PJ_SHUT_RDWR, further 
- *			receptions andtransmissions will be disallowed.
+ * @param sockfd        The socket descriptor.
+ * @param how           If how is PJ_SHUT_RD, further receptions will be 
+ *                      disallowed. If how is PJ_SHUT_WR, further transmissions
+ *                      will be disallowed. If how is PJ_SHUT_RDWR, further 
+ *                      receptions andtransmissions will be disallowed.
  *
- * @return		Zero on success.
+ * @return              Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_shutdown( pj_sock_t sockfd,
-				       int how);
+                                       int how);
 #endif
 
 /*****************************************************************************
@@ -1516,17 +1515,38 @@ PJ_DECL(pj_status_t) pj_sock_shutdown( pj_sock_t sockfd,
  * with square bracket if it's IPv6 address.
  *
  * @param host_str  The host address string.
- * @param port	    The port address.
- * @param buf	    Text buffer.
- * @param size	    Size of buffer.
- * @param flag	    Bitmask combination of these value:
- *		    - 1: port number is included. 
+ * @param port      The port address.
+ * @param buf       Text buffer.
+ * @param size      Size of buffer.
+ * @param flag      Bitmask combination of these value:
+ *                  - 1: port number is included. 
  *
- * @return	The address string.
+ * @return      The address string.
  */
 PJ_DECL(char *) pj_addr_str_print( const pj_str_t *host_str, int port, 
-				   char *buf, int size, unsigned flag);
+                                   char *buf, int size, unsigned flag);
 
+/**
+ * Create socket pair
+ * @param family    Specifies a communication domain; this selects the
+ *                  protocol family which will be used for communication.
+ *                  On Unix, support AF_UNIX, AF_INET and AF_INET6,
+ *                  On Win32, not support AF_UNIX.
+ * @param type      The socket has the indicated type, which specifies the 
+ *                  communication semantics.
+ * @param protocol  Specifies  a  particular  protocol  to  be used with the
+ *                  socket.  Normally only a single protocol exists to support 
+ *                  a particular socket  type  within  a given protocol family, 
+ *                  in which a case protocol can be specified as 0.
+ * @param sv        The new sockets vector
+ *
+ * @return          Zero on success.
+ *
+ */
+PJ_DECL(pj_status_t) pj_sock_socketpair(int family,
+                                        int type,
+                                        int protocol,
+                                        pj_sock_t sv[2]);
 
 /**
  * @}
@@ -1535,5 +1555,5 @@ PJ_DECL(char *) pj_addr_str_print( const pj_str_t *host_str, int port,
 
 PJ_END_DECL
 
-#endif	/* __PJ_SOCK_H__ */
+#endif  /* __PJ_SOCK_H__ */
 

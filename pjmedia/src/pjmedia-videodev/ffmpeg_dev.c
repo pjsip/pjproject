@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -43,11 +42,11 @@
     defined(PJMEDIA_VIDEO_DEV_HAS_FFMPEG) && PJMEDIA_VIDEO_DEV_HAS_FFMPEG != 0
 
 
-#define THIS_FILE		"ffmpeg.c"
+#define THIS_FILE               "ffmpeg.c"
 
 #define LIBAVFORMAT_VER_AT_LEAST(major,minor)  (LIBAVFORMAT_VERSION_MAJOR > major || \
-     					       (LIBAVFORMAT_VERSION_MAJOR == major && \
-					        LIBAVFORMAT_VERSION_MINOR >= minor))
+                                               (LIBAVFORMAT_VERSION_MAJOR == major && \
+                                                LIBAVFORMAT_VERSION_MINOR >= minor))
 
 #include "../pjmedia/ffmpeg_util.h"
 #include <libavdevice/avdevice.h>
@@ -73,8 +72,8 @@ typedef struct ffmpeg_dev_info
 
 typedef struct ffmpeg_factory
 {
-    pjmedia_vid_dev_factory	 base;
-    pj_pool_factory		*pf;
+    pjmedia_vid_dev_factory      base;
+    pj_pool_factory             *pf;
     pj_pool_t                   *pool;
     pj_pool_t                   *dev_pool;
     unsigned                     dev_count;
@@ -89,7 +88,7 @@ typedef struct ffmpeg_stream
     pj_pool_t                   *pool;
     pjmedia_vid_dev_param        param;
     AVFormatContext             *ff_fmt_ctx;
-    void			*frame_buf;
+    void                        *frame_buf;
 } ffmpeg_stream;
 
 
@@ -99,27 +98,27 @@ static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f);
 static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    ffmpeg_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t ffmpeg_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					       unsigned index,
-					       pjmedia_vid_dev_info *info);
+                                               unsigned index,
+                                               pjmedia_vid_dev_info *info);
 static pj_status_t ffmpeg_factory_default_param(pj_pool_t *pool,
                                                 pjmedia_vid_dev_factory *f,
-					        unsigned index,
-					        pjmedia_vid_dev_param *param);
+                                                unsigned index,
+                                                pjmedia_vid_dev_param *param);
 static pj_status_t ffmpeg_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm);
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm);
 
 static pj_status_t ffmpeg_stream_get_param(pjmedia_vid_dev_stream *strm,
-					   pjmedia_vid_dev_param *param);
+                                           pjmedia_vid_dev_param *param);
 static pj_status_t ffmpeg_stream_get_cap(pjmedia_vid_dev_stream *strm,
-				         pjmedia_vid_dev_cap cap,
-				         void *value);
+                                         pjmedia_vid_dev_cap cap,
+                                         void *value);
 static pj_status_t ffmpeg_stream_set_cap(pjmedia_vid_dev_stream *strm,
-				         pjmedia_vid_dev_cap cap,
-				         const void *value);
+                                         pjmedia_vid_dev_cap cap,
+                                         const void *value);
 static pj_status_t ffmpeg_stream_start(pjmedia_vid_dev_stream *strm);
 static pj_status_t ffmpeg_stream_get_frame(pjmedia_vid_dev_stream *s,
                                            pjmedia_frame *frame);
@@ -165,7 +164,7 @@ static void print_ffmpeg_log(void* ptr, int level, const char* fmt, va_list vl)
 
     /* Custom callback needs to filter log level by itself */
     if (level > av_log_get_level())
-	return;
+        return;
 
     vfprintf(stdout, fmt, vl);
 }
@@ -193,8 +192,8 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
 
     status = pjmedia_format_id_to_PixelFormat(param->fmt.id, &av_fmt);
     if (status != PJ_SUCCESS) {
-	avformat_free_context(*ctx);
-	return status;
+        avformat_free_context(*ctx);
+        return status;
     }
 
     vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
@@ -307,7 +306,7 @@ static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f)
 #define MAX_DEV_NAME_LEN 80
 
 static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
-				      char dev_names[][MAX_DEV_NAME_LEN])
+                                      char dev_names[][MAX_DEV_NAME_LEN])
 {
     unsigned max_cnt = *dev_cnt;
     ICreateDevEnum *dev_enum = NULL;
@@ -327,28 +326,28 @@ static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
         ICreateDevEnum_CreateClassEnumerator(dev_enum,
             &CLSID_VideoInputDeviceCategory, &enum_cat, 0) != S_OK) 
     {
-	PJ_LOG(4,(THIS_FILE, "Windows found no video input devices"));
+        PJ_LOG(4,(THIS_FILE, "Windows found no video input devices"));
         if (dev_enum)
             ICreateDevEnum_Release(dev_enum);
 
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     while (IEnumMoniker_Next(enum_cat, 1, &moniker, &fetched) == S_OK &&
-	   *dev_cnt < max_cnt)
+           *dev_cnt < max_cnt)
     {
-	(*dev_cnt)++;
+        (*dev_cnt)++;
     }
 
     if (*dev_cnt == 0) {
         IEnumMoniker_Release(enum_cat);
         ICreateDevEnum_Release(dev_enum);
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     IEnumMoniker_Reset(enum_cat);
     while (i < max_cnt &&
-	   IEnumMoniker_Next(enum_cat, 1, &moniker, &fetched) == S_OK)
+           IEnumMoniker_Next(enum_cat, 1, &moniker, &fetched) == S_OK)
     {
         IPropertyBag *prop_bag;
 
@@ -359,14 +358,14 @@ static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
 
             VariantInit(&var_name);
             hr = IPropertyBag_Read(prop_bag, L"FriendlyName", &var_name,
-				   NULL);
+                                   NULL);
             if (SUCCEEDED(hr) && var_name.bstrVal) {
-		char tmp[MAX_DEV_NAME_LEN] = {0};
+                char tmp[MAX_DEV_NAME_LEN] = {0};
                 WideCharToMultiByte(CP_ACP, 0, var_name.bstrVal,
                                     (int)wcslen(var_name.bstrVal),
                                     tmp, MAX_DEV_NAME_LEN, NULL, NULL);
-		pj_ansi_snprintf(dev_names[i++], MAX_DEV_NAME_LEN,
-				 "video=%s", tmp);
+                pj_ansi_snprintf(dev_names[i++], MAX_DEV_NAME_LEN,
+                                 "video=%s", tmp);
             }
             VariantClear(&var_name);
             IPropertyBag_Release(prop_bag);
@@ -379,7 +378,7 @@ static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
 
     PJ_LOG(4, (THIS_FILE, "DShow has %d devices:", *dev_cnt));
     for (i = 0; i < *dev_cnt; ++i) {
-	PJ_LOG(4, (THIS_FILE, " %d: %s", (i+1), dev_names[i]));
+        PJ_LOG(4, (THIS_FILE, " %d: %s", (i+1), dev_names[i]));
     }
 
     return PJ_SUCCESS;
@@ -408,92 +407,92 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
     /* Iterate host APIs */
     p = av_input_video_device_next(NULL);
     while (p && ff->dev_count < MAX_DEV_CNT) {
-	char dev_names[MAX_DEV_CNT][MAX_DEV_NAME_LEN];
-	unsigned dev_cnt = MAX_DEV_CNT;
-	unsigned dev_idx;
+        char dev_names[MAX_DEV_CNT][MAX_DEV_NAME_LEN];
+        unsigned dev_cnt = MAX_DEV_CNT;
+        unsigned dev_idx;
 
-	if ((p->flags & AVFMT_NOFILE)==0 || p->read_probe) {
-	    goto next_format;
-	}
+        if ((p->flags & AVFMT_NOFILE)==0 || p->read_probe) {
+            goto next_format;
+        }
 
 #if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
     (defined(PJ_WIN64) && PJ_WIN64!=0)
-	if (pj_ansi_strcmp(p->name, "dshow") == 0) {
-	    dshow_enum_devices(&dev_cnt, dev_names);
-	} else if (pj_ansi_strcmp(p->name, "vfwcap") == 0) {
-	    dev_cnt = 1;
-	    pj_ansi_snprintf(dev_names[0], MAX_DEV_NAME_LEN, "0");
-	} else {
-	    dev_cnt = 0;
-	}
+        if (pj_ansi_strcmp(p->name, "dshow") == 0) {
+            dshow_enum_devices(&dev_cnt, dev_names);
+        } else if (pj_ansi_strcmp(p->name, "vfwcap") == 0) {
+            dev_cnt = 1;
+            pj_ansi_snprintf(dev_names[0], MAX_DEV_NAME_LEN, "0");
+        } else {
+            dev_cnt = 0;
+        }
 #elif defined(PJ_LINUX) && PJ_LINUX!=0
-	dev_cnt = 1;
-	pj_ansi_snprintf(dev_names[0], MAX_DEV_NAME_LEN, "/dev/video0");
+        dev_cnt = 1;
+        pj_ansi_snprintf(dev_names[0], MAX_DEV_NAME_LEN, "/dev/video0");
 #else
-	dev_cnt = 0;
+        dev_cnt = 0;
 #endif
 
-	/* Iterate devices (only DirectShow devices for now) */
-	for (dev_idx = 0; dev_idx < dev_cnt && ff->dev_count < MAX_DEV_CNT;
-	    ++dev_idx)
-	{
-	    ffmpeg_dev_info *info;
-	    AVFormatContext *ctx;
-	    AVCodecContext *codec = NULL;
-	    pjmedia_format_id fmt_id;
-	    pj_str_t dev_name;
-	    pj_status_t status;
-	    unsigned i;
+        /* Iterate devices (only DirectShow devices for now) */
+        for (dev_idx = 0; dev_idx < dev_cnt && ff->dev_count < MAX_DEV_CNT;
+            ++dev_idx)
+        {
+            ffmpeg_dev_info *info;
+            AVFormatContext *ctx;
+            AVCodecContext *codec = NULL;
+            pjmedia_format_id fmt_id;
+            pj_str_t dev_name;
+            pj_status_t status;
+            unsigned i;
             
-	    ctx = avformat_alloc_context();
-	    if (!ctx || avformat_open_input(&ctx, dev_names[dev_idx], p, NULL)!=0)
-		continue;
+            ctx = avformat_alloc_context();
+            if (!ctx || avformat_open_input(&ctx, dev_names[dev_idx], p, NULL)!=0)
+                continue;
 
-	    for(i = 0; i < ctx->nb_streams; i++) {
-		if (ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
-		    codec = ctx->streams[i]->codec;
-		    break;
-		}
-	    }
-	    if (!codec) {
-		av_close_input_stream(ctx);
-		continue;
-	    }
+            for(i = 0; i < ctx->nb_streams; i++) {
+                if (ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+                    codec = ctx->streams[i]->codec;
+                    break;
+                }
+            }
+            if (!codec) {
+                av_close_input_stream(ctx);
+                continue;
+            }
 
-	    status = PixelFormat_to_pjmedia_format_id(codec->pix_fmt, &fmt_id);
-	    if (status != PJ_SUCCESS) {
-		av_close_input_stream(ctx);
-		continue;
-	    }
+            status = PixelFormat_to_pjmedia_format_id(codec->pix_fmt, &fmt_id);
+            if (status != PJ_SUCCESS) {
+                av_close_input_stream(ctx);
+                continue;
+            }
 
-	    info = &ff->dev_info[ff->dev_count++];
-	    pj_bzero(info, sizeof(*info));
-	    pj_ansi_strncpy(info->base.name, "default", 
-			    sizeof(info->base.name));
-	    pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
-			     "ffmpeg %s", p->name);
-	    
-	    pj_strdup2_with_null(ff->pool, &dev_name, dev_names[dev_idx]);
-	    info->def_devname = dev_name.ptr;
-	    info->base.dir = PJMEDIA_DIR_CAPTURE;
-	    info->base.has_callback = PJ_FALSE;
+            info = &ff->dev_info[ff->dev_count++];
+            pj_bzero(info, sizeof(*info));
+            pj_ansi_strncpy(info->base.name, "default", 
+                            sizeof(info->base.name));
+            pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
+                             "ffmpeg %s", p->name);
+            
+            pj_strdup2_with_null(ff->pool, &dev_name, dev_names[dev_idx]);
+            info->def_devname = dev_name.ptr;
+            info->base.dir = PJMEDIA_DIR_CAPTURE;
+            info->base.has_callback = PJ_FALSE;
 
-	    info->host_api = p;
+            info->host_api = p;
 
-	    /* Set supported formats */
-	    info->base.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-	    info->base.fmt_cnt = 1;
-	    for (i = 0; i < info->base.fmt_cnt; ++i) {
-		pjmedia_format *fmt = &info->base.fmt[i];
-		pjmedia_format_init_video(fmt, fmt_id,
-					  codec->width, codec->height, 15, 1);
-	    }
+            /* Set supported formats */
+            info->base.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
+            info->base.fmt_cnt = 1;
+            for (i = 0; i < info->base.fmt_cnt; ++i) {
+                pjmedia_format *fmt = &info->base.fmt[i];
+                pjmedia_format_init_video(fmt, fmt_id,
+                                          codec->width, codec->height, 15, 1);
+            }
 
-	    av_close_input_stream(ctx);
-	}
+            av_close_input_stream(ctx);
+        }
 
 next_format:
-	p = av_input_video_device_next(p);
+        p = av_input_video_device_next(p);
     }
 
     return PJ_SUCCESS;
@@ -508,8 +507,8 @@ static unsigned ffmpeg_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 
 /* API: get device info */
 static pj_status_t ffmpeg_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					       unsigned index,
-					       pjmedia_vid_dev_info *info)
+                                               unsigned index,
+                                               pjmedia_vid_dev_info *info)
 {
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
 
@@ -523,8 +522,8 @@ static pj_status_t ffmpeg_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 /* API: create default device parameter */
 static pj_status_t ffmpeg_factory_default_param(pj_pool_t *pool,
                                                 pjmedia_vid_dev_factory *f,
-					        unsigned index,
-					        pjmedia_vid_dev_param *param)
+                                                unsigned index,
+                                                pjmedia_vid_dev_param *param)
 {
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
     ffmpeg_dev_info *info;
@@ -554,11 +553,11 @@ static pj_status_t ffmpeg_factory_default_param(pj_pool_t *pool,
 
 /* API: create stream */
 static pj_status_t ffmpeg_factory_create_stream(
-					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_dev_param *param,
-					const pjmedia_vid_dev_cb *cb,
-					void *user_data,
-					pjmedia_vid_dev_stream **p_vid_strm)
+                                        pjmedia_vid_dev_factory *f,
+                                        pjmedia_vid_dev_param *param,
+                                        const pjmedia_vid_dev_cb *cb,
+                                        void *user_data,
+                                        pjmedia_vid_dev_stream **p_vid_strm)
 {
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
     pj_pool_t *pool;
@@ -568,7 +567,7 @@ static pj_status_t ffmpeg_factory_create_stream(
     PJ_ASSERT_RETURN(param->dir == PJMEDIA_DIR_CAPTURE, PJ_EINVAL);
     PJ_ASSERT_RETURN((unsigned)param->cap_id < ff->dev_count, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
-		     PJ_EINVAL);
+                     PJ_EINVAL);
 
     PJ_UNUSED_ARG(cb);
     PJ_UNUSED_ARG(user_data);
@@ -584,17 +583,17 @@ static pj_status_t ffmpeg_factory_create_stream(
 
     /* Allocate frame buffer */
     {
-	const pjmedia_video_format_info *vfi;
-	pjmedia_video_apply_fmt_param vafp;
+        const pjmedia_video_format_info *vfi;
+        pjmedia_video_apply_fmt_param vafp;
 
-	vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
-	if (!vfi) goto on_error;
+        vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
+        if (!vfi) goto on_error;
 
-	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = param->fmt.det.vid.size;
-	vfi->apply_fmt(vfi, &vafp);
+        pj_bzero(&vafp, sizeof(vafp));
+        vafp.size = param->fmt.det.vid.size;
+        vfi->apply_fmt(vfi, &vafp);
 
-	strm->frame_buf = pj_pool_alloc(pool, vafp.framebytes);
+        strm->frame_buf = pj_pool_alloc(pool, vafp.framebytes);
     }
 
     /* Done */
@@ -610,7 +609,7 @@ on_error:
 
 /* API: Get stream info. */
 static pj_status_t ffmpeg_stream_get_param(pjmedia_vid_dev_stream *s,
-					   pjmedia_vid_dev_param *pi)
+                                           pjmedia_vid_dev_param *pi)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
 
@@ -623,8 +622,8 @@ static pj_status_t ffmpeg_stream_get_param(pjmedia_vid_dev_stream *s,
 
 /* API: get capability */
 static pj_status_t ffmpeg_stream_get_cap(pjmedia_vid_dev_stream *s,
-				         pjmedia_vid_dev_cap cap,
-				         void *pval)
+                                         pjmedia_vid_dev_cap cap,
+                                         void *pval)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
 
@@ -637,8 +636,8 @@ static pj_status_t ffmpeg_stream_get_cap(pjmedia_vid_dev_stream *s,
 
 /* API: set capability */
 static pj_status_t ffmpeg_stream_set_cap(pjmedia_vid_dev_stream *s,
-				         pjmedia_vid_dev_cap cap,
-				         const void *pval)
+                                         pjmedia_vid_dev_cap cap,
+                                         const void *pval)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
 
@@ -732,4 +731,4 @@ static pj_status_t ffmpeg_stream_destroy(pjmedia_vid_dev_stream *s)
 #endif
 
 
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_FFMPEG */
+#endif  /* PJMEDIA_VIDEO_DEV_HAS_FFMPEG */

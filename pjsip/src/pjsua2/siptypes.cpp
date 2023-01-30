@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,7 +22,7 @@
 using namespace pj;
 using namespace std;
 
-#define THIS_FILE	"siptypes.cpp"
+#define THIS_FILE       "siptypes.cpp"
 
 ///////////////////////////////////////////////////////////////////////////////
 namespace pj
@@ -35,7 +34,7 @@ void readIntVector( ContainerNode &node,
     ContainerNode array_node = node.readArray(array_name);
     v.resize(0);
     while (array_node.hasUnread()) {
-	v.push_back((int)array_node.readNumber());
+        v.push_back((int)array_node.readNumber());
     }
 }
 
@@ -45,7 +44,7 @@ void writeIntVector(ContainerNode &node,
 {
     ContainerNode array_node = node.writeNewArray(array_name);
     for (unsigned i=0; i<v.size(); ++i) {
-	array_node.writeNumber("", (float)v[i]);
+        array_node.writeNumber("", (float)v[i]);
     }
 }
 
@@ -78,12 +77,12 @@ void readSipHeaders( const ContainerNode &node,
     ContainerNode headers_node = node.readArray(array_name);
     headers.resize(0);
     while (headers_node.hasUnread()) {
-	SipHeader hdr;
+        SipHeader hdr;
 
-	ContainerNode header_node = headers_node.readContainer("header");
-	hdr.hName = header_node.readString("hname");
-	hdr.hValue = header_node.readString("hvalue");
-	headers.push_back(hdr);
+        ContainerNode header_node = headers_node.readContainer("header");
+        hdr.hName = header_node.readString("hname");
+        hdr.hValue = header_node.readString("hvalue");
+        headers.push_back(hdr);
     }
 }
 
@@ -93,9 +92,9 @@ void writeSipHeaders(ContainerNode &node,
 {
     ContainerNode headers_node = node.writeNewArray(array_name);
     for (unsigned i=0; i<headers.size(); ++i) {
-	ContainerNode header_node = headers_node.writeNewContainer("header");
-	header_node.writeString("hname", headers[i].hName);
-	header_node.writeString("hvalue", headers[i].hValue);
+        ContainerNode header_node = headers_node.writeNewContainer("header");
+        header_node.writeString("hname", headers[i].hName);
+        header_node.writeString("hvalue", headers[i].hValue);
     }
 }
 
@@ -108,10 +107,10 @@ AuthCredInfo::AuthCredInfo()
 }
 
 AuthCredInfo::AuthCredInfo(const string &param_scheme,
-			   const string &param_realm,
-			   const string &param_user_name,
-			   const int param_data_type,
-			   const string param_data)
+                           const string &param_realm,
+                           const string &param_user_name,
+                           const int param_data_type,
+                           const string param_data)
 : scheme(param_scheme), realm(param_realm), username(param_user_name),
   dataType(param_data_type), data(param_data)
 {
@@ -147,34 +146,34 @@ void AuthCredInfo::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 
 void AuthCredInfo::fromPj(const pjsip_cred_info &prm)
 {
-    realm	= pj2Str(prm.realm);
-    scheme	= pj2Str(prm.scheme);
-    username	= pj2Str(prm.username);
-    dataType	= prm.data_type;
-    data	= pj2Str(prm.data);
-    akaK	= pj2Str(prm.ext.aka.k);
-    akaOp	= pj2Str(prm.ext.aka.op);
-    akaAmf	= pj2Str(prm.ext.aka.amf);
+    realm       = pj2Str(prm.realm);
+    scheme      = pj2Str(prm.scheme);
+    username    = pj2Str(prm.username);
+    dataType    = prm.data_type;
+    data        = pj2Str(prm.data);
+    akaK        = pj2Str(prm.ext.aka.k);
+    akaOp       = pj2Str(prm.ext.aka.op);
+    akaAmf      = pj2Str(prm.ext.aka.amf);
 }
 
 pjsip_cred_info AuthCredInfo::toPj() const
 {
     pjsip_cred_info ret;
-    ret.realm	= str2Pj(realm);
-    ret.scheme	= str2Pj(scheme);
-    ret.username	= str2Pj(username);
-    ret.data_type	= dataType;
-    ret.data	= str2Pj(data);
-    ret.ext.aka.k	= str2Pj(akaK);
-    ret.ext.aka.op	= str2Pj(akaOp);
-    ret.ext.aka.amf	= str2Pj(akaAmf);
+    ret.realm   = str2Pj(realm);
+    ret.scheme  = str2Pj(scheme);
+    ret.username        = str2Pj(username);
+    ret.data_type       = dataType;
+    ret.data    = str2Pj(data);
+    ret.ext.aka.k       = str2Pj(akaK);
+    ret.ext.aka.op      = str2Pj(akaOp);
+    ret.ext.aka.amf     = str2Pj(akaAmf);
     return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 TlsConfig::TlsConfig() : method(PJSIP_SSL_UNSPECIFIED_METHOD),
-			 qosType(PJ_QOS_TYPE_BEST_EFFORT)
+                         qosType(PJ_QOS_TYPE_BEST_EFFORT)
 {
     pjsip_tls_setting ts;
     pjsip_tls_setting_default(&ts);
@@ -186,52 +185,52 @@ pjsip_tls_setting TlsConfig::toPj() const
     pjsip_tls_setting ts;
     pjsip_tls_setting_default(&ts);
 
-    ts.ca_list_file	= str2Pj(this->CaListFile);
-    ts.cert_file	= str2Pj(this->certFile);
-    ts.privkey_file	= str2Pj(this->privKeyFile);
-    ts.password		= str2Pj(this->password);
-    ts.ca_buf		= str2Pj(this->CaBuf);
-    ts.cert_buf		= str2Pj(this->certBuf);
-    ts.privkey_buf	= str2Pj(this->privKeyBuf);
-    ts.method		= this->method;
-    ts.ciphers_num	= (unsigned)this->ciphers.size();
-    ts.proto		= this->proto;
+    ts.ca_list_file     = str2Pj(this->CaListFile);
+    ts.cert_file        = str2Pj(this->certFile);
+    ts.privkey_file     = str2Pj(this->privKeyFile);
+    ts.password         = str2Pj(this->password);
+    ts.ca_buf           = str2Pj(this->CaBuf);
+    ts.cert_buf         = str2Pj(this->certBuf);
+    ts.privkey_buf      = str2Pj(this->privKeyBuf);
+    ts.method           = this->method;
+    ts.ciphers_num      = (unsigned)this->ciphers.size();
+    ts.proto            = this->proto;
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(ts.ciphers[0]) == sizeof(int));
-    ts.ciphers		= ts.ciphers_num? 
-			    (pj_ssl_cipher*)&this->ciphers[0] : NULL;
-    ts.verify_server	= this->verifyServer;
-    ts.verify_client	= this->verifyClient;
+    ts.ciphers          = ts.ciphers_num? 
+                            (pj_ssl_cipher*)&this->ciphers[0] : NULL;
+    ts.verify_server    = this->verifyServer;
+    ts.verify_client    = this->verifyClient;
     ts.require_client_cert = this->requireClientCert;
-    ts.timeout.sec 	= this->msecTimeout / 1000;
-    ts.timeout.msec	= this->msecTimeout % 1000;
-    ts.qos_type		= this->qosType;
-    ts.qos_params	= this->qosParams;
-    ts.qos_ignore_error	= this->qosIgnoreError;
+    ts.timeout.sec      = this->msecTimeout / 1000;
+    ts.timeout.msec     = this->msecTimeout % 1000;
+    ts.qos_type         = this->qosType;
+    ts.qos_params       = this->qosParams;
+    ts.qos_ignore_error = this->qosIgnoreError;
 
     return ts;
 }
 
 void TlsConfig::fromPj(const pjsip_tls_setting &prm)
 {
-    this->CaListFile 	= pj2Str(prm.ca_list_file);
-    this->certFile 	= pj2Str(prm.cert_file);
-    this->privKeyFile 	= pj2Str(prm.privkey_file);
-    this->password 	= pj2Str(prm.password);
-    this->CaBuf		= pj2Str(prm.ca_buf);
-    this->certBuf	= pj2Str(prm.cert_buf);
-    this->privKeyBuf	= pj2Str(prm.privkey_buf);
-    this->method 	= (pjsip_ssl_method)prm.method;
-    this->proto 	= prm.proto;
+    this->CaListFile    = pj2Str(prm.ca_list_file);
+    this->certFile      = pj2Str(prm.cert_file);
+    this->privKeyFile   = pj2Str(prm.privkey_file);
+    this->password      = pj2Str(prm.password);
+    this->CaBuf         = pj2Str(prm.ca_buf);
+    this->certBuf       = pj2Str(prm.cert_buf);
+    this->privKeyBuf    = pj2Str(prm.privkey_buf);
+    this->method        = (pjsip_ssl_method)prm.method;
+    this->proto         = prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(prm.ciphers[0]) == sizeof(int));
-    this->ciphers 	= IntVector(prm.ciphers, prm.ciphers+prm.ciphers_num);
-    this->verifyServer 	= PJ2BOOL(prm.verify_server);
-    this->verifyClient 	= PJ2BOOL(prm.verify_client);
+    this->ciphers       = IntVector(prm.ciphers, prm.ciphers+prm.ciphers_num);
+    this->verifyServer  = PJ2BOOL(prm.verify_server);
+    this->verifyClient  = PJ2BOOL(prm.verify_client);
     this->requireClientCert = PJ2BOOL(prm.require_client_cert);
-    this->msecTimeout 	= PJ_TIME_VAL_MSEC(prm.timeout);
-    this->qosType 	= prm.qos_type;
-    this->qosParams 	= prm.qos_params;
+    this->msecTimeout   = PJ_TIME_VAL_MSEC(prm.timeout);
+    this->qosType       = prm.qos_type;
+    this->qosParams     = prm.qos_params;
     this->qosIgnoreError = PJ2BOOL(prm.qos_ignore_error);
 }
 
@@ -290,14 +289,14 @@ TransportConfig::TransportConfig() : qosType(PJ_QOS_TYPE_BEST_EFFORT)
 
 void TransportConfig::fromPj(const pjsua_transport_config &prm)
 {
-    this->port 		= prm.port;
-    this->portRange	= prm.port_range;
-    this->randomizePort	= PJ2BOOL(prm.randomize_port);
+    this->port          = prm.port;
+    this->portRange     = prm.port_range;
+    this->randomizePort = PJ2BOOL(prm.randomize_port);
     this->publicAddress = pj2Str(prm.public_addr);
-    this->boundAddress	= pj2Str(prm.bound_addr);
+    this->boundAddress  = pj2Str(prm.bound_addr);
     this->tlsConfig.fromPj(prm.tls_setting);
-    this->qosType	= prm.qos_type;
-    this->qosParams	= prm.qos_params;
+    this->qosType       = prm.qos_type;
+    this->qosParams     = prm.qos_params;
 }
 
 pjsua_transport_config TransportConfig::toPj() const
@@ -305,14 +304,14 @@ pjsua_transport_config TransportConfig::toPj() const
     pjsua_transport_config tc;
     pjsua_transport_config_default(&tc);
 
-    tc.port		= this->port;
-    tc.port_range	= this->portRange;
-    tc.randomize_port	= this->randomizePort;
-    tc.public_addr	= str2Pj(this->publicAddress);
-    tc.bound_addr	= str2Pj(this->boundAddress);
-    tc.tls_setting	= this->tlsConfig.toPj();
-    tc.qos_type		= this->qosType;
-    tc.qos_params	= this->qosParams;
+    tc.port             = this->port;
+    tc.port_range       = this->portRange;
+    tc.randomize_port   = this->randomizePort;
+    tc.public_addr      = str2Pj(this->publicAddress);
+    tc.bound_addr       = str2Pj(this->boundAddress);
+    tc.tls_setting      = this->tlsConfig.toPj();
+    tc.qos_type         = this->qosType;
+    tc.qos_params       = this->qosParams;
 
     return tc;
 }
@@ -331,7 +330,7 @@ void TransportConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
 }
 
 void TransportConfig::writeObject(ContainerNode &node) const
-				  PJSUA2_THROW(Error)
+                                  PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("TransportConfig");
 
@@ -382,8 +381,8 @@ void SipRxData::fromPj(pjsip_rx_data &rdata)
 {
     char straddr[PJ_INET6_ADDRSTRLEN+10];
 
-    info	= pjsip_rx_data_get_info(&rdata);
-    wholeMsg	= string(rdata.msg_info.msg_buf, rdata.msg_info.len);
+    info        = pjsip_rx_data_get_info(&rdata);
+    wholeMsg    = string(rdata.msg_info.msg_buf, rdata.msg_info.len);
     pj_sockaddr_print(&rdata.pkt_info.src_addr, straddr, sizeof(straddr), 3);
     srcAddress  = straddr;
     pjRxData    = (void *)&rdata;
@@ -393,15 +392,15 @@ void SipRxData::fromPj(pjsip_rx_data &rdata)
 
 void SipMediaType::fromPj(const pjsip_media_type &prm)
 {
-    type	= pj2Str(prm.type);
-    subType	= pj2Str(prm.subtype);
+    type        = pj2Str(prm.type);
+    subType     = pj2Str(prm.subtype);
 }
 
 pjsip_media_type SipMediaType::toPj() const
 {
     pjsip_media_type pj_mt;
     pj_bzero(&pj_mt, sizeof(pj_mt));
-    pj_mt.type	    = str2Pj(type);
+    pj_mt.type      = str2Pj(type);
     pj_mt.subtype   = str2Pj(subType);
     return pj_mt;
 }
@@ -420,25 +419,25 @@ void SipHeader::fromPj(const pjsip_hdr *hdr) PJSUA2_THROW(Error)
      */
     do {
         buf_size <<= 1;
-	buf = (char*)malloc(buf_size);
-	if (!buf)
-	    PJSUA2_RAISE_ERROR(PJ_ENOMEM);
+        buf = (char*)malloc(buf_size);
+        if (!buf)
+            PJSUA2_RAISE_ERROR(PJ_ENOMEM);
 
-	len = pjsip_hdr_print_on((void*)hdr, buf, buf_size-1);
+        len = pjsip_hdr_print_on((void*)hdr, buf, buf_size-1);
         if (len < 0)
             free(buf);
 
     } while ((buf_size < PJSIP_MAX_PKT_LEN) && (len < 0));
     
     if (len < 0)
-	PJSUA2_RAISE_ERROR(PJ_ETOOSMALL);
+        PJSUA2_RAISE_ERROR(PJ_ETOOSMALL);
 
     buf[len] = '\0';
 
     char *pos = strchr(buf, ':');
     if (!pos) {
-	free(buf);
-	PJSUA2_RAISE_ERROR(PJSIP_EINVALIDHDR);
+        free(buf);
+        PJSUA2_RAISE_ERROR(PJSIP_EINVALIDHDR);
     }
 
     // Trim white space after header name
@@ -466,19 +465,19 @@ pjsip_generic_string_hdr &SipHeader::toPj() const
 ///////////////////////////////////////////////////////////////////////////////
 
 void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
-			      PJSUA2_THROW(Error)
+                              PJSUA2_THROW(Error)
 {
     headers.clear();
     pjsip_hdr* pj_hdr = prm.hdr.next;
     while (pj_hdr != &prm.hdr) {
-	SipHeader sh;
-	sh.fromPj(pj_hdr);
-	headers.push_back(sh);
-	pj_hdr = pj_hdr->next;
+        SipHeader sh;
+        sh.fromPj(pj_hdr);
+        headers.push_back(sh);
+        pj_hdr = pj_hdr->next;
     }
 
     if (!prm.body)
-	PJSUA2_RAISE_ERROR(PJ_EINVAL);
+        PJSUA2_RAISE_ERROR(PJ_EINVAL);
     
     contentType.fromPj(prm.body->content_type);
     body = string((char*)prm.body->data, prm.body->len);
@@ -488,16 +487,16 @@ pjsip_multipart_part& SipMultipartPart::toPj() const
 {
     pj_list_init(&pjMpp.hdr);
     for (unsigned i = 0; i < headers.size(); i++) {
-	pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
-	pj_list_push_back(&pjMpp.hdr, &pj_hdr);
+        pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
+        pj_list_push_back(&pjMpp.hdr, &pj_hdr);
     }
 
     pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
     pjMsgBody.content_type  = contentType.toPj();
     pjMsgBody.print_body    = &pjsip_print_text_body;
     pjMsgBody.clone_data    = &pjsip_clone_text_data;
-    pjMsgBody.data	    = (void*)body.c_str();
-    pjMsgBody.len	    = (unsigned)body.size();
+    pjMsgBody.data          = (void*)body.c_str();
+    pjMsgBody.len           = (unsigned)body.size();
     pjMpp.body = &pjMsgBody;
 
     return pjMpp;
@@ -522,10 +521,10 @@ void SipEvent::fromPj(const pjsip_event &ev)
         body.tsxState.type = ev.body.tsx_state.type;
         if (body.tsxState.type == PJSIP_EVENT_TX_MSG) {
             if (ev.body.tsx_state.src.tdata)
-        	body.tsxState.src.tdata.fromPj(*ev.body.tsx_state.src.tdata);
+                body.tsxState.src.tdata.fromPj(*ev.body.tsx_state.src.tdata);
         } else if (body.tsxState.type == PJSIP_EVENT_RX_MSG) {
             if (ev.body.tsx_state.src.rdata)
-        	body.tsxState.src.rdata.fromPj(*ev.body.tsx_state.src.rdata);
+                body.tsxState.src.rdata.fromPj(*ev.body.tsx_state.src.rdata);
         } else if (body.tsxState.type == PJSIP_EVENT_TRANSPORT_ERROR) {
             body.tsxState.src.status = ev.body.tsx_state.src.status;
         } else if (body.tsxState.type == PJSIP_EVENT_TIMER) {
@@ -534,16 +533,16 @@ void SipEvent::fromPj(const pjsip_event &ev)
             body.tsxState.src.data = ev.body.tsx_state.src.data;
         }
     } else if (type == PJSIP_EVENT_TX_MSG) {
-	if (ev.body.tx_msg.tdata)
-	    body.txMsg.tdata.fromPj(*ev.body.tx_msg.tdata);
+        if (ev.body.tx_msg.tdata)
+            body.txMsg.tdata.fromPj(*ev.body.tx_msg.tdata);
     } else if (type == PJSIP_EVENT_RX_MSG) {
-	if (ev.body.rx_msg.rdata)
-	    body.rxMsg.rdata.fromPj(*ev.body.rx_msg.rdata);
+        if (ev.body.rx_msg.rdata)
+            body.rxMsg.rdata.fromPj(*ev.body.rx_msg.rdata);
     } else if (type == PJSIP_EVENT_TRANSPORT_ERROR) {
-	if (ev.body.tx_error.tdata)
-	    body.txError.tdata.fromPj(*ev.body.tx_error.tdata);
-	if (ev.body.tx_error.tsx)
-	    body.txError.tsx.fromPj(*ev.body.tx_error.tsx);
+        if (ev.body.tx_error.tdata)
+            body.txError.tdata.fromPj(*ev.body.tx_error.tdata);
+        if (ev.body.tx_error.tsx)
+            body.txError.tsx.fromPj(*ev.body.tx_error.tsx);
     } else if (type == PJSIP_EVENT_USER) {
         body.user.user1 = ev.body.user.user1;
         body.user.user2 = ev.body.user.user2;
@@ -562,14 +561,14 @@ void SipTxData::fromPj(pjsip_tx_data &tdata)
 {
     char straddr[PJ_INET6_ADDRSTRLEN+10];
     
-    info	= pjsip_tx_data_get_info(&tdata);
+    info        = pjsip_tx_data_get_info(&tdata);
     pjsip_tx_data_encode(&tdata);
-    wholeMsg	= string(tdata.buf.start, tdata.buf.cur - tdata.buf.start);
+    wholeMsg    = string(tdata.buf.start, tdata.buf.cur - tdata.buf.start);
     if (pj_sockaddr_has_addr(&tdata.tp_info.dst_addr)) {
-	pj_sockaddr_print(&tdata.tp_info.dst_addr, straddr, sizeof(straddr), 3);
-	dstAddress  = straddr;
+        pj_sockaddr_print(&tdata.tp_info.dst_addr, straddr, sizeof(straddr), 3);
+        dstAddress  = straddr;
     } else {
-	dstAddress = "";
+        dstAddress = "";
     }
     pjTxData    = (void *)&tdata;
 }
@@ -586,11 +585,11 @@ void SipTransaction::fromPj(pjsip_transaction &tsx)
     this->method        = pj2Str(tsx.method.name);
     this->statusCode    = tsx.status_code;
     this->statusText    = pj2Str(tsx.status_text);
-    this->state		= tsx.state;
+    this->state         = tsx.state;
     if (tsx.last_tx)
-	this->lastTx.fromPj(*tsx.last_tx);
+        this->lastTx.fromPj(*tsx.last_tx);
     else
-	this->lastTx.pjTxData = NULL;
+        this->lastTx.pjTxData = NULL;
     this->pjTransaction = (void *)&tsx;
 }
 
@@ -601,8 +600,8 @@ TsxStateEvent::TsxStateEvent()
 
 bool SipTxOption::isEmpty() const
 {
-    return (targetUri == "" && headers.size() == 0 && contentType == "" &&
-            msgBody == "" && multipartContentType.type == "" &&
+    return (targetUri == "" && localUri == "" &&  headers.size() == 0 &&
+            contentType == "" && msgBody == "" && multipartContentType.type == "" &&
             multipartContentType.subType == "" && multipartParts.size() == 0);
 }
 
@@ -610,13 +609,15 @@ void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
 {
     targetUri = pj2Str(prm.target_uri);
 
+    localUri = pj2Str(prm.local_uri);
+
     headers.clear();
     pjsip_hdr* pj_hdr = prm.hdr_list.next;
     while (pj_hdr != &prm.hdr_list) {
-	SipHeader sh;
-	sh.fromPj(pj_hdr);
-	headers.push_back(sh);
-	pj_hdr = pj_hdr->next;
+        SipHeader sh;
+        sh.fromPj(pj_hdr);
+        headers.push_back(sh);
+        pj_hdr = pj_hdr->next;
     }
 
     contentType = pj2Str(prm.content_type);
@@ -626,10 +627,10 @@ void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
     multipartParts.clear();
     pjsip_multipart_part* pj_mp = prm.multipart_parts.next;
     while (pj_mp != &prm.multipart_parts) {
-	SipMultipartPart smp;
-	smp.fromPj(*pj_mp);
-	multipartParts.push_back(smp);
-	pj_mp = pj_mp->next;
+        SipMultipartPart smp;
+        smp.fromPj(*pj_mp);
+        multipartParts.push_back(smp);
+        pj_mp = pj_mp->next;
     }
 }
 
@@ -641,10 +642,12 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
 
     msg_data.target_uri = str2Pj(targetUri);
 
+    msg_data.local_uri = str2Pj(localUri);
+
     pj_list_init(&msg_data.hdr_list);
     for (i = 0; i < headers.size(); i++) {
-	pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
-	pj_list_push_back(&msg_data.hdr_list, &pj_hdr);
+        pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
+        pj_list_push_back(&msg_data.hdr_list, &pj_hdr);
     }
 
     msg_data.content_type = str2Pj(contentType);
@@ -653,8 +656,8 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
 
     pj_list_init(&msg_data.multipart_parts);
     for (i = 0; i < multipartParts.size(); i++) {
-	pjsip_multipart_part& pj_part = multipartParts[i].toPj();
-	pj_list_push_back(&msg_data.multipart_parts, &pj_part);
+        pjsip_multipart_part& pj_part = multipartParts[i].toPj();
+        pj_list_push_back(&msg_data.multipart_parts, &pj_part);
     }
 }
 

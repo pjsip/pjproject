@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,25 +34,25 @@ PJ_BEGIN_DECL
  * will match G.722.1 bitrate setting in the SDP format parameter of
  * offer and answer.
  *
- * @param pool		The memory pool.
- * @param offer		The SDP media offer.
- * @param o_fmt_idx	Index of the G.722.1 format in the SDP media offer.
- * @param answer	The SDP media answer.
- * @param a_fmt_idx	Index of the G.722.1 format in the SDP media answer.
- * @param option	The format matching option, see
- *			#pjmedia_sdp_neg_fmt_match_flag.
+ * @param pool          The memory pool.
+ * @param offer         The SDP media offer.
+ * @param o_fmt_idx     Index of the G.722.1 format in the SDP media offer.
+ * @param answer        The SDP media answer.
+ * @param a_fmt_idx     Index of the G.722.1 format in the SDP media answer.
+ * @param option        The format matching option, see
+ *                      #pjmedia_sdp_neg_fmt_match_flag.
  *
- * @return		PJ_SUCCESS when the formats in offer and answer match.
+ * @return              PJ_SUCCESS when the formats in offer and answer match.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g7221_match_sdp( pj_pool_t *pool,
-						    pjmedia_sdp_media *offer,
-						    unsigned o_fmt_idx,
-						    pjmedia_sdp_media *answer,
-						    unsigned a_fmt_idx,
-						    unsigned option);
+                                                    pjmedia_sdp_media *offer,
+                                                    unsigned o_fmt_idx,
+                                                    pjmedia_sdp_media *answer,
+                                                    unsigned a_fmt_idx,
+                                                    unsigned option);
 
 
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_CODEC_G7221_SDP_MATCH_H__ */
+#endif  /* __PJMEDIA_CODEC_G7221_SDP_MATCH_H__ */

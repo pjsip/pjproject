@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -58,7 +57,7 @@ enum pjmedia_wsola_option
     /**
      * Disable Hanning window to conserve memory.
      */
-    PJMEDIA_WSOLA_NO_HANNING	= 1,
+    PJMEDIA_WSOLA_NO_HANNING    = 1,
 
     /**
      * Specify that the WSOLA will not be used for PLC.
@@ -87,22 +86,22 @@ enum pjmedia_wsola_option
 /**
  * Create and initialize WSOLA.
  *
- * @param pool		    Pool to allocate memory for WSOLA.
- * @param clock_rate	    Sampling rate of audio playback.
+ * @param pool              Pool to allocate memory for WSOLA.
+ * @param clock_rate        Sampling rate of audio playback.
  * @param samples_per_frame Number of samples per frame.
- * @param channel_count	    Number of channels.
- * @param options	    Option flags, bitmask combination of
- *			    #pjmedia_wsola_option.
- * @param p_wsola	    Pointer to receive WSOLA structure.
+ * @param channel_count     Number of channels.
+ * @param options           Option flags, bitmask combination of
+ *                          #pjmedia_wsola_option.
+ * @param p_wsola           Pointer to receive WSOLA structure.
  *
- * @return		    PJ_SUCCESS or the appropriate error code.
+ * @return                  PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_create(pj_pool_t *pool, 
-					  unsigned clock_rate,
-					  unsigned samples_per_frame,
-					  unsigned channel_count,
-					  unsigned options,
-					  pjmedia_wsola **p_wsola);
+                                          unsigned clock_rate,
+                                          unsigned samples_per_frame,
+                                          unsigned channel_count,
+                                          unsigned options,
+                                          pjmedia_wsola **p_wsola);
 
 
 /**
@@ -113,21 +112,21 @@ PJ_DECL(pj_status_t) pjmedia_wsola_create(pj_pool_t *pool,
  * (see also the documentation of PJMEDIA_WSOLA_MAX_EXPAND_MSEC for
  * more information).
  *
- * @param wsola	    The WSOLA session
- * @param msec	    The duration.
+ * @param wsola     The WSOLA session
+ * @param msec      The duration.
  *
- * @return	    PJ_SUCCESS normally.
+ * @return          PJ_SUCCESS normally.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_set_max_expand(pjmedia_wsola *wsola,
-						  unsigned msec);
+                                                  unsigned msec);
 
 
 /**
  * Destroy WSOLA.
  *
- * @param wsola	    WSOLA session.
+ * @param wsola     WSOLA session.
  *
- * @return	    PJ_SUCCESS normally.
+ * @return          PJ_SUCCESS normally.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola *wsola);
 
@@ -135,13 +134,13 @@ PJ_DECL(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola *wsola);
 /**
  * Reset the buffer contents of WSOLA.
  *
- * @param wsola	    WSOLA session.
+ * @param wsola     WSOLA session.
  * @param options   Reset options, must be zero for now.
  *
- * @return	    PJ_SUCCESS normally.
+ * @return          PJ_SUCCESS normally.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_reset(pjmedia_wsola *wsola,
-					 unsigned options);
+                                         unsigned options);
 
 
 /**
@@ -150,33 +149,33 @@ PJ_DECL(pj_status_t) pjmedia_wsola_reset(pjmedia_wsola *wsola,
  * date with current playback. Depending on the WSOLA implementation,
  * this function may modify the content of the frame.
  *
- * @param wsola	    WSOLA session.
- * @param frm	    The frame, which length must match the samples per
- *		    frame setting of the WSOLA session.
+ * @param wsola     WSOLA session.
+ * @param frm       The frame, which length must match the samples per
+ *                  frame setting of the WSOLA session.
  * @param prev_lost If application previously generated a synthetic
- *		    frame with #pjmedia_wsola_generate() before calling
- *		    this function, specify whether that was because of
- *		    packet lost. If so, set this parameter to PJ_TRUE
- *		    to make WSOLA interpolate this frame with its buffer.
- *		    Otherwise if this value is PJ_FALSE, WSOLA will
- *		    just append this frame to the end of its buffer.
+ *                  frame with #pjmedia_wsola_generate() before calling
+ *                  this function, specify whether that was because of
+ *                  packet lost. If so, set this parameter to PJ_TRUE
+ *                  to make WSOLA interpolate this frame with its buffer.
+ *                  Otherwise if this value is PJ_FALSE, WSOLA will
+ *                  just append this frame to the end of its buffer.
  *
- * @return	    PJ_SUCCESS normally.
+ * @return          PJ_SUCCESS normally.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_save(pjmedia_wsola *wsola, 
-					pj_int16_t frm[], 
-					pj_bool_t prev_lost);
+                                        pj_int16_t frm[], 
+                                        pj_bool_t prev_lost);
 
 /**
  * Generate one synthetic frame from WSOLA.
  *
- * @param wsola	    WSOLA session.
- * @param frm	    Buffer to receive the frame.
+ * @param wsola     WSOLA session.
+ * @param frm       Buffer to receive the frame.
  *
- * @return	    PJ_SUCCESS normally.
+ * @return          PJ_SUCCESS normally.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_generate(pjmedia_wsola *wsola, 
-					    pj_int16_t frm[]);
+                                            pj_int16_t frm[]);
 
 
 /**
@@ -184,29 +183,29 @@ PJ_DECL(pj_status_t) pjmedia_wsola_generate(pjmedia_wsola *wsola,
  * from the buffer, without altering the pitch. For this function to work, 
  * total length of the buffer must be more than twice \a erase_cnt.
  * 
- * @param wsola	    WSOLA session.
- * @param buf1	    Pointer to buffer. 
+ * @param wsola     WSOLA session.
+ * @param buf1      Pointer to buffer. 
  * @param buf1_cnt  Number of samples in the buffer.
- * @param buf2	    Pointer to second buffer, if the buffer is not
- *		    contiguous. Otherwise this parameter must be NULL.
+ * @param buf2      Pointer to second buffer, if the buffer is not
+ *                  contiguous. Otherwise this parameter must be NULL.
  * @param buf2_cnt  Number of samples in the second buffer, if the buffer
- *		    is not contiguous. Otherwise this parameter should be
- *		    zero.
+ *                  is not contiguous. Otherwise this parameter should be
+ *                  zero.
  * @param erase_cnt On input, specify the number of samples to be erased.
- *		    This function may erase more or less than the requested 
- *		    number, and the actual number of samples erased will be 
- *		    given on this argument upon returning from the function.
+ *                  This function may erase more or less than the requested 
+ *                  number, and the actual number of samples erased will be 
+ *                  given on this argument upon returning from the function.
  *
- * @return	    PJ_SUCCESS if some samples have been erased, PJ_ETOOSMALL
- *		    if buffer is too small to be reduced, PJ_EINVAL if any
- *		    of the parameters are not valid.
+ * @return          PJ_SUCCESS if some samples have been erased, PJ_ETOOSMALL
+ *                  if buffer is too small to be reduced, PJ_EINVAL if any
+ *                  of the parameters are not valid.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_discard(pjmedia_wsola *wsola, 
-					   pj_int16_t buf1[],
-					   unsigned buf1_cnt, 
-					   pj_int16_t buf2[],
-					   unsigned buf2_cnt,
-					   unsigned *erase_cnt);
+                                           pj_int16_t buf1[],
+                                           unsigned buf1_cnt, 
+                                           pj_int16_t buf2[],
+                                           unsigned buf2_cnt,
+                                           unsigned *erase_cnt);
 
 
 PJ_END_DECL
@@ -215,5 +214,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_WSOLA_H__ */
+#endif  /* __PJMEDIA_WSOLA_H__ */
 

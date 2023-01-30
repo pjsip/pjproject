@@ -112,6 +112,9 @@ using namespace pj;
 %include "std_vector.i"
 %include "std_map.i"
 
+// Android string handling
+%include "and_string.i"
+
 %template(StringVector)			std::vector<std::string>;
 %template(IntVector) 			std::vector<int>;
 %template(StringToStringMap) 			std::map<string, string>;

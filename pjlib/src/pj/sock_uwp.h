@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2016 Teluu Inc. (http://www.teluu.com)
  *
@@ -26,9 +25,9 @@
 
 
 enum {
-    READ_TIMEOUT	= 60 * 1000,
-    WRITE_TIMEOUT	= 60 * 1000,
-    SEND_BUFFER_SIZE	= 128 * 1024,
+    READ_TIMEOUT        = 60 * 1000,
+    WRITE_TIMEOUT       = 60 * 1000,
+    SEND_BUFFER_SIZE    = 128 * 1024,
 };
 
 enum PjUwpSocketType {
@@ -69,9 +68,9 @@ public:
     void* GetUserData() { return user_data; }
     void SetNonBlocking(const PjUwpSocketCallback *cb_, void *user_data_)
     {
-	is_blocking = PJ_FALSE;
-	cb=*cb_;
-	user_data = user_data_;
+        is_blocking = PJ_FALSE;
+        cb=*cb_;
+        user_data = user_data_;
     }
 
     enum PjUwpSocketType GetType() { return sock_type; }
@@ -136,8 +135,8 @@ private:
 
 
 inline pj_status_t wstr_addr_to_sockaddr(const wchar_t *waddr,
-					 const wchar_t *wport,
-					 pj_sockaddr_t *sockaddr)
+                                         const wchar_t *wport,
+                                         pj_sockaddr_t *sockaddr)
 {
 #if 0
     char tmp_str_buf[PJ_INET6_ADDRSTRLEN+1];
@@ -159,18 +158,18 @@ inline pj_status_t wstr_addr_to_sockaddr(const wchar_t *waddr,
     pj_bool_t got_addr = PJ_FALSE;
 
     if (pj_inet_pton(PJ_AF_INET, &remote_host, &addr->ipv4.sin_addr)
-	== PJ_SUCCESS)
+        == PJ_SUCCESS)
     {
-	addr->addr.sa_family = PJ_AF_INET;
-	got_addr = PJ_TRUE;
+        addr->addr.sa_family = PJ_AF_INET;
+        got_addr = PJ_TRUE;
     } else if (pj_inet_pton(PJ_AF_INET6, &remote_host, &addr->ipv6.sin6_addr)
-	== PJ_SUCCESS)
+        == PJ_SUCCESS)
     {
-	addr->addr.sa_family = PJ_AF_INET6;
-	got_addr = PJ_TRUE;
+        addr->addr.sa_family = PJ_AF_INET6;
+        got_addr = PJ_TRUE;
     }
     if (!got_addr)
-	return PJ_EINVAL;
+        return PJ_EINVAL;
 
     pj_sockaddr_set_port(addr, (pj_uint16_t)_wtoi(wport));
     return PJ_SUCCESS;
@@ -178,14 +177,14 @@ inline pj_status_t wstr_addr_to_sockaddr(const wchar_t *waddr,
 
 
 inline pj_status_t sockaddr_to_hostname_port(const pj_sockaddr_t *sockaddr,
-					     Windows::Networking::HostName ^&hostname,
-					     int *port)
+                                             Windows::Networking::HostName ^&hostname,
+                                             int *port)
 {
     char tmp[PJ_INET6_ADDRSTRLEN];
     wchar_t wtmp[PJ_INET6_ADDRSTRLEN];
     pj_sockaddr_print(sockaddr, tmp, PJ_INET6_ADDRSTRLEN, 0);
     pj_ansi_to_unicode(tmp, pj_ansi_strlen(tmp), wtmp,
-	PJ_INET6_ADDRSTRLEN);
+        PJ_INET6_ADDRSTRLEN);
     hostname = ref new Windows::Networking::HostName(ref new Platform::String(wtmp));
     *port = pj_sockaddr_get_port(sockaddr);
 
@@ -258,7 +257,7 @@ inline concurrency::task<void> complete_after(unsigned int timeout)
     // Create a call object that sets the completion event after the timer fires.
     auto callback = new concurrency::call<int>([tce](int)
     {
-	tce.set();
+        tce.set();
     });
 
     // Connect the timer to the callback and start the timer.
@@ -272,8 +271,8 @@ inline concurrency::task<void> complete_after(unsigned int timeout)
     // and return that continuation task. 
     return event_set.then([callback, fire_once]()
     {
-	delete callback;
-	delete fire_once;
+        delete callback;
+        delete fire_once;
     });
 }
 
@@ -285,27 +284,27 @@ inline concurrency::task<T> cancel_after_timeout(concurrency::task<T> t, concurr
     // Create a task that returns true after the specified task completes.
     concurrency::task<bool> success_task = t.then([](T)
     {
-	return true;
+        return true;
     });
     // Create a task that returns false after the specified timeout.
     concurrency::task<bool> failure_task = complete_after(timeout).then([]
     {
-	return false;
+        return false;
     });
 
     // Create a continuation task that cancels the overall task  
     // if the timeout task finishes first. 
     return (failure_task || success_task).then([t, cts](bool success)
     {
-	if (!success)
-	{
-	    // Set the cancellation token. The task that is passed as the 
-	    // t parameter should respond to the cancellation and stop 
-	    // as soon as it can.
-	    cts.cancel();
-	}
+        if (!success)
+        {
+            // Set the cancellation token. The task that is passed as the 
+            // t parameter should respond to the cancellation and stop 
+            // as soon as it can.
+            cts.cancel();
+        }
 
-	// Return the original task. 
-	return t;
+        // Return the original task. 
+        return t;
     });
 }

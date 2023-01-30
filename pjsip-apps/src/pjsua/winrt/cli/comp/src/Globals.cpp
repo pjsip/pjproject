@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -26,7 +25,7 @@
 using namespace PjsuaCLI::BackEnd;
 using namespace Platform;
 
-#define THIS_FILE	"Globals.cpp"
+#define THIS_FILE       "Globals.cpp"
 
 #if defined (PJ_WIN32_WINPHONE8) && (PJ_WIN32_WINPHONE8 != 0)
 
@@ -42,27 +41,27 @@ void on_cli_started(pj_status_t status, const char *msg)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
     if (Globals::Instance->PjsuaCallback) {
-	static wchar_t msgBuff[ PJ_ERR_MSG_SIZE ];
-	Platform::String ^outMsg = nullptr;
-	if ((status != PJ_SUCCESS) && (!msg || !*msg)) {
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    msg = errmsg;
-	}
-	mbstowcs(msgBuff, msg, PJ_ERR_MSG_SIZE);
-	outMsg = ref new Platform::String(msgBuff);
-	Globals::Instance->PjsuaCallback->OnStarted(outMsg);
+        static wchar_t msgBuff[ PJ_ERR_MSG_SIZE ];
+        Platform::String ^outMsg = nullptr;
+        if ((status != PJ_SUCCESS) && (!msg || !*msg)) {
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            msg = errmsg;
+        }
+        mbstowcs(msgBuff, msg, PJ_ERR_MSG_SIZE);
+        outMsg = ref new Platform::String(msgBuff);
+        Globals::Instance->PjsuaCallback->OnStarted(outMsg);
     }
 }
 
 void on_cli_stopped(pj_bool_t restart, int argc, char **argv)
 {
     if (restart) {
-	restart_argc = argc;
-	restart_argv = argv;
+        restart_argc = argc;
+        restart_argv = argv;
     }
 
     if (Globals::Instance->PjsuaCallback) {
-	Globals::Instance->PjsuaCallback->OnStopped(restart);
+        Globals::Instance->PjsuaCallback->OnStopped(restart);
     }
 }
 
@@ -81,9 +80,9 @@ static int initMain(int argc, char **argv)
 
     status = pjsua_app_init(&wp_app_config);
     if (status == PJ_SUCCESS) {
-	status = pjsua_app_run(PJ_FALSE);
+        status = pjsua_app_run(PJ_FALSE);
     } else {
-	pjsua_app_destroy();
+        pjsua_app_destroy();
     }
 
     return status;
@@ -135,9 +134,9 @@ PjsuaCallback^ Globals::PjsuaCallback::get()
 {
     if (this->callback == nullptr)
     {
-	if (this->callback == nullptr)
+        if (this->callback == nullptr)
         {
-	    this->callback = ref new PjsuaCLI::BackEnd::PjsuaCallback();
+            this->callback = ref new PjsuaCLI::BackEnd::PjsuaCallback();
         }
     }
 

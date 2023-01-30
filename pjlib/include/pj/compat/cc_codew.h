@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -29,28 +28,28 @@
 #  error "This file is only for Code Warrior!"
 #endif
 
-#define PJ_CC_NAME		"codewarrior"
-#define PJ_CC_VER_1		((__MWERKS__ & 0xF000) >> 12)
-#define PJ_CC_VER_2		((__MWERKS__ & 0x0F00) >> 8)
-#define PJ_CC_VER_3		((__MWERKS__ & 0xFF))
+#define PJ_CC_NAME              "codewarrior"
+#define PJ_CC_VER_1             ((__MWERKS__ & 0xF000) >> 12)
+#define PJ_CC_VER_2             ((__MWERKS__ & 0x0F00) >> 8)
+#define PJ_CC_VER_3             ((__MWERKS__ & 0xFF))
 
 
-#define PJ_INLINE_SPECIFIER	static inline
-#define PJ_THREAD_FUNC	
-#define PJ_NORETURN		
-#define PJ_ATTR_NORETURN	
-#define PJ_ATTR_MAY_ALIAS	
+#define PJ_INLINE_SPECIFIER     static inline
+#define PJ_THREAD_FUNC  
+#define PJ_NORETURN             
+#define PJ_ATTR_NORETURN        
+#define PJ_ATTR_MAY_ALIAS       
 
-#define PJ_HAS_INT64		1
+#define PJ_HAS_INT64            1
 
 typedef long long pj_int64_t;
 typedef unsigned long long pj_uint64_t;
 
-#define PJ_INT64(val)		val##LL
-#define PJ_UINT64(val)		val##LLU
-#define PJ_INT64_FMT		"L"
+#define PJ_INT64(val)           val##LL
+#define PJ_UINT64(val)          val##LLU
+#define PJ_INT64_FMT            "L"
 
-#define PJ_UNREACHED(x)	    	
+#define PJ_UNREACHED(x)         
 
-#endif	/* __PJ_COMPAT_CC_CODEW_H__ */
+#endif  /* __PJ_COMPAT_CC_CODEW_H__ */
 

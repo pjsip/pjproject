@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -55,26 +54,26 @@ typedef struct pjsip_tcp_transport_cfg
      * Address family to use. Valid values are pj_AF_INET() and
      * pj_AF_INET6(). Default is pj_AF_INET().
      */
-    int			af;
+    int                 af;
 
     /**
      * Optional address to bind the socket to. Default is to bind to 
      * PJ_INADDR_ANY and to any available port.
      */
-    pj_sockaddr		bind_addr;
+    pj_sockaddr         bind_addr;
 
     /**
      * Should SO_REUSEADDR be used for the listener socket.
      * Default value is PJSIP_TCP_TRANSPORT_REUSEADDR.
      */
-    pj_bool_t		reuse_addr;
+    pj_bool_t           reuse_addr;
 
     /**
      * Optional published address, which is the address to be
      * advertised as the address of this SIP transport. 
      * By default the bound address will be used as the published address.
      */
-    pjsip_host_port	addr_name;
+    pjsip_host_port     addr_name;
 
     /**
      * Number of simultaneous asynchronous accept() operations to be 
@@ -84,7 +83,7 @@ typedef struct pjsip_tcp_transport_cfg
      *
      * Default: 1
      */
-    unsigned	       async_cnt;
+    unsigned           async_cnt;
 
     /**
      * QoS traffic type to be set on this transport. When application wants
@@ -93,7 +92,7 @@ typedef struct pjsip_tcp_transport_cfg
      *
      * Default is QoS not set.
      */
-    pj_qos_type		qos_type;
+    pj_qos_type         qos_type;
 
     /**
      * Set the low level QoS parameters to the transport. This is a lower
@@ -102,7 +101,7 @@ typedef struct pjsip_tcp_transport_cfg
      *
      * Default is QoS not set.
      */
-    pj_qos_params	qos_params;
+    pj_qos_params       qos_params;
 
     /**
      * Specify options to be set on the transport. 
@@ -110,7 +109,7 @@ typedef struct pjsip_tcp_transport_cfg
      * By default there is no options.
      * 
      */
-    pj_sockopt_params	sockopt_params;
+    pj_sockopt_params   sockopt_params;
 
 
     /**
@@ -119,7 +118,7 @@ typedef struct pjsip_tcp_transport_cfg
      *
      * Default: PJSIP_TCP_INITIAL_TIMEOUT
      */
-    unsigned		initial_timeout;
+    unsigned            initial_timeout;
 
 } pjsip_tcp_transport_cfg;
 
@@ -128,11 +127,11 @@ typedef struct pjsip_tcp_transport_cfg
  * Initialize pjsip_tcp_transport_cfg structure with default values for
  * the specifed address family.
  *
- * @param cfg		The structure to initialize.
- * @param af		Address family to be used.
+ * @param cfg           The structure to initialize.
+ * @param af            Address family to be used.
  */
 PJ_DECL(void) pjsip_tcp_transport_cfg_default(pjsip_tcp_transport_cfg *cfg,
-					      int af);
+                                              int af);
 
 
 /**
@@ -141,30 +140,30 @@ PJ_DECL(void) pjsip_tcp_transport_cfg_default(pjsip_tcp_transport_cfg *cfg,
  * instance of SIP TCP transport factory and register it to the
  * transport manager.
  *
- * @param endpt		The SIP endpoint.
- * @param local		Optional local address to bind, or specify the
- *			address to bind the server socket to. Both IP 
- *			interface address and port fields are optional.
- *			If IP interface address is not specified, socket
- *			will be bound to PJ_INADDR_ANY. If port is not
- *			specified, socket will be bound to any port
- *			selected by the operating system.
- * @param async_cnt	Number of simultaneous asynchronous accept()
- *			operations to be supported. It is recommended that
- *			the number here corresponds to the number of
- *			processors in the system (or the number of SIP
- *			worker threads).
- * @param p_factory	Optional pointer to receive the instance of the
- *			SIP TCP transport factory just created.
+ * @param endpt         The SIP endpoint.
+ * @param local         Optional local address to bind, or specify the
+ *                      address to bind the server socket to. Both IP 
+ *                      interface address and port fields are optional.
+ *                      If IP interface address is not specified, socket
+ *                      will be bound to PJ_INADDR_ANY. If port is not
+ *                      specified, socket will be bound to any port
+ *                      selected by the operating system.
+ * @param async_cnt     Number of simultaneous asynchronous accept()
+ *                      operations to be supported. It is recommended that
+ *                      the number here corresponds to the number of
+ *                      processors in the system (or the number of SIP
+ *                      worker threads).
+ * @param p_factory     Optional pointer to receive the instance of the
+ *                      SIP TCP transport factory just created.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tcp_transport_start(pjsip_endpoint *endpt,
-					       const pj_sockaddr_in *local,
-					       unsigned async_cnt,
-					       pjsip_tpfactory **p_factory);
+                                               const pj_sockaddr_in *local,
+                                               unsigned async_cnt,
+                                               pjsip_tpfactory **p_factory);
 
 
 
@@ -172,54 +171,54 @@ PJ_DECL(pj_status_t) pjsip_tcp_transport_start(pjsip_endpoint *endpt,
  * A newer variant of #pjsip_tcp_transport_start(), which allows specifying
  * the published/public address of the TCP transport.
  *
- * @param endpt		The SIP endpoint.
- * @param local		Optional local address to bind, or specify the
- *			address to bind the server socket to. Both IP 
- *			interface address and port fields are optional.
- *			If IP interface address is not specified, socket
- *			will be bound to PJ_INADDR_ANY. If port is not
- *			specified, socket will be bound to any port
- *			selected by the operating system.
- * @param a_name	Optional published address, which is the address to be
- *			advertised as the address of this SIP transport. 
- *			If this argument is NULL, then the bound address
- *			will be used as the published address.
- * @param async_cnt	Number of simultaneous asynchronous accept()
- *			operations to be supported. It is recommended that
- *			the number here corresponds to the number of
- *			processors in the system (or the number of SIP
- *			worker threads).
- * @param p_factory	Optional pointer to receive the instance of the
- *			SIP TCP transport factory just created.
+ * @param endpt         The SIP endpoint.
+ * @param local         Optional local address to bind, or specify the
+ *                      address to bind the server socket to. Both IP 
+ *                      interface address and port fields are optional.
+ *                      If IP interface address is not specified, socket
+ *                      will be bound to PJ_INADDR_ANY. If port is not
+ *                      specified, socket will be bound to any port
+ *                      selected by the operating system.
+ * @param a_name        Optional published address, which is the address to be
+ *                      advertised as the address of this SIP transport. 
+ *                      If this argument is NULL, then the bound address
+ *                      will be used as the published address.
+ * @param async_cnt     Number of simultaneous asynchronous accept()
+ *                      operations to be supported. It is recommended that
+ *                      the number here corresponds to the number of
+ *                      processors in the system (or the number of SIP
+ *                      worker threads).
+ * @param p_factory     Optional pointer to receive the instance of the
+ *                      SIP TCP transport factory just created.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
-					        const pj_sockaddr_in *local,
-					        const pjsip_host_port *a_name,
-					        unsigned async_cnt,
-					        pjsip_tpfactory **p_factory);
+                                                const pj_sockaddr_in *local,
+                                                const pjsip_host_port *a_name,
+                                                unsigned async_cnt,
+                                                pjsip_tpfactory **p_factory);
 
 /**
  * Another variant of #pjsip_tcp_transport_start().
  *
- * @param endpt		The SIP endpoint.
- * @param cfg		TCP transport settings. Application should initialize
- *			this setting with #pjsip_tcp_transport_cfg_default().
- * @param p_factory	Optional pointer to receive the instance of the
- *			SIP TCP transport factory just created.
+ * @param endpt         The SIP endpoint.
+ * @param cfg           TCP transport settings. Application should initialize
+ *                      this setting with #pjsip_tcp_transport_cfg_default().
+ * @param p_factory     Optional pointer to receive the instance of the
+ *                      SIP TCP transport factory just created.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tcp_transport_start3(
-					pjsip_endpoint *endpt,
-					const pjsip_tcp_transport_cfg *cfg,
-					pjsip_tpfactory **p_factory
-					);
+                                        pjsip_endpoint *endpt,
+                                        const pjsip_tcp_transport_cfg *cfg,
+                                        pjsip_tpfactory **p_factory
+                                        );
 
 /**
  * Retrieve the internal socket handle used by the TCP transport. Note
@@ -227,10 +226,10 @@ PJ_DECL(pj_status_t) pjsip_tcp_transport_start3(
  * needs to take care not to perform operation that disrupts ioqueue
  * operation.
  *
- * @param transport	The TCP transport.
+ * @param transport     The TCP transport.
  *
- * @return		The socket handle, or PJ_INVALID_SOCKET if no socket
- *			is currently being used.
+ * @return              The socket handle, or PJ_INVALID_SOCKET if no socket
+ *                      is currently being used.
  */
 PJ_DECL(pj_sock_t) pjsip_tcp_transport_get_socket(pjsip_transport *transport);
 
@@ -239,50 +238,50 @@ PJ_DECL(pj_sock_t) pjsip_tcp_transport_get_socket(pjsip_transport *transport);
  * to start the listener manually, if listener was not started when 
  * PJSIP_TCP_TRANSPORT_DONT_CREATE_LISTENER is set to 0. 
  *
- * @param factory	The SIP TCP transport factory.
+ * @param factory       The SIP TCP transport factory.
  *
- * @param local		The address where the listener should be bound to. 
- *			Both IP interface address and port fields are optional.
- *			If IP interface address is not specified, socket
- *			will be bound to PJ_INADDR_ANY. If port is not
- *			specified, socket will be bound to any port
- *			selected by the operating system.
+ * @param local         The address where the listener should be bound to. 
+ *                      Both IP interface address and port fields are optional.
+ *                      If IP interface address is not specified, socket
+ *                      will be bound to PJ_INADDR_ANY. If port is not
+ *                      specified, socket will be bound to any port
+ *                      selected by the operating system.
  *
- * @param a_name	The published address for the listener. 
- *			If this argument is NULL, then the bound address will 
- *			be used as the published address.
+ * @param a_name        The published address for the listener. 
+ *                      If this argument is NULL, then the bound address will 
+ *                      be used as the published address.
  *
- * @return		PJ_SUCCESS when the listener has been successfully
- *			started.
+ * @return              PJ_SUCCESS when the listener has been successfully
+ *                      started.
  */
 PJ_DECL(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
-						const pj_sockaddr *local,
-						const pjsip_host_port *a_name);
+                                                const pj_sockaddr *local,
+                                                const pjsip_host_port *a_name);
 
 /**
  * Restart the TCP listener. This will close the listener socket and recreate
  * the socket based on the config used when starting the transport.
  *
- * @param factory	The SIP TCP transport factory.
+ * @param factory       The SIP TCP transport factory.
  * 
- * @param local		The address where the listener should be bound to.
- *			Both IP interface address and port fields are optional.
- *			If IP interface address is not specified, socket
- *			will be bound to PJ_INADDR_ANY. If port is not
- *			specified, socket will be bound to any port
- *			selected by the operating system.
+ * @param local         The address where the listener should be bound to.
+ *                      Both IP interface address and port fields are optional.
+ *                      If IP interface address is not specified, socket
+ *                      will be bound to PJ_INADDR_ANY. If port is not
+ *                      specified, socket will be bound to any port
+ *                      selected by the operating system.
  *
- * @param a_name	The published address for the listener. 
- *			If this argument is NULL, then the bound address will
- *			be used as the published address.
+ * @param a_name        The published address for the listener. 
+ *                      If this argument is NULL, then the bound address will
+ *                      be used as the published address.
  *
- * @return		PJ_SUCCESS when the listener has been successfully 
- *			restarted.
+ * @return              PJ_SUCCESS when the listener has been successfully 
+ *                      restarted.
  *
  */
 PJ_DECL(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory, 
-						const pj_sockaddr *local,
-						const pjsip_host_port *a_name);
+                                                const pj_sockaddr *local,
+                                                const pjsip_host_port *a_name);
 
 
 PJ_END_DECL
@@ -291,6 +290,6 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* PJ_HAS_TCP */
+#endif  /* PJ_HAS_TCP */
 
-#endif	/* __PJSIP_TRANSPORT_TCP_H__ */
+#endif  /* __PJSIP_TRANSPORT_TCP_H__ */

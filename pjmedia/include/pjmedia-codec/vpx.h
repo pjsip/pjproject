@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2019 Teluu Inc. (http://www.teluu.com)
  *
@@ -39,13 +38,13 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register VPX codec factory.
  *
- * @param mgr	    The video codec manager instance where this codec will
- * 		    be registered to. Specify NULL to use default instance
- * 		    (in that case, an instance of video codec manager must
- * 		    have been created beforehand).
- * @param pf	    Pool factory.
+ * @param mgr       The video codec manager instance where this codec will
+ *                  be registered to. Specify NULL to use default instance
+ *                  (in that case, an instance of video codec manager must
+ *                  have been created beforehand).
+ * @param pf        Pool factory.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_vpx_vid_init(pjmedia_vid_codec_mgr *mgr,
                                                 pj_pool_factory *pf);
@@ -54,7 +53,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_vpx_vid_init(pjmedia_vid_codec_mgr *mgr,
  * Unregister VPX video codecs factory from the video codec manager and
  * deinitialize the codec library.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_vpx_vid_deinit(void);
 
@@ -66,4 +65,4 @@ PJ_DECL(pj_status_t) pjmedia_codec_vpx_vid_deinit(void);
 
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_CODEC_VPX_H__ */
+#endif  /* __PJMEDIA_CODEC_VPX_H__ */

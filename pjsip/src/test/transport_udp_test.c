@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,55 +34,55 @@ static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned num_tp)
 
     for (;i<num_tp;++i)
     {
-	pj_sockaddr_in addr;
+        pj_sockaddr_in addr;
 
-	pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)(TEST_UDP_PORT+i));
+        pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)(TEST_UDP_PORT+i));
 
-	/* Start UDP transport. */
-	status = pjsip_udp_transport_start( endpt, &addr, NULL, 1, &udp_tp);
-	if (status != PJ_SUCCESS) {
-	    app_perror("   Error: unable to start UDP transport", status);
-	    return -110;
-	}
+        /* Start UDP transport. */
+        status = pjsip_udp_transport_start( endpt, &addr, NULL, 1, &udp_tp);
+        if (status != PJ_SUCCESS) {
+            app_perror("   Error: unable to start UDP transport", status);
+            return -110;
+        }
 
-	/* UDP transport must have initial reference counter set to 1. */
-	if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-	    return -120;
+        /* UDP transport must have initial reference counter set to 1. */
+        if (pj_atomic_get(udp_tp->ref_cnt) != 1)
+            return -120;
 
-	/* Test basic transport attributes */
-	status = generic_transport_test(udp_tp);
-	if (status != PJ_SUCCESS)
-	    return status;
+        /* Test basic transport attributes */
+        status = generic_transport_test(udp_tp);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	tp[i] = udp_tp;
+        tp[i] = udp_tp;
     }
 
     for (i = 0; i < num_tp; ++i) {
-	udp_tp = tp[i];
-	if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-	    return -130;
+        udp_tp = tp[i];
+        if (pj_atomic_get(udp_tp->ref_cnt) != 1)
+            return -130;
     }
 
     /* Acquire transport test without selector. */
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "1.1.1.1"), 80);
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP,
-					   &rem_addr, sizeof(rem_addr),
-					   NULL, &udp_tp);
+                                           &rem_addr, sizeof(rem_addr),
+                                           NULL, &udp_tp);
     if (status != PJ_SUCCESS)
-	return -140;
+        return -140;
 
     for (i = 0; i < num_tp; ++i) {
-	if (udp_tp == tp[i]) {
-	    break;
-	}
+        if (udp_tp == tp[i]) {
+            break;
+        }
     }
     if (i == num_tp)
-	return -150;
+        return -150;
 
     pjsip_transport_dec_ref(udp_tp);
 
     if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-	return -160;
+        return -160;
 
     /* Acquire transport test with selector. */
     pj_bzero(&tp_sel, sizeof(tp_sel));
@@ -91,18 +90,18 @@ static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned num_tp)
     tp_sel.u.transport = tp[num_tp-1];
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "1.1.1.1"), 80);
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP,
-					   &rem_addr, sizeof(rem_addr),
-					   &tp_sel, &udp_tp);
+                                           &rem_addr, sizeof(rem_addr),
+                                           &tp_sel, &udp_tp);
     if (status != PJ_SUCCESS)
-	return -170;
+        return -170;
 
     if (udp_tp != tp[num_tp-1])
-	return -180;
+        return -180;
 
     pjsip_transport_dec_ref(udp_tp);
 
     if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-	return -190;
+        return -190;
 
     return PJ_SUCCESS;
 }
@@ -123,50 +122,50 @@ int transport_udp_test(void)
 
     status = multi_transport_test(&tp[0], NUM_TP);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Basic transport's send/receive loopback test. */
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "127.0.0.1"), TEST_UDP_PORT);
     for (i=0; i<SEND_RECV_LOOP; ++i) {
-	status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp[0], 
-					  "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR,
-					  &rtt[i]);
-	if (status != 0)
-	    return status;
+        status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp[0], 
+                                          "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR,
+                                          &rtt[i]);
+        if (status != 0)
+            return status;
     }
 
     min_rtt = 0xFFFFFFF;
     for (i=0; i<SEND_RECV_LOOP; ++i)
-	if (rtt[i] < min_rtt) min_rtt = rtt[i];
+        if (rtt[i] < min_rtt) min_rtt = rtt[i];
 
     report_ival("udp-rtt-usec", min_rtt, "usec",
-		"Best UDP transport round trip time, in microseconds "
-		"(time from sending request until response is received. "
-		"Tests were performed on local machine only)");
+                "Best UDP transport round trip time, in microseconds "
+                "(time from sending request until response is received. "
+                "Tests were performed on local machine only)");
 
 
     /* Multi-threaded round-trip test. */
     status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp[0], 
-			       "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR, 
-			       &pkt_lost);
+                               "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR, 
+                               &pkt_lost);
     if (status != 0)
-	return status;
+        return status;
 
     if (pkt_lost != 0)
-	PJ_LOG(3,(THIS_FILE, "   note: %d packet(s) was lost", pkt_lost));
+        PJ_LOG(3,(THIS_FILE, "   note: %d packet(s) was lost", pkt_lost));
 
     for (i = 0; i < NUM_TP; ++i) {
-	udp_tp = tp[i];
+        udp_tp = tp[i];
 
         /* Check again that reference counter is 1. */
-	if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-	    return -80;
+        if (pj_atomic_get(udp_tp->ref_cnt) != 1)
+            return -80;
 
-	/* Destroy this transport. */
-	pjsip_transport_dec_ref(udp_tp);
-	status = pjsip_transport_destroy(udp_tp);
-	if (status != PJ_SUCCESS)
-	    return -90;
+        /* Destroy this transport. */
+        pjsip_transport_dec_ref(udp_tp);
+        status = pjsip_transport_destroy(udp_tp);
+        if (status != PJ_SUCCESS)
+            return -90;
     }
 
     /* Flush events. */

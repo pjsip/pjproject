@@ -1,4 +1,3 @@
-# $Id$
 #
 # Just about the simple pjsua command line parameter, which should
 # never fail in any circumstances

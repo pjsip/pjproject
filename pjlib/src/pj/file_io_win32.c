@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -39,7 +38,7 @@ static pj_status_t set_file_pointer(pj_oshandle_t fd,
 
     liDistance.QuadPart = offset;
     if (!SetFilePointerEx(fd, liDistance, &liNewPos, dwMoveMethod)) {
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
     }
     *newPos = liNewPos.QuadPart;
 #else
@@ -50,10 +49,10 @@ static pj_status_t set_file_pointer(pj_oshandle_t fd,
 
     dwNewPos = SetFilePointer(fd, (long)offset, &hi32, dwMoveMethod);
     if (dwNewPos == (DWORD)INVALID_SET_FILE_POINTER) {
-	DWORD dwStatus = GetLastError();
-	if (dwStatus != 0)
-	    return PJ_RETURN_OS_ERROR(dwStatus);
-	/* dwNewPos actually is not an error. */
+        DWORD dwStatus = GetLastError();
+        if (dwStatus != 0)
+            return PJ_RETURN_OS_ERROR(dwStatus);
+        /* dwNewPos actually is not an error. */
     }
     *newPos = hi32;
     *newPos = (*newPos << 32) + dwNewPos;
@@ -94,15 +93,15 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
         dwDesiredAccess |= GENERIC_WRITE;
         if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
 #if !defined(PJ_WIN32_WINCE) || !PJ_WIN32_WINCE
-	    /* FILE_APPEND_DATA is invalid on WM2003 and WM5, but it seems
-	     * to be working on WM6. All are tested on emulator though.
-	     * Removing this also seem to work (i.e. data is appended), so
-	     * I guess this flag is "optional".
-	     * See http://trac.pjsip.org/repos/ticket/825
-	     */
+            /* FILE_APPEND_DATA is invalid on WM2003 and WM5, but it seems
+             * to be working on WM6. All are tested on emulator though.
+             * Removing this also seem to work (i.e. data is appended), so
+             * I guess this flag is "optional".
+             * See https://github.com/pjsip/pjproject/issues/825
+             */
             dwDesiredAccess |= FILE_APPEND_DATA;
 #endif
-	    dwCreationDisposition |= OPEN_ALWAYS;
+            dwCreationDisposition |= OPEN_ALWAYS;
         } else {
             dwDesiredAccess &= ~(FILE_APPEND_DATA);
             dwCreationDisposition |= CREATE_ALWAYS;
@@ -119,36 +118,36 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
         return PJ_EINVAL;
     }
 
-    dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+    dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
     
     dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8  
     hFile = CreateFile2(PJ_STRING_TO_NATIVE(pathname,
-			wpathname, sizeof(wpathname)),
-			dwDesiredAccess, dwShareMode, dwCreationDisposition,
-			NULL);
+                        wpathname, sizeof(wpathname)),
+                        dwDesiredAccess, dwShareMode, dwCreationDisposition,
+                        NULL);
 #else
     hFile = CreateFile(PJ_STRING_TO_NATIVE(pathname,
-		       wpathname, sizeof(wpathname)),
-		       dwDesiredAccess, dwShareMode, NULL,
-		       dwCreationDisposition, dwFlagsAndAttributes, NULL);
+                       wpathname, sizeof(wpathname)),
+                       dwDesiredAccess, dwShareMode, NULL,
+                       dwCreationDisposition, dwFlagsAndAttributes, NULL);
 #endif
 
     if (hFile == INVALID_HANDLE_VALUE) {
-	DWORD lastErr = GetLastError();	
+        DWORD lastErr = GetLastError(); 
         *fd = 0;
         return PJ_RETURN_OS_ERROR(lastErr);
     }
 
     if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
-	pj_status_t status;
+        pj_status_t status;
 
-	status = pj_file_setpos(hFile, 0, PJ_SEEK_END);
-	if (status != PJ_SUCCESS) {
-	    pj_file_close(hFile);
-	    return status;
-	}
+        status = pj_file_setpos(hFile, 0, PJ_SEEK_END);
+        if (status != PJ_SUCCESS) {
+            pj_file_close(hFile);
+            return status;
+        }
     }
 
     *fd = hFile;
@@ -239,7 +238,7 @@ PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
     }
 
     if (set_file_pointer(fd, offset, &newPos, dwMoveMethod) != PJ_SUCCESS) {
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
     }
 
     return PJ_SUCCESS;
@@ -249,7 +248,7 @@ PJ_DEF(pj_status_t) pj_file_getpos( pj_oshandle_t fd,
                                     pj_off_t *pos)
 {
     if (set_file_pointer(fd, 0, pos, FILE_CURRENT) != PJ_SUCCESS) {
-	return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_RETURN_OS_ERROR(GetLastError());
     }
 
     return PJ_SUCCESS;
@@ -262,7 +261,7 @@ PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
     rc = FlushFileBuffers(fd);
 
     if (!rc) {
-	DWORD dwStatus = GetLastError();
+        DWORD dwStatus = GetLastError();
         if (dwStatus != 0)
             return PJ_RETURN_OS_ERROR(dwStatus);
     }

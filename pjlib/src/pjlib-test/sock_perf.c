@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -78,7 +77,7 @@ static int sock_producer_consumer(int sock_type,
     total_received = 0;
     for (i=0; i<loop; ++i) {
         pj_ssize_t sent, part_received, received;
-	pj_time_val delay;
+        pj_time_val delay;
 
         sent = buf_size;
         rc = pj_sock_send(producer, outgoing_buffer, &sent, 0);
@@ -94,34 +93,34 @@ static int sock_producer_consumer(int sock_type,
         received = 0;
         do {
             part_received = buf_size-received;
-	    rc = pj_sock_recv(consumer, incoming_buffer+received, 
-			      &part_received, 0);
-	    if (rc != PJ_SUCCESS) {
-	        app_perror("...recv error", rc);
-	        return -70;
-	    }
+            rc = pj_sock_recv(consumer, incoming_buffer+received, 
+                              &part_received, 0);
+            if (rc != PJ_SUCCESS) {
+                app_perror("...recv error", rc);
+                return -70;
+            }
             if (part_received <= 0) {
                 PJ_LOG(3,("", "...error: socket has closed (part_received=%d)!",
                           part_received));
                 return -73;
             }
-	    if ((pj_size_t)part_received != buf_size-received) {
+            if ((pj_size_t)part_received != buf_size-received) {
                 if (sock_type != pj_SOCK_STREAM()) {
-	            PJ_LOG(3,("", "...error: expecting %u bytes, got %u bytes",
+                    PJ_LOG(3,("", "...error: expecting %u bytes, got %u bytes",
                               buf_size-received, part_received));
-	            return -76;
+                    return -76;
                 }
-	    }
+            }
             received += part_received;
         } while ((pj_size_t)received < buf_size);
 
-	total_received += received;
+        total_received += received;
 
-	/* Stop test if it's been runnign for more than 10 secs. */
-	pj_get_timestamp(&stop);
-	delay = pj_elapsed_time(&start, &stop);
-	if (delay.sec > 10)
-	    break;
+        /* Stop test if it's been runnign for more than 10 secs. */
+        pj_get_timestamp(&stop);
+        delay = pj_elapsed_time(&start, &stop);
+        if (delay.sec > 10)
+            break;
     }
 
     /* Stop timer. */
@@ -162,7 +161,7 @@ int sock_perf_test(void)
 
     /* Disable this test on Symbian since UDP connect()/send() failed
      * with S60 3rd edition (including MR2).
-     * See http://www.pjsip.org/trac/ticket/264
+     * See https://github.com/pjsip/pjproject/issues/264
      */    
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     /* Benchmarking UDP */

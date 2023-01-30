@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -36,4 +35,4 @@ pj_bool_t showNotification(pjsua_call_id call_id);
 PJ_END_DECL
 
 
-#endif	/* __GUI_H__ */
+#endif  /* __GUI_H__ */

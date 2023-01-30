@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -276,24 +275,24 @@ typedef enum pjmedia_tranport_media_option
 typedef struct pjmedia_sock_info
 {
     /** The RTP socket handle */
-    pj_sock_t	    rtp_sock;
+    pj_sock_t       rtp_sock;
 
     /** Address to be advertised as the local address for the RTP
      *  socket, which does not need to be equal as the bound
      *  address (for example, this address can be the address resolved
      *  with STUN).
      */
-    pj_sockaddr	    rtp_addr_name;
+    pj_sockaddr     rtp_addr_name;
 
     /** The RTCP socket handle. */
-    pj_sock_t	    rtcp_sock;
+    pj_sock_t       rtcp_sock;
 
     /** Address to be advertised as the local address for the RTCP
      *  socket, which does not need to be equal as the bound
      *  address (for example, this address can be the address resolved
      *  with STUN).
      */
-    pj_sockaddr	    rtcp_addr_name;
+    pj_sockaddr     rtcp_addr_name;
 
 } pjmedia_sock_info;
 
@@ -309,7 +308,7 @@ struct pjmedia_transport_op
      * Application should call #pjmedia_transport_get_info() instead
      */
     pj_status_t (*get_info)(pjmedia_transport *tp,
-			    pjmedia_transport_info *info);
+                            pjmedia_transport_info *info);
 
     /**
      * This function is called by the stream when the transport is about
@@ -322,16 +321,16 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*attach)(pjmedia_transport *tp,
-			  void *user_data,
-			  const pj_sockaddr_t *rem_addr,
-			  const pj_sockaddr_t *rem_rtcp,
-			  unsigned addr_len,
-			  void (*rtp_cb)(void *user_data,
-					 void *pkt,
-					 pj_ssize_t size),
-			  void (*rtcp_cb)(void *user_data,
-					  void *pkt,
-					  pj_ssize_t size));
+                          void *user_data,
+                          const pj_sockaddr_t *rem_addr,
+                          const pj_sockaddr_t *rem_rtcp,
+                          unsigned addr_len,
+                          void (*rtp_cb)(void *user_data,
+                                         void *pkt,
+                                         pj_ssize_t size),
+                          void (*rtcp_cb)(void *user_data,
+                                          void *pkt,
+                                          pj_ssize_t size));
 
     /**
      * This function is called by the stream when the stream no longer
@@ -345,7 +344,7 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     void (*detach)(pjmedia_transport *tp,
-		   void *user_data);
+                   void *user_data);
 
     /**
      * This function is called by the stream to send RTP packet using the 
@@ -355,8 +354,8 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*send_rtp)(pjmedia_transport *tp,
-			    const void *pkt,
-			    pj_size_t size);
+                            const void *pkt,
+                            pj_size_t size);
 
     /**
      * This function is called by the stream to send RTCP packet using the
@@ -366,8 +365,8 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*send_rtcp)(pjmedia_transport *tp,
-			     const void *pkt,
-			     pj_size_t size);
+                             const void *pkt,
+                             pj_size_t size);
 
     /**
      * This function is called by the stream to send RTCP packet using the
@@ -378,10 +377,10 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*send_rtcp2)(pjmedia_transport *tp,
-			      const pj_sockaddr_t *addr,
-			      unsigned addr_len,
-			      const void *pkt,
-			      pj_size_t size);
+                              const pj_sockaddr_t *addr,
+                              unsigned addr_len,
+                              const void *pkt,
+                              pj_size_t size);
 
     /**
      * Prepare the transport for a new media session.
@@ -390,10 +389,10 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*media_create)(pjmedia_transport *tp,
-				pj_pool_t *sdp_pool,
-				unsigned options,
-				const pjmedia_sdp_session *remote_sdp,
-				unsigned media_index);
+                                pj_pool_t *sdp_pool,
+                                unsigned options,
+                                const pjmedia_sdp_session *remote_sdp,
+                                unsigned media_index);
 
     /**
      * This function is called by application to generate the SDP parts
@@ -403,10 +402,10 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*encode_sdp)(pjmedia_transport *tp,
-			      pj_pool_t *sdp_pool,
-			      pjmedia_sdp_session *sdp_local,
-			      const pjmedia_sdp_session *rem_sdp,
-			      unsigned media_index);
+                              pj_pool_t *sdp_pool,
+                              pjmedia_sdp_session *sdp_local,
+                              const pjmedia_sdp_session *rem_sdp,
+                              unsigned media_index);
 
     /**
      * This function is called by application to start the transport
@@ -416,10 +415,10 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*media_start) (pjmedia_transport *tp,
-			        pj_pool_t *tmp_pool,
-			        const pjmedia_sdp_session *sdp_local,
-			        const pjmedia_sdp_session *sdp_remote,
-				unsigned media_index);
+                                pj_pool_t *tmp_pool,
+                                const pjmedia_sdp_session *sdp_local,
+                                const pjmedia_sdp_session *sdp_remote,
+                                unsigned media_index);
 
     /**
      * This function is called by application to stop the transport.
@@ -436,8 +435,8 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*simulate_lost)(pjmedia_transport *tp,
-				 pjmedia_dir dir,
-				 unsigned pct_lost);
+                                 pjmedia_dir dir,
+                                 unsigned pct_lost);
 
     /**
      * This function can be called to destroy this transport.
@@ -457,7 +456,7 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*attach2)(pjmedia_transport *tp,
-			   pjmedia_transport_attach_param *att_param);
+                           pjmedia_transport_attach_param *att_param);
 };
 
 
@@ -504,7 +503,7 @@ typedef enum pjmedia_transport_type
 struct pjmedia_transport
 {
     /** Transport name (for logging purpose). */
-    char		     name[PJ_MAX_OBJ_NAME];
+    char                     name[PJ_MAX_OBJ_NAME];
 
     /** Transport type. */
     pjmedia_transport_type   type;
@@ -513,7 +512,7 @@ struct pjmedia_transport
     pjmedia_transport_op    *op;
 
     /** Application/user data */
-    void		    *user_data;
+    void                    *user_data;
 };
 
 /**
@@ -532,12 +531,17 @@ typedef struct pjmedia_transport_specific_info
     /**
      * Specify storage buffer size of transport specific info.
      */
-    int			     cbsize;
+    int                      cbsize;
 
     /**
      * Storage buffer of transport specific info.
      */
-    char		     buffer[PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE];
+    char                     buffer[PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE];
+
+    /**
+     * The media transport instance.
+     */
+    pjmedia_transport       *tp;
 
 } pjmedia_transport_specific_info;
 
@@ -558,8 +562,8 @@ struct pjmedia_transport_info
      * Remote address where RTP/RTCP originated from. In case this transport
      * hasn't ever received packet, the address can be invalid (zero).
      */
-    pj_sockaddr	    src_rtp_name;
-    pj_sockaddr	    src_rtcp_name;
+    pj_sockaddr     src_rtp_name;
+    pj_sockaddr     src_rtcp_name;
 
     /**
      * Specifies number of transport specific info included.
@@ -581,29 +585,29 @@ typedef struct pjmedia_tp_cb_param
     /**
      * User data.
      */
-    void 	       *user_data;
+    void               *user_data;
 
     /**
      * Packet buffer.
      */
-    void 	       *pkt;
+    void               *pkt;
 
     /**
      * Packet size.
      */
-    pj_ssize_t 		size;
+    pj_ssize_t          size;
 
     /**
      * Packet's source address.
      */
-    pj_sockaddr	       *src_addr;
+    pj_sockaddr        *src_addr;
 
     /**
      * Should media transport switch remote address to \a rtp_src_addr?
      * Media transport should initialize it to PJ_FALSE, and application
      * can change the value as necessary.
      */
-    pj_bool_t	        rem_switch;
+    pj_bool_t           rem_switch;
 
 } pjmedia_tp_cb_param;
 
@@ -666,7 +670,7 @@ struct pjmedia_transport_attach_param
 /**
  * Initialize transport info.
  *
- * @param info	    Transport info to be initialized.
+ * @param info      Transport info to be initialized.
  */
 PJ_INLINE(void) pjmedia_transport_info_init(pjmedia_transport_info *info)
 {
@@ -681,16 +685,16 @@ PJ_INLINE(void) pjmedia_transport_info_init(pjmedia_transport_info *info)
  * which describes the local address of the transport, and would be needed
  * for example to fill in the "c=" and "m=" line of local SDP.
  *
- * @param tp	    The transport.
- * @param info	    Media transport info to be initialized.
+ * @param tp        The transport.
+ * @param info      Media transport info to be initialized.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
-						  pjmedia_transport_info *info)
+                                                  pjmedia_transport_info *info)
 {
     if (tp && tp->op && tp->op->get_info)
-	return (*tp->op->get_info)(tp, info);
+        return (*tp->op->get_info)(tp, info);
     
     return PJ_ENOTSUP;
 }
@@ -700,20 +704,43 @@ PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
  * Utility API to get transport type specific info from the specified media
  * transport info.
  * 
- * @param info	    Media transport info.
- * @param type	    Media transport type.
+ * @param info      Media transport info.
+ * @param type      Media transport type.
  *
- * @return	    Pointer to media transport specific info, or NULL if
- * 		    specific info for the transport type is not found.
+ * @return          Pointer to media transport specific info, or NULL if
+ *                  specific info for the transport type is not found.
  */
 PJ_INLINE(void*) pjmedia_transport_info_get_spc_info(
-						pjmedia_transport_info *info,
-						pjmedia_transport_type type)
+                                                pjmedia_transport_info *info,
+                                                pjmedia_transport_type type)
 {
     unsigned i;
     for (i = 0; i < info->specific_info_cnt; ++i) {
-	if (info->spc_info[i].type == type)
-	    return (void*)info->spc_info[i].buffer;
+        if (info->spc_info[i].type == type)
+            return (void*)info->spc_info[i].buffer;
+    }
+    return NULL;
+}
+
+
+/**
+ * Utility API to get the transport instance from the specified media
+ * transport info.
+ *
+ * @param info      Media transport info.
+ * @param type      Media transport type.
+ *
+ * @return          The media transport instance, or NULL if
+ *                  the transport type is not found.
+ */
+PJ_INLINE(pjmedia_transport*) pjmedia_transport_info_get_transport(
+                                                pjmedia_transport_info *info,
+                                                pjmedia_transport_type type)
+{
+    unsigned i;
+    for (i = 0; i < info->specific_info_cnt; ++i) {
+        if (info->spc_info[i].type == type)
+            return info->spc_info[i].tp;
     }
     return NULL;
 }
@@ -725,22 +752,22 @@ PJ_INLINE(void*) pjmedia_transport_info_get_spc_info(
  * the transport if it is implemented, otherwise it calls <tt>attach()</tt>
  * member of the transport.
  *
- * @param tp	    The media transport.
+ * @param tp        The media transport.
  * @param att_param The transport attach param.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_attach2(pjmedia_transport *tp,
                                   pjmedia_transport_attach_param *att_param)
 {
     if (tp->op->attach2) {
-	return (*tp->op->attach2)(tp, att_param);
+        return (*tp->op->attach2)(tp, att_param);
     } else {
-	return (*tp->op->attach)(tp, att_param->user_data, 
-				 (pj_sockaddr_t*)&att_param->rem_addr, 
-				 (pj_sockaddr_t*)&att_param->rem_rtcp, 
-				 att_param->addr_len, att_param->rtp_cb, 
-				 att_param->rtcp_cb);
+        return (*tp->op->attach)(tp, att_param->user_data, 
+                                 (pj_sockaddr_t*)&att_param->rem_addr, 
+                                 (pj_sockaddr_t*)&att_param->rem_rtcp, 
+                                 att_param->addr_len, att_param->rtp_cb, 
+                                 att_param->rtcp_cb);
     }
 }
 
@@ -750,56 +777,56 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach2(pjmedia_transport *tp,
  * This is just a simple wrapper which calls <tt>attach()</tt> member of 
  * the transport.
  *
- * @param tp	    The media transport.
+ * @param tp        The media transport.
  * @param user_data Arbitrary user data to be set when the callbacks are 
- *		    called.
+ *                  called.
  * @param rem_addr  Remote RTP address to send RTP packet to.
  * @param rem_rtcp  Optional remote RTCP address. If the argument is NULL
- *		    or if the address is zero, the RTCP address will be
- *		    calculated from the RTP address (which is RTP port
- *		    plus one).
+ *                  or if the address is zero, the RTCP address will be
+ *                  calculated from the RTP address (which is RTP port
+ *                  plus one).
  * @param addr_len  Length of the remote address.
  * @param rtp_cb    Callback to be called when RTP packet is received on
- *		    the transport.
+ *                  the transport.
  * @param rtcp_cb   Callback to be called when RTCP packet is received on
- *		    the transport.
+ *                  the transport.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
-					        void *user_data,
-					        const pj_sockaddr_t *rem_addr,
-						const pj_sockaddr_t *rem_rtcp,
-					        unsigned addr_len,
-					        void (*rtp_cb)(void *user_data,
-							       void *pkt,
-							       pj_ssize_t),
-					        void (*rtcp_cb)(void *usr_data,
-							        void*pkt,
-							        pj_ssize_t))
+                                                void *user_data,
+                                                const pj_sockaddr_t *rem_addr,
+                                                const pj_sockaddr_t *rem_rtcp,
+                                                unsigned addr_len,
+                                                void (*rtp_cb)(void *user_data,
+                                                               void *pkt,
+                                                               pj_ssize_t),
+                                                void (*rtcp_cb)(void *usr_data,
+                                                                void*pkt,
+                                                                pj_ssize_t))
 {
     if (tp->op->attach2) {
-	pjmedia_transport_attach_param param;
+        pjmedia_transport_attach_param param;
 
-	pj_bzero(&param, sizeof(param));
-	param.user_data = user_data;
-	pj_sockaddr_cp(&param.rem_addr, rem_addr);
-	if (rem_rtcp && pj_sockaddr_has_addr(rem_rtcp)) {
-	    pj_sockaddr_cp(&param.rem_rtcp, rem_rtcp);
-	} else {
-	    /* Copy RTCP address from the RTP address, with port + 1 */
-	    pj_memcpy(&param.rem_rtcp, rem_addr, addr_len);
-	    pj_sockaddr_set_port(&param.rem_rtcp,
-				 pj_sockaddr_get_port(rem_addr) + 1);
-	}
-	param.addr_len = addr_len;
-	param.rtp_cb = rtp_cb;
-	param.rtcp_cb = rtcp_cb;
+        pj_bzero(&param, sizeof(param));
+        param.user_data = user_data;
+        pj_sockaddr_cp(&param.rem_addr, rem_addr);
+        if (rem_rtcp && pj_sockaddr_has_addr(rem_rtcp)) {
+            pj_sockaddr_cp(&param.rem_rtcp, rem_rtcp);
+        } else {
+            /* Copy RTCP address from the RTP address, with port + 1 */
+            pj_memcpy(&param.rem_rtcp, rem_addr, addr_len);
+            pj_sockaddr_set_port(&param.rem_rtcp,
+                                 pj_sockaddr_get_port(rem_addr) + 1);
+        }
+        param.addr_len = addr_len;
+        param.rtp_cb = rtp_cb;
+        param.rtcp_cb = rtcp_cb;
 
-	return (*tp->op->attach2)(tp, &param);
+        return (*tp->op->attach2)(tp, &param);
     } else {
-	return (*tp->op->attach)(tp, user_data, rem_addr, rem_rtcp, addr_len,
-			         rtp_cb, rtcp_cb);
+        return (*tp->op->attach)(tp, user_data, rem_addr, rem_rtcp, addr_len,
+                                 rtp_cb, rtcp_cb);
     }
 }
 
@@ -812,12 +839,12 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
  * Application may re-attach the media transport to another transport user
  * (e.g. stream) after the transport has been detached.
  *
- * @param tp	    The media transport.
+ * @param tp        The media transport.
  * @param user_data User data which must match the previously set value
- *		    on attachment.
+ *                  on attachment.
  */
 PJ_INLINE(void) pjmedia_transport_detach(pjmedia_transport *tp,
-					 void *user_data)
+                                         void *user_data)
 {
     (*tp->op->detach)(tp, user_data);
 }
@@ -829,15 +856,15 @@ PJ_INLINE(void) pjmedia_transport_detach(pjmedia_transport *tp,
  * RTP packet will be delivered to the destination address specified in
  * #pjmedia_transport_attach() function.
  *
- * @param tp	    The media transport.
- * @param pkt	    The packet to send.
- * @param size	    Size of the packet.
+ * @param tp        The media transport.
+ * @param pkt       The packet to send.
+ * @param size      Size of the packet.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_send_rtp(pjmedia_transport *tp,
-						  const void *pkt,
-						  pj_size_t size)
+                                                  const void *pkt,
+                                                  pj_size_t size)
 {
     return (*tp->op->send_rtp)(tp, pkt, size);
 }
@@ -849,15 +876,15 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtp(pjmedia_transport *tp,
  * RTCP packet will be delivered to the destination address specified in
  * #pjmedia_transport_attach() function.
  *
- * @param tp	    The media transport.
- * @param pkt	    The packet to send.
- * @param size	    Size of the packet.
+ * @param tp        The media transport.
+ * @param pkt       The packet to send.
+ * @param size      Size of the packet.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
-						  const void *pkt,
-						  pj_size_t size)
+                                                  const void *pkt,
+                                                  pj_size_t size)
 {
     return (*tp->op->send_rtcp)(tp, pkt, size);
 }
@@ -870,19 +897,19 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
  * param addr, if addr is NULL, RTCP packet will be delivered to destination 
  * address specified in #pjmedia_transport_attach() function.
  *
- * @param tp	    The media transport.
- * @param addr	    The destination address.
+ * @param tp        The media transport.
+ * @param addr      The destination address.
  * @param addr_len  Length of destination address.
- * @param pkt	    The packet to send.
- * @param size	    Size of the packet.
+ * @param pkt       The packet to send.
+ * @param size      Size of the packet.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp2(pjmedia_transport *tp,
-						    const pj_sockaddr_t *addr,
-						    unsigned addr_len,
-						    const void *pkt,
-						    pj_size_t size)
+                                                    const pj_sockaddr_t *addr,
+                                                    unsigned addr_len,
+                                                    const void *pkt,
+                                                    pj_size_t size)
 {
     return (*tp->op->send_rtcp2)(tp, addr, addr_len, pkt, size);
 }
@@ -896,24 +923,24 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp2(pjmedia_transport *tp,
  * This is just a simple wrapper which calls <tt>media_create()</tt> member 
  * of the transport.
  *
- * @param tp		The media transport.
- * @param sdp_pool	Pool object to allocate memory related to SDP
- *			messaging components.
- * @param options	Option flags, from #pjmedia_tranport_media_option
- * @param rem_sdp	Remote SDP if local SDP is an answer, otherwise
- *			specify NULL if SDP is an offer.
- * @param media_index	Media index in SDP.
+ * @param tp            The media transport.
+ * @param sdp_pool      Pool object to allocate memory related to SDP
+ *                      messaging components.
+ * @param options       Option flags, from #pjmedia_tranport_media_option
+ * @param rem_sdp       Remote SDP if local SDP is an answer, otherwise
+ *                      specify NULL if SDP is an offer.
+ * @param media_index   Media index in SDP.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
-				    pj_pool_t *sdp_pool,
-				    unsigned options,
-				    const pjmedia_sdp_session *rem_sdp,
-				    unsigned media_index)
+                                    pj_pool_t *sdp_pool,
+                                    unsigned options,
+                                    const pjmedia_sdp_session *rem_sdp,
+                                    unsigned media_index)
 {
     return (*tp->op->media_create)(tp, sdp_pool, options, rem_sdp, 
-				   media_index);
+                                   media_index);
 }
 
 
@@ -925,22 +952,22 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
  * This is just a simple wrapper which calls <tt>encode_sdp()</tt> member 
  * of the transport.
  *
- * @param tp		The media transport.
- * @param sdp_pool	Pool object to allocate memory related to SDP
- *			messaging components.
- * @param sdp		The local SDP to be filled in information from the
- *			media transport.
- * @param rem_sdp	Remote SDP if local SDP is an answer, otherwise
- *			specify NULL if SDP is an offer.
- * @param media_index	Media index in SDP.
+ * @param tp            The media transport.
+ * @param sdp_pool      Pool object to allocate memory related to SDP
+ *                      messaging components.
+ * @param sdp           The local SDP to be filled in information from the
+ *                      media transport.
+ * @param rem_sdp       Remote SDP if local SDP is an answer, otherwise
+ *                      specify NULL if SDP is an offer.
+ * @param media_index   Media index in SDP.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_encode_sdp(pjmedia_transport *tp,
-					    pj_pool_t *sdp_pool,
-					    pjmedia_sdp_session *sdp,
-					    const pjmedia_sdp_session *rem_sdp,
-					    unsigned media_index)
+                                            pj_pool_t *sdp_pool,
+                                            pjmedia_sdp_session *sdp,
+                                            const pjmedia_sdp_session *rem_sdp,
+                                            unsigned media_index)
 {
     return (*tp->op->encode_sdp)(tp, sdp_pool, sdp, rem_sdp, media_index);
 }
@@ -956,22 +983,22 @@ PJ_INLINE(pj_status_t) pjmedia_transport_encode_sdp(pjmedia_transport *tp,
  * This is just a simple wrapper which calls <tt>media_start()</tt> member 
  * of the transport.
  *
- * @param tp		The media transport.
- * @param tmp_pool	The memory pool for allocating temporary objects.
- * @param sdp_local	Local SDP.
- * @param sdp_remote	Remote SDP.
- * @param media_index	Media index in the SDP.
+ * @param tp            The media transport.
+ * @param tmp_pool      The memory pool for allocating temporary objects.
+ * @param sdp_local     Local SDP.
+ * @param sdp_remote    Remote SDP.
+ * @param media_index   Media index in the SDP.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
-				    pj_pool_t *tmp_pool,
-				    const pjmedia_sdp_session *sdp_local,
-				    const pjmedia_sdp_session *sdp_remote,
-				    unsigned media_index)
+                                    pj_pool_t *tmp_pool,
+                                    const pjmedia_sdp_session *sdp_local,
+                                    const pjmedia_sdp_session *sdp_remote,
+                                    unsigned media_index)
 {
     return (*tp->op->media_start)(tp, tmp_pool, sdp_local, sdp_remote, 
-				  media_index);
+                                  media_index);
 }
 
 
@@ -982,9 +1009,9 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
  * This is just a simple wrapper which calls <tt>media_stop()</tt> member 
  * of the transport.
  *
- * @param tp		The media transport.
+ * @param tp            The media transport.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_media_stop(pjmedia_transport *tp)
 {
@@ -996,16 +1023,16 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_stop(pjmedia_transport *tp)
  * <tt>destroy()</tt> member of the transport. This function will free
  * all resources created by this transport (such as sockets, memory, etc.).
  *
- * @param tp	    The media transport.
+ * @param tp        The media transport.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_close(pjmedia_transport *tp)
 {
     if (tp->op->destroy)
-	return (*tp->op->destroy)(tp);
+        return (*tp->op->destroy)(tp);
     else
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 }
 
 /**
@@ -1013,16 +1040,16 @@ PJ_INLINE(pj_status_t) pjmedia_transport_close(pjmedia_transport *tp)
  * When enabled, the transport will randomly drop packets to the specified
  * direction.
  *
- * @param tp	    The media transport.
- * @param dir	    Media direction to which packets will be randomly dropped.
+ * @param tp        The media transport.
+ * @param dir       Media direction to which packets will be randomly dropped.
  * @param pct_lost  Percent lost (0-100). Set to zero to disable packet
- *		    lost simulation.
+ *                  lost simulation.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_simulate_lost(pjmedia_transport *tp,
-						       pjmedia_dir dir,
-						       unsigned pct_lost)
+                                                       pjmedia_dir dir,
+                                                       unsigned pct_lost)
 {
     return (*tp->op->simulate_lost)(tp, dir, pct_lost);
 }
@@ -1035,5 +1062,5 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_TRANSPORT_H__ */
+#endif  /* __PJMEDIA_TRANSPORT_H__ */
 

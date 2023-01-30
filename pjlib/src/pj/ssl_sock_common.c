@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -58,26 +57,26 @@ PJ_DEF(void) pj_ssl_sock_param_default(pj_ssl_sock_param *param)
  * Duplicate SSL socket parameter.
  */
 PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool, 
-				     pj_ssl_sock_param *dst,
-				     const pj_ssl_sock_param *src)
+                                     pj_ssl_sock_param *dst,
+                                     const pj_ssl_sock_param *src)
 {
     /* Init secure socket param */
     pj_memcpy(dst, src, sizeof(*dst));
     if (src->ciphers_num > 0) {
-	unsigned i;
-	dst->ciphers = (pj_ssl_cipher*)
-			pj_pool_calloc(pool, src->ciphers_num, 
-				       sizeof(pj_ssl_cipher));
-	for (i = 0; i < src->ciphers_num; ++i)
-	    dst->ciphers[i] = src->ciphers[i];
+        unsigned i;
+        dst->ciphers = (pj_ssl_cipher*)
+                        pj_pool_calloc(pool, src->ciphers_num, 
+                                       sizeof(pj_ssl_cipher));
+        for (i = 0; i < src->ciphers_num; ++i)
+            dst->ciphers[i] = src->ciphers[i];
     }
 
     if (src->curves_num > 0) {
-	unsigned i;
-    	dst->curves = (pj_ssl_curve *)pj_pool_calloc(pool, src->curves_num,
-					   	     sizeof(pj_ssl_curve));
-	for (i = 0; i < src->curves_num; ++i)
-	    dst->curves[i] = src->curves[i];
+        unsigned i;
+        dst->curves = (pj_ssl_curve *)pj_pool_calloc(pool, src->curves_num,
+                                                     sizeof(pj_ssl_curve));
+        for (i = 0; i < src->curves_num; ++i)
+            dst->curves[i] = src->curves[i];
     }
 
     if (src->server_name.slen) {
@@ -86,21 +85,21 @@ PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool,
     }
 
     if (src->sigalgs.slen) {
-    	/* Sigalgs name must be null-terminated */
-    	pj_strdup_with_null(pool, &dst->sigalgs, &src->sigalgs);
+        /* Sigalgs name must be null-terminated */
+        pj_strdup_with_null(pool, &dst->sigalgs, &src->sigalgs);
     }
 
     if (src->entropy_path.slen) {
-    	/* Path name must be null-terminated */
-    	pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);
+        /* Path name must be null-terminated */
+        pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);
     }
 }
 
 
 PJ_DEF(pj_status_t) pj_ssl_cert_get_verify_status_strings(
-						pj_uint32_t verify_status, 
-						const char *error_strings[],
-						unsigned *count)
+                                                pj_uint32_t verify_status, 
+                                                const char *error_strings[],
+                                                unsigned *count)
 {
     unsigned i = 0, shift_idx = 0;
     unsigned unknown = 0;
@@ -109,79 +108,79 @@ PJ_DEF(pj_status_t) pj_ssl_cert_get_verify_status_strings(
     PJ_ASSERT_RETURN(error_strings && count, PJ_EINVAL);
 
     if (verify_status == PJ_SSL_CERT_ESUCCESS && *count) {
-	error_strings[0] = "OK";
-	*count = 1;
-	return PJ_SUCCESS;
+        error_strings[0] = "OK";
+        *count = 1;
+        return PJ_SUCCESS;
     }
 
     errs = verify_status;
 
     while (errs && i < *count) {
-	pj_uint32_t err;
-	const char *p = NULL;
+        pj_uint32_t err;
+        const char *p = NULL;
 
-	if ((errs & 1) == 0) {
-	    shift_idx++;
-	    errs >>= 1;
-	    continue;
-	}
+        if ((errs & 1) == 0) {
+            shift_idx++;
+            errs >>= 1;
+            continue;
+        }
 
-	err = (1 << shift_idx);
+        err = (1 << shift_idx);
 
-	switch (err) {
-	case PJ_SSL_CERT_EISSUER_NOT_FOUND:
-	    p = "The issuer certificate cannot be found";
-	    break;
-	case PJ_SSL_CERT_EUNTRUSTED:
-	    p = "The certificate is untrusted";
-	    break;
-	case PJ_SSL_CERT_EVALIDITY_PERIOD:
-	    p = "The certificate has expired or not yet valid";
-	    break;
-	case PJ_SSL_CERT_EINVALID_FORMAT:
-	    p = "One or more fields of the certificate cannot be decoded "
-		"due to invalid format";
-	    break;
-	case PJ_SSL_CERT_EISSUER_MISMATCH:
-	    p = "The issuer info in the certificate does not match to the "
-		"(candidate) issuer certificate";
-	    break;
-	case PJ_SSL_CERT_ECRL_FAILURE:
-	    p = "The CRL certificate cannot be found or cannot be read "
-		"properly";
-	    break;
-	case PJ_SSL_CERT_EREVOKED:
-	    p = "The certificate has been revoked";
-	    break;
-	case PJ_SSL_CERT_EINVALID_PURPOSE:
-	    p = "The certificate or CA certificate cannot be used for the "
-		"specified purpose";
-	    break;
-	case PJ_SSL_CERT_ECHAIN_TOO_LONG:
-	    p = "The certificate chain length is too long";
-	    break;
-	case PJ_SSL_CERT_EIDENTITY_NOT_MATCH:
-	    p = "The server identity does not match to any identities "
-		"specified in the certificate";
-	    break;
-	case PJ_SSL_CERT_EUNKNOWN:
-	default:
-	    unknown++;
-	    break;
-	}
-	
-	/* Set error string */
-	if (p)
-	    error_strings[i++] = p;
+        switch (err) {
+        case PJ_SSL_CERT_EISSUER_NOT_FOUND:
+            p = "The issuer certificate cannot be found";
+            break;
+        case PJ_SSL_CERT_EUNTRUSTED:
+            p = "The certificate is untrusted";
+            break;
+        case PJ_SSL_CERT_EVALIDITY_PERIOD:
+            p = "The certificate has expired or not yet valid";
+            break;
+        case PJ_SSL_CERT_EINVALID_FORMAT:
+            p = "One or more fields of the certificate cannot be decoded "
+                "due to invalid format";
+            break;
+        case PJ_SSL_CERT_EISSUER_MISMATCH:
+            p = "The issuer info in the certificate does not match to the "
+                "(candidate) issuer certificate";
+            break;
+        case PJ_SSL_CERT_ECRL_FAILURE:
+            p = "The CRL certificate cannot be found or cannot be read "
+                "properly";
+            break;
+        case PJ_SSL_CERT_EREVOKED:
+            p = "The certificate has been revoked";
+            break;
+        case PJ_SSL_CERT_EINVALID_PURPOSE:
+            p = "The certificate or CA certificate cannot be used for the "
+                "specified purpose";
+            break;
+        case PJ_SSL_CERT_ECHAIN_TOO_LONG:
+            p = "The certificate chain length is too long";
+            break;
+        case PJ_SSL_CERT_EIDENTITY_NOT_MATCH:
+            p = "The server identity does not match to any identities "
+                "specified in the certificate";
+            break;
+        case PJ_SSL_CERT_EUNKNOWN:
+        default:
+            unknown++;
+            break;
+        }
+        
+        /* Set error string */
+        if (p)
+            error_strings[i++] = p;
 
-	/* Next */
-	shift_idx++;
-	errs >>= 1;
+        /* Next */
+        shift_idx++;
+        errs >>= 1;
     }
 
     /* Unknown error */
     if (unknown && i < *count)
-	error_strings[i++] = "Unknown verification error";
+        error_strings[i++] = "Unknown verification error";
 
     *count = i;
 

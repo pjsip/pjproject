@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -27,7 +26,7 @@
 
 /*////////////////////////////////////////////////////////////////////////// */
 /*
-	INTRODUCTION PAGE
+        INTRODUCTION PAGE
  */
 
 /**
@@ -444,7 +443,7 @@
 
 /*////////////////////////////////////////////////////////////////////////// */
 /*
-	BUILDING AND INSTALLING PJLIB
+        BUILDING AND INSTALLING PJLIB
  */
 
 
@@ -580,10 +579,10 @@
  *
  * For Linux kernel target, you are also required to declare the following
  * variables in this file:
- *	- \c KERNEL_DIR: full path of kernel source tree.
- *	- \c KERNEL_ARCH: kernel ARCH options (e.g. "ARCH=um"), or leave blank
- * 	     for default.
- *	- \c PJPROJECT_DIR: full path of PJPROJECT source tree.
+ *      - \c KERNEL_DIR: full path of kernel source tree.
+ *      - \c KERNEL_ARCH: kernel ARCH options (e.g. "ARCH=um"), or leave blank
+ *           for default.
+ *      - \c PJPROJECT_DIR: full path of PJPROJECT source tree.
  *
  * Apart from these, there are also additional steps required to build
  * Linux kernel target, which will be explained in \ref linux_kern_target_subsec.
@@ -666,7 +665,7 @@
  *
  * For building PJLIB for Linux kernel target, there are additional steps required.
  * In general, the additional tasks are:
- *	- Declare some more variables in <b><tt>build.mak</tt></b> file (this
+ *      - Declare some more variables in <b><tt>build.mak</tt></b> file (this
  *        has been explained in \ref build_mak_sec above).
  *      - Perform these two small modifications in kernel source tree.
  *
@@ -692,9 +691,9 @@ script:
  * the additional symbols to be exported in <tt>extra-exports.c</tt> file, and add
  * a this file to be compiled into the kernel:
  *
- *	- Copy the file <tt>extra-exports.c</tt> from <tt>pjlib/src/pj</tt> 
- *	  directory to <tt>$KERNEL_SRC/kernel/</tt> directory.
- *	- Edit <tt>Makefile</tt> in that directory, and add this line
+ *      - Copy the file <tt>extra-exports.c</tt> from <tt>pjlib/src/pj</tt> 
+ *        directory to <tt>$KERNEL_SRC/kernel/</tt> directory.
+ *      - Edit <tt>Makefile</tt> in that directory, and add this line
  *        somewhere after the declaration of that variable:
  \verbatim
 obj-y   += extra-exports.o
@@ -924,11 +923,11 @@ export OS_SOURCES  :=
 # pjlib/build/os-xos.mak:
 #  XOS specific configuration for PJLIB.
 #
-export PJLIB_OBJS += 	os_core_xos.o \
+export PJLIB_OBJS +=    os_core_xos.o \
                         os_error_unix.o \
                         os_time_ansi.o
-export TEST_OBJS +=	main.o
-export TARGETS	    =	pjlib pjlib-test
+export TEST_OBJS +=     main.o
+export TARGETS      =   pjlib pjlib-test
  \endverbatim
  *
  * @subsection new_target_src_sec Create and Edit Source Files
@@ -956,7 +955,7 @@ export TARGETS	    =	pjlib pjlib-test
  *    file accordingly.
  *
  * You will also need to check various files in 
- * <tt><b>include/pj/compat/*.h</b></tt>, to see if they're 
+ * <tt><b>include/pj/compat/xxx.h</b></tt>, to see if they're
  * compatible with your OS.
  *
  * @subsection new_target_build_file_sec Build The Project
@@ -992,5 +991,5 @@ export TARGETS	    =	pjlib pjlib-test
  *    to edit the file or create new file etc.
  */
 
-#endif	/* __PJ_DOXYGEN_H__ */
+#endif  /* __PJ_DOXYGEN_H__ */
 

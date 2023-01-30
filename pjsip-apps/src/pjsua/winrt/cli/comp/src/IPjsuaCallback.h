@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,10 +22,10 @@ namespace PjsuaCLI
 {
     namespace BackEnd
     {
-	public interface class IPjsuaCallback
-	{	
-	    void OnPjsuaStarted(Platform::String ^outStr);
-	    void OnPjsuaStopped(int restart);
-	};
+        public interface class IPjsuaCallback
+        {       
+            void OnPjsuaStarted(Platform::String ^outStr);
+            void OnPjsuaStopped(int restart);
+        };
     }
 }

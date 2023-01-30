@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -43,15 +42,15 @@
  * The G.722 codec implementation is provided as part of pjmedia-codec
  * library, and does not depend on external G.722 codec implementation.
  *
- * \section codec_setting Codec Settings
+ * \section codec_g722_setting Codec Settings
  *
- * \subsection general_setting General Settings
+ * \subsection g722_general_setting General Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
- * \subsection specific_setting Codec Specific Settings
+ * \subsection g722_specific_setting Codec Specific Settings
  *
  * Currently none.
  */
@@ -62,9 +61,9 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register G.722 codec factory to pjmedia endpoint.
  *
- * @param endpt	    The pjmedia endpoint.
+ * @param endpt     The pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g722_init(pjmedia_endpt *endpt);
 
@@ -73,7 +72,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_g722_init(pjmedia_endpt *endpt);
  * Unregister G.722 codec factory from pjmedia endpoint and cleanup
  * resources allocated by the factory.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g722_deinit(void);
 
@@ -86,9 +85,9 @@ PJ_DECL(pj_status_t) pjmedia_codec_g722_deinit(void);
  *
  * Default value is PJMEDIA_G722_DEFAULT_PCM_SHIFT.
  *
- * @param val		The value
+ * @param val           The value
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g722_set_pcm_shift(unsigned val);
 

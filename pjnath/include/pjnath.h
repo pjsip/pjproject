@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -39,6 +38,9 @@
 #include <pjnath/turn_session.h>
 #include <pjnath/turn_sock.h>
 #include <pjnath/types.h>
+
+/* UPnP */
+#include <pjnath/upnp.h>
 
 #endif
 

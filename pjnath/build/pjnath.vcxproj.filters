@@ -50,6 +50,9 @@
     <ClCompile Include="..\src\pjnath\turn_sock.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjnath\upnp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjnath\config.h">
@@ -92,6 +95,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjnath\types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjnath\upnp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\docs\doc_ice.h">

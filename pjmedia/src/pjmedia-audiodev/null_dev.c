@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,31 +22,31 @@
 
 #if PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO
 
-#define THIS_FILE		"null_dev.c"
+#define THIS_FILE               "null_dev.c"
 
 /* null_audio device info */
 struct null_audio_dev_info
 {
-    pjmedia_aud_dev_info	 info;
-    unsigned			 dev_id;
+    pjmedia_aud_dev_info         info;
+    unsigned                     dev_id;
 };
 
 /* null_audio factory */
 struct null_audio_factory
 {
-    pjmedia_aud_dev_factory	 base;
-    pj_pool_t			*pool;
-    pj_pool_factory		*pf;
+    pjmedia_aud_dev_factory      base;
+    pj_pool_t                   *pool;
+    pj_pool_factory             *pf;
 
-    unsigned			 dev_count;
-    struct null_audio_dev_info	*dev_info;
+    unsigned                     dev_count;
+    struct null_audio_dev_info  *dev_info;
 };
 
 /* Sound stream. */
 struct null_audio_stream
 {
-    pjmedia_aud_stream	 base;		    /**< Base stream	       */
-    pjmedia_aud_param	 param;		    /**< Settings	       */
+    pjmedia_aud_stream   base;              /**< Base stream           */
+    pjmedia_aud_param    param;             /**< Settings              */
     pj_pool_t           *pool;              /**< Memory pool.          */
 
     pjmedia_aud_rec_cb   rec_cb;            /**< Capture callback.     */
@@ -62,26 +61,26 @@ static pj_status_t null_factory_destroy(pjmedia_aud_dev_factory *f);
 static pj_status_t null_factory_refresh(pjmedia_aud_dev_factory *f);
 static unsigned    null_factory_get_dev_count(pjmedia_aud_dev_factory *f);
 static pj_status_t null_factory_get_dev_info(pjmedia_aud_dev_factory *f,
-					     unsigned index,
-					     pjmedia_aud_dev_info *info);
+                                             unsigned index,
+                                             pjmedia_aud_dev_info *info);
 static pj_status_t null_factory_default_param(pjmedia_aud_dev_factory *f,
-					      unsigned index,
-					      pjmedia_aud_param *param);
+                                              unsigned index,
+                                              pjmedia_aud_param *param);
 static pj_status_t null_factory_create_stream(pjmedia_aud_dev_factory *f,
-					      const pjmedia_aud_param *param,
-					      pjmedia_aud_rec_cb rec_cb,
-					      pjmedia_aud_play_cb play_cb,
-					      void *user_data,
-					      pjmedia_aud_stream **p_aud_strm);
+                                              const pjmedia_aud_param *param,
+                                              pjmedia_aud_rec_cb rec_cb,
+                                              pjmedia_aud_play_cb play_cb,
+                                              void *user_data,
+                                              pjmedia_aud_stream **p_aud_strm);
 
 static pj_status_t null_stream_get_param(pjmedia_aud_stream *strm,
-					 pjmedia_aud_param *param);
+                                         pjmedia_aud_param *param);
 static pj_status_t null_stream_get_cap(pjmedia_aud_stream *strm,
-				       pjmedia_aud_dev_cap cap,
-				       void *value);
+                                       pjmedia_aud_dev_cap cap,
+                                       void *value);
 static pj_status_t null_stream_set_cap(pjmedia_aud_stream *strm,
-				       pjmedia_aud_dev_cap cap,
-				       const void *value);
+                                       pjmedia_aud_dev_cap cap,
+                                       const void *value);
 static pj_status_t null_stream_start(pjmedia_aud_stream *strm);
 static pj_status_t null_stream_stop(pjmedia_aud_stream *strm);
 static pj_status_t null_stream_destroy(pjmedia_aud_stream *strm);
@@ -139,8 +138,8 @@ static pj_status_t null_factory_init(pjmedia_aud_dev_factory *f)
     /* Initialize input and output devices here */
     nf->dev_count = 1;
     nf->dev_info = (struct null_audio_dev_info*)
- 		   pj_pool_calloc(nf->pool, nf->dev_count,
- 				  sizeof(struct null_audio_dev_info));
+                   pj_pool_calloc(nf->pool, nf->dev_count,
+                                  sizeof(struct null_audio_dev_info));
     ndi = &nf->dev_info[0];
     pj_bzero(ndi, sizeof(*ndi));
     strcpy(ndi->info.name, "null device");
@@ -182,8 +181,8 @@ static unsigned null_factory_get_dev_count(pjmedia_aud_dev_factory *f)
 
 /* API: get device info */
 static pj_status_t null_factory_get_dev_info(pjmedia_aud_dev_factory *f,
-					     unsigned index,
-					     pjmedia_aud_dev_info *info)
+                                             unsigned index,
+                                             pjmedia_aud_dev_info *info)
 {
     struct null_audio_factory *nf = (struct null_audio_factory*)f;
 
@@ -196,8 +195,8 @@ static pj_status_t null_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 
 /* API: create default device parameter */
 static pj_status_t null_factory_default_param(pjmedia_aud_dev_factory *f,
-					      unsigned index,
-					      pjmedia_aud_param *param)
+                                              unsigned index,
+                                              pjmedia_aud_param *param)
 {
     struct null_audio_factory *nf = (struct null_audio_factory*)f;
     struct null_audio_dev_info *di = &nf->dev_info[index];
@@ -206,19 +205,19 @@ static pj_status_t null_factory_default_param(pjmedia_aud_dev_factory *f,
 
     pj_bzero(param, sizeof(*param));
     if (di->info.input_count && di->info.output_count) {
-	param->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
-	param->rec_id = index;
-	param->play_id = index;
+        param->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+        param->rec_id = index;
+        param->play_id = index;
     } else if (di->info.input_count) {
-	param->dir = PJMEDIA_DIR_CAPTURE;
-	param->rec_id = index;
-	param->play_id = PJMEDIA_AUD_INVALID_DEV;
+        param->dir = PJMEDIA_DIR_CAPTURE;
+        param->rec_id = index;
+        param->play_id = PJMEDIA_AUD_INVALID_DEV;
     } else if (di->info.output_count) {
-	param->dir = PJMEDIA_DIR_PLAYBACK;
-	param->play_id = index;
-	param->rec_id = PJMEDIA_AUD_INVALID_DEV;
+        param->dir = PJMEDIA_DIR_PLAYBACK;
+        param->play_id = index;
+        param->rec_id = PJMEDIA_AUD_INVALID_DEV;
     } else {
-	return PJMEDIA_EAUD_INVDEV;
+        return PJMEDIA_EAUD_INVDEV;
     }
 
     /* Set the mandatory settings here */
@@ -236,11 +235,11 @@ static pj_status_t null_factory_default_param(pjmedia_aud_dev_factory *f,
 
 /* API: create stream */
 static pj_status_t null_factory_create_stream(pjmedia_aud_dev_factory *f,
-					      const pjmedia_aud_param *param,
-					      pjmedia_aud_rec_cb rec_cb,
-					      pjmedia_aud_play_cb play_cb,
-					      void *user_data,
-					      pjmedia_aud_stream **p_aud_strm)
+                                              const pjmedia_aud_param *param,
+                                              pjmedia_aud_rec_cb rec_cb,
+                                              pjmedia_aud_play_cb play_cb,
+                                              void *user_data,
+                                              pjmedia_aud_stream **p_aud_strm)
 {
     struct null_audio_factory *nf = (struct null_audio_factory*)f;
     pj_pool_t *pool;
@@ -268,9 +267,9 @@ static pj_status_t null_factory_create_stream(pjmedia_aud_dev_factory *f,
     /* Apply the remaining settings */
     /* Below is an example if you want to set the output volume */
     if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
-	null_stream_set_cap(&strm->base,
-		            PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
-		            &param->output_vol);
+        null_stream_set_cap(&strm->base,
+                            PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+                            &param->output_vol);
     }
 
     /* Done */
@@ -282,7 +281,7 @@ static pj_status_t null_factory_create_stream(pjmedia_aud_dev_factory *f,
 
 /* API: Get stream info. */
 static pj_status_t null_stream_get_param(pjmedia_aud_stream *s,
-					 pjmedia_aud_param *pi)
+                                         pjmedia_aud_param *pi)
 {
     struct null_audio_stream *strm = (struct null_audio_stream*)s;
 
@@ -292,7 +291,7 @@ static pj_status_t null_stream_get_param(pjmedia_aud_stream *s,
 
     /* Example: Update the volume setting */
     if (null_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
-			    &pi->output_vol) == PJ_SUCCESS)
+                            &pi->output_vol) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
     }
@@ -302,8 +301,8 @@ static pj_status_t null_stream_get_param(pjmedia_aud_stream *s,
 
 /* API: get capability */
 static pj_status_t null_stream_get_cap(pjmedia_aud_stream *s,
-				       pjmedia_aud_dev_cap cap,
-				       void *pval)
+                                       pjmedia_aud_dev_cap cap,
+                                       void *pval)
 {
     struct null_audio_stream *strm = (struct null_audio_stream*)s;
 
@@ -314,18 +313,18 @@ static pj_status_t null_stream_get_cap(pjmedia_aud_stream *s,
     /* Example: Get the output's volume setting */
     if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING)
     {
-	/* Output volume setting */
-	*(unsigned*)pval = 0; // retrieve output device's volume here
-	return PJ_SUCCESS;
+        /* Output volume setting */
+        *(unsigned*)pval = 0; // retrieve output device's volume here
+        return PJ_SUCCESS;
     } else {
-	return PJMEDIA_EAUD_INVCAP;
+        return PJMEDIA_EAUD_INVCAP;
     }
 }
 
 /* API: set capability */
 static pj_status_t null_stream_set_cap(pjmedia_aud_stream *s,
-				       pjmedia_aud_dev_cap cap,
-				       const void *pval)
+                                       pjmedia_aud_dev_cap cap,
+                                       const void *pval)
 {
     struct null_audio_stream *strm = (struct null_audio_stream*)s;
 
@@ -336,9 +335,9 @@ static pj_status_t null_stream_set_cap(pjmedia_aud_stream *s,
     /* Example */
     if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING)
     {
-	/* Output volume setting */
-	// set output's volume level here
-	return PJ_SUCCESS;
+        /* Output volume setting */
+        // set output's volume level here
+        return PJ_SUCCESS;
     }
 
     return PJMEDIA_EAUD_INVCAP;
@@ -383,4 +382,4 @@ static pj_status_t null_stream_destroy(pjmedia_aud_stream *strm)
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO */
+#endif  /* PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO */
