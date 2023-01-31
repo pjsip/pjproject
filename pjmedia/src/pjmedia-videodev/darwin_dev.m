@@ -134,10 +134,10 @@ struct darwin_stream
     NSLock                 *frame_lock;
     void                   *capture_buf;
     void                   *frame_buf;
-    
+
     pjmedia_vid_dev_conv    conv;
     pjmedia_rect_size       vid_size;
-    
+
     AVCaptureSession            *cap_session;
     AVCaptureDeviceInput        *dev_input;
     pj_bool_t                    has_image;
@@ -145,7 +145,7 @@ struct darwin_stream
     VOutDelegate                *vout_delegate;
     dispatch_queue_t             queue;
     AVCaptureVideoPreviewLayer  *prev_layer;
-    
+
     pj_bool_t            is_running;
 #if TARGET_OS_IPHONE
     pj_bool_t            is_rendering;
@@ -291,15 +291,15 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
     struct darwin_dev_info *qdi;
     unsigned i, l, first_idx, front_idx = -1;
     enum { MAX_DEV_COUNT = 8 };
-    
+
     set_preset_str();
-    
+
     /* Initialize input and output devices here */
     qf->dev_info = (struct darwin_dev_info*)
                    pj_pool_calloc(qf->pool, MAX_DEV_COUNT,
                                   sizeof(struct darwin_dev_info));
     qf->dev_count = 0;
-    
+
 #if TARGET_OS_IPHONE
     /* Init output device */
     qdi = &qf->dev_info[qf->dev_count++];
@@ -309,7 +309,7 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
     qdi->info.dir = PJMEDIA_DIR_RENDER;
     qdi->info.has_callback = PJ_FALSE;
 #endif
-    
+
     /* Init input device */
     first_idx = qf->dev_count;
     if (NSClassFromString(@"AVCaptureSession")) {
@@ -375,7 +375,7 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
             qdi->dev = device;
         }
     }
-    
+
     /* Set front camera to be the first input device (as default dev) */
     if (front_idx != -1 && front_idx != first_idx) {
         struct darwin_dev_info tmp_dev_info = qf->dev_info[first_idx];
@@ -392,17 +392,17 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
                           PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION |
                           PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE |
                           PJMEDIA_VID_DEV_CAP_ORIENTATION;
-        
+
         for (l = 0; l < PJ_ARRAY_SIZE(darwin_fmts); l++) {
             pjmedia_format *fmt;
-            
+
             /* Simple renderer UIView only supports BGRA */
             if (qdi->info.dir == PJMEDIA_DIR_RENDER &&
                 darwin_fmts[l].pjmedia_format != PJMEDIA_FORMAT_BGRA)
             {
                 continue;
             }
-            
+
             if (qdi->info.dir == PJMEDIA_DIR_RENDER) {
                 fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                 pjmedia_format_init_video(fmt,
@@ -413,7 +413,7 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
             } else {
                 int m;
                 AVCaptureDevice *dev = qdi->dev;
-                
+
                 /* Set supported size for capture device */
                 for(m = 0;
                     m < PJ_ARRAY_SIZE(darwin_sizes) &&
@@ -442,7 +442,7 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
             }
         }
     }
-    
+
     PJ_LOG(4, (THIS_FILE, "Darwin video initialized with %d devices:",
                qf->dev_count));
     for (i = 0; i < qf->dev_count; i++) {
@@ -487,7 +487,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(index < qf->dev_count, PJMEDIA_EVID_INVDEV);
     PJ_UNUSED_ARG(pool);
-    
+
     di = &qf->dev_info[index];
 
     pj_bzero(param, sizeof(*param));
@@ -502,7 +502,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
     } else {
         return PJMEDIA_EVID_INVDEV;
     }
-    
+
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
     param->clock_rate = DEFAULT_CLOCK_RATE;
     pj_memcpy(&param->fmt, &di->info.fmt[0], sizeof(param->fmt));
@@ -524,7 +524,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                                     stream->render_data_provider, 0,
                                     false, kCGRenderingIntentDefault);
     CGColorSpaceRelease(colorSpace);
-    
+
     stream->render_view.layer.contents = (__bridge id)(cgIm);
     CGImageRelease(cgIm);
 
@@ -575,16 +575,16 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 
     if (!sampleBuffer)
         return;
-    
+
     /* Get a CMSampleBuffer's Core Video image buffer for the media data */
     img = CMSampleBufferGetImageBuffer(sampleBuffer);
-    
+
     /* Lock the base address of the pixel buffer */
     CVPixelBufferLockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
 
     [stream->frame_lock lock];
     stream->has_image = PJ_TRUE;
-    
+
     if (stream->is_planar && stream->capture_buf) {
         if (stream->param.fmt.id == PJMEDIA_FORMAT_I420) {
             /* kCVPixelFormatType_420YpCbCr8BiPlanar* is NV12 */
@@ -600,7 +600,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
              */
             pj_size_t height = CVPixelBufferGetHeight(img);
             pj_bool_t need_clip;
-            
+
             /* Auto detect rotation */
             if ((stream->vid_size.w > stream->vid_size.h && stride < height) ||
                 (stream->vid_size.h > stream->vid_size.w && stride > height))
@@ -609,9 +609,9 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                 stream->vid_size.w = stream->vid_size.h;
                 stream->vid_size.h = w;
             }
-            
+
             need_clip = (stride != stream->vid_size.w);
-            
+
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 0);
 
             p_len = stream->vid_size.w * height;
@@ -630,7 +630,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                     p += stride;
                 }
             }
-            
+
             if (stream->vid_size.h > height) {
                 pj_memset(Y, 16, (stream->vid_size.h - height) *
                           stream->vid_size.w);
@@ -640,7 +640,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             if (!need_clip) {
                 p_len >>= 1;
                 p_end = p + p_len;
-                
+
                 while (p < p_end) {
                     *U++ = *p++;
                     *V++ = *p++;
@@ -668,7 +668,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
         pj_memcpy(stream->capture_buf, CVPixelBufferGetBaseAddress(img),
                   stream->frame_size);
     }
-    
+
     status = pjmedia_vid_dev_conv_resize_and_rotate(&stream->conv, 
                                                     stream->capture_buf,
                                                     &frame_buf);
@@ -678,14 +678,14 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 
     stream->frame_ts.u64 += stream->ts_inc;
     [stream->frame_lock unlock];
-    
+
     /* Unlock the pixel buffer */
     CVPixelBufferUnlockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
 }
 @end
 
 static pj_status_t darwin_stream_get_frame(pjmedia_vid_dev_stream *strm,
-                                        pjmedia_frame *frame)
+                                           pjmedia_frame *frame)
 {
     struct darwin_stream *stream = (struct darwin_stream *)strm;
 
@@ -701,11 +701,11 @@ static pj_status_t darwin_stream_get_frame(pjmedia_vid_dev_stream *strm,
     pj_assert(frame->size >= stream->frame_size);
     frame->size = stream->frame_size;
     frame->timestamp.u64 = stream->frame_ts.u64;
-    
+
     [stream->frame_lock lock];
     pj_memcpy(frame->buf, stream->frame_buf, stream->frame_size);
     [stream->frame_lock unlock];
-    
+
     return PJ_SUCCESS;
 }
 
@@ -713,12 +713,12 @@ static pj_status_t darwin_stream_get_frame(pjmedia_vid_dev_stream *strm,
 static darwin_fmt_info* get_darwin_format_info(pjmedia_format_id id)
 {
     unsigned i;
-    
+
     for (i = 0; i < PJ_ARRAY_SIZE(darwin_fmts); i++) {
         if (darwin_fmts[i].pjmedia_format == id)
             return &darwin_fmts[i];
     }
-    
+
     return NULL;
 }
 
@@ -729,32 +729,32 @@ static pj_status_t darwin_init_view(struct darwin_stream *strm)
     pjmedia_vid_dev_param *param = &strm->param;
     CGRect view_rect = CGRectMake(0, 0, param->fmt.det.vid.size.w,
                                   param->fmt.det.vid.size.h);
-    
+
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
         view_rect.size.width = param->disp_size.w;
         view_rect.size.height = param->disp_size.h;
     }
-    
+
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
         view_rect.origin.x = param->window_pos.x;
         view_rect.origin.y = param->window_pos.y;
     }
-    
+
     strm->render_view = [[UIView alloc] initWithFrame:view_rect];
     strm->param.window.info.ios.window = strm->render_view;
 
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         PJ_ASSERT_RETURN(param->window.info.ios.window, PJ_EINVAL);
         darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
-                           param->window.info.ios.window);
+                              param->window.info.ios.window);
     }
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
         darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
-                           &param->window_hide);
+                              &param->window_hide);
     }
     if (param->flags & PJMEDIA_VID_DEV_CAP_ORIENTATION) {
         darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
-                           &param->orient);
+                              &param->orient);
     }
 
     return PJ_SUCCESS;
@@ -787,7 +787,7 @@ static pj_status_t darwin_factory_create_stream(
 
     if (!(ifi = get_darwin_format_info(param->fmt.id)))
         return PJMEDIA_EVID_BADFORMAT;
-    
+
     vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
     if (!vfi)
         return PJMEDIA_EVID_BADFORMAT;
@@ -802,7 +802,7 @@ static pj_status_t darwin_factory_create_stream(
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
     strm->factory = qf;
-    
+
     vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
     pj_memcpy(&strm->size, &vfd->size, sizeof(vfd->size));
     strm->bytes_per_row = strm->size.w * vfi->bpp / 8;
@@ -812,7 +812,7 @@ static pj_status_t darwin_factory_create_stream(
 
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
         int i;
-                
+
         /* Create capture stream here */
         strm->cap_session = [[AVCaptureSession alloc] init];
         if (!strm->cap_session) {
@@ -831,9 +831,9 @@ static pj_status_t darwin_factory_create_stream(
                 break;
             }
         }
-        
+
         strm->cap_session.sessionPreset = darwin_sizes[i].preset_str;
-        
+
         /* If the requested size is portrait (or landscape), we make
          * our natural orientation portrait (or landscape) as well.
          */
@@ -848,7 +848,7 @@ static pj_status_t darwin_factory_create_stream(
         strm->vid_size = vfd->size;
         strm->bytes_per_row = strm->size.w * vfi->bpp / 8;
         strm->frame_size = strm->bytes_per_row * strm->size.h;
-        
+
         /* Update param as output */
         param->fmt = strm->param.fmt;
 
@@ -880,7 +880,7 @@ static pj_status_t darwin_factory_create_stream(
             status = PJMEDIA_EVID_SYSERR;
             goto on_error;
         }
-        
+
         if ([strm->cap_session canAddInput:strm->dev_input]) {
             [strm->cap_session addInput:strm->dev_input];
         } else {
@@ -888,14 +888,14 @@ static pj_status_t darwin_factory_create_stream(
             status = PJMEDIA_EVID_SYSERR;
             goto on_error;
         }
-        
+
         strm->video_output = [[AVCaptureVideoDataOutput alloc] init];
         if (!strm->video_output) {
             PJ_LOG(2, (THIS_FILE, "Unable to create AV video output"));
             status = PJ_ENOMEM;
             goto on_error;
         }
-        
+
         /* Configure the video output */
         strm->video_output.alwaysDiscardsLateVideoFrames = YES;
         strm->video_output.videoSettings =
@@ -928,7 +928,7 @@ static pj_status_t darwin_factory_create_stream(
             selector:@selector(session_runtime_error:)
             name:AVCaptureSessionRuntimeErrorNotification
             object:strm->cap_session];
-        
+
         if ([strm->cap_session canAddOutput:strm->video_output]) {
             [strm->cap_session addOutput:strm->video_output];
         } else {
@@ -936,15 +936,15 @@ static pj_status_t darwin_factory_create_stream(
             status = PJMEDIA_EVID_SYSERR;
             goto on_error;
         }
-        
+
         strm->capture_buf = pj_pool_alloc(strm->pool, strm->frame_size);
         strm->frame_buf = strm->capture_buf;
         strm->frame_lock = [[NSLock alloc]init];
-        
+
         /* Native preview */
         if (param->flags & PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW) {
             darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
-                               &param->native_preview);
+                                  &param->native_preview);
         }
 
         /* Video orientation.
@@ -957,22 +957,22 @@ static pj_status_t darwin_factory_create_stream(
             if (param->orient == PJMEDIA_ORIENT_UNKNOWN)
                 param->orient = PJMEDIA_ORIENT_NATURAL;
             darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
-                               &param->orient);
+                                  &param->orient);
         }
-        
+
     } else if (param->dir & PJMEDIA_DIR_RENDER) {
 #if TARGET_OS_IPHONE
         /* Create renderer stream here */
-        
+
         dispatch_sync_on_main_queue(^{
             darwin_init_view(strm);
         });
-        
+
         if (!strm->vout_delegate) {
             strm->vout_delegate = [VOutDelegate alloc];
             strm->vout_delegate->stream = strm;
         }
-        
+
         strm->render_buf = pj_pool_alloc(pool, strm->frame_size);
         strm->render_buf_size = strm->frame_size;
         strm->render_data_provider = CGDataProviderCreateWithData(NULL,
@@ -980,16 +980,16 @@ static pj_status_t darwin_factory_create_stream(
                                             NULL);
 #endif
     }
-    
+
     /* Done */
     strm->base.op = &stream_op;
     *p_vid_strm = &strm->base;
-    
+
     return PJ_SUCCESS;
-    
+
 on_error:
     darwin_stream_destroy((pjmedia_vid_dev_stream *)strm);
-    
+
     return status;
 }
 
@@ -1012,7 +1012,7 @@ static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *s,
                                          void *pval)
 {
     struct darwin_stream *strm = (struct darwin_stream*)s;
-    
+
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
     PJ_UNUSED_ARG(strm);
 
@@ -1029,7 +1029,7 @@ static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *s,
         default:
             break;
     }
-    
+
     return PJMEDIA_EVID_INVCAP;
 }
 
@@ -1047,7 +1047,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
         case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
         {
             pj_bool_t native_preview = *((pj_bool_t *)pval);
-            
+
             /* Disable native preview */
             if (!native_preview) {
                 if (strm->prev_layer) {
@@ -1061,29 +1061,29 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                 }
                 return PJ_SUCCESS;
             }
-            
+
             /* Enable native preview */
 
             /* Verify if it is already enabled */
             if (strm->prev_layer)
                 return PJ_SUCCESS;
-            
+
             /* Verify capture session instance availability */
             if (!strm->cap_session)
                 return PJ_EINVALIDOP;
-            
+
 #if TARGET_OS_IPHONE
             /* Preview layer instantiation should be in main thread! */
             dispatch_sync_on_main_queue(^{
                 /* Create view, if none */
                 if (!strm->render_view)
                     darwin_init_view(strm);
-            
+
                 /* Create preview layer */
                 AVCaptureVideoPreviewLayer *prev_layer =
                             [[AVCaptureVideoPreviewLayer alloc]
                              initWithSession:strm->cap_session];
-                
+
                 /* Attach preview layer to a UIView */
                 prev_layer.videoGravity = AVLayerVideoGravityResize;
                 prev_layer.frame = strm->render_view.bounds;
@@ -1092,7 +1092,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             });
             PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
 #endif
-            
+
             return PJ_SUCCESS;
         }
 
@@ -1100,7 +1100,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
         case PJMEDIA_VID_DEV_CAP_SWITCH:
         {
             if (!strm->cap_session) return PJ_EINVAL;
-            
+
             NSError *error;
             struct darwin_dev_info* di = strm->factory->dev_info;
             pjmedia_vid_dev_switch_param *p =
@@ -1109,17 +1109,17 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             /* Verify target capture ID */
             if (p->target_id < 0 || p->target_id >= strm->factory->dev_count)
                 return PJ_EINVAL;
-            
+
             if (di[p->target_id].info.dir != PJMEDIA_DIR_CAPTURE ||
                 !di[p->target_id].dev)
             {
                 return PJ_EINVAL;
             }
-            
+
             /* Just return if current and target device are the same */
             if (strm->param.cap_id == p->target_id)
                 return PJ_SUCCESS;
-            
+
             /* Ok, let's do the switch */
             AVCaptureDeviceInput *cur_dev_input = strm->dev_input;
             AVCaptureDeviceInput *new_dev_input =
@@ -1131,17 +1131,17 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             [strm->cap_session removeInput:cur_dev_input];
             [strm->cap_session addInput:new_dev_input];
             [strm->cap_session commitConfiguration];
-            
+
             strm->dev_input = new_dev_input;
             strm->param.cap_id = p->target_id;
-            
+
             /* Set the orientation as well */
             darwin_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
-                               &strm->param.orient);
-            
+                                  &strm->param.orient);
+
             return PJ_SUCCESS;
         }
-        
+
 #if TARGET_OS_IPHONE
         case PJMEDIA_VID_DEV_CAP_FORMAT:
         {
@@ -1149,18 +1149,18 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             pjmedia_video_format_detail *vfd;
             pjmedia_format *fmt = (pjmedia_format *)pval;
             darwin_fmt_info *ifi;
-        
+
             if (!(ifi = get_darwin_format_info(fmt->id)))
                 return PJMEDIA_EVID_BADFORMAT;
-        
+
             vfi = pjmedia_get_video_format_info(
                                         pjmedia_video_format_mgr_instance(),
                                         fmt->id);
             if (!vfi)
                 return PJMEDIA_EVID_BADFORMAT;
-        
+
             pjmedia_format_copy(&strm->param.fmt, fmt);
-        
+
             vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
             pj_memcpy(&strm->size, &vfd->size, sizeof(vfd->size));
             strm->bytes_per_row = strm->size.w * vfi->bpp / 8;
@@ -1175,10 +1175,10 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                                                         strm->frame_size,
                                                         NULL);
             }
-            
+
             return PJ_SUCCESS;
         }
-        
+
         case PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW:
         {
             UIView *view = (UIView *)pval;
@@ -1188,7 +1188,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             });
             return PJ_SUCCESS;
         }
-            
+
         case PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE:
         {
             pj_memcpy(&strm->param.disp_size, pval,
@@ -1203,7 +1203,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             });
             return PJ_SUCCESS;
         }
-    
+
         case PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION:
         {
             pj_memcpy(&strm->param.window_pos, pval,
@@ -1217,7 +1217,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             });
             return PJ_SUCCESS;
         }
-            
+
         case PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE:
         {
             dispatch_sync_on_main_queue(^{
@@ -1226,7 +1226,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             return PJ_SUCCESS;
         }
 #endif /* TARGET_OS_IPHONE */
-        
+
         case PJMEDIA_VID_DEV_CAP_ORIENTATION:
         {
             pjmedia_orient orient = *(pjmedia_orient *)pval;
@@ -1239,7 +1239,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
 
             pj_memcpy(&strm->param.orient, pval,
                       sizeof(strm->param.orient));
-        
+
             if (strm->param.dir == PJMEDIA_DIR_RENDER) {
 #if TARGET_OS_IPHONE
                 dispatch_sync_on_main_queue(^{
@@ -1251,7 +1251,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
 
                 return PJ_SUCCESS;
             }
-        
+
             const AVCaptureVideoOrientation cap_ori[4] =
             {
                 AVCaptureVideoOrientationLandscapeLeft,      /* NATURAL */
@@ -1261,9 +1261,9 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             };
             AVCaptureConnection *vidcon;
             pj_bool_t support_ori = PJ_TRUE;
-            
+
             pj_assert(strm->param.dir == PJMEDIA_DIR_CAPTURE);
-            
+
             if (!strm->video_output)
                 return PJMEDIA_EVID_NOTREADY;
 
@@ -1274,7 +1274,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             } else {
                 support_ori = PJ_FALSE;
             }
-            
+
             if (!strm->conv.conv) {
                 pj_status_t status;
                 pjmedia_rect_size orig_size;
@@ -1297,19 +1297,19 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                                                  orig_size, strm->size,
                                                  (support_ori?PJ_FALSE:PJ_TRUE),
                                                  MAINTAIN_ASPECT_RATIO);
-                
+
                 if (status != PJ_SUCCESS)
                     return status;
             }
-            
+
             pjmedia_vid_dev_conv_set_rotation(&strm->conv, strm->param.orient);
-            
+
             PJ_LOG(5, (THIS_FILE, "Video capture orientation set to %d",
                                   strm->param.orient));
 
             return PJ_SUCCESS;
         }
-        
+
         default:
             break;
     }
@@ -1330,7 +1330,7 @@ static pj_status_t darwin_stream_start(pjmedia_vid_dev_stream *strm)
         [stream->cap_session
             performSelectorOnMainThread:@selector(startRunning)
             withObject:nil waitUntilDone:YES];
-    
+
         if (![stream->cap_session isRunning]) {
             /* More info about the error should be reported in
              * VOutDelegate::session_runtime_error()
@@ -1340,7 +1340,7 @@ static pj_status_t darwin_stream_start(pjmedia_vid_dev_stream *strm)
             return PJ_EUNKNOWN;
         }
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1360,7 +1360,7 @@ static pj_status_t darwin_stream_put_frame(pjmedia_vid_dev_stream *strm,
 
     if (!stream->is_running)
         return PJ_EINVALIDOP;
-    
+
     /* Prevent more than one async rendering task. */
     if (stream->is_rendering)
         return PJ_EIGNORED;
@@ -1369,7 +1369,7 @@ static pj_status_t darwin_stream_put_frame(pjmedia_vid_dev_stream *strm,
         pj_memcpy(stream->render_buf, frame->buf, frame->size);
     else
         pj_memcpy(stream->render_buf, frame->buf, stream->frame_size);
-    
+
     /* Perform video display in the main thread */
     stream->is_rendering = PJ_TRUE;
     [stream->vout_delegate performSelectorOnMainThread:@selector(update_image)
@@ -1386,7 +1386,7 @@ static pj_status_t darwin_stream_stop(pjmedia_vid_dev_stream *strm)
 
     if (!stream->cap_session || ![stream->cap_session isRunning])
         return PJ_SUCCESS;
-    
+
     PJ_LOG(4, (THIS_FILE, "Stopping Darwin video stream"));
 
     [stream->cap_session performSelectorOnMainThread:@selector(stopRunning)
@@ -1399,7 +1399,7 @@ static pj_status_t darwin_stream_stop(pjmedia_vid_dev_stream *strm)
     [stream->vout_delegate performSelectorOnMainThread:@selector(finish_render)
                            withObject:nil waitUntilDone:YES];
 #endif
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1412,7 +1412,7 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     darwin_stream_stop(strm);
-    
+
     if (stream->cap_session) {
         if (stream->dev_input) {
             [stream->cap_session removeInput:stream->dev_input];
@@ -1422,7 +1422,7 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
         [stream->cap_session release];
         stream->cap_session = nil;
     }
- 
+
     if (stream->video_output) {
         [stream->video_output release];
         stream->video_output = nil;
@@ -1441,7 +1441,7 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
         [stream->prev_layer release];
         stream->prev_layer = nil;
     }
-    
+
     if (stream->render_view) {
         [stream->render_view
             performSelectorOnMainThread:@selector(removeFromSuperview)
@@ -1450,7 +1450,7 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
         [stream->render_view release];
         stream->render_view = nil;
     }
-    
+
     if (stream->render_data_provider) {
         CGDataProviderRelease(stream->render_data_provider);
         stream->render_data_provider = nil;
@@ -1461,12 +1461,12 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
         dispatch_release(stream->queue);
         stream->queue = nil;
     }
-    
+
     if (stream->frame_lock) {
         [stream->frame_lock release];
         stream->frame_lock = nil;
     }
-    
+
     pjmedia_vid_dev_conv_destroy_converter(&stream->conv);
 
     pj_pool_release(stream->pool);

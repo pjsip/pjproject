@@ -102,11 +102,11 @@ typedef struct and_stream
     pjmedia_vid_dev_param   param;              /**< Settings          */
     pj_pool_t              *pool;               /**< Memory pool       */
     and_factory            *factory;            /**< Factory           */
-    
+
     pjmedia_vid_dev_cb      vid_cb;             /**< Stream callback   */
     void                   *user_data;          /**< Application data  */
     pj_bool_t               is_running;         /**< Stream running?   */
-    
+
     jobject                 jcam;               /**< PjCamera instance */
 
     pj_timestamp            frame_ts;           /**< Current timestamp */
@@ -115,7 +115,7 @@ typedef struct and_stream
                                                      0: no
                                                      1: from NV21
                                                      2: from YV12       */
-    
+
     /** Capture thread info */
     pj_bool_t               thread_initialized;
     pj_thread_desc          thread_desc;
@@ -124,10 +124,10 @@ typedef struct and_stream
     /** NV21/YV12 -> I420 Conversion buffer  */
     pj_uint8_t             *convert_buf;
     pjmedia_rect_size       cam_size;
-    
+
     /** Converter to rotate frame  */
     pjmedia_vid_dev_conv    conv;
-    
+
     /** Frame format param for NV21/YV12 -> I420 conversion */
     pjmedia_video_apply_fmt_param vafp;
 } and_stream;
@@ -262,7 +262,7 @@ static pj_bool_t jni_get_env(JNIEnv **jni_env)
             with_attach = PJ_TRUE;
         }
     }
-    
+
     return with_attach;
 }
 
@@ -492,9 +492,9 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
     /* Clean up device info and pool */
     f->dev_count = 0;
     pj_pool_reset(f->dev_pool);
-    
+
     with_attach = jni_get_env(&jni_env);
-    
+
     /* dev_count = PjCameraInfo::GetCameraCount() */
     dev_count = (*jni_env)->CallStaticIntMethod(jni_env, jobjs.cam_info.cls,
                                                 jobjs.cam_info.m_get_cnt);
@@ -663,11 +663,11 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
                 }
             }
 #endif
-            
+
         } else {
             goto on_skip_dev;
         }
-        
+
         /* If this is front camera, set it as first/default (if not yet) */
         if (facing == 1) {
             if (!found_front && f->dev_count > 0) {
@@ -681,7 +681,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
             }
             found_front = PJ_TRUE;
         }
-        
+
         f->dev_count++;
 
     on_skip_dev:
@@ -888,7 +888,7 @@ static pj_status_t and_factory_create_stream(
         status = PJMEDIA_EVID_SYSERR;
         goto on_return;
     }
-    
+
     /* Video orientation.
      * If we send in portrait, we need to set up orientation converter
      * as well.
@@ -925,9 +925,9 @@ static pj_status_t and_stream_get_param(pjmedia_vid_dev_stream *s,
                                         pjmedia_vid_dev_param *pi)
 {
     and_stream *strm = (and_stream*)s;
-    
+
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
-    
+
     pj_memcpy(pi, &strm->param, sizeof(*pi));
 
     if (and_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
@@ -935,7 +935,7 @@ static pj_status_t and_stream_get_param(pjmedia_vid_dev_stream *s,
     {
         pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -946,11 +946,11 @@ static pj_status_t and_stream_get_cap(pjmedia_vid_dev_stream *s,
                                       void *pval)
 {
     and_stream *strm = (and_stream*)s;
-    
+
     PJ_UNUSED_ARG(strm);
-    
+
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
-    
+
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         //pjmedia_vid_dev_hwnd *wnd = (pjmedia_vid_dev_hwnd *)pval;
         //wnd->info.android.window = strm->window;
@@ -970,7 +970,7 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
     JNIEnv *jni_env;
     pj_bool_t with_attach;
     pj_status_t status = PJ_SUCCESS;
-    
+
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     switch (cap) {
@@ -1104,7 +1104,7 @@ static pj_status_t and_stream_stop(pjmedia_vid_dev_stream *s)
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(strm != NULL, PJ_EINVAL);
-    
+
     PJ_LOG(4, (THIS_FILE, "Stopping Android camera stream"));
 
     with_attach = jni_get_env(&jni_env);
@@ -1115,7 +1115,7 @@ static pj_status_t and_stream_stop(pjmedia_vid_dev_stream *s)
     strm->is_running = PJ_FALSE;
 
     jni_detach_env(with_attach);
-    
+
     return status;
 }
 
@@ -1126,9 +1126,9 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
     and_stream *strm = (and_stream*)s;
     JNIEnv *jni_env;
     pj_bool_t with_attach;
-    
+
     PJ_ASSERT_RETURN(strm != NULL, PJ_EINVAL);
-    
+
     with_attach = jni_get_env(&jni_env);
 
     if (strm->is_running)
@@ -1138,11 +1138,11 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
         (*jni_env)->DeleteGlobalRef(jni_env, strm->jcam);
         strm->jcam = NULL;
     }
-    
+
     jni_detach_env(with_attach);
-    
+
     pjmedia_vid_dev_conv_destroy_converter(&strm->conv);
-    
+
     if (strm->pool)
         pj_pool_release(strm->pool);
 
@@ -1175,7 +1175,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     pj_uint8_t *Y, *U, *V;
     pj_status_t status;
     void *frame_buf, *data_buf;
-    
+
     strm->frame_ts.u64 += strm->ts_inc;
     if (!strm->vid_cb.capture_cb)
         return;
@@ -1194,7 +1194,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     p0 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane0);
     p1 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane1);
     p2 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane2);
-    
+
     /* Assuming the buffers are originally a large contigue buffer,
      * minimum check for now: plane 1 or 2 must be after plane 0.
      */
@@ -1237,7 +1237,6 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
         }
 
         /* Get U & V planes */
-
         if (rowStride1 == strm->cam_size.w/2) {
             /* No padding, simply bulk memmove U & V */
             pj_memmove(U, p1, strm->vafp.plane_bytes[1]);
@@ -1292,7 +1291,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
             pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
         }
     }
-    
+
     /* The buffer may be originally YV12, i.e: U & V planes are swapped.
      * We also need to strip out padding, if any.
      */
@@ -1326,7 +1325,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 
         }
     }
-    
+
     /* Else, let's just print log for now */
     else {
         jlong p0_len, p1_len, p2_len;
@@ -1399,7 +1398,7 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
     pj_uint8_t *Y, *U, *V;
     pj_status_t status; 
     void *frame_buf, *data_buf;
-    
+
     strm->frame_ts.u64 += strm->ts_inc;
     if (!strm->vid_cb.capture_cb)
         return;
@@ -1494,7 +1493,7 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
 
         }
     }
-    
+
     status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv, 
                                                     f.buf,
                                                     &frame_buf);

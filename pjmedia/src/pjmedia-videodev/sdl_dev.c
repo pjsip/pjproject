@@ -324,7 +324,7 @@ static struct sdl_stream* find_stream(struct sdl_factory *sf,
             break;
         }
     }
- 
+
     if (strm)
         pjmedia_event_init(pevent, PJMEDIA_EVENT_NONE, &strm->last_ts,
                            strm);
@@ -643,7 +643,7 @@ static sdl_fmt_info* get_sdl_format_info(pjmedia_format_id id)
 static pj_status_t sdl_destroy(void *data)
 {
     struct sdl_stream *strm = (struct sdl_stream *)data;
-     
+
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     if (strm->texture) {
         glDeleteTextures(1, &strm->texture);
@@ -661,7 +661,7 @@ static pj_status_t sdl_destroy(void *data)
     if (strm->renderer) {
         SDL_DestroyRenderer(strm->renderer);
         strm->renderer = NULL;
-    }    
+    }
     return PJ_SUCCESS;
 }
 

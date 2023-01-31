@@ -214,12 +214,12 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
     unsigned i, dev_count = 0;
     NSAutoreleasePool *apool = [[NSAutoreleasePool alloc]init];
     NSArray *dev_array;
-    
+
     if (qf->dev_pool) {
         pj_pool_release(qf->dev_pool);
         qf->dev_pool = NULL;
     }
-    
+
     dev_array = [QTCaptureDevice inputDevices];
     for (i = 0; i < [dev_array count]; i++) {
         QTCaptureDevice *dev = [dev_array objectAtIndex:i];
@@ -229,11 +229,11 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
             dev_count++;
         }
     }
-    
+
     /* Initialize input and output devices here */
     qf->dev_count = 0;
     qf->dev_pool = pj_pool_create(qf->pf, "qt video", 500, 500, NULL);
-    
+
     qf->dev_info = (struct qt_dev_info*)
     pj_pool_calloc(qf->dev_pool, dev_count,
                    sizeof(struct qt_dev_info));
@@ -243,7 +243,7 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
             [dev hasMediaType:QTMediaTypeMuxed])
         {
             unsigned k;
-            
+
             qdi = &qf->dev_info[qf->dev_count++];
             pj_bzero(qdi, sizeof(*qdi));
             [[dev localizedDisplayName] getCString:qdi->info.name
@@ -256,7 +256,7 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
             strcpy(qdi->info.driver, "QT");         
             qdi->info.dir = PJMEDIA_DIR_CAPTURE;
             qdi->info.has_callback = PJ_TRUE;
-            
+
             qdi->info.fmt_cnt = 0;
             qdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
             for (k = 0; k < [[dev formatDescriptions] count]; k++) {
@@ -276,16 +276,16 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
                     }
                 }
             }
-            
+
             PJ_LOG(4, (THIS_FILE, " dev_id %d: %s", i, qdi->info.name));    
         }
     }
-    
+
     [apool release];
-    
+
     PJ_LOG(4, (THIS_FILE, "qt video has %d devices",
                qf->dev_count));
-    
+
     return PJ_SUCCESS;
 }
 
@@ -337,12 +337,12 @@ static pj_status_t qt_factory_default_param(pj_pool_t *pool,
 static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
 {
     unsigned i;
-    
+
     for (i = 0; i < PJ_ARRAY_SIZE(qt_fmts); i++) {
         if (qt_fmts[i].pjmedia_format == id)
             return &qt_fmts[i];
     }
-    
+
     return NULL;
 }
 
@@ -359,7 +359,7 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
         strm->cap_exited = PJ_TRUE;
         return;
     }
-    
+
     if (strm->cap_thread_initialized == 0 || !pj_thread_is_registered())
     {
         pj_thread_register("qt_cap", strm->cap_thread_desc,
@@ -367,19 +367,19 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
         strm->cap_thread_initialized = 1;
         PJ_LOG(5,(THIS_FILE, "Capture thread started"));
     }
-    
+
     if (!videoFrame)
         return;
-    
+
     frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame.buf = [sampleBuffer bytesForAllSamples];
     frame.size = size;
     frame.bit_info = 0;
     frame.timestamp.u64 = strm->cap_frame_ts.u64;
-    
+
     if (strm->vid_cb.capture_cb)
         (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &frame);
-    
+
     strm->cap_frame_ts.u64 += strm->cap_ts_inc;
 }
 
@@ -396,18 +396,18 @@ static void init_qt(struct qt_stream *strm)
     qt_fmt_info *qfi = get_qt_format_info(strm->param.fmt.id);
     BOOL success = NO;
     NSError *error;
-    
+
     if (!qfi) {
         strm->status = PJMEDIA_EVID_BADFORMAT;
         return;
     }
-    
+
     strm->cap_session = [[QTCaptureSession alloc] init];
     if (!strm->cap_session) {
         strm->status = PJ_ENOMEM;
         return;
     }
-    
+
     /* Open video device */
     QTCaptureDevice *videoDevice = 
         [QTCaptureDevice deviceWithUniqueID:
@@ -419,7 +419,7 @@ static void init_qt(struct qt_stream *strm)
         strm->status = PJMEDIA_EVID_SYSERR;
         return;
     }
-    
+
     /* Add the video device to the session as a device input */ 
     strm->dev_input = [[QTCaptureDeviceInput alloc] 
                        initWithDevice:videoDevice];
@@ -428,7 +428,7 @@ static void init_qt(struct qt_stream *strm)
         strm->status = PJMEDIA_EVID_SYSERR;
         return;
     }
-    
+
     strm->video_output = [[QTCaptureDecompressedVideoOutput alloc] init];
     success = [strm->cap_session addOutput:strm->video_output
                                  error:&error];
@@ -436,7 +436,7 @@ static void init_qt(struct qt_stream *strm)
         strm->status = PJMEDIA_EVID_SYSERR;
         return;
     }
-    
+
     vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt,
                                                  PJ_TRUE);
     [strm->video_output setPixelBufferAttributes:
@@ -447,17 +447,17 @@ static void init_qt(struct qt_stream *strm)
                                       kCVPixelBufferWidthKey,
                                       [NSNumber numberWithInt:vfd->size.h],
                                       kCVPixelBufferHeightKey, nil]];
-    
+
     pj_assert(vfd->fps.num);
     strm->cap_ts_inc = PJMEDIA_SPF2(strm->param.clock_rate, &vfd->fps, 1);
-    
+
     if ([strm->video_output
          respondsToSelector:@selector(setMinimumVideoFrameInterval)])
     {
         [strm->video_output setMinimumVideoFrameInterval:
                             (1.0f * vfd->fps.denum / (double)vfd->fps.num)];
     }
-    
+
     strm->qt_delegate = [[QTDelegate alloc]init];
     strm->qt_delegate->strm = strm;
     [strm->video_output setDelegate:strm->qt_delegate];
@@ -467,7 +467,7 @@ static void run_func_on_main_thread(struct qt_stream *strm, func_ptr func)
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     QTDelegate *delg = [[QTDelegate alloc] init];
-    
+
     delg->strm = strm;
     delg->func = func;
     [delg performSelectorOnMainThread:@selector(run_func)
@@ -521,7 +521,7 @@ static pj_status_t qt_factory_create_stream(
         if ((status = strm->status) != PJ_SUCCESS)
             goto on_error;
     }
-    
+
     /* Apply the remaining settings */
     /*    
      if (param->flags & PJMEDIA_VID_DEV_CAP_INPUT_SCALE) {
@@ -533,12 +533,12 @@ static pj_status_t qt_factory_create_stream(
     /* Done */
     strm->base.op = &stream_op;
     *p_vid_strm = &strm->base;
-    
+
     return PJ_SUCCESS;
-    
+
 on_error:
     qt_stream_destroy((pjmedia_vid_dev_stream *)strm);
-    
+
     return status;
 }
 
@@ -621,10 +621,10 @@ static pj_status_t qt_stream_start(pjmedia_vid_dev_stream *strm)
 
     if (stream->cap_session) {
         run_func_on_main_thread(stream, start_qt);
-    
+
         if (![stream->cap_session isRunning])
             return PJMEDIA_EVID_NOTREADY;
-        
+
         stream->is_running = PJ_TRUE;
     }
 
@@ -642,16 +642,16 @@ static pj_status_t qt_stream_stop(pjmedia_vid_dev_stream *strm)
 
     if (stream->cap_session && [stream->cap_session isRunning]) {
         int i;
-        
+
         stream->cap_exited = PJ_FALSE;
         run_func_on_main_thread(stream, stop_qt);
-        
+
         stream->is_running = PJ_FALSE;
         for (i = 50; i >= 0 && !stream->cap_exited; i--) {
             pj_thread_sleep(10);
         }
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -659,7 +659,7 @@ static void destroy_qt(struct qt_stream *strm)
 {
     if (strm->dev_input && [[strm->dev_input device] isOpen])
         [[strm->dev_input device] close];
-    
+
     if (strm->cap_session) {
         [strm->cap_session release];
         strm->cap_session = NULL;
@@ -688,7 +688,7 @@ static pj_status_t qt_stream_destroy(pjmedia_vid_dev_stream *strm)
     qt_stream_stop(strm);
 
     run_func_on_main_thread(stream, destroy_qt);
-    
+
     pj_pool_release(stream->pool);
 
     return PJ_SUCCESS;

@@ -26,7 +26,6 @@
 #if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
     defined(PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC) && \
     PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC != 0
-    
 
 #define THIS_FILE               "colorbar_dev.c"
 #define DEFAULT_CLOCK_RATE      90000

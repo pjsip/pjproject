@@ -81,12 +81,12 @@ static pj_status_t avi_factory_destroy(pjmedia_vid_dev_factory *f);
 static pj_status_t avi_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    avi_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t avi_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-                                             unsigned index,
-                                             pjmedia_vid_dev_info *info);
+                                            unsigned index,
+                                            pjmedia_vid_dev_info *info);
 static pj_status_t avi_factory_default_param(pj_pool_t *pool,
-                                              pjmedia_vid_dev_factory *f,
-                                              unsigned index,
-                                              pjmedia_vid_dev_param *param);
+                                             pjmedia_vid_dev_factory *f,
+                                             unsigned index,
+                                             pjmedia_vid_dev_param *param);
 static pj_status_t avi_factory_create_stream(
                                         pjmedia_vid_dev_factory *f,
                                         pjmedia_vid_dev_param *param,
@@ -213,8 +213,8 @@ static unsigned avi_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 
 /* API: get device info */
 static pj_status_t avi_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-                                             unsigned index,
-                                             pjmedia_vid_dev_info *info)
+                                            unsigned index,
+                                            pjmedia_vid_dev_info *info)
 {
     struct avi_factory *cf = (struct avi_factory*)f;
 
@@ -227,9 +227,9 @@ static pj_status_t avi_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 
 /* API: create default device parameter */
 static pj_status_t avi_factory_default_param(pj_pool_t *pool,
-                                              pjmedia_vid_dev_factory *f,
-                                              unsigned index,
-                                              pjmedia_vid_dev_param *param)
+                                             pjmedia_vid_dev_factory *f,
+                                             unsigned index,
+                                             pjmedia_vid_dev_param *param)
 {
     struct avi_factory *cf = (struct avi_factory*)f;
     struct avi_dev_info *di = &cf->dev_info[index];
@@ -565,7 +565,7 @@ static pj_status_t avi_factory_create_stream(
 
 /* API: Get stream info. */
 static pj_status_t avi_dev_strm_get_param(pjmedia_vid_dev_stream *s,
-                                         pjmedia_vid_dev_param *pi)
+                                          pjmedia_vid_dev_param *pi)
 {
     struct avi_dev_strm *strm = (struct avi_dev_strm*)s;
 
@@ -578,8 +578,8 @@ static pj_status_t avi_dev_strm_get_param(pjmedia_vid_dev_stream *s,
 
 /* API: get capability */
 static pj_status_t avi_dev_strm_get_cap(pjmedia_vid_dev_stream *s,
-                                       pjmedia_vid_dev_cap cap,
-                                       void *pval)
+                                        pjmedia_vid_dev_cap cap,
+                                        void *pval)
 {
     struct avi_dev_strm *strm = (struct avi_dev_strm*)s;
 
@@ -594,8 +594,8 @@ static pj_status_t avi_dev_strm_get_cap(pjmedia_vid_dev_stream *s,
 
 /* API: set capability */
 static pj_status_t avi_dev_strm_set_cap(pjmedia_vid_dev_stream *s,
-                                       pjmedia_vid_dev_cap cap,
-                                       const void *pval)
+                                        pjmedia_vid_dev_cap cap,
+                                        const void *pval)
 {
     struct avi_dev_strm *strm = (struct avi_dev_strm*)s;
 
@@ -610,7 +610,7 @@ static pj_status_t avi_dev_strm_set_cap(pjmedia_vid_dev_stream *s,
 
 /* API: Get frame from stream */
 static pj_status_t avi_dev_strm_get_frame(pjmedia_vid_dev_stream *strm,
-                                         pjmedia_frame *frame)
+                                          pjmedia_frame *frame)
 {
     struct avi_dev_strm *stream = (struct avi_dev_strm*)strm;
     

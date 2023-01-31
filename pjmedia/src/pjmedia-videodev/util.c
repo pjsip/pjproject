@@ -48,13 +48,13 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
 
     pj_assert((src_size.w == dst_size.w || src_size.h == dst_size.h) ||
               (src_size.w == dst_size.h || src_size.h == dst_size.w));
-              
+
     if (conv->conv)
         return PJ_SUCCESS;
-        
+
     if (fmt->id != PJMEDIA_FORMAT_I420 && fmt->id != PJMEDIA_FORMAT_BGRA)
         return PJ_EINVAL;
-        
+
     /* Currently, for BGRA format, device must handle the rotation. */
     if (fmt->id == PJMEDIA_FORMAT_BGRA && handle_rotation)
         return PJ_ENOTSUP;
@@ -64,7 +64,7 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
         return PJ_ENOTSUP;
 #endif
     }
-    
+
     conv->src_size = src_size;
     conv->dst_size = dst_size;
     conv->handle_rotation = handle_rotation;
@@ -117,7 +117,7 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
     } else {
         conv->rot_size = dst_size;
     }
-    
+
     /* Calculate the size after resizing. */
     if (handle_rotation) {
         /* If we do the rotation, conversion is done before rotation. */
@@ -160,7 +160,7 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
 
     vfi = pjmedia_get_video_format_info(NULL, fmt->id);
     pj_assert(vfi);
-    
+
     conv->wxh = conv->dst_size.w * conv->dst_size.h;
     conv->src_frame_size = dst_size.w * dst_size.h * vfi->bpp / 8;
     conv->conv_frame_size = conv->rot_size.w * conv->rot_size.h *
@@ -176,7 +176,7 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
                           conv_param.dst.det.vid.size.w,
                           conv_param.dst.det.vid.size.h,
                           maintain_aspect_ratio? "yes": "no"));
-                          
+
     return PJ_SUCCESS;
 }
 
@@ -184,16 +184,16 @@ void pjmedia_vid_dev_conv_set_rotation(pjmedia_vid_dev_conv *conv,
                                        pjmedia_orient rotation)
 {
     pjmedia_rect_size new_size = conv->src_size;
-    
+
     conv->rotation = rotation;
-    
+
     if (rotation == PJMEDIA_ORIENT_ROTATE_90DEG ||
         rotation == PJMEDIA_ORIENT_ROTATE_270DEG)
     {
         new_size.w = conv->src_size.h;
         new_size.h = conv->src_size.w;
     }
-    
+
     /* Check whether new size (size after rotation) and destination
      * are both portrait or both landscape. If yes, resize will not
      * be required in pjmedia_vid_dev_conv_resize_and_rotate() below.
@@ -222,43 +222,43 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
     pj_uint8_t *dst = conv->conv_buf;    
 
     pj_assert(src_buf);
-    
+
     if (!conv->conv) return PJ_EINVALIDOP;
-    
+
     if (!conv->match_src_dst) {
         /* We need to resize. */
         src_frame.buf = src;
         dst_frame.buf = dst;
         src_frame.size = conv->src_frame_size;
         dst_frame.size = conv->conv_frame_size;
-    
+
         status = pjmedia_converter_convert(conv->conv, &src_frame, &dst_frame);
         if (status != PJ_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Failed to convert frame"));
             return status;
         }
-        
+
         src_size = conv->res_size;
-        
+
         swap(src, dst);
     }
-    
+
     if (conv->handle_rotation && conv->rotation != PJMEDIA_ORIENT_NATURAL) {
         /* We need to do rotation. */
         if (conv->fmt.id == PJMEDIA_FORMAT_I420) {
             pjmedia_rect_size dst_size = src_size;
             pj_size_t p_len = src_size.w * src_size.h;
-            
+
             if (conv->rotation == PJMEDIA_ORIENT_ROTATE_90DEG ||
                 conv->rotation == PJMEDIA_ORIENT_ROTATE_270DEG)
             {
                 dst_size.w = src_size.h;
                 dst_size.h = src_size.w;
             }
-            
+
 #if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
             enum RotationMode mode;
-            
+
             switch (conv->rotation) {
                 case PJMEDIA_ORIENT_ROTATE_90DEG:
                     mode = kRotate90;
@@ -280,7 +280,7 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
                        dst+p_len, dst_size.w/2,
                        dst+p_len+p_len/4, dst_size.w/2,
                        src_size.w, src_size.h, mode);
-            
+
             swap(src, dst);
 #else
             PJ_UNUSED_ARG(p_len);
@@ -288,7 +288,7 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
 #endif
         }
     }
-    
+
     if (!conv->match_src_dst && conv->maintain_aspect_ratio) {
         /* Center the frame and fill the area with black color */    
         if (conv->fmt.id == PJMEDIA_FORMAT_I420) {
@@ -343,13 +343,13 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
                 psrc += p_len_src;
                 pj_memcpy(V + gap, psrc, p_len_src);
             }
-            
+
             swap(src, dst);
         }
     }
-    
+
     *result = src;
-    
+
     return PJ_SUCCESS;
 }
 

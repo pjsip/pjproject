@@ -35,11 +35,11 @@ typedef struct pjmedia_vid_dev_conv
     pjmedia_rect_size       res_size;           /* Size after resizing   */
     pjmedia_orient          rotation;
     pjmedia_rect_size       rot_size;           /* Size after rotation   */ 
-    
+
     void                   *conv_buf;
     pj_size_t               src_frame_size;
     pj_size_t               conv_frame_size;
-    
+
     pj_bool_t               fit_to_h;
     pj_bool_t               handle_rotation;
     pj_bool_t               maintain_aspect_ratio;
@@ -86,8 +86,8 @@ void pjmedia_vid_dev_conv_set_rotation(pjmedia_vid_dev_conv *conv,
 
 /* Resize the buffer and rotate it, if necessary */
 pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
-                                                    void *src_buf,
-                                                    void **result);
+                                                   void *src_buf,
+                                                   void **result);
 
 /* Destroy converter */
 void pjmedia_vid_dev_conv_destroy_converter(pjmedia_vid_dev_conv *conv);
