@@ -79,12 +79,14 @@ struct pjsua_call_media
                                          bit 0/LSB : sequence flag
                                          bit 1     : timestamp flag         */
 
-    pjmedia_type                prev_type;     /**< Previous media type     */
-    pjmedia_stream_info         prev_aud_si;   /**< Prev audio stream info  */
-    pjmedia_vid_stream_info     prev_vid_si;   /**< Prev video stream info  */
-    pj_bool_t                   prev_srtp_use; /**< Prev SRTP use           */
-    pjmedia_srtp_info           prev_srtp_info;/**< Prev SRTP transport info*/
-    pj_bool_t                   prev_ice_use;  /**< Prev ICE use            */
+    pjmedia_type         prev_type;            /**< Previous media type     */
+    pj_sockaddr          prev_aud_local_addr;  /**< Prev aud local address  */
+    pj_sockaddr          prev_aud_rem_addr;    /**< Prev aud remote address */
+    pj_sockaddr          prev_vid_local_addr;  /**< Prev vid local address  */
+    pj_sockaddr          prev_vid_rem_addr;    /**< Prev vid remote address */
+    pj_bool_t            prev_srtp_use;        /**< Prev SRTP use           */
+    pjmedia_srtp_info    prev_srtp_info;       /**< Prev SRTP transport info*/
+    pj_bool_t            prev_ice_use;         /**< Prev ICE use            */
     pjmedia_ice_transport_info  prev_ice_info; /**< Prev ICE transport info */
 
     pjmedia_transport   *tp;        /**< Current media transport (can be 0) */

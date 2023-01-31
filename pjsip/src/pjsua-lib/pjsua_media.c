@@ -3140,10 +3140,12 @@ static void stop_media_stream(pjsua_call *call, unsigned med_idx)
         prov_med->rtp_tx_seq        = call_med->rtp_tx_seq;
         prov_med->rtp_tx_ts         = call_med->rtp_tx_ts;
 
-        /* Saved media type and stream info */
+        /* Saved media type and addresses */
         prov_med->prev_type = call_med->prev_type;
-        prov_med->prev_aud_si = call_med->prev_aud_si;
-        prov_med->prev_vid_si = call_med->prev_vid_si;
+        prov_med->prev_aud_local_addr = call_med->prev_aud_local_addr;
+        prov_med->prev_aud_rem_addr   = call_med->prev_aud_rem_addr;
+        prov_med->prev_vid_local_addr = call_med->prev_vid_local_addr;
+        prov_med->prev_vid_rem_addr   = call_med->prev_vid_rem_addr;
 
         /* Stream */
         if (call_med->type == PJMEDIA_TYPE_AUDIO) {
@@ -3378,10 +3380,12 @@ static void check_srtp_roc(pjsua_call *call,
     pjmedia_srtp_info *srtp_info;
     pjmedia_transport *srtp;
     pjmedia_ice_transport_info *ice_info;
-    const pjmedia_stream_info *prev_aud_si = NULL;
+    const pj_sockaddr *prev_aud_local_addr = NULL;
+    const pj_sockaddr *prev_aud_rem_addr = NULL;
     pjmedia_stream_info aud_si;
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-    const pjmedia_vid_stream_info *prev_vid_si = NULL;
+    const pj_sockaddr *prev_vid_local_addr = NULL;
+    const pj_sockaddr *prev_vid_rem_addr = NULL;
     pjmedia_vid_stream_info vid_si;
 #endif
     pj_bool_t local_change = PJ_FALSE, rem_change = PJ_FALSE;
@@ -3423,11 +3427,15 @@ static void check_srtp_roc(pjsua_call *call,
         /* The stream has been deinitialized by now, so we need to retrieve
          * the previous stream info from the stored data.
          */
-        if (call_med->prev_type == PJMEDIA_TYPE_AUDIO)
-            prev_aud_si = &call_med->prev_aud_si;
+        if (call_med->prev_type == PJMEDIA_TYPE_AUDIO) {
+            prev_aud_local_addr = &call_med->prev_aud_local_addr;
+            prev_aud_rem_addr = &call_med->prev_aud_rem_addr;
+        }
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-        else if (call_med->prev_type == PJMEDIA_TYPE_VIDEO)
-            prev_vid_si = &call_med->prev_vid_si;
+        else if (call_med->prev_type == PJMEDIA_TYPE_VIDEO) {
+            prev_vid_local_addr = &call_med->prev_vid_local_addr;
+            prev_vid_rem_addr = &call_med->prev_vid_rem_addr;
+        }
 #endif
     } else {
         call_med->prev_srtp_use = PJ_TRUE;
@@ -3441,7 +3449,8 @@ static void check_srtp_roc(pjsua_call *call,
             /* Get current active audio stream info */
             if (call_med->strm.a.stream) {
                 pjmedia_stream_get_info(call_med->strm.a.stream, &aud_si);
-                prev_aud_si = &aud_si;
+                prev_aud_local_addr = &aud_si.local_addr;
+                prev_aud_rem_addr = &aud_si.rem_addr;
             }
         } 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
@@ -3449,7 +3458,8 @@ static void check_srtp_roc(pjsua_call *call,
             /* Get current active video stream info */
             if (call_med->strm.v.stream) {
                 pjmedia_vid_stream_get_info(call_med->strm.v.stream, &vid_si);
-                prev_vid_si = &vid_si;
+                prev_vid_local_addr = &vid_si.local_addr;
+                prev_vid_rem_addr = &vid_si.rem_addr;
             }
         }
 #endif
@@ -3464,25 +3474,25 @@ static void check_srtp_roc(pjsua_call *call,
                           call_med->prev_srtp_info.rx_roc.roc));
 #endif
     
-    if (prev_aud_si) {
+    if (prev_aud_local_addr) {
         const pjmedia_stream_info *new_si = &new_si_->info.aud;
 
         /* Local IP address changes */
-        if (pj_sockaddr_cmp(&prev_aud_si->local_addr, &new_si->local_addr))
+        if (pj_sockaddr_cmp(&prev_aud_local_addr, &new_si->local_addr))
             local_change = PJ_TRUE;
         /* Remote IP address changes */
-        if (pj_sockaddr_cmp(&prev_aud_si->rem_addr, &new_si->rem_addr))
+        if (pj_sockaddr_cmp(&prev_aud_rem_addr, &new_si->rem_addr))
             rem_change = PJ_TRUE;
     }
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-    if (prev_vid_si) {
+    if (prev_vid_local_addr) {
         const pjmedia_vid_stream_info *new_si = &new_si_->info.vid;
         
         /* Local IP address changes */
-        if (pj_sockaddr_cmp(&prev_vid_si->local_addr, &new_si->local_addr))
+        if (pj_sockaddr_cmp(&prev_vid_local_addr, &new_si->local_addr))
             local_change = PJ_TRUE;
         /* Remote IP address changes */
-        if (pj_sockaddr_cmp(&prev_vid_si->rem_addr, &new_si->rem_addr))
+        if (pj_sockaddr_cmp(&prev_vid_rem_addr, &new_si->rem_addr))
             rem_change = PJ_TRUE;
     }
 #endif

@@ -546,7 +546,11 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
     pjmedia_rtcp_stat stat;
 
     if (strm) {
-        pjmedia_stream_get_info(strm, &call_med->prev_aud_si);
+        pjmedia_stream_info prev_aud_si;
+
+        pjmedia_stream_get_info(strm, &prev_aud_si);
+        call_med->prev_aud_local_addr = prev_aud_si.local_addr;
+        call_med->prev_aud_rem_addr = prev_aud_si.rem_addr;
 
         /* Unsubscribe from stream events */
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
