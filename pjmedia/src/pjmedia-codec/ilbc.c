@@ -248,8 +248,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_ilbc_deinit(void)
 /* 
  * Check if factory can allocate the specified codec. 
  */
-static pj_status_t ilbc_test_alloc( pjmedia_codec_factory *factory, 
-                                   const pjmedia_codec_info *info )
+static pj_status_t ilbc_test_alloc(pjmedia_codec_factory *factory,
+                                   const pjmedia_codec_info *info)
 {
     const pj_str_t ilbc_tag = { "iLBC", 4};
 
@@ -281,9 +281,9 @@ static pj_status_t ilbc_test_alloc( pjmedia_codec_factory *factory,
 /*
  * Generate default attribute.
  */
-static pj_status_t ilbc_default_attr (pjmedia_codec_factory *factory, 
-                                      const pjmedia_codec_info *id, 
-                                      pjmedia_codec_param *attr )
+static pj_status_t ilbc_default_attr(pjmedia_codec_factory *factory, 
+                                     const pjmedia_codec_info *id, 
+                                     pjmedia_codec_param *attr)
 {
     PJ_UNUSED_ARG(factory);
     PJ_ASSERT_RETURN(factory==&ilbc_factory.base, PJ_EINVAL);
@@ -373,8 +373,8 @@ static pj_status_t ilbc_alloc_codec(pjmedia_codec_factory *factory,
 /*
  * Free codec.
  */
-static pj_status_t ilbc_dealloc_codec( pjmedia_codec_factory *factory, 
-                                      pjmedia_codec *codec )
+static pj_status_t ilbc_dealloc_codec(pjmedia_codec_factory *factory,
+                                      pjmedia_codec *codec)
 {
     struct ilbc_codec *ilbc_codec;
 
@@ -577,12 +577,12 @@ static pj_status_t  ilbc_codec_modify(pjmedia_codec *codec,
 /*
  * Get frames in the packet.
  */
-static pj_status_t  ilbc_codec_parse( pjmedia_codec *codec,
-                                     void *pkt,
-                                     pj_size_t pkt_size,
-                                     const pj_timestamp *ts,
-                                     unsigned *frame_cnt,
-                                     pjmedia_frame frames[])
+static pj_status_t ilbc_codec_parse(pjmedia_codec *codec,
+                                    void *pkt,
+                                    pj_size_t pkt_size,
+                                    const pj_timestamp *ts,
+                                    unsigned *frame_cnt,
+                                    pjmedia_frame frames[])
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
     unsigned count;
@@ -833,7 +833,7 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
 /*
  * Recover lost frame.
  */
-static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
+static pj_status_t ilbc_codec_recover(pjmedia_codec *codec,
                                       unsigned output_buf_len,
                                       struct pjmedia_frame *output)
 {

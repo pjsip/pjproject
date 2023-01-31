@@ -206,7 +206,8 @@ typedef struct ffmpeg_private
 #define FUNC_PACKETIZE(name) \
     pj_status_t(name)(ffmpeg_private *ff, pj_uint8_t *bits, \
                       pj_size_t bits_len, unsigned *bits_pos, \
-                      pj_uint8_t *payload, pj_size_t *payload_len, pj_bool_t is_keyframe)
+                      pj_uint8_t *payload, pj_size_t *payload_len, \
+                      pj_bool_t is_keyframe)
 
 #define FUNC_UNPACKETIZE(name) \
     pj_status_t(name)(ffmpeg_private *ff, const pj_uint8_t *payload, \
@@ -602,7 +603,7 @@ static FUNC_PACKETIZE(h264_packetize)
     pj_uint8_t *outbuf = payload;
     pj_size_t out_size = *payload_len;
     status = pjmedia_h264_packetize(data->pktz, bits, bits_len, bits_pos,
-                                  &payload, payload_len);
+                                    &payload, payload_len);
     if (status != PJ_SUCCESS)
         return status;
     if (out_size < *payload_len)
@@ -675,7 +676,7 @@ static FUNC_PACKETIZE(h263_packetize)
     pj_uint8_t *outbuf = payload;
     pj_size_t out_size = *payload_len;
     status = pjmedia_h263_packetize(data->pktz, bits, bits_len, bits_pos,
-                                  &payload, payload_len);
+                                    &payload, payload_len);
     if (status != PJ_SUCCESS)
         return status;
     if (out_size < *payload_len)
@@ -1534,12 +1535,13 @@ static pj_status_t  ffmpeg_codec_get_param(pjmedia_vid_codec *codec,
 }
 
 
-static pj_status_t  ffmpeg_packetize ( pjmedia_vid_codec *codec,
-                                       pj_uint8_t *bits,
-                                       pj_size_t bits_len,
-                                       unsigned *bits_pos,
-                                       pj_uint8_t *payload,
-                                       pj_size_t *payload_len, pj_bool_t is_keyframe)
+static pj_status_t  ffmpeg_packetize(pjmedia_vid_codec *codec,
+                                     pj_uint8_t *bits,
+                                     pj_size_t bits_len,
+                                     unsigned *bits_pos,
+                                     pj_uint8_t *payload,
+                                     pj_size_t *payload_len,
+                                     pj_bool_t is_keyframe)
 {
     ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
 
@@ -1706,8 +1708,7 @@ static pj_status_t ffmpeg_codec_encode_begin(pjmedia_vid_codec *codec,
     *has_more = PJ_FALSE;
 
     if (ff->whole) {
-        status = ffmpeg_codec_encode_whole(codec, opt, input, out_size,
-                                           output);
+        status = ffmpeg_codec_encode_whole(codec, opt, input, out_size, output);
     } else {
         pjmedia_frame whole_frm;
         pj_bzero(&whole_frm, sizeof(whole_frm));

@@ -80,32 +80,31 @@
  * Factory operations.
  */
 static pj_status_t and_media_test_alloc(pjmedia_vid_codec_factory *factory,
-                                    const pjmedia_vid_codec_info *info );
+                                        const pjmedia_vid_codec_info *info);
 static pj_status_t and_media_default_attr(pjmedia_vid_codec_factory *factory,
-                                      const pjmedia_vid_codec_info *info,
-                                      pjmedia_vid_codec_param *attr );
+                                          const pjmedia_vid_codec_info *info,
+                                          pjmedia_vid_codec_param *attr);
 static pj_status_t and_media_enum_info(pjmedia_vid_codec_factory *factory,
-                                   unsigned *count,
-                                   pjmedia_vid_codec_info codecs[]);
+                                       unsigned *count,
+                                       pjmedia_vid_codec_info codecs[]);
 static pj_status_t and_media_alloc_codec(pjmedia_vid_codec_factory *factory,
-                                     const pjmedia_vid_codec_info *info,
-                                     pjmedia_vid_codec **p_codec);
+                                         const pjmedia_vid_codec_info *info,
+                                         pjmedia_vid_codec **p_codec);
 static pj_status_t and_media_dealloc_codec(pjmedia_vid_codec_factory *factory,
-                                       pjmedia_vid_codec *codec );
-
+                                           pjmedia_vid_codec *codec);
 
 /*
  * Codec operations
  */
 static pj_status_t and_media_codec_init(pjmedia_vid_codec *codec,
-                                    pj_pool_t *pool );
+                                        pj_pool_t *pool);
 static pj_status_t and_media_codec_open(pjmedia_vid_codec *codec,
-                                    pjmedia_vid_codec_param *param );
+                                        pjmedia_vid_codec_param *param);
 static pj_status_t and_media_codec_close(pjmedia_vid_codec *codec);
 static pj_status_t and_media_codec_modify(pjmedia_vid_codec *codec,
-                                      const pjmedia_vid_codec_param *param);
+                                          const pjmedia_vid_codec_param *param);
 static pj_status_t and_media_codec_get_param(pjmedia_vid_codec *codec,
-                                         pjmedia_vid_codec_param *param);
+                                             pjmedia_vid_codec_param *param);
 static pj_status_t and_media_codec_encode_begin(pjmedia_vid_codec *codec,
                                             const pjmedia_vid_encode_opt *opt,
                                             const pjmedia_frame *input,
@@ -113,14 +112,14 @@ static pj_status_t and_media_codec_encode_begin(pjmedia_vid_codec *codec,
                                             pjmedia_frame *output,
                                             pj_bool_t *has_more);
 static pj_status_t and_media_codec_encode_more(pjmedia_vid_codec *codec,
-                                           unsigned out_size,
-                                           pjmedia_frame *output,
-                                           pj_bool_t *has_more);
+                                               unsigned out_size,
+                                               pjmedia_frame *output,
+                                               pj_bool_t *has_more);
 static pj_status_t and_media_codec_decode(pjmedia_vid_codec *codec,
-                                      pj_size_t count,
-                                      pjmedia_frame packets[],
-                                      unsigned out_size,
-                                      pjmedia_frame *output);
+                                          pj_size_t count,
+                                          pjmedia_frame packets[],
+                                          unsigned out_size,
+                                          pjmedia_frame *output);
 
 /* Definition for Android AMediaCodec operations. */
 static pjmedia_vid_codec_op and_media_codec_op =
@@ -452,9 +451,8 @@ static pj_status_t configure_decoder(and_media_codec_data *and_media_data) {
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjmedia_codec_and_media_vid_init(
-                                                pjmedia_vid_codec_mgr *mgr,
-                                                pj_pool_factory *pf)
+PJ_DEF(pj_status_t) pjmedia_codec_and_media_vid_init(pjmedia_vid_codec_mgr *mgr,
+                                                     pj_pool_factory *pf)
 {
     const pj_str_t h264_name = { (char*)"H264", 4};
     pj_status_t status;
@@ -527,7 +525,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_and_media_vid_deinit(void)
 }
 
 static pj_status_t and_media_test_alloc(pjmedia_vid_codec_factory *factory,
-                                    const pjmedia_vid_codec_info *info )
+                                        const pjmedia_vid_codec_info *info)
 {
     unsigned i;
 
@@ -545,8 +543,8 @@ static pj_status_t and_media_test_alloc(pjmedia_vid_codec_factory *factory,
 }
 
 static pj_status_t and_media_default_attr(pjmedia_vid_codec_factory *factory,
-                                      const pjmedia_vid_codec_info *info,
-                                      pjmedia_vid_codec_param *attr )
+                                          const pjmedia_vid_codec_info *info,
+                                          pjmedia_vid_codec_param *attr)
 {
     unsigned i;
 
@@ -712,8 +710,8 @@ static void get_codec_name(pj_bool_t is_enc,
 }
 
 static pj_status_t and_media_enum_info(pjmedia_vid_codec_factory *factory,
-                                   unsigned *count,
-                                   pjmedia_vid_codec_info info[])
+                                       unsigned *count,
+                                       pjmedia_vid_codec_info info[])
 {
     unsigned i, max;
 
@@ -816,8 +814,8 @@ static void create_codec(struct and_media_codec_data *and_media_data)
 }
 
 static pj_status_t and_media_alloc_codec(pjmedia_vid_codec_factory *factory,
-                                     const pjmedia_vid_codec_info *info,
-                                     pjmedia_vid_codec **p_codec)
+                                         const pjmedia_vid_codec_info *info,
+                                         pjmedia_vid_codec **p_codec)
 {
     pj_pool_t *pool;
     pjmedia_vid_codec *codec;
@@ -871,7 +869,7 @@ on_error:
 }
 
 static pj_status_t and_media_dealloc_codec(pjmedia_vid_codec_factory *factory,
-                                       pjmedia_vid_codec *codec )
+                                           pjmedia_vid_codec *codec)
 {
     and_media_codec_data *and_media_data;
 
@@ -896,7 +894,7 @@ static pj_status_t and_media_dealloc_codec(pjmedia_vid_codec_factory *factory,
 }
 
 static pj_status_t and_media_codec_init(pjmedia_vid_codec *codec,
-                                    pj_pool_t *pool )
+                                        pj_pool_t *pool)
 {
     PJ_ASSERT_RETURN(codec && pool, PJ_EINVAL);
     PJ_UNUSED_ARG(codec);
@@ -905,15 +903,15 @@ static pj_status_t and_media_codec_init(pjmedia_vid_codec *codec,
 }
 
 static pj_status_t and_media_codec_open(pjmedia_vid_codec *codec,
-                                    pjmedia_vid_codec_param *codec_param)
+                                        pjmedia_vid_codec_param *codec_param)
 {
     and_media_codec_data *and_media_data;
     pjmedia_vid_codec_param *param;
     pj_status_t status = PJ_SUCCESS;
 
     and_media_data = (and_media_codec_data*) codec->codec_data;
-    and_media_data->prm = pjmedia_vid_codec_param_clone( and_media_data->pool,
-                                                     codec_param);
+    and_media_data->prm = pjmedia_vid_codec_param_clone(and_media_data->pool,
+                                                        codec_param);
     param = and_media_data->prm;
     if (and_media_codec[and_media_data->codec_idx].open_codec) {
         status = and_media_codec[and_media_data->codec_idx].open_codec(
@@ -950,7 +948,7 @@ static pj_status_t and_media_codec_close(pjmedia_vid_codec *codec)
 }
 
 static pj_status_t and_media_codec_modify(pjmedia_vid_codec *codec,
-                                      const pjmedia_vid_codec_param *param)
+                                          const pjmedia_vid_codec_param *param)
 {
     PJ_ASSERT_RETURN(codec && param, PJ_EINVAL);
     PJ_UNUSED_ARG(codec);
@@ -959,7 +957,7 @@ static pj_status_t and_media_codec_modify(pjmedia_vid_codec *codec,
 }
 
 static pj_status_t and_media_codec_get_param(pjmedia_vid_codec *codec,
-                                         pjmedia_vid_codec_param *param)
+                                             pjmedia_vid_codec_param *param)
 {
     struct and_media_codec_data *and_media_data;
 
@@ -1157,9 +1155,9 @@ on_return:
 }
 
 static pj_status_t and_media_codec_encode_more(pjmedia_vid_codec *codec,
-                                           unsigned out_size,
-                                           pjmedia_frame *output,
-                                           pj_bool_t *has_more)
+                                               unsigned out_size,
+                                               pjmedia_frame *output,
+                                               pj_bool_t *has_more)
 {
     struct and_media_codec_data *and_media_data;
     pj_status_t status = PJ_SUCCESS;
@@ -1340,8 +1338,8 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
                                                         &output_size);
         if (output_buf == NULL) {
             am_status = AMediaCodec_releaseOutputBuffer(and_media_data->dec,
-                                            buf_idx,
-                                            0);
+                                                        buf_idx,
+                                                        0);
             PJ_LOG(4,(THIS_FILE, "Decoder getOutputBuffer failed"));
             return status;
         }
@@ -1408,10 +1406,10 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
 }
 
 static pj_status_t and_media_codec_decode(pjmedia_vid_codec *codec,
-                                      pj_size_t count,
-                                      pjmedia_frame packets[],
-                                      unsigned out_size,
-                                      pjmedia_frame *output)
+                                          pj_size_t count,
+                                          pjmedia_frame packets[],
+                                          unsigned out_size,
+                                          pjmedia_frame *output)
 {
     struct and_media_codec_data *and_media_data;
     pj_status_t status = PJ_EINVAL;
@@ -1683,12 +1681,12 @@ static pj_status_t decode_h264(pjmedia_vid_codec *codec,
                 return PJMEDIA_CODEC_EFRMTOOSHORT;
             }
 
-            status = pjmedia_h264_unpacketize( h264_data->pktz,
-                                               (pj_uint8_t*)packets[i].buf,
-                                               packets[i].size,
-                                               and_media_data->dec_buf,
-                                               and_media_data->dec_buf_size,
-                                               &whole_len);
+            status = pjmedia_h264_unpacketize(h264_data->pktz,
+                                              (pj_uint8_t*)packets[i].buf,
+                                              packets[i].size,
+                                              and_media_data->dec_buf,
+                                              and_media_data->dec_buf_size,
+                                              &whole_len);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(4,(THIS_FILE, status, "Unpacketize error"));
                 continue;
@@ -1732,7 +1730,7 @@ static pj_status_t decode_h264(pjmedia_vid_codec *codec,
         write_output = (buf_pos + frm_size >= whole_len);
 
         status = and_media_decode(codec, and_media_data, start, frm_size, 0,
-                              &packets[0].timestamp, write_output, output);
+                                  &packets[0].timestamp, write_output, output);
         if (status != PJ_SUCCESS)
             return status;
 
@@ -1783,7 +1781,7 @@ static pj_status_t open_vpx(and_media_codec_data *and_media_data)
     pktz_cfg.fmt_id = and_media_data->prm->enc_fmt.id;
 
     status = pjmedia_vpx_packetizer_create(and_media_data->pool, &pktz_cfg,
-                                            &vpx_data->pktz);
+                                           &vpx_data->pktz);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -1906,9 +1904,9 @@ static pj_status_t decode_vpx(pjmedia_vid_codec *codec,
             write_output = (i == count - 1);
 
             status = and_media_decode(codec, and_media_data,
-                                  (pj_uint8_t *)packets[i].buf + desc_len,
-                                  packet_size, 0, &packets[0].timestamp,
-                                  write_output, output);
+                                      (pj_uint8_t *)packets[i].buf + desc_len,
+                                      packet_size, 0, &packets[0].timestamp,
+                                      write_output, output);
             if (status != PJ_SUCCESS)
                 return status;
 

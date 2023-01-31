@@ -433,9 +433,9 @@ static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory,
 /*
  * Generate default attribute.
  */
-static pj_status_t spx_default_attr (pjmedia_codec_factory *factory, 
-                                      const pjmedia_codec_info *id, 
-                                      pjmedia_codec_param *attr )
+static pj_status_t spx_default_attr(pjmedia_codec_factory *factory,
+                                    const pjmedia_codec_info *id,
+                                    pjmedia_codec_param *attr)
 {
 
     PJ_ASSERT_RETURN(factory==&spx_factory.base, PJ_EINVAL);
@@ -479,9 +479,9 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
 /*
  * Enum codecs supported by this factory (i.e. only Speex!).
  */
-static pj_status_t spx_enum_codecs(pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
-                                    pjmedia_codec_info codecs[])
+static pj_status_t spx_enum_codecs(pjmedia_codec_factory *factory,
+                                   unsigned *count,
+                                   pjmedia_codec_info codecs[])
 {
     unsigned max;
     int i;  /* Must be signed */

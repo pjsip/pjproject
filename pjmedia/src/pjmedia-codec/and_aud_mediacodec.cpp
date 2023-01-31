@@ -708,7 +708,7 @@ static void create_codec(and_media_private_t *and_media_data)
             PJ_LOG(4, (THIS_FILE, "Failed creating encoder: %s", enc_name));
         }
         PJ_LOG(4, (THIS_FILE, "Done creating encoder: %s [0x%x]", enc_name,
-               and_media_data->enc));
+                   and_media_data->enc));
     }
 
     if (!and_media_data->dec) {
@@ -717,7 +717,7 @@ static void create_codec(and_media_private_t *and_media_data)
             PJ_LOG(4, (THIS_FILE, "Failed creating decoder: %s", dec_name));
         }
         PJ_LOG(4, (THIS_FILE, "Done creating decoder: %s [0x%x]", dec_name,
-               and_media_data->dec));
+                   and_media_data->dec));
     }
 }
 

@@ -307,8 +307,8 @@ static pj_status_t bcg729_default_attr(pjmedia_codec_factory *factory,
  * Enum codecs supported by this factory.
  */
 static pj_status_t bcg729_enum_codecs(pjmedia_codec_factory *factory,
-                                    unsigned *count,
-                                    pjmedia_codec_info codecs[])
+                                      unsigned *count,
+                                      pjmedia_codec_info codecs[])
 {
     PJ_ASSERT_RETURN(factory==&bcg729_factory.base, PJ_EINVAL);
     PJ_ASSERT_RETURN(codecs && *count > 0, PJ_EINVAL);
@@ -388,7 +388,7 @@ static pj_status_t bcg729_dealloc_codec(pjmedia_codec_factory *factory,
  * Init codec.
  */
 static pj_status_t bcg729_codec_init(pjmedia_codec *codec,
-                                   pj_pool_t *pool )
+                                     pj_pool_t *pool)
 {
     PJ_UNUSED_ARG(codec);
     PJ_UNUSED_ARG(pool);

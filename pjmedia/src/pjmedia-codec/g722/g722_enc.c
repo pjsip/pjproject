@@ -156,10 +156,10 @@ static int block3l (g722_enc_t *enc, int il)
     detl = depl ;
 
 #ifdef DEBUG_VERBOSE
-        printf ("BLOCK3L il=%4d, ril=%4d, il4=%4d, nbl=%4d, wd=%4d, nbpl=%4d\n",
-                 il, ril, il4, enc->nbl, wd, nbpl) ;
-        printf ("wd1=%4d, wd2=%4d, wd3=%4d, depl=%4d, detl=%4d\n",
-                wd1, wd2, wd3, depl, detl) ;
+    printf("BLOCK3L il=%4d, ril=%4d, il4=%4d, nbl=%4d, wd=%4d, nbpl=%4d\n",
+           il, ril, il4, enc->nbl, wd, nbpl);
+    printf("wd1=%4d, wd2=%4d, wd3=%4d, depl=%4d, detl=%4d\n",
+           wd1, wd2, wd3, depl, detl);
 #endif
 
     return (detl) ;
