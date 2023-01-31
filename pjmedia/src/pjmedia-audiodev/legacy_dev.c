@@ -161,12 +161,11 @@ static unsigned factory_get_dev_count(pjmedia_aud_dev_factory *f)
 }
 
 /* API: get device info */
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info)
 {
-    const pjmedia_snd_dev_info *si = 
-        pjmedia_snd_get_dev_info(index);;
+    const pjmedia_snd_dev_info *si = pjmedia_snd_get_dev_info(index);
 
     PJ_UNUSED_ARG(f);
 

@@ -21,9 +21,9 @@ class TBitStream
 public:
     /*!
       @function TBitStream
-      
+
       @discussion Constructor
-      */   
+      */
     TBitStream():iDes(iData,KUnpackedFrameLen){}
     /*!
       @function CompressG729Frame
@@ -61,110 +61,107 @@ private:
     
 
 const TDesC8& TBitStream::CompressG729Frame( const TDesC8& aSrc, TBool aIsSIDFrame )
-    {
+{
     // reset data
     iDes.FillZ(iDes.MaxLength());
     iIdx = iBitOffset = 0;
-    
-    TInt numParams = (aIsSIDFrame) ? KNumSIDFrameParams : KNumFullFrameParams;
-    const TUint8* p = const_cast<TUint8*>(aSrc.Ptr());
-    
-    for(TInt i = 0, pIdx = 0; i < numParams; i++, pIdx += 2) 
-        {
-        TUint8 paramBits = (aIsSIDFrame) ? KG729SIDPayloadBits[i] : KG729FullPayloadBits[i];        
-        if(paramBits > 8)
-            {
-            Compress(p[pIdx+1], paramBits - 8); // msb
-            paramBits = 8;
-            }            
-        Compress(p[pIdx], paramBits); // lsb    
-        }
 
-    if( iBitOffset )
+    TInt numParams = (aIsSIDFrame) ? KNumSIDFrameParams : KNumFullFrameParams;
+    const TUint8 *p = const_cast<TUint8 *>(aSrc.Ptr());
+
+    for (TInt i = 0, pIdx = 0; i < numParams; i++, pIdx += 2)
+    {
+        TUint8 paramBits = (aIsSIDFrame) ? KG729SIDPayloadBits[i] : KG729FullPayloadBits[i];
+        if (paramBits > 8)
+        {
+            Compress(p[pIdx + 1], paramBits - 8); // msb
+            paramBits = 8;
+        }
+        Compress(p[pIdx], paramBits); // lsb
+    }
+
+    if (iBitOffset)
         iIdx++;
-        
+
     iDes.SetLength(iIdx);
     return iDes;
-    }
+}
 
- 
 const TDesC8& TBitStream::ExpandG729Frame( const TDesC8& aSrc, TBool aIsSIDFrame )
-    {
+{
     // reset data
     iDes.FillZ(iDes.MaxLength());
     iIdx = iBitOffset = 0;
-    
+
     TInt numParams = (aIsSIDFrame) ? KNumSIDFrameParams : KNumFullFrameParams;
-    const TUint8* p = const_cast<TUint8*>(aSrc.Ptr());
-    
-    for(TInt i = 0, dIdx = 0; i < numParams; i++, dIdx += 2) 
-        {
+    const TUint8 *p = const_cast<TUint8 *>(aSrc.Ptr());
+
+    for (TInt i = 0, dIdx = 0; i < numParams; i++, dIdx += 2)
+    {
         TUint8 paramBits = (aIsSIDFrame) ? KG729SIDPayloadBits[i] : KG729FullPayloadBits[i];
-        if(paramBits > 8)
-          {
-          Expand(p, dIdx+1, paramBits - 8); // msb
-          paramBits = 8;
-          }    
-        Expand(p, dIdx, paramBits); // lsb 
+        if (paramBits > 8)
+        {
+            Expand(p, dIdx + 1, paramBits - 8); // msb
+            paramBits = 8;
         }
-        
-    iDes.SetLength(KUnpackedFrameLen);
-    return iDes;
+        Expand(p, dIdx, paramBits); // lsb
     }
 
+    iDes.SetLength(KUnpackedFrameLen);
+    return iDes;
+}
 
 void TBitStream::Compress( TUint8 aValue, TUint8 aNumOfBits )
-  {
+{
     // clear bits that will be discarded
     aValue &= (0xff >> (8 - aNumOfBits));
-    
+
     // calculate required bitwise left shift
     TInt shl = 8 - (iBitOffset + aNumOfBits);
-    
+
     if (shl == 0) // no shift required
-        { 
+    {
         iData[iIdx++] |= aValue;
         iBitOffset = 0;
-        }
+    }
     else if (shl > 0) // bits fit into current byte
-        { 
+    {
         iData[iIdx] |= (aValue << shl);
         iBitOffset += aNumOfBits;
-        }        
-    else        
-        { 
+    }
+    else
+    {
         iBitOffset = -shl;
-        iData[iIdx] |= (aValue >> iBitOffset); // right shift
-        iData[++iIdx] |= (aValue << (8-iBitOffset)); // push remaining bits to next byte
-        }
-  }
-    
+        iData[iIdx] |= (aValue >> iBitOffset);         // right shift
+        iData[++iIdx] |= (aValue << (8 - iBitOffset)); // push remaining bits to next byte
+    }
+}
 
 void TBitStream::Expand( const TUint8* aSrc, TInt aDstIdx, TUint8 aNumOfBits )
-  {    
-    TUint8 aValue = aSrc[iIdx] & (0xff >> iBitOffset);
-       
-    // calculate required bitwise right shift
-    TInt shr = 8 - (iBitOffset + aNumOfBits);
-    
-    if (shr == 0) // no shift required
-        { 
+{
+        TUint8 aValue = aSrc[iIdx] & (0xff >> iBitOffset);
+
+        // calculate required bitwise right shift
+        TInt shr = 8 - (iBitOffset + aNumOfBits);
+
+        if (shr == 0) // no shift required
+        {
         iData[aDstIdx] = aValue;
         iIdx++;
         iBitOffset = 0;
         }
-    else if (shr > 0) // right shift
-        { 
+        else if (shr > 0) // right shift
+        {
         iData[aDstIdx] = (aValue >> shr);
         iBitOffset += aNumOfBits;
-        }        
-    else // shift left and take remaining bits from the next src byte
+        }
+        else // shift left and take remaining bits from the next src byte
         {
         iBitOffset = -shr;
-        iData[aDstIdx] = aValue << iBitOffset;                
+        iData[aDstIdx] = aValue << iBitOffset;
         iData[aDstIdx] |= aSrc[++iIdx] >> (8 - iBitOffset);
         }
-  }
+}
 
 #endif // __BITSTREAM_H_
     

@@ -99,17 +99,17 @@ static pj_status_t oboe_destroy(pjmedia_aud_dev_factory *f);
 static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *f);
 static unsigned oboe_get_dev_count(pjmedia_aud_dev_factory *f);
 static pj_status_t oboe_get_dev_info(pjmedia_aud_dev_factory *f,
-                                        unsigned index,
-                                        pjmedia_aud_dev_info *info);
+                                     unsigned index,
+                                     pjmedia_aud_dev_info *info);
 static pj_status_t oboe_default_param(pjmedia_aud_dev_factory *f,
-                                         unsigned index,
-                                         pjmedia_aud_param *param);
+                                      unsigned index,
+                                      pjmedia_aud_param *param);
 static pj_status_t oboe_create_stream(pjmedia_aud_dev_factory *f,
-                                         const pjmedia_aud_param *param,
-                                         pjmedia_aud_rec_cb rec_cb,
-                                         pjmedia_aud_play_cb play_cb,
-                                         void *user_data,
-                                         pjmedia_aud_stream **p_aud_strm);
+                                      const pjmedia_aud_param *param,
+                                      pjmedia_aud_rec_cb rec_cb,
+                                      pjmedia_aud_play_cb play_cb,
+                                      void *user_data,
+                                      pjmedia_aud_stream **p_aud_strm);
 
 /* Stream prototypes */
 static pj_status_t strm_get_param(pjmedia_aud_stream *strm,
@@ -472,8 +472,8 @@ static unsigned oboe_get_dev_count(pjmedia_aud_dev_factory *ff)
 
 /* API: Get device info. */
 static pj_status_t oboe_get_dev_info(pjmedia_aud_dev_factory *ff,
-                                        unsigned index,
-                                        pjmedia_aud_dev_info *info)
+                                     unsigned index,
+                                     pjmedia_aud_dev_info *info)
 {
     struct oboe_aud_factory *f = (struct oboe_aud_factory*)ff;
 
@@ -486,8 +486,8 @@ static pj_status_t oboe_get_dev_info(pjmedia_aud_dev_factory *ff,
 
 /* API: fill in with default parameter. */
 static pj_status_t oboe_default_param(pjmedia_aud_dev_factory *ff,
-                                         unsigned index,
-                                         pjmedia_aud_param *param)
+                                      unsigned index,
+                                      pjmedia_aud_param *param)
 {
     struct oboe_aud_factory *f = (struct oboe_aud_factory*)ff;
     pjmedia_aud_dev_info adi;

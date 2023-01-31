@@ -157,7 +157,7 @@ static pjmedia_aud_stream_op pa_strm_op =
 
 
 
-static int PaRecorderCallback(const void *input, 
+static int PaRecorderCallback(const void *input,
                               void *output,
                               unsigned long frameCount,
                               const PaStreamCallbackTimeInfo* timeInfo,
@@ -187,7 +187,7 @@ static int PaRecorderCallback(const void *input,
     if (stream->rec_thread_initialized == 0 || !pj_thread_is_registered()) 
     {
         pj_bzero(stream->rec_thread_desc, sizeof(pj_thread_desc));
-        status = pj_thread_register("pa_rec", stream->rec_thread_desc, 
+        status = pj_thread_register("pa_rec", stream->rec_thread_desc,
                                     &stream->rec_thread);
         stream->rec_thread_initialized = 1;
         PJ_LOG(5,(THIS_FILE, "Recorder thread started"));
@@ -383,7 +383,7 @@ static int PaPlayerCallback( const void *input,
         stream->play_timestamp.u64 += stream->samples_per_frame /
                                       stream->channel_count;
     }
-    
+
     if (status==0) 
         return paContinue;
 
@@ -821,7 +821,7 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
             /* No such device. */
             return PJMEDIA_EAUD_NODEFDEV;
         }
-    } 
+    }
 
     paDevInfo = Pa_GetDeviceInfo(play_id);
     if (!paDevInfo) {

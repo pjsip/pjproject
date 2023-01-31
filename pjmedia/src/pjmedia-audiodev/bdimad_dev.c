@@ -76,47 +76,47 @@ struct bd_factory
 struct bd_stream
 {
     /** Base stream.                    */
-    pjmedia_aud_stream   base;                
+    pjmedia_aud_stream   base;
     /** Settings.                       */
-    pjmedia_aud_param    param;               
+    pjmedia_aud_param    param;
     /** Memory pool.                    */
-    pj_pool_t           *pool;                
-                                        
+    pj_pool_t           *pool;
+
     /** Capture callback.               */
-    pjmedia_aud_rec_cb   rec_cb;              
+    pjmedia_aud_rec_cb   rec_cb;
     /** Playback callback.              */
-    pjmedia_aud_play_cb  play_cb;             
+    pjmedia_aud_play_cb  play_cb;
     /** Application data.               */
-    void                *user_data;           
-                                        
+    void                *user_data;
+
     /** Frame format                    */
-    pjmedia_format_id    fmt_id;              
+    pjmedia_format_id    fmt_id;
     /** Silence pattern                 */
-    pj_uint8_t           silence_char;    
+    pj_uint8_t           silence_char;
     /** Bytes per frame                 */
     unsigned             bytes_per_frame;
     /** Samples per frame               */
     unsigned             samples_per_frame;
     /** Channel count                    */
     int                  channel_count;
-                                        
+
     /** Extended frame buffer           */
-    pjmedia_frame_ext   *xfrm;                
+    pjmedia_frame_ext   *xfrm;
     /** Total ext frm size              */
-    unsigned             xfrm_size;           
-       
+    unsigned             xfrm_size;
+
     /** Check running variable          */
-    int                  go;                
+    int                  go;
 
     /** Timestamp iterator for capture  */
-    pj_timestamp         timestampCapture;    
+    pj_timestamp         timestampCapture;
     /** Timestamp iterator for playback */
-    pj_timestamp         timestampPlayback;   
+    pj_timestamp         timestampPlayback;
 
     /** bdIMAD current session instance */
-    bdIMADpj             bdIMADpjInstance;    
+    bdIMADpj             bdIMADpjInstance;
     /** bdIMAD current session settings */
-    bdIMADpj_Setting_t  *bdIMADpjSettingsPtr; 
+    bdIMADpj_Setting_t  *bdIMADpjSettingsPtr;
     /** bdIMAD current session warnings */
     bdIMADpj_Warnings_t *bdIMADpjWarningPtr;
 
@@ -155,27 +155,27 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f);
 static unsigned    factory_get_dev_count(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
-                                        unsigned index,    
+                                        unsigned index,
                                         pjmedia_aud_dev_info *info);
-static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f, 
-                                         unsigned index, 
+static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
+                                         unsigned index,
                                          pjmedia_aud_param *param);
-static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f, 
-                                         const pjmedia_aud_param *param, 
-                                         pjmedia_aud_rec_cb rec_cb, 
-                                         pjmedia_aud_play_cb play_cb, 
-                                         void *user_data, 
+static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
+                                         const pjmedia_aud_param *param,
+                                         pjmedia_aud_rec_cb rec_cb,
+                                         pjmedia_aud_play_cb play_cb,
+                                         void *user_data,
                                          pjmedia_aud_stream **p_aud_strm);
 static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f);
 
 // pjmedia_aud_stream_op
-static pj_status_t stream_get_param(pjmedia_aud_stream *strm, 
+static pj_status_t stream_get_param(pjmedia_aud_stream *strm,
                                     pjmedia_aud_param *param);
-static pj_status_t stream_get_cap(pjmedia_aud_stream *strm, 
-                                  pjmedia_aud_dev_cap cap, 
+static pj_status_t stream_get_cap(pjmedia_aud_stream *strm,
+                                  pjmedia_aud_dev_cap cap,
                                   void *value);
 static pj_status_t stream_set_cap(pjmedia_aud_stream *strm, 
-                                  pjmedia_aud_dev_cap cap, 
+                                  pjmedia_aud_dev_cap cap,
                                   const void *value);
 static pj_status_t stream_start(pjmedia_aud_stream *strm);
 static pj_status_t stream_stop(pjmedia_aud_stream *strm);
@@ -221,7 +221,7 @@ char* BD_IMAD_PJ_WCHARtoCHAR(wchar_t *orig)
 #ifdef __cplusplus
 extern "C" {
 #endif
-void manage_code(const unsigned char * pCode, unsigned char *pMsg1, 
+void manage_code(const unsigned char * pCode, unsigned char *pMsg1,
                  unsigned char * pMsg2);
 #ifdef __cplusplus
 }
@@ -294,13 +294,13 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
         wcscpy(playbackDevName[playbackDeviceCount], deviceNamep);
         playbackDeviceCount++;
     }
-    
+
     // Set devices info
     wf->dev_count = captureDeviceCount + playbackDeviceCount;
     wf->pool = pj_pool_create(wf->pf, "BD_IMAD_DEVICES", 1000, 1000, NULL);
     wf->dev_info = (struct bddev_info*)pj_pool_calloc(wf->pool, wf->dev_count, 
                                                      sizeof(struct bddev_info));
-    
+
     // Capture device properties
     for(i=0;i<captureDeviceCount;i++) {
         wf->dev_info[i].deviceId = i;
@@ -437,11 +437,11 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
 {
     pj_status_t status = PJ_SUCCESS;
     pjmedia_frame frame;
-    unsigned nsamples;    
+    unsigned nsamples;
 
-    struct bd_stream *strm = (struct bd_stream*)user_data;    
+    struct bd_stream *strm = (struct bd_stream*)user_data;
 
-    if(!strm->go) 
+    if(!strm->go)
         goto on_break;
 
     /* Known cases of callback's thread:
@@ -451,7 +451,7 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
      *   session will leave TLS set, but release the TLS data address,
      *   so the second session must re-register the callback's thread.
      */
-    if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered()) 
+    if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered())
     {
         pj_bzero(strm->rec_thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("bd_CaptureCallback", 
@@ -476,7 +476,7 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
              * samples, then call put_frame.
              */
             if (strm->rec_buf_count) {
-                unsigned chunk_count = 0;               
+                unsigned chunk_count = 0;
 
                 chunk_count = strm->samples_per_frame - strm->rec_buf_count;
                 pjmedia_copy_samples(strm->rec_buf + strm->rec_buf_count,
@@ -498,7 +498,7 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
             }
 
             /* Give all frames we have */
-            while (nsamples >= strm->samples_per_frame && status == 0) {                
+            while (nsamples >= strm->samples_per_frame && status == 0) {
                 frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
                 frame.buf = (void*) buffer;
                 frame.size = strm->bytes_per_frame;
@@ -516,7 +516,7 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
             /* Store the remaining samples into the buffer */
             if (nsamples && status == 0) {
                 strm->rec_buf_count = nsamples;
-                pjmedia_copy_samples(strm->rec_buf, (pj_int16_t*)buffer, 
+                pjmedia_copy_samples(strm->rec_buf, (pj_int16_t*)buffer,
                                      nsamples);
             }
 
@@ -525,7 +525,7 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
             pjmedia_copy_samples(strm->rec_buf + strm->rec_buf_count,
                                  (pj_int16_t*)buffer, 
                                  samples * strm->channel_count);
-            strm->rec_buf_count += samples * strm->channel_count;       
+            strm->rec_buf_count += samples * strm->channel_count;
         }
     }  else {
         pj_assert(!"Frame type not supported");
@@ -538,7 +538,7 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
         return;
 
 on_break:
-    strm->rec_thread_exited = 1;    
+    strm->rec_thread_exited = 1;
 }
 
 /* callbacks to get data */
@@ -559,7 +559,7 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
      *   session will leave TLS set, but release the TLS data address,
      *   so the second session must re-register the callback's thread.
      */
-    if (strm->play_thread_initialized == 0 || !pj_thread_is_registered()) 
+    if (strm->play_thread_initialized == 0 || !pj_thread_is_registered())
     {
         pj_bzero(strm->play_thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("bd_PlaybackCallback", 
@@ -585,13 +585,13 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
                 strm->play_buf_count -= nsamples_req;
                 pjmedia_move_samples(strm->play_buf, 
                                      strm->play_buf + nsamples_req,
-                                     strm->play_buf_count);             
+                                     strm->play_buf_count);
 
                 return nsamples_req;
             }
 
             /* samples buffered < requested by sound device */
-            pjmedia_copy_samples((pj_int16_t*)buffer, strm->play_buf, 
+            pjmedia_copy_samples((pj_int16_t*)buffer, strm->play_buf,
                                  strm->play_buf_count);
             nsamples_req -= strm->play_buf_count;
             buffer = (pj_int16_t*)buffer + strm->play_buf_count;
@@ -600,7 +600,7 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
 
         /* Fill output buffer as requested */
         while (nsamples_req && status == 0) {
-            if (nsamples_req >= strm->samples_per_frame) {              
+            if (nsamples_req >= strm->samples_per_frame) {
                 frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
                 frame.buf = buffer;
                 frame.size = strm->bytes_per_frame;
@@ -630,7 +630,7 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
                 if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
                     pj_bzero(frame.buf, frame.size);
 
-                pjmedia_copy_samples((pj_int16_t*)buffer, strm->play_buf, 
+                pjmedia_copy_samples((pj_int16_t*)buffer, strm->play_buf,
                                      nsamples_req);
                 strm->play_buf_count = strm->samples_per_frame - 
                                        nsamples_req;
@@ -701,7 +701,7 @@ static pj_status_t init_streams(struct bd_factory *wf,
     strm->timestampPlayback.u64 = 0;
 
     //BD_IMAD_PJ
-    bdIMADpj_CreateStructures(&strm->bdIMADpjSettingsPtr, 
+    bdIMADpj_CreateStructures(&strm->bdIMADpjSettingsPtr,
                               &strm->bdIMADpjWarningPtr);
     
     strm->bdIMADpjSettingsPtr->FrameSize_ms = ptime;
@@ -752,19 +752,19 @@ static pj_status_t init_streams(struct bd_factory *wf,
         bdIMADpj_FreeAEC(&strm->bdIMADpjInstance);
     strm->bdIMADpjInstance = NULL;
 
-    errorInitAEC = bdIMADpj_InitAEC(&strm->bdIMADpjInstance, 
-                                    &strm->bdIMADpjSettingsPtr, 
+    errorInitAEC = bdIMADpj_InitAEC(&strm->bdIMADpjInstance,
+                                    &strm->bdIMADpjSettingsPtr,
                                     &strm->bdIMADpjWarningPtr);
 
     {
         int auxInt = (prm->ec_enabled == PJ_TRUE ? 1 : 0);
         bdIMADpj_setParameter(strm->bdIMADpjInstance, 
-                              BD_PARAM_IMAD_PJ_AEC_ENABLE, 
+                              BD_PARAM_IMAD_PJ_AEC_ENABLE,
                               &auxInt);
         auxInt = 1;
         //Mic control On by default
         bdIMADpj_setParameter(strm->bdIMADpjInstance, 
-                              BD_PARAM_IMAD_PJ_MIC_CONTROL_ENABLE, 
+                              BD_PARAM_IMAD_PJ_MIC_CONTROL_ENABLE,
                               &auxInt);
                 
                 // Enable GUI Socket Communication [default->disabled]
@@ -776,7 +776,7 @@ static pj_status_t init_streams(struct bd_factory *wf,
     {
         return PJMEDIA_AUDIODEV_ERRNO_FROM_BDIMAD(errorInitAEC);
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -791,8 +791,8 @@ static pj_status_t stream_stopBDIMAD(pjmedia_aud_stream *s)
 
     PJ_ASSERT_RETURN(strm != NULL, PJ_EINVAL);
 
-    strm->go = 0;    
-    
+    strm->go = 0;
+
     for (i=0; !strm->rec_thread_exited && i<100; ++i)
         pj_thread_sleep(10);
     for (i=0; !strm->play_thread_exited && i<100; ++i)
@@ -833,16 +833,16 @@ static pj_status_t stream_destroyBDIMAD(pjmedia_aud_stream *s)
     stream_stopBDIMAD(s);
 
     // DeInit BDIMAD
-    bdIMADpj_FreeAEC(&strm->bdIMADpjInstance); 
-        PJ_LOG(4, (THIS_FILE, "Free AEC"));
+    bdIMADpj_FreeAEC(&strm->bdIMADpjInstance);
+    PJ_LOG(4, (THIS_FILE, "Free AEC"));
 
-    bdIMADpj_FreeStructures(&strm->bdIMADpjSettingsPtr, 
+    bdIMADpj_FreeStructures(&strm->bdIMADpjSettingsPtr,
                             &strm->bdIMADpjWarningPtr);
     PJ_LOG(4, (THIS_FILE, "Free AEC Structure"));
 
     strm->bdIMADpjInstance = NULL;
     strm->bdIMADpjSettingsPtr = NULL;
-    strm->bdIMADpjWarningPtr = NULL;    
+    strm->bdIMADpjWarningPtr = NULL;
 
     strm->quit_flag = 1;
     for (i=0; !strm->rec_thread_exited && i<100; ++i) {
@@ -1088,7 +1088,6 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_EC;
     }
-    
 
     // Get the Route Output Device setting
     if(stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE, &pi->output_route) == PJ_SUCCESS)

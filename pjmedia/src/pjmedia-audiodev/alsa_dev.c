@@ -154,12 +154,12 @@ static pjmedia_aud_stream_op alsa_stream_op =
 };
 
 #if ENABLE_TRACING==0
-static void null_alsa_error_handler (const char *file,
-                                int line,
-                                const char *function,
-                                int err,
-                                const char *fmt,
-                                ...)
+static void null_alsa_error_handler(const char *file,
+                                    int line,
+                                    const char *function,
+                                    int err,
+                                    const char *fmt,
+                                    ...)
 {
     PJ_UNUSED_ARG(file);
     PJ_UNUSED_ARG(line);
@@ -714,9 +714,9 @@ static pj_status_t open_playback (struct alsa_stream* stream,
                                             &tmp_period_size, NULL);
     /* Commenting this as it may cause the number of samples per frame
      * to be incorrest.
-     */  
+     */
     // stream->pb_frames = tmp_period_size > stream->pb_frames ?
-    //                  tmp_period_size : stream->pb_frames;                                                                                
+    //                  tmp_period_size : stream->pb_frames;
     TRACE_((THIS_FILE, "open_playback: period size set to: %d",
             tmp_period_size));
 

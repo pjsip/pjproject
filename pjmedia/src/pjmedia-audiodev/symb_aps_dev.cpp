@@ -77,7 +77,7 @@ struct aps_stream
 {
     // Base
     pjmedia_aud_stream   base;                  /**< Base class.        */
-    
+
     // Pool
     pj_pool_t           *pool;                  /**< Memory pool.       */
 
@@ -574,7 +574,7 @@ TInt CPjAudioEngine::StartL()
         return StartStreamL();
 
     PJ_ASSERT_RETURN(state_ == STATE_NULL, PJMEDIA_EAUD_INVOP);
-    
+
     if (!session_opened) {
         TInt err = iSession.Connect();
         if (err != KErrNone)
@@ -599,7 +599,7 @@ void CPjAudioEngine::Stop()
         // Initialization is on progress, so let's set the state to 
         // STATE_PENDING_STOP to prevent it starting the stream.
         state_ = STATE_PENDING_STOP;
-        
+
         // Then wait until initialization done.
         while (state_ != STATE_READY && state_ != STATE_NULL)
             pj_symbianos_poll(-1, 100);
@@ -631,8 +631,8 @@ void CPjAudioEngine::ConstructL()
 
 TInt CPjAudioEngine::StartStreamL()
 {
-    pj_assert(state_==STATE_READY || state_==STATE_INITIALIZING); 
-    
+    pj_assert(state_==STATE_READY || state_==STATE_INITIALIZING);
+
     iSession.SetCng(setting_.cng);
     iSession.SetVadMode(setting_.vad);
     iSession.SetPlc(setting_.plc);
@@ -653,7 +653,7 @@ TInt CPjAudioEngine::StartStreamL()
     }
 
     state_ = STATE_STREAMING;
-    
+
     return 0;
 }
 
@@ -855,7 +855,7 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
         if (strm->play_buf_len == 0) {
             pjmedia_frame f;
             unsigned samples_got;
-            
+
             f.size = strm->param.samples_per_frame << 1;
             if (strm->play_resample || strm->param.channel_count != 1)
                 f.buf = strm->pcm_buf;
@@ -868,7 +868,7 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
                 pjmedia_zero_samples((pj_int16_t*)f.buf, 
                                      strm->param.samples_per_frame);
             }
-            
+
             samples_got = strm->param.samples_per_frame / 
                           strm->param.channel_count /
                           strm->resample_factor;
@@ -896,7 +896,7 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
                     resampled += 80;
                 }
             }
-            
+
             strm->play_buf_len = samples_got;
             strm->play_buf_start = 0;
         }
@@ -922,13 +922,13 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
 {
     struct aps_stream *strm = (struct aps_stream*) user_data;
     pjmedia_frame_ext *frame = (pjmedia_frame_ext*) strm->rec_buf;
-    
+
     switch(strm->param.ext_fmt.id) {
     case PJMEDIA_FORMAT_AMR:
         {
             const pj_uint8_t *p = (const pj_uint8_t*)buf.iBuffer.Ptr() + 1;
             unsigned len = buf.iBuffer.Length() - 1;
-            
+
             pjmedia_frame_ext_append_subframe(frame, p, len << 3, 160);
             if (frame->samples_cnt == strm->param.samples_per_frame) {
                 frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
@@ -938,7 +938,7 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
             }
         }
         break;
-        
+
     case PJMEDIA_FORMAT_G729:
         {
             /* Check if we got a normal or SID frame. */
@@ -952,13 +952,13 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
                 const TDesC8& p = bitstream->CompressG729Frame(
                                             buf.iBuffer.Right(src_len), 
                                             src_len == SID_LEN);
-                
+
                 pjmedia_frame_ext_append_subframe(frame, p.Ptr(), 
                                                   p.Length() << 3, 80);
             } else { /* We got null frame. */
                 pjmedia_frame_ext_append_subframe(frame, NULL, 0, 80);
             }
-            
+
             if (frame->samples_cnt == strm->param.samples_per_frame) {
                 frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
                 strm->rec_cb(strm->user_data, (pjmedia_frame*)frame);
@@ -974,18 +974,18 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
             
             samples_got =
                 strm->param.ext_fmt.det.aud.avg_bps == 15200? 160 : 240;
-            
+
             /* Check if we got a normal frame. */
             if (buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0) {
                 const pj_uint8_t *p = (const pj_uint8_t*)buf.iBuffer.Ptr() + 2;
                 unsigned len = buf.iBuffer.Length() - 2;
-                
+
                 pjmedia_frame_ext_append_subframe(frame, p, len << 3,
                                                   samples_got);
             } else { /* We got null frame. */
                 pjmedia_frame_ext_append_subframe(frame, NULL, 0, samples_got);
             }
-            
+
             if (frame->samples_cnt == strm->param.samples_per_frame) {
                 frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
                 strm->rec_cb(strm->user_data, (pjmedia_frame*)frame);
@@ -994,12 +994,12 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
             }
         }
         break;
-        
+
     case PJMEDIA_FORMAT_PCMU:
     case PJMEDIA_FORMAT_PCMA:
         {
             unsigned samples_processed = 0;
-            
+
             /* Make sure it is normal frame. */
             pj_assert(buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0);
 
@@ -1011,7 +1011,7 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
                 TRACE_((THIS_FILE, "Detected APS G.711 frame size = %u samples",
                         aps_g711_frame_len));
             }
-            
+
             /* Convert APS buffer format into pjmedia_frame_ext. Whenever 
              * samples count in the frame is equal to stream's samples per 
              * frame, call parent stream callback.
@@ -1020,13 +1020,13 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
                 unsigned tmp;
                 const pj_uint8_t *pb = (const pj_uint8_t*)buf.iBuffer.Ptr() +
                                        2 + samples_processed;
-    
+
                 tmp = PJ_MIN(strm->param.samples_per_frame - frame->samples_cnt,
                              aps_g711_frame_len - samples_processed);
-                
+
                 pjmedia_frame_ext_append_subframe(frame, pb, tmp << 3, tmp);
                 samples_processed += tmp;
-    
+
                 if (frame->samples_cnt == strm->param.samples_per_frame) {
                     frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
                     strm->rec_cb(strm->user_data, (pjmedia_frame*)frame);
@@ -1036,7 +1036,7 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
             }
         }
         break;
-        
+
     default:
         break;
     }
@@ -1082,7 +1082,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
                     
                     amr_header |= ft << 3;
                     buf.iBuffer.Append(amr_header);
-                    
+
                     buf.iBuffer.Append((TUint8*)sf->data, len);
                 } else {
                     enum {NO_DATA_FT = 15 };
@@ -1092,7 +1092,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
                 }
 
                 pjmedia_frame_ext_pop_subframes(frame, 1);
-            
+
             } else { /* PJMEDIA_FRAME_TYPE_NONE */
                 enum {NO_DATA_FT = 15 };
                 pj_uint8_t amr_header = 4 | (NO_DATA_FT << 3);
@@ -1104,7 +1104,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
             }
         }
         break;
-        
+
     case PJMEDIA_FORMAT_G729:
         {
             if (frame->samples_cnt == 0) {
@@ -1117,10 +1117,10 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
             if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
                 pjmedia_frame_ext_subframe *sf;
                 unsigned samples_cnt;
-                
+
                 sf = pjmedia_frame_ext_get_subframe(frame, 0);
                 samples_cnt = frame->samples_cnt / frame->subframe_cnt;
-                
+
                 if (sf->data && sf->bitlen) {
                     enum { NORMAL_LEN = 10, SID_LEN = 2 };
                     pj_bool_t sid_frame = ((sf->bitlen >> 3) == SID_LEN);
@@ -1143,18 +1143,18 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
                 }
 
                 pjmedia_frame_ext_pop_subframes(frame, 1);
-            
+
             } else { /* PJMEDIA_FRAME_TYPE_NONE */
                 buf.iBuffer.Append(2);
                 buf.iBuffer.Append(0);
                 buf.iBuffer.AppendFill(0, 22);
-                
+
                 frame->samples_cnt = 0;
                 frame->subframe_cnt = 0;
             }
         }
         break;
-        
+
     case PJMEDIA_FORMAT_ILBC:
         {
             if (frame->samples_cnt == 0) {
@@ -1167,15 +1167,15 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
             if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
                 pjmedia_frame_ext_subframe *sf;
                 unsigned samples_cnt;
-                
+
                 sf = pjmedia_frame_ext_get_subframe(frame, 0);
                 samples_cnt = frame->samples_cnt / frame->subframe_cnt;
-                
+
                 pj_assert((strm->param.ext_fmt.det.aud.avg_bps == 15200 && 
                            samples_cnt == 160) ||
                           (strm->param.ext_fmt.det.aud.avg_bps != 15200 &&
                            samples_cnt == 240));
-                
+
                 if (sf->data && sf->bitlen) {
                     buf.iBuffer.Append(1);
                     buf.iBuffer.Append(0);
@@ -1186,30 +1186,30 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
                 }
 
                 pjmedia_frame_ext_pop_subframes(frame, 1);
-            
+
             } else { /* PJMEDIA_FRAME_TYPE_NONE */
                 buf.iBuffer.Append(0);
                 buf.iBuffer.Append(0);
-                
+
                 frame->samples_cnt = 0;
                 frame->subframe_cnt = 0;
             }
         }
         break;
-        
+
     case PJMEDIA_FORMAT_PCMU:
     case PJMEDIA_FORMAT_PCMA:
         {
             unsigned samples_ready = 0;
             unsigned samples_req = aps_g711_frame_len;
-            
+
             /* Assume frame size is 10ms if frame size hasn't been known. */
             if (samples_req == 0)
                 samples_req = 80;
-            
+
             buf.iBuffer.Append(1);
             buf.iBuffer.Append(0);
-            
+
             /* Call parent stream callback to get samples to play. */
             while (samples_ready < samples_req) {
                 if (frame->samples_cnt == 0) {
@@ -1218,11 +1218,11 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
                     pj_assert(frame->base.type==PJMEDIA_FRAME_TYPE_EXTENDED ||
                               frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
                 }
-    
+
                 if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
                     pjmedia_frame_ext_subframe *sf;
                     unsigned samples_cnt;
-                    
+
                     sf = pjmedia_frame_ext_get_subframe(frame, 0);
                     samples_cnt = frame->samples_cnt / frame->subframe_cnt;
                     if (sf->data && sf->bitlen) {
@@ -1234,12 +1234,12 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
                         buf.iBuffer.AppendFill(silc, samples_cnt);
                     }
                     samples_ready += samples_cnt;
-                    
+
                     pjmedia_frame_ext_pop_subframes(frame, 1);
-                
+
                 } else { /* PJMEDIA_FRAME_TYPE_NONE */
                     pj_uint8_t silc;
-                    
+
                     silc = (strm->param.ext_fmt.id==PJMEDIA_FORMAT_PCMU)?
                             pjmedia_linear2ulaw(0) : pjmedia_linear2alaw(0);
                     buf.iBuffer.AppendFill(silc, samples_req - samples_ready);
@@ -1251,7 +1251,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
             }
         }
         break;
-        
+
     default:
         break;
     }
@@ -1339,7 +1339,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
             supported = g711_supported;
         }
 #endif
-        
+
         while (!supported && ++retry_cnt <= MAX_RETRY) {
             RAPSSession iSession;
             TAPSInitSettings iPlaySettings;
@@ -1367,12 +1367,12 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
                 err = iSession.InitializePlayer(iPlaySettings);
             if (err == KErrNone)
                 err = iSession.InitializeRecorder(iRecSettings);
-            
+
             // On some devices, immediate closing causes APS Server panic,
             // e.g: N95, so let's just wait for some time before closing.
             enum { APS_CLOSE_WAIT_TIME = 200 }; /* in msecs */
             snd_wait(APS_CLOSE_WAIT_TIME);
-            
+
             iSession.Close();
 
             if (err == KErrNone) {
@@ -1392,7 +1392,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 
         if (supported) {
             pjmedia_format ext_fmt;
-            
+
             switch(i) {
             case 0: /* AMRNB */
                 pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_AMR,
@@ -1431,7 +1431,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
             }
         }
     }
-    
+
     af->dev_info.ext_fmt_cnt = fmt_cnt;
 
     PJ_LOG(4, (THIS_FILE, "APS initialized"));
@@ -1468,7 +1468,7 @@ static unsigned factory_get_dev_count(pjmedia_aud_dev_factory *f)
 }
 
 /* API: get device info */
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info)
 {
@@ -1552,7 +1552,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
     if (strm->param.flags & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT == 0)
         strm->param.ext_fmt.id = PJMEDIA_FORMAT_L16;
-        
+
     /* Set audio engine fourcc. */
     switch(strm->param.ext_fmt.id) {
     case PJMEDIA_FORMAT_L16:
@@ -1606,7 +1606,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
         aps_setting.vad = (strm->param.flags & PJMEDIA_AUD_DEV_CAP_VAD) &&
                           strm->param.vad_enabled;
     }
-    
+
     /* Set other audio engine attributes. */
     aps_setting.plc = (strm->param.flags & PJMEDIA_AUD_DEV_CAP_PLC) &&
                       strm->param.plc_enabled;
@@ -1651,16 +1651,16 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
         PJ_ASSERT_RETURN(g729_bitstream, PJ_ENOMEM);
         strm->strm_data = (void*)g729_bitstream;
     }
-        
+
     /* Init resampler when format is PCM and clock rate is not 8kHz */
     if (strm->param.clock_rate != 8000 && 
         strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16)
     {
         pj_status_t status;
-        
+
         if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
             /* Create resample for recorder */
-            status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1, 
+            status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1,
                                               8000,
                                               strm->param.clock_rate,
                                               80,
@@ -1668,7 +1668,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
             if (status != PJ_SUCCESS)
                 return status;
         }
-    
+
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             /* Create resample for player */
             status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1, 
@@ -1689,7 +1689,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
                                         strm->param.samples_per_frame << 1);
     }
 
-    
+
     /* Create the audio engine. */
     TRAPD(err, strm->engine = CPjAudioEngine::NewL(strm,
                                                    aps_rec_cb, aps_play_cb,
@@ -1728,7 +1728,7 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1749,13 +1749,13 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
             status = PJ_SUCCESS;
         }
         break;
-    
+
     /* There is a case that GetMaxGain() stucks, e.g: in N95. */ 
     /*
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
             PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
-            
+
             TInt max_gain = strm->engine->GetMaxGain();
             TInt gain = strm->engine->GetGain();
             
@@ -1772,10 +1772,10 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
-            
+
             TInt max_vol = strm->engine->GetMaxVolume();
             TInt vol = strm->engine->GetVolume();
-            
+
             if (max_vol > 0 && vol >= 0) {
                 *(unsigned*)pval = vol * 100 / max_vol; 
                 status = PJ_SUCCESS;
@@ -1787,7 +1787,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     default:
         break;
     }
-    
+
     return status;
 }
 
@@ -1808,7 +1808,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
             TInt err;
 
             PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
-            
+
             switch (r) {
             case PJMEDIA_AUD_DEV_ROUTE_DEFAULT:
             case PJMEDIA_AUD_DEV_ROUTE_EARPIECE:
@@ -1871,7 +1871,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
     default:
         break;
     }
-    
+
     return status;
 }
 

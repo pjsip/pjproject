@@ -358,18 +358,18 @@ pj_status_t CPjAudioInputEngine::StartRecord()
                          "clock rate=%d, channel count=%d..",
                          parentStrm_->param.clock_rate, 
                          parentStrm_->param.channel_count));
-    
+
     // Open stream.
     lastError_ = KRequestPending;
     iInputStream_->Open(&iStreamSettings);
-    
+
 #if defined(PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START) && \
     PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START != 0
-    
+
     startAsw_.Start();
-    
+
 #endif
-    
+
     // Success
     PJ_LOG(4,(THIS_FILE, "Sound capture started."));
     return PJ_SUCCESS;
@@ -392,11 +392,11 @@ void CPjAudioInputEngine::Stop()
         delete iInputStream_;
         iInputStream_ = NULL;
     }
-    
+
     if (startAsw_.IsStarted()) {
         startAsw_.AsyncStop();
     }
-    
+
     state_ = STATE_INACTIVE;
 }
 
@@ -413,7 +413,7 @@ void CPjAudioInputEngine::MaiscOpenComplete(TInt aError)
     if (startAsw_.IsStarted()) {
         startAsw_.AsyncStop();
     }
-    
+
     lastError_ = aError;
     if (aError != KErrNone) {
         snd_perror("Error in MaiscOpenComplete()", aError);
@@ -446,7 +446,7 @@ void CPjAudioInputEngine::MaiscOpenComplete(TInt aError)
     state_ = STATE_ACTIVE;
 }
 
-void CPjAudioInputEngine::MaiscBufferCopied(TInt aError, 
+void CPjAudioInputEngine::MaiscBufferCopied(TInt aError,
                                             const TDesC8 &aBuffer)
 {
     lastError_ = aError;
@@ -463,13 +463,13 @@ void CPjAudioInputEngine::MaiscBufferCopied(TInt aError,
     if (frameRecBufLen_) {
         while (frameRecBufLen_ >= frameLen_) {
             pjmedia_frame f;
-            
+
             f.type = PJMEDIA_FRAME_TYPE_AUDIO;
             f.buf = frameRecBuf_;
             f.size = frameLen_;
             f.timestamp.u32.lo = timeStamp_;
             f.bit_info = 0;
-            
+
             // Call the callback.
             recCb_(userData_, &f);
             // Increment timestamp.
@@ -480,16 +480,16 @@ void CPjAudioInputEngine::MaiscBufferCopied(TInt aError,
         }
     } else {
         pjmedia_frame f;
-        
+
         f.type = PJMEDIA_FRAME_TYPE_AUDIO;
         f.buf = (void*)aBuffer.Ptr();
         f.size = aBuffer.Length();
         f.timestamp.u32.lo = timeStamp_;
         f.bit_info = 0;
-        
+
         // Call the callback.
         recCb_(userData_, &f);
-        
+
         // Increment timestamp.
         timeStamp_ += parentStrm_->param.samples_per_frame;
     }
@@ -609,7 +609,7 @@ void CPjAudioOutputEngine::ConstructL()
 CPjAudioOutputEngine::~CPjAudioOutputEngine()
 {
     Stop();
-    delete [] frameBuf_;        
+    delete [] frameBuf_;
 }
 
 CPjAudioOutputEngine *
@@ -618,7 +618,7 @@ CPjAudioOutputEngine::NewLC(struct mda_stream *parent_strm,
                             void *user_data)
 {
     CPjAudioOutputEngine* self = new (ELeave) CPjAudioOutputEngine(parent_strm,
-                                                                   play_cb, 
+                                                                   play_cb,
                                                                    user_data);
     CleanupStack::PushL(self);
     self->ConstructL();
@@ -640,16 +640,16 @@ pj_status_t CPjAudioOutputEngine::StartPlay()
     // Ignore command if playing is in progress.
     if (state_ == STATE_ACTIVE)
         return PJ_SUCCESS;
-    
+
     // Destroy existing stream.
     if (iOutputStream_) delete iOutputStream_;
     iOutputStream_ = NULL;
-    
+
     // Create the stream
     TRAPD(err, iOutputStream_ = CMdaAudioOutputStream::NewL(*this));
     if (err != KErrNone)
         return PJ_RETURN_OS_ERROR(err);
-    
+
     // Initialize settings.
     TMdaAudioDataSettings iStreamSettings;
     iStreamSettings.iChannels = 
@@ -659,7 +659,7 @@ pj_status_t CPjAudioOutputEngine::StartPlay()
 
     pj_assert(iStreamSettings.iChannels != 0 && 
               iStreamSettings.iSampleRate != 0);
-    
+
     PJ_LOG(4,(THIS_FILE, "Opening sound device for playback, "
                          "clock rate=%d, channel count=%d..",
                          parentStrm_->param.clock_rate, 
@@ -668,12 +668,12 @@ pj_status_t CPjAudioOutputEngine::StartPlay()
     // Open stream.
     lastError_ = KRequestPending;
     iOutputStream_->Open(&iStreamSettings);
-    
+
 #if defined(PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START) && \
     PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START != 0
-    
+
     startAsw_.Start();
-    
+
 #endif
 
     // Success
@@ -694,15 +694,15 @@ void CPjAudioOutputEngine::Stop()
             pj_symbianos_poll(-1, 100);
     }
     
-    if (iOutputStream_) {       
+    if (iOutputStream_) {
         delete iOutputStream_;
         iOutputStream_ = NULL;
     }
-    
+
     if (startAsw_.IsStarted()) {
         startAsw_.AsyncStop();
     }
-    
+
     state_ = STATE_INACTIVE;
 }
 
@@ -713,7 +713,7 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
     }
 
     lastError_ = aError;
-    
+
     if (aError==KErrNone) {
         // set stream properties, 16bit 8KHz mono
         TMdaAudioDataSettings iSettings;
@@ -736,15 +736,15 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
             // set volume to 1/2th of stream max volume
             iOutputStream_->SetVolume(iOutputStream_->MaxVolume()/2);
         }
-        
+
         // set stream priority to normal and time sensitive
-        iOutputStream_->SetPriority(EPriorityNormal, 
-                                    EMdaPriorityPreferenceTime);                                
+        iOutputStream_->SetPriority(EPriorityNormal,
+                                    EMdaPriorityPreferenceTime);
 
         // Call callback to retrieve frame from upstream.
         pjmedia_frame f;
         pj_status_t status;
-        
+
         f.type = PJMEDIA_FRAME_TYPE_AUDIO;
         f.buf = frameBuf_;
         f.size = frameBufSize_;
@@ -759,7 +759,7 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
 
         if (f.type != PJMEDIA_FRAME_TYPE_AUDIO)
             pj_bzero(frameBuf_, frameBufSize_);
-        
+
         // Increment timestamp.
         timestamp_ += (frameBufSize_ / BYTES_PER_SAMPLE);
 
@@ -777,7 +777,7 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
     }
 }
 
-void CPjAudioOutputEngine::MaoscBufferCopied(TInt aError, 
+void CPjAudioOutputEngine::MaoscBufferCopied(TInt aError,
                                              const TDesC8& aBuffer)
 {
     PJ_UNUSED_ARG(aBuffer);
@@ -788,7 +788,7 @@ void CPjAudioOutputEngine::MaoscBufferCopied(TInt aError,
         // Call callback to retrieve frame from upstream.
         pjmedia_frame f;
         pj_status_t status;
-        
+
         f.type = PJMEDIA_FRAME_TYPE_AUDIO;
         f.buf = frameBuf_;
         f.size = frameBufSize_;
@@ -886,7 +886,7 @@ static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f)
     pj_pool_release(pool);
 
     PJ_LOG(4, (THIS_FILE, "Symbian Mda destroyed"));
-    
+
     return PJ_SUCCESS;
 }
 
@@ -905,7 +905,7 @@ static unsigned factory_get_dev_count(pjmedia_aud_dev_factory *f)
 }
 
 /* API: get device info */
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info)
 {
@@ -959,7 +959,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     PJ_ASSERT_RETURN((param->flags & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT)==0 ||
                      param->ext_fmt.id == PJMEDIA_FORMAT_L16,
                      PJ_ENOTSUP);
-    
+
     /* It seems that MDA recorder only supports for mono channel. */
     PJ_ASSERT_RETURN(param->channel_count == 1, PJ_EINVAL);
 
@@ -993,7 +993,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
             return PJ_RETURN_OS_ERROR(err);
         }
     }
-        
+
     /* Done */
     strm->base.op = &stream_op;
     *p_aud_strm = &strm->base;
@@ -1010,21 +1010,21 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
 
     pj_memcpy(pi, &strm->param, sizeof(*pi));
-    
+
     /* Update the output volume setting */
     if (stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
                        &pi->output_vol) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
     }
-    
+
     /* Update the input volume setting */
     if (stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
                        &pi->input_vol) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1042,10 +1042,10 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
             PJ_ASSERT_RETURN(strm->in_engine, PJ_EINVAL);
-            
+
             TInt max_gain = strm->in_engine->GetMaxGain();
             TInt gain = strm->in_engine->GetGain();
-            
+
             if (max_gain > 0 && gain >= 0) {
                 *(unsigned*)pval = gain * 100 / max_gain; 
                 status = PJ_SUCCESS;
@@ -1060,7 +1060,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
             
             TInt max_vol = strm->out_engine->GetMaxVolume();
             TInt vol = strm->out_engine->GetVolume();
-            
+
             if (max_vol > 0 && vol >= 0) {
                 *(unsigned*)pval = vol * 100 / max_vol; 
                 status = PJ_SUCCESS;
@@ -1072,7 +1072,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     default:
         break;
     }
-    
+
     return status;
 }
 
@@ -1090,11 +1090,11 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
             PJ_ASSERT_RETURN(strm->in_engine, PJ_EINVAL);
-            
+
             TInt max_gain = strm->in_engine->GetMaxGain();
             if (max_gain > 0) {
                 TInt gain;
-                
+
                 gain = *(unsigned*)pval * max_gain / 100;
                 status = strm->in_engine->SetGain(gain);
             } else {
@@ -1105,11 +1105,11 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             PJ_ASSERT_RETURN(strm->out_engine, PJ_EINVAL);
-            
+
             TInt max_vol = strm->out_engine->GetMaxVolume();
             if (max_vol > 0) {
                 TInt vol;
-                
+
                 vol = *(unsigned*)pval * max_vol / 100;
                 status = strm->out_engine->SetVolume(vol);
             } else {
@@ -1120,7 +1120,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
     default:
         break;
     }
-    
+
     return status;
 }
 
@@ -1137,7 +1137,7 @@ static pj_status_t stream_start(pjmedia_aud_stream *strm)
         if (status != PJ_SUCCESS)
             return status;
     }
-    
+
     if (stream->in_engine) {
         pj_status_t status;
         status = stream->in_engine->StartRecord();
@@ -1158,7 +1158,7 @@ static pj_status_t stream_stop(pjmedia_aud_stream *strm)
     if (stream->in_engine) {
         stream->in_engine->Stop();
     }
-        
+
     if (stream->out_engine) {
         stream->out_engine->Stop();
     }

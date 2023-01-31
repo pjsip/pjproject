@@ -1207,7 +1207,7 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
     pj_status_t status;
     static pj_thread_desc thread_desc;
     pj_thread_t *thread;
-    
+
     /* Register the thread with PJLIB, this is must for any external threads
      * which need to use the PJLIB framework.
      */
@@ -1215,14 +1215,14 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
         pj_bzero(thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("intListener", thread_desc, &thread);
     }
-    
+
     PJ_LOG(3, (THIS_FILE, "Session interrupted! --- %s ---",
            inInterruption == kAudioSessionBeginInterruption ?
            "Begin Interruption" : "End Interruption"));
 
     if (!cf_instance)
         return;
-    
+
     pj_mutex_lock(cf_instance->mutex);
     itBegin = &cf_instance->streams;
     for (it = itBegin->next; it != itBegin; it = it->next) {
@@ -1249,7 +1249,7 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
                            "Warning: cannot set the audio session category (%i)",
                            ostatus));
             }
-            
+
             /* Restart the stream */
             status = ca_stream_start((pjmedia_aud_stream*)it->stream);
             if (status != PJ_SUCCESS) {
@@ -1288,7 +1288,7 @@ static pj_status_t create_audio_resample(struct coreaudio_stream     *strm,
     if (ostatus != noErr) {
         return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
-    
+
     /*
      * Allocate the buffer required to hold enough input data
      */
@@ -1319,7 +1319,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 #if !COREAUDIO_MAC
     strm->sess = [AVAudioSession sharedInstance];
 #endif
-    
+
     /* Create an audio unit to interface with the device */
     ostatus = AudioComponentInstanceNew(io_comp, io_unit);
     if (ostatus != noErr) {
@@ -2036,7 +2036,7 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
     if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
         AudioComponentDescription desc;
         AudioComponent io_comp;
-        
+
         desc.componentType = kAudioUnitType_Output;
         desc.componentSubType = (*(pj_bool_t*)pval)?
                                 kAudioUnitSubType_VoiceProcessingIO :
@@ -2048,18 +2048,18 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
         desc.componentManufacturer = kAudioUnitManufacturer_Apple;
         desc.componentFlags = 0;
         desc.componentFlagsMask = 0;
-        
+
         io_comp = AudioComponentFindNext(NULL, &desc);
         if (io_comp == NULL)
             return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(-1);
         strm->cf->io_comp = io_comp;
         strm->param.ec_enabled = *(pj_bool_t*)pval;
-        
+
         PJ_LOG(4, (THIS_FILE, "Using %s audio unit",
                    (desc.componentSubType ==
                     kAudioUnitSubType_VoiceProcessingIO?
                     "VoiceProcessingIO": "default")));
-        
+
         return PJ_SUCCESS;
     }
 #if COREAUDIO_MAC
@@ -2106,10 +2106,10 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
                        "Error: cannot set the preferred buffer duration"));
             return PJMEDIA_EAUD_INVOP;
         }
-        
+
         ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY, &latency);
         ca_stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY, &latency);
-        
+
         return PJ_SUCCESS;
     }
 
@@ -2181,7 +2181,7 @@ static pj_status_t ca_stream_start(pjmedia_aud_stream *strm)
         PJ_LOG(4, (THIS_FILE, "Warning: cannot activate audio session"));
     }
 #endif
-    
+
     for (i = 0; i < 2; i++) {
         if (stream->io_units[i] == NULL) break;
         ostatus = AudioOutputUnitStart(stream->io_units[i]);

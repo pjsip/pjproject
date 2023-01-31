@@ -106,36 +106,36 @@ struct wasapi_stream
     pjmedia_format_id       fmt_id;             /* Frame format             */
     unsigned                bytes_per_sample;
 
-    /* Playback */    
+    /* Playback */
     pjmedia_aud_play_cb     pb_cb;              /* Playback callback        */
     IAudioClient2          *default_pb_dev;     /* Default playback dev     */
     IAudioRenderClient     *pb_client;          /* Playback client          */
-    ISimpleAudioVolume     *pb_volume;          /* Playback volume          */    
-    unsigned                pb_max_frame_count;     
+    ISimpleAudioVolume     *pb_volume;          /* Playback volume          */
+    unsigned                pb_max_frame_count;
     HANDLE                  pb_event;           /* Playback event           */
     pj_timestamp            pb_timestamp;
 #if defined(USE_ASYNC_ACTIVATE)
     ComPtr<AudioActivator>  pb_aud_act;
     Platform::String^       pb_id;
 #else
-    LPCWSTR                 pb_id;              
+    LPCWSTR                 pb_id;
 #endif
 
-    /* Capture */    
+    /* Capture */
     pjmedia_aud_rec_cb      cap_cb;             /* Capture callback         */
-    IAudioClient2          *default_cap_dev;    /* Default capture dev      */    
+    IAudioClient2          *default_cap_dev;    /* Default capture dev      */
     IAudioCaptureClient    *cap_client;         /* Capture client           */
     unsigned                bytes_per_frame;    /* Bytes per frame          */
     pj_int16_t             *cap_buf;            /* Capture audio buffer     */
     unsigned                cap_max_frame_count;
-    HANDLE                  cap_event;          /* Capture event            */    
+    HANDLE                  cap_event;          /* Capture event            */
     unsigned                cap_buf_count;
     pj_timestamp            cap_timestamp;
 #if defined(USE_ASYNC_ACTIVATE)
     ComPtr<AudioActivator>  cap_aud_act;
     Platform::String^       cap_id;
 #else
-    LPCWSTR                 cap_id;             
+    LPCWSTR                 cap_id;
 #endif
 };
 
@@ -299,8 +299,8 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
             BYTE *cur_pb_buf = NULL;
             pjmedia_frame frame;
 
-            status = PJ_SUCCESS;    
-            
+            status = PJ_SUCCESS;
+
             /* Get available space on buffer to render */
             hr = strm->default_pb_dev->GetCurrentPadding(&padding);
             if (FAILED(hr)) {
@@ -345,7 +345,7 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
             strm->pb_timestamp.u64 += strm->param.samples_per_frame /
                                       strm->param.channel_count;
         } else {
-            /* Capture */           
+            /* Capture */
             pj_uint32_t packet_size = 0;
 
             hr = strm->cap_client->GetNextPacketSize(&packet_size);
@@ -353,7 +353,7 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
                 PJ_LOG(4, (THIS_FILE, "Error getting next packet size"));
                 continue;
             }
-            
+
             while (packet_size) {
 
                 unsigned next_frame_size = 0;
@@ -533,7 +533,7 @@ static pj_status_t activate_capture_dev(struct wasapi_stream *ws)
 /* 
  * Init capture device
  */
-static pj_status_t init_capture_dev(struct wasapi_stream *ws, 
+static pj_status_t init_capture_dev(struct wasapi_stream *ws,
                                     const pjmedia_aud_param *prm)
 {
     pj_status_t status;
@@ -577,7 +577,7 @@ static pj_status_t init_capture_dev(struct wasapi_stream *ws,
                                          stream_flags,
                                          //2000 * 10000,
                                          ptime * ws->param.input_latency_ms * 
-                                         10000,                                  
+                                         10000,
                                          0,
                                          &wfx,
                                          NULL);
@@ -606,15 +606,15 @@ static pj_status_t init_capture_dev(struct wasapi_stream *ws,
 
     EXIT_ON_ERROR(hr);
 
-    hr = ws->default_cap_dev->GetService(__uuidof(IAudioCaptureClient), 
-                                         (void**)&ws->cap_client);
+    hr = ws->default_cap_dev->GetService(__uuidof(IAudioCaptureClient),
+                                         (void **)&ws->cap_client);
 
     EXIT_ON_ERROR(hr);
 
     PJ_LOG(4, (THIS_FILE, 
                "Wasapi Sound recorder initialized ("
                "clock_rate=%d, latency=%d, "
-               "channel_count=%d, samples_per_frame=%d (%dms))",                       
+               "channel_count=%d, samples_per_frame=%d (%dms))",
                prm->clock_rate, ws->param.input_latency_ms, 
                prm->channel_count, prm->samples_per_frame,
                ptime));
@@ -679,7 +679,7 @@ static pj_status_t activate_playback_dev(struct wasapi_stream *ws)
 /* 
  * Init playback device
  */
-static pj_status_t init_playback_dev(struct wasapi_stream *ws, 
+static pj_status_t init_playback_dev(struct wasapi_stream *ws,
                                      const pjmedia_aud_param *prm)
 {
     HRESULT hr = E_FAIL;
@@ -711,23 +711,23 @@ static pj_status_t init_playback_dev(struct wasapi_stream *ws,
     ws->bytes_per_frame = prm->samples_per_frame * ws->bytes_per_sample;
 
     hr = ws->default_pb_dev->Initialize(AUDCLNT_SHAREMODE_SHARED,
-                                        stream_flags,                                   
+                                        stream_flags,
                                         ws->param.output_latency_ms * 10000,
                                         //0,
-                                        0,                                      
+                                        0,
                                         &wfx,
-                                        NULL);    
+                                        NULL);
 
     EXIT_ON_ERROR(hr);
 
-    hr = ws->default_pb_dev->GetBufferSize(&ws->pb_max_frame_count);    
+    hr = ws->default_pb_dev->GetBufferSize(&ws->pb_max_frame_count);
 
     /* Create buffer */
     EXIT_ON_ERROR(hr);
 
     ws->pb_event = CreateEventEx(NULL, NULL, 0, EVENT_ALL_ACCESS);
     if (!ws->pb_event) {
-        hr = HRESULT_FROM_WIN32(GetLastError());        
+        hr = HRESULT_FROM_WIN32(GetLastError());
 
         goto on_exit;
     }
@@ -738,13 +738,13 @@ static pj_status_t init_playback_dev(struct wasapi_stream *ws,
 
     EXIT_ON_ERROR(hr);
 
-    hr = ws->default_pb_dev->GetService(__uuidof(IAudioRenderClient), 
+    hr = ws->default_pb_dev->GetService(__uuidof(IAudioRenderClient),
                                         (void**)&ws->pb_client);
 
     EXIT_ON_ERROR(hr);
 
     /* Other/optional supported interfaces */
-    hr = ws->default_pb_dev->GetService(__uuidof(ISimpleAudioVolume), 
+    hr = ws->default_pb_dev->GetService(__uuidof(ISimpleAudioVolume),
                                         (void**)&ws->pb_volume);
 
     if (FAILED(hr)) {
@@ -754,7 +754,7 @@ static pj_status_t init_playback_dev(struct wasapi_stream *ws,
     PJ_LOG(4, (THIS_FILE, 
                " Wasapi Sound player initialized ("
                "clock_rate=%d, latency=%d, "
-               "channel_count=%d, samples_per_frame=%d (%dms))",                       
+               "channel_count=%d, samples_per_frame=%d (%dms))",
                prm->clock_rate, ws->param.output_latency_ms, 
                prm->channel_count, prm->samples_per_frame,
                ptime));  
@@ -1029,23 +1029,23 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
     }    
     /* Init playback */
     if (param->dir & PJMEDIA_DIR_PLAYBACK) {
-        status = init_playback_dev(strm, param);        
+        status = init_playback_dev(strm, param);
         if (status != PJ_SUCCESS) {
             wasapi_stream_destroy(&strm->base);
             return status;
         }       
     }
 
-    strm->quit_event = CreateEventEx(NULL, NULL, CREATE_EVENT_MANUAL_RESET, 
+    strm->quit_event = CreateEventEx(NULL, NULL, CREATE_EVENT_MANUAL_RESET,
                                      EVENT_ALL_ACCESS);
     if (!strm->quit_event)
     {
         PJ_LOG(4, (THIS_FILE, "Error creating quit event:0x%x", 
                    HRESULT_FROM_WIN32(GetLastError())));
 
-        return PJMEDIA_EAUD_SYSERR;                                        
+        return PJMEDIA_EAUD_SYSERR;
     }
-    
+
     /* Done */
     strm->base.op = &stream_op;
     *p_strm = &strm->base;
@@ -1160,16 +1160,16 @@ on_exit:
 /* API: Stop stream. */
 static pj_status_t wasapi_stream_stop(pjmedia_aud_stream *strm)
 {
-    struct wasapi_stream *ws = (struct wasapi_stream*)strm;    
+    struct wasapi_stream *ws = (struct wasapi_stream*)strm;
     HRESULT hr, hr_tmp;
-    hr = hr_tmp = S_OK;    
+    hr = hr_tmp = S_OK;
 
     PJ_ASSERT_RETURN(ws != NULL, PJ_EINVAL);
 
     if (ws->default_pb_dev) {
         hr = ws->default_pb_dev->Stop();
         if (FAILED(hr)) {
-            PJ_LOG(4, (THIS_FILE, "Error stopping wasapi playback stream:0x%x", 
+            PJ_LOG(4, (THIS_FILE, "Error stopping wasapi playback stream:0x%x",
                        hr));
         } else {
             PJ_LOG(4,(THIS_FILE, "Stopped wasapi playback stream"));
@@ -1180,10 +1180,10 @@ static pj_status_t wasapi_stream_stop(pjmedia_aud_stream *strm)
         hr_tmp = ws->default_cap_dev->Stop();
         if (FAILED(hr_tmp)) {
             hr = hr_tmp;
-            PJ_LOG(4, (THIS_FILE, "Error stopping wasapi capture stream:0x%x", 
+            PJ_LOG(4, (THIS_FILE, "Error stopping wasapi capture stream:0x%x",
                        hr));
         } else {
-            PJ_LOG(4,(THIS_FILE, "Stopped wasapi capture stream"));     
+            PJ_LOG(4,(THIS_FILE, "Stopped wasapi capture stream"));
         }
     }
 

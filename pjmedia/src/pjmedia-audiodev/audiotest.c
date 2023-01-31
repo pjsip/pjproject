@@ -151,7 +151,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
     pjmedia_aud_stream *strm;
     struct test_data test_data;
     unsigned ptime, tmp;
-    
+
     /*
      * Init test parameters
      */
@@ -161,12 +161,12 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
 
     test_data.pool = pj_pool_create(pjmedia_aud_subsys_get_pool_factory(),
                                     "audtest", 1000, 1000, NULL);
-    pj_mutex_create_simple(test_data.pool, "sndtest", &test_data.mutex); 
+    pj_mutex_create_simple(test_data.pool, "sndtest", &test_data.mutex);
 
     /*
      * Open device.
      */
-    status = pjmedia_aud_stream_create(test_data.param, &rec_cb, &play_cb, 
+    status = pjmedia_aud_stream_create(test_data.param, &rec_cb, &play_cb,
                                        &test_data, &strm);
     if (status != PJ_SUCCESS) {
         app_perror("Unable to open device", status);

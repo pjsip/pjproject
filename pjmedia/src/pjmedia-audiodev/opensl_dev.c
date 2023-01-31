@@ -76,7 +76,7 @@ struct opensl_aud_stream
     pj_str_t            name;
     pjmedia_dir         dir;
     pjmedia_aud_param   param;
-    
+
     void               *user_data;
     pj_bool_t           quit_flag;
     pjmedia_aud_rec_cb  rec_cb;
@@ -84,15 +84,15 @@ struct opensl_aud_stream
 
     pj_timestamp        play_timestamp;
     pj_timestamp        rec_timestamp;
-    
+
     pj_bool_t           rec_thread_initialized;
     pj_thread_desc      rec_thread_desc;
     pj_thread_t        *rec_thread;
-    
+
     pj_bool_t           play_thread_initialized;
     pj_thread_desc      play_thread_desc;
     pj_thread_t        *play_thread;
-    
+
     /* Player */
     SLObjectItf         playerObj;
     SLPlayItf           playerPlay;
@@ -100,7 +100,7 @@ struct opensl_aud_stream
     unsigned            playerBufferSize;
     char               *playerBuffer[NUM_BUFFERS];
     int                 playerBufIdx;
-    
+
     /* Recorder */
     SLObjectItf         recordObj;
     SLRecordItf         recordRecord;
@@ -182,30 +182,30 @@ void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
         stream->play_thread_initialized = 1;
         PJ_LOG(5, (THIS_FILE, "Player thread started"));
     }
-    
+
     if (!stream->quit_flag) {
         pjmedia_frame frame;
         char * buf;
-        
+
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
         frame.buf = buf = stream->playerBuffer[stream->playerBufIdx++];
         frame.size = stream->playerBufferSize;
         frame.timestamp.u64 = stream->play_timestamp.u64;
         frame.bit_info = 0;
-        
+
         status = (*stream->play_cb)(stream->user_data, &frame);
         if (status != PJ_SUCCESS || frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
             pj_bzero(buf, stream->playerBufferSize);
-        
+
         stream->play_timestamp.u64 += stream->param.samples_per_frame /
                                       stream->param.channel_count;
-        
+
         result = (*bq)->Enqueue(bq, buf, stream->playerBufferSize);
         if (result != SL_RESULT_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Unable to enqueue next player buffer !!! %d",
                                   result));
         }
-        
+
         stream->playerBufIdx %= NUM_BUFFERS;
     }
 }
@@ -229,29 +229,29 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
         stream->rec_thread_initialized = 1;
         PJ_LOG(5, (THIS_FILE, "Recorder thread started")); 
     }
-    
+
     if (!stream->quit_flag) {
         pjmedia_frame frame;
         char *buf;
-        
+
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
         frame.buf = buf = stream->recordBuffer[stream->recordBufIdx++];
         frame.size = stream->recordBufferSize;
         frame.timestamp.u64 = stream->rec_timestamp.u64;
         frame.bit_info = 0;
-        
+
         status = (*stream->rec_cb)(stream->user_data, &frame);
-        
+
         stream->rec_timestamp.u64 += stream->param.samples_per_frame /
                                      stream->param.channel_count;
-        
+
         /* And now enqueue next buffer */
         result = (*bq)->Enqueue(bq, buf, stream->recordBufferSize);
         if (result != SL_RESULT_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Unable to enqueue next record buffer !!! %d",
                                   result));
         }
-        
+
         stream->recordBufIdx %= NUM_BUFFERS;
     }
 }
@@ -285,13 +285,13 @@ pjmedia_aud_dev_factory* pjmedia_opensl_factory(pj_pool_factory *pf)
 {
     struct opensl_aud_factory *f;
     pj_pool_t *pool;
-    
+
     pool = pj_pool_create(pf, "opensles", 256, 256, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct opensl_aud_factory);
     f->pf = pf;
     f->pool = pool;
     f->base.op = &opensl_op;
-    
+
     return &f->base;
 }
 
@@ -299,15 +299,15 @@ pjmedia_aud_dev_factory* pjmedia_opensl_factory(pj_pool_factory *pf)
 static pj_status_t opensl_init(pjmedia_aud_dev_factory *f)
 {
     struct opensl_aud_factory *pa = (struct opensl_aud_factory*)f;
-    SLresult result;    
-    
+    SLresult result;
+
     /* Create engine */
     result = slCreateEngine(&pa->engineObject, 0, NULL, 0, NULL, NULL);
     if (result != SL_RESULT_SUCCESS) {
         PJ_LOG(3, (THIS_FILE, "Cannot create engine %d ", result));
         return opensl_to_pj_error(result);
     }
-    
+
     /* Realize the engine */
     result = (*pa->engineObject)->Realize(pa->engineObject, SL_BOOLEAN_FALSE);
     if (result != SL_RESULT_SUCCESS) {
@@ -315,7 +315,7 @@ static pj_status_t opensl_init(pjmedia_aud_dev_factory *f)
         opensl_destroy(f);
         return opensl_to_pj_error(result);
     }
-    
+
     /* Get the engine interface, which is needed in order to create
      * other objects.
      */
@@ -327,7 +327,7 @@ static pj_status_t opensl_init(pjmedia_aud_dev_factory *f)
         opensl_destroy(f);
         return opensl_to_pj_error(result);
     }
-    
+
     /* Create output mix */
     result = (*pa->engineEngine)->CreateOutputMix(pa->engineEngine,
                                                   &pa->outputMixObject,
@@ -337,7 +337,7 @@ static pj_status_t opensl_init(pjmedia_aud_dev_factory *f)
         opensl_destroy(f);
         return opensl_to_pj_error(result);
     }
-    
+
     /* Realize the output mix */
     result = (*pa->outputMixObject)->Realize(pa->outputMixObject,
                                              SL_BOOLEAN_FALSE);
@@ -346,7 +346,7 @@ static pj_status_t opensl_init(pjmedia_aud_dev_factory *f)
         opensl_destroy(f);
         return opensl_to_pj_error(result);
     }
-    
+
     PJ_LOG(4,(THIS_FILE, "OpenSL sound library initialized"));
     return PJ_SUCCESS;
 }
@@ -356,26 +356,26 @@ static pj_status_t opensl_destroy(pjmedia_aud_dev_factory *f)
 {
     struct opensl_aud_factory *pa = (struct opensl_aud_factory*)f;
     pj_pool_t *pool;
-    
+
     PJ_LOG(4,(THIS_FILE, "OpenSL sound library shutting down.."));
-    
+
     /* Destroy Output Mix object */
     if (pa->outputMixObject) {
         (*pa->outputMixObject)->Destroy(pa->outputMixObject);
         pa->outputMixObject = NULL;
     }
-    
+
     /* Destroy engine object, and invalidate all associated interfaces */
     if (pa->engineObject) {
         (*pa->engineObject)->Destroy(pa->engineObject);
         pa->engineObject = NULL;
         pa->engineEngine = NULL;
     }
-    
+
     pool = pa->pool;
     pa->pool = NULL;
     pj_pool_release(pool);
-    
+
     return PJ_SUCCESS;
 }
 
@@ -401,13 +401,13 @@ static pj_status_t opensl_get_dev_info(pjmedia_aud_dev_factory *f,
     PJ_UNUSED_ARG(f);
 
     pj_bzero(info, sizeof(*info));
-    
+
     pj_ansi_strcpy(info->name, "OpenSL ES Audio");
     info->default_samples_per_sec = 8000;
     info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
     info->input_count = 1;
     info->output_count = 1;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -416,14 +416,13 @@ static pj_status_t opensl_default_param(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_param *param)
 {
-    
     pjmedia_aud_dev_info adi;
     pj_status_t status;
-    
+
     status = opensl_get_dev_info(f, index, &adi);
     if (status != PJ_SUCCESS)
         return status;
-    
+
     pj_bzero(param, sizeof(*param));
     if (adi.input_count && adi.output_count) {
         param->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
@@ -440,14 +439,14 @@ static pj_status_t opensl_default_param(pjmedia_aud_dev_factory *f,
     } else {
         return PJMEDIA_EAUD_INVDEV;
     }
-    
+
     param->clock_rate = adi.default_samples_per_sec;
     param->channel_count = 1;
     param->samples_per_frame = adi.default_samples_per_sec * 20 / 1000;
     param->bits_per_sample = 16;
     param->input_latency_ms = PJMEDIA_SND_DEFAULT_REC_LATENCY;
     param->output_latency_ms = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -473,17 +472,17 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
     int i, bufferSize;
     SLresult result;
     SLDataFormat_PCM format_pcm;
-    
+
     /* Only supports for mono channel for now */
     PJ_ASSERT_RETURN(param->channel_count == 1, PJ_EINVAL);
     PJ_ASSERT_RETURN(play_cb && rec_cb && p_aud_strm, PJ_EINVAL);
 
     PJ_LOG(4,(THIS_FILE, "Creating OpenSL stream"));
-    
+
     pool = pj_pool_create(pa->pf, "openslstrm", 1024, 1024, NULL);
     if (!pool)
         return PJ_ENOMEM;
-    
+
     stream = PJ_POOL_ZALLOC_T(pool, struct opensl_aud_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, "OpenSL");
@@ -527,7 +526,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
                                       SL_IID_VOLUME};
         const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
 #endif
-        
+
         /* Create audio player */
         result = (*pa->engineEngine)->CreateAudioPlayer(pa->engineEngine,
                                                         &stream->playerObj,
@@ -561,7 +560,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot realize player : %d", result));
             goto on_error;
         }
-        
+
         /* Get the play interface */
         result = (*stream->playerObj)->GetInterface(stream->playerObj,
                                                     SL_IID_PLAY,
@@ -570,7 +569,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot get play interface"));
             goto on_error;
         }
-        
+
         /* Get the buffer queue interface */
         result = (*stream->playerObj)->GetInterface(stream->playerObj,
                                                     SL_IID_BUFFERQUEUE,
@@ -579,7 +578,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot get buffer queue interface"));
             goto on_error;
         }
-        
+
         /* Get the volume interface */
         result = (*stream->playerObj)->GetInterface(stream->playerObj,
                                                     SL_IID_VOLUME,
@@ -593,7 +592,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot register player callback"));
             goto on_error;
         }
-        
+
         stream->playerBufferSize = bufferSize;
         for (i = 0; i < NUM_BUFFERS; i++) {
             stream->playerBuffer[i] = (char *)
@@ -623,7 +622,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         const SLInterfaceID ids[1] = {W_SL_IID_BUFFERQUEUE};
         const SLboolean req[1] = {SL_BOOLEAN_TRUE};
 #endif
-        
+
         /* Create audio recorder
          * (requires the RECORD_AUDIO permission)
          */
@@ -671,7 +670,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
                                   "recorder configuration"));
         }
 #endif
-        
+
         /* Realize the recorder */
         result = (*stream->recordObj)->Realize(stream->recordObj,
                                                SL_BOOLEAN_FALSE);
@@ -688,7 +687,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot get record interface"));
             goto on_error;
         }
-        
+
         /* Get the buffer queue interface */
         result = (*stream->recordObj)->GetInterface(
                      stream->recordObj, W_SL_IID_BUFFERQUEUE,
@@ -697,7 +696,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot get recorder buffer queue iface"));
             goto on_error;
         }
-        
+
         /* Register callback on the buffer queue */
         result = (*stream->recordBufQ)->RegisterCallback(stream->recordBufQ,
                                                          bqRecorderCallback, 
@@ -706,7 +705,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot register recorder callback"));
             goto on_error;
         }
-        
+
         stream->recordBufferSize = bufferSize;
         for (i = 0; i < NUM_BUFFERS; i++) {
             stream->recordBuffer[i] = (char *)
@@ -715,17 +714,17 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         }
 
     }
-    
+
     if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
         strm_set_cap(&stream->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
                      &param->output_vol);
     }
-    
+
     /* Done */
     stream->base.op = &opensl_strm_op;
     *p_aud_strm = &stream->base;
     return PJ_SUCCESS;
-    
+
 on_error:
     strm_destroy(&stream->base);
     return opensl_to_pj_error(result);
@@ -743,8 +742,8 @@ static pj_status_t strm_get_param(pjmedia_aud_stream *s,
                      &pi->output_vol) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
-    }    
-    
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -755,16 +754,16 @@ static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
 {
     struct opensl_aud_stream *strm = (struct opensl_aud_stream*)s;    
     pj_status_t status = PJMEDIA_EAUD_INVCAP;
-    
+
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
-    
+
     if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
         (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
         if (strm->playerVol) {
             SLresult res;
             SLmillibel vol, mvol;
-            
+
             res = (*strm->playerVol)->GetMaxVolumeLevel(strm->playerVol,
                                                         &mvol);
             if (res == SL_RESULT_SUCCESS) {
@@ -778,7 +777,7 @@ static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
             }
         }
     }
-    
+
     return status;
 }
 
@@ -788,7 +787,7 @@ static pj_status_t strm_set_cap(pjmedia_aud_stream *s,
                                 const void *value)
 {
     struct opensl_aud_stream *strm = (struct opensl_aud_stream*)s;
-    
+
     PJ_ASSERT_RETURN(s && value, PJ_EINVAL);
 
     if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
@@ -797,7 +796,7 @@ static pj_status_t strm_set_cap(pjmedia_aud_stream *s,
         if (strm->playerVol) {
             SLresult res;
             SLmillibel vol, mvol;
-            
+
             res = (*strm->playerVol)->GetMaxVolumeLevel(strm->playerVol,
                                                         &mvol);
             if (res == SL_RESULT_SUCCESS) {
@@ -820,7 +819,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *s)
     struct opensl_aud_stream *stream = (struct opensl_aud_stream*)s;
     int i;
     SLresult result = SL_RESULT_SUCCESS;
-    
+
     PJ_LOG(4, (THIS_FILE, "Starting %s stream..", stream->name.ptr));
     stream->quit_flag = 0;
 
@@ -838,7 +837,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *s)
              */
             pj_assert(result == SL_RESULT_SUCCESS);
         }
-        
+
         result = (*stream->recordRecord)->SetRecordState(
                      stream->recordRecord, SL_RECORDSTATE_RECORDING);
         if (result != SL_RESULT_SUCCESS) {
@@ -846,7 +845,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *s)
             goto on_error;
         }
     }
-    
+
     if (stream->playerPlay && stream->playerBufQ) {
         /* Set the player's state to playing */
         result = (*stream->playerPlay)->SetPlayState(stream->playerPlay,
@@ -855,7 +854,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *s)
             PJ_LOG(3, (THIS_FILE, "Cannot start player"));
             goto on_error;
         }
-        
+
         for (i = 0; i < NUM_BUFFERS; i++) {
             pj_bzero(stream->playerBuffer[i], stream->playerBufferSize/100);
             result = (*stream->playerBufQ)->Enqueue(stream->playerBufQ,
@@ -864,10 +863,10 @@ static pj_status_t strm_start(pjmedia_aud_stream *s)
             pj_assert(result == SL_RESULT_SUCCESS);
         }
     }
-    
+
     PJ_LOG(4, (THIS_FILE, "%s stream started", stream->name.ptr));
     return PJ_SUCCESS;
-    
+
 on_error:
     if (result != SL_RESULT_SUCCESS)
         strm_stop(&stream->base);
@@ -878,14 +877,14 @@ on_error:
 static pj_status_t strm_stop(pjmedia_aud_stream *s)
 {
     struct opensl_aud_stream *stream = (struct opensl_aud_stream*)s;
-    
+
     if (stream->quit_flag)
         return PJ_SUCCESS;
-    
+
     PJ_LOG(4, (THIS_FILE, "Stopping stream"));
-    
-    stream->quit_flag = 1;    
-    
+
+    stream->quit_flag = 1;
+
     if (stream->recordBufQ && stream->recordRecord) {
         /* Stop recording and clear buffer queue */
         (*stream->recordRecord)->SetRecordState(stream->recordRecord,
@@ -899,7 +898,7 @@ static pj_status_t strm_stop(pjmedia_aud_stream *s)
          * played. This is indicated by waiting for the count member of the
          * SLBufferQueueState to go to zero.
          */
-/*      
+        /*
         SLresult result;
         W_SLBufferQueueState state;
 
@@ -913,19 +912,18 @@ static pj_status_t strm_stop(pjmedia_aud_stream *s)
     }
 
     PJ_LOG(4,(THIS_FILE, "OpenSL stream stopped"));
-    
+
     return PJ_SUCCESS;
-    
 }
 
 /* API: destroy stream. */
 static pj_status_t strm_destroy(pjmedia_aud_stream *s)
 {    
     struct opensl_aud_stream *stream = (struct opensl_aud_stream*)s;
-    
+
     /* Stop the stream */
     strm_stop(s);
-    
+
     if (stream->playerObj) {
         /* Destroy the player */
         (*stream->playerObj)->Destroy(stream->playerObj);
@@ -935,7 +933,7 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
         stream->playerBufQ = NULL;
         stream->playerVol = NULL;
     }
-    
+
     if (stream->recordObj) {
         /* Destroy the recorder */
         (*stream->recordObj)->Destroy(stream->recordObj);
@@ -944,10 +942,10 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
         stream->recordRecord = NULL;
         stream->recordBufQ = NULL;
     }
-    
+
     pj_pool_release(stream->pool);
     PJ_LOG(4, (THIS_FILE, "OpenSL stream destroyed"));
-    
+
     return PJ_SUCCESS;
 }
 

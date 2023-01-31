@@ -138,7 +138,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f);
 static unsigned    factory_get_dev_count(pjmedia_aud_dev_factory *f);
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info);
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
@@ -675,7 +675,7 @@ static pj_status_t init_waveformatex(LPWAVEFORMATEX wfx,
                 (prm->clock_rate * prm->channel_count);
         wfx->wFormatTag = (pj_uint16_t)
                           ((prm->ext_fmt.id==PJMEDIA_FORMAT_PCMA) ?
-                            WAVE_FORMAT_ALAW : WAVE_FORMAT_MULAW);  
+                            WAVE_FORMAT_ALAW : WAVE_FORMAT_MULAW);
         wfx->nChannels = (pj_uint16_t)prm->channel_count;
         wfx->nSamplesPerSec = prm->clock_rate;
         wfx->nAvgBytesPerSec = prm->clock_rate * prm->channel_count;
@@ -1146,7 +1146,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 
                 /* Re-add the buffer to the device. */
                 mr = waveInAddBuffer(wmme_strm->hWave.In, 
-                                     &(wmme_strm->WaveHdr[wmme_strm->dwBufIdx]), 
+                                     &(wmme_strm->WaveHdr[wmme_strm->dwBufIdx]),
                                      sizeof(WAVEHDR));
                 if (mr != MMSYSERR_NOERROR) {
                     status = PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
@@ -1314,7 +1314,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     }
 
     /* Create and start the thread */
-    status = pj_thread_create(pool, "wmme", &wmme_dev_thread, strm, 0, 0, 
+    status = pj_thread_create(pool, "wmme", &wmme_dev_thread, strm, 0, 0,
                               &strm->thread);
     if (status != PJ_SUCCESS) {
         stream_destroy(&strm->base);
@@ -1370,7 +1370,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
         /* Recording latency */
         *(unsigned*)pval = strm->param.input_latency_ms;
         return PJ_SUCCESS;
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY  && 
+    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY  &&
                (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
         /* Playback latency */
