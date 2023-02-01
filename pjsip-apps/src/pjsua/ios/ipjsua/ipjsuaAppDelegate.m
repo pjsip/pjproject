@@ -354,37 +354,36 @@ void displayWindow(pjsua_vid_win_id wid)
     for (;i < last; ++i) {
         pjsua_vid_win_info wi;
         
-        if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS) {
+        if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS &&
+            wi.hwnd.info.ios.window)
+        {
             dispatch_async(dispatch_get_main_queue(), ^{
-                UIView *parent = app.viewController.view;
-                UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
-            
-                if (view) {
+                if (!wi.is_native) {
+                    /* Video window */
+                    UIView *parent = app.viewController.view;
+                    UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
+
                     /* Add the video window as subview */
                     if (![view isDescendantOfView:parent])
                         [parent addSubview:view];
-                    
-                    if (!wi.is_native) {
-                        /* Resize it to fit width */
-                        view.bounds = CGRectMake(0, 0, parent.bounds.size.width,
-                                                 (parent.bounds.size.height *
-                                                  1.0*parent.bounds.size.width/
-                                                  view.bounds.size.width));
-                        /* Center it horizontally */
-                        view.center = CGPointMake(parent.bounds.size.width/2.0,
-                                              view.bounds.size.height/2.0);
-                    } else {
-                        /* Preview window, move it to the bottom */
-                        view.center = CGPointMake(parent.bounds.size.width/2.0,
-                                                  parent.bounds.size.height-
-                                                  view.bounds.size.height/2.0);
-                    }
+
+                    view.center = parent.center;
+                    parent.autoresizesSubviews = true;
+                    view.autoresizingMask = UIViewAutoresizingFlexibleWidth |
+                                            UIViewAutoresizingFlexibleHeight;
+                } else {
+                    /* Preview window */
+                    UIView *parent = app.viewController.preview;
+                    CALayer *layer = (__bridge CALayer *)wi.hwnd.info.ios.window;
+
+                    /* Add the preview layer as sublayer */
+                    layer.frame = parent.bounds;
+                    if (![layer superlayer])
+                        [parent.layer addSublayer:layer];
                 }
             });
         }
     }
-
-    
 #endif
 }
 

@@ -27,12 +27,14 @@
 @implementation ipjsuaViewController
 
 @synthesize textLabel;
+@synthesize preview;
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
 
+    preview.backgroundColor = UIColor.blackColor;
     [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
 }
 

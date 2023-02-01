@@ -36,13 +36,8 @@
 
 #define THIS_FILE               "darwin_dev.m"
 #define DEFAULT_CLOCK_RATE      90000
-#if TARGET_OS_IPHONE
-    #define DEFAULT_WIDTH       352
-    #define DEFAULT_HEIGHT      288
-#else
-    #define DEFAULT_WIDTH       1280
-    #define DEFAULT_HEIGHT      720
-#endif
+#define DEFAULT_WIDTH           640
+#define DEFAULT_HEIGHT          480
 #define DEFAULT_FPS             15
 
 /* Define whether we should maintain the aspect ratio when rotating the image.
@@ -1018,10 +1013,17 @@ static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *s,
 
     switch (cap) {
 #if TARGET_OS_IPHONE
+        case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
+        {
+            pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*) pval;
+            hwnd->type = PJMEDIA_VID_DEV_HWND_TYPE_IOS;
+            hwnd->info.ios.window = (void*)strm->prev_layer;
+            return PJ_SUCCESS;
+        }
         case PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW:
         {
             pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*) pval;
-            hwnd->type = PJMEDIA_VID_DEV_HWND_TYPE_NONE;
+            hwnd->type = PJMEDIA_VID_DEV_HWND_TYPE_IOS;
             hwnd->info.ios.window = (void*)strm->render_view;
             return PJ_SUCCESS;
         }
@@ -1043,6 +1045,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     switch (cap) {
+#if TARGET_OS_IPHONE
         /* Native preview */
         case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
         {
@@ -1053,7 +1056,8 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                 if (strm->prev_layer) {
                     CALayer *prev_layer = strm->prev_layer;
                     dispatch_sync_on_main_queue(^{
-                        [prev_layer removeFromSuperlayer];
+                        if ([prev_layer superlayer])
+                            [prev_layer removeFromSuperlayer];
                         [prev_layer release];
                     });
                     strm->prev_layer = nil;
@@ -1072,29 +1076,19 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (!strm->cap_session)
                 return PJ_EINVALIDOP;
             
-#if TARGET_OS_IPHONE
             /* Preview layer instantiation should be in main thread! */
             dispatch_sync_on_main_queue(^{
-                /* Create view, if none */
-                if (!strm->render_view)
-                    darwin_init_view(strm);
-            
                 /* Create preview layer */
-                AVCaptureVideoPreviewLayer *prev_layer =
-                            [[AVCaptureVideoPreviewLayer alloc]
-                             initWithSession:strm->cap_session];
-                
-                /* Attach preview layer to a UIView */
-                prev_layer.videoGravity = AVLayerVideoGravityResize;
-                prev_layer.frame = strm->render_view.bounds;
-                [strm->render_view.layer addSublayer:prev_layer];
-                strm->prev_layer = prev_layer;
+                strm->prev_layer = [[AVCaptureVideoPreviewLayer alloc]
+                                   initWithSession:strm->cap_session];
+                strm->prev_layer.videoGravity =
+                    AVLayerVideoGravityResizeAspectFill;
             });
             PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
-#endif
             
             return PJ_SUCCESS;
         }
+#endif
 
         /* Fast switch */
         case PJMEDIA_VID_DEV_CAP_SWITCH:
