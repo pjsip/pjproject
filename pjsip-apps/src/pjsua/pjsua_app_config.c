@@ -166,7 +166,7 @@ static void usage(void)
     puts  ("                      Specify N=-1 to disable this feature.");
     puts  ("                      Specify N=0 for instant close when unused.");
     puts  ("  --no-tones          Disable audible tones");
-    puts  ("  --jb-max-size       Specify jitter buffer maximum size, in frames (default=-1)");
+    puts  ("  --jb-max-size       Specify jitter buffer maximum size, in msec (default=-1)");
     puts  ("  --extra-audio       Add one more audio stream");
 
 #if PJSUA_HAS_VIDEO
