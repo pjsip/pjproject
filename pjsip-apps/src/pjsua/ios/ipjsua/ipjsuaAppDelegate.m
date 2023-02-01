@@ -374,7 +374,8 @@ void displayWindow(pjsua_vid_win_id wid)
                 } else {
                     /* Preview window */
                     UIView *parent = app.viewController.preview;
-                    CALayer *layer = (__bridge CALayer *)wi.hwnd.info.ios.window;
+                    CALayer *layer = (__bridge CALayer *)
+                                     wi.hwnd.info.ios.window;
 
                     /* Add the preview layer as sublayer */
                     layer.frame = parent.bounds;

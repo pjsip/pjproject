@@ -706,7 +706,8 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
             }
 
             if (!w->is_native) {
-                status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot, NULL);
+                status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot,
+                                                NULL);
                 if (status != PJ_SUCCESS) {
                     PJ_PERROR(4, (THIS_FILE, status,
                                   "Ignored error on connecting video ports "
