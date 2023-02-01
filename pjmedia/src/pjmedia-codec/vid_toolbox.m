@@ -35,15 +35,19 @@
 
 #if (defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE)
 #import <UIKit/UIKit.h>
+
+#  define DEFAULT_WIDTH         352
+#  define DEFAULT_HEIGHT        288
+#else
+#  define DEFAULT_WIDTH         720
+#  define DEFAULT_HEIGHT        480
 #endif
 
-#define DEFAULT_WIDTH           720
-#define DEFAULT_HEIGHT          480
 #define DEFAULT_FPS             15
-#define DEFAULT_AVG_BITRATE     384000
-#define DEFAULT_MAX_BITRATE     512000
+#define DEFAULT_AVG_BITRATE     256000
+#define DEFAULT_MAX_BITRATE     256000
 
-#define MAX_RX_WIDTH            1280
+#define MAX_RX_WIDTH            1200
 #define MAX_RX_HEIGHT           800
 
 #define SPS_PPS_BUF_SIZE        32
