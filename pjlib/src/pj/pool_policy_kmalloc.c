@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/pool.h>
 #include <pj/except.h>
@@ -29,7 +29,7 @@ static void *default_block_alloc(pj_pool_factory *factory, pj_size_t size)
     return kmalloc(size, GFP_ATOMIC);
 }
 
-static void default_block_free(pj_pool_factory *factory, 
+static void default_block_free(pj_pool_factory *factory,
                                void *mem, pj_size_t size)
 {
     PJ_CHECK_STACK();
@@ -48,7 +48,7 @@ static void default_pool_callback(pj_pool_t *pool, pj_size_t size)
     PJ_THROW(PJ_NO_MEMORY_EXCEPTION);
 }
 
-pj_pool_factory_policy pj_pool_factory_default_policy = 
+pj_pool_factory_policy pj_pool_factory_default_policy =
 {
     &default_block_alloc,
     &default_block_free,

@@ -97,7 +97,7 @@ if status != 0 :
 
 # end of lib transport
 
-# lib account 
+# lib account
 
 accfg = py_pjsua.acc_config_default()
 status, accid = py_pjsua.acc_add(accfg, 1)
@@ -219,7 +219,7 @@ status = py_pjsua.codec_set_param("coba", c_param)
 print "py media codec set param " + `status`
 if status != 0 :
 	py_pjsua.perror("py_pjsua","codec set param",status)
-	
+
 #end of lib media
 
 #lib call

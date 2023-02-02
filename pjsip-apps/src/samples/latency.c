@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /* See http://trac.pjsip.org/repos/wiki/MeasuringSoundLatency on
@@ -30,7 +30,7 @@
 
 
 /* Util to display the error message for the specified error code  */
-static int app_perror( const char *sender, const char *title, 
+static int app_perror( const char *sender, const char *title,
                        pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
@@ -111,7 +111,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav)
         }
 
         lat = (max_echo_pos - max_signal_pos) * 1000 / PJMEDIA_PIA_SRATE(&wav->info);
-        
+
 #if 0
         printf("Latency = %u\n", lat);
 #endif
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
                            NULL             /* callback on error    */
                            );
 
-    status = pj_register_strerror(PJMEDIA_ERRNO_START, PJ_ERRNO_SPACE_SIZE, 
+    status = pj_register_strerror(PJMEDIA_ERRNO_START, PJ_ERRNO_SPACE_SIZE,
                                   &pjmedia_strerror);
     pj_assert(status == PJ_SUCCESS);
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/sock.h>
 #include <pj/addr_resolv.h>
@@ -104,7 +104,7 @@ CPjSocketReader *CPjSocket::CreateReader(unsigned max_len)
 }
 
 // Delete socket reader when it's not wanted.
-void CPjSocket::DestroyReader() 
+void CPjSocket::DestroyReader()
 {
     if (sockReader_) {
         sockReader_->Cancel();
@@ -122,7 +122,7 @@ void CPjSocket::DestroyReader()
 
 
 CPjSocketReader::CPjSocketReader(CPjSocket &sock)
-: CActive(EPriorityStandard), 
+: CActive(EPriorityStandard),
   sock_(sock), buffer_(NULL, 0), readCb_(NULL), key_(NULL)
 {
 }
@@ -154,16 +154,16 @@ CPjSocketReader::~CPjSocketReader()
     delete [] data;
 }
 
-void CPjSocketReader::StartRecv(void (*cb)(void *key), 
-                                void *key, 
+void CPjSocketReader::StartRecv(void (*cb)(void *key),
+                                void *key,
                                 TDes8 *aDesc,
                                 TUint flags)
 {
     StartRecvFrom(cb, key, aDesc, flags, NULL);
 }
 
-void CPjSocketReader::StartRecvFrom(void (*cb)(void *key), 
-                                    void *key, 
+void CPjSocketReader::StartRecvFrom(void (*cb)(void *key),
+                                    void *key,
                                     TDes8 *aDesc,
                                     TUint flags,
                                     TSockAddr *fromAddr)
@@ -288,7 +288,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
     /* (Symbian IP address is in host byte order) */
     TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
     temp_addr.Output(str16);
- 
+
     return pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
                               str8, sizeof(str8));
 }
@@ -296,7 +296,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
 /*
  * This function converts the Internet host address cp from the standard
  * numbers-and-dots notation into binary data and stores it in the structure
- * that inp points to. 
+ * that inp points to.
  */
 PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp)
 {
@@ -349,7 +349,7 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
     PJ_ASSERT_RETURN(src && src->slen && dst, PJ_EINVAL);
 
-    /* Initialize output with PJ_IN_ADDR_NONE for IPv4 (to be 
+    /* Initialize output with PJ_IN_ADDR_NONE for IPv4 (to be
      * compatible with pj_inet_aton()
      */
     if (af==PJ_AF_INET) {
@@ -419,7 +419,7 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
         /* Symbian IP address is in host byte order */
         TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
         temp_addr.Output(str16);
- 
+
         pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
                            dst, size);
         return PJ_SUCCESS;
@@ -435,7 +435,7 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
 
         TInetAddr temp_addr(ip6, (TUint)0);
         temp_addr.Output(str16);
- 
+
         pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
                            dst, size);
         return PJ_SUCCESS;
@@ -478,8 +478,8 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
 /*
  * Create new socket/endpoint for communication and returns a descriptor.
  */
-PJ_DEF(pj_status_t) pj_sock_socket(int af, 
-                                   int type, 
+PJ_DEF(pj_status_t) pj_sock_socket(int af,
+                                   int type,
                                    int proto,
                                    pj_sock_t *p_sock)
 {
@@ -492,7 +492,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 
     // Return failure if access point is marked as down by app.
     PJ_SYMBIAN_CHECK_CONNECTION();
-    
+
     /* Set proto if none is specified. */
     if (proto == 0) {
         if (type == pj_SOCK_STREAM())
@@ -504,13 +504,13 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     /* Create Symbian RSocket */
     RSocket rSock;
     if (PjSymbianOS::Instance()->Connection())
-        rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(), 
+        rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(),
                         af, type, proto,
                         *PjSymbianOS::Instance()->Connection());
     else
-        rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(), 
+        rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(),
                         af, type, proto);
-        
+
     if (rc != KErrNone)
         return PJ_RETURN_OS_ERROR(rc);
 
@@ -526,7 +526,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 /*
  * Bind socket.
  */
-PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock, 
+PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
                                   const pj_sockaddr_t *addr,
                                   int len)
 {
@@ -557,7 +557,7 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
 /*
  * Bind socket.
  */
-PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock, 
+PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
                                      pj_uint32_t addr32,
                                      pj_uint16_t port)
 {
@@ -599,8 +599,8 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
                                          int *namelen)
 {
     PJ_CHECK_STACK();
-    
-    PJ_ASSERT_RETURN(sock && addr && namelen && 
+
+    PJ_ASSERT_RETURN(sock && addr && namelen &&
                      *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     CPjSocket *pjSock = (CPjSocket*)sock;
@@ -623,8 +623,8 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
                                          int *namelen)
 {
     PJ_CHECK_STACK();
-    
-    PJ_ASSERT_RETURN(sock && addr && namelen && 
+
+    PJ_ASSERT_RETURN(sock && addr && namelen &&
                      *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     CPjSocket *pjSock = (CPjSocket*)sock;
@@ -649,7 +649,7 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
 
     // Return failure if access point is marked as down by app.
     PJ_SYMBIAN_CHECK_CONNECTION();
-    
+
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 
@@ -682,13 +682,13 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
                                    int tolen)
 {
     pj_status_t status;
-    
+
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
 
     // Return failure if access point is marked as down by app.
     PJ_SYMBIAN_CHECK_CONNECTION();
-    
+
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 
@@ -711,7 +711,7 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
         //For some reason TSockXfrLength is not returning correctly!
         //*len = (TInt) sentLen.Length();
         return PJ_SUCCESS;
-    } else 
+    } else
         return PJ_RETURN_OS_ERROR(reqStatus.Int());
 }
 
@@ -814,7 +814,7 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
             *len = data.Length();
 
             if (from && fromlen) {
-                return PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr*)from, 
+                return PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr*)from,
                                             fromlen);
             } else {
                 return PJ_SUCCESS;
@@ -885,16 +885,16 @@ PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
                                      int namelen)
 {
     pj_status_t status;
-    
+
     PJ_CHECK_STACK();
 
     PJ_ASSERT_RETURN(sock && addr && namelen, PJ_EINVAL);
-    PJ_ASSERT_RETURN(((pj_sockaddr*)addr)->addr.sa_family == PJ_AF_INET, 
+    PJ_ASSERT_RETURN(((pj_sockaddr*)addr)->addr.sa_family == PJ_AF_INET,
                      PJ_EINVAL);
 
     // Return failure if access point is marked as down by app.
     PJ_SYMBIAN_CHECK_CONNECTION();
-    
+
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 

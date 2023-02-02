@@ -129,7 +129,7 @@ PJ_DEF(pj_uint8_t) pjmedia_linear2alaw(
                 mask = 0x55;            /* sign bit = 0 */
                 pcm_val = -pcm_val - 8;
 
-                /* https://github.com/pjsip/pjproject/issues/1301 
+                /* https://github.com/pjsip/pjproject/issues/1301
                  * Thank you K Johnson - Zetron - 27 May 2011
                  */
                 if (pcm_val < 0)
@@ -258,7 +258,7 @@ PJ_DEF(int) pjmedia_ulaw2linear(
 {
         int             t;
 
-        /* Shortcut: when input is zero, output is zero 
+        /* Shortcut: when input is zero, output is zero
          * This will also make the VAD works harder.
          *  -bennylp
          */

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/evsub_msg.h>
 #include <pjsip/print_util.h>
@@ -27,14 +27,14 @@
 /*
  * Event header.
  */
-static int pjsip_event_hdr_print( pjsip_event_hdr *hdr, 
+static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
                                   char *buf, pj_size_t size);
-static pjsip_event_hdr* pjsip_event_hdr_clone( pj_pool_t *pool, 
+static pjsip_event_hdr* pjsip_event_hdr_clone( pj_pool_t *pool,
                                                const pjsip_event_hdr *hdr);
 static pjsip_event_hdr* pjsip_event_hdr_shallow_clone( pj_pool_t *pool,
                                                        const pjsip_event_hdr*);
 
-static pjsip_hdr_vptr event_hdr_vptr = 
+static pjsip_hdr_vptr event_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_event_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_event_hdr_shallow_clone,
@@ -56,7 +56,7 @@ PJ_DEF(pjsip_event_hdr*) pjsip_event_hdr_create(pj_pool_t *pool)
     return hdr;
 }
 
-static int pjsip_event_hdr_print( pjsip_event_hdr *hdr, 
+static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
                                   char *buf, pj_size_t size)
 {
     char *p = buf;
@@ -70,9 +70,9 @@ static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
 
     copy_advance(p, hdr->event_type);
     copy_advance_pair(p, ";id=", 4, hdr->id_param);
-    
+
     printed = pjsip_param_print_on(&hdr->other_param, p, endbuf-p,
-                                   &pc->pjsip_TOKEN_SPEC, 
+                                   &pc->pjsip_TOKEN_SPEC,
                                    &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
         return (int)printed;
@@ -81,7 +81,7 @@ static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
     return (int)(p - buf);
 }
 
-static pjsip_event_hdr* pjsip_event_hdr_clone( pj_pool_t *pool, 
+static pjsip_event_hdr* pjsip_event_hdr_clone( pj_pool_t *pool,
                                                const pjsip_event_hdr *rhs)
 {
     pjsip_event_hdr *hdr = pjsip_event_hdr_create(pool);
@@ -91,7 +91,7 @@ static pjsip_event_hdr* pjsip_event_hdr_clone( pj_pool_t *pool,
     return hdr;
 }
 
-static pjsip_event_hdr* 
+static pjsip_event_hdr*
 pjsip_event_hdr_shallow_clone( pj_pool_t *pool,
                                const pjsip_event_hdr *rhs )
 {
@@ -124,16 +124,16 @@ PJ_DEF(pjsip_allow_events_hdr*) pjsip_allow_events_hdr_create(pj_pool_t *pool)
 /*
  * Subscription-State header.
  */
-static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr, 
+static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
                                      char *buf, pj_size_t size);
-static pjsip_sub_state_hdr* 
-pjsip_sub_state_hdr_clone(pj_pool_t *pool, 
+static pjsip_sub_state_hdr*
+pjsip_sub_state_hdr_clone(pj_pool_t *pool,
                           const pjsip_sub_state_hdr *hdr);
-static pjsip_sub_state_hdr* 
+static pjsip_sub_state_hdr*
 pjsip_sub_state_hdr_shallow_clone(pj_pool_t *pool,
                                   const pjsip_sub_state_hdr*);
 
-static pjsip_hdr_vptr sub_state_hdr_vptr = 
+static pjsip_hdr_vptr sub_state_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_sub_state_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_sub_state_hdr_shallow_clone,
@@ -155,7 +155,7 @@ PJ_DEF(pjsip_sub_state_hdr*) pjsip_sub_state_hdr_create(pj_pool_t *pool)
     return hdr;
 }
 
-static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr, 
+static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
                                      char *buf, pj_size_t size)
 {
     char *p = buf;
@@ -182,8 +182,8 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
         printed = pj_utoa(hdr->retry_after, p);
         p += printed;
     }
-    
-    printed = pjsip_param_print_on( &hdr->other_param, p, endbuf-p, 
+
+    printed = pjsip_param_print_on( &hdr->other_param, p, endbuf-p,
                                     &pc->pjsip_TOKEN_SPEC,
                                     &pc->pjsip_TOKEN_SPEC,
                                     ';');
@@ -195,8 +195,8 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
     return (int)(p - buf);
 }
 
-static pjsip_sub_state_hdr* 
-pjsip_sub_state_hdr_clone(pj_pool_t *pool, 
+static pjsip_sub_state_hdr*
+pjsip_sub_state_hdr_clone(pj_pool_t *pool,
                           const pjsip_sub_state_hdr *rhs)
 {
     pjsip_sub_state_hdr *hdr = pjsip_sub_state_hdr_create(pool);
@@ -208,7 +208,7 @@ pjsip_sub_state_hdr_clone(pj_pool_t *pool,
     return hdr;
 }
 
-static pjsip_sub_state_hdr* 
+static pjsip_sub_state_hdr*
 pjsip_sub_state_hdr_shallow_clone(pj_pool_t *pool,
                                   const pjsip_sub_state_hdr *rhs)
 {
@@ -299,7 +299,7 @@ PJ_DEF(void) pjsip_evsub_init_parser(void)
     pjsip_register_hdr_parser( "Event", "o",
                                &parse_hdr_event);
 
-    pjsip_register_hdr_parser( "Subscription-State", NULL, 
+    pjsip_register_hdr_parser( "Subscription-State", NULL,
                                &parse_hdr_sub_state);
 }
 

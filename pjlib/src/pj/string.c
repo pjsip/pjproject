@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/string.h>
 #include <pj/assert.h>
@@ -34,7 +34,7 @@ PJ_DEF(pj_ssize_t) pj_strspn(const pj_str_t *str, const pj_str_t *set_char)
 {
     pj_ssize_t i, j, count = 0;
     for (i = 0; i < str->slen; i++) {
-        if (count != i) 
+        if (count != i)
             break;
 
         for (j = 0; j < set_char->slen; j++) {
@@ -90,7 +90,7 @@ PJ_DEF(pj_ssize_t) pj_strcspn2(const pj_str_t *str, const char *set_char)
 
 PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
                              pj_str_t *tok, pj_size_t start_idx)
-{    
+{
     pj_ssize_t str_idx;
 
     pj_assert(str->slen >= 0);
@@ -100,14 +100,14 @@ PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
     if ((str->slen <= 0) || ((pj_size_t)str->slen < start_idx)) {
         return str->slen;
     }
-    
+
     tok->ptr = str->ptr + start_idx;
     tok->slen = str->slen - start_idx;
 
     str_idx = pj_strspn(tok, delim);
     if (start_idx+str_idx == (pj_size_t)str->slen) {
         return str->slen;
-    }    
+    }
     tok->ptr += str_idx;
     tok->slen -= str_idx;
 
@@ -197,9 +197,9 @@ PJ_DEF(pj_str_t*) pj_strltrim( pj_str_t *str )
 {
     char *end = str->ptr + str->slen;
     register char *p = str->ptr;
- 
+
     pj_assert(str->slen >= 0);
- 
+
     while (p < end && pj_isspace(*p))
         ++p;
     str->slen -= (p - str->ptr);
@@ -247,7 +247,7 @@ PJ_DEF(long) pj_strtol(const pj_str_t *str)
 
     if (str->slen > 0 && (str->ptr[0] == '+' || str->ptr[0] == '-')) {
         pj_str_t s;
-        
+
         s.ptr = str->ptr + 1;
         s.slen = str->slen - 1;
         return (str->ptr[0] == '-'? -(long)pj_strtoul(&s) : pj_strtoul(&s));

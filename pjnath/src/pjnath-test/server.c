@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "server.h"
 #include "test.h"
@@ -134,13 +134,13 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             pj_strdup2(pool, &res_name, domain);
 
             if (use_ipv6) {
-                pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+                pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60,
                                     &hostip.ipv6.sin6_addr);
-            } else {            
-                pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+            } else {
+                pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60,
                                  &hostip.ipv4.sin_addr);
             }
-            
+
             pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
         }
 
@@ -153,12 +153,12 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
         pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
         stun_sock_cb.on_data_recvfrom = &stun_on_data_recvfrom;
 
-        pj_sockaddr_init(GET_AF(use_ipv6), &bound_addr, 
+        pj_sockaddr_init(GET_AF(use_ipv6), &bound_addr,
                          NULL, STUN_SERVER_PORT);
 
-        status = pj_activesock_create_udp(pool, &bound_addr, NULL, 
+        status = pj_activesock_create_udp(pool, &bound_addr, NULL,
                                           test_srv->stun_cfg->ioqueue,
-                                          &stun_sock_cb, test_srv, 
+                                          &stun_sock_cb, test_srv,
                                           &test_srv->stun_sock, NULL);
         if (status != PJ_SUCCESS) {
             destroy_test_server(test_srv);
@@ -186,16 +186,16 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             pj_ansi_snprintf(strbuf, sizeof(strbuf),
                              "stun.%s", domain);
             pj_strdup2(pool, &target, strbuf);
-            pj_dns_init_srv_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 0, 0, 
+            pj_dns_init_srv_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 0, 0,
                                STUN_SERVER_PORT, &target);
             pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 
             res_name = target;
-            if (use_ipv6) {             
-                pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+            if (use_ipv6) {
+                pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60,
                                     &hostip.ipv6.sin6_addr);
-            } else {            
-                pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+            } else {
+                pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60,
                                  &hostip.ipv4.sin_addr);
             }
             pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
@@ -204,10 +204,10 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
     }
 
     if (flags & CREATE_TURN_SERVER) {
-        
+
         pj_sockaddr bound_addr;
         pj_turn_tp_type tp_type = get_turn_tp_type(flags);
-        
+
         pj_sockaddr_init(GET_AF(use_ipv6), &bound_addr, NULL, TURN_SERVER_PORT);
 
         if (tp_type == PJ_TURN_TP_UDP) {
@@ -246,7 +246,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                                    &val, sizeof(val));
             }
 
-            status = pj_sock_bind(sock_fd, &bound_addr, 
+            status = pj_sock_bind(sock_fd, &bound_addr,
                                   pj_sockaddr_get_len(&bound_addr));
             if (status != PJ_SUCCESS) {
                 pj_sock_close(sock_fd);
@@ -259,10 +259,10 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                 RETURN_ERROR(status);
             }
 
-            status = pj_activesock_create(pool, sock_fd, pj_SOCK_STREAM(), 
+            status = pj_activesock_create(pool, sock_fd, pj_SOCK_STREAM(),
                                           NULL,
-                                          test_srv->stun_cfg->ioqueue, 
-                                          &turn_sock_cb, test_srv, 
+                                          test_srv->stun_cfg->ioqueue,
+                                          &turn_sock_cb, test_srv,
                                           &test_srv->turn_sock);
             if (status != PJ_SUCCESS) {
                 pj_sock_close(sock_fd);
@@ -271,7 +271,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 
             status = pj_activesock_start_accept(test_srv->turn_sock,
                                                 pool);
-        } 
+        }
 #if USE_TLS
         else if (tp_type == PJ_TURN_TP_TLS) {
             pj_ssl_sock_t *ssock_serv = NULL;
@@ -296,7 +296,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                     pj_ssl_sock_close(ssock_serv);
             }
 
-            status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
+            status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file,
                                                  &privkey_file, &privkey_pass,
                                                  &cert);
             if (status != PJ_SUCCESS) {
@@ -310,7 +310,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                     pj_ssl_sock_close(ssock_serv);
             }
             test_srv->ssl_srv_sock = ssock_serv;
-            status = pj_ssl_sock_start_accept(ssock_serv, pool, &bound_addr, 
+            status = pj_ssl_sock_start_accept(ssock_serv, pool, &bound_addr,
                                              pj_sockaddr_get_len(&bound_addr));
         }
 #endif
@@ -339,23 +339,23 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             default:
                 pj_ansi_snprintf(strbuf, sizeof(strbuf),
                                  "_turn._udp.%s", domain);
-                
+
             }
             pj_strdup2(pool, &res_name, strbuf);
             pj_ansi_snprintf(strbuf, sizeof(strbuf),
                              "turn.%s", domain);
             pj_strdup2(pool, &target, strbuf);
-            pj_dns_init_srv_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 0, 0, 
+            pj_dns_init_srv_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 0, 0,
                                TURN_SERVER_PORT, &target);
             pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 
             res_name = target;
-            
-            if (use_ipv6) {             
-                pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+
+            if (use_ipv6) {
+                pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60,
                                     &hostip.ipv6.sin6_addr);
-            } else {            
-                pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+            } else {
+                pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60,
                                  &hostip.ipv4.sin_addr);
             }
             pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
@@ -430,14 +430,14 @@ static pj_bool_t stun_on_data_recvfrom(pj_activesock_t *asock,
     test_srv = (test_server*) pj_activesock_get_user_data(asock);
     pool = pj_pool_create(test_srv->stun_cfg->pf, NULL, 512, 512, NULL);
 
-    status = pj_stun_msg_decode(pool, (pj_uint8_t*)data, size, 
-                                PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET, 
+    status = pj_stun_msg_decode(pool, (pj_uint8_t*)data, size,
+                                PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
                                 &req, NULL, NULL);
     if (status != PJ_SUCCESS)
         goto on_return;
 
     if (req->hdr.type != PJ_STUN_BINDING_REQUEST) {
-        pj_stun_msg_create_response(pool, req, PJ_STUN_SC_BAD_REQUEST, 
+        pj_stun_msg_create_response(pool, req, PJ_STUN_SC_BAD_REQUEST,
                                     NULL, &resp);
         goto send_pkt;
     }
@@ -450,7 +450,7 @@ static pj_bool_t stun_on_data_recvfrom(pj_activesock_t *asock,
                                   PJ_TRUE, src_addr, addr_len);
 
 send_pkt:
-    status = pj_stun_msg_encode(resp, (pj_uint8_t*)data, MAX_STUN_PKT, 
+    status = pj_stun_msg_encode(resp, (pj_uint8_t*)data, MAX_STUN_PKT,
                                 0, NULL, &size);
     if (status != PJ_SUCCESS)
         goto on_return;
@@ -513,7 +513,7 @@ static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
     test_server *test_srv = (test_server *)pj_activesock_get_user_data(asock);
 
     PJ_UNUSED_ARG(remainder);
-    return turn_on_data_read(test_srv, data, size, &test_srv->remote_addr, 
+    return turn_on_data_read(test_srv, data, size, &test_srv->remote_addr,
                             sizeof(test_srv->remote_addr), status);
 }
 
@@ -527,9 +527,9 @@ static pj_bool_t turn_tls_on_data_read(pj_ssl_sock_t *ssl_sock,
     test_server *test_srv = (test_server *)pj_ssl_sock_get_user_data(ssl_sock);
 
     PJ_UNUSED_ARG(remainder);
-    return turn_on_data_read(test_srv, data, size, 
-                             &test_srv->remote_addr, 
-                             sizeof(test_srv->remote_addr), 
+    return turn_on_data_read(test_srv, data, size,
+                             &test_srv->remote_addr,
+                             sizeof(test_srv->remote_addr),
                              status);
 }
 #endif
@@ -553,7 +553,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
                                    int addr_len,
                                    pj_status_t status)
 {
-    
+
     pj_pool_t *pool;
     turn_allocation *alloc;
     pj_stun_msg *req, *resp = NULL;
@@ -567,7 +567,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
         return PJ_TRUE;
 
     pj_sockaddr_print(src_addr, client_info, sizeof(client_info), 3);
-    
+
     use_ipv6 = test_srv->flags & SERVER_IPV6;
     pool = pj_pool_create(test_srv->stun_cfg->pf, NULL, 512, 512, NULL);
 
@@ -577,8 +577,8 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
             break;
     }
 
-    if (pj_stun_msg_check((pj_uint8_t*)data, size, 
-                          PJ_STUN_NO_FINGERPRINT_CHECK)!=PJ_SUCCESS)  
+    if (pj_stun_msg_check((pj_uint8_t*)data, size,
+                          PJ_STUN_NO_FINGERPRINT_CHECK)!=PJ_SUCCESS)
 {
         /* Not STUN message, this probably is a ChannelData */
         pj_turn_channel_data cd;
@@ -589,7 +589,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 
         if (i==test_srv->turn_alloc_cnt) {
             /* Invalid data */
-            PJ_LOG(1,(THIS_FILE, 
+            PJ_LOG(1,(THIS_FILE,
                       "TURN Server received strayed data"));
             goto on_return;
         }
@@ -601,7 +601,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 
         /* For UDP check the packet length */
         if (size < cd.length+sizeof(cd)) {
-            PJ_LOG(1,(THIS_FILE, 
+            PJ_LOG(1,(THIS_FILE,
                       "TURN Server: ChannelData discarded: UDP size error"));
             goto on_return;
         }
@@ -613,7 +613,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
         }
 
         if (j==alloc->perm_cnt) {
-            PJ_LOG(1,(THIS_FILE, 
+            PJ_LOG(1,(THIS_FILE,
                       "TURN Server: ChannelData discarded: invalid channel number"));
             goto on_return;
         }
@@ -632,9 +632,9 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
         goto on_return;
     }
 
-    status = pj_stun_msg_decode(pool, (pj_uint8_t*)data, size, 
+    status = pj_stun_msg_decode(pool, (pj_uint8_t*)data, size,
                                 PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET |
-                                    PJ_STUN_NO_FINGERPRINT_CHECK, 
+                                    PJ_STUN_NO_FINGERPRINT_CHECK,
                                 &req, NULL, NULL);
     if (status != PJ_SUCCESS) {
         char errmsg[PJ_ERR_MSG_SIZE];
@@ -682,7 +682,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
          * the user is incorrect
          */
         if (pj_stun_msg_find_attr(req, PJ_STUN_ATTR_MESSAGE_INTEGRITY, 0) == NULL ||
-            uname==NULL || pj_stricmp2(&uname->value, TURN_USERNAME) != 0) 
+            uname==NULL || pj_stricmp2(&uname->value, TURN_USERNAME) != 0)
         {
             pj_str_t tmp;
 
@@ -704,7 +704,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 
         alloc->pool = pj_pool_create(test_srv->stun_cfg->pf, "alloc", 512, 512, NULL);
 
-        /* Create relay socket */       
+        /* Create relay socket */
         pj_sockaddr_init(GET_AF(use_ipv6), &alloc->alloc_addr, NULL, 0);
         if (use_ipv6) {
             /* pj_gethostip() may return IPv6 link-local and will cause EINVAL
@@ -722,9 +722,9 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
             }
         }
 
-        status = pj_activesock_create_udp(alloc->pool, &alloc->alloc_addr, NULL, 
+        status = pj_activesock_create_udp(alloc->pool, &alloc->alloc_addr, NULL,
                                           test_srv->stun_cfg->ioqueue,
-                                          &alloc_sock_cb, alloc, 
+                                          &alloc_sock_cb, alloc,
                                           &alloc->sock, &alloc->alloc_addr);
         if (status != PJ_SUCCESS) {
             pj_pool_release(alloc->pool);
@@ -752,7 +752,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
             pj_stun_msg_create_response(pool, req, PJ_STUN_SC_SERVER_ERROR, NULL, &resp);
             goto send_pkt;
         }
-        pj_stun_msg_add_sockaddr_attr(alloc->pool, alloc->data_ind, 
+        pj_stun_msg_add_sockaddr_attr(alloc->pool, alloc->data_ind,
                                       PJ_STUN_ATTR_XOR_PEER_ADDR, PJ_TRUE,
                                       &alloc->alloc_addr,
                                       pj_sockaddr_get_len(&alloc->alloc_addr));
@@ -819,7 +819,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
                         pj_sockaddr_cp(&alloc->perm[alloc->perm_cnt], &pa->sockaddr);
                         ++alloc->perm_cnt;
 
-                        PJ_LOG(5,("", "Permission %s added to client %s, perm_cnt=%d", 
+                        PJ_LOG(5,("", "Permission %s added to client %s, perm_cnt=%d",
                                       peer_info, client_info, alloc->perm_cnt));
                     }
 
@@ -849,11 +849,11 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
                 }
 
                 if (j==alloc->perm_cnt) {
-                    PJ_LOG(5,("", "SendIndication to %s is rejected (no permission)", 
+                    PJ_LOG(5,("", "SendIndication to %s is rejected (no permission)",
                                   peer_info, client_info, alloc->perm_cnt));
                 } else {
                     PJ_LOG(5,(THIS_FILE, "Relaying %d bytes data from client %s to peer %s, "
-                                         "perm_cnt=%d", 
+                                         "perm_cnt=%d",
                               da->length, client_info, peer_info, alloc->perm_cnt));
 
                     sent = da->length;
@@ -905,7 +905,7 @@ send_pkt:
     if (resp) {
         pj_turn_tp_type tp_type = get_turn_tp_type(test_srv->flags);
 
-        status = pj_stun_msg_encode(resp, (pj_uint8_t*)data, MAX_STUN_PKT, 
+        status = pj_stun_msg_encode(resp, (pj_uint8_t*)data, MAX_STUN_PKT,
                                     0, &auth_key, &size);
         if (status != PJ_SUCCESS)
             goto on_return;
@@ -913,19 +913,19 @@ send_pkt:
         len = size;
         switch (tp_type) {
         case PJ_TURN_TP_TCP:
-            status = pj_activesock_send(test_srv->cl_turn_sock, 
+            status = pj_activesock_send(test_srv->cl_turn_sock,
                                         &test_srv->send_key, data, &len, 0);
             break;
 #if USE_TLS
         case PJ_TURN_TP_TLS:
-            status = pj_ssl_sock_send(test_srv->ssl_cl_sock, 
+            status = pj_ssl_sock_send(test_srv->ssl_cl_sock,
                                       &test_srv->send_key, data, &len, 0);
             break;
 #endif
         default:
-            status = pj_activesock_sendto(test_srv->turn_sock, 
-                                          &test_srv->send_key, data, 
-                                          &len, 0, src_addr, addr_len);     
+            status = pj_activesock_sendto(test_srv->turn_sock,
+                                          &test_srv->send_key, data,
+                                          &len, 0, src_addr, addr_len);
         }
     }
 
@@ -943,7 +943,7 @@ static pj_bool_t turn_tcp_on_accept_complete(pj_activesock_t *asock,
     pj_status_t sstatus;
     pj_activesock_cb asock_cb;
     test_server *test_srv = (test_server *) pj_activesock_get_user_data(asock);
-    
+
     PJ_UNUSED_ARG(src_addr_len);
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
@@ -956,13 +956,13 @@ static pj_bool_t turn_tcp_on_accept_complete(pj_activesock_t *asock,
 
     sstatus = pj_activesock_create(test_srv->pool, newsock, pj_SOCK_STREAM(),
                                    NULL, test_srv->stun_cfg->ioqueue,
-                                   &asock_cb, test_srv, 
+                                   &asock_cb, test_srv,
                                    &test_srv->cl_turn_sock);
-    if (sstatus != PJ_SUCCESS) {        
+    if (sstatus != PJ_SUCCESS) {
         goto on_exit;
     }
 
-    sstatus = pj_activesock_start_read(test_srv->cl_turn_sock, 
+    sstatus = pj_activesock_start_read(test_srv->cl_turn_sock,
                                        test_srv->pool, MAX_STUN_PKT, 0);
     if (sstatus != PJ_SUCCESS) {
         goto on_exit;
@@ -975,7 +975,7 @@ static pj_bool_t turn_tcp_on_accept_complete(pj_activesock_t *asock,
 on_exit:
     if (test_srv->cl_turn_sock)
         pj_activesock_close(test_srv->turn_sock);
-    else    
+    else
         pj_sock_close(newsock);
 
     return PJ_FALSE;
@@ -1047,7 +1047,7 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
         }
     }
     if (i==alloc->perm_cnt) {
-        PJ_LOG(5,("", "Client %s received %d bytes unauthorized data from peer %s", 
+        PJ_LOG(5,("", "Client %s received %d bytes unauthorized data from peer %s",
                       client_info, size, peer_info));
         if (alloc->perm_cnt == 0)
             PJ_LOG(5,("", "Client %s has no permission", client_info));
@@ -1073,7 +1073,7 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
 
     /* Send */
     sent = size;
-    PJ_LOG(5,("", "Forwarding %d bytes data from peer %s to client %s", 
+    PJ_LOG(5,("", "Forwarding %d bytes data from peer %s to client %s",
                    sent, peer_info, client_info));
 
     pj_activesock_sendto(alloc->test_srv->turn_sock, &alloc->send_key, buffer,

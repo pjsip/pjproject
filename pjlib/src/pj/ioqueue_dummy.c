@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ioqueue.h>
 #include <pj/os.h>
@@ -61,7 +61,7 @@ struct pj_ioqueue_t
 {
 };
 
-PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
                                        pj_size_t max_fd,
                                        int max_threads,
                                        pj_ioqueue_t **ptr_ioqueue)
@@ -74,7 +74,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioque)
     return PJ_ENOTSUP;
 }
 
-PJ_DEF(pj_status_t) pj_ioqueue_set_lock( pj_ioqueue_t *ioque, 
+PJ_DEF(pj_status_t) pj_ioqueue_set_lock( pj_ioqueue_t *ioque,
                                          pj_lock_t *lock,
                                          pj_bool_t auto_delete )
 {

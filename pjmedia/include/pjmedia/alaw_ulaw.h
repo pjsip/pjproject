@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_ALAW_ULAW_H__
 #define __PJMEDIA_ALAW_ULAW_H__
@@ -145,11 +145,11 @@ PJ_DECL(unsigned char) pjmedia_ulaw2alaw(unsigned char uval);
  * @param src       Source, 16-bit linear PCM data.
  * @param count     Number of samples.
  */
-PJ_INLINE(void) pjmedia_ulaw_encode(pj_uint8_t *dst, const pj_int16_t *src, 
+PJ_INLINE(void) pjmedia_ulaw_encode(pj_uint8_t *dst, const pj_int16_t *src,
                                     pj_size_t count)
 {
     const pj_int16_t *end = src + count;
-    
+
     while (src < end) {
         *dst++ = pjmedia_linear2ulaw(*src++);
     }
@@ -162,11 +162,11 @@ PJ_INLINE(void) pjmedia_ulaw_encode(pj_uint8_t *dst, const pj_int16_t *src,
  * @param src       Source, 16-bit linear PCM data.
  * @param count     Number of samples.
  */
-PJ_INLINE(void) pjmedia_alaw_encode(pj_uint8_t *dst, const pj_int16_t *src, 
+PJ_INLINE(void) pjmedia_alaw_encode(pj_uint8_t *dst, const pj_int16_t *src,
                                     pj_size_t count)
 {
     const pj_int16_t *end = src + count;
-    
+
     while (src < end) {
         *dst++ = pjmedia_linear2alaw(*src++);
     }
@@ -179,11 +179,11 @@ PJ_INLINE(void) pjmedia_alaw_encode(pj_uint8_t *dst, const pj_int16_t *src,
  * @param src       Source, 8-bit U-Law data.
  * @param len       Encoded frame/source length in bytes.
  */
-PJ_INLINE(void) pjmedia_ulaw_decode(pj_int16_t *dst, const pj_uint8_t *src, 
+PJ_INLINE(void) pjmedia_ulaw_decode(pj_int16_t *dst, const pj_uint8_t *src,
                                     pj_size_t len)
 {
     const pj_uint8_t *end = src + len;
-    
+
     while (src < end) {
         *dst++ = pjmedia_ulaw2linear(*src++);
     }
@@ -196,11 +196,11 @@ PJ_INLINE(void) pjmedia_ulaw_decode(pj_int16_t *dst, const pj_uint8_t *src,
  * @param src       Source, 8-bit A-Law data.
  * @param len       Encoded frame/source length in bytes.
  */
-PJ_INLINE(void) pjmedia_alaw_decode(pj_int16_t *dst, const pj_uint8_t *src, 
+PJ_INLINE(void) pjmedia_alaw_decode(pj_int16_t *dst, const pj_uint8_t *src,
                                     pj_size_t len)
 {
     const pj_uint8_t *end = src + len;
-    
+
     while (src < end) {
         *dst++ = pjmedia_alaw2linear(*src++);
     }

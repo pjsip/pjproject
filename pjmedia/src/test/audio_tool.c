@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia.h>
 #include <pjlib.h>
@@ -35,7 +35,7 @@ static pjmedia_codec_param cattr;
 static FILE *fhnd_pcm;
 #endif
 
-static char talker_sdp[] = 
+static char talker_sdp[] =
     "v=0\r\n"
     "o=- 0 0 IN IP4 127.0.0.1\r\n"
     "s=-\r\n"
@@ -44,7 +44,7 @@ static char talker_sdp[] =
     "m=audio 4002 RTP/AVP 0\r\n"
     "a=rtpmap:0 PCMU/8000\r\n"
     "a=sendonly\r\n";
-static char listener_sdp[] = 
+static char listener_sdp[] =
     "v=0\r\n"
     "o=- 0 0 IN IP4 127.0.0.1\r\n"
     "s=-\r\n"
@@ -121,8 +121,8 @@ static pj_status_t init()
     for (i=0; i<pj_snd_get_dev_count(); ++i) {
         const pj_snd_dev_info *info;
         info = pj_snd_get_dev_info(i);
-        PJ_LOG(3,(THIS_FILE, "  %d: %s\t(%d in, %d out", 
-                             i, info->name, 
+        PJ_LOG(3,(THIS_FILE, "  %d: %s\t(%d in, %d out",
+                             i, info->name,
                              info->input_count, info->output_count));
     }
 
@@ -324,7 +324,7 @@ static int create_ses_by_remote_sdp(int local_port, char *sdp)
 
         printf("  Stream %d: %.*s %s local=%s:%d remote=%.*s:%d\n",
                i, info[i]->type.slen, info[i]->type.ptr,
-               dir, 
+               dir,
                local_ip, pj_sockaddr_get_port(&info[i]->sock_info.rtp_addr_name),
                info[i]->rem_addr.slen, info[i]->rem_addr.ptr, info[i]->rem_port);
     }

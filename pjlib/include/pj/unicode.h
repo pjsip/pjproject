@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_UNICODE_H__
 #define __PJ_UNICODE_H__
@@ -67,9 +67,9 @@ PJ_DECL(char*) pj_unicode_to_ansi(const wchar_t *wstr, pj_ssize_t len,
 #if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
 
 /**
- * This macro is used to declare temporary Unicode buffer for ANSI to 
+ * This macro is used to declare temporary Unicode buffer for ANSI to
  * Unicode conversion, and should be put in declaration section of a block.
- * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this 
+ * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this
  * macro will expand to nothing.
  */
 #   define PJ_DECL_UNICODE_TEMP_BUF(buf,size)   wchar_t buf[size];
@@ -83,9 +83,9 @@ PJ_DECL(char*) pj_unicode_to_ansi(const wchar_t *wstr, pj_ssize_t len,
                                                     buf, max)
 
 /**
- * This macro is used to declare temporary ANSI buffer for Unicode to 
+ * This macro is used to declare temporary ANSI buffer for Unicode to
  * ANSI conversion, and should be put in declaration section of a block.
- * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this 
+ * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this
  * macro will expand to nothing.
  */
 #   define PJ_DECL_ANSI_TEMP_BUF(buf,size)      char buf[size];
@@ -102,9 +102,9 @@ PJ_DECL(char*) pj_unicode_to_ansi(const wchar_t *wstr, pj_ssize_t len,
 #else
 
 /**
- * This macro is used to declare temporary Unicode buffer for ANSI to 
+ * This macro is used to declare temporary Unicode buffer for ANSI to
  * Unicode conversion, and should be put in declaration section of a block.
- * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this 
+ * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this
  * macro will expand to nothing.
  */
 #   define PJ_DECL_UNICODE_TEMP_BUF(var,size)
@@ -114,9 +114,9 @@ PJ_DECL(char*) pj_unicode_to_ansi(const wchar_t *wstr, pj_ssize_t len,
  */
 #   define PJ_STRING_TO_NATIVE(s,buf,max)       ((char*)s)
 /**
- * This macro is used to declare temporary ANSI buffer for Unicode to 
+ * This macro is used to declare temporary ANSI buffer for Unicode to
  * ANSI conversion, and should be put in declaration section of a block.
- * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this 
+ * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this
  * macro will expand to nothing.
  */
 #   define PJ_DECL_ANSI_TEMP_BUF(buf,size)

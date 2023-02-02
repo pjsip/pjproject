@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/tonegen.h>
 #include <pjmedia/errno.h>
@@ -60,7 +60,7 @@
     #define DATA        float
 
     /*
-     * Default floating-point based tone generation using sine wave 
+     * Default floating-point based tone generation using sine wave
      * generation from:
      *   http://www.musicdsp.org/showone.php?id=10.
      * This produces good quality tone in relatively faster time than
@@ -103,14 +103,14 @@
     #define CORDIC_NTAB         28
     #define CORDIC_LOOP         PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP
 
-    static int cordic_ctab [] = 
+    static int cordic_ctab [] =
     {
-        0x03243F6A, 0x01DAC670, 0x00FADBAF, 0x007F56EA, 0x003FEAB7, 
-        0x001FFD55, 0x000FFFAA, 0x0007FFF5, 0x0003FFFE, 0x0001FFFF, 
-        0x0000FFFF, 0x00007FFF, 0x00003FFF, 0x00001FFF, 0x00000FFF, 
-        0x000007FF, 0x000003FF, 0x000001FF, 0x000000FF, 0x0000007F, 
-        0x0000003F, 0x0000001F, 0x0000000F, 0x00000007, 0x00000003, 
-        0x00000001, 0x00000000, 0x00000000 
+        0x03243F6A, 0x01DAC670, 0x00FADBAF, 0x007F56EA, 0x003FEAB7,
+        0x001FFD55, 0x000FFFAA, 0x0007FFF5, 0x0003FFFE, 0x0001FFFF,
+        0x0000FFFF, 0x00007FFF, 0x00003FFF, 0x00001FFF, 0x00000FFF,
+        0x000007FF, 0x000003FF, 0x000001FF, 0x000000FF, 0x0000007F,
+        0x0000003F, 0x0000001F, 0x0000000F, 0x00000007, 0x00000003,
+        0x00000001, 0x00000000, 0x00000000
     };
 
     static pj_int32_t cordic(pj_int32_t theta, unsigned n)
@@ -131,7 +131,7 @@
             y = y + (((x>>k) ^ d) - d);
             z = z - ((cordic_ctab[k] ^ d) - d);
             x = tx;
-        }  
+        }
         return y;
     }
 
@@ -186,11 +186,11 @@
 
 #elif PJMEDIA_TONEGEN_ALG==PJMEDIA_TONEGEN_FAST_FIXED_POINT
 
-    /* 
+    /*
      * Fallback algorithm when floating point is disabled.
      * This is a very fast fixed point tone generation using sine wave
      * approximation from
-     *    http://www.audiomulch.com/~rossb/code/sinusoids/ 
+     *    http://www.audiomulch.com/~rossb/code/sinusoids/
      * Quality wise not so good, but it's blazing fast!
      * Speed = 117 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
      *         approx. 0.95 MIPS
@@ -198,7 +198,7 @@
      *         1,449 usec/0.29 MIPS on ARM926EJ-S.
      */
     PJ_INLINE(int) approximate_sin3(unsigned x)
-    {   
+    {
             unsigned s=-(int)(x>>31);
             x+=x;
             x=x>>16;
@@ -233,7 +233,7 @@ struct gen_state
 
 
 static void init_generate_single_tone(struct gen_state *state,
-                                      unsigned clock_rate, 
+                                      unsigned clock_rate,
                                       unsigned freq,
                                       unsigned vol)
 {
@@ -244,7 +244,7 @@ static void init_generate_single_tone(struct gen_state *state,
 static void generate_single_tone(struct gen_state *state,
                                  unsigned channel_count,
                                  unsigned samples,
-                                 short buf[]) 
+                                 short buf[])
 {
     short *end = buf + samples;
 
@@ -266,7 +266,7 @@ static void generate_single_tone(struct gen_state *state,
 
 
 static void init_generate_dual_tone(struct gen_state *state,
-                                    unsigned clock_rate, 
+                                    unsigned clock_rate,
                                     unsigned freq1,
                                     unsigned freq2,
                                     unsigned vol)
@@ -280,7 +280,7 @@ static void init_generate_dual_tone(struct gen_state *state,
 static void generate_dual_tone(struct gen_state *state,
                                unsigned channel_count,
                                unsigned samples,
-                               short buf[]) 
+                               short buf[])
 {
     short *end = buf + samples;
 
@@ -307,7 +307,7 @@ static void generate_dual_tone(struct gen_state *state,
 
 
 static void init_generate_tone(struct gen_state *state,
-                               unsigned clock_rate, 
+                               unsigned clock_rate,
                                unsigned freq1,
                                unsigned freq2,
                                unsigned vol)
@@ -376,7 +376,7 @@ struct tonegen
 
 
 /* Default digit map is DTMF */
-static pjmedia_tone_digit_map digit_map = 
+static pjmedia_tone_digit_map digit_map =
 {
     16,
     {
@@ -400,7 +400,7 @@ static pjmedia_tone_digit_map digit_map =
 };
 
 
-static pj_status_t tonegen_get_frame(pjmedia_port *this_port, 
+static pj_status_t tonegen_get_frame(pjmedia_port *this_port,
                                      pjmedia_frame *frame);
 static pj_status_t tonegen_destroy(pjmedia_port *this_port);
 
@@ -422,8 +422,8 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
     struct tonegen  *tonegen;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pool && clock_rate && channel_count && 
-                     samples_per_frame && bits_per_sample == 16 && 
+    PJ_ASSERT_RETURN(pool && clock_rate && channel_count &&
+                     samples_per_frame && bits_per_sample == 16 &&
                      p_port != NULL, PJ_EINVAL);
 
     /* Only support mono and stereo */
@@ -432,8 +432,8 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
     /* Create and initialize port */
     tonegen = PJ_POOL_ZALLOC_T(pool, struct tonegen);
     if (name == NULL || name->slen == 0) name = &STR_TONE_GEN;
-    status = pjmedia_port_info_init(&tonegen->base.info, name, 
-                                    SIGNATURE, clock_rate, channel_count, 
+    status = pjmedia_port_info_init(&tonegen->base.info, name,
+                                    SIGNATURE, clock_rate, channel_count,
                                     bits_per_sample, samples_per_frame);
     if (status != PJ_SUCCESS)
         return status;
@@ -457,7 +457,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
         return status;
     }
 
-    TRACE_((THIS_FILE, "Tonegen created: %u/%u/%u/%u", clock_rate, 
+    TRACE_((THIS_FILE, "Tonegen created: %u/%u/%u/%u", clock_rate,
             channel_count, samples_per_frame, bits_per_sample));
 
     /* Done */
@@ -475,7 +475,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create( pj_pool_t *pool,
                                             pjmedia_port **p_port)
 {
     return pjmedia_tonegen_create2(pool, NULL, clock_rate, channel_count,
-                                   samples_per_frame, bits_per_sample, 
+                                   samples_per_frame, bits_per_sample,
                                    options, p_port);
 }
 
@@ -568,7 +568,7 @@ static pj_status_t tonegen_destroy(pjmedia_port *port)
 /*
  * Fill a frame with tones.
  */
-static pj_status_t tonegen_get_frame(pjmedia_port *port, 
+static pj_status_t tonegen_get_frame(pjmedia_port *port,
                                      pjmedia_frame *frame)
 {
     struct tonegen *tonegen = (struct tonegen*) port;
@@ -617,8 +617,8 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
     }
 
     if (tonegen->cur_digit >= tonegen->count) {
-        /* After we're finished with the last digit, we have played all 
-         * the digits 
+        /* After we're finished with the last digit, we have played all
+         * the digits
          */
         if ((tonegen->options|tonegen->playback_options)&PJMEDIA_TONEGEN_LOOP)
         {
@@ -636,7 +636,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
             goto on_return;
         }
     }
-    
+
     dst = (short*) frame->buf;
     end = dst + PJMEDIA_PIA_SPF(&port->info);
 
@@ -651,7 +651,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
                    PJMEDIA_PIA_CCNT(&port->info);
 
         /* Init tonegen */
-        if (tonegen->dig_samples == 0 && 
+        if (tonegen->dig_samples == 0 &&
             (tonegen->count!=1 || !(dig->flags & PJMEDIA_TONE_INITIALIZED)))
         {
             init_generate_tone(&tonegen->state,
@@ -660,7 +660,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
             dig->flags |= PJMEDIA_TONE_INITIALIZED;
             if (tonegen->cur_digit > 0) {
                 /* Clear initialized flag of previous digit */
-                tonegen->digits[tonegen->cur_digit-1].flags &= 
+                tonegen->digits[tonegen->cur_digit-1].flags &=
                                                 (~PJMEDIA_TONE_INITIALIZED);
             }
         }
@@ -678,8 +678,8 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
             tonegen->dig_samples += cnt;
             required -= cnt;
 
-            if ((dig->flags & PJMEDIA_TONE_ENABLE_FADE) && 
-                tonegen->dig_samples == cnt) 
+            if ((dig->flags & PJMEDIA_TONE_ENABLE_FADE) &&
+                tonegen->dig_samples == cnt)
             {
                 /* Fade in */
                 short *samp = (dst - cnt);
@@ -698,7 +698,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
                     }
                 }
             } else if ((dig->flags & PJMEDIA_TONE_ENABLE_FADE) &&
-                        tonegen->dig_samples==on_samp) 
+                        tonegen->dig_samples==on_samp)
             {
                 /* Fade out */
                 if (cnt > tonegen->fade_out_len)
@@ -799,11 +799,11 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play( pjmedia_port *port,
 
     /* Set playback options */
     tonegen->playback_options = options;
-    
+
     /* Copy digits */
     pj_memcpy(tonegen->digits + tonegen->count,
               tones, count * sizeof(pjmedia_tone_desc));
-    
+
     /* Normalize volume, and check if we need to disable fading.
      * Disable fading if tone off time is zero. Application probably
      * wants to play this tone continuously (e.g. dial tone).
@@ -883,7 +883,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_get_digit_map(pjmedia_port *port,
                                                   const pjmedia_tone_digit_map **m)
 {
     struct tonegen *tonegen = (struct tonegen*) port;
-    
+
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
     PJ_ASSERT_RETURN(m != NULL, PJ_EINVAL);
 
@@ -900,7 +900,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_set_digit_map(pjmedia_port *port,
                                                   pjmedia_tone_digit_map *m)
 {
     struct tonegen *tonegen = (struct tonegen*) port;
-    
+
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
     PJ_ASSERT_RETURN(m != NULL, PJ_EINVAL);
 

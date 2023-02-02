@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN == 0
 #   error This file is only for Symbian platform
@@ -55,7 +55,7 @@ unsigned pj_symbianos_get_model_info(char *buf, unsigned buf_size)
     RFile file;
     RFs fs;
     TInt err;
-    
+
     fs.Connect(1);
     err = file.Open(fs, KModelFilename, EFileRead);
     if (err == KErrNone) {
@@ -74,17 +74,17 @@ unsigned pj_symbianos_get_model_info(char *buf, unsigned buf_size)
     fs.Close();
     if (err != KErrNone)
         goto on_return;
-    
-    /* The retrieved model name is usually in long format, e.g: 
-     * "© Nokia N95 (01.01)", "(C) Nokia E52". As we need only
+
+    /* The retrieved model name is usually in long format, e.g:
+     * "ï¿½ Nokia N95 (01.01)", "(C) Nokia E52". As we need only
      * the short version, let's clean it up.
      */
-    
-    /* Remove preceding non-ASCII chars, e.g: "©" */
+
+    /* Remove preceding non-ASCII chars, e.g: "ï¿½" */
     char *p = tmp_str.ptr;
     while (!pj_isascii(*p)) { p++; }
     pj_strset(&tmp_str, p, tmp_str.slen - (p - tmp_str.ptr));
-    
+
     /* Remove "(C)" */
     p = pj_stristr(&tmp_str, &st_copyright);
     if (p) {
@@ -98,28 +98,28 @@ unsigned pj_symbianos_get_model_info(char *buf, unsigned buf_size)
         p += st_nokia.slen;
         pj_strset(&tmp_str, p, tmp_str.slen - (p - tmp_str.ptr));
     }
-    
+
     /* Remove language version, e.g: "(01.01)" */
     p = pj_strchr(&tmp_str, '(');
     if (p) {
         tmp_str.slen = p - tmp_str.ptr;
     }
-    
+
     pj_strtrim(&tmp_str);
-    
+
     if (tmp_str.slen == 0)
         goto on_return;
-    
+
     if ((unsigned)tmp_str.slen > buf_size - model_name.slen - 3)
         tmp_str.slen = buf_size - model_name.slen - 3;
-    
+
     pj_strcat2(&model_name, "(");
     pj_strcat(&model_name, &tmp_str);
     pj_strcat2(&model_name, ")");
-    
+
     /* Zero terminate */
     buf[model_name.slen] = '\0';
-    
+
 on_return:
     return model_name.slen;
 }
@@ -146,7 +146,7 @@ unsigned pj_symbianos_get_platform_info(char *buf, unsigned buf_size)
             TPtr8 tmp_ptr8((TUint8*)buf, buf_size);
             const pj_str_t tmp_ext = {".sis", 4};
             char *p;
-            
+
             tmp_ptr8.Copy((*result)[0].iName);
             pj_strset(&plat_info, buf, (pj_size_t)tmp_ptr8.Length());
             p = pj_stristr(&plat_info, &tmp_ext);
@@ -157,7 +157,7 @@ unsigned pj_symbianos_get_platform_info(char *buf, unsigned buf_size)
     }
     fs.Close();
     buf[plat_info.slen] = '\0';
-    
+
     return plat_info.slen;
 }
 

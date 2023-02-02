@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,13 +14,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiotest.h>
 #include <pjmedia-audiodev/audiodev.h>
 #include <pjlib.h>
 #include <pjlib-util.h>
- 
+
 #define THIS_FILE           "audiotest.c"
 
 /* Test duration in msec */
@@ -41,7 +41,7 @@ struct stream_data
     pj_math_stat    delay;
 };
 
-struct test_data 
+struct test_data
 {
     pj_pool_t                      *pool;
     const pjmedia_aud_param        *param;
@@ -138,7 +138,7 @@ static void app_perror(const char *title, pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
-    pj_strerror(status, errmsg, sizeof(errmsg));        
+    pj_strerror(status, errmsg, sizeof(errmsg));
     printf( "%s: %s (err=%d)\n",
             title, errmsg, status);
 }
@@ -202,7 +202,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
     /* Begin gather data */
     test_data.running = 1;
 
-    /* 
+    /*
      * Let the test runs for a while.
      */
     pj_thread_sleep(DURATION);
@@ -216,7 +216,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
     pj_pool_release(test_data.pool);
 
 
-    /* 
+    /*
      * Gather results
      */
     ptime = param->samples_per_frame * 1000 / param->clock_rate;
@@ -254,7 +254,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
         } else {
             unsigned msec_dur;
 
-            msec_dur = (test_data.capture_data.last_timestamp - 
+            msec_dur = (test_data.capture_data.last_timestamp -
                        test_data.capture_data.first_timestamp) * 1000 /
                        test_data.param->clock_rate;
 

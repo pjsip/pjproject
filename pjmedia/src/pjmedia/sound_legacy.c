@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /*
@@ -75,7 +75,7 @@ static pj_status_t snd_play_cb(void *user_data,
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*)user_data;
 
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    return strm->user_play_cb(strm->user_user_data, 
+    return strm->user_play_cb(strm->user_user_data,
                               frame->timestamp.u32.lo,
                               frame->buf,
                               (unsigned)frame->size);
@@ -85,7 +85,7 @@ static pj_status_t snd_rec_cb(void *user_data,
                               pjmedia_frame *frame)
 {
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*)user_data;
-    return strm->user_rec_cb(strm->user_user_data, 
+    return strm->user_rec_cb(strm->user_user_data,
                              frame->timestamp.u32.lo,
                              frame->buf,
                              (unsigned)frame->size);
@@ -151,7 +151,7 @@ static pj_status_t open_stream( pjmedia_dir dir,
     snd_strm->user_user_data = user_data;
 
     /* Create the stream */
-    status = pjmedia_aud_stream_create(&param, &snd_rec_cb, 
+    status = pjmedia_aud_stream_create(&param, &snd_rec_cb,
                                        &snd_play_cb, snd_strm,
                                        &snd_strm->aud_strm);
     if (status != PJ_SUCCESS) {
@@ -187,7 +187,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
                                         void *user_data,
                                         pjmedia_snd_stream **p_snd_strm )
 {
-    return open_stream(PJMEDIA_DIR_PLAYBACK, PJMEDIA_AUD_INVALID_DEV, index, 
+    return open_stream(PJMEDIA_DIR_PLAYBACK, PJMEDIA_AUD_INVALID_DEV, index,
                        clock_rate, channel_count, samples_per_frame,
                        bits_per_sample, NULL, play_cb,
                        user_data, p_snd_strm);
@@ -206,7 +206,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 {
     return open_stream(PJMEDIA_DIR_CAPTURE_PLAYBACK, rec_id, play_id,
                        clock_rate, channel_count, samples_per_frame,
-                       bits_per_sample, rec_cb, play_cb, 
+                       bits_per_sample, rec_cb, play_cb,
                        user_data, p_snd_strm);
 }
 
@@ -262,7 +262,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
+PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency,
                                             unsigned output_latency)
 {
     g_sys.user_rec_latency = input_latency;

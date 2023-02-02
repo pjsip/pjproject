@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,9 +13,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 package org.pjsip.pjsua2.app;
 
 import java.io.IOException;
@@ -25,7 +25,7 @@ import org.pjsip.pjsua2.app.*;
 class MyObserver implements MyAppObserver {
         private static MyCall currentCall = null;
         private boolean del_call_scheduled = false;
-        
+
         public void check_call_deletion()
         {
                 if (del_call_scheduled && currentCall != null) {
@@ -34,10 +34,10 @@ class MyObserver implements MyAppObserver {
                         del_call_scheduled = false;
                 }
         }
-        
+
         @Override
         public void notifyRegState(int code, String reason, long expiration) {}
-        
+
         @Override
         public void notifyIncomingCall(MyCall call) {
                 /* Auto answer. */
@@ -49,9 +49,9 @@ class MyObserver implements MyAppObserver {
                 } catch (Exception e) {
                         System.out.println(e);
                         return;
-                }                       
+                }
         }
-        
+
         @Override
         public void notifyCallMediaState(MyCall call) {
         }
@@ -59,7 +59,7 @@ class MyObserver implements MyAppObserver {
         public void notifyCallState(MyCall call) {
                 if (currentCall == null || call.getId() != currentCall.getId())
                         return;
-                
+
                 CallInfo ci;
                 try {
                         ci = call.getInfo();
@@ -72,11 +72,11 @@ class MyObserver implements MyAppObserver {
                         // in our main worker thread context.
                         del_call_scheduled = true;
                 }
-                        
+
         }
-        
+
         @Override
-        public void notifyBuddyState(MyBuddy buddy) {}  
+        public void notifyBuddyState(MyBuddy buddy) {}
 
         @Override
         public void notifyChangeNetwork() {}
@@ -95,35 +95,35 @@ class MyShutdownHook extends Thread {
                         ;
                 }
         }
-}       
+}
 
 public class sample {
         private static MyApp app = new MyApp();
         private static MyObserver observer = new MyObserver();
         private static MyAccount account = null;
-        private static AccountConfig accCfg = null;             
+        private static AccountConfig accCfg = null;
 
-        // Snippet code to set native window to output video 
+        // Snippet code to set native window to output video
         /*
         private void setOutputVidWin() {}
-                VideoWindowHandle vidWH = new VideoWindowHandle();      
+                VideoWindowHandle vidWH = new VideoWindowHandle();
                 vidWH.getHandle().setWindow(getNativeWindow());
                 try {
-                        currentCall.vidWin.setWindow(vidWH);                    
-                } catch (Exception e) {                        
+                        currentCall.vidWin.setWindow(vidWH);
+                } catch (Exception e) {
                         System.out.println(e);
-                }        
+                }
         }
         */
 
         private static void runWorker() {
-                try {                                   
+                try {
                         app.init(observer, ".", true);
                 } catch (Exception e) {
                         System.out.println(e);
                         app.deinit();
                         System.exit(-1);
-                } 
+                }
 
                 if (app.accList.size() == 0) {
                         accCfg = new AccountConfig();
@@ -131,16 +131,16 @@ public class sample {
                         account = app.addAcc(accCfg);
 
                         accCfg.setIdUri("sip:test@pjsip.org");
-                        AccountSipConfig sipCfg = accCfg.getSipConfig();                
+                        AccountSipConfig sipCfg = accCfg.getSipConfig();
                         AuthCredInfoVector ciVec = sipCfg.getAuthCreds();
-                        ciVec.add(new AuthCredInfo("Digest", 
+                        ciVec.add(new AuthCredInfo("Digest",
                                         "*",
                                         "test",
                                         0,
                                         "passwd"));
 
                         StringVector proxy = sipCfg.getProxies();
-                        proxy.add("sip:pjsip.org;transport=tcp");                                                       
+                        proxy.add("sip:pjsip.org;transport=tcp");
 
                         AccountRegConfig regCfg = accCfg.getRegConfig();
                         regCfg.setRegistrarUri("sip:pjsip.org");
@@ -148,28 +148,28 @@ public class sample {
                 } else {
                         account = app.accList.get(0);
                         accCfg = account.cfg;
-                }                               
+                }
 
                 try {
                         account.modify(accCfg);
-                } catch (Exception e) {}                                
+                } catch (Exception e) {}
 
                 while (!Thread.currentThread().isInterrupted()) {
                         // Handle events
                         MyApp.ep.libHandleEvents(10);
-                        
+
                         // Check if any call instance need to be deleted
                         observer.check_call_deletion();
-                        
-                        try {                                           
+
+                        try {
                                 Thread.currentThread().sleep(50);
-                        } catch (InterruptedException ie) {                                             
+                        } catch (InterruptedException ie) {
                                 break;
-                        }                       
+                        }
                 }
                 app.deinit();
-        }       
-                
+        }
+
         public static void main(String argv[]) {
                 Runtime.getRuntime().addShutdownHook(new MyShutdownHook(Thread.currentThread()));
 

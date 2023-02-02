@@ -971,7 +971,7 @@ static pj_status_t get_last_token(pj_str_t *cmd, pj_str_t *str)
         return PJ_GET_EXCEPTION();
     }
     PJ_END;
-    
+
     pj_scan_fini(&scanner);
     return PJ_SUCCESS;
 }
@@ -1502,7 +1502,7 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
     switch (sess->parse_state) {
         case ST_CR:
             sess->parse_state = ST_NORMAL;
-            if (*cdata == 0 || *cdata == '\n') {                
+            if (*cdata == 0 || *cdata == '\n') {
                 pj_mutex_unlock(sess->smutex);
                 is_valid = handle_return(sess);
                 if (!is_valid) {

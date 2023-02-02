@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "test.h"
@@ -68,10 +68,10 @@ int generic_transport_test(pjsip_transport *tp)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/* 
+/*
  * Send/receive test.
  *
- * This test sends a request to loopback address; as soon as request is 
+ * This test sends a request to loopback address; as soon as request is
  * received, response will be sent, and time is recorded.
  *
  * The main purpose is to test that the basic transport functionalities works,
@@ -95,7 +95,7 @@ static int recv_status = NO_STATUS;
 static pj_timestamp my_send_time, my_recv_time;
 
 /* Module to receive messages for this test. */
-static pjsip_module my_module = 
+static pjsip_module my_module =
 {
     NULL, NULL,                         /* prev and next        */
     { "Transport-Test", 14},            /* Name.                */
@@ -140,7 +140,7 @@ static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata)
         }
         return PJ_TRUE;
     }
-    
+
     /* Not ours. */
     return PJ_FALSE;
 }
@@ -213,7 +213,7 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
 
     pjsip_method_set(&method, PJSIP_OPTIONS_METHOD);
     status = pjsip_endpt_create_request( endpt, &method, &target, &from, &to,
-                                         &contact, &call_id, CSEQ_VALUE, 
+                                         &contact, &call_id, CSEQ_VALUE,
                                          &body, &tdata );
     if (status != PJ_SUCCESS) {
         app_perror("   error: unable to create request", status);
@@ -227,7 +227,7 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     pj_get_timestamp(&my_send_time);
 
     /* Send the message (statelessly). */
-    PJ_LOG(5,(THIS_FILE, "Sending request to %.*s", 
+    PJ_LOG(5,(THIS_FILE, "Sending request to %.*s",
                          (int)target.slen, target.ptr));
     status = pjsip_endpt_send_request_stateless( endpt, tdata, NULL,
                                                  &send_msg_callback);
@@ -294,7 +294,7 @@ on_return:
 
 
 ///////////////////////////////////////////////////////////////////////////////
-/* 
+/*
  * Multithreaded round-trip test
  *
  * This test will spawn multiple threads, each of them send a request. As soon
@@ -307,7 +307,7 @@ on_return:
 static pj_bool_t rt_on_rx_request(pjsip_rx_data *rdata);
 static pj_bool_t rt_on_rx_response(pjsip_rx_data *rdata);
 
-static pjsip_module rt_module = 
+static pjsip_module rt_module =
 {
     NULL, NULL,                         /* prev and next        */
     { "Transport-RT-Test", 17},         /* Name.                */
@@ -363,7 +363,7 @@ static pj_bool_t rt_on_rx_request(pjsip_rx_data *rdata)
             return PJ_TRUE;
         }
         return PJ_TRUE;
-        
+
     }
     return PJ_FALSE;
 }
@@ -384,9 +384,9 @@ static pj_status_t rt_send_request(int thread_id)
     contact = pj_str(CONTACT_HDR);
     call_id = rt_test_data[thread_id].call_id;
 
-    status = pjsip_endpt_create_request( endpt, &pjsip_options_method, 
+    status = pjsip_endpt_create_request( endpt, &pjsip_options_method,
                                          &target, &from, &to,
-                                         &contact, &call_id, -1, 
+                                         &contact, &call_id, -1,
                                          NULL, &tdata );
     if (status != PJ_SUCCESS) {
         app_perror("    error: unable to create request", status);
@@ -465,7 +465,7 @@ static void rt_timeout_timer( pj_timer_heap_t *timer_heap,
     PJ_UNUSED_ARG(timer_heap);
     PJ_LOG(3,(THIS_FILE, "    timeout waiting for response"));
     rt_test_data[entry->id].timeout_timer.user_data = NULL;
-    
+
     if (rt_test_data[entry->id].tx_timer.user_data == NULL) {
         pj_time_val delay = { 0, 0 };
         rt_test_data[entry->id].tx_timer.user_data = (void*)(pj_ssize_t)1;
@@ -561,7 +561,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     for (i=0; i<THREADS; ++i) {
         char buf[1];
         pj_str_t str_id;
-        
+
         pj_strset(&str_id, buf, 1);
         pj_bzero(&rt_test_data[i], sizeof(rt_test_data[i]));
 
@@ -585,7 +585,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
         }
 
         /* Create thread, suspended. */
-        status = pj_thread_create(pool, "rttest%p", &rt_worker_thread, 
+        status = pj_thread_create(pool, "rttest%p", &rt_worker_thread,
                                   (void*)(pj_ssize_t)i, 0,
                                   PJ_THREAD_SUSPENDED, &rt_test_data[i].thread);
         if (status != PJ_SUCCESS) {
@@ -666,7 +666,7 @@ static struct mod_load_test
     pjsip_module    mod;
     pj_int32_t      next_seq;
     pj_bool_t       err;
-} mod_load = 
+} mod_load =
 {
     {
     NULL, NULL,                         /* prev and next        */
@@ -687,11 +687,11 @@ static struct mod_load_test
 static pj_bool_t load_on_rx_request(pjsip_rx_data *rdata)
 {
     if (rdata->msg_info.cseq->cseq != mod_load.next_seq) {
-        PJ_LOG(1,("THIS_FILE", "    err: expecting cseq %u, got %u", 
+        PJ_LOG(1,("THIS_FILE", "    err: expecting cseq %u, got %u",
                   mod_load.next_seq, rdata->msg_info.cseq->cseq));
         mod_load.err = PJ_TRUE;
         mod_load.next_seq = rdata->msg_info.cseq->cseq + 1;
-    } else 
+    } else
         mod_load.next_seq++;
     return PJ_TRUE;
 }
@@ -728,9 +728,9 @@ int transport_load_test(char *target_url)
         target = pj_str(target_url);
         from = pj_str("<sip:user@host>");
         call_id = pj_str("thecallid");
-        status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, 
-                                            &target, &from, 
-                                            &target, &from, &call_id, 
+        status = pjsip_endpt_create_request(endpt, &pjsip_invite_method,
+                                            &target, &from,
+                                            &target, &from, &call_id,
                                             i, NULL, &tdata );
         if (status != PJ_SUCCESS) {
             app_perror("error creating request", status);
@@ -751,7 +751,7 @@ int transport_load_test(char *target_url)
     } while (i != 0);
 
     if (mod_load.next_seq != COUNT) {
-        PJ_LOG(1,("THIS_FILE", "    err: expecting %u msg, got only %u", 
+        PJ_LOG(1,("THIS_FILE", "    err: expecting %u msg, got only %u",
                   COUNT, mod_load.next_seq));
         status = -2;
         goto on_return;

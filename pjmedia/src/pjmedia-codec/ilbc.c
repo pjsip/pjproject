@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/ilbc.h>
 #include <pjmedia-codec/types.h>
@@ -52,27 +52,27 @@
 
 
 /* Prototypes for iLBC factory */
-static pj_status_t ilbc_test_alloc(pjmedia_codec_factory *factory, 
+static pj_status_t ilbc_test_alloc(pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *id );
-static pj_status_t ilbc_default_attr(pjmedia_codec_factory *factory, 
-                                     const pjmedia_codec_info *id, 
+static pj_status_t ilbc_default_attr(pjmedia_codec_factory *factory,
+                                     const pjmedia_codec_info *id,
                                      pjmedia_codec_param *attr );
-static pj_status_t ilbc_enum_codecs(pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
+static pj_status_t ilbc_enum_codecs(pjmedia_codec_factory *factory,
+                                    unsigned *count,
                                     pjmedia_codec_info codecs[]);
-static pj_status_t ilbc_alloc_codec(pjmedia_codec_factory *factory, 
-                                    const pjmedia_codec_info *id, 
+static pj_status_t ilbc_alloc_codec(pjmedia_codec_factory *factory,
+                                    const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec);
-static pj_status_t ilbc_dealloc_codec(pjmedia_codec_factory *factory, 
+static pj_status_t ilbc_dealloc_codec(pjmedia_codec_factory *factory,
                                       pjmedia_codec *codec );
 
 /* Prototypes for iLBC implementation. */
-static pj_status_t  ilbc_codec_init(pjmedia_codec *codec, 
+static pj_status_t  ilbc_codec_init(pjmedia_codec *codec,
                                     pj_pool_t *pool );
-static pj_status_t  ilbc_codec_open(pjmedia_codec *codec, 
+static pj_status_t  ilbc_codec_open(pjmedia_codec *codec,
                                     pjmedia_codec_param *attr );
 static pj_status_t  ilbc_codec_close(pjmedia_codec *codec );
-static pj_status_t  ilbc_codec_modify(pjmedia_codec *codec, 
+static pj_status_t  ilbc_codec_modify(pjmedia_codec *codec,
                                       const pjmedia_codec_param *attr );
 static pj_status_t  ilbc_codec_parse(pjmedia_codec *codec,
                                      void *pkt,
@@ -80,20 +80,20 @@ static pj_status_t  ilbc_codec_parse(pjmedia_codec *codec,
                                      const pj_timestamp *ts,
                                      unsigned *frame_cnt,
                                      pjmedia_frame frames[]);
-static pj_status_t  ilbc_codec_encode(pjmedia_codec *codec, 
+static pj_status_t  ilbc_codec_encode(pjmedia_codec *codec,
                                       const struct pjmedia_frame *input,
-                                      unsigned output_buf_len, 
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
-static pj_status_t  ilbc_codec_decode(pjmedia_codec *codec, 
+static pj_status_t  ilbc_codec_decode(pjmedia_codec *codec,
                                       const struct pjmedia_frame *input,
-                                      unsigned output_buf_len, 
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
 static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
                                        unsigned output_buf_len,
                                        struct pjmedia_frame *output);
 
 /* Definition for iLBC codec operations. */
-static pjmedia_codec_op ilbc_op = 
+static pjmedia_codec_op ilbc_op =
 {
     &ilbc_codec_init,
     &ilbc_codec_open,
@@ -205,7 +205,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ilbc_init( pjmedia_endpt *endpt,
     }
 
     /* Register codec factory to endpoint. */
-    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+    status = pjmedia_codec_mgr_register_factory(codec_mgr,
                                                 &ilbc_factory.base);
     if (status != PJ_SUCCESS) {
         ilbc_factory.endpt = NULL;
@@ -245,8 +245,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_ilbc_deinit(void)
     return status;
 }
 
-/* 
- * Check if factory can allocate the specified codec. 
+/*
+ * Check if factory can allocate the specified codec.
  */
 static pj_status_t ilbc_test_alloc(pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *info)
@@ -268,7 +268,7 @@ static pj_status_t ilbc_test_alloc(pjmedia_codec_factory *factory,
     /* Check clock-rate */
     if (info->clock_rate != CLOCK_RATE)
         return PJMEDIA_CODEC_EUNSUP;
-    
+
     /* Channel count must be one */
     if (info->channel_cnt != 1)
         return PJMEDIA_CODEC_EUNSUP;
@@ -281,8 +281,8 @@ static pj_status_t ilbc_test_alloc(pjmedia_codec_factory *factory,
 /*
  * Generate default attribute.
  */
-static pj_status_t ilbc_default_attr(pjmedia_codec_factory *factory, 
-                                     const pjmedia_codec_info *id, 
+static pj_status_t ilbc_default_attr(pjmedia_codec_factory *factory,
+                                     const pjmedia_codec_info *id,
                                      pjmedia_codec_param *attr)
 {
     PJ_UNUSED_ARG(factory);
@@ -318,8 +318,8 @@ static pj_status_t ilbc_default_attr(pjmedia_codec_factory *factory,
 /*
  * Enum codecs supported by this factory (i.e. only iLBC!).
  */
-static pj_status_t ilbc_enum_codecs(pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
+static pj_status_t ilbc_enum_codecs(pjmedia_codec_factory *factory,
+                                    unsigned *count,
                                     pjmedia_codec_info codecs[])
 {
     PJ_UNUSED_ARG(factory);
@@ -343,7 +343,7 @@ static pj_status_t ilbc_enum_codecs(pjmedia_codec_factory *factory,
 /*
  * Allocate a new iLBC codec instance.
  */
-static pj_status_t ilbc_alloc_codec(pjmedia_codec_factory *factory, 
+static pj_status_t ilbc_alloc_codec(pjmedia_codec_factory *factory,
                                     const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec)
 {
@@ -403,7 +403,7 @@ static pj_status_t ilbc_dealloc_codec(pjmedia_codec_factory *factory,
 /*
  * Init codec.
  */
-static pj_status_t ilbc_codec_init(pjmedia_codec *codec, 
+static pj_status_t ilbc_codec_init(pjmedia_codec *codec,
                                    pj_pool_t *pool )
 {
     PJ_UNUSED_ARG(codec);
@@ -414,13 +414,13 @@ static pj_status_t ilbc_codec_init(pjmedia_codec *codec,
 /*
  * Open codec.
  */
-static pj_status_t ilbc_codec_open(pjmedia_codec *codec, 
+static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
                                    pjmedia_codec_param *attr )
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
     pj_status_t status;
     unsigned i;
-    pj_uint16_t dec_fmtp_mode = DEFAULT_MODE, 
+    pj_uint16_t dec_fmtp_mode = DEFAULT_MODE,
                 enc_fmtp_mode = DEFAULT_MODE;
 
 #if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
@@ -446,7 +446,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
 #endif
 
     pj_assert(ilbc_codec != NULL);
-    pj_assert(ilbc_codec->enc_ready == PJ_FALSE && 
+    pj_assert(ilbc_codec->enc_ready == PJ_FALSE &&
               ilbc_codec->dec_ready == PJ_FALSE);
 
     /* Get decoder mode */
@@ -460,7 +460,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     }
 
     /* Decoder mode must be set */
-    PJ_ASSERT_RETURN(dec_fmtp_mode == 20 || dec_fmtp_mode == 30, 
+    PJ_ASSERT_RETURN(dec_fmtp_mode == 20 || dec_fmtp_mode == 30,
                      PJMEDIA_CODEC_EINMODE);
 
     /* Get encoder mode */
@@ -473,7 +473,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
         }
     }
 
-    PJ_ASSERT_RETURN(enc_fmtp_mode==20 || enc_fmtp_mode==30, 
+    PJ_ASSERT_RETURN(enc_fmtp_mode==20 || enc_fmtp_mode==30,
                      PJMEDIA_CODEC_EINMODE);
 
     /* Both sides of a bi-directional session MUST use the same "mode" value.
@@ -482,8 +482,8 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
      */
     if (enc_fmtp_mode != dec_fmtp_mode) {
         enc_fmtp_mode = dec_fmtp_mode = DEFAULT_MODE;
-        PJ_LOG(4,(ilbc_codec->obj_name, 
-                  "Normalized iLBC encoder and decoder modes to %d", 
+        PJ_LOG(4,(ilbc_codec->obj_name,
+                  "Normalized iLBC encoder and decoder modes to %d",
                   DEFAULT_MODE));
     }
 
@@ -539,7 +539,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
      */
     pj_set_timestamp32(&ilbc_codec->last_tx, 0, 0);
 
-    PJ_LOG(4,(ilbc_codec->obj_name, 
+    PJ_LOG(4,(ilbc_codec->obj_name,
               "iLBC codec opened, mode=%d", dec_fmtp_mode));
 
     return PJ_SUCCESS;
@@ -563,7 +563,7 @@ static pj_status_t ilbc_codec_close( pjmedia_codec *codec )
 /*
  * Modify codec settings.
  */
-static pj_status_t  ilbc_codec_modify(pjmedia_codec *codec, 
+static pj_status_t  ilbc_codec_modify(pjmedia_codec *codec,
                                       const pjmedia_codec_param *attr )
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
@@ -594,7 +594,7 @@ static pj_status_t ilbc_codec_parse(pjmedia_codec *codec,
         frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
         frames[count].buf = pkt;
         frames[count].size = ilbc_codec->dec_frame_size;
-        frames[count].timestamp.u64 = ts->u64 + (pj_uint64_t)count * 
+        frames[count].timestamp.u64 = ts->u64 + (pj_uint64_t)count *
                                       ilbc_codec->dec_samples_per_frame;
 
         pkt = ((char*)pkt) + ilbc_codec->dec_frame_size;
@@ -673,9 +673,9 @@ static OSStatus decodeDataProc (
 /*
  * Encode frame.
  */
-static pj_status_t ilbc_codec_encode(pjmedia_codec *codec, 
+static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
                                      const struct pjmedia_frame *input,
-                                     unsigned output_buf_len, 
+                                     unsigned output_buf_len,
                                      struct pjmedia_frame *output)
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
@@ -687,7 +687,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
     pcm_in = (pj_int16_t*)input->buf;
     nsamples = input->size >> 1;
 
-    PJ_ASSERT_RETURN(nsamples % ilbc_codec->enc_samples_per_frame == 0, 
+    PJ_ASSERT_RETURN(nsamples % ilbc_codec->enc_samples_per_frame == 0,
                      PJMEDIA_CODEC_EPCMFRMINLEN);
     PJ_ASSERT_RETURN(output_buf_len >= ilbc_codec->enc_frame_size * nsamples /
                      ilbc_codec->enc_samples_per_frame,
@@ -701,7 +701,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
         silence_period = pj_timestamp_diff32(&ilbc_codec->last_tx,
                                               &input->timestamp);
 
-        is_silence = pjmedia_silence_det_detect(ilbc_codec->vad, 
+        is_silence = pjmedia_silence_det_detect(ilbc_codec->vad,
                                                 (const pj_int16_t*)input->buf,
                                                 (input->size >> 1),
                                                 NULL);
@@ -726,16 +726,16 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
         OSStatus err;
         AudioBufferList theABL;
         UInt32 npackets = 1;
-        
+
         theABL.mNumberBuffers = 1;
         theABL.mBuffers[0].mNumberChannels = 1;
         theABL.mBuffers[0].mDataByteSize = output_buf_len;
         theABL.mBuffers[0].mData = output->buf + output->size;
-        
+
         ilbc_codec->enc_total_packets = 1;
         ilbc_codec->enc_buffer = (char *)pcm_in;
         ilbc_codec->enc_buffer_offset = input->size - (nsamples << 1);
-        
+
         err = AudioConverterFillComplexBuffer(ilbc_codec->enc, encodeDataProc,
                                               ilbc_codec, &npackets,
                                               &theABL, NULL);
@@ -744,16 +744,16 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
         }
 #else
         unsigned i;
-        
+
         /* Convert to float */
         for (i=0; i<ilbc_codec->enc_samples_per_frame; ++i) {
             ilbc_codec->enc_block[i] = (float) (*pcm_in++);
         }
-        
+
         iLBC_encode((unsigned char *)output->buf + output->size,
                     ilbc_codec->enc_block,
                     &ilbc_codec->enc);
-        
+
         output->size += ilbc_codec->enc.no_of_bytes;
 #endif
 
@@ -769,9 +769,9 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 /*
  * Decode frame.
  */
-static pj_status_t ilbc_codec_decode(pjmedia_codec *codec, 
+static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
                                      const struct pjmedia_frame *input,
-                                     unsigned output_buf_len, 
+                                     unsigned output_buf_len,
                                      struct pjmedia_frame *output)
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;

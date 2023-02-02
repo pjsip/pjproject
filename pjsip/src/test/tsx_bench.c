@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjsip.h>
@@ -74,7 +74,7 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
     p_elapsed->u64 = elapsed.u64;
     status = PJ_SUCCESS;
-    
+
 on_error:
     for (i=0; i<working_set; ++i) {
         if (tsx[i]) {
@@ -129,7 +129,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     via->rport_param = 1;
     via->recvd_param = pj_str("192.168.0.7");
     pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*)via);
-    
+
 
     /* Create "dummy" rdata from the tdata */
     pj_bzero(&rdata, sizeof(pjsip_rx_data));
@@ -140,9 +140,9 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     rdata.msg_info.cseq = (pjsip_cseq_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
     rdata.msg_info.cid = (pjsip_cid_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.via = via;
-    
+
     pj_sockaddr_in_init(&remote, 0, 0);
-    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
+    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
                                            &remote, sizeof(pj_sockaddr_in),
                                            NULL, &rdata.tp_info.transport);
     if (status != PJ_SUCCESS) {
@@ -163,7 +163,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     pj_get_timestamp(&t1);
     for (i=0; i<working_set; ++i) {
         via->branch_param.ptr = branch_buf;
-        via->branch_param.slen = PJSIP_RFC3261_BRANCH_LEN + 
+        via->branch_param.slen = PJSIP_RFC3261_BRANCH_LEN +
                                     pj_ansi_sprintf(branch_buf+PJSIP_RFC3261_BRANCH_LEN,
                                                     "-%d", i);
         status = pjsip_tsx_create_uas(&mod_tsx_user, &rdata, &tsx[i]);
@@ -177,7 +177,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
     p_elapsed->u64 = elapsed.u64;
     status = PJ_SUCCESS;
-    
+
 on_error:
     for (i=0; i<working_set; ++i) {
         if (tsx[i]) {
@@ -230,7 +230,7 @@ int tsx_bench(void)
         if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
     }
 
-    
+
     /* Report time */
     pj_ansi_sprintf(desc, "Time to create %d UAC transactions, in miliseconds",
                           WORKING_SET);
@@ -246,7 +246,7 @@ int tsx_bench(void)
                           "to create %d simultaneous transactions above.",
                           WORKING_SET);
 
-    report_ival("create-uac-tsx-per-sec", 
+    report_ival("create-uac-tsx-per-sec",
                 speed, "tsx/sec", desc);
 
 
@@ -270,7 +270,7 @@ int tsx_bench(void)
         if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
     }
 
-    
+
     /* Report time */
     pj_ansi_sprintf(desc, "Time to create %d UAS transactions, in miliseconds",
                           WORKING_SET);
@@ -286,7 +286,7 @@ int tsx_bench(void)
                           "to create %d simultaneous transactions above.",
                           WORKING_SET);
 
-    report_ival("create-uas-tsx-per-sec", 
+    report_ival("create-uas-tsx-per-sec",
                 speed, "tsx/sec", desc);
 
     return PJ_SUCCESS;

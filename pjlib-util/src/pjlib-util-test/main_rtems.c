@@ -1,5 +1,5 @@
 
-/* 
+/*
  *  !! OIY OIY !!
  *
  *  The purpose of this file is only to get pjlib-util-test linked. I haven't

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "turn.h"
 #include <pj/compat/socket.h>
@@ -38,8 +38,8 @@ struct udp_listener
 
 
 static pj_status_t udp_destroy(pj_turn_listener *udp);
-static void on_read_complete(pj_ioqueue_key_t *key, 
-                             pj_ioqueue_op_key_t *op_key, 
+static void on_read_complete(pj_ioqueue_key_t *key,
+                             pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_read);
 
 static pj_status_t udp_sendto(pj_turn_transport *tp,
@@ -96,18 +96,18 @@ PJ_DEF(pj_status_t) pj_turn_listener_create_udp( pj_turn_srv *srv,
         goto on_error;
 
     /* Init bind address */
-    status = pj_sockaddr_init(af, &udp->base.addr, bound_addr, 
+    status = pj_sockaddr_init(af, &udp->base.addr, bound_addr,
                               (pj_uint16_t)port);
-    if (status != PJ_SUCCESS) 
+    if (status != PJ_SUCCESS)
         goto on_error;
-    
+
     /* Create info */
     pj_ansi_strcpy(udp->base.info, "UDP:");
-    pj_sockaddr_print(&udp->base.addr, udp->base.info+4, 
+    pj_sockaddr_print(&udp->base.addr, udp->base.info+4,
                       sizeof(udp->base.info)-4, 3);
 
     /* Bind socket */
-    status = pj_sock_bind(udp->base.sock, &udp->base.addr, 
+    status = pj_sock_bind(udp->base.sock, &udp->base.addr,
                           pj_sockaddr_get_len(&udp->base.addr));
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -119,12 +119,12 @@ PJ_DEF(pj_status_t) pj_turn_listener_create_udp( pj_turn_srv *srv,
                                       udp, &ioqueue_cb, &udp->key);
 
     /* Create op keys */
-    udp->read_op = (struct read_op**)pj_pool_calloc(pool, concurrency_cnt, 
+    udp->read_op = (struct read_op**)pj_pool_calloc(pool, concurrency_cnt,
                                                     sizeof(struct read_op*));
 
     /* Create each read_op and kick off read operation */
     for (i=0; i<concurrency_cnt; ++i) {
-        pj_pool_t *rpool = pj_pool_create(srv->core.pf, "rop%p", 
+        pj_pool_t *rpool = pj_pool_create(srv->core.pf, "rop%p",
                                           1000, 1000, NULL);
 
         udp->read_op[i] = PJ_POOL_ZALLOC_T(pool, struct read_op);
@@ -174,7 +174,7 @@ static pj_status_t udp_destroy(pj_turn_listener *listener)
     if (udp->base.pool) {
         pj_pool_t *pool = udp->base.pool;
 
-        PJ_LOG(4,(udp->base.obj_name, "Listener %s destroyed", 
+        PJ_LOG(4,(udp->base.obj_name, "Listener %s destroyed",
                   udp->base.info));
 
         udp->base.pool = NULL;
@@ -218,8 +218,8 @@ static void udp_dec_ref(pj_turn_transport *tp,
 /*
  * Callback on received packet.
  */
-static void on_read_complete(pj_ioqueue_key_t *key, 
-                             pj_ioqueue_op_key_t *op_key, 
+static void on_read_complete(pj_ioqueue_key_t *key,
+                             pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_read)
 {
     struct udp_listener *udp;
@@ -253,7 +253,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
         status = pj_ioqueue_recvfrom(udp->key, op_key,
                                      read_op->pkt.pkt, &bytes_read, 0,
-                                     &read_op->pkt.src.clt_addr, 
+                                     &read_op->pkt.src.clt_addr,
                                      &read_op->pkt.src_addr_len);
 
         if (status != PJ_EPENDING && status != PJ_SUCCESS)

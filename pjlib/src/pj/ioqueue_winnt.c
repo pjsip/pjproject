@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ioqueue.h>
 #include <pj/os.h>
@@ -177,12 +177,12 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
 
     PJ_CHECK_STACK();
 
-    /* On WinXP or later, use SO_UPDATE_ACCEPT_CONTEXT so that socket 
+    /* On WinXP or later, use SO_UPDATE_ACCEPT_CONTEXT so that socket
      * addresses can be obtained with getsockname() and getpeername().
      */
     status = setsockopt(accept_overlapped->newsock, SOL_SOCKET,
-                        SO_UPDATE_ACCEPT_CONTEXT, 
-                        (char*)&key->hnd, 
+                        SO_UPDATE_ACCEPT_CONTEXT,
+                        (char*)&key->hnd,
                         sizeof(SOCKET));
     /* SO_UPDATE_ACCEPT_CONTEXT is for WinXP or later.
      * So ignore the error status.
@@ -191,7 +191,7 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
     /* Operation complete immediately. */
     if (accept_overlapped->addrlen) {
         GetAcceptExSockaddrs( accept_overlapped->accept_buf,
-                              0, 
+                              0,
                               ACCEPT_ADDR_LEN,
                               ACCEPT_ADDR_LEN,
                               &local,
@@ -205,10 +205,10 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
                 pj_memcpy(accept_overlapped->remote, remote, locallen);
         } else {
             if (accept_overlapped->local)
-                pj_bzero(accept_overlapped->local, 
+                pj_bzero(accept_overlapped->local,
                          *accept_overlapped->addrlen);
             if (accept_overlapped->remote)
-                pj_bzero(accept_overlapped->remote, 
+                pj_bzero(accept_overlapped->remote,
                          *accept_overlapped->addrlen);
         }
 
@@ -239,7 +239,7 @@ static void erase_connecting_socket( pj_ioqueue_t *ioqueue, unsigned pos)
         ioqueue->event_pool[ioqueue->event_count++] = hEvent;
     } else {
         /* Shouldn't happen. There should be no more pending connections
-         * than max. 
+         * than max.
          */
         pj_assert(0);
         CloseHandle(hEvent);
@@ -258,7 +258,7 @@ static int check_connecting( pj_ioqueue_t *ioqueue )
 {
     if (ioqueue->connecting_count) {
         int i, count;
-        struct 
+        struct
         {
             pj_ioqueue_key_t *key;
             pj_status_t       status;
@@ -271,8 +271,8 @@ static int check_connecting( pj_ioqueue_t *ioqueue )
             result = WaitForMultipleObjects(ioqueue->connecting_count,
                                             ioqueue->connecting_handles,
                                             FALSE, 0);
-            if (result >= WAIT_OBJECT_0 && 
-                result < WAIT_OBJECT_0+ioqueue->connecting_count) 
+            if (result >= WAIT_OBJECT_0 &&
+                result < WAIT_OBJECT_0+ioqueue->connecting_count)
             {
                 WSANETWORKEVENTS net_events;
 
@@ -281,10 +281,10 @@ static int check_connecting( pj_ioqueue_t *ioqueue )
                 events[count].key = ioqueue->connecting_keys[pos];
 
                 /* See whether connect has succeeded. */
-                WSAEnumNetworkEvents((pj_sock_t)events[count].key->hnd, 
-                                     ioqueue->connecting_handles[pos], 
+                WSAEnumNetworkEvents((pj_sock_t)events[count].key->hnd,
+                                     ioqueue->connecting_handles[pos],
                                      &net_events);
-                events[count].status = 
+                events[count].status =
                     PJ_STATUS_FROM_OS(net_events.iErrorCode[FD_CONNECT_BIT]);
 
                 /* Erase socket from pending connect. */
@@ -299,7 +299,7 @@ static int check_connecting( pj_ioqueue_t *ioqueue )
         /* Call callbacks. */
         for (i=0; i<count; ++i) {
             if (events[i].key->cb.on_connect_complete) {
-                events[i].key->cb.on_connect_complete(events[i].key, 
+                events[i].key->cb.on_connect_complete(events[i].key,
                                                       events[i].status);
             }
         }
@@ -308,7 +308,7 @@ static int check_connecting( pj_ioqueue_t *ioqueue )
     }
 
     return 0;
-    
+
 }
 #endif
 
@@ -348,7 +348,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     rc = sizeof(union operation_key);
 
     /* Check that sizeof(pj_ioqueue_op_key_t) makes sense. */
-    PJ_ASSERT_RETURN(sizeof(pj_ioqueue_op_key_t)-sizeof(void*) >= 
+    PJ_ASSERT_RETURN(sizeof(pj_ioqueue_op_key_t)-sizeof(void*) >=
                      sizeof(union operation_key), PJ_EBUG);
 
     /* Create IOCP */
@@ -491,7 +491,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_default_concurrency(pj_ioqueue_t *ioqueue,
 /*
  * pj_ioqueue_set_lock()
  */
-PJ_DEF(pj_status_t) pj_ioqueue_set_lock( pj_ioqueue_t *ioqueue, 
+PJ_DEF(pj_status_t) pj_ioqueue_set_lock( pj_ioqueue_t *ioqueue,
                                          pj_lock_t *lock,
                                          pj_bool_t auto_delete )
 {
@@ -615,7 +615,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_user_data( pj_ioqueue_key_t *key,
                                               void **old_data )
 {
     PJ_ASSERT_RETURN(key, PJ_EINVAL);
-    
+
     if (old_data)
         *old_data = key->user_data;
 
@@ -648,10 +648,10 @@ static void decrement_counter(pj_ioqueue_key_t *key)
 #endif
 
 /*
- * Poll the I/O Completion Port, execute callback, 
+ * Poll the I/O Completion Port, execute callback,
  * and return the key and bytes transferred of the last operation.
  */
-static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout, 
+static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
                             pj_ssize_t *p_bytes, pj_ioqueue_key_t **p_key )
 {
     DWORD dwBytesTransferred, dwKey;
@@ -662,7 +662,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
 
     /* Poll for completion status. */
     rcGetQueued = GetQueuedCompletionStatus(hIocp, &dwBytesTransferred,
-                                            &dwKey, (OVERLAPPED**)&pOv, 
+                                            &dwKey, (OVERLAPPED**)&pOv,
                                             dwTimeout);
 
     /* The return value is:
@@ -688,7 +688,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
         if (key->closing)
             return PJ_TRUE;
 
-        /* If concurrency is disabled, lock the key 
+        /* If concurrency is disabled, lock the key
          * (and save the lock status to local var since app may change
          * concurrency setting while in the callback) */
         if (key->allow_concurrent == PJ_FALSE) {
@@ -721,7 +721,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
         case PJ_IOQUEUE_OP_RECV_FROM:
             pOv->operation = 0;
             if (key->cb.on_read_complete)
-                key->cb.on_read_complete(key, (pj_ioqueue_op_key_t*)pOv, 
+                key->cb.on_read_complete(key, (pj_ioqueue_op_key_t*)pOv,
                                          size_status);
             break;
         case PJ_IOQUEUE_OP_WRITE:
@@ -729,7 +729,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
         case PJ_IOQUEUE_OP_SEND_TO:
             pOv->operation = 0;
             if (key->cb.on_write_complete)
-                key->cb.on_write_complete(key, (pj_ioqueue_op_key_t*)pOv, 
+                key->cb.on_write_complete(key, (pj_ioqueue_op_key_t*)pOv,
                                                 size_status);
             break;
 #if PJ_HAS_TCP
@@ -752,7 +752,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
 
                 key->cb.on_accept_complete(key, (pj_ioqueue_op_key_t*)pOv,
                                            newsock, status);
-                
+
             }
             break;
         case PJ_IOQUEUE_OP_CONNECT:
@@ -822,8 +822,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 #else
     PJ_UNUSED_ARG(has_lock);
 #endif
-    
-    /* Close handle (the only way to disassociate handle from IOCP). 
+
+    /* Close handle (the only way to disassociate handle from IOCP).
      * We also need to close handle to make sure that no further events
      * will come to the handle.
      */
@@ -832,7 +832,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      *    the socket (i.e. it will still appear in "netstat" output). Also
      *    if we only use CloseHandle(), an "Invalid Handle" exception will
      *    be raised in WSACleanup().
-     *  - MSDN documentation says that CloseHandle() must be called after 
+     *  - MSDN documentation says that CloseHandle() must be called after
      *    closesocket() call (see
      *    http://msdn.microsoft.com/en-us/library/ms724211(VS.85).aspx).
      *    But turns out that this will raise "Invalid Handle" exception
@@ -863,7 +863,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      *  concurrency in the key).
      */
     //This will loop forever if unregistration is done on the callback.
-    //Doing this with RETRY I think should solve the IOCP setting the 
+    //Doing this with RETRY I think should solve the IOCP setting the
     //socket signalled, without causing the deadlock.
     //while (pj_atomic_get(key->ref_count) != 1)
     //  pj_thread_sleep(0);
@@ -891,7 +891,7 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
         pj_ioqueue_key_t *key;
 
         pj_gettickcount(&now);
-        
+
         /* Move closing keys to free list when they've finished the closing
          * idle time.
          */
@@ -991,7 +991,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     op_key_rec->overlapped.wsabuf.len = *length;
 
     dwFlags = flags;
-    
+
     /* Try non-overlapped received first to see if data is
      * immediately available.
      */
@@ -1016,12 +1016,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
      * No immediate data available.
      * Register overlapped Recv() operation.
      */
-    pj_bzero( &op_key_rec->overlapped.overlapped, 
+    pj_bzero( &op_key_rec->overlapped.overlapped,
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_RECV;
 
-    rc = WSARecv((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1, 
-                  &bytesRead, &dwFlags, 
+    rc = WSARecv((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
+                  &bytesRead, &dwFlags,
                   &op_key_rec->overlapped.overlapped, NULL);
     if (rc == SOCKET_ERROR) {
         DWORD dwStatus = WSAGetLastError();
@@ -1067,7 +1067,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     op_key_rec->overlapped.wsabuf.len = *length;
 
     dwFlags = flags;
-    
+
     /* Try non-overlapped received first to see if data is
      * immediately available.
      */
@@ -1092,11 +1092,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
      * No immediate data available.
      * Register overlapped Recv() operation.
      */
-    pj_bzero( &op_key_rec->overlapped.overlapped, 
+    pj_bzero( &op_key_rec->overlapped.overlapped,
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_RECV;
 
-    rc = WSARecvFrom((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1, 
+    rc = WSARecvFrom((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
                      &bytesRead, &dwFlags, addr, addrlen,
                      &op_key_rec->overlapped.overlapped, NULL);
     if (rc == SOCKET_ERROR) {
@@ -1105,8 +1105,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
             *length = -1;
             return PJ_STATUS_FROM_OS(dwStatus);
         }
-    } 
-    
+    }
+
     /* Pending operation has been scheduled. */
     return PJ_EPENDING;
 }
@@ -1185,7 +1185,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
      * Data can't be sent immediately.
      * Schedule asynchronous WSASend().
      */
-    pj_bzero( &op_key_rec->overlapped.overlapped, 
+    pj_bzero( &op_key_rec->overlapped.overlapped,
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_SEND;
 
@@ -1240,7 +1240,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
         if (local && addrlen) {
             int status;
 
-            /* On WinXP or later, use SO_UPDATE_ACCEPT_CONTEXT so that socket 
+            /* On WinXP or later, use SO_UPDATE_ACCEPT_CONTEXT so that socket
              * addresses can be obtained with getsockname() and getpeername().
              */
             status = setsockopt(sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
@@ -1272,8 +1272,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
      * Must schedule an asynchronous operation.
      */
     op_key_rec = (union operation_key*)op_key->internal__;
-    
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
+
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
                             &op_key_rec->accept.newsock);
     if (status != PJ_SUCCESS)
         return status;
@@ -1283,7 +1283,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     op_key_rec->accept.local = local;
     op_key_rec->accept.remote = remote;
     op_key_rec->accept.newsock_ptr = new_sock;
-    pj_bzero( &op_key_rec->accept.overlapped, 
+    pj_bzero( &op_key_rec->accept.overlapped,
               sizeof(op_key_rec->accept.overlapped));
 
     rc = AcceptEx( (SOCKET)key->hnd, (SOCKET)op_key_rec->accept.newsock,
@@ -1364,7 +1364,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
     }
 
     /* Mark key as connecting.
-     * We can't use array index since key can be removed dynamically. 
+     * We can't use array index since key can be removed dynamically.
      */
     key->connecting = 1;
 

@@ -1,5 +1,5 @@
 /*
- * This is an implementation of CRC32. See ISO 3309 and ITU-T V.42 
+ * This is an implementation of CRC32. See ISO 3309 and ITU-T V.42
  * for a formal specification
  *
  * This file is partly taken from Crypto++ library (http://www.cryptopp.com)
@@ -152,7 +152,7 @@ PJ_DEF(void) pj_crc32_init(pj_crc32_context *ctx)
     ctx->crc_state = 0;
 }
 
-PJ_DEF(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx, 
+PJ_DEF(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx,
                                     const pj_uint8_t *data,
                                     pj_size_t nbytes)
 {
@@ -195,13 +195,13 @@ PJ_DEF(void) pj_crc32_init(pj_crc32_context *ctx)
 }
 
 
-PJ_DEF(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx, 
+PJ_DEF(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx,
                                     const pj_uint8_t *octets,
                                     pj_size_t len)
 
 {
     pj_uint32_t crc = ctx->crc_state;
-    
+
     while (len--) {
         pj_uint32_t temp;
         int j;

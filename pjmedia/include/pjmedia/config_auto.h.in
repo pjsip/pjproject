@@ -27,9 +27,9 @@
 /*
  * Note:
  *      The configuration in config_site.h overrides any other settings,
- *      including the setting as detected by autoconf. 
+ *      including the setting as detected by autoconf.
  */
- 
+
 /* G711 codec */
 #ifndef PJMEDIA_HAS_G711_CODEC
 #undef PJMEDIA_HAS_G711_CODEC

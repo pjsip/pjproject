@@ -182,7 +182,7 @@ void VidWin::detach()
 
     NSWindow *w = (NSWindow*)hwnd.info.cocoa.window;
     NSWindow *parent = [(NSView*)winId() window];
-    [parent removeChildWindow:w]; 
+    [parent removeChildWindow:w];
 }
 
 
@@ -200,7 +200,7 @@ void VidWin::set_size()
     r.origin = [[v window] convertBaseToScreen:r.origin];
 
     QRect qr = rect();
-    [w setFrame:r display:NO]; 
+    [w setFrame:r display:NO];
 
     TRACE_("%p new size = %dx%d", w, qr.width(), qr.height());
 }

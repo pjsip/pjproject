@@ -121,7 +121,7 @@ typedef std::vector<MediaFormatVideo> MediaFormatVideoVector;
 
 /**
  * This structure descibes information about a particular media port that
- * has been registered into the conference bridge. 
+ * has been registered into the conference bridge.
  */
 struct ConfPortInfo
 {
@@ -223,7 +223,7 @@ public:
 
 /**
  * Audio Media. This is a lite wrapper class for audio conference bridge port,
- * i.e: this class only maintains one data member, conference slot ID, and 
+ * i.e: this class only maintains one data member, conference slot ID, and
  * the methods are simply proxies for conference bridge operations.
  *
  * Application can create a derived class and use registerMediaPort2()/
@@ -297,7 +297,7 @@ public:
      * @param sink              The destination Media.
      * @param param             The parameter.
      */
-    void startTransmit2(const AudioMedia &sink, 
+    void startTransmit2(const AudioMedia &sink,
                         const AudioMediaTransmitParam &param) const
          PJSUA2_THROW(Error);
 
@@ -415,7 +415,7 @@ private:
     pj_pool_t           *mediaPool;
 };
 
-/** 
+/**
  * Warning: deprecated, use AudioMediaVector2 instead.
  *
  * Array of Audio Media.
@@ -466,13 +466,13 @@ public:
 class AudioMediaPlayer : public AudioMedia
 {
 public:
-    /** 
+    /**
      * Constructor.
      */
     AudioMediaPlayer();
 
     /**
-     * Create a file player,  and automatically add this 
+     * Create a file player,  and automatically add this
      * player to the conference bridge.
      *
      * @param file_name  The filename to be played. Currently only
@@ -860,7 +860,7 @@ struct AudioDevInfo
     ~AudioDevInfo();
 };
 
-/** 
+/**
  * Warning: deprecated, use AudioDevInfoVector2 instead.
  *
  * Array of audio device info.
@@ -908,7 +908,7 @@ public:
 
     /**
      * Select or change capture sound device. Application may call this
-     * function at any time to replace current sound device. Calling this 
+     * function at any time to replace current sound device. Calling this
      * method will not change the state of the sound device (opened/closed).
      *
      * @param capture_dev       Device ID of the capture device.
@@ -917,7 +917,7 @@ public:
 
     /**
      * Select or change playback sound device. Application may call this
-     * function at any time to replace current sound device. Calling this 
+     * function at any time to replace current sound device. Calling this
      * method will not change the state of the sound device (opened/closed).
      *
      * @param playback_dev      Device ID of the playback device.
@@ -968,8 +968,8 @@ public:
      * Note that this method will open the sound device, using current
      * active IDs set via setCaptureDev() or setPlaybackDev(), if the flag
      * PJSUA_SND_DEV_NO_IMMEDIATE_OPEN is not specified.
-     * 
-     * @param mode              The sound device mode, as bitmask combination 
+     *
+     * @param mode              The sound device mode, as bitmask combination
      *                          of #pjsua_snd_dev_mode
      *
      */
@@ -1510,7 +1510,7 @@ private:
 /**
  * Extra audio device. This class allows application to have multiple
  * sound device instances active concurrently.
- 
+
  * Application may also use this class to improve media clock. Normally
  * media clock is driven by sound device in master port, but unfortunately
  * some sound devices may produce jittery clock. To improve media clock,
@@ -1590,7 +1590,7 @@ struct MediaSize
 
 /**
  * This structure descibes information about a particular media port that
- * has been registered into the conference bridge. 
+ * has been registered into the conference bridge.
  */
 struct VidConfPortInfo
 {
@@ -1670,7 +1670,7 @@ public:
      * @param sink              The destination Media.
      * @param param             The parameter.
      */
-    void startTransmit(const VideoMedia &sink, 
+    void startTransmit(const VideoMedia &sink,
                        const VideoMediaTransmitParam &param) const
          PJSUA2_THROW(Error);
 
@@ -1825,7 +1825,7 @@ public:
      * @return                  Video media of this renderer window.
      */
     VideoMedia getVideoMedia() PJSUA2_THROW(Error);
-    
+
     /**
      * Show or hide window. This operation is not valid for native windows
      * (VideoWindowInfo.isNative=true), on which native windowing API
@@ -1836,7 +1836,7 @@ public:
      *
      */
     void Show(bool show) PJSUA2_THROW(Error);
-    
+
     /**
      * Set video window position. This operation is not valid for native windows
      * (VideoWindowInfo.isNative=true), on which native windowing API
@@ -1846,7 +1846,7 @@ public:
      *
      */
     void setPos(const MediaCoordinate &pos) PJSUA2_THROW(Error);
-    
+
     /**
      * Resize window. This operation is not valid for native windows
      * (VideoWindowInfo.isNative=true), on which native windowing API
@@ -1856,7 +1856,7 @@ public:
      *
      */
     void setSize(const MediaSize &size) PJSUA2_THROW(Error);
-    
+
     /**
      * Rotate the video window. This function will change the video orientation
      * and also possibly the video window size (width and height get swapped).
@@ -1952,7 +1952,7 @@ public:
      */
     VideoPreviewOpParam();
 
-    /** 
+    /**
      * Convert from pjsip
      */
     void fromPj(const pjsua_vid_preview_param &prm);
@@ -2039,8 +2039,8 @@ struct VideoDevInfo
      */
     pjmedia_dir dir;
 
-    /** 
-     * Device capabilities, as bitmask combination of #pjmedia_vid_dev_cap 
+    /**
+     * Device capabilities, as bitmask combination of #pjmedia_vid_dev_cap
      */
     unsigned caps;
 
@@ -2070,7 +2070,7 @@ public:
     ~VideoDevInfo();
 };
 
-/** 
+/**
  * Warning: deprecated, use VideoDevInfoVector2 instead.
  *
  * Array of video device info.
@@ -2091,7 +2091,7 @@ struct VideoSwitchParam
      */
     pjmedia_vid_dev_index target_id;
 };
- 
+
 /**
  * Video device manager.
  */
@@ -2128,10 +2128,10 @@ public:
     unsigned getDevCount();
 
     /**
-     * Retrieve the video device info for the specified device index.     
+     * Retrieve the video device info for the specified device index.
      *
      * @param dev_id    The video device id
-     * 
+     *
      * @return          The list of video device info
      */
     VideoDevInfo getDevInfo(int dev_id) const PJSUA2_THROW(Error);
@@ -2161,7 +2161,7 @@ public:
      * @param drv_name  The driver name.
      * @param dev_name  The device name.
      *
-     * @return          The device ID. If the device is not found, 
+     * @return          The device ID. If the device is not found,
      *                  Error will be thrown.
      */
     int lookupDev(const string &drv_name,
@@ -2177,9 +2177,9 @@ public:
     string capName(pjmedia_vid_dev_cap cap) const;
 
     /**
-     * This will configure video format capability to the video device. 
-     * If video device is currently active, the method will forward the setting 
-     * to the video device instance to be applied immediately, if it 
+     * This will configure video format capability to the video device.
+     * If video device is currently active, the method will forward the setting
+     * to the video device instance to be applied immediately, if it
      * supports it.
      *
      * This method is only valid if the device has
@@ -2190,21 +2190,21 @@ public:
      * to any devices, even when application has changed the video device to be
      * used.
      *
-     * @param dev_id    The video device id.    
+     * @param dev_id    The video device id.
      * @param format    The video format.
      * @param keep      Specify whether the setting is to be kept for
      *                  future use.
      */
-    void setFormat(int dev_id, 
-                   const MediaFormatVideo &format, 
+    void setFormat(int dev_id,
+                   const MediaFormatVideo &format,
                    bool keep) PJSUA2_THROW(Error);
 
     /**
      * Get the video format capability to the video device.
      * If video device is currently active, the method will forward the request
-     * to the video device. If video device is currently inactive, and if 
-     * application had previously set the setting and mark the setting as kept, 
-     * then that setting will be returned. Otherwise, this method will 
+     * to the video device. If video device is currently inactive, and if
+     * application had previously set the setting and mark the setting as kept,
+     * then that setting will be returned. Otherwise, this method will
      * raise error.
      *
      * This method is only valid if the device has
@@ -2235,8 +2235,8 @@ public:
      * @param keep      Specify whether the setting is to be kept for
      *                  future use.
      */
-    void setInputScale(int dev_id, 
-                       const MediaSize &scale, 
+    void setInputScale(int dev_id,
+                       const MediaSize &scale,
                        bool keep) PJSUA2_THROW(Error);
 
     /**
@@ -2262,10 +2262,10 @@ public:
      * to the video device instance to be applied immediately, if it
      * supports it.
      *
-     * This method is only valid if the device has 
-     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps 
+     * This method is only valid if the device has
+     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps
      * flags, otherwise Error will be thrown.
-     * 
+     *
      * Note that in case the setting is kept for future use, it will be applied
      * to any devices, even when application has changed the video device to be
      * used.
@@ -2277,7 +2277,7 @@ public:
      */
     void setOutputWindowFlags(int dev_id, int flags, bool keep)
                               PJSUA2_THROW(Error);
-    
+
     /**
      * Get the window output flags capability to the video device.
      * If video device is currently active, the method will forward the request
@@ -2287,7 +2287,7 @@ public:
      * raise error.
      *
      * This method is only valid if the device has
-     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps 
+     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps
      * flags, otherwise Error will be thrown.
      *
      * @param dev_id    The video device id.
@@ -2314,10 +2314,10 @@ public:
     /**
      * Check whether the video capture device is currently active, i.e. if
      * a video preview has been started or there is a video call using
-     * the device.    
+     * the device.
      *
      * @param dev_id    The video device id
-     * 
+     *
      * @return          True if it's active.
      */
     bool isCaptureActive(int dev_id) const;
@@ -2395,7 +2395,7 @@ struct CodecInfo
     void fromPj(const pjsua_codec_info &codec_info);
 };
 
-/** 
+/**
  * Warning: deprecated, use CodecInfoVector2 instead.
  *
  * Array of codec info.
@@ -2469,7 +2469,7 @@ struct CodecParamSetting
  *
  * Please note that codec parameter also contains SDP specific setting,
  * setting::decFmtp and setting::encFmtp, which may need to be set
- * appropriately based on the effective setting. 
+ * appropriately based on the effective setting.
  * See each codec documentation for more detail.
  */
 struct CodecParam
@@ -2503,7 +2503,7 @@ struct CodecOpusConfig
 
 /**
  * Detailed codec attributes used in configuring a video codec and in querying
- * the capability of video codec factories. 
+ * the capability of video codec factories.
  *
  * Please note that codec parameter also contains SDP specific setting,
  * #decFmtp and #encFmtp, which may need to be set appropriately based on
@@ -2578,7 +2578,7 @@ typedef union MediaEventData {
      * Audio device error event data.
      */
     AudDevErrorEvent        audDevError;
-    
+
     /**
      * Pointer to storage to user event data, if it's outside
      * this struct
@@ -2603,7 +2603,7 @@ struct MediaEvent
      * will be specific to the event type being reported.
      */
     MediaEventData              data;
-    
+
     /**
      * Pointer to original pjmedia_event. Only valid when the struct
      * is converted from PJSIP's pjmedia_event.

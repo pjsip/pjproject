@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_VIDEODEV_CONFIG_H__
 #define __PJMEDIA_VIDEODEV_CONFIG_H__
@@ -243,9 +243,9 @@ PJ_BEGIN_DECL
 
 
 /**
- * Specify the SDL library name to be linked with Visual Studio project. 
- * By default, the name is autodetected based on SDL version ("sdl.lib" or 
- * "sdl2.lib"), but application may explicitly specify the library name if this 
+ * Specify the SDL library name to be linked with Visual Studio project.
+ * By default, the name is autodetected based on SDL version ("sdl.lib" or
+ * "sdl2.lib"), but application may explicitly specify the library name if this
  * autodetection fails. Common names are: "sdl2.lib" or "sdl.lib".
  *
  * Default: undeclared.
@@ -274,48 +274,48 @@ PJ_END_DECL
  * @{
 
 PJMEDIA Video Device API is a cross-platform video API appropriate for use with
-VoIP applications and many other types of video streaming applications. 
+VoIP applications and many other types of video streaming applications.
 
 The API abstracts many different video API's on various platforms, such as:
  - native Direct Show video for Win32 and Windows Mobile devices
  - null-video implementation
  - and more to be implemented in the future
 
-The Video Device API/library is an evolution from PJMEDIA @ref PJMED_SND and 
+The Video Device API/library is an evolution from PJMEDIA @ref PJMED_SND and
 contains many enhancements:
 
  - Forward compatibility:
 \n
-   The new API has been designed to be extensible, it will support new API's as 
-   well as new features that may be introduced in the future without breaking 
-   compatibility with applications that use this API as well as compatibility 
-   with existing device implementations. 
+   The new API has been designed to be extensible, it will support new API's as
+   well as new features that may be introduced in the future without breaking
+   compatibility with applications that use this API as well as compatibility
+   with existing device implementations.
 
  - Device capabilities:
 \n
    At the heart of the API is device capabilities management, where all possible
    video capabilities of video devices should be able to be handled in a generic
-   manner. With this framework, new capabilities that may be discovered in the 
-   future can be handled in manner without breaking existing applications. 
+   manner. With this framework, new capabilities that may be discovered in the
+   future can be handled in manner without breaking existing applications.
 
  - Built-in features:
 \n
-   The device capabilities framework enables applications to use and control 
+   The device capabilities framework enables applications to use and control
    video features built-in in the device, such as:
-    - built-in formats, 
+    - built-in formats,
     - etc.
 
  - Codec support:
 \n
    Some video devices support built-in hardware video codecs, and application
-   can use the video device in encoded mode to make use of these hardware 
-   codecs. 
+   can use the video device in encoded mode to make use of these hardware
+   codecs.
 
  - Multiple backends:
 \n
-   The new API supports multiple video backends (called factories or drivers in 
-   the code) to be active simultaneously, and video backends may be added or 
-   removed during run-time. 
+   The new API supports multiple video backends (called factories or drivers in
+   the code) to be active simultaneously, and video backends may be added or
+   removed during run-time.
 
 */
 

@@ -15,7 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #include "util.h"
 
 #include <pj/assert.h>
@@ -44,7 +44,7 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
 {
     pj_status_t status;
     pjmedia_conversion_param conv_param;
-    const pjmedia_video_format_info *vfi;       
+    const pjmedia_video_format_info *vfi;
 
     pj_assert((src_size.w == dst_size.w || src_size.h == dst_size.h) ||
               (src_size.w == dst_size.h || src_size.h == dst_size.w));
@@ -166,7 +166,7 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
     conv->conv_frame_size = conv->rot_size.w * conv->rot_size.h *
                             vfi->bpp / 8;
     conv->conv_buf = pj_pool_alloc(pool, conv->src_frame_size);
-    
+
     pjmedia_vid_dev_conv_set_rotation(conv, PJMEDIA_ORIENT_NATURAL);
 
     PJ_LOG(4, (THIS_FILE, "Orientation converter created: %dx%d to %dx%d, "
@@ -219,7 +219,7 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
     pjmedia_frame src_frame, dst_frame;
     pjmedia_rect_size src_size = conv->src_size;
     pj_uint8_t *src = src_buf;
-    pj_uint8_t *dst = conv->conv_buf;    
+    pj_uint8_t *dst = conv->conv_buf;
 
     pj_assert(src_buf);
 
@@ -290,7 +290,7 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
     }
 
     if (!conv->match_src_dst && conv->maintain_aspect_ratio) {
-        /* Center the frame and fill the area with black color */    
+        /* Center the frame and fill the area with black color */
         if (conv->fmt.id == PJMEDIA_FORMAT_I420) {
             unsigned i = 0;
             pj_uint8_t *pdst = dst;

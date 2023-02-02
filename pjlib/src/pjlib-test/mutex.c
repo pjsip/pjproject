@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -32,7 +32,7 @@ static int simple_mutex_test(pj_pool_t *pool)
     pj_mutex_t *mutex;
 
     PJ_LOG(3,("", "...testing simple mutex"));
-    
+
     /* Create mutex. */
     TRACE_(("", "....create mutex"));
     rc = pj_mutex_create( pool, "", PJ_MUTEX_SIMPLE, &mutex);
@@ -54,7 +54,7 @@ static int simple_mutex_test(pj_pool_t *pool)
         app_perror("...error: pj_mutex_unlock", rc);
         return -30;
     }
-    
+
     /* Lock again. */
     TRACE_(("", "....lock mutex"));
     rc = pj_mutex_lock(mutex);
@@ -109,7 +109,7 @@ static int recursive_mutex_test(pj_pool_t *pool)
         app_perror("...error: pj_mutex_unlock", rc);
         return -30;
     }
-    
+
     /* Lock again. */
     TRACE_(("", "....lock mutex"));
     rc = pj_mutex_lock(mutex);

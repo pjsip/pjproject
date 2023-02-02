@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -177,12 +177,12 @@ int pool_perf_test()
         best = pool_time, worst = pool_time2;
     else
         best = pool_time2, worst = pool_time;
-    
+
     /* avoid division by zero */
     if (best==0) best=1;
     if (worst==0) worst=1;
 
-    PJ_LOG(3, (THIS_FILE, "..pool speedup over malloc best=%dx, worst=%dx", 
+    PJ_LOG(3, (THIS_FILE, "..pool speedup over malloc best=%dx, worst=%dx",
                           (int)(malloc_time/best),
                           (int)(malloc_time/worst)));
     return 0;

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_HTTP_CLIENT_H__
 #define __PJLIB_UTIL_HTTP_CLIENT_H__
@@ -32,7 +32,7 @@ PJ_BEGIN_DECL
  * @ingroup PJ_PROTOCOLS
  * @{
  * This contains a simple HTTP client implementation.
- * Some known limitations: 
+ * Some known limitations:
  * - Does not support chunked Transfer-Encoding.
  */
 
@@ -123,39 +123,39 @@ typedef struct pj_http_auth_cred
  * Parameters that can be given during http request creation. Application
  * must initialize this structure with #pj_http_req_param_default().
  */
-typedef struct pj_http_req_param 
+typedef struct pj_http_req_param
 {
-    /** 
+    /**
      * The address family of the URL.
      *  Default is pj_AF_INET().
      */
     int             addr_family;
 
-    /** 
+    /**
      * The HTTP request method.
      * Default is GET.
      */
     pj_str_t        method;
 
-    /** 
+    /**
      * The HTTP protocol version ("1.0" or "1.1").
      * Default is "1.0".
      */
     pj_str_t        version;
 
-    /** 
+    /**
      * HTTP request operation timeout.
      * Default is PJ_HTTP_DEFAULT_TIMEOUT.
      */
     pj_time_val     timeout;
 
-    /** 
+    /**
      * User-defined data.
      * Default is NULL.
      */
     void            *user_data;
 
-    /** 
+    /**
      * HTTP request headers.
      * Default is empty.
      */
@@ -163,15 +163,15 @@ typedef struct pj_http_req_param
 
     /**
       * This structure describes the http request body. If application
-      * specifies the data to send, the data must remain valid until 
+      * specifies the data to send, the data must remain valid until
       * the HTTP request is sent. Alternatively, application can choose
       * to specify total_size as the total data size to send instead
       * while leaving the data NULL (and its size 0). In this case,
-      * HTTP request will then call on_send_data() callback once it is 
-      * ready to send the request body. This will be useful if 
-      * application does not wish to load the data into the buffer at 
+      * HTTP request will then call on_send_data() callback once it is
+      * ready to send the request body. This will be useful if
+      * application does not wish to load the data into the buffer at
       * once.
-      * 
+      *
       * Default is empty.
       */
     struct pj_http_reqdata
@@ -270,7 +270,7 @@ typedef struct pj_http_url
 typedef struct pj_http_req_callback
 {
     /**
-     * This callback is called when a complete HTTP response header 
+     * This callback is called when a complete HTTP response header
      * is received.
      *
      * @param http_req  The http request.
@@ -281,7 +281,7 @@ typedef struct pj_http_req_callback
     /**
      * This callback is called when the HTTP request is ready to send
      * its request body. Application may wish to use this callback if
-     * it wishes to load the data at a later time or if it does not 
+     * it wishes to load the data at a later time or if it does not
      * wish to load the whole data into memory. In order for this
      * callback to be called, application MUST set http_req_param.total_size
      * to a value greater than 0.
@@ -289,7 +289,7 @@ typedef struct pj_http_req_callback
      * @param http_req  The http request.
      * @param data      Pointer to the data that will be sent. Application
      *                  must set the pointer to the current data chunk/segment
-     *                  to be sent. Data must remain valid until the next 
+     *                  to be sent. Data must remain valid until the next
      *                  on_send_data() callback or for the last segment,
      *                  until it is sent.
      * @param size      Pointer to the data size that will be sent.
@@ -301,11 +301,11 @@ typedef struct pj_http_req_callback
      * This callback is called when a segment of response body data
      * arrives. If this callback is specified (i.e. not NULL), the
      * on_complete() callback will be called with zero-length data
-     * (within the response parameter), hence the application must 
-     * store and manage its own data buffer, otherwise the 
-     * on_complete() callback will be called with the response 
-     * parameter containing the complete data. 
-     * 
+     * (within the response parameter), hence the application must
+     * store and manage its own data buffer, otherwise the
+     * on_complete() callback will be called with the response
+     * parameter containing the complete data.
+     *
      * @param http_req  The http request.
      * @param data      The buffer containing the data.
      * @param size      The length of data in the buffer.
@@ -322,18 +322,18 @@ typedef struct pj_http_req_callback
      * as long as pj_http_req is not destroyed and application does
      * not start a new request.
      *
-     * If no longer required, application may choose to destroy 
-     * pj_http_req immediately by calling #pj_http_req_destroy() inside 
+     * If no longer required, application may choose to destroy
+     * pj_http_req immediately by calling #pj_http_req_destroy() inside
      * the callback.
      *
      * @param http_req  The http request.
      * @param status    The status of the request operation. PJ_SUCCESS
      *                  if the operation completed successfully
-     *                  (connection-wise). To check the server's 
-     *                  status-code response to the HTTP request, 
+     *                  (connection-wise). To check the server's
+     *                  status-code response to the HTTP request,
      *                  application should check resp->status_code instead.
-     * @param resp      The response of the corresponding request. If 
-     *                  the status argument is non-PJ_SUCCESS, this 
+     * @param resp      The response of the corresponding request. If
+     *                  the status argument is non-PJ_SUCCESS, this
      *                  argument will be set to NULL.
      */
     void (*on_complete)(pj_http_req *http_req,
@@ -351,7 +351,7 @@ typedef struct pj_http_req_callback
 PJ_DECL(void) pj_http_req_param_default(pj_http_req_param *param);
 
 /**
- * Add a header element/field. Application MUST make sure that 
+ * Add a header element/field. Application MUST make sure that
  * name and val pointer remains valid until the HTTP request is sent.
  *
  * @param headers       The headers.
@@ -361,13 +361,13 @@ PJ_DECL(void) pj_http_req_param_default(pj_http_req_param *param);
  * @return              PJ_SUCCESS if the operation has been successful,
  *                      or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_http_headers_add_elmt(pj_http_headers *headers, 
-                                              pj_str_t *name, 
+PJ_DECL(pj_status_t) pj_http_headers_add_elmt(pj_http_headers *headers,
+                                              pj_str_t *name,
                                               pj_str_t *val);
 
-/** 
+/**
  * The same as #pj_http_headers_add_elmt() with char * as
- * its parameters. Application MUST make sure that name and val pointer 
+ * its parameters. Application MUST make sure that name and val pointer
  * remains valid until the HTTP request is sent.
  *
  * @param headers       The headers.
@@ -377,7 +377,7 @@ PJ_DECL(pj_status_t) pj_http_headers_add_elmt(pj_http_headers *headers,
  * @return              PJ_SUCCESS if the operation has been successful,
  *                      or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_http_headers_add_elmt2(pj_http_headers *headers, 
+PJ_DECL(pj_status_t) pj_http_headers_add_elmt2(pj_http_headers *headers,
                                                char *name, char *val);
 
 /**
@@ -389,7 +389,7 @@ PJ_DECL(pj_status_t) pj_http_headers_add_elmt2(pj_http_headers *headers,
  * @return              PJ_SUCCESS if the operation has been successful,
  *                      or the appropriate error code on failure.
  */
-PJ_DECL(pj_status_t) pj_http_req_parse_url(const pj_str_t *url, 
+PJ_DECL(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
                                            pj_http_url *hurl);
 
 /**
@@ -400,7 +400,7 @@ PJ_DECL(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
  * @param url           HTTP URL request.
  * @param timer         The timer to use.
  * @param ioqueue       The ioqueue to use.
- * @param param         Optional parameters. When this parameter is not 
+ * @param param         Optional parameters. When this parameter is not
  *                      specifed (NULL), the default values will be used.
  * @param hcb           Pointer to structure containing application
  *                      callbacks.
@@ -418,8 +418,8 @@ PJ_DECL(pj_status_t) pj_http_req_create(pj_pool_t *pool,
                                         pj_http_req **http_req);
 
 /**
- * Set the timeout of the HTTP request operation. Note that if the 
- * HTTP request is currently running, the timeout will only affect 
+ * Set the timeout of the HTTP request operation. Note that if the
+ * HTTP request is currently running, the timeout will only affect
  * subsequent request operations.
  *
  * @param http_req  The http request.
@@ -440,11 +440,11 @@ PJ_DECL(void) pj_http_req_set_timeout(pj_http_req *http_req,
 PJ_DECL(pj_status_t) pj_http_req_start(pj_http_req *http_req);
 
 /**
- * Cancel the asynchronous HTTP request. 
+ * Cancel the asynchronous HTTP request.
  *
  * @param http_req  The http request.
- * @param notify    If non-zero, the on_complete() callback will be 
- *                  called with status PJ_ECANCELLED to notify that 
+ * @param notify    If non-zero, the on_complete() callback will be
+ *                  called with status PJ_ECANCELLED to notify that
  *                  the query has been cancelled.
  *
  * @return

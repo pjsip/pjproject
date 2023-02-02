@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/errno.h>
 #include <pjlib-util/types.h>
@@ -23,16 +23,16 @@
 
 
 
-/* PJLIB_UTIL's own error codes/messages 
+/* PJLIB_UTIL's own error codes/messages
  * MUST KEEP THIS ARRAY SORTED!!
  * Message must be limited to 64 chars!
  */
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
-static const struct 
+static const struct
 {
     int code;
     const char *msg;
-} err_str[] = 
+} err_str[] =
 {
     /* STUN errors */
     PJ_BUILD_ERR( PJLIB_UTIL_ESTUNRESOLVE,      "Unable to resolve STUN server" ),
@@ -115,14 +115,14 @@ static const struct
 /*
  * pjlib_util_strerror()
  */
-pj_str_t pjlib_util_strerror(pj_status_t statcode, 
+pj_str_t pjlib_util_strerror(pj_status_t statcode,
                              char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
-    if (statcode >= PJLIB_UTIL_ERRNO_START && 
+    if (statcode >= PJLIB_UTIL_ERRNO_START &&
         statcode < PJLIB_UTIL_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
     {
         /* Find the error in the table.
@@ -149,7 +149,7 @@ pj_str_t pjlib_util_strerror(pj_status_t statcode,
 
         if (PJ_ARRAY_SIZE(err_str) && err_str[first].code == statcode) {
             pj_str_t msg;
-            
+
             msg.ptr = (char*)err_str[first].msg;
             msg.slen = pj_ansi_strlen(err_str[first].msg);
 
@@ -157,7 +157,7 @@ pj_str_t pjlib_util_strerror(pj_status_t statcode,
             pj_strncpy_with_null(&errstr, &msg, bufsize);
             return errstr;
 
-        } 
+        }
     }
 
 #endif  /* PJ_HAS_ERROR_STRING */
@@ -165,7 +165,7 @@ pj_str_t pjlib_util_strerror(pj_status_t statcode,
 
     /* Error not found. */
     errstr.ptr = buf;
-    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+    errstr.slen = pj_ansi_snprintf(buf, bufsize,
                                    "Unknown pjlib-util error %d",
                                    statcode);
     if (errstr.slen < 1 || errstr.slen >= (pj_ssize_t)bufsize)
@@ -177,9 +177,9 @@ pj_str_t pjlib_util_strerror(pj_status_t statcode,
 PJ_DEF(pj_status_t) pjlib_util_init(void)
 {
     pj_status_t status;
-    
-    status = pj_register_strerror(PJLIB_UTIL_ERRNO_START, 
-                                  PJ_ERRNO_SPACE_SIZE, 
+
+    status = pj_register_strerror(PJLIB_UTIL_ERRNO_START,
+                                  PJ_ERRNO_SPACE_SIZE,
                                   &pjlib_util_strerror);
     pj_assert(status == PJ_SUCCESS);
 

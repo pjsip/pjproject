@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "auth.h"
 #include <pjlib.h>
@@ -31,7 +31,7 @@ static struct cred_t
 {
     char    username[MAX_USERNAME];
     char    passwd[MAX_PASSWORD];
-} g_cred[] = 
+} g_cred[] =
 {
     { "100", "100" },
     { "700", "700" },
@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) pj_turn_get_auth(void *user_data,
  * This function is also used to check whether the username is valid.
  */
 PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
-                                         void *user_data, 
+                                         void *user_data,
                                          const pj_str_t *realm,
                                          const pj_str_t *username,
                                          pj_pool_t *pool,
@@ -99,7 +99,7 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
     PJ_UNUSED_ARG(pool);
 
     if (pj_stricmp2(realm, g_realm)) {
-        LOG((THIS_FILE, "auth error: invalid realm '%.*s'", 
+        LOG((THIS_FILE, "auth error: invalid realm '%.*s'",
                         (int)realm->slen, realm->ptr));
         return PJ_EINVAL;
     }
@@ -112,7 +112,7 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
         }
     }
 
-    LOG((THIS_FILE, "auth error: user '%.*s' not found", 
+    LOG((THIS_FILE, "auth error: user '%.*s' not found",
                     (int)username->slen, username->ptr));
     return PJ_ENOTFOUND;
 }
@@ -134,7 +134,7 @@ PJ_DEF(pj_bool_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
     PJ_UNUSED_ARG(username);
 
     if (pj_stricmp2(nonce, THE_NONCE)) {
-        LOG((THIS_FILE, "auth error: invalid nonce '%.*s'", 
+        LOG((THIS_FILE, "auth error: invalid nonce '%.*s'",
                         (int)nonce->slen, nonce->ptr));
         return PJ_FALSE;
     }

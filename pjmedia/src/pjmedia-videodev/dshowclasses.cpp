@@ -55,7 +55,7 @@ public:
     HRESULT Push(void *buf, long size);
 
     virtual HRESULT CheckMediaType(const CMediaType *pmt);
-    virtual HRESULT DecideBufferSize(IMemAllocator *pAlloc, 
+    virtual HRESULT DecideBufferSize(IMemAllocator *pAlloc,
                                      ALLOCATOR_PROPERTIES *ppropInputRequest);
 
     CMediaType mediaType;
@@ -90,7 +90,7 @@ HRESULT OutputPin::CheckMediaType(const CMediaType *pmt)
     return S_OK;
 }
 
-HRESULT OutputPin::DecideBufferSize(IMemAllocator *pAlloc, 
+HRESULT OutputPin::DecideBufferSize(IMemAllocator *pAlloc,
                                     ALLOCATOR_PROPERTIES *ppropInputRequest)
 {
     ALLOCATOR_PROPERTIES properties;
@@ -158,7 +158,7 @@ on_error:
     return hr;
 }
 
-SourceFilter::SourceFilter(): CBaseFilter("SourceFilter", NULL, &lock, 
+SourceFilter::SourceFilter(): CBaseFilter("SourceFilter", NULL, &lock,
                                           CLSID_SourceFilter)
 {
     HRESULT hr;

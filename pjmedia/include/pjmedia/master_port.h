@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_MASTER_PORT_H__
 #define __PJMEDIA_MASTER_PORT_H__
@@ -34,7 +34,7 @@
  *
  * A master port has two media ports connected to it, and by convention
  * thay are called downstream and upstream ports. The media stream flowing to
- * the downstream port is called encoding or send direction, and media stream 
+ * the downstream port is called encoding or send direction, and media stream
  * flowing to the upstream port is called decoding or receive direction
  * (imagine the downstream as stream to remote endpoint, and upstream as
  * local media port; media flowing to remote endpoint (downstream) will need
@@ -51,7 +51,7 @@
  *    from upstream port and give it to the downstream port).
  *
  * Because master port enables media stream to flow automatically, it is
- * said that the master port supplies @ref PJMEDIA_PORT_CLOCK to the 
+ * said that the master port supplies @ref PJMEDIA_PORT_CLOCK to the
  * media ports interconnection.
  *
  */
@@ -112,7 +112,7 @@ PJ_DECL(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m);
  * @param m                 The master port.
  * @param wait              If non-zero, then the function will block until
  *                          a clock tick elapsed and callback has been called.
- * @param ts                Optional argument to receive the current 
+ * @param ts                Optional argument to receive the current
  *                          timestamp.
  *
  * @return                  Non-zero if clock tick has elapsed, or FALSE if
@@ -173,7 +173,7 @@ PJ_DECL(pjmedia_port*) pjmedia_master_port_get_dport(pjmedia_master_port*m);
 
 
 /**
- * Destroy the master port, and optionally destroy the upstream and 
+ * Destroy the master port, and optionally destroy the upstream and
  * downstream ports.
  *
  * @param m             The master port.

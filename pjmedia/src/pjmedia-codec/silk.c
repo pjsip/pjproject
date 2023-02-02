@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
  * Contributed by Regis Montoya (aka r3gis - www.r3gis.fr)
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia-codec/silk.h>
@@ -301,7 +301,7 @@ on_error:
  * clock rate.
  */
 PJ_DEF(pj_status_t) pjmedia_codec_silk_set_config(
-                                    unsigned clock_rate, 
+                                    unsigned clock_rate,
                                     const pjmedia_codec_silk_setting *opt)
 {
     unsigned i;
@@ -424,9 +424,9 @@ static pj_status_t silk_default_attr( pjmedia_codec_factory *factory,
 {
     silk_param *sp;
     int i;
-    
+
     PJ_ASSERT_RETURN(factory==&silk_factory.base, PJ_EINVAL);
-    
+
     i = silk_get_mode_from_clock_rate(id->clock_rate);
     pj_assert(i >= PARAM_NB && i <= PARAM_SWB);
 
@@ -635,7 +635,7 @@ static pj_status_t silk_codec_open(pjmedia_codec *codec,
     silk->enc_ctl.useDTX                = attr->setting.vad;
     silk->enc_ctl.complexity            = sp->complexity;
     silk->enc_ctl.bitRate               = enc_bitrate;
-    
+
 
     /* Allocate and initialize decoder */
     err = SKP_Silk_SDK_Get_Decoder_Size(&st_size);
@@ -662,7 +662,7 @@ static pj_status_t silk_codec_open(pjmedia_codec *codec,
     /* Inform the stream to prepare a larger buffer since we cannot parse
      * SILK packets and split it into individual frames.
      */
-    attr->info.max_rx_frame_size = attr->info.max_bps * 
+    attr->info.max_rx_frame_size = attr->info.max_bps *
                                    attr->info.frm_ptime / 8 / 1000;
     if ((attr->info.max_bps * attr->info.frm_ptime) % 8000 != 0)
     {
@@ -809,7 +809,7 @@ static pj_status_t silk_codec_decode(pjmedia_codec *codec,
          */
         toc.framesInPacket = (input->bit_info & 0xF0) >> 4;
     }
-    
+
     if (toc.framesInPacket == 0) {
         output->size = 0;
     } else if (silk->pkt_info != pkt_info || input->bit_info == 0) {

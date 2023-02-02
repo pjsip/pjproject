@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -136,7 +136,7 @@ static int test(void)
 
     /*
      * Basic TRY/CATCH
-     */ 
+     */
     PJ_TRY {
         rc = throw_id_1();
 
@@ -146,7 +146,7 @@ static int test(void)
     PJ_CATCH_ANY {
         int id = PJ_GET_EXCEPTION();
         if (id != ID_1) {
-            PJ_LOG(3,("", "...error: got unexpected exception %d (%s)", 
+            PJ_LOG(3,("", "...error: got unexpected exception %d (%s)",
                       id, pj_exception_id_name(id)));
             if (!rc) rc = -20;
         }
@@ -279,7 +279,7 @@ int exception_test(void)
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_exception_test;
 #endif  /* INCLUDE_EXCEPTION_TEST */

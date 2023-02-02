@@ -59,7 +59,7 @@ signals:
     void signalCallReleased();
     void signalInitVideoWindow();
     void signalShowStatus(const QString&);
-    
+
 public slots:
     void preview();
     void call();

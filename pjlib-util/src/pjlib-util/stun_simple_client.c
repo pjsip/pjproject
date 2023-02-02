@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,11 +14,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/stun_simple.h>
 #include <pjlib-util/errno.h>
-#include <pj/compat/socket.h> 
+#include <pj/compat/socket.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -101,7 +101,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
     TRACE_((THIS_FILE, "  Memory allocated."));
 
     /* Create the outgoing BIND REQUEST message template */
-    status = pjstun_create_bind_req( pool, &out_msg, &out_msg_len, 
+    status = pjstun_create_bind_req( pool, &out_msg, &out_msg_len,
                                       pj_rand(), pj_rand());
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -197,8 +197,8 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
         pj_time_val_normalize(&next_tx);
 
         for (pj_gettickcount(&now), select_rc=1;
-             status==PJ_SUCCESS && select_rc>=1 && wait_resp>0 
-               && PJ_TIME_VAL_LT(now, next_tx); 
+             status==PJ_SUCCESS && select_rc>=1 && wait_resp>0
+               && PJ_TIME_VAL_LT(now, next_tx);
              pj_gettickcount(&now))
         {
             pj_time_val timeout;
@@ -228,7 +228,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
                     continue;
 
                 len = sizeof(recv_buf);
-                status = pj_sock_recvfrom( sock[i], recv_buf, 
+                status = pj_sock_recvfrom( sock[i], recv_buf,
                                            &len, 0,
                                            (pj_sockaddr_t*)&addr,
                                            &addrlen);
@@ -238,7 +238,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
                                  "recvfrom() error ignored"));
 
                     /* Ignore non-PJ_SUCCESS status.
-                     * It possible that other SIP entity is currently 
+                     * It possible that other SIP entity is currently
                      * sending SIP request to us, and because SIP message
                      * is larger than STUN, we could get EMSGSIZE when
                      * we call recvfrom().
@@ -289,10 +289,10 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
                     continue;
                 }
 
-                attr = (pjstun_mapped_addr_attr*) 
+                attr = (pjstun_mapped_addr_attr*)
                        pjstun_msg_find_attr(&msg, PJSTUN_ATTR_MAPPED_ADDR);
                 if (!attr) {
-                    attr = (pjstun_mapped_addr_attr*) 
+                    attr = (pjstun_mapped_addr_attr*)
                            pjstun_msg_find_attr(&msg, PJSTUN_ATTR_XOR_MAPPED_ADDR);
                     if (!attr || attr->family != 1) {
                         status = PJLIB_UTIL_ESTUNNOMAP;

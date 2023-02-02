@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_SESSION_H__
 #define __PJMEDIA_SESSION_H__
@@ -29,7 +29,7 @@
 #include <pjmedia/stream.h>
 #include <pjmedia/sdp.h>
 
-PJ_BEGIN_DECL 
+PJ_BEGIN_DECL
 
 /**
  * @defgroup PJMEDIA_SESSION Media Sessions
@@ -38,8 +38,8 @@ PJ_BEGIN_DECL
  *
  * A media session represents multimedia communication between two
  * parties. A media session represents the multimedia session that
- * is described by SDP session descriptor. A media session consists 
- * of one or more media streams (pjmedia_stream), where each stream 
+ * is described by SDP session descriptor. A media session consists
+ * of one or more media streams (pjmedia_stream), where each stream
  * represents one media line (m= line) in SDP.
  *
  * This module provides functions to create and manage multimedia
@@ -66,8 +66,8 @@ struct pjmedia_session_info
 };
 
 
-/** 
- * Opaque declaration of media session. 
+/**
+ * Opaque declaration of media session.
  */
 typedef struct pjmedia_session pjmedia_session;
 
@@ -104,9 +104,9 @@ pjmedia_session_info_from_sdp( pj_pool_t *pool,
 
 /**
  * This function will initialize the stream info based on information
- * in both SDP session descriptors for the specified stream index. 
- * The remaining information will be taken from default codec parameters. 
- * If socket info array is specified, the socket will be copied to the 
+ * in both SDP session descriptors for the specified stream index.
+ * The remaining information will be taken from default codec parameters.
+ * If socket info array is specified, the socket will be copied to the
  * session info as well.
  *
  * @param si            Stream info structure to be initialized.
@@ -128,28 +128,28 @@ pjmedia_stream_info_from_sdp( pjmedia_stream_info *si,
 
 /**
  * Create media session based on the local and remote SDP. After the session
- * has been created, application normally would want to get the media port 
- * interface of each streams, by calling #pjmedia_session_get_port(). The 
+ * has been created, application normally would want to get the media port
+ * interface of each streams, by calling #pjmedia_session_get_port(). The
  * media port interface exports put_frame() and get_frame() function, used
  * to transmit and receive media frames from the stream.
  *
- * Without application calling put_frame() and get_frame(), there will be 
+ * Without application calling put_frame() and get_frame(), there will be
  * no media frames transmitted or received by the session.
- * 
+ *
  * @param endpt         The PJMEDIA endpoint instance.
  * @param si            Session info containing stream count and array of
  *                      stream info. The stream count indicates how many
  *                      streams to be created in the session.
- * @param transports    Array of media stream transports, with 
+ * @param transports    Array of media stream transports, with
  *                      sufficient number of elements (one for each stream).
  * @param user_data     Arbitrary user data to be kept in the session.
  * @param p_session     Pointer to receive the media session.
  *
- * @return              PJ_SUCCESS if media session can be created 
+ * @return              PJ_SUCCESS if media session can be created
  *                      successfully.
  */
-PJ_DECL(pj_status_t) 
-pjmedia_session_create( pjmedia_endpt *endpt, 
+PJ_DECL(pj_status_t)
+pjmedia_session_create( pjmedia_endpt *endpt,
                         const pjmedia_session_info *si,
                         pjmedia_transport *transports[],
                         void *user_data,
@@ -237,7 +237,7 @@ PJ_DECL(pj_status_t) pjmedia_session_resume_stream(pjmedia_session *session,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_session_send_rtcp_sdes( const pjmedia_session *session );
 
 /**
@@ -247,7 +247,7 @@ pjmedia_session_send_rtcp_sdes( const pjmedia_session *session );
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_session_send_rtcp_bye( const pjmedia_session *session );
 
 /**
@@ -261,15 +261,15 @@ pjmedia_session_send_rtcp_bye( const pjmedia_session *session );
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_session_enum_streams( const pjmedia_session *session,
-                              unsigned *count, 
+                              unsigned *count,
                               pjmedia_stream_info strm_info[]);
 
 
 /**
  * Get the media port interface of the specified stream. The media port
- * interface declares put_frame() and get_frame() function, which is the 
+ * interface declares put_frame() and get_frame() function, which is the
  * only  way for application to transmit and receive media frames from the
  * stream.
  *
@@ -316,7 +316,7 @@ PJ_DECL(pj_status_t) pjmedia_session_reset_stream_stat(pjmedia_session *session,
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 /**
  * Get extended session statistics. The extended statistic shows reports
- * from RTCP XR, such as per interval statistics summary (packet count, 
+ * from RTCP XR, such as per interval statistics summary (packet count,
  * packet lost, jitter, etc), VoIP metrics (delay, quality, etc)
  *
  * @param session       The media session.
@@ -410,9 +410,9 @@ PJ_DECL(pj_status_t) pjmedia_session_get_dtmf( pjmedia_session *session,
 PJ_DECL(pj_status_t)
 pjmedia_session_set_dtmf_callback(pjmedia_session *session,
                                   unsigned index,
-                                  void (*cb)(pjmedia_stream*, 
-                                             void *user_data, 
-                                             int digit), 
+                                  void (*cb)(pjmedia_stream*,
+                                             void *user_data,
+                                             int digit),
                                   void *user_data);
 
 /**

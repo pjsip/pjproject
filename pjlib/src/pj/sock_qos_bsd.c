@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/sock_qos.h>
 #include <pj/assert.h>
@@ -22,7 +22,7 @@
 
 /* This is the implementation of QoS with BSD socket's setsockopt(),
  * using IP_TOS/IPV6_TCLASS and SO_PRIORITY
- */ 
+ */
 #if !defined(PJ_QOS_IMPLEMENTATION) || PJ_QOS_IMPLEMENTATION==PJ_QOS_BSD
 
 PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
@@ -53,7 +53,7 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
 
         if (sa.addr.sa_family == pj_AF_INET()) {
             /* In IPv4, the DS field goes in the TOS field */
-            status = pj_sock_setsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
+            status = pj_sock_setsockopt(sock, pj_SOL_IP(), pj_IP_TOS(),
                                         &val, sizeof(val));
         } else if (sa.addr.sa_family == pj_AF_INET6()) {
             /* In IPv6, the DS field goes in the Traffic Class field */
@@ -114,7 +114,7 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
     if (status == PJ_SUCCESS) {
         optlen = sizeof(val);
         if (sa.addr.sa_family == pj_AF_INET()) {
-            status = pj_sock_getsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
+            status = pj_sock_getsockopt(sock, pj_SOL_IP(), pj_IP_TOS(),
                                         &val, &optlen);
         } else if (sa.addr.sa_family == pj_AF_INET6()) {
             status = pj_sock_getsockopt(sock, pj_SOL_IPV6(),

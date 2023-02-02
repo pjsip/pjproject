@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/errno.h>
 #include <pj/string.h>
@@ -32,18 +32,18 @@
 #   endif
 #endif
 
-/* PJMEDIA-Audiodev's own error codes/messages 
+/* PJMEDIA-Audiodev's own error codes/messages
  * MUST KEEP THIS ARRAY SORTED!!
  * Message must be limited to 64 chars!
  */
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
-static const struct 
+static const struct
 {
     int code;
     const char *msg;
-} err_str[] = 
+} err_str[] =
 {
     PJ_BUILD_ERR( PJMEDIA_EAUD_ERR,         "Unspecified audio device error" ),
     PJ_BUILD_ERR( PJMEDIA_EAUD_SYSERR,      "Unknown error from audio driver" ),
@@ -67,7 +67,7 @@ static const struct
 /*
  * pjmedia_audiodev_strerror()
  */
-PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode, 
+PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
                                            char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
@@ -99,7 +99,7 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
         //int pa_err = statcode - PJMEDIA_ERRNO_FROM_PORTAUDIO(0);
         int pa_err = PJMEDIA_AUDIODEV_PORTAUDIO_ERRNO_START - statcode;
         pj_str_t msg;
-        
+
         msg.ptr = (char*)Pa_GetErrorText(pa_err);
         msg.slen = pj_ansi_strlen(msg.ptr);
 
@@ -107,7 +107,7 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
         pj_strncpy_with_null(&errstr, &msg, bufsize);
         return errstr;
 
-    } else 
+    } else
 #endif  /* PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO */
 
     /* See if the error comes from WMME */
@@ -146,7 +146,7 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
             errstr.slen = pj_ansi_strlen(buf);
             return errstr;
         } else {
-            pj_ansi_snprintf(buf, bufsize, "MMSYSTEM native error %d", 
+            pj_ansi_snprintf(buf, bufsize, "MMSYSTEM native error %d",
                              native_err);
             return pj_str(buf);
         }
@@ -156,7 +156,7 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
 
 /* See if the error comes from BDIMAD */
 #if PJMEDIA_AUDIO_DEV_HAS_BDIMAD
-        
+
         if (statcode >= PJMEDIA_AUDIODEV_BDIMAD_ERROR_START &&
             statcode <  PJMEDIA_AUDIODEV_BDIMAD_ERROR_END)
         {
@@ -169,7 +169,7 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
 #endif
 
     /* Audiodev error */
-    if (statcode >= PJMEDIA_AUDIODEV_ERRNO_START && 
+    if (statcode >= PJMEDIA_AUDIODEV_ERRNO_START &&
         statcode < PJMEDIA_AUDIODEV_ERRNO_END)
     {
         /* Find the error in the table.
@@ -196,7 +196,7 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
 
         if (PJ_ARRAY_SIZE(err_str) && err_str[first].code == statcode) {
             pj_str_t msg;
-            
+
             msg.ptr = (char*)err_str[first].msg;
             msg.slen = pj_ansi_strlen(err_str[first].msg);
 
@@ -204,13 +204,13 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
             pj_strncpy_with_null(&errstr, &msg, bufsize);
             return errstr;
 
-        } 
-    } 
+        }
+    }
 #endif  /* PJ_HAS_ERROR_STRING */
 
     /* Error not found. */
     errstr.ptr = buf;
-    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+    errstr.slen = pj_ansi_snprintf(buf, bufsize,
                                    "Unknown pjmedia-audiodev error %d",
                                    statcode);
     if (errstr.slen < 1 || errstr.slen >= (pj_ssize_t)bufsize)

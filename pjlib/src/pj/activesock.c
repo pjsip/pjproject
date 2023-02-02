@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/activesock.h>
 #include <pj/compat/socket.h>
@@ -92,7 +92,7 @@ struct pj_activesock_t
     pj_sock_t            sock;
     CFReadStreamRef      readStream;
 #endif
-    
+
     unsigned             err_counter;
     pj_status_t          last_err;
 
@@ -106,18 +106,18 @@ struct pj_activesock_t
 };
 
 
-static void ioqueue_on_read_complete(pj_ioqueue_key_t *key, 
-                                     pj_ioqueue_op_key_t *op_key, 
+static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
+                                     pj_ioqueue_op_key_t *op_key,
                                      pj_ssize_t bytes_read);
-static void ioqueue_on_write_complete(pj_ioqueue_key_t *key, 
+static void ioqueue_on_write_complete(pj_ioqueue_key_t *key,
                                       pj_ioqueue_op_key_t *op_key,
                                       pj_ssize_t bytes_sent);
 #if PJ_HAS_TCP
-static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key, 
+static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
                                        pj_ioqueue_op_key_t *op_key,
-                                       pj_sock_t sock, 
+                                       pj_sock_t sock,
                                        pj_status_t status);
-static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key, 
+static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key,
                                         pj_status_t status);
 #endif
 
@@ -159,7 +159,7 @@ static void activesock_create_iphone_os_stream(pj_activesock_t *asock)
                       "usage. Usage of THIS particular TCP transport in "
                       "background mode will not be supported."));
 
-            
+
             activesock_destroy_iphone_os_stream(asock);
         }
     }
@@ -225,7 +225,7 @@ PJ_DEF(pj_status_t) pj_activesock_create( pj_pool_t *pool,
         pj_activesock_close(asock);
         return status;
     }
-    
+
     if (asock->whole_data) {
         /* Must disable concurrency otherwise there is a race condition */
         pj_ioqueue_set_concurrency(asock->key, 0);
@@ -262,7 +262,7 @@ PJ_DEF(pj_status_t) pj_activesock_create_udp( pj_pool_t *pool,
         addr = &default_addr;
     }
 
-    status = pj_sock_socket(addr->addr.sa_family, pj_SOCK_DGRAM(), 0, 
+    status = pj_sock_socket(addr->addr.sa_family, pj_SOCK_DGRAM(), 0,
                             &sock_fd);
     if (status != PJ_SUCCESS) {
         return status;
@@ -316,7 +316,7 @@ PJ_DEF(pj_status_t) pj_activesock_close(pj_activesock_t *asock)
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
         activesock_destroy_iphone_os_stream(asock);
-#endif  
+#endif
     }
     return PJ_SUCCESS;
 }
@@ -348,7 +348,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_read(pj_activesock_t *asock,
 
     PJ_ASSERT_RETURN(asock && pool && buff_size, PJ_EINVAL);
 
-    readbuf = (void**) pj_pool_calloc(pool, asock->async_count, 
+    readbuf = (void**) pj_pool_calloc(pool, asock->async_count,
                                       sizeof(void*));
 
     for (i=0; i<asock->async_count; ++i) {
@@ -373,7 +373,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_read2( pj_activesock_t *asock,
     PJ_ASSERT_RETURN(asock->read_op == NULL, PJ_EINVALIDOP);
 
     asock->read_op = (struct read_op*)
-                     pj_pool_calloc(pool, asock->async_count, 
+                     pj_pool_calloc(pool, asock->async_count,
                                     sizeof(struct read_op));
     asock->read_type = TYPE_RECV;
     asock->read_flags = flags;
@@ -407,14 +407,14 @@ PJ_DEF(pj_status_t) pj_activesock_start_recvfrom(pj_activesock_t *asock,
 
     PJ_ASSERT_RETURN(asock && pool && buff_size, PJ_EINVAL);
 
-    readbuf = (void**) pj_pool_calloc(pool, asock->async_count, 
+    readbuf = (void**) pj_pool_calloc(pool, asock->async_count,
                                       sizeof(void*));
 
     for (i=0; i<asock->async_count; ++i) {
         readbuf[i] = pj_pool_alloc(pool, buff_size);
     }
 
-    return pj_activesock_start_recvfrom2(asock, pool, buff_size, 
+    return pj_activesock_start_recvfrom2(asock, pool, buff_size,
                                          readbuf, flags);
 }
 
@@ -432,7 +432,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_recvfrom2( pj_activesock_t *asock,
     PJ_ASSERT_RETURN(asock->read_type == TYPE_NONE, PJ_EINVALIDOP);
 
     asock->read_op = (struct read_op*)
-                     pj_pool_calloc(pool, asock->async_count, 
+                     pj_pool_calloc(pool, asock->async_count,
                                     sizeof(struct read_op));
     asock->read_type = TYPE_RECV_FROM;
     asock->read_flags = flags;
@@ -446,7 +446,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_recvfrom2( pj_activesock_t *asock,
         r->src_addr_len = sizeof(r->src_addr);
 
         status = pj_ioqueue_recvfrom(asock->key, &r->op_key, r->pkt,
-                                     &size_to_read, 
+                                     &size_to_read,
                                      PJ_IOQUEUE_ALWAYS_ASYNC | flags,
                                      &r->src_addr, &r->src_addr_len);
         PJ_ASSERT_RETURN(status != PJ_SUCCESS, PJ_EBUG);
@@ -459,8 +459,8 @@ PJ_DEF(pj_status_t) pj_activesock_start_recvfrom2( pj_activesock_t *asock,
 }
 
 
-static void ioqueue_on_read_complete(pj_ioqueue_key_t *key, 
-                                     pj_ioqueue_op_key_t *op_key, 
+static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
+                                     pj_ioqueue_op_key_t *op_key,
                                      pj_ssize_t bytes_read)
 {
     pj_activesock_t *asock;
@@ -484,9 +484,9 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
             pj_size_t remainder;
             pj_bool_t ret;
 
-            /* Append this new data to existing data. If socket is stream 
-             * oriented, user might have left some data in the buffer. 
-             * Otherwise if socket is datagram there will be nothing in 
+            /* Append this new data to existing data. If socket is stream
+             * oriented, user might have left some data in the buffer.
+             * Otherwise if socket is datagram there will be nothing in
              * existing packet hence the packet will contain only the new
              * packet.
              */
@@ -502,11 +502,11 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
             if (asock->read_type == TYPE_RECV && asock->cb.on_data_read) {
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 PJ_SUCCESS, &remainder);
-            } else if (asock->read_type == TYPE_RECV_FROM && 
-                       asock->cb.on_data_recvfrom) 
+            } else if (asock->read_type == TYPE_RECV_FROM &&
+                       asock->cb.on_data_recvfrom)
             {
                 ret = (*asock->cb.on_data_recvfrom)(asock, r->pkt, r->size,
-                                                    &r->src_addr, 
+                                                    &r->src_addr,
                                                     r->src_addr_len,
                                                     PJ_SUCCESS);
             }
@@ -524,15 +524,15 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 
         } else if (bytes_read <= 0 &&
                    -bytes_read != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
-                   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) && 
+                   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) &&
                    (asock->stream_oriented ||
-                    -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET))) 
+                    -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)))
         {
             pj_size_t remainder;
             pj_bool_t ret;
 
             if (bytes_read == 0) {
-                /* For stream/connection oriented socket, this means the 
+                /* For stream/connection oriented socket, this means the
                  * connection has been closed. For datagram sockets, it means
                  * we've received datagram with zero length.
                  */
@@ -556,14 +556,14 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 
             /* Notify callback */
             if (asock->read_type == TYPE_RECV && asock->cb.on_data_read) {
-                /* For connection oriented socket, we still need to report 
-                 * the remainder data (if any) to the user to let user do 
+                /* For connection oriented socket, we still need to report
+                 * the remainder data (if any) to the user to let user do
                  * processing with the remainder data before it closes the
                  * connection.
                  * If there is no remainder data, set the packet to NULL.
                  */
 
-                /* Shouldn't set the packet to NULL, as there may be active 
+                /* Shouldn't set the packet to NULL, as there may be active
                  * socket user, such as SSL socket, that needs to have access
                  * to the read buffer packet.
                  */
@@ -572,15 +572,15 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 status, &remainder);
 
-            } else if (asock->read_type == TYPE_RECV_FROM && 
-                       asock->cb.on_data_recvfrom) 
+            } else if (asock->read_type == TYPE_RECV_FROM &&
+                       asock->cb.on_data_recvfrom)
             {
-                /* This would always be datagram oriented hence there's 
+                /* This would always be datagram oriented hence there's
                  * nothing in the packet. We can't be sure if there will be
                  * anything useful in the source_addr, so just put NULL
                  * there too.
                  */
-                /* In some scenarios, status may be PJ_SUCCESS. The upper 
+                /* In some scenarios, status may be PJ_SUCCESS. The upper
                  * layer application may not expect the callback to be called
                  * with successful status and NULL data, so lets not call the
                  * callback if the status is PJ_SUCCESS.
@@ -618,7 +618,7 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
             flags |= PJ_IOQUEUE_ALWAYS_ASYNC;
 
         if (asock->read_type == TYPE_RECV) {
-            status = pj_ioqueue_recv(key, op_key, r->pkt + r->size, 
+            status = pj_ioqueue_recv(key, op_key, r->pkt + r->size,
                                      &bytes_read, flags);
         } else {
             r->src_addr_len = sizeof(r->src_addr);
@@ -641,7 +641,7 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 }
 
 
-static pj_status_t send_remaining(pj_activesock_t *asock, 
+static pj_status_t send_remaining(pj_activesock_t *asock,
                                   pj_ioqueue_op_key_t *send_key)
 {
     struct send_data *sd = (struct send_data*)send_key->activesock_data;
@@ -651,7 +651,7 @@ static pj_status_t send_remaining(pj_activesock_t *asock,
         pj_ssize_t size;
 
         size = sd->len - sd->sent;
-        status = pj_ioqueue_send(asock->key, send_key, 
+        status = pj_ioqueue_send(asock->key, send_key,
                                  sd->data+sd->sent, &size, sd->flags);
         if (status != PJ_SUCCESS) {
             /* Pending or error */
@@ -728,7 +728,7 @@ PJ_DEF(pj_status_t) pj_activesock_sendto( pj_activesock_t *asock,
                                           const pj_sockaddr_t *addr,
                                           int addr_len)
 {
-    PJ_ASSERT_RETURN(asock && send_key && data && size && addr && addr_len, 
+    PJ_ASSERT_RETURN(asock && send_key && data && size && addr && addr_len,
                      PJ_EINVAL);
 
     if (asock->shutdown & SHUT_TX)
@@ -739,7 +739,7 @@ PJ_DEF(pj_status_t) pj_activesock_sendto( pj_activesock_t *asock,
 }
 
 
-static void ioqueue_on_write_complete(pj_ioqueue_key_t *key, 
+static void ioqueue_on_write_complete(pj_ioqueue_key_t *key,
                                       pj_ioqueue_op_key_t *op_key,
                                       pj_ssize_t bytes_sent)
 {
@@ -777,7 +777,7 @@ static void ioqueue_on_write_complete(pj_ioqueue_key_t *key,
 
             op_key->activesock_data = NULL;
         }
-    } 
+    }
 
     if (asock->cb.on_data_sent) {
         pj_bool_t ret;
@@ -835,9 +835,9 @@ PJ_DEF(pj_status_t) pj_activesock_start_accept(pj_activesock_t *asock,
 }
 
 
-static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key, 
+static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
                                        pj_ioqueue_op_key_t *op_key,
-                                       pj_sock_t new_sock, 
+                                       pj_sock_t new_sock,
                                        pj_status_t status)
 {
     pj_activesock_t *asock = (pj_activesock_t*) pj_ioqueue_get_user_data(key);
@@ -856,11 +856,11 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
                 PJ_LOG(3, ("", "Received %d consecutive errors: %d for the accept()"
                                " operation, stopping further ioqueue accepts.",
                                asock->err_counter, asock->last_err));
-                
-                if ((status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) && 
-                    (asock->cb.on_accept_complete2)) 
+
+                if ((status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) &&
+                    (asock->cb.on_accept_complete2))
                 {
-                    (*asock->cb.on_accept_complete2)(asock, 
+                    (*asock->cb.on_accept_complete2)(asock,
                                                      accept_op->new_sock,
                                                      &accept_op->rem_addr,
                                                      accept_op->rem_addr_len,
@@ -873,22 +873,22 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
             asock->last_err = status;
         }
 
-        if (status==PJ_SUCCESS && (asock->cb.on_accept_complete2 || 
+        if (status==PJ_SUCCESS && (asock->cb.on_accept_complete2 ||
                                    asock->cb.on_accept_complete)) {
             pj_bool_t ret;
 
             /* Notify callback */
             if (asock->cb.on_accept_complete2) {
-                ret = (*asock->cb.on_accept_complete2)(asock, 
+                ret = (*asock->cb.on_accept_complete2)(asock,
                                                        accept_op->new_sock,
                                                        &accept_op->rem_addr,
                                                        accept_op->rem_addr_len,
                                                        status);
             } else {
-                ret = (*asock->cb.on_accept_complete)(asock, 
+                ret = (*asock->cb.on_accept_complete)(asock,
                                                       accept_op->new_sock,
                                                       &accept_op->rem_addr,
-                                                      accept_op->rem_addr_len);     
+                                                      accept_op->rem_addr_len);
             }
 
             /* If callback returns false, we have been destroyed! */
@@ -900,7 +900,7 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
             activesock_create_iphone_os_stream(asock);
 #endif
         } else if (status==PJ_SUCCESS) {
-            /* Application doesn't handle the new socket, we need to 
+            /* Application doesn't handle the new socket, we need to
              * close it to avoid resource leak.
              */
             pj_sock_close(accept_op->new_sock);
@@ -915,7 +915,7 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
         accept_op->rem_addr_len = sizeof(accept_op->rem_addr);
 
         status = pj_ioqueue_accept(asock->key, op_key, &accept_op->new_sock,
-                                   NULL, &accept_op->rem_addr, 
+                                   NULL, &accept_op->rem_addr,
                                    &accept_op->rem_addr_len);
 
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
@@ -935,7 +935,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_connect( pj_activesock_t *asock,
     return pj_ioqueue_connect(asock->key, remaddr, addr_len);
 }
 
-static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key, 
+static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key,
                                         pj_status_t status)
 {
     pj_activesock_t *asock = (pj_activesock_t*) pj_ioqueue_get_user_data(key);
@@ -953,12 +953,12 @@ static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key,
             /* We've been destroyed */
             return;
         }
-        
+
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
         activesock_create_iphone_os_stream(asock);
 #endif
-        
+
     }
 }
 #endif  /* PJ_HAS_TCP */

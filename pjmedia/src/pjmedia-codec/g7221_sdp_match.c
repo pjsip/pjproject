@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/g7221_sdp_match.h>
 #include <pjmedia/errno.h>
@@ -59,7 +59,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_match_sdp(pj_pool_t *pool,
     PJ_UNUSED_ARG(option);
 
     /* Parse offer */
-    attr_ofr = pjmedia_sdp_media_find_attr2(offer, "fmtp", 
+    attr_ofr = pjmedia_sdp_media_find_attr2(offer, "fmtp",
                                             &offer->desc.fmt[o_fmt_idx]);
     if (!attr_ofr)
         return PJMEDIA_SDP_EINFMTP;
@@ -71,7 +71,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_match_sdp(pj_pool_t *pool,
     GET_FMTP_IVAL(o_bitrate, fmtp, bitrate, 0);
 
     /* Parse answer */
-    attr_ans = pjmedia_sdp_media_find_attr2(answer, "fmtp", 
+    attr_ans = pjmedia_sdp_media_find_attr2(answer, "fmtp",
                                             &answer->desc.fmt[a_fmt_idx]);
     if (!attr_ans)
         return PJMEDIA_SDP_EINFMTP;

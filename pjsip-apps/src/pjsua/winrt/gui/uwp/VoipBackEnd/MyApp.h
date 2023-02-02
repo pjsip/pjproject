@@ -26,7 +26,7 @@ namespace VoipBackEnd
     typedef int TransportId;
 
     typedef Platform::Collections::Vector<Platform::String^> StringVector;
-    typedef Windows::Foundation::Collections::IVector<Platform::String^> 
+    typedef Windows::Foundation::Collections::IVector<Platform::String^>
         IStringVector;
 
     typedef public enum class INV_STATE
@@ -56,7 +56,7 @@ namespace VoipBackEnd
             pj_status_t get();
         };
 
-        property unsigned code 
+        property unsigned code
         {
             unsigned get();
         };
@@ -75,13 +75,13 @@ namespace VoipBackEnd
         OnRegStateParamRT(const pj::OnRegStateParam& param);
 
     private:
-        pj::OnRegStateParam* inPtr;         
+        pj::OnRegStateParam* inPtr;
 
         ~OnRegStateParamRT();
     };
 
     public ref struct CallInfoRT sealed
-    {   
+    {
         property Platform::String^ localUri
         {
             Platform::String^ get();
@@ -89,7 +89,7 @@ namespace VoipBackEnd
 
         property Platform::String^ localContact
         {
-            Platform::String^ get();        
+            Platform::String^ get();
         }
 
         property Platform::String^ remoteUri
@@ -168,19 +168,19 @@ namespace VoipBackEnd
     {
 
     public:
-        virtual void onCallState(CallInfoRT^ info);         
+        virtual void onCallState(CallInfoRT^ info);
     };
 
     class ImpCall : public pj::Call
-    {       
-    public:                 
+    {
+    public:
         ImpCall(pj::Account& account, int call_id);
         virtual ~ImpCall() {};
 
         void setCallback(IntCall^ callback);
 
         virtual void onCallState(pj::OnCallStateParam& prm);
-        virtual void onCallMediaState(pj::OnCallMediaStateParam& prm);      
+        virtual void onCallMediaState(pj::OnCallMediaStateParam& prm);
 
     private:
         IntCall^ cb;
@@ -227,7 +227,7 @@ namespace VoipBackEnd
         /* Call handling. */
         void hangupCall();
         void answerCall(CallOpParamRT^ prm);
-        void makeCall(Platform::String^ dst_uri);       
+        void makeCall(Platform::String^ dst_uri);
         CallInfoRT^ getCallInfo();
 
         /* Thread handling. */
@@ -237,8 +237,8 @@ namespace VoipBackEnd
         /* Account handling. */
         AccountInfo^ getAccountInfo();
 
-        void modifyAccount(Platform::String^ id, Platform::String^ registrar, 
-                           Platform::String^ proxy, Platform::String^ username, 
+        void modifyAccount(Platform::String^ id, Platform::String^ registrar,
+                           Platform::String^ proxy, Platform::String^ username,
                            Platform::String^ password);
 
     internal:

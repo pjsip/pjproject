@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
  /**
@@ -31,7 +31,7 @@
 
 #define THIS_FILE   "mix.c"
 
-static const char *desc = 
+static const char *desc =
  " mix\n"
  "\n"
  " PURPOSE:\n"
@@ -135,8 +135,8 @@ int main(int argc, char *argv[])
     }
 
     /* Scan input file names */
-    for (input_cnt=0 ; pj_optind<argc && input_cnt<MAX_WAV; 
-         ++pj_optind, ++input_cnt) 
+    for (input_cnt=0 ; pj_optind<argc && input_cnt<MAX_WAV;
+         ++pj_optind, ++input_cnt)
     {
         if (!pj_file_exists(argv[pj_optind])) {
             printf("Error: input file %s doesn't exist\n",
@@ -162,8 +162,8 @@ int main(int argc, char *argv[])
     pool = pj_pool_create(&cp.factory, "mix", 1000, 1000, NULL);
 
     /* Create the bridge */
-    CHECK( pjmedia_conf_create(pool, MAX_WAV+4, clock_rate, 1, 
-                               clock_rate * PTIME / 1000, 16, 
+    CHECK( pjmedia_conf_create(pool, MAX_WAV+4, clock_rate, 1,
+                               clock_rate * PTIME / 1000, 16,
                                PJMEDIA_CONF_NO_DEVICE, &conf) );
 
     /* Create the WAV output */
@@ -176,10 +176,10 @@ int main(int argc, char *argv[])
         pj_ssize_t len;
 
         CHECK( pjmedia_wav_player_port_create(pool, wav_input[i].fname, 20,
-                                              PJMEDIA_FILE_NO_LOOP, 0, 
+                                              PJMEDIA_FILE_NO_LOOP, 0,
                                               &wav_input[i].port) );
         len = pjmedia_wav_player_get_len(wav_input[i].port);
-        len = (pj_ssize_t)(len * 1.0 * clock_rate / 
+        len = (pj_ssize_t)(len * 1.0 * clock_rate /
                            PJMEDIA_PIA_SRATE(&wav_input[i].port->info));
         if (len > (pj_ssize_t)longest)
             longest = len;
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
         frame.buf = framebuf;
         frame.size = PJMEDIA_PIA_SPF(&mp->info) * 2;
         pj_assert(frame.size <= sizeof(framebuf));
-        
+
         CHECK( pjmedia_port_get_frame(mp, &frame) );
 
         if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSTUN_H__
 #define __PJSTUN_H__
@@ -134,7 +134,7 @@ typedef struct pjstun_msg
 
 /* STUN message API (stun.c). */
 
-PJ_DECL(pj_status_t) pjstun_create_bind_req( pj_pool_t *pool, 
+PJ_DECL(pj_status_t) pjstun_create_bind_req( pj_pool_t *pool,
                                               void **msg, pj_size_t *len,
                                               pj_uint32_t id_hi,
                                               pj_uint32_t id_lo);
@@ -156,7 +156,7 @@ PJ_DECL(void*) pjstun_msg_find_attr( pjstun_msg *msg, pjstun_attr_type t);
 
 /**
  * This is the main function to request the mapped address of local sockets
- * to multiple STUN servers. This function is able to find the mapped 
+ * to multiple STUN servers. This function is able to find the mapped
  * addresses of multiple sockets simultaneously, and for each socket, two
  * requests will be sent to two different STUN servers to see if both servers
  * get the same public address for the same socket. (Note that application can
@@ -175,10 +175,10 @@ PJ_DECL(void*) pjstun_msg_find_attr( pjstun_msg *msg, pjstun_attr_type t);
  *                      to be queried from the STUN servers.
  * @param srv1          Host name or IP address string of the first STUN
  *                      server.
- * @param port1         The port number of the first STUN server. 
+ * @param port1         The port number of the first STUN server.
  * @param srv2          Host name or IP address string of the second STUN
  *                      server.
- * @param port2         The port number of the second STUN server. 
+ * @param port2         The port number of the second STUN server.
  * @param mapped_addr   Array to receive the mapped public address of the local
  *                      UDP sockets, when the function returns PJ_SUCCESS.
  *
@@ -209,7 +209,7 @@ typedef struct pjstun_setting
      * insert magic cookie (specified in RFC 5389) in the transaction ID.
      */
     pj_bool_t   use_stun2;
-    
+
     /**
      * Address family of the STUN servers.
      */

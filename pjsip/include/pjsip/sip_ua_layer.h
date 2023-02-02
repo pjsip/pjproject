@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_UA_LAYER_H__
 #define __PJSIP_SIP_UA_LAYER_H__
@@ -34,7 +34,7 @@ PJ_BEGIN_DECL
  *
  * This module provides basic dialog management, which is used by higher
  * layer dialog usages such as INVITE sessions and SIP Event Subscription
- * framework (RFC 3265). Application should link  with <b>pjsip-core</b> 
+ * framework (RFC 3265). Application should link  with <b>pjsip-core</b>
  * library to use this base UA layer. The base UA layer module is initialized
  * with #pjsip_ua_init_module().
  */
@@ -100,8 +100,8 @@ PJ_DECL(pj_uint32_t) pjsip_ua_get_dlg_set_count(void);
  * @param call_id       The call ID to be matched.
  * @param local_tag     The local tag to be matched.
  * @param remote_tag    The remote tag to be matched.
- * @param lock_dialog   If non-zero, instruct the function to lock the 
- *                      matching dialog with #pjsip_dlg_inc_lock(). 
+ * @param lock_dialog   If non-zero, instruct the function to lock the
+ *                      matching dialog with #pjsip_dlg_inc_lock().
  *                      Application is responsible to release the dialog's
  *                      lock after it has finished manipulating the dialog,
  *                      by calling #pjsip_dlg_dec_lock().

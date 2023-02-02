@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_ICE_SESSION_H__
 #define __PJNATH_ICE_SESSION_H__
@@ -41,7 +41,7 @@ PJ_BEGIN_DECL
  *
  * \section pj_ice_sess_sec ICE Session
  *
- * An ICE session, represented by #pj_ice_sess structure, is the lowest 
+ * An ICE session, represented by #pj_ice_sess structure, is the lowest
  * abstraction of ICE in PJNATH, and it is used to perform and manage
  * connectivity checks of transport address candidates <b>within a
  * single media stream</b> (note: this differs from what is described
@@ -50,12 +50,12 @@ PJ_BEGIN_DECL
  *
  * The ICE session described here is independent from any transports,
  * meaning that the actual network I/O for this session would have to
- * be performed by the application, or higher layer abstraction. 
+ * be performed by the application, or higher layer abstraction.
  * Using this framework, application would give any incoming packets to
  * the ICE session, and it would provide the ICE session with a callback
  * to send outgoing message.
  *
- * For higher abstraction of ICE where transport is included, please 
+ * For higher abstraction of ICE where transport is included, please
  * see \ref PJNATH_ICE_STREAM_TRANSPORT.
  *
  * \subsection pj_ice_sess_using_sec Using The ICE Session
@@ -173,8 +173,8 @@ typedef struct pj_ice_sess_check pj_ice_sess_check;
 typedef struct pj_ice_sess_cand pj_ice_sess_cand;
 
 /**
- * This structure describes ICE component. 
- * A media stream may require multiple components, each of which has 
+ * This structure describes ICE component.
+ * A media stream may require multiple components, each of which has
  * to work for the media stream as a whole to work.  For media streams
  * based on RTP, there are two components per media stream - one for RTP,
  * and one for RTCP.
@@ -250,10 +250,10 @@ struct pj_ice_sess_cand
      */
     pj_ice_cand_type     type;
 
-    /** 
+    /**
      * Status of this candidate. The value will be PJ_SUCCESS if candidate
      * address has been resolved successfully, PJ_EPENDING when the address
-     * resolution process is in progress, or other value when the address 
+     * resolution process is in progress, or other value when the address
      * resolution has completed with failure.
      */
     pj_status_t          status;
@@ -277,8 +277,8 @@ struct pj_ice_sess_cand
 
     /**
      * The foundation string, which is an identifier which value will be
-     * equivalent for two candidates that are of the same type, share the 
-     * same base, and come from the same STUN server. The foundation is 
+     * equivalent for two candidates that are of the same type, share the
+     * same base, and come from the same STUN server. The foundation is
      * used to optimize ICE performance in the Frozen algorithm.
      */
     pj_str_t             foundation;
@@ -295,16 +295,16 @@ struct pj_ice_sess_cand
      * the local address of the socket. For reflexive candidates, the value
      * will be the public address allocated in NAT router for the host
      * candidate and as reported in MAPPED-ADDRESS or XOR-MAPPED-ADDRESS
-     * attribute of STUN Binding request. For relayed candidate, the value 
+     * attribute of STUN Binding request. For relayed candidate, the value
      * will be the address allocated in the TURN server by STUN Allocate
      * request.
      */
     pj_sockaddr          addr;
 
     /**
-     * Base address of this candidate. "Base" refers to the address an agent 
+     * Base address of this candidate. "Base" refers to the address an agent
      * sends from for a particular candidate.  For host candidates, the base
-     * is the same as the host candidate itself. For reflexive candidates, 
+     * is the same as the host candidate itself. For reflexive candidates,
      * the base is the local IP address of the socket. For relayed candidates,
      * the base address is the transport address allocated in the TURN server
      * for this candidate.
@@ -365,9 +365,9 @@ typedef enum pj_ice_sess_check_state
 
 /**
  * This structure describes an ICE connectivity check. An ICE check
- * contains a candidate pair, and will involve sending STUN Binding 
- * Request transaction for the purposes of verifying connectivity. 
- * A check is sent from the local candidate to the remote candidate 
+ * contains a candidate pair, and will involve sending STUN Binding
+ * Request transaction for the purposes of verifying connectivity.
+ * A check is sent from the local candidate to the remote candidate
  * of a candidate pair.
  */
 struct pj_ice_sess_check
@@ -398,8 +398,8 @@ struct pj_ice_sess_check
     pj_ice_sess_check_state      state;
 
     /**
-     * STUN transmit data containing STUN Binding request that was sent 
-     * as part of this check. The value will only be set when this check 
+     * STUN transmit data containing STUN Binding request that was sent
+     * as part of this check. The value will only be set when this check
      * has a pending transaction, and is used to cancel the transaction
      * when other check has succeeded.
      */
@@ -445,7 +445,7 @@ typedef enum pj_ice_sess_checklist_state
 
 
 /**
- * This structure represents ICE check list, that is an ordered set of 
+ * This structure represents ICE check list, that is an ordered set of
  * candidate pairs that an agent will use to generate checks.
  */
 struct pj_ice_sess_checklist
@@ -509,7 +509,7 @@ typedef struct pj_ice_sess_cb
 
     /**
      * A mandatory callback which will be called by the ICE session when
-     * it needs to send outgoing STUN packet. 
+     * it needs to send outgoing STUN packet.
      *
      * @param ice           The ICE session.
      * @param comp_id       ICE component ID.
@@ -519,7 +519,7 @@ typedef struct pj_ice_sess_cb
      * @param dst_addr      Packet destination address.
      * @param dst_addr_len  Length of destination address.
      */
-    pj_status_t (*on_tx_pkt)(pj_ice_sess *ice, unsigned comp_id, 
+    pj_status_t (*on_tx_pkt)(pj_ice_sess *ice, unsigned comp_id,
                              unsigned transport_id,
                              const void *pkt, pj_size_t size,
                              const pj_sockaddr_t *dst_addr,
@@ -534,12 +534,12 @@ typedef struct pj_ice_sess_cb
      * @param transport_id  Transport ID.
      * @param pkt           The whole packet.
      * @param size          Size of the packet.
-     * @param src_addr      Source address where this packet was received 
+     * @param src_addr      Source address where this packet was received
      *                      from.
      * @param src_addr_len  The length of source address.
      */
     void        (*on_rx_data)(pj_ice_sess *ice, unsigned comp_id,
-                              unsigned transport_id, 
+                              unsigned transport_id,
                               void *pkt, pj_size_t size,
                               const pj_sockaddr_t *src_addr,
                               unsigned src_addr_len);
@@ -630,7 +630,7 @@ typedef enum pj_ice_sess_trickle
 
 /**
  * This structure describes various ICE session options. Application
- * configure the ICE session with these options by calling 
+ * configure the ICE session with these options by calling
  * #pj_ice_sess_set_options().
  */
 typedef struct pj_ice_sess_options
@@ -643,7 +643,7 @@ typedef struct pj_ice_sess_options
 
     /**
      * For controlling agent if it uses regular nomination, specify the delay
-     * to perform nominated check (connectivity check with USE-CANDIDATE 
+     * to perform nominated check (connectivity check with USE-CANDIDATE
      * attribute) after all components have a valid pair.
      *
      * Default value is PJ_ICE_NOMINATED_CHECK_DELAY.
@@ -651,14 +651,14 @@ typedef struct pj_ice_sess_options
     unsigned            nominated_check_delay;
 
     /**
-     * For a controlled agent, specify how long it wants to wait (in 
-     * milliseconds) for the controlling agent to complete sending 
+     * For a controlled agent, specify how long it wants to wait (in
+     * milliseconds) for the controlling agent to complete sending
      * connectivity check with nominated flag set to true for all components
      * after the controlled agent has found that all connectivity checks in
      * its checklist have been completed and there is at least one successful
      * (but not nominated) check for every component.
      *
-     * Default value for this option is 
+     * Default value for this option is
      * ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT. Specify -1 to disable
      * this timer.
      */
@@ -741,10 +741,10 @@ struct pj_ice_sess
 
     /* Checklist */
     pj_ice_sess_checklist clist;                    /**< Active checklist   */
-    
+
     /* Valid list */
     pj_ice_sess_checklist valid_list;               /**< Valid list.        */
-    
+
     /** Temporary buffer for misc stuffs to avoid using stack too much */
     union {
         char txt[128];
@@ -813,7 +813,7 @@ PJ_DECL(void) pj_ice_sess_options_default(pj_ice_sess_options *opt);
  * @param cb            ICE callback.
  * @param local_ufrag   Optional string to be used as local username to
  *                      authenticate incoming STUN binding request. If
- *                      the value is NULL, a random string will be 
+ *                      the value is NULL, a random string will be
  *                      generated.
  * @param local_passwd  Optional string to be used as local password.
  * @param grp_lock      Optional group lock to be used by this session.
@@ -911,8 +911,8 @@ PJ_DECL(pj_status_t) pj_ice_sess_change_role(pj_ice_sess *ice,
 /**
  * Assign a custom preference values for ICE candidate types. By assigning
  * custom preference value, application can control the order of candidates
- * to be checked first. The default preference settings is to use 126 for 
- * host candidates, 100 for server reflexive candidates, 110 for peer 
+ * to be checked first. The default preference settings is to use 126 for
+ * host candidates, 100 for server reflexive candidates, 110 for peer
  * reflexive candidates, an 0 for relayed candidates.
  *
  * Note that this function must be called before any candidates are added
@@ -932,7 +932,7 @@ PJ_DECL(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
 
 /**
  * Add a candidate to this ICE session. Application must add candidates for
- * each components ID before it can start pairing the candidates and 
+ * each components ID before it can start pairing the candidates and
  * performing connectivity checks.
  *
  * @param ice           ICE session instance.
@@ -968,7 +968,7 @@ PJ_DECL(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
  * rule:
  *  - if the component has a successful candidate pair, then the
  *    local candidate of this pair will be returned.
- *  - otherwise a relay, reflexive, or host candidate will be selected 
+ *  - otherwise a relay, reflexive, or host candidate will be selected
  *    on that specified order.
  *
  * @param ice           The ICE session instance.
@@ -991,18 +991,18 @@ PJ_DECL(pj_status_t) pj_ice_sess_find_default_cand(pj_ice_sess *ice,
  * #pj_ice_sess_start_check().
  *
  * @param ice           ICE session instance.
- * @param rem_ufrag     Remote ufrag, as seen in the SDP received from 
+ * @param rem_ufrag     Remote ufrag, as seen in the SDP received from
  *                      the remote agent.
  * @param rem_passwd    Remote password, as seen in the SDP received from
  *                      the remote agent.
  * @param rem_cand_cnt  Number of remote candidates.
  * @param rem_cand      Remote candidate array. Remote candidates are
- *                      gathered from the SDP received from the remote 
+ *                      gathered from the SDP received from the remote
  *                      agent.
  *
  * @return              PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pj_ice_sess_create_check_list(pj_ice_sess *ice,
                               const pj_str_t *rem_ufrag,
                               const pj_str_t *rem_passwd,
@@ -1020,13 +1020,13 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
  * This function is only applicable when trickle ICE is not disabled.
  *
  * @param ice           ICE session instance.
- * @param rem_ufrag     Remote ufrag, as seen in the SDP received from 
+ * @param rem_ufrag     Remote ufrag, as seen in the SDP received from
  *                      the remote agent.
  * @param rem_passwd    Remote password, as seen in the SDP received from
  *                      the remote agent.
  * @param rem_cand_cnt  Number of remote candidates.
  * @param rem_cand      Remote candidate array. Remote candidates are
- *                      gathered from the SDP received from the remote 
+ *                      gathered from the SDP received from the remote
  *                      agent.
  * @param trickle_done  Flag to indicate end of trickling, set to PJ_TRUE
  *                      after all local candidates have been gathered AND
@@ -1035,7 +1035,7 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
  *
  * @return              PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pj_ice_sess_update_check_list(pj_ice_sess *ice,
                               const pj_str_t *rem_ufrag,
                               const pj_str_t *rem_passwd,

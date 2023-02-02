@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_STREAM_COMMON_H__
 #define __PJMEDIA_STREAM_COMMON_H__
@@ -78,9 +78,9 @@ typedef struct pjmedia_stream_ka_config
     unsigned                        start_interval;
 
     /**
-     * The keepalive sending interval, after #start_count number keepalive 
+     * The keepalive sending interval, after #start_count number keepalive
      * was sent.
-     * 
+     *
      * Default: PJMEDIA_STREAM_KA_INTERVAL (seconds)
      */
     unsigned                        ka_interval;

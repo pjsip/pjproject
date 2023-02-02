@@ -168,15 +168,15 @@ struct TlsConfig : public PersistentObject
     string              certBuf;
 
     /**
-     * Optional private key buffer of the endpoint certificate to be used. 
-     * If CaListFile, certFile or privKeyFile are set, this setting will 
+     * Optional private key buffer of the endpoint certificate to be used.
+     * If CaListFile, certFile or privKeyFile are set, this setting will
      * be ignored.
      */
     string              privKeyBuf;
 
     /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field
-     * might be deprecated in favor of <b>proto</b> field. For now, this field 
+     * might be deprecated in favor of <b>proto</b> field. For now, this field
      * is only applicable only when <b>proto</b> field is set to zero.
      *
      * Default is PJSIP_SSL_UNSPECIFIED_METHOD (0), which in turn will
@@ -185,8 +185,8 @@ struct TlsConfig : public PersistentObject
     pjsip_ssl_method    method;
 
     /**
-     * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable 
-     * specific protocol type. Use bitwise OR operation to combine the protocol 
+     * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable
+     * specific protocol type. Use bitwise OR operation to combine the protocol
      * type.
      *
      * Default is PJSIP_SSL_DEFAULT_PROTO.
@@ -324,10 +324,10 @@ struct TransportConfig : public PersistentObject
      * Specify the port range for socket binding, relative to the start
      * port number specified in \a port. Note that this setting is only
      * applicable for media transport when the start port number is non zero.
-     * Media transport is configurable via account setting, 
+     * Media transport is configurable via account setting,
      * i.e: AccountMediaConfig::transportConfig, please check the media
      * transport config docs for more info.
-     * 
+     *
      * Available ports are in the range of [\a port, \a port + \a portRange].
      *
      * Default value is zero.
@@ -339,7 +339,7 @@ struct TransportConfig : public PersistentObject
      * the range of [\a port, \a port + \a port_range]. This setting is
      * used only if both port and port_range are non-zero, and only
      * applicable for the port selection of UDP and loop media transport.
-     * 
+     *
      * Default is PJ_FALSE.
      */
     bool                randomizePort;
@@ -512,24 +512,24 @@ struct SipTxData
      * the request method and its CSeq.
      */
     string              info;
-    
+
     /**
      * The whole message data as a string, containing both the header section
      * and message body section.
      */
     string              wholeMsg;
-    
+
     /**
      * Destination address of the message.
      */
     SocketAddress       dstAddress;
-    
+
     /**
      * Pointer to original pjsip_tx_data. Only valid when the struct
      * is constructed from PJSIP's pjsip_tx_data.
      */
     void               *pjTxData;
-    
+
 public:
     /**
      * Default constructor.
@@ -551,18 +551,18 @@ struct SipTransaction
     /* Transaction identification. */
     pjsip_role_e        role;           /**< Role (UAS or UAC)      */
     string              method;         /**< The method.            */
-    
+
     /* State and status. */
     int                 statusCode;     /**< Last status code seen. */
     string              statusText;     /**< Last reason phrase.    */
     pjsip_tsx_state_e   state;          /**< State.                 */
-    
+
     /* Messages and timer. */
     SipTxData           lastTx;         /**< Msg kept for retrans.  */
-    
+
     /* Original pjsip_transaction. */
     void               *pjTransaction;  /**< pjsip_transaction.     */
-    
+
 public:
     /**
      * Default constructor.
@@ -661,32 +661,32 @@ struct SipEventBody
      * Timer event.
      */
     TimerEvent      timer;
-    
+
     /**
      * Transaction state has changed event.
      */
     TsxStateEvent   tsxState;
-    
+
     /**
      * Message transmission event.
      */
     TxMsgEvent      txMsg;
-    
+
     /**
      * Transmission error event.
      */
     TxErrorEvent    txError;
-    
+
     /**
      * Message arrival event.
      */
     RxMsgEvent      rxMsg;
-    
+
     /**
      * User event.
      */
     UserEvent       user;
-    
+
 };
 
 /**
@@ -699,18 +699,18 @@ struct SipEvent
      * The event type, can be any value of \b pjsip_event_id_e.
      */
     pjsip_event_id_e    type;
-    
+
     /**
      * The event body, which fields depends on the event type.
      */
     SipEventBody        body;
-    
+
     /**
      * Pointer to its original pjsip_event. Only valid when the struct is
      * constructed from PJSIP's pjsip_event.
      */
     void               *pjEvent;
-    
+
 public:
     /**
      * Default constructor.
@@ -886,7 +886,7 @@ public:
      * @return              True if the options are empty.
      */
     bool isEmpty() const;
-    
+
     /**
      * Initiaize from PJSUA's pjsua_msg_data.
      */
@@ -910,22 +910,22 @@ struct SendInstantMessageParam
      * MIME type. Default is "text/plain".
      */
     string      contentType;
-    
+
     /**
      * The message content.
      */
     string      content;
-    
+
     /**
      * List of headers etc to be included in outgoing request.
      */
     SipTxOption txOption;
-    
+
     /**
      * User data, which will be given back when the IM callback is called.
      */
     Token       userData;
-    
+
 public:
     /**
      * Default constructor initializes with zero/empty values.
@@ -944,12 +944,12 @@ struct SendTypingIndicationParam
      * True to indicate to remote that local person is currently typing an IM.
      */
     bool         isTyping;
-    
+
     /**
      * List of headers etc to be included in outgoing request.
      */
     SipTxOption  txOption;
-    
+
 public:
     /**
      * Default constructor initializes with zero/empty values.

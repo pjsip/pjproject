@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/stun_sock.h>
 #include <pjnath/errno.h>
@@ -67,8 +67,8 @@ struct pj_stun_sock
     pj_grp_lock_t       *grp_lock;      /* Session group lock       */
 };
 
-/* 
- * Prototypes for static functions 
+/*
+ * Prototypes for static functions
  */
 
 /* Destructor for group lock */
@@ -82,7 +82,7 @@ static pj_status_t sess_on_send_msg(pj_stun_session *sess,
                                     const pj_sockaddr_t *dst_addr,
                                     unsigned addr_len);
 
-/* This callback is called by the STUN session when outgoing transaction 
+/* This callback is called by the STUN session when outgoing transaction
  * is complete
  */
 static void sess_on_request_complete(pj_stun_session *sess,
@@ -247,7 +247,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
                           "Failed setting SO_RCVBUF"));
         } else {
             if (sobuf_size < cfg->so_rcvbuf_size) {
-                PJ_LOG(4, (stun_sock->obj_name, 
+                PJ_LOG(4, (stun_sock->obj_name,
                            "Warning! Cannot set SO_RCVBUF as configured, "
                            "now=%d, configured=%d",
                            sobuf_size, cfg->so_rcvbuf_size));
@@ -266,7 +266,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
                           "Failed setting SO_SNDBUF"));
         } else {
             if (sobuf_size < cfg->so_sndbuf_size) {
-                PJ_LOG(4, (stun_sock->obj_name, 
+                PJ_LOG(4, (stun_sock->obj_name,
                            "Warning! Cannot set SO_SNDBUF as configured, "
                            "now=%d, configured=%d",
                            sobuf_size, cfg->so_sndbuf_size));
@@ -282,7 +282,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
     if (cfg->port_range && cfg->port_range < max_bind_retry)
         max_bind_retry = cfg->port_range;
     pj_sockaddr_init(af, &bound_addr, NULL, 0);
-    if (cfg->bound_addr.addr.sa_family == pj_AF_INET() || 
+    if (cfg->bound_addr.addr.sa_family == pj_AF_INET() ||
         cfg->bound_addr.addr.sa_family == pj_AF_INET6())
     {
         pj_sockaddr_cp(&bound_addr, &cfg->bound_addr);
@@ -298,13 +298,13 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
         pj_sockaddr bound_addr;
         int addr_len = sizeof(bound_addr);
 
-        status = pj_sock_getsockname(stun_sock->sock_fd, &bound_addr, 
+        status = pj_sock_getsockname(stun_sock->sock_fd, &bound_addr,
                                      &addr_len);
         if (status != PJ_SUCCESS)
             goto on_error;
 
         stun_sock->info = pj_pool_alloc(pool, PJ_INET6_ADDRSTRLEN+10);
-        pj_sockaddr_print(&bound_addr, stun_sock->info, 
+        pj_sockaddr_print(&bound_addr, stun_sock->info,
                           PJ_INET6_ADDRSTRLEN, 3);
     }
 #endif
@@ -323,8 +323,8 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
         pj_bzero(&activesock_cb, sizeof(activesock_cb));
         activesock_cb.on_data_recvfrom = &on_data_recvfrom;
         activesock_cb.on_data_sent = &on_data_sent;
-        status = pj_activesock_create(pool, stun_sock->sock_fd, 
-                                      pj_SOCK_DGRAM(), 
+        status = pj_activesock_create(pool, stun_sock->sock_fd,
+                                      pj_SOCK_DGRAM(),
                                       &activesock_cfg, stun_cfg->ioqueue,
                                       &activesock_cb, stun_sock,
                                       &stun_sock->active_sock);
@@ -338,7 +338,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
             goto on_error;
 
         /* Init send keys */
-        pj_ioqueue_op_key_init(&stun_sock->send_key, 
+        pj_ioqueue_op_key_init(&stun_sock->send_key,
                                sizeof(stun_sock->send_key));
         pj_ioqueue_op_key_init(&stun_sock->int_send_key,
                                sizeof(stun_sock->int_send_key));
@@ -351,9 +351,9 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
         pj_bzero(&sess_cb, sizeof(sess_cb));
         sess_cb.on_request_complete = &sess_on_request_complete;
         sess_cb.on_send_msg = &sess_on_send_msg;
-        status = pj_stun_session_create(&stun_sock->stun_cfg, 
+        status = pj_stun_session_create(&stun_sock->stun_cfg,
                                         stun_sock->obj_name,
-                                        &sess_cb, PJ_FALSE, 
+                                        &sess_cb, PJ_FALSE,
                                         stun_sock->grp_lock,
                                         &stun_sock->stun_sess);
         if (status != PJ_SUCCESS)
@@ -401,7 +401,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
 
     /* Check whether the domain contains IP address */
     stun_sock->srv_addr.addr.sa_family = (pj_uint16_t)stun_sock->af;
-    status = pj_inet_pton(stun_sock->af, domain, 
+    status = pj_inet_pton(stun_sock->af, domain,
                           pj_sockaddr_get_addr(&stun_sock->srv_addr));
     if (status != PJ_SUCCESS) {
         stun_sock->srv_addr.addr.sa_family = (pj_uint16_t)0;
@@ -423,9 +423,9 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
             opt = PJ_DNS_SRV_FALLBACK_A;
 
         stun_sock->last_err = PJ_SUCCESS;
-        status = pj_dns_srv_resolve(domain, &res_name, default_port, 
+        status = pj_dns_srv_resolve(domain, &res_name, default_port,
                                     stun_sock->pool, resolver, opt,
-                                    stun_sock, &dns_srv_resolver_cb, 
+                                    stun_sock, &dns_srv_resolver_cb,
                                     &stun_sock->q);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(stun_sock->obj_name, status,
@@ -558,13 +558,13 @@ PJ_DECL(pj_grp_lock_t *) pj_stun_sock_get_grp_lock(pj_stun_sock *stun_sock)
 }
 
 /* Notify application that session has failed */
-static pj_bool_t sess_fail(pj_stun_sock *stun_sock, 
+static pj_bool_t sess_fail(pj_stun_sock *stun_sock,
                            pj_stun_sock_op op,
                            pj_status_t status)
 {
     pj_bool_t ret;
 
-    PJ_PERROR(4,(stun_sock->obj_name, status, 
+    PJ_PERROR(4,(stun_sock->obj_name, status,
                  "Session failed because %s failed",
                  pj_stun_sock_op_name(op)));
 
@@ -601,10 +601,10 @@ static void dns_srv_resolver_cb(void *user_data,
     pj_sockaddr_init(stun_sock->af, &stun_sock->srv_addr, NULL,
                      rec->entry[0].port);
     if (stun_sock->af == pj_AF_INET6()) {
-        stun_sock->srv_addr.ipv6.sin6_addr = 
+        stun_sock->srv_addr.ipv6.sin6_addr =
                                     rec->entry[0].server.addr[0].ip.v6;
     } else {
-        stun_sock->srv_addr.ipv4.sin_addr = 
+        stun_sock->srv_addr.ipv4.sin_addr =
                                     rec->entry[0].server.addr[0].ip.v4;
     }
 
@@ -625,12 +625,12 @@ static pj_status_t get_mapped_addr(pj_stun_sock *stun_sock)
     ++stun_sock->tsx_id[5];
     status = pj_stun_session_create_req(stun_sock->stun_sess,
                                         PJ_STUN_BINDING_REQUEST,
-                                        PJ_STUN_MAGIC, 
-                                        (const pj_uint8_t*)stun_sock->tsx_id, 
+                                        PJ_STUN_MAGIC,
+                                        (const pj_uint8_t*)stun_sock->tsx_id,
                                         &tdata);
     if (status != PJ_SUCCESS)
         goto on_error;
-    
+
     /* Send request */
     status=pj_stun_session_send_msg(stun_sock->stun_sess, INTERNAL_MSG_TOKEN,
                                     PJ_FALSE, PJ_TRUE, &stun_sock->srv_addr,
@@ -660,7 +660,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
     /* Copy STUN server address and mapped address */
     pj_memcpy(&info->srv_addr, &stun_sock->srv_addr,
               sizeof(pj_sockaddr));
-    pj_memcpy(&info->mapped_addr, &stun_sock->mapped_addr, 
+    pj_memcpy(&info->mapped_addr, &stun_sock->mapped_addr,
               sizeof(pj_sockaddr));
 
     /* Retrieve bound address */
@@ -673,7 +673,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
     }
 
     /* If socket is bound to a specific interface, then only put that
-     * interface in the alias list. Otherwise query all the interfaces 
+     * interface in the alias list. Otherwise query all the interfaces
      * in the host.
      */
     if (pj_sockaddr_has_addr(&info->bound_addr)) {
@@ -693,20 +693,20 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
             pj_grp_lock_release(stun_sock->grp_lock);
             return status;
         }
-        
+
         pj_sockaddr_set_port(&def_addr, port);
-        
+
         /* Enum all IP interfaces in the host */
         pj_enum_ip_option_default(&enum_opt);
         enum_opt.af = stun_sock->af;
         enum_opt.omit_deprecated_ipv6 = PJ_TRUE;
         info->alias_cnt = PJ_ARRAY_SIZE(info->aliases);
-        status = pj_enum_ip_interface2(&enum_opt, &info->alias_cnt, 
+        status = pj_enum_ip_interface2(&enum_opt, &info->alias_cnt,
                                        info->aliases);
         if (status == PJ_ENOTSUP) {
             /* Try again without omitting deprecated IPv6 addresses */
             enum_opt.omit_deprecated_ipv6 = PJ_FALSE;
-            status = pj_enum_ip_interface2(&enum_opt, &info->alias_cnt, 
+            status = pj_enum_ip_interface2(&enum_opt, &info->alias_cnt,
                                            info->aliases);
         }
 
@@ -754,7 +754,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_sendto( pj_stun_sock *stun_sock,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(stun_sock && pkt && dst_addr && addr_len, PJ_EINVAL);
-    
+
     pj_grp_lock_acquire(stun_sock->grp_lock);
 
     if (!stun_sock->active_sock) {
@@ -804,7 +804,7 @@ static pj_status_t sess_on_send_msg(pj_stun_session *sess,
                                 pkt, &size, 0, dst_addr, addr_len);
 }
 
-/* This callback is called by the STUN session when outgoing transaction 
+/* This callback is called by the STUN session when outgoing transaction
  * is complete
  */
 static void sess_on_request_complete(pj_stun_session *sess,
@@ -860,16 +860,16 @@ static void sess_on_request_complete(pj_stun_session *sess,
     }
 
     /* Determine if mapped address has changed, and save the new mapped
-     * address and call callback if so 
+     * address and call callback if so
      */
     mapped_changed = !pj_sockaddr_has_addr(&stun_sock->mapped_addr) ||
-                     pj_sockaddr_cmp(&stun_sock->mapped_addr, 
+                     pj_sockaddr_cmp(&stun_sock->mapped_addr,
                                      &mapped_attr->sockaddr) != 0;
     if (mapped_changed) {
         /* Print mapped adress */
         {
             char addrinfo[PJ_INET6_ADDRSTRLEN+10];
-            PJ_LOG(4,(stun_sock->obj_name, 
+            PJ_LOG(4,(stun_sock->obj_name,
                       "STUN mapped address found/changed: %s",
                       pj_sockaddr_print(&mapped_attr->sockaddr,
                                         addrinfo, sizeof(addrinfo), 3)));
@@ -957,7 +957,7 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
     pj_grp_lock_acquire(stun_sock->grp_lock);
 
     /* Check that this is STUN message */
-    status = pj_stun_msg_check((const pj_uint8_t*)data, size, 
+    status = pj_stun_msg_check((const pj_uint8_t*)data, size,
                                PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET);
     if (status != PJ_SUCCESS) {
         /* Not STUN -- give it to application */
@@ -979,7 +979,7 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
      */
     if (!PJ_STUN_IS_RESPONSE(type) ||
         PJ_STUN_GET_METHOD(type) != PJ_STUN_BINDING_METHOD ||
-        pj_memcmp(hdr->tsx_id, stun_sock->tsx_id, 10) != 0) 
+        pj_memcmp(hdr->tsx_id, stun_sock->tsx_id, 10) != 0)
     {
         /* Not STUN Binding response, or STUN transaction ID mismatch.
          * This is not our message too -- give it to application.
@@ -1031,7 +1031,7 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
         pj_grp_lock_acquire(stun_sock->grp_lock);
 
         /* If app gives NULL send_key in sendto() function, then give
-         * NULL in the callback too 
+         * NULL in the callback too
          */
         if (send_key == &stun_sock->send_key)
             send_key = NULL;

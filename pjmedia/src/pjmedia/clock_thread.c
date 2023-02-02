@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/clock.h>
 #include <pjmedia/errno.h>
@@ -62,7 +62,7 @@ pjmedia_clock_src_get_current_timestamp( const pjmedia_clock_src *clocksrc,
 {
     pj_timestamp now;
     unsigned elapsed_ms;
-    
+
     PJ_ASSERT_RETURN(clocksrc && timestamp, PJ_EINVAL);
 
     pj_get_timestamp(&now);
@@ -91,11 +91,11 @@ pjmedia_clock_src_get_time_msec( const pjmedia_clock_src *clocksrc )
                          * 1000.0 / clocksrc->clock_rate);
 #else
     if (ts.u32.lo > 0x3FFFFFUL)
-        return (pj_uint32_t)(0xFFFFFFFFUL / clocksrc->clock_rate * ts.u32.hi 
+        return (pj_uint32_t)(0xFFFFFFFFUL / clocksrc->clock_rate * ts.u32.hi
                              * 1000UL + ts.u32.lo / clocksrc->clock_rate *
                              1000UL);
     else
-        return (pj_uint32_t)(0xFFFFFFFFUL / clocksrc->clock_rate * ts.u32.hi 
+        return (pj_uint32_t)(0xFFFFFFFFUL / clocksrc->clock_rate * ts.u32.hi
                              * 1000UL + ts.u32.lo * 1000UL /
                              clocksrc->clock_rate);
 #endif
@@ -185,7 +185,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
     clock->thread = NULL;
     clock->running = PJ_FALSE;
     clock->quitting = PJ_FALSE;
-    
+
     /* I don't think we need a mutex, so we'll use null. */
     status = pj_lock_create_null_mutex(pool, "clock", &clock->lock);
     if (status != PJ_SUCCESS)
@@ -198,7 +198,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
 
 
 /*
- * Start the clock. 
+ * Start the clock.
  */
 PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
 {
@@ -240,7 +240,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
 
 
 /*
- * Stop the clock. 
+ * Stop the clock.
  */
 PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
 {
@@ -258,9 +258,9 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
             /* We are probably called from the clock thread itself.
              * Do not cancel the thread's quitting though, since it
              * may cause the clock thread to run indefinitely.
-             */ 
+             */
             // clock->quitting = PJ_FALSE;
-            
+
             return PJ_EBUSY;
         }
     }
@@ -270,7 +270,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
 
 
 /*
- * Update the clock. 
+ * Update the clock.
  */
 PJ_DEF(pj_status_t) pjmedia_clock_modify(pjmedia_clock *clock,
                                          const pjmedia_clock_param *param)
@@ -298,7 +298,7 @@ PJ_INLINE(void) clock_calc_next_tick(pjmedia_clock *clock,
 }
 
 /*
- * Poll the clock. 
+ * Poll the clock.
  */
 PJ_DEF(pj_bool_t) pjmedia_clock_wait( pjmedia_clock *clock,
                                       pj_bool_t wait,
@@ -410,7 +410,7 @@ static int clock_thread(void *arg)
 
 
 /*
- * Destroy the clock. 
+ * Destroy the clock.
  */
 PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
 {

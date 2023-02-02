@@ -79,7 +79,7 @@ public class PjAudioDevInfo {
     }
 
     /* Private members */
-    
+
     private static SparseArray<PjAudioDevInfo> devices;
 
     private static String DevTypeStr(int type) {

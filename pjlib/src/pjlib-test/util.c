@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -51,7 +51,7 @@ pj_status_t app_socket(int family, int type, int proto, int port,
     rc = pj_sock_bind(sock, &addr, sizeof(addr));
     if (rc != PJ_SUCCESS)
         return rc;
-    
+
 #if PJ_HAS_TCP
     if (type == pj_SOCK_STREAM()) {
         rc = pj_sock_listen(sock, 5);

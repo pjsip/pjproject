@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/mwi.h>
 #include <pjsip-simple/errno.h>
@@ -35,7 +35,7 @@
  /*
  * MWI module (mod-mdi)
  */
-static struct pjsip_module mod_mwi = 
+static struct pjsip_module mod_mwi =
 {
     NULL, NULL,                     /* prev, next.                      */
     { "mod-mwi", 7 },               /* Name.                            */
@@ -75,13 +75,13 @@ typedef struct pjsip_mwi
 static void mwi_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 static void mwi_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
                                     pjsip_event *event);
-static void mwi_on_evsub_rx_refresh( pjsip_evsub *sub, 
+static void mwi_on_evsub_rx_refresh( pjsip_evsub *sub,
                                      pjsip_rx_data *rdata,
                                      int *p_st_code,
                                      pj_str_t **p_st_text,
                                      pjsip_hdr *res_hdr,
                                      pjsip_msg_body **p_body);
-static void mwi_on_evsub_rx_notify( pjsip_evsub *sub, 
+static void mwi_on_evsub_rx_notify( pjsip_evsub *sub,
                                     pjsip_rx_data *rdata,
                                     int *p_st_code,
                                     pj_str_t **p_st_text,
@@ -94,7 +94,7 @@ static void mwi_on_evsub_server_timeout(pjsip_evsub *sub);
 /*
  * Event subscription callback for mwi.
  */
-static pjsip_evsub_user mwi_user = 
+static pjsip_evsub_user mwi_user =
 {
     &mwi_on_evsub_state,
     &mwi_on_evsub_tsx_state,
@@ -135,8 +135,8 @@ PJ_DEF(pj_status_t) pjsip_mwi_init_module( pjsip_endpoint *endpt,
     accept[0] = STR_APP_SIMPLE_SMS;
 
     /* Register event package to event module. */
-    status = pjsip_evsub_register_pkg( &mod_mwi, &STR_MWI, 
-                                       PJSIP_MWI_DEFAULT_EXPIRES, 
+    status = pjsip_evsub_register_pkg( &mod_mwi, &STR_MWI,
+                                       PJSIP_MWI_DEFAULT_EXPIRES,
                                        PJ_ARRAY_SIZE(accept), accept);
     if (status != PJ_SUCCESS) {
         pjsip_endpt_unregister_module(endpt, &mod_mwi);
@@ -175,7 +175,7 @@ PJ_DEF(pj_status_t) pjsip_mwi_create_uac( pjsip_dialog *dlg,
     pjsip_dlg_inc_lock(dlg);
 
     /* Create event subscription */
-    status = pjsip_evsub_create_uac( dlg,  &mwi_user, &STR_MWI, 
+    status = pjsip_evsub_create_uac( dlg,  &mwi_user, &STR_MWI,
                                      options, &sub);
     if (status != PJ_SUCCESS)
         goto on_return;
@@ -252,8 +252,8 @@ PJ_DEF(pj_status_t) pjsip_mwi_create_uas( pjsip_dialog *dlg,
         }
 
     } else {
-        /* No Accept header. 
-         * Assume client supports "application/simple-message-summary" 
+        /* No Accept header.
+         * Assume client supports "application/simple-message-summary"
         */
     }
 
@@ -274,7 +274,7 @@ PJ_DEF(pj_status_t) pjsip_mwi_create_uas( pjsip_dialog *dlg,
         pj_memcpy(&mwi->user_cb, user_cb, sizeof(pjsip_evsub_user));
 
     pj_ansi_snprintf(obj_name, PJ_MAX_OBJ_NAME, "mwibd%p", dlg->pool);
-    mwi->body_pool = pj_pool_create(dlg->pool->factory, obj_name, 
+    mwi->body_pool = pj_pool_create(dlg->pool->factory, obj_name,
                                     512, 512, NULL);
 
     /* Attach to evsub */
@@ -305,7 +305,7 @@ PJ_DEF(pj_status_t) pjsip_mwi_initiate( pjsip_evsub *sub,
                                         pj_uint32_t expires,
                                         pjsip_tx_data **p_tdata)
 {
-    return pjsip_evsub_initiate(sub, &pjsip_subscribe_method, expires, 
+    return pjsip_evsub_initiate(sub, &pjsip_subscribe_method, expires,
                                 p_tdata);
 }
 
@@ -324,14 +324,14 @@ PJ_DEF(pj_status_t) pjsip_mwi_accept( pjsip_evsub *sub,
 /*
  * Create message body and attach it to the (NOTIFY) request.
  */
-static pj_status_t mwi_create_msg_body( pjsip_mwi *mwi, 
+static pj_status_t mwi_create_msg_body( pjsip_mwi *mwi,
                                         pjsip_tx_data *tdata)
 {
     pjsip_msg_body *body;
     pj_str_t dup_text;
 
     PJ_ASSERT_RETURN(mwi->mime_type.type.slen && mwi->body.slen, PJ_EINVALIDOP);
-    
+
     /* Clone the message body and mime type */
     pj_strdup(tdata->pool, &dup_text, &mwi->body);
 
@@ -364,7 +364,7 @@ PJ_DEF(pj_status_t) pjsip_mwi_notify(  pjsip_evsub *sub,
     pjsip_mwi *mwi;
     pjsip_tx_data *tdata;
     pj_status_t status;
-    
+
     /* Check arguments. */
     PJ_ASSERT_RETURN(sub && mime_type && body && p_tdata, PJ_EINVAL);
 
@@ -411,7 +411,7 @@ PJ_DEF(pj_status_t) pjsip_mwi_current_notify( pjsip_evsub *sub,
     pjsip_mwi *mwi;
     pjsip_tx_data *tdata;
     pj_status_t status;
-    
+
     /* Check arguments. */
     PJ_ASSERT_RETURN(sub && p_tdata, PJ_EINVAL);
 
@@ -492,7 +492,7 @@ static void mwi_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
 /*
  * Called when SUBSCRIBE is received.
  */
-static void mwi_on_evsub_rx_refresh( pjsip_evsub *sub, 
+static void mwi_on_evsub_rx_refresh( pjsip_evsub *sub,
                                      pjsip_rx_data *rdata,
                                      int *p_st_code,
                                      pj_str_t **p_st_text,
@@ -530,7 +530,7 @@ static void mwi_on_evsub_rx_refresh( pjsip_evsub *sub,
 /*
  * Called when NOTIFY is received.
  */
-static void mwi_on_evsub_rx_notify( pjsip_evsub *sub, 
+static void mwi_on_evsub_rx_notify( pjsip_evsub *sub,
                                      pjsip_rx_data *rdata,
                                      int *p_st_code,
                                      pj_str_t **p_st_text,
@@ -544,7 +544,7 @@ static void mwi_on_evsub_rx_notify( pjsip_evsub *sub,
 
     /* Just notify application. */
     if (mwi->user_cb.on_rx_notify) {
-        (*mwi->user_cb.on_rx_notify)(sub, rdata, p_st_code, p_st_text, 
+        (*mwi->user_cb.on_rx_notify)(sub, rdata, p_st_code, p_st_text,
                                      res_hdr, p_body);
     }
 }

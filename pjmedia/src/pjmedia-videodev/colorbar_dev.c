@@ -55,10 +55,10 @@ struct cbar_fmt_info {
     pjmedia_format_id            fmt_id;        /* Format ID                */
 
     /* Info for packed formats. */
-    unsigned                     c_offset[3];   /* Color component offset, 
+    unsigned                     c_offset[3];   /* Color component offset,
                                                    in bytes                 */
     unsigned                     c_stride[3];   /* Color component stride,
-                                                   or distance between two 
+                                                   or distance between two
                                                    consecutive same color
                                                    components, in bytes     */
 };
@@ -108,7 +108,7 @@ struct cbar_stream
 /* Prototypes */
 static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t cbar_factory_destroy(pjmedia_vid_dev_factory *f);
-static pj_status_t cbar_factory_refresh(pjmedia_vid_dev_factory *f); 
+static pj_status_t cbar_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    cbar_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t cbar_factory_get_dev_info(pjmedia_vid_dev_factory *f,
                                              unsigned index,
@@ -320,19 +320,19 @@ static const struct cbar_fmt_info* get_cbar_fmt_info(pjmedia_format_id id)
     return NULL;
 }
 
-static void fill_first_line(pj_uint8_t *first_lines[], 
+static void fill_first_line(pj_uint8_t *first_lines[],
                             const struct cbar_fmt_info *cbfi,
                             const pjmedia_video_format_info *vfi,
                             const pjmedia_video_apply_fmt_param *vafp)
 {
     typedef pj_uint8_t color_comp_t[3];
-    color_comp_t rgb_colors[] = 
-    { 
+    color_comp_t rgb_colors[] =
+    {
         {255,255,255}, {255,255,0}, {0,255,255}, {0,255,0},
         {255,0,255}, {255,0,0}, {0,0,255}, {0,0,0}
     };
-    color_comp_t yuv_colors[] = 
-    { 
+    color_comp_t yuv_colors[] =
+    {
         //{235,128,128}, {162,44,142}, {131,156,44}, {112,72,58},
         //{84,184,198}, {65,100,212}, {35,212,114}, {16,128,128}
         {235,128,128}, {210,16,146}, {170,166,16}, {145,54,34},
@@ -584,7 +584,7 @@ static pj_status_t spectrum_run(struct cbar_stream *d, pj_uint8_t *p,
         plane_end = ptr + d->vafp.plane_bytes[i];
         while (ptr < plane_end) {
             pj_memcpy(ptr, d->first_line[i], d->vafp.strides[i]);
-            ptr += d->vafp.strides[i]; 
+            ptr += d->vafp.strides[i];
         }
     }
 
@@ -603,7 +603,7 @@ static pj_status_t spectrum_run(struct cbar_stream *d, pj_uint8_t *p,
                 dot_size /= (d->cbfi->c_stride[i] * 8 / d->vfi->bpp);
                 inc_ptr = d->cbfi->c_stride[i];
                 for (j = 0; j < dot_size; ++j) {
-                    ptr = p + d->vafp.strides[0]*(dot_size+j+1) - 
+                    ptr = p + d->vafp.strides[0]*(dot_size+j+1) -
                           2*dot_size*inc_ptr + d->cbfi->c_offset[i];
                     for (k = 0; k < dot_size; ++k) {
                         if (d->vfi->color_model == PJMEDIA_COLOR_MODEL_RGB)
@@ -628,7 +628,7 @@ static pj_status_t spectrum_run(struct cbar_stream *d, pj_uint8_t *p,
                     c = dot_clr_yuv[i];
 
                 dot_size /= (d->vafp.size.w / d->vafp.strides[i]);
-                ptr = p + offset_p + d->vafp.strides[i]*(dot_size+1) - 
+                ptr = p + offset_p + d->vafp.strides[i]*(dot_size+1) -
                       2*dot_size;
                 for (j = 0; j < dot_size; ++j) {
                     pj_memset(ptr, c, dot_size);

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -36,7 +36,7 @@
 #define PTIME       20
 #define TAIL_LENGTH 200
 
-static const char *desc = 
+static const char *desc =
 " FILE                                                              \n"
 "                                                                   \n"
 "  aectest.c                                                        \n"
@@ -68,10 +68,10 @@ static const char *desc =
 " time is 20 ms and default PJMEDIA_WSOLA_DELAY_MSEC is 5 ms, hence \n"
 " 25 ms delay is the minimum value.                                 \n";
 
-/* 
+/*
  * Sample session:
  *
- * -d 100 -a 1 ../bin/orig8.wav ../bin/echo8.wav ../bin/result8.wav 
+ * -d 100 -a 1 ../bin/orig8.wav ../bin/echo8.wav ../bin/result8.wav
  */
 
 static void app_perror(const char *sender, const char *title, pj_status_t st)
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -182,17 +182,17 @@ int main(int argc, char *argv[])
                            );
 
     /* Open wav_play */
-    status = pjmedia_wav_player_port_create(pool, argv[pj_optind], PTIME, 
-                                            PJMEDIA_FILE_NO_LOOP, 0, 
+    status = pjmedia_wav_player_port_create(pool, argv[pj_optind], PTIME,
+                                            PJMEDIA_FILE_NO_LOOP, 0,
                                             &wav_play);
     if (status != PJ_SUCCESS) {
         app_perror(THIS_FILE, "Error opening playback WAV file", status);
         return 1;
     }
-    
+
     /* Open recorded wav */
-    status = pjmedia_wav_player_port_create(pool, argv[pj_optind+1], PTIME, 
-                                            PJMEDIA_FILE_NO_LOOP, 0, 
+    status = pjmedia_wav_player_port_create(pool, argv[pj_optind+1], PTIME,
+                                            PJMEDIA_FILE_NO_LOOP, 0,
                                             &wav_rec);
     if (status != PJ_SUCCESS) {
         app_perror(THIS_FILE, "Error opening recorded WAV file", status);
@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
 
             status = pjmedia_echo_capture(ec, (short*)rec_frame.buf, 0);
 
-            //status = pjmedia_echo_cancel(ec, (short*)rec_frame.buf, 
+            //status = pjmedia_echo_cancel(ec, (short*)rec_frame.buf,
             //                       (short*)play_frame.buf, 0, NULL);
 
             pjmedia_port_put_frame(wav_out, &rec_frame);
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
     }
     pj_get_timestamp(&t1);
 
-    i = (int)pjmedia_wav_writer_port_get_pos(wav_out) / sizeof(pj_int16_t) * 1000 / 
+    i = (int)pjmedia_wav_writer_port_get_pos(wav_out) / sizeof(pj_int16_t) * 1000 /
          (PJMEDIA_PIA_SRATE(&wav_out->info) * PJMEDIA_PIA_CCNT(&wav_out->info));
     PJ_LOG(3,(THIS_FILE, "Processed %3d.%03ds audio",
               i / 1000, i % 1000));

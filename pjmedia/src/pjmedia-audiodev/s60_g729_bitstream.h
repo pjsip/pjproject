@@ -10,14 +10,14 @@ const TUint  KNumFullFrameParams = 11;
 const TUint8 KG729SIDPayloadBits[] = { 1, 5, 4, 5 };
 const TUint  KNumSIDFrameParams = 4;
 
-/*! 
+/*!
   @class TBitStream
-  
+
   @discussion Provides compression from 16-bit-word-aligned G.729 audio frames
   (used in S60 G.729 DSP codec) to 8-bit stream, and vice versa.
   */
 class TBitStream
-  {        
+  {
 public:
     /*!
       @function TBitStream
@@ -27,7 +27,7 @@ public:
     TBitStream():iDes(iData,KUnpackedFrameLen){}
     /*!
       @function CompressG729Frame
-      
+
       @discussion Compress either a 22-byte G.729 full rate frame to 10 bytes
       or a 8-byte G.729 Annex.B SID frame to 2 bytes.
       @param aSrc Reference to the uncompressed source frame data
@@ -35,10 +35,10 @@ public:
       @result a reference to the compressed frame
       */
     const TDesC8& CompressG729Frame( const TDesC8& aSrc, TBool aIsSIDFrame = EFalse );
-    
+
     /*!
       @function ExpandG729Frame
-            
+
       @discussion Expand a 10-byte G.729 full rate frame to 22 bytes
       or a 2-byte G.729 Annex.B SID frame to 8(22) bytes.
       @param aSrc Reference to the compressed source frame data
@@ -58,7 +58,7 @@ private:
     TInt        iIdx;
     TInt        iBitOffset;
     };
-    
+
 
 const TDesC8& TBitStream::CompressG729Frame( const TDesC8& aSrc, TBool aIsSIDFrame )
 {
@@ -164,5 +164,5 @@ void TBitStream::Expand( const TUint8* aSrc, TInt aDstIdx, TUint8 aNumOfBits )
 }
 
 #endif // __BITSTREAM_H_
-    
+
 // eof

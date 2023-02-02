@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ssl_sock.h>
 #include <pj/compat/socket.h>
@@ -135,9 +135,9 @@ typedef void (*CPjSSLSocket_cb)(int err, void *key);
 class CPjSSLSocketReader : public CActive
 {
 public:
-    static CPjSSLSocketReader *NewL(CSecureSocket &sock) 
+    static CPjSSLSocketReader *NewL(CSecureSocket &sock)
     {
-        CPjSSLSocketReader *self = new (ELeave) 
+        CPjSSLSocketReader *self = new (ELeave)
                                    CPjSSLSocketReader(sock);
         CleanupStack::PushL(self);
         self->ConstructL();
@@ -153,12 +153,12 @@ public:
     int Read(CPjSSLSocket_cb cb, void *key, TPtr8 &data, TUint flags)
     {
         PJ_ASSERT_RETURN(!IsActive(), PJ_EBUSY);
-        
+
         cb_ = cb;
         key_ = key;
         sock_.RecvOneOrMore(data, iStatus, len_received_);
         SetActive();
-        
+
         return PJ_EPENDING;
     }
 
@@ -171,15 +171,15 @@ private:
     void DoCancel() {
         sock_.CancelAll();
     }
-    
+
     void RunL() {
         (*cb_)(iStatus.Int(), key_);
     }
 
-    CPjSSLSocketReader(CSecureSocket &sock) : 
-        CActive(0), sock_(sock), cb_(NULL), key_(NULL) 
+    CPjSSLSocketReader(CSecureSocket &sock) :
+        CActive(0), sock_(sock), cb_(NULL), key_(NULL)
     {}
-    
+
     void ConstructL() {
         CActiveScheduler::Add(this);
     }
@@ -194,10 +194,10 @@ public:
         SSL_STATE_HANDSHAKING,
         SSL_STATE_ESTABLISHED
     };
-    
+
     static CPjSSLSocket *NewL(const TDesC8 &ssl_proto,
                               pj_qos_type qos_type,
-                              const pj_qos_params &qos_params) 
+                              const pj_qos_params &qos_params)
     {
         CPjSSLSocket *self = new (ELeave) CPjSSLSocket(qos_type, qos_params);
         CleanupStack::PushL(self);
@@ -211,8 +211,8 @@ public:
         CleanupSubObjects();
     }
 
-    int Connect(CPjSSLSocket_cb cb, void *key, const TInetAddr &local_addr, 
-                const TInetAddr &rem_addr, 
+    int Connect(CPjSSLSocket_cb cb, void *key, const TInetAddr &local_addr,
+                const TInetAddr &rem_addr,
                 const TDesC8 &servername = TPtrC8(NULL,0),
                 const TDesC8 &ciphers = TPtrC8(NULL,0));
     int Send(CPjSSLSocket_cb cb, void *key, const TDesC8 &aDesc, TUint flags);
@@ -237,10 +237,10 @@ private:
     pj_sock_t            sock_;
     CSecureSocket       *securesock_;
     bool                 is_connected_;
-    
+
     pj_qos_type          qos_type_;
     pj_qos_params        qos_params_;
-                              
+
     CPjSSLSocketReader  *reader_;
     TBuf<32>             ssl_proto_;
     TInetAddr            rem_addr_;
@@ -251,17 +251,17 @@ private:
 
     CPjSSLSocket_cb      cb_;
     void                *key_;
-    
+
     void DoCancel();
     void RunL();
 
     CPjSSLSocket(pj_qos_type qos_type, const pj_qos_params &qos_params) :
-        CActive(0), state_(SSL_STATE_NULL), sock_(PJ_INVALID_SOCKET), 
+        CActive(0), state_(SSL_STATE_NULL), sock_(PJ_INVALID_SOCKET),
         securesock_(NULL), is_connected_(false),
         qos_type_(qos_type), qos_params_(qos_params),
         reader_(NULL),  cb_(NULL), key_(NULL)
     {}
-    
+
     void ConstructL(const TDesC8 &ssl_proto) {
         ssl_proto_.Copy(ssl_proto);
         CActiveScheduler::Add(this);
@@ -279,42 +279,42 @@ private:
         if (sock_ != PJ_INVALID_SOCKET) {
             pj_sock_close(sock_);
             sock_ = PJ_INVALID_SOCKET;
-        }           
+        }
     }
 };
 
-int CPjSSLSocket::Connect(CPjSSLSocket_cb cb, void *key, 
-                          const TInetAddr &local_addr, 
+int CPjSSLSocket::Connect(CPjSSLSocket_cb cb, void *key,
+                          const TInetAddr &local_addr,
                           const TInetAddr &rem_addr,
                           const TDesC8 &servername,
                           const TDesC8 &ciphers)
 {
     pj_status_t status;
-    
+
     PJ_ASSERT_RETURN(state_ == SSL_STATE_NULL, PJ_EINVALIDOP);
-    
+
     status = pj_sock_socket(rem_addr.Family(), pj_SOCK_STREAM(), 0, &sock_);
     if (status != PJ_SUCCESS)
         return status;
 
     // Apply QoS
-    status = pj_sock_apply_qos2(sock_, qos_type_, &qos_params_, 
+    status = pj_sock_apply_qos2(sock_, qos_type_, &qos_params_,
                                 2,  THIS_FILE, NULL);
-    
+
     RSocket &rSock = ((CPjSocket*)sock_)->Socket();
 
     local_addr_ = local_addr;
-    
+
     if (!local_addr_.IsUnspecified()) {
         TInt err = rSock.Bind(local_addr_);
         if (err != KErrNone)
             return PJ_RETURN_OS_ERROR(err);
     }
-    
+
     cb_ = cb;
     key_ = key;
     rem_addr_ = rem_addr;
-    
+
     /* Note: the following members only keep the pointer, not the data */
     servername_.Set(servername);
     ciphers_.Set(ciphers);
@@ -322,28 +322,28 @@ int CPjSSLSocket::Connect(CPjSSLSocket_cb cb, void *key,
     rSock.Connect(rem_addr_, iStatus);
     SetActive();
     state_ = SSL_STATE_CONNECTING;
-    
+
     rSock.LocalName(local_addr_);
 
     return PJ_EPENDING;
 }
 
-int CPjSSLSocket::Send(CPjSSLSocket_cb cb, void *key, const TDesC8 &aDesc, 
+int CPjSSLSocket::Send(CPjSSLSocket_cb cb, void *key, const TDesC8 &aDesc,
                        TUint flags)
 {
     PJ_UNUSED_ARG(flags);
 
     PJ_ASSERT_RETURN(state_ == SSL_STATE_ESTABLISHED, PJ_EINVALIDOP);
-    
+
     if (IsActive())
         return PJ_EBUSY;
-    
+
     cb_ = cb;
     key_ = key;
-    
+
     securesock_->Send(aDesc, iStatus, sent_len_);
     SetActive();
-    
+
     return PJ_EPENDING;
 }
 
@@ -352,25 +352,25 @@ int CPjSSLSocket::SendSync(const TDesC8 &aDesc, TUint flags)
     PJ_UNUSED_ARG(flags);
 
     PJ_ASSERT_RETURN(state_ == SSL_STATE_ESTABLISHED, PJ_EINVALIDOP);
-    
+
     TRequestStatus reqStatus;
     securesock_->Send(aDesc, reqStatus, sent_len_);
     User::WaitForRequest(reqStatus);
-    
+
     return PJ_RETURN_OS_ERROR(reqStatus.Int());
 }
 
 CPjSSLSocketReader* CPjSSLSocket::GetReader()
 {
     PJ_ASSERT_RETURN(state_ == SSL_STATE_ESTABLISHED, NULL);
-    
+
     if (reader_)
         return reader_;
-    
+
     TRAPD(err,  reader_ = CPjSSLSocketReader::NewL(*securesock_));
     if (err != KErrNone)
         return NULL;
-    
+
     return reader_;
 }
 
@@ -416,7 +416,7 @@ void CPjSSLSocket::RunL()
 
             /* Get local addr */
             rSock.LocalName(local_addr_);
-            
+
             /* Prepare and start handshake */
             securesock_ = CSecureSocket::NewL(rSock, ssl_proto_);
             securesock_->SetDialogMode(EDialogModeAttended);
@@ -426,9 +426,9 @@ void CPjSSLSocket::RunL()
             if (ciphers_.Length() > 0)
                 securesock_->SetAvailableCipherSuites(ciphers_);
 
-            // FlushSessionCache() seems to also fire signals to all 
+            // FlushSessionCache() seems to also fire signals to all
             // completed AOs (something like CActiveScheduler::RunIfReady())
-            // which may cause problem, e.g: we've experienced that when 
+            // which may cause problem, e.g: we've experienced that when
             // SSL timeout is set to 1s, the SSL timeout timer fires up
             // at this point and securesock_ instance gets deleted here!
             // So be careful using this. And we don't think we need it here.
@@ -461,10 +461,10 @@ void CPjSSLSocket::RunL()
 
 typedef void (*CPjTimer_cb)(void *user_data);
 
-class CPjTimer : public CActive 
+class CPjTimer : public CActive
 {
 public:
-    CPjTimer(const pj_time_val *delay, CPjTimer_cb cb, void *user_data) : 
+    CPjTimer(const pj_time_val *delay, CPjTimer_cb cb, void *user_data) :
         CActive(0), cb_(cb), user_data_(user_data)
     {
         CActiveScheduler::Add(this);
@@ -477,14 +477,14 @@ public:
         rtimer_.After(iStatus, interval);
         SetActive();
     }
-    
+
     ~CPjTimer() { Cancel(); }
-    
-private:        
+
+private:
     RTimer               rtimer_;
     CPjTimer_cb          cb_;
     void                *user_data_;
-    
+
     void RunL() { if (cb_) (*cb_)(user_data_); }
     void DoCancel() { rtimer_.Cancel(); }
 };
@@ -495,7 +495,7 @@ private:
 typedef struct read_state_t {
     TPtr8               *read_buf;
     TPtr8               *orig_buf;
-    pj_uint32_t          flags;    
+    pj_uint32_t          flags;
 } read_state_t;
 
 /*
@@ -513,7 +513,7 @@ typedef struct write_data_t {
  */
 typedef struct write_state_t {
     char                *buf;
-    pj_size_t            max_len;    
+    pj_size_t            max_len;
     char                *start;
     pj_size_t            len;
     write_data_t        *current_data;
@@ -528,7 +528,7 @@ struct pj_ssl_sock_t
     pj_pool_t           *pool;
     pj_ssl_sock_cb       cb;
     void                *user_data;
-    
+
     pj_bool_t            established;
     write_state_t        write_state;
     read_state_t         read_state;
@@ -560,7 +560,7 @@ static pj_str_t get_cert_name(char *buf, unsigned buf_len,
     TInt i;
     TUint8 *p;
     TInt l = buf_len;
-    
+
     p = (TUint8*)buf;
     for(i = 0; i < name.Count(); ++i) {
         const CX520AttributeTypeAndValue &attr = name.Element(i);
@@ -579,7 +579,7 @@ static pj_str_t get_cert_name(char *buf, unsigned buf_len,
         /* Print equal sign */
         *p++ = '=';
         if (0 == --l) break;
-        
+
         /* Print the value. Let's just get the raw data here */
         TPtr8 value(p, l);
         value.Copy(attr.EncodedValue().Mid(2));
@@ -587,13 +587,13 @@ static pj_str_t get_cert_name(char *buf, unsigned buf_len,
         l -= value.Length();
         if (0 >= --l) break;
     }
-    
+
     pj_str_t src;
     pj_strset(&src, buf, buf_len - l);
-    
+
     return src;
 }
-                            
+
 /* Get certificate info from CX509Certificate.
  */
 static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
@@ -602,23 +602,23 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     enum { tmp_buf_len = 512 };
     char *tmp_buf;
     unsigned len;
-    
+
     pj_assert(pool && ci && x);
-    
+
     /* Init */
     tmp_buf = new char[tmp_buf_len];
     pj_bzero(ci, sizeof(*ci));
-    
+
     /* Version */
     ci->version = x->Version();
-    
+
     /* Serial number */
     len = x->SerialNumber().Length();
-    if (len > sizeof(ci->serial_no)) 
+    if (len > sizeof(ci->serial_no))
         len = sizeof(ci->serial_no);
-    pj_memcpy(ci->serial_no + sizeof(ci->serial_no) - len, 
+    pj_memcpy(ci->serial_no + sizeof(ci->serial_no) - len,
               x->SerialNumber().Ptr(), len);
-    
+
     /* Subject */
     {
         HBufC *subject = NULL;
@@ -650,16 +650,16 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
                                      x->IssuerName());
         pj_strdup(pool, &ci->issuer.info, &tmp);
     }
-    
+
     /* Validity */
     const CValidityPeriod &valid_period = x->ValidityPeriod();
     TTime base_time(TDateTime(1970, EJanuary, 0, 0, 0, 0, 0));
     TTimeIntervalSeconds tmp_sec;
     valid_period.Start().SecondsFrom(base_time, tmp_sec);
-    ci->validity.start.sec = tmp_sec.Int(); 
+    ci->validity.start.sec = tmp_sec.Int();
     valid_period.Finish().SecondsFrom(base_time, tmp_sec);
     ci->validity.end.sec = tmp_sec.Int();
-    
+
     /* Deinit */
     delete [] tmp_buf;
 }
@@ -674,7 +674,7 @@ static void update_certs_info(pj_ssl_sock_t *ssock)
 
     pj_assert(ssock && ssock->sock &&
               ssock->sock->GetState() == CPjSSLSocket::SSL_STATE_ESTABLISHED);
-        
+
     /* Active remote certificate */
     x = ssock->sock->GetPeerCert();
     if (x) {
@@ -702,7 +702,7 @@ PJ_DEF(pj_status_t) pj_ssl_cipher_get_availables (pj_ssl_cipher ciphers[],
     unsigned i;
 
     PJ_ASSERT_RETURN(ciphers && cipher_num, PJ_EINVAL);
-    
+
     if (ciphers_num_ == 0) {
         RSocket sock;
         CSecureSocket *secure_sock;
@@ -712,29 +712,29 @@ PJ_DEF(pj_status_t) pj_ssl_cipher_get_availables (pj_ssl_cipher ciphers[],
         if (secure_sock) {
             TBuf8<128> ciphers_buf(0);
             secure_sock->AvailableCipherSuites(ciphers_buf);
-            
+
             ciphers_num_ = ciphers_buf.Length() / 2;
             if (ciphers_num_ > PJ_ARRAY_SIZE(ciphers_))
                 ciphers_num_ = PJ_ARRAY_SIZE(ciphers_);
             for (i = 0; i < ciphers_num_; ++i) {
-                ciphers_[i].id = (pj_ssl_cipher)(ciphers_buf[i*2]*10 + 
+                ciphers_[i].id = (pj_ssl_cipher)(ciphers_buf[i*2]*10 +
                                                  ciphers_buf[i*2+1]);
                 ciphers_[i].name = get_cipher_name(ciphers_[i].id);
             }
         }
-        
+
         delete secure_sock;
     }
-    
+
     if (ciphers_num_ == 0) {
         *cipher_num = 0;
         return PJ_ENOTFOUND;
     }
-    
+
     *cipher_num = PJ_MIN(*cipher_num, ciphers_num_);
     for (i = 0; i < *cipher_num; ++i)
         ciphers[i] = ciphers_[i].id;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -749,7 +749,7 @@ PJ_DEF(const char*) pj_ssl_cipher_name(pj_ssl_cipher cipher)
         i = 0;
         pj_ssl_cipher_get_availables(c, &i);
     }
-        
+
     for (i = 0; i < ciphers_num_; ++i) {
         if (cipher == ciphers_[i].id)
             return ciphers_[i].name;
@@ -763,13 +763,13 @@ PJ_DEF(const char*) pj_ssl_cipher_name(pj_ssl_cipher cipher)
 PJ_DEF(pj_ssl_cipher) pj_ssl_cipher_id(const char *cipher_name)
 {
     unsigned i;
-    
+
     if (ciphers_num_ == 0) {
         pj_ssl_cipher c[1];
         i = 0;
         pj_ssl_cipher_get_availables(c, &i);
     }
-    
+
     for (i = 0; i < ciphers_num_; ++i) {
         if (!pj_ansi_stricmp(ciphers_[i].name, cipher_name))
             return ciphers_[i].id;
@@ -789,7 +789,7 @@ PJ_DEF(pj_bool_t) pj_ssl_cipher_is_supported(pj_ssl_cipher cipher)
         i = 0;
         pj_ssl_cipher_get_availables(c, &i);
     }
-        
+
     for (i = 0; i < ciphers_num_; ++i) {
         if (cipher == ciphers_[i].id)
             return PJ_TRUE;
@@ -800,7 +800,7 @@ PJ_DEF(pj_bool_t) pj_ssl_cipher_is_supported(pj_ssl_cipher cipher)
 
 
 /*
- * Create SSL socket instance. 
+ * Create SSL socket instance.
  */
 PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
                                         const pj_ssl_sock_param *param,
@@ -813,13 +813,13 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
 
     /* Allocate secure socket */
     ssock = PJ_POOL_ZALLOC_T(pool, pj_ssl_sock_t);
-    
+
     /* Allocate write buffer */
-    ssock->write_state.buf = (char*)pj_pool_alloc(pool, 
+    ssock->write_state.buf = (char*)pj_pool_alloc(pool,
                                                   param->send_buffer_size);
     ssock->write_state.max_len = param->send_buffer_size;
     ssock->write_state.start = ssock->write_state.buf;
-    
+
     /* Init secure socket */
     ssock->pool = pool;
     ssock->sock_af = param->sock_af;
@@ -900,10 +900,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
 PJ_DEF(pj_status_t) pj_ssl_sock_close(pj_ssl_sock_t *ssock)
 {
     PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
-    
+
     delete ssock->connect_timer;
     ssock->connect_timer = NULL;
-    
+
     delete ssock->sock;
     ssock->sock = NULL;
 
@@ -911,7 +911,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_close(pj_ssl_sock_t *ssock)
     delete ssock->read_state.orig_buf;
     ssock->read_state.read_buf = NULL;
     ssock->read_state.orig_buf = NULL;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -923,12 +923,12 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_user_data (pj_ssl_sock_t *ssock,
                                                void *user_data)
 {
     PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
-    
+
     ssock->user_data = user_data;
-    
+
     return PJ_SUCCESS;
 }
-                                               
+
 
 /*
  * Retrieve the user data previously associated with this SSL
@@ -937,7 +937,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_user_data (pj_ssl_sock_t *ssock,
 PJ_DEF(void*) pj_ssl_sock_get_user_data(pj_ssl_sock_t *ssock)
 {
     PJ_ASSERT_RETURN(ssock, NULL);
-    
+
     return ssock->user_data;
 }
 
@@ -949,17 +949,17 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
                                           pj_ssl_sock_info *info)
 {
     PJ_ASSERT_RETURN(ssock && info, PJ_EINVAL);
-    
+
     pj_bzero(info, sizeof(*info));
-    
+
     info->established = ssock->established;
-    
+
     /* Local address */
     if (ssock->sock) {
         const TInetAddr* local_addr_ = ssock->sock->GetLocalAddr();
         int addrlen = sizeof(pj_sockaddr);
         pj_status_t status;
-        
+
         status = PjSymbianOS::Addr2pj(*local_addr_, info->local_addr, &addrlen);
         if (status != PJ_SUCCESS)
             return status;
@@ -971,20 +971,20 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
         /* Cipher suite */
         TBuf8<4> cipher;
         if (ssock->sock->GetCipher(cipher) == KErrNone) {
-            info->cipher = (pj_ssl_cipher)cipher[1]; 
+            info->cipher = (pj_ssl_cipher)cipher[1];
         }
 
         /* Remote address */
-        pj_sockaddr_cp((pj_sockaddr_t*)&info->remote_addr, 
+        pj_sockaddr_cp((pj_sockaddr_t*)&info->remote_addr,
                        (pj_sockaddr_t*)&ssock->rem_addr);
-        
+
         /* Certificates info */
         info->remote_cert_info = &ssock->remote_cert_info;
     }
 
     /* Protocol */
     info->proto = ssock->proto;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1019,39 +1019,39 @@ static void read_cb(int err, void *key)
 
     /* Check connection status */
     if (err == KErrEof || !PjSymbianOS::Instance()->IsConnectionUp() ||
-        !ssock->established) 
+        !ssock->established)
     {
         status = PJ_EEOF;
     }
-    
+
     /* Notify data arrival */
     if (ssock->cb.on_data_read) {
         pj_size_t remainder = 0;
         char *data = (char*)ssock->read_state.orig_buf->Ptr();
-        pj_size_t data_len = ssock->read_state.read_buf->Length() + 
+        pj_size_t data_len = ssock->read_state.read_buf->Length() +
                              ssock->read_state.read_buf->Ptr() -
                              ssock->read_state.orig_buf->Ptr();
-        
+
         if (data_len > 0) {
             /* Notify received data */
-            pj_bool_t ret = (*ssock->cb.on_data_read)(ssock, data, data_len, 
+            pj_bool_t ret = (*ssock->cb.on_data_read)(ssock, data, data_len,
                                                       status, &remainder);
             if (!ret) {
                 /* We've been destroyed */
                 return;
             }
-            
+
             /* Calculate available data for next READ operation */
             if (remainder > 0) {
                 pj_size_t data_maxlen = ssock->read_state.orig_buf->MaxLength();
-                
+
                 /* There is some data left unconsumed by application, we give
                  * smaller buffer for next READ operation.
                  */
-                ssock->read_state.read_buf->Set((TUint8*)data+remainder, 0, 
+                ssock->read_state.read_buf->Set((TUint8*)data+remainder, 0,
                                                 data_maxlen - remainder);
             } else {
-                /* Give all buffer for next READ operation. 
+                /* Give all buffer for next READ operation.
                  */
                 ssock->read_state.read_buf->Set(*ssock->read_state.orig_buf);
             }
@@ -1060,24 +1060,24 @@ static void read_cb(int err, void *key)
 
     if (status == PJ_SUCCESS) {
         /* Perform the "next" READ operation */
-        CPjSSLSocketReader *reader = ssock->sock->GetReader(); 
+        CPjSSLSocketReader *reader = ssock->sock->GetReader();
         ssock->read_state.read_buf->SetLength(0);
-        status = reader->Read(&read_cb, ssock, *ssock->read_state.read_buf, 
+        status = reader->Read(&read_cb, ssock, *ssock->read_state.read_buf,
                               ssock->read_state.flags);
     }
-    
+
     /* Connection closed or something goes wrong */
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
         /* Notify error */
         if (ssock->cb.on_data_read) {
-            pj_bool_t ret = (*ssock->cb.on_data_read)(ssock, NULL, 0, 
+            pj_bool_t ret = (*ssock->cb.on_data_read)(ssock, NULL, 0,
                                                       status, NULL);
             if (!ret) {
                 /* We've been destroyed */
                 return;
             }
         }
-        
+
         delete ssock->read_state.read_buf;
         delete ssock->read_state.orig_buf;
         ssock->read_state.read_buf = NULL;
@@ -1099,22 +1099,22 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read2 (pj_ssl_sock_t *ssock,
 {
     PJ_ASSERT_RETURN(ssock && buff_size && readbuf, PJ_EINVAL);
     PJ_ASSERT_RETURN(ssock->established, PJ_EINVALIDOP);
-    
+
     /* Return failure if access point is marked as down by app. */
     PJ_SYMBIAN_CHECK_CONNECTION();
-    
+
     /* Reading is already started */
     if (ssock->read_state.orig_buf) {
         return PJ_SUCCESS;
     }
-    
+
     PJ_UNUSED_ARG(pool);
 
     /* Get reader instance */
     CPjSSLSocketReader *reader = ssock->sock->GetReader();
     if (!reader)
         return PJ_ENOMEM;
-    
+
     /* We manage two buffer pointers here:
      * 1. orig_buf keeps the orginal buffer address (and its max length).
      * 2. read_buf provides buffer for READ operation, mind that there may be
@@ -1123,20 +1123,20 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read2 (pj_ssl_sock_t *ssock,
     ssock->read_state.read_buf = new TPtr8((TUint8*)readbuf[0], 0, buff_size);
     ssock->read_state.orig_buf = new TPtr8((TUint8*)readbuf[0], 0, buff_size);
     ssock->read_state.flags = flags;
-    
+
     pj_status_t status;
-    status = reader->Read(&read_cb, ssock, *ssock->read_state.read_buf, 
+    status = reader->Read(&read_cb, ssock, *ssock->read_state.read_buf,
                           ssock->read_state.flags);
-    
+
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
         delete ssock->read_state.read_buf;
         delete ssock->read_state.orig_buf;
         ssock->read_state.read_buf = NULL;
         ssock->read_state.orig_buf = NULL;
-        
+
         return status;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1158,7 +1158,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_recvfrom (pj_ssl_sock_t *ssock,
 }
 
 /*
- * Same as #pj_ssl_sock_start_recvfrom() except that the recvfrom() 
+ * Same as #pj_ssl_sock_start_recvfrom() except that the recvfrom()
  * operation takes the buffer from the argument rather than creating
  * new ones.
  */
@@ -1183,7 +1183,7 @@ static void send_cb(int err, void *key)
 
     /* Check connection status */
     if (err != KErrNone || !PjSymbianOS::Instance()->IsConnectionUp() ||
-        !ssock->established) 
+        !ssock->established)
     {
         ssock->established = PJ_FALSE;
         return;
@@ -1200,7 +1200,7 @@ static void send_cb(int err, void *key)
     if (st->len) {
         write_data_t *wdata = (write_data_t*)st->start;
         pj_status_t status;
-        
+
         st->send_ptr.Set((TUint8*)wdata->data, (TInt)wdata->data_len);
         st->current_data = wdata;
         status = ssock->sock->Send(&send_cb, ssock, st->send_ptr, 0);
@@ -1226,19 +1226,19 @@ PJ_DEF(pj_status_t) pj_ssl_sock_send (pj_ssl_sock_t *ssock,
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(ssock && data && size, PJ_EINVAL);
-    PJ_ASSERT_RETURN(ssock->write_state.max_len == 0 || 
-                     ssock->write_state.max_len >= (pj_size_t)*size, 
+    PJ_ASSERT_RETURN(ssock->write_state.max_len == 0 ||
+                     ssock->write_state.max_len >= (pj_size_t)*size,
                      PJ_ETOOSMALL);
-    
+
     /* Check connection status */
-    if (!PjSymbianOS::Instance()->IsConnectionUp() || !ssock->established) 
+    if (!PjSymbianOS::Instance()->IsConnectionUp() || !ssock->established)
     {
         ssock->established = PJ_FALSE;
         return PJ_ECANCELLED;
     }
 
     write_state_t *st = &ssock->write_state;
-    
+
     /* Synchronous mode */
     if (st->max_len == 0) {
         st->send_ptr.Set((TUint8*)data, (TInt)*size);
@@ -1246,14 +1246,14 @@ PJ_DEF(pj_status_t) pj_ssl_sock_send (pj_ssl_sock_t *ssock,
     }
 
     /* CSecureSocket only allows one outstanding send operation, so
-     * we use buffering mechanism to allow application to perform send 
+     * we use buffering mechanism to allow application to perform send
      * operations at any time.
      */
-    
+
     pj_size_t needed_len = *size + sizeof(write_data_t) - 1;
-    
+
     /* Align needed_len to be multiplication of 4 */
-    needed_len = ((needed_len + 3) >> 2) << 2; 
+    needed_len = ((needed_len + 3) >> 2) << 2;
 
     /* Block until there is buffer slot available and contiguous! */
     while (st->start + st->len + needed_len > st->buf + st->max_len) {
@@ -1262,7 +1262,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_send (pj_ssl_sock_t *ssock,
 
     /* Push back the send data into the buffer */
     write_data_t *wdata = (write_data_t*)(st->start + st->len);
-    
+
     wdata->len = needed_len;
     wdata->key = send_key;
     wdata->data_len = (pj_size_t)*size;
@@ -1272,18 +1272,18 @@ PJ_DEF(pj_status_t) pj_ssl_sock_send (pj_ssl_sock_t *ssock,
     /* If no outstanding send, send it */
     if (st->current_data == NULL) {
         pj_status_t status;
-            
+
         wdata = (write_data_t*)st->start;
         st->current_data = wdata;
         st->send_ptr.Set((TUint8*)wdata->data, (TInt)wdata->data_len);
         status = ssock->sock->Send(&send_cb, ssock, st->send_ptr, flags);
-        
+
         if (status != PJ_EPENDING) {
             *size = -status;
             return status;
         }
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1309,7 +1309,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_sendto (pj_ssl_sock_t *ssock,
 }
 
 /*
- * Starts asynchronous socket accept() operations on this SSL socket. 
+ * Starts asynchronous socket accept() operations on this SSL socket.
  */
 PJ_DEF(pj_status_t) pj_ssl_sock_start_accept (pj_ssl_sock_t *ssock,
                                               pj_pool_t *pool,
@@ -1320,7 +1320,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_accept (pj_ssl_sock_t *ssock,
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(local_addr);
     PJ_UNUSED_ARG(addr_len);
-    
+
     return PJ_ENOTSUP;
 }
 
@@ -1328,7 +1328,7 @@ static void connect_cb(int err, void *key)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)key;
     pj_status_t status;
-    
+
     if (ssock->connect_timer) {
         delete ssock->connect_timer;
         ssock->connect_timer = NULL;
@@ -1343,7 +1343,7 @@ static void connect_cb(int err, void *key)
         ssock->sock = NULL;
         if (err == KErrTimedOut) status = PJ_ETIMEDOUT;
     }
-    
+
     if (ssock->cb.on_connect_complete) {
         pj_bool_t ret = (*ssock->cb.on_connect_complete)(ssock, status);
         if (!ret) {
@@ -1359,7 +1359,7 @@ static void connect_timer_cb(void *key)
 }
 
 /*
- * Starts asynchronous socket connect() operation and SSL/TLS handshaking 
+ * Starts asynchronous socket connect() operation and SSL/TLS handshaking
  * for this socket. Once the connection is done (either successfully or not),
  * the \a on_connect_complete() callback will be called.
  */
@@ -1371,13 +1371,13 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect (pj_ssl_sock_t *ssock,
 {
     CPjSSLSocket *sock = NULL;
     pj_status_t status;
-    
+
     PJ_ASSERT_RETURN(ssock && pool && localaddr && remaddr && addr_len,
                      PJ_EINVAL);
 
     /* Check connection status */
     PJ_SYMBIAN_CHECK_CONNECTION();
-    
+
     if (ssock->sock != NULL) {
         CPjSSLSocket::ssl_state state = ssock->sock->GetState();
         switch (state) {
@@ -1390,7 +1390,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect (pj_ssl_sock_t *ssock,
 
     /* Set SSL protocol */
     TPtrC8 proto;
-    
+
     if (ssock->proto == PJ_SSL_SOCK_PROTO_DEFAULT)
         ssock->proto = PJ_SSL_SOCK_PROTO_TLS1;
 
@@ -1405,11 +1405,11 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect (pj_ssl_sock_t *ssock,
 
     /* Prepare addresses */
     TInetAddr localaddr_, remaddr_;
-    status = PjSymbianOS::pj2Addr(*(pj_sockaddr*)localaddr, addr_len, 
+    status = PjSymbianOS::pj2Addr(*(pj_sockaddr*)localaddr, addr_len,
                                   localaddr_);
     if (status != PJ_SUCCESS)
         return status;
-    
+
     status = PjSymbianOS::pj2Addr(*(pj_sockaddr*)remaddr, addr_len,
                                   remaddr_);
     if (status != PJ_SUCCESS)
@@ -1418,24 +1418,24 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect (pj_ssl_sock_t *ssock,
     pj_sockaddr_cp((pj_sockaddr_t*)&ssock->rem_addr, remaddr);
 
     /* Init SSL engine */
-    TRAPD(err, sock = CPjSSLSocket::NewL(proto, ssock->qos_type, 
+    TRAPD(err, sock = CPjSSLSocket::NewL(proto, ssock->qos_type,
                                          ssock->qos_params));
     if (err != KErrNone)
         return PJ_ENOMEM;
-    
+
     if (ssock->timeout.sec != 0 || ssock->timeout.msec != 0) {
-        ssock->connect_timer = new CPjTimer(&ssock->timeout, 
+        ssock->connect_timer = new CPjTimer(&ssock->timeout,
                                             &connect_timer_cb, ssock);
     }
-    
+
     /* Convert server name to Symbian descriptor */
-    TPtrC8 servername_((TUint8*)ssock->servername.ptr, 
+    TPtrC8 servername_((TUint8*)ssock->servername.ptr,
                        ssock->servername.slen);
-    
+
     /* Convert cipher list to Symbian descriptor */
-    TPtrC8 ciphers_((TUint8*)ssock->ciphers.ptr, 
+    TPtrC8 ciphers_((TUint8*)ssock->ciphers.ptr,
                     ssock->ciphers.slen);
-    
+
     /* Try to connect */
     status = sock->Connect(&connect_cb, ssock, localaddr_, remaddr_,
                            servername_, ciphers_);

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2019 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/vid_conf.h>
 #include <pjmedia/clock.h>
@@ -195,7 +195,7 @@ static op_entry* get_free_op_entry(pjmedia_vid_conf *conf)
 static void handle_op_queue(pjmedia_vid_conf *conf)
 {
     op_entry *op, *next_op;
-    
+
     op = conf->op_queue->next;
     while (op != conf->op_queue) {
         next_op = op->next;
@@ -516,7 +516,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
                             pj_pool_zalloc(pool,
                                            vid_conf->opt.max_slot_cnt *
                                            sizeof(unsigned));
-    if (!cport->listener_slots) {       
+    if (!cport->listener_slots) {
         status = PJ_ENOMEM;
         goto on_error;
     }
@@ -525,7 +525,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     cport->transmitter_slots = (unsigned*)
                                pj_pool_zalloc(pool,
                                               vid_conf->opt.max_slot_cnt *
-                                              sizeof(unsigned));    
+                                              sizeof(unsigned));
     if (!cport->transmitter_slots) {
         status = PJ_ENOMEM;
         goto on_error;
@@ -546,7 +546,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     cport->render_pool = (pj_pool_t**)
                          pj_pool_zalloc(pool,
                                         vid_conf->opt.max_slot_cnt *
-                                        sizeof(pj_pool_t*));    
+                                        sizeof(pj_pool_t*));
     if (!cport->render_pool) {
         status = PJ_ENOMEM;
         goto on_error;
@@ -759,7 +759,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_connect_port(
 
     /* Check arguments */
     PJ_ASSERT_RETURN(vid_conf &&
-                     src_slot<vid_conf->opt.max_slot_cnt && 
+                     src_slot<vid_conf->opt.max_slot_cnt &&
                      sink_slot<vid_conf->opt.max_slot_cnt, PJ_EINVAL);
     PJ_UNUSED_ARG(opt);
 
@@ -869,7 +869,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
 
     /* Check arguments */
     PJ_ASSERT_RETURN(vid_conf &&
-                     src_slot<vid_conf->opt.max_slot_cnt && 
+                     src_slot<vid_conf->opt.max_slot_cnt &&
                      sink_slot<vid_conf->opt.max_slot_cnt, PJ_EINVAL);
 
     pj_mutex_lock(vid_conf->mutex);
@@ -898,9 +898,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
     if (i != src_port->listener_cnt && j != dst_port->transmitter_cnt) {
         op_entry *ope;
 
-        pj_assert(src_port->listener_cnt > 0 && 
+        pj_assert(src_port->listener_cnt > 0 &&
                   src_port->listener_cnt < vid_conf->opt.max_slot_cnt);
-        pj_assert(dst_port->transmitter_cnt > 0 && 
+        pj_assert(dst_port->transmitter_cnt > 0 &&
                   dst_port->transmitter_cnt < vid_conf->opt.max_slot_cnt);
 
         /* Queue the operation */
@@ -950,9 +950,9 @@ static void op_disconnect_ports(pjmedia_vid_conf *vid_conf,
     if (i == src_port->listener_cnt || j == dst_port->transmitter_cnt)
         return;
 
-    pj_assert(src_port->listener_cnt > 0 && 
+    pj_assert(src_port->listener_cnt > 0 &&
               src_port->listener_cnt < vid_conf->opt.max_slot_cnt);
-    pj_assert(dst_port->transmitter_cnt > 0 && 
+    pj_assert(dst_port->transmitter_cnt > 0 &&
               dst_port->transmitter_cnt < vid_conf->opt.max_slot_cnt);
 
     /* Cleanup all render states of the sink */
@@ -962,9 +962,9 @@ static void op_disconnect_ports(pjmedia_vid_conf *vid_conf,
     /* Update listeners array of the source and transmitters array of
      * the sink.
      */
-    pj_array_erase(src_port->listener_slots, sizeof(unsigned), 
+    pj_array_erase(src_port->listener_slots, sizeof(unsigned),
                    src_port->listener_cnt, i);
-    pj_array_erase(dst_port->transmitter_slots, sizeof(unsigned), 
+    pj_array_erase(dst_port->transmitter_slots, sizeof(unsigned),
                    dst_port->transmitter_cnt, j);
     --src_port->listener_cnt;
     --dst_port->transmitter_cnt;
@@ -1209,7 +1209,7 @@ static void match_ratio_crop(pjmedia_rect_size *size,
     /* Try match width first */
     res.w = size->w;
     res.h = ref_size->h * size->w / ref_size->w;
-    
+
     /* If original height turns out to be shorther, match height */
     if (size->h < res.h) {
         res.w = ref_size->w * size->h / ref_size->h;
@@ -1454,7 +1454,7 @@ static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
         pj_memcpy(sink->put_buf, src->get_buf, src->get_buf_size);
     } else if (rs && rs->converter) {
         pjmedia_frame src_frame, dst_frame;
-        
+
         pj_bzero(&src_frame, sizeof(src_frame));
         src_frame.buf = src->get_buf;
         src_frame.size = src->get_buf_size;

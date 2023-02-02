@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_TIMER_HPP__
 #define __PJPP_TIMER_HPP__
@@ -41,10 +41,10 @@ public:
     //
     // Default constructor.
     //
-    Pj_Timer_Entry() 
-    { 
+    Pj_Timer_Entry()
+    {
         entry_.user_data = this;
-        entry_.cb = &timer_heap_callback; 
+        entry_.cb = &timer_heap_callback;
     }
 
     //
@@ -79,8 +79,8 @@ public:
     //
     // Default constructor.
     //
-    Pj_Timer_Heap() 
-        : ht_(NULL) 
+    Pj_Timer_Heap()
+        : ht_(NULL)
     {
     }
 
@@ -103,7 +103,7 @@ public:
 
     //
     // Create
-    // 
+    //
     pj_status_t create(Pj_Pool *pool, pj_size_t initial_count)
     {
         destroy();

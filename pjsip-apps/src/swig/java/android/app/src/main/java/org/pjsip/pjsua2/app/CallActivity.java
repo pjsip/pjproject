@@ -36,20 +36,20 @@ import android.content.res.Configuration;
 import org.pjsip.pjsua2.*;
 
 class VideoPreviewHandler implements SurfaceHolder.Callback
-{   
+{
     public boolean videoPreviewActive = false;
-        
-    public void updateVideoPreview(SurfaceHolder holder) 
+
+    public void updateVideoPreview(SurfaceHolder holder)
     {
         if (MainActivity.currentCall != null &&
             MainActivity.currentCall.vidWin != null &&
             MainActivity.currentCall.vidPrev != null)
-        {       
+        {
             if (videoPreviewActive) {
                 VideoWindowHandle vidWH = new VideoWindowHandle();
                 vidWH.getHandle().setWindow(holder.getSurface());
                 VideoPreviewOpParam vidPrevParam = new VideoPreviewOpParam();
-                vidPrevParam.setWindow(vidWH);          
+                vidPrevParam.setWindow(vidWH);
                 try {
                     MainActivity.currentCall.vidPrev.start(vidPrevParam);
                 } catch (Exception e) {
@@ -60,11 +60,11 @@ class VideoPreviewHandler implements SurfaceHolder.Callback
                     MainActivity.currentCall.vidPrev.stop();
                 } catch (Exception e) {
                     System.out.println(e);
-                }       
+                }
             }
         }
-    }    
-    
+    }
+
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
     {
@@ -72,20 +72,20 @@ class VideoPreviewHandler implements SurfaceHolder.Callback
     }
 
     @Override
-    public void surfaceCreated(SurfaceHolder holder) 
+    public void surfaceCreated(SurfaceHolder holder)
     {
-        
+
     }
 
     @Override
-    public void surfaceDestroyed(SurfaceHolder holder) 
+    public void surfaceDestroyed(SurfaceHolder holder)
     {
         try {
             MainActivity.currentCall.vidPrev.stop();
         } catch (Exception e) {
             System.out.println(e);
         }
-    }    
+    }
 }
 
 public class CallActivity extends Activity
@@ -93,7 +93,7 @@ public class CallActivity extends Activity
 {
 
     public static Handler handler_;
-    private static VideoPreviewHandler previewHandler = 
+    private static VideoPreviewHandler previewHandler =
                                                       new VideoPreviewHandler();
 
     private final Handler handler = new Handler(this);
@@ -108,14 +108,14 @@ public class CallActivity extends Activity
         SurfaceView surfaceInVideo = (SurfaceView)
                                   findViewById(R.id.surfaceIncomingVideo);
         SurfaceView surfacePreview = (SurfaceView)
-                                  findViewById(R.id.surfacePreviewCapture);     
-        Button buttonShowPreview = (Button) 
-                                  findViewById(R.id.buttonShowPreview); 
-        
+                                  findViewById(R.id.surfacePreviewCapture);
+        Button buttonShowPreview = (Button)
+                                  findViewById(R.id.buttonShowPreview);
+
         if (MainActivity.currentCall == null ||
             MainActivity.currentCall.vidWin == null)
         {
-            surfaceInVideo.setVisibility(View.GONE);        
+            surfaceInVideo.setVisibility(View.GONE);
             buttonShowPreview.setVisibility(View.GONE);
         }
         setupVideoPreview(surfacePreview, buttonShowPreview);
@@ -138,7 +138,7 @@ public class CallActivity extends Activity
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        
+
         WindowManager wm;
         Display display;
         int rotation;
@@ -148,7 +148,7 @@ public class CallActivity extends Activity
         display = wm.getDefaultDisplay();
         rotation = display.getRotation();
         System.out.println("Device orientation changed: " + rotation);
-        
+
         switch (rotation) {
         case Surface.ROTATION_0:   // Portrait
             orient = pjmedia_orient.PJMEDIA_ORIENT_ROTATE_270DEG;
@@ -176,7 +176,7 @@ public class CallActivity extends Activity
                 System.out.println(e);
             }
         }
-    }    
+    }
 
     @Override
     protected void onDestroy()
@@ -184,17 +184,17 @@ public class CallActivity extends Activity
         super.onDestroy();
         handler_ = null;
     }
-    
+
     private void updateVideoWindow(boolean show)
-    { 
+    {
         if (MainActivity.currentCall != null &&
             MainActivity.currentCall.vidWin != null &&
             MainActivity.currentCall.vidPrev != null)
         {
-            SurfaceView surfaceInVideo = (SurfaceView) 
+            SurfaceView surfaceInVideo = (SurfaceView)
                                   findViewById(R.id.surfaceIncomingVideo);
-            
-            VideoWindowHandle vidWH = new VideoWindowHandle();      
+
+            VideoWindowHandle vidWH = new VideoWindowHandle();
             if (show) {
                 vidWH.getHandle().setWindow(
                                        surfaceInVideo.getHolder().getSurface());
@@ -205,10 +205,10 @@ public class CallActivity extends Activity
                 MainActivity.currentCall.vidWin.setWindow(vidWH);
             } catch (Exception e) {
                 System.out.println(e);
-            }       
+            }
         }
     }
-     
+
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
     {
         updateVideoWindow(true);
@@ -251,31 +251,31 @@ public class CallActivity extends Activity
             }
         }
     }
-    
-    public void setupVideoPreview(SurfaceView surfacePreview, 
+
+    public void setupVideoPreview(SurfaceView surfacePreview,
                                   Button buttonShowPreview)
     {
         surfacePreview.setVisibility(previewHandler.videoPreviewActive?
                                      View.VISIBLE:View.GONE);
-        
+
         buttonShowPreview.setText(previewHandler.videoPreviewActive?
                                   getString(R.string.hide_preview):
-                                  getString(R.string.show_preview));            
+                                  getString(R.string.show_preview));
     }
-    
+
     public void showPreview(View view)
     {
         SurfaceView surfacePreview = (SurfaceView)
-                                  findViewById(R.id.surfacePreviewCapture);     
+                                  findViewById(R.id.surfacePreviewCapture);
 
-        Button buttonShowPreview = (Button) 
+        Button buttonShowPreview = (Button)
                                   findViewById(R.id.buttonShowPreview);
-        
-        
+
+
         previewHandler.videoPreviewActive = !previewHandler.videoPreviewActive;
-        
+
         setupVideoPreview(surfacePreview, buttonShowPreview);
-        
+
         previewHandler.updateVideoPreview(surfacePreview.getHolder());
     }
 
@@ -286,10 +286,10 @@ public class CallActivity extends Activity
         SurfaceView surfacePreview = (SurfaceView)
                                   findViewById(R.id.surfacePreviewCapture);
         Button buttonShowPreview = (Button)
-                                  findViewById(R.id.buttonShowPreview); 
+                                  findViewById(R.id.buttonShowPreview);
         surfaceInVideo.setVisibility(View.VISIBLE);
         buttonShowPreview.setVisibility(View.VISIBLE);
-        surfacePreview.setVisibility(View.GONE);        
+        surfacePreview.setVisibility(View.GONE);
     }
 
     @Override

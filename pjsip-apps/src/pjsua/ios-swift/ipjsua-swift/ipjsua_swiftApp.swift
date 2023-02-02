@@ -56,7 +56,7 @@ struct ipjsua_swiftApp: App {
 
         /* Init pjsua */
         status = pjsua_init(&cfg, &log_cfg, &media_cfg);
-        
+
         /* Create transport */
         var transport_id = pjsua_transport_id();
         var tcp_cfg = pjsua_transport_config();
@@ -92,7 +92,7 @@ struct ipjsua_swiftApp: App {
         /* Free strings */
         free(id); free(username); free(passwd); free(realm);
         free(registrar); free(proxy);
-        
+
         /* Start pjsua */
         status = pjsua_start();
     }
@@ -142,11 +142,11 @@ private func on_call_media_state(call_id: pjsua_call_id) {
                 pjsua_conf_connect(call_conf_slot, 0);
                 pjsua_conf_connect(0, call_conf_slot);
                 break;
-        
+
             case PJMEDIA_TYPE_VIDEO:
                 let wid = media[Int(mi)].stream.vid.win_in;
                 var wi = pjsua_vid_win_info();
-                    
+
                 if (pjsua_vid_win_get_info(wid, &wi) == PJ_SUCCESS.rawValue) {
                     let vid_win:UIView =
                         Unmanaged<UIView>.fromOpaque(wi.hwnd.info.ios.window).takeUnretainedValue();
@@ -157,7 +157,7 @@ private func on_call_media_state(call_id: pjsua_call_id) {
                     }
                 }
                 break;
-            
+
             default:
                 break;
             }

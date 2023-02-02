@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/assert.h>
@@ -176,7 +176,7 @@ static pjmedia_aud_dev_factory_op factory_op =
     &factory_refresh
 };
 
-static pjmedia_aud_stream_op stream_op = 
+static pjmedia_aud_stream_op stream_op =
 {
     &stream_get_param,
     &stream_get_cap,
@@ -279,9 +279,9 @@ static void get_dev_names(pjmedia_aud_dev_factory *f)
 
         for (i = 0; i < wf->dev_count; ++i) {
             if (0 == wcscmp(wf->dev_info[i].endpointId, pwszID)) {
-                pj_unicode_to_ansi(varName.pwszVal, 
-                                   wcslen(varName.pwszVal), 
-                                   wf->dev_info[i].info.name, 
+                pj_unicode_to_ansi(varName.pwszVal,
+                                   wcslen(varName.pwszVal),
+                                   wf->dev_info[i].info.name,
                                    sizeof(wf->dev_info[i].info.name));
 
                 break;
@@ -320,7 +320,7 @@ static void get_dev_names(pjmedia_aud_dev_factory *f)
 #endif
 
 /* Internal: build device info from WAVEINCAPS/WAVEOUTCAPS */
-static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi, 
+static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
                            const WAVEINCAPS *wic, const WAVEOUTCAPS *woc)
 {
 #define WIC_WOC(wic,woc,field)  (wic? wic->field : woc->field)
@@ -335,8 +335,8 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
     } else {
         const pj_char_t *szPname = WIC_WOC(wic, woc, szPname);
         PJ_DECL_ANSI_TEMP_BUF(wTmp, sizeof(wdi->info.name));
-        
-        strncpy(wdi->info.name, 
+
+        strncpy(wdi->info.name,
                 PJ_NATIVE_TO_STRING(szPname, wTmp, PJ_ARRAY_SIZE(wTmp)),
                 sizeof(wdi->info.name));
         wdi->info.name[sizeof(wdi->info.name)-1] = '\0';
@@ -349,7 +349,7 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
         wdi->info.input_count = wic->wChannels;
         wdi->info.caps |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
 
-        /* Sometimes a device can return a rediculously large number of 
+        /* Sometimes a device can return a rediculously large number of
          * channels. This happened with an SBLive card on a Windows ME box.
          * It also happens on Win XP!
          */
@@ -361,12 +361,12 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
     if (woc) {
         wdi->info.output_count = woc->wChannels;
         wdi->info.caps |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
-        
+
         if (woc->dwSupport & WAVECAPS_VOLUME) {
             wdi->info.caps |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
         }
 
-        /* Sometimes a device can return a rediculously large number of 
+        /* Sometimes a device can return a rediculously large number of
          * channels. This happened with an SBLive card on a Windows ME box.
          * It also happens on Win XP!
          */
@@ -432,7 +432,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
          * is no sound device installed in the system, even when pjsua has been
          * run with --null-audio. Moreover, it might be better to think that
          * the WMME backend initialization is successfull, regardless there is
-         * no audio device installed, as later application can check it using 
+         * no audio device installed, as later application can check it using
          * get_dev_count().
         return PJMEDIA_EAUD_NODEV;
          */
@@ -440,7 +440,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     }
 
     wf->dev_info = (struct wmme_dev_info*)
-                   pj_pool_calloc(wf->pool, devCount, 
+                   pj_pool_calloc(wf->pool, devCount,
                                   sizeof(struct wmme_dev_info));
 
     if (inputDeviceCount && outputDeviceCount) {
@@ -457,7 +457,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
             pj_bzero(&woc, sizeof(WAVEOUTCAPS));
             mr = waveOutGetDevCaps(WAVE_MAPPER, &woc, sizeof(WAVEOUTCAPS));
             if (mr == MMSYSERR_NOERROR) {
-                build_dev_info(WAVE_MAPPER, &wf->dev_info[wf->dev_count], 
+                build_dev_info(WAVE_MAPPER, &wf->dev_info[wf->dev_count],
                                &wic, &woc);
                 wf->dev_info[wf->dev_count].endpointId = L"";
                 ++wf->dev_count;
@@ -485,7 +485,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
             if (mr != MMSYSERR_NOERROR)
                 continue;
 
-            build_dev_info(uDeviceID, &wf->dev_info[wf->dev_count], 
+            build_dev_info(uDeviceID, &wf->dev_info[wf->dev_count],
                            &wic, NULL);
 
 #if PJMEDIA_WMME_DEV_USE_MMDEVICE_API != 0
@@ -531,7 +531,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
             if (mr != MMSYSERR_NOERROR)
                 continue;
 
-            build_dev_info(uDeviceID, &wf->dev_info[wf->dev_count], 
+            build_dev_info(uDeviceID, &wf->dev_info[wf->dev_count],
                            NULL, &woc);
 
 #if PJMEDIA_WMME_DEV_USE_MMDEVICE_API != 0
@@ -563,7 +563,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     PJ_LOG(4, (THIS_FILE, "WMME found %d devices:",
                wf->dev_count));
     for (c = 0; c < wf->dev_count; ++c) {
-        PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d)", 
+        PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d)",
             c,
             wf->dev_info[c].info.name,
             wf->dev_info[c].info.input_count,
@@ -594,7 +594,7 @@ static unsigned factory_get_dev_count(pjmedia_aud_dev_factory *f)
 }
 
 /* API: get device info */
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info)
 {
@@ -647,19 +647,19 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
 }
 
 /* Internal: init WAVEFORMATEX */
-static pj_status_t init_waveformatex(LPWAVEFORMATEX wfx, 
+static pj_status_t init_waveformatex(LPWAVEFORMATEX wfx,
                                      const pjmedia_aud_param *prm)
 {
 
     pj_bzero(wfx, sizeof(WAVEFORMATEX));
     if (prm->ext_fmt.id == PJMEDIA_FORMAT_L16) {
         enum { BYTES_PER_SAMPLE = 2 };
-        wfx->wFormatTag = WAVE_FORMAT_PCM; 
+        wfx->wFormatTag = WAVE_FORMAT_PCM;
         wfx->nChannels = (pj_uint16_t)prm->channel_count;
         wfx->nSamplesPerSec = prm->clock_rate;
-        wfx->nBlockAlign = (pj_uint16_t)(prm->channel_count * 
+        wfx->nBlockAlign = (pj_uint16_t)(prm->channel_count *
                                          BYTES_PER_SAMPLE);
-        wfx->nAvgBytesPerSec = prm->clock_rate * prm->channel_count * 
+        wfx->nAvgBytesPerSec = prm->clock_rate * prm->channel_count *
                                BYTES_PER_SAMPLE;
         wfx->wBitsPerSample = 16;
 
@@ -671,7 +671,7 @@ static pj_status_t init_waveformatex(LPWAVEFORMATEX wfx,
     {
         unsigned ptime;
 
-        ptime = prm->samples_per_frame * 1000 / 
+        ptime = prm->samples_per_frame * 1000 /
                 (prm->clock_rate * prm->channel_count);
         wfx->wFormatTag = (pj_uint16_t)
                           ((prm->ext_fmt.id==PJMEDIA_FORMAT_PCMA) ?
@@ -714,7 +714,7 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
                                         unsigned buffer_count)
 {
     MMRESULT mr;
-    WAVEFORMATEX wfx; 
+    WAVEFORMATEX wfx;
     unsigned i, ptime;
     DWORD flag;
     pj_status_t status;
@@ -735,7 +735,7 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     if (status != PJ_SUCCESS)
         return status;
 
-    ptime = prm->samples_per_frame * 1000 / 
+    ptime = prm->samples_per_frame * 1000 /
             (prm->clock_rate * prm->channel_count);
     parent->bytes_per_frame = wfx.nAvgBytesPerSec * ptime / 1000;
 
@@ -746,7 +746,7 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     /*
      * Open wave device.
      */
-    mr = waveOutOpen(&wmme_strm->hWave.Out, 
+    mr = waveOutOpen(&wmme_strm->hWave.Out,
                      wf->dev_info[prm->play_id].deviceId,
                      &wfx, (DWORD_PTR)wmme_strm->hEvent, 0, flag);
     if (mr != MMSYSERR_NOERROR) {
@@ -760,21 +760,21 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     }
 
     /*
-     * Create the buffers. 
+     * Create the buffers.
      */
     wmme_strm->WaveHdr = (WAVEHDR*)
                          pj_pool_zalloc(pool, sizeof(WAVEHDR) * buffer_count);
     for (i = 0; i < buffer_count; ++i) {
-        wmme_strm->WaveHdr[i].lpData = pj_pool_zalloc(pool, 
+        wmme_strm->WaveHdr[i].lpData = pj_pool_zalloc(pool,
                                                       parent->bytes_per_frame);
         wmme_strm->WaveHdr[i].dwBufferLength = parent->bytes_per_frame;
-        mr = waveOutPrepareHeader(wmme_strm->hWave.Out, 
+        mr = waveOutPrepareHeader(wmme_strm->hWave.Out,
                                   &(wmme_strm->WaveHdr[i]),
                                   sizeof(WAVEHDR));
         if (mr != MMSYSERR_NOERROR) {
-            return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr); 
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
         }
-        mr = waveOutWrite(wmme_strm->hWave.Out, &(wmme_strm->WaveHdr[i]), 
+        mr = waveOutWrite(wmme_strm->hWave.Out, &(wmme_strm->WaveHdr[i]),
                           sizeof(WAVEHDR));
         if (mr != MMSYSERR_NOERROR) {
             return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
@@ -786,7 +786,7 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     wmme_strm->timestamp.u64 = 0;
 
     /* Done setting up play device. */
-    PJ_LOG(4, (THIS_FILE, 
+    PJ_LOG(4, (THIS_FILE,
                " WaveAPI Sound player \"%s\" initialized ("
                "format=%s, clock_rate=%d, "
                "channel_count=%d, samples_per_frame=%d (%dms))",
@@ -808,7 +808,7 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
                                         unsigned buffer_count)
 {
     MMRESULT mr;
-    WAVEFORMATEX wfx; 
+    WAVEFORMATEX wfx;
     DWORD flag;
     unsigned i, ptime;
 
@@ -826,7 +826,7 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
      * Set up wave format structure for opening the device.
      */
     init_waveformatex(&wfx, prm);
-    ptime = prm->samples_per_frame * 1000 / 
+    ptime = prm->samples_per_frame * 1000 /
             (prm->clock_rate * prm->channel_count);
     parent->bytes_per_frame = wfx.nAvgBytesPerSec * ptime / 1000;
 
@@ -837,29 +837,29 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
     /*
      * Open wave device.
      */
-    mr = waveInOpen(&wmme_strm->hWave.In, 
-                    wf->dev_info[prm->rec_id].deviceId, 
+    mr = waveInOpen(&wmme_strm->hWave.In,
+                    wf->dev_info[prm->rec_id].deviceId,
                     &wfx, (DWORD_PTR)wmme_strm->hEvent, 0, flag);
     if (mr != MMSYSERR_NOERROR) {
         return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
     }
 
     /*
-     * Create the buffers. 
+     * Create the buffers.
      */
     wmme_strm->WaveHdr = (WAVEHDR*)
                          pj_pool_zalloc(pool, sizeof(WAVEHDR) * buffer_count);
     for (i = 0; i < buffer_count; ++i) {
-        wmme_strm->WaveHdr[i].lpData = pj_pool_zalloc(pool, 
+        wmme_strm->WaveHdr[i].lpData = pj_pool_zalloc(pool,
                                                       parent->bytes_per_frame);
         wmme_strm->WaveHdr[i].dwBufferLength = parent->bytes_per_frame;
-        mr = waveInPrepareHeader(wmme_strm->hWave.In, 
+        mr = waveInPrepareHeader(wmme_strm->hWave.In,
                                  &(wmme_strm->WaveHdr[i]),
                                  sizeof(WAVEHDR));
         if (mr != MMSYSERR_NOERROR) {
             return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
         }
-        mr = waveInAddBuffer(wmme_strm->hWave.In, &(wmme_strm->WaveHdr[i]), 
+        mr = waveInAddBuffer(wmme_strm->hWave.In, &(wmme_strm->WaveHdr[i]),
                              sizeof(WAVEHDR));
         if (mr != MMSYSERR_NOERROR) {
             return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
@@ -871,7 +871,7 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
     wmme_strm->timestamp.u64 = 0;
 
     /* Done setting up play device. */
-    PJ_LOG(4,(THIS_FILE, 
+    PJ_LOG(4,(THIS_FILE,
         " WaveAPI Sound recorder \"%s\" initialized "
         "(format=%s, clock_rate=%d, "
         "channel_count=%d, samples_per_frame=%d (%dms))",
@@ -921,7 +921,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 #endif
 
     /*
-     * Loop while not signalled to quit, wait for event objects to be 
+     * Loop while not signalled to quit, wait for event objects to be
      * signalled by WMME capture and play buffer.
      */
     while (status == PJ_SUCCESS)
@@ -979,7 +979,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
                 pjmedia_frame pcm_frame, *frame;
                 MMRESULT mr = MMSYSERR_NOERROR;
 
-                //PJ_LOG(5,(THIS_FILE, "Finished writing buffer %d", 
+                //PJ_LOG(5,(THIS_FILE, "Finished writing buffer %d",
                 //        wmme_strm->dwBufIdx));
 
                 if (strm->fmt_id == PJMEDIA_FORMAT_L16) {
@@ -1023,7 +1023,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
                 } else {
                     /* Codec mode */
                     if (frame->type == PJMEDIA_FRAME_TYPE_NONE) {
-                        pj_memset(buffer, strm->silence_char, 
+                        pj_memset(buffer, strm->silence_char,
                                   strm->bytes_per_frame);
                     } else if (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
                         unsigned sz;
@@ -1041,7 +1041,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
                 }
 
                 /* Write to the device. */
-                mr = waveOutWrite(wmme_strm->hWave.Out, 
+                mr = waveOutWrite(wmme_strm->hWave.Out,
                                   &(wmme_strm->WaveHdr[wmme_strm->dwBufIdx]),
                                   sizeof(WAVEHDR));
                 if (mr != MMSYSERR_NOERROR) {
@@ -1099,19 +1099,19 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
             {
                 char* buffer = (char*)
                                wmme_strm->WaveHdr[wmme_strm->dwBufIdx].lpData;
-                unsigned cap_len = 
+                unsigned cap_len =
                         wmme_strm->WaveHdr[wmme_strm->dwBufIdx].dwBytesRecorded;
                 pjmedia_frame pcm_frame, *frame;
 
                 /*
-                PJ_LOG(5,(THIS_FILE, "Read %d bytes from buffer %d", cap_len, 
+                PJ_LOG(5,(THIS_FILE, "Read %d bytes from buffer %d", cap_len,
                           wmme_strm->dwBufIdx));
                 */
-            
+
                 if (strm->fmt_id == PJMEDIA_FORMAT_L16) {
                     /* PCM mode */
                     if (cap_len < strm->bytes_per_frame)
-                        pj_bzero(buffer + cap_len, 
+                        pj_bzero(buffer + cap_len,
                                  strm->bytes_per_frame - cap_len);
 
                     /* Copy the audio data out of the wave buffer. */
@@ -1145,7 +1145,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
                 }
 
                 /* Re-add the buffer to the device. */
-                mr = waveInAddBuffer(wmme_strm->hWave.In, 
+                mr = waveInAddBuffer(wmme_strm->hWave.In,
                                      &(wmme_strm->WaveHdr[wmme_strm->dwBufIdx]),
                                      sizeof(WAVEHDR));
                 if (mr != MMSYSERR_NOERROR) {
@@ -1172,7 +1172,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
     }
 
     PJ_LOG(5,(THIS_FILE, "WMME: thread stopping.."));
-    
+
     if (status != PJ_SUCCESS) {
         pjmedia_event e;
         pj_timestamp *ts;
@@ -1251,7 +1251,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
             strm->param.output_latency_ms = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
         }
 
-        buf_count = strm->param.output_latency_ms * param->clock_rate * 
+        buf_count = strm->param.output_latency_ms * param->clock_rate *
                     param->channel_count / param->samples_per_frame / 1000;
 
         status = init_player_stream(wf, strm->pool,
@@ -1275,7 +1275,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
             strm->param.input_latency_ms = PJMEDIA_SND_DEFAULT_REC_LATENCY;
         }
 
-        buf_count = strm->param.input_latency_ms * param->clock_rate * 
+        buf_count = strm->param.input_latency_ms * param->clock_rate *
                     param->channel_count / param->samples_per_frame / 1000;
 
         status = init_capture_stream(wf, strm->pool,
@@ -1298,7 +1298,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
     /* If format is extended, must create buffer for the extended frame. */
     if (strm->fmt_id != PJMEDIA_FORMAT_L16) {
-        strm->xfrm_size = sizeof(pjmedia_frame_ext) + 
+        strm->xfrm_size = sizeof(pjmedia_frame_ext) +
                           32 * sizeof(pjmedia_frame_ext_subframe) +
                           strm->bytes_per_frame + 4;
         strm->xfrm = (pjmedia_frame_ext*)
@@ -1344,7 +1344,7 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
 
     pj_memcpy(pi, &strm->param, sizeof(*pi));
-    
+
     /* Update the volume setting */
     if (stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
                       &pi->output_vol) == PJ_SUCCESS)
@@ -1364,8 +1364,8 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
-    if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY && 
-        (strm->param.dir & PJMEDIA_DIR_CAPTURE)) 
+    if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
+        (strm->param.dir & PJMEDIA_DIR_CAPTURE))
     {
         /* Recording latency */
         *(unsigned*)pval = strm->param.input_latency_ms;
@@ -1421,7 +1421,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
         waveVol |= (waveVol << 16);
 
         mr = waveOutSetVolume(strm->play_strm.hWave.Out, waveVol);
-        status = (mr==MMSYSERR_NOERROR)? PJ_SUCCESS : 
+        status = (mr==MMSYSERR_NOERROR)? PJ_SUCCESS :
                                 PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
         if (status == PJ_SUCCESS) {
             strm->param.output_vol = *(unsigned*)pval;
@@ -1520,7 +1520,7 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm)
     {
         waveOutReset(stream->play_strm.hWave.Out);
         for (i = 0; i < stream->play_strm.dwMaxBufIdx; ++i)
-            waveOutUnprepareHeader(stream->play_strm.hWave.Out, 
+            waveOutUnprepareHeader(stream->play_strm.hWave.Out,
                                    &(stream->play_strm.WaveHdr[i]),
                                    sizeof(WAVEHDR));
         waveOutClose(stream->play_strm.hWave.Out);
@@ -1539,7 +1539,7 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm)
     {
         waveInReset(stream->rec_strm.hWave.In);
         for (i = 0; i < stream->play_strm.dwMaxBufIdx; ++i)
-            waveInUnprepareHeader(stream->rec_strm.hWave.In, 
+            waveInUnprepareHeader(stream->rec_strm.hWave.In,
                                   &(stream->rec_strm.WaveHdr[i]),
                                   sizeof(WAVEHDR));
         waveInClose(stream->rec_strm.hWave.In);

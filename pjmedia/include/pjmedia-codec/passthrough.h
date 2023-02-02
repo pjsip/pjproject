@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODECS_PASSTHROUGH_H__
 #define __PJMEDIA_CODECS_PASSTHROUGH_H__
@@ -32,13 +32,13 @@
  * @brief Implementation of passthrough codecs
  * @{
  *
- * This section describes functions to initialize and register passthrough 
- * codecs factory to the codec manager. After the codec factory has been 
- * registered, application can use @ref PJMEDIA_CODEC API to manipulate 
+ * This section describes functions to initialize and register passthrough
+ * codecs factory to the codec manager. After the codec factory has been
+ * registered, application can use @ref PJMEDIA_CODEC API to manipulate
  * the codec.
  *
- * Passthrough codecs are codecs wrapper that does NOT perform encoding 
- * or decoding, it just PACK and PARSE encoded audio data from/into RTP 
+ * Passthrough codecs are codecs wrapper that does NOT perform encoding
+ * or decoding, it just PACK and PARSE encoded audio data from/into RTP
  * payload. This will accomodate pjmedia ports which work with encoded
  * audio data, e.g: encoded audio files, sound device with capability
  * of playing/recording encoded audio data.
@@ -49,13 +49,13 @@
  *
  * \section pjmedia_codec_passthrough_g729 Passthrough G.729
  *
- * G.729 supports 16-bit PCM audio signal with sampling rate 8000Hz, 
+ * G.729 supports 16-bit PCM audio signal with sampling rate 8000Hz,
  * frame length 10ms, and resulting in bitrate 8000bps.
  *
  * \subsection passthrough_codec_setting Codec Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * Note that G.729 VAD status should be signalled in SDP, see more
@@ -65,7 +65,7 @@
  *
  * The capability of VAD/DTX is specified in Annex B.
  *
- * By default, Annex B is enabled. This default setting of Annex B can 
+ * By default, Annex B is enabled. This default setting of Annex B can
  * be modified using #pjmedia_codec_mgr_set_default_param().
  *
  * In #pjmedia_codec_param, Annex B is configured via VAD setting and
@@ -92,24 +92,24 @@
  \endcode
  *
  * \note
- * The difference of Annex B status in SDP offer/answer may be considered as 
+ * The difference of Annex B status in SDP offer/answer may be considered as
  * incompatible codec in SDP negotiation.
  *
- * 
+ *
  * \section pjmedia_codec_passthrough_ilbc Passthrough iLBC
  *
- * The iLBC codec is developed by Global IP Solutions (GIPS), formerly 
- * Global IP Sound. The iLBC offers low bitrate and graceful audio quality 
+ * The iLBC codec is developed by Global IP Solutions (GIPS), formerly
+ * Global IP Sound. The iLBC offers low bitrate and graceful audio quality
  * degradation on frame losses.
  *
- * The iLBC codec supports 16-bit PCM audio signal with sampling rate of 
+ * The iLBC codec supports 16-bit PCM audio signal with sampling rate of
  * 8000Hz operating at two modes: 20ms and 30ms frame length modes, resulting
  * in bitrates of 15.2kbps for 20ms mode and 13.33kbps for 30ms mode.
  *
  * \subsection passthrough_ilbc_codec_setting Codec Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * \subsubsection passthrough_ilbc_mode Mode
@@ -120,7 +120,7 @@
  *
  * In #pjmedia_codec_param, iLBC mode can be set by specifying SDP
  * format parameter "mode" in the SDP "a=fmtp" attribute for decoding
- * direction. Valid values are "20" and "30" (for 20ms and 30ms mode 
+ * direction. Valid values are "20" and "30" (for 20ms and 30ms mode
  * respectively).
  *
  * Here is an example to set up #pjmedia_codec_param to use mode 20ms:
@@ -143,16 +143,16 @@
  *
  * \subsection passthrough_amr_codec_setting Codec Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * \subsubsection passthrough_amr_bitrate Bitrate
  *
- * By default, encoding bitrate is 7400bps. This default setting can be 
- * modified using #pjmedia_codec_mgr_set_default_param() by specifying 
- * prefered AMR bitrate in field <tt>info::avg_bps</tt> of 
- * #pjmedia_codec_param. Valid bitrates could be seen in 
+ * By default, encoding bitrate is 7400bps. This default setting can be
+ * modified using #pjmedia_codec_mgr_set_default_param() by specifying
+ * prefered AMR bitrate in field <tt>info::avg_bps</tt> of
+ * #pjmedia_codec_param. Valid bitrates could be seen in
  * #pjmedia_codec_amrnb_bitrates.
  *
  * \subsubsection passthrough_amr_payload_format Payload Format
@@ -161,21 +161,21 @@
  * octet-aligned. Default setting is using octet-aligned. This default payload
  * format can be modified using #pjmedia_codec_mgr_set_default_param().
  *
- * In #pjmedia_codec_param, payload format can be set by specifying SDP 
- * format parameters "octet-align" in the SDP "a=fmtp" attribute for 
+ * In #pjmedia_codec_param, payload format can be set by specifying SDP
+ * format parameters "octet-align" in the SDP "a=fmtp" attribute for
  * decoding direction. Valid values are "0" (for bandwidth efficient mode)
  * and "1" (for octet-aligned mode).
  *
  * \subsubsection passthrough_amr_mode_set Mode-Set
- * 
+ *
  * Mode-set is used for restricting AMR modes in decoding direction.
  *
- * By default, no mode-set restriction applied. This default setting can be 
+ * By default, no mode-set restriction applied. This default setting can be
  * be modified using #pjmedia_codec_mgr_set_default_param().
  *
  * In #pjmedia_codec_param, mode-set could be specified via format parameters
- * "mode-set" in the SDP "a=fmtp" attribute for decoding direction. Valid 
- * value is a comma separated list of modes from the set 0 - 7, e.g: 
+ * "mode-set" in the SDP "a=fmtp" attribute for decoding direction. Valid
+ * value is a comma separated list of modes from the set 0 - 7, e.g:
  * "4,5,6,7". When this parameter is omitted, no mode-set restrictions applied.
  *
  * Here is an example of modifying AMR default codec param:
@@ -199,34 +199,34 @@
     ...
     pjmedia_codec_mgr_set_default_param(.., &param);
  \endcode
- * 
+ *
  *
  * \section pjmedia_codec_passthrough_g711 Passthrough G.711
  *
  * The G.711 is an ultra low complexity codecs and in trade-off it results
  * in high bitrate, i.e: 64kbps for 16-bit PCM with sampling rate 8000Hz.
  *
- * The factory contains two main compression algorithms, PCMU/u-Law and 
+ * The factory contains two main compression algorithms, PCMU/u-Law and
  * PCMA/A-Law.
  *
  * \subsection passthrough_g711_codec_setting Codec Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  */
 
 PJ_BEGIN_DECL
 
 
-/** 
+/**
  * Codec passthrough configuration settings.
  */
 typedef struct pjmedia_codec_passthrough_setting
 {
     unsigned             fmt_cnt;       /**< Number of encoding formats
                                              to be enabled.             */
-    pjmedia_format      *fmts;          /**< Encoding formats to be 
+    pjmedia_format      *fmts;          /**< Encoding formats to be
                                              enabled.                   */
     unsigned             ilbc_mode;     /**< iLBC default mode.         */
 } pjmedia_codec_passthrough_setting;

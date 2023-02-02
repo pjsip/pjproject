@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/rpid.h>
 #include <pjsip-simple/errno.h>
@@ -63,7 +63,7 @@ static void update_namespaces(pjpidf_pres *pres,
 
 
 /* Comparison function to find node name substring */
-static pj_bool_t substring_match(const pj_xml_node *node, 
+static pj_bool_t substring_match(const pj_xml_node *node,
                                  const char *part_name,
                                  pj_ssize_t part_len)
 {
@@ -82,10 +82,10 @@ static pj_bool_t substring_match(const pj_xml_node *node,
 }
 
 /* Util to find child node with the specified substring */
-static pj_xml_node *find_node(const pj_xml_node *parent, 
+static pj_xml_node *find_node(const pj_xml_node *parent,
                               const char *part_name)
 {
-    const pj_xml_node *node = parent->node_head.next, 
+    const pj_xml_node *node = parent->node_head.next,
                       *head = (pj_xml_node*) &parent->node_head;
     pj_ssize_t part_len = pj_ansi_strlen(part_name);
 
@@ -102,7 +102,7 @@ static pj_xml_node *find_node(const pj_xml_node *parent,
 /*
  * Add RPID element into existing PIDF document.
  */
-PJ_DEF(pj_status_t) pjrpid_add_element(pjpidf_pres *pres, 
+PJ_DEF(pj_status_t) pjrpid_add_element(pjpidf_pres *pres,
                                        pj_pool_t *pool,
                                        unsigned options,
                                        const pjrpid_element *elem)

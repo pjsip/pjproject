@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_CONFIG_H__
 #define __PJMEDIA_CODEC_CONFIG_H__
@@ -225,7 +225,7 @@
 
 /**
  * Enable Intel IPP AMR codec. This also needs to be enabled when AMR WB
- * codec is enabled. This option is only used when PJMEDIA_HAS_INTEL_IPP 
+ * codec is enabled. This option is only used when PJMEDIA_HAS_INTEL_IPP
  * is enabled.
  *
  * Default: 1
@@ -237,7 +237,7 @@
 
 /**
  * Enable Intel IPP AMR wideband codec. The PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
- * option must also be enabled to use this codec. This option is only used 
+ * option must also be enabled to use this codec. This option is only used
  * when PJMEDIA_HAS_INTEL_IPP is enabled.
  *
  * Default: 1
@@ -416,8 +416,8 @@
 
 
 /**
- * Default G.722.1 codec encoder and decoder level adjustment. 
- * If the value is non-zero, then PCM input samples to the encoder will 
+ * Default G.722.1 codec encoder and decoder level adjustment.
+ * If the value is non-zero, then PCM input samples to the encoder will
  * be shifted right by this value, and similarly PCM output samples from
  * the decoder will be shifted left by this value.
  *
@@ -431,7 +431,7 @@
 
 /**
  * Enabling both G.722.1 codec implementations, internal PJMEDIA and IPP,
- * may cause problem in SDP, i.e: payload types duplications. So, let's 
+ * may cause problem in SDP, i.e: payload types duplications. So, let's
  * just trap such case here at compile time.
  *
  * Application can control which implementation to be used by manipulating
@@ -533,7 +533,7 @@
 /**
  * Enable G.729 codec using BCG729 backend.
  *
- * Default: 0 
+ * Default: 0
  */
 #ifndef PJMEDIA_HAS_BCG729
 #   define PJMEDIA_HAS_BCG729                           0

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_TURN_SRV_TURN_H__
 #define __PJ_TURN_SRV_TURN_H__
@@ -33,7 +33,7 @@ typedef struct pj_turn_pkt          pj_turn_pkt;
 
 #define PJ_TURN_INVALID_LIS_ID      ((unsigned)-1)
 
-/** 
+/**
  * Get transport type name string.
  */
 PJ_DECL(const char*) pj_turn_tp_type_name(int tp_type);
@@ -186,7 +186,7 @@ struct pj_turn_permission
     pj_turn_allocation  *allocation;
 
     /** Optional channel number, or PJ_TURN_INVALID_CHANNEL if channel number
-     *  is not requested for this permission. 
+     *  is not requested for this permission.
      */
     pj_uint16_t         channel;
 
@@ -427,16 +427,16 @@ struct pj_turn_srv
 
     } core;
 
-    
+
     /** Hash tables */
     struct {
         /** Allocations hash table, indexed by transport type and
-         *  client address. 
+         *  client address.
          */
         pj_hash_table_t *alloc;
 
         /** Relay resource hash table, indexed by transport type and
-         *  relay address. 
+         *  relay address.
          */
         pj_hash_table_t *res;
 
@@ -467,18 +467,18 @@ struct pj_turn_srv
 };
 
 
-/** 
+/**
  * Create server.
  */
 PJ_DECL(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
                                         pj_turn_srv **p_srv);
 
-/** 
+/**
  * Destroy server.
  */
 PJ_DECL(pj_status_t) pj_turn_srv_destroy(pj_turn_srv *srv);
 
-/** 
+/**
  * Add listener.
  */
 PJ_DECL(pj_status_t) pj_turn_srv_add_listener(pj_turn_srv *srv,
@@ -499,7 +499,7 @@ PJ_DECL(pj_status_t) pj_turn_srv_unregister_allocation(pj_turn_srv *srv,
 /**
  * This callback is called by UDP listener on incoming packet.
  */
-PJ_DECL(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv, 
+PJ_DECL(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
                                     pj_turn_pkt *pkt);
 
 

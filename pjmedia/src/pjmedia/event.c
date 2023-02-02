@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/event.h>
 #include <pjmedia/errno.h>
@@ -109,14 +109,14 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
     while (sub != &mgr->esub_list) {
         *next_sub = sub->next;
 
-        /* Check if the subscriber is interested in 
+        /* Check if the subscriber is interested in
          * receiving the event from the publisher.
          */
         if (sub->epub == ev->epub || !sub->epub) {
             pjmedia_event_cb *cb = sub->cb;
             void *user_data = sub->user_data;
             pj_status_t status;
-            
+
             if (rls_lock) {
                 /* To make sure that event unsubscription waits
                  * until the callback completes.
@@ -343,7 +343,7 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
         pj_mutex_lock(mgr->mutex);
         if (pj_mutex_trylock(mgr->cb_mutex) == PJ_SUCCESS)
             break;
-        
+
         /* The callback is currently being called, wait for a while. */
         pj_mutex_unlock(mgr->mutex);
         pj_thread_sleep(10);

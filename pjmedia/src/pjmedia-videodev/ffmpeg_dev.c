@@ -324,7 +324,7 @@ static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
                           (void**)&dev_enum);
     if (FAILED(hr) ||
         ICreateDevEnum_CreateClassEnumerator(dev_enum,
-            &CLSID_VideoInputDeviceCategory, &enum_cat, 0) != S_OK) 
+            &CLSID_VideoInputDeviceCategory, &enum_cat, 0) != S_OK)
     {
         PJ_LOG(4,(THIS_FILE, "Windows found no video input devices"));
         if (dev_enum)
@@ -443,7 +443,7 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
             pj_str_t dev_name;
             pj_status_t status;
             unsigned i;
-            
+
             ctx = avformat_alloc_context();
             if (!ctx || avformat_open_input(&ctx, dev_names[dev_idx], p, NULL)!=0)
                 continue;
@@ -467,11 +467,11 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
 
             info = &ff->dev_info[ff->dev_count++];
             pj_bzero(info, sizeof(*info));
-            pj_ansi_strncpy(info->base.name, "default", 
+            pj_ansi_strncpy(info->base.name, "default",
                             sizeof(info->base.name));
             pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
                              "ffmpeg %s", p->name);
-            
+
             pj_strdup2_with_null(ff->pool, &dev_name, dev_names[dev_idx]);
             info->def_devname = dev_name.ptr;
             info->base.dir = PJMEDIA_DIR_CAPTURE;

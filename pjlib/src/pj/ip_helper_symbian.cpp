@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ip_helper.h>
 #include <pj/addr_resolv.h>
@@ -32,33 +32,33 @@
 
 static pj_status_t rsock_enum_interface(int af,
                                         unsigned *p_cnt,
-                                        pj_sockaddr ifs[]) 
+                                        pj_sockaddr ifs[])
 {
     TInt rc;
     RSocket rSock;
     TPckgBuf<TSoInetInterfaceInfo> info;
     unsigned i;
-    
+
     if (PjSymbianOS::Instance()->Connection()) {
-        
-        rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(), 
+
+        rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(),
                         af, PJ_SOCK_DGRAM, KProtocolInetUdp,
                         *PjSymbianOS::Instance()->Connection());
     } else {
-        
-        rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(), 
+
+        rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(),
                         af, PJ_SOCK_DGRAM, KProtocolInetUdp);
-                        
+
     }
-        
+
     if (rc != KErrNone)
         return PJ_RETURN_OS_ERROR(rc);
-    
+
     rSock.SetOpt(KSoInetEnumInterfaces, KSolInetIfCtrl);
-    
+
     for (i=0; i<*p_cnt &&
-                rSock.GetOpt(KSoInetNextInterface, KSolInetIfCtrl, 
-                             info) == KErrNone; ) 
+                rSock.GetOpt(KSoInetNextInterface, KSolInetIfCtrl,
+                             info) == KErrNone; )
     {
         TInetAddr &iAddress = info().iAddress;
         int namelen;
@@ -67,19 +67,19 @@ static pj_status_t rsock_enum_interface(int af,
                 if (1) {
                         pj_sockaddr a;
                         char ipaddr[PJ_INET6_ADDRSTRLEN+2];
-                        
+
                         namelen = sizeof(pj_sockaddr);
-                        if (PjSymbianOS::Addr2pj(iAddress, a, &namelen, 
-                                                                         PJ_FALSE) == PJ_SUCCESS) 
+                        if (PjSymbianOS::Addr2pj(iAddress, a, &namelen,
+                                                                         PJ_FALSE) == PJ_SUCCESS)
                         {
-                                PJ_LOG(5,(THIS_FILE, "Enum: found address %s", 
+                                PJ_LOG(5,(THIS_FILE, "Enum: found address %s",
                                                 pj_sockaddr_print(&a, ipaddr, sizeof(ipaddr), 2)));
                         }
                 }
 #endif
-        
+
         namelen = sizeof(ifs[i]);
-        if (PjSymbianOS::Addr2pj(iAddress, ifs[i], &namelen, 
+        if (PjSymbianOS::Addr2pj(iAddress, ifs[i], &namelen,
                                                          PJ_TRUE) != PJ_SUCCESS)
         {
             continue;
@@ -87,18 +87,18 @@ static pj_status_t rsock_enum_interface(int af,
 
         if (ifs[i].addr.sa_family != af)
                     continue;
-        
+
         ++i;
     }
-    
+
     rSock.Close();
-    
+
     // Done
     *p_cnt = i;
-    
+
     return PJ_SUCCESS;
 }
-                                        
+
 /*
  * Enumerate the local IP interface currently active in the host.
  */
@@ -110,7 +110,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
     pj_status_t status = PJ_SUCCESS;
 
     start = 0;
-            
+
     /* Get IPv6 interface first. */
     if (af==PJ_AF_INET6 || af==PJ_AF_UNSPEC) {
         unsigned max = *p_cnt;
@@ -120,7 +120,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
             start += max;
         }
     }
-    
+
     /* Get IPv4 interface. */
     if (af==PJ_AF_INET || af==PJ_AF_UNSPEC) {
         unsigned max = *p_cnt;
@@ -130,9 +130,9 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
             start += max;
         }
     }
-    
+
     *p_cnt = start;
-    
+
     return start ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
 

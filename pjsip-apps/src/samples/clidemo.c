@@ -58,7 +58,7 @@ static pj_cli_t *cli = NULL;
 /* Handler for sayhello command */
 static pj_status_t sayhello(pj_cli_cmd_val *cval)
 {
-    print_msg(("", "Hello %.*s!\r\n", 
+    print_msg(("", "Hello %.*s!\r\n",
               (int)cval->argv[1].slen, cval->argv[1].ptr));
     return PJ_SUCCESS;
 }
@@ -123,7 +123,7 @@ static struct cmd_xml_t cmd_xmls[] = {
      "               <ARG name='streamno' type='int' desc='Stream No' id='1'/>"
      "               <ARG name='devid' type='int' desc='Device Id' id='2'/>"
      "            </CMD>"
-     "   </CMD>"     
+     "   </CMD>"
      "</CMD>",
      NULL},
     {"<CMD name='disable_codec' id='8' desc='Disable codec'>"
@@ -151,7 +151,7 @@ int main()
     pj_cli_telnet_cfg tcfg;
     pj_str_t xml;
     pj_status_t status;
-    int i;        
+    int i;
 
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
@@ -173,8 +173,8 @@ int main()
      * Register some commands.
      */
     for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
-        xml = pj_str(cmd_xmls[i].xml);  
-        status = pj_cli_add_cmd_from_xml(cli, NULL, &xml, 
+        xml = pj_str(cmd_xmls[i].xml);
+        status = pj_cli_add_cmd_from_xml(cli, NULL, &xml,
                                          cmd_xmls[i].handler, NULL,
                                          get_codec_list);
         if (status != PJ_SUCCESS) {
@@ -193,7 +193,7 @@ int main()
     tcfg.port = 0;
 #else
     tcfg.port = 2233;
-#endif    
+#endif
     tcfg.prompt_str = pj_str("CoolWater% ");
     status = pj_cli_telnet_create(cli, &tcfg, NULL);
     if (status != PJ_SUCCESS)
@@ -230,7 +230,7 @@ pj_status_t app_main(pj_cli_t *c)
 
     pj_cli_console_cfg_default(&console_cfg);
     console_cfg.prompt_str = pj_str("HotWater> ");
-    
+
     /*
      * Create the console front end
      */
@@ -250,7 +250,7 @@ pj_status_t app_main(pj_cli_t *c)
         if (status != PJ_SUCCESS)
             break;
 
-        //pj_ansi_strcpy(cmdline, "sayhello {Teluu Inc.}");     
+        //pj_ansi_strcpy(cmdline, "sayhello {Teluu Inc.}");
         if (status == PJ_CLI_EEXIT) {
             /* exit is called */
             break;

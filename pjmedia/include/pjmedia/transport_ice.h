@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TRANSPORT_ICE_H__
 #define __PJMEDIA_TRANSPORT_ICE_H__
@@ -30,7 +30,7 @@
 
 
 /**
- * @defgroup PJMEDIA_TRANSPORT_ICE ICE Media Transport 
+ * @defgroup PJMEDIA_TRANSPORT_ICE ICE Media Transport
  * @ingroup PJMEDIA_TRANSPORT
  * @brief Interactive Connectivity Establishment (ICE) transport
  * @{
@@ -166,10 +166,10 @@ typedef struct pjmedia_ice_transport_info
 enum pjmedia_transport_ice_options
 {
     /**
-     * Normally when remote doesn't use ICE, the ICE transport will 
-     * continuously check the source address of incoming packets to see 
-     * if it is different than the configured remote address, and switch 
-     * the remote address to the source address of the packet if they 
+     * Normally when remote doesn't use ICE, the ICE transport will
+     * continuously check the source address of incoming packets to see
+     * if it is different than the configured remote address, and switch
+     * the remote address to the source address of the packet if they
      * are different after several packets are received.
      * Specifying this option will disable this feature.
      */

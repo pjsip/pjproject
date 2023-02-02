@@ -3,7 +3,7 @@
  Name        : PjsuaContainerView.cpp
  Author      : nanang
  Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
- Description : 
+ Description :
 ========================================================================
 */
 // [[[ begin generated region: do not modify [Generated System Includes]
@@ -40,10 +40,10 @@ CpjsuaContainerView::CpjsuaContainerView()
         // [[[ begin generated region: do not modify [Generated Contents]
         iPjsuaContainer = NULL;
         // ]]] end generated region [Generated Contents]
-        
+
         }
 
-/** 
+/**
  * The view's destructor removes the container from the control
  * stack and destroys it.
  */
@@ -53,7 +53,7 @@ CpjsuaContainerView::~CpjsuaContainerView()
         delete iPjsuaContainer;
         iPjsuaContainer = NULL;
         // ]]] end generated region [Generated Contents]
-        
+
         }
 
 /**
@@ -85,16 +85,16 @@ CpjsuaContainerView* CpjsuaContainerView::NewLC()
 
 
 /**
- * Second-phase constructor for view.  
+ * Second-phase constructor for view.
  * Initialize contents from resource.
- */ 
+ */
 void CpjsuaContainerView::ConstructL()
         {
         // [[[ begin generated region: do not modify [Generated Code]
         BaseConstructL( R_PJSUA_CONTAINER_PJSUA_CONTAINER_VIEW );
-                                
+
         // ]]] end generated region [Generated Code]
-        
+
         // add your own initialization code here
         }
 
@@ -119,44 +119,44 @@ void CpjsuaContainerView::HandleCommandL( TInt aCommand )
                 default:
                         break;
                 }
-        
-                
-        if ( !commandHandled ) 
+
+
+        if ( !commandHandled )
                 {
-        
+
                 if ( aCommand == EAknSoftkeyBack )
                         {
                         AppUi()->HandleCommandL( EEikCmdExit );
                         }
-        
+
                 }
         // ]]] end generated region [Generated Code]
-        
+
         }
 
 /**
- *      Handles user actions during activation of the view, 
+ *      Handles user actions during activation of the view,
  *      such as initializing the content.
  */
-void CpjsuaContainerView::DoActivateL( 
+void CpjsuaContainerView::DoActivateL(
                 const TVwsViewId& /*aPrevViewId*/,
                 TUid /*aCustomMessageId*/,
                 const TDesC8& /*aCustomMessage*/ )
         {
         // [[[ begin generated region: do not modify [Generated Contents]
         SetupStatusPaneL();
-        
-                                
-                                
-        
+
+
+
+
         if ( iPjsuaContainer == NULL )
                 {
                 iPjsuaContainer = CreateContainerL();
                 iPjsuaContainer->SetMopParent( this );
                 AppUi()->AddToStackL( *this, iPjsuaContainer );
-                } 
+                }
         // ]]] end generated region [Generated Contents]
-        
+
         }
 
 /**
@@ -165,7 +165,7 @@ void CpjsuaContainerView::DoDeactivate()
         {
         // [[[ begin generated region: do not modify [Generated Contents]
         CleanupStatusPane();
-        
+
         if ( iPjsuaContainer != NULL )
                 {
                 AppUi()->RemoveFromViewStack( *this, iPjsuaContainer );
@@ -173,16 +173,16 @@ void CpjsuaContainerView::DoDeactivate()
                 iPjsuaContainer = NULL;
                 }
         // ]]] end generated region [Generated Contents]
-        
+
         }
 
-/** 
+/**
  * Handle status pane size change for this view (override)
  */
 void CpjsuaContainerView::HandleStatusPaneSizeChange()
         {
         CAknView::HandleStatusPaneSizeChange();
-        
+
         // this may fail, but we're not able to propagate exceptions here
         TVwsViewId view;
         AppUi()->GetActiveViewId( view );
@@ -194,12 +194,12 @@ void CpjsuaContainerView::HandleStatusPaneSizeChange()
 
         // Hide menu
         Cba()->MakeVisible(EFalse);
-        
+
         //PutMessage("HandleStatusPaneSizeChange()");
-        
+
         // [[[ begin generated region: do not modify [Generated Code]
         // ]]] end generated region [Generated Code]
-        
+
         }
 
 // [[[ begin generated function: do not modify
@@ -207,29 +207,29 @@ void CpjsuaContainerView::SetupStatusPaneL()
         {
         // reset the context pane
         TUid contextPaneUid = TUid::Uid( EEikStatusPaneUidContext );
-        CEikStatusPaneBase::TPaneCapabilities subPaneContext = 
+        CEikStatusPaneBase::TPaneCapabilities subPaneContext =
                 StatusPane()->PaneCapabilities( contextPaneUid );
         if ( subPaneContext.IsPresent() && subPaneContext.IsAppOwned() )
                 {
-                CAknContextPane* context = static_cast< CAknContextPane* > ( 
+                CAknContextPane* context = static_cast< CAknContextPane* > (
                         StatusPane()->ControlL( contextPaneUid ) );
                 context->SetPictureToDefaultL();
                 }
-        
+
         // setup the title pane
         TUid titlePaneUid = TUid::Uid( EEikStatusPaneUidTitle );
-        CEikStatusPaneBase::TPaneCapabilities subPaneTitle = 
+        CEikStatusPaneBase::TPaneCapabilities subPaneTitle =
                 StatusPane()->PaneCapabilities( titlePaneUid );
         if ( subPaneTitle.IsPresent() && subPaneTitle.IsAppOwned() )
                 {
-                CAknTitlePane* title = static_cast< CAknTitlePane* >( 
+                CAknTitlePane* title = static_cast< CAknTitlePane* >(
                         StatusPane()->ControlL( titlePaneUid ) );
                 TResourceReader reader;
                 iEikonEnv->CreateResourceReaderLC( reader, R_PJSUA_CONTAINER_TITLE_RESOURCE );
                 title->SetFromResourceL( reader );
                 CleanupStack::PopAndDestroy(); // reader internal state
                 }
-                                
+
         }
 
 // ]]] end generated function

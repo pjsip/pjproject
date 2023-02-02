@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/turn_sock.h>
 #include <pj/activesock.h>
@@ -124,7 +124,7 @@ static void turn_on_rx_data(pj_turn_session *sess,
                             unsigned pkt_len,
                             const pj_sockaddr_t *peer_addr,
                             unsigned addr_len);
-static void turn_on_state(pj_turn_session *sess, 
+static void turn_on_state(pj_turn_session *sess,
                           pj_turn_state_t old_state,
                           pj_turn_state_t new_state);
 static void turn_on_connection_attempt(pj_turn_session *sess,
@@ -252,7 +252,7 @@ PJ_DEF(void) pj_turn_sock_tls_cfg_wipe_keys(pj_turn_sock_tls_cfg *tls_cfg)
     wipe_buf(&tls_cfg->password);
     wipe_buf(&tls_cfg->ca_buf);
     wipe_buf(&tls_cfg->cert_buf);
-    wipe_buf(&tls_cfg->privkey_buf); 
+    wipe_buf(&tls_cfg->privkey_buf);
 }
 #endif
 
@@ -540,7 +540,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_unlock(pj_turn_sock *turn_sock)
 }
 
 /*
- * Set STUN message logging for this TURN session. 
+ * Set STUN message logging for this TURN session.
  */
 PJ_DEF(void) pj_turn_sock_set_log( pj_turn_sock *turn_sock,
                                    unsigned flags)
@@ -574,7 +574,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_alloc(pj_turn_sock *turn_sock,
 
     pj_grp_lock_acquire(turn_sock->grp_lock);
 
-    /* Copy alloc param. We will call session_alloc() only after the 
+    /* Copy alloc param. We will call session_alloc() only after the
      * server address has been resolved.
      */
     if (param) {
@@ -638,7 +638,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_set_perm( pj_turn_sock *turn_sock,
 
 /*
  * Send packet.
- */ 
+ */
 PJ_DEF(pj_status_t) pj_turn_sock_sendto( pj_turn_sock *turn_sock,
                                         const pj_uint8_t *pkt,
                                         unsigned pkt_len,
@@ -654,7 +654,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_sendto( pj_turn_sock *turn_sock,
      * to store our actual data length to be sent here.
      */
     turn_sock->body_len = pkt_len;
-    return pj_turn_session_sendto(turn_sock->sess, pkt, pkt_len, 
+    return pj_turn_session_sendto(turn_sock->sess, pkt, pkt_len,
                                   addr, addr_len);
 }
 
@@ -754,10 +754,10 @@ static pj_bool_t on_connect_complete(pj_turn_sock *turn_sock,
     }
 
     /* Kick start pending read operation */
-    if (turn_sock->conn_type != PJ_TURN_TP_TLS) 
-        status = pj_activesock_start_read(turn_sock->active_sock, 
+    if (turn_sock->conn_type != PJ_TURN_TP_TLS)
+        status = pj_activesock_start_read(turn_sock->active_sock,
                                           turn_sock->pool,
-                                          turn_sock->setting.max_pkt_size, 
+                                          turn_sock->setting.max_pkt_size,
                                           0);
 #if PJ_HAS_SSL_SOCK
     else
@@ -844,7 +844,7 @@ static unsigned has_packet(pj_turn_sock *turn_sock, const void *buf, pj_size_t b
         pj_memcpy(&cd, buf, sizeof(pj_turn_channel_data));
         cd.length = pj_ntohs(cd.length);
 
-        if (bufsize >= cd.length+sizeof(cd)) 
+        if (bufsize >= cd.length+sizeof(cd))
             return (cd.length+sizeof(cd)+3) & (~3);
         else
             return 0;
@@ -870,18 +870,18 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
          */
         unsigned pkt_len;
 
-        //PJ_LOG(5,(turn_sock->pool->obj_name, 
+        //PJ_LOG(5,(turn_sock->pool->obj_name,
         //        "Incoming data, %lu bytes total buffer", size));
 
         while ((pkt_len=has_packet(turn_sock, data, size)) != 0) {
             pj_size_t parsed_len;
             //const pj_uint8_t *pkt = (const pj_uint8_t*)data;
 
-            //PJ_LOG(5,(turn_sock->pool->obj_name, 
-            //        "Packet start: %02X %02X %02X %02X", 
+            //PJ_LOG(5,(turn_sock->pool->obj_name,
+            //        "Packet start: %02X %02X %02X %02X",
             //        pkt[0], pkt[1], pkt[2], pkt[3]));
 
-            //PJ_LOG(5,(turn_sock->pool->obj_name, 
+            //PJ_LOG(5,(turn_sock->pool->obj_name,
             //        "Processing %lu bytes packet of %lu bytes total buffer",
             //        pkt_len, size));
 
@@ -902,7 +902,7 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
             }
             size = *remainder;
 
-            //PJ_LOG(5,(turn_sock->pool->obj_name, 
+            //PJ_LOG(5,(turn_sock->pool->obj_name,
             //        "Buffer size now %lu bytes", size));
         }
     } else if (status != PJ_SUCCESS) {
@@ -1018,7 +1018,7 @@ static pj_status_t send_pkt(pj_turn_session *sess,
                             const pj_sockaddr_t *dst_addr,
                             unsigned dst_addr_len)
 {
-    pj_turn_sock *turn_sock = (pj_turn_sock*) 
+    pj_turn_sock *turn_sock = (pj_turn_sock*)
                               pj_turn_session_get_user_data(sess);
     pj_ssize_t len = pkt_len;
     pj_status_t status = PJ_SUCCESS;
@@ -1133,7 +1133,7 @@ static void turn_on_rx_data(pj_turn_session *sess,
                             const pj_sockaddr_t *peer_addr,
                             unsigned addr_len)
 {
-    pj_turn_sock *turn_sock = (pj_turn_sock*) 
+    pj_turn_sock *turn_sock = (pj_turn_sock*)
                            pj_turn_session_get_user_data(sess);
     if (turn_sock == NULL || turn_sock->is_destroying) {
         /* We've been destroyed */
@@ -1146,7 +1146,7 @@ static void turn_on_rx_data(pj_turn_session *sess,
     }
 
     if (turn_sock->cb.on_rx_data) {
-        (*turn_sock->cb.on_rx_data)(turn_sock, pkt, pkt_len, 
+        (*turn_sock->cb.on_rx_data)(turn_sock, pkt, pkt_len,
                                   peer_addr, addr_len);
     }
 }
@@ -1155,11 +1155,11 @@ static void turn_on_rx_data(pj_turn_session *sess,
 /*
  * Callback from TURN session when state has changed
  */
-static void turn_on_state(pj_turn_session *sess, 
+static void turn_on_state(pj_turn_session *sess,
                           pj_turn_state_t old_state,
                           pj_turn_state_t new_state)
 {
-    pj_turn_sock *turn_sock = (pj_turn_sock*) 
+    pj_turn_sock *turn_sock = (pj_turn_sock*)
                            pj_turn_session_get_user_data(sess);
     pj_status_t status = PJ_SUCCESS;
 
@@ -1198,8 +1198,8 @@ static void turn_on_state(pj_turn_session *sess,
          * we're switching to alternate TURN server when either TCP
          * connection or ALLOCATE request failed.
          */
-        if ((turn_sock->conn_type != PJ_TURN_TP_TLS) && 
-            (turn_sock->active_sock)) 
+        if ((turn_sock->conn_type != PJ_TURN_TP_TLS) &&
+            (turn_sock->active_sock))
         {
             pj_activesock_close(turn_sock->active_sock);
             turn_sock->active_sock = NULL;
@@ -1228,7 +1228,7 @@ static void turn_on_state(pj_turn_session *sess,
             max_bind_retry = turn_sock->setting.port_range;
         }
         pj_sockaddr_init(turn_sock->af, &bound_addr, NULL, 0);
-        if (cfg_bind_addr->addr.sa_family == pj_AF_INET() || 
+        if (cfg_bind_addr->addr.sa_family == pj_AF_INET() ||
             cfg_bind_addr->addr.sa_family == pj_AF_INET6())
         {
             pj_sockaddr_cp(&bound_addr, cfg_bind_addr);
@@ -1256,7 +1256,7 @@ static void turn_on_state(pj_turn_session *sess,
                                     &turn_sock->setting.qos_params,
                                     (turn_sock->setting.qos_ignore_error?2:1),
                                     turn_sock->pool->obj_name, NULL);
-            if (status != PJ_SUCCESS && !turn_sock->setting.qos_ignore_error) 
+            if (status != PJ_SUCCESS && !turn_sock->setting.qos_ignore_error)
             {
                 pj_sock_close(sock);
                 pj_turn_sock_destroy(turn_sock);
@@ -1315,7 +1315,7 @@ static void turn_on_state(pj_turn_session *sess,
                                           sock_type, &asock_cfg,
                                           turn_sock->cfg.ioqueue, &asock_cb,
                                           turn_sock,
-                                          &turn_sock->active_sock);                                                                                                                                                                                                                                                                             
+                                          &turn_sock->active_sock);
             if (status != PJ_SUCCESS)
                 pj_sock_close(sock);
         }
@@ -1408,8 +1408,8 @@ static void turn_on_state(pj_turn_session *sess,
         }
 
         PJ_LOG(5,(turn_sock->pool->obj_name,
-                  "Connecting to %s", 
-                  pj_sockaddr_print(&info.server, addrtxt, 
+                  "Connecting to %s",
+                  pj_sockaddr_print(&info.server, addrtxt,
                                     sizeof(addrtxt), 3)));
 
         /* Initiate non-blocking connect */
@@ -1419,12 +1419,12 @@ static void turn_on_state(pj_turn_session *sess,
 #if PJ_HAS_TCP
         else if (turn_sock->conn_type == PJ_TURN_TP_TCP) {
             status=pj_activesock_start_connect(
-                                        turn_sock->active_sock, 
+                                        turn_sock->active_sock,
                                         turn_sock->pool,
-                                        &info.server, 
+                                        &info.server,
                                         pj_sockaddr_get_len(&info.server));
-        } 
-#endif  
+        }
+#endif
 #if PJ_HAS_SSL_SOCK
         else if (turn_sock->conn_type == PJ_TURN_TP_TLS) {
             pj_ssl_start_connect_param connect_param;
@@ -1449,7 +1449,7 @@ static void turn_on_state(pj_turn_session *sess,
             return;
         }
 
-        /* Done for now. Subsequent work will be done in 
+        /* Done for now. Subsequent work will be done in
          * on_connect_complete() callback.
          */
     }
@@ -1590,7 +1590,7 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
                                        const pj_sockaddr_t *peer_addr,
                                        unsigned addr_len)
 {
-    pj_turn_sock *turn_sock = (pj_turn_sock*) 
+    pj_turn_sock *turn_sock = (pj_turn_sock*)
                               pj_turn_session_get_user_data(sess);
     pj_pool_t *pool;
     tcp_data_conn_t *new_conn;
@@ -1765,7 +1765,7 @@ on_return:
                   pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3));
 
         if (!new_conn->asock && sock != PJ_INVALID_SOCKET)
-            pj_sock_close(sock);    
+            pj_sock_close(sock);
 
         dataconn_cleanup(new_conn);
         --turn_sock->data_conn_cnt;
@@ -1785,7 +1785,7 @@ static void turn_on_connection_bind_status(pj_turn_session *sess,
                                            const pj_sockaddr_t *peer_addr,
                                            unsigned addr_len)
 {
-    pj_turn_sock *turn_sock = (pj_turn_sock*) 
+    pj_turn_sock *turn_sock = (pj_turn_sock*)
                               pj_turn_session_get_user_data(sess);
     tcp_data_conn_t *conn = NULL;
     unsigned i;
@@ -1829,7 +1829,7 @@ static void turn_on_connect_complete(pj_turn_session *sess,
                                      const pj_sockaddr_t *peer_addr,
                                      unsigned addr_len)
 {
-    pj_turn_sock *turn_sock = (pj_turn_sock*) 
+    pj_turn_sock *turn_sock = (pj_turn_sock*)
                               pj_turn_session_get_user_data(sess);
     pj_pool_t *pool;
     tcp_data_conn_t *new_conn;
@@ -1999,7 +1999,7 @@ on_return:
                   pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3));
 
         if (!new_conn->asock && sock != PJ_INVALID_SOCKET)
-            pj_sock_close(sock);    
+            pj_sock_close(sock);
 
         dataconn_cleanup(new_conn);
         --turn_sock->data_conn_cnt;

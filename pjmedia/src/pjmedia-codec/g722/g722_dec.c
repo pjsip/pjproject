@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /*
  * Based on implementation found in Carnegie Mellon Speech Group Software
@@ -37,7 +37,7 @@
 
 extern const int g722_qmf_coeff[24];
 
-static const int qm4[16] = 
+static const int qm4[16] =
 {
         0, -20456, -12896, -8968,
     -6288,  -4240,  -2584, -1200,
@@ -46,8 +46,8 @@ static const int qm4[16] =
 };
 static const int ilb[32] = {
     2048, 2093, 2139, 2186, 2233, 2282, 2332,
-    2383, 2435, 2489, 2543, 2599, 2656, 2714, 
-    2774, 2834, 2896, 2960, 3025, 3091, 3158, 
+    2383, 2435, 2489, 2543, 2599, 2656, 2714,
+    2774, 2834, 2896, 2960, 3025, 3091, 3158,
     3228, 3298, 3371, 3444, 3520, 3597, 3676,
     3756, 3838, 3922, 4008
 };
@@ -111,7 +111,7 @@ static int block4l (g722_dec_t *dec, int dl)
 
     dec->dlt[0] = dl;
 
-    /* RECONS */ 
+    /* RECONS */
     dec->rlt[0] = sl + dec->dlt[0] ;
     SATURATE(dec->rlt[0], 32767, -32768);
 
@@ -132,7 +132,7 @@ static int block4l (g722_dec_t *dec, int dl)
     if (wd2 > 32767) wd2 = 32767;
     wd2 = wd2 >> 7 ;
 
-    if ( dec->sgl[0] == dec->sgl[2] )  wd3 = 128 ; 
+    if ( dec->sgl[0] == dec->sgl[2] )  wd3 = 128 ;
     else  wd3 = - 128 ;
 
     wd4 = wd2 + wd3 ;
@@ -140,7 +140,7 @@ static int block4l (g722_dec_t *dec, int dl)
 
     dec->apl[2] = wd4 + wd5 ;
     SATURATE(dec->apl[2], 12288, -12288);
-    
+
     /* UPPOL1 */
     dec->sgl[0] = dec->plt[0] >> 15 ;
     dec->sgl[1] = dec->plt[1] >> 15 ;
@@ -245,7 +245,7 @@ static int block5l (int ilr, int sl, int detl, int mode)
         1688,   1360,   1040,   728,
         432,    136,    -432,   -136
     };
-    
+
     /* INVQBL */
     if (mode == 1) {
         ril = ilr ;
@@ -286,7 +286,7 @@ static int block2h (int ih, int deth)
     int dh ;
     int wd2 ;
     static const int qm2[4] = {-7408, -1616, 7408, 1616} ;
-    
+
     /* INVQAH */
     wd2 = qm2[ih] ;
     dh = (deth * wd2) >> 15 ;
@@ -300,7 +300,7 @@ static int block3h (g722_dec_t *dec, int ih)
     int ih2, wd, wd1, wd2, wd3, nbph, deph ;
     static const int wh[3] = {0, -214, 798} ;
     static const int rh2[4] = {2, 1, 2, 1} ;
-    
+
     /* LOGSCH */
     ih2 = rh2[ih] ;
     wd = (dec->nbh * 32512) >> 15 ;
@@ -319,7 +319,7 @@ static int block3h (g722_dec_t *dec, int ih)
 
     /* DELAYA */
     dec->nbh = nbph ;
-    
+
     /* DELAYH */
     deth = deph ;
 
@@ -334,7 +334,7 @@ static int block4h (g722_dec_t *dec, int d)
 
     dec->dh[0] = d;
 
-    /* RECONS */ 
+    /* RECONS */
     dec->rh[0] = sh + dec->dh[0] ;
     SATURATE(dec->rh[0], 32767, -32768);
 
@@ -356,7 +356,7 @@ static int block4h (g722_dec_t *dec, int d)
 
     wd2 = wd2 >> 7 ;
 
-    if ( dec->sgh[0] == dec->sgh[2] )  wd3 = 128 ; 
+    if ( dec->sgh[0] == dec->sgh[2] )  wd3 = 128 ;
     else  wd3 = - 128 ;
 
     wd4 = wd2 + wd3 ;
@@ -364,7 +364,7 @@ static int block4h (g722_dec_t *dec, int d)
 
     dec->aph[2] = wd4 + wd5 ;
     SATURATE(dec->aph[2], 12288, -12288);
-    
+
     /* UPPOL1 */
     dec->sgh[0] = dec->ph[0] >> 15 ;
     dec->sgh[1] = dec->ph[1] >> 15 ;
@@ -398,7 +398,7 @@ static int block4h (g722_dec_t *dec, int d)
         wd3 = (dec->bh[i] * 32640) >> 15 ;
         dec->bph[i] = wd2 + wd3 ;
     }
- 
+
     /* DELAYA */
     for ( i = 6; i > 0; i-- ) {
         dec->dh[i] = dec->dh[i-1] ;
@@ -460,19 +460,19 @@ static void rx_qmf(g722_dec_t *dec, int rl, int rh, int *xout1, int *xout2)
     dec->xd[0] = rl - rh ;
     if (dec->xd[0] > 16383) dec->xd[0] = 16383;
     else if (dec->xd[0] < -16384) dec->xd[0] = -16384;
-    
+
     /* RECB */
     dec->xs[0] = rl + rh ;
     if (dec->xs[0] > 16383) dec->xs[0] = 16383;
     else if (dec->xs[0] < -16384) dec->xs[0] = -16384;
-    
+
     /* ACCUMC */
     *xout1 = 0;
     for (i=0; i<12; ++i) *xout1 += dec->xd[i] * g722_qmf_coeff[2*i];
     *xout1 = *xout1 >> 12 ;
     if (*xout1 >  16383)  *xout1 =  16383 ;
     else if (*xout1 < -16384)  *xout1 = -16384 ;
-    
+
     /* ACCUMD */
     *xout2 = 0;
     for (i=0; i<12; ++i) *xout2 += dec->xs[i] * g722_qmf_coeff[2*i+1];
@@ -494,8 +494,8 @@ PJ_DEF(pj_status_t) g722_dec_init(g722_dec_t *dec)
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) g722_dec_decode( g722_dec_t *dec, 
-                                    void *in, 
+PJ_DEF(pj_status_t) g722_dec_decode( g722_dec_t *dec,
+                                    void *in,
                                     pj_size_t in_size,
                                     pj_int16_t out[],
                                     pj_size_t *nsamples)
@@ -514,7 +514,7 @@ PJ_DEF(pj_status_t) g722_dec_decode( g722_dec_t *dec,
         ihigh = (in_[i] >> 6) & 3;
 
         /* low band decoder */
-        ylow = block5l (ilowr, dec->slow, dec->detlow, MODE) ;  
+        ylow = block5l (ilowr, dec->slow, dec->detlow, MODE) ;
         rlow = block6l (ylow) ;
         dlowt = block2l (ilowr, dec->detlow) ;
         dec->detlow = block3l (dec, ilowr) ;

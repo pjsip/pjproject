@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #define THIS_FILE   "stateless_proxy.c"
 
@@ -80,7 +80,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
                                             NULL, 0, &tdata);
     if (status != PJ_SUCCESS) {
         pjsip_endpt_respond_stateless(global.endpt, rdata,
-                                      PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, 
+                                      PJSIP_SC_INTERNAL_SERVER_ERROR, NULL,
                                       NULL, NULL);
         return PJ_TRUE;
     }
@@ -101,7 +101,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     }
 
     /* Target is set, forward the request */
-    status = pjsip_endpt_send_request_stateless(global.endpt, tdata, 
+    status = pjsip_endpt_send_request_stateless(global.endpt, tdata,
                                                 NULL, NULL);
     if (status != PJ_SUCCESS) {
         app_perror("Error forwarding request", status);
@@ -159,7 +159,7 @@ static pj_bool_t on_rx_response( pjsip_rx_data *rdata )
     }
 
     /* Forward response */
-    status = pjsip_endpt_send_response(global.endpt, &res_addr, tdata, 
+    status = pjsip_endpt_send_response(global.endpt, &res_addr, tdata,
                                        NULL, NULL);
     if (status != PJ_SUCCESS) {
         pjsip_tx_data_dec_ref(tdata);
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
     }
 
 #if PJ_HAS_THREADS
-    status = pj_thread_create(global.pool, "sproxy", &worker_thread, 
+    status = pj_thread_create(global.pool, "sproxy", &worker_thread,
                               NULL, 0, 0, &global.thread);
     if (status != PJ_SUCCESS) {
         app_perror("Error creating thread", status);

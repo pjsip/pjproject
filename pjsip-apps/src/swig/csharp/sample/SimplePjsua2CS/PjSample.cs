@@ -169,7 +169,7 @@ namespace pjsua2xamarin
                     {
                         Debug.WriteLine("Exception: " + err.Message);
                     }
-                }).Start(); 
+                }).Start();
 
             }
             catch (Exception err)

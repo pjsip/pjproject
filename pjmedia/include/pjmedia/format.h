@@ -182,7 +182,7 @@ typedef enum pjmedia_format_id
      * U (Cb) - V (Cr) samples.
      */
     PJMEDIA_FORMAT_NV12     = PJMEDIA_FORMAT_PACK('N', 'V', '1', '2'),
-    
+
     /**
      * This is planar 4:2:0/12bpp YUV format, the data can be treated as
      * two planes of color components, where the first plane contains
@@ -190,7 +190,7 @@ typedef enum pjmedia_format_id
      * V (Cr) - U (Cb) samples.
      */
     PJMEDIA_FORMAT_NV21     = PJMEDIA_FORMAT_PACK('N', 'V', '2', '1'),
-    
+
     /**
      * This is planar 4:2:2/16bpp YUV format, the data can be treated as
      * three planes of color components, where the first plane contains

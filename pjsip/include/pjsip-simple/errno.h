@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -107,7 +107,7 @@ PJ_BEGIN_DECL
  * @return          The error message as NULL terminated string,
  *                  wrapped with pj_str_t.
  */
-PJ_DECL(pj_str_t) pjsipsimple_strerror(pj_status_t status, 
+PJ_DECL(pj_str_t) pjsipsimple_strerror(pj_status_t status,
                                        char *buffer, pj_size_t bufsize);
 
 

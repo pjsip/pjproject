@@ -28,9 +28,9 @@ using VoipBackEnd;
 namespace VoipTasks.Helpers
 {
     class EndpointHelper : IntAccount, IntCall
-    {        
+    {
         private async void sendCallState(String state)
-        {            
+        {
             ValueSet message = new ValueSet();
 
             message[UpdateCallStateArguments.CallState.ToString()] = state;
@@ -84,7 +84,7 @@ namespace VoipTasks.Helpers
                 case INV_STATE.PJSIP_INV_STATE_CONFIRMED:
                     sendCallState("Connected");
                     break;
-                case INV_STATE.PJSIP_INV_STATE_DISCONNECTED:                    
+                case INV_STATE.PJSIP_INV_STATE_DISCONNECTED:
                     sendCallState("Disconnected");
                     Current.EndCall();
                     break;

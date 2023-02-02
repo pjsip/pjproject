@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_RPID_H__
 #define __PJSIP_SIMPLE_RPID_H__
@@ -40,9 +40,9 @@ PJ_BEGIN_DECL
  */
 
 /**
- * This enumeration describes subset of standard activities as 
+ * This enumeration describes subset of standard activities as
  * described by RFC 4480, RPID: Rich Presence Extensions to the
- * Presence Information Data Format (PIDF). 
+ * Presence Information Data Format (PIDF).
  */
 typedef enum pjrpid_activity
 {

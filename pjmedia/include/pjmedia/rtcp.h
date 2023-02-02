@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_RTCP_H__
 #define __PJMEDIA_RTCP_H__
@@ -49,11 +49,11 @@ PJ_BEGIN_DECL
  * #pjmedia_rtcp_stat structure.
  *
  * When application uses the stream interface (see @ref PJMED_STRM),
- * application may retrieve the RTCP statistic by calling 
+ * application may retrieve the RTCP statistic by calling
  * #pjmedia_stream_get_stat() function.
  */
 
- 
+
 #pragma pack(1)
 
 /**
@@ -85,7 +85,7 @@ typedef struct pjmedia_rtcp_rr
     pj_uint32_t     total_lost_2:8; /**< Total lost, bit 0-7.           */
     pj_uint32_t     total_lost_1:8; /**< Total lost, bit 8-15.          */
     pj_uint32_t     total_lost_0:8; /**< Total lost, bit 16-23.         */
-#endif  
+#endif
     pj_uint32_t     last_seq;       /**< Last sequence number.          */
     pj_uint32_t     jitter;         /**< Jitter.                        */
     pj_uint32_t     lsr;            /**< Last SR.                       */
@@ -208,7 +208,7 @@ typedef struct pjmedia_rtcp_stat
 
     pjmedia_rtcp_stream_stat tx;    /**< Encoder stream statistics.         */
     pjmedia_rtcp_stream_stat rx;    /**< Decoder stream statistics.         */
-    
+
     pj_math_stat             rtt;   /**< Round trip delay statistic(in usec)*/
 
     pj_uint32_t              rtp_tx_last_ts; /**< Last TX RTP timestamp.    */
@@ -222,7 +222,7 @@ typedef struct pjmedia_rtcp_stat
 
 #if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
     pj_math_stat             rx_raw_jitter;/**< Statistic of raw jitter in
-                                                receiving direction 
+                                                receiving direction
                                                 (in usec).                  */
 #endif
 
@@ -242,9 +242,9 @@ typedef struct pjmedia_rtcp_session
     char                   *name;       /**< Name identification.           */
     pjmedia_rtcp_sr_pkt     rtcp_sr_pkt;/**< Cached RTCP SR packet.         */
     pjmedia_rtcp_rr_pkt     rtcp_rr_pkt;/**< Cached RTCP RR packet.         */
-    pjmedia_rtcp_fb_common  rtcp_fb_com;/**< Cached RTCP feedback common 
+    pjmedia_rtcp_fb_common  rtcp_fb_com;/**< Cached RTCP feedback common
                                              header packet.                 */
-    
+
     pjmedia_rtp_seq_session seq_ctrl;   /**< RTCP sequence number control.  */
     unsigned                rtp_last_ts;/**< Last timestamp in RX RTP pkt.  */
 
@@ -263,7 +263,7 @@ typedef struct pjmedia_rtcp_session
     pj_uint32_t             rx_lsr;     /**< NTP ts in last SR received     */
     pj_timestamp            rx_lsr_time;/**< Time when last SR is received  */
     pj_uint32_t             peer_ssrc;  /**< Peer SSRC                      */
-    
+
     pjmedia_rtcp_stat       stat;       /**< Bidirectional stream stat.     */
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
@@ -321,7 +321,7 @@ PJ_DECL(void) pjmedia_rtcp_init_stat(pjmedia_rtcp_stat *stat);
  * @param samples_per_frame Average number of samples per frame.
  * @param ssrc              The SSRC used in to identify the session.
  */
-PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session, 
+PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session,
                                  char *name,
                                  unsigned clock_rate,
                                  unsigned samples_per_frame,
@@ -367,8 +367,8 @@ PJ_DECL(void) pjmedia_rtcp_fini( pjmedia_rtcp_session *session);
  * @param ts        The RTP packet timestamp, in host byte order.
  * @param payload   Size of the payload.
  */
-PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session, 
-                                   unsigned seq, 
+PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session,
+                                   unsigned seq,
                                    unsigned ts,
                                    unsigned payload);
 
@@ -383,8 +383,8 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session,
  * @param payload   Size of the payload.
  * @param discarded Flag to specify whether the packet is discarded.
  */
-PJ_DECL(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *session, 
-                                   unsigned seq, 
+PJ_DECL(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *session,
+                                   unsigned seq,
                                    unsigned ts,
                                    unsigned payload,
                                    pj_bool_t discarded);
@@ -398,7 +398,7 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *session,
  * @param ptsize    The payload size of the RTP packet (ie packet minus
  *                  RTP header) in bytes.
  */
-PJ_DECL(void) pjmedia_rtcp_tx_rtp( pjmedia_rtcp_session *session, 
+PJ_DECL(void) pjmedia_rtcp_tx_rtp( pjmedia_rtcp_session *session,
                                    unsigned ptsize );
 
 
@@ -424,12 +424,12 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
  * the ones to calculate fraction lost) in the session.
  *
  * @param session   The RTCP session.
- * @param rtcp_pkt  Upon return, it will contain pointer to the 
+ * @param rtcp_pkt  Upon return, it will contain pointer to the
  *                  RTCP packet, which can be RTCP SR or RR.
- * @param len       Upon return, it will indicate the size of 
+ * @param len       Upon return, it will indicate the size of
  *                  the RTCP packet.
  */
-PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session, 
+PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session,
                                        void **rtcp_pkt, int *len);
 
 
@@ -448,7 +448,7 @@ PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session,
  * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
-                                            pjmedia_rtcp_session *session, 
+                                            pjmedia_rtcp_session *session,
                                             void *buf,
                                             pj_size_t *length,
                                             const pjmedia_rtcp_sdes *sdes);
@@ -467,14 +467,14 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
  * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_rtcp_build_rtcp_bye(
-                                            pjmedia_rtcp_session *session, 
+                                            pjmedia_rtcp_session *session,
                                             void *buf,
                                             pj_size_t *length,
                                             const pj_str_t *reason);
 
 
 /**
- * Call this function if RTCP XR needs to be enabled/disabled in the 
+ * Call this function if RTCP XR needs to be enabled/disabled in the
  * RTCP session.
  *
  * @param session   The RTCP session.
@@ -482,7 +482,7 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_build_rtcp_bye(
  *
  * @return          PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_rtcp_enable_xr( pjmedia_rtcp_session *session, 
+PJ_DECL(pj_status_t) pjmedia_rtcp_enable_xr( pjmedia_rtcp_session *session,
                                              pj_bool_t enable);
 
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -143,7 +143,7 @@ struct avi_reader_port
 };
 
 
-static pj_status_t avi_get_frame(pjmedia_port *this_port, 
+static pj_status_t avi_get_frame(pjmedia_port *this_port,
                                  pjmedia_frame *frame);
 static pj_status_t avi_on_destroy(pjmedia_port *this_port);
 
@@ -159,7 +159,7 @@ static struct avi_reader_port *create_avi_port(pj_pool_t *pool)
     /* Put in default values.
      * These will be overriden once the file is read.
      */
-    pjmedia_port_info_init(&port->base.info, &name, SIGNATURE, 
+    pjmedia_port_info_init(&port->base.info, &name, SIGNATURE,
                            8000, 1, 16, 80);
 
     port->fd = (pj_oshandle_t)(pj_ssize_t)-1;
@@ -228,7 +228,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     fport[0]->fsize = pj_file_size(filename);
 
     /* Size must be more than AVI header size */
-    if (fport[0]->fsize <= sizeof(riff_hdr_t) + sizeof(avih_hdr_t) + 
+    if (fport[0]->fsize <= sizeof(riff_hdr_t) + sizeof(avih_hdr_t) +
                            sizeof(strl_hdr_t))
     {
         return PJMEDIA_EINVALIMEDIATYPE;
@@ -265,7 +265,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         goto on_error;
     }
 
-    /** 
+    /**
      * TODO: Possibly unsupported AVI format.
      * If you encounter this warning, verify whether the avi player
      * is working properly.
@@ -274,7 +274,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         avi_hdr.avih_hdr.pad > 1)
     {
         PJ_LOG(3, (THIS_FILE, "Warning!!! Possibly unsupported AVI format: "
-                   "flags:%d, pad:%d", avi_hdr.avih_hdr.flags, 
+                   "flags:%d, pad:%d", avi_hdr.avih_hdr.flags,
                    avi_hdr.avih_hdr.pad));
     }
 
@@ -288,11 +288,11 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                            sizeof(strl_hdr_t));
         if (status != PJ_SUCCESS)
             goto on_error;
-        
-        elem = COMPARE_TAG(avi_hdr.strl_hdr[i].data_type, 
-                           PJMEDIA_AVI_VIDS_TAG) ? 
+
+        elem = COMPARE_TAG(avi_hdr.strl_hdr[i].data_type,
+                           PJMEDIA_AVI_VIDS_TAG) ?
                sizeof(strf_video_hdr_t) :
-               COMPARE_TAG(avi_hdr.strl_hdr[i].data_type, 
+               COMPARE_TAG(avi_hdr.strl_hdr[i].data_type,
                            PJMEDIA_AVI_AUDS_TAG) ?
                sizeof(strf_audio_hdr_t) : 0;
 
@@ -357,7 +357,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             status = PJ_EINVAL;
             goto on_error;
         }
-        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len - read, 
+        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len - read,
                                          status = PJ_EINVAL; goto on_error;);
         size_to_read = (pj_off_t)ch.len - read;
 
@@ -375,16 +375,16 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         pjmedia_format_id fmt_id;
 
         /* Skip non-audio, non-video, or disabled streams) */
-        if ((!COMPARE_TAG(avi_hdr.strl_hdr[i].data_type, 
+        if ((!COMPARE_TAG(avi_hdr.strl_hdr[i].data_type,
                           PJMEDIA_AVI_VIDS_TAG) &&
-             !COMPARE_TAG(avi_hdr.strl_hdr[i].data_type, 
+             !COMPARE_TAG(avi_hdr.strl_hdr[i].data_type,
                           PJMEDIA_AVI_AUDS_TAG)) ||
             avi_hdr.strl_hdr[i].flags & AVISF_DISABLED)
         {
             continue;
         }
 
-        if (COMPARE_TAG(avi_hdr.strl_hdr[i].data_type, 
+        if (COMPARE_TAG(avi_hdr.strl_hdr[i].data_type,
                         PJMEDIA_AVI_VIDS_TAG))
         {
             int j;
@@ -403,7 +403,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                     break;
                 }
             }
-            
+
             if (j < 0) {
                 PJ_LOG(4, (THIS_FILE, "Unsupported video stream"));
                 continue;
@@ -472,7 +472,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         fport[i]->fsize = fport[0]->fsize;
         /* Current file position now points to start of data */
         fport[i]->start_data = pos;
-        
+
         if (COMPARE_TAG(strl_hdr->data_type, PJMEDIA_AVI_VIDS_TAG)) {
             strf_video_hdr_t *strf_hdr =
                 &avi_hdr.strf_hdr[fport[i]->stream_id].strf_video_hdr;
@@ -541,7 +541,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     for (i = 0; i < nstr; i++)
         (*p_streams)->streams[i] = &fport[i]->base;
 
-    PJ_LOG(4,(THIS_FILE, 
+    PJ_LOG(4,(THIS_FILE,
               "AVI file player '%.*s' created with "
               "%d media ports",
               (int)fport[0]->base.info.name.slen,
@@ -676,7 +676,7 @@ static pj_status_t file_on_event(pjmedia_event *event,
         if (fport->cb2)
             (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -684,7 +684,7 @@ static pj_status_t file_on_event(pjmedia_event *event,
 /*
  * Get frame from file.
  */
-static pj_status_t avi_get_frame(pjmedia_port *this_port, 
+static pj_status_t avi_get_frame(pjmedia_port *this_port,
                                  pjmedia_frame *frame)
 {
     struct avi_reader_port *fport = (struct avi_reader_port*)this_port;
@@ -726,13 +726,13 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                 pjmedia_event_publish(NULL, fport, &event,
                                       PJMEDIA_EVENT_PUBLISH_POST_EVENT);
             }
-            
+
             /* Should not access player port after this since
              * it might have been destroyed by the callback.
              */
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
-            
+
             return (no_loop? PJ_EEOF: PJ_SUCCESS);
 
         } else if (fport->cb) {
@@ -744,7 +744,7 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
          * it might have been destroyed by the callback).
          */
         if ((status != PJ_SUCCESS) ||
-            (fport->options & PJMEDIA_AVI_FILE_NO_LOOP)) 
+            (fport->options & PJMEDIA_AVI_FILE_NO_LOOP))
         {
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
@@ -802,14 +802,14 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                 size_read = 0;
                 goto on_error2;
             }
-            
-            PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, 
+
+            PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len,
                                          status = PJ_EINVAL;  goto on_error2;);
             ch_len = ch.len;
 
             cid = (char *)&ch.id;
             if (cid[0] >= '0' && cid[0] <= '9' &&
-                cid[1] >= '0' && cid[1] <= '9') 
+                cid[1] >= '0' && cid[1] <= '9')
             {
                 stream_id = (cid[0] - '0') * 10 + (cid[1] - '0');
             } else
@@ -921,7 +921,7 @@ on_error2:
             /* Frame is empty */
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
-            return PJ_EEOF;           
+            return PJ_EEOF;
         }
         pj_bzero((char *)frame->buf + frame->size - size_to_read,
                  size_to_read);

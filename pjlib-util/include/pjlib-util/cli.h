@@ -32,12 +32,12 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJLIB_UTIL_CLI Command Line Interface Framework
  * @{
- * A CLI framework features an interface for defining command specification, 
- * parsing, and executing a command. 
- * It also features an interface to communicate with various front-ends, 
+ * A CLI framework features an interface for defining command specification,
+ * parsing, and executing a command.
+ * It also features an interface to communicate with various front-ends,
  * such as console, telnet.
- * Application normally needs only one CLI instance to be created. 
- * On special cases, application could also create multiple CLI 
+ * Application normally needs only one CLI instance to be created.
+ * On special cases, application could also create multiple CLI
  * instances, with each instance has specific command structure.
  *
 \verbatim
@@ -64,7 +64,7 @@ PJ_BEGIN_DECL
             <CHOICE value='g722'/>
         </ARG>
 </CMD>
-\endverbatim 
+\endverbatim
  */
 
 /**
@@ -152,7 +152,7 @@ typedef struct pj_cli_cmd_val
 } pj_cli_cmd_val;
 
 /**
- * This structure contains the hints information for the end user. 
+ * This structure contains the hints information for the end user.
  * This structure could contain either command or argument information.
  * The front-end will format the information and present it to the user.
  */
@@ -169,7 +169,7 @@ typedef struct pj_cli_hint_info
     pj_str_t type;
 
     /**
-     * Helpful description of the hint value. 
+     * Helpful description of the hint value.
      */
     pj_str_t desc;
 
@@ -208,10 +208,10 @@ typedef struct pj_cli_exec_info
     unsigned hint_cnt;
 
     /**
-     * If pj_cli_sess_parse() fails because of a missing argument or ambigous 
-     * command/argument, the function returned PJ_CLI_EMISSINGARG or 
-     * PJ_CLI_EAMBIGUOUS error. 
-     * This field will contain the hint information. This is useful to give 
+     * If pj_cli_sess_parse() fails because of a missing argument or ambigous
+     * command/argument, the function returned PJ_CLI_EMISSINGARG or
+     * PJ_CLI_EAMBIGUOUS error.
+     * This field will contain the hint information. This is useful to give
      * helpful information to the end_user.
      */
     pj_cli_hint_info hint[PJ_CLI_MAX_HINTS];
@@ -219,7 +219,7 @@ typedef struct pj_cli_exec_info
 } pj_cli_exec_info;
 
 /**
- * This structure contains the information returned from the dynamic 
+ * This structure contains the information returned from the dynamic
  * argument callback.
  */
 typedef struct pj_cli_arg_choice_val
@@ -321,7 +321,7 @@ PJ_DECL(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
 
 /**
  * This specifies the function to get the id of the specified command
- * 
+ *
  * @param cmd           The specified command.
  *
  * @return              The command id
@@ -411,7 +411,7 @@ PJ_DECL(void) pj_cli_register_front_end(pj_cli_t *cli,
  *                      if the command specifies a command group.
  * @param p_cmd         Optional pointer to store the newly created
  *                      specification.
- * @param get_choice    Function handler for the argument. Specify this for 
+ * @param get_choice    Function handler for the argument. Specify this for
  *                      dynamic choice type arguments.
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
@@ -420,7 +420,7 @@ PJ_DECL(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
                                              pj_cli_cmd_spec *group,
                                              const pj_str_t *xml,
                                              pj_cli_cmd_handler handler,
-                                             pj_cli_cmd_spec **p_cmd, 
+                                             pj_cli_cmd_spec **p_cmd,
                                              pj_cli_get_dyn_choice get_choice);
 /**
  * Initialize pj_cli_exec_info with its default values.
@@ -430,13 +430,13 @@ PJ_DECL(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
 PJ_DECL(void) pj_cli_exec_info_default(pj_cli_exec_info *param);
 
 /**
- * Write a log message to the specific CLI session. 
+ * Write a log message to the specific CLI session.
  *
  * @param sess          The CLI active session.
  * @param buffer        The message itself.
  * @param len           Length of this message.
  */
-PJ_DECL(void) pj_cli_sess_write_msg(pj_cli_sess *sess,                               
+PJ_DECL(void) pj_cli_sess_write_msg(pj_cli_sess *sess,
                                     const char *buffer,
                                     pj_size_t len);
 
@@ -486,7 +486,7 @@ PJ_DECL(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
  * End the specified session, and destroy it to release all resources used
  * by the session.
  *
- * See also pj_cli_sess and pj_cli_front_end for more info regarding the 
+ * See also pj_cli_sess and pj_cli_front_end for more info regarding the
  * creation process.
  * See also pj_cli_quit() to quit the whole application instead.
  *
@@ -504,7 +504,7 @@ PJ_DECL(void) pj_cli_sess_end_session(pj_cli_sess *sess);
  * See also pj_cli_sess_parse() for more info regarding the cmdline format.
  *
  * @param sess          The CLI session.
- * @param cmdline       The command line string to be executed. 
+ * @param cmdline       The command line string to be executed.
  * @param pool          The pool to allocate memory from.
  * @param info          Optional pointer to receive additional information
  *                      related to the execution of the command (such as

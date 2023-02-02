@@ -22,29 +22,29 @@ import UIKit
 
 
 class ViewController: UIViewController {
-    
+
     // Status Label
     @IBOutlet weak var statusLabel: UILabel!
-    
+
     // Sip settings Text Fields
     @IBOutlet weak var sipIpTField: UITextField!
     @IBOutlet weak var sipPortTField: UITextField!
     @IBOutlet weak var sipUsernameTField: UITextField!
     @IBOutlet weak var sipPasswordTField: UITextField!
-    
+
     //Destination Uri to Making outgoing call
     @IBOutlet weak var sipDestinationUriTField: UITextField!
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        
+
+
         //Create Lib
         CPPWrapper().createLibWrapper()
-        
+
         //Listen incoming call via function pointer
         CPPWrapper().incoming_call_wrapper(incoming_call_swift)
-     
+
         //Done button to the keyboard
         sipIpTField.addDoneButtonOnKeyboard()
         sipPortTField.addDoneButtonOnKeyboard()
@@ -52,8 +52,8 @@ class ViewController: UIViewController {
         sipPasswordTField.addDoneButtonOnKeyboard()
         sipDestinationUriTField.addDoneButtonOnKeyboard()
     }
-    
-    
+
+
     //Refresh Button
     @IBAction func refreshStatus(_ sender: UIButton) {
         if (CPPWrapper().registerStateInfoWrapper()){
@@ -62,18 +62,18 @@ class ViewController: UIViewController {
             statusLabel.text = "Sip Status: NOT REGISTERED"
         }
     }
-    
-    
+
+
     //Login Button
     @IBAction func loginClick(_ sender: UIButton) {
-        
+
         //Check user already logged in. && Form is filled
         if (CPPWrapper().registerStateInfoWrapper() == false
                 && !sipUsernameTField.text!.isEmpty
                 && !sipPasswordTField.text!.isEmpty
                 && !sipIpTField.text!.isEmpty
                 && !sipPortTField.text!.isEmpty){
-            
+
             //Register to the user
             CPPWrapper().createAccountWrapper(
                 sipUsernameTField.text,
@@ -81,27 +81,27 @@ class ViewController: UIViewController {
                 sipIpTField.text,
                 sipPortTField.text)
 
-            
+
         } else {
             let alert = UIAlertController(title: "SIP SETTINGS ERROR", message: "Please fill the form / Logout", preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
                 switch action.style{
                     case .default:
                     print("default")
-                    
+
                     case .cancel:
                     print("cancel")
-                    
+
                     case .destructive:
                     print("destructive")
-                    
+
                 @unknown default:
                     fatalError()
                 }
             }))
             self.present(alert, animated: true, completion: nil)
         }
-        
+
         //Wait until register/unregister
         sleep(2)
         if (CPPWrapper().registerStateInfoWrapper()){
@@ -111,16 +111,16 @@ class ViewController: UIViewController {
         }
 
     }
-    
+
     //Logout Button
     @IBAction func logoutClick(_ sender: UIButton) {
-        
+
         /**
         Only unregister from an account.
          */
         //Unregister
         CPPWrapper().unregisterAccountWrapper()
-        
+
         //Wait until register/unregister
         sleep(2)
         if (CPPWrapper().registerStateInfoWrapper()){
@@ -132,8 +132,8 @@ class ViewController: UIViewController {
 
     //Call Button
     @IBAction func callClick(_ sender: UIButton) {
-        
-        if(CPPWrapper().registerStateInfoWrapper() != false){            
+
+        if(CPPWrapper().registerStateInfoWrapper() != false){
             let vcToPresent = self.storyboard!.instantiateViewController(withIdentifier: "outgoingCallVC") as! OutgoingViewController
             vcToPresent.outgoingCallId = sipDestinationUriTField.text ?? "<SIP-NUMBER>"
             self.present(vcToPresent, animated: true, completion: nil)
@@ -143,13 +143,13 @@ class ViewController: UIViewController {
                 switch action.style{
                     case .default:
                     print("default")
-                    
+
                     case .cancel:
                     print("cancel")
-                    
+
                     case .destructive:
                     print("destructive")
-                    
+
                 @unknown default:
                     fatalError()
                 }
@@ -158,8 +158,8 @@ class ViewController: UIViewController {
         }
 
     }
-    
-    
+
+
 }
 extension UITextField{
     @IBInspectable var doneAccessory: Bool{

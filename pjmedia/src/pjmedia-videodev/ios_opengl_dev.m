@@ -34,7 +34,7 @@
 /* If this is enabled, iOS OpenGL will not return error during creation when
  * in the background. Instead, it will perform the initialization later
  * during rendering.
- */ 
+ */
 #define ALLOW_DELAYED_INITIALIZATION    0
 
 typedef struct iosgl_fmt_info

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2016 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/assert.h>
 #include <pj/errno.h>
@@ -62,7 +62,7 @@ const pj_uint16_t PJ_SOCK_RDM   = SOCK_RDM;
 const pj_uint16_t PJ_SOL_SOCKET = SOL_SOCKET;
 #ifdef SOL_IP
 const pj_uint16_t PJ_SOL_IP     = SOL_IP;
-#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) 
+#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
 const pj_uint16_t PJ_SOL_IP     = IPPROTO_IP;
 #else
 const pj_uint16_t PJ_SOL_IP     = 0;
@@ -185,8 +185,8 @@ internal:
         uwp_sock(uwp_sock_), avail_data_len(0), recv_args(nullptr)
     {
         recv_wait = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-        event_token = uwp_sock->datagram_sock->MessageReceived += 
-            ref new TypedEventHandler<DatagramSocket^, 
+        event_token = uwp_sock->datagram_sock->MessageReceived +=
+            ref new TypedEventHandler<DatagramSocket^,
                                       DatagramSocketMessageReceivedEventArgs^>
                     (this, &PjUwpSocketDatagramRecvHelper::OnMessageReceived);
     }
@@ -415,7 +415,7 @@ pj_status_t PjUwpSocket::Bind(const pj_sockaddr_t *addr)
         has_pending_bind = PJ_TRUE;
         return PJ_SUCCESS;
     }
-    
+
     PJ_ASSERT_RETURN(sock_state == SOCKSTATE_INITIALIZED, PJ_EINVALIDOP);
     if (sock_type != SOCKTYPE_DATAGRAM && sock_type != SOCKTYPE_LISTENER)
         return PJ_EINVALIDOP;
@@ -499,7 +499,7 @@ pj_status_t PjUwpSocket::SendImp(const void *buf, pj_ssize_t *len)
         }).get();
 
         return status;
-    } 
+    }
 
     /* Non-blocking version */
     has_pending_send = PJ_TRUE;
@@ -930,7 +930,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
 /*
  * This function converts the Internet host address cp from the standard
  * numbers-and-dots notation into binary data and stores it in the structure
- * that inp points to. 
+ * that inp points to.
  */
 PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp)
 {
@@ -1168,8 +1168,8 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
 /*
  * Create new socket/endpoint for communication and returns a descriptor.
  */
-PJ_DEF(pj_status_t) pj_sock_socket(int af, 
-                                   int type, 
+PJ_DEF(pj_status_t) pj_sock_socket(int af,
+                                   int type,
                                    int proto,
                                    pj_sock_t *p_sock)
 {
@@ -1177,7 +1177,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     PJ_ASSERT_RETURN(p_sock!=NULL, PJ_EINVAL);
 
     PjUwpSocket *s = new PjUwpSocket(af, type, proto);
-    
+
     /* Init UDP socket here */
     if (type == pj_SOCK_DGRAM()) {
         s->InitSocket(SOCKTYPE_DATAGRAM);
@@ -1191,7 +1191,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 /*
  * Bind socket.
  */
-PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock, 
+PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
                                   const pj_sockaddr_t *addr,
                                   int len)
 {
@@ -1206,7 +1206,7 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
 /*
  * Bind socket.
  */
-PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock, 
+PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
                                      pj_uint32_t addr32,
                                      pj_uint16_t port)
 {
@@ -1248,7 +1248,7 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
                                          int *namelen)
 {
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(sock && addr && namelen && 
+    PJ_ASSERT_RETURN(sock && addr && namelen &&
                      *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
@@ -1266,7 +1266,7 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
                                          int *namelen)
 {
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(sock && addr && namelen && 
+    PJ_ASSERT_RETURN(sock && addr && namelen &&
                      *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
@@ -1308,7 +1308,7 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
     PJ_UNUSED_ARG(flags);
     PJ_UNUSED_ARG(tolen);
-    
+
     PjUwpSocket *s = (PjUwpSocket*)sock;
     return s->SendTo(buf, len, to);
 }
@@ -1324,7 +1324,7 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && len && *len > 0, PJ_EINVAL);
-    
+
     PJ_UNUSED_ARG(flags);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
@@ -1405,10 +1405,10 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
     PJ_ASSERT_RETURN(params, PJ_EINVAL);
 
     for (;i<params->cnt && i<PJ_MAX_SOCKOPT_PARAMS;++i) {
-        pj_status_t status = pj_sock_setsockopt(sockfd, 
+        pj_status_t status = pj_sock_setsockopt(sockfd,
                                     (pj_uint16_t)params->options[i].level,
                                     (pj_uint16_t)params->options[i].optname,
-                                    params->options[i].optval, 
+                                    params->options[i].optval,
                                     params->options[i].optlen);
         if (status != PJ_SUCCESS) {
             retval = status;

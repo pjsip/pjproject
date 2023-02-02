@@ -197,7 +197,7 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.proto            = this->proto;
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(ts.ciphers[0]) == sizeof(int));
-    ts.ciphers          = ts.ciphers_num? 
+    ts.ciphers          = ts.ciphers_num?
                             (pj_ssl_cipher*)&this->ciphers[0] : NULL;
     ts.verify_server    = this->verifyServer;
     ts.verify_client    = this->verifyClient;
@@ -428,7 +428,7 @@ void SipHeader::fromPj(const pjsip_hdr *hdr) PJSUA2_THROW(Error)
             free(buf);
 
     } while ((buf_size < PJSIP_MAX_PKT_LEN) && (len < 0));
-    
+
     if (len < 0)
         PJSUA2_RAISE_ERROR(PJ_ETOOSMALL);
 
@@ -478,7 +478,7 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
 
     if (!prm.body)
         PJSUA2_RAISE_ERROR(PJ_EINVAL);
-    
+
     contentType.fromPj(prm.body->content_type);
     body = string((char*)prm.body->data, prm.body->len);
 }
@@ -560,7 +560,7 @@ SipTxData::SipTxData()
 void SipTxData::fromPj(pjsip_tx_data &tdata)
 {
     char straddr[PJ_INET6_ADDRSTRLEN+10];
-    
+
     info        = pjsip_tx_data_get_info(&tdata);
     pjsip_tx_data_encode(&tdata);
     wholeMsg    = string(tdata.buf.start, tdata.buf.cur - tdata.buf.start);

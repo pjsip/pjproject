@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include <pj/errno.h>
@@ -55,9 +55,9 @@ static int get_machine_speed_mhz()
     char buf[512];
     int len;
     char *pos, *end;
-        
+
     PJ_CHECK_STACK();
-        
+
     /* Open /proc/cpuinfo and read the file */
     strm = fopen("/proc/cpuinfo", "r");
     if (!strm)
@@ -92,11 +92,11 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
             machine_speed.u64 = machine_speed_mhz * 1000000.0;
         }
     }
-    
+
     if (machine_speed_mhz == -1) {
         ts->u64 = 0;
         return -1;
-    } 
+    }
     ts->u64 = rdtsc();
     return 0;
 }
@@ -109,11 +109,11 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
             machine_speed.u64 = machine_speed_mhz * 1000000.0;
         }
     }
-    
+
     if (machine_speed_mhz == -1) {
         freq->u64 = 1;  /* return 1 to prevent division by zero in apps. */
         return -1;
-    } 
+    }
 
     freq->u64 = machine_speed.u64;
     return 0;
@@ -122,7 +122,7 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 #elif defined(PJ_DARWINOS) && PJ_DARWINOS != 0
 
 /* SYSTEM_CLOCK will stop when the device is in deep sleep, so we use
- * KERN_BOOTTIME instead. 
+ * KERN_BOOTTIME instead.
  * See ticket #2140 for more details.
  */
 #define USE_KERN_BOOTTIME 1
@@ -238,7 +238,7 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
             pj_atexit(&close_alarm_fd);
         }
     }
-    
+
     if (s_alarm_fd != -1) {
         err = ioctl(s_alarm_fd,
               ANDROID_ALARM_GET_TIME(ANDROID_ALARM_ELAPSED_REALTIME), &tp);
@@ -246,10 +246,10 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 #elif defined(CLOCK_BOOTTIME)
     err = clock_gettime(CLOCK_BOOTTIME, &tp);
 #endif
-    
+
     if (err != 0) {
         /* Fallback to CLOCK_MONOTONIC if /dev/alarm is not found, or
-         * getting ANDROID_ALARM_ELAPSED_REALTIME fails, or 
+         * getting ANDROID_ALARM_ELAPSED_REALTIME fails, or
          * CLOCK_BOOTTIME fails.
          */
         err = clock_gettime(CLOCK_MONOTONIC, &tp);

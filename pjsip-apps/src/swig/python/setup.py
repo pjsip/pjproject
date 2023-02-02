@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from distutils.core import setup, Extension
 import os
@@ -96,11 +96,11 @@ f.close()
 if platform.system()=='Windows' and os.environ["MSYSTEM"].find('MINGW')!=-1:
     os.environ["PATH"] = "." + os.pathsep + os.environ["PATH"]
 
-setup(name="pjsua2", 
+setup(name="pjsua2",
       version=pj_version,
       description='SIP User Agent Library based on PJSIP',
       url='http://www.pjsip.org',
-      ext_modules = [Extension("_pjsua2", 
+      ext_modules = [Extension("_pjsua2",
                                ["pjsua2_wrap.cpp"],
                                libraries=libraries,
                                extra_compile_args=extra_compile_args,

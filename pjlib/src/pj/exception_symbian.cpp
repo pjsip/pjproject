@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/except.h>
 #include <pj/os.h>
@@ -66,7 +66,7 @@ PJ_DEF(pj_status_t) pj_exception_id_free( pj_exception_id_t id )
      * Exception 0 is reserved for normal path of setjmp()!!!
      */
     PJ_ASSERT_RETURN(id>0 && id<PJ_MAX_EXCEPTION_ID, PJ_EINVAL);
-    
+
     pj_enter_critical_section();
     exception_id_names[id] = NULL;
     pj_leave_critical_section();

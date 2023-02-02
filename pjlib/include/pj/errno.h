@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_ERRNO_H__
 #define __PJ_ERRNO_H__
@@ -43,7 +43,7 @@ PJ_BEGIN_DECL
  * @section pj_errno_retval Return Values
  *
  * All functions that returns @a pj_status_t returns @a PJ_SUCCESS if the
- * operation was completed successfully, or non-zero value to indicate 
+ * operation was completed successfully, or non-zero value to indicate
  * error. If the error came from operating system, then the native error
  * code is translated/folded into PJLIB's error namespace by using
  * #PJ_STATUS_FROM_OS() macro. The function will do this automatically
@@ -131,14 +131,14 @@ PJ_DECL(void) pj_set_netos_error(pj_status_t code);
  * @return          The error message as NULL terminated string,
  *                  wrapped with pj_str_t.
  */
-PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode, 
+PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
                                char *buf, pj_size_t bufsize);
 
 /**
- * A utility macro to print error message pertaining to the specified error 
- * code to the log. This macro will construct the error message title 
+ * A utility macro to print error message pertaining to the specified error
+ * code to the log. This macro will construct the error message title
  * according to the 'title_fmt' argument, and add the error string pertaining
- * to the error code after the title string. A colon (':') will be added 
+ * to the error code after the title string. A colon (':') will be added
  * automatically between the title and the error string.
  *
  * This function is similar to pj_perror() function, but has the advantage
@@ -155,15 +155,15 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
  * @see pj_perror()
  *
  * @param level     The logging verbosity level, valid values are 0-6. Lower
- *                  number indicates higher importance, with level zero 
- *                  indicates fatal error. Only numeral argument is 
+ *                  number indicates higher importance, with level zero
+ *                  indicates fatal error. Only numeral argument is
  *                  permitted (e.g. not variable).
  * @param arg       Enclosed 'printf' like arguments, with the following
  *                  arguments:
  *                   - the sender (NULL terminated string),
  *                   - the error code (pj_status_t)
- *                   - the format string (title_fmt), and 
- *                   - optional variable number of arguments suitable for the 
+ *                   - the format string (title_fmt), and
+ *                   - optional variable number of arguments suitable for the
  *                     format string.
  *
  * Sample:
@@ -177,16 +177,16 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
                                 } while (0)
 
 /**
- * A utility function to print error message pertaining to the specified error 
- * code to the log. This function will construct the error message title 
+ * A utility function to print error message pertaining to the specified error
+ * code to the log. This function will construct the error message title
  * according to the 'title_fmt' argument, and add the error string pertaining
- * to the error code after the title string. A colon (':') will be added 
+ * to the error code after the title string. A colon (':') will be added
  * automatically between the title and the error string.
  *
  * Unlike the PJ_PERROR() macro, this function takes the \a log_level argument
  * as a normal argument, unlike in PJ_PERROR() where a numeral value must be
  * given. However this function will always be linked to the executable,
- * unlike PJ_PERROR() which can be omitted when the level is below the 
+ * unlike PJ_PERROR() which can be omitted when the level is below the
  * PJ_LOG_MAX_LEVEL.
  *
  * Note that the title string constructed from the title_fmt will be built on
@@ -228,7 +228,7 @@ typedef pj_str_t (*pj_error_callback)(pj_status_t e, char *msg, pj_size_t max);
  * @param f             The handler to be called when #pj_strerror() is
  *                      supplied with error code that falls into this range.
  *
- * @return              PJ_SUCCESS or the specified error code. The 
+ * @return              PJ_SUCCESS or the specified error code. The
  *                      registration may fail when the error space has been
  *                      occupied by other handler, or when there are too many
  *                      handlers registered to PJLIB.
@@ -242,7 +242,7 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * Return platform os error code folded into pj_status_t code. This is
  * the macro that is used throughout the library for all PJLIB's functions
  * that returns error from operating system. Application may override
- * this macro to reduce size (e.g. by defining it to always return 
+ * this macro to reduce size (e.g. by defining it to always return
  * #PJ_EUNKNOWN).
  *
  * Note:
@@ -282,7 +282,7 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * @param e     The pj_status_t folded platform os error code.
  * @return      pj_os_err_type
  * @warning     macro implementation; the statcode argument may be evaluated
- *              multiple times.  If the statcode was not created by 
+ *              multiple times.  If the statcode was not created by
  *              pj_get_os_error or PJ_STATUS_FROM_OS, the results are undefined.
  */
 #if PJ_NATIVE_ERR_POSITIVE
@@ -443,7 +443,7 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
 #define PJ_ERRNO_START          20000
 
 /**
- * PJ_ERRNO_SPACE_SIZE is the maximum number of errors in one of 
+ * PJ_ERRNO_SPACE_SIZE is the maximum number of errors in one of
  * the error/status range below.
  */
 #define PJ_ERRNO_SPACE_SIZE     50000
@@ -496,7 +496,7 @@ void pj_errno_clear_handlers(void);
 #if PJ_LOG_MAX_LEVEL >= 1
     #define pj_perror_wrapper_1(arg)    pj_perror_1 arg
     /** Internal function. */
-    PJ_DECL(void) pj_perror_1(const char *sender, pj_status_t status, 
+    PJ_DECL(void) pj_perror_1(const char *sender, pj_status_t status,
                               const char *title_fmt, ...);
 #else
     #define pj_perror_wrapper_1(arg)
@@ -511,7 +511,7 @@ void pj_errno_clear_handlers(void);
 #if PJ_LOG_MAX_LEVEL >= 2
     #define pj_perror_wrapper_2(arg)    pj_perror_2 arg
     /** Internal function. */
-    PJ_DECL(void) pj_perror_2(const char *sender, pj_status_t status, 
+    PJ_DECL(void) pj_perror_2(const char *sender, pj_status_t status,
                               const char *title_fmt, ...);
 #else
     #define pj_perror_wrapper_2(arg)
@@ -526,7 +526,7 @@ void pj_errno_clear_handlers(void);
 #if PJ_LOG_MAX_LEVEL >= 3
     #define pj_perror_wrapper_3(arg)    pj_perror_3 arg
     /** Internal function. */
-    PJ_DECL(void) pj_perror_3(const char *sender, pj_status_t status, 
+    PJ_DECL(void) pj_perror_3(const char *sender, pj_status_t status,
                               const char *title_fmt, ...);
 #else
     #define pj_perror_wrapper_3(arg)
@@ -541,7 +541,7 @@ void pj_errno_clear_handlers(void);
 #if PJ_LOG_MAX_LEVEL >= 4
     #define pj_perror_wrapper_4(arg)    pj_perror_4 arg
     /** Internal function. */
-    PJ_DECL(void) pj_perror_4(const char *sender, pj_status_t status, 
+    PJ_DECL(void) pj_perror_4(const char *sender, pj_status_t status,
                               const char *title_fmt, ...);
 #else
     #define pj_perror_wrapper_4(arg)
@@ -556,7 +556,7 @@ void pj_errno_clear_handlers(void);
 #if PJ_LOG_MAX_LEVEL >= 5
     #define pj_perror_wrapper_5(arg)    pj_perror_5 arg
     /** Internal function. */
-    PJ_DECL(void) pj_perror_5(const char *sender, pj_status_t status, 
+    PJ_DECL(void) pj_perror_5(const char *sender, pj_status_t status,
                               const char *title_fmt, ...);
 #else
     #define pj_perror_wrapper_5(arg)
@@ -571,7 +571,7 @@ void pj_errno_clear_handlers(void);
 #if PJ_LOG_MAX_LEVEL >= 6
     #define pj_perror_wrapper_6(arg)    pj_perror_6 arg
     /** Internal function. */
-    PJ_DECL(void) pj_perror_6(const char *sender, pj_status_t status, 
+    PJ_DECL(void) pj_perror_6(const char *sender, pj_status_t status,
                               const char *title_fmt, ...);
 #else
     #define pj_perror_wrapper_6(arg)

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_COMPAT_OS_DARWINOS_H__
 #define __PJ_COMPAT_OS_DARWINOS_H__
@@ -61,7 +61,7 @@
 #define PJ_HAS_ERRNO_VAR            1
 
 /* Has inet_aton() ?
- */   
+ */
 #define PJ_SOCK_HAS_INET_ATON       1
 
 /* When this macro is set, getsockopt(SOL_SOCKET, SO_ERROR) will return
@@ -93,7 +93,7 @@
 
 #define PJ_ATOMIC_VALUE_TYPE            long
 
-/* Set 1 if native sockaddr_in has sin_len member. 
+/* Set 1 if native sockaddr_in has sin_len member.
  * Default: 0
  */
 #define PJ_SOCKADDR_HAS_LEN             1
@@ -122,7 +122,7 @@
 /* If 1, use Read/Write mutex emulation for platforms that don't support it */
 #define PJ_EMULATE_RWMUTEX              0
 
-/* If 1, pj_thread_create() should enforce the stack size when creating 
+/* If 1, pj_thread_create() should enforce the stack size when creating
  * threads.
  * Default: 0 (let OS decide the thread's stack size).
  */

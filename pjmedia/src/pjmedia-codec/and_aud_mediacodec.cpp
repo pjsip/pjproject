@@ -144,28 +144,28 @@ typedef struct and_media_private {
     pj_uint16_t          frame_size;        /**< Bitstream frame size.      */
 
     pj_bool_t            plc_enabled;       /**< PLC enabled flag.          */
-    pjmedia_plc         *plc;               /**< PJMEDIA PLC engine, NULL if 
+    pjmedia_plc         *plc;               /**< PJMEDIA PLC engine, NULL if
                                                  codec has internal PLC.    */
 
     pj_bool_t            vad_enabled;       /**< VAD enabled flag.          */
-    pjmedia_silence_det *vad;               /**< PJMEDIA VAD engine, NULL if 
+    pjmedia_silence_det *vad;               /**< PJMEDIA VAD engine, NULL if
                                                  codec has internal VAD.    */
     pj_timestamp         last_tx;           /**< Timestamp of last transmit.*/
 } and_media_private_t;
 
 /* CUSTOM CALLBACKS */
 
-/* Parse frames from a packet. Default behaviour of frame parsing is 
- * just separating frames based on calculating frame length derived 
- * from bitrate. Implement this callback when the default behaviour is 
+/* Parse frames from a packet. Default behaviour of frame parsing is
+ * just separating frames based on calculating frame length derived
+ * from bitrate. Implement this callback when the default behaviour is
  * unapplicable.
  */
 typedef pj_status_t (*parse_cb)(and_media_private_t *codec_data, void *pkt,
                                 pj_size_t pkt_size, const pj_timestamp *ts,
                                 unsigned *frame_cnt, pjmedia_frame frames[]);
 
-/* Pack frames into a packet. Default behaviour of packing frames is 
- * just stacking the frames with octet aligned without adding any 
+/* Pack frames into a packet. Default behaviour of packing frames is
+ * just stacking the frames with octet aligned without adding any
  * payload header. Implement this callback when the default behaviour is
  * unapplicable.
  */
@@ -322,7 +322,7 @@ static pj_status_t parse_amr(and_media_private_t *codec_data, void *pkt,
     pj_uint8_t cmr;
 
     setting = &s->dec_setting;
-    status = pjmedia_codec_amr_parse(pkt, pkt_size, ts, setting, frames, 
+    status = pjmedia_codec_amr_parse(pkt, pkt_size, ts, setting, frames,
                                      frame_cnt, &cmr);
     if (status != PJ_SUCCESS)
         return status;
@@ -463,7 +463,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_and_media_aud_init( pjmedia_endpt *endpt )
     PJ_UNUSED_ARG(codec_name);
 
     /* Register codec factory to endpoint. */
-    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+    status = pjmedia_codec_mgr_register_factory(codec_mgr,
                                                 &and_media_factory.base);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -518,7 +518,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_and_media_aud_deinit(void)
 }
 
 /*
- * Check if factory can allocate the specified codec. 
+ * Check if factory can allocate the specified codec.
  */
 static pj_status_t and_media_test_alloc(pjmedia_codec_factory *factory,
                                         const pjmedia_codec_info *info )
@@ -1077,10 +1077,10 @@ static pj_status_t and_media_codec_encode(pjmedia_codec *codec,
         pj_bool_t is_silence;
         pj_int32_t silence_duration;
 
-        silence_duration = pj_timestamp_diff32(&codec_data->last_tx, 
+        silence_duration = pj_timestamp_diff32(&codec_data->last_tx,
                                                &input->timestamp);
 
-        is_silence = pjmedia_silence_det_detect(codec_data->vad, 
+        is_silence = pjmedia_silence_det_detect(codec_data->vad,
                                                 (const pj_int16_t*) input->buf,
                                                 (input->size >> 1),
                                                 NULL);
@@ -1102,7 +1102,7 @@ static pj_status_t and_media_codec_encode(pjmedia_codec *codec,
     samples_per_frame = and_media_data->samples_per_frame;
     nframes = nsamples / samples_per_frame;
 
-    PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0, 
+    PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0,
                      PJMEDIA_CODEC_EPCMFRMINLEN);
 
     /* Encode the frames */
@@ -1341,7 +1341,7 @@ on_return:
     return PJ_SUCCESS;
 }
 
-/* 
+/*
  * Recover lost frame.
  */
 static pj_status_t  and_media_codec_recover(pjmedia_codec *codec,

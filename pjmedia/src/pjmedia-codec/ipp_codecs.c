@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/ipp_codecs.h>
 #include <pjmedia-codec/amr_sdp_match.h>
@@ -45,27 +45,27 @@
 
 
 /* Prototypes for IPP codecs factory */
-static pj_status_t ipp_test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t ipp_test_alloc( pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *id );
-static pj_status_t ipp_default_attr( pjmedia_codec_factory *factory, 
-                                     const pjmedia_codec_info *id, 
+static pj_status_t ipp_default_attr( pjmedia_codec_factory *factory,
+                                     const pjmedia_codec_info *id,
                                      pjmedia_codec_param *attr );
-static pj_status_t ipp_enum_codecs( pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
+static pj_status_t ipp_enum_codecs( pjmedia_codec_factory *factory,
+                                    unsigned *count,
                                     pjmedia_codec_info codecs[]);
-static pj_status_t ipp_alloc_codec( pjmedia_codec_factory *factory, 
-                                    const pjmedia_codec_info *id, 
+static pj_status_t ipp_alloc_codec( pjmedia_codec_factory *factory,
+                                    const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec);
-static pj_status_t ipp_dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t ipp_dealloc_codec( pjmedia_codec_factory *factory,
                                       pjmedia_codec *codec );
 
 /* Prototypes for IPP codecs implementation. */
-static pj_status_t  ipp_codec_init( pjmedia_codec *codec, 
+static pj_status_t  ipp_codec_init( pjmedia_codec *codec,
                                     pj_pool_t *pool );
-static pj_status_t  ipp_codec_open( pjmedia_codec *codec, 
+static pj_status_t  ipp_codec_open( pjmedia_codec *codec,
                                     pjmedia_codec_param *attr );
 static pj_status_t  ipp_codec_close( pjmedia_codec *codec );
-static pj_status_t  ipp_codec_modify(pjmedia_codec *codec, 
+static pj_status_t  ipp_codec_modify(pjmedia_codec *codec,
                                      const pjmedia_codec_param *attr );
 static pj_status_t  ipp_codec_parse( pjmedia_codec *codec,
                                      void *pkt,
@@ -73,20 +73,20 @@ static pj_status_t  ipp_codec_parse( pjmedia_codec *codec,
                                      const pj_timestamp *ts,
                                      unsigned *frame_cnt,
                                      pjmedia_frame frames[]);
-static pj_status_t  ipp_codec_encode( pjmedia_codec *codec, 
+static pj_status_t  ipp_codec_encode( pjmedia_codec *codec,
                                       const struct pjmedia_frame *input,
-                                      unsigned output_buf_len, 
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
-static pj_status_t  ipp_codec_decode( pjmedia_codec *codec, 
+static pj_status_t  ipp_codec_decode( pjmedia_codec *codec,
                                       const struct pjmedia_frame *input,
-                                      unsigned output_buf_len, 
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
-static pj_status_t  ipp_codec_recover(pjmedia_codec *codec, 
-                                      unsigned output_buf_len, 
+static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
 
 /* Definition for IPP codecs operations. */
-static pjmedia_codec_op ipp_op = 
+static pjmedia_codec_op ipp_op =
 {
     &ipp_codec_init,
     &ipp_codec_open,
@@ -130,11 +130,11 @@ typedef struct ipp_private {
     pj_uint16_t          frame_size;        /**< Bitstream frame size.      */
 
     pj_bool_t            plc_enabled;       /**< PLC enabled flag.          */
-    pjmedia_plc         *plc;               /**< PJMEDIA PLC engine, NULL if 
+    pjmedia_plc         *plc;               /**< PJMEDIA PLC engine, NULL if
                                                  codec has internal PLC.    */
 
     pj_bool_t            vad_enabled;       /**< VAD enabled flag.          */
-    pjmedia_silence_det *vad;               /**< PJMEDIA VAD engine, NULL if 
+    pjmedia_silence_det *vad;               /**< PJMEDIA VAD engine, NULL if
                                                  codec has internal VAD.    */
     pj_timestamp         last_tx;           /**< Timestamp of last transmit.*/
 
@@ -158,30 +158,30 @@ extern USC_Fxns USC_AMRWBE_Fxns;
 
 /* This callback is useful for translating RTP frame into USC frame, e.g:
  * reassigning frame attributes, reorder bitstream. Default behaviour of
- * the translation is just setting the USC frame buffer & its size as 
+ * the translation is just setting the USC frame buffer & its size as
  * specified in RTP frame, setting USC frame frametype to 0, setting bitrate
- * of USC frame to bitrate info of codec_data. Implement this callback when 
+ * of USC frame to bitrate info of codec_data. Implement this callback when
  * the default behaviour is unapplicable.
  */
 typedef void (*predecode_cb)(ipp_private_t *codec_data,
                              const pjmedia_frame *rtp_frame,
                              USC_Bitstream *usc_frame);
 
-/* Parse frames from a packet. Default behaviour of frame parsing is 
- * just separating frames based on calculating frame length derived 
- * from bitrate. Implement this callback when the default behaviour is 
+/* Parse frames from a packet. Default behaviour of frame parsing is
+ * just separating frames based on calculating frame length derived
+ * from bitrate. Implement this callback when the default behaviour is
  * unapplicable.
  */
-typedef pj_status_t (*parse_cb)(ipp_private_t *codec_data, void *pkt, 
+typedef pj_status_t (*parse_cb)(ipp_private_t *codec_data, void *pkt,
                                 pj_size_t pkt_size, const pj_timestamp *ts,
                                 unsigned *frame_cnt, pjmedia_frame frames[]);
 
-/* Pack frames into a packet. Default behaviour of packing frames is 
- * just stacking the frames with octet aligned without adding any 
+/* Pack frames into a packet. Default behaviour of packing frames is
+ * just stacking the frames with octet aligned without adding any
  * payload header. Implement this callback when the default behaviour is
  * unapplicable.
  */
-typedef pj_status_t (*pack_cb)(ipp_private_t *codec_data, void *pkt, 
+typedef pj_status_t (*pack_cb)(ipp_private_t *codec_data, void *pkt,
                                pj_size_t *pkt_size, pj_size_t max_pkt_size);
 
 
@@ -190,7 +190,7 @@ typedef pj_status_t (*pack_cb)(ipp_private_t *codec_data, void *pkt,
 static    void predecode_g723( ipp_private_t *codec_data,
                                const pjmedia_frame *rtp_frame,
                                USC_Bitstream *usc_frame);
-static pj_status_t parse_g723( ipp_private_t *codec_data, void *pkt, 
+static pj_status_t parse_g723( ipp_private_t *codec_data, void *pkt,
                                pj_size_t pkt_size, const pj_timestamp *ts,
                                unsigned *frame_cnt, pjmedia_frame frames[]);
 
@@ -201,16 +201,16 @@ static void predecode_g729( ipp_private_t *codec_data,
 static    void predecode_amr( ipp_private_t *codec_data,
                               const pjmedia_frame *rtp_frame,
                               USC_Bitstream *usc_frame);
-static pj_status_t parse_amr( ipp_private_t *codec_data, void *pkt, 
+static pj_status_t parse_amr( ipp_private_t *codec_data, void *pkt,
                               pj_size_t pkt_size, const pj_timestamp *ts,
                               unsigned *frame_cnt, pjmedia_frame frames[]);
-static  pj_status_t pack_amr( ipp_private_t *codec_data, void *pkt, 
+static  pj_status_t pack_amr( ipp_private_t *codec_data, void *pkt,
                               pj_size_t *pkt_size, pj_size_t max_pkt_size);
 
 static    void predecode_g7221( ipp_private_t *codec_data,
                                 const pjmedia_frame *rtp_frame,
                                 USC_Bitstream *usc_frame);
-static  pj_status_t pack_g7221( ipp_private_t *codec_data, void *pkt, 
+static  pj_status_t pack_g7221( ipp_private_t *codec_data, void *pkt,
                                 pj_size_t *pkt_size, pj_size_t max_pkt_size);
 
 /* IPP codec implementation descriptions. */
@@ -237,11 +237,11 @@ static struct ipp_codec {
     pjmedia_codec_fmtp dec_fmtp;        /* Decoder's fmtp params.           */
 }
 
-ipp_codec[] = 
+ipp_codec[] =
 {
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
-    {1, "AMR",      PJMEDIA_RTP_PT_AMR,       &USC_GSMAMR_Fxns,  8000, 1, 160, 
-                    7400, 12200, 2, 1, 1, 
+    {1, "AMR",      PJMEDIA_RTP_PT_AMR,       &USC_GSMAMR_Fxns,  8000, 1, 160,
+                    7400, 12200, 2, 1, 1,
                     &predecode_amr, &parse_amr, &pack_amr,
                     {1, {{{"octet-align", 11}, {"1", 1}}} }
     },
@@ -249,7 +249,7 @@ ipp_codec[] =
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB
     {1, "AMR-WB",   PJMEDIA_RTP_PT_AMRWB,     &USC_AMRWB_Fxns,  16000, 1, 320,
-                    15850, 23850, 2, 1, 1, 
+                    15850, 23850, 2, 1, 1,
                     &predecode_amr, &parse_amr, &pack_amr,
                     {1, {{{"octet-align", 11}, {"1", 1}}} }
     },
@@ -258,12 +258,12 @@ ipp_codec[] =
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
 #       if defined(PJ_HAS_FLOATING_POINT) && (PJ_HAS_FLOATING_POINT != 0)
     {1, "G729",     PJMEDIA_RTP_PT_G729,      &USC_G729AFP_Fxns, 8000, 1,  80,
-                    8000, 11800, 2, 1, 1, 
+                    8000, 11800, 2, 1, 1,
                     &predecode_g729, NULL, NULL
     },
 #       else
     {1, "G729",     PJMEDIA_RTP_PT_G729,      &USC_G729I_Fxns,   8000, 1,  80,
-                    8000, 11800, 2, 1, 1, 
+                    8000, 11800, 2, 1, 1,
                     &predecode_g729, NULL, NULL
     },
 #       endif
@@ -271,55 +271,55 @@ ipp_codec[] =
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1
     /* This is actually G.723.1 */
-    {1, "G723",     PJMEDIA_RTP_PT_G723,      &USC_G723_Fxns,    8000, 1, 240,  
-                    6300,  6300, 1, 1, 1, 
+    {1, "G723",     PJMEDIA_RTP_PT_G723,      &USC_G723_Fxns,    8000, 1, 240,
+                    6300,  6300, 1, 1, 1,
                     &predecode_g723, &parse_g723, NULL
     },
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G726
-    {0, "G726-16",  PJMEDIA_RTP_PT_G726_16,   &USC_G726_Fxns,    8000, 1,  80, 
+    {0, "G726-16",  PJMEDIA_RTP_PT_G726_16,   &USC_G726_Fxns,    8000, 1,  80,
                     16000, 16000, 2, 0, 0,
                     NULL, NULL, NULL
     },
-    {0, "G726-24",  PJMEDIA_RTP_PT_G726_24,   &USC_G726_Fxns,    8000, 1,  80, 
+    {0, "G726-24",  PJMEDIA_RTP_PT_G726_24,   &USC_G726_Fxns,    8000, 1,  80,
                     24000, 24000, 2, 0, 0,
                     NULL, NULL, NULL
     },
-    {1, "G726-32",  PJMEDIA_RTP_PT_G726_32,   &USC_G726_Fxns,    8000, 1,  80, 
+    {1, "G726-32",  PJMEDIA_RTP_PT_G726_32,   &USC_G726_Fxns,    8000, 1,  80,
                     32000, 32000, 2, 0, 0,
                     NULL, NULL, NULL
     },
-    {0, "G726-40",  PJMEDIA_RTP_PT_G726_40,   &USC_G726_Fxns,    8000, 1,  80, 
+    {0, "G726-40",  PJMEDIA_RTP_PT_G726_40,   &USC_G726_Fxns,    8000, 1,  80,
                     40000, 40000, 2, 0, 0,
                     NULL, NULL, NULL
     },
     /* Old definition of G726-32 */
-    {1, "G721",     PJMEDIA_RTP_PT_G721,      &USC_G726_Fxns,    8000, 1,  80, 
+    {1, "G721",     PJMEDIA_RTP_PT_G721,      &USC_G726_Fxns,    8000, 1,  80,
                     32000, 32000, 2, 0, 0,
                     NULL, NULL, NULL
     },
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G728
-    {1, "G728",     PJMEDIA_RTP_PT_G728,      &USC_G728_Fxns,    8000, 1,  80, 
+    {1, "G728",     PJMEDIA_RTP_PT_G728,      &USC_G728_Fxns,    8000, 1,  80,
                     16000, 16000, 2, 0, 1,
                     NULL, NULL, NULL
     },
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
-    {0, "G7221",    PJMEDIA_RTP_PT_G722_1_16, &USC_G722_Fxns,   16000, 1, 320, 
+    {0, "G7221",    PJMEDIA_RTP_PT_G722_1_16, &USC_G722_Fxns,   16000, 1, 320,
                     16000, 16000, 1, 0, 1,
                     predecode_g7221, NULL, pack_g7221,
                     {1, {{{"bitrate", 7}, {"16000", 5}}} }
     },
-    {1, "G7221",    PJMEDIA_RTP_PT_G722_1_24, &USC_G722_Fxns,   16000, 1, 320, 
+    {1, "G7221",    PJMEDIA_RTP_PT_G722_1_24, &USC_G722_Fxns,   16000, 1, 320,
                     24000, 24000, 1, 0, 1,
                     predecode_g7221, NULL, pack_g7221,
                     {1, {{{"bitrate", 7}, {"24000", 5}}} }
     },
-    {1, "G7221",    PJMEDIA_RTP_PT_G722_1_32, &USC_G722_Fxns,   16000, 1, 320, 
+    {1, "G7221",    PJMEDIA_RTP_PT_G722_1_32, &USC_G722_Fxns,   16000, 1, 320,
                     32000, 32000, 1, 0, 1,
                     predecode_g7221, NULL, pack_g7221,
                     {1, {{{"bitrate", 7}, {"32000", 5}}} }
@@ -340,22 +340,22 @@ static void predecode_g729( ipp_private_t *codec_data,
         usc_frame->frametype = 1;
         usc_frame->bitrate = codec_data->info->params.modes.bitrate;
         break;
-    case 8:  
+    case 8:
         /* G729D */
         usc_frame->frametype = 2;
         usc_frame->bitrate = 6400;
         break;
-    case 10: 
+    case 10:
         /* G729 */
         usc_frame->frametype = 3;
         usc_frame->bitrate = 8000;
         break;
-    case 15: 
+    case 15:
         /* G729E */
         usc_frame->frametype = 4;
         usc_frame->bitrate = 11800;
         break;
-    default: 
+    default:
         usc_frame->frametype = 0;
         usc_frame->bitrate = 0;
         break;
@@ -391,7 +391,7 @@ static    void predecode_g723( ipp_private_t *codec_data,
     usc_frame->frametype = 0;
 }
 
-static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt, 
+static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt,
                               pj_size_t pkt_size, const pj_timestamp *ts,
                               unsigned *frame_cnt, pjmedia_frame frames[])
 {
@@ -423,7 +423,7 @@ static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt,
         frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
         frames[count].buf = f;
         frames[count].size = framesize;
-        frames[count].timestamp.u64 = ts->u64 + count * 
+        frames[count].timestamp.u64 = ts->u64 + count *
                         ipp_codec[codec_data->codec_idx].samples_per_frame;
 
         f += framesize;
@@ -473,7 +473,7 @@ static void predecode_amr( ipp_private_t *codec_data,
     usc_frame->pBuffer = frame.buf;
     usc_frame->nbytes = frame.size;
     if (info->mode != -1) {
-        usc_frame->bitrate = setting->amr_nb? 
+        usc_frame->bitrate = setting->amr_nb?
                              pjmedia_codec_amrnb_bitrates[info->mode]:
                              pjmedia_codec_amrwb_bitrates[info->mode];
     } else {
@@ -500,7 +500,7 @@ static void predecode_amr( ipp_private_t *codec_data,
 }
 
 /* Pack AMR payload */
-static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt, 
+static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
                             pj_size_t *pkt_size, pj_size_t max_pkt_size)
 {
     enum {MAX_FRAMES_PER_PACKET = PJMEDIA_MAX_FRAME_DURATION_MS / 20};
@@ -556,7 +556,7 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 
 
 /* Parse AMR payload into frames. */
-static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt, 
+static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
                              pj_size_t pkt_size, const pj_timestamp *ts,
                              unsigned *frame_cnt, pjmedia_frame frames[])
 {
@@ -567,7 +567,7 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 
     setting = &s->dec_setting;
 
-    status = pjmedia_codec_amr_parse(pkt, pkt_size, ts, setting, frames, 
+    status = pjmedia_codec_amr_parse(pkt, pkt_size, ts, setting, frames,
                                      frame_cnt, &cmr);
     if (status != PJ_SUCCESS)
         return status;
@@ -582,7 +582,7 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
         codec_data->info->params.modes.bitrate = s->enc_setting.amr_nb?
                                 pjmedia_codec_amrnb_bitrates[s->enc_mode] :
                                 pjmedia_codec_amrwb_bitrates[s->enc_mode];
-        ippc->fxns->std.Control(&codec_data->info->params.modes, 
+        ippc->fxns->std.Control(&codec_data->info->params.modes,
                                 codec_data->enc);
 
         PJ_LOG(4,(THIS_FILE, "AMR%s switched encoding mode to: %d (%dbps)",
@@ -622,7 +622,7 @@ static void predecode_g7221( ipp_private_t *codec_data,
 #endif
 }
 
-static pj_status_t pack_g7221( ipp_private_t *codec_data, void *pkt, 
+static pj_status_t pack_g7221( ipp_private_t *codec_data, void *pkt,
                                pj_size_t *pkt_size, pj_size_t max_pkt_size)
 {
     PJ_UNUSED_ARG(codec_data);
@@ -687,7 +687,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ipp_init( pjmedia_endpt *endpt )
         return PJ_ENOMEM;
 
     /* Create mutex. */
-    status = pj_mutex_create_simple(ipp_factory.pool, "IPP codecs", 
+    status = pj_mutex_create_simple(ipp_factory.pool, "IPP codecs",
                                     &ipp_factory.mutex);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -731,7 +731,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ipp_init( pjmedia_endpt *endpt )
     PJ_UNUSED_ARG(codec_name);
 
     /* Register codec factory to endpoint. */
-    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+    status = pjmedia_codec_mgr_register_factory(codec_mgr,
                                                 &ipp_factory.base);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -772,7 +772,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ipp_deinit(void)
     /* Unregister IPP codecs factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &ipp_factory.base);
-    
+
     /* Destroy mutex. */
     pj_mutex_unlock(ipp_factory.mutex);
     pj_mutex_destroy(ipp_factory.mutex);
@@ -786,10 +786,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_ipp_deinit(void)
 }
 
 
-/* 
- * Check if factory can allocate the specified codec. 
+/*
+ * Check if factory can allocate the specified codec.
  */
-static pj_status_t ipp_test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t ipp_test_alloc( pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *info )
 {
     unsigned i;
@@ -810,7 +810,7 @@ static pj_status_t ipp_test_alloc( pjmedia_codec_factory *factory,
             return PJ_SUCCESS;
         }
     }
-    
+
     /* Unsupported, or mode is disabled. */
     return PJMEDIA_CODEC_EUNSUP;
 }
@@ -818,8 +818,8 @@ static pj_status_t ipp_test_alloc( pjmedia_codec_factory *factory,
 /*
  * Generate default attribute.
  */
-static pj_status_t ipp_default_attr (pjmedia_codec_factory *factory, 
-                                      const pjmedia_codec_info *id, 
+static pj_status_t ipp_default_attr (pjmedia_codec_factory *factory,
+                                      const pjmedia_codec_info *id,
                                       pjmedia_codec_param *attr )
 {
     unsigned i;
@@ -842,8 +842,8 @@ static pj_status_t ipp_default_attr (pjmedia_codec_factory *factory,
             attr->info.max_bps = ipp_codec[i].max_bitrate;
             attr->info.pcm_bits_per_sample = 16;
             attr->info.frm_ptime =  (pj_uint16_t)
-                                    (ipp_codec[i].samples_per_frame * 1000 / 
-                                    ipp_codec[i].channel_count / 
+                                    (ipp_codec[i].samples_per_frame * 1000 /
+                                    ipp_codec[i].channel_count /
                                     ipp_codec[i].clock_rate);
             attr->setting.frm_per_pkt = ipp_codec[i].frm_per_pkt;
 
@@ -875,8 +875,8 @@ static pj_status_t ipp_default_attr (pjmedia_codec_factory *factory,
 /*
  * Enum codecs supported by this factory.
  */
-static pj_status_t ipp_enum_codecs(pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
+static pj_status_t ipp_enum_codecs(pjmedia_codec_factory *factory,
+                                    unsigned *count,
                                     pjmedia_codec_info codecs[])
 {
     unsigned max;
@@ -886,8 +886,8 @@ static pj_status_t ipp_enum_codecs(pjmedia_codec_factory *factory,
     PJ_ASSERT_RETURN(codecs && *count > 0, PJ_EINVAL);
 
     max = *count;
-    
-    for (i = 0, *count = 0; i < PJ_ARRAY_SIZE(ipp_codec) && *count < max; ++i) 
+
+    for (i = 0, *count = 0; i < PJ_ARRAY_SIZE(ipp_codec) && *count < max; ++i)
     {
         if (!ipp_codec[i].enabled)
             continue;
@@ -908,7 +908,7 @@ static pj_status_t ipp_enum_codecs(pjmedia_codec_factory *factory,
 /*
  * Allocate a new codec instance.
  */
-static pj_status_t ipp_alloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t ipp_alloc_codec( pjmedia_codec_factory *factory,
                                     const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec)
 {
@@ -954,7 +954,7 @@ static pj_status_t ipp_alloc_codec( pjmedia_codec_factory *factory,
     /* Create PLC if codec has no internal PLC */
     if (!ipp_codec[idx].has_native_plc) {
         pj_status_t status;
-        status = pjmedia_plc_create(pool, ipp_codec[idx].clock_rate, 
+        status = pjmedia_plc_create(pool, ipp_codec[idx].clock_rate,
                                     ipp_codec[idx].samples_per_frame, 0,
                                     &codec_data->plc);
         if (status != PJ_SUCCESS) {
@@ -990,7 +990,7 @@ static pj_status_t ipp_alloc_codec( pjmedia_codec_factory *factory,
 /*
  * Free codec.
  */
-static pj_status_t ipp_dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t ipp_dealloc_codec( pjmedia_codec_factory *factory,
                                       pjmedia_codec *codec )
 {
     ipp_private_t *codec_data;
@@ -1012,7 +1012,7 @@ static pj_status_t ipp_dealloc_codec( pjmedia_codec_factory *factory,
 /*
  * Init codec.
  */
-static pj_status_t ipp_codec_init( pjmedia_codec *codec, 
+static pj_status_t ipp_codec_init( pjmedia_codec *codec,
                                    pj_pool_t *pool )
 {
     PJ_UNUSED_ARG(codec);
@@ -1023,7 +1023,7 @@ static pj_status_t ipp_codec_init( pjmedia_codec *codec,
 /*
  * Open codec.
  */
-static pj_status_t ipp_codec_open( pjmedia_codec *codec, 
+static pj_status_t ipp_codec_open( pjmedia_codec *codec,
                                    pjmedia_codec_param *attr )
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
@@ -1043,7 +1043,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     }
     /* Get the codec info */
     codec_data->info = pj_pool_zalloc(pool, info_size);
-    if (USC_NoError != ippc->fxns->std.GetInfo((USC_Handle)NULL, 
+    if (USC_NoError != ippc->fxns->std.GetInfo((USC_Handle)NULL,
                                                codec_data->info))
     {
         PJ_LOG(1,(THIS_FILE, "Error getting codec info"));
@@ -1054,7 +1054,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 
     /* Setting the encoder params */
     codec_data->info->params.direction = USC_ENCODE;
-    codec_data->info->params.modes.vad = attr->setting.vad && 
+    codec_data->info->params.modes.vad = attr->setting.vad &&
                                          ippc->has_native_vad;
     codec_data->info->params.modes.bitrate = attr->info.avg_bps;
     codec_data->info->params.law = 0; /* Linear PCM input */
@@ -1085,10 +1085,10 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     }
 
     /* Allocate memory blocks table */
-    membanks = (USC_MemBank*) pj_pool_zalloc(pool, 
+    membanks = (USC_MemBank*) pj_pool_zalloc(pool,
                                              sizeof(USC_MemBank) * nb_membanks);
     /* Get size of each memory block */
-    if (USC_NoError != ippc->fxns->std.MemAlloc(&codec_data->info->params, 
+    if (USC_NoError != ippc->fxns->std.MemAlloc(&codec_data->info->params,
                                                 membanks))
     {
         PJ_LOG(1,(THIS_FILE, "Error getting memory blocks size of encoder"));
@@ -1102,7 +1102,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 
     /* Create encoder instance */
     if (USC_NoError != ippc->fxns->std.Init(&codec_data->info->params,
-                                            membanks, 
+                                            membanks,
                                             &codec_data->enc))
     {
         PJ_LOG(1,(THIS_FILE, "Error initializing encoder"));
@@ -1118,7 +1118,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     //codec_data->info->params.modes.vad = ippc->has_native_vad;
 
     /* Get number of memory blocks needed by the decoder */
-    if (USC_NoError != ippc->fxns->std.NumAlloc(&codec_data->info->params, 
+    if (USC_NoError != ippc->fxns->std.NumAlloc(&codec_data->info->params,
                                                  &nb_membanks))
     {
         PJ_LOG(1,(THIS_FILE, "Error getting no of memory blocks of decoder"));
@@ -1126,10 +1126,10 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     }
 
     /* Allocate memory blocks table */
-    membanks = (USC_MemBank*) pj_pool_zalloc(pool, 
+    membanks = (USC_MemBank*) pj_pool_zalloc(pool,
                                              sizeof(USC_MemBank) * nb_membanks);
     /* Get size of each memory block */
-    if (USC_NoError != ippc->fxns->std.MemAlloc(&codec_data->info->params, 
+    if (USC_NoError != ippc->fxns->std.MemAlloc(&codec_data->info->params,
                                                 membanks))
     {
         PJ_LOG(1,(THIS_FILE, "Error getting memory blocks size of decoder"));
@@ -1142,7 +1142,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     }
 
     /* Create decoder instance */
-    if (USC_NoError != ippc->fxns->std.Init(&codec_data->info->params, 
+    if (USC_NoError != ippc->fxns->std.Init(&codec_data->info->params,
                                             membanks, &codec_data->dec))
     {
         PJ_LOG(1,(THIS_FILE, "Error initializing decoder"));
@@ -1175,14 +1175,14 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
         /* Check AMR specific attributes */
 
         for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
-            /* octet-align, one of the parameters that must have same value 
+            /* octet-align, one of the parameters that must have same value
              * in offer & answer (RFC 4867 Section 8.3.1). Just check fmtp
-             * in the decoder side, since it's value is guaranteed to fulfil 
+             * in the decoder side, since it's value is guaranteed to fulfil
              * above requirement (by SDP negotiator).
              */
             const pj_str_t STR_FMTP_OCTET_ALIGN = {"octet-align", 11};
-            
-            if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name, 
+
+            if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name,
                            &STR_FMTP_OCTET_ALIGN) == 0)
             {
                 octet_align=(pj_uint8_t)
@@ -1192,7 +1192,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
         }
 
         for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
-            /* mode-set, encoding mode is chosen based on local default mode 
+            /* mode-set, encoding mode is chosen based on local default mode
              * setting:
              * - if local default mode is included in the mode-set, use it
              * - otherwise, find the closest mode to local default mode;
@@ -1201,14 +1201,14 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
              *   contains '2,3,5,6', then 5 will be chosen.
              */
             const pj_str_t STR_FMTP_MODE_SET = {"mode-set", 8};
-            
-            if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, 
+
+            if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name,
                            &STR_FMTP_MODE_SET) == 0)
             {
                 const char *p;
                 pj_size_t l;
                 pj_int8_t diff = 99;
-                
+
                 p = pj_strbuf(&attr->setting.enc_fmtp.param[i].val);
                 l = pj_strlen(&attr->setting.enc_fmtp.param[i].val);
 
@@ -1218,7 +1218,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
                     {
                         pj_int8_t tmp = (pj_int8_t)(*p - '0' - enc_mode);
 
-                        if (PJ_ABS(diff) > PJ_ABS(tmp) || 
+                        if (PJ_ABS(diff) > PJ_ABS(tmp) ||
                             (PJ_ABS(diff) == PJ_ABS(tmp) && tmp > diff))
                         {
                             diff = tmp;
@@ -1255,10 +1255,10 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
         codec_data->info->params.modes.bitrate = s->enc_setting.amr_nb?
                                 pjmedia_codec_amrnb_bitrates[s->enc_mode]:
                                 pjmedia_codec_amrwb_bitrates[s->enc_mode];
-        ippc->fxns->std.Control(&codec_data->info->params.modes, 
+        ippc->fxns->std.Control(&codec_data->info->params.modes,
                                 codec_data->enc);
 
-        PJ_LOG(4,(THIS_FILE, "AMR%s encoding mode: %d (%dbps)", 
+        PJ_LOG(4,(THIS_FILE, "AMR%s encoding mode: %d (%dbps)",
                   (s->enc_setting.amr_nb?"":"-WB"),
                   s->enc_mode,
                   codec_data->info->params.modes.bitrate));
@@ -1269,7 +1269,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 #endif
 
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
-    if (ippc->pt >= PJMEDIA_RTP_PT_G722_1_16 && 
+    if (ippc->pt >= PJMEDIA_RTP_PT_G722_1_16 &&
         ippc->pt <= PJMEDIA_RTP_PT_G7221_RSV2)
     {
         codec_data->g7221_pcm_shift = ipp_factory.g7221_pcm_shift;
@@ -1296,7 +1296,7 @@ static pj_status_t ipp_codec_close( pjmedia_codec *codec )
 /*
  * Modify codec settings.
  */
-static pj_status_t  ipp_codec_modify(pjmedia_codec *codec, 
+static pj_status_t  ipp_codec_modify(pjmedia_codec *codec,
                                      const pjmedia_codec_param *attr )
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
@@ -1363,9 +1363,9 @@ static pj_status_t  ipp_codec_parse( pjmedia_codec *codec,
 /*
  * Encode frames.
  */
-static pj_status_t ipp_codec_encode( pjmedia_codec *codec, 
+static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
                                      const struct pjmedia_frame *input,
-                                     unsigned output_buf_len, 
+                                     unsigned output_buf_len,
                                      struct pjmedia_frame *output)
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
@@ -1382,10 +1382,10 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
         pj_bool_t is_silence;
         pj_int32_t silence_duration;
 
-        silence_duration = pj_timestamp_diff32(&codec_data->last_tx, 
+        silence_duration = pj_timestamp_diff32(&codec_data->last_tx,
                                                &input->timestamp);
 
-        is_silence = pjmedia_silence_det_detect(codec_data->vad, 
+        is_silence = pjmedia_silence_det_detect(codec_data->vad,
                                                 (const pj_int16_t*) input->buf,
                                                 (input->size >> 1),
                                                 NULL);
@@ -1408,7 +1408,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
     samples_per_frame = ippc->samples_per_frame;
     pt = ippc->pt;
 
-    PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0, 
+    PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0,
                      PJMEDIA_CODEC_EPCMFRMINLEN);
 
     /* Encode the frames */
@@ -1434,7 +1434,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
         /* For G722.1: adjust the encoder input signal level */
-        if (pt >= PJMEDIA_RTP_PT_G722_1_16 && 
+        if (pt >= PJMEDIA_RTP_PT_G722_1_16 &&
             pt <= PJMEDIA_RTP_PT_G7221_RSV2 &&
             codec_data->g7221_pcm_shift)
         {
@@ -1449,7 +1449,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
         }
 
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
-        /* For AMR: put info (frametype, degraded, last frame, mode) in the 
+        /* For AMR: put info (frametype, degraded, last frame, mode) in the
          * first two octets for payload packing.
          */
         if (pt == PJMEDIA_RTP_PT_AMR || pt == PJMEDIA_RTP_PT_AMRWB) {
@@ -1463,7 +1463,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
              * bit 8-11 : mode
              */
             out.nbytes += 2;
-            if (out.frametype == 0 || out.frametype == 4 || 
+            if (out.frametype == 0 || out.frametype == 4 ||
                 (pt == PJMEDIA_RTP_PT_AMR && out.frametype == 5) ||
                 (pt == PJMEDIA_RTP_PT_AMRWB && out.frametype == 6))
             {
@@ -1472,7 +1472,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
                 /* Quality */
                 if (out.frametype == 5 || out.frametype == 6)
                     *info |= 0x80;
-            } else if (out.frametype == 1 || out.frametype == 2 || 
+            } else if (out.frametype == 1 || out.frametype == 2 ||
                        (pt == PJMEDIA_RTP_PT_AMR && out.frametype == 6) ||
                        (pt == PJMEDIA_RTP_PT_AMRWB && out.frametype == 7))
             {
@@ -1542,9 +1542,9 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 /*
  * Decode frame.
  */
-static pj_status_t ipp_codec_decode( pjmedia_codec *codec, 
+static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
                                      const struct pjmedia_frame *input,
-                                     unsigned output_buf_len, 
+                                     unsigned output_buf_len,
                                      struct pjmedia_frame *output)
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
@@ -1554,7 +1554,7 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
     USC_Bitstream in;
     pj_uint8_t pt;
 
-    pt = ippc->pt; 
+    pt = ippc->pt;
     samples_per_frame = ippc->samples_per_frame;
 
     PJ_ASSERT_RETURN(output_buf_len >= samples_per_frame << 1,
@@ -1575,7 +1575,7 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
     }
 
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO ||
-        USC_NoError != ippc->fxns->Decode(codec_data->dec, &in, &out)) 
+        USC_NoError != ippc->fxns->Decode(codec_data->dec, &in, &out))
     {
         pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
         output->size = samples_per_frame << 1;
@@ -1600,7 +1600,7 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
 
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
     /* For G722.1: adjust the decoder output signal level */
-    if (pt >= PJMEDIA_RTP_PT_G722_1_16 && 
+    if (pt >= PJMEDIA_RTP_PT_G722_1_16 &&
         pt <= PJMEDIA_RTP_PT_G7221_RSV2 &&
         codec_data->g7221_pcm_shift)
     {
@@ -1623,11 +1623,11 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-/* 
+/*
  * Recover lost frame.
  */
-static pj_status_t  ipp_codec_recover(pjmedia_codec *codec, 
-                                      unsigned output_buf_len, 
+static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output)
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;

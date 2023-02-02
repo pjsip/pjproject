@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ip_helper.h>
 #include <pj/addr_resolv.h>
@@ -52,7 +52,7 @@
         struct sockaddr *ad = (struct sockaddr*)addr;
         if (ad->sa_family != PJ_AF_INET && ad->sa_family != PJ_AF_INET6)
             return "?";
-        return pj_inet_ntop2(ad->sa_family, pj_sockaddr_get_addr(ad), 
+        return pj_inet_ntop2(ad->sa_family, pj_sockaddr_get_addr(ad),
                              txt, sizeof(txt));
     }
 #else
@@ -74,7 +74,7 @@ static pj_status_t if_enum_by_af(int af,
     unsigned max;
 
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
-    
+
     TRACE_((THIS_FILE, "Starting interface enum with getifaddrs() for af=%d",
             af));
 
@@ -110,12 +110,12 @@ static pj_status_t if_enum_by_af(int af,
 
         if (ad==NULL) {
             TRACE_((THIS_FILE, "  NULL address ignored"));
-            continue; /* reported to happen on Linux 2.6.25.9 
+            continue; /* reported to happen on Linux 2.6.25.9
                          with ppp interface */
         }
 
         if (ad->sa_family != af) {
-            TRACE_((THIS_FILE, "  address %s ignored (af=%d)", 
+            TRACE_((THIS_FILE, "  address %s ignored (af=%d)",
                     get_addr(ad), ad->sa_family));
             continue; /* Skip when interface is down */
         }
@@ -139,12 +139,12 @@ static pj_status_t if_enum_by_af(int af,
         if (af==pj_AF_INET() &&
             (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
         {
-            TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
+            TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)",
                     get_addr(ad), ad->sa_family));
             continue;
         }
 
-        TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
+        TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d",
                 get_addr(ad), ad->sa_family, *p_cnt));
 
         pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
@@ -174,7 +174,7 @@ static pj_status_t if_enum_by_af(int af,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
-    
+
     TRACE_((THIS_FILE, "Starting interface enum with SIOCGIFCONF for af=%d",
             af));
 
@@ -204,7 +204,7 @@ static pj_status_t if_enum_by_af(int af,
         struct ifreq *itf = &ifr[i];
         struct ifreq iff = *itf;
         struct sockaddr *ad = &itf->ifr_addr;
-        
+
         TRACE_((THIS_FILE, " checking interface %s", itf->ifr_name));
 
         /* Skip address with different family */
@@ -256,12 +256,12 @@ static pj_status_t if_enum_by_af(int af,
         if (af==pj_AF_INET() &&
             (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
         {
-            TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
+            TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)",
                     get_addr(ad), ad->sa_family));
             continue;
         }
 
-        TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
+        TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d",
                 get_addr(ad), ad->sa_family, *p_cnt));
 
         pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
@@ -343,7 +343,7 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
         ad = (struct sockaddr*) &ifreq.ifr_addr;
 
         if (ad->sa_family != af) {
-            TRACE_((THIS_FILE, "  address %s family %d ignored", 
+            TRACE_((THIS_FILE, "  address %s family %d ignored",
                                get_addr(&ifreq.ifr_addr),
                                ifreq.ifr_addr.sa_family));
             continue;   /* Not address family that we want, continue */
@@ -368,13 +368,13 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
         if (af==pj_AF_INET() &&
             (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
         {
-            TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
+            TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)",
                     get_addr(ad), ad->sa_family));
             continue;
         }
 
         /* Got an address ! */
-        TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
+        TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d",
                 get_addr(ad), ad->sa_family, *p_cnt));
 
         pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
@@ -462,7 +462,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
     status = pj_getdefaultipinterface(PJ_AF_INET, &itf);
     if (status != PJ_SUCCESS)
         return status;
-    
+
     routes[0].ipv4.if_addr.s_addr = itf.ipv4.sin_addr.s_addr;
     routes[0].ipv4.dst_addr.s_addr = 0;
     routes[0].ipv4.mask.s_addr = 0;
@@ -600,7 +600,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
 
         for (i = 0; i < *p_cnt; ++i) {
             int j;
-            
+
             ifs[cnt++] = addrs[i];
 
             if (addrs[i].addr.sa_family != pj_AF_INET6())

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2022 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_UPNP_H__
 #define __PJ_UPNP_H__
@@ -62,7 +62,7 @@ typedef struct pj_upnp_init_param
      * If 0, the library will pick an arbitrary free port.
      */
     unsigned            port;
-    
+
     /**
      * The time duration to search for IGD devices (in seconds).
      *

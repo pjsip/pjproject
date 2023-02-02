@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia.h>
@@ -46,7 +46,7 @@
 #define RECORDER    1
 
 
-static const char *desc = 
+static const char *desc =
  " FILE:                                                                    \n"
  "                                                                          \n"
  "  confsample.c                                                            \n"
@@ -77,9 +77,9 @@ static const char *desc =
  "  However, the files MUST have a single audio channel only (i.e. mono).  \n";
 
 
- 
-/* 
- * Prototypes: 
+
+/*
+ * Prototypes:
  */
 
 /* List the ports in the conference bridge */
@@ -115,7 +115,7 @@ static pj_bool_t input(const char *title, char *buf, pj_size_t len)
 
     if (!*buf)
         return PJ_FALSE;
-    
+
     return PJ_TRUE;
 }
 
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
     file_count = argc - pj_optind;
     port_count = file_count + 1 + RECORDER;
 
-    /* Create the conference bridge. 
+    /* Create the conference bridge.
      * With default options (zero), the bridge will create an instance of
      * sound capture and playback device and connect them to slot zero.
      */
@@ -199,8 +199,8 @@ int main(int argc, char *argv[])
 #if RECORDER
     status = pjmedia_wav_writer_port_create(  pool, "confrecord.wav",
                                               clock_rate, channel_count,
-                                              samples_per_frame, 
-                                              bits_per_sample, 0, 0, 
+                                              samples_per_frame,
+                                              bits_per_sample, 0, 0,
                                               &rec_port);
     if (status != PJ_SUCCESS) {
         app_perror(THIS_FILE, "Unable to create WAV writer", status);
@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
     for (i=0; i<file_count; ++i) {
 
         /* Load the WAV file to file port. */
-        status = pjmedia_wav_player_port_create( 
+        status = pjmedia_wav_player_port_create(
                         pool,               /* pool.        */
                         argv[i+pj_optind],  /* filename     */
                         0,                  /* use default ptime */
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
     }
 
 
-    /* 
+    /*
      * All ports are set up in the conference bridge.
      * But at this point, no media will be flowing since no ports are
      * "connected". User must connect the port manually.
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 
 
     /*
-     * UI Menu: 
+     * UI Menu:
      */
     for (;;) {
         char tmp1[10];
@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
         puts("  v    Display VU meter for a particular port");
         puts("  q    Quit");
         puts("");
-        
+
         printf("Enter selection: "); fflush(stdout);
 
         if (fgets(tmp, sizeof(tmp), stdin) == NULL)
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
             status = pjmedia_conf_connect_port(conf, src, dst, 0);
             if (status != PJ_SUCCESS)
                 app_perror(THIS_FILE, "Error connecting port", status);
-            
+
             break;
 
         case 'd':
@@ -341,7 +341,7 @@ int main(int argc, char *argv[])
             status = pjmedia_conf_disconnect_port(conf, src, dst);
             if (status != PJ_SUCCESS)
                 app_perror(THIS_FILE, "Error connecting port", status);
-            
+
 
             break;
 
@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (!input("Enter level (-128 to >127, 0 for normal)", 
+            if (!input("Enter level (-128 to >127, 0 for normal)",
                               tmp2, sizeof(tmp2)) )
                 continue;
             level = strtol(tmp2, &err, 10);
@@ -382,7 +382,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (!input("Enter level (-128 to >127, 0 for normal)", 
+            if (!input("Enter level (-128 to >127, 0 for normal)",
                               tmp2, sizeof(tmp2)) )
                 continue;
             level = strtol(tmp2, &err, 10);
@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
     }
 
 on_quit:
-    
+
     /* Start deinitialization: */
 
     /* Destroy conference bridge */
@@ -487,8 +487,8 @@ static void conf_list(pjmedia_conf *conf, int detail)
     for (i=0; i<count; ++i) {
         char txlist[4*MAX_PORTS];
         unsigned j;
-        pjmedia_conf_port_info *port_info = &info[i];   
-        
+        pjmedia_conf_port_info *port_info = &info[i];
+
         txlist[0] = '\0';
         for (j=0; j<port_info->listener_cnt; ++j) {
             char s[10];
@@ -503,9 +503,9 @@ static void conf_list(pjmedia_conf *conf, int detail)
         }
 
         if (!detail) {
-            printf("Port #%02d %-25.*s  transmitting to: %s\n", 
-                   port_info->slot, 
-                   (int)port_info->name.slen, 
+            printf("Port #%02d %-25.*s  transmitting to: %s\n",
+                   port_info->slot,
+                   (int)port_info->name.slen,
                    port_info->name.ptr,
                    txlist);
         } else {
@@ -566,7 +566,7 @@ static void monitor_level(pjmedia_conf *conf, int slot, int dir, int dur)
         char meter[21];
 
         /* Poll the volume every 20 msec */
-        status = pjmedia_conf_get_signal_level(conf, slot, 
+        status = pjmedia_conf_get_signal_level(conf, slot,
                                                &tx_level, &rx_level);
         if (status != PJ_SUCCESS) {
             app_perror(THIS_FILE, "Unable to read level", status);

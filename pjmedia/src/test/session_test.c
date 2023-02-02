@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/mediamgr.h>
 #include <pjmedia/session.h>
@@ -59,7 +59,7 @@ pj_status_t session_test (pj_pool_factory *pf)
     // Create callee session based on caller's SDP.
     // THIS WILL DEFINITELY CRASH (NULL as argument)!
     s2 = pj_media_session_create_from_sdp (mm, sdp, NULL);
-    
+
     // Create callee SDP
     sdp = pj_media_session_create_sdp (s2, pool, 0);
     len = pjsdp_print (sdp, buf, sizeof(buf));

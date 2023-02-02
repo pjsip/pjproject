@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/timer.h>
 #include <pj/pool.h>
@@ -56,7 +56,7 @@ struct pj_timer_heap_t
      *  the slot number will be saved in entry->_timer_id
      */
     CPjTimerEntry **entries;
-    
+
     /** Array of free slot indexes in the "entries" array */
     int *free_slots;
 };
@@ -64,25 +64,25 @@ struct pj_timer_heap_t
 /**
  * Active object for each timer entry.
  */
-class CPjTimerEntry : public CActive 
+class CPjTimerEntry : public CActive
 {
 public:
     pj_timer_entry  *entry_;
-    
+
     static CPjTimerEntry* NewL( pj_timer_heap_t *timer_heap,
                                 pj_timer_entry *entry,
                                 const pj_time_val *delay);
-    
+
     ~CPjTimerEntry();
-    
+
     virtual void RunL();
     virtual void DoCancel();
 
-private:        
+private:
     pj_timer_heap_t *timer_heap_;
     RTimer           rtimer_;
     pj_uint32_t      interval_left_;
-    
+
     CPjTimerEntry(pj_timer_heap_t *timer_heap, pj_timer_entry *entry);
     void ConstructL(const pj_time_val *delay);
     void Schedule();
@@ -100,7 +100,7 @@ static pj_status_t realloc_timer_heap(pj_timer_heap_t *th, pj_size_t new_size)
     CPjTimerEntry **entries = NULL;
     int *free_slots = NULL;
     unsigned i, j;
- 
+
     if (new_size > PJ_SYMBIAN_TIMER_MAX_COUNT) {
         /* Just some sanity limit */
         new_size = PJ_SYMBIAN_TIMER_MAX_COUNT;
@@ -110,20 +110,20 @@ static pj_status_t realloc_timer_heap(pj_timer_heap_t *th, pj_size_t new_size)
             return PJ_ETOOMANY;
         }
     }
-    
+
     /* Allocate entries, move entries from the old array if there is one */
     entries = new entry_ptr[new_size];
     if (th->entries) {
         pj_memcpy(entries, th->entries, th->max_size * sizeof(th->entries[0]));
     }
     /* Initialize the remaining new area */
-    pj_bzero(&entries[th->max_size], 
+    pj_bzero(&entries[th->max_size],
             (new_size - th->max_size) * sizeof(th->entries[0]));
-    
+
     /* Allocate free slots array */
     free_slots = new int[new_size];
     if (th->free_slots) {
-        pj_memcpy(free_slots, th->free_slots, 
+        pj_memcpy(free_slots, th->free_slots,
                   FREECNT(th) * sizeof(th->free_slots[0]));
     }
     /* Initialize the remaining new area */
@@ -133,7 +133,7 @@ static pj_status_t realloc_timer_heap(pj_timer_heap_t *th, pj_size_t new_size)
     for ( ; i<new_size; ++i) {
         free_slots[i] = -1;
     }
-    
+
     /* Apply */
     delete [] th->entries;
     th->entries = entries;
@@ -149,7 +149,7 @@ static pj_status_t add_entry(pj_timer_heap_t *th, CPjTimerEntry *entry)
 {
     pj_status_t status;
     int slot;
-    
+
     /* Check that there's still capacity left in the timer heap */
     if (FREECNT(th) < 1) {
         // Grow the timer heap twice the capacity
@@ -157,17 +157,17 @@ static pj_status_t add_entry(pj_timer_heap_t *th, CPjTimerEntry *entry)
         if (status != PJ_SUCCESS)
             return status;
     }
-    
+
     /* Allocate one free slot. Use LIFO */
     slot = th->free_slots[FREECNT(th)-1];
-    PJ_ASSERT_RETURN((slot >= 0) && (slot < (int)th->max_size) && 
+    PJ_ASSERT_RETURN((slot >= 0) && (slot < (int)th->max_size) &&
                      (th->entries[slot]==NULL), PJ_EBUG);
-    
+
     th->free_slots[FREECNT(th)-1] = -1;
     th->entries[slot] = entry;
     entry->entry_->_timer_id = slot;
     ++th->cur_size;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -175,29 +175,29 @@ static pj_status_t add_entry(pj_timer_heap_t *th, CPjTimerEntry *entry)
 static pj_status_t remove_entry(pj_timer_heap_t *th, CPjTimerEntry *entry)
 {
     int slot = entry->entry_->_timer_id;
-    
+
     PJ_ASSERT_RETURN(slot >= 0 && slot < (int)th->max_size, PJ_EBUG);
     PJ_ASSERT_RETURN(FREECNT(th) < th->max_size, PJ_EBUG);
     PJ_ASSERT_RETURN(th->entries[slot]==entry, PJ_EBUG);
     PJ_ASSERT_RETURN(th->free_slots[FREECNT(th)]==-1, PJ_EBUG);
-    
+
     th->entries[slot] = NULL;
     th->free_slots[FREECNT(th)] = slot;
     entry->entry_->_timer_id = -1;
     --th->cur_size;
-    
+
     return PJ_SUCCESS;
 }
 
 
 CPjTimerEntry::CPjTimerEntry(pj_timer_heap_t *timer_heap,
                              pj_timer_entry *entry)
-: CActive(PJ_SYMBIAN_TIMER_PRIORITY), entry_(entry), timer_heap_(timer_heap), 
+: CActive(PJ_SYMBIAN_TIMER_PRIORITY), entry_(entry), timer_heap_(timer_heap),
   interval_left_(0)
 {
 }
 
-CPjTimerEntry::~CPjTimerEntry() 
+CPjTimerEntry::~CPjTimerEntry()
 {
     Cancel();
     rtimer_.Close();
@@ -206,30 +206,30 @@ CPjTimerEntry::~CPjTimerEntry()
 void CPjTimerEntry::Schedule()
 {
     pj_int32_t interval;
-    
+
     if (interval_left_ > MAX_RTIMER_INTERVAL) {
         interval = MAX_RTIMER_INTERVAL;
     } else {
         interval = interval_left_;
     }
-    
+
     interval_left_ -= interval;
     rtimer_.After(iStatus, interval * 1000);
     SetActive();
 }
 
-void CPjTimerEntry::ConstructL(const pj_time_val *delay) 
+void CPjTimerEntry::ConstructL(const pj_time_val *delay)
 {
     rtimer_.CreateLocal();
     CActiveScheduler::Add(this);
-    
+
     interval_left_ = PJ_TIME_VAL_MSEC(*delay);
     Schedule();
 }
 
 CPjTimerEntry* CPjTimerEntry::NewL(pj_timer_heap_t *timer_heap,
                                    pj_timer_entry *entry,
-                                   const pj_time_val *delay) 
+                                   const pj_time_val *delay)
 {
     CPjTimerEntry *self = new CPjTimerEntry(timer_heap, entry);
     CleanupStack::PushL(self);
@@ -239,21 +239,21 @@ CPjTimerEntry* CPjTimerEntry::NewL(pj_timer_heap_t *timer_heap,
     return self;
 }
 
-void CPjTimerEntry::RunL() 
+void CPjTimerEntry::RunL()
 {
     if (interval_left_ > 0) {
         Schedule();
         return;
     }
-    
+
     remove_entry(timer_heap_, this);
     entry_->cb(timer_heap_, entry_);
-    
+
     // Finger's crossed!
     delete this;
 }
 
-void CPjTimerEntry::DoCancel() 
+void CPjTimerEntry::DoCancel()
 {
     /* It's possible that _timer_id is -1, see schedule(). In this case,
      * the entry has not been added to the timer heap, so don't remove
@@ -261,7 +261,7 @@ void CPjTimerEntry::DoCancel()
      */
     if (entry_ && entry_->_timer_id != -1)
         remove_entry(timer_heap_, this);
-    
+
     rtimer_.Cancel();
 }
 
@@ -275,7 +275,7 @@ void CPjTimerEntry::DoCancel()
 PJ_DEF(pj_size_t) pj_timer_heap_mem_size(pj_size_t count)
 {
     return /* size of the timer heap itself: */
-           sizeof(pj_timer_heap_t) + 
+           sizeof(pj_timer_heap_t) +
            /* size of each entry: */
            (count+2) * (sizeof(void*)+sizeof(int)) +
            /* lock, pool etc: */
@@ -324,10 +324,10 @@ PJ_DEF(void) pj_timer_heap_destroy( pj_timer_heap_t *ht )
             }
         }
     }
-    
+
     delete [] ht->entries;
     delete [] ht->free_slots;
-    
+
     ht->entries = NULL;
     ht->free_slots = NULL;
 }
@@ -366,12 +366,12 @@ PJ_DEF(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
 }
 
 PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
-                                            pj_timer_entry *entry, 
+                                            pj_timer_entry *entry,
                                             const pj_time_val *delay)
 {
     CPjTimerEntry *timerObj;
     pj_status_t status;
-    
+
     PJ_ASSERT_RETURN(ht && entry && delay, PJ_EINVAL);
     PJ_ASSERT_RETURN(entry->cb != NULL, PJ_EINVAL);
 
@@ -379,7 +379,7 @@ PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
     PJ_ASSERT_RETURN(entry->_timer_id < 1, PJ_EINVALIDOP);
 
     entry->_timer_id = -1;
-    
+
     timerObj = CPjTimerEntry::NewL(ht, entry, delay);
     status = add_entry(ht, timerObj);
     if (status != PJ_SUCCESS) {
@@ -387,7 +387,7 @@ PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
         delete timerObj;
         return status;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -398,14 +398,14 @@ PJ_DEF(pj_status_t) pj_timer_heap_schedule_w_grp_lock(pj_timer_heap_t *ht,
                                                       pj_grp_lock_t *grp_lock)
 {
     pj_status_t status;
-            
+
     PJ_UNUSED_ARG(grp_lock);
 
     status = pj_timer_heap_schedule(ht, entry, delay);
-    
+
     if (status == PJ_SUCCESS)
         entry->id = id_val;
-    
+
     return status;
 }
 
@@ -413,7 +413,7 @@ PJ_DEF(int) pj_timer_heap_cancel( pj_timer_heap_t *ht,
                                   pj_timer_entry *entry)
 {
     PJ_ASSERT_RETURN(ht && entry, PJ_EINVAL);
-    
+
     if (entry->_timer_id >= 0 && entry->_timer_id < (int)ht->max_size) {
         CPjTimerEntry *timerObj = ht->entries[entry->_timer_id];
         if (timerObj) {
@@ -435,11 +435,11 @@ PJ_DEF(int) pj_timer_heap_cancel_if_active(pj_timer_heap_t *ht,
     int count = pj_timer_heap_cancel(ht, entry);
     if (count == 1)
         entry->id = id_val;
-    
+
     return count;
 }
 
-PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht, 
+PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
                                      pj_time_val *next_delay )
 {
     /* Polling is not necessary on Symbian, since all async activities
@@ -465,10 +465,10 @@ PJ_DEF(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t * ht,
 {
     /* We don't support this! */
     PJ_UNUSED_ARG(ht);
-    
+
     timeval->sec = 1;
     timeval->msec = 0;
-    
+
     return PJ_SUCCESS;
 }
 

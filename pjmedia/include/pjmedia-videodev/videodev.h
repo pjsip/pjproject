@@ -33,7 +33,7 @@ PJ_BEGIN_DECL
  * @brief API Reference
  * @{
  */
- 
+
 
 /**
  * Initialize the video device subsystem. This will register all supported

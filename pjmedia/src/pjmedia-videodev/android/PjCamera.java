@@ -101,7 +101,7 @@ public class PjCamera implements Camera.PreviewCallback, SurfaceHolder.Callback
                 /* Try to revert back */
                 camIdx = oldIdx;
                 Start();
-                return ret; 
+                return ret;
             }
         }
 

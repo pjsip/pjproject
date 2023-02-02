@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/iscomposing.h>
 #include <pjsip-simple/errno.h>
@@ -110,10 +110,10 @@ PJ_DEF(pj_xml_node*) pjsip_iscomposing_create_xml( pj_pool_t *pool,
 /*
  * Function to print XML message body.
  */
-static int xml_print_body( struct pjsip_msg_body *msg_body, 
+static int xml_print_body( struct pjsip_msg_body *msg_body,
                            char *buf, pj_size_t size)
 {
-    return pj_xml_print((const pj_xml_node*)msg_body->data, buf, size, 
+    return pj_xml_print((const pj_xml_node*)msg_body->data, buf, size,
                         PJ_TRUE);
 }
 
@@ -170,7 +170,7 @@ PJ_DEF(pj_status_t) pjsip_iscomposing_parse( pj_pool_t *pool,
 
     /* Set defaults: */
     if (p_is_composing) *p_is_composing = PJ_FALSE;
-    if (p_last_active) *p_last_active = NULL; 
+    if (p_last_active) *p_last_active = NULL;
     if (p_content_type) *p_content_type = NULL;
 
     /* Parse XML */

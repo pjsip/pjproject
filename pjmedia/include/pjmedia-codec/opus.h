@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /* This file is the header of Opus codec wrapper and was contributed by
  * Zaark Technology AB
@@ -50,14 +50,14 @@ PJ_BEGIN_DECL
  *
  * \section opus_codec_setting Codec Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
+ * General codec settings for this codec such as VAD and PLC can be
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param
  * (see the documentation of #pjmedia_codec_param for more info).
  *
  * For Opus codec specific settings, such as sample rate,
  * channel count, bit rate, complexity, and CBR, can be configured
  * in #pjmedia_codec_opus_config.
- * The default setting of sample rate is specified in 
+ * The default setting of sample rate is specified in
  * #PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE. The default setting of
  * bitrate is specified in #PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE.
  * And the default setting of complexity is specified in

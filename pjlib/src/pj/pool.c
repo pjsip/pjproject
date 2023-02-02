@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/pool.h>
 #include <pj/log.h>
@@ -52,11 +52,11 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
     PJ_CHECK_STACK();
     pj_assert(size >= sizeof(pj_pool_block));
 
-    LOG((pool->obj_name, "create_block(sz=%u), cur.cap=%u, cur.used=%u", 
+    LOG((pool->obj_name, "create_block(sz=%u), cur.cap=%u, cur.used=%u",
          size, pool->capacity, pj_pool_get_used_size(pool)));
 
     /* Request memory from allocator. */
-    block = (pj_pool_block*) 
+    block = (pj_pool_block*)
         (*pool->factory->policy.block_alloc)(pool->factory, size);
     if (block == NULL) {
         (*pool->callback)(pool, size);
@@ -117,12 +117,12 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
      * increment size. Also count the size wasted due to aligning
      * the block.
      */
-    if (pool->increment_size < 
-            size + sizeof(pj_pool_block) + PJ_POOL_ALIGNMENT) 
+    if (pool->increment_size <
+            size + sizeof(pj_pool_block) + PJ_POOL_ALIGNMENT)
     {
         pj_size_t count;
         count = (size + pool->increment_size + sizeof(pj_pool_block) +
-                 PJ_POOL_ALIGNMENT) / 
+                 PJ_POOL_ALIGNMENT) /
                 pool->increment_size;
         block_size = count * pool->increment_size;
 
@@ -130,7 +130,7 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
         block_size = pool->increment_size;
     }
 
-    LOG((pool->obj_name, 
+    LOG((pool->obj_name,
          "%u bytes requested, resizing pool by %u bytes (used=%u, cap=%u)",
          size, block_size, pj_pool_get_used_size(pool), pool->capacity));
 
@@ -151,7 +151,7 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
 /*
  * Internal function to initialize pool.
  */
-PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool, 
+PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
                                 const char *name,
                                 pj_size_t increment_size,
                                 pj_pool_callback *callback)
@@ -163,7 +163,7 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
 
     if (name) {
         if (strchr(name, '%') != NULL) {
-            pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name), 
+            pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name),
                              name, pool);
         } else {
             pj_ansi_strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
@@ -178,7 +178,7 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
  * Create new memory pool.
  */
 PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
-                                       pj_size_t initial_size, 
+                                       pj_size_t initial_size,
                                        pj_size_t increment_size,
                                        pj_pool_callback *callback)
 {
@@ -246,11 +246,11 @@ static void reset_pool(pj_pool_t *pool)
        as the pool itself.
     */
     block = block->prev;
-    
+
     while (block != &pool->block_list) {
         pj_pool_block *prev = block->prev;
         pj_list_erase(block);
-        (*pool->factory->policy.block_free)(pool->factory, block, 
+        (*pool->factory->policy.block_free)(pool->factory, block,
                                             block->end - (unsigned char*)block);
         block = prev;
     }
@@ -268,8 +268,8 @@ static void reset_pool(pj_pool_t *pool)
  */
 PJ_DEF(void) pj_pool_reset(pj_pool_t *pool)
 {
-    LOG((pool->obj_name, "reset(): cap=%d, used=%d(%d%%)", 
-        pool->capacity, pj_pool_get_used_size(pool), 
+    LOG((pool->obj_name, "reset(): cap=%d, used=%d(%d%%)",
+        pool->capacity, pj_pool_get_used_size(pool),
         pj_pool_get_used_size(pool)*100/pool->capacity));
 
     reset_pool(pool);
@@ -282,14 +282,14 @@ PJ_DEF(void) pj_pool_destroy_int(pj_pool_t *pool)
 {
     pj_size_t initial_size;
 
-    LOG((pool->obj_name, "destroy(): cap=%d, used=%d(%d%%), block0=%p-%p", 
-        pool->capacity, pj_pool_get_used_size(pool), 
+    LOG((pool->obj_name, "destroy(): cap=%d, used=%d(%d%%), block0=%p-%p",
+        pool->capacity, pj_pool_get_used_size(pool),
         pj_pool_get_used_size(pool)*100/pool->capacity,
-        ((pj_pool_block*)pool->block_list.next)->buf, 
+        ((pj_pool_block*)pool->block_list.next)->buf,
         ((pj_pool_block*)pool->block_list.next)->end));
 
     reset_pool(pool);
-    initial_size = ((pj_pool_block*)pool->block_list.next)->end - 
+    initial_size = ((pj_pool_block*)pool->block_list.next)->end -
                    (unsigned char*)pool;
     if (pool->factory->policy.block_free)
         (*pool->factory->policy.block_free)(pool->factory, pool, initial_size);

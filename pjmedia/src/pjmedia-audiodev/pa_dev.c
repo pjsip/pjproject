@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/assert.h>
@@ -42,7 +42,7 @@ struct pa_aud_factory
 };
 
 
-/* 
+/*
  * Sound stream descriptor.
  * This struct may be used for both unidirectional or bidirectional sound
  * streams.
@@ -87,15 +87,15 @@ struct pa_aud_stream
 
     /* Sometime the record callback does not return framesize as configured
      * (e.g: in OSS), while this module must guarantee returning framesize
-     * as configured in the creation settings. In this case, we need a buffer 
+     * as configured in the creation settings. In this case, we need a buffer
      * for the recorded samples.
      */
     pj_int16_t          *rec_buf;
     unsigned             rec_buf_count;
 
     /* Sometime the player callback does not request framesize as configured
-     * (e.g: in Linux OSS) while sound device will always get samples from 
-     * the other component as many as configured samples_per_frame. 
+     * (e.g: in Linux OSS) while sound device will always get samples from
+     * the other component as many as configured samples_per_frame.
      */
     pj_int16_t          *play_buf;
     unsigned             play_buf_count;
@@ -107,7 +107,7 @@ static pj_status_t  pa_init(pjmedia_aud_dev_factory *f);
 static pj_status_t  pa_destroy(pjmedia_aud_dev_factory *f);
 static pj_status_t  pa_refresh(pjmedia_aud_dev_factory *f);
 static unsigned     pa_get_dev_count(pjmedia_aud_dev_factory *f);
-static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f,
                                     unsigned index,
                                     pjmedia_aud_dev_info *info);
 static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
@@ -134,7 +134,7 @@ static pj_status_t strm_stop(pjmedia_aud_stream *strm);
 static pj_status_t strm_destroy(pjmedia_aud_stream *strm);
 
 
-static pjmedia_aud_dev_factory_op pa_op = 
+static pjmedia_aud_dev_factory_op pa_op =
 {
     &pa_init,
     &pa_destroy,
@@ -142,10 +142,10 @@ static pjmedia_aud_dev_factory_op pa_op =
     &pa_get_dev_info,
     &pa_default_param,
     &pa_create_stream,
-    &pa_refresh    
+    &pa_refresh
 };
 
-static pjmedia_aud_stream_op pa_strm_op = 
+static pjmedia_aud_stream_op pa_strm_op =
 {
     &strm_get_param,
     &strm_get_cap,
@@ -178,13 +178,13 @@ static int PaRecorderCallback(const void *input,
         return paContinue;
 
     /* Known cases of callback's thread:
-     * - The thread may be changed in the middle of a session, e.g: in MacOS 
+     * - The thread may be changed in the middle of a session, e.g: in MacOS
      *   it happens when plugging/unplugging headphone.
      * - The same thread may be reused in consecutive sessions. The first
      *   session will leave TLS set, but release the TLS data address,
      *   so the second session must re-register the callback's thread.
      */
-    if (stream->rec_thread_initialized == 0 || !pj_thread_is_registered()) 
+    if (stream->rec_thread_initialized == 0 || !pj_thread_is_registered())
     {
         pj_bzero(stream->rec_thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("pa_rec", stream->rec_thread_desc,
@@ -201,7 +201,7 @@ static int PaRecorderCallback(const void *input,
     /* Calculate number of samples we've got */
     nsamples = frameCount * stream->channel_count + stream->rec_buf_count;
 
-    if (nsamples >= stream->samples_per_frame) 
+    if (nsamples >= stream->samples_per_frame)
     {
         /* If buffer is not empty, combine the buffer with the just incoming
          * samples, then call put_frame.
@@ -209,7 +209,7 @@ static int PaRecorderCallback(const void *input,
         if (stream->rec_buf_count) {
             unsigned chunk_count = 0;
             pjmedia_frame frame;
-        
+
             chunk_count = stream->samples_per_frame - stream->rec_buf_count;
             pjmedia_copy_samples(stream->rec_buf + stream->rec_buf_count,
                                  (pj_int16_t*)input, chunk_count);
@@ -250,19 +250,19 @@ static int PaRecorderCallback(const void *input,
         /* Store the remaining samples into the buffer */
         if (nsamples && status == 0) {
             stream->rec_buf_count = nsamples;
-            pjmedia_copy_samples(stream->rec_buf, (pj_int16_t*)input, 
+            pjmedia_copy_samples(stream->rec_buf, (pj_int16_t*)input,
                                  nsamples);
         }
 
     } else {
         /* Not enough samples, let's just store them in the buffer */
         pjmedia_copy_samples(stream->rec_buf + stream->rec_buf_count,
-                             (pj_int16_t*)input, 
+                             (pj_int16_t*)input,
                              frameCount * stream->channel_count);
         stream->rec_buf_count += frameCount * stream->channel_count;
     }
 
-    if (status==0) 
+    if (status==0)
         return paContinue;
 
 on_break:
@@ -270,7 +270,7 @@ on_break:
     return paAbort;
 }
 
-static int PaPlayerCallback( const void *input, 
+static int PaPlayerCallback( const void *input,
                              void *output,
                              unsigned long frameCount,
                              const PaStreamCallbackTimeInfo* timeInfo,
@@ -291,13 +291,13 @@ static int PaPlayerCallback( const void *input,
         return paContinue;
 
     /* Known cases of callback's thread:
-     * - The thread may be changed in the middle of a session, e.g: in MacOS 
+     * - The thread may be changed in the middle of a session, e.g: in MacOS
      *   it happens when plugging/unplugging headphone.
      * - The same thread may be reused in consecutive sessions. The first
      *   session will leave TLS set, but release the TLS data address,
      *   so the second session must re-register the callback's thread.
      */
-    if (stream->play_thread_initialized == 0 || !pj_thread_is_registered()) 
+    if (stream->play_thread_initialized == 0 || !pj_thread_is_registered())
     {
         pj_bzero(stream->play_thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("portaudio", stream->play_thread_desc,
@@ -316,19 +316,19 @@ static int PaPlayerCallback( const void *input,
     if (stream->play_buf_count) {
         /* samples buffered >= requested by sound device */
         if (stream->play_buf_count >= nsamples_req) {
-            pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
+            pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf,
                                  nsamples_req);
             stream->play_buf_count -= nsamples_req;
-            pjmedia_move_samples(stream->play_buf, 
+            pjmedia_move_samples(stream->play_buf,
                                  stream->play_buf + nsamples_req,
                                  stream->play_buf_count);
             nsamples_req = 0;
-            
+
             return paContinue;
         }
 
         /* samples buffered < requested by sound device */
-        pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
+        pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf,
                              stream->play_buf_count);
         nsamples_req -= stream->play_buf_count;
         output = (pj_int16_t*)output + stream->play_buf_count;
@@ -371,10 +371,10 @@ static int PaPlayerCallback( const void *input,
             if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
                 pj_bzero(frame.buf, frame.size);
 
-            pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
+            pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf,
                                  nsamples_req);
             stream->play_buf_count = stream->samples_per_frame - nsamples_req;
-            pjmedia_move_samples(stream->play_buf, 
+            pjmedia_move_samples(stream->play_buf,
                                  stream->play_buf+nsamples_req,
                                  stream->play_buf_count);
             nsamples_req = 0;
@@ -384,7 +384,7 @@ static int PaPlayerCallback( const void *input,
                                       stream->channel_count;
     }
 
-    if (status==0) 
+    if (status==0)
         return paContinue;
 
 on_break:
@@ -393,7 +393,7 @@ on_break:
 }
 
 
-static int PaRecorderPlayerCallback( const void *input, 
+static int PaRecorderPlayerCallback( const void *input,
                                      void *output,
                                      unsigned long frameCount,
                                      const PaStreamCallbackTimeInfo* timeInfo,
@@ -458,7 +458,7 @@ static pj_status_t pa_init(pjmedia_aud_dev_factory *f)
 
     err = Pa_Initialize();
 
-    PJ_LOG(4,(THIS_FILE, 
+    PJ_LOG(4,(THIS_FILE,
               "PortAudio sound library initialized, status=%d", err));
     PJ_LOG(4,(THIS_FILE, "PortAudio host api count=%d",
                          Pa_GetHostApiCount()));
@@ -483,7 +483,7 @@ static pj_status_t pa_destroy(pjmedia_aud_dev_factory *f)
     pool = pa->pool;
     pa->pool = NULL;
     pj_pool_release(pool);
-    
+
     return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
@@ -506,7 +506,7 @@ static unsigned pa_get_dev_count(pjmedia_aud_dev_factory *f)
 
 
 /* API: Get device info. */
-static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f,
                                     unsigned index,
                                     pjmedia_aud_dev_info *info)
 {
@@ -628,7 +628,7 @@ static int pa_get_default_input_dev(int channel_count)
         if (paDevInfo->maxInputChannels >= channel_count)
             return i;
     }
-    
+
     return -1;
 }
 
@@ -732,7 +732,7 @@ static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
         sampleFormat = paInt32;
     else
         return PJMEDIA_EAUD_SAMPFORMAT;
-    
+
     pool = pj_pool_create(pa->pf, "recstrm", 1024, 1024, NULL);
     if (!pool)
         return PJ_ENOMEM;
@@ -750,7 +750,7 @@ static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
     stream->channel_count = param->channel_count;
     stream->rec_cb = rec_cb;
 
-    stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+    stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool,
                       stream->samples_per_frame * stream->bytes_per_sample);
     stream->rec_buf_count = 0;
 
@@ -770,7 +770,7 @@ static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
     paFrames = param->samples_per_frame / param->channel_count;
 
     err = Pa_OpenStream( &stream->rec_strm, &inputParam, NULL,
-                         param->clock_rate, paFrames, 
+                         param->clock_rate, paFrames,
                          paClipOff, &PaRecorderCallback, stream );
     if (err != paNoError) {
         pj_pool_release(pool);
@@ -837,7 +837,7 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
         sampleFormat = paInt32;
     else
         return PJMEDIA_EAUD_SAMPFORMAT;
-    
+
     pool = pj_pool_create(pa->pf, "playstrm", 1024, 1024, NULL);
     if (!pool)
         return PJ_ENOMEM;
@@ -855,8 +855,8 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
     stream->channel_count = param->channel_count;
     stream->play_cb = play_cb;
 
-    stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool, 
-                                            stream->samples_per_frame * 
+    stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool,
+                                            stream->samples_per_frame *
                                             stream->bytes_per_sample);
     stream->play_buf_count = 0;
 
@@ -876,7 +876,7 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
     paFrames = param->samples_per_frame / param->channel_count;
 
     err = Pa_OpenStream( &stream->play_strm, NULL, &outputParam,
-                         param->clock_rate,  paFrames, 
+                         param->clock_rate,  paFrames,
                          paClipOff, &PaPlayerCallback, stream );
     if (err != paNoError) {
         pj_pool_release(pool);
@@ -890,9 +890,9 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
     PJ_LOG(5,(THIS_FILE, "Opened device %d: %s(%s) for playing, sample rate=%d"
                          ", ch=%d, "
                          "bits=%d, %d samples per frame, latency=%d ms",
-                         play_id, paDevInfo->name, paHostApiInfo->name, 
+                         play_id, paDevInfo->name, paHostApiInfo->name,
                          paRate, param->channel_count,
-                         param->bits_per_sample, param->samples_per_frame, 
+                         param->bits_per_sample, param->samples_per_frame,
                          paLatency));
 
     *p_snd_strm = &stream->base;
@@ -948,7 +948,7 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
             /* No such device. */
             return PJMEDIA_EAUD_NODEFDEV;
         }
-    } 
+    }
 
     paPlayDevInfo = Pa_GetDeviceInfo(play_id);
     if (!paPlayDevInfo) {
@@ -965,7 +965,7 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
         sampleFormat = paInt32;
     else
         return PJMEDIA_EAUD_SAMPFORMAT;
-    
+
     pool = pj_pool_create(pa->pf, "sndstream", 1024, 1024, NULL);
     if (!pool)
         return PJ_ENOMEM;
@@ -984,11 +984,11 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
     stream->rec_cb = rec_cb;
     stream->play_cb = play_cb;
 
-    stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+    stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool,
                       stream->samples_per_frame * stream->bytes_per_sample);
     stream->rec_buf_count = 0;
 
-    stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+    stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool,
                        stream->samples_per_frame * stream->bytes_per_sample);
     stream->play_buf_count = 0;
 
@@ -1024,7 +1024,7 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
      */
     if (rec_id == play_id) {
         err = Pa_OpenStream( &paStream, &inputParam, &outputParam,
-                             param->clock_rate, paFrames, 
+                             param->clock_rate, paFrames,
                              paClipOff, &PaRecorderPlayerCallback, stream );
         if (err == paNoError) {
             /* Set play stream and record stream to the same stream */
@@ -1041,12 +1041,12 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
     if (paStream == NULL) {
         /* Open input stream */
         err = Pa_OpenStream( &stream->rec_strm, &inputParam, NULL,
-                             param->clock_rate, paFrames, 
+                             param->clock_rate, paFrames,
                              paClipOff, &PaRecorderCallback, stream );
         if (err == paNoError) {
             /* Open output stream */
             err = Pa_OpenStream( &stream->play_strm, NULL, &outputParam,
-                                 param->clock_rate, paFrames, 
+                                 param->clock_rate, paFrames,
                                  paClipOff, &PaPlayerCallback, stream );
             if (err != paNoError)
                 Pa_CloseStream(stream->rec_strm);
@@ -1096,7 +1096,7 @@ static pj_status_t  pa_create_stream(pjmedia_aud_dev_factory *f,
     } else if (param->dir == PJMEDIA_DIR_PLAYBACK) {
         status = create_play_stream(pa, param, play_cb, user_data, p_aud_strm);
     } else if (param->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
-        status = create_bidir_stream(pa, param, rec_cb, play_cb, user_data, 
+        status = create_bidir_stream(pa, param, rec_cb, play_cb, user_data,
                                      p_aud_strm);
     } else {
         return PJ_EINVAL;
@@ -1132,19 +1132,19 @@ static pj_status_t strm_get_param(pjmedia_aud_stream *s,
     pi->dir = strm->dir;
     pi->play_id = strm->play_id;
     pi->rec_id = strm->rec_id;
-    pi->clock_rate = (unsigned)(paPlaySI ? paPlaySI->sampleRate : 
+    pi->clock_rate = (unsigned)(paPlaySI ? paPlaySI->sampleRate :
                                 paRecSI->sampleRate);
     pi->channel_count = strm->channel_count;
     pi->samples_per_frame = strm->samples_per_frame;
     pi->bits_per_sample = strm->bytes_per_sample * 8;
     if (paRecSI) {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
-        pi->input_latency_ms = (unsigned)(paRecSI ? paRecSI->inputLatency * 
+        pi->input_latency_ms = (unsigned)(paRecSI ? paRecSI->inputLatency *
                                                     1000 : 0);
     }
     if (paPlaySI) {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
-        pi->output_latency_ms = (unsigned)(paPlaySI? paPlaySI->outputLatency * 
+        pi->output_latency_ms = (unsigned)(paPlaySI? paPlaySI->outputLatency *
                                                      1000 : 0);
     }
 

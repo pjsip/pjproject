@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_SILENCE_DET_H__
 #define __PJMEDIA_SILENCE_DET_H__
@@ -108,18 +108,18 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_set_adaptive(pjmedia_silence_det *sd,
  * Set other silence detector parameters.
  *
  * @param sd                The silence detector
- * @param before_silence    Minimum duration of silence (in msec) before 
+ * @param before_silence    Minimum duration of silence (in msec) before
  *                          silence is reported. If -1 is specified, then
  *                          the default value will be used. The default is
  *                          400 msec.
  * @param recalc_time1      The interval (in msec) to recalculate threshold
- *                          in non-silence condition when adaptive silence 
- *                          detection is set. If -1 is specified, then the 
+ *                          in non-silence condition when adaptive silence
+ *                          detection is set. If -1 is specified, then the
  *                          default value will be used. The default is 4000
  *                          (msec).
  * @param recalc_time2      The interval (in msec) to recalculate threshold
  *                          in silence condition when adaptive silence detection
- *                          is set. If -1 is specified, then the default value 
+ *                          is set. If -1 is specified, then the default value
  *                          will be used. The default value is 2000 (msec).
  *
  * @return                  PJ_SUCCESS on success.

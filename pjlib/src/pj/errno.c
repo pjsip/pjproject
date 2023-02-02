@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/errno.h>
 #include <pj/log.h>
@@ -23,12 +23,12 @@
 #include <pj/compat/stdarg.h>
 #include <pj/assert.h>
 
-/* Prototype for platform specific error message, which will be defined 
+/* Prototype for platform specific error message, which will be defined
  * in separate file.
  */
 PJ_BEGIN_DECL
 
-    PJ_DECL(int) platform_strerror(pj_os_err_type code, 
+    PJ_DECL(int) platform_strerror(pj_os_err_type code,
                                    char *buf, pj_size_t bufsize );
 PJ_END_DECL
 
@@ -49,11 +49,11 @@ static struct err_msg_hnd
 /* PJLIB's own error codes/messages */
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
 
-static const struct 
+static const struct
 {
     int code;
     const char *msg;
-} err_str[] = 
+} err_str[] =
 {
     PJ_BUILD_ERR(PJ_EUNKNOWN,      "Unknown Error" ),
     PJ_BUILD_ERR(PJ_EPENDING,      "Pending operation" ),
@@ -136,7 +136,7 @@ PJ_DEF(pj_status_t) pj_register_strerror( pj_status_t start,
         if (IN_RANGE(start, err_msg_hnd[i].begin, err_msg_hnd[i].end) ||
             IN_RANGE(start+space-1, err_msg_hnd[i].begin, err_msg_hnd[i].end))
         {
-            if (err_msg_hnd[i].begin == start && 
+            if (err_msg_hnd[i].begin == start &&
                 err_msg_hnd[i].end == (start+space) &&
                 err_msg_hnd[i].strerror == f)
             {
@@ -169,7 +169,7 @@ void pj_errno_clear_handlers(void)
 /*
  * pj_strerror()
  */
-PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode, 
+PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
                               char *buf, pj_size_t bufsize )
 {
     int len = -1;
@@ -223,7 +223,7 @@ static void invoke_log(const char *sender, int level, const char *format, ...)
     va_end(arg);
 }
 
-static void pj_perror_imp(int log_level, const char *sender, 
+static void pj_perror_imp(int log_level, const char *sender,
                           pj_status_t status,
                           const char *title_fmt, va_list marker)
 {

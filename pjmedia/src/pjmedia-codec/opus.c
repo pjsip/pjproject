@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /* This file is the implementation of Opus codec wrapper and was contributed by
  * Zaark Technology AB
@@ -37,7 +37,7 @@
 /* Default Voice Activity Detector setting. */
 #define OPUS_DEFAULT_VAD        0
 
-/* Maximum size of an encoded packet. 
+/* Maximum size of an encoded packet.
  * If the the actual size is bigger, the encode/parse will fail.
  */
 #define MAX_ENCODED_PACKET_SIZE         1280
@@ -54,28 +54,28 @@
 
 
 /* Prototypes for Opus factory */
-static pj_status_t factory_test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t factory_test_alloc( pjmedia_codec_factory *factory,
                                        const pjmedia_codec_info *ci );
-static pj_status_t factory_default_attr( pjmedia_codec_factory *factory, 
-                                         const pjmedia_codec_info *ci, 
+static pj_status_t factory_default_attr( pjmedia_codec_factory *factory,
+                                         const pjmedia_codec_info *ci,
                                          pjmedia_codec_param *attr );
-static pj_status_t factory_enum_codecs( pjmedia_codec_factory *factory, 
-                                        unsigned *count, 
+static pj_status_t factory_enum_codecs( pjmedia_codec_factory *factory,
+                                        unsigned *count,
                                         pjmedia_codec_info codecs[]);
-static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory, 
-                                        const pjmedia_codec_info *ci, 
+static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
+                                        const pjmedia_codec_info *ci,
                                         pjmedia_codec **p_codec);
-static pj_status_t factory_dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t factory_dealloc_codec( pjmedia_codec_factory *factory,
                                           pjmedia_codec *codec );
 
 
 /* Prototypes for Opus implementation. */
-static pj_status_t codec_init( pjmedia_codec *codec, 
+static pj_status_t codec_init( pjmedia_codec *codec,
                                pj_pool_t *pool );
-static pj_status_t codec_open( pjmedia_codec *codec, 
+static pj_status_t codec_open( pjmedia_codec *codec,
                                pjmedia_codec_param *attr );
 static pj_status_t codec_close( pjmedia_codec *codec );
-static pj_status_t codec_modify( pjmedia_codec *codec, 
+static pj_status_t codec_modify( pjmedia_codec *codec,
                                  const pjmedia_codec_param *attr );
 static pj_status_t codec_parse( pjmedia_codec *codec,
                                 void *pkt,
@@ -83,20 +83,20 @@ static pj_status_t codec_parse( pjmedia_codec *codec,
                                 const pj_timestamp *ts,
                                 unsigned *frame_cnt,
                                 pjmedia_frame frames[]);
-static pj_status_t codec_encode( pjmedia_codec *codec, 
+static pj_status_t codec_encode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output);
-static pj_status_t codec_decode( pjmedia_codec *codec, 
+static pj_status_t codec_decode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output);
 static pj_status_t codec_recover( pjmedia_codec *codec,
                                   unsigned output_buf_len,
                                   struct pjmedia_frame *output);
 
 /* Definition for Opus operations. */
-static pjmedia_codec_op opus_op = 
+static pjmedia_codec_op opus_op =
 {
     &codec_init,
     &codec_open,
@@ -152,7 +152,7 @@ static pjmedia_codec_opus_config opus_cfg =
 {
     PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE,     /* Sample rate          */
     1,                                          /* Channel count        */
-    PTIME,                                      /* Frame time           */                      
+    PTIME,                                      /* Frame time           */
     PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE,        /* Bit rate             */
     5,                                          /* Expected packet loss */
     PJMEDIA_CODEC_OPUS_DEFAULT_COMPLEXITY,      /* Complexity           */
@@ -289,7 +289,7 @@ static int find_fmtp(pjmedia_codec_fmtp *fmtp, pj_str_t *name, pj_bool_t add)
         if (pj_stricmp(&fmtp->param[i].name, name) == 0)
             return i;
     }
-    
+
     if (add && (i < PJMEDIA_CODEC_MAX_FMTP_CNT)) {
         fmtp->param[i].name = *name;
         fmtp->cnt++;
@@ -317,7 +317,7 @@ static pj_status_t generate_fmtp(pjmedia_codec_param *attr)
     int idx;
     static char bitrate_str[12];
     static char clockrate_str[12];
-    
+
     if (attr->info.clock_rate != 48000) {
         pj_ansi_snprintf(clockrate_str, sizeof(clockrate_str), "%u",
                          attr->info.clock_rate);
@@ -382,7 +382,7 @@ static pj_status_t generate_fmtp(pjmedia_codec_param *attr)
     } else {
         remove_fmtp(&attr->setting.dec_fmtp, &STR_DTX);
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -428,8 +428,8 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
     param->info.channel_cnt = opus_cfg.channel_cnt = cfg->channel_cnt;
 
     /* Set bit_rate */
-    if ((cfg->bit_rate != PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE) && 
-       (cfg->bit_rate < 6000 || cfg->bit_rate > 510000)) 
+    if ((cfg->bit_rate != PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE) &&
+       (cfg->bit_rate < 6000 || cfg->bit_rate > 510000))
     {
         return PJ_EINVAL;
     }
@@ -447,7 +447,7 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
     opus_cfg.complexity = cfg->complexity;
 
     opus_cfg.cbr = cfg->cbr;
-    
+
     generate_fmtp(param);
 
     status = pjmedia_codec_mgr_set_default_param(codec_mgr, info[0], param);
@@ -458,7 +458,7 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
 /*
  * Check if factory can allocate the specified codec.
  */
-static pj_status_t factory_test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t factory_test_alloc( pjmedia_codec_factory *factory,
                                        const pjmedia_codec_info *ci )
 {
     const pj_str_t opus_tag = {"OPUS", 4};
@@ -489,8 +489,8 @@ static pj_status_t factory_test_alloc( pjmedia_codec_factory *factory,
 /*
  * Generate default attribute.
  */
-static pj_status_t factory_default_attr( pjmedia_codec_factory *factory, 
-                                         const pjmedia_codec_info *ci, 
+static pj_status_t factory_default_attr( pjmedia_codec_factory *factory,
+                                         const pjmedia_codec_info *ci,
                                          pjmedia_codec_param *attr )
 {
     PJ_UNUSED_ARG(factory);
@@ -525,8 +525,8 @@ static pj_status_t factory_default_attr( pjmedia_codec_factory *factory,
 /*
  * Enum codecs supported by this factory.
  */
-static pj_status_t factory_enum_codecs( pjmedia_codec_factory *factory, 
-                                        unsigned *count, 
+static pj_status_t factory_enum_codecs( pjmedia_codec_factory *factory,
+                                        unsigned *count,
                                         pjmedia_codec_info codecs[] )
 {
     PJ_UNUSED_ARG(factory);
@@ -541,7 +541,7 @@ static pj_status_t factory_enum_codecs( pjmedia_codec_factory *factory,
          * The media subtype ("opus") goes in SDP "a=rtpmap" as the encoding
          * name. The RTP clock rate in "a=rtpmap" MUST be 48000 and the
          * number of channels MUST be 2.
-         */     
+         */
         codecs[0].encoding_name = pj_str("opus");
         codecs[0].clock_rate    = 48000;
         codecs[0].channel_cnt   = 2;
@@ -555,8 +555,8 @@ static pj_status_t factory_enum_codecs( pjmedia_codec_factory *factory,
 /*
  * Allocate a new Opus codec instance.
  */
-static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory, 
-                                        const pjmedia_codec_info *ci, 
+static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
+                                        const pjmedia_codec_info *ci,
                                         pjmedia_codec **p_codec )
 {
     pjmedia_codec *codec;
@@ -570,7 +570,7 @@ static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
 
     pool = pjmedia_endpt_create_pool(f->endpt, "opus", 512, 512);
     if (!pool) return PJ_ENOMEM;
-    
+
     opus_data = PJ_POOL_ZALLOC_T(pool, struct opus_data);
     codec     = PJ_POOL_ZALLOC_T(pool, pjmedia_codec);
 
@@ -594,7 +594,7 @@ static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
 /*
  * Free codec.
  */
-static pj_status_t factory_dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t factory_dealloc_codec( pjmedia_codec_factory *factory,
                                           pjmedia_codec *codec )
 {
     struct opus_data *opus_data;
@@ -616,7 +616,7 @@ static pj_status_t factory_dealloc_codec( pjmedia_codec_factory *factory,
 /*
  * Init codec.
  */
-static pj_status_t codec_init( pjmedia_codec *codec, 
+static pj_status_t codec_init( pjmedia_codec *codec,
                                pj_pool_t *pool )
 {
     PJ_UNUSED_ARG(codec);
@@ -705,7 +705,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
         cbr = (unsigned) pj_strtoul(&attr->setting.enc_fmtp.param[idx].val);
         opus_data->cfg.cbr = cbr > 0? PJ_TRUE: PJ_FALSE;
     }
-    
+
     /* Check max average bit rate */
     idx = find_fmtp(&attr->setting.dec_fmtp, &STR_MAX_BIT_RATE, PJ_FALSE);
     if (idx >= 0) {
@@ -729,7 +729,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
         pj_mutex_unlock (opus_data->mutex);
         return PJMEDIA_CODEC_EFAILED;
     }
-    
+
     /* Set signal type */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
     /* Set bitrate */
@@ -781,7 +781,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
 
     /* Initialize temporary decode frames used for FEC */
     opus_data->dec_frame[0].type = PJMEDIA_FRAME_TYPE_NONE;
-    opus_data->dec_frame[0].buf  = pj_pool_zalloc(opus_data->pool,                                   
+    opus_data->dec_frame[0].buf  = pj_pool_zalloc(opus_data->pool,
                 (opus_data->cfg.sample_rate / 1000)
                 * 60 * attr->info.channel_cnt * 2 /* bytes per sample */);
     opus_data->dec_frame[1].type = PJMEDIA_FRAME_TYPE_NONE;
@@ -812,7 +812,7 @@ static pj_status_t  codec_close( pjmedia_codec *codec )
 /*
  * Modify codec settings.
  */
-static pj_status_t  codec_modify( pjmedia_codec *codec, 
+static pj_status_t  codec_modify( pjmedia_codec *codec,
                                   const pjmedia_codec_param *attr )
 {
     struct opus_data *opus_data = (struct opus_data *)codec->codec_data;
@@ -960,9 +960,9 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
 /*
  * Encode frame.
  */
-static pj_status_t codec_encode( pjmedia_codec *codec, 
+static pj_status_t codec_encode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output )
 {
     struct opus_data *opus_data = (struct opus_data *)codec->codec_data;
@@ -1035,9 +1035,9 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 /*
  * Decode frame.
  */
-static pj_status_t  codec_decode( pjmedia_codec *codec, 
+static pj_status_t  codec_decode( pjmedia_codec *codec,
                                   const struct pjmedia_frame *input,
-                                  unsigned output_buf_len, 
+                                  unsigned output_buf_len,
                                   struct pjmedia_frame *output )
 {
     struct opus_data *opus_data = (struct opus_data *)codec->codec_data;
@@ -1103,7 +1103,7 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
                                    frm_size,
                                    fec);
     output->timestamp = inframe->timestamp;
-     
+
     if (inframe->type == PJMEDIA_FRAME_TYPE_AUDIO) {
         /* Mark current indexed frame as invalid */
         inframe->type = PJMEDIA_FRAME_TYPE_NONE;
@@ -1125,7 +1125,7 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
         return PJMEDIA_CODEC_EFAILED;
     }
 
-    output->size = decoded_samples * sizeof(opus_int16) * 
+    output->size = decoded_samples * sizeof(opus_int16) *
                    opus_data->cfg.channel_cnt;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
@@ -1180,7 +1180,7 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
 
     /* Mark current indexed frame as invalid */
     inframe->type = PJMEDIA_FRAME_TYPE_NONE;
-    
+
     /* Update current frame index */
     opus_data->dec_frame_index++;
     if (opus_data->dec_frame_index > 1)
@@ -1195,7 +1195,7 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
         return PJMEDIA_CODEC_EFAILED;
     }
 
-    output->size = decoded_samples * sizeof(opus_int16) * 
+    output->size = decoded_samples * sizeof(opus_int16) *
                    opus_data->cfg.channel_cnt;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = inframe->timestamp;

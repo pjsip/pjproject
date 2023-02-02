@@ -116,7 +116,7 @@ namespace VoipTasks.Helpers
                 }
             }
         }
-        
+
         public static AppServiceConnection AppConnection
         {
             set
@@ -196,9 +196,9 @@ namespace VoipTasks.Helpers
             AppServiceDeferral deferal = AppRequestDeferal;
 
             try
-            {                
+            {
                 EndCall();
-                
+
                 if (request != null)
                 {
                     ValueSet response = new ValueSet();
@@ -235,10 +235,10 @@ namespace VoipTasks.Helpers
             catch (Exception e)
             {
                 _myApp.writeLog(2, e.Message);
-            }            
+            }
 
             try
-            {                
+            {
                 if (call != null)
                 {
                     call.NotifyCallEnded();
@@ -324,7 +324,7 @@ namespace VoipTasks.Helpers
         }
 
         public static void ModifyAccount(String id, String registrar,
-                                         String proxy, String username, 
+                                         String proxy, String username,
                                          String password)
         {
             try
@@ -334,7 +334,7 @@ namespace VoipTasks.Helpers
             catch (Exception e)
             {
                 MyAppRT.Instance.writeLog(2, e.Message);
-            }            
+            }
         }
 
         async public static void GetAccountInfo()

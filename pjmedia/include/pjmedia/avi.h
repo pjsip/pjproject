@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_AVI_H__
 #define __PJMEDIA_AVI_H__
@@ -37,7 +37,7 @@
  * @{
  *
  * This the the low level representation of RIFF/AVI file format. For
- * higher abstraction, please see \ref PJMEDIA_FILE_PLAY and 
+ * higher abstraction, please see \ref PJMEDIA_FILE_PLAY and
  * \ref PJMEDIA_FILE_REC.
  */
 
@@ -148,17 +148,17 @@ static const pj_uint8_t strf_audio_hdr_sizes [] = {8, 4, 8, 6};
 typedef struct {
     pj_uint32_t strf;
     pj_uint32_t strf_size;
-    pj_uint32_t biSize; 
-    pj_int32_t biWidth; 
-    pj_int32_t biHeight; 
-    pj_uint16_t biPlanes; 
+    pj_uint32_t biSize;
+    pj_int32_t biWidth;
+    pj_int32_t biHeight;
+    pj_uint16_t biPlanes;
     pj_uint16_t biBitCount;
-    pj_uint32_t biCompression; 
-    pj_uint32_t biSizeImage; 
-    pj_int32_t biXPelsPerMeter; 
-    pj_int32_t biYPelsPerMeter; 
-    pj_uint32_t biClrUsed; 
-    pj_uint32_t biClrImportant; 
+    pj_uint32_t biCompression;
+    pj_uint32_t biSizeImage;
+    pj_int32_t biXPelsPerMeter;
+    pj_int32_t biYPelsPerMeter;
+    pj_uint32_t biClrUsed;
+    pj_uint32_t biClrImportant;
 } strf_video_hdr_t;
 
 static const pj_uint8_t strf_video_hdr_sizes [] = {20, 4, 24};

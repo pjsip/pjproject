@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/pool.h>
 #include <pj/except.h>
@@ -26,7 +26,7 @@
  * This file contains pool default policy definition and implementation.
  */
 #include "pool_signature.h"
- 
+
 
 static void *operator_new(pj_pool_factory *factory, pj_size_t size)
 {
@@ -40,9 +40,9 @@ static void *operator_new(pj_pool_factory *factory, pj_size_t size)
                 if (!rc)
                     return NULL;
     }
-    
+
     mem = (void*) new char[size+(SIG_SIZE << 1)];
-    
+
     /* Exception for new operator may be disabled, so.. */
     if (mem) {
         /* Apply signature when PJ_SAFE_POOL is set. It will move
@@ -58,9 +58,9 @@ static void operator_delete(pj_pool_factory *factory, void *mem, pj_size_t size)
 {
     PJ_CHECK_STACK();
 
-    if (factory->on_block_free) 
+    if (factory->on_block_free)
         factory->on_block_free(factory, size);
-    
+
     /* Check and remove signature when PJ_SAFE_POOL is set. It will
      * move "mem" pointer backward.
      */
@@ -83,7 +83,7 @@ static void default_pool_callback(pj_pool_t *pool, pj_size_t size)
     PJ_THROW(PJ_NO_MEMORY_EXCEPTION);
 }
 
-PJ_DEF_DATA(pj_pool_factory_policy) pj_pool_factory_default_policy = 
+PJ_DEF_DATA(pj_pool_factory_policy) pj_pool_factory_default_policy =
 {
     &operator_new,
     &operator_delete,
@@ -96,6 +96,6 @@ PJ_DEF(const pj_pool_factory_policy*) pj_pool_factory_get_default_policy(void)
     return &pj_pool_factory_default_policy;
 }
 
- 
+
 #endif  /* PJ_HAS_POOL_ALT_API */
 

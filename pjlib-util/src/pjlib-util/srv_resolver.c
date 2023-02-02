@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/srv_resolver.h>
 #include <pjlib-util/errno.h>
@@ -146,14 +146,14 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 
     query_job->dns_state = PJ_DNS_TYPE_SRV;
 
-    PJ_LOG(5, (query_job->objname, 
+    PJ_LOG(5, (query_job->objname,
                "Starting async DNS %s query_job: target=%.*s:%d",
                pj_dns_get_type_name(query_job->dns_state),
                (int)target_name.slen, target_name.ptr,
                def_port));
 
-    status = pj_dns_resolver_start_query(resolver, &target_name, 
-                                         query_job->dns_state, 0, 
+    status = pj_dns_resolver_start_query(resolver, &target_name,
+                                         query_job->dns_state, 0,
                                          &dns_callback,
                                          query_job, &query_job->q_srv);
     if (status==PJ_SUCCESS && p_query)
@@ -214,21 +214,21 @@ PJ_DEF(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
 
 
 /* Build server entries in the query_job based on received SRV response */
-static void build_server_entries(pj_dns_srv_async_query *query_job, 
+static void build_server_entries(pj_dns_srv_async_query *query_job,
                                  pj_dns_parsed_packet *response)
 {
     unsigned i;
 
     /* Save the Resource Records in DNS answer into SRV targets. */
     query_job->srv_cnt = 0;
-    for (i=0; i<response->hdr.anscount && 
-              query_job->srv_cnt < PJ_DNS_SRV_MAX_ADDR; ++i) 
+    for (i=0; i<response->hdr.anscount &&
+              query_job->srv_cnt < PJ_DNS_SRV_MAX_ADDR; ++i)
     {
         pj_dns_parsed_rr *rr = &response->ans[i];
         struct srv_target *srv = &query_job->srv[query_job->srv_cnt];
 
         if (rr->type != PJ_DNS_TYPE_SRV) {
-            PJ_LOG(4,(query_job->objname, 
+            PJ_LOG(4,(query_job->objname,
                       "Received non SRV answer for SRV query_job!"));
             continue;
         }
@@ -251,17 +251,17 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
         srv->port = rr->rdata.srv.port;
         srv->priority = rr->rdata.srv.prio;
         srv->weight = rr->rdata.srv.weight;
-        
+
         ++query_job->srv_cnt;
     }
 
     if (query_job->srv_cnt == 0) {
-        PJ_LOG(4,(query_job->objname, 
+        PJ_LOG(4,(query_job->objname,
                   "Could not find SRV record in DNS answer!"));
         return;
     }
 
-    /* First pass: 
+    /* First pass:
      *  order the entries based on priority.
      */
     for (i=0; i<query_job->srv_cnt-1; ++i) {
@@ -284,7 +284,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 
         /* Calculate running sum for servers with the same priority */
         sum = query_job->srv[i].sum = query_job->srv[i].weight;
-        for (j=i+1; j<query_job->srv_cnt && 
+        for (j=i+1; j<query_job->srv_cnt &&
                     query_job->srv[j].priority == query_job->srv[i].priority; ++j)
         {
             sum += query_job->srv[j].weight;
@@ -318,7 +318,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
             /* Don't need to do this.
              * See https://github.com/pjsip/pjproject/issues/1719
             while (count > 1) {
-                pj_array_erase(query_job->srv, sizeof(struct srv_target), 
+                pj_array_erase(query_job->srv, sizeof(struct srv_target),
                                query_job->srv_cnt, i+1);
                 --count;
                 --query_job->srv_cnt;
@@ -335,8 +335,8 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
     }
 
     /* Check for Additional Info section if A/AAAA records are available, and
-     * fill in the IP address (so that we won't need to resolve the A/AAAA 
-     * record with another DNS query_job). 
+     * fill in the IP address (so that we won't need to resolve the A/AAAA
+     * record with another DNS query_job).
      */
     for (i=0; i<response->hdr.arcount; ++i) {
         pj_dns_parsed_rr *rr = &response->arr[i];
@@ -356,9 +356,9 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
             (query_job->option & PJ_DNS_SRV_RESOLVE_AAAA)==0))
         {
             continue;
-        }           
+        }
 
-        /* Yippeaiyee!! There is an "A/AAAA" record! 
+        /* Yippeaiyee!! There is an "A/AAAA" record!
          * Update the IP address of the corresponding SRV record.
          */
         for (j=0; j<query_job->srv_cnt; ++j) {
@@ -394,18 +394,18 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
          */
         /*
         if (j == query_job->srv_cnt) {
-            PJ_LOG(4,(query_job->objname, 
+            PJ_LOG(4,(query_job->objname,
                       "Received DNS SRV answer with A record, but "
                       "couldn't find matching name (name=%.*s)",
                       (int)rr->name.slen,
                       rr->name.ptr));
         }
         */
-        
+
     }
 
     /* Rescan again the name specified in the SRV record to see if IP
-     * address is specified as the target name (unlikely, but well, who 
+     * address is specified as the target name (unlikely, but well, who
      * knows..).
      */
     for (i=0; i<query_job->srv_cnt; ++i) {
@@ -440,7 +440,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
     }
 
     /* Print resolved entries to the log */
-    PJ_LOG(5,(query_job->objname, 
+    PJ_LOG(5,(query_job->objname,
               "SRV query_job for %.*s completed, "
               "%d of %d total entries selected%c",
               (int)query_job->full_name.slen,
@@ -458,12 +458,12 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
         } else
             pj_ansi_strcpy(addr, "-");
 
-        PJ_LOG(5,(query_job->objname, 
+        PJ_LOG(5,(query_job->objname,
                   " %d: SRV %d %d %d %.*s (%s)",
-                  i, query_job->srv[i].priority, 
-                  query_job->srv[i].weight, 
-                  query_job->srv[i].port, 
-                  (int)query_job->srv[i].target_name.slen, 
+                  i, query_job->srv[i].priority,
+                  query_job->srv[i].weight,
+                  query_job->srv[i].port,
+                  (int)query_job->srv[i].target_name.slen,
                   query_job->srv[i].target_name.ptr,
                   addr));
     }
@@ -492,9 +492,9 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
             continue;
         }
 
-        PJ_LOG(5, (query_job->objname, 
+        PJ_LOG(5, (query_job->objname,
                    "Starting async DNS A query_job for %.*s",
-                   (int)srv->target_name.slen, 
+                   (int)srv->target_name.slen,
                    srv->target_name.ptr));
 
         srv->common.type = PJ_DNS_TYPE_A;
@@ -545,11 +545,11 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
             err = status;
         }
     }
-    
+
     return (err_cnt == query_job->srv_cnt) ? err : PJ_SUCCESS;
 }
 
-/* 
+/*
  * This callback is called by PJLIB-UTIL DNS resolver when asynchronous
  * query_job has completed (successfully or with error).
  */
@@ -613,15 +613,15 @@ static void dns_callback(void *user_data,
             query_job->last_error = status;
 
             pj_strerror(status, errmsg, sizeof(errmsg));
-            PJ_LOG(4,(query_job->objname, 
-                      "DNS SRV resolution failed for %.*s: %s", 
-                      (int)query_job->full_name.slen, 
+            PJ_LOG(4,(query_job->objname,
+                      "DNS SRV resolution failed for %.*s: %s",
+                      (int)query_job->full_name.slen,
                       query_job->full_name.ptr,
                       errmsg));
 
             /* Trigger error when fallback is disabled */
             if ((query_job->option &
-                 (PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA)) == 0) 
+                 (PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA)) == 0)
             {
                 goto on_error;
             }
@@ -634,13 +634,13 @@ static void dns_callback(void *user_data,
             unsigned new_option = 0;
 
             /* Looks like we aren't getting any SRV responses.
-             * Resolve the original target as A record by creating a 
+             * Resolve the original target as A record by creating a
              * single "dummy" srv record and start the hostname resolution.
              */
-            PJ_LOG(4, (query_job->objname, 
+            PJ_LOG(4, (query_job->objname,
                        "DNS SRV resolution failed for %.*s, trying "
                        "resolving A/AAAA record for %.*s",
-                       (int)query_job->full_name.slen, 
+                       (int)query_job->full_name.slen,
                        query_job->full_name.ptr,
                        (int)query_job->domain_part.slen,
                        query_job->domain_part.ptr));
@@ -659,10 +659,10 @@ static void dns_callback(void *user_data,
                                PJ_DNS_SRV_RESOLVE_AAAA_ONLY);
             if (query_job->option & PJ_DNS_SRV_FALLBACK_A)
                 new_option &= (~PJ_DNS_SRV_RESOLVE_AAAA_ONLY);
-            
+
             query_job->option = new_option;
         }
-        
+
 
         /* Resolve server hostnames (DNS A/AAAA record) for hosts which
          * don't have A/AAAA record yet.
@@ -749,18 +749,18 @@ static void dns_callback(void *user_data,
                     /* Mismatched address family, e.g: getting IPv6 address in
                      * DNS A query resolution.
                      */
-                    PJ_LOG(4,(query_job->objname, 
+                    PJ_LOG(4,(query_job->objname,
                               "Bad address family in DNS %s query for %.*s",
                               (is_type_a? "A" : "AAAA"),
-                              (int)srv->target_name.slen, 
+                              (int)srv->target_name.slen,
                               srv->target_name.ptr));
                 }
 
                 if (added) {
-                    PJ_LOG(5,(query_job->objname, 
+                    PJ_LOG(5,(query_job->objname,
                               "DNS %s for %.*s: %s",
                               (is_type_a? "A" : "AAAA"),
-                              (int)srv->target_name.slen, 
+                              (int)srv->target_name.slen,
                               srv->target_name.ptr,
                               pj_sockaddr_print(&srv->addr[srv->addr_cnt],
                                                 addr, sizeof(addr), 2)));
@@ -812,7 +812,7 @@ static void dns_callback(void *user_data,
 
             pj_assert(srv2->addr_cnt <= PJ_DNS_MAX_IP_IN_A_REC);
 
-            for (j=0; j<srv2->addr_cnt; ++j) {          
+            for (j=0; j<srv2->addr_cnt; ++j) {
                 s->addr[j].af = srv2->addr[j].addr.sa_family;
                 if (s->addr[j].af == pj_AF_INET())
                     s->addr[j].ip.v4 = srv2->addr[j].ipv4.sin_addr;
@@ -828,7 +828,7 @@ static void dns_callback(void *user_data,
             }
         }
 
-        PJ_LOG(5,(query_job->objname, 
+        PJ_LOG(5,(query_job->objname,
                   "Server resolution complete, %d server entry(s) found",
                   srv_rec.count));
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ssl_sock.h>
 #include <pj/errno.h>
@@ -52,10 +52,10 @@ PJ_DEF(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
     pj_time_decode(&ci->validity.end, &pt2);
 
     /* Version */
-    len = pj_ansi_snprintf(p, end-p, "%sVersion    : v%d\n", 
+    len = pj_ansi_snprintf(p, end-p, "%sVersion    : v%d\n",
                            indent, ci->version);
     CHECK_BUF_LEN();
-    
+
     /* Serial number */
     len = pj_ansi_snprintf(p, end-p, "%sSerial     : ", indent);
     CHECK_BUF_LEN();
@@ -66,7 +66,7 @@ PJ_DEF(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
         CHECK_BUF_LEN();
     }
     *(p-1) = '\n';
-    
+
     /* Subject */
     len = pj_ansi_snprintf( p, end-p, "%sSubject    : %.*s\n", indent,
                             (int)ci->subject.cn.slen,
@@ -104,7 +104,7 @@ PJ_DEF(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
 
     /* Subject alternative name extension */
     if (ci->subj_alt_name.cnt) {
-        len = pj_ansi_snprintf(p, end-p, "%ssubjectAltName extension\n", 
+        len = pj_ansi_snprintf(p, end-p, "%ssubjectAltName extension\n",
                                indent);
         CHECK_BUF_LEN();
 
@@ -128,8 +128,8 @@ PJ_DEF(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
                 break;
             }
             if (type) {
-                len = pj_ansi_snprintf( p, end-p, "%s      %s : %.*s\n", indent, 
-                                        type, 
+                len = pj_ansi_snprintf( p, end-p, "%s      %s : %.*s\n", indent,
+                                        type,
                                         (int)ci->subj_alt_name.entry[i].name.slen,
                                         ci->subj_alt_name.entry[i].name.ptr);
                 CHECK_BUF_LEN();

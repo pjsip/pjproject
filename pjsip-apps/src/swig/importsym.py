@@ -1,6 +1,6 @@
 #
 # importsym.py: Import C symbol decls (structs, enums, etc) and write them
-#               to another file 
+#               to another file
 #
 # Copyright (C)2013 Teluu Inc. (http://www.teluu.com)
 #
@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import pycparser
 from pycparser import c_generator
@@ -27,7 +27,7 @@ def which(program):
 	import os
 	def is_exe(fpath):
 		return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-	
+
 	if sys.platform == 'win32' and not program.endswith(".exe"):
 		program += ".exe"
 
@@ -45,7 +45,7 @@ def which(program):
 
 #
 PJ_ROOT_PATH = "../../../"
-   
+
 # CPP is needed by pycparser.
 CPP_PATH = which("cpp")
 if not CPP_PATH:
@@ -63,7 +63,7 @@ else:
 	PYCPARSER_DIR="/Library/Python/2.7/site-packages/pycparser"
 
 if not os.path.exists(PYCPARSER_DIR + '/utils/fake_libc_include'):
-	print "Error: couldn't find pycparser utils in '%s'" % PYCPARSER_DIR 
+	print "Error: couldn't find pycparser utils in '%s'" % PYCPARSER_DIR
 	sys.exit(1)
 
 # Heading, to be placed before the source files
@@ -89,53 +89,53 @@ class SymbolVisitor(pycparser.c_ast.NodeVisitor):
 		self.nodeDict = {}
 		for name in names:
 			self.nodeDict[name] = None
-		
+
 	def _add(self, node):
 		if self.nodeDict.has_key(node.name):
 			self.nodeDict[node.name] = node
-		
+
 	def visit_Struct(self, node):
 		self._add(node)
-		
+
 	def visit_Enum(self, node):
 		self._add(node)
 
 	def visit_Typename(self, node):
 		self._add(node)
-		
+
 	def visit_Typedef(self, node):
 		self._add(node)
 
-		
+
 TEMP_FILE="tmpsrc.h"
-		
+
 class SymbolImporter:
 	"""
 	Import C selected declarations from C source file and move it
 	to another file.
-	
+
 	Parameters:
 	 - listfile	Path of file containing list of C source file
 	                and identifier names to be imported. The format
 	                of the listfile is:
-	                
+
 	                filename        name1  name2  name3
-	                
+
 	                for example:
-	                
+
 	                pj/sock_qos.h	pj_qos_type  pj_qos_flag
 	                pj/types.h	pj_status_t  PJ_SUCCESS
 	"""
 	def __init__(self):
 		pass
-	
+
 	def process(self, listfile, outfile):
-		
+
 		# Read listfile
 		f = open(listfile)
 		lines = f.readlines()
 		f.close()
-		
+
 		# Process each line in list file, while generating the
 		# temporary C file to be processed by pycparser
 		f = open(TEMP_FILE, "w")
@@ -151,16 +151,16 @@ class SymbolImporter:
 			names.extend(spec[1:])
 		f.close()
 		print 'Parsing %d symbols from %d files..' % (len(names), fcnt)
-		
+
 		# Parse the temporary C file
 		ast = pycparser.parse_file(TEMP_FILE, use_cpp=True, cpp_path=CPP_PATH, cpp_args=CPP_CFLAGS)
 		os.remove(TEMP_FILE)
-		
+
 		# Filter the declarations that we wanted
 		print 'Filtering..'
 		visitor = SymbolVisitor(names)
 		visitor.visit(ast)
-	
+
 		# Print symbol declarations to outfile
 		print 'Writing declarations..'
 		f = open(outfile, 'w')
@@ -190,5 +190,5 @@ if __name__ == "__main__":
 		os.remove("yacctab.py")
 	except OSError:
 		pass
-	
-	
+
+

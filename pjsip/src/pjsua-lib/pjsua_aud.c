@@ -627,7 +627,7 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
         /* For discussions about call mutex protection related to this
          * callback, please see ticket #460:
          *      https://github.com/pjsip/pjproject/issues/460#comment:4
-         */    
+         */
         (*pjsua_var.ua_cfg.cb.on_dtmf_digit)(call_id, digit);
     }
 
@@ -764,7 +764,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                               &dtmf_event_callback,
                                               (void*)(pj_ssize_t)(call->index));
         } else if (!call->hanging_up &&
-                   (pjsua_var.ua_cfg.cb.on_dtmf_digit || 
+                   (pjsua_var.ua_cfg.cb.on_dtmf_digit ||
                     pjsua_var.ua_cfg.cb.on_dtmf_digit2))
         {
             pjmedia_stream_set_dtmf_callback(call_med->strm.a.stream,
@@ -784,13 +784,13 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
          */
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_created2) {
             pjsua_on_stream_created_param prm;
-            
+
             prm.stream = call_med->strm.a.stream;
             prm.stream_idx = strm_idx;
             prm.destroy_port = PJ_FALSE;
             prm.port = call_med->strm.a.media_port;
             (*pjsua_var.ua_cfg.cb.on_stream_created2)(call->index, &prm);
-            
+
             call_med->strm.a.destroy_port = prm.destroy_port;
             call_med->strm.a.media_port = prm.port;
 
@@ -970,7 +970,7 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
     pjsua_conf_connect_param_default(&prm);
     return pjsua_conf_connect2(source, sink, &prm);
 }
-                                        
+
 /*
  * Establish unidirectional media flow from souce to sink, with signal
  * level adjustment.
@@ -1116,12 +1116,12 @@ on_return:
 
     if (status == PJ_SUCCESS) {
         pjsua_conf_connect_param cc_param;
-        
+
         if (!prm)
             pjsua_conf_connect_param_default(&cc_param);
         else
             pj_memcpy(&cc_param, prm, sizeof(cc_param));
-        status = pjmedia_conf_connect_port(pjsua_var.mconf, source, sink, 
+        status = pjmedia_conf_connect_port(pjsua_var.mconf, source, sink,
                                            (int)((cc_param.level-1) * 128));
     }
 
@@ -1251,7 +1251,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
+    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000,
                              1000);
     if (!pool) {
         status = PJ_ENOMEM;
@@ -1594,7 +1594,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
+    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000,
                              1000);
     if (!pool) {
         status = PJ_ENOMEM;
@@ -2238,7 +2238,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
             return PJ_SUCCESS;
         }
     }
-    
+
     /* No sound */
     if (snd_param->capture_dev == PJSUA_SND_NO_DEV &&
         snd_param->playback_dev == PJSUA_SND_NO_DEV)
@@ -2252,8 +2252,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
     }
 
     /* Null-sound */
-    if (snd_param->capture_dev == PJSUA_SND_NULL_DEV && 
-        snd_param->playback_dev == PJSUA_SND_NULL_DEV) 
+    if (snd_param->capture_dev == PJSUA_SND_NULL_DEV &&
+        snd_param->playback_dev == PJSUA_SND_NULL_DEV)
     {
         PJSUA_UNLOCK();
         PJ_LOG(4, (THIS_FILE, "Null sound device, mode setting is ignored"));
@@ -2274,7 +2274,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
         pjsua_var.play_dev = snd_param->playback_dev;
         pjsua_var.no_snd = PJ_FALSE;
 
-        PJSUA_UNLOCK(); 
+        PJSUA_UNLOCK();
         pj_log_pop_indent();
         return PJ_SUCCESS;
     }
@@ -2305,8 +2305,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
                             pjsua_var.media_cfg.channel_count / 1000;
         pjmedia_snd_port_param_default(&param);
         param.ec_options = pjsua_var.media_cfg.ec_options;
-        status = create_aud_param(&param.base, snd_param->capture_dev, 
-                                  snd_param->playback_dev, 
+        status = create_aud_param(&param.base, snd_param->capture_dev,
+                                  snd_param->playback_dev,
                                   alt_cr[i], pjsua_var.media_cfg.channel_count,
                                   samples_per_frame, 16,
                                   snd_param->use_default_settings);
@@ -2614,7 +2614,7 @@ PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
 
     /* Create mono splitter/combiner */
     status = pjmedia_splitcomb_create(
-                                    pool, 
+                                    pool,
                                     param->base.clock_rate,
                                     param->base.channel_count,
                                     param->base.samples_per_frame,

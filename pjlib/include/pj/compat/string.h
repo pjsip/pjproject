@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_COMPAT_STRING_H__
 #define __PJ_COMPAT_STRING_H__
@@ -86,7 +86,7 @@
     PJ_DECL(int) vsnprintf(char*s1, pj_size_t len, const char*s2, va_list arg);
     PJ_END_DECL
 #endif
-    
+
 #define pj_ansi_snprintf        snprintf
 #define pj_ansi_vsprintf        vsprintf
 #define pj_ansi_vsnprintf       vsnprintf

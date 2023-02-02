@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -33,7 +33,7 @@ static struct test
     pj_stun_msg* (*create)(pj_pool_t*);
     pj_status_t    expected_status;
     int          (*verify)(pj_stun_msg*);
-} tests[] = 
+} tests[] =
 {
     {
         "Invalid message type",
@@ -192,7 +192,7 @@ static struct test
         NULL
     },
     {
-        "Attribute between MESSAGE-INTEGRITY and FINGERPRINT is allowed", 
+        "Attribute between MESSAGE-INTEGRITY and FINGERPRINT is allowed",
         "\x00\x01\x00\x28\x21\x12\xa4\x42"
         "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         "\x00\x08\x00\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -205,7 +205,7 @@ static struct test
         &verify5
     },
     {
-        "Attribute past FINGERPRINT is not allowed", 
+        "Attribute past FINGERPRINT is not allowed",
         "\x00\x01\x00\x10\x21\x12\xa4\x42"
         "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         "\x80\x28\x00\x04\x00\x00\x00\x00"
@@ -232,7 +232,7 @@ static int decode_test(void)
     unsigned i;
     pj_pool_t *pool;
     int rc = 0;
-    
+
     pool = pj_pool_create(mem, "decode_test", 1024, 1024, NULL);
 
     PJ_LOG(3,(THIS_FILE, "  STUN decode test"));
@@ -249,7 +249,7 @@ static int decode_test(void)
 
         if (t->pdu) {
             status = pj_stun_msg_decode(pool, (pj_uint8_t*)t->pdu, t->pdu_len,
-                                        PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET, 
+                                        PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
                                         &msg, NULL, NULL);
 
             /* Check expected decode result */
@@ -278,8 +278,8 @@ static int decode_test(void)
         }
 
         /* Try to decode it once more */
-        status = pj_stun_msg_decode(pool, buf, len, 
-                                    PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET, 
+        status = pj_stun_msg_decode(pool, buf, len,
+                                    PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
                                     &msg2, NULL, NULL);
         if (status != PJ_SUCCESS) {
             PJ_LOG(1,(THIS_FILE, "    subsequent decoding failed: %s", err(status)));
@@ -458,7 +458,7 @@ static struct test_vector
     char          *realm;
     char          *nonce;
     pj_stun_msg* (*create)(pj_pool_t*, test_vector*);
-} test_vectors[] = 
+} test_vectors[] =
 {
     {
         PJ_STUN_BINDING_REQUEST,
@@ -561,7 +561,7 @@ static char* print_binary(const pj_uint8_t *data, unsigned data_len)
     for (i=0; i<data_len;) {
         unsigned j;
 
-        pj_ansi_snprintf(p, 1500-(p-buf), 
+        pj_ansi_snprintf(p, 1500-(p-buf),
                          "%04d-%04d   ",
                          i, (i+20 < data_len) ? i+20 : data_len);
         p += 12;
@@ -615,7 +615,7 @@ static int fingerprint_test_vector()
         char print[1500];
         pj_str_t key;
 
-        PJ_LOG(3,(THIS_FILE, "    Running test %d/%d", i, 
+        PJ_LOG(3,(THIS_FILE, "    Running test %d/%d", i,
                   PJ_ARRAY_SIZE(test_vectors)));
 
         v = &test_vectors[i];
@@ -626,7 +626,7 @@ static int fingerprint_test_vector()
 
         /* Try to parse the reference message first */
         status = pj_stun_msg_decode(pool, (pj_uint8_t*)v->pdu, v->pdu_len,
-                                    PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET, 
+                                    PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
                                     &ref_msg, &parsed_len, NULL);
         if (status != PJ_SUCCESS) {
             PJ_LOG(1,(THIS_FILE, "    Error decoding reference message"));
@@ -656,9 +656,9 @@ static int fingerprint_test_vector()
         if (v->options & USE_MESSAGE_INTEGRITY) {
             pj_str_t s1, s2, r;
 
-            pj_stun_create_key(pool, &key, pj_cstr(&r, v->realm), 
-                               pj_cstr(&s1, v->username), 
-                               PJ_STUN_PASSWD_PLAIN, 
+            pj_stun_create_key(pool, &key, pj_cstr(&r, v->realm),
+                               pj_cstr(&s1, v->username),
+                               PJ_STUN_PASSWD_PLAIN,
                                pj_cstr(&s2, v->password));
             pj_stun_msg_encode(msg, buf, sizeof(buf), 0, &key, &len);
 
@@ -701,12 +701,12 @@ static int fingerprint_test_vector()
                 cred.data.static_cred.data = pj_str(v->password);
                 cred.data.static_cred.nonce = pj_str(v->nonce);
 
-                status2 = pj_stun_authenticate_request(buf, (unsigned)len, msg, 
+                status2 = pj_stun_authenticate_request(buf, (unsigned)len, msg,
                                                       &cred, pool, NULL, NULL);
                 if (status2 != PJ_SUCCESS) {
                     char errmsg[PJ_ERR_MSG_SIZE];
                     pj_strerror(status2, errmsg, sizeof(errmsg));
-                    PJ_LOG(1,(THIS_FILE, 
+                    PJ_LOG(1,(THIS_FILE,
                               "    Request authentication failed: %s",
                               errmsg));
                     rc = -1070;
@@ -715,19 +715,19 @@ static int fingerprint_test_vector()
 
             } else if (PJ_STUN_IS_RESPONSE(msg->hdr.type)) {
                 pj_status_t status2;
-                status2 = pj_stun_authenticate_response(buf, (unsigned)len, 
+                status2 = pj_stun_authenticate_response(buf, (unsigned)len,
                                                        msg, &key);
                 if (status2 != PJ_SUCCESS) {
                     char errmsg[PJ_ERR_MSG_SIZE];
                     pj_strerror(status2, errmsg, sizeof(errmsg));
-                    PJ_LOG(1,(THIS_FILE, 
+                    PJ_LOG(1,(THIS_FILE,
                               "    Response authentication failed: %s",
                               errmsg));
                     rc = -1080;
                     goto on_return;
                 }
             }
-        }       
+        }
     }
 
 
@@ -748,19 +748,19 @@ static pj_stun_msg* create_msgint1(pj_pool_t *pool, test_vector *v)
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_PRIORITY, 
+    status = pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_PRIORITY,
                                        0x6e0001ff);
     if (status != PJ_SUCCESS)
         goto on_error;
 
     u64.u32.hi = 0x932ff9b1;
     u64.u32.lo = 0x51263b36;
-    status = pj_stun_msg_add_uint64_attr(pool, msg, 
+    status = pj_stun_msg_add_uint64_attr(pool, msg,
                                          PJ_STUN_ATTR_ICE_CONTROLLED, &u64);
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_USERNAME, 
+    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_USERNAME,
                                          pj_cstr(&s1, v->username));
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -792,19 +792,19 @@ static pj_stun_msg* create_msgint2(pj_pool_t *pool, test_vector *v)
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE, 
+    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE,
                                          pj_cstr(&s1, "test vector"));
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pj_sockaddr_in_init(&mapped_addr, pj_cstr(&s1, "192.0.2.1"), 
+    status = pj_sockaddr_in_init(&mapped_addr, pj_cstr(&s1, "192.0.2.1"),
                                  32853);
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pj_stun_msg_add_sockaddr_attr(pool, msg, 
+    status = pj_stun_msg_add_sockaddr_attr(pool, msg,
                                            PJ_STUN_ATTR_XOR_MAPPED_ADDR,
-                                           PJ_TRUE, &mapped_addr, 
+                                           PJ_TRUE, &mapped_addr,
                                            sizeof(pj_sockaddr_in));
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -837,7 +837,7 @@ static pj_stun_msg* create_msgint3(pj_pool_t *pool, test_vector *v)
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE, 
+    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE,
                                          pj_cstr(&s1, "test vector"));
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -848,9 +848,9 @@ static pj_stun_msg* create_msgint3(pj_pool_t *pool, test_vector *v)
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pj_stun_msg_add_sockaddr_attr(pool, msg, 
+    status = pj_stun_msg_add_sockaddr_attr(pool, msg,
                                            PJ_STUN_ATTR_XOR_MAPPED_ADDR,
-                                           PJ_TRUE, &mapped_addr, 
+                                           PJ_TRUE, &mapped_addr,
                                            sizeof(pj_sockaddr));
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -943,7 +943,7 @@ static int handle_unknown_non_mandatory(void)
     cred.data.static_cred.data = PASSWORD;
 
     PJ_LOG(3,(THIS_FILE, "    authenticating"));
-    rc += pj_stun_authenticate_request(packet, (unsigned)len, msg1, &cred, pool, 
+    rc += pj_stun_authenticate_request(packet, (unsigned)len, msg1, &cred, pool,
                                        NULL, NULL);
 
     PJ_LOG(3,(THIS_FILE, "    clone"));

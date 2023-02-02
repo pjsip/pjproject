@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -107,7 +107,7 @@ int test_main(void)
     }
     PJ_CATCH_ANY {
         int id = PJ_GET_EXCEPTION();
-        PJ_LOG(3,("test", "FATAL: unhandled exception id %d (%s)", 
+        PJ_LOG(3,("test", "FATAL: unhandled exception id %d (%s)",
                   id, pj_exception_id_name(id)));
     }
     PJ_END;

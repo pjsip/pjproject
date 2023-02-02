@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ssl_sock.h>
 #include <pj/assert.h>
@@ -56,7 +56,7 @@ PJ_DEF(void) pj_ssl_sock_param_default(pj_ssl_sock_param *param)
 /*
  * Duplicate SSL socket parameter.
  */
-PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool, 
+PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool,
                                      pj_ssl_sock_param *dst,
                                      const pj_ssl_sock_param *src)
 {
@@ -65,7 +65,7 @@ PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool,
     if (src->ciphers_num > 0) {
         unsigned i;
         dst->ciphers = (pj_ssl_cipher*)
-                        pj_pool_calloc(pool, src->ciphers_num, 
+                        pj_pool_calloc(pool, src->ciphers_num,
                                        sizeof(pj_ssl_cipher));
         for (i = 0; i < src->ciphers_num; ++i)
             dst->ciphers[i] = src->ciphers[i];
@@ -97,7 +97,7 @@ PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool,
 
 
 PJ_DEF(pj_status_t) pj_ssl_cert_get_verify_status_strings(
-                                                pj_uint32_t verify_status, 
+                                                pj_uint32_t verify_status,
                                                 const char *error_strings[],
                                                 unsigned *count)
 {
@@ -168,7 +168,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_get_verify_status_strings(
             unknown++;
             break;
         }
-        
+
         /* Set error string */
         if (p)
             error_strings[i++] = p;

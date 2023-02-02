@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev.h>
 #include <pjmedia-audiodev/audiotest.h>
@@ -35,7 +35,7 @@ static void app_perror(const char *title, pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
-    pj_strerror(status, errmsg, sizeof(errmsg));        
+    pj_strerror(status, errmsg, sizeof(errmsg));
     printf( "%s: %s (err=%d)\n",
             title, errmsg, status);
 }
@@ -44,7 +44,7 @@ static void list_devices(void)
 {
     unsigned i;
     pj_status_t status;
-    
+
     dev_count = pjmedia_aud_dev_count();
     if (dev_count == 0) {
         PJ_LOG(3,(THIS_FILE, "No devices found"));
@@ -75,7 +75,7 @@ static const char *decode_caps(unsigned caps)
     for (i=0; i<31; ++i) {
         if ((1 << i) & caps) {
             const char *capname;
-            capname = pjmedia_aud_dev_cap_name((pjmedia_aud_dev_cap)(1 << i), 
+            capname = pjmedia_aud_dev_cap_name((pjmedia_aud_dev_cap)(1 << i),
                                                NULL);
             strcat(text, capname);
             strcat(text, " ");
@@ -153,8 +153,8 @@ static void show_dev_info(unsigned index)
 #undef H
 }
 
-static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id, 
-                        unsigned clock_rate, unsigned ptime, 
+static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
+                        unsigned clock_rate, unsigned ptime,
                         unsigned chnum)
 {
     pjmedia_aud_param param;
@@ -180,7 +180,7 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
     param.samples_per_frame = clock_rate * chnum * ptime / 1000;
 
     /* Latency settings */
-    param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
+    param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
                     PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
     param.input_latency_ms = capture_lat;
     param.output_latency_ms = playback_lat;
@@ -228,7 +228,7 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
             PJ_LOG(3,(THIS_FILE, " No clock drift detected"));
         } else {
             const char *which = result.rec_drift_per_sec>=0 ? "faster" : "slower";
-            unsigned drift = result.rec_drift_per_sec>=0 ? 
+            unsigned drift = result.rec_drift_per_sec>=0 ?
                                 result.rec_drift_per_sec :
                                 -result.rec_drift_per_sec;
 
@@ -261,7 +261,7 @@ static void record(unsigned rec_index, const char *filename)
     pool = pj_pool_create(pjmedia_aud_subsys_get_pool_factory(), "wav",
                           1000, 1000, NULL);
 
-    status = pjmedia_wav_writer_port_create(pool, filename, 16000, 
+    status = pjmedia_wav_writer_port_create(pool, filename, 16000,
                                             1, 320, 16, 0, 0, &wav);
     if (status != PJ_SUCCESS) {
         app_perror("Error creating WAV file", status);
@@ -413,7 +413,7 @@ int main()
     /* Init pjlib */
     status = pj_init();
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, 1);
-    
+
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
 
     /* Must create a pool factory before we can allocate any memory. */
@@ -465,7 +465,7 @@ int main()
                 unsigned clock_rate, ptime, chnum;
                 int cnt;
 
-                cnt = sscanf(line+2, "%d %d %u %u %u", &rec_id, &play_id, 
+                cnt = sscanf(line+2, "%d %d %u %u %u", &rec_id, &play_id,
                              &clock_rate, &ptime, &chnum);
                 if (cnt < 4) {
                     puts("error: not enough parameters");
@@ -501,7 +501,7 @@ int main()
                 }
 
                 test_device(dir, rec_id, play_id, clock_rate, ptime, chnum);
-                
+
             }
             break;
 
@@ -545,7 +545,7 @@ int main()
                 int rec_lat, play_lat;
 
                 if (sscanf(line+2, "%d %d", &rec_lat, &play_lat) == 2) {
-                    capture_lat = (unsigned) 
+                    capture_lat = (unsigned)
                          (rec_lat>=0? rec_lat:PJMEDIA_SND_DEFAULT_REC_LATENCY);
                     playback_lat = (unsigned)
                          (play_lat >= 0? play_lat : PJMEDIA_SND_DEFAULT_PLAY_LATENCY);

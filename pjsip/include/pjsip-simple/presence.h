@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_PRESENCE_H__
 #define __PJSIP_SIMPLE_PRESENCE_H__
@@ -38,7 +38,7 @@ PJ_BEGIN_DECL
  * @brief Support for SIP Extension for Presence (RFC 3856)
  * @{
  *
- * This module contains the implementation of SIP Presence Extension as 
+ * This module contains the implementation of SIP Presence Extension as
  * described in RFC 3856. It uses the SIP Event Notification framework
  * (evsub.h) and extends the framework by implementing "presence"
  * event package.
@@ -53,7 +53,7 @@ PJ_BEGIN_DECL
  * @param endpt         The endpoint instance.
  * @param mod_evsub     The event subscription module instance.
  *
- * @return              PJ_SUCCESS if the module is successfully 
+ * @return              PJ_SUCCESS if the module is successfully
  *                      initialized and registered to both endpoint
  *                      and the event subscription module.
  */
@@ -134,7 +134,7 @@ PJ_DECL(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
  * @param dlg           The underlying dialog to use.
  * @param user_cb       Pointer to callbacks to receive presence subscription
  *                      events.
- * @param rdata         The incoming SUBSCRIBE request that creates the event 
+ * @param rdata         The incoming SUBSCRIBE request that creates the event
  *                      subscription.
  * @param p_evsub       Pointer to receive the presence subscription
  *                      session.
@@ -149,7 +149,7 @@ PJ_DECL(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
 
 /**
  * Forcefully destroy the presence subscription. This function should only
- * be called on special condition, such as when the subscription 
+ * be called on special condition, such as when the subscription
  * initialization has failed. For other conditions, application MUST terminate
  * the subscription by sending the appropriate un(SUBSCRIBE) or NOTIFY.
  *
@@ -165,7 +165,7 @@ PJ_DECL(pj_status_t) pjsip_pres_terminate( pjsip_evsub *sub,
 
 
 /**
- * Call this function to create request to initiate presence subscription, to 
+ * Call this function to create request to initiate presence subscription, to
  * refresh subcription, or to request subscription termination.
  *
  * @param sub           Client subscription instance.
@@ -215,7 +215,7 @@ PJ_DECL(pj_status_t) pjsip_pres_accept( pjsip_evsub *sub,
 
 
 /**
- * For notifier, create NOTIFY request to subscriber, and set the state 
+ * For notifier, create NOTIFY request to subscriber, and set the state
  * of the subscription. Application MUST set the presence status to the
  * appropriate state (by calling #pjsip_pres_set_status()) before calling
  * this function.
@@ -300,7 +300,7 @@ PJ_DECL(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
  * @param pool          The pool to allocate memory for the message body.
  * @param status        Presence status to be converted into PIDF message
  *                      body.
- * @param entity        The entity ID, which normally is equal to the 
+ * @param entity        The entity ID, which normally is equal to the
  *                      presentity ID publishing this presence info.
  * @param p_body        Pointer to receive the SIP message body.
  *
@@ -319,7 +319,7 @@ PJ_DECL(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
  * @param pool          The pool to allocate memory for the message body.
  * @param status        Presence status to be converted into X-PIDF message
  *                      body.
- * @param entity        The entity ID, which normally is equal to the 
+ * @param entity        The entity ID, which normally is equal to the
  *                      presentity ID publishing this presence info.
  * @param p_body        Pointer to receive the SIP message body.
  *

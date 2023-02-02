@@ -466,7 +466,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 
     /* Save the remote info. */
     pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
-    
+
     /* Save initial destination host from transport's info */
     if (rdata->tp_info.transport->dir == PJSIP_TP_DIR_OUTGOING) {
         pj_strdup(dlg->pool, &dlg->initial_dest,

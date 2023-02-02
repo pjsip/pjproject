@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -41,7 +41,7 @@
 #define THIS_FILE   "resampleplay.c"
 
 
-static const char *desc = 
+static const char *desc =
 " FILE                                                              \n"
 "                                                                   \n"
 "  resampleplay.c                                                   \n"
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     }
 
     /* Create sound player port. */
-    status = pjmedia_snd_port_create( 
+    status = pjmedia_snd_port_create(
                  pool,                  /* pool                     */
                  dev_id,                /* device                   */
                  dev_id,                /* device                   */
@@ -175,8 +175,8 @@ int main(int argc, char *argv[])
     /* Dump memory usage */
     dump_pool_usage(THIS_FILE, &cp);
 
-    /* 
-     * File should be playing and looping now, using sound device's thread. 
+    /*
+     * File should be playing and looping now, using sound device's thread.
      */
 
 
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
     if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
         puts("EOF while reading stdin, will quit now..");
     }
-    
+
     /* Start deinitialization: */
 
 
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
 
-    /* Destroy resample port. 
+    /* Destroy resample port.
      * This will destroy all downstream ports (e.g. the file port)
      */
     status = pjmedia_port_destroy( resample_port );

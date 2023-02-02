@@ -25,7 +25,7 @@ namespace VoipTasks.Helpers
         public async Task<VoipPhoneCallResourceReservationStatus> RequestNewCallAsync(string dstURI)
         {
             VoipPhoneCallResourceReservationStatus status = VoipPhoneCallResourceReservationStatus.ResourcesNotAvailable;
-            
+
             status = await LaunchRTCTaskAsync();
             if (status == VoipPhoneCallResourceReservationStatus.Success)
             {
@@ -41,7 +41,7 @@ namespace VoipTasks.Helpers
         {
             // End current call before starting another call, there should be only one RTC task active at a time.
             // Duplicate calls to launch RTC task will result in HR ERROR_ALREADY_EXSIST
-            // <TODO> For multiple calls against single rtc task add logic to verify that the rtc is not completed, 
+            // <TODO> For multiple calls against single rtc task add logic to verify that the rtc is not completed,
             // and then Skip launching new rtc task
             Current.EndCall();
 
@@ -137,7 +137,7 @@ namespace VoipTasks.Helpers
         }
 
         private void Call_AnswerRequested(VoipPhoneCall sender, CallAnswerEventArgs args)
-        {            
+        {
             CallOpParamRT param = new CallOpParamRT();
             param.statusCode = 200;
             param.reason = "OK";
@@ -147,7 +147,7 @@ namespace VoipTasks.Helpers
                 Current.MyApp.answerCall(param);
             }
             catch (Exception ex)
-            {                
+            {
                 Current.MyApp.writeLog(2, ex.Message);
             }
             Current.VoipCall = sender;
@@ -156,9 +156,9 @@ namespace VoipTasks.Helpers
                 Current.VoipCall.NotifyCallActive();
             }
             catch (Exception ex)
-            {                
+            {
                 Current.MyApp.writeLog(2, ex.Message);
-            }            
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/stun_msg.h>
 #include <pjnath/errno.h>
@@ -32,7 +32,7 @@
 
 static int padding_char;
 
-static const char *stun_method_names[PJ_STUN_METHOD_MAX] = 
+static const char *stun_method_names[PJ_STUN_METHOD_MAX] =
 {
     "Unknown",                  /* 0 */
     "Binding",                  /* 1 */
@@ -53,9 +53,9 @@ static struct
 {
     int err_code;
     const char *err_msg;
-} stun_err_msg_map[] = 
+} stun_err_msg_map[] =
 {
-    { PJ_STUN_SC_TRY_ALTERNATE,             "Try Alternate"}, 
+    { PJ_STUN_SC_TRY_ALTERNATE,             "Try Alternate"},
     { PJ_STUN_SC_BAD_REQUEST,               "Bad Request"},
     { PJ_STUN_SC_UNAUTHORIZED,              "Unauthorized"},
     { PJ_STUN_SC_FORBIDDEN,                 "Forbidden"},
@@ -87,101 +87,101 @@ static struct
 struct attr_desc
 {
     const char   *name;
-    pj_status_t (*decode_attr)(pj_pool_t *pool, const pj_uint8_t *buf, 
+    pj_status_t (*decode_attr)(pj_pool_t *pool, const pj_uint8_t *buf,
                                const pj_stun_msg_hdr *msghdr, void **p_attr);
-    pj_status_t (*encode_attr)(const void *a, pj_uint8_t *buf, 
+    pj_status_t (*encode_attr)(const void *a, pj_uint8_t *buf,
                                unsigned len, const pj_stun_msg_hdr *msghdr,
                                unsigned *printed);
     void*       (*clone_attr)(pj_pool_t *pool, const void *src);
 };
 
-static pj_status_t decode_sockaddr_attr(pj_pool_t *pool, 
-                                        const pj_uint8_t *buf, 
+static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
+                                        const pj_uint8_t *buf,
                                         const pj_stun_msg_hdr *msghdr,
                                         void **p_attr);
-static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool, 
-                                              const pj_uint8_t *buf, 
-                                              const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
+                                              const pj_uint8_t *buf,
+                                              const pj_stun_msg_hdr *msghdr,
                                               void **p_attr);
-static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf, 
-                                        unsigned len, 
+static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
+                                        unsigned len,
                                         const pj_stun_msg_hdr *msghdr,
                                         unsigned *printed);
 static void*       clone_sockaddr_attr(pj_pool_t *pool, const void *src);
-static pj_status_t decode_string_attr(pj_pool_t *pool, 
-                                      const pj_uint8_t *buf, 
-                                      const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_string_attr(pj_pool_t *pool,
+                                      const pj_uint8_t *buf,
+                                      const pj_stun_msg_hdr *msghdr,
                                       void **p_attr);
-static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf, 
-                                      unsigned len, 
+static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf,
+                                      unsigned len,
                                       const pj_stun_msg_hdr *msghdr,
                                       unsigned *printed);
 static void*       clone_string_attr(pj_pool_t *pool, const void *src);
-static pj_status_t decode_msgint_attr(pj_pool_t *pool, 
+static pj_status_t decode_msgint_attr(pj_pool_t *pool,
                                       const pj_uint8_t *buf,
-                                      const pj_stun_msg_hdr *msghdr, 
+                                      const pj_stun_msg_hdr *msghdr,
                                       void **p_attr);
-static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf, 
-                                      unsigned len, 
+static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf,
+                                      unsigned len,
                                       const pj_stun_msg_hdr *msghdr,
                                       unsigned *printed);
 static void*       clone_msgint_attr(pj_pool_t *pool, const void *src);
-static pj_status_t decode_errcode_attr(pj_pool_t *pool, 
+static pj_status_t decode_errcode_attr(pj_pool_t *pool,
                                        const pj_uint8_t *buf,
-                                       const pj_stun_msg_hdr *msghdr, 
+                                       const pj_stun_msg_hdr *msghdr,
                                        void **p_attr);
-static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf, 
-                                       unsigned len, 
+static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf,
+                                       unsigned len,
                                        const pj_stun_msg_hdr *msghdr,
                                        unsigned *printed);
 static void*       clone_errcode_attr(pj_pool_t *pool, const void *src);
-static pj_status_t decode_unknown_attr(pj_pool_t *pool, 
-                                       const pj_uint8_t *buf, 
-                                       const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_unknown_attr(pj_pool_t *pool,
+                                       const pj_uint8_t *buf,
+                                       const pj_stun_msg_hdr *msghdr,
                                        void **p_attr);
-static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf, 
-                                       unsigned len, 
+static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
+                                       unsigned len,
                                        const pj_stun_msg_hdr *msghdr,
                                        unsigned *printed);
 static void*       clone_unknown_attr(pj_pool_t *pool, const void *src);
-static pj_status_t decode_uint_attr(pj_pool_t *pool, 
-                                    const pj_uint8_t *buf, 
-                                    const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_uint_attr(pj_pool_t *pool,
+                                    const pj_uint8_t *buf,
+                                    const pj_stun_msg_hdr *msghdr,
                                     void **p_attr);
-static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf, 
-                                    unsigned len, 
+static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf,
+                                    unsigned len,
                                     const pj_stun_msg_hdr *msghdr,
                                     unsigned *printed);
 static void*       clone_uint_attr(pj_pool_t *pool, const void *src);
-static pj_status_t decode_uint64_attr(pj_pool_t *pool, 
-                                      const pj_uint8_t *buf, 
-                                      const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_uint64_attr(pj_pool_t *pool,
+                                      const pj_uint8_t *buf,
+                                      const pj_stun_msg_hdr *msghdr,
                                       void **p_attr);
-static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf, 
-                                      unsigned len, 
+static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf,
+                                      unsigned len,
                                       const pj_stun_msg_hdr *msghdr,
                                       unsigned *printed);
 static void*       clone_uint64_attr(pj_pool_t *pool, const void *src);
-static pj_status_t decode_binary_attr(pj_pool_t *pool, 
+static pj_status_t decode_binary_attr(pj_pool_t *pool,
                                       const pj_uint8_t *buf,
-                                      const pj_stun_msg_hdr *msghdr, 
+                                      const pj_stun_msg_hdr *msghdr,
                                       void **p_attr);
-static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf, 
-                                      unsigned len, 
+static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf,
+                                      unsigned len,
                                       const pj_stun_msg_hdr *msghdr,
                                       unsigned *printed);
 static void*       clone_binary_attr(pj_pool_t *pool, const void *src);
-static pj_status_t decode_empty_attr(pj_pool_t *pool, 
-                                     const pj_uint8_t *buf, 
-                                     const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_empty_attr(pj_pool_t *pool,
+                                     const pj_uint8_t *buf,
+                                     const pj_stun_msg_hdr *msghdr,
                                      void **p_attr);
-static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf, 
-                                     unsigned len, 
+static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf,
+                                     unsigned len,
                                      const pj_stun_msg_hdr *msghdr,
                                      unsigned *printed);
 static void*       clone_empty_attr(pj_pool_t *pool, const void *src);
 
-static struct attr_desc mandatory_attr_desc[] = 
+static struct attr_desc mandatory_attr_desc[] =
 {
     {
         /* type zero */
@@ -654,7 +654,7 @@ static const struct attr_desc *find_attr_desc(unsigned attr_type)
               PJ_STUN_ATTR_END_MANDATORY_ATTR+1);
     pj_assert(mandatory_attr_desc[PJ_STUN_ATTR_END_MANDATORY_ATTR].decode_attr
               == NULL);
-    pj_assert(mandatory_attr_desc[PJ_STUN_ATTR_USE_CANDIDATE].decode_attr 
+    pj_assert(mandatory_attr_desc[PJ_STUN_ATTR_USE_CANDIDATE].decode_attr
               == &decode_empty_attr);
     pj_assert(PJ_ARRAY_SIZE(extended_attr_desc) ==
               PJ_STUN_ATTR_END_EXTENDED_ATTR-PJ_STUN_ATTR_START_EXTENDED_ATTR);
@@ -816,7 +816,7 @@ static void GETATTRHDR(const pj_uint8_t *buf, pj_stun_attr_hdr *hdr)
  * Init sockaddr attr
  */
 PJ_DEF(pj_status_t) pj_stun_sockaddr_attr_init( pj_stun_sockaddr_attr *attr,
-                                                int attr_type, 
+                                                int attr_type,
                                                 pj_bool_t xor_ed,
                                                 const pj_sockaddr_t *addr,
                                                 unsigned addr_len)
@@ -852,7 +852,7 @@ PJ_DEF(pj_status_t) pj_stun_sockaddr_attr_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_sockaddr_attr);
     *p_attr = attr;
-    return pj_stun_sockaddr_attr_init(attr, attr_type, xor_ed, 
+    return pj_stun_sockaddr_attr_init(attr, attr_type, xor_ed,
                                       addr, addr_len);
 }
 
@@ -862,7 +862,7 @@ PJ_DEF(pj_status_t) pj_stun_sockaddr_attr_create(pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_stun_msg_add_sockaddr_attr(pj_pool_t *pool,
                                                   pj_stun_msg *msg,
-                                                  int attr_type, 
+                                                  int attr_type,
                                                   pj_bool_t xor_ed,
                                                   const pj_sockaddr_t *addr,
                                                   unsigned addr_len)
@@ -878,9 +878,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_sockaddr_attr(pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_sockaddr_attr(pj_pool_t *pool, 
-                                        const pj_uint8_t *buf, 
-                                        const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
+                                        const pj_uint8_t *buf,
+                                        const pj_stun_msg_hdr *msghdr,
                                         void **p_attr)
 {
     pj_stun_sockaddr_attr *attr;
@@ -889,7 +889,7 @@ static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
     pj_uint32_t val;
 
     PJ_CHECK_STACK();
-    
+
     PJ_UNUSED_ARG(msghdr);
 
     /* Create the attribute */
@@ -924,7 +924,7 @@ static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
 
     /* Get port and address */
     pj_sockaddr_init(af, &attr->sockaddr, NULL, 0);
-    pj_sockaddr_set_port(&attr->sockaddr, 
+    pj_sockaddr_set_port(&attr->sockaddr,
                          GETVAL16H(buf, ATTR_HDR_LEN+2));
     pj_memcpy(pj_sockaddr_get_addr(&attr->sockaddr),
               buf+ATTR_HDR_LEN+4,
@@ -937,9 +937,9 @@ static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool, 
-                                              const pj_uint8_t *buf, 
-                                              const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
+                                              const pj_uint8_t *buf,
+                                              const pj_stun_msg_hdr *msghdr,
                                               void **p_attr)
 {
     pj_stun_sockaddr_attr *attr;
@@ -965,8 +965,8 @@ static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
 
         /* If the IP address family is IPv6, X-Address is computed by
          * taking the mapped IP address in host byte order, XOR'ing it
-         * with the concatenation of the magic cookie and the 96-bit 
-         * transaction ID, and converting the result to network byte 
+         * with the concatenation of the magic cookie and the 96-bit
+         * transaction ID, and converting the result to network byte
          * order.
          */
         for (i=0; i<4; ++i) {
@@ -988,17 +988,17 @@ static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf, 
-                                        unsigned len, 
+static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
+                                        unsigned len,
                                         const pj_stun_msg_hdr *msghdr,
                                         unsigned *printed)
 {
     pj_uint8_t *start_buf = buf;
-    const pj_stun_sockaddr_attr *ca = 
+    const pj_stun_sockaddr_attr *ca =
         (const pj_stun_sockaddr_attr *)a;
 
     PJ_CHECK_STACK();
-    
+
     /* Common: attribute type */
     PUTVAL16H(buf, 0, ca->hdr.type);
 
@@ -1007,13 +1007,13 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
             ATTR_LEN = ATTR_HDR_LEN + STUN_GENERIC_IPV4_ADDR_LEN
         };
 
-        if (len < ATTR_LEN) 
+        if (len < ATTR_LEN)
             return PJ_ETOOSMALL;
 
         /* attribute len */
         PUTVAL16H(buf, 2, STUN_GENERIC_IPV4_ADDR_LEN);
         buf += ATTR_HDR_LEN;
-    
+
         /* Ignored */
         *buf++ = '\0';
 
@@ -1057,13 +1057,13 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
             ATTR_LEN = ATTR_HDR_LEN + STUN_GENERIC_IPV6_ADDR_LEN
         };
 
-        if (len < ATTR_LEN) 
+        if (len < ATTR_LEN)
             return PJ_ETOOSMALL;
 
         /* attribute len */
         PUTVAL16H(buf, 2, STUN_GENERIC_IPV6_ADDR_LEN);
         buf += ATTR_HDR_LEN;
-    
+
         /* Ignored */
         *buf++ = '\0';
 
@@ -1180,7 +1180,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_string_attr(pj_pool_t *pool,
     pj_stun_string_attr *attr = NULL;
     pj_status_t status;
 
-    status = pj_stun_string_attr_create(pool, attr_type, value, 
+    status = pj_stun_string_attr_create(pool, attr_type, value,
                                                 &attr);
     if (status != PJ_SUCCESS)
         return status;
@@ -1189,9 +1189,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_string_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t decode_string_attr(pj_pool_t *pool, 
-                                      const pj_uint8_t *buf, 
-                                      const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_string_attr(pj_pool_t *pool,
+                                      const pj_uint8_t *buf,
+                                      const pj_stun_msg_hdr *msghdr,
                                       void **p_attr)
 {
     pj_stun_string_attr *attr;
@@ -1218,16 +1218,16 @@ static pj_status_t decode_string_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf, 
-                                      unsigned len, 
+static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf,
+                                      unsigned len,
                                       const pj_stun_msg_hdr *msghdr,
                                       unsigned *printed)
 {
-    const pj_stun_string_attr *ca = 
+    const pj_stun_string_attr *ca =
         (const pj_stun_string_attr*)a;
 
     PJ_CHECK_STACK();
-    
+
     PJ_UNUSED_ARG(msghdr);
 
     /* Calculated total attr_len (add padding if necessary) */
@@ -1240,7 +1240,7 @@ static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf,
     PUTVAL16H(buf, 0, ca->hdr.type);
 
     /* Special treatment for SOFTWARE attribute:
-     * This attribute had caused interop problem when talking to 
+     * This attribute had caused interop problem when talking to
      * legacy RFC 3489 STUN servers, due to different "length"
      * rules with RFC 5389.
      */
@@ -1325,8 +1325,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_empty_attr( pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_empty_attr(pj_pool_t *pool, 
-                                     const pj_uint8_t *buf, 
+static pj_status_t decode_empty_attr(pj_pool_t *pool,
+                                     const pj_uint8_t *buf,
                                      const pj_stun_msg_hdr *msghdr,
                                      void **p_attr)
 {
@@ -1352,8 +1352,8 @@ static pj_status_t decode_empty_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf, 
-                                     unsigned len, 
+static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf,
+                                     unsigned len,
                                      const pj_stun_msg_hdr *msghdr,
                                      unsigned *printed)
 {
@@ -1361,7 +1361,7 @@ static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf,
 
     PJ_UNUSED_ARG(msghdr);
 
-    if (len < ATTR_HDR_LEN) 
+    if (len < ATTR_HDR_LEN)
         return PJ_ETOOSMALL;
 
     PUTVAL16H(buf, 0, ca->hdr.type);
@@ -1425,9 +1425,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_uint_attr(pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_uint_attr(pj_pool_t *pool, 
-                                    const pj_uint8_t *buf, 
-                                    const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_uint_attr(pj_pool_t *pool,
+                                    const pj_uint8_t *buf,
+                                    const pj_stun_msg_hdr *msghdr,
                                     void **p_attr)
 {
     pj_stun_uint_attr *attr;
@@ -1451,8 +1451,8 @@ static pj_status_t decode_uint_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf, 
-                                    unsigned len, 
+static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf,
+                                    unsigned len,
                                     const pj_stun_msg_hdr *msghdr,
                                     unsigned *printed)
 {
@@ -1461,14 +1461,14 @@ static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf,
     PJ_CHECK_STACK();
 
     PJ_UNUSED_ARG(msghdr);
-    
-    if (len < 8) 
+
+    if (len < 8)
         return PJ_ETOOSMALL;
 
     PUTVAL16H(buf, 0, ca->hdr.type);
     PUTVAL16H(buf, 2, (pj_uint16_t)4);
     PUTVAL32H(buf, 4, ca->value);
-    
+
     /* Done */
     *printed = 8;
 
@@ -1528,9 +1528,9 @@ PJ_DEF(pj_status_t)  pj_stun_msg_add_uint64_attr(pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_uint64_attr(pj_pool_t *pool, 
-                                      const pj_uint8_t *buf, 
-                                      const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_uint64_attr(pj_pool_t *pool,
+                                      const pj_uint8_t *buf,
+                                      const pj_stun_msg_hdr *msghdr,
                                       void **p_attr)
 {
     pj_stun_uint64_attr *attr;
@@ -1544,7 +1544,7 @@ static pj_status_t decode_uint64_attr(pj_pool_t *pool,
     if (attr->hdr.length != 8)
         return PJNATH_ESTUNINATTRLEN;
 
-    GETVAL64H(buf, 4, &attr->value);    
+    GETVAL64H(buf, 4, &attr->value);
 
     /* Done */
     *p_attr = attr;
@@ -1553,8 +1553,8 @@ static pj_status_t decode_uint64_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf, 
-                                      unsigned len, 
+static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf,
+                                      unsigned len,
                                       const pj_stun_msg_hdr *msghdr,
                                       unsigned *printed)
 {
@@ -1563,8 +1563,8 @@ static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf,
     PJ_CHECK_STACK();
 
     PJ_UNUSED_ARG(msghdr);
-    
-    if (len < 12) 
+
+    if (len < 12)
         return PJ_ETOOSMALL;
 
     PUTVAL16H(buf, 0, ca->hdr.type);
@@ -1625,9 +1625,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_msgint_attr(pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_msgint_attr(pj_pool_t *pool, 
+static pj_status_t decode_msgint_attr(pj_pool_t *pool,
                                       const pj_uint8_t *buf,
-                                      const pj_stun_msg_hdr *msghdr, 
+                                      const pj_stun_msg_hdr *msghdr,
                                       void **p_attr)
 {
     pj_stun_msgint_attr *attr;
@@ -1651,18 +1651,18 @@ static pj_status_t decode_msgint_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf, 
-                                      unsigned len, 
+static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf,
+                                      unsigned len,
                                       const pj_stun_msg_hdr *msghdr,
                                       unsigned *printed)
 {
     const pj_stun_msgint_attr *ca = (const pj_stun_msgint_attr*)a;
 
     PJ_CHECK_STACK();
-    
+
     PJ_UNUSED_ARG(msghdr);
 
-    if (len < 24) 
+    if (len < 24)
         return PJ_ETOOSMALL;
 
     /* Copy and convert attribute to network byte order */
@@ -1743,9 +1743,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_errcode_attr(pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &err_attr->hdr);
 }
 
-static pj_status_t decode_errcode_attr(pj_pool_t *pool, 
+static pj_status_t decode_errcode_attr(pj_pool_t *pool,
                                        const pj_uint8_t *buf,
-                                       const pj_stun_msg_hdr *msghdr, 
+                                       const pj_stun_msg_hdr *msghdr,
                                        void **p_attr)
 {
     pj_stun_errcode_attr *attr;
@@ -1777,19 +1777,19 @@ static pj_status_t decode_errcode_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf, 
-                                       unsigned len, 
+static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf,
+                                       unsigned len,
                                        const pj_stun_msg_hdr *msghdr,
                                        unsigned *printed)
 {
-    const pj_stun_errcode_attr *ca = 
+    const pj_stun_errcode_attr *ca =
         (const pj_stun_errcode_attr*)a;
 
     PJ_CHECK_STACK();
-    
+
     PJ_UNUSED_ARG(msghdr);
 
-    if (len < ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen) 
+    if (len < ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen)
         return PJ_ETOOSMALL;
 
     /* Copy and convert attribute to network byte order */
@@ -1882,9 +1882,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_unknown_attr(pj_pool_t *pool, 
-                                       const pj_uint8_t *buf, 
-                                       const pj_stun_msg_hdr *msghdr, 
+static pj_status_t decode_unknown_attr(pj_pool_t *pool,
+                                       const pj_uint8_t *buf,
+                                       const pj_stun_msg_hdr *msghdr,
                                        void **p_attr)
 {
     pj_stun_unknown_attr *attr;
@@ -1895,7 +1895,7 @@ static pj_status_t decode_unknown_attr(pj_pool_t *pool,
 
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_unknown_attr);
     GETATTRHDR(buf, &attr->hdr);
- 
+
     attr->attr_count = (attr->hdr.length >> 1);
     if (attr->attr_count > PJ_STUN_MAX_ATTR)
         return PJ_ETOOMANY;
@@ -1912,8 +1912,8 @@ static pj_status_t decode_unknown_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf, 
-                                       unsigned len, 
+static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
+                                       unsigned len,
                                        const pj_stun_msg_hdr *msghdr,
                                        unsigned *printed)
 {
@@ -1922,7 +1922,7 @@ static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
     unsigned i;
 
     PJ_CHECK_STACK();
-    
+
     PJ_UNUSED_ARG(msghdr);
 
     /* Check that buffer is enough */
@@ -1950,7 +1950,7 @@ static void* clone_unknown_attr(pj_pool_t *pool, const void *src)
     pj_stun_unknown_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_unknown_attr);
 
     pj_memcpy(dst, src, sizeof(pj_stun_unknown_attr));
-    
+
     return (void*)dst;
 }
 
@@ -2024,7 +2024,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t decode_binary_attr(pj_pool_t *pool, 
+static pj_status_t decode_binary_attr(pj_pool_t *pool,
                                       const pj_uint8_t *buf,
                                       const pj_stun_msg_hdr *msghdr,
                                       void **p_attr)
@@ -2050,15 +2050,15 @@ static pj_status_t decode_binary_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf, 
-                                      unsigned len, 
+static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf,
+                                      unsigned len,
                                       const pj_stun_msg_hdr *msghdr,
                                       unsigned *printed)
 {
     const pj_stun_binary_attr *ca = (const pj_stun_binary_attr*)a;
 
     PJ_CHECK_STACK();
-    
+
     PJ_UNUSED_ARG(msghdr);
 
     /* Calculated total attr_len (add padding if necessary) */
@@ -2211,7 +2211,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, pj_size_t pdu_len,
 
     /* Check the PDU length */
     msg_len = GETVAL16H(pdu, 2);
-    if ((msg_len + 20 > pdu_len) || 
+    if ((msg_len + 20 > pdu_len) ||
         ((options & PJ_STUN_IS_DATAGRAM) && msg_len + 20 != pdu_len))
     {
         return PJNATH_EINSTUNMSGLEN;
@@ -2230,8 +2230,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, pj_size_t pdu_len,
     if (GETVAL32H(pdu, 4) == PJ_STUN_MAGIC) {
 
         /* Check if FINGERPRINT attribute is present */
-        if ((options & PJ_STUN_NO_FINGERPRINT_CHECK )==0 && 
-            GETVAL16H(pdu, msg_len + 20 - 8) == PJ_STUN_ATTR_FINGERPRINT) 
+        if ((options & PJ_STUN_NO_FINGERPRINT_CHECK )==0 &&
+            GETVAL16H(pdu, msg_len + 20 - 8) == PJ_STUN_ATTR_FINGERPRINT)
         {
             pj_uint16_t attr_len = GETVAL16H(pdu, msg_len + 20 - 8 + 2);
             pj_uint32_t fingerprint = GETVAL32H(pdu, msg_len + 20 - 8 + 4);
@@ -2266,7 +2266,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_response, PJ_EINVAL);
 
-    PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(msg_type), 
+    PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(msg_type),
                      PJNATH_EINSTUNMSGTYPE);
 
     /* Create response or error response */
@@ -2275,7 +2275,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
     else
         msg_type |= PJ_STUN_SUCCESS_RESPONSE_BIT;
 
-    status = pj_stun_msg_create(pool, msg_type, req_msg->hdr.magic, 
+    status = pj_stun_msg_create(pool, msg_type, req_msg->hdr.magic,
                                 req_msg->hdr.tsx_id, &response);
     if (status != PJ_SUCCESS) {
         return status;
@@ -2283,7 +2283,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
 
     /* Add error code attribute */
     if (err_code) {
-        status = pj_stun_msg_add_errcode_attr(pool, response, 
+        status = pj_stun_msg_add_errcode_attr(pool, response,
                                               err_code, err_msg);
         if (status != PJ_SUCCESS) {
             return status;
@@ -2306,7 +2306,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
                                        pj_size_t *p_parsed_len,
                                        pj_stun_msg **p_response)
 {
-    
+
     pj_stun_msg *msg;
     const pj_uint8_t *start_pdu = pdu;
     pj_bool_t has_msg_int = PJ_FALSE;
@@ -2379,8 +2379,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
                       (int)err_msg.slen, err_msg.ptr));
 
             if (p_response) {
-                pj_stun_msg_create_response(pool, msg, 
-                                            PJ_STUN_SC_BAD_REQUEST, 
+                pj_stun_msg_create_response(pool, msg,
+                                            PJ_STUN_SC_BAD_REQUEST,
                                             &err_msg, p_response);
             }
             return PJNATH_ESTUNINATTRLEN;
@@ -2393,7 +2393,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
             /* Unrecognized attribute */
             pj_stun_binary_attr *attr = NULL;
 
-            PJ_LOG(5,(THIS_FILE, "Unrecognized attribute type 0x%x", 
+            PJ_LOG(5,(THIS_FILE, "Unrecognized attribute type 0x%x",
                       attr_type));
 
             /* Is this a fatal condition? */
@@ -2405,7 +2405,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
                     unsigned err_code = PJ_STUN_SC_UNKNOWN_ATTRIBUTE;
 
                     status = pj_stun_msg_create_response(pool, msg,
-                                                         err_code, NULL, 
+                                                         err_code, NULL,
                                                          p_response);
                     if (status==PJ_SUCCESS) {
                         pj_uint16_t d = (pj_uint16_t)attr_type;
@@ -2427,7 +2427,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
             }
 
             /* Create binary attribute to represent this */
-            status = pj_stun_binary_attr_create(pool, attr_type, pdu+4, 
+            status = pj_stun_binary_attr_create(pool, attr_type, pdu+4,
                                                 GETVAL16H(pdu, 2), &attr);
             if (status != PJ_SUCCESS) {
                 if (p_response) {
@@ -2436,7 +2436,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
                                                 NULL, p_response);
                 }
 
-                PJ_LOG(4,(THIS_FILE, 
+                PJ_LOG(4,(THIS_FILE,
                           "Error parsing unknown STUN attribute type %d",
                           attr_type));
 
@@ -2472,16 +2472,16 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
                                                 &e, p_response);
                 }
 
-                PJ_LOG(4,(THIS_FILE, 
+                PJ_LOG(4,(THIS_FILE,
                           "Error parsing STUN attribute %s: %s",
-                          pj_stun_get_attr_name(attr_type), 
+                          pj_stun_get_attr_name(attr_type),
                           err_msg1));
 
                 return status;
             }
 
-            if (attr_type == PJ_STUN_ATTR_MESSAGE_INTEGRITY && 
-                !has_fingerprint) 
+            if (attr_type == PJ_STUN_ATTR_MESSAGE_INTEGRITY &&
+                !has_fingerprint)
             {
                 if (has_msg_int) {
                     /* Already has MESSAGE-INTEGRITY */
@@ -2546,7 +2546,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 
     if (pdu_len > 0) {
         /* Stray trailing bytes */
-        PJ_LOG(4,(THIS_FILE, 
+        PJ_LOG(4,(THIS_FILE,
                   "Error decoding STUN message: unparsed trailing %d bytes",
                   pdu_len));
         return PJNATH_EINSTUNMSGLEN;
@@ -2613,7 +2613,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
      */
     if (buf_size < sizeof(pj_stun_msg_hdr))
         return PJ_ETOOSMALL;
-    
+
     PUTVAL16H(buf, 0, msg->hdr.type);
     PUTVAL16H(buf, 2, 0);   /* length will be calculated later */
     PUTVAL32H(buf, 4, msg->hdr.magic);
@@ -2641,14 +2641,14 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
         adesc = find_attr_desc(attr_hdr->type);
         if (adesc) {
-            status = adesc->encode_attr(attr_hdr, buf, (unsigned)buf_size, 
+            status = adesc->encode_attr(attr_hdr, buf, (unsigned)buf_size,
                                         &msg->hdr, &printed);
         } else {
             /* This may be a generic attribute */
-            const pj_stun_binary_attr *bin_attr = (const pj_stun_binary_attr*) 
+            const pj_stun_binary_attr *bin_attr = (const pj_stun_binary_attr*)
                                                    attr_hdr;
             PJ_ASSERT_RETURN(bin_attr->magic == PJ_STUN_MAGIC, PJ_EBUG);
-            status = encode_binary_attr(bin_attr, buf, (unsigned)buf_size, 
+            status = encode_binary_attr(bin_attr, buf, (unsigned)buf_size,
                                         &msg->hdr, &printed);
         }
 
@@ -2671,7 +2671,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
         if (attr_hdr->type == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
             /* There mustn't be MESSAGE-INTEGRITY before */
-            PJ_ASSERT_RETURN(amsgint == NULL, 
+            PJ_ASSERT_RETURN(amsgint == NULL,
                              PJNATH_ESTUNMSGINTPOS);
             amsgint = (pj_stun_msgint_attr*) attr_hdr;
 
@@ -2686,7 +2686,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
      * calculation, used in rfc3489bis-06 and older.
      */
     /* We MUST update the message length in the header NOW before
-     * calculating MESSAGE-INTEGRITY and FINGERPRINT. 
+     * calculating MESSAGE-INTEGRITY and FINGERPRINT.
      * Note that length is not including the 20 bytes header.
       */
     if (amsgint && afingerprint) {
@@ -2740,9 +2740,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
         /* Calculate HMAC-SHA1 digest, add zero padding to input
          * if necessary to make the input 64 bytes aligned.
          */
-        pj_hmac_sha1_init(&ctx, (const pj_uint8_t*)key->ptr, 
+        pj_hmac_sha1_init(&ctx, (const pj_uint8_t*)key->ptr,
                           (unsigned)key->slen);
-        pj_hmac_sha1_update(&ctx, (const pj_uint8_t*)start, 
+        pj_hmac_sha1_update(&ctx, (const pj_uint8_t*)start,
                             (unsigned)(buf-start));
 #if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
         // These are obsoleted in rfc3489bis-08
@@ -2755,7 +2755,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
         pj_hmac_sha1_final(&ctx, amsgint->hmac);
 
         /* Put this attribute in the message */
-        status = encode_msgint_attr(amsgint, buf, (unsigned)buf_size, 
+        status = encode_msgint_attr(amsgint, buf, (unsigned)buf_size,
                                     &msg->hdr, &printed);
         if (status != PJ_SUCCESS)
             return status;
@@ -2769,7 +2769,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
 #if !PJ_STUN_OLD_STYLE_MI_FINGERPRINT
         /* Update message length */
-        PUTVAL16H(start, 2, 
+        PUTVAL16H(start, 2,
                  (pj_uint16_t)(GETVAL16H(start, 2)+8));
 #endif
 
@@ -2777,7 +2777,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
         afingerprint->value ^= STUN_XOR_FINGERPRINT;
 
         /* Put this attribute in the message */
-        status = encode_uint_attr(afingerprint, buf, (unsigned)buf_size, 
+        status = encode_uint_attr(afingerprint, buf, (unsigned)buf_size,
                                   &msg->hdr, &printed);
         if (status != PJ_SUCCESS)
             return status;

@@ -534,8 +534,8 @@ static pj_status_t respond_digest( pj_pool_t *pool,
                                           NULL,  NULL, uri, &chal->realm,
                                           cred_info, method);
             } else {
-                status = pjsip_auth_create_digest( &cred->response, 
-                                          &cred->nonce, NULL, NULL, NULL, uri, 
+                status = pjsip_auth_create_digest( &cred->response,
+                                          &cred->nonce, NULL, NULL, NULL, uri,
                                           &chal->realm, cred_info, method);
             }
         }
@@ -570,10 +570,10 @@ static pj_status_t respond_digest( pj_pool_t *pool,
                                           &chal->realm, cred_info,
                                           method);
             } else {
-                status = pjsip_auth_create_digest( &cred->response, 
-                                          &cred->nonce, &cred->nc, 
-                                          &cred->cnonce, &pjsip_AUTH_STR, 
-                                          uri, &chal->realm, 
+                status = pjsip_auth_create_digest( &cred->response,
+                                          &cred->nonce, &cred->nc,
+                                          &cred->cnonce, &pjsip_AUTH_STR,
+                                          uri, &chal->realm,
                                           cred_info, method);
             }
         }
@@ -669,7 +669,7 @@ static void update_digest_session( pjsip_cached_auth *cached_auth,
             ++cached_auth->nc;
         } else {
             /* Server gives new nonce. */
-            pj_strdup(cached_auth->pool, 
+            pj_strdup(cached_auth->pool,
                       &cached_auth->last_chal->challenge.digest.nonce,
                       &hdr->challenge.digest.nonce);
             /* Has the opaque changed? */
@@ -754,9 +754,9 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
 PJ_DEF(pj_status_t) pjsip_auth_clt_deinit(pjsip_auth_clt_sess *sess)
 {
     pjsip_cached_auth *auth;
-    
+
     PJ_ASSERT_RETURN(sess && sess->endpt, PJ_EINVAL);
-    
+
     auth = sess->cached_auth.next;
     while (auth != &sess->cached_auth) {
         pjsip_endpt_release_pool(sess->endpt, auth->pool);
@@ -1236,10 +1236,10 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 }
 
 
-static void recreate_cached_auth_pool( pjsip_endpoint *endpt, 
+static void recreate_cached_auth_pool( pjsip_endpoint *endpt,
                                        pjsip_cached_auth *auth )
 {
-    pj_pool_t *auth_pool = pjsip_endpt_create_pool(endpt, "auth_cli%p", 1024, 
+    pj_pool_t *auth_pool = pjsip_endpt_create_pool(endpt, "auth_cli%p", 1024,
                                                    1024);
 
     if (auth->realm.slen) {
@@ -1478,10 +1478,10 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
         }
 
         if (pj_pool_get_used_size(cached_auth->pool) >
-            PJSIP_AUTH_CACHED_POOL_MAX_SIZE) 
+            PJSIP_AUTH_CACHED_POOL_MAX_SIZE)
         {
             recreate_cached_auth_pool(sess->endpt, cached_auth);
-        }       
+        }
 
         /* Add to the message. */
         pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);

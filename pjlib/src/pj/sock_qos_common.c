@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/sock_qos.h>
 #include <pj/assert.h>
@@ -26,11 +26,11 @@
                      PJ_QOS_PARAM_HAS_WMM)
 
 /* "Standard" mapping between traffic type and QoS params */
-static const pj_qos_params qos_map[] = 
+static const pj_qos_params qos_map[] =
 {
     /* flags    dscp  prio wmm_prio */
     {ALL_FLAGS, 0x00, 0,    PJ_QOS_WMM_PRIO_BULK_EFFORT},   /* BE */
-    {ALL_FLAGS, 0x08, 2,    PJ_QOS_WMM_PRIO_BULK},          /* BK */    
+    {ALL_FLAGS, 0x08, 2,    PJ_QOS_WMM_PRIO_BULK},          /* BK */
     {ALL_FLAGS, 0x28, 5,    PJ_QOS_WMM_PRIO_VIDEO},         /* VI */
     {ALL_FLAGS, 0x30, 6,    PJ_QOS_WMM_PRIO_VOICE},         /* VO */
     {ALL_FLAGS, 0x38, 7,    PJ_QOS_WMM_PRIO_VOICE},         /* CO */
@@ -39,7 +39,7 @@ static const pj_qos_params qos_map[] =
 
 
 /* Retrieve the mapping for the specified type */
-PJ_DEF(pj_status_t) pj_qos_get_params(pj_qos_type type, 
+PJ_DEF(pj_status_t) pj_qos_get_params(pj_qos_type type,
                                       pj_qos_params *p_param)
 {
     PJ_ASSERT_RETURN(type<=PJ_QOS_TYPE_SIGNALLING && p_param, PJ_EINVAL);
@@ -110,8 +110,8 @@ PJ_DEF(pj_status_t) pj_sock_apply_qos( pj_sock_t sock,
         qos_type_rc = pj_sock_set_qos_type(sock, qos_type);
 
         if (qos_type_rc != PJ_SUCCESS) {
-            pj_perror(log_level, log_sender,  qos_type_rc, 
-                      "Error setting QoS type %d to %s", 
+            pj_perror(log_level, log_sender,  qos_type_rc,
+                      "Error setting QoS type %d to %s",
                       qos_type, sock_name);
         }
     }
@@ -119,8 +119,8 @@ PJ_DEF(pj_status_t) pj_sock_apply_qos( pj_sock_t sock,
     if (qos_params && qos_params->flags) {
         qos_params_rc = pj_sock_set_qos_params(sock, qos_params);
         if (qos_params_rc != PJ_SUCCESS) {
-            pj_perror(log_level, log_sender,  qos_params_rc, 
-                      "Error setting QoS params (flags=%d) to %s", 
+            pj_perror(log_level, log_sender,  qos_params_rc,
+                      "Error setting QoS params (flags=%d) to %s",
                       qos_params->flags, sock_name);
             if (qos_type_rc != PJ_SUCCESS)
                 return qos_params_rc;

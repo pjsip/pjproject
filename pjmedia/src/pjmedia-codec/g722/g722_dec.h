@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /*
  * Based on implementation found in Carnegie Mellon Speech Group Software
@@ -66,8 +66,8 @@ typedef struct g722_dec_t {
 
 PJ_DECL(pj_status_t) g722_dec_init(g722_dec_t *dec);
 
-PJ_DECL(pj_status_t) g722_dec_decode(g722_dec_t *dec, 
-                                     void *in, 
+PJ_DECL(pj_status_t) g722_dec_decode(g722_dec_t *dec,
+                                     void *in,
                                      pj_size_t in_size,
                                      pj_int16_t out[],
                                      pj_size_t *nsamples);

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -54,23 +54,23 @@ static void write_log(int level, const char *data, int len)
 
     PJ_UNUSED_ARG(level);
     PJ_UNUSED_ARG(len);
-    SendMessage(hwndLog, EM_REPLACESEL, FALSE, 
+    SendMessage(hwndLog, EM_REPLACESEL, FALSE,
                 (LPARAM)PJ_STRING_TO_NATIVE(data,wdata,256));
 }
 
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPTSTR lpCmdLine, int nCmdShow)
 {
     MSG msg;
-    
+
     PJ_UNUSED_ARG(lpCmdLine);
     PJ_UNUSED_ARG(hPrevInstance);
 
-    
+
     if (!InitInstance (hInstance, nCmdShow))
         return FALSE;
-    
+
     pj_log_set_log_func( &write_log );
     param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR;
 
@@ -85,7 +85,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    
+
     DeleteObject(hFixedFont);
     return msg.wParam;
 }
@@ -102,7 +102,7 @@ int main()
 ATOM MyRegisterClass(HINSTANCE hInstance, LPTSTR szWindowClass)
 {
     WNDCLASS    wc;
-    
+
     wc.style            = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc      = (WNDPROC) WndProc;
     wc.cbClsExtra       = 0;
@@ -114,7 +114,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance, LPTSTR szWindowClass)
     wc.hbrBackground    = (HBRUSH) GetStockObject(WHITE_BRUSH);
     wc.lpszMenuName     = 0;
     wc.lpszClassName    = szWindowClass;
-    
+
     return RegisterClass(&wc);
 }
 
@@ -140,21 +140,21 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         return FALSE;
 
     hInst = hInstance;
-    
+
     MyRegisterClass(hInstance, szWindowClass);
-    
+
     hWnd = CreateWindow(szWindowClass, szTitle, WS_VISIBLE,
-                        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 
+                        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                         CW_USEDEFAULT, NULL, NULL, hInstance, NULL);
-    
+
     if (!hWnd)
         return FALSE;
-    
+
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
     if (hwndLog) {
-        SendMessage(hwndLog, WM_SETFONT, (WPARAM) hFixedFont, (LPARAM) 0);  
+        SendMessage(hwndLog, WM_SETFONT, (WPARAM) hFixedFont, (LPARAM) 0);
         ShowWindow(hwndLog, TRUE);
     }
 
@@ -166,15 +166,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     RECT rt;
     DWORD dwStyle;
-    
-    switch (message) 
+
+    switch (message)
     {
     case WM_CREATE:
         // Create text control.
         GetClientRect(hWnd, &rt);
-        dwStyle = WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | 
+        dwStyle = WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL |
                   WS_BORDER | ES_LEFT | ES_MULTILINE | ES_NOHIDESEL |
-                  ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY; 
+                  ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY;
         hwndLog = CreateWindow( TEXT("edit"),       // class
                                 NULL,               // window text
                                 dwStyle,            // style

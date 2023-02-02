@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-ua/sip_xfer.h>
 #include <pjsip-simple/evsub_msg.h>
@@ -36,7 +36,7 @@
 /*
  * Refer module (mod-refer)
  */
-static struct pjsip_module mod_xfer = 
+static struct pjsip_module mod_xfer =
 {
     NULL, NULL,                         /* prev, next.                  */
     { "mod-refer", 9 },                 /* Name.                        */
@@ -104,13 +104,13 @@ typedef struct pjsip_xfer pjsip_xfer;
 static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 static void xfer_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
                                      pjsip_event *event);
-static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub, 
+static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub,
                                       pjsip_rx_data *rdata,
                                       int *p_st_code,
                                       pj_str_t **p_st_text,
                                       pjsip_hdr *res_hdr,
                                       pjsip_msg_body **p_body);
-static void xfer_on_evsub_rx_notify( pjsip_evsub *sub, 
+static void xfer_on_evsub_rx_notify( pjsip_evsub *sub,
                                      pjsip_rx_data *rdata,
                                      int *p_st_code,
                                      pj_str_t **p_st_text,
@@ -123,7 +123,7 @@ static void xfer_on_evsub_server_timeout(pjsip_evsub *sub);
 /*
  * Event subscription callback for xference.
  */
-static pjsip_evsub_user xfer_user = 
+static pjsip_evsub_user xfer_user =
 {
     &xfer_on_evsub_state,
     &xfer_on_evsub_tsx_state,
@@ -151,13 +151,13 @@ PJ_DEF(pj_status_t) pjsip_xfer_init_module(pjsip_endpoint *endpt)
     if (status != PJ_SUCCESS)
         return status;
 
-    status = pjsip_endpt_add_capability( endpt, &mod_xfer, PJSIP_H_ALLOW, 
-                                         NULL, 1, 
+    status = pjsip_endpt_add_capability( endpt, &mod_xfer, PJSIP_H_ALLOW,
+                                         NULL, 1,
                                          &pjsip_get_refer_method()->name);
     if (status != PJ_SUCCESS)
         return status;
 
-    status = pjsip_evsub_register_pkg(&mod_xfer, &STR_REFER, 
+    status = pjsip_evsub_register_pkg(&mod_xfer, &STR_REFER,
                                       PJSIP_XFER_EXPIRES, 1, &accept);
     if (status != PJ_SUCCESS)
         return status;
@@ -183,7 +183,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_create_uac( pjsip_dialog *dlg,
     pjsip_dlg_inc_lock(dlg);
 
     /* Create event subscription */
-    status = pjsip_evsub_create_uac( dlg,  &xfer_user, &STR_REFER, 
+    status = pjsip_evsub_create_uac( dlg,  &xfer_user, &STR_REFER,
                                      PJSIP_EVSUB_NO_EVENT_ID, &sub);
     if (status != PJ_SUCCESS)
         goto on_return;
@@ -252,7 +252,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_create_uas( pjsip_dialog *dlg,
     }
 
     /* Create server subscription */
-    status = pjsip_evsub_create_uas( dlg, &xfer_user, rdata, 
+    status = pjsip_evsub_create_uas( dlg, &xfer_user, rdata,
                                      PJSIP_EVSUB_NO_EVENT_ID, &sub);
     if (status != PJ_SUCCESS)
         goto on_return;
@@ -361,8 +361,8 @@ PJ_DEF(pj_status_t) pjsip_xfer_accept( pjsip_evsub *sub,
 
 
 /*
- * For notifier, create NOTIFY request to subscriber, and set the state 
- * of the subscription. 
+ * For notifier, create NOTIFY request to subscriber, and set the state
+ * of the subscription.
  */
 PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
                                        pjsip_evsub_state state,
@@ -378,7 +378,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
     int bodylen;
     pjsip_msg_body *msg_body;
     pj_status_t status;
-    
+
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(sub, PJ_EINVAL);
@@ -391,7 +391,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
     /* Lock object. */
     pjsip_dlg_inc_lock(xfer->dlg);
 
-    /* Create the NOTIFY request. 
+    /* Create the NOTIFY request.
      * Note that reason is only used when state is TERMINATED, and
      * the defined termination reason for REFER is "noresource".
      */
@@ -414,8 +414,8 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
                                xfer_st_code,
                                (int)xfer_st_text->slen,
                                xfer_st_text->ptr);
-    PJ_ASSERT_ON_FAIL(bodylen > 0 && bodylen < 128, 
-                        {status=PJ_EBUG; pjsip_tx_data_dec_ref(tdata); 
+    PJ_ASSERT_ON_FAIL(bodylen > 0 && bodylen < 128,
+                        {status=PJ_EBUG; pjsip_tx_data_dec_ref(tdata);
                          goto on_return; });
 
 
@@ -456,7 +456,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_current_notify( pjsip_evsub *sub,
 {
     pjsip_xfer *xfer;
     pj_status_t status;
-    
+
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(sub, PJ_EINVAL);
@@ -478,7 +478,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_current_notify( pjsip_evsub *sub,
 
 
 /*
- * Send request message. 
+ * Send request message.
  */
 PJ_DEF(pj_status_t) pjsip_xfer_send_request( pjsip_evsub *sub,
                                              pjsip_tx_data *tdata)
@@ -521,7 +521,7 @@ static void xfer_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
 /*
  * Called when REFER is received to refresh subscription.
  */
-static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub, 
+static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub,
                                       pjsip_rx_data *rdata,
                                       int *p_st_code,
                                       pj_str_t **p_st_text,
@@ -547,7 +547,7 @@ static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub,
         if (pjsip_evsub_get_state(sub)==PJSIP_EVSUB_STATE_TERMINATED) {
             status = pjsip_xfer_notify( sub, PJSIP_EVSUB_STATE_TERMINATED,
                                         xfer->last_st_code,
-                                        &xfer->last_st_text, 
+                                        &xfer->last_st_text,
                                         &tdata);
         } else {
             status = pjsip_xfer_current_notify(sub, &tdata);
@@ -562,7 +562,7 @@ static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub,
 /*
  * Called when NOTIFY is received.
  */
-static void xfer_on_evsub_rx_notify( pjsip_evsub *sub, 
+static void xfer_on_evsub_rx_notify( pjsip_evsub *sub,
                                      pjsip_rx_data *rdata,
                                      int *p_st_code,
                                      pj_str_t **p_st_text,
@@ -619,7 +619,7 @@ static void xfer_on_evsub_server_timeout(pjsip_evsub *sub)
         pjsip_tx_data *tdata;
 
         status = pjsip_xfer_notify(sub, PJSIP_EVSUB_STATE_TERMINATED,
-                                   xfer->last_st_code, 
+                                   xfer->last_st_code,
                                    &xfer->last_st_text, &tdata);
         if (status == PJ_SUCCESS)
             pjsip_xfer_send_request(sub, tdata);

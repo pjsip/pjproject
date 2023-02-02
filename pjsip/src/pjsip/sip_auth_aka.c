@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_auth_aka.h>
 #include <pjsip/sip_errno.h>
@@ -33,7 +33,7 @@
 /*
  * Create MD5-AKA1 digest response.
  */
-PJ_DEF(pj_status_t) pjsip_auth_create_aka_response( 
+PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
                                              pj_pool_t *pool,
                                              const pjsip_digest_challenge *chal,
                                              const pjsip_cred_info *cred,
@@ -64,8 +64,8 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
          * A normal MD5 authentication is requested. Fallback to the usual
          * MD5 digest creation.
          */
-        status = pjsip_auth_create_digest(&auth->response, &auth->nonce, 
-                                 &auth->nc, &auth->cnonce, &auth->qop, 
+        status = pjsip_auth_create_digest(&auth->response, &auth->nonce,
+                                 &auth->nc, &auth->cnonce, &auth->qop,
                                  &auth->uri, &auth->realm, cred, method);
 
         return status;
@@ -101,7 +101,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
     /* Get RAND, AUTN, and MAC */
     chal_rand = (pj_uint8_t*)(nonce_bin.ptr + 0);
     chal_sqnxoraka = (pj_uint8_t*) (nonce_bin.ptr + PJSIP_AKA_RANDLEN);
-    chal_mac = (pj_uint8_t*) (nonce_bin.ptr + PJSIP_AKA_RANDLEN + 
+    chal_mac = (pj_uint8_t*) (nonce_bin.ptr + PJSIP_AKA_RANDLEN +
                               PJSIP_AKA_SQNLEN + PJSIP_AKA_AMFLEN);
 
     /* Copy k. op, and amf */
@@ -134,7 +134,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
     }
 
     /* Build a temporary credential info to create MD5 digest, using
-     * "res" as the password. 
+     * "res" as the password.
      */
     pj_memcpy(&aka_cred, cred, sizeof(aka_cred));
     aka_cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
@@ -147,9 +147,9 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
         aka_cred.data.ptr = (char*)res;
         aka_cred.data.slen = PJSIP_AKA_RESLEN;
 
-        status = pjsip_auth_create_digest(&auth->response, &chal->nonce, 
-                                 &auth->nc, &auth->cnonce, &auth->qop, 
-                                 &auth->uri, &chal->realm, &aka_cred, method);  
+        status = pjsip_auth_create_digest(&auth->response, &chal->nonce,
+                                 &auth->nc, &auth->cnonce, &auth->qop,
+                                 &auth->uri, &chal->realm, &aka_cred, method);
 
     } else if (aka_version == 2) {
 
@@ -186,8 +186,8 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
                          aka_cred.data.ptr, &len);
         aka_cred.data.slen = hmac64_len;
 
-        status = pjsip_auth_create_digest(&auth->response, &chal->nonce, 
-                                 &auth->nc, &auth->cnonce, &auth->qop, 
+        status = pjsip_auth_create_digest(&auth->response, &chal->nonce,
+                                 &auth->nc, &auth->cnonce, &auth->qop,
                                  &auth->uri, &chal->realm, &aka_cred, method);
 
     } else {

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_TURN_SRV_AUTH_H__
 #define __PJ_TURN_SRV_AUTH_H__
@@ -45,14 +45,14 @@ PJ_DECL(void) pj_turn_auth_dinit(void);
  *                      empty string for the realm.
  * @param nonce         On return, if application wants to use long
  *                      term credential, it MUST fill in the nonce
- *                      with some value. Otherwise  if short term 
+ *                      with some value. Otherwise  if short term
  *                      credential is wanted, it MAY set this value.
  *                      If short term credential is wanted and the
  *                      application doesn't want to include NONCE,
  *                      then it must set this to empty string.
  *
  * @return              The callback should return PJ_SUCCESS, or
- *                      otherwise response message will not be 
+ *                      otherwise response message will not be
  *                      created.
  */
 PJ_DECL(pj_status_t) pj_turn_get_auth(void *user_data,
@@ -84,7 +84,7 @@ PJ_DECL(pj_status_t) pj_turn_get_auth(void *user_data,
  *                      username is not valid.
  */
 PJ_DECL(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
-                                          void *user_data, 
+                                          void *user_data,
                                           const pj_str_t *realm,
                                           const pj_str_t *username,
                                           pj_pool_t *pool,
@@ -102,7 +102,7 @@ PJ_DECL(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
  * @param username      The username as specified in the message.
  * @param nonce         The nonce to be verified.
  *
- * @return              The callback MUST return non-zero if the 
+ * @return              The callback MUST return non-zero if the
  *                      NONCE can be accepted.
  */
 PJ_DECL(pj_bool_t) pj_turn_verify_nonce(const pj_stun_msg *msg,

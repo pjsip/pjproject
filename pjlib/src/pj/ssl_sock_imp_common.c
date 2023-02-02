@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2019-2019 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ssl_sock.h>
 #include <pj/assert.h>
@@ -241,7 +241,7 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
  * - if handshake failed, reset SSL state
  * - return PJ_FALSE when SSL socket instance is destroyed by application.
  */
-static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock, 
+static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
                                        pj_status_t status)
 {
     /* Cancel handshake timer */
@@ -271,9 +271,9 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
             }
 
             if (ssock->param.cb.on_accept_complete2) {
-                (*ssock->param.cb.on_accept_complete2) 
-                      (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr, 
-                      pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr), 
+                (*ssock->param.cb.on_accept_complete2)
+                      (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr,
+                      pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr),
                       status);
             }
 
@@ -303,7 +303,7 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
                 }
                 pj_time_val_normalize(&interval);
                 status1 = pj_timer_heap_schedule_w_grp_lock(
-                                                 ssock->param.timer_heap, 
+                                                 ssock->param.timer_heap,
                                                  &ssock->timer,
                                                  &interval,
                                                  TIMER_CLOSE,
@@ -329,9 +329,9 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 
         /* Notify application the newly accepted SSL socket */
         if (ssock->param.cb.on_accept_complete2) {
-            ret = (*ssock->param.cb.on_accept_complete2) 
-                    (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr, 
-                    pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr), 
+            ret = (*ssock->param.cb.on_accept_complete2)
+                    (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr,
+                    pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr),
                     status);
         } else if (ssock->param.cb.on_accept_complete) {
             ret = (*ssock->param.cb.on_accept_complete)
@@ -353,7 +353,7 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 
     /* Connecting */
     else {
-        /* On failure, reset SSL socket state first, as app may try to 
+        /* On failure, reset SSL socket state first, as app may try to
          * reconnect in the callback.
          */
         if (status != PJ_SUCCESS) {
@@ -441,7 +441,7 @@ static void free_send_data(pj_ssl_sock_t *ssock, write_data_t *wdata)
     write_data_t *spl = &ssock->send_pending;
 
     pj_assert(!pj_list_empty(&ssock->send_pending));
-    
+
     /* Free slot from the buffer */
     if (spl->next == wdata && spl->prev == wdata) {
         /* This is the only data, reset the buffer */
@@ -480,7 +480,7 @@ static void free_send_data(pj_ssl_sock_t *ssock, write_data_t *wdata)
     /* For data in the middle buffer, just do nothing on the buffer. The slot
      * will be freed later when freeing the first/last data.
      */
-    
+
     /* Remove the data from send pending list */
     pj_list_erase(wdata);
 }
@@ -547,11 +547,11 @@ static pj_status_t flush_circ_buf_output(pj_ssl_sock_t *ssock,
                           flags);
 #else
     if (ssock->param.sock_type == pj_SOCK_STREAM()) {
-        status = pj_activesock_send(ssock->asock, &wdata->key, 
+        status = pj_activesock_send(ssock->asock, &wdata->key,
                                     wdata->data.content, &len,
                                     flags);
     } else {
-        status = pj_activesock_sendto(ssock->asock, &wdata->key, 
+        status = pj_activesock_sendto(ssock->asock, &wdata->key,
                                       wdata->data.content, &len,
                                       flags,
                                       (pj_sockaddr_t*)&ssock->rem_addr,
@@ -595,7 +595,7 @@ pj_status_t pj_ssl_sock_ossl_test_send_buf(pj_pool_t *pool)
 
     if (ssock->send_buf.max_len == 0) {
         ssock->send_buf.buf = (char*)
-                              pj_pool_alloc(ssock->pool, 
+                              pj_pool_alloc(ssock->pool,
                                             ssock->param.send_buffer_size);
         ssock->send_buf.max_len = ssock->param.send_buffer_size;
         ssock->send_buf.start = ssock->send_buf.buf;
@@ -685,10 +685,10 @@ static void ssl_on_destroy(void *arg)
 
 /*
  * Get the offset of pointer to read-buffer of SSL socket from read-buffer
- * of active socket. Note that both SSL socket and active socket employ 
+ * of active socket. Note that both SSL socket and active socket employ
  * different but correlated read-buffers (as much as async_cnt for each),
  * and to make it easier/faster to find corresponding SSL socket's read-buffer
- * from known active socket's read-buffer, the pointer of corresponding 
+ * from known active socket's read-buffer, the pointer of corresponding
  * SSL socket's read-buffer is stored right after the end of active socket's
  * read-buffer.
  */
@@ -752,7 +752,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
 
                     if (size_ > 0)
                         buf->len += size_;
-                
+
                     if (status != PJ_SUCCESS) {
                         ssock->ssl_state = SSL_STATE_ERROR;
                     }
@@ -765,7 +765,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                         return PJ_FALSE;
                     }
 
-                    /* Application may have left some data to be consumed 
+                    /* Application may have left some data to be consumed
                      * later.
                      */
                     buf->len = remainder_;
@@ -791,7 +791,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                     ssl_update_certs_info(ssock);
 
                     // Ticket #1573: Don't hold mutex while calling
-                    //               PJLIB socket send(). 
+                    //               PJLIB socket send().
                     //pj_lock_acquire(ssock->write_mutex);
                     status = flush_delayed_send(ssock);
                     //pj_lock_release(ssock->write_mutex);
@@ -801,12 +801,12 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                         status = PJ_SUCCESS;
 
                     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-                        PJ_PERROR(1,(ssock->pool->obj_name, status, 
+                        PJ_PERROR(1,(ssock->pool->obj_name, status,
                                      "Failed to flush delayed send"));
                         goto on_error;
                     }
                 } else if (status != PJ_EPENDING) {
-                    PJ_PERROR(1,(ssock->pool->obj_name, status, 
+                    PJ_PERROR(1,(ssock->pool->obj_name, status,
                                  "Renegotiation failed"));
                     goto on_error;
                 }
@@ -850,7 +850,7 @@ static pj_bool_t ssock_on_data_sent (pj_ssl_sock_t *ssock,
     pj_ssize_t sent_len;
 
     sent_len = (sent > 0)? wdata->plain_data_len : sent;
-    
+
     /* Update write buffer state */
     pj_lock_acquire(ssock->write_mutex);
     free_send_data(ssock, wdata);
@@ -860,7 +860,7 @@ static pj_bool_t ssock_on_data_sent (pj_ssl_sock_t *ssock,
     if (ssock->ssl_state == SSL_STATE_HANDSHAKING) {
         /* Initial handshaking */
         pj_status_t status;
-        
+
         status = ssl_do_handshake(ssock);
         /* Not pending is either success or failed */
         if (status != PJ_EPENDING)
@@ -870,7 +870,7 @@ static pj_bool_t ssock_on_data_sent (pj_ssl_sock_t *ssock,
         /* Some data has been sent, notify application */
         if (ssock->param.cb.on_data_sent) {
             pj_bool_t ret;
-            ret = (*ssock->param.cb.on_data_sent)(ssock, app_key, 
+            ret = (*ssock->param.cb.on_data_sent)(ssock, app_key,
                                                   sent_len);
             if (!ret) {
                 /* We've been destroyed */
@@ -903,10 +903,10 @@ static pj_status_t get_localaddr(pj_ssl_sock_t *ssock,
     PJ_UNUSED_ARG(namelen);
 
 #ifdef SSL_SOCK_IMP_USE_OWN_NETWORK
-    return network_get_localaddr(ssock, &ssock->local_addr, 
+    return network_get_localaddr(ssock, &ssock->local_addr,
                                  &ssock->addr_len);
 #else
-    return pj_sock_getsockname(ssock->sock, &ssock->local_addr, 
+    return pj_sock_getsockname(ssock->sock, &ssock->local_addr,
                                &ssock->addr_len);
 #endif
 }
@@ -956,7 +956,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     ssock->sock = newsock;
     ssock->is_server = PJ_TRUE;
     if (ssock_parent->cert) {
-        status = pj_ssl_sock_set_certificate(ssock, ssock->pool, 
+        status = pj_ssl_sock_set_certificate(ssock, ssock->pool,
                                              ssock_parent->cert);
         if (status != PJ_SUCCESS)
             goto on_return;
@@ -978,7 +978,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     ssl_set_peer_name(ssock);
 
     /* Prepare read buffer */
-    ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool, 
+    ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool,
                                                ssock->param.async_cnt,
                                                sizeof(void*));
     if (!ssock->asock_rbuf) {
@@ -988,8 +988,8 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
 
     for (i = 0; i<ssock->param.async_cnt; ++i) {
         ssock->asock_rbuf[i] = (void*) pj_pool_alloc(
-                                            ssock->pool, 
-                                            ssock->param.read_buffer_size + 
+                                            ssock->pool,
+                                            ssock->param.read_buffer_size +
                                             sizeof(read_data_t*));
         if (!ssock->asock_rbuf[i]) {
             status = PJ_ENOMEM;
@@ -1021,14 +1021,14 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
 #else
     /* Apply QoS, if specified */
     status = pj_sock_apply_qos2(ssock->sock, ssock->param.qos_type,
-                                &ssock->param.qos_params, 1, 
+                                &ssock->param.qos_params, 1,
                                 ssock->pool->obj_name, NULL);
     if (status != PJ_SUCCESS && !ssock->param.qos_ignore_error)
         goto on_return;
 
     /* Apply socket options, if specified */
     if (ssock->param.sockopt_params.cnt) {
-        status = pj_sock_setsockopt_params(ssock->sock, 
+        status = pj_sock_setsockopt_params(ssock->sock,
                                            &ssock->param.sockopt_params);
         if (status != PJ_SUCCESS && !ssock->param.sockopt_ignore_error)
             goto on_return;
@@ -1046,10 +1046,10 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     asock_cb.on_data_sent = asock_on_data_sent;
 
     status = pj_activesock_create(ssock->pool,
-                                  ssock->sock, 
+                                  ssock->sock,
                                   ssock->param.sock_type,
                                   &asock_cfg,
-                                  ssock->param.ioqueue, 
+                                  ssock->param.ioqueue,
                                   &asock_cb,
                                   ssock,
                                   &ssock->asock);
@@ -1058,7 +1058,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
         goto on_return;
 
     /* Start read */
-    status = pj_activesock_start_read2(ssock->asock, ssock->pool, 
+    status = pj_activesock_start_read2(ssock->asock, ssock->pool,
                                        (unsigned)ssock->param.read_buffer_size,
                                        ssock->asock_rbuf,
                                        PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -1078,7 +1078,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     /* Prepare write/send state */
     pj_assert(ssock->send_buf.max_len == 0);
     ssock->send_buf.buf = (char*)
-                          pj_pool_alloc(ssock->pool, 
+                          pj_pool_alloc(ssock->pool,
                                         ssock->param.send_buffer_size);
     if (!ssock->send_buf.buf)
         return PJ_ENOMEM;
@@ -1092,7 +1092,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
         ssock->param.timeout.msec != 0))
     {
         pj_assert(ssock->timer.id == TIMER_NONE);
-        status = pj_timer_heap_schedule_w_grp_lock(ssock->param.timer_heap, 
+        status = pj_timer_heap_schedule_w_grp_lock(ssock->param.timer_heap,
                                                    &ssock->timer,
                                                    &ssock->param.timeout,
                                                    TIMER_HANDSHAKE_TIMEOUT,
@@ -1137,7 +1137,7 @@ static pj_bool_t ssock_on_connect_complete (pj_ssl_sock_t *ssock,
         goto on_return;
 
     /* Prepare read buffer */
-    ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool, 
+    ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool,
                                                ssock->param.async_cnt,
                                                sizeof(void*));
     if (!ssock->asock_rbuf)
@@ -1145,8 +1145,8 @@ static pj_bool_t ssock_on_connect_complete (pj_ssl_sock_t *ssock,
 
     for (i = 0; i<ssock->param.async_cnt; ++i) {
         ssock->asock_rbuf[i] = (void*) pj_pool_alloc(
-                                            ssock->pool, 
-                                            ssock->param.read_buffer_size + 
+                                            ssock->pool,
+                                            ssock->param.read_buffer_size +
                                             sizeof(read_data_t*));
         if (!ssock->asock_rbuf[i])
             return PJ_ENOMEM;
@@ -1158,7 +1158,7 @@ static pj_bool_t ssock_on_connect_complete (pj_ssl_sock_t *ssock,
                                 (unsigned)ssock->param.read_buffer_size,
                                 ssock->asock_rbuf, 0);
 #else
-    status = pj_activesock_start_read2(ssock->asock, ssock->pool, 
+    status = pj_activesock_start_read2(ssock->asock, ssock->pool,
                                        (unsigned)ssock->param.read_buffer_size,
                                        ssock->asock_rbuf,
                                        PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -1169,7 +1169,7 @@ static pj_bool_t ssock_on_connect_complete (pj_ssl_sock_t *ssock,
     /* Prepare write/send state */
     pj_assert(ssock->send_buf.max_len == 0);
     ssock->send_buf.buf = (char*)
-                             pj_pool_alloc(ssock->pool, 
+                             pj_pool_alloc(ssock->pool,
                                            ssock->param.send_buffer_size);
     if (!ssock->send_buf.buf)
         return PJ_ENOMEM;
@@ -1387,7 +1387,7 @@ PJ_DEF(pj_bool_t) pj_ssl_curve_is_supported(pj_ssl_curve curve)
 }
 
 /*
- * Create SSL socket instance. 
+ * Create SSL socket instance.
  */
 PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
                                         const pj_ssl_sock_param *param,
@@ -1543,7 +1543,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
     /* Remote address */
     if (pj_sockaddr_has_addr(&ssock->rem_addr))
         pj_sockaddr_cp(&info->remote_addr, &ssock->rem_addr);
-    
+
     if (info->established) {
         info->cipher = ssl_get_cipher(ssock);
 
@@ -1574,10 +1574,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read (pj_ssl_sock_t *ssock,
 
     PJ_ASSERT_RETURN(ssock && pool && buff_size, PJ_EINVAL);
 
-    if (ssock->ssl_state != SSL_STATE_ESTABLISHED) 
+    if (ssock->ssl_state != SSL_STATE_ESTABLISHED)
         return PJ_EINVALIDOP;
 
-    readbuf = (void**) pj_pool_calloc(pool, ssock->param.async_cnt, 
+    readbuf = (void**) pj_pool_calloc(pool, ssock->param.async_cnt,
                                       sizeof(void*));
     if (!readbuf)
         return PJ_ENOMEM;
@@ -1588,7 +1588,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read (pj_ssl_sock_t *ssock,
             return PJ_ENOMEM;
     }
 
-    return pj_ssl_sock_start_read2(ssock, pool, buff_size, 
+    return pj_ssl_sock_start_read2(ssock, pool, buff_size,
                                    readbuf, flags);
 }
 
@@ -1608,11 +1608,11 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read2 (pj_ssl_sock_t *ssock,
 
     PJ_ASSERT_RETURN(ssock && pool && buff_size && readbuf, PJ_EINVAL);
 
-    if (ssock->ssl_state != SSL_STATE_ESTABLISHED) 
+    if (ssock->ssl_state != SSL_STATE_ESTABLISHED)
         return PJ_EINVALIDOP;
 
     /* Create SSL socket read buffer */
-    ssock->ssock_rbuf = (read_data_t*)pj_pool_calloc(pool, 
+    ssock->ssock_rbuf = (read_data_t*)pj_pool_calloc(pool,
                                                ssock->param.async_cnt,
                                                sizeof(read_data_t));
     if (!ssock->ssock_rbuf)
@@ -1620,7 +1620,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read2 (pj_ssl_sock_t *ssock,
 
     /* Store SSL socket read buffer pointer in the activesock read buffer */
     for (i=0; i<ssock->param.async_cnt; ++i) {
-        read_data_t **p_ssock_rbuf = 
+        read_data_t **p_ssock_rbuf =
                         OFFSET_OF_READ_DATA_PTR(ssock, ssock->asock_rbuf[i]);
 
         ssock->ssock_rbuf[i].data = readbuf[i];
@@ -1665,7 +1665,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_recvfrom (pj_ssl_sock_t *ssock,
 
 
 /*
- * Same as #pj_ssl_sock_start_recvfrom() except that the recvfrom() 
+ * Same as #pj_ssl_sock_start_recvfrom() except that the recvfrom()
  * operation takes the buffer from the argument rather than creating
  * new ones.
  */
@@ -1686,7 +1686,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_recvfrom2 (pj_ssl_sock_t *ssock,
 
 
 /* Write plain data to SSL and flush the buffer. */
-static pj_status_t ssl_send (pj_ssl_sock_t *ssock, 
+static pj_status_t ssl_send (pj_ssl_sock_t *ssock,
                              pj_ioqueue_op_key_t *send_key,
                              const void *data,
                              pj_ssize_t size,
@@ -1710,7 +1710,7 @@ static pj_status_t ssl_send (pj_ssl_sock_t *ssock,
     }
     status = ssl_write(ssock, data, size, &nwritten);
     pj_lock_release(ssock->write_mutex);
-    
+
     if (status == PJ_SUCCESS && nwritten == size) {
         /* All data written, flush write buffer to network socket */
         status = flush_circ_buf_output(ssock, send_key, size, flags);
@@ -1753,7 +1753,7 @@ static pj_status_t flush_delayed_send(pj_ssl_sock_t *ssock)
         /* Ticket #1573: Don't hold mutex while calling socket send. */
         pj_lock_release(ssock->write_mutex);
 
-        status = ssl_send (ssock, &wp->key, wp->data.ptr, 
+        status = ssl_send (ssock, &wp->key, wp->data.ptr,
                            wp->plain_data_len, wp->flags);
         if (status != PJ_SUCCESS) {
             /* Reset ongoing flush flag first. */
@@ -1799,7 +1799,7 @@ static pj_status_t delay_send (pj_ssl_sock_t *ssock,
     wp->flags = flags;
 
     pj_list_push_back(&ssock->write_pending, wp);
-    
+
     pj_lock_release(ssock->write_mutex);
 
     /* Must return PJ_EPENDING */
@@ -1820,13 +1820,13 @@ PJ_DEF(pj_status_t) pj_ssl_sock_send (pj_ssl_sock_t *ssock,
 
     PJ_ASSERT_RETURN(ssock && data && size && (*size>0), PJ_EINVAL);
 
-    if (ssock->ssl_state != SSL_STATE_ESTABLISHED) 
+    if (ssock->ssl_state != SSL_STATE_ESTABLISHED)
         return PJ_EINVALIDOP;
 
     // Ticket #1573: Don't hold mutex while calling PJLIB socket send().
     //pj_lock_acquire(ssock->write_mutex);
 
-    /* Flush delayed send first. Sending data might be delayed when 
+    /* Flush delayed send first. Sending data might be delayed when
      * re-negotiation is on-progress.
      */
     status = flush_delayed_send(ssock);
@@ -1875,7 +1875,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_sendto (pj_ssl_sock_t *ssock,
 
 
 /**
- * Starts asynchronous socket accept() operations on this secure socket. 
+ * Starts asynchronous socket accept() operations on this secure socket.
  */
 PJ_DEF(pj_status_t) pj_ssl_sock_start_accept (pj_ssl_sock_t *ssock,
                                               pj_pool_t *pool,
@@ -1923,7 +1923,7 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
         goto on_error;
 #else
     /* Create socket */
-    status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0, 
+    status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0,
                             &ssock->sock);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -1942,14 +1942,14 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
 
     /* Apply QoS, if specified */
     status = pj_sock_apply_qos2(ssock->sock, ssock->param.qos_type,
-                                &ssock->param.qos_params, 2, 
+                                &ssock->param.qos_params, 2,
                                 ssock->pool->obj_name, NULL);
     if (status != PJ_SUCCESS && !ssock->param.qos_ignore_error)
         goto on_error;
 
     /* Apply socket options, if specified */
     if (ssock->param.sockopt_params.cnt) {
-        status = pj_sock_setsockopt_params(ssock->sock, 
+        status = pj_sock_setsockopt_params(ssock->sock,
                                            &ssock->param.sockopt_params);
 
         if (status != PJ_SUCCESS && !ssock->param.sockopt_ignore_error)
@@ -1978,10 +1978,10 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
     asock_cb.on_accept_complete2 = asock_on_accept_complete2;
 
     status = pj_activesock_create(pool,
-                                  ssock->sock, 
+                                  ssock->sock,
                                   ssock->param.sock_type,
                                   &asock_cfg,
-                                  ssock->param.ioqueue, 
+                                  ssock->param.ioqueue,
                                   &asock_cb,
                                   ssock,
                                   &ssock->asock);
@@ -1998,7 +1998,7 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
 
     /* Update local address */
     ssock->addr_len = addr_len;
-    status = pj_sock_getsockname(ssock->sock, &ssock->local_addr, 
+    status = pj_sock_getsockname(ssock->sock, &ssock->local_addr,
                                  &ssock->addr_len);
     if (status != PJ_SUCCESS)
         pj_sockaddr_cp(&ssock->local_addr, localaddr);
@@ -2021,7 +2021,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
                                               const pj_sockaddr_t *remaddr,
                                               int addr_len)
 {
-    pj_ssl_start_connect_param param;    
+    pj_ssl_start_connect_param param;
     param.pool = pool;
     param.localaddr = localaddr;
     param.local_port_range = 0;
@@ -2043,7 +2043,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect2(
 #else
     pj_activesock_cb asock_cb;
     pj_activesock_cfg asock_cfg;
-    
+
     pj_pool_t *pool = connect_param->pool;
     const pj_sockaddr_t *localaddr = connect_param->localaddr;
     pj_uint16_t port_range = connect_param->local_port_range;
@@ -2054,21 +2054,21 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect2(
                      PJ_EINVAL);
 
     /* Create socket */
-    status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0, 
+    status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0,
                             &ssock->sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 
     /* Apply QoS, if specified */
     status = pj_sock_apply_qos2(ssock->sock, ssock->param.qos_type,
-                                &ssock->param.qos_params, 2, 
+                                &ssock->param.qos_params, 2,
                                 ssock->pool->obj_name, NULL);
     if (status != PJ_SUCCESS && !ssock->param.qos_ignore_error)
         goto on_error;
 
     /* Apply socket options, if specified */
     if (ssock->param.sockopt_params.cnt) {
-        status = pj_sock_setsockopt_params(ssock->sock, 
+        status = pj_sock_setsockopt_params(ssock->sock,
                                            &ssock->param.sockopt_params);
 
         if (status != PJ_SUCCESS && !ssock->param.sockopt_ignore_error)
@@ -2104,10 +2104,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect2(
     asock_cb.on_data_sent = asock_on_data_sent;
 
     status = pj_activesock_create(pool,
-                                  ssock->sock, 
+                                  ssock->sock,
                                   ssock->param.sock_type,
                                   &asock_cfg,
-                                  ssock->param.ioqueue, 
+                                  ssock->param.ioqueue,
                                   &asock_cb,
                                   ssock,
                                   &ssock->asock);
@@ -2173,7 +2173,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock)
 
     PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
 
-    if (ssock->ssl_state != SSL_STATE_ESTABLISHED) 
+    if (ssock->ssl_state != SSL_STATE_ESTABLISHED)
         return PJ_EINVALIDOP;
 
     status = ssl_renegotiate(ssock);
@@ -2193,7 +2193,7 @@ static void wipe_buf(pj_str_t *buf)
 }
 
 PJ_DEF(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert)
-{    
+{
     if (cert) {
         wipe_buf(&cert->CA_file);
         wipe_buf(&cert->CA_path);

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
  */
 #ifndef __PJMEDIA_TRANSPORT_SRTP_H__
 #define __PJMEDIA_TRANSPORT_SRTP_H__
@@ -37,34 +37,34 @@
  * key exchange method. It implements \ref PJMEDIA_TRANSPORT to integrate
  * with the rest of PJMEDIA framework.
  *
- * As we know, media transport is separated from the stream object (which 
- * does the encoding/decoding of PCM frames, (de)packetization of RTP/RTCP 
+ * As we know, media transport is separated from the stream object (which
+ * does the encoding/decoding of PCM frames, (de)packetization of RTP/RTCP
  * packets, and de-jitter buffering). The connection between stream and media
- * transport is established when the stream is created (we need to specify 
- * media transport during stream creation), and the interconnection can be 
+ * transport is established when the stream is created (we need to specify
+ * media transport during stream creation), and the interconnection can be
  * depicted from the diagram below:
  *
    \image html media-transport.PNG
 
  * I think the diagram above is self-explanatory.
  *
- * SRTP functionality is implemented as some kind of "adapter", which is 
- * plugged between the stream and the actual media transport that does 
+ * SRTP functionality is implemented as some kind of "adapter", which is
+ * plugged between the stream and the actual media transport that does
  * sending/receiving RTP/RTCP packets. When SRTP is used, the interconnection
  * between stream and transport is like the diagram below:
  *
     \image html media-srtp-transport.PNG
 
- * So to stream, the SRTP transport behaves as if it is a media transport 
+ * So to stream, the SRTP transport behaves as if it is a media transport
  * (because it is a media transport), and to the media transport it behaves
  * as if it is a stream. The SRTP object then forwards RTP packets back and
- * forth between stream and the actual transport, encrypting/decrypting 
+ * forth between stream and the actual transport, encrypting/decrypting
  * the RTP/RTCP packets as necessary.
- * 
- * The neat thing about this design is the SRTP "adapter" then can be used 
- * to encrypt any kind of media transports. We currently have UDP and ICE 
- * media transports that can benefit SRTP, and we could add SRTP to any 
- * media transports that will be added in the future. 
+ *
+ * The neat thing about this design is the SRTP "adapter" then can be used
+ * to encrypt any kind of media transports. We currently have UDP and ICE
+ * media transports that can benefit SRTP, and we could add SRTP to any
+ * media transports that will be added in the future.
  */
 
 PJ_BEGIN_DECL
@@ -196,7 +196,7 @@ typedef struct pjmedia_srtp_roc
 
 /**
  * Settings to be given when creating SRTP transport. Application should call
- * #pjmedia_srtp_setting_default() to initialize this structure with its 
+ * #pjmedia_srtp_setting_default() to initialize this structure with its
  * default values.
  */
 typedef struct pjmedia_srtp_setting
@@ -207,7 +207,7 @@ typedef struct pjmedia_srtp_setting
     pjmedia_srtp_use             use;
 
     /**
-     * Specify whether the SRTP transport should close the member transport 
+     * Specify whether the SRTP transport should close the member transport
      * when it is destroyed. Default: PJ_TRUE.
      */
     pj_bool_t                    close_member_tp;
@@ -361,7 +361,7 @@ typedef struct pjmedia_srtp_dtls_nego_param
 
 /**
  * Initialize SRTP library. This function should be called before
- * any SRTP functions, however calling #pjmedia_transport_srtp_create() 
+ * any SRTP functions, however calling #pjmedia_transport_srtp_create()
  * will also invoke this function. This function will also register SRTP
  * library deinitialization to #pj_atexit(), so the deinitialization
  * of SRTP library will be performed automatically by PJLIB destructor.
@@ -413,7 +413,7 @@ PJ_DECL(pj_status_t) pjmedia_srtp_enum_keying(unsigned *count,
  * Create an SRTP media transport.
  *
  * @param endpt     The media endpoint instance.
- * @param tp        The actual media transport to send and receive 
+ * @param tp        The actual media transport to send and receive
  *                  RTP/RTCP packets. This media transport will be
  *                  kept as member transport of this SRTP instance.
  * @param opt       Optional settings. If NULL is given, default
@@ -502,11 +502,11 @@ PJ_DECL(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
  * Manually start SRTP session with the given parameters. Application only
  * needs to call this function when the SRTP transport is used without SDP
  * offer/answer. When SDP offer/answer framework is used, the SRTP transport
- * will be started/stopped by #pjmedia_transport_media_start() and 
+ * will be started/stopped by #pjmedia_transport_media_start() and
  * #pjmedia_transport_media_stop() respectively.
  *
  * Please note that even if an RTP stream is only one direction, application
- * will still need to provide both crypto suites, because it is needed by 
+ * will still need to provide both crypto suites, because it is needed by
  * RTCP.
 
  * If application specifies the crypto keys, the keys for transmit and receive
@@ -530,7 +530,7 @@ PJ_DECL(pj_status_t) pjmedia_transport_srtp_start(
  *
  * @return          PJ_SUCCESS on success.
  *
- * @see #pjmedia_transport_srtp_start() 
+ * @see #pjmedia_transport_srtp_start()
  */
 PJ_DECL(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp);
 

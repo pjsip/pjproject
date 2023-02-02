@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -47,7 +47,7 @@ static int wait_socket(pj_sock_t sock, unsigned msec_timeout)
 
     PJ_FD_ZERO(&fdset);
     PJ_FD_SET(sock, &fdset);
-    
+
     return pj_sock_select(FD_SETSIZE, &fdset, NULL, NULL, &timeout);
 }
 
@@ -72,7 +72,7 @@ static int echo_client_thread(void *arg)
         return -10;
     }
 
-    rc = pj_sockaddr_in_init( &addr, pj_cstr(&s, client->server), 
+    rc = pj_sockaddr_in_init( &addr, pj_cstr(&s, client->server),
                               (pj_uint16_t)client->port);
     if (rc != PJ_SUCCESS) {
         app_perror("...unable to resolve server", rc);
@@ -86,7 +86,7 @@ static int echo_client_thread(void *arg)
         return -20;
     }
 
-    PJ_LOG(3,("", "...socket connected to %s:%d", 
+    PJ_LOG(3,("", "...socket connected to %s:%d",
                   pj_inet_ntop2(pj_AF_INET(), &addr.sin_addr,
                                 addr, sizeof(addr)),
                   pj_ntohs(addr.sin_port)));
@@ -164,7 +164,7 @@ static int echo_client_thread(void *arg)
             recv_buf[BUF_SIZE-1] = '\0';
             PJ_LOG(3,("", "...error: buffer %u has changed!\n"
                           "send_buf=%s\n"
-                          "recv_buf=%s\n", 
+                          "recv_buf=%s\n",
                           counter, send_buf, recv_buf));
             pj_atomic_inc(invalid_counter);
         }
@@ -202,12 +202,12 @@ int echo_client(int sock_type, const char *server, int port)
     rc = pj_atomic_create(pool, 0, &timeout_counter);
 
     PJ_LOG(3,("", "Echo client started"));
-    PJ_LOG(3,("", "  Destination: %s:%d", 
+    PJ_LOG(3,("", "  Destination: %s:%d",
                   ECHO_SERVER_ADDRESS, ECHO_SERVER_START_PORT));
     PJ_LOG(3,("", "  Press Ctrl-C to exit"));
 
     for (i=0; i<ECHO_CLIENT_MAX_THREADS; ++i) {
-        rc = pj_thread_create( pool, NULL, &echo_client_thread, &client, 
+        rc = pj_thread_create( pool, NULL, &echo_client_thread, &client,
                                PJ_THREAD_DEFAULT_STACK_SIZE, 0,
                                &thread[i]);
         if (rc != PJ_SUCCESS) {
@@ -236,22 +236,22 @@ int echo_client(int sock_type, const char *server, int port)
 
         received = pj_atomic_get(totalBytes);
         cur_received = received - last_received;
-        
+
         bw = cur_received;
         pj_highprec_mul(bw, 1000);
         pj_highprec_div(bw, msec);
 
         bw32 = (unsigned)bw;
-        
+
         last_report = now;
         last_received = received;
 
         timeout = pj_atomic_get(timeout_counter);
         invalid = pj_atomic_get(invalid_counter);
 
-        PJ_LOG(3,("", 
+        PJ_LOG(3,("",
                   "...%d threads, total bandwidth: %d KB/s, "
-                  "timeout=%d, invalid=%d", 
+                  "timeout=%d, invalid=%d",
                   ECHO_CLIENT_MAX_THREADS, bw32/1000,
                   timeout, invalid));
     }

@@ -613,7 +613,7 @@ static pj_status_t avi_dev_strm_get_frame(pjmedia_vid_dev_stream *strm,
                                           pjmedia_frame *frame)
 {
     struct avi_dev_strm *stream = (struct avi_dev_strm*)strm;
-    
+
     if (stream->adi->codec) {
         pjmedia_frame enc_frame;
         pj_status_t status;

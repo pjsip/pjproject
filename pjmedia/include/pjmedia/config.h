@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CONFIG_H__
 #define __PJMEDIA_CONFIG_H__
@@ -72,11 +72,11 @@
 #endif
 
 /**
- * Specify whether we prefer to use audio switch board rather than 
+ * Specify whether we prefer to use audio switch board rather than
  * conference bridge.
  *
- * Audio switch board is a kind of simplified version of conference 
- * bridge, but not really the subset of conference bridge. It has 
+ * Audio switch board is a kind of simplified version of conference
+ * bridge, but not really the subset of conference bridge. It has
  * stricter rules on audio routing among the pjmedia ports and has
  * no audio mixing capability. The power of it is it could work with
  * encoded audio frames where conference brigde couldn't.
@@ -155,7 +155,7 @@
 #endif
 
 /**
- * Specify default sound device latency, in milisecond. 
+ * Specify default sound device latency, in milisecond.
  *
  * Default is 160ms for Windows Mobile and 140ms for other platforms.
  */
@@ -185,21 +185,21 @@
 /**
  * This denotes implementation of WSOLA using fixed or floating point WSOLA
  * algorithm. This implementation provides the best quality of the result,
- * at the expense of one frame delay and intensive processing power 
+ * at the expense of one frame delay and intensive processing power
  * requirement.
  */
 #define PJMEDIA_WSOLA_IMP_WSOLA             1
 
 /**
- * This denotes implementation of WSOLA algorithm with faster waveform 
- * similarity calculation. This implementation provides fair quality of 
+ * This denotes implementation of WSOLA algorithm with faster waveform
+ * similarity calculation. This implementation provides fair quality of
  * the result with the main advantage of low processing power requirement.
  */
 #define PJMEDIA_WSOLA_IMP_WSOLA_LITE        2
 
 /**
  * Specify type of Waveform based Similarity Overlap and Add (WSOLA) backend
- * implementation to be used. WSOLA is an algorithm to expand and/or compress 
+ * implementation to be used. WSOLA is an algorithm to expand and/or compress
  * audio frames without changing the pitch, and used by the delaybuf and as PLC
  * backend algorithm.
  *
@@ -212,8 +212,8 @@
 
 /**
  * Specify the default maximum duration of synthetic audio that is generated
- * by WSOLA. This value should be long enough to cover burst of packet losses. 
- * but not too long, because as the duration increases the quality would 
+ * by WSOLA. This value should be long enough to cover burst of packet losses.
+ * but not too long, because as the duration increases the quality would
  * degrade considerably.
  *
  * Note that this limit is only applied when fading is enabled in the WSOLA
@@ -242,7 +242,7 @@
 /**
  * Specify WSOLA algorithm delay, in milliseconds. The algorithm delay is
  * used to merge synthetic samples with real samples in the transition
- * between real to synthetic and vice versa. The longer the delay, the 
+ * between real to synthetic and vice versa. The longer the delay, the
  * smoother signal to be generated, at the expense of longer latency and
  * a slighty more computation.
  *
@@ -288,7 +288,7 @@
 /**
  * Specify number of sound buffers. Larger number is better for sound
  * stability and to accommodate sound devices that are unable to send frames
- * in timely manner, however it would probably cause more audio delay (and 
+ * in timely manner, however it would probably cause more audio delay (and
  * definitely will take more memory). One individual buffer is normally 10ms
  * or 20 ms long, depending on ptime settings (samples_per_frame value).
  *
@@ -370,12 +370,12 @@
  * Select one of these backends in PJMEDIA_RESAMPLE_IMP.
  */
 #define PJMEDIA_RESAMPLE_NONE               1   /**< No resampling.         */
-#define PJMEDIA_RESAMPLE_LIBRESAMPLE        2   /**< Sample rate conversion 
+#define PJMEDIA_RESAMPLE_LIBRESAMPLE        2   /**< Sample rate conversion
                                                      using libresample.  */
-#define PJMEDIA_RESAMPLE_SPEEX              3   /**< Sample rate conversion 
+#define PJMEDIA_RESAMPLE_SPEEX              3   /**< Sample rate conversion
                                                      using Speex. */
-#define PJMEDIA_RESAMPLE_LIBSAMPLERATE      4   /**< Sample rate conversion 
-                                                     using libsamplerate 
+#define PJMEDIA_RESAMPLE_LIBSAMPLERATE      4   /**< Sample rate conversion
+                                                     using libsamplerate
                                                      (a.k.a Secret Rabbit Code)
                                                  */
 
@@ -416,7 +416,7 @@
  * This (among other thing) will affect the size of buffers to be allocated
  * for outgoing packets.
  */
-#ifndef PJMEDIA_MAX_FRAME_DURATION_MS   
+#ifndef PJMEDIA_MAX_FRAME_DURATION_MS
 #   define PJMEDIA_MAX_FRAME_DURATION_MS        200
 #endif
 
@@ -424,7 +424,7 @@
 /**
  * Max packet size for transmitting direction.
  */
-#ifndef PJMEDIA_MAX_MTU                 
+#ifndef PJMEDIA_MAX_MTU
 #  define PJMEDIA_MAX_MTU                       1500
 #endif
 
@@ -432,7 +432,7 @@
 /**
  * Max packet size for receiving direction.
  */
-#ifndef PJMEDIA_MAX_MRU                 
+#ifndef PJMEDIA_MAX_MRU
 #  define PJMEDIA_MAX_MRU                       2000
 #endif
 
@@ -441,7 +441,7 @@
  * DTMF/telephone-event duration, in timestamp. To specify the duration in
  * milliseconds, use the setting PJMEDIA_DTMF_DURATION_MSEC instead.
  */
-#ifndef PJMEDIA_DTMF_DURATION           
+#ifndef PJMEDIA_DTMF_DURATION
 #  define PJMEDIA_DTMF_DURATION                 1600    /* in timestamp */
 #endif
 
@@ -451,9 +451,9 @@
  * than zero, than this setting will be used instead of PJMEDIA_DTMF_DURATION.
  *
  * Note that for a clockrate of 8 KHz, a dtmf duration of 1600 timestamp
- * units (the default value of PJMEDIA_DTMF_DURATION) is equivalent to 200 ms. 
+ * units (the default value of PJMEDIA_DTMF_DURATION) is equivalent to 200 ms.
  */
-#ifndef PJMEDIA_DTMF_DURATION_MSEC              
+#ifndef PJMEDIA_DTMF_DURATION_MSEC
 #  define PJMEDIA_DTMF_DURATION_MSEC            0
 #endif
 
@@ -463,7 +463,7 @@
  * remote address required to make the stream switch transmission
  * to the source address.
  */
-#ifndef PJMEDIA_RTP_NAT_PROBATION_CNT   
+#ifndef PJMEDIA_RTP_NAT_PROBATION_CNT
 #  define PJMEDIA_RTP_NAT_PROBATION_CNT         10
 #endif
 
@@ -535,7 +535,7 @@
 #endif
 
 /**
- * Specify the factor with wich RTCP RTT statistics should be normalized 
+ * Specify the factor with wich RTCP RTT statistics should be normalized
  * if exceptionally high. For e.g. mobile networks with potentially large
  * fluctuations, this might be unwanted.
  *
@@ -565,9 +565,9 @@
 
 /**
  * Specify whether RTCP XR support should be built into PJMEDIA. Disabling
- * this feature will reduce footprint slightly. Note that even when this 
- * setting is enabled, RTCP XR processing will only be performed in stream 
- * if it is enabled on run-time on per stream basis. See  
+ * this feature will reduce footprint slightly. Note that even when this
+ * setting is enabled, RTCP XR processing will only be performed in stream
+ * if it is enabled on run-time on per stream basis. See
  * PJMEDIA_STREAM_ENABLE_XR setting for more info.
  *
  * Default: 0 (no).
@@ -579,7 +579,7 @@
 
 /**
  * The RTCP XR feature is activated and used by stream if \a enable_rtcp_xr
- * field of \a pjmedia_stream_info structure is non-zero. This setting 
+ * field of \a pjmedia_stream_info structure is non-zero. This setting
  * controls the default value of this field.
  *
  * Default: 0 (disabled)
@@ -593,7 +593,7 @@
  * Specify the buffer length for storing any received RTCP SDES text
  * in a stream session. Usually RTCP contains only the mandatory SDES
  * field, i.e: CNAME.
- * 
+ *
  * Default: 64 bytes.
  */
 #ifndef PJMEDIA_RTCP_RX_SDES_BUF_LEN
@@ -603,7 +603,7 @@
 
 /**
  * Specify the maximum number of RTCP Feedback capability definition.
- * 
+ *
  * Default: 16
  */
 #ifndef PJMEDIA_RTCP_FB_MAX_CAP
@@ -621,7 +621,7 @@
  *
  * Specify zero to disable this feature.
  *
- * Default: 600 msec (which gives good probability that some RTP 
+ * Default: 600 msec (which gives good probability that some RTP
  *                    packets will reach the destination, but without
  *                    filling up the jitter buffer on the remote end).
  */
@@ -651,9 +651,9 @@
 
 
 /**
- * Specify the maximum duration of silence period in the codec, in msec. 
+ * Specify the maximum duration of silence period in the codec, in msec.
  * This is useful for example to keep NAT binding open in the firewall
- * and to prevent server from disconnecting the call because no 
+ * and to prevent server from disconnecting the call because no
  * RTP packet is received.
  *
  * This only applies to codecs that use PJMEDIA's VAD such as G711, GSM,
@@ -757,7 +757,7 @@
  * remote, or should it rather use the codec preference as specified by
  * local endpoint.
  *
- * For example, suppose incoming call has codec order "8 0 3", while 
+ * For example, suppose incoming call has codec order "8 0 3", while
  * local codec order is "3 0 8". If remote codec order is preferable,
  * the selected codec will be 8, while if local codec order is preferable,
  * the selected codec will be 3.
@@ -810,14 +810,14 @@
 
 
 /**
- * This specifies if the SDP negotiator should compare its content before 
- * incrementing the origin version on the subsequent offer/answer. 
- * If this is set to 1, origin version will only by incremented if the 
- * new offer/answer is different than the previous one. For backward 
+ * This specifies if the SDP negotiator should compare its content before
+ * incrementing the origin version on the subsequent offer/answer.
+ * If this is set to 1, origin version will only by incremented if the
+ * new offer/answer is different than the previous one. For backward
  * compatibility and performance this is set to 0.
  *
  * Default is 0 (No)
- * 
+ *
  * This macro has been deprecated in version 2.14.
  * See https://github.com/pjsip/pjproject/pull/3322 for more info.
  */
@@ -864,7 +864,7 @@
 
 
 /**
- * This macro controls whether pjmedia should include SDP rtpmap 
+ * This macro controls whether pjmedia should include SDP rtpmap
  * attribute for static payload types. SDP rtpmap for static
  * payload types are optional, although they are normally included
  * for interoperability reason.
@@ -920,12 +920,12 @@
 #endif
 
 
-/* 
+/*
  * Below specifies the various tone generator backend algorithm.
  */
 
-/** 
- * The math's sine(), floating point. This has very good precision 
+/**
+ * The math's sine(), floating point. This has very good precision
  * but it's the slowest and requires floating point support and
  * linking with the math library.
  */
@@ -941,7 +941,7 @@
 /**
  * Fixed point using sine signal generated by Cordic algorithm. This
  * algorithm can be tuned to provide balance between precision and
- * performance by tuning the PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP 
+ * performance by tuning the PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP
  * setting, and may be suitable for platforms that lack floating-point
  * support.
  */
@@ -956,7 +956,7 @@
 
 
 /**
- * Specify the tone generator algorithm to be used. Please see 
+ * Specify the tone generator algorithm to be used. Please see
  * http://trac.pjsip.org/repos/wiki/Tone_Generator for the performance
  * analysis results of the various tone generator algorithms.
  *
@@ -976,7 +976,7 @@
 /**
  * Specify the number of calculation loops to generate the tone, when
  * PJMEDIA_TONEGEN_FIXED_POINT_CORDIC algorithm is used. With more calculation
- * loops, the tone signal gets more precise, but this will add more 
+ * loops, the tone signal gets more precise, but this will add more
  * processing.
  *
  * Valid values are 1 to 28.
@@ -1121,7 +1121,7 @@
  * Enable AES_GCM_256 cryptos in SRTP.
  *
  * To enable this, you would require OpenSSL which supports it.
- * See https://github.com/pjsip/pjproject/issues/1943 for more info. 
+ * See https://github.com/pjsip/pjproject/issues/1943 for more info.
  *
  * Default: disabled.
  */
@@ -1209,8 +1209,8 @@
 
 /**
  * Transport info (pjmedia_transport_info) contains a socket info and list
- * of transport specific info, since transports can be chained together 
- * (for example, SRTP transport uses UDP transport as the underlying 
+ * of transport specific info, since transports can be chained together
+ * (for example, SRTP transport uses UDP transport as the underlying
  * transport). This constant specifies maximum number of transport specific
  * infos that can be held in a transport info.
  */
@@ -1254,22 +1254,22 @@
 
 
 /**
- * Specify another type of keep-alive and NAT hole punching 
+ * Specify another type of keep-alive and NAT hole punching
  * mechanism (the other type is PJMEDIA_STREAM_VAD_SUSPEND_MSEC
- * and PJMEDIA_CODEC_MAX_SILENCE_PERIOD) to be used by stream. 
- * When this feature is enabled, the stream will initially 
+ * and PJMEDIA_CODEC_MAX_SILENCE_PERIOD) to be used by stream.
+ * When this feature is enabled, the stream will initially
  * transmit one packet to punch a hole in NAT, and periodically
  * transmit keep-alive packets.
  *
  * When this alternative keep-alive mechanism is used, application
- * may disable the other keep-alive mechanisms, i.e: by setting 
- * PJMEDIA_STREAM_VAD_SUSPEND_MSEC to zero and 
+ * may disable the other keep-alive mechanisms, i.e: by setting
+ * PJMEDIA_STREAM_VAD_SUSPEND_MSEC to zero and
  * PJMEDIA_CODEC_MAX_SILENCE_PERIOD to -1.
  *
  * The value of this macro specifies the type of packet used
  * for the keep-alive mechanism. Valid values are
  * PJMEDIA_STREAM_KA_EMPTY_RTP and PJMEDIA_STREAM_KA_USER.
- * 
+ *
  * The duration of the keep-alive interval further can be set
  * with PJMEDIA_STREAM_KA_INTERVAL setting.
  *
@@ -1316,20 +1316,20 @@
 
 
 /**
- * Specify the number of identical consecutive error that will be ignored when 
+ * Specify the number of identical consecutive error that will be ignored when
  * receiving RTP/RTCP data before the library tries to restart the transport.
  *
- * When receiving RTP/RTCP data, the library will ignore error besides 
- * PJ_EPENDING or PJ_ECANCELLED and continue the loop to receive the data. 
+ * When receiving RTP/RTCP data, the library will ignore error besides
+ * PJ_EPENDING or PJ_ECANCELLED and continue the loop to receive the data.
  * If the OS always return error, then the loop will continue non stop.
- * This setting will limit the number of the identical consecutive error, 
+ * This setting will limit the number of the identical consecutive error,
  * before the library start to restart the transport. If error still happens
- * after transport restart, then PJMEDIA_EVENT_MEDIA_TP_ERR event will be 
+ * after transport restart, then PJMEDIA_EVENT_MEDIA_TP_ERR event will be
  * publish as a notification.
  *
  * If PJ_ESOCKETSTOP is raised, then transport will be restarted regardless
  * of this setting.
- * 
+ *
  * To always ignore the error when receving RTP/RTCP, set this to 0.
  *
  * Default : 20
@@ -1480,7 +1480,7 @@
 /**
  * Minimum burst level reference used for calculating discard duration
  * in jitter buffer progressive discard algorithm, in frames.
- * 
+ *
  * Default: 1 frame
  */
 #ifndef PJMEDIA_JBUF_PRO_DISC_MIN_BURST
@@ -1491,7 +1491,7 @@
 /**
  * Maximum burst level reference used for calculating discard duration
  * in jitter buffer progressive discard algorithm, in frames.
- * 
+ *
  * Default: 200 frames
  */
 #ifndef PJMEDIA_JBUF_PRO_DISC_MAX_BURST
@@ -1556,9 +1556,9 @@
  * Maximum video payload size. Note that this must not be greater than
  * PJMEDIA_MAX_MTU.
  *
- * Default: (PJMEDIA_MAX_MTU - 20 - (128+16)) if SRTP is enabled, 
- *          otherwise (PJMEDIA_MAX_MTU - 20). 
- *          Note that (128+16) constant value is taken from libSRTP macro 
+ * Default: (PJMEDIA_MAX_MTU - 20 - (128+16)) if SRTP is enabled,
+ *          otherwise (PJMEDIA_MAX_MTU - 20).
+ *          Note that (128+16) constant value is taken from libSRTP macro
  *          SRTP_MAX_TRAILER_LEN.
  */
 #ifndef PJMEDIA_MAX_VID_PAYLOAD_SIZE
@@ -1629,7 +1629,7 @@
 
 
 /**
- * Specify the number of keyframe needed to be sent after the stream is 
+ * Specify the number of keyframe needed to be sent after the stream is
  * created. Setting this to 0 will disable it.
  *
  * Default : 5

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,12 +14,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/session.h>
 #include <pjmedia/errno.h>
 #include <pj/log.h>
-#include <pj/os.h> 
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/assert.h>
@@ -69,7 +69,7 @@ PJ_DEF(pj_status_t) pjmedia_session_info_from_sdp( pj_pool_t *pool,
         pj_status_t status;
 
         status = pjmedia_stream_info_from_sdp( &si->stream_info[i], pool,
-                                               endpt, 
+                                               endpt,
                                                local, remote, i);
         if (status != PJ_SUCCESS)
             return status;
@@ -82,7 +82,7 @@ PJ_DEF(pj_status_t) pjmedia_session_info_from_sdp( pj_pool_t *pool,
 /**
  * Create new session.
  */
-PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt, 
+PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
                                             const pjmedia_session_info *si,
                                             pjmedia_transport *transports[],
                                             void *user_data,
@@ -97,8 +97,8 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
     PJ_ASSERT_RETURN(endpt && si && p_session, PJ_EINVAL);
 
     /* Create pool for the session. */
-    pool = pjmedia_endpt_create_pool( endpt, "session", 
-                                      PJMEDIA_SESSION_SIZE, 
+    pool = pjmedia_endpt_create_pool( endpt, "session",
+                                      PJMEDIA_SESSION_SIZE,
                                       PJMEDIA_SESSION_INC);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
@@ -178,7 +178,7 @@ PJ_DEF(pj_status_t) pjmedia_session_destroy (pjmedia_session *session)
     PJ_ASSERT_RETURN(session, PJ_EINVAL);
 
     for (i=0; i<session->stream_cnt; ++i) {
-        
+
         pjmedia_stream_destroy(session->stream[i]);
 
     }
@@ -256,7 +256,7 @@ PJ_DEF(pj_status_t) pjmedia_session_resume_stream( pjmedia_session *session,
 /**
  * Send RTCP SDES for the session.
  */
-PJ_DEF(pj_status_t) 
+PJ_DEF(pj_status_t)
 pjmedia_session_send_rtcp_sdes( const pjmedia_session *session )
 {
     unsigned i;
@@ -273,7 +273,7 @@ pjmedia_session_send_rtcp_sdes( const pjmedia_session *session )
 /**
  * Send RTCP BYE for the session.
  */
-PJ_DEF(pj_status_t) 
+PJ_DEF(pj_status_t)
 pjmedia_session_send_rtcp_bye( const pjmedia_session *session )
 {
     unsigned i;
@@ -291,7 +291,7 @@ pjmedia_session_send_rtcp_bye( const pjmedia_session *session )
  * Enumerate media stream in the session.
  */
 PJ_DEF(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session,
-                                                 unsigned *count, 
+                                                 unsigned *count,
                                                  pjmedia_stream_info info[])
 {
     unsigned i;
@@ -302,7 +302,7 @@ PJ_DEF(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session,
         *count = session->stream_cnt;
 
     for (i=0; i<*count; ++i) {
-        pj_memcpy(&info[i], &session->stream_info[i], 
+        pj_memcpy(&info[i], &session->stream_info[i],
                   sizeof(pjmedia_stream_info));
     }
 
@@ -327,7 +327,7 @@ PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat( pjmedia_session *session,
                                                      unsigned index,
                                                      pjmedia_rtcp_stat *stat)
 {
-    PJ_ASSERT_RETURN(session && stat && index < session->stream_cnt, 
+    PJ_ASSERT_RETURN(session && stat && index < session->stream_cnt,
                      PJ_EINVAL);
 
     return pjmedia_stream_get_stat(session->stream[index], stat);
@@ -355,7 +355,7 @@ PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat_xr(
                                              unsigned index,
                                              pjmedia_rtcp_xr_stat *stat_xr)
 {
-    PJ_ASSERT_RETURN(session && stat_xr && index < session->stream_cnt, 
+    PJ_ASSERT_RETURN(session && stat_xr && index < session->stream_cnt,
                      PJ_EINVAL);
 
     return pjmedia_stream_get_stat_xr(session->stream[index], stat_xr);
@@ -367,7 +367,7 @@ PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat_jbuf(
                                             unsigned index,
                                             pjmedia_jb_state *state)
 {
-    PJ_ASSERT_RETURN(session && state && index < session->stream_cnt, 
+    PJ_ASSERT_RETURN(session && state && index < session->stream_cnt,
                      PJ_EINVAL);
 
     return pjmedia_stream_get_stat_jbuf(session->stream[index], state);
@@ -413,9 +413,9 @@ PJ_DEF(pj_status_t) pjmedia_session_get_dtmf( pjmedia_session *session,
  */
 PJ_DEF(pj_status_t) pjmedia_session_set_dtmf_callback(pjmedia_session *session,
                                   unsigned index,
-                                  void (*cb)(pjmedia_stream*, 
-                                             void *user_data, 
-                                             int digit), 
+                                  void (*cb)(pjmedia_stream*,
+                                             void *user_data,
+                                             int digit),
                                   void *user_data)
 {
     PJ_ASSERT_RETURN(session && index < session->stream_cnt, PJ_EINVAL);

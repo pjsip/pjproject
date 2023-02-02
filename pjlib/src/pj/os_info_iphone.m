@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "TargetConditionals.h"
 
@@ -29,10 +29,10 @@ void pj_iphone_os_get_sys_info(pj_sys_info *si, pj_str_t *si_buffer)
 {
     unsigned buf_len = si_buffer->slen, left = si_buffer->slen, len;
     UIDevice *device = [UIDevice currentDevice];
-    
+
     if ([device respondsToSelector:@selector(isMultitaskingSupported)])
         si->flags |= PJ_SYS_HAS_IOS_BG;
-    
+
 #define ALLOC_CP_STR(str,field) \
     do { \
         len = [str length]; \

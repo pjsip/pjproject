@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pjmedia-audiodev/errno.h>
@@ -39,10 +39,10 @@
 #include <VoIPILBCDecoderIntfc.h>
 #include <VoIPILBCEncoderIntfc.h>
 
-/* AMR helper */  
+/* AMR helper */
 #include <pjmedia-codec/amr_helper.h>
 
-/* Pack/unpack G.729 frame of S60 DSP codec, taken from:  
+/* Pack/unpack G.729 frame of S60 DSP codec, taken from:
  * http://wiki.forum.nokia.com/index.php/TSS000776_-_Payload_conversion_for_G.729_audio_format
  */
 #include "s60_g729_bitstream.h"
@@ -87,7 +87,7 @@ struct vas_stream
 {
     // Base
     pjmedia_aud_stream   base;                  /**< Base class.        */
-    
+
     // Pool
     pj_pool_t           *pool;                  /**< Memory pool.       */
 
@@ -110,7 +110,7 @@ struct vas_stream
     pj_uint16_t          rec_buf_len;           /**< Record buffer length. */
     void                *strm_data;             /**< Stream data.       */
 
-    /* Resampling is needed, in case audio device is opened with clock rate 
+    /* Resampling is needed, in case audio device is opened with clock rate
      * other than 8kHz (only for PCM format).
      */
     pjmedia_resample    *play_resample;         /**< Resampler for playback. */
@@ -131,7 +131,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f);
 static unsigned    factory_get_dev_count(pjmedia_aud_dev_factory *f);
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info);
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
@@ -169,7 +169,7 @@ static pjmedia_aud_dev_factory_op factory_op =
     &factory_refresh
 };
 
-static pjmedia_aud_stream_op stream_op = 
+static pjmedia_aud_stream_op stream_op =
 {
     &stream_get_param,
     &stream_get_cap,
@@ -237,7 +237,7 @@ public:
     void Stop();
 
     TInt ActivateSpeaker(TBool active);
-    
+
     TInt SetVolume(TInt vol) { return iVoIPDnlink->SetVolume(vol); }
     TInt GetVolume() { TInt vol;iVoIPDnlink->GetVolume(vol);return vol; }
     TInt GetMaxVolume() { TInt vol;iVoIPDnlink->GetMaxVolume(vol);return vol; }
@@ -321,14 +321,14 @@ void CPjAudioEngine::ConstructL()
     User::LeaveIfError(err);
 
     if (parentStrm_->param.dir != PJMEDIA_DIR_CAPTURE) {
-        err = iFactory->CreateDownlinkStream(ver, 
+        err = iFactory->CreateDownlinkStream(ver,
                                              CVoIPUtilityFactory::EVoIPCall,
                                              iVoIPDnlink);
         User::LeaveIfError(err);
     }
 
     if (parentStrm_->param.dir != PJMEDIA_DIR_PLAYBACK) {
-        err = iFactory->CreateUplinkStream(ver, 
+        err = iFactory->CreateUplinkStream(ver,
                                            CVoIPUtilityFactory::EVoIPCall,
                                            iVoIPUplink);
         User::LeaveIfError(err);
@@ -358,10 +358,10 @@ CPjAudioEngine::CPjAudioEngine(struct vas_stream *parent_strm,
 CPjAudioEngine::~CPjAudioEngine()
 {
     Stop();
-    
+
     if (iVoIPUplink)
         iVoIPUplink->Close();
-    
+
     if (iVoIPDnlink)
         iVoIPDnlink->Close();
 
@@ -370,15 +370,15 @@ CPjAudioEngine::~CPjAudioEngine()
     delete iVoIPDnlink;
     delete iVoIPUplink;
     delete iFactory;
-    
+
     TRACE_((THIS_FILE, "Sound device destroyed"));
 }
 
 TBool CPjAudioEngine::IsStarted()
 {
-    return ((((parentStrm_->param.dir & PJMEDIA_DIR_CAPTURE) == 0) || 
+    return ((((parentStrm_->param.dir & PJMEDIA_DIR_CAPTURE) == 0) ||
                up_state_ == STATE_STREAMING) &&
-            (((parentStrm_->param.dir & PJMEDIA_DIR_PLAYBACK) == 0) || 
+            (((parentStrm_->param.dir & PJMEDIA_DIR_PLAYBACK) == 0) ||
                dn_state_ == STATE_STREAMING));
 }
 
@@ -458,7 +458,7 @@ TInt CPjAudioEngine::StartPlay()
 
     if (err != KErrNone)
         goto on_return;
-    
+
     /* Configure audio routing */
     ActivateSpeaker(setting_.loudspk);
 
@@ -676,7 +676,7 @@ void CPjAudioEngine::Event(const CVoIPAudioUplinkStream& /*aSrc*/,
 
             up_state_ = STATE_READY;
             TRACE_((THIS_FILE, "Uplink opened"));
-            
+
             if (last_state == STATE_STARTING)
                 StartRec();
         }
@@ -697,7 +697,7 @@ void CPjAudioEngine::Event(const CVoIPAudioUplinkStream& /*aSrc*/,
 }
 
 // Callback from MVoIPFormatObserver
-void CPjAudioEngine::Event(const CVoIPFormatIntfc& /*aSrc*/, 
+void CPjAudioEngine::Event(const CVoIPFormatIntfc& /*aSrc*/,
                            TInt aEventType)
 {
     snd_perror("Format event", aEventType);
@@ -759,7 +759,7 @@ static void PlayCbPcm2(CVoIPDataBuffer *buf, void *user_data)
     f.size = strm->param.samples_per_frame << 1;
     strm->play_cb(strm->user_data, &f);
     if (f.type != PJMEDIA_FRAME_TYPE_AUDIO) {
-        pjmedia_zero_samples((pj_int16_t*)f.buf, 
+        pjmedia_zero_samples((pj_int16_t*)f.buf,
                              strm->param.samples_per_frame);
     }
     f.size = strm->param.samples_per_frame << 1;
@@ -819,20 +819,20 @@ static void RecCbPcm(CVoIPDataBuffer *buf, void *user_data)
         samples_processed += samples_to_process;
 
         /* Buffer is full, time to call parent callback */
-        if (strm->rec_buf_len == strm->param.samples_per_frame / 
+        if (strm->rec_buf_len == strm->param.samples_per_frame /
                                  strm->param.channel_count /
-                                 strm->resample_factor) 
+                                 strm->resample_factor)
         {
             pjmedia_frame f;
 
             /* Need to resample clock rate? */
             if (strm->rec_resample) {
                 unsigned resampled = 0;
-                
+
                 while (resampled < strm->rec_buf_len) {
-                    pjmedia_resample_run(strm->rec_resample, 
+                    pjmedia_resample_run(strm->rec_resample,
                                 &strm->rec_buf[resampled],
-                                strm->pcm_buf + 
+                                strm->pcm_buf +
                                 resampled * strm->resample_factor);
                     resampled += 80;
                 }
@@ -884,13 +884,13 @@ static void PlayCbPcm(CVoIPDataBuffer *buf, void *user_data)
      * encode the PCM samples into G.711 and put it into VAS buffer.
      */
     unsigned samples_processed = 0;
-    
+
     while (samples_processed < g711_frame_len) {
         /* Need more samples to play, time to call parent callback */
         if (strm->play_buf_len == 0) {
             pjmedia_frame f;
             unsigned samples_got;
-            
+
             f.size = strm->param.samples_per_frame << 1;
             if (strm->play_resample || strm->param.channel_count != 1)
                 f.buf = strm->pcm_buf;
@@ -900,11 +900,11 @@ static void PlayCbPcm(CVoIPDataBuffer *buf, void *user_data)
             /* Call parent callback */
             strm->play_cb(strm->user_data, &f);
             if (f.type != PJMEDIA_FRAME_TYPE_AUDIO) {
-                pjmedia_zero_samples((pj_int16_t*)f.buf, 
+                pjmedia_zero_samples((pj_int16_t*)f.buf,
                                      strm->param.samples_per_frame);
             }
-            
-            samples_got = strm->param.samples_per_frame / 
+
+            samples_got = strm->param.samples_per_frame /
                           strm->param.channel_count /
                           strm->resample_factor;
 
@@ -921,11 +921,11 @@ static void PlayCbPcm(CVoIPDataBuffer *buf, void *user_data)
             /* Need to resample clock rate? */
             if (strm->play_resample) {
                 unsigned resampled = 0;
-                
-                while (resampled < samples_got) 
+
+                while (resampled < samples_got)
                 {
-                    pjmedia_resample_run(strm->play_resample, 
-                                strm->pcm_buf + 
+                    pjmedia_resample_run(strm->play_resample,
+                                strm->pcm_buf +
                                 resampled * strm->resample_factor,
                                 &strm->play_buf[resampled]);
                     resampled += 80;
@@ -964,7 +964,7 @@ static void RecCb(CVoIPDataBuffer *buf, void *user_data)
 
     /* Get the buffer */
     buf->GetPayloadPtr(buffer);
-    
+
     switch(strm->param.ext_fmt.id) {
     case PJMEDIA_FORMAT_AMR:
         {
@@ -992,10 +992,10 @@ static void RecCb(CVoIPDataBuffer *buf, void *user_data)
                 pj_assert(src_len == NORMAL_LEN || src_len == SID_LEN);
 
                 const TDesC8& p = bitstream->CompressG729Frame(
-                                            buffer.Right(src_len), 
+                                            buffer.Right(src_len),
                                             src_len == SID_LEN);
-                
-                pjmedia_frame_ext_append_subframe(frame, p.Ptr(), 
+
+                pjmedia_frame_ext_append_subframe(frame, p.Ptr(),
                                                   p.Length() << 3, 80);
             } else { /* We got null frame. */
                 pjmedia_frame_ext_append_subframe(frame, NULL, 0, 80);
@@ -1045,7 +1045,7 @@ static void RecCb(CVoIPDataBuffer *buf, void *user_data)
             /* Make sure it is normal frame. */
             pj_assert(buffer[0] == 1 && buffer[1] == 0);
 
-            /* Detect the recorder G.711 frame size, player frame size will 
+            /* Detect the recorder G.711 frame size, player frame size will
              * follow this recorder frame size.
              */
             if (vas_g711_frame_len == 0) {
@@ -1054,15 +1054,15 @@ static void RecCb(CVoIPDataBuffer *buf, void *user_data)
                         vas_g711_frame_len));
             }
 
-            /* Convert VAS buffer format into pjmedia_frame_ext. Whenever 
-             * samples count in the frame is equal to stream's samples per 
+            /* Convert VAS buffer format into pjmedia_frame_ext. Whenever
+             * samples count in the frame is equal to stream's samples per
              * frame, call parent stream callback.
              */
             while (samples_processed < vas_g711_frame_len) {
                 unsigned tmp;
                 const pj_uint8_t *pb = (const pj_uint8_t*)buffer.Ptr() +
                                        2 + samples_processed;
-    
+
                 tmp = PJ_MIN(strm->param.samples_per_frame - frame->samples_cnt,
                              vas_g711_frame_len - samples_processed);
 
@@ -1106,16 +1106,16 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
                           frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
             }
 
-            if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+            if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) {
                 pjmedia_frame_ext_subframe *sf;
                 unsigned samples_cnt;
-                
+
                 sf = pjmedia_frame_ext_get_subframe(frame, 0);
                 samples_cnt = frame->samples_cnt / frame->subframe_cnt;
-                
+
                 if (sf->data && sf->bitlen) {
                     /* AMR header for VAS is one byte, the format (may be!):
-                     * 0xxxxy00, where xxxx:frame type, y:not sure. 
+                     * 0xxxxy00, where xxxx:frame type, y:not sure.
                      */
                     unsigned len = (sf->bitlen+7)>>3;
                     enum {SID_FT = 8 };
@@ -1158,7 +1158,7 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
                           frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
             }
 
-            if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+            if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) {
                 pjmedia_frame_ext_subframe *sf;
                 unsigned samples_cnt;
 
@@ -1188,7 +1188,7 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
                 }
 
                 pjmedia_frame_ext_pop_subframes(frame, 1);
-            
+
             } else { /* PJMEDIA_FRAME_TYPE_NONE */
                 buffer.Append(2);
                 buffer.Append(0);
@@ -1207,14 +1207,14 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
                           frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
             }
 
-            if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+            if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) {
                 pjmedia_frame_ext_subframe *sf;
                 unsigned samples_cnt;
 
                 sf = pjmedia_frame_ext_get_subframe(frame, 0);
                 samples_cnt = frame->samples_cnt / frame->subframe_cnt;
 
-                pj_assert((strm->param.ext_fmt.det.aud.avg_bps == 15200 && 
+                pj_assert((strm->param.ext_fmt.det.aud.avg_bps == 15200 &&
                            samples_cnt == 160) ||
                           (strm->param.ext_fmt.det.aud.avg_bps != 15200 &&
                            samples_cnt == 240));
@@ -1275,7 +1275,7 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
                               frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
                 }
 
-                if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+                if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) {
                     pjmedia_frame_ext_subframe *sf;
                     unsigned samples_cnt;
 
@@ -1365,7 +1365,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
                         PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE |
                         PJMEDIA_AUD_DEV_CAP_VAD |
                         PJMEDIA_AUD_DEV_CAP_CNG;
-    af->dev_info.routes = PJMEDIA_AUD_DEV_ROUTE_EARPIECE | 
+    af->dev_info.routes = PJMEDIA_AUD_DEV_ROUTE_EARPIECE |
                           PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
     af->dev_info.input_count = 1;
     af->dev_info.output_count = 1;
@@ -1376,7 +1376,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     if (err != KErrNone)
         goto on_error;
 
-    /* On VAS 2.0, uplink & downlink stream should be instantiated before 
+    /* On VAS 2.0, uplink & downlink stream should be instantiated before
      * querying formats.
      */
     err = vas_factory_->CreateUplinkStream(vas_version,
@@ -1452,7 +1452,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
             af->dev_info.ext_fmt[ext_fmt_cnt] = ext_fmt;
             //af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_FALSE;
             break;
-        
+
         default:
             continue;
         }
@@ -1559,19 +1559,19 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     PJ_ASSERT_RETURN(param->bits_per_sample == BITS_PER_SAMPLE, PJ_EINVAL);
 
     /* Supported clock rates:
-     * - for non-PCM format: 8kHz  
-     * - for PCM format: 8kHz and 16kHz  
+     * - for non-PCM format: 8kHz
+     * - for PCM format: 8kHz and 16kHz
      */
     PJ_ASSERT_RETURN(param->clock_rate == 8000 ||
-                     (param->clock_rate == 16000 && 
+                     (param->clock_rate == 16000 &&
                       param->ext_fmt.id == PJMEDIA_FORMAT_L16),
                      PJ_EINVAL);
 
     /* Supported channels number:
      * - for non-PCM format: mono
-     * - for PCM format: mono and stereo  
+     * - for PCM format: mono and stereo
      */
-    PJ_ASSERT_RETURN(param->channel_count == 1 || 
+    PJ_ASSERT_RETURN(param->channel_count == 1 ||
                      (param->channel_count == 2 &&
                       param->ext_fmt.id == PJMEDIA_FORMAT_L16),
                      PJ_EINVAL);
@@ -1590,7 +1590,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     /* Set audio engine fourcc. */
     switch(strm->param.ext_fmt.id) {
     case PJMEDIA_FORMAT_L16:
-#ifdef USE_NATIVE_PCM   
+#ifdef USE_NATIVE_PCM
         vas_setting.format = EPCM16;
 #else
         vas_setting.format = EG711;
@@ -1617,7 +1617,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     /* Set audio engine mode. */
     if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16)
     {
-#ifdef USE_NATIVE_PCM   
+#ifdef USE_NATIVE_PCM
         vas_setting.mode = 0;
 #else
         vas_setting.mode = CVoIPFormatIntfc::EG711uLaw;
@@ -1645,7 +1645,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
         vas_setting.mode = 0;
     }
 
-    /* Disable VAD on L16, G711, iLBC, and also G729 (G729's SID 
+    /* Disable VAD on L16, G711, iLBC, and also G729 (G729's SID
      * potentially cause noise?).
      */
     if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_PCMU ||
@@ -1664,7 +1664,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     vas_setting.plc = (strm->param.flags & PJMEDIA_AUD_DEV_CAP_PLC) &&
                       strm->param.plc_enabled;
     vas_setting.cng = vas_setting.vad;
-    vas_setting.loudspk = 
+    vas_setting.loudspk =
                 strm->param.output_route==PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
 
     /* Set audio engine callbacks. */
@@ -1688,8 +1688,8 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
     /* play_buf size is samples per frame scaled in to 8kHz mono. */
     strm->play_buf = (pj_int16_t*)pj_pool_zalloc(
-                                        pool, 
-                                        (strm->param.samples_per_frame / 
+                                        pool,
+                                        (strm->param.samples_per_frame /
                                         strm->resample_factor /
                                         strm->param.channel_count) << 1);
     strm->play_buf_len = 0;
@@ -1697,28 +1697,28 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
     /* rec_buf size is samples per frame scaled in to 8kHz mono. */
     strm->rec_buf  = (pj_int16_t*)pj_pool_zalloc(
-                                        pool, 
-                                        (strm->param.samples_per_frame / 
+                                        pool,
+                                        (strm->param.samples_per_frame /
                                         strm->resample_factor /
                                         strm->param.channel_count) << 1);
     strm->rec_buf_len = 0;
 
     if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_G729) {
         TBitStream *g729_bitstream = new TBitStream;
-        
+
         PJ_ASSERT_RETURN(g729_bitstream, PJ_ENOMEM);
         strm->strm_data = (void*)g729_bitstream;
     }
 
     /* Init resampler when format is PCM and clock rate is not 8kHz */
-    if (strm->param.clock_rate != 8000 && 
+    if (strm->param.clock_rate != 8000 &&
         strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16)
     {
         pj_status_t status;
 
         if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
             /* Create resample for recorder */
-            status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1, 
+            status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1,
                                               8000,
                                               strm->param.clock_rate,
                                               80,
@@ -1729,7 +1729,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             /* Create resample for player */
-            status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1, 
+            status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1,
                                               strm->param.clock_rate,
                                               8000,
                                               80 * strm->resample_factor,
@@ -1741,9 +1741,9 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
     /* Create PCM buffer, when the clock rate is not 8kHz or not mono */
     if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16 &&
-        (strm->resample_factor > 1 || strm->param.channel_count != 1)) 
+        (strm->resample_factor > 1 || strm->param.channel_count != 1))
     {
-        strm->pcm_buf = (pj_int16_t*)pj_pool_zalloc(pool, 
+        strm->pcm_buf = (pj_int16_t*)pj_pool_zalloc(pool,
                                         strm->param.samples_per_frame << 1);
     }
 
@@ -1795,24 +1795,24 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     switch (cap) {
-    case PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE: 
+    case PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE:
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             *(pjmedia_aud_dev_route*)pval = strm->param.output_route;
             status = PJ_SUCCESS;
         }
         break;
 
-    /* There is a case that GetMaxGain() stucks, e.g: in N95. */ 
+    /* There is a case that GetMaxGain() stucks, e.g: in N95. */
     /*
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
             PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
-            
+
             TInt max_gain = strm->engine->GetMaxGain();
             TInt gain = strm->engine->GetGain();
-            
+
             if (max_gain > 0 && gain >= 0) {
-                *(unsigned*)pval = gain * 100 / max_gain; 
+                *(unsigned*)pval = gain * 100 / max_gain;
                 status = PJ_SUCCESS;
             } else {
                 status = PJMEDIA_EAUD_NOTREADY;
@@ -1824,12 +1824,12 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
-            
+
             TInt max_vol = strm->engine->GetMaxVolume();
             TInt vol = strm->engine->GetVolume();
-            
+
             if (max_vol > 0 && vol >= 0) {
-                *(unsigned*)pval = vol * 100 / max_vol; 
+                *(unsigned*)pval = vol * 100 / max_vol;
                 status = PJ_SUCCESS;
             } else {
                 status = PJMEDIA_EAUD_NOTREADY;
@@ -1854,7 +1854,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     switch (cap) {
-    case PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE: 
+    case PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE:
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             pjmedia_aud_dev_route r = *(const pjmedia_aud_dev_route*)pval;
             TInt err;
@@ -1876,20 +1876,20 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
                 break;
             }
             if (status == PJ_SUCCESS)
-                strm->param.output_route = r; 
+                strm->param.output_route = r;
         }
         break;
 
-    /* There is a case that GetMaxGain() stucks, e.g: in N95. */ 
+    /* There is a case that GetMaxGain() stucks, e.g: in N95. */
     /*
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
             PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
-            
+
             TInt max_gain = strm->engine->GetMaxGain();
             if (max_gain > 0) {
                 TInt gain, err;
-                
+
                 gain = *(unsigned*)pval * max_gain / 100;
                 err = strm->engine->SetGain(gain);
                 status = (err==KErrNone)? PJ_SUCCESS:PJ_RETURN_OS_ERROR(err);
@@ -1905,7 +1905,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
-            
+
             TInt max_vol = strm->engine->GetMaxVolume();
             if (max_vol > 0) {
                 TInt vol, err;
@@ -1949,15 +1949,15 @@ static pj_status_t stream_start(pjmedia_aud_stream *strm)
             now.UniversalTime();
         } while (!stream->engine->IsStarted() &&
                  (now.MicroSecondsFrom(start) < VAS_WAIT_START * 1000));
-        
+
         if (stream->engine->IsStarted()) {
 
             /* Apply output volume setting if specified */
-            if (stream->param.flags & 
-                PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) 
+            if (stream->param.flags &
+                PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING)
             {
                 stream_set_cap(strm,
-                               PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
+                               PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
                                &stream->param.output_vol);
             }
 

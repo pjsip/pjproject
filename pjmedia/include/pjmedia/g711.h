@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_G711_H__
 #define __PJMEDIA_G711_H__
@@ -39,15 +39,15 @@
  * The G.711 is an ultra low complexity codecs and in trade-off it results
  * in high bitrate, i.e: 64kbps for 16-bit PCM with sampling rate 8000Hz.
  *
- * The factory contains two main compression algorithms, PCMU/u-Law and 
+ * The factory contains two main compression algorithms, PCMU/u-Law and
  * PCMA/A-Law.
  *
  * \section codec_setting Codec Settings
  *
  * \subsection general_setting General Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * \subsection specific_setting Codec Specific Settings

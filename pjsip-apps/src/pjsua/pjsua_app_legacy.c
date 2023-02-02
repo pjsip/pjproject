@@ -1302,7 +1302,7 @@ static void ui_send_dtmf_2833()
         pj_status_t status;
         char buf[128];
 
-#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0               
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
         if (!simple_input("DTMF strings to send (0-9*R#A-B)", buf,
             sizeof(buf)))
 #else
@@ -1347,7 +1347,7 @@ static void ui_send_dtmf_info()
         if (call != current_call) {
             puts("Call has been disconnected");
             return;
-        }       
+        }
         pjsua_call_send_dtmf_param_default(&param);
         param.digits = pj_str(buf);
         param.method = PJSUA_DTMF_METHOD_SIP_INFO;

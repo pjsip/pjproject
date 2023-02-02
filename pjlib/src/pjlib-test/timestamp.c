@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pj/os.h>
@@ -88,16 +88,16 @@ static int timestamp_accuracy()
     /* Only allow 1 msec mismatch */
     if (diff > (pj_int64_t)(freq.u64 / 1000)) {
         PJ_LOG(3,(THIS_FILE, "....error: timestamp drifted by %d usec after "
-                             "%d msec", 
-                             (pj_uint32_t)(diff * 1000000 / freq.u64), 
+                             "%d msec",
+                             (pj_uint32_t)(diff * 1000000 / freq.u64),
                              msec));
         return -2000;
 
     /* Otherwise just print warning if timestamp drifted by >1 usec */
     } else if (diff > (pj_int64_t)(freq.u64 / 1000000)) {
         PJ_LOG(3,(THIS_FILE, "....warning: timestamp drifted by %d usec after "
-                             "%d msec", 
-                             (pj_uint32_t)(diff * 1000000 / freq.u64), 
+                             "%d msec",
+                             (pj_uint32_t)(diff * 1000000 / freq.u64),
                              msec));
     } else {
         PJ_LOG(3,(THIS_FILE, "....good. Timestamp is accurate down to"
@@ -118,14 +118,14 @@ int timestamp_test(void)
     pj_status_t rc;
 
     PJ_LOG(3,(THIS_FILE, "...Testing timestamp (high res time)"));
-    
+
     /* Get and display timestamp frequency. */
     if ((rc=pj_get_timestamp_freq(&freq)) != PJ_SUCCESS) {
         app_perror("...ERROR: get timestamp freq", rc);
         return -1000;
     }
 
-    PJ_LOG(3,(THIS_FILE, "....frequency: hiword=%lu loword=%lu", 
+    PJ_LOG(3,(THIS_FILE, "....frequency: hiword=%lu loword=%lu",
                         freq.u32.hi, freq.u32.lo));
 
     PJ_LOG(3,(THIS_FILE, "...checking if time can run backwards (pls wait).."));
@@ -146,7 +146,7 @@ int timestamp_test(void)
         return -1002;
     }
     for (i=0; i<CONSECUTIVE_LOOP; ++i) {
-        
+
         pj_thread_sleep(pj_rand() % 100);
 
         rc = pj_get_timestamp(&t2);
@@ -175,8 +175,8 @@ int timestamp_test(void)
         }
     }
 
-    /* 
-     * Simple test to time some loop. 
+    /*
+     * Simple test to time some loop.
      */
     PJ_LOG(3,(THIS_FILE, "....testing simple 1000000 loop"));
 
@@ -204,14 +204,14 @@ int timestamp_test(void)
     elapsed = pj_elapsed_usec(&t1, &t2);
     PJ_LOG(3,(THIS_FILE, "....elapsed: %u usec", (unsigned)elapsed));
 
-    /* See if elapsed time is "reasonable". 
+    /* See if elapsed time is "reasonable".
      * This should be good even on 50Mhz embedded powerpc.
      */
     if (elapsed < 1 || elapsed > 1000000) {
         PJ_LOG(3,(THIS_FILE, "....error: elapsed time outside window (%u, "
                              "t1.u32.hi=%u, t1.u32.lo=%u, "
                              "t2.u32.hi=%u, t2.u32.lo=%u)",
-                             elapsed, 
+                             elapsed,
                              t1.u32.hi, t1.u32.lo, t2.u32.hi, t2.u32.lo));
         return -1030;
     }
@@ -227,7 +227,7 @@ int timestamp_test(void)
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_timestamp_test;
 #endif  /* INCLUDE_TIMESTAMP_TEST */

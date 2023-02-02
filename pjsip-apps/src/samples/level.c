@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -30,7 +30,7 @@
  */
 
 
-static const char *desc = 
+static const char *desc =
  " FILE:                                                                    \n"
  "  level.c                                                                 \n"
  "                                                                          \n"
@@ -53,7 +53,7 @@ static const char *desc =
 
 
 /* Util to display the error message for the specified error code  */
-static int app_perror( const char *sender, const char *title, 
+static int app_perror( const char *sender, const char *title,
                        pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -140,20 +140,20 @@ int main(int argc, char *argv[])
 
         frm.buf = framebuf;
         frm.size = sizeof(framebuf);
-        
+
         pjmedia_port_get_frame(file_port, &frm);
 
-        level32 = pjmedia_calc_avg_signal(framebuf, 
+        level32 = pjmedia_calc_avg_signal(framebuf,
                                           PJMEDIA_PIA_SPF(&file_port->info));
         level = pjmedia_linear2ulaw(level32) ^ 0xFF;
 
         ms = i * 1000 * PJMEDIA_PIA_SPF(&file_port->info) /
                 PJMEDIA_PIA_SRATE(&file_port->info);
-        printf("%03d.%03d\t%7d\t%7d\n", 
+        printf("%03d.%03d\t%7d\t%7d\n",
                 ms/1000, ms%1000, level, level32);
     }
     puts("");
-    
+
 
     /* Destroy file port */
     status = pjmedia_port_destroy( file_port );

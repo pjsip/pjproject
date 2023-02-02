@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/file_io.h>
 #include <pj/unicode.h>
@@ -69,12 +69,12 @@ static pj_status_t set_file_pointer(pj_oshandle_t fd,
  *
  * @return              Non-zero if file is EOF.
  */
-PJ_DECL(pj_bool_t) pj_file_eof(pj_oshandle_t fd, 
+PJ_DECL(pj_bool_t) pj_file_eof(pj_oshandle_t fd,
                                enum pj_file_access access);
 
 
 PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
-                                  const char *pathname, 
+                                  const char *pathname,
                                   unsigned flags,
                                   pj_oshandle_t *fd)
 {
@@ -119,10 +119,10 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     }
 
     dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-    
+
     dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8  
+#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     hFile = CreateFile2(PJ_STRING_TO_NATIVE(pathname,
                         wpathname, sizeof(wpathname)),
                         dwDesiredAccess, dwShareMode, dwCreationDisposition,
@@ -135,7 +135,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
 #endif
 
     if (hFile == INVALID_HANDLE_VALUE) {
-        DWORD lastErr = GetLastError(); 
+        DWORD lastErr = GetLastError();
         *fd = 0;
         return PJ_RETURN_OS_ERROR(lastErr);
     }

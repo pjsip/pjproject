@@ -3,7 +3,7 @@
  Name        : pjsuaDocument.cpp
  Author      : nanang
  Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
- Description : 
+ Description :
 ========================================================================
 */
 // [[[ begin generated region: do not modify [Generated User Includes]
@@ -21,13 +21,13 @@ CpjsuaDocument::CpjsuaDocument( CEikApplication& anApplication )
         }
 
 /**
- * @brief Completes the second phase of Symbian object construction. 
- * Put initialization code that could leave here.  
- */ 
+ * @brief Completes the second phase of Symbian object construction.
+ * Put initialization code that could leave here.
+ */
 void CpjsuaDocument::ConstructL()
         {
         }
-        
+
 /**
  * Symbian OS two-phase constructor.
  *
@@ -49,9 +49,9 @@ CpjsuaDocument* CpjsuaDocument::NewL( CEikApplication& aApp )
 /**
  * @brief Creates the application UI object for this document.
  * @return the new instance
- */     
+ */
 CEikAppUi* CpjsuaDocument::CreateAppUiL()
         {
         return new ( ELeave ) CpjsuaAppUi;
         }
-                                
+

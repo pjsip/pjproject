@@ -236,7 +236,7 @@ struct pjmedia_stream
     pj_bool_t                use_ka;           /**< Stream keep-alive with non-
                                                     codec-VAD mechanism is
                                                     enabled?                */
-    unsigned                 ka_interval;      /**< The keepalive sending 
+    unsigned                 ka_interval;      /**< The keepalive sending
                                                     interval                */
     pj_time_val              last_frm_ts_sent; /**< Time of last sending
                                                     packet                  */
@@ -1883,7 +1883,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     if (stream->si.rtcp_mux && hdr->pt >= 64 && hdr->pt <= 95) {
         on_rx_rtcp(stream, pkt, bytes_read);
         return;
-    }    
+    }
 
     /* See if source address of RTP packet is different than the
      * configured address, and check if we need to tell the
@@ -1918,7 +1918,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                      * - we have ever received packet with bad ssrc from
                      *   remote address and this packet also has bad ssrc.
                      */
-                    return;                 
+                    return;
                 }
                 if (!badssrc && stream->rem_rtp_flag != 1)
                 {
@@ -2897,8 +2897,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Check the zero frame buffer. */
     if (stream->enc_samples_per_pkt > PJ_ARRAY_SIZE(zero_frame)) {
-        stream->zero_frame = (pj_int16_t*)pj_pool_zalloc(pool, 
-                               sizeof(pj_int16_t)*stream->enc_samples_per_pkt); 
+        stream->zero_frame = (pj_int16_t*)pj_pool_zalloc(pool,
+                               sizeof(pj_int16_t)*stream->enc_samples_per_pkt);
     } else {
         stream->zero_frame = zero_frame;
     }

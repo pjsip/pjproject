@@ -128,8 +128,8 @@ struct pj_cli_t
     pj_cli_cfg          cfg;            /* CLI configuration */
     pj_cli_cmd_spec     root;           /* Root of command tree structure */
     pj_cli_front_end    fe_head;        /* List of front-ends */
-    pj_hash_table_t    *cmd_name_hash;  /* Command name hash table, this will 
-                                           include the command name and shortcut 
+    pj_hash_table_t    *cmd_name_hash;  /* Command name hash table, this will
+                                           include the command name and shortcut
                                            as hash key */
     pj_hash_table_t    *cmd_id_hash;    /* Command id hash table */
 
@@ -180,7 +180,7 @@ typedef enum pj_cli_arg_type
 struct arg_type
 {
     const pj_str_t msg;
-} arg_type[3] = 
+} arg_type[3] =
 {
     {{"Text", 4}},
     {{"Int", 3}},
@@ -227,12 +227,12 @@ struct pj_cli_arg_spec
     /**
      * Static Choice Values count
      */
-    unsigned stat_choice_cnt; 
+    unsigned stat_choice_cnt;
 
     /**
      * Static Choice Values
      */
-    pj_cli_arg_choice_val *stat_choice_val; 
+    pj_cli_arg_choice_val *stat_choice_val;
 
     /**
      * Argument callback to get the valid values
@@ -251,27 +251,27 @@ typedef enum pj_cli_parse_mode {
     PARSE_EXEC          /* Exec the command line */
 } pj_cli_parse_mode;
 
-/** 
- * This is used to get the matched command/argument from the 
+/**
+ * This is used to get the matched command/argument from the
  * command/argument structure.
- * 
+ *
  * @param sess          The session on which the command is execute on.
  * @param cmd           The active command.
  * @param cmd_val       The command value to match.
- * @param argc          The number of argument that the 
+ * @param argc          The number of argument that the
  *                      current active command have.
  * @param pool          The memory pool to allocate memory.
  * @param get_cmd       Set true to search matching command from sub command.
  * @param parse_mode    The parse mode.
  * @param p_cmd         The command that mathes the command value.
- * @param info          The output information containing any hints for 
+ * @param info          The output information containing any hints for
  *                      matching command/arg.
- * @return              This function return the status of the 
+ * @return              This function return the status of the
  *                      matching process.Please see the return value
  *                      of pj_cli_sess_parse() for possible return values.
  */
 static pj_status_t get_available_cmds(pj_cli_sess *sess,
-                                      pj_cli_cmd_spec *cmd, 
+                                      pj_cli_cmd_spec *cmd,
                                       pj_str_t *cmd_val,
                                       unsigned argc,
                                       pj_pool_t *pool,
@@ -318,7 +318,7 @@ PJ_DEF(void) pj_cli_write_log(pj_cli_t *cli,
     }
 }
 
-PJ_DEF(void) pj_cli_sess_write_msg(pj_cli_sess *sess,                               
+PJ_DEF(void) pj_cli_sess_write_msg(pj_cli_sess *sess,
                                    const char *buffer,
                                    pj_size_t len)
 {
@@ -358,21 +358,21 @@ PJ_DEF(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
                                   pj_cli_t **p_cli)
 {
     pj_pool_t *pool;
-    pj_cli_t *cli;    
+    pj_cli_t *cli;
     unsigned i;
 
     /* This is an example of the command structure */
     char* cmd_xmls[] = {
      "<CMD name='log' id='30000' sc='' desc='Change log level'>"
      "    <ARG name='level' type='int' optional='0' desc='Log level'/>"
-     "</CMD>",     
-     "<CMD name='exit' id='30001' sc='' desc='Exit session'>"     
+     "</CMD>",
+     "<CMD name='exit' id='30001' sc='' desc='Exit session'>"
      "</CMD>",
     };
 
     PJ_ASSERT_RETURN(cfg && cfg->pf && p_cli, PJ_EINVAL);
 
-    pool = pj_pool_create(cfg->pf, "cli", PJ_CLI_POOL_SIZE, 
+    pool = pj_pool_create(cfg->pf, "cli", PJ_CLI_POOL_SIZE,
                           PJ_CLI_POOL_INC, NULL);
     if (!pool)
         return PJ_ENOMEM;
@@ -392,8 +392,8 @@ PJ_DEF(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
     for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
         pj_str_t xml = pj_str(cmd_xmls[i]);
 
-        if (pj_cli_add_cmd_from_xml(cli, NULL, &xml, 
-                                    &cmd_handler, NULL, NULL) != PJ_SUCCESS) 
+        if (pj_cli_add_cmd_from_xml(cli, NULL, &xml,
+                                    &cmd_handler, NULL, NULL) != PJ_SUCCESS)
         {
             TRACE_((THIS_FILE, "Failed to add command #%d", i));
         }
@@ -489,8 +489,8 @@ static void on_syntax_error(pj_scanner *scanner)
 }
 
 /* Get the command from the command hash */
-static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli, 
-                                     const pj_cli_cmd_spec *group, 
+static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli,
+                                     const pj_cli_cmd_spec *group,
                                      const pj_str_t *cmd)
 {
     pj_str_t cmd_val;
@@ -502,15 +502,15 @@ static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli,
     if (group) {
         char cmd_str[MAX_CMD_ID_LENGTH];
         pj_ansi_sprintf(cmd_str, "%d", group->id);
-        pj_strcat2(&cmd_val, cmd_str);  
+        pj_strcat2(&cmd_val, cmd_str);
     }
     pj_strcat(&cmd_val, cmd);
-    return (pj_cli_cmd_spec *)pj_hash_get(cli->cmd_name_hash, cmd_val.ptr, 
+    return (pj_cli_cmd_spec *)pj_hash_get(cli->cmd_name_hash, cmd_val.ptr,
                                           (unsigned)cmd_val.slen, NULL);
 }
 
 /* Add command to the command hash */
-static void add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group, 
+static void add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group,
                          pj_cli_cmd_spec *cmd, pj_str_t *cmd_name)
 {
     pj_str_t cmd_val;
@@ -523,17 +523,17 @@ static void add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group,
     if (group) {
         char cmd_str[MAX_CMD_ID_LENGTH];
         pj_ansi_sprintf(cmd_str, "%d", group->id);
-        pj_strcat2(&cmd_val, cmd_str);  
+        pj_strcat2(&cmd_val, cmd_str);
     }
     pj_strcat(&cmd_val, cmd_name);
     pj_strdup(cli->pool, &add_cmd, &cmd_val);
-    
-    pj_hash_set(cli->pool, cli->cmd_name_hash, cmd_val.ptr, 
+
+    pj_hash_set(cli->pool, cli->cmd_name_hash, cmd_val.ptr,
                 (unsigned)cmd_val.slen, 0, cmd);
 }
 
 /**
- * This method is to parse and add the choice type 
+ * This method is to parse and add the choice type
  * argument values to command structure.
  **/
 static pj_status_t add_choice_node(pj_cli_t *cli,
@@ -548,13 +548,13 @@ static pj_status_t add_choice_node(pj_cli_t *cli,
 
     sub_node = xml_node;
     arg->type = PJ_CLI_ARG_CHOICE;
-    arg->get_dyn_choice = get_choice;                                           
+    arg->get_dyn_choice = get_choice;
 
     choice_node = sub_node->node_head.next;
     while (choice_node != (pj_xml_node*)&sub_node->node_head) {
         pj_xml_attr *choice_attr;
         unsigned *stat_cnt = &arg->stat_choice_cnt;
-        pj_cli_arg_choice_val *choice_val = &choice_values[*stat_cnt];               
+        pj_cli_arg_choice_val *choice_val = &choice_values[*stat_cnt];
         pj_bzero(choice_val, sizeof(*choice_val));
 
         choice_attr = choice_node->attr_head.next;
@@ -565,24 +565,24 @@ static pj_status_t add_choice_node(pj_cli_t *cli,
                 pj_strassign(&choice_val->desc, &choice_attr->value);
             }
             choice_attr = choice_attr->next;
-        }               
+        }
         if (++(*stat_cnt) >= PJ_CLI_MAX_CHOICE_VAL)
             break;
         choice_node = choice_node->next;
-    }    
+    }
     if (arg->stat_choice_cnt > 0) {
         unsigned i;
 
         arg->stat_choice_val = (pj_cli_arg_choice_val *)
-                                pj_pool_zalloc(cli->pool, 
+                                pj_pool_zalloc(cli->pool,
                                                arg->stat_choice_cnt *
                                                sizeof(pj_cli_arg_choice_val));
 
         for (i = 0; i < arg->stat_choice_cnt; i++) {
-            pj_strdup(cli->pool, &arg->stat_choice_val[i].value, 
+            pj_strdup(cli->pool, &arg->stat_choice_val[i].value,
                       &choice_values[i].value);
-            pj_strdup(cli->pool, &arg->stat_choice_val[i].desc, 
-                      &choice_values[i].desc);            
+            pj_strdup(cli->pool, &arg->stat_choice_val[i].desc,
+                      &choice_values[i].desc);
         }
     }
     return status;
@@ -596,19 +596,19 @@ static pj_status_t add_arg_node(pj_cli_t *cli,
                                 pj_cli_cmd_spec *cmd,
                                 pj_cli_arg_spec *arg,
                                 pj_cli_get_dyn_choice get_choice)
-{    
+{
     pj_xml_attr *attr;
     pj_status_t status = PJ_SUCCESS;
     pj_xml_node *sub_node = xml_node;
 
     if (cmd->arg_cnt >= PJ_CLI_MAX_ARGS)
         return PJ_CLI_ETOOMANYARGS;
-    
+
     pj_bzero(arg, sizeof(*arg));
     attr = sub_node->attr_head.next;
     arg->optional = PJ_FALSE;
     arg->validate = PJ_TRUE;
-    while (attr != &sub_node->attr_head) {      
+    while (attr != &sub_node->attr_head) {
         if (!pj_stricmp2(&attr->name, "name")) {
             pj_strassign(&arg->name, &attr->value);
         } else if (!pj_stricmp2(&attr->name, "id")) {
@@ -621,7 +621,7 @@ static pj_status_t add_arg_node(pj_cli_t *cli,
             } else if (!pj_stricmp2(&attr->value, "choice")) {
                 /* Get choice value */
                 add_choice_node(cli, xml_node, arg, get_choice);
-            } 
+            }
         } else if (!pj_stricmp2(&attr->name, "desc")) {
             pj_strassign(&arg->desc, &attr->value);
         } else if (!pj_stricmp2(&attr->name, "optional")) {
@@ -633,8 +633,8 @@ static pj_status_t add_arg_node(pj_cli_t *cli,
                 arg->validate = PJ_TRUE;
             } else {
                 arg->validate = PJ_FALSE;
-            }   
-        } 
+            }
+        }
         attr = attr->next;
     }
     cmd->arg_cnt++;
@@ -644,8 +644,8 @@ static pj_status_t add_arg_node(pj_cli_t *cli,
 /**
  * This method is to parse and add the command attribute to command structure.
  **/
-static pj_status_t add_cmd_node(pj_cli_t *cli,                            
-                                pj_cli_cmd_spec *group,                                  
+static pj_status_t add_cmd_node(pj_cli_t *cli,
+                                pj_cli_cmd_spec *group,
                                 pj_xml_node *xml_node,
                                 pj_cli_cmd_handler handler,
                                 pj_cli_cmd_spec **p_cmd,
@@ -664,26 +664,26 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
 
     /* Initialize the command spec */
     cmd = PJ_POOL_ZALLOC_T(cli->pool, struct pj_cli_cmd_spec);
-    
+
     /* Get the command attributes */
     attr = root->attr_head.next;
     while (attr != &root->attr_head) {
         if (!pj_stricmp2(&attr->name, "name")) {
             pj_strltrim(&attr->value);
-            if (!attr->value.slen || 
-                (get_cmd_name(cli, group, &attr->value)))                
+            if (!attr->value.slen ||
+                (get_cmd_name(cli, group, &attr->value)))
             {
                 return PJ_CLI_EBADNAME;
             }
             pj_strdup(cli->pool, &cmd->name, &attr->value);
-        } else if (!pj_stricmp2(&attr->name, "id")) {       
+        } else if (!pj_stricmp2(&attr->name, "id")) {
             pj_bool_t is_valid = PJ_FALSE;
-            if (attr->value.slen) {             
+            if (attr->value.slen) {
                 pj_cli_cmd_id cmd_id = pj_strtol(&attr->value);
-                if (!pj_hash_get(cli->cmd_id_hash, &cmd_id, 
+                if (!pj_hash_get(cli->cmd_id_hash, &cmd_id,
                                  sizeof(pj_cli_cmd_id), NULL))
                     is_valid = PJ_TRUE;
-            } 
+            }
             if (!is_valid)
                 return PJ_CLI_EBADID;
             cmd->id = (pj_cli_cmd_id)pj_strtol(&attr->value);
@@ -737,14 +737,14 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
     sub_node = root->node_head.next;
     while (sub_node != (pj_xml_node*)&root->node_head) {
         if (!pj_stricmp2(&sub_node->name, "CMD")) {
-            status = add_cmd_node(cli, cmd, sub_node, handler, NULL, 
+            status = add_cmd_node(cli, cmd, sub_node, handler, NULL,
                                   get_choice);
             if (status != PJ_SUCCESS)
                 return status;
         } else if (!pj_stricmp2(&sub_node->name, "ARG")) {
             /* Get argument attribute */
-            status = add_arg_node(cli, sub_node, 
-                                  cmd, &args[cmd->arg_cnt], 
+            status = add_arg_node(cli, sub_node,
+                                  cmd, &args[cmd->arg_cnt],
                                   get_choice);
 
             if (status != PJ_SUCCESS)
@@ -764,7 +764,7 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
 
         cmd->arg = (pj_cli_arg_spec *)pj_pool_zalloc(cli->pool, cmd->arg_cnt *
                                                      sizeof(pj_cli_arg_spec));
-        
+
         for (i = 0; i < cmd->arg_cnt; i++) {
             pj_strdup(cli->pool, &cmd->arg[i].name, &args[i].name);
             pj_strdup(cli->pool, &cmd->arg[i].desc, &args[i].desc);
@@ -784,14 +784,14 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
         cmd->sc = (pj_str_t *)pj_pool_zalloc(cli->pool, cmd->sc_cnt *
                                              sizeof(pj_str_t));
         for (i = 0; i < cmd->sc_cnt; i++) {
-            pj_strdup(cli->pool, &cmd->sc[i], &sc[i]);  
+            pj_strdup(cli->pool, &cmd->sc[i], &sc[i]);
             /** Add shortcut to root command **/
             add_cmd_name(cli, &cli->root, cmd, &sc[i]);
         }
     }
-    
-    add_cmd_name(cli, group, cmd, &cmd->name);    
-    pj_hash_set(cli->pool, cli->cmd_id_hash, 
+
+    add_cmd_name(cli, group, cmd, &cmd->name);
+    pj_hash_set(cli->pool, cli->cmd_id_hash,
                 &cmd->id, sizeof(pj_cli_cmd_id), 0, cmd);
 
     cmd->handler = handler;
@@ -816,13 +816,13 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
                                             pj_cli_cmd_spec *group,
                                             const pj_str_t *xml,
                                             pj_cli_cmd_handler handler,
-                                            pj_cli_cmd_spec **p_cmd, 
+                                            pj_cli_cmd_spec **p_cmd,
                                             pj_cli_get_dyn_choice get_choice)
-{ 
+{
     pj_pool_t *pool;
     pj_xml_node *root;
     pj_status_t status = PJ_SUCCESS;
-    
+
     PJ_ASSERT_RETURN(cli && xml, PJ_EINVAL);
 
     /* Parse the xml */
@@ -835,7 +835,7 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
         TRACE_((THIS_FILE, "Error: unable to parse XML"));
         pj_pool_release(pool);
         return PJ_CLI_EBADXML;
-    }    
+    }
     status = add_cmd_node(cli, group, root, handler, p_cmd, get_choice);
     pj_pool_release(pool);
     return status;
@@ -846,14 +846,14 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
                                       pj_cli_cmd_val *val,
                                       pj_pool_t *pool,
                                       pj_cli_exec_info *info)
-{    
+{
     pj_scanner scanner;
     pj_str_t str;
-    pj_size_t len;    
+    pj_size_t len;
     pj_cli_cmd_spec *cmd;
     pj_cli_cmd_spec *next_cmd;
     pj_status_t status = PJ_SUCCESS;
-    pj_cli_parse_mode parse_mode = PARSE_NONE;    
+    pj_cli_parse_mode parse_mode = PARSE_NONE;
 
     PJ_USE_EXCEPTION;
 
@@ -871,16 +871,16 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
     if (len > 0 && ((cmdline[len - 1] == '\r')||(cmdline[len - 1] == '\n'))) {
         cmdline[--len] = 0;
         parse_mode = PARSE_EXEC;
-    } else if (len > 0 && 
-               (cmdline[len - 1] == '\t' || cmdline[len - 1] == '?')) 
+    } else if (len > 0 &&
+               (cmdline[len - 1] == '\t' || cmdline[len - 1] == '?'))
     {
         cmdline[--len] = 0;
         if (len == 0) {
             parse_mode = PARSE_NEXT_AVAIL;
         } else {
-            if (cmdline[len - 1] == ' ') 
+            if (cmdline[len - 1] == ' ')
                 parse_mode = PARSE_NEXT_AVAIL;
-            else 
+            else
                 parse_mode = PARSE_COMPLETION;
         }
     }
@@ -888,10 +888,10 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
     info->err_pos = 0;
     cmd = &sess->fe->cli->root;
     if (len > 0) {
-        pj_scan_init(&scanner, cmdline, len, PJ_SCAN_AUTOSKIP_WS, 
+        pj_scan_init(&scanner, cmdline, len, PJ_SCAN_AUTOSKIP_WS,
                      &on_syntax_error);
         PJ_TRY {
-            val->argc = 0;          
+            val->argc = 0;
             while (!pj_scan_is_eof(&scanner)) {
                 info->err_pos = (int)(scanner.curptr - scanner.begin);
                 if (*scanner.curptr == '\'' || *scanner.curptr == '"' ||
@@ -906,28 +906,28 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
                 }
                 ++val->argc;
                 if (val->argc == PJ_CLI_MAX_ARGS)
-                    PJ_THROW(PJ_CLI_ETOOMANYARGS);              
-                
-                status = get_available_cmds(sess, cmd, &str, val->argc-1, 
-                                            pool, PJ_TRUE, parse_mode, 
+                    PJ_THROW(PJ_CLI_ETOOMANYARGS);
+
+                status = get_available_cmds(sess, cmd, &str, val->argc-1,
+                                            pool, PJ_TRUE, parse_mode,
                                             &next_cmd, info);
 
                 if (status != PJ_SUCCESS)
                     PJ_THROW(status);
-                
+
                 if (cmd != next_cmd) {
                     /* Found new command, set it as the active command */
                     cmd = next_cmd;
                     val->argc = 1;
                     val->cmd = cmd;
                 }
-                if (parse_mode == PARSE_EXEC) 
+                if (parse_mode == PARSE_EXEC)
                     pj_strassign(&val->argv[val->argc-1], &info->hint->name);
-                else 
+                else
                     pj_strassign(&val->argv[val->argc-1], &str);
 
-            }            
-            if (!pj_scan_is_eof(&scanner)) 
+            }
+            if (!pj_scan_is_eof(&scanner))
                 PJ_THROW(PJ_CLI_EINVARG);
 
         }
@@ -936,14 +936,14 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
             return PJ_GET_EXCEPTION();
         }
         PJ_END;
-        
+
         pj_scan_fini(&scanner);
-    } 
-    
+    }
+
     if ((parse_mode == PARSE_NEXT_AVAIL) || (parse_mode == PARSE_EXEC)) {
         /* If exec mode, just get the matching argument */
-        status = get_available_cmds(sess, cmd, NULL, val->argc, pool, 
-                                    (parse_mode==PARSE_NEXT_AVAIL), 
+        status = get_available_cmds(sess, cmd, NULL, val->argc, pool,
+                                    (parse_mode==PARSE_NEXT_AVAIL),
                                     parse_mode,
                                     NULL, info);
         if ((status != PJ_SUCCESS) && (status != PJ_CLI_EINVARG)) {
@@ -954,8 +954,8 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
 
             info->err_pos = (int)pj_ansi_strlen(cmdline);
         }
-    } 
-   
+    }
+
     val->sess = sess;
     return status;
 }
@@ -982,7 +982,7 @@ PJ_DECL(pj_status_t) pj_cli_sess_exec(pj_cli_sess *sess,
 
     if (!info)
         info = &einfo;
-        
+
     status = pj_cli_sess_parse(sess, cmdline, &val, pool, info);
     if (status != PJ_SUCCESS)
         return status;
@@ -999,9 +999,9 @@ PJ_DECL(pj_status_t) pj_cli_sess_exec(pj_cli_sess *sess,
     return PJ_SUCCESS;
 }
 
-static pj_bool_t hint_inserted(const pj_str_t *name, 
-                               const pj_str_t *desc, 
-                               const pj_str_t *type, 
+static pj_bool_t hint_inserted(const pj_str_t *name,
+                               const pj_str_t *desc,
+                               const pj_str_t *type,
                                pj_cli_exec_info *info)
 {
     unsigned i;
@@ -1017,13 +1017,13 @@ static pj_bool_t hint_inserted(const pj_str_t *name,
     return PJ_FALSE;
 }
 
-/** This will insert new hint with the option to check for the same 
+/** This will insert new hint with the option to check for the same
     previous entry **/
-static pj_status_t insert_new_hint2(pj_pool_t *pool, 
+static pj_status_t insert_new_hint2(pj_pool_t *pool,
                                     pj_bool_t unique_insert,
-                                    const pj_str_t *name, 
-                                    const pj_str_t *desc, 
-                                    const pj_str_t *type, 
+                                    const pj_str_t *name,
+                                    const pj_str_t *desc,
+                                    const pj_str_t *type,
                                     pj_cli_exec_info *info)
 {
     pj_cli_hint_info *hint;
@@ -1042,42 +1042,42 @@ static pj_status_t insert_new_hint2(pj_pool_t *pool,
     } else {
         hint->desc.slen = 0;
     }
-    
+
     if (type && (type->slen > 0)) {
         pj_strdup(pool, &hint->type, type);
     } else {
         hint->type.slen = 0;
     }
 
-    ++info->hint_cnt;    
+    ++info->hint_cnt;
     return PJ_SUCCESS;
 }
 
 /** This will insert new hint without checking for the same previous entry **/
-static pj_status_t insert_new_hint(pj_pool_t *pool, 
-                                   const pj_str_t *name, 
-                                   const pj_str_t *desc, 
-                                   const pj_str_t *type, 
+static pj_status_t insert_new_hint(pj_pool_t *pool,
+                                   const pj_str_t *name,
+                                   const pj_str_t *desc,
+                                   const pj_str_t *type,
                                    pj_cli_exec_info *info)
-{        
+{
     return insert_new_hint2(pool, PJ_FALSE, name, desc, type, info);
 }
 
 /** This will get a complete/exact match of a command from the cmd hash **/
-static pj_status_t get_comp_match_cmds(const pj_cli_t *cli, 
+static pj_status_t get_comp_match_cmds(const pj_cli_t *cli,
                                        const pj_cli_cmd_spec *group,
-                                       const pj_str_t *cmd_val, 
-                                       pj_pool_t *pool, 
+                                       const pj_str_t *cmd_val,
+                                       pj_pool_t *pool,
                                        pj_cli_cmd_spec **p_cmd,
                                        pj_cli_exec_info *info)
 {
-    pj_cli_cmd_spec *cmd;    
-    PJ_ASSERT_RETURN(cli && group && cmd_val && pool && info, PJ_EINVAL);   
+    pj_cli_cmd_spec *cmd;
+    PJ_ASSERT_RETURN(cli && group && cmd_val && pool && info, PJ_EINVAL);
 
     cmd = get_cmd_name(cli, group, cmd_val);
 
     if (cmd) {
-        pj_status_t status;    
+        pj_status_t status;
         status = insert_new_hint(pool, cmd_val, &cmd->desc, NULL, info);
 
         if (status != PJ_SUCCESS)
@@ -1094,22 +1094,22 @@ static pj_status_t get_comp_match_cmds(const pj_cli_t *cli,
     only be executed from root **/
 static pj_status_t get_pattern_match_shortcut(const pj_cli_t *cli,
                                               const pj_str_t *cmd_val,
-                                              pj_pool_t *pool, 
+                                              pj_pool_t *pool,
                                               pj_cli_cmd_spec **p_cmd,
                                               pj_cli_exec_info *info)
 {
     pj_hash_iterator_t it_buf, *it;
     pj_status_t status;
     PJ_ASSERT_RETURN(cli && pool && cmd_val && info, PJ_EINVAL);
-  
+
     it = pj_hash_first(cli->cmd_name_hash, &it_buf);
     while (it) {
         unsigned i;
         pj_cli_cmd_spec *cmd = (pj_cli_cmd_spec *)
                                pj_hash_this(cli->cmd_name_hash, it);
 
-        PJ_ASSERT_RETURN(cmd, PJ_EINVAL);           
-        
+        PJ_ASSERT_RETURN(cmd, PJ_EINVAL);
+
         for (i=0; i < cmd->sc_cnt; ++i) {
             static const pj_str_t SHORTCUT = {"SC", 2};
             pj_str_t *sc = &cmd->sc[i];
@@ -1118,7 +1118,7 @@ static pj_status_t get_pattern_match_shortcut(const pj_cli_t *cli,
             if (!pj_strncmp(sc, cmd_val, cmd_val->slen)) {
                 /** Unique hints needed because cmd hash contain command name
                     and shortcut referencing to the same command **/
-                status = insert_new_hint2(pool, PJ_TRUE, sc, &cmd->desc, 
+                status = insert_new_hint2(pool, PJ_TRUE, sc, &cmd->desc,
                                           &SHORTCUT, info);
                 if (status != PJ_SUCCESS)
                     return status;
@@ -1127,7 +1127,7 @@ static pj_status_t get_pattern_match_shortcut(const pj_cli_t *cli,
                     *p_cmd = cmd;
             }
         }
-        
+
         it = pj_hash_next(cli->cmd_name_hash, it);
     }
 
@@ -1136,23 +1136,23 @@ static pj_status_t get_pattern_match_shortcut(const pj_cli_t *cli,
 
 /** This method will search a pattern match to the input command from the child
     command list of the current/active command. **/
-static pj_status_t get_pattern_match_cmds(pj_cli_cmd_spec *cmd, 
-                                          const pj_str_t *cmd_val,                                    
-                                          pj_pool_t *pool, 
-                                          pj_cli_cmd_spec **p_cmd, 
+static pj_status_t get_pattern_match_cmds(pj_cli_cmd_spec *cmd,
+                                          const pj_str_t *cmd_val,
+                                          pj_pool_t *pool,
+                                          pj_cli_cmd_spec **p_cmd,
                                           pj_cli_parse_mode parse_mode,
                                           pj_cli_exec_info *info)
 {
     pj_status_t status;
-    PJ_ASSERT_RETURN(cmd && pool && info && cmd_val, PJ_EINVAL);   
+    PJ_ASSERT_RETURN(cmd && pool && info && cmd_val, PJ_EINVAL);
 
     /* Get matching command */
     if (cmd->sub_cmd) {
         pj_cli_cmd_spec *child_cmd = cmd->sub_cmd->next;
         while (child_cmd != cmd->sub_cmd) {
             pj_bool_t found = PJ_FALSE;
-            if (!pj_strncmp(&child_cmd->name, cmd_val, cmd_val->slen)) {                
-                status = insert_new_hint(pool, &child_cmd->name, 
+            if (!pj_strncmp(&child_cmd->name, cmd_val, cmd_val->slen)) {
+                status = insert_new_hint(pool, &child_cmd->name,
                                          &child_cmd->desc, NULL, info);
                 if (status != PJ_SUCCESS)
                     return status;
@@ -1168,8 +1168,8 @@ static pj_status_t get_pattern_match_cmds(pj_cli_cmd_spec *cmd,
                         pj_str_t *sc = &child_cmd->sc[i];
                         PJ_ASSERT_RETURN(sc, PJ_EINVAL);
 
-                        status = insert_new_hint(pool, sc, 
-                                                 &child_cmd->desc, &SHORTCUT, 
+                        status = insert_new_hint(pool, sc,
+                                                 &child_cmd->desc, &SHORTCUT,
                                                  info);
                         if (status != PJ_SUCCESS)
                             return status;
@@ -1177,8 +1177,8 @@ static pj_status_t get_pattern_match_cmds(pj_cli_cmd_spec *cmd,
                 }
 
                 if (p_cmd)
-                    *p_cmd = child_cmd;                     
-            }   
+                    *p_cmd = child_cmd;
+            }
             child_cmd = child_cmd->next;
         }
     }
@@ -1188,10 +1188,10 @@ static pj_status_t get_pattern_match_cmds(pj_cli_cmd_spec *cmd,
 /** This will match the arguments passed to the command with the argument list
     of the specified command list. **/
 static pj_status_t get_match_args(pj_cli_sess *sess,
-                                  pj_cli_cmd_spec *cmd, 
+                                  pj_cli_cmd_spec *cmd,
                                   const pj_str_t *cmd_val,
                                   unsigned argc,
-                                  pj_pool_t *pool, 
+                                  pj_pool_t *pool,
                                   pj_cli_parse_mode parse_mode,
                                   pj_cli_exec_info *info)
 {
@@ -1210,51 +1210,51 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
     if (cmd->arg_cnt > 0) {
         arg = &cmd->arg[argc-1];
         PJ_ASSERT_RETURN(arg, PJ_EINVAL);
-        if (arg->type == PJ_CLI_ARG_CHOICE) {       
-            unsigned j;             
+        if (arg->type == PJ_CLI_ARG_CHOICE) {
+            unsigned j;
 
             if ((parse_mode == PARSE_EXEC) && (!arg->validate)) {
                 /* If no validation needed, then insert the values */
-                status = insert_new_hint(pool, cmd_val, NULL, NULL, info);              
+                status = insert_new_hint(pool, cmd_val, NULL, NULL, info);
                 return status;
             }
 
             for (j=0; j < arg->stat_choice_cnt; ++j) {
-                pj_cli_arg_choice_val *choice_val = &arg->stat_choice_val[j];           
-            
-                PJ_ASSERT_RETURN(choice_val, PJ_EINVAL);                
-            
-                if (!pj_strncmp(&choice_val->value, cmd_val, cmd_val->slen)) {              
-                    status = insert_new_hint(pool, 
-                                             &choice_val->value, 
-                                             &choice_val->desc, 
-                                             &arg_type[PJ_CLI_ARG_CHOICE].msg, 
+                pj_cli_arg_choice_val *choice_val = &arg->stat_choice_val[j];
+
+                PJ_ASSERT_RETURN(choice_val, PJ_EINVAL);
+
+                if (!pj_strncmp(&choice_val->value, cmd_val, cmd_val->slen)) {
+                    status = insert_new_hint(pool,
+                                             &choice_val->value,
+                                             &choice_val->desc,
+                                             &arg_type[PJ_CLI_ARG_CHOICE].msg,
                                              info);
                     if (status != PJ_SUCCESS)
-                        return status;              
+                        return status;
                 }
             }
             if (arg->get_dyn_choice) {
                 pj_cli_dyn_choice_param dyn_choice_param;
                 static pj_str_t choice_str = {"choice", 6};
 
-                /* Get the dynamic choice values */         
+                /* Get the dynamic choice values */
                 dyn_choice_param.sess = sess;
                 dyn_choice_param.cmd = cmd;
                 dyn_choice_param.arg_id = arg->id;
                 dyn_choice_param.max_cnt = PJ_CLI_MAX_CHOICE_VAL;
                 dyn_choice_param.pool = pool;
-                dyn_choice_param.cnt = 0;           
+                dyn_choice_param.cnt = 0;
 
                 (*arg->get_dyn_choice)(&dyn_choice_param);
                 for (j=0; j < dyn_choice_param.cnt; ++j) {
                     pj_cli_arg_choice_val *choice = &dyn_choice_param.choice[j];
                     if (!pj_strncmp(&choice->value, cmd_val, cmd_val->slen)) {
-                        pj_strassign(&info->hint[info->hint_cnt].name, 
+                        pj_strassign(&info->hint[info->hint_cnt].name,
                                      &choice->value);
-                        pj_strassign(&info->hint[info->hint_cnt].type, 
+                        pj_strassign(&info->hint[info->hint_cnt].type,
                                      &choice_str);
-                        pj_strassign(&info->hint[info->hint_cnt].desc, 
+                        pj_strassign(&info->hint[info->hint_cnt].desc,
                                      &choice->desc);
                         if ((++info->hint_cnt) >= PJ_CLI_MAX_HINTS)
                             break;
@@ -1268,9 +1268,9 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
                 if (info->hint_cnt == 0) {
                     if (!((parse_mode == PARSE_EXEC) && (arg->optional))) {
                         /* For exec mode,no need to insert hint if optional */
-                        status = insert_new_hint(pool, 
-                                                 &arg->name, 
-                                                 &arg->desc, 
+                        status = insert_new_hint(pool,
+                                                 &arg->name,
+                                                 &arg->desc,
                                                  &arg_type[arg->type].msg,
                                                  info);
                         if (status != PJ_SUCCESS)
@@ -1278,19 +1278,19 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
                     }
                     if (!arg->optional)
                         return PJ_CLI_EMISSINGARG;
-                } 
+                }
             } else {
                 return insert_new_hint(pool, cmd_val, NULL, NULL, info);
             }
         }
-    } 
+    }
     return status;
 }
 
-/** This will check for a match of the commands/arguments input. Any match 
+/** This will check for a match of the commands/arguments input. Any match
     will be inserted to the hint data. **/
 static pj_status_t get_available_cmds(pj_cli_sess *sess,
-                                      pj_cli_cmd_spec *cmd, 
+                                      pj_cli_cmd_spec *cmd,
                                       pj_str_t *cmd_val,
                                       unsigned argc,
                                       pj_pool_t *pool,
@@ -1305,18 +1305,18 @@ static pj_status_t get_available_cmds(pj_cli_sess *sess,
 
     prefix = cmd_val?(pj_strtrim(cmd_val)):(&EMPTY_STR);
 
-    info->hint_cnt = 0;    
+    info->hint_cnt = 0;
 
     if (get_cmd) {
-        status = get_comp_match_cmds(sess->fe->cli, cmd, prefix, pool, p_cmd, 
+        status = get_comp_match_cmds(sess->fe->cli, cmd, prefix, pool, p_cmd,
                                      info);
         if (status != PJ_SUCCESS)
             return status;
-        
+
         /** If exact match found, then no need to search for pattern match **/
         if (info->hint_cnt == 0) {
-            if ((parse_mode != PARSE_NEXT_AVAIL) && 
-                (cmd == &sess->fe->cli->root)) 
+            if ((parse_mode != PARSE_NEXT_AVAIL) &&
+                (cmd == &sess->fe->cli->root))
             {
                 /** Pattern match for shortcut needed on root command only **/
                 status = get_pattern_match_shortcut(sess->fe->cli, prefix, pool,
@@ -1324,9 +1324,9 @@ static pj_status_t get_available_cmds(pj_cli_sess *sess,
 
                 if (status != PJ_SUCCESS)
                     return status;
-            } 
-            
-            status = get_pattern_match_cmds(cmd, prefix, pool, p_cmd, 
+            }
+
+            status = get_pattern_match_cmds(cmd, prefix, pool, p_cmd,
                                             parse_mode, info);
         }
 
@@ -1335,12 +1335,12 @@ static pj_status_t get_available_cmds(pj_cli_sess *sess,
     }
 
     if (argc > 0)
-        status = get_match_args(sess, cmd, prefix, argc, 
+        status = get_match_args(sess, cmd, prefix, argc,
                                 pool, parse_mode, info);
 
-    if (status == PJ_SUCCESS) { 
+    if (status == PJ_SUCCESS) {
         if (prefix->slen > 0) {
-            /** If a command entered is not a an empty command, and have a 
+            /** If a command entered is not a an empty command, and have a
                 single match in the command list then it is a valid command **/
             if (info->hint_cnt == 0) {
                 status = PJ_CLI_EINVARG;
@@ -1351,7 +1351,7 @@ static pj_status_t get_available_cmds(pj_cli_sess *sess,
             if (info->hint_cnt > 0)
                 status = PJ_CLI_EAMBIGUOUS;
         }
-    } 
+    }
 
     return status;
 }

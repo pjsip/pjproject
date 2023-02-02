@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/pidf.h>
 #include <pj/string.h>
@@ -22,7 +22,7 @@
 #include <pj/assert.h>
 
 
-struct pjpidf_op_desc pjpidf_op = 
+struct pjpidf_op_desc pjpidf_op =
 {
     {
         &pjpidf_pres_construct,
@@ -121,7 +121,7 @@ PJ_DEF(pjpidf_tuple*) pjpidf_pres_get_first_tuple(pjpidf_pres *pres)
     return pj_xml_find_node(pres, &TUPLE);
 }
 
-PJ_DEF(pjpidf_tuple*) pjpidf_pres_get_next_tuple(pjpidf_pres *pres, 
+PJ_DEF(pjpidf_tuple*) pjpidf_pres_get_next_tuple(pjpidf_pres *pres,
                                                  pjpidf_tuple *tuple)
 {
     return pj_xml_find_next_node(pres, tuple, &TUPLE);
@@ -143,7 +143,7 @@ PJ_DEF(void) pjpidf_pres_remove_tuple(pjpidf_pres *pres, pjpidf_tuple *t)
     pj_list_erase(t);
 }
 
-PJ_DEF(pjpidf_note*) pjpidf_pres_add_note(pj_pool_t *pool, pjpidf_pres *pres, 
+PJ_DEF(pjpidf_note*) pjpidf_pres_add_note(pj_pool_t *pool, pjpidf_pres *pres,
                                           const pj_str_t *text)
 {
     pjpidf_note *note = PJ_POOL_ALLOC_T(pool, pjpidf_note);
@@ -209,7 +209,7 @@ PJ_DEF(const pj_str_t*) pjpidf_tuple_get_contact(const pjpidf_tuple *t)
     return &node->content;
 }
 
-PJ_DEF(void) pjpidf_tuple_set_contact(pj_pool_t *pool, pjpidf_tuple *t, 
+PJ_DEF(void) pjpidf_tuple_set_contact(pj_pool_t *pool, pjpidf_tuple *t,
                                       const pj_str_t *contact)
 {
     pj_xml_node *node = pj_xml_find_node(t, &CONTACT);
@@ -222,7 +222,7 @@ PJ_DEF(void) pjpidf_tuple_set_contact(pj_pool_t *pool, pjpidf_tuple *t,
     }
 }
 
-PJ_DEF(void) pjpidf_tuple_set_contact_prio(pj_pool_t *pool, pjpidf_tuple *t, 
+PJ_DEF(void) pjpidf_tuple_set_contact_prio(pj_pool_t *pool, pjpidf_tuple *t,
                                            const pj_str_t *prio)
 {
     pj_xml_node *node = pj_xml_find_node(t, &CONTACT);
@@ -296,7 +296,7 @@ PJ_DEF(void) pjpidf_tuple_set_timestamp(pj_pool_t *pool, pjpidf_tuple *t,
 }
 
 
-PJ_DEF(void) pjpidf_tuple_set_timestamp_np(pj_pool_t *pool, pjpidf_tuple *t, 
+PJ_DEF(void) pjpidf_tuple_set_timestamp_np(pj_pool_t *pool, pjpidf_tuple *t,
                                            pj_str_t *ts)
 {
     pj_xml_node *node = pj_xml_find_node(t, &TIMESTAMP);

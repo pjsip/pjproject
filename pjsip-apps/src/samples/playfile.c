@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia.h>
@@ -61,7 +61,7 @@
 #define THIS_FILE   "playfile.c"
 
 
-static const char *desc = 
+static const char *desc =
 " FILE                                                              \n"
 "                                                                   \n"
 "  playfile.c                                                       \n"
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     }
 
     /* Create sound player port. */
-    status = pjmedia_snd_port_create_player( 
+    status = pjmedia_snd_port_create_player(
                  pool,                              /* pool                 */
                  -1,                                /* use default dev.     */
                  PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.         */
@@ -158,8 +158,8 @@ int main(int argc, char *argv[])
 
 
 
-    /* 
-     * File should be playing and looping now, using sound device's thread. 
+    /*
+     * File should be playing and looping now, using sound device's thread.
      */
 
 
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
         puts("EOF while reading stdin, will quit now..");
     }
 
-    
+
     /* Start deinitialization: */
 
     /* Disconnect sound port from file port */

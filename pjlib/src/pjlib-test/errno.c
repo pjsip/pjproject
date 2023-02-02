@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pj/errno.h>
@@ -77,9 +77,9 @@ int errno_test(void)
     PJ_LOG(3,(THIS_FILE, "...errno test: check the msg carefully"));
 
     PJ_UNUSED_ARG(rc);
-    
-    /* 
-     * Windows platform error. 
+
+    /*
+     * Windows platform error.
      */
 #   ifdef ERROR_INVALID_DATA
     rc = PJ_STATUS_FROM_OS(ERROR_INVALID_DATA);
@@ -90,7 +90,7 @@ int errno_test(void)
     trim_newlines(errbuf);
     PJ_LOG(3,(THIS_FILE, "...msg for rc=ERROR_INVALID_DATA: '%s'", errbuf));
     if (my_stristr(errbuf, "invalid") == NULL) {
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "...error: expecting \"invalid\" string in the msg"));
 #ifndef PJ_WIN32_WINCE
         return -20;
@@ -116,7 +116,7 @@ int errno_test(void)
     trim_newlines(errbuf);
     PJ_LOG(3,(THIS_FILE, "...msg for rc=EINVAL: '%s'", errbuf));
     if (my_stristr(errbuf, "invalid") == NULL) {
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "...error: expecting \"invalid\" string in the msg"));
         return -30;
     }
@@ -126,7 +126,7 @@ int errno_test(void)
     PJ_LOG(3,(THIS_FILE, "...msg for rc=EINVAL (cut): '%s'", errbuf));
 #   endif
 
-    /* 
+    /*
      * Windows WSA errors
      */
 #   ifdef WSAEINVAL
@@ -138,7 +138,7 @@ int errno_test(void)
     trim_newlines(errbuf);
     PJ_LOG(3,(THIS_FILE, "...msg for rc=WSAEINVAL: '%s'", errbuf));
     if (my_stristr(errbuf, "invalid") == NULL) {
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "...error: expecting \"invalid\" string in the msg"));
         return -40;
     }
@@ -151,13 +151,13 @@ int errno_test(void)
     pj_strerror(PJ_EBUG, errbuf, sizeof(errbuf));
     PJ_LOG(3,(THIS_FILE, "...msg for rc=PJ_EBUG: '%s'", errbuf));
     if (my_stristr(errbuf, "BUG") == NULL) {
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "...error: expecting \"BUG\" string in the msg"));
         return -20;
     }
 
     pj_strerror(PJ_EBUG, errbuf, CUT);
-    PJ_LOG(3,(THIS_FILE, "...msg for rc=PJ_EBUG, cut at %d chars: '%s'", 
+    PJ_LOG(3,(THIS_FILE, "...msg for rc=PJ_EBUG, cut at %d chars: '%s'",
               CUT, errbuf));
 
     /* Perror */

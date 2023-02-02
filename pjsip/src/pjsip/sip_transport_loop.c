@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_transport_loop.h>
 #include <pjsip/sip_endpoint.h>
@@ -72,8 +72,8 @@ static struct recv_list *create_incoming_packet( struct loop_transport *loop,
     pj_pool_t *pool;
     struct recv_list *pkt;
 
-    pool = pjsip_endpt_create_pool(loop->base.endpt, "rdata", 
-                                   PJSIP_POOL_RDATA_LEN, 
+    pool = pjsip_endpt_create_pool(loop->base.endpt, "rdata",
+                                   PJSIP_POOL_RDATA_LEN,
                                    PJSIP_POOL_RDATA_INC+5);
     if (!pool)
         return NULL;
@@ -83,7 +83,7 @@ static struct recv_list *create_incoming_packet( struct loop_transport *loop,
     /* Initialize rdata. */
     pkt->rdata.tp_info.pool = pool;
     pkt->rdata.tp_info.transport = &loop->base;
-    
+
     /* Copy the packet. */
     pj_memcpy(pkt->rdata.pkt_info.packet, tdata->buf.start,
               tdata->buf.cur - tdata->buf.start);
@@ -117,7 +117,7 @@ static pj_status_t add_notification( struct loop_transport *loop,
                                      pjsip_tx_data *tdata,
                                      pj_ssize_t sent,
                                      void *token,
-                                     void (*callback)(pjsip_transport*, 
+                                     void (*callback)(pjsip_transport*,
                                                       void*, pj_ssize_t))
 {
     struct send_list *sent_status;
@@ -144,7 +144,7 @@ static pj_status_t add_notification( struct loop_transport *loop,
 }
 
 /* Handler for sending outgoing message; called by transport manager. */
-static pj_status_t loop_send_msg( pjsip_transport *tp, 
+static pj_status_t loop_send_msg( pjsip_transport *tp,
                                   pjsip_tx_data *tdata,
                                   const pj_sockaddr_t *rem_addr,
                                   int addr_len,
@@ -153,7 +153,7 @@ static pj_status_t loop_send_msg( pjsip_transport *tp,
 {
     struct loop_transport *loop = (struct loop_transport*)tp;
     struct recv_list *recv_pkt;
-    
+
     PJ_ASSERT_RETURN(tp && (tp->key.type == PJSIP_TRANSPORT_LOOP ||
                      tp->key.type == PJSIP_TRANSPORT_LOOP_DGRAM), PJ_EINVAL);
 
@@ -186,16 +186,16 @@ static pj_status_t loop_send_msg( pjsip_transport *tp,
     if (loop->recv_delay == 0) {
         pj_ssize_t size_eaten;
 
-        size_eaten = pjsip_tpmgr_receive_packet( loop->base.tpmgr, 
+        size_eaten = pjsip_tpmgr_receive_packet( loop->base.tpmgr,
                                                  &recv_pkt->rdata);
         pj_assert(size_eaten == recv_pkt->rdata.pkt_info.len);
         PJ_UNUSED_ARG(size_eaten);
 
-        pjsip_endpt_release_pool(loop->base.endpt, 
+        pjsip_endpt_release_pool(loop->base.endpt,
                                  recv_pkt->rdata.tp_info.pool);
 
     } else {
-        /* Otherwise if delay is configured, add the "packet" to the 
+        /* Otherwise if delay is configured, add the "packet" to the
          * receive list to be processed by worker thread.
          */
         pj_lock_acquire(loop->base.lock);
@@ -216,10 +216,10 @@ static pj_status_t loop_send_msg( pjsip_transport *tp,
 static pj_status_t loop_destroy(pjsip_transport *tp)
 {
     struct loop_transport *loop = (struct loop_transport*)tp;
-    
+
     PJ_ASSERT_RETURN(tp && (tp->key.type == PJSIP_TRANSPORT_LOOP ||
                      tp->key.type == PJSIP_TRANSPORT_LOOP_DGRAM), PJ_EINVAL);
-    
+
     loop->thread_quit_flag = 1;
     /* Unlock transport mutex before joining thread. */
     /// This raised assertion failed "mutex->owner == pj_thread_this()",
@@ -363,9 +363,9 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
 
     /* Create the loop structure. */
     loop = PJ_POOL_ZALLOC_T(pool, struct loop_transport);
-    
+
     /* Initialize transport properties. */
-    pj_ansi_snprintf(loop->base.obj_name, sizeof(loop->base.obj_name), 
+    pj_ansi_snprintf(loop->base.obj_name, sizeof(loop->base.obj_name),
                      "loop%p", loop);
     loop->base.pool = pool;
     status = pj_atomic_create(pool, 0, &loop->base.ref_cnt);
@@ -380,7 +380,7 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
     loop->base.info = "LOOP-DGRAM";
     loop->base.flag = PJSIP_TRANSPORT_DATAGRAM;
     loop->base.local_name.host = pj_str(ADDR_LOOP_DGRAM);
-    loop->base.local_name.port = 
+    loop->base.local_name.port =
         pjsip_transport_get_default_port_for_type((pjsip_transport_type_e)
                                                   loop->base.key.type);
     loop->base.addr_len = sizeof(pj_sockaddr_in);
@@ -394,8 +394,8 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
     pj_list_init(&loop->send_list);
 
     /* Create worker thread. */
-    status = pj_thread_create(pool, "loop", 
-                              &loop_transport_worker_thread, loop, 0, 
+    status = pj_thread_create(pool, "loop",
+                              &loop_transport_worker_thread, loop, 0,
                               PJ_THREAD_SUSPENDED, &loop->thread);
     if (status != PJ_SUCCESS)
         goto on_error;

@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import sys
 import pjsua as pj
@@ -52,7 +52,7 @@ class MyBuddyCallback(pj.BuddyCallback):
         print self.buddy.info().online_text
 
     def on_pager(self, mime_type, body):
-        print "Instant message from", self.buddy.info().uri, 
+        print "Instant message from", self.buddy.info().uri,
         print "(", mime_type, "):"
         print body
 
@@ -76,18 +76,18 @@ try:
     lib.init(log_cfg = pj.LogConfig(level=LOG_LEVEL, callback=log_cb))
 
     # Create UDP transport which listens to any available port
-    transport = lib.create_transport(pj.TransportType.UDP, 
+    transport = lib.create_transport(pj.TransportType.UDP,
                                      pj.TransportConfig(0))
-    print "\nListening on", transport.info().host, 
+    print "\nListening on", transport.info().host,
     print "port", transport.info().port, "\n"
-    
+
     # Start the library
     lib.start()
 
     # Create local account
     acc = lib.create_account_for_transport(transport, cb=MyAccountCallback())
     acc.set_basic_status(True)
-    
+
     my_sip_uri = "sip:" + transport.info().host + \
                  ":" + str(transport.info().port)
 
@@ -102,7 +102,7 @@ try:
         input = sys.stdin.readline().rstrip("\r\n")
         if input == "a":
             # Add buddy
-            print "Enter buddy URI: ", 
+            print "Enter buddy URI: ",
             input = sys.stdin.readline().rstrip("\r\n")
             if input == "":
                 continue
@@ -120,14 +120,14 @@ try:
 
             buddy.send_typing_ind(True)
 
-            print "Type the message: ", 
+            print "Type the message: ",
             input = sys.stdin.readline().rstrip("\r\n")
             if input == "":
                 buddy.send_typing_ind(False)
                 continue
-            
+
             buddy.send_pager(input)
-        
+
         elif input == "d":
             if buddy:
                 buddy.delete()

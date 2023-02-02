@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef __PJMEDIA_CODECS_AMR_HELPER_H__
@@ -36,7 +36,7 @@
  * @brief AMR common tables and helper functions.
  * @{
  *
- * This sections describes common AMR constants tables (e.g: bits sensitivity 
+ * This sections describes common AMR constants tables (e.g: bits sensitivity
  * order map, frame lengths, bitrates) and helper functions (e.g: pack AMR
  * payload in octet-aligned mode or bandwidth-efficient mode, payload parser,
  * reorder AMR bitstream).
@@ -565,33 +565,33 @@ const pj_int16_t* const pjmedia_codec_amrwb_ordermaps[9] =
 /**
  * Constant of AMR-NB frame lengths in bytes.
  */
-const pj_uint8_t  pjmedia_codec_amrnb_framelen[16] = 
+const pj_uint8_t  pjmedia_codec_amrnb_framelen[16] =
     {12, 13, 15, 17, 19, 20, 26, 31, 5, 0, 0, 0, 0, 0, 0, 0};
 /**
  * Constant of AMR-NB frame lengths in bits.
  */
-const pj_uint16_t pjmedia_codec_amrnb_framelenbits[9] = 
+const pj_uint16_t pjmedia_codec_amrnb_framelenbits[9] =
     {95, 103, 118, 134, 148, 159, 204, 244, 39};
 /**
  * Constant of AMR-NB bitrates.
  */
-const pj_uint16_t pjmedia_codec_amrnb_bitrates[8] = 
+const pj_uint16_t pjmedia_codec_amrnb_bitrates[8] =
     {4750, 5150, 5900, 6700, 7400, 7950, 10200, 12200};
 
 /**
  * Constant of AMR-WB frame lengths in bytes.
  */
-const pj_uint8_t  pjmedia_codec_amrwb_framelen[16] = 
+const pj_uint8_t  pjmedia_codec_amrwb_framelen[16] =
     {17, 23, 32, 37, 40, 46, 50, 58, 60, 5, 0, 0, 0, 0, 0, 0};
 /**
  * Constant of AMR-WB frame lengths in bits.
  */
-const pj_uint16_t pjmedia_codec_amrwb_framelenbits[10] = 
+const pj_uint16_t pjmedia_codec_amrwb_framelenbits[10] =
     {132, 177, 253, 285, 317, 365, 397, 461, 477, 40};
 /**
  * Constant of AMR-WB bitrates.
  */
-const pj_uint16_t pjmedia_codec_amrwb_bitrates[9] = 
+const pj_uint16_t pjmedia_codec_amrwb_bitrates[9] =
     {6600, 8850, 12650, 14250, 15850, 18250, 19850, 23050, 23850};
 
 
@@ -615,10 +615,10 @@ typedef struct pjmedia_codec_amr_bit_info {
  */
 typedef struct pjmedia_codec_amr_pack_setting {
     pj_uint8_t amr_nb:1;        /**< Set 1 for AMR-NB, 0 for AMR-WB.    */
-    pj_uint8_t reorder:1;       /**< Reorder bitstream into descending 
+    pj_uint8_t reorder:1;       /**< Reorder bitstream into descending
                                      sensitivity order or vice versa.   */
     pj_uint8_t octet_aligned:1; /**< TRUE if payload is in octet-aligned mode,
-                                     FALSE if payload is in bandwidth 
+                                     FALSE if payload is in bandwidth
                                      efficient mode.                    */
     pj_uint8_t cmr:4;           /**< Change Mode Request for remote
                                      encoder.                           */
@@ -700,15 +700,15 @@ PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode2(pj_bool_t amrnb,
                 return (pj_int8_t)i;
         }
     }
-    
+
     pj_assert(!"Invalid AMR frame length");
     return -1;
 }
 
 /**
  * Prepare a frame before pass it to decoder. This function will do:
- * - reorder AMR bitstream from descending sensitivity order into 
- *   encoder bits order. This can be enabled/disabled via param 
+ * - reorder AMR bitstream from descending sensitivity order into
+ *   encoder bits order. This can be enabled/disabled via param
  *   'setting' by setting/resetting field 'reorder'.
  * - align left the start bit (make the start_bit to be 0).
  *
@@ -758,7 +758,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
         bitrate_tbl     = pjmedia_codec_amrwb_bitrates;
         order_maps      = pjmedia_codec_amrwb_ordermaps;
     }
-    
+
     PJ_UNUSED_ARG(bitrate_tbl);
 
     /* unpack AMR bitstream if there is any data */
@@ -815,7 +815,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
         pj_uint8_t FT_;
 
         if (setting->amr_nb)
-            FT_ = (pj_uint8_t)((amr_bits[36] << 2) | (amr_bits[37] << 1) | 
+            FT_ = (pj_uint8_t)((amr_bits[36] << 2) | (amr_bits[37] << 1) |
                                amr_bits[38]);
         else
             FT_ = (pj_uint8_t)((amr_bits[36] << 3) | (amr_bits[37] << 2) |
@@ -864,7 +864,7 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
                             const pjmedia_frame frames[],
                             unsigned nframes,
                             const pjmedia_codec_amr_pack_setting *setting,
-                            void *pkt, 
+                            void *pkt,
                             pj_size_t *pkt_size)
 {
     /* Write cursor */
@@ -901,7 +901,7 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
         bitrate_tbl     = pjmedia_codec_amrwb_bitrates;
         order_maps      = pjmedia_codec_amrwb_ordermaps;
     }
-    
+
     PJ_UNUSED_ARG(bitrate_tbl);
 
     /* Code Mode Request, 4 bits */
@@ -1078,11 +1078,11 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
  * @return          PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
-                             void *pkt, 
-                             pj_size_t pkt_size, 
+                             void *pkt,
+                             pj_size_t pkt_size,
                              const pj_timestamp *ts,
                              const pjmedia_codec_amr_pack_setting* setting,
-                             pjmedia_frame frames[], 
+                             pjmedia_frame frames[],
                              unsigned *nframes,
                              pj_uint8_t *cmr)
 {
@@ -1176,7 +1176,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
 
         /* AMR frame length is 20ms */
         ts_.u64 += setting->amr_nb? 160 : 320;
-        
+
         if (++cnt == *nframes || !F)
             break;
     }

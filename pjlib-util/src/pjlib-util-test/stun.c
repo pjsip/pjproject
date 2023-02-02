@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 static int decode_test(void)
@@ -69,8 +69,8 @@ static int auth_test(void)
      * Username).
      */
 
-    /* If long term credential is wanted and REALM is not present, server 
-     * must respond with 434 (Missing Realm) 
+    /* If long term credential is wanted and REALM is not present, server
+     * must respond with 434 (Missing Realm)
      */
 
     /* If REALM doesn't match, server must respond with 434 (Missing Realm)
@@ -83,7 +83,7 @@ static int auth_test(void)
      */
 
     /* Simulate 438 (Stale Nonce) */
-    
+
     /* Simulate 436 (Unknown Username) */
 
     /* When server wants to use short term credential, but request has

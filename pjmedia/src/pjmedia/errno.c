@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/errno.h>
 #include <pjmedia/types.h>
@@ -30,18 +30,18 @@ PJ_END_DECL
 #endif
 
 
-/* PJMEDIA's own error codes/messages 
+/* PJMEDIA's own error codes/messages
  * MUST KEEP THIS ARRAY SORTED!!
  * Message must be limited to 64 chars!
  */
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
-static const struct 
+static const struct
 {
     int code;
     const char *msg;
-} err_str[] = 
+} err_str[] =
 {
     /* Generic PJMEDIA errors, shouldn't be used! */
     PJ_BUILD_ERR( PJMEDIA_ERROR,            "Unspecified PJMEDIA error" ),
@@ -130,7 +130,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_RTP_EBADSEQ,      "Bad sequence number in RTP packet" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_EBADDEST,     "RTP media port destination is not configured" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_ENOCONFIG,    "RTP is not configured" ),
-    
+
     /* Media port errors: */
     PJ_BUILD_ERR( PJMEDIA_ENOTCOMPATIBLE,   "Media ports are not compatible" ),
     PJ_BUILD_ERR( PJMEDIA_ENCCLOCKRATE,     "Media ports have incompatible clock rate" ),
@@ -182,7 +182,7 @@ static const struct
 /*
  * pjmedia_strerror()
  */
-PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode, 
+PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
                                    char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
@@ -198,7 +198,7 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
         //int pa_err = statcode - PJMEDIA_ERRNO_FROM_PORTAUDIO(0);
         int pa_err = PJMEDIA_PORTAUDIO_ERRNO_START - statcode;
         pj_str_t msg;
-        
+
         msg.ptr = (char*)Pa_GetErrorText(pa_err);
         msg.slen = pj_ansi_strlen(msg.ptr);
 
@@ -206,7 +206,7 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
         pj_strncpy_with_null(&errstr, &msg, bufsize);
         return errstr;
 
-    } else 
+    } else
 #endif  /* PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO */
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -216,18 +216,18 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
     {
         int err = statcode - PJMEDIA_LIBSRTP_ERRNO_START;
         pj_str_t msg;
-        
+
         msg = pj_str((char*)get_libsrtp_errstr(err));
 
         errstr.ptr = buf;
         pj_strncpy_with_null(&errstr, &msg, bufsize);
         return errstr;
-    
+
     } else
 #endif
-    
+
     /* PJMEDIA error */
-    if (statcode >= PJMEDIA_ERRNO_START && 
+    if (statcode >= PJMEDIA_ERRNO_START &&
                statcode < PJMEDIA_ERRNO_END)
     {
         /* Find the error in the table.
@@ -254,7 +254,7 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 
         if (PJ_ARRAY_SIZE(err_str) && err_str[first].code == statcode) {
             pj_str_t msg;
-            
+
             msg.ptr = (char*)err_str[first].msg;
             msg.slen = pj_ansi_strlen(err_str[first].msg);
 
@@ -262,13 +262,13 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
             pj_strncpy_with_null(&errstr, &msg, bufsize);
             return errstr;
 
-        } 
-    } 
+        }
+    }
 #endif  /* PJ_HAS_ERROR_STRING */
 
     /* Error not found. */
     errstr.ptr = buf;
-    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+    errstr.slen = pj_ansi_snprintf(buf, bufsize,
                                    "Unknown pjmedia error %d",
                                    statcode);
     if (errstr.slen < 1 || errstr.slen >= (pj_ssize_t)bufsize)

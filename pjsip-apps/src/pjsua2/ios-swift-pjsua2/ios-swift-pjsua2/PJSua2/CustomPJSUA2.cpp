@@ -73,7 +73,7 @@ public:
         CallInfo ci = getInfo();
            if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
                callStatusListenerPtr(0);
-               
+
                /* Delete the call */
                delete call;
                call = NULL;
@@ -81,13 +81,13 @@ public:
         if (ci.state == PJSIP_INV_STATE_CONFIRMED) {
             callStatusListenerPtr(1);
         }
-        
+
         setCallerId(ci.remoteUri);
-        
+
         //Notify caller ID:
         PJSua2 pjsua2;
         pjsua2.incomingCallInfo();
-        
+
     }
 
     // Notification when call's media state has changed.
@@ -97,7 +97,7 @@ public:
         for (unsigned i = 0; i < ci.media.size(); i++) {
             if (ci.media[i].type==PJMEDIA_TYPE_AUDIO && getMedia(i)) {
                 AudioMedia *aud_med = (AudioMedia *)getMedia(i);
-                
+
                 // Connect the call audio media to sound device
                 AudDevManager& mgr = Endpoint::instance().audDevManager();
                 aud_med->startTransmit(mgr.getPlaybackDevMedia());
@@ -118,11 +118,11 @@ class MyAccount : public Account {
     shutdown();
     // ..before deleting any member objects.
     }
-    
-    
+
+
     // This is getting for register status!
     virtual void onRegState(OnRegStateParam &prm);
-    
+
     // This is getting for incoming call (We can either answer or hangup the incoming call)
     virtual void onIncomingCall(OnIncomingCallParam &iprm);
 };
@@ -156,22 +156,22 @@ void PJSua2::createLib() {
     } catch (Error& err){
         std::cout << "Startup error: " << err.info() << std::endl;
     }
-    
+
     //LibInit
     try {
         EpConfig ep_cfg;
         ep->libInit( ep_cfg );
-    
+
     } catch(Error& err) {
         std::cout << "Initialization error: " << err.info() << std::endl;
     }
-    
+
     // Create SIP transport. Error handling sample is shown
     try {
     TransportConfig tcfg;
     tcfg.port = 5060;
     TransportId tid = ep->transportCreate(PJSIP_TRANSPORT_UDP, tcfg);
-        
+
     } catch(Error& err) {
     std::cout << "Transport creation error: " << err.info() << std::endl;
     }
@@ -188,13 +188,13 @@ void PJSua2::createLib() {
  Delete lib
  */
 void PJSua2::deleteLib() {
-    
+
     // Here we don't have anything else to do..
     pj_thread_sleep(500);
-    
+
     // Delete the account. This will unregister from server
     delete acc;
-    
+
     ep->libDestroy();
     delete ep;
 }
@@ -204,15 +204,15 @@ void PJSua2::deleteLib() {
  Create Account via following config(string username, string password, string ip, string port)
  */
 void PJSua2::createAccount(std::string username, std::string password, std::string ip, std::string port) {
-    
+
     // Configure an AccountConfig
     AccountConfig acfg;
     acfg.idUri = "sip:" + username + "@" + ip + ":" + port;
     acfg.regConfig.registrarUri = "sip:" + ip + ":" + port;
     AuthCredInfo cred("digest", "*", username, 0, password);
     acfg.sipConfig.authCreds.push_back(cred);
-    
-    
+
+
     //  TODO:: GET ID -1 IS EXPERIMENTAL, NOT SURE THAT, IT IS GOOD WAY TO CHECK ACC IS CREATED. FIX IT!
     if(acc->getId() == -1){
         // Create the account
@@ -231,7 +231,7 @@ void PJSua2::createAccount(std::string username, std::string password, std::stri
             std::cout << "Account modify error: " << err.info() << std::endl;
         }
     }
-    
+
 }
 
 
@@ -289,7 +289,7 @@ void PJSua2::answerCall(){
  Hangup active call (Incoming/Outgoing/Active)
  */
 void PJSua2::hangupCall(){
-    
+
     if (call != NULL) {
         CallOpParam op;
         op.statusCode = PJSIP_SC_DECLINE;
@@ -303,17 +303,17 @@ void PJSua2::hangupCall(){
  Hold the call
  */
 void PJSua2::holdCall(){
-    
+
     if (call != NULL) {
         CallOpParam op;
-        
+
         try {
             call->setHold(op);
         } catch(Error& err) {
             std::cout << "Hold error: " << err.info() << std::endl;
         }
     }
-    
+
 }
 
 /**
@@ -322,17 +322,17 @@ void PJSua2::holdCall(){
 void PJSua2::unholdCall(){
 
     if (call != NULL) {
-        
+
         CallOpParam op;
         op.opt.flag=PJSUA_CALL_UNHOLD;
-        
+
         try {
             call->reinvite(op);
         } catch(Error& err) {
             std::cout << "Unhold/Reinvite error: " << err.info() << std::endl;
         }
     }
-    
+
 }
 /**
  Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_IP:SIP_PORT>)

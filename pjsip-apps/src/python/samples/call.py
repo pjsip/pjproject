@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import sys
 import pjsua as pj
@@ -36,11 +36,11 @@ class MyAccountCallback(pj.AccountCallback):
 
     # Notification on incoming call
     def on_incoming_call(self, call):
-        global current_call 
+        global current_call
         if current_call:
             call.answer(486, "Busy")
             return
-            
+
         print "Incoming call from ", call.info().remote_uri
         print "Press 'a' to answer"
 
@@ -51,7 +51,7 @@ class MyAccountCallback(pj.AccountCallback):
 
         current_call.answer(180)
 
-        
+
 # Callback to receive events from Call
 class MyCallCallback(pj.CallCallback):
 
@@ -63,9 +63,9 @@ class MyCallCallback(pj.CallCallback):
         global current_call
         print "Call with", self.call.info().remote_uri,
         print "is", self.call.info().state_text,
-        print "last code =", self.call.info().last_code, 
+        print "last code =", self.call.info().last_code,
         print "(" + self.call.info().last_reason + ")"
-        
+
         if self.call.info().state == pj.CallState.DISCONNECTED:
             current_call = None
             print 'Current call is', current_call
@@ -89,7 +89,7 @@ def make_call(uri):
     except pj.Error, e:
         print "Exception: " + str(e)
         return None
-        
+
 
 # Create library instance
 lib = pj.Lib()
@@ -100,11 +100,11 @@ try:
     lib.init(log_cfg = pj.LogConfig(level=LOG_LEVEL, callback=log_cb))
 
     # Create UDP transport which listens to any available port
-    transport = lib.create_transport(pj.TransportType.UDP, 
+    transport = lib.create_transport(pj.TransportType.UDP,
                                      pj.TransportConfig(0))
-    print "\nListening on", transport.info().host, 
+    print "\nListening on", transport.info().host,
     print "port", transport.info().port, "\n"
-    
+
     # Start the library
     lib.start()
 
@@ -131,7 +131,7 @@ try:
             if current_call:
                 print "Already have another call"
                 continue
-            print "Enter destination URI to call: ", 
+            print "Enter destination URI to call: ",
             input = sys.stdin.readline().rstrip("\r\n")
             if input == "":
                 continue

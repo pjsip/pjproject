@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -101,7 +101,7 @@ static void dump_ssl_info(const pj_ssl_sock_info *si)
     PJ_LOG(3, ("", ".....Cipher: %s", tmp_st));
 
     /* Print remote certificate info and verification result */
-    if (si->remote_cert_info && si->remote_cert_info->subject.info.slen) 
+    if (si->remote_cert_info && si->remote_cert_info->subject.info.slen)
     {
         char buf[2048];
         const char *verif_msgs[32];
@@ -130,7 +130,7 @@ static void dump_ssl_info(const pj_ssl_sock_info *si)
 static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
                                          pj_status_t status)
 {
-    struct test_state *st = (struct test_state*) 
+    struct test_state *st = (struct test_state*)
                             pj_ssl_sock_get_user_data(ssock);
     void *read_buf[1];
     pj_ssl_sock_info info;
@@ -167,7 +167,7 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
         pj_ssize_t size;
 
         size = st->send_str_len - st->sent;
-        status = pj_ssl_sock_send(ssock, (pj_ioqueue_op_key_t*)&st->send_key, 
+        status = pj_ssl_sock_send(ssock, (pj_ioqueue_op_key_t*)&st->send_key,
                                   st->send_str + st->sent, &size, 0);
         if (status != PJ_SUCCESS && status != PJ_EPENDING) {
             app_perror("...ERROR pj_ssl_sock_send()", status);
@@ -202,7 +202,7 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
                                         int src_addr_len,
                                         pj_status_t accept_status)
 {
-    struct test_state *parent_st = (struct test_state*) 
+    struct test_state *parent_st = (struct test_state*)
                                    pj_ssl_sock_get_user_data(ssock);
     struct test_state *st;
     void *read_buf[1];
@@ -211,7 +211,7 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
     pj_status_t status;
 
     PJ_UNUSED_ARG(src_addr_len);
-    
+
     if (accept_status != PJ_SUCCESS) {
         if (newsock) {
             st = (struct test_state*) pj_ssl_sock_get_user_data(newsock);
@@ -250,7 +250,7 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
         pj_ssize_t size;
 
         size = st->send_str_len - st->sent;
-        status = pj_ssl_sock_send(newsock, (pj_ioqueue_op_key_t*)&st->send_key, 
+        status = pj_ssl_sock_send(newsock, (pj_ioqueue_op_key_t*)&st->send_key,
                                   st->send_str + st->sent, &size, 0);
         if (status != PJ_SUCCESS && status != PJ_EPENDING) {
             app_perror("...ERROR pj_ssl_sock_send()", status);
@@ -283,7 +283,7 @@ static pj_bool_t ssl_on_data_read(pj_ssl_sock_t *ssock,
                                   pj_status_t status,
                                   pj_size_t *remainder)
 {
-    struct test_state *st = (struct test_state*) 
+    struct test_state *st = (struct test_state*)
                              pj_ssl_sock_get_user_data(ssock);
 
     PJ_UNUSED_ARG(remainder);
@@ -397,7 +397,7 @@ static pj_bool_t ssl_on_data_sent(pj_ssl_sock_t *ssock,
             pj_status_t status;
 
             size = st->send_str_len - st->sent;
-            status = pj_ssl_sock_send(ssock, (pj_ioqueue_op_key_t*)&st->send_key, 
+            status = pj_ssl_sock_send(ssock, (pj_ioqueue_op_key_t*)&st->send_key,
                                       st->send_str + st->sent, &size, 0);
             if (status != PJ_SUCCESS && status != PJ_EPENDING) {
                 app_perror("...ERROR pj_ssl_sock_send()", status);
@@ -504,7 +504,7 @@ static int https_client_test(unsigned ms_timeout)
     PJ_LOG(3, ("", ".....Sent/recv: %d/%d bytes", state.sent, state.recv));
 
 on_return:
-    if (ssock && !state.err && !state.done) 
+    if (ssock && !state.err && !state.done)
         pj_ssl_sock_close(ssock);
     if (ioqueue)
         pj_ioqueue_destroy(ioqueue);
@@ -516,7 +516,7 @@ on_return:
     return status;
 }
 
-#if !(defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1) 
+#if !(defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
 static pj_status_t load_cert_to_buf(pj_pool_t *pool, const pj_str_t *file_name,
                                     pj_ssl_cert_buffer *buf)
 {
@@ -607,7 +607,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
         pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
-        status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
+        status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file,
                                              &privkey_file, &privkey_pass,
                                              &cert);
 #else
@@ -629,7 +629,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
         }
 
         status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &cert_buf,
-                                              &privkey_buf, &privkey_pass, 
+                                              &privkey_buf, &privkey_pass,
                                               &cert);
 #endif
         if (status != PJ_SUCCESS) {
@@ -692,7 +692,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
             pj_str_t null_str = pj_str("");
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
-            status = pj_ssl_cert_load_from_files(pool, &ca_file, &null_str, 
+            status = pj_ssl_cert_load_from_files(pool, &ca_file, &null_str,
                                                  &null_str, &null_str, &cert);
 #else
             pj_ssl_cert_buffer null_buf, ca_buf;
@@ -771,7 +771,7 @@ on_return:
 
     if (ssock_serv)
         pj_ssl_sock_close(ssock_serv);
-    if (ssock_cli && !state_cli.err && !state_cli.done) 
+    if (ssock_cli && !state_cli.err && !state_cli.done)
         pj_ssl_sock_close(ssock_cli);
     if (ioqueue)
         pj_ioqueue_destroy(ioqueue);
@@ -865,7 +865,7 @@ static pj_bool_t asock_on_accept_complete(pj_activesock_t *asock,
     st = (struct test_state*) pj_activesock_get_user_data(asock);
 
     asock_cb.on_data_read = &asock_on_data_read;
-    status = pj_activesock_create(st->pool, newsock, pj_SOCK_STREAM(), NULL, 
+    status = pj_activesock_create(st->pool, newsock, pj_SOCK_STREAM(), NULL,
                                   st->ioqueue, &asock_cb, st, &new_asock);
     if (status != PJ_SUCCESS) {
         goto on_return;
@@ -873,8 +873,8 @@ static pj_bool_t asock_on_accept_complete(pj_activesock_t *asock,
 
     /* Start reading data */
     read_buf[0] = st->read_buf;
-    status = pj_activesock_start_read2(new_asock, st->pool, 
-                                       sizeof(st->read_buf), 
+    status = pj_activesock_start_read2(new_asock, st->pool,
+                                       sizeof(st->read_buf),
                                        (void**)read_buf, 0);
     if (status != PJ_SUCCESS) {
         app_perror("...ERROR pj_ssl_sock_start_read2()", status);
@@ -931,7 +931,7 @@ static int client_non_ssl(unsigned ms_timeout)
         pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
-        status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
+        status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file,
                                              &privkey_file, &privkey_pass,
                                              &cert);
 #else
@@ -953,7 +953,7 @@ static int client_non_ssl(unsigned ms_timeout)
         }
 
         status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &cert_buf,
-                                              &privkey_buf, &privkey_pass, 
+                                              &privkey_buf, &privkey_pass,
                                               &cert);
 #endif
         if (status != PJ_SUCCESS) {
@@ -1015,13 +1015,13 @@ static int client_non_ssl(unsigned ms_timeout)
 
     asock_cb.on_connect_complete = &asock_on_connect_complete;
     asock_cb.on_data_read = &asock_on_data_read;
-    status = pj_activesock_create(pool, sock, pj_SOCK_STREAM(), NULL, 
+    status = pj_activesock_create(pool, sock, pj_SOCK_STREAM(), NULL,
                                   ioqueue, &asock_cb, &state_cli, &asock_cli);
     if (status != PJ_SUCCESS) {
         goto on_return;
     }
 
-    status = pj_activesock_start_connect(asock_cli, pool, (pj_sockaddr_t*)&listen_addr, 
+    status = pj_activesock_start_connect(asock_cli, pool, (pj_sockaddr_t*)&listen_addr,
                                          pj_sockaddr_get_len(&listen_addr));
     if (status == PJ_SUCCESS) {
         asock_on_connect_complete(asock_cli, PJ_SUCCESS);
@@ -1073,7 +1073,7 @@ on_return:
 /* SSL socket try to connect to raw TCP socket server, once
  * connection established, SSL socket will try to perform SSL
  * handshake. SSL client socket should be able to close the
- * connection after specified timeout period (set ms_timeout to 
+ * connection after specified timeout period (set ms_timeout to
  * 0 to disable timer).
  */
 static int server_non_ssl(unsigned ms_timeout)
@@ -1118,7 +1118,7 @@ static int server_non_ssl(unsigned ms_timeout)
         pj_sockaddr_init(PJ_AF_INET, &listen_addr, pj_strset2(&tmp_st, "127.0.0.1"), 0);
     }
 
-    status = pj_sock_bind(sock, (pj_sockaddr_t*)&listen_addr, 
+    status = pj_sock_bind(sock, (pj_sockaddr_t*)&listen_addr,
                           pj_sockaddr_get_len((pj_sockaddr_t*)&listen_addr));
     if (status != PJ_SUCCESS) {
         goto on_return;
@@ -1130,7 +1130,7 @@ static int server_non_ssl(unsigned ms_timeout)
     }
 
     asock_cb.on_accept_complete = &asock_on_accept_complete;
-    status = pj_activesock_create(pool, sock, pj_SOCK_STREAM(), NULL, 
+    status = pj_activesock_create(pool, sock, pj_SOCK_STREAM(), NULL,
                                   ioqueue, &asock_cb, &state_serv, &asock_serv);
     if (status != PJ_SUCCESS) {
         goto on_return;
@@ -1175,9 +1175,9 @@ static int server_non_ssl(unsigned ms_timeout)
         pj_sockaddr_init(PJ_AF_INET, &addr, pj_strset2(&tmp_st, "127.0.0.1"), 0);
     }
 
-    status = pj_ssl_sock_start_connect(ssock_cli, pool, 
-                                       (pj_sockaddr_t*)&addr, 
-                                       (pj_sockaddr_t*)&listen_addr, 
+    status = pj_ssl_sock_start_connect(ssock_cli, pool,
+                                       (pj_sockaddr_t*)&addr,
+                                       (pj_sockaddr_t*)&listen_addr,
                                        pj_sockaddr_get_len(&listen_addr));
     if (status != PJ_EPENDING) {
         goto on_return;
@@ -1263,7 +1263,7 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
         pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
-        status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
+        status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file,
                                              &privkey_file, &privkey_pass,
                                              &cert);
 #else
@@ -1285,7 +1285,7 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
         }
 
         status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &cert_buf,
-                                              &privkey_buf, &privkey_pass, 
+                                              &privkey_buf, &privkey_pass,
                                               &cert);
 #endif
         if (status != PJ_SUCCESS) {
@@ -1444,7 +1444,7 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     /* SSL setup and data transfer duration */
     {
         pj_time_val stop;
-        
+
         pj_gettimeofday(&stop);
         PJ_TIME_VAL_SUB(stop, start);
 
@@ -1464,7 +1464,7 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     PJ_LOG(3, ("", ".....Total sent/recv: %d/%d bytes", tot_sent, tot_recv));
 
 on_return:
-    if (ssock_serv) 
+    if (ssock_serv)
         pj_ssl_sock_close(ssock_serv);
 
     if (ssock_cli && state_cli) {
@@ -1522,42 +1522,42 @@ int ssl_sock_test(void)
         //return ret;
 
 #ifndef PJ_SYMBIAN
-   
-    /* On Symbian platforms, SSL socket is implemented using CSecureSocket, 
+
+    /* On Symbian platforms, SSL socket is implemented using CSecureSocket,
      * and it hasn't supported server mode, so exclude the following tests,
      * which require SSL server, for now.
      */
 
     PJ_LOG(3,("", "..echo test w/ TLSv1 and PJ_TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_TLS1, 
-                    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_TLS1,
+                    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
 
     PJ_LOG(3,("", "..echo test w/ SSLv23 and PJ_TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_SSL23, PJ_SSL_SOCK_PROTO_SSL23, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_SSL23, PJ_SSL_SOCK_PROTO_SSL23,
                     PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
 
     PJ_LOG(3,("", "..echo test w/ compatible proto: server TLSv1.2 vs client TLSv1.2"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_2, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_2,
                     -1, -1,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
 
     PJ_LOG(3,("", "..echo test w/ compatible proto: server TLSv1.2+1.3 vs client TLSv1.3"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2 | PJ_SSL_SOCK_PROTO_TLS1_3, PJ_SSL_SOCK_PROTO_TLS1_3, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2 | PJ_SSL_SOCK_PROTO_TLS1_3, PJ_SSL_SOCK_PROTO_TLS1_3,
                     -1, -1,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
 
     PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1 vs client SSL3"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_SSL3, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_SSL3,
                     PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_DES_CBC_SHA,
                     PJ_FALSE, PJ_FALSE);
     if (ret == 0)
@@ -1566,7 +1566,7 @@ int ssl_sock_test(void)
 /* We can't set min/max proto for TLS protocol higher than 1.0. */
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_DARWIN)
     PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1.2 vs client TLSv1.3"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_3, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_3,
                     -1, -1,
                     PJ_FALSE, PJ_FALSE);
     if (ret == 0)
@@ -1579,7 +1579,7 @@ int ssl_sock_test(void)
  */
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_APPLE)
     PJ_LOG(3,("", "..echo test w/ incompatible ciphers"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT,
                     PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
                     PJ_FALSE, PJ_FALSE);
     if (ret == 0)
@@ -1587,14 +1587,14 @@ int ssl_sock_test(void)
 #endif
 
     PJ_LOG(3,("", "..echo test w/ client cert required but not provided"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT,
                     PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
                     PJ_TRUE, PJ_FALSE);
     if (ret == 0)
         return PJ_EBUG;
 
     PJ_LOG(3,("", "..echo test w/ client cert required and provided"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
+    ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT,
                     PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
                     PJ_TRUE, PJ_TRUE);
     if (ret != 0)
@@ -1624,7 +1624,7 @@ int ssl_sock_test(void)
 
 #else   /* INCLUDE_SSLSOCK_TEST */
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_ssl_sock_test;
 #endif  /* INCLUDE_SSLSOCK_TEST */

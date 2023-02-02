@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/wav_playlist.h>
 #include <pjmedia/errno.h>
@@ -114,7 +114,7 @@ static pj_status_t file_on_event(pjmedia_event *event,
         if (fport->cb2)
             (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -143,7 +143,7 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
                               &size);
         if (status != PJ_SUCCESS)
             return status;
-        
+
         if (size < 0)
         {
             /* Should return more appropriate error code here.. */
@@ -156,22 +156,22 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
              */
             size = (pj_ssize_t)fport->data_left_list[current_file];
         }
-        
+
         size_left -= (pj_uint32_t)size;
         fport->data_left_list[current_file] -= (pj_uint32_t)size;
-        fport->fpos_list[current_file] += size; 
-        
+        fport->fpos_list[current_file] += size;
+
         /* If size is less than size_to_read, it indicates that we've
          * encountered EOF. Rewind the file.
          */
         if (size < (pj_ssize_t)size_to_read)
         {
             /* Rewind the file for the next iteration */
-            fport->fpos_list[current_file] = 
+            fport->fpos_list[current_file] =
                 fport->start_data_list[current_file];
-            pj_file_setpos(fport->fd_list[current_file], 
+            pj_file_setpos(fport->fd_list[current_file],
                            fport->fpos_list[current_file], PJ_SEEK_SET);
-            fport->data_left_list[current_file] = 
+            fport->data_left_list[current_file] =
                                             fport->data_len_list[current_file];
 
             /* Move to next file */
@@ -185,7 +185,7 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
                  * this will be overwritten by new reading.
                  */
                 if (size_left > 0) {
-                    pj_bzero(&fport->buf[fport->bufsize-size_left], 
+                    pj_bzero(&fport->buf[fport->bufsize-size_left],
                              size_left);
                 }
 
@@ -234,7 +234,7 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
                               "File port %.*s EOF, calling callback",
                               (int)fport->base.info.name.slen,
                               fport->base.info.name.ptr));
-                    
+
                     fport->eof = PJ_TRUE;
 
                     status = (*fport->cb)(&fport->base,
@@ -267,24 +267,24 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
                     PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, rewinding..",
                               (int)fport->base.info.name.slen,
                               fport->base.info.name.ptr));
-                    
+
                     /* start with first file again. */
                     fport->current_file = current_file = 0;
                     fport->fpos_list[0] = fport->start_data_list[0];
                     pj_file_setpos(fport->fd_list[0], fport->fpos_list[0],
                                    PJ_SEEK_SET);
                     fport->data_left_list[0] = fport->data_len_list[0];
-                }               
-                
+                }
+
             } /* if current_file == max_file */
 
         } /* size < size_to_read */
 
     } /* while () */
-    
+
     /* Convert samples to host rep */
     samples_to_host((pj_int16_t*)fport->buf, fport->bufsize/BYTES_PER_SAMPLE);
-    
+
     return PJ_SUCCESS;
 }
 
@@ -428,21 +428,21 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
         /* Get the file size. */
         fport->current_file = index;
         fport->fsize_list[index] = pj_file_size(filename);
-        
+
         /* Size must be more than WAVE header size */
         if (fport->fsize_list[index] <= sizeof(pjmedia_wave_hdr)) {
             status = PJMEDIA_ENOTVALIDWAVE;
             goto on_error;
         }
-        
+
         /* Open file. */
-        status = pj_file_open( pool, filename, PJ_O_RDONLY, 
+        status = pj_file_open( pool, filename, PJ_O_RDONLY,
                                &fport->fd_list[index]);
         if (status != PJ_SUCCESS)
             goto on_error;
-        
+
         /* Read the file header plus fmt header only. */
-        size_to_read = size_read = sizeof(wavehdr) - 8; 
+        size_to_read = size_read = sizeof(wavehdr) - 8;
         status = pj_file_read( fport->fd_list[index], &wavehdr, &size_read);
         if (status != PJ_SUCCESS) {
             goto on_error;
@@ -452,12 +452,12 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
             status = PJMEDIA_ENOTVALIDWAVE;
             goto on_error;
         }
-        
+
         /* Normalize WAVE header fields values from little-endian to host
          * byte order.
          */
         pjmedia_wave_hdr_file_to_host(&wavehdr);
-        
+
         /* Validate WAVE file. */
         if (wavehdr.riff_hdr.riff != PJMEDIA_RIFF_TAG ||
             wavehdr.riff_hdr.wave != PJMEDIA_WAVE_TAG ||
@@ -471,7 +471,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
             status = PJMEDIA_ENOTVALIDWAVE;
             goto on_error;
         }
-        
+
         /* Must be PCM with 16bits per sample */
         if (wavehdr.fmt_hdr.fmt_tag != 1 ||
             wavehdr.fmt_hdr.bits_per_sample != 16)
@@ -479,15 +479,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
             status = PJMEDIA_EWAVEUNSUPP;
             goto on_error;
         }
-        
+
         /* Block align must be 2*nchannels */
-        if (wavehdr.fmt_hdr.block_align != 
+        if (wavehdr.fmt_hdr.block_align !=
                 wavehdr.fmt_hdr.nchan * BYTES_PER_SAMPLE)
         {
             status = PJMEDIA_EWAVEUNSUPP;
             goto on_error;
         }
-        
+
         /* If length of fmt_header is greater than 16, skip the remaining
          * fmt header data.
          */
@@ -495,55 +495,55 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
             PJ_CHECK_OVERFLOW_UINT32_TO_LONG(wavehdr.fmt_hdr.len-16,
                                status = PJMEDIA_ENOTVALIDWAVE; goto on_error;);
             size_to_read = (pj_off_t)wavehdr.fmt_hdr.len - 16;
-            status = pj_file_setpos(fport->fd_list[index], size_to_read, 
+            status = pj_file_setpos(fport->fd_list[index], size_to_read,
                                     PJ_SEEK_CUR);
             if (status != PJ_SUCCESS) {
                 goto on_error;
             }
         }
-        
+
         /* Repeat reading the WAVE file until we have 'data' chunk */
         for (;;) {
             pjmedia_wave_subchunk subchunk;
             size_read = 8;
-            status = pj_file_read(fport->fd_list[index], &subchunk, 
+            status = pj_file_read(fport->fd_list[index], &subchunk,
                                   &size_read);
             if (status != PJ_SUCCESS || size_read != 8) {
                 status = PJMEDIA_EWAVETOOSHORT;
                 goto on_error;
             }
-            
+
             /* Normalize endianness */
             PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&subchunk);
-            
+
             /* Break if this is "data" chunk */
             if (subchunk.id == PJMEDIA_DATA_TAG) {
                 wavehdr.data_hdr.data = PJMEDIA_DATA_TAG;
                 wavehdr.data_hdr.len = subchunk.len;
                 break;
             }
-            
+
             /* Otherwise skip the chunk contents */
-            PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len, 
+            PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len,
                                status = PJMEDIA_ENOTVALIDWAVE; goto on_error;);
             size_to_read = subchunk.len;
 
-            status = pj_file_setpos(fport->fd_list[index], size_to_read, 
+            status = pj_file_setpos(fport->fd_list[index], size_to_read,
                                     PJ_SEEK_CUR);
             if (status != PJ_SUCCESS) {
                 goto on_error;
             }
         }
-        
+
         /* Current file position now points to start of data */
         status = pj_file_getpos(fport->fd_list[index], &pos);
         fport->start_data_list[index] = (unsigned)pos;
         fport->data_len_list[index] = wavehdr.data_hdr.len;
         fport->data_left_list[index] = wavehdr.data_hdr.len;
-        
+
         /* Validate length. */
-        if (wavehdr.data_hdr.len > fport->fsize_list[index] - 
-                                       fport->start_data_list[index]) 
+        if (wavehdr.data_hdr.len > fport->fsize_list[index] -
+                                       fport->start_data_list[index])
         {
             status = PJMEDIA_EWAVEUNSUPP;
             goto on_error;
@@ -554,11 +554,11 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
             status = PJMEDIA_EWAVETOOSHORT;
             goto on_error;
         }
-        
+
         /* It seems like we have a valid WAVE file. */
-        
+
         /* Update port info if we don't have one, otherwise check
-         * that the WAV file has the same attributes as previous files. 
+         * that the WAV file has the same attributes as previous files.
          */
         if (!has_wave_info) {
             afd->channel_count = wavehdr.fmt_hdr.nchan;
@@ -580,8 +580,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
                 wavehdr.fmt_hdr.sample_rate != afd->clock_rate ||
                 wavehdr.fmt_hdr.bits_per_sample != afd->bits_per_sample)
             {
-                /* This file has different characteristics than the other 
-                 * files. 
+                /* This file has different characteristics than the other
+                 * files.
                  */
                 PJ_LOG(4,(THIS_FILE,
                           "WAV playlist error: file '%s' has differrent number"
@@ -602,8 +602,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 
         /* Create file buffer.
          */
-        fport->bufsize = (pj_uint32_t)buff_size;        
-        
+        fport->bufsize = (pj_uint32_t)buff_size;
+
         /* Set initial position of the file. */
         fport->fpos_list[index] = fport->start_data_list[index];
     }
@@ -613,11 +613,11 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     if (status != PJ_SUCCESS) {
         goto on_error;
     }
-    
+
     /* Done. */
-    
+
     *p_port = &fport->base;
-    
+
     PJ_LOG(4,(THIS_FILE,
              "WAV playlist '%.*s' created: samp.rate=%d, ch=%d, bufsize=%uKB",
              (int)port_label->slen,
@@ -625,7 +625,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
              afd->clock_rate,
              afd->channel_count,
              fport->bufsize / 1000));
-    
+
     return PJ_SUCCESS;
 
 on_error:

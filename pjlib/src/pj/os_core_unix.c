@@ -69,7 +69,7 @@ JavaVM *pj_jni_jvm = NULL;
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     pj_jni_jvm = vm;
-    
+
     return JNI_VERSION_1_4;
 }
 
@@ -1034,7 +1034,7 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
     pj_status_t status;
 
     PJ_ASSERT_RETURN(atomic_var, PJ_EINVAL);
-    
+
 #if PJ_HAS_THREADS
     status = pj_mutex_destroy( atomic_var->mutex );
     if (status == PJ_SUCCESS) {

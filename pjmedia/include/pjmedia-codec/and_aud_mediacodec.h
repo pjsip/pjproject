@@ -115,7 +115,7 @@ PJ_BEGIN_DECL
 PJ_DECL(pj_status_t) pjmedia_codec_and_media_aud_init( pjmedia_endpt *endpt );
 
 /**
- * Unregister Android audio MediaCodec factory from pjmedia endpoint 
+ * Unregister Android audio MediaCodec factory from pjmedia endpoint
  * and deinitialize the codec library.
  *
  * @return          PJ_SUCCESS on success.

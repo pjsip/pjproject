@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy oa the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>
@@ -31,7 +31,7 @@ enum session_type
 };
 
 struct offer_answer
-{                       
+{
     enum session_type type;     /*  LOCAL_OFFER:        REMOTE_OFFER:   */
     char *sdp1;                 /* local offer          remote offer    */
     char *sdp2;                 /* remote answer        initial local   */
@@ -43,7 +43,7 @@ static struct test
     const char          *title;
     unsigned             offer_answer_count;
     struct offer_answer  offer_answer[4];
-} test[] = 
+} test[] =
 {
     /* test 0: */
     {
@@ -101,7 +101,7 @@ static struct test
           },
           {
             REMOTE_OFFER,
-            /* Bob wants to change his local SDP 
+            /* Bob wants to change his local SDP
              * (change local port for the first stream and add new stream)
              * Received SDP from Bob:
              */
@@ -190,7 +190,7 @@ static struct test
           },
           {
             LOCAL_OFFER,
-            /* Bob wants to change his local SDP 
+            /* Bob wants to change his local SDP
              * (change local port for the first stream and add new stream)
              */
             "v=0\r\n"
@@ -251,9 +251,9 @@ static struct test
         {
           {
             LOCAL_OFFER,
-            /* The initial offer from Alice to Bob indicates a single audio 
-             * stream with the three audio codecs that are available in the 
-             * DSP. The stream is marked as inactive, 
+            /* The initial offer from Alice to Bob indicates a single audio
+             * stream with the three audio codecs that are available in the
+             * DSP. The stream is marked as inactive,
              */
             "v=0\r\n"
             "o=alice 2890844526 2890844526 IN IP4 host.anywhere.com\r\n"
@@ -265,7 +265,7 @@ static struct test
             "a=rtpmap:4 G723/8000\r\n"
             "a=rtpmap:18 G729/8000\r\n"
             "a=inactive\r\n",
-            /* Bob can support dynamic switching between PCMU and G.723. So, 
+            /* Bob can support dynamic switching between PCMU and G.723. So,
              * he sends the following answer:
              */
             "v=0\r\n"
@@ -322,9 +322,9 @@ static struct test
     },
 
 #if 0
-    // this test is commented, this causes error: 
+    // this test is commented, this causes error:
     // No suitable codec for remote offer (PJMEDIA_SDPNEG_NOANSCODEC),
-    // since currently the negotiator always answer with one codec, 
+    // since currently the negotiator always answer with one codec,
     // PCMU in this case, while PCMU is not included in the second offer.
 
     /* test 3: */
@@ -1377,7 +1377,7 @@ static int compare_sdp_string(const char *cmp_title,
                             "%s\n",
                             cmp_title,
                             errbuf,
-                            title1, sdpbuf1, 
+                            title1, sdpbuf1,
                             title2, sdpbuf2));
 
         return -1;
@@ -1392,7 +1392,7 @@ static int compare_sdp_string(const char *cmp_title,
                             "%s:\n"
                             "%s\n",
                             cmp_title,
-                            title1, sdpbuf1, 
+                            title1, sdpbuf1,
                             title2, sdpbuf2));
 
         diff = find_diff(sdpbuf1, sdpbuf2, &line);
@@ -1430,9 +1430,9 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
     neg = *p_neg;
 
     if (oa->type == LOCAL_OFFER) {
-        
-        /* 
-         * Local creates offer first. 
+
+        /*
+         * Local creates offer first.
          */
         pjmedia_sdp_session *sdp2, *sdp3;
         const pjmedia_sdp_session *active;
@@ -1524,8 +1524,8 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
             return -120;
 
     } else {
-        /* 
-         * Remote creates offer first. 
+        /*
+         * Remote creates offer first.
          */
 
         pjmedia_sdp_session *sdp2 = NULL, *sdp3;
@@ -1549,7 +1549,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
             const pjmedia_sdp_session *lsdp;
             status = pjmedia_sdp_neg_get_active_local(neg, &lsdp);
             if (status != PJ_SUCCESS) {
-                app_perror(status, 
+                app_perror(status,
                            "   error: pjmedia_sdp_neg_get_active_local");
                 return -215;
             }
@@ -1586,7 +1586,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
             app_perror(status, "   error: pjmedia_sdp_neg_negotiate");
             return -240;
         }
-        
+
         /* Get our answer. */
         status = pjmedia_sdp_neg_get_active_local(neg, &answer);
         if (status != PJ_SUCCESS) {

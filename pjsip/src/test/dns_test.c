@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjsip.h>
@@ -62,12 +62,12 @@ static void add_dns_entries(pj_dns_resolver *resv)
      _sip._udp.example.com 3600 IN SRV 0 20 5060 sip02.example.com.
      _sip._udp.example.com 3600 IN SRV 0 10 5060 sip03.example.com.
      _sip._udp.example.com 3600 IN SRV 1 0  5060 sip04.example.com.
-     
+
      sip01.example.com. 3600 IN A       1.1.1.1
      sip02.example.com. 3600 IN A       2.2.2.2
      sip03.example.com. 3600 IN A       3.3.3.3
      sip04.example.com. 3600 IN A       4.4.4.4
-     
+
      ; Additionally, add A record for "example.com"
      example.com.       3600 IN A       5.5.5.5
 
@@ -159,7 +159,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
         ar[5+i].ttl = 3600;
     }
 
-    /* 
+    /*
      * Create individual A records for all hosts in "example.com" domain.
      */
     for (i=0; i<PJ_ARRAY_SIZE(ar); ++i) {
@@ -179,7 +179,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
         pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
     }
 
-    /* 
+    /*
      * Simulate DNS error response by creating these answers.
      * Sample of invalid SRV records: _sip._udp.sip01.example.com.
      */
@@ -203,7 +203,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
             pkt.hdr.flags = PJ_DNS_SET_QR(1) |
                             PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
             pkt.q = &q2;
-            
+
             pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
         }
     }
@@ -365,7 +365,7 @@ static int test_resolve(const char *title,
             PJ_LOG(3,(THIS_FILE, "  test_resolve() error 10: result count mismatch"));
             return 10;
         }
-        
+
         for (i=0; i<ref->count; ++i) {
             pj_sockaddr_in *ra = (pj_sockaddr_in *)&ref->entry[i].addr;
             pj_sockaddr_in *rb = (pj_sockaddr_in *)&result.servers.entry[i].addr;
@@ -476,18 +476,18 @@ static int round_robin_test(pj_pool_t *pool)
         if (actual_pct + PCT_ALLOWANCE < (int)server_hit[i].percent ||
             actual_pct - PCT_ALLOWANCE > (int)server_hit[i].percent)
         {
-            PJ_LOG(1,(THIS_FILE, 
+            PJ_LOG(1,(THIS_FILE,
                       "..round_robin_test() error 20: "
                       "hit rate difference for server %s (%d%%) is more than "
                       "tolerable allowance (%d%%)",
-                      server_hit[i].ip_addr, 
-                      actual_pct - server_hit[i].percent, 
+                      server_hit[i].ip_addr,
+                      actual_pct - server_hit[i].percent,
                       PCT_ALLOWANCE));
             return 20;
         }
     }
 
-    PJ_LOG(3,(THIS_FILE, 
+    PJ_LOG(3,(THIS_FILE,
               " Load balance test success, hit-rate is "
               "within %d%% allowance", PCT_ALLOWANCE));
     return PJ_SUCCESS;
@@ -589,7 +589,7 @@ int resolve_test(void)
             return -140;
     }
 
-    /* This will fail to be resolved as SRV, resolver should fallback to 
+    /* This will fail to be resolved as SRV, resolver should fallback to
      * resolving to A record.
      */
     {

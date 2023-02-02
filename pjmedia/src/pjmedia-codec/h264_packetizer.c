@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/h264_packetizer.h>
 #include <pjmedia/types.h>
@@ -38,7 +38,7 @@ struct pjmedia_h264_packetizer
 {
     /* Current settings */
     pjmedia_h264_packetizer_cfg cfg;
-    
+
     /* Unpacketizer state */
     unsigned        unpack_last_sync_pos;
     pj_bool_t       unpack_prev_lost;
@@ -130,7 +130,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
 {
     pj_uint8_t *nal_start = NULL, *nal_end = NULL, *nal_octet = NULL;
     pj_uint8_t *p, *end;
-    enum { 
+    enum {
         HEADER_SIZE_FU_A             = 2,
         HEADER_SIZE_STAP_A           = 3,
     };
@@ -159,9 +159,9 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
 
     /* Get end of NAL unit */
     p = nal_start+pktz->cfg.mtu+1;
-    if (p > end || pktz->cfg.mode==PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL) 
+    if (p > end || pktz->cfg.mode==PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL)
         p = end;
-    nal_end = find_next_nal_unit(nal_start, p); 
+    nal_end = find_next_nal_unit(nal_start, p);
     if (!nal_end)
         nal_end = p;
 
@@ -233,7 +233,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
     /* Aggregation (STAP-A) packet */
     if ((pktz->cfg.mode != PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL) &&
         (nal_end != end) &&
-        (nal_end - nal_start + HEADER_SIZE_STAP_A) < pktz->cfg.mtu) 
+        (nal_end - nal_start + HEADER_SIZE_STAP_A) < pktz->cfg.mtu)
     {
         int total_size;
         unsigned nal_cnt = 1;
@@ -299,7 +299,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
                 pj_assert(nal_size[i] <= 0xFFFF);
                 *p++ = (pj_uint8_t)(nal_size[i] >> 8);
                 *p++ = (pj_uint8_t)(nal_size[i] & 0xFF);
-                
+
                 /* Append NAL unit, watchout memmove()-ing bitstream! */
                 if (p != nal[i])
                     pj_memmove(p, nal[i], nal_size[i]);
@@ -352,7 +352,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
                                              unsigned   *bits_pos)
 {
     const pj_uint8_t nal_start[4] = {0, 0, 0, 1};
-    const pj_uint8_t *nal_start_code; 
+    const pj_uint8_t *nal_start_code;
     enum { MIN_PAYLOAD_SIZE = 2 };
     pj_uint8_t nal_type;
 

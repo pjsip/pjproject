@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/pool.h>
 #include <pj/string.h>
@@ -150,7 +150,7 @@ PJ_DEF(pj_size_t) pj_pool_get_used_size_imp(pj_pool_t *pool)
 }
 
 /* Allocate memory from the pool */
-PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line, 
+PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
                                  pj_pool_t *pool, pj_size_t sz)
 {
     struct pj_pool_mem *mem;
@@ -172,7 +172,7 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
     {
         char msg[120];
         pj_ansi_sprintf(msg, "Mem %X (%d+%d bytes) allocated by %s:%d\r\n",
-                        mem, sz, sizeof(struct pj_pool_mem), 
+                        mem, sz, sizeof(struct pj_pool_mem),
                         file, line);
         TRACE_(msg);
     }
@@ -182,8 +182,8 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
 }
 
 /* Allocate memory from the pool and zero the memory */
-PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line, 
-                                  pj_pool_t *pool, unsigned cnt, 
+PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
+                                  pj_pool_t *pool, unsigned cnt,
                                   unsigned elemsz)
 {
     void *mem;
@@ -197,10 +197,10 @@ PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
 }
 
 /* Allocate memory from the pool and zero the memory */
-PJ_DEF(void*) pj_pool_zalloc_imp( const char *file, int line, 
+PJ_DEF(void*) pj_pool_zalloc_imp( const char *file, int line,
                                   pj_pool_t *pool, pj_size_t sz)
 {
-    return pj_pool_calloc_imp(file, line, pool, 1, sz); 
+    return pj_pool_calloc_imp(file, line, pool, 1, sz);
 }
 
 

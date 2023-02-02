@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_WAV_PLAYLIST_H__
 #define __PJMEDIA_WAV_PLAYLIST_H__
@@ -54,7 +54,7 @@ PJ_BEGIN_DECL
  * @param ptime         The duration (in miliseconds) of each frame read
  *                      from this port. If the value is zero, the default
  *                      duration (20ms) will be used.
- * @param options       Optional options. Application may specify 
+ * @param options       Optional options. Application may specify
  *                      PJMEDIA_FILE_NO_LOOP to prevent play back loop.
  * @param buff_size     Buffer size to be allocated. If the value is zero or
  *                      negative, the port will use default buffer size (which
@@ -76,8 +76,8 @@ PJ_DECL(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 #if !DEPRECATED_FOR_TICKET_2251
 /**
  * Register a callback to be called when the file reading has reached the
- * end of file of the last file. If the file is set to play repeatedly, 
- * then the callback will be called multiple times. Note that only one 
+ * end of file of the last file. If the file is set to play repeatedly,
+ * then the callback will be called multiple times. Note that only one
  * callback can be registered for each file port.
  *
  * @param port          The WAV play list port.
@@ -99,8 +99,8 @@ pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
 
 /**
  * Register a callback to be called when the file reading has reached the
- * end of file of the last file. If the file is set to play repeatedly, 
- * then the callback will be called multiple times. Note that only one 
+ * end of file of the last file. If the file is set to play repeatedly,
+ * then the callback will be called multiple times. Note that only one
  * callback can be registered for each file port.
  *
  * @param port          The WAV play list port.

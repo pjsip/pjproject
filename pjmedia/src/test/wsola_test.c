@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/wsola.h>
 #include <pj/log.h>
@@ -133,11 +133,11 @@ int expand(pj_pool_t *pool, const char *filein, const char *fileout,
 
                 pj_sub_timestamp(&t2, &t1);
                 pj_add_timestamp(&elapsed, &t2);
-    
+
                 samples += SAMPLES_PER_FRAME;
 
                 fwrite(frame, SAMPLES_PER_FRAME*2, 1, out);
-            } 
+            }
 
         } else {
             /* Lost */
@@ -178,11 +178,11 @@ int expand(pj_pool_t *pool, const char *filein, const char *fileout,
 
     zero.u64 = 0;
     zero.u64 = pj_elapsed_usec(&zero, &elapsed);
-    
+
     zero.u64 = samples * PJ_INT64(1000000) / zero.u64;
     assert(zero.u32.hi == 0);
 
-    PJ_LOG(3,("test.c", "Processing: %f Msamples per second", 
+    PJ_LOG(3,("test.c", "Processing: %f Msamples per second",
               zero.u32.lo/1000000.0));
     PJ_LOG(3,("test.c", "CPU load for current settings: %f%%",
               CLOCK_RATE * 100.0 / zero.u32.lo));
@@ -194,7 +194,7 @@ int expand(pj_pool_t *pool, const char *filein, const char *fileout,
     return 0;
 }
 
-static void save_file(const char *file, 
+static void save_file(const char *file,
                       short frame[], unsigned count)
 {
     FILE *f = fopen(file, "wb");
@@ -202,8 +202,8 @@ static void save_file(const char *file,
     fclose(f);
 }
 
-int compress(pj_pool_t *pool, 
-             const char *filein, const char *fileout, 
+int compress(pj_pool_t *pool,
+             const char *filein, const char *fileout,
              int rate10)
 {
     enum { BUF_CNT = SAMPLES_PER_FRAME * 10 };
@@ -212,7 +212,7 @@ int compress(pj_pool_t *pool,
     short buf[BUF_CNT];
     pj_timestamp elapsed, zero;
     unsigned samples = 0;
-    
+
     in = fopen(filein, "rb");
     if (!in) return 1;
     out = fopen(fileout, "wb");
@@ -242,14 +242,14 @@ int compress(pj_pool_t *pool,
 #elif 0
             /* Method 2: split, majority in buf1 */
             assert(count > SAMPLES_PER_FRAME);
-            pjmedia_wsola_discard(wsola, buf, count-SAMPLES_PER_FRAME, 
-                                  buf+count-SAMPLES_PER_FRAME, SAMPLES_PER_FRAME, 
+            pjmedia_wsola_discard(wsola, buf, count-SAMPLES_PER_FRAME,
+                                  buf+count-SAMPLES_PER_FRAME, SAMPLES_PER_FRAME,
                                   &to_del);
 #elif 0
             /* Method 3: split, majority in buf2 */
             assert(count > SAMPLES_PER_FRAME);
-            pjmedia_wsola_discard(wsola, buf, SAMPLES_PER_FRAME, 
-                                  buf+SAMPLES_PER_FRAME, count-SAMPLES_PER_FRAME, 
+            pjmedia_wsola_discard(wsola, buf, SAMPLES_PER_FRAME,
+                                  buf+SAMPLES_PER_FRAME, count-SAMPLES_PER_FRAME,
                                   &to_del);
 #elif 1
             /* Method 4: split, each with small length */
@@ -258,15 +258,15 @@ int compress(pj_pool_t *pool,
             short *ptr = buf + count - TOT_LEN;
             assert(count > TOT_LEN);
             if (buf1_len==0) buf1_len=SAMPLES_PER_FRAME*2;
-            pjmedia_wsola_discard(wsola, ptr, buf1_len, 
-                                  ptr+buf1_len, TOT_LEN-buf1_len, 
+            pjmedia_wsola_discard(wsola, ptr, buf1_len,
+                                  ptr+buf1_len, TOT_LEN-buf1_len,
                                   &to_del);
 #endif
             count -= to_del;
             size_del += to_del;
         }
         pj_get_timestamp(&t2);
-        
+
         samples += BUF_CNT;
 
         pj_sub_timestamp(&t2, &t1);
@@ -283,11 +283,11 @@ int compress(pj_pool_t *pool,
 
     zero.u64 = 0;
     zero.u64 = pj_elapsed_usec(&zero, &elapsed);
-    
+
     zero.u64 = samples * PJ_INT64(1000000) / zero.u64;
     assert(zero.u32.hi == 0);
 
-    PJ_LOG(3,("test.c", "Processing: %f Msamples per second", 
+    PJ_LOG(3,("test.c", "Processing: %f Msamples per second",
               zero.u32.lo/1000000.0));
     PJ_LOG(3,("test.c", "CPU load for current settings: %f%%",
               CLOCK_RATE * 100.0 / zero.u32.lo));
@@ -316,17 +316,17 @@ static void mem_test(pj_pool_t *pool)
         memset(unused, 0, sizeof(unused));
         samples += 160;
     }
-    
 
-    
+
+
 
     zero.u64 = 0;
     zero.u64 = pj_elapsed_usec(&zero, &elapsed);
-    
+
     zero.u64 = samples * PJ_INT64(1000000) / zero.u64;
     assert(zero.u32.hi == 0);
 
-    PJ_LOG(3,("test.c", "Processing: %f Msamples per second", 
+    PJ_LOG(3,("test.c", "Processing: %f Msamples per second",
               zero.u32.lo/1000000.0));
     PJ_LOG(3,("test.c", "CPU load for current settings: %f%%",
               CLOCK_RATE * 100.0 / zero.u32.lo));

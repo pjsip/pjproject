@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-videodev/videodev_imp.h>
 #include <pj/assert.h>
@@ -81,8 +81,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf)
     }
 
     /* Register error subsystem */
-    pj_register_strerror(PJMEDIA_VIDEODEV_ERRNO_START, 
-                         PJ_ERRNO_SPACE_SIZE, 
+    pj_register_strerror(PJMEDIA_VIDEODEV_ERRNO_START,
+                         PJ_ERRNO_SPACE_SIZE,
                          &pjmedia_videodev_strerror);
 
     /* Init */

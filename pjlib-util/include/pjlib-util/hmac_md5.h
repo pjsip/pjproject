@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_HMAC_MD5_H__
 #define __PJLIB_UTIL_HMAC_MD5_H__
@@ -38,7 +38,7 @@ PJ_BEGIN_DECL
  * @ingroup PJLIB_UTIL_ENCRYPTION
  * @{
  *
- * This module contains the implementation of HMAC: Keyed-Hashing 
+ * This module contains the implementation of HMAC: Keyed-Hashing
  * for Message Authentication, as described in RFC 2104
  */
 
@@ -61,8 +61,8 @@ typedef struct pj_hmac_md5_context
  * @param key_len       Length of the authentication key.
  * @param digest        Buffer to be filled with HMAC MD5 digest.
  */
-PJ_DECL(void) pj_hmac_md5(const pj_uint8_t *input, unsigned input_len, 
-                          const pj_uint8_t *key, unsigned key_len, 
+PJ_DECL(void) pj_hmac_md5(const pj_uint8_t *input, unsigned input_len,
+                          const pj_uint8_t *key, unsigned key_len,
                           pj_uint8_t digest[16]);
 
 
@@ -73,7 +73,7 @@ PJ_DECL(void) pj_hmac_md5(const pj_uint8_t *input, unsigned input_len,
  * @param key           Pointer to the authentication key.
  * @param key_len       Length of the authentication key.
  */
-PJ_DECL(void) pj_hmac_md5_init(pj_hmac_md5_context *hctx, 
+PJ_DECL(void) pj_hmac_md5_init(pj_hmac_md5_context *hctx,
                                const pj_uint8_t *key, unsigned key_len);
 
 /**
@@ -84,11 +84,11 @@ PJ_DECL(void) pj_hmac_md5_init(pj_hmac_md5_context *hctx,
  * @param input_len     Length of input stream in bytes.
  */
 PJ_DECL(void) pj_hmac_md5_update(pj_hmac_md5_context *hctx,
-                                 const pj_uint8_t *input, 
+                                 const pj_uint8_t *input,
                                  unsigned input_len);
 
 /**
- * Finish the message and return the digest. 
+ * Finish the message and return the digest.
  *
  * @param hctx          HMAC-MD5 context.
  * @param digest        Buffer to be filled with HMAC MD5 digest.

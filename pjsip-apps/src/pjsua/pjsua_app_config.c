@@ -375,8 +375,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_USE_ICE, OPT_ICE_REGULAR, OPT_ICE_TRICKLE,
            OPT_USE_SRTP, OPT_SRTP_SECURE,
            OPT_USE_TURN, OPT_ICE_MAX_HOSTS, OPT_ICE_NO_RTCP, OPT_TURN_SRV,
-           OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD, OPT_TURN_TLS, 
-           OPT_TURN_TLS_CA_FILE, OPT_TURN_TLS_CERT_FILE, 
+           OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD, OPT_TURN_TLS,
+           OPT_TURN_TLS_CA_FILE, OPT_TURN_TLS_CERT_FILE,
            OPT_TURN_TLS_NEG_TIMEOUT, OPT_TURN_TLS_CIPHER,
            OPT_TURN_TLS_PRIV_FILE, OPT_TURN_TLS_PASSWORD,
            OPT_RTCP_MUX, OPT_SRTP_KEYING,
@@ -1128,7 +1128,7 @@ static pj_status_t parse_args(int argc, char *argv[],
                                          "TLS/SSL backend.", pj_optarg));
                     printf("Available TLS/SSL ciphers (%d):\n", ciphers_cnt);
                     for (j=0; j<ciphers_cnt; ++j)
-                        printf("- 0x%06X: %s\n", ciphers[j], 
+                        printf("- 0x%06X: %s\n", ciphers[j],
                                pj_ssl_cipher_name(ciphers[j]));
                     return -1;
                 }

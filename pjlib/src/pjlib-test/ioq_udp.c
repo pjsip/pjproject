@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -70,18 +70,18 @@ static pj_ioqueue_op_key_t  *callback_read_op,
                             *callback_write_op,
                             *callback_accept_op;
 
-static void on_ioqueue_read(pj_ioqueue_key_t *key, 
+static void on_ioqueue_read(pj_ioqueue_key_t *key,
                             pj_ioqueue_op_key_t *op_key,
                             pj_ssize_t bytes_read)
 {
     callback_read_key = key;
     callback_read_op = op_key;
     callback_read_size = bytes_read;
-    TRACE__((THIS_FILE, "     callback_read_key = %p, bytes=%d", 
+    TRACE__((THIS_FILE, "     callback_read_key = %p, bytes=%d",
              key, bytes_read));
 }
 
-static void on_ioqueue_write(pj_ioqueue_key_t *key, 
+static void on_ioqueue_write(pj_ioqueue_key_t *key,
                              pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_written)
 {
@@ -90,7 +90,7 @@ static void on_ioqueue_write(pj_ioqueue_key_t *key,
     callback_write_size = bytes_written;
 }
 
-static void on_ioqueue_accept(pj_ioqueue_key_t *key, 
+static void on_ioqueue_accept(pj_ioqueue_key_t *key,
                               pj_ioqueue_op_key_t *op_key,
                               pj_sock_t sock, int status)
 {
@@ -106,7 +106,7 @@ static void on_ioqueue_connect(pj_ioqueue_key_t *key, int status)
     callback_connect_status = status;
 }
 
-static pj_ioqueue_callback test_cb = 
+static pj_ioqueue_callback test_cb =
 {
     &on_ioqueue_read,
     &on_ioqueue_write,
@@ -124,7 +124,7 @@ static pj_ioqueue_callback test_cb =
  * compliance_test()
  * To test that the basic IOQueue functionality works. It will just exchange
  * data between two sockets.
- */ 
+ */
 static int compliance_test(const pj_ioqueue_cfg *cfg)
 {
     pj_sock_t ssock=-1, csock=-1;
@@ -198,14 +198,14 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     // We put this after inactivity socket, hopefully this can represent the
     // worst waiting time.
     TRACE_("registering first sockets...");
-    rc = pj_ioqueue_register_sock(pool, ioque, ssock, NULL, 
+    rc = pj_ioqueue_register_sock(pool, ioque, ssock, NULL,
                                   &test_cb, &skey);
     if (rc != PJ_SUCCESS) {
         app_perror("...error(10): ioqueue_register error", rc);
         status=-25; goto on_error;
     }
     TRACE_("registering second sockets...");
-    rc = pj_ioqueue_register_sock( pool, ioque, csock, NULL, 
+    rc = pj_ioqueue_register_sock( pool, ioque, csock, NULL,
                                    &test_cb, &ckey);
     if (rc != PJ_SUCCESS) {
         app_perror("...error(11): ioqueue_register error", rc);
@@ -231,10 +231,10 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
         status=-28; goto on_error;
     } else if (rc == PJ_EPENDING) {
         recv_pending = 1;
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "......ok: recvfrom returned pending"));
     } else {
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "......error: recvfrom returned immediate ok!"));
         status=-29; goto on_error;
     }
@@ -250,25 +250,25 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     // Write must return the number of bytes.
     TRACE_("start sendto...");
     bytes = bufsize;
-    rc = pj_ioqueue_sendto(ckey, &write_op, send_buf, &bytes, 0, &dst_addr, 
+    rc = pj_ioqueue_sendto(ckey, &write_op, send_buf, &bytes, 0, &dst_addr,
                            sizeof(dst_addr));
     if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
         app_perror("...error: pj_ioqueue_sendto", rc);
         status=-30; goto on_error;
     } else if (rc == PJ_EPENDING) {
         send_pending = 1;
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "......ok: sendto returned pending"));
     } else {
         send_pending = 0;
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "......ok: sendto returned immediate success"));
     }
 
     // reset callback variables.
     callback_read_size = callback_write_size = 0;
     callback_accept_status = callback_connect_status = -2;
-    callback_read_key = callback_write_key = 
+    callback_read_key = callback_write_key =
         callback_accept_key = callback_connect_key = NULL;
     callback_read_op = callback_write_op = NULL;
 
@@ -315,7 +315,7 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
 
 
             recv_pending = 0;
-        } 
+        }
 
         if (callback_write_key != NULL) {
             if (callback_write_size != bufsize) {
@@ -330,8 +330,8 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
 
             send_pending = 0;
         }
-    } 
-    
+    }
+
     // Success
     status = 0;
 
@@ -340,12 +340,12 @@ on_error:
         pj_ioqueue_unregister(skey);
     else if (ssock != -1)
         pj_sock_close(ssock);
-    
+
     if (ckey)
         pj_ioqueue_unregister(ckey);
     else if (csock != -1)
         pj_sock_close(csock);
-    
+
     if (ioque != NULL)
         pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
@@ -354,8 +354,8 @@ on_error:
 }
 
 
-static void on_read_complete(pj_ioqueue_key_t *key, 
-                             pj_ioqueue_op_key_t *op_key, 
+static void on_read_complete(pj_ioqueue_key_t *key,
+                             pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_read)
 {
     unsigned *p_packet_cnt = (unsigned*) pj_ioqueue_get_user_data(key);
@@ -368,9 +368,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
 /*
  * unregister_test()
- * Check if callback is still called after socket has been unregistered or 
+ * Check if callback is still called after socket has been unregistered or
  * closed.
- */ 
+ */
 static int unregister_test(const pj_ioqueue_cfg *cfg)
 {
     enum { RPORT = 50000, SPORT = 50001 };
@@ -606,10 +606,10 @@ static int many_handles_test(const pj_ioqueue_cfg *cfg)
     if (!pool)
         return PJ_ENOMEM;
 
-    key = (pj_ioqueue_key_t**) 
+    key = (pj_ioqueue_key_t**)
           pj_pool_alloc(pool, MAX*sizeof(pj_ioqueue_key_t*));
     sock = (pj_sock_t*) pj_pool_alloc(pool, MAX*sizeof(pj_sock_t));
-    
+
     /* Create IOQueue */
     rc = pj_ioqueue_create2(pool, MAX, cfg, &ioqueue);
     if (rc != PJ_SUCCESS || ioqueue == NULL) {
@@ -622,7 +622,7 @@ static int many_handles_test(const pj_ioqueue_cfg *cfg)
         sock[count] = PJ_INVALID_SOCKET;
         rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[count]);
         if (rc != PJ_SUCCESS || sock[count] == PJ_INVALID_SOCKET) {
-            PJ_LOG(3,(THIS_FILE, "....unable to create %d-th socket, rc=%d", 
+            PJ_LOG(3,(THIS_FILE, "....unable to create %d-th socket, rc=%d",
                                  count, rc));
             break;
         }
@@ -630,7 +630,7 @@ static int many_handles_test(const pj_ioqueue_cfg *cfg)
         rc = pj_ioqueue_register_sock(pool, ioqueue, sock[count],
                                       NULL, &test_cb, &key[count]);
         if (rc != PJ_SUCCESS || key[count] == NULL) {
-            PJ_LOG(3,(THIS_FILE, "....unable to register %d-th socket, rc=%d", 
+            PJ_LOG(3,(THIS_FILE, "....unable to register %d-th socket, rc=%d",
                                  count, rc));
             return -30;
         }
@@ -638,7 +638,7 @@ static int many_handles_test(const pj_ioqueue_cfg *cfg)
 
     /* Test complete. */
 
-    /* Now deregister and close all handles. */ 
+    /* Now deregister and close all handles. */
 
     /* NOTE for RTEMS:
      *  It seems that the order of close(sock) is pretty important here.
@@ -663,7 +663,7 @@ static int many_handles_test(const pj_ioqueue_cfg *cfg)
     if (rc != PJ_SUCCESS) {
         app_perror("...error in pj_ioqueue_destroy", rc);
     }
-    
+
     pj_pool_release(pool);
 
     PJ_LOG(3,(THIS_FILE,"....many_handles_test() ok"));
@@ -975,7 +975,7 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
 
     // Allocate inactive sockets, and bind them to some arbitrary address.
     // Then register them to the I/O queue, and start a read operation.
-    inactive_sock = (pj_sock_t*)pj_pool_alloc(pool, 
+    inactive_sock = (pj_sock_t*)pj_pool_alloc(pool,
                                     inactive_sock_count*sizeof(pj_sock_t));
     inactive_read_op = (pj_ioqueue_op_key_t*)pj_pool_alloc(pool,
                               inactive_sock_count*sizeof(pj_ioqueue_op_key_t));
@@ -995,7 +995,7 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
             app_perror("...error: pj_sock_bind()", rc);
             goto on_error;
         }
-        rc = pj_ioqueue_register_sock(pool, ioque, inactive_sock[i], 
+        rc = pj_ioqueue_register_sock(pool, ioque, inactive_sock[i],
                                       NULL, &test_cb, &keys[i]);
         if (rc != PJ_SUCCESS) {
             pj_sock_close(inactive_sock[i]);
@@ -1019,14 +1019,14 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     // Register server and client socket.
     // We put this after inactivity socket, hopefully this can represent the
     // worst waiting time.
-    rc = pj_ioqueue_register_sock(pool, ioque, ssock, NULL, 
+    rc = pj_ioqueue_register_sock(pool, ioque, ssock, NULL,
                                   &test_cb, &skey);
     if (rc != PJ_SUCCESS) {
         app_perror("...error(2): pj_ioqueue_register_sock()", rc);
         goto on_error;
     }
 
-    rc = pj_ioqueue_register_sock(pool, ioque, csock, NULL, 
+    rc = pj_ioqueue_register_sock(pool, ioque, csock, NULL,
                                   &test_cb, &ckey);
     if (rc != PJ_SUCCESS) {
         app_perror("...error(3): pj_ioqueue_register_sock()", rc);
@@ -1099,8 +1099,8 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
         }
 
         // Compare recv buffer with send buffer.
-        if (callback_read_size != bufsize || 
-            pj_memcmp(send_buf, recv_buf, bufsize)) 
+        if (callback_read_size != bufsize ||
+            pj_memcmp(send_buf, recv_buf, bufsize))
         {
             rc = -10;
             PJ_LOG(3,(THIS_FILE, "   error: size/buffer mismatch"));
@@ -1113,7 +1113,7 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
 #ifdef PJ_SYMBIAN
             PJ_UNUSED_ARG(timeout);
             rc = pj_symbianos_poll(-1, 100);
-#else       
+#else
             rc = pj_ioqueue_poll(ioque, &timeout);
 #endif
         } while (rc>0);
@@ -1129,11 +1129,11 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
         tzero.u32.hi = tzero.u32.lo = 0;
         usec_delay = pj_elapsed_usec( &tzero, &t_elapsed);
 
-        PJ_LOG(3, (THIS_FILE, "...%10d %15d  % 9d", 
+        PJ_LOG(3, (THIS_FILE, "...%10d %15d  % 9d",
                    bufsize, inactive_sock_count, usec_delay));
 
     } else {
-        PJ_LOG(2, (THIS_FILE, "...ERROR rc=%d (buf:%d, fds:%d)", 
+        PJ_LOG(2, (THIS_FILE, "...ERROR rc=%d (buf:%d, fds:%d)",
                               rc, bufsize, inactive_sock_count+2));
     }
 
@@ -1151,14 +1151,14 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     return rc;
 
 on_error:
-    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", 
+    PJ_LOG(1,(THIS_FILE, "...ERROR: %s",
               pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf))));
     if (ssock)
         pj_sock_close(ssock);
     if (csock)
         pj_sock_close(csock);
-    for (i=0; i<inactive_sock_count && inactive_sock && 
-              inactive_sock[i]!=PJ_INVALID_SOCKET; ++i) 
+    for (i=0; i<inactive_sock_count && inactive_sock &&
+              inactive_sock[i]!=PJ_INVALID_SOCKET; ++i)
     {
         pj_sock_close(inactive_sock[i]);
     }
@@ -1195,7 +1195,7 @@ static int udp_ioqueue_test_imp(const pj_ioqueue_cfg *cfg)
     if ((status=many_handles_test(cfg)) != 0) {
         return status;
     }
-    
+
     //return 0;
 
     PJ_LOG(4, (THIS_FILE, "...benchmarking different buffer size:"));
@@ -1217,9 +1217,9 @@ static int udp_ioqueue_test_imp(const pj_ioqueue_cfg *cfg)
     }
 //pass2:
     bufsize = 512;
-    for (sock_count=SOCK_INACTIVE_MIN+2; 
-         sock_count<=SOCK_INACTIVE_MAX+2; 
-         sock_count *= 2) 
+    for (sock_count=SOCK_INACTIVE_MIN+2;
+         sock_count<=SOCK_INACTIVE_MAX+2;
+         sock_count *= 2)
     {
         //PJ_LOG(3,(THIS_FILE, "...testing with %d fds", sock_count));
         if ((status=bench_test(cfg, bufsize, sock_count-2)) != 0)
@@ -1293,7 +1293,7 @@ int udp_ioqueue_test()
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_uiq_udp;
 #endif  /* INCLUDE_UDP_IOQUEUE_TEST */

@@ -15,12 +15,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
 """Multimedia communication client library based on SIP protocol.
 
-This implements a fully featured multimedia communication client 
+This implements a fully featured multimedia communication client
 library based on PJSIP stack (http://www.pjsip.org)
 
 
@@ -46,7 +46,7 @@ library based on PJSIP stack (http://www.pjsip.org)
      - STUN
      - TURN
      - ICE
- 
+
 
 2. USING
 
@@ -63,7 +63,7 @@ import time
 
 class Error:
     """Error exception class.
-    
+
     Member documentation:
 
     op_name  -- name of the operation that generated this error.
@@ -93,13 +93,13 @@ class Error:
         return "Object: " + str(self.obj) + ", operation=" + self.op_name + \
                ", error=" + self.err_msg()
 
-# 
+#
 # Constants
 #
 
 class TransportType:
     """SIP transport type constants.
-    
+
     Member documentation:
     UNSPECIFIED -- transport type is unknown or unspecified
     UDP         -- UDP transport
@@ -120,13 +120,13 @@ class TransportType:
 
 class TransportFlag:
     """Transport flags to indicate the characteristics of the transport.
-    
+
     Member documentation:
-    
+
     RELIABLE    -- transport is reliable.
     SECURE      -- transport is secure.
     DATAGRAM    -- transport is datagram based.
-    
+
     """
     RELIABLE = 1
     SECURE = 2
@@ -134,7 +134,7 @@ class TransportFlag:
 
 class CallRole:
     """Call role constants.
-    
+
     Member documentation:
 
     CALLER  -- role is caller
@@ -146,7 +146,7 @@ class CallRole:
 
 class CallState:
     """Call state constants.
-    
+
     Member documentation:
 
     NULL            -- call is not initialized.
@@ -168,7 +168,7 @@ class CallState:
 
 class MediaState:
     """Call media state constants.
-    
+
     Member documentation:
 
     NULL        -- media is not available.
@@ -186,7 +186,7 @@ class MediaState:
 
 class MediaDir:
     """Media direction constants.
-    
+
     Member documentation:
 
     NULL              -- media is not active
@@ -202,7 +202,7 @@ class MediaDir:
 
 class PresenceActivity:
     """Presence activities constants.
-    
+
     Member documentation:
 
     UNKNOWN -- the person activity is unknown
@@ -229,7 +229,7 @@ class SubscriptionState:
 
 class TURNConnType:
     """These constants specifies the connection type to TURN server.
-    
+
     Member documentation:
     UDP     -- use UDP transport.
     TCP     -- use TCP transport.
@@ -242,7 +242,7 @@ class TURNConnType:
 
 class UAConfig:
     """User agent configuration to be specified in Lib.init().
-    
+
     Member documentation:
 
     max_calls   -- maximum number of calls to be supported.
@@ -259,7 +259,7 @@ class UAConfig:
     stun_domain = ""
     stun_host = ""
     user_agent = "pjsip python"
-    
+
     def _cvt_from_pjsua(self, cfg):
         self.max_calls = cfg.max_calls
         self.thread_cnt = cfg.thread_cnt
@@ -281,7 +281,7 @@ class UAConfig:
 
 class LogConfig:
     """Logging configuration to be specified in Lib.init().
-    
+
     Member documentation:
 
     msg_logging   -- specify if SIP messages should be logged. Set to
@@ -303,7 +303,7 @@ class LogConfig:
     decor = 0
     filename = ""
     callback = None
-    
+
     def __init__(self, level=-1, filename="", callback=None,
                  console_level=-1):
         self._cvt_from_pjsua(_pjsua.logging_config_default())
@@ -337,9 +337,9 @@ class LogConfig:
 
 class MediaConfig:
     """Media configuration to be specified in Lib.init().
-    
+
     Member documentation:
-    
+
     clock_rate          -- specify the core clock rate of the audio,
                            most notably the conference bridge.
     snd_clock_rate      -- optionally specify different clock rate for
@@ -399,7 +399,7 @@ class MediaConfig:
     turn_server = ""
     turn_conn_type = TURNConnType.UDP
     turn_cred = None
-     
+
     def __init__(self):
         default = _pjsua.media_config_default()
         self._cvt_from_pjsua(default)
@@ -463,7 +463,7 @@ class MediaConfig:
 
 class TransportConfig:
     """SIP transport configuration class.
-    
+
     Member configuration:
 
     port        -- port number.
@@ -476,7 +476,7 @@ class TransportConfig:
     qos_type    -- High level traffic classification.
                    Enumerator:
                      0: PJ_QOS_TYPE_BEST_EFFORT
-                          Best effort traffic (default value). Any QoS function calls with 
+                          Best effort traffic (default value). Any QoS function calls with
                           specifying this value are effectively no-op
                      1: PJ_QOS_TYPE_BACKGROUND
                           Background traffic.
@@ -504,16 +504,16 @@ class TransportConfig:
     port = 0
     bound_addr = ""
     public_addr = ""
-    
+
     qos_type = 0
     qos_params_flags = 0
     qos_params_dscp_val = 0
     qos_params_so_prio = 0
     qos_params_wmm_prio = 0
-    
-    
 
-    def __init__(self, port=0, 
+
+
+    def __init__(self, port=0,
                  bound_addr="", public_addr=""):
         self.port = port
         self.bound_addr = bound_addr
@@ -545,7 +545,7 @@ class TransportConfig:
 
 class TransportInfo:
     """SIP transport info.
-    
+
     Member documentation:
 
     type        -- transport type, from TransportType constants.
@@ -565,7 +565,7 @@ class TransportInfo:
     host = ""
     port = 0
     ref_cnt = 0
-    
+
     def __init__(self, ti):
         self.type = ti.type_name
         self.description = ti.info
@@ -575,8 +575,8 @@ class TransportInfo:
         self.host = ti.addr
         self.port = ti.port
         self.ref_cnt = ti.usage_count
-    
-    
+
+
 class Transport:
     "SIP transport class."
     _id = -1
@@ -591,7 +591,7 @@ class Transport:
 
     def __del__(self):
         _Trace((self, 'destroyed'))
-        
+
     def __str__(self):
         return self._obj_name
 
@@ -680,7 +680,7 @@ class SIPUri:
 
 class AuthCred:
     """Authentication credential for SIP or TURN account.
-    
+
     Member documentation:
 
     scheme      -- authentication scheme (default is "Digest")
@@ -734,23 +734,23 @@ class AccountConfig:
     auth_initial_algorithm  -- when auth_initial_send is enabled, optionally
                                specify the authentication algorithm to use.
                                Valid values are "md5", "akav1-md5", or
-                               "akav2-md5". 
+                               "akav2-md5".
     transport_id            -- optionally specify the transport ID to be used
                                by this account. Shouldn't be needed unless
                                for specific requirements (e.g. in multi-homed
                                scenario).
     allow_contact_rewrite   -- specify whether the account should learn its
-                               Contact address from REGISTER response and 
+                               Contact address from REGISTER response and
                                update the registration accordingly. Default is
                                True.
-    ka_interval             -- specify the interval to send NAT keep-alive 
+    ka_interval             -- specify the interval to send NAT keep-alive
                                packet.
     ka_data                 -- specify the NAT keep-alive packet contents.
     use_srtp                -- specify the SRTP usage policy. Valid values
                                are: 0=disable, 1=optional, 2=mandatory.
                                Default is 0.
     srtp_secure_signaling   -- specify the signaling security level required
-                               by SRTP. Valid values are: 0=no secure 
+                               by SRTP. Valid values are: 0=no secure
                                transport is required, 1=hop-by-hop secure
                                transport such as TLS is required, 2=end-to-
                                end secure transport is required (i.e. "sips").
@@ -778,10 +778,10 @@ class AccountConfig:
     rtp_transport_cfg = None
     mwi_enabled = False
 
-    def __init__(self, domain="", username="", password="", 
+    def __init__(self, domain="", username="", password="",
                  display="", registrar="", proxy=""):
         """
-        Construct account config. If domain argument is specified, 
+        Construct account config. If domain argument is specified,
         a typical configuration will be built.
 
         Keyword arguments:
@@ -807,7 +807,7 @@ class AccountConfig:
     def build_config(self, domain, username, password, display="",
                      registrar="", proxy="", rtp_transport_cfg = None):
         """
-        Construct account config. If domain argument is specified, 
+        Construct account config. If domain argument is specified,
         a typical configuration will be built.
 
         Keyword arguments:
@@ -839,12 +839,12 @@ class AccountConfig:
         self.proxy.append(proxy)
         if username != "":
             self.auth_cred.append(AuthCred("*", username, password))
-        
+
         if (rtp_transport_cfg is not None):
             self.rtp_transport_cfg = rtp_transport_cfg
         else:
             self.rtp_transport_cfg = TransportConfig()
-    
+
     def _cvt_from_pjsua(self, cfg):
         self.priority = cfg.priority
         self.id = cfg.id
@@ -856,7 +856,7 @@ class AccountConfig:
         self.pidf_tuple_id = cfg.pidf_tuple_id
         self.proxy = cfg.proxy
         for cred in cfg.cred_info:
-            self.auth_cred.append(AuthCred(cred.realm, cred.username, 
+            self.auth_cred.append(AuthCred(cred.realm, cred.username,
                                            cred.data, cred.scheme,
                                            cred.data_type))
         self.auth_initial_send = cfg.auth_initial_send
@@ -890,7 +890,7 @@ class AccountConfig:
             c.data_type = cred.passwd_type
             c.data = cred.passwd
             cfg.cred_info.append(c)
-            
+
         cfg.auth_initial_send = self.auth_initial_send
         cfg.auth_initial_algorithm = self.auth_initial_algorithm
         cfg.transport_id = self.transport_id
@@ -903,10 +903,10 @@ class AccountConfig:
 
         if (self.rtp_transport_cfg is not None):
             cfg.rtp_transport_cfg = self.rtp_transport_cfg._cvt_to_pjsua()
-        
+
         return cfg
- 
- 
+
+
 # Account information
 class AccountInfo:
     """This describes Account info. Application retrives account info
@@ -924,7 +924,7 @@ class AccountInfo:
                        this specifies the error code.
     reg_reason      -- contains the registration status text (e.g. the
                        error message).
-    online_status   -- the account's presence online status, True if it's 
+    online_status   -- the account's presence online status, True if it's
                        publishing itself as online.
     online_text     -- the account's presence status text.
 
@@ -1008,10 +1008,10 @@ class AccountCallback:
         call.hangup()
 
     def on_incoming_subscribe(self, buddy, from_uri, contact_uri, pres_obj):
-        """Notification when incoming SUBSCRIBE request is received. 
-        
-        Application may use this callback to authorize the incoming 
-        subscribe request (e.g. ask user permission if the request 
+        """Notification when incoming SUBSCRIBE request is received.
+
+        Application may use this callback to authorize the incoming
+        subscribe request (e.g. ask user permission if the request
         should be granted)
 
         Keyword arguments:
@@ -1096,30 +1096,30 @@ class AccountCallback:
 class Account:
     """This describes SIP account class.
 
-    PJSUA accounts provide identity (or identities) of the user who is 
-    currently using the application. In SIP terms, the identity is used 
+    PJSUA accounts provide identity (or identities) of the user who is
+    currently using the application. In SIP terms, the identity is used
     as the From header in outgoing requests.
 
-    Account may or may not have client registration associated with it. 
-    An account is also associated with route set and some authentication 
-    credentials, which are used when sending SIP request messages using 
-    the account. An account also has presence's online status, which 
-    will be reported to remote peer when they subscribe to the account's 
-    presence, or which is published to a presence server if presence 
+    Account may or may not have client registration associated with it.
+    An account is also associated with route set and some authentication
+    credentials, which are used when sending SIP request messages using
+    the account. An account also has presence's online status, which
+    will be reported to remote peer when they subscribe to the account's
+    presence, or which is published to a presence server if presence
     publication is enabled for the account.
 
-    Account is created with Lib.create_account(). At least one account 
-    MUST be created. If no user association is required, application can 
+    Account is created with Lib.create_account(). At least one account
+    MUST be created. If no user association is required, application can
     create a userless account by calling Lib.create_account_for_transport().
-    A userless account identifies local endpoint instead of a particular 
+    A userless account identifies local endpoint instead of a particular
     user, and it correspond with a particular transport instance.
 
-    Also one account must be set as the default account, which is used as 
+    Also one account must be set as the default account, which is used as
     the account to use when PJSUA fails to match a request with any other
     accounts.
 
     """
-    _id = -1        
+    _id = -1
     _lib = None
     _cb = AccountCallback(None)
     _obj_name = ""
@@ -1199,7 +1199,7 @@ class Account:
 
     def delete(self):
         """ Delete this account.
-        
+
         """
         lck = self._lib().auto_lock()
         err = _pjsua.acc_set_user_data(self._id, 0)
@@ -1219,17 +1219,17 @@ class Account:
         err = _pjsua.acc_set_online_status(self._id, is_online)
         self._lib()._err_check("set_basic_status()", self, err)
 
-    def set_presence_status(self, is_online, 
-                            activity=PresenceActivity.UNKNOWN, 
+    def set_presence_status(self, is_online,
+                            activity=PresenceActivity.UNKNOWN,
                             pres_text="", rpid_id=""):
-        """ Set presence status of this account. 
-        
+        """ Set presence status of this account.
+
         Keyword arguments:
         is_online   -- boolean to indicate basic presence availability
         activity    -- value from PresenceActivity
         pres_text   -- optional string to convey additional information about
                        the activity (such as "On the phone")
-        rpid_id     -- optional string to be placed as RPID ID. 
+        rpid_id     -- optional string to be placed as RPID ID.
 
         """
         lck = self._lib().auto_lock()
@@ -1278,7 +1278,7 @@ class Account:
         """
         lck = self._lib().auto_lock()
         call = Call(self._lib(), -1, cb)
-        err, cid = _pjsua.call_make_call(self._id, dst_uri, 0, 
+        err, cid = _pjsua.call_make_call(self._id, dst_uri, 0,
                                          call, Lib._create_msg_data(hdr_list))
         self._lib()._err_check("make_call()", self, err)
         call.attach_to_id(cid)
@@ -1309,7 +1309,7 @@ class Account:
     def pres_notify(self, pres_obj, state, reason="", hdr_list=None):
         """Send NOTIFY to inform account presence status or to terminate
         server side presence subscription.
-        
+
         Keyword arguments:
         pres_obj    -- The subscription object from on_incoming_subscribe()
                        callback
@@ -1318,9 +1318,9 @@ class Account:
         hdr_list    -- Optional header list.
         """
         lck = self._lib().auto_lock()
-        _pjsua.acc_pres_notify(self._id, pres_obj, state, reason, 
+        _pjsua.acc_pres_notify(self._id, pres_obj, state, reason,
                                Lib._create_msg_data(hdr_list))
-    
+
     def send_pager(self, uri, text, im_id=0, content_type="text/plain", \
                    hdr_list=None):
         """Send instant message to arbitrary URI.
@@ -1344,9 +1344,9 @@ class Account:
         self._lib()._err_check("send_pager()", self, err)
 
 class CallCallback:
-    """Class to receive event notification from Call objects. 
+    """Class to receive event notification from Call objects.
 
-    Use Call.set_callback() method to install instance of this callback 
+    Use Call.set_callback() method to install instance of this callback
     class to receive event notifications from the call object.
 
     Member documentation:
@@ -1390,10 +1390,10 @@ class CallCallback:
         pass
 
     def on_transfer_request(self, dst, code):
-        """Notification that call is being transferred by remote party. 
+        """Notification that call is being transferred by remote party.
 
         Application can decide to accept/reject transfer request by returning
-        code greater than or equal to 500. The default behavior is to accept 
+        code greater than or equal to 500. The default behavior is to accept
         the transfer by returning 202.
 
         Keyword arguments:
@@ -1409,7 +1409,7 @@ class CallCallback:
 
     def on_transfer_status(self, code, reason, final, cont):
         """
-        Notification about the status of previous call transfer request. 
+        Notification about the status of previous call transfer request.
 
         Keyword arguments:
         code    -- SIP status code to indicate completion status.
@@ -1427,7 +1427,7 @@ class CallCallback:
         return cont
 
     def on_replace_request(self, code, reason):
-        """Notification when incoming INVITE with Replaces header is received. 
+        """Notification when incoming INVITE with Replaces header is received.
 
         Application may reject the request by returning value greather than
         or equal to 500. The default behavior is to accept the request.
@@ -1444,7 +1444,7 @@ class CallCallback:
 
     def on_replaced(self, new_call):
         """
-        Notification that this call will be replaced with new_call. 
+        Notification that this call will be replaced with new_call.
         After this callback is called, this call will be disconnected.
 
         Keyword arguments:
@@ -1641,7 +1641,7 @@ class Call:
 
         """
         lck = self._lib().auto_lock()
-        err = _pjsua.call_answer(self._id, code, reason, 
+        err = _pjsua.call_answer(self._id, code, reason,
                                    Lib._create_msg_data(hdr_list))
         self._lib()._err_check("answer()", self, err)
 
@@ -1658,7 +1658,7 @@ class Call:
 
         """
         lck = self._lib().auto_lock()
-        err = _pjsua.call_hangup(self._id, code, reason, 
+        err = _pjsua.call_hangup(self._id, code, reason,
                                    Lib._create_msg_data(hdr_list))
         self._lib()._err_check("hangup()", self, err)
 
@@ -1684,7 +1684,7 @@ class Call:
 
         """
         lck = self._lib().auto_lock()
-        err = _pjsua.call_reinvite(self._id, True, 
+        err = _pjsua.call_reinvite(self._id, True,
                                      Lib._create_msg_data(hdr_list))
         self._lib()._err_check("unhold()", self, err)
 
@@ -1698,7 +1698,7 @@ class Call:
 
         """
         lck = self._lib().auto_lock()
-        err = _pjsua.call_reinvite(self._id, True, 
+        err = _pjsua.call_reinvite(self._id, True,
                                      Lib._create_msg_data(hdr_list))
         self._lib()._err_check("reinvite()", self, err)
 
@@ -1713,7 +1713,7 @@ class Call:
 
         """
         lck = self._lib().auto_lock()
-        err = _pjsua.call_update(self._id, options, 
+        err = _pjsua.call_update(self._id, options,
                                    Lib._create_msg_data(hdr_list))
         self._lib()._err_check("update()", self, err)
 
@@ -1728,7 +1728,7 @@ class Call:
 
         """
         lck = self._lib().auto_lock()
-        err = _pjsua.call_xfer(self._id, dest_uri, 
+        err = _pjsua.call_xfer(self._id, dest_uri,
                                  Lib._create_msg_data(hdr_list))
         self._lib()._err_check("transfer()", self, err)
 
@@ -1763,10 +1763,10 @@ class Call:
     def send_request(self, method, hdr_list=None, content_type=None,
                      body=None):
         """
-        Send arbitrary request to remote call. 
-        
-        This is useful for example to send INFO request. Note that this 
-        function should not be used to send request that will change the 
+        Send arbitrary request to remote call.
+
+        This is useful for example to send INFO request. Note that this
+        function should not be used to send request that will change the
         call state such as CANCEL or BYE.
 
         Keyword arguments:
@@ -1788,11 +1788,11 @@ class Call:
                 msg_data.msg_body = body
         else:
             msg_data = None
-                
+
         err = _pjsua.call_send_request(self._id, method, msg_data)
         self._lib()._err_check("send_request()", self, err)
 
-    def send_pager(self, text, im_id=0, content_type="text/plain", 
+    def send_pager(self, text, im_id=0, content_type="text/plain",
                    hdr_list=None):
         """Send instant message inside a call.
 
@@ -1813,9 +1813,9 @@ class Call:
                              im_id)
         self._lib()._err_check("send_pager()", self, err)
 
-  
+
 class BuddyInfo:
-    """This class contains information about Buddy. Application may 
+    """This class contains information about Buddy. Application may
     retrieve this information by calling Buddy.info().
 
     Member documentation:
@@ -1881,7 +1881,7 @@ class BuddyCallback:
         may then retrieve the new status with Buddy.info() function.
         """
         pass
-   
+
     def on_pager(self, mime_type, body):
         """Notification that incoming instant message is received from
         this buddy.
@@ -2113,7 +2113,7 @@ class CodecParameter:
     vad_enabled = False
     plc_enabled = False
     _codec_param = None
-    
+
     def __init__(self, codec_param):
         self.ptime = codec_param.info.frm_ptime * \
                         codec_param.setting.frm_per_pkt
@@ -2151,7 +2151,7 @@ enable_trace = False
 
 class Lib:
     """Library instance.
-    
+
     """
     _quit = False
     _has_thread = False
@@ -2160,7 +2160,7 @@ class Lib:
     def __init__(self):
         global _lib
         if _lib:
-            raise Error("__init()__", None, -1, 
+            raise Error("__init()__", None, -1,
                         "Library instance already exist")
 
         self._lock = threading.RLock()
@@ -2213,7 +2213,7 @@ class Lib:
         py_ua_cfg.cb.on_typing = _cb_on_typing
         py_ua_cfg.cb.on_mwi_info = _cb_on_mwi_info;
 
-        err = _pjsua.init(py_ua_cfg, log_cfg._cvt_to_pjsua(), 
+        err = _pjsua.init(py_ua_cfg, log_cfg._cvt_to_pjsua(),
                           media_cfg._cvt_to_pjsua())
         self._err_check("init()", self, err)
 
@@ -2231,7 +2231,7 @@ class Lib:
         _lib = None
 
     def start(self, with_thread=True):
-        """Start the library. 
+        """Start the library.
 
         Keyword argument:
         with_thread -- specify whether the module should create worker
@@ -2247,7 +2247,7 @@ class Lib:
 
     def handle_events(self, timeout=50):
         """Poll the events from underlying pjsua library.
-        
+
         Application must poll the stack periodically if worker thread
         is disable when starting the library.
 
@@ -2273,13 +2273,13 @@ class Lib:
         self._err_check("thread_register()", self, err)
 
     def verify_sip_url(self, sip_url):
-        """Verify that the specified string is a valid URI. 
-        
+        """Verify that the specified string is a valid URI.
+
         Keyword argument:
         sip_url -- the URL string.
-        
+
         Return:
-            0 is the the URI is valid, otherwise the appropriate error 
+            0 is the the URI is valid, otherwise the appropriate error
             code is returned.
 
         """
@@ -2287,8 +2287,8 @@ class Lib:
         return _pjsua.verify_sip_url(sip_url)
 
     def create_transport(self, type, cfg=None):
-        """Create SIP transport instance of the specified type. 
-        
+        """Create SIP transport instance of the specified type.
+
         Keyword arguments:
         type    -- transport type from TransportType constant.
         cfg     -- TransportConfig instance
@@ -2396,7 +2396,7 @@ class Lib:
         lck = self.auto_lock()
         err = _pjsua.set_snd_dev(capture_dev, playback_dev)
         self._err_check("set_current_sound_devices()", self, err)
-    
+
     def set_null_snd_dev(self):
         """Disable the sound devices. This is useful if the system
         does not have sound device installed.
@@ -2406,7 +2406,7 @@ class Lib:
         err = _pjsua.set_null_snd_dev()
         self._err_check("set_null_snd_dev()", self, err)
 
-    
+
     # Conference bridge
 
     def conf_get_max_ports(self):
@@ -2420,35 +2420,35 @@ class Lib:
         return _pjsua.conf_get_max_ports()
 
     def conf_connect(self, src_slot, dst_slot):
-        """Establish unidirectional media flow from souce to sink. 
-        
-        One source may transmit to multiple destinations/sink. And if 
-        multiple sources are transmitting to the same sink, the media 
-        will be mixed together. Source and sink may refer to the same ID, 
+        """Establish unidirectional media flow from souce to sink.
+
+        One source may transmit to multiple destinations/sink. And if
+        multiple sources are transmitting to the same sink, the media
+        will be mixed together. Source and sink may refer to the same ID,
         effectively looping the media.
 
         If bidirectional media flow is desired, application needs to call
-        this function twice, with the second one having the arguments 
+        this function twice, with the second one having the arguments
         reversed.
 
         Keyword arguments:
         src_slot    -- integer to identify the conference slot number of
                        the source/transmitter.
-        dst_slot    -- integer to identify the conference slot number of    
+        dst_slot    -- integer to identify the conference slot number of
                        the destination/receiver.
 
         """
         lck = self.auto_lock()
         err = _pjsua.conf_connect(src_slot, dst_slot)
         self._err_check("conf_connect()", self, err)
-    
+
     def conf_disconnect(self, src_slot, dst_slot):
         """Disconnect media flow from the source to destination port.
 
         Keyword arguments:
         src_slot    -- integer to identify the conference slot number of
                        the source/transmitter.
-        dst_slot    -- integer to identify the conference slot number of    
+        dst_slot    -- integer to identify the conference slot number of
                        the destination/receiver.
 
         """
@@ -2457,7 +2457,7 @@ class Lib:
         self._err_check("conf_disconnect()", self, err)
 
     def conf_set_tx_level(self, slot, level):
-        """Adjust the signal level to be transmitted from the bridge to 
+        """Adjust the signal level to be transmitted from the bridge to
         the specified port by making it louder or quieter.
 
         Keyword arguments:
@@ -2468,7 +2468,7 @@ class Lib:
         lck = self.auto_lock()
         err = _pjsua.conf_set_tx_level(slot, level)
         self._err_check("conf_set_tx_level()", self, err)
-        
+
     def conf_set_rx_level(self, slot, level):
         """Adjust the signal level to be received from the specified port
         (to the bridge) by making it louder or quieter.
@@ -2481,9 +2481,9 @@ class Lib:
         lck = self.auto_lock()
         err = _pjsua.conf_set_rx_level(slot, level)
         self._err_check("conf_set_rx_level()", self, err)
-        
+
     def conf_get_signal_level(self, slot):
-        """Get last signal level transmitted to or received from the 
+        """Get last signal level transmitted to or received from the
         specified port. The signal levels are float values from 0.0 to 1.0,
         with 0.0 indicates no signal, and 1.0 indicates the loudest signal
         level.
@@ -2498,7 +2498,7 @@ class Lib:
         err, tx_level, rx_level = _pjsua.conf_get_signal_level(slot)
         self._err_check("conf_get_signal_level()", self, err)
         return (tx_level, rx_level)
-        
+
 
 
     # Codecs API
@@ -2541,7 +2541,7 @@ class Lib:
         lck = self.auto_lock()
         cp = _pjsua.codec_get_param(name)
         if not cp:
-            self._err_check("get_codec_parameter()", self, -1, 
+            self._err_check("get_codec_parameter()", self, -1,
                             "Invalid codec name")
         return CodecParameter(cp)
 
@@ -2556,7 +2556,7 @@ class Lib:
         lck = self.auto_lock()
         err = _pjsua.codec_set_param(name, param._cvt_to_pjsua())
         self._err_check("set_codec_parameter()", self, err)
-    
+
     # WAV playback and recording
 
     def create_player(self, filename, loop=False):
@@ -2577,13 +2577,13 @@ class Lib:
         err, player_id = _pjsua.player_create(filename, opt)
         self._err_check("create_player()", self, err)
         return player_id
-        
+
     def player_get_slot(self, player_id):
         """Get the conference port ID for the specified player.
 
         Keyword arguments:
         player_id  -- the WAV player ID
-        
+
         Return:
             Conference slot number for the player
 
@@ -2591,7 +2591,7 @@ class Lib:
         lck = self.auto_lock()
         slot = _pjsua.player_get_conf_port(player_id)
         if slot < 0:
-                self._err_check("player_get_slot()", self, -1, 
+                self._err_check("player_get_slot()", self, -1,
                                 "Invalid player id")
         return slot
 
@@ -2606,7 +2606,7 @@ class Lib:
         lck = self.auto_lock()
         err = _pjsua.player_set_pos(player_id, pos)
         self._err_check("player_set_pos()", self, err)
-        
+
     def player_destroy(self, player_id):
         """Destroy the WAV player.
 
@@ -2637,14 +2637,14 @@ class Lib:
             opt = opt + 1
         err, playlist_id = _pjsua.playlist_create(label, filelist, opt)
         self._err_check("create_playlist()", self, err)
-        return playlist_id 
+        return playlist_id
 
     def playlist_get_slot(self, playlist_id):
         """Get the conference port ID for the specified playlist.
 
         Keyword arguments:
         playlist_id  -- the WAV playlist ID
-        
+
         Return:
             Conference slot number for the playlist
 
@@ -2652,7 +2652,7 @@ class Lib:
         lck = self.auto_lock()
         slot = _pjsua.player_get_conf_port(playlist_id)
         if slot < 0:
-                self._err_check("playlist_get_slot()", self, -1, 
+                self._err_check("playlist_get_slot()", self, -1,
                                 "Invalid playlist id")
         return slot
 
@@ -2681,13 +2681,13 @@ class Lib:
         err, rec_id = _pjsua.recorder_create(filename, 0, None, -1, 0)
         self._err_check("create_recorder()", self, err)
         return rec_id
-        
+
     def recorder_get_slot(self, rec_id):
         """Get the conference port ID for the specified recorder.
 
         Keyword arguments:
         rec_id  -- the WAV recorder ID
-        
+
         Return:
             Conference slot number for the recorder
 
@@ -2695,7 +2695,7 @@ class Lib:
         lck = self.auto_lock()
         slot = _pjsua.recorder_get_conf_port(rec_id)
         if slot < 1:
-            self._err_check("recorder_get_slot()", self, -1, 
+            self._err_check("recorder_get_slot()", self, -1,
                             "Invalid recorder id")
         return slot
 
@@ -2716,7 +2716,7 @@ class Lib:
     @staticmethod
     def strerror(err):
         return _pjsua.strerror(err)
-    
+
     def _err_check(self, op_name, obj, err_code, err_msg=""):
         if err_code != 0:
             raise Error(op_name, obj, err_code, err_msg)
@@ -2728,7 +2728,7 @@ class Lib:
         msg_data = _pjsua.Msg_Data()
         msg_data.hdr_list = hdr_list
         return msg_data
-    
+
     def auto_lock(self):
         return _LibMutex(self._lock)
 
@@ -2751,8 +2751,8 @@ class Lib:
                 buddy = None
         else:
             buddy = None
-            
-        return buddy 
+
+        return buddy
 
     # Account allbacks
 
@@ -2761,7 +2761,7 @@ class Lib:
         if acc:
             acc._cb.on_reg_state()
 
-    def _cb_on_incoming_subscribe(self, acc_id, buddy_id, from_uri, 
+    def _cb_on_incoming_subscribe(self, acc_id, buddy_id, from_uri,
                                   contact_uri, pres_obj):
         acc = self._lookup_account(acc_id)
         if acc:
@@ -2781,7 +2781,7 @@ class Lib:
         else:
             _pjsua.call_hangup(call_id, 603, None, None)
 
-    # Call callbacks 
+    # Call callbacks
 
     def _cb_on_call_state(self, call_id):
         call = self._lookup_call(call_id)
@@ -2832,7 +2832,7 @@ class Lib:
         if old_call and new_call:
             old_call._cb.on_replaced(new_call)
 
-    def _cb_on_pager(self, call_id, from_uri, to_uri, contact, mime_type, 
+    def _cb_on_pager(self, call_id, from_uri, to_uri, contact, mime_type,
                      body, acc_id):
         call = None
         if call_id != -1:
@@ -2847,7 +2847,7 @@ class Lib:
             else:
                 acc._cb.on_pager(from_uri, contact, mime_type, body)
 
-    def _cb_on_pager_status(self, call_id, to_uri, body, user_data, 
+    def _cb_on_pager_status(self, call_id, to_uri, body, user_data,
                             code, reason, acc_id):
         call = None
         if call_id != -1:
@@ -2862,7 +2862,7 @@ class Lib:
             else:
                 acc._cb.on_pager_status(to_uri, body, user_data, code, reason)
 
-    def _cb_on_typing(self, call_id, from_uri, to_uri, contact, is_typing, 
+    def _cb_on_typing(self, call_id, from_uri, to_uri, contact, is_typing,
                       acc_id):
         call = None
         if call_id != -1:
@@ -2907,7 +2907,7 @@ def _cb_on_call_transfer_request(call_id, dst, code):
     return _lib._cb_on_call_transfer_request(call_id, dst, code)
 
 def _cb_on_call_transfer_status(call_id, code, reason, final, cont):
-    return _lib._cb_on_call_transfer_status(call_id, code, reason, 
+    return _lib._cb_on_call_transfer_status(call_id, code, reason,
                                              final, cont)
 def _cb_on_call_replace_request(call_id, rdata, code, reason):
     return _lib._cb_on_call_replace_request(call_id, rdata, code, reason)
@@ -2919,7 +2919,7 @@ def _cb_on_reg_state(acc_id):
     _lib._cb_on_reg_state(acc_id)
 
 def _cb_on_incoming_subscribe(acc_id, buddy_id, from_uri, contact_uri, pres):
-    return _lib._cb_on_incoming_subscribe(acc_id, buddy_id, from_uri, 
+    return _lib._cb_on_incoming_subscribe(acc_id, buddy_id, from_uri,
                                           contact_uri, pres)
 
 def _cb_on_buddy_state(buddy_id):
@@ -2929,7 +2929,7 @@ def _cb_on_pager(call_id, from_uri, to, contact, mime_type, body, acc_id):
     _lib._cb_on_pager(call_id, from_uri, to, contact, mime_type, body, acc_id)
 
 def _cb_on_pager_status(call_id, to, body, user_data, status, reason, acc_id):
-    _lib._cb_on_pager_status(call_id, to, body, user_data, 
+    _lib._cb_on_pager_status(call_id, to, body, user_data,
                              status, reason, acc_id)
 
 def _cb_on_typing(call_id, from_uri, to, contact, is_typing, acc_id):

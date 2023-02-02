@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia/echo.h>
@@ -83,7 +83,7 @@ struct ec_operations
 };
 
 
-static struct ec_operations echo_supp_op = 
+static struct ec_operations echo_supp_op =
 {
     "Echo suppressor",
     &echo_supp_create,
@@ -101,7 +101,7 @@ static struct ec_operations echo_supp_op =
  * Speex AEC prototypes
  */
 #if defined(PJMEDIA_HAS_SPEEX_AEC) && PJMEDIA_HAS_SPEEX_AEC!=0
-static struct ec_operations speex_aec_op = 
+static struct ec_operations speex_aec_op =
 {
     "Speex AEC",
     &speex_aec_create,
@@ -118,7 +118,7 @@ static struct ec_operations speex_aec_op =
  * IPP AEC prototypes
  */
 #if defined(PJMEDIA_HAS_INTEL_IPP_AEC) && PJMEDIA_HAS_INTEL_IPP_AEC!=0
-static struct ec_operations ipp_aec_op = 
+static struct ec_operations ipp_aec_op =
 {
     "IPP AEC",
     &ipp_aec_create,
@@ -177,7 +177,7 @@ PJ_DEF(void) pjmedia_echo_stat_default(pjmedia_echo_stat *stat)
 }
 
 /*
- * Create the echo canceller. 
+ * Create the echo canceller.
  */
 PJ_DEF(pj_status_t) pjmedia_echo_create( pj_pool_t *pool,
                                          unsigned clock_rate,
@@ -192,7 +192,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_create( pj_pool_t *pool,
 }
 
 /*
- * Create the echo canceller. 
+ * Create the echo canceller.
  */
 PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
                                          unsigned clock_rate,
@@ -224,7 +224,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
         ;
 #if defined(PJMEDIA_HAS_SPEEX_AEC) && PJMEDIA_HAS_SPEEX_AEC!=0
     } else if ((options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_SPEEX ||
-               (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT) 
+               (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT)
     {
         ec->op = &speex_aec_op;
 #endif
@@ -243,7 +243,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
     {
         ec->op = &webrtc_aec_op;
 #endif
-        
+
 #if defined(PJMEDIA_HAS_WEBRTC_AEC3) && PJMEDIA_HAS_WEBRTC_AEC3!=0
     } else if ((options & PJMEDIA_ECHO_ALGO_MASK)==PJMEDIA_ECHO_WEBRTC_AEC3 ||
                (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT)
@@ -263,8 +263,8 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
     PJ_LOG(5,(ec->obj_name, "Creating %s", ec->op->name));
 
     /* Instantiate EC object */
-    status = (*ec->op->ec_create)(pool, clock_rate, channel_count, 
-                                  samples_per_frame, tail_ms, 
+    status = (*ec->op->ec_create)(pool, clock_rate, channel_count,
+                                  samples_per_frame, tail_ms,
                                   options, &ec->state);
     if (status != PJ_SUCCESS) {
         pj_pool_release(pool);
@@ -299,7 +299,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
         /* Create delay buffer to compensate drifts */
         if (options & PJMEDIA_ECHO_USE_SIMPLE_FIFO)
             delay_buf_opt |= PJMEDIA_DELAY_BUF_SIMPLE_FIFO;
-        status = pjmedia_delay_buf_create(ec->pool, ec->obj_name, clock_rate, 
+        status = pjmedia_delay_buf_create(ec->pool, ec->obj_name, clock_rate,
                                           samples_per_frame, channel_count,
                                           (PJMEDIA_SOUND_BUFFER_COUNT+1) * ptime,
                                           delay_buf_opt, &ec->delay_buf);
@@ -309,10 +309,10 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
         }
     }
 
-    PJ_LOG(4,(ec->obj_name, 
+    PJ_LOG(4,(ec->obj_name,
               "%s created, clock_rate=%d, channel=%d, "
               "samples per frame=%d, tail length=%d ms, "
-              "latency=%d ms", 
+              "latency=%d ms",
               ec->op->name, clock_rate, channel_count, samples_per_frame,
               tail_ms, latency_ms));
 
@@ -324,7 +324,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
 
 
 /*
- * Destroy the Echo Canceller. 
+ * Destroy the Echo Canceller.
  */
 PJ_DEF(pj_status_t) pjmedia_echo_destroy(pjmedia_echo_state *echo )
 {
@@ -370,7 +370,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
         return (*echo->op->ec_playback)(echo->state, play_frm);
     }
 
-    /* Playing frame should be stored, as it will be used by echo_capture() 
+    /* Playing frame should be stored, as it will be used by echo_capture()
      * as reference frame, delay buffer is used for storing the playing frames
      * as in case there was clock drift between mic & speaker.
      *
@@ -379,11 +379,11 @@ PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
      * modified frames may not be smooth, i.e: if there were two or more
      * consecutive pjmedia_delay_buf_get() before next pjmedia_delay_buf_put(),
      * so we'll just feed the delay buffer with the copy of playing frame,
-     * instead of the original playing frame. However this will cause the EC 
-     * uses slight 'different' frames (for reference) than actually played 
+     * instead of the original playing frame. However this will cause the EC
+     * uses slight 'different' frames (for reference) than actually played
      * by the speaker.
      */
-    pjmedia_copy_samples(echo->frm_buf, play_frm, 
+    pjmedia_copy_samples(echo->frm_buf, play_frm,
                          echo->samples_per_frame);
     pjmedia_delay_buf_put(echo->delay_buf, echo->frm_buf);
 
@@ -398,7 +398,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
             PJ_LOG(5,(echo->obj_name, "Latency bufferring complete"));
             return PJ_SUCCESS;
         }
-            
+
         frm = echo->lat_free.prev;
         pj_list_erase(frm);
 
@@ -413,7 +413,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
 
 
 /*
- * Let the Echo Canceller knows that a frame has been captured from 
+ * Let the Echo Canceller knows that a frame has been captured from
  * the microphone.
  */
 PJ_DEF(pj_status_t) pjmedia_echo_capture( pjmedia_echo_state *echo,
@@ -439,7 +439,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_capture( pjmedia_echo_state *echo,
     pj_list_erase(oldest_frm);
 
     /* Cancel echo using this reference frame */
-    status = pjmedia_echo_cancel(echo, rec_frm, oldest_frm->buf, 
+    status = pjmedia_echo_cancel(echo, rec_frm, oldest_frm->buf,
                                  options, NULL);
 
     /* Move one frame from delay buffer to the latency buffer. */
@@ -451,7 +451,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_capture( pjmedia_echo_state *echo,
         pjmedia_zero_samples(oldest_frm->buf, echo->samples_per_frame);
     }
     pj_list_push_back(&echo->lat_buf, oldest_frm);
-    
+
     return status;
 }
 
@@ -465,13 +465,13 @@ PJ_DEF(pj_status_t) pjmedia_echo_cancel( pjmedia_echo_state *echo,
                                          unsigned options,
                                          void *reserved )
 {
-    return (*echo->op->ec_cancel)( echo->state, rec_frm, play_frm, options, 
+    return (*echo->op->ec_cancel)( echo->state, rec_frm, play_frm, options,
                                    reserved);
 }
 
 
 /*
- * Get the Echo Canceller stats. 
+ * Get the Echo Canceller stats.
  */
 PJ_DEF(pj_status_t) pjmedia_echo_get_stat(pjmedia_echo_state *echo,
                                           pjmedia_echo_stat *p_stat)

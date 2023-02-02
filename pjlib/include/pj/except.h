@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_EXCEPTION_H__
 #define __PJ_EXCEPTION_H__
@@ -50,7 +50,7 @@ PJ_BEGIN_DECL
  * Handling (SEH) if macro PJ_EXCEPTION_USE_WIN32_SEH is non-zero.
  * Otherwise it will use setjmp() and longjmp().
  *
- * On some platforms where setjmp/longjmp is not available, setjmp/longjmp 
+ * On some platforms where setjmp/longjmp is not available, setjmp/longjmp
  * implementation is provided. See <pj/compat/setjmp.h> for compatibility.
  *
  * The exception handling mechanism is completely thread safe, so the exception
@@ -62,11 +62,11 @@ PJ_BEGIN_DECL
  * \verbatim
    #define NO_MEMORY     1
    #define SYNTAX_ERROR  2
-  
+
    int sample1()
    {
       PJ_USE_EXCEPTION;  // declare local exception stack.
-  
+
       PJ_TRY {
         ...// do something..
       }
@@ -79,7 +79,7 @@ PJ_BEGIN_DECL
    int sample2()
    {
       PJ_USE_EXCEPTION;  // declare local exception stack.
-  
+
       PJ_TRY {
         ...// do something..
       }
@@ -100,7 +100,7 @@ PJ_BEGIN_DECL
  * \section pj_except_reg Exception ID Allocation
  *
  * To ensure that exception ID (number) are used consistently and to
- * prevent ID collisions in an application, it is strongly suggested that 
+ * prevent ID collisions in an application, it is strongly suggested that
  * applications allocate an exception ID for each possible exception
  * type. As a bonus of this process, the application can identify
  * the name of the exception when the particular exception is thrown.
@@ -135,7 +135,7 @@ PJ_BEGIN_DECL
                 ....
                 ..
 
-                // The following block is WRONG! You MUST declare 
+                // The following block is WRONG! You MUST declare
                 // PJ_USE_EXCEPTION once again in this block.
                 PJ_TRY {
                     ..
@@ -151,7 +151,7 @@ PJ_BEGIN_DECL
   \endverbatim
 
  *  - You MUST NOT exit the function inside the PJ_TRY block. The correct way
- *    is to return from the function after PJ_END block is executed. 
+ *    is to return from the function after PJ_END block is executed.
  *    For example, the following code will yield crash not in this code,
  *    but rather in the subsequent execution of PJ_TRY block:
   \verbatim
@@ -169,7 +169,7 @@ PJ_BEGIN_DECL
             PJ_END;
         }
   \endverbatim
-  
+
  *  - You can not provide more than PJ_CATCH or PJ_CATCH_ANY nor use PJ_CATCH
  *    and PJ_CATCH_ANY for a single PJ_TRY.
  *  - Exceptions will always be caught by the first handler (unlike C++ where
@@ -179,13 +179,13 @@ PJ_BEGIN_DECL
  *
  * \subsection PJ_THROW PJ_THROW(expression)
  * Throw an exception. The expression thrown is an integer as the result of
- * the \a expression. This keyword can be specified anywhere within the 
+ * the \a expression. This keyword can be specified anywhere within the
  * program.
  *
  * \subsection PJ_USE_EXCEPTION PJ_USE_EXCEPTION
- * Specify this in the variable definition section of the function block 
- * (or any blocks) to specify that the block has \a PJ_TRY/PJ_CATCH exception 
- * block. 
+ * Specify this in the variable definition section of the function block
+ * (or any blocks) to specify that the block has \a PJ_TRY/PJ_CATCH exception
+ * block.
  * Actually, this is just a macro to declare local variable which is used to
  * push the exception state to the exception stack.
  * Note: you must specify PJ_USE_EXCEPTION as the last statement in the
@@ -193,7 +193,7 @@ PJ_BEGIN_DECL
  *
  * \subsection PJ_TRY PJ_TRY
  * The \a PJ_TRY keyword is typically followed by a block. If an exception is
- * thrown in this block, then the execution will resume to the \a PJ_CATCH 
+ * thrown in this block, then the execution will resume to the \a PJ_CATCH
  * handler.
  *
  * \subsection PJ_CATCH PJ_CATCH(expression)
@@ -213,7 +213,7 @@ PJ_BEGIN_DECL
  * \a PJ_CATCH or \a PJ_CATCH_ANY block, altough it can be used anywhere where
  * the \a PJ_USE_EXCEPTION definition is in scope.
  *
- * 
+ *
  * \section pj_except_examples_sec Examples
  *
  * For some examples on how to use the exception construct, please see:
@@ -228,14 +228,14 @@ PJ_BEGIN_DECL
  * no collisions of exception ID.
  *
  * As a bonus, when exception number is acquired through this function,
- * the library can assign name to the exception (only if 
+ * the library can assign name to the exception (only if
  * PJ_HAS_EXCEPTION_NAMES is enabled (default is yes)) and find out the
  * exception name when it catches an exception.
  *
  * @param name      Name to be associated with the exception ID.
  * @param id        Pointer to receive the ID.
  *
- * @return          PJ_SUCCESS on success or PJ_ETOOMANY if the library 
+ * @return          PJ_SUCCESS on success or PJ_ETOOMANY if the library
  *                  is running out out ids.
  */
 PJ_DECL(pj_status_t) pj_exception_id_alloc(const char *name,
@@ -277,13 +277,13 @@ pj_throw_exception_(pj_exception_id_t id) PJ_ATTR_NORETURN
     RaiseException(id,1,0,NULL);
 }
 
-#define PJ_USE_EXCEPTION    
+#define PJ_USE_EXCEPTION
 #define PJ_TRY              __try
 #define PJ_CATCH(id)        __except(GetExceptionCode()==id ? \
                                       EXCEPTION_EXECUTE_HANDLER : \
                                       EXCEPTION_CONTINUE_SEARCH)
 #define PJ_CATCH_ANY        __except(EXCEPTION_EXECUTE_HANDLER)
-#define PJ_END              
+#define PJ_END
 #define PJ_THROW(id)        pj_throw_exception_(id)
 #define PJ_GET_EXCEPTION()  GetExceptionCode()
 
@@ -308,7 +308,7 @@ public:
 
 #define PJ_USE_EXCEPTION
 #define PJ_TRY                  try
-//#define PJ_CATCH(id)          
+//#define PJ_CATCH(id)
 #define PJ_CATCH_ANY            catch (const TPjException & pj_excp_)
 #define PJ_END
 #define PJ_THROW(x_id)          do { TPjException e; e.code_=x_id; throw e;} \
@@ -318,7 +318,7 @@ public:
 #else
 
 #define PJ_USE_EXCEPTION
-#define PJ_TRY                          
+#define PJ_TRY
 #define PJ_CATCH_ANY            if (0)
 #define PJ_END
 #define PJ_THROW(x_id)          do { PJ_LOG(1,("PJ_THROW"," error code = %d",x_id)); } while (0)
@@ -338,7 +338,7 @@ public:
  * stack.
  */
 struct pj_exception_state_t
-{    
+{
     pj_jmp_buf state;                   /**< jmp_buf.                    */
     struct pj_exception_state_t *prev;  /**< Previous state in the list. */
 };
@@ -347,7 +347,7 @@ struct pj_exception_state_t
  * Throw exception.
  * @param id    Exception Id.
  */
-PJ_DECL_NO_RETURN(void) 
+PJ_DECL_NO_RETURN(void)
 pj_throw_exception_(pj_exception_id_t id) PJ_ATTR_NORETURN;
 
 /**

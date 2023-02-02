@@ -105,7 +105,7 @@ static void ffmpeg_log_cb(void* ptr, int level, const char* fmt, va_list vl)
     /* Custom callback needs to filter log level by itself */
     if (level > av_log_get_level())
         return;
-    
+
     /* Add original ffmpeg sender to log format */
     if (ptr) {
         AVClass* avc = *(AVClass**)ptr;

@@ -283,7 +283,7 @@ int vid_dev_test(void)
 {
     int rc = 0;
     pj_status_t status;
-    
+
     status = pjmedia_vid_dev_subsys_init(mem);
     if (status != PJ_SUCCESS)
         return -10;
@@ -298,7 +298,7 @@ int vid_dev_test(void)
 
 on_return:
     pjmedia_vid_dev_subsys_shutdown();
-    
+
     return rc;
 }
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/string.h>
 #include <pj/pool.h>
@@ -93,7 +93,7 @@ PJ_INLINE(int) cmp(const char *expr, int i, int j)
 static int stricmp_test(void)
 {
 /* This specificly tests and benchmark pj_stricmp(), pj_stricmp_alnum().
- * In addition, it also tests pj_stricmp2(), pj_strnicmp(), and 
+ * In addition, it also tests pj_stricmp2(), pj_strnicmp(), and
  * pj_strnicmp2().
  */
 #define STRTEST(res,res2,S1,S2,code)    \
@@ -135,7 +135,7 @@ static int stricmp_test(void)
     STRTEST( 0, 0, SNULL,SNULL,-506);
     STRTEST( 0, -1, "hello","world",-508);
 
-    /* equal, length=1 
+    /* equal, length=1
      * use buffer to simulate non-aligned string.
      */
     buf = "a""A";
@@ -146,7 +146,7 @@ static int stricmp_test(void)
     STRTEST(-1, -1, SNULL, "a", -516);
     STRTEST( 1,  1, "a", SNULL, -518);
 
-    /* equal, length=2 
+    /* equal, length=2
      * use buffer to simulate non-aligned string.
      */
     buf = "aa""Aa""aA""AA";
@@ -156,7 +156,7 @@ static int stricmp_test(void)
     STRTEST( 0, -1, "aa",buf+4,-524);
     STRTEST( 0, 0, "aa",buf+6,-524);
 
-    /* equal, length=3 
+    /* equal, length=3
      * use buffer to simulate non-aligned string.
      */
     buf = "aaa""Aaa""aAa""aaA""AAa""aAA""AaA""AAA";
@@ -242,8 +242,8 @@ static int stricmp_test(void)
 
     /* Avoid division by zero */
     if (c2 == 0) c2=1;
-    
-    PJ_LOG(3, ("", "  time: stricmp=%u, stricmp_alnum=%u (speedup=%d.%02dx)", 
+
+    PJ_LOG(3, ("", "  time: stricmp=%u, stricmp_alnum=%u (speedup=%d.%02dx)",
                    c1, c2,
                    (c1 * 100 / c2) / 100,
                    (c1 * 100 / c2) % 100));
@@ -266,7 +266,7 @@ static int strcmp_test(void)
 
     pj_str_t s1, s2;
     int len;
-    
+
     /* Test with length == 0 */
     len=0;
     STR_TEST(0, "", "", -400);
@@ -301,10 +301,10 @@ int string_test(void)
 
     pool = pj_pool_create(mem, SNULL, 4096, 0, SNULL);
     if (!pool) return -5;
-    
-    /* 
-     * pj_str(), pj_strcmp(), pj_stricmp(), pj_strlen(), 
-     * pj_strncmp(), pj_strchr() 
+
+    /*
+     * pj_str(), pj_strcmp(), pj_stricmp(), pj_strlen(),
+     * pj_strncmp(), pj_strchr()
      */
     s1 = pj_str(HELLO_WORLD);
     if (pj_strcmp(&s1, &hello_world) != 0)
@@ -324,19 +324,19 @@ int string_test(void)
     if (pj_strchr(&s1, HELLO_WORLD[1]) != s1.ptr+1)
         return -80;
 
-    /* 
-     * pj_strdup() 
+    /*
+     * pj_strdup()
      */
     if (!pj_strdup(pool, &s2, &s1))
         return -100;
     if (pj_strcmp(&s1, &s2) != 0)
         return -110;
-    
-    /* 
-     * pj_strcpy(), pj_strcat() 
+
+    /*
+     * pj_strcpy(), pj_strcat()
      */
     s3.ptr = (char*) pj_pool_alloc(pool, 256);
-    if (!s3.ptr) 
+    if (!s3.ptr)
         return -200;
     pj_strcpy(&s3, &s2);
     pj_strcat(&s3, &just_hello);
@@ -344,24 +344,24 @@ int string_test(void)
     if (pj_strcmp2(&s3, HELLO_WORLD JUST_HELLO) != 0)
         return -210;
 
-    /* 
-     * pj_strdup2(), pj_strtrim(). 
+    /*
+     * pj_strdup2(), pj_strtrim().
      */
     pj_strdup2(pool, &s4, " " HELLO_WORLD "\t ");
     pj_strtrim(&s4);
     if (pj_strcmp2(&s4, HELLO_WORLD) != 0)
         return -250;
 
-    /* 
-     * pj_utoa() 
+    /*
+     * pj_utoa()
      */
     s5.ptr = (char*) pj_pool_alloc(pool, 16);
     if (!s5.ptr)
         return -270;
     s5.slen = pj_utoa(UL_VALUE, s5.ptr);
 
-    /* 
-     * pj_strtoul() 
+    /*
+     * pj_strtoul()
      */
     if (pj_strtoul(&s5) != UL_VALUE)
         return -280;
@@ -392,13 +392,13 @@ int string_test(void)
     if (s4.slen != 0)
         return -297;
 
-    /* 
-     * pj_create_random_string() 
+    /*
+     * pj_create_random_string()
      * Check that no duplicate strings are returned.
      */
     for (i=0; i<RCOUNT; ++i) {
         int j;
-        
+
         random[i].ptr = (char*) pj_pool_alloc(pool, RLEN);
         if (!random[i].ptr)
             return -320;
@@ -430,7 +430,7 @@ int string_test(void)
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_string_test;
 #endif  /* INCLUDE_STRING_TEST */

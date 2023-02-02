@@ -19,7 +19,7 @@
 #if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0)
 
 /* Include OpenSSL libraries for MSVC */
-#  ifdef _MSC_VER 
+#  ifdef _MSC_VER
 #    if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 #      include <openssl/opensslv.h>
 #      if OPENSSL_VERSION_NUMBER >= 0x10100000L
@@ -244,14 +244,14 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
         return PJMEDIA_SDP_EINATTR;
     }
 
-    /* Key */    
+    /* Key */
     delim = pj_str("| ");
     found_idx = pj_strtok(&attr->value, &delim, &token, found_idx+token.slen);
     if (found_idx == attr->value.slen) {
         PJ_LOG(4,(THIS_FILE, "Attribute crypto expecting key"));
         return PJMEDIA_SDP_EINATTR;
     }
-    
+
     if (PJ_BASE64_TO_BASE256_LEN(token.slen) > MAX_KEY_LEN) {
         PJ_LOG(4,(THIS_FILE, "Key too long"));
         return PJMEDIA_SRTP_EINKEYLEN;
@@ -486,7 +486,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
                                        &srtp->setting.crypto[j].name) == 0)
                         {
                             int cs_idx = get_crypto_idx(&tmp_rx_crypto.name);
-                            
+
                             if (cs_idx == -1)
                                 return PJMEDIA_SRTP_ENOTSUPCRYPTO;
 
@@ -573,19 +573,19 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 
 
 static pj_status_t fill_local_crypto(pj_pool_t *pool,
-                                     const pjmedia_sdp_media *m_loc, 
+                                     const pjmedia_sdp_media *m_loc,
                                      pjmedia_srtp_crypto loc_crypto[],
                                      int *count)
 {
     int i;
     int crypto_count = 0;
     pj_status_t status = PJ_SUCCESS;
-    
+
     for (i = 0; i < *count; ++i) {
         pj_bzero(&loc_crypto[i], sizeof(loc_crypto[i]));
     }
 
-    for (i = 0; i < (int)m_loc->attr_count; ++i) {      
+    for (i = 0; i < (int)m_loc->attr_count; ++i) {
         pjmedia_srtp_crypto tmp_crypto;
         int loc_tag;
 
@@ -729,12 +729,12 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
             return status;
 
 
-        /* Tag range check, our tags in the offer must be in the SRTP 
-         * setting range, so does the remote answer's. The remote answer's 
+        /* Tag range check, our tags in the offer must be in the SRTP
+         * setting range, so does the remote answer's. The remote answer's
          * tag must not exceed the tag range of the local offer.
          */
         if (rem_tag < 1 || rem_tag > (int)srtp->setting.crypto_count ||
-            rem_tag > loc_cryto_cnt) 
+            rem_tag > loc_cryto_cnt)
         {
             DEACTIVATE_MEDIA(pool, m_loc);
             return PJMEDIA_SRTP_ESDPINCRYPTOTAG;

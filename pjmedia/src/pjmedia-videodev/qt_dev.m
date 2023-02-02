@@ -87,7 +87,7 @@ struct qt_stream
 
     pj_timestamp            cap_frame_ts;   /**< Captured frame tstamp */
     unsigned                cap_ts_inc;     /**< Increment             */
-    
+
     pjmedia_vid_dev_cb      vid_cb;         /**< Stream callback.      */
     void                   *user_data;      /**< Application data.     */
 
@@ -95,12 +95,12 @@ struct qt_stream
     pj_bool_t               cap_thread_initialized;
     pj_thread_desc          cap_thread_desc;
     pj_thread_t            *cap_thread;
-    
+
     struct qt_factory      *qf;
     pj_status_t             status;
     pj_bool_t               is_running;
     pj_bool_t               cap_exited;
-    
+
     QTCaptureSession                    *cap_session;
     QTCaptureDeviceInput                *dev_input;
     QTCaptureDecompressedVideoOutput    *video_output;
@@ -253,7 +253,7 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
             [[dev uniqueID] getCString:qdi->dev_id
                             maxLength:sizeof(qdi->dev_id)
                             encoding:[NSString defaultCStringEncoding]];
-            strcpy(qdi->info.driver, "QT");         
+            strcpy(qdi->info.driver, "QT");
             qdi->info.dir = PJMEDIA_DIR_CAPTURE;
             qdi->info.has_callback = PJ_TRUE;
 
@@ -265,7 +265,7 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
                                              objectAtIndex:k];
                 for (l = 0; l < PJ_ARRAY_SIZE(qt_fmts); l++) {
                     if ([desc formatType] == qt_fmts[l].qt_format) {
-                        pjmedia_format *fmt = 
+                        pjmedia_format *fmt =
                             &qdi->info.fmt[qdi->info.fmt_cnt++];
                         pjmedia_format_init_video(fmt,
                                                   qt_fmts[l].pjmedia_format,
@@ -277,7 +277,7 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
                 }
             }
 
-            PJ_LOG(4, (THIS_FILE, " dev_id %d: %s", i, qdi->info.name));    
+            PJ_LOG(4, (THIS_FILE, " dev_id %d: %s", i, qdi->info.name));
         }
     }
 
@@ -409,7 +409,7 @@ static void init_qt(struct qt_stream *strm)
     }
 
     /* Open video device */
-    QTCaptureDevice *videoDevice = 
+    QTCaptureDevice *videoDevice =
         [QTCaptureDevice deviceWithUniqueID:
                          [NSString stringWithCString:
                                    strm->qf->dev_info[strm->param.cap_id].dev_id
@@ -420,8 +420,8 @@ static void init_qt(struct qt_stream *strm)
         return;
     }
 
-    /* Add the video device to the session as a device input */ 
-    strm->dev_input = [[QTCaptureDeviceInput alloc] 
+    /* Add the video device to the session as a device input */
+    strm->dev_input = [[QTCaptureDeviceInput alloc]
                        initWithDevice:videoDevice];
     success = [strm->cap_session addInput:strm->dev_input error:&error];
     if (!success) {
@@ -461,7 +461,7 @@ static void init_qt(struct qt_stream *strm)
     strm->qt_delegate = [[QTDelegate alloc]init];
     strm->qt_delegate->strm = strm;
     [strm->video_output setDelegate:strm->qt_delegate];
-}    
+}
 
 static void run_func_on_main_thread(struct qt_stream *strm, func_ptr func)
 {
@@ -472,11 +472,11 @@ static void run_func_on_main_thread(struct qt_stream *strm, func_ptr func)
     delg->func = func;
     [delg performSelectorOnMainThread:@selector(run_func)
                            withObject:nil waitUntilDone:YES];
-    
+
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 
     [delg release];
-    [pool release];    
+    [pool release];
 }
 
 /* API: create stream */
@@ -515,7 +515,7 @@ static pj_status_t qt_factory_create_stream(
     strm->qf = qf;
 
     /* Create capture stream here */
-    if (param->dir & PJMEDIA_DIR_CAPTURE) {        
+    if (param->dir & PJMEDIA_DIR_CAPTURE) {
         strm->status = PJ_SUCCESS;
         run_func_on_main_thread(strm, init_qt);
         if ((status = strm->status) != PJ_SUCCESS)
@@ -523,7 +523,7 @@ static pj_status_t qt_factory_create_stream(
     }
 
     /* Apply the remaining settings */
-    /*    
+    /*
      if (param->flags & PJMEDIA_VID_DEV_CAP_INPUT_SCALE) {
         qt_stream_set_cap(&strm->base,
                           PJMEDIA_VID_DEV_CAP_INPUT_SCALE,

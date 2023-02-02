@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_ISCOMPOSING_H__
 #define __PJSIP_SIMPLE_ISCOMPOSING_H__
@@ -51,11 +51,11 @@ PJ_BEGIN_DECL
  *                          activity. If none is to be specified, the value
  *                          MUST be set to NULL.
  * @param content_tp        Optional attribute to indicate the content type of
- *                          message being composed. If none is to be specified, 
+ *                          message being composed. If none is to be specified,
  *                          the value MUST be set to NULL.
  * @param refresh           Optional attribute to indicate the interval when
- *                          next indication will be sent, only when 
- *                          is_composing is non-zero. If none is to be 
+ *                          next indication will be sent, only when
+ *                          is_composing is non-zero. If none is to be
  *                          specified, the value MUST be set to -1.
  *
  * @return                  An XML message containing the message indication.
@@ -81,14 +81,14 @@ PJ_DECL(pj_xml_node*) pjsip_iscomposing_create_xml(pj_pool_t *pool,
  *                          activity. If none is to be specified, the value
  *                          MUST be set to NULL.
  * @param content_tp        Optional attribute to indicate the content type of
- *                          message being composed. If none is to be specified, 
+ *                          message being composed. If none is to be specified,
  *                          the value MUST be set to NULL.
  * @param refresh           Optional attribute to indicate the interval when
- *                          next indication will be sent, only when 
- *                          is_composing is non-zero. If none is to be 
+ *                          next indication will be sent, only when
+ *                          is_composing is non-zero. If none is to be
  *                          specified, the value MUST be set to -1.
  *
- * @return                  The SIP message body containing XML message 
+ * @return                  The SIP message body containing XML message
  *                          indication. NULL will be returned when there's not
  *                          enough memory to allocate the message.
  */
@@ -100,7 +100,7 @@ PJ_DECL(pjsip_msg_body*) pjsip_iscomposing_create_body( pj_pool_t *pool,
 
 
 /**
- * Parse the buffer and return message composition indication in the 
+ * Parse the buffer and return message composition indication in the
  * message.
  *
  * Note that the input string buffer MUST be NULL terminated and have

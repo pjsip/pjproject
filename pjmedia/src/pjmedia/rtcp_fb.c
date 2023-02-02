@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2018 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia/rtcp_fb.h>
@@ -81,7 +81,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_nack(
  * Build an RTCP-FB Picture Loss Indication (PLI) packet.
  */
 PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_pli(
-                                        pjmedia_rtcp_session *session, 
+                                        pjmedia_rtcp_session *session,
                                         void *buf,
                                         pj_size_t *length)
 {
@@ -112,7 +112,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_pli(
  * Build an RTCP-FB Slice Loss Indication (SLI) packet.
  */
 PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
-                                        pjmedia_rtcp_session *session, 
+                                        pjmedia_rtcp_session *session,
                                         void *buf,
                                         pj_size_t *length,
                                         unsigned sli_cnt,
@@ -160,7 +160,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
  * Build an RTCP-FB Slice Loss Indication (SLI) packet.
  */
 PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
-                                            pjmedia_rtcp_session *session, 
+                                            pjmedia_rtcp_session *session,
                                             void *buf,
                                             pj_size_t *length,
                                             const pjmedia_rtcp_fb_rpsi *rpsi)
@@ -399,7 +399,7 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
         sci[cnt++].pt = pt;
     }
     *sci_cnt = cnt;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -694,7 +694,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_sli(
     if (hdr->rtcp_common.pt != RTCP_PSFB || hdr->rtcp_common.count != 2)
         return PJ_ENOTFOUND;
 
-    if (hdr->rtcp_common.length < 3) {    
+    if (hdr->rtcp_common.length < 3) {
         PJ_PERROR(3, (THIS_FILE, PJ_ETOOSMALL,
                       "Failed parsing FB SLI, invalid header length"));
         return PJ_ETOOSMALL;
@@ -745,7 +745,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_rpsi(
     if (hdr->rtcp_common.pt != RTCP_PSFB || hdr->rtcp_common.count != 3)
         return PJ_ENOTFOUND;
 
-    if (hdr->rtcp_common.length < 3) {    
+    if (hdr->rtcp_common.length < 3) {
         PJ_PERROR(3, (THIS_FILE, PJ_ETOOSMALL,
                       "Failed parsing FB RPSI, invalid header length"));
         return PJ_ETOOSMALL;

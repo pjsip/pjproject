@@ -11,7 +11,7 @@
  *
  * #define PJ_CONFIG_NOKIA_APS_DIRECT
  *   Use this macro to activate the APS-Direct feature. Please see
- *   http://trac.pjsip.org/repos/wiki/Nokia_APS_VAS_Direct for more 
+ *   http://trac.pjsip.org/repos/wiki/Nokia_APS_VAS_Direct for more
  *   info.
  *
  * #define PJ_CONFIG_WIN32_WMME_DIRECT
@@ -52,7 +52,7 @@
     /* Previously, resampling is disabled due to performance reason and
      * this condition prevented some 'light' wideband codecs (e.g: G722.1)
      * to work along with narrowband codecs. Lately, some tests showed
-     * that 16kHz <-> 8kHz resampling using libresample small filter was 
+     * that 16kHz <-> 8kHz resampling using libresample small filter was
      * affordable on ARM9 260 MHz, so here we decided to enable resampling.
      * Note that it is important to make sure that libresample is created
      * using small filter. For example PJSUA_DEFAULT_CODEC_QUALITY must
@@ -69,7 +69,7 @@
      */
 
     /* Set maximum number of dialog/transaction/calls to minimum to reduce
-     * memory usage 
+     * memory usage
      */
     #define PJSIP_MAX_TSX_COUNT                 31
     #define PJSIP_MAX_DIALOG_COUNT              31
@@ -147,7 +147,7 @@
     /* Previously, resampling is disabled due to performance reason and
      * this condition prevented some 'light' wideband codecs (e.g: G722.1)
      * to work along with narrowband codecs. Lately, some tests showed
-     * that 16kHz <-> 8kHz resampling using libresample small filter was 
+     * that 16kHz <-> 8kHz resampling using libresample small filter was
      * affordable on ARM9 222 MHz, so here we decided to enable resampling.
      * Note that it is important to make sure that libresample is created
      * using small filter. For example PJSUA_DEFAULT_CODEC_QUALITY must
@@ -159,8 +159,8 @@
     /* Use the lighter WSOLA implementation */
     #define PJMEDIA_WSOLA_IMP                   PJMEDIA_WSOLA_IMP_WSOLA_LITE
 
-    /* We probably need more buffers especially if MDA audio backend 
-     * is used, so increase the limit 
+    /* We probably need more buffers especially if MDA audio backend
+     * is used, so increase the limit
      */
     #define PJMEDIA_SOUND_BUFFER_COUNT          32
 
@@ -389,7 +389,7 @@
 
     /* Fine tune Speex's default settings for best performance/quality */
     #define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY 5
-    
+
     /*
      * PJSIP settings.
      */
@@ -435,7 +435,7 @@
     #undef PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
     #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO             0
     #undef PJMEDIA_AUDIO_DEV_HAS_ALSA
-    #define PJMEDIA_AUDIO_DEV_HAS_ALSA                  0    
+    #define PJMEDIA_AUDIO_DEV_HAS_ALSA                  0
 #endif
 
 
@@ -475,7 +475,7 @@
 #   define PJ_HAS_STRICMP_ALNUM         0
 #   define PJSIP_UNESCAPE_IN_PLACE      1
 
-#   if defined(PJ_WIN32) || defined(PJ_WIN64) 
+#   if defined(PJ_WIN32) || defined(PJ_WIN64)
 #     define PJSIP_MAX_NET_EVENTS       10
 #   endif
 

@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia-codec/bcg729.h>
@@ -256,7 +256,7 @@ static pj_status_t bcg729_test_alloc(pjmedia_codec_factory *factory,
 
     /* Check clock-rate */
     if (info->clock_rate != G729_CLOCK_RATE)
-        return PJMEDIA_CODEC_EUNSUP;    
+        return PJMEDIA_CODEC_EUNSUP;
 
     return PJ_SUCCESS;
 }
@@ -268,7 +268,7 @@ static pj_status_t bcg729_test_alloc(pjmedia_codec_factory *factory,
 static pj_status_t bcg729_default_attr(pjmedia_codec_factory *factory,
                                        const pjmedia_codec_info *id,
                                        pjmedia_codec_param *attr )
-{    
+{
     PJ_ASSERT_RETURN(factory==&bcg729_factory.base, PJ_EINVAL);
 
     if (id->pt != PJMEDIA_RTP_PT_G729)
@@ -521,7 +521,7 @@ static pj_status_t bcg729_codec_encode(pjmedia_codec *codec,
 {
     bcg729_private *bcg729_data;
     pj_int16_t *pcm_in;
-    unsigned nsamples;    
+    unsigned nsamples;
     pj_uint8_t stream_len;
 
     PJ_ASSERT_RETURN(codec && input && output_buf_len && output, PJ_EINVAL);
@@ -552,7 +552,7 @@ static pj_status_t bcg729_codec_encode(pjmedia_codec *codec,
             }
         }
     }
-    
+
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;
 

@@ -113,7 +113,7 @@ namespace VoipUI.Helpers
 
                                 MainPage.Current.UpdateCallState(message[UpdateCallStateArguments.CallState.ToString()] as String);
                             });
-                            
+
                             break;
 
                         case ForegroundReguest.UpdateRegState:

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/master_port.h>
 #include <pjmedia/clock.h>
@@ -98,7 +98,7 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
     m->u_port = u_port;
     m->d_port = d_port;
 
-    
+
     /* Create buffer */
     m->buff_size = bytes_per_frame;
     m->buff = pj_pool_alloc(pool, m->buff_size);
@@ -111,7 +111,7 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
         return status;
 
     /* Create media clock */
-    status = pjmedia_clock_create(pool, clock_rate, channel_count, 
+    status = pjmedia_clock_create(pool, clock_rate, channel_count,
                                   samples_per_frame, options, &clock_callback,
                                   m, &m->clock);
     if (status != PJ_SUCCESS) {
@@ -144,7 +144,7 @@ PJ_DEF(pj_status_t) pjmedia_master_port_start(pjmedia_master_port *m)
 PJ_DEF(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m)
 {
     PJ_ASSERT_RETURN(m && m->clock, PJ_EINVAL);
-    
+
     return pjmedia_clock_stop(m->clock);
 }
 
@@ -168,7 +168,7 @@ static void clock_callback(const pj_timestamp *ts, void *user_data)
     pjmedia_frame frame;
     pj_status_t status;
 
-    
+
     /* Lock access to ports. */
     pj_lock_acquire(m->lock);
 
@@ -286,7 +286,7 @@ PJ_DEF(pjmedia_port*) pjmedia_master_port_get_dport(pjmedia_master_port*m)
 
 
 /*
- * Destroy the master port, and optionally destroy the u_port and 
+ * Destroy the master port, and optionally destroy the u_port and
  * d_port ports.
  */
 PJ_DEF(pj_status_t) pjmedia_master_port_destroy(pjmedia_master_port *m,

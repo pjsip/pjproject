@@ -31,7 +31,7 @@ namespace VoipUI.Helpers
         public static async Task<OperationResult> StartServiceAsync()
         {
             if (!ApiInformation.IsApiContractPresent("Windows.ApplicationModel.Calls.CallsVoipContract", 1))
-            {                
+            {
                 return OperationResult.Failed;
             }
 

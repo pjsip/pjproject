@@ -3,7 +3,7 @@
  Name        : pjsuaAppUi.h
  Author      : nanang
  Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
- Description : 
+ Description :
 ========================================================================
 */
 #ifndef PJSUAAPPUI_H
@@ -25,7 +25,7 @@ class CpjsuaContainerView;
  */
 class CpjsuaAppUi : public CAknViewAppUi
         {
-public: 
+public:
         // constructor and destructor
         CpjsuaAppUi();
         virtual ~CpjsuaAppUi();
@@ -42,29 +42,29 @@ public:
         void HandleResourceChangeL( TInt aType );
 
         // from CAknAppUi
-        void HandleViewDeactivation( 
-                        const TVwsViewId& aViewIdToBeDeactivated, 
+        void HandleViewDeactivation(
+                        const TVwsViewId& aViewIdToBeDeactivated,
                         const TVwsViewId& aNewlyActivatedViewId );
 
 private:
         void InitializeContainersL();
         // [[[ begin generated region: do not modify [Generated Methods]
-public: 
+public:
         // ]]] end generated region [Generated Methods]
-        
+
         void PutMsg(const char *msg);
-        
+
         // [[[ begin generated region: do not modify [Generated Instance Variables]
-private: 
+private:
         CpjsuaContainerView* iPjsuaContainerView;
         // ]]] end generated region [Generated Instance Variables]
-        
-        
+
+
         // [[[ begin [User Handlers]
-protected: 
+protected:
         // ]]] end [User Handlers]
         void PrepareToExit();
 
         };
 
-#endif // PJSUAAPPUI_H                  
+#endif // PJSUAAPPUI_H

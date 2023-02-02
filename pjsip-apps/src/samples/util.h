@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,12 +14,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <stdlib.h>     /* strtol() */
 
 /* Util to display the error message for the specified error code  */
-static int app_perror( const char *sender, const char *title, 
+static int app_perror( const char *sender, const char *title,
                        pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
@@ -63,7 +63,7 @@ static int app_perror( const char *sender, const char *title,
  * common sound options.
  */
 pj_status_t get_snd_options(const char *app_name,
-                            int argc, 
+                            int argc,
                             char *argv[],
                             int *dev_id,
                             int *clock_rate,
@@ -87,8 +87,8 @@ pj_status_t get_snd_options(const char *app_name,
     *samples_per_frame = 0;
 
     pj_optind = 0;
-    while((c=pj_getopt_long(argc,argv, "d:r:c:f:b:", 
-                            long_options, &option_index))!=-1) 
+    while((c=pj_getopt_long(argc,argv, "d:r:c:f:b:",
+                            long_options, &option_index))!=-1)
     {
 
         switch (c) {

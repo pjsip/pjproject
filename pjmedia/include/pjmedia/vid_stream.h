@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_VID_STREAM_H__
 #define __PJMEDIA_VID_STREAM_H__
@@ -68,7 +68,7 @@ PJ_BEGIN_DECL
  *
  * Video streams are created by calling #pjmedia_vid_stream_create(),
  * specifying #pjmedia_stream_info structure in the parameter. Application
- * can construct the #pjmedia_vid_stream_info structure manually, or use 
+ * can construct the #pjmedia_vid_stream_info structure manually, or use
  * #pjmedia_vid_stream_info_from_sdp() function to construct the
  * #pjmedia_vid_stream_info from local and remote SDP session descriptors.
  */
@@ -119,7 +119,7 @@ typedef struct pjmedia_vid_stream_rc_config
 } pjmedia_vid_stream_rc_config;
 
 /**
- * Structure of configuration settings for video stream sending keyframe 
+ * Structure of configuration settings for video stream sending keyframe
  * after it is created.
  */
 typedef struct pjmedia_vid_stream_sk_config
@@ -141,7 +141,7 @@ typedef struct pjmedia_vid_stream_sk_config
 } pjmedia_vid_stream_sk_config;
 
 
-/** 
+/**
  * This structure describes video stream information. Each video stream
  * corresponds to one "m=" line in SDP session descriptor, and it has
  * its own RTP/RTCP socket pair.
@@ -169,11 +169,11 @@ typedef struct pjmedia_vid_stream_info
     pj_uint32_t         rtp_ts;     /**< Initial RTP timestamp.             */
     pj_uint16_t         rtp_seq;    /**< Initial RTP sequence number.       */
     pj_uint8_t          rtp_seq_ts_set;
-                                    /**< Bitmask flags if initial RTP sequence 
+                                    /**< Bitmask flags if initial RTP sequence
                                          and/or timestamp for sender are set.
-                                         bit 0/LSB : sequence flag 
+                                         bit 0/LSB : sequence flag
                                          bit 1     : timestamp flag         */
-    int                 jb_init;    /**< Jitter buffer init delay in msec.  
+    int                 jb_init;    /**< Jitter buffer init delay in msec.
                                          (-1 for default).                  */
     int                 jb_min_pre; /**< Jitter buffer minimum prefetch
                                          delay in msec (-1 for default).    */
@@ -192,7 +192,7 @@ typedef struct pjmedia_vid_stream_info
     pjmedia_vid_codec_info   codec_info;  /**< Incoming codec format info.  */
     pjmedia_vid_codec_param *codec_param; /**< Optional codec param.        */
 
-    pj_bool_t           rtcp_sdes_bye_disabled; 
+    pj_bool_t           rtcp_sdes_bye_disabled;
                                     /**< Disable automatic sending of RTCP
                                          SDES and BYE.                      */
 
@@ -206,9 +206,9 @@ typedef struct pjmedia_vid_stream_info
 
 /**
  * This function will initialize the video stream info based on information
- * in both SDP session descriptors for the specified stream index. 
- * The remaining information will be taken from default codec parameters. 
- * If socket info array is specified, the socket will be copied to the 
+ * in both SDP session descriptors for the specified stream index.
+ * The remaining information will be taken from default codec parameters.
+ * If socket info array is specified, the socket will be copied to the
  * session info as well.
  *
  * @param si            Stream info structure to be initialized.
@@ -259,7 +259,7 @@ typedef struct pjmedia_vid_stream pjmedia_vid_stream;
  * The media port interface exports put_frame() and get_frame() function,
  * used to transmit and receive media frames from the stream.
  *
- * Without application calling put_frame() and get_frame(), there will be 
+ * Without application calling put_frame() and get_frame(), there will be
  * no media frames transmitted or received by the stream.
  *
  * @param endpt         Media endpoint.
@@ -301,7 +301,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_destroy(pjmedia_vid_stream *stream);
 
 /**
  * Get the media port interface of the stream. The media port interface
- * declares put_frame() and get_frame() function, which is the only 
+ * declares put_frame() and get_frame() function, which is the only
  * way for application to transmit and receive media frames from the
  * stream. As bidirectional video streaming may have different video
  * formats in the encoding and decoding direction, there are two media
@@ -469,12 +469,12 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_send_rtcp_pli(
 
 
 /**
- * Get the RTP session information of the video media stream. This function 
- * can be useful for app with custom media transport to inject/filter some 
+ * Get the RTP session information of the video media stream. This function
+ * can be useful for app with custom media transport to inject/filter some
  * outgoing/incoming proprietary packets into normal video RTP traffics.
  * This will return the original pointer to the internal states of the stream,
  * and generally it is not advisable for app to modify them.
- * 
+ *
  * @param stream        The video media stream.
  *
  * @param session_info  The stream session info.

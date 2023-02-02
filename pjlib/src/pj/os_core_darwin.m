@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include "TargetConditionals.h"
@@ -60,10 +60,10 @@ typedef struct run_app_t {
 static void* main_thread(void *data)
 {
     run_app_t *param = (run_app_t *)data;
-    
+
     param->retval = (*param->main_func)(param->argc, param->argv);
     CFRunLoopStop(CFRunLoopGetMain());
-    
+
     return NULL;
 }
 
@@ -79,7 +79,7 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     pthread_t thread;
     run_app_t param;
     NSAutoreleasePool *pool;
-    
+
     pool = [[NSAutoreleasePool alloc] init];
     [NSApplication sharedApplication];
     [DeadThread enterMultiThreadedMode];
@@ -90,9 +90,9 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     if (pthread_create(&thread, NULL, &main_thread, &param) == 0) {
         CFRunLoopRun();
     }
-    
+
     PJ_UNUSED_ARG(pool);
-    
+
     return param.retval;
 }
 

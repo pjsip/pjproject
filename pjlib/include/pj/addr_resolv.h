@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_ADDR_RESOLV_H__
 #define __PJ_ADDR_RESOLV_H__
@@ -43,7 +43,7 @@ PJ_BEGIN_DECL
  *   pj_hostent he;
  *   pj_status_t rc;
  *   pj_str_t host = pj_str("host.example.com");
- *   
+ *
  *   rc = pj_gethostbyname( &host, &he);
  *   if (rc != PJ_SUCCESS) {
  *      char errbuf[80];
@@ -73,7 +73,7 @@ typedef struct pj_hostent
 /** Shortcut to h_addr_list[0] */
 #define h_addr h_addr_list[0]
 
-/** 
+/**
  * This structure describes address information pj_getaddrinfo().
  */
 typedef struct pj_addrinfo
@@ -96,12 +96,12 @@ typedef struct pj_addrinfo
  *                  invocation.
  *
  * @return          PJ_SUCCESS, or the appropriate error codes.
- */ 
+ */
 PJ_DECL(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he);
 
 
 /**
- * Resolve the primary IP address of local host. 
+ * Resolve the primary IP address of local host.
  *
  * @param af        The desired address family to query. Valid values
  *                  are pj_AF_INET() or pj_AF_INET6().
@@ -158,9 +158,9 @@ PJ_DECL(pj_status_t) pj_getdefaultipinterface(int af,
 
 
 /**
- * This function translates the name of a service location (for example, 
+ * This function translates the name of a service location (for example,
  * a host name) and returns a set of addresses and associated information
- * to be used in creating a socket with which to address the specified 
+ * to be used in creating a socket with which to address the specified
  * service.
  *
  * @param af        The desired address family to query. Valid values

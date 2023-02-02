@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_SHA1_H__
 #define __PJLIB_UTIL_SHA1_H__
@@ -46,25 +46,25 @@ typedef struct pj_sha1_context
 #define PJ_SHA1_DIGEST_SIZE     20
 
 
-/** Initialize the algorithm. 
+/** Initialize the algorithm.
  *  @param ctx          SHA1 context.
  */
 PJ_DECL(void) pj_sha1_init(pj_sha1_context *ctx);
 
-/** Append a stream to the message. 
+/** Append a stream to the message.
  *  @param ctx          SHA1 context.
  *  @param data         Data.
  *  @param nbytes       Length of data.
  */
-PJ_DECL(void) pj_sha1_update(pj_sha1_context *ctx, 
-                             const pj_uint8_t *data, 
+PJ_DECL(void) pj_sha1_update(pj_sha1_context *ctx,
+                             const pj_uint8_t *data,
                              const pj_size_t nbytes);
 
-/** Finish the message and return the digest. 
+/** Finish the message and return the digest.
  *  @param ctx          SHA1 context.
  *  @param digest       16 byte digest.
  */
-PJ_DECL(void) pj_sha1_final(pj_sha1_context *ctx, 
+PJ_DECL(void) pj_sha1_final(pj_sha1_context *ctx,
                             pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE]);
 
 

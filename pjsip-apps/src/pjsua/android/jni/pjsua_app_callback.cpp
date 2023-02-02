@@ -1,5 +1,5 @@
 /* $Id: pjsua_app_callback.cpp $ */
-/* 
+/*
  * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "pjsua_app_callback.h"
@@ -35,7 +35,7 @@ static pjsua_vid_win_id winId = PJSUA_INVALID_ID;
 void setVideoWindow(const WindowHandle& win)
 {
     pjmedia_vid_dev_hwnd vhwnd;
-   
+
     vhwnd.info.window = win.window;
     if (winId != PJSUA_INVALID_ID)
         pjsua_vid_win_set_win(winId, &vhwnd);
@@ -72,7 +72,7 @@ static void on_call_media_state(pjsua_call_id call_id)
         }
     }
 #endif
-    
+
     /* Forward to original callback */
     if (pjsua_cb_orig.on_call_media_state)
         (*pjsua_cb_orig.on_call_media_state)(call_id);
@@ -83,7 +83,7 @@ static void on_cli_config(pjsua_app_config *cfg)
 {
     pjsua_cb_orig = cfg->cfg.cb;
     cfg->log_cfg.cb = &log_writer;
-    
+
     /* Override pjsua callback, e.g: to install renderer view */
     cfg->cfg.cb.on_call_media_state = &on_call_media_state;
 }

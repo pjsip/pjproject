@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia/rtcp_xr.h>
@@ -58,7 +58,7 @@
 #   define TRACE_(x)    ;
 #endif
 
-void pjmedia_rtcp_xr_init( pjmedia_rtcp_xr_session *session, 
+void pjmedia_rtcp_xr_init( pjmedia_rtcp_xr_session *session,
                            struct pjmedia_rtcp_session *parent_session,
                            pj_uint8_t gmin,
                            unsigned frames_per_packet)
@@ -73,7 +73,7 @@ void pjmedia_rtcp_xr_init( pjmedia_rtcp_xr_session *session,
 
     /* Init config */
     session->stat.rx.voip_mtc.gmin = (pj_uint8_t)(gmin? gmin : DEFAULT_GMIN);
-    session->ptime = session->rtcp_session->pkt_size * 1000 / 
+    session->ptime = session->rtcp_session->pkt_size * 1000 /
                      session->rtcp_session->clock_rate;
     session->frames_per_packet = frames_per_packet;
 
@@ -104,7 +104,7 @@ void pjmedia_rtcp_xr_fini(pjmedia_rtcp_xr_session *session)
     PJ_UNUSED_ARG(session);
 }
 
-PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess, 
+PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
                                          unsigned rpt_types,
                                          void **rtcp_pkt, int *len)
 {
@@ -138,7 +138,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 
     /* DLRR Report Block */
     /* Build this block if we have received RR NTP (rx_lrr) before */
-    if ((rpt_types == 0 || (rpt_types & PJMEDIA_RTCP_XR_DLRR)) && 
+    if ((rpt_types == 0 || (rpt_types & PJMEDIA_RTCP_XR_DLRR)) &&
         sess->rx_lrr)
     {
         pjmedia_rtcp_xr_rb_dlrr *r;
@@ -162,7 +162,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
         if (sess->rx_lrr != 0) {
             pj_get_timestamp(&ts);
             ts.u64 -= sess->rx_lrr_time.u64;
-        
+
             /* Convert DLRR time to 1/65536 seconds resolution */
             ts.u64 = (ts.u64 << 16) / sess->rtcp_session->ts_freq.u64;
             dlrr_item->dlrr = pj_htonl(ts.u32.lo);
@@ -209,9 +209,9 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
         if (sess->stat.rx.stat_sum.j) {
             r->jitter_min = pj_htonl(sess->stat.rx.stat_sum.jitter.min);
             r->jitter_max = pj_htonl(sess->stat.rx.stat_sum.jitter.max);
-            r->jitter_mean = 
+            r->jitter_mean =
                 pj_htonl((unsigned)sess->stat.rx.stat_sum.jitter.mean);
-            r->jitter_dev = 
+            r->jitter_dev =
                 pj_htonl(pj_math_stat_get_stddev(&sess->stat.rx.stat_sum.jitter));
         }
         if (sess->stat.rx.stat_sum.t) {
@@ -338,8 +338,8 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
         else if (sess->rtcp_session->stat.rtt.last)
             sess->stat.rx.voip_mtc.rnd_trip_delay = (pj_uint16_t)
                                     (sess->rtcp_session->stat.rtt.last / 1000);
-        
-        /* End system delay = RTT/2 + current jitter buffer size + 
+
+        /* End system delay = RTT/2 + current jitter buffer size +
          *                    EXTRA (estimated extra delay)
          * EXTRA will cover additional delay introduced by other components of
          * audio engine, e.g: sound device, codec, AEC, PLC, WSOLA.
@@ -349,13 +349,13 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
         est_extra_delay = 30;
 
 #if !PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO
-        est_extra_delay += PJMEDIA_SND_DEFAULT_REC_LATENCY + 
+        est_extra_delay += PJMEDIA_SND_DEFAULT_REC_LATENCY +
                            PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
 #endif
 
         sess->stat.rx.voip_mtc.end_sys_delay = (pj_uint16_t)
                                  (sess->stat.rx.voip_mtc.rnd_trip_delay / 2 +
-                                 sess->stat.rx.voip_mtc.jb_nom + 
+                                 sess->stat.rx.voip_mtc.jb_nom +
                                  est_extra_delay);
 
         /* Generate block contents */
@@ -369,7 +369,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
         r->rnd_trip_delay   = pj_htons(sess->stat.rx.voip_mtc.rnd_trip_delay);
         r->end_sys_delay    = pj_htons(sess->stat.rx.voip_mtc.end_sys_delay);
         /* signal & noise level encoded in two's complement form */
-        r->signal_lvl       = (pj_uint8_t) 
+        r->signal_lvl       = (pj_uint8_t)
                               ((sess->stat.rx.voip_mtc.signal_lvl >= 0)?
                                sess->stat.rx.voip_mtc.signal_lvl :
                                (sess->stat.rx.voip_mtc.signal_lvl + 256));
@@ -414,7 +414,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
     const pjmedia_rtcp_xr_rb_dlrr     *rb_dlrr = NULL;
     const pjmedia_rtcp_xr_rb_stats    *rb_stats = NULL;
     const pjmedia_rtcp_xr_rb_voip_mtc *rb_voip_mtc = NULL;
-    const pjmedia_rtcp_xr_rb_header   *rb_hdr = (pjmedia_rtcp_xr_rb_header*) 
+    const pjmedia_rtcp_xr_rb_header   *rb_hdr = (pjmedia_rtcp_xr_rb_header*)
                                                 rtcp_xr->buf;
     unsigned pkt_len, rb_len;
 
@@ -428,7 +428,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 
     /* Parse report rpt_types */
     while ((pj_int32_t*)rb_hdr < (pj_int32_t*)pkt + pkt_len)
-    {   
+    {
         rb_len = pj_ntohs((pj_uint16_t)rb_hdr->length);
 
         /* Just skip any block with length == 0 (no report content) */
@@ -436,7 +436,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
             switch (rb_hdr->bt) {
                 case BT_RR_TIME:
                     if ((char*)rb_hdr + sizeof(*rb_rr_time) <=
-                        (char*)pkt + size) 
+                        (char*)pkt + size)
                     {
                         rb_rr_time = (pjmedia_rtcp_xr_rb_rr_time*)rb_hdr;
                     }
@@ -473,7 +473,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
     /* Receiving RR Time */
     if (rb_rr_time) {
         /* Save LRR from NTP timestamp of the RR time block report */
-        sess->rx_lrr = ((pj_ntohl(rb_rr_time->ntp_sec) & 0x0000FFFF) << 16) | 
+        sess->rx_lrr = ((pj_ntohl(rb_rr_time->ntp_sec) & 0x0000FFFF) << 16) |
                        ((pj_ntohl(rb_rr_time->ntp_frac) >> 16) & 0xFFFF);
 
         /* Calculate RR arrival time for DLRR */
@@ -490,8 +490,8 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
         pj_uint64_t eedelay;
         pjmedia_rtcp_ntp_rec ntp;
 
-        /* LRR is the middle 32bit of NTP. It has 1/65536 second 
-         * resolution 
+        /* LRR is the middle 32bit of NTP. It has 1/65536 second
+         * resolution
          */
         lrr = pj_ntohl(rb_dlrr->item.lrr);
 
@@ -520,14 +520,14 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
                            "now=%p, rtt=%p",
                 lrr, dlrr, dlrr/65536, (dlrr%65536)*1000/65536,
                 now, (pj_uint32_t)eedelay));
-        
+
         /* Only save calculation if "now" is greater than lrr, or
-         * otherwise rtt will be invalid 
+         * otherwise rtt will be invalid
          */
         if (now-dlrr >= lrr) {
             unsigned rtt = (pj_uint32_t)eedelay;
-            
-            /* Check that eedelay value really makes sense. 
+
+            /* Check that eedelay value really makes sense.
              * We allow up to 30 seconds RTT!
              */
             if (eedelay <= 30 * 1000 * 1000UL) {
@@ -539,11 +539,11 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
                 {
                     unsigned orig_rtt = rtt;
                     rtt = (unsigned)sess->stat.rtt.mean*3;
-                    PJ_LOG(5,(sess->name, 
+                    PJ_LOG(5,(sess->name,
                               "RTT value %d usec is normalized to %d usec",
                               orig_rtt, rtt));
                 }
-        
+
                 TRACE_((sess->name, "RTCP RTT is set to %d usec", rtt));
                 pj_math_stat_update(&sess->stat.rtt, rtt);
             }
@@ -586,7 +586,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
             sess->stat.tx.stat_sum.jitter.min = pj_ntohl(rb_stats->jitter_min);
             sess->stat.tx.stat_sum.jitter.max = pj_ntohl(rb_stats->jitter_max);
             sess->stat.tx.stat_sum.jitter.mean= pj_ntohl(rb_stats->jitter_mean);
-            pj_math_stat_set_stddev(&sess->stat.tx.stat_sum.jitter, 
+            pj_math_stat_set_stddev(&sess->stat.tx.stat_sum.jitter,
                                     pj_ntohl(rb_stats->jitter_dev));
         }
 
@@ -594,7 +594,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
             sess->stat.tx.stat_sum.toh.min = rb_stats->toh_min;
             sess->stat.tx.stat_sum.toh.max = rb_stats->toh_max;
             sess->stat.tx.stat_sum.toh.mean= rb_stats->toh_mean;
-            pj_math_stat_set_stddev(&sess->stat.tx.stat_sum.toh, 
+            pj_math_stat_set_stddev(&sess->stat.tx.stat_sum.toh,
                                     pj_ntohl(rb_stats->toh_dev));
         }
 
@@ -609,18 +609,18 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
         sess->stat.tx.voip_mtc.gap_den = rb_voip_mtc->gap_den;
         sess->stat.tx.voip_mtc.burst_dur = pj_ntohs(rb_voip_mtc->burst_dur);
         sess->stat.tx.voip_mtc.gap_dur = pj_ntohs(rb_voip_mtc->gap_dur);
-        sess->stat.tx.voip_mtc.rnd_trip_delay = 
+        sess->stat.tx.voip_mtc.rnd_trip_delay =
                                         pj_ntohs(rb_voip_mtc->rnd_trip_delay);
-        sess->stat.tx.voip_mtc.end_sys_delay = 
+        sess->stat.tx.voip_mtc.end_sys_delay =
                                         pj_ntohs(rb_voip_mtc->end_sys_delay);
         /* signal & noise level encoded in two's complement form */
         sess->stat.tx.voip_mtc.signal_lvl = (pj_int8_t)
                                     ((rb_voip_mtc->signal_lvl > 127)?
-                                     ((int)rb_voip_mtc->signal_lvl - 256) : 
+                                     ((int)rb_voip_mtc->signal_lvl - 256) :
                                      rb_voip_mtc->signal_lvl);
         sess->stat.tx.voip_mtc.noise_lvl  = (pj_int8_t)
                                     ((rb_voip_mtc->noise_lvl > 127)?
-                                     ((int)rb_voip_mtc->noise_lvl - 256) : 
+                                     ((int)rb_voip_mtc->noise_lvl - 256) :
                                      rb_voip_mtc->noise_lvl);
         sess->stat.tx.voip_mtc.rerl = rb_voip_mtc->rerl;
         sess->stat.tx.voip_mtc.gmin = rb_voip_mtc->gmin;
@@ -693,7 +693,7 @@ static pj_uint32_t extend_seq(pjmedia_rtcp_xr_session *sess,
 }
 
 void pjmedia_rtcp_xr_rx_rtp( pjmedia_rtcp_xr_session *sess,
-                             unsigned seq, 
+                             unsigned seq,
                              int lost,
                              int dup,
                              int discarded,
@@ -708,13 +708,13 @@ void pjmedia_rtcp_xr_rx_rtp( pjmedia_rtcp_xr_session *sess,
     /* Update statistics summary */
     sess->stat.rx.stat_sum.count++;
 
-    if (sess->stat.rx.stat_sum.begin_seq == 0 || 
+    if (sess->stat.rx.stat_sum.begin_seq == 0 ||
         sess->stat.rx.stat_sum.begin_seq > ext_seq)
     {
         sess->stat.rx.stat_sum.begin_seq = ext_seq;
     }
 
-    if (sess->stat.rx.stat_sum.end_seq == 0 || 
+    if (sess->stat.rx.stat_sum.end_seq == 0 ||
         sess->stat.rx.stat_sum.end_seq < ext_seq)
     {
         sess->stat.rx.stat_sum.end_seq = ext_seq;
@@ -791,14 +791,14 @@ void pjmedia_rtcp_xr_rx_rtp( pjmedia_rtcp_xr_session *sess,
     }
 }
 
-void pjmedia_rtcp_xr_tx_rtp( pjmedia_rtcp_xr_session *session, 
+void pjmedia_rtcp_xr_tx_rtp( pjmedia_rtcp_xr_session *session,
                              unsigned ptsize )
 {
     PJ_UNUSED_ARG(session);
     PJ_UNUSED_ARG(ptsize);
 }
 
-PJ_DEF(pj_status_t) pjmedia_rtcp_xr_update_info( 
+PJ_DEF(pj_status_t) pjmedia_rtcp_xr_update_info(
                                          pjmedia_rtcp_xr_session *sess,
                                          unsigned info,
                                          pj_int32_t val)

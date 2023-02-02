@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/transport_adapter_sample.h>
 #include <pjmedia/endpoint.h>
@@ -63,7 +63,7 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp);
 
 
 /* The transport operations */
-static struct pjmedia_transport_op tp_adapter_op = 
+static struct pjmedia_transport_op tp_adapter_op =
 {
     &transport_get_info,
     NULL,
@@ -125,7 +125,7 @@ PJ_DEF(pj_status_t) pjmedia_tp_adapter_create( pjmedia_endpt *endpt,
     pool = pjmedia_endpt_create_pool(endpt, name, 512, 512);
     adapter = PJ_POOL_ZALLOC_T(pool, struct tp_adapter);
     adapter->pool = pool;
-    pj_ansi_strncpy(adapter->base.name, pool->obj_name, 
+    pj_ansi_strncpy(adapter->base.name, pool->obj_name,
                     sizeof(adapter->base.name));
     adapter->base.type = (pjmedia_transport_type)
                          (PJMEDIA_TRANSPORT_TYPE_USER + 1);
@@ -170,7 +170,7 @@ static void transport_rtp_cb2(pjmedia_tp_cb_param *param)
     /* Call stream's callback */
     if (adapter->stream_rtp_cb2) {
         pjmedia_tp_cb_param cbparam;
-        
+
         pj_memcpy(&cbparam, param, sizeof(cbparam));
         cbparam.user_data = adapter->stream_user_data;
         adapter->stream_rtp_cb2(&cbparam);
@@ -218,10 +218,10 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
     adapter->stream_ref = att_param->stream;
 
     att_param->rtp_cb2 = &transport_rtp_cb2;
-    att_param->rtp_cb = NULL;    
+    att_param->rtp_cb = NULL;
     att_param->rtcp_cb = &transport_rtcp_cb;
     att_param->user_data = adapter;
-        
+
     status = pjmedia_transport_attach2(adapter->slave_tp, att_param);
     if (status != PJ_SUCCESS) {
         adapter->stream_user_data = NULL;
@@ -235,14 +235,14 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
     return PJ_SUCCESS;
 }
 
-/* 
- * detach() is called when the media is terminated, and the stream is 
+/*
+ * detach() is called when the media is terminated, and the stream is
  * to be disconnected from us.
  */
 static void transport_detach(pjmedia_transport *tp, void *strm)
 {
     struct tp_adapter *adapter = (struct tp_adapter*)tp;
-    
+
     PJ_UNUSED_ARG(strm);
 
     if (adapter->stream_user_data != NULL) {
@@ -257,7 +257,7 @@ static void transport_detach(pjmedia_transport *tp, void *strm)
 
 
 /*
- * send_rtp() is called to send RTP packet. The "pkt" and "size" argument 
+ * send_rtp() is called to send RTP packet. The "pkt" and "size" argument
  * contain both the RTP header and the payload.
  */
 static pj_status_t transport_send_rtp( pjmedia_transport *tp,
@@ -301,7 +301,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
                                         pj_size_t size)
 {
     struct tp_adapter *adapter = (struct tp_adapter*)tp;
-    return pjmedia_transport_send_rtcp2(adapter->slave_tp, addr, addr_len, 
+    return pjmedia_transport_send_rtcp2(adapter->slave_tp, addr, addr_len,
                                         pkt, size);
 }
 
@@ -319,7 +319,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 
     /* if "rem_sdp" is not NULL, it means we are UAS. You may do some
      * inspections on the incoming SDP to verify that the SDP is acceptable
-     * for us. If the SDP is not acceptable, we can reject the SDP by 
+     * for us. If the SDP is not acceptable, we can reject the SDP by
      * returning non-PJ_SUCCESS.
      */
     if (rem_sdp) {
@@ -369,7 +369,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
                              my_attr);
     }
 
-    /* And then pass the call to slave transport to let it encode its 
+    /* And then pass the call to slave transport to let it encode its
      * information in the SDP. You may choose to call encode_sdp() to slave
      * first before adding your custom attributes if you want.
      */

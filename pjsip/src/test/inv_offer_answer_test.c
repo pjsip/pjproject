@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "test.h"
@@ -32,7 +32,7 @@ static struct oa_sdp_t
     const char *offer;
     const char *answer;
     unsigned    pt_result;
-} oa_sdp[] = 
+} oa_sdp[] =
 {
     {
         /* Offer: */
@@ -180,7 +180,7 @@ static pjmedia_sdp_session *create_sdp(pj_pool_t *pool, const char *body)
     pjmedia_sdp_session *sdp;
     pj_str_t dup;
     pj_status_t status;
-    
+
     pj_strdup2_with_null(pool, &dup, body);
     status = pjmedia_sdp_parse(pool, dup.ptr, dup.slen, &sdp);
     pj_assert(status == PJ_SUCCESS);
@@ -201,7 +201,7 @@ static void on_rx_offer(pjsip_inv_session *inv,
     pjsip_inv_set_sdp_answer(inv, sdp);
 
     if (inv_test.oa_index == inv_test.param.count-1 &&
-        inv_test.param.need_established) 
+        inv_test.param.need_established)
     {
         jobs[job_cnt].type = ESTABLISH_CALL;
         jobs[job_cnt].who = PJSIP_ROLE_UAS;
@@ -219,7 +219,7 @@ static void on_create_offer(pjsip_inv_session *inv,
     pj_assert(!"Should not happen");
 }
 
-static void on_media_update(pjsip_inv_session *inv_ses, 
+static void on_media_update(pjsip_inv_session *inv_ses,
                             pj_status_t status)
 {
     PJ_UNUSED_ARG(status);
@@ -232,7 +232,7 @@ static void on_media_update(pjsip_inv_session *inv_ses,
         inv_test.uac_update_cnt++;
         pj_assert(inv_test.uac_update_cnt - inv_test.uas_update_cnt <= 1);
         TRACE_((THIS_FILE, "      Caller media is established"));
-        
+
     } else {
         pj_assert(!"Unknown session!");
     }
@@ -433,10 +433,10 @@ static int perform_test(inv_test_param_t *param)
 
     uri = pj_str(CONTACT);
 
-    /*  
+    /*
      * Create UAC
      */
-    status = pjsip_dlg_create_uac(pjsip_ua_instance(), 
+    status = pjsip_dlg_create_uac(pjsip_ua_instance(),
                                   &uri, &uri, &uri, &uri, &dlg);
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, -10);
 
@@ -514,7 +514,7 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
     char info[80];
 
     if (msg->type == PJSIP_REQUEST_MSG)
-        pj_ansi_snprintf(info, sizeof(info), "%.*s", 
+        pj_ansi_snprintf(info, sizeof(info), "%.*s",
             (int)msg->line.req.method.name.slen,
             msg->line.req.method.name.ptr);
     else
@@ -531,7 +531,7 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
 
 
 /* Message logger module. */
-static pjsip_module mod_msg_logger = 
+static pjsip_module mod_msg_logger =
 {
     NULL, NULL,                         /* prev and next        */
     { "mod-msg-loggee", 14},            /* Name.                */

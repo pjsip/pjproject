@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/errno.h>
 #include <pj/assert.h>
@@ -118,17 +118,17 @@ PJ_DEF(void) pj_set_netos_error(pj_status_t code)
 
 PJ_BEGIN_DECL
 
-    PJ_DECL(int) platform_strerror( pj_os_err_type os_errcode, 
+    PJ_DECL(int) platform_strerror( pj_os_err_type os_errcode,
                                     char *buf, pj_size_t bufsize);
 PJ_END_DECL
 
-/* 
+/*
  * platform_strerror()
  *
- * Platform specific error message. This file is called by pj_strerror() 
- * in errno.c 
+ * Platform specific error message. This file is called by pj_strerror()
+ * in errno.c
  */
-PJ_DEF(int) platform_strerror( pj_os_err_type os_errcode, 
+PJ_DEF(int) platform_strerror( pj_os_err_type os_errcode,
                                char *buf, pj_size_t bufsize)
 {
     int len = 0;

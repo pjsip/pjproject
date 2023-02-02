@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_AUTH_SIP_AUTH_PARSER_H__
 #define __PJSIP_AUTH_SIP_AUTH_PARSER_H__
@@ -31,7 +31,7 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register authorization parser module.
  * This will register parser handler for various Authorization related headers
- * such as Authorization, WWW-Authenticate, Proxy-Authorizization, and 
+ * such as Authorization, WWW-Authenticate, Proxy-Authorizization, and
  * Proxy-Authenticate headers.
  *
  * This function is called automatically by the main SIP parser.

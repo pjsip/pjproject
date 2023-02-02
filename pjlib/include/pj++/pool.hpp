@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_POOL_HPP__
 #define __PJPP_POOL_HPP__
@@ -78,9 +78,9 @@ public:
     // Create pool.
     //
     Pj_Pool(Pj_Caching_Pool &caching_pool,
-            pj_size_t initial_size, 
-            pj_size_t increment_size, 
-            const char *name = NULL, 
+            pj_size_t initial_size,
+            pj_size_t increment_size,
+            const char *name = NULL,
             pj_pool_callback *callback = NULL);
 
     //
@@ -102,7 +102,7 @@ public:
     //
     // Destructor.
     //
-    // Release pool back to factory. Remember: if you delete pool, then 
+    // Release pool back to factory. Remember: if you delete pool, then
     // make sure that all objects that have been allocated from this pool
     // have been properly destroyed.
     //
@@ -233,14 +233,14 @@ public:
     //
     // Create pool.
     //
-    pj_pool_t *create_pool( pj_size_t initial_size, 
-                            pj_size_t increment_size, 
-                            const char *name = NULL, 
+    pj_pool_t *create_pool( pj_size_t initial_size,
+                            pj_size_t increment_size,
+                            const char *name = NULL,
                             pj_pool_callback *callback = NULL)
     {
-        return (pj_pool_t*)(*cp_.factory.create_pool)(&cp_.factory, name, 
-                                                     initial_size, 
-                                                     increment_size, 
+        return (pj_pool_t*)(*cp_.factory.create_pool)(&cp_.factory, name,
+                                                     initial_size,
+                                                     increment_size,
                                                      callback);
     }
 
@@ -264,9 +264,9 @@ inline void *Pj_Object::operator new(unsigned int class_size, Pj_Pool &pool)
 // Inlines for Pj_Pool
 //
 inline Pj_Pool::Pj_Pool( Pj_Caching_Pool &caching_pool,
-                         pj_size_t initial_size, 
-                         pj_size_t increment_size, 
-                         const char *name, 
+                         pj_size_t initial_size,
+                         pj_size_t increment_size,
+                         const char *name,
                          pj_pool_callback *callback)
 {
     p_ = caching_pool.create_pool(initial_size, increment_size, name,

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -131,7 +131,7 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
         duration = now;
         PJ_TIME_VAL_SUB(duration, last_print);
         msec = PJ_TIME_VAL_MSEC(duration);
-        
+
         bw = cur_received;
         pj_highprec_mul(bw, 1000);
         pj_highprec_div(bw, msec);
@@ -142,9 +142,9 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
         avg_bw = avg_bw + bw;
         count++;
 
-        PJ_LOG(3,("", "%s UDP (%d threads): %u KB/s (avg=%u KB/s) %s", 
+        PJ_LOG(3,("", "%s UDP (%d threads): %u KB/s (avg=%u KB/s) %s",
                   ioqueue_name,
-                  ECHO_SERVER_MAX_THREADS, 
+                  ECHO_SERVER_MAX_THREADS,
                   (unsigned)(bw / 1000),
                   (unsigned)(avg_bw / count / 1000),
                   (count==20 ? "<ses avg>" : "")));

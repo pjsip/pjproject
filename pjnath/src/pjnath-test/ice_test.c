@@ -45,7 +45,7 @@ enum
 /* Test results */
 struct test_result
 {
-    pj_status_t start_status;   /* start ice successful?        */      
+    pj_status_t start_status;   /* start ice successful?        */
     pj_status_t init_status;    /* init successful?             */
     pj_status_t nego_status;    /* negotiation successful?      */
     unsigned    rx_cnt[4];      /* Number of data received      */
@@ -154,11 +154,11 @@ static pj_bool_t enable_ipv6_test()
 
 #endif
 
-static void set_stun_turn_cfg(struct ice_ept *ept, 
-                                     pj_ice_strans_cfg *ice_cfg, 
+static void set_stun_turn_cfg(struct ice_ept *ept,
+                                     pj_ice_strans_cfg *ice_cfg,
                                      char *serverip,
-                                     pj_bool_t use_ipv6) 
-{        
+                                     pj_bool_t use_ipv6)
+{
     if (ept->cfg.enable_stun & YES) {
         unsigned stun_idx = ice_cfg->stun_tp_cnt++;
         pj_ice_strans_stun_cfg_default(&ice_cfg->stun_tp[stun_idx]);
@@ -173,15 +173,15 @@ static void set_stun_turn_cfg(struct ice_ept *ept,
         ice_cfg->stun_tp[stun_idx].af = GET_AF(use_ipv6);
     }
     ice_cfg->stun.af = GET_AF(use_ipv6);
-    if (ept->cfg.enable_host == 0) {    
+    if (ept->cfg.enable_host == 0) {
         ice_cfg->stun.max_host_cands = 0;
     } else {
-        //ice_cfg.stun.no_host_cands = PJ_FALSE;        
+        //ice_cfg.stun.no_host_cands = PJ_FALSE;
         ice_cfg->stun.loop_addr = PJ_TRUE;
     }
 
     if (ept->cfg.enable_turn & YES) {
-        unsigned turn_idx = ice_cfg->turn_tp_cnt++;     
+        unsigned turn_idx = ice_cfg->turn_tp_cnt++;
         pj_ice_strans_turn_cfg_default(&ice_cfg->turn_tp[turn_idx]);
 
         if ((ept->cfg.enable_turn & SRV) == SRV) {
@@ -205,14 +205,14 @@ static void set_stun_turn_cfg(struct ice_ept *ept,
             PJ_STUN_PASSWD_PLAIN;
         ice_cfg->turn_tp[turn_idx].auth_cred.data.static_cred.data =
             pj_str(TURN_PASSWD);
-        
+
         ice_cfg->turn_tp[turn_idx].af = GET_AF(use_ipv6);
-    }    
+    }
 }
 
 /* Create ICE stream transport */
 static int create_ice_strans(struct test_sess *test_sess,
-                             struct ice_ept *ept,                            
+                             struct ice_ept *ept,
                              pj_ice_strans **p_ice)
 {
     pj_ice_strans *ice;
@@ -231,7 +231,7 @@ static int create_ice_strans(struct test_sess *test_sess,
     pj_sockaddr_print(&hostip, serveripv4, sizeof(serveripv4), 0);
 
     if (flag & CLIENT_IPV6) {
-        status = pj_gethostip(pj_AF_INET6(), &hostip);    
+        status = pj_gethostip(pj_AF_INET6(), &hostip);
         if (status != PJ_SUCCESS)
             return -1031;
 
@@ -307,12 +307,12 @@ static int create_sess(pj_stun_config *stun_cfg,
     /* Create server */
     flags = server_flag;
     if (flags & SERVER_IPV4) {
-        status = create_test_server(stun_cfg, (flags & ~SERVER_IPV6), 
+        status = create_test_server(stun_cfg, (flags & ~SERVER_IPV6),
                                     SRV_DOMAIN, &sess->server1);
     }
 
     if ((status == PJ_SUCCESS) && (flags & SERVER_IPV6)) {
-        status = create_test_server(stun_cfg, (flags & ~SERVER_IPV4), 
+        status = create_test_server(stun_cfg, (flags & ~SERVER_IPV4),
                                     SRV_DOMAIN, &sess->server2);
     }
 
@@ -332,10 +332,10 @@ static int create_sess(pj_stun_config *stun_cfg,
     }
 
     /* Create resolver */
-    if ((sess->callee.cfg.enable_stun & SRV)==SRV || 
+    if ((sess->callee.cfg.enable_stun & SRV)==SRV ||
         (sess->callee.cfg.enable_turn & SRV)==SRV ||
-        (sess->caller.cfg.enable_stun & SRV)==SRV || 
-        (sess->caller.cfg.enable_turn & SRV)==SRV) 
+        (sess->caller.cfg.enable_stun & SRV)==SRV ||
+        (sess->caller.cfg.enable_turn & SRV)==SRV)
     {
         status = pj_dns_resolver_create(mem, NULL, 0, stun_cfg->timer_heap,
                                         stun_cfg->ioqueue, &sess->resolver);
@@ -635,10 +635,10 @@ static int perform_test2(const char *title,
                                  (caller_cfg->client_flag &
                                  (CLIENT_IPV4+CLIENT_IPV6)));
 
-    sprintf(add_title1, "%s%s%s", (server_flag & SERVER_IPV4)?"IPv4":"", 
+    sprintf(add_title1, "%s%s%s", (server_flag & SERVER_IPV4)?"IPv4":"",
             ((server_flag & SERVER_IPV4)&&(server_flag & SERVER_IPV6))?"+":"",
             (server_flag & SERVER_IPV6)?"IPv6":"");
-    
+
     sprintf(add_title2, "%s", client_mix_test?"Mix test":"");
 
     PJ_LOG(3,(THIS_FILE, INDENT "%s (%s) %s", title, add_title1, add_title2));
@@ -701,7 +701,7 @@ static int perform_test2(const char *title,
     rc = start_ice(&sess->callee, &sess->caller);
     if (rc != PJ_SUCCESS) {
         int retval = (rc == sess->callee.cfg.expected.start_status)?0:-120;
-        destroy_sess(sess, 500);        
+        destroy_sess(sess, 500);
         return retval;
     }
     /* Wait for callee's answer_delay */
@@ -837,7 +837,7 @@ static int perform_test(const char *title,
     int expected_callee_start_ice = callee_cfg->expected.start_status;
 
     set_client_server_flag(SERVER_IPV4, CLIENT_IPV4, CLIENT_IPV4,
-                           &server_flag, &caller_cfg->client_flag, 
+                           &server_flag, &caller_cfg->client_flag,
                            &callee_cfg->client_flag);
 
 

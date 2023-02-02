@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/assert.h>
@@ -32,7 +32,7 @@ static struct cap_info
 {
     const char *name;
     const char *info;
-} cap_infos[] = 
+} cap_infos[] =
 {
     DEFINE_CAP("ext-fmt",     "Extended/non-PCM format"),
     DEFINE_CAP("latency-in",  "Input latency/buffer size setting"),
@@ -52,7 +52,7 @@ static struct cap_info
 
 
 /*
- * The device index seen by application and driver is different. 
+ * The device index seen by application and driver is different.
  *
  * At application level, device index is index to global list of device.
  * At driver level, device index is index to device list on that particular
@@ -154,8 +154,8 @@ PJ_DEF(pj_status_t) pjmedia_aud_driver_init(unsigned drv_idx,
             drv->dev_idx = i;
         }
 
-        if (drv->play_dev_idx >= 0 && drv->rec_dev_idx >= 0 && 
-            drv->dev_idx >= 0) 
+        if (drv->play_dev_idx >= 0 && drv->rec_dev_idx >= 0 &&
+            drv->dev_idx >= 0)
         {
             /* Done. */
             break;
@@ -187,7 +187,7 @@ PJ_DEF(void) pjmedia_aud_driver_deinit(unsigned drv_idx)
     }
 
     pj_bzero(drv, sizeof(*drv));
-    drv->play_dev_idx = drv->rec_dev_idx = 
+    drv->play_dev_idx = drv->rec_dev_idx =
                         drv->dev_idx = PJMEDIA_AUD_INVALID_DEV;
 }
 
@@ -316,11 +316,11 @@ PJ_DEF(pj_status_t) pjmedia_aud_param_get_cap( const pjmedia_aud_param *param,
 PJ_DEF(pj_status_t) pjmedia_aud_dev_refresh(void)
 {
     unsigned i;
-    
+
     aud_subsys.dev_cnt = 0;
     for (i=0; i<aud_subsys.drv_cnt; ++i) {
         pjmedia_aud_driver *drv = &aud_subsys.drv[i];
-        
+
         if (drv->f && drv->f->op->refresh) {
             pj_status_t status = drv->f->op->refresh(drv->f);
             if (status != PJ_SUCCESS) {
@@ -340,7 +340,7 @@ PJ_DEF(unsigned) pjmedia_aud_dev_count(void)
 }
 
 /* Internal: convert local index to global device index */
-static pj_status_t make_global_index(unsigned drv_idx, 
+static pj_status_t make_global_index(unsigned drv_idx,
                                      pjmedia_aud_dev_index *id)
 {
     if (*id < 0) {
@@ -351,7 +351,7 @@ static pj_status_t make_global_index(unsigned drv_idx,
     PJ_ASSERT_RETURN(aud_subsys.drv[drv_idx].f, PJ_EBUG);
 
     /* Check that device index is valid */
-    PJ_ASSERT_RETURN(*id>=0 && *id<(int)aud_subsys.drv[drv_idx].dev_cnt, 
+    PJ_ASSERT_RETURN(*id>=0 && *id<(int)aud_subsys.drv[drv_idx].dev_cnt,
                      PJ_EBUG);
 
     *id += aud_subsys.drv[drv_idx].start_idx;
@@ -377,14 +377,14 @@ static pj_status_t lookup_dev(pjmedia_aud_dev_index id,
                 id = drv->dev_idx;
                 make_global_index(i, &id);
                 break;
-            } else if (id==PJMEDIA_AUD_DEFAULT_CAPTURE_DEV && 
-                drv->rec_dev_idx >= 0) 
+            } else if (id==PJMEDIA_AUD_DEFAULT_CAPTURE_DEV &&
+                drv->rec_dev_idx >= 0)
             {
                 id = drv->rec_dev_idx;
                 make_global_index(i, &id);
                 break;
-            } else if (id==PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV && 
-                drv->play_dev_idx >= 0) 
+            } else if (id==PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV &&
+                drv->play_dev_idx >= 0)
             {
                 id = drv->play_dev_idx;
                 make_global_index(i, &id);
@@ -555,7 +555,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
     PJ_ASSERT_RETURN(f != NULL, PJ_EBUG);
 
     /* For now, rec_id and play_id must belong to the same factory */
-    PJ_ASSERT_RETURN((param.dir != PJMEDIA_DIR_CAPTURE_PLAYBACK) || 
+    PJ_ASSERT_RETURN((param.dir != PJMEDIA_DIR_CAPTURE_PLAYBACK) ||
                      (rec_f == play_f),
                      PJMEDIA_EAUD_INVDEV);
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2019-2019 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef __SSL_SOCK_IMP_COMMON_H__
@@ -73,7 +73,7 @@ typedef struct write_data_t {
  */
 typedef struct send_buf_t {
     char                *buf;
-    pj_size_t            max_len;    
+    pj_size_t            max_len;
     char                *start;
     pj_size_t            len;
 } send_buf_t;
@@ -95,14 +95,14 @@ typedef struct circ_buf_t {
 struct pj_ssl_sock_t
 {
     pj_pool_t            *pool;
-    pj_pool_t            *info_pool; /* this is for certificate chain 
-                                      * information allocation. Don't use for 
+    pj_pool_t            *info_pool; /* this is for certificate chain
+                                      * information allocation. Don't use for
                                       * other purposes. */
     pj_ssl_sock_t        *parent;
     pj_ssl_sock_param     param;
     pj_ssl_sock_param     newsock_param;
     pj_ssl_cert_t        *cert;
-    
+
     pj_ssl_cert_info      local_cert_info;
     pj_ssl_cert_info      remote_cert_info;
 
@@ -122,7 +122,7 @@ struct pj_ssl_sock_t
     pj_sockaddr           local_addr;
     pj_sockaddr           rem_addr;
     int                   addr_len;
-    
+
     pj_bool_t             read_started;
     pj_size_t             read_size;
     pj_uint32_t           read_flags;

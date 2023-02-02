@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/plc.h>
 #include <pjmedia/errno.h>
@@ -90,7 +90,7 @@ PJ_DEF(pj_status_t) pjmedia_plc_save( pjmedia_plc *plc,
                                       pj_int16_t *frame )
 {
     PJ_ASSERT_RETURN(plc && frame, PJ_EINVAL);
- 
+
     plc->op->plc_save(plc->obj, frame);
     return PJ_SUCCESS;
 }
@@ -103,7 +103,7 @@ PJ_DEF(pj_status_t) pjmedia_plc_generate( pjmedia_plc *plc,
                                           pj_int16_t *frame )
 {
     PJ_ASSERT_RETURN(plc && frame, PJ_EINVAL);
-    
+
     plc->op->plc_generate(plc->obj, frame);
     return PJ_SUCCESS;
 }
@@ -120,7 +120,7 @@ struct wsola_plc
 };
 
 
-static void* plc_wsola_create(pj_pool_t *pool, unsigned clock_rate, 
+static void* plc_wsola_create(pj_pool_t *pool, unsigned clock_rate,
                               unsigned samples_per_frame)
 {
     struct wsola_plc *o;
@@ -155,7 +155,7 @@ static void plc_wsola_save(void *plc, pj_int16_t *frame)
 static void plc_wsola_generate(void *plc, pj_int16_t *frame)
 {
     struct wsola_plc *o = (struct wsola_plc*) plc;
-    
+
     pjmedia_wsola_generate(o->wsola, frame);
     o->prev_lost = PJ_TRUE;
 }

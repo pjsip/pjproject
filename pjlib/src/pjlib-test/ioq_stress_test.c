@@ -362,8 +362,8 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     unsigned i;
 
 #if PJ_WIN64 || PJ_WIN32
-    if (test->cfg.expected_ret_code==RETCODE_CONNECT_FAILED && 
-        status==PJ_SUCCESS) 
+    if (test->cfg.expected_ret_code==RETCODE_CONNECT_FAILED &&
+        status==PJ_SUCCESS)
     {
         /* On Windows, when the server socket is closed even without accept(),
         * connect() returns success but subsequent write will return

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -65,9 +65,9 @@ static pj_bool_t srv_on_data_recvfrom(pj_activesock_t *asock,
         pj_stun_msg *req_msg, *res_msg;
 
         pool = pj_pool_create(mem, "stunsrv", 512, 512, NULL);
-    
+
         /* Parse request */
-        status = pj_stun_msg_decode(pool, (pj_uint8_t*)data, size, 
+        status = pj_stun_msg_decode(pool, (pj_uint8_t*)data, size,
                                     PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
                                     &req_msg, NULL, NULL);
         if (status != PJ_SUCCESS) {
@@ -89,8 +89,8 @@ static pj_bool_t srv_on_data_recvfrom(pj_activesock_t *asock,
         if (srv->flag & WITH_MAPPED) {
             pj_sockaddr addr;
             pj_bool_t use_ipv6 = (srv->addr.addr.sa_family == pj_AF_INET6());
-            
-            pj_sockaddr_init(GET_AF(use_ipv6), &addr, &srv->ip_to_send, 
+
+            pj_sockaddr_init(GET_AF(use_ipv6), &addr, &srv->ip_to_send,
                              srv->port_to_send);
 
             pj_stun_msg_add_sockaddr_attr(pool, res_msg, PJ_STUN_ATTR_MAPPED_ADDR,
@@ -98,17 +98,17 @@ static pj_bool_t srv_on_data_recvfrom(pj_activesock_t *asock,
         } else if (srv->flag & WITH_XOR_MAPPED) {
             pj_sockaddr addr;
             pj_bool_t use_ipv6 = (srv->addr.addr.sa_family == pj_AF_INET6());
-            
-            pj_sockaddr_init(GET_AF(use_ipv6), &addr, &srv->ip_to_send, 
+
+            pj_sockaddr_init(GET_AF(use_ipv6), &addr, &srv->ip_to_send,
                              srv->port_to_send);
 
-            pj_stun_msg_add_sockaddr_attr(pool, res_msg, 
+            pj_stun_msg_add_sockaddr_attr(pool, res_msg,
                                           PJ_STUN_ATTR_XOR_MAPPED_ADDR,
                                           PJ_TRUE, &addr, sizeof(addr));
         }
 
         /* Encode */
-        status = pj_stun_msg_encode(res_msg, (pj_uint8_t*)data, 100, 0, 
+        status = pj_stun_msg_encode(res_msg, (pj_uint8_t*)data, 100, 0,
                                     NULL, &size);
         if (status != PJ_SUCCESS) {
             app_perror("   pj_stun_msg_encode()", status);
@@ -118,7 +118,7 @@ static pj_bool_t srv_on_data_recvfrom(pj_activesock_t *asock,
 
         /* Send back */
         sent = size;
-        pj_activesock_sendto(asock, &srv->send_key, data, &sent, 0, 
+        pj_activesock_sendto(asock, &srv->send_key, data, &sent, 0,
                              src_addr, addr_len);
 
         pj_pool_release(pool);
@@ -126,7 +126,7 @@ static pj_bool_t srv_on_data_recvfrom(pj_activesock_t *asock,
     } else if (srv->flag & ECHO) {
         /* Send back */
         sent = size;
-        pj_activesock_sendto(asock, &srv->send_key, data, &sent, 0, 
+        pj_activesock_sendto(asock, &srv->send_key, data, &sent, 0,
                              src_addr, addr_len);
 
     }
@@ -156,7 +156,7 @@ static pj_status_t create_server(pj_pool_t *pool,
     pj_bzero(&activesock_cb, sizeof(activesock_cb));
     activesock_cb.on_data_recvfrom = &srv_on_data_recvfrom;
     status = pj_activesock_create_udp(pool, &srv->addr, NULL, ioqueue,
-                                      &activesock_cb, srv, &srv->asock, 
+                                      &activesock_cb, srv, &srv->asock,
                                       &srv->addr);
     if (status != PJ_SUCCESS)
         return status;
@@ -194,7 +194,7 @@ struct stun_client
     unsigned             on_rx_data_cnt;
 };
 
-static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock, 
+static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock,
                                      pj_stun_sock_op op,
                                      pj_status_t status)
 {
@@ -253,7 +253,7 @@ static pj_status_t create_client(pj_stun_config *cfg,
     pj_bzero(&cb, sizeof(cb));
     cb.on_status = &stun_sock_on_status;
     cb.on_rx_data = &stun_sock_on_rx_data;
-    status = pj_stun_sock_create(cfg, NULL, GET_AF(use_ipv6), &cb, &sock_cfg, 
+    status = pj_stun_sock_create(cfg, NULL, GET_AF(use_ipv6), &cb, &sock_cfg,
                                  client, &client->sock);
     if (status != PJ_SUCCESS) {
         app_perror("   pj_stun_sock_create()", status);
@@ -298,7 +298,7 @@ static void handle_events(pj_stun_config *cfg, unsigned msec_delay)
 /*
  * Timeout test: scenario when no response is received from server
  */
-static int timeout_test(pj_stun_config *cfg, pj_bool_t destroy_on_err, 
+static int timeout_test(pj_stun_config *cfg, pj_bool_t destroy_on_err,
                         pj_bool_t use_ipv6)
 {
     struct stun_srv *srv;
@@ -308,7 +308,7 @@ static int timeout_test(pj_stun_config *cfg, pj_bool_t destroy_on_err,
     int i, ret = 0;
     pj_status_t status;
 
-    PJ_LOG(3,(THIS_FILE, "  timeout test [%d] - (%s)", destroy_on_err, 
+    PJ_LOG(3,(THIS_FILE, "  timeout test [%d] - (%s)", destroy_on_err,
            (use_ipv6)?"IPv6":"IPv4"));
 
     status =  create_client(cfg, &client, destroy_on_err, use_ipv6);
@@ -323,7 +323,7 @@ static int timeout_test(pj_stun_config *cfg, pj_bool_t destroy_on_err,
 
     srv_addr = (use_ipv6)?pj_str("::1"):pj_str("127.0.0.1");
 
-    status = pj_stun_sock_start(client->sock, &srv_addr, 
+    status = pj_stun_sock_start(client->sock, &srv_addr,
                                 pj_sockaddr_get_port(&srv->addr), NULL);
     if (status != PJ_SUCCESS) {
         destroy_server(srv);
@@ -382,7 +382,7 @@ on_return:
  * Invalid response scenario: when server returns no MAPPED-ADDRESS or
  * XOR-MAPPED-ADDRESS attribute.
  */
-static int missing_attr_test(pj_stun_config *cfg, pj_bool_t destroy_on_err, 
+static int missing_attr_test(pj_stun_config *cfg, pj_bool_t destroy_on_err,
                              pj_bool_t use_ipv6)
 {
     struct stun_srv *srv;
@@ -392,14 +392,14 @@ static int missing_attr_test(pj_stun_config *cfg, pj_bool_t destroy_on_err,
     int i, ret = 0;
     pj_status_t status;
 
-    PJ_LOG(3,(THIS_FILE, "  missing attribute test [%d] - (%s)", 
+    PJ_LOG(3,(THIS_FILE, "  missing attribute test [%d] - (%s)",
            destroy_on_err, (use_ipv6)?"IPv6":"IPv4"));
 
     status =  create_client(cfg, &client, destroy_on_err, use_ipv6);
     if (status != PJ_SUCCESS)
         return -110;
 
-    status = create_server(client->pool, cfg->ioqueue, RESPOND_STUN, use_ipv6, 
+    status = create_server(client->pool, cfg->ioqueue, RESPOND_STUN, use_ipv6,
                            &srv);
     if (status != PJ_SUCCESS) {
         destroy_client(client);
@@ -407,8 +407,8 @@ static int missing_attr_test(pj_stun_config *cfg, pj_bool_t destroy_on_err,
     }
     srv_addr = (use_ipv6)?pj_str("::1"):pj_str("127.0.0.1");
 
-    status = pj_stun_sock_start(client->sock, &srv_addr, 
-                                pj_sockaddr_get_port(&srv->addr), NULL);                                
+    status = pj_stun_sock_start(client->sock, &srv_addr,
+                                pj_sockaddr_get_port(&srv->addr), NULL);
     if (status != PJ_SUCCESS) {
         destroy_server(srv);
         destroy_client(client);
@@ -467,14 +467,14 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
     int i, ret = 0;
     pj_status_t status;
 
-    PJ_LOG(3,(THIS_FILE, "  normal operation - (%s)", 
+    PJ_LOG(3,(THIS_FILE, "  normal operation - (%s)",
            (use_ipv6)?"IPv6":"IPv4"));
 
     status =  create_client(cfg, &client, PJ_TRUE, use_ipv6);
     if (status != PJ_SUCCESS)
         return -310;
 
-    status = create_server(client->pool, cfg->ioqueue, RESPOND_STUN|WITH_XOR_MAPPED, 
+    status = create_server(client->pool, cfg->ioqueue, RESPOND_STUN|WITH_XOR_MAPPED,
                            use_ipv6, &srv);
     if (status != PJ_SUCCESS) {
         destroy_client(client);
@@ -488,7 +488,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
 
     srv_addr = (use_ipv6)?pj_str("::1"):pj_str("127.0.0.1");
 
-    status = pj_stun_sock_start(client->sock, &srv_addr, 
+    status = pj_stun_sock_start(client->sock, &srv_addr,
                                 pj_sockaddr_get_port(&srv->addr), NULL);
     if (status != PJ_SUCCESS) {
         destroy_server(srv);
@@ -545,7 +545,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
         goto on_return;
     }
     /* verify the mapped address */
-    pj_sockaddr_init(GET_AF(use_ipv6), &mapped_addr, 
+    pj_sockaddr_init(GET_AF(use_ipv6), &mapped_addr,
                      &srv->ip_to_send, srv->port_to_send);
     if (pj_sockaddr_cmp(&info.mapped_addr, &mapped_addr) != 0) {
         PJ_LOG(3,(THIS_FILE, "    error: mapped address mismatched"));
@@ -583,7 +583,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
         PJ_LOG(3,(THIS_FILE, "     sending to %s", pj_sockaddr_print(&info.srv_addr, txt, sizeof(txt), 3)));
     }
     status = pj_stun_sock_sendto(client->sock, NULL, &ret, sizeof(ret),
-                                 0, &info.srv_addr, 
+                                 0, &info.srv_addr,
                                  pj_sockaddr_get_len(&info.srv_addr));
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
         app_perror("    error: server sending data", status);
@@ -683,7 +683,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
     srv->flag = RESPOND_STUN | WITH_XOR_MAPPED;
 
     /* Change mapped address in the response */
-    srv->ip_to_send = (use_ipv6)?pj_str("2002:202:202::"):pj_str("2.2.2.2");    
+    srv->ip_to_send = (use_ipv6)?pj_str("2002:202:202::"):pj_str("2.2.2.2");
     srv->port_to_send++;
 
     /* Reset server */
@@ -754,7 +754,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
         goto on_return;
     }
     /* verify the mapped address */
-    pj_sockaddr_init(GET_AF(use_ipv6), &mapped_addr, 
+    pj_sockaddr_init(GET_AF(use_ipv6), &mapped_addr,
                      &srv->ip_to_send, srv->port_to_send);
     if (pj_sockaddr_cmp(&info.mapped_addr, &mapped_addr) != 0) {
         PJ_LOG(3,(THIS_FILE, "    error: mapped address mismatched"));
@@ -779,7 +779,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
      * Part 5: Failed keep-alive
      */
     PJ_LOG(3,(THIS_FILE, "    failed keep-alive scenario"));
-    
+
     /* Change server operation mode to respond without attribute */
     srv->flag = RESPOND_STUN;
 
@@ -864,7 +864,7 @@ int stun_sock_test(void)
         ret = -8;
         goto on_return;
     }
-    
+
     pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
 
     DO_TEST(timeout_test(&stun_cfg, PJ_FALSE, USE_IPV6));

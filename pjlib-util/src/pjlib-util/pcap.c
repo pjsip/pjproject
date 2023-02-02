@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/pcap.h>
 #include <pj/assert.h>
@@ -34,7 +34,7 @@
 
 #pragma pack(1)
 
-typedef struct pj_pcap_hdr 
+typedef struct pj_pcap_hdr
 {
     pj_uint32_t magic_number;   /* magic number */
     pj_uint16_t version_major;  /* major version number */
@@ -45,7 +45,7 @@ typedef struct pj_pcap_hdr
     pj_uint32_t network;        /* data link type */
 } pj_pcap_hdr;
 
-typedef struct pj_pcap_rec_hdr 
+typedef struct pj_pcap_rec_hdr
 {
     pj_uint32_t ts_sec;         /* timestamp seconds */
     pj_uint32_t ts_usec;        /* timestamp microseconds */
@@ -55,7 +55,7 @@ typedef struct pj_pcap_rec_hdr
 
 #if 0
 /* gcc insisted on aligning this struct to 32bit on ARM */
-typedef struct pj_pcap_eth_hdr 
+typedef struct pj_pcap_eth_hdr
 {
     pj_uint8_t  dest[6];
     pj_uint8_t  src[6];
@@ -65,7 +65,7 @@ typedef struct pj_pcap_eth_hdr
 typedef pj_uint8_t pj_pcap_eth_hdr[14];
 #endif
 
-typedef struct pj_pcap_ip_hdr 
+typedef struct pj_pcap_ip_hdr
 {
     pj_uint8_t  v_ihl;
     pj_uint8_t  tos;
@@ -118,7 +118,7 @@ PJ_DEF(pj_status_t) pj_pcap_open(pj_pool_t *pool,
     TRACE_(("pcap", "sizeof(pj_pcap_udp_hdr)=%d",
             sizeof(pj_pcap_udp_hdr)));
     PJ_ASSERT_RETURN(sizeof(pj_pcap_udp_hdr)==8, PJ_EBUG);
-    
+
     file = PJ_POOL_ZALLOC_T(pool, pj_pcap_file);
 
     pj_ansi_strcpy(file->obj_name, "pcap");
@@ -148,7 +148,7 @@ PJ_DEF(pj_status_t) pj_pcap_open(pj_pool_t *pool,
     }
 
     TRACE_((file->obj_name, "PCAP file %s opened", path));
-    
+
     *p_file = file;
     return PJ_SUCCESS;
 }
@@ -189,7 +189,7 @@ static pj_status_t skip(pj_oshandle_t fd, pj_off_t bytes)
     pj_status_t status;
     status = pj_file_setpos(fd, bytes, PJ_SEEK_CUR);
     if (status != PJ_SUCCESS)
-        return status; 
+        return status;
     return PJ_SUCCESS;
 }
 
@@ -211,7 +211,7 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
     PJ_ASSERT_RETURN(*udp_payload_size, PJ_EINVAL);
 
     /* Check data link type in PCAP file header */
-    if ((file->filter.link && 
+    if ((file->filter.link &&
             file->hdr.network != (pj_uint32_t)file->filter.link) ||
         file->hdr.network != PJ_PCAP_LINK_TYPE_ETH)
     {
@@ -238,7 +238,7 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 
         /* Read PCAP packet header */
         sz = sizeof(tmp.rec);
-        status = read_file(file, &tmp.rec, &sz); 
+        status = read_file(file, &tmp.rec, &sz);
         if (status != PJ_SUCCESS) {
             TRACE_((file->obj_name, "read_file() error: %d", status));
             return status;
@@ -271,7 +271,7 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
         }
 
         sz_read += sz;
-            
+
         /* Read IP header */
         sz = sizeof(tmp.ip);
         status = read_file(file, &tmp.ip, &sz);
@@ -284,7 +284,7 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 
         /* Skip if IP source mismatch */
         if (file->filter.ip_src && tmp.ip.ip_src != file->filter.ip_src) {
-            TRACE_((file->obj_name, "IP source %s mismatch, skipping", 
+            TRACE_((file->obj_name, "IP source %s mismatch, skipping",
                     pj_inet_ntop2(pj_AF_INET(), (pj_in_addr*)&tmp.ip.ip_src,
                                   addr, sizeof(addr))));
             SKIP_PKT();
@@ -293,7 +293,7 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 
         /* Skip if IP destination mismatch */
         if (file->filter.ip_dst && tmp.ip.ip_dst != file->filter.ip_dst) {
-            TRACE_((file->obj_name, "IP detination %s mismatch, skipping", 
+            TRACE_((file->obj_name, "IP detination %s mismatch, skipping",
                     pj_inet_ntop2(pj_AF_INET(), (pj_in_addr*)&tmp.ip.ip_dst,
                                   addr, sizeof(addr))));
             SKIP_PKT();
@@ -302,7 +302,7 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 
         /* Skip if proto mismatch */
         if (file->filter.proto && tmp.ip.proto != file->filter.proto) {
-            TRACE_((file->obj_name, "IP proto %d mismatch, skipping", 
+            TRACE_((file->obj_name, "IP proto %d mismatch, skipping",
                     tmp.ip.proto));
             SKIP_PKT();
             continue;
@@ -321,20 +321,20 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
             sz_read += sz;
 
             /* Skip if source port mismatch */
-            if (file->filter.src_port && 
-                tmp.udp.src_port != file->filter.src_port) 
+            if (file->filter.src_port &&
+                tmp.udp.src_port != file->filter.src_port)
             {
-                TRACE_((file->obj_name, "UDP src port %d mismatch, skipping", 
+                TRACE_((file->obj_name, "UDP src port %d mismatch, skipping",
                         pj_ntohs(tmp.udp.src_port)));
                 SKIP_PKT();
                 continue;
             }
 
             /* Skip if destination port mismatch */
-            if (file->filter.dst_port && 
-                tmp.udp.dst_port != file->filter.dst_port) 
+            if (file->filter.dst_port &&
+                tmp.udp.dst_port != file->filter.dst_port)
             {
-                TRACE_((file->obj_name, "UDP dst port %d mismatch, skipping", 
+                TRACE_((file->obj_name, "UDP dst port %d mismatch, skipping",
                         pj_ntohs(tmp.udp.dst_port)));
                 SKIP_PKT();
                 continue;
@@ -356,7 +356,7 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 
         /* Check if payload fits the buffer */
         if (sz > (pj_ssize_t)*udp_payload_size) {
-            TRACE_((file->obj_name, 
+            TRACE_((file->obj_name,
                     "Error: packet too large (%d bytes required)", sz));
             SKIP_PKT();
             return PJ_ETOOSMALL;

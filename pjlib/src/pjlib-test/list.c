@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -128,7 +128,7 @@ int list_test()
         return -1;
     }
 
-    // 
+    //
     // Check merge_first()
     //
     pj_list_init(&list);
@@ -206,7 +206,7 @@ int list_test()
         if (p != &nodes[i]) {
             return -1;
         }
-        p = (list_node*) pj_list_search(&list, (void*)(pj_ssize_t)i, 
+        p = (list_node*) pj_list_search(&list, (void*)(pj_ssize_t)i,
                                         &compare_node);
         pj_assert( p == &nodes[i] );
         if (p != &nodes[i]) {
@@ -218,7 +218,7 @@ int list_test()
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_list_test;
 #endif  /* INCLUDE_LIST_TEST */

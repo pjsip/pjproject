@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/sdp.h>
 #include <pj/os.h>
@@ -99,7 +99,7 @@ static int sdp_conform_test(pj_pool_factory *pf)
     for (i=0; i<sizeof(sdp)/sizeof(sdp[0]); ++i) {
         pool = pj_pool_create(pf, "sdp", 4096, 0, NULL);
         ses = pjsdp_parse(sdp[i], strlen(sdp[i]), pool);
-        len = pjsdp_print(ses, buf, sizeof(buf)); 
+        len = pjsdp_print(ses, buf, sizeof(buf));
         buf[len] = '\0';
         printf("%s\n", buf);
         pj_pool_release(pool);

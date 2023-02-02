@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_ECHO_H__
 #define __PJMEDIA_ECHO_H__
@@ -36,7 +36,7 @@
  *
  * This section describes API to perform echo cancellation to audio signal.
  * There may be multiple echo canceller implementation in PJMEDIA, ranging
- * from simple echo suppressor to a full Accoustic Echo Canceller/AEC. By 
+ * from simple echo suppressor to a full Accoustic Echo Canceller/AEC. By
  * using this API, application should be able to use which EC backend to
  * use base on the requirement and capability of the platform.
  */
@@ -111,7 +111,7 @@ typedef enum pjmedia_echo_flag
      * will be used instead of device EC.
      */
     PJMEDIA_ECHO_USE_SW_ECHO = 64,
-    
+
     /**
      * If PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR flag is specified, the echo
      * canceller will also apply noise suppressor method to reduce noise.
@@ -123,35 +123,35 @@ typedef enum pjmedia_echo_flag
      * canceller will also apply automatic gain control.
      */
     PJMEDIA_ECHO_USE_GAIN_CONTROLLER = 256,
-    
+
     /**
-     * Use default aggressiveness setting for the echo canceller algorithm. 
+     * Use default aggressiveness setting for the echo canceller algorithm.
      * This setting is mutually exclusive with the other aggressiveness
      * settings.
      */
     PJMEDIA_ECHO_AGGRESSIVENESS_DEFAULT = 0,
-    
+
     /**
      * Use conservative aggressiveness setting for the echo canceller
      * algorithm. This setting is mutually exclusive with the other
      * aggressiveness settings.
      */
     PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE = 0x1000,
-    
+
     /**
-     * Use moderate aggressiveness setting for the echo canceller algorithm. 
+     * Use moderate aggressiveness setting for the echo canceller algorithm.
      * This setting is mutually exclusive with the other aggressiveness
      * settings.
      */
     PJMEDIA_ECHO_AGGRESSIVENESS_MODERATE = 0x2000,
-    
+
     /**
      * Use aggressive aggressiveness setting for the echo canceller
      * algorithm. This setting is mutually exclusive with the other
      * aggressiveness settings.
      */
     PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE = 0x3000,
-    
+
     /**
      * For internal use.
      */
@@ -171,7 +171,7 @@ typedef struct pjmedia_echo_stat
     /**
      * The name of the EC backend.
      * NULL if not specified.
-     */    
+     */
     const char *name;
 
     /**
@@ -257,18 +257,18 @@ PJ_DECL(void) pjmedia_echo_stat_default(pjmedia_echo_stat *stat);
 
 
 /**
- * Create the echo canceller. 
+ * Create the echo canceller.
  *
  * @param pool              Pool to allocate memory.
  * @param clock_rate        Media clock rate/sampling rate.
  * @param samples_per_frame Number of samples per frame.
  * @param tail_ms           Tail length, miliseconds.
- * @param latency_ms        Total lacency introduced by playback and 
+ * @param latency_ms        Total lacency introduced by playback and
  *                          recording device. Set to zero if the latency
  *                          is not known.
  * @param options           Options. If PJMEDIA_ECHO_SIMPLE is specified,
- *                          then a simple echo suppressor implementation 
- *                          will be used instead of an accoustic echo 
+ *                          then a simple echo suppressor implementation
+ *                          will be used instead of an accoustic echo
  *                          cancellation.
  *                          See #pjmedia_echo_flag for other options.
  * @param p_echo            Pointer to receive the Echo Canceller state.
@@ -284,19 +284,19 @@ PJ_DECL(pj_status_t) pjmedia_echo_create(pj_pool_t *pool,
                                          pjmedia_echo_state **p_echo );
 
 /**
- * Create multi-channel the echo canceller. 
+ * Create multi-channel the echo canceller.
  *
  * @param pool              Pool to allocate memory.
  * @param clock_rate        Media clock rate/sampling rate.
  * @param channel_count     Number of channels.
  * @param samples_per_frame Number of samples per frame.
  * @param tail_ms           Tail length, miliseconds.
- * @param latency_ms        Total lacency introduced by playback and 
+ * @param latency_ms        Total lacency introduced by playback and
  *                          recording device. Set to zero if the latency
  *                          is not known.
  * @param options           Options. If PJMEDIA_ECHO_SIMPLE is specified,
- *                          then a simple echo suppressor implementation 
- *                          will be used instead of an accoustic echo 
+ *                          then a simple echo suppressor implementation
+ *                          will be used instead of an accoustic echo
  *                          cancellation.
  *                          See #pjmedia_echo_flag for other options.
  * @param p_echo            Pointer to receive the Echo Canceller state.
@@ -313,7 +313,7 @@ PJ_DECL(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
                                           pjmedia_echo_state **p_echo );
 
 /**
- * Destroy the Echo Canceller. 
+ * Destroy the Echo Canceller.
  *
  * @param echo          The Echo Canceller.
  *
@@ -352,7 +352,7 @@ PJ_DECL(pj_status_t) pjmedia_echo_get_stat(pjmedia_echo_state *echo,
  * @param echo          The Echo Canceller.
  * @param play_frm      Sample buffer containing frame to be played
  *                      (or has been played) to the playback device.
- *                      The frame must contain exactly samples_per_frame 
+ *                      The frame must contain exactly samples_per_frame
  *                      number of samples.
  *
  * @return              PJ_SUCCESS on success.
@@ -362,17 +362,17 @@ PJ_DECL(pj_status_t) pjmedia_echo_playback(pjmedia_echo_state *echo,
 
 
 /**
- * Let the Echo Canceller know that a frame has been captured from the 
+ * Let the Echo Canceller know that a frame has been captured from the
  * microphone. The Echo Canceller will cancel the echo from the captured
  * signal, using the internal buffer (supplied by #pjmedia_echo_playback())
  * as the FES (Far End Speech) reference.
  *
  * @param echo          The Echo Canceller.
- * @param rec_frm       On input, it contains the input signal (captured 
+ * @param rec_frm       On input, it contains the input signal (captured
  *                      from microphone) which echo is to be removed.
  *                      Upon returning this function, this buffer contain
  *                      the processed signal with the echo removed.
- *                      The frame must contain exactly samples_per_frame 
+ *                      The frame must contain exactly samples_per_frame
  *                      number of samples.
  * @param options       Echo cancellation options, reserved for future use.
  *                      Put zero for now.
@@ -388,13 +388,13 @@ PJ_DECL(pj_status_t) pjmedia_echo_capture(pjmedia_echo_state *echo,
  * Perform echo cancellation.
  *
  * @param echo          The Echo Canceller.
- * @param rec_frm       On input, it contains the input signal (captured 
+ * @param rec_frm       On input, it contains the input signal (captured
  *                      from microphone) which echo is to be removed.
  *                      Upon returning this function, this buffer contain
  *                      the processed signal with the echo removed.
  * @param play_frm      Sample buffer containing frame to be played
  *                      (or has been played) to the playback device.
- *                      The frame must contain exactly samples_per_frame 
+ *                      The frame must contain exactly samples_per_frame
  *                      number of samples.
  * @param options       Echo cancellation options, reserved for future use.
  *                      Put zero for now.

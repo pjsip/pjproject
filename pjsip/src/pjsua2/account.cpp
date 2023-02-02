@@ -127,7 +127,7 @@ void SrtpCrypto::fromPj(const pjmedia_srtp_crypto &prm)
 pjmedia_srtp_crypto SrtpCrypto::toPj() const
 {
     pjmedia_srtp_crypto crypto;
-    
+
     crypto.key      = str2Pj(this->key);
     crypto.name     = str2Pj(this->name);
     crypto.flags    = this->flags;
@@ -985,7 +985,7 @@ void Account::create(const AccountConfig &acc_cfg,
                      bool make_default) PJSUA2_THROW(Error)
 {
     pjsua_acc_config pj_acc_cfg;
-    
+
     acc_cfg.toPj(pj_acc_cfg);
 
     for (unsigned i = 0; i < pj_acc_cfg.cred_count; ++i) {
@@ -1018,7 +1018,7 @@ void Account::shutdown()
 void Account::modify(const AccountConfig &acc_cfg) PJSUA2_THROW(Error)
 {
     pjsua_acc_config pj_acc_cfg;
-    
+
     acc_cfg.toPj(pj_acc_cfg);
     pj_acc_cfg.user_data = (void*)this;
     PJSUA2_CHECK_EXPR( pjsua_acc_modify(id, &pj_acc_cfg) );

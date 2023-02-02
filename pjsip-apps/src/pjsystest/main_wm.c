@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "gui.h"
 #include "systest.h"
@@ -65,13 +65,13 @@ static void log_writer(int level, const char *buffer, int len)
         SendMessage(g_hWndLog, EM_SETSEL, (WPARAM)cur_len, (LPARAM)cur_len);
         SendMessage(g_hWndLog, EM_REPLACESEL, (WPARAM)0, (LPARAM)buf);
     }
-    
+
     //uncomment to forward to the original log writer
     if (g_log_writer_orig)
         (*g_log_writer_orig)(level, buffer, len);
 }
 
-/* execute menu handler for id menu specified, return FALSE if menu handler 
+/* execute menu handler for id menu specified, return FALSE if menu handler
  * is not found.
  */
 static BOOL handle_menu(UINT id)
@@ -105,14 +105,14 @@ static UINT generate_submenu(HMENU parent, UINT id_start, gui_menu *menu)
 
             /* add separator */
             AppendMenu(parent, MF_SEPARATOR, 0, 0);
-        
+
         }  else if (menu->submenus[i]->submenu_cnt != 0) {
-            
+
             /* this submenu item has children, generate popup menu */
             HMENU hMenu;
             wchar_t buf[64];
-            
-            pj_ansi_to_unicode(menu->submenus[i]->title, 
+
+            pj_ansi_to_unicode(menu->submenus[i]->title,
                                pj_ansi_strlen(menu->submenus[i]->title),
                                buf, 64);
 
@@ -124,8 +124,8 @@ static UINT generate_submenu(HMENU parent, UINT id_start, gui_menu *menu)
 
             /* this submenu item is leaf, register the handler */
             wchar_t buf[64];
-            
-            pj_ansi_to_unicode(menu->submenus[i]->title, 
+
+            pj_ansi_to_unicode(menu->submenus[i]->title,
                                pj_ansi_strlen(menu->submenus[i]->title),
                                buf, 64);
 
@@ -133,7 +133,7 @@ static UINT generate_submenu(HMENU parent, UINT id_start, gui_menu *menu)
 
             if (menu->submenus[i]->handler) {
                 g_menu_handlers[g_menu_handler_cnt].id = id;
-                g_menu_handlers[g_menu_handler_cnt].handler = 
+                g_menu_handlers[g_menu_handler_cnt].handler =
                                         menu->submenus[i]->handler;
                 ++g_menu_handler_cnt;
             }
@@ -155,10 +155,10 @@ BOOL InitDialog()
 }
 
 LRESULT CALLBACK DialogProc(const HWND hWnd,
-                            const UINT Msg, 
+                            const UINT Msg,
                             const WPARAM wParam,
-                            const LPARAM lParam) 
-{   
+                            const LPARAM lParam)
+{
     LRESULT res = 0;
 
     switch (Msg) {
@@ -207,17 +207,17 @@ LRESULT CALLBACK DialogProc(const HWND hWnd,
 pj_status_t gui_init(gui_menu *menu)
 {
     WNDCLASS wc;
-    HWND hWnd = NULL;   
+    HWND hWnd = NULL;
     RECT r;
     DWORD dwStyle;
 
     pj_status_t status  = PJ_SUCCESS;
-    
+
     /* Check if app is running. If it's running then focus on the window */
     hWnd = FindWindow(MAINWINDOWCLASS, MAINWINDOWTITLE);
 
     if (NULL != hWnd) {
-        SetForegroundWindow(hWnd);    
+        SetForegroundWindow(hWnd);
         return status;
     }
 
@@ -233,7 +233,7 @@ pj_status_t gui_init(gui_menu *menu)
     wc.hbrBackground = (HBRUSH) GetStockObject(WHITE_BRUSH);
     wc.lpszMenuName     = 0;
     wc.lpszClassName = MAINWINDOWCLASS;
-    
+
     if (!RegisterClass(&wc) != 0) {
         DWORD err = GetLastError();
         return PJ_RETURN_OS_ERROR(err);
@@ -241,7 +241,7 @@ pj_status_t gui_init(gui_menu *menu)
 
     /* Create the app. window */
     g_hWndMain = CreateWindow(MAINWINDOWCLASS, MAINWINDOWTITLE,
-                              WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 
+                              WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
                               CW_USEDEFAULT, CW_USEDEFAULT,
                               (HWND)NULL, NULL, g_hInst, (LPSTR)NULL);
 
@@ -262,7 +262,7 @@ pj_status_t gui_init(gui_menu *menu)
                 g_hWndMain,     // Window handle to the parent window
                 (HMENU) 0,      // Control identifier
                 g_hInst,        // Instance handle
-                NULL);          // Specify NULL for this parameter when 
+                NULL);          // Specify NULL for this parameter when
                                 // you create a control
 
     /* Resize the log */
@@ -272,7 +272,7 @@ pj_status_t gui_init(gui_menu *menu)
         GetWindowRect(g_hWndLog, &r);
         GetWindowRect(g_hWndMenuBar, &r_menu);
         if (r.bottom > r_menu.top) {
-            MoveWindow(g_hWndLog, 0, 0, r.right-r.left, 
+            MoveWindow(g_hWndLog, 0, 0, r.right-r.left,
                        (r.bottom-r.top)-(r_menu.bottom-r_menu.top), TRUE);
         }
     }
@@ -401,7 +401,7 @@ pj_status_t gui_start(gui_menu *menu)
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    
+
     return (msg.wParam);
 }
 
@@ -435,7 +435,7 @@ int WINAPI WinMain(
         goto on_return;
 
     status = systest_run();
-        
+
 on_return:
     systest_deinit();
 

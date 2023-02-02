@@ -43,7 +43,7 @@
 #define MAX_SOUND_CARDS                 5
 #define MAX_SOUND_DEVICES_PER_CARD      5
 #define MAX_DEVICES                     32
-#define MAX_MIX_NAME_LEN                64 
+#define MAX_MIX_NAME_LEN                64
 
 /* Set to 1 to enable tracing */
 #define ENABLE_TRACING                  0

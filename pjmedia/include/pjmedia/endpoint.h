@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_MEDIAMGR_H__
 #define __PJMEDIA_MEDIAMGR_H__
@@ -28,7 +28,7 @@
  * @defgroup PJMED_ENDPT The Endpoint
  * @{
  *
- * The media endpoint acts as placeholder for endpoint capabilities. Each 
+ * The media endpoint acts as placeholder for endpoint capabilities. Each
  * media endpoint will have a codec manager to manage list of codecs installed
  * in the endpoint and a sound device factory.
  *
@@ -81,7 +81,7 @@ typedef void (*pjmedia_endpt_exit_callback)(pjmedia_endpt *endpt);
 
 
 /**
- * Call this function to initialize \a pjmedia_endpt_create_sdp_param with default 
+ * Call this function to initialize \a pjmedia_endpt_create_sdp_param with default
  * values.
  *
  * @param param     The param to be initialized.
@@ -94,9 +94,9 @@ pjmedia_endpt_create_sdp_param_default(pjmedia_endpt_create_sdp_param *param);
  *
  * @param pf            Pool factory, which will be used by the media endpoint
  *                      throughout its lifetime.
- * @param ioqueue       Optional ioqueue instance to be registered to the 
+ * @param ioqueue       Optional ioqueue instance to be registered to the
  *                      endpoint. The ioqueue instance is used to poll all RTP
- *                      and RTCP sockets. If this argument is NULL, the 
+ *                      and RTCP sockets. If this argument is NULL, the
  *                      endpoint will create an internal ioqueue instance.
  * @param worker_cnt    Specify the number of worker threads to be created
  *                      to poll the ioqueue.
@@ -114,9 +114,9 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create2(pj_pool_factory *pf,
  *
  * @param pf            Pool factory, which will be used by the media endpoint
  *                      throughout its lifetime.
- * @param ioqueue       Optional ioqueue instance to be registered to the 
+ * @param ioqueue       Optional ioqueue instance to be registered to the
  *                      endpoint. The ioqueue instance is used to poll all RTP
- *                      and RTCP sockets. If this argument is NULL, the 
+ *                      and RTCP sockets. If this argument is NULL, the
  *                      endpoint will create an internal ioqueue instance.
  * @param worker_cnt    Specify the number of worker threads to be created
  *                      to poll the ioqueue.
@@ -145,7 +145,7 @@ PJ_INLINE(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     if (status != PJ_SUCCESS) {
         pjmedia_aud_subsys_shutdown();
     }
-    
+
     return status;
 }
 
@@ -221,14 +221,14 @@ PJ_DECL(pj_ioqueue_t*) pjmedia_endpt_get_ioqueue(pjmedia_endpt *endpt);
 PJ_DECL(unsigned) pjmedia_endpt_get_thread_count(pjmedia_endpt *endpt);
 
 /**
- * Get a reference to one of the worker threads of the media endpoint 
+ * Get a reference to one of the worker threads of the media endpoint
  *
  * @param endpt         The media endpoint instance.
  * @param index         The index of the thread: 0<= index < thread_cnt
  *
  * @return              pj_thread_t or NULL
  */
-PJ_DECL(pj_thread_t*) pjmedia_endpt_get_thread(pjmedia_endpt *endpt, 
+PJ_DECL(pj_thread_t*) pjmedia_endpt_get_thread(pjmedia_endpt *endpt,
                                                unsigned index);
 
 /**
@@ -279,7 +279,7 @@ PJ_DECL(pjmedia_codec_mgr*) pjmedia_endpt_get_codec_mgr(pjmedia_endpt *endpt);
  *                      By convention, if this value is greater than one,
  *                      the first media will be audio and the remaining
  *                      media is video.
- * @param sock_info     Array of socket transport information. One 
+ * @param sock_info     Array of socket transport information. One
  *                      transport is needed for each media stream, and
  *                      each transport consists of an RTP and RTCP socket
  *                      pair.
@@ -361,7 +361,7 @@ PJ_DECL(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt);
 
 
 /**
- * Register cleanup function to be called by media endpoint when 
+ * Register cleanup function to be called by media endpoint when
  * #pjmedia_endpt_destroy() is called. Note that application should not
  * use or access any endpoint resource (such as pool, ioqueue) from within
  * the callback as such resource may have been released when the callback

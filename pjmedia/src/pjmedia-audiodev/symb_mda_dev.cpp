@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pjmedia-audiodev/errno.h>
@@ -31,7 +31,7 @@
  * This file provides sound implementation for Symbian Audio Streaming
  * device. Application using this sound abstraction must link with:
  *  - mediaclientaudiostream.lib, and
- *  - mediaclientaudioinputstream.lib 
+ *  - mediaclientaudioinputstream.lib
  */
 #include <mda/common/audio.h>
 #include <mdaaudiooutputstream.h>
@@ -68,7 +68,7 @@ struct mda_stream
 {
     // Base
     pjmedia_aud_stream   base;                  /**< Base class.        */
-    
+
     // Pool
     pj_pool_t           *pool;                  /**< Memory pool.       */
 
@@ -86,7 +86,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f);
 static unsigned    factory_get_dev_count(pjmedia_aud_dev_factory *f);
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info);
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
@@ -124,7 +124,7 @@ static pjmedia_aud_dev_factory_op factory_op =
     &factory_refresh
 };
 
-static pjmedia_aud_stream_op stream_op = 
+static pjmedia_aud_stream_op stream_op =
 {
     &stream_get_param,
     &stream_get_cap,
@@ -173,11 +173,11 @@ static TInt get_channel_cap(unsigned channel_count)
 /*
  * Utility: print sound device error
  */
-static void snd_perror(const char *title, TInt rc) 
+static void snd_perror(const char *title, TInt rc)
 {
     PJ_LOG(1,(THIS_FILE, "%s: error code %d", title, rc));
 }
- 
+
 //////////////////////////////////////////////////////////////////////////////
 //
 
@@ -206,28 +206,28 @@ public:
     pj_status_t StartRecord();
     void Stop();
 
-    pj_status_t SetGain(TInt gain) { 
-        if (iInputStream_) { 
+    pj_status_t SetGain(TInt gain) {
+        if (iInputStream_) {
             iInputStream_->SetGain(gain);
             return PJ_SUCCESS;
         } else
             return PJ_EINVALIDOP;
     }
-    
-    TInt GetGain() { 
-        if (iInputStream_) { 
+
+    TInt GetGain() {
+        if (iInputStream_) {
             return iInputStream_->Gain();
         } else
             return PJ_EINVALIDOP;
     }
 
-    TInt GetMaxGain() { 
-        if (iInputStream_) { 
+    TInt GetMaxGain() {
+        if (iInputStream_) {
             return iInputStream_->MaxGain();
         } else
             return PJ_EINVALIDOP;
     }
-    
+
 private:
     State                    state_;
     struct mda_stream       *parentStrm_;
@@ -243,7 +243,7 @@ private:
     // cache variable
     // to avoid calculating frame length repeatedly
     TInt                     frameLen_;
-    
+
     // sometimes recorded size != requested framesize, so let's
     // provide a buffer to make sure the rec callback returning
     // framesize as requested.
@@ -255,7 +255,7 @@ private:
                         void *user_data);
     void ConstructL();
     TPtr8 & GetFrame();
-    
+
 public:
     virtual void MaiscOpenComplete(TInt aError);
     virtual void MaiscBufferCopied(TInt aError, const TDesC8 &aBuffer);
@@ -267,11 +267,11 @@ public:
 CPjAudioInputEngine::CPjAudioInputEngine(struct mda_stream *parent_strm,
                                          pjmedia_aud_rec_cb rec_cb,
                                          void *user_data)
-    : state_(STATE_INACTIVE), parentStrm_(parent_strm), 
-      recCb_(rec_cb), userData_(user_data), 
+    : state_(STATE_INACTIVE), parentStrm_(parent_strm),
+      recCb_(rec_cb), userData_(user_data),
       iInputStream_(NULL), iStreamBuffer_(NULL), iFramePtr_(0, 0),
       lastError_(KErrNone), timeStamp_(0),
-      frameLen_(parent_strm->param.samples_per_frame * 
+      frameLen_(parent_strm->param.samples_per_frame *
                 BYTES_PER_SAMPLE),
       frameRecBuf_(NULL), frameRecBufLen_(0)
 {
@@ -283,7 +283,7 @@ CPjAudioInputEngine::~CPjAudioInputEngine()
 
     delete iStreamBuffer_;
     iStreamBuffer_ = NULL;
-    
+
     delete [] frameRecBuf_;
     frameRecBuf_ = NULL;
     frameRecBufLen_ = 0;
@@ -303,7 +303,7 @@ CPjAudioInputEngine *CPjAudioInputEngine::NewLC(struct mda_stream *parent,
                                                 void *user_data)
 {
     CPjAudioInputEngine* self = new (ELeave) CPjAudioInputEngine(parent,
-                                                                 rec_cb, 
+                                                                 rec_cb,
                                                                  user_data);
     CleanupStack::PushL(self);
     self->ConstructL();
@@ -330,7 +330,7 @@ pj_status_t CPjAudioInputEngine::StartRecord()
         return PJ_SUCCESS;
 
     // According to Nokia's AudioStream example, some 2nd Edition, FP2 devices
-    // (such as Nokia 6630) require the stream to be reconstructed each time 
+    // (such as Nokia 6630) require the stream to be reconstructed each time
     // before calling Open() - otherwise the callback never gets called.
     // For uniform behavior, lets just delete/re-create the stream for all
     // devices.
@@ -346,17 +346,17 @@ pj_status_t CPjAudioInputEngine::StartRecord()
 
     // Initialize settings.
     TMdaAudioDataSettings iStreamSettings;
-    iStreamSettings.iChannels = 
+    iStreamSettings.iChannels =
                             get_channel_cap(parentStrm_->param.channel_count);
-    iStreamSettings.iSampleRate = 
+    iStreamSettings.iSampleRate =
                             get_clock_rate_cap(parentStrm_->param.clock_rate);
 
-    pj_assert(iStreamSettings.iChannels != 0 && 
+    pj_assert(iStreamSettings.iChannels != 0 &&
               iStreamSettings.iSampleRate != 0);
 
     PJ_LOG(4,(THIS_FILE, "Opening sound device for capture, "
                          "clock rate=%d, channel count=%d..",
-                         parentStrm_->param.clock_rate, 
+                         parentStrm_->param.clock_rate,
                          parentStrm_->param.channel_count));
 
     // Open stream.
@@ -401,7 +401,7 @@ void CPjAudioInputEngine::Stop()
 }
 
 
-TPtr8 & CPjAudioInputEngine::GetFrame() 
+TPtr8 & CPjAudioInputEngine::GetFrame()
 {
     //iStreamBuffer_->Des().FillZ(frameLen_);
     iFramePtr_.Set((TUint8*)(iStreamBuffer_->Ptr()), frameLen_, frameLen_);
@@ -421,17 +421,17 @@ void CPjAudioInputEngine::MaiscOpenComplete(TInt aError)
     }
 
     /* Apply input volume setting if specified */
-    if (parentStrm_->param.flags & 
-        PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) 
+    if (parentStrm_->param.flags &
+        PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING)
     {
         stream_set_cap(&parentStrm_->base,
-                       PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING, 
+                       PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
                        &parentStrm_->param.input_vol);
     }
 
     // set stream priority to normal and time sensitive
-    iInputStream_->SetPriority(EPriorityNormal, 
-                               EMdaPriorityPreferenceTime);                             
+    iInputStream_->SetPriority(EPriorityNormal,
+                               EMdaPriorityPreferenceTime);
 
     // Read the first frame.
     TPtr8 & frm = GetFrame();
@@ -543,23 +543,23 @@ public:
     pj_status_t StartPlay();
     void Stop();
 
-    pj_status_t SetVolume(TInt vol) { 
-        if (iOutputStream_) { 
+    pj_status_t SetVolume(TInt vol) {
+        if (iOutputStream_) {
             iOutputStream_->SetVolume(vol);
             return PJ_SUCCESS;
         } else
             return PJ_EINVALIDOP;
     }
-    
-    TInt GetVolume() { 
-        if (iOutputStream_) { 
+
+    TInt GetVolume() {
+        if (iOutputStream_) {
             return iOutputStream_->Volume();
         } else
             return PJ_EINVALIDOP;
     }
 
-    TInt GetMaxVolume() { 
-        if (iOutputStream_) { 
+    TInt GetMaxVolume() {
+        if (iOutputStream_) {
             return iOutputStream_->MaxVolume();
         } else
             return PJ_EINVALIDOP;
@@ -591,8 +591,8 @@ private:
 
 CPjAudioOutputEngine::CPjAudioOutputEngine(struct mda_stream *parent_strm,
                                            pjmedia_aud_play_cb play_cb,
-                                           void *user_data) 
-: state_(STATE_INACTIVE), parentStrm_(parent_strm), playCb_(play_cb), 
+                                           void *user_data)
+: state_(STATE_INACTIVE), parentStrm_(parent_strm), playCb_(play_cb),
   userData_(user_data), iOutputStream_(NULL), frameBuf_(NULL),
   lastError_(KErrNone), timestamp_(0)
 {
@@ -652,17 +652,17 @@ pj_status_t CPjAudioOutputEngine::StartPlay()
 
     // Initialize settings.
     TMdaAudioDataSettings iStreamSettings;
-    iStreamSettings.iChannels = 
+    iStreamSettings.iChannels =
                             get_channel_cap(parentStrm_->param.channel_count);
-    iStreamSettings.iSampleRate = 
+    iStreamSettings.iSampleRate =
                             get_clock_rate_cap(parentStrm_->param.clock_rate);
 
-    pj_assert(iStreamSettings.iChannels != 0 && 
+    pj_assert(iStreamSettings.iChannels != 0 &&
               iStreamSettings.iSampleRate != 0);
 
     PJ_LOG(4,(THIS_FILE, "Opening sound device for playback, "
                          "clock rate=%d, channel count=%d..",
-                         parentStrm_->param.clock_rate, 
+                         parentStrm_->param.clock_rate,
                          parentStrm_->param.channel_count));
 
     // Open stream.
@@ -693,7 +693,7 @@ void CPjAudioOutputEngine::Stop()
         while (lastError_ == KRequestPending)
             pj_symbianos_poll(-1, 100);
     }
-    
+
     if (iOutputStream_) {
         delete iOutputStream_;
         iOutputStream_ = NULL;
@@ -717,20 +717,20 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
     if (aError==KErrNone) {
         // set stream properties, 16bit 8KHz mono
         TMdaAudioDataSettings iSettings;
-        iSettings.iChannels = 
+        iSettings.iChannels =
                         get_channel_cap(parentStrm_->param.channel_count);
-        iSettings.iSampleRate = 
+        iSettings.iSampleRate =
                         get_clock_rate_cap(parentStrm_->param.clock_rate);
 
-        iOutputStream_->SetAudioPropertiesL(iSettings.iSampleRate, 
+        iOutputStream_->SetAudioPropertiesL(iSettings.iSampleRate,
                                             iSettings.iChannels);
 
         /* Apply output volume setting if specified */
-        if (parentStrm_->param.flags & 
-            PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) 
+        if (parentStrm_->param.flags &
+            PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING)
         {
             stream_set_cap(&parentStrm_->base,
-                           PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
+                           PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
                            &parentStrm_->param.output_vol);
         } else {
             // set volume to 1/2th of stream max volume
@@ -763,9 +763,9 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
         // Increment timestamp.
         timestamp_ += (frameBufSize_ / BYTES_PER_SAMPLE);
 
-        // issue WriteL() to write the first audio data block, 
-        // subsequent calls to WriteL() will be issued in 
-        // MMdaAudioOutputStreamCallback::MaoscBufferCopied() 
+        // issue WriteL() to write the first audio data block,
+        // subsequent calls to WriteL() will be issued in
+        // MMdaAudioOutputStreamCallback::MaoscBufferCopied()
         // until whole data buffer is written.
         frame_.Set(frameBuf_, frameBufSize_);
         iOutputStream_->WriteL(frame_);
@@ -803,7 +803,7 @@ void CPjAudioOutputEngine::MaoscBufferCopied(TInt aError,
 
         if (f.type != PJMEDIA_FRAME_TYPE_AUDIO)
             pj_bzero(frameBuf_, frameBufSize_);
-        
+
         // Increment timestamp.
         timestamp_ += (frameBufSize_ / BYTES_PER_SAMPLE);
 
@@ -976,20 +976,20 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
         TRAPD(err, strm->out_engine = CPjAudioOutputEngine::NewL(strm, play_cb,
                                                                  user_data));
         if (err != KErrNone) {
-            pj_pool_release(pool);      
+            pj_pool_release(pool);
             return PJ_RETURN_OS_ERROR(err);
         }
     }
 
     // Create the input stream.
     if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
-        TRAPD(err, strm->in_engine = CPjAudioInputEngine::NewL(strm, rec_cb, 
+        TRAPD(err, strm->in_engine = CPjAudioInputEngine::NewL(strm, rec_cb,
                                                                user_data));
         if (err != KErrNone) {
             strm->in_engine = NULL;
             delete strm->out_engine;
             strm->out_engine = NULL;
-            pj_pool_release(pool);      
+            pj_pool_release(pool);
             return PJ_RETURN_OS_ERROR(err);
         }
     }
@@ -1047,7 +1047,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
             TInt gain = strm->in_engine->GetGain();
 
             if (max_gain > 0 && gain >= 0) {
-                *(unsigned*)pval = gain * 100 / max_gain; 
+                *(unsigned*)pval = gain * 100 / max_gain;
                 status = PJ_SUCCESS;
             } else {
                 status = PJMEDIA_EAUD_NOTREADY;
@@ -1057,12 +1057,12 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
         if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
             PJ_ASSERT_RETURN(strm->out_engine, PJ_EINVAL);
-            
+
             TInt max_vol = strm->out_engine->GetMaxVolume();
             TInt vol = strm->out_engine->GetVolume();
 
             if (max_vol > 0 && vol >= 0) {
-                *(unsigned*)pval = vol * 100 / max_vol; 
+                *(unsigned*)pval = vol * 100 / max_vol;
                 status = PJ_SUCCESS;
             } else {
                 status = PJMEDIA_EAUD_NOTREADY;

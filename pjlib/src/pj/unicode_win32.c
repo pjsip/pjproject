@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/unicode.h>
 #include <pj/assert.h>
@@ -27,7 +27,7 @@ PJ_DEF(wchar_t*) pj_ansi_to_unicode(const char *s, int len,
 {
     PJ_ASSERT_RETURN(s && buf, NULL);
 
-    len = MultiByteToWideChar(CP_ACP, 0, s, len, 
+    len = MultiByteToWideChar(CP_ACP, 0, s, len,
                               buf, buf_count);
     if (buf_count) {
         if (len < buf_count)
@@ -45,7 +45,7 @@ PJ_DEF(char*) pj_unicode_to_ansi( const wchar_t *wstr, pj_ssize_t len,
 {
     PJ_ASSERT_RETURN(wstr && buf, NULL);
 
-    len = WideCharToMultiByte(CP_ACP, 0, wstr, (int)len, buf, buf_size, 
+    len = WideCharToMultiByte(CP_ACP, 0, wstr, (int)len, buf, buf_size,
                               NULL, NULL);
     if (buf_size) {
         if (len < buf_size)

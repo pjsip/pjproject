@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __SIP_100REL_H__
 #define __SIP_100REL_H__
@@ -54,7 +54,7 @@
  * \subsection pjsip_100rel_sess Using 100rel in a Session
  *
  * For UAC, \a 100rel support will be enabled in the session if \a 100rel
- * support is enabled in the library (default is yes). 
+ * support is enabled in the library (default is yes).
  * Outgoing INVITE request will include \a 100rel tag in \a Supported
  * header and \a PRACK method in \a Allow header. When callee endpoint
  * sends reliable provisional responses, the UAC will automatically send
@@ -64,17 +64,17 @@
  *
  * If the UAC wants to <b>mandate</b> \a 100rel support, it can specify
  * #PJSIP_INV_REQUIRE_100REL in the \a options argument when calling
- * #pjsip_inv_create_uac(). In this case, PJSIP will add \a 100rel tag 
+ * #pjsip_inv_create_uac(). In this case, PJSIP will add \a 100rel tag
  * in the \a Require header of the outgoing INVITE request.
  *
- * For UAS, if it wants to support \a 100rel but not to mandate it, 
- * it must specify  #PJSIP_INV_SUPPORT_100REL flag in the \a options 
- * argument when calling  #pjsip_inv_verify_request(), and pass the same 
- * \a options variable when calling #pjsip_inv_verify_request. If UAC had 
- * specified \a 100rel in it's list of extensions in \a Require header, 
- * the UAS will send provisional responses reliably. If UAC only listed 
- * \a 100rel in its \a Supported header but not in \a Require header, 
- * or if UAC does not list \a 100rel support at all, the UAS WILL NOT 
+ * For UAS, if it wants to support \a 100rel but not to mandate it,
+ * it must specify  #PJSIP_INV_SUPPORT_100REL flag in the \a options
+ * argument when calling  #pjsip_inv_verify_request(), and pass the same
+ * \a options variable when calling #pjsip_inv_verify_request. If UAC had
+ * specified \a 100rel in it's list of extensions in \a Require header,
+ * the UAS will send provisional responses reliably. If UAC only listed
+ * \a 100rel in its \a Supported header but not in \a Require header,
+ * or if UAC does not list \a 100rel support at all, the UAS WILL NOT
  * send provisional responses reliably.
  * The snippet below can be used to accomplish this task:
  *
@@ -103,8 +103,8 @@
    \endverbatim
  *
  * For another requirement, if UAS wants to <b>mandate</b> \a 100rel support,
- * it can specify #PJSIP_INV_REQUIRE_100REL flag when calling 
- * #pjsip_inv_verify_request(), and pass the \a options when calling 
+ * it can specify #PJSIP_INV_REQUIRE_100REL flag when calling
+ * #pjsip_inv_verify_request(), and pass the \a options when calling
  * #pjsip_inv_verify_request. In this case,
  * \a 100rel extension will be used if UAC specifies \a 100rel in its
  * \a Supported header. If UAC does not list \a 100rel in \a Supported header,
@@ -123,15 +123,15 @@
 PJ_BEGIN_DECL
 
 
-/** 
- * PRACK method constant. 
- * @see pjsip_get_prack_method() 
+/**
+ * PRACK method constant.
+ * @see pjsip_get_prack_method()
   */
 PJ_DECL_DATA(const pjsip_method) pjsip_prack_method;
 
 
-/** 
- * Get #pjsip_invite_method constant. 
+/**
+ * Get #pjsip_invite_method constant.
  */
 PJ_DECL(const pjsip_method*) pjsip_get_prack_method(void);
 

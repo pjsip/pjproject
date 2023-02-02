@@ -968,8 +968,8 @@ struct AccountMediaConfig : public PersistentObject
 {
     /**
      * Media transport (RTP) configuration.
-     * 
-     * For \a port and \a portRange settings, RTCP port is selected as 
+     *
+     * For \a port and \a portRange settings, RTCP port is selected as
      * RTP port+1.
      * Example: \a port=5000, \a portRange=4
      * - Available ports: 5000, 5002, 5004 (Media/RTP transport)
@@ -1202,7 +1202,7 @@ public:
  * Account config specific to IP address change.
  */
 typedef struct AccountIpChangeConfig
-{    
+{
     /**
      * Shutdown the transport used for account registration. If this is set to
      * PJ_TRUE, the transport will be shutdown altough it's used by multiple
@@ -1214,7 +1214,7 @@ typedef struct AccountIpChangeConfig
     bool                shutdownTp;
 
     /**
-     * Hangup active calls associated with the acount. If this is set to true, 
+     * Hangup active calls associated with the acount. If this is set to true,
      * then the calls will be hang up.
      *
      * Default: false
@@ -1222,8 +1222,8 @@ typedef struct AccountIpChangeConfig
     bool                hangupCalls;
 
     /**
-     * Specify the call flags used in the re-INVITE when \a hangupCalls is set 
-     * to false. If this is set to 0, no re-INVITE will be sent. The 
+     * Specify the call flags used in the re-INVITE when \a hangupCalls is set
+     * to false. If this is set to 0, no re-INVITE will be sent. The
      * re-INVITE will be sent after re-Registration is finished.
      *
      * Default: PJSUA_CALL_REINIT_MEDIA | PJSUA_CALL_UPDATE_CONTACT |
@@ -1262,7 +1262,7 @@ public:
      * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
-    
+
 } AccountIpChangeConfig;
 
 /**
@@ -1680,7 +1680,7 @@ struct PresNotifyParam
      * Server presence subscription state to set.
      */
     pjsip_evsub_state   state;
-    
+
     /**
      * Optionally specify the state string name, if state is not "active",
      * "pending", or "terminated".
@@ -1888,7 +1888,7 @@ public:
      * @param prm               The sending NOTIFY parameter.
      */
     void presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error);
-    
+
 #if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use enumBuddies2() instead. This function is not
@@ -1913,7 +1913,7 @@ public:
      * Warning: deprecated, use findBuddy2 instead. This function is not
      * safe in multithreaded environment.
      *
-     * Find a buddy in the buddy list with the specified URI. 
+     * Find a buddy in the buddy list with the specified URI.
      *
      * Exception: if buddy is not found, PJ_ENOTFOUND will be thrown.
      *
@@ -1927,7 +1927,7 @@ public:
 #endif
 
     /**
-     * Find a buddy in the buddy list with the specified URI. 
+     * Find a buddy in the buddy list with the specified URI.
      *
      * Exception: if buddy is not found, PJ_ENOTFOUND will be thrown.
      *

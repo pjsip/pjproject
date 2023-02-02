@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_RTP_H__
 #define __PJMEDIA_RTP_H__
@@ -41,7 +41,7 @@ PJ_BEGIN_DECL
  * on any transports (sockets), to promote even more use, such as in DSP
  * development (where transport may be handled by different processor).
  *
- * An RTCP implementation is available, in separate module. Please see 
+ * An RTCP implementation is available, in separate module. Please see
  * @ref PJMED_RTCP.
  *
  * The functions that are provided by this module:
@@ -52,11 +52,11 @@ PJ_BEGIN_DECL
  * The RTP module does not use any dynamic memory at all.
  *
  * \section P1 How to Use the RTP Module
- * 
- * First application must call #pjmedia_rtp_session_init() to initialize the RTP 
+ *
+ * First application must call #pjmedia_rtp_session_init() to initialize the RTP
  * session.
  *
- * When application wants to send RTP packet, it needs to call 
+ * When application wants to send RTP packet, it needs to call
  * #pjmedia_rtp_encode_rtp() to build the RTP header. Note that this WILL NOT build
  * the complete RTP packet, but instead only the header. Application can
  * then either concatenate the header with the payload, or send the two
@@ -93,7 +93,7 @@ struct pjmedia_rtp_hdr
     pj_uint16_t pt:7;           /**< payload type                   */
 #else
     pj_uint16_t cc:4;           /**< CSRC count                     */
-    pj_uint16_t x:1;            /**< header extension flag          */ 
+    pj_uint16_t x:1;            /**< header extension flag          */
     pj_uint16_t p:1;            /**< padding flag                   */
     pj_uint16_t v:2;            /**< packet type/version            */
     pj_uint16_t pt:7;           /**< payload type                   */
@@ -242,7 +242,7 @@ struct pjmedia_rtp_status
     } status;               /**< Status information union.                  */
 
     pj_uint16_t diff;       /**< Sequence number difference from previous
-                                 packet. Normally the value should be 1.    
+                                 packet. Normally the value should be 1.
                                  Value greater than one may indicate packet
                                  loss. If packet with lower sequence is
                                  received, the value will be set to zero.
@@ -288,7 +288,7 @@ typedef struct pjmedia_rtp_status pjmedia_rtp_status;
  * @return              PJ_SUCCESS if successfull.
  */
 PJ_DECL(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
-                                               int default_pt, 
+                                               int default_pt,
                                                pj_uint32_t sender_ssrc );
 
 /**
@@ -300,7 +300,7 @@ PJ_DECL(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
  *
  * @return              PJ_SUCCESS if successfull.
  */
-PJ_DECL(pj_status_t) pjmedia_rtp_session_init2( 
+PJ_DECL(pj_status_t) pjmedia_rtp_session_init2(
                                     pjmedia_rtp_session *ses,
                                     pjmedia_rtp_session_setting settings);
 
@@ -319,15 +319,15 @@ PJ_DECL(pj_status_t) pjmedia_rtp_session_init2(
  *
  * @return              PJ_SUCCESS if successfull.
  */
-PJ_DECL(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses, 
+PJ_DECL(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses,
                                              int pt, int m,
                                              int payload_len, int ts_len,
-                                             const void **rtphdr, 
+                                             const void **rtphdr,
                                              int *hdrlen );
 
 /**
  * This function decodes incoming packet into RTP header and payload.
- * The decode function is guaranteed to point the payload to the correct 
+ * The decode function is guaranteed to point the payload to the correct
  * position regardless of any options present in the RTP packet.
  *
  * Note that this function does not modify the returned RTP header to
@@ -336,7 +336,7 @@ PJ_DECL(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses,
  * @param ses           The session.
  * @param pkt           The received RTP packet.
  * @param pkt_len       The length of the packet.
- * @param hdr           Upon return will point to the location of the RTP 
+ * @param hdr           Upon return will point to the location of the RTP
  *                      header inside the packet. Note that the RTP header
  *                      will be given back as is, meaning that the fields
  *                      will be in network byte order.
@@ -346,7 +346,7 @@ PJ_DECL(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses,
  *
  * @return              PJ_SUCCESS if successfull.
  */
-PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses, 
+PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
                                              const void *pkt, int pkt_len,
                                              const pjmedia_rtp_hdr **hdr,
                                              const void **payload,
@@ -368,7 +368,7 @@ PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
  *                      header inside the packet. Note that the RTP header
  *                      will be given back as is, meaning that the fields
  *                      will be in network byte order.
- * @param dec_hdr       Upon return will point to the location of the 
+ * @param dec_hdr       Upon return will point to the location of the
  *                      additional RTP header inside the packet, if any.
  * @param payload       Upon return will point to the location of the
  *                      payload inside the packet.
@@ -385,7 +385,7 @@ PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp2(
                                     unsigned *payloadlen);
 
 /**
- * Call this function everytime an RTP packet is received to check whether 
+ * Call this function everytime an RTP packet is received to check whether
  * the packet can be received and to let the RTP session performs its internal
  * calculations.
  *
@@ -395,13 +395,13 @@ PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp2(
  * @param seq_st    Optional structure to receive the status of the RTP packet
  *                  processing.
  */
-PJ_DECL(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, 
+PJ_DECL(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses,
                                           const pjmedia_rtp_hdr *hdr,
                                           pjmedia_rtp_status *seq_st);
 
 
 /**
- * Call this function everytime an RTP packet is received to check whether 
+ * Call this function everytime an RTP packet is received to check whether
  * the packet can be received and to let the RTP session performs its internal
  * calculations.
  *
@@ -414,7 +414,7 @@ PJ_DECL(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses,
  *
  * @see pjmedia_rtp_session_update()
  */
-PJ_DECL(void) pjmedia_rtp_session_update2(pjmedia_rtp_session *ses, 
+PJ_DECL(void) pjmedia_rtp_session_update2(pjmedia_rtp_session *ses,
                                           const pjmedia_rtp_hdr *hdr,
                                           pjmedia_rtp_status *seq_st,
                                           pj_bool_t check_pt);
@@ -424,26 +424,26 @@ PJ_DECL(void) pjmedia_rtp_session_update2(pjmedia_rtp_session *ses,
  * INTERNAL:
  */
 
-/** 
- * Internal function for creating sequence number control, shared by RTCP 
- * implementation. 
+/**
+ * Internal function for creating sequence number control, shared by RTCP
+ * implementation.
  *
  * @param seq_ctrl  The sequence control instance.
  * @param seq       Sequence number to initialize.
  */
-void pjmedia_rtp_seq_init(pjmedia_rtp_seq_session *seq_ctrl, 
+void pjmedia_rtp_seq_init(pjmedia_rtp_seq_session *seq_ctrl,
                           pj_uint16_t seq);
 
 
-/** 
+/**
  * Internal function update sequence control, shared by RTCP implementation.
  *
  * @param seq_ctrl      The sequence control instance.
  * @param seq           Sequence number to update.
- * @param seq_status    Optional structure to receive additional information 
+ * @param seq_status    Optional structure to receive additional information
  *                      about the packet.
  */
-void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *seq_ctrl, 
+void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *seq_ctrl,
                              pj_uint16_t seq,
                              pjmedia_rtp_status *seq_status);
 

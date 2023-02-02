@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_util.h>
 #include <pjsip/sip_module.h>
@@ -37,7 +37,7 @@ static void mod_util_on_tsx_state(pjsip_transaction*, pjsip_event*);
 
 /* This module will be registered in pjsip_endpt.c */
 
-pjsip_module mod_stateful_util = 
+pjsip_module mod_stateful_util =
 {
     NULL, NULL,                     /* prev, next.                      */
     { "mod-stateful-util", 17 },    /* Name.                            */
@@ -143,7 +143,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
     if (p_tsx) *p_tsx = NULL;
 
     /* Create response message */
-    status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text, 
+    status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text,
                                           &tdata);
     if (status != PJ_SUCCESS)
         return status;

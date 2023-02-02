@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __OS_SYMBIAN_H__
 #define __OS_SYMBIAN_H__
@@ -54,20 +54,20 @@ public:
 
     // Construct CPjSocket
     CPjSocket(int af, int sock_type, RSocket &sock)
-        : af_(af), sock_(sock), sock_type_(sock_type), connected_(false), 
+        : af_(af), sock_(sock), sock_type_(sock_type), connected_(false),
           sockReader_(NULL)
-    { 
+    {
     }
 
     // Destroy CPjSocket
     ~CPjSocket();
 
     // Get address family
-    int GetAf() const 
+    int GetAf() const
     {
-        return af_;     
+        return af_;
     }
-    
+
     // Get the internal RSocket
     RSocket& Socket()
     {
@@ -91,13 +91,13 @@ public:
     {
         return sock_type_;
     }
-    
+
     // Returns true if socket is a datagram
     bool IsDatagram() const
     {
         return sock_type_ == KSockDatagram;
     }
-    
+
     // Get socket reader, if any.
     // May return NULL.
     CPjSocketReader *Reader()
@@ -110,13 +110,13 @@ public:
 
     // Delete socket reader when it's not wanted.
     void DestroyReader();
-    
+
 private:
     int              af_;
     RSocket          sock_;         // Must not be reference, or otherwise
                                     // it may point to local variable!
     unsigned         sock_type_;
-    
+
     bool             connected_;
     CPjSocketReader *sockReader_;
 };
@@ -135,14 +135,14 @@ public:
     ~CPjSocketReader();
 
     // Start asynchronous read from the socket.
-    void StartRecv(void (*cb)(void *key)=NULL, 
-                   void *key=NULL, 
+    void StartRecv(void (*cb)(void *key)=NULL,
+                   void *key=NULL,
                    TDes8 *aDesc = NULL,
                    TUint flags = 0);
 
     // Start asynchronous read from the socket.
-    void StartRecvFrom(void (*cb)(void *key)=NULL, 
-                       void *key=NULL, 
+    void StartRecvFrom(void (*cb)(void *key)=NULL,
+                       void *key=NULL,
                        TDes8 *aDesc = NULL,
                        TUint flags = 0,
                        TSockAddr *fromAddr = NULL);
@@ -223,7 +223,7 @@ public:
     // Set parameters
     //
     void SetParameters(pj_symbianos_params *params);
-    
+
     //
     // Initialize.
     //
@@ -246,11 +246,11 @@ public:
     }
 
     // Get RConnection instance, if any.
-    RConnection *Connection() 
+    RConnection *Connection()
     {
         return appConnection_;
     }
-    
+
     // Convert TInetAddr to pj_sockaddr_in
     static inline pj_status_t Addr2pj(const TInetAddr & sym_addr,
                                       pj_sockaddr &pj_addr,
@@ -259,10 +259,10 @@ public:
     {
     TUint fam = sym_addr.Family();
         pj_bzero(&pj_addr, *addr_len);
-        if (fam == PJ_AF_INET || 
-                        (convert_ipv4_mapped_addr && 
-                         fam == PJ_AF_INET6 && 
-                         sym_addr.IsV4Mapped())) 
+        if (fam == PJ_AF_INET ||
+                        (convert_ipv4_mapped_addr &&
+                         fam == PJ_AF_INET6 &&
+                         sym_addr.IsV4Mapped()))
         {
                 pj_addr.addr.sa_family = PJ_AF_INET;
             PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
@@ -282,7 +282,7 @@ public:
             pj_assert(!"Unsupported address family");
             return PJ_EAFNOTSUP;
         }
-        
+
         return PJ_SUCCESS;
     }
 
@@ -299,7 +299,7 @@ public:
             sym_addr.SetPort(pj_ntohs(pj_addr.ipv4.sin_port));
         } else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
             TIp6Addr ip6;
-        
+
             PJ_ASSERT_RETURN(addrlen>=(int)sizeof(pj_sockaddr_in6), PJ_EINVAL);
             pj_memcpy(ip6.u.iAddr8, &pj_addr.ipv6.sin6_addr, 16);
             sym_addr.Init(KAfInet6);
@@ -356,13 +356,13 @@ public:
     //
     // Get console
     //
-    
+
     // Get console
     CConsoleBase *Console()
     {
         return console_;
     }
-    
+
     //
     // Get select() timeout timer.
     //
@@ -383,7 +383,7 @@ public:
 
 private:
     bool isConnectionUp_;
-    
+
     bool isSocketServInitialized_;
     RSocketServ socketServ_;
 
@@ -400,7 +400,7 @@ private:
     RConnection *appConnection_;
     RHostResolver *appHostResolver_;
     RHostResolver *appHostResolver6_;
-    
+
 private:
     PjSymbianOS();
 };

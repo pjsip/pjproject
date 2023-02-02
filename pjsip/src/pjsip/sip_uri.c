@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_uri.h>
 #include <pjsip/sip_msg.h>
@@ -83,7 +83,7 @@ PJ_DEF(void) pjsip_param_clone( pj_pool_t *pool, pjsip_param *dst_list,
 }
 
 
-PJ_DEF(void) pjsip_param_shallow_clone( pj_pool_t *pool, 
+PJ_DEF(void) pjsip_param_shallow_clone( pj_pool_t *pool,
                                         pjsip_param *dst_list,
                                         const pjsip_param *src_list)
 {
@@ -151,33 +151,33 @@ static void *pjsip_name_addr_get_uri( pjsip_name_addr *name );
 static pj_str_t sip_str = { "sip", 3 };
 static pj_str_t sips_str = { "sips", 4 };
 
-static pjsip_name_addr* pjsip_name_addr_clone( pj_pool_t *pool, 
+static pjsip_name_addr* pjsip_name_addr_clone( pj_pool_t *pool,
                                                const pjsip_name_addr *rhs);
 static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
-                                        const pjsip_name_addr *name, 
+                                        const pjsip_name_addr *name,
                                         char *buf, pj_size_t size);
 static int pjsip_name_addr_compare(  pjsip_uri_context_e context,
                                      const pjsip_name_addr *naddr1,
                                      const pjsip_name_addr *naddr2);
 static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
-                                    const pjsip_sip_uri *url, 
+                                    const pjsip_sip_uri *url,
                                     char *buf, pj_size_t size);
 static int pjsip_url_compare( pjsip_uri_context_e context,
-                              const pjsip_sip_uri *url1, 
+                              const pjsip_sip_uri *url1,
                               const pjsip_sip_uri *url2);
-static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool, 
+static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool,
                                       const pjsip_sip_uri *rhs);
 
 typedef const pj_str_t* (*P_GET_SCHEME)(const void*);
 typedef void*           (*P_GET_URI)(void*);
 typedef pj_ssize_t      (*P_PRINT_URI)(pjsip_uri_context_e,const void *,
                                        char*,pj_size_t);
-typedef int             (*P_CMP_URI)(pjsip_uri_context_e, const void*, 
+typedef int             (*P_CMP_URI)(pjsip_uri_context_e, const void*,
                                      const void*);
 typedef void*           (*P_CLONE)(pj_pool_t*, const void*);
 
 
-static pjsip_uri_vptr sip_url_vptr = 
+static pjsip_uri_vptr sip_url_vptr =
 {
     (P_GET_SCHEME)      &pjsip_url_get_scheme,
     (P_GET_URI)         &pjsip_get_uri,
@@ -186,7 +186,7 @@ static pjsip_uri_vptr sip_url_vptr =
     (P_CLONE)           &pjsip_url_clone
 };
 
-static pjsip_uri_vptr sips_url_vptr = 
+static pjsip_uri_vptr sips_url_vptr =
 {
     (P_GET_SCHEME)      &pjsips_url_get_scheme,
     (P_GET_URI)         &pjsip_get_uri,
@@ -195,7 +195,7 @@ static pjsip_uri_vptr sips_url_vptr =
     (P_CLONE)           &pjsip_url_clone
 };
 
-static pjsip_uri_vptr name_addr_vptr = 
+static pjsip_uri_vptr name_addr_vptr =
 {
     (P_GET_SCHEME)      &pjsip_name_addr_get_scheme,
     (P_GET_URI)         &pjsip_name_addr_get_uri,
@@ -226,7 +226,7 @@ static void *pjsip_name_addr_get_uri( pjsip_name_addr *name )
     return pjsip_uri_get_uri(name->uri);
 }
 
-PJ_DEF(void) pjsip_sip_uri_set_secure( pjsip_sip_uri *url, 
+PJ_DEF(void) pjsip_sip_uri_set_secure( pjsip_sip_uri *url,
                                        pj_bool_t secure )
 {
     url->vptr = secure ? &sips_url_vptr : &sip_url_vptr;
@@ -241,7 +241,7 @@ PJ_DEF(void) pjsip_sip_uri_init(pjsip_sip_uri *url, pj_bool_t secure)
     pj_list_init(&url->header_param);
 }
 
-PJ_DEF(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, 
+PJ_DEF(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool,
                                              pj_bool_t secure )
 {
     pjsip_sip_uri *url = PJ_POOL_ALLOC_T(pool, pjsip_sip_uri);
@@ -250,7 +250,7 @@ PJ_DEF(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool,
 }
 
 static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
-                                    const pjsip_sip_uri *url, 
+                                    const pjsip_sip_uri *url,
                                     char *buf, pj_size_t size)
 {
     int printed;
@@ -290,7 +290,7 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
         copy_advance_check(buf, url->host);
     }
 
-    /* Only print port if it is explicitly specified. 
+    /* Only print port if it is explicitly specified.
      * Port is not allowed in To and From header, see Table 1 in
      * RFC 3261 Section 19.1.1
      */
@@ -314,7 +314,7 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* Method param is only allowed in external/other context. */
     if (context == PJSIP_URI_IN_OTHER) {
-        copy_advance_pair_escape(buf, ";method=", 8, url->method_param, 
+        copy_advance_pair_escape(buf, ";method=", 8, url->method_param,
                                  pc->pjsip_PARAM_CHAR_SPEC);
     }
 
@@ -326,7 +326,7 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* TTL param is not allowed in From, To, Route, and Record-Route header. */
     if (url->ttl_param >= 0 && context != PJSIP_URI_IN_FROMTO_HDR &&
-        context != PJSIP_URI_IN_ROUTING_HDR) 
+        context != PJSIP_URI_IN_ROUTING_HDR)
     {
         if (endbuf - buf < 15)
             return -1;
@@ -349,7 +349,7 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* lr param is not allowed in From, To, and Contact header. */
     if (url->lr_param && context != PJSIP_URI_IN_FROMTO_HDR &&
-        context != PJSIP_URI_IN_CONTACT_HDR) 
+        context != PJSIP_URI_IN_CONTACT_HDR)
     {
         pj_str_t lr = { ";lr", 3 };
         if (endbuf - buf < 3)
@@ -358,21 +358,21 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
     }
 
     /* Other param. */
-    printed = (int)pjsip_param_print_on(&url->other_param, buf, endbuf-buf, 
-                                        &pc->pjsip_PARAM_CHAR_SPEC, 
+    printed = (int)pjsip_param_print_on(&url->other_param, buf, endbuf-buf,
+                                        &pc->pjsip_PARAM_CHAR_SPEC,
                                         &pc->pjsip_PARAM_CHAR_SPEC, ';');
     if (printed < 0)
         return -1;
     buf += printed;
 
-    /* Header param. 
+    /* Header param.
      * Header param is only allowed in these contexts:
      *  - PJSIP_URI_IN_CONTACT_HDR
      *  - PJSIP_URI_IN_OTHER
      */
     if (context == PJSIP_URI_IN_CONTACT_HDR || context == PJSIP_URI_IN_OTHER) {
         printed = (int)pjsip_param_print_on(&url->header_param, buf, endbuf-buf,
-                                            &pc->pjsip_HDR_CHAR_SPEC, 
+                                            &pc->pjsip_HDR_CHAR_SPEC,
                                             &pc->pjsip_HDR_CHAR_SPEC, '?');
         if (printed < 0)
             return -1;
@@ -384,7 +384,7 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 }
 
 static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
-                                      const pjsip_sip_uri *url1, 
+                                      const pjsip_sip_uri *url1,
                                       const pjsip_sip_uri *url2)
 {
     const pjsip_param *p1;
@@ -393,27 +393,27 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
      * Compare two SIP URL's according to Section 19.1.4 of RFC 3261.
      */
 
-    /* SIP and SIPS URI are never equivalent. 
-     * Note: just compare the vptr to avoid string comparison. 
+    /* SIP and SIPS URI are never equivalent.
+     * Note: just compare the vptr to avoid string comparison.
      *       Pretty neat huh!!
      */
     if (url1->vptr != url2->vptr)
         return PJSIP_ECMPSCHEME;
 
-    /* Comparison of the userinfo of SIP and SIPS URIs is case-sensitive. 
-     * This includes userinfo containing passwords or formatted as 
+    /* Comparison of the userinfo of SIP and SIPS URIs is case-sensitive.
+     * This includes userinfo containing passwords or formatted as
      * telephone-subscribers.
      */
     if (pj_strcmp(&url1->user, &url2->user) != 0)
         return PJSIP_ECMPUSER;
     if (pj_strcmp(&url1->passwd, &url2->passwd) != 0)
         return PJSIP_ECMPPASSWD;
-    
+
     /* Comparison of all other components of the URI is
      * case-insensitive unless explicitly defined otherwise.
      */
 
-    /* The ordering of parameters and header fields is not significant 
+    /* The ordering of parameters and header fields is not significant
      * in comparing SIP and SIPS URIs.
      */
 
@@ -421,17 +421,17 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
      * are equivalent to their encoding.
      */
 
-    /* An IP address that is the result of a DNS lookup of a host name 
+    /* An IP address that is the result of a DNS lookup of a host name
      * does not match that host name.
      */
     if (pj_stricmp(&url1->host, &url2->host) != 0)
         return PJSIP_ECMPHOST;
 
     /* A URI omitting any component with a default value will not match a URI
-     * explicitly containing that component with its default value. 
+     * explicitly containing that component with its default value.
      * For instance, a URI omitting the optional port component will not match
-     * a URI explicitly declaring port 5060. 
-     * The same is true for the transport-parameter, ttl-parameter, 
+     * a URI explicitly declaring port 5060.
+     * The same is true for the transport-parameter, ttl-parameter,
      * user-parameter, and method components.
      */
 
@@ -471,14 +471,14 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
     /* lr param is not allowed in From, To, and Contact header. */
 
 
-    /* All other uri-parameters appearing in only one URI are ignored when 
+    /* All other uri-parameters appearing in only one URI are ignored when
      * comparing the URIs.
      */
     if (pjsip_param_cmp(&url1->other_param, &url2->other_param, 1)!=0)
         return PJSIP_ECMPOTHERPARAM;
 
     /* URI header components are never ignored. Any present header component
-     * MUST be present in both URIs and match for the URIs to match. 
+     * MUST be present in both URIs and match for the URIs to match.
      * The matching rules are defined for each header field in Section 20.
      */
     p1 = url1->header_param.next;
@@ -503,7 +503,7 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
 }
 
 
-PJ_DEF(void) pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
+PJ_DEF(void) pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url,
                                   const pjsip_sip_uri *rhs)
 {
     pj_strdup( pool, &url->user, &rhs->user);
@@ -553,7 +553,7 @@ PJ_DEF(pjsip_name_addr*) pjsip_name_addr_create(pj_pool_t *pool)
 }
 
 static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
-                                        const pjsip_name_addr *name, 
+                                        const pjsip_name_addr *name,
                                         char *buf, pj_size_t size)
 {
     int printed;
@@ -595,7 +595,7 @@ PJ_DEF(void) pjsip_name_addr_assign(pj_pool_t *pool, pjsip_name_addr *dst,
     dst->uri = (pjsip_uri*) pjsip_uri_clone(pool, src->uri);
 }
 
-static pjsip_name_addr* pjsip_name_addr_clone( pj_pool_t *pool, 
+static pjsip_name_addr* pjsip_name_addr_clone( pj_pool_t *pool,
                                                const pjsip_name_addr *rhs)
 {
     pjsip_name_addr *addr = PJ_POOL_ALLOC_T(pool, pjsip_name_addr);
@@ -638,15 +638,15 @@ static int pjsip_name_addr_compare(  pjsip_uri_context_e context,
 static const pj_str_t *other_uri_get_scheme( const pjsip_other_uri*);
 static void *other_uri_get_uri( pjsip_other_uri*);
 static pj_ssize_t other_uri_print( pjsip_uri_context_e context,
-                                   const pjsip_other_uri *url, 
+                                   const pjsip_other_uri *url,
                                    char *buf, pj_size_t size);
 static int other_uri_cmp( pjsip_uri_context_e context,
-                          const pjsip_other_uri *url1, 
+                          const pjsip_other_uri *url1,
                           const pjsip_other_uri *url2);
-static pjsip_other_uri* other_uri_clone( pj_pool_t *pool, 
+static pjsip_other_uri* other_uri_clone( pj_pool_t *pool,
                                          const pjsip_other_uri *rhs);
 
-static pjsip_uri_vptr other_uri_vptr = 
+static pjsip_uri_vptr other_uri_vptr =
 {
     (P_GET_SCHEME)  &other_uri_get_scheme,
     (P_GET_URI)     &other_uri_get_uri,
@@ -656,7 +656,7 @@ static pjsip_uri_vptr other_uri_vptr =
 };
 
 
-PJ_DEF(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool) 
+PJ_DEF(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool)
 {
     pjsip_other_uri *uri = PJ_POOL_ZALLOC_T(pool, pjsip_other_uri);
     uri->vptr = &other_uri_vptr;
@@ -674,24 +674,24 @@ static void *other_uri_get_uri( pjsip_other_uri *uri )
 }
 
 static pj_ssize_t other_uri_print(pjsip_uri_context_e context,
-                                  const pjsip_other_uri *uri, 
+                                  const pjsip_other_uri *uri,
                                   char *buf, pj_size_t size)
 {
     char *startbuf = buf;
     char *endbuf = buf + size - 1; // Need to minus one for NULL terminator
-    
+
     PJ_UNUSED_ARG(context);
-    
+
     if (uri->scheme.slen + uri->content.slen + 1 > (int)size)
         return -1;
 
     /* Print scheme. */
     copy_advance(buf, uri->scheme);
     copy_advance_char_check(buf, ':');
-    
+
     /* Print content. */
     copy_advance(buf, uri->content);
-    
+
     *buf = '\0';
     return (buf - startbuf);
 }
@@ -705,24 +705,24 @@ static int other_uri_cmp(pjsip_uri_context_e context,
     /* Check that uri2 is also an other_uri */
     if (uri1->vptr != uri2->vptr)
         return -1;
-    
+
     /* Scheme must match. */
     if (pj_stricmp(&uri1->scheme, &uri2->scheme) != 0) {
         return PJSIP_ECMPSCHEME;
     }
-    
+
     /* Content must match. */
     if(pj_stricmp(&uri1->content, &uri2->content) != 0) {
         return -1;
     }
-    
+
     /* Equal. */
     return 0;
 }
 
 /* Clone *: URI */
-static pjsip_other_uri* other_uri_clone(pj_pool_t *pool, 
-                                        const pjsip_other_uri *rhs) 
+static pjsip_other_uri* other_uri_clone(pj_pool_t *pool,
+                                        const pjsip_other_uri *rhs)
 {
     pjsip_other_uri *uri = pjsip_other_uri_create(pool);
     pj_strdup(pool, &uri->scheme, &rhs->scheme);

@@ -11,7 +11,7 @@ public class test {
         AuthCredInfo cred = new AuthCredInfo();
 
         cred.setRealm("Hello world");
-    
+
         System.out.println(cred.getRealm());
   }
 }

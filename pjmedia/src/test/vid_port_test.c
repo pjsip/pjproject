@@ -165,7 +165,7 @@ static int find_device(pjmedia_dir dir,
                        pj_bool_t has_callback)
 {
     unsigned i, count = pjmedia_vid_dev_count();
- 
+
     for (i = 0; i < count; ++i) {
         pjmedia_vid_dev_info cdi;
 
@@ -174,7 +174,7 @@ static int find_device(pjmedia_dir dir,
         if ((cdi.dir & dir) != 0 && cdi.has_callback == has_callback)
             return i;
     }
-    
+
     return -999;
 }
 

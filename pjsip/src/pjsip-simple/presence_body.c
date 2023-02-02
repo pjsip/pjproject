@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/presence.h>
 #include <pjsip-simple/errno.h>
@@ -40,10 +40,10 @@ static const pj_str_t STR_XPIDF_XML =   { "xpidf+xml", 9 };
 /*
  * Function to print XML message body.
  */
-static int pres_print_body(struct pjsip_msg_body *msg_body, 
+static int pres_print_body(struct pjsip_msg_body *msg_body,
                            char *buf, pj_size_t size)
 {
-    return pj_xml_print((const pj_xml_node*)msg_body->data, buf, size, 
+    return pj_xml_print((const pj_xml_node*)msg_body->data, buf, size,
                         PJ_TRUE);
 }
 
@@ -100,13 +100,13 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 
         /* Set <contact> */
         if (status->info[i].contact.slen)
-            pjpidf_tuple_set_contact(pool, pidf_tuple, 
+            pjpidf_tuple_set_contact(pool, pidf_tuple,
                                      &status->info[i].contact);
 
 
         /* Set basic status */
         pidf_status = pjpidf_tuple_get_status(pidf_tuple);
-        pjpidf_status_set_basic_open(pidf_status, 
+        pjpidf_status_set_basic_open(pidf_status,
                                      status->info[i].basic_open);
 
         /* Add <timestamp> if configured */
@@ -132,7 +132,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 
           tslen = pj_ansi_snprintf(buf, sizeof(buf),
                                    "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
-                                   pt.year, pt.mon+1, pt.day, 
+                                   pt.year, pt.mon+1, pt.day,
                                    pt.hour, pt.min, pt.sec, pt.msec);
           if (tslen > 0 && tslen < (int)sizeof(buf)) {
               pj_str_t time = pj_str(buf);
@@ -156,7 +156,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 
     *p_body = body;
 
-    return PJ_SUCCESS;    
+    return PJ_SUCCESS;
 }
 
 
@@ -229,20 +229,20 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
     while (pidf_tuple && pres_status->info_cnt < PJSIP_PRES_STATUS_MAX_INFO) {
         pjpidf_status *pidf_status;
 
-        pres_status->info[pres_status->info_cnt].tuple_node = 
+        pres_status->info[pres_status->info_cnt].tuple_node =
             pj_xml_clone(pool, pidf_tuple);
 
-        pj_strdup(pool, 
+        pj_strdup(pool,
                   &pres_status->info[pres_status->info_cnt].id,
                   pjpidf_tuple_get_id(pidf_tuple));
 
-        pj_strdup(pool, 
+        pj_strdup(pool,
                   &pres_status->info[pres_status->info_cnt].contact,
                   pjpidf_tuple_get_contact(pidf_tuple));
 
         pidf_status = pjpidf_tuple_get_status(pidf_tuple);
         if (pidf_status) {
-            pres_status->info[pres_status->info_cnt].basic_open = 
+            pres_status->info[pres_status->info_cnt].basic_open =
                 pjpidf_status_is_basic_open(pidf_status);
         } else {
             pres_status->info[pres_status->info_cnt].basic_open = PJ_FALSE;
@@ -282,7 +282,7 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
         return PJSIP_SIMPLE_EBADXPIDF;
 
     pres_status->info_cnt = 1;
-    
+
     pj_strdup(pool,
               &pres_status->info[0].contact,
               pjxpidf_get_uri(xpidf));

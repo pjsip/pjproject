@@ -227,7 +227,7 @@ static pj_status_t tls_init(void)
         for (i = 0; i<PJ_ARRAY_SIZE(ssl_ciphers); i++) {
             unsigned char id[2];
             const char *suite;
-            
+
             suite = gnutls_cipher_suite_info(i, (unsigned char *)id,
                                              NULL, NULL, NULL, NULL);
             ssl_ciphers[i].id = 0;
@@ -772,7 +772,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                                                            GNUTLS_X509_FMT_DER,
                                                            prikey_pass,
                                                            0);
-            */                                                           
+            */
             if (ret < 0)
                 goto out;
         }
@@ -857,7 +857,7 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
     for (i = 0; ; i++) {
         unsigned char id[2];
         const char *suite;
-        
+
         suite = gnutls_cipher_suite_info(i,(unsigned char *)id, NULL,
                                          &lookup, NULL, NULL);
         if (suite) {

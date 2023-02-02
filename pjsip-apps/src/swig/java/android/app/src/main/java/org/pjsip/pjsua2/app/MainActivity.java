@@ -137,7 +137,7 @@ public class MainActivity extends Activity
             app = new MyApp();
             // Wait for GDB to init, for native debugging only
             if (false &&
-                (getApplicationInfo().flags & 
+                (getApplicationInfo().flags &
                 ApplicationInfo.FLAG_DEBUGGABLE) != 0)
             {
                 try {
@@ -181,7 +181,7 @@ public class MainActivity extends Activity
                 @Override
                 public void onItemClick(AdapterView<?> parent,
                                         final View view,
-                                        int position, long id) 
+                                        int position, long id)
                 {
                     view.setSelected(true);
                     buddyListSelectedIdx = position;
@@ -223,7 +223,7 @@ public class MainActivity extends Activity
         }
 
         return true;
-    }   
+    }
 
     @Override
     public boolean handleMessage(Message m)
@@ -498,7 +498,7 @@ public class MainActivity extends Activity
                             buddyList.add(putData(cfg.getUri(), ""));
                             buddyListAdapter.notifyDataSetChanged();
                             buddyListSelectedIdx = -1;
-                        } else if (old_cfg.getSubscribe() != 
+                        } else if (old_cfg.getSubscribe() !=
                                    cfg.getSubscribe())
                         {
                             MyBuddy bud = account.buddyList.get(
@@ -576,7 +576,7 @@ public class MainActivity extends Activity
 
     /*
     * === MyAppObserver ===
-    * 
+    *
     * As we cannot do UI from worker thread, the callbacks mostly just send
     * a message to UI/main thread.
     */
@@ -614,7 +614,7 @@ public class MainActivity extends Activity
         try {
             ci = call.getInfo();
         } catch (Exception e) {}
-        
+
         if (ci == null)
             return;
 

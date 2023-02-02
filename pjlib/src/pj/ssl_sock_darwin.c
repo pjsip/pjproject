@@ -42,7 +42,7 @@
 #include <Security/Security.h>
 #include <Security/SecureTransport.h>
 #include <CoreFoundation/CoreFoundation.h>
-#include <CommonCrypto/CommonDigest.h> 
+#include <CommonCrypto/CommonDigest.h>
 
 #define SSL_SOCK_IMP_USE_CIRC_BUF
 
@@ -80,7 +80,7 @@ static pj_status_t pj_status_from_err(darwinssl_sock_t *dssock,
 
     if (__builtin_available(macOS 10.3, iOS 11.3, *)) {
         CFStringRef errmsg;
-    
+
         errmsg = SecCopyErrorMessageString(err, NULL);
         PJ_LOG(3, (THIS_FILE, "Darwin SSL error %s [%d]: %s",
                    (msg? msg: ""), err,
@@ -162,21 +162,21 @@ static pj_status_t create_data_from_file(CFDataRef *data,
     CFReadStreamRef read_stream;
     UInt8 data_buf[8192];
     CFIndex nbytes = 0;
-    
+
     if (path) {
         CFURLRef filepath;
         CFStringRef path_str;
-        
+
         path_str = CFStringCreateWithBytes(NULL, (const UInt8 *)path->ptr,
                                            path->slen,
                                            kCFStringEncodingUTF8, false);
         if (!path_str) return PJ_ENOMEM;
-    
+
         filepath = CFURLCreateWithFileSystemPath(NULL, path_str,
                                                  kCFURLPOSIXPathStyle, true);
         CFRelease(path_str);
         if (!filepath) return PJ_ENOMEM;
-    
+
         path_str = CFStringCreateWithBytes(NULL, (const UInt8 *)fname->ptr,
                                            fname->slen,
                                            kCFStringEncodingUTF8, false);
@@ -184,7 +184,7 @@ static pj_status_t create_data_from_file(CFDataRef *data,
             CFRelease(filepath);
             return PJ_ENOMEM;
         }
-    
+
         file = CFURLCreateCopyAppendingPathComponent(NULL, filepath,
                                                      path_str, false);
         CFRelease(path_str);
@@ -193,32 +193,32 @@ static pj_status_t create_data_from_file(CFDataRef *data,
         file = CFURLCreateFromFileSystemRepresentation(NULL,
                (const UInt8 *)fname->ptr, fname->slen, false);
     }
-    
+
     if (!file)
         return PJ_ENOMEM;
-    
+
     read_stream = CFReadStreamCreateWithFile(NULL, file);
     CFRelease(file);
-    
+
     if (!read_stream)
         return PJ_ENOTFOUND;
-    
+
     if (!CFReadStreamOpen(read_stream)) {
         PJ_LOG(2, (THIS_FILE, "Failed opening file"));
         CFRelease(read_stream);
         return PJ_EINVAL;
     }
-    
+
     nbytes = CFReadStreamRead(read_stream, data_buf,
                               sizeof(data_buf));
     if (nbytes > 0)
         *data = CFDataCreate(NULL, data_buf, nbytes);
     else
         *data = NULL;
-    
+
     CFReadStreamClose(read_stream);
     CFRelease(read_stream);
-    
+
     return (*data? PJ_SUCCESS: PJ_EINVAL);
 }
 
@@ -269,13 +269,13 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
             keys[0] = (void *)kSecImportExportPassphrase;
             values[0] = (void *)password;
         }
-    
+
         options = CFDictionaryCreate(NULL, (const void **)keys,
                                      (const void **)values,
                                      (password? 1: 0), NULL, NULL);
         if (!options)
             return PJ_ENOMEM;
-        
+
 #if TARGET_OS_IPHONE
         err = SecPKCS12Import(cert_data, options, &items);
 #else
@@ -285,11 +285,11 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
                                                kSecFormatX509Cert/* DER */};
             SecExternalItemType ext_type = kSecItemTypeCertificate;
             SecItemImportExportKeyParameters key_params;
-    
+
             pj_bzero(&key_params, sizeof(key_params));
             key_params.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
             key_params.passphrase = password;
-    
+
             for (i = 0; i < PJ_ARRAY_SIZE(ext_format); i++) {
                 items = NULL;
                 err = SecItemImport(cert_data, NULL, &ext_format[i],
@@ -300,7 +300,7 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
             }
         }
 #endif
-    
+
         CFRelease(options);
         if (password)
             CFRelease(password);
@@ -308,16 +308,16 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
         if (err != noErr || !items) {
             return pj_status_from_err(dssock, "SecItemImport", err);
         }
-    
+
         count = CFArrayGetCount(items);
-    
+
         for (i = 0; i < count; i++) {
             CFTypeRef item;
             CFTypeID item_id;
-        
+
             item = (CFTypeRef) CFArrayGetValueAtIndex(items, i);
             item_id = CFGetTypeID(item);
-    
+
             if (item_id == CFDictionaryGetTypeID()) {
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
@@ -340,23 +340,23 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
             }
 #endif
         }
-    
+
         CFRelease(items);
-    
+
         if (!identity) {
             PJ_LOG(2, (THIS_FILE, "Failed extracting identity from "
                                   "the cert file"));
             return PJ_EINVAL;
         }
-        
+
         cert_arr[0] = identity;
         cert_refs = CFArrayCreate(NULL, (const void **)cert_arr, 1,
                               &kCFTypeArrayCallBacks);
         if (!cert_refs)
             return PJ_ENOMEM;
-    
+
         err = SSLSetCertificate(dssock->ssl_ctx, cert_refs);
-    
+
         CFRelease(cert_refs);
         CFRelease(identity);
         if (err != noErr)
@@ -472,12 +472,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     if (ssock->param.ciphers_num > 0) {
         int i, n = ssock->param.ciphers_num;
         SSLCipherSuite ciphers[MAX_CIPHERS];
-        
+
         if (n > PJ_ARRAY_SIZE(ciphers))
             n = PJ_ARRAY_SIZE(ciphers);
         for (i = 0; i < n; i++)
             ciphers[i] = (SSLCipherSuite)ssock->param.ciphers[i];
-    
+
         err = SSLSetEnabledCiphers(ssl_ctx, ciphers, n);
         if (err != noErr)
             return pj_status_from_err(dssock, "SetEnabledCiphers", err);
@@ -534,247 +534,247 @@ const char *sslGetCipherSuiteString(SSLCipherSuite cs)
 {
     switch (cs) {
         /* TLS cipher suites, RFC 2246 */
-        case SSL_NULL_WITH_NULL_NULL:               
+        case SSL_NULL_WITH_NULL_NULL:
             return "TLS_NULL_WITH_NULL_NULL";
-        case SSL_RSA_WITH_NULL_MD5:                 
+        case SSL_RSA_WITH_NULL_MD5:
             return "TLS_RSA_WITH_NULL_MD5";
-        case SSL_RSA_WITH_NULL_SHA:                 
+        case SSL_RSA_WITH_NULL_SHA:
             return "TLS_RSA_WITH_NULL_SHA";
-        case SSL_RSA_EXPORT_WITH_RC4_40_MD5:        
+        case SSL_RSA_EXPORT_WITH_RC4_40_MD5:
             return "TLS_RSA_EXPORT_WITH_RC4_40_MD5";
-        case SSL_RSA_WITH_RC4_128_MD5:              
+        case SSL_RSA_WITH_RC4_128_MD5:
             return "TLS_RSA_WITH_RC4_128_MD5";
-        case SSL_RSA_WITH_RC4_128_SHA:              
+        case SSL_RSA_WITH_RC4_128_SHA:
             return "TLS_RSA_WITH_RC4_128_SHA";
-        case SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5:    
+        case SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5:
             return "TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5";
-        case SSL_RSA_WITH_IDEA_CBC_SHA:             
+        case SSL_RSA_WITH_IDEA_CBC_SHA:
             return "TLS_RSA_WITH_IDEA_CBC_SHA";
-        case SSL_RSA_EXPORT_WITH_DES40_CBC_SHA:     
+        case SSL_RSA_EXPORT_WITH_DES40_CBC_SHA:
             return "TLS_RSA_EXPORT_WITH_DES40_CBC_SHA";
-        case SSL_RSA_WITH_DES_CBC_SHA:              
+        case SSL_RSA_WITH_DES_CBC_SHA:
             return "TLS_RSA_WITH_DES_CBC_SHA";
-        case SSL_RSA_WITH_3DES_EDE_CBC_SHA:         
+        case SSL_RSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_RSA_WITH_3DES_EDE_CBC_SHA";
-        case SSL_DH_DSS_EXPORT_WITH_DES40_CBC_SHA:  
+        case SSL_DH_DSS_EXPORT_WITH_DES40_CBC_SHA:
             return "TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA";
-        case SSL_DH_DSS_WITH_DES_CBC_SHA:           
+        case SSL_DH_DSS_WITH_DES_CBC_SHA:
             return "TLS_DH_DSS_WITH_DES_CBC_SHA";
-        case SSL_DH_DSS_WITH_3DES_EDE_CBC_SHA:      
+        case SSL_DH_DSS_WITH_3DES_EDE_CBC_SHA:
             return "TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA";
-        case SSL_DH_RSA_EXPORT_WITH_DES40_CBC_SHA:  
+        case SSL_DH_RSA_EXPORT_WITH_DES40_CBC_SHA:
             return "TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA";
-        case SSL_DH_RSA_WITH_DES_CBC_SHA:           
+        case SSL_DH_RSA_WITH_DES_CBC_SHA:
             return "TLS_DH_RSA_WITH_DES_CBC_SHA";
-        case SSL_DH_RSA_WITH_3DES_EDE_CBC_SHA:      
+        case SSL_DH_RSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA";
-        case SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA: 
+        case SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA:
             return "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA";
-        case SSL_DHE_DSS_WITH_DES_CBC_SHA:          
+        case SSL_DHE_DSS_WITH_DES_CBC_SHA:
             return "TLS_DHE_DSS_WITH_DES_CBC_SHA";
-        case SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA:     
+        case SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA:
             return "TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA";
-        case SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA: 
+        case SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA:
             return "TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA";
-        case SSL_DHE_RSA_WITH_DES_CBC_SHA:          
+        case SSL_DHE_RSA_WITH_DES_CBC_SHA:
             return "TLS_DHE_RSA_WITH_DES_CBC_SHA";
-        case SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA:     
+        case SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA";
-        case SSL_DH_anon_EXPORT_WITH_RC4_40_MD5:    
+        case SSL_DH_anon_EXPORT_WITH_RC4_40_MD5:
             return "TLS_DH_anon_EXPORT_WITH_RC4_40_MD5";
-        case SSL_DH_anon_WITH_RC4_128_MD5:          
+        case SSL_DH_anon_WITH_RC4_128_MD5:
             return "TLS_DH_anon_WITH_RC4_128_MD5";
-        case SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA: 
+        case SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA:
             return "TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA";
-        case SSL_DH_anon_WITH_DES_CBC_SHA:          
+        case SSL_DH_anon_WITH_DES_CBC_SHA:
             return "TLS_DH_anon_WITH_DES_CBC_SHA";
-        case SSL_DH_anon_WITH_3DES_EDE_CBC_SHA:     
+        case SSL_DH_anon_WITH_3DES_EDE_CBC_SHA:
             return "TLS_DH_anon_WITH_3DES_EDE_CBC_SHA";
 
         /* SSLv3 Fortezza cipher suites, from NSS */
-        case SSL_FORTEZZA_DMS_WITH_NULL_SHA:        
+        case SSL_FORTEZZA_DMS_WITH_NULL_SHA:
             return "SSL_FORTEZZA_DMS_WITH_NULL_SHA";
         case SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA:
             return "SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA";
 
         /* TLS addenda using AES-CBC, RFC 3268 */
-        case TLS_RSA_WITH_AES_128_CBC_SHA:          
+        case TLS_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_DH_DSS_WITH_AES_128_CBC_SHA:       
+        case TLS_DH_DSS_WITH_AES_128_CBC_SHA:
             return "TLS_DH_DSS_WITH_AES_128_CBC_SHA";
-        case TLS_DH_RSA_WITH_AES_128_CBC_SHA:       
+        case TLS_DH_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_DH_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_DHE_DSS_WITH_AES_128_CBC_SHA:      
+        case TLS_DHE_DSS_WITH_AES_128_CBC_SHA:
             return "TLS_DHE_DSS_WITH_AES_128_CBC_SHA";
-        case TLS_DHE_RSA_WITH_AES_128_CBC_SHA:      
+        case TLS_DHE_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_DHE_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_DH_anon_WITH_AES_128_CBC_SHA:      
+        case TLS_DH_anon_WITH_AES_128_CBC_SHA:
             return "TLS_DH_anon_WITH_AES_128_CBC_SHA";
-        case TLS_RSA_WITH_AES_256_CBC_SHA:          
+        case TLS_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_DH_DSS_WITH_AES_256_CBC_SHA:       
+        case TLS_DH_DSS_WITH_AES_256_CBC_SHA:
             return "TLS_DH_DSS_WITH_AES_256_CBC_SHA";
-        case TLS_DH_RSA_WITH_AES_256_CBC_SHA:       
+        case TLS_DH_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_DH_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_DHE_DSS_WITH_AES_256_CBC_SHA:      
+        case TLS_DHE_DSS_WITH_AES_256_CBC_SHA:
             return "TLS_DHE_DSS_WITH_AES_256_CBC_SHA";
-        case TLS_DHE_RSA_WITH_AES_256_CBC_SHA:      
+        case TLS_DHE_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_DHE_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_DH_anon_WITH_AES_256_CBC_SHA:      
+        case TLS_DH_anon_WITH_AES_256_CBC_SHA:
             return "TLS_DH_anon_WITH_AES_256_CBC_SHA";
 
         /* ECDSA addenda, RFC 4492 */
-        case TLS_ECDH_ECDSA_WITH_NULL_SHA:          
+        case TLS_ECDH_ECDSA_WITH_NULL_SHA:
             return "TLS_ECDH_ECDSA_WITH_NULL_SHA";
-        case TLS_ECDH_ECDSA_WITH_RC4_128_SHA:       
+        case TLS_ECDH_ECDSA_WITH_RC4_128_SHA:
             return "TLS_ECDH_ECDSA_WITH_RC4_128_SHA";
-        case TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA:  
+        case TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA:   
+        case TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA:
             return "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA";
-        case TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA:   
+        case TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA:
             return "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA";
-        case TLS_ECDHE_ECDSA_WITH_NULL_SHA:         
+        case TLS_ECDHE_ECDSA_WITH_NULL_SHA:
             return "TLS_ECDHE_ECDSA_WITH_NULL_SHA";
-        case TLS_ECDHE_ECDSA_WITH_RC4_128_SHA:      
+        case TLS_ECDHE_ECDSA_WITH_RC4_128_SHA:
             return "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA";
-        case TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA: 
+        case TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA:  
+        case TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA:
             return "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA";
-        case TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:  
+        case TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:
             return "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA";
-        case TLS_ECDH_RSA_WITH_NULL_SHA:            
+        case TLS_ECDH_RSA_WITH_NULL_SHA:
             return "TLS_ECDH_RSA_WITH_NULL_SHA";
-        case TLS_ECDH_RSA_WITH_RC4_128_SHA:         
+        case TLS_ECDH_RSA_WITH_RC4_128_SHA:
             return "TLS_ECDH_RSA_WITH_RC4_128_SHA";
-        case TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA:    
+        case TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDH_RSA_WITH_AES_128_CBC_SHA:     
+        case TLS_ECDH_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_ECDH_RSA_WITH_AES_256_CBC_SHA:     
+        case TLS_ECDH_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_ECDHE_RSA_WITH_NULL_SHA:           
+        case TLS_ECDHE_RSA_WITH_NULL_SHA:
             return "TLS_ECDHE_RSA_WITH_NULL_SHA";
-        case TLS_ECDHE_RSA_WITH_RC4_128_SHA:        
+        case TLS_ECDHE_RSA_WITH_RC4_128_SHA:
             return "TLS_ECDHE_RSA_WITH_RC4_128_SHA";
-        case TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA:   
+        case TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:    
+        case TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:
             return "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA";
-        case TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:    
+        case TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:
             return "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA";
-        case TLS_ECDH_anon_WITH_NULL_SHA:           
+        case TLS_ECDH_anon_WITH_NULL_SHA:
             return "TLS_ECDH_anon_WITH_NULL_SHA";
-        case TLS_ECDH_anon_WITH_RC4_128_SHA:        
+        case TLS_ECDH_anon_WITH_RC4_128_SHA:
             return "TLS_ECDH_anon_WITH_RC4_128_SHA";
-        case TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA:   
+        case TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA:
             return "TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA";
-        case TLS_ECDH_anon_WITH_AES_128_CBC_SHA:    
+        case TLS_ECDH_anon_WITH_AES_128_CBC_SHA:
             return "TLS_ECDH_anon_WITH_AES_128_CBC_SHA";
-        case TLS_ECDH_anon_WITH_AES_256_CBC_SHA:    
+        case TLS_ECDH_anon_WITH_AES_256_CBC_SHA:
             return "TLS_ECDH_anon_WITH_AES_256_CBC_SHA";
 
         /* TLS 1.2 addenda, RFC 5246 */
-        case TLS_RSA_WITH_AES_128_CBC_SHA256:       
+        case TLS_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_RSA_WITH_AES_256_CBC_SHA256:       
+        case TLS_RSA_WITH_AES_256_CBC_SHA256:
             return "TLS_RSA_WITH_AES_256_CBC_SHA256";
-        case TLS_DH_DSS_WITH_AES_128_CBC_SHA256:    
+        case TLS_DH_DSS_WITH_AES_128_CBC_SHA256:
             return "TLS_DH_DSS_WITH_AES_128_CBC_SHA256";
-        case TLS_DH_RSA_WITH_AES_128_CBC_SHA256:    
+        case TLS_DH_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_DH_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_DHE_DSS_WITH_AES_128_CBC_SHA256:   
+        case TLS_DHE_DSS_WITH_AES_128_CBC_SHA256:
             return "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256";
-        case TLS_DHE_RSA_WITH_AES_128_CBC_SHA256:   
+        case TLS_DHE_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_DH_DSS_WITH_AES_256_CBC_SHA256:    
+        case TLS_DH_DSS_WITH_AES_256_CBC_SHA256:
             return "TLS_DH_DSS_WITH_AES_256_CBC_SHA256";
-        case TLS_DH_RSA_WITH_AES_256_CBC_SHA256:    
+        case TLS_DH_RSA_WITH_AES_256_CBC_SHA256:
             return "TLS_DH_RSA_WITH_AES_256_CBC_SHA256";
-        case TLS_DHE_DSS_WITH_AES_256_CBC_SHA256:   
+        case TLS_DHE_DSS_WITH_AES_256_CBC_SHA256:
             return "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256";
-        case TLS_DHE_RSA_WITH_AES_256_CBC_SHA256:   
+        case TLS_DHE_RSA_WITH_AES_256_CBC_SHA256:
             return "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256";
-        case TLS_DH_anon_WITH_AES_128_CBC_SHA256:   
+        case TLS_DH_anon_WITH_AES_128_CBC_SHA256:
             return "TLS_DH_anon_WITH_AES_128_CBC_SHA256";
-        case TLS_DH_anon_WITH_AES_256_CBC_SHA256:   
+        case TLS_DH_anon_WITH_AES_256_CBC_SHA256:
             return "TLS_DH_anon_WITH_AES_256_CBC_SHA256";
 
         /* TLS addenda using AES-GCM, RFC 5288 */
-        case TLS_RSA_WITH_AES_128_GCM_SHA256:       
+        case TLS_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_RSA_WITH_AES_256_GCM_SHA384:       
+        case TLS_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_DHE_RSA_WITH_AES_128_GCM_SHA256:   
+        case TLS_DHE_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_DHE_RSA_WITH_AES_256_GCM_SHA384:   
+        case TLS_DHE_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384";
-        case TLS_DH_RSA_WITH_AES_128_GCM_SHA256:    
+        case TLS_DH_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_DH_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_DH_RSA_WITH_AES_256_GCM_SHA384:    
+        case TLS_DH_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_DH_RSA_WITH_AES_256_GCM_SHA384";
-        case TLS_DHE_DSS_WITH_AES_128_GCM_SHA256:   
+        case TLS_DHE_DSS_WITH_AES_128_GCM_SHA256:
             return "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256";
-        case TLS_DHE_DSS_WITH_AES_256_GCM_SHA384:   
+        case TLS_DHE_DSS_WITH_AES_256_GCM_SHA384:
             return "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384";
-        case TLS_DH_DSS_WITH_AES_128_GCM_SHA256:    
+        case TLS_DH_DSS_WITH_AES_128_GCM_SHA256:
             return "TLS_DH_DSS_WITH_AES_128_GCM_SHA256";
-        case TLS_DH_DSS_WITH_AES_256_GCM_SHA384:    
+        case TLS_DH_DSS_WITH_AES_256_GCM_SHA384:
             return "TLS_DH_DSS_WITH_AES_256_GCM_SHA384";
-        case TLS_DH_anon_WITH_AES_128_GCM_SHA256:   
+        case TLS_DH_anon_WITH_AES_128_GCM_SHA256:
             return "TLS_DH_anon_WITH_AES_128_GCM_SHA256";
-        case TLS_DH_anon_WITH_AES_256_GCM_SHA384:   
+        case TLS_DH_anon_WITH_AES_256_GCM_SHA384:
             return "TLS_DH_anon_WITH_AES_256_GCM_SHA384";
 
         /* ECDSA addenda, RFC 5289 */
-        case TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256:   
+        case TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256:
             return "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256";
-        case TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384:   
+        case TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384:
             return "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384";
-        case TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256:    
+        case TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256:
             return "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256";
-        case TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384:    
+        case TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384:
             return "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384";
-        case TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256:     
+        case TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384:     
+        case TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384:
             return "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384";
-        case TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256:      
+        case TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256:
             return "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256";
-        case TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384:      
+        case TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384:
             return "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384";
-        case TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:   
+        case TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:
             return "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256";
-        case TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:   
+        case TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:
             return "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
-        case TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256:    
+        case TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256:
             return "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256";
-        case TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384:    
+        case TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384:
             return "TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384";
-        case TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:     
+        case TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:     
+        case TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384";
-        case TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256:      
+        case TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256:
             return "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256";
-        case TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384:      
+        case TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384:
             return "TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384";
-            
+
         /*
          * Tags for SSL 2 cipher kinds which are not specified for SSL 3.
          */
-        case SSL_RSA_WITH_RC2_CBC_MD5:              
+        case SSL_RSA_WITH_RC2_CBC_MD5:
             return "TLS_RSA_WITH_RC2_CBC_MD5";
-        case SSL_RSA_WITH_IDEA_CBC_MD5:             
+        case SSL_RSA_WITH_IDEA_CBC_MD5:
             return "TLS_RSA_WITH_IDEA_CBC_MD5";
-        case SSL_RSA_WITH_DES_CBC_MD5:              
+        case SSL_RSA_WITH_DES_CBC_MD5:
             return "TLS_RSA_WITH_DES_CBC_MD5";
-        case SSL_RSA_WITH_3DES_EDE_CBC_MD5:         
+        case SSL_RSA_WITH_3DES_EDE_CBC_MD5:
             return "TLS_RSA_WITH_3DES_EDE_CBC_MD5";
-        case SSL_NO_SUCH_CIPHERSUITE:               
+        case SSL_NO_SUCH_CIPHERSUITE:
             return "SSL_NO_SUCH_CIPHERSUITE";
-            
+
         default:
             return "TLS_CIPHER_STRING_UNKNOWN";
     }
@@ -790,7 +790,7 @@ static void ssl_ciphers_populate(void)
 
         ssl_ctx = SSLCreateContext(NULL, kSSLClientSide, kSSLStreamType);
         if (ssl_ctx == NULL) return;
-        
+
         err = SSLGetNumberSupportedCiphers(ssl_ctx, &n);
         if (err != noErr) goto on_error;
         if (n > PJ_ARRAY_SIZE(ssl_ciphers))
@@ -803,7 +803,7 @@ static void ssl_ciphers_populate(void)
             ssl_ciphers[i].id = ciphers[i];
             ssl_ciphers[i].name = sslGetCipherSuiteString(ciphers[i]);
         }
-        
+
         ssl_cipher_num = n;
 
 on_error:
@@ -849,7 +849,7 @@ static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
                 continue;
             str = (CFStringRef) CFDictionaryGetValue(dict,
                                                      kSecPropertyKeyValue);
-                                                     
+
             if (CFStringGetLength(str) > 0) {
                 if (add_separator) {
                     CFStringAppendCString(info, "/", kCFStringEncodingUTF8);
@@ -857,7 +857,7 @@ static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
                 CFStringAppendCString(info, labels[i], kCFStringEncodingUTF8);
                 CFStringAppend(info, str);
                 add_separator = PJ_TRUE;
-                
+
                 if (CFEqual(keys[i], kSecOIDCommonName))
                     *cn = str;
             }
@@ -917,7 +917,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
      * validity, and alt names.
      */
     CFArrayRef issuer_vals;
-    
+
     dict = get_cert_oid(cert, kSecOIDX509V1IssuerName,
                         (CFTypeRef *)&issuer_vals);
     if (dict) {
@@ -955,7 +955,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 #if !TARGET_OS_IPHONE
 {
     CFStringRef version;
-    
+
     dict = get_cert_oid(cert, kSecOIDX509V1Version,
                         (CFTypeRef *)&version);
     if (dict) {
@@ -993,17 +993,17 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 {
     CFArrayRef subject;
     CFMutableStringRef subject_info;
-    
+
     dict = get_cert_oid(cert, kSecOIDX509V1SubjectName,
                         (CFTypeRef *)&subject);
     if (dict) {
         subject_info = CFStringCreateMutable(NULL, 0);
 
         get_info_and_cn(subject, subject_info, &str);
-    
+
         CFStringGetCString(subject_info, buf, bufsize, kCFStringEncodingUTF8);
         pj_strdup2(pool, &ci->subject.info, buf);
-    
+
         CFRelease(dict);
         CFRelease(subject_info);
     }
@@ -1015,7 +1015,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 {
     CFNumberRef validity;
     double interval;
-    
+
     dict = get_cert_oid(cert, kSecOIDX509V1ValidityNotBefore,
                         (CFTypeRef *)&validity);
     if (dict) {
@@ -1058,11 +1058,11 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
         CFDictionaryRef item;
         CFStringRef label, value;
         pj_ssl_cert_name_type type = PJ_SSL_CERT_NAME_UNKNOWN;
-        
+
         item = CFArrayGetValueAtIndex(altname, i);
         if (CFGetTypeID(item) != CFDictionaryGetTypeID())
             continue;
-        
+
         label = (CFStringRef)CFDictionaryGetValue(item, kSecPropertyKeyLabel);
         if (CFGetTypeID(label) != CFStringGetTypeID())
             continue;
@@ -1139,7 +1139,7 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
     SecCertificateRef cert;
 
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
-    
+
     /* Get active local certificate */
     /* There's no API to get local cert */
 
@@ -1173,7 +1173,7 @@ static void ssl_set_peer_name(pj_ssl_sock_t *ssock)
         get_ip_addr_ver(&ssock->param.server_name) == 0)
     {
         OSStatus err;
-        
+
         err = SSLSetPeerDomainName(dssock->ssl_ctx,
                                    ssock->param.server_name.ptr,
                                    ssock->param.server_name.slen);
@@ -1201,7 +1201,7 @@ static void auto_verify_result(pj_ssl_sock_t *ssock, OSStatus ret)
 
     case errSSLPeerCertRevoked:
         ssock->verify_status |= PJ_SSL_CERT_EREVOKED;
-        break;  
+        break;
 
     case errSSLHostNameMismatch:
         ssock->verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
@@ -1242,30 +1242,30 @@ static pj_status_t verify_cert(darwinssl_sock_t * dssock, pj_ssl_cert_t *cert)
         if (!ca_data)
             PJ_LOG(2, (THIS_FILE, "Not enough memory for CA buffer"));
     }
-    
+
     if (ca_data) {
         SecCertificateRef ca_cert;
         CFMutableArrayRef ca_array;
-        
+
         ca_array = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
         if (!ca_array) {
             CFRelease(ca_data);
             PJ_LOG(2, (THIS_FILE, "Not enough memory for CA array"));
             return PJ_ENOMEM;
         }
-        
+
         ca_cert = SecCertificateCreateWithData(NULL, ca_data);
         CFRelease(ca_data);
-        
+
         if (!ca_cert) {
             PJ_LOG(2, (THIS_FILE, "Failed creating certificate from "
                                   "CA file/buffer. It has to be "
                                   "in DER format."));
         } else {
-        
+
             CFArrayAppendValue(ca_array, ca_cert);
             CFRelease(ca_cert);
-        
+
             err = SecTrustSetAnchorCertificates(trust, ca_array);
             CFRelease(ca_array);
             if (err != noErr)
@@ -1314,7 +1314,7 @@ static pj_status_t verify_cert(darwinssl_sock_t * dssock, pj_ssl_cert_t *cert)
                         */
                        ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
                        break;
-        
+
                    case kSecTrustResultOtherError:
                        ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
                        break;
@@ -1327,9 +1327,9 @@ static pj_status_t verify_cert(darwinssl_sock_t * dssock, pj_ssl_cert_t *cert)
                        break;
                    }
               });
-    
+
     CFRelease(trust);
-    
+
     if (err != noErr)
         return pj_status_from_err(dssock, "SecTrustEvaluateAsync", err);
 
@@ -1416,7 +1416,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
     } else if (processed < size) {
         return PJ_ENOMEM;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1429,7 +1429,7 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
     if (err != noErr) {
         return pj_status_from_err(dssock, "SSLReHandshake", err);
     }
-    
+
     return PJ_SUCCESS;
 }
 

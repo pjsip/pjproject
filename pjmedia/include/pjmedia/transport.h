@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TRANSPORT_H__
 #define __PJMEDIA_TRANSPORT_H__
@@ -35,7 +35,7 @@
  * @{
  * The media transport (#pjmedia_transport) is the object to send and
  * receive media packets over the network. The media transport interface
- * allows the library to be extended to support different types of 
+ * allows the library to be extended to support different types of
  * transports to send and receive packets.
  *
  * The media transport is declared as #pjmedia_transport "class", which
@@ -43,7 +43,7 @@
  * structure. For the user of the media transport (normally the user of
  * media transport is media stream, see \ref PJMED_STRM), these transport
  * "methods" are wrapped with API such as #pjmedia_transport_attach(),
- * so it should not need to call the function pointer inside 
+ * so it should not need to call the function pointer inside
  * #pjmedia_transport_op directly.
  *
  * The connection between \ref PJMED_STRM and media transport is shown in
@@ -87,27 +87,27 @@
  *    two endpoints, and it may contain more than one media streams, for
  *    example, an audio stream and a video stream).
  *
- *  When stream is created, it will "attach" itself to the media 
+ *  When stream is created, it will "attach" itself to the media
  *    transport by calling #pjmedia_transport_attach(), which is a thin
- *    wrapper which calls "attach()" method of the media transport's 
+ *    wrapper which calls "attach()" method of the media transport's
  *    "virtual function pointer" (#pjmedia_transport_op). Among other things,
  *    the stream specifies two callback functions to the transport: one
  *    callback function will be called by transport when it receives RTP
- *    packet, and another callback for incoming RTCP packet. The 
+ *    packet, and another callback for incoming RTCP packet. The
  *    #pjmedia_transport_attach() function also establish the destination
  *    of the outgoing RTP and RTCP packets.
  *
  *  When the stream needs to send outgoing RTP/RTCP packets, it will
  *    call #pjmedia_transport_send_rtp() and #pjmedia_transport_send_rtcp()
- *    of the media transport API, which is a thin wrapper to call send_rtp() 
- *    and send_rtcp() methods in the media transport's "virtual function 
+ *    of the media transport API, which is a thin wrapper to call send_rtp()
+ *    and send_rtcp() methods in the media transport's "virtual function
  *    pointer"  (#pjmedia_transport_op).
  *
  *  When the stream is destroyed, it will "detach" itself from
  *    the media transport by calling #pjmedia_transport_detach(), which is
- *    a thin wrapper which calls "detach()" method of the media transport's 
+ *    a thin wrapper which calls "detach()" method of the media transport's
  *    "virtual function pointer" (#pjmedia_transport_op). After the transport
- *    is detached from its user (the stream), it will no longer report 
+ *    is detached from its user (the stream), it will no longer report
  *    incoming RTP/RTCP packets to the stream, and it will refuse to send
  *    outgoing packets since the destination has been cleared.
  *
@@ -121,18 +121,18 @@
  *    closed and re-opened). However it is up to the application to choose
  *    which method is most suitable for its uses.
  *
- * 
+ *
  * \subsection PJMEDIA_TRANSPORT_H_DESTROY Destroying the Media Transport.
  *
  *  Finally if application no longer needs the media transport, it will
- *    call #pjmedia_transport_close() function, which is thin wrapper which 
- *    calls "destroy()" method of the media transport's  "virtual function 
+ *    call #pjmedia_transport_close() function, which is thin wrapper which
+ *    calls "destroy()" method of the media transport's  "virtual function
  *    pointer" (#pjmedia_transport_op). This function releases
  *    all resources used by the transport, such as sockets and memory.
  *
  *
  * \section offer_answer Interaction with SDP Offer/Answer
- 
+
    For basic UDP transport, the \ref PJMEDIA_TRANSPORT_H_USING above is
    sufficient to use the media transport. However, more complex media
    transports such as \ref PJMEDIA_TRANSPORT_SRTP and \ref
@@ -148,8 +148,8 @@
        have been negotiated by SDP offer answer, and
      - #pjmedia_transport_media_stop(), to deinitialize the media transport
        and reset the transport to its idle state.
-   
-   The usage of these API in the context of SDP offer answer will be 
+
+   The usage of these API in the context of SDP offer answer will be
    described below.
 
    \subsection media_create Initializing Transport for New Session
@@ -169,7 +169,7 @@
    SDP to the invite session to be sent to remote agent.
 
    When creating an answer, also call #pjmedia_transport_encode_sdp(),
-   but this time specify both local and remote SDP to the function. The 
+   but this time specify both local and remote SDP to the function. The
    media transport will once again modify the local SDP and add relevant
    attributes to the local SDP, if the appropriate attributes related to
    the transport functionality are present in remote offer. The remote
@@ -182,9 +182,9 @@
 
    \subsection media_start Offer/Answer Completion
 
-   Once both local and remote SDP have been negotiated by the 
+   Once both local and remote SDP have been negotiated by the
    \ref PJMEDIA_SDP_NEG (normally this is part of PJSIP invite session),
-   application should give both local and remote SDP to 
+   application should give both local and remote SDP to
    #pjmedia_transport_media_start() so that the settings are activated
    for the session. This function should be called for both initial and
    subsequent SDP negotiation.
@@ -202,7 +202,7 @@
  * To implement a new type of media transport, one needs to "subclass" the
  * media transport "class" (#pjmedia_transport) by providing the "methods"
  * in the media transport "interface" (#pjmedia_transport_op), and provides
- * a function to create this new type of transport (similar to 
+ * a function to create this new type of transport (similar to
  * #pjmedia_transport_udp_create() function).
  *
  * The media transport is expected to run indepently, that is there should
@@ -253,7 +253,7 @@ typedef enum pjmedia_tranport_media_option
      * When this flag is specified, the transport will not perform media
      * transport validation, this is useful when transport is stacked with
      * other transport, for example when transport UDP is stacked under
-     * transport SRTP, media transport validation only need to be done by 
+     * transport SRTP, media transport validation only need to be done by
      * transport SRTP.
      */
     PJMEDIA_TPMED_NO_TRANSPORT_CHECKING = 1,
@@ -313,11 +313,11 @@ struct pjmedia_transport_op
     /**
      * This function is called by the stream when the transport is about
      * to be used by the stream for the first time, and it tells the transport
-     * about remote RTP address to send the packet and some callbacks to be 
+     * about remote RTP address to send the packet and some callbacks to be
      * called for incoming packets. This function exists for backwards
      * compatibility. Transports should implement attach2 instead.
      *
-     * Application should call #pjmedia_transport_attach() instead of 
+     * Application should call #pjmedia_transport_attach() instead of
      * calling this function directly.
      */
     pj_status_t (*attach)(pjmedia_transport *tp,
@@ -337,20 +337,20 @@ struct pjmedia_transport_op
      * needs the transport (normally when the stream is about to be closed).
      * After the transport is detached, it will ignore incoming
      * RTP/RTCP packets, and will refuse to send outgoing RTP/RTCP packets.
-     * Application may re-attach the media transport to another transport 
+     * Application may re-attach the media transport to another transport
      * user (e.g. stream) after the transport has been detached.
      *
-     * Application should call #pjmedia_transport_detach() instead of 
+     * Application should call #pjmedia_transport_detach() instead of
      * calling this function directly.
      */
     void (*detach)(pjmedia_transport *tp,
                    void *user_data);
 
     /**
-     * This function is called by the stream to send RTP packet using the 
+     * This function is called by the stream to send RTP packet using the
      * transport.
      *
-     * Application should call #pjmedia_transport_send_rtp() instead of 
+     * Application should call #pjmedia_transport_send_rtp() instead of
      * calling this function directly.
      */
     pj_status_t (*send_rtp)(pjmedia_transport *tp,
@@ -361,7 +361,7 @@ struct pjmedia_transport_op
      * This function is called by the stream to send RTCP packet using the
      * transport.
      *
-     * Application should call #pjmedia_transport_send_rtcp() instead of 
+     * Application should call #pjmedia_transport_send_rtcp() instead of
      * calling this function directly.
      */
     pj_status_t (*send_rtcp)(pjmedia_transport *tp,
@@ -373,7 +373,7 @@ struct pjmedia_transport_op
      * transport with destination address other than default specified in
      * #pjmedia_transport_attach().
      *
-     * Application should call #pjmedia_transport_send_rtcp2() instead of 
+     * Application should call #pjmedia_transport_send_rtcp2() instead of
      * calling this function directly.
      */
     pj_status_t (*send_rtcp2)(pjmedia_transport *tp,
@@ -385,7 +385,7 @@ struct pjmedia_transport_op
     /**
      * Prepare the transport for a new media session.
      *
-     * Application should call #pjmedia_transport_media_create() instead of 
+     * Application should call #pjmedia_transport_media_create() instead of
      * calling this function directly.
      */
     pj_status_t (*media_create)(pjmedia_transport *tp,
@@ -411,7 +411,7 @@ struct pjmedia_transport_op
      * This function is called by application to start the transport
      * based on local and remote SDP.
      *
-     * Application should call #pjmedia_transport_media_start() instead of 
+     * Application should call #pjmedia_transport_media_start() instead of
      * calling this function directly.
      */
     pj_status_t (*media_start) (pjmedia_transport *tp,
@@ -423,7 +423,7 @@ struct pjmedia_transport_op
     /**
      * This function is called by application to stop the transport.
      *
-     * Application should call #pjmedia_transport_media_stop() instead of 
+     * Application should call #pjmedia_transport_media_stop() instead of
      * calling this function directly.
      */
     pj_status_t (*media_stop)  (pjmedia_transport *tp);
@@ -431,7 +431,7 @@ struct pjmedia_transport_op
     /**
      * This function can be called to simulate packet lost.
      *
-     * Application should call #pjmedia_transport_simulate_lost() instead of 
+     * Application should call #pjmedia_transport_simulate_lost() instead of
      * calling this function directly.
      */
     pj_status_t (*simulate_lost)(pjmedia_transport *tp,
@@ -441,7 +441,7 @@ struct pjmedia_transport_op
     /**
      * This function can be called to destroy this transport.
      *
-     * Application should call #pjmedia_transport_close() instead of 
+     * Application should call #pjmedia_transport_close() instead of
      * calling this function directly.
      */
     pj_status_t (*destroy)(pjmedia_transport *tp);
@@ -466,7 +466,7 @@ struct pjmedia_transport_op
 typedef struct pjmedia_transport_op pjmedia_transport_op;
 
 
-/** 
+/**
  * Media transport type.
  */
 typedef enum pjmedia_transport_type
@@ -477,7 +477,7 @@ typedef enum pjmedia_transport_type
     /** Media transport using ICE */
     PJMEDIA_TRANSPORT_TYPE_ICE,
 
-    /** 
+    /**
      * Media transport SRTP, this transport is actually security adapter to be
      * stacked with other transport to enable encryption on the underlying
      * transport.
@@ -547,8 +547,8 @@ typedef struct pjmedia_transport_specific_info
 
 
 /**
- * This structure describes transport informations, including general 
- * socket information and specific information of single transport or 
+ * This structure describes transport informations, including general
+ * socket information and specific information of single transport or
  * stacked transports (e.g: SRTP stacked on top of UDP)
  */
 struct pjmedia_transport_info
@@ -623,7 +623,7 @@ struct pjmedia_transport_attach_param
     void *stream;
 
     /**
-     * Indicate the stream type, either it's audio (PJMEDIA_TYPE_AUDIO) 
+     * Indicate the stream type, either it's audio (PJMEDIA_TYPE_AUDIO)
      * or video (PJMEDIA_TYPE_VIDEO).
      */
     pjmedia_type media_type;
@@ -680,7 +680,7 @@ PJ_INLINE(void) pjmedia_transport_info_init(pjmedia_transport_info *info)
 
 
 /**
- * Get media transport info from the specified transport and all underlying 
+ * Get media transport info from the specified transport and all underlying
  * transports if any. The transport also contains information about socket info
  * which describes the local address of the transport, and would be needed
  * for example to fill in the "c=" and "m=" line of local SDP.
@@ -695,7 +695,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
 {
     if (tp && tp->op && tp->op->get_info)
         return (*tp->op->get_info)(tp, info);
-    
+
     return PJ_ENOTSUP;
 }
 
@@ -703,7 +703,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
 /**
  * Utility API to get transport type specific info from the specified media
  * transport info.
- * 
+ *
  * @param info      Media transport info.
  * @param type      Media transport type.
  *
@@ -763,10 +763,10 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach2(pjmedia_transport *tp,
     if (tp->op->attach2) {
         return (*tp->op->attach2)(tp, att_param);
     } else {
-        return (*tp->op->attach)(tp, att_param->user_data, 
-                                 (pj_sockaddr_t*)&att_param->rem_addr, 
-                                 (pj_sockaddr_t*)&att_param->rem_rtcp, 
-                                 att_param->addr_len, att_param->rtp_cb, 
+        return (*tp->op->attach)(tp, att_param->user_data,
+                                 (pj_sockaddr_t*)&att_param->rem_addr,
+                                 (pj_sockaddr_t*)&att_param->rem_rtcp,
+                                 att_param->addr_len, att_param->rtp_cb,
                                  att_param->rtcp_cb);
     }
 }
@@ -774,11 +774,11 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach2(pjmedia_transport *tp,
 
 /**
  * Attach callbacks to be called on receipt of incoming RTP/RTCP packets.
- * This is just a simple wrapper which calls <tt>attach()</tt> member of 
+ * This is just a simple wrapper which calls <tt>attach()</tt> member of
  * the transport.
  *
  * @param tp        The media transport.
- * @param user_data Arbitrary user data to be set when the callbacks are 
+ * @param user_data Arbitrary user data to be set when the callbacks are
  *                  called.
  * @param rem_addr  Remote RTP address to send RTP packet to.
  * @param rem_rtcp  Optional remote RTCP address. If the argument is NULL
@@ -833,7 +833,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
 
 /**
  * Detach callbacks from the transport.
- * This is just a simple wrapper which calls <tt>detach()</tt> member of 
+ * This is just a simple wrapper which calls <tt>detach()</tt> member of
  * the transport. After the transport is detached, it will ignore incoming
  * RTP/RTCP packets, and will refuse to send outgoing RTP/RTCP packets.
  * Application may re-attach the media transport to another transport user
@@ -852,7 +852,7 @@ PJ_INLINE(void) pjmedia_transport_detach(pjmedia_transport *tp,
 
 /**
  * Send RTP packet with the specified media transport. This is just a simple
- * wrapper which calls <tt>send_rtp()</tt> member of the transport. The 
+ * wrapper which calls <tt>send_rtp()</tt> member of the transport. The
  * RTP packet will be delivered to the destination address specified in
  * #pjmedia_transport_attach() function.
  *
@@ -872,7 +872,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtp(pjmedia_transport *tp,
 
 /**
  * Send RTCP packet with the specified media transport. This is just a simple
- * wrapper which calls <tt>send_rtcp()</tt> member of the transport. The 
+ * wrapper which calls <tt>send_rtcp()</tt> member of the transport. The
  * RTCP packet will be delivered to the destination address specified in
  * #pjmedia_transport_attach() function.
  *
@@ -892,9 +892,9 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
 
 /**
  * Send RTCP packet with the specified media transport. This is just a simple
- * wrapper which calls <tt>send_rtcp2()</tt> member of the transport. The 
+ * wrapper which calls <tt>send_rtcp2()</tt> member of the transport. The
  * RTCP packet will be delivered to the destination address specified in
- * param addr, if addr is NULL, RTCP packet will be delivered to destination 
+ * param addr, if addr is NULL, RTCP packet will be delivered to destination
  * address specified in #pjmedia_transport_attach() function.
  *
  * @param tp        The media transport.
@@ -920,7 +920,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp2(pjmedia_transport *tp,
  * call this function before starting a new media session using this
  * transport.
  *
- * This is just a simple wrapper which calls <tt>media_create()</tt> member 
+ * This is just a simple wrapper which calls <tt>media_create()</tt> member
  * of the transport.
  *
  * @param tp            The media transport.
@@ -939,7 +939,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
                                     const pjmedia_sdp_session *rem_sdp,
                                     unsigned media_index)
 {
-    return (*tp->op->media_create)(tp, sdp_pool, options, rem_sdp, 
+    return (*tp->op->media_create)(tp, sdp_pool, options, rem_sdp,
                                    media_index);
 }
 
@@ -949,7 +949,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
  * called to put transport specific information in the initial or
  * subsequent SDP offer or answer.
  *
- * This is just a simple wrapper which calls <tt>encode_sdp()</tt> member 
+ * This is just a simple wrapper which calls <tt>encode_sdp()</tt> member
  * of the transport.
  *
  * @param tp            The media transport.
@@ -974,13 +974,13 @@ PJ_INLINE(pj_status_t) pjmedia_transport_encode_sdp(pjmedia_transport *tp,
 
 
 /**
- * Start the transport session with the settings in both local and remote 
- * SDP. The actual work that is done by this function depends on the 
+ * Start the transport session with the settings in both local and remote
+ * SDP. The actual work that is done by this function depends on the
  * underlying transport type. For SRTP, this will activate the encryption
  * and decryption based on the keys found the SDPs. For ICE, this will
  * start ICE negotiation according to the information found in the SDPs.
  *
- * This is just a simple wrapper which calls <tt>media_start()</tt> member 
+ * This is just a simple wrapper which calls <tt>media_start()</tt> member
  * of the transport.
  *
  * @param tp            The media transport.
@@ -997,7 +997,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
                                     const pjmedia_sdp_session *sdp_remote,
                                     unsigned media_index)
 {
-    return (*tp->op->media_start)(tp, tmp_pool, sdp_local, sdp_remote, 
+    return (*tp->op->media_start)(tp, tmp_pool, sdp_local, sdp_remote,
                                   media_index);
 }
 
@@ -1006,7 +1006,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
  * This API should be called when the session is stopped, to allow the media
  * transport to release its resources used for the session.
  *
- * This is just a simple wrapper which calls <tt>media_stop()</tt> member 
+ * This is just a simple wrapper which calls <tt>media_stop()</tt> member
  * of the transport.
  *
  * @param tp            The media transport.
@@ -1019,7 +1019,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_stop(pjmedia_transport *tp)
 }
 
 /**
- * Close media transport. This is just a simple wrapper which calls 
+ * Close media transport. This is just a simple wrapper which calls
  * <tt>destroy()</tt> member of the transport. This function will free
  * all resources created by this transport (such as sockets, memory, etc.).
  *

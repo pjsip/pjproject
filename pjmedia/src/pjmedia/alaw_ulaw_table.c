@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,18 +14,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /*
- * The tables here and also the conversion ideas are contributed by 
+ * The tables here and also the conversion ideas are contributed by
  * Toni Rutar <toni at aufbix.org>. Many thanks!
  */
 #include <pjmedia/alaw_ulaw.h>
 
 #if defined(PJMEDIA_HAS_ALAW_ULAW_TABLE) && PJMEDIA_HAS_ALAW_ULAW_TABLE!=0
 
-const pj_uint8_t pjmedia_linear2ulaw_tab[16384] = 
+const pj_uint8_t pjmedia_linear2ulaw_tab[16384] =
 {
     0xff,0xfe,0xfe,0xfd,0xfd,0xfc,0xfc,0xfb,
     0xfb,0xfa,0xfa,0xf9,0xf9,0xf8,0xf8,0xf7,
@@ -2078,7 +2078,7 @@ const pj_uint8_t pjmedia_linear2ulaw_tab[16384] =
 };
 
 
-const pj_uint8_t pjmedia_linear2alaw_tab[16384] = 
+const pj_uint8_t pjmedia_linear2alaw_tab[16384] =
 {
      0xD5,0xD5,0xD5,0xD5,0xD4,0xD4,0xD4,0xD4,
      0xD7,0xD7,0xD7,0xD7,0xD6,0xD6,0xD6,0xD6,
@@ -4130,7 +4130,7 @@ const pj_uint8_t pjmedia_linear2alaw_tab[16384] =
      0x57,0x54,0x54,0x54,0x54,0x55,0x55,0x55
 };
 
-const pj_int16_t pjmedia_ulaw2linear_tab[256] = 
+const pj_int16_t pjmedia_ulaw2linear_tab[256] =
 {
    -32124,-31100,-30076,-29052,-28028,-27004,-25980,-24956,
    -23932,-22908,-21884,-20860,-19836,-18812,-17788,-16764,
@@ -4166,7 +4166,7 @@ const pj_int16_t pjmedia_ulaw2linear_tab[256] =
        56,    48,    40,    32,    24,    16,     8,     0
 };
 
-const pj_int16_t pjmedia_alaw2linear_tab[256] = 
+const pj_int16_t pjmedia_alaw2linear_tab[256] =
 {
       -5504, -5248, -6016, -5760, -4480, -4224, -4992, -4736,
       -7552, -7296, -8064, -7808, -6528, -6272, -7040, -6784,

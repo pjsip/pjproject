@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -46,7 +46,7 @@
  */
 #define HAVE_MULTICAST 1
 
-static const char *desc = 
+static const char *desc =
  " streamutil                                                           \n"
  "                                                                      \n"
  " PURPOSE:                                                             \n"
@@ -110,7 +110,7 @@ static const char *desc =
 
 
 /* Prototype */
-static void print_stream_stat(pjmedia_stream *stream, 
+static void print_stream_stat(pjmedia_stream *stream,
                               const pjmedia_codec_param *codec_param);
 
 /* Hexa string to octet array */
@@ -128,8 +128,8 @@ int my_hex_string_to_octet_string(char *raw, char *hex, int len)
     return len;
 }
 
-/* 
- * Register all codecs. 
+/*
+ * Register all codecs.
  */
 static pj_status_t init_codecs(pjmedia_endpt *med_endpt)
 {
@@ -137,8 +137,8 @@ static pj_status_t init_codecs(pjmedia_endpt *med_endpt)
 }
 
 
-/* 
- * Create stream based on the codec, dir, remote address, etc. 
+/*
+ * Create stream based on the codec, dir, remote address, etc.
  */
 static pj_status_t create_stream( pj_pool_t *pool,
                                   pjmedia_endpt *med_endpt,
@@ -221,7 +221,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
                                   NULL, local_port);
         if (status != PJ_SUCCESS)
             return status;
-    
+
         status = pj_sock_bind(si.rtp_sock, &si.rtp_addr_name,
                               pj_sockaddr_get_len(&si.rtp_addr_name));
         if (status != PJ_SUCCESS)
@@ -243,7 +243,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
                                   NULL, local_port+1);
         if (status != PJ_SUCCESS)
             return status;
-    
+
         status = pj_sock_bind(si.rtcp_sock, &si.rtcp_addr_name,
                               pj_sockaddr_get_len(&si.rtcp_addr_name));
         if (status != PJ_SUCCESS)
@@ -253,7 +253,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
         {
             unsigned char loop;
             struct pj_ip_mreq imr;
-        
+
             pj_memset(&imr, 0, sizeof(struct pj_ip_mreq));
             imr.imr_multiaddr.s_addr = mcast_addr->sin_addr.s_addr;
             imr.imr_interface.s_addr = pj_htonl(PJ_INADDR_ANY);
@@ -277,13 +277,13 @@ static pj_status_t create_stream( pj_pool_t *pool,
                                pj_IP_MULTICAST_LOOP(), &loop, sizeof(loop));
         }
 #endif
-        
+
         /* Create media transport from existing sockets */
-        status = pjmedia_transport_udp_attach( med_endpt, NULL, &si, 
+        status = pjmedia_transport_udp_attach( med_endpt, NULL, &si,
                                 PJMEDIA_UDP_NO_SRC_ADDR_CHECKING, &transport);
         if (status != PJ_SUCCESS)
-            return status;      
-        
+            return status;
+
     } else {
         /* Create media transport */
         status = pjmedia_transport_udp_create(med_endpt, NULL, local_port,
@@ -295,7 +295,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* Check if SRTP enabled */
     if (use_srtp) {
-        status = pjmedia_transport_srtp_create(med_endpt, transport, 
+        status = pjmedia_transport_srtp_create(med_endpt, transport,
                                                NULL, &srtp_tp);
         if (status != PJ_SUCCESS)
             return status;
@@ -304,7 +304,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
             char fp[128];
             pj_size_t fp_len = sizeof(fp);
             pjmedia_srtp_dtls_nego_param dtls_param;
-            
+
             pjmedia_transport_srtp_dtls_get_fingerprint(srtp_tp, "SHA-256", fp, &fp_len);
             PJ_LOG(3, (THIS_FILE, "Local cert fingerprint: %s", fp));
 
@@ -326,7 +326,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
             tx_plc.name = *crypto_suite;
             rx_plc.key = *srtp_rx_key;
             rx_plc.name = *crypto_suite;
-        
+
             status = pjmedia_transport_srtp_start(srtp_tp, &tx_plc, &rx_plc);
             if (status != PJ_SUCCESS)
                 return status;
@@ -336,12 +336,12 @@ static pj_status_t create_stream( pj_pool_t *pool,
     }
 #endif
 
-    /* Now that the stream info is initialized, we can create the 
+    /* Now that the stream info is initialized, we can create the
      * stream.
      */
 
-    status = pjmedia_stream_create( med_endpt, pool, &info, 
-                                    transport, 
+    status = pjmedia_stream_create( med_endpt, pool, &info,
+                                    transport,
                                     NULL, p_stream);
 
     if (status != PJ_SUCCESS) {
@@ -381,7 +381,7 @@ int main(int argc, char *argv[])
     pjmedia_port *stream_port;
     char tmp[10];
     char addr[PJ_INET_ADDRSTRLEN];
-    pj_status_t status; 
+    pj_status_t status;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* SRTP variables */
@@ -551,13 +551,13 @@ int main(int argc, char *argv[])
             break;
 
         case OPT_SRTP_TX_KEY:
-            tmp_key_len = my_hex_string_to_octet_string(tmp_tx_key, pj_optarg, 
+            tmp_key_len = my_hex_string_to_octet_string(tmp_tx_key, pj_optarg,
                                                         (int)strlen(pj_optarg));
             pj_strset(&srtp_tx_key, tmp_tx_key, tmp_key_len/2);
             break;
 
         case OPT_SRTP_RX_KEY:
-            tmp_key_len = my_hex_string_to_octet_string(tmp_rx_key, pj_optarg, 
+            tmp_key_len = my_hex_string_to_octet_string(tmp_rx_key, pj_optarg,
                                                         (int)strlen(pj_optarg));
             pj_strset(&srtp_rx_key, tmp_rx_key, tmp_key_len/2);
             break;
@@ -621,7 +621,7 @@ int main(int argc, char *argv[])
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* SRTP validation */
     if (use_srtp) {
-        if (!is_dtls_client && !is_dtls_server && 
+        if (!is_dtls_client && !is_dtls_server &&
             (!srtp_tx_key.slen || !srtp_rx_key.slen))
         {
             printf("Error: Key for each SRTP stream direction must be set\n");
@@ -633,7 +633,7 @@ int main(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -760,7 +760,7 @@ int main(int argc, char *argv[])
             goto on_exit;
         }
 
-        status = pjmedia_master_port_create(pool, stream_port, rec_file_port, 
+        status = pjmedia_master_port_create(pool, stream_port, rec_file_port,
                                             0, &master_port);
         if (status != PJ_SUCCESS) {
             app_perror(THIS_FILE, "Unable to create master port", status);
@@ -774,26 +774,26 @@ int main(int argc, char *argv[])
         }
 
         printf("Recording to WAV file %s..\n", rec_file);
-        
+
     } else {
 
         /* Create sound device port. */
         if (dir == PJMEDIA_DIR_ENCODING_DECODING)
-            status = pjmedia_snd_port_create(pool, -1, -1, 
+            status = pjmedia_snd_port_create(pool, -1, -1,
                                         PJMEDIA_PIA_SRATE(&stream_port->info),
                                         PJMEDIA_PIA_CCNT(&stream_port->info),
                                         PJMEDIA_PIA_SPF(&stream_port->info),
                                         PJMEDIA_PIA_BITS(&stream_port->info),
                                         0, &snd_port);
         else if (dir == PJMEDIA_DIR_ENCODING)
-            status = pjmedia_snd_port_create_rec(pool, -1, 
+            status = pjmedia_snd_port_create_rec(pool, -1,
                                         PJMEDIA_PIA_SRATE(&stream_port->info),
                                         PJMEDIA_PIA_CCNT(&stream_port->info),
                                         PJMEDIA_PIA_SPF(&stream_port->info),
                                         PJMEDIA_PIA_BITS(&stream_port->info),
                                         0, &snd_port);
         else
-            status = pjmedia_snd_port_create_player(pool, -1, 
+            status = pjmedia_snd_port_create_player(pool, -1,
                                         PJMEDIA_PIA_SRATE(&stream_port->info),
                                         PJMEDIA_PIA_CCNT(&stream_port->info),
                                         PJMEDIA_PIA_SPF(&stream_port->info),
@@ -877,7 +877,7 @@ on_exit:
 
         tp = pjmedia_stream_get_transport(stream);
         pjmedia_stream_destroy(stream);
-        
+
         pjmedia_transport_media_stop(tp);
         pjmedia_transport_close(tp);
     }
@@ -915,11 +915,11 @@ static const char *good_number(char *buf, pj_int32_t val)
     if (val < 1000) {
         pj_ansi_sprintf(buf, "%d", val);
     } else if (val < 1000000) {
-        pj_ansi_sprintf(buf, "%d.%dK", 
+        pj_ansi_sprintf(buf, "%d.%dK",
                         val / 1000,
                         (val % 1000) / 100);
     } else {
-        pj_ansi_sprintf(buf, "%d.%02dM", 
+        pj_ansi_sprintf(buf, "%d.%02dM",
                         val / 1000000,
                         (val % 1000000) / 10000);
     }
@@ -977,7 +977,7 @@ static void print_stream_stat(pjmedia_stream *stream,
         PJMEDIA_PIA_SRATE(&port->info),
         PJMEDIA_PIA_PTIME(&port->info),
         good_number(bps, (codec_param->info.avg_bps+7)/8),
-        good_number(ipbps, ((codec_param->info.avg_bps+7)/8) + 
+        good_number(ipbps, ((codec_param->info.avg_bps+7)/8) +
                            (40 * 1000 /
                             codec_param->setting.frm_per_pkt /
                             codec_param->info.frm_ptime)));
@@ -1007,13 +1007,13 @@ static void print_stream_stat(pjmedia_stream *stream,
            "",
            stat.rx.loss,
            stat.rx.loss * 100.0 / (stat.rx.pkt + stat.rx.loss),
-           stat.rx.dup, 
+           stat.rx.dup,
            stat.rx.dup * 100.0 / (stat.rx.pkt + stat.rx.loss),
-           stat.rx.reorder, 
+           stat.rx.reorder,
            stat.rx.reorder * 100.0 / (stat.rx.pkt + stat.rx.loss),
            "",
-           stat.rx.loss_period.min / 1000.0, 
-           stat.rx.loss_period.mean / 1000.0, 
+           stat.rx.loss_period.min / 1000.0,
+           stat.rx.loss_period.mean / 1000.0,
            stat.rx.loss_period.max / 1000.0,
            stat.rx.loss_period.last / 1000.0,
            pj_math_stat_get_stddev(&stat.rx.loss_period) / 1000.0,
@@ -1052,13 +1052,13 @@ static void print_stream_stat(pjmedia_stream *stream,
            "",
            stat.tx.loss,
            stat.tx.loss * 100.0 / (stat.tx.pkt + stat.tx.loss),
-           stat.tx.dup, 
+           stat.tx.dup,
            stat.tx.dup * 100.0 / (stat.tx.pkt + stat.tx.loss),
-           stat.tx.reorder, 
+           stat.tx.reorder,
            stat.tx.reorder * 100.0 / (stat.tx.pkt + stat.tx.loss),
            "",
-           stat.tx.loss_period.min / 1000.0, 
-           stat.tx.loss_period.mean / 1000.0, 
+           stat.tx.loss_period.min / 1000.0,
+           stat.tx.loss_period.mean / 1000.0,
            stat.tx.loss_period.max / 1000.0,
            stat.tx.loss_period.last / 1000.0,
            pj_math_stat_get_stddev(&stat.tx.loss_period) / 1000.0,
@@ -1072,7 +1072,7 @@ static void print_stream_stat(pjmedia_stream *stream,
            );
 
 
-    printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f %7.3f%s\n", 
+    printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f %7.3f%s\n",
            stat.rtt.min / 1000.0,
            stat.rtt.mean / 1000.0,
            stat.rtt.max / 1000.0,
@@ -1113,22 +1113,22 @@ static void print_stream_stat(pjmedia_stream *stream,
         if (xr_stat.rx.stat_sum.j) {
             unsigned jmin, jmax, jmean, jdev;
 
-            SAMPLES_TO_USEC(jmin, xr_stat.rx.stat_sum.jitter.min, 
+            SAMPLES_TO_USEC(jmin, xr_stat.rx.stat_sum.jitter.min,
                             port->info.fmt.det.aud.clock_rate);
-            SAMPLES_TO_USEC(jmax, xr_stat.rx.stat_sum.jitter.max, 
+            SAMPLES_TO_USEC(jmax, xr_stat.rx.stat_sum.jitter.max,
                             port->info.fmt.det.aud.clock_rate);
-            SAMPLES_TO_USEC(jmean, xr_stat.rx.stat_sum.jitter.mean, 
+            SAMPLES_TO_USEC(jmean, xr_stat.rx.stat_sum.jitter.mean,
                             port->info.fmt.det.aud.clock_rate);
-            SAMPLES_TO_USEC(jdev, 
+            SAMPLES_TO_USEC(jdev,
                            pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.jitter),
                            port->info.fmt.det.aud.clock_rate);
-            sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
+            sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f",
                     jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
         } else
             sprintf(jitter, "(report not available)");
 
         if (xr_stat.rx.stat_sum.t) {
-            sprintf(toh, "%11d %11d %11d %11d", 
+            sprintf(toh, "%11d %11d %11d %11d",
                     xr_stat.rx.stat_sum.toh.min,
                     xr_stat.rx.stat_sum.toh.mean,
                     xr_stat.rx.stat_sum.toh.max,
@@ -1176,22 +1176,22 @@ static void print_stream_stat(pjmedia_stream *stream,
         if (xr_stat.tx.stat_sum.j) {
             unsigned jmin, jmax, jmean, jdev;
 
-            SAMPLES_TO_USEC(jmin, xr_stat.tx.stat_sum.jitter.min, 
+            SAMPLES_TO_USEC(jmin, xr_stat.tx.stat_sum.jitter.min,
                             port->info.fmt.det.aud.clock_rate);
-            SAMPLES_TO_USEC(jmax, xr_stat.tx.stat_sum.jitter.max, 
+            SAMPLES_TO_USEC(jmax, xr_stat.tx.stat_sum.jitter.max,
                             port->info.fmt.det.aud.clock_rate);
-            SAMPLES_TO_USEC(jmean, xr_stat.tx.stat_sum.jitter.mean, 
+            SAMPLES_TO_USEC(jmean, xr_stat.tx.stat_sum.jitter.mean,
                             port->info.fmt.det.aud.clock_rate);
-            SAMPLES_TO_USEC(jdev, 
+            SAMPLES_TO_USEC(jdev,
                            pj_math_stat_get_stddev(&xr_stat.tx.stat_sum.jitter),
                            port->info.fmt.det.aud.clock_rate);
-            sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
+            sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f",
                     jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
         } else
             sprintf(jitter, "(report not available)");
 
         if (xr_stat.tx.stat_sum.t) {
-            sprintf(toh, "%11d %11d %11d %11d", 
+            sprintf(toh, "%11d %11d %11d %11d",
                     xr_stat.tx.stat_sum.toh.min,
                     xr_stat.tx.stat_sum.toh.mean,
                     xr_stat.tx.stat_sum.toh.max,
@@ -1406,7 +1406,7 @@ static void print_stream_stat(pjmedia_stream *stream,
 
         /* RTT delay (by receiver side) */
         printf("          (msec)    min     avg     max     last    dev\n");
-        printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f %7.3f%s\n", 
+        printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f %7.3f%s\n",
                xr_stat.rtt.min / 1000.0,
                xr_stat.rtt.mean / 1000.0,
                xr_stat.rtt.max / 1000.0,

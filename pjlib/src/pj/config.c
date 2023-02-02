@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/config.h>
 #include <pj/log.h>
@@ -57,7 +57,7 @@ PJ_DEF(void) pj_dump_config(void)
     PJ_LOG(3, (id, " PJ_OS_NAME                : %s", PJ_OS_NAME));
     PJ_LOG(3, (id, " PJ_CC_NAME/VER_(1,2,3)    : %s-%d.%d.%d", PJ_CC_NAME,
                PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_3));
-    PJ_LOG(3, (id, " PJ_IS_(BIG/LITTLE)_ENDIAN : %s", 
+    PJ_LOG(3, (id, " PJ_IS_(BIG/LITTLE)_ENDIAN : %s",
                (PJ_IS_BIG_ENDIAN?"big-endian":"little-endian")));
     PJ_LOG(3, (id, " PJ_HAS_INT64              : %d", PJ_HAS_INT64));
     PJ_LOG(3, (id, " PJ_HAS_FLOATING_POINT     : %d", PJ_HAS_FLOATING_POINT));

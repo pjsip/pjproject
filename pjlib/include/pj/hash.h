@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_HASH_H__
 #define __PJ_HASH_H__
@@ -33,7 +33,7 @@ PJ_BEGIN_DECL
  * @ingroup PJ_DS
  * @{
  * A hash table is a dictionary in which keys are mapped to array positions by
- * hash functions. Having the keys of more than one item map to the same 
+ * hash functions. Having the keys of more than one item map to the same
  * position is called a collision. In this library, we will chain the nodes
  * that have the same key in a list.
  */
@@ -60,12 +60,12 @@ typedef void *pj_hash_entry_buf[(PJ_HASH_ENTRY_BUF_SIZE+sizeof(void*)-1)/(sizeof
  *
  * @param hval      the initial hash value, or zero.
  * @param key       the key to calculate.
- * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to treat 
+ * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to treat
  *                  the key as null terminated string.
  *
  * @return          the hash value.
  */
-PJ_DECL(pj_uint32_t) pj_hash_calc(pj_uint32_t hval, 
+PJ_DECL(pj_uint32_t) pj_hash_calc(pj_uint32_t hval,
                                   const void *key, unsigned keylen);
 
 
@@ -137,7 +137,7 @@ PJ_DECL(void *) pj_hash_get_lower( pj_hash_table_t *ht,
  * @param ht        the hash table.
  * @param key       the key. If pool is not specified, the key MUST point to
  *                  buffer that remains valid for the duration of the entry.
- * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the 
+ * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the
  *                  string length of the key.
  * @param hval      if the value is not zero, then the hash table will use
  *                  this value to search the entry's index, otherwise it will
@@ -164,12 +164,12 @@ PJ_DECL(void) pj_hash_set_lower( pj_pool_t *pool, pj_hash_table_t *ht,
 
 /**
  * Associate/disassociate a value with the specified key. This function works
- * like #pj_hash_set(), except that it doesn't use pool (hence the np -- no 
+ * like #pj_hash_set(), except that it doesn't use pool (hence the np -- no
  * pool suffix). If new entry needs to be allocated, it will use the entry_buf.
  *
  * @param ht        the hash table.
  * @param key       the key.
- * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the 
+ * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the
  *                  string length of the key.
  * @param hval      if the value is not zero, then the hash table will use
  *                  this value to search the entry's index, otherwise it will
@@ -181,8 +181,8 @@ PJ_DECL(void) pj_hash_set_lower( pj_pool_t *pool, pj_hash_table_t *ht,
  *                  the specified key.
  */
 PJ_DECL(void) pj_hash_set_np(pj_hash_table_t *ht,
-                             const void *key, unsigned keylen, 
-                             pj_uint32_t hval, pj_hash_entry_buf entry_buf, 
+                             const void *key, unsigned keylen,
+                             pj_uint32_t hval, pj_hash_entry_buf entry_buf,
                              void *value);
 
 /**
@@ -208,7 +208,7 @@ PJ_DECL(unsigned) pj_hash_count( pj_hash_table_t *ht );
 
 
 /**
- * Get the iterator to the first element in the hash table. 
+ * Get the iterator to the first element in the hash table.
  *
  * @param ht    the hash table.
  * @param it    the iterator for iterating hash elements.
@@ -227,7 +227,7 @@ PJ_DECL(pj_hash_iterator_t*) pj_hash_first( pj_hash_table_t *ht,
  *
  * @return the next iterator, or NULL if there's no more element.
  */
-PJ_DECL(pj_hash_iterator_t*) pj_hash_next( pj_hash_table_t *ht, 
+PJ_DECL(pj_hash_iterator_t*) pj_hash_next( pj_hash_table_t *ht,
                                            pj_hash_iterator_t *it );
 
 /**

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,13 +14,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSUA_INTERNAL_H__
 #define __PJSUA_INTERNAL_H__
 
-/** 
- * This is the private header used by pjsua library implementation. 
+/**
+ * This is the private header used by pjsua library implementation.
  * Applications should not include this file.
  */
 
@@ -137,8 +137,8 @@ typedef enum pjsua_op_state {
     PJSUA_OP_STATE_DONE,
 } pjsua_op_state;
 
-/** 
- * Structure to be attached to invite dialog. 
+/**
+ * Structure to be attached to invite dialog.
  * Given a dialog "dlg", application can retrieve this structure
  * by accessing dlg->mod_data[pjsua.mod.id].
  */
@@ -199,7 +199,7 @@ struct pjsua_call
                 pjsua_msg_data  *msg_data;/**< Headers for outgoing INVITE. */
                 pj_bool_t        hangup;  /**< Call is hangup?              */
             } out_call;
-            struct {            
+            struct {
                 call_answer      answers;/**< A list of call answers.       */
                 pj_bool_t        hangup;/**< Call is hangup?                */
                 pjsip_dialog    *replaced_dlg; /**< Replaced dialog.        */
@@ -213,17 +213,17 @@ struct pjsua_call
                                             offer.                          */
     unsigned             rem_vid_cnt;  /**< No of active video in last remote
                                             offer.                          */
-    
+
     pj_bool_t            rx_reinv_async;/**< on_call_rx_reinvite() async.   */
     pj_timer_entry       reinv_timer;  /**< Reinvite retry timer.           */
     pj_bool_t            reinv_pending;/**< Pending until CONFIRMED state.  */
     pj_bool_t            reinv_ice_sent;/**< Has reinvite for ICE upd sent? */
     pjsip_rx_data       *incoming_data;/**< Cloned incoming call rdata.
-                                            On pjsua2, when handling incoming 
+                                            On pjsua2, when handling incoming
                                             call, onCreateMediaTransport() will
                                             not be called since the call isn't
-                                            created yet. This temporary 
-                                            variable is used to handle such 
+                                            created yet. This temporary
+                                            variable is used to handle such
                                             case, see ticket #1916.         */
 
     struct {
@@ -427,7 +427,7 @@ typedef struct pjsua_stun_resolve
     pj_sockaddr          addr;      /**< Result             */
     pj_stun_sock        *stun_sock; /**< Testing STUN sock  */
     int                  af;        /**< Address family     */
-    pj_bool_t            async_wait;/**< Async resolution 
+    pj_bool_t            async_wait;/**< Async resolution
                                          of STUN entry      */
 } pjsua_stun_resolve;
 
@@ -463,7 +463,7 @@ typedef struct pjsua_timer_list
 } pjsua_timer_list;
 
 
-typedef struct pjsua_event_list 
+typedef struct pjsua_event_list
 {
     PJ_DECL_LIST_MEMBER(struct pjsua_event_list);
     pjmedia_event       event;
@@ -508,7 +508,7 @@ struct pjsua_data
     pjsua_stun_resolve   stun_res;  /**< List of pending STUN resolution*/
     unsigned             stun_srv_idx; /**< Resolved STUN server index  */
     unsigned             stun_opt;  /**< STUN resolution option.        */
-    pj_dns_resolver     *resolver;  /**< DNS resolver.                  */   
+    pj_dns_resolver     *resolver;  /**< DNS resolver.                  */
 
     /* UPnP */
     pj_status_t          upnp_status; /**< UPnP status.                 */
@@ -623,7 +623,7 @@ pj_status_t pjsua_media_apply_xml_control(pjsua_call_id call_id,
 /**
  * Duplicate IM data.
  */
-PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool, 
+PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
                                             const pjsua_im_data *src)
 {
     pjsua_im_data *dst;
@@ -706,7 +706,7 @@ void pjsua_set_state(pjsua_state new_state);
 pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error,
                                 unsigned options);
 
-/** 
+/**
  * Normalize route URI (check for ";lr" and append one if it doesn't
  * exist and pjsua_config.force_lr is set.
  */
@@ -750,7 +750,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                                      int *sip_err_code,
                                      pj_bool_t async,
                                      pjsua_med_tp_state_cb cb);
-pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id, 
+pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                                            pj_pool_t *pool,
                                            const pjmedia_sdp_session *rem_sdp,
                                            pjmedia_sdp_session **p_sdp,
@@ -830,7 +830,7 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id);
 void pjsua_pres_unpublish(pjsua_acc *acc, unsigned flags);
 
 /**
- * Terminate server subscription for the account 
+ * Terminate server subscription for the account
  */
 void pjsua_pres_delete_acc(int acc_id, unsigned flags);
 

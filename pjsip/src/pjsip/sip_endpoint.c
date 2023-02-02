@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_transaction.h>
@@ -114,7 +114,7 @@ struct pjsip_endpoint
 /*
  * Prototypes.
  */
-static void endpt_on_rx_msg( pjsip_endpoint*, 
+static void endpt_on_rx_msg( pjsip_endpoint*,
                              pj_status_t, pjsip_rx_data*);
 static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
                                     pjsip_tx_data *tdata );
@@ -131,7 +131,7 @@ pj_status_t pjsip_tel_uri_subsys_init(void);
 
 /*
  * This is the global handler for memory allocation failure, for pools that
- * are created by the endpoint (by default, all pools ARE allocated by 
+ * are created by the endpoint (by default, all pools ARE allocated by
  * endpoint). The error is handled by throwing exception, and hopefully,
  * the exception will be handled by the application (or this library).
  */
@@ -152,8 +152,8 @@ static int cmp_mod_name(void *name, const void *mod)
 
 /*
  * Register new module to the endpoint.
- * The endpoint will then call the load and start function in the module to 
- * properly initialize the module, and assign a unique module ID for the 
+ * The endpoint will then call the load and start function in the module to
+ * properly initialize the module, and assign a unique module ID for the
  * module.
  */
 PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
@@ -170,7 +170,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
                         {status = PJ_EEXISTS; goto on_return;});
 
     /* Make sure that no module with the same name has been registered. */
-    PJ_ASSERT_ON_FAIL(  pj_list_search(&endpt->module_list, &mod->name, 
+    PJ_ASSERT_ON_FAIL(  pj_list_search(&endpt->module_list, &mod->name,
                                        &cmp_mod_name)==NULL,
                         {status = PJ_EEXISTS; goto on_return; });
 
@@ -216,7 +216,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
 
     /* Done. */
 
-    PJ_LOG(4,(THIS_FILE, "Module \"%.*s\" registered", 
+    PJ_LOG(4,(THIS_FILE, "Module \"%.*s\" registered",
               (int)mod->name.slen, mod->name.ptr));
 
 on_return:
@@ -226,7 +226,7 @@ on_return:
 
 /*
  * Unregister a module from the endpoint.
- * The endpoint will then call the stop and unload function in the module to 
+ * The endpoint will then call the stop and unload function in the module to
  * properly shutdown the module.
  */
 PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
@@ -241,7 +241,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
                         {status = PJ_ENOTFOUND;goto on_return;} );
 
     /* Make sure the module exists in the array. */
-    PJ_ASSERT_ON_FAIL(  mod->id>=0 && 
+    PJ_ASSERT_ON_FAIL(  mod->id>=0 &&
                         mod->id<(int)PJ_ARRAY_SIZE(endpt->modules) &&
                         endpt->modules[mod->id] == mod,
                         {status = PJ_ENOTFOUND; goto on_return;});
@@ -277,7 +277,7 @@ static pj_status_t unload_module(pjsip_endpoint *endpt,
     /* Try to unload the module. */
     if (mod->unload) {
         status = (*mod->unload)();
-        if (status != PJ_SUCCESS) 
+        if (status != PJ_SUCCESS)
             return status;
     }
 
@@ -296,7 +296,7 @@ static pj_status_t unload_module(pjsip_endpoint *endpt,
     /* Done. */
     status = PJ_SUCCESS;
 
-    PJ_LOG(4,(THIS_FILE, "Module \"%.*s\" unregistered", 
+    PJ_LOG(4,(THIS_FILE, "Module \"%.*s\" unregistered",
               (int)mod->name.slen, mod->name.ptr));
 
     return status;
@@ -338,7 +338,7 @@ PJ_DEF(pj_bool_t) pjsip_endpt_has_capability( pjsip_endpoint *endpt,
     const pjsip_generic_array_hdr *hdr;
     unsigned i;
 
-    hdr = (const pjsip_generic_array_hdr*) 
+    hdr = (const pjsip_generic_array_hdr*)
            pjsip_endpt_get_capability(endpt, htype, hname);
     if (!hdr)
         return PJ_FALSE;
@@ -372,13 +372,13 @@ PJ_DEF(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
     /* Check arguments. */
     PJ_ASSERT_RETURN(endpt!=NULL && count>0 && tags, PJ_EINVAL);
     PJ_ASSERT_RETURN(count <= PJSIP_GENERIC_ARRAY_MAX_COUNT, PJ_ETOOMANY);
-    PJ_ASSERT_RETURN(htype==PJSIP_H_ACCEPT || 
+    PJ_ASSERT_RETURN(htype==PJSIP_H_ACCEPT ||
                      htype==PJSIP_H_ALLOW ||
                      htype==PJSIP_H_SUPPORTED,
                      PJ_EINVAL);
 
     /* Find the header. */
-    hdr = (pjsip_generic_array_hdr*) pjsip_endpt_get_capability(endpt, 
+    hdr = (pjsip_generic_array_hdr*) pjsip_endpt_get_capability(endpt,
                                                                 htype, hname);
 
     /* Create the header when it's not present */
@@ -444,7 +444,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     *p_endpt = NULL;
 
     /* Create pool */
-    pool = pj_pool_create(pf, "pept%p", 
+    pool = pj_pool_create(pf, "pept%p",
                           PJSIP_POOL_LEN_ENDPT, PJSIP_POOL_INC_ENDPT,
                           &pool_callback);
     if (!pool)
@@ -487,7 +487,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     }
 
     /* Create timer heap to manage all timers within this endpoint. */
-    status = pj_timer_heap_create( endpt->pool, PJSIP_MAX_TIMER_COUNT, 
+    status = pj_timer_heap_create( endpt->pool, PJSIP_MAX_TIMER_COUNT,
                                    &endpt->timer_heap);
     if (status != PJ_SUCCESS) {
         goto on_error;
@@ -501,7 +501,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     pj_timer_heap_set_lock(endpt->timer_heap, lock, PJ_TRUE);
 
     /* Set maximum timed out entries to process in a single poll. */
-    pj_timer_heap_set_max_timed_out_per_poll(endpt->timer_heap, 
+    pj_timer_heap_set_max_timed_out_per_poll(endpt->timer_heap,
                                              PJSIP_MAX_TIMED_OUT_ENTRIES);
 
     /* Create ioqueue. */
@@ -708,8 +708,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
 
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_handle_events()"));
 
-    /* Poll the timer. The timer heap has its own mutex for better 
-     * granularity, so we don't need to lock end endpoint. 
+    /* Poll the timer. The timer heap has its own mutex for better
+     * granularity, so we don't need to lock end endpoint.
      */
     timeout.sec = timeout.msec = 0;
     c = pj_timer_heap_poll( endpt->timer_heap, &timeout );
@@ -729,7 +729,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
         timeout = *max_timeout;
     }
 
-    /* Poll ioqueue. 
+    /* Poll ioqueue.
      * Repeat polling the ioqueue while we have immediate events, because
      * timer heap may process more than one events, so if we only process
      * one network events at a time (such as when IOCP backend is used),
@@ -841,7 +841,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock(
 /*
  * Cancel the previously registered timer.
  */
-PJ_DEF(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt, 
+PJ_DEF(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt,
                                        pj_timer_entry *entry )
 {
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_cancel_timer(entry=%p)", entry));
@@ -955,7 +955,7 @@ on_return:
 }
 
 /*
- * This is the callback that is called by the transport manager when it 
+ * This is the callback that is called by the transport manager when it
  * receives a message from the network.
  */
 static void endpt_on_rx_msg( pjsip_endpoint *endpt,
@@ -987,7 +987,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
                 pj_strcpy2(&p, " To");
             if (rdata->msg_info.via == NULL)
                 pj_strcpy2(&p, " Via");
-            if (rdata->msg_info.cseq == NULL) 
+            if (rdata->msg_info.cseq == NULL)
                 pj_strcpy2(&p, " CSeq");
 
             p.ptr[p.slen] = '\0';
@@ -995,21 +995,21 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 
         pj_strerror(status, errmsg, sizeof(errmsg));
 
-        PJ_LOG(1, (THIS_FILE, 
+        PJ_LOG(1, (THIS_FILE,
                   "Error processing packet from %s:%d: %s %s [code %d]:\n"
                   "%.*s\n"
                   "-- end of packet.",
-                  rdata->pkt_info.src_name, 
+                  rdata->pkt_info.src_name,
                   rdata->pkt_info.src_port,
                   errmsg,
                   info,
                   status,
-                  (int)rdata->msg_info.len,     
+                  (int)rdata->msg_info.len,
                   rdata->msg_info.msg_buf));
         return;
     }
 
-    PJ_LOG(5, (THIS_FILE, "Processing incoming message: %s", 
+    PJ_LOG(5, (THIS_FILE, "Processing incoming message: %s",
                pjsip_rx_data_get_info(rdata)));
     pj_log_push_indent();
 
@@ -1042,20 +1042,20 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 
         } else if (port != rdata->tp_info.transport->local_name.port) {
             /* Port or address mismatch, we should discard response */
-            /* But we saw one implementation (we don't want to name it to 
+            /* But we saw one implementation (we don't want to name it to
              * protect the innocence) which put wrong sent-by port although
              * the "rport" parameter is correct.
              * So we discard the response only if the port doesn't match
              * both the port in sent-by and rport. We try to be lenient here!
              */
-            if (rdata->msg_info.via->rport_param != 
+            if (rdata->msg_info.via->rport_param !=
                 rdata->tp_info.transport->local_name.port)
                 mismatch = PJ_TRUE;
             else {
                 PJ_LOG(4,(THIS_FILE, "Message %s from %s has mismatch port in "
                                      "sent-by but the rport parameter is "
                                      "correct",
-                                     pjsip_rx_data_get_info(rdata), 
+                                     pjsip_rx_data_get_info(rdata),
                                      rdata->pkt_info.src_name));
             }
         }
@@ -1063,9 +1063,9 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
         if (mismatch) {
             PJ_TODO(ENDPT_REPORT_WHEN_DROPPING_MESSAGE);
             PJ_LOG(4,(THIS_FILE, "Dropping response %s from %s:%d because "
-                                 "sent-by is mismatch", 
+                                 "sent-by is mismatch",
                                  pjsip_rx_data_get_info(rdata),
-                                 rdata->pkt_info.src_name, 
+                                 rdata->pkt_info.src_name,
                                  rdata->pkt_info.src_port));
             pj_log_pop_indent();
             return;
@@ -1144,7 +1144,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_tdata(  pjsip_endpoint *endpt,
 }
 
 /*
- * Create the DNS resolver instance. 
+ * Create the DNS resolver instance.
  */
 PJ_DEF(pj_status_t) pjsip_endpt_create_resolver(pjsip_endpoint *endpt,
                                                 pj_dns_resolver **p_resv)
@@ -1226,7 +1226,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_acquire_transport(pjsip_endpoint *endpt,
                                                   const pjsip_tpselector *sel,
                                                   pjsip_transport **transport)
 {
-    return pjsip_tpmgr_acquire_transport(endpt->transport_mgr, type, 
+    return pjsip_tpmgr_acquire_transport(endpt->transport_mgr, type,
                                          remote, addr_len, sel, transport);
 }
 
@@ -1242,7 +1242,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_acquire_transport2(pjsip_endpoint *endpt,
                                                    pjsip_tx_data *tdata,
                                                    pjsip_transport **transport)
 {
-    return pjsip_tpmgr_acquire_transport2(endpt->transport_mgr, type, remote, 
+    return pjsip_tpmgr_acquire_transport2(endpt->transport_mgr, type, remote,
                                           addr_len, sel, tdata, transport);
 }
 
@@ -1274,7 +1274,7 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
                          ": [err %d] ", error_code);
         len += pj_ansi_strlen(newformat+len);
 
-        errstr = pj_strerror( error_code, newformat+len, 
+        errstr = pj_strerror( error_code, newformat+len,
                               sizeof(newformat)-len-1);
 
         len += errstr.slen;
@@ -1307,7 +1307,7 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     pj_mutex_lock(endpt->mutex);
 
     PJ_LOG(3, (THIS_FILE, "Dumping endpoint %p:", endpt));
-    
+
     /* Dumping pool factory. */
     pj_pool_factory_dump(endpt->pf, detail);
 
@@ -1323,7 +1323,7 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     }
 #endif
 
-    /* Transports. 
+    /* Transports.
      */
     pjsip_tpmgr_dump_transports( endpt->transport_mgr );
 
@@ -1331,7 +1331,7 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
 #if PJ_TIMER_DEBUG
     pj_timer_heap_dump(endpt->timer_heap);
 #else
-    PJ_LOG(3,(THIS_FILE, " Timer heap has %u entries", 
+    PJ_LOG(3,(THIS_FILE, " Timer heap has %u entries",
                         pj_timer_heap_count(endpt->timer_heap)));
 #endif
 

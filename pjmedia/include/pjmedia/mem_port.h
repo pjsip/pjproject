@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_MEM_PORT_H__
 #define __PJMEDIA_MEM_PORT_H__
@@ -35,7 +35,7 @@ PJ_BEGIN_DECL
  * @{
  *
  * A memory/buffer based playback port is used to play media from a fixed
- * size buffer. This is useful over @ref PJMEDIA_FILE_PLAY for 
+ * size buffer. This is useful over @ref PJMEDIA_FILE_PLAY for
  * situation where filesystems are not available in the target system.
  */
 
@@ -89,7 +89,7 @@ PJ_DECL(pj_status_t) pjmedia_mem_player_create(pj_pool_t *pool,
 /**
  * Register a callback to be called when the buffer reading has reached the
  * end of buffer. If the player is set to play repeatedly, then the callback
- * will be called multiple times. Note that only one callback can be 
+ * will be called multiple times. Note that only one callback can be
  * registered for each player port.
  *
  * @param port          The memory player port.
@@ -101,7 +101,7 @@ PJ_DECL(pj_status_t) pjmedia_mem_player_create(pj_pool_t *pool,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
                                void *user_data,
                                pj_status_t (*cb)(pjmedia_port *port,
@@ -112,7 +112,7 @@ pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
 /**
  * Register a callback to be called when the buffer reading has reached the
  * end of buffer. If the player is set to play repeatedly, then the callback
- * will be called multiple times. Note that only one callback can be 
+ * will be called multiple times. Note that only one callback can be
  * registered for each player port.
  *
  * @param port          The memory player port.
@@ -125,7 +125,7 @@ pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_mem_player_set_eof_cb2(pjmedia_port *port,
                                void *user_data,
                                void (*cb)(pjmedia_port *port,
@@ -142,7 +142,7 @@ pjmedia_mem_player_set_eof_cb2(pjmedia_port *port,
  * @{
  *
  * A memory based capture is used to save media streams to a fixed size
- * buffer. This is useful over @ref PJMEDIA_FILE_REC for 
+ * buffer. This is useful over @ref PJMEDIA_FILE_REC for
  * situation where filesystems are not available in the target system.
  */
 
@@ -178,7 +178,7 @@ PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
 /**
  * Register a callback to be called when no space left in the buffer.
  * Note that when a callback is registered, this callback will also be
- * called when application destroys the port and the callback has not 
+ * called when application destroys the port and the callback has not
  * been called before.
  *
  * @param port          The memory recorder port.
@@ -186,9 +186,9 @@ PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
  * @param cb            Callback to be called. If the callback returns non-
  *                      PJ_SUCCESS, the recording will stop. In other cases
  *                      recording will be restarted and the rest of the frame
- *                      will be stored starting from the beginning of the 
+ *                      will be stored starting from the beginning of the
  *                      buffer. Note that if application destroys the capture
- *                      port in the callback, it must return non-PJ_SUCCESS 
+ *                      port in the callback, it must return non-PJ_SUCCESS
  *                      here.
  *
  * @return              PJ_SUCCESS on success.

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2014 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -59,8 +59,8 @@
 /* Prototype for LIBSRTP utility in file datatypes.c */
 int hex_string_to_octet_string(char *raw, char *hex, int len);
 
-/* 
- * Register all codecs. 
+/*
+ * Register all codecs.
  */
 static pj_status_t init_codecs(pj_pool_factory *pf)
 {
@@ -93,8 +93,8 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
     return PJ_SUCCESS;
 }
 
-/* 
- * Register all codecs. 
+/*
+ * Register all codecs.
  */
 static void deinit_codecs()
 {
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
     pj_caching_pool cp;
     pjmedia_endpt *med_endpt;
     pj_pool_t *pool;
-    pj_status_t status; 
+    pj_status_t status;
 
     /* Codec */
     char *codec_id = (char*)"H264";
@@ -359,10 +359,10 @@ int main(int argc, char *argv[])
     }
 
     /* Get codec default param for info */
-    status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info, 
+    status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
                                                      &codec_param);
     pj_assert(status == PJ_SUCCESS);
-    
+
     /* Alloc encoder */
     status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info, &codec);
     if (status != PJ_SUCCESS) {

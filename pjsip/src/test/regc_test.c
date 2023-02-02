@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjsip_ua.h>
@@ -28,12 +28,12 @@
 /* A module to inject error into outgoing sending operation */
 static pj_status_t mod_send_on_tx_request(pjsip_tx_data *tdata);
 
-static struct 
+static struct
 {
     pjsip_module mod;
     unsigned     count;
     unsigned     count_before_reject;
-} send_mod = 
+} send_mod =
 {
     {
         NULL, NULL,                         /* prev, next.              */
@@ -94,7 +94,7 @@ static struct registrar
     pjsip_module            mod;
     struct registrar_cfg    cfg;
     unsigned                response_cnt;
-} registrar = 
+} registrar =
 {
     {
         NULL, NULL,                         /* prev, next.              */
@@ -128,14 +128,14 @@ static pj_bool_t regs_rx_request(pjsip_rx_data *rdata)
 
     pj_list_init(&hdr_list);
 
-    if (registrar.cfg.authenticate && 
-        pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL)==NULL) 
+    if (registrar.cfg.authenticate &&
+        pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL)==NULL)
     {
         pjsip_generic_string_hdr *hwww;
         const pj_str_t hname = pj_str("WWW-Authenticate");
         const pj_str_t hvalue = pj_str("Digest realm=\"test\"");
 
-        hwww = pjsip_generic_string_hdr_create(rdata->tp_info.pool, &hname, 
+        hwww = pjsip_generic_string_hdr_create(rdata->tp_info.pool, &hname,
                                                &hvalue);
         pj_list_push_back(&hdr_list, hwww);
 
@@ -143,7 +143,7 @@ static pj_bool_t regs_rx_request(pjsip_rx_data *rdata)
 
     } else {
         if (registrar.cfg.contact_op == EXACT ||
-            registrar.cfg.contact_op == MODIFIED) 
+            registrar.cfg.contact_op == MODIFIED)
         {
             pjsip_hdr *hsrc;
 
@@ -181,7 +181,7 @@ static pj_bool_t regs_rx_request(pjsip_rx_data *rdata)
             pjsip_generic_string_hdr *hcontact;
             const pj_str_t hname = pj_str("Contact");
 
-            hcontact = pjsip_generic_string_hdr_create(rdata->tp_info.pool, &hname, 
+            hcontact = pjsip_generic_string_hdr_create(rdata->tp_info.pool, &hname,
                                                        &registrar.cfg.more_contacts);
             pj_list_push_back(&hdr_list, hcontact);
         }
@@ -189,7 +189,7 @@ static pj_bool_t regs_rx_request(pjsip_rx_data *rdata)
         if (registrar.cfg.expires) {
             pjsip_expires_hdr *hexp;
 
-            hexp = pjsip_expires_hdr_create(rdata->tp_info.pool, 
+            hexp = pjsip_expires_hdr_create(rdata->tp_info.pool,
                                             registrar.cfg.expires);
             pj_list_push_back(&hdr_list, hexp);
         }
@@ -265,7 +265,7 @@ static void client_cb(struct pjsip_regc_cbparam *param)
 /* Generic client test session */
 static struct client client_result;
 static int do_test(const char *title,
-                   const struct registrar_cfg *srv_cfg, 
+                   const struct registrar_cfg *srv_cfg,
                    const struct client *client_cfg,
                    const pj_str_t *registrar_uri,
                    unsigned contact_cnt,
@@ -398,10 +398,10 @@ static int do_test(const char *title,
 static int keep_alive_test(const pj_str_t *registrar_uri)
 {
     enum { TIMEOUT = 40 };
-    struct registrar_cfg server_cfg = 
+    struct registrar_cfg server_cfg =
         /* respond      code    auth      contact  exp_prm expires more_contacts */
         { PJ_TRUE,      200,    PJ_FALSE, EXACT,   TIMEOUT, 0,      {NULL, 0}};
-    struct client client_cfg = 
+    struct client client_cfg =
         /* error        code    have_reg    expiration  contact_cnt auth?    destroy*/
         { PJ_FALSE,     200,    PJ_TRUE,    TIMEOUT,    1,          PJ_FALSE,PJ_FALSE};
     pj_str_t contact = pj_str("<sip:c@C>");
@@ -475,10 +475,10 @@ static int refresh_error(const pj_str_t *registrar_uri,
                          pj_bool_t destroy_on_cb)
 {
     enum { TIMEOUT = 40 };
-    struct registrar_cfg server_cfg = 
+    struct registrar_cfg server_cfg =
         /* respond      code    auth      contact  exp_prm expires more_contacts */
         { PJ_TRUE,      200,    PJ_FALSE, EXACT,   TIMEOUT, 0,      {NULL, 0}};
-    struct client client_cfg = 
+    struct client client_cfg =
         /* error        code    have_reg    expiration  contact_cnt auth?    destroy*/
         { PJ_FALSE,     200,    PJ_TRUE,    TIMEOUT,    1,          PJ_FALSE,PJ_FALSE};
     pj_str_t contact = pj_str("<sip:c@C>");
@@ -532,10 +532,10 @@ static int refresh_error(const pj_str_t *registrar_uri,
 static int update_test(const pj_str_t *registrar_uri)
 {
     enum { TIMEOUT = 40 };
-    struct registrar_cfg server_cfg = 
+    struct registrar_cfg server_cfg =
         /* respond      code    auth      contact  exp_prm expires more_contacts */
         { PJ_TRUE,      200,    PJ_FALSE, EXACT,   TIMEOUT, 0,      {NULL, 0}};
-    struct client client_cfg = 
+    struct client client_cfg =
         /* error        code    have_reg    expiration  contact_cnt auth?    destroy*/
         { PJ_FALSE,     200,    PJ_TRUE,    TIMEOUT,    1,          PJ_FALSE,PJ_FALSE};
     pj_str_t contacts[] = {
@@ -560,7 +560,7 @@ static int update_test(const pj_str_t *registrar_uri)
     }
 
     /*****
-     * replace the contact with new one 
+     * replace the contact with new one
      */
     PJ_LOG(3,(THIS_FILE, "   replacing contact"));
     status = pjsip_regc_update_contact(regc, 1, &contacts[1]);
@@ -579,7 +579,7 @@ static int update_test(const pj_str_t *registrar_uri)
      *  - <sip:a>;expires=0,
      *  - <sip:b>
      */
-    h1 = (pjsip_contact_hdr*) 
+    h1 = (pjsip_contact_hdr*)
           pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL);
     if (!h1) {
         ret = -630;
@@ -588,7 +588,7 @@ static int update_test(const pj_str_t *registrar_uri)
     if ((void*)h1->next == (void*)&tdata->msg->hdr)
         h2 = NULL;
     else
-        h2 = (pjsip_contact_hdr*) 
+        h2 = (pjsip_contact_hdr*)
               pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, h1->next);
     if (!h2) {
         ret = -640;
@@ -632,7 +632,7 @@ static int update_test(const pj_str_t *registrar_uri)
 
 
 
-    /** 
+    /**
      * First loop, it will update with more contacts. Second loop
      * should do nothing.
      */
@@ -658,7 +658,7 @@ static int update_test(const pj_str_t *registrar_uri)
          *  - <sip:b>
          *  - <sip:c>
          */
-        h1 = (pjsip_contact_hdr*) 
+        h1 = (pjsip_contact_hdr*)
               pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL);
         if (!h1) {
             ret = -730;
@@ -667,7 +667,7 @@ static int update_test(const pj_str_t *registrar_uri)
         if ((void*)h1->next == (void*)&tdata->msg->hdr)
             h2 = NULL;
         else
-            h2 = (pjsip_contact_hdr*) 
+            h2 = (pjsip_contact_hdr*)
                   pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, h1->next);
         if (!h2) {
             ret = -740;
@@ -708,10 +708,10 @@ static int auth_send_error(const pj_str_t *registrar_uri,
                            pj_bool_t destroy_on_cb)
 {
     enum { TIMEOUT = 40 };
-    struct registrar_cfg server_cfg = 
+    struct registrar_cfg server_cfg =
         /* respond      code    auth      contact  exp_prm expires more_contacts */
         { PJ_TRUE,      200,    PJ_TRUE,  EXACT,   75,     0,       {NULL, 0}};
-    struct client client_cfg = 
+    struct client client_cfg =
         /* error        code    have_reg    expiration  contact_cnt auth?    destroy*/
         { PJ_TRUE,      401,    PJ_FALSE,   TIMEOUT,    0,          PJ_TRUE, PJ_TRUE};
     pj_str_t contact = pj_str("<sip:c@C>");
@@ -757,7 +757,7 @@ int regc_test(void)
         unsigned                 expires;
         struct registrar_cfg     server_cfg;
         struct client            client_cfg;
-    } test_rec[] = 
+    } test_rec[] =
     {
         /* immediate error */
         {
@@ -892,7 +892,7 @@ int regc_test(void)
          * still returns all parameters intact. In addition it returns
          * bindings from other clients.
          *
-         * In this case the expiration is taken from the expires param 
+         * In this case the expiration is taken from the expires param
          * because add_xuid_param is enabled.
          */
         {
@@ -915,8 +915,8 @@ int regc_test(void)
 
 
         /* a bad registrar returns completely different Contact and
-         * all parameters are gone. In this case the expiration is 
-         * also taken from the expires param since the number of 
+         * all parameters are gone. In this case the expiration is
+         * also taken from the expires param since the number of
          * header matches.
          */
         {
@@ -1008,7 +1008,7 @@ int regc_test(void)
     unsigned i;
     pj_sockaddr_in addr;
     pjsip_transport *udp = NULL;
-    pj_uint16_t port; 
+    pj_uint16_t port;
     char registrar_uri_buf[80];
     pj_str_t registrar_uri;
     int rc = 0;
@@ -1100,11 +1100,11 @@ int regc_test(void)
 
                     t->client_cfg.destroy_on_cb = z;
 
-                    sprintf(new_title, "%s [check=%d, xuid=%d, destroy=%d]", 
+                    sprintf(new_title, "%s [check=%d, xuid=%d, destroy=%d]",
                             t->title, pjsip_cfg()->regc.check_contact,
                             pjsip_cfg()->regc.add_xuid_param, z);
-                    rc = do_test(new_title, &t->server_cfg, &t->client_cfg, 
-                                 &reg_uri, t->contact_cnt, contacts, 
+                    rc = do_test(new_title, &t->server_cfg, &t->client_cfg,
+                                 &reg_uri, t->contact_cnt, contacts,
                                  t->expires, PJ_FALSE, NULL);
                     if (rc != 0)
                         goto on_return;

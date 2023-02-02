@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_AUTH_SIP_AUTH_MSG_H__
 #define __PJSIP_AUTH_SIP_AUTH_MSG_H__
@@ -54,7 +54,7 @@ struct pjsip_digest_credential
     pjsip_param other_param;    /**< Other parameters.          */
     pj_str_t    username;       /**< Username parameter.        */
     pj_str_t    nonce;          /**< Nonce parameter.           */
-    pj_str_t    uri;            /**< URI parameter.             */ 
+    pj_str_t    uri;            /**< URI parameter.             */
     pj_str_t    response;       /**< Response digest.           */
     pj_str_t    algorithm;      /**< Algorithm.                 */
     pj_str_t    cnonce;         /**< Cnonce.                    */
@@ -141,7 +141,7 @@ typedef struct pjsip_authorization_hdr pjsip_proxy_authorization_hdr;
  * @param pool      Pool where memory will be allocated from.
  * @return          SIP Authorization header.
  */
-PJ_DECL(pjsip_authorization_hdr*) 
+PJ_DECL(pjsip_authorization_hdr*)
 pjsip_authorization_hdr_create(pj_pool_t *pool);
 
 /**
@@ -149,7 +149,7 @@ pjsip_authorization_hdr_create(pj_pool_t *pool);
  * @param pool      Pool where memory will be allocated from.
  * @return SIP      Proxy-Authorization header.
  */
-PJ_DECL(pjsip_proxy_authorization_hdr*) 
+PJ_DECL(pjsip_proxy_authorization_hdr*)
 pjsip_proxy_authorization_hdr_create(pj_pool_t *pool);
 
 
@@ -199,7 +199,7 @@ struct pjsip_pgp_challenge
     pjsip_param other_param;    /**< Other parameters.          */
     pj_str_t    version;        /**< PGP version.               */
     pj_str_t    micalgorithm;   /**< micalgorithm parameter.    */
-    pj_str_t    pubalgorithm;   /**< pubalgorithm parameter.    */ 
+    pj_str_t    pubalgorithm;   /**< pubalgorithm parameter.    */
     pj_str_t    nonce;          /**< Nonce challenge.           */
 };
 
@@ -248,7 +248,7 @@ typedef struct pjsip_www_authenticate_hdr pjsip_proxy_authenticate_hdr;
  * @param pool      Pool where memory will be allocated from.
  * @return          SIP WWW-Authenticate header.
  */
-PJ_DECL(pjsip_www_authenticate_hdr*) 
+PJ_DECL(pjsip_www_authenticate_hdr*)
 pjsip_www_authenticate_hdr_create(pj_pool_t *pool);
 
 /**
@@ -257,7 +257,7 @@ pjsip_www_authenticate_hdr_create(pj_pool_t *pool);
  * @param pool      Pool where memory will be allocated from.
  * @return          SIP Proxy-Authenticate header.
  */
-PJ_DECL(pjsip_proxy_authenticate_hdr*) 
+PJ_DECL(pjsip_proxy_authenticate_hdr*)
 pjsip_proxy_authenticate_hdr_create(pj_pool_t *pool);
 
 /**

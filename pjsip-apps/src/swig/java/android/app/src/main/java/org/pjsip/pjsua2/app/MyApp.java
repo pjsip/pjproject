@@ -62,14 +62,14 @@ class MyCall extends Call
     {
         try {
             CallInfo ci = getInfo();
-            if (ci.getState() == 
+            if (ci.getState() ==
                 pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
             {
                 MyApp.ep.utilLogWrite(3, "MyCall", this.dump(true, ""));
             }
         } catch (Exception e) {
         }
-        
+
         // Should not delete this call instance (self) in this context,
         // so the observer should manage this call instance deletion
         // out of this callback context.
@@ -91,9 +91,9 @@ class MyCall extends Call
         for (int i = 0; i < cmiv.size(); i++) {
             CallMediaInfo cmi = cmiv.get(i);
             if (cmi.getType() == pjmedia_type.PJMEDIA_TYPE_AUDIO &&
-                (cmi.getStatus() == 
+                (cmi.getStatus() ==
                         pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE ||
-                 cmi.getStatus() == 
+                 cmi.getStatus() ==
                         pjsua_call_media_status.PJSUA_CALL_MEDIA_REMOTE_HOLD))
             {
                 // connect ports
@@ -109,7 +109,7 @@ class MyCall extends Call
                     continue;
                 }
             } else if (cmi.getType() == pjmedia_type.PJMEDIA_TYPE_VIDEO &&
-                       cmi.getStatus() == 
+                       cmi.getStatus() ==
                             pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE &&
                        cmi.getVideoIncomingWindowId() != pjsua2.INVALID_ID)
             {
@@ -226,7 +226,7 @@ class MyBuddy extends Buddy
                 if (status == null || status.length()==0) {
                     status = "Online";
                 }
-            } else if (bi.getPresStatus().getStatus() == 
+            } else if (bi.getPresStatus().getStatus() ==
                        pjsua_buddy_status.PJSUA_BUDDY_STATUS_OFFLINE)
             {
                 status = "Offline";
@@ -259,7 +259,7 @@ class MyAccountConfig
             ContainerNode buddies_node = acc_node.readArray("buddies");
             buddyCfgs.clear();
             while (buddies_node.hasUnread()) {
-                BuddyConfig bud_cfg = new BuddyConfig(); 
+                BuddyConfig bud_cfg = new BuddyConfig();
                 bud_cfg.readObject(buddies_node);
                 buddyCfgs.add(bud_cfg);
             }
@@ -335,8 +335,8 @@ class MyApp extends pjsua2 {
         LogConfig log_cfg = epConfig.getLogConfig();
         logWriter = new MyLogWriter();
         log_cfg.setWriter(logWriter);
-        log_cfg.setDecor(log_cfg.getDecor() & 
-                         ~(pj_log_decoration.PJ_LOG_HAS_CR | 
+        log_cfg.setDecor(log_cfg.getDecor() &
+                         ~(pj_log_decoration.PJ_LOG_HAS_CR |
                          pj_log_decoration.PJ_LOG_HAS_NEWLINE));
 
         /* Write log to file (just uncomment whenever needed) */
@@ -554,9 +554,9 @@ class MyApp extends pjsua2 {
         } catch (Exception e) {}
 
         /* Force delete Endpoint here, to avoid deletion from a non-
-        * registered thread (by GC?). 
+        * registered thread (by GC?).
         */
         ep.delete();
         ep = null;
-    } 
+    }
 }

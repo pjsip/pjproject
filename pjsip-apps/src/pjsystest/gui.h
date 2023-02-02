@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __GUI_H__
 #define __GUI_H__
@@ -26,7 +26,7 @@ typedef char gui_title[32];
 
 typedef void (*gui_menu_handler) (void);
 
-typedef struct gui_menu 
+typedef struct gui_menu
 {
     gui_title            title;
     gui_menu_handler     handler;
@@ -34,7 +34,7 @@ typedef struct gui_menu
     struct gui_menu     *submenus[16];
 } gui_menu;
 
-enum gui_flag 
+enum gui_flag
 {
     WITH_OK = 0,
     WITH_YESNO = 1,

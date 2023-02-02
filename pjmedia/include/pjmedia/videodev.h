@@ -37,7 +37,7 @@ PJ_BEGIN_DECL
  * @brief API Reference
  * @{
  */
- 
+
 /**
  * Type for device index.
  */
@@ -229,9 +229,9 @@ typedef enum pjmedia_vid_dev_cap
     PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW = 4,
 
     /**
-     * Support for resizing video output. This capability SHOULD be 
+     * Support for resizing video output. This capability SHOULD be
      * implemented by renderer, to alter the video output dimension on the fly.
-     * Value is pjmedia_rect_size. 
+     * Value is pjmedia_rect_size.
      */
     PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE = 8,
 
@@ -323,8 +323,8 @@ typedef struct pjmedia_vid_dev_info
     /** The underlying driver name */
     char driver[32];
 
-    /** 
-     * The supported direction of the video device, i.e. whether it supports 
+    /**
+     * The supported direction of the video device, i.e. whether it supports
      * capture only, render only, or both.
      */
     pjmedia_dir dir;
@@ -344,11 +344,11 @@ typedef struct pjmedia_vid_dev_info
     /** Number of video formats supported by this device */
     unsigned fmt_cnt;
 
-    /** 
+    /**
      * Array of supported video formats. Some fields in each supported video
      * format may be set to zero or of "unknown" value, to indicate that the
      * value is unknown or should be ignored. When these value are not set
-     * to zero, it indicates that the exact format combination is being used. 
+     * to zero, it indicates that the exact format combination is being used.
      */
     pjmedia_format fmt[PJMEDIA_VID_DEV_INFO_FMT_CNT];
 
@@ -391,7 +391,7 @@ typedef struct pjmedia_vid_dev_cb
     * @param frame         Video frame, which buffer is to be filled in by
     *                      the application.
     *
-    * @return              Returning non-PJ_SUCCESS will cause the video 
+    * @return              Returning non-PJ_SUCCESS will cause the video
     *                      stream to stop
     */
     pj_status_t (*render_cb)(pjmedia_vid_dev_stream *stream,
@@ -423,7 +423,7 @@ typedef struct pjmedia_vid_dev_param
      */
     pjmedia_vid_dev_index rend_id;
 
-    /** 
+    /**
      * Video clock rate. This setting is mandatory if the video
      * direction includes input/capture direction
      */
@@ -448,13 +448,13 @@ typedef struct pjmedia_vid_dev_param
 
     /**
      * Window for the renderer to display the video. This setting is optional,
-     * and will only be used if PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW is set in 
+     * and will only be used if PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW is set in
      * the flags.
      */
     pjmedia_vid_dev_hwnd window;
 
     /**
-     * Video display size. This setting is optional, and will only be used 
+     * Video display size. This setting is optional, and will only be used
      * if PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE is set in the flags.
      */
     pjmedia_rect_size disp_size;

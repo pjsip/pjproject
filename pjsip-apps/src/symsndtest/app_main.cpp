@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev.h>
 #include <pjmedia/delaybuf.h>
@@ -44,8 +44,8 @@ static pj_pool_t *pool;
 static pjmedia_delay_buf *delaybuf;
 static char frame_buf[256];
 
-static void copy_frame_ext(pjmedia_frame_ext *f_dst, 
-                           const pjmedia_frame_ext *f_src) 
+static void copy_frame_ext(pjmedia_frame_ext *f_dst,
+                           const pjmedia_frame_ext *f_src)
 {
     pj_bzero(f_dst, sizeof(*f_dst));
     if (f_src->subframe_cnt) {
@@ -53,7 +53,7 @@ static void copy_frame_ext(pjmedia_frame_ext *f_dst,
         for (unsigned i = 0; i < f_src->subframe_cnt; ++i) {
             pjmedia_frame_ext_subframe *sf;
             sf = pjmedia_frame_ext_get_subframe(f_src, i);
-            pjmedia_frame_ext_append_subframe(f_dst, sf->data, sf->bitlen, 
+            pjmedia_frame_ext_append_subframe(f_dst, sf->data, sf->bitlen,
                                               param.samples_per_frame);
         }
     } else {
@@ -122,14 +122,14 @@ static pj_status_t app_init()
         PJ_LOG(3, (THIS_FILE, "%d: %s %d/%d %dHz",
                    i, info.name, info.input_count, info.output_count,
                    info.default_samples_per_sec));
-        
+
         unsigned j;
 
         /* Print extended formats supported by this audio device */
         PJ_LOG(3, (THIS_FILE, "   Extended formats supported:"));
         for (j = 0; j < info.ext_fmt_cnt; ++j) {
             const char *fmt_name = NULL;
-            
+
             switch (info.ext_fmt[j].id) {
             case PJMEDIA_FORMAT_PCMA:
                 fmt_name = "PCMA";
@@ -189,7 +189,7 @@ static pj_status_t rec_cb(void *user_data,
 
     if (param.ext_fmt.id == PJMEDIA_FORMAT_PCM) {
         pjmedia_delay_buf_put(delaybuf, (pj_int16_t*)frame->buf);
-    
+
         if (frame->size != SAMPLES_PER_FRAME*2) {
                     PJ_LOG(3, (THIS_FILE, "Size captured = %u",
                                frame->size));
@@ -197,7 +197,7 @@ static pj_status_t rec_cb(void *user_data,
     } else {
         pjmedia_frame_ext *f_src = (pjmedia_frame_ext*)frame;
         pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frame_buf;
-        
+
         copy_frame_ext(f_dst, f_src);
     }
 

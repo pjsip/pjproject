@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-ua/sip_replaces.h>
 #include <pjsip-ua/sip_inv.h>
@@ -36,14 +36,14 @@
 /*
  * Replaces header vptr.
  */
-static int replaces_hdr_print( pjsip_replaces_hdr *hdr, 
+static int replaces_hdr_print( pjsip_replaces_hdr *hdr,
                                char *buf, pj_size_t size);
-static pjsip_replaces_hdr* replaces_hdr_clone( pj_pool_t *pool, 
+static pjsip_replaces_hdr* replaces_hdr_clone( pj_pool_t *pool,
                                                const pjsip_replaces_hdr *hdr);
 static pjsip_replaces_hdr* replaces_hdr_shallow_clone( pj_pool_t *pool,
                                                        const pjsip_replaces_hdr*);
 
-static pjsip_hdr_vptr replaces_hdr_vptr = 
+static pjsip_hdr_vptr replaces_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &replaces_hdr_clone,
     (pjsip_hdr_clone_fptr) &replaces_hdr_shallow_clone,
@@ -66,7 +66,7 @@ PJ_DEF(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool)
     return hdr;
 }
 
-static int replaces_hdr_print( pjsip_replaces_hdr *hdr, 
+static int replaces_hdr_print( pjsip_replaces_hdr *hdr,
                                char *buf, pj_size_t size)
 {
     char *p = buf;
@@ -86,9 +86,9 @@ static int replaces_hdr_print( pjsip_replaces_hdr *hdr,
         const pj_str_t str_early_only = { ";early-only", 11 };
         copy_advance(p, str_early_only);
     }
-    
+
     printed = pjsip_param_print_on(&hdr->other_param, p, endbuf-p,
-                                   &pc->pjsip_TOKEN_SPEC, 
+                                   &pc->pjsip_TOKEN_SPEC,
                                    &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
         return (int)printed;
@@ -97,7 +97,7 @@ static int replaces_hdr_print( pjsip_replaces_hdr *hdr,
     return (int)(p - buf);
 }
 
-static pjsip_replaces_hdr* replaces_hdr_clone( pj_pool_t *pool, 
+static pjsip_replaces_hdr* replaces_hdr_clone( pj_pool_t *pool,
                                                const pjsip_replaces_hdr *rhs)
 {
     pjsip_replaces_hdr *hdr = pjsip_replaces_hdr_create(pool);
@@ -109,7 +109,7 @@ static pjsip_replaces_hdr* replaces_hdr_clone( pj_pool_t *pool,
     return hdr;
 }
 
-static pjsip_replaces_hdr* 
+static pjsip_replaces_hdr*
 replaces_hdr_shallow_clone( pj_pool_t *pool,
                             const pjsip_replaces_hdr *rhs )
 {
@@ -169,7 +169,7 @@ static void pjsip_replaces_deinit_module(pjsip_endpoint *endpt)
 }
 
 /*
- * Initialize Replaces support in PJSIP. 
+ * Initialize Replaces support in PJSIP.
  */
 PJ_DEF(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt)
 {
@@ -182,7 +182,7 @@ PJ_DEF(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt)
         return PJ_SUCCESS;
 
     /* Register Replaces header parser */
-    status = pjsip_register_hdr_parser( "Replaces", NULL, 
+    status = pjsip_register_hdr_parser( "Replaces", NULL,
                                         &parse_hdr_replaces);
     if (status != PJ_SUCCESS)
         return status;
@@ -194,8 +194,8 @@ PJ_DEF(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt)
     /* Register deinit module to be executed when PJLIB shutdown */
     if (pjsip_endpt_atexit(endpt, &pjsip_replaces_deinit_module) != PJ_SUCCESS)
     {
-        /* Failure to register this function may cause this module won't 
-         * work properly when the stack is restarted (without quitting 
+        /* Failure to register this function may cause this module won't
+         * work properly when the stack is restarted (without quitting
          * application).
          */
         pj_assert(!"Failed to register Replaces deinit.");
@@ -237,8 +237,8 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
     pj_list_init(&res_hdr_list);
 
     /* Find Replaces header */
-    rep_hdr = (pjsip_replaces_hdr*) 
-              pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_REPLACES, 
+    rep_hdr = (pjsip_replaces_hdr*)
+              pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_REPLACES,
                                          NULL);
     if (!rep_hdr) {
         /* No Replaces header. No further processing is necessary. */
@@ -247,9 +247,9 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
 
 
     /* Check that there's no other Replaces header and return 400 Bad Request
-     * if not. 
+     * if not.
      */
-    if (pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_REPLACES, 
+    if (pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_REPLACES,
                                    rep_hdr->next)) {
         code = PJSIP_SC_BAD_REQUEST;
         warn_text = "Found multiple Replaces headers";
@@ -281,8 +281,8 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
         goto on_return;
     }
 
-    /* Return 603 Declined response if invite session has already 
-     * terminated 
+    /* Return 603 Declined response if invite session has already
+     * terminated
      */
     if (inv->state >= PJSIP_INV_STATE_DISCONNECTED) {
         code = PJSIP_SC_DECLINE;
@@ -291,7 +291,7 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
     }
 
     /* If "early-only" flag is present, check that the invite session
-     * has not been confirmed yet. If the session has been confirmed, 
+     * has not been confirmed yet. If the session has been confirmed,
      * return 486 "Busy Here" response.
      */
     if (rep_hdr->early_only && inv->state >= PJSIP_INV_STATE_CONNECTING) {
@@ -340,7 +340,7 @@ on_return:
             pjsip_tx_data *tdata;
             const pjsip_hdr *h;
 
-            status = pjsip_endpt_create_response(the_endpt, rdata, code, 
+            status = pjsip_endpt_create_response(the_endpt, rdata, code,
                                                  NULL, &tdata);
 
             if (status != PJ_SUCCESS)
@@ -364,7 +364,7 @@ on_return:
                 pjsip_warning_hdr *warn_hdr;
                 pj_str_t warn_value = pj_str((char*)warn_text);
 
-                warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399, 
+                warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399,
                                                   pjsip_endpt_name(the_endpt),
                                                   &warn_value);
                 pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);

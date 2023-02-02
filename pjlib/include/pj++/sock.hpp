@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_SOCK_HPP__
 #define __PJPP_SOCK_HPP__
@@ -132,7 +132,7 @@ public:
     // Default constructor.
     //
     Pj_Socket()
-        : sock_(PJ_INVALID_SOCKET) 
+        : sock_(PJ_INVALID_SOCKET)
     {
     }
 
@@ -147,8 +147,8 @@ public:
     //
     // Copy constructor.
     //
-    Pj_Socket(const Pj_Socket &rhs) 
-        : sock_(rhs.sock_) 
+    Pj_Socket(const Pj_Socket &rhs)
+        : sock_(rhs.sock_)
     {
     }
 
@@ -235,7 +235,7 @@ public:
     //
     // getsockopt.
     //
-    pj_status_t getsockopt(pj_uint16_t level, pj_uint16_t optname, 
+    pj_status_t getsockopt(pj_uint16_t level, pj_uint16_t optname,
                            void *optval, int *optlen)
     {
         return pj_sock_getsockopt(sock_, level, optname, optval, optlen);
@@ -243,8 +243,8 @@ public:
 
     //
     // setsockopt
-    // 
-    pj_status_t setsockopt(pj_uint16_t level, pj_uint16_t optname, 
+    //
+    pj_status_t setsockopt(pj_uint16_t level, pj_uint16_t optname,
                            const void *optval, int optlen)
     {
         return pj_sock_setsockopt(sock_, level, optname, optval, optlen);
@@ -305,7 +305,7 @@ public:
     //
     // Default constructor.
     //
-    Pj_Sock_Stream() 
+    Pj_Sock_Stream()
     {
     }
 
@@ -320,17 +320,17 @@ public:
     //
     // Copy constructor.
     //
-    Pj_Sock_Stream(const Pj_Sock_Stream &rhs) : Pj_Socket(rhs) 
+    Pj_Sock_Stream(const Pj_Sock_Stream &rhs) : Pj_Socket(rhs)
     {
     }
 
     //
     // Assignment.
     //
-    Pj_Sock_Stream &operator=(const Pj_Sock_Stream &rhs) 
-    { 
-        sock_ = rhs.sock_; 
-        return *this; 
+    Pj_Sock_Stream &operator=(const Pj_Sock_Stream &rhs)
+    {
+        sock_ = rhs.sock_;
+        return *this;
     }
 
     //
@@ -349,7 +349,7 @@ public:
         pj_sock_t newsock;
         int *addrlen = remote_addr ? &remote_addr->addrlen_ : NULL;
         pj_status_t status;
-        
+
         status = pj_sock_accept(sock_, &newsock, remote_addr, addrlen);
         if (status != PJ_SUCCESS)
             return Pj_Sock_Stream(-1);
@@ -377,7 +377,7 @@ public:
     //
     // Default constructor.
     //
-    Pj_Sock_Dgram() 
+    Pj_Sock_Dgram()
     {
     }
 
@@ -392,29 +392,29 @@ public:
     //
     // Copy constructor.
     //
-    Pj_Sock_Dgram(const Pj_Sock_Dgram &rhs) 
-        : Pj_Socket(rhs) 
+    Pj_Sock_Dgram(const Pj_Sock_Dgram &rhs)
+        : Pj_Socket(rhs)
     {
     }
 
     //
     // Assignment.
     //
-    Pj_Sock_Dgram &operator=(const Pj_Sock_Dgram &rhs) 
-    { 
+    Pj_Sock_Dgram &operator=(const Pj_Sock_Dgram &rhs)
+    {
         Pj_Socket::operator =(rhs);
-        return *this; 
+        return *this;
     }
 
     //
     // recvfrom()
     //
-    pj_ssize_t recvfrom( void *buf, pj_size_t len, int flag = 0, 
+    pj_ssize_t recvfrom( void *buf, pj_size_t len, int flag = 0,
                          Pj_Inet_Addr *fromaddr = NULL)
     {
         pj_ssize_t bytes = len;
         int *addrlen = fromaddr ? &fromaddr->addrlen_ : NULL;
-        if (pj_sock_recvfrom( sock_, buf, &bytes, flag, 
+        if (pj_sock_recvfrom( sock_, buf, &bytes, flag,
                               fromaddr, addrlen) != PJ_SUCCESS)
         {
             return -1;
@@ -425,11 +425,11 @@ public:
     //
     // sendto()
     //
-    pj_ssize_t sendto( const void *buf, pj_size_t len, int flag, 
+    pj_ssize_t sendto( const void *buf, pj_size_t len, int flag,
                        const Pj_Inet_Addr &addr)
     {
         pj_ssize_t bytes = len;
-        if (pj_sock_sendto( sock_, buf, &bytes, flag, 
+        if (pj_sock_sendto( sock_, buf, &bytes, flag,
                             &addr, sizeof(pj_sockaddr_in)) != PJ_SUCCESS)
         {
             return -1;

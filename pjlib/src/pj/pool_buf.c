@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/pool_buf.h>
 #include <pj/assert.h>
@@ -104,7 +104,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
     param.size = size;
     pj_thread_local_set(tls, &param);
 
-    return pj_pool_create_int(&stack_based_factory, name, size, 0, 
+    return pj_pool_create_int(&stack_based_factory, name, size, 0,
                               pj_pool_factory_default_policy.callback);
 #else
     PJ_UNUSED_ARG(buf);

@@ -13,7 +13,7 @@ By Steve Reid <sreid@sea-to-sky.net>
 100% Public Domain
 
 -----------------
-Modified 7/98 
+Modified 7/98
 By James H. Brown <jbrown@burgoyne.com>
 Still 100% Public Domain
 
@@ -35,7 +35,7 @@ Since the file IO in main() reads 16K at a time, any file 8K or larger would
 be guaranteed to generate the wrong hash (e.g. Test Vector #3, a million
 "a"s).
 
-I also changed the declaration of variables i & j in SHA1Update to 
+I also changed the declaration of variables i & j in SHA1Update to
 unsigned long from unsigned int for the same reason.
 
 These changes should make no difference to any 32 bit implementations since
@@ -62,7 +62,7 @@ Still 100% public domain
 Modified 4/01
 By Saul Kravitz <Saul.Kravitz@celera.com>
 Still 100% PD
-Modified to run on Compaq Alpha hardware.  
+Modified to run on Compaq Alpha hardware.
 
 -----------------
 Modified 07/2002
@@ -202,13 +202,13 @@ PJ_DEF(void) pj_sha1_init(pj_sha1_context* context)
 
 
 /* Run your data through this. */
-PJ_DEF(void) pj_sha1_update(pj_sha1_context* context, 
+PJ_DEF(void) pj_sha1_update(pj_sha1_context* context,
                             const pj_uint8_t* data, const pj_size_t len)
 {
     pj_size_t i, j;
 
     j = (context->count[0] >> 3) & 63;
-    if ((context->count[0] += (pj_uint32_t)len << 3) < (len << 3)) 
+    if ((context->count[0] += (pj_uint32_t)len << 3) < (len << 3))
         context->count[1]++;
     context->count[1] += ((pj_uint32_t)len >> 29);
     if ((j + len) > 63) {
@@ -228,7 +228,7 @@ PJ_DEF(void) pj_sha1_update(pj_sha1_context* context,
 
 
 /* Add padding and return the message digest. */
-PJ_DEF(void) pj_sha1_final(pj_sha1_context* context, 
+PJ_DEF(void) pj_sha1_final(pj_sha1_context* context,
                            pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE])
 {
     pj_uint32_t i;
@@ -247,7 +247,7 @@ PJ_DEF(void) pj_sha1_final(pj_sha1_context* context,
         digest[i] = (pj_uint8_t)
          ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
     }
-    
+
     /* Wipe variables */
     i = 0;
     pj_memset(context->buffer, 0, 64);

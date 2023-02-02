@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -62,18 +62,18 @@ static void usage(void)
     puts("  -H HDR   Specify additional headers to send with response");
     puts("           This option may be specified more than once.");
     puts("           Example:");
-    puts("              -H 'Expires: 300' -H 'Contact: <sip:localhost>'"); 
+    puts("              -H 'Expires: 300' -H 'Contact: <sip:localhost>'");
 }
 
 
 /* Callback to handle incoming requests. */
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 {
-    /* Respond (statelessly) all incoming requests (except ACK!) 
+    /* Respond (statelessly) all incoming requests (except ACK!)
      * with 501 (Not Implemented)
      */
     if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
-        pjsip_endpt_respond_stateless( sip_endpt, rdata, 
+        pjsip_endpt_respond_stateless( sip_endpt, rdata,
                                        code, NULL,
                                        &hdr_list, NULL);
     }
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
     };
     int c;
     pj_status_t status;
-    
+
     /* Must init PJLIB first: */
     status = pj_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
          */
 
         /* Create the endpoint: */
-        status = pjsip_endpt_create(&cp.factory, "sipstateless", 
+        status = pjsip_endpt_create(&cp.factory, "sipstateless",
                                     &sip_endpt);
         PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }
@@ -141,10 +141,10 @@ int main(int argc, char *argv[])
         switch (c) {
         case 'H':
             if (pool == NULL) {
-                pool = pj_pool_create(&cp.factory, "sipstateless", 1000, 
+                pool = pj_pool_create(&cp.factory, "sipstateless", 1000,
                                       1000, NULL);
-            } 
-            
+            }
+
             if (pool) {
                 char *name;
                 name = strtok(pj_optarg, ":");
@@ -186,8 +186,8 @@ int main(int argc, char *argv[])
     PJ_LOG(4,(THIS_FILE, "Returning %d to incoming requests", code));
 
 
-    /* 
-     * Add UDP transport, with hard-coded port 
+    /*
+     * Add UDP transport, with hard-coded port
      */
 #ifdef HAS_UDP_TRANSPORT
     {
@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
 
         status = pjsip_udp_transport_start( sip_endpt, &addr, NULL, 1, NULL);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(3,(THIS_FILE, 
+            PJ_LOG(3,(THIS_FILE,
                       "Error starting UDP transport (port in use?)"));
             return 1;
         }
@@ -207,8 +207,8 @@ int main(int argc, char *argv[])
 #endif
 
 #if HAS_TCP_TRANSPORT
-    /* 
-     * Add UDP transport, with hard-coded port 
+    /*
+     * Add UDP transport, with hard-coded port
      */
     {
         pj_sockaddr_in addr;
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
 
         status = pjsip_tcp_transport_start(sip_endpt, &addr, 1, NULL);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(3,(THIS_FILE, 
+            PJ_LOG(3,(THIS_FILE,
                       "Error starting TCP transport (port in use?)"));
             return 1;
         }

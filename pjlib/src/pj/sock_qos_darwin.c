@@ -58,7 +58,7 @@ static pj_status_t sock_set_net_service_type_type(pj_sock_t sock,
             break;
         case PJ_QOS_TYPE_SIGNALLING:
             val = NET_SERVICE_TYPE_SIG;
-            break;          
+            break;
         case PJ_QOS_TYPE_VIDEO:
             val = NET_SERVICE_TYPE_VI;
             break;
@@ -269,7 +269,7 @@ static pj_status_t sock_get_net_service_type_type(pj_sock_t sock,
                 break;
             case NET_SERVICE_TYPE_SIG:
                 *p_type = PJ_QOS_TYPE_SIGNALLING;
-                break;      
+                break;
             case NET_SERVICE_TYPE_VI:
             case NET_SERVICE_TYPE_RV:
             case NET_SERVICE_TYPE_AV:

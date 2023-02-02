@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/wave.h>
 
@@ -27,7 +27,7 @@ static void wave_hdr_swap_bytes( pjmedia_wave_hdr *hdr )
     hdr->riff_hdr.riff              = pj_swap32(hdr->riff_hdr.riff);
     hdr->riff_hdr.file_len          = pj_swap32(hdr->riff_hdr.file_len);
     hdr->riff_hdr.wave              = pj_swap32(hdr->riff_hdr.wave);
-    
+
     hdr->fmt_hdr.fmt                = pj_swap32(hdr->fmt_hdr.fmt);
     hdr->fmt_hdr.len                = pj_swap32(hdr->fmt_hdr.len);
     hdr->fmt_hdr.fmt_tag            = pj_swap16(hdr->fmt_hdr.fmt_tag);
@@ -36,7 +36,7 @@ static void wave_hdr_swap_bytes( pjmedia_wave_hdr *hdr )
     hdr->fmt_hdr.bytes_per_sec      = pj_swap32(hdr->fmt_hdr.bytes_per_sec);
     hdr->fmt_hdr.block_align        = pj_swap16(hdr->fmt_hdr.block_align);
     hdr->fmt_hdr.bits_per_sample    = pj_swap16(hdr->fmt_hdr.bits_per_sample);
-    
+
     hdr->data_hdr.data              = pj_swap32(hdr->data_hdr.data);
     hdr->data_hdr.len               = pj_swap32(hdr->data_hdr.len);
 #else

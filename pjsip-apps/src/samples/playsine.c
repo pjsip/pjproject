@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -55,7 +55,7 @@
 
 
 /* Util to display the error message for the specified error code  */
-static int app_perror( const char *sender, const char *title, 
+static int app_perror( const char *sender, const char *title,
                        pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
@@ -77,7 +77,7 @@ typedef struct
 
 
 /* This callback is called to feed more samples */
-static pj_status_t sine_get_frame( pjmedia_port *port, 
+static pj_status_t sine_get_frame( pjmedia_port *port,
                                    pjmedia_frame *frame)
 {
     port_data *sine = port->port_data.pdata;
@@ -129,7 +129,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     pj_str_t name;
     port_data *sine;
 
-    PJ_ASSERT_RETURN(pool && channel_count > 0 && channel_count <= 2, 
+    PJ_ASSERT_RETURN(pool && channel_count > 0 && channel_count <= 2,
                      PJ_EINVAL);
 
     port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
@@ -142,7 +142,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
                            sampling_rate,
                            channel_count,
                            16, sampling_rate * 20 / 1000 * channel_count);
-    
+
     /* Set the function to feed frame */
     port->get_frame = &sine_get_frame;
 
@@ -157,7 +157,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     /* initialise sinusoidal wavetable */
     for( i=0; i<count; i++ )
     {
-        sine->samples[i] = (pj_int16_t) (10000.0 * 
+        sine->samples[i] = (pj_int16_t) (10000.0 *
                 sin(((double)i/(double)count) * M_PI * 8.) );
     }
 
@@ -210,7 +210,7 @@ int main(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
     }
 
     /* Create sound player port. */
-    status = pjmedia_snd_port_create_player( 
+    status = pjmedia_snd_port_create_player(
                  pool,                              /* pool                 */
                  -1,                                /* use default dev.     */
                  PJMEDIA_PIA_SRATE(&sine_port->info),/* clock rate.         */
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* Connect sine generator port to the sound player 
+    /* Connect sine generator port to the sound player
      * Stream playing will commence immediately.
      */
     status = pjmedia_snd_port_connect( snd_port, sine_port);
@@ -260,8 +260,8 @@ int main(int argc, char *argv[])
 
 
 
-    /* 
-     * Audio should be playing in a loop now, using sound device's thread. 
+    /*
+     * Audio should be playing in a loop now, using sound device's thread.
      */
 
 
@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
         puts("EOF while reading stdin, will quit now..");
     }
 
-    
+
     /* Start deinitialization: */
 
     /* Disconnect sound port from file port */

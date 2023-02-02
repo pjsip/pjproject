@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "test.h"
@@ -29,7 +29,7 @@ static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned num_tp)
     unsigned i = 0;
     pj_str_t s;
     pjsip_transport *udp_tp;
-    pj_sockaddr_in rem_addr;    
+    pj_sockaddr_in rem_addr;
     pjsip_tpselector tp_sel;
 
     for (;i<num_tp;++i)
@@ -127,7 +127,7 @@ int transport_udp_test(void)
     /* Basic transport's send/receive loopback test. */
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "127.0.0.1"), TEST_UDP_PORT);
     for (i=0; i<SEND_RECV_LOOP; ++i) {
-        status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp[0], 
+        status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp[0],
                                           "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR,
                                           &rtt[i]);
         if (status != 0)
@@ -145,8 +145,8 @@ int transport_udp_test(void)
 
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp[0], 
-                               "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR, 
+    status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp[0],
+                               "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR,
                                &pkt_lost);
     if (status != 0)
         return status;

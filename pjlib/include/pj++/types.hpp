@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_TYPES_HPP__
 #define __PJPP_TYPES_HPP__
@@ -58,83 +58,83 @@ public:
         msec = init_msec;
     }
 
-    Pj_Time_Val(const Pj_Time_Val &rhs) 
-    { 
-        sec=rhs.sec; 
-        msec=rhs.msec; 
+    Pj_Time_Val(const Pj_Time_Val &rhs)
+    {
+        sec=rhs.sec;
+        msec=rhs.msec;
     }
 
-    explicit Pj_Time_Val(const pj_time_val &tv) 
-    { 
-        sec = tv.sec; 
-        msec = tv.msec; 
+    explicit Pj_Time_Val(const pj_time_val &tv)
+    {
+        sec = tv.sec;
+        msec = tv.msec;
     }
 
-    long get_sec()  const    
-    { 
-        return sec; 
+    long get_sec()  const
+    {
+        return sec;
     }
 
-    long get_msec() const    
-    { 
-        return msec; 
+    long get_msec() const
+    {
+        return msec;
     }
 
-    void set_sec (long s)    
-    { 
-        sec = s; 
+    void set_sec (long s)
+    {
+        sec = s;
     }
 
-    void set_msec(long ms)   
-    { 
-        msec = ms; 
-        normalize(); 
+    void set_msec(long ms)
+    {
+        msec = ms;
+        normalize();
     }
 
-    long to_msec() const 
-    { 
-        return PJ_TIME_VAL_MSEC((*this)); 
+    long to_msec() const
+    {
+        return PJ_TIME_VAL_MSEC((*this));
     }
 
-    bool operator == (const Pj_Time_Val &rhs) const 
-    { 
-        return PJ_TIME_VAL_EQ((*this), rhs);  
+    bool operator == (const Pj_Time_Val &rhs) const
+    {
+        return PJ_TIME_VAL_EQ((*this), rhs);
     }
 
-    bool operator >  (const Pj_Time_Val &rhs) const 
-    { 
-        return PJ_TIME_VAL_GT((*this), rhs);  
+    bool operator >  (const Pj_Time_Val &rhs) const
+    {
+        return PJ_TIME_VAL_GT((*this), rhs);
     }
 
-    bool operator >= (const Pj_Time_Val &rhs) const 
-    { 
-        return PJ_TIME_VAL_GTE((*this), rhs); 
+    bool operator >= (const Pj_Time_Val &rhs) const
+    {
+        return PJ_TIME_VAL_GTE((*this), rhs);
     }
 
-    bool operator <  (const Pj_Time_Val &rhs) const 
-    { 
-        return PJ_TIME_VAL_LT((*this), rhs);  
+    bool operator <  (const Pj_Time_Val &rhs) const
+    {
+        return PJ_TIME_VAL_LT((*this), rhs);
     }
 
-    bool operator <= (const Pj_Time_Val &rhs) const 
-    { 
-        return PJ_TIME_VAL_LTE((*this), rhs); 
+    bool operator <= (const Pj_Time_Val &rhs) const
+    {
+        return PJ_TIME_VAL_LTE((*this), rhs);
     }
 
-    Pj_Time_Val & operator = (const Pj_Time_Val &rhs) 
+    Pj_Time_Val & operator = (const Pj_Time_Val &rhs)
     {
         sec = rhs.sec;
         msec = rhs.msec;
         return *this;
     }
- 
-    Pj_Time_Val & operator += (const Pj_Time_Val &rhs) 
+
+    Pj_Time_Val & operator += (const Pj_Time_Val &rhs)
     {
         PJ_TIME_VAL_ADD((*this), rhs);
         return *this;
     }
 
-    Pj_Time_Val & operator -= (const Pj_Time_Val &rhs) 
+    Pj_Time_Val & operator -= (const Pj_Time_Val &rhs)
     {
         PJ_TIME_VAL_SUB((*this), rhs);
         return *this;
@@ -149,9 +149,9 @@ public:
 
 
 private:
-    void normalize() 
-    { 
-        pj_time_val_normalize(this); 
+    void normalize()
+    {
+        pj_time_val_normalize(this);
     }
 
 };

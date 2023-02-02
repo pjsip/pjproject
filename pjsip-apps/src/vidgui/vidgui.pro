@@ -15,7 +15,7 @@ win32 {
   }
   LIBS += Iphlpapi.lib  dsound.lib \
   	  dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib \
-  	  odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib 
+  	  odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib
 } else {
   LIBS += $$system(make -f pj-pkgconfig.mak ldflags)
   QMAKE_CXXFLAGS += $$system(make --silent -f pj-pkgconfig.mak cflags)
@@ -33,5 +33,5 @@ QT += core widgets
 
 # Input
 HEADERS += vidgui.h vidwin.h
-SOURCES += vidgui.cpp vidwin.cpp 
+SOURCES += vidgui.cpp vidwin.cpp
 

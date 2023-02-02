@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/file_access.h>
 #include <pj/unicode.h>
@@ -96,7 +96,7 @@ PJ_DEF(pj_bool_t) pj_file_exists(const char *filename)
 
     hFile = create_file(PJ_STRING_TO_NATIVE(filename,
                                             wfilename, sizeof(wfilename)),
-                        CONTROL_ACCESS, 
+                        CONTROL_ACCESS,
                         FILE_SHARE_READ, NULL,
                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -113,14 +113,14 @@ PJ_DEF(pj_bool_t) pj_file_exists(const char *filename)
 PJ_DEF(pj_off_t) pj_file_size(const char *filename)
 {
     PJ_DECL_UNICODE_TEMP_BUF(wfilename,256)
-    HANDLE hFile;    
+    HANDLE hFile;
     pj_off_t size;
 
     PJ_ASSERT_RETURN(filename != NULL, -1);
 
-    hFile = create_file(PJ_STRING_TO_NATIVE(filename, 
+    hFile = create_file(PJ_STRING_TO_NATIVE(filename,
                                             wfilename, sizeof(wfilename)),
-                        CONTROL_ACCESS, 
+                        CONTROL_ACCESS,
                         FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -161,11 +161,11 @@ PJ_DEF(pj_status_t) pj_file_move( const char *oldname, const char *newname)
     PJ_ASSERT_RETURN(oldname!=NULL && newname!=NULL, PJ_EINVAL);
 
 #if PJ_WIN32_WINNT >= 0x0400
-    rc = MoveFileEx(PJ_STRING_TO_NATIVE(oldname,woldname,sizeof(woldname)), 
-                    PJ_STRING_TO_NATIVE(newname,wnewname,sizeof(wnewname)), 
+    rc = MoveFileEx(PJ_STRING_TO_NATIVE(oldname,woldname,sizeof(woldname)),
+                    PJ_STRING_TO_NATIVE(newname,wnewname,sizeof(wnewname)),
                     MOVEFILE_COPY_ALLOWED|MOVEFILE_REPLACE_EXISTING);
 #else
-    rc = MoveFile(PJ_STRING_TO_NATIVE(oldname,woldname,sizeof(woldname)), 
+    rc = MoveFile(PJ_STRING_TO_NATIVE(oldname,woldname,sizeof(woldname)),
                   PJ_STRING_TO_NATIVE(newname,wnewname,sizeof(wnewname)));
 #endif
 
@@ -226,8 +226,8 @@ PJ_DEF(pj_status_t) pj_file_getstat(const char *filename, pj_file_stat *stat)
     PJ_ASSERT_RETURN(filename!=NULL && stat!=NULL, PJ_EINVAL);
 
     hFile = create_file(PJ_STRING_TO_NATIVE(filename,
-                                            wfilename, sizeof(wfilename)), 
-                        CONTROL_ACCESS, 
+                                            wfilename, sizeof(wfilename)),
+                        CONTROL_ACCESS,
                         FILE_SHARE_READ, NULL,
                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)

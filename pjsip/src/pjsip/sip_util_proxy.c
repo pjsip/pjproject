@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_util.h>
 #include <pjsip/sip_endpoint.h>
@@ -58,7 +58,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_clone_msg( pjsip_endpoint *endpt,
     tdata->msg = pjsip_msg_clone(tdata->pool, rdata->msg_info.msg);
 
     pjsip_tx_data_add_ref(tdata);
-    
+
     *p_tdata = tdata;
 
     return PJ_SUCCESS;
@@ -67,11 +67,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_clone_msg( pjsip_endpoint *endpt,
 
 
 /*
- * Create new request message to be forwarded upstream to new destination URI 
- * in uri. 
+ * Create new request message to be forwarded upstream to new destination URI
+ * in uri.
  */
 PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
-                                                   pjsip_rx_data *rdata, 
+                                                   pjsip_rx_data *rdata,
                                                    const pjsip_uri *uri,
                                                    const pj_str_t *branch,
                                                    unsigned options,
@@ -83,7 +83,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
 
 
     PJ_ASSERT_RETURN(endpt && rdata && p_tdata, PJ_EINVAL);
-    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG, 
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
                      PJSIP_ENOTREQUESTMSG);
 
     PJ_UNUSED_ARG(options);
@@ -93,7 +93,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
      *
      * For each target, the proxy forwards the request following these
      * steps:
-     * 
+     *
      * 1.  Make a copy of the received request
      * 2.  Update the Request-URI
      * 3.  Update the Max-Forwards header field
@@ -131,7 +131,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
 
         /* Set request URI */
         if (uri) {
-            dst->line.req.uri = (pjsip_uri*) 
+            dst->line.req.uri = (pjsip_uri*)
                                 pjsip_uri_clone(tdata->pool, uri);
         } else {
             dst->line.req.uri= (pjsip_uri*)
@@ -159,7 +159,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
                 pjsip_msg_add_hdr(dst, (pjsip_hdr*)hvia);
 
             }
-            /* Skip Content-Type and Content-Length as these would be 
+            /* Skip Content-Type and Content-Length as these would be
              * generated when the the message is printed.
              */
             else if (hsrc->type == PJSIP_H_CONTENT_LENGTH ||
@@ -217,7 +217,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
          * proxy MUST add one with a field value, which SHOULD be 70.
          */
         if (rdata->msg_info.max_fwd == NULL) {
-            pjsip_max_fwd_hdr *hmaxfwd = 
+            pjsip_max_fwd_hdr *hmaxfwd =
                 pjsip_max_fwd_hdr_create(tdata->pool, 70);
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hmaxfwd);
         }
@@ -246,7 +246,7 @@ on_error:
 
 
 PJ_DEF(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
-                                                     pjsip_rx_data *rdata, 
+                                                     pjsip_rx_data *rdata,
                                                      unsigned options,
                                                      pjsip_tx_data **p_tdata)
 {
@@ -272,14 +272,14 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
 
         /* Clone the status line */
         dst->line.status.code = src->line.status.code;
-        pj_strdup(tdata->pool, &dst->line.status.reason, 
+        pj_strdup(tdata->pool, &dst->line.status.reason,
                   &src->line.status.reason);
 
         /* Duplicate all headers */
         hsrc = src->hdr.next;
         while (hsrc != &src->hdr) {
-            
-            /* Skip Content-Type and Content-Length as these would be 
+
+            /* Skip Content-Type and Content-Length as these would be
              * generated when the the message is printed.
              */
             if (hsrc->type == PJSIP_H_CONTENT_LENGTH ||
@@ -296,7 +296,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
                 continue;
             }
 
-            pjsip_msg_add_hdr(dst, 
+            pjsip_msg_add_hdr(dst,
                               (pjsip_hdr*)pjsip_hdr_clone(tdata->pool, hsrc));
 
             hsrc = hsrc->next;
@@ -338,25 +338,25 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
     pj_md5_context ctx;
     pj_uint8_t digest[16];
     pj_str_t branch;
-    pj_str_t rfc3261_branch = {PJSIP_RFC3261_BRANCH_ID, 
+    pj_str_t rfc3261_branch = {PJSIP_RFC3261_BRANCH_ID,
                                PJSIP_RFC3261_BRANCH_LEN};
 
     /* If incoming request does not have RFC 3261 branch value, create
      * a branch value from GUID .
      */
-    if (pj_strnicmp(&rdata->msg_info.via->branch_param, 
-                   &rfc3261_branch, PJSIP_RFC3261_BRANCH_LEN) != 0 ) 
+    if (pj_strnicmp(&rdata->msg_info.via->branch_param,
+                   &rfc3261_branch, PJSIP_RFC3261_BRANCH_LEN) != 0 )
     {
         pj_str_t tmp;
 
         branch.ptr = (char*)
                      pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_BRANCH_LEN);
         branch.slen = PJSIP_RFC3261_BRANCH_LEN;
-        pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, 
+        pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID,
                   PJSIP_RFC3261_BRANCH_LEN);
 
         tmp.ptr = branch.ptr + PJSIP_RFC3261_BRANCH_LEN + 2;
-        *(tmp.ptr-2) = (pj_int8_t)(branch.slen+73); 
+        *(tmp.ptr-2) = (pj_int8_t)(branch.slen+73);
         *(tmp.ptr-1) = (pj_int8_t)(branch.slen+99);
         pj_generate_unique_string( &tmp );
 
@@ -373,7 +373,7 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
     pj_md5_final(&ctx, digest);
 
     branch.ptr = (char*)
-                 pj_pool_alloc(rdata->tp_info.pool, 
+                 pj_pool_alloc(rdata->tp_info.pool,
                                34 + PJSIP_RFC3261_BRANCH_LEN);
     pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, PJSIP_RFC3261_BRANCH_LEN);
     branch.slen = PJSIP_RFC3261_BRANCH_LEN;

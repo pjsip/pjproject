@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/vid_tee.h>
 #include <pjmedia/converter.h>
@@ -51,10 +51,10 @@ typedef struct vid_tee_port
     unsigned             dst_port_cnt;
     vid_tee_dst_port    *dst_ports;
     pj_uint8_t          *put_frm_flag;
-    
+
     struct vid_tee_conv_t {
         pjmedia_converter   *conv;
-        pj_size_t            conv_buf_size;        
+        pj_size_t            conv_buf_size;
     } *tee_conv;
 } vid_tee_port;
 
@@ -133,10 +133,10 @@ static void realloc_buf(vid_tee_port *vid_tee,
                         unsigned buf_cnt, pj_size_t buf_size)
 {
     unsigned i;
-    
+
     if (buf_cnt > vid_tee->buf_cnt)
         vid_tee->buf_cnt = buf_cnt;
-    
+
     if (buf_size > vid_tee->buf_size) {
         /* We need a larger buffer here. */
         vid_tee->buf_size = buf_size;
@@ -146,12 +146,12 @@ static void realloc_buf(vid_tee_port *vid_tee,
         }
         vid_tee->buf[0] = vid_tee->buf[1] = NULL;
     }
-    
+
     if (!vid_tee->buf_pool) {
         vid_tee->buf_pool = pj_pool_create(vid_tee->pf, "video tee buffer",
                                            1000, 1000, NULL);
     }
- 
+
     for (i = 0; i < vid_tee->buf_cnt; i++) {
         if (!vid_tee->buf[i])
             vid_tee->buf[i] = pj_pool_alloc(vid_tee->buf_pool,
@@ -174,7 +174,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
 
     if (tee->dst_port_cnt >= tee->dst_port_maxcnt)
         return PJ_ETOOMANY;
-    
+
     if (vid_tee->info.fmt.id != port->info.fmt.id)
         return PJMEDIA_EBADFMT;
 
@@ -184,7 +184,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
     {
         return PJMEDIA_EBADFMT;
     }
-    
+
     realloc_buf(tee, (option & PJMEDIA_VID_TEE_DST_DO_IN_PLACE_PROC)?
                 1: 0, tee->buf_size);
 
@@ -207,15 +207,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
 {
     vid_tee_port *tee = (vid_tee_port*)vid_tee;
     pjmedia_video_format_detail *vfd;
-    
+
     PJ_ASSERT_RETURN(vid_tee && vid_tee->info.signature==TEE_PORT_SIGN,
                      PJ_EINVAL);
-    
+
     if (tee->dst_port_cnt >= tee->dst_port_maxcnt)
         return PJ_ETOOMANY;
-    
+
     pj_bzero(&tee->tee_conv[tee->dst_port_cnt], sizeof(tee->tee_conv[0]));
-    
+
     /* Check if we need to create a converter. */
     vfd = pjmedia_format_get_video_format_detail(&port->info.fmt, PJ_TRUE);
     if (vid_tee->info.fmt.id != port->info.fmt.id ||
@@ -236,29 +236,29 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
         status = vfi->apply_fmt(vfi, &vafp);
         if (status != PJ_SUCCESS)
             return status;
-        
+
         realloc_buf(tee, (option & PJMEDIA_VID_TEE_DST_DO_IN_PLACE_PROC)?
                     2: 1, vafp.framebytes);
-        
+
         pjmedia_format_copy(&conv_param.src, &vid_tee->info.fmt);
         pjmedia_format_copy(&conv_param.dst, &port->info.fmt);
-        
+
         status = pjmedia_converter_create(
                      NULL, tee->pool, &conv_param,
                      &tee->tee_conv[tee->dst_port_cnt].conv);
         if (status != PJ_SUCCESS)
             return status;
-        
+
         tee->tee_conv[tee->dst_port_cnt].conv_buf_size = vafp.framebytes;
     } else {
         realloc_buf(tee, (option & PJMEDIA_VID_TEE_DST_DO_IN_PLACE_PROC)?
-                    1: 0, tee->buf_size);        
+                    1: 0, tee->buf_size);
     }
-    
+
     tee->dst_ports[tee->dst_port_cnt].dst = port;
     tee->dst_ports[tee->dst_port_cnt].option = option;
     ++tee->dst_port_cnt;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -279,7 +279,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_remove_dst_port(pjmedia_port *vid_tee,
         if (tee->dst_ports[i].dst == port) {
             if (tee->tee_conv[i].conv)
                 pjmedia_converter_destroy(tee->tee_conv[i].conv);
-            
+
             pj_array_erase(tee->dst_ports, sizeof(tee->dst_ports[0]),
                            tee->dst_port_cnt, i);
             pj_array_erase(tee->tee_conv, sizeof(tee->tee_conv[0]),
@@ -307,10 +307,10 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
 
         if (tee->put_frm_flag[i])
             continue;
-        
+
         if (tee->tee_conv[i].conv) {
             pj_status_t status;
-            
+
             frame_.buf  = tee->buf[0];
             frame_.size = tee->tee_conv[i].conv_buf_size;
             status = pjmedia_converter_convert(tee->tee_conv[i].conv,
@@ -324,24 +324,24 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
                 continue;
             }
         }
-        
+
         /* Find other destination ports which has the same format so
          * we don't need to do the same conversion twice.
          */
         for (j = i; j < tee->dst_port_cnt; ++j) {
             pjmedia_frame framep;
-            
+
             if (tee->put_frm_flag[j] ||
-                (tee->dst_ports[j].dst->info.fmt.id != 
+                (tee->dst_ports[j].dst->info.fmt.id !=
                  tee->dst_ports[i].dst->info.fmt.id) ||
-                (tee->dst_ports[j].dst->info.fmt.det.vid.size.w != 
+                (tee->dst_ports[j].dst->info.fmt.det.vid.size.w !=
                  tee->dst_ports[i].dst->info.fmt.det.vid.size.w) ||
-                (tee->dst_ports[j].dst->info.fmt.det.vid.size.h != 
+                (tee->dst_ports[j].dst->info.fmt.det.vid.size.h !=
                  tee->dst_ports[i].dst->info.fmt.det.vid.size.h))
             {
                 continue;
             }
-            
+
             framep = frame_;
             /* For dst_ports that do in-place processing, we need to duplicate
              * the data source first.
@@ -357,7 +357,7 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
             /* Deliver the data */
             pjmedia_port_put_frame(tee->dst_ports[j].dst, &framep);
             tee->put_frm_flag[j] = PUT_FRM_DONE;
-            
+
             if (!tee->tee_conv[i].conv)
                 break;
         }
@@ -385,7 +385,7 @@ static pj_status_t tee_destroy(pjmedia_port *port)
     pj_pool_release(tee->pool);
     if (tee->buf_pool)
         pj_pool_release(tee->buf_pool);
-                    
+
     pj_bzero(tee, sizeof(*tee));
 
     return PJ_SUCCESS;

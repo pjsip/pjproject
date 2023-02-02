@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjmedia-codec.h>
@@ -27,9 +27,9 @@
 
 #define THIS_FILE "vid_codec.c"
 
-/* 
- * Capture device setting: 
- *   -1 = colorbar, 
+/*
+ * Capture device setting:
+ *   -1 = colorbar,
  *   -2 = any non-colorbar capture device (first found)
  *    x = specified capture device id
  */
@@ -223,8 +223,8 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 
         /* Lookup codec */
         pj_cstr(&codec_id_st, codec_id);
-        status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id_st, 
-                                                         &info_cnt, 
+        status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id_st,
+                                                         &info_cnt,
                                                          &codec_info, NULL);
         if (status != PJ_SUCCESS) {
             rc = 205; goto on_return;
@@ -251,7 +251,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
             if (status != PJ_SUCCESS) {
                 rc = 206; goto on_return;
             }
-            if (info.dir & PJMEDIA_DIR_CAPTURE && 
+            if (info.dir & PJMEDIA_DIR_CAPTURE &&
                 pj_ansi_stricmp(info.driver, "Colorbar"))
             {
                 cap_idx = i;
@@ -277,12 +277,12 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     /* Prepare codec */
     {
         pj_str_t codec_id_st;
-        unsigned info_cnt = 1;        
+        unsigned info_cnt = 1;
 
         /* Lookup codec */
         pj_cstr(&codec_id_st, codec_id);
-        status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id_st, 
-                                                         &info_cnt, 
+        status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id_st,
+                                                         &info_cnt,
                                                          &codec_info, NULL);
         if (status != PJ_SUCCESS) {
             rc = 245; goto on_return;
@@ -315,7 +315,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
             rc = 252; goto on_return;
         }
 
-        /* After opened, codec will update the param, let's sync encoder & 
+        /* After opened, codec will update the param, let's sync encoder &
          * decoder format detail.
          */
         codec_param.dec_fmt.det = codec_param.enc_fmt.det;
@@ -366,7 +366,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     /* Init codec port */
     pj_bzero(&codec_port, sizeof(codec_port));
     status = pjmedia_port_info_init2(&codec_port.info, &port_name, 0x1234,
-                                     PJMEDIA_DIR_ENCODING, 
+                                     PJMEDIA_DIR_ENCODING,
                                      &codec_param.dec_fmt);
     if (status != PJ_SUCCESS) {
         rc = 260; goto on_return;
@@ -376,10 +376,10 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     codec_port_data.rdr_port = renderer;
     codec_port_data.enc_buf_size = codec_param.dec_fmt.det.vid.size.w *
                                    codec_param.dec_fmt.det.vid.size.h * 4;
-    codec_port_data.enc_buf = pj_pool_alloc(pool, 
+    codec_port_data.enc_buf = pj_pool_alloc(pool,
                                             codec_port_data.enc_buf_size);
     codec_port_data.pack_buf_size = codec_port_data.enc_buf_size;
-    codec_port_data.pack_buf = pj_pool_alloc(pool, 
+    codec_port_data.pack_buf = pj_pool_alloc(pool,
                                              codec_port_data.pack_buf_size);
 
     codec_port.put_frame = &codec_put_frame;
@@ -442,7 +442,7 @@ int vid_codec_test(void)
     int rc = 0;
     pj_status_t status;
     int orig_log_level;
-    
+
     orig_log_level = pj_log_get_level();
     pj_log_set_level(3);
 

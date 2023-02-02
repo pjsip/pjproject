@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/dns_server.h>
 #include <pjlib-util/errno.h>
@@ -80,7 +80,7 @@ PJ_DEF(pj_status_t) pj_dns_server_create( pj_pool_factory *pf,
 
     PJ_ASSERT_RETURN(pf && ioqueue && p_srv && flags==0, PJ_EINVAL);
     PJ_ASSERT_RETURN(af==pj_AF_INET() || af==pj_AF_INET6(), PJ_EINVAL);
-    
+
     pool = pj_pool_create(pf, "dnsserver", 256, 256, NULL);
     srv = (pj_dns_server*) PJ_POOL_ZALLOC_T(pool, pj_dns_server);
     srv->pool = pool;
@@ -90,7 +90,7 @@ PJ_DEF(pj_status_t) pj_dns_server_create( pj_pool_factory *pf,
     pj_bzero(&sock_addr, sizeof(sock_addr));
     sock_addr.addr.sa_family = (pj_uint16_t)af;
     pj_sockaddr_set_port(&sock_addr, (pj_uint16_t)port);
-    
+
     pj_bzero(&sock_cb, sizeof(sock_cb));
     sock_cb.on_data_recvfrom = &on_data_recvfrom;
 
@@ -138,7 +138,7 @@ static struct rr* find_rr( pj_dns_server *srv,
 
     r = srv->rr_list.next;
     while (r != &srv->rr_list) {
-        if (r->rec.dnsclass == dns_class && r->rec.type == type && 
+        if (r->rec.dnsclass == dns_class && r->rec.type == type &&
             pj_stricmp(&r->rec.name, name)==0)
         {
             return r;
@@ -319,7 +319,7 @@ static int print_rr(pj_uint8_t *pkt, int size, pj_uint8_t *pos,
 
         p += 18;
         size -= 18;
-    
+
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
                rr->type == PJ_DNS_TYPE_NS ||
                rr->type == PJ_DNS_TYPE_PTR) {
@@ -512,8 +512,8 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
 
         r = srv->rr_list.next;
         while (r != &srv->rr_list) {
-            if (r->rec.dnsclass == req->q->dnsclass && 
-                r->rec.type == PJ_DNS_TYPE_SRV && 
+            if (r->rec.dnsclass == req->q->dnsclass &&
+                r->rec.type == PJ_DNS_TYPE_SRV &&
                 pj_stricmp(&r->rec.name, &req->q->name)==0 &&
                 ans.hdr.anscount < MAX_ANS)
             {

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -59,7 +59,7 @@ static pj_ioqueue_op_key_t  *callback_read_op,
                             *callback_write_op,
                             *callback_accept_op;
 
-static void on_ioqueue_read(pj_ioqueue_key_t *key, 
+static void on_ioqueue_read(pj_ioqueue_key_t *key,
                             pj_ioqueue_op_key_t *op_key,
                             pj_ssize_t bytes_read)
 {
@@ -69,7 +69,7 @@ static void on_ioqueue_read(pj_ioqueue_key_t *key,
     callback_call_count++;
 }
 
-static void on_ioqueue_write(pj_ioqueue_key_t *key, 
+static void on_ioqueue_write(pj_ioqueue_key_t *key,
                              pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_written)
 {
@@ -79,9 +79,9 @@ static void on_ioqueue_write(pj_ioqueue_key_t *key,
     callback_call_count++;
 }
 
-static void on_ioqueue_accept(pj_ioqueue_key_t *key, 
+static void on_ioqueue_accept(pj_ioqueue_key_t *key,
                               pj_ioqueue_op_key_t *op_key,
-                              pj_sock_t sock, 
+                              pj_sock_t sock,
                               int status)
 {
     if (sock == PJ_INVALID_SOCKET) {
@@ -119,7 +119,7 @@ static void on_ioqueue_connect(pj_ioqueue_key_t *key, int status)
     callback_call_count++;
 }
 
-static pj_ioqueue_callback test_cb = 
+static pj_ioqueue_callback test_cb =
 {
     &on_ioqueue_read,
     &on_ioqueue_write,
@@ -153,7 +153,7 @@ static int send_recv_test(pj_ioqueue_t *ioque,
         app_perror("...pj_ioqueue_recv error", status);
         return -100;
     }
-    
+
     if (status == PJ_EPENDING)
         ++pending_op;
     else {
@@ -314,7 +314,7 @@ static int compliance_test_0(const pj_ioqueue_cfg *cfg)
     // Register server socket and client socket.
     rc = pj_ioqueue_register_sock(pool, ioque, ssock, NULL, &test_cb, &skey);
     if (rc == PJ_SUCCESS)
-        rc = pj_ioqueue_register_sock(pool, ioque, csock1, NULL, &test_cb, 
+        rc = pj_ioqueue_register_sock(pool, ioque, csock1, NULL, &test_cb,
                                       &ckey1);
     else
         ckey1 = NULL;
@@ -331,7 +331,7 @@ static int compliance_test_0(const pj_ioqueue_cfg *cfg)
 
     // Server socket accept()
     client_addr_len = sizeof(pj_sockaddr_in);
-    status = pj_ioqueue_accept(skey, &accept_op, &csock0, 
+    status = pj_ioqueue_accept(skey, &accept_op, &csock0,
                                &client_addr, &rmt_addr, &client_addr_len);
     if (status != PJ_EPENDING) {
         app_perror("...ERROR in pj_ioqueue_accept()", rc);
@@ -356,7 +356,7 @@ static int compliance_test_0(const pj_ioqueue_cfg *cfg)
     callback_accept_status = callback_connect_status = -2;
     callback_call_count = 0;
 
-    callback_read_key = callback_write_key = 
+    callback_read_key = callback_write_key =
         callback_accept_key = callback_connect_key = NULL;
     callback_accept_op = callback_read_op = callback_write_op = NULL;
 
@@ -435,7 +435,7 @@ static int compliance_test_0(const pj_ioqueue_cfg *cfg)
     }
 
     // Register newly accepted socket.
-    rc = pj_ioqueue_register_sock(pool, ioque, csock0, NULL, 
+    rc = pj_ioqueue_register_sock(pool, ioque, csock0, NULL,
                                   &test_cb, &ckey0);
     if (rc != PJ_SUCCESS) {
         app_perror("...ERROR in pj_ioqueue_register_sock", rc);
@@ -445,7 +445,7 @@ static int compliance_test_0(const pj_ioqueue_cfg *cfg)
 
     // Test send and receive.
     t_elapsed.u32.lo = 0;
-    status = send_recv_test(ioque, ckey0, ckey1, send_buf, 
+    status = send_recv_test(ioque, ckey0, ckey1, send_buf,
                             recv_buf, bufsize, &t_elapsed);
     if (status != 0) {
         goto on_error;
@@ -459,17 +459,17 @@ on_error:
         pj_ioqueue_unregister(skey);
     else if (ssock != PJ_INVALID_SOCKET)
         pj_sock_close(ssock);
-    
+
     if (ckey1 != NULL)
         pj_ioqueue_unregister(ckey1);
     else if (csock1 != PJ_INVALID_SOCKET)
         pj_sock_close(csock1);
-    
+
     if (ckey0 != NULL)
         pj_ioqueue_unregister(ckey0);
     else if (csock0 != PJ_INVALID_SOCKET)
         pj_sock_close(csock0);
-    
+
     if (ioque != NULL)
         pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
@@ -510,7 +510,7 @@ static int compliance_test_1(const pj_ioqueue_cfg *cfg)
     }
 
     // Register client socket.
-    rc = pj_ioqueue_register_sock(pool, ioque, csock1, NULL, 
+    rc = pj_ioqueue_register_sock(pool, ioque, csock1, NULL,
                                   &test_cb, &ckey1);
     if (rc != PJ_SUCCESS) {
         app_perror("...ERROR in pj_ioqueue_register_sock()", rc);
@@ -597,7 +597,7 @@ on_error:
         pj_ioqueue_unregister(ckey1);
     else if (csock1 != PJ_INVALID_SOCKET)
         pj_sock_close(csock1);
-    
+
     if (ioque != NULL)
         pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
@@ -652,17 +652,17 @@ static int compliance_test_2(const pj_ioqueue_cfg *cfg)
 
     listener.sock = PJ_INVALID_SOCKET;
     listener.key = NULL;
-    
+
     for (i=0; i<MAX_PAIR; ++i) {
         server[i].sock = PJ_INVALID_SOCKET;
         server[i].key = NULL;
     }
-    
+
     for (i=0; i<MAX_PAIR; ++i) {
         client[i].sock = PJ_INVALID_SOCKET;
-        client[i].key = NULL;   
+        client[i].key = NULL;
     }
-    
+
     // Create pool.
     pool = pj_pool_create(mem, NULL, POOL_SIZE, 4000, NULL);
 
@@ -704,7 +704,7 @@ static int compliance_test_2(const pj_ioqueue_cfg *cfg)
 
 
     // Register listener socket.
-    rc = pj_ioqueue_register_sock(pool, ioque, listener.sock, NULL, &test_cb, 
+    rc = pj_ioqueue_register_sock(pool, ioque, listener.sock, NULL, &test_cb,
                                   &listener.key);
     if (rc != PJ_SUCCESS) {
         app_perror("...ERROR", rc);
@@ -728,7 +728,7 @@ static int compliance_test_2(const pj_ioqueue_cfg *cfg)
                 status=-70; goto on_error;
             }
 
-            rc = pj_ioqueue_register_sock(pool, ioque, client[i].sock, NULL, 
+            rc = pj_ioqueue_register_sock(pool, ioque, client[i].sock, NULL,
                                           &test_cb, &client[i].key);
             if (rc != PJ_SUCCESS) {
                 app_perror("...error ", rc);
@@ -736,12 +736,12 @@ static int compliance_test_2(const pj_ioqueue_cfg *cfg)
             }
 
             // Server socket accept()
-            pj_ioqueue_op_key_init(&server[i].accept_op, 
+            pj_ioqueue_op_key_init(&server[i].accept_op,
                                    sizeof(server[i].accept_op));
             server[i].rem_addr_len = sizeof(pj_sockaddr_in);
-            status = pj_ioqueue_accept(listener.key, &server[i].accept_op, 
-                                       &server[i].sock, &server[i].local_addr, 
-                                       &server[i].rem_addr, 
+            status = pj_ioqueue_accept(listener.key, &server[i].accept_op,
+                                       &server[i].sock, &server[i].local_addr,
+                                       &server[i].rem_addr,
                                        &server[i].rem_addr_len);
             if (status!=PJ_SUCCESS && status != PJ_EPENDING) {
                 app_perror("...ERROR in pj_ioqueue_accept()", rc);
@@ -753,7 +753,7 @@ static int compliance_test_2(const pj_ioqueue_cfg *cfg)
 
 
             // Client socket connect()
-            status = pj_ioqueue_connect(client[i].key, &listener.addr, 
+            status = pj_ioqueue_connect(client[i].key, &listener.addr,
                                         sizeof(listener.addr));
             if (status!=PJ_SUCCESS && status != PJ_EPENDING) {
                 app_perror("...ERROR in pj_ioqueue_connect()", rc);
@@ -844,7 +844,7 @@ static int compliance_test_2(const pj_ioqueue_cfg *cfg)
 
             // Test send and receive.
             t_elapsed.u32.lo = 0;
-            status = send_recv_test(ioque, server[i].key, client[i].key, 
+            status = send_recv_test(ioque, server[i].key, client[i].key,
                                     send_buf, recv_buf, bufsize, &t_elapsed);
             if (status != 0) {
                 goto on_error;
@@ -995,7 +995,7 @@ int tcp_ioqueue_test()
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_uiq_tcp;
 #endif  /* INCLUDE_TCP_IOQUEUE_TEST */

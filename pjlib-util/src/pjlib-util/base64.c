@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/base64.h>
 #include <pj/assert.h>
@@ -30,7 +30,7 @@ static const char base64_char[] = {
     'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
     'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
     'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7',
-    '8', '9', '+', '/' 
+    '8', '9', '+', '/'
 };
 
 static int base256_char(char c)
@@ -54,7 +54,7 @@ static int base256_char(char c)
 }
 
 
-static void base256to64(pj_uint8_t c1, pj_uint8_t c2, pj_uint8_t c3, 
+static void base256to64(pj_uint8_t c1, pj_uint8_t c2, pj_uint8_t c3,
                         int padding, char *output)
 {
     *output++ = base64_char[c1>>2];
@@ -86,7 +86,7 @@ PJ_DEF(pj_status_t) pj_base64_encode(const pj_uint8_t *input, int in_len,
     char *po = output;
 
     PJ_ASSERT_RETURN(input && output && out_len, PJ_EINVAL);
-    PJ_ASSERT_RETURN(*out_len >= PJ_BASE256_TO_BASE64_LEN(in_len), 
+    PJ_ASSERT_RETURN(*out_len >= PJ_BASE256_TO_BASE64_LEN(in_len),
                      PJ_ETOOSMALL);
 
     while (i < in_len) {
@@ -120,7 +120,7 @@ PJ_DEF(pj_status_t) pj_base64_encode(const pj_uint8_t *input, int in_len,
 }
 
 
-PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input, 
+PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input,
                                      pj_uint8_t *out, int *out_len)
 {
     const char *buf;
@@ -135,7 +135,7 @@ PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input,
     while (len && buf[len-1] == '=')
         --len;
 
-    PJ_ASSERT_RETURN(*out_len >= PJ_BASE64_TO_BASE256_LEN(len), 
+    PJ_ASSERT_RETURN(*out_len >= PJ_BASE64_TO_BASE256_LEN(len),
                      PJ_ETOOSMALL);
 
     for (i=0, j=0; i<len; ) {

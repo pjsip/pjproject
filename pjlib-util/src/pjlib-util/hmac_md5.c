@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,13 +14,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/hmac_md5.h>
 #include <pj/string.h>
 
 
-PJ_DEF(void) pj_hmac_md5_init(pj_hmac_md5_context *hctx, 
+PJ_DEF(void) pj_hmac_md5_init(pj_hmac_md5_context *hctx,
                               const pj_uint8_t *key, unsigned key_len)
 {
     pj_uint8_t k_ipad[64];
@@ -63,7 +63,7 @@ PJ_DEF(void) pj_hmac_md5_init(pj_hmac_md5_context *hctx,
 }
 
 PJ_DEF(void) pj_hmac_md5_update(pj_hmac_md5_context *hctx,
-                                 const pj_uint8_t *input, 
+                                 const pj_uint8_t *input,
                                  unsigned input_len)
 {
     pj_md5_update(&hctx->context, input, input_len);
@@ -83,8 +83,8 @@ PJ_DEF(void) pj_hmac_md5_final(pj_hmac_md5_context *hctx,
     pj_md5_final(&hctx->context, digest);
 }
 
-PJ_DEF(void) pj_hmac_md5( const pj_uint8_t *input, unsigned input_len, 
-                          const pj_uint8_t *key, unsigned key_len, 
+PJ_DEF(void) pj_hmac_md5( const pj_uint8_t *input, unsigned input_len,
+                          const pj_uint8_t *key, unsigned key_len,
                           pj_uint8_t digest[16] )
 {
     pj_hmac_md5_context ctx;

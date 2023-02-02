@@ -1,4 +1,4 @@
-# 
+#
 # This file is used to generate PJSIP/PJMEDIA footprint report.
 # To use this file, just run it in pjsip-apps/build directory, to
 # produce footprint.txt and footprint.htm report files.
@@ -21,7 +21,7 @@ compile_flags1 = [
     # PJLIB-UTIL
     ['HAS_PJLIB_STUN',		'STUN client'],
     ['HAS_PJLIB_GETOPT',	'getopt() functionality'],
-    
+
     # Subtotal
     ['',			'TOTAL']
 ]
@@ -53,7 +53,7 @@ compile_flags = [
     ['HAS_PJSIP_CORE_MSG_UTIL',	'PJSIP Core - Stateless operations, SIP SRV, server resolution and fail-over'],
     ['HAS_PJSIP_UDP_TRANSPORT',	'PJSIP UDP transport'],
     ['',			'Subtotal: A minimalistic SIP application (parsing, UDP transport+STUN, no transaction)'],
-   
+
     ['HAS_PJSIP_TCP_TRANSPORT',	'PJSIP TCP transport'],
     ['HAS_PJSIP_TLS_TRANSPORT',	'PJSIP TLS transport'],
     ['HAS_PJSIP_INFO',		'PJSIP INFO support (RFC 2976) (no special treatment, thus the zero size)'],
@@ -65,7 +65,7 @@ compile_flags = [
     ['HAS_PJSIP_INV_SESSION',	'PJSIP INVITE session API'],
     ['HAS_PJSIP_REGC',		'PJSIP client registration API'],
     ['',			'Subtotal: Minimal SIP application with registration (including digest authentication)'],
-    
+
     ['HAS_PJSIP_EVENT_FRAMEWORK','PJSIP Event/SUBSCRIBE framework, RFC 3265 (needed by call transfer, and presence)'],
     ['HAS_PJSIP_CALL_TRANSFER',	'PJSIP Call Transfer/REFER support (RFC 3515)'],
     ['',			'Subtotal: Minimal SIP application with call transfer'],
@@ -77,7 +77,7 @@ compile_flags = [
 
     # Subtotal
     ['',			'Subtotal: Complete PJSIP package (call, registration, presence, IM) +STUN +GETOPT (+PJLIB), no media'],
-    
+
     # PJNATH
     ['HAS_PJNATH_STUN',		'PJNATH STUN'],
     ['HAS_PJNATH_ICE',		'PJNATH ICE'],
@@ -107,7 +107,7 @@ compile_flags = [
 
     # Subtotal
     ['',			'Subtotal: Complete SIP and all PJMEDIA features (G.711 codec only)'],
-    
+
     # Codecs
     ['HAS_PJMEDIA_GSM_CODEC',	'PJMEDIA GSM codec (including PLC)'],
     ['HAS_PJMEDIA_SPEEX_CODEC',	'PJMEDIA Speex codec (narrowband, wideband, ultra-wideband)'],
@@ -144,11 +144,11 @@ def print_text_report(filename):
     output.write('Footprint (in bytes):\n')
     output.write('   .text   .data    .bss    Module Description\n')
     output.write('==========================================================\n')
-	
+
     for i in range(1, len(exe_size)):
 	e = exe_size[i]
 	prev = exe_size[i-1]
-	
+
 	if e[1]<>'':
 	    output.write(' ')
 	    output.write(  string.rjust(`string.atoi(e[2]) - string.atoi(prev[2])`, 8) )
@@ -156,16 +156,16 @@ def print_text_report(filename):
 	    output.write(  string.rjust(`string.atoi(e[4]) - string.atoi(prev[4])`, 8) )
 	    output.write('   ' + e[5] + '\n')
 	else:
-	    output.write(' ------------------------\n')	
+	    output.write(' ------------------------\n')
 	    output.write(' ')
 	    output.write( string.rjust(e[2], 8) )
 	    output.write( string.rjust(e[3], 8) )
 	    output.write( string.rjust(e[4], 8) )
 	    output.write('   ' + e[5] + '\n')
-	    output.write('\n')	
+	    output.write('\n')
 
-	
-    # Done    
+
+    # Done
     output.close()
 
 
@@ -241,19 +241,19 @@ def print_html_report():
     # Write individual module size
     output.write('<H2>Footprint Report</H2>\n')
     output.write('<p>The table below shows the footprint of individual feature, in bytes.</p>')
-    output.write('<TABLE border="1" cellpadding="2" cellspacing="0">\n' + 
-		  '<TR bgcolor="#e8e8ff">\n' + 
+    output.write('<TABLE border="1" cellpadding="2" cellspacing="0">\n' +
+		  '<TR bgcolor="#e8e8ff">\n' +
 		  '  <TD align="center"><strong>.text</strong></TD>\n' +
 		  '  <TD align="center"><strong>.data</strong></TD>\n' +
 		  '  <TD align="center"><strong>.bss</strong></TD>\n' +
 		  '  <TD align="center"><strong>Features/Module Description</strong></TD>\n' +
 		  '</TR>\n')
-	
-	
+
+
     for i in range(1, len(exe_size)):
 	e = exe_size[i]
 	prev = exe_size[i-1]
-	
+
 	output.write('<TR>\n')
 	if e[1]<>'':
 	    output.write( '  <TD align="right">' + `string.atoi(e[2]) - string.atoi(prev[2])` + '</TD>\n')
@@ -280,8 +280,8 @@ def print_html_report():
     output.write('<!--#include virtual="/footer.html" -->')
     output.write('</BODY>\n')
     output.write('</HTML>\n')
-	
-    # Done    
+
+    # Done
     output.close()
 
 
@@ -315,7 +315,7 @@ def get_size(all_flags, flags, desc):
 	exe_size.append(elem)
 	# Remove file
 	rc = os.system("make -f Footprint.mak FCFLAGS='" + all_flags + "' clean")
-	
+
 # Main
 elem = '', '',  '0', '0', '0', ''
 exe_size.append(elem)
@@ -330,8 +330,8 @@ for elem in compile_flags:
 	e = exe_size[len(exe_size)-1]
 	n = all_flags, '', e[2], e[3], e[4], elem[1]
 	exe_size.append(n)
-	
 
-#print_text_report('footprint.txt')	
+
+#print_text_report('footprint.txt')
 print_html_report()
 

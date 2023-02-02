@@ -162,7 +162,7 @@ struct pjmedia_vid_stream
     pj_bool_t                use_ka;           /**< Stream keep-alive with non-
                                                     codec-VAD mechanism is
                                                     enabled?                */
-    unsigned                 ka_interval;      /**< The keepalive sending 
+    unsigned                 ka_interval;      /**< The keepalive sending
                                                     interval                */
     pj_time_val              last_frm_ts_sent; /**< Time of last sending
                                                     packet                  */
@@ -439,11 +439,11 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
         default:
             break;
         }
-    } else if (event->epub == &stream->rtcp && 
+    } else if (event->epub == &stream->rtcp &&
                event->type==PJMEDIA_EVENT_RX_RTCP_FB)
     {
         /* This is RX RTCP-FB event */
-        pjmedia_event_rx_rtcp_fb_data *data = 
+        pjmedia_event_rx_rtcp_fb_data *data =
                     (pjmedia_event_rx_rtcp_fb_data*)&event->data.rx_rtcp_fb;
 
         /* Check if configured to listen to the RTCP-FB type */
@@ -694,7 +694,7 @@ static void check_tx_rtcp(pjmedia_vid_stream *stream)
     if (stream->rtcp_last_tx.u64 == 0 && !early) {
         pj_get_timestamp(&stream->rtcp_last_tx);
         return;
-    } 
+    }
 
     /* Build & send RTCP */
     if (early ||
@@ -1821,7 +1821,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     stream->use_ka = info->use_ka;
     stream->ka_interval = info->ka_cfg.ka_interval;
     stream->start_ka_count = info->ka_cfg.start_count;
-    stream->start_ka_interval = info->ka_cfg.start_interval;    
+    stream->start_ka_interval = info->ka_cfg.start_interval;
 #endif
     stream->num_keyframe = info->sk_cfg.count;
 
@@ -1839,7 +1839,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     }
 
     /* Create group lock */
-    status = pj_grp_lock_create_w_handler(pool, NULL, stream, 
+    status = pj_grp_lock_create_w_handler(pool, NULL, stream,
                                           &on_destroy,
                                           &stream->grp_lock);
     if (status != PJ_SUCCESS)

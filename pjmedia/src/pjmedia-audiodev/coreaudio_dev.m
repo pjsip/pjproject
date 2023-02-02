@@ -42,7 +42,7 @@
      * As in iOS SDK 4 or later, audio route change property listener is
      * no longer necessary. Just make surethat your application can receive
      * remote control events by adding the code:
-     *     [[UIApplication sharedApplication] 
+     *     [[UIApplication sharedApplication]
      *      beginReceivingRemoteControlEvents];
      * Otherwise audio route change (such as headset plug/unplug) will not be
      * processed while your application is in the background mode.
@@ -145,7 +145,7 @@ struct coreaudio_stream
     void                        *resample_buf_ptr;
     unsigned                     resample_buf_count;
     unsigned                     resample_buf_size;
-    
+
 #if !COREAUDIO_MAC
     AVAudioSession              *sess;
 #endif
@@ -397,7 +397,7 @@ static pj_status_t ca_factory_destroy(pjmedia_aud_dev_factory *f)
         kAudioSessionProperty_AudioRouteChange, propListener, cf);
 #endif
 #endif
-    
+
     if (cf->pool) {
         pj_pool_release(cf->pool);
         cf->pool = NULL;
@@ -483,23 +483,23 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
          */
         return PJMEDIA_EAUD_INIT;
     }
-    
+
     if (dev_size > 1) {
         AudioDeviceID dev_id = kAudioObjectUnknown;
         unsigned idx = 0;
-        
+
         /* Find default audio input device */
         addr.mSelector = kAudioHardwarePropertyDefaultInputDevice;
         addr.mScope = kAudioObjectPropertyScopeGlobal;
         addr.mElement = kAudioObjectPropertyElementMaster;
         size = sizeof(dev_id);
-        
+
         ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
                                              &addr, 0, NULL,
                                              &size, (void *)&dev_id);
         if (ostatus == noErr && dev_id != dev_ids[idx]) {
             AudioDeviceID temp_id = dev_ids[idx];
-            
+
             for (i = idx + 1; i < dev_count; i++) {
                 if (dev_ids[i] == dev_id) {
                     dev_ids[idx++] = dev_id;
@@ -510,13 +510,13 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
         }
 
         /* Find default audio output device */
-        addr.mSelector = kAudioHardwarePropertyDefaultOutputDevice;     
+        addr.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
         ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
                                              &addr, 0, NULL,
                                              &size, (void *)&dev_id);
         if (ostatus == noErr && dev_id != dev_ids[idx]) {
             AudioDeviceID temp_id = dev_ids[idx];
-            
+
             for (i = idx + 1; i < dev_count; i++) {
                 if (dev_ids[i] == dev_id) {
                     dev_ids[idx] = dev_id;
@@ -767,7 +767,7 @@ static OSStatus resample_callback(void                       *inRefCon,
         status = pj_thread_register("ca_rec", strm->rec_thread_desc,
                                     &strm->rec_thread);
         strm->rec_thread_initialized = 1;
-        PJ_LOG(5,(THIS_FILE, "Recorder thread started, (%i frames)", 
+        PJ_LOG(5,(THIS_FILE, "Recorder thread started, (%i frames)",
                   inNumberFrames));
     }
 
@@ -803,7 +803,7 @@ static OSStatus resample_callback(void                       *inRefCon,
         frame.size = strm->param.samples_per_frame *
                      strm->param.bits_per_sample >> 3;
         frame.bit_info = 0;
-        
+
         ab.mNumberBuffers = 1;
         ab.mBuffers[0].mNumberChannels = strm->streamFormat.mChannelsPerFrame;
         ab.mBuffers[0].mData = strm->rec_buf;
@@ -839,12 +839,12 @@ static OSStatus resample_callback(void                       *inRefCon,
             strm->rec_timestamp.u64 += strm->param.samples_per_frame /
                                        strm->param.channel_count;
         }
-        
-        
+
+
         /* Give all frames we have */
         while (nsamples >= resampleSize && status == 0) {
             frame.timestamp.u64 = strm->rec_timestamp.u64;
-            
+
             /* Do the resample */
             strm->resample_buf_ptr = input;
             ab.mBuffers[0].mDataByteSize = frame.size;
@@ -858,10 +858,10 @@ static OSStatus resample_callback(void                       *inRefCon,
                                                       NULL);
             if (ostatus != noErr) {
                 goto on_break;
-            }       
-            
+            }
+
             status = (*strm->rec_cb)(strm->user_data, &frame);
-            
+
             input = (pj_int16_t*) input + resampleSize;
             nsamples -= resampleSize;
             strm->rec_timestamp.u64 += strm->param.samples_per_frame /
@@ -1169,7 +1169,7 @@ static void propListener(void                   *inClientData,
     routeDictionary = (CFDictionaryRef)inData;
     reason = (CFNumberRef)
              CFDictionaryGetValue(
-                 routeDictionary, 
+                 routeDictionary,
                  CFSTR(kAudioSession_AudioRouteChangeKey_Reason));
     CFNumberGetValue(reason, kCFNumberSInt32Type, &reasonVal);
 
@@ -1234,7 +1234,7 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
 
             /* Make sure that your application can receive remote control
              * events by adding the code:
-             *     [[UIApplication sharedApplication] 
+             *     [[UIApplication sharedApplication]
              *      beginReceivingRemoteControlEvents];
              * Otherwise audio unit will fail to restart while your
              * application is in the background mode.
@@ -1493,7 +1493,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
         if (strm->param.ec_enabled
 #if !COREAUDIO_MAC
             && isMacCatalystApp
-#endif          
+#endif
         ) {
             /* When using VPIO on Mac, we need to use float data. Using
              * signed integer will generate no errors, but strangely,
@@ -1626,7 +1626,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
         strm->audio_buf->mNumberBuffers = 1;
         strm->audio_buf->mBuffers[0].mNumberChannels =
                 strm->streamFormat.mChannelsPerFrame;
-        
+
 #endif
 
         /* Allocate recording buffer */
@@ -2238,11 +2238,11 @@ static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm)
 
     if (should_deactivate) {
 #if !COREAUDIO_MAC && SETUP_AV_AUDIO_SESSION
-        if ([stream->sess 
+        if ([stream->sess
              respondsToSelector:@selector(setActive:withOptions:error:)])
         {
             [stream->sess setActive:NO
-            withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation 
+            withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
             error:nil];
         } else {
             if ([stream->sess setActive:NO error:nil] != YES) {

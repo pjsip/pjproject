@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib.h>
 #include "test.h"
@@ -35,8 +35,8 @@ struct op_key
     int                  addrlen;
 };
 
-static void on_read_complete(pj_ioqueue_key_t *ioq_key, 
-                             pj_ioqueue_op_key_t *op_key, 
+static void on_read_complete(pj_ioqueue_key_t *ioq_key,
+                             pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_received)
 {
     pj_status_t rc;
@@ -98,8 +98,8 @@ static void on_read_complete(pj_ioqueue_key_t *ioq_key,
     }
 }
 
-static void on_write_complete(pj_ioqueue_key_t *ioq_key, 
-                              pj_ioqueue_op_key_t *op_key, 
+static void on_write_complete(pj_ioqueue_key_t *ioq_key,
+                              pj_ioqueue_op_key_t *op_key,
                               pj_ssize_t bytes_sent)
 {
     struct op_key *send_rec = (struct op_key*)op_key;
@@ -144,7 +144,7 @@ static int worker_thread(void *arg)
         read_op.is_pending = 1;
         on_read_complete(key, &read_op.op_key_, length);
     }
-    
+
     while (!thread_quit_flag) {
         pj_time_val timeout;
         timeout.sec = 0; timeout.msec = 10;
@@ -177,7 +177,7 @@ int udp_echo_srv_ioqueue(void)
         return -20;
     }
 
-    rc = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, 
+    rc = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0,
                     ECHO_SERVER_START_PORT, &sock);
     if (rc != PJ_SUCCESS) {
         app_perror("...app_socket error", rc);

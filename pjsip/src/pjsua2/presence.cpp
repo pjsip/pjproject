@@ -62,7 +62,7 @@ void BuddyInfo::fromPj(const pjsua_buddy_info &pbi)
     subStateName        = string(pbi.sub_state_name);
     subTermCode         = (pjsip_status_code)pbi.sub_term_code;
     subTermReason       = pj2Str(pbi.sub_term_reason);
-    
+
     /* Presence status */
     presStatus.status   = pbi.status;
     presStatus.statusText = pj2Str(pbi.status_text);
@@ -85,7 +85,7 @@ Buddy::Buddy()
 : id(PJSUA_INVALID_ID)
 {
 }
- 
+
 Buddy::Buddy(pjsua_buddy_id buddy_id)
 : id(buddy_id)
 {
@@ -118,7 +118,7 @@ Buddy::~Buddy()
             acc->removeBuddy(this);
     }
 }
-    
+
 /*
  * Create buddy and register the buddy to PJSUA-LIB.
  */
@@ -127,10 +127,10 @@ void Buddy::create(Account &account, const BuddyConfig &cfg)
 {
     pjsua_buddy_config pj_cfg;
     pjsua_buddy_config_default(&pj_cfg);
-    
+
     if (!account.isValid())
         PJSUA2_RAISE_ERROR3(PJ_EINVAL, "Buddy::create()", "Invalid account");
-    
+
     BuddyUserData *bud = new BuddyUserData();
     bud->self = this;
     bud->acc  = &account;
@@ -139,7 +139,7 @@ void Buddy::create(Account &account, const BuddyConfig &cfg)
     pj_cfg.subscribe = cfg.subscribe;
     pj_cfg.user_data = (void*)bud;
     PJSUA2_CHECK_EXPR( pjsua_buddy_add(&pj_cfg, &id) );
-    
+
     account.addBuddy(this);
 }
 
@@ -147,7 +147,7 @@ int Buddy::getId() const
 {
     return id;
 }
-    
+
 /*
  * Check if this buddy is valid.
  */
@@ -177,7 +177,7 @@ void Buddy::subscribePresence(bool subscribe) PJSUA2_THROW(Error)
     PJSUA2_CHECK_EXPR( pjsua_buddy_subscribe_pres(id, subscribe) );
 }
 
-    
+
 /*
  * Update the presence information for the buddy.
  */
@@ -185,7 +185,7 @@ void Buddy::updatePresence(void) PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_buddy_update_pres(id) );
 }
-     
+
 /*
  * Send instant messaging outside dialog.
  */
@@ -207,7 +207,7 @@ void Buddy::sendInstantMessage(const SendInstantMessageParam &prm)
     void *user_data = (void*)prm.userData;
     pjsua_msg_data msg_data;
     prm.txOption.toPj(msg_data);
-    
+
     PJSUA2_CHECK_EXPR( pjsua_im_send(acc->getId(), &to, &mime_type, &content,
                                      &msg_data, user_data) );
 }
@@ -230,7 +230,7 @@ void Buddy::sendTypingIndication(const SendTypingIndicationParam &prm)
     pj_str_t to = str2Pj(bi.contact.empty()? bi.uri : bi.contact);
     pjsua_msg_data msg_data;
     prm.txOption.toPj(msg_data);
-    
+
     PJSUA2_CHECK_EXPR( pjsua_im_typing(acc->getId(), &to, prm.isTyping,
                                        &msg_data) );
 }

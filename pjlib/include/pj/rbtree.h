@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_RBTREE_H__
 #define __PJ_RBTREE_H__
@@ -32,13 +32,13 @@ PJ_BEGIN_DECL
  * @defgroup PJ_RBTREE Red/Black Balanced Tree
  * @ingroup PJ_DS
  * @brief
- * Red/Black tree is the variant of balanced tree, where the search, insert, 
+ * Red/Black tree is the variant of balanced tree, where the search, insert,
  * and delete operation is \b guaranteed to take at most \a O( lg(n) ).
  * @{
  */
 /**
  * Color type for Red-Black tree.
- */ 
+ */
 typedef enum pj_rbcolor_t
 {
     PJ_RBCOLOR_BLACK,
@@ -48,7 +48,7 @@ typedef enum pj_rbcolor_t
 /**
  * The type of the node of the R/B Tree.
  */
-typedef struct pj_rbtree_node 
+typedef struct pj_rbtree_node
 {
     /** Pointers to the node's parent. */
     struct pj_rbtree_node *parent;
@@ -143,7 +143,7 @@ PJ_DECL(pj_rbtree_node*) pj_rbtree_last( pj_rbtree *tree );
  * @param node the node.
  * @return the successive node, or NULL if the node has no successor.
  */
-PJ_DECL(pj_rbtree_node*) pj_rbtree_next( pj_rbtree *tree, 
+PJ_DECL(pj_rbtree_node*) pj_rbtree_next( pj_rbtree *tree,
                                          pj_rbtree_node *node );
 
 /**
@@ -153,18 +153,18 @@ PJ_DECL(pj_rbtree_node*) pj_rbtree_next( pj_rbtree *tree,
  * @param node the node.
  * @return the previous node, or NULL if the node has no previous node.
  */
-PJ_DECL(pj_rbtree_node*) pj_rbtree_prev( pj_rbtree *tree, 
+PJ_DECL(pj_rbtree_node*) pj_rbtree_prev( pj_rbtree *tree,
                                          pj_rbtree_node *node );
 
 /**
- * Insert a new node. 
- * The node will be inserted at sorted location. The key of the node must 
+ * Insert a new node.
+ * The node will be inserted at sorted location. The key of the node must
  * be UNIQUE, i.e. it hasn't existed in the tree.
  * @param tree the tree.
  * @param node the node to be inserted.
  * @return zero on success, or -1 if the key already exist.
  */
-PJ_DECL(int) pj_rbtree_insert( pj_rbtree *tree, 
+PJ_DECL(int) pj_rbtree_insert( pj_rbtree *tree,
                                pj_rbtree_node *node );
 
 /**

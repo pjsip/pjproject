@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <winuserm.h>
 #include <aygshell.h>
@@ -48,10 +48,10 @@ static void PjsuaOnStopped(pj_bool_t restart, int argc, char** argv);
 static void PjsuaOnConfig(pjsua_app_config *cfg);
 
 LRESULT CALLBACK DialogProc(const HWND hWnd,
-                            const UINT Msg, 
+                            const UINT Msg,
                             const WPARAM wParam,
-                            const LPARAM lParam) 
-{   
+                            const LPARAM lParam)
+{
     LRESULT res = 0;
 
     switch (Msg) {
@@ -101,7 +101,7 @@ LRESULT CALLBACK DialogProc(const HWND hWnd,
 pj_status_t GuiInit()
 {
     WNDCLASS wc;
-    HWND hWnd = NULL;   
+    HWND hWnd = NULL;
     RECT r;
     DWORD dwStyle;
     enum { LABEL_HEIGHT = 30 };
@@ -111,12 +111,12 @@ pj_status_t GuiInit()
     SHMENUBARINFO mbi;
 
     pj_status_t status  = PJ_SUCCESS;
-    
+
     /* Check if app is running. If it's running then focus on the window */
     hWnd = FindWindow(MAINWINDOWCLASS, MAINWINDOWTITLE);
 
     if (NULL != hWnd) {
-        SetForegroundWindow(hWnd);    
+        SetForegroundWindow(hWnd);
         return status;
     }
 
@@ -130,7 +130,7 @@ pj_status_t GuiInit()
     wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
     wc.lpszMenuName     = 0;
     wc.lpszClassName = MAINWINDOWCLASS;
-    
+
     if (!RegisterClass(&wc) != 0) {
         DWORD err = GetLastError();
         return PJ_RETURN_OS_ERROR(err);
@@ -138,7 +138,7 @@ pj_status_t GuiInit()
 
     /* Create the app. window */
     g_hWndMain = CreateWindow(MAINWINDOWCLASS, MAINWINDOWTITLE,
-                              WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 
+                              WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
                               CW_USEDEFAULT, CW_USEDEFAULT,
                               (HWND)NULL, NULL, g_hInst, (LPSTR)NULL);
     if (g_hWndMain == NULL) {
@@ -315,7 +315,7 @@ void PjsuaInit()
     status = pjsua_app_init(&app_cfg);
     if (status != PJ_SUCCESS)
         goto on_return;
-    
+
     SetWindowText(g_hWndLbl, _T("Starting.."));
     status = pjsua_app_run(PJ_FALSE);
     if (status != PJ_SUCCESS)
@@ -360,7 +360,7 @@ int WINAPI WinMain(
     PostMessage(g_hWndMain, WM_APP_INIT, 0, 0);
 
     status = GuiStart();
-        
+
 on_return:
     PjsuaDestroy();
     GuiDestroy();

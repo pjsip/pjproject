@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_SYMBIAN_SOUND_APS_H__
 #define __PJMEDIA_SYMBIAN_SOUND_APS_H__
@@ -22,7 +22,7 @@
 
 /**
  * @file symbian_sound_aps.h
- * @brief Sound device wrapper using Audio Proxy Server on 
+ * @brief Sound device wrapper using Audio Proxy Server on
  * Symbian S60 3rd edition.
  */
 #include <pjmedia/types.h>
@@ -32,7 +32,7 @@ PJ_BEGIN_DECL
 /**
  * Set audio routing for APS sound device.
  *
- * @param stream        The sound device stream, the stream should be started 
+ * @param stream        The sound device stream, the stream should be started
  *                      before calling this function.
  * @param route         Audio routing to be set.
  *

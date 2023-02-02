@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -39,7 +39,7 @@ PJ_IDEF(pj_size_t) pj_pool_get_used_size( pj_pool_t *pool )
 
 PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t size )
 {
-    /* The operation below is valid for size==0. 
+    /* The operation below is valid for size==0.
      * When size==0, the function will return the pointer to the pool
      * memory address, but no memory will be allocated.
      */
@@ -76,9 +76,9 @@ PJ_IDEF(const char *) pj_pool_getobjname( const pj_pool_t *pool )
     return pool->obj_name;
 }
 
-PJ_IDEF(pj_pool_t*) pj_pool_create( pj_pool_factory *f, 
+PJ_IDEF(pj_pool_t*) pj_pool_create( pj_pool_factory *f,
                                     const char *name,
-                                    pj_size_t initial_size, 
+                                    pj_size_t initial_size,
                                     pj_size_t increment_size,
                                     pj_pool_callback *callback)
 {

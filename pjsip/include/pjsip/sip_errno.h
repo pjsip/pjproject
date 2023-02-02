@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_ERRNO_H__
 #define __PJSIP_SIP_ERRNO_H__
@@ -229,8 +229,8 @@ PJ_BEGIN_DECL
 #define PJSIP_ETPNOTSUITABLE    (PJSIP_ERRNO_START_PJSIP + 64)  /* 171064 */
 /**
  * @hideinitializer
- * Transport not available. This error occurs for example when the SIP stack 
- * is trying to use a SIP transport while the transport is being paused by 
+ * Transport not available. This error occurs for example when the SIP stack
+ * is trying to use a SIP transport while the transport is being paused by
  * application.
  */
 #define PJSIP_ETPNOTAVAIL       (PJSIP_ERRNO_START_PJSIP + 65)  /* 171065 */
@@ -329,7 +329,7 @@ PJ_BEGIN_DECL
 #define PJSIP_EFAILEDCREDENTIAL (PJSIP_ERRNO_START_PJSIP + 100) /* 171100 */
 /**
  * @hideinitializer
- * No suitable credential is found to authenticate the request against 
+ * No suitable credential is found to authenticate the request against
  * the received authentication challenge in 401/407 response. This often
  * is caused by different realm supplied in the credential than the realm
  * found in the challenge.
@@ -382,7 +382,7 @@ PJ_BEGIN_DECL
 #define PJSIP_EAUTHINVALIDDIGEST (PJSIP_ERRNO_START_PJSIP+110)  /* 171110 */
 /**
  * @hideinitializer
- * Maximum number of stale retries exceeded. This happens when server 
+ * Maximum number of stale retries exceeded. This happens when server
  * keeps rejecting our authorization request with stale=true.
  */
 #define PJSIP_EAUTHSTALECOUNT   (PJSIP_ERRNO_START_PJSIP + 111) /* 171111 */
@@ -435,7 +435,7 @@ PJ_BEGIN_DECL
 #define PJSIP_ESESSIONSTATE      (PJSIP_ERRNO_START_PJSIP+141)  /* 171141 */
 /**
  * @hideinitializer
- * The feature being requested requires the use of secure session or 
+ * The feature being requested requires the use of secure session or
  * transport.
  */
 #define PJSIP_ESESSIONINSECURE  (PJSIP_ERRNO_START_PJSIP+142)   /* 171142 */
@@ -529,7 +529,7 @@ PJ_BEGIN_DECL
  * @return          The error message as NULL terminated string,
  *                  wrapped with pj_str_t.
  */
-PJ_DECL(pj_str_t) pjsip_strerror(pj_status_t status, 
+PJ_DECL(pj_str_t) pjsip_strerror(pj_status_t status,
                                  char *buffer, pj_size_t bufsize);
 
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_ENDPOINT_H__
 #define __PJSIP_SIP_ENDPOINT_H__
@@ -43,13 +43,13 @@ PJ_BEGIN_DECL
  * SIP Endpoint instance (pjsip_endpoint) can be viewed as the master/owner of
  * all SIP objects in an application. It performs the following roles:
  *  - it manages the allocation/deallocation of memory pools for all objects.
- *  - it manages listeners and transports, and how they are used by 
+ *  - it manages listeners and transports, and how they are used by
  *    transactions.
  *  - it receives incoming messages from transport layer and automatically
  *    dispatches them to the correct transaction (or create a new one).
  *  - it has a single instance of timer management (timer heap).
  *  - it manages modules, which is the primary means of extending the library.
- *  - it provides single polling function for all objects and distributes 
+ *  - it provides single polling function for all objects and distributes
  *    events.
  *  - it automatically handles incoming requests which can not be handled by
  *    existing modules (such as when incoming request has unsupported method).
@@ -70,11 +70,11 @@ typedef void (*pjsip_endpt_exit_callback)(pjsip_endpoint *endpt);
 
 /**
  * Create an instance of SIP endpoint from the specified pool factory.
- * The pool factory reference then will be kept by the endpoint, so that 
+ * The pool factory reference then will be kept by the endpoint, so that
  * future memory allocations by SIP components will be taken from the same
  * pool factory.
  *
- * @param pf            Pool factory that will be used for the lifetime of 
+ * @param pf            Pool factory that will be used for the lifetime of
  *                      endpoint.
  * @param name          Optional name to be specified for the endpoint.
  *                      If this parameter is NULL, then the name will use
@@ -109,7 +109,7 @@ PJ_DECL(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint *endpt);
 /**
  * Poll for events. Application must call this function periodically to ensure
  * that all events from both transports and timer heap are handled in timely
- * manner.  This function, like all other endpoint functions, is thread safe, 
+ * manner.  This function, like all other endpoint functions, is thread safe,
  * and application may have more than one thread concurrently calling this function.
  *
  * @param endpt         The endpoint.
@@ -118,7 +118,7 @@ PJ_DECL(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint *endpt);
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_handle_events( pjsip_endpoint *endpt, 
+PJ_DECL(pj_status_t) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
                                                 const pj_time_val *max_timeout);
 
 
@@ -211,7 +211,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock(
  * @param endpt     The endpoint.
  * @param entry     The timer entry previously registered.
  */
-PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt, 
+PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt,
                                         pj_timer_entry *entry );
 
 /**
@@ -226,8 +226,8 @@ PJ_DECL(pj_timer_heap_t*) pjsip_endpt_get_timer_heap(pjsip_endpoint *endpt);
 
 /**
  * Register new module to the endpoint.
- * The endpoint will then call the load and start function in the module to 
- * properly initialize the module, and assign a unique module ID for the 
+ * The endpoint will then call the load and start function in the module to
+ * properly initialize the module, and assign a unique module ID for the
  * module.
  *
  * @param endpt         The endpoint.
@@ -240,7 +240,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
 
 /**
  * Unregister a module from the endpoint.
- * The endpoint will then call the stop and unload function in the module to 
+ * The endpoint will then call the stop and unload function in the module to
  * properly shutdown the module.
  *
  * @param endpt         The endpoint.
@@ -429,18 +429,18 @@ PJ_DECL(pj_status_t) pjsip_endpt_set_resolver(pjsip_endpoint *endpt,
                                               pj_dns_resolver *resv);
 
 /**
- * Set the DNS external resolver implementation to use in the SIP resolver. 
+ * Set the DNS external resolver implementation to use in the SIP resolver.
  *
  * Note that naturally when implementing its own resolver, application would not
- * need the internal resolver, hence this function will also destroy the 
- * PJLIB-UTIL DNS resolver if any (e.g: set using #pjsip_endpt_set_resolver()). 
- * Application that needs it, still be able create its own instance. 
+ * need the internal resolver, hence this function will also destroy the
+ * PJLIB-UTIL DNS resolver if any (e.g: set using #pjsip_endpt_set_resolver()).
+ * Application that needs it, still be able create its own instance.
  *
  * @param endpt       The SIP resolver engine.
  * @param ext_res   The external resolver implementation callback. This argument
- *                  can be NULL to reset the whole external implementation. 
+ *                  can be NULL to reset the whole external implementation.
  *                  However, it is prohibited to reset individual callback.
- * 
+ *
  * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_set_ext_resolver(pjsip_endpoint *endpt,
@@ -457,7 +457,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_set_ext_resolver(pjsip_endpoint *endpt,
 PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
 
 /**
- * Asynchronously resolve a SIP target host or domain according to rule 
+ * Asynchronously resolve a SIP target host or domain according to rule
  * specified in RFC 3263 (Locating SIP Servers). When the resolving operation
  * has completed, the callback will be called.
  *
@@ -509,7 +509,7 @@ PJ_DECL(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt);
  *
  * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjsip_endpt_acquire_transport( pjsip_endpoint *endpt,
                                pjsip_transport_type_e type,
                                const pj_sockaddr_t *remote,
@@ -520,8 +520,8 @@ pjsip_endpt_acquire_transport( pjsip_endpoint *endpt,
 
 /**
  * Find a SIP transport suitable for sending SIP message to the specified
- * address by also considering the outgoing SIP message data. If transport 
- * selector ("sel") is set, then the function will check if the transport 
+ * address by also considering the outgoing SIP message data. If transport
+ * selector ("sel") is set, then the function will check if the transport
  * selected is suitable to send requests to the specified address.
  *
  * @see pjsip_tpmgr_acquire_transport
@@ -537,7 +537,7 @@ pjsip_endpt_acquire_transport( pjsip_endpoint *endpt,
  *
  * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjsip_endpt_acquire_transport2(pjsip_endpoint *endpt,
                                pjsip_transport_type_e type,
                                const pj_sockaddr_t *remote,
@@ -659,7 +659,7 @@ PJ_DECL(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail );
 
 
 /**
- * Register cleanup function to be called by SIP endpoint when 
+ * Register cleanup function to be called by SIP endpoint when
  * #pjsip_endpt_destroy() is called.  Note that application should not
  * use or access any endpoint resource (such as pool, ioqueue, timer heap)
  * from within the callback as such resource may have been released when

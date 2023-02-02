@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_LIST_H__
 #define __PJ_LIST_H__
@@ -62,7 +62,7 @@ PJ_BEGIN_DECL
                                    /** List @a prev. */ \
                                    type *prev;          \
                                    /** List @a next. */ \
-                                   type *next 
+                                   type *next
 
 
 /**
@@ -79,7 +79,7 @@ struct pj_list
 /**
  * Initialize the list.
  * Initially, the list will have no member, and function pj_list_empty() will
- * always return nonzero (which indicates TRUE) for the newly initialized 
+ * always return nonzero (which indicates TRUE) for the newly initialized
  * list.
  *
  * @param node The list head.
@@ -107,7 +107,7 @@ PJ_INLINE(int) pj_list_empty(const pj_list_type * node)
 /**
  * Insert the node to the list before the specified element position.
  *
- * @param pos   The element to which the node will be inserted before. 
+ * @param pos   The element to which the node will be inserted before.
  * @param node  The element to be inserted.
  *
  */
@@ -118,7 +118,7 @@ PJ_IDECL(void)  pj_list_insert_before(pj_list_type *pos, pj_list_type *node);
  * Insert the node to the back of the list. This is just an alias for
  * #pj_list_insert_before().
  *
- * @param list  The list. 
+ * @param list  The list.
  * @param node  The element to be inserted.
  */
 PJ_INLINE(void) pj_list_push_back(pj_list_type *list, pj_list_type *node)
@@ -139,7 +139,7 @@ PJ_IDECL(void) pj_list_insert_nodes_before(pj_list_type *lst,
 /**
  * Insert a node to the list after the specified element position.
  *
- * @param pos       The element in the list which will precede the inserted 
+ * @param pos       The element in the list which will precede the inserted
  *                  element.
  * @param node      The element to be inserted after the position element.
  *
@@ -151,7 +151,7 @@ PJ_IDECL(void) pj_list_insert_after(pj_list_type *pos, pj_list_type *node);
  * Insert the node to the front of the list. This is just an alias for
  * #pj_list_insert_after().
  *
- * @param list  The list. 
+ * @param list  The list.
  * @param node  The element to be inserted.
  */
 PJ_INLINE(void) pj_list_push_front(pj_list_type *list, pj_list_type *node)
@@ -187,7 +187,7 @@ PJ_IDECL(void) pj_list_merge_first(pj_list_type *list1, pj_list_type *list2);
 
 
 /**
- * Remove elements from the second list argument, and insert them to the list 
+ * Remove elements from the second list argument, and insert them to the list
  * in the first argument. The elements from the second list will be appended
  * to the first list. Note that the node pointed by \a list2
  * itself is not considered as a node, but rather as the list descriptor, so
@@ -195,7 +195,7 @@ PJ_IDECL(void) pj_list_merge_first(pj_list_type *list1, pj_list_type *list2);
  * at \a list2->next. If \a list2 is to be included in the operation, use
  * \a pj_list_insert_nodes_before.
  *
- * @param list1     The element in the list which will precede the inserted 
+ * @param list1     The element in the list which will precede the inserted
  *                  element.
  * @param list2     The element in the list to be inserted.
  *
@@ -217,10 +217,10 @@ PJ_IDECL(void) pj_list_erase(pj_list_type *node);
  * @param list      The list head.
  * @param node      The node element to be searched.
  *
- * @return The node itself if it is found in the list, or NULL if it is not 
+ * @return The node itself if it is found in the list, or NULL if it is not
  *         found in the list.
  */
-PJ_IDECL(pj_list_type*) pj_list_find_node(pj_list_type *list, 
+PJ_IDECL(pj_list_type*) pj_list_find_node(pj_list_type *list,
                                           pj_list_type *node);
 
 
@@ -231,15 +231,15 @@ PJ_IDECL(pj_list_type*) pj_list_find_node(pj_list_type *list,
  * comparison function returns ZERO.
  *
  * @param list      The list head.
- * @param value     The user defined value to be passed in the comparison 
+ * @param value     The user defined value to be passed in the comparison
  *                  function
- * @param comp      The comparison function, which should return ZERO to 
+ * @param comp      The comparison function, which should return ZERO to
  *                  indicate that the searched value is found.
  *
  * @return The first node that matched, or NULL if it is not found.
  */
 PJ_IDECL(pj_list_type*) pj_list_search(pj_list_type *list, void *value,
-                                       int (*comp)(void *value, 
+                                       int (*comp)(void *value,
                                                    const pj_list_type *node)
                                        );
 

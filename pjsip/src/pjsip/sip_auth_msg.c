@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_auth_msg.h>
 #include <pjsip/sip_auth_parser.h>
@@ -36,7 +36,7 @@ static pjsip_authorization_hdr* pjsip_authorization_hdr_shallow_clone( pj_pool_t
 static int pjsip_authorization_hdr_print( pjsip_authorization_hdr *hdr,
                                           char *buf, pj_size_t size);
 
-static pjsip_hdr_vptr authorization_hdr_vptr = 
+static pjsip_hdr_vptr authorization_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_authorization_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_authorization_hdr_shallow_clone,
@@ -68,9 +68,9 @@ static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_
     char *startbuf = buf;
     char *endbuf = buf + size;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
-    
+
     copy_advance_pair_quote_cond(buf, "username=", 9, cred->username, '"', '"');
-    copy_advance_pair_quote_cond_always(buf, ", realm=", 8, cred->realm, '"', 
+    copy_advance_pair_quote_cond_always(buf, ", realm=", 8, cred->realm, '"',
                                         '"');
     copy_advance_pair_quote(buf, ", nonce=", 8, cred->nonce, '"', '"');
     copy_advance_pair_quote_cond(buf, ", uri=", 6, cred->uri, '"', '"');
@@ -78,14 +78,14 @@ static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_
     copy_advance_pair(buf, ", algorithm=", 12, cred->algorithm);
     copy_advance_pair_quote_cond(buf, ", cnonce=", 9, cred->cnonce, '"', '"');
     copy_advance_pair_quote_cond(buf, ", opaque=", 9, cred->opaque, '"', '"');
-    //Note: there's no dbl-quote in qop in Authorization header 
+    //Note: there's no dbl-quote in qop in Authorization header
     // (unlike WWW-Authenticate)
     //copy_advance_pair_quote_cond(buf, ", qop=", 6, cred->qop, '"', '"');
     copy_advance_pair(buf, ", qop=", 6, cred->qop);
     copy_advance_pair(buf, ", nc=", 5, cred->nc);
-    
-    printed = pjsip_param_print_on(&cred->other_param, buf, endbuf-buf, 
-                                   &pc->pjsip_TOKEN_SPEC, 
+
+    printed = pjsip_param_print_on(&cred->other_param, buf, endbuf-buf,
+                                   &pc->pjsip_TOKEN_SPEC,
                                    &pc->pjsip_TOKEN_SPEC, ',');
     if (printed < 0)
         return -1;
@@ -136,11 +136,11 @@ static int pjsip_authorization_hdr_print( pjsip_authorization_hdr *hdr,
     if (pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR) == 0)
     {
         printed = print_digest_credential(&hdr->credential.digest, buf, endbuf - buf);
-    } 
+    }
     else if (pj_stricmp(&hdr->scheme, &pjsip_PGP_STR) == 0)
     {
         printed = print_pgp_credential(&hdr->credential.pgp, buf, endbuf - buf);
-    } 
+    }
     else if (pj_stricmp(&hdr->scheme, &pjsip_BEARER_STR) == 0)
     {
         printed = print_oauth_credential(&hdr->credential.oauth, buf,
@@ -194,7 +194,7 @@ static pjsip_authorization_hdr* pjsip_authorization_hdr_clone(  pj_pool_t *pool,
     return hdr;
 }
 
-static pjsip_authorization_hdr* 
+static pjsip_authorization_hdr*
 pjsip_authorization_hdr_shallow_clone(  pj_pool_t *pool,
                                         const pjsip_authorization_hdr *rhs)
 {
@@ -202,7 +202,7 @@ pjsip_authorization_hdr_shallow_clone(  pj_pool_t *pool,
     pjsip_authorization_hdr *hdr;
     hdr = PJ_POOL_ALLOC_T(pool, pjsip_authorization_hdr);
     pj_memcpy(hdr, rhs, sizeof(*hdr));
-    pjsip_param_shallow_clone(pool, &hdr->credential.common.other_param, 
+    pjsip_param_shallow_clone(pool, &hdr->credential.common.other_param,
                               &rhs->credential.common.other_param);
     return hdr;
 }
@@ -219,7 +219,7 @@ static pjsip_www_authenticate_hdr* pjsip_www_authenticate_hdr_clone( pj_pool_t *
 static pjsip_www_authenticate_hdr* pjsip_www_authenticate_hdr_shallow_clone( pj_pool_t *pool,
                                                                              const pjsip_www_authenticate_hdr *hdr);
 
-static pjsip_hdr_vptr www_authenticate_hdr_vptr = 
+static pjsip_hdr_vptr www_authenticate_hdr_vptr =
 {
     (pjsip_hdr_clone_fptr) &pjsip_www_authenticate_hdr_clone,
     (pjsip_hdr_clone_fptr) &pjsip_www_authenticate_hdr_shallow_clone,
@@ -265,9 +265,9 @@ static int print_digest_challenge( pjsip_digest_challenge *chal,
     }
     copy_advance_pair(buf, ",algorithm=", 11, chal->algorithm);
     copy_advance_pair_quote_cond(buf, ",qop=", 5, chal->qop, '"', '"');
-    
-    printed = pjsip_param_print_on(&chal->other_param, buf, endbuf-buf, 
-                                   &pc->pjsip_TOKEN_SPEC, 
+
+    printed = pjsip_param_print_on(&chal->other_param, buf, endbuf-buf,
+                                   &pc->pjsip_TOKEN_SPEC,
                                    &pc->pjsip_TOKEN_SPEC, ',');
     if (printed < 0)
         return -1;
@@ -336,7 +336,7 @@ static pjsip_www_authenticate_hdr* pjsip_www_authenticate_hdr_clone( pj_pool_t *
         hdr->challenge.digest.stale = rhs->challenge.digest.stale;
         pj_strdup(pool, &hdr->challenge.digest.algorithm, &rhs->challenge.digest.algorithm);
         pj_strdup(pool, &hdr->challenge.digest.qop, &rhs->challenge.digest.qop);
-        pjsip_param_clone(pool, &hdr->challenge.digest.other_param, 
+        pjsip_param_clone(pool, &hdr->challenge.digest.other_param,
                           &rhs->challenge.digest.other_param);
     } else if (pj_stricmp2(&hdr->scheme, "pgp") == 0) {
         pj_assert(0);
@@ -357,7 +357,7 @@ static pjsip_www_authenticate_hdr* pjsip_www_authenticate_hdr_shallow_clone( pj_
     pjsip_www_authenticate_hdr *hdr;
     hdr = PJ_POOL_ALLOC_T(pool, pjsip_www_authenticate_hdr);
     pj_memcpy(hdr, rhs, sizeof(*hdr));
-    pjsip_param_shallow_clone(pool, &hdr->challenge.common.other_param, 
+    pjsip_param_shallow_clone(pool, &hdr->challenge.common.other_param,
                               &rhs->challenge.common.other_param);
     return hdr;
 }

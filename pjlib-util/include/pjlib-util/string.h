@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_STRING_H__
 #define __PJLIB_UTIL_STRING_H__
@@ -64,10 +64,10 @@ PJ_DECL(pj_str_t*) pj_strcpy_unescape(pj_str_t *dst, const pj_str_t *src);
  * @param dst       Target string.
  * @param src       Source string.
  * @param max       Maximum length to copy to target string.
- * @param unres     Unreserved characters, which are allowed to appear 
+ * @param unres     Unreserved characters, which are allowed to appear
  *                  unescaped.
  *
- * @return          The target string if all characters have been copied 
+ * @return          The target string if all characters have been copied
  *                  successfully, or NULL if there's not enough buffer to
  *                  escape the strings.
  */
@@ -82,7 +82,7 @@ PJ_DECL(pj_str_t*) pj_strncpy_escape(pj_str_t *dst, const pj_str_t *src,
  * @param dst       Target string.
  * @param src       Source string.
  * @param max       Maximum length to copy to target string.
- * @param unres     Unreserved characters, which are allowed to appear 
+ * @param unres     Unreserved characters, which are allowed to appear
  *                  unescaped.
  *
  * @return          The length of the destination, or -1 if there's not

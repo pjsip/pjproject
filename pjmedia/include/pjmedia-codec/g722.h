@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_G722_H__
 #define __PJMEDIA_CODEC_G722_H__
@@ -36,7 +36,7 @@
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
  *
- * The G.722 implementation uses 16-bit PCM with sampling rate 16000Hz and 
+ * The G.722 implementation uses 16-bit PCM with sampling rate 16000Hz and
  * 20ms frame length resulting in 64kbps bitrate.
  *
  * The G.722 codec implementation is provided as part of pjmedia-codec
@@ -46,8 +46,8 @@
  *
  * \subsection g722_general_setting General Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * \subsection g722_specific_setting Codec Specific Settings
@@ -79,7 +79,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_g722_deinit(void);
 
 /**
  * Set the G.722 codec encoder and decoder level adjustment.
- * If the value is non-zero, then PCM input samples to the encoder will 
+ * If the value is non-zero, then PCM input samples to the encoder will
  * be shifted right by this value, and similarly PCM output samples from
  * the decoder will be shifted left by this value.
  *

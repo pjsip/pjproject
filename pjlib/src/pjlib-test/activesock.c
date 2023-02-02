@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -79,7 +79,7 @@ static pj_bool_t udp_echo_srv_on_data_recvfrom(pj_activesock_t *asock,
     /* Send back if echo is enabled */
     if (srv->echo_enabled) {
         sent = size;
-        srv->status = pj_activesock_sendto(asock, &srv->send_key, data, 
+        srv->status = pj_activesock_sendto(asock, &srv->send_key, data,
                                            &sent, 0,
                                            src_addr, addr_len);
         if (srv->status != PJ_SUCCESS) {
@@ -111,7 +111,7 @@ static pj_status_t udp_echo_srv_create(pj_pool_t *pool,
     pj_bzero(&activesock_cb, sizeof(activesock_cb));
     activesock_cb.on_data_recvfrom = &udp_echo_srv_on_data_recvfrom;
 
-    status = pj_activesock_create_udp(pool, &addr, NULL, ioqueue, &activesock_cb, 
+    status = pj_activesock_create_udp(pool, &addr, NULL, ioqueue, &activesock_cb,
                                       srv, &srv->asock, &addr);
     if (status != PJ_SUCCESS) {
         pj_sock_close(sock_fd);
@@ -244,7 +244,7 @@ on_return:
         pj_ioqueue_destroy(ioqueue);
     if (pool)
         pj_pool_release(pool);
-    
+
     return ret;
 }
 
@@ -291,7 +291,7 @@ static pj_bool_t tcp_on_data_read(pj_activesock_t *asock,
         struct tcp_pkt *tcp_pkt = (struct tcp_pkt*) next;
 
         if (tcp_pkt->signature != SIGNATURE) {
-            PJ_LOG(1,("", "   err: invalid signature at seq=%d", 
+            PJ_LOG(1,("", "   err: invalid signature at seq=%d",
                           st->next_recv_seq));
             st->err = PJ_TRUE;
             return PJ_FALSE;
@@ -347,7 +347,7 @@ static int tcp_perf_test(void)
 
     pool = pj_pool_create(mem, "tcpperf", 256, 256, NULL);
 
-    status = app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock1, 
+    status = app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock1,
                             &sock2);
     if (status != PJ_SUCCESS) {
         status = -100;
@@ -417,7 +417,7 @@ static int tcp_perf_test(void)
                  * eventhough the remote end hasn't received the data yet.
                  * If we continue sending, eventually send() will block,
                  * possibly because the send buffer is full. So we need to
-                 * poll the ioqueue periodically, to let receiver gets the 
+                 * poll the ioqueue periodically, to let receiver gets the
                  * data.
                  */
                 pj_symbianos_poll(-1, 0);
@@ -472,7 +472,7 @@ static int tcp_perf_test(void)
         goto on_return;
     }
     if (state1->next_recv_seq != COUNT) {
-        PJ_LOG(3,("", "   err: only %u packets received, expecting %u", 
+        PJ_LOG(3,("", "   err: only %u packets received, expecting %u",
                       state1->next_recv_seq, COUNT));
         status = -195;
         goto on_return;
@@ -512,7 +512,7 @@ int activesock_test(void)
 
 #else   /* INCLUDE_ACTIVESOCK_TEST */
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_active_sock_test;
 #endif  /* INCLUDE_ACTIVESOCK_TEST */

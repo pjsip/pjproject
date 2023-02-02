@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include <pj/assert.h>
@@ -44,7 +44,7 @@
  */
 static LONG CpuMhz;
 static pj_int64_t CpuHz;
- 
+
 static pj_status_t GetCpuHz(void)
 {
     HKEY key;
@@ -79,9 +79,9 @@ static pj_status_t GetCpuHz(void)
 }
 
 /* __int64 is nicely returned in EDX:EAX */
-__declspec(naked) __int64 rdtsc() 
+__declspec(naked) __int64 rdtsc()
 {
-    __asm 
+    __asm
     {
         RDTSC
         RET
@@ -161,8 +161,8 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 
         /* Get the counter elapsed time in miliseconds */
         counter64 = (val.QuadPart - g_ts_base.u64) * 1000 / g_ts_freq.u64;
-        
-        /* Get the time elapsed in miliseconds. 
+
+        /* Get the time elapsed in miliseconds.
          * We don't want to use PJ_TIME_VAL_MSEC() since it's using
          * 32bit calculation, which limits the maximum elapsed time
          * to around 49 days only.

@@ -376,7 +376,7 @@ static void get_buddy_id(pj_cli_dyn_choice_param *param)
 
                 /* Fill buddy id */
                 pj_ansi_snprintf(data_out, sizeof(data_out), "%d", ids[i]+1);
-                pj_strdup2(param->pool, &param->choice[param->cnt].value, 
+                pj_strdup2(param->pool, &param->choice[param->cnt].value,
                            data_out);
                 pj_bzero(data_out, PJ_ARRAY_SIZE(data_out));
 
@@ -389,7 +389,7 @@ static void get_buddy_id(pj_cli_dyn_choice_param *param)
                                 (int)info.uri.slen,
                                 info.uri.ptr);
 
-                pj_strdup2(param->pool, &param->choice[param->cnt].desc, 
+                pj_strdup2(param->pool, &param->choice[param->cnt].desc,
                            data_out);
                 if (++param->cnt >= (param->max_cnt-1))
                     break;
@@ -537,7 +537,7 @@ static void get_video_stream_id(pj_cli_dyn_choice_param *param)
                     char med_idx[8];
                     pj_ansi_snprintf(med_idx, sizeof(med_idx), "%d",
                                      call_info.media[i].index);
-                    pj_strdup2(param->pool, &param->choice[param->cnt].value, 
+                    pj_strdup2(param->pool, &param->choice[param->cnt].value,
                                med_idx);
 
                     switch (call_info.media[i].status) {
@@ -720,7 +720,7 @@ static void get_call_id(pj_cli_dyn_choice_param *param)
 
                 pjsua_call_get_info(ids[i], &call_info);
                 pj_ansi_snprintf(call_id, sizeof(call_id), "%d", ids[i]);
-                pj_strdup2(param->pool, &param->choice[param->cnt].value, 
+                pj_strdup2(param->pool, &param->choice[param->cnt].value,
                            call_id);
                 pj_ansi_snprintf(desc, sizeof(desc), "%.*s [%.*s]",
                     (int)call_info.remote_info.slen,

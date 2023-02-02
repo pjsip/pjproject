@@ -245,7 +245,7 @@ static pj_status_t apply_planar_444(const pjmedia_video_format_info *fi,
     aparam->framebytes = (Y_bytes * 3);
 
     /* Planar formats use 3 plane */
-    aparam->strides[0] = aparam->strides[1] = 
+    aparam->strides[0] = aparam->strides[1] =
                          aparam->strides[2] = aparam->size.w;
 
     aparam->planes[0] = aparam->buffer;

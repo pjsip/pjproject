@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_CONFIG_H__
 #define __PJSIP_SIP_CONFIG_H__
@@ -28,7 +28,7 @@
 /**
  * @defgroup PJSIP_CORE Core SIP Library
  * @brief The core framework from which all other SIP components depends on.
- * 
+ *
  * The PJSIP Core library only provides transport framework, event
  * dispatching/module framework, and SIP message representation and
  * parsing. It doesn't do anything usefull in itself!
@@ -137,7 +137,7 @@ typedef struct pjsip_cfg_t
         pj_bool_t req_has_via_alias;
 
         /**
-         * Resolve hostname when trying to get the network interface to be put 
+         * Resolve hostname when trying to get the network interface to be put
          * in Via or Contact header.
          *
          * Default is PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE.
@@ -160,7 +160,7 @@ typedef struct pjsip_cfg_t
          * Encode SIP headers in their short forms to reduce size. By default,
          * SIP headers in outgoing messages will be encoded in their full names.
          * If this option is enabled, then SIP headers for outgoing messages
-         * will be encoded in their short forms, to reduce message size. 
+         * will be encoded in their short forms, to reduce message size.
          * Note that this does not affect the ability of PJSIP to parse incoming
          * SIP messages, as the parser always supports parsing both the long
          * and short version of the headers.
@@ -228,9 +228,9 @@ typedef struct pjsip_cfg_t
     /** Client registration settings. */
     struct {
         /**
-         * Specify whether client registration should check for its 
-         * registered contact in Contact header of successful REGISTER 
-         * response to determine whether registration has been successful. 
+         * Specify whether client registration should check for its
+         * registered contact in Contact header of successful REGISTER
+         * response to determine whether registration has been successful.
          * This setting may be disabled if non-compliant registrar is unable
          * to return correct Contact header.
          *
@@ -241,7 +241,7 @@ typedef struct pjsip_cfg_t
         /**
          * Specify whether client registration should add "x-uid" extension
          * parameter in all Contact URIs that it registers to assist the
-         * matching of Contact URIs in the 200/OK REGISTER response, in 
+         * matching of Contact URIs in the 200/OK REGISTER response, in
          * case the registrar is unable to return exact Contact URI in the
          * 200/OK response.
          *
@@ -339,7 +339,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
- * Transport manager hash table size (must be 2^n-1). 
+ * Transport manager hash table size (must be 2^n-1).
  * See also PJSIP_MAX_TRANSPORTS
  */
 #ifndef PJSIP_TPMGR_HTABLE_SIZE
@@ -468,7 +468,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 /**
- * Resolve hostname when trying to get the network interface to be put in Via 
+ * Resolve hostname when trying to get the network interface to be put in Via
  * or Contact header.
  *
  * This option can also be controlled at run-time by the
@@ -509,9 +509,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 /**
  * Encode SIP headers in their short forms to reduce size. By default,
- * SIP headers in outgoing messages will be encoded in their full names. 
+ * SIP headers in outgoing messages will be encoded in their full names.
  * If this option is enabled, then SIP headers for outgoing messages
- * will be encoded in their short forms, to reduce message size. 
+ * will be encoded in their short forms, to reduce message size.
  * Note that this does not affect the ability of PJSIP to parse incoming
  * SIP messages, as the parser always supports parsing both the long
  * and short version of the headers.
@@ -533,14 +533,14 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * allowed within dialog.
  *
  * Note that there is also an undocumented variable defined in sip_dialog.c
- * to control whether Allow header should be included. The default value 
+ * to control whether Allow header should be included. The default value
  * of this variable is PJSIP_INCLUDE_ALLOW_HDR_IN_DLG.
- * To change PJSIP behavior during run-time, application can use the 
+ * To change PJSIP behavior during run-time, application can use the
  * following construct:
  *
  \verbatim
    extern pj_bool_t pjsip_include_allow_hdr_in_dlg;
- 
+
    // do not transmit Allow header
    pjsip_include_allow_hdr_in_dlg = PJ_FALSE;
  \endverbatim
@@ -575,7 +575,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  *
  * The default behavior is yes, but when the UA supports IP address change
  * for the SIP transport, it will need to turn this checking off since
- * when the transport address is changed between request is sent and 
+ * when the transport address is changed between request is sent and
  * response is received, the response will be discarded since its Via
  * sent-by now contains address that is different than the transport
  * address.
@@ -638,8 +638,8 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
- * Max entries to process in timer heap per poll. 
- * 
+ * Max entries to process in timer heap per poll.
+ *
  * Default: 10
  */
 #ifndef PJSIP_MAX_TIMED_OUT_ENTRIES
@@ -681,7 +681,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * created. This only applies for ephemeral transports such as TCP.
  *
  * Currently this is not used.
- * 
+ *
  * Default: -1
  */
 #ifndef PJSIP_MAX_TRANSPORT_USAGE
@@ -724,13 +724,13 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Not having a listener means that application will not be able to
  * function in server mode and accept incoming connections.
  *
- * When enabling this setting, if you use PJSUA, it is recommended to set 
+ * When enabling this setting, if you use PJSUA, it is recommended to set
  * pjsua_acc_config.contact_use_src_port to PJ_TRUE.
  * Warning: If contact_use_src_port is disabled or failed (because it's
  * unsupported in some platforms or automatically turned off due to
  * DNS server resolution), Contact header will be generated from
  * pj_getipinterface()/pj_gethostip(), but the address will not be
- * able to accept connections. 
+ * able to accept connections.
  *
  * Default is 0 (listener will be created).
  */
@@ -744,7 +744,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Not having a listener means that application will not be able to
  * function in server mode and accept incoming connections.
  *
- * When enabling this setting, if you use PJSUA, it is recommended to set 
+ * When enabling this setting, if you use PJSUA, it is recommended to set
  * pjsua_acc_config.contact_use_src_port to PJ_TRUE.
  * Warning: If contact_use_src_port is disabled or failed (because it's
  * unsupported in some platforms or automatically turned off due to
@@ -851,8 +851,8 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
-/** 
- * Maximum number of addresses returned by the resolver. The number here 
+/**
+ * Maximum number of addresses returned by the resolver. The number here
  * will slightly affect stack usage, since each entry will occupy about
  * 32 bytes of stack memory.
  *
@@ -1026,7 +1026,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 /**
  * Initial memory size for transaction layer. The bulk of pool usage
- * for transaction layer will be used to create the hash table, so 
+ * for transaction layer will be used to create the hash table, so
  * setting this value too high will not help too much with reducing
  * fragmentation and the memory will most likely be wasted.
  */
@@ -1036,7 +1036,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 /**
  * Memory increment for transaction layer. The bulk of pool usage
- * for transaction layer will be used to create the hash table, so 
+ * for transaction layer will be used to create the hash table, so
  * setting this value too high will not help too much with reducing
  * fragmentation and the memory will most likely be wasted.
  */
@@ -1109,7 +1109,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #define PJSIP_MAX_URI_TYPES             4
 
 /*****************************************************************************
- *  Default timeout settings, in miliseconds. 
+ *  Default timeout settings, in miliseconds.
  */
 
 /** Transaction T1 timeout value. */
@@ -1246,11 +1246,11 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 /**
  * Specify whether client registration should add "x-uid" extension
  * parameter in all Contact URIs that it registers to assist the
- * matching of Contact URIs in the 200/OK REGISTER response, in 
+ * matching of Contact URIs in the 200/OK REGISTER response, in
  * case the registrar is unable to return exact Contact URI in the
  * 200/OK response.
  *
- * This setting can be changed in run-time by setting 
+ * This setting can be changed in run-time by setting
  * \a regc.add_xuid_param field of pjsip_cfg().
  *
  * Default is 0.
@@ -1298,7 +1298,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 /**
- * Allow client to send multiple Authorization header when receiving multiple 
+ * Allow client to send multiple Authorization header when receiving multiple
  * WWW-Authenticate header fields. If this is disabled, the stack will send
  * Authorization header field containing credentials that match the
  * topmost header field.
@@ -1314,7 +1314,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 
 /**
- * Specify the time (in seconds) to send SUBSCRIBE to refresh client 
+ * Specify the time (in seconds) to send SUBSCRIBE to refresh client
  * subscription before the actual interval expires.
  *
  * Default: 5 seconds
@@ -1325,7 +1325,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
- * Specify the time (in seconds) to send PUBLISH to refresh client 
+ * Specify the time (in seconds) to send PUBLISH to refresh client
  * publication before the actual interval expires.
  *
  * Default: 5 seconds
@@ -1362,10 +1362,10 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 /**
  * Specify the default expiration time for presence event subscription, for
  * both client and server subscription. For client subscription, application
- * can override this by specifying positive non-zero value in "expires" 
+ * can override this by specifying positive non-zero value in "expires"
  * parameter when calling #pjsip_pres_initiate(). For server subscription,
  * we would take the expiration value from the Expires header sent by client
- * in the SUBSCRIBE request if the header exists and its value is less than 
+ * in the SUBSCRIBE request if the header exists and its value is less than
  * this setting, otherwise this setting will be used.
  *
  * Default: 600 seconds (10 minutes)
@@ -1406,7 +1406,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 /**
  * Default session interval for Session Timer (RFC 4028) extension, in
- * seconds. As specified in RFC 4028 Section 4, this value must not be 
+ * seconds. As specified in RFC 4028 Section 4, this value must not be
  * less than the absolute minimum for the Session-Expires header field
  * 90 seconds, and the recommended value is 1800 seconds.
  *
@@ -1474,9 +1474,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_HAS_TX_DATA_LIST               0
 #endif
 
-/** 
+/**
  * Specify whether to accept INVITE/re-INVITE with unknown content type,
- * by default the stack will reject this type of message as specified in 
+ * by default the stack will reject this type of message as specified in
  * RFC3261 section 8.2.3.
  * Application that wishes to process the body could set this to PJ_TRUE,
  * be informed that SDP offer/answer will still be present.
@@ -1487,7 +1487,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_INV_ACCEPT_UNKNOWN_BODY    PJ_FALSE
 #endif
 
-/** 
+/**
  * Specify whether to check if UPDATE sent in EARLY state has already
  * completed SDP negotiation using reliable provisional responses, as
  * specified in RFC3311 section 5.1.

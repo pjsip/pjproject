@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C)2019 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/vpx.h>
 #include <pjmedia/vid_codec_util.h>
@@ -438,7 +438,7 @@ static pj_status_t vpx_codec_open(pjmedia_vid_codec *codec,
         PJ_LOG(3, (THIS_FILE, "Failed to get encoder default config"));
         return PJMEDIA_CODEC_EFAILED;
     }
-    
+
     cfg.g_w = vpx_data->prm->enc_fmt.det.vid.size.w;
     cfg.g_h = vpx_data->prm->enc_fmt.det.vid.size.h;
     /* timebase is the inverse of fps */
@@ -446,7 +446,7 @@ static pj_status_t vpx_codec_open(pjmedia_vid_codec *codec,
     cfg.g_timebase.den = vpx_data->prm->enc_fmt.det.vid.fps.num;
     /* bitrate in KBps */
     cfg.rc_target_bitrate = vpx_data->prm->enc_fmt.det.vid.avg_bps / 1000;
-    
+
     cfg.g_pass = VPX_RC_ONE_PASS;
     cfg.rc_end_usage = VPX_CBR;
     cfg.g_threads = 4;
@@ -606,7 +606,7 @@ static pj_status_t vpx_codec_encode_begin(pjmedia_vid_codec *codec,
                 vpx_data->enc_frame_is_keyframe = PJ_TRUE;
             else
                 vpx_data->enc_frame_is_keyframe = PJ_FALSE;
-                
+
             break;
         }
     } while (1);
@@ -623,7 +623,7 @@ static pj_status_t vpx_codec_encode_begin(pjmedia_vid_codec *codec,
             return PJ_SUCCESS;
         }
     }
-    
+
     if (vpx_data->whole) {
         *has_more = PJ_FALSE;
         if (vpx_data->enc_frame_size > out_size)
@@ -638,7 +638,7 @@ static pj_status_t vpx_codec_encode_begin(pjmedia_vid_codec *codec,
         }
 
         pj_memcpy(output->buf, vpx_data->enc_frame_whole, output->size);
-        
+
         return PJ_SUCCESS;
     }
 
@@ -658,7 +658,7 @@ static pj_status_t vpx_codec_encode_more(pjmedia_vid_codec *codec,
                      PJ_EINVAL);
 
     vpx_data = (vpx_codec_data*) codec->codec_data;
-    
+
     if (vpx_data->enc_processed < vpx_data->enc_frame_size) {
         unsigned payload_desc_size = 1;
         pj_size_t payload_len = out_size;
@@ -817,7 +817,7 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
     }
 
     output->size = pos;
-        
+
 on_return:
     if (!has_frame) {
         pjmedia_event event;

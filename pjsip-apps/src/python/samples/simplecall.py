@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import sys
 import pjsua as pj
@@ -33,9 +33,9 @@ class MyCallCallback(pj.CallCallback):
     # Notification when call state has changed
     def on_state(self):
         print "Call is ", self.call.info().state_text,
-        print "last code =", self.call.info().last_code, 
+        print "last code =", self.call.info().last_code,
         print "(" + self.call.info().last_reason + ")"
-        
+
     # Notification when call's media state has changed.
     def on_media_state(self):
         global lib
@@ -61,7 +61,7 @@ try:
 
     # Create UDP transport which listens to any available port
     transport = lib.create_transport(pj.TransportType.UDP)
-    
+
     # Start the library
     lib.start()
 

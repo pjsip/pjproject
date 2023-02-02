@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/presence.h>
 #include <pjsip-simple/errno.h>
@@ -43,7 +43,7 @@
 /*
  * Presence module (mod-presence)
  */
-static struct pjsip_module mod_presence = 
+static struct pjsip_module mod_presence =
 {
     NULL, NULL,                     /* prev, next.                      */
     { "mod-presence", 12 },         /* Name.                            */
@@ -96,13 +96,13 @@ typedef struct pjsip_pres pjsip_pres;
 static void pres_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 static void pres_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
                                      pjsip_event *event);
-static void pres_on_evsub_rx_refresh( pjsip_evsub *sub, 
+static void pres_on_evsub_rx_refresh( pjsip_evsub *sub,
                                       pjsip_rx_data *rdata,
                                       int *p_st_code,
                                       pj_str_t **p_st_text,
                                       pjsip_hdr *res_hdr,
                                       pjsip_msg_body **p_body);
-static void pres_on_evsub_rx_notify( pjsip_evsub *sub, 
+static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
                                      pjsip_rx_data *rdata,
                                      int *p_st_code,
                                      pj_str_t **p_st_text,
@@ -115,7 +115,7 @@ static void pres_on_evsub_server_timeout(pjsip_evsub *sub);
 /*
  * Event subscription callback for presence.
  */
-static pjsip_evsub_user pres_user = 
+static pjsip_evsub_user pres_user =
 {
     &pres_on_evsub_state,
     &pres_on_evsub_tsx_state,
@@ -162,8 +162,8 @@ PJ_DEF(pj_status_t) pjsip_pres_init_module( pjsip_endpoint *endpt,
     accept[1] = STR_APP_XPIDF_XML;
 
     /* Register event package to event module. */
-    status = pjsip_evsub_register_pkg( &mod_presence, &STR_PRESENCE, 
-                                       PRES_DEFAULT_EXPIRES, 
+    status = pjsip_evsub_register_pkg( &mod_presence, &STR_PRESENCE,
+                                       PRES_DEFAULT_EXPIRES,
                                        PJ_ARRAY_SIZE(accept), accept);
     if (status != PJ_SUCCESS) {
         pjsip_endpt_unregister_module(endpt, &mod_presence);
@@ -201,7 +201,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
     pjsip_dlg_inc_lock(dlg);
 
     /* Create event subscription */
-    status = pjsip_evsub_create_uac( dlg,  &pres_user, &STR_PRESENCE, 
+    status = pjsip_evsub_create_uac( dlg,  &pres_user, &STR_PRESENCE,
                                      options, &sub);
     if (status != PJ_SUCCESS)
         goto on_return;
@@ -214,10 +214,10 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
         pj_memcpy(&pres->user_cb, user_cb, sizeof(pjsip_evsub_user));
 
     pj_ansi_snprintf(obj_name, PJ_MAX_OBJ_NAME, "pres%p", dlg->pool);
-    pres->status_pool = pj_pool_create(dlg->pool->factory, obj_name, 
+    pres->status_pool = pj_pool_create(dlg->pool->factory, obj_name,
                                        512, 512, NULL);
     pj_ansi_snprintf(obj_name, PJ_MAX_OBJ_NAME, "tmpres%p", dlg->pool);
-    pres->tmp_pool = pj_pool_create(dlg->pool->factory, obj_name, 
+    pres->tmp_pool = pj_pool_create(dlg->pool->factory, obj_name,
                                     512, 512, NULL);
 
     /* Attach to evsub */
@@ -315,10 +315,10 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
         pj_memcpy(&pres->user_cb, user_cb, sizeof(pjsip_evsub_user));
 
     pj_ansi_snprintf(obj_name, PJ_MAX_OBJ_NAME, "pres%p", dlg->pool);
-    pres->status_pool = pj_pool_create(dlg->pool->factory, obj_name, 
+    pres->status_pool = pj_pool_create(dlg->pool->factory, obj_name,
                                        512, 512, NULL);
     pj_ansi_snprintf(obj_name, PJ_MAX_OBJ_NAME, "tmpres%p", dlg->pool);
-    pres->tmp_pool = pj_pool_create(dlg->pool->factory, obj_name, 
+    pres->tmp_pool = pj_pool_create(dlg->pool->factory, obj_name,
                                     512, 512, NULL);
 
     /* Attach to evsub */
@@ -349,7 +349,7 @@ PJ_DEF(pj_status_t) pjsip_pres_initiate( pjsip_evsub *sub,
                                          pj_uint32_t expires,
                                          pjsip_tx_data **p_tdata)
 {
-    return pjsip_evsub_initiate(sub, &pjsip_subscribe_method, expires, 
+    return pjsip_evsub_initiate(sub, &pjsip_subscribe_method, expires,
                                 p_tdata);
 }
 
@@ -421,21 +421,21 @@ PJ_DEF(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
         if (pres->status.info[i].id.slen) {
             /* Id already set */
         } else if (status->info[i].id.slen == 0) {
-            pj_create_unique_string(pres->dlg->pool, 
+            pj_create_unique_string(pres->dlg->pool,
                                     &pres->status.info[i].id);
         } else {
-            pj_strdup(pres->dlg->pool, 
+            pj_strdup(pres->dlg->pool,
                       &pres->status.info[i].id,
                       &status->info[i].id);
         }
-        pj_strdup(pres->tmp_pool, 
+        pj_strdup(pres->tmp_pool,
                   &pres->status.info[i].contact,
                   &status->info[i].contact);
 
         /* Duplicate <person> */
-        pres->status.info[i].rpid.activity = 
+        pres->status.info[i].rpid.activity =
             status->info[i].rpid.activity;
-        pj_strdup(pres->tmp_pool, 
+        pj_strdup(pres->tmp_pool,
                   &pres->status.info[i].rpid.id,
                   &status->info[i].rpid.id);
         pj_strdup(pres->tmp_pool,
@@ -459,7 +459,7 @@ PJ_DEF(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
 /*
  * Create message body.
  */
-static pj_status_t pres_create_msg_body( pjsip_pres *pres, 
+static pj_status_t pres_create_msg_body( pjsip_pres *pres,
                                          pjsip_tx_data *tdata)
 {
     pj_str_t entity;
@@ -500,7 +500,7 @@ PJ_DEF(pj_status_t) pjsip_pres_notify( pjsip_evsub *sub,
     pjsip_pres *pres;
     pjsip_tx_data *tdata;
     pj_status_t status;
-    
+
     /* Check arguments. */
     PJ_ASSERT_RETURN(sub, PJ_EINVAL);
 
@@ -508,7 +508,7 @@ PJ_DEF(pj_status_t) pjsip_pres_notify( pjsip_evsub *sub,
     pres = (pjsip_pres*) pjsip_evsub_get_mod_data(sub, mod_presence.id);
     PJ_ASSERT_RETURN(pres != NULL, PJSIP_SIMPLE_ENOPRESENCE);
 
-    /* Must have at least one presence info, unless state is 
+    /* Must have at least one presence info, unless state is
      * PJSIP_EVSUB_STATE_TERMINATED. This could happen if subscription
      * has not been active (e.g. we're waiting for user authorization)
      * and remote cancels the subscription.
@@ -526,7 +526,7 @@ PJ_DEF(pj_status_t) pjsip_pres_notify( pjsip_evsub *sub,
         goto on_return;
 
 
-    /* Create message body to reflect the presence status. 
+    /* Create message body to reflect the presence status.
      * Only do this if we have presence status info to send (see above).
      */
     if (pres->status.info_cnt > 0) {
@@ -554,7 +554,7 @@ PJ_DEF(pj_status_t) pjsip_pres_current_notify( pjsip_evsub *sub,
     pjsip_pres *pres;
     pjsip_tx_data *tdata;
     pj_status_t status;
-    
+
     /* Check arguments. */
     PJ_ASSERT_RETURN(sub, PJ_EINVAL);
 
@@ -565,7 +565,7 @@ PJ_DEF(pj_status_t) pjsip_pres_current_notify( pjsip_evsub *sub,
     /* We may not have a presence info yet, e.g. when we receive SUBSCRIBE
      * to refresh subscription while we're waiting for user authorization.
      */
-    //PJ_ASSERT_RETURN(pres->status.info_cnt > 0, 
+    //PJ_ASSERT_RETURN(pres->status.info_cnt > 0,
     //                 PJSIP_SIMPLE_ENOPRESENCEINFO);
 
 
@@ -650,7 +650,7 @@ static void pres_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
 /*
  * Called when SUBSCRIBE is received.
  */
-static void pres_on_evsub_rx_refresh( pjsip_evsub *sub, 
+static void pres_on_evsub_rx_refresh( pjsip_evsub *sub,
                                       pjsip_rx_data *rdata,
                                       int *p_st_code,
                                       pj_str_t **p_st_text,
@@ -693,7 +693,7 @@ static void pres_on_evsub_rx_refresh( pjsip_evsub *sub,
  *        is not PJ_SUCCESS, res_hdr may be added with Warning header.
  */
 static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
-                                           pjsip_rx_data *rdata, 
+                                           pjsip_rx_data *rdata,
                                            int *p_st_code,
                                            pj_str_t **p_st_text,
                                            pjsip_hdr *res_hdr)
@@ -708,7 +708,7 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
     ctype_hdr = rdata->msg_info.ctype;
 
     if (ctype_hdr==NULL || rdata->msg_info.msg->body==NULL) {
-        
+
         pjsip_warning_hdr *warn_hdr;
         pj_str_t warn_text;
 
@@ -760,7 +760,7 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
         status = pjsip_pres_parse_pidf( rdata, pres->tmp_pool,
                                         &pres->tmp_status);
     }
-    else 
+    else
     if (pj_stricmp(&ctype_hdr->media.type, &STR_APPLICATION)==0 &&
         pj_stricmp(&ctype_hdr->media.subtype, &STR_XPIDF_XML)==0)
     {
@@ -817,7 +817,7 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
 /*
  * Called when NOTIFY is received.
  */
-static void pres_on_evsub_rx_notify( pjsip_evsub *sub, 
+static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
                                      pjsip_rx_data *rdata,
                                      int *p_st_code,
                                      pj_str_t **p_st_text,
@@ -839,7 +839,7 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
     } else {
 #if 1
         /* This is the newest change, https://github.com/pjsip/pjproject/issues/873
-         * Some app want to be notified about the empty NOTIFY, e.g. to 
+         * Some app want to be notified about the empty NOTIFY, e.g. to
          * decide whether it should consider the buddy as offline.
          * In this case, leave the buddy state unchanged, but set the
          * "tuple_node" in pjsip_pres_status to NULL.
@@ -867,11 +867,11 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
 
     /* Notify application. */
     if (pres->user_cb.on_rx_notify) {
-        (*pres->user_cb.on_rx_notify)(sub, rdata, p_st_code, p_st_text, 
+        (*pres->user_cb.on_rx_notify)(sub, rdata, p_st_code, p_st_text,
                                       res_hdr, p_body);
     }
 
-    
+
     /* If application responded NOTIFY with 2xx, copy temporary status
      * to main status, and mark the temporary status as invalid.
      */

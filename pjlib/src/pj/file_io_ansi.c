@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/file_io.h>
 #include <pj/assert.h>
@@ -24,7 +24,7 @@
 #include <errno.h>
 
 PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
-                                  const char *pathname, 
+                                  const char *pathname,
                                   unsigned flags,
                                   pj_oshandle_t *fd)
 {
@@ -41,7 +41,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
                 *p++ = '+';
         } else {
             /* This is invalid.
-             * Can not specify PJ_O_RDONLY with PJ_O_APPEND! 
+             * Can not specify PJ_O_RDONLY with PJ_O_APPEND!
              */
         }
     } else {
@@ -63,7 +63,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     *fd = fopen(pathname, mode);
     if (*fd == NULL)
         return PJ_RETURN_OS_ERROR(errno);
-    
+
     return PJ_SUCCESS;
 }
 
@@ -125,7 +125,7 @@ PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
     int mode;
 
     if ((sizeof(pj_off_t) > sizeof(long)) &&
-        (offset > PJ_MAXLONG || offset < PJ_MINLONG)) 
+        (offset > PJ_MAXLONG || offset < PJ_MINLONG))
     {
         return PJ_ENOTSUP;
     }

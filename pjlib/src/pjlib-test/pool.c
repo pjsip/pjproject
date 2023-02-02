@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/pool.h>
 #include <pj/pool_buf.h>
@@ -53,7 +53,7 @@ static void null_callback(pj_pool_t *pool, pj_size_t size)
 
 #define GET_FREE(p)     (pj_pool_get_capacity(p)-pj_pool_get_used_size(p))
 
-/* Test that the capacity and used size reported by the pool is correct. 
+/* Test that the capacity and used size reported by the pool is correct.
  */
 static int capacity_test(void)
 {
@@ -165,16 +165,16 @@ static int pool_buf_alignment_test(void)
     return 0;
 }
 
-/* Test function to drain the pool's space. 
+/* Test function to drain the pool's space.
  */
 static int drain_test(pj_size_t size, pj_size_t increment)
 {
-    pj_pool_t *pool = pj_pool_create(mem, NULL, size, increment, 
+    pj_pool_t *pool = pj_pool_create(mem, NULL, size, increment,
                                      &null_callback);
     pj_size_t freesize;
     void *p;
     int status = 0;
-    
+
     PJ_LOG(3,("test", "...drain_test(%d,%d)", size, increment));
 
     if (!pool)
@@ -183,7 +183,7 @@ static int drain_test(pj_size_t size, pj_size_t increment)
     /* Get free size */
     freesize = GET_FREE(pool);
     if (freesize < 1) {
-        status=-15; 
+        status=-15;
         goto on_error;
     }
 
@@ -192,7 +192,7 @@ static int drain_test(pj_size_t size, pj_size_t increment)
         int size2;
 
         if (freesize > 255)
-            size2 = ((pj_rand() & 0x000000FF) + PJ_POOL_ALIGNMENT) & 
+            size2 = ((pj_rand() & 0x000000FF) + PJ_POOL_ALIGNMENT) &
                    ~(PJ_POOL_ALIGNMENT - 1);
         else
             size2 = (int)freesize;
@@ -234,7 +234,7 @@ static int pool_buf_test(void)
 {
     enum { STATIC_BUF_SIZE = 40 };
     /* 16 is the internal struct in pool_buf */
-    static char buf[ STATIC_BUF_SIZE + sizeof(pj_pool_t) + 
+    static char buf[ STATIC_BUF_SIZE + sizeof(pj_pool_t) +
                      sizeof(pj_pool_block) + 2 * PJ_POOL_ALIGNMENT];
     pj_pool_t *pool;
     void *p;
@@ -297,7 +297,7 @@ int pool_test(void)
         rc = drain_test(SIZE, SIZE);
         if (rc != 0) return rc;
 
-        /* Test situation where pool is not allowed to grow. 
+        /* Test situation where pool is not allowed to grow.
          * We expect the test to return correct error.
          */
         rc = drain_test(SIZE, 0);
@@ -314,7 +314,7 @@ int pool_test(void)
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_pool_test;
 #endif  /* INCLUDE_POOL_TEST */

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjsip/sip_transport_tls.h>
@@ -56,8 +56,8 @@ struct tls_listener
     pj_ssl_sock_t           *ssock;
     pj_sockaddr              bound_addr;
     pj_ssl_cert_t           *cert;
-    pjsip_tls_setting        tls_setting;    
-    unsigned                 async_cnt;    
+    pjsip_tls_setting        tls_setting;
+    unsigned                 async_cnt;
 
     /* Group lock to be used by TLS transport and ioqueue key */
     pj_grp_lock_t           *grp_lock;
@@ -161,7 +161,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 /* Common function to create and initialize transport */
 static pj_status_t tls_create(struct tls_listener *listener,
                               pj_pool_t *pool,
-                              pj_ssl_sock_t *ssock, 
+                              pj_ssl_sock_t *ssock,
                               pj_bool_t is_server,
                               const pj_sockaddr *local,
                               const pj_sockaddr *remote,
@@ -231,7 +231,7 @@ static pj_uint32_t ssl_get_proto(pjsip_ssl_method ssl_method, pj_uint32_t proto)
     default:
         out_proto = PJ_SSL_SOCK_PROTO_DEFAULT;
         break;
-    }   
+    }
     return out_proto;
 }
 
@@ -258,12 +258,12 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
         pjsip_transport_state_info state_info;
         pjsip_tls_state_info tls_info;
         pj_ssl_sock_info ssl_info;
-        
+
         /* Init transport state info */
         pj_bzero(&state_info, sizeof(state_info));
         state_info.status = tls->close_reason;
 
-        if (tls->ssock && 
+        if (tls->ssock &&
             pj_ssl_sock_get_info(tls->ssock, &ssl_info) == PJ_SUCCESS)
         {
             pj_bzero(&tls_info, sizeof(tls_info));
@@ -281,7 +281,7 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
     }
 
     /* We can not destroy the transport since high level objects may
-     * still keep reference to this transport. So we can only 
+     * still keep reference to this transport. So we can only
      * instruct transport manager to gracefully start the shutdown
      * procedure for this transport.
      */
@@ -362,7 +362,7 @@ static void update_bound_addr(struct tls_listener *listener,
     } else {
         pj_sockaddr_init(af, &listener->bound_addr, NULL, 0);
     }
-    pj_sockaddr_cp(listener_addr, &listener->bound_addr);    
+    pj_sockaddr_cp(listener_addr, &listener->bound_addr);
 }
 
 static pj_status_t update_factory_addr(struct tls_listener *listener,
@@ -437,8 +437,8 @@ static void update_transport_info(struct tls_listener *listener)
                                                       INFO_LEN);
     }
     pj_sockaddr_print(listener_addr, local_addr, sizeof(local_addr), 3);
-    pj_addr_str_print(&listener->factory.addr_name.host, 
-                      listener->factory.addr_name.port, pub_addr, 
+    pj_addr_str_print(&listener->factory.addr_name.host,
+                      listener->factory.addr_name.port, pub_addr,
                       sizeof(pub_addr), 1);
     len = pj_ansi_snprintf(
             listener->factory.info, INFO_LEN, "tls %s [published as %s]",
@@ -498,13 +498,13 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
     ssock_param.grp_lock = listener->grp_lock;
 
     /* Create SSL socket */
-    status = pj_ssl_sock_create(listener->factory.pool, &ssock_param, 
+    status = pj_ssl_sock_create(listener->factory.pool, &ssock_param,
                                 &listener->ssock);
     if (status != PJ_SUCCESS)
         return status;
 
     if (listener->cert) {
-        status = pj_ssl_sock_set_certificate(listener->ssock, 
+        status = pj_ssl_sock_set_certificate(listener->ssock,
                                        listener->factory.pool, listener->cert);
         if (status != PJ_SUCCESS)
             return status;
@@ -512,7 +512,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
 
     /* Start accepting incoming connections. Note that some TLS/SSL
      * backends may not support for SSL socket server.
-     */    
+     */
     pj_memcpy(&newsock_param, &ssock_param, sizeof(newsock_param));
     newsock_param.async_cnt = 1;
     newsock_param.cb.on_data_read = &on_data_read;
@@ -523,7 +523,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
                             &newsock_param);
 
     if (status == PJ_SUCCESS || status == PJ_EPENDING) {
-        pj_ssl_sock_info info;  
+        pj_ssl_sock_info info;
 
         /* Retrieve the bound address */
         status = pj_ssl_sock_get_info(listener->ssock, &info);
@@ -537,7 +537,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
 
     update_transport_info(listener);
 
-    return status;    
+    return status;
 }
 
 
@@ -547,18 +547,18 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                                                 const pjsip_host_port *a_name,
                                                 unsigned async_cnt,
                                                 pjsip_tpfactory **p_factory)
-{        
+{
     pj_pool_t *pool;
-    pj_bool_t is_ipv6;    
-    struct tls_listener *listener;    
+    pj_bool_t is_ipv6;
+    struct tls_listener *listener;
     pj_status_t status;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
 
-    is_ipv6 = (local && local->addr.sa_family == pj_AF_INET6());    
+    is_ipv6 = (local && local->addr.sa_family == pj_AF_INET6());
 
-    pool = pjsip_endpt_create_pool(endpt, "tlstp", POOL_LIS_INIT, 
+    pool = pjsip_endpt_create_pool(endpt, "tlstp", POOL_LIS_INIT,
                                    POOL_LIS_INC);
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
@@ -570,7 +570,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
         listener->factory.type = PJSIP_TRANSPORT_TLS;
     listener->factory.type_name = (char*)
                 pjsip_transport_get_type_name(listener->factory.type);
-    listener->factory.flag = 
+    listener->factory.flag =
                 pjsip_transport_get_flag_from_type(listener->factory.type);
     listener->endpt = endpt;
 
@@ -588,10 +588,10 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    if (async_cnt > MAX_ASYNC_CNT) 
+    if (async_cnt > MAX_ASYNC_CNT)
         async_cnt = MAX_ASYNC_CNT;
 
-    listener->async_cnt = async_cnt;    
+    listener->async_cnt = async_cnt;
 
     /* Create group lock */
     status = pj_grp_lock_create(pool, NULL, &listener->grp_lock);
@@ -606,8 +606,8 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     /* Check if certificate/CA list for SSL socket is set */
     if (listener->tls_setting.cert_file.slen ||
         listener->tls_setting.ca_list_file.slen ||
-        listener->tls_setting.ca_list_path.slen || 
-        listener->tls_setting.privkey_file.slen) 
+        listener->tls_setting.ca_list_path.slen ||
+        listener->tls_setting.privkey_file.slen)
     {
         status = pj_ssl_cert_load_from_files2(pool,
                         &listener->tls_setting.ca_list_file,
@@ -629,7 +629,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                         &listener->tls_setting.password,
                         &listener->cert);
         if (status != PJ_SUCCESS)
-            goto on_error;    
+            goto on_error;
     }
 
     /* Register to transport manager */
@@ -742,23 +742,23 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
     lis_close(listener);
 
     status = pjsip_tls_transport_lis_start(factory, local, a_name);
-    if (status != PJ_SUCCESS) { 
-        tls_perror(listener->factory.obj_name, 
+    if (status != PJ_SUCCESS) {
+        tls_perror(listener->factory.obj_name,
                    "Unable to start listener after closing it", status, NULL);
 
         return status;
     }
-    
+
     status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
                                             &listener->factory);
     if (status != PJ_SUCCESS) {
         tls_perror(listener->factory.obj_name,
                     "Unable to register the transport listener", status, NULL);
 
-        listener->is_registered = PJ_FALSE;     
+        listener->is_registered = PJ_FALSE;
     } else {
-        listener->is_registered = PJ_TRUE;      
-    }    
+        listener->is_registered = PJ_TRUE;
+    }
 
     return status;
 }
@@ -773,7 +773,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
  * Prototypes.
  */
 /* Called by transport manager to send message */
-static pj_status_t tls_send_msg(pjsip_transport *transport, 
+static pj_status_t tls_send_msg(pjsip_transport *transport,
                                 pjsip_tx_data *tdata,
                                 const pj_sockaddr_t *rem_addr,
                                 int addr_len,
@@ -815,7 +815,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     const pj_str_t ka_pkt = PJSIP_TLS_KEEP_ALIVE_DATA;
     char print_addr[PJ_INET6_ADDRSTRLEN+10];
     pj_status_t status;
-    
+
 
     PJ_ASSERT_RETURN(listener && ssock && local && remote && p_tls, PJ_EINVAL);
 
@@ -824,7 +824,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
         pool = pjsip_endpt_create_pool(listener->endpt, "tls",
                                        POOL_TP_INIT, POOL_TP_INC);
         PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
-    }    
+    }
 
     /*
      * Create and initialize basic transport structure.
@@ -835,7 +835,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     pj_list_init(&tls->delayed_list);
     tls->base.pool = pool;
 
-    pj_ansi_snprintf(tls->base.obj_name, PJ_MAX_OBJ_NAME, 
+    pj_ansi_snprintf(tls->base.obj_name, PJ_MAX_OBJ_NAME,
                      (is_server ? "tlss%p" :"tlsc%p"), tls);
 
     status = pj_atomic_create(pool, 0, &tls->base.ref_cnt);
@@ -867,7 +867,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
 
     tls->base.addr_len = pj_sockaddr_get_len(remote);
     tls->base.dir = is_server? PJSIP_TP_DIR_INCOMING : PJSIP_TP_DIR_OUTGOING;
-    
+
     /* Set initial local address */
     if (!pj_sockaddr_has_addr(local)) {
         pj_sockaddr_cp(&tls->base.local_addr,
@@ -875,7 +875,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     } else {
         pj_sockaddr_cp(&tls->base.local_addr, local);
     }
-    
+
     sockaddr_to_host_port(pool, &tls->base.local_name, &tls->base.local_addr);
     if (tls->remote_name.slen) {
         tls->base.remote_name.host = tls->remote_name;
@@ -912,7 +912,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->ka_timer.cb = &tls_keep_alive_timer;
     pj_ioqueue_op_key_init(&tls->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
     pj_strdup(tls->base.pool, &tls->ka_pkt, &ka_pkt);
-    
+
     /* Done setting up basic transport. */
     *p_tls = tls;
 
@@ -962,7 +962,7 @@ static void tls_flush_pending_tx(struct tls_transport *tls)
 
         /* send! */
         size = tdata->buf.cur - tdata->buf.start;
-        status = pj_ssl_sock_send(tls->ssock, op_key, tdata->buf.start, 
+        status = pj_ssl_sock_send(tls->ssock, op_key, tdata->buf.start,
                                   &size, 0);
 
         if (status != PJ_EPENDING) {
@@ -1013,13 +1013,13 @@ static void tls_on_destroy(void *arg)
             char errmsg[PJ_ERR_MSG_SIZE];
 
             pj_strerror(tls->close_reason, errmsg, sizeof(errmsg));
-            PJ_LOG(4,(tls->base.obj_name, 
-                      "TLS transport destroyed with reason %d: %s", 
+            PJ_LOG(4,(tls->base.obj_name,
+                      "TLS transport destroyed with reason %d: %s",
                       tls->close_reason, errmsg));
 
         } else {
 
-            PJ_LOG(4,(tls->base.obj_name, 
+            PJ_LOG(4,(tls->base.obj_name,
                       "TLS transport destroyed normally"));
 
         }
@@ -1028,7 +1028,7 @@ static void tls_on_destroy(void *arg)
 }
 
 /* Destroy TLS transport */
-static pj_status_t tls_destroy(pjsip_transport *transport, 
+static pj_status_t tls_destroy(pjsip_transport *transport,
                                pj_status_t reason)
 {
     struct tls_transport *tls = (struct tls_transport*)transport;
@@ -1113,7 +1113,7 @@ static pj_status_t tls_start_read(struct tls_transport *tls)
     tls->rdata.tp_info.transport = &tls->base;
     tls->rdata.tp_info.tp_data = tls;
     tls->rdata.tp_info.op_key.rdata = &tls->rdata;
-    pj_ioqueue_op_key_init(&tls->rdata.tp_info.op_key.op_key, 
+    pj_ioqueue_op_key_init(&tls->rdata.tp_info.op_key.op_key,
                            sizeof(pj_ioqueue_op_key_t));
 
     tls->rdata.pkt_info.src_addr = tls->base.key.rem_addr;
@@ -1216,10 +1216,10 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
               sizeof(ssock_param.qos_params));
 
-    ssock_param.sockopt_ignore_error = 
+    ssock_param.sockopt_ignore_error =
                                      listener->tls_setting.sockopt_ignore_error;
     /* Copy the sockopt */
-    pj_memcpy(&ssock_param.sockopt_params, 
+    pj_memcpy(&ssock_param.sockopt_params,
               &listener->tls_setting.sockopt_params,
               sizeof(listener->tls_setting.sockopt_params));
 
@@ -1254,7 +1254,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     pj_sockaddr_copy_addr(&local_addr, &listener->bound_addr);
 
     /* Create the transport descriptor */
-    status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr, 
+    status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr,
                         rem_addr, &remote_name, glock, &tls);
     if (status != PJ_SUCCESS)
         return status;
@@ -1264,7 +1264,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     /* Start asynchronous connect() operation */
     tls->has_pending_connect = PJ_TRUE;
-    status = pj_ssl_sock_start_connect(tls->ssock, tls->base.pool, 
+    status = pj_ssl_sock_start_connect(tls->ssock, tls->base.pool,
                                        (pj_sockaddr_t*)&local_addr,
                                        (pj_sockaddr_t*)rem_addr,
                                        addr_len);
@@ -1280,7 +1280,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
         char local_addr_buf[PJ_INET6_ADDRSTRLEN+10];
         char remote_addr_buf[PJ_INET6_ADDRSTRLEN+10];
 
-        /* Update local address, just in case local address currently set is 
+        /* Update local address, just in case local address currently set is
          * different now that asynchronous connect() is started.
          */
 
@@ -1299,7 +1299,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                         (pj_sockaddr_t*)&tls->base.local_addr))
             {
                 /* Update port only */
-                pj_sockaddr_set_port(&tls->base.local_addr, 
+                pj_sockaddr_set_port(&tls->base.local_addr,
                                      new_port);
             }
 
@@ -1307,13 +1307,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                   &tls->base.local_addr);
         }
 
-        PJ_LOG(4,(tls->base.obj_name, 
+        PJ_LOG(4,(tls->base.obj_name,
                   "TLS transport %s is connecting to %s...",
-                  pj_addr_str_print(&tls->base.local_name.host, 
-                                    tls->base.local_name.port, 
+                  pj_addr_str_print(&tls->base.local_name.host,
+                                    tls->base.local_name.port,
                                     local_addr_buf, sizeof(local_addr_buf), 1),
-                  pj_addr_str_print(&tls->base.remote_name.host, 
-                                tls->base.remote_name.port, 
+                  pj_addr_str_print(&tls->base.remote_name.host,
+                                tls->base.remote_name.port,
                                 remote_addr_buf, sizeof(remote_addr_buf), 1)));
     }
 
@@ -1327,9 +1327,9 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
                                      pj_ssl_sock_t *new_ssock,
                                      const pj_sockaddr_t *src_addr,
-                                     int src_addr_len, 
+                                     int src_addr_len,
                                      pj_status_t accept_status)
-{    
+{
     struct tls_listener *listener;
     struct tls_transport *tls;
     pj_ssl_sock_info ssl_info;
@@ -1338,7 +1338,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     pj_sockaddr tmp_src_addr;
     pj_bool_t is_shutdown;
     pj_status_t status;
-    char addr_buf[PJ_INET6_ADDRSTRLEN+10];        
+    char addr_buf[PJ_INET6_ADDRSTRLEN+10];
 
     PJ_UNUSED_ARG(src_addr_len);
 
@@ -1396,13 +1396,13 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
             (*listener->tls_setting.on_accept_fail_cb) (&param);
         }
         return PJ_FALSE;
-    }   
+    }
 
-    PJ_LOG(4,(listener->factory.obj_name, 
+    PJ_LOG(4,(listener->factory.obj_name,
               "TLS listener %s: got incoming TLS connection "
               "from %s, sock=%d",
-              pj_addr_str_print(&listener->factory.addr_name.host, 
-                                listener->factory.addr_name.port, addr_buf, 
+              pj_addr_str_print(&listener->factory.addr_name.host,
+                                listener->factory.addr_name.port, addr_buf,
                                 sizeof(addr_buf), 1),
               pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
               new_ssock));
@@ -1429,14 +1429,14 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     pj_bzero(&tmp_src_addr, sizeof(tmp_src_addr));
     pj_sockaddr_cp(&tmp_src_addr, src_addr);
 
-    /* 
+    /*
      * Incoming connection!
      * Create TLS transport for the new socket.
      */
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
                          &ssl_info.local_addr, &tmp_src_addr, NULL,
                          ssl_info.grp_lock, &tls);
-    
+
     if (status != PJ_SUCCESS) {
         pj_ssl_sock_close(new_ssock);
 
@@ -1454,7 +1454,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     /* Set the "pending" SSL socket user data */
     pj_ssl_sock_set_user_data(new_ssock, tls);
 
-    /* Prevent immediate transport destroy as application may access it 
+    /* Prevent immediate transport destroy as application may access it
      * (getting info, etc) in transport state notification callback.
      */
     pjsip_transport_add_ref(&tls->base);
@@ -1463,7 +1463,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
      * and destroy the transport.
      */
     if (ssl_info.verify_status && listener->tls_setting.verify_client) {
-        if (tls->close_reason == PJ_SUCCESS) 
+        if (tls->close_reason == PJ_SUCCESS)
             tls->close_reason = PJSIP_TLS_ECERTVERIF;
         pjsip_transport_shutdown(&tls->base);
     }
@@ -1510,10 +1510,10 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     } else {
         /* Start keep-alive timer */
         if (pjsip_cfg()->tls.keep_alive_interval) {
-            pj_time_val delay = {0};        
+            pj_time_val delay = {0};
             delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-            pjsip_endpt_schedule_timer(listener->endpt, 
-                                       &tls->ka_timer, 
+            pjsip_endpt_schedule_timer(listener->endpt,
+                                       &tls->ka_timer,
                                        &delay);
             tls->ka_timer.id = PJ_TRUE;
             pj_gettimeofday(&tls->last_activity);
@@ -1536,14 +1536,14 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
 //}
 
 
-/* 
+/*
  * Callback from ioqueue when packet is sent.
  */
 static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
                               pj_ioqueue_op_key_t *op_key,
                               pj_ssize_t bytes_sent)
 {
-    struct tls_transport *tls = (struct tls_transport*) 
+    struct tls_transport *tls = (struct tls_transport*)
                                 pj_ssl_sock_get_user_data(ssock);
     pjsip_tx_data_op_key *tdata_op_key = (pjsip_tx_data_op_key*)op_key;
 
@@ -1571,7 +1571,7 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
     if (bytes_sent <= 0) {
         pj_status_t status;
 
-        PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%d", 
+        PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%d",
                   bytes_sent));
 
         status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
@@ -1581,7 +1581,7 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 
         return PJ_FALSE;
     }
-    
+
     return PJ_TRUE;
 }
 
@@ -1613,17 +1613,17 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         param.local_cert_info = info.local_cert_info;
         param.remote_cert_info = info.remote_cert_info;
         param.tp_dir = is_server?PJSIP_TP_DIR_INCOMING:PJSIP_TP_DIR_OUTGOING;
-        
+
         return (*verify_cb)(&param);
     }
     return PJ_TRUE;
 }
 
 
-/* 
- * This callback is called by transport manager to send SIP message 
+/*
+ * This callback is called by transport manager to send SIP message
  */
-static pj_status_t tls_send_msg(pjsip_transport *transport, 
+static pj_status_t tls_send_msg(pjsip_transport *transport,
                                 pjsip_tx_data *tdata,
                                 const pj_sockaddr_t *rem_addr,
                                 int addr_len,
@@ -1640,7 +1640,7 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
 
     /* Check that there's no pending operation associated with the tdata */
     PJ_ASSERT_RETURN(tdata->op_key.tdata == NULL, PJSIP_EPENDINGTX);
-    
+
     /* Check the address is supported */
     PJ_ASSERT_RETURN(rem_addr && (addr_len==sizeof(pj_sockaddr_in) ||
                                   addr_len==sizeof(pj_sockaddr_in6)),
@@ -1674,7 +1674,7 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
              * connect() is completed, the timeout value will be checked to
              * determine whether the transmit data needs to be sent.
              */
-            delayed_tdata = PJ_POOL_ZALLOC_T(tdata->pool, 
+            delayed_tdata = PJ_POOL_ZALLOC_T(tdata->pool,
                                              struct delayed_tdata);
             delayed_tdata->tdata_op_key = &tdata->op_key;
             if (tdata->msg && tdata->msg->type == PJSIP_REQUEST_MSG) {
@@ -1691,15 +1691,15 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
         }
 
         pj_lock_release(tls->base.lock);
-    } 
-    
+    }
+
     if (!delayed) {
         /*
          * Transport is ready to go. Send the packet to ioqueue to be
          * sent asynchronously.
          */
         size = tdata->buf.cur - tdata->buf.start;
-        status = pj_ssl_sock_send(tls->ssock, 
+        status = pj_ssl_sock_send(tls->ssock,
                                     (pj_ioqueue_op_key_t*)&tdata->op_key,
                                     tdata->buf.start, &size, 0);
 
@@ -1710,10 +1710,10 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
             /* Shutdown transport on closure/errors */
             if (size <= 0) {
 
-                PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%d", 
+                PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%d",
                           size));
 
-                if (status == PJ_SUCCESS) 
+                if (status == PJ_SUCCESS)
                     status = PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);
 
                 tls_init_shutdown(tls, status);
@@ -1725,13 +1725,13 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
 }
 
 
-/* 
+/*
  * This callback is called by transport manager to shutdown transport.
  */
 static pj_status_t tls_shutdown(pjsip_transport *transport)
 {
     struct tls_transport *tls = (struct tls_transport*)transport;
-    
+
     /* Stop keep-alive timer. */
     if (tls->ka_timer.id) {
         pjsip_endpt_cancel_timer(tls->base.endpt, &tls->ka_timer);
@@ -1742,7 +1742,7 @@ static pj_status_t tls_shutdown(pjsip_transport *transport)
 }
 
 
-/* 
+/*
  * Callback from ioqueue that an incoming data is received from the socket.
  */
 static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
@@ -1786,8 +1786,8 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
          * The transport manager will tell us how many bytes of the packet
          * have been processed (as valid SIP message).
          */
-        size_eaten = 
-            pjsip_tpmgr_receive_packet(rdata->tp_info.transport->tpmgr, 
+        size_eaten =
+            pjsip_tpmgr_receive_packet(rdata->tp_info.transport->tpmgr,
                                        rdata);
 
         pj_assert(size_eaten <= (pj_size_t)rdata->pkt_info.len);
@@ -1818,7 +1818,7 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
 }
 
 
-/* 
+/*
  * Callback from ioqueue when asynchronous connect() operation completes.
  */
 static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
@@ -1879,7 +1879,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
      * on some systems, like old Win32 probably?).
      */
     tp_addr = &tls->base.local_addr;
-    pj_sockaddr_cp((pj_sockaddr_t*)&addr, 
+    pj_sockaddr_cp((pj_sockaddr_t*)&addr,
                    (pj_sockaddr_t*)&ssl_info.local_addr);
     if (pj_sockaddr_cmp(tp_addr, &addr) != 0) {
         pj_sockaddr_cp(tp_addr, &addr);
@@ -1900,7 +1900,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
         else
             remote_name = &tls->base.remote_name.host;
 
-        /* Start matching remote name with SubjectAltName fields of 
+        /* Start matching remote name with SubjectAltName fields of
          * server certificate.
          */
         for (i = 0; i < serv_cert->subj_alt_name.cnt && !matched; ++i) {
@@ -1919,7 +1919,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
                     char *p;
 
                     p = pj_strchr(cert_name, ':') + 1;
-                    pj_strset(&host_part, p, cert_name->slen - 
+                    pj_strset(&host_part, p, cert_name->slen -
                                              (p - cert_name->ptr));
                     matched = !pj_stricmp(remote_name, &host_part);
                 }
@@ -1928,7 +1928,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
                 break;
             }
         }
-        
+
         /* When still not matched or no SubjectAltName fields in server
          * certificate, try with Common Name of Subject field.
          */
@@ -1946,7 +1946,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
         }
     }
 
-    /* Prevent immediate transport destroy as application may access it 
+    /* Prevent immediate transport destroy as application may access it
      * (getting info, etc) in transport state notification callback.
      */
     pjsip_transport_add_ref(&tls->base);
@@ -1955,7 +1955,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
      * and destroy the transport.
      */
     if (ssl_info.verify_status && tls->verify_server) {
-        if (tls->close_reason == PJ_SUCCESS) 
+        if (tls->close_reason == PJ_SUCCESS)
             tls->close_reason = PJSIP_TLS_ECERTVERIF;
         pjsip_transport_shutdown(&tls->base);
     }
@@ -1993,7 +1993,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     pjsip_transport_dec_ref(&tls->base);
     if (is_shutdown) {
         status = tls->close_reason;
-        tls_perror(tls->base.obj_name, "TLS connect() error", status, 
+        tls_perror(tls->base.obj_name, "TLS connect() error", status,
                    &tls->remote_name);
 
         /* Cancel all delayed transmits */
@@ -2016,13 +2016,13 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     /* Mark that pending connect() operation has completed. */
     tls->has_pending_connect = PJ_FALSE;
 
-    PJ_LOG(4,(tls->base.obj_name, 
+    PJ_LOG(4,(tls->base.obj_name,
               "TLS transport %s is connected to %s",
-              pj_addr_str_print(&tls->base.local_name.host, 
-                                tls->base.local_name.port, local_addr_buf, 
+              pj_addr_str_print(&tls->base.local_name.host,
+                                tls->base.local_name.port, local_addr_buf,
                                 sizeof(local_addr_buf), 1),
-              pj_addr_str_print(&tls->base.remote_name.host, 
-                                tls->base.remote_name.port, remote_addr_buf, 
+              pj_addr_str_print(&tls->base.remote_name.host,
+                                tls->base.remote_name.port, remote_addr_buf,
                                 sizeof(remote_addr_buf), 1)));
 
     /* Start pending read */
@@ -2035,9 +2035,9 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 
     /* Start keep-alive timer */
     if (pjsip_cfg()->tls.keep_alive_interval) {
-        pj_time_val delay = {0};            
+        pj_time_val delay = {0};
         delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
+        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer,
                                    &delay);
         tls->ka_timer.id = PJ_TRUE;
         pj_gettimeofday(&tls->last_activity);
@@ -2060,7 +2060,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     pj_time_val now;
     pj_ssize_t size;
     pj_status_t status;
-    char addr[PJ_INET6_ADDRSTRLEN+10];    
+    char addr[PJ_INET6_ADDRSTRLEN+10];
 
     PJ_UNUSED_ARG(th);
 
@@ -2074,16 +2074,16 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
         delay.sec = pjsip_cfg()->tls.keep_alive_interval - now.sec;
         delay.msec = 0;
 
-        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
+        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer,
                                    &delay);
         tls->ka_timer.id = PJ_TRUE;
         return;
     }
 
-    PJ_LOG(5,(tls->base.obj_name, "Sending %d byte(s) keep-alive to %s", 
-              (int)tls->ka_pkt.slen, 
-              pj_addr_str_print(&tls->base.remote_name.host, 
-                                tls->base.remote_name.port, addr, 
+    PJ_LOG(5,(tls->base.obj_name, "Sending %d byte(s) keep-alive to %s",
+              (int)tls->ka_pkt.slen,
+              pj_addr_str_print(&tls->base.remote_name.host,
+                                tls->base.remote_name.port, addr,
                                 sizeof(addr), 1)));
 
     /* Send the data */
@@ -2092,7 +2092,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
                               tls->ka_pkt.ptr, &size, 0);
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-        tls_perror(tls->base.obj_name, 
+        tls_perror(tls->base.obj_name,
                    "Error sending keep-alive packet", status,
                    &tls->remote_name);
 
@@ -2104,7 +2104,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = pjsip_cfg()->tls.keep_alive_interval;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
+    pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer,
                                &delay);
     tls->ka_timer.id = PJ_TRUE;
 }
@@ -2132,7 +2132,7 @@ PJ_DEF(void) pjsip_tls_setting_wipe_keys(pjsip_tls_setting *opt)
     wipe_buf(&opt->entropy_path);
     wipe_buf(&opt->ca_buf);
     wipe_buf(&opt->cert_buf);
-    wipe_buf(&opt->privkey_buf);    
+    wipe_buf(&opt->privkey_buf);
 }
 
 #endif /* PJSIP_HAS_TLS_TRANSPORT */

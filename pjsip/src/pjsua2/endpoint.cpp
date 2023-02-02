@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsua2/endpoint.hpp>
 #include <pjsua2/account.hpp>
@@ -61,7 +61,7 @@ void TlsInfo::fromPj(const pjsip_tls_state_info &info)
     const char *verif_msgs[32];
     const char *cipher_name;
     unsigned verif_msg_cnt;
-    
+
     empty       = false;
     established = PJ2BOOL(ssock_info->established);
     protocol    = ssock_info->proto;
@@ -83,7 +83,7 @@ void TlsInfo::fromPj(const pjsip_tls_state_info &info)
         localCertInfo.fromPj(*ssock_info->local_cert_info);
     if (ssock_info->remote_cert_info)
         remoteCertInfo.fromPj(*ssock_info->remote_cert_info);
-    
+
     /* Dump server TLS certificate verification result */
     verif_msg_cnt = PJ_ARRAY_SIZE(verif_msgs);
     pj_ssl_cert_get_verify_status_strings(ssock_info->verify_status,
@@ -153,7 +153,7 @@ pjsip_digest_credential DigestCredential::toPj() const
     pj_list_init(&credentials.other_param);
     credentials.realm = str2Pj(realm);
     credentials.username = str2Pj(username);
-    for (std::map<std::string, std::string>::const_iterator it = otherParam.begin(); 
+    for (std::map<std::string, std::string>::const_iterator it = otherParam.begin();
            it != otherParam.end(); ++it) {
         pjsip_param other_param;
         other_param.name = str2Pj(it->first);
@@ -193,7 +193,7 @@ pjsip_digest_challenge DigestChallenge::toPj() const
     pj_list_init(&challenge.other_param);
     challenge.realm = str2Pj(realm);
     challenge.domain = str2Pj(domain);
-    for (std::map<std::string, std::string>::const_iterator it = otherParam.begin(); 
+    for (std::map<std::string, std::string>::const_iterator it = otherParam.begin();
            it != otherParam.end(); ++it) {
         pjsip_param other_param;
         other_param.name = str2Pj(it->first);
@@ -211,7 +211,7 @@ pjsip_digest_challenge DigestChallenge::toPj() const
 ///////////////////////////////////////////////////////////////////////////////
 IpChangeParam::IpChangeParam()
 {
-    pjsua_ip_change_param param;    
+    pjsua_ip_change_param param;
     pjsua_ip_change_param_default(&param);
     fromPj(param);
 }
@@ -792,7 +792,7 @@ void Endpoint::on_transport_state( pjsip_transport *tp,
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     if (!pj_ansi_stricmp(tp->type_name, "tls") && info->ext_info &&
-        (state == PJSIP_TP_STATE_CONNECTED || 
+        (state == PJSIP_TP_STATE_CONNECTED ||
          ((pjsip_tls_state_info*)info->ext_info)->
                                  ssl_sock_info->verify_status != PJ_SUCCESS))
     {
@@ -843,9 +843,9 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
     pjsua_call *call = &pjsua_var.calls[call_id];
     if (!call->incoming_data) {
-        /* This happens when the incoming call callback has been called from 
-         * inside the on_create_media_transport() callback. So we simply 
-         * return here to avoid calling the callback twice. 
+        /* This happens when the incoming call callback has been called from
+         * inside the on_create_media_transport() callback. So we simply
+         * return here to avoid calling the callback twice.
          */
         return;
     }
@@ -1076,9 +1076,9 @@ void Endpoint::on_acc_find_for_incoming(const pjsip_rx_data *rdata,
     pj_assert(rdata && acc_id);
     prm.rdata.fromPj(*((pjsip_rx_data *)rdata));
     prm.accountIndex = *acc_id;
-    
+
     instance_->onSelectAccount(prm);
-    
+
     *acc_id = prm.accountIndex;
 }
 
@@ -1120,10 +1120,10 @@ void Endpoint::on_call_state(pjsua_call_id call_id, pjsip_event *e)
     if (!call) {
         return;
     }
-    
+
     OnCallStateParam prm;
     prm.e.fromPj(*e);
-    
+
     call->processStateChange(prm);
     /* If the state is DISCONNECTED, call may have already been deleted
      * by the application in the callback, so do not access it anymore here.
@@ -1140,10 +1140,10 @@ void Endpoint::on_call_tsx_state(pjsua_call_id call_id,
     if (!call) {
         return;
     }
-    
+
     OnCallTsxStateParam prm;
     prm.e.fromPj(*e);
-    
+
     call->onCallTsxState(prm);
 }
 
@@ -1167,18 +1167,18 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     if (!call) {
         return;
     }
-    
+
     OnCallSdpCreatedParam prm;
     string orig_sdp;
-    
+
     prm.sdp.fromPj(*sdp);
     orig_sdp = prm.sdp.wholeSdp;
     if (rem_sdp)
         prm.remSdp.fromPj(*rem_sdp);
-    
+
     call->sdp_pool = pool;
     call->onCallSdpCreated(prm);
-    
+
     /* Check if application modifies the SDP */
     if (orig_sdp != prm.sdp.wholeSdp) {
         pjmedia_sdp_session *new_sdp;
@@ -1187,7 +1187,7 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
                                 (pj_ssize_t)prm.sdp.wholeSdp.size()};
         pj_status_t status;
 
-        pj_strdup(pool, &dup_new_sdp, &new_sdp_str);        
+        pj_strdup(pool, &dup_new_sdp, &new_sdp_str);
         status = pjmedia_sdp_parse(pool, dup_new_sdp.ptr,
                                    dup_new_sdp.slen, &new_sdp);
         if (status != PJ_SUCCESS) {
@@ -1245,15 +1245,15 @@ void Endpoint::on_stream_created2(pjsua_call_id call_id,
     if (!call) {
         return;
     }
-    
+
     OnStreamCreatedParam prm;
     prm.stream = param->stream;
     prm.streamIdx = param->stream_idx;
     prm.destroyPort = (param->destroy_port != PJ_FALSE);
     prm.pPort = (MediaPort)param->port;
-    
+
     call->onStreamCreated(prm);
-    
+
     param->destroy_port = prm.destroyPort;
     param->port = (pjmedia_port *)prm.pPort;
 }
@@ -1269,11 +1269,11 @@ void Endpoint::on_stream_destroyed(pjsua_call_id call_id,
          */
         return;
     }
-    
+
     OnStreamDestroyedParam prm;
     prm.stream = strm;
     prm.streamIdx = stream_idx;
-    
+
     call->onStreamDestroyed(prm);
 }
 
@@ -1300,24 +1300,24 @@ void Endpoint::on_dtmf_digit(pjsua_call_id call_id, int digit)
     if (!call) {
         return;
     }
-    
+
     PendingOnDtmfDigitCallback *job = new PendingOnDtmfDigitCallback;
     job->call_id = call_id;
     char buf[10];
     pj_ansi_snprintf(buf, sizeof(buf), "%c", digit);
     job->prm.digit = string(buf);
-    
+
     Endpoint::instance().utilAddPendingJob(job);
 }
 
-void Endpoint::on_dtmf_digit2(pjsua_call_id call_id, 
+void Endpoint::on_dtmf_digit2(pjsua_call_id call_id,
                               const pjsua_dtmf_info *info)
 {
     Call *call = Call::lookup(call_id);
     if (!call) {
         return;
     }
-    
+
     PendingOnDtmfDigitCallback *job = new PendingOnDtmfDigitCallback;
     job->call_id = call_id;
     char buf[10];
@@ -1325,7 +1325,7 @@ void Endpoint::on_dtmf_digit2(pjsua_call_id call_id,
     job->prm.digit = string(buf);
     job->prm.method = info->method;
     job->prm.duration = info->duration;
-    
+
     Endpoint::instance().utilAddPendingJob(job);
 }
 
@@ -1392,15 +1392,15 @@ void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
     if (!call) {
         return;
     }
-    
+
     OnCallTransferRequestParam prm;
     prm.dstUri = pj2Str(*dst);
     prm.statusCode = *code;
     prm.opt.fromPj(*opt);
     prm.newCall = NULL;
-    
+
     call->onCallTransferRequest(prm);
-    
+
     *code = prm.statusCode;
     *opt = prm.opt.toPj();
     if (*code/100 <= 2) {
@@ -1437,15 +1437,15 @@ void Endpoint::on_call_transfer_status(pjsua_call_id call_id,
     if (!call) {
         return;
     }
-    
+
     OnCallTransferStatusParam prm;
     prm.statusCode = (pjsip_status_code)st_code;
     prm.reason = pj2Str(*st_text);
     prm.finalNotify = PJ2BOOL(final);
     prm.cont = PJ2BOOL(*p_cont);
-    
+
     call->onCallTransferStatus(prm);
-    
+
     *p_cont = prm.cont;
 }
 
@@ -1459,16 +1459,16 @@ void Endpoint::on_call_replace_request2(pjsua_call_id call_id,
     if (!call) {
         return;
     }
-    
+
     OnCallReplaceRequestParam prm;
     prm.rdata.fromPj(*rdata);
     prm.statusCode = (pjsip_status_code)*st_code;
     prm.reason = pj2Str(*st_text);
     prm.opt.fromPj(*opt);
     prm.newCall = NULL;
-    
+
     call->onCallReplaceRequest(prm);
-    
+
     *st_code = prm.statusCode;
     *st_text = str2Pj(prm.reason);
     *opt = prm.opt.toPj();
@@ -1512,11 +1512,11 @@ void Endpoint::on_call_replaced(pjsua_call_id old_call_id,
      */
     if (new_call == call)
         new_call = NULL;
-    
+
     OnCallReplacedParam prm;
     prm.newCallId = new_call_id;
     prm.newCall = new_call;
-    
+
     call->onCallReplaced(prm);
 
     if (prm.newCall && prm.newCall != call) {
@@ -1553,14 +1553,14 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
     if (!call) {
         return;
     }
-    
+
     OnCallRxOfferParam prm;
     prm.offer.fromPj(*offer);
     prm.statusCode = *code;
     prm.opt.fromPj(*opt);
-    
+
     call->onCallRxOffer(prm);
-    
+
     *code = prm.statusCode;
     *opt = prm.opt.toPj();
 }
@@ -1579,16 +1579,16 @@ void Endpoint::on_call_rx_reinvite(pjsua_call_id call_id,
     if (!call) {
         return;
     }
-    
+
     OnCallRxReinviteParam prm;
     prm.offer.fromPj(*offer);
     prm.rdata.fromPj(*rdata);
     prm.isAsync = PJ2BOOL(*async);
     prm.statusCode = *code;
     prm.opt.fromPj(*opt);
-    
+
     call->onCallRxReinvite(prm);
-    
+
     *async = prm.isAsync;
     *code = prm.statusCode;
     *opt = prm.opt.toPj();
@@ -1621,7 +1621,7 @@ pjsip_redirect_op Endpoint::on_call_redirected(pjsua_call_id call_id,
     if (!call) {
         return PJSIP_REDIRECT_STOP;
     }
-    
+
     OnCallRedirectedParam prm;
     char uristr[PJSIP_MAX_URL_SIZE];
     int len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, target, uristr,
@@ -1634,7 +1634,7 @@ pjsip_redirect_op Endpoint::on_call_redirected(pjsua_call_id call_id,
         prm.e.fromPj(*e);
     else
         prm.e.type = PJSIP_EVENT_UNKNOWN;
-    
+
     return call->onCallRedirected(prm);
 }
 
@@ -1666,13 +1666,13 @@ Endpoint::on_call_media_transport_state(pjsua_call_id call_id,
     }
 
     PendingOnMediaTransportCallback *job = new PendingOnMediaTransportCallback;
-    
+
     job->call_id = call_id;
     job->prm.medIdx = info->med_idx;
     job->prm.state = info->state;
     job->prm.status = info->status;
     job->prm.sipErrorCode = info->sip_err_code;
-    
+
     Endpoint::instance().utilAddPendingJob(job);
 
     return PJ_SUCCESS;
@@ -1696,7 +1696,7 @@ struct PendingOnMediaEventCallback : public PendingJob
             Endpoint::instance().onMediaEvent(prm2);
         } else {
             Call *call = Call::lookup(call_id);
-            
+
             if (call)
                 call->onCallMediaEvent(prm);
         }
@@ -1710,7 +1710,7 @@ void Endpoint::on_media_event(pjmedia_event *event)
     job->call_id = PJSUA_INVALID_ID;
     job->prm.medIdx = 0;
     job->prm.ev.fromPj(*event);
-    
+
     Endpoint::instance().utilAddPendingJob(job);
 }
 
@@ -1723,7 +1723,7 @@ void Endpoint::on_call_media_event(pjsua_call_id call_id,
     job->call_id = call_id;
     job->prm.medIdx = med_idx;
     job->prm.ev.fromPj(*event);
-    
+
     Endpoint::instance().utilAddPendingJob(job);
 }
 
@@ -1738,7 +1738,7 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
         pjsua_call *in_call = &pjsua_var.calls[call_id];
         if (in_call->incoming_data) {
             /* This can happen when there is an incoming call but the
-             * on_incoming_call() callback hasn't been called. So we need to 
+             * on_incoming_call() callback hasn't been called. So we need to
              * call the callback here.
              */
             on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data);
@@ -1749,7 +1749,7 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
                 return base_tp;
             }
             if (in_call->inv->dlg->mod_data[pjsua_var.mod.id] == NULL) {
-                /* This will enabled notification for fail events related to 
+                /* This will enabled notification for fail events related to
                  * the call via on_call_state() and on_call_tsx_state().
                  */
                 in_call->inv->dlg->mod_data[pjsua_var.mod.id] = in_call;
@@ -1760,14 +1760,14 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
             return base_tp;
         }
     }
-    
+
     OnCreateMediaTransportParam prm;
     prm.mediaIdx = media_idx;
     prm.mediaTp = base_tp;
     prm.flags = flags;
-    
+
     call->onCreateMediaTransport(prm);
-    
+
     return (pjmedia_transport *)prm.mediaTp;
 }
 
@@ -1780,7 +1780,7 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
         pjsua_call *in_call = &pjsua_var.calls[call_id];
         if (in_call->incoming_data) {
             /* This can happen when there is an incoming call but the
-             * on_incoming_call() callback hasn't been called. So we need to 
+             * on_incoming_call() callback hasn't been called. So we need to
              * call the callback here.
              */
             on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data);
@@ -1794,21 +1794,21 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
             return;
         }
     }
-    
+
     OnCreateMediaTransportSrtpParam prm;
     prm.mediaIdx = media_idx;
     prm.srtpUse  = srtp_opt->use;
     for (unsigned i = 0; i < srtp_opt->crypto_count; i++) {
         SrtpCrypto crypto;
-        
+
         crypto.key   = pj2Str(srtp_opt->crypto[i].key);
         crypto.name  = pj2Str(srtp_opt->crypto[i].name);
         crypto.flags = srtp_opt->crypto[i].flags;
         prm.cryptos.push_back(crypto);
     }
-    
+
     call->onCreateMediaTransportSrtp(prm);
-    
+
     srtp_opt->use = prm.srtpUse;
     srtp_opt->crypto_count = (unsigned)prm.cryptos.size();
     for (unsigned i = 0; i < srtp_opt->crypto_count; i++) {
@@ -1828,16 +1828,16 @@ void Endpoint::on_ip_change_progress(pjsua_ip_change_op op,
     param.op = op;
     param.status = status;
     switch (op) {
-    case PJSUA_IP_CHANGE_OP_RESTART_LIS:                
-        param.transportId = info->lis_restart.transport_id;     
+    case PJSUA_IP_CHANGE_OP_RESTART_LIS:
+        param.transportId = info->lis_restart.transport_id;
         break;
     case PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP:
         param.accId = info->acc_shutdown_tp.acc_id;
         break;
-    case PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT: 
-        param.accId = info->acc_update_contact.acc_id;  
+    case PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT:
+        param.accId = info->acc_update_contact.acc_id;
         param.regInfo.code = info->acc_update_contact.code;
-        param.regInfo.isRegister = 
+        param.regInfo.isRegister =
                                  PJ2BOOL(info->acc_update_contact.is_register);
         break;
     case PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS:
@@ -1875,7 +1875,7 @@ void Endpoint::libCreate() PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_create() );
     mainThread = pj_thread_this();
-    
+
     /* Register library main thread */
     threadDescMap[pj_thread_this()] = NULL;
 }
@@ -1944,7 +1944,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_media_event            = &Endpoint::on_media_event;
     ua_cfg.cb.on_call_media_event       = &Endpoint::on_call_media_event;
     ua_cfg.cb.on_create_media_transport = &Endpoint::on_create_media_transport;
-    ua_cfg.cb.on_stun_resolution_complete = 
+    ua_cfg.cb.on_stun_resolution_complete =
         &Endpoint::stun_resolve_cb;
 
     /* Init! */
@@ -1966,7 +1966,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
         if (t)
             threadDescMap[t] = NULL;
     }
-    
+
     PJSUA2_CHECK_EXPR( pj_mutex_create_simple(pjsua_var.pool, "threadDesc",
                                               &threadDescMutex) );
 
@@ -2566,13 +2566,13 @@ void Endpoint::videoCodecSetPriority(const string &codec_id,
 #endif
 }
 
-VidCodecParam Endpoint::getVideoCodecParam(const string &codec_id) const 
+VidCodecParam Endpoint::getVideoCodecParam(const string &codec_id) const
                                            PJSUA2_THROW(Error)
-{    
+{
     VidCodecParam codec_param;
 #if PJSUA_HAS_VIDEO
     pjmedia_vid_codec_param pj_param;
-    pj_str_t codec_str = str2Pj(codec_id);    
+    pj_str_t codec_str = str2Pj(codec_id);
 
     PJSUA2_CHECK_EXPR(pjsua_vid_codec_get_param(&codec_str, &pj_param));
     codec_param.fromPj(pj_param);
@@ -2589,7 +2589,7 @@ void Endpoint::setVideoCodecParam(const string &codec_id,
 #if PJSUA_HAS_VIDEO
     pj_str_t codec_str = str2Pj(codec_id);
     pjmedia_vid_codec_param pj_param = param.toPj();
-    
+
     PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, &pj_param));
 #else
     PJ_UNUSED_ARG(codec_id);
@@ -2601,12 +2601,12 @@ void Endpoint::resetVideoCodecParam(const string &codec_id)
                                     PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
-    pj_str_t codec_str = str2Pj(codec_id);    
-    
+    pj_str_t codec_str = str2Pj(codec_id);
+
     PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, NULL));
 #else
     PJ_UNUSED_ARG(codec_id);
-#endif  
+#endif
 }
 
 /*

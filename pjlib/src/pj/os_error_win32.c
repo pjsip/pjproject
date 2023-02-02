@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/errno.h>
 #include <pj/assert.h>
@@ -132,13 +132,13 @@ PJ_DEF(void) pj_set_netos_error(pj_status_t code)
     WSASetLastError(PJ_STATUS_TO_OS(code));
 }
 
-/* 
+/*
  * platform_strerror()
  *
- * Platform specific error message. This file is called by pj_strerror() 
- * in errno.c 
+ * Platform specific error message. This file is called by pj_strerror()
+ * in errno.c
  */
-int platform_strerror( pj_os_err_type os_errcode, 
+int platform_strerror( pj_os_err_type os_errcode,
                        char *buf, pj_size_t bufsize)
 {
     pj_size_t len = 0;
@@ -174,11 +174,11 @@ int platform_strerror( pj_os_err_type os_errcode,
 
     if (!len) {
 #if PJ_NATIVE_STRING_IS_UNICODE
-        len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
+        len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM
                              | FORMAT_MESSAGE_IGNORE_INSERTS,
                              NULL,
                              os_errcode,
-                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                              wbuf,
                              PJ_ARRAY_SIZE(wbuf),
                              NULL);
@@ -186,11 +186,11 @@ int platform_strerror( pj_os_err_type os_errcode,
             pj_unicode_to_ansi(wbuf, len, buf, bufsize);
         }
 #else
-        len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
+        len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM
                              | FORMAT_MESSAGE_IGNORE_INSERTS,
                              NULL,
                              os_errcode,
-                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                              buf,
                              (int)bufsize,
                              NULL);
@@ -207,7 +207,7 @@ int platform_strerror( pj_os_err_type os_errcode,
     }
 
     if (!len) {
-        len = pj_ansi_snprintf( buf, bufsize, "Win32 error code %u", 
+        len = pj_ansi_snprintf( buf, bufsize, "Win32 error code %u",
                                 (unsigned)os_errcode);
         if (len < 0 || len >= (int)bufsize)
             len = bufsize-1;

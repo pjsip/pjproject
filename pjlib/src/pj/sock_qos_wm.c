@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/sock_qos.h>
 #include <pj/assert.h>
@@ -30,7 +30,7 @@
 #define THIS_FILE   "sock_qos_wm.c"
 
 /* Mapping between our traffic type and WM's DSCP traffic types */
-static const int dscp_map[] = 
+static const int dscp_map[] =
 {
     DSCPBestEffort,
     DSCPBackground,

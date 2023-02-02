@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -183,7 +183,7 @@ static pj_status_t init_report(void)
     pj_parsed_time date_time;
     pj_ssize_t len;
     pj_status_t status;
-    
+
     pj_ansi_sprintf(tmp, "pjsip-static-bench-%s-%s.htm", PJ_OS_NAME, PJ_CC_NAME);
 
     status = pj_file_open(NULL, tmp, PJ_O_WRONLY, &fd_report);
@@ -196,14 +196,14 @@ static pj_status_t init_report(void)
                                "  <TITLE>PJSIP %s (%s) - Static Benchmark</TITLE>\n"
                                " </HEAD>\n"
                                "<BODY>\n"
-                               "\n", 
+                               "\n",
                                PJ_VERSION,
                                (PJ_DEBUG ? "Debug" : "Release"));
     pj_file_write(fd_report, buf, &len);
 
 
     /* Title */
-    len = pj_ansi_sprintf(buf, "<H1>PJSIP %s (%s) - Static Benchmark</H1>\n", 
+    len = pj_ansi_sprintf(buf, "<H1>PJSIP %s (%s) - Static Benchmark</H1>\n",
                                PJ_VERSION,
                                (PJ_DEBUG ? "Debug" : "Release"));
     pj_file_write(fd_report, buf, &len);
@@ -253,7 +253,7 @@ static pj_status_t init_report(void)
 
 
     /* Write CC name */
-    len = pj_ansi_sprintf(tmp, "%s-%d.%d.%d", PJ_CC_NAME, 
+    len = pj_ansi_sprintf(tmp, "%s-%d.%d.%d", PJ_CC_NAME,
                           PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_2);
     report_sval("cc-name", tmp, "", "Compiler name and version");
 
@@ -261,7 +261,7 @@ static pj_status_t init_report(void)
     return PJ_SUCCESS;
 }
 
-void report_sval(const char *name, const char* value, const char *valname, 
+void report_sval(const char *name, const char* value, const char *valname,
                  const char *desc)
 {
     pj_ssize_t len;
@@ -275,7 +275,7 @@ void report_sval(const char *name, const char* value, const char *valname,
 }
 
 
-void report_ival(const char *name, int value, const char *valname, 
+void report_ival(const char *name, int value, const char *valname,
                  const char *desc)
 {
     pj_ssize_t len;
@@ -343,7 +343,7 @@ int test_main(char *testlist)
 
     pj_dump_config();
 
-    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 
+    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy,
                           PJSIP_TEST_MEM_SIZE );
 
     rc = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
@@ -369,7 +369,7 @@ int test_main(char *testlist)
     /* Create loop transport. */
     rc = pjsip_loop_start(endpt, NULL);
     if (rc != PJ_SUCCESS) {
-        app_perror("   error: unable to create datagram loop transport", 
+        app_perror("   error: unable to create datagram loop transport",
                    rc);
         goto on_return;
     }
@@ -502,9 +502,9 @@ on_return:
     pj_caching_pool_destroy(&caching_pool);
 
     PJ_LOG(3,(THIS_FILE, ""));
- 
+
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
-    PJ_LOG(3,(THIS_FILE, "Stack max usage: %u, deepest: %s:%u", 
+    PJ_LOG(3,(THIS_FILE, "Stack max usage: %u, deepest: %s:%u",
                       pj_thread_get_stack_max_usage(pj_thread_this()),
                       filename, line));
     if (rc == 0)

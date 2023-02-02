@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #define THIS_FILE   "stateful_proxy.c"
 
@@ -127,7 +127,7 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
                                                 NULL, 0, &tdata);
         if (status != PJ_SUCCESS) {
             pjsip_endpt_respond_stateless(global.endpt, rdata,
-                                          PJSIP_SC_INTERNAL_SERVER_ERROR, 
+                                          PJSIP_SC_INTERNAL_SERVER_ERROR,
                                           NULL, NULL, NULL);
             return PJ_TRUE;
         }
@@ -156,7 +156,7 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
          * it will not be received by on_rx_request() callback.
          */
         if (tdata->msg->line.req.method.id == PJSIP_ACK_METHOD) {
-            status = pjsip_endpt_send_request_stateless(global.endpt, tdata, 
+            status = pjsip_endpt_send_request_stateless(global.endpt, tdata,
                                                         NULL, NULL);
             if (status != PJ_SUCCESS) {
                 app_perror("Error forwarding request", status);
@@ -166,15 +166,15 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
             return PJ_TRUE;
         }
 
-        /* Create UAC transaction for forwarding the request. 
+        /* Create UAC transaction for forwarding the request.
          * Set our module as the transaction user to receive further
          * events from this transaction.
          */
         status = pjsip_tsx_create_uac(&mod_tu, tdata, &uac_tsx);
         if (status != PJ_SUCCESS) {
             pjsip_tx_data_dec_ref(tdata);
-            pjsip_endpt_respond_stateless(global.endpt, rdata, 
-                                          PJSIP_SC_INTERNAL_SERVER_ERROR, 
+            pjsip_endpt_respond_stateless(global.endpt, rdata,
+                                          PJSIP_SC_INTERNAL_SERVER_ERROR,
                                           NULL, NULL, NULL);
             return PJ_TRUE;
         }
@@ -183,15 +183,15 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
         status = pjsip_tsx_create_uas(&mod_tu, rdata, &uas_tsx);
         if (status != PJ_SUCCESS) {
             pjsip_tx_data_dec_ref(tdata);
-            pjsip_endpt_respond_stateless(global.endpt, rdata, 
-                                          PJSIP_SC_INTERNAL_SERVER_ERROR, 
+            pjsip_endpt_respond_stateless(global.endpt, rdata,
+                                          PJSIP_SC_INTERNAL_SERVER_ERROR,
                                           NULL, NULL, NULL);
             pjsip_tsx_terminate(uac_tsx, PJSIP_SC_INTERNAL_SERVER_ERROR);
             return PJ_TRUE;
         }
 
-        /* Feed the request to the UAS transaction to drive it's state 
-         * out of NULL state. 
+        /* Feed the request to the UAS transaction to drive it's state
+         * out of NULL state.
          */
         pjsip_tsx_recv_msg(uas_tsx, rdata);
 
@@ -238,7 +238,7 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
         if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) {
             pjsip_tx_data *res100;
 
-            pjsip_endpt_create_response(global.endpt, rdata, 100, NULL, 
+            pjsip_endpt_create_response(global.endpt, rdata, 100, NULL,
                                         &res100);
             pjsip_tsx_send_msg(uas_tsx, res100);
         }
@@ -248,7 +248,7 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
         pjsip_transaction *invite_uas;
         struct uas_data *uas_data2;
         pj_str_t key;
-        
+
         /* Find the UAS INVITE transaction */
         pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_UAS_ROLE,
                              pjsip_get_invite_method(), rdata);
@@ -320,7 +320,7 @@ static pj_bool_t proxy_on_rx_response( pjsip_rx_data *rdata )
     /* Calculate the address to forward the response */
     pj_bzero(&res_addr, sizeof(res_addr));
     res_addr.dst_host.type = PJSIP_TRANSPORT_UDP;
-    res_addr.dst_host.flag = 
+    res_addr.dst_host.flag =
         pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_UDP);
 
     /* Destination address is Via's received param */
@@ -370,7 +370,7 @@ static void tu_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
                            uas_data->uac_tsx->mod_data[mod_tu.id];
                 uac_data->uas_tsx = NULL;
             }
-                       
+
         }
         return;
     }
@@ -392,16 +392,16 @@ static void tu_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
         /* Do not forward 100 response for INVITE (we already responded
          * INVITE with 100)
          */
-        if (tsx->method.id == PJSIP_INVITE_METHOD && 
+        if (tsx->method.id == PJSIP_INVITE_METHOD &&
             rdata->msg_info.msg->line.status.code == 100)
         {
             return;
         }
 
-        /* Create response to be forwarded upstream 
-         * (Via will be stripped here) 
+        /* Create response to be forwarded upstream
+         * (Via will be stripped here)
          */
-        status = pjsip_endpt_create_response_fwd(global.endpt, rdata, 0, 
+        status = pjsip_endpt_create_response_fwd(global.endpt, rdata, 0,
                                                  &tdata);
         if (status != PJ_SUCCESS) {
             app_perror("Error creating response", status);
@@ -409,7 +409,7 @@ static void tu_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
         }
 
         /* Get topmost Via header of the new response */
-        hvia = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, 
+        hvia = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA,
                                                    NULL);
         if (hvia == NULL) {
             /* Invalid response! Just drop it */
@@ -420,7 +420,7 @@ static void tu_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
         /* Calculate the address to forward the response */
         pj_bzero(&res_addr, sizeof(res_addr));
         res_addr.dst_host.type = PJSIP_TRANSPORT_UDP;
-        res_addr.dst_host.flag = 
+        res_addr.dst_host.flag =
             pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_UDP);
 
         /* Destination address is Via's received param */
@@ -452,7 +452,7 @@ static void tu_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
      *  - receipt of 2xx response to INVITE
      */
     if (tsx->state == PJSIP_TSX_STATE_TERMINATED && uac_data &&
-        uac_data->uas_tsx) 
+        uac_data->uas_tsx)
     {
 
         pjsip_transaction *uas_tsx;
@@ -538,7 +538,7 @@ int main(int argc, char *argv[])
     }
 
 #if PJ_HAS_THREADS
-    status = pj_thread_create(global.pool, "sproxy", &worker_thread, 
+    status = pj_thread_create(global.pool, "sproxy", &worker_thread,
                               NULL, 0, 0, &global.thread);
     if (status != PJ_SUCCESS) {
         app_perror("Error creating thread", status);

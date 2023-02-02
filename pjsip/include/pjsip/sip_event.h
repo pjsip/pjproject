@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_EVENT_H__
 #define __PJSIP_SIP_EVENT_H__
@@ -36,7 +36,7 @@ PJ_BEGIN_DECL
 #include <pj/timer.h>
 
 
-/** 
+/**
  * Event IDs.
  */
 typedef enum pjsip_event_id_e
@@ -112,7 +112,7 @@ struct pjsip_event
             } src;
             pjsip_transaction   *tsx;   /**< The transaction.           */
             int                  prev_state; /**< Previous state.       */
-            pjsip_event_id_e     type;  /**< Type of event source:      
+            pjsip_event_id_e     type;  /**< Type of event source:
                                          *      - PJSIP_EVENT_TX_MSG
                                          *      - PJSIP_EVENT_RX_MSG,
                                          *      - PJSIP_EVENT_TRANSPORT_ERROR

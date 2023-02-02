@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util/stun_simple.h>
 #include <pjlib-util/errno.h>
@@ -25,13 +25,13 @@
 
 #define THIS_FILE   "stun_simple.c"
 
-PJ_DEF(pj_status_t) pjstun_create_bind_req( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pjstun_create_bind_req( pj_pool_t *pool,
                                              void **msg, pj_size_t *len,
-                                             pj_uint32_t id_hi, 
+                                             pj_uint32_t id_hi,
                                              pj_uint32_t id_lo)
 {
     pjstun_msg_hdr *hdr;
-    
+
     PJ_CHECK_STACK();
 
 
@@ -48,7 +48,7 @@ PJ_DEF(pj_status_t) pjstun_create_bind_req( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len, 
+PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
                                       pjstun_msg *msg)
 {
     pj_uint16_t msg_type, msg_len;
@@ -75,7 +75,7 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
 
     msg_len = pj_ntohs(msg->hdr->length);
     if (msg_len != buf_len - sizeof(pjstun_msg_hdr)) {
-        PJ_LOG(4,(THIS_FILE, "Error: invalid msg_len %d (expecting %d)", 
+        PJ_LOG(4,(THIS_FILE, "Error: invalid msg_len %d (expecting %d)",
                              msg_len, buf_len - sizeof(pjstun_msg_hdr)));
         return PJLIB_UTIL_ESTUNINMSGLEN;
     }
@@ -93,7 +93,7 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
         len = (len + 3) & ~3;
 
         if (msg_len < len) {
-            PJ_LOG(4,(THIS_FILE, "Error: length mismatch in attr %d", 
+            PJ_LOG(4,(THIS_FILE, "Error: length mismatch in attr %d",
                                  msg->attr_count));
             return PJLIB_UTIL_ESTUNINATTRLEN;
         }

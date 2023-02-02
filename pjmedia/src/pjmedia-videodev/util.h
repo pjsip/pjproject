@@ -34,7 +34,7 @@ typedef struct pjmedia_vid_dev_conv
     pjmedia_rect_size       dst_size;
     pjmedia_rect_size       res_size;           /* Size after resizing   */
     pjmedia_orient          rotation;
-    pjmedia_rect_size       rot_size;           /* Size after rotation   */ 
+    pjmedia_rect_size       rot_size;           /* Size after rotation   */
 
     void                   *conv_buf;
     pj_size_t               src_frame_size;
@@ -50,7 +50,7 @@ typedef struct pjmedia_vid_dev_conv
 
 /**
  * Create converter.
- * The process: 
+ * The process:
  * frame --> resize -->        rotate       -->           center
  *                      (if handle_rotation      (if maintain_aspect_ratio
  *                          == PJ_TRUE)                 == PJ_TRUE)

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/errno.h>
 #include <pjnath/stun_msg.h>
@@ -24,16 +24,16 @@
 
 
 
-/* PJNATH's own error codes/messages 
+/* PJNATH's own error codes/messages
  * MUST KEEP THIS ARRAY SORTED!!
  * Message must be limited to 64 chars!
  */
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
-static const struct 
+static const struct
 {
     int code;
     const char *msg;
-} err_str[] = 
+} err_str[] =
 {
     /* STUN related error codes */
     PJ_BUILD_ERR( PJNATH_EINSTUNMSG,        "Invalid STUN message"),
@@ -79,14 +79,14 @@ static const struct
 /*
  * pjnath_strerror()
  */
-static pj_str_t pjnath_strerror(pj_status_t statcode, 
+static pj_str_t pjnath_strerror(pj_status_t statcode,
                                 char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
-    if (statcode >= PJNATH_ERRNO_START && 
+    if (statcode >= PJNATH_ERRNO_START &&
         statcode < PJNATH_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
     {
         /* Find the error in the table.
@@ -113,7 +113,7 @@ static pj_str_t pjnath_strerror(pj_status_t statcode,
 
         if (PJ_ARRAY_SIZE(err_str) && err_str[first].code == statcode) {
             pj_str_t msg;
-            
+
             msg.ptr = (char*)err_str[first].msg;
             msg.slen = pj_ansi_strlen(err_str[first].msg);
 
@@ -121,7 +121,7 @@ static pj_str_t pjnath_strerror(pj_status_t statcode,
             pj_strncpy_with_null(&errstr, &msg, bufsize);
             return errstr;
 
-        } 
+        }
     }
 
 #endif  /* PJ_HAS_ERROR_STRING */
@@ -129,7 +129,7 @@ static pj_str_t pjnath_strerror(pj_status_t statcode,
 
     /* Error not found. */
     errstr.ptr = buf;
-    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+    errstr.slen = pj_ansi_snprintf(buf, bufsize,
                                    "Unknown pjnath error %d",
                                    statcode);
     if (errstr.slen < 1 || errstr.slen >= (int)bufsize)
@@ -139,7 +139,7 @@ static pj_str_t pjnath_strerror(pj_status_t statcode,
 }
 
 
-static pj_str_t pjnath_strerror2(pj_status_t statcode, 
+static pj_str_t pjnath_strerror2(pj_status_t statcode,
                                  char *buf, pj_size_t bufsize )
 {
     int stun_code = statcode - PJ_STATUS_FROM_STUN_CODE(0);
@@ -151,7 +151,7 @@ static pj_str_t pjnath_strerror2(pj_status_t statcode,
     if (cmsg.slen == 0) {
         /* Not found */
         errstr.ptr = buf;
-        errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+        errstr.slen = pj_ansi_snprintf(buf, bufsize,
                                        "Unknown STUN err-code %d",
                                        stun_code);
     } else {
@@ -174,12 +174,12 @@ PJ_DEF(pj_status_t) pjnath_init(void)
 {
     pj_status_t status;
 
-    status = pj_register_strerror(PJNATH_ERRNO_START, 299, 
+    status = pj_register_strerror(PJNATH_ERRNO_START, 299,
                                   &pjnath_strerror);
     pj_assert(status == PJ_SUCCESS);
 
-    status = pj_register_strerror(PJ_STATUS_FROM_STUN_CODE(300), 
-                                  699 - 300, 
+    status = pj_register_strerror(PJ_STATUS_FROM_STUN_CODE(300),
+                                  699 - 300,
                                   &pjnath_strerror2);
     pj_assert(status == PJ_SUCCESS);
 

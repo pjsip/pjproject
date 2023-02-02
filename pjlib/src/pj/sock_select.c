@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/sock_select.h>
 #include <pj/compat/socket.h>
@@ -85,10 +85,10 @@ PJ_DEF(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp)
     return PART_COUNT(fdsetp);
 }
 
-PJ_DEF(int) pj_sock_select( int n, 
-                            pj_fd_set_t *readfds, 
+PJ_DEF(int) pj_sock_select( int n,
+                            pj_fd_set_t *readfds,
                             pj_fd_set_t *writefds,
-                            pj_fd_set_t *exceptfds, 
+                            pj_fd_set_t *exceptfds,
                             const pj_time_val *timeout)
 {
     struct timeval os_timeout, *p_os_timeout;

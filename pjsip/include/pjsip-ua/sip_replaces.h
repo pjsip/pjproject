@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_REPLACES_H__
 #define __PJSIP_REPLACES_H__
@@ -33,21 +33,21 @@
  * @{
  *
  * This module implements support for Replaces header in PJSIP. The Replaces
- * specification is written in RFC 3891 - The Session Initiation Protocol (SIP) 
- * "Replaces" Header, and can be used to enable a variety of features, 
+ * specification is written in RFC 3891 - The Session Initiation Protocol (SIP)
+ * "Replaces" Header, and can be used to enable a variety of features,
  * for example: "Attended Transfer" and "Call Pickup".
  *
- * 
+ *
  *
  * \section PJSIP_REPLACES_USING_SEC Using PJSIP Replaces Support
  *
  * \subsection PJSIP_REPLACES_INIT_SUBSEC Initialization
  *
  * Application needs to call #pjsip_replaces_init_module() during application
- * initialization stage to register "replaces" support in PJSIP. 
+ * initialization stage to register "replaces" support in PJSIP.
  *
  *
- * 
+ *
  * \subsection PJSIP_REPLACES_UAC_SUBSEC UAC Behavior: Sending a Replaces Header
  *
  * A User Agent that wishes to replace a single existing early or
@@ -67,7 +67,7 @@
  *
  * Note that when the outgoing INVITE request (with Replaces) is initiated
  * from an incoming REFER request (as in Attended Call Transfer case),
- * this process should be done rather more automatically by PJSIP. Upon 
+ * this process should be done rather more automatically by PJSIP. Upon
  * receiving incoming incoming REFER request, normally these processes
  * will be performed:
  *  - Application finds \a Refer-To header,
@@ -77,11 +77,11 @@
  *    as \a Replaces and \a Require headers.
  *  - The dialog keeps the header fields in the header parameters
  *    of the URI, and the invite session would add these headers into
- *    the outgoing INVITE request. Because of this, the outgoing 
+ *    the outgoing INVITE request. Because of this, the outgoing
  *    INVITE request will contain the \a Replaces and \a Require headers.
  *
  *
- * For more information, please see the implementation of 
+ * For more information, please see the implementation of
  * #pjsua_call_xfer_replaces() in \ref PJSUA_LIB source code.
  *
  *
@@ -90,7 +90,7 @@
  * The Replaces header contains information used to match an existing
  * SIP dialog (call-id, to-tag, and from-tag).  Upon receiving an INVITE
  * with a Replaces header, the User Agent (UA) attempts to match this
- * information with a confirmed or early dialog.  
+ * information with a confirmed or early dialog.
  *
  * In PJSIP, if application wants to process the Replaces header in the
  * incoming INVITE request, it should call #pjsip_replaces_verify_request()
@@ -198,7 +198,7 @@
  * \section PJSIP_REPLACES_REFERENCE References
  *
  * References:
- *  - <A HREF="http://www.ietf.org/rfc/rfc3891.txt">RFC 3891: The Session 
+ *  - <A HREF="http://www.ietf.org/rfc/rfc3891.txt">RFC 3891: The Session
  *    Initiation Protocol (SIP) "Replaces" Header</A>
  *  - \ref PJSUA_XFER
  */
@@ -234,7 +234,7 @@ typedef struct pjsip_replaces_hdr
 
 
 /**
- * Initialize Replaces support in PJSIP. This would, among other things, 
+ * Initialize Replaces support in PJSIP. This would, among other things,
  * register the header parser for Replaces header.
  *
  * @param endpt     The endpoint instance.
@@ -260,7 +260,7 @@ PJ_DECL(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool);
  * Section 3 "User Agent Server Behavior: Receiving a Replaces Header".
  *
  * @param rdata     The incoming request to be verified.
- * @param p_dlg     On return, it will be filled with the matching 
+ * @param p_dlg     On return, it will be filled with the matching
  *                  dialog.
  * @param lock_dlg  Specifies whether this function should acquire lock
  *                  to the matching dialog. If yes (and should be yes!),
@@ -276,11 +276,11 @@ PJ_DECL(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool);
  *                    function returns PJ_SUCCESS and \a p_dlg parameter
  *                    will be set to NULL.
  *                  - If the request contains Replaces header and a valid,
- *                    matching dialog is found, the function returns 
+ *                    matching dialog is found, the function returns
  *                    PJ_SUCCESS and \a p_dlg parameter will be set to the
  *                    matching dialog instance.
  *                  - Upon error condition (as described by RFC 3891), the
- *                    function returns non-PJ_SUCCESS, and \a p_tdata 
+ *                    function returns non-PJ_SUCCESS, and \a p_tdata
  *                    parameter SHOULD be set with a final response message
  *                    to be sent to the sender of the request.
  */

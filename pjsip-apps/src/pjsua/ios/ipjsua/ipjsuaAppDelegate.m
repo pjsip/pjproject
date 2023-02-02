@@ -70,7 +70,7 @@ Reachability            *internetReach;
     NSParameterAssert([curReach isKindOfClass: [Reachability class]]);
     PJ_LOG(3,("", "reachability changed.."));
     [self updateWithReachability: curReach];
-    
+
     if ([curReach currentReachabilityStatus] != NotReachable &&
         ![curReach connectionRequired])
     {
@@ -96,7 +96,7 @@ static void displayMsg(const char *msg)
 static void pjsuaOnStartedCb(pj_status_t status, const char* msg)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
-    
+
     if (status != PJ_SUCCESS && (!msg || !*msg)) {
         pj_strerror(status, errmsg, sizeof(errmsg));
         PJ_LOG(3,(THIS_FILE, "Error: %s", errmsg));
@@ -135,10 +135,10 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     const char **argv = pjsua_app_def_argv;
     int argc = PJ_ARRAY_SIZE(pjsua_app_def_argv) -1;
     pj_status_t status;
-    
+
     isShuttingDown = false;
     displayMsg("Starting..");
-    
+
     pj_bzero(&app_cfg, sizeof(app_cfg));
     if (restartArgc) {
         app_cfg.argc = restartArgc;
@@ -150,7 +150,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     app_cfg.on_started = &pjsuaOnStartedCb;
     app_cfg.on_stopped = &pjsuaOnStoppedCb;
     app_cfg.on_config_init = &pjsuaOnAppConfigCb;
-    
+
     while (!isShuttingDown) {
         status = pjsua_app_init(&app_cfg);
         if (status != PJ_SUCCESS) {
@@ -160,7 +160,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
             pjsua_app_destroy();
             return;
         }
-    
+
         /* Setup device orientation change notification */
         dispatch_async(dispatch_get_main_queue(),
         ^{
@@ -170,19 +170,19 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
                 name:UIDeviceOrientationDidChangeNotification
                 object:[UIDevice currentDevice]];
         });
-        
+
         status = pjsua_app_run(PJ_TRUE);
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
             displayMsg(errmsg);
         }
-        
+
         [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
-    
+
         pjsua_app_destroy();
     }
-    
+
     restartArgv = NULL;
     restartArgc = 0;
 }
@@ -198,20 +198,20 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     }
     self.window.rootViewController = self.viewController;
     [self.window makeKeyAndVisible];
-    
+
     /* Observe the kNetworkReachabilityChangedNotification. When that
      * notification is posted, the method "reachabilityChanged" will be called.
      */
     [[NSNotificationCenter defaultCenter] addObserver: self
           selector: @selector(reachabilityChanged:)
           name: kReachabilityChangedNotification object: nil];
-    
+
     internetReach = [Reachability reachabilityForInternetConnection];
     [internetReach startNotifier];
     [self updateWithReachability: internetReach];
-    
+
     app = self;
-    
+
     /* Start pjsua app thread */
     [NSThread detachNewThreadSelector:@selector(pjsuaStart) toTarget:self withObject:nil];
 
@@ -241,18 +241,18 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     static UIDeviceOrientation prev_ori = 0;
     UIDeviceOrientation dev_ori = [[UIDevice currentDevice] orientation];
     int i;
-    
+
     if (dev_ori == prev_ori) return;
-    
+
     NSLog(@"Device orientation changed: %d", (int)(prev_ori = dev_ori));
-    
+
     if (dev_ori >= UIDeviceOrientationPortrait &&
         dev_ori <= UIDeviceOrientationLandscapeRight)
     {
         if (!pj_thread_is_registered()) {
             pj_thread_register("ipjsua", a_thread_desc, &a_thread);
         }
-        
+
         /* Here we set the orientation for all video devices.
          * This may return failure for renderer devices or for
          * capture devices which do not support orientation setting,
@@ -270,11 +270,11 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     static pj_thread_desc a_thread_desc;
     static pj_thread_t *a_thread;
     int i;
-    
+
     if (!pj_thread_is_registered()) {
         pj_thread_register("ipjsua", a_thread_desc, &a_thread);
     }
-    
+
     /* Since iOS requires that the minimum keep alive interval is 600s,
      * application needs to make sure that the account's registration
      * timeout is long enough.
@@ -288,7 +288,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 
 - (void)applicationDidEnterBackground:(UIApplication *)application
 {
-    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later. 
+    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
     // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
     [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
 
@@ -333,7 +333,7 @@ pj_bool_t showNotification(pjsua_call_id call_id)
          * --auto-answer option).
          */
         alert.alertAction = @"Activate app";
-        
+
         dispatch_async(dispatch_get_main_queue(),
                        ^{[[UIApplication sharedApplication]
                           presentLocalNotificationNow:alert];});
@@ -347,23 +347,23 @@ void displayWindow(pjsua_vid_win_id wid)
 {
 #if PJSUA_HAS_VIDEO
     int i, last;
-    
+
     i = (wid == PJSUA_INVALID_ID) ? 0 : wid;
     last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid+1;
 
     for (;i < last; ++i) {
         pjsua_vid_win_info wi;
-        
+
         if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 UIView *parent = app.viewController.view;
                 UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
-            
+
                 if (view) {
                     /* Add the video window as subview */
                     if (![view isDescendantOfView:parent])
                         [parent addSubview:view];
-                    
+
                     if (!wi.is_native) {
                         /* Resize it to fit width */
                         view.bounds = CGRectMake(0, 0, parent.bounds.size.width,
@@ -384,7 +384,7 @@ void displayWindow(pjsua_vid_win_id wid)
         }
     }
 
-    
+
 #endif
 }
 

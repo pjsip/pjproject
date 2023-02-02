@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_NAT_DETECT_H__
 #define __PJNATH_NAT_DETECT_H__
@@ -79,18 +79,18 @@ typedef enum pj_stun_nat_type
     PJ_STUN_NAT_TYPE_SYMMETRIC_UDP,
 
     /**
-     * A full cone NAT is one where all requests from the same internal 
+     * A full cone NAT is one where all requests from the same internal
      * IP address and port are mapped to the same external IP address and
-     * port.  Furthermore, any external host can send a packet to the 
+     * port.  Furthermore, any external host can send a packet to the
      * internal host, by sending a packet to the mapped external address.
      */
     PJ_STUN_NAT_TYPE_FULL_CONE,
 
     /**
-     * A symmetric NAT is one where all requests from the same internal 
+     * A symmetric NAT is one where all requests from the same internal
      * IP address and port, to a specific destination IP address and port,
-     * are mapped to the same external IP address and port.  If the same 
-     * host sends a packet with the same source address and port, but to 
+     * are mapped to the same external IP address and port.  If the same
+     * host sends a packet with the same source address and port, but to
      * a different destination, a different mapping is used.  Furthermore,
      * only the external host that receives a packet can send a UDP packet
      * back to the internal host.
@@ -98,18 +98,18 @@ typedef enum pj_stun_nat_type
     PJ_STUN_NAT_TYPE_SYMMETRIC,
 
     /**
-     * A restricted cone NAT is one where all requests from the same 
-     * internal IP address and port are mapped to the same external IP 
-     * address and port.  Unlike a full cone NAT, an external host (with 
-     * IP address X) can send a packet to the internal host only if the 
+     * A restricted cone NAT is one where all requests from the same
+     * internal IP address and port are mapped to the same external IP
+     * address and port.  Unlike a full cone NAT, an external host (with
+     * IP address X) can send a packet to the internal host only if the
      * internal host had previously sent a packet to IP address X.
      */
     PJ_STUN_NAT_TYPE_RESTRICTED,
 
     /**
-     * A port restricted cone NAT is like a restricted cone NAT, but the 
-     * restriction includes port numbers. Specifically, an external host 
-     * can send a packet, with source IP address X and source port P, 
+     * A port restricted cone NAT is like a restricted cone NAT, but the
+     * restriction includes port numbers. Specifically, an external host
+     * can send a packet, with source IP address X and source port P,
      * to the internal host only if the internal host had previously sent
      * a packet to IP address X and port P.
      */

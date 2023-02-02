@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -63,7 +63,7 @@ static int test(void)
     unsigned size;
 
     pj_rbtree_init(&rb, (pj_rbtree_comp*)&compare_node);
-    size = MAX_COUNT*(sizeof(*key)+PJ_RBTREE_NODE_SIZE) + 
+    size = MAX_COUNT*(sizeof(*key)+PJ_RBTREE_NODE_SIZE) +
                            PJ_RBTREE_SIZE + PJ_POOL_SIZE;
     pool = pj_pool_create( mem, "pool", size, 0, NULL);
     if (!pool) {
@@ -113,7 +113,7 @@ static int test(void)
             if (prev) {
                 if (compare_node((node_key*)prev->key,(node_key*)it->key)>=0) {
                     ++err;
-                    PJ_LOG(3, (THIS_FILE, "Error: %s >= %s", 
+                    PJ_LOG(3, (THIS_FILE, "Error: %s >= %s",
                                (char*)prev->user_data, (char*)it->user_data));
                 }
             }
@@ -141,7 +141,7 @@ static int test(void)
             t_erase.u32.lo += (t2.u32.lo - t1.u32.lo);
         }
 
-        PJ_LOG(4, (THIS_FILE, 
+        PJ_LOG(4, (THIS_FILE,
                 "...count:%d, setup:%d, insert:%d, search:%d, erase:%d",
                 count,
                 t_setup.u32.lo / count, t_insert.u32.lo / count,

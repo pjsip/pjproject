@@ -57,7 +57,7 @@ PJSua2 pjsua2;
     std::string password = std::string([[passwordNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string ip = std::string([[ipNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string port = std::string([[portNS componentsSeparatedByString:@"*"][0] UTF8String]);
-    
+
     pjsua2.createAccount(username, password, ip, port);
 }
 

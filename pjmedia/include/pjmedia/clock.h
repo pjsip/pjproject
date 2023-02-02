@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CLOCK_H__
 #define __PJMEDIA_CLOCK_H__
@@ -32,11 +32,11 @@
  * @brief Various types of classes that provide timing.
  * @{
 
- The media clock/timing extends the media port concept that is explained 
- in @ref PJMEDIA_PORT. When clock is present in the ports 
+ The media clock/timing extends the media port concept that is explained
+ in @ref PJMEDIA_PORT. When clock is present in the ports
  interconnection, media will flow automatically (and with correct timing too!)
  from one media port to another.
- 
+
  There are few objects in PJMEDIA that are able to provide clock/timing
  to media ports interconnection:
 
@@ -64,14 +64,14 @@
  * @ingroup PJMEDIA_PORT_CLOCK
  * @brief Interface for generating clock.
  * @{
- * 
+ *
  * The clock generator provides the application with media timing,
  * and it is used by the @ref PJMEDIA_MASTER_PORT for its sound clock.
  *
- * The clock generator may be configured to run <b>asynchronously</b> 
- * (the default behavior) or <b>synchronously</b>. When it is run 
+ * The clock generator may be configured to run <b>asynchronously</b>
+ * (the default behavior) or <b>synchronously</b>. When it is run
  * asynchronously, it will call the application's callback every time
- * the clock <b>tick</b> expires. When it is run synchronously, 
+ * the clock <b>tick</b> expires. When it is run synchronously,
  * application must continuously polls the clock generator to synchronize
  * the timing.
  */
@@ -217,7 +217,7 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
  * @param clock_rate        Number of samples per second.
  * @param channel_count     Number of channel.
  * @param samples_per_frame Number of samples per frame. This argument
- *                          along with clock_rate and channel_count, specifies 
+ *                          along with clock_rate and channel_count, specifies
  *                          the interval of each clock run (or clock ticks).
  * @param options           Bitmask of pjmedia_clock_options.
  * @param cb                Callback to be called for each clock tick.
@@ -261,7 +261,7 @@ PJ_DECL(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
 
 /**
  * Start the clock. For clock created with asynchronous flag set to TRUE,
- * this may start a worker thread for the clock (depending on the 
+ * this may start a worker thread for the clock (depending on the
  * backend clock implementation being used).
  *
  * @param clock             The media clock.
@@ -275,7 +275,7 @@ PJ_DECL(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock);
  * Stop the clock. When the function returns PJ_SUCCESS, it is guaranteed
  * that the clock thread (if any) has stopped and the callback has completed.
  * But if the function is called from within the clock's callback itself,
- * the callback will still be running until completion. In that case, 
+ * the callback will still be running until completion. In that case,
  * the function will only stop future callbacks and returns PJ_EBUSY.
  *
  * @param clock             The media clock.
@@ -304,7 +304,7 @@ PJ_DECL(pj_status_t) pjmedia_clock_modify(pjmedia_clock *clock,
  * @param clock             The media clock.
  * @param wait              If non-zero, then the function will block until
  *                          a clock tick elapsed and callback has been called.
- * @param ts                Optional argument to receive the current 
+ * @param ts                Optional argument to receive the current
  *                          timestamp.
  *
  * @return                  Non-zero if clock tick has elapsed, or FALSE if

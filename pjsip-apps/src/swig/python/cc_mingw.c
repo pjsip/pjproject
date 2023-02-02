@@ -61,7 +61,7 @@ const char* find_gcc(const char *gcc_exe)
         if (access(fname, F_OK | X_OK) != -1) {
             return fname;
         }
-        
+
         p = strtok(NULL, ";");
     }
 
@@ -120,7 +120,7 @@ int main(int argc, const char const **argv)
     remove_mno_cygwin = check_gcc_reject_mno_cygwin(gcc_exe);
     if (remove_mno_cygwin < 0)
         return -30;
-    
+
     len = snprintf(cmd, sizeof(cmd), "%s", gcc_exe);
     p = cmd + len;
     sz = sizeof(cmd) - len;
@@ -139,7 +139,7 @@ int main(int argc, const char const **argv)
         p += len;
         sz -= len;
     }
-    
+
     if (!ret) {
         //printf("cmd = %s\n", cmd);
         ret = system(cmd);
@@ -148,6 +148,6 @@ int main(int argc, const char const **argv)
     if (ret) {
         printf("Error: %s\n", strerror(ret));
     }
-    
+
     return ret;
 }

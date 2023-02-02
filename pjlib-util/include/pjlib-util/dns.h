@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_DNS_H__
 #define __PJLIB_UTIL_DNS_H__
@@ -41,14 +41,14 @@ PJ_BEGIN_DECL
  *
  * This module provides low-level services to parse and packetize DNS queries
  * and responses. The functions support building a DNS query packet and parse
- * the data in the DNS response. This implementation conforms to the 
+ * the data in the DNS response. This implementation conforms to the
  * following specifications:
  *  - RFC 1035: DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION
  *  - RFC 1886: DNS Extensions to support IP version 6
  *
  * To create a DNS query packet, application should call #pj_dns_make_query()
  * function, specifying the desired DNS query type, the name to be resolved,
- * and the buffer where the DNS packet will be built into. 
+ * and the buffer where the DNS packet will be built into.
  *
  * When incoming DNS query or response packet arrives, application can use
  * #pj_dns_parse_packet() to parse the TCP/UDP payload into parsed DNS packet
@@ -124,7 +124,7 @@ typedef enum pj_dns_type
 
 /**
  * Standard DNS header, according to RFC 1035, which will be present in
- * both DNS query and DNS response. 
+ * both DNS query and DNS response.
  *
  * Note that all values seen by application would be in
  * host by order. The library would convert them to network
@@ -184,7 +184,7 @@ typedef struct pj_dns_hdr
 #define PJ_DNS_GET_QR(val)      (((val) & PJ_DNS_SET_QR(1)) >> 15)
 
 
-/** 
+/**
  * These constants describe DNS RCODEs. Application can fold these constants
  * into PJLIB pj_status_t namespace by calling #PJ_STATUS_FROM_DNS_RCODE()
  * macro.
@@ -230,7 +230,7 @@ typedef struct pj_dns_parsed_rr
     void        *data;      /**< Pointer to the raw resource data, only
                                  when the type is not known. If it is known,
                                  the data will be put in rdata below.       */
-    
+
     /** For resource types that are recognized/supported by this library,
      *  the parsed resource data will be placed in this rdata union.
      */
@@ -335,7 +335,7 @@ PJ_DECL(pj_status_t) pj_dns_make_query(void *packet,
  * CNAME record, NS record, and SRV record.
  *
  * @param pool          Pool to allocate memory for the parsed packet.
- * @param packet        Pointer to the DNS packet (the TCP/UDP payload of 
+ * @param packet        Pointer to the DNS packet (the TCP/UDP payload of
  *                      the raw packet).
  * @param size          The size of the DNS packet.
  * @param p_res         Pointer to store the resulting parsed packet.

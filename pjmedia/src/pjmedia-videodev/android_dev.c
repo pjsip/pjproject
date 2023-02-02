@@ -136,7 +136,7 @@ typedef struct and_stream
 /* Prototypes */
 static pj_status_t and_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t and_factory_destroy(pjmedia_vid_dev_factory *f);
-static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *f); 
+static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    and_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t and_factory_get_dev_info(pjmedia_vid_dev_factory *f,
                                             unsigned index,
@@ -530,7 +530,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
                                          jobjs.cam_info.f_facing);
         if (facing < 0)
             goto on_skip_dev;
-        
+
         /* Set device ID, direction, and has_callback info */
         adi->dev_idx = i;
         vdi->id = f->dev_count;
@@ -558,7 +558,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 
             cnt = (*jni_env)->GetArrayLength(jni_env, jiarray);
             sizes = (*jni_env)->GetIntArrayElements(jni_env, jiarray, 0);
-            
+
             adi->sup_size_cnt = cnt/2;
             adi->sup_size = pj_pool_calloc(f->dev_pool, adi->sup_size_cnt,
                                            sizeof(adi->sup_size[0]));
@@ -642,7 +642,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
                                               DEFAULT_FPS, 1);
                 }
             }
-            
+
             /* NV21 */
             if (adi->has_nv21) {
                 for (k = 0; k < adi->sup_size_cnt &&
@@ -875,7 +875,7 @@ static pj_status_t and_factory_create_stream(
                                  vfd->fps.denum,        /* fps */
                                  (jlong)(intptr_t)strm, /* user data */
                                  NULL                   /* SurfaceView */
-                                 );        
+                                 );
     if (jcam == NULL) {
         PJ_LOG(3, (THIS_FILE, "Unable to create PjCamera instance"));
         status = PJMEDIA_EVID_SYSERR;
@@ -980,7 +980,7 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
                                               pval;
             and_dev_info *adi;
             int res;
-            
+
             /* Just return if current and target device are the same */
             if (strm->param.cap_id == p->target_id)
                 return PJ_SUCCESS;
@@ -1003,7 +1003,7 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
                 status = PJMEDIA_EVID_SYSERR;
             } else {
                 strm->param.cap_id = p->target_id;
-                
+
                 /* If successful, set the orientation as well */
                 and_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
                                    &strm->param.orient);
@@ -1035,11 +1035,11 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
                                                  strm->param.fmt.det.vid.size,
                                                  PJ_TRUE,
                                                  MAINTAIN_ASPECT_RATIO);
-                
+
                 if (status != PJ_SUCCESS)
                     return status;
             }
-            
+
             eff_ori = strm->param.orient;
             adi = &strm->factory->dev_info[strm->param.cap_id];
             /* Normalize the orientation for back-facing camera */
@@ -1050,7 +1050,7 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
                     eff_ori = PJMEDIA_ORIENT_ROTATE_90DEG;
             }
             pjmedia_vid_dev_conv_set_rotation(&strm->conv, eff_ori);
-            
+
             PJ_LOG(4, (THIS_FILE, "Video capture orientation set to %d",
                                   strm->param.orient));
 
@@ -1061,7 +1061,7 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
             status = PJMEDIA_EVID_INVCAP;
             break;
     }
-    
+
     return status;
 }
 
@@ -1377,7 +1377,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 
     }
 
-    status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv, 
+    status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv,
                                                     f.buf,
                                                     &frame_buf);
     if (status == PJ_SUCCESS) {
@@ -1396,7 +1396,7 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
     and_stream *strm = (and_stream*)(intptr_t)user_data;
     pjmedia_frame f;
     pj_uint8_t *Y, *U, *V;
-    pj_status_t status; 
+    pj_status_t status;
     void *frame_buf, *data_buf;
 
     strm->frame_ts.u64 += strm->ts_inc;
@@ -1494,7 +1494,7 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
         }
     }
 
-    status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv, 
+    status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv,
                                                     f.buf,
                                                     &frame_buf);
     if (status == PJ_SUCCESS) {

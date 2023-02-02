@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -124,7 +124,7 @@ static int test_timer_heap(void)
 
         // Set the time where all timers should finish
         pj_gettimeofday(&expire);
-        delay.sec = DELAY; 
+        delay.sec = DELAY;
         delay.msec = 0;
         PJ_TIME_VAL_ADD(expire, delay);
 
@@ -143,7 +143,7 @@ static int test_timer_heap(void)
 
             pj_get_timestamp(&t1);
 #if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
-            /* On Symbian, we must use OS poll (Active Scheduler poll) since 
+            /* On Symbian, we must use OS poll (Active Scheduler poll) since
              * timer is implemented using Active Object.
              */
             rc = 0;
@@ -161,16 +161,16 @@ static int test_timer_heap(void)
         } while (PJ_TIME_VAL_LTE(now, expire)&&pj_timer_heap_count(timer) > 0);
 
         if (pj_timer_heap_count(timer)) {
-            PJ_LOG(3, (THIS_FILE, "ERROR: %d timers left", 
+            PJ_LOG(3, (THIS_FILE, "ERROR: %d timers left",
                        pj_timer_heap_count(timer)));
             ++err;
         }
-        t_sched.u32.lo /= count; 
+        t_sched.u32.lo /= count;
         t_cancel.u32.lo /= count;
         t_poll.u32.lo /= count;
-        PJ_LOG(4, (THIS_FILE, 
+        PJ_LOG(4, (THIS_FILE,
                 "...ok (count:%d, early:%d, cancelled:%d, "
-                "sched:%d, cancel:%d poll:%d)", 
+                "sched:%d, cancel:%d poll:%d)",
                 count, early, cancelled, t_sched.u32.lo, t_cancel.u32.lo,
                 t_poll.u32.lo));
 
@@ -290,7 +290,7 @@ static void st_entry_callback(pj_timer_heap_t *ht, pj_timer_entry *e)
 
     /* try to cancel this */
     pj_timer_heap_cancel_if_active(ht, e, 10);
-    
+
     /* busy doing something */
     pj_thread_sleep(pj_rand() % 50);
 
@@ -330,7 +330,7 @@ static int stress_worker(void *arg)
         else if (job < (prob[0] + prob[1])) task = CANCELLING;
         else if (job < (prob[0] + prob[1] + prob[2])) task = POLLING;
         else task = NOTHING;
-    
+
         idx = pj_rand() % ST_ENTRY_COUNT;
         prev_status = pj_atomic_get(tparam->status[idx]);
         if (task == SCHEDULING) {
@@ -529,7 +529,7 @@ static int timer_stress_test(void)
                                    sizeof(pj_grp_lock_t*));
         tparam.grp_locks = grp_locks;
     }
-    for (i=0; i<ST_ENTRY_GROUP_LOCK_COUNT; ++i) {    
+    for (i=0; i<ST_ENTRY_GROUP_LOCK_COUNT; ++i) {
         status = pj_grp_lock_create(pool, NULL, &grp_locks[i]);
         if (status != PJ_SUCCESS) {
             app_perror("...error: unable to create group lock", status);
@@ -552,7 +552,7 @@ static int timer_stress_test(void)
         err = -55;
         goto on_return;
     }
-    
+
     for (i=0; i<ST_ENTRY_COUNT; ++i) {
         pj_timer_entry_init(&entries[i], 0, &tparam, &st_entry_callback);
 
@@ -663,10 +663,10 @@ static int timer_stress_test(void)
     pj_thread_sleep(ST_DURATION);
 
 on_return:
-    
+
     PJ_LOG(3,("test", "...Cleaning up resources"));
     tparam.stopping = PJ_TRUE;
-    
+
     for (i=0; i<ST_STRESS_THREAD_COUNT; ++i) {
         if (!stress_threads[i])
             continue;
@@ -680,14 +680,14 @@ on_return:
         pj_thread_join(poll_threads[i]);
         pj_thread_destroy(poll_threads[i]);
     }
-    
+
     for (i=0; i<ST_CANCEL_THREAD_COUNT; ++i) {
         if (!cancel_threads[i])
             continue;
         pj_thread_join(cancel_threads[i]);
         pj_thread_destroy(cancel_threads[i]);
     }
-    
+
     for (i=0; i<ST_POLL_THREAD_COUNT+ST_CANCEL_THREAD_COUNT; ++i) {
         PJ_LOG(3,("test", "...Thread #%d (%s) executed %d entries",
                   i, (tparam.stat[i].is_poll? "poll":"cancel"),
@@ -973,7 +973,7 @@ int timer_test()
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_timer_test;
 #endif  /* INCLUDE_TIMER_TEST */

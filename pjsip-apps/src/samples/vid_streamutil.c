@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -44,7 +44,7 @@
 #include "util.h"
 
 
-static const char *desc = 
+static const char *desc =
  " vid_streamutil                                                       \n"
  "\n"
  " PURPOSE:                                                             \n"
@@ -67,7 +67,7 @@ static const char *desc =
  "  --send-recv           Set stream direction to bidirectional.        \n"
  "  --send-only           Set stream direction to send only             \n"
  "  --recv-only           Set stream direction to recv only (default)   \n"
- 
+
  "  --send-width          Video width to be sent                        \n"
  "  --send-height         Video height to be sent                       \n"
  "                        --send-width and --send-height not applicable \n"
@@ -118,8 +118,8 @@ int my_hex_string_to_octet_string(char *raw, char *hex, int len)
     return len;
 }
 
-/* 
- * Register all codecs. 
+/*
+ * Register all codecs.
  */
 static pj_status_t init_codecs(pj_pool_factory *pf)
 {
@@ -153,8 +153,8 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
     return PJ_SUCCESS;
 }
 
-/* 
- * Register all codecs. 
+/*
+ * Register all codecs.
  */
 static void deinit_codecs()
 {
@@ -204,8 +204,8 @@ static pj_status_t create_file_player( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-/* 
- * Create stream based on the codec, dir, remote address, etc. 
+/*
+ * Create stream based on the codec, dir, remote address, etc.
  */
 static pj_status_t create_stream( pj_pool_t *pool,
                                   pjmedia_endpt *med_endpt,
@@ -243,7 +243,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
     info.ssrc = pj_rand();
     if (codec_param)
         info.codec_param = codec_param;
-    
+
     /* Copy remote address */
     pj_memcpy(&info.rem_addr, rem_addr, sizeof(pj_sockaddr_in));
 
@@ -266,7 +266,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
     if (use_srtp) {
         pjmedia_srtp_crypto tx_plc, rx_plc;
 
-        status = pjmedia_transport_srtp_create(med_endpt, transport, 
+        status = pjmedia_transport_srtp_create(med_endpt, transport,
                                                NULL, &srtp_tp);
         if (status != PJ_SUCCESS)
             return status;
@@ -278,7 +278,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
         tx_plc.name = *crypto_suite;
         rx_plc.key = *srtp_rx_key;
         rx_plc.name = *crypto_suite;
-        
+
         status = pjmedia_transport_srtp_start(srtp_tp, &tx_plc, &rx_plc);
         if (status != PJ_SUCCESS)
             return status;
@@ -287,12 +287,12 @@ static pj_status_t create_stream( pj_pool_t *pool,
     }
 #endif
 
-    /* Now that the stream info is initialized, we can create the 
+    /* Now that the stream info is initialized, we can create the
      * stream.
      */
 
-    status = pjmedia_vid_stream_create( med_endpt, pool, &info, 
-                                        transport, 
+    status = pjmedia_vid_stream_create( med_endpt, pool, &info,
+                                        transport,
                                         NULL, p_stream);
 
     if (status != PJ_SUCCESS) {
@@ -342,7 +342,7 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
         write_frame.buf = play_file->dec_buf;
         write_frame.size = play_file->dec_buf_size;
         status = pjmedia_vid_codec_decode(decoder, 1, &read_frame,
-                                          (unsigned)write_frame.size, 
+                                          (unsigned)write_frame.size,
                                           &write_frame);
         if (status != PJ_SUCCESS)
             return;
@@ -378,7 +378,7 @@ static int main_func(int argc, char *argv[])
     pjmedia_vid_stream *stream = NULL;
     pjmedia_port *enc_port, *dec_port;
     char addr[PJ_INET_ADDRSTRLEN];
-    pj_status_t status; 
+    pj_status_t status;
 
     pjmedia_vid_port *capture=NULL, *renderer=NULL;
     pjmedia_vid_port_param vpp;
@@ -535,7 +535,7 @@ static int main_func(int argc, char *argv[])
             break;
 
         case OPT_SRTP_TX_KEY:
-            tmp_key_len = my_hex_string_to_octet_string(tmp_tx_key, pj_optarg, 
+            tmp_key_len = my_hex_string_to_octet_string(tmp_tx_key, pj_optarg,
                                                         (int)strlen(pj_optarg));
             pj_strset(&srtp_tx_key, tmp_tx_key, tmp_key_len/2);
             break;
@@ -586,7 +586,7 @@ static int main_func(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -643,10 +643,10 @@ static int main_func(int argc, char *argv[])
     }
 
     /* Get codec default param for info */
-    status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info, 
+    status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
                                                      &codec_param);
     pj_assert(status == PJ_SUCCESS);
-    
+
     /* Set outgoing video size */
     if (tx_size.w && tx_size.h)
         codec_param.enc_fmt.det.vid.size = tx_size;
@@ -763,12 +763,12 @@ static int main_func(int argc, char *argv[])
             pjmedia_format_copy(&vpp.vidparam.fmt, &codec_param.enc_fmt);
             vpp.vidparam.fmt.id = codec_param.dec_fmt.id;
             vpp.vidparam.dir = PJMEDIA_DIR_CAPTURE;
-            
+
             status = pjmedia_vid_port_create(pool, &vpp, &capture);
             if (status != PJ_SUCCESS)
                 goto on_exit;
         }
-        
+
         if (dir & PJMEDIA_DIR_DECODING) {
             /* Create renderer */
             status = pjmedia_vid_dev_default_param(
@@ -796,9 +796,9 @@ static int main_func(int argc, char *argv[])
 
     /* Create stream based on program arguments */
     status = create_stream(pool, med_endpt, codec_info, &codec_param,
-                           dir, rx_pt, tx_pt, local_port, &remote_addr, 
+                           dir, rx_pt, tx_pt, local_port, &remote_addr,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-                           use_srtp, &srtp_crypto_suite, 
+                           use_srtp, &srtp_crypto_suite,
                            &srtp_tx_key, &srtp_rx_key,
 #endif
                            &stream);
@@ -969,7 +969,7 @@ on_exit:
 
         tp = pjmedia_vid_stream_get_transport(stream);
         pjmedia_vid_stream_destroy(stream);
-        
+
         pjmedia_transport_media_stop(tp);
         pjmedia_transport_close(tp);
     }

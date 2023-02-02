@@ -55,7 +55,7 @@
     $result = $1_jstr;
 %}
 
-%typemap(in) std::string 
+%typemap(in) std::string
 %{ if(!$input) {
      SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
      return $null;
@@ -74,7 +74,7 @@
     jenv->DeleteLocalRef($1_strClass);
 %}
 
-%typemap(directorout) std::string 
+%typemap(directorout) std::string
 %{ if(!$input) {
      SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
      return $null;
@@ -90,7 +90,7 @@
    $result.assign((char *)$1_pBytes, $1_length);
    jenv->ReleaseByteArrayElements($1_strJbytes, $1_pBytes, JNI_ABORT);
    jenv->DeleteLocalRef($1_strJbytes);
-   jenv->DeleteLocalRef($1_strClass);       
+   jenv->DeleteLocalRef($1_strClass);
 %}
 
 %typemap(in) const std::string &
@@ -107,7 +107,7 @@
 
    if (!$1_pBytes) return $null;
    $*1_ltype $1_str((char *)$1_pBytes, $1_length);
-   $1 = &$1_str;   
+   $1 = &$1_str;
    jenv->ReleaseByteArrayElements($1_strJbytes, $1_pBytes, JNI_ABORT);
    jenv->DeleteLocalRef($1_strJbytes);
    jenv->DeleteLocalRef($1_strClass);

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2022 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/upnp.h>
 #include <pjnath/config.h>
@@ -64,7 +64,7 @@ struct igd
     pj_str_t    control_url;
     pj_str_t    public_ip;
     pj_sockaddr public_ip_addr;
-    
+
     pj_bool_t   valid;
     pj_bool_t   alive;
 };
@@ -167,7 +167,7 @@ static const char *action_get_external_ip(struct igd *igd)
 
     if (check_error_response(response))
         goto on_error;
-    
+
     /* Get the external IP address from the response. */
     public_ip = doc_get_elmt_value(response, "NewExternalIPAddress");
     if (!public_ip) {
@@ -182,7 +182,7 @@ static const char *action_get_external_ip(struct igd *igd)
 on_error:
     ixmlDocument_free(action);
     if (response) ixmlDocument_free(response);
-    
+
     return public_ip;
 }
 
@@ -221,7 +221,7 @@ static void download_igd_xml(unsigned dev_idx)
     friendly_name = doc_get_elmt_value(doc, "friendlyName");
     if (!friendly_name)
         friendly_name = "";
-    
+
     /* Get base URL. */
     base_url = doc_get_elmt_value(doc, "URLBase");
     if (!base_url)
@@ -244,7 +244,7 @@ static void download_igd_xml(unsigned dev_idx)
         {
             continue;
         }
-        
+
         /* We only want serviceType of WANIPConnection or WANPPPConnection. */
         service_type = get_node_value(service_type_node);
         if (pj_ansi_strcmp(service_type, UPNP_WANIP_SERVICE) &&
@@ -281,7 +281,7 @@ static void download_igd_xml(unsigned dev_idx)
         /* We find a valid IGD. */
         igd_dev->valid = PJ_TRUE;
         igd_dev->alive = PJ_TRUE;
-        
+
         PJ_LOG(4, (THIS_FILE, "Valid IGD:\n"
                               "\tUDN          : %s\n"
                               "\tName         : %s\n"
@@ -357,7 +357,7 @@ static void set_device_online(const char *dev_id)
 
     for (i = 0; i < upnp_mgr.igd_cnt; i++) {
         struct igd *igd = &upnp_mgr.igd_devs[i];
-        
+
         /* We are only interested in valid IGDs that we can use. */
         if (!pj_strcmp2(&igd->dev_id, dev_id) && igd->valid) {
             igd->alive = PJ_TRUE;
@@ -386,7 +386,7 @@ static void set_device_offline(const char *dev_id)
         /* We are only interested in valid IGDs that we can use. */
         if (!pj_strcmp2(&igd->dev_id, dev_id) && igd->valid) {
             igd->alive = PJ_FALSE;
- 
+
             pj_mutex_lock(upnp_mgr.mutex);
             if (i == upnp_mgr.primary_igd_idx) {
                 unsigned j;
@@ -453,7 +453,7 @@ static int client_cb(Upnp_EventType event_type, const void *event,
 
     case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE:
     {
-        const UpnpDiscovery* d_event = (const UpnpDiscovery*) event;        
+        const UpnpDiscovery* d_event = (const UpnpDiscovery*) event;
         set_device_offline(UpnpDiscovery_get_DeviceID_cstr(d_event));
         break;
     }
@@ -497,7 +497,7 @@ static int client_cb(Upnp_EventType event_type, const void *event,
                                   UpnpGetErrorMessage(err_code)));
             break;
         }
-        
+
         response = UpnpActionComplete_get_ActionResult(a_event);
         if (!response) {
             PJ_LOG(4, (THIS_FILE, "Failed to get response to delete port "
@@ -515,7 +515,7 @@ static int client_cb(Upnp_EventType event_type, const void *event,
         TRACE_("Unhandled UPnP client callback %d", event_type);
         break;
     }
-    
+
     return UPNP_E_SUCCESS;
 }
 
@@ -658,12 +658,12 @@ PJ_DEF(pj_status_t) pj_upnp_deinit(void)
 
     if (upnp_mgr.pool)
         pj_pool_release(upnp_mgr.pool);
-    
+
     pj_bzero(&upnp_mgr, sizeof(upnp_mgr));
     upnp_mgr.primary_igd_idx = -1;
 
     PJ_LOG(4, (THIS_FILE, "UPnP deinitialized"));
-    
+
     return PJ_SUCCESS;
 }
 
@@ -768,7 +768,7 @@ PJ_DECL(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
                                   "get response from",
                                   igd->dev_id.ptr,
                                   igd->public_ip.ptr, pext_port,
-                                  addr_buf, int_port_buf, upnp_err,           
+                                  addr_buf, int_port_buf, upnp_err,
                                   UpnpGetErrorMessage(upnp_err)));
             status = PJ_ETIMEDOUT;
         }
@@ -785,7 +785,7 @@ PJ_DECL(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
 
         ixmlDocument_free(action);
         if (response) ixmlDocument_free(response);
-        
+
         pj_sockaddr_cp(&mapped_addr[i], &bound_addr);
         pj_sockaddr_set_str_addr(bound_addr.addr.sa_family,
                                  &mapped_addr[i], &igd->public_ip);
@@ -800,7 +800,7 @@ PJ_DECL(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
                               igd->public_ip.ptr, pext_port,
                               addr_buf, int_port_buf));
     }
-    
+
     return PJ_SUCCESS;
 
 on_error:
@@ -829,7 +829,7 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
 
     if (!upnp_mgr.initialized)
         return PJ_EINVALIDOP;
-    
+
     /* Need to lock in case the device becomes offline at the same time. */
     pj_mutex_lock(upnp_mgr.mutex);
     if (upnp_mgr.primary_igd_idx < 0) {
@@ -860,14 +860,14 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
             }
         }
     }
-    
+
     if (!igd) {
         /* Either the IGD we previously requested to add port mapping has become
          * offline, or the address is actually not a valid.
          */
         PJ_LOG(3, (THIS_FILE, "The IGD is offline or invalid mapped address"));
         return PJ_EGONE;
-    } 
+    }
 
     ext_port = pj_sockaddr_get_port(mapped_addr);
     if (ext_port == 0) {
@@ -904,9 +904,9 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
                               UpnpGetErrorMessage(upnp_err)));
         status = PJ_EINVALIDOP;
     }
-    
+
     ixmlDocument_free(action);
-    
+
     return status;
 }
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/l16.h>
 #include <pjmedia/codec.h>
@@ -45,27 +45,27 @@ static const pj_str_t STR_L16 = { "L16", 3 };
 
 
 /* Prototypes for L16 factory */
-static pj_status_t l16_test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t l16_test_alloc( pjmedia_codec_factory *factory,
                                     const pjmedia_codec_info *id );
-static pj_status_t l16_default_attr( pjmedia_codec_factory *factory, 
-                                      const pjmedia_codec_info *id, 
+static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
+                                      const pjmedia_codec_info *id,
                                       pjmedia_codec_param *attr );
-static pj_status_t l16_enum_codecs (pjmedia_codec_factory *factory, 
-                                     unsigned *count, 
+static pj_status_t l16_enum_codecs (pjmedia_codec_factory *factory,
+                                     unsigned *count,
                                      pjmedia_codec_info codecs[]);
-static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory, 
-                                     const pjmedia_codec_info *id, 
+static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
+                                     const pjmedia_codec_info *id,
                                      pjmedia_codec **p_codec);
-static pj_status_t l16_dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t l16_dealloc_codec( pjmedia_codec_factory *factory,
                                        pjmedia_codec *codec );
 
 /* Prototypes for L16 implementation. */
-static pj_status_t  l16_init( pjmedia_codec *codec, 
+static pj_status_t  l16_init( pjmedia_codec *codec,
                                pj_pool_t *pool );
-static pj_status_t  l16_open( pjmedia_codec *codec, 
+static pj_status_t  l16_open( pjmedia_codec *codec,
                               pjmedia_codec_param *attr );
 static pj_status_t  l16_close( pjmedia_codec *codec );
-static pj_status_t  l16_modify(pjmedia_codec *codec, 
+static pj_status_t  l16_modify(pjmedia_codec *codec,
                                const pjmedia_codec_param *attr );
 static pj_status_t  l16_parse(pjmedia_codec *codec,
                               void *pkt,
@@ -73,13 +73,13 @@ static pj_status_t  l16_parse(pjmedia_codec *codec,
                               const pj_timestamp *ts,
                               unsigned *frame_cnt,
                               pjmedia_frame frames[]);
-static pj_status_t  l16_encode( pjmedia_codec *codec, 
+static pj_status_t  l16_encode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output);
-static pj_status_t  l16_decode( pjmedia_codec *codec, 
+static pj_status_t  l16_decode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output);
 #if !PLC_DISABLED
 static pj_status_t  l16_recover(pjmedia_codec *codec,
@@ -88,7 +88,7 @@ static pj_status_t  l16_recover(pjmedia_codec *codec,
 #endif
 
 /* Definition for L16 codec operations. */
-static pjmedia_codec_op l16_op = 
+static pjmedia_codec_op l16_op =
 {
     &l16_init,
     &l16_open,
@@ -169,7 +169,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_init(pjmedia_endpt *endpt,
         return PJ_ENOMEM;
 
     /* Create mutex. */
-    status = pj_mutex_create_simple(l16_factory.pool, "l16", 
+    status = pj_mutex_create_simple(l16_factory.pool, "l16",
                                     &l16_factory.mutex);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -181,7 +181,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_init(pjmedia_endpt *endpt,
     }
 
     /* Register codec factory to endpoint. */
-    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+    status = pjmedia_codec_mgr_register_factory(codec_mgr,
                                                 &l16_factory.base);
     if (status != PJ_SUCCESS)
         return status;
@@ -241,7 +241,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_deinit(void)
     return status;
 }
 
-static pj_status_t l16_test_alloc(pjmedia_codec_factory *factory, 
+static pj_status_t l16_test_alloc(pjmedia_codec_factory *factory,
                                   const pjmedia_codec_info *id )
 {
     PJ_UNUSED_ARG(factory);
@@ -254,8 +254,8 @@ static pj_status_t l16_test_alloc(pjmedia_codec_factory *factory,
     return -1;
 }
 
-static pj_status_t l16_default_attr( pjmedia_codec_factory *factory, 
-                                     const pjmedia_codec_info *id, 
+static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
+                                     const pjmedia_codec_info *id,
                                      pjmedia_codec_param *attr )
 {
     PJ_UNUSED_ARG(factory);
@@ -283,8 +283,8 @@ static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
     return PJ_SUCCESS;
 }
 
-static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory, 
-                                    unsigned *max_count, 
+static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
+                                    unsigned *max_count,
                                     pjmedia_codec_info codecs[])
 {
     unsigned count = 0;
@@ -456,7 +456,7 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
     return PJ_SUCCESS;
 }
 
-static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
                                     const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec)
 {
@@ -488,8 +488,8 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
 
 #if !PLC_DISABLED
     /* Create PLC */
-    status = pjmedia_plc_create(pool, id->clock_rate, 
-                                data->frame_size >> 1, 0, 
+    status = pjmedia_plc_create(pool, id->clock_rate,
+                                data->frame_size >> 1, 0,
                                 &data->plc);
     if (status != PJ_SUCCESS) {
         pj_mutex_unlock(l16_factory.mutex);
@@ -498,7 +498,7 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
 #endif
 
     /* Create silence detector */
-    status = pjmedia_silence_det_create(pool, id->clock_rate, 
+    status = pjmedia_silence_det_create(pool, id->clock_rate,
                                         data->frame_size >> 1,
                                         &data->vad);
     if (status != PJ_SUCCESS) {
@@ -514,7 +514,7 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
     return PJ_SUCCESS;
 }
 
-static pj_status_t l16_dealloc_codec(pjmedia_codec_factory *factory, 
+static pj_status_t l16_dealloc_codec(pjmedia_codec_factory *factory,
                                      pjmedia_codec *codec )
 {
     struct l16_data *data;
@@ -545,11 +545,11 @@ static pj_status_t l16_init( pjmedia_codec *codec, pj_pool_t *pool )
     return PJ_SUCCESS;
 }
 
-static pj_status_t l16_open(pjmedia_codec *codec, 
+static pj_status_t l16_open(pjmedia_codec *codec,
                             pjmedia_codec_param *attr )
 {
     struct l16_data *data = NULL;
-    
+
     PJ_ASSERT_RETURN(codec && codec->codec_data && attr, PJ_EINVAL);
 
     data = (struct l16_data*) codec->codec_data;
@@ -569,7 +569,7 @@ static pj_status_t l16_close( pjmedia_codec *codec )
     return PJ_SUCCESS;
 }
 
-static pj_status_t  l16_modify(pjmedia_codec *codec, 
+static pj_status_t  l16_modify(pjmedia_codec *codec,
                                const pjmedia_codec_param *attr )
 {
     struct l16_data *data = (struct l16_data*) codec->codec_data;
@@ -613,15 +613,15 @@ static pj_status_t  l16_parse( pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-static pj_status_t l16_encode(pjmedia_codec *codec, 
+static pj_status_t l16_encode(pjmedia_codec *codec,
                               const struct pjmedia_frame *input,
-                              unsigned output_buf_len, 
+                              unsigned output_buf_len,
                               struct pjmedia_frame *output)
 {
     struct l16_data *data = (struct l16_data*) codec->codec_data;
     const pj_int16_t *samp = (const pj_int16_t*) input->buf;
     const pj_int16_t *samp_end = samp + input->size/sizeof(pj_int16_t);
-    pj_int16_t *samp_out = (pj_int16_t*) output->buf;    
+    pj_int16_t *samp_out = (pj_int16_t*) output->buf;
 
     pj_assert(data && input && output);
 
@@ -634,10 +634,10 @@ static pj_status_t l16_encode(pjmedia_codec *codec,
         pj_bool_t is_silence;
         pj_int32_t silence_duration;
 
-        silence_duration = pj_timestamp_diff32(&data->last_tx, 
+        silence_duration = pj_timestamp_diff32(&data->last_tx,
                                                &input->timestamp);
 
-        is_silence = pjmedia_silence_det_detect(data->vad, 
+        is_silence = pjmedia_silence_det_detect(data->vad,
                                                 (const pj_int16_t*) input->buf,
                                                 (input->size >> 1),
                                                 NULL);
@@ -673,15 +673,15 @@ static pj_status_t l16_encode(pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-static pj_status_t l16_decode(pjmedia_codec *codec, 
+static pj_status_t l16_decode(pjmedia_codec *codec,
                               const struct pjmedia_frame *input,
-                              unsigned output_buf_len, 
+                              unsigned output_buf_len,
                               struct pjmedia_frame *output)
 {
     struct l16_data *l16_data = (struct l16_data*) codec->codec_data;
     const pj_int16_t *samp = (const pj_int16_t*) input->buf;
     const pj_int16_t *samp_end = samp + input->size/sizeof(pj_int16_t);
-    pj_int16_t *samp_out = (pj_int16_t*) output->buf;    
+    pj_int16_t *samp_out = (pj_int16_t*) output->buf;
 
     pj_assert(l16_data != NULL);
     PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
@@ -725,7 +725,7 @@ static pj_status_t  l16_recover(pjmedia_codec *codec,
 
     PJ_ASSERT_RETURN(data->plc_enabled, PJ_EINVALIDOP);
 
-    PJ_ASSERT_RETURN(output_buf_len >= data->frame_size, 
+    PJ_ASSERT_RETURN(output_buf_len >= data->frame_size,
                      PJMEDIA_CODEC_EPCMTOOSHORT);
 
     pjmedia_plc_generate(data->plc, (pj_int16_t*)output->buf);

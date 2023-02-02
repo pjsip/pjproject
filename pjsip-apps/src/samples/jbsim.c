@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /* jbsim:
@@ -76,7 +76,7 @@ struct stream
     pjmedia_port        *port;
 
     /*
-     * Running states: 
+     * Running states:
      */
     union {
         /* TX stream state */
@@ -86,7 +86,7 @@ struct stream
             int         total_lost;     /* # of dropped pkts so far */
             unsigned    cur_lost_burst; /* current # of lost bursts */
             unsigned    drop_prob;      /* drop probability value   */
-                                        
+
         } tx;
 
         /* RX stream state */
@@ -96,8 +96,8 @@ struct stream
     } state;
 };
 
-/* 
- * Logging 
+/*
+ * Logging
  */
 
 /* Events names */
@@ -318,7 +318,7 @@ static pj_status_t stream_init(const struct stream_cfg *cfg, struct stream **p_s
     pool = pj_pool_create(&g_app.cp.factory, cfg->name, 512, 512, NULL);
     stream = PJ_POOL_ZALLOC_T(pool, struct stream);
     stream->pool = pool;
-    
+
     /* Create stream info */
     pj_bzero(&si, sizeof(si));
     si.type = PJMEDIA_TYPE_AUDIO;
@@ -451,7 +451,7 @@ static pj_status_t test_init(void)
 
     /* Log file */
     if (g_app.cfg.log_file) {
-        status = pj_file_open(g_app.pool, g_app.cfg.log_file, 
+        status = pj_file_open(g_app.pool, g_app.cfg.log_file,
                               PJ_O_WRONLY,
                               &g_app.log_fd);
         if (status != PJ_SUCCESS) {
@@ -463,7 +463,7 @@ static pj_status_t test_init(void)
         pj_log_set_log_func(&log_cb);
     }
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -499,11 +499,11 @@ static pj_status_t test_init(void)
     strm_cfg.dtx = g_app.cfg.tx_dtx;
     strm_cfg.plc = PJ_TRUE;
     status = stream_init(&strm_cfg, &g_app.tx);
-    if (status != PJ_SUCCESS) 
+    if (status != PJ_SUCCESS)
         goto on_error;
 
     /* Create transmitter WAV */
-    status = pjmedia_wav_player_port_create(g_app.pool, 
+    status = pjmedia_wav_player_port_create(g_app.pool,
                                             g_app.cfg.tx_wav_in,
                                             g_app.cfg.tx_ptime,
                                             0,
@@ -533,11 +533,11 @@ static pj_status_t test_init(void)
     strm_cfg.dtx = PJ_TRUE;
     strm_cfg.plc = g_app.cfg.rx_plc;
     status = stream_init(&strm_cfg, &g_app.rx);
-    if (status != PJ_SUCCESS) 
+    if (status != PJ_SUCCESS)
         goto on_error;
 
     /* Create receiver WAV */
-    status = pjmedia_wav_writer_port_create(g_app.pool, 
+    status = pjmedia_wav_writer_port_create(g_app.pool,
                                             g_app.cfg.rx_wav_out,
                                             PJMEDIA_PIA_SRATE(&g_app.rx->port->info),
                                             PJMEDIA_PIA_CCNT(&g_app.rx->port->info),
@@ -580,7 +580,7 @@ static void run_one_frame(pjmedia_port *src, pjmedia_port *dst,
     frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame.buf = g_app.framebuf;
     frame.size = PJMEDIA_PIA_SPF(&dst->info) * 2;
-    
+
     status = pjmedia_port_get_frame(src, &frame);
     pj_assert(status == PJ_SUCCESS);
 
@@ -610,7 +610,7 @@ static void tx_tick(const pj_time_val *t)
     struct stream *strm = g_app.tx;
     static char log_msg[120];
     pjmedia_port *port = g_app.tx->port;
-    long pkt_interval; 
+    long pkt_interval;
 
     /* packet interval, without jitter */
     pkt_interval = PJMEDIA_PIA_SPF(&port->info) * 1000 /
@@ -625,8 +625,8 @@ static void tx_tick(const pj_time_val *t)
         pj_bzero(&entry, sizeof(entry));
         entry.wall_clock = *t;
 
-        /* 
-         * Determine whether to drop this packet 
+        /*
+         * Determine whether to drop this packet
          */
         if (strm->state.tx.cur_lost_burst) {
             /* We are currently dropping packet */
@@ -637,10 +637,10 @@ static void tx_tick(const pj_time_val *t)
             }
 
             /* Correlate the next packet loss */
-            if (!drop_this_pkt && 
+            if (!drop_this_pkt &&
                 strm->state.tx.cur_lost_burst < g_app.cfg.tx_max_lost_burst &&
                 MAX(strm->state.tx.total_lost-LOSS_EXTRA,0) * 100 / MAX(strm->state.tx.total_tx,1) < g_app.cfg.tx_pct_avg_lost
-               ) 
+               )
             {
                 strm->state.tx.drop_prob = ((g_app.cfg.tx_pct_loss_corr * strm->state.tx.drop_prob) +
                                              ((100-g_app.cfg.tx_pct_loss_corr) * (pj_rand()%100))
@@ -740,7 +740,7 @@ static void tx_tick(const pj_time_val *t)
 
         pj_time_val_normalize(&strm->state.tx.next_schedule);
 
-        sprintf(log_msg, "** Packet #%u tick is at %d.%03d, %d ms jitter applied **", 
+        sprintf(log_msg, "** Packet #%u tick is at %d.%03d, %d ms jitter applied **",
                 strm->state.tx.total_tx+1,
                 (int)strm->state.tx.next_schedule.sec, (int)strm->state.tx.next_schedule.msec,
                 jitter);
@@ -818,7 +818,7 @@ static void rx_tick(const pj_time_val *t)
         strm->state.rx.next_schedule.msec += pkt_interval;
         pj_time_val_normalize(&strm->state.rx.next_schedule);
     }
-            
+
 }
 
 static void test_loop(long duration)
@@ -858,7 +858,7 @@ enum {
     OPT_RX_PTIME    = 'r',
     OPT_NO_VAD      = 'U',
     OPT_NO_PLC      = 'p',
-    OPT_JB_PREFETCH = 'P', 
+    OPT_JB_PREFETCH = 'P',
     OPT_JB_MIN_PRE  = 'm',
     OPT_JB_MAX_PRE  = 'M',
     OPT_JB_MAX      = 'X',
@@ -995,8 +995,8 @@ static int init_options(int argc, char *argv[])
 
     /* Parse options */
     pj_optind = 0;
-    while((c=pj_getopt_long(argc,argv, format, 
-                            long_options, &option_index))!=-1) 
+    while((c=pj_getopt_long(argc,argv, format,
+                            long_options, &option_index))!=-1)
     {
         switch (c) {
         case OPT_CODEC:
@@ -1121,7 +1121,7 @@ int main(int argc, char *argv[])
               g_app.cfg.tx_min_lost_burst,
               g_app.cfg.tx_max_lost_burst));
     PJ_LOG(3,(THIS_FILE, " TX jitter min=%dms, max=%dms",
-              g_app.cfg.tx_min_jitter, 
+              g_app.cfg.tx_min_jitter,
               g_app.cfg.tx_max_jitter));
     PJ_LOG(3,(THIS_FILE, " RX jb init:%dms, min_pre=%dms, max_pre=%dms, max=%dms",
               g_app.cfg.rx_jb_init,

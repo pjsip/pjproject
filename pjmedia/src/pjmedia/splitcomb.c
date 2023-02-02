@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/splitcomb.h>
 #include <pjmedia/delaybuf.h>
@@ -49,7 +49,7 @@
 #define OP_GET              (-1)
 
 
-/* 
+/*
  * Media flow directions:
  *
  *             put_frame() +-----+
@@ -60,14 +60,14 @@
  */
 enum sc_dir
 {
-    /* This is the media direction from the splitcomb to the 
+    /* This is the media direction from the splitcomb to the
      * downstream port(s), which happens when:
      *  - put_frame() is called to the splitcomb
      *  - get_frame() is called to the reverse channel port.
      */
     DIR_DOWNSTREAM,
 
-    /* This is the media direction from the downstream port to 
+    /* This is the media direction from the downstream port to
      * the splitcomb, which happens when:
      *  - get_frame() is called to the splitcomb
      *  - put_frame() is called to the reverse channel port.
@@ -111,7 +111,7 @@ struct reverse_port
     unsigned         ch_num;
 
     /* Maximum burst before media flow is suspended.
-     * With reverse port, it's possible that either end of the 
+     * With reverse port, it's possible that either end of the
      * port doesn't actually process the media flow (meaning, it
      * stops calling get_frame()/put_frame()). When this happens,
      * the other end will encounter excessive underflow or overflow,
@@ -141,7 +141,7 @@ struct reverse_port
     unsigned         max_null_frames;
 
     /* A reverse port need a temporary buffer to store frames
-     * (because of the different phase, see splitcomb.h for details). 
+     * (because of the different phase, see splitcomb.h for details).
      * Since we can not expect get_frame() and put_frame() to be
      * called evenly one after another, we use delay buffers to
      * accomodate the burst.
@@ -169,7 +169,7 @@ struct reverse_port
         pj_timestamp    ts;
 
         /* Number of NULL frames transmitted to this port so far.
-         * NULL frame indicate that nothing is transmitted, and 
+         * NULL frame indicate that nothing is transmitted, and
          * once we get too many of this, we should pause the media
          * flow to reduce processing.
          */
@@ -187,15 +187,15 @@ struct reverse_port
 /*
  * Prototypes.
  */
-static pj_status_t put_frame(pjmedia_port *this_port, 
+static pj_status_t put_frame(pjmedia_port *this_port,
                              pjmedia_frame *frame);
-static pj_status_t get_frame(pjmedia_port *this_port, 
+static pj_status_t get_frame(pjmedia_port *this_port,
                              pjmedia_frame *frame);
 static pj_status_t on_destroy(pjmedia_port *this_port);
 
-static pj_status_t rport_put_frame(pjmedia_port *this_port, 
+static pj_status_t rport_put_frame(pjmedia_port *this_port,
                                    pjmedia_frame *frame);
-static pj_status_t rport_get_frame(pjmedia_port *this_port, 
+static pj_status_t rport_get_frame(pjmedia_port *this_port,
                                    pjmedia_frame *frame);
 static pj_status_t rport_on_destroy(pjmedia_port *this_port);
 
@@ -230,13 +230,13 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
 
     /* Create temporary buffers */
     sc->get_buf = (TMP_SAMP_TYPE*)
-                  pj_pool_alloc(pool, samples_per_frame * 
+                  pj_pool_alloc(pool, samples_per_frame *
                                       sizeof(TMP_SAMP_TYPE) /
                                       channel_count);
     PJ_ASSERT_RETURN(sc->get_buf, PJ_ENOMEM);
 
     sc->put_buf = (TMP_SAMP_TYPE*)
-                  pj_pool_alloc(pool, samples_per_frame * 
+                  pj_pool_alloc(pool, samples_per_frame *
                                       sizeof(TMP_SAMP_TYPE) /
                                       channel_count);
     PJ_ASSERT_RETURN(sc->put_buf, PJ_ENOMEM);
@@ -334,7 +334,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 
     /* Initialize port info... */
     port = &rport->base;
-    pjmedia_port_info_init(&port->info, &name, SIGNATURE_PORT, 
+    pjmedia_port_info_init(&port->info, &name, SIGNATURE_PORT,
                            sc_afd->clock_rate, 1,
                            sc_afd->bits_per_sample,
                            PJMEDIA_PIA_SPF(&splitcomb->info) /
@@ -399,8 +399,8 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 }
 
 
-/* 
- * Extract one mono frame from a multichannel frame. 
+/*
+ * Extract one mono frame from a multichannel frame.
  */
 static void extract_mono_frame( const pj_int16_t *in,
                                 pj_int16_t *out,
@@ -418,8 +418,8 @@ static void extract_mono_frame( const pj_int16_t *in,
 }
 
 
-/* 
- * Put one mono frame into a multichannel frame 
+/*
+ * Put one mono frame into a multichannel frame
  */
 static void store_mono_frame( const pj_int16_t *in,
                               pj_int16_t *out,
@@ -458,8 +458,8 @@ static void op_update(struct reverse_port *rport, int dir, int op)
             /* Level has fallen below max level, we can resume
              * media flow.
              */
-            PJ_LOG(5,(rport->base.info.name.ptr, 
-                      "Resuming media flow on %s direction (level=%d)", 
+            PJ_LOG(5,(rport->base.info.name.ptr,
+                      "Resuming media flow on %s direction (level=%d)",
                       dir_name[dir], rport->buf[dir].level));
             rport->buf[dir].level = 0;
             rport->buf[dir].paused = PJ_FALSE;
@@ -471,14 +471,14 @@ static void op_update(struct reverse_port *rport, int dir, int op)
         }
     } else {
         if (rport->buf[dir].level >= rport->max_burst ||
-            rport->buf[dir].level <= -rport->max_burst) 
+            rport->buf[dir].level <= -rport->max_burst)
         {
             /* Level has reached maximum level, the other side of
              * rport is not sending/retrieving frames. Pause the
              * rport on this direction.
              */
-            PJ_LOG(5,(rport->base.info.name.ptr, 
-                      "Pausing media flow on %s direction (level=%d)", 
+            PJ_LOG(5,(rport->base.info.name.ptr,
+                      "Pausing media flow on %s direction (level=%d)",
                       dir_name[dir], rport->buf[dir].level));
             rport->buf[dir].paused = PJ_TRUE;
         }
@@ -487,11 +487,11 @@ static void op_update(struct reverse_port *rport, int dir, int op)
 
 
 /*
- * "Write" a multichannel frame downstream. This would split 
- * the multichannel frame into individual mono channel, and write 
+ * "Write" a multichannel frame downstream. This would split
+ * the multichannel frame into individual mono channel, and write
  * it to the appropriate port.
  */
-static pj_status_t put_frame(pjmedia_port *this_port, 
+static pj_status_t put_frame(pjmedia_port *this_port,
                              pjmedia_frame *frame)
 {
     struct splitcomb *sc = (struct splitcomb*) this_port;
@@ -514,18 +514,18 @@ static pj_status_t put_frame(pjmedia_port *this_port,
                  * media be suspended.
                  */
 
-                if (++rport->buf[DIR_DOWNSTREAM].null_cnt > 
-                        rport->max_null_frames) 
+                if (++rport->buf[DIR_DOWNSTREAM].null_cnt >
+                        rport->max_null_frames)
                 {
                     /* Prevent the counter from overflowing and resetting
                      * back to zero
                      */
-                    rport->buf[DIR_DOWNSTREAM].null_cnt = 
+                    rport->buf[DIR_DOWNSTREAM].null_cnt =
                         rport->max_null_frames + 1;
                     continue;
                 }
 
-                /* Write zero port to delaybuf so that it doesn't underflow. 
+                /* Write zero port to delaybuf so that it doesn't underflow.
                  * If we don't do this, get_frame() on this direction will
                  * cause delaybuf to generate missing frame and the last
                  * frame transmitted to delaybuf will be replayed multiple
@@ -540,7 +540,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
                     continue;
 
                 /* Generate zero frame. */
-                pjmedia_zero_samples(sc->put_buf, 
+                pjmedia_zero_samples(sc->put_buf,
                                      PJMEDIA_PIA_SPF(&port->info));
 
                 /* Put frame to delay buffer */
@@ -558,8 +558,8 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     PJ_ASSERT_RETURN(frame->size == PJMEDIA_PIA_AVG_FSZ(&this_port->info),
                      PJ_EINVAL);
 
-    /* 
-     * Write mono frame into each channels 
+    /*
+     * Write mono frame into each channels
      */
     for (ch=0; ch < PJMEDIA_PIA_CCNT(&this_port->info); ++ch) {
         pjmedia_port *port = sc->port_desc[ch].port;
@@ -568,9 +568,9 @@ static pj_status_t put_frame(pjmedia_port *this_port,
             continue;
 
         /* Extract the mono frame to temporary buffer */
-        extract_mono_frame((const pj_int16_t*)frame->buf, sc->put_buf, ch, 
+        extract_mono_frame((const pj_int16_t*)frame->buf, sc->put_buf, ch,
                            PJMEDIA_PIA_CCNT(&this_port->info),
-                           (unsigned)frame->size * 8 / 
+                           (unsigned)frame->size * 8 /
                              PJMEDIA_PIA_BITS(&this_port->info) /
                              PJMEDIA_PIA_CCNT(&this_port->info));
 
@@ -597,7 +597,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
             op_update(rport, DIR_DOWNSTREAM, OP_PUT);
 
             if (!rport->buf[DIR_DOWNSTREAM].paused) {
-                pjmedia_delay_buf_put(rport->buf[DIR_DOWNSTREAM].dbuf, 
+                pjmedia_delay_buf_put(rport->buf[DIR_DOWNSTREAM].dbuf,
                                       sc->put_buf);
             }
         }
@@ -612,7 +612,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
  * This will get mono channel frame from each port and put the
  * mono frame into the multichannel frame.
  */
-static pj_status_t get_frame(pjmedia_port *this_port, 
+static pj_status_t get_frame(pjmedia_port *this_port,
                              pjmedia_frame *frame)
 {
     struct splitcomb *sc = (struct splitcomb*) this_port;
@@ -626,7 +626,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         pj_status_t status;
 
         if (!port) {
-            pjmedia_zero_samples(sc->get_buf, 
+            pjmedia_zero_samples(sc->get_buf,
                                  PJMEDIA_PIA_SPF(&this_port->info) /
                                   PJMEDIA_PIA_CCNT(&this_port->info));
 
@@ -637,10 +637,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             mono_frame.timestamp.u64 = frame->timestamp.u64;
 
             status = pjmedia_port_get_frame(port, &mono_frame);
-            if (status != PJ_SUCCESS || 
+            if (status != PJ_SUCCESS ||
                 mono_frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
             {
-                pjmedia_zero_samples(sc->get_buf, 
+                pjmedia_zero_samples(sc->get_buf,
                                      PJMEDIA_PIA_SPF(&port->info));
             }
 
@@ -654,11 +654,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             op_update(rport, DIR_UPSTREAM, OP_GET);
 
             if (!rport->buf[DIR_UPSTREAM].paused) {
-                pjmedia_delay_buf_get(rport->buf[DIR_UPSTREAM].dbuf, 
+                pjmedia_delay_buf_get(rport->buf[DIR_UPSTREAM].dbuf,
                                       sc->get_buf);
 
             } else {
-                pjmedia_zero_samples(sc->get_buf, 
+                pjmedia_zero_samples(sc->get_buf,
                                      PJMEDIA_PIA_SPF(&port->info));
             }
 
@@ -666,7 +666,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         }
 
         /* Combine the mono frame into multichannel frame */
-        store_mono_frame(sc->get_buf, 
+        store_mono_frame(sc->get_buf,
                          (pj_int16_t*)frame->buf, ch,
                          PJMEDIA_PIA_CCNT(&this_port->info),
                          PJMEDIA_PIA_SPF(&this_port->info) /
@@ -701,7 +701,7 @@ static pj_status_t on_destroy(pjmedia_port *this_port)
  * Put a frame in the reverse port (upstream direction). This frame
  * will be picked up by get_frame() above.
  */
-static pj_status_t rport_put_frame(pjmedia_port *this_port, 
+static pj_status_t rport_put_frame(pjmedia_port *this_port,
                                    pjmedia_frame *frame)
 {
     struct reverse_port *rport = (struct reverse_port*) this_port;
@@ -715,14 +715,14 @@ static pj_status_t rport_put_frame(pjmedia_port *this_port,
          * media be suspended.
          */
         if (++rport->buf[DIR_UPSTREAM].null_cnt > rport->max_null_frames) {
-            /* Prevent the counter from overflowing and resetting back 
+            /* Prevent the counter from overflowing and resetting back
              * to zero
              */
             rport->buf[DIR_UPSTREAM].null_cnt = rport->max_null_frames + 1;
             return PJ_SUCCESS;
         }
 
-        /* Write zero port to delaybuf so that it doesn't underflow. 
+        /* Write zero port to delaybuf so that it doesn't underflow.
          * If we don't do this, get_frame() on this direction will
          * cause delaybuf to generate missing frame and the last
          * frame transmitted to delaybuf will be replayed multiple
@@ -737,11 +737,11 @@ static pj_status_t rport_put_frame(pjmedia_port *this_port,
             return PJ_SUCCESS;
 
         /* Generate zero frame. */
-        pjmedia_zero_samples(rport->tmp_up_buf, 
+        pjmedia_zero_samples(rport->tmp_up_buf,
                              PJMEDIA_PIA_SPF(&this_port->info));
 
         /* Put frame to delay buffer */
-        return pjmedia_delay_buf_put(rport->buf[DIR_UPSTREAM].dbuf, 
+        return pjmedia_delay_buf_put(rport->buf[DIR_UPSTREAM].dbuf,
                                      rport->tmp_up_buf);
     }
 
@@ -766,7 +766,7 @@ static pj_status_t rport_put_frame(pjmedia_port *this_port,
                          PJMEDIA_PIA_SPF(&this_port->info));
 
     /* Put frame to delay buffer */
-    return pjmedia_delay_buf_put(rport->buf[DIR_UPSTREAM].dbuf, 
+    return pjmedia_delay_buf_put(rport->buf[DIR_UPSTREAM].dbuf,
                                  rport->tmp_up_buf);
 }
 
@@ -774,7 +774,7 @@ static pj_status_t rport_put_frame(pjmedia_port *this_port,
 /* Get a mono frame from a reversed phase channel (downstream direction).
  * The frame is put by put_frame() call to the splitcomb.
  */
-static pj_status_t rport_get_frame(pjmedia_port *this_port, 
+static pj_status_t rport_get_frame(pjmedia_port *this_port,
                                    pjmedia_frame *frame)
 {
     struct reverse_port *rport = (struct reverse_port*) this_port;
@@ -795,7 +795,7 @@ static pj_status_t rport_get_frame(pjmedia_port *this_port,
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->timestamp.u64 = rport->buf[DIR_DOWNSTREAM].ts.u64;
 
-    return pjmedia_delay_buf_get(rport->buf[DIR_DOWNSTREAM].dbuf, 
+    return pjmedia_delay_buf_get(rport->buf[DIR_DOWNSTREAM].dbuf,
                                  (short*)frame->buf);
 }
 

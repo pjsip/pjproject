@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_multipart.h>
 #include <pjsip/sip_parser.h>
@@ -90,7 +90,7 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
             *p++ = '\n';
 
             if (!ctype_printed && hdr->type == PJSIP_H_CONTENT_TYPE)
-                ctype_printed = PJ_TRUE;            
+                ctype_printed = PJ_TRUE;
 
             hdr = hdr->next;
         }
@@ -98,7 +98,7 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
         /* Automaticly adds Content-Type and Content-Length headers, only
          * if content_type is set in the message body and haven't been printed.
          */
-        if (part->body && part->body->content_type.type.slen && !ctype_printed) 
+        if (part->body && part->body->content_type.type.slen && !ctype_printed)
         {
             pj_str_t ctype_hdr = { "Content-Type: ", 14};
             const pjsip_media_type *media = &part->body->content_type;
@@ -674,7 +674,7 @@ static pjsip_multipart_part *parse_multipart_part(pj_pool_t *pool,
         pjsip_hdr *hdr;
         pj_status_t status;
 
-        status = pjsip_parse_headers(pool, start, end_hdr-start, 
+        status = pjsip_parse_headers(pool, start, end_hdr-start,
                                      &part->hdr, 0);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(2,(THIS_FILE, status, "Warning: error parsing multipart"

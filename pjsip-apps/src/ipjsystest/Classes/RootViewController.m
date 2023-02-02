@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #import "RootViewController.h"
 #import "gui.h"
@@ -38,7 +38,7 @@ gui_menu                *gmenu;
 int                     section;
 int                     row;
 const char              *ctitle;
-const char              *cmsg; 
+const char              *cmsg;
 enum gui_flag           cflag;
 
 pj_status_t gui_init(gui_menu *menu)
@@ -67,7 +67,7 @@ pj_status_t gui_start(gui_menu *menu)
         [view.menus addObject:smenu];
     }
     gmenu = menu;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -83,15 +83,15 @@ enum gui_key gui_msgbox(const char *title, const char *message, enum gui_flag fl
     cmsg = message;
     cflag = flag;
     [view performSelectorOnMainThread:@selector(showMsg) withObject:nil waitUntilDone:YES];
-    
+
     view.testView.key = 0;
     while(view.testView.key == 0) {
-        /* Let the main thread do its job (refresh the view) while we wait for 
+        /* Let the main thread do its job (refresh the view) while we wait for
          * user interaction (button click)
          */
         [NSThread sleepForTimeInterval:SLEEP_INTERVAL];
     }
-    
+
     if (view.testView.key == 1)
         return KEY_OK;
     else
@@ -106,9 +106,9 @@ void gui_sleep(unsigned sec)
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    
+
     view = self;
-    
+
     /* Get a writable path for output files */
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths objectAtIndex:0];
@@ -119,7 +119,7 @@ void gui_sleep(unsigned sec)
     NSString *resPath = [[NSBundle mainBundle] resourcePath];
     [resPath getCString:res_path maxLength:PATH_LENGTH encoding:NSASCIIStringEncoding];
     strncat(res_path, "/", PATH_LENGTH);
-    
+
     systest_initialized = false;
     thread_quit = false;
     [NSThread detachNewThreadSelector:@selector(startTest) toTarget:self withObject:nil];
@@ -164,7 +164,7 @@ void gui_sleep(unsigned sec)
 - (void)didReceiveMemoryWarning {
     // Releases the view if it doesn't have a superview.
     [super didReceiveMemoryWarning];
-    
+
     // Release any cached data, images, etc that aren't in use.
 }
 
@@ -173,7 +173,7 @@ void gui_sleep(unsigned sec)
     // e.g. self.myOutlet = nil;
     self.titles = nil;
     self.menus = nil;
-    
+
     thread_quit = true;
     [NSThread sleepForTimeInterval:SLEEP_INTERVAL];
 }
@@ -200,17 +200,17 @@ void gui_sleep(unsigned sec)
 
 // Customize the appearance of table view cells.
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    
+
     static NSString *CellIdentifier = @"Cell";
-    
+
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
     if (cell == nil) {
         cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
     }
-    
+
     // Configure the cell.
     cell.textLabel.text = [[menus objectAtIndex:indexPath.section] objectAtIndex:indexPath.row];
-    
+
     return cell;
 }
 
@@ -220,9 +220,9 @@ void gui_sleep(unsigned sec)
         [pool release];
         return;
     }
-    
+
     systest_run();
-    
+
     systest_initialized = 1;
     while(!thread_quit) {
         section = -1;
@@ -233,7 +233,7 @@ void gui_sleep(unsigned sec)
         cmsg = NULL;
         [view performSelectorOnMainThread:@selector(showMsg) withObject:nil waitUntilDone:YES];
     }
-    
+
     systest_deinit();
     [pool release];
 }
@@ -249,7 +249,7 @@ void gui_sleep(unsigned sec)
     self.testView.title = [NSString stringWithFormat:@"%s", ctitle];
     self.testView.testDesc.text = [self.testView.testDesc.text stringByAppendingString: [NSString stringWithFormat:@"%s\n\n", cmsg]];
     [self.testView.testDesc scrollRangeToVisible:NSMakeRange([self.testView.testDesc.text length] - 1, 1)];
-    
+
     [self.testView.button1 setHidden:false];
     [self.testView.button2 setHidden:false];
     if (cflag == WITH_YESNO) {
@@ -267,16 +267,16 @@ void gui_sleep(unsigned sec)
 
 // Override to support row selection in the table view.
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    
+
     // Navigation logic may go here -- for example, create and push another view controller.
     // AnotherViewController *anotherViewController = [[AnotherViewController alloc] initWithNibName:@"AnotherView" bundle:nil];
     // [self.navigationController pushViewController:anotherViewController animated:YES];
     // [anotherViewController release];
-    
+
     if (self.testView == nil) {
         self.testView = [[TestViewController alloc] initWithNibName:@"TestViewController" bundle:[NSBundle mainBundle]];
     }
-    
+
     [self.navigationController pushViewController:self.testView animated:YES];
     self.testView.title = [[menus objectAtIndex:indexPath.section] objectAtIndex:indexPath.row];
     self.testView.testDesc.text = @"";
@@ -297,14 +297,14 @@ void gui_sleep(unsigned sec)
 /*
  // Override to support editing the table view.
  - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
- 
+
     if (editingStyle == UITableViewCellEditingStyleDelete) {
         // Delete the row from the data source.
         [tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
-    }   
+    }
     else if (editingStyle == UITableViewCellEditingStyleInsert) {
         // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view.
-    }   
+    }
  }
  */
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef __PJMEDIA_CIRC_BUF_H__
@@ -33,10 +33,10 @@
 /**
  * @defgroup PJMED_CIRCBUF Circular Buffer
  * @ingroup PJMEDIA_FRAME_OP
- * @brief Circular buffer manages read and write contiguous audio samples in a 
+ * @brief Circular buffer manages read and write contiguous audio samples in a
  * non-contiguous buffer as if the buffer were contiguous. This should give
  * better performance than keeping contiguous samples in a contiguous buffer,
- * since read/write operations will only update the pointers, instead of 
+ * since read/write operations will only update the pointers, instead of
  * shifting audio samples.
  *
  * @{
@@ -53,7 +53,7 @@
 
 PJ_BEGIN_DECL
 
-/** 
+/**
  * Circular buffer structure
  */
 typedef struct pjmedia_circ_buf {
@@ -61,7 +61,7 @@ typedef struct pjmedia_circ_buf {
     unsigned         capacity;      /**< Buffer capacity, in samples    */
 
     pj_int16_t      *start;         /**< Pointer to the first sample    */
-    unsigned         len;           /**< Audio samples length, 
+    unsigned         len;           /**< Audio samples length,
                                          in samples                     */
 } pjmedia_circ_buf;
 
@@ -78,14 +78,14 @@ typedef struct pjmedia_circ_buf {
  *                          created successfully, otherwise the appropriate
  *                          error will be returned.
  */
-PJ_INLINE(pj_status_t) pjmedia_circ_buf_create(pj_pool_t *pool, 
-                                               unsigned capacity, 
+PJ_INLINE(pj_status_t) pjmedia_circ_buf_create(pj_pool_t *pool,
+                                               unsigned capacity,
                                                pjmedia_circ_buf **p_cb)
 {
     pjmedia_circ_buf *cbuf;
 
     cbuf = PJ_POOL_ZALLOC_T(pool, pjmedia_circ_buf);
-    cbuf->buf = (pj_int16_t*) pj_pool_calloc(pool, capacity, 
+    cbuf->buf = (pj_int16_t*) pj_pool_calloc(pool, capacity,
                                              sizeof(pj_int16_t));
     cbuf->capacity = capacity;
     cbuf->start = cbuf->buf;
@@ -114,7 +114,7 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_reset(pjmedia_circ_buf *circbuf)
 
 
 /**
- * Get the circular buffer length, it is number of samples buffered in the 
+ * Get the circular buffer length, it is number of samples buffered in the
  * circular buffer.
  *
  * @param circbuf           The circular buffer.
@@ -128,7 +128,7 @@ PJ_INLINE(unsigned) pjmedia_circ_buf_get_len(pjmedia_circ_buf *circbuf)
 
 
 /**
- * Set circular buffer length. This is useful when audio buffer is manually 
+ * Set circular buffer length. This is useful when audio buffer is manually
  * manipulated by the user, e.g: shrinked, expanded.
  *
  * @param circbuf           The circular buffer.
@@ -144,17 +144,17 @@ PJ_INLINE(void) pjmedia_circ_buf_set_len(pjmedia_circ_buf *circbuf,
 
 /**
  * Advance the read pointer of circular buffer. This function will discard
- * the skipped samples while advancing the read pointer, thus reducing 
+ * the skipped samples while advancing the read pointer, thus reducing
  * the buffer length.
  *
  * @param circbuf           The circular buffer.
  * @param count             Distance from current read pointer, can only be
  *                          possitive number, in samples.
  *
- * @return                  PJ_SUCCESS when successful, otherwise 
+ * @return                  PJ_SUCCESS when successful, otherwise
  *                          the appropriate error will be returned.
  */
-PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_read_ptr(pjmedia_circ_buf *circbuf, 
+PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_read_ptr(pjmedia_circ_buf *circbuf,
                                                      unsigned count)
 {
     if (count >= circbuf->len)
@@ -163,7 +163,7 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_read_ptr(pjmedia_circ_buf *circbuf,
     PJMEDIA_CIRC_BUF_CHECK(count <= circbuf->len);
 
     circbuf->start += count;
-    if (circbuf->start >= circbuf->buf + circbuf->capacity) 
+    if (circbuf->start >= circbuf->buf + circbuf->capacity)
         circbuf->start -= circbuf->capacity;
     circbuf->len -= count;
 
@@ -180,7 +180,7 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_read_ptr(pjmedia_circ_buf *circbuf,
  * @param count             Distance from current write pointer, can only be
  *                          possitive number, in samples.
  *
- * @return                  PJ_SUCCESS when successful, otherwise 
+ * @return                  PJ_SUCCESS when successful, otherwise
  *                          the appropriate error will be returned.
  */
 PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_write_ptr(pjmedia_circ_buf *circbuf,
@@ -200,22 +200,22 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_write_ptr(pjmedia_circ_buf *circbuf,
  *
  * @param circbuf           The circular buffer.
  * @param reg1              Pointer to store the first buffer address.
- * @param reg1_len          Pointer to store the length of the first buffer, 
+ * @param reg1_len          Pointer to store the length of the first buffer,
  *                          in samples.
  * @param reg2              Pointer to store the second buffer address.
- * @param reg2_len          Pointer to store the length of the second buffer, 
+ * @param reg2_len          Pointer to store the length of the second buffer,
  *                          in samples.
  */
-PJ_INLINE(void) pjmedia_circ_buf_get_read_regions(pjmedia_circ_buf *circbuf, 
-                                                  pj_int16_t **reg1, 
-                                                  unsigned *reg1_len, 
-                                                  pj_int16_t **reg2, 
+PJ_INLINE(void) pjmedia_circ_buf_get_read_regions(pjmedia_circ_buf *circbuf,
+                                                  pj_int16_t **reg1,
+                                                  unsigned *reg1_len,
+                                                  pj_int16_t **reg2,
                                                   unsigned *reg2_len)
 {
     *reg1 = circbuf->start;
     *reg1_len = circbuf->len;
     if (*reg1 + *reg1_len > circbuf->buf + circbuf->capacity) {
-        *reg1_len = (unsigned)(circbuf->buf + circbuf->capacity - 
+        *reg1_len = (unsigned)(circbuf->buf + circbuf->capacity -
                                circbuf->start);
         *reg2 = circbuf->buf;
         *reg2_len = circbuf->len - *reg1_len;
@@ -224,7 +224,7 @@ PJ_INLINE(void) pjmedia_circ_buf_get_read_regions(pjmedia_circ_buf *circbuf,
         *reg2_len = 0;
     }
 
-    PJMEDIA_CIRC_BUF_CHECK(*reg1_len != 0 || (*reg1_len == 0 && 
+    PJMEDIA_CIRC_BUF_CHECK(*reg1_len != 0 || (*reg1_len == 0 &&
                                               circbuf->len == 0));
     PJMEDIA_CIRC_BUF_CHECK(*reg1_len + *reg2_len == circbuf->len);
 }
@@ -235,16 +235,16 @@ PJ_INLINE(void) pjmedia_circ_buf_get_read_regions(pjmedia_circ_buf *circbuf,
  *
  * @param circbuf           The circular buffer.
  * @param reg1              Pointer to store the first buffer address.
- * @param reg1_len          Pointer to store the length of the first buffer, 
+ * @param reg1_len          Pointer to store the length of the first buffer,
  *                          in samples.
  * @param reg2              Pointer to store the second buffer address.
- * @param reg2_len          Pointer to store the length of the second buffer, 
+ * @param reg2_len          Pointer to store the length of the second buffer,
  *                          in samples.
  */
-PJ_INLINE(void) pjmedia_circ_buf_get_write_regions(pjmedia_circ_buf *circbuf, 
-                                                   pj_int16_t **reg1, 
-                                                   unsigned *reg1_len, 
-                                                   pj_int16_t **reg2, 
+PJ_INLINE(void) pjmedia_circ_buf_get_write_regions(pjmedia_circ_buf *circbuf,
+                                                   pj_int16_t **reg1,
+                                                   unsigned *reg1_len,
+                                                   pj_int16_t **reg2,
                                                    unsigned *reg2_len)
 {
     *reg1 = circbuf->start + circbuf->len;
@@ -260,9 +260,9 @@ PJ_INLINE(void) pjmedia_circ_buf_get_write_regions(pjmedia_circ_buf *circbuf,
         *reg2_len = 0;
     }
 
-    PJMEDIA_CIRC_BUF_CHECK(*reg1_len != 0 || (*reg1_len == 0 && 
+    PJMEDIA_CIRC_BUF_CHECK(*reg1_len != 0 || (*reg1_len == 0 &&
                                               circbuf->len == 0));
-    PJMEDIA_CIRC_BUF_CHECK(*reg1_len + *reg2_len == circbuf->capacity - 
+    PJMEDIA_CIRC_BUF_CHECK(*reg1_len + *reg2_len == circbuf->capacity -
                            circbuf->len);
 }
 
@@ -274,11 +274,11 @@ PJ_INLINE(void) pjmedia_circ_buf_get_write_regions(pjmedia_circ_buf *circbuf,
  * @param data              Buffer to store the read audio samples.
  * @param count             Number of samples being read.
  *
- * @return                  PJ_SUCCESS when successful, otherwise 
+ * @return                  PJ_SUCCESS when successful, otherwise
  *                          the appropriate error will be returned.
  */
-PJ_INLINE(pj_status_t) pjmedia_circ_buf_read(pjmedia_circ_buf *circbuf, 
-                                             pj_int16_t *data, 
+PJ_INLINE(pj_status_t) pjmedia_circ_buf_read(pjmedia_circ_buf *circbuf,
+                                             pj_int16_t *data,
                                              unsigned count)
 {
     pj_int16_t *reg1, *reg2;
@@ -288,7 +288,7 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_read(pjmedia_circ_buf *circbuf,
     if (count > circbuf->len)
         return PJ_ETOOBIG;
 
-    pjmedia_circ_buf_get_read_regions(circbuf, &reg1, &reg1cnt, 
+    pjmedia_circ_buf_get_read_regions(circbuf, &reg1, &reg1cnt,
                                       &reg2, &reg2cnt);
     if (reg1cnt >= count) {
         pjmedia_copy_samples(data, reg1, count);
@@ -311,8 +311,8 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_read(pjmedia_circ_buf *circbuf,
  * @return                  PJ_SUCCESS when successful, otherwise
  *                          the appropriate error will be returned.
  */
-PJ_INLINE(pj_status_t) pjmedia_circ_buf_write(pjmedia_circ_buf *circbuf, 
-                                              pj_int16_t *data, 
+PJ_INLINE(pj_status_t) pjmedia_circ_buf_write(pjmedia_circ_buf *circbuf,
+                                              pj_int16_t *data,
                                               unsigned count)
 {
     pj_int16_t *reg1, *reg2;
@@ -322,7 +322,7 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_write(pjmedia_circ_buf *circbuf,
     if (count > circbuf->capacity - circbuf->len)
         return PJ_ETOOBIG;
 
-    pjmedia_circ_buf_get_write_regions(circbuf, &reg1, &reg1cnt, 
+    pjmedia_circ_buf_get_write_regions(circbuf, &reg1, &reg1cnt,
                                        &reg2, &reg2cnt);
     if (reg1cnt >= count) {
         pjmedia_copy_samples(reg1, data, count);
@@ -336,19 +336,19 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_write(pjmedia_circ_buf *circbuf,
 
 
 /**
- * Copy audio samples from the circular buffer without changing its state. 
+ * Copy audio samples from the circular buffer without changing its state.
  *
  * @param circbuf           The circular buffer.
  * @param start_idx         Starting sample index to be copied.
  * @param data              Buffer to store the read audio samples.
  * @param count             Number of samples being read.
  *
- * @return                  PJ_SUCCESS when successful, otherwise 
+ * @return                  PJ_SUCCESS when successful, otherwise
  *                          the appropriate error will be returned.
  */
-PJ_INLINE(pj_status_t) pjmedia_circ_buf_copy(pjmedia_circ_buf *circbuf, 
+PJ_INLINE(pj_status_t) pjmedia_circ_buf_copy(pjmedia_circ_buf *circbuf,
                                              unsigned start_idx,
-                                             pj_int16_t *data, 
+                                             pj_int16_t *data,
                                              unsigned count)
 {
     pj_int16_t *reg1, *reg2;
@@ -358,7 +358,7 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_copy(pjmedia_circ_buf *circbuf,
     if (count + start_idx > circbuf->len)
         return PJ_ETOOBIG;
 
-    pjmedia_circ_buf_get_read_regions(circbuf, &reg1, &reg1cnt, 
+    pjmedia_circ_buf_get_read_regions(circbuf, &reg1, &reg1cnt,
                                       &reg2, &reg2cnt);
     if (reg1cnt > start_idx) {
         unsigned tmp_len;
@@ -382,7 +382,7 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_copy(pjmedia_circ_buf *circbuf,
  *
  * @param circbuf           The circular buffer.
  *
- * @return                  PJ_SUCCESS when successful, otherwise 
+ * @return                  PJ_SUCCESS when successful, otherwise
  *                          the appropriate error will be returned.
  */
 PJ_INLINE(pj_status_t) pjmedia_circ_buf_pack_buffer(pjmedia_circ_buf *circbuf)
@@ -391,12 +391,12 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_pack_buffer(pjmedia_circ_buf *circbuf)
     unsigned reg1cnt, reg2cnt;
     unsigned gap;
 
-    pjmedia_circ_buf_get_read_regions(circbuf, &reg1, &reg1cnt, 
+    pjmedia_circ_buf_get_read_regions(circbuf, &reg1, &reg1cnt,
                                       &reg2, &reg2cnt);
 
     /* Check if not contigue */
     if (reg2cnt != 0) {
-        /* Check if no space left to roll the buffer 
+        /* Check if no space left to roll the buffer
          * (or should this function provide temporary buffer?)
          */
         gap = circbuf->capacity - pjmedia_circ_buf_get_len(circbuf);
@@ -419,7 +419,7 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_pack_buffer(pjmedia_circ_buf *circbuf)
 
     /* Finally, Shift samples to the left edge */
     if (reg1 != circbuf->buf)
-        pjmedia_move_samples(circbuf->buf, reg1, 
+        pjmedia_move_samples(circbuf->buf, reg1,
                              pjmedia_circ_buf_get_len(circbuf));
     circbuf->start = circbuf->buf;
 

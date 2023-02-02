@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import pjsua as pj
 import string
@@ -25,16 +25,16 @@ CFG_FILE = "config"
 
 INFO = 1
 TRACE = 2
-	
+
 # Call callback. This would just forward the event to the Member class
 class CallCb(pj.CallCallback):
 	def __init__(self, member, call=None):
 		pj.CallCallback.__init__(self, call)
 		self.member = member
-	
+
 	def on_state(self):
 		self.member.on_call_state(self.call)
-	
+
 	def on_media_state(self):
 		self.member.on_call_media_state(self.call)
 
@@ -43,13 +43,13 @@ class CallCb(pj.CallCallback):
 
 	def on_transfer_request(self, dst, code):
 		return self.member.on_call_transfer_request(self.call, dst, code)
-	
+
 	def on_transfer_status(self, code, reason, final, cont):
 		return self.member.on_call_transfer_status(self.call, code, reason, final, cont)
 
 	def on_replace_request(self, code, reason):
 		return self.member.on_call_replace_request(self.call, code, reason)
-		
+
 	def on_replaced(self, new_call):
 		self.member.on_call_replaced(self.call, new_call)
 
@@ -58,7 +58,7 @@ class CallCb(pj.CallCallback):
 
 	def on_pager(self, mime_type, body):
 		self.member.on_pager(mime_type, body, call=self.call)
-	
+
 	def on_pager_status(self, body, im_id, code, reason):
 		self.member.on_pager_status(body, im_id, code, reason, call=self.call)
 
@@ -67,7 +67,7 @@ class BuddyCb(pj.BuddyCallback):
 	def __init__(self, member, buddy=None):
 		pj.BuddyCallback.__init__(self, buddy)
 		self.member = member
-	
+
 	def on_pager(self, mime_type, body):
 		self.member.on_pager(mime_type, body, buddy=self.buddy)
 
@@ -100,9 +100,9 @@ class Member:
 		self.in_voice = False
 		self.im_error = False
 		self.html = False
-	
+
 	def __str__(self):
-		str = string.ljust(self.uri, 30) + " -- " 
+		str = string.ljust(self.uri, 30) + " -- "
 		if self.buddy:
 			bi = self.buddy.info()
 			str = str + bi.online_text
@@ -122,7 +122,7 @@ class Member:
 			str = str + " im_error"
 		str = str + "]"
 		return str
-		
+
 	def join_call(self, call):
 		if self.call:
 			self.call.hangup(603, "You have been disconnected for making another call")
@@ -132,7 +132,7 @@ class Member:
 			  {'uri': self.uri}
 		self.bot.DEBUG(msg + "\n", INFO)
 		self.bot.broadcast_pager(None, msg)
-	
+
 	def join_chat(self):
 		if not self.buddy:
 			self.bot.DEBUG(self.uri + " joining chatroom...\n", INFO)
@@ -157,7 +157,7 @@ class Member:
 			self.bot.DEBUG("..sent\n")
 		else:
 			self.bot.DEBUG("..not sent!\n")
-		
+
 	def on_call_state(self, call):
 		ci = call.info()
 		if ci.state==pj.CallState.DISCONNECTED:
@@ -174,7 +174,7 @@ class Member:
 				  {'uri': self.uri}
 			self.bot.DEBUG(msg + "\n", INFO)
 			self.bot.broadcast_pager(None, msg)
-	
+
 	def on_call_media_state(self, call):
 		self.bot.DEBUG("Member.on_call_media_state\n")
 		ci = call.info()
@@ -200,7 +200,7 @@ class Member:
 			  {'uri': self.uri, 'dst': dst}
 		self.bot.broadcast_pager(None, msg)
 		return 202
-	
+
 	def on_call_transfer_status(self, call, code, reason, final, cont):
 		msg = "%(uri)s call transfer status is %(code)d/%(res)s" % \
 			  {'uri': self.uri, 'code': code, 'res': reason}
@@ -212,7 +212,7 @@ class Member:
 			  {'uri': self.uri}
 		self.bot.broadcast_pager(None, msg)
 		return (code, reason)
-		
+
 	def on_call_replaced(self, call, new_call):
 		msg = "%(uri)s call is replaced" % \
 			  {'uri': self.uri}
@@ -244,7 +244,7 @@ class Member:
 			else:
 				self.in_chat = False
 			self.bot.on_member_left(self)
-		
+
 	def on_typing(self, is_typing, call=None, buddy=None):
 		if is_typing:
 			msg = self.uri + " is typing..."
@@ -256,7 +256,7 @@ class Member:
 		if not self.bot.handle_cmd(self, None, body):
 			msg = self.uri + ": " + body
 			self.bot.broadcast_pager(self, msg, mime_type)
-	
+
 	def on_pager_status(self, body, im_id, code, reason, call=None, buddy=None):
 		self.im_error = (code/100 != 2)
 
@@ -279,7 +279,7 @@ class Bot(pj.AccountCallback):
 
 	def DEBUG(self, msg, level=TRACE):
 		print msg,
-		
+
 	def helpstring(self):
 		return """
 --h[elp]            Display this help screen
@@ -309,7 +309,7 @@ Admin commands:
 		for uri, m in self.members.iteritems():
 			msg = msg + str(m) + "\n"
 		return msg
-	
+
 	def showsettings(self):
 		ai = self.acc.info()
 		msg = """
@@ -321,14 +321,14 @@ ConfBot status and settings:
 """ % {'uri': ai.uri, 'pres': ai.online_text, \
 	   'reg_st': ai.reg_status, 'reg_res': ai.reg_reason}
 		return msg
-  
+
 	def main(self, cfg_file):
 		try:
 			cfg = self.cfg = __import__(cfg_file)
-			
+
 			self.lib.init(ua_cfg=cfg.ua_cfg, log_cfg=cfg.log_cfg, media_cfg=cfg.media_cfg)
 			self.lib.set_null_snd_dev()
-			
+
 			transport = None
 			if cfg.udp_cfg:
 				transport = self.lib.create_transport(pj.TransportType.UDP, cfg.udp_cfg)
@@ -336,9 +336,9 @@ ConfBot status and settings:
 				t = self.lib.create_transport(pj.TransportType.TCP, cfg.tcp_cfg)
 				if not transport:
 					transport = t
-				
+
 			self.lib.start()
-			
+
 			if cfg.acc_cfg:
 				self.DEBUG("Creating account %(uri)s..\n" % {'uri': cfg.acc_cfg.id}, INFO)
 				self.acc = self.lib.create_account(cfg.acc_cfg, cb=self)
@@ -346,9 +346,9 @@ ConfBot status and settings:
 				self.DEBUG("Creating account for %(t)s..\n" % \
 							{'t': transport.info().description}, INFO)
 				self.acc = self.lib.create_account_for_transport(transport, cb=self)
-			
+
 			self.acc.set_basic_status(True)
-			
+
 			# Wait for ENTER before quitting
 			print "Press q to quit or --help/--h for help"
 			while True:
@@ -356,7 +356,7 @@ ConfBot status and settings:
 				if not self.handle_cmd(None, None, input):
 					if input=="q":
 						break
-			
+
 			self.lib.destroy()
 			self.lib = None
 
@@ -365,7 +365,7 @@ ConfBot status and settings:
 			if self.lib:
 				self.lib.destroy()
 				self.lib = None
-	
+
 	def broadcast_pager(self, exclude_member, body, mime_type="text/plain"):
 		self.DEBUG("Broadcast: " + body + "\n")
 		for uri, m in self.members.iteritems():
@@ -386,12 +386,12 @@ ConfBot status and settings:
 			if dst_ci.media_state==pj.MediaState.ACTIVE and dst_ci.conf_slot!=-1:
 				self.lib.conf_connect(src_ci.conf_slot, dst_ci.conf_slot)
 				self.lib.conf_connect(dst_ci.conf_slot, src_ci.conf_slot)
-	
+
 	def on_member_left(self, member):
 		if not member.call and not member.buddy:
 			del self.members[member.uri]
 			del member
-			
+
 	def handle_admin_cmd(self, member, body):
 		if member and self.cfg.admins and not member.uri in self.cfg.admins:
 			member.send_pager("You are not admin")
@@ -524,7 +524,7 @@ ConfBot status and settings:
 			else:
 				print msg
 		return handled
-	
+
 	def on_incoming_call(self, call):
 		self.DEBUG("on_incoming_call from %(uri)s\n" % {'uri': call.info().remote_uri}, INFO)
 		ci = call.info()
@@ -536,7 +536,7 @@ ConfBot status and settings:
 			m = self.members[ci.remote_uri]
 			m.join_call(call)
 		call.answer(200)
-	
+
 	def on_incoming_subscribe(self, buddy, from_uri, contact_uri, pres_obj):
 		self.DEBUG("on_incoming_subscribe from %(uri)s\n" % from_uri, INFO)
 		return (200, 'OK')

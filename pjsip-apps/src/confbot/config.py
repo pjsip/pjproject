@@ -25,7 +25,7 @@ tcp_cfg = pj.TransportConfig(0)
 # Logging Config (you can also set it to None to use default values)
 def log_cb(level, str, len):
 	print str,
-	
+
 log_cfg = pj.LogConfig()
 #log_cfg.callback = log_cb
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib.h>
 #include "test.h"
@@ -94,16 +94,16 @@ static int format_test(void)
     const unsigned char A[] = {127, 0, 0, 1};
 
     PJ_LOG(3,("test", "...format_test()"));
-    
+
     /* pj_inet_aton() */
     if (pj_inet_aton(&s, &addr) != 1)
         return -10;
-    
+
     /* Check the result. */
     p = (unsigned char*)&addr;
     if (p[0]!=A[0] || p[1]!=A[1] || p[2]!=A[2] || p[3]!=A[3]) {
         PJ_LOG(3,("test", "  error: mismatched address. p0=%d, p1=%d, "
-                          "p2=%d, p3=%d", p[0] & 0xFF, p[1] & 0xFF, 
+                          "p2=%d, p3=%d", p[0] & 0xFF, p[1] & 0xFF,
                            p[2] & 0xFF, p[3] & 0xFF));
         return -15;
     }
@@ -160,7 +160,7 @@ static int format_test(void)
 
 #endif  /* PJ_HAS_IPV6 */
 
-    /* Test that pj_sockaddr_in_init() initialize the whole structure, 
+    /* Test that pj_sockaddr_in_init() initialize the whole structure,
      * including sin_zero_pad.
      */
     pj_sockaddr_in_init(&addr2, 0, 1000);
@@ -173,7 +173,7 @@ static int format_test(void)
     if (!hostname || !hostname->ptr || !hostname->slen)
         return -40;
 
-    PJ_LOG(3,("test", "....hostname is %.*s", 
+    PJ_LOG(3,("test", "....hostname is %.*s",
               (int)hostname->slen, hostname->ptr));
 
     /* pj_gethostaddr() */
@@ -182,10 +182,10 @@ static int format_test(void)
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     if (PJ_AF_INET==0xFFFF) return -5500;
     if (PJ_AF_INET6==0xFFFF) return -5501;
-    
+
     /* 0xFFFF could be a valid SOL_SOCKET (e.g: on some Win or Mac) */
     //if (PJ_SOL_SOCKET==0xFFFF) return -5503;
-    
+
     if (PJ_SOL_IP==0xFFFF) return -5502;
     if (PJ_SOL_TCP==0xFFFF) return -5510;
     if (PJ_SOL_UDP==0xFFFF) return -5520;
@@ -215,7 +215,7 @@ static int parse_test(void)
         const char  *result_ip;
         pj_uint16_t  result_port;
     };
-    struct test_t valid_tests[] = 
+    struct test_t valid_tests[] =
     {
         /* IPv4 */
         { "10.0.0.1:80", IPv4, "10.0.0.1", 80},
@@ -245,7 +245,7 @@ static int parse_test(void)
         { "[::]:80", IPv6, "::", 80},
 #endif
     };
-    struct test_t invalid_tests[] = 
+    struct test_t invalid_tests[] =
     {
         /* IPv4 */
         { "10.0.0.1:abcd", IPv4},   /* port not numeric */
@@ -288,11 +288,11 @@ static int parse_test(void)
         }
 
         /* Try parsing with PJ_AF_UNSPEC */
-        status = pj_sockaddr_parse(PJ_AF_UNSPEC, 0, 
-                                   pj_cstr(&input, valid_tests[i].input), 
+        status = pj_sockaddr_parse(PJ_AF_UNSPEC, 0,
+                                   pj_cstr(&input, valid_tests[i].input),
                                    &addr);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(1,("test", ".... failed when parsing %s (i=%d)", 
+            PJ_LOG(1,("test", ".... failed when parsing %s (i=%d)",
                       valid_tests[i].input, i));
             return -10;
         }
@@ -303,27 +303,27 @@ static int parse_test(void)
         /* Build the correct result */
         status = pj_sockaddr_init(valid_tests[i].result_af,
                                   &result,
-                                  pj_cstr(&input, valid_tests[i].result_ip), 
+                                  pj_cstr(&input, valid_tests[i].result_ip),
                                   valid_tests[i].result_port);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(1,("test", ".... error building IP address %s", 
+            PJ_LOG(1,("test", ".... error building IP address %s",
                       valid_tests[i].input));
             return -30;
         }
 
         /* Compare the result */
         if (pj_sockaddr_cmp(&addr, &result) != 0) {
-            PJ_LOG(1,("test", ".... parsed result mismatched for %s", 
+            PJ_LOG(1,("test", ".... parsed result mismatched for %s",
                       valid_tests[i].input));
             return -40;
         }
 
         /* Parse again with the specified af */
-        status = pj_sockaddr_parse(valid_tests[i].result_af, 0, 
-                                   pj_cstr(&input, valid_tests[i].input), 
+        status = pj_sockaddr_parse(valid_tests[i].result_af, 0,
+                                   pj_cstr(&input, valid_tests[i].input),
                                    &addr);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(1,("test", ".... failed when parsing %s", 
+            PJ_LOG(1,("test", ".... failed when parsing %s",
                       valid_tests[i].input));
             return -50;
         }
@@ -333,7 +333,7 @@ static int parse_test(void)
 
         /* Compare the result again */
         if (pj_sockaddr_cmp(&addr, &result) != 0) {
-            PJ_LOG(1,("test", ".... parsed result mismatched for %s", 
+            PJ_LOG(1,("test", ".... parsed result mismatched for %s",
                       valid_tests[i].input));
             return -60;
         }
@@ -357,11 +357,11 @@ static int parse_test(void)
         }
 
         /* Try parsing with PJ_AF_UNSPEC */
-        status = pj_sockaddr_parse(PJ_AF_UNSPEC, 0, 
-                                   pj_cstr(&input, invalid_tests[i].input), 
+        status = pj_sockaddr_parse(PJ_AF_UNSPEC, 0,
+                                   pj_cstr(&input, invalid_tests[i].input),
                                    &addr);
         if (status == PJ_SUCCESS) {
-            PJ_LOG(1,("test", ".... expecting failure when parsing %s", 
+            PJ_LOG(1,("test", ".... expecting failure when parsing %s",
                       invalid_tests[i].input));
             return -100;
         }
@@ -445,7 +445,7 @@ static int simple_sock_test(void)
     PJ_LOG(3,("test", "...simple_sock_test()"));
 
     for (i=0; i<(int)(sizeof(types)/sizeof(types[0])); ++i) {
-        
+
         rc = pj_sock_socket(pj_AF_INET(), types[i], 0, &sock);
         if (rc != PJ_SUCCESS) {
             app_perror("...error: unable to create socket", rc);
@@ -464,7 +464,7 @@ static int simple_sock_test(void)
 
 static int send_recv_test(int sock_type,
                           pj_sock_t ss, pj_sock_t cs,
-                          pj_sockaddr_in *dstaddr, pj_sockaddr_in *srcaddr, 
+                          pj_sockaddr_in *dstaddr, pj_sockaddr_in *srcaddr,
                           int addrlen)
 {
     enum { DATA_LEN = 16 };
@@ -500,7 +500,7 @@ static int send_recv_test(int sock_type,
     if (srcaddr) {
         pj_sockaddr_in addr;
         int srclen = sizeof(addr);
-        
+
         pj_bzero(&addr, sizeof(addr));
 
         received = DATA_LEN;
@@ -516,11 +516,11 @@ static int send_recv_test(int sock_type,
             strcpy(srcaddr_str, pj_inet_ntoa(srcaddr->sin_addr));
             strcpy(addr_str, pj_inet_ntoa(addr.sin_addr));
             PJ_LOG(3,("test", "...error: src address mismatch (original=%s, "
-                              "recvfrom addr=%s)", 
+                              "recvfrom addr=%s)",
                               srcaddr_str, addr_str));
             return -152;
         }
-        
+
     } else {
         /* Repeat recv() until all data is received.
          * This applies only for non-UDP of course, since for UDP
@@ -612,7 +612,7 @@ static int send_recv_test(int sock_type,
         PJ_LOG(3,("", "...error: received data has been altered!"));
         rc = -180; goto on_error;
     }
-    
+
     rc = 0;
 
 on_error:
@@ -643,7 +643,7 @@ static int udp_test(void)
     dstaddr.sin_family = pj_AF_INET();
     dstaddr.sin_port = pj_htons(UDP_PORT);
     dstaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));
-    
+
     if ((rc=pj_sock_bind(ss, &dstaddr, sizeof(dstaddr))) != 0) {
         app_perror("...bind error udp:"ADDRESS, rc);
         rc = -120; goto on_error;
@@ -659,15 +659,15 @@ static int udp_test(void)
         app_perror("...bind error", rc);
         rc = -121; goto on_error;
     }
-            
+
     /* Test send/recv, with sendto */
-    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, &dstaddr, NULL, 
+    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, &dstaddr, NULL,
                         sizeof(dstaddr));
     if (rc != 0)
         goto on_error;
 
     /* Test send/recv, with sendto and recvfrom */
-    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, &dstaddr, 
+    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, &dstaddr,
                         &srcaddr, sizeof(dstaddr));
     if (rc != 0)
         goto on_error;
@@ -675,7 +675,7 @@ static int udp_test(void)
     /* Disable this test on Symbian since UDP connect()/send() failed
      * with S60 3rd edition (including MR2).
      * See https://github.com/pjsip/pjproject/issues/264
-     */    
+     */
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     /* connect() the sockets. */
     rc = pj_sock_connect(cs, &dstaddr, sizeof(dstaddr));
@@ -690,7 +690,7 @@ static int udp_test(void)
         goto on_error;
 
     /* Test send/recv with send() and recvfrom */
-    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, NULL, &srcaddr, 
+    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, NULL, &srcaddr,
                         sizeof(srcaddr));
     if (rc != 0)
         goto on_error;
@@ -782,22 +782,22 @@ static int connect_test()
         char buffer[16];
         TPtrC8 data((const TUint8*)buffer, (TInt)sizeof(buffer));
         int rc;
-        
+
         rc = rSockServ.Connect();
         if (rc != KErrNone)
                 return rc;
-        
+
         rc = rSock.Open(rSockServ, KAfInet, KSockDatagram, KProtocolInetUdp);
-        if (rc != KErrNone) 
-        {               
+        if (rc != KErrNone)
+        {
                 rSockServ.Close();
                 return rc;
         }
-        
+
         inetAddr.Init(KAfInet);
         inetAddr.Input(_L("127.0.0.1"));
         inetAddr.SetPort(80);
-        
+
         rSock.Connect(inetAddr, reqStatus);
         User::WaitForRequest(reqStatus);
 
@@ -806,16 +806,16 @@ static int connect_test()
                 rSockServ.Close();
                 return rc;
         }
-    
+
         rSock.Send(data, 0, reqStatus);
         User::WaitForRequest(reqStatus);
-        
+
         if (reqStatus!=KErrNone) {
                 rSock.Close();
                 rSockServ.Close();
                 return rc;
         }
-        
+
         rSock.Close();
         rSockServ.Close();
         return KErrNone;
@@ -940,7 +940,7 @@ static int socketpair_test()
 int sock_test()
 {
     int rc;
-    
+
     pj_create_random_string(bigdata, BIG_DATA_LEN);
 
 // Enable this to demonstrate the error witn S60 3rd Edition MR2
@@ -949,7 +949,7 @@ int sock_test()
     if (rc != 0)
         return rc;
 #endif
-    
+
     rc = format_test();
     if (rc != 0)
         return rc;
@@ -992,7 +992,7 @@ int sock_test()
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_sock_test;
 #endif  /* INCLUDE_SOCK_TEST */

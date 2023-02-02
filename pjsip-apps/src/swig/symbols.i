@@ -360,7 +360,7 @@ typedef struct pjmedia_tone_digit
 typedef struct pjmedia_tone_digit_map
 {
   unsigned count;
-  struct 
+  struct
   {
     char digit;
     short freq1;

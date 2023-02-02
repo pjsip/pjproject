@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_TRANSPORT_LOOP_H__
 #define __PJSIP_TRANSPORT_LOOP_H__
@@ -22,7 +22,7 @@
 
 /**
  * @file sip_transport_loop.h
- * @brief 
+ * @brief
  * Loopback transport (for debugging)
  */
 
@@ -93,7 +93,7 @@ PJ_DECL(pj_status_t) pjsip_loop_set_failure( pjsip_transport *tp,
 
 /**
  * Set delay (in miliseconds) before packet is received by the other end
- * of the loop transport. This will also 
+ * of the loop transport. This will also
  * control the delay for error notification callback.
  *
  * @param tp            The loop transport.

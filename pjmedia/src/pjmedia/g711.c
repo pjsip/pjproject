@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,9 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/* This file contains file from Sun Microsystems, Inc, with the complete 
+/* This file contains file from Sun Microsystems, Inc, with the complete
  * notice in the second half of this file.
  */
 #include <pjmedia/g711.h>
@@ -44,27 +44,27 @@
 #define SAMPLES_PER_FRAME   (8000 * PTIME / 1000)   /* 80 samples   */
 
 /* Prototypes for G711 factory */
-static pj_status_t g711_test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t g711_test_alloc( pjmedia_codec_factory *factory,
                                     const pjmedia_codec_info *id );
-static pj_status_t g711_default_attr( pjmedia_codec_factory *factory, 
-                                      const pjmedia_codec_info *id, 
+static pj_status_t g711_default_attr( pjmedia_codec_factory *factory,
+                                      const pjmedia_codec_info *id,
                                       pjmedia_codec_param *attr );
-static pj_status_t g711_enum_codecs (pjmedia_codec_factory *factory, 
-                                     unsigned *count, 
+static pj_status_t g711_enum_codecs (pjmedia_codec_factory *factory,
+                                     unsigned *count,
                                      pjmedia_codec_info codecs[]);
-static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory, 
-                                     const pjmedia_codec_info *id, 
+static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
+                                     const pjmedia_codec_info *id,
                                      pjmedia_codec **p_codec);
-static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory,
                                        pjmedia_codec *codec );
 
 /* Prototypes for G711 implementation. */
-static pj_status_t  g711_init( pjmedia_codec *codec, 
+static pj_status_t  g711_init( pjmedia_codec *codec,
                                pj_pool_t *pool );
-static pj_status_t  g711_open( pjmedia_codec *codec, 
+static pj_status_t  g711_open( pjmedia_codec *codec,
                                pjmedia_codec_param *attr );
 static pj_status_t  g711_close( pjmedia_codec *codec );
-static pj_status_t  g711_modify(pjmedia_codec *codec, 
+static pj_status_t  g711_modify(pjmedia_codec *codec,
                                 const pjmedia_codec_param *attr );
 static pj_status_t  g711_parse(pjmedia_codec *codec,
                                void *pkt,
@@ -72,13 +72,13 @@ static pj_status_t  g711_parse(pjmedia_codec *codec,
                                const pj_timestamp *timestamp,
                                unsigned *frame_cnt,
                                pjmedia_frame frames[]);
-static pj_status_t  g711_encode( pjmedia_codec *codec, 
+static pj_status_t  g711_encode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output);
-static pj_status_t  g711_decode( pjmedia_codec *codec, 
+static pj_status_t  g711_decode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output);
 #if !PLC_DISABLED
 static pj_status_t  g711_recover( pjmedia_codec *codec,
@@ -87,7 +87,7 @@ static pj_status_t  g711_recover( pjmedia_codec *codec,
 #endif
 
 /* Definition for G711 codec operations. */
-static pjmedia_codec_op g711_op = 
+static pjmedia_codec_op g711_op =
 {
     &g711_init,
     &g711_open,
@@ -173,7 +173,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g711_init(pjmedia_endpt *endpt)
     }
 
     /* Register codec factory to endpoint. */
-    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+    status = pjmedia_codec_mgr_register_factory(codec_mgr,
                                                 &g711_factory.base);
     if (status != PJ_SUCCESS)
         return status;
@@ -233,7 +233,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g711_deinit(void)
     return status;
 }
 
-static pj_status_t g711_test_alloc(pjmedia_codec_factory *factory, 
+static pj_status_t g711_test_alloc(pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *id )
 {
     PJ_UNUSED_ARG(factory);
@@ -242,8 +242,8 @@ static pj_status_t g711_test_alloc(pjmedia_codec_factory *factory,
     return (id->pt==PJMEDIA_RTP_PT_PCMU || id->pt==PJMEDIA_RTP_PT_PCMA)? 0:-1;
 }
 
-static pj_status_t g711_default_attr (pjmedia_codec_factory *factory, 
-                                      const pjmedia_codec_info *id, 
+static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
+                                      const pjmedia_codec_info *id,
                                       pjmedia_codec_param *attr )
 {
     PJ_UNUSED_ARG(factory);
@@ -273,8 +273,8 @@ static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
     return PJ_SUCCESS;
 }
 
-static pj_status_t g711_enum_codecs(pjmedia_codec_factory *factory, 
-                                    unsigned *max_count, 
+static pj_status_t g711_enum_codecs(pjmedia_codec_factory *factory,
+                                    unsigned *max_count,
                                     pjmedia_codec_info codecs[])
 {
     unsigned count = 0;
@@ -303,7 +303,7 @@ static pj_status_t g711_enum_codecs(pjmedia_codec_factory *factory,
     return PJ_SUCCESS;
 }
 
-static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
                                      const pjmedia_codec_info *id,
                                      pjmedia_codec **p_codec)
 {
@@ -368,7 +368,7 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
     return PJ_SUCCESS;
 }
 
-static pj_status_t g711_dealloc_codec(pjmedia_codec_factory *factory, 
+static pj_status_t g711_dealloc_codec(pjmedia_codec_factory *factory,
                                       pjmedia_codec *codec )
 {
     struct g711_private *priv = (struct g711_private*) codec->codec_data;
@@ -420,7 +420,7 @@ static pj_status_t g711_init( pjmedia_codec *codec, pj_pool_t *pool )
     return PJ_SUCCESS;
 }
 
-static pj_status_t g711_open(pjmedia_codec *codec, 
+static pj_status_t g711_open(pjmedia_codec *codec,
                              pjmedia_codec_param *attr )
 {
     struct g711_private *priv = (struct g711_private*) codec->codec_data;
@@ -439,7 +439,7 @@ static pj_status_t g711_close( pjmedia_codec *codec )
     return PJ_SUCCESS;
 }
 
-static pj_status_t  g711_modify(pjmedia_codec *codec, 
+static pj_status_t  g711_modify(pjmedia_codec *codec,
                                 const pjmedia_codec_param *attr )
 {
     struct g711_private *priv = (struct g711_private*) codec->codec_data;
@@ -484,9 +484,9 @@ static pj_status_t  g711_parse( pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-static pj_status_t  g711_encode(pjmedia_codec *codec, 
+static pj_status_t  g711_encode(pjmedia_codec *codec,
                                 const struct pjmedia_frame *input,
-                                unsigned output_buf_len, 
+                                unsigned output_buf_len,
                                 struct pjmedia_frame *output)
 {
     pj_int16_t *samples = (pj_int16_t*) input->buf;
@@ -504,10 +504,10 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
         silence_period = pj_timestamp_diff32(&priv->last_tx,
                                              &input->timestamp);
 
-        is_silence = pjmedia_silence_det_detect(priv->vad, 
-                                                (const pj_int16_t*) input->buf, 
+        is_silence = pjmedia_silence_det_detect(priv->vad,
+                                                (const pj_int16_t*) input->buf,
                                                 (input->size >> 1), NULL);
-        if (is_silence && 
+        if (is_silence &&
             (PJMEDIA_CODEC_MAX_SILENCE_PERIOD == -1 ||
              silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*8000/1000))
         {
@@ -550,9 +550,9 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-static pj_status_t  g711_decode(pjmedia_codec *codec, 
+static pj_status_t  g711_decode(pjmedia_codec *codec,
                                 const struct pjmedia_frame *input,
-                                unsigned output_buf_len, 
+                                unsigned output_buf_len,
                                 struct pjmedia_frame *output)
 {
     struct g711_private *priv = (struct g711_private*) codec->codec_data;
@@ -562,7 +562,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
                      PJMEDIA_CODEC_EPCMTOOSHORT);
 
     /* Input buffer MUST have exactly 80 bytes long */
-    PJ_ASSERT_RETURN(input->size == FRAME_SIZE, 
+    PJ_ASSERT_RETURN(input->size == FRAME_SIZE,
                      PJMEDIA_CODEC_EFRMINLEN);
 
     /* Decode */
@@ -609,7 +609,7 @@ static pj_status_t  g711_recover( pjmedia_codec *codec,
     if (!priv->plc_enabled)
         return PJ_EINVALIDOP;
 
-    PJ_ASSERT_RETURN(output_buf_len >= SAMPLES_PER_FRAME * 2, 
+    PJ_ASSERT_RETURN(output_buf_len >= SAMPLES_PER_FRAME * 2,
                      PJMEDIA_CODEC_EPCMTOOSHORT);
 
     pjmedia_plc_generate(priv->plc, (pj_int16_t*)output->buf);

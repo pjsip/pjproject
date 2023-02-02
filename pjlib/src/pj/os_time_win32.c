@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include <pj/errno.h>
@@ -36,18 +36,18 @@ static LARGE_INTEGER base_time;
 /* Note:
  *  In Windows CE/Windows Mobile platforms, the availability of milliseconds
  *  time resolution in SYSTEMTIME.wMilliseconds depends on the OEM, and most
- *  likely it won't be available. When it's not available, the 
+ *  likely it won't be available. When it's not available, the
  *  SYSTEMTIME.wMilliseconds will contain a constant arbitrary value.
  *
  *  Because of that, we need to emulate the milliseconds time resolution
- *  using QueryPerformanceCounter() (via pj_get_timestamp() API). However 
- *  there is limitation on using this, i.e. the time returned by 
+ *  using QueryPerformanceCounter() (via pj_get_timestamp() API). However
+ *  there is limitation on using this, i.e. the time returned by
  *  pj_gettimeofday() may be off by up to plus/minus 999 msec (the second
- *  part will be correct, however the msec part may be off), because we're 
+ *  part will be correct, however the msec part may be off), because we're
  *  not synchronizing the msec field with the change of value of the "second"
  *  field of the system time.
  *
- *  Also there is other caveat which need to be handled (and they are 
+ *  Also there is other caveat which need to be handled (and they are
  *  handled by this implementation):
  *   - user may change system time, so pj_gettimeofday() needs to periodically
  *     checks if system time has changed. The period on which system time is
@@ -55,7 +55,7 @@ static LARGE_INTEGER base_time;
  */
 static LARGE_INTEGER g_start_time;  /* Time gettimeofday() is first called  */
 static pj_timestamp  g_start_tick;  /* TS gettimeofday() is first called  */
-static pj_timestamp  g_last_update; /* Last time check_system_time() is 
+static pj_timestamp  g_last_update; /* Last time check_system_time() is
                                        called, to periodically synchronize
                                        with up-to-date system time (in case
                                        user changes system time).           */
@@ -115,7 +115,7 @@ static pj_status_t check_system_time(pj_uint64_t ts_elapsed)
     /* Get system's current time */
     GetLocalTime(&st);
     SystemTimeToFileTime(&st, &ft);
-    
+
     cur.LowPart = ft.dwLowDateTime;
     cur.HighPart = ft.dwHighDateTime;
     cur.QuadPart /= SECS_TO_FT_MULT;
@@ -149,7 +149,7 @@ static pj_status_t check_system_time(pj_uint64_t ts_elapsed)
 
 #endif
 
-// Find 1st Jan 1970 as a FILETIME 
+// Find 1st Jan 1970 as a FILETIME
 static pj_status_t get_base_time(void)
 {
     SYSTEMTIME st;
@@ -161,7 +161,7 @@ static pj_status_t get_base_time(void)
     st.wMonth=1;
     st.wDay=1;
     SystemTimeToFileTime(&st, &ft);
-    
+
     base_time.LowPart = ft.dwLowDateTime;
     base_time.HighPart = ft.dwHighDateTime;
     base_time.QuadPart /= SECS_TO_FT_MULT;
@@ -276,7 +276,7 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
     st.wMinute = (pj_uint16_t) pt->min;
     st.wSecond = (pj_uint16_t) pt->sec;
     st.wMilliseconds = (pj_uint16_t) pt->msec;
-    
+
     SystemTimeToFileTime(&st, &ft);
 
     li.LowPart = ft.dwLowDateTime;

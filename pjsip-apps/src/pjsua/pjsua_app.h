@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,14 +13,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef __PJSUA_APP_H__
 #define __PJSUA_APP_H__
 
 /**
- * Interface for user application to use pjsua with CLI/menu based UI. 
+ * Interface for user application to use pjsua with CLI/menu based UI.
  */
 
 #include "pjsua_app_common.h"
@@ -38,33 +38,33 @@ typedef struct pjsua_app_cfg_t
     int       argc;
 
     /**
-     * The array of arguments string passed to the application. 
+     * The array of arguments string passed to the application.
      */
     char    **argv;
 
-    /** 
+    /**
      * Tell app that CLI (and pjsua) is (re)started.
-     * msg will contain start error message such as “Telnet to X:Y”,
-     * “failed to start pjsua lib”, “port busy”..
+     * msg will contain start error message such as ï¿½Telnet to X:Yï¿½,
+     * ï¿½failed to start pjsua libï¿½, ï¿½port busyï¿½..
      */
     void (*on_started)(pj_status_t status, const char* title);
 
     /**
      * Tell app that library request to stopped/restart.
-     * GUI app needs to use a timer mechanism to wait before invoking the 
+     * GUI app needs to use a timer mechanism to wait before invoking the
      * cleanup procedure.
      */
     void (*on_stopped)(pj_bool_t restart, int argc, char** argv);
 
     /**
      * This will enable application to supply customize configuration other than
-     * the basic configuration provided by pjsua. 
+     * the basic configuration provided by pjsua.
      */
     void (*on_config_init)(pjsua_app_config *cfg);
 } pjsua_app_cfg_t;
 
 /**
- * This will initiate the pjsua and the user interface (CLI/menu UI) based on 
+ * This will initiate the pjsua and the user interface (CLI/menu UI) based on
  * the provided configuration.
  */
 pj_status_t pjsua_app_init(const pjsua_app_cfg_t *app_cfg);
@@ -83,5 +83,5 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli);
 pj_status_t pjsua_app_destroy(void);
 
 PJ_END_DECL
-    
+
 #endif  /* __PJSUA_APP_H__ */

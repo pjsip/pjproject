@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef __PJMEDIA_DELAYBUF_H__
@@ -47,7 +47,7 @@
  * get() and put() are matched).
  *
  * The buffer is adaptive, that is it continuously learns the optimal delay
- * to be applied to the audio flow at run-time. Once the optimal delay has 
+ * to be applied to the audio flow at run-time. Once the optimal delay has
  * been learned, the delay buffer will apply this delay to the audio flow,
  * expanding or shrinking the audio samples as necessary when the actual
  * audio samples in the buffer are too low or too high. It does this without
@@ -82,13 +82,13 @@ typedef enum pjmedia_delay_buf_flag
  *
  * @param pool              Pool where the delay buffer will be allocated
  *                          from.
- * @param name              Optional name for the buffer for log 
+ * @param name              Optional name for the buffer for log
  *                          identification.
  * @param clock_rate        Number of samples processed per second.
  * @param samples_per_frame Number of samples per frame.
  * @param channel_count     Number of channel per frame.
  * @param max_delay         Maximum number of delay to be accommodated,
- *                          in ms, if this value is negative or less than 
+ *                          in ms, if this value is negative or less than
  *                          one frame time, default maximum delay used is
  *                          400 ms.
  * @param options           Options. If PJMEDIA_DELAY_BUF_SIMPLE_FIFO is

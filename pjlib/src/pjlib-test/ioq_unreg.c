@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -62,8 +62,8 @@ struct sock_data
     pj_ssize_t           received;
 } sock_data;
 
-static void on_read_complete(pj_ioqueue_key_t *key, 
-                             pj_ioqueue_op_key_t *op_key, 
+static void on_read_complete(pj_ioqueue_key_t *key,
+                             pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_read)
 {
     pj_ssize_t size;
@@ -97,7 +97,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         pj_time_val now;
 
         pj_gettimeofday(&now);
-        if (PJ_TIME_VAL_GTE(now, time_to_unregister)) { 
+        if (PJ_TIME_VAL_GTE(now, time_to_unregister)) {
             sock_data.unregistered = 1;
             TRACE((THIS_FILE, "......on_read_complete(): unregistering"));
             pj_ioqueue_unregister(key);
@@ -105,8 +105,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             return;
         }
     }
- 
-    do { 
+
+    do {
         size = sock_data.bufsize;
         status = pj_ioqueue_recv(key, op_key, sock_data.buffer, &size, 0);
         TRACE((THIS_FILE, "........recv, status=%d", status));
@@ -128,7 +128,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         app_perror("send() error", status);
 
     TRACE((THIS_FILE, "........done"));
-} 
+}
 
 static int worker_thread(void *arg)
 {
@@ -151,7 +151,7 @@ static int worker_thread(void *arg)
  */
 static int perform_unreg_test(pj_ioqueue_t *ioqueue,
                               pj_pool_t *test_pool,
-                              const char *title, 
+                              const char *title,
                               pj_bool_t other_socket)
 {
     enum { WORKER_CNT = 1, MSEC = 500, QUIT_MSEC = 500 };
@@ -197,7 +197,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     end_time.msec += QUIT_MSEC;
     pj_time_val_normalize(&end_time);
 
-    
+
     /* Create polling thread */
     for (i=0; i<WORKER_CNT; ++i) {
         status = pj_thread_create(test_pool, "unregtest", &worker_thread,
@@ -209,7 +209,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     }
 
     /* Create pair of client/server sockets */
-    status = app_socketpair(pj_AF_INET(), pj_SOCK_DGRAM(), 0, 
+    status = app_socketpair(pj_AF_INET(), pj_SOCK_DGRAM(), 0,
                             &sock_data.sock, &sock_data.csock);
     if (status != PJ_SUCCESS) {
         app_perror("app_socketpair error", status);
@@ -221,8 +221,8 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     sock_data.pool = pj_pool_create(mem, "sd", 1000, 1000, NULL);
     sock_data.buffer = (char*) pj_pool_alloc(sock_data.pool, 128);
     sock_data.bufsize = 128;
-    sock_data.op_key = (pj_ioqueue_op_key_t*) 
-                       pj_pool_alloc(sock_data.pool, 
+    sock_data.op_key = (pj_ioqueue_op_key_t*)
+                       pj_pool_alloc(sock_data.pool,
                                      sizeof(*sock_data.op_key));
     sock_data.received = 0;
     sock_data.unregistered = 0;
@@ -255,9 +255,9 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 
         pj_gettimeofday(&now);
 
-        if (test_method == UNREGISTER_IN_APP && 
+        if (test_method == UNREGISTER_IN_APP &&
             PJ_TIME_VAL_GTE(now, time_to_unregister) &&
-            !sock_data.unregistered) 
+            !sock_data.unregistered)
         {
             sock_data.unregistered = 1;
             TRACE((THIS_FILE, "......main: unregistering"));
@@ -327,7 +327,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
         return -12;
     }
 
-    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 0/3, unregister in app (%s)", 
+    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 0/3, unregister in app (%s)",
                pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
         pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
@@ -348,7 +348,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
 
     test_method = UNREGISTER_IN_CALLBACK;
 
-    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 2/3, unregister in cb (%s)", 
+    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 2/3, unregister in cb (%s)",
                pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
         pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
@@ -358,7 +358,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     }
 
 
-    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 3/3, unregister in cb (%s)", 
+    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 3/3, unregister in cb (%s)",
                pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
         pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
@@ -390,7 +390,7 @@ int udp_ioqueue_unreg_test(void)
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_uiq_unreg;
 #endif  /* INCLUDE_IOQUEUE_UNREG_TEST */

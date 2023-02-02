@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/transport_udp.h>
 #include <pj/compat/socket.h>
@@ -102,14 +102,14 @@ struct transport_udp
 
 
 
-static void on_rx_rtp( pj_ioqueue_key_t *key, 
-                       pj_ioqueue_op_key_t *op_key, 
+static void on_rx_rtp( pj_ioqueue_key_t *key,
+                       pj_ioqueue_op_key_t *op_key,
                        pj_ssize_t bytes_read);
-static void on_rtp_data_sent(pj_ioqueue_key_t *key, 
-                             pj_ioqueue_op_key_t *op_key, 
+static void on_rtp_data_sent(pj_ioqueue_key_t *key,
+                             pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_sent);
-static void on_rx_rtcp(pj_ioqueue_key_t *key, 
-                       pj_ioqueue_op_key_t *op_key, 
+static void on_rx_rtcp(pj_ioqueue_key_t *key,
+                       pj_ioqueue_op_key_t *op_key,
                        pj_ssize_t bytes_read);
 
 /*
@@ -164,10 +164,10 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
                                        pjmedia_dir dir,
                                        unsigned pct_lost);
 static pj_status_t transport_destroy  (pjmedia_transport *tp);
-static pj_status_t transport_restart  (pj_bool_t is_rtp, 
+static pj_status_t transport_restart  (pj_bool_t is_rtp,
                                        struct transport_udp *udp);
 
-static pjmedia_transport_op transport_udp_op = 
+static pjmedia_transport_op transport_udp_op =
 {
     &transport_get_info,
     &transport_attach,
@@ -195,7 +195,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create( pjmedia_endpt *endpt,
                                                   unsigned options,
                                                   pjmedia_transport **p_tp)
 {
-    return pjmedia_transport_udp_create2(endpt, name, NULL, port, options, 
+    return pjmedia_transport_udp_create2(endpt, name, NULL, port, options,
                                         p_tp);
 }
 
@@ -227,7 +227,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
     pjmedia_sock_info si;
     pj_status_t status;
 
-    
+
     /* Sanity check */
     PJ_ASSERT_RETURN(endpt && port && p_tp, PJ_EINVAL);
 
@@ -245,7 +245,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    status = pj_sock_bind(si.rtp_sock, &si.rtp_addr_name, 
+    status = pj_sock_bind(si.rtp_sock, &si.rtp_addr_name,
                           pj_sockaddr_get_len(&si.rtp_addr_name));
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -257,7 +257,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
         goto on_error;
 
     /* Bind RTCP socket */
-    status = pj_sockaddr_init(af, &si.rtcp_addr_name, addr, 
+    status = pj_sockaddr_init(af, &si.rtcp_addr_name, addr,
                               (pj_uint16_t)(port+1));
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -267,7 +267,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    
+
     /* Create UDP transport by attaching socket info */
     return pjmedia_transport_udp_attach( endpt, name, &si, options, p_tp);
 
@@ -332,7 +332,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
         if (status != PJ_SUCCESS)
             goto on_error;
 
-        pj_memcpy(pj_sockaddr_get_addr(&tp->rtp_addr_name), 
+        pj_memcpy(pj_sockaddr_get_addr(&tp->rtp_addr_name),
                   pj_sockaddr_get_addr(&hostip),
                   pj_sockaddr_get_addr_len(&hostip));
     }
@@ -353,7 +353,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
                                       &rtp_cb, &tp->rtp_key);
     if (status != PJ_SUCCESS)
         goto on_error;
-    
+
     /* Disallow concurrency so that detach() and destroy() are
      * synchronized with the callback.
      */
@@ -365,7 +365,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_ioqueue_op_key_init(&tp->rtp_read_op, sizeof(tp->rtp_read_op));
     for (i=0; i<PJ_ARRAY_SIZE(tp->rtp_pending_write); ++i) {
         tp->rtp_pending_write[i].is_pending = PJ_FALSE;
-        pj_ioqueue_op_key_init(&tp->rtp_pending_write[i].op_key, 
+        pj_ioqueue_op_key_init(&tp->rtp_pending_write[i].op_key,
                                sizeof(tp->rtp_pending_write[i].op_key));
     }
 
@@ -405,7 +405,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
                                   &tp->rtcp_src_addr, &tp->rtcp_addr_len);
     if (status != PJ_EPENDING)
         goto on_error;
-#endif  
+#endif
 
     tp->ioqueue = ioqueue;
 
@@ -432,7 +432,7 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 
     /* Must not close while application is using this */
     //PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
-    
+
 
     if (udp->rtp_key) {
         /* This will block the execution if callback is still
@@ -462,7 +462,7 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 }
 
 /* Call RTP cb. */
-static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read, 
+static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
                         pj_bool_t *rem_switch)
 {
     void (*cb)(void*,void*,pj_ssize_t);
@@ -541,7 +541,7 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
         /* Simulate packet lost on RX direction */
         if (udp->rx_drop_pct) {
             if ((pj_rand() % 100) <= (int)udp->rx_drop_pct) {
-                PJ_LOG(5,(udp->base.name, 
+                PJ_LOG(5,(udp->base.name,
                           "RX RTP packet dropped because of pkt lost "
                           "simulation"));
                 discard = PJ_TRUE;
@@ -549,8 +549,8 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
         }
 
         //if (!discard && udp->attached && cb)
-        if (!discard && 
-            (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))) 
+        if (!discard &&
+            (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)))
         {
             call_rtp_cb(udp, bytes_read, &rem_switch);
         }
@@ -602,7 +602,7 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
                                         &udp->rtp_src_addr,
                                         &udp->rtp_addrlen);
 
-        if (status != PJ_EPENDING && status != PJ_SUCCESS) {        
+        if (status != PJ_EPENDING && status != PJ_SUCCESS) {
             if (transport_restarted && last_err == status) {
                 /* Still the same error after restart */
                 bytes_read = -PJ_ESOCKETSTOP;
@@ -619,7 +619,7 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
                 if (status == PJ_ESOCKETSTOP ||
                     num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
                 {
-                    status = transport_restart(PJ_TRUE, udp);               
+                    status = transport_restart(PJ_TRUE, udp);
                     if (status != PJ_SUCCESS) {
                         bytes_read = -PJ_ESOCKETSTOP;
                         call_rtp_cb(udp, bytes_read, NULL);
@@ -636,8 +636,8 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
              udp->started);
 }
 
-static void on_rtp_data_sent(pj_ioqueue_key_t *key, 
-                             pj_ioqueue_op_key_t *op_key, 
+static void on_rtp_data_sent(pj_ioqueue_key_t *key,
+                             pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_sent)
 {
     struct transport_udp *udp;
@@ -656,8 +656,8 @@ static void on_rtp_data_sent(pj_ioqueue_key_t *key,
 }
 
 /* Notification from ioqueue about incoming RTCP packet */
-static void on_rx_rtcp(pj_ioqueue_key_t *key, 
-                       pj_ioqueue_op_key_t *op_key, 
+static void on_rx_rtcp(pj_ioqueue_key_t *key,
+                       pj_ioqueue_op_key_t *op_key,
                        pj_ssize_t bytes_read)
 {
     struct transport_udp *udp;
@@ -725,7 +725,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
         udp->rtcp_addr_len = sizeof(udp->rtcp_src_addr);
         status = pj_ioqueue_recvfrom(udp->rtcp_key, &udp->rtcp_read_op,
                                      udp->rtcp_pkt, &bytes_read, 0,
-                                     &udp->rtcp_src_addr, 
+                                     &udp->rtcp_src_addr,
                                      &udp->rtcp_addr_len);
 
         if (status != PJ_EPENDING && status != PJ_SUCCESS) {
@@ -745,7 +745,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
                 if (status == PJ_ESOCKETSTOP ||
                     num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
                 {
-                    status = transport_restart(PJ_FALSE, udp);              
+                    status = transport_restart(PJ_FALSE, udp);
                     if (status != PJ_SUCCESS) {
                         bytes_read = -PJ_ESOCKETSTOP;
                         call_rtcp_cb(udp, bytes_read);
@@ -757,7 +757,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
             }
             bytes_read = -status;
             TRACE_((udp->base.name, "on_rx_rtcp(): recvfrom error=%d", status));
-        }       
+        }
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
              udp->started);
 }
@@ -891,14 +891,14 @@ static pj_status_t tp_attach          (pjmedia_transport *tp,
 #if PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE
     {
         unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
-        
+
         status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(),
                                           PJ_TRUE, &sobuf_size);
         if (status != PJ_SUCCESS) {
             pj_perror(3, tp->name, status, "Failed setting SO_RCVBUF");
         } else {
             if (sobuf_size < PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE) {
-                PJ_LOG(4, (tp->name, 
+                PJ_LOG(4, (tp->name,
                            "Warning! Cannot set SO_RCVBUF as configured, "
                            "now=%d, configured=%d",
                            sobuf_size, PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE));
@@ -918,7 +918,7 @@ static pj_status_t tp_attach          (pjmedia_transport *tp,
             pj_perror(3, tp->name, status, "Failed setting SO_SNDBUF");
         } else {
             if (sobuf_size < PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE) {
-                PJ_LOG(4, (tp->name, 
+                PJ_LOG(4, (tp->name,
                            "Warning! Cannot set SO_SNDBUF as configured, "
                            "now=%d, configured=%d",
                            sobuf_size, PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE));
@@ -960,11 +960,11 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 static pj_status_t transport_attach2(pjmedia_transport *tp,
                                      pjmedia_transport_attach_param *att_param)
 {
-    return tp_attach(tp, att_param->user_data, 
-                            (pj_sockaddr_t*)&att_param->rem_addr, 
-                            (pj_sockaddr_t*)&att_param->rem_rtcp, 
+    return tp_attach(tp, att_param->user_data,
+                            (pj_sockaddr_t*)&att_param->rem_addr,
+                            (pj_sockaddr_t*)&att_param->rem_rtcp,
                             att_param->addr_len, att_param->rtp_cb,
-                            att_param->rtp_cb2, 
+                            att_param->rtp_cb2,
                             att_param->rtcp_cb);
 }
 
@@ -1045,7 +1045,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     /* Simulate packet lost on TX direction */
     if (udp->tx_drop_pct) {
         if ((pj_rand() % 100) <= (int)udp->tx_drop_pct) {
-            PJ_LOG(5,(udp->base.name, 
+            PJ_LOG(5,(udp->base.name,
                       "TX RTP packet dropped because of pkt lost "
                       "simulation"));
             return PJ_SUCCESS;
@@ -1069,10 +1069,10 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     pj_memcpy(pw->buffer, pkt, size);
 
     sent = size;
-    status = pj_ioqueue_sendto( udp->rtp_key, 
+    status = pj_ioqueue_sendto( udp->rtp_key,
                                 &udp->rtp_pending_write[id].op_key,
                                 pw->buffer, &sent, 0,
-                                &udp->rem_rtp_addr, 
+                                &udp->rem_rtp_addr,
                                 udp->addr_len);
 
     if (status != PJ_EPENDING) {
@@ -1170,7 +1170,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
         m_loc = sdp_local->media[media_index];
 
         tp_proto_loc = pjmedia_sdp_transport_get_proto(&m_loc->desc.transport);
-        tp_proto_rem = m_rem? 
+        tp_proto_rem = m_rem?
                 pjmedia_sdp_transport_get_proto(&m_rem->desc.transport) : 0;
         PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_loc, PJMEDIA_TP_PROFILE_RTCP_FB);
         PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_rem, PJMEDIA_TP_PROFILE_RTCP_FB);
@@ -1182,7 +1182,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
             return PJMEDIA_SDP_EINPROTO;
         }
     }
-    
+
     if (udp->enable_rtcp_mux) {
         pjmedia_sdp_media *m = sdp_local->media[media_index];
         pjmedia_sdp_attr *attr;
@@ -1193,8 +1193,8 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
         /* Check if remote wants RTCP mux */
         if (rem_sdp) {
             pjmedia_sdp_media *rem_m = rem_sdp->media[media_index];
-            
-            attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+
+            attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr,
                                          &STR_RTCP_MUX, NULL);
             udp->use_rtcp_mux = (attr? PJ_TRUE: PJ_FALSE);
             add_rtcp_mux = udp->use_rtcp_mux;
@@ -1207,13 +1207,13 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
          * if remote rejects it.
          */
         pjmedia_sdp_attr_remove_all(&m->attr_count, m->attr, "rtcp");
-        
+
         if (!udp->use_rtcp_mux) {
            /* Add RTCP attribute if the remote doesn't offer or
             * rejects it.
             */
             attr = pjmedia_sdp_attr_create_rtcp(pool,
-                                                &udp->rtcp_addr_name);  
+                                                &udp->rtcp_addr_name);
             if (attr)
                 pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
         }
@@ -1256,7 +1256,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 
     pj_ioqueue_op_key_init(&udp->rtp_read_op, sizeof(udp->rtp_read_op));
     for (i=0; i<PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
-        pj_ioqueue_op_key_init(&udp->rtp_pending_write[i].op_key, 
+        pj_ioqueue_op_key_init(&udp->rtp_pending_write[i].op_key,
                                sizeof(udp->rtp_pending_write[i].op_key));
     }
 
@@ -1332,14 +1332,14 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 
     if (dir & PJMEDIA_DIR_ENCODING)
         udp->tx_drop_pct = pct_lost;
-    
+
     if (dir & PJMEDIA_DIR_DECODING)
         udp->rx_drop_pct = pct_lost;
 
     return PJ_SUCCESS;
 }
 
-static pj_status_t transport_restart(pj_bool_t is_rtp, 
+static pj_status_t transport_restart(pj_bool_t is_rtp,
                                      struct transport_udp *udp)
 {
     PJ_UNUSED_ARG(udp);
@@ -1368,11 +1368,11 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     pj_ioqueue_callback cb;
     pj_ssize_t size;
 
-    PJ_LOG(4, (udp->base.name, "Restarting %s transport", 
+    PJ_LOG(4, (udp->base.name, "Restarting %s transport",
               (is_rtp)?"RTP":"RTCP"));
 
     udp->started = PJ_FALSE;
-    /* Destroy existing socket, if any. */    
+    /* Destroy existing socket, if any. */
     if (key) {
         /* This will block the execution if callback is still
          * being called.
@@ -1386,7 +1386,7 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     } else if (*sock != PJ_INVALID_SOCKET) {
         pj_sock_close(*sock);
     }
-    *sock = PJ_INVALID_SOCKET;   
+    *sock = PJ_INVALID_SOCKET;
 
     /* Create socket */
     af = udp->rtp_addr_name.addr.sa_family;
@@ -1405,7 +1405,7 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     if (is_rtp) {
         unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
 
-        pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(), 
+        pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(),
                                  PJ_TRUE, &sobuf_size);
     }
 #endif
@@ -1413,7 +1413,7 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     if (is_rtp) {
         unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
 
-        pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(), 
+        pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(),
                                  PJ_TRUE, &sobuf_size);
     }
 #endif
@@ -1430,7 +1430,7 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
                                           &cb, &udp->rtp_key);
     } else {
         status = pj_ioqueue_register_sock(udp->pool, udp->ioqueue, *sock, udp,
-                                          &cb, &udp->rtcp_key);    
+                                          &cb, &udp->rtcp_key);
     }
 
     if (status != PJ_SUCCESS)
@@ -1439,13 +1439,13 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     if (is_rtp) {
         size = sizeof(udp->rtp_pkt);
         status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
-                                     udp->rtp_pkt, &size, 
+                                     udp->rtp_pkt, &size,
                                      PJ_IOQUEUE_ALWAYS_ASYNC,
                                      &udp->rtp_src_addr, &udp->rtp_addrlen);
     } else {
         size = sizeof(udp->rtcp_pkt);
         status = pj_ioqueue_recvfrom(udp->rtcp_key, &udp->rtcp_read_op,
-                                     udp->rtcp_pkt, &size, 
+                                     udp->rtcp_pkt, &size,
                                      PJ_IOQUEUE_ALWAYS_ASYNC,
                                      &udp->rtcp_src_addr, &udp->rtcp_addr_len);
     }
@@ -1453,7 +1453,7 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
         goto on_error;
 
     udp->started = PJ_TRUE;
-    PJ_LOG(4, (udp->base.name, "Success restarting %s transport", 
+    PJ_LOG(4, (udp->base.name, "Success restarting %s transport",
               (is_rtp)?"RTP":"RTCP"));
     return PJ_SUCCESS;
 on_error:
@@ -1461,7 +1461,7 @@ on_error:
         pj_sock_close(*sock);
         *sock = PJ_INVALID_SOCKET;
     }
-    PJ_PERROR(1, (udp->base.name, status, 
+    PJ_PERROR(1, (udp->base.name, status,
                  "Error restarting %s transport", (is_rtp)?"RTP":"RTCP"));
     return status;
 

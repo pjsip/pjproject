@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSUA_APP_COMMON_H__
 #define __PJSUA_APP_COMMON_H__
@@ -195,7 +195,7 @@ void legacy_on_stopped(pj_bool_t restart);
 pj_status_t cli_init(void);
 pj_status_t cli_main(pj_bool_t wait_telnet_cli);
 void cli_destroy(void);
-void cli_get_info(char *info, pj_size_t size); 
+void cli_get_info(char *info, pj_size_t size);
 
 /** Legacy method **/
 void legacy_main(void);
@@ -219,6 +219,6 @@ void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg);
 
 
 PJ_END_DECL
-    
+
 #endif  /* __PJSUA_APP_COMMON_H__ */
 

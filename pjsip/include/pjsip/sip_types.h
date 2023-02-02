@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_TYPES_H__
 #define __PJSIP_SIP_TYPES_H__
@@ -172,8 +172,8 @@ typedef struct pjsip_cred_info pjsip_cred_info;
 typedef struct pjsip_module pjsip_module;
 
 
-/** 
- * Forward declaration for user agent type (sip_ua_layer.h). 
+/**
+ * Forward declaration for user agent type (sip_ua_layer.h).
  */
 typedef pjsip_module pjsip_user_agent;
 

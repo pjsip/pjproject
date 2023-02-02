@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_HASH_HPP__
 #define __PJPP_HASH_HPP__
@@ -35,29 +35,29 @@ public:
     class iterator
     {
     public:
-        iterator() 
+        iterator()
         {
         }
-        explicit iterator(pj_hash_table_t *h, pj_hash_iterator_t *i) 
-        : ht_(h), it_(i) 
+        explicit iterator(pj_hash_table_t *h, pj_hash_iterator_t *i)
+        : ht_(h), it_(i)
         {
         }
-        iterator(const iterator &rhs) 
-        : ht_(rhs.ht_), it_(rhs.it_) 
+        iterator(const iterator &rhs)
+        : ht_(rhs.ht_), it_(rhs.it_)
         {
         }
-        void operator++() 
-        { 
-            it_ = pj_hash_next(ht_, it_); 
+        void operator++()
+        {
+            it_ = pj_hash_next(ht_, it_);
         }
-        bool operator==(const iterator &rhs) 
-        { 
-            return ht_ == rhs.ht_ && it_ == rhs.it_; 
+        bool operator==(const iterator &rhs)
+        {
+            return ht_ == rhs.ht_ && it_ == rhs.it_;
         }
-        iterator & operator=(const iterator &rhs) 
-        { 
-            ht_=rhs.ht_; it_=rhs.it_; 
-            return *this; 
+        iterator & operator=(const iterator &rhs)
+        {
+            ht_=rhs.ht_; it_=rhs.it_;
+            return *this;
         }
     private:
         pj_hash_table_t *ht_;
@@ -85,8 +85,8 @@ public:
     //
     // Calculate hash value.
     //
-    static pj_uint32_t calc( pj_uint32_t initial_hval, 
-                             const void *key, 
+    static pj_uint32_t calc( pj_uint32_t initial_hval,
+                             const void *key,
                              unsigned keylen = PJ_HASH_KEY_STRING)
     {
         return pj_hash_calc(initial_hval, key, keylen);
@@ -112,8 +112,8 @@ public:
     // Associate a value with a key.
     // Set the value to NULL to delete the key from the hash table.
     //
-    void set(Pj_Pool *pool, 
-             const void *key, 
+    void set(Pj_Pool *pool,
+             const void *key,
              void *value,
              unsigned keylen = PJ_HASH_KEY_STRING)
     {

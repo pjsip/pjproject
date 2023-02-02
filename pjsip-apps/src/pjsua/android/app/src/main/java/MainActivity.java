@@ -50,17 +50,17 @@ class CONST {
 
 class LOG {
     public static void DEBUG(Handler h, String str) {
-        Message msg = Message.obtain(h, CONST.MSG_TYPE.STR_DEBUG.ordinal(), 
+        Message msg = Message.obtain(h, CONST.MSG_TYPE.STR_DEBUG.ordinal(),
                                      str);
         msg.sendToTarget();
-    }   
+    }
     public static void INFO(Handler h, String str) {
-        Message msg = Message.obtain(h, CONST.MSG_TYPE.STR_INFO.ordinal(), 
+        Message msg = Message.obtain(h, CONST.MSG_TYPE.STR_INFO.ordinal(),
                                      str);
         msg.sendToTarget();
     }
     public static void ERROR(Handler h, String str) {
-        Message msg = Message.obtain(h, CONST.MSG_TYPE.STR_ERROR.ordinal(), 
+        Message msg = Message.obtain(h, CONST.MSG_TYPE.STR_ERROR.ordinal(),
                                      str);
         msg.sendToTarget();
     }
@@ -74,7 +74,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         private final WeakReference<MainActivity> mTarget;
 
         public MyHandler(MainActivity target) {
-            mTarget = new WeakReference<MainActivity>(target); 
+            mTarget = new WeakReference<MainActivity>(target);
         }
 
         @Override
@@ -84,10 +84,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                 return;
 
             if (m.what == CONST.MSG_TYPE.STR_DEBUG.ordinal()) {
-                Log.d(CONST.TAG, (String)m.obj);        
+                Log.d(CONST.TAG, (String)m.obj);
             } else if (m.what == CONST.MSG_TYPE.STR_INFO.ordinal()) {
                 target.updateStatus((String)m.obj);
-                Log.i(CONST.TAG, (String)m.obj);                                
+                Log.i(CONST.TAG, (String)m.obj);
             } else if (m.what == CONST.MSG_TYPE.STR_ERROR.ordinal()) {
                 target.updateStatus((String)m.obj);
                 Log.e(CONST.TAG, (String)m.obj);
@@ -112,17 +112,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         private WeakReference<Handler> ui_handler;
 
         public MyCallback(Handler in_ui_handler) {
-            set_ui_handler(in_ui_handler);                      
+            set_ui_handler(in_ui_handler);
         }
 
         public void set_ui_handler(Handler in_ui_handler) {
             ui_handler = new WeakReference<Handler>(in_ui_handler);
-        }               
+        }
 
         @Override
         public void onStarted(String msg) {
             Handler ui = ui_handler.get();
-            LOG.INFO(ui, msg);                  
+            LOG.INFO(ui, msg);
         }
 
         @Override
@@ -131,12 +131,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
             /** Use timer to stopped/restart **/
             if (restart != 0) {
                 LOG.INFO(ui, "Telnet Restarting");
-                Message msg = Message.obtain(ui, 
+                Message msg = Message.obtain(ui,
                         CONST.MSG_TYPE.CLI_RESTART.ordinal());
                 ui.sendMessageDelayed(msg, 100);
             } else {
                 LOG.INFO(ui, "Telnet Stopping");
-                Message msg = Message.obtain(ui, 
+                Message msg = Message.obtain(ui,
                         CONST.MSG_TYPE.CLI_STOP.ordinal());
                 ui.sendMessageDelayed(msg, 100);
             }
@@ -156,7 +156,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
     private void updateStatus(String output) {
         TextView tStatus = (TextView) findViewById(R.id.textStatus);
-        tStatus.setText(output);        
+        tStatus.setText(output);
     }
 
     @Override
@@ -221,7 +221,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         setContentView(R.layout.activity_main);
     }
 
-    private int init_lib() {        
+    private int init_lib() {
         LOG.INFO(ui_handler, "Loading module...");
 
         // Try loading video dependency libs
@@ -243,13 +243,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         }
 
         // Wait for GDB to init, for native debugging only
-        if (false && (getApplicationInfo().flags & 
+        if (false && (getApplicationInfo().flags &
                       ApplicationInfo.FLAG_DEBUGGABLE) != 0)
         {
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {
-                LOG.ERROR(ui_handler, "InterruptedException: " + 
+                LOG.ERROR(ui_handler, "InterruptedException: " +
                         e.getMessage());
             }
         }
@@ -274,7 +274,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
         return 0;
     }
-    
+
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
     {
         WindowHandle wh = new WindowHandle();
@@ -293,5 +293,5 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         wh.setWindow(null);
         pjsua.setVideoWindow(wh);
     }
-    
+
 }

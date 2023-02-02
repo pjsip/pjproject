@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_OS_H__
 #define __PJ_OS_H__
@@ -165,7 +165,7 @@ typedef int (PJ_THREAD_FUNC pj_thread_proc)(void*);
 
 /**
  * Thread structure, to thread's state when the thread is created by external
- * or native API. 
+ * or native API.
  */
 typedef long pj_thread_desc[PJ_THREAD_DESC_SIZE];
 
@@ -178,27 +178,27 @@ PJ_DECL(pj_uint32_t) pj_getpid(void);
 /**
  * Create a new thread.
  *
- * @param pool          The memory pool from which the thread record 
+ * @param pool          The memory pool from which the thread record
  *                      will be allocated from.
  * @param thread_name   The optional name to be assigned to the thread.
  * @param proc          Thread entry function.
  * @param arg           Argument to be passed to the thread entry function.
  * @param stack_size    The size of the stack for the new thread, or ZERO or
- *                      PJ_THREAD_DEFAULT_STACK_SIZE to let the 
- *                      library choose the reasonable size for the stack. 
- *                      For some systems, the stack will be allocated from 
+ *                      PJ_THREAD_DEFAULT_STACK_SIZE to let the
+ *                      library choose the reasonable size for the stack.
+ *                      For some systems, the stack will be allocated from
  *                      the pool, so the pool must have suitable capacity.
- * @param flags         Flags for thread creation, which is bitmask combination 
+ * @param flags         Flags for thread creation, which is bitmask combination
  *                      from enum pj_thread_create_flags.
  * @param thread        Pointer to hold the newly created thread.
  *
  * @return              PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_thread_create(  pj_pool_t *pool, 
+PJ_DECL(pj_status_t) pj_thread_create(  pj_pool_t *pool,
                                         const char *thread_name,
-                                        pj_thread_proc *proc, 
+                                        pj_thread_proc *proc,
                                         void *arg,
-                                        pj_size_t stack_size, 
+                                        pj_size_t stack_size,
                                         unsigned flags,
                                         pj_thread_t **thread );
 
@@ -208,11 +208,11 @@ PJ_DECL(pj_status_t) pj_thread_create(  pj_pool_t *pool,
  * When the thread is created by external function or API call,
  * it must be 'registered' to PJLIB using pj_thread_register(), so that it can
  * cooperate with PJLIB's framework. During registration, some data needs to
- * be maintained, and this data must remain available during the thread's 
+ * be maintained, and this data must remain available during the thread's
  * lifetime.
  *
  * @param thread_name   The optional name to be assigned to the thread.
- * @param desc          Thread descriptor, which must be available throughout 
+ * @param desc          Thread descriptor, which must be available throughout
  *                      the lifetime of the thread.
  * @param thread        Pointer to hold the created thread handle.
  *
@@ -357,17 +357,17 @@ PJ_DECL(pj_status_t) pj_thread_sleep(unsigned msec);
 #  define PJ_CHECK_STACK() pj_thread_check_stack(__FILE__, __LINE__)
 
 /** @internal
- * The implementation of stack checking. 
+ * The implementation of stack checking.
  */
 PJ_DECL(void) pj_thread_check_stack(const char *file, int line);
 
 /** @internal
- * Get maximum stack usage statistic. 
+ * Get maximum stack usage statistic.
  */
 PJ_DECL(pj_uint32_t) pj_thread_get_stack_max_usage(pj_thread_t *thread);
 
 /** @internal
- * Dump thread stack status. 
+ * Dump thread stack status.
  */
 PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
                                               const char **file,
@@ -398,7 +398,7 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
  * tasks. PJLIB port for Symbian complies to this recommended behavior.
  * As the result, few things have been changed in PJLIB for Symbian:
  *      - the timer heap (see @ref PJ_TIMER) is implemented with active
- *        object framework, and each timer entry registered to the timer 
+ *        object framework, and each timer entry registered to the timer
  *        heap will register an Active Object to the Active Scheduler.
  *        Because of this, polling the timer heap with pj_timer_heap_poll()
  *        is no longer necessary, and this function will just evaluate
@@ -410,16 +410,16 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
  *        necessary, and this function will just evaluate to nothing.
  *
  * Since timer heap and ioqueue polling are no longer necessary, Symbian
- * application can now poll for all events by calling 
+ * application can now poll for all events by calling
  * \a User::WaitForAnyRequest() and \a CActiveScheduler::RunIfReady().
  * PJLIB provides a thin wrapper which calls these two functions,
  * called pj_symbianos_poll().
  */
- 
+
 /**
  * Wait the completion of any Symbian active objects. When the timeout
- * value is not specified (the \a ms_timeout argument is -1), this 
- * function is a thin wrapper which calls \a User::WaitForAnyRequest() 
+ * value is not specified (the \a ms_timeout argument is -1), this
+ * function is a thin wrapper which calls \a User::WaitForAnyRequest()
  * and \a CActiveScheduler::RunIfReady(). If the timeout value is
  * specified, this function will schedule a timer entry to the timer
  * heap (which is an Active Object), to limit the wait time for event
@@ -449,7 +449,7 @@ PJ_DECL(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout);
  * This structure declares Symbian OS specific parameters that can be
  * specified when calling #pj_symbianos_set_params().
  */
-typedef struct pj_symbianos_params 
+typedef struct pj_symbianos_params
 {
     /**
      * Optional RSocketServ instance to be used by PJLIB. If this
@@ -457,28 +457,28 @@ typedef struct pj_symbianos_params
      * when pj_init() is called.
      */
     void        *rsocketserv;
-    
+
     /**
      * Optional RConnection instance to be used by PJLIB when creating
      * sockets. If this value is NULL, no RConnection will be
      * specified when creating sockets.
      */
     void        *rconnection;
-    
+
     /**
      * Optional RHostResolver instance to be used by PJLIB. If this value
      * is NULL, a new RHostResolver instance will be created when
      * pj_init() is called.
      */
     void        *rhostresolver;
-     
+
     /**
-     * Optional RHostResolver for IPv6 instance to be used by PJLIB. 
+     * Optional RHostResolver for IPv6 instance to be used by PJLIB.
      * If this value is NULL, a new RHostResolver instance will be created
      * when pj_init() is called.
      */
     void        *rhostresolver6;
-     
+
 } pj_symbianos_params;
 
 /**
@@ -495,10 +495,10 @@ PJ_DECL(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm);
 /**
  *  Notify PJLIB that the access point connection has been down or unusable
  *  and PJLIB should not try to access the Symbian socket API (especially ones
- *  that send packets). Sending packet when RConnection is reconnected to 
- *  different access point may cause the WaitForRequest() for the function to 
+ *  that send packets). Sending packet when RConnection is reconnected to
+ *  different access point may cause the WaitForRequest() for the function to
  *  block indefinitely.
- *  
+ *
  *  @param up           If set to PJ_FALSE it will cause PJLIB to not try
  *                      to access socket API, and error will be returned
  *                      immediately instead.
@@ -508,7 +508,7 @@ PJ_DECL(void) pj_symbianos_set_connection_status(pj_bool_t up);
 /**
  * @}
  */
- 
+
 /* **************************************************************************/
 /**
  * @defgroup PJ_TLS Thread Local Storage.
@@ -516,7 +516,7 @@ PJ_DECL(void) pj_symbianos_set_connection_status(pj_bool_t up);
  * @{
  */
 
-/** 
+/**
  * Allocate thread local storage index. The initial value of the variable at
  * the index is zero.
  *
@@ -578,7 +578,7 @@ PJ_DECL(void*) pj_thread_local_get(long index);
  *
  * @return          PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_atomic_create( pj_pool_t *pool, 
+PJ_DECL(pj_status_t) pj_atomic_create( pj_pool_t *pool,
                                        pj_atomic_value_t initial,
                                        pj_atomic_t **atomic );
 
@@ -597,7 +597,7 @@ PJ_DECL(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var );
  * @param atomic_var    the atomic variable.
  * @param value         value to be set to the variable.
  */
-PJ_DECL(void) pj_atomic_set( pj_atomic_t *atomic_var, 
+PJ_DECL(void) pj_atomic_set( pj_atomic_t *atomic_var,
                              pj_atomic_value_t value);
 
 /**
@@ -672,7 +672,7 @@ PJ_DECL(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
  * @{
  *
  * Mutex manipulation. Alternatively, application can use higher abstraction
- * for lock objects, which provides uniform API for all kinds of lock 
+ * for lock objects, which provides uniform API for all kinds of lock
  * mechanisms, including mutex. See @ref PJ_LOCK for more information.
  */
 
@@ -700,14 +700,14 @@ typedef enum pj_mutex_type_e
  *
  * @return          PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_mutex_create(pj_pool_t *pool, 
+PJ_DECL(pj_status_t) pj_mutex_create(pj_pool_t *pool,
                                      const char *name,
-                                     int type, 
+                                     int type,
                                      pj_mutex_t **mutex);
 
 /**
  * Create simple, non-recursive mutex.
- * This function is a simple wrapper for #pj_mutex_create to create 
+ * This function is a simple wrapper for #pj_mutex_create to create
  * non-recursive mutex.
  *
  * @param pool      The pool.
@@ -721,7 +721,7 @@ PJ_DECL(pj_status_t) pj_mutex_create_simple( pj_pool_t *pool, const char *name,
 
 /**
  * Create recursive mutex.
- * This function is a simple wrapper for #pj_mutex_create to create 
+ * This function is a simple wrapper for #pj_mutex_create to create
  * recursive mutex.
  *
  * @param pool      The pool.
@@ -785,14 +785,14 @@ PJ_DECL(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex);
  * @ingroup PJ_OS
  * @{
  * Reader/writer mutex is a classic synchronization object where multiple
- * readers can acquire the mutex, but only a single writer can acquire the 
+ * readers can acquire the mutex, but only a single writer can acquire the
  * mutex.
  */
 
 /**
  * Opaque declaration for reader/writer mutex.
  * Reader/writer mutex is a classic synchronization object where multiple
- * readers can acquire the mutex, but only a single writer can acquire the 
+ * readers can acquire the mutex, but only a single writer can acquire the
  * mutex.
  */
 typedef struct pj_rwmutex_t pj_rwmutex_t;
@@ -910,9 +910,9 @@ PJ_DECL(void) pj_leave_critical_section(void);
  *
  * @return          PJ_SUCCESS on success, or the error code.
  */
-PJ_DECL(pj_status_t) pj_sem_create( pj_pool_t *pool, 
+PJ_DECL(pj_status_t) pj_sem_create( pj_pool_t *pool,
                                     const char *name,
-                                    unsigned initial, 
+                                    unsigned initial,
                                     unsigned max,
                                     pj_sem_t **sem);
 
@@ -1003,10 +1003,10 @@ PJ_DECL(pj_status_t) pj_event_wait(pj_event_t *event);
 PJ_DECL(pj_status_t) pj_event_trywait(pj_event_t *event);
 
 /**
- * Set the event object state to signaled. For auto-reset event, this 
+ * Set the event object state to signaled. For auto-reset event, this
  * will only release the first thread that are waiting on the event. For
  * manual reset event, the state remains signaled until the event is reset.
- * If there is no thread waiting on the event, the event object state 
+ * If there is no thread waiting on the event, the event object state
  * remains signaled.
  *
  * @param event     The event object.
@@ -1152,7 +1152,7 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
  * @ingroup PJ_OS
  * @{
  *
- * PJLIB provides <b>High Resolution Timestamp</b> API to access highest 
+ * PJLIB provides <b>High Resolution Timestamp</b> API to access highest
  * resolution timestamp value provided by the platform. The API is usefull
  * to measure precise elapsed time, and can be used in applications such
  * as profiling.
@@ -1338,7 +1338,7 @@ PJ_INLINE(pj_int32_t) pj_timestamp_diff32(const pj_timestamp *t1,
  * Calculate the elapsed time, and store it in pj_time_val.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1356,7 +1356,7 @@ PJ_DECL(pj_time_val) pj_elapsed_time( const pj_timestamp *start,
  * Calculate the elapsed time as 32-bit miliseconds.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1380,7 +1380,7 @@ PJ_DECL(pj_uint64_t) pj_elapsed_msec64(const pj_timestamp *start,
  * Calculate the elapsed time in 32-bit microseconds.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1398,7 +1398,7 @@ PJ_DECL(pj_uint32_t) pj_elapsed_usec( const pj_timestamp *start,
  * Calculate the elapsed time in 32-bit nanoseconds.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *
@@ -1416,7 +1416,7 @@ PJ_DECL(pj_uint32_t) pj_elapsed_nanosec( const pj_timestamp *start,
  * Calculate the elapsed time in 32-bit cycles.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering
- * whether floating point or 64-bit precision arithmetic is available. 
+ * whether floating point or 64-bit precision arithmetic is available.
  * For maximum portability, application should prefer to use this function
  * rather than calculating the elapsed time by itself.
  *

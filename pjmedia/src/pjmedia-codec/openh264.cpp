@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C)2014 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/openh264.h>
 #include <pjmedia-codec/h264_packetizer.h>
@@ -527,7 +527,7 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     pj_bzero(&elayer_ctx, sizeof (SLayerPEncCtx));
     elayer_ctx.iDLayerQp                = 24;
     elayer_ctx.sSliceArgument.uiSliceMode = (oh264_data->whole ?
-                                             SM_SINGLE_SLICE : 
+                                             SM_SINGLE_SLICE :
                                              SM_SIZELIMITED_SLICE);
 
     /* uiSliceSizeConstraint = uiMaxNalSize - NAL_HEADER_ADD_0X30BYTES */
@@ -584,7 +584,7 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
                              "rc=%d", rc));
         return PJMEDIA_CODEC_EFAILED;
     }
-    
+
     /*
      * Decoder
      */
@@ -1143,7 +1143,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
                       "Decoder returned non error free frame, ret=%d", ret));
         }
     }
-        
+
     if (!has_frame) {
         output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->size = 0;

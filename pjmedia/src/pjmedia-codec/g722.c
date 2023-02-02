@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/g722.h>
 #include <pjmedia/codec.h>
@@ -44,37 +44,37 @@
 
 /* Tracing */
 #ifndef PJ_TRACE
-#   define PJ_TRACE     0       
+#   define PJ_TRACE     0
 #endif
 
-#if PJ_TRACE 
+#if PJ_TRACE
 #   define TRACE_(expr) PJ_LOG(4,expr)
 #else
 #   define TRACE_(expr)
 #endif
 
 /* Prototypes for G722 factory */
-static pj_status_t g722_test_alloc(pjmedia_codec_factory *factory, 
+static pj_status_t g722_test_alloc(pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *id );
-static pj_status_t g722_default_attr(pjmedia_codec_factory *factory, 
-                                     const pjmedia_codec_info *id, 
+static pj_status_t g722_default_attr(pjmedia_codec_factory *factory,
+                                     const pjmedia_codec_info *id,
                                      pjmedia_codec_param *attr );
-static pj_status_t g722_enum_codecs(pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
+static pj_status_t g722_enum_codecs(pjmedia_codec_factory *factory,
+                                    unsigned *count,
                                     pjmedia_codec_info codecs[]);
-static pj_status_t g722_alloc_codec(pjmedia_codec_factory *factory, 
-                                    const pjmedia_codec_info *id, 
+static pj_status_t g722_alloc_codec(pjmedia_codec_factory *factory,
+                                    const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec);
-static pj_status_t g722_dealloc_codec(pjmedia_codec_factory *factory, 
+static pj_status_t g722_dealloc_codec(pjmedia_codec_factory *factory,
                                       pjmedia_codec *codec );
 
 /* Prototypes for G722 implementation. */
-static pj_status_t  g722_codec_init(pjmedia_codec *codec, 
+static pj_status_t  g722_codec_init(pjmedia_codec *codec,
                                     pj_pool_t *pool );
-static pj_status_t  g722_codec_open(pjmedia_codec *codec, 
+static pj_status_t  g722_codec_open(pjmedia_codec *codec,
                                     pjmedia_codec_param *attr );
 static pj_status_t  g722_codec_close(pjmedia_codec *codec );
-static pj_status_t  g722_codec_modify(pjmedia_codec *codec, 
+static pj_status_t  g722_codec_modify(pjmedia_codec *codec,
                                       const pjmedia_codec_param *attr );
 static pj_status_t  g722_codec_parse(pjmedia_codec *codec,
                                      void *pkt,
@@ -82,13 +82,13 @@ static pj_status_t  g722_codec_parse(pjmedia_codec *codec,
                                      const pj_timestamp *ts,
                                      unsigned *frame_cnt,
                                      pjmedia_frame frames[]);
-static pj_status_t  g722_codec_encode(pjmedia_codec *codec, 
+static pj_status_t  g722_codec_encode(pjmedia_codec *codec,
                                       const struct pjmedia_frame *input,
-                                      unsigned output_buf_len, 
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
-static pj_status_t  g722_codec_decode(pjmedia_codec *codec, 
+static pj_status_t  g722_codec_decode(pjmedia_codec *codec,
                                       const struct pjmedia_frame *input,
-                                      unsigned output_buf_len, 
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
 #if !PLC_DISABLED
 static pj_status_t  g722_codec_recover(pjmedia_codec *codec,
@@ -97,7 +97,7 @@ static pj_status_t  g722_codec_recover(pjmedia_codec *codec,
 #endif
 
 /* Definition for G722 codec operations. */
-static pjmedia_codec_op g722_op = 
+static pjmedia_codec_op g722_op =
 {
     &g722_codec_init,
     &g722_codec_open,
@@ -181,7 +181,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g722_init( pjmedia_endpt *endpt )
     pj_list_init(&g722_codec_factory.codec_list);
 
     /* Create mutex. */
-    status = pj_mutex_create_simple(g722_codec_factory.pool, "g722", 
+    status = pj_mutex_create_simple(g722_codec_factory.pool, "g722",
                                     &g722_codec_factory.mutex);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -194,13 +194,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_g722_init( pjmedia_endpt *endpt )
     }
 
     /* Register codec factory to endpoint. */
-    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+    status = pjmedia_codec_mgr_register_factory(codec_mgr,
                                                 &g722_codec_factory.base);
     if (status != PJ_SUCCESS)
         goto on_error;
 
     TRACE_((THIS_FILE, "G722 codec factory initialized"));
-    
+
     /* Done. */
     return PJ_SUCCESS;
 
@@ -233,14 +233,14 @@ PJ_DEF(pj_status_t) pjmedia_codec_g722_deinit(void)
     /* Unregister G722 codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &g722_codec_factory.base);
-    
+
     /* Destroy mutex. */
     pj_mutex_destroy(g722_codec_factory.mutex);
 
     /* Destroy pool. */
     pj_pool_release(g722_codec_factory.pool);
     g722_codec_factory.pool = NULL;
-    
+
     TRACE_((THIS_FILE, "G722 codec factory shutdown"));
     return status;
 }
@@ -256,10 +256,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_g722_set_pcm_shift(unsigned val)
 }
 
 
-/* 
- * Check if factory can allocate the specified codec. 
+/*
+ * Check if factory can allocate the specified codec.
  */
-static pj_status_t g722_test_alloc(pjmedia_codec_factory *factory, 
+static pj_status_t g722_test_alloc(pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *info )
 {
     PJ_UNUSED_ARG(factory);
@@ -276,8 +276,8 @@ static pj_status_t g722_test_alloc(pjmedia_codec_factory *factory,
 /*
  * Generate default attribute.
  */
-static pj_status_t g722_default_attr( pjmedia_codec_factory *factory, 
-                                      const pjmedia_codec_info *id, 
+static pj_status_t g722_default_attr( pjmedia_codec_factory *factory,
+                                      const pjmedia_codec_info *id,
                                       pjmedia_codec_param *attr )
 {
     PJ_UNUSED_ARG(factory);
@@ -304,8 +304,8 @@ static pj_status_t g722_default_attr( pjmedia_codec_factory *factory,
 /*
  * Enum codecs supported by this factory (i.e. only G722!).
  */
-static pj_status_t g722_enum_codecs(pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
+static pj_status_t g722_enum_codecs(pjmedia_codec_factory *factory,
+                                    unsigned *count,
                                     pjmedia_codec_info codecs[])
 {
     PJ_UNUSED_ARG(factory);
@@ -326,7 +326,7 @@ static pj_status_t g722_enum_codecs(pjmedia_codec_factory *factory,
 /*
  * Allocate a new G722 codec instance.
  */
-static pj_status_t g722_alloc_codec(pjmedia_codec_factory *factory, 
+static pj_status_t g722_alloc_codec(pjmedia_codec_factory *factory,
                                     const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec)
 {
@@ -355,7 +355,7 @@ static pj_status_t g722_alloc_codec(pjmedia_codec_factory *factory,
 
 #if !PLC_DISABLED
         /* Create PLC */
-        status = pjmedia_plc_create(g722_codec_factory.pool, 16000, 
+        status = pjmedia_plc_create(g722_codec_factory.pool, 16000,
                                     SAMPLES_PER_FRAME, 0, &g722_data->plc);
         if (status != PJ_SUCCESS) {
             pj_mutex_unlock(g722_codec_factory.mutex);
@@ -369,7 +369,7 @@ static pj_status_t g722_alloc_codec(pjmedia_codec_factory *factory,
                                             &g722_data->vad);
         if (status != PJ_SUCCESS) {
             pj_mutex_unlock(g722_codec_factory.mutex);
-            TRACE_((THIS_FILE, "Create silence detector failed (status = %d)", 
+            TRACE_((THIS_FILE, "Create silence detector failed (status = %d)",
                                status));
             return status;
         }
@@ -385,7 +385,7 @@ static pj_status_t g722_alloc_codec(pjmedia_codec_factory *factory,
 /*
  * Free codec.
  */
-static pj_status_t g722_dealloc_codec(pjmedia_codec_factory *factory, 
+static pj_status_t g722_dealloc_codec(pjmedia_codec_factory *factory,
                                       pjmedia_codec *codec )
 {
     struct g722_data *g722_data;
@@ -426,7 +426,7 @@ static pj_status_t g722_dealloc_codec(pjmedia_codec_factory *factory,
 /*
  * Init codec.
  */
-static pj_status_t g722_codec_init(pjmedia_codec *codec, 
+static pj_status_t g722_codec_init(pjmedia_codec *codec,
                                    pj_pool_t *pool )
 {
     PJ_UNUSED_ARG(codec);
@@ -437,7 +437,7 @@ static pj_status_t g722_codec_init(pjmedia_codec *codec,
 /*
  * Open codec.
  */
-static pj_status_t g722_codec_open(pjmedia_codec *codec, 
+static pj_status_t g722_codec_open(pjmedia_codec *codec,
                                    pjmedia_codec_param *attr )
 {
     struct g722_data *g722_data = (struct g722_data*) codec->codec_data;
@@ -481,7 +481,7 @@ static pj_status_t g722_codec_close( pjmedia_codec *codec )
      */
 
     PJ_UNUSED_ARG(codec);
-    
+
     TRACE_((THIS_FILE, "G722 codec closed"));
     return PJ_SUCCESS;
 }
@@ -490,7 +490,7 @@ static pj_status_t g722_codec_close( pjmedia_codec *codec )
 /*
  * Modify codec settings.
  */
-static pj_status_t  g722_codec_modify(pjmedia_codec *codec, 
+static pj_status_t  g722_codec_modify(pjmedia_codec *codec,
                                      const pjmedia_codec_param *attr )
 {
     struct g722_data *g722_data = (struct g722_data*) codec->codec_data;
@@ -545,9 +545,9 @@ static pj_status_t  g722_codec_parse(pjmedia_codec *codec,
 /*
  * Encode frame.
  */
-static pj_status_t g722_codec_encode(pjmedia_codec *codec, 
+static pj_status_t g722_codec_encode(pjmedia_codec *codec,
                                      const struct pjmedia_frame *input,
-                                     unsigned output_buf_len, 
+                                     unsigned output_buf_len,
                                      struct pjmedia_frame *output)
 {
     struct g722_data *g722_data = (struct g722_data*) codec->codec_data;
@@ -555,7 +555,7 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
 
     pj_assert(g722_data && input && output);
 
-    PJ_ASSERT_RETURN((input->size >> 2) <= output_buf_len, 
+    PJ_ASSERT_RETURN((input->size >> 2) <= output_buf_len,
                      PJMEDIA_CODEC_EFRMTOOSHORT);
 
     /* Detect silence */
@@ -563,10 +563,10 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
         pj_bool_t is_silence;
         pj_int32_t silence_duration;
 
-        silence_duration = pj_timestamp_diff32(&g722_data->last_tx, 
+        silence_duration = pj_timestamp_diff32(&g722_data->last_tx,
                                                &input->timestamp);
 
-        is_silence = pjmedia_silence_det_detect(g722_data->vad, 
+        is_silence = pjmedia_silence_det_detect(g722_data->vad,
                                                 (const pj_int16_t*) input->buf,
                                                 (input->size >> 1),
                                                 NULL);
@@ -598,7 +598,7 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
 
     /* Encode to temporary buffer */
     output->size = output_buf_len;
-    status = g722_enc_encode(&g722_data->encoder, (pj_int16_t*)input->buf, 
+    status = g722_enc_encode(&g722_data->encoder, (pj_int16_t*)input->buf,
                              (input->size >> 1), output->buf, &output->size);
     if (status != PJ_SUCCESS) {
         output->size = 0;
@@ -610,7 +610,7 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;
-    
+
     TRACE_((THIS_FILE, "G722 encode(): size=%d", output->size));
     return PJ_SUCCESS;
 }
@@ -618,9 +618,9 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
 /*
  * Decode frame.
  */
-static pj_status_t g722_codec_decode(pjmedia_codec *codec, 
+static pj_status_t g722_codec_decode(pjmedia_codec *codec,
                                      const struct pjmedia_frame *input,
-                                     unsigned output_buf_len, 
+                                     unsigned output_buf_len,
                                      struct pjmedia_frame *output)
 {
     struct g722_data *g722_data = (struct g722_data*) codec->codec_data;
@@ -632,7 +632,7 @@ static pj_status_t g722_codec_decode(pjmedia_codec *codec,
     TRACE_((THIS_FILE, "G722 decode(): inbuf=%p, insize=%d, outbuf=%p,"
                        "outsize=%d",
                        input->buf, input->size, output->buf, output_buf_len));
-    
+
     if (output_buf_len < SAMPLES_PER_FRAME * 2) {
         TRACE_((THIS_FILE, "G722 decode() ERROR: PJMEDIA_CODEC_EPCMTOOSHORT"));
         return PJMEDIA_CODEC_EPCMTOOSHORT;
@@ -676,7 +676,7 @@ static pj_status_t g722_codec_decode(pjmedia_codec *codec,
                 *p = g722_data->pcm_min;
             else if (*p > g722_data->pcm_max)
                 *p = g722_data->pcm_max;
-            
+
 #endif
             *p = *p * g722_data->pcm_shift_val;
             ++p;
@@ -709,14 +709,14 @@ static pj_status_t  g722_codec_recover(pjmedia_codec *codec,
 
     PJ_ASSERT_RETURN(g722_data->plc_enabled, PJ_EINVALIDOP);
 
-    PJ_ASSERT_RETURN(output_buf_len >= SAMPLES_PER_FRAME * 2, 
+    PJ_ASSERT_RETURN(output_buf_len >= SAMPLES_PER_FRAME * 2,
                      PJMEDIA_CODEC_EPCMTOOSHORT);
 
     pjmedia_plc_generate(g722_data->plc, (pj_int16_t*)output->buf);
 
     output->size = SAMPLES_PER_FRAME * 2;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    
+
     return PJ_SUCCESS;
 }
 #endif

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/sdp.h>
@@ -50,7 +50,7 @@ struct pjmedia_sdp_neg
                                                  for retaining last_sent.    */
 };
 
-static const char *state_str[] = 
+static const char *state_str[] =
 {
     "STATE_NULL",
     "STATE_LOCAL_OFFER",
@@ -70,7 +70,7 @@ struct fmt_match_cb_t
 static unsigned fmt_match_cb_cnt;
 
 /* The registered customized SDP format negotiation callbacks */
-static struct fmt_match_cb_t 
+static struct fmt_match_cb_t
               fmt_match_cb[PJMEDIA_SDP_NEG_MAX_CUSTOM_FMT_NEG_CB];
 
 /* Redefining a very long identifier name, just for convenience */
@@ -165,7 +165,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
     neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
 
     if (initial) {
-        PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(initial))==PJ_SUCCESS, 
+        PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(initial))==PJ_SUCCESS,
                          status);
 
         neg->initial_sdp = pjmedia_sdp_session_clone(pool, initial);
@@ -174,7 +174,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
         neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
 
     } else {
-        
+
         neg->state = PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER;
 
     }
@@ -327,7 +327,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     PJ_ASSERT_RETURN(pool && neg && local, PJ_EINVAL);
 
     /* Can only do this in STATE_DONE. */
-    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_DONE, 
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_DONE,
                      PJMEDIA_SDPNEG_EINSTATE);
 
     /* Validate the new offer */
@@ -374,8 +374,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     if ((flags & PJMEDIA_SDP_NEG_ALLOW_MEDIA_CHANGE) == 0) {
        /* Generating the new offer, in the case media lines doesn't match the
         * active SDP (e.g. current/active SDP's have m=audio and m=video lines,
-        * and the new offer only has m=audio line), the negotiator will fix 
-        * the new offer by reordering and adding the missing media line with 
+        * and the new offer only has m=audio line), the negotiator will fix
+        * the new offer by reordering and adding the missing media line with
         * port number set to zero.
         */
         for (oi = 0; oi < old_offer->media_count; ++oi) {
@@ -414,7 +414,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
             }
         }
     } else {
-        /* If media type change is allowed, the negotiator only needs to fix 
+        /* If media type change is allowed, the negotiator only needs to fix
          * the new offer by adding the missing media line(s) with port number
          * set to zero.
          */
@@ -456,7 +456,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
 
     /* Can only do this in STATE_DONE or STATE_LOCAL_OFFER. */
     PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_DONE ||
-                     neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER, 
+                     neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
                      PJMEDIA_SDPNEG_EINSTATE);
 
     if (neg->state == PJMEDIA_SDP_NEG_STATE_DONE) {
@@ -511,14 +511,14 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
      * If we haven't provided local offer, then rx_remote_offer() should
      * be called instead of this function.
      */
-    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER, 
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
                      PJMEDIA_SDPNEG_EINSTATE);
 
     /* We're ready to negotiate. */
     neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
     neg->has_remote_answer = PJ_TRUE;
     neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
- 
+
     return PJ_SUCCESS;
 }
 
@@ -533,7 +533,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
      * If we already provide local offer, then rx_remote_answer() should
      * be called instead of this function.
      */
-    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_DONE, 
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_DONE,
                      PJMEDIA_SDPNEG_EINSTATE);
 
     /* State now is STATE_REMOTE_OFFER. */
@@ -555,7 +555,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
      * be called instead of this function.
      */
     PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER ||
-                     neg->state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, 
+                     neg->state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO,
                      PJMEDIA_SDPNEG_EINSTATE);
 
     /* State now is STATE_WAIT_NEGO. */
@@ -567,11 +567,11 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
             neg->initial_sdp_tmp = neg->initial_sdp;
             neg->initial_sdp = pjmedia_sdp_session_clone(pool,
                                                          neg->initial_sdp);
-        
+
             /* I don't think there is anything in RFC 3264 that mandates
              * answerer to place the same origin (and increment version)
              * in the answer, but probably it won't hurt either.
-             * Note that the version will be incremented in 
+             * Note that the version will be incremented in
              * pjmedia_sdp_neg_negotiate()
              */
             neg->neg_local_sdp->origin.id = neg->initial_sdp->origin.id;
@@ -657,7 +657,7 @@ static void update_media_direction(pj_pool_t *pool,
          * it is currently "sendrecv". Otherwise if local is NOT "sendonly",
          * then set local direction to "inactive"
          */
-    
+
         switch (old_dir) {
         case PJMEDIA_DIR_ENCODING_DECODING:
             new_dir = PJMEDIA_DIR_ENCODING;
@@ -671,8 +671,8 @@ static void update_media_direction(pj_pool_t *pool,
         }
 
     } else {
-        /* Remote indicates "sendrecv" capability. No change to local 
-         * direction 
+        /* Remote indicates "sendrecv" capability. No change to local
+         * direction
          */
     }
 
@@ -695,7 +695,7 @@ static void update_media_direction(pj_pool_t *pool,
             /* sendrecv */
             break;
         }
-        
+
         if (a) {
             pjmedia_sdp_media_add_attr(local, a);
         }
@@ -722,8 +722,8 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 
     /* Check if remote has rejected our offer */
     if (answer->desc.port == 0) {
-        
-        /* Remote has rejected our offer. 
+
+        /* Remote has rejected our offer.
          * Deactivate our media too.
          */
         pjmedia_sdp_media_deactivate(pool, offer);
@@ -734,11 +734,11 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 
     /* Check that transport in the answer match our offer. */
 
-    /* At this point, transport type must be compatible, 
+    /* At this point, transport type must be compatible,
      * the transport instance will do more validation later.
      */
-    if (pjmedia_sdp_transport_cmp(&answer->desc.transport, 
-                                  &offer->desc.transport) 
+    if (pjmedia_sdp_transport_cmp(&answer->desc.transport,
+                                  &offer->desc.transport)
         != PJ_SUCCESS)
     {
         return PJMEDIA_SDPNEG_EINVANSTP;
@@ -755,9 +755,9 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 
     /* Process direction attributes */
     update_media_direction(pool, answer, offer);
- 
-    /* If asymetric media is allowed, then just check that remote answer has 
-     * codecs that are within the offer. 
+
+    /* If asymetric media is allowed, then just check that remote answer has
+     * codecs that are within the offer.
      *
      * Otherwise if asymetric media is not allowed, then we will choose only
      * one codec in our initial offer to match the answer.
@@ -794,7 +794,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
             unsigned pt;
             pj_uint32_t j;
             pj_str_t *fmt = &offer->desc.fmt[i];
-            
+
 
             /* Find matching answer */
             pt = pj_strtoul(fmt);
@@ -820,18 +820,18 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                 }
                 pjmedia_sdp_attr_get_rtpmap(a, &or_);
 
-                /* Find paylaod in answer SDP with matching 
+                /* Find paylaod in answer SDP with matching
                  * encoding name and clock rate.
                  */
                 for (j=0; j<answer->desc.fmt_count; ++j) {
-                    a = pjmedia_sdp_media_find_attr2(answer, "rtpmap", 
+                    a = pjmedia_sdp_media_find_attr2(answer, "rtpmap",
                                                      &answer->desc.fmt[j]);
                     if (a) {
                         pjmedia_sdp_rtpmap ar;
                         pjmedia_sdp_attr_get_rtpmap(a, &ar);
 
                         /* See if encoding name, clock rate, and channel
-                         * count match 
+                         * count match
                          */
                         if (!pj_stricmp(&or_.enc_name, &ar.enc_name) &&
                             or_.clock_rate == ar.clock_rate &&
@@ -887,7 +887,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
          * - Resort offer formats so the order match to the answer.
          * - Remove answer formats that unmatches to the offer.
          */
-        
+
         /* Resort offer formats */
         for (i=0; i<offer->desc.fmt_count; ++i) {
             unsigned j;
@@ -906,7 +906,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
             unsigned del_cnt = 0;
             for (i=0; i<answer->desc.fmt_count;) {
                 /* The offer is ordered now, also the offer_fmt_prior */
-                if (i >= offer->desc.fmt_count || 
+                if (i >= offer->desc.fmt_count ||
                     offer_fmt_prior[i]-del_cnt != i)
                 {
                     pj_str_t *fmt = &answer->desc.fmt[i];
@@ -923,7 +923,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                         pjmedia_sdp_media_remove_attr(answer, a);
 
                     /* Remove this format from answer's array */
-                    pj_array_erase(answer->desc.fmt, 
+                    pj_array_erase(answer->desc.fmt,
                                    sizeof(answer->desc.fmt[0]),
                                    answer->desc.fmt_count, i);
                     --answer->desc.fmt_count;
@@ -999,7 +999,7 @@ static pj_status_t process_answer(pj_pool_t *pool,
         else if (status == PJMEDIA_SDPNEG_EANSNOMEDIA) {
             pjmedia_sdp_media_deactivate(pool, offer->media[omi]);
             pjmedia_sdp_media_deactivate(pool, answer->media[ami]);
-        } 
+        }
         /* Return the error code, for other errors. */
         else if (status != PJ_SUCCESS) {
             return status;
@@ -1141,13 +1141,13 @@ static pj_status_t match_offer(pj_pool_t *pool,
         master = preanswer;
         slave  = offer;
     }
-    
-    /* With the addition of telephone-event and dodgy MS RTC SDP, 
+
+    /* With the addition of telephone-event and dodgy MS RTC SDP,
      * the answer generation algorithm looks really shitty...
      */
     for (i=0; i<master->desc.fmt_count; ++i) {
         unsigned j;
-        
+
         if (pj_isdigit(*master->desc.fmt[i].ptr)) {
             /* This is normal/standard payload type, where it's identified
              * by payload number.
@@ -1155,7 +1155,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
             unsigned pt;
 
             pt = pj_strtoul(&master->desc.fmt[i]);
-            
+
             if (pt < 96) {
                 /* For static payload type, it's enough to compare just
                  * the payload number.
@@ -1164,7 +1164,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 master_has_codec = 1;
 
                 /* We just need to select one codec if not allowing multiple.
-                 * Continue if we have selected matching codec for previous 
+                 * Continue if we have selected matching codec for previous
                  * payload.
                  */
                 if (!answer_with_multiple_codecs && found_matching_codec)
@@ -1203,7 +1203,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 pj_bool_t is_codec = 0;
 
                 /* Get the rtpmap for the payload type in the master. */
-                a = pjmedia_sdp_media_find_attr2(master, "rtpmap", 
+                a = pjmedia_sdp_media_find_attr2(master, "rtpmap",
                                                  &master->desc.fmt[i]);
                 if (!a) {
                     pj_assert(!"Bug! Offer should have been validated");
@@ -1217,27 +1217,27 @@ static pj_status_t match_offer(pj_pool_t *pool,
                         continue;
                     is_codec = 1;
                 }
-                
-                /* Find paylaod in our initial SDP with matching 
+
+                /* Find paylaod in our initial SDP with matching
                  * encoding name and clock rate.
                  */
                 for (j=0; j<slave->desc.fmt_count; ++j) {
-                    a = pjmedia_sdp_media_find_attr2(slave, "rtpmap", 
+                    a = pjmedia_sdp_media_find_attr2(slave, "rtpmap",
                                                      &slave->desc.fmt[j]);
                     if (a) {
                         pjmedia_sdp_rtpmap lr;
                         pjmedia_sdp_attr_get_rtpmap(a, &lr);
 
                         /* See if encoding name, clock rate, and
-                         * channel count  match 
+                         * channel count  match
                          */
                         if (!pj_stricmp(&or_.enc_name, &lr.enc_name) &&
                             or_.clock_rate == lr.clock_rate &&
                             (pj_stricmp(&or_.param, &lr.param)==0 ||
-                             (lr.param.slen==0 && or_.param.slen==1 && 
-                                                 *or_.param.ptr=='1') || 
-                             (or_.param.slen==0 && lr.param.slen==1 && 
-                                                  *lr.param.ptr=='1'))) 
+                             (lr.param.slen==0 && or_.param.slen==1 &&
+                                                 *or_.param.ptr=='1') ||
+                             (or_.param.slen==0 && lr.param.slen==1 &&
+                                                  *lr.param.ptr=='1')))
                         {
                             /* Match! */
                             if (is_codec) {
@@ -1278,17 +1278,17 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                         break;
                                 if (k < ntel_clockrate)
                                     continue;
-                                
+
                                 tel_clockrate[ntel_clockrate++] = or_.clock_rate;
                                 found_matching_telephone_event = 1;
                             }
 
-                            pt_offer[pt_answer_count] = 
+                            pt_offer[pt_answer_count] =
                                                 prefer_remote_codec_order?
                                                 offer->desc.fmt[i]:
                                                 offer->desc.fmt[j];
-                            pt_answer[pt_answer_count++] = 
-                                                prefer_remote_codec_order? 
+                            pt_answer[pt_answer_count++] =
+                                                prefer_remote_codec_order?
                                                 preanswer->desc.fmt[j]:
                                                 preanswer->desc.fmt[i];
                             break;
@@ -1315,7 +1315,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                     pt_offer[pt_answer_count] = prefer_remote_codec_order?
                                                 offer->desc.fmt[i]:
                                                 offer->desc.fmt[j];
-                    pt_answer[pt_answer_count++] = prefer_remote_codec_order? 
+                    pt_answer[pt_answer_count++] = prefer_remote_codec_order?
                                                    preanswer->desc.fmt[j]:
                                                    preanswer->desc.fmt[i];
                     break;
@@ -1418,20 +1418,20 @@ static pj_status_t match_offer(pj_pool_t *pool,
         pj_assert(j != answer->desc.fmt_count);
         str_swap(&answer->desc.fmt[i], &answer->desc.fmt[j]);
     }
-    
+
     /* Remove unwanted local formats. */
     for (i=pt_answer_count; i<answer->desc.fmt_count; ++i) {
         pjmedia_sdp_attr *a;
 
         /* Remove rtpmap for this format */
-        a = pjmedia_sdp_media_find_attr2(answer, "rtpmap", 
+        a = pjmedia_sdp_media_find_attr2(answer, "rtpmap",
                                          &answer->desc.fmt[i]);
         if (a) {
             pjmedia_sdp_media_remove_attr(answer, a);
         }
 
         /* Remove fmtp for this format */
-        a = pjmedia_sdp_media_find_attr2(answer, "fmtp", 
+        a = pjmedia_sdp_media_find_attr2(answer, "fmtp",
                                          &answer->desc.fmt[i]);
         if (a) {
             pjmedia_sdp_media_remove_attr(answer, a);
@@ -1465,7 +1465,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
     char media_used[PJMEDIA_MAX_SDP_MEDIA];
     unsigned i;
 
-    /* Validate remote offer. 
+    /* Validate remote offer.
      * This should have been validated before.
      */
     PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(offer))==PJ_SUCCESS, status);
@@ -1556,7 +1556,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
                      PJMEDIA_SDPNEG_EINSTATE);
 
     if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
-        neg->active_local_sdp) 
+        neg->active_local_sdp)
     {
         /* Increment next version number. This happens if for example
          * the reinvite offer is rejected by 488. If we don't increment
@@ -1592,7 +1592,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && neg, PJ_EINVAL);
 
     /* Must be in STATE_WAIT_NEGO state. */
-    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, 
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO,
                      PJMEDIA_SDPNEG_EINSTATE);
 
     /* Must have remote offer. */
@@ -1703,7 +1703,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_register_fmt_match_cb(
     }
 
     /* Unregistration */
-    
+
     if (cb == NULL) {
         if (i == fmt_match_cb_cnt)
             return PJ_ENOTFOUND;
@@ -1760,7 +1760,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_fmt_match(pj_pool_t *pool,
     }
 
     /* Get the format rtpmap from the offer. */
-    attr = pjmedia_sdp_media_find_attr2(offer, "rtpmap", 
+    attr = pjmedia_sdp_media_find_attr2(offer, "rtpmap",
                                         &offer->desc.fmt[o_fmt_idx]);
     if (!attr) {
         pj_assert(!"Bug! Offer haven't been validated");
@@ -1769,7 +1769,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_fmt_match(pj_pool_t *pool,
     pjmedia_sdp_attr_get_rtpmap(attr, &o_rtpmap);
 
     /* Get the format rtpmap from the answer. */
-    attr = pjmedia_sdp_media_find_attr2(answer, "rtpmap", 
+    attr = pjmedia_sdp_media_find_attr2(answer, "rtpmap",
                                         &answer->desc.fmt[a_fmt_idx]);
     if (!attr) {
         pj_assert(!"Bug! Answer haven't been validated");

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -68,8 +68,8 @@ static void print_call(int call_index)
 
     /* Call number and state */
     PJ_LOG(3, (THIS_FILE,
-              "Call #%d: %s%s", 
-              call_index, pjsip_inv_state_name(inv->state), 
+              "Call #%d: %s%s",
+              call_index, pjsip_inv_state_name(inv->state),
               duration));
 
 
@@ -85,7 +85,7 @@ static void print_call(int call_index)
 
 
     if (call->inv == NULL || call->inv->state < PJSIP_INV_STATE_CONFIRMED ||
-        call->connect_time.sec == 0) 
+        call->connect_time.sec == 0)
     {
         pj_log_set_decor(decor);
         return;
@@ -108,13 +108,13 @@ static void print_call(int call_index)
         if (call->connect_time.sec) {
             t = call->connect_time;
             PJ_TIME_VAL_SUB(t, call->start_time);
-            sprintf(connectdelay, ", connected after: %ld ms", 
+            sprintf(connectdelay, ", connected after: %ld ms",
                     PJ_TIME_VAL_MSEC(t));
         } else {
             connectdelay[0] = '\0';
         }
 
-        PJ_LOG(3, (THIS_FILE, 
+        PJ_LOG(3, (THIS_FILE,
                    "   Signaling quality: %s%s", pdd, connectdelay));
     }
 
@@ -140,7 +140,7 @@ static void print_call(int call_index)
                 now.msec);
     }
 
-    PJ_LOG(3, (THIS_FILE, 
+    PJ_LOG(3, (THIS_FILE,
            "              RX stat last update: %s\n"
            "                 total %s packets %sB received (%sB +IP hdr)%s\n"
            "                 pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
@@ -154,13 +154,13 @@ static void print_call(int call_index)
            "",
            audio->rtcp.stat.rx.loss,
            audio->rtcp.stat.rx.loss * 100.0 / (audio->rtcp.stat.rx.pkt + audio->rtcp.stat.rx.loss),
-           audio->rtcp.stat.rx.dup, 
+           audio->rtcp.stat.rx.dup,
            audio->rtcp.stat.rx.dup * 100.0 / (audio->rtcp.stat.rx.pkt + audio->rtcp.stat.rx.loss),
-           audio->rtcp.stat.rx.reorder, 
+           audio->rtcp.stat.rx.reorder,
            audio->rtcp.stat.rx.reorder * 100.0 / (audio->rtcp.stat.rx.pkt + audio->rtcp.stat.rx.loss),
            "",
-           audio->rtcp.stat.rx.loss_period.min / 1000.0, 
-           audio->rtcp.stat.rx.loss_period.mean / 1000.0, 
+           audio->rtcp.stat.rx.loss_period.min / 1000.0,
+           audio->rtcp.stat.rx.loss_period.mean / 1000.0,
            audio->rtcp.stat.rx.loss_period.max / 1000.0,
            audio->rtcp.stat.rx.loss_period.last / 1000.0,
            "",
@@ -198,13 +198,13 @@ static void print_call(int call_index)
            "",
            audio->rtcp.stat.tx.loss,
            audio->rtcp.stat.tx.loss * 100.0 / (audio->rtcp.stat.tx.pkt + audio->rtcp.stat.tx.loss),
-           audio->rtcp.stat.tx.dup, 
+           audio->rtcp.stat.tx.dup,
            audio->rtcp.stat.tx.dup * 100.0 / (audio->rtcp.stat.tx.pkt + audio->rtcp.stat.tx.loss),
-           audio->rtcp.stat.tx.reorder, 
+           audio->rtcp.stat.tx.reorder,
            audio->rtcp.stat.tx.reorder * 100.0 / (audio->rtcp.stat.tx.pkt + audio->rtcp.stat.tx.loss),
            "",
-           audio->rtcp.stat.tx.loss_period.min / 1000.0, 
-           audio->rtcp.stat.tx.loss_period.mean / 1000.0, 
+           audio->rtcp.stat.tx.loss_period.min / 1000.0,
+           audio->rtcp.stat.tx.loss_period.mean / 1000.0,
            audio->rtcp.stat.tx.loss_period.max / 1000.0,
            audio->rtcp.stat.tx.loss_period.last / 1000.0,
            "",
@@ -217,7 +217,7 @@ static void print_call(int call_index)
 
 
     PJ_LOG(3, (THIS_FILE,
-           "             RTT delay      : %7.3f %7.3f %7.3f %7.3f%s\n", 
+           "             RTT delay      : %7.3f %7.3f %7.3f %7.3f%s\n",
            audio->rtcp.stat.rtt.min / 1000.0,
            audio->rtcp.stat.rtt.mean / 1000.0,
            audio->rtcp.stat.rtt.max / 1000.0,

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_TYPES_H__
 #define __PJ_TYPES_H__
@@ -156,7 +156,7 @@ typedef union pj_timestamp
  */
 typedef void pj_list_type;
 
-/** 
+/**
  * List.
  */
 typedef struct pj_list pj_list;
@@ -220,7 +220,7 @@ typedef struct pj_ioqueue_key_t pj_ioqueue_key_t;
  */
 typedef struct pj_timer_heap_t pj_timer_heap_t;
 
-/** 
+/**
  * Opaque data type for atomic operations.
  */
 typedef struct pj_atomic_t pj_atomic_t;
@@ -229,7 +229,7 @@ typedef struct pj_atomic_t pj_atomic_t;
  * Value type of an atomic variable.
  */
 typedef PJ_ATOMIC_VALUE_TYPE pj_atomic_value_t;
- 
+
 /* ************************************************************************* */
 
 /** Thread handle. */
@@ -315,7 +315,7 @@ PJ_DECL(void) pj_shutdown(void);
 typedef void (*pj_exit_callback)(void);
 
 /**
- * Register cleanup function to be called by PJLIB when pj_shutdown() is 
+ * Register cleanup function to be called by PJLIB when pj_shutdown() is
  * called.
  *
  * @param func      The function to be registered.
@@ -391,7 +391,7 @@ PJ_INLINE(pj_int32_t) pj_swap32(pj_int32_t val32)
 /**
  * Representation of time value in this library.
  * This type can be used to represent either an interval or a specific time
- * or date. 
+ * or date.
  */
 typedef struct pj_time_val
 {

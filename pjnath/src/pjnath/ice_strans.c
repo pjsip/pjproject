@@ -476,7 +476,7 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
     return PJ_SUCCESS;
 }
 
-static pj_bool_t ice_cand_equals(pj_ice_sess_cand *lcand, 
+static pj_bool_t ice_cand_equals(pj_ice_sess_cand *lcand,
                                  pj_ice_sess_cand *rcand)
 {
     if (lcand == NULL && rcand == NULL){
@@ -485,7 +485,7 @@ static pj_bool_t ice_cand_equals(pj_ice_sess_cand *lcand,
     if (lcand == NULL || rcand == NULL){
         return PJ_FALSE;
     }
-    
+
     if (lcand->type != rcand->type
         || lcand->status != rcand->status
         || lcand->comp_id != rcand->comp_id
@@ -498,7 +498,7 @@ static pj_bool_t ice_cand_equals(pj_ice_sess_cand *lcand,
     {
         return PJ_FALSE;
     }
-    
+
     return PJ_TRUE;
 }
 
@@ -661,7 +661,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 
             /* Ignore loopback addresses if cfg->stun.loop_addr is unset */
             if (stun_cfg->loop_addr==PJ_FALSE) {
-                if (stun_cfg->af == pj_AF_INET() && 
+                if (stun_cfg->af == pj_AF_INET() &&
                     (pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==127)
                 {
                     continue;
@@ -696,7 +696,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
             pj_sockaddr_cp(&cand->addr, addr);
             pj_sockaddr_cp(&cand->base_addr, addr);
             pj_bzero(&cand->rel_addr, sizeof(cand->rel_addr));
-            
+
             /* Check if not already in list */
             for (j=0; j<comp->cand_cnt; j++) {
                 if (ice_cand_equals(cand, &comp->cand_list[j])) {
@@ -719,7 +719,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
                 cand_cnt++;
                 max_cand_cnt--;
             }
-            
+
             pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
                                    cand->type, &cand->base_addr);
 
@@ -736,7 +736,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 
             PJ_LOG(4,(ice_st->obj_name,
                       "Comp %d/%d: host candidate %s (tpid=%d) added",
-                      comp->comp_id, comp->cand_cnt-1, 
+                      comp->comp_id, comp->cand_cnt-1,
                       pj_sockaddr_print(&cand->addr, addrinfo,
                                         sizeof(addrinfo), 3),
                                         cand->transport_id));
@@ -828,7 +828,7 @@ static pj_status_t alloc_send_buf(pj_ice_strans *ice_st, unsigned buf_size)
 {
     if (buf_size > ice_st->buf_size) {
         unsigned i;
-        
+
         if (ice_st->is_pending) {
             /* The current buffer is insufficient, but still currently used.*/
             return PJ_EBUSY;
@@ -851,7 +851,7 @@ static pj_status_t alloc_send_buf(pj_ice_strans *ice_st, unsigned buf_size)
         }
         ice_st->buf_idx = ice_st->empty_idx = 0;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -918,7 +918,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     /* To maintain backward compatibility, check if old/deprecated setting is set
      * and the new setting is not, copy the value to the new setting.
      */
-    if (cfg->stun_tp_cnt == 0 && 
+    if (cfg->stun_tp_cnt == 0 &&
         (cfg->stun.server.slen || cfg->stun.max_host_cands))
     {
         ice_st->cfg.stun_tp_cnt = 1;
@@ -1133,7 +1133,7 @@ static void sess_init_update(pj_ice_strans *ice_st)
                            pj_ice_get_cand_type_name(cand->type)));
                 return;
             }
-            
+
             if (status == PJ_EUNKNOWN) {
                 status = cand->status;
             } else {
@@ -1142,7 +1142,7 @@ static void sess_init_update(pj_ice_strans *ice_st)
                     status = PJ_SUCCESS;
             }
         }
-        
+
         if (status != PJ_SUCCESS)
             break;
     }
@@ -1735,7 +1735,7 @@ pj_ice_strans_get_valid_pair(const pj_ice_strans *ice_st,
 PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
 {
     PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
-    
+
     /* Protect with group lock, since this may cause race condition with
      * pj_ice_strans_sendto2().
      * See ticket #1877.
@@ -1771,7 +1771,7 @@ static pj_status_t use_buffer( pj_ice_strans *ice_st,
     status = alloc_send_buf(ice_st, (unsigned)data_len);
     if (status != PJ_SUCCESS)
         return status;
-    
+
     if (ice_st->is_pending && ice_st->empty_idx == ice_st->buf_idx) {
         /* We don't use buffer or there's no more empty buffer. */
         return PJ_EBUSY;
@@ -1786,12 +1786,12 @@ static pj_status_t use_buffer( pj_ice_strans *ice_st,
     pj_sockaddr_cp(&ice_st->send_buf[idx].dst_addr, dst_addr);
     ice_st->send_buf[idx].dst_addr_len = dst_addr_len;
     *buffer = ice_st->send_buf[idx].buffer;
-    
+
     if (ice_st->is_pending) {
         /* We'll continue later since there's still a pending send. */
         return PJ_EPENDING;
     }
-    
+
     ice_st->is_pending = PJ_TRUE;
     ice_st->buf_idx = idx;
 
@@ -1858,12 +1858,12 @@ static pj_status_t send_data(pj_ice_strans *ice_st,
             pj_grp_lock_release(ice_st->grp_lock);
             goto on_return;
         }
-    } 
+    }
 
     pj_grp_lock_release(ice_st->grp_lock);
 
     def_cand = &comp->cand_list[comp->default_cand];
-    
+
     if (def_cand->status == PJ_SUCCESS) {
         unsigned tp_idx = GET_TP_IDX(def_cand->transport_id);
 
@@ -1966,7 +1966,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
                        dst_addr_len, PJ_TRUE, PJ_FALSE);
     if (status == PJ_EPENDING)
         status = PJ_SUCCESS;
-    
+
     return status;
 }
 #endif
@@ -2233,7 +2233,7 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
                 if (status != PJ_SUCCESS) {
                     goto on_return;
                 }
-            
+
                 pj_sockaddr_cp(&comp->dst_addr, dst_addr);
                 comp->synth_addr_len = pj_sockaddr_get_len(&comp->synth_addr);
             }
@@ -2292,7 +2292,7 @@ static void check_pending_send(pj_ice_strans *ice_st)
 
     if (ice_st->num_buf > 0)
         ice_st->buf_idx = (ice_st->buf_idx + 1) % ice_st->num_buf;
-    
+
     if (ice_st->num_buf > 0 && ice_st->buf_idx != ice_st->empty_idx) {
         /* There's some pending send. Send it one by one. */
         pending_send *ps = &ice_st->send_buf[ice_st->buf_idx];
@@ -2472,7 +2472,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
                 {
                     /* We get an IPv4 mapped address for our IPv6
                      * host address.
-                     */              
+                     */
                     comp->ipv4_mapped = PJ_TRUE;
 
                     /* Find other host candidates with the same (IPv6)
@@ -2484,7 +2484,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 
                         if (comp->cand_list[i].type != PJ_ICE_CAND_TYPE_HOST)
                             continue;
-                        
+
                         a1 = &comp->cand_list[i].addr;
                         a2 = &cand->base_addr;
                         if (pj_memcmp(pj_sockaddr_get_addr(a1),
@@ -2501,7 +2501,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
                     pj_sockaddr_cp(&cand->base_addr, &info.mapped_addr);
                     pj_sockaddr_cp(&cand->rel_addr, &info.mapped_addr);
                 }
-                
+
                 /* Eliminate the srflx candidate if the address is
                  * equal to other (host) candidates.
                  */
@@ -2573,7 +2573,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
                 if (op == PJ_STUN_SOCK_MAPPED_ADDR_CHANGE &&
                     ice_st->cb.on_ice_complete)
                 {
-                    (*ice_st->cb.on_ice_complete)(ice_st, 
+                    (*ice_st->cb.on_ice_complete)(ice_st,
                                                   PJ_ICE_STRANS_OP_ADDR_CHANGE,
                                                   status);
                 }
@@ -2813,7 +2813,7 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
                                           cand->local_pref,
                                           &cand->foundation,
                                           &cand->addr,
-                                          &cand->base_addr, 
+                                          &cand->base_addr,
                                           &cand->rel_addr,
                                           pj_sockaddr_get_len(&cand->addr),
                                           NULL);

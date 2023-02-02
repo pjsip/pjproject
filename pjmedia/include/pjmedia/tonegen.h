@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TONEGEN_PORT_H__
 #define __PJMEDIA_TONEGEN_PORT_H__
@@ -132,7 +132,7 @@ enum
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample. This version of PJMEDIA
  *                          only supports 16bit per sample.
- * @param options           Option flags. Application may specify 
+ * @param options           Option flags. Application may specify
  *                          PJMEDIA_TONEGEN_LOOP to play the tone in a loop.
  * @param p_port            Pointer to receive the port instance.
  *
@@ -161,7 +161,7 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_create(pj_pool_t *pool,
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample. This version of PJMEDIA
  *                          only supports 16bit per sample.
- * @param options           Option flags. Application may specify 
+ * @param options           Option flags. Application may specify
  *                          PJMEDIA_TONEGEN_LOOP to play the tone in a loop.
  * @param p_port            Pointer to receive the port instance.
  *
@@ -220,7 +220,7 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_rewind(pjmedia_port *tonegen);
 
 
 /**
- * Instruct the tone generator to play single or dual frequency tones 
+ * Instruct the tone generator to play single or dual frequency tones
  * with the specified duration. The new tones will be appended to currently
  * playing tones, unless #pjmedia_tonegen_stop() is called before calling
  * this function. The playback will begin as soon as  the first get_frame()
@@ -229,7 +229,7 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_rewind(pjmedia_port *tonegen);
  * @param tonegen           The tone generator instance.
  * @param count             The number of tones in the array.
  * @param tones             Array of tones to be played.
- * @param options           Option flags. Application may specify 
+ * @param options           Option flags. Application may specify
  *                          PJMEDIA_TONEGEN_LOOP to play the tone in a loop.
  *
  * @return                  PJ_SUCCESS on success, or PJ_ETOOMANY if
@@ -244,15 +244,15 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_play(pjmedia_port *tonegen,
  * Instruct the tone generator to play multiple MF digits with each of
  * the digits having individual ON/OFF duration. Each of the digit in the
  * digit array must have the corresponding descriptor in the digit map.
- * The new tones will be appended to currently playing tones, unless 
- * #pjmedia_tonegen_stop() is called before calling this function. 
- * The playback will begin as soon as the first get_frame() is called 
+ * The new tones will be appended to currently playing tones, unless
+ * #pjmedia_tonegen_stop() is called before calling this function.
+ * The playback will begin as soon as the first get_frame() is called
  * to the generator.
  *
  * @param tonegen           The tone generator instance.
  * @param count             Number of digits in the array.
  * @param digits            Array of MF digits.
- * @param options           Option flags. Application may specify 
+ * @param options           Option flags. Application may specify
  *                          PJMEDIA_TONEGEN_LOOP to play the tone in a loop.
  *
  * @return                  PJ_SUCCESS on success, or PJ_ETOOMANY if

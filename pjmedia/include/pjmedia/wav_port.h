@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_WAV_PORT_H__
 #define __PJMEDIA_WAV_PORT_H__
@@ -81,7 +81,7 @@ typedef struct pjmedia_wav_player_info
 
 /**
  * Create a media port to play streams from a WAV file. WAV player port
- * supports for reading WAV file with uncompressed 16 bit PCM format or 
+ * supports for reading WAV file with uncompressed 16 bit PCM format or
  * compressed G.711 A-law/U-law format.
  *
  * @param pool          Pool to create memory buffers for this port.
@@ -154,7 +154,7 @@ PJ_DECL(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port );
 /**
  * Register a callback to be called when the file reading has reached the
  * end of file. If the file is set to play repeatedly, then the callback
- * will be called multiple times. Note that only one callback can be 
+ * will be called multiple times. Note that only one callback can be
  * registered for each file port.
  *
  * @param port          The file player port.
@@ -177,7 +177,7 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
 /**
  * Register a callback to be called when the file reading has reached the
  * end of file. If the file is set to play repeatedly, then the callback
- * will be called multiple times. Note that only one callback can be 
+ * will be called multiple times. Note that only one callback can be
  * registered for each file port.
  *
  * @param port          The file player port.
@@ -237,7 +237,7 @@ enum pjmedia_file_writer_option
  * must be closed properly (with #pjmedia_port_destroy()) so that the WAV
  * header can be filled with correct values (such as the file length).
  * WAV writer port supports for writing audio in uncompressed 16 bit PCM format
- * or compressed G.711 U-law/A-law format, this needs to be specified in 
+ * or compressed G.711 U-law/A-law format, this needs to be specified in
  * \a flags param.
  *
  * @param pool              Pool to create memory buffers for this port.
@@ -248,7 +248,7 @@ enum pjmedia_file_writer_option
  * @param bits_per_sample   Number of bits per sample (eg 16).
  * @param flags             Port creation flags, see
  *                          #pjmedia_file_writer_option.
- * @param buff_size         Buffer size to be allocated. If the value is 
+ * @param buff_size         Buffer size to be allocated. If the value is
  *                          zero or negative, the port will use default buffer
  *                          size (which is about 4KB).
  * @param p_port            Pointer to receive the file port instance.
@@ -274,7 +274,7 @@ PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
  *
  * @param port          The file writer port.
  *
- * @return              Positive value to indicate the position (in bytes), 
+ * @return              Positive value to indicate the position (in bytes),
  *                      or negative value containing the error code.
  */
 PJ_DECL(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port );
@@ -291,13 +291,13 @@ PJ_DECL(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port );
  * @param user_data     User data to be specified in the callback, and will be
  *                      given on the callback.
  * @param cb            Callback to be called. If the callback returns non-
- *                      PJ_SUCCESS, the writing will stop. Note that if 
+ *                      PJ_SUCCESS, the writing will stop. Note that if
  *                      application destroys the port in the callback, it must
  *                      return non-PJ_SUCCESS here.
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
                                 pj_size_t pos,
                                 void *user_data,
@@ -323,7 +323,7 @@ pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
                                 pj_size_t pos,
                                 void *user_data,

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_PLC_H__
 #define __PJMEDIA_PLC_H__
@@ -34,7 +34,7 @@
  *
  * This section describes PJMEDIA's implementation of Packet Lost
  * Concealment algorithm. This algorithm is used to implement PLC for
- * codecs that do not have built-in support for one (e.g. G.711 or GSM 
+ * codecs that do not have built-in support for one (e.g. G.711 or GSM
  * codecs).
  *
  * The PLC algorithm (either built-in or external) is embedded in

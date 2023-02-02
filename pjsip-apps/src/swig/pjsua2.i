@@ -28,9 +28,9 @@ using namespace pj;
 
 #ifdef SWIGCSHARP
   %typemap(throws, canthrow=1) pj::Error {
-    SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, 
+    SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException,
     	(std::string("C++ pj::Error:\n") + $1.info(true).c_str()).c_str());
-    
+
     return $null;
   }
 #endif
@@ -53,7 +53,7 @@ using namespace pj;
   public String getMessage() {
     return getTitle();
   }
-  
+
   // Disable serialization (check ticket #1868)
   private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
     throw new java.io.NotSerializableException("Check ticket #1868!");
@@ -98,7 +98,7 @@ using namespace pj;
 // Classes that can be extended in the target language
 //
 %feature("director") LogWriter;
-%feature("director") Endpoint; 
+%feature("director") Endpoint;
 %feature("director") Account;
 %feature("director") Call;
 %feature("director") Buddy;
@@ -159,7 +159,7 @@ using namespace pj;
 %template(CodecInfoVector2)		std::vector<pj::CodecInfo>;
 %template(VideoDevInfoVector)		std::vector<pj::VideoDevInfo*>;
 %template(VideoDevInfoVector2)		std::vector<pj::VideoDevInfo>;
-%template(CodecFmtpVector)		std::vector<pj::CodecFmtp>;	
+%template(CodecFmtpVector)		std::vector<pj::CodecFmtp>;
 %template(MediaFormatAudioVector)       std::vector<pj::MediaFormatAudio>;
 %template(MediaFormatVideoVector)       std::vector<pj::MediaFormatVideo>;
 %template(CallMediaInfoVector)          std::vector<pj::CallMediaInfo>;

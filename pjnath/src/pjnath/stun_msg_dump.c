@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/stun_msg.h>
 #include <pjnath/errno.h>
@@ -61,7 +61,7 @@ static int print_attr(char *buffer, unsigned length,
     int len;
 
     if (*attr_name == '?') {
-        pj_ansi_snprintf(attr_buf, sizeof(attr_buf), "Attr 0x%x", 
+        pj_ansi_snprintf(attr_buf, sizeof(attr_buf), "Attr 0x%x",
                          ahdr->type);
         attr_name = attr_buf;
     }
@@ -260,7 +260,7 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
     PJ_ASSERT_RETURN(msg && buffer && length, NULL);
 
     PJ_CHECK_STACK();
-    
+
     p = buffer;
     end = buffer + length;
 
@@ -270,7 +270,7 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
     APPLY();
 
     pj_memcpy(tsx_id, msg->hdr.tsx_id, sizeof(msg->hdr.tsx_id));
-    len = pj_ansi_snprintf(p, end-p, 
+    len = pj_ansi_snprintf(p, end-p,
                            " Hdr: length=%d, magic=%08x, tsx_id=%08x%08x%08x\n"
                            " Attributes:\n",
                            msg->hdr.length,

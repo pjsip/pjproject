@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/xpidf.h>
 #include <pj/assert.h>
@@ -35,7 +35,7 @@ static pj_str_t STR_SUBSCRIBE_PARAM = { ";method=SUBSCRIBE", 17 };
 static pj_str_t STR_PRESENTITY = { "presentity", 10 };
 static pj_str_t STR_EMPTY_STRING = { NULL, 0 };
 
-static pj_xml_node* xml_create_node(pj_pool_t *pool, 
+static pj_xml_node* xml_create_node(pj_pool_t *pool,
                                     pj_str_t *name, const pj_str_t *value)
 {
     pj_xml_node *node;
@@ -79,7 +79,7 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_create(pj_pool_t *pool, const pj_str_t *uri_cstr)
     pj_xml_add_node(pres, presentity);
 
     /* uri attribute */
-    uri.ptr = (char*) pj_pool_alloc(pool, uri_cstr->slen + 
+    uri.ptr = (char*) pj_pool_alloc(pool, uri_cstr->slen +
                                            STR_SUBSCRIBE_PARAM.slen);
     pj_strcpy( &uri, uri_cstr);
     pj_strcat( &uri, &STR_SUBSCRIBE_PARAM);
@@ -112,7 +112,7 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_create(pj_pool_t *pool, const pj_str_t *uri_cstr)
     pj_xml_add_attr(status, attr);
 
     return pres;
-}   
+}
 
 
 
@@ -140,7 +140,7 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_parse(pj_pool_t *pool, char *text, pj_size_t len)
     node = pj_xml_find_node(pres, &STR_ATOM);
     if (node == NULL)
         return NULL;
-    if (pj_xml_find_attr(node, &STR_ATOMID, NULL) == NULL && 
+    if (pj_xml_find_attr(node, &STR_ATOMID, NULL) == NULL &&
         pj_xml_find_attr(node, &STR_ID, NULL) == NULL)
     {
         return NULL;
@@ -188,7 +188,7 @@ PJ_DEF(pj_str_t*) pjxpidf_get_uri(pjxpidf_pres *pres)
 }
 
 
-PJ_DEF(pj_status_t) pjxpidf_set_uri(pj_pool_t *pool, pjxpidf_pres *pres, 
+PJ_DEF(pj_status_t) pjxpidf_set_uri(pj_pool_t *pool, pjxpidf_pres *pres,
                                     const pj_str_t *uri)
 {
     pj_xml_node *presentity;

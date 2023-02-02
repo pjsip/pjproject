@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_PROACTOR_HPP__
 #define __PJPP_PROACTOR_HPP__
@@ -102,7 +102,7 @@ public:
         timer_.user_data = this;
         timer_.cb = &timer_callback;
     }
-    
+
     //
     // Destroy.
     //
@@ -133,8 +133,8 @@ public:
     //
     // Start async receive.
     //
-    pj_status_t recv( Pj_Async_Op *op_key, 
-                      void *buf, pj_ssize_t *len, 
+    pj_status_t recv( Pj_Async_Op *op_key,
+                      void *buf, pj_ssize_t *len,
                       unsigned flags)
     {
         return pj_ioqueue_recv( key_, op_key,
@@ -144,7 +144,7 @@ public:
     //
     // Start async recvfrom()
     //
-    pj_status_t recvfrom( Pj_Async_Op *op_key, 
+    pj_status_t recvfrom( Pj_Async_Op *op_key,
                           void *buf, pj_ssize_t *len, unsigned flags,
                           Pj_Inet_Addr *addr)
     {
@@ -156,8 +156,8 @@ public:
     //
     // Start async send()
     //
-    pj_status_t send( Pj_Async_Op *op_key, 
-                      const void *data, pj_ssize_t *len, 
+    pj_status_t send( Pj_Async_Op *op_key,
+                      const void *data, pj_ssize_t *len,
                       unsigned flags)
     {
         return pj_ioqueue_send( key_, op_key, data, len, flags);
@@ -187,8 +187,8 @@ public:
     // Start async accept().
     //
     pj_status_t accept( Pj_Async_Op *op_key,
-                        Pj_Socket *sock, 
-                        Pj_Inet_Addr *local = NULL, 
+                        Pj_Socket *sock,
+                        Pj_Inet_Addr *local = NULL,
                         Pj_Inet_Addr *remote = NULL)
     {
         int *addrlen = local ? &local->addrlen_ : NULL;
@@ -206,21 +206,21 @@ protected:
     //
     // Timeout callback.
     //
-    virtual void on_timeout(int) 
+    virtual void on_timeout(int)
     {
     }
 
     //
     // On read complete callback.
     //
-    virtual void on_read_complete( Pj_Async_Op*, pj_ssize_t) 
+    virtual void on_read_complete( Pj_Async_Op*, pj_ssize_t)
     {
     }
 
     //
     // On write complete callback.
     //
-    virtual void on_write_complete( Pj_Async_Op *, pj_ssize_t) 
+    virtual void on_write_complete( Pj_Async_Op *, pj_ssize_t)
     {
     }
 
@@ -228,14 +228,14 @@ protected:
     //
     // On connect complete callback.
     //
-    virtual void on_connect_complete(pj_status_t) 
+    virtual void on_connect_complete(pj_status_t)
     {
     }
 
     //
     // On new connection callback.
     //
-    virtual void on_accept_complete( Pj_Async_Op*, pj_sock_t, pj_status_t) 
+    virtual void on_accept_complete( Pj_Async_Op*, pj_sock_t, pj_status_t)
     {
     }
 
@@ -252,10 +252,10 @@ private:
     //
     // Static timer callback.
     //
-    static void timer_callback( pj_timer_heap_t*, 
+    static void timer_callback( pj_timer_heap_t*,
                                 struct pj_timer_entry *entry)
     {
-        Pj_Event_Handler *handler = 
+        Pj_Event_Handler *handler =
             (Pj_Event_Handler*) entry->user_data;
 
         handler->on_timeout(entry->id);
@@ -269,7 +269,7 @@ inline bool Pj_Async_Op::is_pending()
 
 inline bool Pj_Async_Op::cancel(pj_ssize_t bytes_status)
 {
-    return pj_ioqueue_post_completion(handler_->key_, this, 
+    return pj_ioqueue_post_completion(handler_->key_, this,
                                       bytes_status) == PJ_SUCCESS;
 }
 
@@ -317,7 +317,7 @@ public:
     //
     // Create proactor.
     //
-    pj_status_t create( Pj_Pool *pool, pj_size_t max_fd, 
+    pj_status_t create( Pj_Pool *pool, pj_size_t max_fd,
                         pj_size_t timer_entry_count)
     {
         pj_status_t status;
@@ -325,17 +325,17 @@ public:
         destroy();
 
         status = pj_ioqueue_create(pool->pool_(), max_fd, &ioq_);
-        if (status != PJ_SUCCESS) 
+        if (status != PJ_SUCCESS)
             return status;
-        
-        status = pj_timer_heap_create(pool->pool_(), 
+
+        status = pj_timer_heap_create(pool->pool_(),
                                       timer_entry_count, &th_);
         if (status != PJ_SUCCESS) {
             pj_ioqueue_destroy(ioq_);
             ioq_ = NULL;
             return NULL;
         }
-        
+
         return status;
     }
 
@@ -358,7 +358,7 @@ public:
     // Register handler.
     // This will call handler->get_socket_handle()
     //
-    pj_status_t register_socket_handler(Pj_Pool *pool, 
+    pj_status_t register_socket_handler(Pj_Pool *pool,
                                         Pj_Event_Handler *handler)
     {
         return   pj_ioqueue_register_sock( pool->pool_(), ioq_,
@@ -380,8 +380,8 @@ public:
     //
     // Scheduler timer.
     //
-    bool schedule_timer( Pj_Event_Handler *handler, 
-                         const Pj_Time_Val &delay, 
+    bool schedule_timer( Pj_Event_Handler *handler,
+                         const Pj_Time_Val &delay,
                          int id=-1)
     {
         return schedule_timer(th_, handler, delay, id);
@@ -405,10 +405,10 @@ public:
 
         timer_count = pj_timer_heap_poll( th_, &timeout );
 
-        if (timeout.get_sec() < 0) 
+        if (timeout.get_sec() < 0)
             timeout.sec = PJ_MAXINT32;
 
-        /* If caller specifies maximum time to wait, then compare the value 
+        /* If caller specifies maximum time to wait, then compare the value
          * with the timeout to wait from timer, and use the minimum value.
          */
         if (max_timeout && timeout >= *max_timeout) {
@@ -446,9 +446,9 @@ private:
     pj_timer_heap_t *th_;
     pj_ioqueue_callback cb_;
 
-    static bool schedule_timer( pj_timer_heap_t *timer, 
+    static bool schedule_timer( pj_timer_heap_t *timer,
                                 Pj_Event_Handler *handler,
-                                const Pj_Time_Val &delay, 
+                                const Pj_Time_Val &delay,
                                 int id=-1)
     {
         handler->timer_.id = id;
@@ -459,11 +459,11 @@ private:
     //
     // Static read completion callback.
     //
-    static void read_complete_cb( pj_ioqueue_key_t *key, 
-                                  pj_ioqueue_op_key_t *op_key, 
+    static void read_complete_cb( pj_ioqueue_key_t *key,
+                                  pj_ioqueue_op_key_t *op_key,
                                   pj_ssize_t bytes_read)
     {
-        Pj_Event_Handler *handler = 
+        Pj_Event_Handler *handler =
             (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
 
         handler->on_read_complete((Pj_Async_Op*)op_key, bytes_read);
@@ -472,11 +472,11 @@ private:
     //
     // Static write completion callback.
     //
-    static void write_complete_cb(pj_ioqueue_key_t *key, 
+    static void write_complete_cb(pj_ioqueue_key_t *key,
                                   pj_ioqueue_op_key_t *op_key,
                                   pj_ssize_t bytes_sent)
     {
-        Pj_Event_Handler *handler = 
+        Pj_Event_Handler *handler =
             (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
 
         handler->on_write_complete((Pj_Async_Op*)op_key, bytes_sent);
@@ -485,12 +485,12 @@ private:
     //
     // Static accept completion callback.
     //
-    static void accept_complete_cb(pj_ioqueue_key_t *key, 
+    static void accept_complete_cb(pj_ioqueue_key_t *key,
                                    pj_ioqueue_op_key_t *op_key,
                                    pj_sock_t new_sock,
                                    pj_status_t status)
     {
-        Pj_Event_Handler *handler = 
+        Pj_Event_Handler *handler =
             (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
 
         handler->on_accept_complete((Pj_Async_Op*)op_key, new_sock, status);
@@ -499,10 +499,10 @@ private:
     //
     // Static connect completion callback.
     //
-    static void connect_complete_cb(pj_ioqueue_key_t *key, 
+    static void connect_complete_cb(pj_ioqueue_key_t *key,
                                     pj_status_t status)
     {
-        Pj_Event_Handler *handler = 
+        Pj_Event_Handler *handler =
             (Pj_Event_Handler*) pj_ioqueue_get_user_data(key);
 
         handler->on_connect_complete(status);

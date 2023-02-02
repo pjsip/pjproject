@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2010-2012 Regis Montoya (aka r3gis - www.r3gis.fr)
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /* This file is the implementation of Android OpenSL ES audio device.
  * The original code was originally part of CSipSimple
@@ -58,7 +58,7 @@ struct opensl_aud_factory
     pjmedia_aud_dev_factory  base;
     pj_pool_factory         *pf;
     pj_pool_t               *pool;
-    
+
     SLObjectItf              engineObject;
     SLEngineItf              engineEngine;
     SLObjectItf              outputMixObject;
@@ -227,7 +227,7 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
                                     &stream->rec_thread);
         PJ_UNUSED_ARG(status);  /* Unused for now.. */
         stream->rec_thread_initialized = 1;
-        PJ_LOG(5, (THIS_FILE, "Recorder thread started")); 
+        PJ_LOG(5, (THIS_FILE, "Recorder thread started"));
     }
 
     if (!stream->quit_flag) {
@@ -583,7 +583,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         result = (*stream->playerObj)->GetInterface(stream->playerObj,
                                                     SL_IID_VOLUME,
                                                     &stream->playerVol);
-        
+
         /* Register callback on the buffer queue */
         result = (*stream->playerBufQ)->RegisterCallback(stream->playerBufQ,
                                                          bqPlayerCallback,
@@ -678,7 +678,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot realize recorder : %d", result));
             goto on_error;
         }
-        
+
         /* Get the record interface */
         result = (*stream->recordObj)->GetInterface(stream->recordObj,
                                                     SL_IID_RECORD,
@@ -699,7 +699,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
 
         /* Register callback on the buffer queue */
         result = (*stream->recordBufQ)->RegisterCallback(stream->recordBufQ,
-                                                         bqRecorderCallback, 
+                                                         bqRecorderCallback,
                                                          (void *) stream);
         if (result != SL_RESULT_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Cannot register recorder callback"));
@@ -752,7 +752,7 @@ static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
                                 pjmedia_aud_dev_cap cap,
                                 void *pval)
 {
-    struct opensl_aud_stream *strm = (struct opensl_aud_stream*)s;    
+    struct opensl_aud_stream *strm = (struct opensl_aud_stream*)s;
     pj_status_t status = PJMEDIA_EAUD_INVCAP;
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
@@ -918,7 +918,7 @@ static pj_status_t strm_stop(pjmedia_aud_stream *s)
 
 /* API: destroy stream. */
 static pj_status_t strm_destroy(pjmedia_aud_stream *s)
-{    
+{
     struct opensl_aud_stream *stream = (struct opensl_aud_stream*)s;
 
     /* Stop the stream */

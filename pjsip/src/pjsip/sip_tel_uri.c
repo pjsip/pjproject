@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_tel_uri.h>
 #include <pjsip/sip_msg.h>
@@ -67,7 +67,7 @@ static pj_str_t pjsip_PH_CTX_STR = { "phone-context", 13 };
 static const pj_str_t *tel_uri_get_scheme( const pjsip_tel_uri* );
 static void *tel_uri_get_uri( pjsip_tel_uri* );
 static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
-                                 const pjsip_tel_uri *url, 
+                                 const pjsip_tel_uri *url,
                                  char *buf, pj_size_t size);
 static int tel_uri_cmp( pjsip_uri_context_e context,
                         const pjsip_tel_uri *url1, const pjsip_tel_uri *url2);
@@ -79,11 +79,11 @@ typedef const pj_str_t* (*P_GET_SCHEME)(const void*);
 typedef void*           (*P_GET_URI)(void*);
 typedef pj_ssize_t      (*P_PRINT_URI)(pjsip_uri_context_e,const void *,
                                        char*,pj_size_t);
-typedef int             (*P_CMP_URI)(pjsip_uri_context_e, const void*, 
+typedef int             (*P_CMP_URI)(pjsip_uri_context_e, const void*,
                                      const void*);
 typedef void*           (*P_CLONE)(pj_pool_t*, const void*);
 
-static pjsip_uri_vptr tel_uri_vptr = 
+static pjsip_uri_vptr tel_uri_vptr =
 {
     (P_GET_SCHEME)      &tel_uri_get_scheme,
     (P_GET_URI)         &tel_uri_get_uri,
@@ -164,7 +164,7 @@ pj_status_t pjsip_tel_uri_subsys_init(void)
     pj_cis_add_cis(&pjsip_TEL_PARSING_PVALUE_SPEC, &pjsip_TEL_PVALUE_SPEC);
     pj_cis_add_str(&pjsip_TEL_PARSING_PVALUE_SPEC, "=");
 
-    status = pj_cis_dup(&pjsip_TEL_PARSING_PVALUE_SPEC_ESC, 
+    status = pj_cis_dup(&pjsip_TEL_PARSING_PVALUE_SPEC_ESC,
                         &pjsip_TEL_PARSING_PVALUE_SPEC);
     pj_cis_del_str(&pjsip_TEL_PARSING_PVALUE_SPEC_ESC, "%");
 
@@ -176,7 +176,7 @@ pj_status_t pjsip_tel_uri_subsys_init(void)
 
 /* Print tel: URI */
 static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
-                                 const pjsip_tel_uri *uri, 
+                                 const pjsip_tel_uri *uri,
                                  char *buf, pj_size_t size)
 {
     int printed;
@@ -196,21 +196,21 @@ static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
     /* ISDN sub-address or extension must appear first. */
 
     /* Extension param. */
-    copy_advance_pair_escape(buf, ";ext=", 5, uri->ext_param, 
+    copy_advance_pair_escape(buf, ";ext=", 5, uri->ext_param,
                              pjsip_TEL_EXT_VALUE_SPEC);
 
     /* ISDN sub-address. */
-    copy_advance_pair_escape(buf, ";isub=", 6, uri->isub_param, 
+    copy_advance_pair_escape(buf, ";isub=", 6, uri->isub_param,
                              pjsip_TEL_URIC_SPEC);
 
     /* Followed by phone context, if present. */
-    copy_advance_pair_escape(buf, ";phone-context=", 15, uri->context, 
+    copy_advance_pair_escape(buf, ";phone-context=", 15, uri->context,
                              pjsip_TEL_PHONE_CONTEXT_SPEC);
 
 
     /* Print other parameters. */
-    printed = (int)pjsip_param_print_on(&uri->other_param, buf, (endbuf-buf), 
-                                        &pjsip_TEL_PNAME_SPEC, 
+    printed = (int)pjsip_param_print_on(&uri->other_param, buf, (endbuf-buf),
+                                        &pjsip_TEL_PNAME_SPEC,
                                         &pjsip_TEL_PVALUE_SPEC, ';');
     if (printed < 0)
         return -1;
@@ -364,7 +364,7 @@ static pjsip_tel_uri* tel_uri_clone(pj_pool_t *pool, const pjsip_tel_uri *rhs)
     return uri;
 }
 
-/* Parse tel: URI 
+/* Parse tel: URI
  * THis actually returns (pjsip_tel_uri *) type.
  */
 static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
@@ -410,11 +410,11 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
                 pj_scan_get_char(scanner);
 
 #               if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
-                    pj_scan_get_unescape(scanner, 
+                    pj_scan_get_unescape(scanner,
                                          &pjsip_TEL_PARSING_PVALUE_SPEC_ESC,
                                          &pvalue);
 #               else
-                    pj_scan_get(scanner, &pjsip_TEL_PARSING_PVALUE_SPEC, 
+                    pj_scan_get(scanner, &pjsip_TEL_PARSING_PVALUE_SPEC,
                                 &pvalue);
                     pvalue = pj_str_unescape(pool, &pvalue);
 #               endif

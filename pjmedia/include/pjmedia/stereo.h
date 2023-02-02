@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_STEREO_H__
 #define __PJMEDIA_STEREO_H__
@@ -53,12 +53,12 @@ PJ_BEGIN_DECL
  * Multichannel to monochannel conversion. This function can work safely
  * using the same buffer (in place conversion).
  *
- * @param mono              Output buffer to store the mono frame extracted 
+ * @param mono              Output buffer to store the mono frame extracted
  *                          from the multichannels frame.
  * @param multi             Input frame containing multichannels audio.
  * @param channel_count     Number of channels in the input frame.
  * @param samples_per_frame Number of samples in the input frame.
- * @param mix               If the value is PJ_TRUE then the input channels 
+ * @param mix               If the value is PJ_TRUE then the input channels
  *                          will be mixed to produce output frame, otherwise
  *                          only frame from channel_src will be copied to the
  *                          output frame.
@@ -104,11 +104,11 @@ PJ_INLINE(pj_status_t) pjmedia_convert_channel_nto1(pj_int16_t mono[],
 
 /**
  * Monochannel to multichannel conversion, it will just duplicate the samples
- * from monochannel frame to all channels in the multichannel frame. 
+ * from monochannel frame to all channels in the multichannel frame.
  * This function can work safely using the same buffer (in place conversion)
  * as long as the buffer is big enough for the multichannel samples.
  *
- * @param multi             Output buffer to store the multichannels frame 
+ * @param multi             Output buffer to store the multichannels frame
  *                          mixed from the mono frame.
  * @param mono              The input monochannel audio frame.
  * @param channel_count     Desired number of channels in the output frame.
@@ -125,7 +125,7 @@ PJ_INLINE(pj_status_t) pjmedia_convert_channel_1ton(pj_int16_t multi[],
 {
     const pj_int16_t *src;
 
-    PJ_ASSERT_RETURN(mono && multi && channel_count && samples_per_frame, 
+    PJ_ASSERT_RETURN(mono && multi && channel_count && samples_per_frame,
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
 
@@ -145,13 +145,13 @@ PJ_INLINE(pj_status_t) pjmedia_convert_channel_1ton(pj_int16_t multi[],
 }
 
 
-/** 
+/**
  * Options for channel converter port.
  */
 typedef enum pjmedia_stereo_port_options
 {
     /**
-     * Specifies whether this port should not destroy downstream port when 
+     * Specifies whether this port should not destroy downstream port when
      * this port is destroyed.
      */
     PJMEDIA_STEREO_DONT_DESTROY_DN  = 4
@@ -163,12 +163,12 @@ typedef enum pjmedia_stereo_port_options
  * which will adjust the samples of audio frame to a different channel count
  * when the port's get_frame() and put_frame() is called.
  *
- * When the port's get_frame() is called, this port will get a frame from 
+ * When the port's get_frame() is called, this port will get a frame from
  * the downstream port and convert the frame to the target channel count before
  * returning it to the caller.
  *
  * When the port's put_frame() is called, this port will convert the frame
- * to the downstream port's channel count before giving the frame to the 
+ * to the downstream port's channel count before giving the frame to the
  * downstream port.
  *
  * @param pool                  Pool to allocate the structure and buffers.
@@ -179,8 +179,8 @@ typedef enum pjmedia_stereo_port_options
  *                              and also application may add PJMEDIA_STEREO_MIX
  *                              to mix channels.
  *                              When this flag is zero, the default behavior
- *                              is to use simple N-to-1 channel converter and 
- *                              to destroy downstream port when this port is 
+ *                              is to use simple N-to-1 channel converter and
+ *                              to destroy downstream port when this port is
  *                              destroyed.
  * @param p_port                Pointer to receive the stereo port instance.
  *

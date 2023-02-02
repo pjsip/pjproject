@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_CONFIG_H__
 #define __PJLIB_UTIL_CONFIG_H__
@@ -58,7 +58,7 @@
  * (the #pj_dns_packet_dup() function).
  *
  * Generally name compression is desired, since it saves some memory (see
- * PJ_DNS_RESOLVER_RES_BUF_SIZE setting). However it comes at the expense of 
+ * PJ_DNS_RESOLVER_RES_BUF_SIZE setting). However it comes at the expense of
  * a little processing overhead to perform name scanning and also a little
  * bit more stack usage (8 bytes per entry on 32bit platform).
  *
@@ -83,7 +83,7 @@
 
 
 /**
- * Default retransmission delay, in miliseconds. The combination of 
+ * Default retransmission delay, in miliseconds. The combination of
  * retransmission delay and count determines the query timeout.
  *
  * Default: 2000 (2 seconds, according to RFC 1035)
@@ -105,8 +105,8 @@
 
 
 /**
- * Maximum life-time of DNS response in the resolver response cache, 
- * in seconds. If the value is zero, then DNS response caching will be 
+ * Maximum life-time of DNS response in the resolver response cache,
+ * in seconds. If the value is zero, then DNS response caching will be
  * disabled.
  *
  * Default is 300 seconds (5 minutes).
@@ -119,8 +119,8 @@
 
 /**
  * The life-time of invalid DNS response in the resolver response cache.
- * An invalid DNS response is a response which RCODE is non-zero and 
- * response without any answer section. These responses can be put in 
+ * An invalid DNS response is a response which RCODE is non-zero and
+ * response without any answer section. These responses can be put in
  * the cache too to minimize message round-trip.
  *
  * Default: 60 (one minute).
@@ -132,7 +132,7 @@
 #endif
 
 /**
- * The interval on which nameservers which are known to be good to be 
+ * The interval on which nameservers which are known to be good to be
  * probed again to determine whether they are still good. Note that
  * this applies to both active nameserver (the one currently being used)
  * and idle nameservers (good nameservers that are not currently selected).

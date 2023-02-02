@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/sock.h>
 #include <pj/assert.h>
@@ -39,7 +39,7 @@
 
 /*
  * Convert address string with numbers and dots to binary IP address.
- */ 
+ */
 PJ_DEF(pj_in_addr) pj_inet_addr(const pj_str_t *cp)
 {
     pj_in_addr addr;
@@ -50,7 +50,7 @@ PJ_DEF(pj_in_addr) pj_inet_addr(const pj_str_t *cp)
 
 /*
  * Convert address string with numbers and dots to binary IP address.
- */ 
+ */
 PJ_DEF(pj_in_addr) pj_inet_addr2(const char *cp)
 {
     pj_str_t str = pj_str((char*)cp);
@@ -112,7 +112,7 @@ PJ_DEF(char*) pj_sockaddr_print( const pj_sockaddr_t *addr,
 }
 
 /*
- * Set the IP address of an IP socket address from string address, 
+ * Set the IP address of an IP socket address from string address,
  * with resolving the host if necessary. The string address may be in a
  * standard numbers and dots notation or may be a hostname. If hostname
  * is specified, then the function will resolve the host into the IP
@@ -123,7 +123,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
 {
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(!str_addr || str_addr->slen < PJ_MAX_HOSTNAME, 
+    PJ_ASSERT_RETURN(!str_addr || str_addr->slen < PJ_MAX_HOSTNAME,
                      (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
 
     PJ_SOCKADDR_RESET_LEN(addr);
@@ -197,8 +197,8 @@ PJ_DEF(pj_status_t) pj_sockaddr_set_str_addr(int af,
 
 /*
  * Set the IP address and port of an IP socket address.
- * The string address may be in a standard numbers and dots notation or 
- * may be a hostname. If hostname is specified, then the function will 
+ * The string address may be in a standard numbers and dots notation or
+ * may be a hostname. If hostname is specified, then the function will
  * resolve the host into the IP address.
  */
 PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
@@ -217,7 +217,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
 /*
  * Initialize IP socket address based on the address and port info.
  */
-PJ_DEF(pj_status_t) pj_sockaddr_init(int af, 
+PJ_DEF(pj_status_t) pj_sockaddr_init(int af,
                                      pj_sockaddr *addr,
                                      const pj_str_t *cp,
                                      pj_uint16_t port)
@@ -233,7 +233,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_init(int af,
 
     pj_bzero(addr, sizeof(pj_sockaddr_in6));
     addr->addr.sa_family = PJ_AF_INET6;
-    
+
     status = pj_sockaddr_set_str_addr(af, addr, cp);
     if (status != PJ_SUCCESS)
         return status;
@@ -276,9 +276,9 @@ PJ_DEF(int) pj_sockaddr_cmp( const pj_sockaddr_t *addr1,
         return 1;
 
     /* TODO:
-     *  Do we need to compare flow label and scope id in IPv6? 
+     *  Do we need to compare flow label and scope id in IPv6?
      */
-    
+
     /* Looks equal */
     return 0;
 }
@@ -329,8 +329,8 @@ PJ_DEF(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr)
     /* It's probably not wise to raise assertion here if
      * the address doesn't contain a valid address family, and
      * just return PJ_FALSE instead.
-     * 
-     * The reason is because application may need to distinguish 
+     *
+     * The reason is because application may need to distinguish
      * these three conditions with sockaddr:
      *  a) sockaddr is not initialized. This is by convention
      *     indicated by sa_family==0.
@@ -351,7 +351,7 @@ PJ_DEF(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr)
     } else if (a->addr.sa_family == PJ_AF_INET6) {
         pj_uint8_t zero[24];
         pj_bzero(zero, sizeof(zero));
-        return pj_memcmp(a->ipv6.sin6_addr.s6_addr, zero, 
+        return pj_memcmp(a->ipv6.sin6_addr.s6_addr, zero,
                          sizeof(pj_in6_addr)) != 0;
     } else
         return a->ipv4.sin_addr.s_addr != PJ_INADDR_ANY;
@@ -438,21 +438,21 @@ PJ_DEF(pj_status_t) pj_sockaddr_synthesize(int dst_af,
 
     pj_sockaddr_print(src, ip_addr_buf, sizeof(ip_addr_buf), 0);
     ip_addr = pj_str(ip_addr_buf);
-    
+
     /* Try to synthesize address using pj_getaddrinfo(). */
-    status = pj_getaddrinfo(dst_af, &ip_addr, &count, ai); 
+    status = pj_getaddrinfo(dst_af, &ip_addr, &count, ai);
     if (status == PJ_SUCCESS && count > 0) {
         pj_sockaddr_cp(dst, &ai[0].ai_addr);
         pj_sockaddr_set_port(dst, pj_sockaddr_get_port(src));
     }
-    
+
     return status;
 }
 
 /*
  * Set port number of pj_sockaddr_in
  */
-PJ_DEF(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 
+PJ_DEF(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr,
                                      pj_uint16_t hostport)
 {
     addr->sin_port = pj_htons(hostport);
@@ -461,7 +461,7 @@ PJ_DEF(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr,
 /*
  * Set port number of pj_sockaddr
  */
-PJ_DEF(pj_status_t) pj_sockaddr_set_port(pj_sockaddr *addr, 
+PJ_DEF(pj_status_t) pj_sockaddr_set_port(pj_sockaddr *addr,
                                          pj_uint16_t hostport)
 {
     int af = addr->addr.sa_family;
@@ -679,7 +679,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_parse( int af, unsigned options,
     status = pj_sockaddr_parse2(af, options, str, &hostpart, &port, &af);
     if (status != PJ_SUCCESS)
         return status;
-    
+
 #if !defined(PJ_HAS_IPV6) || !PJ_HAS_IPV6
     if (af==PJ_AF_INET6)
         return PJ_EIPV6NOTSUP;
@@ -688,7 +688,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_parse( int af, unsigned options,
     status = pj_sockaddr_init(af, addr, &hostpart, port);
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
     if (status != PJ_SUCCESS && af == PJ_AF_INET6) {
-        /* Parsing does not yield valid address. Try to treat the last 
+        /* Parsing does not yield valid address. Try to treat the last
          * portion after the colon as port number.
          */
         const char *last_colon_pos=NULL, *p;
@@ -726,7 +726,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_parse( int af, unsigned options,
         status = pj_sockaddr_init(PJ_AF_INET6, addr, &hostpart, port);
     }
 #endif
-    
+
     return status;
 }
 
@@ -892,7 +892,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
             for (i=0; i<cand_cnt; ++i) {
                 unsigned j;
                 for (j=0; j<count; ++j) {
-                    if (pj_sockaddr_cmp(&cand_addr[i], 
+                    if (pj_sockaddr_cmp(&cand_addr[i],
                                         &cand_addr[start_if+j])==0)
                         break;
                 }
@@ -909,7 +909,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
             for (i=0; i<count; ++i) {
                 unsigned j;
                 for (j=0; j<cand_cnt; ++j) {
-                    if (pj_sockaddr_cmp(&cand_addr[start_if+i], 
+                    if (pj_sockaddr_cmp(&cand_addr[start_if+i],
                                         &cand_addr[j])==0)
                         break;
                 }
@@ -1190,14 +1190,14 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_sobuf( pj_sock_t sockfd,
 }
 
 
-PJ_DEF(char *) pj_addr_str_print( const pj_str_t *host_str, int port, 
+PJ_DEF(char *) pj_addr_str_print( const pj_str_t *host_str, int port,
                                   char *buf, int size, unsigned flag)
 {
     enum {
         WITH_PORT = 1
     };
     char *bquote, *equote;
-    int af = pj_AF_UNSPEC();    
+    int af = pj_AF_UNSPEC();
     pj_in6_addr dummy6;
 
     /* Check if this is an IPv6 address */
@@ -1206,15 +1206,15 @@ PJ_DEF(char *) pj_addr_str_print( const pj_str_t *host_str, int port,
 
     if (af == pj_AF_INET6()) {
         bquote = "[";
-        equote = "]";    
+        equote = "]";
     } else {
         bquote = "";
-        equote = "";    
-    } 
+        equote = "";
+    }
 
     if (flag & WITH_PORT) {
         pj_ansi_snprintf(buf, size, "%s%.*s%s:%d",
-                         bquote, (int)host_str->slen, host_str->ptr, equote, 
+                         bquote, (int)host_str->slen, host_str->ptr, equote,
                          port);
     } else {
         pj_ansi_snprintf(buf, size, "%s%.*s%s",

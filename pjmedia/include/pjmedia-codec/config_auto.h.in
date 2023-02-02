@@ -27,9 +27,9 @@
 /*
  * Note:
  *      The configuration in config_site.h overrides any other settings,
- *      including the setting as detected by autoconf. 
+ *      including the setting as detected by autoconf.
  */
- 
+
 /* L16 codec */
 #ifndef PJMEDIA_HAS_L16_CODEC
 #undef PJMEDIA_HAS_L16_CODEC

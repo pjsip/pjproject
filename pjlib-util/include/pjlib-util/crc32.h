@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_CRC32_H__
 #define __PJLIB_UTIL_CRC32_H__
@@ -32,7 +32,7 @@ PJ_BEGIN_DECL
  * @defgroup PJLIB_UTIL_CRC32 CRC32 (Cyclic Redundancy Check)
  * @ingroup PJLIB_UTIL_ENCRYPTION
  * @{
- * This implements CRC32 algorithm. See ITU-T V.42 for the formal 
+ * This implements CRC32 algorithm. See ITU-T V.42 for the formal
  * specification.
  */
 
@@ -59,7 +59,7 @@ PJ_DECL(void) pj_crc32_init(pj_crc32_context *ctx);
  *
  * @return          The current CRC32 value.
  */
-PJ_DECL(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx, 
+PJ_DECL(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx,
                                      const pj_uint8_t *data,
                                      pj_size_t nbytes);
 

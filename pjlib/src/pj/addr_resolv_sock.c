@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/addr_resolv.h>
 #include <pj/assert.h>
@@ -34,7 +34,7 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
     char copy[PJ_MAX_HOSTNAME];
 
     pj_assert(hostname && hostname ->slen < PJ_MAX_HOSTNAME);
-    
+
     if (hostname->slen >= PJ_MAX_HOSTNAME)
         return PJ_ENAMETOOLONG;
 
@@ -130,24 +130,24 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
         i = 0;
         if (addrRef != nil) {
             CFIndex idx, naddr;
-            
+
             naddr = CFArrayGetCount(addrRef);
             for (idx = 0; idx < naddr && i < *count; idx++) {
                 struct sockaddr *addr;
                 size_t addr_size;
-                
+
                 addr = (struct sockaddr *)
                        CFDataGetBytePtr(CFArrayGetValueAtIndex(addrRef, idx));
                 /* This should not happen. */
                 pj_assert(addr);
-                
+
                 /* Ignore unwanted address families */
                 if (af!=PJ_AF_UNSPEC && addr->sa_family != af)
                     continue;
 
                 /* Store canonical name */
                 pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
-                
+
                 /* Store address */
                 addr_size = sizeof(*addr);
                 if (addr->sa_family == PJ_AF_INET6) {
@@ -156,11 +156,11 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
                 PJ_ASSERT_ON_FAIL(addr_size <= sizeof(pj_sockaddr), continue);
                 pj_memcpy(&ai[i].ai_addr, addr, addr_size);
                 PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
-                
+
                 i++;
             }
         }
-        
+
         *count = i;
         if (*count == 0)
             status = PJ_ERESOLVE;
@@ -168,10 +168,10 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     } else {
         status = PJ_ERESOLVE;
     }
-    
+
     CFRelease(hostRef);
     CFRelease(hostname);
-    
+
     return status;
 #else
     /* Call getaddrinfo() */
@@ -287,7 +287,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
         pj_hostent he;
         unsigned i, max_count;
         pj_status_t status;
-        
+
         /* VC6 complains that "he" is uninitialized */
         #ifdef _MSC_VER
         pj_bzero(&he, sizeof(he));

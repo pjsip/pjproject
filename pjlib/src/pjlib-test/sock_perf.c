@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -44,7 +44,7 @@
  */
 static int sock_producer_consumer(int sock_type,
                                   pj_size_t buf_size,
-                                  unsigned loop, 
+                                  unsigned loop,
                                   unsigned *p_bandwidth)
 {
     pj_sock_t consumer, producer;
@@ -93,7 +93,7 @@ static int sock_producer_consumer(int sock_type,
         received = 0;
         do {
             part_received = buf_size-received;
-            rc = pj_sock_recv(consumer, incoming_buffer+received, 
+            rc = pj_sock_recv(consumer, incoming_buffer+received,
                               &part_received, 0);
             if (rc != PJ_SUCCESS) {
                 app_perror("...recv error", rc);
@@ -132,7 +132,7 @@ static int sock_producer_consumer(int sock_type,
     bandwidth = total_received;
     pj_highprec_mul(bandwidth, 1000);
     pj_highprec_div(bandwidth, elapsed);
-    
+
     *p_bandwidth = (pj_uint32_t)bandwidth;
 
     /* Close sockets. */
@@ -162,7 +162,7 @@ int sock_perf_test(void)
     /* Disable this test on Symbian since UDP connect()/send() failed
      * with S60 3rd edition (including MR2).
      * See https://github.com/pjsip/pjproject/issues/264
-     */    
+     */
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     /* Benchmarking UDP */
     rc = sock_producer_consumer(pj_SOCK_DGRAM(), 512, LOOP, &bandwidth);
@@ -181,7 +181,7 @@ int sock_perf_test(void)
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_sock_perf_test;
 #endif  /* INCLUDE_SOCK_PERF_TEST */

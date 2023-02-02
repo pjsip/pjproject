@@ -62,13 +62,13 @@ public:
         wav_player = NULL;
         myAcc = (MyAccount *)&acc;
     }
-    
+
     ~MyCall()
     {
         if (wav_player)
             delete wav_player;
     }
-    
+
     virtual void onCallState(OnCallStateParam &prm);
     virtual void onCallTransferRequest(OnCallTransferRequestParam &prm);
     virtual void onCallReplaceRequest(OnCallReplaceRequestParam &prm);
@@ -79,7 +79,7 @@ class MyAccount : public Account
 {
 public:
     std::vector<Call *> calls;
-    
+
 public:
     MyAccount()
     {}
@@ -96,7 +96,7 @@ public:
             it = calls.erase(it);
         }
     }
-    
+
     void removeCall(Call *call)
     {
         for (std::vector<Call *>::iterator it = calls.begin();
@@ -115,16 +115,16 @@ public:
         std::cout << (ai.regIsActive? "*** Register: code=" : "*** Unregister: code=")
                   << prm.code << std::endl;
     }
-    
+
     virtual void onIncomingCall(OnIncomingCallParam &iprm)
     {
         Call *call = new MyCall(*this, iprm.callId);
         CallInfo ci = call->getInfo();
         CallOpParam prm;
-        
+
         std::cout << "*** Incoming Call: " <<  ci.remoteUri << " ["
                   << ci.stateText << "]" << std::endl;
-        
+
         calls.push_back(call);
         prm.statusCode = (pjsip_status_code)200;
         call->answer(prm);
@@ -138,7 +138,7 @@ void MyCall::onCallState(OnCallStateParam &prm)
     CallInfo ci = getInfo();
     std::cout << "*** Call: " <<  ci.remoteUri << " [" << ci.stateText
               << "]" << std::endl;
-    
+
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
         //myAcc->removeCall(this);
         /* Delete the call */
@@ -232,9 +232,9 @@ static void mainProg1(MyEndpoint &ep)
     } catch (...) {
         std::cout << "Adding account failed" << std::endl;
     }
-    
+
     pj_thread_sleep(2000);
-    
+
     // Make outgoing call
     Call *call = new MyCall(*acc);
     acc->calls.push_back(call);
@@ -242,12 +242,12 @@ static void mainProg1(MyEndpoint &ep)
     prm.opt.audioCount = 1;
     prm.opt.videoCount = 0;
     call->makeCall("sip:test1@pjsip.org", prm);
-    
+
     // Hangup all calls
     pj_thread_sleep(4000);
     ep.hangupAllCalls();
     pj_thread_sleep(4000);
-    
+
     // Destroy library
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
     delete acc; /* Will delete all calls too */

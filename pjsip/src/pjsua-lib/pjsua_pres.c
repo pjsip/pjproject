@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
@@ -87,7 +87,7 @@ static pj_status_t lock_buddy(const char *title,
     pj_bzero(lck, sizeof(*lck));
 
     for (retry=0; retry<MAX_RETRY; ++retry) {
-        
+
         if (PJSUA_TRY_LOCK() != PJ_SUCCESS) {
             pj_thread_sleep(retry/10);
             continue;
@@ -127,7 +127,7 @@ static pj_status_t lock_buddy(const char *title,
                                  title));
         return PJ_ETIMEDOUT;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -259,7 +259,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     /* Presence status */
     pj_memcpy(&info->pres_status, &buddy->status, sizeof(pjsip_pres_status));
 
-    /* status and status text */    
+    /* status and status text */
     if (buddy->sub == NULL || buddy->status.info_cnt==0) {
         info->status = PJSUA_BUDDY_STATUS_UNKNOWN;
         info->status_text = pj_str("?");
@@ -293,7 +293,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
         info->sub_state = pjsip_evsub_get_state(buddy->sub);
         info->sub_state_name = pjsip_evsub_get_state_name(buddy->sub);
         if (info->sub_state == PJSIP_EVSUB_STATE_TERMINATED &&
-            total < sizeof(info->buf_)) 
+            total < sizeof(info->buf_))
         {
             info->sub_term_reason.ptr = info->buf_ + total;
             pj_strncpy(&info->sub_term_reason,
@@ -388,7 +388,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
     int index;
     pj_str_t tmp;
 
-    PJ_ASSERT_RETURN(pjsua_var.buddy_cnt <= 
+    PJ_ASSERT_RETURN(pjsua_var.buddy_cnt <=
                         PJ_ARRAY_SIZE(pjsua_var.buddy),
                      PJ_ETOOMANY);
 
@@ -425,8 +425,8 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
     }
 
     /* Init buffers for presence subscription status */
-    buddy->term_reason.ptr = (char*) 
-                             pj_pool_alloc(buddy->pool, 
+    buddy->term_reason.ptr = (char*)
+                             pj_pool_alloc(buddy->pool,
                                            PJSUA_BUDDY_SUB_TERM_REASON_LEN);
 
     /* Get name and display name for buddy */
@@ -496,7 +496,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id)
     struct buddy_lock lck;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(buddy_id>=0 && 
+    PJ_ASSERT_RETURN(buddy_id>=0 &&
                         buddy_id<(int)PJ_ARRAY_SIZE(pjsua_var.buddy),
                      PJ_EINVAL);
 
@@ -516,7 +516,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id)
 
     /* Not interested with further events for this buddy */
     if (pjsua_var.buddy[buddy_id].sub) {
-        pjsip_evsub_set_mod_data(pjsua_var.buddy[buddy_id].sub, 
+        pjsip_evsub_set_mod_data(pjsua_var.buddy[buddy_id].sub,
                                  pjsua_var.mod.id, NULL);
     }
 
@@ -615,7 +615,7 @@ PJ_DEF(void) pjsua_pres_dump(pj_bool_t verbose)
     unsigned acc_id;
     unsigned i;
 
-    
+
     PJSUA_LOCK();
 
     /*
@@ -623,7 +623,7 @@ PJ_DEF(void) pjsua_pres_dump(pj_bool_t verbose)
      * subscriptions.
      */
     if (verbose == PJ_FALSE) {
-        
+
         int count = 0;
 
         for (acc_id=0; acc_id<PJ_ARRAY_SIZE(pjsua_var.acc); ++acc_id) {
@@ -642,7 +642,7 @@ PJ_DEF(void) pjsua_pres_dump(pj_bool_t verbose)
             }
         }
 
-        PJ_LOG(3,(THIS_FILE, "Number of server/UAS subscriptions: %d", 
+        PJ_LOG(3,(THIS_FILE, "Number of server/UAS subscriptions: %d",
                   count));
 
         count = 0;
@@ -655,12 +655,12 @@ PJ_DEF(void) pjsua_pres_dump(pj_bool_t verbose)
             }
         }
 
-        PJ_LOG(3,(THIS_FILE, "Number of client/UAC subscriptions: %d", 
+        PJ_LOG(3,(THIS_FILE, "Number of client/UAC subscriptions: %d",
                   count));
         PJSUA_UNLOCK();
         return;
     }
-    
+
 
     /*
      * Dumping all server (UAS) subscriptions
@@ -685,7 +685,7 @@ PJ_DEF(void) pjsua_pres_dump(pj_bool_t verbose)
 
             uapres = pjsua_var.acc[acc_id].pres_srv_list.next;
             while (uapres != &pjsua_var.acc[acc_id].pres_srv_list) {
-            
+
                 PJ_LOG(3,(THIS_FILE, "    %10s %s",
                           pjsip_evsub_get_state_name(uapres->sub),
                           uapres->remote));
@@ -736,7 +736,7 @@ PJ_DEF(void) pjsua_pres_dump(pj_bool_t verbose)
 static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata);
 
 /* The module instance. */
-static pjsip_module mod_pjsua_pres = 
+static pjsip_module mod_pjsua_pres =
 {
     NULL, NULL,                         /* prev, next.          */
     { "mod-pjsua-pres", 14 },           /* Name.                */
@@ -778,7 +778,7 @@ static void pres_evsub_on_srv_state( pjsip_evsub *sub, pjsip_event *event)
             pj_str_t from;
 
             from = uapres->dlg->remote.info_str;
-            (*pjsua_var.ua_cfg.cb.on_srv_subscribe_state)(uapres->acc_id, 
+            (*pjsua_var.ua_cfg.cb.on_srv_subscribe_state)(uapres->acc_id,
                                                           uapres, &from,
                                                           state, event);
         }
@@ -793,7 +793,7 @@ static void pres_evsub_on_srv_state( pjsip_evsub *sub, pjsip_event *event)
     PJSUA_UNLOCK();
 }
 
-/* This is called when request is received. 
+/* This is called when request is received.
  * We need to check for incoming SUBSCRIBE request.
  */
 static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
@@ -819,7 +819,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     /* Don't want to accept the request if shutdown is in progress */
     if (pjsua_var.thread_quit_flag) {
-        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
+        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
                                       PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
                                       NULL, NULL);
         return PJ_TRUE;
@@ -830,24 +830,24 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Find which account for the incoming request. */
     acc_id = pjsua_acc_find_for_incoming(rdata);
     if (acc_id == PJSUA_INVALID_ID) {
-        PJ_LOG(2, (THIS_FILE, 
+        PJ_LOG(2, (THIS_FILE,
                    "Unable to process incoming message %s "
-                   "due to no available account", 
+                   "due to no available account",
                    pjsip_rx_data_get_info(rdata)));
 
         PJSUA_UNLOCK();
-        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
+        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
                                       PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
                                       NULL, NULL);
         pj_log_pop_indent();
-        return PJ_TRUE; 
+        return PJ_TRUE;
     }
     acc = &pjsua_var.acc[acc_id];
 
     PJ_LOG(4,(THIS_FILE, "Creating server subscription, using account %d",
               acc_id));
     pj_log_push_indent();
-    
+
     /* Create suitable Contact header */
     if (acc->contact.slen) {
         contact = acc->contact;
@@ -855,7 +855,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
         status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
                                               acc_id, rdata);
         if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+            pjsua_perror(THIS_FILE, "Unable to generate Contact header",
                          status);
             PJSUA_UNLOCK();
             pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 400, NULL,
@@ -869,8 +869,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
                                                &contact, &dlg);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, 
-                     "Unable to create UAS dialog for subscription", 
+        pjsua_perror(THIS_FILE,
+                     "Unable to create UAS dialog for subscription",
                      status);
         PJSUA_UNLOCK();
         pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 400, NULL,
@@ -921,7 +921,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
         int code = PJSIP_ERRNO_TO_SIP_STATUS(status);
         pjsip_tx_data *tdata;
 
-        pjsua_perror(THIS_FILE, "Unable to create server subscription", 
+        pjsua_perror(THIS_FILE, "Unable to create server subscription",
                      status);
 
         if (code==599 || code > 699 || code < 300) {
@@ -993,7 +993,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
         buddy_id = find_buddy(rdata->msg_info.from->uri);
 
         (*pjsua_var.ua_cfg.cb.on_incoming_subscribe)(acc_id, uapres, buddy_id,
-                                                     &dlg->remote.info_str, 
+                                                     &dlg->remote.info_str,
                                                      rdata, &st_code, &reason,
                                                      &msg_data);
     }
@@ -1003,7 +1003,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
         pjsip_tx_data *tdata;
 
         /* Create response */
-        status = pjsip_dlg_create_response(dlg, rdata, st_code, 
+        status = pjsip_dlg_create_response(dlg, rdata, st_code,
                                            &reason, &tdata);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error creating response",  status);
@@ -1036,7 +1036,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Create and send 2xx response to the SUBSCRIBE request: */
     status = pjsip_pres_accept(sub, rdata, st_code, &msg_data.hdr_list);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Unable to accept presence subscription", 
+        pjsua_perror(THIS_FILE, "Unable to accept presence subscription",
                      status);
         pj_list_erase(uapres);
         pjsip_pres_terminate(sub, PJ_FALSE);
@@ -1047,7 +1047,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     /* If code is 200, send NOTIFY now */
     if (st_code == 200) {
-        pjsua_pres_notify(acc_id, uapres, PJSIP_EVSUB_STATE_ACTIVE, 
+        pjsua_pres_notify(acc_id, uapres, PJSIP_EVSUB_STATE_ACTIVE,
                           NULL, NULL, PJ_TRUE, &msg_data);
     }
 
@@ -1109,7 +1109,7 @@ PJ_DEF(pj_status_t) pjsua_pres_notify( pjsua_acc_id acc_id,
     //causing XML parsing to fail.
     //pres_status.info[0].contact = pjsua_var.local_uri;
     /* add RPID information */
-    pj_memcpy(&pres_status.info[0].rpid, &acc->rpid, 
+    pj_memcpy(&pres_status.info[0].rpid, &acc->rpid,
               sizeof(pjrpid_element));
 
     pjsip_pres_set_status(srv_pres->sub, &pres_status);
@@ -1121,7 +1121,7 @@ PJ_DEF(pj_status_t) pjsua_pres_notify( pjsua_acc_id acc_id,
         ev_state = PJSIP_EVSUB_STATE_TERMINATED;
 
     /* Create and send the NOTIFY to active subscription: */
-    status = pjsip_pres_notify(srv_pres->sub, ev_state, state_str, 
+    status = pjsip_pres_notify(srv_pres->sub, ev_state, state_str,
                                reason, &tdata);
     if (status == PJ_SUCCESS) {
         /* Force removal of message body if msg_body==FALSE */
@@ -1133,7 +1133,7 @@ PJ_DEF(pj_status_t) pjsua_pres_notify( pjsua_acc_id acc_id,
     }
 
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Unable to create/send NOTIFY", 
+        pjsua_perror(THIS_FILE, "Unable to create/send NOTIFY",
                      status);
         pj_list_erase(srv_pres);
         pjsip_pres_terminate(srv_pres->sub, PJ_FALSE);
@@ -1176,7 +1176,7 @@ static void publish_cb(struct pjsip_publishc_cbparam *param)
             char errmsg[PJ_ERR_MSG_SIZE];
 
             pj_strerror(param->status, errmsg, sizeof(errmsg));
-            PJ_LOG(1,(THIS_FILE, 
+            PJ_LOG(1,(THIS_FILE,
                       "Client publication (PUBLISH) failed, status=%d, msg=%s",
                        param->status, errmsg));
         } else if (param->code == 412) {
@@ -1184,9 +1184,9 @@ static void publish_cb(struct pjsip_publishc_cbparam *param)
              * The PUBLISH refresh has failed, retry with new one.
              */
             pjsua_pres_init_publish_acc(acc->index);
-            
+
         } else {
-            PJ_LOG(1,(THIS_FILE, 
+            PJ_LOG(1,(THIS_FILE,
                       "Client publication (PUBLISH) failed (%d/%.*s)",
                        param->code, (int)param->reason.slen,
                        param->reason.ptr));
@@ -1236,7 +1236,7 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
         pres_status.info[0].basic_open = acc->online_status;
         pres_status.info[0].id = acc->cfg.pidf_tuple_id;
         /* .. including RPID information */
-        pj_memcpy(&pres_status.info[0].rpid, &acc->rpid, 
+        pj_memcpy(&pres_status.info[0].rpid, &acc->rpid,
                   sizeof(pjrpid_element));
 
         /* Be careful not to send PIDF with presence entity ID containing
@@ -1333,7 +1333,7 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
     if (acc_cfg->publish_enabled) {
 
         /* Create client publication */
-        status = pjsip_publishc_create(pjsua_var.endpt, &acc_cfg->publish_opt, 
+        status = pjsip_publishc_create(pjsua_var.endpt, &acc_cfg->publish_opt,
                                        acc, &publish_cb,
                                        &acc->publish_sess);
         if (status != PJ_SUCCESS) {
@@ -1344,7 +1344,7 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
         /* Initialize client publication */
         status = pjsip_publishc_init(acc->publish_sess, &STR_PRESENCE,
                                      &acc_cfg->id, &acc_cfg->id,
-                                     &acc_cfg->id, 
+                                     &acc_cfg->id,
                                      PJSUA_PUBLISH_EXPIRATION);
         if (status != PJ_SUCCESS) {
             acc->publish_sess = NULL;
@@ -1353,7 +1353,7 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
 
         /* Add credential for authentication */
         if (acc->cred_cnt) {
-            pjsip_publishc_set_credentials(acc->publish_sess, acc->cred_cnt, 
+            pjsip_publishc_set_credentials(acc->publish_sess, acc->cred_cnt,
                                            acc->cred);
         }
 
@@ -1420,7 +1420,7 @@ void pjsua_pres_delete_acc(int acc_id, unsigned flags)
 
     /* Notify all subscribers that we're no longer available */
     while (uapres != &acc->pres_srv_list) {
-        
+
         pjsip_pres_status pres_status;
         pj_str_t reason = { "noresource", 10 };
         pjsua_srv_pres *next;
@@ -1429,7 +1429,7 @@ void pjsua_pres_delete_acc(int acc_id, unsigned flags)
         next = uapres->next;
 
         pjsip_pres_get_status(uapres->sub, &pres_status);
-        
+
         pres_status.info[0].basic_open = pjsua_var.acc[acc_id].online_status;
         pjsip_pres_set_status(uapres->sub, &pres_status);
 
@@ -1467,7 +1467,7 @@ void pjsua_pres_update_acc(int acc_id, pj_bool_t force)
     uapres = pjsua_var.acc[acc_id].pres_srv_list.next;
 
     while (uapres != &acc->pres_srv_list) {
-        
+
         pjsip_pres_status pres_status;
         pjsip_tx_data *tdata;
 
@@ -1480,11 +1480,11 @@ void pjsua_pres_update_acc(int acc_id, pj_bool_t force)
          * the user accepted the request.
          */
         if (pjsip_evsub_get_state(uapres->sub)==PJSIP_EVSUB_STATE_ACTIVE &&
-            (force || pres_status.info[0].basic_open != acc->online_status)) 
+            (force || pres_status.info[0].basic_open != acc->online_status))
         {
 
             pres_status.info[0].basic_open = acc->online_status;
-            pj_memcpy(&pres_status.info[0].rpid, &acc->rpid, 
+            pj_memcpy(&pres_status.info[0].rpid, &acc->rpid,
                       sizeof(pjrpid_element));
 
             pjsip_pres_set_status(uapres->sub, &pres_status);
@@ -1501,7 +1501,7 @@ void pjsua_pres_update_acc(int acc_id, pj_bool_t force)
     /* Send PUBLISH if required. We only do this when we have a PUBLISH
      * session. If we don't have a PUBLISH session, then it could be
      * that we're waiting until registration has completed before we
-     * send the first PUBLISH. 
+     * send the first PUBLISH.
      */
     if (acc_cfg->publish_enabled && acc->publish_sess) {
         if (force || acc->publish_state != acc->online_status) {
@@ -1540,8 +1540,8 @@ static void buddy_resubscribe(pjsua_buddy *buddy, pj_bool_t resched,
     if (resched) {
         pj_time_val delay;
 
-        PJ_LOG(4,(THIS_FILE,  
-                  "Resubscribing buddy id %u in %u ms (reason: %.*s)", 
+        PJ_LOG(4,(THIS_FILE,
+                  "Resubscribing buddy id %u in %u ms (reason: %.*s)",
                   buddy->index, msec_interval,
                   (int)buddy->term_reason.slen,
                   buddy->term_reason.ptr));
@@ -1569,10 +1569,10 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
      */
     buddy = (pjsua_buddy*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (buddy) {
-        PJ_LOG(4,(THIS_FILE, 
+        PJ_LOG(4,(THIS_FILE,
                   "Presence subscription to %.*s is %s",
                   (int)pjsua_var.buddy[buddy->index].uri.slen,
-                  pjsua_var.buddy[buddy->index].uri.ptr, 
+                  pjsua_var.buddy[buddy->index].uri.ptr,
                   pjsip_evsub_get_state_name(sub)));
         pj_log_push_indent();
 
@@ -1580,12 +1580,12 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
             int resub_delay = -1;
 
             if (buddy->term_reason.ptr == NULL) {
-                buddy->term_reason.ptr = (char*) 
+                buddy->term_reason.ptr = (char*)
                                          pj_pool_alloc(buddy->pool,
                                            PJSUA_BUDDY_SUB_TERM_REASON_LEN);
             }
-            pj_strncpy(&buddy->term_reason, 
-                       pjsip_evsub_get_termination_reason(sub), 
+            pj_strncpy(&buddy->term_reason,
+                       pjsip_evsub_get_termination_reason(sub),
                        PJSUA_BUDDY_SUB_TERM_REASON_LEN);
 
             buddy->term_code = 200;
@@ -1593,7 +1593,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
             /* Determine whether to resubscribe automatically */
             if (event && event->type==PJSIP_EVENT_TSX_STATE) {
                 const pjsip_transaction *tsx = event->body.tsx_state.tsx;
-                if (pjsip_method_cmp(&tsx->method, 
+                if (pjsip_method_cmp(&tsx->method,
                                      pjsip_get_subscribe_method())==0)
                 {
                     buddy->term_code = tsx->status_code;
@@ -1617,33 +1617,33 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
                 {
                     if (pj_stricmp2(&buddy->term_reason, "deactivated")==0 ||
                         pj_stricmp2(&buddy->term_reason, "timeout")==0) {
-                        /* deactivated: The subscription has been terminated, 
-                         * but the subscriber SHOULD retry immediately with 
+                        /* deactivated: The subscription has been terminated,
+                         * but the subscriber SHOULD retry immediately with
                          * a new subscription.
                          */
-                        /* timeout: The subscription has been terminated 
+                        /* timeout: The subscription has been terminated
                          * because it was not refreshed before it expired.
-                         * Clients MAY re-subscribe immediately. The 
-                         * "retry-after" parameter has no semantics for 
+                         * Clients MAY re-subscribe immediately. The
+                         * "retry-after" parameter has no semantics for
                          * "timeout".
                          */
                         resub_delay = 500;
-                    } 
+                    }
                     else if (pj_stricmp2(&buddy->term_reason, "probation")==0||
                              pj_stricmp2(&buddy->term_reason, "giveup")==0) {
-                        /* probation: The subscription has been terminated, 
-                         * but the client SHOULD retry at some later time.  
-                         * If a "retry-after" parameter is also present, the 
-                         * client SHOULD wait at least the number of seconds 
+                        /* probation: The subscription has been terminated,
+                         * but the client SHOULD retry at some later time.
+                         * If a "retry-after" parameter is also present, the
+                         * client SHOULD wait at least the number of seconds
                          * specified by that parameter before attempting to re-
                          * subscribe.
                          */
                         /* giveup: The subscription has been terminated because
-                         * the notifier could not obtain authorization in a 
-                         * timely fashion.  If a "retry-after" parameter is 
+                         * the notifier could not obtain authorization in a
+                         * timely fashion.  If a "retry-after" parameter is
                          * also present, the client SHOULD wait at least the
                          * number of seconds specified by that parameter before
-                         * attempting to re-subscribe; otherwise, the client 
+                         * attempting to re-subscribe; otherwise, the client
                          * MAY retry immediately, but will likely get put back
                          * into pending state.
                          */
@@ -1701,7 +1701,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 
 
 /* Callback when transaction state has changed. */
-static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub, 
+static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
                                      pjsip_transaction *tsx,
                                      pjsip_event *event)
 {
@@ -1724,11 +1724,11 @@ static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
         /* Contact already set */
         return;
     }
-    
+
     /* Only care about 2xx response to outgoing SUBSCRIBE */
     if (tsx->status_code/100 != 2 ||
         tsx->role != PJSIP_UAC_ROLE ||
-        event->type != PJSIP_EVENT_RX_MSG || 
+        event->type != PJSIP_EVENT_RX_MSG ||
         pjsip_method_cmp(&tsx->method, pjsip_get_subscribe_method())!=0)
     {
         return;
@@ -1746,7 +1746,7 @@ static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
                          pj_pool_alloc(buddy->pool, PJSIP_MAX_URL_SIZE);
     buddy->contact.slen = pjsip_uri_print( PJSIP_URI_IN_CONTACT_HDR,
                                            contact_hdr->uri,
-                                           buddy->contact.ptr, 
+                                           buddy->contact.ptr,
                                            PJSIP_MAX_URL_SIZE);
     if (buddy->contact.slen < 0)
         buddy->contact.slen = 0;
@@ -1754,7 +1754,7 @@ static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
 
 
 /* Callback called when we receive NOTIFY */
-static void pjsua_evsub_on_rx_notify(pjsip_evsub *sub, 
+static void pjsua_evsub_on_rx_notify(pjsip_evsub *sub,
                                      pjsip_rx_data *rdata,
                                      int *p_st_code,
                                      pj_str_t **p_st_text,
@@ -1822,7 +1822,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
         status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
                                               acc_id, &buddy->uri);
         if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+            pjsua_perror(THIS_FILE, "Unable to generate Contact header",
                          status);
             pj_pool_release(tmp_pool);
             pj_log_pop_indent();
@@ -1831,13 +1831,13 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     }
 
     /* Create UAC dialog */
-    status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
+    status = pjsip_dlg_create_uac( pjsip_ua_instance(),
                                    &acc->cfg.id,
                                    &contact,
                                    &buddy->uri,
                                    NULL, &buddy->dlg);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Unable to create dialog", 
+        pjsua_perror(THIS_FILE, "Unable to create dialog",
                      status);
         if (tmp_pool) pj_pool_release(tmp_pool);
         pj_log_pop_indent();
@@ -1870,11 +1870,11 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     }
 
 
-    status = pjsip_pres_create_uac( buddy->dlg, &pres_callback, 
+    status = pjsip_pres_create_uac( buddy->dlg, &pres_callback,
                                     PJSIP_EVSUB_NO_EVENT_ID, &buddy->sub);
     if (status != PJ_SUCCESS) {
         buddy->sub = NULL;
-        pjsua_perror(THIS_FILE, "Unable to create presence client", 
+        pjsua_perror(THIS_FILE, "Unable to create presence client",
                      status);
         /* This should destroy the dialog since there's no session
          * referencing it
@@ -1902,7 +1902,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 
     /* Set credentials */
     if (acc->cred_cnt) {
-        pjsip_auth_clt_set_credentials( &buddy->dlg->auth_sess, 
+        pjsip_auth_clt_set_credentials( &buddy->dlg->auth_sess,
                                         acc->cred_cnt, acc->cred);
     }
 
@@ -1920,7 +1920,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
             pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         }
         buddy->sub = NULL;
-        pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE", 
+        pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE",
                      status);
         if (tmp_pool) pj_pool_release(tmp_pool);
         pj_log_pop_indent();
@@ -1936,7 +1936,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
             pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         }
         buddy->sub = NULL;
-        pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
+        pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE",
                      status);
         if (tmp_pool) pj_pool_release(tmp_pool);
         pj_log_pop_indent();
@@ -1978,7 +1978,7 @@ static void unsubscribe_buddy_presence(pjsua_buddy_id buddy_id)
     if (status != PJ_SUCCESS && buddy->sub) {
         pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         buddy->sub = NULL;
-        pjsua_perror(THIS_FILE, "Unable to unsubscribe presence", 
+        pjsua_perror(THIS_FILE, "Unable to unsubscribe presence",
                      status);
     }
 
@@ -2033,9 +2033,9 @@ static void mwi_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
     if (!acc)
         return;
 
-    PJ_LOG(4,(THIS_FILE, 
+    PJ_LOG(4,(THIS_FILE,
               "MWI subscription for %.*s is %s",
-              (int)acc->cfg.id.slen, acc->cfg.id.ptr, 
+              (int)acc->cfg.id.slen, acc->cfg.id.ptr,
               pjsip_evsub_get_state_name(sub)));
 
     /* Call callback */
@@ -2053,7 +2053,7 @@ static void mwi_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 }
 
 /* Callback called when we receive NOTIFY */
-static void mwi_evsub_on_rx_notify(pjsip_evsub *sub, 
+static void mwi_evsub_on_rx_notify(pjsip_evsub *sub,
                                    pjsip_rx_data *rdata,
                                    int *p_st_code,
                                    pj_str_t **p_st_text,
@@ -2090,21 +2090,21 @@ static void mwi_evsub_on_rx_notify(pjsip_evsub *sub,
 
 
 /* Event subscription callback. */
-static pjsip_evsub_user mwi_cb = 
+static pjsip_evsub_user mwi_cb =
 {
-    &mwi_evsub_on_state,  
+    &mwi_evsub_on_state,
     NULL,   /* on_tsx_state: not interested */
-    NULL,   /* on_rx_refresh: don't care about SUBSCRIBE refresh, unless 
-             * we want to authenticate 
+    NULL,   /* on_rx_refresh: don't care about SUBSCRIBE refresh, unless
+             * we want to authenticate
              */
 
     &mwi_evsub_on_rx_notify,
 
-    NULL,   /* on_client_refresh: Use default behaviour, which is to 
+    NULL,   /* on_client_refresh: Use default behaviour, which is to
              * refresh client subscription. */
 
-    NULL,   /* on_server_timeout: Use default behaviour, which is to send 
-             * NOTIFY to terminate. 
+    NULL,   /* on_server_timeout: Use default behaviour, which is to send
+             * NOTIFY to terminate.
              */
 };
 
@@ -2144,11 +2144,11 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
     if (acc->mwi_sub) {
         if (!force_renew)
             return PJ_SUCCESS;
-        
+
         /* Update MWI subscription */
         pj_assert(acc->mwi_dlg);
         pjsip_dlg_inc_lock(acc->mwi_dlg);
-        
+
         status = pjsip_mwi_initiate(acc->mwi_sub, acc->cfg.mwi_expires, &tdata);
         if (status == PJ_SUCCESS) {
             pjsua_process_msg_data(tdata, NULL);
@@ -2162,7 +2162,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
     PJ_LOG(4,(THIS_FILE, "Starting MWI subscription.."));
     pj_log_push_indent();
 
-    /* Generate suitable Contact header unless one is already set in 
+    /* Generate suitable Contact header unless one is already set in
      * the account
      */
     if (acc->contact.slen) {
@@ -2172,7 +2172,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
         status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
                                               acc->index, &acc->cfg.id);
         if (status != PJ_SUCCESS) {
-            pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+            pjsua_perror(THIS_FILE, "Unable to generate Contact header",
                          status);
             goto on_return;
         }
@@ -2215,7 +2215,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
     }
 
     /* Create UAC subscription */
-    status = pjsip_mwi_create_uac(acc->mwi_dlg, &mwi_cb, 
+    status = pjsip_mwi_create_uac(acc->mwi_dlg, &mwi_cb,
                                   PJSIP_EVSUB_NO_EVENT_ID, &acc->mwi_sub);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error creating MWI subscription", status);
@@ -2240,7 +2240,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 
     /* Set credentials */
     if (acc->cred_cnt) {
-        pjsip_auth_clt_set_credentials( &acc->mwi_dlg->auth_sess, 
+        pjsip_auth_clt_set_credentials( &acc->mwi_dlg->auth_sess,
                                         acc->cred_cnt, acc->cred);
     }
 
@@ -2257,7 +2257,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
         }
         acc->mwi_sub = NULL;
         acc->mwi_dlg = NULL;
-        pjsua_perror(THIS_FILE, "Unable to create initial MWI SUBSCRIBE", 
+        pjsua_perror(THIS_FILE, "Unable to create initial MWI SUBSCRIBE",
                      status);
         goto on_return;
     }
@@ -2272,7 +2272,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
         }
         acc->mwi_sub = NULL;
         acc->mwi_dlg = NULL;
-        pjsua_perror(THIS_FILE, "Unable to send initial MWI SUBSCRIBE", 
+        pjsua_perror(THIS_FILE, "Unable to send initial MWI SUBSCRIBE",
                      status);
         goto on_return;
     }
@@ -2297,7 +2297,7 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t MWI = { "message-summary", 15 };
     pjsip_event_hdr *eh;
 
-    if (pjsip_method_cmp(&msg->line.req.method, pjsip_get_notify_method())!=0) 
+    if (pjsip_method_cmp(&msg->line.req.method, pjsip_get_notify_method())!=0)
     {
         /* Only interested with NOTIFY request */
         return PJ_FALSE;
@@ -2341,7 +2341,7 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
 }
 
 /* The module instance. */
-static pjsip_module pjsua_unsolicited_mwi_mod = 
+static pjsip_module pjsua_unsolicited_mwi_mod =
 {
     NULL, NULL,                         /* prev, next.          */
     { "mod-unsolicited-mwi", 19 },      /* Name.                */
@@ -2362,10 +2362,10 @@ static pj_status_t enable_unsolicited_mwi(void)
 {
     pj_status_t status;
 
-    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(), 
+    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
                                          &pjsua_unsolicited_mwi_mod);
     if (status != PJ_SUCCESS)
-        pjsua_perror(THIS_FILE, "Error registering unsolicited MWI module", 
+        pjsua_perror(THIS_FILE, "Error registering unsolicited MWI module",
                      status);
 
     return status;
@@ -2423,7 +2423,7 @@ pj_status_t pjsua_pres_init()
 
     status = pjsip_endpt_register_module( pjsua_var.endpt, &mod_pjsua_pres);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Unable to register pjsua presence module", 
+        pjsua_perror(THIS_FILE, "Unable to register pjsua presence module",
                      status);
     }
 

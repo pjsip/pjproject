@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_STUN_SOCK_H__
 #define __PJNATH_STUN_SOCK_H__
@@ -143,7 +143,7 @@ typedef struct pj_stun_sock_cb
      * callback may be called for the following conditions:
      *  - the first time the publicly mapped address has been resolved from
      *    the STUN server, this callback will be called with \a op argument
-     *    set to PJ_STUN_SOCK_BINDING_OP \a status  argument set to 
+     *    set to PJ_STUN_SOCK_BINDING_OP \a status  argument set to
      *    PJ_SUCCESS.
      *  - anytime when the transport has detected that the publicly mapped
      *    address has changed, this callback will be called with \a op
@@ -152,7 +152,7 @@ typedef struct pj_stun_sock_cb
      *    application will get the resolved public address in the
      *    #pj_stun_sock_info structure.
      *  - for any terminal error (such as STUN time-out, DNS resolution
-     *    failure, or keep-alive failure), this callback will be called 
+     *    failure, or keep-alive failure), this callback will be called
      *    with the \a status argument set to non-PJ_SUCCESS.
      *
      * @param stun_sock The STUN transport.
@@ -166,7 +166,7 @@ typedef struct pj_stun_sock_cb
      *                  should return PJ_TRUE to let the STUN socket operation
      *                  continues.
      */
-    pj_bool_t   (*on_status)(pj_stun_sock *stun_sock, 
+    pj_bool_t   (*on_status)(pj_stun_sock *stun_sock,
                              pj_stun_sock_op op,
                              pj_status_t status);
 
@@ -262,7 +262,7 @@ typedef struct pj_stun_sock_cfg
 
     /**
      * Specify the STUN keep-alive duration, in seconds. The STUN transport
-     * does keep-alive by sending STUN Binding request to the STUN server. 
+     * does keep-alive by sending STUN Binding request to the STUN server.
      * If this value is zero, the PJ_STUN_KEEP_ALIVE_SEC value will be used.
      * If the value is negative, it will disable STUN keep-alive.
      */
@@ -341,7 +341,7 @@ PJ_DECL(void) pj_stun_sock_cfg_default(pj_stun_sock_cfg *cfg);
  *                      things the ioqueue and timer heap instance for
  *                      the operation of this transport.
  * @param af            Address family of socket. Currently pj_AF_INET()
- *                      and pj_AF_INET6() are supported. 
+ *                      and pj_AF_INET6() are supported.
  * @param name          Optional name to be given to this transport to
  *                      assist debugging.
  * @param cb            Callback to receive events/data from the transport.
@@ -475,7 +475,7 @@ PJ_DECL(pj_status_t) pj_stun_sock_get_info(pj_stun_sock *stun_sock,
  *                      this case the \a on_data_sent() callback will be
  *                      called when data is actually sent. Any other return
  *                      value indicates error condition.
- */ 
+ */
 PJ_DECL(pj_status_t) pj_stun_sock_sendto(pj_stun_sock *stun_sock,
                                          pj_ioqueue_op_key_t *send_key,
                                          const void *pkt,

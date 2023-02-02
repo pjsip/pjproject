@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PY_PJSUA_H__
 #define __PY_PJSUA_H__
@@ -228,7 +228,7 @@ typedef struct
     PyObject *username;
     int       data_type;
     PyObject *data;
-    
+
 } PyObj_pjsip_cred_info;
 
 /*
@@ -274,7 +274,7 @@ static void PyObj_pjsip_cred_info_export(pjsip_cred_info *cfg,
  * cred_info_new
  * constructor for cred_info object
  */
-static PyObject * PyObj_pjsip_cred_info_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsip_cred_info_new(PyTypeObject *type,
                                             PyObject *args,
                                             PyObject *kwds)
 {
@@ -344,11 +344,11 @@ static PyMemberDef PyObj_pjsip_cred_info_members[] =
         "depending on the value of data_type"
     },
     {
-        "data_type", T_INT, 
+        "data_type", T_INT,
         offsetof(PyObj_pjsip_cred_info, data_type), 0,
         "Type of data"
     },
-    
+
     {NULL}  /* Sentinel */
 };
 
@@ -541,7 +541,7 @@ static void PyObj_pjsua_callback_delete(PyObj_pjsua_callback* self)
  * PyObj_pjsua_callback_new
  * * declares constructor for callback struct
  */
-static PyObject * PyObj_pjsua_callback_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsua_callback_new(PyTypeObject *type,
                                            PyObject *args,
                                            PyObject *kwds)
 {
@@ -657,8 +657,8 @@ static PyObject * PyObj_pjsua_callback_new(PyTypeObject *type,
 static PyMemberDef PyObj_pjsua_callback_members[] =
 {
     {
-        "on_call_state", T_OBJECT_EX, 
-        offsetof(PyObj_pjsua_callback, on_call_state), 0, 
+        "on_call_state", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_callback, on_call_state), 0,
         "Notify application when invite state has changed. Application may "
         "then query the call info to get the detail call states."
     },
@@ -725,7 +725,7 @@ static PyMemberDef PyObj_pjsua_callback_members[] =
         "then query the buddy into to get the details."
     },
     {
-        "on_pager", T_OBJECT_EX, 
+        "on_pager", T_OBJECT_EX,
         offsetof(PyObj_pjsua_callback, on_pager), 0,
         "Notify application on incoming pager (i.e. MESSAGE request). "
         "Argument call_id will be -1 if MESSAGE request is not related to an "
@@ -738,7 +738,7 @@ static PyMemberDef PyObj_pjsua_callback_members[] =
         "request."
     },
     {
-        "on_typing", T_OBJECT_EX, 
+        "on_typing", T_OBJECT_EX,
         offsetof(PyObj_pjsua_callback, on_typing), 0,
         "Notify application about typing indication."
     },
@@ -828,7 +828,7 @@ typedef struct
 static PyMemberDef PyObj_pjsua_media_config_members[] =
 {
     {
-        "clock_rate", T_INT, 
+        "clock_rate", T_INT,
         offsetof(PyObj_pjsua_media_config, clock_rate), 0,
         "Clock rate to be applied to the conference bridge. If value is zero, "
         "default clock rate will be used (16KHz)."
@@ -843,7 +843,7 @@ static PyMemberDef PyObj_pjsua_media_config_members[] =
         "computations are performed."
     },
     {
-        "has_ioqueue", T_INT, 
+        "has_ioqueue", T_INT,
         offsetof(PyObj_pjsua_media_config, has_ioqueue), 0,
         "Specify whether the media manager should manage its own ioqueue for "
         "the RTP/RTCP sockets. If yes, ioqueue will be created and at least "
@@ -852,50 +852,50 @@ static PyMemberDef PyObj_pjsua_media_config_members[] =
         "needed."
     },
     {
-        "thread_cnt", T_INT, 
+        "thread_cnt", T_INT,
         offsetof(PyObj_pjsua_media_config, thread_cnt), 0,
         "Specify the number of worker threads to handle incoming RTP packets. "
         "A value of one is recommended for most applications."
     },
     {
-        "quality", T_INT, 
+        "quality", T_INT,
         offsetof(PyObj_pjsua_media_config, quality), 0,
         "The media quality also sets speex codec quality/complexity to the "
         "number."
     },
     {
-        "ptime", T_INT, 
+        "ptime", T_INT,
         offsetof(PyObj_pjsua_media_config, ptime), 0,
         "Specify default ptime."
     },
     {
-        "no_vad", T_INT, 
+        "no_vad", T_INT,
         offsetof(PyObj_pjsua_media_config, no_vad), 0,
         "Disable VAD?"
     },
     {
-        "ilbc_mode", T_INT, 
+        "ilbc_mode", T_INT,
         offsetof(PyObj_pjsua_media_config, ilbc_mode), 0,
         "iLBC mode (20 or 30)."
     },
     {
-        "tx_drop_pct", T_INT, 
+        "tx_drop_pct", T_INT,
         offsetof(PyObj_pjsua_media_config, tx_drop_pct), 0,
         "Percentage of RTP packet to drop in TX direction (to simulate packet "
         "lost)."
     },
     {
-        "rx_drop_pct", T_INT, 
+        "rx_drop_pct", T_INT,
         offsetof(PyObj_pjsua_media_config, rx_drop_pct), 0,
         "Percentage of RTP packet to drop in RX direction (to simulate packet "
         "lost)."},
     {
-        "ec_options", T_INT, 
+        "ec_options", T_INT,
         offsetof(PyObj_pjsua_media_config, ec_options), 0,
         "Echo canceller options (see pjmedia_echo_create())"
     },
     {
-        "ec_tail_len", T_INT, 
+        "ec_tail_len", T_INT,
         offsetof(PyObj_pjsua_media_config, ec_tail_len), 0,
         "Echo canceller tail length, in miliseconds."
     },
@@ -1050,8 +1050,8 @@ static void PyObj_pjsua_config_export(pjsua_config *cfg,
 }
 
 
-static PyObject *PyObj_pjsua_config_new(PyTypeObject *type, 
-                                        PyObject *args, 
+static PyObject *PyObj_pjsua_config_new(PyTypeObject *type,
+                                        PyObject *args,
                                         PyObject *kwds)
 {
     PyObj_pjsua_config *self;
@@ -1093,12 +1093,12 @@ static PyObject *PyObj_pjsua_config_new(PyTypeObject *type,
 static PyMemberDef PyObj_pjsua_config_members[] =
 {
     {
-        "max_calls", T_INT, 
+        "max_calls", T_INT,
         offsetof(PyObj_pjsua_config, max_calls), 0,
         "Maximum calls to support (default: 4) "
     },
     {
-        "thread_cnt", T_INT, 
+        "thread_cnt", T_INT,
         offsetof(PyObj_pjsua_config, thread_cnt), 0,
         "Number of worker threads. Normally application will want to have at "
         "least one worker thread, unless when it wants to poll the library "
@@ -1243,7 +1243,7 @@ static void PyObj_pjsua_logging_config_export(pjsua_logging_config *cfg,
  * PyObj_pjsua_logging_config_new
  * constructor for logging_config object
  */
-static PyObject * PyObj_pjsua_logging_config_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsua_logging_config_new(PyTypeObject *type,
                                                  PyObject *args,
                                                  PyObject *kwds)
 {
@@ -1280,22 +1280,22 @@ static PyObject * PyObj_pjsua_logging_config_new(PyTypeObject *type,
 static PyMemberDef PyObj_pjsua_logging_config_members[] =
 {
     {
-        "msg_logging", T_INT, 
+        "msg_logging", T_INT,
         offsetof(PyObj_pjsua_logging_config, msg_logging), 0,
         "Log incoming and outgoing SIP message? Yes!"
     },
     {
-        "level", T_INT, 
+        "level", T_INT,
         offsetof(PyObj_pjsua_logging_config, level), 0,
         "Input verbosity level. Value 5 is reasonable."
     },
     {
-        "console_level", T_INT, 
+        "console_level", T_INT,
         offsetof(PyObj_pjsua_logging_config, console_level),
         0, "Verbosity level for console. Value 4 is reasonable."
     },
     {
-        "decor", T_INT, 
+        "decor", T_INT,
          offsetof(PyObj_pjsua_logging_config, decor), 0,
         "Log decoration"
     },
@@ -1305,7 +1305,7 @@ static PyMemberDef PyObj_pjsua_logging_config_members[] =
         "Optional log filename"
     },
     {
-        "cb", T_OBJECT_EX, 
+        "cb", T_OBJECT_EX,
         offsetof(PyObj_pjsua_logging_config, cb), 0,
         "Optional callback function to be called to write log to application "
         "specific device. This function will be called forlog messages on "
@@ -1400,7 +1400,7 @@ static void PyObj_pjsua_msg_data_delete(PyObj_pjsua_msg_data* self)
  * constructor for msg_data object
  * !modified @ 061206
  */
-static PyObject * PyObj_pjsua_msg_data_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsua_msg_data_new(PyTypeObject *type,
                                            PyObject *args,
                                            PyObject *kwds)
 {
@@ -1441,17 +1441,17 @@ static PyObject * PyObj_pjsua_msg_data_new(PyTypeObject *type,
 static PyMemberDef PyObj_pjsua_msg_data_members[] =
 {
     {
-        "hdr_list", T_OBJECT_EX, 
-        offsetof(PyObj_pjsua_msg_data, hdr_list), 0, 
+        "hdr_list", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_msg_data, hdr_list), 0,
         "Additional message headers as linked list of strings."
-    }, 
+    },
     {
-        "content_type", T_OBJECT_EX, 
-        offsetof(PyObj_pjsua_msg_data, content_type), 0, 
+        "content_type", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_msg_data, content_type), 0,
         "MIME type of optional message body."
     },
     {
-        "msg_body", T_OBJECT_EX, 
+        "msg_body", T_OBJECT_EX,
         offsetof(PyObj_pjsua_msg_data, msg_body), 0,
         "Optional message body."
     },
@@ -1529,8 +1529,8 @@ typedef struct
  */
 static void PyObj_pjsua_transport_config_delete(PyObj_pjsua_transport_config* self)
 {
-    Py_XDECREF(self->public_addr);    
-    Py_XDECREF(self->bound_addr);    
+    Py_XDECREF(self->public_addr);
+    Py_XDECREF(self->bound_addr);
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -1547,12 +1547,12 @@ static void PyObj_pjsua_transport_config_export(pjsua_transport_config *cfg,
 static void PyObj_pjsua_transport_config_import(PyObj_pjsua_transport_config *obj,
                                                 const pjsua_transport_config *cfg)
 {
-    Py_XDECREF(obj->public_addr);    
-    obj->public_addr = PyString_FromStringAndSize(cfg->public_addr.ptr, 
+    Py_XDECREF(obj->public_addr);
+    obj->public_addr = PyString_FromStringAndSize(cfg->public_addr.ptr,
                                                   cfg->public_addr.slen);
 
-    Py_XDECREF(obj->bound_addr);    
-    obj->bound_addr = PyString_FromStringAndSize(cfg->bound_addr.ptr, 
+    Py_XDECREF(obj->bound_addr);
+    obj->bound_addr = PyString_FromStringAndSize(cfg->bound_addr.ptr,
                                                  cfg->bound_addr.slen);
 
     obj->port = cfg->port;
@@ -1563,7 +1563,7 @@ static void PyObj_pjsua_transport_config_import(PyObj_pjsua_transport_config *ob
  * PyObj_pjsua_transport_config_new
  * constructor for transport_config object
  */
-static PyObject * PyObj_pjsua_transport_config_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsua_transport_config_new(PyTypeObject *type,
                                                    PyObject *args,
                                                    PyObject *kwds)
 {
@@ -1596,7 +1596,7 @@ static PyObject * PyObj_pjsua_transport_config_new(PyTypeObject *type,
 static PyMemberDef PyObj_pjsua_transport_config_members[] =
 {
     {
-        "port", T_INT, 
+        "port", T_INT,
         offsetof(PyObj_pjsua_transport_config, port), 0,
         "UDP port number to bind locally. This setting MUST be specified "
         "even when default port is desired. If the value is zero, the "
@@ -1604,23 +1604,23 @@ static PyMemberDef PyObj_pjsua_transport_config_members[] =
         "can query the port by querying the transport info."
     },
     {
-        "public_addr", T_OBJECT_EX, 
+        "public_addr", T_OBJECT_EX,
         offsetof(PyObj_pjsua_transport_config, public_addr), 0,
         "Optional address to advertise as the address of this transport. "
         "Application can specify any address or hostname for this field, "
         "for example it can point to one of the interface address in the "
         "system, or it can point to the public address of a NAT router "
-        "where port mappings have been configured for the application."         
-    },    
+        "where port mappings have been configured for the application."
+    },
     {
-        "bound_addr", T_OBJECT_EX, 
+        "bound_addr", T_OBJECT_EX,
         offsetof(PyObj_pjsua_transport_config, bound_addr), 0,
         "Optional address where the socket should be bound to. This option "
         "SHOULD only be used to selectively bind the socket to particular "
         "interface (instead of 0.0.0.0), and SHOULD NOT be used to set the "
         "published address of a transport (the public_addr field should be "
-        "used for that purpose)."               
-    },    
+        "used for that purpose)."
+    },
     {NULL}  /* Sentinel */
 };
 
@@ -1700,7 +1700,7 @@ typedef struct
  */
 static void PyObj_pjsua_transport_info_delete(PyObj_pjsua_transport_info* self)
 {
-    Py_XDECREF(self->type_name); 
+    Py_XDECREF(self->type_name);
     Py_XDECREF(self->info);
     Py_XDECREF(self->addr);
     self->ob_type->tp_free((PyObject*)self);
@@ -1727,7 +1727,7 @@ static void PyObj_pjsua_transport_info_import(PyObj_pjsua_transport_info *obj,
  * PyObj_pjsua_transport_info_new
  * constructor for transport_info object
  */
-static PyObject * PyObj_pjsua_transport_info_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsua_transport_info_new(PyTypeObject *type,
                                                  PyObject *args,
                                                  PyObject *kwds)
 {
@@ -1744,7 +1744,7 @@ static PyObject * PyObj_pjsua_transport_info_new(PyTypeObject *type,
             Py_DECREF(self);
             return NULL;
         }
-        self->info = PyString_FromString(""); 
+        self->info = PyString_FromString("");
         if (self->info == NULL) {
             Py_DECREF(self);
             return NULL;
@@ -1766,12 +1766,12 @@ static PyObject * PyObj_pjsua_transport_info_new(PyTypeObject *type,
 static PyMemberDef PyObj_pjsua_transport_info_members[] =
 {
     {
-        "id", T_INT, 
+        "id", T_INT,
         offsetof(PyObj_pjsua_transport_info, id), 0,
         "PJSUA transport identification."
     },
     {
-        "type", T_INT, 
+        "type", T_INT,
         offsetof(PyObj_pjsua_transport_info, id), 0,
         "Transport type."
     },
@@ -1786,7 +1786,7 @@ static PyMemberDef PyObj_pjsua_transport_info_members[] =
         "Transport string info/description."
     },
     {
-        "flag", T_INT, 
+        "flag", T_INT,
         offsetof(PyObj_pjsua_transport_info, flag), 0,
         "Transport flag (see ##pjsip_transport_flags_e)."
     },
@@ -1801,10 +1801,10 @@ static PyMemberDef PyObj_pjsua_transport_info_members[] =
         "Published port number."
     },
     {
-        "usage_count", T_INT, 
+        "usage_count", T_INT,
         offsetof(PyObj_pjsua_transport_info, usage_count), 0,
         "Current number of objects currently referencing this transport."
-    },    
+    },
     {NULL}  /* Sentinel */
 };
 
@@ -1867,7 +1867,7 @@ typedef struct
 {
     PyObject_HEAD
     /* Type-specific fields go here. */
-    int              priority;  
+    int              priority;
     PyObject        *id;
     PyObject        *reg_uri;
     int              publish_enabled;
@@ -1887,9 +1887,9 @@ typedef struct
  */
 static void PyObj_pjsua_acc_config_delete(PyObj_pjsua_acc_config* self)
 {
-    Py_XDECREF(self->id); 
+    Py_XDECREF(self->id);
     Py_XDECREF(self->reg_uri);
-    Py_XDECREF(self->force_contact);    
+    Py_XDECREF(self->force_contact);
     Py_XDECREF(self->proxy);
     Py_XDECREF(self->cred_info);
     self->ob_type->tp_free((PyObject*)self);
@@ -1905,7 +1905,7 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     Py_XDECREF(obj->id);
     obj->id         = PyString_FromStringAndSize(cfg->id.ptr, cfg->id.slen);
     Py_XDECREF(obj->reg_uri);
-    obj->reg_uri    = PyString_FromStringAndSize(cfg->reg_uri.ptr, 
+    obj->reg_uri    = PyString_FromStringAndSize(cfg->reg_uri.ptr,
                                                  cfg->reg_uri.slen);
     obj->publish_enabled = cfg->publish_enabled;
     Py_XDECREF(obj->force_contact);
@@ -1915,7 +1915,7 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     obj->proxy = (PyListObject *)PyList_New(0);
     for (i=0; i<cfg->proxy_cnt; ++i) {
         PyObject * str;
-        str = PyString_FromStringAndSize(cfg->proxy[i].ptr, 
+        str = PyString_FromStringAndSize(cfg->proxy[i].ptr,
                                          cfg->proxy[i].slen);
         PyList_Append((PyObject *)obj->proxy, str);
     }
@@ -1926,7 +1926,7 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     obj->cred_info = (PyListObject *)PyList_New(0);
     for (i=0; i<cfg->cred_count; ++i) {
         PyObj_pjsip_cred_info * ci;
-        
+
         ci = (PyObj_pjsip_cred_info *)
              PyObj_pjsip_cred_info_new(&PyTyp_pjsip_cred_info,NULL,NULL);
         PyObj_pjsip_cred_info_import(ci, &cfg->cred_info[i]);
@@ -1959,7 +1959,7 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     for (i = 0; i < cfg->cred_count; i++) {
         /*cfg.cred_info[i] = ac->cred_info[i];*/
         PyObj_pjsip_cred_info *ci;
-        ci = (PyObj_pjsip_cred_info*) 
+        ci = (PyObj_pjsip_cred_info*)
              PyList_GetItem((PyObject *)obj->cred_info,i);
         PyObj_pjsip_cred_info_export(&cfg->cred_info[i], ci);
     }
@@ -1972,7 +1972,7 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
  * PyObj_pjsua_acc_config_new
  * constructor for acc_config object
  */
-static PyObject * PyObj_pjsua_acc_config_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsua_acc_config_new(PyTypeObject *type,
                                              PyObject *args,
                                              PyObject *kwds)
 {
@@ -2043,7 +2043,7 @@ static PyMemberDef PyObj_pjsua_acc_config_members[] =
         "If the value is empty, no account registration will be performed. "
     },
     {
-        "publish_enabled", T_INT, 
+        "publish_enabled", T_INT,
         offsetof(PyObj_pjsua_acc_config, publish_enabled), 0,
         "Publish presence? "
     },
@@ -2151,14 +2151,14 @@ typedef struct
 {
     PyObject_HEAD
     /* Type-specific fields go here. */
-    int          id;    
+    int          id;
     int          is_default;
     PyObject    *acc_uri;
     int          has_registration;
     int          expires;
     int          status;
     PyObject    *status_text;
-    int          online_status; 
+    int          online_status;
     PyObject    *online_status_text;
 } PyObj_pjsua_acc_info;
 
@@ -2181,7 +2181,7 @@ static void PyObj_pjsua_acc_info_import(PyObj_pjsua_acc_info *obj,
 {
     obj->id         = info->id;
     obj->is_default = info->is_default;
-    obj->acc_uri    = PyString_FromStringAndSize(info->acc_uri.ptr, 
+    obj->acc_uri    = PyString_FromStringAndSize(info->acc_uri.ptr,
                                                  info->acc_uri.slen);
     obj->has_registration = info->has_registration;
     obj->expires    = info->expires;
@@ -2198,7 +2198,7 @@ static void PyObj_pjsua_acc_info_import(PyObj_pjsua_acc_info *obj,
  * PyObj_pjsua_acc_info_new
  * constructor for acc_info object
  */
-static PyObject * PyObj_pjsua_acc_info_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsua_acc_info_new(PyTypeObject *type,
                                            PyObject *args,
                                            PyObject *kwds)
 {
@@ -2223,7 +2223,7 @@ static PyObject * PyObj_pjsua_acc_info_new(PyTypeObject *type,
         if (self->online_status_text == NULL) {
             Py_DECREF(self);
             return NULL;
-        }        
+        }
     }
 
     return (PyObject *)self;
@@ -2235,12 +2235,12 @@ static PyObject * PyObj_pjsua_acc_info_new(PyTypeObject *type,
 static PyMemberDef acc_info_members[] =
 {
     {
-        "id", T_INT, 
+        "id", T_INT,
         offsetof(PyObj_pjsua_acc_info, id), 0,
         "The account ID."
     },
     {
-        "is_default", T_INT, 
+        "is_default", T_INT,
         offsetof(PyObj_pjsua_acc_info, is_default), 0,
         "Flag to indicate whether this is the default account. "
     },
@@ -2250,18 +2250,18 @@ static PyMemberDef acc_info_members[] =
         "Account URI"
     },
     {
-        "has_registration", T_INT, 
+        "has_registration", T_INT,
         offsetof(PyObj_pjsua_acc_info, has_registration), 0,
         "Flag to tell whether this account has registration setting "
         "(reg_uri is not empty)."
     },
     {
-        "expires", T_INT, 
+        "expires", T_INT,
         offsetof(PyObj_pjsua_acc_info, expires), 0,
         "An up to date expiration interval for account registration session."
     },
     {
-        "status", T_INT, 
+        "status", T_INT,
         offsetof(PyObj_pjsua_acc_info, status), 0,
         "Last registration status code. If status code is zero, "
         "the account is currently not registered. Any other value indicates "
@@ -2273,12 +2273,12 @@ static PyMemberDef acc_info_members[] =
         "String describing the registration status."
     },
     {
-        "online_status", T_INT, 
+        "online_status", T_INT,
         offsetof(PyObj_pjsua_acc_info, online_status), 0,
         "Presence online status for this account. "
     },
     {
-        "online_status_text", T_OBJECT_EX, 
+        "online_status_text", T_OBJECT_EX,
         offsetof(PyObj_pjsua_acc_info, online_status_text), 0,
         "Presence online status text."
     },
@@ -2384,7 +2384,7 @@ static void PyObj_pjsua_buddy_config_export(pjsua_buddy_config *cfg,
  * PyObj_pjsua_buddy_config_new
  * constructor for buddy_config object
  */
-static PyObject *PyObj_pjsua_buddy_config_new(PyTypeObject *type, 
+static PyObject *PyObj_pjsua_buddy_config_new(PyTypeObject *type,
                                               PyObject *args,
                                               PyObject *kwds)
 {
@@ -2399,7 +2399,7 @@ static PyObject *PyObj_pjsua_buddy_config_new(PyTypeObject *type,
         if (self->uri == NULL) {
             Py_DECREF(self);
             return NULL;
-        }        
+        }
     }
     return (PyObject *)self;
 }
@@ -2409,19 +2409,19 @@ static PyObject *PyObj_pjsua_buddy_config_new(PyTypeObject *type,
  */
 static PyMemberDef PyObj_pjsua_buddy_config_members[] =
 {
-    
+
     {
         "uri", T_OBJECT_EX,
         offsetof(PyObj_pjsua_buddy_config, uri), 0,
-        "TBuddy URL or name address."        
+        "TBuddy URL or name address."
     },
-    
+
     {
-        "subscribe", T_INT, 
+        "subscribe", T_INT,
         offsetof(PyObj_pjsua_buddy_config, subscribe), 0,
         "Specify whether presence subscription should start immediately. "
     },
-    
+
     {NULL}  /* Sentinel */
 };
 
@@ -2483,7 +2483,7 @@ static PyTypeObject PyTyp_pjsua_buddy_config =
 typedef struct
 {
     PyObject_HEAD
-    /* Type-specific fields go here. */ 
+    /* Type-specific fields go here. */
     int          id;
     PyObject    *uri;
     PyObject    *contact;
@@ -2503,7 +2503,7 @@ static void PyObj_pjsua_buddy_info_delete(PyObj_pjsua_buddy_info* self)
     Py_XDECREF(self->uri);
     Py_XDECREF(self->contact);
     Py_XDECREF(self->status_text);
-    
+
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -2518,7 +2518,7 @@ static void PyObj_pjsua_buddy_info_import(PyObj_pjsua_buddy_info *obj,
     obj->contact = PyString_FromStringAndSize(info->contact.ptr, info->contact.slen);
     obj->status = info->status;
     Py_XDECREF(obj->status_text);
-    obj->status_text = PyString_FromStringAndSize(info->status_text.ptr, 
+    obj->status_text = PyString_FromStringAndSize(info->status_text.ptr,
                                                   info->status_text.slen);
     obj->monitor_pres = info->monitor_pres;
 }
@@ -2529,7 +2529,7 @@ static void PyObj_pjsua_buddy_info_import(PyObj_pjsua_buddy_info *obj,
  * constructor for buddy_info object
  * !modified @ 071206
  */
-static PyObject * PyObj_pjsua_buddy_info_new(PyTypeObject *type, 
+static PyObject * PyObj_pjsua_buddy_info_new(PyTypeObject *type,
                                              PyObject *args,
                                              PyObject *kwds)
 {
@@ -2544,7 +2544,7 @@ static PyObject * PyObj_pjsua_buddy_info_new(PyTypeObject *type,
         if (self->uri == NULL) {
             Py_DECREF(self);
             return NULL;
-        }        
+        }
         self->contact = PyString_FromString("");
         if (self->contact == NULL) {
             Py_DECREF(self);
@@ -2555,7 +2555,7 @@ static PyObject * PyObj_pjsua_buddy_info_new(PyTypeObject *type,
             Py_DECREF(self);
             return NULL;
         }
-        
+
     }
     return (PyObject *)self;
 }
@@ -2567,39 +2567,39 @@ static PyObject * PyObj_pjsua_buddy_info_new(PyTypeObject *type,
 static PyMemberDef PyObj_pjsua_buddy_info_members[] =
 {
     {
-        "id", T_INT, 
+        "id", T_INT,
         offsetof(PyObj_pjsua_buddy_info, id), 0,
         "The buddy ID."
     },
     {
         "uri", T_OBJECT_EX,
         offsetof(PyObj_pjsua_buddy_info, uri), 0,
-        "The full URI of the buddy, as specified in the configuration. "        
+        "The full URI of the buddy, as specified in the configuration. "
     },
     {
         "contact", T_OBJECT_EX,
         offsetof(PyObj_pjsua_buddy_info, contact), 0,
         "Buddy's Contact, only available when presence subscription "
-        "has been established to the buddy."        
+        "has been established to the buddy."
     },
     {
-        "status", T_INT, 
+        "status", T_INT,
         offsetof(PyObj_pjsua_buddy_info, status), 0,
         "Buddy's online status. "
     },
     {
         "status_text", T_OBJECT_EX,
         offsetof(PyObj_pjsua_buddy_info, status_text), 0,
-        "Text to describe buddy's online status."        
+        "Text to describe buddy's online status."
     },
     {
-        "monitor_pres", T_INT, 
+        "monitor_pres", T_INT,
         offsetof(PyObj_pjsua_buddy_info, monitor_pres), 0,
         "Flag to indicate that we should monitor the presence information "
         "for this buddy (normally yes, unless explicitly disabled). "
     },
-    
-    
+
+
     {NULL}  /* Sentinel */
 };
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_MWI_H__
 #define __PJSIP_SIMPLE_MWI_H__
@@ -37,7 +37,7 @@ PJ_BEGIN_DECL
  *
  * This module implements RFC 3842: A Message Summary and Message Waiting
  * Indication Event Package for the Session Initiation Protocol (SIP).
- * It uses the SIP Event Notification framework (evsub.h) and extends the 
+ * It uses the SIP Event Notification framework (evsub.h) and extends the
  * framework by implementing "message-summary" event package.
  */
 
@@ -49,7 +49,7 @@ PJ_BEGIN_DECL
  * @param endpt         The endpoint instance.
  * @param mod_evsub     The event subscription module instance.
  *
- * @return              PJ_SUCCESS if the module is successfully 
+ * @return              PJ_SUCCESS if the module is successfully
  *                      initialized and registered to both endpoint
  *                      and the event subscription module.
  */
@@ -87,7 +87,7 @@ PJ_DECL(pj_status_t) pjsip_mwi_create_uac( pjsip_dialog *dlg,
  * @param dlg           The underlying dialog to use.
  * @param user_cb       Pointer to callbacks to receive MWI subscription
  *                      events.
- * @param rdata         The incoming SUBSCRIBE request that creates the event 
+ * @param rdata         The incoming SUBSCRIBE request that creates the event
  *                      subscription.
  * @param p_evsub       Pointer to receive the MWI subscription
  *                      session.
@@ -101,7 +101,7 @@ PJ_DECL(pj_status_t) pjsip_mwi_create_uas( pjsip_dialog *dlg,
 
 /**
  * Forcefully destroy the MWI subscription. This function should only
- * be called on special condition, such as when the subscription 
+ * be called on special condition, such as when the subscription
  * initialization has failed. For other conditions, application MUST terminate
  * the subscription by sending the appropriate un(SUBSCRIBE) or NOTIFY.
  *
@@ -115,7 +115,7 @@ PJ_DECL(pj_status_t) pjsip_mwi_terminate( pjsip_evsub *sub,
                                           pj_bool_t notify );
 
 /**
- * Call this function to create request to initiate MWI subscription, to 
+ * Call this function to create request to initiate MWI subscription, to
  * refresh subcription, or to request subscription termination.
  *
  * @param sub           Client subscription instance.
@@ -148,8 +148,8 @@ PJ_DECL(pj_status_t) pjsip_mwi_accept( pjsip_evsub *sub,
                                        const pjsip_hdr *hdr_list );
 
 /**
- * For notifier, create NOTIFY request to subscriber, and set the state 
- * of the subscription. 
+ * For notifier, create NOTIFY request to subscriber, and set the state
+ * of the subscription.
  *
  * @param sub           The server subscription (notifier) instance.
  * @param state         New state to set.

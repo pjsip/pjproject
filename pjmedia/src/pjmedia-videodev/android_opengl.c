@@ -480,7 +480,7 @@ static pj_status_t andgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 
     if (!stream->is_running || stream->display == EGL_NO_DISPLAY)
         return PJ_EINVALIDOP;
-    
+
     stream->frame = frame;
     job_queue_post_job(stream->jq, render, strm, 0, &status);
 
@@ -528,7 +528,7 @@ static pj_status_t andgl_stream_destroy(pjmedia_vid_dev_stream *strm)
 static int job_thread(void * data)
 {
     job_queue *jq = (job_queue *)data;
-    
+
     while (1) {
         job *jb;
 

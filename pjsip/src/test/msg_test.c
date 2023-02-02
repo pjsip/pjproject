@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjsip.h>
@@ -45,7 +45,7 @@ struct test_msg
     pjsip_msg *(*creator)(pj_pool_t *pool);
     pj_size_t    len;
     int          expected_status;
-} test_array[] = 
+} test_array[] =
 {
 {
     /* 'Normal' message with all headers. */
@@ -273,7 +273,7 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     pj_get_timestamp(&t1);
     status = pjsip_find_msg(entry->msg, entry->len, PJ_FALSE, &msg_size);
     if (status != PJ_SUCCESS) {
-        if (status!=PJSIP_EPARTIALMSG || 
+        if (status!=PJSIP_EPARTIALMSG ||
             entry->expected_status!=STATUS_PARTIAL)
         {
             app_perror("   error: unable to detect message", status);
@@ -290,7 +290,7 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 
     if (var.flag & FLAG_DETECT_ONLY)
         return PJ_SUCCESS;
-    
+
     /* Parse message. */
 parse_msg:
     var.parse_len = var.parse_len + entry->len;
@@ -337,7 +337,7 @@ parse_msg:
             goto on_return;
         }
         status = pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
-                               parsed_msg->line.req.uri, 
+                               parsed_msg->line.req.uri,
                                ref_msg->line.req.uri);
         if (status != PJ_SUCCESS) {
             app_perror("   error: request URI mismatch", status);
@@ -350,8 +350,8 @@ parse_msg:
             status = -32;
             goto on_return;
         }
-        if (pj_strcmp(&parsed_msg->line.status.reason, 
-                      &ref_msg->line.status.reason) != 0) 
+        if (pj_strcmp(&parsed_msg->line.status.reason,
+                      &ref_msg->line.status.reason) != 0)
         {
             PJ_LOG(3,(THIS_FILE, "   error: status text mismatch"));
             status = -33;
@@ -441,7 +441,7 @@ parse_msg:
         status = -140;
         goto on_return;
     }
-    
+
     /* Print message. */
 print_msg:
     var.print_len = var.print_len + entry->len;
@@ -623,13 +623,13 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     pj_strdup2(pool, &via->recvd_param, "192.0.2.1");
 
 
-    /* "Via: SIP/2.0/UDP 10.2.1.1, */ 
+    /* "Via: SIP/2.0/UDP 10.2.1.1, */
     via = pjsip_via_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)via);
     pj_strdup2(pool, &via->transport, "UDP");
     pj_strdup2(pool, &via->sent_by.host, "10.2.1.1");
-    
-    
+
+
     /*SIP/2.0/TCP 192.168.1.1\n" */
     via = pjsip_via_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)via);
@@ -726,7 +726,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     url = pjsip_sip_uri_create(pool, PJ_FALSE);
     route->name_addr.uri = (pjsip_uri*)url;
     url->host = pj_str("proxy.sipprovider.com");
-    
+
     //"Route: <sip:proxy.supersip.com:5060>\r\n"
     route = pjsip_route_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)route);
@@ -824,7 +824,7 @@ static pj_status_t simple_test(void)
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "  simple test.."));
-    
+
     status = pjsip_parse_status_line(stbuf, pj_ansi_strlen(stbuf), &st_line);
     if (status != PJ_SUCCESS)
         return status;
@@ -844,7 +844,7 @@ static pj_status_t simple_test(void)
 
 
 #if INCLUDE_BENCHMARKS
-static int msg_benchmark(unsigned *p_detect, unsigned *p_parse, 
+static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
                          unsigned *p_print)
 {
     pj_pool_t *pool;
@@ -877,8 +877,8 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(avg_detect, var.detect_len);
     avg_detect = 1000000 / avg_detect;
 
-    PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB detected in %d.%03ds (avg=%d msg detection/sec)", 
+    PJ_LOG(3,(THIS_FILE,
+              "    %u.%u MB detected in %d.%03ds (avg=%d msg detection/sec)",
               (unsigned)(var.detect_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_detect));
@@ -893,8 +893,8 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(avg_parse, var.parse_len);
     avg_parse = 1000000 / avg_parse;
 
-    PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB parsed in %d.%03ds (avg=%d msg parsing/sec)", 
+    PJ_LOG(3,(THIS_FILE,
+              "    %u.%u MB parsed in %d.%03ds (avg=%d msg parsing/sec)",
               (unsigned)(var.parse_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_parse));
@@ -909,8 +909,8 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_div(avg_print, var.print_len);
     avg_print = 1000000 / avg_print;
 
-    PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB printed in %d.%03ds (avg=%d msg print/sec)", 
+    PJ_LOG(3,(THIS_FILE,
+              "    %u.%u MB printed in %d.%03ds (avg=%d msg print/sec)",
               (unsigned)(var.print_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_print));
@@ -1335,7 +1335,7 @@ static int test_simple_addr_spec(pjsip_uri *uri)
     return 0;
 }
 
-/* 
+/*
 #define PARAM_CHAR          "][/:&+$"
 #define SIMPLE_ADDR_SPEC    "sip:host"
 #define ADDR_SPEC            SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
@@ -1445,7 +1445,7 @@ static int hdr_test_contact0(pjsip_hdr *h)
 }
 
 /*
-    NAME_ADDR GENERIC_PARAM "\r\n",    
+    NAME_ADDR GENERIC_PARAM "\r\n",
  */
 static int hdr_test_contact1(pjsip_hdr *h)
 {
@@ -1857,7 +1857,7 @@ static int hdr_test_retry_after1(pjsip_hdr *h)
 
     if (hdr->ivalue != 10)
         return -2920;
-    
+
     if (pj_strcmp2(&hdr->comment, "Already Pending Register"))
         return -2930;
 
@@ -1910,9 +1910,9 @@ static int hdr_test(void)
 #else
         hcontent = test->hcontent;
 #endif
-        
-        parsed_hdr1 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, 
-                                                   hcontent, len, 
+
+        parsed_hdr1 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname,
+                                                   hcontent, len,
                                                    &parsed_len);
         if (parsed_hdr1 == NULL) {
             if (test->flags & HDR_FLAG_PARSE_FAIL) {

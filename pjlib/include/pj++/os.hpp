@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_OS_HPP__
 #define __PJPP_OS_HPP__
@@ -145,7 +145,7 @@ public:
     //
     // Start a thread.
     //
-    pj_status_t create( Pj_Pool *pool, 
+    pj_status_t create( Pj_Pool *pool,
                         unsigned flags = 0,
                         const char *thread_name = NULL,
                         pj_size_t stack_size = PJ_THREAD_DEFAULT_STACK_SIZE)
@@ -211,7 +211,7 @@ protected:
 
 //
 // External Thread
-//  (threads that were started by external means, i.e. not 
+//  (threads that were started by external means, i.e. not
 //   with Pj_Thread::create).
 //
 // This class will normally be defined as local variable in
@@ -652,7 +652,7 @@ public:
     //
     // Create event object.
     //
-    pj_status_t create( Pj_Pool *pool, bool manual_reset = false, 
+    pj_status_t create( Pj_Pool *pool, bool manual_reset = false,
                         bool initial = false, const char *name = NULL)
     {
         destroy();
@@ -803,7 +803,7 @@ public:
     //
     // Parse to time of day.
     //
-    static pj_status_t time_decode( const Pj_Time_Val *tv, 
+    static pj_status_t time_decode( const Pj_Time_Val *tv,
                                     pj_parsed_time *pt )
     {
         return pj_time_decode(tv, pt);
@@ -812,7 +812,7 @@ public:
     //
     // Parse from time of day.
     //
-    static pj_status_t time_encode( const pj_parsed_time *pt, 
+    static pj_status_t time_encode( const pj_parsed_time *pt,
                                     Pj_Time_Val *tv)
     {
         return pj_time_encode(pt, tv);
@@ -829,7 +829,7 @@ public:
     //
     // Convert time to local.
     //
-    static pj_status_t time_gmt_to_local( Pj_Time_Val *tv) 
+    static pj_status_t time_gmt_to_local( Pj_Time_Val *tv)
     {
         return pj_time_gmt_to_local( tv );
     }

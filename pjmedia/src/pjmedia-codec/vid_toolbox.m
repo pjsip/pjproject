@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C)2017 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/vid_toolbox.h>
 #include <pjmedia-codec/h264_packetizer.h>
@@ -162,7 +162,7 @@ typedef struct vtool_codec_data
     unsigned                     enc_frame_size;
     unsigned                     enc_processed;
     pj_bool_t                    enc_is_keyframe;
-    
+
     /* Decoder */
     VTDecompressionSessionRef    dec;
     pj_uint8_t                  *dec_buf;
@@ -174,7 +174,7 @@ typedef struct vtool_codec_data
     unsigned                     dec_pps_size;
     unsigned char                dec_sps[SPS_PPS_BUF_SIZE];
     unsigned char                dec_pps[SPS_PPS_BUF_SIZE];
-    
+
     pjmedia_frame               *dec_frame;
     pj_bool_t                    dec_fmt_change;
 } vtool_codec_data;
@@ -439,9 +439,9 @@ static void encode_cb(void *outputCallbackRefCon,
         size_t enc_pps_size, enc_pps_cnt;
         const uint8_t *enc_sps, *enc_pps;
         OSStatus status;
-        
+
         format = CMSampleBufferGetFormatDescription(sampleBuffer);
-       
+
         /* Get SPS */
         status = CMVideoFormatDescriptionGetH264ParameterSetAtIndex(
                      format, 0, &enc_sps, &enc_sps_size, &enc_sps_cnt, 0 );
@@ -464,7 +464,7 @@ static void encode_cb(void *outputCallbackRefCon,
         pj_memcpy(buf + offset, enc_pps, enc_pps_size);
         offset += enc_pps_size;
     }
-    
+
     pj_assert(CMSampleBufferGetNumSamples(sampleBuffer) == 1);
 
     /* Get data pointer of the encoded frame */
@@ -472,7 +472,7 @@ static void encode_cb(void *outputCallbackRefCon,
     status = CMBlockBufferGetDataPointer(block_buf, 0, &length, NULL, &data);
     if (status != noErr || (offset + length) > vtool_data->enc_buf_size)
         return;
-        
+
     pj_assert(CMBlockBufferIsRangeContiguous(block_buf, 0, length));
     pj_assert(length == CMBlockBufferGetDataLength(block_buf));
 
@@ -488,7 +488,7 @@ static void encode_cb(void *outputCallbackRefCon,
 
         /* Replace data length with NAL start code */
         pj_memcpy(buf + offset, start_code, code_size);
-        
+
         buf_pos += avcc_size + data_length;
         offset += avcc_size + data_length;
     }
@@ -511,7 +511,7 @@ static OSStatus create_encoder(vtool_codec_data *vtool_data)
 
     /* Create encoder session */
     ret = VTCompressionSessionCreate(NULL, (int)param->enc_fmt.det.vid.size.w,
-                                     (int)param->enc_fmt.det.vid.size.h, 
+                                     (int)param->enc_fmt.det.vid.size.h,
                                      kCMVideoCodecType_H264, NULL, NULL,
                                      NULL, encode_cb, vtool_data,
                                      &vtool_data->enc);
@@ -639,7 +639,7 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
         enc_vfi = pjmedia_get_video_format_info(NULL,codec_param->dec_fmt.id);
         if (!enc_vfi)
             return PJ_EINVAL;
-    
+
         pj_bzero(&enc_vafp, sizeof(enc_vafp));
         enc_vafp.size = codec_param->enc_fmt.det.vid.size;
         enc_vafp.buffer = NULL;
@@ -669,7 +669,7 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
         const pj_uint8_t start_code[3] = {0, 0, 1};
         const int code_size = PJ_ARRAY_SIZE(start_code);
         unsigned i, j;
-        
+
         for (i = h264_fmtp.sprop_param_sets_len-code_size; i >= code_size;
              i--)
         {
@@ -679,23 +679,23 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
                 }
             }
         }
-        
+
         if (i >= code_size) {
             vtool_data->dec_sps_size = i - code_size;
             pj_memcpy(vtool_data->dec_sps,
                       &h264_fmtp.sprop_param_sets[code_size],
                       vtool_data->dec_sps_size);
 
-            vtool_data->dec_pps_size = h264_fmtp.sprop_param_sets_len - 
+            vtool_data->dec_pps_size = h264_fmtp.sprop_param_sets_len -
                                        code_size-i;
             pj_memcpy(vtool_data->dec_pps,
                       &h264_fmtp.sprop_param_sets[i + code_size],
                       vtool_data->dec_pps_size);
-                      
+
             create_decoder(vtool_data);
         }
     }
-    
+
     /* Create decoder buffer */
     vtool_data->dec_buf_size = (MAX_RX_WIDTH * MAX_RX_HEIGHT * 3 >> 1) +
                                (MAX_RX_WIDTH);
@@ -711,7 +711,7 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
 static pj_status_t vtool_codec_close(pjmedia_vid_codec *codec)
 {
     struct vtool_codec_data *vtool_data;
- 
+
     PJ_ASSERT_RETURN(codec, PJ_EINVAL);
 
     vtool_data = (vtool_codec_data*) codec->codec_data;
@@ -727,7 +727,7 @@ static pj_status_t vtool_codec_close(pjmedia_vid_codec *codec)
         CFRelease(vtool_data->dec);
         vtool_data->dec = NULL;
     }
-    
+
     if (vtool_data->dec_format)
         CFRelease(vtool_data->dec_format);
 
@@ -770,7 +770,7 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     size_t plane_w[3], plane_h[3], plane_bpr[3];
     NSDictionary *frm_prop = NULL;
     OSStatus ret;
- 
+
     PJ_ASSERT_RETURN(codec && input && out_size && output && has_more,
                      PJ_EINVAL);
 
@@ -787,7 +787,7 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     plane_bpr[1] = plane_bpr[2] = vtool_data->prm->enc_fmt.det.vid.size.w >> 1;
 
 #if TARGET_OS_IPHONE
-    ret = CVPixelBufferCreate(NULL, 
+    ret = CVPixelBufferCreate(NULL,
                 vtool_data->prm->enc_fmt.det.vid.size.w,
                 vtool_data->prm->enc_fmt.det.vid.size.h,
                 kCVPixelFormatType_420YpCbCr8Planar, /* I420 */
@@ -845,7 +845,7 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
                       kVTEncodeFrameOptionKey_ForceKeyFrame: @YES };
     }
 
-    ret = VTCompressionSessionEncodeFrame(vtool_data->enc, image_buf, 
+    ret = VTCompressionSessionEncodeFrame(vtool_data->enc, image_buf,
                                           ts, dur,
                                           (__bridge CFDictionaryRef)frm_prop,
                                           NULL, NULL);
@@ -886,7 +886,7 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
         CVPixelBufferRelease(image_buf);
         return PJMEDIA_CODEC_EFAILED;
     }
-    
+
     /* EncodeFrame is async, so tell it to finish the encoding. */
     ts.flags = kCMTimeFlags_Indefinite;
     ret = VTCompressionSessionCompleteFrames(vtool_data->enc, ts);
@@ -913,7 +913,7 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
         *has_more = PJ_FALSE;
         output->size = vtool_data->enc_frame_size;
         return PJ_SUCCESS;
-    }    
+    }
 
     return vtool_codec_encode_more(codec, out_size, output, has_more);
 }
@@ -953,13 +953,13 @@ static pj_status_t vtool_codec_encode_more(pjmedia_vid_codec *codec,
         /* Reset */
         vtool_data->enc_frame_size = vtool_data->enc_processed = 0;
         *has_more = (vtool_data->enc_processed < vtool_data->enc_frame_size);
-    
+
         PJ_PERROR(4,(THIS_FILE, status, "pjmedia_h264_packetize() error"));
         return status;
     }
-    
+
     PJ_ASSERT_RETURN(payload_len <= out_size, PJMEDIA_CODEC_EFRMTOOSHORT);
-    
+
     output->type = PJMEDIA_FRAME_TYPE_VIDEO;
     pj_memcpy(output->buf, payload, payload_len);
     output->size = payload_len;
@@ -976,12 +976,12 @@ static int process_i420(CVImageBufferRef src_buf, pj_uint8_t *dst)
 {
     pj_uint8_t *pdst = dst;
     pj_size_t i, count;
-    
+
     count = CVPixelBufferGetPlaneCount(src_buf);
     for (i = 0; i < count; i++) {
         pj_uint8_t *psrc;
         pj_size_t src_w, dst_w, h;
-        
+
         psrc = CVPixelBufferGetBaseAddressOfPlane(src_buf, i);
         src_w = CVPixelBufferGetBytesPerRowOfPlane(src_buf, i);
         dst_w = CVPixelBufferGetWidthOfPlane(src_buf, i);
@@ -1001,7 +1001,7 @@ static int process_i420(CVImageBufferRef src_buf, pj_uint8_t *dst)
             }
         }
     }
-    
+
     return (pdst - dst);
 }
 
@@ -1016,7 +1016,7 @@ static void decode_cb(void *decompressionOutputRefCon,
 {
     struct vtool_codec_data *vtool_data;
     pj_size_t width, height, len;
-    
+
     /* This callback can be called from another, unregistered thread.
      * So do not call pjlib functions here.
      */
@@ -1026,8 +1026,8 @@ static void decode_cb(void *decompressionOutputRefCon,
         return;
 
     CVPixelBufferLockBaseAddress(imageBuffer,0);
-    
-    width = CVPixelBufferGetWidth(imageBuffer); 
+
+    width = CVPixelBufferGetWidth(imageBuffer);
     height = CVPixelBufferGetHeight(imageBuffer);
 
     /* Detect format change */
@@ -1064,7 +1064,7 @@ static OSStatus create_decoder(struct vtool_codec_data *vtool_data)
      */
     ret = CMVideoFormatDescriptionCreateFromH264ParameterSets(
               kCFAllocatorDefault, 2,
-              (const uint8_t * const *)param_ptrs, 
+              (const uint8_t * const *)param_ptrs,
               param_sizes, code_size, &dec_format);
     if (ret != noErr) {
         PJ_LOG(4,(THIS_FILE, "Failed to create video format "
@@ -1104,7 +1104,7 @@ static OSStatus create_decoder(struct vtool_codec_data *vtool_data)
         PJ_LOG(3,(THIS_FILE, "Failed to create decompression session %d",
                   ret));
     }
-    
+
     SET_PROPERTY(vtool_data->dec, kVTCompressionPropertyKey_RealTime,
                  kCFBooleanTrue);
 #if !TARGET_OS_IPHONE
@@ -1112,7 +1112,7 @@ static OSStatus create_decoder(struct vtool_codec_data *vtool_data)
         kVTVideoDecoderSpecification_EnableHardwareAcceleratedVideoDecoder,
         kCFBooleanTrue);
 #endif
-    
+
     return ret;
 }
 
@@ -1187,10 +1187,10 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
                              vtool_data->dec_buf_size));
         status = PJMEDIA_CODEC_EFRMTOOSHORT;
     }
-    
+
     if (status != PJ_SUCCESS)
         goto on_return;
-    
+
     /* Dummy NAL sentinel */
     pj_memcpy(vtool_data->dec_buf + whole_len, start_code, code_size);
 
@@ -1215,7 +1215,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
         frm_size = i;
         start = vtool_data->dec_buf + buf_pos;
         nalu_type = (start[code_size] & 0x1F);
-        
+
 #if TARGET_OS_IPHONE
         /* On iOS, packets preceded by SEI frame (type 6), such as the ones
          * sent by Mac VideoToolbox encoder will cause DecodeFrame to fail
@@ -1244,7 +1244,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
                                               sizeof(vtool_data->dec_pps));
             pj_memcpy(vtool_data->dec_pps, &start[code_size],
                       vtool_data->dec_pps_size);
-            
+
             ret = create_decoder(vtool_data);
         } else if (vtool_data->dec &&
                    (!decode_whole || (buf_pos + frm_size >= whole_len)))
@@ -1278,7 +1278,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
             } else {
                 PJ_LOG(4,(THIS_FILE, "Failed to create block buffer"));
             }
-            
+
             if (ret == noErr) {
                 vtool_data->dec_frame = output;
                 ret = VTDecompressionSessionDecodeFrame(

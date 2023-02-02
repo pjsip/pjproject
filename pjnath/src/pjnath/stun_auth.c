@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/stun_auth.h>
 #include <pjnath/errno.h>
@@ -48,7 +48,7 @@ PJ_DEF(void) pj_stun_auth_cred_dup( pj_pool_t *pool,
                         &src->data.static_cred.nonce);
         break;
     case PJ_STUN_AUTH_CRED_DYNAMIC:
-        pj_memcpy(&dst->data.dyn_cred, &src->data.dyn_cred, 
+        pj_memcpy(&dst->data.dyn_cred, &src->data.dyn_cred,
                   sizeof(src->data.dyn_cred));
         break;
     }
@@ -70,7 +70,7 @@ PJ_DEF(void) pj_stun_req_cred_info_dup( pj_pool_t *pool,
 
 
 /* Calculate HMAC-SHA1 key for long term credential, by getting
- * MD5 digest of username, realm, and password. 
+ * MD5 digest of username, realm, and password.
  */
 static void calc_md5_key(pj_uint8_t digest[16],
                          const pj_str_t *realm,
@@ -81,7 +81,7 @@ static void calc_md5_key(pj_uint8_t digest[16],
      * the MD5 hash of the result of concatenating the following five
      * fields: (1) The username, with any quotes and trailing nulls
      * removed, (2) A single colon, (3) The realm, with any quotes and
-     * trailing nulls removed, (4) A single colon, and (5) The 
+     * trailing nulls removed, (4) A single colon, and (5) The
      * password, with any trailing nulls removed.
      */
     pj_md5_context ctx;
@@ -122,7 +122,7 @@ static void calc_md5_key(pj_uint8_t digest[16],
 
 /*
  * Create authentication key to be used for encoding the message with
- * MESSAGE-INTEGRITY. 
+ * MESSAGE-INTEGRITY.
  */
 PJ_DEF(void) pj_stun_create_key(pj_pool_t *pool,
                                 pj_str_t *key,
@@ -175,8 +175,8 @@ static pj_status_t create_challenge(pj_pool_t *pool,
     pj_str_t err_msg;
     pj_status_t rc;
 
-    rc = pj_stun_msg_create_response(pool, msg, err_code, 
-                                     (errstr?pj_cstr(&err_msg, errstr):NULL), 
+    rc = pj_stun_msg_create_response(pool, msg, err_code,
+                                     (errstr?pj_cstr(&err_msg, errstr):NULL),
                                      &response);
     if (rc != PJ_SUCCESS)
         return rc;
@@ -184,7 +184,7 @@ static pj_status_t create_challenge(pj_pool_t *pool,
     /* SHOULD NOT add REALM, NONCE, USERNAME, and M-I on 400 response */
     if (err_code!=400 && realm && realm->slen) {
         rc = pj_stun_msg_add_string_attr(pool, response,
-                                         PJ_STUN_ATTR_REALM, 
+                                         PJ_STUN_ATTR_REALM,
                                          realm);
         if (rc != PJ_SUCCESS)
             return rc;
@@ -198,7 +198,7 @@ static pj_status_t create_challenge(pj_pool_t *pool,
 
     if (err_code!=400 && nonce && nonce->slen) {
         rc = pj_stun_msg_add_string_attr(pool, response,
-                                         PJ_STUN_ATTR_NONCE, 
+                                         PJ_STUN_ATTR_NONCE,
                                          nonce);
         if (rc != PJ_SUCCESS)
             return rc;
@@ -256,7 +256,7 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
         p_info->nonce = cred->data.static_cred.nonce;
     } else if (cred->type == PJ_STUN_AUTH_CRED_DYNAMIC) {
         status = cred->data.dyn_cred.get_auth(cred->data.dyn_cred.user_data,
-                                              pool, &p_info->realm, 
+                                              pool, &p_info->realm,
                                               &p_info->nonce);
         if (status != PJ_SUCCESS)
             return status;
@@ -285,7 +285,7 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
            for short term, and 401 for long term.
            The rule has been changed from rfc3489bis-06
         */
-        err_code = p_info->realm.slen ? PJ_STUN_SC_UNAUTHORIZED : 
+        err_code = p_info->realm.slen ? PJ_STUN_SC_UNAUTHORIZED :
                     PJ_STUN_SC_BAD_REQUEST;
         goto on_auth_failed;
     }
@@ -319,18 +319,18 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
     /* Check if username match */
     if (cred->type == PJ_STUN_AUTH_CRED_STATIC) {
         pj_bool_t username_ok;
-        username_ok = !pj_strcmp(&auser->value, 
+        username_ok = !pj_strcmp(&auser->value,
                                  &cred->data.static_cred.username);
         if (username_ok) {
-            pj_strdup(pool, &p_info->username, 
+            pj_strdup(pool, &p_info->username,
                       &cred->data.static_cred.username);
             pj_stun_create_key(pool, &p_info->auth_key, &p_info->realm,
                                &auser->value, cred->data.static_cred.data_type,
                                &cred->data.static_cred.data);
         } else {
             /* Username mismatch */
-            /* According to rfc3489bis-10 Sec 10.1.2/10.2.2, we should 
-             * return 401 
+            /* According to rfc3489bis-10 Sec 10.1.2/10.2.2, we should
+             * return 401
              */
             err_code = PJ_STUN_SC_UNAUTHORIZED;
             goto on_auth_failed;
@@ -340,15 +340,15 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
         pj_str_t password;
         pj_status_t rc;
 
-        rc = cred->data.dyn_cred.get_password(msg, 
+        rc = cred->data.dyn_cred.get_password(msg,
                                               cred->data.dyn_cred.user_data,
                                               (arealm?&arealm->value:NULL),
                                               &auser->value, pool,
                                               &data_type, &password);
         if (rc == PJ_SUCCESS) {
             pj_strdup(pool, &p_info->username, &auser->value);
-            pj_stun_create_key(pool, &p_info->auth_key, 
-                               (arealm?&arealm->value:NULL), &auser->value, 
+            pj_stun_create_key(pool, &p_info->auth_key,
+                               (arealm?&arealm->value:NULL), &auser->value,
                                data_type, &password);
         } else {
             err_code = PJ_STUN_SC_UNAUTHORIZED;
@@ -397,7 +397,7 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
          * term credential. The draft doesn't mention anything about
          * switching between long term and short term.
          */
-        
+
         /* For now just accept the credential, anyway it will probably
          * cause wrong message integrity value later.
          */
@@ -417,9 +417,9 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
         pj_bool_t ok;
 
         if (cred->type == PJ_STUN_AUTH_CRED_DYNAMIC &&
-            cred->data.dyn_cred.verify_nonce != NULL) 
+            cred->data.dyn_cred.verify_nonce != NULL)
         {
-            ok=cred->data.dyn_cred.verify_nonce(msg, 
+            ok=cred->data.dyn_cred.verify_nonce(msg,
                                                 cred->data.dyn_cred.user_data,
                                                 (arealm?&arealm->value:NULL),
                                                 &auser->value,
@@ -441,7 +441,7 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
     }
 
     /* Now calculate HMAC of the message. */
-    pj_hmac_sha1_init(&ctx, (pj_uint8_t*)p_info->auth_key.ptr, 
+    pj_hmac_sha1_init(&ctx, (pj_uint8_t*)p_info->auth_key.ptr,
                       (unsigned)p_info->auth_key.slen);
 
 #if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
@@ -503,7 +503,7 @@ PJ_DEF(pj_bool_t) pj_stun_auth_valid_for_msg(const pj_stun_msg *msg)
     const pj_stun_errcode_attr *err_attr;
 
     /* STUN requests and success response can be authenticated */
-    if (!PJ_STUN_IS_ERROR_RESPONSE(msg_type) && 
+    if (!PJ_STUN_IS_ERROR_RESPONSE(msg_type) &&
         !PJ_STUN_IS_INDICATION(msg_type))
     {
         return PJ_TRUE;

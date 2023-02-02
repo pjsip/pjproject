@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -104,10 +104,10 @@
 int dummy_function()
 {
     pj_caching_pool cp;
- 
+
     sprintf(NULL, "%d", 0);
     rand();
-    
+
 #ifdef HAS_PJLIB
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
@@ -129,7 +129,7 @@ int dummy_function()
 #ifdef HAS_PJLIB_GETOPT
     pj_getopt_long(0, NULL, NULL, NULL, NULL);
 #endif
-    
+
 #ifdef HAS_PJLIB_XML
     pj_xml_parse(NULL, NULL, 100);
     pj_xml_print(NULL, NULL, 10, PJ_FALSE);

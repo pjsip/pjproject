@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_SDP_NEG_H__
 #define __PJMEDIA_SDP_NEG_H__
@@ -32,11 +32,11 @@
  *
  * The header file <b><pjmedia/sdp_neg.h></b> contains the declaration
  * of SDP offer and answer negotiator. SDP offer and answer model is described
- * in RFC 3264 <b>"An Offer/Answer Model with Session Description Protocol 
+ * in RFC 3264 <b>"An Offer/Answer Model with Session Description Protocol
  * (SDP)"</b>.
  *
  * The SDP negotiator is represented with opaque type \a pjmedia_sdp_neg.
- * This structure contains negotiation state and several SDP session 
+ * This structure contains negotiation state and several SDP session
  * descriptors currently being used in the negotiation.
  *
  *
@@ -44,9 +44,9 @@
  *
  * The following diagram describes the state transition diagram of the
  * SDP negotiator.
- * 
+ *
  * <pre>
- *                                              
+ *
  *                                              modify_local_offer()
  *     create_w_local_offer()  +-------------+  send_local_offer()
  *     ----------------------->| LOCAL_OFFER |<-----------------------
@@ -73,7 +73,7 @@
  * \subsection sdpneg_create_offer Creating Initial Offer
  *
  * Application creates an offer by manualy building the SDP session descriptor
- * (pjmedia_sdp_session), or request PJMEDIA endpoint (pjmedia_endpt) to 
+ * (pjmedia_sdp_session), or request PJMEDIA endpoint (pjmedia_endpt) to
  * create SDP session descriptor based on capabilities that present in the
  * endpoint by calling #pjmedia_endpt_create_sdp().
  *
@@ -92,16 +92,16 @@
  * the negotiation process of previous offer/answer session (i.e. the
  * negotiator state is PJMEDIA_SDP_NEG_STATE_DONE).
  *
- * If any previous negotiation process was successfull (i.e. the return 
+ * If any previous negotiation process was successfull (i.e. the return
  * value of #pjmedia_sdp_neg_negotiate() was PJ_SUCCESS), the negotiator
  * keeps both active local and active remote SDP.
  *
  * If application does not want send modified offer, it can just send
  * the active local SDP as the offer. In this case, application calls
  * #pjmedia_sdp_neg_send_local_offer() to get the active local SDP.
- * 
- * If application wants to modify it's local offer, it MUST inform 
- * the negotiator about the modified SDP by calling 
+ *
+ * If application wants to modify it's local offer, it MUST inform
+ * the negotiator about the modified SDP by calling
  * #pjmedia_sdp_neg_modify_local_offer().
  *
  * In both cases, the negotiator will internally create a copy of the offer,
@@ -113,11 +113,11 @@
  *
  * Application receives an offer in the incoming request from remote to
  * establish multimedia session, such as incoming INVITE message with SDP
- * body. 
+ * body.
  *
- * Initially, when the initial offer is received, application creates the 
+ * Initially, when the initial offer is received, application creates the
  * SDP negotiator by calling #pjmedia_sdp_neg_create_w_remote_offer(),
- * specifying the remote SDP offer in one of the argument. 
+ * specifying the remote SDP offer in one of the argument.
  *
  * At this stage, application may or may not ready to create an answer.
  * For example, a SIP B2BUA needs to make outgoing call and receive SDP
@@ -127,7 +127,7 @@
  * If application is not ready to create an answer, it passes NULL as
  * the local SDP when it calls #pjmedia_sdp_neg_create_w_remote_offer().
  *
- * The section @ref sdpneg_create_answer describes the case when 
+ * The section @ref sdpneg_create_answer describes the case when
  * application is ready to create a SDP answer.
  *
  *
@@ -158,8 +158,8 @@
  * too.
  *
  * If #pjmedia_sdp_neg_negotiate() returns PJ_SUCCESS, the negotiator will
- * keep the updated local answer and remote answer internally. These two 
- * SDPs are called active local SDP and active remote SDP, as it describes 
+ * keep the updated local answer and remote answer internally. These two
+ * SDPs are called active local SDP and active remote SDP, as it describes
  * currently active session.
  *
  * Application can retrieve the active local SDP by calling
@@ -169,9 +169,9 @@
  * If #pjmedia_sdp_neg_negotiate() returns failure (i.e. not PJ_SUCCESS),
  * it WILL NOT update its active local and active remote SDP.
  *
- * Regardless of the return status of the #pjmedia_sdp_neg_negotiate(), 
+ * Regardless of the return status of the #pjmedia_sdp_neg_negotiate(),
  * the negotiator state will move to PJMEDIA_SDP_NEG_STATE_DONE.
- * 
+ *
  *
  * \subsection sdpneg_cancel_offer Cancelling an Offer
  *
@@ -198,17 +198,17 @@
  *
  * \subsection sdpneg_create_answer Generating SDP Answer
  *
- * After remote offer has been set in the negotiator, application can 
- * request the SDP negotiator to generate appropriate answer based on local 
+ * After remote offer has been set in the negotiator, application can
+ * request the SDP negotiator to generate appropriate answer based on local
  * capability.
  *
  * To do this, first the application MUST have an SDP describing its local
  * capabilities. This SDP can be built manually, or application can generate
- * SDP to describe local media endpoint capability by calling 
- * #pjmedia_endpt_create_sdp(). When the application is a SIP B2BUA, 
+ * SDP to describe local media endpoint capability by calling
+ * #pjmedia_endpt_create_sdp(). When the application is a SIP B2BUA,
  * application can treat the SDP received from the outgoing call leg as if
  * it was it's local capability.
- * 
+ *
  * The local SDP session descriptor DOES NOT have to match the SDP offer.
  * For example, it can have more or less media lines than the offer, or
  * their order may be different than the offer. The negotiator is capable
@@ -219,7 +219,7 @@
  * a SDP answer.
  *
  * If application does not already have the negotiator instance, it creates
- * one by calling #pjmedia_sdp_neg_create_w_remote_offer(), specifying 
+ * one by calling #pjmedia_sdp_neg_create_w_remote_offer(), specifying
  * both remote SDP offer and local SDP as the arguments. The SDP negotiator
  * validates both remote and local SDP by calling #pjmedia_sdp_validate(),
  * and if both SDPs are valid, the negotiator state will move to
@@ -251,7 +251,7 @@
  * If #pjmedia_sdp_neg_negotiate() returns failure (i.e. not PJ_SUCCESS),
  * it WILL NOT update its active local and active remote SDP.
  *
- * Regardless of the return status of the #pjmedia_sdp_neg_negotiate(), 
+ * Regardless of the return status of the #pjmedia_sdp_neg_negotiate(),
  * the negotiator state will move to PJMEDIA_SDP_NEG_STATE_DONE.
  *
  *
@@ -262,29 +262,29 @@
 PJ_BEGIN_DECL
 
 /**
- * This enumeration describes SDP negotiation state. 
+ * This enumeration describes SDP negotiation state.
  */
 enum pjmedia_sdp_neg_state
 {
-    /** 
-     * This is the state of SDP negoator before it is initialized. 
+    /**
+     * This is the state of SDP negoator before it is initialized.
      */
     PJMEDIA_SDP_NEG_STATE_NULL,
 
-    /** 
+    /**
      * This state occurs when SDP negotiator has sent our offer to remote and
-     * it is waiting for answer. 
+     * it is waiting for answer.
      */
     PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
 
-    /** 
+    /**
      * This state occurs when SDP negotiator has received offer from remote
      * and currently waiting for local answer.
      */
     PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER,
 
     /**
-     * This state occurs when an offer (either local or remote) has been 
+     * This state occurs when an offer (either local or remote) has been
      * provided with answer. The SDP negotiator is ready to negotiate both
      * session descriptors. Application can call #pjmedia_sdp_neg_negotiate()
      * immediately to begin negotiation process.
@@ -292,7 +292,7 @@ enum pjmedia_sdp_neg_state
     PJMEDIA_SDP_NEG_STATE_WAIT_NEGO,
 
     /**
-     * This state occurs when SDP negotiation has completed, either 
+     * This state occurs when SDP negotiation has completed, either
      * successfully or not.
      */
     PJMEDIA_SDP_NEG_STATE_DONE
@@ -344,7 +344,7 @@ PJ_DECL(const char*) pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_state state);
  * received, application must call #pjmedia_sdp_neg_set_remote_answer().
  *
  * After calling this function, application should send the local SDP offer
- * to remote party using signaling protocol such as SIP and wait for SDP 
+ * to remote party using signaling protocol such as SIP and wait for SDP
  * answer.
  *
  * @param pool          Pool to allocate memory. The pool's lifetime needs
@@ -355,24 +355,24 @@ PJ_DECL(const char*) pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_state state);
  * @return              PJ_SUCCESS on success, or the appropriate error
  *                      code.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
                                       const pjmedia_sdp_session *local,
                                       pjmedia_sdp_neg **p_neg);
 
 /**
  * Initialize the SDP negotiator with remote offer, and optionally
- * specify the initial local capability, if known. Application normally 
- * calls this function when it receives initial offer from remote. 
+ * specify the initial local capability, if known. Application normally
+ * calls this function when it receives initial offer from remote.
  *
  * If local media capability is specified, this capability will be set as
  * initial local capability of the negotiator, and after this function is
  * called, the SDP negotiator state will move to state
- * PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, and the negotiation function can be 
- * called. 
+ * PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, and the negotiation function can be
+ * called.
  *
  * If local SDP is not specified, the negotiator will not have initial local
- * capability, and after this function is called the negotiator state will 
+ * capability, and after this function is called the negotiator state will
  * move to PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER state. Application MUST supply
  * local answer later with #pjmedia_sdp_neg_set_local_answer(), before
  * calling the negotiation function.
@@ -386,7 +386,7 @@ pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
  * @return              PJ_SUCCESS on success, or the appropriate error
  *                      code.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
                                       const pjmedia_sdp_session *initial,
                                       const pjmedia_sdp_session *remote,
@@ -398,7 +398,7 @@ pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
  * remote, or should it rather use the codec preference as specified by
  * local endpoint.
  *
- * For example, suppose incoming call has codec order "8 0 3", while 
+ * For example, suppose incoming call has codec order "8 0 3", while
  * local codec order is "3 0 8". If remote codec order is preferable,
  * the selected codec will be 8, while if local codec order is preferable,
  * the selected codec will be 3.
@@ -446,7 +446,7 @@ pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg );
 /**
  * Get the currently active local SDP. Application can only call this
  * function after negotiation has been done, or otherwise there won't be
- * active SDPs. Calling this function will not change the state of the 
+ * active SDPs. Calling this function will not change the state of the
  * negotiator.
  *
  * @param neg           The SDP negotiator instance.
@@ -454,14 +454,14 @@ pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg );
  *
  * @return              PJ_SUCCESS if local active SDP is present.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
                                   const pjmedia_sdp_session **local);
 
 /**
  * Get the currently active remote SDP. Application can only call this
  * function after negotiation has been done, or otherwise there won't be
- * active SDPs. Calling this function will not change the state of the 
+ * active SDPs. Calling this function will not change the state of the
  * negotiator.
  *
  * @param neg           The SDP negotiator instance.
@@ -469,7 +469,7 @@ pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
  *
  * @return              PJ_SUCCESS if remote active SDP is present.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
                                    const pjmedia_sdp_session **remote);
 
@@ -490,10 +490,10 @@ pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg);
 
 
 /**
- * Get the current remote SDP offer or answer. Application can only 
+ * Get the current remote SDP offer or answer. Application can only
  * call this function in state PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER or
- * PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, or otherwise there won't be remote 
- * SDP offer/answer. Calling this  function will not change the state 
+ * PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, or otherwise there won't be remote
+ * SDP offer/answer. Calling this  function will not change the state
  * of the negotiator.
  *
  * @param neg           The SDP negotiator instance.
@@ -509,10 +509,10 @@ pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
 
 
 /**
- * Get the current local SDP offer or answer. Application can only 
+ * Get the current local SDP offer or answer. Application can only
  * call this function in state PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER or
- * PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, or otherwise there won't be local 
- * SDP offer/answer. Calling this function will not change the state 
+ * PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, or otherwise there won't be local
+ * SDP offer/answer. Calling this function will not change the state
  * of the negotiator.
  *
  * @param neg           The SDP negotiator instance.
@@ -522,14 +522,14 @@ pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
  * @return              PJ_SUCCESS if the negotiator currently has
  *                      local offer or answer.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
                                const pjmedia_sdp_session **local);
 
 /**
- * Modify local session with a new SDP and treat this as a new offer. 
+ * Modify local session with a new SDP and treat this as a new offer.
  * This function can only be called in state PJMEDIA_SDP_NEG_STATE_DONE.
- * After calling this function, application can send the SDP as offer 
+ * After calling this function, application can send the SDP as offer
  * to remote party, using signaling protocol such as SIP.
  * The negotiator state will move to PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
  * where it waits for SDP answer from remote. See also
@@ -543,15 +543,15 @@ pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
  * @return              PJ_SUCCESS on success, or the appropriate
  *                      error code.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
                                     pjmedia_sdp_neg *neg,
                                     const pjmedia_sdp_session *local);
 
 /**
- * Modify local session with a new SDP and treat this as a new offer. 
+ * Modify local session with a new SDP and treat this as a new offer.
  * This function can only be called in state PJMEDIA_SDP_NEG_STATE_DONE.
- * After calling this function, application can send the SDP as offer 
+ * After calling this function, application can send the SDP as offer
  * to remote party, using signaling protocol such as SIP.
  * The negotiator state will move to PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
  * where it waits for SDP answer from remote.
@@ -565,7 +565,7 @@ pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
  * @return              PJ_SUCCESS on success, or the appropriate
  *                      error code.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_modify_local_offer2( pj_pool_t *pool,
                                      pjmedia_sdp_neg *neg,
                                      unsigned flags,
@@ -576,9 +576,9 @@ pjmedia_sdp_neg_modify_local_offer2( pj_pool_t *pool,
  * Application calls this function to retrieve currently active
  * local SDP, and then send the SDP to remote as an offer. The negotiator
  * state will then move to PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER, where it waits
- * for SDP answer from remote. 
+ * for SDP answer from remote.
  *
- * When SDP answer has been received from remote, application must call 
+ * When SDP answer has been received from remote, application must call
  * #pjmedia_sdp_neg_set_remote_answer().
  *
  * @param pool          Pool to allocate memory. The pool's lifetime needs
@@ -589,7 +589,7 @@ pjmedia_sdp_neg_modify_local_offer2( pj_pool_t *pool,
  *
  * @return              PJ_SUCCESS if local offer can be created.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
                                   pjmedia_sdp_neg *neg,
                                   const pjmedia_sdp_session **offer);
@@ -609,7 +609,7 @@ pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
                                    pjmedia_sdp_neg *neg,
                                    const pjmedia_sdp_session *remote);
@@ -617,9 +617,9 @@ pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
 
 
 /**
- * This function can only be called in PJMEDIA_SDP_NEG_STATE_DONE state. 
+ * This function can only be called in PJMEDIA_SDP_NEG_STATE_DONE state.
  * Application calls this function when it receives SDP offer from remote.
- * After this function is called, the negotiator state will move to 
+ * After this function is called, the negotiator state will move to
  * PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER, and application MUST call the
  * #pjmedia_sdp_neg_set_local_answer() to set local answer before it can
  * call the negotiation function.
@@ -631,7 +631,7 @@ pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
                                   pjmedia_sdp_neg *neg,
                                   const pjmedia_sdp_session *remote);
@@ -658,7 +658,7 @@ pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
                                   pjmedia_sdp_neg *neg,
                                   const pjmedia_sdp_session *local);
@@ -711,7 +711,7 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg);
  * @param allow_asym    Should be zero.
  *
  * @return              PJ_SUCCESS when there is at least one media
- *                      is actuve common in both offer and answer, or 
+ *                      is actuve common in both offer and answer, or
  *                      failure code when negotiation has failed.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,

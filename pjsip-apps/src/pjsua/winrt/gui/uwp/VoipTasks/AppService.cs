@@ -70,7 +70,7 @@ namespace VoipTasks
                             Current.AppRequest = args.Request;
                             Current.Request = BackgroundRequest.StartService;
                             Current.AppRequestDeferal = deferral;
-                            Current.StartService();                            
+                            Current.StartService();
 
                             break;
                         case BackgroundRequest.StopService:
@@ -108,7 +108,7 @@ namespace VoipTasks
             }
             finally
             {
-               
+
                 if (stop)
                 {
                     _deferral.Complete();

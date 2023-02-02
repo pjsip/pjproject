@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
@@ -331,7 +331,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
                                      const pjmedia_sdp_session *remote_sdp)
 {
     pj_status_t status;
-    
+
     PJ_LOG(4,(THIS_FILE, "Video channel update.."));
     pj_log_push_indent();
 

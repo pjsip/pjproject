@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/h263_packetizer.h>
 #include <pjmedia/types.h>
@@ -32,7 +32,7 @@
 struct pjmedia_h263_packetizer {
     /* Current settings */
     pjmedia_h263_packetizer_cfg cfg;
-    
+
     /* Unpacketizer state */
     unsigned        unpack_last_sync_pos;
     pj_bool_t       unpack_prev_lost;
@@ -40,7 +40,7 @@ struct pjmedia_h263_packetizer {
 
 
 /*
- * Find synchronization point (PSC, slice, GSBC, EOS, EOSBS) in H.263 
+ * Find synchronization point (PSC, slice, GSBC, EOS, EOSBS) in H.263
  * bitstream.
  */
 static pj_uint8_t* find_sync_point(pj_uint8_t *data,
@@ -53,13 +53,13 @@ static pj_uint8_t* find_sync_point(pj_uint8_t *data,
 
     if (p == end)
         return NULL;
-        
+
     return p;
 }
 
 
 /*
- * Find synchronization point (PSC, slice, GSBC, EOS, EOSBS) in H.263 
+ * Find synchronization point (PSC, slice, GSBC, EOS, EOSBS) in H.263
  * bitstream, in reversed manner.
  */
 static pj_uint8_t* find_sync_point_rev(pj_uint8_t *data,
@@ -72,7 +72,7 @@ static pj_uint8_t* find_sync_point_rev(pj_uint8_t *data,
 
     if (p < data)
         return (data + data_len);
-        
+
     return p;
 }
 
@@ -145,7 +145,7 @@ PJ_DEF(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
     }
     *(p+1) = 0;
 
-    /* When bitstream truncation needed because of payload length/MTU 
+    /* When bitstream truncation needed because of payload length/MTU
      * limitation, try to use sync point for the payload boundary.
      */
     if (end-p > pktz->cfg.mtu) {

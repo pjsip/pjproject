@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_WAVE_H__
 #define __PJMEDIA_WAVE_H__
@@ -39,7 +39,7 @@
  * @{
  *
  * This the the low level representation of RIFF/WAVE file format. For
- * higher abstraction, please see \ref PJMEDIA_FILE_PLAY and 
+ * higher abstraction, please see \ref PJMEDIA_FILE_PLAY and
  * \ref PJMEDIA_FILE_REC.
  */
 
@@ -148,7 +148,7 @@ typedef struct pjmedia_wave_subchunk
 
 /**
  * On big-endian hosts, this function swaps the byte order of the values
- * in the WAVE header fields. On little-endian hosts, this function does 
+ * in the WAVE header fields. On little-endian hosts, this function does
  * nothing.
  *
  * Application SHOULD call this function after reading the WAVE header
@@ -161,7 +161,7 @@ PJ_DECL(void) pjmedia_wave_hdr_file_to_host( pjmedia_wave_hdr *hdr );
 
 /**
  * On big-endian hosts, this function swaps the byte order of the values
- * in the WAVE header fields. On little-endian hosts, this function does 
+ * in the WAVE header fields. On little-endian hosts, this function does
  * nothing.
  *
  * Application SHOULD call this function before writing the WAVE header

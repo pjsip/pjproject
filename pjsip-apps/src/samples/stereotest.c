@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -48,7 +48,7 @@
 #define THIS_FILE   "stereotest.c"
 
 
-static const char *desc = 
+static const char *desc =
 " FILE                                                              \n"
 "                                                                   \n"
 "  stereotest.c                                                     \n"
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         switch (c) {
         case OPT_MODE:
             if (mode) {
-                app_perror(THIS_FILE, "Cannot record and play at once!", 
+                app_perror(THIS_FILE, "Cannot record and play at once!",
                            PJ_EINVAL);
                 return 1;
             }
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
-    /* 
+    /*
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
         }
 
         /* Create sound player port. */
-        status = pjmedia_snd_port_create_player( 
+        status = pjmedia_snd_port_create_player(
                      pool,                              /* pool               */
                      dev_id,                            /* device id.         */
                      PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.       */
@@ -227,10 +227,10 @@ int main(int argc, char *argv[])
         status = pjmedia_wav_writer_port_create(pool, wav_file,
                                                 REC_CLOCK_RATE,
                                                 rec_ch_cnt,
-                                                rec_ch_cnt * PTIME * 
+                                                rec_ch_cnt * PTIME *
                                                 REC_CLOCK_RATE / 1000,
                                                 NBITS,
-                                                0, 0, 
+                                                0, 0,
                                                 &file_port);
         if (status != PJ_SUCCESS) {
             app_perror(THIS_FILE, "Unable to open file", status);
@@ -238,12 +238,12 @@ int main(int argc, char *argv[])
         }
 
         /* Create sound player port. */
-        status = pjmedia_snd_port_create_rec( 
+        status = pjmedia_snd_port_create_rec(
                          pool,                      /* pool                 */
                          dev_id,                    /* device id.           */
                          REC_CLOCK_RATE,            /* clock rate.          */
                          snd_ch_cnt,                /* # of channels.       */
-                         snd_ch_cnt * PTIME * 
+                         snd_ch_cnt * PTIME *
                          REC_CLOCK_RATE / 1000,     /* samples per frame.   */
                          NBITS,                     /* bits per sample.     */
                          0,                         /* options              */
@@ -279,8 +279,8 @@ int main(int argc, char *argv[])
     /* Dump memory usage */
     dump_pool_usage(THIS_FILE, &cp);
 
-    /* 
-     * File should be playing and looping now, using sound device's thread. 
+    /*
+     * File should be playing and looping now, using sound device's thread.
      */
 
 
@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
 
     printf("Mode = %s\n", (mode == MODE_PLAY? "playing" : "recording") );
     printf("File  port channel count = %d\n", PJMEDIA_PIA_CCNT(&file_port->info));
-    printf("Sound port channel count = %d\n", 
+    printf("Sound port channel count = %d\n",
             PJMEDIA_PIA_CCNT(&pjmedia_snd_port_get_port(snd_port)->info));
     puts("");
     puts("Press <ENTER> to stop and quit");
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
     if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
         puts("EOF while reading stdin, will quit now..");
     }
-    
+
     /* Start deinitialization: */
 
 
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
 
-    /* Destroy stereo port and file_port. 
+    /* Destroy stereo port and file_port.
      * Stereo port will destroy all downstream ports (e.g. the file port)
      */
     status = pjmedia_port_destroy( stereo_port? stereo_port : file_port);

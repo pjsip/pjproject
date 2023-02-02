@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/stun_transaction.h>
 #include <pjnath/errno.h>
@@ -60,9 +60,9 @@ struct pj_stun_client_tsx
 #endif
 
 
-static void retransmit_timer_callback(pj_timer_heap_t *timer_heap, 
+static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
                                       pj_timer_entry *timer);
-static void destroy_timer_callback(pj_timer_heap_t *timer_heap, 
+static void destroy_timer_callback(pj_timer_heap_t *timer_heap,
                                    pj_timer_entry *timer);
 
 /*
@@ -344,7 +344,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 
 
 /* Retransmit timer callback */
-static void retransmit_timer_callback(pj_timer_heap_t *timer_heap, 
+static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
                                       pj_timer_entry *timer)
 {
     pj_stun_client_tsx *tsx = (pj_stun_client_tsx *) timer->user_data;
@@ -408,7 +408,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx,
 }
 
 /* Timer callback to destroy transaction */
-static void destroy_timer_callback(pj_timer_heap_t *timer_heap, 
+static void destroy_timer_callback(pj_timer_heap_t *timer_heap,
                                    pj_timer_entry *timer)
 {
     pj_stun_client_tsx *tsx = (pj_stun_client_tsx *) timer->user_data;
@@ -434,23 +434,23 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     pj_status_t status;
 
     /* Must be STUN response message */
-    if (!PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) && 
+    if (!PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) &&
         !PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))
     {
-        PJ_LOG(4,(tsx->obj_name, 
+        PJ_LOG(4,(tsx->obj_name,
                   "STUN rx_msg() error: not response message"));
         return PJNATH_EINSTUNMSGTYPE;
     }
 
 
-    /* We have a response with matching transaction ID. 
+    /* We have a response with matching transaction ID.
      * We can cancel retransmit timer now.
      */
     pj_timer_heap_cancel_if_active(tsx->timer_heap, &tsx->retransmit_timer,
                                    TIMER_INACTIVE);
 
     /* Find STUN error code attribute */
-    err_attr = (pj_stun_errcode_attr*) 
+    err_attr = (pj_stun_errcode_attr*)
                 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ERROR_CODE, 0);
 
     if (err_attr && err_attr->err_code <= 200) {
@@ -458,7 +458,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
          * Any response between 100 and 299 MUST result in the cessation
          * of request retransmissions, but otherwise is discarded.
          */
-        PJ_LOG(4,(tsx->obj_name, 
+        PJ_LOG(4,(tsx->obj_name,
                   "STUN rx_msg() error: received provisional %d code (%.*s)",
                   err_attr->err_code,
                   (int)err_attr->reason.slen,

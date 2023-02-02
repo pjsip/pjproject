@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_L16_H__
 #define __PJMEDIA_CODEC_L16_H__
@@ -32,7 +32,7 @@
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
  *
- * Note that the L16 codec factory registers several (about fourteen!) 
+ * Note that the L16 codec factory registers several (about fourteen!)
  * L16 codec types to codec manager (different combinations of clock
  * rate and number of channels).
  *
@@ -40,8 +40,8 @@
  *
  * \subsection l16_general_setting General Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * \subsection l16_specific_setting Codec Specific Settings

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2016 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #pragma once
 
@@ -116,7 +116,7 @@ private:
     Windows::Networking::Sockets::DatagramSocket^ datagram_sock;
     Windows::Networking::Sockets::StreamSocket^ stream_sock;
     Windows::Networking::Sockets::StreamSocketListener^ listener_sock;
-    
+
     /* Helper objects */
     PjUwpSocketDatagramRecvHelper^ dgram_recv_helper;
     PjUwpSocketListenerHelper^ listener_helper;
@@ -267,8 +267,8 @@ inline concurrency::task<void> complete_after(unsigned int timeout)
     // Create a task that completes after the completion event is set.
     concurrency::task<void> event_set(tce);
 
-    // Create a continuation task that cleans up resources and 
-    // and return that continuation task. 
+    // Create a continuation task that cleans up resources and
+    // and return that continuation task.
     return event_set.then([callback, fire_once]()
     {
         delete callback;
@@ -276,8 +276,8 @@ inline concurrency::task<void> complete_after(unsigned int timeout)
     });
 }
 
-// Cancels the provided task after the specifed delay, if the task 
-// did not complete. 
+// Cancels the provided task after the specifed delay, if the task
+// did not complete.
 template<typename T>
 inline concurrency::task<T> cancel_after_timeout(concurrency::task<T> t, concurrency::cancellation_token_source cts, unsigned int timeout)
 {
@@ -292,19 +292,19 @@ inline concurrency::task<T> cancel_after_timeout(concurrency::task<T> t, concurr
         return false;
     });
 
-    // Create a continuation task that cancels the overall task  
-    // if the timeout task finishes first. 
+    // Create a continuation task that cancels the overall task
+    // if the timeout task finishes first.
     return (failure_task || success_task).then([t, cts](bool success)
     {
         if (!success)
         {
-            // Set the cancellation token. The task that is passed as the 
-            // t parameter should respond to the cancellation and stop 
+            // Set the cancellation token. The task that is passed as the
+            // t parameter should respond to the cancellation and stop
             // as soon as it can.
             cts.cancel();
         }
 
-        // Return the original task. 
+        // Return the original task.
         return t;
     });
 }

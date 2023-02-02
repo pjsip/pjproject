@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODECS_G7221_H__
 #define __PJMEDIA_CODECS_G7221_H__
@@ -39,10 +39,10 @@
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
  *
- * PJMEDIA G722.1 codec implementation is based on ITU-T Recommendation 
+ * PJMEDIA G722.1 codec implementation is based on ITU-T Recommendation
  * G.722.1 (05/2005) C fixed point implementation including its Annex C.
  *
- * G.722.1 is a low complexity codec that supports 7kHz and 14kHz audio 
+ * G.722.1 is a low complexity codec that supports 7kHz and 14kHz audio
  * bandwidth working at bitrates ranging from 16kbps to 48kbps. It may be
  * used with speech or music inputs.
  *
@@ -51,8 +51,8 @@
  *
  * \subsection g7221_general_setting General Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * \subsection g7221_specific_setting Codec Specific Settings
@@ -70,7 +70,7 @@
  *   48kbps.
  *
  * The usage of non-standard bitrates must follow these requirements:
- * - for 7kHz audio bandwidth (16kHz sampling rate): 16000 to 32000 bps, 
+ * - for 7kHz audio bandwidth (16kHz sampling rate): 16000 to 32000 bps,
  *   multiplication of 400
  * - for 14kHz audio bandwidth (32kHz sampling rate): 24000 to 48000 bps,
  *   multiplication of 400
@@ -83,9 +83,9 @@
  *
  * \remark
  * There is a flaw in the codec manager as currently it could not
- * differentiate G.722.1 codecs by bitrates, hence invoking 
+ * differentiate G.722.1 codecs by bitrates, hence invoking
  * #pjmedia_codec_mgr_set_default_param() may only affect a G.722.1 codec
- * with the highest priority (or first index found in codec enumeration 
+ * with the highest priority (or first index found in codec enumeration
  * when they have same priority) and invoking
  * #pjmedia_codec_mgr_set_codec_priority() will set priority of all G.722.1
  * codecs with sampling rate as specified.
@@ -104,7 +104,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_g7221_init( pjmedia_endpt *endpt );
 
 
 /**
- * Enable and disable G.722.1 mode. By default, the standard modes are 
+ * Enable and disable G.722.1 mode. By default, the standard modes are
  * enabled upon initialization, i.e.:
  * - sampling rate 16kHz, bitrate 24kbps and 32kbps.
  * - sampling rate 32kHz, bitrate 24kbps, 32kbps, and 48kbps.
@@ -112,22 +112,22 @@ PJ_DECL(pj_status_t) pjmedia_codec_g7221_init( pjmedia_endpt *endpt );
  * Note that currently only up to two non-standard modes can be enabled
  * at one time.
  *
- * @param sample_rate   PCM sampling rate, in Hz, valid values are only 
+ * @param sample_rate   PCM sampling rate, in Hz, valid values are only
  *                      16000 and 32000.
  * @param bitrate       G722.1 bitrate, in bps, the valid values are
- *                      standard and non-standard bitrates as described 
+ *                      standard and non-standard bitrates as described
  *                      above.
  * @param enabled       PJ_TRUE for enabling specified mode.
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate, 
-                                                  unsigned bitrate, 
+PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
+                                                  unsigned bitrate,
                                                   pj_bool_t enabled);
 
 /**
- * Set the G.722.1 codec encoder and decoder level adjustment. 
- * If the value is non-zero, then PCM input samples to the encoder will 
+ * Set the G.722.1 codec encoder and decoder level adjustment.
+ * If the value is non-zero, then PCM input samples to the encoder will
  * be shifted right by this value, and similarly PCM output samples from
  * the decoder will be shifted left by this value.
  *

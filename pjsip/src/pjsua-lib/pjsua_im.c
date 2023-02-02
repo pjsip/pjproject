@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
@@ -45,7 +45,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata);
 
 
 /* The module instance. */
-static pjsip_module mod_pjsua_im = 
+static pjsip_module mod_pjsua_im =
 {
     NULL, NULL,                         /* prev, next.          */
     { "mod-pjsua-im", 12 },             /* Name.                */
@@ -117,8 +117,8 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
      */
     ctype = (pjsip_ctype_hdr*)
             pjsip_msg_find_hdr(msg, PJSIP_H_CONTENT_TYPE, NULL);
-    if (msg->body == NULL || ctype == NULL || 
-        !acceptable_message(&ctype->media)) 
+    if (msg->body == NULL || ctype == NULL ||
+        !acceptable_message(&ctype->media))
     {
         /* Create Accept header. */
         if (p_accept_hdr)
@@ -169,7 +169,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
                   pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
                                      NULL);
     if (contact_hdr && contact_hdr->uri) {
-        contact.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, 
+        contact.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool,
                                             PJSIP_MAX_URL_SIZE);
         contact.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
                                        contact_hdr->uri, contact.ptr,
@@ -219,7 +219,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
         char buf[256];
         pjsip_media_type *m;
         pj_str_t text_body;
-        
+
         /* Save text body */
         if (body) {
             text_body.ptr = (char*)rdata->msg_info.msg->body->data;
@@ -244,7 +244,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
         }
 
         if (pjsua_var.ua_cfg.cb.on_pager) {
-            (*pjsua_var.ua_cfg.cb.on_pager)(call_id, from, to, &contact, 
+            (*pjsua_var.ua_cfg.cb.on_pager)(call_id, from, to, &contact,
                                             &mime_type, &text_body);
         }
 
@@ -298,14 +298,14 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
         pj_list_init(&hdr_list);
         pj_list_push_back(&hdr_list, accept_hdr);
 
-        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
-                                      PJSIP_SC_NOT_ACCEPTABLE_HERE, NULL, 
+        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
+                                      PJSIP_SC_NOT_ACCEPTABLE_HERE, NULL,
                                       &hdr_list, NULL);
         return PJ_TRUE;
     }
-    
+
     /* Respond with 200 first, so that remote doesn't retransmit in case
-     * the UI takes too long to process the message. 
+     * the UI takes too long to process the message.
      */
     pjsip_endpt_respond( pjsua_var.endpt, NULL, rdata, 200, NULL,
                          NULL, NULL, NULL);
@@ -315,7 +315,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
      * not available, then use From header.
      */
     from.ptr = (char*)pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
-    from.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, 
+    from.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
                                 rdata->msg_info.from->uri,
                                 from.ptr, PJSIP_MAX_URL_SIZE);
 
@@ -324,7 +324,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 
     /* Build the To text. */
     to.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
-    to.slen = pjsip_uri_print( PJSIP_URI_IN_FROMTO_HDR, 
+    to.slen = pjsip_uri_print( PJSIP_URI_IN_FROMTO_HDR,
                                rdata->msg_info.to->uri,
                                to.ptr, PJSIP_MAX_URL_SIZE);
     if (to.slen < 1)
@@ -354,7 +354,7 @@ static void im_callback(void *token, pjsip_event *e)
 
         /* Handle authentication challenges */
         if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
-            (tsx->status_code == 401 || tsx->status_code == 407)) 
+            (tsx->status_code == 401 || tsx->status_code == 407))
         {
             pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
             pjsip_tx_data *tdata;
@@ -365,12 +365,12 @@ static void im_callback(void *token, pjsip_event *e)
 
             /* Create temporary authentication session */
             pjsip_auth_clt_init(&auth,pjsua_var.endpt,rdata->tp_info.pool, 0);
-    
-            pjsip_auth_clt_set_credentials(&auth, 
+
+            pjsip_auth_clt_set_credentials(&auth,
                 pjsua_var.acc[im_data->acc_id].cred_cnt,
                 pjsua_var.acc[im_data->acc_id].cred);
 
-            pjsip_auth_clt_set_prefs(&auth, 
+            pjsip_auth_clt_set_prefs(&auth,
                                      &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
 
             status = pjsip_auth_clt_reinit_req(&auth, rdata, tsx->last_tx,
@@ -403,11 +403,11 @@ static void im_callback(void *token, pjsip_event *e)
         }
 
         if (tsx->status_code/100 == 2) {
-            PJ_LOG(4,(THIS_FILE, 
+            PJ_LOG(4,(THIS_FILE,
                       "Message \'%s\' delivered successfully",
                       im_data->body.ptr));
         } else {
-            PJ_LOG(3,(THIS_FILE, 
+            PJ_LOG(3,(THIS_FILE,
                       "Failed to deliver message \'%s\': %d/%.*s",
                       im_data->body.ptr,
                       tsx->status_code,
@@ -422,11 +422,11 @@ static void im_callback(void *token, pjsip_event *e)
                 pj_strset(&im_body, body->data, body->len);
             }
 
-            pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id, 
+            pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id,
                                                 &im_data->to,
                                                 &im_body,
                                                 im_data->user_data,
-                                                (pjsip_status_code) 
+                                                (pjsip_status_code)
                                                     tsx->status_code,
                                                 &tsx->status_text);
         }
@@ -445,11 +445,11 @@ static void im_callback(void *token, pjsip_event *e)
                 pj_strset(&im_body, body->data, body->len);
             }
 
-            pjsua_var.ua_cfg.cb.on_pager_status2(im_data->call_id, 
+            pjsua_var.ua_cfg.cb.on_pager_status2(im_data->call_id,
                                                  &im_data->to,
                                                  &im_body,
                                                  im_data->user_data,
-                                                 (pjsip_status_code) 
+                                                 (pjsip_status_code)
                                                     tsx->status_code,
                                                  &tsx->status_text,
                                                  tsx->last_tx,
@@ -462,7 +462,7 @@ static void im_callback(void *token, pjsip_event *e)
 }
 
 
-/* Outgoing typing indication callback. 
+/* Outgoing typing indication callback.
  * (used to reauthenticate request)
  */
 static void typing_callback(void *token, pjsip_event *e)
@@ -479,7 +479,7 @@ static void typing_callback(void *token, pjsip_event *e)
 
         /* Handle authentication challenges */
         if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
-            (tsx->status_code == 401 || tsx->status_code == 407)) 
+            (tsx->status_code == 401 || tsx->status_code == 407))
         {
             pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
             pjsip_tx_data *tdata;
@@ -490,12 +490,12 @@ static void typing_callback(void *token, pjsip_event *e)
 
             /* Create temporary authentication session */
             pjsip_auth_clt_init(&auth,pjsua_var.endpt,rdata->tp_info.pool, 0);
-    
-            pjsip_auth_clt_set_credentials(&auth, 
+
+            pjsip_auth_clt_set_credentials(&auth,
                 pjsua_var.acc[im_data->acc_id].cred_cnt,
                 pjsua_var.acc[im_data->acc_id].cred);
 
-            pjsip_auth_clt_set_prefs(&auth, 
+            pjsip_auth_clt_set_prefs(&auth,
                                      &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
 
             status = pjsip_auth_clt_reinit_req(&auth, rdata, tsx->last_tx,
@@ -529,7 +529,7 @@ static void typing_callback(void *token, pjsip_event *e)
  * Send instant messaging outside dialog, using the specified account for
  * route set and authentication.
  */
-PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id, 
+PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
                                    const pj_str_t *to,
                                    const pj_str_t *mime_type,
                                    const pj_str_t *content,
@@ -556,9 +556,9 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     acc = &pjsua_var.acc[acc_id];
 
     /* Create request. */
-    status = pjsip_endpt_create_request(pjsua_var.endpt, 
+    status = pjsip_endpt_create_request(pjsua_var.endpt,
                                         &pjsip_message_method,
-                                        (msg_data && msg_data->target_uri.slen? 
+                                        (msg_data && msg_data->target_uri.slen?
                                          &msg_data->target_uri: to),
                                         (msg_data && msg_data->local_uri.slen?
                                          &msg_data->local_uri: &acc->cfg.id),
@@ -579,7 +579,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     }
 
     /* Add accept header. */
-    pjsip_msg_add_hdr( tdata->msg, 
+    pjsip_msg_add_hdr( tdata->msg,
                        (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
 
     /* Create suitable Contact header unless a Contact header has been
@@ -602,7 +602,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     }
 
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
-        pjsip_generic_string_hdr_create(tdata->pool, 
+        pjsip_generic_string_hdr_create(tdata->pool,
                                         &STR_CONTACT, &contact));
     */
 
@@ -630,7 +630,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
 
         /* Add message body */
         tdata->msg->body = pjsip_msg_body_create( tdata->pool, &media_type.type,
-                                                  &media_type.subtype, 
+                                                  &media_type.subtype,
                                                   &im_data->body);
         if (tdata->msg->body == NULL) {
             pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
@@ -652,7 +652,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     }
 
     /* Send request (statefully) */
-    status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1, 
+    status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1,
                                        im_data, &im_callback);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send request", status);
@@ -666,8 +666,8 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
 /*
  * Send typing indication outside dialog.
  */
-PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id, 
-                                     const pj_str_t *to, 
+PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
+                                     const pj_str_t *to,
                                      pj_bool_t is_typing,
                                      const pjsua_msg_data *msg_data)
 {
@@ -702,7 +702,7 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     }
 
     /* Add accept header. */
-    pjsip_msg_add_hdr( tdata->msg, 
+    pjsip_msg_add_hdr( tdata->msg,
                        (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
 
 
@@ -726,7 +726,7 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     }
 
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
-        pjsip_generic_string_hdr_create(tdata->pool, 
+        pjsip_generic_string_hdr_create(tdata->pool,
                                         &STR_CONTACT, &contact));
     */
 
@@ -751,7 +751,7 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     im_data->acc_id = acc_id;
 
     /* Send request (statefully) */
-    status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1, 
+    status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1,
                                        im_data, &typing_callback);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send request", status);
@@ -769,7 +769,7 @@ pj_status_t pjsua_im_init(void)
 {
     const pj_str_t msg_tag = { "MESSAGE", 7 };
     const pj_str_t STR_MIME_TEXT_PLAIN = { "text/plain", 10 };
-    const pj_str_t STR_MIME_APP_ISCOMPOSING = 
+    const pj_str_t STR_MIME_APP_ISCOMPOSING =
                     { "application/im-iscomposing+xml", 30 };
     pj_status_t status;
 

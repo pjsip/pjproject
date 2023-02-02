@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIMPLE_PIDF_H__
 #define __PJSIP_SIMPLE_PIDF_H__
@@ -35,7 +35,7 @@ PJ_BEGIN_DECL
  * @brief Support for PIDF/Presence Information Data Format (RFC 3863)
  * @{
  *
- * This file provides tools for manipulating Presence Information Data 
+ * This file provides tools for manipulating Presence Information Data
  * Format (PIDF) as described in RFC 3863.
  */
 typedef struct pj_xml_node pjpidf_pres;
@@ -100,7 +100,7 @@ extern struct pjpidf_op_desc
 
 
 /******************************************************************************
- * Top level API for managing presence document. 
+ * Top level API for managing presence document.
  *****************************************************************************/
 PJ_DECL(pjpidf_pres*)    pjpidf_create(pj_pool_t *pool, const pj_str_t *entity);
 PJ_DECL(pjpidf_pres*)    pjpidf_parse(pj_pool_t *pool, char *text, int len);
@@ -112,17 +112,17 @@ PJ_DECL(int)             pjpidf_print(const pjpidf_pres* pres, char *buf, int le
  *****************************************************************************/
 PJ_DECL(void)            pjpidf_pres_construct(pj_pool_t *pool, pjpidf_pres *pres,
                                                const pj_str_t *entity);
-PJ_DECL(pjpidf_tuple*)   pjpidf_pres_add_tuple(pj_pool_t *pool, pjpidf_pres *pres, 
+PJ_DECL(pjpidf_tuple*)   pjpidf_pres_add_tuple(pj_pool_t *pool, pjpidf_pres *pres,
                                                const pj_str_t *id);
 PJ_DECL(pjpidf_tuple*)   pjpidf_pres_get_first_tuple(pjpidf_pres *pres);
-PJ_DECL(pjpidf_tuple*)   pjpidf_pres_get_next_tuple(pjpidf_pres *pres, 
+PJ_DECL(pjpidf_tuple*)   pjpidf_pres_get_next_tuple(pjpidf_pres *pres,
                                                     pjpidf_tuple *t);
-PJ_DECL(pjpidf_tuple*)   pjpidf_pres_find_tuple(pjpidf_pres *pres, 
+PJ_DECL(pjpidf_tuple*)   pjpidf_pres_find_tuple(pjpidf_pres *pres,
                                                 const pj_str_t *id);
-PJ_DECL(void)            pjpidf_pres_remove_tuple(pjpidf_pres *pres, 
+PJ_DECL(void)            pjpidf_pres_remove_tuple(pjpidf_pres *pres,
                                                   pjpidf_tuple*);
 
-PJ_DECL(pjpidf_note*)    pjpidf_pres_add_note(pj_pool_t *pool, pjpidf_pres *pres, 
+PJ_DECL(pjpidf_note*)    pjpidf_pres_add_note(pj_pool_t *pool, pjpidf_pres *pres,
                                               const pj_str_t *text);
 PJ_DECL(pjpidf_note*)    pjpidf_pres_get_first_note(pjpidf_pres *pres);
 PJ_DECL(pjpidf_note*)    pjpidf_pres_get_next_note(pjpidf_pres*, pjpidf_note*);
@@ -134,15 +134,15 @@ PJ_DECL(pjpidf_note*)    pjpidf_pres_get_next_note(pjpidf_pres*, pjpidf_note*);
 PJ_DECL(void)            pjpidf_tuple_construct(pj_pool_t *pool, pjpidf_tuple *t,
                                                 const pj_str_t *id);
 PJ_DECL(const pj_str_t*) pjpidf_tuple_get_id(const pjpidf_tuple *t );
-PJ_DECL(void)            pjpidf_tuple_set_id(pj_pool_t *pool, pjpidf_tuple *t, 
+PJ_DECL(void)            pjpidf_tuple_set_id(pj_pool_t *pool, pjpidf_tuple *t,
                                              const pj_str_t *id);
 
 PJ_DECL(pjpidf_status*)  pjpidf_tuple_get_status(pjpidf_tuple *t);
 
 PJ_DECL(const pj_str_t*) pjpidf_tuple_get_contact(const pjpidf_tuple *t);
-PJ_DECL(void)            pjpidf_tuple_set_contact(pj_pool_t *pool, pjpidf_tuple *t, 
+PJ_DECL(void)            pjpidf_tuple_set_contact(pj_pool_t *pool, pjpidf_tuple *t,
                                                   const pj_str_t *contact);
-PJ_DECL(void)            pjpidf_tuple_set_contact_prio(pj_pool_t *pool, pjpidf_tuple *t, 
+PJ_DECL(void)            pjpidf_tuple_set_contact_prio(pj_pool_t *pool, pjpidf_tuple *t,
                                                        const pj_str_t *prio);
 PJ_DECL(const pj_str_t*) pjpidf_tuple_get_contact_prio(const pjpidf_tuple *t);
 

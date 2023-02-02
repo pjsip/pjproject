@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,11 +14,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /*
- * - Many thanks for Zetron, Inc. and Phil Torre <ptorre@zetron.com> for 
+ * - Many thanks for Zetron, Inc. and Phil Torre <ptorre@zetron.com> for
  *   donating this file and the RTEMS port in general!
  */
 
@@ -113,7 +113,7 @@ void *POSIX_Init(void *argument)
     size_t              stack_size;
     int                 result;
     char                data[1000];
-    
+
 
     memset(data, 1, sizeof(data));
 
@@ -123,13 +123,13 @@ void *POSIX_Init(void *argument)
     if (RTEMS_SUCCESSFUL != rtems_clock_set(&fakeTime))
     {
         assert(0);
-    }   
+    }
 
     /* Bring up the network stack so we can run the socket tests. */
     initialize_network();
 
     /* Start a POSIX thread for pjlib_test_main(), since that's what it
-     * thinks it is running in. 
+     * thinks it is running in.
      */
 
     /* Initialize attribute */
@@ -164,10 +164,10 @@ void *POSIX_Init(void *argument)
     /* Create the thread for application */
     result = pthread_create(&theThread, &threadAttr, &pjlib_test_main, NULL);
     if (result != 0) {
-        my_perror(PJ_STATUS_FROM_OS(result), 
+        my_perror(PJ_STATUS_FROM_OS(result),
                   "Error creating pjlib_test_main thread");
         assert(!"Error creating main thread");
-    } 
+    }
 
     return NULL;
 }
@@ -186,7 +186,7 @@ pjlib_test_main(void* unused)
      * select() tests will fail. */
     struct sched_param schedParam;
     int schedPolicy;
-  
+
     printf("pjlib_test_main thread started..\n");
 
     TEST( pthread_getschedparam(pthread_self(), &schedPolicy, &schedParam) );
@@ -212,7 +212,7 @@ pjlib_test_main(void* unused)
 #  include <arpa/inet.h>
 #  include <unistd.h>
 
-/* 
+/*
  * Send UDP packet to some host. We can then use Ethereal to sniff the packet
  * to see if this target really transmits UDP packet.
  */
@@ -281,7 +281,7 @@ end:
     while(1) sleep(1);
 }
 
-/* 
+/*
  * Initialize the network stack and Ethernet driver, using the configuration
  * in rtems-network-config.h
  */
@@ -301,7 +301,7 @@ initialize_network()
     fd = open("/etc/hosts", O_RDWR | O_CREAT, 0744);
     result = write(fd, "127.0.0.1       localhost\n", 41);
     result = write(fd, ip_address_string, strlen(ip_address_string));
-    result = write(fd, "        pjsip-test\n", 32); 
+    result = write(fd, "        pjsip-test\n", 32);
     result = close(fd);
 
     netdriver_config.ip_address = ip_address_string;
@@ -311,7 +311,7 @@ initialize_network()
     if (0 != rtems_bsdnet_initialize_network())
         PJ_LOG(3,(THIS_FILE, "Error: Unable to initialize network stack!"));
     else
-        PJ_LOG(3,(THIS_FILE, "IP addr=%s/%s, gw=%s", 
+        PJ_LOG(3,(THIS_FILE, "IP addr=%s/%s, gw=%s",
                               ip_address_string,
                               netmask_string,
                               gateway_string));

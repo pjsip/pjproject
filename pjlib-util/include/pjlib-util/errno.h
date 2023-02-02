@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_ERRNO_H__
 #define __PJLIB_UTIL_ERRNO_H__
@@ -167,7 +167,7 @@
 #define PJLIB_UTIL_EDNSINNSADDR     (PJLIB_UTIL_ERRNO_START+44) /* 320044 */
 /**
  * @hideinitializer
- * No nameserver is in DNS resolver. No nameserver is configured in the 
+ * No nameserver is in DNS resolver. No nameserver is configured in the
  * resolver.
  */
 #define PJLIB_UTIL_EDNSNONS         (PJLIB_UTIL_ERRNO_START+45) /* 320045 */
@@ -220,14 +220,14 @@
 /**
  * @hideinitializer
  * Name Error - Meaningful only for responses from an authoritative name
- * server, this code signifies that the domain name referenced in the query 
+ * server, this code signifies that the domain name referenced in the query
  * does not exist.
  * This corresponds to DNS RCODE 3.
  */
 #define PJLIB_UTIL_EDNS_NXDOMAIN    PJ_STATUS_FROM_DNS_RCODE(3) /* 320053 */
 /**
  * @hideinitializer
- * Not Implemented - The name server does not support the requested kind of 
+ * Not Implemented - The name server does not support the requested kind of
  * query.
  * This corresponds to DNS RCODE 4.
  */
@@ -438,7 +438,7 @@
 #define PJ_CLI_EBADXML              (PJLIB_UTIL_ERRNO_START+207)/* 320207 */
 /**
  * @hideinitializer
- * CLI command entered by user match with more than one command/argument 
+ * CLI command entered by user match with more than one command/argument
  * specification.
  */
 #define PJ_CLI_EAMBIGUOUS           (PJLIB_UTIL_ERRNO_START+208)/* 320208 */

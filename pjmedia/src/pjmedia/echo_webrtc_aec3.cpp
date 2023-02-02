@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011-2021 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia/echo.h>
@@ -73,27 +73,27 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
                                        void **p_echo )
 {
     webrtc_ec *echo;
-   
+
     *p_echo = NULL;
-    
+
     echo = PJ_POOL_ZALLOC_T(pool, webrtc_ec);
     PJ_ASSERT_RETURN(echo != NULL, PJ_ENOMEM);
-    
+
     if (clock_rate != 16000 && clock_rate != 32000 && clock_rate != 48000) {
         PJ_LOG(3, (THIS_FILE, "Unsupported clock rate for WebRTC AEC3"));
         return PJ_ENOTSUP;
     }
-    
-    echo->options = options;    
+
+    echo->options = options;
     echo->channel_count = channel_count;
     echo->samples_per_frame = samples_per_frame;
     echo->clock_rate = clock_rate;
     echo->frame_length = clock_rate/100;
     echo->num_bands = clock_rate/16000;
-    
+
     echo->aec = new EchoCanceller3(EchoCanceller3Config(), clock_rate,
                                    channel_count, channel_count);
-    
+
     echo->cap_buf = new AudioBuffer(clock_rate, channel_count, clock_rate,
                                     channel_count, clock_rate, channel_count);
     echo->rend_buf = new AudioBuffer(clock_rate, channel_count, clock_rate,
@@ -109,7 +109,7 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
     if (options & PJMEDIA_ECHO_USE_GAIN_CONTROLLER) {
         echo->agc = new GainController2();
         echo->agc->Initialize(clock_rate);
-        
+
         AudioProcessing::Config::GainController2 cfg;
         cfg.adaptive_digital.enabled = true;
         if (GainController2::Validate(cfg))
@@ -129,7 +129,7 @@ PJ_DEF(pj_status_t) webrtc_aec3_destroy(void *state )
 {
     webrtc_ec *echo = (webrtc_ec*) state;
     PJ_ASSERT_RETURN(echo, PJ_EINVAL);
-    
+
     if (echo->aec) {
         delete echo->aec;
         echo->aec = NULL;
@@ -142,11 +142,11 @@ PJ_DEF(pj_status_t) webrtc_aec3_destroy(void *state )
         delete echo->agc;
         echo->agc = NULL;
     }
-    
+
     if (echo->cap_buf) {
         delete echo->cap_buf;
         echo->cap_buf = NULL;
-    }    
+    }
     if (echo->rend_buf) {
         delete echo->rend_buf;
         echo->rend_buf = NULL;
@@ -162,9 +162,9 @@ PJ_DEF(pj_status_t) webrtc_aec3_destroy(void *state )
 PJ_DEF(void) webrtc_aec3_reset(void *state )
 {
     webrtc_ec *echo = (webrtc_ec*) state;
-    
+
     pj_assert(echo != NULL);
-    
+
     PJ_LOG(4, (THIS_FILE, "WebRTC AEC3 reset no-op"));
 }
 
@@ -202,12 +202,12 @@ PJ_DEF(pj_status_t) webrtc_aec3_cancel_echo(void *state,
 
         echo->aec->AnalyzeCapture(echo->cap_buf);
         echo->aec->AnalyzeRender(echo->rend_buf);
-        
+
         if (echo->ns) {
             echo->ns->Analyze(*echo->cap_buf);
             echo->ns->Process(echo->cap_buf);
         }
-        
+
         echo->aec->ProcessCapture(echo->cap_buf, false);
 
         if (echo->agc) {
@@ -237,7 +237,7 @@ PJ_DEF(pj_status_t) webrtc_aec3_get_stat(void *state,
     unsigned i = 0;
 
     if (!echo || !echo->aec)
-        return PJ_EINVAL;    
+        return PJ_EINVAL;
 
     /* We cannot perform get metrics here since it may cause a race
      * condition with echo cancellation process and crash with:

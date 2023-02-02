@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import sys
 if sys.version_info[0] >= 3: # Python 3
@@ -71,7 +71,7 @@ class AccConfig:
 		for buddy in self.buddyConfigs:
 			buddy_node.writeObject(buddy)
 
-	
+
 # Master settings
 class AppConfig:
 	def __init__(self):
@@ -80,45 +80,45 @@ class AppConfig:
 		self.tcp = SipTransportConfig(pj.PJSIP_TRANSPORT_TCP, True)
 		self.tls = SipTransportConfig(pj.PJSIP_TRANSPORT_TLS, False)
 		self.accounts = []		# Array of AccConfig
-		
+
 	def loadFile(self, file):
 		json = pj.JsonDocument()
 		json.loadFile(file)
 		root = json.getRootContainer()
 		self.epConfig = pj.EpConfig()
 		self.epConfig.readObject(root)
-		
+
 		tp_node = root.readArray("transports")
 		self.udp.readObject(tp_node)
 		self.tcp.readObject(tp_node)
 		if tp_node.hasUnread():
 			self.tls.readObject(tp_node)
-			
+
 		acc_node = root.readArray("accounts")
 		while acc_node.hasUnread():
 			acfg = AccConfig()
 			acfg.readObject(acc_node)
 			self.accounts.append(acfg)
-			
+
 	def saveFile(self,file):
 		json = pj.JsonDocument()
-		
+
 		# Write endpoint config
 		json.writeObject(self.epConfig)
-		
+
 		# Write transport config
 		tp_node = json.writeNewArray("transports")
 		self.udp.writeObject(tp_node)
 		self.tcp.writeObject(tp_node)
 		self.tls.writeObject(tp_node)
-		
+
 		# Write account configs
 		node = json.writeNewArray("accounts")
 		for acc in self.accounts:
 			acc.writeObject(node)
-				
+
 		json.saveFile(file)
-		
+
 
 # Settings dialog
 class Dialog(tk.Toplevel):
@@ -130,22 +130,22 @@ class Dialog(tk.Toplevel):
 		self.transient(parent)
 		self.parent = parent
 		self.title('Settings')
-		
+
 		self.frm = ttk.Frame(self)
 		self.frm.pack(expand='yes', fill='both')
-		
+
 		self.isOk = False
 		self.cfg = cfg
-		
+
 		self.createWidgets()
-	
+
 	def doModal(self):
 		if self.parent:
 			self.parent.wait_window(self)
 		else:
 			self.wait_window(self)
 		return self.isOk
-		
+
 	def createWidgets(self):
 		# The notebook
 		self.frm.rowconfigure(0, weight=1)
@@ -154,13 +154,13 @@ class Dialog(tk.Toplevel):
 		self.frm.columnconfigure(1, weight=1)
 		self.wTab = ttk.Notebook(self.frm)
 		self.wTab.grid(column=0, row=0, columnspan=2, padx=10, pady=10, ipadx=20, ipady=20, sticky=tk.N+tk.S+tk.W+tk.E)
-		
+
 		# Main buttons
 		btnOk = ttk.Button(self.frm, text='Ok', command=self.onOk)
 		btnOk.grid(column=0, row=1, sticky=tk.E, padx=20, pady=10)
 		btnCancel = ttk.Button(self.frm, text='Cancel', command=self.onCancel)
 		btnCancel.grid(column=1, row=1, sticky=tk.W, padx=20, pady=10)
-		
+
 		# Tabs
 		self.createBasicTab()
 		self.createNetworkTab()
@@ -170,7 +170,7 @@ class Dialog(tk.Toplevel):
 		# Prepare the variables to set/receive values from GUI
 		self.cfgLogFile = tk.StringVar(value=self.cfg.epConfig.logConfig.filename)
 		self.cfgLogAppend = tk.BooleanVar(value=True if (self.cfg.epConfig.logConfig.fileFlags & pj.PJ_O_APPEND) else False)
-		
+
 		# Build the tab page
 		frm = ttk.Frame(self.frm)
 		frm.columnconfigure(0, weight=1)
@@ -188,7 +188,7 @@ class Dialog(tk.Toplevel):
 		ttk.Checkbutton(frm, text='Append log file', variable=self.cfgLogAppend).grid(row=row, column=1, sticky=tk.W, padx=6, pady=2)
 
 		self.wTab.add(frm, text='Basic')
-		
+
 	def createNetworkTab(self):
 		self.cfgNameserver = tk.StringVar()
 		if len(self.cfg.epConfig.uaConfig.nameserver):
@@ -197,19 +197,19 @@ class Dialog(tk.Toplevel):
 		if len(self.cfg.epConfig.uaConfig.stunServer):
 			self.cfgStunServer.set(self.cfg.epConfig.uaConfig.stunServer[0])
 		self.cfgStunIgnoreError = tk.BooleanVar(value=self.cfg.epConfig.uaConfig.stunIgnoreFailure)
-		
+
 		self.cfgUdpEnabled = tk.BooleanVar(value=self.cfg.udp.enabled)
 		self.cfgUdpPort = tk.IntVar(value=self.cfg.udp.config.port)
 		self.cfgTcpEnabled = tk.BooleanVar(value=self.cfg.tcp.enabled)
 		self.cfgTcpPort = tk.IntVar(value=self.cfg.tcp.config.port)
 		self.cfgTlsEnabled = tk.BooleanVar(value=self.cfg.tls.enabled)
 		self.cfgTlsPort = tk.IntVar(value=self.cfg.tls.config.port)
-		
+
 		self.cfgTlsCaFile = tk.StringVar(value=self.cfg.tls.config.tlsConfig.CaListFile)
 		self.cfgTlsCertFile = tk.StringVar(value=self.cfg.tls.config.tlsConfig.certFile)
 		self.cfgTlsVerifyClient = tk.BooleanVar(value=self.cfg.tls.config.tlsConfig.verifyClient)
 		self.cfgTlsVerifyServer = tk.BooleanVar(value=self.cfg.tls.config.tlsConfig.verifyServer)
-		
+
 		# Build the tab page
 		frm = ttk.Frame(self.frm)
 		frm.columnconfigure(0, weight=1)
@@ -255,7 +255,7 @@ class Dialog(tk.Toplevel):
 		ttk.Entry(frm, textvariable=self.cfgStunServer, width=32).grid(row=row, column=1, sticky=tk.W, padx=6)
 		row += 1
 		ttk.Checkbutton(frm, text='Ignore STUN failure at startup', variable=self.cfgStunIgnoreError).grid(row=row, column=1, sticky=tk.W, padx=6, pady=2)
-		
+
 		self.wTab.add(frm, text='Network')
 
 	def createMediaTab(self):
@@ -266,7 +266,7 @@ class Dialog(tk.Toplevel):
 		self.cfgCodecPtime = tk.IntVar(value=self.cfg.epConfig.medConfig.ptime)
 		self.cfgVad = tk.BooleanVar(value=not self.cfg.epConfig.medConfig.noVad)
 		self.cfgEcTailLen = tk.IntVar(value=self.cfg.epConfig.medConfig.ecTailLen)
-		
+
 		# Build the tab page
 		frm = ttk.Frame(self.frm)
 		frm.columnconfigure(0, weight=1)
@@ -297,7 +297,7 @@ class Dialog(tk.Toplevel):
 		ttk.Label(frm, text='Echo canceller tail length:').grid(row=row, column=0, sticky=tk.E, pady=2, padx=8)
 		tk.Spinbox(frm, from_=0, to=400, increment=10, textvariable=self.cfgEcTailLen, width=3).grid(row=row, column=1, sticky=tk.W, padx=6)
 		ttk.Label(frm, text='(ms, 0 to disable)').grid(row=row, column=1, sticky=tk.E, pady=6, padx=6)
-		
+
 		self.wTab.add(frm, text='Media')
 
 	def onOk(self):
@@ -306,29 +306,29 @@ class Dialog(tk.Toplevel):
 		if errors:
 			msgbox.showerror("Error detected:", errors)
 			return
-		
+
 		# Basic settings
 		self.cfg.epConfig.logConfig.filename = self.cfgLogFile.get()
 		flags = pj.PJ_O_APPEND if self.cfgLogAppend.get() else 0
-		self.cfg.epConfig.logConfig.fileFlags = self.cfg.epConfig.logConfig.fileFlags | flags 
-		
+		self.cfg.epConfig.logConfig.fileFlags = self.cfg.epConfig.logConfig.fileFlags | flags
+
 		# Network settings
 		self.cfg.epConfig.uaConfig.nameserver.clear()
-		if len(self.cfgNameserver.get()): 
+		if len(self.cfgNameserver.get()):
 			self.cfg.epConfig.uaConfig.nameserver.append(self.cfgNameserver.get())
 		self.cfg.epConfig.uaConfig.stunServer.clear()
 		if len(self.cfgStunServer.get()):
 			self.cfg.epConfig.uaConfig.stunServer.append(self.cfgStunServer.get())
-			
+
 		self.cfg.epConfig.uaConfig.stunIgnoreFailure = self.cfgStunIgnoreError.get()
-		
+
 		self.cfg.udp.enabled 	= self.cfgUdpEnabled.get()
 		self.cfg.udp.config.port = self.cfgUdpPort.get()
 		self.cfg.tcp.enabled 	= self.cfgTcpEnabled.get()
 		self.cfg.tcp.config.port = self.cfgTcpPort.get()
 		self.cfg.tls.enabled 	= self.cfgTlsEnabled.get()
 		self.cfg.tls.config.port = self.cfgTlsPort.get()
-		
+
 		self.cfg.tls.config.tlsConfig.CaListFile = self.cfgTlsCaFile.get()
 		self.cfg.tls.config.tlsConfig.certFile   = self.cfgTlsCertFile.get()
 		self.cfg.tls.config.tlsConfig.verifyClient = self.cfgTlsVerifyClient.get()
@@ -342,10 +342,10 @@ class Dialog(tk.Toplevel):
 		self.cfg.epConfig.medConfig.ptime	= self.cfgCodecPtime.get()
 		self.cfg.epConfig.medConfig.noVad	= not self.cfgVad.get()
 		self.cfg.epConfig.medConfig.ecTailLen	= self.cfgEcTailLen.get()
-		
+
 		self.isOk = True
 		self.destroy()
-		
+
 	def onCancel(self):
 		self.destroy()
 
@@ -358,4 +358,3 @@ if __name__ == '__main__':
 	dlg = Dialog(None, acfg)
 	if dlg.doModal():
 		acfg.saveFile('pygui.js')
-		

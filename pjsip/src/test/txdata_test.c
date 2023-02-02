@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "test.h"
@@ -35,7 +35,7 @@
 
 
 /*
- * This tests various core message creation functions. 
+ * This tests various core message creation functions.
  */
 static int core_txdata_test(void)
 {
@@ -112,7 +112,7 @@ static int core_txdata_test(void)
         app_perror("   error: create second request failed", status);
         return -30;
     }
-    
+
     /* Buffer must be invalid. */
     if (pjsip_tx_data_is_valid(invite2) != 0) {
         PJ_LOG(3,(THIS_FILE, "   error: buffer must be invalid"));
@@ -158,7 +158,7 @@ static int core_txdata_test(void)
         return -49;
     }
 
-    /* Initialize dummy rdata (to simulate receiving a request) 
+    /* Initialize dummy rdata (to simulate receiving a request)
      * We should never do this in real application, as there are many
      * many more fields need to be initialized!!
      */
@@ -176,13 +176,13 @@ static int core_txdata_test(void)
     dummy_rdata.msg_info.via = HFIND(invite->msg, via, VIA);
 
     /* Create a response message for the request. */
-    status = pjsip_endpt_create_response( endpt, &dummy_rdata, 301, NULL, 
+    status = pjsip_endpt_create_response( endpt, &dummy_rdata, 301, NULL,
                                           &response);
     if (status != PJ_SUCCESS) {
         app_perror("   error: unable to create response", status);
         return -50;
     }
-    
+
     /* Buffer must be invalid. */
     if (pjsip_tx_data_is_valid(response) != 0) {
         PJ_LOG(3,(THIS_FILE, "   error: buffer must be invalid"));
@@ -333,7 +333,7 @@ static int core_txdata_test(void)
 
 
 
-/* 
+/*
  * This test demonstrate the bug as reported in:
  *  http://bugzilla.pjproject.net/show_bug.cgi?id=49
  */
@@ -387,7 +387,7 @@ static int gcc_test()
         e = err_list.next;
         while (e != &err_list) {
             PJ_LOG(3,(THIS_FILE, "     %s in line %d col %d hname=%.*s",
-                                 pj_exception_id_name(e->except_code), 
+                                 pj_exception_id_name(e->except_code),
                                  e->line, e->col+1,
                                  (int)e->hname.slen,
                                  e->hname.ptr));
@@ -483,7 +483,7 @@ static int txdata_test_uri_params(void)
         e = err_list.next;
         while (e != &err_list) {
             PJ_LOG(3,(THIS_FILE, "     %s in line %d col %d hname=%.*s",
-                                 pj_exception_id_name(e->except_code), 
+                                 pj_exception_id_name(e->except_code),
                                  e->line, e->col+1,
                                  (int)e->hname.slen,
                                  e->hname.ptr));
@@ -603,7 +603,7 @@ static int txdata_test_uri_params(void)
 
 
     /* Check that headers are present in the request. */
-    hdr = (pjsip_generic_string_hdr*) 
+    hdr = (pjsip_generic_string_hdr*)
         pjsip_msg_find_hdr_by_name(msg, &hname, NULL);
     if (hdr == NULL || pj_strcmp2(&hdr->hvalue, "Header 1")!=0) {
         PJ_LOG(3,(THIS_FILE, "   error: header X-Hdr-1 not created"));
@@ -611,7 +611,7 @@ static int txdata_test_uri_params(void)
         return -300;
     }
 
-    hdr = (pjsip_generic_string_hdr*) 
+    hdr = (pjsip_generic_string_hdr*)
         pjsip_msg_find_hdr_by_name(msg, &hemptyname, NULL);
     if (hdr == NULL || pj_strcmp2(&param->value, "")!=0) {
         PJ_LOG(3,(THIS_FILE, "   error: header X-Empty-Hdr not created"));
@@ -661,7 +661,7 @@ static int create_request_bench(pj_timestamp *p_elapsed)
         pj_get_timestamp(&t2);
         pj_sub_timestamp(&t2, &t1);
         pj_add_timestamp(&elapsed, &t2);
-        
+
         for (j=0; j<COUNT; ++j)
             pjsip_tx_data_dec_ref(tdata[j]);
     }
@@ -719,7 +719,7 @@ static int create_response_bench(pj_timestamp *p_elapsed)
     pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*) pjsip_hdr_clone(request->pool, via));
     pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*) pjsip_hdr_clone(request->pool, via));
     pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*)via);
-    
+
 
     /* Create "dummy" rdata from the tdata */
     pj_bzero(&rdata, sizeof(pjsip_rx_data));
@@ -752,7 +752,7 @@ static int create_response_bench(pj_timestamp *p_elapsed)
         pj_get_timestamp(&t2);
         pj_sub_timestamp(&t2, &t1);
         pj_add_timestamp(&elapsed, &t2);
-        
+
         for (j=0; j<COUNT; ++j)
             pjsip_tx_data_dec_ref(tdata[j]);
     }
@@ -817,7 +817,7 @@ int txdata_test(void)
 
     PJ_LOG(3,(THIS_FILE, "    Requests created at %d requests/sec", msgs));
 
-    report_ival("create-request-per-sec", 
+    report_ival("create-request-per-sec",
                 msgs, "msg/sec",
                 "Number of typical request messages that can be created "
                 "per second with <tt>pjsip_endpt_create_request()</tt>");
@@ -844,7 +844,7 @@ int txdata_test(void)
 
     PJ_LOG(3,(THIS_FILE, "    Responses created at %d responses/sec", msgs));
 
-    report_ival("create-response-per-sec", 
+    report_ival("create-response-per-sec",
                 msgs, "msg/sec",
                 "Number of typical response messages that can be created "
                 "per second with <tt>pjsip_endpt_create_response()</tt>");
@@ -852,4 +852,4 @@ int txdata_test(void)
 
     return 0;
 }
- 
+

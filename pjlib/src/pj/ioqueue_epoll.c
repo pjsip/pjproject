@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /*
  * ioqueue_epoll.c
@@ -103,7 +103,7 @@ struct pj_ioqueue_t
 
     unsigned            max, count;
     //pj_ioqueue_key_t  hlist;
-    pj_ioqueue_key_t    active_list;    
+    pj_ioqueue_key_t    active_list;
     int                 epfd;
     //struct epoll_event *events;
     //struct queue       *queue;
@@ -259,7 +259,7 @@ PJ_DEF(const char*) pj_ioqueue_name(void)
  *
  * Create epoll ioqueue.
  */
-PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
                                        pj_size_t max_fd,
                                        pj_ioqueue_t **p_ioqueue)
 {
@@ -285,7 +285,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     int i;
 
     /* Check that arguments are valid. */
-    PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && 
+    PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL &&
                      max_fd > 0, PJ_EINVAL);
 
     /* Check that size of pj_ioqueue_op_key_t is sufficient */
@@ -331,7 +331,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
      * all keys and put them in the free list.
      */
 
-    /* Mutex to protect key's reference counter 
+    /* Mutex to protect key's reference counter
      * We don't want to use key's mutex or ioqueue's mutex because
      * that would create deadlock situation in some cases.
      */
@@ -380,7 +380,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
         ioqueue_destroy(ioqueue);
         return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
-    
+
     /*ioqueue->events = pj_pool_calloc(pool, max_fd, sizeof(struct epoll_event));
     PJ_ASSERT_RETURN(ioqueue->events != NULL, PJ_ENOMEM);
 
@@ -453,7 +453,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     pj_uint32_t value;
     int rc;
     pj_status_t status = PJ_SUCCESS;
-    
+
     PJ_ASSERT_RETURN(pool && ioqueue && sock != PJ_INVALID_SOCKET &&
                      cb && p_key, PJ_EINVAL);
 
@@ -468,14 +468,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     /* Set socket to nonblocking. */
     value = 1;
     if ((rc=os_ioctl(sock, FIONBIO, (ioctl_val_type)&value))) {
-        TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: ioctl rc=%d", 
+        TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: ioctl rc=%d",
                 rc));
         status = pj_get_netos_error();
         goto on_return;
     }
 
     /* If safe unregistration (PJ_IOQUEUE_HAS_SAFE_UNREG) is used, get
-     * the key from the free list. Otherwise allocate a new one. 
+     * the key from the free list. Otherwise allocate a new one.
      */
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 
@@ -524,7 +524,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
         PJ_PERROR(1,(THIS_FILE, status, "epol_ctl(ADD) error"));
         goto on_return;
     }
-    
+
     /* Register */
     pj_list_insert_before(&ioqueue->active_list, key);
     ++ioqueue->count;
@@ -538,7 +538,7 @@ on_return:
     }
     *p_key = key;
     pj_lock_release(ioqueue->lock);
-    
+
     return status;
 }
 
@@ -597,7 +597,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 {
     pj_ioqueue_t *ioqueue;
     int status;
-    
+
     PJ_ASSERT_RETURN(key != NULL, PJ_EINVAL);
 
     ioqueue = key->ioqueue;
@@ -738,7 +738,7 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
 }
 
 static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
-                                     pj_ioqueue_key_t *key, 
+                                     pj_ioqueue_key_t *key,
                                      unsigned event_types)
 {
     pj_uint32_t events = key->ev.events;
@@ -832,14 +832,14 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     struct epoll_event events[MAX_EVENTS];
     struct queue queue[MAX_EVENTS];
     pj_timestamp t1, t2;
-    
+
     PJ_CHECK_STACK();
 
     msec = timeout ? PJ_TIME_VAL_MSEC(*timeout) : 9000;
 
     TRACE_((THIS_FILE, "start os_epoll_wait, msec=%d", msec));
     pj_get_timestamp(&t1);
- 
+
     //count = os_epoll_wait( ioqueue->epfd, events, ioqueue->max, msec);
     count = os_epoll_wait( ioqueue->epfd, events, MAX_EVENTS, msec);
     if (count == 0) {
@@ -877,7 +877,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         /*
          * Check readability.
          */
-        if ((events[i].events & EPOLLIN) && 
+        if ((events[i].events & EPOLLIN) &&
             (key_has_pending_read(h) || key_has_pending_accept(h)) && !IS_CLOSING(h) ) {
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG

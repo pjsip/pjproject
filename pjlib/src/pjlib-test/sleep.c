@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -57,9 +57,9 @@ static int simple_sleep_test(void)
     enum { COUNT = 10 };
     int i;
     pj_status_t rc;
-    
+
     PJ_LOG(3,(THIS_FILE, "..will write messages every 1 second:"));
-    
+
     for (i=0; i<COUNT; ++i) {
         pj_time_val tv;
         pj_parsed_time pt;
@@ -78,7 +78,7 @@ static int simple_sleep_test(void)
 
         pj_time_decode(&tv, &pt);
 
-        PJ_LOG(3,(THIS_FILE, 
+        PJ_LOG(3,(THIS_FILE,
                   "...%04d-%02d-%02d %02d:%02d:%02d.%03d",
                   pt.year, pt.mon, pt.day,
                   pt.hour, pt.min, pt.sec, pt.msec));
@@ -129,7 +129,7 @@ static int sleep_duration_test(void)
         if (msec < duration[i] * (100-MIS)/100 ||
             msec > duration[i] * (100+MIS)/100)
         {
-            PJ_LOG(3,(THIS_FILE, 
+            PJ_LOG(3,(THIS_FILE,
                       "...error: slept for %d ms instead of %d ms "
                       "(outside %d%% err window)",
                       msec, duration[i], MIS));
@@ -182,12 +182,12 @@ static int sleep_duration_test(void)
         if (msec < duration[i] * (100-MIS)/100 ||
             msec > duration[i] * (100+MIS)/100)
         {
-            PJ_LOG(3,(THIS_FILE, 
+            PJ_LOG(3,(THIS_FILE,
                       "...error: slept for %d ms instead of %d ms "
                       "(outside %d%% err window)",
                       msec, duration[i], MIS));
             PJ_TIME_VAL_SUB(t2, t1);
-            PJ_LOG(3,(THIS_FILE, 
+            PJ_LOG(3,(THIS_FILE,
                       "...info: gettimeofday() reported duration is "
                       "%d msec",
                       PJ_TIME_VAL_MSEC(t2)));
@@ -217,7 +217,7 @@ int sleep_test()
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_sleep_test;
 #endif  /* INCLUDE_SLEEP_TEST */

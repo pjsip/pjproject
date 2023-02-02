@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /*
@@ -24,10 +24,10 @@
 
 /*
  * Network configuration
- * 
+ *
  ************************************************************
  * EDIT THIS FILE TO REFLECT YOUR NETWORK CONFIGURATION     *
- * BEFORE RUNNING ANY RTEMS PROGRAMS WHICH USE THE NETWORK! * 
+ * BEFORE RUNNING ANY RTEMS PROGRAMS WHICH USE THE NETWORK! *
  ************************************************************
  *
  */
@@ -73,8 +73,8 @@
 static char ethernet_address[6] = { 0x00, 0x80, 0x7F, 0x22, 0x61, 0x77 };
 #endif
 
-#define RTEMS_USE_LOOPBACK 
-#ifdef RTEMS_USE_LOOPBACK 
+#define RTEMS_USE_LOOPBACK
+#ifdef RTEMS_USE_LOOPBACK
 /*
  * Loopback interface
  */
@@ -95,7 +95,7 @@ static struct rtems_bsdnet_ifconfig netdriver_config = {
         RTEMS_BSP_NETWORK_DRIVER_NAME,          /* name */
         RTEMS_BSP_NETWORK_DRIVER_ATTACH,        /* attach function */
 
-#ifdef RTEMS_USE_LOOPBACK 
+#ifdef RTEMS_USE_LOOPBACK
         &loopback_config,               /* link to next interface */
 #else
         NULL,                           /* No more interfaces */

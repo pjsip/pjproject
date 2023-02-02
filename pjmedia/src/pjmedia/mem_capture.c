@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/mem_port.h>
 #include <pj/assert.h>
@@ -47,9 +47,9 @@ struct mem_rec
 };
 
 
-static pj_status_t rec_put_frame(pjmedia_port *this_port, 
+static pj_status_t rec_put_frame(pjmedia_port *this_port,
                                  pjmedia_frame *frame);
-static pj_status_t rec_get_frame(pjmedia_port *this_port, 
+static pj_status_t rec_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
 static pj_status_t rec_on_destroy(pjmedia_port *this_port);
 
@@ -81,7 +81,7 @@ PJ_DEF(pj_status_t) pjmedia_mem_capture_create( pj_pool_t *pool,
 
     /* Create the rec */
     pjmedia_port_info_init(&rec->base.info, &name, SIGNATURE,
-                           clock_rate, channel_count, bits_per_sample, 
+                           clock_rate, channel_count, bits_per_sample,
                            samples_per_frame);
 
 
@@ -149,7 +149,7 @@ PJ_DEF(pj_status_t) pjmedia_mem_capture_set_eof_cb2( pjmedia_port *port,
     rec->cb2 = cb;
 
     return PJ_SUCCESS;
-} 
+}
 
 
 /* Get current buffer size */
@@ -177,12 +177,12 @@ static pj_status_t rec_on_event(pjmedia_event *event,
         if (rec->cb2)
             (*rec->cb2)(&rec->base, rec->user_data);
     }
-    
+
     return PJ_SUCCESS;
 }
 
 
-static pj_status_t rec_put_frame( pjmedia_port *this_port, 
+static pj_status_t rec_put_frame( pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     struct mem_rec *rec;
@@ -197,28 +197,28 @@ static pj_status_t rec_put_frame( pjmedia_port *this_port,
     if (rec->eof) {
         return PJ_EEOF;
     }
- 
+
     size_written = 0;
     endpos = rec->buffer + rec->buf_size;
 
     while (size_written < frame->size) {
         pj_size_t max;
-        
+
         max = frame->size - size_written;
         if ((endpos - rec->write_pos) < (int)max)
             max = endpos - rec->write_pos;
-        
+
         pj_memcpy(rec->write_pos, ((char*)frame->buf)+size_written, max);
         size_written += max;
         rec->write_pos += max;
-        
+
         pj_assert(rec->write_pos <= endpos);
-        
+
         if (rec->write_pos == endpos) {
-            
+
             /* Rewind */
             rec->write_pos = rec->buffer;
-            
+
             /* Call callback, if any */
             if (rec->cb2) {
                 if (!rec->subscribed) {
@@ -243,7 +243,7 @@ static pj_status_t rec_put_frame( pjmedia_port *this_port,
 
             } else if (rec->cb) {
                 pj_status_t status;
-                
+
                 rec->eof = PJ_TRUE;
                 status = (*rec->cb)(this_port, rec->user_data);
                 if (status != PJ_SUCCESS) {
@@ -254,14 +254,14 @@ static pj_status_t rec_put_frame( pjmedia_port *this_port,
                 }
                 rec->eof = PJ_FALSE;
             }
-        } 
+        }
     }
 
     return PJ_SUCCESS;
 }
 
 
-static pj_status_t rec_get_frame( pjmedia_port *this_port, 
+static pj_status_t rec_get_frame( pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE,

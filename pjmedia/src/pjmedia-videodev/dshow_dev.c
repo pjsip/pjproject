@@ -215,10 +215,10 @@ pjmedia_vid_dev_factory* pjmedia_dshow_factory(pj_pool_factory *pf)
 static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 {
     HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    if (hr == RPC_E_CHANGED_MODE) {     
-        /* When using apartment mode, Dshow object would not be accessible from 
+    if (hr == RPC_E_CHANGED_MODE) {
+        /* When using apartment mode, Dshow object would not be accessible from
          * other thread. Take this into consideration when implementing native
-         * renderer using Dshow. 
+         * renderer using Dshow.
          */
         hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
         if (FAILED(hr)) {
@@ -332,12 +332,12 @@ static void enum_dev_cap(IBaseFilter *filter,
                                    sizeof(dshow_fmts)/sizeof(dshow_fmts[0]));
                         for (j = 0; j < nformat; j++) {
                             const GUID *dshow_format = dshow_fmt;
-                            
+
                             if (!dshow_format)
                                 dshow_format = dshow_fmts[j].dshow_format;
-                            if (UuidCompare(&mediatype->subtype, 
+                            if (UuidCompare(&mediatype->subtype,
                                             (UUID*)dshow_format,
-                                            &rpcstatus) == 0 && 
+                                            &rpcstatus) == 0 &&
                                 rpcstatus == RPC_S_OK &&
                                 UuidCompare(&mediatype->formattype,
                                             (UUID*)&FORMAT_VideoInfo,
@@ -354,12 +354,12 @@ static void enum_dev_cap(IBaseFilter *filter,
                                     PJMEDIA_VID_DEV_INFO_FMT_CNT)
                                 {
                                     unsigned fps_num=DEFAULT_FPS, fps_denum=1;
-                                    
+
                                     if (vi->AvgTimePerFrame != 0) {
                                         fps_num = 10000000;
                                         fps_denum=(unsigned)vi->AvgTimePerFrame;
                                     }
-                                        
+
                                     pjmedia_format_init_video(
                                         &vdi->fmt[vdi->fmt_cnt++],
                                         dshow_fmts[j].pjmedia_format,
@@ -367,7 +367,7 @@ static void enum_dev_cap(IBaseFilter *filter,
                                         vi->bmiHeader.biHeight,
                                         fps_num, fps_denum);
                                 }
-                                
+
                                 if (pSrcpin) {
                                     if ((width == 0 && height == 0 ) ||
                                         (vi->bmiHeader.biWidth == width &&
@@ -417,7 +417,7 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
     for (c = 0; c < sizeof(dshow_fmts) / sizeof(dshow_fmts[0]); c++) {
         dshow_fmts[c].enabled = PJ_FALSE;
     }
-    
+
     df->dev_count = 0;
     df->dev_pool = pj_pool_create(df->pf, "dshow video", 500, 500, NULL);
 
@@ -426,7 +426,7 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
                           (void**)&dev_enum);
     if (FAILED(hr) ||
         ICreateDevEnum_CreateClassEnumerator(dev_enum,
-            &CLSID_VideoInputDeviceCategory, &enum_cat, 0) != S_OK) 
+            &CLSID_VideoInputDeviceCategory, &enum_cat, 0) != S_OK)
     {
         PJ_LOG(4,(THIS_FILE, "Windows found no video input devices"));
         if (dev_enum)
@@ -476,7 +476,7 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
                         CoTaskMemFree(wszDisplayName);
                     }
 
-                    strncpy(ddi->info.driver, "dshow", 
+                    strncpy(ddi->info.driver, "dshow",
                             sizeof(ddi->info.driver));
                     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
                     ddi->info.dir = PJMEDIA_DIR_CAPTURE;
@@ -518,15 +518,15 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
 //    ddi->info.caps |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
 
     ddi->info.fmt_cnt = 1;
-    pjmedia_format_init_video(&ddi->info.fmt[0], dshow_fmts[0].pjmedia_format, 
-                              DEFAULT_WIDTH, DEFAULT_HEIGHT, 
+    pjmedia_format_init_video(&ddi->info.fmt[0], dshow_fmts[0].pjmedia_format,
+                              DEFAULT_WIDTH, DEFAULT_HEIGHT,
                               DEFAULT_FPS, 1);
 #endif
 
-    PJ_LOG(4, (THIS_FILE, "DShow has %d devices:", 
+    PJ_LOG(4, (THIS_FILE, "DShow has %d devices:",
                df->dev_count));
     for (c = 0; c < df->dev_count; ++c) {
-        PJ_LOG(4, (THIS_FILE, " dev_id %d: %s (%s)", 
+        PJ_LOG(4, (THIS_FILE, " dev_id %d: %s (%s)",
                c,
                df->dev_info[c].info.name,
                df->dev_info[c].info.dir & PJMEDIA_DIR_CAPTURE ?
@@ -606,7 +606,7 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
     {
         pj_status_t status;
 
-        status = pj_thread_register("ds_cap", strm->cap_thread_desc, 
+        status = pj_thread_register("ds_cap", strm->cap_thread_desc,
                                     &strm->cap_thread);
         if (status != PJ_SUCCESS)
             return;
@@ -625,7 +625,7 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
         unsigned i, stride;
         BYTE *src_buf, *dst_buf;
         pjmedia_video_format_detail *vfd;
-        
+
         /* Image is bottom-up, convert it to top-down. */
         src_buf = dst_buf = (BYTE *)frame.buf;
         stride = strm->frm_buf_size;
@@ -804,7 +804,7 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
     if (video_info->AvgTimePerFrame == 0 ||
         (!use_def_fps && vfd->fps.num != 0))
     {
-        video_info->AvgTimePerFrame = (LONGLONG) (10000000 * 
+        video_info->AvgTimePerFrame = (LONGLONG) (10000000 *
                                                   (double)vfd->fps.denum /
                                                   vfd->fps.num);
     }
@@ -853,7 +853,7 @@ on_error:
     if (FAILED(hr)) {
         char msg[80];
         if (AMGetErrorText(hr, msg, sizeof(msg))) {
-            PJ_LOG(4,(THIS_FILE, "Error creating filter graph: %s (hr=0x%x)", 
+            PJ_LOG(4,(THIS_FILE, "Error creating filter graph: %s (hr=0x%x)",
                       msg, hr));
         }
         return PJ_EUNKNOWN;
@@ -942,7 +942,7 @@ static pj_status_t dshow_factory_create_stream(
                 goto on_error;
             pj_memcpy(param, &strm->param, sizeof(*param));
         }
-        
+
         vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
         strm->cap_ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
     } else if (param->dir & PJMEDIA_DIR_RENDER) {
@@ -966,7 +966,7 @@ static pj_status_t dshow_factory_create_stream(
     *p_vid_strm = &strm->base;
 
     return PJ_SUCCESS;
- 
+
 on_error:
     dshow_stream_destroy((pjmedia_vid_dev_stream *)strm);
     return status;

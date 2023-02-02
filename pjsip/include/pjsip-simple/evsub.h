@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -51,8 +51,8 @@ typedef struct pjsip_evsub pjsip_evsub;
 
 
 /**
- * This enumeration describes basic subscription state as described in the 
- * RFC 3265. The standard specifies that extensions may define additional 
+ * This enumeration describes basic subscription state as described in the
+ * RFC 3265. The standard specifies that extensions may define additional
  * states. In the case where the state is not known, the subscription state
  * will be set to PJSIP_EVSUB_STATE_UNKNOWN, and the token will be kept
  * in state_str member of the susbcription structure.
@@ -61,13 +61,13 @@ typedef enum pjsip_evsub_state
 {
     PJSIP_EVSUB_STATE_NULL,      /**< State is NULL.                        */
     PJSIP_EVSUB_STATE_SENT,      /**< Client has sent SUBSCRIBE request.    */
-    PJSIP_EVSUB_STATE_ACCEPTED,  /**< 2xx response to SUBSCRIBE has been 
+    PJSIP_EVSUB_STATE_ACCEPTED,  /**< 2xx response to SUBSCRIBE has been
                                       sent/received.                        */
     PJSIP_EVSUB_STATE_PENDING,   /**< Subscription is pending.              */
     PJSIP_EVSUB_STATE_ACTIVE,    /**< Subscription is active.               */
     PJSIP_EVSUB_STATE_TERMINATED,/**< Subscription is terminated.           */
     PJSIP_EVSUB_STATE_UNKNOWN,   /**< Subscription state can not be determined.
-                                      Application can query the state by 
+                                      Application can query the state by
                                       calling #pjsip_evsub_get_state_name().*/
 } pjsip_evsub_state;
 
@@ -77,9 +77,9 @@ typedef enum pjsip_evsub_state
  */
 enum
 {
-    /** 
+    /**
      * If this flag is set, then outgoing request to create subscription
-     * will not have id in the Event header (e.g. in REFER request). But if 
+     * will not have id in the Event header (e.g. in REFER request). But if
      * there is an id in the incoming NOTIFY, that id will be used.
      */
     PJSIP_EVSUB_NO_EVENT_ID  = 1,
@@ -118,9 +118,9 @@ struct pjsip_evsub_user
 
     /**
      * This callback is called when incoming SUBSCRIBE (or any method that
-     * establishes the subscription in the first place) is received. It 
-     * allows application to specify what response should be sent to 
-     * remote, along with additional headers and message body to be put 
+     * establishes the subscription in the first place) is received. It
+     * allows application to specify what response should be sent to
+     * remote, along with additional headers and message body to be put
      * in the response.
      *
      * This callback is only applicable and required for UAS.
@@ -138,12 +138,12 @@ struct pjsip_evsub_user
      *                  unsubscription, the library will always reply with
      *                  200.
      * @param p_st_text Custom status text, if any.
-     * @param res_hdr   Upon return, application can put additional headers 
+     * @param res_hdr   Upon return, application can put additional headers
      *                  to be sent in the response in this list.
      * @param p_body    Application MAY specify message body to be sent in
      *                  the response.
      */
-    void (*on_rx_refresh)( pjsip_evsub *sub, 
+    void (*on_rx_refresh)( pjsip_evsub *sub,
                            pjsip_rx_data *rdata,
                            int *p_st_code,
                            pj_str_t **p_st_text,
@@ -165,12 +165,12 @@ struct pjsip_evsub_user
      *                  final status code (200-699) upon returning from the
      *                  callback.
      * @param p_st_text Custom status text, if any.
-     * @param res_hdr   Upon return, application can put additional headers 
+     * @param res_hdr   Upon return, application can put additional headers
      *                  to be sent in the response in this list.
      * @param p_body    Application MAY specify message body to be sent in
      *                  the response.
      */
-    void (*on_rx_notify)(pjsip_evsub *sub, 
+    void (*on_rx_notify)(pjsip_evsub *sub,
                          pjsip_rx_data *rdata,
                          int *p_st_code,
                          pj_str_t **p_st_text,
@@ -181,7 +181,7 @@ struct pjsip_evsub_user
      * This callback is called when it is time for the client to refresh
      * the subscription.
      *
-     * This callback is OPTIONAL when PJSIP package such as presence or 
+     * This callback is OPTIONAL when PJSIP package such as presence or
      * refer is used; the event package will refresh subscription by sending
      * SUBSCRIBE with the interval set to current/last interval.
      *
@@ -190,11 +190,11 @@ struct pjsip_evsub_user
     void (*on_client_refresh)(pjsip_evsub *sub);
 
     /**
-     * This callback is called when server doesn't receive subscription 
+     * This callback is called when server doesn't receive subscription
      * refresh after the specified subscription interval.
      *
-     * This callback is OPTIONAL when PJSIP package such as presence or 
-     * refer is used; the event package send NOTIFY to terminate the 
+     * This callback is OPTIONAL when PJSIP package such as presence or
+     * refer is used; the event package send NOTIFY to terminate the
      * subscription.
      */
     void (*on_server_timeout)(pjsip_evsub *sub);
@@ -230,7 +230,7 @@ PJ_DECL(const pjsip_method*) pjsip_get_notify_method(void);
 
 
 /**
- * Initialize the event subscription module and register the module to the 
+ * Initialize the event subscription module and register the module to the
  * specified endpoint.
  *
  * @param endpt         The endpoint instance.
@@ -242,7 +242,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt);
 
 
 /**
- * Get the event subscription module instance that was previously created 
+ * Get the event subscription module instance that was previously created
  * and registered to endpoint.
  *
  * @return              The event subscription module instance.
@@ -274,7 +274,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
  * that are registered to the evsub module.
  *
  * @param m             Pointer to event subscription module instance, or
- *                      NULL to use default instance (equal to 
+ *                      NULL to use default instance (equal to
  *                      #pjsip_evsub_instance()).
  *
  * @return              The Allow-Events header.
@@ -305,7 +305,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_create_uac( pjsip_dialog *dlg,
  *
  * @param dlg           The underlying dialog to use.
  * @param user_cb       Callback to receive event subscription notifications.
- * @param rdata         The incoming request that creates the event 
+ * @param rdata         The incoming request that creates the event
  *                      subscription, such as SUBSCRIBE or REFER.
  * @param option        Bitmask of options.
  * @param p_evsub       Pointer to receive event subscription instance.
@@ -320,7 +320,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
 
 /**
  * Forcefully destroy the subscription session. This function should only
- * be called on special condition, such as when the subscription 
+ * be called on special condition, such as when the subscription
  * initialization has failed. For other conditions, application MUST terminate
  * the subscription by sending the appropriate un(SUBSCRIBE) or NOTIFY.
  *
@@ -377,7 +377,7 @@ PJ_DECL(pj_uint32_t) pjsip_evsub_get_expires(const pjsip_evsub *sub);
 
 
 /**
- * Call this function to create request to initiate subscription, to 
+ * Call this function to create request to initiate subscription, to
  * refresh subcription, or to request subscription termination.
  *
  * @param sub           Client subscription instance.
@@ -429,7 +429,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_accept( pjsip_evsub *sub,
 
 
 /**
- * For notifier, create NOTIFY request to subscriber, and set the state 
+ * For notifier, create NOTIFY request to subscriber, and set the state
  * of the subscription.
  *
  * @param sub           The server subscription (notifier) instance.
@@ -481,7 +481,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_send_request( pjsip_evsub *sub,
 
 
 /**
- * Get the event subscription instance associated with the specified 
+ * Get the event subscription instance associated with the specified
  * transaction.
  *
  * @param tsx           The transaction.

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_PARSER_H__
 #define __PJSIP_SIP_PARSER_H__
@@ -70,8 +70,8 @@ enum
 
     /** If this option is specified, function #pjsip_parse_uri and other
      *  internal functions that this function calls will parse URI according
-     *  to convention for parsing From/To/Contact header. For example, when 
-     *  the URI is not enclosed in brackets ("<" and ">"), all parameters 
+     *  to convention for parsing From/To/Contact header. For example, when
+     *  the URI is not enclosed in brackets ("<" and ">"), all parameters
      *  are treated as header parameters (not URI parameters).
      */
     PJSIP_PARSE_URI_IN_FROM_TO_HDR = 2
@@ -118,8 +118,8 @@ typedef struct pjsip_parse_ctx
  *   - It must not modify the input text.
  *   - The hname and HCOLON has been parsed prior to invoking the handler.
  *   - It returns the header instance on success.
- *   - For error reporting, it must throw PJSIP_SYN_ERR_EXCEPTION exception 
- *     instead of just returning NULL. 
+ *   - For error reporting, it must throw PJSIP_SYN_ERR_EXCEPTION exception
+ *     instead of just returning NULL.
  *     When exception is thrown, the return value is ignored.
  *   - It must read the header separator after finished reading the header
  *     body. The separator types are described below, and if they don't exist,
@@ -140,8 +140,8 @@ typedef void* (pjsip_parse_uri_func)(pj_scanner *scanner, pj_pool_t *pool,
                                      pj_bool_t parse_params);
 
 /**
- * Register header parser handler. The parser handler MUST follow the 
- * specification of header parser handler function. New registration 
+ * Register header parser handler. The parser handler MUST follow the
+ * specification of header parser handler function. New registration
  * overwrites previous registration with the same name.
  *
  * @param hname         The header name.
@@ -156,7 +156,7 @@ PJ_DECL(pj_status_t) pjsip_register_hdr_parser( const char *hname,
 
 /**
  * Unregister previously registered header parser handler.
- * All the arguments MUST exactly equal to the value specified upon 
+ * All the arguments MUST exactly equal to the value specified upon
  * registration of the handler.
  *
  * @param hname         The header name registered.
@@ -182,7 +182,7 @@ PJ_DECL(pj_status_t) pjsip_register_uri_parser( char *scheme,
 
 /**
  * Unregister URI scheme parser handler.
- * All the arguments MUST exactly equal to the value specified upon 
+ * All the arguments MUST exactly equal to the value specified upon
  * registration of the handler.
  *
  * @param scheme        The URI scheme as registered previously.
@@ -201,17 +201,17 @@ PJ_DECL(pj_status_t) pjsip_unregister_uri_parser( const char *scheme,
  * @param pool          The pool to get memory allocations.
  * @param buf           The input buffer, which MUST be NULL terminated.
  * @param size          The length of the string (not counting NULL terminator).
- * @param options       If no options are given (value is zero), the object 
- *                      returned is dependent on the syntax of the URI, 
- *                      eg. basic SIP URL, TEL URL, or name address. 
+ * @param options       If no options are given (value is zero), the object
+ *                      returned is dependent on the syntax of the URI,
+ *                      eg. basic SIP URL, TEL URL, or name address.
  *                      If option PJSIP_PARSE_URI_AS_NAMEADDR is given,
  *                      then the returned object is always name address object,
- *                      with the relevant URI object contained in the name 
+ *                      with the relevant URI object contained in the name
  *                      address object.
- * @return              The URI or NULL when failed. No exception is thrown by 
+ * @return              The URI or NULL when failed. No exception is thrown by
  *                      this function (or any public parser functions).
  */
-PJ_DECL(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool, 
+PJ_DECL(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
                                      char *buf, pj_size_t size,
                                      unsigned options);
 
@@ -233,7 +233,7 @@ PJ_DECL(pj_status_t) pjsip_parse_status_line(char *buf, pj_size_t size,
 /**
  * Parse a packet buffer and build a full SIP message from the packet. This
  * function parses all parts of the message, including request/status line,
- * all headers, and the message body. The message body however is only 
+ * all headers, and the message body. The message body however is only
  * treated as a text block, ie. the function will not try to parse the content
  * of the body.
  *
@@ -249,7 +249,7 @@ PJ_DECL(pj_status_t) pjsip_parse_status_line(char *buf, pj_size_t size,
  * @return              The message or NULL when failed. No exception is thrown
  *                      by this function (or any public parser functions).
  */
-PJ_DECL(pjsip_msg *) pjsip_parse_msg( pj_pool_t *pool, 
+PJ_DECL(pjsip_msg *) pjsip_parse_msg( pj_pool_t *pool,
                                       char *buf, pj_size_t size,
                                       pjsip_parser_err_report *err_list);
 
@@ -276,7 +276,7 @@ PJ_DECL(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
                                         pjsip_rx_data *rdata );
 
 /**
- * Check incoming packet to see if a (probably) valid SIP message has been 
+ * Check incoming packet to see if a (probably) valid SIP message has been
  * received.
  * Note that the input string buffer MUST be NULL terminated and have
  * length at least size+1 (size MUST NOT include the NULL terminator).
@@ -289,9 +289,9 @@ PJ_DECL(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
  *
  * @return              PJ_SUCCESS if a message is found, or an error code.
  */
-PJ_DECL(pj_status_t) pjsip_find_msg(const char *buf, 
-                                    pj_size_t size, 
-                                    pj_bool_t is_datagram, 
+PJ_DECL(pj_status_t) pjsip_find_msg(const char *buf,
+                                    pj_size_t size,
+                                    pj_bool_t is_datagram,
                                     pj_size_t *msg_size);
 
 /**
@@ -300,7 +300,7 @@ PJ_DECL(pj_status_t) pjsip_find_msg(const char *buf,
  * to the expected name, and will return the correct instance of header.
  *
  * Note that the input string buffer MUST be NULL terminated and have
- * length at least size+1 (size MUST NOT include the NULL terminator). 
+ * length at least size+1 (size MUST NOT include the NULL terminator).
  *
  * @param pool          Pool to allocate memory for the header.
  * @param hname         Header name which is used to find the correct function
@@ -335,14 +335,14 @@ PJ_DECL(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
  * @param input         The input text to parse, which must be NULL terminated.
  * @param size          The text length (not counting NULL terminator).
  * @param hlist         The header list to store the parsed headers.
- *                      This list must have been initialized before calling 
+ *                      This list must have been initialized before calling
  *                      this function.
  * @param options       Specify 1 here to make parsing stop when error is
  *                      encountered when parsing the header. Otherwise the
  *                      error is silently ignored and parsing resumes to the
  *                      next line.
- * @return              zero if successfull, or -1 if error is encountered. 
- *                      Upon error, the \a hlist argument MAY contain 
+ * @return              zero if successfull, or -1 if error is encountered.
+ *                      Upon error, the \a hlist argument MAY contain
  *                      successfully parsed headers.
  */
 PJ_DECL(pj_status_t) pjsip_parse_headers( pj_pool_t *pool, char *input,
@@ -410,7 +410,7 @@ typedef struct pjsip_parser_const_t
     pj_cis_t pjsip_USER_SPEC_LENIENT;   /**< User, with additional '#' char */
     pj_cis_t pjsip_USER_SPEC_LENIENT_ESC;/**< pjsip_USER_SPEC_ESC with '#' */
     pj_cis_t pjsip_NOT_NEWLINE;         /**< For eating up header, basically
-                                             any chars except newlines or 
+                                             any chars except newlines or
                                              zero.                      */
     pj_cis_t pjsip_NOT_COMMA_OR_NEWLINE;/**< Array elements.            */
     pj_cis_t pjsip_DISPLAY_SPEC;        /**< Used when searching for display
@@ -447,9 +447,9 @@ PJ_DECL(void) pjsip_parse_uri_param_imp(pj_scanner *scanner, pj_pool_t *pool,
                                         pj_str_t *pname, pj_str_t *pvalue,
                                         unsigned opt);
 /** Internal: concatenate parameter */
-PJ_DECL(void) pjsip_concat_param_imp(pj_str_t *param, pj_pool_t *pool, 
-                                     const pj_str_t *pname, 
-                                     const pj_str_t *pvalue, 
+PJ_DECL(void) pjsip_concat_param_imp(pj_str_t *param, pj_pool_t *pool,
+                                     const pj_str_t *pname,
+                                     const pj_str_t *pvalue,
                                      int sepchar);
 /** Internal */
 PJ_DECL(void) pjsip_parse_end_hdr_imp ( pj_scanner *scanner );

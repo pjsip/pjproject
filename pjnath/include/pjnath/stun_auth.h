@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJNATH_STUN_AUTH_H__
 #define __PJNATH_STUN_AUTH_H__
@@ -42,7 +42,7 @@ PJ_BEGIN_DECL
  * Type of authentication.
  */
 typedef enum pj_stun_auth_type
-{ 
+{
     /**
      * No authentication.
      */
@@ -67,15 +67,15 @@ typedef enum pj_stun_auth_type
 typedef enum pj_stun_auth_cred_type
 {
     /**
-     * The credential data contains a static credential to be matched 
-     * against the credential in the message. A static credential can be 
+     * The credential data contains a static credential to be matched
+     * against the credential in the message. A static credential can be
      * used as both client side or server side authentication.
      */
     PJ_STUN_AUTH_CRED_STATIC,
 
     /**
-     * The credential data contains callbacks to be called to verify the 
-     * credential in the message. A dynamic credential is suitable when 
+     * The credential data contains callbacks to be called to verify the
+     * credential in the message. A dynamic credential is suitable when
      * performing server side authentication where server does not know
      * in advance the identity of the user requesting authentication.
      */
@@ -120,7 +120,7 @@ typedef struct pj_stun_auth_cred
     /**
      * This union contains the authentication data.
      */
-    union 
+    union
     {
         /**
          * This structure contains static data for performing authentication.
@@ -129,12 +129,12 @@ typedef struct pj_stun_auth_cred
          */
         struct
         {
-            /** 
+            /**
              * If not-empty, it indicates that this is a long term credential.
              */
             pj_str_t            realm;
 
-            /** 
+            /**
              * The username of the credential.
              */
             pj_str_t            username;
@@ -144,14 +144,14 @@ typedef struct pj_stun_auth_cred
              */
             pj_stun_passwd_type data_type;
 
-            /** 
+            /**
              * The data, which depends depends on the value of \a data_type
              * field. When \a data_type is zero, this field will contain the
              * plaintext password.
              */
             pj_str_t            data;
 
-            /** 
+            /**
              * Optional NONCE.
              */
             pj_str_t            nonce;
@@ -181,14 +181,14 @@ typedef struct pj_stun_auth_cred
              *                  empty string for the realm.
              * @param nonce     On return, if application wants to use long
              *                  term credential, it MUST fill in the nonce
-             *                  with some value. Otherwise  if short term 
+             *                  with some value. Otherwise  if short term
              *                  credential is wanted, it MAY set this value.
              *                  If short term credential is wanted and the
              *                  application doesn't want to include NONCE,
              *                  then it must set this to empty string.
              *
              * @return          The callback should return PJ_SUCCESS, or
-             *                  otherwise response message will not be 
+             *                  otherwise response message will not be
              *                  created.
              */
             pj_status_t (*get_auth)(void *user_data,
@@ -231,7 +231,7 @@ typedef struct pj_stun_auth_cred
                                     pj_str_t *data);
 
             /**
-             * Get the password for the specified username. This function 
+             * Get the password for the specified username. This function
              * is also used to check whether the username is valid.
              *
              * @param msg       The STUN message where the password will be
@@ -254,7 +254,7 @@ typedef struct pj_stun_auth_cred
              *                  username is not valid.
              */
             pj_status_t (*get_password)(const pj_stun_msg *msg,
-                                        void *user_data, 
+                                        void *user_data,
                                         const pj_str_t *realm,
                                         const pj_str_t *username,
                                         pj_pool_t *pool,
@@ -274,7 +274,7 @@ typedef struct pj_stun_auth_cred
              * @param username  The username as specified in the message.
              * @param nonce     The nonce to be verified.
              *
-             * @return          The callback MUST return non-zero if the 
+             * @return          The callback MUST return non-zero if the
              *                  NONCE can be accepted.
              */
             pj_bool_t   (*verify_nonce)(const pj_stun_msg *msg,
@@ -298,7 +298,7 @@ typedef struct pj_stun_auth_cred
 typedef struct pj_stun_req_cred_info
 {
     /**
-     * The REALM value found in the incoming request. If short term 
+     * The REALM value found in the incoming request. If short term
      * credential is used, the value will be empty.
      */
     pj_str_t    realm;
@@ -314,7 +314,7 @@ typedef struct pj_stun_req_cred_info
     pj_str_t    nonce;
 
     /**
-     * Authentication key that was used to authenticate the incoming 
+     * Authentication key that was used to authenticate the incoming
      * request. This key is created with #pj_stun_create_key(), and
      * it can be used to encode the credential of the outgoing
      * response.

@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 import sys
 if sys.version_info[0] >= 3: # Python 3
@@ -39,7 +39,7 @@ import os
 import traceback
 
 # You may try to enable pjsua worker thread by setting USE_THREADS below to True *and*
-# recreate the swig module with adding -threads option to swig (uncomment USE_THREADS 
+# recreate the swig module with adding -threads option to swig (uncomment USE_THREADS
 # in swig/python/Makefile). In my experiment this would crash Python as reported in:
 # http://lists.pjsip.org/pipermail/pjsip_lists.pjsip.org/2014-March/017223.html
 USE_THREADS = False

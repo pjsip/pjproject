@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_REG_H__
 #define __PJSIP_SIP_REG_H__
@@ -145,7 +145,7 @@ PJ_DECL(pjsip_module*) pjsip_regc_get_module(void);
  * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
-                                        pjsip_regc_cb *cb, 
+                                        pjsip_regc_cb *cb,
                                         pjsip_regc **p_regc);
 
 
@@ -210,16 +210,16 @@ PJ_DECL(pj_pool_t*) pjsip_regc_get_pool(pjsip_regc *regc);
  * @param ccnt      Number of contacts in the array.
  * @param contact   Array of contacts, each contact item must be formatted
  *                  as described in RFC 3261 Section 20.10:
- *                  When the header field value contains a display 
- *                  name, the URI including all URI parameters is 
- *                  enclosed in "<" and ">".  If no "<" and ">" are 
+ *                  When the header field value contains a display
+ *                  name, the URI including all URI parameters is
+ *                  enclosed in "<" and ">".  If no "<" and ">" are
  *                  present, all parameters after the URI are header
- *                  parameters, not URI parameters.  The display name 
- *                  can be tokens, or a quoted string, if a larger 
+ *                  parameters, not URI parameters.  The display name
+ *                  can be tokens, or a quoted string, if a larger
  *                  character set is desired.
  * @param expires   Default expiration interval (in seconds) to be applied for
  *                  contact URL that doesn't have expiration settings. If the
- *                  value PJSIP_REGC_EXPIRATION_NOT_SPECIFIED is given, then 
+ *                  value PJSIP_REGC_EXPIRATION_NOT_SPECIFIED is given, then
  *                  no default expiration will be applied.
  * @return          zero on success.
  */
@@ -336,12 +336,12 @@ PJ_DECL(pj_status_t) pjsip_regc_set_route_set(pjsip_regc *regc,
 
 
 /**
- * Lock/bind client registration to a specific transport/listener. 
+ * Lock/bind client registration to a specific transport/listener.
  * This is optional, as normally transport will be selected automatically
- * based on the destination of requests upon resolver completion. 
- * When the client registration is explicitly bound to the specific 
+ * based on the destination of requests upon resolver completion.
+ * When the client registration is explicitly bound to the specific
  * transport/listener, all UAC transactions originated by the client
- * registration will use the specified transport/listener when sending 
+ * registration will use the specified transport/listener when sending
  * outgoing requests.
  *
  * Note that this doesn't affect the Contact header set for this client
@@ -449,12 +449,12 @@ PJ_DECL(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
  * @param ccnt      Number of contacts.
  * @param contact   Array of contacts, each contact item must be formatted
  *                  as described in RFC 3261 Section 20.10:
- *                  When the header field value contains a display 
- *                  name, the URI including all URI parameters is 
- *                  enclosed in "<" and ">".  If no "<" and ">" are 
+ *                  When the header field value contains a display
+ *                  name, the URI including all URI parameters is
+ *                  enclosed in "<" and ">".  If no "<" and ">" are
  *                  present, all parameters after the URI are header
- *                  parameters, not URI parameters.  The display name 
- *                  can be tokens, or a quoted string, if a larger 
+ *                  parameters, not URI parameters.  The display name
+ *                  can be tokens, or a quoted string, if a larger
  *                  character set is desired.
  * @return          PJ_SUCCESS if sucessfull.
  */

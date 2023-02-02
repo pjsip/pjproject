@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_COMPAT_SOCKET_H__
 #define __PJ_COMPAT_SOCKET_H__
@@ -49,7 +49,7 @@
  * download and install IPv6 Tehnology Preview (IPv6Kit) from:
  *    http://msdn.microsoft.com/downloads/sdks/platform/tpipv6/ReadMe.asp
  * Then put IPv6Kit\inc in your Visual Studio include path.
- * 
+ *
  * In addition, by default IPv6Kit does not want to install on
  * Windows 2000 SP4. Please see:
  *    http://msdn.microsoft.com/downloads/sdks/platform/tpipv6/faq.asp
@@ -197,7 +197,7 @@
 #endif
 
 /* Regarding sin_len member of sockaddr_in:
- *  BSD systems (including MacOS X requires that the sin_len member of 
+ *  BSD systems (including MacOS X requires that the sin_len member of
  *  sockaddr_in be set to sizeof(sockaddr_in), while other systems (Windows
  *  and Linux included) do not.
  *
@@ -208,14 +208,14 @@
  *
  *  Application MUST always set this field to zero.
  *
- *  This way we can avoid hard to find problem such as when the socket 
+ *  This way we can avoid hard to find problem such as when the socket
  *  address is used as hash table key.
  */
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
 #   define PJ_SOCKADDR_SET_LEN(addr,len) (((pj_addr_hdr*)(addr))->sa_zero_len=(len))
 #   define PJ_SOCKADDR_RESET_LEN(addr)   (((pj_addr_hdr*)(addr))->sa_zero_len=0)
 #else
-#   define PJ_SOCKADDR_SET_LEN(addr,len) 
+#   define PJ_SOCKADDR_SET_LEN(addr,len)
 #   define PJ_SOCKADDR_RESET_LEN(addr)
 #endif
 

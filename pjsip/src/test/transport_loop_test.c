@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "test.h"
@@ -54,7 +54,7 @@ static int datagram_loop_test()
 
     /* Basic transport's send/receive loopback test. */
     for (i=0; i<LOOP; ++i) {
-        status = transport_send_recv_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
+        status = transport_send_recv_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop,
                                           "sip:bob@130.0.0.1;transport=loop-dgram",
                                           &rtt[i]);
         if (status != 0)
@@ -72,7 +72,7 @@ static int datagram_loop_test()
 
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
+    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop,
                                "sip:bob@130.0.0.1;transport=loop-dgram",
                                &pkt_lost);
     if (status != 0)
@@ -88,7 +88,7 @@ static int datagram_loop_test()
     pjsip_loop_set_delay(loop, 10);
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
+    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop,
                                "sip:bob@130.0.0.1;transport=loop-dgram",
                                &pkt_lost);
     if (status != 0)
@@ -104,7 +104,7 @@ static int datagram_loop_test()
 
     /* Check reference counter. */
     if (pj_atomic_get(loop->ref_cnt) != ref_cnt) {
-        PJ_LOG(3,(THIS_FILE, "   error: ref counter is not %d (%d)", 
+        PJ_LOG(3,(THIS_FILE, "   error: ref counter is not %d (%d)",
                              ref_cnt, pj_atomic_get(loop->ref_cnt)));
         return -51;
     }

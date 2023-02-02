@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/null_port.h>
 #include <pjmedia/errno.h>
@@ -25,9 +25,9 @@
 
 #define SIGNATURE   PJMEDIA_SIG_PORT_NULL
 
-static pj_status_t null_get_frame(pjmedia_port *this_port, 
+static pj_status_t null_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
-static pj_status_t null_put_frame(pjmedia_port *this_port, 
+static pj_status_t null_put_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
 static pj_status_t null_on_destroy(pjmedia_port *this_port);
 
@@ -56,7 +56,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
 
 
     *p_port = port;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -65,7 +65,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
 /*
  * Put frame to file.
  */
-static pj_status_t null_put_frame(pjmedia_port *this_port, 
+static pj_status_t null_put_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     PJ_UNUSED_ARG(this_port);
@@ -77,13 +77,13 @@ static pj_status_t null_put_frame(pjmedia_port *this_port,
 /*
  * Get frame from file.
  */
-static pj_status_t null_get_frame(pjmedia_port *this_port, 
+static pj_status_t null_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->size = PJMEDIA_PIA_AVG_FSZ(&this_port->info);
     frame->timestamp.u32.lo += PJMEDIA_PIA_SPF(&this_port->info);
-    pjmedia_zero_samples((pj_int16_t*)frame->buf, 
+    pjmedia_zero_samples((pj_int16_t*)frame->buf,
                           PJMEDIA_PIA_SPF(&this_port->info));
 
     return PJ_SUCCESS;

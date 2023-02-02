@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2016 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/ioqueue.h>
 #include <pj/errno.h>
@@ -52,7 +52,7 @@ struct pj_ioqueue_t
 #include "ioqueue_common_abs.c"
 
 static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
-                                     pj_ioqueue_key_t *key, 
+                                     pj_ioqueue_key_t *key,
                                      unsigned event_types)
 {
     PJ_UNUSED_ARG(ioqueue);
@@ -139,7 +139,7 @@ static void on_read(PjUwpSocket *s, int bytes_read)
     check_thread(ioq);
 
     ioqueue_dispatch_read_event(key->ioqueue, key);
-    
+
     if (bytes_read > 0)
         start_next_read(key);
 }
@@ -242,7 +242,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioq )
 
 
 /*
- * Register a socket to the I/O queue framework. 
+ * Register a socket to the I/O queue framework.
  */
 PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
                                               pj_ioqueue_t *ioqueue,
@@ -302,7 +302,7 @@ on_return:
 }
 
 /*
- * Unregister from the I/O Queue framework. 
+ * Unregister from the I/O Queue framework.
  */
 PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 {

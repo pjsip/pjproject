@@ -1,15 +1,15 @@
 /*******************************************************
- 
+
  bdimad_dev.c
 
  Author: bdSound Development Team (techsupport@bdsound.com)
- 
+
  Date: 12/03/2015
  Version 2.0.0 rev.1618
 
  Copyright (c) 2015 bdSound s.r.l. (www.bdsound.com)
  All Rights Reserved.
- 
+
  *******************************************************/
 
 #include <pjmedia-audiodev/audiodev_imp.h>
@@ -31,26 +31,26 @@
 #include  "../../third_party/bdsound/include/bdimad.h"
 
 /* Maximum supported audio devices */
-#define BD_IMAD_MAX_DEV_COUNT               100                                
+#define BD_IMAD_MAX_DEV_COUNT               100
 /* Maximum supported device name */
-#define BD_IMAD_MAX_DEV_LENGTH_NAME         256                                
+#define BD_IMAD_MAX_DEV_LENGTH_NAME         256
 /* Only mono mode */
-#define BD_IMAD_MAX_CHANNELS                1                                  
+#define BD_IMAD_MAX_CHANNELS                1
 /* Frequency default value (admitted 8000 Hz, 16000 Hz, 32000 Hz, 44100 Hz and 48000 Hz) */
-#define BD_IMAD_DEFAULT_FREQ                48000                              
+#define BD_IMAD_DEFAULT_FREQ                48000
 /* Default milliseconds per buffer */
-#define BD_IMAD_MSECOND_PER_BUFFER          16                                 
+#define BD_IMAD_MSECOND_PER_BUFFER          16
 /* Only for supported systems */
-#define BD_IMAD_STARTING_INPUT_VOLUME       50                                 
+#define BD_IMAD_STARTING_INPUT_VOLUME       50
 /* Only for supported systems */
-#define BD_IMAD_STARTING_OUTPUT_VOLUME      100                                
+#define BD_IMAD_STARTING_OUTPUT_VOLUME      100
 /* Diagnostic Enable/Disable */
 #define BD_IMAD_DIAGNOSTIC                  BD_IMAD_DIAGNOSTIC_DISABLE
 
-/* Diagnostic folder path */ 
+/* Diagnostic folder path */
 #define BD_IMAD_DIAGNOSTIC_PATH  "/mnt/sdcard/MUSIC/"
 
-static wchar_t bdImadPjDiagnosticFolderPath[200];                          
+static wchar_t bdImadPjDiagnosticFolderPath[200];
 
 #define THIS_FILE            "bdimad_dev.c"
 
@@ -134,15 +134,15 @@ struct bd_stream
 
     /* Sometime the record callback does not return framesize as configured
      * (e.g: in OSS), while this module must guarantee returning framesize
-     * as configured in the creation settings. In this case, we need a buffer 
+     * as configured in the creation settings. In this case, we need a buffer
      * for the recorded samples.
      */
     pj_int16_t          *rec_buf;
     unsigned             rec_buf_count;
 
     /* Sometime the player callback does not request framesize as configured
-     * (e.g: in Linux OSS) while sound device will always get samples from 
-     * the other component as many as configured samples_per_frame. 
+     * (e.g: in Linux OSS) while sound device will always get samples from
+     * the other component as many as configured samples_per_frame.
      */
     pj_int16_t          *play_buf;
     unsigned             play_buf_count;
@@ -154,7 +154,7 @@ struct bd_stream
 static pj_status_t factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f);
 static unsigned    factory_get_dev_count(pjmedia_aud_dev_factory *f);
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info);
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
@@ -174,7 +174,7 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *strm,
 static pj_status_t stream_get_cap(pjmedia_aud_stream *strm,
                                   pjmedia_aud_dev_cap cap,
                                   void *value);
-static pj_status_t stream_set_cap(pjmedia_aud_stream *strm, 
+static pj_status_t stream_set_cap(pjmedia_aud_stream *strm,
                                   pjmedia_aud_dev_cap cap,
                                   const void *value);
 static pj_status_t stream_start(pjmedia_aud_stream *strm);
@@ -195,7 +195,7 @@ static pjmedia_aud_dev_factory_op factory_op =
     &factory_refresh
 };
 
-static pjmedia_aud_stream_op stream_op = 
+static pjmedia_aud_stream_op stream_op =
 {
     &stream_get_param,
     &stream_get_cap,
@@ -264,7 +264,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 
 /* API: refresh the device list */
 static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
-{    
+{
     struct bd_factory *wf = (struct bd_factory*)f;
     unsigned int i = 0;
     wchar_t *deviceNamep=NULL;
@@ -280,7 +280,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     }
 
     // Enumerate capture sound devices
-    while(bdIMADpj_getDeviceName(BD_IMAD_CAPTURE_DEVICES, &deviceNamep) != 
+    while(bdIMADpj_getDeviceName(BD_IMAD_CAPTURE_DEVICES, &deviceNamep) !=
           BD_PJ_ERROR_IMAD_DEVICE_LIST_EMPTY)
     {
         wcscpy(captureDevName[captureDeviceCount], deviceNamep);
@@ -288,7 +288,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     }
 
     // Enumerate playback sound devices
-    while(bdIMADpj_getDeviceName(BD_IMAD_PLAYBACK_DEVICES, &deviceNamep) != 
+    while(bdIMADpj_getDeviceName(BD_IMAD_PLAYBACK_DEVICES, &deviceNamep) !=
           BD_PJ_ERROR_IMAD_DEVICE_LIST_EMPTY)
     {
         wcscpy(playbackDevName[playbackDeviceCount], deviceNamep);
@@ -298,7 +298,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     // Set devices info
     wf->dev_count = captureDeviceCount + playbackDeviceCount;
     wf->pool = pj_pool_create(wf->pf, "BD_IMAD_DEVICES", 1000, 1000, NULL);
-    wf->dev_info = (struct bddev_info*)pj_pool_calloc(wf->pool, wf->dev_count, 
+    wf->dev_info = (struct bddev_info*)pj_pool_calloc(wf->pool, wf->dev_count,
                                                      sizeof(struct bddev_info));
 
     // Capture device properties
@@ -310,7 +310,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
         wf->dev_info[i].info.ext_fmt_cnt = 0;
         wf->dev_info[i].info.input_count = BD_IMAD_MAX_CHANNELS;
         wf->dev_info[i].info.output_count = 0;
-        strcpy(wf->dev_info[i].info.name, 
+        strcpy(wf->dev_info[i].info.name,
                BD_IMAD_PJ_WCHARtoCHAR(captureDevName[i]));
         wf->dev_info[i].info.routes = 0;
     }
@@ -319,27 +319,27 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     for(i=0;i<playbackDeviceCount;i++) {
         wf->dev_info[captureDeviceCount+i].deviceId = captureDeviceCount+i;
                 bdIMADpj_getDeviceCapabilities(BD_IMAD_PLAYBACK_DEVICES,&wf->dev_info[captureDeviceCount+i].info.caps);
-        wf->dev_info[captureDeviceCount+i].info.default_samples_per_sec = 
+        wf->dev_info[captureDeviceCount+i].info.default_samples_per_sec =
                                 BD_IMAD_DEFAULT_FREQ;
         strcpy(wf->dev_info[captureDeviceCount+i].info.driver, "BD_IMAD");
         wf->dev_info[captureDeviceCount+i].info.ext_fmt_cnt = 0;
         wf->dev_info[captureDeviceCount+i].info.input_count = 0;
-        wf->dev_info[captureDeviceCount+i].info.output_count = 
+        wf->dev_info[captureDeviceCount+i].info.output_count =
                                 BD_IMAD_MAX_CHANNELS;
-        strcpy(wf->dev_info[captureDeviceCount+i].info.name, 
+        strcpy(wf->dev_info[captureDeviceCount+i].info.name,
                BD_IMAD_PJ_WCHARtoCHAR(playbackDevName[i]));
         wf->dev_info[captureDeviceCount+i].info.routes = 0;
     }
 
     PJ_LOG(4, (THIS_FILE, "BDIMAD found %d devices:", wf->dev_count));
     for(i=0; i<wf->dev_count; i++) {
-        PJ_LOG(4,   
-               (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d)", 
+        PJ_LOG(4,
+               (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d)",
                i,
                wf->dev_info[i].info.name,
                wf->dev_info[i].info.input_count,
                wf->dev_info[i].info.output_count));
-    }    
+    }
     return PJ_SUCCESS;
 }
 
@@ -364,7 +364,7 @@ static unsigned factory_get_dev_count(pjmedia_aud_dev_factory *f)
 }
 
 /* API: get device info */
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info)
 {
@@ -408,10 +408,10 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
     param->bits_per_sample = BD_IMAD_BITS_X_SAMPLE;
     param->clock_rate = di->info.default_samples_per_sec;
     param->flags = di->info.caps;
-    param->samples_per_frame = di->info.default_samples_per_sec * 
-                               param->channel_count * 
-                               BD_IMAD_MSECOND_PER_BUFFER / 
-                               1000;    
+    param->samples_per_frame = di->info.default_samples_per_sec *
+                               param->channel_count *
+                               BD_IMAD_MSECOND_PER_BUFFER /
+                               1000;
 
     if(di->info.caps & PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) {
         param->input_vol = BD_IMAD_STARTING_INPUT_VOLUME;
@@ -445,7 +445,7 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
         goto on_break;
 
     /* Known cases of callback's thread:
-     * - The thread may be changed in the middle of a session, e.g: in MacOS 
+     * - The thread may be changed in the middle of a session, e.g: in MacOS
      *   it happens when plugging/unplugging headphone.
      * - The same thread may be reused in consecutive sessions. The first
      *   session will leave TLS set, but release the TLS data address,
@@ -454,8 +454,8 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
     if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered())
     {
         pj_bzero(strm->rec_thread_desc, sizeof(pj_thread_desc));
-        status = pj_thread_register("bd_CaptureCallback", 
-                                    strm->rec_thread_desc, 
+        status = pj_thread_register("bd_CaptureCallback",
+                                    strm->rec_thread_desc,
                                     &strm->rec_thread);
         if (status != PJ_SUCCESS)
             goto on_break;
@@ -463,7 +463,7 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
         strm->rec_thread_initialized = 1;
         PJ_LOG(5,(THIS_FILE, "Recorder thread started"));
     }
-    
+
     /* Calculate number of samples we've got */
     nsamples = samples * strm->channel_count + strm->rec_buf_count;
 
@@ -523,15 +523,15 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
         } else {
             /* Not enough samples, let's just store them in the buffer */
             pjmedia_copy_samples(strm->rec_buf + strm->rec_buf_count,
-                                 (pj_int16_t*)buffer, 
+                                 (pj_int16_t*)buffer,
                                  samples * strm->channel_count);
             strm->rec_buf_count += samples * strm->channel_count;
         }
     }  else {
         pj_assert(!"Frame type not supported");
     }
-    
-    strm->timestampCapture.u64 += strm->param.samples_per_frame / 
+
+    strm->timestampCapture.u64 += strm->param.samples_per_frame /
                                   strm->param.channel_count;
 
     if (status==0)
@@ -549,11 +549,11 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
     struct bd_stream *strm = (struct bd_stream*)user_data;
     unsigned nsamples_req = samples * strm->channel_count;
 
-    if(!strm->go) 
+    if(!strm->go)
         goto on_break;
 
     /* Known cases of callback's thread:
-     * - The thread may be changed in the middle of a session, e.g: in MacOS 
+     * - The thread may be changed in the middle of a session, e.g: in MacOS
      *   it happens when plugging/unplugging headphone.
      * - The same thread may be reused in consecutive sessions. The first
      *   session will leave TLS set, but release the TLS data address,
@@ -562,7 +562,7 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
     if (strm->play_thread_initialized == 0 || !pj_thread_is_registered())
     {
         pj_bzero(strm->play_thread_desc, sizeof(pj_thread_desc));
-        status = pj_thread_register("bd_PlaybackCallback", 
+        status = pj_thread_register("bd_PlaybackCallback",
                                     strm->play_thread_desc,
                                     &strm->play_thread);
         if (status != PJ_SUCCESS)
@@ -580,10 +580,10 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
         if (strm->play_buf_count) {
             /* samples buffered >= requested by sound device */
             if (strm->play_buf_count >= nsamples_req) {
-                pjmedia_copy_samples((pj_int16_t*)buffer, strm->play_buf, 
+                pjmedia_copy_samples((pj_int16_t*)buffer, strm->play_buf,
                                      nsamples_req);
                 strm->play_buf_count -= nsamples_req;
-                pjmedia_move_samples(strm->play_buf, 
+                pjmedia_move_samples(strm->play_buf,
                                      strm->play_buf + nsamples_req,
                                      strm->play_buf_count);
 
@@ -616,7 +616,7 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
 
                 nsamples_req -= strm->samples_per_frame;
                 buffer = (pj_int16_t*)buffer + strm->samples_per_frame;
-            } else {            
+            } else {
                 frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
                 frame.buf = strm->play_buf;
                 frame.size = strm->bytes_per_frame;
@@ -632,9 +632,9 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
 
                 pjmedia_copy_samples((pj_int16_t*)buffer, strm->play_buf,
                                      nsamples_req);
-                strm->play_buf_count = strm->samples_per_frame - 
+                strm->play_buf_count = strm->samples_per_frame -
                                        nsamples_req;
-                pjmedia_move_samples(strm->play_buf, 
+                pjmedia_move_samples(strm->play_buf,
                                      strm->play_buf+nsamples_req,
                                      strm->play_buf_count);
                 nsamples_req = 0;
@@ -651,7 +651,7 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
         return 0;
     }
 
-    strm->timestampPlayback.u64 += strm->param.samples_per_frame / 
+    strm->timestampPlayback.u64 += strm->param.samples_per_frame /
                                    strm->param.channel_count;
 
     if (status == 0)
@@ -690,12 +690,12 @@ static pj_status_t init_streams(struct bd_factory *wf,
     PJ_ASSERT_RETURN(prm->play_id < (int)wf->dev_count, PJ_EINVAL);
     PJ_ASSERT_RETURN(prm->rec_id < (int)wf->dev_count, PJ_EINVAL);
 
-    ptime = prm->samples_per_frame * 
-            1000 / 
+    ptime = prm->samples_per_frame *
+            1000 /
             (prm->clock_rate * prm->channel_count);
-    strm->bytes_per_frame = (prm->clock_rate * 
-                            ((prm->channel_count * prm->bits_per_sample) / 8)) * 
-                             ptime / 
+    strm->bytes_per_frame = (prm->clock_rate *
+                            ((prm->channel_count * prm->bits_per_sample) / 8)) *
+                             ptime /
                              1000;
     strm->timestampCapture.u64 = 0;
     strm->timestampPlayback.u64 = 0;
@@ -703,29 +703,29 @@ static pj_status_t init_streams(struct bd_factory *wf,
     //BD_IMAD_PJ
     bdIMADpj_CreateStructures(&strm->bdIMADpjSettingsPtr,
                               &strm->bdIMADpjWarningPtr);
-    
+
     strm->bdIMADpjSettingsPtr->FrameSize_ms = ptime;
     strm->bdIMADpjSettingsPtr->DiagnosticEnable = BD_IMAD_DIAGNOSTIC;
     mbstowcs(bdImadPjDiagnosticFolderPath, BD_IMAD_DIAGNOSTIC_PATH, strlen(BD_IMAD_DIAGNOSTIC_PATH));
     strm->bdIMADpjSettingsPtr->DiagnosticFolderPath = bdImadPjDiagnosticFolderPath;
     strm->bdIMADpjSettingsPtr->validate = (void *)manage_code;
 
-    if(prm->clock_rate != 8000 && prm->clock_rate != 16000 
+    if(prm->clock_rate != 8000 && prm->clock_rate != 16000
            && prm->clock_rate != 32000 && prm->clock_rate != 44100 && prm->clock_rate != 48000) {
-        PJ_LOG(4, (THIS_FILE, 
+        PJ_LOG(4, (THIS_FILE,
                    "BDIMAD support 8000 Hz, 16000 Hz, 32000 Hz, 44100 Hz and 48000 Hz "
                    "frequency."));
     }
     strm->bdIMADpjSettingsPtr->SamplingFrequency = prm->clock_rate;
 
     if(prm->channel_count > BD_IMAD_MAX_CHANNELS) {
-        PJ_LOG(4, (THIS_FILE, 
-                   "BDIMAD doesn't support a number of channels upper than %d.", 
+        PJ_LOG(4, (THIS_FILE,
+                   "BDIMAD doesn't support a number of channels upper than %d.",
                    BD_IMAD_MAX_CHANNELS));
     }
-    
+
     // Enumerate capture sound devices
-    while(bdIMADpj_getDeviceName(BD_IMAD_CAPTURE_DEVICES, &deviceNamep) != 
+    while(bdIMADpj_getDeviceName(BD_IMAD_CAPTURE_DEVICES, &deviceNamep) !=
           BD_PJ_ERROR_IMAD_DEVICE_LIST_EMPTY)
     {
         wcscpy(captureDevName[captureDeviceCount], deviceNamep);
@@ -734,13 +734,13 @@ static pj_status_t init_streams(struct bd_factory *wf,
     strm->bdIMADpjSettingsPtr->CaptureDevice = captureDevName[(int)prm->rec_id];
 
     // Enumerate playback sound devices
-    while(bdIMADpj_getDeviceName(BD_IMAD_PLAYBACK_DEVICES, &deviceNamep) != 
+    while(bdIMADpj_getDeviceName(BD_IMAD_PLAYBACK_DEVICES, &deviceNamep) !=
           BD_PJ_ERROR_IMAD_DEVICE_LIST_EMPTY)
     {
         wcscpy(playbackDevName[playbackDeviceCount], deviceNamep);
         playbackDeviceCount++;
     }
-    strm->bdIMADpjSettingsPtr->PlayDevice = 
+    strm->bdIMADpjSettingsPtr->PlayDevice =
                     playbackDevName[(int)(prm->play_id-captureDeviceCount)];
 
     strm->bdIMADpjSettingsPtr->cb_emptyCaptureBuffer = &bdimad_CaptureCallback;
@@ -748,7 +748,7 @@ static pj_status_t init_streams(struct bd_factory *wf,
     strm->bdIMADpjSettingsPtr->cb_fillPlayBackBuffer = &bdimad_PlaybackCallback;
     strm->bdIMADpjSettingsPtr->cb_fillPlayBackBuffer_user_data = (void*)strm;
 
-    if(strm->bdIMADpjInstance != NULL) 
+    if(strm->bdIMADpjInstance != NULL)
         bdIMADpj_FreeAEC(&strm->bdIMADpjInstance);
     strm->bdIMADpjInstance = NULL;
 
@@ -758,21 +758,21 @@ static pj_status_t init_streams(struct bd_factory *wf,
 
     {
         int auxInt = (prm->ec_enabled == PJ_TRUE ? 1 : 0);
-        bdIMADpj_setParameter(strm->bdIMADpjInstance, 
+        bdIMADpj_setParameter(strm->bdIMADpjInstance,
                               BD_PARAM_IMAD_PJ_AEC_ENABLE,
                               &auxInt);
         auxInt = 1;
         //Mic control On by default
-        bdIMADpj_setParameter(strm->bdIMADpjInstance, 
+        bdIMADpj_setParameter(strm->bdIMADpjInstance,
                               BD_PARAM_IMAD_PJ_MIC_CONTROL_ENABLE,
                               &auxInt);
-                
+
                 // Enable GUI Socket Communication [default->disabled]
                 bdIMADpj_enableGuiSocketCommunication(strm->bdIMADpjInstance,27000,0);
     }
 
-    if(errorInitAEC != BD_PJ_OK && 
-       errorInitAEC != BD_PJ_WARN_BDIMAD_WARNING_ASSERTED) 
+    if(errorInitAEC != BD_PJ_OK &&
+       errorInitAEC != BD_PJ_WARN_BDIMAD_WARNING_ASSERTED)
     {
         return PJMEDIA_AUDIODEV_ERRNO_FROM_BDIMAD(errorInitAEC);
     }
@@ -780,8 +780,8 @@ static pj_status_t init_streams(struct bd_factory *wf,
     return PJ_SUCCESS;
 }
 
-/**************************************** 
-            API: create stream 
+/****************************************
+            API: create stream
 *****************************************/
 static pj_status_t stream_stopBDIMAD(pjmedia_aud_stream *s)
 {
@@ -889,7 +889,7 @@ static pj_status_t stream_set_capBDIMAD(pjmedia_aud_stream *s,
         if(vol < 0.0f) vol = 0.0f;
 
         vol = vol / 100.0f;
-        res = bdIMADpj_setParameter(strm->bdIMADpjInstance, 
+        res = bdIMADpj_setParameter(strm->bdIMADpjInstance,
                                     BD_PARAM_IMAD_PJ_SPK_VOLUME, &vol);
 
 
@@ -909,7 +909,7 @@ static pj_status_t stream_set_capBDIMAD(pjmedia_aud_stream *s,
         if(vol < 0.0f) vol = 0.0f;
 
         vol = vol / 100.0f;
-        res = bdIMADpj_setParameter(strm->bdIMADpjInstance, 
+        res = bdIMADpj_setParameter(strm->bdIMADpjInstance,
                                     BD_PARAM_IMAD_PJ_MIC_VOLUME, &vol);
         if(res == BD_PJ_OK) {
             strm->param.input_vol = *(unsigned*)pval;
@@ -923,8 +923,8 @@ static pj_status_t stream_set_capBDIMAD(pjmedia_aud_stream *s,
         int aecOnOff = (*(pj_bool_t*)pval == PJ_TRUE ? 1 : 0);
 
         /* AEC setting */
-        res = bdIMADpj_setParameter(strm->bdIMADpjInstance, 
-                                    BD_PARAM_IMAD_PJ_AEC_ENABLE, 
+        res = bdIMADpj_setParameter(strm->bdIMADpjInstance,
+                                    BD_PARAM_IMAD_PJ_AEC_ENABLE,
                                     &aecOnOff);
         if(res == BD_PJ_OK) {
             strm->param.ec_enabled = (aecOnOff == 1 ? PJ_TRUE : PJ_FALSE);
@@ -996,7 +996,7 @@ static pj_status_t factory_create_streamBDIMAD(pjmedia_aud_dev_factory *f,
         return PJMEDIA_EAUD_ERR;
     }
 
-    strm->rec_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+    strm->rec_buf = (pj_int16_t*)pj_pool_alloc(pool,
                     strm->bytes_per_frame);
     if (!strm->rec_buf) {
         pj_pool_release(pool);
@@ -1004,7 +1004,7 @@ static pj_status_t factory_create_streamBDIMAD(pjmedia_aud_dev_factory *f,
     }
     strm->rec_buf_count = 0;
 
-    strm->play_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+    strm->play_buf = (pj_int16_t*)pj_pool_alloc(pool,
                      strm->bytes_per_frame);
     if (!strm->play_buf) {
         pj_pool_release(pool);
@@ -1014,18 +1014,18 @@ static pj_status_t factory_create_streamBDIMAD(pjmedia_aud_dev_factory *f,
 
     /* Apply the remaining settings */
     if(param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
-        stream_set_capBDIMAD(&strm->base, 
-                             PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
+        stream_set_capBDIMAD(&strm->base,
+                             PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
                              &param->output_vol);
     }
     if(param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) {
-        stream_set_capBDIMAD(&strm->base, 
-                             PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING, 
+        stream_set_capBDIMAD(&strm->base,
+                             PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
                              &param->input_vol);
     }
     if(param->flags & PJMEDIA_AUD_DEV_CAP_EC) {
-        stream_set_capBDIMAD(&strm->base, 
-                             PJMEDIA_AUD_DEV_CAP_EC, 
+        stream_set_capBDIMAD(&strm->base,
+                             PJMEDIA_AUD_DEV_CAP_EC,
                              &param->ec_enabled);
     }
 
@@ -1048,7 +1048,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
                                          void *user_data,
                                          pjmedia_aud_stream **p_aud_strm)
 {
-    return factory_create_streamBDIMAD(f, param, rec_cb, 
+    return factory_create_streamBDIMAD(f, param, rec_cb,
                                        play_cb, user_data, p_aud_strm);
 }
 // ----------------------------------------------------------------------
@@ -1066,14 +1066,14 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
     pj_memcpy(pi, &strm->param, sizeof(*pi));
 
     // Get the output volume setting
-    if(stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
+    if(stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
                       &pi->output_vol) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
     }
 
     // Get the input volume setting
-    if(stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING, 
+    if(stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
                       &pi->input_vol) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING;
@@ -1111,7 +1111,7 @@ static pj_status_t stream_get_capBDIMAD(pjmedia_aud_stream *s,
     {
         /* Input volume setting */
         float vol;
-        res = bdIMADpj_getParameter(strm->bdIMADpjInstance, 
+        res = bdIMADpj_getParameter(strm->bdIMADpjInstance,
                                     BD_PARAM_IMAD_PJ_MIC_VOLUME, &vol);
         if(res == BD_PJ_OK) {
             vol = vol * 100;
@@ -1125,7 +1125,7 @@ static pj_status_t stream_get_capBDIMAD(pjmedia_aud_stream *s,
     } else if(cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
         /* Output volume setting */
         float vol;
-        res = bdIMADpj_getParameter(strm->bdIMADpjInstance, 
+        res = bdIMADpj_getParameter(strm->bdIMADpjInstance,
                                     BD_PARAM_IMAD_PJ_SPK_VOLUME, &vol);
         if(res == BD_PJ_OK) {
                         vol = vol * 100;
@@ -1139,7 +1139,7 @@ static pj_status_t stream_get_capBDIMAD(pjmedia_aud_stream *s,
     }
     else if(cap == PJMEDIA_AUD_DEV_CAP_EC) {
         int aecIsOn;
-        res = bdIMADpj_getParameter(strm->bdIMADpjInstance, 
+        res = bdIMADpj_getParameter(strm->bdIMADpjInstance,
                                     BD_PARAM_IMAD_PJ_AEC_ENABLE, &aecIsOn);
         if(res == BD_PJ_OK) {
             *(pj_bool_t*)pval = (aecIsOn == 1 ? PJ_TRUE : PJ_FALSE);

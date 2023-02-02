@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pjmedia/sound.h>
@@ -52,7 +52,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f);
 static unsigned    factory_get_dev_count(pjmedia_aud_dev_factory *f);
-static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
+static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info);
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
@@ -90,7 +90,7 @@ static pjmedia_aud_dev_factory_op factory_op =
     &factory_refresh
 };
 
-static pjmedia_aud_stream_op stream_op = 
+static pjmedia_aud_stream_op stream_op =
 {
     &stream_get_param,
     &stream_get_cap,
@@ -179,7 +179,7 @@ static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
     info->output_count = si->output_count;
     info->default_samples_per_sec = si->default_samples_per_sec;
     pj_ansi_strcpy(info->driver, "legacy");
-    info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
+    info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
                  PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
 
     return PJ_SUCCESS;
@@ -259,7 +259,7 @@ static pj_status_t snd_rec_cb( /* in */   void *user_data,
 {
     struct legacy_stream *strm = (struct legacy_stream*)user_data;
     pjmedia_frame frame;
-    
+
     frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame.buf = input;
     frame.size = size;
@@ -390,8 +390,8 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
 
     PJ_ASSERT_RETURN(strm && pval, PJ_EINVAL);
 
-    if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY && 
-        (strm->param.dir & PJMEDIA_DIR_CAPTURE)) 
+    if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
+        (strm->param.dir & PJMEDIA_DIR_CAPTURE))
     {
         /* Recording latency */
         if (strm->input_latency) {
@@ -401,7 +401,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
             return PJMEDIA_EAUD_INVCAP;
         }
 
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY  && 
+    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY  &&
                (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
         /* Playback latency */

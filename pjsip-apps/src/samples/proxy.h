@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip.h>
 #include <pjlib-util.h>
@@ -80,7 +80,7 @@ static pj_status_t init_options(int argc, char *argv[])
             global.port = atoi(pj_optarg);
             printf("Port is set to %d\n", global.port);
             break;
-        
+
         case 'R':
             global.record_route = PJ_TRUE;
             printf("Using record route mode\n");
@@ -131,7 +131,7 @@ static pj_bool_t logging_on_rx_msg(pjsip_rx_data *rdata)
                          rdata->pkt_info.src_port,
                          (int)rdata->msg_info.len,
                          rdata->msg_info.msg_buf));
-    
+
     /* Always return false, otherwise messages will not get processed! */
     return PJ_FALSE;
 }
@@ -139,7 +139,7 @@ static pj_bool_t logging_on_rx_msg(pjsip_rx_data *rdata)
 /* Notification on outgoing messages */
 static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
 {
-    
+
     /* Important note:
      *  tp_info field is only valid after outgoing messages has passed
      *  transport layer. So don't try to access tp_info when the module
@@ -162,7 +162,7 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
 }
 
 /* The module instance. */
-static pjsip_module mod_msg_logger = 
+static pjsip_module mod_msg_logger =
 {
     NULL, NULL,                         /* prev, next.          */
     { "mod-msg-logger", 14 },           /* Name.                */
@@ -216,14 +216,14 @@ static pj_status_t init_stack(void)
         addr.sin_addr.s_addr = 0;
         addr.sin_port = pj_htons((pj_uint16_t)global.port);
 
-        status = pjsip_udp_transport_start( global.endpt, &addr, 
+        status = pjsip_udp_transport_start( global.endpt, &addr,
                                             NULL, 1, NULL);
         if (status != PJ_SUCCESS)
             return status;
     }
 
     /* Create pool for the application */
-    global.pool = pj_pool_create(&global.cp.factory, "proxyapp", 
+    global.pool = pj_pool_create(&global.cp.factory, "proxyapp",
                                  4000, 4000, NULL);
 
     /* Register the logger module */
@@ -264,7 +264,7 @@ static pj_status_t init_proxy(void)
     {
         for (i=0; i<addr_cnt; ++i) {
             char addr[PJ_INET_ADDRSTRLEN];
-            
+
             if (addr_list[i].ipv4.sin_addr.s_addr == pri_addr.ipv4.sin_addr.s_addr)
                 continue;
 
@@ -295,7 +295,7 @@ static pj_status_t init_proxy(void)
     PJ_LOG(3,(THIS_FILE, "Proxy started, listening on port %d", global.port));
     PJ_LOG(3,(THIS_FILE, "Local host aliases:"));
     for (i=0; i<global.name_cnt; ++i) {
-        PJ_LOG(3,(THIS_FILE, " %.*s:%d", 
+        PJ_LOG(3,(THIS_FILE, " %.*s:%d",
                   (int)global.name[i].host.slen,
                   global.name[i].host.ptr,
                   global.name[i].port));
@@ -355,7 +355,7 @@ static pj_status_t proxy_verify_request(pjsip_rx_data *rdata)
 
     /* Before an element can proxy a request, it MUST verify the message's
      * validity.  A valid message must pass the following checks:
-     * 
+     *
      * 1. Reasonable Syntax
      * 2. URI scheme
      * 3. Max-Forwards
@@ -374,7 +374,7 @@ static pj_status_t proxy_verify_request(pjsip_rx_data *rdata)
     if (!PJSIP_URI_SCHEME_IS_SIP(rdata->msg_info.msg->line.req.uri) &&
         !PJSIP_URI_SCHEME_IS_SIPS(rdata->msg_info.msg->line.req.uri))
     {
-        pjsip_endpt_respond_stateless(global.endpt, rdata, 
+        pjsip_endpt_respond_stateless(global.endpt, rdata,
                                       PJSIP_SC_UNSUPPORTED_URI_SCHEME, NULL,
                                       NULL, NULL);
         return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_UNSUPPORTED_URI_SCHEME);
@@ -384,7 +384,7 @@ static pj_status_t proxy_verify_request(pjsip_rx_data *rdata)
      * Send error if Max-Forwards is 1 or lower.
      */
     if (rdata->msg_info.max_fwd && rdata->msg_info.max_fwd->ivalue <= 1) {
-        pjsip_endpt_respond_stateless(global.endpt, rdata, 
+        pjsip_endpt_respond_stateless(global.endpt, rdata,
                                       PJSIP_SC_TOO_MANY_HOPS, NULL,
                                       NULL, NULL);
         return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_TOO_MANY_HOPS);
@@ -395,10 +395,10 @@ static pj_status_t proxy_verify_request(pjsip_rx_data *rdata)
      */
 
     /* 5. Proxy-Require */
-    if (pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_PROXY_REQUIRE, 
-                                   NULL) != NULL) 
+    if (pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_PROXY_REQUIRE,
+                                   NULL) != NULL)
     {
-        pjsip_endpt_respond_stateless(global.endpt, rdata, 
+        pjsip_endpt_respond_stateless(global.endpt, rdata,
                                       PJSIP_SC_BAD_EXTENSION, NULL,
                                       NULL, NULL);
         return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_EXTENSION);
@@ -443,8 +443,8 @@ static pj_status_t proxy_process_routing(pjsip_tx_data *tdata)
         }
 
         /* Find the last Route header */
-        while ( (r=(pjsip_route_hdr*)pjsip_msg_find_hdr(tdata->msg, 
-                                                        PJSIP_H_ROUTE, 
+        while ( (r=(pjsip_route_hdr*)pjsip_msg_find_hdr(tdata->msg,
+                                                        PJSIP_H_ROUTE,
                                                         r->next)) != NULL )
         {
             hroute = r;
@@ -463,7 +463,7 @@ static pj_status_t proxy_process_routing(pjsip_tx_data *tdata)
             /* Yes this is strict route, so:
              * - replace req URI with the URI in Route header,
              * - remove the Route header,
-             * - proceed as if it received this modified request. 
+             * - proceed as if it received this modified request.
             */
             tdata->msg->line.req.uri = hroute->name_addr.uri;
             target = (pjsip_sip_uri*) tdata->msg->line.req.uri;
@@ -496,7 +496,7 @@ static pj_status_t proxy_process_routing(pjsip_tx_data *tdata)
     /* If the first value in the Route header field indicates this proxy,
      * the proxy MUST remove that value from the request.
      */
-    hroute = (pjsip_route_hdr*) 
+    hroute = (pjsip_route_hdr*)
               pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
     if (hroute && is_uri_local((pjsip_sip_uri*)hroute->name_addr.uri)) {
         pj_list_erase(hroute);
@@ -561,7 +561,7 @@ static pj_status_t proxy_calculate_target(pjsip_rx_data *rdata,
     /* If the target set for the request has not been predetermined as
      * described above, this implies that the element is responsible for the
      * domain in the Request-URI, and the element MAY use whatever mechanism
-     * it desires to determine where to send the request. 
+     * it desires to determine where to send the request.
      */
 
     /* We're not interested to receive request destined to us, so

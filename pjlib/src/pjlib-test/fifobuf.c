@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,12 +14,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_fifobuf_test;
 
@@ -29,8 +29,8 @@ int dummy_fifobuf_test;
 
 int fifobuf_test()
 {
-    enum { SIZE = 1024, MAX_ENTRIES = 128, 
-           MIN_SIZE = 4, MAX_SIZE = 64, 
+    enum { SIZE = 1024, MAX_ENTRIES = 128,
+           MIN_SIZE = 4, MAX_SIZE = 64,
            LOOP=10000 };
     pj_pool_t *pool;
     pj_fifobuf_t fifo;
@@ -48,7 +48,7 @@ int fifobuf_test()
         return -20;
 
     pj_fifobuf_init (&fifo, buffer, SIZE);
-    
+
     // Test 1
     for (i=0; i<LOOP*MAX_ENTRIES; ++i) {
         int size;

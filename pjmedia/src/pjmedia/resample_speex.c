@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/resample.h>
 #include <pjmedia/errno.h>
@@ -67,7 +67,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
     resample->in_samples_per_frame = samples_per_frame;
     resample->out_samples_per_frame = rate_out / (rate_in / samples_per_frame);
-    resample->state = speex_resampler_init(channel_count,  rate_in, rate_out, 
+    resample->state = speex_resampler_init(channel_count,  rate_in, rate_out,
                                            quality, &err);
     if (resample->state == NULL || err != RESAMPLER_ERR_SUCCESS)
         return PJ_ENOMEM;
@@ -75,8 +75,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
     *p_resample = resample;
 
-    PJ_LOG(5,(THIS_FILE, 
-              "resample created: quality=%d, ch=%d, in/out rate=%d/%d", 
+    PJ_LOG(5,(THIS_FILE,
+              "resample created: quality=%d, ch=%d, in/out rate=%d/%d",
               quality, channel_count, rate_in, rate_out));
     return PJ_SUCCESS;
 }

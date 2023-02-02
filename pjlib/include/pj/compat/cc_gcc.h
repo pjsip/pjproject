@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_COMPAT_CC_GCC_H__
 #define __PJ_COMPAT_CC_GCC_H__
@@ -41,18 +41,18 @@
 
 
 
-#define PJ_THREAD_FUNC  
-#define PJ_NORETURN             
+#define PJ_THREAD_FUNC
+#define PJ_NORETURN
 
 #define PJ_HAS_INT64            1
 
 #ifdef __STRICT_ANSI__
-  #include <inttypes.h> 
+  #include <inttypes.h>
   typedef int64_t               pj_int64_t;
   typedef uint64_t              pj_uint64_t;
   #define PJ_INLINE_SPECIFIER   static __inline
-  #define PJ_ATTR_NORETURN      
-  #define PJ_ATTR_MAY_ALIAS     
+  #define PJ_ATTR_NORETURN
+  #define PJ_ATTR_MAY_ALIAS
 #else
   typedef long long             pj_int64_t;
   typedef unsigned long long    pj_uint64_t;
@@ -70,7 +70,7 @@
 #   define PJ_HAS_BZERO         1
 #endif
 
-#define PJ_UNREACHED(x)         
+#define PJ_UNREACHED(x)
 
 #define PJ_ALIGN_DATA(declaration, alignment) declaration __attribute__((aligned (alignment)))
 

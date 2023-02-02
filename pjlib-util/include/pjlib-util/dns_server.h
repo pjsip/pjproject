@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJLIB_UTIL_DNS_SERVER_H__
 #define __PJLIB_UTIL_DNS_SERVER_H__
@@ -32,8 +32,8 @@ PJ_BEGIN_DECL
  * @defgroup PJ_DNS_SERVER Simple DNS Server
  * @ingroup PJ_DNS
  * @{
- * This contains a simple but fully working DNS server implementation, 
- * mostly for testing purposes. It supports serving various DNS resource 
+ * This contains a simple but fully working DNS server implementation,
+ * mostly for testing purposes. It supports serving various DNS resource
  * records such as SRV, CNAME, A, and AAAA.
  */
 

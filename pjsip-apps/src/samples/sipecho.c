@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -378,7 +378,7 @@ static pjmedia_sdp_session *create_answer(int call_num, pj_pool_t *pool,
     return answer;
 }
 
-static void call_on_state_changed( pjsip_inv_session *inv, 
+static void call_on_state_changed( pjsip_inv_session *inv,
                                    pjsip_event *e)
 {
     call_t *call = (call_t*)inv->mod_data[mod_sipecho.id];
@@ -400,7 +400,7 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 static void call_on_rx_offer(pjsip_inv_session *inv, const pjmedia_sdp_session *offer)
 {
     call_t *call = (call_t*) inv->mod_data[mod_sipecho.id];
-    pjsip_inv_set_sdp_answer(inv, create_answer((int)(call - app.call), 
+    pjsip_inv_set_sdp_answer(inv, create_answer((int)(call - app.call),
                              inv->pool_prov, offer));
 }
 

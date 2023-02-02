@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/lock.h>
 #include <pj/os.h>
@@ -46,7 +46,7 @@ typedef pj_status_t (*FPTR)(LOCK_OBJ*);
 /******************************************************************************
  * Implementation of lock object with mutex.
  */
-static pj_lock_t mutex_lock_template = 
+static pj_lock_t mutex_lock_template =
 {
     NULL,
     (FPTR) &pj_mutex_lock,
@@ -105,7 +105,7 @@ static pj_status_t null_op(void *arg)
     return PJ_SUCCESS;
 }
 
-static pj_lock_t null_lock_template = 
+static pj_lock_t null_lock_template =
 {
     NULL,
     &null_op,
@@ -133,7 +133,7 @@ PJ_DEF(pj_status_t) pj_lock_create_null_mutex( pj_pool_t *pool,
  */
 #if defined(PJ_HAS_SEMAPHORE) && PJ_HAS_SEMAPHORE != 0
 
-static pj_lock_t sem_lock_template = 
+static pj_lock_t sem_lock_template =
 {
     NULL,
     (FPTR) &pj_sem_wait,
@@ -472,7 +472,7 @@ PJ_DEF(pj_status_t) pj_grp_lock_create_w_handler( pj_pool_t *pool,
         pj_pool_t *pool = (*p_grp_lock)->pool;
         grp_lock_add_handler(*p_grp_lock, pool, member, handler, PJ_FALSE);
     }
-    
+
     return status;
 }
 

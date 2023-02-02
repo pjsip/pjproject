@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_COMPAT_CC_MSVC_H__
 #define __PJ_COMPAT_CC_MSVC_H__
@@ -64,10 +64,10 @@
 #define PJ_EXPORT_DEF_SPECIFIER     __declspec(dllexport)
 #define PJ_IMPORT_DECL_SPECIFIER    __declspec(dllimport)
 
-#define PJ_THREAD_FUNC  
+#define PJ_THREAD_FUNC
 #define PJ_NORETURN             __declspec(noreturn)
-#define PJ_ATTR_NORETURN        
-#define PJ_ATTR_MAY_ALIAS       
+#define PJ_ATTR_NORETURN
+#define PJ_ATTR_MAY_ALIAS
 
 #define PJ_HAS_INT64    1
 
@@ -78,7 +78,7 @@ typedef unsigned __int64 pj_uint64_t;
 #define PJ_UINT64(val)          val##ui64
 #define PJ_INT64_FMT            "I64"
 
-#define PJ_UNREACHED(x)         
+#define PJ_UNREACHED(x)
 
 #define PJ_ALIGN_DATA(declaration, alignment) __declspec(align(alignment)) declaration
 

@@ -80,7 +80,7 @@ typedef void (*gen_conv_func)();
 
 typedef int (*conv_pack_to_pack_method)(const uint8* src, int src_stride,
                                         uint8* dst, int dst_stride,
-                                        int width, int height); 
+                                        int width, int height);
 
 typedef int (*conv_pack_to_planar_method)(const uint8* src, int src_stride,
                                           uint8* dst1, int dst_stride1,
@@ -109,7 +109,7 @@ typedef int  (*scale_pack_method)
               int dst_width, int dst_height,
               enum FilterMode filtering);
 
-typedef int (*scale_planar_method)      
+typedef int (*scale_planar_method)
             (const uint8* src_y, int src_stride_y,
              const uint8* src_u, int src_stride_u,
              const uint8* src_v, int src_stride_v,
@@ -127,7 +127,7 @@ typedef union act_method
     conv_planar_to_pack_method      conv_planar_to_pack;
     conv_planar_to_planar_method    conv_planar_to_planar;
     scale_pack_method               scale_pack;
-    scale_planar_method             scale_planar;    
+    scale_planar_method             scale_planar;
 } act_method;
 
 typedef struct fmt_convert_map {
@@ -146,7 +146,7 @@ typedef struct fmt_convert_map {
  * 2 : Biinear
  * 3 : Filter Box (best quality)
  */
-#if !defined(LIBYUV_FILTER_MODE) 
+#if !defined(LIBYUV_FILTER_MODE)
 #   define LIBYUV_FILTER_MODE 3
 #endif
 
@@ -168,17 +168,17 @@ typedef struct fmt_convert_map {
 #define MAP_SCALE_PLANAR(fmt,method) GET_PJ_FORMAT(fmt),\
         GET_PJ_FORMAT(fmt),SCALE_PLANAR,(gen_conv_func)&method
 
-static fmt_convert_map conv_to_i420[] = 
+static fmt_convert_map conv_to_i420[] =
 {
     {MAP_CONV_PACK_TO_PLANAR(RGB24,I420,RGB24ToI420)},
     {MAP_CONV_PACK_TO_PLANAR(RGBA,I420,ABGRToI420)},
     {MAP_CONV_PACK_TO_PLANAR(BGRA,I420,ARGBToI420)},
     {MAP_CONV_PACK_TO_PLANAR(YUY2,I420,YUY2ToI420)},
     {MAP_CONV_PACK_TO_PLANAR(UYVY,I420,UYVYToI420)},
-    {MAP_CONV_PLANAR_TO_PLANAR(I422,I420,I422ToI420)}    
+    {MAP_CONV_PLANAR_TO_PLANAR(I422,I420,I422ToI420)}
 };
 
-static fmt_convert_map conv_from_i420[] = 
+static fmt_convert_map conv_from_i420[] =
 {
     {MAP_CONV_PLANAR_TO_PACK(I420,RGB24,I420ToRGB24)},
     {MAP_CONV_PLANAR_TO_PACK(I420,RGBA,I420ToABGR)},
@@ -189,17 +189,17 @@ static fmt_convert_map conv_from_i420[] =
     {MAP_SCALE_PLANAR(I420,I420Scale)}
 };
 
-static fmt_convert_map conv_to_bgra[] = 
+static fmt_convert_map conv_to_bgra[] =
 {
     {MAP_CONV_PACK_TO_PACK(RGB24,BGRA,RGB24ToARGB)},
-    {MAP_CONV_PACK_TO_PACK(RGBA,BGRA,ABGRToARGB)},    
+    {MAP_CONV_PACK_TO_PACK(RGBA,BGRA,ABGRToARGB)},
     {MAP_CONV_PACK_TO_PACK(YUY2,BGRA,YUY2ToARGB)},
     {MAP_CONV_PACK_TO_PACK(UYVY,BGRA,UYVYToARGB)},
     {MAP_CONV_PLANAR_TO_PACK(I422,BGRA,I422ToARGB)},
     {MAP_CONV_PLANAR_TO_PACK(I420,BGRA,I420ToARGB)}
 };
 
-static fmt_convert_map conv_from_bgra[] = 
+static fmt_convert_map conv_from_bgra[] =
 {
     {MAP_CONV_PACK_TO_PACK(BGRA,RGB24,ARGBToRGB24)},
     {MAP_CONV_PACK_TO_PACK(BGRA,RGBA,ARGBToABGR)},
@@ -210,7 +210,7 @@ static fmt_convert_map conv_from_bgra[] =
     {MAP_SCALE_PACK(BGRA,ARGBScale)}
 };
 
-typedef struct converter_act 
+typedef struct converter_act
 {
     conv_func_type          act_type;
     struct fmt_info         src_fmt_info;
@@ -220,15 +220,15 @@ typedef struct converter_act
 
 struct libyuv_converter
 {
-    pjmedia_converter                    base;      
+    pjmedia_converter                    base;
     int                                  act_num;
     converter_act                        act[MAXIMUM_ACT];
 };
 
-/* Find the matched format conversion map. */ 
-static pj_status_t get_converter_map(pj_uint32_t src_id, 
+/* Find the matched format conversion map. */
+static pj_status_t get_converter_map(pj_uint32_t src_id,
                                      pj_uint32_t dst_id,
-                                     const pjmedia_rect_size *src_size, 
+                                     const pjmedia_rect_size *src_size,
                                      const pjmedia_rect_size *dst_size,
                                      int act_num,
                                      converter_act *act)
@@ -272,55 +272,55 @@ static pj_status_t get_converter_map(pj_uint32_t src_id,
 
     switch (act[act_idx].act_type) {
     case CONV_PACK_TO_PACK:
-        act[act_idx].method.conv_pack_to_pack = 
+        act[act_idx].method.conv_pack_to_pack =
                                      (conv_pack_to_pack_method)map[i].conv_func;
         break;
     case CONV_PACK_TO_PLANAR:
-        act[act_idx].method.conv_pack_to_planar = 
+        act[act_idx].method.conv_pack_to_planar =
                                    (conv_pack_to_planar_method)map[i].conv_func;
         break;
     case CONV_PLANAR_TO_PACK:
-        act[act_idx].method.conv_planar_to_pack = 
+        act[act_idx].method.conv_planar_to_pack =
                                    (conv_planar_to_pack_method)map[i].conv_func;
         break;
     case CONV_PLANAR_TO_PLANAR:
-        act[act_idx].method.conv_planar_to_planar = 
+        act[act_idx].method.conv_planar_to_planar =
                                  (conv_planar_to_planar_method)map[i].conv_func;
         break;
     case SCALE_PACK:
         act[act_idx].method.scale_pack = (scale_pack_method)map[i].conv_func;
         break;
     case SCALE_PLANAR:
-        act[act_idx].method.scale_planar = 
+        act[act_idx].method.scale_planar =
                                           (scale_planar_method)map[i].conv_func;
         break;
-    }    
+    }
 
     act[act_idx].src_fmt_info.vid_fmt_info = pjmedia_get_video_format_info(
                                             pjmedia_video_format_mgr_instance(),
                                             src_id);
-    
-    act[act_idx].dst_fmt_info.vid_fmt_info = 
+
+    act[act_idx].dst_fmt_info.vid_fmt_info =
               pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
                                             dst_id);
 
-    /* Source buffer size is always the same as the previous destination buffer 
+    /* Source buffer size is always the same as the previous destination buffer
        size, except for the first act. */
     act[act_idx].src_fmt_info.apply_param.size = (!act_idx)?*src_size:
                                    act[act_idx-1].dst_fmt_info.apply_param.size;
 
-    /* Destination buffer size is not the same as source buffer size 
+    /* Destination buffer size is not the same as source buffer size
        when scaling. */
-    act[act_idx].dst_fmt_info.apply_param.size = 
+    act[act_idx].dst_fmt_info.apply_param.size =
                                      (METHOD_IS_SCALE(act[act_idx].act_type))?
                                      *dst_size:
                                      act[act_idx].src_fmt_info.apply_param.size;
-    
+
     return PJ_SUCCESS;
 }
 
-/* This method will return the prefered conversion format based 
- * on the color model. 
+/* This method will return the prefered conversion format based
+ * on the color model.
  */
 static pjmedia_format_id get_next_conv_fmt(pj_uint32_t src_id) {
     const pjmedia_video_format_info *vid_info = pjmedia_get_video_format_info(
@@ -337,17 +337,17 @@ static pjmedia_format_id get_next_conv_fmt(pj_uint32_t src_id) {
     }
 }
 
-/* This method will find and set all the steps needed for conversion/scale. 
- * More than one step might be needed, since not all format is provided with 
+/* This method will find and set all the steps needed for conversion/scale.
+ * More than one step might be needed, since not all format is provided with
  * a direct conversion/scale method.
  * e.g : Scale YUY2 (240*320) to YUY2 (320*720)
  *       - Step 1: Convert YUY2(240*320) to I420 (240*320)
  *       - Step 2: Scale I420 (320*760)
  *       - Step 3: Convert I420 (320*760) to YUY2 (320*760)
  */
-static int set_converter_act(pj_uint32_t src_id, 
+static int set_converter_act(pj_uint32_t src_id,
                              pj_uint32_t dst_id,
-                             const pjmedia_rect_size *src_size, 
+                             const pjmedia_rect_size *src_size,
                              const pjmedia_rect_size *dst_size,
                              converter_act *act)
 {
@@ -358,12 +358,12 @@ static int set_converter_act(pj_uint32_t src_id,
     /* Convert to I420 or BGRA if needed. */
     if ((src_id != PJMEDIA_FORMAT_I420) && (src_id != PJMEDIA_FORMAT_BGRA)) {
         pj_uint32_t next_id = get_next_conv_fmt(src_id);
-        if (get_converter_map(src_id, next_id, src_size, dst_size, ++act_num, 
+        if (get_converter_map(src_id, next_id, src_size, dst_size, ++act_num,
                               act) != PJ_SUCCESS)
         {
-            return 0;                   
-        }                                                  
-                
+            return 0;
+        }
+
         current_id = next_id;
     }
 
@@ -376,11 +376,11 @@ static int set_converter_act(pj_uint32_t src_id,
     need_scale = PJ_TRUE;
 
     if (need_scale) {
-        if (get_converter_map(current_id, current_id, src_size, dst_size, 
+        if (get_converter_map(current_id, current_id, src_size, dst_size,
                               ++act_num, act) != PJ_SUCCESS)
         {
-            return 0;                        
-        }                              
+            return 0;
+        }
     }
 
     /* Convert if needed */
@@ -389,33 +389,33 @@ static int set_converter_act(pj_uint32_t src_id,
                               act) != PJ_SUCCESS)
         {
             return 0;
-        }                              
+        }
     }
 
-    return act_num; 
+    return act_num;
 }
 
 /* Additional buffer might be needed for formats without direct conversion/scale
  * method. This method will allocate and set the destination buffer needed by
  * the conversion/scaling process.
  */
-static pj_status_t set_destination_buffer(pj_pool_t *pool, 
+static pj_status_t set_destination_buffer(pj_pool_t *pool,
                                           struct libyuv_converter *lconv)
 {
     int i = 0;
 
     for (;i<lconv->act_num-1;++i) {
-        pj_size_t buffer_size = 0;      
+        pj_size_t buffer_size = 0;
         fmt_info *info = &lconv->act[i].dst_fmt_info;
 
         /* Get destination buffer size. */
-        (*info->vid_fmt_info->apply_fmt)(info->vid_fmt_info, 
+        (*info->vid_fmt_info->apply_fmt)(info->vid_fmt_info,
                                          &info->apply_param);
 
         buffer_size = info->apply_param.framebytes;
 
         /* Allocate buffer. */
-        lconv->act[i].dst_fmt_info.apply_param.buffer = 
+        lconv->act[i].dst_fmt_info.apply_param.buffer =
                                   (pj_uint8_t*)pj_pool_alloc(pool, buffer_size);
 
         if (!lconv->act[i].dst_fmt_info.apply_param.buffer)
@@ -425,27 +425,27 @@ static pj_status_t set_destination_buffer(pj_pool_t *pool,
 }
 
 /* Check the act input/output format matched the conversion/scale format. */
-static pj_bool_t check_converter_act(const converter_act *act, 
-                                     int act_num, 
+static pj_bool_t check_converter_act(const converter_act *act,
+                                     int act_num,
                                      pj_uint32_t src_id,
                                      const pjmedia_rect_size *src_size,
-                                     pj_uint32_t dst_id, 
+                                     pj_uint32_t dst_id,
                                      const pjmedia_rect_size *dst_size)
 {
     if (act_num) {
         const struct fmt_info *first_fmt = &act[0].src_fmt_info;
-        const struct fmt_info *last_fmt = &act[act_num-1].dst_fmt_info; 
+        const struct fmt_info *last_fmt = &act[act_num-1].dst_fmt_info;
 
         if ((first_fmt->vid_fmt_info->id == src_id) &&
             (first_fmt->apply_param.size.h == src_size->h) &&
             (first_fmt->apply_param.size.w == src_size->w) &&
-            (last_fmt->vid_fmt_info->id == dst_id) && 
+            (last_fmt->vid_fmt_info->id == dst_id) &&
             (last_fmt->apply_param.size.h == dst_size->h) &&
             (last_fmt->apply_param.size.w == dst_size->w))
         {
             return PJ_TRUE;
         }
-    } 
+    }
     return PJ_FALSE;
 }
 
@@ -488,11 +488,11 @@ static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
 
     src_detail = pjmedia_format_get_video_format_detail(&prm->src, PJ_TRUE);
     dst_detail = pjmedia_format_get_video_format_detail(&prm->dst, PJ_TRUE);
-    
+
     lconv = PJ_POOL_ZALLOC_T(pool, struct libyuv_converter);
     lconv->base.op = &libyuv_converter_op;
 
-    lconv->act_num = set_converter_act(src_fmt_info->id, dst_fmt_info->id, 
+    lconv->act_num = set_converter_act(src_fmt_info->id, dst_fmt_info->id,
                                        &src_detail->size, &dst_detail->size,
                                        lconv->act);
 
@@ -500,9 +500,9 @@ static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
         return status;
     }
 
-    if (!check_converter_act(lconv->act, lconv->act_num, 
+    if (!check_converter_act(lconv->act, lconv->act_num,
                              src_fmt_info->id, &src_detail->size,
-                             dst_fmt_info->id, &dst_detail->size)) 
+                             dst_fmt_info->id, &dst_detail->size))
     {
         return status;
     }
@@ -530,20 +530,20 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
     lconv->act[0].src_fmt_info.apply_param.buffer = src_frame->buf;
 
     /* Set the last act buffer from dst frame. */
-    lconv->act[lconv->act_num-1].dst_fmt_info.apply_param.buffer = 
+    lconv->act[lconv->act_num-1].dst_fmt_info.apply_param.buffer =
                                                                  dst_frame->buf;
 
-    for (;i<lconv->act_num;++i) {       
+    for (;i<lconv->act_num;++i) {
         /* Use destination info as the source info for the next act. */
-        struct fmt_info *src_fmt_info = (i==0)?&lconv->act[i].src_fmt_info: 
+        struct fmt_info *src_fmt_info = (i==0)?&lconv->act[i].src_fmt_info:
                                         &lconv->act[i-1].dst_fmt_info;
 
-        struct fmt_info *dst_fmt_info = &lconv->act[i].dst_fmt_info;    
-        
-        (*src_fmt_info->vid_fmt_info->apply_fmt)(src_fmt_info->vid_fmt_info, 
+        struct fmt_info *dst_fmt_info = &lconv->act[i].dst_fmt_info;
+
+        (*src_fmt_info->vid_fmt_info->apply_fmt)(src_fmt_info->vid_fmt_info,
                                                  &src_fmt_info->apply_param);
 
-        (*dst_fmt_info->vid_fmt_info->apply_fmt)(dst_fmt_info->vid_fmt_info, 
+        (*dst_fmt_info->vid_fmt_info->apply_fmt)(dst_fmt_info->vid_fmt_info,
                                                  &dst_fmt_info->apply_param);
 
         switch (lconv->act[i].act_type) {
@@ -551,22 +551,22 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
             (*lconv->act[i].method.conv_pack_to_pack)(
                               (const uint8*)src_fmt_info->apply_param.planes[0],
                               src_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.planes[0], 
+                              dst_fmt_info->apply_param.planes[0],
                               dst_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.size.w, 
+                              dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h);
             break;
         case CONV_PACK_TO_PLANAR:
             (*lconv->act[i].method.conv_pack_to_planar)(
                               (const uint8*)src_fmt_info->apply_param.planes[0],
                               src_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.planes[0], 
+                              dst_fmt_info->apply_param.planes[0],
                               dst_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.planes[1], 
+                              dst_fmt_info->apply_param.planes[1],
                               dst_fmt_info->apply_param.strides[1],
-                              dst_fmt_info->apply_param.planes[2], 
+                              dst_fmt_info->apply_param.planes[2],
                               dst_fmt_info->apply_param.strides[2],
-                              dst_fmt_info->apply_param.size.w, 
+                              dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h);
             break;
         case CONV_PLANAR_TO_PACK:
@@ -577,9 +577,9 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
                               src_fmt_info->apply_param.strides[1],
                               (const uint8*)src_fmt_info->apply_param.planes[2],
                               src_fmt_info->apply_param.strides[2],
-                              dst_fmt_info->apply_param.planes[0], 
+                              dst_fmt_info->apply_param.planes[0],
                               dst_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.size.w, 
+                              dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h);
             break;
         case CONV_PLANAR_TO_PLANAR:
@@ -590,13 +590,13 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
                               src_fmt_info->apply_param.strides[1],
                               (const uint8*)src_fmt_info->apply_param.planes[2],
                               src_fmt_info->apply_param.strides[2],
-                              dst_fmt_info->apply_param.planes[0], 
+                              dst_fmt_info->apply_param.planes[0],
                               dst_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.planes[1], 
+                              dst_fmt_info->apply_param.planes[1],
                               dst_fmt_info->apply_param.strides[1],
-                              dst_fmt_info->apply_param.planes[2], 
+                              dst_fmt_info->apply_param.planes[2],
                               dst_fmt_info->apply_param.strides[2],
-                              dst_fmt_info->apply_param.size.w, 
+                              dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h);
             break;
         case SCALE_PACK:
@@ -610,7 +610,7 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
                               dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h,
                               LIBYUV_FILTER_MODE);
-            break;      
+            break;
         case SCALE_PLANAR:
             (*lconv->act[i].method.scale_planar)(
                               (const uint8*)src_fmt_info->apply_param.planes[0],
@@ -630,9 +630,9 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
                               dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h,
                               LIBYUV_FILTER_MODE);
-            break;      
-        };      
-    }    
+            break;
+        };
+    }
     return PJ_SUCCESS;
 }
 
@@ -670,15 +670,15 @@ static pj_status_t libyuv_conv_convert2(
 
     for (i=0;i<lconv->act_num;++i) {
         /* Use destination info as the source info for the next act. */
-        struct fmt_info *src_fmt_info = (i==0)? src_info : 
+        struct fmt_info *src_fmt_info = (i==0)? src_info :
                                         &lconv->act[i-1].dst_fmt_info;
 
-        struct fmt_info *dst_fmt_info = &lconv->act[i].dst_fmt_info;    
-        
-        (*src_fmt_info->vid_fmt_info->apply_fmt)(src_fmt_info->vid_fmt_info, 
+        struct fmt_info *dst_fmt_info = &lconv->act[i].dst_fmt_info;
+
+        (*src_fmt_info->vid_fmt_info->apply_fmt)(src_fmt_info->vid_fmt_info,
                                                  &src_fmt_info->apply_param);
 
-        (*dst_fmt_info->vid_fmt_info->apply_fmt)(dst_fmt_info->vid_fmt_info, 
+        (*dst_fmt_info->vid_fmt_info->apply_fmt)(dst_fmt_info->vid_fmt_info,
                                                  &dst_fmt_info->apply_param);
 
         /* For first and last acts, apply plane buffer offset and return back
@@ -713,22 +713,22 @@ static pj_status_t libyuv_conv_convert2(
             (*lconv->act[i].method.conv_pack_to_pack)(
                               (const uint8*)src_fmt_info->apply_param.planes[0],
                               src_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.planes[0], 
+                              dst_fmt_info->apply_param.planes[0],
                               dst_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.size.w, 
+                              dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h);
             break;
         case CONV_PACK_TO_PLANAR:
             (*lconv->act[i].method.conv_pack_to_planar)(
                               (const uint8*)src_fmt_info->apply_param.planes[0],
                               src_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.planes[0], 
+                              dst_fmt_info->apply_param.planes[0],
                               dst_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.planes[1], 
+                              dst_fmt_info->apply_param.planes[1],
                               dst_fmt_info->apply_param.strides[1],
-                              dst_fmt_info->apply_param.planes[2], 
+                              dst_fmt_info->apply_param.planes[2],
                               dst_fmt_info->apply_param.strides[2],
-                              dst_fmt_info->apply_param.size.w, 
+                              dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h);
             break;
         case CONV_PLANAR_TO_PACK:
@@ -739,9 +739,9 @@ static pj_status_t libyuv_conv_convert2(
                               src_fmt_info->apply_param.strides[1],
                               (const uint8*)src_fmt_info->apply_param.planes[2],
                               src_fmt_info->apply_param.strides[2],
-                              dst_fmt_info->apply_param.planes[0], 
+                              dst_fmt_info->apply_param.planes[0],
                               dst_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.size.w, 
+                              dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h);
             break;
         case CONV_PLANAR_TO_PLANAR:
@@ -752,13 +752,13 @@ static pj_status_t libyuv_conv_convert2(
                               src_fmt_info->apply_param.strides[1],
                               (const uint8*)src_fmt_info->apply_param.planes[2],
                               src_fmt_info->apply_param.strides[2],
-                              dst_fmt_info->apply_param.planes[0], 
+                              dst_fmt_info->apply_param.planes[0],
                               dst_fmt_info->apply_param.strides[0],
-                              dst_fmt_info->apply_param.planes[1], 
+                              dst_fmt_info->apply_param.planes[1],
                               dst_fmt_info->apply_param.strides[1],
-                              dst_fmt_info->apply_param.planes[2], 
+                              dst_fmt_info->apply_param.planes[2],
                               dst_fmt_info->apply_param.strides[2],
-                              dst_fmt_info->apply_param.size.w, 
+                              dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h);
             break;
         case SCALE_PACK:
@@ -772,7 +772,7 @@ static pj_status_t libyuv_conv_convert2(
                               dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h,
                               LIBYUV_FILTER_MODE);
-            break;      
+            break;
         case SCALE_PLANAR:
             (*lconv->act[i].method.scale_planar)(
                               (const uint8*)src_fmt_info->apply_param.planes[0],
@@ -792,9 +792,9 @@ static pj_status_t libyuv_conv_convert2(
                               dst_fmt_info->apply_param.size.w,
                               dst_fmt_info->apply_param.size.h,
                               LIBYUV_FILTER_MODE);
-            break;      
-        };      
-    }    
+            break;
+        };
+    }
     return PJ_SUCCESS;
 }
 

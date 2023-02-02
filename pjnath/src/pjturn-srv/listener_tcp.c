@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "turn.h"
 #include <pj/compat/socket.h>
@@ -38,15 +38,15 @@ struct tcp_listener
 };
 
 
-static void lis_on_accept_complete(pj_ioqueue_key_t *key, 
-                                   pj_ioqueue_op_key_t *op_key, 
-                                   pj_sock_t sock, 
+static void lis_on_accept_complete(pj_ioqueue_key_t *key,
+                                   pj_ioqueue_op_key_t *op_key,
+                                   pj_sock_t sock,
                                    pj_status_t status);
 static pj_status_t lis_destroy(pj_turn_listener *listener);
 static void transport_create(pj_sock_t sock, pj_turn_listener *lis,
                              pj_sockaddr_t *src_addr, int src_addr_len);
 
-static void show_err(const char *sender, const char *title, 
+static void show_err(const char *sender, const char *title,
                      pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
@@ -92,18 +92,18 @@ PJ_DEF(pj_status_t) pj_turn_listener_create_tcp(pj_turn_srv *srv,
         goto on_error;
 
     /* Init bind address */
-    status = pj_sockaddr_init(af, &tcp_lis->base.addr, bound_addr, 
+    status = pj_sockaddr_init(af, &tcp_lis->base.addr, bound_addr,
                               (pj_uint16_t)port);
-    if (status != PJ_SUCCESS) 
+    if (status != PJ_SUCCESS)
         goto on_error;
-    
+
     /* Create info */
     pj_ansi_strcpy(tcp_lis->base.info, "TCP:");
-    pj_sockaddr_print(&tcp_lis->base.addr, tcp_lis->base.info+4, 
+    pj_sockaddr_print(&tcp_lis->base.addr, tcp_lis->base.info+4,
                       sizeof(tcp_lis->base.info)-4, 3);
 
     /* Bind socket */
-    status = pj_sock_bind(tcp_lis->base.sock, &tcp_lis->base.addr, 
+    status = pj_sock_bind(tcp_lis->base.sock, &tcp_lis->base.addr,
                           pj_sockaddr_get_len(&tcp_lis->base.addr));
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -125,12 +125,12 @@ PJ_DEF(pj_status_t) pj_turn_listener_create_tcp(pj_turn_srv *srv,
 
     /* Create each accept_op and kick off read operation */
     for (i=0; i<concurrency_cnt; ++i) {
-        lis_on_accept_complete(tcp_lis->key, &tcp_lis->accept_op[i].op_key, 
+        lis_on_accept_complete(tcp_lis->key, &tcp_lis->accept_op[i].op_key,
                                PJ_INVALID_SOCKET, PJ_EPENDING);
     }
 
     /* Done */
-    PJ_LOG(4,(tcp_lis->base.obj_name, "Listener %s created", 
+    PJ_LOG(4,(tcp_lis->base.obj_name, "Listener %s created",
            tcp_lis->base.info));
 
     *p_listener = &tcp_lis->base;
@@ -167,7 +167,7 @@ static pj_status_t lis_destroy(pj_turn_listener *listener)
     if (tcp_lis->base.pool) {
         pj_pool_t *pool = tcp_lis->base.pool;
 
-        PJ_LOG(4,(tcp_lis->base.obj_name, "Listener %s destroyed", 
+        PJ_LOG(4,(tcp_lis->base.obj_name, "Listener %s destroyed",
                   tcp_lis->base.info));
 
         tcp_lis->base.pool = NULL;
@@ -180,9 +180,9 @@ static pj_status_t lis_destroy(pj_turn_listener *listener)
 /*
  * Callback on new TCP connection.
  */
-static void lis_on_accept_complete(pj_ioqueue_key_t *key, 
-                                   pj_ioqueue_op_key_t *op_key, 
-                                   pj_sock_t sock, 
+static void lis_on_accept_complete(pj_ioqueue_key_t *key,
+                                   pj_ioqueue_op_key_t *op_key,
+                                   pj_sock_t sock,
                                    pj_status_t status)
 {
     struct tcp_listener *tcp_lis;
@@ -227,7 +227,7 @@ enum
     TIMER_DESTROY
 };
 
-/* The delay in seconds to be applied before TCP transport is destroyed when 
+/* The delay in seconds to be applied before TCP transport is destroyed when
  * no allocation is referencing it. This also means the initial time to wait
  * after the initial TCP connection establishment to receive a valid STUN
  * message in the transport.
@@ -256,8 +256,8 @@ struct tcp_transport
 };
 
 
-static void tcp_on_read_complete(pj_ioqueue_key_t *key, 
-                                 pj_ioqueue_op_key_t *op_key, 
+static void tcp_on_read_complete(pj_ioqueue_key_t *key,
+                                 pj_ioqueue_op_key_t *op_key,
                                  pj_ssize_t bytes_read);
 
 static pj_status_t tcp_sendto(pj_turn_transport *tp,
@@ -307,7 +307,7 @@ static void transport_create(pj_sock_t sock, pj_turn_listener *lis,
     }
 
     /* Init pkt */
-    tcp->recv_op.pkt.pool = pj_pool_create(lis->server->core.pf, "tcpkt%p", 
+    tcp->recv_op.pkt.pool = pj_pool_create(lis->server->core.pf, "tcpkt%p",
                                            1000, 1000, NULL);
     tcp->recv_op.pkt.transport = &tcp->base;
     tcp->recv_op.pkt.src.tp_type = PJ_TURN_TP_TCP;
@@ -347,8 +347,8 @@ static void timer_callback(pj_timer_heap_t *timer_heap,
 }
 
 
-static void tcp_on_read_complete(pj_ioqueue_key_t *key, 
-                                 pj_ioqueue_op_key_t *op_key, 
+static void tcp_on_read_complete(pj_ioqueue_key_t *key,
+                                 pj_ioqueue_op_key_t *op_key,
                                  pj_ssize_t bytes_read)
 {
     struct tcp_transport *tcp;
@@ -376,7 +376,7 @@ static void tcp_on_read_complete(pj_ioqueue_key_t *key,
             tcp_dec_ref(&tcp->base, NULL);
 
         } else if (bytes_read != -PJ_EPENDING) {
-            /* TCP connection closed/error. Notify client and then destroy 
+            /* TCP connection closed/error. Notify client and then destroy
              * ourselves.
              * Note: the -PJ_EPENDING is the value passed during init.
              */
@@ -384,7 +384,7 @@ static void tcp_on_read_complete(pj_ioqueue_key_t *key,
 
             if (tcp->alloc) {
                 if (bytes_read != 0) {
-                    show_err(tcp->base.obj_name, "TCP socket error", 
+                    show_err(tcp->base.obj_name, "TCP socket error",
                              -bytes_read);
                 } else {
                     PJ_LOG(5,(tcp->base.obj_name, "TCP socket closed"));
@@ -412,7 +412,7 @@ static void tcp_on_read_complete(pj_ioqueue_key_t *key,
         /* Read next packet */
         bytes_read = sizeof(recv_op->pkt.pkt) - recv_op->pkt.len;
         status = pj_ioqueue_recv(tcp->key, op_key,
-                                 recv_op->pkt.pkt + recv_op->pkt.len, 
+                                 recv_op->pkt.pkt + recv_op->pkt.len,
                                  &bytes_read, 0);
 
         if (status != PJ_EPENDING && status != PJ_SUCCESS)

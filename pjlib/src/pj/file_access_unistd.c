@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/file_access.h>
 #include <pj/assert.h>
@@ -89,7 +89,7 @@ PJ_DEF(pj_status_t) pj_file_move( const char *oldname, const char *newname)
 /*
  * pj_file_getstat()
  */
-PJ_DEF(pj_status_t) pj_file_getstat(const char *filename, 
+PJ_DEF(pj_status_t) pj_file_getstat(const char *filename,
                                     pj_file_stat *statbuf)
 {
     struct stat buf;

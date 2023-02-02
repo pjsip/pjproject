@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __VIDEODEV_IMP_H__
 #define __VIDEODEV_IMP_H__
@@ -60,10 +60,10 @@ typedef struct pjmedia_vid_dev_factory_op
      * @param f         The video device factory.
      * @param index     Device index.
      * @param info      The video device information structure which will be
-     *                  initialized by this function once it returns 
+     *                  initialized by this function once it returns
      *                  successfully.
      */
-    pj_status_t (*get_dev_info)(pjmedia_vid_dev_factory *f, 
+    pj_status_t (*get_dev_info)(pjmedia_vid_dev_factory *f,
                                 unsigned index,
                                 pjmedia_vid_dev_info *info);
 
@@ -101,7 +101,7 @@ typedef struct pjmedia_vid_dev_factory_op
 
 
 /**
- * This structure describes a video device factory. 
+ * This structure describes a video device factory.
  */
 struct pjmedia_vid_dev_factory
 {

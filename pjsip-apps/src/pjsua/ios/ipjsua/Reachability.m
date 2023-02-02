@@ -1,7 +1,7 @@
 /*
  Copyright (C) 2016 Apple Inc. All Rights Reserved.
  See LICENSE.txt for this sample’s licensing information
- 
+
  Abstract:
  Basic demonstration of how to use the SystemConfiguration Reachablity APIs.
  */
@@ -113,7 +113,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
         bzero(&zeroAddress, sizeof(zeroAddress));
         zeroAddress.sin_len = sizeof(zeroAddress);
         zeroAddress.sin_family = AF_INET;
-    
+
     return [self reachabilityWithAddress: (const struct sockaddr *) &zeroAddress];
 }
 
@@ -137,7 +137,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
                         returnValue = YES;
                 }
         }
-    
+
         return returnValue;
 }
 
@@ -205,7 +205,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
          */
                 returnValue = ReachableViaWWAN;
         }
-    
+
         return returnValue;
 }
 
@@ -229,12 +229,12 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
         NSAssert(_reachabilityRef != NULL, @"currentNetworkStatus called with NULL SCNetworkReachabilityRef");
         NetworkStatus returnValue = NotReachable;
         SCNetworkReachabilityFlags flags;
-    
+
         if (SCNetworkReachabilityGetFlags(_reachabilityRef, &flags))
         {
         returnValue = [self networkStatusForFlags:flags];
         }
-    
+
         return returnValue;
 }
 

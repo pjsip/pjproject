@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/amr_sdp_match.h>
 #include <pjmedia/errno.h>
@@ -48,10 +48,10 @@ static pj_status_t amr_toggle_octet_align(pj_pool_t *pool,
     pjmedia_sdp_attr *attr;
     pjmedia_sdp_fmtp fmtp;
     const pj_str_t STR_OCTET_ALIGN = {"octet-align=", 12};
-    
+
     enum { MAX_FMTP_STR_LEN = 160 };
 
-    attr = pjmedia_sdp_media_find_attr2(media, "fmtp", 
+    attr = pjmedia_sdp_media_find_attr2(media, "fmtp",
                                         &media->desc.fmt[fmt_idx]);
     /* Check if the AMR media format has FMTP attribute */
     if (attr) {
@@ -82,7 +82,7 @@ static pj_status_t amr_toggle_octet_align(pj_pool_t *pool,
             attr->value = pj_strdup3(pool, buf);
         }
     } else {
-        /* Add new attribute for the AMR media format with octet-align 
+        /* Add new attribute for the AMR media format with octet-align
          * field set.
          */
         char buf[MAX_FMTP_STR_LEN];
@@ -125,7 +125,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_amr_match_sdp( pj_pool_t *pool,
     pj_status_t status;
 
     /* Parse offerer FMTP */
-    attr_ofr = pjmedia_sdp_media_find_attr2(offer, "fmtp", 
+    attr_ofr = pjmedia_sdp_media_find_attr2(offer, "fmtp",
                                             &offer->desc.fmt[o_fmt_idx]);
     if (attr_ofr) {
         status = pjmedia_sdp_attr_get_fmtp(attr_ofr, &fmtp);
@@ -139,7 +139,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_amr_match_sdp( pj_pool_t *pool,
     }
 
     /* Parse answerer FMTP */
-    attr_ans = pjmedia_sdp_media_find_attr2(answer, "fmtp", 
+    attr_ans = pjmedia_sdp_media_find_attr2(answer, "fmtp",
                                             &answer->desc.fmt[a_fmt_idx]);
     if (attr_ans) {
         status = pjmedia_sdp_attr_get_fmtp(attr_ans, &fmtp);

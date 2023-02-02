@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_AUTH_SIP_AUTH_AKA_H__
 #define __PJSIP_AUTH_SIP_AUTH_AKA_H__
@@ -53,7 +53,7 @@ PJ_BEGIN_DECL
  * In addition, application would need to link with <b>libmilenage</b>
  * library from \a third_party directory.
  *
- * Application then specifies digest AKA credential by initializing the 
+ * Application then specifies digest AKA credential by initializing the
  * authentication credential as follows:
  *
  @code
@@ -77,14 +77,14 @@ PJ_BEGIN_DECL
  * Description:
  * - To support AKA, application adds \a PJSIP_CRED_DATA_EXT_AKA flag in the
  * \a data_type field. This indicates that extended information specific to
- * AKA authentication is available in the credential, and that response 
+ * AKA authentication is available in the credential, and that response
  * digest computation will use the callback function instead of the usual MD5
  * digest computation.
  *
- * - The \a scheme for the credential is "Digest". 
+ * - The \a scheme for the credential is "Digest".
  *
- * - The \a realm is the expected realm in the challenge. Application may 
- * also specify wildcard realm ("*") if it wishes to respond to any realms 
+ * - The \a realm is the expected realm in the challenge. Application may
+ * also specify wildcard realm ("*") if it wishes to respond to any realms
  * in the challenge.
  *
  * - The \a data field is optional. Application may fill this with the password
@@ -104,7 +104,7 @@ PJ_BEGIN_DECL
  * it's own function.
  *
  * - Optionally application may set \a ext.aka.op and \a ext.aka.amf in the
- * credential to specify AKA Operator variant key and AKA Authentication 
+ * credential to specify AKA Operator variant key and AKA Authentication
  * Management Field information.
  */
 
@@ -165,8 +165,8 @@ PJ_BEGIN_DECL
 
 /**
  * This function creates MD5, AKAv1-MD5, or AKAv2-MD5 response for
- * the specified challenge in \a chal, according to the algorithm 
- * specified in the challenge, and based on the information in the 
+ * the specified challenge in \a chal, according to the algorithm
+ * specified in the challenge, and based on the information in the
  * credential \a cred.
  *
  * Application may register this function as \a ext.aka.cb field of

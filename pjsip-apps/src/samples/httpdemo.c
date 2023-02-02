@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -123,7 +123,7 @@ pj_status_t getURL(const char *curl)
 
     pj_strdup2(pool, &url, curl);
 
-    if ((status = pj_http_req_create(pool, &url, timer_heap, ioqueue, 
+    if ((status = pj_http_req_create(pool, &url, timer_heap, ioqueue,
                            NULL, &hcb, &http_req)) != PJ_SUCCESS)
         return status;
 

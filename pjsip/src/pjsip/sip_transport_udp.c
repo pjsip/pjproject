@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_transport_udp.h>
 #include <pjsip/sip_endpoint.h>
@@ -41,7 +41,7 @@
  * The buffer size is important, especially in WinXP/2000 machines.
  * Basicly the lower the size, the more packets will be lost (dropped?)
  * when we're sending (receiving?) packets in large volumes.
- * 
+ *
  * The figure here is taken based on my experiment on WinXP/2000 machine,
  * and with this value, the rate of dropped packet is about 8% when
  * sending 1800 requests simultaneously (percentage taken as average
@@ -101,7 +101,7 @@ static void init_rdata(struct udp_transport *tp, unsigned rdata_index,
     rdata->tp_info.transport = &tp->base;
     rdata->tp_info.tp_data = (void*)(pj_ssize_t)rdata_index;
     rdata->tp_info.op_key.rdata = rdata;
-    pj_ioqueue_op_key_init(&rdata->tp_info.op_key.op_key, 
+    pj_ioqueue_op_key_init(&rdata->tp_info.op_key.op_key,
                            sizeof(pj_ioqueue_op_key_t));
 
     tp->rdata[rdata_index] = rdata;
@@ -117,8 +117,8 @@ static void init_rdata(struct udp_transport *tp, unsigned rdata_index,
  * This is callback notification from ioqueue that a pending recvfrom()
  * operation has completed.
  */
-static void udp_on_read_complete( pj_ioqueue_key_t *key, 
-                                  pj_ioqueue_op_key_t *op_key, 
+static void udp_on_read_complete( pj_ioqueue_key_t *key,
+                                  pj_ioqueue_op_key_t *op_key,
                                   pj_ssize_t bytes_read)
 {
     /* See https://github.com/pjsip/pjproject/issues/1197 */
@@ -189,8 +189,8 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
                               sizeof(rdata->pkt_info.src_name), 0);
             rdata->pkt_info.src_port = pj_sockaddr_get_port(src_addr);
 
-            size_eaten = 
-                pjsip_tpmgr_receive_packet(rdata->tp_info.transport->tpmgr, 
+            size_eaten =
+                pjsip_tpmgr_receive_packet(rdata->tp_info.transport->tpmgr,
                                            rdata);
 
             if (size_eaten < 0) {
@@ -206,14 +206,14 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
             /* TODO: */
 
         } else if (-bytes_read != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
-                   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) && 
-                   -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
+                   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) &&
+                   -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET))
         {
 
             /* Report error to endpoint. */
             PJSIP_ENDPT_LOG_ERROR((rdata->tp_info.transport->endpt,
                                    rdata->tp_info.transport->obj_name,
-                                   (pj_status_t)-bytes_read, 
+                                   (pj_status_t)-bytes_read,
                                    "Warning: pj_ioqueue_recvfrom()"
                                    " callback error"));
         }
@@ -225,7 +225,7 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
             flags = 0;
         }
 
-        /* Reset pool. 
+        /* Reset pool.
          * Need to copy rdata fields to temp variable because they will
          * be invalid after pj_pool_reset().
          */
@@ -257,10 +257,10 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
         /* Read next packet. */
         bytes_read = sizeof(rdata->pkt_info.packet);
         rdata->pkt_info.src_addr_len = sizeof(rdata->pkt_info.src_addr);
-        status = pj_ioqueue_recvfrom(key, op_key, 
+        status = pj_ioqueue_recvfrom(key, op_key,
                                      rdata->pkt_info.packet,
                                      &bytes_read, flags,
-                                     &rdata->pkt_info.src_addr, 
+                                     &rdata->pkt_info.src_addr,
                                      &rdata->pkt_info.src_addr_len);
 
         if (status == PJ_SUCCESS) {
@@ -280,12 +280,12 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 
                 /* Report error to endpoint if this is not EWOULDBLOCK error.*/
                 if (status != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
-                    status != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) && 
-                    status != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
+                    status != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) &&
+                    status != PJ_STATUS_FROM_OS(OSERR_ECONNRESET))
                 {
                     PJSIP_ENDPT_LOG_ERROR((rdata->tp_info.transport->endpt,
                                            rdata->tp_info.transport->obj_name,
-                                           status, 
+                                           status,
                                            "Warning: pj_ioqueue_recvfrom"));
                 }
 
@@ -297,7 +297,7 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
                  */
                 PJSIP_ENDPT_LOG_ERROR((rdata->tp_info.transport->endpt,
                                        rdata->tp_info.transport->obj_name,
-                                       status, 
+                                       status,
                                        "FATAL: pj_ioqueue_recvfrom() error, "
                                        "UDP transport stopping! Error"));
                 break;
@@ -315,11 +315,11 @@ on_return:
  * This is callback notification from ioqueue that a pending sendto()
  * operation has completed.
  */
-static void udp_on_write_complete( pj_ioqueue_key_t *key, 
+static void udp_on_write_complete( pj_ioqueue_key_t *key,
                                    pj_ioqueue_op_key_t *op_key,
                                    pj_ssize_t bytes_sent)
 {
-    struct udp_transport *tp = (struct udp_transport*) 
+    struct udp_transport *tp = (struct udp_transport*)
                                pj_ioqueue_get_user_data(key);
     pjsip_tx_data_op_key *tdata_op_key = (pjsip_tx_data_op_key*)op_key;
 
@@ -370,7 +370,7 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
 
     PJ_ASSERT_RETURN(transport && tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(tdata->op_key.tdata == NULL, PJSIP_EPENDINGTX);
-    
+
     /* Return error if transport is paused */
     if (tp->is_paused)
         return PJSIP_ETPNOTAVAIL;
@@ -459,7 +459,7 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
      *      and another one for closing the socket.
      *
     for (i=0; i<tp->rdata_cnt; ++i) {
-        pj_ioqueue_post_completion(tp->key, 
+        pj_ioqueue_post_completion(tp->key,
                                    &tp->rdata[i]->tp_info.op_key.op_key, -1);
     }
     */
@@ -477,14 +477,14 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
     }
 
     /* Must poll ioqueue because IOCP calls the callback when socket
-     * is closed. We poll the ioqueue until all pending callbacks 
+     * is closed. We poll the ioqueue until all pending callbacks
      * have been called.
      */
     for (i=0; i<50 && tp->is_closing < 1+tp->rdata_cnt; ++i) {
         int cnt;
         pj_time_val timeout = {0, 1};
 
-        cnt = pj_ioqueue_poll(pjsip_endpt_get_ioqueue(transport->endpt), 
+        cnt = pj_ioqueue_poll(pjsip_endpt_get_ioqueue(transport->endpt),
                               &timeout);
         if (cnt == 0)
             break;
@@ -612,7 +612,7 @@ static pj_status_t get_published_name(pj_sock_t sock,
                 return status;
         }
 
-        status = pj_inet_ntop(tmp_addr.addr.sa_family, 
+        status = pj_inet_ntop(tmp_addr.addr.sa_family,
                               pj_sockaddr_get_addr(&tmp_addr),
                               hostbuf, hostbufsz);
     }
@@ -634,14 +634,14 @@ static void udp_set_pub_name(struct udp_transport *tp,
     int len;
 
     pj_assert(a_name->host.slen != 0);
-    
+
     if (pj_strcmp(&tp->base.local_name.host, &a_name->host) == 0 &&
         tp->base.local_name.port == a_name->port)
     {
         return;
     }
-    
-    pj_strdup_with_null(tp->base.pool, &tp->base.local_name.host, 
+
+    pj_strdup_with_null(tp->base.pool, &tp->base.local_name.host,
                         &a_name->host);
     tp->base.local_name.port = a_name->port;
 
@@ -651,8 +651,8 @@ static void udp_set_pub_name(struct udp_transport *tp,
     }
 
     pj_sockaddr_print(&tp->base.local_addr, local_addr, sizeof(local_addr), 3);
-    pj_addr_str_print(&tp->base.local_name.host, 
-                      tp->base.local_name.port, 
+    pj_addr_str_print(&tp->base.local_name.host,
+                      tp->base.local_name.port,
                       pub_addr, sizeof(pub_addr), 1),
 
     len = pj_ansi_snprintf( tp->base.info, INFO_LEN, "udp %s [published as %s]",
@@ -720,7 +720,7 @@ static pj_status_t register_to_ioqueue(struct udp_transport *tp)
 
         tp->base.grp_lock = tp->grp_lock;
     }
-    
+
     /* Register to ioqueue. */
     ioqueue = pjsip_endpt_get_ioqueue(tp->base.endpt);
     pj_memset(&ioqueue_cb, 0, sizeof(ioqueue_cb));
@@ -743,7 +743,7 @@ static pj_status_t start_async_read(struct udp_transport *tp)
 
         size = sizeof(tp->rdata[i]->pkt_info.packet);
         tp->rdata[i]->pkt_info.src_addr_len = sizeof(tp->rdata[i]->pkt_info.src_addr);
-        status = pj_ioqueue_recvfrom(tp->key, 
+        status = pj_ioqueue_recvfrom(tp->key,
                                      &tp->rdata[i]->tp_info.op_key.op_key,
                                      tp->rdata[i]->pkt_info.packet,
                                      &size, PJ_IOQUEUE_ALWAYS_ASYNC,
@@ -801,7 +801,7 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
     }
 
     /* Create pool. */
-    pool = pjsip_endpt_create_pool(endpt, format, PJSIP_POOL_LEN_TRANSPORT, 
+    pool = pjsip_endpt_create_pool(endpt, format, PJSIP_POOL_LEN_TRANSPORT,
                                    PJSIP_POOL_INC_TRANSPORT);
     if (!pool)
         return PJ_ENOMEM;
@@ -820,7 +820,7 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
         goto on_error;
 
     /* Init lock. */
-    status = pj_lock_create_recursive_mutex(pool, pool->obj_name, 
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
                                             &tp->base.lock);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -843,7 +843,7 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
     tp->base.addr_len = sizeof(tp->base.local_addr);
 
     /* Init local address. */
-    status = pj_sock_getsockname(sock, &tp->base.local_addr, 
+    status = pj_sock_getsockname(sock, &tp->base.local_addr,
                                  &tp->base.addr_len);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -891,10 +891,10 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
     /* Create rdata and put it in the array. */
     tp->rdata_cnt = 0;
     tp->rdata = (pjsip_rx_data**)
-                pj_pool_calloc(tp->base.pool, async_cnt, 
+                pj_pool_calloc(tp->base.pool, async_cnt,
                                sizeof(pjsip_rx_data*));
     for (i=0; i<async_cnt; ++i) {
-        pj_pool_t *rdata_pool = pjsip_endpt_create_pool(endpt, "rtd%p", 
+        pj_pool_t *rdata_pool = pjsip_endpt_create_pool(endpt, "rtd%p",
                                                         PJSIP_POOL_RDATA_LEN,
                                                         PJSIP_POOL_RDATA_INC);
         if (!rdata_pool) {
@@ -917,8 +917,8 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
     /* Done. */
     if (p_transport)
         *p_transport = &tp->base;
-    
-    PJ_LOG(4,(tp->base.obj_name, 
+
+    PJ_LOG(4,(tp->base.obj_name,
               "SIP %s started, published address is %s%.*s%s:%d",
               pjsip_transport_get_type_desc((pjsip_transport_type_e)tp->base.key.type),
               ipv6_quoteb,
@@ -1093,7 +1093,7 @@ PJ_DEF(pj_sock_t) pjsip_udp_transport_get_socket(pjsip_transport *transport)
 
 
 /*
- * Temporarily pause or shutdown the transport. 
+ * Temporarily pause or shutdown the transport.
  */
 PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
                                               unsigned option)
@@ -1111,7 +1111,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
     /* Transport must not have been paused */
     PJ_ASSERT_RETURN(tp->is_paused==0, PJ_EINVALIDOP);
 
-    /* Set transport to paused first, so that when the read callback is 
+    /* Set transport to paused first, so that when the read callback is
      * called by pj_ioqueue_post_completion() it will not try to
      * re-register the rdata.
      */
@@ -1119,7 +1119,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
 
     /* Cancel the ioqueue operation. */
     for (i=0; i<(unsigned)tp->rdata_cnt; ++i) {
-        pj_ioqueue_post_completion(tp->key, 
+        pj_ioqueue_post_completion(tp->key,
                                    &tp->rdata[i]->tp_info.op_key.op_key, -1);
     }
 
@@ -1137,7 +1137,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
             }
         }
         tp->sock = PJ_INVALID_SOCKET;
-        
+
     }
 
     PJ_LOG(4,(tp->base.obj_name, "SIP UDP transport paused"));
@@ -1161,7 +1161,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
                                                 const pj_sockaddr_in *local,
                                                 const pjsip_host_port *a_name)
 {
-    return pjsip_udp_transport_restart2(transport, option, sock, 
+    return pjsip_udp_transport_restart2(transport, option, sock,
                                         (pj_sockaddr*)local, a_name);
 }
 
@@ -1187,7 +1187,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
      * quit as soon as possible.
      */
     tp->is_paused = PJ_TRUE;
-    
+
     if (option & PJSIP_UDP_TRANSPORT_DESTROY_SOCKET) {
         char addr_buf[PJ_INET6_ADDRSTRLEN];
         pjsip_host_port bound_name;
@@ -1210,8 +1210,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
 
         /* Create the socket if it's not specified */
         if (sock == PJ_INVALID_SOCKET) {
-            status = create_socket(local?local->addr.sa_family:pj_AF_UNSPEC(), 
-                                   local, local?pj_sockaddr_get_len(local):0, 
+            status = create_socket(local?local->addr.sa_family:pj_AF_UNSPEC(),
+                                   local, local?pj_sockaddr_get_len(local):0,
                                    &sock);
             if (status != PJ_SUCCESS)
                 return status;
@@ -1232,7 +1232,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
         }
 
         /* Init local address. */
-        status = pj_sock_getsockname(sock, &tp->base.local_addr, 
+        status = pj_sock_getsockname(sock, &tp->base.local_addr,
                                      &tp->base.addr_len);
         if (status != PJ_SUCCESS) {
             pj_sock_close(sock);

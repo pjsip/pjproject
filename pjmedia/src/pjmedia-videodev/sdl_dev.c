@@ -611,7 +611,7 @@ static pj_status_t sdl_factory_default_param(pj_pool_t *pool,
     struct sdl_dev_info *di = &sf->dev_info[index];
 
     PJ_ASSERT_RETURN(index < sf->dev_count, PJMEDIA_EVID_INVDEV);
-    
+
     PJ_UNUSED_ARG(pool);
 
     pj_bzero(param, sizeof(*param));
@@ -667,7 +667,7 @@ static pj_status_t sdl_destroy(void *data)
 
 static pj_status_t sdl_destroy_all(void *data)
 {
-    struct sdl_stream *strm = (struct sdl_stream *)data;  
+    struct sdl_stream *strm = (struct sdl_stream *)data;
 
     sdl_destroy(data);
 #if !defined(TARGET_OS_IPHONE) || TARGET_OS_IPHONE == 0
@@ -681,14 +681,14 @@ static pj_status_t sdl_destroy_all(void *data)
     return PJ_SUCCESS;
 }
 
-static pj_status_t sdl_create_window(struct sdl_stream *strm, 
+static pj_status_t sdl_create_window(struct sdl_stream *strm,
                                      pj_bool_t use_app_win,
                                      Uint32 sdl_format,
                                      pjmedia_vid_dev_hwnd *hwnd)
 {
     if (!strm->window) {
         Uint32 flags = 0;
-        
+
         if (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS) {
             if (!(strm->param.window_flags & PJMEDIA_VID_DEV_WND_BORDER))
                 flags |= SDL_WINDOW_BORDERLESS;
@@ -719,9 +719,9 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
         if (strm->param.rend_id == OPENGL_DEV_IDX)
             flags |= SDL_WINDOW_OPENGL;
-#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */   
+#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
         if (use_app_win) {
-            /* Use the window supplied by the application. */       
+            /* Use the window supplied by the application. */
             strm->window = SDL_CreateWindowFrom(hwnd->info.window);
             if (!strm->window) {
                 sdl_log_err("SDL_CreateWindowFrom()");
@@ -772,18 +772,18 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
         glEnable(GL_TEXTURE_2D);
-        
+
         /* Init the viewport */
         glViewport(0, 0, strm->param.disp_size.w, strm->param.disp_size.h);
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        
+
         glOrtho(0.0, (GLdouble)strm->param.disp_size.w,
                 (GLdouble)strm->param.disp_size.h, 0.0, 0.0, 1.0);
-        
+
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        
+
         /* Create a texture */
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
         glGenTextures(1, &strm->texture);
@@ -792,7 +792,7 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
             return PJMEDIA_EVID_SYSERR;
     } else
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
-    {    
+    {
         strm->scr_tex = SDL_CreateTexture(strm->renderer, sdl_format,
                                           SDL_TEXTUREACCESS_STREAMING,
                                           strm->rect.w, strm->rect.h);
@@ -800,7 +800,7 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
             sdl_log_err("SDL_CreateTexture()");
             return PJMEDIA_EVID_SYSERR;
         }
-    
+
         strm->pitch = strm->rect.w * SDL_BYTESPERPIXEL(sdl_format);
     }
 
@@ -844,7 +844,7 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
     }
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
-    return sdl_create_window(strm, 
+    return sdl_create_window(strm,
                          (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW),
                          sdl_info->sdl_format,
                          &strm->param.window);
@@ -861,7 +861,7 @@ static pj_status_t resize_disp(struct sdl_stream *strm,
 {
     pj_memcpy(&strm->param.disp_size, new_disp_size,
               sizeof(strm->param.disp_size));
-    
+
     if (strm->scr_tex) {
         strm->dstrect.x = strm->dstrect.y = 0;
         strm->dstrect.w = (Uint16)strm->param.disp_size.w;
@@ -948,7 +948,7 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 
     stream->frame = frame;
     job_queue_post_job(stream->sf->jq, put_frame, strm, 0, &status);
-    
+
     return status;
 }
 
@@ -1190,7 +1190,7 @@ static pj_status_t set_cap(void *data)
         status = change_format(strm, (pjmedia_format *)pval);
         if (status != PJ_SUCCESS) {
             pj_status_t status_;
-            
+
             /**
              * Failed to change the output format. Try to revert
              * to its original format.
@@ -1204,7 +1204,7 @@ static pj_status_t set_cap(void *data)
                 status = PJMEDIA_EVID_ERR;
             }
         }
-        
+
         return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
         pjmedia_rect_size *new_size = (pjmedia_rect_size *)pval;
@@ -1233,13 +1233,13 @@ static pj_status_t set_cap(void *data)
         /* Re-init SDL */
         status = sdl_destroy_all(strm);
         if (status != PJ_SUCCESS)
-            return status;      
+            return status;
 
         status = sdl_create_window(strm, PJ_TRUE, sdl_info->sdl_format, hwnd);
         PJ_PERROR(4, (THIS_FILE, status,
                       "Re-initializing SDL with native window %d",
                       hwnd->info.window));
-        return status;  
+        return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
         Uint32 flag;
         pjmedia_vid_dev_fullscreen_flag val =

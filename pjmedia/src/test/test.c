@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -36,14 +36,14 @@ pj_pool_factory *mem;
 void app_perror(pj_status_t status, const char *msg)
 {
     char errbuf[PJ_ERR_MSG_SIZE];
-    
+
     pjmedia_strerror(status, errbuf, sizeof(errbuf));
 
     PJ_LOG(3,(THIS_FILE, "%s: %s", msg, errbuf));
 }
 
 /* Force linking PLC stuff if G.711 is disabled. See:
- *  https://github.com/pjsip/pjproject/issues/1337 
+ *  https://github.com/pjsip/pjproject/issues/1337
  */
 #if PJMEDIA_HAS_G711_CODEC==0
 void *dummy()

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_CTYPE_H__
 #define __PJ_CTYPE_H__
@@ -39,64 +39,64 @@ PJ_BEGIN_DECL
  * must not depend to LIBC.
  */
 
-/** 
+/**
  * Returns a non-zero value if either isalpha or isdigit is true for c.
  * @param c     The integer character to test.
  * @return      Non-zero value if either isalpha or isdigit is true for c.
  */
 PJ_INLINE(int) pj_isalnum(unsigned char c) { return isalnum(c); }
 
-/** 
- * Returns a non-zero value if c is a particular representation of an 
+/**
+ * Returns a non-zero value if c is a particular representation of an
  * alphabetic character.
  * @param c     The integer character to test.
- * @return      Non-zero value if c is a particular representation of an 
+ * @return      Non-zero value if c is a particular representation of an
  *              alphabetic character.
  */
 PJ_INLINE(int) pj_isalpha(unsigned char c) { return isalpha(c); }
 
-/** 
- * Returns a non-zero value if c is a particular representation of an 
+/**
+ * Returns a non-zero value if c is a particular representation of an
  * ASCII character.
  * @param c     The integer character to test.
- * @return      Non-zero value if c is a particular representation of 
+ * @return      Non-zero value if c is a particular representation of
  *              an ASCII character.
  */
 PJ_INLINE(int) pj_isascii(unsigned char c) { return c<128; }
 
-/** 
- * Returns a non-zero value if c is a particular representation of 
+/**
+ * Returns a non-zero value if c is a particular representation of
  * a decimal-digit character.
  * @param c     The integer character to test.
- * @return      Non-zero value if c is a particular representation of 
+ * @return      Non-zero value if c is a particular representation of
  *              a decimal-digit character.
  */
 PJ_INLINE(int) pj_isdigit(unsigned char c) { return isdigit(c); }
 
-/** 
- * Returns a non-zero value if c is a particular representation of 
+/**
+ * Returns a non-zero value if c is a particular representation of
  * a space character (0x09 - 0x0D or 0x20).
  * @param c     The integer character to test.
- * @return      Non-zero value if c is a particular representation of 
+ * @return      Non-zero value if c is a particular representation of
  *              a space character (0x09 - 0x0D or 0x20).
  */
 PJ_INLINE(int) pj_isspace(unsigned char c) { return isspace(c); }
 
-/** 
- * Returns a non-zero value if c is a particular representation of 
+/**
+ * Returns a non-zero value if c is a particular representation of
  * a lowercase character.
  * @param c     The integer character to test.
- * @return      Non-zero value if c is a particular representation of 
+ * @return      Non-zero value if c is a particular representation of
  *              a lowercase character.
  */
 PJ_INLINE(int) pj_islower(unsigned char c) { return islower(c); }
 
 
-/** 
- * Returns a non-zero value if c is a particular representation of 
+/**
+ * Returns a non-zero value if c is a particular representation of
  * a uppercase character.
  * @param c     The integer character to test.
- * @return      Non-zero value if c is a particular representation of 
+ * @return      Non-zero value if c is a particular representation of
  *              a uppercase character.
  */
 PJ_INLINE(int) pj_isupper(unsigned char c) { return isupper(c); }
@@ -125,10 +125,10 @@ PJ_INLINE(int) pj_tolower(unsigned char c) { return tolower(c); }
 PJ_INLINE(int) pj_toupper(unsigned char c) { return toupper(c); }
 
 /**
- * Returns a non-zero value if c is a particular representation of 
+ * Returns a non-zero value if c is a particular representation of
  * an hexadecimal digit character.
  * @param c     The integer character to test.
- * @return      Non-zero value if c is a particular representation of 
+ * @return      Non-zero value if c is a particular representation of
  *              an hexadecimal digit character.
  */
 PJ_INLINE(int) pj_isxdigit(unsigned char c){ return isxdigit(c); }

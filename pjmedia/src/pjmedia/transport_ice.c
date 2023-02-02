@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/transport_ice.h>
 #include <pjnath/errno.h>
@@ -160,12 +160,12 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp);
 /*
  * And these are ICE callbacks.
  */
-static void ice_on_rx_data(pj_ice_strans *ice_st, 
-                           unsigned comp_id, 
+static void ice_on_rx_data(pj_ice_strans *ice_st,
+                           unsigned comp_id,
                            void *pkt, pj_size_t size,
                            const pj_sockaddr_t *src_addr,
                            unsigned src_addr_len);
-static void ice_on_ice_complete(pj_ice_strans *ice_st, 
+static void ice_on_ice_complete(pj_ice_strans *ice_st,
                                 pj_ice_strans_op op,
                                 pj_status_t status);
 static void ice_on_new_candidate(pj_ice_strans *ice_st,
@@ -178,7 +178,7 @@ static void ice_on_new_candidate(pj_ice_strans *ice_st,
 static void tp_ice_on_destroy(void *arg);
 
 
-static pjmedia_transport_op transport_ice_op = 
+static pjmedia_transport_op transport_ice_op =
 {
     &transport_get_info,
     &transport_attach,
@@ -313,18 +313,18 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
 
     /* Configure RTP socket buffer settings, if not set */
     if (ice_st_cfg.comp[COMP_RTP-1].so_rcvbuf_size == 0) {
-        ice_st_cfg.comp[COMP_RTP-1].so_rcvbuf_size = 
+        ice_st_cfg.comp[COMP_RTP-1].so_rcvbuf_size =
                             PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
     }
     if (ice_st_cfg.comp[COMP_RTP-1].so_sndbuf_size == 0) {
-        ice_st_cfg.comp[COMP_RTP-1].so_sndbuf_size = 
+        ice_st_cfg.comp[COMP_RTP-1].so_sndbuf_size =
                             PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
     }
     if (ice_st_cfg.send_buf_size == 0)
         ice_st_cfg.send_buf_size = PJMEDIA_MAX_MTU;
 
     /* Create ICE */
-    status = pj_ice_strans_create(name, &ice_st_cfg, comp_cnt, tp_ice, 
+    status = pj_ice_strans_create(name, &ice_st_cfg, comp_cnt, tp_ice,
                                   &ice_st_cb, &tp_ice->ice_st);
     if (status != PJ_SUCCESS) {
         pj_pool_release(pool);
@@ -781,7 +781,7 @@ static void set_no_ice(struct transport_ice *tp_ice, const char *reason,
         PJ_PERROR(4,(tp_ice->base.name, err,
                      "Stopping ICE, reason=%s", reason));
     } else {
-        PJ_LOG(4,(tp_ice->base.name, 
+        PJ_LOG(4,(tp_ice->base.name,
                   "Stopping ICE, reason=%s", reason));
     }
 
@@ -806,7 +806,7 @@ static int print_sdp_cand_attr(char *buffer, int max_len,
                             cand->foundation.ptr,
                             (unsigned)cand->comp_id,
                             cand->prio,
-                            pj_sockaddr_print(&cand->addr, ipaddr, 
+                            pj_sockaddr_print(&cand->addr, ipaddr,
                                               sizeof(ipaddr), 0),
                             (unsigned)pj_sockaddr_get_port(&cand->addr));
     if (len < 1 || len >= max_len)
@@ -893,7 +893,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
                                          pj_bool_t rtcp_mux,
                                          pj_bool_t trickle)
 {
-    enum { 
+    enum {
         ATTR_BUF_LEN = 160,     /* Max len of a=candidate attr */
         RATTR_BUF_LEN= 160      /* Max len of a=remote-candidates attr */
     };
@@ -914,7 +914,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
      *
      * 9.1.2.2: Existing Media Streams with ICE Completed
      *   The agent MUST include a candidate attributes for candidates
-     *   matching the default destination for each component of the 
+     *   matching the default destination for each component of the
      *   media stream, and MUST NOT include any other candidates.
      *
      * When ICE has not completed, we shall include all candidates.
@@ -939,7 +939,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
         pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
         /* Encode ice-pwd attribute */
-        attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr, 
+        attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr,
                                        &local_pwd);
         pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
@@ -949,7 +949,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
         rem_cand.slen = 0;
 
         /* 9.1.2.2: Existing Media Streams with ICE Completed
-         *   The default destination for media (i.e., the values of 
+         *   The default destination for media (i.e., the values of
          *   the IP addresses and ports in the m and c line used for
          *   that media stream) MUST be the local candidate from the
          *   highest priority nominated pair in the valid list for each
@@ -966,30 +966,30 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
         if (conn == NULL)
             conn = sdp_local->conn;
 
-        conn->addr.ptr = (char*) pj_pool_alloc(sdp_pool, 
+        conn->addr.ptr = (char*) pj_pool_alloc(sdp_pool,
                                                PJ_INET6_ADDRSTRLEN);
-        pj_sockaddr_print(&check->lcand->addr, conn->addr.ptr, 
+        pj_sockaddr_print(&check->lcand->addr, conn->addr.ptr,
                           PJ_INET6_ADDRSTRLEN, 0);
         conn->addr.slen = pj_ansi_strlen(conn->addr.ptr);
         m->desc.port = pj_sockaddr_get_port(&check->lcand->addr);
 
         /* Override address RTCP attribute if it's present */
         if (comp_cnt == 2 &&
-            (check = pj_ice_strans_get_valid_pair(tp_ice->ice_st, 
+            (check = pj_ice_strans_get_valid_pair(tp_ice->ice_st,
                                                   COMP_RTCP)) != NULL &&
-            (a_rtcp = pjmedia_sdp_attr_find(m->attr_count, m->attr, 
-                                            &STR_RTCP, 0)) != NULL) 
+            (a_rtcp = pjmedia_sdp_attr_find(m->attr_count, m->attr,
+                                            &STR_RTCP, 0)) != NULL)
         {
             pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a_rtcp);
 
-            a_rtcp = pjmedia_sdp_attr_create_rtcp(sdp_pool, 
+            a_rtcp = pjmedia_sdp_attr_create_rtcp(sdp_pool,
                                                   &check->lcand->addr);
             if (a_rtcp)
                 pjmedia_sdp_attr_add(&m->attr_count, m->attr, a_rtcp);
         }
 
-        /* Encode only candidates matching the default destination 
-         * for each component 
+        /* Encode only candidates matching the default destination
+         * for each component
          */
         for (comp=0; comp < comp_cnt; ++comp) {
             int len;
@@ -1002,7 +1002,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 
             /* Print and add local candidate in the pair */
             value.ptr = attr_buf;
-            value.slen = print_sdp_cand_attr(attr_buf, ATTR_BUF_LEN, 
+            value.slen = print_sdp_cand_attr(attr_buf, ATTR_BUF_LEN,
                                              check->lcand);
             if (value.slen < 0) {
                 pj_assert(!"Not enough attr_buf to print candidate");
@@ -1014,17 +1014,17 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
             pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
             /* Append to a=remote-candidates attribute */
-            if (pj_ice_strans_get_role(tp_ice->ice_st) == 
-                                    PJ_ICE_SESS_ROLE_CONTROLLING) 
+            if (pj_ice_strans_get_role(tp_ice->ice_st) ==
+                                    PJ_ICE_SESS_ROLE_CONTROLLING)
             {
                 char rem_addr[PJ_INET6_ADDRSTRLEN];
 
-                pj_sockaddr_print(&check->rcand->addr, rem_addr, 
+                pj_sockaddr_print(&check->rcand->addr, rem_addr,
                                   sizeof(rem_addr), 0);
                 len = pj_ansi_snprintf(
                            rem_cand.ptr + rem_cand.slen,
                            RATTR_BUF_LEN - rem_cand.slen,
-                           "%s%u %s %u", 
+                           "%s%u %s %u",
                            (rem_cand.slen==0? "" : " "),
                            comp+1, rem_addr,
                            pj_sockaddr_get_port(&check->rcand->addr)
@@ -1041,16 +1041,16 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 
         /* 9.1.2.2: Existing Media Streams with ICE Completed
          *   In addition, if the agent is controlling, it MUST include
-         *   the a=remote-candidates attribute for each media stream 
+         *   the a=remote-candidates attribute for each media stream
          *   whose check list is in the Completed state.  The attribute
-         *   contains the remote candidates from the highest priority 
+         *   contains the remote candidates from the highest priority
          *   nominated pair in the valid list for each component of that
          *   media stream.
          */
-        if (pj_ice_strans_get_role(tp_ice->ice_st) == 
-                                    PJ_ICE_SESS_ROLE_CONTROLLING) 
+        if (pj_ice_strans_get_role(tp_ice->ice_st) ==
+                                    PJ_ICE_SESS_ROLE_CONTROLLING)
         {
-            attr = pjmedia_sdp_attr_create(sdp_pool, STR_REM_CAND.ptr, 
+            attr = pjmedia_sdp_attr_create(sdp_pool, STR_REM_CAND.ptr,
                                            &rem_cand);
             pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
         }
@@ -1071,7 +1071,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
                                            &local_ufrag);
             pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
-            attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr, 
+            attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr,
                                            &local_pwd);
             pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
@@ -1108,7 +1108,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
             for (i=0; i<cand_cnt; ++i) {
                 pj_str_t value;
 
-                value.slen = print_sdp_cand_attr(attr_buf, ATTR_BUF_LEN, 
+                value.slen = print_sdp_cand_attr(attr_buf, ATTR_BUF_LEN,
                                                  &cand[i]);
                 if (value.slen < 0) {
                     pj_assert(!"Not enough attr_buf to print candidate");
@@ -1116,7 +1116,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
                 }
 
                 value.ptr = attr_buf;
-                attr = pjmedia_sdp_attr_create(sdp_pool, 
+                attr = pjmedia_sdp_attr_create(sdp_pool,
                                                STR_CANDIDATE.ptr,
                                                &value);
                 pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
@@ -1225,7 +1225,7 @@ static pj_status_t parse_cand(const char *obj_name,
         goto on_return;
     }
     if (pj_stricmp2(&token, "UDP") != 0) {
-        TRACE__((obj_name, 
+        TRACE__((obj_name,
                  "Expecting ICE UDP transport only in candidate"));
         goto on_return;
     }
@@ -1294,7 +1294,7 @@ static pj_status_t parse_cand(const char *obj_name,
         cand->type = PJ_ICE_CAND_TYPE_PRFLX;
 
     } else {
-        PJ_LOG(5,(obj_name, "Invalid ICE candidate type %.*s in candidate", 
+        PJ_LOG(5,(obj_name, "Invalid ICE candidate type %.*s in candidate",
                   token.slen, token.ptr));
         goto on_return;
     }
@@ -1315,7 +1315,7 @@ static pj_status_t create_initial_offer(struct transport_ice *tp_ice,
     pj_status_t status;
 
     /* Encode ICE in SDP */
-    status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index, 
+    status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
                                    tp_ice->comp_cnt, PJ_FALSE,
                                    tp_ice->enable_rtcp_mux,
                                    tp_ice->trickle_ice !=
@@ -1352,7 +1352,7 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     if (tp_ice->enable_rtcp_mux) {
         pjmedia_sdp_attr *attr;
 
-        attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+        attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr,
                                      &STR_RTCP_MUX, NULL);
         tp_ice->use_rtcp_mux = (attr? PJ_TRUE: PJ_FALSE);
     }
@@ -1366,8 +1366,8 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
         return PJ_SUCCESS;
     }
 
-    /* Verify that default target for each component matches one of the 
-     * candidate for the component. Otherwise stop ICE with ICE ice_mismatch 
+    /* Verify that default target for each component matches one of the
+     * candidate for the component. Otherwise stop ICE with ICE ice_mismatch
      * error.
      */
 
@@ -1380,9 +1380,9 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 
     /* Verify address family matches */
     /*
-    if ((tp_ice->af==pj_AF_INET() && 
+    if ((tp_ice->af==pj_AF_INET() &&
          pj_strcmp(&rem_conn->addr_type, &STR_IP4)!=0) ||
-        (tp_ice->af==pj_AF_INET6() && 
+        (tp_ice->af==pj_AF_INET6() &&
          pj_strcmp(&rem_conn->addr_type, &STR_IP6)!=0))
     {
         return PJMEDIA_SDP_ETPORTNOTEQUAL;
@@ -1409,7 +1409,7 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
         /* Get default RTCP candidate from a=rtcp line, if present, otherwise
          * calculate default RTCP candidate from default RTP target.
          */
-        attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+        attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr,
                                      &STR_RTCP, NULL);
         has_rtcp = (attr != NULL);
 
@@ -1421,13 +1421,13 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
                 /* Error parsing a=rtcp attribute */
                 return status;
             }
-        
+
             if (rtcp_attr.addr.slen) {
                 /* Verify address family matches */
                 /*
-                if ((tp_ice->af==pj_AF_INET() && 
+                if ((tp_ice->af==pj_AF_INET() &&
                      pj_strcmp(&rtcp_attr.addr_type, &STR_IP4)!=0) ||
-                    (tp_ice->af==pj_AF_INET6() && 
+                    (tp_ice->af==pj_AF_INET6() &&
                      pj_strcmp(&rtcp_attr.addr_type, &STR_IP6)!=0))
                 {
                     return PJMEDIA_SDP_ETPORTNOTEQUAL;
@@ -1443,8 +1443,8 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
                 }
             } else {
                 /* Assign RTCP address */
-                status = pj_sockaddr_init(rem_af, &rtcp_addr, 
-                                          NULL, 
+                status = pj_sockaddr_init(rem_af, &rtcp_addr,
+                                          NULL,
                                           (pj_uint16_t)rtcp_attr.port);
                 if (status != PJ_SUCCESS) {
                     return PJMEDIA_SDP_EINRTCP;
@@ -1453,14 +1453,14 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
             }
         } else {
             unsigned rtcp_port;
-        
+
             rtcp_port = pj_sockaddr_get_port(&rem_conn_addr) + 1;
             pj_sockaddr_cp(&rtcp_addr, &rem_conn_addr);
             pj_sockaddr_set_port(&rtcp_addr, (pj_uint16_t)rtcp_port);
         }
     }
 
-    /* Find the default addresses in a=candidate attributes. 
+    /* Find the default addresses in a=candidate attributes.
      */
     for (i=0; i<rem_m->attr_count; ++i) {
         pj_ice_sess_cand cand;
@@ -1470,13 +1470,13 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
         if (pj_strcmp(&rem_m->attr[i]->name, &STR_CANDIDATE)!=0)
             continue;
 
-        status = parse_cand(tp_ice->base.name, tmp_pool, 
+        status = parse_cand(tp_ice->base.name, tmp_pool,
                             &rem_m->attr[i]->value, &cand);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(tp_ice->base.name, status,
                          "Error in parsing SDP candidate attribute '%.*s', "
                          "candidate is ignored",
-                         (int)rem_m->attr[i]->value.slen, 
+                         (int)rem_m->attr[i]->value.slen,
                          rem_m->attr[i]->value.ptr));
             continue;
         }
@@ -1522,7 +1522,7 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     /* Detect remote restarting session */
     if (pj_ice_strans_has_sess(tp_ice->ice_st) &&
         (pj_ice_strans_sess_is_running(tp_ice->ice_st) ||
-         pj_ice_strans_sess_is_complete(tp_ice->ice_st))) 
+         pj_ice_strans_sess_is_complete(tp_ice->ice_st)))
     {
         pj_str_t rem_run_ufrag, rem_run_pwd;
         pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, NULL, NULL,
@@ -1569,12 +1569,12 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
         sdp_state->has_trickle = PJ_FALSE;
     }
 
-    PJ_LOG(4,(tp_ice->base.name, 
+    PJ_LOG(4,(tp_ice->base.name,
               "Processing SDP: support ICE=%u, common comp_cnt=%u, "
               "ice_mismatch=%u, ice_restart=%u, local_role=%s, trickle=%u",
-              (sdp_state->match_comp_cnt != 0), 
-              sdp_state->match_comp_cnt, 
-              sdp_state->ice_mismatch, 
+              (sdp_state->match_comp_cnt != 0),
+              sdp_state->match_comp_cnt,
+              sdp_state->ice_mismatch,
               sdp_state->ice_restart,
               pj_ice_sess_role_name(sdp_state->local_role),
               sdp_state->has_trickle));
@@ -1611,17 +1611,17 @@ static pj_status_t encode_no_ice_in_sdp( struct transport_ice *tp_ice,
          * if remote rejects it.
          */
         pjmedia_sdp_attr_remove_all(&m->attr_count, m->attr, "rtcp");
-        
+
         if (!tp_ice->use_rtcp_mux && tp_ice->comp_cnt > 1) {
             pj_ice_sess_cand cand;
             pj_status_t status;
-            
+
             status = pj_ice_strans_get_def_cand(tp_ice->ice_st, 2, &cand);
             if (status == PJ_SUCCESS) {
                 /* Add RTCP attribute if the remote doesn't offer or
                  * rejects it.
                  */
-                attr = pjmedia_sdp_attr_create_rtcp(pool, &cand.addr);  
+                attr = pjmedia_sdp_attr_create_rtcp(pool, &cand.addr);
                 if (attr)
                     pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
             }
@@ -1655,8 +1655,8 @@ static pj_status_t create_initial_answer(struct transport_ice *tp_ice,
     }
 
     /* Verify the offer */
-    status = verify_ice_sdp(tp_ice, sdp_pool, rem_sdp, media_index, 
-                            PJ_ICE_SESS_ROLE_CONTROLLED, 
+    status = verify_ice_sdp(tp_ice, sdp_pool, rem_sdp, media_index,
+                            PJ_ICE_SESS_ROLE_CONTROLLED,
                             &tp_ice->rem_offer_state);
     if (status != PJ_SUCCESS) {
         set_no_ice(tp_ice, "Invalid SDP offer", status);
@@ -1681,7 +1681,7 @@ static pj_status_t create_initial_answer(struct transport_ice *tp_ice,
     /* Encode ICE in SDP */
     with_trickle = tp_ice->rem_offer_state.has_trickle &&
                    tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED;
-    status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index, 
+    status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
                                    tp_ice->rem_offer_state.match_comp_cnt,
                                    PJ_FALSE, tp_ice->use_rtcp_mux,
                                    with_trickle);
@@ -1725,8 +1725,8 @@ static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
     pj_status_t status;
 
     /* We have a session */
-    status = verify_ice_sdp(tp_ice, sdp_pool, rem_sdp, media_index, 
-                            PJ_ICE_SESS_ROLE_CONTROLLED, 
+    status = verify_ice_sdp(tp_ice, sdp_pool, rem_sdp, media_index,
+                            PJ_ICE_SESS_ROLE_CONTROLLED,
                             &tp_ice->rem_offer_state);
     if (status != PJ_SUCCESS) {
         /* Something wrong with the offer */
@@ -1781,7 +1781,7 @@ static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
         /* Looks like now remote is offering ICE, so we need to create
          * ICE session now.
          */
-        status = pj_ice_strans_init_ice(tp_ice->ice_st, 
+        status = pj_ice_strans_init_ice(tp_ice->ice_st,
                                         PJ_ICE_SESS_ROLE_CONTROLLED,
                                         NULL, NULL);
         if (status != PJ_SUCCESS) {
@@ -1863,7 +1863,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     /* Init ICE, the initial role is set now based on availability of
      * rem_sdp, but it will be checked again later.
      */
-    ice_role = (rem_sdp==NULL ? PJ_ICE_SESS_ROLE_CONTROLLING : 
+    ice_role = (rem_sdp==NULL ? PJ_ICE_SESS_ROLE_CONTROLLING :
                                 PJ_ICE_SESS_ROLE_CONTROLLED);
     status = pj_ice_strans_init_ice(tp_ice->ice_st, ice_role, NULL, NULL);
 
@@ -1921,7 +1921,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
         m_loc = sdp_local->media[media_index];
 
         tp_proto_loc = pjmedia_sdp_transport_get_proto(&m_loc->desc.transport);
-        tp_proto_rem = m_rem? 
+        tp_proto_rem = m_rem?
                 pjmedia_sdp_transport_get_proto(&m_rem->desc.transport) : 0;
         PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_loc, PJMEDIA_TP_PROFILE_RTCP_FB);
         PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_rem, PJMEDIA_TP_PROFILE_RTCP_FB);
@@ -1936,7 +1936,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
     if (tp_ice->initial_sdp) {
         if (rem_sdp) {
-            status = create_initial_answer(tp_ice, sdp_pool, sdp_local, 
+            status = create_initial_answer(tp_ice, sdp_pool, sdp_local,
                                            rem_sdp, media_index);
         } else {
             status = create_initial_offer(tp_ice, sdp_pool, sdp_local,
@@ -1991,7 +1991,7 @@ static pj_status_t start_ice(struct transport_ice *tp_ice,
 
     /* Allocate candidate array */
     cand = (pj_ice_sess_cand*)
-           pj_pool_calloc(tmp_pool, PJ_ICE_MAX_CAND, 
+           pj_pool_calloc(tmp_pool, PJ_ICE_MAX_CAND,
                           sizeof(pj_ice_sess_cand));
 
     /* Get all candidates in the media */
@@ -2005,7 +2005,7 @@ static pj_status_t start_ice(struct transport_ice *tp_ice,
             continue;
 
         /* Parse candidate */
-        status = parse_cand(tp_ice->base.name, tmp_pool, &attr->value, 
+        status = parse_cand(tp_ice->base.name, tmp_pool, &attr->value,
                             &cand[cand_cnt]);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(tp_ice->base.name, status,
@@ -2020,7 +2020,7 @@ static pj_status_t start_ice(struct transport_ice *tp_ice,
     }
 
     /* Start ICE */
-    return pj_ice_strans_start_ice(tp_ice->ice_st, &ufrag_attr->value, 
+    return pj_ice_strans_start_ice(tp_ice->ice_st, &ufrag_attr->value,
                                    &pwd_attr->value, cand_cnt, cand);
 }
 
@@ -2075,7 +2075,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
         struct sdp_state answer_state;
 
         /* Verify the answer */
-        status = verify_ice_sdp(tp_ice, tmp_pool, rem_sdp, media_index, 
+        status = verify_ice_sdp(tp_ice, tmp_pool, rem_sdp, media_index,
                                 PJ_ICE_SESS_ROLE_CONTROLLING, &answer_state);
         if (status != PJ_SUCCESS) {
             /* Something wrong in the SDP answer */
@@ -2086,25 +2086,25 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
         /* Does it have ICE? */
         if (answer_state.match_comp_cnt == 0) {
             /* Remote doesn't support ICE */
-            set_no_ice(tp_ice, "Remote answer doesn't support ICE", 
+            set_no_ice(tp_ice, "Remote answer doesn't support ICE",
                        PJ_SUCCESS);
             return PJ_SUCCESS;
         }
 
         /* Check if remote has reported ice-mismatch */
-        if (pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+        if (pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr,
                                   &STR_ICE_MISMATCH, NULL) != NULL)
         {
             /* Remote has reported ice-mismatch */
-            set_no_ice(tp_ice, 
-                       "Remote answer contains 'ice-mismatch' attribute", 
+            set_no_ice(tp_ice,
+                       "Remote answer contains 'ice-mismatch' attribute",
                        PJ_SUCCESS);
             return PJ_SUCCESS;
         }
 
         /* Check if remote has indicated a restart */
         if (answer_state.ice_restart) {
-            PJ_LOG(2,(tp_ice->base.name, 
+            PJ_LOG(2,(tp_ice->base.name,
                       "Warning: remote has signalled ICE restart in SDP "
                       "answer which is disallowed. Remote ICE negotiation"
                       " may fail."));
@@ -2114,10 +2114,10 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
         if (answer_state.ice_mismatch) {
             /* This happens either when a B2BUA modified remote answer but
              * strangely didn't modify our offer, or remote is not capable
-             * of detecting mismatch in our offer (it didn't put 
+             * of detecting mismatch in our offer (it didn't put
              * 'ice-mismatch' attribute in the answer).
              */
-            PJ_LOG(2,(tp_ice->base.name, 
+            PJ_LOG(2,(tp_ice->base.name,
                       "Warning: remote answer mismatch, but it does not "
                       "reject our offer with 'ice-mismatch'. ICE negotiation "
                       "may fail"));
@@ -2154,7 +2154,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 
         /* Check for ICE ice_mismatch condition in the offer */
         if (tp_ice->rem_offer_state.ice_mismatch) {
-            set_no_ice(tp_ice, "Remote offer mismatch: ", 
+            set_no_ice(tp_ice, "Remote offer mismatch: ",
                        PJNATH_EICEMISMATCH);
             return PJ_SUCCESS;
         }
@@ -2171,7 +2171,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
         }
 
         /* Either remote has requested ICE restart or this is our
-         * first answer. 
+         * first answer.
          */
 
         /* Stop ICE */
@@ -2181,11 +2181,11 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
             /* We have put new ICE ufrag and pwd in the answer. Now
              * create a new ICE session with that ufrag/pwd pair.
              */
-            get_ice_attr(sdp_local, sdp_local->media[media_index], 
+            get_ice_attr(sdp_local, sdp_local->media[media_index],
                          &ufrag_attr, &pwd_attr);
-            status = pj_ice_strans_init_ice(tp_ice->ice_st, 
+            status = pj_ice_strans_init_ice(tp_ice->ice_st,
                                             tp_ice->rem_offer_state.local_role,
-                                            &ufrag_attr->value, 
+                                            &ufrag_attr->value,
                                             &pwd_attr->value);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(1,(tp_ice->base.name, status,
@@ -2194,13 +2194,13 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
             }
         }
 
-        /* Ticket #977: Update role if turns out we're supposed to be the 
-         * Controlling agent (e.g. when talking to ice-lite peer). 
+        /* Ticket #977: Update role if turns out we're supposed to be the
+         * Controlling agent (e.g. when talking to ice-lite peer).
          */
         if (tp_ice->rem_offer_state.local_role==PJ_ICE_SESS_ROLE_CONTROLLING &&
-            pj_ice_strans_has_sess(tp_ice->ice_st)) 
+            pj_ice_strans_has_sess(tp_ice->ice_st))
         {
-            pj_ice_strans_change_role(tp_ice->ice_st, 
+            pj_ice_strans_change_role(tp_ice->ice_st,
                                       PJ_ICE_SESS_ROLE_CONTROLLING);
         }
 
@@ -2245,7 +2245,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 static pj_status_t transport_media_stop(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    
+
     set_no_ice(tp_ice, "media stop requested", PJ_SUCCESS);
 
     return PJ_SUCCESS;
@@ -2321,7 +2321,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
         }
     }
 
-    /* Set remote address originating RTP & RTCP if this transport has 
+    /* Set remote address originating RTP & RTCP if this transport has
      * ICE activated or received any packets.
      */
     if (tp_ice->use_ice || tp_ice->rtp_src_cnt) {
@@ -2361,7 +2361,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
         }
         ii->sess_state = pj_ice_strans_get_state(tp_ice->ice_st);
         ii->comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
-        
+
         for (i=1; i<=ii->comp_cnt && i<=PJ_ARRAY_SIZE(ii->comp); ++i) {
             const pj_ice_sess_check *chk;
 
@@ -2394,7 +2394,7 @@ static pj_status_t transport_attach  (pjmedia_transport *tp,
                                                       pj_ssize_t))
 {
     pjmedia_transport_attach_param param;
-    
+
     pj_bzero(&param, sizeof(param));
     param.user_data = stream;
     pj_sockaddr_cp(&param.rem_addr, rem_addr);
@@ -2461,14 +2461,14 @@ static pj_status_t transport_send_rtp(pjmedia_transport *tp,
     /* Simulate packet lost on TX direction */
     if (tp_ice->tx_drop_pct) {
         if ((pj_rand() % 100) <= (int)tp_ice->tx_drop_pct) {
-            PJ_LOG(5,(tp_ice->base.name, 
+            PJ_LOG(5,(tp_ice->base.name,
                       "TX RTP packet dropped because of pkt lost "
                       "simulation"));
             return PJ_SUCCESS;
         }
     }
 
-    status = pj_ice_strans_sendto2(tp_ice->ice_st, 1, 
+    status = pj_ice_strans_sendto2(tp_ice->ice_st, 1,
                                    pkt, size, &tp_ice->remote_rtp,
                                    tp_ice->addr_len);
     if (status == PJ_EPENDING)
@@ -2500,7 +2500,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
         if (addr == NULL) {
             addr = &tp_ice->remote_rtcp;
             addr_len = pj_sockaddr_get_len(addr);
-        }         
+        }
 
         status = pj_ice_strans_sendto2(tp_ice->ice_st, comp_id, pkt, size,
                                        addr, addr_len);
@@ -2514,7 +2514,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 }
 
 
-static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id, 
+static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
                            void *pkt, pj_size_t size,
                            const pj_sockaddr_t *src_addr,
                            unsigned src_addr_len)
@@ -2541,7 +2541,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
         /* Simulate packet lost on RX direction */
         if (tp_ice->rx_drop_pct) {
             if ((pj_rand() % 100) <= (int)tp_ice->rx_drop_pct) {
-                PJ_LOG(5,(tp_ice->base.name, 
+                PJ_LOG(5,(tp_ice->base.name,
                           "RX RTP packet dropped because of pkt lost "
                           "simulation"));
                 return;
@@ -2564,7 +2564,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
                 (*tp_ice->rtp_cb)(tp_ice->stream, pkt, size);
             }
         }
-        
+
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
         if (rem_switch &&
@@ -2599,7 +2599,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
                 PJ_LOG(4,(tp_ice->base.name,
                           "Remote RTCP address switched to predicted "
                           "address %s",
-                          pj_sockaddr_print(&tp_ice->remote_rtcp, 
+                          pj_sockaddr_print(&tp_ice->remote_rtcp,
                                             addr_text,
                                             sizeof(addr_text), 3)));
             }
@@ -2650,7 +2650,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 }
 
 
-static void ice_on_ice_complete(pj_ice_strans *ice_st, 
+static void ice_on_ice_complete(pj_ice_strans *ice_st,
                                 pj_ice_strans_op op,
                                 pj_status_t result)
 {

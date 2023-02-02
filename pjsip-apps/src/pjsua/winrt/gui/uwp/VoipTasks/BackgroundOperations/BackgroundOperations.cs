@@ -13,7 +13,7 @@ using System;
 namespace VoipTasks.BackgroundOperations
 {
     public enum BackgroundRequest
-    {        
+    {
         NewOutgoingCall,
         EndCall,
         GetCallDuration,

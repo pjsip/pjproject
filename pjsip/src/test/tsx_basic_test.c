@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "test.h"
@@ -139,9 +139,9 @@ int tsx_basic_test(struct tsx_test_param *param)
 {
     int status;
 
-    pj_ansi_sprintf(TARGET_URI, "sip:bob@127.0.0.1:%d;transport=%s", 
+    pj_ansi_sprintf(TARGET_URI, "sip:bob@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
-    pj_ansi_sprintf(FROM_URI, "sip:alice@127.0.0.1:%d;transport=%s", 
+    pj_ansi_sprintf(FROM_URI, "sip:alice@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
 
     status = tsx_layer_test();

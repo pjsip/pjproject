@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_AEC_PORT_H__
 #define __PJMEDIA_AEC_PORT_H__
@@ -41,12 +41,12 @@ PJ_BEGIN_DECL
 
 
 /**
- * Create echo canceller port. 
+ * Create echo canceller port.
  *
  * @param pool          Pool to allocate memory.
  * @param dn_port       Downstream port.
  * @param tail_ms       Tail length in miliseconds.
- * @param latency_ms    Total lacency introduced by playback and 
+ * @param latency_ms    Total lacency introduced by playback and
  *                      recording device. Set to zero if the latency
  *                      is not known.
  * @param options       Options, as in #pjmedia_echo_create().

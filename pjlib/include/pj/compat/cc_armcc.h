@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_COMPAT_CC_ARMCC_H__
 #define __PJ_COMPAT_CC_ARMCC_H__
@@ -39,8 +39,8 @@
 #  define PJ_INLINE_SPECIFIER   static __inline
 #endif
 
-#define PJ_THREAD_FUNC  
-#define PJ_NORETURN             
+#define PJ_THREAD_FUNC
+#define PJ_NORETURN
 #define PJ_ATTR_NORETURN        __attribute__ ((noreturn))
 #define PJ_ATTR_MAY_ALIAS       __attribute__ ((__may_alias__))
 
@@ -51,7 +51,7 @@ typedef unsigned long long pj_uint64_t;
 
 #define PJ_INT64_FMT            "L"
 
-#define PJ_UNREACHED(x)         
+#define PJ_UNREACHED(x)
 
 #endif  /* __PJ_COMPAT_CC_ARMCC_H__ */
 

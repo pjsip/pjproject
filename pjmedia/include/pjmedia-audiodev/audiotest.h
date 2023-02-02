@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_AUDIODEV_AUDIOTEST_H__
 #define __PJMEDIA_AUDIODEV_AUDIOTEST_H__
@@ -45,28 +45,28 @@ typedef struct pjmedia_aud_test_stat
      */
     unsigned frame_cnt;
 
-    /** 
-     * Minimum inter-frame arrival time, in milliseconds 
+    /**
+     * Minimum inter-frame arrival time, in milliseconds
      */
     unsigned min_interval;
 
-    /** 
-     * Maximum inter-frame arrival time, in milliseconds 
+    /**
+     * Maximum inter-frame arrival time, in milliseconds
      */
     unsigned max_interval;
 
-    /** 
-     * Average inter-frame arrival time, in milliseconds 
+    /**
+     * Average inter-frame arrival time, in milliseconds
      */
     unsigned avg_interval;
 
-    /** 
-     * Standard deviation of inter-frame arrival time, in milliseconds 
+    /**
+     * Standard deviation of inter-frame arrival time, in milliseconds
      */
     unsigned dev_interval;
 
-    /** 
-     * Maximum number of frame burst 
+    /**
+     * Maximum number of frame burst
      */
     unsigned max_burst;
 
@@ -88,7 +88,7 @@ typedef struct pjmedia_aud_test_results
      */
     pjmedia_aud_test_stat play;
 
-    /** 
+    /**
      * Clock drifts per second, in samples. Positive number indicates rec
      * device is running faster than playback device.
      */

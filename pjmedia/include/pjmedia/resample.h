@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_RESAMPLE_H__
 #define __PJMEDIA_RESAMPLE_H__
@@ -45,7 +45,7 @@ PJ_BEGIN_DECL
  * This file declares two types of API:
  *
  * Application can use #pjmedia_resample_create() and #pjmedia_resample_run()
- * to convert a frame from source rate to destination rate. The inpuit frame 
+ * to convert a frame from source rate to destination rate. The inpuit frame
  * must have a constant length.
  *
  * Alternatively, application can create a resampling port with

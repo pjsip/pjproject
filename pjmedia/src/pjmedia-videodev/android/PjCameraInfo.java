@@ -40,7 +40,7 @@ public class PjCameraInfo {
         return li;
     }
 
-    // convert Fps list {[min1, max1], [min2, max2], ...} to 
+    // convert Fps list {[min1, max1], [min2, max2], ...} to
     // [min1, max1, min2, max2, ...]
     private static int[] IntArrayListToIntArray(List<int[]> list)
     {

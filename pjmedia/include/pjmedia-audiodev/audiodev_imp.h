@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __AUDIODEV_IMP_H__
 #define __AUDIODEV_IMP_H__
@@ -61,10 +61,10 @@ typedef struct pjmedia_aud_dev_factory_op
      * @param f         The audio device factory.
      * @param index     Device index.
      * @param info      The audio device information structure which will be
-     *                  initialized by this function once it returns 
+     *                  initialized by this function once it returns
      *                  successfully.
      */
-    pj_status_t (*get_dev_info)(pjmedia_aud_dev_factory *f, 
+    pj_status_t (*get_dev_info)(pjmedia_aud_dev_factory *f,
                                 unsigned index,
                                 pjmedia_aud_dev_info *info);
 
@@ -102,7 +102,7 @@ typedef struct pjmedia_aud_dev_factory_op
 
 
 /**
- * This structure describes an audio device factory. 
+ * This structure describes an audio device factory.
  */
 struct pjmedia_aud_dev_factory
 {

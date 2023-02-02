@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
  * Contributed by Regis Montoya (aka r3gis - www.r3gis.fr)
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_CODEC_SILK_H__
 #define __PJMEDIA_CODEC_SILK_H__
@@ -36,7 +36,7 @@
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
  *
- * The SILK codec uses multiple bit rates, and supports super wideband 
+ * The SILK codec uses multiple bit rates, and supports super wideband
  * (24 kHz sampling rate), wideband (16 kHz sampling rate), medium (12kHz
  * sampling rate), and narrowband (telephone quality, 8 kHz sampling rate).
  *
@@ -44,8 +44,8 @@
  *
  * \subsection silk_general_setting General Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
- * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * General codec settings for this codec such as VAD and PLC can be
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
  *
  * \subsection silk_specific_setting Codec Specific Settings
@@ -58,7 +58,7 @@
  * requirement can be adjusted by modifying the quality and complexity
  * setting, by calling #pjmedia_codec_silk_set_config().
  *
- * The default setting of quality is specified in 
+ * The default setting of quality is specified in
  * #PJMEDIA_CODEC_SILK_DEFAULT_QUALITY. And the default setting of
  * complexity is specified in #PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY.
  */
@@ -68,7 +68,7 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_codec_silk_setting
 {
     pj_bool_t   enabled;    /**< Enable/disable.                            */
-    int         quality;    /**< Encoding quality, or use -1 for default 
+    int         quality;    /**< Encoding quality, or use -1 for default
                                  (@see PJMEDIA_CODEC_SILK_DEFAULT_QUALITY). */
     int         complexity; /**< Encoding complexity, or use -1 for default
                                  (@see PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY)*/
@@ -102,7 +102,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_silk_init(pjmedia_endpt *endpt);
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_silk_set_config(
-                                    unsigned clock_rate, 
+                                    unsigned clock_rate,
                                     const pjmedia_codec_silk_setting *opt);
 
 

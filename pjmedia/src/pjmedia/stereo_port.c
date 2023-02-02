@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia/stereo.h>
@@ -39,7 +39,7 @@ struct stereo_port
 
 static pj_status_t stereo_put_frame(pjmedia_port *this_port,
                                     pjmedia_frame *frame);
-static pj_status_t stereo_get_frame(pjmedia_port *this_port, 
+static pj_status_t stereo_get_frame(pjmedia_port *this_port,
                                     pjmedia_frame *frame);
 static pj_status_t stereo_destroy(pjmedia_port *this_port);
 
@@ -76,9 +76,9 @@ PJ_DEF(pj_status_t) pjmedia_stereo_port_create( pj_pool_t *pool,
     samples_per_frame = PJMEDIA_PIA_SPF(&dn_port->info) * channel_count /
                           PJMEDIA_PIA_CCNT(&dn_port->info);
 
-    pjmedia_port_info_init(&sport->base.info, &name, SIGNATURE, 
+    pjmedia_port_info_init(&sport->base.info, &name, SIGNATURE,
                            PJMEDIA_PIA_SRATE(&dn_port->info),
-                           channel_count, 
+                           channel_count,
                            PJMEDIA_PIA_BITS(&dn_port->info),
                            samples_per_frame);
 
@@ -128,14 +128,14 @@ static pj_status_t stereo_put_frame(pjmedia_port *this_port,
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
         tmp_frame.buf = sport->put_buf;
         if (dn_afd->channel_count == 1) {
-            pjmedia_convert_channel_nto1((pj_int16_t*)tmp_frame.buf, 
+            pjmedia_convert_channel_nto1((pj_int16_t*)tmp_frame.buf,
                                          (const pj_int16_t*)frame->buf,
                                          s_afd->channel_count,
                                          PJMEDIA_AFD_SPF(s_afd),
                                          (sport->options & PJMEDIA_STEREO_MIX),
                                          0);
         } else {
-            pjmedia_convert_channel_1ton((pj_int16_t*)tmp_frame.buf, 
+            pjmedia_convert_channel_1ton((pj_int16_t*)tmp_frame.buf,
                                          (const pj_int16_t*)frame->buf,
                                          dn_afd->channel_count,
                                          PJMEDIA_AFD_SPF(s_afd),
@@ -155,7 +155,7 @@ static pj_status_t stereo_put_frame(pjmedia_port *this_port,
 
 
 
-static pj_status_t stereo_get_frame(pjmedia_port *this_port, 
+static pj_status_t stereo_get_frame(pjmedia_port *this_port,
                                     pjmedia_frame *frame)
 {
     struct stereo_port *sport = (struct stereo_port*) this_port;
@@ -192,13 +192,13 @@ static pj_status_t stereo_get_frame(pjmedia_port *this_port,
     }
 
     if (s_afd->channel_count == 1) {
-        pjmedia_convert_channel_nto1((pj_int16_t*)frame->buf, 
+        pjmedia_convert_channel_nto1((pj_int16_t*)frame->buf,
                                      (const pj_int16_t*)tmp_frame.buf,
                                      dn_afd->channel_count,
                                      PJMEDIA_AFD_SPF(s_afd),
                                      (sport->options & PJMEDIA_STEREO_MIX), 0);
     } else {
-        pjmedia_convert_channel_1ton((pj_int16_t*)frame->buf, 
+        pjmedia_convert_channel_1ton((pj_int16_t*)frame->buf,
                                      (const pj_int16_t*)tmp_frame.buf,
                                      s_afd->channel_count,
                                      PJMEDIA_AFD_SPF(dn_afd),

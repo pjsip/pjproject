@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from distutils.core import setup, Extension
 import os
@@ -86,9 +86,9 @@ f.close()
 
 # Mac OS X depedencies
 if platform.system() == 'Darwin':
-    extra_link_args = ["-framework", "CoreFoundation", 
+    extra_link_args = ["-framework", "CoreFoundation",
                        "-framework", "AudioToolbox"]
-    version = platform.mac_ver()[0].split(".")    
+    version = platform.mac_ver()[0].split(".")
     # OS X Lion (10.7.x) or above support
     if version[0] == '10' and int(version[1]) >= 7:
         extra_link_args += ["-framework", "AudioUnit"]
@@ -96,15 +96,15 @@ else:
     extra_link_args = []
 
 
-setup(name="pjsua", 
+setup(name="pjsua",
       version=pj_version,
       description='SIP User Agent Library based on PJSIP',
       url='http://trac.pjsip.org/repos/wiki/Python_SIP_Tutorial',
-      ext_modules = [Extension("_pjsua", 
-                               ["_pjsua.c"], 
+      ext_modules = [Extension("_pjsua",
+                               ["_pjsua.c"],
                                define_macros=[('PJ_AUTOCONF', '1'),],
-                               include_dirs=pj_inc_dirs, 
-                               library_dirs=pj_lib_dirs, 
+                               include_dirs=pj_inc_dirs,
+                               library_dirs=pj_lib_dirs,
                                libraries=pj_libs,
                                extra_link_args=extra_link_args
                               )

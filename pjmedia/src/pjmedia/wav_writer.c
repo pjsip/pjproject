@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/wav_port.h>
 #include <pjmedia/alaw_ulaw.h>
@@ -52,9 +52,9 @@ struct file_port
     void           (*cb2)(pjmedia_port*, void*);
 };
 
-static pj_status_t file_put_frame(pjmedia_port *this_port, 
+static pj_status_t file_put_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
-static pj_status_t file_get_frame(pjmedia_port *this_port, 
+static pj_status_t file_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
 
@@ -130,7 +130,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     wave_hdr.fmt_hdr.fmt_tag = (pj_uint16_t)fport->fmt_tag;
     wave_hdr.fmt_hdr.nchan = (pj_int16_t)channel_count;
     wave_hdr.fmt_hdr.sample_rate = sampling_rate;
-    wave_hdr.fmt_hdr.bytes_per_sec = sampling_rate * channel_count * 
+    wave_hdr.fmt_hdr.bytes_per_sec = sampling_rate * channel_count *
                                      fport->bytes_per_sample;
     wave_hdr.fmt_hdr.block_align = (pj_uint16_t)
                                    (fport->bytes_per_sample * channel_count);
@@ -214,7 +214,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     /* Done. */
     *p_port = &fport->base;
 
-    PJ_LOG(4,(THIS_FILE, 
+    PJ_LOG(4,(THIS_FILE,
               "File writer '%.*s' created: samp.rate=%d, bufsize=%uKB",
               (int)fport->base.info.name.slen,
               fport->base.info.name.ptr,
@@ -228,7 +228,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 
 
 /*
- * Get current writing position. 
+ * Get current writing position.
  */
 PJ_DEF(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port )
 {
@@ -347,7 +347,7 @@ static pj_status_t file_on_event(pjmedia_event *event,
         if (fport->cb2)
             (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -355,7 +355,7 @@ static pj_status_t file_on_event(pjmedia_event *event,
  * Put a frame into the buffer. When the buffer is full, flush the buffer
  * to the file.
  */
-static pj_status_t file_put_frame(pjmedia_port *this_port, 
+static pj_status_t file_put_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     struct file_port *fport = (struct file_port *)this_port;
@@ -441,7 +441,7 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 /*
  * Get frame, basicy is a no-op operation.
  */
-static pj_status_t file_get_frame(pjmedia_port *this_port, 
+static pj_status_t file_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     PJ_UNUSED_ARG(this_port);
@@ -469,7 +469,7 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     }
 
     /* Flush remaining buffers. */
-    if (fport->writepos != fport->buf) 
+    if (fport->writepos != fport->buf)
         flush_buffer(fport);
 
     /* Get file size. */

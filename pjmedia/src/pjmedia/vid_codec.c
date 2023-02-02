@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/errno.h>
@@ -50,7 +50,7 @@ typedef struct pjmedia_vid_codec_desc
     pjmedia_codec_id                 id;        /**< Fully qualified name   */
     pjmedia_codec_priority           prio;      /**< Priority.              */
     pjmedia_vid_codec_factory       *factory;   /**< The factory.           */
-    pjmedia_vid_codec_default_param *def_param; /**< Default codecs 
+    pjmedia_vid_codec_default_param *def_param; /**< Default codecs
                                                      parameters.            */
 } pjmedia_vid_codec_desc;
 
@@ -85,7 +85,7 @@ static void sort_codecs(pjmedia_vid_codec_mgr *mgr);
  * Duplicate video codec parameter.
  */
 PJ_DEF(pjmedia_vid_codec_param*) pjmedia_vid_codec_param_clone(
-                                        pj_pool_t *pool, 
+                                        pj_pool_t *pool,
                                         const pjmedia_vid_codec_param *src)
 {
     pjmedia_vid_codec_param *p;
@@ -98,15 +98,15 @@ PJ_DEF(pjmedia_vid_codec_param*) pjmedia_vid_codec_param_clone(
     /* Update codec param */
     pj_memcpy(p, src, sizeof(pjmedia_vid_codec_param));
     for (i = 0; i < src->dec_fmtp.cnt; ++i) {
-        pj_strdup(pool, &p->dec_fmtp.param[i].name, 
+        pj_strdup(pool, &p->dec_fmtp.param[i].name,
                   &src->dec_fmtp.param[i].name);
-        pj_strdup(pool, &p->dec_fmtp.param[i].val, 
+        pj_strdup(pool, &p->dec_fmtp.param[i].val,
                   &src->dec_fmtp.param[i].val);
     }
     for (i = 0; i < src->enc_fmtp.cnt; ++i) {
-        pj_strdup(pool, &p->enc_fmtp.param[i].name, 
+        pj_strdup(pool, &p->enc_fmtp.param[i].name,
                   &src->enc_fmtp.param[i].name);
-        pj_strdup(pool, &p->enc_fmtp.param[i].val, 
+        pj_strdup(pool, &p->enc_fmtp.param[i].val,
                   &src->enc_fmtp.param[i].val);
     }
 
@@ -239,7 +239,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_register_factory(
  * Unregister a codec factory.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_unregister_factory(
-                                pjmedia_vid_codec_mgr *mgr, 
+                                pjmedia_vid_codec_mgr *mgr,
                                 pjmedia_vid_codec_factory *factory)
 {
     unsigned i;
@@ -260,14 +260,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_unregister_factory(
     pj_list_erase(factory);
 
 
-    /* Remove all supported codecs from the codec manager that were created 
+    /* Remove all supported codecs from the codec manager that were created
      * by the specified factory.
      */
     for (i=0; i<mgr->codec_cnt; ) {
 
         if (mgr->codec_desc[i].factory == factory) {
             /* Remove the codec from array of codec descriptions */
-            pj_array_erase(mgr->codec_desc, sizeof(mgr->codec_desc[0]), 
+            pj_array_erase(mgr->codec_desc, sizeof(mgr->codec_desc[0]),
                            mgr->codec_cnt, i);
             --mgr->codec_cnt;
 
@@ -286,8 +286,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_unregister_factory(
  * Enum all codecs.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_enum_codecs(
-                                pjmedia_vid_codec_mgr *mgr, 
-                                unsigned *count, 
+                                pjmedia_vid_codec_mgr *mgr,
+                                unsigned *count,
                                 pjmedia_vid_codec_info codecs[],
                                 unsigned *prio)
 {
@@ -302,10 +302,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_enum_codecs(
 
     if (*count > mgr->codec_cnt)
         *count = mgr->codec_cnt;
-    
+
     for (i=0; i<*count; ++i) {
-        pj_memcpy(&codecs[i], 
-                  &mgr->codec_desc[i].info, 
+        pj_memcpy(&codecs[i],
+                  &mgr->codec_desc[i].info,
                   sizeof(pjmedia_vid_codec_info));
     }
 
@@ -429,8 +429,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_find_codecs_by_id(
     for (i=0; i<mgr->codec_cnt; ++i) {
 
         if (codec_id->slen == 0 ||
-            pj_strnicmp2(codec_id, mgr->codec_desc[i].id, 
-                         codec_id->slen) == 0) 
+            pj_strnicmp2(codec_id, mgr->codec_desc[i].id,
+                         codec_id->slen) == 0)
         {
 
             if (p_info)
@@ -461,7 +461,7 @@ static void swap_codec(pjmedia_vid_codec_mgr *mgr, unsigned i, unsigned j)
 
     pj_memcpy(&tmp, &mgr->codec_desc[i], sizeof(pjmedia_vid_codec_desc));
 
-    pj_memcpy(&mgr->codec_desc[i], &mgr->codec_desc[j], 
+    pj_memcpy(&mgr->codec_desc[i], &mgr->codec_desc[j],
                sizeof(pjmedia_vid_codec_desc));
 
     pj_memcpy(&mgr->codec_desc[j], &tmp, sizeof(pjmedia_vid_codec_desc));
@@ -503,7 +503,7 @@ static void sort_codecs(pjmedia_vid_codec_mgr *mgr)
  * priorities of all those codecs.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_codec_priority(
-                                pjmedia_vid_codec_mgr *mgr, 
+                                pjmedia_vid_codec_mgr *mgr,
                                 const pj_str_t *codec_id,
                                 pj_uint8_t prio)
 {
@@ -517,11 +517,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_codec_priority(
     pj_mutex_lock(mgr->mutex);
 
     /* Update the priorities of affected codecs */
-    for (i=0; i<mgr->codec_cnt; ++i) 
+    for (i=0; i<mgr->codec_cnt; ++i)
     {
         if (codec_id->slen == 0 ||
-            pj_strnicmp2(codec_id, mgr->codec_desc[i].id, 
-                         codec_id->slen) == 0) 
+            pj_strnicmp2(codec_id, mgr->codec_desc[i].id,
+                         codec_id->slen) == 0)
         {
             mgr->codec_desc[i].prio = (pjmedia_codec_priority) prio;
             ++found;
@@ -546,7 +546,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_codec_priority(
  * Allocate one codec.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_alloc_codec(
-                                        pjmedia_vid_codec_mgr *mgr, 
+                                        pjmedia_vid_codec_mgr *mgr,
                                         const pjmedia_vid_codec_info *info,
                                         pjmedia_vid_codec **p_codec)
 {
@@ -603,7 +603,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_default_param(
     if (!mgr) mgr = def_vid_codec_mgr;
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
-    if (!pjmedia_vid_codec_info_to_id(info, (char*)&codec_id, 
+    if (!pjmedia_vid_codec_info_to_id(info, (char*)&codec_id,
                                       sizeof(codec_id)))
         return PJ_EINVAL;
 
@@ -619,7 +619,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_default_param(
 
     /* If we found the codec and its default param is set, return it */
     if (codec_desc && codec_desc->def_param) {
-        pj_memcpy(param, codec_desc->def_param->param, 
+        pj_memcpy(param, codec_desc->def_param->param,
                   sizeof(pjmedia_vid_codec_param));
 
         status = PJ_SUCCESS;
@@ -668,7 +668,7 @@ on_return:
 /*
  * Set default codec parameter.
  */
-PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param( 
+PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
                                             pjmedia_vid_codec_mgr *mgr,
                                             const pjmedia_vid_codec_info *info,
                                             const pjmedia_vid_codec_param *param )

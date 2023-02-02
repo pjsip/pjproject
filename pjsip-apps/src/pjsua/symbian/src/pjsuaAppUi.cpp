@@ -3,7 +3,7 @@
  Name        : pjsuaAppUi.cpp
  Author      : nanang
  Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
- Description : 
+ Description :
 ========================================================================
 */
 // [[[ begin generated region: do not modify [Generated System Includes]
@@ -44,11 +44,11 @@ static void PjsuaOnStopped(pj_bool_t restart, int argc, char** argv);
 static void PjsuaOnConfig(pjsua_app_config *cfg);
 
 /* Helper class to schedule function execution */
-class MyTimer : public CActive 
+class MyTimer : public CActive
 {
 public:
     typedef void (*timer_func)();
-    
+
 public:
     static MyTimer* NewL(int ms, timer_func f) {
         MyTimer *self = new MyTimer(f);
@@ -57,20 +57,20 @@ public:
         CleanupStack::Pop(self);
         return self;
     }
-    
+
     MyTimer(timer_func f) : CActive(EPriorityStandard), func(f) {}
     ~MyTimer() {
         Cancel();
         rtimer.Close();
     }
-    
+
     virtual void RunL() { (*func)(); delete this; }
     virtual void DoCancel() { rtimer.Cancel(); }
 
-private:        
+private:
     RTimer rtimer;
     timer_func func;
-    
+
     void ConstructL(int ms) {
         rtimer.CreateLocal();
         CActiveScheduler::Add(this);
@@ -81,15 +81,15 @@ private:
 
 /**
  * Construct the CpjsuaAppUi instance
- */ 
+ */
 CpjsuaAppUi::CpjsuaAppUi()
         {
         // [[[ begin generated region: do not modify [Generated Contents]
         // ]]] end generated region [Generated Contents]
-        
+
         }
 
-/** 
+/**
  * The appui's destructor removes the container from the control
  * stack and destroys it.
  */
@@ -97,7 +97,7 @@ CpjsuaAppUi::~CpjsuaAppUi()
         {
         // [[[ begin generated region: do not modify [Generated Contents]
         // ]]] end generated region [Generated Contents]
-        
+
         }
 
 // [[[ begin generated function: do not modify
@@ -122,9 +122,9 @@ void CpjsuaAppUi::HandleCommandL( TInt aCommand )
                 default:
                         break;
                 }
-        
-                
-        if ( !commandHandled ) 
+
+
+        if ( !commandHandled )
                 {
                 if ( aCommand == EAknSoftkeyExit || aCommand == EEikCmdExit )
                         {
@@ -132,10 +132,10 @@ void CpjsuaAppUi::HandleCommandL( TInt aCommand )
                         }
                 }
         // ]]] end generated region [Generated Code]
-        
+
         }
 
-/** 
+/**
  * Override of the HandleResourceChangeL virtual function
  */
 void CpjsuaAppUi::HandleResourceChangeL( TInt aType )
@@ -143,14 +143,14 @@ void CpjsuaAppUi::HandleResourceChangeL( TInt aType )
         CAknViewAppUi::HandleResourceChangeL( aType );
         // [[[ begin generated region: do not modify [Generated Code]
         // ]]] end generated region [Generated Code]
-        
+
         }
-                                
-/** 
+
+/**
  * Override of the HandleKeyEventL virtual function
  * @return EKeyWasConsumed if event was handled, EKeyWasNotConsumed if not
- * @param aKeyEvent 
- * @param aType 
+ * @param aKeyEvent
+ * @param aType
  */
 TKeyResponse CpjsuaAppUi::HandleKeyEventL(
                 const TKeyEvent& aKeyEvent,
@@ -161,66 +161,66 @@ TKeyResponse CpjsuaAppUi::HandleKeyEventL(
         // ]]] end generated region [Generated Contents]
 
         // Left or right softkey pressed
-        if (aType==EEventKeyDown && 
-            (aKeyEvent.iScanCode == EStdKeyDevice0 || 
-             aKeyEvent.iScanCode == EStdKeyDevice1))    
+        if (aType==EEventKeyDown &&
+            (aKeyEvent.iScanCode == EStdKeyDevice0 ||
+             aKeyEvent.iScanCode == EStdKeyDevice1))
         {
             Cba()->MakeVisible(ETrue);
         } else {
-            Cba()->MakeVisible(EFalse);   
+            Cba()->MakeVisible(EFalse);
         }
 
         return EKeyWasNotConsumed;
         }
 
-/** 
+/**
  * Override of the HandleViewDeactivation virtual function
  *
- * @param aViewIdToBeDeactivated 
- * @param aNewlyActivatedViewId 
+ * @param aViewIdToBeDeactivated
+ * @param aNewlyActivatedViewId
  */
-void CpjsuaAppUi::HandleViewDeactivation( 
-                const TVwsViewId& aViewIdToBeDeactivated, 
+void CpjsuaAppUi::HandleViewDeactivation(
+                const TVwsViewId& aViewIdToBeDeactivated,
                 const TVwsViewId& aNewlyActivatedViewId )
         {
-        CAknViewAppUi::HandleViewDeactivation( 
-                        aViewIdToBeDeactivated, 
+        CAknViewAppUi::HandleViewDeactivation(
+                        aViewIdToBeDeactivated,
                         aNewlyActivatedViewId );
         // [[[ begin generated region: do not modify [Generated Contents]
         // ]]] end generated region [Generated Contents]
-        
+
         }
 
 /**
- * @brief Completes the second phase of Symbian object construction. 
- * Put initialization code that could leave here. 
- */ 
+ * @brief Completes the second phase of Symbian object construction.
+ * Put initialization code that could leave here.
+ */
 void CpjsuaAppUi::ConstructL()
         {
         // [[[ begin generated region: do not modify [Generated Contents]
-        
-        BaseConstructL( EAknEnableSkin  | 
-                                         EAknEnableMSK ); 
+
+        BaseConstructL( EAknEnableSkin  |
+                                         EAknEnableMSK );
         InitializeContainersL();
         // ]]] end generated region [Generated Contents]
-        
+
         // Save pointer to this AppUi
         appui = this;
-        
+
         // Full screen
         StatusPane()->MakeVisible(EFalse);
         Cba()->MakeVisible(EFalse);
 
         if (InitSymbSocket() != PJ_SUCCESS) {
             PutMsg("Failed to initialize Symbian network param.");
-        } else {        
+        } else {
             start_argc = pjsua_app_def_argc;
             start_argv = (char**)pjsua_app_def_argv;
 
             // Schedule Lib Init
             MyTimer::NewL(100, &PjsuaInitL);
         }
-        
+
         }
 
 /* Called by Symbian GUI framework when app is about to exit */
@@ -289,7 +289,7 @@ void PjsuaOnConfig(pjsua_app_config *cfg)
     if (app_ioqueue ==  NULL) {
         pj_ioqueue_create(cfg->pool, 0, &app_ioqueue);
     }
-    cfg->cli_cfg.telnet_cfg.ioqueue = app_ioqueue; 
+    cfg->cli_cfg.telnet_cfg.ioqueue = app_ioqueue;
 }
 
 // Set Symbian OS parameters in pjlib.
@@ -298,12 +298,12 @@ pj_status_t InitSymbSocket()
 {
     pj_symbianos_params sym_params;
     TInt err;
-    
+
     // Initialize RSocketServ
     if ((err=aSocketServer.Connect(32)) != KErrNone) {
         return PJ_STATUS_FROM_OS(err);
     }
-    
+
     // Open up a connection
     if ((err=aConn.Open(aSocketServer)) != KErrNone) {
         aSocketServer.Close();
@@ -314,12 +314,12 @@ pj_status_t InitSymbSocket()
         aSocketServer.Close();
         return PJ_STATUS_FROM_OS(err);
     }
-    
+
     pj_bzero(&sym_params, sizeof(sym_params));
     sym_params.rsocketserv = &aSocketServer;
     sym_params.rconnection = &aConn;
     pj_symbianos_set_params(&sym_params);
-    
+
     return PJ_SUCCESS;
 }
 
@@ -335,9 +335,9 @@ void PjsuaInitL()
 {
     pjsua_app_cfg_t app_cfg;
     pj_status_t status;
-    
+
     PjsuaDestroyL();
-    
+
     pj_bzero(&app_cfg, sizeof(app_cfg));
     app_cfg.argc = start_argc;
     app_cfg.argv = start_argv;
@@ -349,7 +349,7 @@ void PjsuaInitL()
     status = pjsua_app_init(&app_cfg);
     if (status != PJ_SUCCESS)
         goto on_return;
-    
+
     appui->PutMsg("Starting..");
     status = pjsua_app_run(PJ_FALSE);
     if (status != PJ_SUCCESS)

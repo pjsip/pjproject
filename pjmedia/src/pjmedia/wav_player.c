@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/wav_port.h>
 #include <pjmedia/alaw_ulaw.h>
@@ -77,7 +77,7 @@ struct file_reader_port
 };
 
 
-static pj_status_t file_get_frame(pjmedia_port *this_port, 
+static pj_status_t file_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
 
@@ -93,7 +93,7 @@ static struct file_reader_port *create_file_port(pj_pool_t *pool)
     /* Put in default values.
      * These will be overriden once the file is read.
      */
-    pjmedia_port_info_init(&port->base.info, &name, SIGNATURE, 
+    pjmedia_port_info_init(&port->base.info, &name, SIGNATURE,
                            8000, 1, 16, 80);
 
     port->base.get_frame = &file_get_frame;
@@ -114,13 +114,13 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
     pj_status_t status;
 
     fport->eofpos = NULL;
-    
+
     while (size_left > 0) {
 
         /* Calculate how many bytes to read in this run. */
         size = size_to_read = size_left;
-        status = pj_file_read(fport->fd, 
-                              &fport->buf[fport->bufsize-size_left], 
+        status = pj_file_read(fport->fd,
+                              &fport->buf[fport->bufsize-size_left],
                               &size);
         if (status != PJ_SUCCESS)
             return status;
@@ -169,7 +169,7 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
     }
 
     /* Convert samples to host rep */
-    samples_to_host((pj_int16_t*)fport->buf, 
+    samples_to_host((pj_int16_t*)fport->buf,
                     fport->bufsize/fport->bytes_per_sample);
 
     return PJ_SUCCESS;
@@ -249,14 +249,14 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
      * byte order.
      */
     pjmedia_wave_hdr_file_to_host(&wave_hdr);
-    
+
     /* Validate WAVE file. */
     if (wave_hdr.riff_hdr.riff != PJMEDIA_RIFF_TAG ||
         wave_hdr.riff_hdr.wave != PJMEDIA_WAVE_TAG ||
         wave_hdr.fmt_hdr.fmt != PJMEDIA_FMT_TAG)
     {
         pj_file_close(fport->fd);
-        TRACE_((THIS_FILE, 
+        TRACE_((THIS_FILE,
                 "actual value|expected riff=%x|%x, wave=%x|%x fmt=%x|%x",
                 wave_hdr.riff_hdr.riff, PJMEDIA_RIFF_TAG,
                 wave_hdr.riff_hdr.wave, PJMEDIA_WAVE_TAG,
@@ -267,7 +267,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* Validate format and its attributes (i.e: bits per sample, block align) */
     switch (wave_hdr.fmt_hdr.fmt_tag) {
     case PJMEDIA_WAVE_FMT_TAG_PCM:
-        if (wave_hdr.fmt_hdr.bits_per_sample != 16 || 
+        if (wave_hdr.fmt_hdr.bits_per_sample != 16 ||
             wave_hdr.fmt_hdr.block_align != 2 * wave_hdr.fmt_hdr.nchan)
             status = PJMEDIA_EWAVEUNSUPP;
         break;
@@ -290,7 +290,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     }
 
     fport->fmt_tag = (pjmedia_wave_fmt_tag)wave_hdr.fmt_hdr.fmt_tag;
-    fport->bytes_per_sample = (pj_uint16_t) 
+    fport->bytes_per_sample = (pj_uint16_t)
                               (wave_hdr.fmt_hdr.bits_per_sample / 8);
 
     /* If length of fmt_header is greater than 16, skip the remaining
@@ -328,7 +328,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
         }
 
         /* Otherwise skip the chunk contents */
-        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len, 
+        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len,
                       pj_file_close(fport->fd); return PJMEDIA_ENOTVALIDWAVE;);
         size_to_read = subchunk.len;
 
@@ -404,7 +404,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
         pj_file_close(fport->fd);
         return PJ_ENOMEM;
     }
- 
+
     fport->readpos = fport->buf;
 
     /* Set initial position of the file. */
@@ -422,7 +422,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     *p_port = &fport->base;
 
 
-    PJ_LOG(4,(THIS_FILE, 
+    PJ_LOG(4,(THIS_FILE,
               "File player '%.*s' created: samp.rate=%d, ch=%d, bufsize=%uKB, "
               "filesize=%luKB",
               (int)fport->base.info.name.slen,
@@ -625,7 +625,7 @@ static pj_status_t file_on_event(pjmedia_event *event,
         if (fport->cb2)
             (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -633,7 +633,7 @@ static pj_status_t file_on_event(pjmedia_event *event,
 /*
  * Get frame from file.
  */
-static pj_status_t file_get_frame(pjmedia_port *this_port, 
+static pj_status_t file_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     struct file_reader_port *fport = (struct file_reader_port*)this_port;
@@ -675,13 +675,13 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
                 pjmedia_event_publish(NULL, fport, &event,
                                       PJMEDIA_EVENT_PUBLISH_POST_EVENT);
             }
-            
+
             /* Should not access player port after this since
              * it might have been destroyed by the callback.
              */
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
-            
+
             return (no_loop? PJ_EEOF: PJ_SUCCESS);
 
         } else if (fport->cb) {
@@ -712,7 +712,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
         //frame->size = frame_size;
     } else {
         /* Must be ULAW or ALAW */
-        pj_assert(fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW || 
+        pj_assert(fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW ||
                   fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ALAW);
 
         frame_size = frame->size >> 1;
@@ -745,7 +745,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
         unsigned endread;
 
         /* Split read.
-         * First stage: read until end of buffer. 
+         * First stage: read until end of buffer.
          */
         endread = (unsigned)((fport->buf+fport->bufsize) - fport->readpos);
         pj_memcpy(frame->buf, fport->readpos, endread);

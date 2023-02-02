@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_AVI_STREAM_H__
 #define __PJMEDIA_AVI_STREAM_H__
@@ -60,8 +60,8 @@ typedef pjmedia_port pjmedia_avi_stream;
 typedef struct pjmedia_avi_streams pjmedia_avi_streams;
 
 /**
- * Create avi streams to play an AVI file. AVI player supports 
- * reading AVI file with uncompressed video format and 
+ * Create avi streams to play an AVI file. AVI player supports
+ * reading AVI file with uncompressed video format and
  * 16 bit PCM or compressed G.711 A-law/U-law audio format.
  *
  * @param pool          Pool to create the streams.
@@ -141,7 +141,7 @@ PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream);
 /**
  * Register a callback to be called when the file reading has reached the
  * end of file. If the file is set to play repeatedly, then the callback
- * will be called multiple times. Note that only one callback can be 
+ * will be called multiple times. Note that only one callback can be
  * registered for each AVI stream.
  *
  * @param stream        The AVI stream.
@@ -153,7 +153,7 @@ PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream);
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream *stream,
                               void *user_data,
                               pj_status_t (*cb)(pjmedia_avi_stream *stream,
@@ -164,7 +164,7 @@ pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream *stream,
 /**
  * Register a callback to be called when the file reading has reached the
  * end of file. If the file is set to play repeatedly, then the callback
- * will be called multiple times. Note that only one callback can be 
+ * will be called multiple times. Note that only one callback can be
  * registered for each AVI stream.
  *
  * @param stream        The AVI stream.
@@ -177,7 +177,7 @@ pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream *stream,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_avi_stream_set_eof_cb2(pjmedia_avi_stream *stream,
                                void *user_data,
                                void (*cb)(pjmedia_avi_stream *stream,

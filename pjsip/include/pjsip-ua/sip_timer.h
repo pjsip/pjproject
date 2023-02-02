@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_TIMER_H__
 #define __PJSIP_TIMER_H__
@@ -36,7 +36,7 @@
  * \section PJSIP_TIMER_REFERENCE References
  *
  * References:
- *  - <A HREF="http://www.ietf.org/rfc/rfc4028.txt">RFC 4028: Session Timers 
+ *  - <A HREF="http://www.ietf.org/rfc/rfc4028.txt">RFC 4028: Session Timers
  *    in the Session Initiation Protocol (SIP)</A>
  */
 
@@ -53,7 +53,7 @@ typedef struct pjsip_timer pjsip_timer;
  */
 typedef struct pjsip_timer_setting
 {
-    /** 
+    /**
      * Specify minimum session expiration period, in seconds. Must not be
      * lower than 90. Default is 90.
      */
@@ -63,7 +63,7 @@ typedef struct pjsip_timer_setting
      * Specify session expiration period, in seconds. Must not be lower than
      * #min_se. Default is 1800.
      */
-    unsigned                     sess_expires;  
+    unsigned                     sess_expires;
 
 } pjsip_timer_setting;
 
@@ -168,7 +168,7 @@ PJ_DECL(pjsip_min_se_hdr*) pjsip_min_se_hdr_create(pj_pool_t *pool);
  * Update outgoing request to insert Session Timers headers and also
  * signal Session Timers capability in Supported and/or Require headers.
  *
- * This function will be called internally by the invite session if it 
+ * This function will be called internally by the invite session if it
  * detects that the session needs Session Timers support.
  *
  * @param inv           The invite session.
@@ -185,12 +185,12 @@ PJ_DECL(pj_status_t) pjsip_timer_update_req(pjsip_inv_session *inv,
  * will only process incoming response with status code 422 (Session
  * Interval Too Small) or 2xx (final response).
  *
- * This function will be called internally by the invite session if it 
+ * This function will be called internally by the invite session if it
  * detects that the session needs Session Timers support.
  *
  * @param inv           The invite session.
  * @param rdata         Incoming response data.
- * @param st_code       Output buffer to store corresponding SIP status code 
+ * @param st_code       Output buffer to store corresponding SIP status code
  *                      when function returning non-PJ_SUCCESS.
  *
  * @return              PJ_SUCCESS on successful.
@@ -217,12 +217,12 @@ PJ_DECL(pj_status_t)  pjsip_timer_handle_refresh_error(
  * Process Session Timers headers in incoming request, this function
  * will only process incoming INVITE and UPDATE request.
  *
- * This function will be called internally by the invite session if it 
+ * This function will be called internally by the invite session if it
  * detects that the session needs Session Timers support.
  *
  * @param inv           The invite session.
  * @param rdata         Incoming INVITE or UPDATE request.
- * @param st_code       Output buffer to store corresponding SIP status code 
+ * @param st_code       Output buffer to store corresponding SIP status code
  *                      when function returning non-PJ_SUCCESS.
  *
  * @return              PJ_SUCCESS on successful.
@@ -235,10 +235,10 @@ PJ_DECL(pj_status_t) pjsip_timer_process_req(pjsip_inv_session *inv,
 /**
  * Update outgoing response to insert Session Timers headers and also
  * signal Session Timers capability in Supported and/or Require headers.
- * This function will only update outgoing response with status code 
+ * This function will only update outgoing response with status code
  * 422 (Session Interval Too Small) or 2xx (final response).
  *
- * This function will be called internally by the invite session if it 
+ * This function will be called internally by the invite session if it
  * detects that the session needs Session Timers support.
  *
  * @param inv           The invite session.
@@ -252,7 +252,7 @@ PJ_DECL(pj_status_t) pjsip_timer_update_resp(pjsip_inv_session *inv,
 /**
  * End Session Timers in an invite session.
  *
- * This function will be called internally by the invite session if it 
+ * This function will be called internally by the invite session if it
  * detects that the session needs Session Timers support.
  *
  * @param inv           The invite session.

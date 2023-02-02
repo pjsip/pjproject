@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/resample.h>
 #include <pjmedia/errno.h>
@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     /* Create converter */
     resample->state = src_new(type, channel_count, &err);
     if (resample->state == NULL) {
-        PJ_LOG(4,(THIS_FILE, "Error creating resample: %s", 
+        PJ_LOG(4,(THIS_FILE, "Error creating resample: %s",
                   src_strerror(err)));
         return PJMEDIA_ERROR;
     }
@@ -97,20 +97,20 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     resample->in_samples = samples_per_frame;
     resample->out_samples = rate_out / (rate_in / samples_per_frame);
 
-    resample->frame_in = (float*) 
-                         pj_pool_calloc(pool, 
-                                        resample->in_samples + 8, 
+    resample->frame_in = (float*)
+                         pj_pool_calloc(pool,
+                                        resample->in_samples + 8,
                                         sizeof(float));
 
-    resample->frame_out = (float*) 
-                          pj_pool_calloc(pool, 
-                                         resample->out_samples + 8, 
+    resample->frame_out = (float*)
+                          pj_pool_calloc(pool,
+                                         resample->out_samples + 8,
                                          sizeof(float));
 
     /* Set the converter ratio */
     err = src_set_ratio(resample->state, resample->ratio);
     if (err != 0) {
-        PJ_LOG(4,(THIS_FILE, "Error creating resample: %s", 
+        PJ_LOG(4,(THIS_FILE, "Error creating resample: %s",
                   src_strerror(err)));
         return PJMEDIA_ERROR;
     }
@@ -141,9 +141,9 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
     /* Done */
 
-    PJ_LOG(5,(THIS_FILE, 
+    PJ_LOG(5,(THIS_FILE,
               "Resample using libsamplerate %s, type=%s (%s), "
-              "ch=%d, in/out rate=%d/%d", 
+              "ch=%d, in/out rate=%d/%d",
               src_get_version(),
               src_get_name(type), src_get_description(type),
               channel_count, rate_in, rate_out));
@@ -161,7 +161,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
     SRC_DATA src_data;
 
     /* Convert samples to float */
-    src_short_to_float_array(input, resample->frame_in, 
+    src_short_to_float_array(input, resample->frame_in,
                              resample->in_samples);
 
     if (resample->in_extra) {
@@ -187,7 +187,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
     src_float_to_short_array(resample->frame_out, output,
                              src_data.output_frames_gen);
 
-    /* Replay last sample if conversion couldn't fill up the whole 
+    /* Replay last sample if conversion couldn't fill up the whole
      * frame. This could happen for example with 22050 to 16000 conversion.
      */
     if (src_data.output_frames_gen < (int)resample->out_samples) {
@@ -196,7 +196,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
         if (resample->in_extra < 4)
             resample->in_extra++;
 
-        for (i=src_data.output_frames_gen; 
+        for (i=src_data.output_frames_gen;
              i<resample->out_samples; ++i)
         {
             output[i] = output[src_data.output_frames_gen-1];

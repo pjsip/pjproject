@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/pool.h>
 #include <pj/except.h>
@@ -45,7 +45,7 @@ static void *default_block_alloc(pj_pool_factory *factory, pj_size_t size)
     p = malloc(size+(SIG_SIZE << 1));
 
     if (p == NULL) {
-        if (factory->on_block_free) 
+        if (factory->on_block_free)
             factory->on_block_free(factory, size);
     } else {
         /* Apply signature when PJ_SAFE_POOL is set. It will move
@@ -57,12 +57,12 @@ static void *default_block_alloc(pj_pool_factory *factory, pj_size_t size)
     return p;
 }
 
-static void default_block_free(pj_pool_factory *factory, void *mem, 
+static void default_block_free(pj_pool_factory *factory, void *mem,
                                pj_size_t size)
 {
     PJ_CHECK_STACK();
 
-    if (factory->on_block_free) 
+    if (factory->on_block_free)
         factory->on_block_free(factory, size);
 
     /* Check and remove signature when PJ_SAFE_POOL is set. It will

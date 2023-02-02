@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_COMPAT_LIMITS_H__
 #define __PJ_COMPAT_LIMITS_H__
@@ -57,7 +57,7 @@
 #  ifndef ULONG_MAX
 #    if __WORDSIZE == 64
 #      define ULONG_MAX    18446744073709551615UL
-#    else    
+#    else
 #      define ULONG_MAX    4294967295UL
 #    endif
 #  endif

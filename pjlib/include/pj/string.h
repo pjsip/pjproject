@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_STRING_H__
 #define __PJ_STRING_H__
@@ -191,7 +191,7 @@ PJ_IDECL(pj_str_t*) pj_strcpy2(pj_str_t *dst, const char *src);
  *
  * @return the target string.
  */
-PJ_IDECL(pj_str_t*) pj_strncpy(pj_str_t *dst, const pj_str_t *src, 
+PJ_IDECL(pj_str_t*) pj_strncpy(pj_str_t *dst, const pj_str_t *src,
                                pj_ssize_t max);
 
 /**
@@ -296,12 +296,12 @@ PJ_INLINE(const char*) pj_strbuf( const pj_str_t *str )
 }
 
 /**
- * Compare strings. 
+ * Compare strings.
  *
  * @param str1      The string to compare.
  * @param str2      The string to compare.
  *
- * @return 
+ * @return
  *      - < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
@@ -314,7 +314,7 @@ PJ_IDECL(int) pj_strcmp( const pj_str_t *str1, const pj_str_t *str2);
  * @param str1      The string to compare.
  * @param str2      The string to compare.
  *
- * @return 
+ * @return
  *      - < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
@@ -322,33 +322,33 @@ PJ_IDECL(int) pj_strcmp( const pj_str_t *str1, const pj_str_t *str2);
 PJ_IDECL(int) pj_strcmp2( const pj_str_t *str1, const char *str2 );
 
 /**
- * Compare strings. 
+ * Compare strings.
  *
  * @param str1      The string to compare.
  * @param str2      The string to compare.
  * @param len       The maximum number of characters to compare.
  *
- * @return 
+ * @return
  *      - < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strncmp( const pj_str_t *str1, const pj_str_t *str2, 
+PJ_IDECL(int) pj_strncmp( const pj_str_t *str1, const pj_str_t *str2,
                           pj_size_t len);
 
 /**
- * Compare strings. 
+ * Compare strings.
  *
  * @param str1      The string to compare.
  * @param str2      The string to compare.
  * @param len       The maximum number of characters to compare.
  *
- * @return 
+ * @return
  *      - < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strncmp2( const pj_str_t *str1, const char *str2, 
+PJ_IDECL(int) pj_strncmp2( const pj_str_t *str1, const char *str2,
                            pj_size_t len);
 
 /**
@@ -357,7 +357,7 @@ PJ_IDECL(int) pj_strncmp2( const pj_str_t *str1, const char *str2,
  * @param str1      The string to compare.
  * @param str2      The string to compare.
  *
- * @return 
+ * @return
  *      - < 0 if str1 is less than str2
  *      - 0   if str1 is equal to str2
  *      - > 0 if str1 is greater than str2
@@ -369,14 +369,14 @@ PJ_IDECL(int) pj_stricmp(const pj_str_t *str1, const pj_str_t *str2);
  * alnum characters. More over, it will only return non-zero if both
  * strings are not equal, not the usual negative or positive value.
  *
- * If non-alnum inputs are given, then the function may mistakenly 
+ * If non-alnum inputs are given, then the function may mistakenly
  * treat two strings as equal.
  *
  * @param str1      The string to compare.
  * @param str2      The string to compare.
  * @param len       The length to compare.
  *
- * @return 
+ * @return
  *      - 0         if str1 is equal to str2
  *      - (-1)      if not equal.
  */
@@ -392,13 +392,13 @@ PJ_IDECL(int) strnicmp_alnum(const char *str1, const char *str2,
  * alnum characters. More over, it will only return non-zero if both
  * strings are not equal, not the usual negative or positive value.
  *
- * If non-alnum inputs are given, then the function may mistakenly 
+ * If non-alnum inputs are given, then the function may mistakenly
  * treat two strings as equal.
  *
  * @param str1      The string to compare.
  * @param str2      The string to compare.
  *
- * @return 
+ * @return
  *      - 0         if str1 is equal to str2
  *      - (-1)      if not equal.
  */
@@ -414,7 +414,7 @@ PJ_IDECL(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2);
  * @param str1      The string to compare.
  * @param str2      The string to compare.
  *
- * @return 
+ * @return
  *      - < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
@@ -428,12 +428,12 @@ PJ_IDECL(int) pj_stricmp2( const pj_str_t *str1, const char *str2);
  * @param str2      The string to compare.
  * @param len       The maximum number of characters to compare.
  *
- * @return 
+ * @return
  *      - < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2, 
+PJ_IDECL(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2,
                            pj_size_t len);
 
 /**
@@ -443,12 +443,12 @@ PJ_IDECL(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2,
  * @param str2      The string to compare.
  * @param len       The maximum number of characters to compare.
  *
- * @return 
+ * @return
  *      - < 0 if str1 is less than str2
  *      - 0   if str1 is identical to str2
  *      - > 0 if str1 is greater than str2
  */
-PJ_IDECL(int) pj_strnicmp2( const pj_str_t *str1, const char *str2, 
+PJ_IDECL(int) pj_strnicmp2( const pj_str_t *str1, const char *str2,
                             pj_size_t len);
 
 /**
@@ -486,13 +486,13 @@ PJ_INLINE(char*) pj_strchr( const pj_str_t *str, int chr)
 
 
 /**
- * Find the first index of character, in a string, that does not belong to a 
+ * Find the first index of character, in a string, that does not belong to a
  * set of characters.
  *
  * @param str       The string.
- * @param set_char  The string containing the set of characters. 
+ * @param set_char  The string containing the set of characters.
  *
- * @return the index of the first character in the str that doesn't belong to 
+ * @return the index of the first character in the str that doesn't belong to
  * set_char. If str starts with a character not in set_char, return 0.
  */
 PJ_DECL(pj_ssize_t) pj_strspn(const pj_str_t *str, const pj_str_t *set_char);
@@ -512,7 +512,7 @@ PJ_DECL(pj_ssize_t) pj_strspn2(const pj_str_t *str, const char *set_char);
 
 
 /**
- * Find the first index of character, in a string, that belong to a set of 
+ * Find the first index of character, in a string, that belong to a set of
  * characters.
  *
  * @param str       The string.
@@ -541,7 +541,7 @@ PJ_DECL(pj_ssize_t) pj_strcspn2(const pj_str_t *str, const char *set_char);
  * Find tokens from a string using the delimiter.
  *
  * @param str       The string.
- * @param delim     The string containing the delimiter. It might contain 
+ * @param delim     The string containing the delimiter. It might contain
  *                  multiple character treated as unique set. If same character
  *                  was found on the set, it will be skipped.
  * @param tok       The string containing the token.
@@ -624,7 +624,7 @@ PJ_DECL(pj_str_t*) pj_strrtrim( pj_str_t *str );
 PJ_IDECL(pj_str_t*) pj_strtrim( pj_str_t *str );
 
 /**
- * Initialize the buffer with some random string. Note that the 
+ * Initialize the buffer with some random string. Note that the
  * generated string is not NULL terminated.
  *
  * @param str       the string to store the result.
@@ -660,7 +660,7 @@ PJ_DECL(long) pj_strtol(const pj_str_t *str);
  *         PJ_ETOOBIG if the value was an impossibly long positive number.
  *         In this case, *value will be set to LONG_MAX.
  *         \n
- *         PJ_EINVAL if the input string was NULL, the value pointer was NULL 
+ *         PJ_EINVAL if the input string was NULL, the value pointer was NULL
  *         or the input string could not be parsed at all such as starting with
  *         a character other than a '+', '-' or not in the '0' - '9' range.
  *         In this case, *value will be left untouched.
@@ -682,9 +682,9 @@ PJ_DECL(unsigned long) pj_strtoul(const pj_str_t *str);
 /**
  * Convert strings to an unsigned long-integer value.
  * This function stops reading the string input either when the number
- * of characters has exceeded the length of the input or it has read 
+ * of characters has exceeded the length of the input or it has read
  * the first character it cannot recognize as part of a number, that is
- * a character greater than or equal to base. 
+ * a character greater than or equal to base.
  *
  * @param str       The input string.
  * @param endptr    Optional pointer to receive the remainder/unparsed
@@ -709,8 +709,8 @@ PJ_DECL(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
  *         PJ_ETOOBIG if the value was an impossibly long positive number.
  *         In this case, *value will be set to ULONG_MAX.
  *         \n
- *         PJ_EINVAL if the input string was NULL, the value pointer was NULL 
- *         or the input string could not be parsed at all such as starting 
+ *         PJ_EINVAL if the input string was NULL, the value pointer was NULL
+ *         or the input string could not be parsed at all such as starting
  *         with a character outside the base character range.  In this case,
  *         *value will be left untouched.
  */

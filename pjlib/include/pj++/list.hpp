@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_LIST_HPP__
 #define __PJPP_LIST_HPP__
@@ -47,31 +47,31 @@ public:
     class const_iterator
     {
     public:
-        const_iterator() 
-            : node_(NULL) 
+        const_iterator()
+            : node_(NULL)
         {}
-        const_iterator(const List_Node *nd) 
-            : node_((List_Node*)nd) 
+        const_iterator(const List_Node *nd)
+            : node_((List_Node*)nd)
         {}
-        const List_Node * operator *() 
-        { 
-            return node_; 
+        const List_Node * operator *()
+        {
+            return node_;
         }
-        const List_Node * operator -> () 
-        { 
-            return node_; 
+        const List_Node * operator -> ()
+        {
+            return node_;
         }
-        const_iterator operator++() 
-        { 
-            return const_iterator((const List_Node *)node_->next); 
+        const_iterator operator++()
+        {
+            return const_iterator((const List_Node *)node_->next);
         }
-        bool operator==(const const_iterator &rhs) 
-        { 
-            return node_ == rhs.node_; 
+        bool operator==(const const_iterator &rhs)
+        {
+            return node_ == rhs.node_;
         }
-        bool operator!=(const const_iterator &rhs) 
-        { 
-            return node_ != rhs.node_; 
+        bool operator!=(const const_iterator &rhs)
+        {
+            return node_ != rhs.node_;
         }
 
     protected:
@@ -84,40 +84,40 @@ public:
     class iterator : public const_iterator
     {
     public:
-        iterator() 
+        iterator()
         {}
-        iterator(List_Node *nd) 
-            : const_iterator(nd) 
+        iterator(List_Node *nd)
+            : const_iterator(nd)
         {}
-        List_Node * operator *() 
-        { 
-            return node_; 
+        List_Node * operator *()
+        {
+            return node_;
         }
-        List_Node * operator -> () 
-        { 
-            return node_; 
+        List_Node * operator -> ()
+        {
+            return node_;
         }
-        iterator operator++() 
-        { 
-            return iterator((List_Node*)node_->next); 
+        iterator operator++()
+        {
+            return iterator((List_Node*)node_->next);
         }
-        bool operator==(const iterator &rhs) 
-        { 
-            return node_ == rhs.node_; 
+        bool operator==(const iterator &rhs)
+        {
+            return node_ == rhs.node_;
         }
-        bool operator!=(const iterator &rhs) 
-        { 
-            return node_ != rhs.node_; 
+        bool operator!=(const iterator &rhs)
+        {
+            return node_ != rhs.node_;
         }
     };
 
     //
     // Default constructor.
     //
-    Pj_List() 
-    { 
-        pj_list_init(&root_); 
-        if (0) compiletest(); 
+    Pj_List()
+    {
+        pj_list_init(&root_);
+        if (0) compiletest();
     }
 
     //
@@ -146,7 +146,7 @@ public:
 
     //
     // Check if list is empty.
-    // 
+    //
     bool empty() const
     {
         return pj_list_empty(&root_);
@@ -339,7 +339,7 @@ private:
 
     void compiletest()
     {
-        // If you see error in this line, 
+        // If you see error in this line,
         // it's because List_Node is not derived from Pj_List_Node.
         List_Node *n = (List_Node*)0;
         n = (List_Node *)n->next; n = (List_Node *)n->prev;

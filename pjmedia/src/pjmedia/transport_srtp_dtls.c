@@ -23,7 +23,7 @@
 #include <pj/rand.h>
 #include <pj/ssl_sock.h>
 
-/* 
+/*
  * Include OpenSSL headers
  */
 #include <openssl/bn.h>
@@ -87,7 +87,7 @@ static pjmedia_transport_op dtls_op =
 
 
 typedef enum dtls_setup
-{ 
+{
     DTLS_SETUP_UNKNOWN,
     DTLS_SETUP_ACTPASS,
     DTLS_SETUP_ACTIVE,
@@ -155,7 +155,7 @@ static char* pj_profiles[OPENSSL_PROFILE_NUM] =
     "AEAD_AES_128_GCM"
 };
 
-/* This will store the valid OpenSSL profiles which is mapped from 
+/* This will store the valid OpenSSL profiles which is mapped from
  * OpenSSL-pjmedia SRTP cryptos.
  */
 static char *valid_pj_profiles_list[OPENSSL_PROFILE_NUM];
@@ -440,7 +440,7 @@ static pj_status_t ssl_create(dtls_srtp *ds)
         return GET_SSL_STATUS(ds);
     }
 
-    if (valid_profiles_cnt == 0) {      
+    if (valid_profiles_cnt == 0) {
         return PJMEDIA_SRTP_DTLS_ENOPROFILE;
     }
 
@@ -529,7 +529,7 @@ static void ssl_destroy(dtls_srtp *ds)
         /**
          * Avoid calling SSL_shutdown() if handshake wasn't completed.
          * OpenSSL 1.0.2f complains if SSL_shutdown() is called during an
-         * SSL handshake, while previous versions always return 0.       
+         * SSL handshake, while previous versions always return 0.
          */
         if (SSL_in_init(ds->ossl_ssl) == 0) {
             SSL_shutdown(ds->ossl_ssl);
@@ -892,7 +892,7 @@ static pj_status_t ssl_handshake(dtls_srtp *ds)
                                       ds, &ds->clock);
         if (status != PJ_SUCCESS)
             goto on_return;
-    }    
+    }
     status = pjmedia_clock_start(ds->clock);
     if (status != PJ_SUCCESS)
         goto on_return;
@@ -1342,7 +1342,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 
             if (ds->setup == DTLS_SETUP_UNKNOWN)
                 ds->setup = DTLS_SETUP_ACTPASS;
-            
+
             if (ds->setup == DTLS_SETUP_ACTIVE)
                 val = ID_ACTIVE;
             else if (ds->setup == DTLS_SETUP_PASSIVE)
@@ -1426,7 +1426,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
     if (ds->srtp->offerer_side) {
         m_loc->desc.transport = ID_TP_DTLS_SRTP;
     } else {
-        m_loc->desc.transport = 
+        m_loc->desc.transport =
                             sdp_remote->media[media_index]->desc.transport;
     }
 
@@ -1585,7 +1585,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
         }
     } else {
         /* As answerer */
-        
+
         /* Nothing to do? */
     }
 
@@ -1613,7 +1613,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     }
 
     /* Check if the background DTLS nego has completed */
-    if (ds->got_keys) { 
+    if (ds->got_keys) {
         ds->srtp->tx_policy_neg = ds->tx_crypto;
         ds->srtp->rx_policy_neg = ds->rx_crypto;
 
@@ -1630,7 +1630,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
         }
 
         return PJ_SUCCESS;
-    } 
+    }
 
     /* SRTP key is not ready, SRTP start is pending */
     ds->srtp->keying_pending_cnt++;
@@ -1690,7 +1690,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
                           pj_sockaddr_get_port(&ap.rem_addr)));
             }
 #endif
-            
+
             status = ssl_handshake(ds);
             if (status != PJ_SUCCESS)
                 goto on_return;
@@ -1716,7 +1716,7 @@ static pj_status_t dtls_media_stop(pjmedia_transport *tp)
 
     if (ds->clock)
         pjmedia_clock_stop(ds->clock);
-    
+
     /* Reset DTLS state */
     ssl_destroy(ds);
     ds->setup = DTLS_SETUP_UNKNOWN;

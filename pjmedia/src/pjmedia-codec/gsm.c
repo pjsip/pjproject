@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/gsm.h>
 #include <pjmedia/codec.h>
@@ -50,27 +50,27 @@
 
 
 /* Prototypes for GSM factory */
-static pj_status_t gsm_test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t gsm_test_alloc( pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *id );
-static pj_status_t gsm_default_attr( pjmedia_codec_factory *factory, 
-                                     const pjmedia_codec_info *id, 
+static pj_status_t gsm_default_attr( pjmedia_codec_factory *factory,
+                                     const pjmedia_codec_info *id,
                                      pjmedia_codec_param *attr );
-static pj_status_t gsm_enum_codecs( pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
+static pj_status_t gsm_enum_codecs( pjmedia_codec_factory *factory,
+                                    unsigned *count,
                                     pjmedia_codec_info codecs[]);
-static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory, 
-                                    const pjmedia_codec_info *id, 
+static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
+                                    const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec);
-static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
                                       pjmedia_codec *codec );
 
 /* Prototypes for GSM implementation. */
-static pj_status_t  gsm_codec_init( pjmedia_codec *codec, 
+static pj_status_t  gsm_codec_init( pjmedia_codec *codec,
                                     pj_pool_t *pool );
-static pj_status_t  gsm_codec_open( pjmedia_codec *codec, 
+static pj_status_t  gsm_codec_open( pjmedia_codec *codec,
                                     pjmedia_codec_param *attr );
 static pj_status_t  gsm_codec_close( pjmedia_codec *codec );
-static pj_status_t  gsm_codec_modify(pjmedia_codec *codec, 
+static pj_status_t  gsm_codec_modify(pjmedia_codec *codec,
                                      const pjmedia_codec_param *attr );
 static pj_status_t  gsm_codec_parse( pjmedia_codec *codec,
                                      void *pkt,
@@ -78,13 +78,13 @@ static pj_status_t  gsm_codec_parse( pjmedia_codec *codec,
                                      const pj_timestamp *ts,
                                      unsigned *frame_cnt,
                                      pjmedia_frame frames[]);
-static pj_status_t  gsm_codec_encode( pjmedia_codec *codec, 
+static pj_status_t  gsm_codec_encode( pjmedia_codec *codec,
                                       const struct pjmedia_frame *input,
-                                      unsigned output_buf_len, 
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
-static pj_status_t  gsm_codec_decode( pjmedia_codec *codec, 
+static pj_status_t  gsm_codec_decode( pjmedia_codec *codec,
                                       const struct pjmedia_frame *input,
-                                      unsigned output_buf_len, 
+                                      unsigned output_buf_len,
                                       struct pjmedia_frame *output);
 #if !PLC_DISABLED
 static pj_status_t  gsm_codec_recover(pjmedia_codec *codec,
@@ -93,7 +93,7 @@ static pj_status_t  gsm_codec_recover(pjmedia_codec *codec,
 #endif
 
 /* Definition for GSM codec operations. */
-static pjmedia_codec_op gsm_op = 
+static pjmedia_codec_op gsm_op =
 {
     &gsm_codec_init,
     &gsm_codec_open,
@@ -163,7 +163,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_gsm_init( pjmedia_endpt *endpt )
     gsm_codec_factory.base.factory_data = NULL;
     gsm_codec_factory.endpt = endpt;
 
-    gsm_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "gsm", 4000, 
+    gsm_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "gsm", 4000,
                                                        4000);
     if (!gsm_codec_factory.pool)
         return PJ_ENOMEM;
@@ -171,7 +171,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_gsm_init( pjmedia_endpt *endpt )
     pj_list_init(&gsm_codec_factory.codec_list);
 
     /* Create mutex. */
-    status = pj_mutex_create_simple(gsm_codec_factory.pool, "gsm", 
+    status = pj_mutex_create_simple(gsm_codec_factory.pool, "gsm",
                                     &gsm_codec_factory.mutex);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -184,7 +184,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_gsm_init( pjmedia_endpt *endpt )
     }
 
     /* Register codec factory to endpoint. */
-    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+    status = pjmedia_codec_mgr_register_factory(codec_mgr,
                                                 &gsm_codec_factory.base);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -214,7 +214,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_gsm_deinit(void)
 
     /* We don't want to deinit if there's outstanding codec. */
     /* This is silly, as we'll always have codec in the list if
-       we ever allocate a codec! A better behavior maybe is to 
+       we ever allocate a codec! A better behavior maybe is to
        deallocate all codecs in the list.
     pj_mutex_lock(gsm_codec_factory.mutex);
     if (!pj_list_empty(&gsm_codec_factory.codec_list)) {
@@ -234,7 +234,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_gsm_deinit(void)
     /* Unregister GSM codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &gsm_codec_factory.base);
-    
+
     /* Destroy mutex. */
     pj_mutex_destroy(gsm_codec_factory.mutex);
 
@@ -245,10 +245,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_gsm_deinit(void)
     return status;
 }
 
-/* 
- * Check if factory can allocate the specified codec. 
+/*
+ * Check if factory can allocate the specified codec.
  */
-static pj_status_t gsm_test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t gsm_test_alloc( pjmedia_codec_factory *factory,
                                    const pjmedia_codec_info *info )
 {
     PJ_UNUSED_ARG(factory);
@@ -265,8 +265,8 @@ static pj_status_t gsm_test_alloc( pjmedia_codec_factory *factory,
 /*
  * Generate default attribute.
  */
-static pj_status_t gsm_default_attr (pjmedia_codec_factory *factory, 
-                                      const pjmedia_codec_info *id, 
+static pj_status_t gsm_default_attr (pjmedia_codec_factory *factory,
+                                      const pjmedia_codec_info *id,
                                       pjmedia_codec_param *attr )
 {
     PJ_UNUSED_ARG(factory);
@@ -295,8 +295,8 @@ static pj_status_t gsm_default_attr (pjmedia_codec_factory *factory,
 /*
  * Enum codecs supported by this factory (i.e. only GSM!).
  */
-static pj_status_t gsm_enum_codecs(pjmedia_codec_factory *factory, 
-                                    unsigned *count, 
+static pj_status_t gsm_enum_codecs(pjmedia_codec_factory *factory,
+                                    unsigned *count,
                                     pjmedia_codec_info codecs[])
 {
     PJ_UNUSED_ARG(factory);
@@ -317,7 +317,7 @@ static pj_status_t gsm_enum_codecs(pjmedia_codec_factory *factory,
 /*
  * Allocate a new GSM codec instance.
  */
-static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
                                     const pjmedia_codec_info *id,
                                     pjmedia_codec **p_codec)
 {
@@ -346,7 +346,7 @@ static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
 
 #if !PLC_DISABLED
         /* Create PLC */
-        status = pjmedia_plc_create(gsm_codec_factory.pool, 8000, 
+        status = pjmedia_plc_create(gsm_codec_factory.pool, 8000,
                                     160, 0, &gsm_data->plc);
         if (status != PJ_SUCCESS) {
             pj_mutex_unlock(gsm_codec_factory.mutex);
@@ -373,7 +373,7 @@ static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
 /*
  * Free codec.
  */
-static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
                                       pjmedia_codec *codec )
 {
     struct gsm_data *gsm_data;
@@ -414,7 +414,7 @@ static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
 /*
  * Init codec.
  */
-static pj_status_t gsm_codec_init( pjmedia_codec *codec, 
+static pj_status_t gsm_codec_init( pjmedia_codec *codec,
                                    pj_pool_t *pool )
 {
     PJ_UNUSED_ARG(codec);
@@ -425,7 +425,7 @@ static pj_status_t gsm_codec_init( pjmedia_codec *codec,
 /*
  * Open codec.
  */
-static pj_status_t gsm_codec_open( pjmedia_codec *codec, 
+static pj_status_t gsm_codec_open( pjmedia_codec *codec,
                                    pjmedia_codec_param *attr )
 {
     struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
@@ -472,7 +472,7 @@ static pj_status_t gsm_codec_close( pjmedia_codec *codec )
 /*
  * Modify codec settings.
  */
-static pj_status_t  gsm_codec_modify(pjmedia_codec *codec, 
+static pj_status_t  gsm_codec_modify(pjmedia_codec *codec,
                                      const pjmedia_codec_param *attr )
 {
     struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
@@ -522,9 +522,9 @@ static pj_status_t  gsm_codec_parse( pjmedia_codec *codec,
 /*
  * Encode frame.
  */
-static pj_status_t gsm_codec_encode( pjmedia_codec *codec, 
+static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
                                      const struct pjmedia_frame *input,
-                                     unsigned output_buf_len, 
+                                     unsigned output_buf_len,
                                      struct pjmedia_frame *output)
 {
     struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
@@ -532,12 +532,12 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     pj_size_t in_size;
 
     pj_assert(gsm_data && input && output);
-    
+
     pcm_in = (pj_int16_t*)input->buf;
     in_size = input->size;
 
     PJ_ASSERT_RETURN(in_size % 320 == 0, PJMEDIA_CODEC_EPCMFRMINLEN);
-    PJ_ASSERT_RETURN(output_buf_len >= 33 * in_size/320, 
+    PJ_ASSERT_RETURN(output_buf_len >= 33 * in_size/320,
                      PJMEDIA_CODEC_EFRMTOOSHORT);
 
     /* Detect silence */
@@ -545,10 +545,10 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
         pj_bool_t is_silence;
         pj_int32_t silence_duration;
 
-        silence_duration = pj_timestamp_diff32(&gsm_data->last_tx, 
+        silence_duration = pj_timestamp_diff32(&gsm_data->last_tx,
                                                &input->timestamp);
 
-        is_silence = pjmedia_silence_det_detect(gsm_data->vad, 
+        is_silence = pjmedia_silence_det_detect(gsm_data->vad,
                                                 (const pj_int16_t*) input->buf,
                                                 (input->size >> 1),
                                                 NULL);
@@ -569,7 +569,7 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     /* Encode */
     output->size = 0;
     while (in_size >= 320) {
-        gsm_encode(gsm_data->encoder, pcm_in, 
+        gsm_encode(gsm_data->encoder, pcm_in,
                    (unsigned char*)output->buf + output->size);
         pcm_in += 160;
         output->size += 33;
@@ -585,9 +585,9 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
 /*
  * Decode frame.
  */
-static pj_status_t gsm_codec_decode( pjmedia_codec *codec, 
+static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
                                      const struct pjmedia_frame *input,
-                                     unsigned output_buf_len, 
+                                     unsigned output_buf_len,
                                      struct pjmedia_frame *output)
 {
     struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
@@ -601,8 +601,8 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
     if (input->size < 33)
         return PJMEDIA_CODEC_EFRMTOOSHORT;
 
-    gsm_decode(gsm_data->decoder, 
-               (unsigned char*)input->buf, 
+    gsm_decode(gsm_data->decoder,
+               (unsigned char*)input->buf,
                (short*)output->buf);
 
     output->size = 320;

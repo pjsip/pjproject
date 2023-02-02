@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/os.h>
 #include <pj/ctype.h>
@@ -60,7 +60,7 @@
 #   include <sys/sysctl.h>
     void pj_iphone_os_get_sys_info(pj_sys_info *si, pj_str_t *si_buffer);
 #endif
-    
+
 #if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
     PJ_BEGIN_DECL
     unsigned pj_symbianos_get_model_info(char *buf, unsigned buf_size);
@@ -97,32 +97,32 @@ static char *ver_info(pj_uint32_t ver, char *buf)
 }
 
 static pj_uint32_t parse_version(char *str)
-{    
+{
     int i, maxtok;
     pj_ssize_t found_idx;
     pj_uint32_t version = 0;
     pj_str_t in_str = pj_str(str);
     pj_str_t token, delim;
-    
+
     while (*str && !pj_isdigit(*str))
         str++;
 
     maxtok = 4;
     delim = pj_str(".-");
-    for (found_idx = pj_strtok(&in_str, &delim, &token, 0), i=0; 
+    for (found_idx = pj_strtok(&in_str, &delim, &token, 0), i=0;
          found_idx != in_str.slen && i < maxtok;
-         ++i, found_idx = pj_strtok(&in_str, &delim, &token, 
+         ++i, found_idx = pj_strtok(&in_str, &delim, &token,
                                     found_idx + token.slen))
     {
         int n;
 
         if (!pj_isdigit(*token.ptr))
             break;
-        
+
         n = atoi(token.ptr);
         version |= (n << ((3-i)*8));
     }
-    
+
     return version;
 }
 
@@ -178,7 +178,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
         si.sdk_ver = parse_version(tmp);
         #endif
     }
-    #else    
+    #else
     {
         struct utsname u;
 
@@ -190,7 +190,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 
         ALLOC_CP_STR(u.machine, machine);
         ALLOC_CP_STR(u.sysname, os_name);
-        
+
         si.os_ver = parse_version(u.release);
     }
     #endif
@@ -224,7 +224,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     #else
         GetSystemInfo(&wsi);
     #endif
-        
+
         switch (wsi.wProcessorArchitecture) {
         #if (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE) || \
             (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8)
@@ -255,7 +255,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     {
         pj_symbianos_get_model_info(si_buffer, sizeof(si_buffer));
         ALLOC_CP_STR(si_buffer, machine);
-        
+
         char *p = si_buffer + sizeof(si_buffer) - left;
         unsigned plen;
         plen = pj_symbianos_get_platform_info(p, left);
@@ -266,7 +266,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
         } else {
             si.os_name = pj_str("Unknown");
         }
-        
+
         /* Avoid compile warning on Symbian. */
         goto get_sdk_info;
     }

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_SIP_MODULE_H__
 #define __PJSIP_SIP_MODULE_H__
@@ -37,8 +37,8 @@ PJ_BEGIN_DECL
  * would not know how to handle messages, and will simply discard all
  * incoming messages.
  *
- * Modules are registered by creating and initializing #pjsip_module 
- * structure, and register the structure to PJSIP with 
+ * Modules are registered by creating and initializing #pjsip_module
+ * structure, and register the structure to PJSIP with
  * #pjsip_endpt_register_module().
  *
  * The <A HREF="/docs.htm">PJSIP Developer's Guide</A>
@@ -99,8 +99,8 @@ struct pjsip_module
 
     /**
      * Optional function to be called to deinitialize the module before
-     * it is unloaded. This function will be called by endpoint during 
-     * module unregistration. If the value is NULL, then it's equal to 
+     * it is unloaded. This function will be called by endpoint during
+     * module unregistration. If the value is NULL, then it's equal to
      * returning PJ_SUCCESS.
      *
      * @return          Module should return PJ_SUCCESS to indicate success.
@@ -109,8 +109,8 @@ struct pjsip_module
 
     /**
      * Optional function to be called to deinitialize the module before
-     * it is unloaded. This function will be called by endpoint during 
-     * module unregistration. If the value is NULL, then it's equal to 
+     * it is unloaded. This function will be called by endpoint during
+     * module unregistration. If the value is NULL, then it's equal to
      * returning PJ_SUCCESS.
      *
      * @param mod       The module.
@@ -135,8 +135,8 @@ struct pjsip_module
      *
      * @param rdata     The incoming message.
      *
-     * @return          Module should return PJ_TRUE if it handles the 
-     *                  response, or otherwise it should return PJ_FALSE to 
+     * @return          Module should return PJ_TRUE if it handles the
+     *                  response, or otherwise it should return PJ_FALSE to
      *                  allow other modules to handle the response.
      */
     pj_bool_t (*on_rx_response)(pjsip_rx_data *rdata);
@@ -147,8 +147,8 @@ struct pjsip_module
      *
      * @param tdata     The outgoing request message.
      *
-     * @return          Module should return PJ_SUCCESS in all cases. 
-     *                  If non-zero is returned, the message 
+     * @return          Module should return PJ_SUCCESS in all cases.
+     *                  If non-zero is returned, the message
      *                  will not be sent.
      */
     pj_status_t (*on_tx_request)(pjsip_tx_data *tdata);
@@ -159,15 +159,15 @@ struct pjsip_module
      *
      * @param tdata     The outgoing response message.
      *
-     * @return          Module should return PJ_SUCCESS in all cases. 
-     *                  If non-zero is returned, the message 
+     * @return          Module should return PJ_SUCCESS in all cases.
+     *                  If non-zero is returned, the message
      *                  will not be sent.
      */
     pj_status_t (*on_tx_response)(pjsip_tx_data *tdata);
 
     /**
-     * Optional function to be called when this module is acting as 
-     * transaction user for the specified transaction, when the 
+     * Optional function to be called when this module is acting as
+     * transaction user for the specified transaction, when the
      * transaction's state has changed.
      *
      * @param tsx       The transaction.
@@ -184,7 +184,7 @@ struct pjsip_module
  */
 enum pjsip_module_priority
 {
-    /** 
+    /**
      * This is the priority used by transport layer.
      */
     PJSIP_MOD_PRIORITY_TRANSPORT_LAYER  = 8,

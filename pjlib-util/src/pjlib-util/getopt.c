@@ -1,4 +1,4 @@
-/* 
+/*
  * pj_getopt entry points
  *
  * modified by Mike Borella <mike_borella@mw.3com.com>
@@ -46,7 +46,7 @@ int _getopt_internal (int argc, char *const *argv,
 
 
 int
-pj_getopt_long (int argc, char *const *argv, const char *options, 
+pj_getopt_long (int argc, char *const *argv, const char *options,
              const struct pj_getopt_option *long_options, int *opt_index)
 {
   return _getopt_internal (argc, argv, options, long_options, opt_index, 0);
@@ -56,7 +56,7 @@ pj_getopt_long (int argc, char *const *argv, const char *options,
    If an option that starts with '-' (not '--') doesn't match a long option,
    but does match a short option, it is parsed as a short option
    instead.  */
- 
+
 int
 pj_getopt (int argc, char * const * argv, const char * optstring)
 {
@@ -256,7 +256,7 @@ exchange (char **argv)
 
 /* Initialize the internal data when the first call is made.  */
 
-static const char *_getopt_initialize (int argc, char *const *argv, 
+static const char *_getopt_initialize (int argc, char *const *argv,
                                        const char *optstring)
 {
     PJ_UNUSED_ARG(argc);
@@ -350,8 +350,8 @@ static const char *_getopt_initialize (int argc, char *const *argv,
    long-named options.  */
 
 static int
-_getopt_internal (int argc, char *const *argv, const char *optstring, 
-                  const struct pj_getopt_option *longopts, int *longind, 
+_getopt_internal (int argc, char *const *argv, const char *optstring,
+                  const struct pj_getopt_option *longopts, int *longind,
                   int long_only)
 {
   pj_optarg = NULL;

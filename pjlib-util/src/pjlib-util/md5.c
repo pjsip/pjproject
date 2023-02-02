@@ -1,4 +1,4 @@
-/* 
+/*
  * This is the implementation of MD5 algorithm, based on the code
  * written by Colin Plumb. This file is put in public domain.
  */
@@ -69,7 +69,7 @@ PJ_DEF(void) pj_md5_init(pj_md5_context *ctx)
  * Update context to reflect the concatenation of another buffer full
  * of bytes.
  */
-PJ_DEF(void) pj_md5_update( pj_md5_context *ctx, 
+PJ_DEF(void) pj_md5_update( pj_md5_context *ctx,
                             unsigned char const *buf, unsigned len)
 {
     pj_uint32_t t;
@@ -115,7 +115,7 @@ PJ_DEF(void) pj_md5_update( pj_md5_context *ctx,
 }
 
 /*
- * Final wrapup - pad to 64-byte boundary with the bit pattern 
+ * Final wrapup - pad to 64-byte boundary with the bit pattern
  * 1 0* (64-bit count of bits processed, MSB-first)
  */
 PJ_DEF(void) pj_md5_final(pj_md5_context *ctx, unsigned char digest[16])

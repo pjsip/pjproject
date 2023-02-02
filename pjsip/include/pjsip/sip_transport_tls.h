@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_TRANSPORT_TLS_H__
 #define __PJSIP_TRANSPORT_TLS_H__
@@ -38,7 +38,7 @@ PJ_BEGIN_DECL
  * @ingroup PJSIP_TRANSPORT
  * @brief API to create and register TLS transport.
  * @{
- * The functions below are used to create TLS transport and register 
+ * The functions below are used to create TLS transport and register
  * the transport to the framework.
  */
 
@@ -54,7 +54,7 @@ PJ_BEGIN_DECL
 /** SSL protocol method constants. */
 typedef enum pjsip_ssl_method
 {
-    PJSIP_SSL_UNSPECIFIED_METHOD = 0,   /**< Default protocol method.   */    
+    PJSIP_SSL_UNSPECIFIED_METHOD = 0,   /**< Default protocol method.   */
     PJSIP_SSLV2_METHOD           = 20,  /**< Use SSLv2 method.          */
     PJSIP_SSLV3_METHOD           = 30,  /**< Use SSLv3 method.          */
     PJSIP_TLSV1_METHOD           = 31,  /**< Use TLSv1 method.          */
@@ -126,7 +126,7 @@ typedef struct pjsip_tls_on_verify_param {
      * Describes active local certificate info.
      */
     pj_ssl_cert_info *local_cert_info;
-   
+
     /**
      * Describes active remote certificate info.
      */
@@ -177,8 +177,8 @@ typedef struct pjsip_tls_setting
     pj_ssl_cert_buffer cert_buf;
 
     /**
-     * Optional private key buffer of the endpoint certificate to be used. 
-     * If ca_list_file, ca_list_path, cert_file or privkey_file are set, 
+     * Optional private key buffer of the endpoint certificate to be used.
+     * If ca_list_file, ca_list_path, cert_file or privkey_file are set,
      * this setting will be ignored.
      */
     pj_ssl_cert_buffer privkey_buf;
@@ -190,7 +190,7 @@ typedef struct pjsip_tls_setting
 
     /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field
-     * might be deprecated in favor of <b>proto</b> field. For now, this field 
+     * might be deprecated in favor of <b>proto</b> field. For now, this field
      * is only applicable only when <b>proto</b> field is set to zero.
      *
      * Default is PJSIP_SSL_UNSPECIFIED_METHOD (0), which in turn will
@@ -199,8 +199,8 @@ typedef struct pjsip_tls_setting
     pjsip_ssl_method    method;
 
     /**
-     * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable 
-     * specific protocol type. Use bitwise OR operation to combine the protocol 
+     * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable
+     * specific protocol type. Use bitwise OR operation to combine the protocol
      * type.
      *
      * Default is PJSIP_SSL_DEFAULT_PROTO.
@@ -208,8 +208,8 @@ typedef struct pjsip_tls_setting
     pj_uint32_t proto;
 
     /**
-     * Number of ciphers contained in the specified cipher preference. 
-     * If this is set to zero, then default cipher list of the backend 
+     * Number of ciphers contained in the specified cipher preference.
+     * If this is set to zero, then default cipher list of the backend
      * will be used.
      *
      * Default: 0 (zero).
@@ -268,12 +268,12 @@ typedef struct pjsip_tls_setting
     pj_str_t            entropy_path;
 
     /**
-     * Specifies TLS transport behavior on the server TLS certificate 
+     * Specifies TLS transport behavior on the server TLS certificate
      * verification result:
-     * - If \a verify_server is disabled (set to PJ_FALSE), TLS transport 
+     * - If \a verify_server is disabled (set to PJ_FALSE), TLS transport
      *   will just notify the application via #pjsip_tp_state_callback with
      *   state PJSIP_TP_STATE_CONNECTED regardless TLS verification result.
-     * - If \a verify_server is enabled (set to PJ_TRUE), TLS transport 
+     * - If \a verify_server is enabled (set to PJ_TRUE), TLS transport
      *   will be shutdown and application will be notified with state
      *   PJSIP_TP_STATE_DISCONNECTED whenever there is any TLS verification
      *   error, otherwise PJSIP_TP_STATE_CONNECTED will be notified.
@@ -286,12 +286,12 @@ typedef struct pjsip_tls_setting
     pj_bool_t   verify_server;
 
     /**
-     * Specifies TLS transport behavior on the client TLS certificate 
+     * Specifies TLS transport behavior on the client TLS certificate
      * verification result:
-     * - If \a verify_client is disabled (set to PJ_FALSE), TLS transport 
+     * - If \a verify_client is disabled (set to PJ_FALSE), TLS transport
      *   will just notify the application via #pjsip_tp_state_callback with
      *   state PJSIP_TP_STATE_CONNECTED regardless TLS verification result.
-     * - If \a verify_client is enabled (set to PJ_TRUE), TLS transport 
+     * - If \a verify_client is enabled (set to PJ_TRUE), TLS transport
      *   will be shutdown and application will be notified with state
      *   PJSIP_TP_STATE_DISCONNECTED whenever there is any TLS verification
      *   error, otherwise PJSIP_TP_STATE_CONNECTED will be notified.
@@ -352,19 +352,19 @@ typedef struct pjsip_tls_setting
     pj_bool_t qos_ignore_error;
 
     /**
-     * Specify options to be set on the transport. 
+     * Specify options to be set on the transport.
      *
      * By default there is no options.
-     * 
+     *
      */
     pj_sockopt_params sockopt_params;
 
     /**
-     * Specify if the transport should ignore any errors when setting the 
+     * Specify if the transport should ignore any errors when setting the
      * sockopt parameters.
      *
      * Default: PJ_TRUE
-     * 
+     *
      */
     pj_bool_t sockopt_ignore_error;
 
@@ -376,12 +376,12 @@ typedef struct pjsip_tls_setting
     void(*on_accept_fail_cb)(const pjsip_tls_on_accept_fail_param *param);
 
     /**
-     * Callback to be called to verify a new connection.  Currently it's only 
+     * Callback to be called to verify a new connection.  Currently it's only
      * implemented for OpenSSL backend.
      *
      * @param param         The parameter to the callback.
-     * 
-     * @return              Return PJ_TRUE if succesfully verified. 
+     *
+     * @return              Return PJ_TRUE if succesfully verified.
      *                      If verification failed, connection will be dropped
      *                      immediately.
      *
@@ -483,14 +483,14 @@ PJ_DECL(void) pjsip_tls_setting_wipe_keys(pjsip_tls_setting *opt);
  * @param endpt         The SIP endpoint.
  * @param opt           Optional TLS settings.
  * @param local         Optional local address to bind, or specify the
- *                      address to bind the server socket to. Both IP 
+ *                      address to bind the server socket to. Both IP
  *                      interface address and port fields are optional.
  *                      If IP interface address is not specified, socket
  *                      will be bound to PJ_INADDR_ANY. If port is not
  *                      specified, socket will be bound to any port
  *                      selected by the operating system.
  * @param a_name        Optional published address, which is the address to be
- *                      advertised as the address of this SIP transport. 
+ *                      advertised as the address of this SIP transport.
  *                      If this argument is NULL, then the bound address
  *                      will be used as the published address.
  * @param async_cnt     Number of simultaneous asynchronous accept()

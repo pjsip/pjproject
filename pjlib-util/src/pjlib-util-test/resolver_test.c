@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib-util.h>
 #include <pjlib.h>
@@ -361,7 +361,7 @@ static int server_thread(void *p)
 
         src_len = sizeof(src_addr);
         pkt_len = sizeof(pkt);
-        rc = pj_sock_recvfrom(srv->sock, pkt, &pkt_len, 0, 
+        rc = pj_sock_recvfrom(srv->sock, pkt, &pkt_len, 0,
                               &src_addr, &src_len);
         if (rc != 0) {
             app_perror("Server error receiving packet", rc);
@@ -1063,8 +1063,8 @@ static int dns_test(void)
                          set.good_ns_ttl));
     pj_thread_sleep(set.good_ns_ttl * 1000);
 
-    /* 
-     * Fail-over test 
+    /*
+     * Fail-over test
      */
     PJ_LOG(3,(THIS_FILE, "  failing server0"));
     g_server[0].action = ACTION_IGNORE;
@@ -1109,7 +1109,7 @@ static int dns_test(void)
 
     /* Wait to allow probing period to complete, server 0 will be in bad state */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state to end (%d sec)",
-                         set.qretr_delay * 
+                         set.qretr_delay *
                          (set.qretr_count+2) / 1000));
     pj_thread_sleep(set.qretr_delay * (set.qretr_count + 2));
 
@@ -1209,7 +1209,7 @@ static void action1_1(const pj_dns_parsed_packet *pkt,
         res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     }
     if (res->ans == NULL) {
-        res->ans = (pj_dns_parsed_rr*) 
+        res->ans = (pj_dns_parsed_rr*)
                   pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
     }
 
@@ -1297,7 +1297,7 @@ static void srv_cb_1(void *user_data,
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR1, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT1, return);
 
-    
+
 }
 
 
@@ -1497,7 +1497,7 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
-    res->ans = (pj_dns_parsed_rr*) 
+    res->ans = (pj_dns_parsed_rr*)
                pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
 
     res->hdr.qdcount = 1;
@@ -1782,7 +1782,7 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
         pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp." DOMAIN3)==0);
 
         res->hdr.anscount = SRV_COUNT3;
-        res->ans = (pj_dns_parsed_rr*) 
+        res->ans = (pj_dns_parsed_rr*)
                    pj_pool_calloc(pool, SRV_COUNT3, sizeof(pj_dns_parsed_rr));
 
         for (i=0; i<SRV_COUNT3; ++i) {
@@ -1806,7 +1806,7 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
         //pj_assert(pj_strcmp2(&res->q[0].name, "sip." DOMAIN3)==0);
 
         res->hdr.anscount = A_COUNT3;
-        res->ans = (pj_dns_parsed_rr*) 
+        res->ans = (pj_dns_parsed_rr*)
                    pj_pool_calloc(pool, A_COUNT3, sizeof(pj_dns_parsed_rr));
 
         for (i=0; i<A_COUNT3; ++i) {
@@ -1896,7 +1896,7 @@ static int srv_resolver_many_test(void)
 int resolver_test(void)
 {
     int rc;
-    
+
     rc = init(PJ_FALSE);
     if (rc != 0)
         goto on_error;

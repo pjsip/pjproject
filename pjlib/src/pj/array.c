@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/array.h>
 #include <pj/string.h>
@@ -48,9 +48,9 @@ PJ_DEF(void) pj_array_erase( void *array,
     }
 }
 
-PJ_DEF(pj_status_t) pj_array_find( const void *array, 
-                                   unsigned elem_size, 
-                                   unsigned count, 
+PJ_DEF(pj_status_t) pj_array_find( const void *array,
+                                   unsigned elem_size,
+                                   unsigned count,
                                    pj_status_t (*matching)(const void *value),
                                    void **result)
 {

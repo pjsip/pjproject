@@ -23,7 +23,7 @@ namespace VoipTasks
 
             Current.RTCTaskDeferral = _deferral;
             // Register for Task Cancel callback
-            taskInstance.Canceled += TaskInstance_Canceled;            
+            taskInstance.Canceled += TaskInstance_Canceled;
         }
 
         private void TaskInstance_Canceled(IBackgroundTaskInstance sender, BackgroundTaskCancellationReason reason)

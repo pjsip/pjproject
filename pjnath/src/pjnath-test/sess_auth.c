@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -81,7 +81,7 @@ static pj_status_t server_on_rx_request(pj_stun_session *sess,
     PJ_UNUSED_ARG(pkt_len);
     PJ_UNUSED_ARG(token);
 
-    return pj_stun_session_respond(sess, rdata, 0, NULL, NULL, PJ_TRUE, 
+    return pj_stun_session_respond(sess, rdata, 0, NULL, NULL, PJ_TRUE,
                                    src_addr, src_addr_len);
 }
 
@@ -106,7 +106,7 @@ static pj_status_t server_get_auth(void *user_data,
 
 
 static pj_status_t server_get_password( const pj_stun_msg *msg,
-                                        void *user_data, 
+                                        void *user_data,
                                         const pj_str_t *realm,
                                         const pj_str_t *username,
                                         pj_pool_t *pool,
@@ -172,8 +172,8 @@ static int server_thread(void *unused)
         PJ_FD_ZERO(&readset);
         PJ_FD_SET(server->sock, &readset);
 
-        if (pj_sock_select((int)server->sock+1, &readset, NULL, NULL, &delay)==1 
-            && PJ_FD_ISSET(server->sock, &readset)) 
+        if (pj_sock_select((int)server->sock+1, &readset, NULL, NULL, &delay)==1
+            && PJ_FD_ISSET(server->sock, &readset))
         {
             char pkt[1000];
             pj_ssize_t len;
@@ -195,7 +195,7 @@ static int server_thread(void *unused)
             if (!server->responding)
                 continue;
 
-            pj_stun_session_on_rx_pkt(server->sess, pkt, len, 
+            pj_stun_session_on_rx_pkt(server->sess, pkt, len,
                                       PJ_STUN_CHECK_PACKET | PJ_STUN_IS_DATAGRAM,
                                       NULL, NULL, &src_addr, src_addr_len);
         }
@@ -235,7 +235,7 @@ static int create_std_server(pj_stun_auth_type auth_type,
     pj_stun_session_cb sess_cb;
     pj_stun_auth_cred cred;
     pj_status_t status;
-    
+
     /* Create server */
     pool = pj_pool_create(mem, "server", 1000, 1000, NULL);
     server = PJ_POOL_ZALLOC_T(pool, struct server);
@@ -294,7 +294,7 @@ static int create_std_server(pj_stun_auth_type auth_type,
              * 'no route to host' error, so let's just hardcode to [::1]
              */
             pj_sockaddr_init(pj_AF_INET6(), &addr, NULL, 0);
-            addr.ipv6.sin6_addr.s6_addr[15] = 1;        
+            addr.ipv6.sin6_addr.s6_addr[15] = 1;
         } else {
             status = pj_gethostip(GET_AF(use_ipv6), &addr);
             if (status != PJ_SUCCESS) {
@@ -394,8 +394,8 @@ static int client_thread(void *unused)
         PJ_FD_ZERO(&readset);
         PJ_FD_SET(client->sock, &readset);
 
-        if (pj_sock_select((int)client->sock+1, &readset, NULL, NULL, &delay)==1 
-            && PJ_FD_ISSET(client->sock, &readset)) 
+        if (pj_sock_select((int)client->sock+1, &readset, NULL, NULL, &delay)==1
+            && PJ_FD_ISSET(client->sock, &readset))
         {
             char pkt[1000];
             pj_ssize_t len;
@@ -417,11 +417,11 @@ static int client_thread(void *unused)
             if (!client->responding)
                 continue;
 
-            pj_stun_session_on_rx_pkt(client->sess, pkt, len, 
+            pj_stun_session_on_rx_pkt(client->sess, pkt, len,
                                       PJ_STUN_CHECK_PACKET | PJ_STUN_IS_DATAGRAM,
                                       NULL, NULL, &src_addr, src_addr_len);
         }
- 
+
     }
 
     return 0;
@@ -465,7 +465,7 @@ static int run_client_test(const char *title,
                            pj_status_t expected_code,
                            const char *expected_realm,
                            const char *expected_nonce,
-                           
+
                            int (*more_check)(void))
 {
     pj_pool_t *pool;
@@ -475,7 +475,7 @@ static int run_client_test(const char *title,
     pj_status_t status;
     pj_sockaddr addr;
     int rc = 0;
-    
+
     PJ_LOG(3,(THIS_FILE, "   %s test (%s)", title, use_ipv6?"IPv6":"IPv4"));
 
     /* Create client */
@@ -545,7 +545,7 @@ static int run_client_test(const char *title,
     }
 
     /* Create request */
-    status = pj_stun_session_create_req(client->sess, PJ_STUN_BINDING_REQUEST, 
+    status = pj_stun_session_create_req(client->sess, PJ_STUN_BINDING_REQUEST,
                                         PJ_STUN_MAGIC, NULL, &tdata);
     if (status != PJ_SUCCESS) {
         destroy_client_server();
@@ -570,7 +570,7 @@ static int run_client_test(const char *title,
             pj_stun_msgint_attr_create(tdata->pool, &mi);
             pj_stun_msg_add_attr(tdata->msg, &mi->hdr);
         }
-           
+
     }
 
     /* Send the request */
@@ -596,7 +596,7 @@ static int run_client_test(const char *title,
             PJ_LOG(3,(THIS_FILE, "    err: expecting %d (%s) but got %d (%s) response",
                       expected_code, e1, client->response_status, e2));
             rc = -500;
-        } 
+        }
 
     } else {
         int res_code = 0;
@@ -604,17 +604,17 @@ static int run_client_test(const char *title,
         pj_stun_nonce_attr *anonce;
 
         if (client->response_status != 0) {
-            PJ_LOG(3,(THIS_FILE, "    err: expecting successful operation but got error %d", 
+            PJ_LOG(3,(THIS_FILE, "    err: expecting successful operation but got error %d",
                       client->response_status));
             rc = -600;
             goto done;
-        } 
+        }
 
         if (PJ_STUN_IS_ERROR_RESPONSE(client->response->hdr.type)) {
             pj_stun_errcode_attr *aerr = NULL;
 
             aerr = (pj_stun_errcode_attr*)
-                   pj_stun_msg_find_attr(client->response, 
+                   pj_stun_msg_find_attr(client->response,
                                          PJ_STUN_ATTR_ERROR_CODE, 0);
             if (aerr == NULL) {
                 PJ_LOG(3,(THIS_FILE, "    err: received error response without ERROR-CODE"));
@@ -747,8 +747,8 @@ static int long_term_check1(void)
 
 static int long_term_check2(void)
 {
-    /* response SHOULD NOT include a USERNAME, NONCE, REALM or 
-     * MESSAGE-INTEGRITY attribute. 
+    /* response SHOULD NOT include a USERNAME, NONCE, REALM or
+     * MESSAGE-INTEGRITY attribute.
      */
     if (pj_stun_msg_find_attr(client->response, PJ_STUN_ATTR_USERNAME, 0))
         return -900;
@@ -851,7 +851,7 @@ int sess_auth_test(void)
     }
 
     /* If the USERNAME does not contain a username value currently valid
-     * within the server: If the message is a request, the server MUST 
+     * within the server: If the message is a request, the server MUST
      * reject the request with an error response.  This response MUST use
      * an error code of 401 (Unauthorized).
      */
@@ -1083,7 +1083,7 @@ int sess_auth_test(void)
      * MUST include a NONCE and REALM attribute and SHOULD NOT incude the
      * USERNAME or MESSAGE-INTEGRITY attribute.  Servers can invalidate
      * nonces in order to provide additional security.  See Section 4.3
-     * of [RFC2617] for guidelines.    
+     * of [RFC2617] for guidelines.
      */
     // how??
 

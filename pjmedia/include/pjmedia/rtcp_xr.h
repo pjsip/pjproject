@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_RTCP_XR_H__
 #define __PJMEDIA_RTCP_XR_H__
@@ -134,7 +134,7 @@ typedef struct pjmedia_rtcp_xr_rb_dlrr_item
 typedef struct pjmedia_rtcp_xr_rb_dlrr
 {
     pjmedia_rtcp_xr_rb_header header;   /**< Block header.              */
-    pjmedia_rtcp_xr_rb_dlrr_item item;  /**< Block contents, 
+    pjmedia_rtcp_xr_rb_dlrr_item item;  /**< Block contents,
                                              variable length list       */
 } pjmedia_rtcp_xr_rb_dlrr;
 
@@ -147,14 +147,14 @@ typedef struct pjmedia_rtcp_xr_rb_stats
     pj_uint32_t          ssrc;          /**< Receiver SSRC                   */
     pj_uint16_t          begin_seq;     /**< Begin RTP sequence reported     */
     pj_uint16_t          end_seq;       /**< End RTP sequence reported       */
-    pj_uint32_t          lost;          /**< Number of packet lost in this 
+    pj_uint32_t          lost;          /**< Number of packet lost in this
                                              interval  */
-    pj_uint32_t          dup;           /**< Number of duplicated packet in 
+    pj_uint32_t          dup;           /**< Number of duplicated packet in
                                              this interval */
     pj_uint32_t          jitter_min;    /**< Minimum jitter in this interval */
     pj_uint32_t          jitter_max;    /**< Maximum jitter in this interval */
     pj_uint32_t          jitter_mean;   /**< Average jitter in this interval */
-    pj_uint32_t          jitter_dev;    /**< Jitter deviation in this 
+    pj_uint32_t          jitter_dev;    /**< Jitter deviation in this
                                              interval */
     pj_uint32_t          toh_min:8;     /**< Minimum ToH in this interval    */
     pj_uint32_t          toh_max:8;     /**< Maximum ToH in this interval    */
@@ -183,11 +183,11 @@ typedef struct pjmedia_rtcp_xr_rb_voip_mtc
     pj_uint8_t           gmin;          /**< The gap threshold          */
     pj_uint8_t           r_factor;      /**< Voice quality metric carried
                                              over this RTP session      */
-    pj_uint8_t           ext_r_factor;  /**< Voice quality metric carried 
+    pj_uint8_t           ext_r_factor;  /**< Voice quality metric carried
                                              outside of this RTP session*/
-    pj_uint8_t           mos_lq;        /**< Mean Opinion Score for 
+    pj_uint8_t           mos_lq;        /**< Mean Opinion Score for
                                              Listening Quality          */
-    pj_uint8_t           mos_cq;        /**< Mean Opinion Score for 
+    pj_uint8_t           mos_cq;        /**< Mean Opinion Score for
                                              Conversation Quality       */
     pj_uint8_t           rx_config;     /**< Receiver configuration     */
     pj_uint8_t           reserved2;     /**< Not used                   */
@@ -256,7 +256,7 @@ typedef struct pjmedia_rtcp_xr_stream_stat
         unsigned            l:1;        /**< Lost flag                      */
         unsigned            d:1;        /**< Duplicated flag                */
         unsigned            j:1;        /**< Jitter flag                    */
-        unsigned            t:2;        /**< TTL or Hop Limit, 
+        unsigned            t:2;        /**< TTL or Hop Limit,
                                              0=none, 1=TTL, 2=HL            */
 
         unsigned            lost;       /**< Number of packets lost         */
@@ -282,11 +282,11 @@ typedef struct pjmedia_rtcp_xr_stream_stat
         pj_uint8_t          gmin;           /**< The gap threshold          */
         pj_uint8_t          r_factor;       /**< Voice quality metric carried
                                                  over this RTP session      */
-        pj_uint8_t          ext_r_factor;   /**< Voice quality metric carried 
+        pj_uint8_t          ext_r_factor;   /**< Voice quality metric carried
                                                  outside of this RTP session*/
-        pj_uint8_t          mos_lq;         /**< Mean Opinion Score for 
+        pj_uint8_t          mos_lq;         /**< Mean Opinion Score for
                                                  Listening Quality          */
-        pj_uint8_t          mos_cq;         /**< Mean Opinion Score for 
+        pj_uint8_t          mos_cq;         /**< Mean Opinion Score for
                                                  Conversation Quality       */
         pj_uint8_t          rx_config;      /**< Receiver configuration     */
         pj_uint16_t         jb_nom;         /**< Current delay by jitter
@@ -303,8 +303,8 @@ typedef struct pjmedia_rtcp_xr_stat
 {
     pjmedia_rtcp_xr_stream_stat  rx;  /**< Decoding direction statistics.   */
     pjmedia_rtcp_xr_stream_stat  tx;  /**< Encoding direction statistics.   */
-    pj_math_stat                 rtt; /**< Round-trip delay stat (in usec) 
-                                           the value is calculated from 
+    pj_math_stat                 rtt; /**< Round-trip delay stat (in usec)
+                                           the value is calculated from
                                            receiver side.                   */
 } pjmedia_rtcp_xr_stat;
 
@@ -324,7 +324,7 @@ struct pjmedia_rtcp_xr_session
 
     pj_uint32_t             rx_lrr;     /**< NTP ts in last RR received.    */
     pj_timestamp            rx_lrr_time;/**< Time when last RR is received. */
-    pj_uint32_t             rx_last_rr; /**< # pkt received since last 
+    pj_uint32_t             rx_last_rr; /**< # pkt received since last
                                              sending RR time.               */
 
     pjmedia_rtcp_xr_stat    stat;       /**< RTCP XR statistics.            */
@@ -337,7 +337,7 @@ struct pjmedia_rtcp_xr_session
     pj_uint32_t             src_ref_seq;
     pj_bool_t               uninitialized_src_ref_seq;
 
-    /* This structure contains variables needed for calculating 
+    /* This structure contains variables needed for calculating
      * burst metrics.
      */
     struct {
@@ -371,7 +371,7 @@ typedef struct pjmedia_rtcp_xr_session pjmedia_rtcp_xr_session;
  *                  are defined in pjmedia_rtcp_xr_type, set this to zero
  *                  will make this function build all reports appropriately.
  * @param rtcp_pkt  Upon return, it will contain pointer to the RTCP XR packet.
- * @param len       Upon return, it will indicate the size of the generated 
+ * @param len       Upon return, it will indicate the size of the generated
  *                  RTCP XR packet.
  */
 PJ_DECL(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *session,
@@ -379,7 +379,7 @@ PJ_DECL(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *session,
                                           void **rtcp_pkt, int *len);
 
 /**
- * Call this function to manually update some info needed by RTCP XR to 
+ * Call this function to manually update some info needed by RTCP XR to
  * generate report which could not be populated directly when receiving
  * RTP.
  *
@@ -406,13 +406,13 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_xr_update_info(
  * @param frames_per_packet
                     Number of frames per packet.
  */
-void pjmedia_rtcp_xr_init( pjmedia_rtcp_xr_session *session, 
+void pjmedia_rtcp_xr_init( pjmedia_rtcp_xr_session *session,
                            struct pjmedia_rtcp_session *r_session,
                            pj_uint8_t gmin,
                            unsigned frames_per_packet);
 
 /**
- * This function is called internally by RTCP session to destroy 
+ * This function is called internally by RTCP session to destroy
  * the RTCP XR session.
  *
  * @param session   RTCP XR session.
@@ -420,7 +420,7 @@ void pjmedia_rtcp_xr_init( pjmedia_rtcp_xr_session *session,
 void pjmedia_rtcp_xr_fini( pjmedia_rtcp_xr_session *session );
 
 /**
- * This function is called internally by RTCP session when it receives 
+ * This function is called internally by RTCP session when it receives
  * incoming RTCP XR packets.
  *
  * @param session   RTCP XR session.
@@ -441,16 +441,16 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *session,
  *
  * @param session   RTCP XR session.
  * @param seq       Sequence number of RTP packet.
- * @param lost      Info if this packet is lost. 
- * @param dup       Info if this packet is a duplication. 
- * @param discarded Info if this packet is discarded 
+ * @param lost      Info if this packet is lost.
+ * @param dup       Info if this packet is a duplication.
+ * @param discarded Info if this packet is discarded
  *                  (not because of duplication).
  * @param jitter    Info jitter of this packet.
  * @param toh       Info Time To Live or Hops Limit of this packet.
  * @param toh_ipv4  Set PJ_TRUE if packet is transported over IPv4.
  */
 void pjmedia_rtcp_xr_rx_rtp( pjmedia_rtcp_xr_session *session,
-                             unsigned seq, 
+                             unsigned seq,
                              int lost,
                              int dup,
                              int discarded,
@@ -458,13 +458,13 @@ void pjmedia_rtcp_xr_rx_rtp( pjmedia_rtcp_xr_session *session,
                              int toh, pj_bool_t toh_ipv4);
 
 /**
- * This function is called internally by RTCP session whenever an RTP 
+ * This function is called internally by RTCP session whenever an RTP
  * packet is sent to let the RTCP XR session do its internal calculations.
  *
  * @param session   RTCP XR session.
  * @param ptsize    Size of RTP payload being sent.
  */
-void pjmedia_rtcp_xr_tx_rtp( pjmedia_rtcp_xr_session *session, 
+void pjmedia_rtcp_xr_tx_rtp( pjmedia_rtcp_xr_session *session,
                              unsigned ptsize );
 
 /**

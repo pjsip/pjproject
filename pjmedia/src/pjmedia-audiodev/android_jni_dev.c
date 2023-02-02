@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2010-2012 Regis Montoya (aka r3gis - www.r3gis.fr)
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /* This file is the implementation of Android JNI audio device.
  * The original code was originally part of CSipSimple
@@ -46,7 +46,7 @@ struct android_aud_factory
     pj_pool_t              *pool;
 };
 
-/* 
+/*
  * Sound stream descriptor.
  * This struct may be used for both unidirectional or bidirectional sound
  * streams.
@@ -75,7 +75,7 @@ struct android_aud_stream
     pj_bool_t           rec_thread_exited;
     pj_thread_t        *rec_thread;
     pj_sem_t           *rec_sem;
-    pj_timestamp        rec_timestamp;    
+    pj_timestamp        rec_timestamp;
 
     /* Track */
     jobject             track;
@@ -167,7 +167,7 @@ static int AndroidRecorderCallback(void *userData)
     PJ_LOG(5, (THIS_FILE, "Recorder thread started"));
 
     /* Get methods ids */
-    read_method = (*jni_env)->GetMethodID(jni_env, stream->record_class, 
+    read_method = (*jni_env)->GetMethodID(jni_env, stream->record_class,
                                           "read", "([BII)I");
     record_method = (*jni_env)->GetMethodID(jni_env, stream->record_class,
                                             "startRecording", "()V");
@@ -629,7 +629,7 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
             record_obj =  (*jni_env)->NewObject(jni_env,
                                                 stream->record_class,
                                                 constructor_method,
-                                                mic_source, 
+                                                mic_source,
                                                 param->clock_rate,
                                                 channelInCfg,
                                                 sampleFormat,
@@ -678,9 +678,9 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
         stream->record = (*jni_env)->NewGlobalRef(jni_env, record_obj);
         if (stream->record == 0) {
             jmethodID release_method=0;
-            
-            PJ_LOG(3, (THIS_FILE, "Unable to create audio record global ref."));            
-            release_method = (*jni_env)->GetMethodID(jni_env, 
+
+            PJ_LOG(3, (THIS_FILE, "Unable to create audio record global ref."));
+            release_method = (*jni_env)->GetMethodID(jni_env,
                                                      stream->record_class,
                                                      "release", "()V");
             (*jni_env)->CallVoidMethod(jni_env, record_obj, release_method);
@@ -744,7 +744,7 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
         if (stream->track == 0) {
             jmethodID release_method=0;
 
-            release_method = (*jni_env)->GetMethodID(jni_env, 
+            release_method = (*jni_env)->GetMethodID(jni_env,
                                                      stream->track_class,
                                                      "release", "()V");
             (*jni_env)->CallVoidMethod(jni_env, track_obj, release_method);
@@ -796,7 +796,7 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
     detach_jvm(attached);
 
     return PJ_SUCCESS;
-    
+
 on_error:
     detach_jvm(attached);
     strm_destroy(&stream->base);
@@ -856,9 +856,9 @@ static pj_status_t strm_set_cap(pjmedia_aud_stream *s,
             jmethodID vol_method = 0;
             int retval = 0;
             float vol = *(int *)value;
-            
+
             attached = attach_jvm(&jni_env);
-            
+
             vol_method = (*jni_env)->GetMethodID(jni_env, stream->track_class,
                                                  "setStereoVolume", "(FF)I");
             if (vol_method) {
@@ -939,7 +939,7 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
             stream->rec_sem = NULL;
         }
         if (stream->record_class) {
-            release_method = (*jni_env)->GetMethodID(jni_env, 
+            release_method = (*jni_env)->GetMethodID(jni_env,
                                                      stream->record_class,
                                                      "release", "()V");
             (*jni_env)->CallVoidMethod(jni_env, stream->record,
@@ -974,7 +974,7 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
                                        release_method);
         }
         (*jni_env)->DeleteGlobalRef(jni_env, stream->track);
-        stream->track = NULL;        
+        stream->track = NULL;
         PJ_LOG(4, (THIS_FILE, "Audio track released"));
     }
     if (stream->track_class) {

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_ua_layer.h>
 #include <pjsip/sip_module.h>
@@ -85,7 +85,7 @@ static struct user_agent
     pjsip_ua_init_param  param;
     struct dlg_set       free_dlgset_nodes;
 
-} mod_ua = 
+} mod_ua =
 {
   {
     NULL, NULL,             /* prev, next.                      */
@@ -104,7 +104,7 @@ static struct user_agent
   }
 };
 
-/* 
+/*
  * mod_ua_load()
  *
  * Called when module is being loaded by endpoint.
@@ -175,7 +175,7 @@ static void mod_ua_on_tsx_state( pjsip_transaction *tsx, pjsip_event *e)
 
     /* Get the dialog where this transaction belongs. */
     dlg = (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
-    
+
     /* If dialog instance has gone, it could mean that the dialog
      * may has been destroyed.
      */
@@ -259,7 +259,7 @@ PJ_DEF(void) pjsip_ua_create_dlg_set_key( pj_pool_t *pool,
 
     pj_memcpy(set_key->ptr, call_id->ptr, call_id->slen);
     set_key->ptr[call_id->slen] = '$';
-    pj_memcpy(set_key->ptr + call_id->slen + 1, 
+    pj_memcpy(set_key->ptr + call_id->slen + 1,
               local_tag->ptr, local_tag->slen);
 }
 */
@@ -311,12 +311,12 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 
         dlg_set = (struct dlg_set*)
                   pj_hash_get_lower( mod_ua.dlg_table,
-                                     dlg->local.info->tag.ptr, 
+                                     dlg->local.info->tag.ptr,
                                      (unsigned)dlg->local.info->tag.slen,
                                      &dlg->local.tag_hval);
 
         if (dlg_set) {
-            /* This is NOT the first dialog in the dialog set. 
+            /* This is NOT the first dialog in the dialog set.
              * Just add this dialog in the list.
              */
             pj_assert(dlg_set->dlg_list.next != (void*)&dlg_set->dlg_list);
@@ -325,7 +325,7 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
             dlg->dlg_set = dlg_set;
 
         } else {
-            /* This is the first dialog in the dialog set. 
+            /* This is the first dialog in the dialog set.
              * Create the dialog set and add this dialog to it.
              */
             dlg_set = alloc_dlgset_node();
@@ -336,7 +336,7 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
             dlg->dlg_set = dlg_set;
 
             /* Register the dialog set in the hash table. */
-            pj_hash_set_np_lower(mod_ua.dlg_table, 
+            pj_hash_set_np_lower(mod_ua.dlg_table,
                                  dlg_set->ht_key.ptr,
                                  (unsigned)dlg_set->ht_key.slen,
                                  dlg->local.tag_hval, dlg_set->ht_entry,
@@ -354,7 +354,7 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 
         dlg->dlg_set = dlg_set;
 
-        pj_hash_set_np_lower(mod_ua.dlg_table, 
+        pj_hash_set_np_lower(mod_ua.dlg_table,
                              dlg_set->ht_key.ptr,
                              (unsigned)dlg_set->ht_key.slen,
                              dlg->local.tag_hval, dlg_set->ht_entry, dlg_set);
@@ -466,7 +466,7 @@ PJ_DEF(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx )
 
 /*
  * Retrieve the current number of dialog-set currently registered
- * in the hash table. 
+ * in the hash table.
  */
 PJ_DEF(unsigned) pjsip_ua_get_dlg_set_count(void)
 {
@@ -482,7 +482,7 @@ PJ_DEF(unsigned) pjsip_ua_get_dlg_set_count(void)
 }
 
 
-/* 
+/*
  * Find a dialog.
  */
 PJ_DEF(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
@@ -512,7 +512,7 @@ PJ_DEF(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
      * remote tag.
      */
     dlg = dlg_set->dlg_list.next;
-    while (dlg != (pjsip_dialog*)&dlg_set->dlg_list) {  
+    while (dlg != (pjsip_dialog*)&dlg_set->dlg_list) {
         if (pj_stricmp(&dlg->remote.info->tag, remote_tag) == 0)
             break;
         dlg = dlg->next;
@@ -588,7 +588,7 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
         else
             role = PJSIP_ROLE_UAC;
 
-        pjsip_tsx_create_key(rdata->tp_info.pool, &key, role, 
+        pjsip_tsx_create_key(rdata->tp_info.pool, &key, role,
                              pjsip_get_invite_method(), rdata);
 
         /* Lookup the INVITE transaction */
@@ -620,7 +620,7 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
 
         /* Lookup the dialog set. */
         dlg_set = (struct dlg_set*)
-                  pj_hash_get_lower(mod_ua.dlg_table, tag->ptr, 
+                  pj_hash_get_lower(mod_ua.dlg_table, tag->ptr,
                                     (unsigned)tag->slen, NULL);
         return dlg_set;
     }
@@ -635,9 +635,9 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     pj_status_t status;
 
     /* Optimized path: bail out early if request is not CANCEL and it doesn't
-     * have To tag 
+     * have To tag
      */
-    if (rdata->msg_info.to->tag.slen == 0 && 
+    if (rdata->msg_info.to->tag.slen == 0 &&
         rdata->msg_info.msg->line.req.method.id != PJSIP_CANCEL_METHOD)
     {
         return PJ_FALSE;
@@ -663,25 +663,25 @@ retry_on_deadlock:
         pj_mutex_unlock(mod_ua.mutex);
 
         if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
-            PJ_LOG(5,(THIS_FILE, 
+            PJ_LOG(5,(THIS_FILE,
                       "Unable to find dialogset for %s, answering with 481",
                       pjsip_rx_data_get_info(rdata)));
 
             /* Respond with 481 . */
-            pjsip_endpt_respond_stateless( mod_ua.endpt, rdata, 481, NULL, 
+            pjsip_endpt_respond_stateless( mod_ua.endpt, rdata, 481, NULL,
                                            NULL, NULL );
         }
         return PJ_TRUE;
     }
 
     /* Dialog set has been found.
-     * Find the dialog in the dialog set based on the content of the remote 
+     * Find the dialog in the dialog set based on the content of the remote
      * tag.
      */
     from_tag = &rdata->msg_info.from->tag;
     dlg = dlg_set->dlg_list.next;
     while (dlg != (pjsip_dialog*)&dlg_set->dlg_list) {
-        
+
         if (pj_stricmp(&dlg->remote.info->tag, from_tag) == 0)
             break;
 
@@ -692,7 +692,7 @@ retry_on_deadlock:
      *  - UAC sends SUBSCRIBE, then UAS sends NOTIFY before answering
      *    SUBSCRIBE request with 2xx.
      *
-     * In this case, we can accept the request ONLY when the original 
+     * In this case, we can accept the request ONLY when the original
      * dialog still has empty To tag.
      */
     if (dlg == (pjsip_dialog*)&dlg_set->dlg_list) {
@@ -704,15 +704,15 @@ retry_on_deadlock:
             pj_mutex_unlock(mod_ua.mutex);
 
             if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
-                PJ_LOG(5,(THIS_FILE, 
+                PJ_LOG(5,(THIS_FILE,
                           "Unable to find dialog for %s, answering with 481",
                           pjsip_rx_data_get_info(rdata)));
 
                 pjsip_endpt_respond_stateless(mod_ua.endpt, rdata,
-                                              PJSIP_SC_CALL_TSX_DOES_NOT_EXIST, 
+                                              PJSIP_SC_CALL_TSX_DOES_NOT_EXIST,
                                               NULL, NULL, NULL);
             } else {
-                PJ_LOG(5,(THIS_FILE, 
+                PJ_LOG(5,(THIS_FILE,
                           "Unable to find dialog for %s",
                           pjsip_rx_data_get_info(rdata)));
             }
@@ -729,8 +729,8 @@ retry_on_deadlock:
     PJ_LOG(6,(dlg->obj_name, "UA layer acquiring dialog lock for request"));
     status = pjsip_dlg_try_inc_lock(dlg);
     if (status != PJ_SUCCESS) {
-        /* Failed to acquire dialog mutex immediately, this could be 
-         * because of deadlock. Release UA mutex, yield, and retry 
+        /* Failed to acquire dialog mutex immediately, this could be
+         * because of deadlock. Release UA mutex, yield, and retry
          * the whole thing once again.
          */
         pj_mutex_unlock(mod_ua.mutex);
@@ -792,7 +792,7 @@ retry_on_deadlock:
         /* Get the dialog set. */
         dlg_set = (struct dlg_set*) dlg->dlg_set;
 
-        /* Even if transaction is found and (candidate) dialog has been 
+        /* Even if transaction is found and (candidate) dialog has been
          * identified, it's possible that the request has forked.
          */
 
@@ -819,7 +819,7 @@ retry_on_deadlock:
 
         /* Get the dialog set. */
         dlg_set = (struct dlg_set*)
-                  pj_hash_get_lower(mod_ua.dlg_table, 
+                  pj_hash_get_lower(mod_ua.dlg_table,
                                     rdata->msg_info.from->tag.ptr,
                                     (unsigned)rdata->msg_info.from->tag.slen,
                                     NULL);
@@ -829,7 +829,7 @@ retry_on_deadlock:
             pj_mutex_unlock(mod_ua.mutex);
 
             /* Strayed 2xx response!! */
-            PJ_LOG(4,(THIS_FILE, 
+            PJ_LOG(4,(THIS_FILE,
                       "Received strayed 2xx response (no dialog is found)"
                       " from %s:%d: %s",
                       rdata->pkt_info.src_name, rdata->pkt_info.src_port,
@@ -844,17 +844,17 @@ retry_on_deadlock:
      */
     pj_assert(dlg_set && !pj_list_empty(&dlg_set->dlg_list));
 
-    /* Check for forked response. 
+    /* Check for forked response.
      * Request will fork only for the initial INVITE request.
      */
 
-    //This doesn't work when there is authentication challenge, since 
+    //This doesn't work when there is authentication challenge, since
     //first_cseq evaluation will yield false.
     //if (rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
     //  rdata->msg_info.cseq->cseq == dlg_set->dlg_list.next->local.first_cseq)
 
     if (rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) {
-        
+
         int st_code = rdata->msg_info.msg->line.status.code;
         pj_str_t *to_tag = &rdata->msg_info.to->tag;
 
@@ -881,19 +881,19 @@ retry_on_deadlock:
          * provisional response OR a 2xx response.
          */
         if (dlg == (pjsip_dialog*)&dlg_set->dlg_list &&
-            ((st_code/100==1 && st_code!=100) || st_code/100==2)) 
+            ((st_code/100==1 && st_code!=100) || st_code/100==2))
         {
 
-            PJ_LOG(5,(THIS_FILE, 
+            PJ_LOG(5,(THIS_FILE,
                       "Received forked %s for existing dialog %s",
-                      pjsip_rx_data_get_info(rdata), 
+                      pjsip_rx_data_get_info(rdata),
                       dlg_set->dlg_list.next->obj_name));
 
             /* Report to application about forked condition.
              * Application can either create a dialog or ignore the response.
              */
             if (mod_ua.param.on_dlg_forked) {
-                dlg = (*mod_ua.param.on_dlg_forked)(dlg_set->dlg_list.next, 
+                dlg = (*mod_ua.param.on_dlg_forked)(dlg_set->dlg_list.next,
                                                     rdata);
                 if (dlg == NULL) {
                     pj_mutex_unlock(mod_ua.mutex);
@@ -902,7 +902,7 @@ retry_on_deadlock:
             } else {
                 dlg = dlg_set->dlg_list.next;
 
-                PJ_LOG(4,(THIS_FILE, 
+                PJ_LOG(4,(THIS_FILE,
                           "Unhandled forked %s from %s:%d, response will be "
                           "handed over to the first dialog",
                           pjsip_rx_data_get_info(rdata),
@@ -973,7 +973,7 @@ static void print_dialog( const char *title,
         pj_ansi_strcpy(userinfo, "<--uri too long-->");
     else
         userinfo[len] = '\0';
-    
+
     len = pj_ansi_snprintf(buf, size, "%s[%s]  %s",
                            title,
                            (dlg->state==PJSIP_DIALOG_STATE_NULL ? " - " :
@@ -997,7 +997,7 @@ PJ_DEF(void) pjsip_ua_dump(pj_bool_t detail)
 
     pj_mutex_lock(mod_ua.mutex);
 
-    PJ_LOG(3, (THIS_FILE, "Number of dialog sets: %u", 
+    PJ_LOG(3, (THIS_FILE, "Number of dialog sets: %u",
                           pj_hash_count(mod_ua.dlg_table)));
 
     if (detail && pj_hash_count(mod_ua.dlg_table)) {

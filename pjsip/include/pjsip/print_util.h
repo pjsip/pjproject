@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_PRINT_H__
 #define __PJSIP_PRINT_H__
@@ -107,7 +107,7 @@
 #define copy_advance_pair       copy_advance_pair_check
 
 /*
- * Append str1 and quoted str2 and copy to buf. 
+ * Append str1 and quoted str2 and copy to buf.
  * No string is copied if str2 is empty.
  */
 #define copy_advance_pair_quote_cond(buf,str1,len1,str2,quotebegin,quoteend) \
@@ -119,7 +119,7 @@
         } while (0)
 
 /*
- * Append str1 and quoted str2 and copy to buf. 
+ * Append str1 and quoted str2 and copy to buf.
  * In case str2 is empty, str1 will be appended with empty quote.
  */
 #define copy_advance_pair_quote_cond_always(buf,str1,len1,str2,quotebegin, \

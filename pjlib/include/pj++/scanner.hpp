@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJPP_SCANNER_HPP__
 #define __PJPP_SCANNER_HPP__
@@ -31,9 +31,9 @@ class Pj_Cis_Buffer
     friend class Pj_Cis;
 
 public:
-    Pj_Cis_Buffer() 
-    { 
-        pj_cis_buf_init(&buf_); 
+    Pj_Cis_Buffer()
+    {
+        pj_cis_buf_init(&buf_);
     }
 
 private:
@@ -120,7 +120,7 @@ public:
 
     typedef pj_scan_state State;
 
-    void init(char *buf, int len, unsigned options=PJ_SCAN_AUTOSKIP_WS, 
+    void init(char *buf, int len, unsigned options=PJ_SCAN_AUTOSKIP_WS,
               pj_syn_err_func_ptr callback = &syntax_error_handler_throw_pj)
     {
         pj_scan_init(&scanner_, buf, len, options, callback);

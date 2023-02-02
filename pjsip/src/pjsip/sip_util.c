@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip/sip_util.h>
 #include <pjsip/sip_transport.h>
@@ -35,7 +35,7 @@
 
 #define THIS_FILE    "endpoint"
 
-static const char *event_str[] = 
+static const char *event_str[] =
 {
     "UNIDENTIFIED",
     "TIMER",
@@ -112,7 +112,7 @@ PJ_DEF(pj_status_t) pjsip_target_set_add_from_msg( pjsip_target_set *tset,
 
             if (!cn_hdr->star) {
                 pj_status_t rc;
-                rc = pjsip_target_set_add_uri(tset, pool, cn_hdr->uri, 
+                rc = pjsip_target_set_add_uri(tset, pool, cn_hdr->uri,
                                               cn_hdr->q1000);
                 if (rc == PJ_SUCCESS)
                     ++added;
@@ -185,21 +185,21 @@ PJ_DEF(pj_status_t) pjsip_target_assign_status( pjsip_target *target,
 /*
  * Initialize transmit data (msg) with the headers and optional body.
  * This will just put the headers in the message as it is. Be carefull
- * when calling this function because once a header is put in a message, 
- * it CAN NOT be put in other message until the first message is deleted, 
+ * when calling this function because once a header is put in a message,
+ * it CAN NOT be put in other message until the first message is deleted,
  * because the way the header is put in the list.
  * That's why the session will shallow_clone it's headers before calling
  * this function.
  */
 static void init_request_throw( pjsip_endpoint *endpt,
-                                pjsip_tx_data *tdata, 
+                                pjsip_tx_data *tdata,
                                 pjsip_method *method,
                                 pjsip_uri *param_target,
                                 pjsip_from_hdr *param_from,
-                                pjsip_to_hdr *param_to, 
+                                pjsip_to_hdr *param_to,
                                 pjsip_contact_hdr *param_contact,
                                 pjsip_cid_hdr *param_call_id,
-                                pjsip_cseq_hdr *param_cseq, 
+                                pjsip_cseq_hdr *param_cseq,
                                 const pj_str_t *param_text)
 {
     pjsip_msg *msg;
@@ -217,7 +217,7 @@ static void init_request_throw( pjsip_endpoint *endpt,
     /* Add additional request headers from endpoint. */
     endpt_hdr = pjsip_endpt_get_request_headers(endpt)->next;
     while (endpt_hdr != pjsip_endpt_get_request_headers(endpt)) {
-        pjsip_hdr *hdr = (pjsip_hdr*) 
+        pjsip_hdr *hdr = (pjsip_hdr*)
                          pjsip_hdr_shallow_clone(tdata->pool, endpt_hdr);
         pjsip_msg_add_hdr( tdata->msg, hdr );
         endpt_hdr = endpt_hdr->next;
@@ -248,8 +248,8 @@ static void init_request_throw( pjsip_endpoint *endpt,
     pjsip_msg_insert_first_hdr(msg, (pjsip_hdr*)via);
 
     /* Add header params as request headers */
-    if (PJSIP_URI_SCHEME_IS_SIP(param_target) || 
-        PJSIP_URI_SCHEME_IS_SIPS(param_target)) 
+    if (PJSIP_URI_SCHEME_IS_SIP(param_target) ||
+        PJSIP_URI_SCHEME_IS_SIPS(param_target))
     {
         pjsip_sip_uri *uri = (pjsip_sip_uri*) pjsip_uri_get_uri(param_target);
         pjsip_param *hparam;
@@ -258,7 +258,7 @@ static void init_request_throw( pjsip_endpoint *endpt,
         while (hparam != &uri->header_param) {
             pjsip_generic_string_hdr *hdr;
 
-            hdr = pjsip_generic_string_hdr_create(tdata->pool, 
+            hdr = pjsip_generic_string_hdr_create(tdata->pool,
                                                   &hparam->name,
                                                   &hparam->value);
             pjsip_msg_add_hdr(msg, (pjsip_hdr*)hdr);
@@ -278,7 +278,7 @@ static void init_request_throw( pjsip_endpoint *endpt,
         msg->body = body;
     }
 
-    PJ_LOG(5,(THIS_FILE, "%s created.", 
+    PJ_LOG(5,(THIS_FILE, "%s created.",
                          pjsip_tx_data_get_info(tdata)));
 
 }
@@ -286,14 +286,14 @@ static void init_request_throw( pjsip_endpoint *endpt,
 /*
  * Create arbitrary request.
  */
-PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt, 
+PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
                                                  const pjsip_method *method,
                                                  const pj_str_t *param_target,
                                                  const pj_str_t *param_from,
-                                                 const pj_str_t *param_to, 
+                                                 const pj_str_t *param_to,
                                                  const pj_str_t *param_contact,
                                                  const pj_str_t *param_call_id,
-                                                 int param_cseq, 
+                                                 int param_cseq,
                                                  const pj_str_t *param_text,
                                                  pjsip_tx_data **p_tdata)
 {
@@ -328,7 +328,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
         /* From */
         from = pjsip_from_hdr_create(tdata->pool);
         pj_strdup_with_null(tdata->pool, &tmp, param_from);
-        from->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen, 
+        from->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen,
                                      PJSIP_PARSE_URI_AS_NAMEADDR);
         if (from->uri == NULL) {
             status = PJSIP_EINVALIDHDR;
@@ -339,7 +339,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
         /* To */
         to = pjsip_to_hdr_create(tdata->pool);
         pj_strdup_with_null(tdata->pool, &tmp, param_to);
-        to->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen, 
+        to->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen,
                                    PJSIP_PARSE_URI_AS_NAMEADDR);
         if (to->uri == NULL) {
             status = PJSIP_EINVALIDHDR;
@@ -350,7 +350,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
         if (param_contact) {
             pj_strdup_with_null(tdata->pool, &tmp, param_contact);
             contact = (pjsip_contact_hdr*)
-                      pjsip_parse_hdr(tdata->pool, &STR_CONTACT, tmp.ptr, 
+                      pjsip_parse_hdr(tdata->pool, &STR_CONTACT, tmp.ptr,
                                       tmp.slen, NULL);
             if (contact == NULL) {
                 status = PJSIP_EINVALIDHDR;
@@ -378,7 +378,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
         pjsip_method_copy(tdata->pool, &cseq->method, method);
 
         /* Create the request. */
-        init_request_throw( endpt, tdata, &cseq->method, target, from, to, 
+        init_request_throw( endpt, tdata, &cseq->method, target, from, to,
                             contact, call_id, cseq, param_text);
     }
     PJ_CATCH_ANY {
@@ -436,7 +436,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
         to = (pjsip_to_hdr*) pjsip_hdr_clone(tdata->pool, param_to);
         pjsip_fromto_hdr_set_to(to);
         if (param_contact) {
-            contact = (pjsip_contact_hdr*) 
+            contact = (pjsip_contact_hdr*)
                       pjsip_hdr_clone(tdata->pool, param_contact);
         } else {
             contact = NULL;
@@ -455,7 +455,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
         pjsip_method_copy(tdata->pool, &cseq->method, method);
 
         /* Copy headers to the request. */
-        init_request_throw(endpt, tdata, &cseq->method, target, from, to, 
+        init_request_throw(endpt, tdata, &cseq->method, target, from, to,
                            contact, call_id, cseq, param_text);
     }
     PJ_CATCH_ANY {
@@ -536,20 +536,20 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
         pjsip_msg_add_hdr( msg, (pjsip_hdr*)new_via);
         via = via->next;
         if (via != (void*)&req_msg->hdr)
-            via = (pjsip_via_hdr*) 
+            via = (pjsip_via_hdr*)
                   pjsip_msg_find_hdr(req_msg, PJSIP_H_VIA, via);
         else
             break;
     }
 
     /* Copy all Record-Route headers, in order. */
-    rr = (pjsip_rr_hdr*) 
+    rr = (pjsip_rr_hdr*)
          pjsip_msg_find_hdr(req_msg, PJSIP_H_RECORD_ROUTE, NULL);
     while (rr) {
         pjsip_msg_add_hdr(msg, (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, rr));
         rr = rr->next;
         if (rr != (void*)&req_msg->hdr)
-            rr = (pjsip_rr_hdr*) pjsip_msg_find_hdr(req_msg, 
+            rr = (pjsip_rr_hdr*) pjsip_msg_find_hdr(req_msg,
                                                     PJSIP_H_RECORD_ROUTE, rr);
         else
             break;
@@ -638,7 +638,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
 #   undef FIND_HDR
 
     /* Create new request message from the headers. */
-    status = pjsip_endpt_create_request_from_hdr(endpt, 
+    status = pjsip_endpt_create_request_from_hdr(endpt,
                                                  pjsip_get_ack_method(),
                                                  tdata->msg->line.req.uri,
                                                  from_hdr, to_hdr,
@@ -660,15 +660,15 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
 
     /* Must contain single Via, just as the original INVITE. */
     hdr = (pjsip_hdr*) pjsip_msg_find_hdr( invite_msg, PJSIP_H_VIA, NULL);
-    pjsip_msg_insert_first_hdr( ack->msg, 
+    pjsip_msg_insert_first_hdr( ack->msg,
                                 (pjsip_hdr*) pjsip_hdr_clone(ack->pool,hdr) );
 
-    /* If the original INVITE has Route headers, those header fields MUST 
+    /* If the original INVITE has Route headers, those header fields MUST
      * appear in the ACK.
      */
     hdr = (pjsip_hdr*) pjsip_msg_find_hdr( invite_msg, PJSIP_H_ROUTE, NULL);
     while (hdr != NULL) {
-        pjsip_msg_add_hdr( ack->msg, 
+        pjsip_msg_add_hdr( ack->msg,
                            (pjsip_hdr*) pjsip_hdr_clone(ack->pool, hdr) );
         hdr = hdr->next;
         if (hdr == &invite_msg->hdr)
@@ -729,7 +729,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 #   undef FIND_HDR
 
     /* Create new request message from the headers. */
-    status = pjsip_endpt_create_request_from_hdr(endpt, 
+    status = pjsip_endpt_create_request_from_hdr(endpt,
                                                  pjsip_get_cancel_method(),
                                                  req_tdata->msg->line.req.uri,
                                                  from_hdr, to_hdr,
@@ -745,12 +745,12 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
         pj_list_erase(via);
 
 
-    /* Must only have single Via which matches the top-most Via in the 
-     * request being cancelled. 
+    /* Must only have single Via which matches the top-most Via in the
+     * request being cancelled.
      */
     hdr = (pjsip_hdr*) pjsip_msg_find_hdr(req_tdata->msg, PJSIP_H_VIA, NULL);
     if (hdr) {
-        pjsip_msg_insert_first_hdr(cancel_tdata->msg, 
+        pjsip_msg_insert_first_hdr(cancel_tdata->msg,
                                    (pjsip_hdr*)pjsip_hdr_clone(cancel_tdata->pool, hdr));
     }
 
@@ -760,11 +760,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
      */
     hdr = (pjsip_hdr*) pjsip_msg_find_hdr(req_tdata->msg, PJSIP_H_ROUTE, NULL);
     while (hdr != NULL) {
-        pjsip_msg_add_hdr(cancel_tdata->msg, 
+        pjsip_msg_add_hdr(cancel_tdata->msg,
                           (pjsip_hdr*) pjsip_hdr_clone(cancel_tdata->pool, hdr));
         hdr = hdr->next;
         if (hdr != &req_tdata->msg->hdr)
-            hdr = (pjsip_hdr*) pjsip_msg_find_hdr(req_tdata->msg, 
+            hdr = (pjsip_hdr*) pjsip_msg_find_hdr(req_tdata->msg,
                                                   PJSIP_H_ROUTE, hdr);
         else
             break;
@@ -814,7 +814,7 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
      * (the default is TLS) must always be used regardless
      * of the target scheme or transport type (see ticket #1740).
      */
-    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri) || 
+    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri) ||
         (pjsip_cfg()->endpt.disable_tls_switch == 0 && request_uri &&
          PJSIP_URI_SCHEME_IS_SIPS(request_uri)))
     {
@@ -832,7 +832,7 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
         else
             pj_strdup(pool, &dest_info->addr.host, &url->host);
         dest_info->addr.port = url->port;
-        dest_info->type = 
+        dest_info->type =
             pjsip_transport_get_type_from_name(&url->transport_param);
 
         /* Double-check that the transport parameter match.
@@ -864,9 +864,9 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
         else
             pj_strdup(pool, &dest_info->addr.host, &url->host);
         dest_info->addr.port = url->port;
-        dest_info->type = 
+        dest_info->type =
             pjsip_transport_get_type_from_name(&url->transport_param);
-        dest_info->flag = 
+        dest_info->flag =
             pjsip_transport_get_flag_from_type(dest_info->type);
     } else {
         /* Should have never reached here; app should have configured route
@@ -878,7 +878,7 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
     }
 
     /* Handle IPv6 (https://github.com/pjsip/pjproject/issues/861) */
-    if (dest_info->type != PJSIP_TRANSPORT_UNSPECIFIED && 
+    if (dest_info->type != PJSIP_TRANSPORT_UNSPECIFIED &&
         pj_strchr(&dest_info->addr.host, ':'))
     {
         dest_info->type = (pjsip_transport_type_e)
@@ -900,14 +900,14 @@ PJ_DEF(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
 {
     const pjsip_uri *target_uri;
     const pjsip_route_hdr *first_route_hdr;
-    
-    PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG, 
+
+    PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG,
                      PJSIP_ENOTREQUESTMSG);
     PJ_ASSERT_RETURN(dest_info != NULL, PJ_EINVAL);
 
     /* Get the first "Route" header from the message.
      */
-    first_route_hdr = (const pjsip_route_hdr*) 
+    first_route_hdr = (const pjsip_route_hdr*)
                       pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
     if (first_route_hdr) {
         target_uri = first_route_hdr->name_addr.uri;
@@ -934,8 +934,8 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
     const pjsip_name_addr *topmost_route_uri;
     pjsip_route_hdr *first_route_hdr, *last_route_hdr;
     pj_status_t status;
-    
-    PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG, 
+
+    PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG,
                      PJSIP_ENOTREQUESTMSG);
     PJ_ASSERT_RETURN(dest_info != NULL, PJ_EINVAL);
 
@@ -960,7 +960,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
         while (last_route_hdr->next != (void*)&tdata->msg->hdr) {
             pjsip_route_hdr *hdr;
             hdr = (pjsip_route_hdr*)
-                  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, 
+                  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE,
                                      last_route_hdr->next);
             if (!hdr)
                 break;
@@ -1004,7 +1004,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
                 last_route_hdr = NULL;
             */
         } else {
-            new_request_uri = (const pjsip_uri*) 
+            new_request_uri = (const pjsip_uri*)
                               pjsip_uri_get_uri((pjsip_uri*)topmost_route_uri);
             pj_list_erase(first_route_hdr);
             tdata->saved_strict_route = first_route_hdr;
@@ -1032,12 +1032,12 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
             dest_info->type = tdata->tp_sel.u.listener->type;
     }
 
-    /* If target URI is different than request URI, replace 
+    /* If target URI is different than request URI, replace
      * request URI add put the original URI in the last Route header.
      */
     if (new_request_uri && new_request_uri!=tdata->msg->line.req.uri) {
         pjsip_route_hdr *route = pjsip_route_hdr_create(tdata->pool);
-        route->name_addr.uri = (pjsip_uri*) 
+        route->name_addr.uri = (pjsip_uri*)
                                pjsip_uri_get_uri(tdata->msg->line.req.uri);
         if (last_route_hdr)
             pj_list_insert_after(last_route_hdr, route);
@@ -1047,7 +1047,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
     }
 
     /* Success. */
-    return PJ_SUCCESS;  
+    return PJ_SUCCESS;
 }
 
 
@@ -1082,7 +1082,7 @@ PJ_DEF(void) pjsip_restore_strict_route_set(pjsip_tx_data *tdata)
     while (last_route_hdr->next != (void*)&tdata->msg->hdr) {
         pjsip_route_hdr *hdr;
         hdr = (pjsip_route_hdr*)
-              pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, 
+              pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE,
                                  last_route_hdr->next);
         if (!hdr)
             break;
@@ -1101,7 +1101,7 @@ PJ_DEF(void) pjsip_restore_strict_route_set(pjsip_tx_data *tdata)
 }
 
 
-/* Transport callback for sending stateless request. 
+/* Transport callback for sending stateless request.
  * This is one of the most bizzare function in pjsip, so
  * good luck if you happen to debug this function!!
  */
@@ -1161,8 +1161,8 @@ static void stateless_send_transport_cb( void *token,
             return;
         }
 
-        /* Try next address, if any, and only when this is not the 
-         * first invocation. 
+        /* Try next address, if any, and only when this is not the
+         * first invocation.
          */
         if (sent != -PJ_EPENDING) {
             tdata->dest_info.cur_addr++;
@@ -1202,7 +1202,7 @@ static void stateless_send_transport_cb( void *token,
         via = (pjsip_via_hdr*) pjsip_msg_find_hdr( tdata->msg,
                                                    PJSIP_H_VIA, NULL);
         if (!via) {
-            /* Shouldn't happen if request was created with PJSIP API! 
+            /* Shouldn't happen if request was created with PJSIP API!
              * But we handle the case anyway for robustness.
              */
             pj_assert(!"Via header not found!");
@@ -1213,7 +1213,7 @@ static void stateless_send_transport_cb( void *token,
         if (tdata->msg->line.req.method.id == PJSIP_CANCEL_METHOD) {
             if (via->sent_by.host.slen > 0) {
                 /* Don't update Via header on a CANCEL request if the sent-by
-                 * parameter is already set since it needs to match the 
+                 * parameter is already set since it needs to match the
                  * original request. */
                 need_update_via = PJ_FALSE;
             }
@@ -1253,10 +1253,10 @@ static void stateless_send_transport_cb( void *token,
                 tdata->via_tp = stateless_data->cur_transport;
                 tdata->via_addr = via->sent_by;
             }
-            
+
             via->rport_param = pjsip_cfg()->endpt.disable_rport ? -1 : 0;
 
-            /* Add/remove "alias" param to/from Via header on connection 
+            /* Add/remove "alias" param to/from Via header on connection
              * oriented/less transport, if configured.
              */
             if (pjsip_cfg()->endpt.req_has_via_alias &&
@@ -1267,7 +1267,7 @@ static void stateless_send_transport_cb( void *token,
                 pj_bool_t is_datagram;
 
                 alias_param = pjsip_param_find(&via->other_param, &ALIAS_STR);
-                is_datagram = (stateless_data->cur_transport->flag & 
+                is_datagram = (stateless_data->cur_transport->flag &
                                PJSIP_TRANSPORT_DATAGRAM);
                 if (!is_datagram && !alias_param) {
                     alias_param = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_param);
@@ -1307,7 +1307,7 @@ static void stateless_send_transport_cb( void *token,
 }
 
 /* Resolver callback for sending stateless request. */
-static void 
+static void
 stateless_send_resolver_callback( pj_status_t status,
                                   void *token,
                                   const struct pjsip_server_addresses *addr)
@@ -1327,7 +1327,7 @@ stateless_send_resolver_callback( pj_status_t status,
 
     /* Copy server addresses */
     if (addr && addr != &tdata->dest_info.addr) {
-        pj_memcpy( &tdata->dest_info.addr, addr, 
+        pj_memcpy( &tdata->dest_info.addr, addr,
                    sizeof(pjsip_server_addresses));
     }
     pj_assert(tdata->dest_info.addr.count != 0);
@@ -1340,7 +1340,7 @@ stateless_send_resolver_callback( pj_status_t status,
      */
     if (pjsip_cfg()->endpt.disable_tcp_switch==0 &&
         tdata->msg->type == PJSIP_REQUEST_MSG &&
-        tdata->dest_info.addr.count > 0 && 
+        tdata->dest_info.addr.count > 0 &&
         tdata->dest_info.addr.entry[0].type == PJSIP_TRANSPORT_UDP)
     {
         int len;
@@ -1394,7 +1394,7 @@ stateless_send_resolver_callback( pj_status_t status,
  *  - establish transport (#pjsip_endpt_acquire_transport)
  *  - send the message (#pjsip_transport_send)
  */
-PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt, 
+PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
                                    pjsip_tx_data *tdata,
                                    void *token,
                                    pjsip_send_callback cb)
@@ -1498,8 +1498,8 @@ static void send_raw_resolver_callback( pj_status_t status,
                                       addr->entry[0].type,
                                       sraw_data->sel, sraw_data->tdata,
                                       sraw_data->tdata->buf.start, data_len,
-                                      &addr->entry[0].addr, 
-                                      addr->entry[0].addr_len, 
+                                      &addr->entry[0].addr,
+                                      addr->entry[0].addr_len,
                                       sraw_data->app_token,
                                       sraw_data->app_cb);
         if (status == PJ_SUCCESS) {
@@ -1519,7 +1519,7 @@ static void send_raw_resolver_callback( pj_status_t status,
 
 
 /*
- * Send raw data to the specified destination URI. 
+ * Send raw data to the specified destination URI.
  */
 PJ_DEF(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
                                                 const pj_str_t *p_dst_uri,
@@ -1621,13 +1621,13 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
     if (PJSIP_TRANSPORT_IS_RELIABLE(src_transport)) {
         /* For reliable protocol such as TCP or SCTP, or TLS over those, the
          * response MUST be sent using the existing connection to the source
-         * of the original request that created the transaction, if that 
-         * connection is still open. 
-         * If that connection is no longer open, the server SHOULD open a 
+         * of the original request that created the transaction, if that
+         * connection is still open.
+         * If that connection is no longer open, the server SHOULD open a
          * connection to the IP address in the received parameter, if present,
-         * using the port in the sent-by value, or the default port for that 
-         * transport, if no port is specified. 
-         * If that connection attempt fails, the server SHOULD use the 
+         * using the port in the sent-by value, or the default port for that
+         * transport, if no port is specified.
+         * If that connection attempt fails, the server SHOULD use the
          * procedures in [4] for servers in order to determine the IP address
          * and port to open the connection and send the response to.
          */
@@ -1637,36 +1637,36 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->addr_len = rdata->pkt_info.src_addr_len;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
+        pj_strdup( pool, &res_addr->dst_host.addr.host,
                    &rdata->msg_info.via->recvd_param);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
-            res_addr->dst_host.addr.port = 
+            res_addr->dst_host.addr.port =
                 pjsip_transport_get_default_port_for_type(res_addr->dst_host.type);
         }
 
     } else if (rdata->msg_info.via->maddr_param.slen) {
         /* Otherwise, if the Via header field value contains a maddr parameter,
-         * the response MUST be forwarded to the address listed there, using 
-         * the port indicated in sent-by, or port 5060 if none is present. 
-         * If the address is a multicast address, the response SHOULD be sent 
+         * the response MUST be forwarded to the address listed there, using
+         * the port indicated in sent-by, or port 5060 if none is present.
+         * If the address is a multicast address, the response SHOULD be sent
          * using the TTL indicated in the ttl parameter, or with a TTL of 1 if
-         * that parameter is not present. 
+         * that parameter is not present.
          */
         res_addr->transport = NULL;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
+        pj_strdup( pool, &res_addr->dst_host.addr.host,
                    &rdata->msg_info.via->maddr_param);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0)
             res_addr->dst_host.addr.port = 5060;
 
     } else if (rdata->msg_info.via->rport_param >= 0) {
-        /* There is both a "received" parameter and an "rport" parameter, 
+        /* There is both a "received" parameter and an "rport" parameter,
          * the response MUST be sent to the IP address listed in the "received"
-         * parameter, and the port in the "rport" parameter. 
-         * The response MUST be sent from the same address and port that the 
+         * parameter, and the port in the "rport" parameter.
+         * The response MUST be sent from the same address and port that the
          * corresponding request was received on.
          */
         res_addr->transport = rdata->tp_info.transport;
@@ -1675,11 +1675,11 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->addr_len = rdata->pkt_info.src_addr_len;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
+        pj_strdup( pool, &res_addr->dst_host.addr.host,
                    &rdata->msg_info.via->recvd_param);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
-            res_addr->dst_host.addr.port = 
+            res_addr->dst_host.addr.port =
                 pjsip_transport_get_default_port_for_type(res_addr->dst_host.type);
         }
 
@@ -1687,11 +1687,11 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->transport = NULL;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
+        pj_strdup( pool, &res_addr->dst_host.addr.host,
                    &rdata->msg_info.via->recvd_param);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
-            res_addr->dst_host.addr.port = 
+            res_addr->dst_host.addr.port =
                 pjsip_transport_get_default_port_for_type(res_addr->dst_host.type);
         }
     }
@@ -1739,7 +1739,7 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
     /* Only handle the first address resolved. */
 
     /* Acquire transport. */
-    status = pjsip_endpt_acquire_transport2(send_state->endpt, 
+    status = pjsip_endpt_acquire_transport2(send_state->endpt,
                                             addr->entry[0].type,
                                             &addr->entry[0].addr,
                                             addr->entry[0].addr_len,
@@ -1759,14 +1759,14 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
     pj_memcpy(&send_state->tdata->dest_info.addr, addr, sizeof(*addr));
 
     /* Send response using the transoprt. */
-    status = pjsip_transport_send( send_state->cur_transport, 
+    status = pjsip_transport_send( send_state->cur_transport,
                                    send_state->tdata,
                                    &addr->entry[0].addr,
                                    addr->entry[0].addr_len,
                                    send_state,
                                    &send_response_transport_cb);
     if (status == PJ_SUCCESS) {
-        pj_ssize_t sent = send_state->tdata->buf.cur - 
+        pj_ssize_t sent = send_state->tdata->buf.cur -
                           send_state->tdata->buf.start;
         send_response_transport_cb(send_state, send_state->tdata, sent);
 
@@ -1803,7 +1803,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
         send_state->cur_transport = res_addr->transport;
         pjsip_transport_add_ref(send_state->cur_transport);
 
-        status = pjsip_transport_send( send_state->cur_transport, tdata, 
+        status = pjsip_transport_send( send_state->cur_transport, tdata,
                                        &res_addr->addr,
                                        res_addr->addr_len,
                                        send_state,
@@ -1822,11 +1822,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
     } else {
         /* Copy the destination host name to TX data */
         if (!tdata->dest_info.name.slen) {
-            pj_strdup(tdata->pool, &tdata->dest_info.name, 
+            pj_strdup(tdata->pool, &tdata->dest_info.name,
                       &res_addr->dst_host.addr.host);
         }
 
-        pjsip_endpt_resolve(endpt, tdata->pool, &res_addr->dst_host, 
+        pjsip_endpt_resolve(endpt, tdata->pool, &res_addr->dst_host,
                             send_state, &send_response_resolver_cb);
         return PJ_SUCCESS;
     }
@@ -1874,14 +1874,14 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
     PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
                      PJSIP_ENOTREQUESTMSG);
 
-    /* Check that no UAS transaction has been created for this request. 
+    /* Check that no UAS transaction has been created for this request.
      * If UAS transaction has been created for this request, application
      * MUST send the response statefully using that transaction.
      */
     PJ_ASSERT_RETURN(pjsip_rdata_get_tsx(rdata)==NULL, PJ_EINVALIDOP);
 
     /* Create response message */
-    status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text, 
+    status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text,
                                           &tdata);
     if (status != PJ_SUCCESS)
         return status;
@@ -1890,7 +1890,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
     if (hdr_list) {
         const pjsip_hdr *hdr = hdr_list->next;
         while (hdr != hdr_list) {
-            pjsip_msg_add_hdr(tdata->msg, 
+            pjsip_msg_add_hdr(tdata->msg,
                               (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr) );
             hdr = hdr->next;
         }

@@ -3,7 +3,7 @@
  Name        : pjsuaContainer.cpp
  Author      : nanang
  Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
- Description : 
+ Description :
 ========================================================================
 */
 // [[[ begin generated region: do not modify [Generated System Includes]
@@ -32,7 +32,7 @@ _LIT( KpjsuaFile, "\\resource\\apps\\pjsua.mbm" );
 // ]]] end generated region [Generated Constants]
 
 /**
- * First phase of Symbian two-phase construction. Should not 
+ * First phase of Symbian two-phase construction. Should not
  * contain any code that could leave.
  */
 CPjsuaContainer::CPjsuaContainer()
@@ -41,9 +41,9 @@ CPjsuaContainer::CPjsuaContainer()
         iImage1 = NULL;
         iLabel1 = NULL;
         // ]]] end generated region [Generated Contents]
-        
+
         }
-/** 
+/**
  * Destroy child controls.
  */
 CPjsuaContainer::~CPjsuaContainer()
@@ -54,9 +54,9 @@ CPjsuaContainer::~CPjsuaContainer()
         delete iLabel1;
         iLabel1 = NULL;
         // ]]] end generated region [Generated Contents]
-        
+
         }
-                                
+
 /**
  * Construct the control (first phase).
  *  Creates an instance and initializes it.
@@ -66,14 +66,14 @@ CPjsuaContainer::~CPjsuaContainer()
  * @param aCommandObserver command observer
  * @return initialized instance of CPjsuaContainer
  */
-CPjsuaContainer* CPjsuaContainer::NewL( 
-                const TRect& aRect, 
-                const CCoeControl* aParent, 
+CPjsuaContainer* CPjsuaContainer::NewL(
+                const TRect& aRect,
+                const CCoeControl* aParent,
                 MEikCommandObserver* aCommandObserver )
         {
-        CPjsuaContainer* self = CPjsuaContainer::NewLC( 
-                        aRect, 
-                        aParent, 
+        CPjsuaContainer* self = CPjsuaContainer::NewLC(
+                        aRect,
+                        aParent,
                         aCommandObserver );
         CleanupStack::Pop( self );
         return self;
@@ -88,9 +88,9 @@ CPjsuaContainer* CPjsuaContainer::NewL(
  * @param aCommandObserver command observer
  * @return new instance of CPjsuaContainer
  */
-CPjsuaContainer* CPjsuaContainer::NewLC( 
-                const TRect& aRect, 
-                const CCoeControl* aParent, 
+CPjsuaContainer* CPjsuaContainer::NewLC(
+                const TRect& aRect,
+                const CCoeControl* aParent,
                 MEikCommandObserver* aCommandObserver )
         {
         CPjsuaContainer* self = new ( ELeave ) CPjsuaContainer();
@@ -98,17 +98,17 @@ CPjsuaContainer* CPjsuaContainer::NewLC(
         self->ConstructL( aRect, aParent, aCommandObserver );
         return self;
         }
-                        
+
 /**
  * Construct the control (second phase).
  *  Creates a window to contain the controls and activates it.
  * @param aRect bounding rectangle
  * @param aCommandObserver command observer
  * @param aParent owning parent, or NULL
- */ 
-void CPjsuaContainer::ConstructL( 
-                const TRect& aRect, 
-                const CCoeControl* aParent, 
+ */
+void CPjsuaContainer::ConstructL(
+                const TRect& aRect,
+                const CCoeControl* aParent,
                 MEikCommandObserver* aCommandObserver )
         {
         if ( aParent == NULL )
@@ -126,7 +126,7 @@ void CPjsuaContainer::ConstructL(
 
         // Full screen
         SetExtentToWholeScreen();
-        
+
         // Set label color
         //iLabel1->OverrideColorL( EColorLabelText, KRgbWhite );
         //iLabel1->OverrideColorL(EColorControlBackground, KRgbBlack )
@@ -145,13 +145,13 @@ void CPjsuaContainer::ConstructL(
         fontUsed = iCoeEnv->CreateScreenFontL(*fontSpec);
         iLabel1->SetFont(fontUsed);
         iLabel1->SetAlignment( EHCenterVCenter );
-        
+
         ActivateL();
         // [[[ begin generated region: do not modify [Post-ActivateL initializations]
         // ]]] end generated region [Post-ActivateL initializations]
-        
+
         }
-                        
+
 /**
 * Return the number of controls in the container (override)
 * @return count
@@ -160,7 +160,7 @@ TInt CPjsuaContainer::CountComponentControls() const
         {
         return ( int ) ELastControl;
         }
-                                
+
 /**
 * Get the control with the given index (override)
 * @param aIndex Control index [0...n) (limited by #CountComponentControls)
@@ -177,19 +177,19 @@ CCoeControl* CPjsuaContainer::ComponentControl( TInt aIndex ) const
                         return iLabel1;
                 }
         // ]]] end generated region [Generated Contents]
-        
+
         // handle any user controls here...
-        
+
         return NULL;
         }
-                                
+
 /**
  *      Handle resizing of the container. This implementation will lay out
  *  full-sized controls like list boxes for any screen size, and will layout
  *  labels, editors, etc. to the size they were given in the UI designer.
  *  This code will need to be modified to adjust arbitrary controls to
  *  any screen size.
- */                             
+ */
 void CPjsuaContainer::SizeChanged()
         {
         CCoeControl::SizeChanged();
@@ -199,17 +199,17 @@ void CPjsuaContainer::SizeChanged()
         int x = (Size().iWidth - iImage1->Size().iWidth) / 2;
         int y = (Size().iHeight - iImage1->Size().iHeight) / 2;
         iImage1->SetPosition(TPoint(x, y));
-        
+
         // Align the label
         iLabel1->SetExtent(TPoint(0, Size().iHeight - iLabel1->Size().iHeight),
                            TSize(Size().iWidth, iLabel1->Size().iHeight));
-        
+
         // [[[ begin generated region: do not modify [Generated Contents]
-                        
+
         // ]]] end generated region [Generated Contents]
-        
+
         }
-                                
+
 // [[[ begin generated function: do not modify
 /**
  * Layout components as specified in the UI Designer
@@ -223,15 +223,15 @@ void CPjsuaContainer::LayoutControls()
 
 /**
  *      Handle key events.
- */                             
-TKeyResponse CPjsuaContainer::OfferKeyEventL( 
-                const TKeyEvent& aKeyEvent, 
+ */
+TKeyResponse CPjsuaContainer::OfferKeyEventL(
+                const TKeyEvent& aKeyEvent,
                 TEventCode aType )
         {
         // [[[ begin generated region: do not modify [Generated Contents]
-        
+
         // ]]] end generated region [Generated Contents]
-        
+
         if ( iFocusControl != NULL
                 && iFocusControl->OfferKeyEventL( aKeyEvent, aType ) == EKeyWasConsumed )
                 {
@@ -239,11 +239,11 @@ TKeyResponse CPjsuaContainer::OfferKeyEventL(
                 }
         return CCoeControl::OfferKeyEventL( aKeyEvent, aType );
         }
-                                
+
 // [[[ begin generated function: do not modify
 /**
  *      Initialize each control upon creation.
- */                             
+ */
 void CPjsuaContainer::InitializeControlsL()
         {
         iImage1 = new ( ELeave ) CEikImage;
@@ -263,11 +263,11 @@ void CPjsuaContainer::InitializeControlsL()
                 iLabel1->ConstructFromResourceL( reader );
                 CleanupStack::PopAndDestroy(); // reader internal state
                 }
-        
+
         }
 // ]]] end generated function
 
-/** 
+/**
  * Handle global resource changes, such as scalable UI or skin events (override)
  */
 void CPjsuaContainer::HandleResourceChange( TInt aType )
@@ -276,12 +276,12 @@ void CPjsuaContainer::HandleResourceChange( TInt aType )
         SetRect( iAvkonViewAppUi->View( TUid::Uid( EPjsuaContainerViewId ) )->ClientRect() );
         // [[[ begin generated region: do not modify [Generated Contents]
         // ]]] end generated region [Generated Contents]
-        
+
         }
-                                
+
 /**
  *      Draw container contents.
- */                             
+ */
 void CPjsuaContainer::Draw( const TRect& aRect ) const
         {
         // [[[ begin generated region: do not modify [Generated Contents]
@@ -291,16 +291,16 @@ void CPjsuaContainer::Draw( const TRect& aRect ) const
         gc.SetBrushColor( backColor );
         gc.SetBrushStyle( CGraphicsContext::ESolidBrush );
         gc.DrawRect( aRect );
-        
+
         // ]]] end generated region [Generated Contents]
-        
+
         }
 
 void CPjsuaContainer::PutMessageL( const char * msg )
 {
     if (!iLabel1)
         return;
-    
+
     TPtrC8 ptr(reinterpret_cast<const TUint8*>(msg));
     HBufC* buffer = HBufC::NewLC(ptr.Length());
     buffer->Des().Copy(ptr);

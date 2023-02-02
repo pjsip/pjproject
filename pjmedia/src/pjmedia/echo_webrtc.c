@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2011-2015 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjmedia/echo.h>
@@ -97,7 +97,7 @@ static void set_config(void *AEC_inst, unsigned options)
         aec_config.echoMode = 4;
     aec_config.cngMode = AecmTrue;
 #else
-    
+
     aec_config.nlpMode = kAecNlpModerate;
     if (aggr_opt == PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE)
         aec_config.nlpMode = kAecNlpConservative;
@@ -105,7 +105,7 @@ static void set_config(void *AEC_inst, unsigned options)
         aec_config.nlpMode = kAecNlpAggressive;
     else
         aec_config.nlpMode = kAecNlpModerate;
-    
+
     aec_config.skewMode = kAecFalse;
 #if SHOW_DELAY_METRICS
     aec_config.metricsMode = kAecTrue;
@@ -136,12 +136,12 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
 {
     webrtc_ec *echo;
     int status;
-    
+
     *p_echo = NULL;
-    
+
     echo = PJ_POOL_ZALLOC_T(pool, webrtc_ec);
     PJ_ASSERT_RETURN(echo != NULL, PJ_ENOMEM);
-    
+
     /* Currently we only support mono. */
     if (channel_count != 1) {
         PJ_LOG(3, (THIS_FILE, "WebRTC AEC doesn't support stereo"));
@@ -158,13 +158,13 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     else
         echo->subframe_len = 80;
     echo->options = options;
-    
+
     /* Create WebRTC AEC */
     echo->AEC_inst = WebRtcAec_Create();
     if (!echo->AEC_inst) {
         return PJ_ENOMEM;
     }
-    
+
     /* Init WebRTC AEC */
     status = WebRtcAec_Init(echo->AEC_inst, clock_rate, clock_rate);
     if (status != 0) {
@@ -186,7 +186,7 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
      * the beginning of a call.
      */
     WebRtcAec_enable_delay_agnostic(WebRtcAec_aec_core(echo->AEC_inst), 1);
-    
+
     set_config(echo->AEC_inst, options);
 
     if (options & PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR) {
@@ -214,7 +214,7 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     /* Done */
     *p_echo = echo;
     return PJ_SUCCESS;
-    
+
 }
 
 
@@ -225,7 +225,7 @@ PJ_DEF(pj_status_t) webrtc_aec_destroy(void *state )
 {
     webrtc_ec *echo = (webrtc_ec*) state;
     PJ_ASSERT_RETURN(echo, PJ_EINVAL);
-    
+
     if (echo->AEC_inst) {
         WebRtcAec_Free(echo->AEC_inst);
         echo->AEC_inst = NULL;
@@ -234,7 +234,7 @@ PJ_DEF(pj_status_t) webrtc_aec_destroy(void *state )
         WebRtcNs_Free(echo->NS_inst);
         echo->NS_inst = NULL;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -246,18 +246,18 @@ PJ_DEF(void) webrtc_aec_reset(void *state )
 {
     webrtc_ec *echo = (webrtc_ec*) state;
     int status;
-    
+
     pj_assert(echo != NULL);
-    
+
     /* Re-initialize the EC */
     status = WebRtcAec_Init(echo->AEC_inst, echo->clock_rate, echo->clock_rate);
     if (status != 0) {
         print_webrtc_aec_error("reset", echo->AEC_inst);
         return;
     }
-    
+
     set_config(echo->AEC_inst, echo->options);
-    
+
     PJ_LOG(4, (THIS_FILE, "WebRTC AEC reset succeeded"));
 }
 
@@ -282,7 +282,7 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(echo && rec_frm && play_frm, PJ_EINVAL);
-    
+
     for(i = echo->samples_per_frame / echo->subframe_len; i > 0; i--) {
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
         buf_ptr = &play_frm[frm_idx];
@@ -293,15 +293,15 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
         }
         buf_ptr = echo->tmp_buf2;
 #endif
-        
+
         /* Feed farend buffer */
         status = WebRtcAec_BufferFarend(echo->AEC_inst, buf_ptr,
                                         echo->subframe_len);
         if (status != 0) {
             print_webrtc_aec_error("Buffer farend", echo->AEC_inst);
             return PJ_EUNKNOWN;
-        }        
-        
+        }
+
         buf_ptr = echo->tmp_buf;
         out_buf_ptr = echo->tmp_buf2;
         if (echo->NS_inst) {
@@ -315,7 +315,7 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
             WebRtcNs_Analyze(echo->NS_inst, buf_ptr);
 #endif
         }
-        
+
         /* Process echo cancellation */
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
         status = WebRtcAecm_Process(echo->AEC_inst, &rec_frm[frm_idx],
@@ -341,7 +341,7 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
                              echo->channel_count, &out_buf_ptr);
         }
 #endif
-    
+
         for (j = 0; j < echo->subframe_len; j++) {
             rec_frm[frm_idx++] = (pj_int16_t)out_buf_ptr[j];
         }

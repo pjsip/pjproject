@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "pjsua_app.h"
 
@@ -47,27 +47,27 @@ void on_app_stopped(pj_bool_t restart, int argc, char** argv)
 static pj_thread_desc handler_desc;
 
 static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
-{   
-    switch (fdwCtrlType) 
-    { 
-        // Handle the CTRL+C signal. 
- 
-        case CTRL_C_EVENT: 
-        case CTRL_CLOSE_EVENT: 
-        case CTRL_BREAK_EVENT: 
-        case CTRL_LOGOFF_EVENT: 
-        case CTRL_SHUTDOWN_EVENT: 
+{
+    switch (fdwCtrlType)
+    {
+        // Handle the CTRL+C signal.
+
+        case CTRL_C_EVENT:
+        case CTRL_CLOSE_EVENT:
+        case CTRL_BREAK_EVENT:
+        case CTRL_LOGOFF_EVENT:
+        case CTRL_SHUTDOWN_EVENT:
             pj_thread_register("ctrlhandler", handler_desc, &sig_thread);
             PJ_LOG(3,(THIS_FILE, "Ctrl-C detected, quitting.."));
             receive_end_sig = PJ_TRUE;
-            pjsua_app_destroy();            
+            pjsua_app_destroy();
             ExitProcess(1);
             PJ_UNREACHED(return TRUE;)
- 
-        default: 
- 
-            return FALSE; 
-    } 
+
+        default:
+
+            return FALSE;
+    }
 }
 
 static void setup_socket_signal()
@@ -134,7 +134,7 @@ int main_func(int argc, char *argv[])
     setup_signal_handler();
     setup_socket_signal();
 
-    while (running) {        
+    while (running) {
         status = pjsua_app_init(&cfg);
         if (status == PJ_SUCCESS) {
             status = pjsua_app_run(PJ_TRUE);

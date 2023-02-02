@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/sdp.h>
 #include <pjmedia/errno.h>
@@ -65,7 +65,7 @@ static pj_status_t compare_attr_imp(unsigned count1,
     for (i=0; i<count1; ++i) {
         const pjmedia_sdp_attr *a1 = attr1[i];
 
-        if (pj_strcmp(&a1->name, &inactive) == 0 || 
+        if (pj_strcmp(&a1->name, &inactive) == 0 ||
             pj_strcmp(&a1->name, &sendrecv) == 0 ||
             pj_strcmp(&a1->name, &sendonly) == 0 ||
             pj_strcmp(&a1->name, &recvonly) == 0)
@@ -207,7 +207,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_media_cmp( const pjmedia_sdp_media *sd1,
     }
 
     /* Compare attributes. */
-    status = compare_attr(sd1->attr_count, sd1->attr, 
+    status = compare_attr(sd1->attr_count, sd1->attr,
                           sd2->attr_count, sd2->attr);
     if (status != PJ_SUCCESS)
         return status;
@@ -249,7 +249,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_session_cmp( const pjmedia_sdp_session *sd1,
     if (pj_strcmp(&sd1->origin.addr, &sd2->origin.addr) != 0)
         return PJMEDIA_SDP_EORIGINNOTEQUAL;
 
-    
+
     /* Compare the subject line. */
     if (pj_strcmp(&sd1->name, &sd2->name) != 0)
         return PJMEDIA_SDP_ENAMENOTEQUAL;
@@ -274,7 +274,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_session_cmp( const pjmedia_sdp_session *sd1,
         return PJMEDIA_SDP_ETIMENOTEQUAL;
 
     /* Compare attributes. */
-    status = compare_attr(sd1->attr_count, sd1->attr, 
+    status = compare_attr(sd1->attr_count, sd1->attr,
                           sd2->attr_count, sd2->attr);
     if (status != PJ_SUCCESS)
         return status;
@@ -294,7 +294,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_session_cmp( const pjmedia_sdp_session *sd1,
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_sdp_conn_cmp(const pjmedia_sdp_conn *conn1, 
+PJ_DEF(pj_status_t) pjmedia_sdp_conn_cmp(const pjmedia_sdp_conn *conn1,
                                          const pjmedia_sdp_conn *conn2,
                                          unsigned option)
 {

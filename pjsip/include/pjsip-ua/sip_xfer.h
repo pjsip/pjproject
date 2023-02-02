@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSIP_XFER_H__
 #define __PJSIP_XFER_H__
@@ -40,19 +40,19 @@
  * in draft-worley-sip-many-refers-00 draft, for example:
  *  - Remote Dial: where UAC sends REFER to instruct REFER recipient to
  *    initiate an INVITE session to some target.
- * 
+ *
  * A REFER request can be sent inside or outside existing dialog context,
  * although for call transfer case, it is more common to send REFER inside
  * existing INVITE session context. PJSIP supports both sending REFER request
  * inside or outside dialog context.
  *
  * The REFER framework uses @ref PJSIP_EVENT_NOT to manage the event
- * subscription created by the REFER request. Because of this, application 
- * must link with <b>pjsip-ua</b> AND <b>pjsip-simple</b> static libraries 
+ * subscription created by the REFER request. Because of this, application
+ * must link with <b>pjsip-ua</b> AND <b>pjsip-simple</b> static libraries
  * to use REFER functionality.
  *
  * Reference:
- *  - <A HREF="http://www.ietf.org/rfc/rfc3515.txt">RFC 3515: The Session 
+ *  - <A HREF="http://www.ietf.org/rfc/rfc3515.txt">RFC 3515: The Session
  *    Initiation Protocol (SIP) Refer Method</A>
  *  - @ref PJSIP_EVENT_NOT
  */
@@ -98,7 +98,7 @@ PJ_DECL(pj_status_t) pjsip_xfer_create_uac( pjsip_dialog *dlg,
  * @param dlg           The underlying dialog to use.
  * @param user_cb       Pointer to callbacks to receive presence subscription
  *                      events.
- * @param rdata         The incoming SUBSCRIBE request that creates the event 
+ * @param rdata         The incoming SUBSCRIBE request that creates the event
  *                      subscription.
  * @param p_evsub       Pointer to receive the presence subscription
  *                      session.
@@ -144,15 +144,15 @@ PJ_DECL(pj_status_t) pjsip_xfer_accept( pjsip_evsub *sub,
 
 
 /**
- * For notifier, create NOTIFY request to subscriber, and set the state 
- * of the subscription. 
+ * For notifier, create NOTIFY request to subscriber, and set the state
+ * of the subscription.
  *
  * @param sub           The server subscription (notifier) instance.
  * @param state         New state to set.
  * @param xfer_st_code  The call status code to be reported with the NOTIFY
  *                      request.
- * @param xfer_st_text  Optional call status text to be reported with the 
- *                      NOTIFY request. If the value is NULL, default 
+ * @param xfer_st_text  Optional call status text to be reported with the
+ *                      NOTIFY request. If the value is NULL, default
  *                      status text will be used.
  * @param p_tdata       Pointer to receive the request.
  *

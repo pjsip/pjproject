@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -56,14 +56,14 @@ enum
  *
  * Perform pj_sock_select() and find out which sockets
  * are signalled.
- */    
+ */
 static int do_select( pj_sock_t sock1, pj_sock_t sock2,
                       int setcount[])
 {
     pj_fd_set_t fds[3];
     pj_time_val timeout;
     int i, n;
-    
+
     for (i=0; i<3; ++i) {
         PJ_FD_ZERO(&fds[i]);
         PJ_FD_SET(sock1, &fds[i]);
@@ -110,7 +110,7 @@ int select_test()
     pj_status_t rc;
 
     PJ_LOG(3, (THIS_FILE, "...Testing simple UDP select()"));
-    
+
     // Create two UDP sockets.
     rc = pj_sock_socket( pj_AF_INET(), pj_SOCK_DGRAM(), 0, &udp1);
     if (rc != PJ_SUCCESS) {
@@ -167,7 +167,7 @@ int select_test()
             status=-80; goto on_return;
         }
     } else {
-        PJ_LOG(3,(THIS_FILE, 
+        PJ_LOG(3,(THIS_FILE,
                   "...info: system doesn't report writable sockets"));
     }
     if (setcount[EXCEPT_FDS] != 0) {
@@ -180,7 +180,7 @@ int select_test()
     if (rc != PJ_SUCCESS || received != 5) {
         status=-100; goto on_return;
     }
-    
+
     status = 0;
 
     // Test timeout on the read part.
@@ -212,7 +212,7 @@ on_return:
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_select_test;
 #endif  /* INCLUDE_SELECT_TEST */

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjmedia-codec.h>
@@ -22,11 +22,11 @@
 #define TMP_OUT     "output.tmp"
 
 /*
- * Encode test. Read input from WAV file, encode to temporary output file, 
+ * Encode test. Read input from WAV file, encode to temporary output file,
  * and compare the temporary output file to the reference file.
  */
-static int codec_test_encode(pjmedia_codec_mgr *mgr, 
-                             char *codec_name, 
+static int codec_test_encode(pjmedia_codec_mgr *mgr,
+                             char *codec_name,
                              unsigned bitrate,
                              const char *wav_file,
                              const char *ref_encoded_file)
@@ -94,9 +94,9 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
     }
 
     /* Open WAV file */
-    status = pjmedia_wav_player_port_create(pool, wav_file, 
-                                            codec_param.info.frm_ptime, 
-                                            PJMEDIA_FILE_NO_LOOP, 0, 
+    status = pjmedia_wav_player_port_create(pool, wav_file,
+                                            codec_param.info.frm_ptime,
+                                            PJMEDIA_FILE_NO_LOOP, 0,
                                             &wav_port);
     if (status != PJ_SUCCESS) {
         rc = -80;
@@ -137,12 +137,12 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
 
             if (encoded_frame_len == 0)
                 encoded_frame_len = out_frame.size;
-        }    
+        }
     }
 
     fclose(output);
     output = NULL;
-    
+
     /* Compare encoded files */
     fref = fopen(ref_encoded_file, "rb");
     if (!fref) {
@@ -159,7 +159,7 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
     pos = 0;
     for (;;) {
         pj_size_t count2;
-        
+
         count2 = fread(in_frame.buf, encoded_frame_len, 1, fref);
         if (count2 != 1)
             break;
@@ -211,7 +211,7 @@ on_return:
 /*
  * Read file in ITU format (".itu" extension).
  *
- * Set swap_endian to TRUE if the ITU file is stored in little 
+ * Set swap_endian to TRUE if the ITU file is stored in little
  * endian format (normally true).
  */
 static int read_ITU_format(FILE  *fp_bitstream,
@@ -240,7 +240,7 @@ static int read_ITU_format(FILE  *fp_bitstream,
         *p_frame_error_flag = 1;
     } else {
         *p_frame_error_flag = 0;
-        
+
         /* increment j to skip over the number of bits in frame */
         j++;
 
@@ -249,11 +249,11 @@ static int read_ITU_format(FILE  *fp_bitstream,
             bit_count = 15;
             while (bit_count >= 0) {
                 bit = in_array[j++];
-                if (bit == zero) 
+                if (bit == zero)
                     bit = 0;
-                else if (bit == one) 
+                else if (bit == one)
                     bit = 1;
-                else 
+                else
                     *p_frame_error_flag = 1;
 
                 packed_word <<= 1;
@@ -282,8 +282,8 @@ static int read_ITU_format(FILE  *fp_bitstream,
  * before comparison, such manipulation can be done by supplying
  * this function with the "manip" function.
  */
-static int codec_test_decode(pjmedia_codec_mgr *mgr, 
-                             char *codec_name, 
+static int codec_test_decode(pjmedia_codec_mgr *mgr,
+                             char *codec_name,
                              unsigned bitrate,
                              unsigned encoded_len,
                              const char *in_encoded_file,
@@ -401,8 +401,8 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 
         if (has_frame) {
             count2 = 2;
-            if (pjmedia_codec_parse(codec, pkt, encoded_len, &ts, 
-                                    &count2, in_frame) != PJ_SUCCESS) 
+            if (pjmedia_codec_parse(codec, pkt, encoded_len, &ts,
+                                    &count2, in_frame) != PJ_SUCCESS)
             {
                 rc = -100;
                 goto on_return;
@@ -414,13 +414,13 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
             }
 
             if (pjmedia_codec_decode(codec, &in_frame[0], samples_per_frame*2,
-                                     &out_frame) != PJ_SUCCESS) 
+                                     &out_frame) != PJ_SUCCESS)
             {
                 rc = -120;
                 goto on_return;
             }
         } else {
-            if (pjmedia_codec_recover(codec, samples_per_frame*2, 
+            if (pjmedia_codec_recover(codec, samples_per_frame*2,
                                       &out_frame) != PJ_SUCCESS)
             {
                 rc = -125;
@@ -442,7 +442,7 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 
     fclose(output);
     output = NULL;
-    
+
     /* Compare encoded files */
     fref = fopen(ref_pcm_file, "rb");
     if (!fref) {
@@ -459,7 +459,7 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
     pos = 0;
     for (;;) {
         pj_size_t count2;
-        
+
         count2 = fread(pkt, samples_per_frame*2, 1, fref);
         if (count2 != 1)
             break;
@@ -528,15 +528,15 @@ int codec_test_vectors(void)
         unsigned     bit_rate;
         const char  *wav_file;
         const char  *ref_encoded_file;
-    } enc_vectors[] = 
+    } enc_vectors[] =
     {
 #if PJMEDIA_HAS_G7221_CODEC
-        { "G7221/16000/1", 24000, 
-          "../src/test/vectors/g722_1_enc_in.wav", 
+        { "G7221/16000/1", 24000,
+          "../src/test/vectors/g722_1_enc_in.wav",
           "../src/test/vectors/g722_1_enc_out_24000_be.pak"
         },
-        { "G7221/16000/1", 32000, 
-          "../src/test/vectors/g722_1_enc_in.wav", 
+        { "G7221/16000/1", 32000,
+          "../src/test/vectors/g722_1_enc_in.wav",
           "../src/test/vectors/g722_1_enc_out_32000_be.pak"
         },
 #endif
@@ -549,17 +549,17 @@ int codec_test_vectors(void)
         void        (*manip)(short *pcm, unsigned count);
         const char  *enc_file;
         const char  *ref_pcm_file;
-    } dec_vectors[] = 
+    } dec_vectors[] =
     {
 #if PJMEDIA_HAS_G7221_CODEC
         { "G7221/16000/1", 24000, 60,
           &g7221_pcm_manip,
-          "../src/test/vectors/g722_1_enc_out_24000_be.pak", 
+          "../src/test/vectors/g722_1_enc_out_24000_be.pak",
           "../src/test/vectors/g722_1_dec_out_24000.pcm"
         },
         { "G7221/16000/1", 32000, 80,
           &g7221_pcm_manip,
-          "../src/test/vectors/g722_1_enc_out_32000_be.pak", 
+          "../src/test/vectors/g722_1_enc_out_32000_be.pak",
           "../src/test/vectors/g722_1_dec_out_32000.pcm"
         },
         { "G7221/16000/1", 24000, 60,
@@ -599,8 +599,8 @@ int codec_test_vectors(void)
     for (i=0; i<PJ_ARRAY_SIZE(enc_vectors); ++i) {
         if (!enc_vectors[i].codec_name)
             continue;
-        PJ_LOG(3,(THIS_FILE,"    %s @%d bps %s ==> %s", 
-                  enc_vectors[i].codec_name, 
+        PJ_LOG(3,(THIS_FILE,"    %s @%d bps %s ==> %s",
+                  enc_vectors[i].codec_name,
                   enc_vectors[i].bit_rate,
                   enc_vectors[i].wav_file,
                   enc_vectors[i].ref_encoded_file));
@@ -616,8 +616,8 @@ int codec_test_vectors(void)
     for (i=0; i<PJ_ARRAY_SIZE(dec_vectors); ++i) {
         if (!dec_vectors[i].codec_name)
             continue;
-        PJ_LOG(3,(THIS_FILE,"    %s @%d bps %s ==> %s", 
-                  dec_vectors[i].codec_name, 
+        PJ_LOG(3,(THIS_FILE,"    %s @%d bps %s ==> %s",
+                  dec_vectors[i].codec_name,
                   dec_vectors[i].bit_rate,
                   dec_vectors[i].enc_file,
                   dec_vectors[i].ref_pcm_file));

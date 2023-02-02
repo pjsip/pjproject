@@ -25,7 +25,7 @@ f.close()
 
 # Mac OS X depedencies
 if sys.platform == 'darwin':
-	extra_link_args = ["-framework", "CoreFoundation", 
+	extra_link_args = ["-framework", "CoreFoundation",
 			   "-framework", "AudioToolbox"]
 else:
 	extra_link_args = []
@@ -33,11 +33,11 @@ else:
 
 setup(name="py_pjsua", version="0.8",
 	ext_modules = [
-		Extension("py_pjsua", 
-			  ["py_pjsua.c"], 
+		Extension("py_pjsua",
+			  ["py_pjsua.c"],
 			  define_macros=[('PJ_AUTOCONF', '1'),],
-			  include_dirs=pj_inc_dirs, 
-			  library_dirs=pj_lib_dirs, 
+			  include_dirs=pj_inc_dirs,
+			  library_dirs=pj_lib_dirs,
 			  libraries=pj_libs,
 			  extra_link_args=extra_link_args),
 	])

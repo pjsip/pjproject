@@ -108,7 +108,7 @@ struct darwin_factory
     struct darwin_dev_info      *dev_info;
 };
 
-@interface VOutDelegate: NSObject 
+@interface VOutDelegate: NSObject
                          <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
 @public
@@ -438,7 +438,7 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
                                 darwin_sizes[m].supported_size_w,
                                 DEFAULT_FPS, 1);
                     }
-                }                
+                }
             }
         }
     }
@@ -558,7 +558,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                [error.localizedFailureReason UTF8String]));
 }
 
-- (void)captureOutput:(AVCaptureOutput *)captureOutput 
+- (void)captureOutput:(AVCaptureOutput *)captureOutput
                       didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
                       fromConnection:(AVCaptureConnection *)connection
 {
@@ -669,7 +669,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                   stream->frame_size);
     }
 
-    status = pjmedia_vid_dev_conv_resize_and_rotate(&stream->conv, 
+    status = pjmedia_vid_dev_conv_resize_and_rotate(&stream->conv,
                                                     stream->capture_buf,
                                                     &frame_buf);
     if (status == PJ_SUCCESS) {
@@ -821,7 +821,7 @@ static pj_status_t darwin_factory_create_stream(
             goto on_error;
         }
         AVCaptureDevice *dev = qf->dev_info[param->cap_id].dev;
- 
+
         for (i = PJ_ARRAY_SIZE(darwin_sizes)-1; i > 0; --i) {
             if (((vfd->size.w == darwin_sizes[i].supported_size_w) &&
                  (vfd->size.h == darwin_sizes[i].supported_size_h)) ||
@@ -869,7 +869,7 @@ static pj_status_t darwin_factory_create_stream(
             [dev unlockForConfiguration];
         }
 #endif
-        
+
         /* Add the video device to the session as a device input */
         NSError *error;
         strm->dev_input = [AVCaptureDeviceInput
@@ -1267,7 +1267,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (!strm->video_output)
                 return PJMEDIA_EVID_NOTREADY;
 
-            vidcon = [strm->video_output 
+            vidcon = [strm->video_output
                       connectionWithMediaType:AVMediaTypeVideo];
             if ([vidcon isVideoOrientationSupported]) {
                 vidcon.videoOrientation = cap_ori[strm->param.orient-1];
@@ -1286,7 +1286,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                                strm->size.w);
 
                 if (!support_ori) {
-                    PJ_LOG(4, (THIS_FILE, "Native video capture orientation " 
+                    PJ_LOG(4, (THIS_FILE, "Native video capture orientation "
                                           "unsupported, will use converter's "
                                           "rotation."));
                 }
@@ -1454,7 +1454,7 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
     if (stream->render_data_provider) {
         CGDataProviderRelease(stream->render_data_provider);
         stream->render_data_provider = nil;
-    }    
+    }
 #endif /* TARGET_OS_IPHONE */
 
     if (stream->queue) {

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/resample.h>
 #include <pjmedia/errno.h>
@@ -42,7 +42,7 @@ struct resample_port
 
 static pj_status_t resample_put_frame(pjmedia_port *this_port,
                                       pjmedia_frame *frame);
-static pj_status_t resample_get_frame(pjmedia_port *this_port, 
+static pj_status_t resample_get_frame(pjmedia_port *this_port,
                                       pjmedia_frame *frame);
 static pj_status_t resample_destroy(pjmedia_port *this_port);
 
@@ -80,7 +80,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
 
     r_afd = pjmedia_format_get_audio_format_detail(&rport->base.info.fmt, 1);
 
-    /* Create buffers. 
+    /* Create buffers.
      * We need separate buffer for get_frame() and put_frame() since
      * both functions may run simultaneously.
      */
@@ -94,7 +94,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
 
 
     /* Create "get_frame" resample */
-    status = pjmedia_resample_create(pool, 
+    status = pjmedia_resample_create(pool,
                                      (opt&PJMEDIA_RESAMPLE_USE_LINEAR)==0,
                                      (opt&PJMEDIA_RESAMPLE_USE_SMALL_FILTER)==0,
                                      d_afd->channel_count,
@@ -106,8 +106,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
         return status;
 
     /* Create "put_frame" resample */
-    status = pjmedia_resample_create(pool, 
-                                     (opt&PJMEDIA_RESAMPLE_USE_LINEAR)==0, 
+    status = pjmedia_resample_create(pool,
+                                     (opt&PJMEDIA_RESAMPLE_USE_LINEAR)==0,
                                      (opt&PJMEDIA_RESAMPLE_USE_SMALL_FILTER)==0,
                                      d_afd->channel_count,
                                      r_afd->clock_rate,
@@ -141,8 +141,8 @@ static pj_status_t resample_put_frame(pjmedia_port *this_port,
     }
 
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
-        pjmedia_resample_run( rport->resample_put, 
-                              (const pj_int16_t*) frame->buf, 
+        pjmedia_resample_run( rport->resample_put,
+                              (const pj_int16_t*) frame->buf,
                               rport->put_buf);
 
         downstream_frame.buf = rport->put_buf;
@@ -160,7 +160,7 @@ static pj_status_t resample_put_frame(pjmedia_port *this_port,
 
 
 
-static pj_status_t resample_get_frame(pjmedia_port *this_port, 
+static pj_status_t resample_get_frame(pjmedia_port *this_port,
                                       pjmedia_frame *frame)
 {
     struct resample_port *rport = (struct resample_port*) this_port;
@@ -189,15 +189,15 @@ static pj_status_t resample_get_frame(pjmedia_port *this_port,
         frame->size = tmp_frame.size < PJMEDIA_PIA_AVG_FSZ(&rport->base.info) ?
                       tmp_frame.size : PJMEDIA_PIA_AVG_FSZ(&rport->base.info);
         if (tmp_frame.size) {
-            pjmedia_copy_samples((pj_int16_t*)frame->buf, 
-                                 (const pj_int16_t*)tmp_frame.buf, 
+            pjmedia_copy_samples((pj_int16_t*)frame->buf,
+                                 (const pj_int16_t*)tmp_frame.buf,
                                  (unsigned)frame->size >> 1);
         }
         return PJ_SUCCESS;
     }
 
-    pjmedia_resample_run( rport->resample_get, 
-                          (const pj_int16_t*) tmp_frame.buf, 
+    pjmedia_resample_run( rport->resample_get,
+                          (const pj_int16_t*) tmp_frame.buf,
                           (pj_int16_t*) frame->buf);
 
     frame->size = PJMEDIA_PIA_AVG_FSZ(&rport->base.info);

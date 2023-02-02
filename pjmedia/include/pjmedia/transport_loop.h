@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_TRANSPORT_LOOP_H__
 #define __PJMEDIA_TRANSPORT_LOOP_H__
@@ -39,7 +39,7 @@
  * other PJMEDIA transports, the loop transport may be attached to multiple
  * streams (in other words, application should specify the same loop transport
  * instance when calling #pjmedia_stream_create()). Any RTP or RTCP packets
- * sent by one stream to this transport by default will be sent back to all 
+ * sent by one stream to this transport by default will be sent back to all
  * streams that are attached to this transport, including to the stream that
  * sends the packet. Application may individually select which stream to
  * receive packets by calling #pjmedia_transport_loop_disable_rx().
@@ -78,7 +78,7 @@ typedef struct pjmedia_loop_tp_setting
      * Note that no actual port will be allocated. Default is 4000.
      */
     int         port;
-    
+
     /* Setting whether attached streams will receive incoming packets.
      * Application can further customize the setting of a particular setting
      * using the API pjmedia_transport_loop_disable_rx().

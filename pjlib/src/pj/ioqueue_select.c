@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /*
@@ -154,7 +154,7 @@ PJ_DEF(const char*) pj_ioqueue_name(void)
     return "select";
 }
 
-/* 
+/*
  * Scan the socket descriptor sets for the largest descriptor.
  * This value is needed by select().
  */
@@ -209,8 +209,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     pj_status_t rc;
 
     /* Check that arguments are valid. */
-    PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && 
-                     max_fd > 0 && max_fd <= PJ_IOQUEUE_MAX_HANDLES, 
+    PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL &&
+                     max_fd > 0 && max_fd <= PJ_IOQUEUE_MAX_HANDLES,
                      PJ_EINVAL);
 
     /* Check that size of pj_ioqueue_op_key_t is sufficient */
@@ -241,7 +241,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
      * all keys and put them in the free list.
      */
 
-    /* Mutex to protect key's reference counter 
+    /* Mutex to protect key's reference counter
      * We don't want to use key's mutex or ioqueue's mutex because
      * that would create deadlock situation in some cases.
      */
@@ -353,7 +353,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     pj_uint32_t value;
 #endif
     pj_status_t rc = PJ_SUCCESS;
-    
+
     PJ_ASSERT_RETURN(pool && ioqueue && sock != PJ_INVALID_SOCKET &&
                      cb && p_key, PJ_EINVAL);
 
@@ -376,7 +376,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     }
 
     /* If safe unregistration (PJ_IOQUEUE_HAS_SAFE_UNREG) is used, get
-     * the key from the free list. Otherwise allocate a new one. 
+     * the key from the free list. Otherwise allocate a new one.
      */
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 
@@ -430,7 +430,7 @@ on_return:
     }
     *p_key = key;
     pj_lock_release(ioqueue->lock);
-    
+
     return rc;
 }
 
@@ -616,10 +616,10 @@ static void validate_sets(const pj_ioqueue_t *ioqueue,
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
             || !pj_list_empty(&key->accept_list)
 #endif
-            ) 
+            )
         {
             pj_assert(PJ_FD_ISSET(key->fd, rfdset));
-        } 
+        }
         else {
             pj_assert(PJ_FD_ISSET(key->fd, rfdset) == 0);
         }
@@ -663,7 +663,7 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
 }
 
 static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
-                                     pj_ioqueue_key_t *key, 
+                                     pj_ioqueue_key_t *key,
                                      unsigned event_types)
 {
     pj_lock_acquire(ioqueue->lock);
@@ -778,7 +778,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
             PJ_LOG(4,(THIS_FILE, "Retry to replace UDP socket %d", old_sock));
             pj_thread_sleep(msec);
         }
-        
+
         if (old_sock != PJ_INVALID_SOCKET) {
             /* Investigate the old socket */
             addr_len = sizeof(local_addr);
@@ -787,7 +787,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
                 PJ_PERROR(5,(THIS_FILE, status, "Error get socket name"));
                 continue;
             }
-        
+
             addr_len = sizeof(rem_addr);
             status = pj_sock_getpeername(old_sock, &rem_addr, &addr_len);
             if (status != PJ_SUCCESS) {
@@ -803,7 +803,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
                 PJ_PERROR(5,(THIS_FILE, status, "Error get qos param"));
                 continue;
             }
-        
+
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(5,(THIS_FILE, status, "Error get qos param"));
             } else {
@@ -817,7 +817,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(5,(THIS_FILE, status, "Error closing socket"));
             }
-            
+
             old_sock = PJ_INVALID_SOCKET;
         }
 
@@ -871,10 +871,10 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
             }
         }
     }
-    
+
     if (status != PJ_SUCCESS)
         goto on_error;
-    
+
     /* Set socket to nonblocking. */
     val = 1;
 #if defined(PJ_WIN32) && PJ_WIN32!=0 || \
@@ -934,7 +934,7 @@ on_error:
  * Few things worth written:
  *
  *  - we used to do only one callback called per poll, but it didn't go
- *    very well. The reason is because on some situation, the write 
+ *    very well. The reason is because on some situation, the write
  *    callback gets called all the time, thus doesn't give the read
  *    callback to get called. This happens, for example, when user
  *    submit write operation inside the write callback.
@@ -973,7 +973,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      * Otherwise select() will return error.
      */
     if (PJ_FD_COUNT(&ioqueue->rfdset)==0 &&
-        PJ_FD_COUNT(&ioqueue->wfdset)==0 
+        PJ_FD_COUNT(&ioqueue->wfdset)==0
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
         && PJ_FD_COUNT(&ioqueue->xfdset)==0
 #endif
@@ -1012,7 +1012,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     __try {
 #endif
 
-    count = pj_sock_select(nfds+1, &rfdset, &wfdset, &xfdset, 
+    count = pj_sock_select(nfds+1, &rfdset, &wfdset, &xfdset,
                            timeout);
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
@@ -1021,8 +1021,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     __except (GetExceptionCode() == STATUS_INVALID_HANDLE ?
               EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH) {
     }
-#endif    
-    
+#endif
+
     if (count == 0)
         return 0;
     else if (count < 0)

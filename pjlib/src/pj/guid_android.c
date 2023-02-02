@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2015-2016 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /* This original code was kindly contributed by Johan Lantz.
  */
@@ -37,7 +37,7 @@ static pj_bool_t attach_jvm(JNIEnv **jni_env)
         }
         return PJ_TRUE;
     }
-    
+
     return PJ_FALSE;
 }
 
@@ -79,7 +79,7 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     if (get_uuid_method == 0)
         goto on_error;
 
-    javaUuid = (*jni_env)->CallStaticObjectMethod(jni_env, uuid_class, 
+    javaUuid = (*jni_env)->CallStaticObjectMethod(jni_env, uuid_class,
                                                   get_uuid_method);
     if (javaUuid == 0)
         goto on_error;

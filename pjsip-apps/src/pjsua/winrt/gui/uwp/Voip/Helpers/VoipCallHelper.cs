@@ -29,7 +29,7 @@ namespace VoipUI.Helpers
 
             ValueSet message = new ValueSet();
             message[NewCallArguments.DstURI.ToString()] = dstURI;
-            message[BackgroundOperation.NewBackgroundRequest] = (int)BackgroundRequest.NewOutgoingCall;            
+            message[BackgroundOperation.NewBackgroundRequest] = (int)BackgroundRequest.NewOutgoingCall;
 
             ValueSet response = await appServiceHelper.SendMessageAsync(message);
 
@@ -49,7 +49,7 @@ namespace VoipUI.Helpers
             message[BackgroundOperation.NewBackgroundRequest] = (int)BackgroundRequest.EndCall;
 
             appServiceHelper.SendMessage(message);
-            
+
             return OperationResult.Succeeded;
         }
     }

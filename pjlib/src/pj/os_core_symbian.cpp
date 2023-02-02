@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pj/os.h>
@@ -46,7 +46,7 @@
  * Note:
  *
  * The Symbian implementation does not support threading!
- */ 
+ */
 
 struct pj_thread_t
 {
@@ -167,7 +167,7 @@ PjSymbianOS::PjSymbianOS()
 }
 
 // Set parameters
-void PjSymbianOS::SetParameters(pj_symbianos_params *params) 
+void PjSymbianOS::SetParameters(pj_symbianos_params *params)
 {
     appSocketServ_ = (RSocketServ*) params->rsocketserv;
     appConnection_ = (RConnection*) params->rconnection;
@@ -192,7 +192,7 @@ TInt PjSymbianOS::Initialize()
 
 #if 0
     pj_assert(console_ == NULL);
-    TRAPD(err, console_ = Console::NewL(_L("PJLIB"), 
+    TRAPD(err, console_ = Console::NewL(_L("PJLIB"),
                                         TSize(KConsFullScreen,KConsFullScreen)));
     return err;
 #endif
@@ -215,11 +215,11 @@ TInt PjSymbianOS::Initialize()
                                          *Connection());
             else
                 err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream);
-        
+
             if (err != KErrNone)
                 goto on_error;
         }
-        
+
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
         if (appHostResolver6_ == NULL) {
             if (Connection())
@@ -227,18 +227,18 @@ TInt PjSymbianOS::Initialize()
                                           *Connection());
             else
                 err = hostResolver6_.Open(SocketServ(), KAfInet6, KSockStream);
-        
+
             if (err != KErrNone)
                 goto on_error;
         }
 #endif
-        
-        
+
+
         isResolverInitialized_ = true;
     }
 
     isConnectionUp_ = true;
-    
+
     return KErrNone;
 
 on_error:
@@ -250,7 +250,7 @@ on_error:
 void PjSymbianOS::Shutdown()
 {
     isConnectionUp_ = false;
-    
+
     if (isResolverInitialized_) {
                 hostResolver_.Close();
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
@@ -269,7 +269,7 @@ void PjSymbianOS::Shutdown()
 
     delete selectTimeoutTimer_;
     selectTimeoutTimer_ = NULL;
-    
+
     appSocketServ_ = NULL;
     appConnection_ = NULL;
     appHostResolver_ = NULL;
@@ -311,7 +311,7 @@ PJ_DEF(pj_uint32_t) pj_getpid(void)
 
 
 /* Set Symbian specific parameters */
-PJ_DEF(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm) 
+PJ_DEF(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm)
 {
     PJ_ASSERT_RETURN(prm != NULL, PJ_EINVAL);
     PjSymbianOS::Instance()->SetParameters(prm);
@@ -334,7 +334,7 @@ PJ_DEF(pj_status_t) pj_init(void)
 {
         char stack_ptr;
     pj_status_t status;
-    
+
     /* Check if PJLIB have been initialized */
     if (initialized) {
         ++initialized;
@@ -351,7 +351,7 @@ PJ_DEF(pj_status_t) pj_init(void)
 
     PJ_LOG(4,(THIS_FILE, "Initializing PJLIB for Symbian OS.."));
 
-    TInt err; 
+    TInt err;
     err = os->Initialize();
     if (err != KErrNone)
         return PJ_RETURN_OS_ERROR(err);
@@ -359,9 +359,9 @@ PJ_DEF(pj_status_t) pj_init(void)
     /* Init logging */
     pj_log_init();
 
-    /* Initialize exception ID for the pool. 
+    /* Initialize exception ID for the pool.
      * Must do so after critical section is configured.
-     */ 
+     */
     status = pj_exception_id_alloc("PJLIB/No memory", &PJ_NO_MEMORY_EXCEPTION);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -426,18 +426,18 @@ PJ_DEF(void) pj_shutdown(void)
 
 /////////////////////////////////////////////////////////////////////////////
 
-class CPollTimeoutTimer : public CActive 
+class CPollTimeoutTimer : public CActive
 {
 public:
     static CPollTimeoutTimer* NewL(int msec, TInt prio);
     ~CPollTimeoutTimer();
-    
+
     virtual void RunL();
     virtual void DoCancel();
 
-private:        
+private:
     RTimer           rtimer_;
-    
+
     explicit CPollTimeoutTimer(TInt prio);
     void ConstructL(int msec);
 };
@@ -448,12 +448,12 @@ CPollTimeoutTimer::CPollTimeoutTimer(TInt prio)
 }
 
 
-CPollTimeoutTimer::~CPollTimeoutTimer() 
+CPollTimeoutTimer::~CPollTimeoutTimer()
 {
     rtimer_.Close();
 }
 
-void CPollTimeoutTimer::ConstructL(int msec) 
+void CPollTimeoutTimer::ConstructL(int msec)
 {
     rtimer_.CreateLocal();
     CActiveScheduler::Add(this);
@@ -461,51 +461,51 @@ void CPollTimeoutTimer::ConstructL(int msec)
     SetActive();
 }
 
-CPollTimeoutTimer* CPollTimeoutTimer::NewL(int msec, TInt prio) 
+CPollTimeoutTimer* CPollTimeoutTimer::NewL(int msec, TInt prio)
 {
     CPollTimeoutTimer *self = new CPollTimeoutTimer(prio);
     CleanupStack::PushL(self);
-    self->ConstructL(msec);    
+    self->ConstructL(msec);
     CleanupStack::Pop(self);
 
     return self;
 }
 
-void CPollTimeoutTimer::RunL() 
+void CPollTimeoutTimer::RunL()
 {
 }
 
-void CPollTimeoutTimer::DoCancel() 
+void CPollTimeoutTimer::DoCancel()
 {
      rtimer_.Cancel();
 }
 
 
 /*
- * Wait the completion of any Symbian active objects. 
+ * Wait the completion of any Symbian active objects.
  */
 PJ_DEF(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout)
 {
     CPollTimeoutTimer *timer = NULL;
-    
+
     if (priority==-1)
         priority = EPriorityNull;
-    
+
     if (ms_timeout >= 0) {
         timer = CPollTimeoutTimer::NewL(ms_timeout, priority);
     }
-    
+
     PjSymbianOS::Instance()->WaitForActiveObjects(priority);
-    
+
     if (timer) {
         bool timer_is_active = timer->IsActive();
-    
+
         timer->Cancel();
-        
+
         delete timer;
-        
+
         return timer_is_active ? PJ_TRUE : PJ_FALSE;
-        
+
     } else {
         return PJ_TRUE;
     }
@@ -565,7 +565,7 @@ PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
 /*
  * pj_thread_get_os_handle()
  */
-PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread) 
+PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread)
 {
     PJ_UNUSED_ARG(thread);
     return NULL;
@@ -588,11 +588,11 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 /*
  * pj_thread_create(...)
  */
-PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
                                       const char *thread_name,
-                                      pj_thread_proc *proc, 
+                                      pj_thread_proc *proc,
                                       void *arg,
-                                      pj_size_t stack_size, 
+                                      pj_size_t stack_size,
                                       unsigned flags,
                                       pj_thread_t **ptr_thread)
 {
@@ -731,7 +731,7 @@ PJ_DEF(void*) pj_thread_local_get(long index)
 /*
  * Create atomic variable.
  */
-PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
                                       pj_atomic_value_t initial,
                                       pj_atomic_t **atomic )
 {
@@ -754,7 +754,7 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
 /*
  * Set the value of an atomic type, and return the previous value.
  */
-PJ_DEF(void) pj_atomic_set( pj_atomic_t *atomic_var, 
+PJ_DEF(void) pj_atomic_set( pj_atomic_t *atomic_var,
                             pj_atomic_value_t value)
 {
     atomic_var->value = value;
@@ -794,7 +794,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
 PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 {
     --atomic_var->value;
-}       
+}
 
 
 /*
@@ -830,9 +830,9 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
 
 /////////////////////////////////////////////////////////////////////////////
 
-PJ_DEF(pj_status_t) pj_mutex_create( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_mutex_create( pj_pool_t *pool,
                                      const char *name,
-                                     int type, 
+                                     int type,
                                      pj_mutex_t **mutex)
 {
     PJ_UNUSED_ARG(pool);
@@ -846,7 +846,7 @@ PJ_DEF(pj_status_t) pj_mutex_create( pj_pool_t *pool,
 /*
  * pj_mutex_create_simple()
  */
-PJ_DEF(pj_status_t) pj_mutex_create_simple( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_mutex_create_simple( pj_pool_t *pool,
                                             const char *name,
                                             pj_mutex_t **mutex )
 {
@@ -931,14 +931,14 @@ PJ_DEF(void) pj_leave_critical_section(void)
 /*
  * Create semaphore.
  */
-PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
                                    const char *name,
-                                   unsigned initial, 
+                                   unsigned initial,
                                    unsigned max,
                                    pj_sem_t **p_sem)
 {
     pj_sem_t *sem;
- 
+
     PJ_UNUSED_ARG(name);
 
     sem = (pj_sem_t*) pj_pool_zalloc(pool, sizeof(pj_sem_t));
@@ -1003,7 +1003,7 @@ PJ_DEF(pj_status_t) pj_sem_destroy(pj_sem_t *sem)
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK != 0
 /*
- * The implementation of stack checking. 
+ * The implementation of stack checking.
  */
 PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
 {
@@ -1029,7 +1029,7 @@ PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
 }
 
 /*
- * Get maximum stack usage statistic. 
+ * Get maximum stack usage statistic.
  */
 PJ_DEF(pj_uint32_t) pj_thread_get_stack_max_usage(pj_thread_t *thread)
 {
@@ -1037,7 +1037,7 @@ PJ_DEF(pj_uint32_t) pj_thread_get_stack_max_usage(pj_thread_t *thread)
 }
 
 /*
- * Dump thread stack status. 
+ * Dump thread stack status.
  */
 PJ_DEF(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
                                              const char **file,

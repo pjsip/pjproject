@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /*
  * Based on implementation found in Carnegie Mellon Speech Group Software
@@ -58,13 +58,13 @@ static int block1l (int xl, int sl, int detl)
     static const int iln[32] = {
         0, 63, 62, 31, 30, 29, 28, 27, 26, 25,
         24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14,
-        13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 0 
+        13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 0
     };
 
     static const int ilp[32] = {
         0, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52,
         51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41,
-        40, 39, 38, 37, 36, 35, 34, 33, 32, 0 
+        40, 39, 38, 37, 36, 35, 34, 33, 32, 0
     };
 
     /* SUBTRA */
@@ -134,7 +134,7 @@ static int block3l (g722_enc_t *enc, int il)
 
     ril = il >> 2 ;
     il4 = rl42[ril] ;
-    
+
     wd = (enc->nbl * 32512) >> 15 ;
     nbpl = wd + wl[il4] ;
 
@@ -172,7 +172,7 @@ static int block4l (g722_enc_t *enc, int dl)
     int wd, wd1, wd2, wd3, wd4, wd5 /*, wd6 */;
 
     enc->dlt[0] = dl;
-    
+
     /* RECONS */
 
     enc->rlt[0] = sl + enc->dlt[0] ;
@@ -322,7 +322,7 @@ static int block2h (int ih, int deth)
     int dh ;
     int wd2 ;
     static const int qm2[4] = {-7408, -1616, 7408, 1616};
-    
+
     /* INVQAH */
 
     wd2 = qm2[ih] ;
@@ -497,7 +497,7 @@ static void tx_qmf(g722_enc_t *enc, int pcm1, int pcm2, int *lo, int *hi)
     int i;
 
     pj_memmove(&enc->x[2], enc->x, 22 * sizeof(enc->x[0]));
-    enc->x[1] = pcm1; 
+    enc->x[1] = pcm1;
     enc->x[0] = pcm2;
 
     sumodd = 0;
@@ -517,7 +517,7 @@ static void tx_qmf(g722_enc_t *enc, int pcm1, int pcm2, int *lo, int *hi)
 PJ_DEF(pj_status_t) g722_enc_init(g722_enc_t *enc)
 {
     PJ_ASSERT_RETURN(enc, PJ_EINVAL);
-    
+
     pj_bzero(enc, sizeof(g722_enc_t));
 
     enc->detlow = 32;
@@ -526,8 +526,8 @@ PJ_DEF(pj_status_t) g722_enc_init(g722_enc_t *enc)
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) g722_enc_encode( g722_enc_t *enc, 
-                                     pj_int16_t in[], 
+PJ_DEF(pj_status_t) g722_enc_encode( g722_enc_t *enc,
+                                     pj_int16_t in[],
                                      pj_size_t nsamples,
                                      void *out,
                                      pj_size_t *out_size)
@@ -540,7 +540,7 @@ PJ_DEF(pj_status_t) g722_enc_encode( g722_enc_t *enc,
     PJ_ASSERT_RETURN(enc && in && nsamples && out && out_size, PJ_EINVAL);
     PJ_ASSERT_RETURN(nsamples % 2 == 0, PJ_EINVAL);
     PJ_ASSERT_RETURN(*out_size >= (nsamples >> 1), PJ_ETOOSMALL);
-    
+
     for(i = 0; i < nsamples; i += 2) {
         tx_qmf(enc, in[i], in[i+1], &xlow, &xhigh);
 

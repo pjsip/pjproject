@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJSUA2_UA_HPP__
 #define __PJSUA2_UA_HPP__
@@ -161,7 +161,7 @@ struct SslCertInfo
 
     TimeVal             validityStart;      /**< Validity start         */
     TimeVal             validityEnd;        /**< Validity end           */
-    bool                validityGmt;        /**< Flag if validity 
+    bool                validityGmt;        /**< Flag if validity
                                                  date/time use GMT      */
 
     SslCertNameVector   subjectAltName;     /**< Subject alternative
@@ -188,7 +188,7 @@ public:
      * Convert from pjsip
      */
     void fromPj(const pj_ssl_cert_info &info);
-    
+
 private:
     bool empty;
 };
@@ -199,13 +199,13 @@ private:
 struct TlsInfo
 {
     /**
-     * Describes whether secure socket connection is established, i.e: TLS/SSL 
+     * Describes whether secure socket connection is established, i.e: TLS/SSL
      * handshaking has been done successfully.
      */
     bool                established;
 
     /**
-     * Describes secure socket protocol being used, see #pj_ssl_sock_proto. 
+     * Describes secure socket protocol being used, see #pj_ssl_sock_proto.
      * Use bitwise OR operation to combine the protocol type.
      */
     unsigned            protocol;
@@ -231,13 +231,13 @@ struct TlsInfo
      * Describes remote address.
      */
     SocketAddress       remoteAddr;
-   
+
     /**
      * Describes active local certificate info. Use SslCertInfo.isEmpty()
      * to check if the local cert info is available.
      */
     SslCertInfo         localCertInfo;
-   
+
     /**
      * Describes active remote certificate info. Use SslCertInfo.isEmpty()
      * to check if the remote cert info is available.
@@ -286,7 +286,7 @@ struct OnTransportStateParam
      * The transport handle.
      */
     TransportHandle     hnd;
-    
+
     /**
      * The transport type.
      */
@@ -301,9 +301,9 @@ struct OnTransportStateParam
      * The last error code related to the transport state.
      */
     pj_status_t         lastError;
-    
+
     /**
-     * TLS transport info, only used if transport type is TLS. Use 
+     * TLS transport info, only used if transport type is TLS. Use
      * TlsInfo.isEmpty() to check if this info is available.
      */
     TlsInfo             tlsInfo;
@@ -334,15 +334,15 @@ struct OnSelectAccountParam
 struct IpChangeParam {
     /**
      * If set to PJ_TRUE, this will restart the transport listener.
-     * 
+     *
      * Default : PJ_TRUE
      */
     bool            restartListener;
 
-    /** 
-     * If \a restartListener is set to PJ_TRUE, some delay might be needed 
+    /**
+     * If \a restartListener is set to PJ_TRUE, some delay might be needed
      * for the listener to be restarted. Use this to set the delay.
-     * 
+     *
      * Default : PJSUA_TRANSPORT_RESTART_DELAY_TIME
      */
     unsigned        restartLisDelay;
@@ -396,16 +396,16 @@ struct OnIpChangeProgressParam
     pj_status_t         status;
 
     /**
-     * Information of the transport id. This is only available when the 
+     * Information of the transport id. This is only available when the
      * operation is PJSUA_IP_CHANGE_OP_RESTART_LIS.
      */
     TransportId         transportId;
 
     /**
-     * Information of the account id. This is only available when the 
+     * Information of the account id. This is only available when the
      * operation is:
-     * - PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP 
-     * - PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT 
+     * - PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP
+     * - PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT
      * - PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS
      * - PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS
      */
@@ -413,7 +413,7 @@ struct OnIpChangeProgressParam
 
     /**
      * Information of the call id. This is only available when the operation is
-     * PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS or 
+     * PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS or
      * PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS
      */
     int                 callId;
@@ -1504,7 +1504,7 @@ public:
      * @param id                Transport ID.
      */
     void transportClose(TransportId id) PJSUA2_THROW(Error);
-    
+
     /**
      * Start graceful shutdown procedure for this transport handle. After
      * graceful shutdown has been initiated, no new reference can be
@@ -1523,13 +1523,13 @@ public:
     /*************************************************************************
      * Call operations
      */
-    
+
     /**
      * Terminate all calls. This will initiate call hangup for all
      * currently active calls.
      */
     void hangupAllCalls(void);
-    
+
     /*************************************************************************
      * Media operations
      */
@@ -1674,7 +1674,7 @@ public:
      * not safe in multithreaded environment.
      *
      * Enum all supported video codecs in the system.
-     *  
+     *
      * @return          Array of video codec info.
      */
     const CodecInfoVector &videoCodecEnum() PJSUA2_THROW(Error);
@@ -1682,7 +1682,7 @@ public:
 
     /**
      * Enum all supported video codecs in the system.
-     *  
+     *
      * @return          Array of video codec info.
      */
     CodecInfoVector2 videoCodecEnum2() const PJSUA2_THROW(Error);
@@ -1705,7 +1705,7 @@ public:
      *
      * @param codec_id  Codec ID.
      *
-     * @return          Codec parameters. If codec is not found, Error 
+     * @return          Codec parameters. If codec is not found, Error
      *                  will be thrown.
      *
      */
@@ -1721,7 +1721,7 @@ public:
      */
     void setVideoCodecParam(const string &codec_id,
                             const VidCodecParam &param) PJSUA2_THROW(Error);
-                            
+
     /**
      * Reset video codec parameters to library default settings.
      *
@@ -1765,7 +1765,7 @@ public:
      *    \a IpChangeParam.restartListener).
      * 2. Shutdown the transport used by account registration (this step is
      *    configurable via \a AccountConfig.ipChangeConfig.shutdownTp).
-     * 3. Update contact URI by sending re-Registration (this step is 
+     * 3. Update contact URI by sending re-Registration (this step is
      *    configurable via a\ AccountConfig.natConfig.contactRewriteUse and
      *    a\ AccountConfig.natConfig.contactRewriteMethod)
      * 4. Hangup active calls (this step is configurable via
@@ -1841,11 +1841,11 @@ public:
     { PJ_UNUSED_ARG(prm); }
 
     /**
-     * Calling #handleIpChange() may involve different operation. This 
+     * Calling #handleIpChange() may involve different operation. This
      * callback is called to report the progress of each enabled operation.
      *
      * @param prm       Callback parameters.
-     * 
+     *
      */
     virtual void onIpChangeProgress(OnIpChangeProgressParam &prm)
     { PJ_UNUSED_ARG(prm); }
@@ -1866,7 +1866,7 @@ public:
      * Callback for computation of the digest credential.
      *
      * Usually, an application does not need to implement (overload) this callback.
-     * Use it, if your application needs to support Digest AKA authentication without 
+     * Use it, if your application needs to support Digest AKA authentication without
      * the default digest computation back-end (i.e: using <b>libmilenage</b>).
      *
      * To use Digest AKA authentication, add \a PJSIP_CRED_DATA_EXT_AKA flag in the
@@ -1874,7 +1874,7 @@ public:
      * AKA specific information in AuthCredInfo:
      *  - If PJSIP_HAS_DIGEST_AKA_AUTH is disabled, you have to overload this callback
      *    to provide your own digest computation back-end.
-     *  - If PJSIP_HAS_DIGEST_AKA_AUTH is enabled, <b>libmilenage</b> library from 
+     *  - If PJSIP_HAS_DIGEST_AKA_AUTH is enabled, <b>libmilenage</b> library from
      *    \a third_party directory is linked, and this callback returns PJ_ENOTSUP,
      *    then the default digest computation back-end is used.
      *
@@ -1891,7 +1891,7 @@ public:
      *              by this function.
      *
      * @return PJ_ENOTSUP is the default. If you overload this callback,
-     *              return PJ_SUCCESS on success. 
+     *              return PJ_SUCCESS on success.
      */
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm);
 
@@ -2002,7 +2002,7 @@ private:
                                     pjmedia_stream *strm,
                                     unsigned stream_idx);
     static void on_dtmf_digit(pjsua_call_id call_id, int digit);
-    static void on_dtmf_digit2(pjsua_call_id call_id, 
+    static void on_dtmf_digit2(pjsua_call_id call_id,
                                const pjsua_dtmf_info *info);
     static void on_dtmf_event(pjsua_call_id call_id,
                               const pjsua_dtmf_event *event);

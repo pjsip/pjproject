@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -138,7 +138,7 @@ typedef struct
 
 
 /* This callback is called to feed more samples */
-static pj_status_t sine_get_frame( pjmedia_port *port, 
+static pj_status_t sine_get_frame( pjmedia_port *port,
                                    pjmedia_frame *frame)
 {
     port_data *sine = port->port_data.pdata;
@@ -190,7 +190,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     pj_str_t port_name;
     port_data *sine;
 
-    PJ_ASSERT_RETURN(pool && channel_count > 0 && channel_count <= 2, 
+    PJ_ASSERT_RETURN(pool && channel_count > 0 && channel_count <= 2,
                      PJ_EINVAL);
 
     port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
@@ -199,9 +199,9 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     /* Fill in port info. */
     port_name = pj_str("sine generator");
     pjmedia_port_info_init(&port->info, &port_name,
-                           12345, sampling_rate, channel_count, 16, 
+                           12345, sampling_rate, channel_count, 16,
                            sampling_rate * SINE_PTIME / 1000 * channel_count);
-    
+
     /* Set the function to feed frame */
     port->get_frame = &sine_get_frame;
 
@@ -216,7 +216,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     /* initialise sinusoidal wavetable */
     for( i=0; i<count; i++ )
     {
-        sine->samples[i] = (pj_int16_t) (10000.0 * 
+        sine->samples[i] = (pj_int16_t) (10000.0 *
                 sin(((double)i/(double)count) * M_PI * 8.) );
     }
 

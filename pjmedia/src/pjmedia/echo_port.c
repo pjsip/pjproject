@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/echo_port.h>
 #include <pjmedia/echo.h>
@@ -36,9 +36,9 @@ struct ec
 };
 
 
-static pj_status_t ec_put_frame(pjmedia_port *this_port, 
+static pj_status_t ec_put_frame(pjmedia_port *this_port,
                                 pjmedia_frame *frame);
-static pj_status_t ec_get_frame(pjmedia_port *this_port, 
+static pj_status_t ec_get_frame(pjmedia_port *this_port,
                                 pjmedia_frame *frame);
 static pj_status_t ec_on_destroy(pjmedia_port *this_port);
 
@@ -64,7 +64,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
 
     /* Create the port and the AEC itself */
     ec = PJ_POOL_ZALLOC_T(pool, struct ec);
-    
+
     pjmedia_port_info_init(&ec->base.info, &AEC, SIGNATURE,
                            afd->clock_rate,
                            afd->channel_count,
@@ -91,7 +91,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
 }
 
 
-static pj_status_t ec_put_frame( pjmedia_port *this_port, 
+static pj_status_t ec_put_frame( pjmedia_port *this_port,
                                  pjmedia_frame *frame)
 {
     struct ec *ec = (struct ec*)this_port;
@@ -111,7 +111,7 @@ static pj_status_t ec_put_frame( pjmedia_port *this_port,
 }
 
 
-static pj_status_t ec_get_frame( pjmedia_port *this_port, 
+static pj_status_t ec_get_frame( pjmedia_port *this_port,
                                  pjmedia_frame *frame)
 {
     struct ec *ec = (struct ec*)this_port;
@@ -121,7 +121,7 @@ static pj_status_t ec_get_frame( pjmedia_port *this_port,
 
     status = pjmedia_port_get_frame(ec->dn_port, frame);
     if (status!=PJ_SUCCESS || frame->type!=PJMEDIA_FRAME_TYPE_AUDIO) {
-        pjmedia_zero_samples((pj_int16_t*)frame->buf, 
+        pjmedia_zero_samples((pj_int16_t*)frame->buf,
                               PJMEDIA_PIA_SPF(&this_port->info));
     }
 

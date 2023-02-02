@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/fifobuf.h>
 #include <pj/log.h>
@@ -29,8 +29,8 @@ PJ_DEF(void) pj_fifobuf_init (pj_fifobuf_t *fifobuf, void *buffer, unsigned size
 {
     PJ_CHECK_STACK();
 
-    PJ_LOG(6, (THIS_FILE, 
-               "fifobuf_init fifobuf=%p buffer=%p, size=%d", 
+    PJ_LOG(6, (THIS_FILE,
+               "fifobuf_init fifobuf=%p buffer=%p, size=%d",
                fifobuf, buffer, size));
 
     fifobuf->first = (char*)buffer;
@@ -51,7 +51,7 @@ PJ_DEF(unsigned) pj_fifobuf_max_size (pj_fifobuf_t *fifobuf)
     } else {
         s1 = s2 = (unsigned)(fifobuf->ubegin - fifobuf->uend);
     }
-    
+
     return s1<s2 ? s2 : s1;
 }
 
@@ -63,8 +63,8 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
     PJ_CHECK_STACK();
 
     if (fifobuf->full) {
-        PJ_LOG(6, (THIS_FILE, 
-                   "fifobuf_alloc fifobuf=%p, size=%d: full!", 
+        PJ_LOG(6, (THIS_FILE,
+                   "fifobuf_alloc fifobuf=%p, size=%d: full!",
                    fifobuf, size));
         return NULL;
     }
@@ -82,8 +82,8 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
             *(unsigned*)ptr = size+SZ;
             ptr += SZ;
 
-            PJ_LOG(6, (THIS_FILE, 
-                       "fifobuf_alloc fifobuf=%p, size=%d: returning %p, p1=%p, p2=%p", 
+            PJ_LOG(6, (THIS_FILE,
+                       "fifobuf_alloc fifobuf=%p, size=%d: returning %p, p1=%p, p2=%p",
                        fifobuf, size, ptr, fifobuf->ubegin, fifobuf->uend));
             return ptr;
         }
@@ -100,14 +100,14 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
         *(unsigned*)ptr = size+SZ;
         ptr += SZ;
 
-        PJ_LOG(6, (THIS_FILE, 
-                   "fifobuf_alloc fifobuf=%p, size=%d: returning %p, p1=%p, p2=%p", 
+        PJ_LOG(6, (THIS_FILE,
+                   "fifobuf_alloc fifobuf=%p, size=%d: returning %p, p1=%p, p2=%p",
                    fifobuf, size, ptr, fifobuf->ubegin, fifobuf->uend));
         return ptr;
     }
 
-    PJ_LOG(6, (THIS_FILE, 
-               "fifobuf_alloc fifobuf=%p, size=%d: no space left! p1=%p, p2=%p", 
+    PJ_LOG(6, (THIS_FILE,
+               "fifobuf_alloc fifobuf=%p, size=%d: no space left! p1=%p, p2=%p",
                fifobuf, size, fifobuf->ubegin, fifobuf->uend));
     return NULL;
 }
@@ -135,8 +135,8 @@ PJ_DEF(pj_status_t) pj_fifobuf_unalloc (pj_fifobuf_t *fifobuf, void *buf)
     fifobuf->uend = ptr;
     fifobuf->full = 0;
 
-    PJ_LOG(6, (THIS_FILE, 
-               "fifobuf_unalloc fifobuf=%p, ptr=%p, size=%d, p1=%p, p2=%p", 
+    PJ_LOG(6, (THIS_FILE,
+               "fifobuf_unalloc fifobuf=%p, ptr=%p, size=%d, p1=%p, p2=%p",
                fifobuf, buf, sz, fifobuf->ubegin, fifobuf->uend));
 
     return 0;
@@ -180,8 +180,8 @@ PJ_DEF(pj_status_t) pj_fifobuf_free (pj_fifobuf_t *fifobuf, void *buf)
 
     fifobuf->full = 0;
 
-    PJ_LOG(6, (THIS_FILE, 
-               "fifobuf_free fifobuf=%p, ptr=%p, size=%d, p1=%p, p2=%p", 
+    PJ_LOG(6, (THIS_FILE,
+               "fifobuf_free fifobuf=%p, ptr=%p, size=%d, p1=%p, p2=%p",
                fifobuf, buf, sz, fifobuf->ubegin, fifobuf->uend));
 
     return 0;

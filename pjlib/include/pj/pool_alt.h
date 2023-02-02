@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_POOL_ALT_H__
 #define __PJ_POOL_ALT_H__
@@ -26,7 +26,7 @@ PJ_BEGIN_DECL
 /**
  * The type for function to receive callback from the pool when it is unable
  * to allocate memory. The elegant way to handle this condition is to throw
- * exception, and this is what is expected by most of this library 
+ * exception, and this is what is expected by most of this library
  * components.
  */
 typedef void pj_pool_callback(pj_pool_t *pool, pj_size_t size);
@@ -122,16 +122,16 @@ PJ_DECL(pj_size_t) pj_pool_get_capacity_imp(pj_pool_t *pool);
 PJ_DECL(pj_size_t) pj_pool_get_used_size_imp(pj_pool_t *pool);
 
 /* Allocate memory from the pool */
-PJ_DECL(void*) pj_pool_alloc_imp(const char *file, int line, 
+PJ_DECL(void*) pj_pool_alloc_imp(const char *file, int line,
                                  pj_pool_t *pool, pj_size_t sz);
 
 /* Allocate memory from the pool and zero the memory */
-PJ_DECL(void*) pj_pool_calloc_imp(const char *file, int line, 
-                                  pj_pool_t *pool, unsigned cnt, 
+PJ_DECL(void*) pj_pool_calloc_imp(const char *file, int line,
+                                  pj_pool_t *pool, unsigned cnt,
                                   unsigned elemsz);
 
 /* Allocate memory from the pool and zero the memory */
-PJ_DECL(void*) pj_pool_zalloc_imp(const char *file, int line, 
+PJ_DECL(void*) pj_pool_zalloc_imp(const char *file, int line,
                                   pj_pool_t *pool, pj_size_t sz);
 
 
@@ -151,7 +151,7 @@ typedef struct pj_pool_factory_policy
     /**
      * Allocate memory block (for use by pool). This function is called
      * by memory pool to allocate memory block.
-     * 
+     *
      * @param factory   Pool factory.
      * @param size      The size of memory block to allocate.
      *
@@ -186,7 +186,7 @@ struct pj_pool_factory
     int dummy;
 };
 
-struct pj_caching_pool 
+struct pj_caching_pool
 {
     pj_pool_factory factory;
 

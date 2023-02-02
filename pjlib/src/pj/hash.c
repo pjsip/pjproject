@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pj/hash.h>
 #include <pj/log.h>
@@ -49,7 +49,7 @@ struct pj_hash_table_t
 
 
 
-PJ_DEF(pj_uint32_t) pj_hash_calc(pj_uint32_t hash, const void *key, 
+PJ_DEF(pj_uint32_t) pj_hash_calc(pj_uint32_t hash, const void *key,
                                  unsigned keylen)
 {
     PJ_CHECK_STACK();
@@ -91,7 +91,7 @@ PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
 {
     pj_hash_table_t *h;
     unsigned table_size;
-    
+
     /* Check that PJ_HASH_ENTRY_BUF_SIZE is correct. */
     PJ_ASSERT_RETURN(sizeof(pj_hash_entry)<=PJ_HASH_ENTRY_BUF_SIZE, NULL);
 
@@ -106,17 +106,17 @@ PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
      */
     table_size = 8;
     do {
-        table_size <<= 1;    
+        table_size <<= 1;
     } while (table_size < size);
     table_size -= 1;
-    
+
     h->rows = table_size;
     h->table = (pj_hash_entry**)
                pj_pool_calloc(pool, table_size+1, sizeof(pj_hash_entry*));
     return h;
 }
 
-static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht, 
+static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
                                    const void *key, unsigned keylen,
                                    void *val, pj_uint32_t *hval,
                                    void *entry_buf, pj_bool_t lower)
@@ -130,7 +130,7 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
             keylen = (unsigned)pj_ansi_strlen((const char*)key);
         }
     } else {
-        /* This slightly differs with pj_hash_calc() because we need 
+        /* This slightly differs with pj_hash_calc() because we need
          * to get the keylen when keylen is PJ_HASH_KEY_STRING.
          */
         hash=0;
@@ -139,7 +139,7 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
             for ( ; *p; ++p ) {
                 if (lower)
                     hash = hash * PJ_HASH_MULTIPLIER + pj_tolower(*p);
-                else 
+                else
                     hash = hash * PJ_HASH_MULTIPLIER + *p;
             }
             keylen = (unsigned)(p - (const unsigned char*)key);
@@ -160,8 +160,8 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
     }
 
     /* scan the linked list */
-    for (p_entry = &ht->table[hash & ht->rows], entry=*p_entry; 
-         entry; 
+    for (p_entry = &ht->table[hash & ht->rows], entry=*p_entry;
+         entry;
          p_entry = &entry->next, entry = *p_entry)
     {
         if (entry->hash==hash && entry->keylen==keylen &&
@@ -176,7 +176,7 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
     if (entry || val==NULL)
         return p_entry;
 
-    /* Entry not found, create a new one. 
+    /* Entry not found, create a new one.
      * If entry_buf is specified, use it. Otherwise allocate from pool.
      */
     if (entry_buf) {
@@ -186,9 +186,9 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
         PJ_ASSERT_RETURN(pool != NULL, NULL);
 
         entry = PJ_POOL_ALLOC_T(pool, pj_hash_entry);
-        PJ_LOG(6, ("hashtbl", 
-                   "%p: New p_entry %p created, pool used=%u, cap=%u", 
-                   ht, entry,  pj_pool_get_used_size(pool), 
+        PJ_LOG(6, ("hashtbl",
+                   "%p: New p_entry %p created, pool used=%u, cap=%u",
+                   ht, entry,  pj_pool_get_used_size(pool),
                    pj_pool_get_capacity(pool)));
     }
     entry->next = NULL;
@@ -202,9 +202,9 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
     entry->keylen = keylen;
     entry->value = val;
     *p_entry = entry;
-    
+
     ++ht->count;
-    
+
     return p_entry;
 }
 
@@ -240,11 +240,11 @@ static void hash_set( pj_pool_t *pool, pj_hash_table_t *ht,
             PJ_LOG(6, ("hashtbl", "%p: p_entry %p deleted", ht, *p_entry));
             *p_entry = (*p_entry)->next;
             --ht->count;
-            
+
         } else {
             /* overwrite */
             (*p_entry)->value = value;
-            PJ_LOG(6, ("hashtbl", "%p: p_entry %p value set to %p", ht, 
+            PJ_LOG(6, ("hashtbl", "%p: p_entry %p value set to %p", ht,
                        *p_entry, value));
         }
     }
@@ -265,8 +265,8 @@ PJ_DEF(void) pj_hash_set_lower( pj_pool_t *pool, pj_hash_table_t *ht,
 }
 
 PJ_DEF(void) pj_hash_set_np( pj_hash_table_t *ht,
-                             const void *key, unsigned keylen, 
-                             pj_uint32_t hval, pj_hash_entry_buf entry_buf, 
+                             const void *key, unsigned keylen,
+                             pj_uint32_t hval, pj_hash_entry_buf entry_buf,
                              void *value)
 {
     hash_set(NULL, ht, key, keylen, hval, value, (void *)entry_buf, PJ_FALSE);
@@ -302,7 +302,7 @@ PJ_DEF(pj_hash_iterator_t*) pj_hash_first( pj_hash_table_t *ht,
     return it->entry ? it : NULL;
 }
 
-PJ_DEF(pj_hash_iterator_t*) pj_hash_next( pj_hash_table_t *ht, 
+PJ_DEF(pj_hash_iterator_t*) pj_hash_next( pj_hash_table_t *ht,
                                           pj_hash_iterator_t *it )
 {
     it->entry = it->entry->next;
@@ -336,7 +336,7 @@ void pj_hash_dump_collision( pj_hash_table_t *ht )
     int len, totlen = 0;
 
     for (i=0; i<=ht->rows; ++i) {
-        unsigned count = 0;    
+        unsigned count = 0;
         pj_hash_entry *entry = ht->table[i];
         while (entry) {
             ++count;

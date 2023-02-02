@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/publish.h>
 #include <pjsip/sip_auth.h>
@@ -48,7 +48,7 @@ enum
     PJSIP_PUBLISH_METHOD = PJSIP_OTHER_METHOD,
 };
 
-const pjsip_method pjsip_publish_method = 
+const pjsip_method pjsip_publish_method =
 {
     (pjsip_method_e)PJSIP_PUBLISH_METHOD,
     { "PUBLISH", 7 }
@@ -130,7 +130,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt)
         responses.
 
         13.2.1 Creating the Initial INVITE
-          An Allow header field (Section 20.5) SHOULD be present in the 
+          An Allow header field (Section 20.5) SHOULD be present in the
           INVITE. It indicates what methods can be invoked within a dialog
 
         20.5 Allow
@@ -150,10 +150,10 @@ PJ_DEF(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt)
 }
 
 
-PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt, 
+PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
                                            const pjsip_publishc_opt *opt,
                                            void *token,
-                                           pjsip_publishc_cb *cb,       
+                                           pjsip_publishc_cb *cb,
                                            pjsip_publishc **p_pubc)
 {
     pj_pool_t *pool;
@@ -237,8 +237,8 @@ PJ_DEF(pj_pool_t*) pjsip_publishc_get_pool(pjsip_publishc *pubc)
 
 static void set_expires( pjsip_publishc *pubc, pj_uint32_t expires)
 {
-    if (expires != pubc->expires && 
-        expires != PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED) 
+    if (expires != pubc->expires &&
+        expires != PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
     {
         pubc->expires_hdr = pjsip_expires_hdr_create(pubc->pool, expires);
     } else {
@@ -256,7 +256,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_init(pjsip_publishc *pubc,
 {
     pj_str_t tmp;
 
-    PJ_ASSERT_RETURN(pubc && event && target_uri && from_uri && to_uri && 
+    PJ_ASSERT_RETURN(pubc && event && target_uri && from_uri && to_uri &&
                      expires, PJ_EINVAL);
 
     /* Copy event type */
@@ -276,7 +276,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_init(pjsip_publishc *pubc,
     pj_strdup_with_null(pubc->pool, &pubc->from_uri, from_uri);
     tmp = pubc->from_uri;
     pubc->from_hdr = pjsip_from_hdr_create(pubc->pool);
-    pubc->from_hdr->uri = pjsip_parse_uri(pubc->pool, tmp.ptr, tmp.slen, 
+    pubc->from_hdr->uri = pjsip_parse_uri(pubc->pool, tmp.ptr, tmp.slen,
                                           PJSIP_PARSE_URI_AS_NAMEADDR);
     if (!pubc->from_hdr->uri) {
         return PJSIP_EINVALIDURI;
@@ -285,7 +285,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_init(pjsip_publishc *pubc,
     /* Set "To" header. */
     pj_strdup_with_null(pubc->pool, &tmp, to_uri);
     pubc->to_hdr = pjsip_to_hdr_create(pubc->pool);
-    pubc->to_hdr->uri = pjsip_parse_uri(pubc->pool, tmp.ptr, tmp.slen, 
+    pubc->to_hdr->uri = pjsip_parse_uri(pubc->pool, tmp.ptr, tmp.slen,
                                         PJSIP_PARSE_URI_AS_NAMEADDR);
     if (!pubc->to_hdr->uri) {
         return PJSIP_EINVALIDURI;
@@ -369,7 +369,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
     return PJ_SUCCESS;
 }
 
-static pj_status_t create_request(pjsip_publishc *pubc, 
+static pj_status_t create_request(pjsip_publishc *pubc,
                                   pjsip_tx_data **p_tdata)
 {
     const pj_str_t STR_EVENT = { "Event", 5 };
@@ -380,7 +380,7 @@ static pj_status_t create_request(pjsip_publishc *pubc,
     PJ_ASSERT_RETURN(pubc && p_tdata, PJ_EINVAL);
 
     /* Create the request. */
-    status = pjsip_endpt_create_request_from_hdr( pubc->endpt, 
+    status = pjsip_endpt_create_request_from_hdr( pubc->endpt,
                                                   &pjsip_publish_method,
                                                   pubc->target_uri,
                                                   pubc->from_hdr,
@@ -453,7 +453,7 @@ static pj_status_t create_request(pjsip_publishc *pubc,
 }
 
 
-PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc, 
+PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc,
                                            pj_bool_t auto_refresh,
                                            pjsip_tx_data **p_tdata)
 {
@@ -529,7 +529,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_update_expires( pjsip_publishc *pubc,
 }
 
 
-static void call_callback(pjsip_publishc *pubc, pj_status_t status, 
+static void call_callback(pjsip_publishc *pubc, pj_status_t status,
                           int st_code, const pj_str_t *reason,
                           pjsip_rx_data *rdata, pj_uint32_t expiration)
 {
@@ -553,7 +553,7 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     pjsip_publishc *pubc = (pjsip_publishc*) entry->user_data;
     pjsip_tx_data *tdata;
     pj_status_t status;
-    
+
     PJ_UNUSED_ARG(timer_heap);
 
     entry->id = 0;
@@ -575,7 +575,7 @@ static void tsx_callback(void *token, pjsip_event *event)
     pj_status_t status;
     pjsip_publishc *pubc = (pjsip_publishc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
-    
+
     /* Decrement pending transaction counter. */
     pj_assert(pubc->pending_tsx > 0);
     --pubc->pending_tsx;
@@ -583,7 +583,7 @@ static void tsx_callback(void *token, pjsip_event *event)
     /* Mark that we're in callback to prevent deletion (#1164) */
     ++pubc->in_callback;
 
-    /* If publication data has been deleted by user then remove publication 
+    /* If publication data has been deleted by user then remove publication
      * data from transaction's callback, and don't call callback.
      */
     if (pubc->_delete_flag) {
@@ -598,11 +598,11 @@ static void tsx_callback(void *token, pjsip_event *event)
         pjsip_tx_data *tdata;
 
         status = pjsip_auth_clt_reinit_req( &pubc->auth_sess,
-                                            rdata, 
-                                            tsx->last_tx,  
+                                            rdata,
+                                            tsx->last_tx,
                                             &tdata);
         if (status != PJ_SUCCESS) {
-            call_callback(pubc, status, tsx->status_code, 
+            call_callback(pubc, status, tsx->status_code,
                           &rdata->msg_info.msg->line.status.reason,
                           rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
         } else {
@@ -637,7 +637,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 
             if (pubc->auto_refresh && expires)
                 expiration = expires->ivalue;
-            
+
             if (pubc->auto_refresh && expiration!=0 &&
                 expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
             {
@@ -650,12 +650,12 @@ static void tsx_callback(void *token, pjsip_event *event)
                 }
 
                 delay.sec = expiration - DELAY_BEFORE_REFRESH;
-                if (pubc->expires != PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED && 
-                    delay.sec > (pj_int32_t)pubc->expires) 
+                if (pubc->expires != PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED &&
+                    delay.sec > (pj_int32_t)pubc->expires)
                 {
                     delay.sec = pubc->expires;
                 }
-                if (delay.sec < DELAY_BEFORE_REFRESH) 
+                if (delay.sec < DELAY_BEFORE_REFRESH)
                     delay.sec = DELAY_BEFORE_REFRESH;
                 pubc->timer.cb = &pubc_refresh_timer_cb;
                 pubc->timer.id = REFRESH_TIMER;
@@ -667,7 +667,7 @@ static void tsx_callback(void *token, pjsip_event *event)
             }
 
         } else {
-            rdata = (event->body.tsx_state.type==PJSIP_EVENT_RX_MSG) ? 
+            rdata = (event->body.tsx_state.type==PJSIP_EVENT_RX_MSG) ?
                         event->body.tsx_state.src.rdata : NULL;
         }
 
@@ -680,8 +680,8 @@ static void tsx_callback(void *token, pjsip_event *event)
          */
         ++pubc->pending_tsx;
 
-        call_callback(pubc, PJ_SUCCESS, tsx->status_code, 
-                      (rdata ? &rdata->msg_info.msg->line.status.reason 
+        call_callback(pubc, PJ_SUCCESS, tsx->status_code,
+                      (rdata ? &rdata->msg_info.msg->line.status.reason
                         : pjsip_get_status_text(tsx->status_code)),
                       rdata, expiration);
 
@@ -743,7 +743,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 }
 
 
-PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
+PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
                                         pjsip_tx_data *tdata)
 {
     pj_status_t status;
@@ -798,11 +798,11 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
      * may be called even before send_request() returns!
      */
     ++pubc->pending_tsx;
-    status = pjsip_endpt_send_request(pubc->endpt, tdata, -1, pubc, 
+    status = pjsip_endpt_send_request(pubc->endpt, tdata, -1, pubc,
                                       &tsx_callback);
     if (status!=PJ_SUCCESS) {
         // no need to decrement, callback has been called and it should
-        // already decremented pending_tsx. Decrementing this here may 
+        // already decremented pending_tsx. Decrementing this here may
         // cause accessing freed memory location.
         //--pubc->pending_tsx;
         PJ_PERROR(4,(THIS_FILE, status, "Error sending request"));

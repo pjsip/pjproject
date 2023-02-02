@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/silencedet.h>
 #include <pjmedia/alaw_ulaw.h>
@@ -33,7 +33,7 @@
 #endif
 
 /**
- * This enumeration specifies operation mode of silence detector 
+ * This enumeration specifies operation mode of silence detector
  */
 typedef enum pjmedia_silence_det_mode {
     VAD_MODE_NONE,
@@ -76,13 +76,13 @@ struct pjmedia_silence_det
     unsigned  sum_cnt;                  /**< Number of level summed.        */
     unsigned  silence_timer;            /**< Silence condition timer.       */
     unsigned  voiced_timer;             /**< Voiced condition timer.        */
-    
+
     enum pjmedia_silence_det_state state;/**< Silence detector state.       */
-    unsigned  recalc_on_voiced;         /**< Setting of time to recalc 
+    unsigned  recalc_on_voiced;         /**< Setting of time to recalc
                                              threshold in voiced condition. */
-    unsigned  recalc_on_silence;        /**< Setting of time to recalc 
+    unsigned  recalc_on_silence;        /**< Setting of time to recalc
                                              threshold in silence condition.*/
-    unsigned  before_silence;           /**< Setting of silence time before 
+    unsigned  before_silence;           /**< Setting of silence time before
                                              really changing state into SILENCE,
                                              in ms.                         */
 };
@@ -104,7 +104,7 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
     sd->objname[PJ_MAX_OBJ_NAME-1] = '\0';
 
     sd->ptime = samples_per_frame * 1000 / clock_rate;
-     
+
     /* Default settings */
     pjmedia_silence_det_set_params(sd, -1, -1, -1);
 
@@ -190,7 +190,7 @@ PJ_DEF(pj_int32_t) pjmedia_calc_avg_signal( const pj_int16_t samples[],
                                             pj_size_t count)
 {
     pj_uint32_t sum = 0;
-    
+
     const pj_int16_t * pcm = samples;
     const pj_int16_t * end = samples + count;
 
@@ -203,7 +203,7 @@ PJ_DEF(pj_int32_t) pjmedia_calc_avg_signal( const pj_int16_t samples[],
         else
             sum += *pcm++;
     }
-    
+
     return (pj_int32_t)(sum / count);
 }
 
@@ -223,7 +223,7 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
     ++sd->sum_cnt;
     avg_recent_level = (sd->sum_level / sd->sum_cnt);
 
-    if (level > sd->threshold || 
+    if (level > sd->threshold ||
         level >= PJMEDIA_SILENCE_DET_MAX_THRESHOLD)
     {
         sd->silence_timer = 0;
@@ -232,7 +232,7 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
         switch(sd->state) {
             case STATE_VOICED:
                 if (sd->voiced_timer > sd->recalc_on_voiced) {
-                    /* Voiced for long time (>recalc_on_voiced), current 
+                    /* Voiced for long time (>recalc_on_voiced), current
                      * threshold seems to be too low.
                      */
                     sd->threshold = (avg_recent_level + sd->threshold) >> 1;
@@ -319,10 +319,10 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_detect( pjmedia_silence_det *sd,
                                               pj_int32_t *p_level)
 {
     pj_uint32_t level;
-    
+
     /* Calculate average signal level. */
     level = pjmedia_calc_avg_signal(samples, count);
-    
+
     /* Report to caller, if required. */
     if (p_level)
         *p_level = level;

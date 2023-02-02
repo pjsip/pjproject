@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "test.h"
@@ -118,7 +118,7 @@ static int server_thread(void *p)
             unsigned ctr = 0;
             pj_ansi_sprintf(pkt, "HTTP/1.0 200 OK\r\n");
             if (srv->send_content_length) {
-                pj_ansi_sprintf(pkt + pj_ansi_strlen(pkt), 
+                pj_ansi_sprintf(pkt + pj_ansi_strlen(pkt),
                                 "Content-Length: %d\r\n",
                                 srv->data_size);
             }
@@ -180,7 +180,7 @@ static void on_send_data(pj_http_req *hreq,
     *data = sdata;
     *size = sendsz;
 
-    PJ_LOG(5, (THIS_FILE, "\nSending data progress: %d out of %d bytes", 
+    PJ_LOG(5, (THIS_FILE, "\nSending data progress: %d out of %d bytes",
            send_size, total_size));
 }
 
@@ -220,7 +220,7 @@ static void on_response(pj_http_req *hreq, const pj_http_resp *resp)
     printf("%.*s, %d, %.*s\n", STR_PREC(resp->version),
            resp->status_code, STR_PREC(resp->reason));
     for (i = 0; i < resp->headers.count; i++) {
-        printf("%.*s : %.*s\n", 
+        printf("%.*s : %.*s\n",
                STR_PREC(resp->headers.header[i].name),
                STR_PREC(resp->headers.header[i].value));
     }
@@ -372,9 +372,9 @@ static int parse_url_test()
     return 0;
 }
 
-/* 
+/*
  * GET request scenario 1: using on_response() and on_data_read()
- * Server replies with content-length. Application cancels the 
+ * Server replies with content-length. Application cancels the
  * request upon receiving the response, then start it again.
  */
 int http_client_test1()
@@ -405,7 +405,7 @@ int http_client_test1()
     g_server.data_size = 2970;
     g_server.buf_size = 1024;
 
-    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
+    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
                              &g_server.sock);
     if (sstatus != PJ_SUCCESS)
         return -41;
@@ -442,7 +442,7 @@ int http_client_test1()
     pj_cstr(&url, "http://www.teluu.com/about-us/");
 #endif
 
-    if (pj_http_req_create(pool, &url, timer_heap, ioqueue, 
+    if (pj_http_req_create(pool, &url, timer_heap, ioqueue,
                            &param, &hcb, &http_req))
         return -33;
 
@@ -479,8 +479,8 @@ int http_client_test1()
     return PJ_SUCCESS;
 }
 
-/* 
- * GET request scenario 2: using on_complete() to get the 
+/*
+ * GET request scenario 2: using on_complete() to get the
  * complete data. Server does not reply with content-length.
  * Request timed out, application sets a longer timeout, then
  * then restart the request.
@@ -517,7 +517,7 @@ int http_client_test2()
     g_server.data_size = 4173;
     g_server.buf_size = 1024;
 
-    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
+    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
                              &g_server.sock);
     if (sstatus != PJ_SUCCESS)
         return -41;
@@ -573,7 +573,7 @@ int http_client_test2()
                                      "Windows NT 6.0; SLCC1; "
                                      ".NET CLR 2.0.50727; "
                                      ".NET CLR 3.0.04506)");
-    if (pj_http_req_create(pool, &url, timer_heap, ioqueue, 
+    if (pj_http_req_create(pool, &url, timer_heap, ioqueue,
                            &param, &hcb, &http_req))
         return -43;
 
@@ -646,7 +646,7 @@ int http_client_test_put1()
     g_server.data_size = 0;
     g_server.buf_size = 4096;
 
-    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
+    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
                              &g_server.sock);
     if (sstatus != PJ_SUCCESS)
         return -41;
@@ -691,7 +691,7 @@ int http_client_test_put1()
     pj_ansi_sprintf(data, "PUT test\n");
     param.reqdata.data = data;
     param.reqdata.size = length;
-    if (pj_http_req_create(pool, &url, timer_heap, ioqueue, 
+    if (pj_http_req_create(pool, &url, timer_heap, ioqueue,
                            &param, &hcb, &http_req))
         return -53;
 
@@ -749,7 +749,7 @@ int http_client_test_put2()
     g_server.data_size = 0;
     g_server.buf_size = 16384;
 
-    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
+    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
                              &g_server.sock);
     if (sstatus != PJ_SUCCESS)
         return -41;
@@ -792,7 +792,7 @@ int http_client_test_put2()
     total_size = 15383;
     send_size = 0;
     param.reqdata.total_size = total_size;
-    if (pj_http_req_create(pool, &url, timer_heap, ioqueue, 
+    if (pj_http_req_create(pool, &url, timer_heap, ioqueue,
                            &param, &hcb, &http_req))
         return -53;
 
@@ -844,7 +844,7 @@ int http_client_test_delete()
     g_server.data_size = 0;
     g_server.buf_size = 1024;
 
-    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
+    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0,
                              &g_server.sock);
     if (sstatus != PJ_SUCCESS)
         return -41;
@@ -883,7 +883,7 @@ int http_client_test_delete()
 
     pj_http_req_param_default(&param);
     pj_strset2(&param.method, (char*)"DELETE");
-    if (pj_http_req_create(pool, &url, timer_heap, ioqueue, 
+    if (pj_http_req_create(pool, &url, timer_heap, ioqueue,
                            &param, &hcb, &http_req))
         return -63;
 
@@ -913,7 +913,7 @@ int http_client_test_delete()
 int http_client_test()
 {
     int rc;
-    
+
     PJ_LOG(3, (THIS_FILE, "..Testing URL parsing"));
     rc = parse_url_test();
     if (rc)
@@ -949,7 +949,7 @@ int http_client_test()
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_http_client_test;
 #endif  /* INCLUDE_HTTP_CLIENT_TEST */

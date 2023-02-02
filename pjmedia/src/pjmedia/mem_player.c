@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/mem_port.h>
 #include <pj/assert.h>
@@ -48,9 +48,9 @@ struct mem_player
 };
 
 
-static pj_status_t mem_put_frame(pjmedia_port *this_port, 
+static pj_status_t mem_put_frame(pjmedia_port *this_port,
                                  pjmedia_frame *frame);
-static pj_status_t mem_get_frame(pjmedia_port *this_port, 
+static pj_status_t mem_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
 static pj_status_t mem_on_destroy(pjmedia_port *this_port);
 
@@ -151,7 +151,7 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_set_eof_cb2( pjmedia_port *port,
 }
 
 
-static pj_status_t mem_put_frame( pjmedia_port *this_port, 
+static pj_status_t mem_put_frame( pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     PJ_UNUSED_ARG(this_port);
@@ -170,12 +170,12 @@ static pj_status_t player_on_event(pjmedia_event *event,
         if (player->cb2)
             (*player->cb2)(&player->base, player->user_data);
     }
-    
+
     return PJ_SUCCESS;
 }
 
 
-static pj_status_t mem_get_frame( pjmedia_port *this_port, 
+static pj_status_t mem_get_frame( pjmedia_port *this_port,
                                   pjmedia_frame *frame)
 {
     struct mem_player *player;
@@ -241,7 +241,7 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
             frame->size = 0;
             return PJ_EEOF;
         }
-        
+
         player->eof = PJ_FALSE;
     }
 
@@ -252,7 +252,7 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
     while (size_written < size_needed) {
         char *dst = ((char*)frame->buf) + size_written;
         pj_size_t max;
-        
+
         max = size_needed - size_written;
         if (endpos - player->read_pos < (int)max)
             max = endpos - player->read_pos;

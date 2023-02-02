@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
  /**
@@ -33,7 +33,7 @@
 
 #define THIS_FILE   "encdec.c"
 
-static const char *desc = 
+static const char *desc =
  " encdec                                                               \n"
  "                                                                      \n"
  " PURPOSE:                                                             \n"
@@ -102,7 +102,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
     pj_status_t status;
 
 #define T   file_msec_duration/1000, file_msec_duration%1000
-    
+
     pool = pjmedia_endpt_create_pool(mept, "encdec", 1000, 1000);
 
     cm = pjmedia_endpt_get_codec_mgr(mept);
@@ -112,9 +112,9 @@ static pj_status_t enc_dec_test(const char *codec_id,
 #else
     lost_pct = 0;
 #endif
-    
+
     cnt = 1;
-    CHECK( pjmedia_codec_mgr_find_codecs_by_id(cm, pj_cstr(&tmp, codec_id), 
+    CHECK( pjmedia_codec_mgr_find_codecs_by_id(cm, pj_cstr(&tmp, codec_id),
                                                &cnt, &pci, NULL) );
     CHECK( pjmedia_codec_mgr_get_default_param(cm, pci, &param) );
 
@@ -124,13 +124,13 @@ static pj_status_t enc_dec_test(const char *codec_id,
     param.setting.vad = 1;
 
     /* Open wav for reading */
-    CHECK( pjmedia_wav_player_port_create(pool, filein, 
-                                          param.info.frm_ptime, 
+    CHECK( pjmedia_wav_player_port_create(pool, filein,
+                                          param.info.frm_ptime,
                                           PJMEDIA_FILE_NO_LOOP, 0, &wavin) );
 
     /* Open wav for writing */
     CHECK( pjmedia_wav_writer_port_create(pool, fileout,
-                                          param.info.clock_rate, 
+                                          param.info.clock_rate,
                                           param.info.channel_cnt,
                                           samples_per_frame,
                                           16, 0, 0, &wavout) );
@@ -139,7 +139,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
     CHECK( pjmedia_codec_mgr_alloc_codec(cm, pci, &codec) );
     CHECK( pjmedia_codec_init(codec, pool) );
     CHECK( pjmedia_codec_open(codec, &param) );
-    
+
     for (;;) {
         pjmedia_frame frm_pcm, frm_bit, out_frm, frames[4];
         pj_int16_t pcmbuf[2048];
@@ -156,13 +156,13 @@ static pj_status_t enc_dec_test(const char *codec_id,
             break;;
 
         /* Update duration */
-        file_msec_duration += samples_per_frame * 1000 / 
+        file_msec_duration += samples_per_frame * 1000 /
                               param.info.clock_rate;
 
         /* Encode */
         frm_bit.buf = bitstream;
         frm_bit.size = sizeof(bitstream);
-        CHECK(pjmedia_codec_encode(codec, &frm_pcm, sizeof(bitstream), 
+        CHECK(pjmedia_codec_encode(codec, &frm_pcm, sizeof(bitstream),
                                    &frm_bit));
 
         /* On DTX, write zero frame to wavout to maintain duration */
@@ -174,7 +174,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
                     T, frm_pcm.size, frm_bit.size));
             continue;
         }
-        
+
         bitstream_size += (unsigned)frm_bit.size;
 
         /* Parse the bitstream (not really necessary for this case
@@ -183,21 +183,21 @@ static pj_status_t enc_dec_test(const char *codec_id,
          */
         ts.u64 = 0;
         cnt = PJ_ARRAY_SIZE(frames);
-        CHECK( pjmedia_codec_parse(codec, bitstream, frm_bit.size, &ts, &cnt, 
+        CHECK( pjmedia_codec_parse(codec, bitstream, frm_bit.size, &ts, &cnt,
                                    frames) );
         CHECK( (cnt==1 ? PJ_SUCCESS : -1) );
 
         /* Decode or simulate packet loss */
         out_frm.buf = (char*)pcmbuf;
         out_frm.size = sizeof(pcmbuf);
-        
+
         if ((pj_rand() % 100) < (int)lost_pct) {
             /* Simulate loss */
             CHECK( pjmedia_codec_recover(codec, sizeof(pcmbuf), &out_frm) );
             TRACE_((THIS_FILE, "%d.%03d Packet lost", T));
         } else {
             /* Decode */
-            CHECK( pjmedia_codec_decode(codec, &frames[0], sizeof(pcmbuf), 
+            CHECK( pjmedia_codec_decode(codec, &frames[0], sizeof(pcmbuf),
                                      &out_frm) );
         }
 
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
     }
 
     CHECK( pj_init() );
-    
+
     pj_caching_pool_init(&cp, NULL, 0);
 
     CHECK( pjmedia_endpt_create(&cp.factory, NULL, 1, &mept) );
@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
     if (status == PJ_SUCCESS) {
         puts("");
         puts("Success");
-        printf("Duration: %ds.%03d\n", file_msec_duration/1000, 
+        printf("Duration: %ds.%03d\n", file_msec_duration/1000,
                                        file_msec_duration%1000);
         printf("Time: %lds.%03ld\n", t1.sec, t1.msec);
     }

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjlib-util/http_client.h>
@@ -147,7 +147,7 @@ static pj_status_t http_req_start_reading(pj_http_req *hreq);
 /* End the request */
 static pj_status_t http_req_end_request(pj_http_req *hreq);
 /* Parse the header data and populate the header fields with the result. */
-static pj_status_t http_headers_parse(char *hdata, pj_size_t size, 
+static pj_status_t http_headers_parse(char *hdata, pj_size_t size,
                                       pj_http_headers *headers);
 /* Parse the response */
 static pj_status_t http_response_parse(pj_pool_t *pool,
@@ -231,31 +231,31 @@ static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
         hreq->error = (sent < 0 ? (pj_status_t)-sent : PJLIB_UTIL_EHTTPLOST);
         pj_http_req_cancel(hreq, PJ_TRUE);
         return PJ_FALSE;
-    } 
+    }
 
     hreq->tcp_state.current_send_size += sent;
-    TRACE_((THIS_FILE, "\nData sent: %d out of %d bytes", 
+    TRACE_((THIS_FILE, "\nData sent: %d out of %d bytes",
            hreq->tcp_state.current_send_size, hreq->tcp_state.send_size));
     if (hreq->tcp_state.current_send_size == hreq->tcp_state.send_size) {
         /* Find out whether there is a request body to send. */
-        if (hreq->param.reqdata.total_size > 0 || 
-            hreq->param.reqdata.size > 0) 
+        if (hreq->param.reqdata.total_size > 0 ||
+            hreq->param.reqdata.size > 0)
         {
             if (hreq->state == SENDING_REQUEST) {
                 /* Start sending the request body */
                 hreq->state = SENDING_REQUEST_BODY;
                 hreq->tcp_state.tot_chunk_size = 0;
                 pj_assert(hreq->param.reqdata.total_size == 0 ||
-                          (hreq->param.reqdata.total_size > 0 && 
+                          (hreq->param.reqdata.total_size > 0 &&
                           hreq->param.reqdata.size == 0));
             } else {
                 /* Continue sending the next chunk of the request body */
                 hreq->tcp_state.tot_chunk_size += hreq->tcp_state.send_size;
-                if (hreq->tcp_state.tot_chunk_size == 
+                if (hreq->tcp_state.tot_chunk_size ==
                     hreq->param.reqdata.total_size ||
-                    hreq->param.reqdata.total_size == 0) 
+                    hreq->param.reqdata.total_size == 0)
                 {
-                    /* Finish sending all the chunks, start reading 
+                    /* Finish sending all the chunks, start reading
                      * the response.
                      */
                     hreq->state = REQUEST_SENT;
@@ -264,17 +264,17 @@ static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
                 }
             }
             if (hreq->param.reqdata.total_size > 0 &&
-                hreq->cb.on_send_data) 
+                hreq->cb.on_send_data)
             {
                 /* Call the callback for the application to provide
                  * the next chunk of data to be sent.
                  */
-                (*hreq->cb.on_send_data)(hreq, &hreq->param.reqdata.data, 
+                (*hreq->cb.on_send_data)(hreq, &hreq->param.reqdata.data,
                                          &hreq->param.reqdata.size);
                 /* Make sure the total data size given by the user does not
                  * exceed what the user originally said.
                  */
-                pj_assert(hreq->tcp_state.tot_chunk_size + 
+                pj_assert(hreq->tcp_state.tot_chunk_size +
                           hreq->param.reqdata.size <=
                           hreq->param.reqdata.total_size);
             }
@@ -328,8 +328,8 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
         } else {
             hreq->state = READING_DATA;
             if (st != PJ_SUCCESS) {
-                /* Server replied with an invalid (or unknown) response 
-                 * format. We'll just pass the whole (unparsed) response 
+                /* Server replied with an invalid (or unknown) response
+                 * format. We'll just pass the whole (unparsed) response
                  * to the user.
                  */
                 hreq->response.data = data;
@@ -386,7 +386,7 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
                 }
             }
 
-            /* We already received the response header, call the 
+            /* We already received the response header, call the
              * appropriate callback.
              */
             if (hreq->cb.on_response)
@@ -414,32 +414,32 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
     } else {
         if (hreq->response.size == 0) {
             /* If we know the content length, allocate the data based
-             * on that, otherwise we'll use initial buffer size and grow 
+             * on that, otherwise we'll use initial buffer size and grow
              * it later if necessary.
              */
-            hreq->response.size = (hreq->response.content_length == -1 ? 
-                                   INITIAL_DATA_BUF_SIZE : 
+            hreq->response.size = (hreq->response.content_length == -1 ?
+                                   INITIAL_DATA_BUF_SIZE :
                                    hreq->response.content_length);
-            hreq->response.data = pj_pool_alloc(hreq->pool, 
+            hreq->response.data = pj_pool_alloc(hreq->pool,
                                                 hreq->response.size);
         }
 
         /* If the size of data received exceeds its current size,
          * grow the buffer by a factor of 2.
          */
-        if (hreq->tcp_state.current_read_size + size > 
-            hreq->response.size) 
+        if (hreq->tcp_state.current_read_size + size >
+            hreq->response.size)
         {
             void *olddata = hreq->response.data;
 
-            hreq->response.data = pj_pool_alloc(hreq->pool, 
+            hreq->response.data = pj_pool_alloc(hreq->pool,
                                                 hreq->response.size << 1);
             pj_memcpy(hreq->response.data, olddata, hreq->response.size);
             hreq->response.size <<= 1;
         }
 
         /* Append the response data. */
-        pj_memcpy((char *)hreq->response.data + 
+        pj_memcpy((char *)hreq->response.data +
                   hreq->tcp_state.current_read_size, data, size);
     }
     hreq->tcp_state.current_read_size += size;
@@ -450,7 +450,7 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
     if ((hreq->response.content_length >=0 &&
         (pj_ssize_t)hreq->tcp_state.current_read_size >=
         hreq->response.content_length) ||
-        (status == PJ_EEOF && hreq->response.content_length == -1)) 
+        (status == PJ_EEOF && hreq->response.content_length == -1))
     {
         /* Finish reading */
         http_req_end_request(hreq);
@@ -466,13 +466,13 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
 
     /* Error status or premature EOF. */
     if ((status != PJ_SUCCESS && status != PJ_EPENDING && status != PJ_EEOF)
-        || (status == PJ_EEOF && hreq->response.content_length > -1)) 
+        || (status == PJ_EEOF && hreq->response.content_length > -1))
     {
         hreq->error = status;
         pj_http_req_cancel(hreq, PJ_TRUE);
         return PJ_FALSE;
     }
-    
+
     return PJ_TRUE;
 }
 
@@ -484,8 +484,8 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 
     PJ_UNUSED_ARG(timer_heap);
 
-    /* Recheck that the request is still not completed, since there is a 
-     * slight possibility of race condition (timer elapsed while at the 
+    /* Recheck that the request is still not completed, since there is a
+     * slight possibility of race condition (timer elapsed while at the
      * same time response arrives).
      */
     if (hreq->state == READING_COMPLETE) {
@@ -596,17 +596,17 @@ static pj_status_t parse_auth_chal(pj_pool_t *pool, pj_str_t *input,
 /* The same as #pj_http_headers_add_elmt() with char * as
  * its parameters.
  */
-PJ_DEF(pj_status_t) pj_http_headers_add_elmt2(pj_http_headers *headers, 
+PJ_DEF(pj_status_t) pj_http_headers_add_elmt2(pj_http_headers *headers,
                                               char *name, char *val)
 {
     pj_str_t f, v;
     pj_cstr(&f, name);
     pj_cstr(&v, val);
     return pj_http_headers_add_elmt(headers, &f, &v);
-}   
+}
 
-PJ_DEF(pj_status_t) pj_http_headers_add_elmt(pj_http_headers *headers, 
-                                             pj_str_t *name, 
+PJ_DEF(pj_status_t) pj_http_headers_add_elmt(pj_http_headers *headers,
+                                             pj_str_t *name,
                                              pj_str_t *val)
 {
     PJ_ASSERT_RETURN(headers && name && val, PJ_FALSE);
@@ -695,7 +695,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
         if (!pj_stricmp(&response->headers.header[i].name,
                         &STR_CONTENT_LENGTH))
         {
-            response->content_length = 
+            response->content_length =
                 pj_strtoul(&response->headers.header[i].value);
             /* If content length is zero, make sure that it is because the
              * header value is really zero and not due to parsing error.
@@ -712,7 +712,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
     return status;
 }
 
-static pj_status_t http_headers_parse(char *hdata, pj_size_t size, 
+static pj_status_t http_headers_parse(char *hdata, pj_size_t size,
                                       pj_http_headers *headers)
 {
     pj_scanner scanner;
@@ -796,7 +796,7 @@ static char *get_url_at_pos(const char *str, pj_size_t len)
 }
 
 
-PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url, 
+PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
                                           pj_http_url *hurl)
 {
     pj_scanner scanner;
@@ -804,7 +804,7 @@ PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
     PJ_USE_EXCEPTION;
 
     if (!len) return -1;
-    
+
     pj_bzero(hurl, sizeof(*hurl));
     pj_scan_init(&scanner, url->ptr, url->slen, 0, &on_syntax_error);
 
@@ -899,11 +899,11 @@ PJ_DEF(pj_status_t) pj_http_req_create(pj_pool_t *pool,
     char *at_pos;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pool && url && timer && ioqueue && 
+    PJ_ASSERT_RETURN(pool && url && timer && ioqueue &&
                      hcb && http_req, PJ_EINVAL);
 
     *http_req = NULL;
-    own_pool = pj_pool_create(pool->factory, NULL, INITIAL_POOL_SIZE, 
+    own_pool = pj_pool_create(pool->factory, NULL, INITIAL_POOL_SIZE,
                               POOL_INCREMENT_SIZE, NULL);
     hreq = PJ_POOL_ZALLOC_T(own_pool, struct pj_http_req);
     if (!hreq)
@@ -925,16 +925,16 @@ PJ_DEF(pj_status_t) pj_http_req_create(pj_pool_t *pool,
         pj_memcpy(&hreq->param, param, sizeof(*param));
         /* TODO: validate the param here
          * Should we validate the method as well? If yes, based on all HTTP
-         * methods or based on supported methods only? For the later, one 
-         * drawback would be that you can't use this if the method is not 
+         * methods or based on supported methods only? For the later, one
+         * drawback would be that you can't use this if the method is not
          * officially supported
          */
-        PJ_ASSERT_RETURN(hreq->param.addr_family==pj_AF_UNSPEC() || 
-                         hreq->param.addr_family==pj_AF_INET() || 
+        PJ_ASSERT_RETURN(hreq->param.addr_family==pj_AF_UNSPEC() ||
+                         hreq->param.addr_family==pj_AF_INET() ||
                          hreq->param.addr_family==pj_AF_INET6(), PJ_EAFNOTSUP);
-        PJ_ASSERT_RETURN(!pj_strcmp2(&hreq->param.version, HTTP_1_0) || 
-                         !pj_strcmp2(&hreq->param.version, HTTP_1_1), 
-                         PJ_ENOTSUP); 
+        PJ_ASSERT_RETURN(!pj_strcmp2(&hreq->param.version, HTTP_1_0) ||
+                         !pj_strcmp2(&hreq->param.version, HTTP_1_1),
+                         PJ_ENOTSUP);
         pj_time_val_normalize(&hreq->param.timeout);
     } else {
         pj_http_req_param_default(&hreq->param);
@@ -1015,7 +1015,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
     int retry = 0;
 
     PJ_ASSERT_RETURN(http_req, PJ_EINVAL);
-    /* Http request is not idle, a request was initiated before and 
+    /* Http request is not idle, a request was initiated before and
      * is still in progress
      */
     PJ_ASSERT_RETURN(http_req->state == IDLE, PJ_EBUSY);
@@ -1027,7 +1027,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
 
     if (!http_req->resolved) {
         /* Resolve the Internet address of the host */
-        status = pj_sockaddr_init(http_req->param.addr_family, 
+        status = pj_sockaddr_init(http_req->param.addr_family,
                                   &http_req->addr, &http_req->hurl.host,
                                   http_req->hurl.port);
         if (status != PJ_SUCCESS ||
@@ -1040,7 +1040,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
         http_req->resolved = PJ_TRUE;
     }
 
-    status = pj_sock_socket(http_req->param.addr_family, pj_SOCK_STREAM(), 
+    status = pj_sock_socket(http_req->param.addr_family, pj_SOCK_STREAM(),
                             0, &sock);
     if (status != PJ_SUCCESS)
         goto on_return; // error creating socket
@@ -1049,7 +1049,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
     asock_cb.on_data_read = &http_on_data_read;
     asock_cb.on_data_sent = &http_on_data_sent;
     asock_cb.on_connect_complete = &http_on_connect;
-        
+
     do
     {
         pj_sockaddr_in bound_addr;
@@ -1078,7 +1078,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
 
     // TODO: should we set whole data to 0 by default?
     // or add it in the param?
-    status = pj_activesock_create(http_req->pool, sock, pj_SOCK_STREAM(), 
+    status = pj_activesock_create(http_req->pool, sock, pj_SOCK_STREAM(),
                                   NULL, http_req->ioqueue,
                                   &asock_cb, http_req, &http_req->asock);
     if (status != PJ_SUCCESS) {
@@ -1089,7 +1089,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
     /* Schedule timeout timer for the request */
     pj_assert(http_req->timer_entry.id == 0);
     http_req->timer_entry.id = 1;
-    status = pj_timer_heap_schedule(http_req->timer, &http_req->timer_entry, 
+    status = pj_timer_heap_schedule(http_req->timer, &http_req->timer_entry,
                                     &http_req->param.timeout);
     if (status != PJ_SUCCESS) {
         http_req->timer_entry.id = 0;
@@ -1098,8 +1098,8 @@ static pj_status_t start_http_req(pj_http_req *http_req,
 
     /* Connect to host */
     http_req->state = CONNECTING;
-    status = pj_activesock_start_connect(http_req->asock, http_req->pool, 
-                                         (pj_sockaddr_t *)&(http_req->addr), 
+    status = pj_activesock_start_connect(http_req->asock, http_req->pool,
+                                         (pj_sockaddr_t *)&(http_req->addr),
                                          pj_sockaddr_get_len(&http_req->addr));
     if (status == PJ_SUCCESS) {
         http_req->state = SENDING_REQUEST;
@@ -1492,10 +1492,10 @@ on_error:
 }
 
 
-/* snprintf() to a pj_str_t struct with an option to append the 
+/* snprintf() to a pj_str_t struct with an option to append the
  * result at the back of the string.
  */
-static void str_snprintf(pj_str_t *s, size_t size, 
+static void str_snprintf(pj_str_t *s, size_t size,
                          pj_bool_t append, const char *format, ...)
 {
     va_list arg;
@@ -1505,7 +1505,7 @@ static void str_snprintf(pj_str_t *s, size_t size,
     if (!append)
         s->slen = 0;
     size -= s->slen;
-    retval = pj_ansi_vsnprintf(s->ptr + s->slen, 
+    retval = pj_ansi_vsnprintf(s->ptr + s->slen,
                                size, format, arg);
     s->slen += ((retval < (int)size) ? retval : size - 1);
     va_end(arg);
@@ -1518,7 +1518,7 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
     pj_ssize_t len;
     pj_size_t i;
 
-    PJ_ASSERT_RETURN(hreq->state == SENDING_REQUEST || 
+    PJ_ASSERT_RETURN(hreq->state == SENDING_REQUEST ||
                      hreq->state == SENDING_REQUEST_BODY, PJ_EBUG);
 
     if (hreq->state == SENDING_REQUEST) {
@@ -1529,9 +1529,9 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
         pkt.slen = 0;
         /* Start-line */
         str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%.*s %.*s %s/%.*s\r\n",
-                     STR_PREC(hreq->param.method), 
+                     STR_PREC(hreq->param.method),
                      STR_PREC(hreq->hurl.path),
-                     get_protocol(&hreq->hurl.protocol), 
+                     get_protocol(&hreq->hurl.protocol),
                      STR_PREC(hreq->param.version));
         /* Header field "Host" */
         str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "Host: %.*s:%d\r\n",
@@ -1540,8 +1540,8 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
             char buf[16];
 
             /* Header field "Content-Length" */
-            pj_utoa(hreq->param.reqdata.total_size ? 
-                    (unsigned long)hreq->param.reqdata.total_size: 
+            pj_utoa(hreq->param.reqdata.total_size ?
+                    (unsigned long)hreq->param.reqdata.total_size:
                     (unsigned long)hreq->param.reqdata.size, buf);
             str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%s: %s\r\n",
                          CONTENT_LENGTH, buf);
@@ -1571,7 +1571,7 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
     pj_ioqueue_op_key_init(&hreq->op_key, sizeof(hreq->op_key));
     hreq->tcp_state.send_size = len;
     hreq->tcp_state.current_send_size = 0;
-    status = pj_activesock_send(hreq->asock, &hreq->op_key, 
+    status = pj_activesock_send(hreq->asock, &hreq->op_key,
                                 pkt.ptr, &len, 0);
 
     if (status == PJ_SUCCESS) {
@@ -1597,7 +1597,7 @@ static pj_status_t http_req_start_reading(pj_http_req *hreq)
     hreq->state = READING_RESPONSE;
     hreq->tcp_state.current_read_size = 0;
     pj_assert(hreq->buffer.ptr);
-    status = pj_activesock_start_read2(hreq->asock, hreq->pool, BUF_SIZE, 
+    status = pj_activesock_start_read2(hreq->asock, hreq->pool, BUF_SIZE,
                                        (void**)&hreq->buffer.ptr, 0);
     if (status != PJ_SUCCESS) {
         /* Error reading */
@@ -1635,7 +1635,7 @@ PJ_DEF(pj_status_t) pj_http_req_cancel(pj_http_req *http_req,
     http_req_end_request(http_req);
 
     if (notify && http_req->cb.on_complete) {
-        (*http_req->cb.on_complete)(http_req, (!http_req->error? 
+        (*http_req->cb.on_complete)(http_req, (!http_req->error?
                                     PJ_ECANCELLED: http_req->error), NULL);
     }
 
@@ -1646,7 +1646,7 @@ PJ_DEF(pj_status_t) pj_http_req_cancel(pj_http_req *http_req,
 PJ_DEF(pj_status_t) pj_http_req_destroy(pj_http_req *http_req)
 {
     PJ_ASSERT_RETURN(http_req, PJ_EINVAL);
-    
+
     /* If there is any pending request, cancel it */
     if (http_req->state != IDLE) {
         pj_http_req_cancel(http_req, PJ_FALSE);

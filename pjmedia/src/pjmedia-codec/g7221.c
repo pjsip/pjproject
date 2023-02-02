@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/g7221.h>
 #include <pjmedia-codec/g7221_sdp_match.h>
@@ -55,27 +55,27 @@
 
 
 /* Prototypes for G722.1 codec factory */
-static pj_status_t test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t test_alloc( pjmedia_codec_factory *factory,
                                const pjmedia_codec_info *id );
-static pj_status_t default_attr( pjmedia_codec_factory *factory, 
-                                 const pjmedia_codec_info *id, 
+static pj_status_t default_attr( pjmedia_codec_factory *factory,
+                                 const pjmedia_codec_info *id,
                                  pjmedia_codec_param *attr );
-static pj_status_t enum_codecs( pjmedia_codec_factory *factory, 
-                                unsigned *count, 
+static pj_status_t enum_codecs( pjmedia_codec_factory *factory,
+                                unsigned *count,
                                 pjmedia_codec_info codecs[]);
-static pj_status_t alloc_codec( pjmedia_codec_factory *factory, 
-                                const pjmedia_codec_info *id, 
+static pj_status_t alloc_codec( pjmedia_codec_factory *factory,
+                                const pjmedia_codec_info *id,
                                 pjmedia_codec **p_codec);
-static pj_status_t dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t dealloc_codec( pjmedia_codec_factory *factory,
                                   pjmedia_codec *codec );
 
 /* Prototypes for G722.1 codec implementation. */
-static pj_status_t codec_init( pjmedia_codec *codec, 
+static pj_status_t codec_init( pjmedia_codec *codec,
                                pj_pool_t *pool );
-static pj_status_t codec_open( pjmedia_codec *codec, 
+static pj_status_t codec_open( pjmedia_codec *codec,
                                pjmedia_codec_param *attr );
 static pj_status_t codec_close( pjmedia_codec *codec );
-static pj_status_t codec_modify(pjmedia_codec *codec, 
+static pj_status_t codec_modify(pjmedia_codec *codec,
                                 const pjmedia_codec_param *attr );
 static pj_status_t codec_parse( pjmedia_codec *codec,
                                 void *pkt,
@@ -83,20 +83,20 @@ static pj_status_t codec_parse( pjmedia_codec *codec,
                                 const pj_timestamp *ts,
                                 unsigned *frame_cnt,
                                 pjmedia_frame frames[]);
-static pj_status_t codec_encode( pjmedia_codec *codec, 
+static pj_status_t codec_encode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
                                  unsigned output_buf_len,
                                  struct pjmedia_frame *output);
 static pj_status_t codec_decode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output);
-static pj_status_t codec_recover( pjmedia_codec *codec, 
-                                  unsigned output_buf_len, 
+static pj_status_t codec_recover( pjmedia_codec *codec,
+                                  unsigned output_buf_len,
                                   struct pjmedia_frame *output);
 
 /* Definition for G722.1 codec operations. */
-static pjmedia_codec_op codec_op = 
+static pjmedia_codec_op codec_op =
 {
     &codec_init,
     &codec_open,
@@ -143,7 +143,7 @@ static struct codec_factory {
     codec_mode               modes[MAX_CODEC_MODES]; /**< The G722.1 modes. */
     unsigned                 mode_rsv_start;/**< Start index of G722.1 non-
                                                  standard modes, currently
-                                                 there can only be up to two 
+                                                 there can only be up to two
                                                  non-standard modes enabled
                                                  at the same time.          */
 } codec_factory;
@@ -167,11 +167,11 @@ typedef struct codec_private {
     pj_uint16_t          frame_size_bits;   /**< Coded frame size in bits.  */
     pj_uint16_t          number_of_regions; /**< Number of regions.         */
     pj_int16_t           pcm_shift_val;     /**< Adjustment for PCM in/out  */
-    
+
     /* Encoder specific state */
     Word16              *enc_frame;         /**< 16bit to 14bit buffer      */
     Word16              *enc_old_frame;
-    
+
     /* Decoder specific state */
     Word16              *dec_old_frame;
     Rand_Obj             dec_randobj;
@@ -179,7 +179,7 @@ typedef struct codec_private {
     Word16              *dec_old_mlt_coefs;
 } codec_private_t;
 
-/* 
+/*
  * Helper function for looking up mode based on payload type.
  */
 static codec_mode* lookup_mode(unsigned pt)
@@ -196,13 +196,13 @@ static codec_mode* lookup_mode(unsigned pt)
     return mode;
 }
 
-/* 
+/*
  * Helper function to validate G722.1 mode. Valid modes are defined as:
  * 1. sample rate must be 16kHz or 32kHz,
  * 2. bitrate:
- *    - for sampling rate 16kHz: 16000 to 32000 bps, it must be a multiple 
+ *    - for sampling rate 16kHz: 16000 to 32000 bps, it must be a multiple
  *      of 400 (to keep RTP payload octed-aligned)
- *    - for sampling rate 32kHz: 24000 to 48000 bps, it must be a multiple 
+ *    - for sampling rate 32kHz: 24000 to 48000 bps, it must be a multiple
  *      of 400 (to keep RTP payload octed-aligned)
  */
 static pj_bool_t validate_mode(unsigned sample_rate, unsigned bitrate)
@@ -347,7 +347,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_init( pjmedia_endpt *endpt )
         goto on_error;
 
     /* Register codec factory to endpoint. */
-    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+    status = pjmedia_codec_mgr_register_factory(codec_mgr,
                                                 &codec_factory.base);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -370,8 +370,8 @@ on_error:
 /**
  * Enable and disable G722.1 modes, including non-standard modes.
  */
-PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate, 
-                                                 unsigned bitrate, 
+PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
+                                                 unsigned bitrate,
                                                  pj_bool_t enabled)
 {
     pjmedia_codec_mgr *codec_mgr;
@@ -406,15 +406,15 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
      * a non-standard G722.1 mode.
      */
 
-    /* Non-standard mode need to be initialized first before user 
+    /* Non-standard mode need to be initialized first before user
      * can disable it.
      */
     if (!enabled)
         return PJ_ENOTFOUND;
 
     /* Initialize a non-standard mode, look for available space. */
-    for (i = codec_factory.mode_rsv_start; 
-         i < codec_factory.mode_count; ++i) 
+    for (i = codec_factory.mode_rsv_start;
+         i < codec_factory.mode_count; ++i)
     {
         if (!codec_factory.modes[i].enabled)
         {
@@ -433,7 +433,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
             return PJ_SUCCESS;
         }
     }
-    
+
     /* No space for non-standard mode. */
     return PJ_ETOOMANY;
 }
@@ -475,7 +475,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_deinit(void)
     /* Unregister G722.1 codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &codec_factory.base);
-    
+
     /* Destroy mutex. */
     pj_mutex_unlock(codec_factory.mutex);
     pj_mutex_destroy(codec_factory.mutex);
@@ -488,10 +488,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_deinit(void)
     return status;
 }
 
-/* 
- * Check if factory can allocate the specified codec. 
+/*
+ * Check if factory can allocate the specified codec.
  */
-static pj_status_t test_alloc( pjmedia_codec_factory *factory, 
+static pj_status_t test_alloc( pjmedia_codec_factory *factory,
                                const pjmedia_codec_info *info )
 {
     PJ_UNUSED_ARG(factory);
@@ -505,7 +505,7 @@ static pj_status_t test_alloc( pjmedia_codec_factory *factory,
         return PJMEDIA_CODEC_EUNSUP;
 
     /* Check clock-rate */
-    if (info->clock_rate != WB_SAMPLE_RATE && 
+    if (info->clock_rate != WB_SAMPLE_RATE &&
         info->clock_rate != UWB_SAMPLE_RATE)
     {
         return PJMEDIA_CODEC_EUNSUP;
@@ -517,8 +517,8 @@ static pj_status_t test_alloc( pjmedia_codec_factory *factory,
 /*
  * Generate default attribute.
  */
-static pj_status_t default_attr ( pjmedia_codec_factory *factory, 
-                                  const pjmedia_codec_info *id, 
+static pj_status_t default_attr ( pjmedia_codec_factory *factory,
+                                  const pjmedia_codec_info *id,
                                   pjmedia_codec_param *attr )
 {
     codec_mode *mode;
@@ -555,8 +555,8 @@ static pj_status_t default_attr ( pjmedia_codec_factory *factory,
 /*
  * Enum codecs supported by this factory.
  */
-static pj_status_t enum_codecs( pjmedia_codec_factory *factory, 
-                                unsigned *count, 
+static pj_status_t enum_codecs( pjmedia_codec_factory *factory,
+                                unsigned *count,
                                 pjmedia_codec_info codecs[])
 {
     unsigned i, max_cnt;
@@ -566,7 +566,7 @@ static pj_status_t enum_codecs( pjmedia_codec_factory *factory,
 
     max_cnt = *count;
     *count = 0;
-    
+
     for (i=0; (i < codec_factory.mode_count) && (*count < max_cnt); ++i)
     {
         if (!codec_factory.modes[i].enabled)
@@ -588,7 +588,7 @@ static pj_status_t enum_codecs( pjmedia_codec_factory *factory,
 /*
  * Allocate a new codec instance.
  */
-static pj_status_t alloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t alloc_codec( pjmedia_codec_factory *factory,
                                 const pjmedia_codec_info *id,
                                 pjmedia_codec **p_codec)
 {
@@ -612,7 +612,7 @@ static pj_status_t alloc_codec( pjmedia_codec_factory *factory,
     codec_data->pool = pool;
 
     /* Create silence detector */
-    status = pjmedia_silence_det_create(pool, id->clock_rate, 
+    status = pjmedia_silence_det_create(pool, id->clock_rate,
                                         id->clock_rate * 20 / 1000,
                                         &codec_data->vad);
     if (status != PJ_SUCCESS) {
@@ -629,7 +629,7 @@ static pj_status_t alloc_codec( pjmedia_codec_factory *factory,
 /*
  * Free codec.
  */
-static pj_status_t dealloc_codec( pjmedia_codec_factory *factory, 
+static pj_status_t dealloc_codec( pjmedia_codec_factory *factory,
                                   pjmedia_codec *codec )
 {
     codec_private_t *codec_data;
@@ -652,7 +652,7 @@ static pj_status_t dealloc_codec( pjmedia_codec_factory *factory,
 /*
  * Init codec.
  */
-static pj_status_t codec_init( pjmedia_codec *codec, 
+static pj_status_t codec_init( pjmedia_codec *codec,
                                pj_pool_t *pool )
 {
     PJ_UNUSED_ARG(codec);
@@ -663,7 +663,7 @@ static pj_status_t codec_init( pjmedia_codec *codec,
 /*
  * Open codec.
  */
-static pj_status_t codec_open( pjmedia_codec *codec, 
+static pj_status_t codec_open( pjmedia_codec *codec,
                                pjmedia_codec_param *attr )
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
@@ -737,7 +737,7 @@ static pj_status_t codec_close( pjmedia_codec *codec )
 /*
  * Modify codec settings.
  */
-static pj_status_t codec_modify( pjmedia_codec *codec, 
+static pj_status_t codec_modify( pjmedia_codec *codec,
                                  const pjmedia_codec_param *attr )
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
@@ -768,7 +768,7 @@ static pj_status_t codec_parse( pjmedia_codec *codec,
         frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
         frames[count].buf = pkt;
         frames[count].size = codec_data->frame_size;
-        frames[count].timestamp.u64 = ts->u64 + 
+        frames[count].timestamp.u64 = ts->u64 +
                                       count * codec_data->samples_per_frame;
 
         pkt = (pj_uint8_t*)pkt + codec_data->frame_size;
@@ -786,9 +786,9 @@ static pj_status_t codec_parse( pjmedia_codec *codec,
 /*
  * Encode frames.
  */
-static pj_status_t codec_encode( pjmedia_codec *codec, 
+static pj_status_t codec_encode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output)
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
@@ -796,7 +796,7 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 
     /* Check frame in & out size */
     nsamples = input->size >> 1;
-    PJ_ASSERT_RETURN(nsamples % codec_data->samples_per_frame == 0, 
+    PJ_ASSERT_RETURN(nsamples % codec_data->samples_per_frame == 0,
                      PJMEDIA_CODEC_EPCMFRMINLEN);
     PJ_ASSERT_RETURN(output_buf_len >= codec_data->frame_size * nsamples /
                      codec_data->samples_per_frame,
@@ -809,10 +809,10 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 
         pj_assert(codec_data->vad);
 
-        silence_duration = pj_timestamp_diff32(&codec_data->last_tx, 
+        silence_duration = pj_timestamp_diff32(&codec_data->last_tx,
                                                &input->timestamp);
 
-        is_silence = pjmedia_silence_det_detect(codec_data->vad, 
+        is_silence = pjmedia_silence_det_detect(codec_data->vad,
                                                 (const pj_int16_t*) input->buf,
                                                 (input->size >> 1),
                                                 NULL);
@@ -838,7 +838,7 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
         Word16 mag_shift;
         const Word16 *pcm_input;
         pj_int8_t *out_bits;
-        
+
         pcm_input = (const Word16*)input->buf + processed;
         out_bits = (pj_int8_t*)output->buf + output->size;
 
@@ -846,7 +846,7 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
         if (codec_data->pcm_shift_val > 1) {
             unsigned i;
             for (i=0; i<codec_data->samples_per_frame; ++i) {
-                codec_data->enc_frame[i] = 
+                codec_data->enc_frame[i] =
                         (Word16)(pcm_input[i] / codec_data->pcm_shift_val);
             }
             pcm_input = codec_data->enc_frame;
@@ -854,8 +854,8 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 
         /* Convert input samples to rmlt coefs */
         mag_shift = samples_to_rmlt_coefs(pcm_input,
-                                          codec_data->enc_old_frame, 
-                                          mlt_coefs, 
+                                          codec_data->enc_old_frame,
+                                          mlt_coefs,
                                           codec_data->samples_per_frame);
 
         /* Encode the mlt coefs. Note that encoder output stream is
@@ -885,9 +885,9 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 /*
  * Decode frame.
  */
-static pj_status_t codec_decode( pjmedia_codec *codec, 
+static pj_status_t codec_decode( pjmedia_codec *codec,
                                  const struct pjmedia_frame *input,
-                                 unsigned output_buf_len, 
+                                 unsigned output_buf_len,
                                  struct pjmedia_frame *output)
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
@@ -897,7 +897,7 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
     Word16 frame_error_flag = 0;
 
     /* Check frame out length size */
-    PJ_ASSERT_RETURN(output_buf_len >= 
+    PJ_ASSERT_RETURN(output_buf_len >=
                     (unsigned)(codec_data->samples_per_frame<<1),
                      PJMEDIA_CODEC_EPCMTOOSHORT);
 
@@ -935,10 +935,10 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
             frame_error_flag);
 
     /* Convert the mlt_coefs to PCM samples */
-    rmlt_coefs_to_samples(mlt_coefs, 
-                          codec_data->dec_old_frame, 
-                          (Word16*)output->buf, 
-                          codec_data->samples_per_frame, 
+    rmlt_coefs_to_samples(mlt_coefs,
+                          codec_data->dec_old_frame,
+                          (Word16*)output->buf,
+                          codec_data->samples_per_frame,
                           mag_shift);
 
     /* Decoder adjust PCM signal */
@@ -957,11 +957,11 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-/* 
+/*
  * Recover lost frame.
  */
-static pj_status_t codec_recover( pjmedia_codec *codec, 
-                                  unsigned output_buf_len, 
+static pj_status_t codec_recover( pjmedia_codec *codec,
+                                  unsigned output_buf_len,
                                   struct pjmedia_frame *output)
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
@@ -974,7 +974,7 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = codec_data->samples_per_frame << 1;
 
-    pjmedia_zero_samples((pj_int16_t*)output->buf, 
+    pjmedia_zero_samples((pj_int16_t*)output->buf,
                          codec_data->samples_per_frame);
 
     return PJ_SUCCESS;

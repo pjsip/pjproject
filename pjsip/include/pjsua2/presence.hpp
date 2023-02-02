@@ -53,7 +53,7 @@ struct PresenceStatus
      * Text to describe buddy's online status.
      */
     string               statusText;
-    
+
     /**
      * Activity type.
      */
@@ -158,7 +158,7 @@ struct BuddyInfo
     pjsip_status_code    subTermCode;
 
     /**
-     * Specifies the last presence subscription termination reason. If 
+     * Specifies the last presence subscription termination reason. If
      * presence subscription is currently active, the value will be empty.
      */
     string               subTermReason;
@@ -175,7 +175,7 @@ public:
     BuddyInfo() : subState(PJSIP_EVSUB_STATE_UNKNOWN),
                   subTermCode(PJSIP_SC_NULL)
     {}
-                    
+
 
     /** Import from pjsip structure */
     void fromPj(const pjsua_buddy_info &pbi);
@@ -219,7 +219,7 @@ public:
      * Constructor.
      */
     Buddy();
-    
+
     /**
      * Destructor. Note that if the Buddy original instance (i.e: the instance
      * that calls Buddy::create()) is destroyed, it will also delete the
@@ -228,7 +228,7 @@ public:
      * Account::enumBuddies2() or Account::findBuddy2()) will do nothing.
      */
     virtual ~Buddy();
-    
+
     /**
      * Create buddy and register the buddy to PJSUA-LIB.
      *
@@ -240,7 +240,7 @@ public:
      * @param cfg               The buddy config.
      */
     void create(Account &acc, const BuddyConfig &cfg) PJSUA2_THROW(Error);
-    
+
     /**
      * Check if this buddy is valid.
      *
@@ -271,7 +271,7 @@ public:
      *                          subscription.
      */
     void subscribePresence(bool subscribe) PJSUA2_THROW(Error);
-    
+
     /**
      * Update the presence information for the buddy. Although the library
      * periodically refreshes the presence subscription for all buddies,
@@ -289,7 +289,7 @@ public:
      * \a onBuddyState() callback.
      */
      void updatePresence(void) PJSUA2_THROW(Error);
-     
+
     /**
      * Send instant messaging outside dialog, using this buddy's specified
      * account for route set and authentication.
@@ -311,7 +311,7 @@ public:
     /*
      * Callbacks
      */
-     
+
     /**
      * Notify application when the buddy state has changed.
      * Application may then query the buddy info to get the details.
@@ -329,7 +329,7 @@ public:
      */
     virtual void onBuddyEvSubState(OnBuddyEvSubStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
-     
+
 private:
      /**
       * Buddy ID.

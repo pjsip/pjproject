@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include "server.h"
@@ -60,7 +60,7 @@ static void turn_on_rx_data(pj_turn_sock *turn_sock,
                             unsigned pkt_len,
                             const pj_sockaddr_t *peer_addr,
                             unsigned addr_len);
-static void turn_on_state(pj_turn_sock *turn_sock, 
+static void turn_on_state(pj_turn_sock *turn_sock,
                           pj_turn_state_t old_state,
                           pj_turn_state_t new_state);
 
@@ -94,7 +94,7 @@ pj_turn_tp_type get_turn_tp_type(pj_uint32_t flag) {
         return PJ_TURN_TP_TCP;
     } else if (flag & TURN_TLS) {
         return PJ_TURN_TP_TLS;
-    } 
+    }
     return PJ_TURN_TP_UDP;
 }
 
@@ -123,10 +123,10 @@ static int create_test_session(pj_stun_config  *stun_cfg,
     turn_sock_cb.on_state = &turn_on_state;
     status = pj_turn_sock_create(sess->stun_cfg,
                                  GET_AF(use_ipv6),
-                                 tp_type, 
-                                 &turn_sock_cb, 
-                                 0, 
-                                 sess, 
+                                 tp_type,
+                                 &turn_sock_cb,
+                                 0,
+                                 sess,
                                  &sess->turn_sock);
     if (status != PJ_SUCCESS) {
         destroy_session(sess);
@@ -134,7 +134,7 @@ static int create_test_session(pj_stun_config  *stun_cfg,
     }
 
     /* Create test server */
-    status = create_test_server(sess->stun_cfg, cfg->srv.flags, SRV_DOMAIN, 
+    status = create_test_server(sess->stun_cfg, cfg->srv.flags, SRV_DOMAIN,
                                 &sess->test_srv);
     if (status != PJ_SUCCESS) {
         destroy_session(sess);
@@ -222,7 +222,7 @@ static void turn_on_rx_data(pj_turn_sock *turn_sock,
 }
 
 
-static void turn_on_state(pj_turn_sock *turn_sock, 
+static void turn_on_state(pj_turn_sock *turn_sock,
                           pj_turn_state_t old_state,
                           pj_turn_state_t new_state)
 {
@@ -263,13 +263,13 @@ static void turn_on_state(pj_turn_sock *turn_sock,
 
 /////////////////////////////////////////////////////////////////////
 
-static void set_server_flag(struct test_session_cfg *test_cfg, 
+static void set_server_flag(struct test_session_cfg *test_cfg,
                             pj_bool_t use_ipv6,
                             pj_turn_tp_type tp_type)
 {
     pj_uint32_t flag = TURN_UDP;
     test_cfg->srv.flags &= ~(SERVER_IPV4+SERVER_IPV6+
-                             TURN_UDP+TURN_TCP+TURN_TLS);    
+                             TURN_UDP+TURN_TCP+TURN_TLS);
     switch (tp_type) {
         case PJ_TURN_TP_TCP:
             flag = TURN_TCP;
@@ -283,14 +283,14 @@ static void set_server_flag(struct test_session_cfg *test_cfg,
     test_cfg->srv.flags |= ((use_ipv6)?SERVER_IPV6:SERVER_IPV4)+flag;
 }
 
-static int state_progression_test(pj_stun_config  *stun_cfg, 
+static int state_progression_test(pj_stun_config  *stun_cfg,
                                   pj_bool_t use_ipv6,
                                   pj_turn_tp_type tp_type)
 {
-    struct test_session_cfg test_cfg = 
+    struct test_session_cfg test_cfg =
     {
-        {   /* Client cfg */                    
-            PJ_TRUE,        /* DNS SRV */       
+        {   /* Client cfg */
+            PJ_TRUE,        /* DNS SRV */
             0xFFFF          /* Destroy on state */
         },
         {   /* Server cfg */
@@ -307,7 +307,7 @@ static int state_progression_test(pj_stun_config  *stun_cfg,
               use_ipv6?"IPv6":"IPv4",
               (tp_type==PJ_TURN_TP_UDP)?"UDP":
                 (tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
-    
+
     set_server_flag(&test_cfg, use_ipv6, tp_type);
     for (i=0; i<=1; ++i) {
         enum { TIMEOUT = 60 };
@@ -429,10 +429,10 @@ static int destroy_test(pj_stun_config  *stun_cfg,
                         pj_bool_t use_ipv6,
                         pj_turn_tp_type tp_type)
 {
-    struct test_session_cfg test_cfg = 
+    struct test_session_cfg test_cfg =
     {
-        {   /* Client cfg */        
-            PJ_TRUE,        /* DNS SRV */   
+        {   /* Client cfg */
+            PJ_TRUE,        /* DNS SRV */
             0xFFFF          /* Destroy on state */
         },
         {   /* Server cfg */
@@ -452,7 +452,7 @@ static int destroy_test(pj_stun_config  *stun_cfg,
                     (tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
 
     test_cfg.client.enable_dns_srv = with_dns_srv;
-    set_server_flag(&test_cfg, use_ipv6, tp_type);    
+    set_server_flag(&test_cfg, use_ipv6, tp_type);
 
     for (target_state=PJ_TURN_STATE_RESOLVING; target_state<=PJ_TURN_STATE_READY; ++target_state) {
         enum { TIMEOUT = 60 };
@@ -495,7 +495,7 @@ static int destroy_test(pj_stun_config  *stun_cfg,
                 poll_events(stun_cfg, 1, PJ_FALSE);
 
                 pj_turn_sock_get_info(sess->turn_sock, &info);
-                
+
                 if (info.state >= target_state) {
                     pj_turn_sock_destroy(sess->turn_sock);
                     break;
@@ -559,7 +559,7 @@ int turn_sock_test(void)
         }
 
         rc = state_progression_test(&stun_cfg, USE_IPV6, tp_type);
-        if (rc != 0) 
+        if (rc != 0)
             goto on_return;
 
         for (i=0; i<=1; ++i) {

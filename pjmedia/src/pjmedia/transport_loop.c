@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/transport_loop.h>
 #include <pj/array.h>
@@ -113,7 +113,7 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 static pj_status_t transport_destroy  (pjmedia_transport *tp);
 
 
-static pjmedia_transport_op transport_udp_op = 
+static pjmedia_transport_op transport_udp_op =
 {
     &transport_get_info,
     &transport_attach,
@@ -137,7 +137,7 @@ static pjmedia_transport_op transport_udp_op =
 PJ_DEF(void) pjmedia_loop_tp_setting_default(pjmedia_loop_tp_setting *opt)
 {
     pj_bzero(opt, sizeof(pjmedia_loop_tp_setting));
-    
+
     opt->af = pj_AF_INET();
     opt->max_attach_cnt = 4;
 }
@@ -245,7 +245,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     struct transport_loop *loop = (struct transport_loop*) tp;
 
     info->sock_info.rtp_sock = 1;
-    pj_sockaddr_init(loop->setting.af, &info->sock_info.rtp_addr_name, 
+    pj_sockaddr_init(loop->setting.af, &info->sock_info.rtp_addr_name,
                      &loop->setting.addr, (pj_uint16_t)loop->setting.port);
     info->sock_info.rtcp_sock = 2;
     pj_sockaddr_init(loop->setting.af, &info->sock_info.rtcp_addr_name,
@@ -318,11 +318,11 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 static pj_status_t transport_attach2(pjmedia_transport *tp,
                                      pjmedia_transport_attach_param *att_param)
 {
-    return tp_attach(tp, att_param->user_data, 
-                            (pj_sockaddr_t*)&att_param->rem_addr, 
-                            (pj_sockaddr_t*)&att_param->rem_rtcp, 
+    return tp_attach(tp, att_param->user_data,
+                            (pj_sockaddr_t*)&att_param->rem_addr,
+                            (pj_sockaddr_t*)&att_param->rem_rtcp,
                             att_param->addr_len, att_param->rtp_cb,
-                            att_param->rtp_cb2, 
+                            att_param->rtp_cb2,
                             att_param->rtcp_cb);
 }
 
@@ -361,7 +361,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     /* Simulate packet lost on TX direction */
     if (loop->tx_drop_pct) {
         if ((pj_rand() % 100) <= (int)loop->tx_drop_pct) {
-            PJ_LOG(5,(loop->base.name, 
+            PJ_LOG(5,(loop->base.name,
                       "TX RTP packet dropped because of pkt lost "
                       "simulation"));
             return PJ_SUCCESS;
@@ -371,7 +371,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     /* Simulate packet lost on RX direction */
     if (loop->rx_drop_pct) {
         if ((pj_rand() % 100) <= (int)loop->rx_drop_pct) {
-            PJ_LOG(5,(loop->base.name, 
+            PJ_LOG(5,(loop->base.name,
                       "RX RTP packet dropped because of pkt lost "
                       "simulation"));
             return PJ_SUCCESS;
@@ -390,7 +390,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
             param.size = size;
             (*loop->users[i].rtp_cb2)(&param);
         } else if (loop->users[i].rtp_cb) {
-            (*loop->users[i].rtp_cb)(loop->users[i].user_data, (void*)pkt, 
+            (*loop->users[i].rtp_cb)(loop->users[i].user_data, (void*)pkt,
                                      size);
         }
     }
@@ -489,7 +489,7 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 
     if (dir & PJMEDIA_DIR_ENCODING)
         loop->tx_drop_pct = pct_lost;
-    
+
     if (dir & PJMEDIA_DIR_DECODING)
         loop->rx_drop_pct = pct_lost;
 

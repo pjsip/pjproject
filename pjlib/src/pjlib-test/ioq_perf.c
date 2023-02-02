@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -67,7 +67,7 @@ static unsigned last_error_counter;
 typedef struct test_item
 {
     const char          *type_name;
-    pj_sock_t            server_fd, 
+    pj_sock_t            server_fd,
                          client_fd;
     pj_ioqueue_t        *ioqueue;
     pj_ioqueue_key_t    *server_key,
@@ -78,14 +78,14 @@ typedef struct test_item
     pj_size_t            buffer_size;
     char                *outgoing_buffer;
     char                *incoming_buffer;
-    pj_size_t            bytes_sent, 
+    pj_size_t            bytes_sent,
                          bytes_recv;
 } test_item;
 
 /* Callback when data has been read.
  * Increment item->bytes_recv and ready to read the next data.
  */
-static void on_read_complete(pj_ioqueue_key_t *key, 
+static void on_read_complete(pj_ioqueue_key_t *key,
                              pj_ioqueue_op_key_t *op_key,
                              pj_ssize_t bytes_read)
 {
@@ -134,7 +134,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         }
 
         item->bytes_recv += bytes_read;
-    
+
         /* To assure that the test quits, even if main thread
          * doesn't have time to run.
          */
@@ -178,12 +178,12 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 /* Callback when data has been written.
  * Increment item->bytes_sent and write the next data.
  */
-static void on_write_complete(pj_ioqueue_key_t *key, 
+static void on_write_complete(pj_ioqueue_key_t *key,
                               pj_ioqueue_op_key_t *op_key,
                               pj_ssize_t bytes_sent)
 {
     test_item *item = (test_item*) pj_ioqueue_get_user_data(key);
-    
+
     //TRACE_((THIS_FILE, "     write complete: sent = %d", bytes_sent));
 
     if (thread_quit_flag)
@@ -196,7 +196,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
                          -bytes_sent));
         }
         item->has_pending_send = 0;
-    } 
+    }
     else if (!item->has_pending_send) {
         pj_status_t rc;
 
@@ -238,9 +238,9 @@ static int worker_thread(void *p)
         if (rc < 0) {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(-rc, errmsg, sizeof(errmsg));
-            PJ_LOG(3, (THIS_FILE, 
+            PJ_LOG(3, (THIS_FILE,
                        "...error in pj_ioqueue_poll() in thread %d "
-                       "after %d loop: %s [pj_status_t=%d]", 
+                       "after %d loop: %s [pj_status_t=%d]",
                        arg->id, arg->loop_cnt, errmsg, -rc));
             //return -1;
             ++arg->err_cnt;
@@ -257,7 +257,7 @@ static int worker_thread(void *p)
  *  - create thread_cnt number of worker threads.
  *  - each producer will send buffer_size bytes data as fast and
  *    as soon as it can.
- *  - each consumer will read buffer_size bytes of data as fast 
+ *  - each consumer will read buffer_size bytes of data as fast
  *    as it could.
  *  - measure the total bytes received by all consumers during a
  *    period of time.
@@ -265,7 +265,7 @@ static int worker_thread(void *p)
 static int perform_test(const pj_ioqueue_cfg *cfg,
                         int sock_type, const char *type_name,
                         unsigned thread_cnt, unsigned sockpair_cnt,
-                        pj_size_t buffer_size, 
+                        pj_size_t buffer_size,
                         pj_bool_t display_report,
                         pj_size_t *p_bandwidth)
 {
@@ -324,7 +324,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
 
         /* Create socket pair. */
         TRACE_((THIS_FILE, "      calling socketpair.."));
-        rc = app_socketpair(pj_AF_INET(), sock_type, 0, 
+        rc = app_socketpair(pj_AF_INET(), sock_type, 0,
                             &items[i].server_fd, &items[i].client_fd);
         if (rc != PJ_SUCCESS) {
             app_perror("...error: unable to create socket pair", rc);
@@ -333,7 +333,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
 
         /* Register server socket to ioqueue. */
         TRACE_((THIS_FILE, "      register(1).."));
-        rc = pj_ioqueue_register_sock(pool, ioqueue, 
+        rc = pj_ioqueue_register_sock(pool, ioqueue,
                                       items[i].server_fd,
                                       &items[i], &ioqueue_callback,
                                       &items[i].server_key);
@@ -344,7 +344,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
 
         /* Register client socket to ioqueue. */
         TRACE_((THIS_FILE, "      register(2).."));
-        rc = pj_ioqueue_register_sock(pool, ioqueue, 
+        rc = pj_ioqueue_register_sock(pool, ioqueue,
                                       items[i].client_fd,
                                       &items[i],  &ioqueue_callback,
                                       &items[i].client_key);
@@ -387,10 +387,10 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
         arg->id = i;
         arg->ioqueue = ioqueue;
 
-        rc = pj_thread_create( pool, NULL, 
-                               &worker_thread, 
-                               arg, 
-                               PJ_THREAD_DEFAULT_STACK_SIZE, 
+        rc = pj_thread_create( pool, NULL,
+                               &worker_thread,
+                               arg,
+                               PJ_THREAD_DEFAULT_STACK_SIZE,
                                PJ_THREAD_SUSPENDED, &thread[i] );
         if (rc != PJ_SUCCESS) {
             app_perror("...error: unable to create thread", rc);
@@ -411,7 +411,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
             return -100;
     }
 
-    /* Wait for MSEC_DURATION seconds. 
+    /* Wait for MSEC_DURATION seconds.
      * This should be as simple as pj_thread_sleep(MSEC_DURATION) actually,
      * but unfortunately it doesn't work when system doesn't employ
      * timeslicing for threads.
@@ -473,7 +473,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     bandwidth = (pj_highprec_t)total_received;
     pj_highprec_mul(bandwidth, 1000);
     pj_highprec_div(bandwidth, total_elapsed_usec);
-    
+
     *p_bandwidth = (pj_uint32_t)bandwidth;
 
     if (display_report) {
@@ -524,7 +524,7 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
         const char *type_name;
         int         thread_cnt;
         int         sockpair_cnt;
-    } test_param[] = 
+    } test_param[] =
     {
         { pj_SOCK_DGRAM(), "udp", 1, 1},
         { pj_SOCK_DGRAM(), "udp", 2, 2},
@@ -553,11 +553,11 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
         pj_size_t bandwidth;
 
         rc = perform_test(cfg,
-                          test_param[i].type, 
+                          test_param[i].type,
                           test_param[i].type_name,
-                          test_param[i].thread_cnt, 
-                          test_param[i].sockpair_cnt, 
-                          BUF_SIZE, 
+                          test_param[i].thread_cnt,
+                          test_param[i].sockpair_cnt,
+                          BUF_SIZE,
                           PJ_FALSE,
                           &bandwidth);
         if (rc != 0)
@@ -567,18 +567,18 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
             best_bandwidth = bandwidth, best_index = i;
 
         /* Give it a rest before next test, to allow system to close the
-         * sockets properly. 
+         * sockets properly.
          */
         pj_thread_sleep(500);
     }
 
-    PJ_LOG(3,(THIS_FILE, 
+    PJ_LOG(3,(THIS_FILE,
               "   Best: Type=%s Threads=%d, Skt.Pairs=%d, Bandwidth=%u KB/s",
               test_param[best_index].type_name,
               test_param[best_index].thread_cnt,
               test_param[best_index].sockpair_cnt,
               best_bandwidth));
-    PJ_LOG(3,(THIS_FILE, "   (Note: packet size=%d, total errors=%u)", 
+    PJ_LOG(3,(THIS_FILE, "   (Note: packet size=%d, total errors=%u)",
                          BUF_SIZE, last_error_counter));
     return 0;
 }
@@ -654,7 +654,7 @@ int ioqueue_perf_test(void)
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_uiq_perf_test;
 #endif  /* INCLUDE_IOQUEUE_PERF_TEST */

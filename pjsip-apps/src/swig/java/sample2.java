@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,9 +13,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 package org.pjsip.pjsua2.app;
 
 import java.io.IOException;
@@ -33,7 +33,7 @@ import java.lang.reflect.Method;
 class MyObserver implements MyAppObserver {
         private static MyCall currentCall = null;
         private static boolean del_call_scheduled = false;
-        
+
         public void check_call_deletion()
         {
                 if (del_call_scheduled && currentCall != null) {
@@ -42,10 +42,10 @@ class MyObserver implements MyAppObserver {
                         del_call_scheduled = false;
                 }
         }
-        
+
         @Override
         public void notifyRegState(int code, String reason, long expiration) {}
-        
+
         @Override
         public void notifyIncomingCall(MyCall call) {
                 /* Auto answer. */
@@ -57,9 +57,9 @@ class MyObserver implements MyAppObserver {
                 } catch (Exception e) {
                         System.out.println(e);
                         return;
-                }       
+                }
         }
-        
+
         @Override
         public void notifyCallMediaState(MyCall call) {
         }
@@ -77,13 +77,13 @@ class MyObserver implements MyAppObserver {
                 if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
                         // Should not delete call instance here, so let's schedule it.
                         // The call will be deleted by our main worker thread.
-                        del_call_scheduled = true;                 
+                        del_call_scheduled = true;
                 } else if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED) {
                         if (ci.getSetting().getVideoCount() != 0) {
                                 System.out.println("Changing video window using " + sample2.hwnd);
                                 // Change window
-                                VideoWindowHandle vidWH = new VideoWindowHandle();      
-                                vidWH.getHandle().setWindow(sample2.hwnd);                  
+                                VideoWindowHandle vidWH = new VideoWindowHandle();
+                                vidWH.getHandle().setWindow(sample2.hwnd);
                                 try {
                                         currentCall.vidWin.setWindow(vidWH);
                                 } catch (Exception e) {
@@ -94,7 +94,7 @@ class MyObserver implements MyAppObserver {
         }
 
         @Override
-        public void notifyBuddyState(MyBuddy buddy) {}  
+        public void notifyBuddyState(MyBuddy buddy) {}
 
         @Override
         public void notifyChangeNetwork() {}
@@ -104,16 +104,16 @@ class MyThread extends Thread {
         private static MyApp app = new MyApp();
         private static MyObserver observer = new MyObserver();
         private static MyAccount account = null;
-        private static AccountConfig accCfg = null;                  
-        
+        private static AccountConfig accCfg = null;
+
         public void run() {
-                try {                                   
+                try {
                         app.init(observer, ".", true);
                 } catch (Exception e) {
                         System.out.println(e);
                         app.deinit();
                         System.exit(-1);
-                }                 
+                }
 
                 if (app.accList.size() == 0) {
                         accCfg = new AccountConfig();
@@ -121,23 +121,23 @@ class MyThread extends Thread {
                         account = app.addAcc(accCfg);
 
                         accCfg.setIdUri("sip:test1@pjsip.org");
-                        AccountSipConfig sipCfg = accCfg.getSipConfig();                
+                        AccountSipConfig sipCfg = accCfg.getSipConfig();
                         AuthCredInfoVector ciVec = sipCfg.getAuthCreds();
-                        ciVec.add(new AuthCredInfo("Digest", 
+                        ciVec.add(new AuthCredInfo("Digest",
                                         "*",
                                         "test1",
                                         0,
                                         "test1"));
 
                         StringVector proxy = sipCfg.getProxies();
-                        proxy.add("sip:sip.pjsip.org;transport=tcp");                                                   
+                        proxy.add("sip:sip.pjsip.org;transport=tcp");
 
                         AccountRegConfig regCfg = accCfg.getRegConfig();
                         regCfg.setRegistrarUri("sip:pjsip.org");
 
                         accCfg.getVideoConfig().setAutoTransmitOutgoing(true);
-                        accCfg.getVideoConfig().setAutoShowIncoming(true);                        
-                        account = app.addAcc(accCfg);                        
+                        accCfg.getVideoConfig().setAutoShowIncoming(true);
+                        account = app.addAcc(accCfg);
                 } else {
                         account = app.accList.get(0);
                         accCfg = account.cfg;
@@ -158,9 +158,9 @@ class MyThread extends Thread {
                         } catch (InterruptedException ie) {
                                 break;
                         }
-                }    
+                }
                 app.deinit();
-        }               
+        }
 }
 
 public class sample2 extends Application {
@@ -181,22 +181,22 @@ public class sample2 extends Application {
                         return 0;
                 }
         }
-        
+
         @Override
         public void start(Stage primaryStage) {
                 primaryStage.setTitle("Pjsua2 javafx sample");
-                StackPane root = new StackPane();                
+                StackPane root = new StackPane();
                 primaryStage.setScene(new Scene(root, 300, 250));
                 primaryStage.show();
                 hwnd = getWindowPointer(primaryStage);
                 myThread.start();
-        }          
+        }
         @Override
         public void stop() throws Exception {
                 myThread.interrupt();
                 myThread.join();
-        }                
+        }
         public static void main(String argv[]) {
                 launch(argv);
-        }        
+        }
 }

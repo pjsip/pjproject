@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 /**
@@ -82,7 +82,7 @@ static void send_request(const pjsip_method *method,
                          pj_bool_t with_offer)
 {
     pjsip_tx_data *tdata;
-    pj_str_t dummy_sdp_str = 
+    pj_str_t dummy_sdp_str =
     {
         "v=0\r\n"
         "o=- 3360842071 3360842071 IN IP4 192.168.0.68\r\n"
@@ -116,8 +116,8 @@ static void send_request(const pjsip_method *method,
 
 
         dummy_sdp_str.slen = pj_ansi_strlen(dummy_sdp_str.ptr);
-        body = pjsip_msg_body_create(tdata->pool, 
-                                     &mime_application, &mime_sdp, 
+        body = pjsip_msg_body_create(tdata->pool,
+                                     &mime_application, &mime_sdp,
                                      &dummy_sdp_str);
         tdata->msg->body = body;
     }
@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
     pj_thread_t *thread;
     pj_pool_t *pool;
     pj_status_t status;
-    
+
     if (argc != 2) {
         puts("Error: destination URL needed");
         return 0;
@@ -215,12 +215,12 @@ int main(int argc, char *argv[])
 
 
     /* Create the endpoint: */
-    status = pjsip_endpt_create(&cp.factory, "sipstateless", 
+    status = pjsip_endpt_create(&cp.factory, "sipstateless",
                                 &sip_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
-    /* 
-     * Add UDP transport, with hard-coded port 
+    /*
+     * Add UDP transport, with hard-coded port
      */
     {
         pj_sockaddr_in addr;
@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
 
         status = pjsip_udp_transport_start( sip_endpt, &addr, NULL, 1, NULL);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(3,(THIS_FILE, 
+            PJ_LOG(3,(THIS_FILE,
                       "Error starting UDP transport (port in use?)"));
             return 1;
         }

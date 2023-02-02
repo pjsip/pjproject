@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib-util.h>
@@ -44,12 +44,12 @@ static char *sha1_test_results[] = {
 };
 
 
-static void digest_to_hex(const pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE], 
+static void digest_to_hex(const pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE],
                           char *output)
 {
     int i,j;
     char *c = output;
-    
+
     for (i = 0; i < PJ_SHA1_DIGEST_SIZE/4; i++) {
         for (j = 0; j < 4; j++) {
             sprintf(c,"%02X", digest[i*4+j] & 0xFF);
@@ -72,10 +72,10 @@ static int sha1_test1(void)
     pj_uint8_t *block;
 
     PJ_LOG(3, (THIS_FILE, "  SHA1 test vector 1 from sha1.c.."));
-    
-    for (k = 0; k < 2; k++){ 
+
+    for (k = 0; k < 2; k++){
         pj_sha1_init(&context);
-        pj_sha1_update(&context, (pj_uint8_t*)sha1_test_data[k], 
+        pj_sha1_update(&context, (pj_uint8_t*)sha1_test_data[k],
                        pj_ansi_strlen(sha1_test_data[k]));
         pj_sha1_final(&context, digest);
         digest_to_hex(digest, output);
@@ -207,7 +207,7 @@ struct rfc2202_test
 };
 
 
-struct rfc2202_test rfc2202_test_vector[] = 
+struct rfc2202_test rfc2202_test_vector[] =
 {
     {
         "\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b",
@@ -331,9 +331,9 @@ static int rfc2202_test(void)
 
     /* Verify that test vectors are valid */
     for (i=0; i<PJ_ARRAY_SIZE(rfc2202_test_vector); ++i) {
-        PJ_ASSERT_RETURN(pj_ansi_strlen(rfc2202_test_vector[i].input) == 
+        PJ_ASSERT_RETURN(pj_ansi_strlen(rfc2202_test_vector[i].input) ==
                             rfc2202_test_vector[i].input_len, -50);
-        PJ_ASSERT_RETURN(pj_ansi_strlen(rfc2202_test_vector[i].key) == 
+        PJ_ASSERT_RETURN(pj_ansi_strlen(rfc2202_test_vector[i].key) ==
                             rfc2202_test_vector[i].key_len, -52);
         PJ_ASSERT_RETURN(rfc2202_test_vector[i].md5_digest==NULL ||
                             pj_ansi_strlen(rfc2202_test_vector[i].md5_digest)<=16,
@@ -356,9 +356,9 @@ static int rfc2202_test(void)
 
         digest = digest_buf+1;
 
-        pj_hmac_md5((pj_uint8_t*)rfc2202_test_vector[i].input, 
+        pj_hmac_md5((pj_uint8_t*)rfc2202_test_vector[i].input,
                     rfc2202_test_vector[i].input_len,
-                    (pj_uint8_t*)rfc2202_test_vector[i].key, 
+                    (pj_uint8_t*)rfc2202_test_vector[i].key,
                     rfc2202_test_vector[i].key_len,
                     digest);
 
@@ -388,9 +388,9 @@ static int rfc2202_test(void)
 
         digest = digest_buf+1;
 
-        pj_hmac_sha1((pj_uint8_t*)rfc2202_test_vector[i].input, 
+        pj_hmac_sha1((pj_uint8_t*)rfc2202_test_vector[i].input,
                      rfc2202_test_vector[i].input_len,
-                     (pj_uint8_t*)rfc2202_test_vector[i].key, 
+                     (pj_uint8_t*)rfc2202_test_vector[i].key,
                      rfc2202_test_vector[i].key_len,
                      digest);
 
@@ -417,7 +417,7 @@ struct crc32_test_t
 {
     char            *input;
     pj_uint32_t      crc;
-} crc32_test_data[] = 
+} crc32_test_data[] =
 {
     {
         "",
@@ -484,7 +484,7 @@ static int crc32_test(void)
         crc1 = pj_crc32_final(&ctx);
 
         if (crc0 != crc1) {
-            PJ_LOG(3,(THIS_FILE, 
+            PJ_LOG(3,(THIS_FILE,
                       "    error: crc algorithm error on test %d", i));
             return -85;
         }
@@ -508,7 +508,7 @@ static struct base64_test_vec
     const char *base256;
     const char *base64;
     unsigned flag;
-} base64_test_vec[] = 
+} base64_test_vec[] =
 {
     {
         "",
@@ -681,7 +681,7 @@ int encryption_benchmark()
         void (*update)(void*, const pj_uint8_t*, unsigned);
         void (*final)(void*, void*);
         pj_uint32_t t;
-    } algorithms[] = 
+    } algorithms[] =
     {
         {
             "MD5  ",
@@ -718,7 +718,7 @@ int encryption_benchmark()
 
     input = (pj_uint8_t*)pj_pool_alloc(pool, input_len);
     pj_memset(input, '\xaa', input_len);
-    
+
     PJ_LOG(3, (THIS_FILE, "  feeding %d Mbytes of data",
                (unsigned)(total_len/1024/1024)));
 
