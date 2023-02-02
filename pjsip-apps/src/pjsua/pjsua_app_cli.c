@@ -163,7 +163,7 @@ void displayLog(const char *msg, int len);
 pj_status_t cli_setup_command(pj_cli_t *cli);
 void cli_destroy(void);
 
-PJ_DEF(void) cli_get_info(char *info, pj_size_t size)
+void cli_get_info(char *info, pj_size_t size)
 {
     pj_cli_telnet_info telnet_info;
     pj_cli_telnet_get_info(telnet_front_end, &telnet_info);
