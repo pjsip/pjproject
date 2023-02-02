@@ -33,8 +33,8 @@ struct VidView: UIViewRepresentable {
             if (!vid_win.isDescendant(of: uiView)) {
                 uiView.addSubview(vid_win);
                 vid_win.center = uiView.center;
-                uiView.autoresizesSubviews = true;
-                vid_win.autoresizingMask = [.flexibleWidth, .flexibleHeight];
+                vid_win.frame = uiView.bounds;
+                vid_win.contentMode = .scaleAspectFit;
             }
         }
     }
