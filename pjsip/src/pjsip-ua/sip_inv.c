@@ -68,7 +68,7 @@ static const char *inv_state_names[] =
     "EARLY",
     "CONNECTING",
     "CONFIRMED",
-    "DISCONNCTD",
+    "DISCONNECTED",
     "TERMINATED",
 };
 
