@@ -620,9 +620,15 @@ struct AccountNatConfig : public PersistentObject
      * This will also update the public name of UDP transport if STUN is
      * configured.
      *
+     * Possible values:
+     * * 0 (disabled).
+     * * 1 (enabled). Update except if both Contact and server's IP address
+     * are public but response contains private IP.
+     * * 2 (enabled). Update without exception.
+     *
      * See also contactRewriteMethod field.
      *
-     * Default: 1 (PJ_TRUE / yes)
+     * Default: 1
      */
     int                 contactRewriteUse;
 
