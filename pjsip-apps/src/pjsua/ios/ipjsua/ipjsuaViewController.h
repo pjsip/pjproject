@@ -23,6 +23,5 @@
 @interface ipjsuaViewController : UIViewController
 
 @property (nonatomic, retain) IBOutlet UILabel *textLabel;
-@property (nonatomic, retain) IBOutlet UIView *preview;
 
 @end

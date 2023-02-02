@@ -358,29 +358,22 @@ void displayWindow(pjsua_vid_win_id wid)
             wi.hwnd.info.ios.window)
         {
             dispatch_async(dispatch_get_main_queue(), ^{
+                UIView *parent = app.viewController.view;
+                UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
+
+                if (![view isDescendantOfView:parent])
+                    [parent addSubview:view];
+
                 if (!wi.is_native) {
                     /* Video window */
-                    UIView *parent = app.viewController.view;
-                    UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
-
-                    /* Add the video window as subview */
-                    if (![view isDescendantOfView:parent])
-                        [parent addSubview:view];
-
+                    view.contentMode = UIViewContentModeScaleAspectFit;
                     view.center = parent.center;
-                    parent.autoresizesSubviews = true;
-                    view.autoresizingMask = UIViewAutoresizingFlexibleWidth |
-                                            UIViewAutoresizingFlexibleHeight;
+                    view.frame = parent.bounds;
                 } else {
                     /* Preview window */
-                    UIView *parent = app.viewController.preview;
-                    CALayer *layer = (__bridge CALayer *)
-                                     wi.hwnd.info.ios.window;
-
-                    /* Add the preview layer as sublayer */
-                    layer.frame = parent.bounds;
-                    if (![layer superlayer])
-                        [parent.layer addSublayer:layer];
+                    view.contentMode = UIViewContentModeBottomLeft;
+                    view.frame = CGRectMake(0, parent.frame.size.height - view.frame.size.height,
+                                            view.frame.size.width, view.frame.size.height);
                 }
             });
         }

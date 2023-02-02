@@ -139,7 +139,6 @@ struct darwin_stream
     AVCaptureVideoDataOutput    *video_output;
     VOutDelegate                *vout_delegate;
     dispatch_queue_t             queue;
-    AVCaptureVideoPreviewLayer  *prev_layer;
     
     pj_bool_t            is_running;
 #if TARGET_OS_IPHONE
@@ -148,6 +147,8 @@ struct darwin_stream
     pj_size_t            render_buf_size;
     CGDataProviderRef    render_data_provider;
     UIView              *render_view;
+    AVCaptureVideoPreviewLayer  *prev_layer;
+    UIView                      *prev_view;
 #endif
 
     pj_timestamp         frame_ts;
@@ -231,6 +232,7 @@ static void set_preset_str()
 #endif
 }
 
+#if TARGET_OS_IPHONE
 static void dispatch_sync_on_main_queue(void (^block)(void))
 {
     if ([NSThread isMainThread]) {
@@ -239,6 +241,7 @@ static void dispatch_sync_on_main_queue(void (^block)(void))
         dispatch_sync(dispatch_get_main_queue(), block);
     }
 }
+#endif
 
 /****************************************************************************
  * Factory operations
@@ -1015,16 +1018,16 @@ static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *s,
 #if TARGET_OS_IPHONE
         case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
         {
-            pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*) pval;
+            pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd *) pval;
             hwnd->type = PJMEDIA_VID_DEV_HWND_TYPE_IOS;
-            hwnd->info.ios.window = (void*)strm->prev_layer;
+            hwnd->info.ios.window = (void *)strm->prev_view;
             return PJ_SUCCESS;
         }
         case PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW:
         {
-            pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*) pval;
+            pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd *) pval;
             hwnd->type = PJMEDIA_VID_DEV_HWND_TYPE_IOS;
-            hwnd->info.ios.window = (void*)strm->render_view;
+            hwnd->info.ios.window = (void *)strm->render_view;
             return PJ_SUCCESS;
         }
 #endif /* TARGET_OS_IPHONE */
@@ -1083,6 +1086,21 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                                    initWithSession:strm->cap_session];
                 strm->prev_layer.videoGravity =
                     AVLayerVideoGravityResizeAspectFill;
+
+                /* Create preview view and init it at smaller size than
+                 * the actual video.
+                 */
+                if (!strm->prev_view) {
+                    CGRect rect;
+                    rect = CGRectMake(0, 0, strm->param.fmt.det.vid.size.w/2,
+                                      strm->param.fmt.det.vid.size.h/2);
+                    strm->prev_view = [[UIView alloc] initWithFrame:rect];
+                }
+
+                /* Add the preview layer as sublayer */
+                strm->prev_layer.frame = strm->prev_view.bounds;
+                [strm->prev_view.layer addSublayer:strm->prev_layer];
+
             });
             PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
             
@@ -1192,8 +1210,6 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                 r.size = CGSizeMake(strm->param.disp_size.w,
                                     strm->param.disp_size.h);
                 strm->render_view.bounds = r;
-                if (strm->prev_layer)
-                    strm->prev_layer.frame = r;
             });
             return PJ_SUCCESS;
         }
@@ -1443,6 +1459,15 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
 
         [stream->render_view release];
         stream->render_view = nil;
+    }
+
+    if (stream->prev_view) {
+        [stream->prev_view
+            performSelectorOnMainThread:@selector(removeFromSuperview)
+            withObject:nil waitUntilDone:YES];
+
+        [stream->prev_view release];
+        stream->prev_view = nil;
     }
     
     if (stream->render_data_provider) {
