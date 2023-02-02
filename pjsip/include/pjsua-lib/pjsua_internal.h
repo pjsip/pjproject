@@ -80,10 +80,8 @@ struct pjsua_call_media
                                          bit 1     : timestamp flag         */
 
     pjmedia_type         prev_type;            /**< Previous media type     */
-    pj_sockaddr          prev_aud_local_addr;  /**< Prev aud local address  */
-    pj_sockaddr          prev_aud_rem_addr;    /**< Prev aud remote address */
-    pj_sockaddr          prev_vid_local_addr;  /**< Prev vid local address  */
-    pj_sockaddr          prev_vid_rem_addr;    /**< Prev vid remote address */
+    pj_sockaddr          prev_local_addr;      /**< Prev media local address*/
+    pj_sockaddr          prev_rem_addr;        /**< Prev media remote addr  */
     pj_bool_t            prev_srtp_use;        /**< Prev SRTP use           */
     pjmedia_srtp_info    prev_srtp_info;       /**< Prev SRTP transport info*/
     pj_bool_t            prev_ice_use;         /**< Prev ICE use            */

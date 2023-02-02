@@ -1337,8 +1337,8 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     pj_log_push_indent();
     
     pjmedia_vid_stream_get_info(strm, &prev_vid_si);
-    call_med->prev_vid_local_addr = prev_vid_si.local_addr;
-    call_med->prev_vid_rem_addr = prev_vid_si.rem_addr;
+    call_med->prev_local_addr = prev_vid_si.local_addr;
+    call_med->prev_rem_addr = prev_vid_si.rem_addr;
 
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
