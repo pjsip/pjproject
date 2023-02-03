@@ -2695,7 +2695,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         jb_max_pre = info->jb_max_pre / stream->codec_param.info.frm_ptime;
     else
         //jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
-        jb_max_pre = jb_max * 4 / 5;
+        jb_max_pre = PJ_MAX(1, jb_max * 4 / 5);
 
     if (info->jb_init >= stream->codec_param.info.frm_ptime)
         jb_init = info->jb_init / stream->codec_param.info.frm_ptime;
