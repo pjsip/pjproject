@@ -1325,6 +1325,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 {
     pjmedia_vid_stream *strm = call_med->strm.v.stream;
     pjmedia_rtcp_stat stat;
+    pjmedia_vid_stream_info prev_vid_si;
     unsigned num_locks = 0;
 
     pj_assert(call_med->type == PJMEDIA_TYPE_VIDEO);
@@ -1335,7 +1336,9 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     PJ_LOG(4,(THIS_FILE, "Stopping video stream.."));
     pj_log_push_indent();
     
-    pjmedia_vid_stream_get_info(strm, &call_med->prev_vid_si);
+    pjmedia_vid_stream_get_info(strm, &prev_vid_si);
+    call_med->prev_local_addr = prev_vid_si.local_addr;
+    call_med->prev_rem_addr = prev_vid_si.rem_addr;
 
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
