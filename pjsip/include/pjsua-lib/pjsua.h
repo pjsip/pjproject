@@ -3974,11 +3974,17 @@ typedef struct pjsua_acc_config
      * unregister current Contact, update the Contact with transport address
      * learned from Via header, and register a new Contact to the registrar.
      * This will also update the public name of UDP transport if STUN is
-     * configured. 
+     * configured.
      *
+     * Possible values:
+     * * 0 (disabled).
+     * * 1 (enabled). Update except if both Contact and server's IP address
+     * are public but response contains private IP.
+     * * 2 (enabled). Update without exception.
+     * 
      * See also contact_rewrite_method field.
      *
-     * Default: 1 (yes)
+     * Default: 1
      */
     pj_bool_t allow_contact_rewrite;
 
