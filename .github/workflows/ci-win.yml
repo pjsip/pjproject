@@ -6,12 +6,12 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get swig
-      run: Invoke-WebRequest -Uri "http://nchc.dl.sourceforge.net/project/swig/swigwin/swigwin-4.0.1/swigwin-4.0.1.zip"  -OutFile ".\swigwin.zip"
+      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/swigwin-4.1.1.zip"  -OutFile ".\swigwin.zip"
       shell: powershell
     - name: expand swig
       run: |
         Expand-Archive -LiteralPath .\swigwin.zip -DestinationPath .\swigwin\; pwd
-        cd swigwin\swigwin-4.0.1
+        cd swigwin\swigwin-4.1.1
         Add-Content ..\..\swig_path.txt $pwd.Path
       shell: powershell
     - name: config site
