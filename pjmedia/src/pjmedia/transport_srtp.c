@@ -381,7 +381,7 @@ static pj_status_t transport_attach2  (pjmedia_transport *tp,
                                        pjmedia_transport_attach_param *param);
 
 
-
+// clang-format off
 static pjmedia_transport_op transport_srtp_op =
 {
     &transport_get_info,
@@ -398,6 +398,7 @@ static pjmedia_transport_op transport_srtp_op =
     &transport_destroy,
     &transport_attach2
 };
+// clang-format on
 
 /* Get crypto index from crypto name */
 static int get_crypto_idx(const pj_str_t* crypto_name);
@@ -423,6 +424,7 @@ PJ_END_DECL
 const char* get_libsrtp_errstr(int err)
 {
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
+    // clang-format off
     static char *liberr[] = {
         "ok",                               /* srtp_err_status_ok       = 0  */
         "unspecified failure",              /* err_status_fail          = 1  */
@@ -453,6 +455,7 @@ const char* get_libsrtp_errstr(int err)
         "error while using semaphores",     /* err_status_semaphore_err = 23 */
         "error while using pfkey"           /* err_status_pfkey_err     = 24 */
     };
+    // clang-format on
     if (err >= 0 && err < (int)PJ_ARRAY_SIZE(liberr)) {
         return liberr[err];
     } else {

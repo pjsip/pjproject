@@ -68,6 +68,7 @@ enum
  * This enumeration describes standard DNS record types as described by
  * RFC 1035, RFC 2782, and others.
  */
+// clang-format off
 typedef enum pj_dns_type
 {
     PJ_DNS_TYPE_A       = 1,    /**< Host address (A) record.               */
@@ -119,6 +120,7 @@ typedef enum pj_dns_type
     PJ_DNS_TYPE_NSEC    = 47,   /**< DNS Next Secure Name.                  */
     PJ_DNS_TYPE_DNSKEY  = 48    /**< DNSSEC Key.                            */
 } pj_dns_type;
+// clang-format on
 
 
 

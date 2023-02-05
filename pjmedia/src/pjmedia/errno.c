@@ -37,6 +37,7 @@ PJ_END_DECL
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
+// clang-format off
 static const struct 
 {
     int code;
@@ -174,6 +175,7 @@ static const struct
 #endif
 
 };
+// clang-format on
 
 #endif  /* PJ_HAS_ERROR_STRING */
 

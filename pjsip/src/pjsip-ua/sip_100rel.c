@@ -32,11 +32,13 @@
 #define THIS_FILE       "sip_100rel.c"
 
 /* PRACK method */
+// clang-format off
 PJ_DEF_DATA(const pjsip_method) pjsip_prack_method =
 {
     PJSIP_OTHER_METHOD,
     { "PRACK", 5 }
 };
+// clang-format on
 
 typedef struct dlg_data dlg_data;
 

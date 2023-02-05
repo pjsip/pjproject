@@ -62,6 +62,7 @@
 /* VPX VP9 default PT */
 #define VPX_VP9_PT              PJMEDIA_RTP_PT_VP9
 
+
 /*
  * Factory operations.
  */
@@ -108,6 +109,7 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
                                      unsigned out_size,
                                      pjmedia_frame *output);
 
+// clang-format off
 /* Definition for VPX codecs operations. */
 static pjmedia_vid_codec_op vpx_codec_op =
 {
@@ -131,6 +133,7 @@ static pjmedia_vid_codec_factory_op vpx_factory_op =
     &vpx_alloc_codec,
     &vpx_dealloc_codec
 };
+// clang-format on
 
 
 static struct vpx_factory

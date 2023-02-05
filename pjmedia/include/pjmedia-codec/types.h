@@ -35,6 +35,7 @@
  */
 
 
+// clang-format off
 
 /**
  * These are the dynamic payload types that are used by audio codecs in
@@ -136,6 +137,7 @@ enum pjmedia_video_pt
       */
 };
 
+// clang-format on
 
 /**
  * @}

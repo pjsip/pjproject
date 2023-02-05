@@ -362,6 +362,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 static void on_call_generic_media_state(pjsua_call_info *ci, unsigned mi,
                                         pj_bool_t *has_error)
 {
+    // clang-format off
     const char *status_name[] = {
         "None",
         "Active",
@@ -369,6 +370,7 @@ static void on_call_generic_media_state(pjsua_call_info *ci, unsigned mi,
         "Remote hold",
         "Error"
     };
+    // clang-format on
 
     PJ_UNUSED_ARG(has_error);
 

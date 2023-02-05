@@ -87,6 +87,7 @@ static pjsip_uri *create_dummy( pj_pool_t *pool );
 #define ERR_NOT_EQUAL   -1001
 #define ERR_SYNTAX_ERR  -1002
 
+// clang-format off
 struct uri_test
 {
     pj_status_t      status;
@@ -365,6 +366,7 @@ struct uri_test
     }
 
 };
+// clang-format on
 
 static pjsip_uri *create_uri0(pj_pool_t *pool)
 {

@@ -95,6 +95,7 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
                                   unsigned output_buf_len, 
                                   struct pjmedia_frame *output);
 
+// clang-format off
 /* Definition for G722.1 codec operations. */
 static pjmedia_codec_op codec_op = 
 {
@@ -118,7 +119,7 @@ static pjmedia_codec_factory_op codec_factory_op =
     &dealloc_codec,
     &pjmedia_codec_g7221_deinit
 };
-
+// clang-format on
 
 /* Structure of G722.1 mode */
 typedef struct codec_mode
@@ -129,7 +130,6 @@ typedef struct codec_mode
     unsigned         bitrate;           /* Bitrate.                         */
     char             bitrate_str[8];    /* Bitrate in string.               */
 } codec_mode;
-
 
 /* G722.1 codec factory */
 static struct codec_factory {

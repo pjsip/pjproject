@@ -53,6 +53,7 @@
 #   define TRACE_(expr)
 #endif
 
+
 /* Prototypes for G722 factory */
 static pj_status_t g722_test_alloc(pjmedia_codec_factory *factory, 
                                    const pjmedia_codec_info *id );
@@ -96,6 +97,7 @@ static pj_status_t  g722_codec_recover(pjmedia_codec *codec,
                                       struct pjmedia_frame *output);
 #endif
 
+// clang-format off
 /* Definition for G722 codec operations. */
 static pjmedia_codec_op g722_op = 
 {
@@ -123,6 +125,7 @@ static pjmedia_codec_factory_op g722_factory_op =
     &g722_dealloc_codec,
     &pjmedia_codec_g722_deinit
 };
+// clang-format on
 
 /* G722 factory */
 static struct g722_codec_factory

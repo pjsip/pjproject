@@ -21,6 +21,7 @@
 #include <pjmedia.h>
 #include <pjmedia-codec.h>
 
+// clang-format off
 static const char *USAGE =
 "pcaputil [options] INPUT OUTPUT\n"
 "\n"
@@ -63,6 +64,7 @@ static const char *USAGE =
 "             file.pcap output.wav\n"
 "\n"
 ;
+// clang-format on
 
 static struct app
 {
@@ -433,6 +435,7 @@ int main(int argc, char *argv[])
         OPT_SRC_IP = 1, OPT_DST_IP, OPT_SRC_PORT, OPT_DST_PORT,
         OPT_CODEC, OPT_PLAY_DEV_ID
     };
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "srtp-crypto",    1, 0, 'c' },
         { "srtp-key",       1, 0, 'k' },
@@ -444,6 +447,7 @@ int main(int argc, char *argv[])
         { "play-dev-id",    1, 0, OPT_PLAY_DEV_ID },
         { NULL, 0, 0, 0}
     };
+    // clang-format on
     int c;
     int option_index;
     char key_bin[32];

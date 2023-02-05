@@ -39,6 +39,7 @@
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
+// clang-format off
 static const struct 
 {
     int code;
@@ -59,6 +60,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_EAUD_BADLATENCY,  "Bad audio latency setting")
 
 };
+// clang-format on
 
 #endif  /* PJ_HAS_ERROR_STRING */
 

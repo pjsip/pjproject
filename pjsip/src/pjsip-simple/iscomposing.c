@@ -24,6 +24,7 @@
 #include <pj/string.h>
 
 
+// clang-format off
 /* MIME */
 static const pj_str_t STR_MIME_TYPE = { "application", 11 };
 static const pj_str_t STR_MIME_SUBTYPE = { "im-iscomposing+xml", 18 };
@@ -46,6 +47,7 @@ static const pj_str_t STR_XMLNS_XSI_NAME = { "xmlns:xsi", 9 };
 static const pj_str_t STR_XMLNS_XSI_VAL  = { "http://www.w3.org/2001/XMLSchema-instance", 41 };
 static const pj_str_t STR_XSI_SLOC_NAME =  { "xsi:schemaLocation", 18 };
 static const pj_str_t STR_XSI_SLOC_VAL =   { "urn:ietf:params:xml:ns:im-composing iscomposing.xsd", 51 };
+// clang-format on
 
 
 PJ_DEF(pj_xml_node*) pjsip_iscomposing_create_xml( pj_pool_t *pool,

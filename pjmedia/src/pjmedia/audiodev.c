@@ -25,6 +25,7 @@
 
 #define THIS_FILE   "audiodev.c"
 
+// clang-format off
 #define DEFINE_CAP(name, info)  {name, info}
 
 /* Capability names */
@@ -49,6 +50,7 @@ static struct cap_info
     DEFINE_CAP("cng",         "Comfort noise generation"),
     DEFINE_CAP("plg",         "Packet loss concealment")
 };
+// clang-format on
 
 
 /*

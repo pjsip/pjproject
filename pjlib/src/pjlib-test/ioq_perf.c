@@ -519,6 +519,7 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
 {
     enum { BUF_SIZE = 512 };
     int i, rc;
+    // clang-format off
     struct {
         int         type;
         const char *type_name;
@@ -538,6 +539,7 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
         { pj_SOCK_STREAM(), "tcp", 8, 8},
         { pj_SOCK_STREAM(), "tcp", 16, 16},
     };
+    // clang-format on
     pj_size_t best_bandwidth;
     int best_index = 0;
 

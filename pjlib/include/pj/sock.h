@@ -443,6 +443,7 @@ extern const int PJ_MSG_DONTROUTE;
 #endif
 
 
+
 /**
  * Flag to be specified in #pj_sock_shutdown().
  */
@@ -578,11 +579,13 @@ typedef struct in6_addr pj_in6_addr;
 #endif
 
 
+// clang-format off
 /** Initializer value for pj_in6_addr. */
 #define PJ_IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
 
 /** Initializer value for pj_in6_addr. */
 #define PJ_IN6ADDR_LOOPBACK_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 } } }
+// clang-format on
 
 /**
  * This structure describes IPv6 socket address.

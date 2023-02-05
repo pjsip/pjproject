@@ -95,6 +95,7 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
                                   unsigned output_buf_len,
                                   struct pjmedia_frame *output);
 
+// clang-format off
 /* Definition for Opus operations. */
 static pjmedia_codec_op opus_op = 
 {
@@ -118,7 +119,7 @@ static pjmedia_codec_factory_op opus_factory_op =
     &factory_dealloc_codec,
     &pjmedia_codec_opus_deinit
 };
-
+// clang-format on
 
 /* Opus factory */
 struct opus_codec_factory

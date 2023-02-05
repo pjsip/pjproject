@@ -37,6 +37,7 @@
 
 PJ_BEGIN_DECL
 
+// clang-format off
 
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.
@@ -663,6 +664,7 @@ PJ_BEGIN_DECL
 
 #endif /* PJMEDIA_HAS_SRTP */
 
+// clang-format on
 
 /**
  * Get error message for the specified error code. Note that this

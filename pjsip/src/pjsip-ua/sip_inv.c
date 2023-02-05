@@ -60,6 +60,7 @@
 
 #define THIS_FILE       "sip_inv.c"
 
+// clang-format off
 static const char *inv_state_names[] =
 {
     "NULL",
@@ -78,6 +79,7 @@ static const pjsip_method pjsip_update_method =
     PJSIP_OTHER_METHOD,
     { "UPDATE", 6 }
 };
+// clang-format on
 
 #define POOL_INIT_SIZE  256
 #define POOL_INC_SIZE   256
@@ -119,6 +121,7 @@ static pj_bool_t inv_check_secure_dlg(pjsip_inv_session *inv,
 
 static int print_sdp(pjsip_msg_body *body, char *buf, pj_size_t len);
 
+// clang-format off
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
     &inv_on_state_null,
@@ -129,6 +132,7 @@ static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) =
     &inv_on_state_confirmed,
     &inv_on_state_disconnected,
 };
+// clang-format on
 
 static struct mod_inv
 {
@@ -173,7 +177,7 @@ struct tsx_inv_data
 static pj_status_t mod_inv_load(pjsip_endpoint *endpt)
 {
     pj_str_t allowed[] = {{"INVITE", 6}, {"ACK",3}, {"BYE",3}, {"CANCEL",6},
-                            { "UPDATE", 6}};
+                            { "UPDATE", 6},};
     pj_str_t accepted = { "application/sdp", 15 };
 
     /* Register supported methods: INVITE, ACK, BYE, CANCEL, UPDATE */

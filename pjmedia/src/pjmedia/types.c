@@ -33,7 +33,7 @@ static pjmedia_type_map media_type_names[] = {
     {PJMEDIA_TYPE_AUDIO,        "audio"},
     {PJMEDIA_TYPE_VIDEO,        "video"},
     {PJMEDIA_TYPE_APPLICATION,  "application"},
-    {PJMEDIA_TYPE_UNKNOWN,      "unknown"}
+    {PJMEDIA_TYPE_UNKNOWN,      "unknown"},
 };
 
 /*

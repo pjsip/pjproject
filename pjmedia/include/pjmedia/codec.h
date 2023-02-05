@@ -67,7 +67,8 @@ PJ_BEGIN_DECL
  *
  * @subsection codec_inst Codec Instance
  *
- * Application allocates codec instance by calling #pjmedia_codec_mgr_alloc_codec().
+ * Application allocates codec instance by calling
+ * #pjmedia_codec_mgr_alloc_codec().
  * One codec instance (#pjmedia_codec) can be used for simultaneous encoding
  * and decoding.
  *
@@ -193,6 +194,7 @@ PJ_BEGIN_DECL
  * type numbers that are used by PJMEDIA when advertising the capability
  * for example in SDP message.
  */
+// clang-format off
 enum pjmedia_rtp_pt
 {
     PJMEDIA_RTP_PT_PCMU = 0,        /**< audio PCMU                         */
@@ -225,6 +227,7 @@ enum pjmedia_rtp_pt
     PJMEDIA_RTP_PT_DYNAMIC = 96     /**< start of dynamic RTP payload       */
 
 };
+// clang-format on
 
 
 /** 

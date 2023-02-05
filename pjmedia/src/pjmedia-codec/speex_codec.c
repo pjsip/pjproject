@@ -34,7 +34,6 @@
  */
 #if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
 
-
 #define THIS_FILE   "speex_codec.c"
 
 /* Prototypes for Speex factory */
@@ -78,6 +77,7 @@ static pj_status_t  spx_codec_recover(pjmedia_codec *codec,
                                       unsigned output_buf_len, 
                                       struct pjmedia_frame *output);
 
+// clang-format off
 /* Definition for Speex codec operations. */
 static pjmedia_codec_op spx_op = 
 {
@@ -101,6 +101,7 @@ static pjmedia_codec_factory_op spx_factory_op =
     &spx_dealloc_codec,
     &pjmedia_codec_speex_deinit
 };
+// clang-format on
 
 /* Index to Speex parameter. */
 enum

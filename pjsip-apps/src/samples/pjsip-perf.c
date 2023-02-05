@@ -102,7 +102,7 @@ static pj_str_t dummy_sdp_str =
     "a=sendrecv\r\n"
     "a=rtpmap:101 telephone-event/8000\r\n"
     "a=fmtp:101 0-15\r\n",
-    0
+    0,
 };
 
 static pj_str_t mime_application = { "application", 11};
@@ -1115,6 +1115,7 @@ static pj_status_t verify_sip_url(const char *c_url)
 }
 
 
+// clang-format off
 static void usage(void)
 {
     printf(
@@ -1159,6 +1160,7 @@ static void usage(void)
         "   - sip:2@server-addr     To handle INVITE call.\n",
         DEFAULT_COUNT, JOB_WINDOW);
 }
+// clang-format on
 
 
 static int my_atoi(const char *s)
@@ -1171,6 +1173,7 @@ static int my_atoi(const char *s)
 static pj_status_t init_options(int argc, char *argv[])
 {
     enum { OPT_THREAD_COUNT = 1, OPT_REAL_SDP, OPT_TRYING, OPT_RINGING };
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "local-port",     1, 0, 'p' },
         { "count",          1, 0, 'c' },
@@ -1188,6 +1191,7 @@ static pj_status_t init_options(int argc, char *argv[])
         { "ringing",        0, 0, OPT_RINGING},
         { NULL, 0, 0, 0 },
     };
+    // clang-format on
     int c;
     int option_index;
 

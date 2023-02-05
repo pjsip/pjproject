@@ -38,6 +38,7 @@ struct offer_answer
     char *sdp3;                 /* local active media   local answer    */
 };
 
+// clang-format off
 static struct test
 {
     const char          *title;
@@ -1325,6 +1326,7 @@ static struct test
     },
 
 };
+// clang-format on
 
 static const char *find_diff(const char *s1, const char *s2,
                              int *line)

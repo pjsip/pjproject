@@ -27,6 +27,7 @@
 #define CONTACT     "sip:127.0.0.1:5068"
 #define TRACE_(x)   PJ_LOG(3,x)
 
+// clang-format off
 static struct oa_sdp_t
 {
     const char *offer;
@@ -119,6 +120,7 @@ static struct oa_sdp_t
         4
     }
 };
+// clang-format on
 
 
 
@@ -548,6 +550,7 @@ static pjsip_module mod_msg_logger =
     NULL,                               /* on_tsx_state()       */
 };
 
+// clang-format off
 static inv_test_param_t test_params[] =
 {
 /* Normal scenario:
@@ -710,6 +713,7 @@ static inv_test_param_t test_params[] =
     },
 
 };
+// clang-format on
 
 
 static pjsip_dialog* on_dlg_forked(pjsip_dialog *first_set, pjsip_rx_data *res)

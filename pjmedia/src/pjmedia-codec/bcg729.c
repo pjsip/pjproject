@@ -84,6 +84,7 @@ static pj_status_t  bcg729_codec_recover(pjmedia_codec *codec,
 #define G729_FRAME_PER_PACKET   2
 #define G729_FRAME_SIZE         10
 
+// clang-format off
 /* Definition for BCG729 codec operations. */
 static pjmedia_codec_op bcg729_op =
 {
@@ -107,7 +108,7 @@ static pjmedia_codec_factory_op bcg729_factory_op =
     &bcg729_dealloc_codec,
     &pjmedia_codec_bcg729_deinit
 };
-
+// clang-format on
 
 /* BCG729 factory private data */
 static struct bcg729_factory

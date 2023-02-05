@@ -27,11 +27,13 @@
 
 typedef void (*input_callback)(void *user_data, IMediaSample *pMediaSample);
 
+// clang-format off
 const GUID CLSID_NullRenderer = {0xF9168C5E, 0xCEB2, 0x4FAA, {0xB6, 0xBF,
                                  0x32, 0x9B, 0xF3, 0x9F, 0xA1, 0xE4}};
 
 const GUID CLSID_SourceFilter = {0xF9168C5E, 0xCEB2, 0x4FAA, {0xB6, 0xBF,
                                  0x32, 0x9B, 0xF3, 0x9F, 0xA1, 0xE5}};
+// clang-format on
 
 class NullRenderer: public CBaseRenderer
 {

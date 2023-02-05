@@ -91,6 +91,8 @@ static void mwi_on_evsub_client_refresh(pjsip_evsub *sub);
 static void mwi_on_evsub_server_timeout(pjsip_evsub *sub);
 
 
+// clang-format off
+
 /*
  * Event subscription callback for mwi.
  */
@@ -111,6 +113,8 @@ static pjsip_evsub_user mwi_user =
 static const pj_str_t STR_EVENT          = { "Event", 5 };
 static const pj_str_t STR_MWI            = { "message-summary", 15 };
 static const pj_str_t STR_APP_SIMPLE_SMS = { "application/simple-message-summary", 34};
+
+// clang-format on
 
 /*
  * Init mwi module.

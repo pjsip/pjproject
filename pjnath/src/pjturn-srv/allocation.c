@@ -26,10 +26,12 @@
 enum {
     TIMER_ID_NONE,
     TIMER_ID_TIMEOUT,
-    TIMER_ID_DESTROY
+    TIMER_ID_DESTROY,
 };
 
+// clang-format off
 #define DESTROY_DELAY       {0, 500}
+// clang-format on
 #define PEER_TABLE_SIZE     32
 
 #define MAX_CLIENT_BANDWIDTH    128  /* In Kbps */

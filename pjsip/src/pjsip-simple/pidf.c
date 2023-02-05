@@ -21,7 +21,7 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 
-
+// clang-format off
 struct pjpidf_op_desc pjpidf_op = 
 {
     {
@@ -57,6 +57,7 @@ struct pjpidf_op_desc pjpidf_op =
         &pjpidf_status_set_basic_open
     }
 };
+// clang-format on
 
 static pj_str_t PRESENCE = { "presence", 8 };
 static pj_str_t ENTITY = { "entity", 6};

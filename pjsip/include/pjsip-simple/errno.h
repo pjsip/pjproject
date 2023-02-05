@@ -23,6 +23,8 @@
 
 PJ_BEGIN_DECL
 
+// clang-format off
+
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.
  */
@@ -92,6 +94,8 @@ PJ_BEGIN_DECL
  * Bad isComposing XML message.
  */
 #define PJSIP_SIMPLE_EBADISCOMPOSE  (PJSIP_SIMPLE_ERRNO_START+40)   /*270040*/
+
+// clang-format on
 
 /**
  * Get error message for the specified error code. Note that this

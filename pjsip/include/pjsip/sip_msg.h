@@ -59,12 +59,9 @@ typedef enum pjsip_method_e
     PJSIP_BYE_METHOD,       /**< BYE method, for terminating dialog.        */
     PJSIP_REGISTER_METHOD,  /**< REGISTER method.                           */
     PJSIP_OPTIONS_METHOD,   /**< OPTIONS method.                            */
-
     PJSIP_OTHER_METHOD      /**< Other method.                              */
 
 } pjsip_method_e;
-
-
 
 /**
  * This structure represents a SIP method.
@@ -79,7 +76,6 @@ struct pjsip_method
     pj_str_t       name;    /**< Method name, which will always contain the 
                                  method string. */
 };
-
 
 /*
  * For convenience, standard method structures are defined in the library.
@@ -195,6 +191,7 @@ PJ_DECL(int) pjsip_method_cmp( const pjsip_method *m1, const pjsip_method *m2);
 /**
  * Header types, as defined by RFC3261.
  */
+// clang-format off
 typedef enum pjsip_hdr_e
 {
     /*
@@ -252,6 +249,7 @@ typedef enum pjsip_hdr_e
     PJSIP_H_OTHER
 
 } pjsip_hdr_e;
+// clang-format on
 
 /**
  * This structure provides the pointer to basic functions that are needed

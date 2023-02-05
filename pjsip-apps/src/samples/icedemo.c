@@ -1001,6 +1001,7 @@ static void icedemo_send_data(unsigned comp_id, const char *data)
         PJ_LOG(3,(THIS_FILE, "Data sent/will be sent"));
 }
 
+// clang-format off
 
 /*
  * Display help for the menu.
@@ -1060,6 +1061,7 @@ static void icedemo_print_menu(void)
     puts("+----------------------------------------------------------------------+");
 }
 
+// clang-format on
 
 /*
  * Main console loop.
@@ -1155,6 +1157,7 @@ static void icedemo_console(void)
 /*
  * Display program usage.
  */
+// clang-format off
 static void icedemo_usage()
 {
     puts("Usage: icedemo [optons]");
@@ -1184,6 +1187,7 @@ static void icedemo_usage()
     puts(" --turn-fingerprint, -F    Use fingerprint for outgoing TURN requests");
     puts("");
 }
+// clang-format on
 
 
 /*
@@ -1191,6 +1195,7 @@ static void icedemo_usage()
  */
 int main(int argc, char *argv[])
 {
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "comp-cnt",           1, 0, 'c'},
         { "nameserver",         1, 0, 'n'},
@@ -1205,6 +1210,7 @@ int main(int argc, char *argv[])
         { "regular",            0, 0, 'R'},
         { "log-file",           1, 0, 'L'},
     };
+    // clang-format on
     int c, opt_id;
     pj_status_t status;
 

@@ -26,6 +26,7 @@
  */
 #include <pjsip/sip_msg.h>
 
+// clang-format off
 /**
  * @defgroup PJSIP_REPLACES SIP Replaces support (RFC 3891 - "Replaces" Header)
  * @ingroup PJSIP_HIGH_UA
@@ -202,6 +203,7 @@
  *    Initiation Protocol (SIP) "Replaces" Header</A>
  *  - \ref PJSUA_XFER
  */
+// clang-format on
 
 PJ_BEGIN_DECL
 

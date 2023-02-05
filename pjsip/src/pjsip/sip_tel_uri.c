@@ -83,6 +83,7 @@ typedef int             (*P_CMP_URI)(pjsip_uri_context_e, const void*,
                                      const void*);
 typedef void*           (*P_CLONE)(pj_pool_t*, const void*);
 
+// clang-format off
 static pjsip_uri_vptr tel_uri_vptr = 
 {
     (P_GET_SCHEME)      &tel_uri_get_scheme,
@@ -91,6 +92,7 @@ static pjsip_uri_vptr tel_uri_vptr =
     (P_CMP_URI)         &tel_uri_cmp,
     (P_CLONE)           &tel_uri_clone
 };
+// clang-format on
 
 
 PJ_DEF(pjsip_tel_uri*) pjsip_tel_uri_create(pj_pool_t *pool)

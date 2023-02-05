@@ -24,6 +24,7 @@
  * @brief Doxygen's mainpage.
  */
 
+// clang-format off
 
 /*////////////////////////////////////////////////////////////////////////// */
 /*
@@ -238,6 +239,8 @@ TOTAL                          55,232   268    2,020    57,520
  *
  * \includelineno siprtp.c
  */
+
+// clang-format off
 
 #endif /* __PJMEDIA_DOXYGEN_H__ */
 

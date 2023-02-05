@@ -39,14 +39,14 @@ enum read_type
 {
     TYPE_NONE,
     TYPE_RECV,
-    TYPE_RECV_FROM
+    TYPE_RECV_FROM,
 };
 
 enum shutdown_dir
 {
     SHUT_NONE = 0,
     SHUT_RX = 1,
-    SHUT_TX = 2
+    SHUT_TX = 2,
 };
 
 struct read_op

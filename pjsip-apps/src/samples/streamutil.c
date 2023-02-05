@@ -46,6 +46,7 @@
  */
 #define HAVE_MULTICAST 1
 
+// clang-format off
 static const char *desc = 
  " streamutil                                                           \n"
  "                                                                      \n"
@@ -101,6 +102,7 @@ static const char *desc =
 
  "\n"
 ;
+// clang-format on
 
 
 
@@ -414,6 +416,7 @@ int main(int argc, char *argv[])
     char *play_file = NULL;
     int mcast = 0;
 
+    // clang-format off
     enum {
         OPT_CODEC       = 'c',
         OPT_LOCAL_PORT  = 'p',
@@ -464,6 +467,7 @@ int main(int argc, char *argv[])
         { "help",           0, 0, OPT_HELP },
         { NULL, 0, 0, 0 },
     };
+    // clang-format on
 
     int c;
     int option_index;

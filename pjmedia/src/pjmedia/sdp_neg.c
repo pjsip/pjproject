@@ -50,6 +50,7 @@ struct pjmedia_sdp_neg
                                                  for retaining last_sent.    */
 };
 
+// clang-format off
 static const char *state_str[] = 
 {
     "STATE_NULL",
@@ -58,6 +59,7 @@ static const char *state_str[] =
     "STATE_WAIT_NEGO",
     "STATE_DONE",
 };
+// clang-format on
 
 /* Definition of customized SDP format negotiation callback */
 struct fmt_match_cb_t

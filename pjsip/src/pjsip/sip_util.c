@@ -35,6 +35,7 @@
 
 #define THIS_FILE    "endpoint"
 
+// clang-format off
 static const char *event_str[] = 
 {
     "UNIDENTIFIED",
@@ -48,6 +49,7 @@ static const char *event_str[] =
 
 static pj_str_t str_TEXT = { "text", 4},
                 str_PLAIN = { "plain", 5 };
+// clang-format on
 
 /* Add URI to target-set */
 PJ_DEF(pj_status_t) pjsip_target_set_add_uri( pjsip_target_set *tset,

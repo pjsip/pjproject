@@ -167,6 +167,7 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp);
 static pj_status_t transport_restart  (pj_bool_t is_rtp, 
                                        struct transport_udp *udp);
 
+// clang-format off
 static pjmedia_transport_op transport_udp_op = 
 {
     &transport_get_info,
@@ -181,8 +182,9 @@ static pjmedia_transport_op transport_udp_op =
     &transport_media_stop,
     &transport_simulate_lost,
     &transport_destroy,
-    &transport_attach2
+    &transport_attach2,
 };
+// clang-format on
 
 static const pj_str_t STR_RTCP_MUX      = { "rtcp-mux", 8 };
 

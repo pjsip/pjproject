@@ -56,6 +56,8 @@ typedef struct sdl_fmt_info
     Uint32              Amask;
 } sdl_fmt_info;
 
+
+// clang-format off
 static sdl_fmt_info sdl_fmts[] =
 {
 #if PJ_IS_BIG_ENDIAN
@@ -82,9 +84,10 @@ static sdl_fmt_info sdl_fmts[] =
     {PJMEDIA_FORMAT_YVYU, SDL_PIXELFORMAT_YVYU, 0, 0, 0, 0} ,
     {PJMEDIA_FORMAT_I420, SDL_PIXELFORMAT_IYUV, 0, 0, 0, 0} ,
     {PJMEDIA_FORMAT_YV12, SDL_PIXELFORMAT_YV12, 0, 0, 0, 0} ,
-    {PJMEDIA_FORMAT_I420JPEG, SDL_PIXELFORMAT_IYUV, 0, 0, 0, 0} ,
+    {PJMEDIA_FORMAT_I420JPEG, SDL_PIXELFORMAT_IYUV, 0, 0, 0, 0},
     {PJMEDIA_FORMAT_I422JPEG, SDL_PIXELFORMAT_YV12, 0, 0, 0, 0}
 };
+// clang-format on
 
 /* sdl_ device info */
 struct sdl_dev_info
@@ -239,6 +242,7 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
 static pj_status_t job_queue_destroy(job_queue *jq);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &sdl_factory_init,
@@ -261,6 +265,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &sdl_stream_stop,
     &sdl_stream_destroy
 };
+// clang-format on
 
 /*
  * Util

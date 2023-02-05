@@ -52,9 +52,10 @@ PJ_BEGIN_DECL
 
 
 /** SSL protocol method constants. */
+// clang-format off
 typedef enum pjsip_ssl_method
 {
-    PJSIP_SSL_UNSPECIFIED_METHOD = 0,   /**< Default protocol method.   */    
+    PJSIP_SSL_UNSPECIFIED_METHOD = 0,   /**< Default protocol method.   */
     PJSIP_SSLV2_METHOD           = 20,  /**< Use SSLv2 method.          */
     PJSIP_SSLV3_METHOD           = 30,  /**< Use SSLv3 method.          */
     PJSIP_TLSV1_METHOD           = 31,  /**< Use TLSv1 method.          */
@@ -63,6 +64,7 @@ typedef enum pjsip_ssl_method
     PJSIP_TLSV1_3_METHOD         = 34,  /**< Use TLSv1_3 method.        */
     PJSIP_SSLV23_METHOD          = 23,  /**< Use SSLv23 method.         */
 } pjsip_ssl_method;
+// clang-format on
 
 /**
  * The default enabled SSL proto to be used.

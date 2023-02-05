@@ -58,6 +58,7 @@ static pj_oshandle_t fd_report;
 const char *system_name = "Unknown";
 static char buf[1024];
 
+// clang-format off
 static struct {
     const char *name;
     int run_test;
@@ -76,6 +77,7 @@ static struct {
     { "inv_oa", 0},
     { "regc", 0},
 };
+// clang-format on
 enum tests_to_run {
     include_uri_test = 0,
     include_msg_test,

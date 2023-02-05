@@ -31,6 +31,7 @@
 
 #define THIS_FILE   "mix.c"
 
+// clang-format off
 static const char *desc = 
  " mix\n"
  "\n"
@@ -51,6 +52,7 @@ static const char *desc =
  "    -c N          Set clock rate to N Hz (default 16000)\n"
  "    -f            Force write (overwrite output without warning\n"
 ;
+// clang-format on
 
 #define MAX_WAV     16
 #define PTIME       20

@@ -906,6 +906,7 @@ int ice_test(void)
     pj_stun_config stun_cfg;
     unsigned i;
     int rc;
+    // clang-format off
     struct sess_cfg_t {
         const char      *title;
         unsigned         server_flag;
@@ -951,6 +952,7 @@ int ice_test(void)
             {ROLE2, 1,     YES,    YES,   YES,      NO,     0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
         },
     };
+    // clang-format on
 
     pool = pj_pool_create(mem, NULL, 512, 512, NULL);
     rc = create_stun_config(pool, &stun_cfg);
@@ -961,6 +963,7 @@ int ice_test(void)
 
     /* Simple test first with host candidate */
     if (1) {
+        // clang-format off
         struct sess_cfg_t cfg =
         {
             "Basic with host candidates",
@@ -969,6 +972,7 @@ int ice_test(void)
             {ROLE1,     1,      YES,     NO,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
             {ROLE2,     1,      YES,     NO,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
         };
+        // clang-format on
 
         rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
@@ -986,6 +990,7 @@ int ice_test(void)
 
     /* Simple test first with srflx candidate */
     if (1) {
+        // clang-format off
         struct sess_cfg_t cfg =
         {
             "Basic with srflx candidates",
@@ -994,6 +999,7 @@ int ice_test(void)
             {ROLE1,     1,      YES,    YES,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
             {ROLE2,     1,      YES,    YES,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
         };
+        // clang-format on
 
         rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
@@ -1012,6 +1018,7 @@ int ice_test(void)
 
     /* Simple test with relay candidate */
     if (1) {
+        // clang-format off
         struct sess_cfg_t cfg =
         {
             "Basic with relay candidates",
@@ -1020,6 +1027,7 @@ int ice_test(void)
             {ROLE1,     1,       NO,     NO,      YES,      0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
             {ROLE2,     1,       NO,     NO,      YES,      0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
         };
+        // clang-format on
 
         rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
@@ -1038,6 +1046,7 @@ int ice_test(void)
 
     /* Failure test with STUN resolution */
     if (1) {
+        // clang-format off
         struct sess_cfg_t cfg =
         {
             "STUN resolution failure",
@@ -1046,6 +1055,7 @@ int ice_test(void)
             {ROLE1,     2,       NO,    YES,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}},
             {ROLE2,     2,       NO,    YES,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}}
         };
+        // clang-format on
 
         rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
@@ -1064,6 +1074,7 @@ int ice_test(void)
 
     /* Failure test with TURN resolution */
     if (1) {
+        // clang-format off
         struct sess_cfg_t cfg =
         {
             "TURN allocation failure",
@@ -1072,6 +1083,7 @@ int ice_test(void)
             {ROLE1,     2,       NO,    NO,     YES, WRONG_TURN,    0,      0,      0, {PJ_SUCCESS, PJ_STATUS_FROM_STUN_CODE(401), -1}},
             {ROLE2,     2,       NO,    NO,     YES, WRONG_TURN,    0,      0,      0, {PJ_SUCCESS, PJ_STATUS_FROM_STUN_CODE(401), -1}}
         };
+        // clang-format on
 
         rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
@@ -1091,6 +1103,7 @@ int ice_test(void)
 
     /* STUN failure, testing TURN deallocation */
     if (1) {
+        // clang-format off
         struct sess_cfg_t cfg =
         {
             "STUN failure, testing TURN deallocation",
@@ -1099,6 +1112,7 @@ int ice_test(void)
             {ROLE1,     1,       YES,    YES,   YES,    0,    0,            0,      0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}},
             {ROLE2,     1,       YES,    YES,   YES,    0,    0,            0,      0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}}
         };
+        // clang-format on
 
         rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
@@ -1134,7 +1148,7 @@ int ice_test(void)
                 { ROLE1, ROLE2},
                 { ROLE2, ROLE1},
                 { ROLE1, ROLE1},
-                { ROLE2, ROLE2}
+                { ROLE2, ROLE2},
             };
             unsigned j;
 
@@ -1182,6 +1196,7 @@ on_return:
 
 int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit)
 {
+    // clang-format off
     struct sess_cfg_t {
         const char      *title;
         unsigned         server_flag;
@@ -1195,6 +1210,7 @@ int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit)
         {ROLE1, 1,      YES,     YES,       YES,    CLIENT_IPV4,    0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
         {ROLE2, 1,      YES,     YES,       YES,    CLIENT_IPV4,    0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
     };
+    // clang-format on
     struct sess_param test_param;
     int rc;
 
@@ -1535,6 +1551,7 @@ int trickle_ice_test(void)
     unsigned i;
     int rc;
 
+    // clang-format off
     struct sess_cfg_t {
         const char      *title;
         unsigned         server_flag;
@@ -1563,6 +1580,7 @@ int trickle_ice_test(void)
         {ROLE1, 1,    YES,  YES,  YES,  CLIENT_IPV4, 0,      0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
         {ROLE2, 1,    YES,  YES,  YES,  CLIENT_IPV4, 0,      0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
     }};
+    // clang-format on
 
     PJ_LOG(3,(THIS_FILE, "Trickle ICE"));
     pj_log_push_indent();

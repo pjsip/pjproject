@@ -257,6 +257,7 @@ pj_status_t parse_url(const char *url, pj_http_url *hurl)
 
 static int parse_url_test()
 {
+    // clang-format off
     struct test_data
     {
         char *url;
@@ -339,6 +340,7 @@ static int parse_url_test()
         /* Invalid URL */
         {"http://:::", PJ_EINVAL, "", "", "", 0, ""},
     };
+    // clang-format on
     unsigned i;
 
     for (i=0; i<PJ_ARRAY_SIZE(test_data); ++i) {

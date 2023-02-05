@@ -63,6 +63,7 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp);
 
 
 /* The transport operations */
+// clang-format off
 static struct pjmedia_transport_op tp_adapter_op = 
 {
     &transport_get_info,
@@ -79,7 +80,7 @@ static struct pjmedia_transport_op tp_adapter_op =
     &transport_destroy,
     &transport_attach2,
 };
-
+// clang-format on
 
 /* The transport adapter instance */
 struct tp_adapter

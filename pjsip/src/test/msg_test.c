@@ -39,6 +39,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool);
 #define FLAG_PARSE_ONLY         4
 #define FLAG_PRINT_ONLY         8
 
+// clang-format off
 struct test_msg
 {
     char         msg[1024];
@@ -73,7 +74,7 @@ struct test_msg
     "\r\n",
     &create_msg0,
     0,
-    PJ_SUCCESS
+    PJ_SUCCESS,
 },
 {
     /* Typical response message. */
@@ -101,7 +102,7 @@ struct test_msg
     "a=rtpmap:0 PCMU/8000\r\n",
     &create_msg1,
     0,
-    PJ_SUCCESS
+    PJ_SUCCESS,
 },
 {
     /* Torture message from RFC 4475
@@ -146,7 +147,7 @@ struct test_msg
     "a=rtpmap:31 LPC\r\n",
     NULL,
     0,
-    PJ_SUCCESS
+    PJ_SUCCESS,
 },
 {
     /* Torture message from RFC 4475
@@ -163,7 +164,7 @@ struct test_msg
     "Content-Length: 0\r\n\r\n",
     NULL,
     641,
-    PJ_SUCCESS
+    PJ_SUCCESS,
 },
 {
     /* Torture message from RFC 4475
@@ -191,7 +192,7 @@ struct test_msg
     "a=rtpmap:31 LPC\r\n",
     NULL,
     0,
-    PJ_SUCCESS
+    PJ_SUCCESS,
 },
 {
     /* Torture message from RFC 4475
@@ -210,7 +211,7 @@ struct test_msg
     "\r\n",
     NULL,
     0,
-    PJ_SUCCESS
+    PJ_SUCCESS,
 },
 {
     /* Torture message from RFC 4475
@@ -230,9 +231,10 @@ struct test_msg
     "\r\n",
     NULL,
     0,
-    PJ_SUCCESS
-}
+    PJ_SUCCESS,
+},
 };
+// clang-format on
 
 static struct
 {
@@ -961,6 +963,7 @@ static int hdr_test_subject_utf(pjsip_hdr *h);
 #define HDR_FLAG_PARSE_FAIL 1
 #define HDR_FLAG_DONT_PRINT 2
 
+// clang-format off
 struct hdr_test_t
 {
     char *hname;
@@ -1174,6 +1177,7 @@ struct hdr_test_t
         &hdr_test_subject_utf
     }
 };
+// clang-format on
 
 static int hdr_test_success(pjsip_hdr *h)
 {

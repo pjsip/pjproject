@@ -30,6 +30,7 @@
 #define THIS_FILE   "sock_qos_wm.c"
 
 /* Mapping between our traffic type and WM's DSCP traffic types */
+// clang-format off
 static const int dscp_map[] = 
 {
     DSCPBestEffort,
@@ -38,6 +39,7 @@ static const int dscp_map[] =
     DSCPAudio,
     DSCPControl
 };
+// clang-format on
 
 PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
                                            pj_qos_params *param)

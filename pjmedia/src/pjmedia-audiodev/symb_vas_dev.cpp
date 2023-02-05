@@ -64,6 +64,7 @@
 #   define TRACE_(st)
 #endif
 
+
 /* VAS G.711 frame length */
 static pj_uint8_t vas_g711_frame_len;
 
@@ -158,6 +159,7 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm);
 
 
 /* Operations */
+// clang-format off
 static pjmedia_aud_dev_factory_op factory_op =
 {
     &factory_init,
@@ -178,6 +180,7 @@ static pjmedia_aud_stream_op stream_op =
     &stream_stop,
     &stream_destroy
 };
+// clang-format on
 
 
 /****************************************************************************

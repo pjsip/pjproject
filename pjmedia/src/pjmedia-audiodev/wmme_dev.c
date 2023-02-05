@@ -68,6 +68,7 @@
 
 #define THIS_FILE                       "wmme_dev.c"
 
+
 /* WMME device info */
 struct wmme_dev_info
 {
@@ -165,6 +166,7 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm);
 
 
 /* Operations */
+// clang-format off
 static pjmedia_aud_dev_factory_op factory_op =
 {
     &factory_init,
@@ -185,7 +187,7 @@ static pjmedia_aud_stream_op stream_op =
     &stream_stop,
     &stream_destroy
 };
-
+// clang-format on
 
 /****************************************************************************
  * Factory operations
@@ -219,10 +221,12 @@ pjmedia_aud_dev_factory* pjmedia_wmme_factory(pj_pool_factory *pf)
 #include <Guiddef.h>
 #include <FunctionDiscoveryKeys_devpkey.h>
 
+//clang-format off
 DEFINE_GUID(CLSID_MMDeviceEnumerator, 0xBCDE0395, 0xE52F, 0x467C,
             0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E);
 DEFINE_GUID(IID_IMMDeviceEnumerator, 0xA95664D2, 0x9614, 0x4F35,
             0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6);
+//clang-format on
 
 static void get_dev_names(pjmedia_aud_dev_factory *f)
 {

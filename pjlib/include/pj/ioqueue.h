@@ -275,6 +275,7 @@ typedef struct pj_ioqueue_callback
  * Types of pending I/O Queue operation. This enumeration is only used
  * internally within the ioqueue.
  */
+// clang-format off
 typedef enum pj_ioqueue_operation_e
 {
     PJ_IOQUEUE_OP_NONE          = 0,    /**< No operation.          */
@@ -289,6 +290,7 @@ typedef enum pj_ioqueue_operation_e
     PJ_IOQUEUE_OP_CONNECT       = 128   /**< connect() operation.   */
 #endif  /* PJ_HAS_TCP */
 } pj_ioqueue_operation_e;
+// clang-format on
 
 
 /**

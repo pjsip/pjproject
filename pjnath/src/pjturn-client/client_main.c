@@ -420,6 +420,7 @@ static void menu(void)
     pj_sockaddr_print(&g.peer[1].mapped_addr, peer1_addr, sizeof(peer1_addr), 3);
 
 
+    // clang-format off
     puts("\n");
     puts("+=====================================================================+");
     puts("|             CLIENT                 |             PEER-0             |");
@@ -440,6 +441,7 @@ static void menu(void)
     puts("+------------------------------------+--------------------------------+");
     printf(">>> ");
     fflush(stdout);
+    // clang-format on
 }
 
 
@@ -537,6 +539,7 @@ static void console_main(void)
 
 static void usage(void)
 {
+// clang-format off
     puts("Usage: pjturn_client TURN-SERVER [OPTIONS]");
     puts("");
     puts("where TURN-SERVER is \"host[:port]\"");
@@ -550,10 +553,12 @@ static void usage(void)
     puts(" --stun-srv, -S  NAME  Use this STUN srv instead of TURN for Binding discovery");
     puts(" --nameserver, -N IP   Activate DNS SRV, use this DNS server");
     puts(" --help, -h");
+// clang-format on
 }
 
 int main(int argc, char *argv[])
 {
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "realm",      1, 0, 'r'},
         { "username",   1, 0, 'u'},
@@ -562,8 +567,9 @@ int main(int argc, char *argv[])
         { "tcp",        0, 0, 'T'},
         { "help",       0, 0, 'h'},
         { "stun-srv",   1, 0, 'S'},
-        { "nameserver", 1, 0, 'N'}
+        { "nameserver", 1, 0, 'N'},
     };
+    // clang-format on
     int c, opt_id;
     char *pos;
     pj_status_t status;

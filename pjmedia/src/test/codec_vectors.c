@@ -533,11 +533,11 @@ int codec_test_vectors(void)
 #if PJMEDIA_HAS_G7221_CODEC
         { "G7221/16000/1", 24000, 
           "../src/test/vectors/g722_1_enc_in.wav", 
-          "../src/test/vectors/g722_1_enc_out_24000_be.pak"
+          "../src/test/vectors/g722_1_enc_out_24000_be.pak",
         },
         { "G7221/16000/1", 32000, 
           "../src/test/vectors/g722_1_enc_in.wav", 
-          "../src/test/vectors/g722_1_enc_out_32000_be.pak"
+          "../src/test/vectors/g722_1_enc_out_32000_be.pak",
         },
 #endif
         { NULL }
@@ -555,25 +555,25 @@ int codec_test_vectors(void)
         { "G7221/16000/1", 24000, 60,
           &g7221_pcm_manip,
           "../src/test/vectors/g722_1_enc_out_24000_be.pak", 
-          "../src/test/vectors/g722_1_dec_out_24000.pcm"
+          "../src/test/vectors/g722_1_dec_out_24000.pcm",
         },
         { "G7221/16000/1", 32000, 80,
           &g7221_pcm_manip,
           "../src/test/vectors/g722_1_enc_out_32000_be.pak", 
-          "../src/test/vectors/g722_1_dec_out_32000.pcm"
+          "../src/test/vectors/g722_1_dec_out_32000.pcm",
         },
         { "G7221/16000/1", 24000, 60,
           &g7221_pcm_manip,
           "../src/test/vectors/g722_1_dec_in_24000_fe.itu",
-          "../src/test/vectors/g722_1_dec_out_24000_fe.pcm"
+          "../src/test/vectors/g722_1_dec_out_24000_fe.pcm",
         },
         { "G7221/16000/1", 32000, 80,
           &g7221_pcm_manip,
           "../src/test/vectors/g722_1_dec_in_32000_fe.itu",
-          "../src/test/vectors/g722_1_dec_out_32000_fe.pcm"
+          "../src/test/vectors/g722_1_dec_out_32000_fe.pcm",
         },
 #endif
-        { NULL }
+        { NULL },
     };
     unsigned i;
     pj_status_t status;

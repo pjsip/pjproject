@@ -30,6 +30,7 @@
  */
 
 
+// clang-format off
 static const char *desc = 
  " FILE:                                                                    \n"
  "  level.c                                                                 \n"
@@ -42,6 +43,7 @@ static const char *desc =
  "  level file.wav                                                          \n"
  "                                                                          \n"
  "  The WAV file SHOULD have a 16bit mono samples.                          ";
+// clang-format on
 
 #include <pjmedia.h>
 #include <pjlib.h>

@@ -94,6 +94,7 @@ typedef struct pjmedia_conf_port_info
  * Conference port options. The values here can be combined in bitmask to
  * be specified when the conference bridge is created.
  */
+// clang-format off
 enum pjmedia_conf_option
 {
     PJMEDIA_CONF_NO_MIC  = 1,   /**< Disable audio streams from the
@@ -103,6 +104,7 @@ enum pjmedia_conf_option
     PJMEDIA_CONF_USE_LINEAR=8   /**< Use linear resampling instead of filter
                                      based.                                 */
 };
+// clang-format on
 
 
 /**

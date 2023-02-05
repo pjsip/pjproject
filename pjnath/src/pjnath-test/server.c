@@ -28,7 +28,9 @@
 #define CERT_PRIVKEY_FILE           CERT_DIR "privkey.pem"
 #define CERT_PRIVKEY_PASS           "privkeypass"
 
+// clang-format off
 #define RETURN_ERROR(rc)            {app_perror("", rc);return rc;}
+// clang-format on
 
 static pj_bool_t stun_on_data_recvfrom(pj_activesock_t *asock,
                                        void *data,

@@ -27,6 +27,7 @@
 #include <pjsip-simple/types.h>
 
 
+// clang-format off
 /**
  * @defgroup PJSIP_EVENT_NOT SIP Event Notification (RFC 3265) Module
  * @ingroup PJSIP_SIMPLE
@@ -40,6 +41,7 @@
  * This module itself is extensible; new event packages can be registered to
  * this module to handle specific extensions (such as presence).
  */
+// clang-format on
 
 PJ_BEGIN_DECL
 

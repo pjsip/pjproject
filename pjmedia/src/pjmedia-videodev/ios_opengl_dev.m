@@ -37,6 +37,7 @@
  */ 
 #define ALLOW_DELAYED_INITIALIZATION    0
 
+
 typedef struct iosgl_fmt_info
 {
     pjmedia_format_id   pjmedia_format;
@@ -99,6 +100,7 @@ static pj_status_t iosgl_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t iosgl_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_stream_op stream_op =
 {
     &iosgl_stream_get_param,
@@ -110,6 +112,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &iosgl_stream_stop,
     &iosgl_stream_destroy
 };
+// clang-format on
 
 int pjmedia_vid_dev_opengl_imp_get_cap(void)
 {

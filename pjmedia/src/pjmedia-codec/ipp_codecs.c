@@ -85,6 +85,7 @@ static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
                                       unsigned output_buf_len, 
                                       struct pjmedia_frame *output);
 
+// clang-format off
 /* Definition for IPP codecs operations. */
 static pjmedia_codec_op ipp_op = 
 {
@@ -108,6 +109,7 @@ static pjmedia_codec_factory_op ipp_factory_op =
     &ipp_dealloc_codec,
     &pjmedia_codec_ipp_deinit
 };
+// clang-format on
 
 /* IPP codecs factory */
 static struct ipp_factory {
@@ -237,6 +239,7 @@ static struct ipp_codec {
     pjmedia_codec_fmtp dec_fmtp;        /* Decoder's fmtp params.           */
 }
 
+// clang-format off
 ipp_codec[] = 
 {
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
@@ -326,6 +329,7 @@ ipp_codec[] =
     },
 #   endif
 };
+// clang-format on
 
 
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_G729

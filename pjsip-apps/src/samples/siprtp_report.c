@@ -27,6 +27,7 @@
  */
 
 
+// clang-format off
 static void print_call(int call_index)
 {
     struct call *call = &app.call[call_index];
@@ -227,4 +228,5 @@ static void print_call(int call_index)
 
     pj_log_set_decor(decor);
 }
+// clang-format on
 

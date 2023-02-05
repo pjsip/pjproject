@@ -29,6 +29,7 @@
 PJ_BEGIN_DECL 
 
 
+// clang-format off
 /**
  * @defgroup socket_qos Socket Quality of Service (QoS) API: TOS, DSCP, WMM, IEEE 802.1p
  * @ingroup PJ_SOCK
@@ -227,6 +228,7 @@ PJ_BEGIN_DECL
     use pj_sock_set_qos_type() instead.
  */
 
+// clang-format on
 
 /**
  * High level traffic classification.

@@ -86,6 +86,7 @@ static pj_status_t null_stream_stop(pjmedia_aud_stream *strm);
 static pj_status_t null_stream_destroy(pjmedia_aud_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_aud_dev_factory_op factory_op =
 {
     &null_factory_init,
@@ -106,6 +107,7 @@ static pjmedia_aud_stream_op stream_op =
     &null_stream_stop,
     &null_stream_destroy
 };
+// clang-format on
 
 
 /****************************************************************************

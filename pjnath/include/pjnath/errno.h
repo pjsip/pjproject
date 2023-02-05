@@ -33,6 +33,8 @@
  * @{
  */
 
+// clang-format off
+
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.
  * This value is 370000.
@@ -216,7 +218,7 @@
  */
 #define PJNATH_ETURNINTP            (PJNATH_ERRNO_START+120) /* 370120 */
 
-
+// clang-format on
 
 /**
  * @}

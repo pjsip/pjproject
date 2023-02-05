@@ -49,6 +49,7 @@ static struct err_msg_hnd
 /* PJLIB's own error codes/messages */
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
 
+// clang-format off
 static const struct 
 {
     int code;
@@ -80,6 +81,7 @@ static const struct
     PJ_BUILD_ERR(PJ_EGONE,         "Object no longer exists"),
     PJ_BUILD_ERR(PJ_ESOCKETSTOP,   "Socket is in bad state")
 };
+// clang-format on
 #endif  /* PJ_HAS_ERROR_STRING */
 
 

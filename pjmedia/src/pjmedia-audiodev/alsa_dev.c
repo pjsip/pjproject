@@ -132,6 +132,7 @@ struct alsa_stream
     pj_thread_t         *ca_thread;
 };
 
+// clang-format off
 static pjmedia_aud_dev_factory_op alsa_factory_op =
 {
     &alsa_factory_init,
@@ -152,6 +153,7 @@ static pjmedia_aud_stream_op alsa_stream_op =
     &alsa_stream_stop,
     &alsa_stream_destroy
 };
+// clang-format on
 
 #if ENABLE_TRACING==0
 static void null_alsa_error_handler (const char *file,

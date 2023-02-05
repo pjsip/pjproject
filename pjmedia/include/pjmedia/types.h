@@ -73,6 +73,7 @@ typedef enum pjmedia_type
 /**
  * Media transport protocol and profile.
  */
+// clang-format off
 typedef enum pjmedia_tp_proto
 {
     /* Basic transports */
@@ -132,6 +133,7 @@ typedef enum pjmedia_tp_proto
                                        PJMEDIA_TP_PROFILE_RTCP_FB),
 
 } pjmedia_tp_proto;
+// clang-format on
 
 /**
  * Macro helper for checking if a transport protocol contains specific

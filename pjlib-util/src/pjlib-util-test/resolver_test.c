@@ -1562,7 +1562,9 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
     *p_res = res;
 }
 
+// clang-format off
 #define SRV_CB_CHECK(cond, err) if(!(cond)) { *cb_err=err; goto on_return; }
+// clang-format on
 
 static void srv_cb_2(void *user_data,
                      pj_status_t status,

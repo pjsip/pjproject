@@ -50,6 +50,7 @@
  */
 #define MAINTAIN_ASPECT_RATIO   PJ_TRUE
 
+
 typedef struct darwin_fmt_info
 {
     pjmedia_format_id   pjmedia_format;
@@ -63,7 +64,7 @@ static darwin_fmt_info darwin_fmts[] =
     { PJMEDIA_FORMAT_UYVY, kCVPixelFormatType_422YpCbCr8 },
 #endif
     { PJMEDIA_FORMAT_BGRA, kCVPixelFormatType_32BGRA },
-    { PJMEDIA_FORMAT_I420, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange }
+    { PJMEDIA_FORMAT_I420, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange },
 };
 
 typedef struct darwin_supported_size
@@ -74,6 +75,7 @@ typedef struct darwin_supported_size
 } darwin_supported_size;
 
 /* Set the preset_str on set_preset_str method. */
+// clang-format off
 static darwin_supported_size darwin_sizes[] =
 {
 #if !TARGET_OS_IPHONE
@@ -84,11 +86,12 @@ static darwin_supported_size darwin_sizes[] =
 #if !TARGET_OS_IPHONE
     { 960, 540, NULL },
 #endif
-    { 1280, 720, NULL }
+    { 1280, 720, NULL },
 #if TARGET_OS_IPHONE
-    ,{ 1920, 1080, NULL }
+    { 1920, 1080, NULL },
 #endif
 };
+// clang-format on
 
 /* darwin device info */
 struct darwin_dev_info
@@ -196,6 +199,7 @@ static pj_status_t darwin_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &darwin_factory_init,
@@ -218,6 +222,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &darwin_stream_stop,
     &darwin_stream_destroy
 };
+// clang-format on
 
 static void set_preset_str()
 {

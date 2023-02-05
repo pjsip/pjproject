@@ -66,6 +66,7 @@ PJ_BEGIN_DECL
 /**
  * Log decoration flag, to be specified with #pj_log_set_decor().
  */
+// clang-format off
 enum pj_log_decoration
 {
     PJ_LOG_HAS_DAY_NAME   =    1, /**< Include day name [default: no]         */
@@ -84,6 +85,7 @@ enum pj_log_decoration
     PJ_LOG_HAS_THREAD_SWC = 8192, /**< Add mark when thread has switched [yes]*/
     PJ_LOG_HAS_INDENT     =16384  /**< Indentation. Say yes! [yes]            */
 };
+// clang-format on
 
 /**
  * Write log message.

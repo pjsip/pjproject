@@ -133,7 +133,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *strm);
 static pj_status_t strm_stop(pjmedia_aud_stream *strm);
 static pj_status_t strm_destroy(pjmedia_aud_stream *strm);
 
-
+// clang-format off
 static pjmedia_aud_dev_factory_op pa_op = 
 {
     &pa_init,
@@ -142,7 +142,7 @@ static pjmedia_aud_dev_factory_op pa_op =
     &pa_get_dev_info,
     &pa_default_param,
     &pa_create_stream,
-    &pa_refresh    
+    &pa_refresh
 };
 
 static pjmedia_aud_stream_op pa_strm_op = 
@@ -154,8 +154,7 @@ static pjmedia_aud_stream_op pa_strm_op =
     &strm_stop,
     &strm_destroy
 };
-
-
+// clang-format on
 
 static int PaRecorderCallback(const void *input, 
                               void *output,

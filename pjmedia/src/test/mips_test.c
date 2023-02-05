@@ -73,6 +73,7 @@
                           PJMEDIA_HAS_L16_CODEC)
 
 
+// clang-format off
 /* Sample speech data, 360ms length, encoded at 8Khz */
 static const pj_int16_t ref_signal[] = {
          0,    -4,     0,     0,     1,     8,     8,     7,    12,    16,
@@ -364,6 +365,7 @@ static const pj_int16_t ref_signal[] = {
        -92,    60,   356,  -176,   176,   212,   124,   -57,   -76,   168,
         88,  -140,   -37,   160,     0,   -92,    96,    24,   -84,     0,
 };
+// clang-format on
 
 #define THIS_FILE           "mips_test.c"
 #define DURATION            5000
@@ -2392,6 +2394,7 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
 /***************************************************************************/
 int mips_test(void)
 {
+    // clang-format off
     struct test_entry entries[] = {
         { "get from memplayer", OP_GET, K8|K16, &gen_port_test_init},
         { "conference bridge with 1 call", OP_GET_PUT, K8|K16, &conf1_test_init},
@@ -2507,6 +2510,7 @@ int mips_test(void)
     PJ_LOG(3,(THIS_FILE, "Clock  Item                                      Time     CPU    MIPS"));
     PJ_LOG(3,(THIS_FILE, " Rate                                           (usec)    (%%)       "));
     PJ_LOG(3,(THIS_FILE, "----------------------------------------------------------------------"));
+    // clang-format on
 
     for (c=0; c<PJ_ARRAY_SIZE(clock_rates); ++c) {
         for (i=0; i<PJ_ARRAY_SIZE(entries); ++i) {

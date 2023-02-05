@@ -25,7 +25,6 @@
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
-
 #define TEE_PORT_NAME   "vid_tee"
 #define TEE_PORT_SIGN   PJMEDIA_SIG_PORT_VID_TEE
 

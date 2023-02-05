@@ -119,6 +119,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *strm);
 static pj_status_t strm_stop(pjmedia_aud_stream *strm);
 static pj_status_t strm_destroy(pjmedia_aud_stream *strm);
 
+// clang-format off
 static pjmedia_aud_dev_factory_op android_op =
 {
     &android_init,
@@ -139,6 +140,7 @@ static pjmedia_aud_stream_op android_strm_op =
     &strm_stop,
     &strm_destroy
 };
+// clang-format on
 
 PJ_DECL(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env);
 PJ_DECL(void) pj_jni_dettach_jvm(pj_bool_t attached);

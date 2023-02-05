@@ -35,6 +35,7 @@
 #define PJ_TURN_CHANNEL_HTABLE_SIZE 8
 #define PJ_TURN_PERM_HTABLE_SIZE    8
 
+// clang-format off
 static const char *state_names[] = 
 {
     "Null",
@@ -44,14 +45,15 @@ static const char *state_names[] =
     "Ready",
     "Deallocating",
     "Deallocated",
-    "Destroying"
+    "Destroying",
 };
+// clang-format on
 
 enum timer_id_t
 {
     TIMER_NONE,
     TIMER_KEEP_ALIVE,
-    TIMER_DESTROY
+    TIMER_DESTROY,
 };
 
 /* This structure describes a channel binding. A channel binding is index by

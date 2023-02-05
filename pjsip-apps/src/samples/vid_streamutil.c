@@ -43,7 +43,7 @@
 
 #include "util.h"
 
-
+// clang-format off
 static const char *desc = 
  " vid_streamutil                                                       \n"
  "\n"
@@ -88,6 +88,7 @@ static const char *desc =
 
  "\n"
 ;
+// clang-format on
 
 #define THIS_FILE       "vid_streamutil.c"
 
@@ -409,6 +410,7 @@ static int main_func(int argc, char *argv[])
     pjmedia_vid_codec *play_decoder = NULL;
     pjmedia_clock *play_clock = NULL;
 
+    // clang-format off
     enum {
         OPT_CODEC       = 'c',
         OPT_LOCAL_PORT  = 'p',
@@ -449,6 +451,7 @@ static int main_func(int argc, char *argv[])
         { "help",           0, 0, OPT_HELP },
         { NULL, 0, 0, 0 },
     };
+    // clang-format on
 
     int c;
     int option_index;
@@ -1010,7 +1013,9 @@ int main(int argc, char *argv[])
 {
     PJ_UNUSED_ARG(argc);
     PJ_UNUSED_ARG(argv);
+    // clang-format off
     puts("Error: this sample requires video capability (PJMEDIA_HAS_VIDEO == 1)");
+    // clang-format on
     return -1;
 }
 

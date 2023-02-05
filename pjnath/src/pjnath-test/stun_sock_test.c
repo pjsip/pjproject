@@ -24,7 +24,7 @@ enum {
     RESPOND_STUN    = 1,
     WITH_MAPPED     = 2,
     WITH_XOR_MAPPED = 4,
-    ECHO            = 8
+    ECHO            = 8,
 };
 
 /*

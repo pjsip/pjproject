@@ -129,7 +129,9 @@ PJ_DEF(pj_status_t) pjmedia_vpx_unpacketize(pjmedia_vpx_packetizer *pktz,
     unsigned desc_len = 1;
     pj_uint8_t *p = (pj_uint8_t *)payload;
 
+// clang-format off
 #define INC_DESC_LEN() {if (++desc_len >= payload_len) return PJ_ETOOSMALL;}
+// clang-format on
 
     if (payload_len <= desc_len) return PJ_ETOOSMALL;
 

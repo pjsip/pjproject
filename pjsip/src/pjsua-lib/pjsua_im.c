@@ -33,11 +33,13 @@ enum
     PJSIP_MESSAGE_METHOD = PJSIP_OTHER_METHOD
 };
 
+// clang-format off
 const pjsip_method pjsip_message_method =
 {
     (pjsip_method_e) PJSIP_MESSAGE_METHOD,
     { "MESSAGE", 7 }
 };
+// clang-format on
 
 
 /* Proto */

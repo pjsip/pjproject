@@ -28,13 +28,14 @@
 #include <pj/rand.h>
 #include <pj/string.h>
 
+// clang-format off
 /* String names for candidate types */
 static const char *cand_type_names[] =
 {
     "host",
     "srflx",
     "prflx",
-    "relay"
+    "relay",
 
 };
 
@@ -46,14 +47,14 @@ static const char *check_state_name[] =
     "Waiting",
     "In Progress",
     "Succeeded",
-    "Failed"
+    "Failed",
 };
 
 static const char *clist_state_name[] =
 {
     "Idle",
     "Running",
-    "Completed"
+    "Completed",
 };
 #endif  /* PJ_LOG_MAX_LEVEL >= 4 */
 
@@ -61,8 +62,9 @@ static const char *role_names[] =
 {
     "Unknown",
     "Controlled",
-    "Controlling"
+    "Controlling",
 };
+// clang-format on
 
 enum timer_type
 {

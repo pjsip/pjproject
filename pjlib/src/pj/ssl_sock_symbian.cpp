@@ -39,6 +39,7 @@ typedef struct cipher_name_t {
 } cipher_name_t;
 
 /* Cipher name constants */
+// clang-format off
 static cipher_name_t cipher_names[] =
 {
     {PJ_TLS_UNKNOWN_CIPHER,                    "UNKNOWN"},
@@ -114,6 +115,7 @@ static cipher_name_t cipher_names[] =
     {PJ_SSL_CK_DES_64_CBC_WITH_MD5,            "SSL_CK_DES_64_CBC_WITH_MD5"},
     {PJ_SSL_CK_DES_192_EDE3_CBC_WITH_MD5,      "SSL_CK_DES_192_EDE3_CBC_WITH_MD5"}
 };
+// clang-format on
 
 
 /* Get cipher name string */

@@ -214,11 +214,13 @@ pj_status_t pjsua_vid_subsys_destroy(void)
 
 PJ_DEF(const char*) pjsua_vid_win_type_name(pjsua_vid_win_type wt)
 {
+    // clang-format off
     const char *win_type_names[] = {
          "none",
          "preview",
          "stream"
     };
+    // clang-format on
 
     return (wt < PJ_ARRAY_SIZE(win_type_names)) ? win_type_names[wt] : "??";
 }

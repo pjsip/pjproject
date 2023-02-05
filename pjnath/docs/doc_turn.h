@@ -17,6 +17,7 @@
  */
 
 
+// clang-format off
 /**
 @defgroup PJNATH_TURN TURN: Traversal Using Relays around NAT
 @brief TURN protocol implementation
@@ -161,3 +162,5 @@ Also see <b>\ref samples_page</b> for other samples.
  * @brief Transport independent TURN client session
  * @ingroup PJNATH_TURN
  */
+
+// clang-format on

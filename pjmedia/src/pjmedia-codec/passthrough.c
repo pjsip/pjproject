@@ -78,6 +78,7 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
                                   unsigned output_buf_len, 
                                   struct pjmedia_frame *output);
 
+// clang-format off
 /* Definition for passthrough codecs operations. */
 static pjmedia_codec_op codec_op = 
 {
@@ -101,6 +102,7 @@ static pjmedia_codec_factory_op codec_factory_op =
     &dealloc_codec,
     &pjmedia_codec_passthrough_deinit
 };
+// clang-format on
 
 /* Passthrough codecs factory */
 static struct codec_factory {
@@ -175,6 +177,7 @@ static struct codec_desc {
     pjmedia_codec_fmtp dec_fmtp;        /* Decoder's fmtp params.           */
 }
 
+// clang-format off
 codec_desc[] = 
 {
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
@@ -216,6 +219,7 @@ codec_desc[] =
     },
 #   endif
 };
+// clang-format on
 
 
 #if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR

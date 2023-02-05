@@ -127,13 +127,15 @@ static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
  */
 PJ_DEF(const char*) pj_stun_sock_op_name(pj_stun_sock_op op)
 {
+    // clang-format off
     const char *names[] = {
         "?",
         "DNS resolution",
         "STUN Binding request",
         "Keep-alive",
-        "Mapped addr. changed"
+        "Mapped addr. changed",
     };
+    // clang-format on
 
     return op < PJ_ARRAY_SIZE(names) ? names[op] : "???";
 }

@@ -99,6 +99,7 @@ static void get_codec_list(pj_cli_dyn_choice_param *param)
     }
 }
 
+// clang-format off
 static struct cmd_xml_t cmd_xmls[] = {
     {"<CMD name='sayhello' id='1' sc='  ,h , ,, sh  ,' desc='Will say hello'>"
      "    <ARG name='whom' type='text' desc='Whom to say hello to'/>"
@@ -137,6 +138,7 @@ static struct cmd_xml_t cmd_xmls[] = {
      "</CMD>",
      &quit_app},
 };
+// clang-format on
 
 static void log_writer(int level, const char *buffer, int len)
 {

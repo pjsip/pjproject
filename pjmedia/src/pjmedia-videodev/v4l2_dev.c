@@ -44,7 +44,6 @@
 #define BUFFER_CNT              2
 #define MAX_IOCTL_RETRY         20
 
-
 /* mapping between pjmedia_fmt_id and v4l2 pixel format */
 typedef struct vid4lin_fmt_map
 {
@@ -107,6 +106,7 @@ typedef struct vid4lin_stream
 } vid4lin_stream;
 
 /* Use this to convert between pjmedia_format_id and V4L2 fourcc */
+// clang-format off
 static vid4lin_fmt_map v4l2_fmt_maps[] =
 {
     { PJMEDIA_FORMAT_RGB24,     V4L2_PIX_FMT_BGR24 },
@@ -115,8 +115,9 @@ static vid4lin_fmt_map v4l2_fmt_maps[] =
     { PJMEDIA_FORMAT_AYUV,      V4L2_PIX_FMT_YUV32 },
     { PJMEDIA_FORMAT_YUY2,      V4L2_PIX_FMT_YUYV },
     { PJMEDIA_FORMAT_UYVY,      V4L2_PIX_FMT_UYVY },
-    { PJMEDIA_FORMAT_I420,      V4L2_PIX_FMT_YUV420 }
+    { PJMEDIA_FORMAT_I420,      V4L2_PIX_FMT_YUV420 },
 };
+// clang-format on
 
 /* Prototypes */
 static pj_status_t vid4lin_factory_init(pjmedia_vid_dev_factory *f);
@@ -151,6 +152,7 @@ static pj_status_t vid4lin_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t vid4lin_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &vid4lin_factory_init,
@@ -173,6 +175,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &vid4lin_stream_stop,
     &vid4lin_stream_destroy
 };
+// clang-format on
 
 
 /****************************************************************************
@@ -226,6 +229,7 @@ static void v4l2_get_supported_size(int fd,
                                     pjmedia_vid_dev_info *info)
 {
     int i=0;
+    // clang-format off
     pjmedia_rect_size v4l_sizes[] =
     {
          /* Some webcam doesn't work well using size below 320x240 */
@@ -239,6 +243,7 @@ static void v4l2_get_supported_size(int fd,
          { 3672, 1536 }, { 3680, 1536 }, { 3840, 2160 }, { 4096, 2048 },
          { 4096, 2160 }, { 4096, 2304 }*/
     };
+    // clang-format on
 
     const vid4lin_fmt_map *fmt_map = get_v4l2_format_info(fmt_id);
     if (fmt_map == NULL)

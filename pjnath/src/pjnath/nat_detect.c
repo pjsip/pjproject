@@ -28,7 +28,7 @@
 #include <pj/timer.h>
 #include <pj/compat/socket.h>
 
-
+// clang-format off
 static const char *nat_type_names[] =
 {
     "Unknown",
@@ -39,9 +39,9 @@ static const char *nat_type_names[] =
     "Full Cone",
     "Symmetric",
     "Restricted",
-    "Port Restricted"
+    "Port Restricted",
 };
-
+// clang-format on
 
 #define CHANGE_IP_FLAG          4
 #define CHANGE_PORT_FLAG        2
@@ -54,7 +54,7 @@ enum test_type
     ST_TEST_2,
     ST_TEST_3,
     ST_TEST_1B,
-    ST_MAX
+    ST_MAX,
 };
 
 static const char *test_names[] =
@@ -62,13 +62,13 @@ static const char *test_names[] =
     "Test I: Binding request",
     "Test II: Binding request with change address and port request",
     "Test III: Binding request with change port request",
-    "Test IB: Binding request to alternate address"
+    "Test IB: Binding request to alternate address",
 };
 
 enum timer_type
 {
     TIMER_TEST      = 1,
-    TIMER_DESTROY   = 2
+    TIMER_DESTROY   = 2,
 };
 
 typedef struct nat_detect_session

@@ -43,6 +43,7 @@
  */
 #define MAINTAIN_ASPECT_RATIO   PJ_TRUE
 
+
 /* Format map info */
 typedef struct and_fmt_map
 {
@@ -166,6 +167,7 @@ static pj_status_t and_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 
+// clang-format off
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
 {
@@ -189,7 +191,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &and_stream_stop,
     &and_stream_destroy
 };
-
+// clang-format on
 
 /****************************************************************************
  * JNI stuff

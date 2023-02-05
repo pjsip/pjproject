@@ -140,6 +140,7 @@ static pj_status_t cbar_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t cbar_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &cbar_factory_init,
@@ -162,7 +163,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &cbar_stream_stop,
     &cbar_stream_destroy
 };
-
+// clang-format on
 
 /****************************************************************************
  * Factory operations

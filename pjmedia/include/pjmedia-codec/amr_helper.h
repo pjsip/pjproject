@@ -44,9 +44,9 @@
 
 PJ_BEGIN_DECL
 
+// clang-format off
 
 /* AMR bits sensitivity order maps */
-
 const pj_int16_t pjmedia_codec_amrnb_ordermap122[244] =
 {
       0,   1,   2,   3,   4,   5,   6,   7,   8,  9,
@@ -561,38 +561,39 @@ const pj_int16_t* const pjmedia_codec_amrwb_ordermaps[9] =
     pjmedia_codec_amrwb_ordermap_2305,
     pjmedia_codec_amrwb_ordermap_2385
 };
+// clang-format on
 
 /**
  * Constant of AMR-NB frame lengths in bytes.
  */
 const pj_uint8_t  pjmedia_codec_amrnb_framelen[16] = 
-    {12, 13, 15, 17, 19, 20, 26, 31, 5, 0, 0, 0, 0, 0, 0, 0};
+    {12, 13, 15, 17, 19, 20, 26, 31, 5, 0, 0, 0, 0, 0, 0, 0,};
 /**
  * Constant of AMR-NB frame lengths in bits.
  */
 const pj_uint16_t pjmedia_codec_amrnb_framelenbits[9] = 
-    {95, 103, 118, 134, 148, 159, 204, 244, 39};
+    {95, 103, 118, 134, 148, 159, 204, 244, 39,};
 /**
  * Constant of AMR-NB bitrates.
  */
 const pj_uint16_t pjmedia_codec_amrnb_bitrates[8] = 
-    {4750, 5150, 5900, 6700, 7400, 7950, 10200, 12200};
+    {4750, 5150, 5900, 6700, 7400, 7950, 10200, 12200,};
 
 /**
  * Constant of AMR-WB frame lengths in bytes.
  */
 const pj_uint8_t  pjmedia_codec_amrwb_framelen[16] = 
-    {17, 23, 32, 37, 40, 46, 50, 58, 60, 5, 0, 0, 0, 0, 0, 0};
+    {17, 23, 32, 37, 40, 46, 50, 58, 60, 5, 0, 0, 0, 0, 0, 0,};
 /**
  * Constant of AMR-WB frame lengths in bits.
  */
 const pj_uint16_t pjmedia_codec_amrwb_framelenbits[10] = 
-    {132, 177, 253, 285, 317, 365, 397, 461, 477, 40};
+    {132, 177, 253, 285, 317, 365, 397, 461, 477, 40,};
 /**
  * Constant of AMR-WB bitrates.
  */
 const pj_uint16_t pjmedia_codec_amrwb_bitrates[9] = 
-    {6600, 8850, 12650, 14250, 15850, 18250, 19850, 23050, 23850};
+    {6600, 8850, 12650, 14250, 15850, 18250, 19850, 23050, 23850,};
 
 
 /**

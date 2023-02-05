@@ -64,8 +64,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
         return TRUE;
     }
 
+    // clang-format off
     MessageBox(0, TEXT("Test has been successful. Please see the result in \"\\pjmedia-test.txt\" file"),
                   TEXT(TITLE), 0);
+    // clang-format on
     return TRUE;
 }
 

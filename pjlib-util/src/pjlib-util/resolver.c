@@ -68,7 +68,7 @@ static const char *state_names[3] =
 {
     "Probing",
     "Active",
-    "Bad"
+    "Bad",
 };
 
 

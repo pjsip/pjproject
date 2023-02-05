@@ -46,10 +46,11 @@
 #define DEFAULT_H264_RATIO_DENUM    3
 
 
+// clang-format off
 /* ITU resolution definition */
 struct mpi_resolution_t
 {
-    pj_str_t            name;    
+    pj_str_t            name;
     pjmedia_rect_size   size;
 }
 mpi_resolutions [] =
@@ -61,9 +62,9 @@ mpi_resolutions [] =
     {{"CIF16",5},   {1408,1142}},
 };
 
-
 #define CALC_H264_MB_NUM(size) (((size.w+15)/16)*((size.h+15)/16))
 #define CALC_H264_MBPS(size,fps) CALC_H264_MB_NUM(size)*fps.num/fps.denum
+// clang-format on
 
 
 /* Parse fmtp value for custom resolution, e.g: "CUSTOM=800,600,2" */
@@ -318,6 +319,7 @@ static pj_status_t init_h264_profile(const pj_str_t *profile,
 {
     // Taken from https://www.itu.int/rec/T-REC-H.264
     // H.264 (08/21) Table A-1 – Level limits
+    // clang-format off
     const h264_level_info_t level_info[] =
     {
         { 10,     1485,     99,     64 },
@@ -341,6 +343,7 @@ static pj_status_t init_h264_profile(const pj_str_t *profile,
         { 61,  8355840, 139264, 480000 },
         { 62, 16711680, 139264, 800000 },
     };
+    // clang-format on
     unsigned i, tmp;
     pj_str_t endst;
     const h264_level_info_t *li = NULL;

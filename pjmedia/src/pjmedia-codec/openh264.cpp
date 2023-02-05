@@ -110,6 +110,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
                                       unsigned out_size,
                                       pjmedia_frame *output);
 
+// clang-format off
 /* Definition for OpenH264 codecs operations. */
 static pjmedia_vid_codec_op oh264_codec_op =
 {
@@ -133,7 +134,7 @@ static pjmedia_vid_codec_factory_op oh264_factory_op =
     &oh264_alloc_codec,
     &oh264_dealloc_codec
 };
-
+// clang-format on
 
 static struct oh264_factory
 {

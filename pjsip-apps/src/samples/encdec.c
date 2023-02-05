@@ -33,6 +33,7 @@
 
 #define THIS_FILE   "encdec.c"
 
+// clang-format off
 static const char *desc = 
  " encdec                                                               \n"
  "                                                                      \n"
@@ -51,6 +52,7 @@ static const char *desc =
 
  "\n"
 ;
+// clang-format on
 
 //#undef PJ_TRACE
 //#define PJ_TRACE 1

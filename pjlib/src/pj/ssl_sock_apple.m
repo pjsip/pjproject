@@ -1757,7 +1757,7 @@ static void ssl_ciphers_populate(void)
         tls_ciphersuite_RSA_WITH_AES_128_GCM_SHA256,
         tls_ciphersuite_RSA_WITH_AES_256_CBC_SHA,
         tls_ciphersuite_RSA_WITH_AES_256_CBC_SHA256,
-        tls_ciphersuite_RSA_WITH_AES_256_GCM_SHA384
+        tls_ciphersuite_RSA_WITH_AES_256_GCM_SHA384,
     };
     if (!ssl_cipher_num) {
         unsigned i;

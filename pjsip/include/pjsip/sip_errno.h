@@ -41,6 +41,8 @@ PJ_BEGIN_DECL
  *  - 171000 - 171999: mapped to errors generated from PJSIP core.
  */
 
+// clang-format off
+
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.
  */
@@ -514,6 +516,7 @@ PJ_BEGIN_DECL
  */
 #define PJSIP_TLS_ECERTVERIF    (PJSIP_ERRNO_START_PJSIP+173)   /* 171173 */
 
+// clang-format on
 
 /**
  * Get error message for the specified error code. Note that this

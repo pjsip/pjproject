@@ -31,8 +31,10 @@
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || \
     (defined (_MSC_VER) && _MSC_VER >= 1400)
 /* Variadic macro is introduced in C99; MSVC supports it in since 2005. */
+// clang-format off
 #  define printf(...) {printf(__VA_ARGS__);fflush(stdout);}
 #  define puts(s) {puts(s);fflush(stdout);}
+// clang-format on
 #endif
 
 
@@ -222,6 +224,7 @@ static void keystroke_help()
 
     print_buddy_list();
 
+    // clang-format off
     //puts("Commands:");
     puts("+=============================================================================+");
     puts("|       Call Commands:         |   Buddy, IM & Presence:  |     Account:      |");
@@ -249,6 +252,7 @@ static void keystroke_help()
     puts("|  q  QUIT      L  ReLoad       I  IP change     n  detect NAT type           |");
     puts("|  sleep MS     echo [0|1|txt]                                                |");
     puts("+=============================================================================+");
+    // clang-format on
 
     i = pjsua_call_get_count();
     printf("You have %d active call%s\n", i, (i>1?"s":""));
@@ -268,6 +272,7 @@ static void vid_show_help()
 {
     pj_bool_t vid_enabled = (app_config.vid.vid_cnt > 0);
 
+    // clang-format off
     puts("+=============================================================================+");
     puts("|                            Video commands:                                  |");
     puts("|                                                                             |");
@@ -304,6 +309,7 @@ static void vid_show_help()
     printf("| Video will be %s in the next offer/answer %s                            |\n",
            (vid_enabled? "enabled" : "disabled"), (vid_enabled? " " : ""));
     puts("+=============================================================================+");
+    // clang-format on
 }
 
 static void vid_handle_menu(char *menuin)
@@ -528,8 +534,10 @@ static void vid_handle_menu(char *menuin)
             } else {
                 unsigned i;
                 PJ_LOG(3,(THIS_FILE, "Found %d video codecs:", count));
+                // clang-format off
                 PJ_LOG(3,(THIS_FILE, "codec id      prio  fps    bw(kbps)   size"));
                 PJ_LOG(3,(THIS_FILE, "------------------------------------------"));
+                // clang-format on
                 for (i=0; i<count; ++i) {
                     pjmedia_vid_codec_param cp;
                     pjmedia_video_format_detail *vfd;
@@ -618,8 +626,10 @@ static void vid_handle_menu(char *menuin)
             } else {
                 unsigned i;
                 printf(" Video conference has %d ports:\n", count);
+                // clang-format off
                 printf(" id name                   format               rx-from      tx-to \n");
                 printf(" ------------------------------------------------------------------\n");
+                // clang-format on
                 for (i=0; i<count; ++i) {
                     char li_list[PJSUA_MAX_CALLS*4];
                     char tr_list[PJSUA_MAX_CALLS*4];

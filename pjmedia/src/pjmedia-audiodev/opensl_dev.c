@@ -143,6 +143,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *strm);
 static pj_status_t strm_stop(pjmedia_aud_stream *strm);
 static pj_status_t strm_destroy(pjmedia_aud_stream *strm);
 
+// clang-format off
 static pjmedia_aud_dev_factory_op opensl_op =
 {
     &opensl_init,
@@ -163,6 +164,7 @@ static pjmedia_aud_stream_op opensl_strm_op =
     &strm_stop,
     &strm_destroy
 };
+// clang-format on
 
 /* This callback is called every time a buffer finishes playing. */
 void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)

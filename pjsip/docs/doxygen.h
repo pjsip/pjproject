@@ -22,6 +22,8 @@
  * @brief PJSIP Doxygen's mainpage.
  */
 
+// clang-format off
+
 /*////////////////////////////////////////////////////////////////////////// */
 /*
         INTRODUCTION PAGE
@@ -304,3 +306,4 @@
  * \includelineno pjsip-perf.c
  */
 
+// clang-format on

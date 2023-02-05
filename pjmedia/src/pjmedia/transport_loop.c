@@ -112,7 +112,7 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
                                        unsigned pct_lost);
 static pj_status_t transport_destroy  (pjmedia_transport *tp);
 
-
+// clang-format off
 static pjmedia_transport_op transport_udp_op = 
 {
     &transport_get_info,
@@ -129,7 +129,7 @@ static pjmedia_transport_op transport_udp_op =
     &transport_destroy,
     &transport_attach2
 };
-
+// clang-format on
 
 /**
  * Initialize loopback media transport setting with its default values.

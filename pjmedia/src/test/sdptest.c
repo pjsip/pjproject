@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 
+// clang-format off
 static char *sdp[] = {
     /*
     "v=0\r\n"
@@ -51,6 +52,7 @@ static char *sdp[] = {
     "a=accept-types: message/cpim text/plain text/html\r\n"
     "a=path:msrp://alice.example.com:7394/2s93i9;tcp\r\n"
 };
+// clang-format on
 
 static int sdp_perform_test(pj_pool_factory *pf)
 {

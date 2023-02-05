@@ -51,7 +51,7 @@ enum
 const pjsip_method pjsip_publish_method = 
 {
     (pjsip_method_e)PJSIP_PUBLISH_METHOD,
-    { "PUBLISH", 7 }
+    { "PUBLISH", 7 },
 };
 
 

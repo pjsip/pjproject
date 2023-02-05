@@ -119,7 +119,7 @@ static pj_status_t  amr_codec_recover(pjmedia_codec *codec,
                                       struct pjmedia_frame *output);
 
 
-
+// clang-format off
 /* Definition for AMR codec operations. */
 static pjmedia_codec_op amr_op = 
 {
@@ -143,7 +143,7 @@ static pjmedia_codec_factory_op amr_factory_op =
     &amr_dealloc_codec,
     &pjmedia_codec_opencore_amr_deinit
 };
-
+// clang-format on
 
 /* AMR factory */
 static struct amr_codec_factory
@@ -180,6 +180,7 @@ enum
     IDX_AMR_WB  /* Index for wideband.      */
 };
 
+// clang-format off
 static pjmedia_codec_amr_config def_config[2] =
 {{ /* AMR-NB */
     PJ_FALSE,       /* octet align      */
@@ -189,14 +190,15 @@ static pjmedia_codec_amr_config def_config[2] =
     PJ_FALSE,       /* octet align      */
     12650           /* bitrate          */
  }};
+// clang-format on
 
 static const pj_uint16_t* amr_bitrates[2] =
-    {pjmedia_codec_amrnb_bitrates, pjmedia_codec_amrwb_bitrates};
+    {pjmedia_codec_amrnb_bitrates, pjmedia_codec_amrwb_bitrates,};
 
 static const unsigned amr_bitrates_size[2] =
 {
     PJ_ARRAY_SIZE(pjmedia_codec_amrnb_bitrates),
-    PJ_ARRAY_SIZE(pjmedia_codec_amrwb_bitrates)
+    PJ_ARRAY_SIZE(pjmedia_codec_amrwb_bitrates),
 };
 
 

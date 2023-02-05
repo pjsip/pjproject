@@ -2501,8 +2501,10 @@ static pj_status_t cmd_vid_conf_list()
     }
 
     PJ_LOG(3,(THIS_FILE," Video conference has %d ports:\n", count));
+    // clang-format off
     PJ_LOG(3,(THIS_FILE," id name                   format               rx-from      tx-to \n"));
     PJ_LOG(3,(THIS_FILE," ------------------------------------------------------------------\n"));
+    // clang-format on
     for (i=0; i<count; ++i) {
         char li_list[PJSUA_MAX_CALLS*4];
         char tr_list[PJSUA_MAX_CALLS*4];
@@ -3025,6 +3027,7 @@ static pj_status_t add_config_command(pj_cli_t *c)
 #if PJSUA_HAS_VIDEO
 static pj_status_t add_video_command(pj_cli_t *c)
 {
+    // clang-format off
     char* video_command =
         "<CMD name='video' id='600' desc='Video commands'>"
         "  <CMD name='enable' id='6001' desc='Enable video'/>"
@@ -3171,6 +3174,7 @@ static pj_status_t add_video_command(pj_cli_t *c)
         "    </CMD>"
         "  </CMD>"
         "</CMD>";
+    // clang-format on
 
     pj_str_t xml = pj_str(video_command);
     return pj_cli_add_cmd_from_xml(c, NULL,

@@ -47,6 +47,7 @@ static pj_status_t libyuv_conv_convert2(
 
 static void libyuv_conv_destroy(pjmedia_converter *converter);
 
+// clang-format off
 static pjmedia_converter_factory_op libyuv_factory_op =
 {
     &factory_create_converter,
@@ -59,6 +60,7 @@ static pjmedia_converter_op libyuv_converter_op =
     &libyuv_conv_destroy,
     &libyuv_conv_convert2
 };
+// clang-format on
 
 typedef struct fmt_info
 {
@@ -175,7 +177,7 @@ static fmt_convert_map conv_to_i420[] =
     {MAP_CONV_PACK_TO_PLANAR(BGRA,I420,ARGBToI420)},
     {MAP_CONV_PACK_TO_PLANAR(YUY2,I420,YUY2ToI420)},
     {MAP_CONV_PACK_TO_PLANAR(UYVY,I420,UYVYToI420)},
-    {MAP_CONV_PLANAR_TO_PLANAR(I422,I420,I422ToI420)}    
+    {MAP_CONV_PLANAR_TO_PLANAR(I422,I420,I422ToI420)},
 };
 
 static fmt_convert_map conv_from_i420[] = 
@@ -186,17 +188,17 @@ static fmt_convert_map conv_from_i420[] =
     {MAP_CONV_PLANAR_TO_PACK(I420,YUY2,I420ToYUY2)},
     {MAP_CONV_PLANAR_TO_PACK(I420,UYVY,I420ToUYVY)},
     {MAP_CONV_PLANAR_TO_PLANAR(I420,I422,I420ToI422)},
-    {MAP_SCALE_PLANAR(I420,I420Scale)}
+    {MAP_SCALE_PLANAR(I420,I420Scale)},
 };
 
 static fmt_convert_map conv_to_bgra[] = 
 {
     {MAP_CONV_PACK_TO_PACK(RGB24,BGRA,RGB24ToARGB)},
-    {MAP_CONV_PACK_TO_PACK(RGBA,BGRA,ABGRToARGB)},    
+    {MAP_CONV_PACK_TO_PACK(RGBA,BGRA,ABGRToARGB)},
     {MAP_CONV_PACK_TO_PACK(YUY2,BGRA,YUY2ToARGB)},
     {MAP_CONV_PACK_TO_PACK(UYVY,BGRA,UYVYToARGB)},
     {MAP_CONV_PLANAR_TO_PACK(I422,BGRA,I422ToARGB)},
-    {MAP_CONV_PLANAR_TO_PACK(I420,BGRA,I420ToARGB)}
+    {MAP_CONV_PLANAR_TO_PACK(I420,BGRA,I420ToARGB)},
 };
 
 static fmt_convert_map conv_from_bgra[] = 
@@ -207,7 +209,7 @@ static fmt_convert_map conv_from_bgra[] =
     {MAP_CONV_PACK_TO_PACK(BGRA,UYVY,ARGBToUYVY)},
     {MAP_CONV_PACK_TO_PLANAR(BGRA,I422,ARGBToI422)},
     {MAP_CONV_PACK_TO_PLANAR(BGRA,I420,ARGBToI420)},
-    {MAP_SCALE_PACK(BGRA,ARGBScale)}
+    {MAP_SCALE_PACK(BGRA,ARGBScale)},
 };
 
 typedef struct converter_act 

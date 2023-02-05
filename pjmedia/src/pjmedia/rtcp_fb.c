@@ -276,7 +276,7 @@ struct rtcp_fb_type_name_t
 {
     {PJMEDIA_RTCP_FB_ACK,       "ack"},
     {PJMEDIA_RTCP_FB_NACK,      "nack"},
-    {PJMEDIA_RTCP_FB_TRR_INT,   "trr-int"}
+    {PJMEDIA_RTCP_FB_TRR_INT,   "trr-int"},
 };
 
 /* Generate a=rtcp-fb based on the specified PT & RTCP-FB capability */

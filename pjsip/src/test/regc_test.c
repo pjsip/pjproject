@@ -746,6 +746,7 @@ enum
 
 int regc_test(void)
 {
+    // clang-format off
     struct test_rec {
         unsigned                 check_contact;
         unsigned                 add_xuid_param;
@@ -1004,6 +1005,7 @@ int regc_test(void)
             { PJ_FALSE, 200,    PJ_TRUE,    600,        0,          PJ_FALSE}
         },
     };
+    // clang-format on
 
     unsigned i;
     pj_sockaddr_in addr;

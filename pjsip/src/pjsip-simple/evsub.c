@@ -50,6 +50,7 @@ enum
     PJSIP_NOTIFY_METHOD = PJSIP_OTHER_METHOD
 };
 
+// clang-format off
 PJ_DEF_DATA(const pjsip_method) pjsip_subscribe_method = 
 {
     (pjsip_method_e) PJSIP_SUBSCRIBE_METHOD,
@@ -61,6 +62,7 @@ PJ_DEF_DATA(const pjsip_method) pjsip_notify_method =
     (pjsip_method_e) PJSIP_NOTIFY_METHOD,
     { "NOTIFY", 6 }
 };
+// clang-format on
 
 /**
  * SUBSCRIBE method constant.
@@ -89,6 +91,7 @@ static pj_status_t mod_evsub_unload(void);
 /*
  * State names.
  */
+// clang-format off
 static pj_str_t evsub_state_names[] = 
 {
     { "NULL",       4},
@@ -99,6 +102,7 @@ static pj_str_t evsub_state_names[] =
     { "TERMINATED", 10},
     { "UNKNOWN",    7}
 };
+// clang-format on
 
 /*
  * Timer constants.
@@ -149,6 +153,7 @@ enum timer_id
     TIMER_TYPE_MAX
 };
 
+// clang-format off
 static const char *timer_names[] = 
 {
     "None",
@@ -158,6 +163,7 @@ static const char *timer_names[] =
     "UAC_WAIT_NOTIFY",
     "INVALID_TIMER"
 };
+// clang-format on
 
 /*
  * Definition of event package.

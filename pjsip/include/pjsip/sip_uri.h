@@ -150,6 +150,7 @@ PJ_DECL(pj_ssize_t) pjsip_param_print_on(const pjsip_param *param_list,
 /**
  * URI context.
  */
+// clang-format off
 typedef enum pjsip_uri_context_e
 {
     PJSIP_URI_IN_REQ_URI,       /**< The URI is in Request URI. */
@@ -158,6 +159,7 @@ typedef enum pjsip_uri_context_e
     PJSIP_URI_IN_ROUTING_HDR,   /**< The URI is in Route/Record-Route header. */
     PJSIP_URI_IN_OTHER          /**< Other context (web page, business card, etc.) */
 } pjsip_uri_context_e;
+// clang-format on
 
 /**
  * URI 'virtual' function table.

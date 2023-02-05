@@ -752,6 +752,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     int         cand_weight[CAND_CNT];
     int         selected_cand;
     char        strip[PJ_INET6_ADDRSTRLEN+10];
+    // clang-format off
     /* Special IPv4 addresses. */
     struct spec_ipv4_t
     {
@@ -802,6 +803,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
           WEIGHT_DISABLED
         }
     };
+    // clang-format on
     pj_addrinfo ai;
     pj_status_t status;
 

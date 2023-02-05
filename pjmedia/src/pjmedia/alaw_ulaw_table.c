@@ -25,6 +25,7 @@
 
 #if defined(PJMEDIA_HAS_ALAW_ULAW_TABLE) && PJMEDIA_HAS_ALAW_ULAW_TABLE!=0
 
+// clang-format off
 const pj_uint8_t pjmedia_linear2ulaw_tab[16384] = 
 {
     0xff,0xfe,0xfe,0xfd,0xfd,0xfc,0xfc,0xfb,
@@ -4201,6 +4202,7 @@ const pj_int16_t pjmedia_alaw2linear_tab[256] =
         688,   656,   752,   720,   560,   528,   624,   592,
         944,   912,  1008,   976,   816,   784,   880,   848
 };
+// clang-format on
 
 #endif
 

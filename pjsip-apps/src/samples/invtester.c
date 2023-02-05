@@ -95,7 +95,7 @@ static void send_request(const pjsip_method *method,
         "a=sendrecv\r\n"
         "a=rtpmap:101 telephone-event/8000\r\n"
         "a=fmtp:101 0-15\r\n",
-        0
+        0,
     };
     pj_status_t status;
 

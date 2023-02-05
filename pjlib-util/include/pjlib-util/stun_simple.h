@@ -33,6 +33,7 @@ PJ_BEGIN_DECL
 /**
  * This enumeration describes STUN message types.
  */
+// clang-format off
 typedef enum pjstun_msg_type
 {
     PJSTUN_BINDING_REQUEST                  = 0x0001, /**< Binding request  */
@@ -42,6 +43,7 @@ typedef enum pjstun_msg_type
     PJSTUN_SHARED_SECRET_RESPONSE           = 0x0102, /**< Secret response  */
     PJSTUN_SHARED_SECRET_ERROR_RESPONSE     = 0x0112  /**< Secret error     */
 } pjstun_msg_type;
+// clang-format on
 
 
 /**

@@ -62,6 +62,8 @@
 
 /* vidtoolbox H264 default PT */
 #define VT_H264_PT              PJMEDIA_RTP_PT_H264_RSV1
+
+
 /*
  * Factory operations.
  */
@@ -108,6 +110,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
                                       unsigned out_size,
                                       pjmedia_frame *output);
 
+// clang-format off
 /* Definition for Video Toolbox codecs operations. */
 static pjmedia_vid_codec_op vtool_codec_op =
 {
@@ -131,7 +134,7 @@ static pjmedia_vid_codec_factory_op vtool_factory_op =
     &vtool_alloc_codec,
     &vtool_dealloc_codec
 };
-
+// clang-format on
 
 static struct vtool_factory
 {

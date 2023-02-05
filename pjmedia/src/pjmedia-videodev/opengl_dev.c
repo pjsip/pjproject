@@ -52,12 +52,14 @@
 #    define LOG(a)
 #endif
 
+
 enum {
     ATTRIB_VERTEX,
     ATTRIB_TEXTUREPOSITON,
     NUM_ATTRIBUTES
 };
 
+// clang-format off
 /* Vertex and fragment shaders */
 static const GLchar *vertSrc = " \
 attribute vec4 position; \
@@ -77,6 +79,7 @@ void main() \
     gl_FragColor = texture2D(videoFrame, texCoord); \
 } \
 ";
+// clang-format on
 
 /* OpenGL buffers structure. */
 struct gl_buffers {
@@ -130,6 +133,7 @@ opengl_factory_create_stream(pjmedia_vid_dev_factory *f,
                              pjmedia_vid_dev_stream **p_vid_strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &opengl_factory_init,
@@ -140,6 +144,7 @@ static pjmedia_vid_dev_factory_op factory_op =
     &opengl_factory_create_stream,
     &opengl_factory_refresh
 };
+// clang-format on
 
 /****************************************************************************
  * OpenGL utility functions

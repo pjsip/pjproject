@@ -377,6 +377,7 @@ on_return:
 }
 
 
+// clang-format off
 static void print_menu(void)
 {
     puts("");
@@ -403,6 +404,7 @@ static void print_menu(void)
     printf("Enter selection: ");
     fflush(stdout);
 }
+// clang-format on
 
 int main()
 {

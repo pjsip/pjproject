@@ -148,6 +148,7 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm);
 
 
 /* Operations */
+// clang-format off
 static pjmedia_aud_dev_factory_op factory_op =
 {
     &factory_init,
@@ -168,7 +169,7 @@ static pjmedia_aud_stream_op stream_op =
     &stream_stop,
     &stream_destroy
 };
-
+// clang-format on
 
 /****************************************************************************
  * Internal APS Engine
@@ -1320,7 +1321,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
         TFourCC(KMCPFourCCIdAMRNB),
         TFourCC(KMCPFourCCIdG711),
         TFourCC(KMCPFourCCIdG729),
-        TFourCC(KMCPFourCCIdILBC)
+        TFourCC(KMCPFourCCIdILBC),
     };
 
     for (i = 0; i < PJ_ARRAY_SIZE(fourcc); ++i) {

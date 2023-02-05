@@ -213,7 +213,9 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
                                                    void *src_buf,
                                                    void **result)
 {
+// clang-format off
 #define swap(a, b) {pj_uint8_t *c = a; a = b; b = c;}
+// clang-format on
 
     pj_status_t status;
     pjmedia_frame src_frame, dst_frame;

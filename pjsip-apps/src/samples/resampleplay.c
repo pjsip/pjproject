@@ -41,6 +41,7 @@
 #define THIS_FILE   "resampleplay.c"
 
 
+// clang-format off
 static const char *desc = 
 " FILE                                                              \n"
 "                                                                   \n"
@@ -60,6 +61,7 @@ SND_USAGE
 "                                                                   \n"
 "  The WAV file could have mono or stereo channels with arbitrary   \n"
 "  sampling rate, but MUST contain uncompressed (i.e. 16bit) PCM.   \n";
+// clang-format on
 
 
 int main(int argc, char *argv[])

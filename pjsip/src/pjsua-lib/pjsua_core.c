@@ -2138,6 +2138,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
 void pjsua_set_state(pjsua_state new_state)
 {
+    // clang-format off
     const char *state_name[] = {
         "NULL",
         "CREATED",
@@ -2146,6 +2147,7 @@ void pjsua_set_state(pjsua_state new_state)
         "RUNNING",
         "CLOSING"
     };
+    // clang-format on
     pjsua_state old_state = pjsua_var.state;
 
     pjsua_var.state = new_state;

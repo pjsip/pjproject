@@ -34,6 +34,7 @@
 
 #define kCVPixelFormatType_422YpCbCr8_yuvs 'yuvs'
 
+
 typedef struct qt_fmt_info
 {
     pjmedia_format_id   pjmedia_format;
@@ -140,6 +141,7 @@ static pj_status_t qt_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t qt_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &qt_factory_init,
@@ -162,7 +164,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &qt_stream_stop,
     &qt_stream_destroy
 };
-
+// clang-format on
 
 /****************************************************************************
  * Factory operations

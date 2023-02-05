@@ -39,6 +39,7 @@
  */
 #define STOP_IF_ERROR_RENDERING 8
 
+
 typedef struct andgl_fmt_info
 {
     pjmedia_format_id   pjmedia_format;
@@ -124,6 +125,7 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
 static pj_status_t job_queue_destroy(job_queue *jq);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_stream_op stream_op =
 {
     &andgl_stream_get_param,
@@ -135,6 +137,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &andgl_stream_stop,
     &andgl_stream_destroy
 };
+// clang-format on
 
 int pjmedia_vid_dev_opengl_imp_get_cap(void)
 {
@@ -163,12 +166,14 @@ static andgl_fmt_info* get_andgl_format_info(pjmedia_format_id id)
 static pj_status_t init_opengl(void * data)
 {
     struct andgl_stream *strm = (struct andgl_stream *)data;
+    // clang-format off
     const EGLint attr[] =
     {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_SURFACE_TYPE,
         EGL_WINDOW_BIT, EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8,
-        EGL_RED_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_NONE
+        EGL_RED_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_NONE,
     };
+    // clang-format on
     EGLint context_attr[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
     EGLConfig config;
     EGLint numConfigs;

@@ -111,6 +111,7 @@ static pj_status_t avi_dev_strm_destroy(pjmedia_vid_dev_stream *strm);
 static void reset_dev_info(struct avi_dev_info *adi);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &avi_factory_init,
@@ -133,7 +134,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &avi_dev_strm_stop,
     &avi_dev_strm_destroy
 };
-
+// clang-format on
 
 /****************************************************************************
  * Factory operations

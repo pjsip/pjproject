@@ -40,6 +40,7 @@ static unsigned dump_media_stat(const char *indent,
                                 const pjmedia_rtcp_stat *stat,
                                 const char *rx_info, const char *tx_info)
 {
+    // clang-format off
     char last_update[64];
     char packets[32], bytes[32], ipbytes[32], avg_bps[32], avg_ipbps[32];
     pj_time_val media_duration, now;
@@ -207,6 +208,7 @@ static unsigned dump_media_stat(const char *indent,
     p += len;
 
     return (unsigned)(p-buf);
+    // clang-format on
 }
 
 
@@ -219,6 +221,7 @@ static void dump_media_session(const char *indent,
                                char *buf, unsigned maxlen,
                                pjsua_call *call)
 {
+    // clang-format off
     unsigned i;
     char *p = buf, *end = buf+maxlen;
     int len;
@@ -879,6 +882,7 @@ static void dump_media_session(const char *indent,
 #endif
 
     }
+    // clang-format on
 }
 
 #else   /* PJSUA_MEDIA_HAS_PJMEDIA ||

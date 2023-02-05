@@ -29,6 +29,7 @@
  * Message must be limited to 64 chars!
  */
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
+// clang-format off
 static const struct 
 {
     int code;
@@ -73,6 +74,7 @@ static const struct
     PJ_BUILD_ERR( PJNATH_ETURNINTP,         "Invalid/unsupported transport"),
 
 };
+// clang-format on
 #endif  /* PJ_HAS_ERROR_STRING */
 
 

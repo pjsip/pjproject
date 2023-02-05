@@ -132,7 +132,6 @@ typedef enum pj_ssl_cert_verify_flag_t
 
 } pj_ssl_cert_verify_flag_t;
 
-
 /**
  * Type of SSL certificate name.
  */
@@ -319,8 +318,8 @@ PJ_DECL(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert);
 /** 
  * Cipher suites enumeration.
  */
+// clang-format off
 typedef enum pj_ssl_cipher {
-
     /* Unsupported cipher */
     PJ_TLS_UNKNOWN_CIPHER                       = -1,
 
@@ -398,6 +397,7 @@ typedef enum pj_ssl_cipher {
     PJ_SSL_CK_DES_192_EDE3_CBC_WITH_MD5         = 0x000700C0
 
 } pj_ssl_cipher;
+// clang-format on
 
 
 /**
@@ -448,6 +448,7 @@ PJ_DECL(pj_ssl_cipher) pj_ssl_cipher_id(const char *cipher_name);
 /**
  * Elliptic curves enumeration.
  */
+// clang-format off
 typedef enum pj_ssl_curve
 {
         PJ_TLS_UNKNOWN_CURVE            = 0,
@@ -482,6 +483,7 @@ typedef enum pj_ssl_curve
         PJ_TLS_CURVE_ARBITRARY_EXPLICIT_PRIME_CURVES    = 0XFF01,
         PJ_TLS_CURVE_ARBITRARY_EXPLICIT_CHAR2_CURVES    = 0XFF02
 } pj_ssl_curve;
+// clang-format on
 
 /**
  * Get curve list supported by SSL/TLS backend.
@@ -526,6 +528,7 @@ PJ_DECL(const char*) pj_ssl_curve_name(pj_ssl_curve curve);
  */
 PJ_DECL(pj_ssl_curve) pj_ssl_curve_id(const char *curve_name);
 
+// clang-format off
 /**
  * Entropy enumeration
  */
@@ -538,6 +541,7 @@ typedef enum pj_ssl_entropy
         PJ_SSL_ENTROPY_FILE     = 4,    /**< File */
         PJ_SSL_ENTROPY_UNKNOWN  = 0x0F  /**< Unknown */
 } pj_ssl_entropy_t;
+// clang-format on
 
 /**
  * This structure contains the callbacks to be called by the secure socket.

@@ -55,6 +55,7 @@
 #   define PJMEDIA_VID_PORT_MATCH_WIDTH_ARRAY_SIZE 3
 #endif
 
+
 typedef struct vid_pasv_port vid_pasv_port;
 
 enum role
@@ -414,6 +415,7 @@ static void test_find_closest_fmt(pjmedia_vid_dev_info *di)
     unsigned i, j, k;
     char fmt_name[5];
 
+    // clang-format off
     pjmedia_rect_size find_size[] = {
         {720, 480},
         {352, 288},
@@ -437,6 +439,7 @@ static void test_find_closest_fmt(pjmedia_vid_dev_info *di)
         PJMEDIA_FORMAT_YUY2,
         PJMEDIA_FORMAT_I420
     };
+    // clang-format on
 
     TRACE_FIND_FMT((THIS_FILE, "Supported format = "));
     for (i = 0; i < di->fmt_cnt; i++) {

@@ -150,6 +150,7 @@ static pj_status_t alt_codec_deinit(void)
 
 }
 
+// clang-format off
 static pjmedia_codec_factory_op alt_codec_factory_op =
 {
     &alt_codec_test_alloc,
@@ -159,6 +160,7 @@ static pjmedia_codec_factory_op alt_codec_factory_op =
     &alt_codec_dealloc_codec,
     &alt_codec_deinit
 };
+// clang-format on
 
 
 /*****************************************************************************

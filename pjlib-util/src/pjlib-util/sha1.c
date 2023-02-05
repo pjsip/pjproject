@@ -155,6 +155,7 @@ static void SHA1_Transform(pj_uint32_t state[5], pj_uint8_t buffer[64])
     e = state[4];
 
     /* 4 rounds of 20 operations each. Loop unrolled. */
+    // clang-format off
     R0(a,b,c,d,e, 0); R0(e,a,b,c,d, 1); R0(d,e,a,b,c, 2); R0(c,d,e,a,b, 3);
     R0(b,c,d,e,a, 4); R0(a,b,c,d,e, 5); R0(e,a,b,c,d, 6); R0(d,e,a,b,c, 7);
     R0(c,d,e,a,b, 8); R0(b,c,d,e,a, 9); R0(a,b,c,d,e,10); R0(e,a,b,c,d,11);
@@ -175,6 +176,7 @@ static void SHA1_Transform(pj_uint32_t state[5], pj_uint8_t buffer[64])
     R4(c,d,e,a,b,68); R4(b,c,d,e,a,69); R4(a,b,c,d,e,70); R4(e,a,b,c,d,71);
     R4(d,e,a,b,c,72); R4(c,d,e,a,b,73); R4(b,c,d,e,a,74); R4(a,b,c,d,e,75);
     R4(e,a,b,c,d,76); R4(d,e,a,b,c,77); R4(c,d,e,a,b,78); R4(b,c,d,e,a,79);
+    // clang-format on
 
     /* Add the working vars back into context.state[] */
     state[0] += a;

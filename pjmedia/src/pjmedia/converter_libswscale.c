@@ -59,6 +59,7 @@ struct ffmpeg_converter
                                          dst;
 };
 
+// clang-format off
 static pjmedia_converter_factory_op libswscale_factory_op =
 {
     &factory_create_converter,
@@ -71,6 +72,7 @@ static pjmedia_converter_op liswscale_converter_op =
     &libswscale_conv_destroy,
     &libswscale_conv_convert2
 };
+// clang-format on
 
 static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
                                             pj_pool_t *pool,

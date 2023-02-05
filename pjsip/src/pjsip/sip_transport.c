@@ -189,6 +189,7 @@ static struct transport_names_t
     char                   name_buf[16];    /* For user's transport */
 } transport_names[16] = 
 {
+    // clang-format off
     { 
         PJSIP_TRANSPORT_UNSPECIFIED, 
         0, 
@@ -273,6 +274,8 @@ static struct transport_names_t
         "DTLS IPv6 transport",
         PJSIP_TRANSPORT_SECURE
     },
+
+    // clang-format on
 };
 
 static void tp_state_callback(pjsip_transport *tp,

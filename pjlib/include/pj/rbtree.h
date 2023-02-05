@@ -42,7 +42,7 @@ PJ_BEGIN_DECL
 typedef enum pj_rbcolor_t
 {
     PJ_RBCOLOR_BLACK,
-    PJ_RBCOLOR_RED
+    PJ_RBCOLOR_RED,
 } pj_rbcolor_t;
 
 /**

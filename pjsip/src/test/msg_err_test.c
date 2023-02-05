@@ -32,6 +32,7 @@ static pj_bool_t verify_success(pjsip_msg *msg,
     return PJ_TRUE;
 }
 
+// clang-format off
 static struct test_entry
 {
     char        msg[1024];
@@ -67,6 +68,7 @@ static struct test_entry
         &verify_success
     }
 };
+// clang-format on
 
 
 int msg_err_test(void)

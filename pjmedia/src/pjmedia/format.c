@@ -72,6 +72,7 @@ struct pjmedia_video_format_mgr
     pjmedia_video_format_info **infos;
 };
 
+// clang-format off
 static pjmedia_video_format_mgr *video_format_mgr_instance;
 static pjmedia_video_format_info built_in_vid_fmt_info[] =
 {
@@ -92,6 +93,7 @@ static pjmedia_video_format_info built_in_vid_fmt_info[] =
     {PJMEDIA_FORMAT_NV12,  "NV12", PJMEDIA_COLOR_MODEL_YUV, 12, 2, &apply_biplanar_420},
     {PJMEDIA_FORMAT_NV21,  "NV21", PJMEDIA_COLOR_MODEL_YUV, 12, 2, &apply_biplanar_420},
 };
+// clang-format on
 
 PJ_DEF(void) pjmedia_format_init_video( pjmedia_format *fmt,
                                         pj_uint32_t fmt_id,

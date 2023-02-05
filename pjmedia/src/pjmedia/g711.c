@@ -86,6 +86,7 @@ static pj_status_t  g711_recover( pjmedia_codec *codec,
                                   struct pjmedia_frame *output);
 #endif
 
+// clang-format off
 /* Definition for G711 codec operations. */
 static pjmedia_codec_op g711_op = 
 {
@@ -113,6 +114,7 @@ static pjmedia_codec_factory_op g711_factory_op =
     &g711_dealloc_codec,
     &pjmedia_codec_g711_deinit
 };
+// clang-format on
 
 /* G711 factory private data */
 static struct g711_factory

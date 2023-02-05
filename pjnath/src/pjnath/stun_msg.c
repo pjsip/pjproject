@@ -32,6 +32,7 @@
 
 static int padding_char;
 
+// clang-format off
 static const char *stun_method_names[PJ_STUN_METHOD_MAX] = 
 {
     "Unknown",                  /* 0 */
@@ -81,7 +82,7 @@ static struct
     { PJ_STUN_SC_INSUFFICIENT_CAPACITY,     "Insufficient Capacity"},
     { PJ_STUN_SC_GLOBAL_FAILURE,            "Global Failure"}
 };
-
+// clang-format on
 
 
 struct attr_desc
@@ -181,6 +182,7 @@ static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf,
                                      unsigned *printed);
 static void*       clone_empty_attr(pj_pool_t *pool, const void *src);
 
+// clang-format off
 static struct attr_desc mandatory_attr_desc[] = 
 {
     {
@@ -610,6 +612,7 @@ static struct attr_desc extended_attr_desc[] =
         &clone_uint64_attr
     }
 };
+// clang-format on
 
 
 

@@ -75,9 +75,8 @@ static const pj_uint32_t crc_tab[] = {
     0xbdbdf21cL, 0xcabac28aL, 0x53b39330L, 0x24b4a3a6L, 0xbad03605L,
     0xcdd70693L, 0x54de5729L, 0x23d967bfL, 0xb3667a2eL, 0xc4614ab8L,
     0x5d681b02L, 0x2a6f2b94L, 0xb40bbe37L, 0xc30c8ea1L, 0x5a05df1bL,
-    0x2d02ef8dL
+    0x2d02ef8dL,
 };
-
 
 #elif defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN != 0
 #define CRC32_INDEX(c)      (c >> 24)
@@ -139,7 +138,7 @@ static const pj_uint32_t crc_tab[] = {
     0x1cf2bdbdL, 0x8ac2bacaL, 0x3093b353L, 0xa6a3b424L, 0x0536d0baL,
     0x9306d7cdL, 0x2957de54L, 0xbf67d923L, 0x2e7a66b3L, 0xb84a61c4L,
     0x021b685dL, 0x942b6f2aL, 0x37be0bb4L, 0xa18e0cc3L, 0x1bdf055aL,
-    0x8def022dL
+    0x8def022dL,
 };
 
 #else

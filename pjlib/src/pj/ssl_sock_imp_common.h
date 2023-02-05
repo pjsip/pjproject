@@ -29,7 +29,7 @@ enum ssl_state {
     SSL_STATE_NULL,
     SSL_STATE_HANDSHAKING,
     SSL_STATE_ESTABLISHED,
-    SSL_STATE_ERROR
+    SSL_STATE_ERROR,
 };
 
 /*
@@ -39,7 +39,7 @@ enum timer_id
 {
     TIMER_NONE,
     TIMER_HANDSHAKE_TIMEOUT,
-    TIMER_CLOSE
+    TIMER_CLOSE,
 };
 
 /*

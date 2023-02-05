@@ -49,16 +49,15 @@ PJ_DEF(const char*) pj_get_version(void)
 
 PJ_DEF(void) pj_dump_config(void)
 {
+    // clang-format off
     PJ_LOG(3, (id, "PJLIB (c)2008-2016 Teluu Inc."));
     PJ_LOG(3, (id, "Dumping configurations:"));
     PJ_LOG(3, (id, " PJ_VERSION                : %s", PJ_VERSION));
     PJ_LOG(3, (id, " PJ_M_NAME                 : %s", PJ_M_NAME));
     PJ_LOG(3, (id, " PJ_HAS_PENTIUM            : %d", PJ_HAS_PENTIUM));
     PJ_LOG(3, (id, " PJ_OS_NAME                : %s", PJ_OS_NAME));
-    PJ_LOG(3, (id, " PJ_CC_NAME/VER_(1,2,3)    : %s-%d.%d.%d", PJ_CC_NAME,
-               PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_3));
-    PJ_LOG(3, (id, " PJ_IS_(BIG/LITTLE)_ENDIAN : %s", 
-               (PJ_IS_BIG_ENDIAN?"big-endian":"little-endian")));
+    PJ_LOG(3, (id, " PJ_CC_NAME/VER_(1,2,3)    : %s-%d.%d.%d", PJ_CC_NAME, PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_3));
+    PJ_LOG(3, (id, " PJ_IS_(BIG/LITTLE)_ENDIAN : %s", (PJ_IS_BIG_ENDIAN?"big-endian":"little-endian")));
     PJ_LOG(3, (id, " PJ_HAS_INT64              : %d", PJ_HAS_INT64));
     PJ_LOG(3, (id, " PJ_HAS_FLOATING_POINT     : %d", PJ_HAS_FLOATING_POINT));
     PJ_LOG(3, (id, " PJ_DEBUG                  : %d", PJ_DEBUG));
@@ -84,5 +83,6 @@ PJ_DEF(void) pj_dump_config(void)
     PJ_LOG(3, (id, " PJ_OS_HAS_CHECK_STACK     : %d", PJ_OS_HAS_CHECK_STACK));
     PJ_LOG(3, (id, " PJ_HAS_HIGH_RES_TIMER     : %d", PJ_HAS_HIGH_RES_TIMER));
     PJ_LOG(3, (id, " PJ_HAS_IPV6               : %d", PJ_HAS_IPV6));
+    // clang-format on
 }
 

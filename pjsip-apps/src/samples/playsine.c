@@ -174,7 +174,7 @@ static void usage(void)
     puts("Usage: playsine [nchannel]");
     puts("");
     puts("where");
-    puts(" nchannel is number of audio channels (1 for mono, or 2 for stereo).");
+    puts(" nchannel is number of audio channels (1 for mono, or 2 for stereo)");
     puts(" Default is 1 (mono).");
     puts("");
 }

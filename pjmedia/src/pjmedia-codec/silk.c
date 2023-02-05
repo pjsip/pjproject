@@ -111,7 +111,7 @@ typedef struct silk_param
     int          complexity;        /* Complexity mode: 0/lowest to 2.      */
 } silk_param;
 
-
+// clang-format off
 /* Definition for SILK codec operations. */
 static pjmedia_codec_op silk_op =
 {
@@ -135,7 +135,7 @@ static pjmedia_codec_factory_op silk_factory_op =
     &silk_dealloc_codec,
     &pjmedia_codec_silk_deinit
 };
-
+// clang-format on
 
 /* SILK factory private data */
 static struct silk_factory

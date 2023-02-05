@@ -844,6 +844,7 @@ static void test_loop(long duration)
 /*****************************************************************************
  * usage()
  */
+// clang-format off
 enum {
     OPT_CODEC       = 'c',
     OPT_INPUT       = 'i',
@@ -920,10 +921,12 @@ static void usage(void)
     printf("  --jb-max, -%c MSEC      Set maximum delay that can be accomodated by the\n", OPT_JB_MAX);
     printf("                         jitter buffer msec.\n");
 }
+// clang-format on
 
 
 static int init_options(int argc, char *argv[])
 {
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "codec",          1, 0, OPT_CODEC },
         { "input",          1, 0, OPT_INPUT },
@@ -948,6 +951,7 @@ static int init_options(int argc, char *argv[])
         { "help",           0, 0, OPT_HELP},
         { NULL, 0, 0, 0 },
     };
+    // clang-format on
     int c;
     int option_index;
     char format[128];
@@ -1030,7 +1034,9 @@ static int init_options(int argc, char *argv[])
         case OPT_LOSS_CORR:
             g_app.cfg.tx_pct_loss_corr = atoi(pj_optarg);
             if (g_app.cfg.tx_pct_avg_lost > 100) {
+                // clang-format off
                 puts("Error: Loss correlation is in percentage, value is not valid?");
+                // clang-format on
                 return 1;
             }
             break;

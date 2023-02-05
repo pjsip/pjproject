@@ -28,7 +28,7 @@
 
 PJ_BEGIN_DECL
 
-
+// clang-format off
 /**
  * @defgroup PJ_DNS_RESOLVER DNS Asynchronous/Caching Resolution Engine
  * @ingroup PJ_DNS
@@ -156,6 +156,7 @@ PJ_BEGIN_DECL
  *    </A>
  */
 
+// clang-format on
 
 
 /**

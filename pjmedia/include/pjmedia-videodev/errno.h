@@ -36,6 +36,7 @@
 
 PJ_BEGIN_DECL
 
+// clang-format off
 
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.
@@ -128,6 +129,7 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_EVID_BADSIZE    (PJMEDIA_VIDEODEV_ERRNO_START+13) /* 520013 */
 
+// clang-format on
 
 /**
  * Get error message for the specified error code. Note that this

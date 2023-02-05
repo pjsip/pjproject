@@ -17,6 +17,8 @@
  */
 
 
+// clang-format off
+
 /**
 @defgroup PJNATH_STUN STUN: Session Traversal Utilities for NAT
 @ingroup PJNATH
@@ -131,3 +133,5 @@ Also see <b>\ref samples_page</b> for other samples.
 
  */
 
+
+// clang-format on

@@ -52,6 +52,7 @@
 /* Timeout until the buffer is ready in ms. */
 #define CODEC_DEQUEUE_TIMEOUT   10
 
+
 /* Prototypes for Android MediaCodec codecs factory */
 static pj_status_t and_media_test_alloc(pjmedia_codec_factory *factory,
                                         const pjmedia_codec_info *id );
@@ -93,6 +94,7 @@ static pj_status_t  and_media_codec_recover(pjmedia_codec *codec,
                                             unsigned output_buf_len,
                                             struct pjmedia_frame *output);
 
+// clang-format off
 /* Definition for Android MediaCodec codecs operations. */
 static pjmedia_codec_op and_media_op =
 {
@@ -116,6 +118,7 @@ static pjmedia_codec_factory_op and_media_factory_op =
     &and_media_dealloc_codec,
     &pjmedia_codec_and_media_aud_deinit
 };
+// clang-format on
 
 /* Android MediaCodec codecs factory */
 static struct and_media_factory {
@@ -237,6 +240,7 @@ static struct and_media_codec {
     pjmedia_codec_fmtp dec_fmtp;        /* Decoder's fmtp params.           */
 }
 
+// clang-format off
 and_media_codec[] =
 {
 #   if PJMEDIA_HAS_AND_MEDIA_AMRNB
@@ -255,6 +259,7 @@ and_media_codec[] =
     },
 #   endif
 };
+// clang-format on
 
 #if PJMEDIA_HAS_AND_MEDIA_AMRNB || PJMEDIA_HAS_AND_MEDIA_AMRWB
 

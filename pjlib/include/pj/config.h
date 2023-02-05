@@ -994,6 +994,7 @@
  * Secure socket implementation.
  * Select one of these implementations in PJ_SSL_SOCK_IMP.
  */
+// clang-format off
 #define PJ_SSL_SOCK_IMP_NONE        0   /**< Disable SSL socket.    */
 #define PJ_SSL_SOCK_IMP_OPENSSL     1   /**< Using OpenSSL.         */
 #define PJ_SSL_SOCK_IMP_GNUTLS      2   /**< Using GnuTLS.          */
@@ -1002,6 +1003,7 @@
                                              MacOS 10.15 & iOS 13.0)*/
 #define PJ_SSL_SOCK_IMP_APPLE       4   /**< Using Apple's Network 
                                              framework.             */
+// clang-format on
 
 /**
  * Select which SSL socket implementation to use. Currently pjlib supports
@@ -1422,9 +1424,11 @@ PJ_BEGIN_DECL
  * 0xMMIIRR00, where MM: major number, II: minor number, RR: revision
  * number, 00: always zero for now.
  */
+// clang-format off
 #define PJ_VERSION_NUM  ((PJ_VERSION_NUM_MAJOR << 24) | \
                          (PJ_VERSION_NUM_MINOR << 16) | \
                          (PJ_VERSION_NUM_REV << 8))
+// clang-format on
 
 /**
  * PJLIB version string constant. @see pj_get_version()

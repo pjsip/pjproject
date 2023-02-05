@@ -44,6 +44,8 @@
 /* Max number of hangup retries. */
 #define CALL_HANGUP_MAX_RETRY        4
 
+// clang-format off
+
 /*
  * The INFO method.
  */
@@ -59,6 +61,8 @@ static const pjsip_method pjsip_update_method =
     PJSIP_OTHER_METHOD,
     { "UPDATE", 6 }
 };
+
+// clang-format on
 
 /* This callback receives notification from invite session when the
  * session state has changed.

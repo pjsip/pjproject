@@ -409,7 +409,7 @@ static int round_robin_test(pj_pool_t *pool)
         { "1.1.1.1", 3,  0 },
         { "2.2.2.2", 65, 0 },
         { "3.3.3.3", 32, 0 },
-        { "4.4.4.4", 0,  0 }
+        { "4.4.4.4", 0,  0 },
     };
 
     PJ_LOG(3,(THIS_FILE, " Performing round-robin/load-balance test.."));

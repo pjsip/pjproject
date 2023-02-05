@@ -72,6 +72,7 @@
 
 #define THIS_FILE               "coreaudio_dev.c"
 
+
 /* coreaudio device info */
 struct coreaudio_dev_info
 {
@@ -197,6 +198,7 @@ static void propListener(void *                 inClientData,
 #endif
 
 /* Operations */
+// clang-format off
 static pjmedia_aud_dev_factory_op factory_op =
 {
     &ca_factory_init,
@@ -217,6 +219,7 @@ static pjmedia_aud_stream_op stream_op =
     &ca_stream_stop,
     &ca_stream_destroy
 };
+// clang-format on
 
 
 /****************************************************************************

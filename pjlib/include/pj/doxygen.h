@@ -19,6 +19,8 @@
 #ifndef __PJ_DOXYGEN_H__
 #define __PJ_DOXYGEN_H__
 
+// clang-format off
+
 /**
  * @file doxygen.h
  * @brief Doxygen's mainpage.
@@ -990,6 +992,8 @@ export TARGETS      =   pjlib pjlib-test
  *  - other than that above, use your own judgement on whether
  *    to edit the file or create new file etc.
  */
+
+// clang-format on
 
 #endif  /* __PJ_DOXYGEN_H__ */
 

@@ -28,6 +28,7 @@
 char   *stdout_refresh_text = "STDOUT_REFRESH";
 
 /* Show usage */
+// clang-format off
 static void usage(void)
 {
     puts  ("Usage:");
@@ -240,6 +241,7 @@ static void usage(void)
 
     fflush(stdout);
 }
+// clang-format on
 
 static void log_writer_nobuf(int level, const char *buffer, int len)
 {
@@ -403,6 +405,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE
     };
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "config-file",1, 0, OPT_CONFIG_FILE},
         { "log-file",   1, 0, OPT_LOG_FILE},
@@ -548,6 +551,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
         { NULL, 0, 0, 0}
     };
+    // clang-format on
     pj_status_t status;
     pjsua_acc_config *cur_acc;
     char *config_file = NULL;

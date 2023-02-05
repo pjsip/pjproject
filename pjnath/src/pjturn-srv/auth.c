@@ -27,6 +27,7 @@
 
 static char g_realm[MAX_REALM];
 
+// clang-format off
 static struct cred_t
 {
     char    username[MAX_USERNAME];
@@ -37,6 +38,7 @@ static struct cred_t
     { "700", "700" },
     { "701", "701" }
 };
+// clang-format on
 
 #define THIS_FILE       "auth.c"
 #define THE_NONCE       "pjnath"

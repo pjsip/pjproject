@@ -37,6 +37,7 @@
 
 #define THIS_FILE           "sip_parser.c"
 
+// clang-format off
 #define ALNUM
 #define RESERVED            ";/?:@&=+$,"
 #define MARK                "-_.!~*'()"
@@ -56,6 +57,7 @@
      #?;:@&=+-_.!~*'()%$,/
  */
 #define GENERIC_URI_CHARS   "#?;:@&=+-_.!~*'()%$,/" "%"
+// clang-format on
 
 #define UNREACHED(expr)
 

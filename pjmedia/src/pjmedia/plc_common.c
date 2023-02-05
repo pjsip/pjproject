@@ -43,7 +43,7 @@ static struct plc_alg plc_wsola =
 {
     &plc_wsola_create,
     &plc_wsola_save,
-    &plc_wsola_generate
+    &plc_wsola_generate,
 };
 
 

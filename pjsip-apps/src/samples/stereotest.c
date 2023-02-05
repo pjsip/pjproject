@@ -47,7 +47,7 @@
 /* For logging purpose. */
 #define THIS_FILE   "stereotest.c"
 
-
+// clang-format off
 static const char *desc = 
 " FILE                                                              \n"
 "                                                                   \n"
@@ -68,6 +68,7 @@ static const char *desc =
 "  -C, --rec-ch-cnt=N    Number of channel for recording file.      \n"
 "  -c, --snd-ch-cnt=N    Number of channel for opening sound device.\n"
 "                                                                   \n";
+// clang-format on
 
 int main(int argc, char *argv[])
 {
@@ -88,6 +89,7 @@ int main(int argc, char *argv[])
     unsigned rec_ch_cnt = 1;
     unsigned snd_ch_cnt = 2;
 
+    // clang-format off
     enum {
         OPT_MODE        = 'm',
         OPT_REC_CHANNEL = 'C',
@@ -100,6 +102,7 @@ int main(int argc, char *argv[])
         { "snd-ch-cnt",     1, 0, OPT_SND_CHANNEL },
         { NULL, 0, 0, 0 },
     };
+    // clang-format on
 
     int c;
     int option_index;

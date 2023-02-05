@@ -25,6 +25,7 @@
 #include <pj/log.h>
 #include <pj/string.h>
 
+// clang-format off
 static char json_doc1[] =
 "{\
     \"Object\": {\
@@ -51,6 +52,7 @@ static char json_doc1[] =
    \"Array1\": [116, false, \"string\"]\
 }\
 ";
+// clang-format on
 
 static int json_verify_1()
 {

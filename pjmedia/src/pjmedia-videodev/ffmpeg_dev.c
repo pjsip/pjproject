@@ -126,6 +126,7 @@ static pj_status_t ffmpeg_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t ffmpeg_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &ffmpeg_factory_init,
@@ -148,7 +149,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &ffmpeg_stream_stop,
     &ffmpeg_stream_destroy
 };
-
+// clang-format on
 
 static void print_ffmpeg_err(int err)
 {

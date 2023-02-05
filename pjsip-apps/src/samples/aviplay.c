@@ -62,6 +62,7 @@
 /* For logging purpose. */
 #define THIS_FILE   "aviplay.c"
 
+// clang-format off
 static const char *desc = 
 " FILE                                                              \n"
 "                                                                   \n"
@@ -74,6 +75,7 @@ static const char *desc =
 " USAGE                                                             \n"
 "                                                                   \n"
 "  aviplay FILE.AVI                                                 \n";
+// clang-format on
 
 struct codec_fmt {
     pj_uint32_t         pjmedia_id;
@@ -87,7 +89,7 @@ struct codec_fmt {
                   {PJMEDIA_FORMAT_H263 , "h263" ,
                    PJ_FALSE, 0},
                   {PJMEDIA_FORMAT_MPEG4, "mp4v"}, 
-                  {PJMEDIA_FORMAT_H264 , "h264"}
+                  {PJMEDIA_FORMAT_H264 , "h264"},
                  };
 
 typedef struct avi_port_t
@@ -553,7 +555,9 @@ int main(int argc, char *argv[])
 {
     PJ_UNUSED_ARG(argc);
     PJ_UNUSED_ARG(argv);
+    // clang-format off
     puts("Error: this sample requires video capability (PJMEDIA_HAS_VIDEO == 1)");
+    // clang-format on
     return -1;
 }
 

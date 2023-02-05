@@ -76,7 +76,7 @@ static dshow_fmt_info dshow_fmts[] =
     {PJMEDIA_FORMAT_RGB24, &MEDIASUBTYPE_RGB24, PJ_FALSE} ,
     {PJMEDIA_FORMAT_RGB32, &MEDIASUBTYPE_RGB32, PJ_FALSE} ,
     {PJMEDIA_FORMAT_IYUV, &MEDIASUBTYPE_IYUV, PJ_FALSE} ,
-    {PJMEDIA_FORMAT_I420, &WMMEDIASUBTYPE_I420, PJ_FALSE}
+    {PJMEDIA_FORMAT_I420, &WMMEDIASUBTYPE_I420, PJ_FALSE},
 };
 
 /* dshow_ device info */
@@ -167,6 +167,7 @@ static pj_status_t dshow_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t dshow_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_vid_dev_factory_op factory_op =
 {
     &dshow_factory_init,
@@ -189,7 +190,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &dshow_stream_stop,
     &dshow_stream_destroy
 };
-
+// clang-format on
 
 /****************************************************************************
  * Factory operations

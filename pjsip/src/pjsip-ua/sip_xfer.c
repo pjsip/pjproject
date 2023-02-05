@@ -64,7 +64,7 @@ enum
 
 PJ_DEF_DATA(const pjsip_method) pjsip_refer_method = {
     (pjsip_method_e) PJSIP_REFER_METHOD,
-    { "REFER", 5}
+    { "REFER", 5},
 };
 
 PJ_DEF(const pjsip_method*) pjsip_get_refer_method()
@@ -123,6 +123,7 @@ static void xfer_on_evsub_server_timeout(pjsip_evsub *sub);
 /*
  * Event subscription callback for xference.
  */
+// clang-format off
 static pjsip_evsub_user xfer_user = 
 {
     &xfer_on_evsub_state,
@@ -132,7 +133,7 @@ static pjsip_evsub_user xfer_user =
     &xfer_on_evsub_client_refresh,
     &xfer_on_evsub_server_timeout,
 };
-
+// clang-format on
 
 
 

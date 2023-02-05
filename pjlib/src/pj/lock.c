@@ -52,7 +52,7 @@ static pj_lock_t mutex_lock_template =
     (FPTR) &pj_mutex_lock,
     (FPTR) &pj_mutex_trylock,
     (FPTR) &pj_mutex_unlock,
-    (FPTR) &pj_mutex_destroy
+    (FPTR) &pj_mutex_destroy,
 };
 
 static pj_status_t create_mutex_lock( pj_pool_t *pool,
@@ -105,6 +105,7 @@ static pj_status_t null_op(void *arg)
     return PJ_SUCCESS;
 }
 
+// clang-format off
 static pj_lock_t null_lock_template = 
 {
     NULL,
@@ -113,6 +114,7 @@ static pj_lock_t null_lock_template =
     &null_op,
     &null_op
 };
+// clang-format on
 
 PJ_DEF(pj_status_t) pj_lock_create_null_mutex( pj_pool_t *pool,
                                                const char *name,
@@ -139,7 +141,7 @@ static pj_lock_t sem_lock_template =
     (FPTR) &pj_sem_wait,
     (FPTR) &pj_sem_trywait,
     (FPTR) &pj_sem_post,
-    (FPTR) &pj_sem_destroy
+    (FPTR) &pj_sem_destroy,
 };
 
 PJ_DEF(pj_status_t) pj_lock_create_semaphore(  pj_pool_t *pool,

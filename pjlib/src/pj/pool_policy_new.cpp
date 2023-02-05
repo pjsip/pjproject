@@ -88,7 +88,7 @@ PJ_DEF_DATA(pj_pool_factory_policy) pj_pool_factory_default_policy =
     &operator_new,
     &operator_delete,
     &default_pool_callback,
-    0
+    0,
 };
 
 PJ_DEF(const pj_pool_factory_policy*) pj_pool_factory_get_default_policy(void)

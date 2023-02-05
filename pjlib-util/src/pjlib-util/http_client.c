@@ -57,34 +57,36 @@
 enum http_protocol
 {
     PROTOCOL_HTTP,
-    PROTOCOL_HTTPS
+    PROTOCOL_HTTPS,
 };
 
 static const char *http_protocol_names[NUM_PROTOCOL] =
 {
     "HTTP",
-    "HTTPS"
+    "HTTPS",
 };
 
 static const unsigned int http_default_port[NUM_PROTOCOL] =
 {
     80,
-    443
+    443,
 };
 
 enum http_method
 {
     HTTP_GET,
     HTTP_PUT,
-    HTTP_DELETE
+    HTTP_DELETE,
 };
 
+// clang-format off
 static const char *http_method_names[3] =
 {
     "GET",
     "PUT",
-    "DELETE"
+    "DELETE",
 };
+// clang-format on
 
 enum http_state
 {

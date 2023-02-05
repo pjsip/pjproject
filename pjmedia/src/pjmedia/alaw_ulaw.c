@@ -45,6 +45,7 @@
 static short seg_end[8] = {0xFF, 0x1FF, 0x3FF, 0x7FF,
                             0xFFF, 0x1FFF, 0x3FFF, 0x7FFF};
 
+// clang-format off
 /* copy from CCITT G.711 specifications */
 static unsigned char _u2a[128] = {              /* u- to A-law conversions */
         1,      1,      2,      2,      3,      3,      4,      4,
@@ -81,6 +82,7 @@ static unsigned char _a2u[128] = {              /* A- to u-law conversions */
         104,    105,    106,    107,    108,    109,    110,    111,
         112,    113,    114,    115,    116,    117,    118,    119,
         120,    121,    122,    123,    124,    125,    126,    127};
+// clang-format on
 
 static int
 search(

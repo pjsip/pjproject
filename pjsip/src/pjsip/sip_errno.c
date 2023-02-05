@@ -27,6 +27,7 @@
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
+// clang-format off
 static const struct 
 {
     int code;
@@ -133,7 +134,7 @@ static const struct
     PJ_BUILD_ERR( PJSIP_TLS_ETIMEDOUT,  "SSL negotiation has timed out"),
     PJ_BUILD_ERR( PJSIP_TLS_ECERTVERIF, "SSL certificate verification error"),
 };
-
+// clang-format on
 
 #endif  /* PJ_HAS_ERROR_STRING */
 

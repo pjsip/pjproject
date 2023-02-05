@@ -87,6 +87,7 @@ static pj_status_t  l16_recover(pjmedia_codec *codec,
                                 struct pjmedia_frame *output);
 #endif
 
+// clang-format off
 /* Definition for L16 codec operations. */
 static pjmedia_codec_op l16_op = 
 {
@@ -114,6 +115,7 @@ static pjmedia_codec_factory_op l16_factory_op =
     &l16_dealloc_codec,
     &pjmedia_codec_l16_deinit
 };
+// clang-format on
 
 /* L16 factory private data */
 static struct l16_factory

@@ -113,6 +113,7 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm);
 
 
 /* Operations */
+// clang-format off
 static pjmedia_aud_dev_factory_op factory_op =
 {
     &factory_init,
@@ -133,7 +134,7 @@ static pjmedia_aud_stream_op stream_op =
     &stream_stop,
     &stream_destroy
 };
-
+// clang-format on
 
 /*
  * Convert clock rate to Symbian's TMdaAudioDataSettings capability.

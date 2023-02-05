@@ -38,6 +38,7 @@ static void parse_digest_challenge  ( pj_scanner *scanner, pj_pool_t *pool,
 static void parse_pgp_challenge     ( pj_scanner *scanner, pj_pool_t *pool,
                                       pjsip_pgp_challenge *chal);
 
+// clang-format off
 const pj_str_t  pjsip_USERNAME_STR =        { "username", 8 },
                 pjsip_REALM_STR =           { "realm", 5},
                 pjsip_NONCE_STR =           { "nonce", 5},
@@ -65,7 +66,7 @@ const pj_str_t  pjsip_USERNAME_STR =        { "username", 8 },
                 pjsip_QUOTED_SHA256_STR =   { "\"SHA-256\"", 9},
                 pjsip_AUTH_STR =            { "auth", 4},
                 pjsip_QUOTED_AUTH_STR =     { "\"auth\"", 6 };
-
+// clang-format on
 
 static void parse_digest_credential( pj_scanner *scanner, pj_pool_t *pool, 
                                      pjsip_digest_credential *cred)

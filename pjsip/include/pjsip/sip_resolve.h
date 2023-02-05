@@ -32,6 +32,7 @@
 
 PJ_BEGIN_DECL
 
+// clang-format off
 /**
  * @defgroup PJSIP_RESOLVE SIP SRV Server Resolution (RFC 3263 - Locating SIP Servers)
  * @ingroup PJSIP_TRANSPORT
@@ -170,6 +171,7 @@ PJ_BEGIN_DECL
  *  - RFC 2782: A DNS RR for specifying the location of services (DNS SRV)
  *  - RFC 3263: Locating SIP Servers
  */
+// clang-format on
 
 /**
  * The server addresses returned by the resolver.

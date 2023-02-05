@@ -26,7 +26,6 @@
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
-
 #define THIS_FILE   "vid_codec.c"
 
 static pjmedia_vid_codec_mgr *def_vid_codec_mgr;

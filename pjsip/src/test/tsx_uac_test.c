@@ -1106,7 +1106,7 @@ static int tsx_uac_retransmit_test(void)
 
         { &pjsip_options_method, 0},
         //{ &pjsip_options_method, TEST1_ALLOWED_DIFF*2}
-        { &pjsip_options_method, 300}
+        { &pjsip_options_method, 300},
     };
 
     PJ_LOG(3,(THIS_FILE, "  test1: basic uac retransmit and timeout test"));

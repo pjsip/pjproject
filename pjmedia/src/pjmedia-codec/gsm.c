@@ -92,6 +92,7 @@ static pj_status_t  gsm_codec_recover(pjmedia_codec *codec,
                                       struct pjmedia_frame *output);
 #endif
 
+// clang-format off
 /* Definition for GSM codec operations. */
 static pjmedia_codec_op gsm_op = 
 {
@@ -119,6 +120,7 @@ static pjmedia_codec_factory_op gsm_factory_op =
     &gsm_dealloc_codec,
     &pjmedia_codec_gsm_deinit
 };
+// clang-format on
 
 /* GSM factory */
 static struct gsm_codec_factory

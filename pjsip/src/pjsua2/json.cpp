@@ -70,6 +70,7 @@ static ContainerNode    jsonNode_writeNewArray(ContainerNode*,
                                                const string &name)
                                                PJSUA2_THROW(Error);
 
+// clang-format off
 static container_node_op json_op =
 {
     &jsonNode_hasUnread,
@@ -87,6 +88,7 @@ static container_node_op json_op =
     &jsonNode_writeNewContainer,
     &jsonNode_writeNewArray
 };
+// clang-format on
 
 ///////////////////////////////////////////////////////////////////////////////
 JsonDocument::JsonDocument()

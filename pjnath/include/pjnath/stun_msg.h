@@ -326,6 +326,7 @@ typedef enum pj_stun_msg_type
 
 
 
+// clang-format off
 /**
  * This enumeration describes STUN attribute types.
  */
@@ -419,6 +420,7 @@ typedef enum pj_stun_status
     PJ_STUN_SC_GLOBAL_FAILURE           = 600   /**< Global Failure         */
 } pj_stun_status;
 
+// clang-format on
 
 /**
  * This structure describes STUN message header. A STUN message has the 

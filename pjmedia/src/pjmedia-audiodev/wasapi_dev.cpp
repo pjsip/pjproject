@@ -173,6 +173,7 @@ static pj_status_t wasapi_stream_stop(pjmedia_aud_stream *strm);
 static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm);
 
 /* Operations */
+// clang-format off
 static pjmedia_aud_dev_factory_op factory_op =
 {
     &wasapi_factory_init,
@@ -193,6 +194,7 @@ static pjmedia_aud_stream_op stream_op =
     &wasapi_stream_stop,
     &wasapi_stream_destroy
 };
+// clang-format on
 
 static pj_status_t init_waveformatex(WAVEFORMATEX *wfx,
                                      const pjmedia_aud_param *prm,

@@ -83,7 +83,7 @@ PJ_DEF(const pjsip_method*) pjsip_get_options_method(void)
     return &pjsip_options_method;
 }
 
-
+// clang-format off
 static const pj_str_t *method_names[] = 
 {
     &pjsip_invite_method.name,
@@ -143,6 +143,7 @@ const pjsip_hdr_name_info_t pjsip_hdr_names[] =
 
     { "_Unknown-Header",    15, NULL },   // PJSIP_H_OTHER,
 };
+// clang-format on
 
 static pj_str_t status_phrase[710];
 static int print_media_type(char *buf, unsigned len,

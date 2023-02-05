@@ -25,6 +25,7 @@
  * platform, you should only include this file once in one of
  * your source file.
  */
+// clang-format off
 const char *pjsua_app_def_argv[] = { "pjsua",
                                      "--use-cli",
                                      "--no-cli-console",
@@ -42,6 +43,7 @@ const char *pjsua_app_def_argv[] = { "pjsua",
                                      "--add-buddy=sip:169.254.0.2",
 #endif
                                      NULL };
+// clang-format on
 
 #define pjsua_app_def_argc (PJ_ARRAY_SIZE(pjsua_app_def_argv)-1)
 

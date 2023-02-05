@@ -124,6 +124,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *strm);
 static pj_status_t strm_stop(pjmedia_aud_stream *strm);
 static pj_status_t strm_destroy(pjmedia_aud_stream *strm);
 
+// clang-format off
 static pjmedia_aud_dev_factory_op oboe_op =
 {
     &oboe_init,
@@ -144,7 +145,7 @@ static pjmedia_aud_stream_op oboe_strm_op =
     &strm_stop,
     &strm_destroy
 };
-
+// clang-format on
 
 /*
  * Init Android Oboe audio driver.

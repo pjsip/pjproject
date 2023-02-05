@@ -35,6 +35,7 @@
  */
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING!=0)
 
+// clang-format off
 static const struct {
     pj_os_err_type code;
     const char *msg;
@@ -107,6 +108,7 @@ static const struct {
     PJ_BUILD_ERR( WSANO_DATA,         "No host data of that type was found"),
     {0, NULL}
 };
+// clang-format on
 
 #endif  /* PJ_HAS_ERROR_STRING */
 

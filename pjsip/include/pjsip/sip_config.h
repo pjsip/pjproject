@@ -780,9 +780,11 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  *
  * Default: CRLF
  */
+// clang-format off
 #ifndef PJSIP_TCP_KEEP_ALIVE_DATA
-#   define PJSIP_TCP_KEEP_ALIVE_DATA        { "\r\n\r\n", 4 }
+#  define PJSIP_TCP_KEEP_ALIVE_DATA        { "\r\n\r\n", 4 }
 #endif
+// clang-format on
 
 
 /**

@@ -26,6 +26,7 @@
 
 #define THIS_FILE   "xml_test"
 
+// clang-format off
 static const char *xml_doc[] =
 {
 "   <?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -93,6 +94,7 @@ static const char *xml_doc[] =
 "   </p:pidf-full>\n"
 }
 ;
+// clang-format on
 
 static int xml_parse_print_test(const char *doc)
 {

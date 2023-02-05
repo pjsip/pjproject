@@ -758,7 +758,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 512,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #if PJ_HAS_LINUX_EPOLL
     {
@@ -773,7 +773,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 512,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "basic udp (single thread, EPOLLONESHOT)",
@@ -787,7 +787,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 512,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "basic udp (single thread, epoll plain)",
@@ -801,7 +801,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 512,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #endif
     /* simplest test (tcp), no threads, no parallel send/recv, it's good for debugging.
@@ -820,7 +820,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #if PJ_HAS_LINUX_EPOLL
     {
@@ -836,7 +836,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "basic tcp (single thread, EPOLLONESHOT)",
@@ -850,7 +850,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "basic tcp (single thread, plain)",
@@ -864,7 +864,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #endif
     /* failed TCP connect().
@@ -883,7 +883,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .cfg.repeat = 2,
     },
     #if PJ_HAS_LINUX_EPOLL
     {
@@ -900,7 +900,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .cfg.repeat = 2,
     },
     {
         .cfg.title = "failed tcp connect (EPOLLONESHOT)",
@@ -916,7 +916,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .cfg.repeat = 2,
     },
     {
         .cfg.title = "failed tcp connect (plain)",
@@ -932,7 +932,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .cfg.repeat = 2,
     },
     #endif
     /* reject TCP connect().
@@ -951,7 +951,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 20,
         .cfg.n_servers = 1,
         .cfg.n_clients = 1,
-        .cfg.repeat = 2
+        .cfg.repeat = 2,
     },
     /* quite involved test (udp). Multithreads, parallel send/recv operations,
      * limitation in recv buffer. max_fd is very limited to test management of
@@ -970,7 +970,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*8*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #if PJ_HAS_LINUX_EPOLL
     /* EPOLLEXCLUSIVE (udp).
@@ -988,7 +988,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*8*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     /* EPOLLONESHOT (udp).
      */
@@ -1005,7 +1005,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*8*512,
         .cfg.n_servers = 2,
         .cfg.n_clients = 2,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "udp (multithreads, plain epoll)",
@@ -1020,7 +1020,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*8*512,
         .cfg.n_servers = 2,
         .cfg.n_clients = 2,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #endif
     /* quite involved test (tcp). Multithreads, parallel send/recv operations,
@@ -1041,7 +1041,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #if PJ_HAS_LINUX_EPOLL
     {
@@ -1058,7 +1058,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "tcp (multithreads, EPOLLONESHOT)",
@@ -1074,7 +1074,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "tcp (multithreads, plain epoll)",
@@ -1090,7 +1090,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #endif
     /* when concurrency is disabled, TCP packets should be received in correct
@@ -1111,7 +1111,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #if PJ_HAS_LINUX_EPOLL
     {
@@ -1129,7 +1129,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "tcp (multithreads, sequenced, concur=0, EPOLLONESHOT)",
@@ -1146,7 +1146,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     {
         .cfg.title = "tcp (multithreads, sequenced, concur=0, epoll plain)",
@@ -1163,7 +1163,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     #endif
     /* when concurrency is *enabled*, TCP packets are received in correct
@@ -1185,7 +1185,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
     /* when concurrency is disabled, UDP packets should be received in increasing
      * order (although some packets may be lost). Edit: it turns out packets
@@ -1207,7 +1207,7 @@ static test_desc tests[128] = {
         .cfg.rx_cnt = 4*MAX_THREADS*512,
         .cfg.n_servers = MAX_ASYNC,
         .cfg.n_clients = MAX_ASYNC,
-        .cfg.repeat = 4
+        .cfg.repeat = 4,
     },
 };
 

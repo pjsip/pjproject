@@ -36,6 +36,7 @@
 #define PTIME       20
 #define TAIL_LENGTH 200
 
+// clang-format off
 static const char *desc = 
 " FILE                                                              \n"
 "                                                                   \n"
@@ -67,6 +68,7 @@ static const char *desc =
 " frame time + PJMEDIA_WSOLA_DELAY_MSEC. In this application, frame \n"
 " time is 20 ms and default PJMEDIA_WSOLA_DELAY_MSEC is 5 ms, hence \n"
 " 25 ms delay is the minimum value.                                 \n";
+// clang-format on
 
 /* 
  * Sample session:

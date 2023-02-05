@@ -81,7 +81,7 @@ static pj_stun_tsx_cb tsx_cb =
 {
     &stun_tsx_on_complete,
     &stun_tsx_on_send_msg,
-    &stun_tsx_on_destroy
+    &stun_tsx_on_destroy,
 };
 
 

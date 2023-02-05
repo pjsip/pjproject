@@ -54,7 +54,6 @@ typedef enum pjsip_cred_data_type
 {
     PJSIP_CRED_DATA_PLAIN_PASSWD=0, /**< Plain text password.           */
     PJSIP_CRED_DATA_DIGEST      =1, /**< Hashed digest.                 */
-
     PJSIP_CRED_DATA_EXT_AKA     =16 /**< Extended AKA info is available */
 
 } pjsip_cred_data_type;

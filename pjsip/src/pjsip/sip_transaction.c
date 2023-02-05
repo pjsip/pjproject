@@ -66,6 +66,8 @@ static pj_status_t mod_tsx_layer_unload(void);
 static pj_bool_t   mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata);
 static pj_bool_t   mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata);
 
+// clang-format off
+
 /* Transaction layer module definition. */
 static struct mod_tsx_layer
 {
@@ -119,6 +121,8 @@ enum
     TSX_HAS_PENDING_DESTROY     = 8,
     TSX_HAS_RESOLVED_SERVER     = 16,
 };
+
+// clang-format on
 
 /* Timer timeout value constants */
 static pj_time_val t1_timer_val = { PJSIP_T1_TIMEOUT/1000, 
@@ -196,6 +200,7 @@ static void        tsx_update_transport( pjsip_transaction *tsx,
 static int  (*tsx_state_handler_uac[PJSIP_TSX_STATE_MAX])(pjsip_transaction *,
                                                           pjsip_event *) = 
 {
+    // clang-format off
     &tsx_on_state_null,
     &tsx_on_state_calling,
     NULL,
@@ -204,12 +209,14 @@ static int  (*tsx_state_handler_uac[PJSIP_TSX_STATE_MAX])(pjsip_transaction *,
     &tsx_on_state_confirmed,
     &tsx_on_state_terminated,
     &tsx_on_state_destroyed,
+    // clang-format on
 };
 
 /* State handlers for UAS */
 static int  (*tsx_state_handler_uas[PJSIP_TSX_STATE_MAX])(pjsip_transaction *, 
                                                           pjsip_event *) = 
 {
+    // clang-format off
     &tsx_on_state_null,
     NULL,
     &tsx_on_state_trying,
@@ -218,6 +225,7 @@ static int  (*tsx_state_handler_uas[PJSIP_TSX_STATE_MAX])(pjsip_transaction *,
     &tsx_on_state_confirmed,
     &tsx_on_state_terminated,
     &tsx_on_state_destroyed,
+    // clang-format on
 };
 
 /*****************************************************************************

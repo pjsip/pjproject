@@ -29,6 +29,7 @@ typedef pj_status_t (*verify_ptr)(pj_pool_t*,pjsip_msg_body*);
 static pj_status_t verify1(pj_pool_t *pool, pjsip_msg_body *body);
 static pj_status_t verify2(pj_pool_t *pool, pjsip_msg_body *body);
 
+// clang-format off
 static struct test_t
 {
     char *ctype;
@@ -67,7 +68,7 @@ static struct test_t
                 "--12345--\r\n"
                 "This is epilogue, which should be ignored too",
 
-                &verify1
+                &verify1,
         },
         {
                 /* Content-type */
@@ -100,10 +101,11 @@ static struct test_t
                 "--12345--\r\n"
                 "This is epilogue, which should be ignored too",
 
-                &verify2
-        }
+                &verify2,
+        },
 
 };
+// clang-format on
 
 static void init_media_type(pjsip_media_type *mt,
                             char *type, char *subtype, char *boundary)

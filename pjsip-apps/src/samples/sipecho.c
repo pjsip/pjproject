@@ -563,12 +563,14 @@ static void usage()
  */
 int main(int argc, char *argv[])
 {
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "local-port", 1, 0, 'p' },
         { "tcp",        0, 0, 't' },
         { "ipv6",       0, 0, '6' },
         { "help",       0, 0, 'h' }
     };
+    // clang-format on
     int c, option_index;
     pj_status_t status;
 

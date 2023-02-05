@@ -44,7 +44,7 @@ enum tp_type
 {
     TP_NONE,
     TP_STUN,
-    TP_TURN
+    TP_TURN,
 };
 
 
@@ -1063,6 +1063,7 @@ PJ_DEF(pj_ice_strans_state) pj_ice_strans_get_state(pj_ice_strans *ice_st)
 /* State string */
 PJ_DEF(const char*) pj_ice_strans_state_name(pj_ice_strans_state state)
 {
+    // clang-format off
     const char *names[] = {
         "Null",
         "Candidate Gathering",
@@ -1070,8 +1071,9 @@ PJ_DEF(const char*) pj_ice_strans_state_name(pj_ice_strans_state state)
         "Session Initialized",
         "Negotiation In Progress",
         "Negotiation Success",
-        "Negotiation Failed"
+        "Negotiation Failed",
     };
+    // clang-format on
 
     PJ_ASSERT_RETURN(state <= PJ_ICE_STRANS_STATE_FAILED, "???");
     return names[state];

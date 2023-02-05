@@ -28,6 +28,8 @@
  * @{
  */
 
+// clang-format off
+
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.
  * This value is 320000.
@@ -448,6 +450,7 @@
  */
 #define PJ_CLI_ETELNETLOST          (PJLIB_UTIL_ERRNO_START+211)/* 320211 */
 
+// clang-format on
 /**
  * @}
  */

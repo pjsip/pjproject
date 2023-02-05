@@ -45,7 +45,7 @@
 /* Shall we put recorder in the conference */
 #define RECORDER    1
 
-
+// clang-format off
 static const char *desc = 
  " FILE:                                                                    \n"
  "                                                                          \n"
@@ -76,6 +76,7 @@ static const char *desc =
  "  arbitrary sampling rate; the bridge will convert it to its clock rate.  \n"
  "  However, the files MUST have a single audio channel only (i.e. mono).  \n";
 
+// clang-format on
 
  
 /* 

@@ -27,6 +27,7 @@
 #include <pjsip-ua/sip_inv.h>
 #include <pjsip/sip_msg.h>
 
+// clang-format off
 /**
  * @defgroup PJSIP_TIMER SIP Session Timers support (RFC 4028 - Session Timers in SIP)
  * @ingroup PJSIP_HIGH_UA
@@ -39,6 +40,7 @@
  *  - <A HREF="http://www.ietf.org/rfc/rfc4028.txt">RFC 4028: Session Timers 
  *    in the Session Initiation Protocol (SIP)</A>
  */
+// clang-format on
 
 PJ_BEGIN_DECL
 

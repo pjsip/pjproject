@@ -38,6 +38,7 @@
             PJMEDIA_HAS_FFMPEG_VID_CODEC != 0 && \
     defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
+
 #define THIS_FILE   "ffmpeg_vid_codecs.c"
 
 #include "../pjmedia/ffmpeg_util.h"
@@ -80,6 +81,7 @@
 /* AVCodec H264 default PT */
 #define AVC_H264_PT                       PJMEDIA_RTP_PT_H264_RSV3
 
+
 /* Prototypes for FFMPEG codecs factory */
 static pj_status_t ffmpeg_test_alloc( pjmedia_vid_codec_factory *factory, 
                                       const pjmedia_vid_codec_info *id );
@@ -121,6 +123,7 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
                                         unsigned out_size,
                                         pjmedia_frame *output);
 
+// clang-format off
 /* Definition for FFMPEG codecs operations. */
 static pjmedia_vid_codec_op ffmpeg_op = 
 {
@@ -144,7 +147,7 @@ static pjmedia_vid_codec_factory_op ffmpeg_factory_op =
     &ffmpeg_alloc_codec,
     &ffmpeg_dealloc_codec
 };
-
+// clang-format on
 
 /* FFMPEG codecs factory */
 static struct ffmpeg_factory {
@@ -286,6 +289,7 @@ static FUNC_UNPACKETIZE(h263_unpacketize);
 
 
 /* Internal codec info */
+// clang-format off
 static ffmpeg_codec_desc codec_desc[] =
 {
 #if PJMEDIA_HAS_FFMPEG_CODEC_H264
@@ -352,6 +356,7 @@ static ffmpeg_codec_desc codec_desc[] =
         PJMEDIA_FORMAT_MPEG4, {640, 480}, {25, 1},
     },
 };
+// clang-format on
 
 #if PJMEDIA_HAS_FFMPEG_CODEC_VP8 || PJMEDIA_HAS_FFMPEG_CODEC_VP9
 typedef struct vpx_data

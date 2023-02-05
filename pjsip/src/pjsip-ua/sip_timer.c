@@ -46,7 +46,7 @@ static const pj_str_t STR_TIMER         = {"timer", 5};
 enum timer_refresher {
     TR_UNKNOWN,
     TR_UAC,
-    TR_UAS
+    TR_UAS,
 };
 
 /* Structure definition of Session Timers */

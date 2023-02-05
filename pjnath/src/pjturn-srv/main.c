@@ -63,8 +63,10 @@ static void dump_status(pj_turn_srv *srv)
         return;
     }
 
+    // clang-format off
     puts("#    Client addr.          Alloc addr.            Username Lftm Expy #prm #chl");
     puts("------------------------------------------------------------------------------");
+    // clang-format on
 
     pj_gettimeofday(&now);
 

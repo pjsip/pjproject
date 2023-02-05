@@ -369,6 +369,7 @@
  * Sample rate conversion backends.
  * Select one of these backends in PJMEDIA_RESAMPLE_IMP.
  */
+// clang-format off
 #define PJMEDIA_RESAMPLE_NONE               1   /**< No resampling.         */
 #define PJMEDIA_RESAMPLE_LIBRESAMPLE        2   /**< Sample rate conversion 
                                                      using libresample.  */
@@ -378,6 +379,7 @@
                                                      using libsamplerate 
                                                      (a.k.a Secret Rabbit Code)
                                                  */
+// clang-format on
 
 /**
  * Select which resample implementation to use. Currently pjmedia supports:
@@ -1248,9 +1250,11 @@
  * of the packet is initializer to pj_str_t structure. Note that
  * the content may contain NULL character.
  */
+// clang-format off
 #ifndef PJMEDIA_STREAM_KA_USER_PKT
-#   define PJMEDIA_STREAM_KA_USER_PKT   { "\r\n", 2 }
+#  define PJMEDIA_STREAM_KA_USER_PKT   { "\r\n", 2 }
 #endif
+// clang-format on
 
 
 /**

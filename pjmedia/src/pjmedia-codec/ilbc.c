@@ -92,6 +92,7 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
                                        unsigned output_buf_len,
                                        struct pjmedia_frame *output);
 
+// clang-format off
 /* Definition for iLBC codec operations. */
 static pjmedia_codec_op ilbc_op = 
 {
@@ -115,6 +116,7 @@ static pjmedia_codec_factory_op ilbc_factory_op =
     &ilbc_dealloc_codec,
     &pjmedia_codec_ilbc_deinit
 };
+// clang-format on
 
 /* iLBC factory */
 static struct ilbc_factory

@@ -34,7 +34,7 @@ enum oa_role
 {
     ROLE_NONE,
     ROLE_OFFERER,
-    ROLE_ANSWERER
+    ROLE_ANSWERER,
 };
 
 struct sdp_state
@@ -178,6 +178,7 @@ static void ice_on_new_candidate(pj_ice_strans *ice_st,
 static void tp_ice_on_destroy(void *arg);
 
 
+// clang-format off
 static pjmedia_transport_op transport_ice_op = 
 {
     &transport_get_info,
@@ -210,6 +211,7 @@ static const pj_str_t STR_BANDW_RS      = { "RS", 2 };
 static const pj_str_t STR_ICE_OPTIONS   = { "ice-options", 11 };
 static const pj_str_t STR_TRICKLE       = { "trickle", 7 };
 static const pj_str_t STR_END_OF_CAND   = { "end-of-candidates", 17 };
+// clang-format on
 
 enum {
     COMP_RTP = 1,

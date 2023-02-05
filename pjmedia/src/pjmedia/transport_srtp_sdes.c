@@ -55,7 +55,7 @@ static pj_status_t sdes_media_start (pjmedia_transport *tp,
                                      unsigned media_index);
 static pj_status_t sdes_media_stop  (pjmedia_transport *tp);
 
-
+// clang-format off
 static pjmedia_transport_op sdes_op =
 {
     NULL,
@@ -71,7 +71,7 @@ static pjmedia_transport_op sdes_op =
     NULL,
     NULL
 };
-
+// clang-format on
 
 static pj_status_t sdes_create(transport_srtp *srtp,
                                pjmedia_transport **p_keying)

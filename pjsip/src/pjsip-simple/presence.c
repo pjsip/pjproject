@@ -112,6 +112,7 @@ static void pres_on_evsub_client_refresh(pjsip_evsub *sub);
 static void pres_on_evsub_server_timeout(pjsip_evsub *sub);
 
 
+// clang-format off
 /*
  * Event subscription callback for presence.
  */
@@ -125,7 +126,6 @@ static pjsip_evsub_user pres_user =
     &pres_on_evsub_server_timeout,
 };
 
-
 /*
  * Some static constants.
  */
@@ -137,6 +137,7 @@ static const pj_str_t STR_XPIDF_XML         = { "xpidf+xml", 9};
 static const pj_str_t STR_APP_PIDF_XML      = { "application/pidf+xml", 20 };
 static const pj_str_t STR_APP_XPIDF_XML    = { "application/xpidf+xml", 21 };
 
+// clang-format on
 
 /*
  * Init presence module.

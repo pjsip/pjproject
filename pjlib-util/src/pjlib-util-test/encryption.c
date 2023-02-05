@@ -35,14 +35,13 @@
 static char *sha1_test_data[] = {
     "abc",
     "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
-    "A million repetitions of 'a'"
+    "A million repetitions of 'a'",
 };
 static char *sha1_test_results[] = {
     "A9993E36 4706816A BA3E2571 7850C26C 9CD0D89D",
     "84983E44 1C3BD26E BAAE4AA1 F95129E5 E54670F1",
-    "34AA973C D4C4DAA4 F61EEB2B DBAD2731 6534016F"
+    "34AA973C D4C4DAA4 F61EEB2B DBAD2731 6534016F",
 };
-
 
 static void digest_to_hex(const pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE], 
                           char *output)
@@ -157,7 +156,7 @@ static char *resultarray[4] =
     "A9993E36 4706816A BA3E2571 7850C26C 9CD0D89D",
     "84983E44 1C3BD26E BAAE4AA1 F95129E5 E54670F1",
     "34AA973C D4C4DAA4 F61EEB2B DBAD2731 6534016F",
-    "DEA356A2 CDDD90C7 A7ECEDC5 EBB56393 4F460452"
+    "DEA356A2 CDDD90C7 A7ECEDC5 EBB56393 4F460452",
 };
 
 static int sha1_test2(void)
@@ -207,6 +206,7 @@ struct rfc2202_test
 };
 
 
+// clang-format off
 struct rfc2202_test rfc2202_test_vector[] = 
 {
     {
@@ -321,6 +321,7 @@ struct rfc2202_test rfc2202_test_vector[] =
         "\xe8\xe9\x9d\x0f\x45\x23\x7d\x78\x6d\x6b\xba\xa7\x96\x5c\x78\x08\xbb\xff\x1a\x91"
     }
 };
+// clang-format on
 
 
 static int rfc2202_test(void)
@@ -413,6 +414,7 @@ static int rfc2202_test(void)
 }
 
 /* CRC32 test data, generated from crc32 test on a Linux box */
+// clang-format off
 struct crc32_test_t
 {
     char            *input;
@@ -441,6 +443,7 @@ struct crc32_test_t
         0xCBF43926
     }
 };
+// clang-format on
 
 /*
  * CRC32 test
@@ -573,7 +576,6 @@ static struct base64_test_vec
     },
 };
 
-
 static int base64_test(void)
 {
     unsigned i;
@@ -687,20 +689,20 @@ int encryption_benchmark()
             "MD5  ",
             (void (*)(void*))&pj_md5_init,
             (void (*)(void*, const pj_uint8_t*, unsigned))&pj_md5_update,
-            (void (*)(void*, void*))&pj_md5_final
+            (void (*)(void*, void*))&pj_md5_final,
         },
         {
             "SHA1 ",
             (void (*)(void*))&pj_sha1_init,
             (void (*)(void*, const pj_uint8_t*, unsigned))&pj_sha1_update,
-            (void (*)(void*, void*))&pj_sha1_final
+            (void (*)(void*, void*))&pj_sha1_final,
         },
         {
             "CRC32",
             (void (*)(void*))&pj_crc32_init,
             (void (*)(void*, const pj_uint8_t*, unsigned))&crc32_update,
-            (void (*)(void*, void*))&crc32_final
-        }
+            (void (*)(void*, void*))&crc32_final,
+        },
     };
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     enum { LOOP = 1000 };

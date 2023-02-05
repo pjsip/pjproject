@@ -28,6 +28,7 @@
 
 #define THIS_FILE   "videodev.c"
 
+// clang-format off
 #define DEFINE_CAP(name, info)  {name, info}
 
 /* Capability names */
@@ -46,10 +47,10 @@ static struct cap_info
     DEFINE_CAP("preview",       "Input preview"),
     DEFINE_CAP("orientation",   "Video orientation"),
     DEFINE_CAP("switch",        "Switch device"),
-    DEFINE_CAP("wndflags",      "Window flags"),
-    DEFINE_CAP("fullscreen",    "Renderer fullscreen")
+    DEFINE_CAP("wndflags",       "Window flags"),
+    DEFINE_CAP("fullscreen",    "Renderer fullscreen"),
 };
-
+// clang-format on
 
 /*
  * The device index seen by application and driver is different. 

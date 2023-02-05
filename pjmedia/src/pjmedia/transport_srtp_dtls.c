@@ -68,6 +68,7 @@ static void on_ice_complete2(pjmedia_transport *tp,
                              void *user_data);
 
 
+// clang-format off
 static pjmedia_transport_op dtls_op =
 {
     NULL,
@@ -84,6 +85,7 @@ static pjmedia_transport_op dtls_op =
     &dtls_destroy,
     NULL,
 };
+// clang-format on
 
 
 typedef enum dtls_setup
@@ -145,14 +147,14 @@ static char* ossl_profiles[OPENSSL_PROFILE_NUM] =
      "SRTP_AES128_CM_SHA1_80",
      "SRTP_AES128_CM_SHA1_32",
      "SRTP_AEAD_AES_256_GCM",
-     "SRTP_AEAD_AES_128_GCM"
+     "SRTP_AEAD_AES_128_GCM",
 };
 static char* pj_profiles[OPENSSL_PROFILE_NUM] =
 {
     "AES_CM_128_HMAC_SHA1_80",
     "AES_CM_128_HMAC_SHA1_32",
     "AEAD_AES_256_GCM",
-    "AEAD_AES_128_GCM"
+    "AEAD_AES_128_GCM",
 };
 
 /* This will store the valid OpenSSL profiles which is mapped from 

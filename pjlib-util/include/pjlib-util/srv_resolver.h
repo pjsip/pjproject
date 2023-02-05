@@ -27,6 +27,7 @@
 
 PJ_BEGIN_DECL
 
+// clang-format off
 /**
  * @defgroup PJ_DNS_SRV_RESOLVER DNS SRV Resolution Helper
  * @ingroup PJ_DNS
@@ -73,6 +74,8 @@ PJ_BEGIN_DECL
  *  - <A HREF="http://www.ietf.org/rfc/rfc2782.txt">RFC 2782</A>: 
  *      A DNS RR for specifying the location of services (DNS SRV)
  */
+
+// clang-format on
 
 /**
  * Flags to be specified when starting the DNS SRV query.

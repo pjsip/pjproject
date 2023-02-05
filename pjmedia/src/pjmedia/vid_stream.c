@@ -77,6 +77,7 @@
 /*  Number of send error before repeat the report. */
 #define SEND_ERR_COUNT_TO_REPORT        50
 
+
 /**
  * Media channel.
  */

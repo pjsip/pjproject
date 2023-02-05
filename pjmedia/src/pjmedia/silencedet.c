@@ -44,6 +44,7 @@ typedef enum pjmedia_silence_det_mode {
 /**
  * Default settings
  */
+// clang-format off
 #define DEF_RECALC_ON_VOICED        4000 /* Time to recalculate threshold
                                             in voiced condition, in ms    */
 #define DEF_RECALC_ON_SILENCE       2000 /* Time to recalculate threshold
@@ -51,6 +52,7 @@ typedef enum pjmedia_silence_det_mode {
 #define DEF_BEFORE_SILENCE          400  /* Silence time before really changing
                                             state into SILENCE, in ms.    */
 #define DEF_THRESHOLD               1000 /* Default threshold.            */
+// clang-format on
 
 /**
  * This enumeration specifies the states of the silence detector.

@@ -22,6 +22,7 @@
 
 
 /* Usage */
+// clang-format off
 static const char *USAGE = 
 " PURPOSE:                                                                  \n"
 "   This program establishes SIP INVITE session and media, and calculate    \n"
@@ -63,6 +64,7 @@ static const char *USAGE =
 "   --a-ptime=MS            Set audio frame time to MS msec (default=20ms)\n"
 */
 ;
+// clang-format on
 
 
 /* Include all headers. */
@@ -268,6 +270,7 @@ static pjsip_module mod_siprtp =
 
 
 /* Codec constants */
+// clang-format off
 struct codec audio_codecs[] = 
 {
     { 0,  "PCMU", 8000, 64000, 20, "G.711 ULaw" },
@@ -276,6 +279,7 @@ struct codec audio_codecs[] =
     { 8,  "PCMA", 8000, 64000, 20, "G.711 ALaw" },
     { 18, "G729", 8000, 8000,  20, "G.729" },
 };
+// clang-format on
 
 
 /*
@@ -855,6 +859,7 @@ static pj_status_t init_options(int argc, char *argv[])
            OPT_A_PT, OPT_A_NAME, OPT_A_CLOCK, OPT_A_BITRATE, OPT_A_PTIME,
            OPT_REPORT_FILE };
 
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "count",          1, 0, 'c' },
         { "gap",            1, 0, 'g' },
@@ -881,6 +886,7 @@ static pj_status_t init_options(int argc, char *argv[])
 
         { NULL, 0, 0, 0 },
     };
+    // clang-format on
     int c;
     int option_index;
 

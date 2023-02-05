@@ -177,6 +177,7 @@ typedef int             (*P_CMP_URI)(pjsip_uri_context_e, const void*,
 typedef void*           (*P_CLONE)(pj_pool_t*, const void*);
 
 
+// clang-format off
 static pjsip_uri_vptr sip_url_vptr = 
 {
     (P_GET_SCHEME)      &pjsip_url_get_scheme,
@@ -203,6 +204,7 @@ static pjsip_uri_vptr name_addr_vptr =
     (P_CMP_URI)         &pjsip_name_addr_compare,
     (P_CLONE)           &pjsip_name_addr_clone
 };
+// clang-format on
 
 static const pj_str_t *pjsip_url_get_scheme(const pjsip_sip_uri *url)
 {
@@ -646,6 +648,7 @@ static int other_uri_cmp( pjsip_uri_context_e context,
 static pjsip_other_uri* other_uri_clone( pj_pool_t *pool, 
                                          const pjsip_other_uri *rhs);
 
+// clang-format off
 static pjsip_uri_vptr other_uri_vptr = 
 {
     (P_GET_SCHEME)  &other_uri_get_scheme,
@@ -654,6 +657,7 @@ static pjsip_uri_vptr other_uri_vptr =
     (P_CMP_URI)     &other_uri_cmp,
     (P_CLONE)       &other_uri_clone
 };
+// clang-format on
 
 
 PJ_DEF(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool) 

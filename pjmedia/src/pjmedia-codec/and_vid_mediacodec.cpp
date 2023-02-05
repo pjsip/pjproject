@@ -76,6 +76,7 @@
 #define AND_MED_VP8_PT          PJMEDIA_RTP_PT_VP8_RSV1
 #define AND_MED_VP9_PT          PJMEDIA_RTP_PT_VP9_RSV1
 
+
 /*
  * Factory operations.
  */
@@ -122,6 +123,7 @@ static pj_status_t and_media_codec_decode(pjmedia_vid_codec *codec,
                                       unsigned out_size,
                                       pjmedia_frame *output);
 
+// clang-format off
 /* Definition for Android AMediaCodec operations. */
 static pjmedia_vid_codec_op and_media_codec_op =
 {
@@ -145,6 +147,7 @@ static pjmedia_vid_codec_factory_op and_media_factory_op =
     &and_media_alloc_codec,
     &and_media_dealloc_codec
 };
+// clang-format on
 
 static struct and_media_factory
 {
@@ -269,34 +272,34 @@ static pj_str_t H264_sw_encoder[] = {{(char *)"OMX.google.h264.encoder\0",
                                       23}};
 static pj_str_t H264_hw_encoder[] =
                                   {{(char *)"OMX.qcom.video.encoder.avc\0", 26},
-                                  {(char *)"OMX.Exynos.avc.Encoder\0", 22}};
+                                  {(char *)"OMX.Exynos.avc.Encoder\0", 22},};
 static pj_str_t H264_sw_decoder[] = {{(char *)"OMX.google.h264.decoder\0",
                                       23}};
 static pj_str_t H264_hw_decoder[] =
                                   {{(char *)"OMX.qcom.video.decoder.avc\0", 26},
-                                  {(char *)"OMX.Exynos.avc.dec\0", 18}};
+                                  {(char *)"OMX.Exynos.avc.dec\0", 18},};
 #endif
 
 #if PJMEDIA_HAS_AND_MEDIA_VP8
 static pj_str_t VP8_sw_encoder[] = {{(char *)"OMX.google.vp8.encoder\0", 23}};
 static pj_str_t VP8_hw_encoder[] =
                                  {{(char *)"OMX.qcom.video.encoder.vp8\0", 26},
-                                 {(char *)"OMX.Exynos.vp8.Encoder\0", 22}};
+                                 {(char *)"OMX.Exynos.vp8.Encoder\0", 22},};
 static pj_str_t VP8_sw_decoder[] = {{(char *)"OMX.google.vp8.decoder\0", 23}};
 static pj_str_t VP8_hw_decoder[] =
                                  {{(char *)"OMX.qcom.video.decoder.vp8\0", 26},
-                                 {(char *)"OMX.Exynos.vp8.dec\0", 18}};
+                                 {(char *)"OMX.Exynos.vp8.dec\0", 18},};
 #endif
 
 #if PJMEDIA_HAS_AND_MEDIA_VP9
 static pj_str_t VP9_sw_encoder[] = {{(char *)"OMX.google.vp9.encoder\0", 23}};
 static pj_str_t VP9_hw_encoder[] =
                                  {{(char *)"OMX.qcom.video.encoder.vp9\0", 26},
-                                 {(char *)"OMX.Exynos.vp9.Encoder\0", 22}};
+                                 {(char *)"OMX.Exynos.vp9.Encoder\0", 22},};
 static pj_str_t VP9_sw_decoder[] = {{(char *)"OMX.google.vp9.decoder\0", 23}};
 static pj_str_t VP9_hw_decoder[] =
                                  {{(char *)"OMX.qcom.video.decoder.vp9\0", 26},
-                                 {(char *)"OMX.Exynos.vp9.dec\0", 18}};
+                                 {(char *)"OMX.Exynos.vp9.dec\0", 18},};
 #endif
 
 static struct and_media_codec {
@@ -317,6 +320,7 @@ static struct and_media_codec {
 
     pjmedia_codec_fmtp dec_fmtp;          /* Decoder's fmtp params.          */
 }
+// clang-format off
 and_media_codec[] = {
 #if PJMEDIA_HAS_AND_MEDIA_H264
     {0, "H264", "Android MediaCodec H264 codec", "video/avc",
@@ -349,6 +353,7 @@ and_media_codec[] = {
     }
 #endif
 };
+// clang-format on
 
 static pj_status_t configure_encoder(and_media_codec_data *and_media_data)
 {

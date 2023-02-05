@@ -26,6 +26,7 @@
 #include "ffmpeg_util.h"
 #include <libavformat/avformat.h>
 
+// clang-format off
 /* Conversion table between pjmedia_format_id and AVPixelFormat */
 static const struct ffmpeg_fmt_table_t
 {
@@ -66,8 +67,9 @@ static const struct ffmpeg_codec_table_t
     {PJMEDIA_FORMAT_MPEG1VIDEO, AV(CODEC_ID_MPEG1VIDEO)},
     {PJMEDIA_FORMAT_MPEG2VIDEO, AV(CODEC_ID_MPEG2VIDEO)},
     {PJMEDIA_FORMAT_MPEG4,      AV(CODEC_ID_MPEG4)},
-    {PJMEDIA_FORMAT_MJPEG,      AV(CODEC_ID_MJPEG)}
+    {PJMEDIA_FORMAT_MJPEG,      AV(CODEC_ID_MJPEG)},
 };
+// clang-format on
 
 static int pjmedia_ffmpeg_ref_cnt;
 
@@ -192,7 +194,6 @@ pj_status_t CodecID_to_pjmedia_format_id(unsigned codec_id,
 
     return PJ_ENOTFOUND;
 }
-
 
 #ifdef _MSC_VER
 #   pragma comment( lib, "avformat.lib")

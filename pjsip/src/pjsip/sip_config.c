@@ -23,6 +23,7 @@
 static const char *id = "sip_config.c";
 
 /* pjsip configuration instance, initialized with default values */
+// clang-format off
 pjsip_cfg_t pjsip_sip_cfg_var =
 {
     /* Global settings */
@@ -66,6 +67,7 @@ pjsip_cfg_t pjsip_sip_cfg_var =
         PJSIP_TLS_KEEP_ALIVE_INTERVAL
     }
 };
+// clang-format on
 
 PJ_DEF(void) pjsip_dump_config(void)
 {

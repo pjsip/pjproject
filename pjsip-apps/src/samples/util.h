@@ -50,12 +50,14 @@ static int app_perror( const char *sender, const char *title,
 /*
  * Common sound options.
  */
+// clang-format off
 #define SND_USAGE   \
 "  -d, --dev=NUM        Sound device use device id NUM (default=-1)      \n"\
 "  -r, --rate=HZ        Set clock rate in samples per sec (default=44100)\n"\
 "  -c, --channel=NUM    Set # of channels (default=1 for mono).          \n"\
 "  -f, --frame=NUM      Set # of samples per frame (default equival 20ms)\n"\
 "  -b, --bit=NUM        Set # of bits per sample (default=16)            \n"
+// clang-format on
 
 
 /*
@@ -71,6 +73,7 @@ pj_status_t get_snd_options(const char *app_name,
                             int *samples_per_frame,
                             int *bits_per_sample)
 {
+    // clang-format off
     struct pj_getopt_option long_options[] = {
         { "dev",        1, 0, 'd' },
         { "rate",       1, 0, 'r' },
@@ -79,6 +82,7 @@ pj_status_t get_snd_options(const char *app_name,
         { "bit",        1, 0, 'b' },
         { NULL, 0, 0, 0 },
     };
+    // clang-format on
     int c;
     int option_index;
     long val;

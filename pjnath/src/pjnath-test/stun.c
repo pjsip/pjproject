@@ -25,6 +25,7 @@ static int verify1(pj_stun_msg*);
 static int verify2(pj_stun_msg*);
 static int verify5(pj_stun_msg*);
 
+// clang-format off
 static struct test
 {
     const char    *title;
@@ -216,6 +217,7 @@ static struct test
         NULL
     }
 };
+// clang-format on
 
 static const char *err(pj_status_t status)
 {
@@ -446,6 +448,7 @@ enum
     USE_FINGERPRINT         = 2
 };
 
+// clang-format off
 static struct test_vector
 {
     unsigned       msg_type;
@@ -549,6 +552,7 @@ static struct test_vector
 #endif
     */
 };
+// clang-format on
 
 
 static char* print_binary(const pj_uint8_t *data, unsigned data_len)

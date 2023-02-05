@@ -60,6 +60,7 @@
 #    define TRACE_(expr)
 #endif
 
+
 /*
  * Factory prototypes
  */
@@ -138,6 +139,7 @@ struct bb10_stream
     pj_thread_t         *ca_thread;
 };
 
+// clang-format off
 static pjmedia_aud_dev_factory_op bb10_factory_op =
 {
     &bb10_factory_init,
@@ -158,6 +160,7 @@ static pjmedia_aud_stream_op bb10_stream_op =
     &bb10_stream_stop,
     &bb10_stream_destroy
 };
+// clang-format on
 
 /*
  * BB10 - tests loads the audio units and sets up the driver structure

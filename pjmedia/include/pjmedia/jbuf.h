@@ -47,6 +47,7 @@ PJ_BEGIN_DECL
 /**
  * Types of frame returned by the jitter buffer.
  */
+// clang-format off
 typedef enum pjmedia_jb_frame_type 
 {
     PJMEDIA_JB_MISSING_FRAME       = 0, /**< No frame because it's missing  */
@@ -56,6 +57,7 @@ typedef enum pjmedia_jb_frame_type
     PJMEDIA_JB_ZERO_EMPTY_FRAME    = 3  /**< Zero frame is being returned
                                              because JB is empty.           */
 } pjmedia_jb_frame_type;
+// clang-format on
 
 
 /**

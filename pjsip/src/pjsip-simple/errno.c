@@ -26,6 +26,7 @@
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
+// clang-format off
 static const struct 
 {
     int code;
@@ -48,7 +49,7 @@ static const struct
     /* isComposing errors. */
     { PJSIP_SIMPLE_EBADISCOMPOSE,   "Bad isComposing indication/XML message" },
 };
-
+// clang-format on
 
 #endif  /* PJ_HAS_ERROR_STRING */
 

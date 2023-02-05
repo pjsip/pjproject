@@ -173,7 +173,9 @@ static void init_outbound_setting(pjsua_acc *acc)
         const pj_str_t *hostname;
         pj_uint32_t hval;
         pj_size_t pos;
+        // clang-format off
         char instprm[] = ";+sip.instance=\"<urn:uuid:00000000-0000-0000-0000-0000CCDDEEFF>\"";
+        // clang-format on
 
         hostname = pj_gethostname();
         pos = pj_ansi_strlen(instprm) - 10;
@@ -1665,6 +1667,7 @@ done:
 /* Check if IP is private IP address */
 static pj_bool_t is_private_ip(const pj_str_t *addr)
 {
+    // clang-format off
     const pj_str_t private_net[] = 
     {
         { "10.", 3 },
@@ -1675,6 +1678,7 @@ static pj_bool_t is_private_ip(const pj_str_t *addr)
         { "172.28.", 7 }, { "172.29.", 7 }, { "172.30.", 7 }, { "172.31.", 7 },
         { "192.168.", 8 }
     };
+    // clang-format on
     unsigned i;
 
     for (i=0; i<PJ_ARRAY_SIZE(private_net); ++i) {

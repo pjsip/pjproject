@@ -63,6 +63,7 @@ static void usage(void)
 
 static pj_status_t init_options(int argc, char *argv[])
 {
+    // clang-format off
     struct pj_getopt_option long_opt[] = {
         { "port",       1, 0, 'p'},
         { "rr",         0, 0, 'R'},
@@ -70,6 +71,7 @@ static pj_status_t init_options(int argc, char *argv[])
         { "help",       0, 0, 'h'},
         { NULL,         0, 0, 0}
     };
+    // clang-format on
     int c;
     int opt_ind;
 

@@ -82,6 +82,7 @@ struct ec_operations
                              pjmedia_echo_stat *stat);
 };
 
+// clang-format off
 
 static struct ec_operations echo_supp_op = 
 {
@@ -161,6 +162,8 @@ static struct ec_operations webrtc_aec3_op =
     &webrtc_aec3_get_stat
 };
 #endif
+
+// clang-format on
 
 PJ_DEF(void) pjmedia_echo_stat_default(pjmedia_echo_stat *stat)
 {

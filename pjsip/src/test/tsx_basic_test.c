@@ -253,6 +253,7 @@ static int tsx_create_and_send_req(void *arg)
 int tsx_destroy_test()
 {
     struct tsx_test_state state;
+    // clang-format off
     struct test_desc
     {
         const char *title;
@@ -291,6 +292,7 @@ int tsx_destroy_test()
             60000
         },
     };
+    // clang-format on
     int rc;
     unsigned i;
     const int INDENT = 2;

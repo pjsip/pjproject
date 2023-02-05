@@ -46,6 +46,7 @@
 #define BITS_PER_SAMPLE     16
 
 
+// clang-format off
 static const char *desc = 
  " FILE                                     \n"
  "  recfile.c                               \n"
@@ -56,6 +57,7 @@ static const char *desc =
  " USAGE:                                   \n"
  "  recfile FILE.WAV                        \n"
  "";
+// clang-format on
 
 
 /* Util to display the error message for the specified error code  */
