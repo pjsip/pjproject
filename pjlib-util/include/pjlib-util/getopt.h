@@ -1,4 +1,3 @@
-/* $Id$ */
 /* Declarations for pj_getopt.
    Copyright (C) 1989,90,91,92,93,94,96,97,98 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
@@ -32,7 +31,7 @@
  * @{
  */
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
 #endif
 
@@ -68,9 +67,9 @@ extern int pj_optopt;
    zero.
 
    The field `has_arg' is:
-   no_argument		(or 0) if the option does not take an argument,
-   required_argument	(or 1) if the option requires an argument,
-   optional_argument 	(or 2) if the option takes an optional argument.
+   no_argument          (or 0) if the option does not take an argument,
+   required_argument    (or 1) if the option requires an argument,
+   optional_argument    (or 2) if the option takes an optional argument.
 
    If the field `flag' is not NULL, it points to a variable that is set
    to the value given in the field `val' when the option is found, but
@@ -95,9 +94,9 @@ struct pj_getopt_option
 
 /* Names for the values of the `has_arg' field of `struct pj_getopt_option'.  */
 
-# define no_argument		0
-# define required_argument	1
-# define optional_argument	2
+# define no_argument            0
+# define required_argument      1
+# define optional_argument      2
 
 
 /* Get definitions and prototypes for functions to process the
@@ -127,13 +126,13 @@ struct pj_getopt_option
 int pj_getopt (int argc, char *const *argv, const char *shortopts);
 
 int pj_getopt_long (int argc, char *const *argv, const char *options,
-		        const struct pj_getopt_option *longopts, int *longind);
+                        const struct pj_getopt_option *longopts, int *longind);
 int pj_getopt_long_only (int argc, char *const *argv,
-			     const char *shortopts,
-		             const struct pj_getopt_option *longopts, int *longind);
+                             const char *shortopts,
+                             const struct pj_getopt_option *longopts, int *longind);
 
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 }
 #endif
 

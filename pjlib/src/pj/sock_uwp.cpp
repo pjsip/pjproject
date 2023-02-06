@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2016 Teluu Inc. (http://www.teluu.com)
  *
@@ -25,7 +24,7 @@
 #include <ppltasks.h>
 #include <string>
 
-#define THIS_FILE	"sock_uwp.cpp"
+#define THIS_FILE       "sock_uwp.cpp"
 
 #include "sock_uwp.h"
 
@@ -33,19 +32,19 @@
  * Address families conversion.
  * The values here are indexed based on pj_addr_family.
  */
-const pj_uint16_t PJ_AF_UNSPEC	= AF_UNSPEC;
-const pj_uint16_t PJ_AF_UNIX	= AF_UNIX;
-const pj_uint16_t PJ_AF_INET	= AF_INET;
-const pj_uint16_t PJ_AF_INET6	= AF_INET6;
+const pj_uint16_t PJ_AF_UNSPEC  = AF_UNSPEC;
+const pj_uint16_t PJ_AF_UNIX    = AF_UNIX;
+const pj_uint16_t PJ_AF_INET    = AF_INET;
+const pj_uint16_t PJ_AF_INET6   = AF_INET6;
 #ifdef AF_PACKET
-const pj_uint16_t PJ_AF_PACKET	= AF_PACKET;
+const pj_uint16_t PJ_AF_PACKET  = AF_PACKET;
 #else
-const pj_uint16_t PJ_AF_PACKET	= 0xFFFF;
+const pj_uint16_t PJ_AF_PACKET  = 0xFFFF;
 #endif
 #ifdef AF_IRDA
-const pj_uint16_t PJ_AF_IRDA	= AF_IRDA;
+const pj_uint16_t PJ_AF_IRDA    = AF_IRDA;
 #else
-const pj_uint16_t PJ_AF_IRDA	= 0xFFFF;
+const pj_uint16_t PJ_AF_IRDA    = 0xFFFF;
 #endif
 
 /*
@@ -53,82 +52,82 @@ const pj_uint16_t PJ_AF_IRDA	= 0xFFFF;
 * The values here are indexed based on pj_sock_type
 */
 const pj_uint16_t PJ_SOCK_STREAM= SOCK_STREAM;
-const pj_uint16_t PJ_SOCK_DGRAM	= SOCK_DGRAM;
-const pj_uint16_t PJ_SOCK_RAW	= SOCK_RAW;
-const pj_uint16_t PJ_SOCK_RDM	= SOCK_RDM;
+const pj_uint16_t PJ_SOCK_DGRAM = SOCK_DGRAM;
+const pj_uint16_t PJ_SOCK_RAW   = SOCK_RAW;
+const pj_uint16_t PJ_SOCK_RDM   = SOCK_RDM;
 
 /*
 * Socket level values.
 */
-const pj_uint16_t PJ_SOL_SOCKET	= SOL_SOCKET;
+const pj_uint16_t PJ_SOL_SOCKET = SOL_SOCKET;
 #ifdef SOL_IP
-const pj_uint16_t PJ_SOL_IP	= SOL_IP;
+const pj_uint16_t PJ_SOL_IP     = SOL_IP;
 #elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) 
-const pj_uint16_t PJ_SOL_IP	= IPPROTO_IP;
+const pj_uint16_t PJ_SOL_IP     = IPPROTO_IP;
 #else
-const pj_uint16_t PJ_SOL_IP	= 0;
+const pj_uint16_t PJ_SOL_IP     = 0;
 #endif /* SOL_IP */
 
 #if defined(SOL_TCP)
-const pj_uint16_t PJ_SOL_TCP	= SOL_TCP;
+const pj_uint16_t PJ_SOL_TCP    = SOL_TCP;
 #elif defined(IPPROTO_TCP)
-const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
+const pj_uint16_t PJ_SOL_TCP    = IPPROTO_TCP;
 #elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
-const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
+const pj_uint16_t PJ_SOL_TCP    = IPPROTO_TCP;
 #else
-const pj_uint16_t PJ_SOL_TCP	= 6;
+const pj_uint16_t PJ_SOL_TCP    = 6;
 #endif /* SOL_TCP */
 
 #ifdef SOL_UDP
-const pj_uint16_t PJ_SOL_UDP	= SOL_UDP;
+const pj_uint16_t PJ_SOL_UDP    = SOL_UDP;
 #elif defined(IPPROTO_UDP)
-const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
+const pj_uint16_t PJ_SOL_UDP    = IPPROTO_UDP;
 #elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
-const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
+const pj_uint16_t PJ_SOL_UDP    = IPPROTO_UDP;
 #else
-const pj_uint16_t PJ_SOL_UDP	= 17;
+const pj_uint16_t PJ_SOL_UDP    = 17;
 #endif /* SOL_UDP */
 
 #ifdef SOL_IPV6
-const pj_uint16_t PJ_SOL_IPV6	= SOL_IPV6;
+const pj_uint16_t PJ_SOL_IPV6   = SOL_IPV6;
 #elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
 #   if defined(IPPROTO_IPV6) || (_WIN32_WINNT >= 0x0501)
-const pj_uint16_t PJ_SOL_IPV6	= IPPROTO_IPV6;
+const pj_uint16_t PJ_SOL_IPV6   = IPPROTO_IPV6;
 #   else
-const pj_uint16_t PJ_SOL_IPV6	= 41;
+const pj_uint16_t PJ_SOL_IPV6   = 41;
 #   endif
 #else
-const pj_uint16_t PJ_SOL_IPV6	= 41;
+const pj_uint16_t PJ_SOL_IPV6   = 41;
 #endif /* SOL_IPV6 */
 
 /* IP_TOS */
 #ifdef IP_TOS
-const pj_uint16_t PJ_IP_TOS	= IP_TOS;
+const pj_uint16_t PJ_IP_TOS     = IP_TOS;
 #else
-const pj_uint16_t PJ_IP_TOS	= 1;
+const pj_uint16_t PJ_IP_TOS     = 1;
 #endif
 
 
 /* TOS settings (declared in netinet/ip.h) */
 #ifdef IPTOS_LOWDELAY
-const pj_uint16_t PJ_IPTOS_LOWDELAY	= IPTOS_LOWDELAY;
+const pj_uint16_t PJ_IPTOS_LOWDELAY     = IPTOS_LOWDELAY;
 #else
-const pj_uint16_t PJ_IPTOS_LOWDELAY	= 0x10;
+const pj_uint16_t PJ_IPTOS_LOWDELAY     = 0x10;
 #endif
 #ifdef IPTOS_THROUGHPUT
-const pj_uint16_t PJ_IPTOS_THROUGHPUT	= IPTOS_THROUGHPUT;
+const pj_uint16_t PJ_IPTOS_THROUGHPUT   = IPTOS_THROUGHPUT;
 #else
-const pj_uint16_t PJ_IPTOS_THROUGHPUT	= 0x08;
+const pj_uint16_t PJ_IPTOS_THROUGHPUT   = 0x08;
 #endif
 #ifdef IPTOS_RELIABILITY
-const pj_uint16_t PJ_IPTOS_RELIABILITY	= IPTOS_RELIABILITY;
+const pj_uint16_t PJ_IPTOS_RELIABILITY  = IPTOS_RELIABILITY;
 #else
-const pj_uint16_t PJ_IPTOS_RELIABILITY	= 0x04;
+const pj_uint16_t PJ_IPTOS_RELIABILITY  = 0x04;
 #endif
 #ifdef IPTOS_MINCOST
-const pj_uint16_t PJ_IPTOS_MINCOST	= IPTOS_MINCOST;
+const pj_uint16_t PJ_IPTOS_MINCOST      = IPTOS_MINCOST;
 #else
-const pj_uint16_t PJ_IPTOS_MINCOST	= 0x02;
+const pj_uint16_t PJ_IPTOS_MINCOST      = 0x02;
 #endif
 
 
@@ -166,9 +165,9 @@ const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = 0xFFFF;
 #endif
 
 /* recv() and send() flags */
-const int PJ_MSG_OOB		= MSG_OOB;
-const int PJ_MSG_PEEK		= MSG_PEEK;
-const int PJ_MSG_DONTROUTE	= MSG_DONTROUTE;
+const int PJ_MSG_OOB            = MSG_OOB;
+const int PJ_MSG_PEEK           = MSG_PEEK;
+const int PJ_MSG_DONTROUTE      = MSG_DONTROUTE;
 
 
 
@@ -183,70 +182,70 @@ ref class PjUwpSocketDatagramRecvHelper sealed
 {
 internal:
     PjUwpSocketDatagramRecvHelper(PjUwpSocket* uwp_sock_) :
-	uwp_sock(uwp_sock_), avail_data_len(0), recv_args(nullptr)
+        uwp_sock(uwp_sock_), avail_data_len(0), recv_args(nullptr)
     {
-	recv_wait = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-	event_token = uwp_sock->datagram_sock->MessageReceived += 
-	    ref new TypedEventHandler<DatagramSocket^, 
-				      DatagramSocketMessageReceivedEventArgs^>
-		    (this, &PjUwpSocketDatagramRecvHelper::OnMessageReceived);
+        recv_wait = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        event_token = uwp_sock->datagram_sock->MessageReceived += 
+            ref new TypedEventHandler<DatagramSocket^, 
+                                      DatagramSocketMessageReceivedEventArgs^>
+                    (this, &PjUwpSocketDatagramRecvHelper::OnMessageReceived);
     }
 
     void OnMessageReceived(DatagramSocket ^sender,
-			   DatagramSocketMessageReceivedEventArgs ^args)
+                           DatagramSocketMessageReceivedEventArgs ^args)
     {
-	try {
-	    if (uwp_sock->sock_state >= SOCKSTATE_DISCONNECTED)
-		return;
+        try {
+            if (uwp_sock->sock_state >= SOCKSTATE_DISCONNECTED)
+                return;
 
-	    recv_args = args;
-	    avail_data_len = args->GetDataReader()->UnconsumedBufferLength;
+            recv_args = args;
+            avail_data_len = args->GetDataReader()->UnconsumedBufferLength;
 
-	    if (uwp_sock->cb.on_read) {
-		(*uwp_sock->cb.on_read)(uwp_sock, avail_data_len);
-	    }
+            if (uwp_sock->cb.on_read) {
+                (*uwp_sock->cb.on_read)(uwp_sock, avail_data_len);
+            }
 
-	    WaitForSingleObjectEx(recv_wait, INFINITE, false);
-	} catch (...) {}
+            WaitForSingleObjectEx(recv_wait, INFINITE, false);
+        } catch (...) {}
     }
 
     pj_status_t ReadDataIfAvailable(void *buf, pj_ssize_t *len,
-				    pj_sockaddr_t *from)
+                                    pj_sockaddr_t *from)
     {
-	if (avail_data_len <= 0)
-	    return PJ_ENOTFOUND;
+        if (avail_data_len <= 0)
+            return PJ_ENOTFOUND;
 
-	if (*len < avail_data_len)
-	    return PJ_ETOOSMALL;
+        if (*len < avail_data_len)
+            return PJ_ETOOSMALL;
 
-	// Read data
-	auto reader = recv_args->GetDataReader();
-	auto buffer = reader->ReadBuffer(avail_data_len);
-	unsigned char *p;
-	GetRawBufferFromIBuffer(buffer, &p);
-	pj_memcpy((void*) buf, p, avail_data_len);
-	*len = avail_data_len;
+        // Read data
+        auto reader = recv_args->GetDataReader();
+        auto buffer = reader->ReadBuffer(avail_data_len);
+        unsigned char *p;
+        GetRawBufferFromIBuffer(buffer, &p);
+        pj_memcpy((void*) buf, p, avail_data_len);
+        *len = avail_data_len;
 
-	// Get source address
-	wstr_addr_to_sockaddr(recv_args->RemoteAddress->CanonicalName->Data(),
-			      recv_args->RemotePort->Data(), from);
+        // Get source address
+        wstr_addr_to_sockaddr(recv_args->RemoteAddress->CanonicalName->Data(),
+                              recv_args->RemotePort->Data(), from);
 
-	// finally
-	avail_data_len = 0;
-	SetEvent(recv_wait);
+        // finally
+        avail_data_len = 0;
+        SetEvent(recv_wait);
 
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
 private:
 
     ~PjUwpSocketDatagramRecvHelper()
     {
-	if (uwp_sock->datagram_sock)
-	    uwp_sock->datagram_sock->MessageReceived -= event_token;
+        if (uwp_sock->datagram_sock)
+            uwp_sock->datagram_sock->MessageReceived -= event_token;
 
-	SetEvent(recv_wait);
-	CloseHandle(recv_wait);
+        SetEvent(recv_wait);
+        CloseHandle(recv_wait);
     }
 
     PjUwpSocket* uwp_sock;
@@ -261,51 +260,51 @@ ref class PjUwpSocketListenerHelper sealed
 {
 internal:
     PjUwpSocketListenerHelper(PjUwpSocket* uwp_sock_) :
-	uwp_sock(uwp_sock_), conn_args(nullptr)
+        uwp_sock(uwp_sock_), conn_args(nullptr)
     {
-	conn_wait = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-	event_token = uwp_sock->listener_sock->ConnectionReceived +=
-	    ref new TypedEventHandler<StreamSocketListener^, StreamSocketListenerConnectionReceivedEventArgs^>
-	    (this, &PjUwpSocketListenerHelper::OnConnectionReceived);
+        conn_wait = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        event_token = uwp_sock->listener_sock->ConnectionReceived +=
+            ref new TypedEventHandler<StreamSocketListener^, StreamSocketListenerConnectionReceivedEventArgs^>
+            (this, &PjUwpSocketListenerHelper::OnConnectionReceived);
     }
 
     void OnConnectionReceived(StreamSocketListener ^sender,
-	StreamSocketListenerConnectionReceivedEventArgs ^args)
+        StreamSocketListenerConnectionReceivedEventArgs ^args)
     {
-	try {
-	    conn_args = args;
+        try {
+            conn_args = args;
 
-	    if (uwp_sock->cb.on_accept) {
-		(*uwp_sock->cb.on_accept)(uwp_sock);
-	    }
+            if (uwp_sock->cb.on_accept) {
+                (*uwp_sock->cb.on_accept)(uwp_sock);
+            }
 
-	    WaitForSingleObjectEx(conn_wait, INFINITE, false);
-	} catch (Exception^ e) {}
+            WaitForSingleObjectEx(conn_wait, INFINITE, false);
+        } catch (Exception^ e) {}
     }
 
     pj_status_t GetAcceptedSocket(StreamSocket^& stream_sock)
     {
-	if (conn_args == nullptr)
-	    return PJ_ENOTFOUND;
+        if (conn_args == nullptr)
+            return PJ_ENOTFOUND;
 
-	stream_sock = conn_args->Socket;
+        stream_sock = conn_args->Socket;
 
-	// finally
-	conn_args = nullptr;
-	SetEvent(conn_wait);
+        // finally
+        conn_args = nullptr;
+        SetEvent(conn_wait);
 
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
 private:
 
     ~PjUwpSocketListenerHelper()
     {
-	if (uwp_sock->listener_sock)
-	    uwp_sock->listener_sock->ConnectionReceived -= event_token;
+        if (uwp_sock->listener_sock)
+            uwp_sock->listener_sock->ConnectionReceived -= event_token;
 
-	SetEvent(conn_wait);
-	CloseHandle(conn_wait);
+        SetEvent(conn_wait);
+        CloseHandle(conn_wait);
     }
 
     PjUwpSocket* uwp_sock;
@@ -347,11 +346,11 @@ PjUwpSocket* PjUwpSocket::CreateAcceptSocket(Windows::Networking::Sockets::Strea
 
     // Update local & remote address
     wstr_addr_to_sockaddr(stream_sock_->Information->RemoteAddress->CanonicalName->Data(),
-			  stream_sock_->Information->RemotePort->Data(),
-			  &new_sock->remote_addr);
+                          stream_sock_->Information->RemotePort->Data(),
+                          &new_sock->remote_addr);
     wstr_addr_to_sockaddr(stream_sock_->Information->LocalAddress->CanonicalName->Data(),
-			  stream_sock_->Information->LocalPort->Data(),
-			  &new_sock->local_addr);
+                          stream_sock_->Information->LocalPort->Data(),
+                          &new_sock->local_addr);
 
     return new_sock;
 }
@@ -363,18 +362,18 @@ pj_status_t PjUwpSocket::InitSocket(enum PjUwpSocketType sock_type_)
 
     sock_type = sock_type_;
     if (sock_type == SOCKTYPE_LISTENER) {
-	listener_sock = ref new StreamSocketListener();
+        listener_sock = ref new StreamSocketListener();
     } else if (sock_type == SOCKTYPE_STREAM) {
-	stream_sock = ref new StreamSocket();
+        stream_sock = ref new StreamSocket();
     } else if (sock_type == SOCKTYPE_DATAGRAM) {
-	datagram_sock = ref new DatagramSocket();
+        datagram_sock = ref new DatagramSocket();
     } else {
-	pj_assert(!"Invalid socket type");
-	return PJ_EINVAL;
+        pj_assert(!"Invalid socket type");
+        return PJ_EINVAL;
     }
 
     if (sock_type == SOCKTYPE_DATAGRAM || sock_type == SOCKTYPE_STREAM) {
-	send_buffer = ref new Buffer(SEND_BUFFER_SIZE);
+        send_buffer = ref new Buffer(SEND_BUFFER_SIZE);
     }
 
     sock_state = SOCKSTATE_INITIALIZED;
@@ -386,13 +385,13 @@ pj_status_t PjUwpSocket::InitSocket(enum PjUwpSocketType sock_type_)
 void PjUwpSocket::DeinitSocket()
 {
     if (stream_sock) {
-	concurrency::create_task(stream_sock->CancelIOAsync()).wait();
+        concurrency::create_task(stream_sock->CancelIOAsync()).wait();
     }
     if (datagram_sock && has_pending_send) {
-	concurrency::create_task(datagram_sock->CancelIOAsync()).wait();
+        concurrency::create_task(datagram_sock->CancelIOAsync()).wait();
     }
     if (listener_sock) {
-	concurrency::create_task(listener_sock->CancelIOAsync()).wait();
+        concurrency::create_task(listener_sock->CancelIOAsync()).wait();
     }
     while (has_pending_recv) pj_thread_sleep(10);
 
@@ -412,53 +411,53 @@ pj_status_t PjUwpSocket::Bind(const pj_sockaddr_t *addr)
      * whether it is a stream or a listener.
      */
     if (sock_state < SOCKSTATE_INITIALIZED) {
-	pj_sockaddr_cp(&local_addr, addr);
-	has_pending_bind = PJ_TRUE;
-	return PJ_SUCCESS;
+        pj_sockaddr_cp(&local_addr, addr);
+        has_pending_bind = PJ_TRUE;
+        return PJ_SUCCESS;
     }
     
     PJ_ASSERT_RETURN(sock_state == SOCKSTATE_INITIALIZED, PJ_EINVALIDOP);
     if (sock_type != SOCKTYPE_DATAGRAM && sock_type != SOCKTYPE_LISTENER)
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
 
     if (has_pending_bind) {
-	has_pending_bind = PJ_FALSE;
-	if (!addr)
-	    addr = &local_addr;
+        has_pending_bind = PJ_FALSE;
+        if (!addr)
+            addr = &local_addr;
     }
 
     /* If no bound address is set, just return */
     if (!pj_sockaddr_has_addr(addr) && !pj_sockaddr_get_port(addr))
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     if (addr != &local_addr)
-	pj_sockaddr_cp(&local_addr, addr);
+        pj_sockaddr_cp(&local_addr, addr);
 
     HRESULT err = 0;
     concurrency::create_task([this, addr, &err]() {
-	HostName ^host;
-	int port;
+        HostName ^host;
+        int port;
 
-	sockaddr_to_hostname_port(addr, host, &port);
-	if (pj_sockaddr_has_addr(addr)) {
-	    if (sock_type == SOCKTYPE_DATAGRAM)
-		return datagram_sock->BindEndpointAsync(host, port.ToString());
-	    else
-		return listener_sock->BindEndpointAsync(host, port.ToString());
-	} else /* if (pj_sockaddr_get_port(addr) != 0) */ {
-	    if (sock_type == SOCKTYPE_DATAGRAM)
-		return datagram_sock->BindServiceNameAsync(port.ToString());
-	    else
-		return listener_sock->BindServiceNameAsync(port.ToString());
-	}
+        sockaddr_to_hostname_port(addr, host, &port);
+        if (pj_sockaddr_has_addr(addr)) {
+            if (sock_type == SOCKTYPE_DATAGRAM)
+                return datagram_sock->BindEndpointAsync(host, port.ToString());
+            else
+                return listener_sock->BindEndpointAsync(host, port.ToString());
+        } else /* if (pj_sockaddr_get_port(addr) != 0) */ {
+            if (sock_type == SOCKTYPE_DATAGRAM)
+                return datagram_sock->BindServiceNameAsync(port.ToString());
+            else
+                return listener_sock->BindServiceNameAsync(port.ToString());
+        }
     }).then([this, &err](concurrency::task<void> t)
     {
-	try {
-	    if (!err)
-		t.get();
-	} catch (Exception^ e) {
-	    err = e->HResult;
-	}
+        try {
+            if (!err)
+                t.get();
+        } catch (Exception^ e) {
+            err = e->HResult;
+        }
     }).get();
 
     return (err? PJ_RETURN_OS_ERROR(err) : PJ_SUCCESS);
@@ -468,10 +467,10 @@ pj_status_t PjUwpSocket::Bind(const pj_sockaddr_t *addr)
 pj_status_t PjUwpSocket::SendImp(const void *buf, pj_ssize_t *len)
 {
     if (has_pending_send)
-	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+        return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
 
     if (*len > (pj_ssize_t)send_buffer->Capacity)
-	return PJ_ETOOBIG;
+        return PJ_ETOOBIG;
 
     CopyToIBuffer((unsigned char*)buf, *len, send_buffer);
     send_buffer->Length = *len;
@@ -479,52 +478,52 @@ pj_status_t PjUwpSocket::SendImp(const void *buf, pj_ssize_t *len)
 
     /* Blocking version */
     if (is_blocking) {
-	pj_status_t status = PJ_SUCCESS;
-	concurrency::cancellation_token_source cts;
-	auto cts_token = cts.get_token();
-	auto t = concurrency::create_task(socket_writer->StoreAsync(),
-					  cts_token);
-	*len = cancel_after_timeout(t, cts, (unsigned int)WRITE_TIMEOUT).
-	    then([cts_token, &status](concurrency::task<unsigned int> t_)
-	{
-	    int sent = 0;
-	    try {
-		if (cts_token.is_canceled())
-		    status = PJ_ETIMEDOUT;
-		else
-		    sent = t_.get();
-	    } catch (Exception^ e) {
-		status = PJ_RETURN_OS_ERROR(e->HResult);
-	    }
-	    return sent;
-	}).get();
+        pj_status_t status = PJ_SUCCESS;
+        concurrency::cancellation_token_source cts;
+        auto cts_token = cts.get_token();
+        auto t = concurrency::create_task(socket_writer->StoreAsync(),
+                                          cts_token);
+        *len = cancel_after_timeout(t, cts, (unsigned int)WRITE_TIMEOUT).
+            then([cts_token, &status](concurrency::task<unsigned int> t_)
+        {
+            int sent = 0;
+            try {
+                if (cts_token.is_canceled())
+                    status = PJ_ETIMEDOUT;
+                else
+                    sent = t_.get();
+            } catch (Exception^ e) {
+                status = PJ_RETURN_OS_ERROR(e->HResult);
+            }
+            return sent;
+        }).get();
 
-	return status;
+        return status;
     } 
 
     /* Non-blocking version */
     has_pending_send = PJ_TRUE;
     concurrency::create_task(socket_writer->StoreAsync()).
-	then([this](concurrency::task<unsigned int> t_)
+        then([this](concurrency::task<unsigned int> t_)
     {
-	try {
-	    unsigned int l = t_.get();
-	    has_pending_send = PJ_FALSE;
+        try {
+            unsigned int l = t_.get();
+            has_pending_send = PJ_FALSE;
 
-	    // invoke callback
-	    if (cb.on_write) {
-		(*cb.on_write)(this, l);
-	    }
-	} catch (...) {
-	    has_pending_send = PJ_FALSE;
-	    sock_state = SOCKSTATE_ERROR;
-	    DeinitSocket();
+            // invoke callback
+            if (cb.on_write) {
+                (*cb.on_write)(this, l);
+            }
+        } catch (...) {
+            has_pending_send = PJ_FALSE;
+            sock_state = SOCKSTATE_ERROR;
+            DeinitSocket();
 
-	    // invoke callback
-	    if (cb.on_write) {
-		(*cb.on_write)(this, -PJ_EUNKNOWN);
-	    }
-	}
+            // invoke callback
+            if (cb.on_write) {
+                (*cb.on_write)(this, -PJ_EUNKNOWN);
+            }
+        }
     });
 
     return PJ_SUCCESS;
@@ -534,14 +533,14 @@ pj_status_t PjUwpSocket::SendImp(const void *buf, pj_ssize_t *len)
 pj_status_t PjUwpSocket::Send(const void *buf, pj_ssize_t *len)
 {
     if ((sock_type!=SOCKTYPE_STREAM && sock_type!=SOCKTYPE_DATAGRAM) ||
-	(sock_state!=SOCKSTATE_CONNECTED))
+        (sock_state!=SOCKSTATE_CONNECTED))
     {
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
     }
 
     /* Sending for SOCKTYPE_DATAGRAM is implemented in pj_sock_sendto() */
     if (sock_type == SOCKTYPE_DATAGRAM) {
-	return SendTo(buf, len, &remote_addr);
+        return SendTo(buf, len, &remote_addr);
     }
 
     return SendImp(buf, len);
@@ -549,19 +548,19 @@ pj_status_t PjUwpSocket::Send(const void *buf, pj_ssize_t *len)
 
 
 pj_status_t PjUwpSocket::SendTo(const void *buf, pj_ssize_t *len,
-				const pj_sockaddr_t *to)
+                                const pj_sockaddr_t *to)
 {
     if (sock_type != SOCKTYPE_DATAGRAM || sock_state < SOCKSTATE_INITIALIZED
-	|| sock_state >= SOCKSTATE_DISCONNECTED)
+        || sock_state >= SOCKSTATE_DISCONNECTED)
     {
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
     }
 
     if (has_pending_send)
-	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+        return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
 
     if (*len > (pj_ssize_t)send_buffer->Capacity)
-	return PJ_ETOOBIG;
+        return PJ_ETOOBIG;
 
     HostName ^hostname;
     int port;
@@ -570,32 +569,32 @@ pj_status_t PjUwpSocket::SendTo(const void *buf, pj_ssize_t *len,
     concurrency::cancellation_token_source cts;
     auto cts_token = cts.get_token();
     auto t = concurrency::create_task(datagram_sock->GetOutputStreamAsync(
-				      hostname, port.ToString()), cts_token);
+                                      hostname, port.ToString()), cts_token);
     pj_status_t status = PJ_SUCCESS;
 
     cancel_after_timeout(t, cts, (unsigned int)WRITE_TIMEOUT).
-	then([this, cts_token, &status](concurrency::task<IOutputStream^> t_)
+        then([this, cts_token, &status](concurrency::task<IOutputStream^> t_)
     {
-	try {
-	    if (cts_token.is_canceled()) {
-		status = PJ_ETIMEDOUT;
-	    } else {
-		IOutputStream^ outstream = t_.get();
-		socket_writer = ref new DataWriter(outstream);
-	    }
-	} catch (Exception^ e) {
-	    status = PJ_RETURN_OS_ERROR(e->HResult);
-	}
+        try {
+            if (cts_token.is_canceled()) {
+                status = PJ_ETIMEDOUT;
+            } else {
+                IOutputStream^ outstream = t_.get();
+                socket_writer = ref new DataWriter(outstream);
+            }
+        } catch (Exception^ e) {
+            status = PJ_RETURN_OS_ERROR(e->HResult);
+        }
     }).get();
 
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     status = SendImp(buf, len);
     if ((status == PJ_SUCCESS || status == PJ_EPENDING) &&
-	sock_state < SOCKSTATE_CONNECTED)
+        sock_state < SOCKSTATE_CONNECTED)
     {
-	sock_state = SOCKSTATE_CONNECTED;
+        sock_state = SOCKSTATE_CONNECTED;
     }
 
     return status;
@@ -605,7 +604,7 @@ pj_status_t PjUwpSocket::SendTo(const void *buf, pj_ssize_t *len,
 int PjUwpSocket::ConsumeReadBuffer(void *buf, int max_len)
 {
     if (socket_reader->UnconsumedBufferLength == 0)
-	return 0;
+        return 0;
 
     int read_len = PJ_MIN((int)socket_reader->UnconsumedBufferLength,max_len);
     IBuffer^ buffer = socket_reader->ReadBuffer(read_len);
@@ -619,50 +618,50 @@ pj_status_t PjUwpSocket::Recv(void *buf, pj_ssize_t *len)
 {
     /* Only for TCP, at least for now! */
     if (sock_type == SOCKTYPE_DATAGRAM)
-	return PJ_ENOTSUP;
+        return PJ_ENOTSUP;
 
     if (sock_type != SOCKTYPE_STREAM || sock_state != SOCKSTATE_CONNECTED)
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
 
     if (has_pending_recv)
-	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+        return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
 
     /* First check if there is already some data in the read buffer */
     if (buf) {
-	int avail_len = ConsumeReadBuffer(buf, *len);
-	if (avail_len > 0) {
-	    *len = avail_len;
-	    return PJ_SUCCESS;
-	}
+        int avail_len = ConsumeReadBuffer(buf, *len);
+        if (avail_len > 0) {
+            *len = avail_len;
+            return PJ_SUCCESS;
+        }
     }
 
     /* Blocking version */
     if (is_blocking) {
-	pj_status_t status = PJ_SUCCESS;
-	concurrency::cancellation_token_source cts;
-	auto cts_token = cts.get_token();
-	auto t = concurrency::create_task(socket_reader->LoadAsync(*len),
-					  cts_token);
-	*len = cancel_after_timeout(t, cts, READ_TIMEOUT)
-	    .then([this, len, buf, cts_token, &status]
-				    (concurrency::task<unsigned int> t_)
-	{
-	    try {
-		if (cts_token.is_canceled()) {
-		    status = PJ_ETIMEDOUT;
-		    return 0;
-		}
-		t_.get();
-	    } catch (Exception^) {
-		status = PJ_ETIMEDOUT;
-		return 0;
-	    }
+        pj_status_t status = PJ_SUCCESS;
+        concurrency::cancellation_token_source cts;
+        auto cts_token = cts.get_token();
+        auto t = concurrency::create_task(socket_reader->LoadAsync(*len),
+                                          cts_token);
+        *len = cancel_after_timeout(t, cts, READ_TIMEOUT)
+            .then([this, len, buf, cts_token, &status]
+                                    (concurrency::task<unsigned int> t_)
+        {
+            try {
+                if (cts_token.is_canceled()) {
+                    status = PJ_ETIMEDOUT;
+                    return 0;
+                }
+                t_.get();
+            } catch (Exception^) {
+                status = PJ_ETIMEDOUT;
+                return 0;
+            }
 
-	    *len = ConsumeReadBuffer(buf, *len);
-	    return (int)*len;
-	}).get();
+            *len = ConsumeReadBuffer(buf, *len);
+            return (int)*len;
+        }).get();
 
-	return status;
+        return status;
     }
 
     /* Non-blocking version */
@@ -672,35 +671,35 @@ pj_status_t PjUwpSocket::Recv(void *buf, pj_ssize_t *len)
 
     has_pending_recv = PJ_TRUE;
     concurrency::create_task(socket_reader->LoadAsync(*len), cts_token)
-	.then([this, cts_token](concurrency::task<unsigned int> t_)
+        .then([this, cts_token](concurrency::task<unsigned int> t_)
     {
-	try {
-	    if (cts_token.is_canceled()) {
-		has_pending_recv = PJ_FALSE;
+        try {
+            if (cts_token.is_canceled()) {
+                has_pending_recv = PJ_FALSE;
 
-		// invoke callback
-		if (cb.on_read) {
-		    (*cb.on_read)(this, -PJ_EUNKNOWN);
-		}
-		return;
-	    }
+                // invoke callback
+                if (cb.on_read) {
+                    (*cb.on_read)(this, -PJ_EUNKNOWN);
+                }
+                return;
+            }
 
-	    t_.get();
-	    has_pending_recv = PJ_FALSE;
+            t_.get();
+            has_pending_recv = PJ_FALSE;
 
-	    // invoke callback
-	    int read_len = socket_reader->UnconsumedBufferLength;
-	    if (read_len > 0 && cb.on_read) {
-		(*cb.on_read)(this, read_len);
-	    }
-	} catch (...) {
-	    has_pending_recv = PJ_FALSE;
+            // invoke callback
+            int read_len = socket_reader->UnconsumedBufferLength;
+            if (read_len > 0 && cb.on_read) {
+                (*cb.on_read)(this, read_len);
+            }
+        } catch (...) {
+            has_pending_recv = PJ_FALSE;
 
-	    // invoke callback
-	    if (cb.on_read) {
-		(*cb.on_read)(this, -PJ_EUNKNOWN);
-	    }
-	}
+            // invoke callback
+            if (cb.on_read) {
+                (*cb.on_read)(this, -PJ_EUNKNOWN);
+            }
+        }
     });
 
     return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
@@ -708,41 +707,41 @@ pj_status_t PjUwpSocket::Recv(void *buf, pj_ssize_t *len)
 
 
 pj_status_t PjUwpSocket::RecvFrom(void *buf, pj_ssize_t *len,
-				  pj_sockaddr_t *from)
+                                  pj_sockaddr_t *from)
 {
     if (sock_type != SOCKTYPE_DATAGRAM || sock_state < SOCKSTATE_INITIALIZED
-	|| sock_state >= SOCKSTATE_DISCONNECTED)
+        || sock_state >= SOCKSTATE_DISCONNECTED)
     {
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
     }
 
     /* Start receive, if not yet */
     if (dgram_recv_helper == nullptr) {
-	dgram_recv_helper = ref new PjUwpSocketDatagramRecvHelper(this);
+        dgram_recv_helper = ref new PjUwpSocketDatagramRecvHelper(this);
     }
 
     /* Try to read any available data first */
     if (buf || is_blocking) {
-	pj_status_t status;
-	status = dgram_recv_helper->ReadDataIfAvailable(buf, len, from);
-	if (status != PJ_ENOTFOUND)
-	    return status;
+        pj_status_t status;
+        status = dgram_recv_helper->ReadDataIfAvailable(buf, len, from);
+        if (status != PJ_ENOTFOUND)
+            return status;
     }
 
     /* Blocking version */
     if (is_blocking) {
-	int max_loop = 0;
-	pj_status_t status = PJ_ENOTFOUND;
-	while (status == PJ_ENOTFOUND && sock_state <= SOCKSTATE_CONNECTED)
-	{
-	    status = dgram_recv_helper->ReadDataIfAvailable(buf, len, from);
-	    if (status != PJ_SUCCESS)
-		pj_thread_sleep(100);
+        int max_loop = 0;
+        pj_status_t status = PJ_ENOTFOUND;
+        while (status == PJ_ENOTFOUND && sock_state <= SOCKSTATE_CONNECTED)
+        {
+            status = dgram_recv_helper->ReadDataIfAvailable(buf, len, from);
+            if (status != PJ_SUCCESS)
+                pj_thread_sleep(100);
 
-	    if (++max_loop > 10)
-		return PJ_ETIMEDOUT;
-	}
-	return status;
+            if (++max_loop > 10)
+                return PJ_ETIMEDOUT;
+        }
+        return status;
     }
 
     /* For non-blocking version, just return PJ_EPENDING */
@@ -755,90 +754,90 @@ pj_status_t PjUwpSocket::Connect(const pj_sockaddr_t *addr)
     pj_status_t status;
 
     PJ_ASSERT_RETURN((sock_type == SOCKTYPE_UNKNOWN && sock_state == SOCKSTATE_NULL) ||
-		     (sock_type == SOCKTYPE_DATAGRAM && sock_state == SOCKSTATE_INITIALIZED),
-		     PJ_EINVALIDOP);
+                     (sock_type == SOCKTYPE_DATAGRAM && sock_state == SOCKSTATE_INITIALIZED),
+                     PJ_EINVALIDOP);
 
     if (sock_type == SOCKTYPE_UNKNOWN) {
-	InitSocket(SOCKTYPE_STREAM);
-	// No need to check pending bind, no bind for TCP client socket
+        InitSocket(SOCKTYPE_STREAM);
+        // No need to check pending bind, no bind for TCP client socket
     }
 
     pj_sockaddr_cp(&remote_addr, addr);
 
     auto t = concurrency::create_task([this, addr]()
     {
-	HostName ^hostname;
-	int port;
-	sockaddr_to_hostname_port(&remote_addr, hostname, &port);
-	if (sock_type == SOCKTYPE_STREAM)
-	    return stream_sock->ConnectAsync(hostname, port.ToString(),
-				      SocketProtectionLevel::PlainSocket);
-	else
-	    return datagram_sock->ConnectAsync(hostname, port.ToString());
+        HostName ^hostname;
+        int port;
+        sockaddr_to_hostname_port(&remote_addr, hostname, &port);
+        if (sock_type == SOCKTYPE_STREAM)
+            return stream_sock->ConnectAsync(hostname, port.ToString(),
+                                      SocketProtectionLevel::PlainSocket);
+        else
+            return datagram_sock->ConnectAsync(hostname, port.ToString());
     }).then([=](concurrency::task<void> t_)
     {
-	try {
-	    t_.get();
+        try {
+            t_.get();
 
-	    sock_state = SOCKSTATE_CONNECTED;
+            sock_state = SOCKSTATE_CONNECTED;
 
-	    // Update local & remote address
-	    HostName^ local_address;
-	    String^ local_port;
+            // Update local & remote address
+            HostName^ local_address;
+            String^ local_port;
 
-	    if (sock_type == SOCKTYPE_STREAM) {
-		local_address = stream_sock->Information->LocalAddress;
-		local_port = stream_sock->Information->LocalPort;
+            if (sock_type == SOCKTYPE_STREAM) {
+                local_address = stream_sock->Information->LocalAddress;
+                local_port = stream_sock->Information->LocalPort;
 
-		socket_reader = ref new DataReader(stream_sock->InputStream);
-		socket_writer = ref new DataWriter(stream_sock->OutputStream);
-		socket_reader->InputStreamOptions = InputStreamOptions::Partial;
-	    } else {
-		local_address = datagram_sock->Information->LocalAddress;
-		local_port = datagram_sock->Information->LocalPort;
-	    }
-	    if (local_address && local_port) {
-		wstr_addr_to_sockaddr(local_address->CanonicalName->Data(),
-		    local_port->Data(),
-		    &local_addr);
-	    }
+                socket_reader = ref new DataReader(stream_sock->InputStream);
+                socket_writer = ref new DataWriter(stream_sock->OutputStream);
+                socket_reader->InputStreamOptions = InputStreamOptions::Partial;
+            } else {
+                local_address = datagram_sock->Information->LocalAddress;
+                local_port = datagram_sock->Information->LocalPort;
+            }
+            if (local_address && local_port) {
+                wstr_addr_to_sockaddr(local_address->CanonicalName->Data(),
+                    local_port->Data(),
+                    &local_addr);
+            }
 
-	    if (!is_blocking && cb.on_connect) {
-		(*cb.on_connect)(this, PJ_SUCCESS);
-	    }
-	    return (pj_status_t)PJ_SUCCESS;
+            if (!is_blocking && cb.on_connect) {
+                (*cb.on_connect)(this, PJ_SUCCESS);
+            }
+            return (pj_status_t)PJ_SUCCESS;
 
-	} catch (Exception^ ex) {
+        } catch (Exception^ ex) {
 
-	    SocketErrorStatus status = SocketError::GetStatus(ex->HResult);
+            SocketErrorStatus status = SocketError::GetStatus(ex->HResult);
 
-	    switch (status)
-	    {
-	    case SocketErrorStatus::UnreachableHost:
-		break;
-	    case SocketErrorStatus::ConnectionTimedOut:
-		break;
-	    case SocketErrorStatus::ConnectionRefused:
-		break;
-	    default:
-		break;
-	    }
+            switch (status)
+            {
+            case SocketErrorStatus::UnreachableHost:
+                break;
+            case SocketErrorStatus::ConnectionTimedOut:
+                break;
+            case SocketErrorStatus::ConnectionRefused:
+                break;
+            default:
+                break;
+            }
 
-	    if (!is_blocking && cb.on_connect) {
-		(*cb.on_connect)(this, PJ_EUNKNOWN);
-	    }
+            if (!is_blocking && cb.on_connect) {
+                (*cb.on_connect)(this, PJ_EUNKNOWN);
+            }
 
-	    return (pj_status_t)PJ_EUNKNOWN;
-	}
+            return (pj_status_t)PJ_EUNKNOWN;
+        }
     });
 
     if (!is_blocking)
-	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_CONNECT_ERROR_VAL);
+        return PJ_RETURN_OS_ERROR(PJ_BLOCKING_CONNECT_ERROR_VAL);
 
     try {
-	status = t.get();
+        status = t.get();
     } catch (Exception^) {
-	return PJ_EUNKNOWN;
+        return PJ_EUNKNOWN;
     }
     return status;
 }
@@ -846,19 +845,19 @@ pj_status_t PjUwpSocket::Connect(const pj_sockaddr_t *addr)
 pj_status_t PjUwpSocket::Listen()
 {
     PJ_ASSERT_RETURN((sock_type == SOCKTYPE_UNKNOWN) ||
-		     (sock_type == SOCKTYPE_LISTENER &&
-		      sock_state == SOCKSTATE_INITIALIZED),
-		     PJ_EINVALIDOP);
+                     (sock_type == SOCKTYPE_LISTENER &&
+                      sock_state == SOCKSTATE_INITIALIZED),
+                     PJ_EINVALIDOP);
 
     if (sock_type == SOCKTYPE_UNKNOWN)
-	InitSocket(SOCKTYPE_LISTENER);
+        InitSocket(SOCKTYPE_LISTENER);
 
     if (has_pending_bind)
-	Bind();
+        Bind();
 
     /* Start listen */
     if (listener_helper == nullptr) {
-	listener_helper = ref new PjUwpSocketListenerHelper(this);
+        listener_helper = ref new PjUwpSocketListenerHelper(this);
     }
 
     return PJ_SUCCESS;
@@ -867,15 +866,15 @@ pj_status_t PjUwpSocket::Listen()
 pj_status_t PjUwpSocket::Accept(PjUwpSocket **new_sock)
 {
     if (sock_type != SOCKTYPE_LISTENER || sock_state != SOCKSTATE_INITIALIZED)
-	return PJ_EINVALIDOP;
+        return PJ_EINVALIDOP;
 
     StreamSocket^ accepted_sock;
     pj_status_t status = listener_helper->GetAcceptedSocket(accepted_sock);
     if (status == PJ_ENOTFOUND)
-	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+        return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
 
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     *new_sock = CreateAcceptSocket(accepted_sock);
     return PJ_SUCCESS;
@@ -944,12 +943,12 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp)
     inp->s_addr = PJ_INADDR_NONE;
 
     /* Caution:
-    *	this function might be called with cp->slen >= 16
+    *   this function might be called with cp->slen >= 16
     *  (i.e. when called with hostname to check if it's an IP addr).
     */
     PJ_ASSERT_RETURN(cp && cp->slen && inp, 0);
     if (cp->slen >= PJ_INET_ADDRSTRLEN) {
-	return 0;
+        return 0;
     }
 
     pj_memcpy(tempaddr, cp->ptr, cp->slen);
@@ -977,15 +976,15 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
     * compatible with pj_inet_aton()
     */
     if (af == PJ_AF_INET) {
-	((pj_in_addr*)dst)->s_addr = PJ_INADDR_NONE;
+        ((pj_in_addr*)dst)->s_addr = PJ_INADDR_NONE;
     }
 
     /* Caution:
-    *	this function might be called with cp->slen >= 46
+    *   this function might be called with cp->slen >= 46
     *  (i.e. when called with hostname to check if it's an IP addr).
     */
     if (src->slen >= PJ_INET6_ADDRSTRLEN) {
-	return PJ_ENAMETOOLONG;
+        return PJ_ENAMETOOLONG;
     }
 
     pj_memcpy(tempaddr, src->ptr, src->slen);
@@ -996,11 +995,11 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
     * Implementation using inet_pton()
     */
     if (inet_pton(af, tempaddr, dst) != 1) {
-	pj_status_t status = pj_get_netos_error();
-	if (status == PJ_SUCCESS)
-	    status = PJ_EUNKNOWN;
+        pj_status_t status = pj_get_netos_error();
+        if (status == PJ_SUCCESS)
+            status = PJ_EUNKNOWN;
 
-	return status;
+        return status;
     }
 
     return PJ_SUCCESS;
@@ -1011,39 +1010,39 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
     * Should also work on Unicode systems.
     */
     {
-	PJ_DECL_UNICODE_TEMP_BUF(wtempaddr, PJ_INET6_ADDRSTRLEN)
-	    pj_sockaddr sock_addr;
-	int addr_len = sizeof(sock_addr);
-	int rc;
+        PJ_DECL_UNICODE_TEMP_BUF(wtempaddr, PJ_INET6_ADDRSTRLEN)
+            pj_sockaddr sock_addr;
+        int addr_len = sizeof(sock_addr);
+        int rc;
 
-	sock_addr.addr.sa_family = (pj_uint16_t)af;
-	rc = WSAStringToAddress(
-	    PJ_STRING_TO_NATIVE(tempaddr, wtempaddr, sizeof(wtempaddr)),
-	    af, NULL, (LPSOCKADDR)&sock_addr, &addr_len);
-	if (rc != 0) {
-	    /* If you get rc 130022 Invalid argument (WSAEINVAL) with IPv6,
-	    * check that you have IPv6 enabled (install it in the network
-	    * adapter).
-	    */
-	    pj_status_t status = pj_get_netos_error();
-	    if (status == PJ_SUCCESS)
-		status = PJ_EUNKNOWN;
+        sock_addr.addr.sa_family = (pj_uint16_t)af;
+        rc = WSAStringToAddress(
+            PJ_STRING_TO_NATIVE(tempaddr, wtempaddr, sizeof(wtempaddr)),
+            af, NULL, (LPSOCKADDR)&sock_addr, &addr_len);
+        if (rc != 0) {
+            /* If you get rc 130022 Invalid argument (WSAEINVAL) with IPv6,
+            * check that you have IPv6 enabled (install it in the network
+            * adapter).
+            */
+            pj_status_t status = pj_get_netos_error();
+            if (status == PJ_SUCCESS)
+                status = PJ_EUNKNOWN;
 
-	    return status;
-	}
+            return status;
+        }
 
-	if (sock_addr.addr.sa_family == PJ_AF_INET) {
-	    pj_memcpy(dst, &sock_addr.ipv4.sin_addr, 4);
-	    return PJ_SUCCESS;
-	}
-	else if (sock_addr.addr.sa_family == PJ_AF_INET6) {
-	    pj_memcpy(dst, &sock_addr.ipv6.sin6_addr, 16);
-	    return PJ_SUCCESS;
-	}
-	else {
-	    pj_assert(!"Shouldn't happen");
-	    return PJ_EBUG;
-	}
+        if (sock_addr.addr.sa_family == PJ_AF_INET) {
+            pj_memcpy(dst, &sock_addr.ipv4.sin_addr, 4);
+            return PJ_SUCCESS;
+        }
+        else if (sock_addr.addr.sa_family == PJ_AF_INET6) {
+            pj_memcpy(dst, &sock_addr.ipv6.sin6_addr, 16);
+            return PJ_SUCCESS;
+        }
+        else {
+            pj_assert(!"Shouldn't happen");
+            return PJ_EBUG;
+        }
     }
 #elif !defined(PJ_HAS_IPV6) || PJ_HAS_IPV6==0
     /* IPv6 support is disabled, just return error without raising assertion */
@@ -1058,7 +1057,7 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
  * Convert IPv4/IPv6 address to text.
  */
 PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
-				 char *dst, int size)
+                                 char *dst, int size)
 
 {
     PJ_ASSERT_RETURN(src && dst && size, PJ_EINVAL);
@@ -1071,11 +1070,11 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
     * Implementation using inet_ntop()
     */
     if (inet_ntop(af, src, dst, size) == NULL) {
-	pj_status_t status = pj_get_netos_error();
-	if (status == PJ_SUCCESS)
-	    status = PJ_EUNKNOWN;
+        pj_status_t status = pj_get_netos_error();
+        if (status == PJ_SUCCESS)
+            status = PJ_EUNKNOWN;
 
-	return status;
+        return status;
     }
 
     return PJ_SUCCESS;
@@ -1086,52 +1085,52 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
     * Should also work on Unicode systems.
     */
     {
-	PJ_DECL_UNICODE_TEMP_BUF(wtempaddr, PJ_INET6_ADDRSTRLEN)
-	    pj_sockaddr sock_addr;
-	DWORD addr_len, addr_str_len;
-	int rc;
+        PJ_DECL_UNICODE_TEMP_BUF(wtempaddr, PJ_INET6_ADDRSTRLEN)
+            pj_sockaddr sock_addr;
+        DWORD addr_len, addr_str_len;
+        int rc;
 
-	pj_bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.addr.sa_family = (pj_uint16_t)af;
-	if (af == PJ_AF_INET) {
-	    if (size < PJ_INET_ADDRSTRLEN)
-		return PJ_ETOOSMALL;
-	    pj_memcpy(&sock_addr.ipv4.sin_addr, src, 4);
-	    addr_len = sizeof(pj_sockaddr_in);
-	    addr_str_len = PJ_INET_ADDRSTRLEN;
-	}
-	else if (af == PJ_AF_INET6) {
-	    if (size < PJ_INET6_ADDRSTRLEN)
-		return PJ_ETOOSMALL;
-	    pj_memcpy(&sock_addr.ipv6.sin6_addr, src, 16);
-	    addr_len = sizeof(pj_sockaddr_in6);
-	    addr_str_len = PJ_INET6_ADDRSTRLEN;
-	}
-	else {
-	    pj_assert(!"Unsupported address family");
-	    return PJ_EAFNOTSUP;
-	}
+        pj_bzero(&sock_addr, sizeof(sock_addr));
+        sock_addr.addr.sa_family = (pj_uint16_t)af;
+        if (af == PJ_AF_INET) {
+            if (size < PJ_INET_ADDRSTRLEN)
+                return PJ_ETOOSMALL;
+            pj_memcpy(&sock_addr.ipv4.sin_addr, src, 4);
+            addr_len = sizeof(pj_sockaddr_in);
+            addr_str_len = PJ_INET_ADDRSTRLEN;
+        }
+        else if (af == PJ_AF_INET6) {
+            if (size < PJ_INET6_ADDRSTRLEN)
+                return PJ_ETOOSMALL;
+            pj_memcpy(&sock_addr.ipv6.sin6_addr, src, 16);
+            addr_len = sizeof(pj_sockaddr_in6);
+            addr_str_len = PJ_INET6_ADDRSTRLEN;
+        }
+        else {
+            pj_assert(!"Unsupported address family");
+            return PJ_EAFNOTSUP;
+        }
 
 #if PJ_NATIVE_STRING_IS_UNICODE
-	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
-	    NULL, wtempaddr, &addr_str_len);
-	if (rc == 0) {
-	    pj_unicode_to_ansi(wtempaddr, wcslen(wtempaddr), dst, size);
-	}
+        rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
+            NULL, wtempaddr, &addr_str_len);
+        if (rc == 0) {
+            pj_unicode_to_ansi(wtempaddr, wcslen(wtempaddr), dst, size);
+        }
 #else
-	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
-	    NULL, dst, &addr_str_len);
+        rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
+            NULL, dst, &addr_str_len);
 #endif
 
-	if (rc != 0) {
-	    pj_status_t status = pj_get_netos_error();
-	    if (status == PJ_SUCCESS)
-		status = PJ_EUNKNOWN;
+        if (rc != 0) {
+            pj_status_t status = pj_get_netos_error();
+            if (status == PJ_SUCCESS)
+                status = PJ_EUNKNOWN;
 
-	    return status;
-	}
+            return status;
+        }
 
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
 #elif !defined(PJ_HAS_IPV6) || PJ_HAS_IPV6==0
@@ -1154,14 +1153,14 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
     PJ_CHECK_STACK();
 
     if (hostname.ptr == NULL) {
-	hostname.ptr = buf;
-	if (gethostname(buf, sizeof(buf)) != 0) {
-	    hostname.ptr[0] = '\0';
-	    hostname.slen = 0;
-	}
-	else {
-	    hostname.slen = strlen(buf);
-	}
+        hostname.ptr = buf;
+        if (gethostname(buf, sizeof(buf)) != 0) {
+            hostname.ptr[0] = '\0';
+            hostname.slen = 0;
+        }
+        else {
+            hostname.slen = strlen(buf);
+        }
     }
     return &hostname;
 }
@@ -1170,9 +1169,9 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
  * Create new socket/endpoint for communication and returns a descriptor.
  */
 PJ_DEF(pj_status_t) pj_sock_socket(int af, 
-				   int type, 
-				   int proto,
-				   pj_sock_t *p_sock)
+                                   int type, 
+                                   int proto,
+                                   pj_sock_t *p_sock)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(p_sock!=NULL, PJ_EINVAL);
@@ -1181,7 +1180,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     
     /* Init UDP socket here */
     if (type == pj_SOCK_DGRAM()) {
-	s->InitSocket(SOCKTYPE_DATAGRAM);
+        s->InitSocket(SOCKTYPE_DATAGRAM);
     }
 
     *p_sock = (pj_sock_t)s;
@@ -1193,8 +1192,8 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
  * Bind socket.
  */
 PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock, 
-				  const pj_sockaddr_t *addr,
-				  int len)
+                                  const pj_sockaddr_t *addr,
+                                  int len)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock, PJ_EINVAL);
@@ -1208,8 +1207,8 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
  * Bind socket.
  */
 PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock, 
-				     pj_uint32_t addr32,
-				     pj_uint16_t port)
+                                     pj_uint32_t addr32,
+                                     pj_uint16_t port)
 {
     pj_sockaddr_in addr;
 
@@ -1233,7 +1232,7 @@ PJ_DEF(pj_status_t) pj_sock_close(pj_sock_t sock)
     PJ_ASSERT_RETURN(sock, PJ_EINVAL);
 
     if (sock == PJ_INVALID_SOCKET)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
     delete s;
@@ -1245,12 +1244,12 @@ PJ_DEF(pj_status_t) pj_sock_close(pj_sock_t sock)
  * Get remote's name.
  */
 PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
-					 pj_sockaddr_t *addr,
-					 int *namelen)
+                                         pj_sockaddr_t *addr,
+                                         int *namelen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && addr && namelen && 
-		     *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
+                     *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
     pj_sockaddr_cp(addr, s->GetRemoteAddr());
@@ -1263,12 +1262,12 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
  * Get socket name.
  */
 PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
-					 pj_sockaddr_t *addr,
-					 int *namelen)
+                                         pj_sockaddr_t *addr,
+                                         int *namelen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && addr && namelen && 
-		     *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
+                     *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
     pj_sockaddr_cp(addr, s->GetLocalAddr());
@@ -1282,9 +1281,9 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
  * Send data
  */
 PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
-				 const void *buf,
-				 pj_ssize_t *len,
-				 unsigned flags)
+                                 const void *buf,
+                                 pj_ssize_t *len,
+                                 unsigned flags)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
@@ -1299,11 +1298,11 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
  * Send data.
  */
 PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
-				   const void *buf,
-				   pj_ssize_t *len,
-				   unsigned flags,
-				   const pj_sockaddr_t *to,
-				   int tolen)
+                                   const void *buf,
+                                   pj_ssize_t *len,
+                                   unsigned flags,
+                                   const pj_sockaddr_t *to,
+                                   int tolen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
@@ -1319,9 +1318,9 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
  * Receive data.
  */
 PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
-				 void *buf,
-				 pj_ssize_t *len,
-				 unsigned flags)
+                                 void *buf,
+                                 pj_ssize_t *len,
+                                 unsigned flags)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && len && *len > 0, PJ_EINVAL);
@@ -1336,11 +1335,11 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
  * Receive data.
  */
 PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
-				     void *buf,
-				     pj_ssize_t *len,
-				     unsigned flags,
-				     pj_sockaddr_t *from,
-				     int *fromlen)
+                                     void *buf,
+                                     pj_ssize_t *len,
+                                     unsigned flags,
+                                     pj_sockaddr_t *from,
+                                     int *fromlen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && buf && len && from && fromlen, PJ_EINVAL);
@@ -1352,7 +1351,7 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     PjUwpSocket *s = (PjUwpSocket*)sock;
     pj_status_t status = s->RecvFrom(buf, len, from);
     if (status == PJ_SUCCESS)
-	*fromlen = pj_sockaddr_get_len(from);
+        *fromlen = pj_sockaddr_get_len(from);
     return status;
 }
 
@@ -1360,10 +1359,10 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
  * Get socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_getsockopt( pj_sock_t sock,
-					pj_uint16_t level,
-					pj_uint16_t optname,
-					void *optval,
-					int *optlen)
+                                        pj_uint16_t level,
+                                        pj_uint16_t optname,
+                                        void *optval,
+                                        int *optlen)
 {
     // Not supported for now.
     PJ_UNUSED_ARG(sock);
@@ -1379,10 +1378,10 @@ PJ_DEF(pj_status_t) pj_sock_getsockopt( pj_sock_t sock,
  * Set socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
-					pj_uint16_t level,
-					pj_uint16_t optname,
-					const void *optval,
-					int optlen)
+                                        pj_uint16_t level,
+                                        pj_uint16_t optname,
+                                        const void *optval,
+                                        int optlen)
 {
     // Not supported for now.
     PJ_UNUSED_ARG(sock);
@@ -1406,17 +1405,17 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
     PJ_ASSERT_RETURN(params, PJ_EINVAL);
 
     for (;i<params->cnt && i<PJ_MAX_SOCKOPT_PARAMS;++i) {
-	pj_status_t status = pj_sock_setsockopt(sockfd, 
-				    (pj_uint16_t)params->options[i].level,
-				    (pj_uint16_t)params->options[i].optname,
-				    params->options[i].optval, 
-				    params->options[i].optlen);
-	if (status != PJ_SUCCESS) {
-	    retval = status;
-	    PJ_PERROR(4,(THIS_FILE, status,
-			 "Warning: error applying sock opt %d",
-			 params->options[i].optname));
-	}
+        pj_status_t status = pj_sock_setsockopt(sockfd, 
+                                    (pj_uint16_t)params->options[i].level,
+                                    (pj_uint16_t)params->options[i].optname,
+                                    params->options[i].optval, 
+                                    params->options[i].optlen);
+        if (status != PJ_SUCCESS) {
+            retval = status;
+            PJ_PERROR(4,(THIS_FILE, status,
+                         "Warning: error applying sock opt %d",
+                         params->options[i].optname));
+        }
     }
 
     return retval;
@@ -1427,8 +1426,8 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
  * Connect socket.
  */
 PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
-				     const pj_sockaddr_t *addr,
-				     int namelen)
+                                     const pj_sockaddr_t *addr,
+                                     int namelen)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && addr, PJ_EINVAL);
@@ -1444,7 +1443,7 @@ PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
  */
 #if PJ_HAS_TCP
 PJ_DEF(pj_status_t) pj_sock_shutdown( pj_sock_t sock,
-				      int how)
+                                      int how)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock, PJ_EINVAL);
@@ -1457,7 +1456,7 @@ PJ_DEF(pj_status_t) pj_sock_shutdown( pj_sock_t sock,
  * Start listening to incoming connections.
  */
 PJ_DEF(pj_status_t) pj_sock_listen( pj_sock_t sock,
-				    int backlog)
+                                    int backlog)
 {
     PJ_CHECK_STACK();
     PJ_UNUSED_ARG(backlog);
@@ -1471,9 +1470,9 @@ PJ_DEF(pj_status_t) pj_sock_listen( pj_sock_t sock,
  * Accept incoming connections
  */
 PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
-				    pj_sock_t *newsock,
-				    pj_sockaddr_t *addr,
-				    int *addrlen)
+                                    pj_sock_t *newsock,
+                                    pj_sockaddr_t *addr,
+                                    int *addrlen)
 {
     pj_status_t status;
 
@@ -1485,18 +1484,18 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
 
     status = s->Accept(&new_uwp_sock);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
     if (newsock == NULL)
-	return PJ_ENOTFOUND;
+        return PJ_ENOTFOUND;
 
     *newsock = (pj_sock_t)new_uwp_sock;
 
     if (addr)
-	pj_sockaddr_cp(addr, new_uwp_sock->GetRemoteAddr());
+        pj_sockaddr_cp(addr, new_uwp_sock->GetRemoteAddr());
 
     if (addrlen)
-	*addrlen = pj_sockaddr_get_len(addr);
+        *addrlen = pj_sockaddr_get_len(addr);
 
     return PJ_SUCCESS;
 }
-#endif	/* PJ_HAS_TCP */
+#endif  /* PJ_HAS_TCP */

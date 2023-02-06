@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -112,7 +111,7 @@ struct pjsip_event
                 void            *data;  /**< Generic data.              */
             } src;
             pjsip_transaction   *tsx;   /**< The transaction.           */
-	    int			 prev_state; /**< Previous state.	*/
+            int                  prev_state; /**< Previous state.       */
             pjsip_event_id_e     type;  /**< Type of event source:      
                                          *      - PJSIP_EVENT_TX_MSG
                                          *      - PJSIP_EVENT_RX_MSG,
@@ -169,28 +168,28 @@ struct pjsip_event
 #define PJSIP_EVENT_INIT_TSX_STATE(event,ptsx,ptype,pdata,prev)   \
         do { \
             (event).type = PJSIP_EVENT_TSX_STATE;           \
-            (event).body.tsx_state.tsx = ptsx;		    \
+            (event).body.tsx_state.tsx = ptsx;              \
             (event).body.tsx_state.type = ptype;            \
             (event).body.tsx_state.src.data = pdata;        \
-	    (event).body.tsx_state.prev_state = prev;	    \
+            (event).body.tsx_state.prev_state = prev;       \
         } while (0)
 
 /**
  * Init tx msg event.
  */
-#define PJSIP_EVENT_INIT_TX_MSG(event,ptdata)	\
+#define PJSIP_EVENT_INIT_TX_MSG(event,ptdata)   \
         do { \
             (event).type = PJSIP_EVENT_TX_MSG;          \
-            (event).body.tx_msg.tdata = ptdata;		\
+            (event).body.tx_msg.tdata = ptdata;         \
         } while (0)
 
 /**
  * Init rx msg event.
  */
-#define PJSIP_EVENT_INIT_RX_MSG(event,prdata)	\
+#define PJSIP_EVENT_INIT_RX_MSG(event,prdata)   \
         do { \
-            (event).type = PJSIP_EVENT_RX_MSG;		\
-            (event).body.rx_msg.rdata = prdata;		\
+            (event).type = PJSIP_EVENT_RX_MSG;          \
+            (event).body.rx_msg.rdata = prdata;         \
         } while (0)
 
 /**
@@ -199,8 +198,8 @@ struct pjsip_event
 #define PJSIP_EVENT_INIT_TRANSPORT_ERROR(event,ptsx,ptdata)   \
         do { \
             (event).type = PJSIP_EVENT_TRANSPORT_ERROR; \
-            (event).body.tx_error.tsx = ptsx;		\
-            (event).body.tx_error.tdata = ptdata;	\
+            (event).body.tx_error.tsx = ptsx;           \
+            (event).body.tx_error.tdata = ptdata;       \
         } while (0)
 
 /**
@@ -228,4 +227,4 @@ PJ_DECL(const char *) pjsip_event_str(pjsip_event_id_e e);
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_EVENT_H__ */
+#endif  /* __PJSIP_SIP_EVENT_H__ */

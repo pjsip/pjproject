@@ -1,4 +1,3 @@
-# $Id$
 #
 import inc_const as const
 

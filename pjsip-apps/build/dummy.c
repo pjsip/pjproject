@@ -1,4 +1,3 @@
-/* $Id$ */
 
 /**
  * This is an empty C file for helping libpjproject so it gets built properly.

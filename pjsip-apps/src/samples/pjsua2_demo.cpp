@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -20,7 +19,7 @@
 #include <iostream>
 #include <pj/file_access.h>
 
-#define THIS_FILE 	"pjsua2_demo.cpp"
+#define THIS_FILE       "pjsua2_demo.cpp"
 
 using namespace pj;
 
@@ -60,19 +59,19 @@ public:
     MyCall(Account &acc, int call_id = PJSUA_INVALID_ID)
     : Call(acc, call_id)
     {
-    	wav_player = NULL;
+        wav_player = NULL;
         myAcc = (MyAccount *)&acc;
     }
     
     ~MyCall()
     {
-    	if (wav_player)
-    	    delete wav_player;
+        if (wav_player)
+            delete wav_player;
     }
     
     virtual void onCallState(OnCallStateParam &prm);
     virtual void onCallTransferRequest(OnCallTransferRequestParam &prm);
-    virtual void onCallReplaced(OnCallReplacedParam &prm);
+    virtual void onCallReplaceRequest(OnCallReplaceRequestParam &prm);
     virtual void onCallMediaState(OnCallMediaStateParam &prm);
 };
 
@@ -90,11 +89,11 @@ public:
         std::cout << "*** Account is being deleted: No of calls="
                   << calls.size() << std::endl;
 
-	for (std::vector<Call *>::iterator it = calls.begin();
+        for (std::vector<Call *>::iterator it = calls.begin();
              it != calls.end(); )
         {
-	    delete (*it);
-	    it = calls.erase(it);
+            delete (*it);
+            it = calls.erase(it);
         }
     }
     
@@ -112,9 +111,9 @@ public:
 
     virtual void onRegState(OnRegStateParam &prm)
     {
-	AccountInfo ai = getInfo();
-	std::cout << (ai.regIsActive? "*** Register: code=" : "*** Unregister: code=")
-		  << prm.code << std::endl;
+        AccountInfo ai = getInfo();
+        std::cout << (ai.regIsActive? "*** Register: code=" : "*** Unregister: code=")
+                  << prm.code << std::endl;
     }
     
     virtual void onIncomingCall(OnIncomingCallParam &iprm)
@@ -154,31 +153,31 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
     CallInfo ci = getInfo();
     AudioMedia aud_med;
     AudioMedia& play_dev_med =
-    	MyEndpoint::instance().audDevManager().getPlaybackDevMedia();
+        MyEndpoint::instance().audDevManager().getPlaybackDevMedia();
 
     try {
-    	// Get the first audio media
-    	aud_med = getAudioMedia(-1);
+        // Get the first audio media
+        aud_med = getAudioMedia(-1);
     } catch(...) {
-	std::cout << "Failed to get audio media" << std::endl;
-	return;
+        std::cout << "Failed to get audio media" << std::endl;
+        return;
     }
 
     if (!wav_player) {
-    	wav_player = new AudioMediaPlayer();
-   	try {
-   	    wav_player->createPlayer(
-   	    	"../../../../tests/pjsua/wavs/input.16.wav", 0);
-   	} catch (...) {
-	    std::cout << "Failed opening wav file" << std::endl;
-	    delete wav_player;
-	    wav_player = NULL;
-    	}
+        wav_player = new AudioMediaPlayer();
+        try {
+            wav_player->createPlayer(
+                "../../../../tests/pjsua/wavs/input.16.wav", 0);
+        } catch (...) {
+            std::cout << "Failed opening wav file" << std::endl;
+            delete wav_player;
+            wav_player = NULL;
+        }
     }
 
     // This will connect the wav file to the call audio media
     if (wav_player)
-    	wav_player->startTransmit(aud_med);
+        wav_player->startTransmit(aud_med);
 
     // And this will connect the call audio media to the sound device/speaker
     aud_med.startTransmit(play_dev_med);
@@ -190,10 +189,10 @@ void MyCall::onCallTransferRequest(OnCallTransferRequestParam &prm)
     prm.newCall = new MyCall(*myAcc);
 }
 
-void MyCall::onCallReplaced(OnCallReplacedParam &prm)
+void MyCall::onCallReplaceRequest(OnCallReplaceRequestParam &prm)
 {
     /* Create new Call for call replace */
-    prm.newCall = new MyCall(*myAcc, prm.newCallId);
+    prm.newCall = new MyCall(*myAcc);
 }
 
 
@@ -229,9 +228,9 @@ static void mainProg1(MyEndpoint &ep)
     acc_cfg.sipConfig.authCreds.push_back(aci);
     MyAccount *acc(new MyAccount);
     try {
-	acc->create(acc_cfg);
+        acc->create(acc_cfg);
     } catch (...) {
-	std::cout << "Adding account failed" << std::endl;
+        std::cout << "Adding account failed" << std::endl;
     }
     
     pj_thread_sleep(2000);
@@ -261,44 +260,44 @@ static void mainProg2()
 {
     string json_str;
     {
-	EpConfig epCfg;
-	JsonDocument jDoc;
+        EpConfig epCfg;
+        JsonDocument jDoc;
 
-	epCfg.uaConfig.maxCalls = 61;
-	epCfg.uaConfig.userAgent = "Just JSON Test";
-	epCfg.uaConfig.stunServer.push_back("stun1.pjsip.org");
-	epCfg.uaConfig.stunServer.push_back("stun2.pjsip.org");
-	epCfg.logConfig.filename = "THE.LOG";
+        epCfg.uaConfig.maxCalls = 61;
+        epCfg.uaConfig.userAgent = "Just JSON Test";
+        epCfg.uaConfig.stunServer.push_back("stun1.pjsip.org");
+        epCfg.uaConfig.stunServer.push_back("stun2.pjsip.org");
+        epCfg.logConfig.filename = "THE.LOG";
 
-	jDoc.writeObject(epCfg);
-	json_str = jDoc.saveString();
-	std::cout << json_str << std::endl << std::endl;
+        jDoc.writeObject(epCfg);
+        json_str = jDoc.saveString();
+        std::cout << json_str << std::endl << std::endl;
     }
 
     {
-	EpConfig epCfg;
-	JsonDocument rDoc;
-	string output;
+        EpConfig epCfg;
+        JsonDocument rDoc;
+        string output;
 
-	rDoc.loadString(json_str);
-	rDoc.readObject(epCfg);
+        rDoc.loadString(json_str);
+        rDoc.readObject(epCfg);
 
-	JsonDocument wDoc;
+        JsonDocument wDoc;
 
-	wDoc.writeObject(epCfg);
-	json_str = wDoc.saveString();
-	std::cout << json_str << std::endl << std::endl;
+        wDoc.writeObject(epCfg);
+        json_str = wDoc.saveString();
+        std::cout << json_str << std::endl << std::endl;
 
-	wDoc.saveFile("jsontest.js");
+        wDoc.saveFile("jsontest.js");
     }
 
     {
-	EpConfig epCfg;
-	JsonDocument rDoc;
+        EpConfig epCfg;
+        JsonDocument rDoc;
 
-	rDoc.loadFile("jsontest.js");
-	rDoc.readObject(epCfg);
-	pj_file_delete("jsontest.js");
+        rDoc.loadFile("jsontest.js");
+        rDoc.readObject(epCfg);
+        pj_file_delete("jsontest.js");
     }
 }
 #endif
@@ -308,8 +307,8 @@ static void mainProg2()
 static void mainProg3(MyEndpoint &ep)
 {
     const char *paths[] = { "../../../../tests/pjsua/wavs/input.16.wav",
-			    "../../tests/pjsua/wavs/input.16.wav",
-			    "input.16.wav"};
+                            "../../tests/pjsua/wavs/input.16.wav",
+                            "input.16.wav"};
     unsigned i;
     const char *filename = NULL;
 
@@ -325,8 +324,8 @@ static void mainProg3(MyEndpoint &ep)
     }
 
     if (!filename) {
-	PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "mainProg3()",
-			   "Could not locate input.16.wav");
+        PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "mainProg3()",
+                           "Could not locate input.16.wav");
     }
 
     // Start library
@@ -342,24 +341,24 @@ static void mainProg3(MyEndpoint &ep)
     /* And install sound device using Extra Audio Device */
     ExtraAudioDevice auddev2(-1, -1);
     try {
-	auddev2.open();
+        auddev2.open();
     } catch (...) {
-	std::cout << "Extra sound device failed" << std::endl;
+        std::cout << "Extra sound device failed" << std::endl;
     }
 
     // Create player and recorder
     {
-	AudioMediaPlayer amp;
-	amp.createPlayer(filename);
+        AudioMediaPlayer amp;
+        amp.createPlayer(filename);
 
-	AudioMediaRecorder amr;
-	amr.createRecorder("recorder_test_output.wav");
+        AudioMediaRecorder amr;
+        amr.createRecorder("recorder_test_output.wav");
 
-	amp.startTransmit(amr);
-	if (auddev2.isOpened())
-	    amp.startTransmit(auddev2);
+        amp.startTransmit(amr);
+        if (auddev2.isOpened())
+            amp.startTransmit(auddev2);
 
-	pj_thread_sleep(5000);
+        pj_thread_sleep(5000);
     }
 }
 #endif
@@ -371,54 +370,54 @@ static void mainProg(MyEndpoint &)
     string json_str;
 
     {
-	JsonDocument jdoc;
-	AccountConfig accCfg;
+        JsonDocument jdoc;
+        AccountConfig accCfg;
 
-	accCfg.idUri = "\"Just Test\" <sip:test@pjsip.org>";
-	accCfg.regConfig.registrarUri = "sip:sip.pjsip.org";
-	SipHeader h;
-	h.hName = "X-Header";
-	h.hValue = "User header";
-	accCfg.regConfig.headers.push_back(h);
+        accCfg.idUri = "\"Just Test\" <sip:test@pjsip.org>";
+        accCfg.regConfig.registrarUri = "sip:sip.pjsip.org";
+        SipHeader h;
+        h.hName = "X-Header";
+        h.hValue = "User header";
+        accCfg.regConfig.headers.push_back(h);
 
-	accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tcp>");
-	accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tls>");
+        accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tcp>");
+        accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tls>");
 
-	accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(1);
-	accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(2);
-	accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(3);
+        accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(1);
+        accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(2);
+        accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(3);
 
-	AuthCredInfo aci;
-	aci.scheme = "digest";
-	aci.username = "test";
-	aci.data = "passwd";
-	aci.realm = "*";
-	aci.dataType = PJSIP_CRED_DATA_PLAIN_PASSWD;
+        AuthCredInfo aci;
+        aci.scheme = "digest";
+        aci.username = "test";
+        aci.data = "passwd";
+        aci.realm = "*";
+        aci.dataType = PJSIP_CRED_DATA_PLAIN_PASSWD;
 #if PJSIP_HAS_DIGEST_AKA_AUTH
-	aci.dataType |= PJSIP_CRED_DATA_EXT_AKA;
-	aci.akaK = "key";
+        aci.dataType |= PJSIP_CRED_DATA_EXT_AKA;
+        aci.akaK = "key";
 #endif
-	accCfg.sipConfig.authCreds.push_back(aci);
+        accCfg.sipConfig.authCreds.push_back(aci);
 
-	jdoc.writeObject(accCfg);
-	json_str = jdoc.saveString();
-	std::cout << "Original:" << std::endl;
-	std::cout << json_str << std::endl << std::endl;
+        jdoc.writeObject(accCfg);
+        json_str = jdoc.saveString();
+        std::cout << "Original:" << std::endl;
+        std::cout << json_str << std::endl << std::endl;
     }
 
     {
-	JsonDocument rdoc;
+        JsonDocument rdoc;
 
-	rdoc.loadString(json_str);
-	AccountConfig accCfg;
-	rdoc.readObject(accCfg);
+        rdoc.loadString(json_str);
+        AccountConfig accCfg;
+        rdoc.readObject(accCfg);
 
-	JsonDocument wdoc;
-	wdoc.writeObject(accCfg);
-	json_str = wdoc.saveString();
+        JsonDocument wdoc;
+        wdoc.writeObject(accCfg);
+        json_str = wdoc.saveString();
 
-	std::cout << "Parsed:" << std::endl;
-	std::cout << json_str << std::endl << std::endl;
+        std::cout << "Parsed:" << std::endl;
+        std::cout << json_str << std::endl << std::endl;
     }
 }
 #endif
@@ -463,41 +462,41 @@ int main()
     MyEndpoint ep;
 
     try {
-	ep.libCreate();
+        ep.libCreate();
 
 #if USE_TEST == 0
-	mainProg(ep);
+        mainProg(ep);
 #endif
 #if USE_TEST == 1
-	mainProg1(ep);
+        mainProg1(ep);
 #endif
 #if USE_TEST == 2
-	mainProg2(ep);
+        mainProg2(ep);
 #endif
 #if USE_TEST == 3
-	mainProg3(ep);
+        mainProg3(ep);
 #endif
 #if USE_TEST == 4
-	mainProg4(ep);
+        mainProg4(ep);
 #endif
 
-	ret = PJ_SUCCESS;
+        ret = PJ_SUCCESS;
     } catch (Error & err) {
-	std::cout << "Exception: " << err.info() << std::endl;
-	ret = 1;
+        std::cout << "Exception: " << err.info() << std::endl;
+        ret = 1;
     }
 
     try {
-	ep.libDestroy();
+        ep.libDestroy();
     } catch(Error &err) {
-	std::cout << "Exception: " << err.info() << std::endl;
-	ret = 1;
+        std::cout << "Exception: " << err.info() << std::endl;
+        ret = 1;
     }
 
     if (ret == PJ_SUCCESS) {
-	std::cout << "Success" << std::endl;
+        std::cout << "Success" << std::endl;
     } else {
-	std::cout << "Error Found" << std::endl;
+        std::cout << "Error Found" << std::endl;
     }
 
     return ret;

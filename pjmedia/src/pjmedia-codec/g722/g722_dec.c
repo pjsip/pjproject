@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -40,7 +39,7 @@ extern const int g722_qmf_coeff[24];
 
 static const int qm4[16] = 
 {
-	0, -20456, -12896, -8968,
+        0, -20456, -12896, -8968,
     -6288,  -4240,  -2584, -1200,
     20456,  12896,   8968,  6288,
      4240,   2584,   1200,     0
@@ -73,10 +72,10 @@ static int block3l (g722_dec_t *dec, int il)
     int detl ;
     int ril, il4, wd, wd1, wd2, wd3, nbpl, depl ;
     static const int  wl[8] = {
-	-60, -30, 58, 172, 334, 538, 1198, 3042
+        -60, -30, 58, 172, 334, 538, 1198, 3042
     };
     static const int rl42[16] = {
-	0, 7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1, 0
+        0, 7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1, 0
     };
 
     /* LOGSCL */
@@ -166,24 +165,24 @@ static int block4l (g722_dec_t *dec, int dl)
     dec->sgl[0] = dec->dlt[0] >> 15 ;
 
     for ( i = 1; i < 7; i++ ) {
-	dec->sgl[i] = dec->dlt[i] >> 15 ;
-	if ( dec->sgl[i] == dec->sgl[0] )  wd2 = wd1 ;
-	else  wd2 = - wd1 ;
-	wd3 = (dec->bl[i] * 32640) >> 15 ;
-	dec->bpl[i] = wd2 + wd3 ;
-	SATURATE(dec->bpl[i], 32767, -32768);
+        dec->sgl[i] = dec->dlt[i] >> 15 ;
+        if ( dec->sgl[i] == dec->sgl[0] )  wd2 = wd1 ;
+        else  wd2 = - wd1 ;
+        wd3 = (dec->bl[i] * 32640) >> 15 ;
+        dec->bpl[i] = wd2 + wd3 ;
+        SATURATE(dec->bpl[i], 32767, -32768);
     }
 
     /* DELAYA */
     for ( i = 6; i > 0; i-- ) {
-	dec->dlt[i] = dec->dlt[i-1] ;
-	dec->bl[i]  = dec->bpl[i] ;
+        dec->dlt[i] = dec->dlt[i-1] ;
+        dec->bl[i]  = dec->bpl[i] ;
     }
 
     for ( i = 2; i > 0; i-- ) {
-	dec->rlt[i] = dec->rlt[i-1] ;
-	dec->plt[i] = dec->plt[i-1] ;
-	dec->al[i]  = dec->apl[i] ;
+        dec->rlt[i] = dec->rlt[i-1] ;
+        dec->plt[i] = dec->plt[i-1] ;
+        dec->al[i]  = dec->apl[i] ;
     }
 
     /* FILTEP */
@@ -201,10 +200,10 @@ static int block4l (g722_dec_t *dec, int dl)
     /* FILTEZ */
     dec->szl = 0 ;
     for (i=6; i>0; i--) {
-	wd = dec->dlt[i] << 1;
-	SATURATE(wd, 32767, -32768);
-	dec->szl += (dec->bl[i] * wd) >> 15 ;
-	SATURATE(dec->szl, 32767, -32768);
+        wd = dec->dlt[i] << 1;
+        SATURATE(wd, 32767, -32768);
+        dec->szl += (dec->bl[i] * wd) >> 15 ;
+        SATURATE(dec->szl, 32767, -32768);
     }
 
     /* PREDIC */
@@ -219,48 +218,48 @@ static int block5l (int ilr, int sl, int detl, int mode)
     int yl ;
     int ril, dl, wd2 = 0;
     static const int qm5[32] = {
-	  -280,   -280, -23352, -17560,
-	-14120, -11664,  -9752,  -8184,
-	 -6864,  -5712,  -4696,  -3784,
-	 -2960,  -2208,  -1520,   -880,
-	 23352,  17560,  14120,  11664,
-	  9752,   8184,   6864,   5712,
-	  4696,   3784,   2960,   2208,
-	  1520,    880,    280,   -280
+          -280,   -280, -23352, -17560,
+        -14120, -11664,  -9752,  -8184,
+         -6864,  -5712,  -4696,  -3784,
+         -2960,  -2208,  -1520,   -880,
+         23352,  17560,  14120,  11664,
+          9752,   8184,   6864,   5712,
+          4696,   3784,   2960,   2208,
+          1520,    880,    280,   -280
     };
     static const int qm6[64] = {
-	-136,	-136,	-136,	-136,
-	-24808,	-21904,	-19008,	-16704,
-	-14984,	-13512,	-12280,	-11192,
-	-10232,	-9360,	-8576,	-7856,
-	-7192,	-6576,	-6000,	-5456,
-	-4944,	-4464,	-4008,	-3576,
-	-3168,	-2776,	-2400,	-2032,
-	-1688,	-1360,	-1040,	-728,
-	24808,	21904,	19008,	16704,
-	14984,	13512,	12280,	11192,
-	10232,	9360,	8576,	7856,
-	7192,	6576,	6000,	5456,
-	4944,	4464,	4008,	3576,
-	3168,	2776,	2400,	2032,
-	1688,	1360,	1040,	728,
-	432,	136,	-432,	-136
+        -136,   -136,   -136,   -136,
+        -24808, -21904, -19008, -16704,
+        -14984, -13512, -12280, -11192,
+        -10232, -9360,  -8576,  -7856,
+        -7192,  -6576,  -6000,  -5456,
+        -4944,  -4464,  -4008,  -3576,
+        -3168,  -2776,  -2400,  -2032,
+        -1688,  -1360,  -1040,  -728,
+        24808,  21904,  19008,  16704,
+        14984,  13512,  12280,  11192,
+        10232,  9360,   8576,   7856,
+        7192,   6576,   6000,   5456,
+        4944,   4464,   4008,   3576,
+        3168,   2776,   2400,   2032,
+        1688,   1360,   1040,   728,
+        432,    136,    -432,   -136
     };
     
     /* INVQBL */
     if (mode == 1) {
-	ril = ilr ;
-	wd2 = qm6[ril] ;
+        ril = ilr ;
+        wd2 = qm6[ril] ;
     }
 
     if (mode == 2) {
-	ril = ilr >> 1 ;
-	wd2 = qm5[ril] ;
+        ril = ilr >> 1 ;
+        wd2 = qm5[ril] ;
     }
 
     if (mode == 3) {
-	ril = ilr >> 2 ;
-	wd2 = qm4[ril] ;
+        ril = ilr >> 2 ;
+        wd2 = qm4[ril] ;
     }
 
     dl = (detl * wd2 ) >> 15 ;
@@ -393,23 +392,23 @@ static int block4h (g722_dec_t *dec, int d)
     dec->sgh[0] = dec->dh[0] >> 15 ;
 
     for ( i = 1; i < 7; i++ ) {
-	dec->sgh[i] = dec->dh[i] >> 15 ;
-	if ( dec->sgh[i] == dec->sgh[0] )  wd2 = wd1 ;
-	else wd2 = - wd1 ;
-	wd3 = (dec->bh[i] * 32640) >> 15 ;
-	dec->bph[i] = wd2 + wd3 ;
+        dec->sgh[i] = dec->dh[i] >> 15 ;
+        if ( dec->sgh[i] == dec->sgh[0] )  wd2 = wd1 ;
+        else wd2 = - wd1 ;
+        wd3 = (dec->bh[i] * 32640) >> 15 ;
+        dec->bph[i] = wd2 + wd3 ;
     }
  
     /* DELAYA */
     for ( i = 6; i > 0; i-- ) {
-	dec->dh[i] = dec->dh[i-1] ;
-	dec->bh[i] = dec->bph[i] ;
+        dec->dh[i] = dec->dh[i-1] ;
+        dec->bh[i] = dec->bph[i] ;
     }
 
     for ( i = 2; i > 0; i-- ) {
-	dec->rh[i] = dec->rh[i-1] ;
-	dec->ph[i] = dec->ph[i-1] ;
-	dec->ah[i] = dec->aph[i] ;
+        dec->rh[i] = dec->rh[i-1] ;
+        dec->ph[i] = dec->ph[i-1] ;
+        dec->ah[i] = dec->aph[i] ;
     }
 
     /* FILTEP */
@@ -427,10 +426,10 @@ static int block4h (g722_dec_t *dec, int d)
     /* FILTEZ */
     dec->szh = 0 ;
     for (i=6; i>0; i--) {
-	wd = dec->dh[i] << 1;
-	SATURATE(wd, 32767, -32768);
-	dec->szh += (dec->bh[i] * wd) >> 15 ;
-	SATURATE(dec->szh, 32767, -32768);
+        wd = dec->dh[i] << 1;
+        SATURATE(wd, 32767, -32768);
+        dec->szh += (dec->bh[i] * wd) >> 15 ;
+        SATURATE(dec->szh, 32767, -32768);
     }
 
     /* PREDIC */
@@ -496,10 +495,10 @@ PJ_DEF(pj_status_t) g722_dec_init(g722_dec_t *dec)
 }
 
 PJ_DEF(pj_status_t) g722_dec_decode( g722_dec_t *dec, 
-				    void *in, 
-				    pj_size_t in_size,
-				    pj_int16_t out[],
-				    pj_size_t *nsamples)
+                                    void *in, 
+                                    pj_size_t in_size,
+                                    pj_int16_t out[],
+                                    pj_size_t *nsamples)
 {
     unsigned i;
     int ilowr, ylow, rlow, dlowt;
@@ -511,27 +510,27 @@ PJ_DEF(pj_status_t) g722_dec_decode( g722_dec_t *dec,
     PJ_ASSERT_RETURN(*nsamples >= (in_size << 1), PJ_ETOOSMALL);
 
     for(i = 0; i < in_size; ++i) {
-	ilowr = in_[i] & 63;
-	ihigh = (in_[i] >> 6) & 3;
+        ilowr = in_[i] & 63;
+        ihigh = (in_[i] >> 6) & 3;
 
-	/* low band decoder */
-	ylow = block5l (ilowr, dec->slow, dec->detlow, MODE) ;	
-	rlow = block6l (ylow) ;
-	dlowt = block2l (ilowr, dec->detlow) ;
-	dec->detlow = block3l (dec, ilowr) ;
-	dec->slow = block4l (dec, dlowt) ;
-	/* rlow <= output low band pcm */
+        /* low band decoder */
+        ylow = block5l (ilowr, dec->slow, dec->detlow, MODE) ;  
+        rlow = block6l (ylow) ;
+        dlowt = block2l (ilowr, dec->detlow) ;
+        dec->detlow = block3l (dec, ilowr) ;
+        dec->slow = block4l (dec, dlowt) ;
+        /* rlow <= output low band pcm */
 
-	/* high band decoder */
-	dhigh = block2h (ihigh, dec->dethigh) ;
-	rhigh = block5h (dhigh, dec->shigh) ;
-	dec->dethigh = block3h (dec, ihigh) ;
-	dec->shigh = block4h (dec, dhigh) ;
-	/* rhigh <= output high band pcm */
+        /* high band decoder */
+        dhigh = block2h (ihigh, dec->dethigh) ;
+        rhigh = block5h (dhigh, dec->shigh) ;
+        dec->dethigh = block3h (dec, ihigh) ;
+        dec->shigh = block4h (dec, dhigh) ;
+        /* rhigh <= output high band pcm */
 
-	rx_qmf(dec, rlow, rhigh, &pcm1, &pcm2);
-	out[i*2]   = (pj_int16_t)pcm1;
-	out[i*2+1] = (pj_int16_t)pcm2;
+        rx_qmf(dec, rlow, rhigh, &pcm1, &pcm2);
+        out[i*2]   = (pj_int16_t)pcm1;
+        out[i*2+1] = (pj_int16_t)pcm2;
     }
 
     *nsamples = in_size << 1;

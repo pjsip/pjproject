@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,22 +45,22 @@ PJ_BEGIN_DECL
  * Create the transport adapter, specifying the underlying transport to be
  * used to send and receive RTP/RTCP packets.
  *
- * @param endpt		The media endpoint.
- * @param name		Optional name to identify this media transport
- *			for logging purposes.
- * @param base_tp	The base/underlying media transport to send and
- * 			receive RTP/RTCP packets.
- * @param del_base	Specify whether the base transport should also be
- * 			destroyed when destroy() is called upon us.
- * @param p_tp		Pointer to receive the media transport instance.
+ * @param endpt         The media endpoint.
+ * @param name          Optional name to identify this media transport
+ *                      for logging purposes.
+ * @param base_tp       The base/underlying media transport to send and
+ *                      receive RTP/RTCP packets.
+ * @param del_base      Specify whether the base transport should also be
+ *                      destroyed when destroy() is called upon us.
+ * @param p_tp          Pointer to receive the media transport instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_tp_adapter_create( pjmedia_endpt *endpt,
-					        const char *name,
-					        pjmedia_transport *base_tp,
-					        pj_bool_t del_base,
-						pjmedia_transport **p_tp);
+                                                const char *name,
+                                                pjmedia_transport *base_tp,
+                                                pj_bool_t del_base,
+                                                pjmedia_transport **p_tp);
 
 PJ_END_DECL
 
@@ -71,6 +70,6 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_TRANSPORT_ADAPTER_SAMPLE_H__ */
+#endif  /* __PJMEDIA_TRANSPORT_ADAPTER_SAMPLE_H__ */
 
 

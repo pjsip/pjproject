@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -38,11 +37,11 @@ static void init_guid_chars(void)
     unsigned i;
 
     for (i=0; i<10; ++i)
-	*p++ = '0'+i;
+        *p++ = '0'+i;
 
     for (i=0; i<26; ++i) {
-	*p++ = 'a'+i;
-	*p++ = 'A'+i;
+        *p++ = 'a'+i;
+        *p++ = 'A'+i;
     }
 
     *p++ = '-';
@@ -56,23 +55,23 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     PJ_CHECK_STACK();
 
     if (guid_chars[0] == '\0') {
-	pj_enter_critical_section();
-	if (guid_chars[0] == '\0') {
-	    init_guid_chars();
-	}
-	pj_leave_critical_section();
+        pj_enter_critical_section();
+        if (guid_chars[0] == '\0') {
+            init_guid_chars();
+        }
+        pj_leave_critical_section();
     }
 
     /* This would only work if PJ_GUID_STRING_LENGTH is multiple of 2 bytes */
     pj_assert(PJ_GUID_STRING_LENGTH % 2 == 0);
 
     for (p=str->ptr, end=p+PJ_GUID_STRING_LENGTH; p<end; ) {
-	pj_uint32_t rand_val = pj_rand();
-	pj_uint32_t rand_idx = RAND_MAX;
+        pj_uint32_t rand_val = pj_rand();
+        pj_uint32_t rand_idx = RAND_MAX;
 
-	for ( ; rand_idx>0 && p<end; rand_idx>>=8, rand_val>>=8, p++) {
-	    *p = guid_chars[(rand_val & 0xFF) & 63];
-	}
+        for ( ; rand_idx>0 && p<end; rand_idx>>=8, rand_val>>=8, p++) {
+            *p = guid_chars[(rand_val & 0xFF) & 63];
+        }
     }
 
     str->slen = PJ_GUID_STRING_LENGTH;

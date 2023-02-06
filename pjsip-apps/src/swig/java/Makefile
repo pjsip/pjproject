@@ -173,7 +173,7 @@ $(LIBPJSUA2_SO): $(OUT_DIR)/pjsua2_wrap.o
 ifeq ($(OS),android)
 	mkdir -p android/pjsua2/src/main/jniLibs/$(TARGET_ARCH)
 	# copy libc++_shared.so manually
-	cp -f ${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${TARGET_ARCH}/libc++_shared.so android/pjsua2/src/main/jniLibs/$(TARGET_ARCH)
+	cp -f ${STD_CPP_LIB} android/pjsua2/src/main/jniLibs/$(TARGET_ARCH)
 endif
 	$(PJ_CXX) -shared -o $(LIBPJSUA2_SO) $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_LDFLAGS)
@@ -182,7 +182,7 @@ $(OUT_DIR)/pjsua2_wrap.o: $(OUT_DIR)/pjsua2_wrap.cpp Makefile
 	$(PJ_CXX) -c $(OUT_DIR)/pjsua2_wrap.cpp -o $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_CFLAGS)
 
-$(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i $(SRCS)
+$(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i ../and_string.i $(SRCS)
 	mkdir -p $(MY_PACKAGE_PATH)
 	mkdir -p $(OUT_DIR)
 	swig $(SWIG_FLAGS) -java  -package $(MY_PACKAGE_NAME) \

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2017 Teluu Inc. (http://www.teluu.com)
  *
@@ -45,7 +44,7 @@
  * BCGG729 supports 16-bit PCM audio signal with sampling rate 8000Hz, 
  * frame length 10ms, and resulting in bitrate 8000bps.
  *
- * \subsection codec_setting Codec Settings
+ * \subsection bcg729_codec_setting Codec Settings
  *
  * General codec settings for this codec such as VAD and PLC can be 
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
@@ -54,7 +53,7 @@
  * Note that G.729 VAD status should be signalled in SDP, see more
  * description below.
  *
- * \subsubsection annexb Annex B
+ * \subsubsection bcg729_annexb Annex B
  *
  * The capability of VAD/DTX is specified in Annex B.
  *
@@ -95,9 +94,9 @@ PJ_BEGIN_DECL
 /**
  * Initialize and register BCG729 codec factory to pjmedia endpoint. 
  *
- * @param endpt		The pjmedia endpoint.
+ * @param endpt         The pjmedia endpoint.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt *endpt);
 
@@ -105,7 +104,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_bcg729_init(pjmedia_endpt *endpt);
  * Unregister BCG729 codec factory from pjmedia endpoint and deinitialize
  * the BCG729 codec library.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_bcg729_deinit(void);
 
@@ -117,5 +116,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODEC_BCG729_H__ */
+#endif  /* __PJMEDIA_CODEC_BCG729_H__ */
 

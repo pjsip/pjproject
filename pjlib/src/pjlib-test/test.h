@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -22,46 +21,49 @@
 
 #include <pj/types.h>
 
-#define GROUP_LIBC                  1
-#define GROUP_OS                    1
-#define GROUP_DATA_STRUCTURE        1
-#define GROUP_NETWORK               1
+#define TEST_DEFAULT                1
+
+#define GROUP_LIBC                  TEST_DEFAULT
+#define GROUP_OS                    TEST_DEFAULT
+#define GROUP_DATA_STRUCTURE        TEST_DEFAULT
+#define GROUP_NETWORK               TEST_DEFAULT
 #if defined(PJ_SYMBIAN)
 #   define GROUP_FILE               0
 #else
-#   define GROUP_FILE               1
+#   define GROUP_FILE               TEST_DEFAULT
 #endif
 
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
-#   define WITH_BENCHMARK	    0
+#   define WITH_BENCHMARK           0
 #else
-#   define WITH_BENCHMARK	    1
+#   define WITH_BENCHMARK           1
 #endif
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
-#define INCLUDE_EXCEPTION_TEST	    GROUP_LIBC
-#define INCLUDE_RAND_TEST	    GROUP_LIBC
-#define INCLUDE_LIST_TEST	    GROUP_DATA_STRUCTURE
-#define INCLUDE_HASH_TEST	    GROUP_DATA_STRUCTURE
-#define INCLUDE_POOL_TEST	    GROUP_LIBC
-#define INCLUDE_POOL_PERF_TEST	    (GROUP_LIBC && WITH_BENCHMARK)
-#define INCLUDE_STRING_TEST	    GROUP_DATA_STRUCTURE
-#define INCLUDE_FIFOBUF_TEST	    0	// GROUP_DATA_STRUCTURE
-#define INCLUDE_RBTREE_TEST	    GROUP_DATA_STRUCTURE
-#define INCLUDE_TIMER_TEST	    GROUP_DATA_STRUCTURE
+#define INCLUDE_EXCEPTION_TEST      GROUP_LIBC
+#define INCLUDE_RAND_TEST           GROUP_LIBC
+#define INCLUDE_LIST_TEST           GROUP_DATA_STRUCTURE
+#define INCLUDE_HASH_TEST           GROUP_DATA_STRUCTURE
+#define INCLUDE_POOL_TEST           GROUP_LIBC
+#define INCLUDE_POOL_PERF_TEST      (GROUP_LIBC && WITH_BENCHMARK)
+#define INCLUDE_STRING_TEST         GROUP_DATA_STRUCTURE
+#define INCLUDE_FIFOBUF_TEST        GROUP_DATA_STRUCTURE
+#define INCLUDE_RBTREE_TEST         GROUP_DATA_STRUCTURE
+#define INCLUDE_TIMER_TEST          GROUP_DATA_STRUCTURE
 #define INCLUDE_ATOMIC_TEST         GROUP_OS
-#define INCLUDE_MUTEX_TEST	    (PJ_HAS_THREADS && GROUP_OS)
+#define INCLUDE_MUTEX_TEST          (PJ_HAS_THREADS && GROUP_OS)
 #define INCLUDE_SLEEP_TEST          GROUP_OS
 #define INCLUDE_OS_TEST             GROUP_OS
 #define INCLUDE_THREAD_TEST         (PJ_HAS_THREADS && GROUP_OS)
-#define INCLUDE_SOCK_TEST	    GROUP_NETWORK
-#define INCLUDE_SOCK_PERF_TEST	    (GROUP_NETWORK && WITH_BENCHMARK)
-#define INCLUDE_SELECT_TEST	    GROUP_NETWORK
+#define INCLUDE_SOCK_TEST           GROUP_NETWORK
+#define INCLUDE_SOCK_PERF_TEST      (GROUP_NETWORK && WITH_BENCHMARK)
+#define INCLUDE_SELECT_TEST         GROUP_NETWORK
+#define INCLUDE_IOQUEUE_STRESS_TEST (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
-#define INCLUDE_ACTIVESOCK_TEST	    GROUP_NETWORK
-#define INCLUDE_SSLSOCK_TEST	    (PJ_HAS_SSL_SOCK && GROUP_NETWORK)
+#define INCLUDE_ACTIVESOCK_TEST     GROUP_NETWORK
+#define INCLUDE_SSLSOCK_TEST        (PJ_HAS_SSL_SOCK && GROUP_NETWORK)
 #define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK && WITH_BENCHMARK)
 #define INCLUDE_IOQUEUE_UNREG_TEST  (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_FILE_TEST           GROUP_FILE
@@ -103,6 +105,7 @@ extern int udp_ioqueue_test(void);
 extern int udp_ioqueue_unreg_test(void);
 extern int tcp_ioqueue_test(void);
 extern int ioqueue_perf_test(void);
+extern int ioqueue_stress_test(void);
 extern int activesock_test(void);
 extern int file_test(void);
 extern int ssl_sock_test(void);
@@ -123,13 +126,22 @@ extern pj_status_t  app_socket(int family, int type, int proto, int port,
                                pj_sock_t *ptr_sock);
 extern pj_status_t  app_socketpair(int family, int type, int protocol,
                                    pj_sock_t *server, pj_sock_t *client);
-extern int	    null_func(void);
+extern int          null_func(void);
 
-//#define TRACE_(expr) PJ_LOG(3,expr)
+/* #define TRACE_(expr) PJ_LOG(3,expr) */
 #define TRACE_(expr)
 #define HALT(msg)   { PJ_LOG(3,(THIS_FILE,"%s halted",msg)); for(;;) sleep(1); }
 
+#define CHECK(r,expr)   do { \
+                            pj_status_t st = expr; \
+                            if (st!=PJ_SUCCESS && st!=PJ_EPENDING) { \
+                                PJ_PERROR(1,(THIS_FILE, st, #expr)); \
+                                retcode = r; \
+                                goto on_return; \
+                            } \
+                        } while (0)
+
 PJ_END_DECL
 
-#endif	/* __PJLIB_TEST_H__ */
+#endif  /* __PJLIB_TEST_H__ */
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -37,24 +36,24 @@
  *
  * Once a transmit data is created, the reference counter is initialized to 1.
  *
- * @param endpt	    The endpoint instance.
- * @param rdata	    The incoming SIP message.
+ * @param endpt     The endpoint instance.
+ * @param rdata     The incoming SIP message.
  * @param p_tdata   Pointer to receive the transmit data containing
- *		    the duplicated message.
+ *                  the duplicated message.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 /*
 PJ_DEF(pj_status_t) pjsip_endpt_clone_msg( pjsip_endpoint *endpt,
-					   const pjsip_rx_data *rdata,
-					   pjsip_tx_data **p_tdata)
+                                           const pjsip_rx_data *rdata,
+                                           pjsip_tx_data **p_tdata)
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
 
     status = pjsip_endpt_create_tdata(endpt, &tdata);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     tdata->msg = pjsip_msg_clone(tdata->pool, rdata->msg_info.msg);
 
@@ -72,11 +71,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_clone_msg( pjsip_endpoint *endpt,
  * in uri. 
  */
 PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
-						   pjsip_rx_data *rdata, 
-						   const pjsip_uri *uri,
-						   const pj_str_t *branch,
-						   unsigned options,
-						   pjsip_tx_data **p_tdata)
+                                                   pjsip_rx_data *rdata, 
+                                                   const pjsip_uri *uri,
+                                                   const pj_str_t *branch,
+                                                   unsigned options,
+                                                   pjsip_tx_data **p_tdata)
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
@@ -85,7 +84,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
 
     PJ_ASSERT_RETURN(endpt && rdata && p_tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG, 
-		     PJSIP_ENOTREQUESTMSG);
+                     PJSIP_ENOTREQUESTMSG);
 
     PJ_UNUSED_ARG(options);
 
@@ -112,126 +111,126 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
 
     status = pjsip_endpt_create_tdata(endpt, &tdata);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Always increment ref counter to 1 */
     pjsip_tx_data_add_ref(tdata);
 
     /* Duplicate the request */
     PJ_TRY {
-	pjsip_msg *dst;
-	const pjsip_msg *src = rdata->msg_info.msg;
-	const pjsip_hdr *hsrc;
+        pjsip_msg *dst;
+        const pjsip_msg *src = rdata->msg_info.msg;
+        const pjsip_hdr *hsrc;
 
-	/* Create the request */
-	tdata->msg = dst = pjsip_msg_create(tdata->pool, PJSIP_REQUEST_MSG);
+        /* Create the request */
+        tdata->msg = dst = pjsip_msg_create(tdata->pool, PJSIP_REQUEST_MSG);
 
-	/* Duplicate request method */
-	pjsip_method_copy(tdata->pool, &tdata->msg->line.req.method,
-			  &src->line.req.method);
+        /* Duplicate request method */
+        pjsip_method_copy(tdata->pool, &tdata->msg->line.req.method,
+                          &src->line.req.method);
 
-	/* Set request URI */
-	if (uri) {
-	    dst->line.req.uri = (pjsip_uri*) 
-	    			pjsip_uri_clone(tdata->pool, uri);
-	} else {
-	    dst->line.req.uri= (pjsip_uri*)
-	    		       pjsip_uri_clone(tdata->pool, src->line.req.uri);
-	}
+        /* Set request URI */
+        if (uri) {
+            dst->line.req.uri = (pjsip_uri*) 
+                                pjsip_uri_clone(tdata->pool, uri);
+        } else {
+            dst->line.req.uri= (pjsip_uri*)
+                               pjsip_uri_clone(tdata->pool, src->line.req.uri);
+        }
 
-	/* Clone ALL headers */
-	hsrc = src->hdr.next;
-	while (hsrc != &src->hdr) {
+        /* Clone ALL headers */
+        hsrc = src->hdr.next;
+        while (hsrc != &src->hdr) {
 
-	    pjsip_hdr *hdst;
+            pjsip_hdr *hdst;
 
-	    /* If this is the top-most Via header, insert our own before
-	     * cloning the header.
-	     */
-	    if (hsrc == (pjsip_hdr*)rdata->msg_info.via) {
-		pjsip_via_hdr *hvia;
-		hvia = pjsip_via_hdr_create(tdata->pool);
-		if (branch)
-		    pj_strdup(tdata->pool, &hvia->branch_param, branch);
-		else {
-		    pj_str_t new_branch = pjsip_calculate_branch_id(rdata);
-		    pj_strdup(tdata->pool, &hvia->branch_param, &new_branch);
-		}
-		pjsip_msg_add_hdr(dst, (pjsip_hdr*)hvia);
+            /* If this is the top-most Via header, insert our own before
+             * cloning the header.
+             */
+            if (hsrc == (pjsip_hdr*)rdata->msg_info.via) {
+                pjsip_via_hdr *hvia;
+                hvia = pjsip_via_hdr_create(tdata->pool);
+                if (branch)
+                    pj_strdup(tdata->pool, &hvia->branch_param, branch);
+                else {
+                    pj_str_t new_branch = pjsip_calculate_branch_id(rdata);
+                    pj_strdup(tdata->pool, &hvia->branch_param, &new_branch);
+                }
+                pjsip_msg_add_hdr(dst, (pjsip_hdr*)hvia);
 
-	    }
-	    /* Skip Content-Type and Content-Length as these would be 
-	     * generated when the the message is printed.
-	     */
-	    else if (hsrc->type == PJSIP_H_CONTENT_LENGTH ||
-		     hsrc->type == PJSIP_H_CONTENT_TYPE) {
+            }
+            /* Skip Content-Type and Content-Length as these would be 
+             * generated when the the message is printed.
+             */
+            else if (hsrc->type == PJSIP_H_CONTENT_LENGTH ||
+                     hsrc->type == PJSIP_H_CONTENT_TYPE) {
 
-		hsrc = hsrc->next;
-		continue;
+                hsrc = hsrc->next;
+                continue;
 
-	    }
+            }
 #if 0
-	    /* If this is the top-most Route header and it indicates loose
-	     * route, remove the header.
-	     */
-	    else if (hsrc == (pjsip_hdr*)rdata->msg_info.route) {
+            /* If this is the top-most Route header and it indicates loose
+             * route, remove the header.
+             */
+            else if (hsrc == (pjsip_hdr*)rdata->msg_info.route) {
 
-		const pjsip_route_hdr *hroute = (const pjsip_route_hdr*) hsrc;
-		const pjsip_sip_uri *sip_uri;
+                const pjsip_route_hdr *hroute = (const pjsip_route_hdr*) hsrc;
+                const pjsip_sip_uri *sip_uri;
 
-		if (!PJSIP_URI_SCHEME_IS_SIP(hroute->name_addr.uri) &&
-		    !PJSIP_URI_SCHEME_IS_SIPS(hroute->name_addr.uri))
-		{
-		    /* This is a bad request! */
-		    status = PJSIP_EINVALIDHDR;
-		    goto on_error;
-		}
+                if (!PJSIP_URI_SCHEME_IS_SIP(hroute->name_addr.uri) &&
+                    !PJSIP_URI_SCHEME_IS_SIPS(hroute->name_addr.uri))
+                {
+                    /* This is a bad request! */
+                    status = PJSIP_EINVALIDHDR;
+                    goto on_error;
+                }
 
-		sip_uri = (pjsip_sip_uri*) hroute->name_addr.uri;
+                sip_uri = (pjsip_sip_uri*) hroute->name_addr.uri;
 
-		if (sip_uri->lr_param) {
-		    /* Yes lr param is present, skip this Route header */
-		    hsrc = hsrc->next;
-		    continue;
-		}
-	    }
+                if (sip_uri->lr_param) {
+                    /* Yes lr param is present, skip this Route header */
+                    hsrc = hsrc->next;
+                    continue;
+                }
+            }
 #endif
 
-	    /* Clone the header */
-	    hdst = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hsrc);
+            /* Clone the header */
+            hdst = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hsrc);
 
-	    /* If this is Max-Forward header, decrement the value */
-	    if (hdst->type == PJSIP_H_MAX_FORWARDS) {
-		pjsip_max_fwd_hdr *hmaxfwd = (pjsip_max_fwd_hdr*)hdst;
-		--hmaxfwd->ivalue;
-	    }
+            /* If this is Max-Forward header, decrement the value */
+            if (hdst->type == PJSIP_H_MAX_FORWARDS) {
+                pjsip_max_fwd_hdr *hmaxfwd = (pjsip_max_fwd_hdr*)hdst;
+                --hmaxfwd->ivalue;
+            }
 
-	    /* Append header to new request */
-	    pjsip_msg_add_hdr(dst, hdst);
+            /* Append header to new request */
+            pjsip_msg_add_hdr(dst, hdst);
 
 
-	    hsrc = hsrc->next;
-	}
+            hsrc = hsrc->next;
+        }
 
-	/* 16.6.3:
-	 * If the copy does not contain a Max-Forwards header field, the
+        /* 16.6.3:
+         * If the copy does not contain a Max-Forwards header field, the
          * proxy MUST add one with a field value, which SHOULD be 70.
-	 */
-	if (rdata->msg_info.max_fwd == NULL) {
-	    pjsip_max_fwd_hdr *hmaxfwd = 
-		pjsip_max_fwd_hdr_create(tdata->pool, 70);
-	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hmaxfwd);
-	}
+         */
+        if (rdata->msg_info.max_fwd == NULL) {
+            pjsip_max_fwd_hdr *hmaxfwd = 
+                pjsip_max_fwd_hdr_create(tdata->pool, 70);
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hmaxfwd);
+        }
 
-	/* Clone request body */
-	if (src->body) {
-	    dst->body = pjsip_msg_body_clone(tdata->pool, src->body);
-	}
+        /* Clone request body */
+        if (src->body) {
+            dst->body = pjsip_msg_body_clone(tdata->pool, src->body);
+        }
 
     }
     PJ_CATCH_ANY {
-	status = PJ_ENOMEM;
-	goto on_error;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
     PJ_END
 
@@ -247,9 +246,9 @@ on_error:
 
 
 PJ_DEF(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
-						     pjsip_rx_data *rdata, 
-						     unsigned options,
-						     pjsip_tx_data **p_tdata)
+                                                     pjsip_rx_data *rdata, 
+                                                     unsigned options,
+                                                     pjsip_tx_data **p_tdata)
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
@@ -259,59 +258,59 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
 
     status = pjsip_endpt_create_tdata(endpt, &tdata);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     pjsip_tx_data_add_ref(tdata);
 
     PJ_TRY {
-	pjsip_msg *dst;
-	const pjsip_msg *src = rdata->msg_info.msg;
-	const pjsip_hdr *hsrc;
+        pjsip_msg *dst;
+        const pjsip_msg *src = rdata->msg_info.msg;
+        const pjsip_hdr *hsrc;
 
-	/* Create the request */
-	tdata->msg = dst = pjsip_msg_create(tdata->pool, PJSIP_RESPONSE_MSG);
+        /* Create the request */
+        tdata->msg = dst = pjsip_msg_create(tdata->pool, PJSIP_RESPONSE_MSG);
 
-	/* Clone the status line */
-	dst->line.status.code = src->line.status.code;
-	pj_strdup(tdata->pool, &dst->line.status.reason, 
-		  &src->line.status.reason);
+        /* Clone the status line */
+        dst->line.status.code = src->line.status.code;
+        pj_strdup(tdata->pool, &dst->line.status.reason, 
+                  &src->line.status.reason);
 
-	/* Duplicate all headers */
-	hsrc = src->hdr.next;
-	while (hsrc != &src->hdr) {
-	    
-	    /* Skip Content-Type and Content-Length as these would be 
-	     * generated when the the message is printed.
-	     */
-	    if (hsrc->type == PJSIP_H_CONTENT_LENGTH ||
-		hsrc->type == PJSIP_H_CONTENT_TYPE) {
+        /* Duplicate all headers */
+        hsrc = src->hdr.next;
+        while (hsrc != &src->hdr) {
+            
+            /* Skip Content-Type and Content-Length as these would be 
+             * generated when the the message is printed.
+             */
+            if (hsrc->type == PJSIP_H_CONTENT_LENGTH ||
+                hsrc->type == PJSIP_H_CONTENT_TYPE) {
 
-		hsrc = hsrc->next;
-		continue;
+                hsrc = hsrc->next;
+                continue;
 
-	    }
-	    /* Remove the first Via header */
-	    else if (hsrc == (pjsip_hdr*) rdata->msg_info.via) {
+            }
+            /* Remove the first Via header */
+            else if (hsrc == (pjsip_hdr*) rdata->msg_info.via) {
 
-		hsrc = hsrc->next;
-		continue;
-	    }
+                hsrc = hsrc->next;
+                continue;
+            }
 
-	    pjsip_msg_add_hdr(dst, 
-	    		      (pjsip_hdr*)pjsip_hdr_clone(tdata->pool, hsrc));
+            pjsip_msg_add_hdr(dst, 
+                              (pjsip_hdr*)pjsip_hdr_clone(tdata->pool, hsrc));
 
-	    hsrc = hsrc->next;
-	}
+            hsrc = hsrc->next;
+        }
 
-	/* Clone message body */
-	if (src->body)
-	    dst->body = pjsip_msg_body_clone(tdata->pool, src->body);
+        /* Clone message body */
+        if (src->body)
+            dst->body = pjsip_msg_body_clone(tdata->pool, src->body);
 
 
     }
     PJ_CATCH_ANY {
-	status = PJ_ENOMEM;
-	goto on_error;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
     PJ_END;
 
@@ -328,8 +327,8 @@ static void digest2str(const unsigned char digest[], char *output)
 {
     int i;
     for (i = 0; i<16; ++i) {
-	pj_val_to_hex_digit(digest[i], output);
-	output += 2;
+        pj_val_to_hex_digit(digest[i], output);
+        output += 2;
     }
 }
 
@@ -346,23 +345,23 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
      * a branch value from GUID .
      */
     if (pj_strnicmp(&rdata->msg_info.via->branch_param, 
-		   &rfc3261_branch, PJSIP_RFC3261_BRANCH_LEN) != 0 ) 
+                   &rfc3261_branch, PJSIP_RFC3261_BRANCH_LEN) != 0 ) 
     {
-	pj_str_t tmp;
+        pj_str_t tmp;
 
-	branch.ptr = (char*)
-		     pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_BRANCH_LEN);
-	branch.slen = PJSIP_RFC3261_BRANCH_LEN;
-	pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, 
-	          PJSIP_RFC3261_BRANCH_LEN);
+        branch.ptr = (char*)
+                     pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_BRANCH_LEN);
+        branch.slen = PJSIP_RFC3261_BRANCH_LEN;
+        pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, 
+                  PJSIP_RFC3261_BRANCH_LEN);
 
-	tmp.ptr = branch.ptr + PJSIP_RFC3261_BRANCH_LEN + 2;
-	*(tmp.ptr-2) = (pj_int8_t)(branch.slen+73); 
-	*(tmp.ptr-1) = (pj_int8_t)(branch.slen+99);
-	pj_generate_unique_string( &tmp );
+        tmp.ptr = branch.ptr + PJSIP_RFC3261_BRANCH_LEN + 2;
+        *(tmp.ptr-2) = (pj_int8_t)(branch.slen+73); 
+        *(tmp.ptr-1) = (pj_int8_t)(branch.slen+99);
+        pj_generate_unique_string( &tmp );
 
-	branch.slen = PJSIP_MAX_BRANCH_LEN;
-	return branch;
+        branch.slen = PJSIP_MAX_BRANCH_LEN;
+        return branch;
     }
 
     /* Create branch ID for new request by calculating MD5 hash
@@ -370,12 +369,12 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
      */
     pj_md5_init(&ctx);
     pj_md5_update(&ctx, (pj_uint8_t*)rdata->msg_info.via->branch_param.ptr,
-		  (unsigned)rdata->msg_info.via->branch_param.slen);
+                  (unsigned)rdata->msg_info.via->branch_param.slen);
     pj_md5_final(&ctx, digest);
 
     branch.ptr = (char*)
-    		 pj_pool_alloc(rdata->tp_info.pool, 
-			       34 + PJSIP_RFC3261_BRANCH_LEN);
+                 pj_pool_alloc(rdata->tp_info.pool, 
+                               34 + PJSIP_RFC3261_BRANCH_LEN);
     pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, PJSIP_RFC3261_BRANCH_LEN);
     branch.slen = PJSIP_RFC3261_BRANCH_LEN;
     *(branch.ptr+PJSIP_RFC3261_BRANCH_LEN) = (pj_int8_t)(branch.slen+73);

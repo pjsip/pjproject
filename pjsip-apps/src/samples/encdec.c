@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,13 +34,13 @@
 #define THIS_FILE   "encdec.c"
 
 static const char *desc = 
- " encdec								\n"
- "									\n"
- " PURPOSE:								\n"
+ " encdec                                                               \n"
+ "                                                                      \n"
+ " PURPOSE:                                                             \n"
  "  Encode input WAV with a codec, and decode the result to another WAV \n"
  "\n"
  "\n"
- " USAGE:								\n"
+ " USAGE:                                                               \n"
  "  encdec codec input.wav output.wav                                   \n"
  "\n"
  "\n"
@@ -57,11 +56,11 @@ static const char *desc =
 //#define PJ_TRACE 1
 
 #ifndef PJ_TRACE
-#	define PJ_TRACE 0
+#       define PJ_TRACE 0
 #endif
 
 #if PJ_TRACE
-#   define TRACE_(expr)	    PJ_LOG(4,expr)
+#   define TRACE_(expr)     PJ_LOG(4,expr)
 #else
 #   define TRACE_(expr)
 #endif
@@ -75,20 +74,20 @@ static void err(const char *op, pj_status_t status)
 }
 
 #define CHECK(op)   do { \
-			status = op; \
-			if (status != PJ_SUCCESS) { \
-			    err(#op, status); \
-			    return status; \
-			} \
-		    } \
-		    while (0)
+                        status = op; \
+                        if (status != PJ_SUCCESS) { \
+                            err(#op, status); \
+                            return status; \
+                        } \
+                    } \
+                    while (0)
 
 static pjmedia_endpt *mept;
 static unsigned file_msec_duration;
 
 static pj_status_t enc_dec_test(const char *codec_id,
-				const char *filein,
-			        const char *fileout)
+                                const char *filein,
+                                const char *fileout)
 {
     pj_pool_t *pool;
     pjmedia_codec_mgr *cm;
@@ -116,7 +115,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
     
     cnt = 1;
     CHECK( pjmedia_codec_mgr_find_codecs_by_id(cm, pj_cstr(&tmp, codec_id), 
-					       &cnt, &pci, NULL) );
+                                               &cnt, &pci, NULL) );
     CHECK( pjmedia_codec_mgr_get_default_param(cm, pci, &param) );
 
     samples_per_frame = param.info.clock_rate * param.info.frm_ptime / 1000;
@@ -126,15 +125,15 @@ static pj_status_t enc_dec_test(const char *codec_id,
 
     /* Open wav for reading */
     CHECK( pjmedia_wav_player_port_create(pool, filein, 
-					  param.info.frm_ptime, 
-					  PJMEDIA_FILE_NO_LOOP, 0, &wavin) );
+                                          param.info.frm_ptime, 
+                                          PJMEDIA_FILE_NO_LOOP, 0, &wavin) );
 
     /* Open wav for writing */
     CHECK( pjmedia_wav_writer_port_create(pool, fileout,
-					  param.info.clock_rate, 
-					  param.info.channel_cnt,
-					  samples_per_frame,
-					  16, 0, 0, &wavout) );
+                                          param.info.clock_rate, 
+                                          param.info.channel_cnt,
+                                          samples_per_frame,
+                                          16, 0, 0, &wavout) );
 
     /* Alloc codec */
     CHECK( pjmedia_codec_mgr_alloc_codec(cm, pci, &codec) );
@@ -142,71 +141,71 @@ static pj_status_t enc_dec_test(const char *codec_id,
     CHECK( pjmedia_codec_open(codec, &param) );
     
     for (;;) {
-	pjmedia_frame frm_pcm, frm_bit, out_frm, frames[4];
-	pj_int16_t pcmbuf[2048];
-	pj_timestamp ts;
-	pj_uint8_t bitstream[2048];
+        pjmedia_frame frm_pcm, frm_bit, out_frm, frames[4];
+        pj_int16_t pcmbuf[2048];
+        pj_timestamp ts;
+        pj_uint8_t bitstream[2048];
 
-	frm_pcm.buf = (char*)pcmbuf;
-	frm_pcm.size = samples_per_frame * 2;
+        frm_pcm.buf = (char*)pcmbuf;
+        frm_pcm.size = samples_per_frame * 2;
 
-	/* Read from WAV */
-	if (pjmedia_port_get_frame(wavin, &frm_pcm) != PJ_SUCCESS)
-	    break;
-	if (frm_pcm.type != PJMEDIA_FRAME_TYPE_AUDIO)
-	    break;;
+        /* Read from WAV */
+        if (pjmedia_port_get_frame(wavin, &frm_pcm) != PJ_SUCCESS)
+            break;
+        if (frm_pcm.type != PJMEDIA_FRAME_TYPE_AUDIO)
+            break;;
 
-	/* Update duration */
-	file_msec_duration += samples_per_frame * 1000 / 
-			      param.info.clock_rate;
+        /* Update duration */
+        file_msec_duration += samples_per_frame * 1000 / 
+                              param.info.clock_rate;
 
-	/* Encode */
-	frm_bit.buf = bitstream;
-	frm_bit.size = sizeof(bitstream);
-	CHECK(pjmedia_codec_encode(codec, &frm_pcm, sizeof(bitstream), 
-	                           &frm_bit));
+        /* Encode */
+        frm_bit.buf = bitstream;
+        frm_bit.size = sizeof(bitstream);
+        CHECK(pjmedia_codec_encode(codec, &frm_pcm, sizeof(bitstream), 
+                                   &frm_bit));
 
-	/* On DTX, write zero frame to wavout to maintain duration */
-	if (frm_bit.size == 0 || frm_bit.type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	    out_frm.buf = (char*)pcmbuf;
-	    out_frm.size = 160;
-	    CHECK( pjmedia_port_put_frame(wavout, &out_frm) );
-	    TRACE_((THIS_FILE, "%d.%03d read: %u, enc: %u",
-		    T, frm_pcm.size, frm_bit.size));
-	    continue;
-	}
-	
-	bitstream_size += (unsigned)frm_bit.size;
+        /* On DTX, write zero frame to wavout to maintain duration */
+        if (frm_bit.size == 0 || frm_bit.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+            out_frm.buf = (char*)pcmbuf;
+            out_frm.size = 160;
+            CHECK( pjmedia_port_put_frame(wavout, &out_frm) );
+            TRACE_((THIS_FILE, "%d.%03d read: %u, enc: %u",
+                    T, frm_pcm.size, frm_bit.size));
+            continue;
+        }
+        
+        bitstream_size += (unsigned)frm_bit.size;
 
-	/* Parse the bitstream (not really necessary for this case
-	 * since we always decode 1 frame, but it's still good
-	 * for testing)
-	 */
-	ts.u64 = 0;
-	cnt = PJ_ARRAY_SIZE(frames);
-	CHECK( pjmedia_codec_parse(codec, bitstream, frm_bit.size, &ts, &cnt, 
-			           frames) );
-	CHECK( (cnt==1 ? PJ_SUCCESS : -1) );
+        /* Parse the bitstream (not really necessary for this case
+         * since we always decode 1 frame, but it's still good
+         * for testing)
+         */
+        ts.u64 = 0;
+        cnt = PJ_ARRAY_SIZE(frames);
+        CHECK( pjmedia_codec_parse(codec, bitstream, frm_bit.size, &ts, &cnt, 
+                                   frames) );
+        CHECK( (cnt==1 ? PJ_SUCCESS : -1) );
 
-	/* Decode or simulate packet loss */
-	out_frm.buf = (char*)pcmbuf;
-	out_frm.size = sizeof(pcmbuf);
-	
-	if ((pj_rand() % 100) < (int)lost_pct) {
-	    /* Simulate loss */
-	    CHECK( pjmedia_codec_recover(codec, sizeof(pcmbuf), &out_frm) );
-	    TRACE_((THIS_FILE, "%d.%03d Packet lost", T));
-	} else {
-	    /* Decode */
-	    CHECK( pjmedia_codec_decode(codec, &frames[0], sizeof(pcmbuf), 
-				     &out_frm) );
-	}
+        /* Decode or simulate packet loss */
+        out_frm.buf = (char*)pcmbuf;
+        out_frm.size = sizeof(pcmbuf);
+        
+        if ((pj_rand() % 100) < (int)lost_pct) {
+            /* Simulate loss */
+            CHECK( pjmedia_codec_recover(codec, sizeof(pcmbuf), &out_frm) );
+            TRACE_((THIS_FILE, "%d.%03d Packet lost", T));
+        } else {
+            /* Decode */
+            CHECK( pjmedia_codec_decode(codec, &frames[0], sizeof(pcmbuf), 
+                                     &out_frm) );
+        }
 
-	/* Write to WAV */
-	CHECK( pjmedia_port_put_frame(wavout, &out_frm) );
+        /* Write to WAV */
+        CHECK( pjmedia_port_put_frame(wavout, &out_frm) );
 
-	TRACE_((THIS_FILE, "%d.%03d read: %u, enc: %u, dec/write: %u",
-		T, frm_pcm.size, frm_bit.size, out_frm.size));
+        TRACE_((THIS_FILE, "%d.%03d read: %u, enc: %u, dec/write: %u",
+                T, frm_pcm.size, frm_bit.size, out_frm.size));
     }
 
     /* Close wavs */
@@ -233,8 +232,8 @@ int main(int argc, char *argv[])
     pj_status_t status;
 
     if (argc != 4) {
-	puts(desc);
-	return 1;
+        puts(desc);
+        return 1;
     }
 
     CHECK( pj_init() );
@@ -256,11 +255,11 @@ int main(int argc, char *argv[])
     pj_shutdown();
 
     if (status == PJ_SUCCESS) {
-	puts("");
-	puts("Success");
-	printf("Duration: %ds.%03d\n", file_msec_duration/1000, 
-				       file_msec_duration%1000);
-	printf("Time: %lds.%03ld\n", t1.sec, t1.msec);
+        puts("");
+        puts("Success");
+        printf("Duration: %ds.%03d\n", file_msec_duration/1000, 
+                                       file_msec_duration%1000);
+        printf("Time: %lds.%03ld\n", t1.sec, t1.msec);
     }
 
     return 0;

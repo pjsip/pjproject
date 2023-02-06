@@ -1,4 +1,3 @@
-# $Id$
 
 # PLAYFILE -> RECFILE:
 # Input file is played and is recorded to output, then compare them.

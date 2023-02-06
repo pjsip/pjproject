@@ -1,4 +1,3 @@
-# $Id$
 import sys
 import imp
 import re
@@ -249,6 +248,10 @@ class Expect(threading.Thread):
                     time.sleep(0.01)
         return None
                             
+    def get_config(self, key_config):
+        self.send("dd")
+        line = self.expect(key_config);
+        return line
 
     def sync_stdout(self):
         if not self.use_telnet:

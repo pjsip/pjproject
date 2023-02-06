@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -28,5 +27,5 @@
 #include <pjsip-ua/sip_timer.h>
 
 
-#endif	/* __PJSIP_UA_H__ */
+#endif  /* __PJSIP_UA_H__ */
 

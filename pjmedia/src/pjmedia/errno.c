@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -45,42 +44,42 @@ static const struct
 } err_str[] = 
 {
     /* Generic PJMEDIA errors, shouldn't be used! */
-    PJ_BUILD_ERR( PJMEDIA_ERROR,	    "Unspecified PJMEDIA error" ),
+    PJ_BUILD_ERR( PJMEDIA_ERROR,            "Unspecified PJMEDIA error" ),
 
     /* SDP error. */
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINSDP,	    "Invalid SDP descriptor" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINVER,	    "Invalid SDP version line" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINSDP,       "Invalid SDP descriptor" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINVER,       "Invalid SDP version line" ),
     PJ_BUILD_ERR( PJMEDIA_SDP_EINORIGIN,    "Invalid SDP origin line" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINTIME,	    "Invalid SDP time line"),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINNAME,	    "SDP name/subject line is empty"),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINCONN,	    "Invalid SDP connection line"),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINTIME,      "Invalid SDP time line"),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINNAME,      "SDP name/subject line is empty"),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINCONN,      "Invalid SDP connection line"),
     PJ_BUILD_ERR( PJMEDIA_SDP_EMISSINGCONN, "Missing SDP connection info line"),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINATTR,	    "Invalid SDP attributes"),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINATTR,      "Invalid SDP attributes"),
     PJ_BUILD_ERR( PJMEDIA_SDP_EINRTPMAP,    "Invalid SDP rtpmap attribute"),
     PJ_BUILD_ERR( PJMEDIA_SDP_ERTPMAPTOOLONG,"SDP rtpmap attribute too long"),
     PJ_BUILD_ERR( PJMEDIA_SDP_EMISSINGRTPMAP,"Missing SDP rtpmap for dynamic payload type"),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINMEDIA,	    "Invalid SDP media line" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_ENOFMT,	    "No SDP payload format in the media line" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINPT,	    "Invalid SDP payload type in media line" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINFMTP,	    "Invalid SDP fmtp attribute" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINRTCP,	    "Invalid SDP rtcp attribute" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINPROTO,	    "Invalid SDP media transport protocol" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINBANDW,	    "Invalid SDP bandwidth info line" ),
-    PJ_BUILD_ERR( PJMEDIA_SDP_EINSSRC,	    "Invalid SDP ssrc attribute" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINMEDIA,     "Invalid SDP media line" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_ENOFMT,       "No SDP payload format in the media line" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINPT,        "Invalid SDP payload type in media line" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINFMTP,      "Invalid SDP fmtp attribute" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINRTCP,      "Invalid SDP rtcp attribute" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINPROTO,     "Invalid SDP media transport protocol" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINBANDW,     "Invalid SDP bandwidth info line" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINSSRC,      "Invalid SDP ssrc attribute" ),
 
     /* SDP negotiator errors. */
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINSTATE,	"Invalid SDP negotiator state for operation" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENOINITIAL,	"No initial local SDP in SDP negotiator" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENOACTIVE,	"No active SDP in SDP negotiator" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENONEG,	"No current local/remote offer/answer" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EMISMEDIA,	"SDP media count mismatch in offer/answer" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINVANSMEDIA,	"SDP media type mismatch in offer/answer" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINVANSTP,	"SDP media transport type mismatch in offer/answer" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EANSNOMEDIA,	"No common SDP media payload in answer" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENOMEDIA,	"No active media stream after negotiation" ),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSCODEC,	"No suitable codec for remote offer"),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSTELEVENT,	"No suitable telephone-event for remote offer"),
-    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSUNKNOWN,	"No suitable answer for unknown remote offer"),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINSTATE,      "Invalid SDP negotiator state for operation" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENOINITIAL,    "No initial local SDP in SDP negotiator" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENOACTIVE,     "No active SDP in SDP negotiator" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENONEG,        "No current local/remote offer/answer" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EMISMEDIA,     "SDP media count mismatch in offer/answer" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINVANSMEDIA,  "SDP media type mismatch in offer/answer" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINVANSTP,     "SDP media transport type mismatch in offer/answer" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_EANSNOMEDIA,   "No common SDP media payload in answer" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENOMEDIA,      "No active media stream after negotiation" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSCODEC,    "No suitable codec for remote offer"),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSTELEVENT, "No suitable telephone-event for remote offer"),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSUNKNOWN,  "No suitable answer for unknown remote offer"),
 
     /* SDP comparison results */
     PJ_BUILD_ERR( PJMEDIA_SDP_EMEDIANOTEQUAL,   "SDP media descriptor not equal" ),
@@ -98,66 +97,66 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_SDP_ETIMENOTEQUAL,    "SDP time line not equal" ),
 
     /* Codec errors. */
-    PJ_BUILD_ERR( PJMEDIA_CODEC_EUNSUP,		"Unsupported media codec" ),
-    PJ_BUILD_ERR( PJMEDIA_CODEC_EFAILED,	"Codec internal creation error" ),
+    PJ_BUILD_ERR( PJMEDIA_CODEC_EUNSUP,         "Unsupported media codec" ),
+    PJ_BUILD_ERR( PJMEDIA_CODEC_EFAILED,        "Codec internal creation error" ),
     PJ_BUILD_ERR( PJMEDIA_CODEC_EFRMTOOSHORT,   "Codec frame is too short" ),
     PJ_BUILD_ERR( PJMEDIA_CODEC_EPCMTOOSHORT,   "PCM frame is too short" ),
     PJ_BUILD_ERR( PJMEDIA_CODEC_EFRMINLEN,      "Invalid codec frame length" ),
     PJ_BUILD_ERR( PJMEDIA_CODEC_EPCMFRMINLEN,   "Invalid PCM frame length" ),
-    PJ_BUILD_ERR( PJMEDIA_CODEC_EINMODE,	"Invalid codec mode (no fmtp?)" ),
-    PJ_BUILD_ERR( PJMEDIA_CODEC_EBADBITSTREAM,	"Bad or corrupted bitstream" ),
+    PJ_BUILD_ERR( PJMEDIA_CODEC_EINMODE,        "Invalid codec mode (no fmtp?)" ),
+    PJ_BUILD_ERR( PJMEDIA_CODEC_EBADBITSTREAM,  "Bad or corrupted bitstream" ),
 
     /* Media errors. */
-    PJ_BUILD_ERR( PJMEDIA_EINVALIDIP,	    "Invalid remote media (IP) address" ),
-    PJ_BUILD_ERR( PJMEDIA_EASYMCODEC,	    "Asymetric media codec is not supported" ),
-    PJ_BUILD_ERR( PJMEDIA_EINVALIDPT,	    "Invalid media payload type" ),
+    PJ_BUILD_ERR( PJMEDIA_EINVALIDIP,       "Invalid remote media (IP) address" ),
+    PJ_BUILD_ERR( PJMEDIA_EASYMCODEC,       "Asymetric media codec is not supported" ),
+    PJ_BUILD_ERR( PJMEDIA_EINVALIDPT,       "Invalid media payload type" ),
     PJ_BUILD_ERR( PJMEDIA_EMISSINGRTPMAP,   "Missing rtpmap in media description" ),
     PJ_BUILD_ERR( PJMEDIA_EINVALIMEDIATYPE, "Invalid media type" ),
     PJ_BUILD_ERR( PJMEDIA_EREMOTENODTMF,    "Remote does not support DTMF" ),
-    PJ_BUILD_ERR( PJMEDIA_RTP_EINDTMF,	    "Invalid DTMF digit" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EINDTMF,      "Invalid DTMF digit" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_EREMNORFC2833,"Remote does not support RFC 2833" ),
-    PJ_BUILD_ERR( PJMEDIA_EBADFMT,	    "Bad format"),
+    PJ_BUILD_ERR( PJMEDIA_EBADFMT,          "Bad format"),
     PJ_BUILD_ERR( PJMEDIA_EUNSUPMEDIATYPE,  "Unsupported media type"),
 
     /* RTP session errors. */
-    PJ_BUILD_ERR( PJMEDIA_RTP_EINPKT,	    "Invalid RTP packet" ),
-    PJ_BUILD_ERR( PJMEDIA_RTP_EINPACK,	    "Invalid RTP packing (internal error)" ),
-    PJ_BUILD_ERR( PJMEDIA_RTP_EINVER,	    "Invalid RTP version" ),
-    PJ_BUILD_ERR( PJMEDIA_RTP_EINSSRC,	    "RTP packet SSRC id mismatch" ),
-    PJ_BUILD_ERR( PJMEDIA_RTP_EINPT,	    "RTP packet payload type mismatch" ),
-    PJ_BUILD_ERR( PJMEDIA_RTP_EINLEN,	    "Invalid RTP packet length" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EINPKT,       "Invalid RTP packet" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EINPACK,      "Invalid RTP packing (internal error)" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EINVER,       "Invalid RTP version" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EINSSRC,      "RTP packet SSRC id mismatch" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EINPT,        "RTP packet payload type mismatch" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EINLEN,       "Invalid RTP packet length" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_ESESSRESTART,    "RTP session restarted" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_ESESSPROBATION,  "RTP session in probation" ),
-    PJ_BUILD_ERR( PJMEDIA_RTP_EBADSEQ,	    "Bad sequence number in RTP packet" ),
-    PJ_BUILD_ERR( PJMEDIA_RTP_EBADDEST,	    "RTP media port destination is not configured" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EBADSEQ,      "Bad sequence number in RTP packet" ),
+    PJ_BUILD_ERR( PJMEDIA_RTP_EBADDEST,     "RTP media port destination is not configured" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_ENOCONFIG,    "RTP is not configured" ),
     
     /* Media port errors: */
     PJ_BUILD_ERR( PJMEDIA_ENOTCOMPATIBLE,   "Media ports are not compatible" ),
-    PJ_BUILD_ERR( PJMEDIA_ENCCLOCKRATE,	    "Media ports have incompatible clock rate" ),
+    PJ_BUILD_ERR( PJMEDIA_ENCCLOCKRATE,     "Media ports have incompatible clock rate" ),
     PJ_BUILD_ERR( PJMEDIA_ENCSAMPLESPFRAME, "Media ports have incompatible samples per frame" ),
-    PJ_BUILD_ERR( PJMEDIA_ENCTYPE,	    "Media ports have incompatible media type" ),
-    PJ_BUILD_ERR( PJMEDIA_ENCBITS,	    "Media ports have incompatible bits per sample" ),
-    PJ_BUILD_ERR( PJMEDIA_ENCBYTES,	    "Media ports have incompatible bytes per frame" ),
-    PJ_BUILD_ERR( PJMEDIA_ENCCHANNEL,	    "Media ports have incompatible number of channels" ),
+    PJ_BUILD_ERR( PJMEDIA_ENCTYPE,          "Media ports have incompatible media type" ),
+    PJ_BUILD_ERR( PJMEDIA_ENCBITS,          "Media ports have incompatible bits per sample" ),
+    PJ_BUILD_ERR( PJMEDIA_ENCBYTES,         "Media ports have incompatible bytes per frame" ),
+    PJ_BUILD_ERR( PJMEDIA_ENCCHANNEL,       "Media ports have incompatible number of channels" ),
 
     /* Media file errors: */
     PJ_BUILD_ERR( PJMEDIA_ENOTVALIDWAVE,    "Not a valid WAVE file" ),
-    PJ_BUILD_ERR( PJMEDIA_EWAVEUNSUPP,	    "Unsupported WAVE file format" ),
+    PJ_BUILD_ERR( PJMEDIA_EWAVEUNSUPP,      "Unsupported WAVE file format" ),
     PJ_BUILD_ERR( PJMEDIA_EWAVETOOSHORT,    "WAVE file too short" ),
     PJ_BUILD_ERR( PJMEDIA_EFRMFILETOOBIG,   "Sound frame too large for file buffer"),
-    PJ_BUILD_ERR( PJMEDIA_EAVIUNSUPP,	    "Unsupported AVI file"),
+    PJ_BUILD_ERR( PJMEDIA_EAVIUNSUPP,       "Unsupported AVI file"),
 
     /* Sound device errors: */
-    PJ_BUILD_ERR( PJMEDIA_ENOSNDREC,	    "No suitable sound capture device" ),
-    PJ_BUILD_ERR( PJMEDIA_ENOSNDPLAY,	    "No suitable sound playback device" ),
-    PJ_BUILD_ERR( PJMEDIA_ESNDINDEVID,	    "Invalid sound device ID" ),
+    PJ_BUILD_ERR( PJMEDIA_ENOSNDREC,        "No suitable sound capture device" ),
+    PJ_BUILD_ERR( PJMEDIA_ENOSNDPLAY,       "No suitable sound playback device" ),
+    PJ_BUILD_ERR( PJMEDIA_ESNDINDEVID,      "Invalid sound device ID" ),
     PJ_BUILD_ERR( PJMEDIA_ESNDINSAMPLEFMT,  "Invalid sample format for sound device" ),
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* SRTP transport errors: */
     PJ_BUILD_ERR( PJMEDIA_SRTP_ECRYPTONOTMATCH, "SRTP crypto-suite name not match the offerer tag" ),
-    PJ_BUILD_ERR( PJMEDIA_SRTP_EINKEYLEN,	"Invalid SRTP key length for specific crypto" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_EINKEYLEN,       "Invalid SRTP key length for specific crypto" ),
     PJ_BUILD_ERR( PJMEDIA_SRTP_ENOTSUPCRYPTO,   "Unsupported SRTP crypto-suite" ),
     PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPAMBIGUEANS,  "SRTP SDP contains ambigue answer" ),
     PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPDUPCRYPTOTAG,"Duplicated SRTP crypto tag" ),
@@ -170,13 +169,13 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_ENOCRYPTO,  "No matching SRTP crypto-suite after DTLS nego" ),
     PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_EPEERNOCERT,"No certificate supplied by peer in DTLS nego" ),
     PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_EFPNOTMATCH,"Fingerprint from signalling not match to actual fingerprint" ),
-    PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_ENOFPRINT,	"Fingerprint not found" ),
-    PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_ENOPROFILE,	"No valid SRTP protection profile found" )
+    PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_ENOFPRINT,  "Fingerprint not found" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_ENOPROFILE, "No valid SRTP protection profile found" )
 #endif
 
 };
 
-#endif	/* PJ_HAS_ERROR_STRING */
+#endif  /* PJ_HAS_ERROR_STRING */
 
 
 
@@ -184,7 +183,7 @@ static const struct
  * pjmedia_strerror()
  */
 PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode, 
-				   char *buf, pj_size_t bufsize )
+                                   char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
 
@@ -193,87 +192,87 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
     /* See if the error comes from PortAudio. */
 #if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
     if (statcode >= PJMEDIA_PORTAUDIO_ERRNO_START &&
-	statcode <= PJMEDIA_PORTAUDIO_ERRNO_END)
+        statcode <= PJMEDIA_PORTAUDIO_ERRNO_END)
     {
 
-	//int pa_err = statcode - PJMEDIA_ERRNO_FROM_PORTAUDIO(0);
-	int pa_err = PJMEDIA_PORTAUDIO_ERRNO_START - statcode;
-	pj_str_t msg;
-	
-	msg.ptr = (char*)Pa_GetErrorText(pa_err);
-	msg.slen = pj_ansi_strlen(msg.ptr);
+        //int pa_err = statcode - PJMEDIA_ERRNO_FROM_PORTAUDIO(0);
+        int pa_err = PJMEDIA_PORTAUDIO_ERRNO_START - statcode;
+        pj_str_t msg;
+        
+        msg.ptr = (char*)Pa_GetErrorText(pa_err);
+        msg.slen = pj_ansi_strlen(msg.ptr);
 
-	errstr.ptr = buf;
-	pj_strncpy_with_null(&errstr, &msg, bufsize);
-	return errstr;
+        errstr.ptr = buf;
+        pj_strncpy_with_null(&errstr, &msg, bufsize);
+        return errstr;
 
     } else 
-#endif	/* PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO */
+#endif  /* PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO */
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* LIBSRTP error */
     if (statcode >= PJMEDIA_LIBSRTP_ERRNO_START &&
-	statcode <  PJMEDIA_LIBSRTP_ERRNO_END)
+        statcode <  PJMEDIA_LIBSRTP_ERRNO_END)
     {
-	int err = statcode - PJMEDIA_LIBSRTP_ERRNO_START;
-	pj_str_t msg;
-	
-	msg = pj_str((char*)get_libsrtp_errstr(err));
+        int err = statcode - PJMEDIA_LIBSRTP_ERRNO_START;
+        pj_str_t msg;
+        
+        msg = pj_str((char*)get_libsrtp_errstr(err));
 
-	errstr.ptr = buf;
-	pj_strncpy_with_null(&errstr, &msg, bufsize);
-	return errstr;
+        errstr.ptr = buf;
+        pj_strncpy_with_null(&errstr, &msg, bufsize);
+        return errstr;
     
     } else
 #endif
     
     /* PJMEDIA error */
     if (statcode >= PJMEDIA_ERRNO_START && 
-	       statcode < PJMEDIA_ERRNO_END)
+               statcode < PJMEDIA_ERRNO_END)
     {
-	/* Find the error in the table.
-	 * Use binary search!
-	 */
-	int first = 0;
-	int n = PJ_ARRAY_SIZE(err_str);
+        /* Find the error in the table.
+         * Use binary search!
+         */
+        int first = 0;
+        int n = PJ_ARRAY_SIZE(err_str);
 
-	while (n > 0) {
-	    int half = n/2;
-	    int mid = first + half;
+        while (n > 0) {
+            int half = n/2;
+            int mid = first + half;
 
-	    if (err_str[mid].code < statcode) {
-		first = mid+1;
-		n -= (half+1);
-	    } else if (err_str[mid].code > statcode) {
-		n = half;
-	    } else {
-		first = mid;
-		break;
-	    }
-	}
+            if (err_str[mid].code < statcode) {
+                first = mid+1;
+                n -= (half+1);
+            } else if (err_str[mid].code > statcode) {
+                n = half;
+            } else {
+                first = mid;
+                break;
+            }
+        }
 
 
-	if (PJ_ARRAY_SIZE(err_str) && err_str[first].code == statcode) {
-	    pj_str_t msg;
-	    
-	    msg.ptr = (char*)err_str[first].msg;
-	    msg.slen = pj_ansi_strlen(err_str[first].msg);
+        if (PJ_ARRAY_SIZE(err_str) && err_str[first].code == statcode) {
+            pj_str_t msg;
+            
+            msg.ptr = (char*)err_str[first].msg;
+            msg.slen = pj_ansi_strlen(err_str[first].msg);
 
-	    errstr.ptr = buf;
-	    pj_strncpy_with_null(&errstr, &msg, bufsize);
-	    return errstr;
+            errstr.ptr = buf;
+            pj_strncpy_with_null(&errstr, &msg, bufsize);
+            return errstr;
 
-	} 
+        } 
     } 
-#endif	/* PJ_HAS_ERROR_STRING */
+#endif  /* PJ_HAS_ERROR_STRING */
 
     /* Error not found. */
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
-				   "Unknown pjmedia error %d",
-				   statcode);
+                                   "Unknown pjmedia error %d",
+                                   statcode);
     if (errstr.slen < 1 || errstr.slen >= (pj_ssize_t)bufsize)
-	errstr.slen = bufsize - 1;
+        errstr.slen = bufsize - 1;
     return errstr;
 }
 

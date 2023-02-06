@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -63,9 +62,9 @@ PJ_BEGIN_DECL
  * Initialize and register G711 codec factory to pjmedia endpoint.
  * This will register PCMU and PCMA codec, in that order.
  *
- * @param endpt		The pjmedia endpoint.
+ * @param endpt         The pjmedia endpoint.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g711_init(pjmedia_endpt *endpt);
 
@@ -74,7 +73,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_g711_init(pjmedia_endpt *endpt);
 /**
  * Unregister G711 codec factory from pjmedia endpoint.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_g711_deinit(void);
 
@@ -85,5 +84,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_G711_H__ */
+#endif  /* __PJMEDIA_G711_H__ */
 

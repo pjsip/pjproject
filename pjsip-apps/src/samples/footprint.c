@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -277,9 +276,9 @@ int dummy_function()
 
 #ifdef HAS_PJSIP_CORE_MSG_UTIL
     pjsip_endpt_create_request(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-			       -1, NULL, NULL);
+                               -1, NULL, NULL);
     pjsip_endpt_create_request_from_hdr(NULL, NULL, NULL, NULL, NULL, NULL,
-					NULL, -1, NULL, NULL);
+                                        NULL, -1, NULL, NULL);
     pjsip_endpt_create_response(NULL, NULL, -1, NULL, NULL);
     pjsip_endpt_create_ack(NULL, NULL, NULL, NULL);
     pjsip_endpt_create_cancel(NULL, NULL, NULL);

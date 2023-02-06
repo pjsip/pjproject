@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -92,13 +91,13 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
      * number of shutdown().
      */
     if (aud_subsys->init_count++ != 0) {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     /* Register error subsystem */
     status = pj_register_strerror(PJMEDIA_AUDIODEV_ERRNO_START,
-				  PJ_ERRNO_SPACE_SIZE,
-				  &pjmedia_audiodev_strerror);
+                                  PJ_ERRNO_SPACE_SIZE,
+                                  &pjmedia_audiodev_strerror);
     pj_assert(status == PJ_SUCCESS);
 
     /* Init */
@@ -152,11 +151,11 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
 
     /* Initialize each factory and build the device ID list */
     for (i=0; i<aud_subsys->drv_cnt; ++i) {
-	status = pjmedia_aud_driver_init(i, PJ_FALSE);
-	if (status != PJ_SUCCESS) {
-	    pjmedia_aud_driver_deinit(i);
-	    continue;
-	}
+        status = pjmedia_aud_driver_init(i, PJ_FALSE);
+        if (status != PJ_SUCCESS) {
+            pjmedia_aud_driver_deinit(i);
+            continue;
+        }
     }
 
     return aud_subsys->dev_cnt ? PJ_SUCCESS : status;
@@ -170,14 +169,14 @@ pjmedia_aud_register_factory(pjmedia_aud_dev_factory_create_func_ptr adf)
     pjmedia_aud_subsys *aud_subsys = pjmedia_get_aud_subsys();
 
     if (aud_subsys->init_count == 0)
-	return PJMEDIA_EAUD_INIT;
+        return PJMEDIA_EAUD_INIT;
 
     aud_subsys->drv[aud_subsys->drv_cnt].create = adf;
     status = pjmedia_aud_driver_init(aud_subsys->drv_cnt, PJ_FALSE);
     if (status == PJ_SUCCESS) {
-	aud_subsys->drv_cnt++;
+        aud_subsys->drv_cnt++;
     } else {
-	pjmedia_aud_driver_deinit(aud_subsys->drv_cnt);
+        pjmedia_aud_driver_deinit(aud_subsys->drv_cnt);
     }
 
     return status;
@@ -191,20 +190,20 @@ pjmedia_aud_unregister_factory(pjmedia_aud_dev_factory_create_func_ptr adf)
     pjmedia_aud_subsys *aud_subsys = pjmedia_get_aud_subsys();
 
     if (aud_subsys->init_count == 0)
-	return PJMEDIA_EAUD_INIT;
+        return PJMEDIA_EAUD_INIT;
 
     for (i=0; i<aud_subsys->drv_cnt; ++i) {
-	pjmedia_aud_driver *drv = &aud_subsys->drv[i];
+        pjmedia_aud_driver *drv = &aud_subsys->drv[i];
 
-	if (drv->create == adf) {
-	    for (j = drv->start_idx; j < drv->start_idx + drv->dev_cnt; j++)
-	    {
-		aud_subsys->dev_list[j] = (pj_uint32_t)PJMEDIA_AUD_INVALID_DEV;
-	    }
+        if (drv->create == adf) {
+            for (j = drv->start_idx; j < drv->start_idx + drv->dev_cnt; j++)
+            {
+                aud_subsys->dev_list[j] = (pj_uint32_t)PJMEDIA_AUD_INVALID_DEV;
+            }
 
-	    pjmedia_aud_driver_deinit(i);
-	    return PJ_SUCCESS;
-	}
+            pjmedia_aud_driver_deinit(i);
+            return PJ_SUCCESS;
+        }
     }
 
     return PJMEDIA_EAUD_ERR;
@@ -227,16 +226,16 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_shutdown(void)
      * number of init().
      */
     if (aud_subsys->init_count == 0) {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
     --aud_subsys->init_count;
 
     if (aud_subsys->init_count == 0) {
-	for (i=0; i<aud_subsys->drv_cnt; ++i) {
-	    pjmedia_aud_driver_deinit(i);
-	}
+        for (i=0; i<aud_subsys->drv_cnt; ++i) {
+            pjmedia_aud_driver_deinit(i);
+        }
 
-	aud_subsys->pf = NULL;
+        aud_subsys->pf = NULL;
     }
     return PJ_SUCCESS;
 }

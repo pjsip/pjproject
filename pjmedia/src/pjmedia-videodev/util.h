@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2014-2015 Teluu Inc. (http://www.teluu.com)
  *
@@ -29,24 +28,24 @@
 
 typedef struct pjmedia_vid_dev_conv
 {
-    pjmedia_converter	   *conv;
-    pjmedia_format	    fmt;
-    pjmedia_rect_size	    src_size;
-    pjmedia_rect_size	    dst_size;
-    pjmedia_rect_size	    res_size;		/* Size after resizing   */
-    pjmedia_orient	    rotation;
-    pjmedia_rect_size	    rot_size;		/* Size after rotation   */ 
+    pjmedia_converter      *conv;
+    pjmedia_format          fmt;
+    pjmedia_rect_size       src_size;
+    pjmedia_rect_size       dst_size;
+    pjmedia_rect_size       res_size;           /* Size after resizing   */
+    pjmedia_orient          rotation;
+    pjmedia_rect_size       rot_size;           /* Size after rotation   */ 
     
-    void		   *conv_buf;
-    pj_size_t		    src_frame_size;
-    pj_size_t		    conv_frame_size;
+    void                   *conv_buf;
+    pj_size_t               src_frame_size;
+    pj_size_t               conv_frame_size;
     
-    pj_bool_t		    fit_to_h;
-    pj_bool_t		    handle_rotation;
-    pj_bool_t		    maintain_aspect_ratio;
-    pj_bool_t		    match_src_dst;
-    pj_int32_t		    pad;
-    pj_size_t		    wxh;
+    pj_bool_t               fit_to_h;
+    pj_bool_t               handle_rotation;
+    pj_bool_t               maintain_aspect_ratio;
+    pj_bool_t               match_src_dst;
+    pj_int32_t              pad;
+    pj_size_t               wxh;
 } pjmedia_vid_dev_conv;
 
 /**
@@ -74,21 +73,21 @@ typedef struct pjmedia_vid_dev_conv
  */
 pj_status_t
 pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
-				      pj_pool_t *pool,
-				      pjmedia_format *fmt,
-				      pjmedia_rect_size src_size,
-				      pjmedia_rect_size dst_size,
-				      pj_bool_t handle_rotation,
-				      pj_bool_t maintain_aspect_ratio);
+                                      pj_pool_t *pool,
+                                      pjmedia_format *fmt,
+                                      pjmedia_rect_size src_size,
+                                      pjmedia_rect_size dst_size,
+                                      pj_bool_t handle_rotation,
+                                      pj_bool_t maintain_aspect_ratio);
 
 /* Set rotation */
 void pjmedia_vid_dev_conv_set_rotation(pjmedia_vid_dev_conv *conv,
-				       pjmedia_orient rotation);
+                                       pjmedia_orient rotation);
 
 /* Resize the buffer and rotate it, if necessary */
 pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
-				      		    void *src_buf,
-				      		    void **result);
+                                                    void *src_buf,
+                                                    void **result);
 
 /* Destroy converter */
 void pjmedia_vid_dev_conv_destroy_converter(pjmedia_vid_dev_conv *conv);

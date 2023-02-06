@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -44,8 +43,8 @@ PJ_BEGIN_DECL
  */
 typedef struct pj_hmac_sha1_context
 {
-    pj_sha1_context context;	/**< SHA1 context	    */
-    pj_uint8_t	    k_opad[64];	/**< opad xor-ed with key   */
+    pj_sha1_context context;    /**< SHA1 context           */
+    pj_uint8_t      k_opad[64]; /**< opad xor-ed with key   */
 } pj_hmac_sha1_context;
 
 
@@ -53,46 +52,46 @@ typedef struct pj_hmac_sha1_context
  * Calculate HMAC-SHA1 digest for the specified input and key with this
  * single function call.
  *
- * @param input		Pointer to the input stream.
- * @param input_len	Length of input stream in bytes.
- * @param key		Pointer to the authentication key.
- * @param key_len	Length of the authentication key.
- * @param digest	Buffer to be filled with HMAC SHA1 digest.
+ * @param input         Pointer to the input stream.
+ * @param input_len     Length of input stream in bytes.
+ * @param key           Pointer to the authentication key.
+ * @param key_len       Length of the authentication key.
+ * @param digest        Buffer to be filled with HMAC SHA1 digest.
  */
 PJ_DECL(void) pj_hmac_sha1(const pj_uint8_t *input, unsigned input_len, 
-			   const pj_uint8_t *key, unsigned key_len, 
-			   pj_uint8_t digest[20]);
+                           const pj_uint8_t *key, unsigned key_len, 
+                           pj_uint8_t digest[20]);
 
 
 /**
  * Initiate HMAC-SHA1 context for incremental hashing.
  *
- * @param hctx		HMAC-SHA1 context.
- * @param key		Pointer to the authentication key.
- * @param key_len	Length of the authentication key.
+ * @param hctx          HMAC-SHA1 context.
+ * @param key           Pointer to the authentication key.
+ * @param key_len       Length of the authentication key.
  */
 PJ_DECL(void) pj_hmac_sha1_init(pj_hmac_sha1_context *hctx, 
-			        const pj_uint8_t *key, unsigned key_len);
+                                const pj_uint8_t *key, unsigned key_len);
 
 /**
  * Append string to the message.
  *
- * @param hctx		HMAC-SHA1 context.
- * @param input		Pointer to the input stream.
- * @param input_len	Length of input stream in bytes.
+ * @param hctx          HMAC-SHA1 context.
+ * @param input         Pointer to the input stream.
+ * @param input_len     Length of input stream in bytes.
  */
 PJ_DECL(void) pj_hmac_sha1_update(pj_hmac_sha1_context *hctx,
-				  const pj_uint8_t *input, 
-				  unsigned input_len);
+                                  const pj_uint8_t *input, 
+                                  unsigned input_len);
 
 /**
  * Finish the message and return the digest. 
  *
- * @param hctx		HMAC-SHA1 context.
- * @param digest	Buffer to be filled with HMAC SHA1 digest.
+ * @param hctx          HMAC-SHA1 context.
+ * @param digest        Buffer to be filled with HMAC SHA1 digest.
  */
 PJ_DECL(void) pj_hmac_sha1_final(pj_hmac_sha1_context *hctx,
-				 pj_uint8_t digest[20]);
+                                 pj_uint8_t digest[20]);
 
 
 /**
@@ -102,6 +101,6 @@ PJ_DECL(void) pj_hmac_sha1_final(pj_hmac_sha1_context *hctx,
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_HMAC_SHA1_H__ */
+#endif  /* __PJLIB_UTIL_HMAC_SHA1_H__ */
 
 

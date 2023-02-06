@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -63,18 +62,18 @@
 
 
 static const char *desc = 
-" FILE		    						    \n"
-"		    						    \n"
-"  playfile.c	    						    \n"
-"		    						    \n"
-" PURPOSE	    						    \n"
-"		    						    \n"
-"  Demonstrate how to play a WAV file.				    \n"
-"		    						    \n"
-" USAGE		    						    \n"
-"		    						    \n"
-"  playfile FILE.WAV						    \n"
-"		    						    \n"
+" FILE                                                              \n"
+"                                                                   \n"
+"  playfile.c                                                       \n"
+"                                                                   \n"
+" PURPOSE                                                           \n"
+"                                                                   \n"
+"  Demonstrate how to play a WAV file.                              \n"
+"                                                                   \n"
+" USAGE                                                             \n"
+"                                                                   \n"
+"  playfile FILE.WAV                                                \n"
+"                                                                   \n"
 "  The WAV file could have mono or stereo channels with arbitrary   \n"
 "  sampling rate, but MUST contain uncompressed (i.e. 16bit) PCM.   \n";
 
@@ -94,9 +93,9 @@ int main(int argc, char *argv[])
 
 
     if (argc != 2) {
-    	puts("Error: filename required");
-	puts(desc);
-	return 1;
+        puts("Error: filename required");
+        puts(desc);
+        return 1;
     }
 
 
@@ -115,40 +114,40 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for our file player */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "wav",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "wav",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     /* Create file media port from the WAV file */
-    status = pjmedia_wav_player_port_create(  pool,	/* memory pool	    */
-					      argv[1],	/* file to play	    */
-					      20,	/* ptime.	    */
-					      0,	/* flags	    */
-					      0,	/* default buffer   */
-					      &file_port/* returned port    */
-					      );
+    status = pjmedia_wav_player_port_create(  pool,     /* memory pool      */
+                                              argv[1],  /* file to play     */
+                                              20,       /* ptime.           */
+                                              0,        /* flags            */
+                                              0,        /* default buffer   */
+                                              &file_port/* returned port    */
+                                              );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to use WAV file", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to use WAV file", status);
+        return 1;
     }
 
     /* Create sound player port. */
     status = pjmedia_snd_port_create_player( 
-		 pool,				    /* pool		    */
-		 -1,				    /* use default dev.	    */
-		 PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.	    */
-		 PJMEDIA_PIA_CCNT(&file_port->info),/* # of channels.	    */
-		 PJMEDIA_PIA_SPF(&file_port->info), /* samples per frame.   */
-		 PJMEDIA_PIA_BITS(&file_port->info),/* bits per sample.	    */
-		 0,				    /* options		    */
-		 &snd_port			    /* returned port	    */
-		 );
+                 pool,                              /* pool                 */
+                 -1,                                /* use default dev.     */
+                 PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.         */
+                 PJMEDIA_PIA_CCNT(&file_port->info),/* # of channels.       */
+                 PJMEDIA_PIA_SPF(&file_port->info), /* samples per frame.   */
+                 PJMEDIA_PIA_BITS(&file_port->info),/* bits per sample.     */
+                 0,                                 /* options              */
+                 &snd_port                          /* returned port        */
+                 );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open sound device", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to open sound device", status);
+        return 1;
     }
 
     /* Connect file port to the sound player.
@@ -173,7 +172,7 @@ int main(int argc, char *argv[])
     puts("Press <ENTER> to stop playing and quit");
 
     if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
-	puts("EOF while reading stdin, will quit now..");
+        puts("EOF while reading stdin, will quit now..");
     }
 
     

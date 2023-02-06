@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -48,28 +47,28 @@ PJ_DECL(void) pjsip_auth_deinit_parser(void);
 
 
 
-extern const pj_str_t	pjsip_USERNAME_STR, /**< "username" string const.   */
-			pjsip_REALM_STR,    /**< "realm" string const.	    */
-			pjsip_NONCE_STR,    /**< "nonce" string const.	    */
-			pjsip_URI_STR,	    /**< "uri" string const.	    */
-			pjsip_RESPONSE_STR, /**< "response" string const.   */
-			pjsip_ALGORITHM_STR,/**< "algorithm" string const.  */
-			pjsip_DOMAIN_STR,   /**< "domain" string const.	    */
-			pjsip_STALE_STR,    /**< "stale" string const.	    */
-			pjsip_QOP_STR,	    /**< "qop" string const.	    */
-			pjsip_CNONCE_STR,   /**< "cnonce" string const.	    */
-			pjsip_OPAQUE_STR,   /**< "opaque" string const.	    */
-			pjsip_NC_STR,	    /**< "nc" string const.	    */
-			pjsip_TRUE_STR,	    /**< "true" string const.	    */
-			pjsip_FALSE_STR,    /**< "false" string const.	    */
-			pjsip_DIGEST_STR,   /**< "digest" string const.	    */
-			pjsip_PGP_STR,	    /**< "pgp" string const.	    */
-			pjsip_BEARER_STR,   /**< "bearer" string const.     */
-			pjsip_MD5_STR,	    /**< "MD5" string const.	    */
-			pjsip_SHA256_STR,   /**< "SHA-256" string const.    */
-			pjsip_AUTH_STR;	    /**< "auth" string const.	    */
+extern const pj_str_t   pjsip_USERNAME_STR, /**< "username" string const.   */
+                        pjsip_REALM_STR,    /**< "realm" string const.      */
+                        pjsip_NONCE_STR,    /**< "nonce" string const.      */
+                        pjsip_URI_STR,      /**< "uri" string const.        */
+                        pjsip_RESPONSE_STR, /**< "response" string const.   */
+                        pjsip_ALGORITHM_STR,/**< "algorithm" string const.  */
+                        pjsip_DOMAIN_STR,   /**< "domain" string const.     */
+                        pjsip_STALE_STR,    /**< "stale" string const.      */
+                        pjsip_QOP_STR,      /**< "qop" string const.        */
+                        pjsip_CNONCE_STR,   /**< "cnonce" string const.     */
+                        pjsip_OPAQUE_STR,   /**< "opaque" string const.     */
+                        pjsip_NC_STR,       /**< "nc" string const.         */
+                        pjsip_TRUE_STR,     /**< "true" string const.       */
+                        pjsip_FALSE_STR,    /**< "false" string const.      */
+                        pjsip_DIGEST_STR,   /**< "digest" string const.     */
+                        pjsip_PGP_STR,      /**< "pgp" string const.        */
+                        pjsip_BEARER_STR,   /**< "bearer" string const.     */
+                        pjsip_MD5_STR,      /**< "MD5" string const.        */
+                        pjsip_SHA256_STR,   /**< "SHA-256" string const.    */
+                        pjsip_AUTH_STR;     /**< "auth" string const.       */
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_AUTH_SIP_AUTH_PARSER_H__ */
+#endif  /* __PJSIP_AUTH_SIP_AUTH_PARSER_H__ */
 

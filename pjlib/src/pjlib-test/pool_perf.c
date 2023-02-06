@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -30,10 +29,10 @@
 
 #define THIS_FILE   "test"
 
-#define LOOP	    10
-#define COUNT	    1024
-static unsigned	    sizes[COUNT];
-static char	   *p[COUNT];
+#define LOOP        10
+#define COUNT       1024
+static unsigned     sizes[COUNT];
+static char        *p[COUNT];
 #define MIN_SIZE    4
 #define MAX_SIZE    512
 static unsigned total_size;
@@ -44,17 +43,17 @@ static int pool_test_pool()
     int i;
     pj_pool_t *pool = pj_pool_create(mem, NULL, total_size + 4*COUNT, 0, NULL);
     if (!pool)
-	return -1;
+        return -1;
 
     for (i=0; i<COUNT; ++i) {
-	char *ptr;
-	if ( (ptr=(char*)pj_pool_alloc(pool, sizes[i])) == NULL) {
-	    PJ_LOG(3,(THIS_FILE,"   error: pool failed to allocate %d bytes",
-		      sizes[i]));
-	    pj_pool_release(pool);
-	    return -1;
-	}
-	*ptr = '\0';
+        char *ptr;
+        if ( (ptr=(char*)pj_pool_alloc(pool, sizes[i])) == NULL) {
+            PJ_LOG(3,(THIS_FILE,"   error: pool failed to allocate %d bytes",
+                      sizes[i]));
+            pj_pool_release(pool);
+            return -1;
+        }
+        *ptr = '\0';
     }
 
     pj_pool_release(pool);
@@ -69,48 +68,48 @@ static int pool_test_malloc_free()
     int i; /* must be signed */
 
     for (i=0; i<COUNT; ++i) {
-		p[i] = new char[sizes[i]];
-		if (!p[i]) {
-			PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
-					  sizes[i]));
-			--i;
-			while (i >= 0) {
-				delete [] p[i];
-				--i;
-			}
-			return -1;
-		}
-		*p[i] = '\0';
+                p[i] = new char[sizes[i]];
+                if (!p[i]) {
+                        PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
+                                          sizes[i]));
+                        --i;
+                        while (i >= 0) {
+                                delete [] p[i];
+                                --i;
+                        }
+                        return -1;
+                }
+                *p[i] = '\0';
     }
 
     for (i=0; i<COUNT; ++i) {
-    	delete [] p[i];
+        delete [] p[i];
     }
 
     return 0;
 }
 
-#else	/* PJ_SYMBIAN */
+#else   /* PJ_SYMBIAN */
 
 static int pool_test_malloc_free()
 {
     int i; /* must be signed */
 
     for (i=0; i<COUNT; ++i) {
-	p[i] = (char*)malloc(sizes[i]);
-	if (!p[i]) {
-	    PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
-		      sizes[i]));
-	    --i;
-	    while (i >= 0)
-		free(p[i]), --i;
-	    return -1;
-	}
-	*p[i] = '\0';
+        p[i] = (char*)malloc(sizes[i]);
+        if (!p[i]) {
+            PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
+                      sizes[i]));
+            --i;
+            while (i >= 0)
+                free(p[i]), --i;
+            return -1;
+        }
+        *p[i] = '\0';
     }
 
     for (i=0; i<COUNT; ++i) {
-	free(p[i]);
+        free(p[i]);
     }
 
     return 0;
@@ -127,12 +126,12 @@ int pool_perf_test()
 
     /* Initialize size of chunks to allocate in for the test. */
     for (i=0; i<COUNT; ++i) {
-	unsigned aligned_size;
-	sizes[i] = MIN_SIZE + (pj_rand() % MAX_SIZE);
-	aligned_size = sizes[i];
-	if (aligned_size & (PJ_POOL_ALIGNMENT-1))
-	    aligned_size = ((aligned_size + PJ_POOL_ALIGNMENT - 1)) & ~(PJ_POOL_ALIGNMENT - 1);
-	total_size += aligned_size;
+        unsigned aligned_size;
+        sizes[i] = MIN_SIZE + (pj_rand() % MAX_SIZE);
+        aligned_size = sizes[i];
+        if (aligned_size & (PJ_POOL_ALIGNMENT-1))
+            aligned_size = ((aligned_size + PJ_POOL_ALIGNMENT - 1)) & ~(PJ_POOL_ALIGNMENT - 1);
+        total_size += aligned_size;
     }
 
     /* Add some more for pool admin area */
@@ -145,26 +144,26 @@ int pool_perf_test()
     pool_test_malloc_free();
 
     for (i=0; i<LOOP; ++i) {
-	pj_get_timestamp(&start);
-	if (pool_test_pool()) {
-	    return 1;
-	}
-	pj_get_timestamp(&end);
-	pool_time += (end.u32.lo - start.u32.lo);
+        pj_get_timestamp(&start);
+        if (pool_test_pool()) {
+            return 1;
+        }
+        pj_get_timestamp(&end);
+        pool_time += (end.u32.lo - start.u32.lo);
 
-	pj_get_timestamp(&start);
-	if (pool_test_malloc_free()) {
-	    return 2;
-	}
-	pj_get_timestamp(&end);
-	malloc_time += (end.u32.lo - start.u32.lo);
+        pj_get_timestamp(&start);
+        if (pool_test_malloc_free()) {
+            return 2;
+        }
+        pj_get_timestamp(&end);
+        malloc_time += (end.u32.lo - start.u32.lo);
 
-	pj_get_timestamp(&start);
-	if (pool_test_pool()) {
-	    return 4;
-	}
-	pj_get_timestamp(&end);
-	pool_time2 += (end.u32.lo - start.u32.lo);
+        pj_get_timestamp(&start);
+        if (pool_test_pool()) {
+            return 4;
+        }
+        pj_get_timestamp(&end);
+        pool_time2 += (end.u32.lo - start.u32.lo);
     }
 
     PJ_LOG(4,(THIS_FILE,"..LOOP count:                        %u",LOOP));
@@ -175,20 +174,20 @@ int pool_perf_test()
 
     if (pool_time2==0) pool_time2=1;
     if (pool_time < pool_time2)
-	best = pool_time, worst = pool_time2;
+        best = pool_time, worst = pool_time2;
     else
-	best = pool_time2, worst = pool_time;
+        best = pool_time2, worst = pool_time;
     
     /* avoid division by zero */
     if (best==0) best=1;
     if (worst==0) worst=1;
 
     PJ_LOG(3, (THIS_FILE, "..pool speedup over malloc best=%dx, worst=%dx", 
-			  (int)(malloc_time/best),
-			  (int)(malloc_time/worst)));
+                          (int)(malloc_time/best),
+                          (int)(malloc_time/worst)));
     return 0;
 }
 
 
-#endif	/* INCLUDE_POOL_PERF_TEST */
+#endif  /* INCLUDE_POOL_PERF_TEST */
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -22,7 +21,7 @@
 
 
 PJ_DEF(void) pj_hmac_sha1_init(pj_hmac_sha1_context *hctx, 
-			       const pj_uint8_t *key, unsigned key_len)
+                               const pj_uint8_t *key, unsigned key_len)
 {
     pj_uint8_t k_ipad[64];
     pj_uint8_t tk[20];
@@ -63,13 +62,13 @@ PJ_DEF(void) pj_hmac_sha1_init(pj_hmac_sha1_context *hctx,
 }
 
 PJ_DEF(void) pj_hmac_sha1_update(pj_hmac_sha1_context *hctx,
-				 const pj_uint8_t *input, unsigned input_len)
+                                 const pj_uint8_t *input, unsigned input_len)
 {
     pj_sha1_update(&hctx->context, input, input_len);
 }
 
 PJ_DEF(void) pj_hmac_sha1_final(pj_hmac_sha1_context *hctx,
-				pj_uint8_t digest[20])
+                                pj_uint8_t digest[20])
 {
     pj_sha1_final(&hctx->context, digest);
 
@@ -83,8 +82,8 @@ PJ_DEF(void) pj_hmac_sha1_final(pj_hmac_sha1_context *hctx,
 }
 
 PJ_DEF(void) pj_hmac_sha1(const pj_uint8_t *input, unsigned input_len, 
-			  const pj_uint8_t *key, unsigned key_len, 
-			  pj_uint8_t digest[20] )
+                          const pj_uint8_t *key, unsigned key_len, 
+                          pj_uint8_t digest[20] )
 {
     pj_hmac_sha1_context ctx;
 

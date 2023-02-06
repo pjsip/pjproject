@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -64,89 +63,89 @@ enum pjmedia_transport_udp_options
  * Create an RTP and RTCP sockets and bind the sockets to the specified
  * port to create media transport.
  *
- * @param endpt	    The media endpoint instance.
- * @param name	    Optional name to be assigned to the transport.
- * @param port	    UDP port number for the RTP socket. The RTCP port number
- *		    will be set to one above RTP port.
+ * @param endpt     The media endpoint instance.
+ * @param name      Optional name to be assigned to the transport.
+ * @param port      UDP port number for the RTP socket. The RTCP port number
+ *                  will be set to one above RTP port.
  * @param options   Options, bitmask of #pjmedia_transport_udp_options.
- * @param p_tp	    Pointer to receive the transport instance.
+ * @param p_tp      Pointer to receive the transport instance.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_transport_udp_create(pjmedia_endpt *endpt,
-						  const char *name,
-						  int port,
-						  unsigned options,
-						  pjmedia_transport **p_tp);
+                                                  const char *name,
+                                                  int port,
+                                                  unsigned options,
+                                                  pjmedia_transport **p_tp);
 
 
 /**
  * Create an RTP and RTCP sockets and bind the sockets to the specified
  * address and port to create media transport.
  *
- * @param endpt	    The media endpoint instance.
- * @param name	    Optional name to be assigned to the transport.
- * @param addr	    Optional local address to bind the sockets to. If this
- *		    argument is NULL or empty, the sockets will be bound
- *		    to all interface.
- * @param port	    UDP port number for the RTP socket. The RTCP port number
- *		    will be set to one above RTP port.
+ * @param endpt     The media endpoint instance.
+ * @param name      Optional name to be assigned to the transport.
+ * @param addr      Optional local address to bind the sockets to. If this
+ *                  argument is NULL or empty, the sockets will be bound
+ *                  to all interface.
+ * @param port      UDP port number for the RTP socket. The RTCP port number
+ *                  will be set to one above RTP port.
  * @param options   Options, bitmask of #pjmedia_transport_udp_options.
- * @param p_tp	    Pointer to receive the transport instance.
+ * @param p_tp      Pointer to receive the transport instance.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
-						   const char *name,
-						   const pj_str_t *addr,
-						   int port,
-						   unsigned options,
-						   pjmedia_transport **p_tp);
+                                                   const char *name,
+                                                   const pj_str_t *addr,
+                                                   int port,
+                                                   unsigned options,
+                                                   pjmedia_transport **p_tp);
 
 /**
  * Another variant of #pjmedia_transport_udp_create() which allows
  * the creation of IPv6 transport.
  *
- * @param endpt	    The media endpoint instance.
- * @param af	    Address family, which can be pj_AF_INET() for IPv4 or
- *		    pj_AF_INET6() for IPv6.
- * @param name	    Optional name to be assigned to the transport.
- * @param addr	    Optional local address to bind the sockets to. If this
- *		    argument is NULL or empty, the sockets will be bound
- *		    to all interface.
- * @param port	    UDP port number for the RTP socket. The RTCP port number
- *		    will be set to one above RTP port.
+ * @param endpt     The media endpoint instance.
+ * @param af        Address family, which can be pj_AF_INET() for IPv4 or
+ *                  pj_AF_INET6() for IPv6.
+ * @param name      Optional name to be assigned to the transport.
+ * @param addr      Optional local address to bind the sockets to. If this
+ *                  argument is NULL or empty, the sockets will be bound
+ *                  to all interface.
+ * @param port      UDP port number for the RTP socket. The RTCP port number
+ *                  will be set to one above RTP port.
  * @param options   Options, bitmask of #pjmedia_transport_udp_options.
- * @param p_tp	    Pointer to receive the transport instance.
+ * @param p_tp      Pointer to receive the transport instance.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
-						   int af,
-						   const char *name,
-						   const pj_str_t *addr,
-						   int port,
-						   unsigned options,
-						   pjmedia_transport **p_tp);
+                                                   int af,
+                                                   const char *name,
+                                                   const pj_str_t *addr,
+                                                   int port,
+                                                   unsigned options,
+                                                   pjmedia_transport **p_tp);
 
 
 /**
  * Create UDP stream transport from existing sockets. Use this function when
  * the sockets have previously been created.
  *
- * @param endpt	    The media endpoint instance.
- * @param name	    Optional name to be assigned to the transport.
- * @param si	    Media socket info containing the RTP and RTCP sockets.
+ * @param endpt     The media endpoint instance.
+ * @param name      Optional name to be assigned to the transport.
+ * @param si        Media socket info containing the RTP and RTCP sockets.
  * @param options   Options, bitmask of #pjmedia_transport_udp_options.
- * @param p_tp	    Pointer to receive the transport instance.
+ * @param p_tp      Pointer to receive the transport instance.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_transport_udp_attach(pjmedia_endpt *endpt,
-						  const char *name,
-						  const pjmedia_sock_info *si,
-						  unsigned options,
-						  pjmedia_transport **p_tp);
+                                                  const char *name,
+                                                  const pjmedia_sock_info *si,
+                                                  unsigned options,
+                                                  pjmedia_transport **p_tp);
 
 
 PJ_END_DECL
@@ -157,6 +156,6 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_TRANSPORT_UDP_H__ */
+#endif  /* __PJMEDIA_TRANSPORT_UDP_H__ */
 
 

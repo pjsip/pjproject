@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -29,7 +28,7 @@
 PJ_DEF(const char *) pj_dns_get_type_name(int type)
 {
     switch (type) {
-    case PJ_DNS_TYPE_A:	    return "A";
+    case PJ_DNS_TYPE_A:     return "A";
     case PJ_DNS_TYPE_AAAA:  return "AAAA";
     case PJ_DNS_TYPE_SRV:   return "SRV";
     case PJ_DNS_TYPE_NS:    return "NS";
@@ -54,10 +53,10 @@ static void write16(pj_uint8_t *p, pj_uint16_t val)
  * Initialize a DNS query transaction.
  */
 PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
-				       unsigned *size,
-				       pj_uint16_t id,
-				       int qtype,
-				       const pj_str_t *name)
+                                       unsigned *size,
+                                       pj_uint16_t id,
+                                       int qtype,
+                                       const pj_str_t *name)
 {
     pj_uint8_t *p = (pj_uint8_t*)packet;
     const char *startlabel, *endlabel, *endname;
@@ -86,14 +85,14 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
     startlabel = endlabel = name->ptr;
     endname = name->ptr + name->slen;
     while (endlabel != endname) {
-	while (endlabel != endname && *endlabel != '.')
-	    ++endlabel;
-	*p++ = (pj_uint8_t)(endlabel - startlabel);
-	pj_memcpy(p, startlabel, endlabel-startlabel);
-	p += (endlabel-startlabel);
-	if (endlabel != endname && *endlabel == '.')
-	    ++endlabel;
-	startlabel = endlabel;
+        while (endlabel != endname && *endlabel != '.')
+            ++endlabel;
+        *p++ = (pj_uint8_t)(endlabel - startlabel);
+        pj_memcpy(p, startlabel, endlabel-startlabel);
+        p += (endlabel-startlabel);
+        if (endlabel != endname && *endlabel == '.')
+            ++endlabel;
+        startlabel = endlabel;
     }
     *p++ = '\0';
 
@@ -116,64 +115,66 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
  * it may contain pointers when name compression is applied) 
  */
 static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt, 
-				const pj_uint8_t *start, const pj_uint8_t *max, 
-				int *parsed_len, int *name_len)
+                                const pj_uint8_t *start, const pj_uint8_t *max, 
+                                int *parsed_len, int *name_len)
 {
     const pj_uint8_t *p;
     pj_status_t status;
 
     /* Limit the number of recursion */
     if (rec_counter > 10) {
-	/* Too many name recursion */
-	return PJLIB_UTIL_EDNSINNAMEPTR;
+        /* Too many name recursion */
+        return PJLIB_UTIL_EDNSINNAMEPTR;
     }
 
     *name_len = *parsed_len = 0;
     p = start;
     while (*p) {
-	if ((*p & 0xc0) == 0xc0) {
-	    /* Compression is found! */
-	    int ptr_len = 0;
-	    int dummy;
-	    pj_uint16_t offset;
+        if ((*p & 0xc0) == 0xc0) {
+            /* Compression is found! */
+            int ptr_len = 0;
+            int dummy;
+            pj_uint16_t offset;
 
-	    /* Get the 14bit offset */
-	    pj_memcpy(&offset, p, 2);
-	    offset ^= pj_htons((pj_uint16_t)(0xc0 << 8));
-	    offset = pj_ntohs(offset);
+            /* Get the 14bit offset */
+            pj_memcpy(&offset, p, 2);
+            offset ^= pj_htons((pj_uint16_t)(0xc0 << 8));
+            offset = pj_ntohs(offset);
 
-	    /* Check that offset is valid */
-	    if (offset >= max - pkt)
-		return PJLIB_UTIL_EDNSINNAMEPTR;
+            /* Check that offset is valid */
+            if (offset >= max - pkt)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
 
-	    /* Get the name length from that offset. */
-	    status = get_name_len(rec_counter+1, pkt, pkt + offset, max, 
-				  &dummy, &ptr_len);
-	    if (status != PJ_SUCCESS)
-		return status;
+            /* Get the name length from that offset. */
+            status = get_name_len(rec_counter+1, pkt, pkt + offset, max, 
+                                  &dummy, &ptr_len);
+            if (status != PJ_SUCCESS)
+                return status;
 
-	    *parsed_len += 2;
-	    *name_len += ptr_len;
+            *parsed_len += 2;
+            *name_len += ptr_len;
 
-	    return PJ_SUCCESS;
-	} else {
-	    unsigned label_len = *p;
+            return PJ_SUCCESS;
+        } else {
+            unsigned label_len = *p;
 
-	    /* Check that label length is valid */
-	    if (pkt+label_len > max)
-		return PJLIB_UTIL_EDNSINNAMEPTR;
+            /* Check that label length is valid.
+             * Each label consists of an octet length (of size 1) followed
+             * by the octet of the specified length (label_len). Then it
+             * must be followed by either another label's octet length or
+             * a zero length octet (that terminates the sequence).
+             */
+            if (p+1+label_len+1 > max)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
 
-	    p += (label_len + 1);
-	    *parsed_len += (label_len + 1);
+            p += (label_len + 1);
+            *parsed_len += (label_len + 1);
 
-	    if (*p != 0)
-		++label_len;
-	    
-	    *name_len += label_len;
-
-	    if (p >= max)
-		return PJLIB_UTIL_EDNSINSIZE;
-	}
+            if (*p != 0)
+                ++label_len;
+            
+            *name_len += label_len;
+        }
     }
     ++p;
     (*parsed_len)++;
@@ -186,58 +187,60 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
  * it may contain pointers when compression is applied).
  */
 static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt, 
-			    const pj_uint8_t *start, const pj_uint8_t *max,
-			    pj_str_t *name)
+                            const pj_uint8_t *start, const pj_uint8_t *max,
+                            pj_str_t *name)
 {
     const pj_uint8_t *p;
     pj_status_t status;
 
     /* Limit the number of recursion */
     if (rec_counter > 10) {
-	/* Too many name recursion */
-	return PJLIB_UTIL_EDNSINNAMEPTR;
+        /* Too many name recursion */
+        return PJLIB_UTIL_EDNSINNAMEPTR;
     }
 
     p = start;
     while (*p) {
-	if ((*p & 0xc0) == 0xc0) {
-	    /* Compression is found! */
-	    pj_uint16_t offset;
+        if ((*p & 0xc0) == 0xc0) {
+            /* Compression is found! */
+            pj_uint16_t offset;
 
-	    /* Get the 14bit offset */
-	    pj_memcpy(&offset, p, 2);
-	    offset ^= pj_htons((pj_uint16_t)(0xc0 << 8));
-	    offset = pj_ntohs(offset);
+            /* Get the 14bit offset */
+            pj_memcpy(&offset, p, 2);
+            offset ^= pj_htons((pj_uint16_t)(0xc0 << 8));
+            offset = pj_ntohs(offset);
 
-	    /* Check that offset is valid */
-	    if (offset >= max - pkt)
-		return PJLIB_UTIL_EDNSINNAMEPTR;
+            /* Check that offset is valid */
+            if (offset >= max - pkt)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
 
-	    /* Retrieve the name from that offset. */
-	    status = get_name(rec_counter+1, pkt, pkt + offset, max, name);
-	    if (status != PJ_SUCCESS)
-		return status;
+            /* Retrieve the name from that offset. */
+            status = get_name(rec_counter+1, pkt, pkt + offset, max, name);
+            if (status != PJ_SUCCESS)
+                return status;
 
-	    return PJ_SUCCESS;
-	} else {
-	    unsigned label_len = *p;
+            return PJ_SUCCESS;
+        } else {
+            unsigned label_len = *p;
 
-	    /* Check that label length is valid */
-	    if (pkt+label_len > max)
-		return PJLIB_UTIL_EDNSINNAMEPTR;
+            /* Check that label length is valid.
+             * Each label consists of an octet length (of size 1) followed
+             * by the octet of the specified length (label_len). Then it
+             * must be followed by either another label's octet length or
+             * a zero length octet (that terminates the sequence).
+             */
+            if (p+1+label_len+1 > max)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
 
-	    pj_memcpy(name->ptr + name->slen, p+1, label_len);
-	    name->slen += label_len;
+            pj_memcpy(name->ptr + name->slen, p+1, label_len);
+            name->slen += label_len;
 
-	    p += label_len + 1;
-	    if (*p != 0) {
-		*(name->ptr + name->slen) = '.';
-		++name->slen;
-	    }
-
-	    if (p >= max)
-		return PJLIB_UTIL_EDNSINSIZE;
-	}
+            p += label_len + 1;
+            if (*p != 0) {
+                *(name->ptr + name->slen) = '.';
+                ++name->slen;
+            }
+        }
     }
 
     return PJ_SUCCESS;
@@ -246,8 +249,8 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
 
 /* Parse query records. */
 static pj_status_t parse_query(pj_dns_parsed_query *q, pj_pool_t *pool,
-			       const pj_uint8_t *pkt, const pj_uint8_t *start,
-			       const pj_uint8_t *max, int *parsed_len)
+                               const pj_uint8_t *pkt, const pj_uint8_t *start,
+                               const pj_uint8_t *max, int *parsed_len)
 {
     const pj_uint8_t *p = start;
     int name_len, name_part_len;
@@ -256,7 +259,7 @@ static pj_status_t parse_query(pj_dns_parsed_query *q, pj_pool_t *pool,
     /* Get the length of the name */
     status = get_name_len(0, pkt, start, max, &name_part_len, &name_len);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Allocate memory for the name */
     q->name.ptr = (char*) pj_pool_alloc(pool, name_len+4);
@@ -265,9 +268,13 @@ static pj_status_t parse_query(pj_dns_parsed_query *q, pj_pool_t *pool,
     /* Get the name */
     status = get_name(0, pkt, start, max, &q->name);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     p = (start + name_part_len);
+
+    /* Check the size can accomodate next few fields. */
+    if (p + 4 > max)
+        return PJLIB_UTIL_EDNSINSIZE;
 
     /* Get the type */
     pj_memcpy(&q->type, p, 2);
@@ -287,9 +294,9 @@ static pj_status_t parse_query(pj_dns_parsed_query *q, pj_pool_t *pool,
 
 /* Parse RR records */
 static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
-			    const pj_uint8_t *pkt,
-			    const pj_uint8_t *start, const pj_uint8_t *max,
-			    int *parsed_len)
+                            const pj_uint8_t *pkt,
+                            const pj_uint8_t *start, const pj_uint8_t *max,
+                            int *parsed_len)
 {
     const pj_uint8_t *p = start;
     int name_len, name_part_len;
@@ -298,7 +305,7 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
     /* Get the length of the name */
     status = get_name_len(0, pkt, start, max, &name_part_len, &name_len);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     /* Allocate memory for the name */
     rr->name.ptr = (char*) pj_pool_alloc(pool, name_len+4);
@@ -307,13 +314,13 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
     /* Get the name */
     status = get_name(0, pkt, start, max, &rr->name);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     p = (start + name_part_len);
 
     /* Check the size can accomodate next few fields. */
     if (p+10 > max)
-	return PJLIB_UTIL_EDNSINSIZE;
+        return PJLIB_UTIL_EDNSINSIZE;
 
     /* Get the type */
     pj_memcpy(&rr->type, p, 2);
@@ -327,13 +334,13 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
 
     /* Class MUST be IN */
     if (rr->dnsclass != 1) {
-	/* Class is not IN, return error only if type is known (see #1889) */
-	if (rr->type == PJ_DNS_TYPE_A     || rr->type == PJ_DNS_TYPE_AAAA  ||
-	    rr->type == PJ_DNS_TYPE_CNAME || rr->type == PJ_DNS_TYPE_NS    ||
-	    rr->type == PJ_DNS_TYPE_PTR   || rr->type == PJ_DNS_TYPE_SRV)
-	{
-	    return PJLIB_UTIL_EDNSINCLASS;
-	}
+        /* Class is not IN, return error only if type is known (see #1889) */
+        if (rr->type == PJ_DNS_TYPE_A     || rr->type == PJ_DNS_TYPE_AAAA  ||
+            rr->type == PJ_DNS_TYPE_CNAME || rr->type == PJ_DNS_TYPE_NS    ||
+            rr->type == PJ_DNS_TYPE_PTR   || rr->type == PJ_DNS_TYPE_SRV)
+        {
+            return PJLIB_UTIL_EDNSINCLASS;
+        }
     }
 
     /* Get TTL */
@@ -348,76 +355,76 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
 
     /* Check that length is valid */
     if (p + rr->rdlength > max)
-	return PJLIB_UTIL_EDNSINSIZE;
+        return PJLIB_UTIL_EDNSINSIZE;
 
     /* Parse some well known records */
     if (rr->type == PJ_DNS_TYPE_A) {
-	pj_memcpy(&rr->rdata.a.ip_addr, p, 4);
-	p += 4;
+        pj_memcpy(&rr->rdata.a.ip_addr, p, 4);
+        p += 4;
 
     } else if (rr->type == PJ_DNS_TYPE_AAAA) {
-	pj_memcpy(&rr->rdata.aaaa.ip_addr, p, 16);
-	p += 16;
+        pj_memcpy(&rr->rdata.aaaa.ip_addr, p, 16);
+        p += 16;
 
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
-	       rr->type == PJ_DNS_TYPE_NS ||
-	       rr->type == PJ_DNS_TYPE_PTR) 
+               rr->type == PJ_DNS_TYPE_NS ||
+               rr->type == PJ_DNS_TYPE_PTR) 
     {
 
-	/* Get the length of the target name */
-	status = get_name_len(0, pkt, p, max, &name_part_len, &name_len);
-	if (status != PJ_SUCCESS)
-	    return status;
+        /* Get the length of the target name */
+        status = get_name_len(0, pkt, p, max, &name_part_len, &name_len);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	/* Allocate memory for the name */
-	rr->rdata.cname.name.ptr = (char*) pj_pool_alloc(pool, name_len);
-	rr->rdata.cname.name.slen = 0;
+        /* Allocate memory for the name */
+        rr->rdata.cname.name.ptr = (char*) pj_pool_alloc(pool, name_len);
+        rr->rdata.cname.name.slen = 0;
 
-	/* Get the name */
-	status = get_name(0, pkt, p, max, &rr->rdata.cname.name);
-	if (status != PJ_SUCCESS)
-	    return status;
+        /* Get the name */
+        status = get_name(0, pkt, p, max, &rr->rdata.cname.name);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	p += name_part_len;
+        p += name_part_len;
 
     } else if (rr->type == PJ_DNS_TYPE_SRV) {
 
-	/* Priority */
-	pj_memcpy(&rr->rdata.srv.prio, p, 2);
-	rr->rdata.srv.prio = pj_ntohs(rr->rdata.srv.prio);
-	p += 2;
+        /* Priority */
+        pj_memcpy(&rr->rdata.srv.prio, p, 2);
+        rr->rdata.srv.prio = pj_ntohs(rr->rdata.srv.prio);
+        p += 2;
 
-	/* Weight */
-	pj_memcpy(&rr->rdata.srv.weight, p, 2);
-	rr->rdata.srv.weight = pj_ntohs(rr->rdata.srv.weight);
-	p += 2;
+        /* Weight */
+        pj_memcpy(&rr->rdata.srv.weight, p, 2);
+        rr->rdata.srv.weight = pj_ntohs(rr->rdata.srv.weight);
+        p += 2;
 
-	/* Port */
-	pj_memcpy(&rr->rdata.srv.port, p, 2);
-	rr->rdata.srv.port = pj_ntohs(rr->rdata.srv.port);
-	p += 2;
-	
-	/* Get the length of the target name */
-	status = get_name_len(0, pkt, p, max, &name_part_len, &name_len);
-	if (status != PJ_SUCCESS)
-	    return status;
+        /* Port */
+        pj_memcpy(&rr->rdata.srv.port, p, 2);
+        rr->rdata.srv.port = pj_ntohs(rr->rdata.srv.port);
+        p += 2;
+        
+        /* Get the length of the target name */
+        status = get_name_len(0, pkt, p, max, &name_part_len, &name_len);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	/* Allocate memory for the name */
-	rr->rdata.srv.target.ptr = (char*) pj_pool_alloc(pool, name_len);
-	rr->rdata.srv.target.slen = 0;
+        /* Allocate memory for the name */
+        rr->rdata.srv.target.ptr = (char*) pj_pool_alloc(pool, name_len);
+        rr->rdata.srv.target.slen = 0;
 
-	/* Get the name */
-	status = get_name(0, pkt, p, max, &rr->rdata.srv.target);
-	if (status != PJ_SUCCESS)
-	    return status;
-	p += name_part_len;
+        /* Get the name */
+        status = get_name(0, pkt, p, max, &rr->rdata.srv.target);
+        if (status != PJ_SUCCESS)
+            return status;
+        p += name_part_len;
 
     } else {
-	/* Copy the raw data */
-	rr->data = pj_pool_alloc(pool, rr->rdlength);
-	pj_memcpy(rr->data, p, rr->rdlength);
+        /* Copy the raw data */
+        rr->data = pj_pool_alloc(pool, rr->rdlength);
+        pj_memcpy(rr->data, p, rr->rdlength);
 
-	p += rr->rdlength;
+        p += rr->rdlength;
     }
 
     *parsed_len = (int)(p - start);
@@ -429,9 +436,9 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
  * Parse raw DNS packet into DNS packet structure.
  */
 PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
-				  	 const void *packet,
-					 unsigned size,
-					 pj_dns_parsed_packet **p_res)
+                                         const void *packet,
+                                         unsigned size,
+                                         pj_dns_parsed_packet **p_res)
 {
     pj_dns_parsed_packet *res;
     const pj_uint8_t *start, *end;
@@ -443,14 +450,14 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
 
     /* Packet size must be at least as big as the header */
     if (size < sizeof(pj_dns_hdr))
-	return PJLIB_UTIL_EDNSINSIZE;
+        return PJLIB_UTIL_EDNSINSIZE;
 
     /* Create the structure */
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     /* Copy the DNS header, and convert endianness to host byte order */
     pj_memcpy(&res->hdr, packet, sizeof(pj_dns_hdr));
-    res->hdr.id	      = pj_ntohs(res->hdr.id);
+    res->hdr.id       = pj_ntohs(res->hdr.id);
     res->hdr.flags    = pj_ntohs(res->hdr.flags);
     res->hdr.qdcount  = pj_ntohs(res->hdr.qdcount);
     res->hdr.anscount = pj_ntohs(res->hdr.anscount);
@@ -464,73 +471,73 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
     /* Parse query records (if any).
      */
     if (res->hdr.qdcount) {
-	res->q = (pj_dns_parsed_query*)
-		 pj_pool_zalloc(pool, res->hdr.qdcount *
-				      sizeof(pj_dns_parsed_query));
-	for (i=0; i<res->hdr.qdcount; ++i) {
-	    int parsed_len = 0;
-	    
-	    status = parse_query(&res->q[i], pool, (const pj_uint8_t*)packet, 
-	    			 start, end, &parsed_len);
-	    if (status != PJ_SUCCESS)
-		return status;
+        res->q = (pj_dns_parsed_query*)
+                 pj_pool_zalloc(pool, res->hdr.qdcount *
+                                      sizeof(pj_dns_parsed_query));
+        for (i=0; i<res->hdr.qdcount; ++i) {
+            int parsed_len = 0;
+            
+            status = parse_query(&res->q[i], pool, (const pj_uint8_t*)packet, 
+                                 start, end, &parsed_len);
+            if (status != PJ_SUCCESS)
+                return status;
 
-	    start += parsed_len;
-	}
+            start += parsed_len;
+        }
     }
 
     /* Parse answer, if any */
     if (res->hdr.anscount) {
-	res->ans = (pj_dns_parsed_rr*)
-		   pj_pool_zalloc(pool, res->hdr.anscount * 
-					sizeof(pj_dns_parsed_rr));
+        res->ans = (pj_dns_parsed_rr*)
+                   pj_pool_zalloc(pool, res->hdr.anscount * 
+                                        sizeof(pj_dns_parsed_rr));
 
-	for (i=0; i<res->hdr.anscount; ++i) {
-	    int parsed_len;
+        for (i=0; i<res->hdr.anscount; ++i) {
+            int parsed_len;
 
-	    status = parse_rr(&res->ans[i], pool, (const pj_uint8_t*)packet, 
-	    		      start, end, &parsed_len);
-	    if (status != PJ_SUCCESS)
-		return status;
+            status = parse_rr(&res->ans[i], pool, (const pj_uint8_t*)packet, 
+                              start, end, &parsed_len);
+            if (status != PJ_SUCCESS)
+                return status;
 
-	    start += parsed_len;
-	}
+            start += parsed_len;
+        }
     }
 
     /* Parse authoritative NS records, if any */
     if (res->hdr.nscount) {
-	res->ns = (pj_dns_parsed_rr*)
-		  pj_pool_zalloc(pool, res->hdr.nscount *
-				       sizeof(pj_dns_parsed_rr));
+        res->ns = (pj_dns_parsed_rr*)
+                  pj_pool_zalloc(pool, res->hdr.nscount *
+                                       sizeof(pj_dns_parsed_rr));
 
-	for (i=0; i<res->hdr.nscount; ++i) {
-	    int parsed_len;
+        for (i=0; i<res->hdr.nscount; ++i) {
+            int parsed_len;
 
-	    status = parse_rr(&res->ns[i], pool, (const pj_uint8_t*)packet, 
-	    		      start, end, &parsed_len);
-	    if (status != PJ_SUCCESS)
-		return status;
+            status = parse_rr(&res->ns[i], pool, (const pj_uint8_t*)packet, 
+                              start, end, &parsed_len);
+            if (status != PJ_SUCCESS)
+                return status;
 
-	    start += parsed_len;
-	}
+            start += parsed_len;
+        }
     }
 
     /* Parse additional RR answer, if any */
     if (res->hdr.arcount) {
-	res->arr = (pj_dns_parsed_rr*)
-		   pj_pool_zalloc(pool, res->hdr.arcount *
-					sizeof(pj_dns_parsed_rr));
+        res->arr = (pj_dns_parsed_rr*)
+                   pj_pool_zalloc(pool, res->hdr.arcount *
+                                        sizeof(pj_dns_parsed_rr));
 
-	for (i=0; i<res->hdr.arcount; ++i) {
-	    int parsed_len;
+        for (i=0; i<res->hdr.arcount; ++i) {
+            int parsed_len;
 
-	    status = parse_rr(&res->arr[i], pool, (const pj_uint8_t*)packet, 
-	    		      start, end, &parsed_len);
-	    if (status != PJ_SUCCESS)
-		return status;
+            status = parse_rr(&res->arr[i], pool, (const pj_uint8_t*)packet, 
+                              start, end, &parsed_len);
+            if (status != PJ_SUCCESS)
+                return status;
 
-	    start += parsed_len;
-	}
+            start += parsed_len;
+        }
     }
 
     /* Looks like everything is okay */
@@ -545,41 +552,41 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
  * the string with the pool, but rather just use the pointer there.
  */
 static void apply_name_table( unsigned *count,
-			      pj_str_t nametable[],
-		    	      const pj_str_t *src,
-			      pj_pool_t *pool,
-			      pj_str_t *dst)
+                              pj_str_t nametable[],
+                              const pj_str_t *src,
+                              pj_pool_t *pool,
+                              pj_str_t *dst)
 {
     unsigned i;
 
     /* Scan strings in nametable */
     for (i=0; i<*count; ++i) {
-	if (pj_stricmp(&nametable[i], src) == 0)
-	    break;
+        if (pj_stricmp(&nametable[i], src) == 0)
+            break;
     }
 
     /* If name is found in nametable, use the pointer in the nametable */
     if (i != *count) {
-	dst->ptr = nametable[i].ptr;
-	dst->slen = nametable[i].slen;
-	return;
+        dst->ptr = nametable[i].ptr;
+        dst->slen = nametable[i].slen;
+        return;
     }
 
     /* Otherwise duplicate the string, and insert new name in nametable */
     pj_strdup(pool, dst, src);
 
     if (*count < PJ_DNS_MAX_NAMES_IN_NAMETABLE) {
-	nametable[*count].ptr = dst->ptr;
-	nametable[*count].slen = dst->slen;
+        nametable[*count].ptr = dst->ptr;
+        nametable[*count].slen = dst->slen;
 
-	++(*count);
+        ++(*count);
     }
 }
 
 static void copy_query(pj_pool_t *pool, pj_dns_parsed_query *dst,
-		       const pj_dns_parsed_query *src,
-		       unsigned *nametable_count,
-		       pj_str_t nametable[])
+                       const pj_dns_parsed_query *src,
+                       unsigned *nametable_count,
+                       pj_str_t nametable[])
 {
     pj_memcpy(dst, src, sizeof(*src));
     apply_name_table(nametable_count, nametable, &src->name, pool, &dst->name);
@@ -587,32 +594,32 @@ static void copy_query(pj_pool_t *pool, pj_dns_parsed_query *dst,
 
 
 static void copy_rr(pj_pool_t *pool, pj_dns_parsed_rr *dst,
-		    const pj_dns_parsed_rr *src,
-		    unsigned *nametable_count,
-		    pj_str_t nametable[])
+                    const pj_dns_parsed_rr *src,
+                    unsigned *nametable_count,
+                    pj_str_t nametable[])
 {
     pj_memcpy(dst, src, sizeof(*src));
     apply_name_table(nametable_count, nametable, &src->name, pool, &dst->name);
 
     if (src->data) {
-	dst->data = pj_pool_alloc(pool, src->rdlength);
-	pj_memcpy(dst->data, src->data, src->rdlength);
+        dst->data = pj_pool_alloc(pool, src->rdlength);
+        pj_memcpy(dst->data, src->data, src->rdlength);
     }
 
     if (src->type == PJ_DNS_TYPE_SRV) {
-	apply_name_table(nametable_count, nametable, &src->rdata.srv.target, 
-			 pool, &dst->rdata.srv.target);
+        apply_name_table(nametable_count, nametable, &src->rdata.srv.target, 
+                         pool, &dst->rdata.srv.target);
     } else if (src->type == PJ_DNS_TYPE_A) {
-	dst->rdata.a.ip_addr.s_addr =  src->rdata.a.ip_addr.s_addr;
+        dst->rdata.a.ip_addr.s_addr =  src->rdata.a.ip_addr.s_addr;
     } else if (src->type == PJ_DNS_TYPE_AAAA) {
-	pj_memcpy(&dst->rdata.aaaa.ip_addr, &src->rdata.aaaa.ip_addr,
-		  sizeof(pj_in6_addr));
+        pj_memcpy(&dst->rdata.aaaa.ip_addr, &src->rdata.aaaa.ip_addr,
+                  sizeof(pj_in6_addr));
     } else if (src->type == PJ_DNS_TYPE_CNAME) {
-	pj_strdup(pool, &dst->rdata.cname.name, &src->rdata.cname.name);
+        pj_strdup(pool, &dst->rdata.cname.name, &src->rdata.cname.name);
     } else if (src->type == PJ_DNS_TYPE_NS) {
-	pj_strdup(pool, &dst->rdata.ns.name, &src->rdata.ns.name);
+        pj_strdup(pool, &dst->rdata.ns.name, &src->rdata.ns.name);
     } else if (src->type == PJ_DNS_TYPE_PTR) {
-	pj_strdup(pool, &dst->rdata.ptr.name, &src->rdata.ptr.name);
+        pj_strdup(pool, &dst->rdata.ptr.name, &src->rdata.ptr.name);
     }
 }
 
@@ -620,9 +627,9 @@ static void copy_rr(pj_pool_t *pool, pj_dns_parsed_rr *dst,
  * Duplicate DNS packet.
  */
 PJ_DEF(void) pj_dns_packet_dup(pj_pool_t *pool,
-			       const pj_dns_parsed_packet*p,
-			       unsigned options,
-			       pj_dns_parsed_packet **p_dst)
+                               const pj_dns_parsed_packet*p,
+                               unsigned options,
+                               pj_dns_parsed_packet **p_dst)
 {
     pj_dns_parsed_packet *dst;
     unsigned nametable_count = 0;
@@ -647,66 +654,66 @@ PJ_DEF(void) pj_dns_packet_dup(pj_pool_t *pool,
     dst->hdr.anscount = 0;
     dst->hdr.nscount = 0;
     dst->hdr.arcount = 0;
-	
+        
 
     /* Copy query section */
     if (p->hdr.qdcount && (options & PJ_DNS_NO_QD)==0) {
-	dst->q = (pj_dns_parsed_query*)
-		 pj_pool_alloc(pool, p->hdr.qdcount * 
-				     sizeof(pj_dns_parsed_query));
-	for (i=0; i<p->hdr.qdcount; ++i) {
-	    copy_query(pool, &dst->q[i], &p->q[i], 
-		       &nametable_count, nametable);
-	    ++dst->hdr.qdcount;
-	}
+        dst->q = (pj_dns_parsed_query*)
+                 pj_pool_alloc(pool, p->hdr.qdcount * 
+                                     sizeof(pj_dns_parsed_query));
+        for (i=0; i<p->hdr.qdcount; ++i) {
+            copy_query(pool, &dst->q[i], &p->q[i], 
+                       &nametable_count, nametable);
+            ++dst->hdr.qdcount;
+        }
     }
 
     /* Copy answer section */
     if (p->hdr.anscount && (options & PJ_DNS_NO_ANS)==0) {
-	dst->ans = (pj_dns_parsed_rr*)
-		   pj_pool_alloc(pool, p->hdr.anscount * 
-				       sizeof(pj_dns_parsed_rr));
-	for (i=0; i<p->hdr.anscount; ++i) {
-	    copy_rr(pool, &dst->ans[i], &p->ans[i],
-		    &nametable_count, nametable);
-	    ++dst->hdr.anscount;
-	}
+        dst->ans = (pj_dns_parsed_rr*)
+                   pj_pool_alloc(pool, p->hdr.anscount * 
+                                       sizeof(pj_dns_parsed_rr));
+        for (i=0; i<p->hdr.anscount; ++i) {
+            copy_rr(pool, &dst->ans[i], &p->ans[i],
+                    &nametable_count, nametable);
+            ++dst->hdr.anscount;
+        }
     }
 
     /* Copy NS section */
     if (p->hdr.nscount && (options & PJ_DNS_NO_NS)==0) {
-	dst->ns = (pj_dns_parsed_rr*)
-		  pj_pool_alloc(pool, p->hdr.nscount * 
-				      sizeof(pj_dns_parsed_rr));
-	for (i=0; i<p->hdr.nscount; ++i) {
-	    copy_rr(pool, &dst->ns[i], &p->ns[i],
-		    &nametable_count, nametable);
-	    ++dst->hdr.nscount;
-	}
+        dst->ns = (pj_dns_parsed_rr*)
+                  pj_pool_alloc(pool, p->hdr.nscount * 
+                                      sizeof(pj_dns_parsed_rr));
+        for (i=0; i<p->hdr.nscount; ++i) {
+            copy_rr(pool, &dst->ns[i], &p->ns[i],
+                    &nametable_count, nametable);
+            ++dst->hdr.nscount;
+        }
     }
 
     /* Copy additional info section */
     if (p->hdr.arcount && (options & PJ_DNS_NO_AR)==0) {
-	dst->arr = (pj_dns_parsed_rr*)
-		   pj_pool_alloc(pool, p->hdr.arcount * 
-				       sizeof(pj_dns_parsed_rr));
-	for (i=0; i<p->hdr.arcount; ++i) {
-	    copy_rr(pool, &dst->arr[i], &p->arr[i],
-		    &nametable_count, nametable);
-	    ++dst->hdr.arcount;
-	}
+        dst->arr = (pj_dns_parsed_rr*)
+                   pj_pool_alloc(pool, p->hdr.arcount * 
+                                       sizeof(pj_dns_parsed_rr));
+        for (i=0; i<p->hdr.arcount; ++i) {
+            copy_rr(pool, &dst->arr[i], &p->arr[i],
+                    &nametable_count, nametable);
+            ++dst->hdr.arcount;
+        }
     }
 }
 
 
 PJ_DEF(void) pj_dns_init_srv_rr( pj_dns_parsed_rr *rec,
-				 const pj_str_t *res_name,
-				 unsigned dnsclass,
-				 unsigned ttl,
-				 unsigned prio,
-				 unsigned weight,
-				 unsigned port,
-				 const pj_str_t *target)
+                                 const pj_str_t *res_name,
+                                 unsigned dnsclass,
+                                 unsigned ttl,
+                                 unsigned prio,
+                                 unsigned weight,
+                                 unsigned port,
+                                 const pj_str_t *target)
 {
     pj_bzero(rec, sizeof(*rec));
     rec->name = *res_name;
@@ -721,10 +728,10 @@ PJ_DEF(void) pj_dns_init_srv_rr( pj_dns_parsed_rr *rec,
 
 
 PJ_DEF(void) pj_dns_init_cname_rr( pj_dns_parsed_rr *rec,
-				   const pj_str_t *res_name,
-				   unsigned dnsclass,
-				   unsigned ttl,
-				   const pj_str_t *name)
+                                   const pj_str_t *res_name,
+                                   unsigned dnsclass,
+                                   unsigned ttl,
+                                   const pj_str_t *name)
 {
     pj_bzero(rec, sizeof(*rec));
     rec->name = *res_name;
@@ -736,10 +743,10 @@ PJ_DEF(void) pj_dns_init_cname_rr( pj_dns_parsed_rr *rec,
 
 
 PJ_DEF(void) pj_dns_init_a_rr( pj_dns_parsed_rr *rec,
-			       const pj_str_t *res_name,
-			       unsigned dnsclass,
-			       unsigned ttl,
-			       const pj_in_addr *ip_addr)
+                               const pj_str_t *res_name,
+                               unsigned dnsclass,
+                               unsigned ttl,
+                               const pj_in_addr *ip_addr)
 {
     pj_bzero(rec, sizeof(*rec));
     rec->name = *res_name;
@@ -751,10 +758,10 @@ PJ_DEF(void) pj_dns_init_a_rr( pj_dns_parsed_rr *rec,
 
 
 PJ_DEF(void) pj_dns_init_aaaa_rr(pj_dns_parsed_rr *rec,
-				 const pj_str_t *res_name,
-				 unsigned dnsclass,
-				 unsigned ttl,
-				 const pj_in6_addr *ip_addr)
+                                 const pj_str_t *res_name,
+                                 unsigned dnsclass,
+                                 unsigned ttl,
+                                 const pj_in6_addr *ip_addr)
 {
     pj_bzero(rec, sizeof(*rec));
     rec->name = *res_name;

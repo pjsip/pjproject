@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -80,9 +79,9 @@ typedef enum {
 
 /** This structure describes RIFF AVI file header */
 typedef struct riff_hdr_t {
-    pj_uint32_t riff;		/**< "RIFF" ASCII tag.		*/
-    pj_uint32_t file_len;       /**< File length minus 8 bytes	*/
-    pj_uint32_t avi;		/**< "AVI" ASCII tag.		*/
+    pj_uint32_t riff;           /**< "RIFF" ASCII tag.          */
+    pj_uint32_t file_len;       /**< File length minus 8 bytes  */
+    pj_uint32_t avi;            /**< "AVI" ASCII tag.           */
 } riff_hdr_t;
 
 /** This structure describes avih header  */
@@ -131,12 +130,12 @@ typedef struct strl_hdr_t {
 typedef struct {
     pj_uint32_t strf;
     pj_uint32_t strf_size;
-    pj_uint16_t fmt_tag;	    /**< 1 for PCM			*/
-    pj_uint16_t nchannels;          /**< Number of channels.	        */
-    pj_uint32_t sample_rate;	    /**< Sampling rate.		        */
-    pj_uint32_t bytes_per_sec;	    /**< Average bytes per second.	*/
-    pj_uint16_t block_align;	    /**< nchannels * bits / 8	        */
-    pj_uint16_t bits_per_sample;    /**< Bits per sample.		*/
+    pj_uint16_t fmt_tag;            /**< 1 for PCM                      */
+    pj_uint16_t nchannels;          /**< Number of channels.            */
+    pj_uint32_t sample_rate;        /**< Sampling rate.                 */
+    pj_uint32_t bytes_per_sec;      /**< Average bytes per second.      */
+    pj_uint16_t block_align;        /**< nchannels * bits / 8           */
+    pj_uint16_t bits_per_sample;    /**< Bits per sample.               */
     pj_uint16_t extra_size;
 } strf_audio_hdr_t;
 
@@ -187,8 +186,8 @@ typedef struct pjmedia_avi_hdr pjmedia_avi_hdr;
  */
 typedef struct pjmedia_avi_subchunk
 {
-    pj_uint32_t	    id;			/**< Subchunk ASCII tag.	    */
-    pj_uint32_t	    len;		/**< Length following this field    */
+    pj_uint32_t     id;                 /**< Subchunk ASCII tag.            */
+    pj_uint32_t     len;                /**< Length following this field    */
 } pjmedia_avi_subchunk;
 
 
@@ -199,4 +198,4 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_AVI_H__ */
+#endif  /* __PJMEDIA_AVI_H__ */

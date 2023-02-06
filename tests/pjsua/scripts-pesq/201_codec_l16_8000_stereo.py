@@ -1,4 +1,3 @@
-# $Id$
 #
 from inc_cfg import *
 

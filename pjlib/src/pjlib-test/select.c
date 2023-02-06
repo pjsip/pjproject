@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -59,7 +58,7 @@ enum
  * are signalled.
  */    
 static int do_select( pj_sock_t sock1, pj_sock_t sock2,
-		      int setcount[])
+                      int setcount[])
 {
     pj_fd_set_t fds[3];
     pj_time_val timeout;
@@ -76,7 +75,7 @@ static int do_select( pj_sock_t sock1, pj_sock_t sock2,
     timeout.msec = 0;
 
     n = pj_sock_select(PJ_IOQUEUE_MAX_HANDLES, &fds[0], &fds[1], &fds[2],
-		       &timeout);
+                       &timeout);
     if (n < 0)
         return n;
     if (n == 0)
@@ -86,7 +85,7 @@ static int do_select( pj_sock_t sock1, pj_sock_t sock2,
         if (PJ_FD_ISSET(sock1, &fds[i]))
             setcount[i]++;
         if (PJ_FD_ISSET(sock2, &fds[i]))
-	    setcount[i]++;
+            setcount[i]++;
     }
 
     return n;
@@ -116,12 +115,12 @@ int select_test()
     rc = pj_sock_socket( pj_AF_INET(), pj_SOCK_DGRAM(), 0, &udp1);
     if (rc != PJ_SUCCESS) {
         app_perror("...error: unable to create socket", rc);
-	status=-10; goto on_return;
+        status=-10; goto on_return;
     }
     rc = pj_sock_socket( pj_AF_INET(), pj_SOCK_DGRAM(), 0, &udp2);
     if (udp2 == PJ_INVALID_SOCKET) {
         app_perror("...error: unable to create socket", rc);
-	status=-20; goto on_return;
+        status=-20; goto on_return;
     }
 
     // Bind one of the UDP socket.
@@ -131,7 +130,7 @@ int select_test()
     udp_addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
 
     if (pj_sock_bind(udp2, &udp_addr, sizeof(udp_addr))) {
-	status=-30; goto on_return;
+        status=-30; goto on_return;
     }
 
     // Send data.
@@ -139,47 +138,47 @@ int select_test()
     rc = pj_sock_sendto(udp1, data, &sent, 0, &udp_addr, sizeof(udp_addr));
     if (rc != PJ_SUCCESS || sent != datalen) {
         app_perror("...error: sendto() error", rc);
-	status=-40; goto on_return;
+        status=-40; goto on_return;
     }
 
-    // Sleep a bit. See http://trac.pjsip.org/repos/ticket/890
+    // Sleep a bit. See https://github.com/pjsip/pjproject/issues/890
     pj_thread_sleep(10);
 
     // Check that socket is marked as reable.
     // Note that select() may also report that sockets are writable.
     status = do_select(udp1, udp2, setcount);
     if (status < 0) {
-	char errbuf[128];
+        char errbuf[128];
         pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf));
-	PJ_LOG(1,(THIS_FILE, "...error: %s", errbuf));
-	status=-50; goto on_return;
+        PJ_LOG(1,(THIS_FILE, "...error: %s", errbuf));
+        status=-50; goto on_return;
     }
     if (status == 0) {
-	status=-60; goto on_return;
+        status=-60; goto on_return;
     }
 
     if (setcount[READ_FDS] != 1) {
-	status=-70; goto on_return;
+        status=-70; goto on_return;
     }
     if (setcount[WRITE_FDS] != 0) {
-	if (setcount[WRITE_FDS] == 2) {
-	    PJ_LOG(3,(THIS_FILE, "...info: system reports writable sockets"));
-	} else {
-	    status=-80; goto on_return;
-	}
+        if (setcount[WRITE_FDS] == 2) {
+            PJ_LOG(3,(THIS_FILE, "...info: system reports writable sockets"));
+        } else {
+            status=-80; goto on_return;
+        }
     } else {
-	PJ_LOG(3,(THIS_FILE, 
-		  "...info: system doesn't report writable sockets"));
+        PJ_LOG(3,(THIS_FILE, 
+                  "...info: system doesn't report writable sockets"));
     }
     if (setcount[EXCEPT_FDS] != 0) {
-	status=-90; goto on_return;
+        status=-90; goto on_return;
     }
 
     // Read the socket to clear readable sockets.
     received = sizeof(buf);
     rc = pj_sock_recv(udp2, buf, &received, 0);
     if (rc != PJ_SUCCESS || received != 5) {
-	status=-100; goto on_return;
+        status=-100; goto on_return;
     }
     
     status = 0;
@@ -190,24 +189,24 @@ int select_test()
     setcount[0] = setcount[1] = setcount[2] = 0;
     status = do_select(udp1, udp2, setcount);
     if (status != 0 && status != setcount[WRITE_FDS]) {
-	PJ_LOG(3,(THIS_FILE, "...error: expecting timeout but got %d sks set",
-			     status));
-	PJ_LOG(3,(THIS_FILE, "          rdset: %d, wrset: %d, exset: %d",
-			     setcount[0], setcount[1], setcount[2]));
-	status = -110; goto on_return;
+        PJ_LOG(3,(THIS_FILE, "...error: expecting timeout but got %d sks set",
+                             status));
+        PJ_LOG(3,(THIS_FILE, "          rdset: %d, wrset: %d, exset: %d",
+                             setcount[0], setcount[1], setcount[2]));
+        status = -110; goto on_return;
     }
     if (setcount[READ_FDS] != 0) {
-	PJ_LOG(3,(THIS_FILE, "...error: readable socket not expected"));
-	status = -120; goto on_return;
+        PJ_LOG(3,(THIS_FILE, "...error: readable socket not expected"));
+        status = -120; goto on_return;
     }
 
     status = 0;
 
 on_return:
     if (udp1 != PJ_INVALID_SOCKET)
-	pj_sock_close(udp1);
+        pj_sock_close(udp1);
     if (udp2 != PJ_INVALID_SOCKET)
-	pj_sock_close(udp2);
+        pj_sock_close(udp2);
     return status;
 }
 
@@ -216,6 +215,6 @@ on_return:
  * when this test is disabled. 
  */
 int dummy_select_test;
-#endif	/* INCLUDE_SELECT_TEST */
+#endif  /* INCLUDE_SELECT_TEST */
 
 
