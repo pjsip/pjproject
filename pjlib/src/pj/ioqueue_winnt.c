@@ -614,6 +614,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     /* Group lock */
     rec->grp_lock = grp_lock;
     if (rec->grp_lock) {
+        /* IOCP backend doesn't have group lock functionality, so
+         * you should not use it other than for experimental purposes.
+         */
         PJ_TODO(INTEGRATE_GROUP_LOCK);
         // pj_grp_lock_add_ref_dbg(rec->grp_lock, "ioqueue", 0);
     }
