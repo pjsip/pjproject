@@ -614,7 +614,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     /* Group lock */
     rec->grp_lock = grp_lock;
     if (rec->grp_lock) {
-        pj_grp_lock_add_ref_dbg(rec->grp_lock, "ioqueue", 0);
+        PJ_TODO(INTEGRATE_GROUP_LOCK);
+        // pj_grp_lock_add_ref_dbg(rec->grp_lock, "ioqueue", 0);
     }
 
     *key = rec;
