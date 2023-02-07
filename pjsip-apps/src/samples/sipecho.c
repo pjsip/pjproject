@@ -469,6 +469,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         pjsip_endpt_respond_stateless( app.sip_endpt, rdata,
                                        400, &reason,
                                        NULL, NULL);
+        return PJ_TRUE;
     }
 
     for (i=0; i<MAX_CALLS; ++i) {
