@@ -2182,7 +2182,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                                                   pjsip_rx_data *rdata)
 {
     struct tsx_inv_data *tsx_inv_data;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
     pjsip_msg *msg;
     pjsip_rdata_sdp_info *sdp_info;
 
@@ -2197,7 +2197,10 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
     sdp_info = pjsip_rdata_get_sdp_info(rdata);
     if (sdp_info->body.ptr == NULL) {
         /* Message body is not "application/sdp" */
-        return PJMEDIA_SDP_EINSDP;
+        status = PJMEDIA_SDP_EINSDP;
+        if (PJSIP_INV_ACCEPT_UNKNOWN_BODY)
+            return status;
+        goto on_return;
     }
 
     /* Process the SDP body. */
@@ -2205,7 +2208,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         PJ_PERROR(4,(THIS_FILE, sdp_info->sdp_err,
              "Error parsing SDP in %s",
              pjsip_rx_data_get_info(rdata)));
-        return PJMEDIA_SDP_EINSDP;
+        status = PJMEDIA_SDP_EINSDP;
+        goto on_return;
     }
 
     /* Get/attach invite session's transaction data */
@@ -2383,7 +2387,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(THIS_FILE, status, "Error processing SDP answer in %s",
                       pjsip_rx_data_get_info(rdata)));
-            return PJMEDIA_SDP_EINSDP;
+            status = PJMEDIA_SDP_EINSDP;
+            goto on_return;
         }
 
         /* Negotiate SDP */
@@ -2411,7 +2416,16 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
               pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_get_state(inv->neg))));
     }
 
-    return PJ_SUCCESS;
+on_return:
+    if (status != PJ_SUCCESS && inv->neg &&
+        pjmedia_sdp_neg_get_state(inv->neg) ==
+        PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+    {
+        if (mod_inv.cb.on_media_update && inv->notify)
+            (*mod_inv.cb.on_media_update)(inv, status);
+    }
+
+    return status;
 }
 
 
