@@ -221,7 +221,7 @@ on_return:
 
     pj_shutdown();
 
-    return 0;
+    return rc;
 }
 
 #include <pj/sock.h>
