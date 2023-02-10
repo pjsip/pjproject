@@ -52,6 +52,8 @@
 
 #define THIS_FILE   "sleep_test"
 
+extern pj_bool_t param_ci_mode;
+
 static int simple_sleep_test(void)
 {
     enum { COUNT = 10 };
@@ -90,7 +92,7 @@ static int simple_sleep_test(void)
 
 static int sleep_duration_test(void)
 {
-    enum { MIS = 20};
+    const int MIS = param_ci_mode? 30 : 10;
     unsigned duration[] = { 2000, 1000, 500, 200, 100 };
     unsigned i;
     pj_status_t rc;
