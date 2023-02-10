@@ -26,6 +26,7 @@
 extern int param_echo_sock_type;
 extern const char *param_echo_server;
 extern int param_echo_port;
+extern pj_bool_t param_ci_mode;
 
 
 //#if defined(PJ_WIN32) && PJ_WIN32!=0
@@ -83,14 +84,14 @@ static void init_signals(void)
 
 int main(int argc, char *argv[])
 {
-    int rc;
+    int iarg=1, rc;
     int interractive = 0;
     int no_trap = 0;
 
     boost();
 
-    while (argc > 1) {
-        char *arg = argv[--argc];
+    while (iarg < argc) {
+        char *arg = argv[iarg++];
 
         if (*arg=='-' && *(arg+1)=='i') {
             interractive = 1;
@@ -98,24 +99,30 @@ int main(int argc, char *argv[])
         } else if (*arg=='-' && *(arg+1)=='n') {
             no_trap = 1;
         } else if (*arg=='-' && *(arg+1)=='p') {
-            pj_str_t port = pj_str(argv[--argc]);
+            pj_str_t port = pj_str(argv[iarg++]);
 
             param_echo_port = pj_strtoul(&port);
 
         } else if (*arg=='-' && *(arg+1)=='s') {
-            param_echo_server = argv[--argc];
+            param_echo_server = argv[iarg++];
 
         } else if (*arg=='-' && *(arg+1)=='t') {
-            pj_str_t type = pj_str(argv[--argc]);
+            pj_str_t type = pj_str(argv[iarg++]);
             
             if (pj_stricmp2(&type, "tcp")==0)
                 param_echo_sock_type = pj_SOCK_STREAM();
             else if (pj_stricmp2(&type, "udp")==0)
                 param_echo_sock_type = pj_SOCK_DGRAM();
             else {
-                PJ_LOG(3,("", "error: unknown socket type %s", type.ptr));
+                printf("Error: unknown socket type %s\n", type.ptr);
                 return 1;
             }
+        } else if (strcmp(arg, "--ci-mode")==0) {
+            param_ci_mode = PJ_TRUE;
+
+        } else {
+            printf("Error in argument \"%s\"\n", arg);
+            return 1;
         }
     }
 

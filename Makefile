@@ -106,6 +106,9 @@ selftest: pjlib-test pjlib-util-test pjnath-test pjmedia-test pjsip-test pjsua-t
 pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
 	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME)
 
+pjlib-test-ci: pjlib/bin/pjlib-test-$(TARGET_NAME)
+	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME) --ci-mode
+
 pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
 	cd pjlib-util/build && ../bin/pjlib-util-test-$(TARGET_NAME)
 
