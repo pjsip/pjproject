@@ -54,9 +54,11 @@
  * The trace will contain JB operation timestamp, frame info, RTP info, and
  * the JB state right after the operation.
  */
+// clang-format off
 #define TRACE_JB                        0       /* Enable/disable trace.    */
 #define TRACE_JB_PATH_PREFIX            ""      /* Optional path/prefix
                                                    for the CSV filename.    */
+// clang-format on
 #if TRACE_JB
 #   include <pj/file_io.h>
 #   define TRACE_JB_INVALID_FD          ((pj_oshandle_t)-1)

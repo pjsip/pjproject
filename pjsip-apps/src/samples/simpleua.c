@@ -66,6 +66,7 @@
 
 
 /* Settings */
+// clang-format off
 #define AF              pj_AF_INET() /* Change to pj_AF_INET6() for IPv6.
                                       * PJ_HAS_IPV6 must be enabled and
                                       * your system must support IPv6.  */
@@ -79,6 +80,7 @@
 
 #define MAX_MEDIA_CNT   2            /* Media count, set to 1 for audio
                                       * only or 2 for audio and video   */
+// clang-format on
 
 /*
  * Static variables.

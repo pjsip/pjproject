@@ -50,7 +50,7 @@ AllowShortLoopsOnASingleLine: false
 
 # macros
 AlignConsecutiveMacros: AcrossEmptyLinesAndComments
-AlignEscapedNewlines: DontAlign
+AlignEscapedNewlines: Left
 IndentPPDirectives: AfterHash
 PPIndentWidth: 2
 TypenameMacros: ['PJ_DECL', 'PJ_DEF', 'PJ_INLINE', 'PJ_IDEF', 'PJ_IDECL', 'PJ_DECL_NO_RETURN', 'PJ_IDECL_NO_RETURN', 'PJ_DECL_DATA', 'PJ_DEF_DATA']
