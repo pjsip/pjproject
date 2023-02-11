@@ -1,10 +1,5 @@
-extern crate pjsua;
 use pjsua::*;
-
-use std::ffi::CString;
-use std::mem::MaybeUninit;
-use std::os::raw::c_int;
-use std::ptr;
+use std::{ffi::CString, mem::MaybeUninit, os::raw::c_int, ptr};
 
 const SIP_DOMAIN: &str = "pjsip.org";
 const SIP_USER: &str = "username";
