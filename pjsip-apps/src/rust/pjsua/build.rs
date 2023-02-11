@@ -9,7 +9,11 @@ pub fn main() {
     // get the include paths from pkg-config and create a clang argument for each
     for path in conf.include_paths {
         clang_args.push("-I".to_string());
-        clang_args.push(path.to_str().unwrap().to_string());
+        clang_args.push(
+            path.to_str()
+                .expect(&format!("Could not convert PathBuf: {:?} to str", path))
+                .to_string(),
+        );
     }
 
     // get the define flags from pkg-config and create a clang argument for each
