@@ -1,13 +1,10 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
+extern crate pjsua;
+use pjsua::*;
 
 use std::ffi::CString;
 use std::mem::MaybeUninit;
 use std::os::raw::c_int;
 use std::ptr;
-
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 const SIP_DOMAIN: &str = "pjsip.org";
 const SIP_USER: &str = "username";
@@ -58,7 +55,7 @@ fn main() {
         let id = CString::new(&*format!("sip:{}@{}", SIP_USER, SIP_DOMAIN)).unwrap();
         acc_cfg.id = pj_str(id.as_ptr() as *mut i8);
 
-        let uri = CString::new(&*format!("sip:{}",SIP_DOMAIN)).unwrap();
+        let uri = CString::new(&*format!("sip:{}", SIP_DOMAIN)).unwrap();
         acc_cfg.reg_uri = pj_str(uri.as_ptr() as *mut i8);
 
         acc_cfg.cred_count = 1;

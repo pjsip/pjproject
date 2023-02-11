@@ -1,16 +1,16 @@
 extern crate bindgen;
 
 pub fn main() {
-    println!("cargo:rerun-if-changed=../../../pjsip/include/pjsua.h");
+    println!("cargo:rerun-if-changed=../../../../pjsip/include/pjsua.h");
     println!("cargo:rerun-if-changed=build.rs");
 
-    println!("cargo:rustc-link-search=../../../pjsip/lib");
-    println!("cargo:rustc-link-search=../../../pjlib/lib");
-    println!("cargo:rustc-link-search=../../../pjlib-util/lib");
-    println!("cargo:rustc-link-search=../../../pjmedia/lib");
-    println!("cargo:rustc-link-search=../../../pjnath/lib");
-    println!("cargo:rustc-link-search=../../../third_party/lib");
-    println!("cargo:rustc-link-search=../../../lib");
+    println!("cargo:rustc-link-search=../../../../pjsip/lib");
+    println!("cargo:rustc-link-search=../../../../pjlib/lib");
+    println!("cargo:rustc-link-search=../../../../pjlib-util/lib");
+    println!("cargo:rustc-link-search=../../../../pjmedia/lib");
+    println!("cargo:rustc-link-search=../../../../pjnath/lib");
+    println!("cargo:rustc-link-search=../../../../third_party/lib");
+    println!("cargo:rustc-link-search=../../../../lib");
 
     println!("cargo:rustc-link-lib=pj");
     println!("cargo:rustc-link-lib=pjsip-simple");
@@ -33,15 +33,14 @@ pub fn main() {
     println!("cargo:rustc-link-lib=webrtc");
     println!("cargo:rustc-link-lib=yuv");
 
-    
     let bindings = bindgen::Builder::default()
-        .header("../../../pjsip/include/pjsua.h")
-        .clang_args(["-I", "../../../pjsip/include"])
-        .clang_args(["-I", "../../../pjlib/include"])
-        .clang_args(["-I", "../../../pjlib-util/include"])
-        .clang_args(["-I", "../../../pjmedia/include"])
-        .clang_args(["-I", "../../../pjnath/include"])
-        .clang_args(["-I", "../../../include"])
+        .header("../../../../pjsip/include/pjsua.h")
+        .clang_args(["-I", "../../../../pjsip/include"])
+        .clang_args(["-I", "../../../../pjlib/include"])
+        .clang_args(["-I", "../../../../pjlib-util/include"])
+        .clang_args(["-I", "../../../../pjmedia/include"])
+        .clang_args(["-I", "../../../../pjnath/include"])
+        .clang_args(["-I", "../../../../include"])
         .generate_comments(false)
         .allowlist_type(r"pj.*")
         .allowlist_type(r"PJ.*")
