@@ -11,7 +11,7 @@ pub fn main() {
         clang_args.push("-I".to_string());
         clang_args.push(
             path.to_str()
-                .expect(&format!("Could not convert PathBuf: {:?} to str", path))
+                .expect(&format!("Couldn't convert PathBuf: {:?} to str!", path))
                 .to_string(),
         );
     }
