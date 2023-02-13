@@ -528,8 +528,15 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         status = pjsip_inv_send_msg(call->inv, tdata);
 
     if (status != PJ_SUCCESS) {
-        pjsip_endpt_respond_stateless( app.sip_endpt, rdata,
-                                       500, NULL, NULL, NULL);
+        if (pjsip_rdata_get_tsx(rdata) == NULL) {
+            /* Respond statelessly when tsx is not created yet */
+            pjsip_endpt_respond_stateless( app.sip_endpt, rdata,
+                                           500, NULL, NULL, NULL);
+        } else {
+            /* Otherwise, respond statefully */
+            pjsip_endpt_respond( app.sip_endpt, &mod_sipecho, rdata,
+                                 500, NULL, NULL, NULL, NULL);
+        }
         destroy_call(call);
     } else {
         call->inv->mod_data[mod_sipecho.id] = call;
