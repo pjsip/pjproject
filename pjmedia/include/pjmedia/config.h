@@ -817,9 +817,18 @@
  * compatibility and performance this is set to 0.
  *
  * Default is 0 (No)
+ * 
+ * This macro has been deprecated in version 2.14.
+ * See https://github.com/pjsip/pjproject/pull/3322 for more info.
  */
-#ifndef PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
-#   define PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION   0
+#ifdef PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
+#   ifdef _MSC_VER
+#       pragma message("Warning: PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION macro is"\
+                       " deprecated and has no effect")
+#   else
+#       warning "PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION macro is deprecated"\
+                " and has no effect"
+#   endif
 #endif
 
 

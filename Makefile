@@ -106,6 +106,9 @@ selftest: pjlib-test pjlib-util-test pjnath-test pjmedia-test pjsip-test pjsua-t
 pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
 	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME)
 
+pjlib-test-ci: pjlib/bin/pjlib-test-$(TARGET_NAME)
+	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME) --ci-mode
+
 pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
 	cd pjlib-util/build && ../bin/pjlib-util-test-$(TARGET_NAME)
 
@@ -119,7 +122,7 @@ pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
 	cd pjsip/build && ../bin/pjsip-test-$(TARGET_NAME)
 
 pjsua-test: cmp_wav
-	cd tests/pjsua && python runall.py
+	cd tests/pjsua && python runall.py -t 2
 
 cmp_wav:
 	cd tests/pjsua/tools && make

@@ -746,12 +746,12 @@ PJ_DEF(int) pj_stun_set_padding_char(int chr)
 
 #define INIT_ATTR(a,t,l)    (a)->hdr.type=(pj_uint16_t)(t), \
                             (a)->hdr.length=(pj_uint16_t)(l)
-#define ATTR_HDR_LEN        4
+#define ATTR_HDR_LEN        sizeof(pj_stun_attr_hdr)
 
 static pj_uint16_t GETVAL16H(const pj_uint8_t *buf, unsigned pos)
 {
-    return (pj_uint16_t) ((buf[pos + 0] << 8) | \
-                          (buf[pos + 1] << 0));
+    return (pj_uint16_t) (((pj_uint16_t)buf[pos + 0] << 8) | \
+                          ((pj_uint16_t)buf[pos + 1] << 0));
 }
 
 /*unused PJ_INLINE(pj_uint16_t) GETVAL16N(const pj_uint8_t *buf, unsigned pos)
@@ -767,10 +767,10 @@ static void PUTVAL16H(pj_uint8_t *buf, unsigned pos, pj_uint16_t hval)
 
 PJ_INLINE(pj_uint32_t) GETVAL32H(const pj_uint8_t *buf, unsigned pos)
 {
-    return (pj_uint32_t) ((buf[pos + 0] << 24UL) | \
-                          (buf[pos + 1] << 16UL) | \
-                          (buf[pos + 2] <<  8UL) | \
-                          (buf[pos + 3] <<  0UL));
+    return (pj_uint32_t) (((pj_uint32_t)buf[pos + 0] << 24UL) | \
+                          ((pj_uint32_t)buf[pos + 1] << 16UL) | \
+                          ((pj_uint32_t)buf[pos + 2] <<  8UL) | \
+                          ((pj_uint32_t)buf[pos + 3] <<  0UL));
 }
 
 /*unused PJ_INLINE(pj_uint32_t) GETVAL32N(const pj_uint8_t *buf, unsigned pos)
@@ -1438,11 +1438,11 @@ static pj_status_t decode_uint_attr(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_uint_attr);
     GETATTRHDR(buf, &attr->hdr);
 
-    attr->value = GETVAL32H(buf, 4);
-
     /* Check that the attribute length is valid */
     if (attr->hdr.length != 4)
         return PJNATH_ESTUNINATTRLEN;
+
+    attr->value = GETVAL32H(buf, 4);
 
     /* Done */
     *p_attr = attr;
@@ -1757,14 +1757,15 @@ static pj_status_t decode_errcode_attr(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_errcode_attr);
     GETATTRHDR(buf, &attr->hdr);
 
+    /* Check that the attribute length is valid */
+    if (attr->hdr.length < 4)
+        return PJNATH_ESTUNINATTRLEN;
+
     attr->err_code = buf[6] * 100 + buf[7];
 
     /* Get pointer to the string in the message */
     value.ptr = ((char*)buf + ATTR_HDR_LEN + 4);
     value.slen = attr->hdr.length - 4;
-    /* Make sure the length is never negative */
-    if (value.slen < 0)
-        value.slen = 0;
 
     /* Copy the string to the attribute */
     pj_strdup(pool, &attr->reason, &value);
@@ -2327,6 +2328,14 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
         status = pj_stun_msg_check(pdu, pdu_len, options);
         if (status != PJ_SUCCESS)
             return status;
+    } else {
+        /* For safety, verify packet length at least */
+        pj_uint32_t msg_len = GETVAL16H(pdu, 2) + 20;
+        if (msg_len > pdu_len ||
+            ((options & PJ_STUN_IS_DATAGRAM) && msg_len != pdu_len))
+        {
+            return PJNATH_EINSTUNMSGLEN;
+        }
     }
 
     /* Create the message, copy the header, and convert to host byte order */
@@ -2345,7 +2354,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
         p_response = NULL;
 
     /* Parse attributes */
-    while (pdu_len >= 4) {
+    while (pdu_len >= ATTR_HDR_LEN) {
         unsigned attr_type, attr_val_len;
         const struct attr_desc *adesc;
 
@@ -2357,7 +2366,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
         attr_val_len = (attr_val_len + 3) & (~3);
 
         /* Check length */
-        if (pdu_len < attr_val_len) {
+        if (pdu_len < attr_val_len + ATTR_HDR_LEN) {
             pj_str_t err_msg;
             char err_msg_buf[80];
 

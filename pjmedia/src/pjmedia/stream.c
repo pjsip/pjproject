@@ -781,7 +781,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                 }
             } else if (use_dec_buf) {
                 stream->dec_buf_count = (unsigned)frame_out.size /
-                                                                        sizeof(pj_int16_t);
+                                        sizeof(pj_int16_t);
             }
 
             if (stream->jb_last_frm != frame_type) {
@@ -2532,8 +2532,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         /* Allocate decoding buffer as Opus can send a packet duration of
          * up to 120 ms.
          */
-        stream->dec_buf_size = stream->codec_param.info.clock_rate * 120 /
-                               1000;
+        stream->dec_buf_size = stream->codec_param.info.clock_rate * 120 / 1000;
         stream->dec_buf = (pj_int16_t*)pj_pool_alloc(pool,
                                                      stream->dec_buf_size *
                                                      sizeof(pj_int16_t));
@@ -2696,7 +2695,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         jb_max_pre = info->jb_max_pre / stream->codec_param.info.frm_ptime;
     else
         //jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
-        jb_max_pre = jb_max * 4 / 5;
+        jb_max_pre = PJ_MAX(1, jb_max * 4 / 5);
 
     if (info->jb_init >= stream->codec_param.info.frm_ptime)
         jb_init = info->jb_init / stream->codec_param.info.frm_ptime;

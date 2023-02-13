@@ -44,7 +44,7 @@
                             if (rc!=0) goto on_return; \
                         } while (0)
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
 # define strtok_r strtok_s
 #endif
 

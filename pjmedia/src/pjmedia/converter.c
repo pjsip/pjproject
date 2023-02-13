@@ -198,7 +198,7 @@ PJ_DEF(pj_status_t) pjmedia_converter_convert2(
                                     pjmedia_frame           *dst_frame,
                                     const pjmedia_rect_size *dst_frame_size,
                                     const pjmedia_coord     *dst_pos,
-                                    void                    *param)
+                                    pjmedia_converter_convert_setting *param)
 {
     if (!cv->op->convert2)
         return PJ_ENOTSUP;

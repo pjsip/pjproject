@@ -141,6 +141,8 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     pj_str_t temp;
     pj_bool_t send_pending, recv_pending;
     pj_status_t rc;
+    pj_str_t ioque_name;
+    pj_str_t ioqueue_type;
 
     pj_set_os_error(PJ_SUCCESS);
 
@@ -177,6 +179,19 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     rc = pj_ioqueue_create2(pool, PJ_IOQUEUE_MAX_HANDLES, cfg, &ioque);
     if (rc != PJ_SUCCESS) {
         status=-20; goto on_error;
+    }
+
+    ioque_name = pj_str((char*)pj_ioqueue_name());
+    if (pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "epoll"), 5) == 0 ||
+        pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "kqueue"), 6) == 0 ||
+        pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "iocp"), 4) == 0) {
+      if (pj_ioqueue_get_os_handle(ioque) == NULL) {
+        PJ_LOG(1,(
+          THIS_FILE,
+          "...pj_ioqueue_os_handle() unexpectedly returned NULL"
+        ));
+        status=-21; goto on_error;
+      }
     }
 
     // Register server and client socket.

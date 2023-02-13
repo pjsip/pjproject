@@ -425,9 +425,8 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
     PJ_ASSERT_RETURN(mod_evsub.mod.id != -1, PJ_EINVALIDOP);
 
     /* Make sure no module with the specified name already registered: */
-
-    PJ_ASSERT_RETURN(find_pkg(event_name) == NULL, PJSIP_SIMPLE_EPKGEXISTS);
-
+    if (find_pkg(event_name) != NULL)
+        return PJSIP_SIMPLE_EPKGEXISTS;
 
     /* Create new event package: */
 
@@ -2224,9 +2223,12 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
         /* Send the pending NOTIFY sent by app from inside
          * on_rx_refresh() callback.
          */
-        pj_assert(sub->pending_notify);
-        status = pjsip_evsub_send_request(sub, sub->pending_notify);
-        sub->pending_notify = NULL;
+        //pj_assert(sub->pending_notify);
+        /* Make sure that pending_notify is set. */
+        if (sub->pending_notify) {
+            status = pjsip_evsub_send_request(sub, sub->pending_notify);
+            sub->pending_notify = NULL;
+        }
 
     } else if (pjsip_method_cmp(&tsx->method, &pjsip_notify_method)==0) {
 

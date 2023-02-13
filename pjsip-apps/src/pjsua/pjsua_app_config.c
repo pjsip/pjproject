@@ -81,8 +81,8 @@ static void usage(void)
             PJSIP_SESS_TIMER_DEF_SE);
     puts  ("  --timer-min-se=N    Session timers minimum expiration period, in secs (def:90)");
     puts  ("  --outb-rid=string   Set SIP outbound reg-id (default:1)");
-    puts  ("  --auto-update-nat=N Where N is 0 or 1 to enable/disable SIP traversal behind");
-    puts  ("                      symmetric NAT (default 1)");
+    puts  ("  --auto-update-nat=N Enable/disable SIP traversal behind symmetric NAT (def: 1)");
+    puts  ("                      0: disabled, 1:enabled with exception, 2: fully enabled");
     puts  ("  --disable-stun      Disable STUN for this account");
     puts  ("  --next-cred         Add another credentials");
     puts  ("");
@@ -166,7 +166,7 @@ static void usage(void)
     puts  ("                      Specify N=-1 to disable this feature.");
     puts  ("                      Specify N=0 for instant close when unused.");
     puts  ("  --no-tones          Disable audible tones");
-    puts  ("  --jb-max-size       Specify jitter buffer maximum size, in frames (default=-1)");
+    puts  ("  --jb-max-size       Specify jitter buffer maximum size, in msec (default=-1)");
     puts  ("  --extra-audio       Add one more audio stream");
 
 #if PJSUA_HAS_VIDEO

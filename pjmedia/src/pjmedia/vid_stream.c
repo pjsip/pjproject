@@ -1953,7 +1953,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     if (info->jb_max_pre >= frm_ptime)
         jb_max_pre  = info->jb_max_pre * chunks_per_frm / frm_ptime;
     else
-        jb_max_pre  = jb_max * 4 / 5;
+        jb_max_pre  = PJ_MAX(1, jb_max * 4 / 5);
 
     /* JB init prefetch, default 0 */
     if (info->jb_init >= frm_ptime)

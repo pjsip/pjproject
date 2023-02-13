@@ -172,7 +172,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create2(pj_pool_factory *pf,
 
         if (worker_cnt == 0) {
             PJ_LOG(4,(THIS_FILE, "Warning: no worker thread is created in"  
-                                 "media endpoint for internal ioqueue"));
+                                 " media endpoint for internal ioqueue"));
         }
     }
 

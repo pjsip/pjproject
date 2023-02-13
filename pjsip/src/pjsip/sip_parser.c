@@ -594,12 +594,10 @@ PJ_INLINE(int) compare_handler( const handler_rec *r1,
         return 1;
 
     /* Compare length. */
-    /*
     if (r1->hname_len < name_len)
         return -1;
     if (r1->hname_len > name_len)
         return 1;
-     */
 
     /* Equal length and equal hash. compare the strings. */
     return pj_memcmp(r1->hname, name, name_len);

@@ -124,6 +124,7 @@ typedef struct dtls_srtp
     SSL                 *ossl_ssl;
     BIO                 *ossl_rbio;
     BIO                 *ossl_wbio;
+    pj_lock_t           *ossl_lock;
 } dtls_srtp;
 
 
@@ -247,6 +248,7 @@ static pj_status_t dtls_create(transport_srtp *srtp,
 {
     dtls_srtp *ds;
     pj_pool_t *pool;
+	pj_status_t status;
 
     pool = pj_pool_create(srtp->pool->factory, "dtls%p",
                           2000, 256, NULL);
@@ -258,6 +260,11 @@ static pj_status_t dtls_create(transport_srtp *srtp,
     ds->base.op = &dtls_op;
     ds->base.user_data = srtp;
     ds->srtp = srtp;
+
+    status = pj_lock_create_simple_mutex(ds->pool, "dtls_ssl_lock%p",
+                                         &ds->ossl_lock);
+    if (status != PJ_SUCCESS)
+        return status;
 
     *p_keying = &ds->base;
     PJ_LOG(5,(srtp->pool->obj_name, "SRTP keying DTLS-SRTP created"));
@@ -515,6 +522,8 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 /* Destroy SSL context and instance */
 static void ssl_destroy(dtls_srtp *ds)
 {
+    pj_lock_acquire(ds->ossl_lock);
+
     /* Destroy SSL instance */
     if (ds->ossl_ssl) {
         /**
@@ -537,6 +546,8 @@ static void ssl_destroy(dtls_srtp *ds)
         SSL_CTX_free(ds->ossl_ctx);
         ds->ossl_ctx = NULL;
     }
+
+    pj_lock_release(ds->ossl_lock);
 }
 
 static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
@@ -546,6 +557,13 @@ static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
     int rc, i, crypto_idx = -1;
     pjmedia_srtp_crypto *tx, *rx;
     pj_status_t status = PJ_SUCCESS;
+
+    pj_lock_acquire(ds->ossl_lock);
+
+    if (!ds->ossl_ssl) {
+        status = PJ_EGONE;
+        goto on_return;
+    }
 
     /* Get selected crypto-suite */
     profile = SSL_get_selected_srtp_profile(ds->ossl_ssl);
@@ -610,6 +628,7 @@ static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
     }
 
 on_return:
+    pj_lock_release(ds->ossl_lock);
     return status;
 }
 
@@ -633,8 +652,17 @@ static pj_status_t ssl_match_fingerprint(dtls_srtp *ds)
         return PJ_ENOTSUP;
     }
 
+    pj_lock_acquire(ds->ossl_lock);
+    if (!ds->ossl_ssl) {
+        pj_lock_release(ds->ossl_lock);
+        return PJ_EGONE;
+    }
+
     /* Get remote cert & calculate the hash */
     rem_cert = SSL_get_peer_certificate(ds->ossl_ssl);
+
+    pj_lock_release(ds->ossl_lock);
+
     if (!rem_cert)
         return PJMEDIA_SRTP_DTLS_EPEERNOCERT;
 
@@ -692,13 +720,20 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
     pj_size_t len;
     pj_status_t status = PJ_SUCCESS;
 
-        if (ds->ossl_wbio == NULL) return PJ_EGONE;
+    pj_lock_acquire(ds->ossl_lock);
+
+    if (!ds->ossl_wbio) {
+        pj_lock_release(ds->ossl_lock);
+        return PJ_EGONE;
+    }
 
     /* Check whether there is data to send */
     if (BIO_ctrl_pending(ds->ossl_wbio) > 0) {
         /* Yes, get and send it */
         len = BIO_read(ds->ossl_wbio, ds->buf, sizeof(ds->buf));
         if (len > 0) {
+            pj_lock_release(ds->ossl_lock);
+
             status = send_raw(ds, ds->buf, len);
             if (status != PJ_SUCCESS) {
 #if DTLS_DEBUG
@@ -708,18 +743,28 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
                  * its packet when not receiving from us.
                  */
             }
+            pj_lock_acquire(ds->ossl_lock);
         }
+    }
+
+    if (!ds->ossl_ssl) {
+        pj_lock_release(ds->ossl_lock);
+        return PJ_EGONE;
     }
 
     /* Just return if handshake completion procedure (key parsing, fingerprint
      * verification, etc) has been done or handshake is still in progress.
      */
-    if (ds->nego_completed || !SSL_is_init_finished(ds->ossl_ssl))
+    if (ds->nego_completed || !SSL_is_init_finished(ds->ossl_ssl)) {
+        pj_lock_release(ds->ossl_lock);
         return PJ_SUCCESS;
+    }
 
     /* Yes, SSL handshake is done! */
     ds->nego_completed = PJ_TRUE;
     PJ_LOG(2,(ds->base.name, "DTLS-SRTP negotiation completed!"));
+
+    pj_lock_release(ds->ossl_lock);
 
     /* Stop the retransmission clock. Note that the clock may not be stopped
      * if this function is called from clock thread context. We'll try again
@@ -777,9 +822,18 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
 
     PJ_UNUSED_ARG(ts);
 
-    if (ds->ossl_ssl) {
-        if (DTLSv1_handle_timeout(ds->ossl_ssl) > 0)
-            ssl_flush_wbio(ds);
+    pj_lock_acquire(ds->ossl_lock);
+
+    if (!ds->ossl_ssl) {
+        pj_lock_release(ds->ossl_lock);
+        return;
+    }
+
+    if (DTLSv1_handle_timeout(ds->ossl_ssl) > 0) {
+        pj_lock_release(ds->ossl_lock);
+        ssl_flush_wbio(ds);
+    } else {
+        pj_lock_release(ds->ossl_lock);
     }
 }
 
@@ -790,14 +844,20 @@ static pj_status_t ssl_handshake(dtls_srtp *ds)
     pj_status_t status;
     int err;
 
+    pj_lock_acquire(ds->ossl_lock);
+
     /* Init DTLS (if not yet) */
     status = ssl_create(ds);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pj_lock_release(ds->ossl_lock);
         return status;
+    }
 
     /* Check if handshake has been initiated or even completed */
-    if (ds->nego_started || SSL_is_init_finished(ds->ossl_ssl))
+    if (ds->nego_started || SSL_is_init_finished(ds->ossl_ssl)) {
+        pj_lock_release(ds->ossl_lock);
         return PJ_SUCCESS;
+    }
 
     /* Perform SSL handshake */
     if (ds->setup == DTLS_SETUP_ACTIVE) {
@@ -808,6 +868,9 @@ static pj_status_t ssl_handshake(dtls_srtp *ds)
     err = SSL_do_handshake(ds->ossl_ssl);
     if (err < 0) {
         err = SSL_get_error(ds->ossl_ssl, err);
+
+        pj_lock_release(ds->ossl_lock);
+
         if (err == SSL_ERROR_WANT_READ) {
             status = ssl_flush_wbio(ds);
             if (status != PJ_SUCCESS)
@@ -818,6 +881,8 @@ static pj_status_t ssl_handshake(dtls_srtp *ds)
             pj_perror(2, ds->base.name, status, "SSL_do_handshake() error");
             goto on_return;
         }
+    } else {
+        pj_lock_release(ds->ossl_lock);
     }
 
     /* Create and start clock @4Hz for retransmission */
@@ -1009,7 +1074,12 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds,
     char tmp[128];
     pj_size_t nwritten;
 
-        if (ds->ossl_rbio == NULL) return PJ_EGONE;
+    pj_lock_acquire(ds->ossl_lock);
+
+    if (!ds->ossl_rbio) {
+        pj_lock_release(ds->ossl_lock);
+        return PJ_EGONE;
+    }
 
     nwritten = BIO_write(ds->ossl_rbio, data, (int)len);
     if (nwritten < len) {
@@ -1019,7 +1089,13 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds,
 #if DTLS_DEBUG
         pj_perror(2, ds->base.name, status, "BIO_write() error");
 #endif
+        pj_lock_release(ds->ossl_lock);
         return status;
+    }
+
+    if (!ds->ossl_ssl) {
+        pj_lock_release(ds->ossl_lock);
+        return PJ_EGONE;
     }
 
     /* Consume (and ignore) the packet */
@@ -1034,6 +1110,8 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds,
             break;
         }
     }
+
+    pj_lock_release(ds->ossl_lock);
 
     /* Flush anything pending in the write BIO */
     return ssl_flush_wbio(ds);
@@ -1663,6 +1741,12 @@ static pj_status_t dtls_destroy(pjmedia_transport *tp)
     if (ds->clock)
         pjmedia_clock_destroy(ds->clock);
     ssl_destroy(ds);
+
+    if (ds->ossl_lock) {
+        pj_lock_destroy(ds->ossl_lock);
+        ds->ossl_lock = NULL;
+    }
+
     pj_pool_safe_release(&ds->pool);
 
     return PJ_SUCCESS;

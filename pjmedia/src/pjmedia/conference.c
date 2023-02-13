@@ -1718,7 +1718,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     /* Skip port if it is disabled */
-    if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
+    if (cport->tx_setting == PJMEDIA_PORT_DISABLE) {
         cport->tx_level = 0;
         *frm_type = PJMEDIA_FRAME_TYPE_NONE;
         return PJ_SUCCESS;
@@ -1974,6 +1974,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
         /* Var "ci" is to count how many ports have been visited so far. */
         ++ci;
+
+        /* Skip if we're not allowed to transmit to this port. */
+        if (conf_port->tx_setting != PJMEDIA_PORT_ENABLE)
+            continue;
 
         /* Reset buffer (only necessary if the port has transmitter) and
          * reset auto adjustment level for mixed signal.

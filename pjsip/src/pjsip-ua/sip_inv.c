@@ -48,8 +48,8 @@
     2xx/INVITE      X       X       Response may contain offer or answer
     ACK                     X       ACK may contain answer
 
-    PRACK                   X       PRACK can only contain answer
-    2xx/PRACK                       Response may not have offer nor answer
+    PRACK           X       X       PRACK may contain offer or answer
+    2xx/PRACK               X       Response may contain answer
 
     UPDATE          X               UPDATE may only contain offer
     2xx/UPDATE              X       Response may only contain answer
@@ -68,7 +68,7 @@ static const char *inv_state_names[] =
     "EARLY",
     "CONNECTING",
     "CONFIRMED",
-    "DISCONNCTD",
+    "DISCONNECTED",
     "TERMINATED",
 };
 
@@ -2182,7 +2182,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                                                   pjsip_rx_data *rdata)
 {
     struct tsx_inv_data *tsx_inv_data;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
     pjsip_msg *msg;
     pjsip_rdata_sdp_info *sdp_info;
 
@@ -2197,7 +2197,10 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
     sdp_info = pjsip_rdata_get_sdp_info(rdata);
     if (sdp_info->body.ptr == NULL) {
         /* Message body is not "application/sdp" */
-        return PJMEDIA_SDP_EINSDP;
+        status = PJMEDIA_SDP_EINSDP;
+        if (PJSIP_INV_ACCEPT_UNKNOWN_BODY)
+            return status;
+        goto on_return;
     }
 
     /* Process the SDP body. */
@@ -2205,7 +2208,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         PJ_PERROR(4,(THIS_FILE, sdp_info->sdp_err,
              "Error parsing SDP in %s",
              pjsip_rx_data_get_info(rdata)));
-        return PJMEDIA_SDP_EINSDP;
+        status = PJMEDIA_SDP_EINSDP;
+        goto on_return;
     }
 
     /* Get/attach invite session's transaction data */
@@ -2383,7 +2387,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(THIS_FILE, status, "Error processing SDP answer in %s",
                       pjsip_rx_data_get_info(rdata)));
-            return PJMEDIA_SDP_EINSDP;
+            status = PJMEDIA_SDP_EINSDP;
+            goto on_return;
         }
 
         /* Negotiate SDP */
@@ -2411,7 +2416,16 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
               pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_get_state(inv->neg))));
     }
 
-    return PJ_SUCCESS;
+on_return:
+    if (status != PJ_SUCCESS && inv->neg &&
+        pjmedia_sdp_neg_get_state(inv->neg) ==
+        PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+    {
+        if (mod_inv.cb.on_media_update && inv->notify)
+            (*mod_inv.cb.on_media_update)(inv, status);
+    }
+
+    return status;
 }
 
 
@@ -3981,48 +3995,115 @@ static void inv_handle_incoming_reliable_response(pjsip_inv_session *inv,
 static void inv_respond_incoming_prack(pjsip_inv_session *inv,
                                        pjsip_rx_data *rdata)
 {
-    pj_status_t status;
+    pjmedia_sdp_neg_state neg_state;
+    pj_status_t status, prack_sdp_status;
+    pjsip_tx_data *tdata = NULL;
 
     /* Run through 100rel module to see if we can accept this
-     * PRACK request. The 100rel will send 200/OK to PRACK request.
+     * PRACK request. The 100rel will not send 200/OK to PRACK request.
      */
     status = pjsip_100rel_on_rx_prack(inv, rdata);
-    if (status != PJ_SUCCESS)
+
+    /* Already replied 400 "Unexpected PRACK" */
+    if (status == PJSIP_ENOTINITIALIZED)
         return;
 
-    /* Now check for SDP answer in the PRACK request */
-    if (rdata->msg_info.msg->body) {
-        status = inv_check_sdp_in_incoming_msg(inv, 
-                                        pjsip_rdata_get_tsx(rdata), rdata);
-    } else {
-        /* No SDP body */
-        status = -1;
-    }
-
-    /* If SDP negotiation has been successful, also mark the
-     * SDP negotiation flag in the invite transaction to be
-     * done too.
+    /* Even if something wrong, anyway reply with 200/OK for PRACK
+     * Keeping the same behaviour, that was in sip_100rel.c
      */
-    if (status == PJ_SUCCESS && inv->invite_tsx) {
-        struct tsx_inv_data *tsx_inv_data;
+    if (status != PJ_SUCCESS) {
+        status = pjsip_dlg_create_response(inv->dlg, rdata, PJSIP_SC_OK, NULL,
+                                           &tdata);
+        goto on_return;
+    }
 
-        /* Get/attach invite session's transaction data */
-        tsx_inv_data = (struct tsx_inv_data*) 
-                       inv->invite_tsx->mod_data[mod_inv.mod.id];
-        if (tsx_inv_data == NULL) {
-            tsx_inv_data = PJ_POOL_ZALLOC_T(inv->invite_tsx->pool, 
-                                            struct tsx_inv_data);
-            tsx_inv_data->inv = inv;
-            tsx_inv_data->has_sdp = PJ_TRUE;
-            inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+    /* No SDP in the PRACK request, respond with 200/OK without SDP */
+    if (rdata->msg_info.msg->body == NULL) {
+        status = pjsip_dlg_create_response(inv->dlg, rdata, PJSIP_SC_OK, NULL,
+                                           &tdata);
+        goto on_return;
+    }
+
+    neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+    /* If we're waiting for an answer, respond with 200/OK without SDP */
+    if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
+        status = inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata),
+                                               rdata);
+        /* If SDP negotiation has been successful, also mark the
+         * SDP negotiation flag in the invite transaction to be
+         * done too.
+         */
+            if (status == PJ_SUCCESS && inv->invite_tsx) {
+            struct tsx_inv_data *tsx_inv_data;
+
+            /* Get/attach invite session's transaction data */
+            tsx_inv_data = (struct tsx_inv_data*)
+                           inv->invite_tsx->mod_data[mod_inv.mod.id];
+            if (tsx_inv_data == NULL) {
+                tsx_inv_data = PJ_POOL_ZALLOC_T(inv->invite_tsx->pool,
+                                                struct tsx_inv_data);
+                tsx_inv_data->inv = inv;
+                tsx_inv_data->has_sdp = PJ_TRUE;
+                inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+            }
+
+            tsx_inv_data->sdp_done = PJ_TRUE;
         }
-        
-        tsx_inv_data->sdp_done = PJ_TRUE;
+
+        status = pjsip_dlg_create_response(inv->dlg, rdata, PJSIP_SC_OK,
+                                           NULL, &tdata);
+        if (pjmedia_sdp_neg_get_state(inv->neg) == PJMEDIA_SDP_NEG_STATE_DONE)
+        {
+            inv->sdp_done_early_rel = PJ_TRUE;
+        }
+        goto on_return;
     }
 
-    if (pjmedia_sdp_neg_get_state(inv->neg) == PJMEDIA_SDP_NEG_STATE_DONE) {
-        inv->sdp_done_early_rel = PJ_TRUE;
+    /* We receive new offer from remote */
+    inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
+
+    /* Please check RFC 6337 section 2.3 Rejection of an Offer.
+     * And RFC 3262 Section 5.
+     * We MUST answer to PRACK with 200/OK with SDP answer
+     * if PRACK contains SDP offer.
+     * So if SDP negotiation failed we terminate INVITE transaction
+     * with errror 488 "Not Acceptable Here"
+     */
+    prack_sdp_status = inv_negotiate_sdp(inv);
+    inv->sdp_done_early_rel = PJ_TRUE;
+    status = pjsip_dlg_create_response(inv->dlg, rdata, PJSIP_SC_OK, NULL,
+                                       &tdata);
+    if (status == PJ_SUCCESS) {
+        const pjmedia_sdp_session *sdp;
+        status = pjmedia_sdp_neg_get_active_local(inv->neg, &sdp);
+        if (status == PJ_SUCCESS)
+            tdata->msg->body = create_sdp_body(tdata->pool, sdp);
+        pjsip_dlg_send_response(inv->dlg, pjsip_rdata_get_tsx(rdata), tdata);
     }
+    if (prack_sdp_status != PJ_SUCCESS) {
+        pjsip_tx_data *resp;
+        pj_str_t st_reason = pj_str("PRACK SDP negotiation failed");
+        /* SDP negotiation has failed. If negotiator is still
+         * stuck at non-DONE state, cancel any ongoing offer.
+         */
+        neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+        if (neg_state != PJMEDIA_SDP_NEG_STATE_DONE)
+            pjmedia_sdp_neg_cancel_offer(inv->neg);
+
+        /* Terminate the call as we have no way
+         * to reply with error code to PRACK
+         */
+        PJ_LOG(4,(THIS_FILE, "Call terminated. PRACK SDP not acceptable"));
+        status = pjsip_inv_end_session(inv, PJSIP_SC_NOT_ACCEPTABLE_HERE,
+                                       &st_reason, &resp);
+        if (status == PJ_SUCCESS && resp)
+            status = pjsip_inv_send_msg(inv, resp);
+    }
+    return;
+
+on_return:
+    if (status == PJ_SUCCESS)
+	pjsip_dlg_send_response(inv->dlg, pjsip_rdata_get_tsx(rdata), tdata);
 }
 
 
