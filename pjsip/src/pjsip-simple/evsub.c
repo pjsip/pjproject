@@ -2223,9 +2223,12 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
         /* Send the pending NOTIFY sent by app from inside
          * on_rx_refresh() callback.
          */
-        pj_assert(sub->pending_notify);
-        status = pjsip_evsub_send_request(sub, sub->pending_notify);
-        sub->pending_notify = NULL;
+        //pj_assert(sub->pending_notify);
+        /* Make sure that pending_notify is set. */
+        if (sub->pending_notify) {
+            status = pjsip_evsub_send_request(sub, sub->pending_notify);
+            sub->pending_notify = NULL;
+        }
 
     } else if (pjsip_method_cmp(&tsx->method, &pjsip_notify_method)==0) {
 
