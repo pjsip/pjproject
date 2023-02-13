@@ -1152,6 +1152,8 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
                         volatile parse_context *ctx)
 {
     pj_str_t str;
+    unsigned long num;
+    pj_status_t status;
 
     ctx->last_error = PJMEDIA_SDP_EINMEDIA;
 
@@ -1170,17 +1172,22 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
 
     /* port */
     pj_scan_get(scanner, &cs_token, &str);
-    med->desc.port = (unsigned short)pj_strtoul(&str);
-    if (pj_scan_is_eof(scanner)) {
+    status = pj_strtoul3(&str, &num, 10);
+    if (status != PJ_SUCCESS || pj_scan_is_eof(scanner)) {
         on_scanner_error(scanner);
         return;
     }
+    med->desc.port = (unsigned short)num;
     if (*scanner->curptr == '/') {
         /* port count */
         pj_scan_get_char(scanner);
         pj_scan_get(scanner, &cs_token, &str);
-        med->desc.port_count = pj_strtoul(&str);
-
+        status = pj_strtoul3(&str, &num, 10);
+        if (status != PJ_SUCCESS) {
+            on_scanner_error(scanner);
+            return;
+        }
+        med->desc.port_count = (unsigned)num;
     } else {
         med->desc.port_count = 0;
     }
