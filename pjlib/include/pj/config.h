@@ -994,14 +994,20 @@
  * Secure socket implementation.
  * Select one of these implementations in PJ_SSL_SOCK_IMP.
  */
-#define PJ_SSL_SOCK_IMP_NONE        0   /**< Disable SSL socket.    */
-#define PJ_SSL_SOCK_IMP_OPENSSL     1   /**< Using OpenSSL.         */
-#define PJ_SSL_SOCK_IMP_GNUTLS      2   /**< Using GnuTLS.          */
-#define PJ_SSL_SOCK_IMP_DARWIN      3   /**< Using Apple's Secure
-                                             Transport (deprecated in
-                                             MacOS 10.15 & iOS 13.0)*/
-#define PJ_SSL_SOCK_IMP_APPLE       4   /**< Using Apple's Network 
-                                             framework.             */
+/** Disable SSL socket */
+#define PJ_SSL_SOCK_IMP_NONE        0
+
+/** Using OpenSSL */
+#define PJ_SSL_SOCK_IMP_OPENSSL     1
+
+/**< Using GnuTLS */
+#define PJ_SSL_SOCK_IMP_GNUTLS      2
+
+/** Using Apple's Secure Transport (deprecated in MacOS 10.15 & iOS 13.0) */
+#define PJ_SSL_SOCK_IMP_DARWIN      3
+
+/** Using Apple's Network framework */
+#define PJ_SSL_SOCK_IMP_APPLE       4
 
 /**
  * Select which SSL socket implementation to use. Currently pjlib supports

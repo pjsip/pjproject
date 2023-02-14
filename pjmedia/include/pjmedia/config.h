@@ -369,15 +369,17 @@
  * Sample rate conversion backends.
  * Select one of these backends in PJMEDIA_RESAMPLE_IMP.
  */
-#define PJMEDIA_RESAMPLE_NONE               1   /**< No resampling.         */
-#define PJMEDIA_RESAMPLE_LIBRESAMPLE        2   /**< Sample rate conversion 
-                                                     using libresample.  */
-#define PJMEDIA_RESAMPLE_SPEEX              3   /**< Sample rate conversion 
-                                                     using Speex. */
-#define PJMEDIA_RESAMPLE_LIBSAMPLERATE      4   /**< Sample rate conversion 
-                                                     using libsamplerate 
-                                                     (a.k.a Secret Rabbit Code)
-                                                 */
+/** No resampling */
+#define PJMEDIA_RESAMPLE_NONE               1
+
+/** Sample rate conversion using libresample */
+#define PJMEDIA_RESAMPLE_LIBRESAMPLE        2
+
+/** Sample rate conversion using Speex */
+#define PJMEDIA_RESAMPLE_SPEEX              3
+
+/** Sample rate conversion using libsamplerate (a.k.a Secret Rabbit Code) */
+#define PJMEDIA_RESAMPLE_LIBSAMPLERATE      4
 
 /**
  * Select which resample implementation to use. Currently pjmedia supports:
