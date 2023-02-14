@@ -372,7 +372,8 @@ static pjmedia_sdp_session *create_answer(int call_num, pj_pool_t *pool,
         PJ_LOG(3,(THIS_FILE, "  Media %d, %.*s: %s <--> %.*s:%d",
                   mi, (int)m->desc.media.slen, m->desc.media.ptr,
                   (our_dir ? our_dir : "sendrecv"),
-                  (int)c->addr.slen, c->addr.ptr, m->desc.port));
+                  (c? (int)c->addr.slen : 6), (c? c->addr.ptr : "(none)"),
+                  m->desc.port));
     }
 
     return answer;
