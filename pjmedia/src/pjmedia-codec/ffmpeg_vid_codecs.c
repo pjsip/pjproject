@@ -163,7 +163,7 @@ typedef struct ffmpeg_codec_desc ffmpeg_codec_desc;
 typedef struct ffmpeg_private
 {
     const ffmpeg_codec_desc         *desc;
-    pjmedia_vid_codec_param          param;     /**< Codec param            */
+    pjmedia_vid_codec_param         *param;     /**< Codec param            */
     pj_pool_t                       *pool;      /**< Pool for each instance */
 
     /* Format info and apply format param */
@@ -196,7 +196,7 @@ typedef struct ffmpeg_private
                                                 /**< Expected output format of 
                                                      ffmpeg decoder         */
 
-    void                            *data;      /**< Codec specific data    */              
+    void                            *data;      /**< Codec specific data    */
 } ffmpeg_private;
 
 
@@ -206,7 +206,8 @@ typedef struct ffmpeg_private
 #define FUNC_PACKETIZE(name) \
     pj_status_t(name)(ffmpeg_private *ff, pj_uint8_t *bits, \
                       pj_size_t bits_len, unsigned *bits_pos, \
-                      pj_uint8_t *payload, pj_size_t *payload_len, pj_bool_t is_keyframe)
+                      pj_uint8_t *payload, pj_size_t *payload_len, \
+                      pj_bool_t is_keyframe)
 
 #define FUNC_UNPACKETIZE(name) \
     pj_status_t(name)(ffmpeg_private *ff, const pj_uint8_t *payload, \
@@ -369,13 +370,13 @@ static pj_status_t vpx_preopen(ffmpeg_private *ff)
     ff->data = data;
 
     /* Parse local fmtp */
-    if (!ff->param.ignore_fmtp)
+    if (!ff->param->ignore_fmtp)
     {
         pjmedia_vid_codec_vpx_fmtp vpx_fmtp;
         const unsigned MAX_RX_RES = 1200;
         unsigned max_res = MAX_RX_RES;
 
-        status = pjmedia_vid_codec_vpx_parse_fmtp(&ff->param.dec_fmtp, &vpx_fmtp);
+        status = pjmedia_vid_codec_vpx_parse_fmtp(&ff->param->dec_fmtp, &vpx_fmtp);
         if (status != PJ_SUCCESS)
         {
             PJ_LOG(2, (THIS_FILE, "Parse vpx fmtp fail, status:%d", status));
@@ -390,7 +391,7 @@ static pj_status_t vpx_preopen(ffmpeg_private *ff)
 
     /* Create packetizer */
     pktz_cfg.fmt_id = ff->desc->info.fmt_id;
-    pktz_cfg.mtu = ff->param.enc_mtu;
+    pktz_cfg.mtu = ff->param->enc_mtu;
     status = pjmedia_vpx_packetizer_create(ff->pool, &pktz_cfg, &data->pktz);
     if (status != PJ_SUCCESS)
     {
@@ -468,13 +469,13 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
     ff->data = data;
 
     /* Parse remote fmtp */
-    status = pjmedia_vid_codec_h264_parse_fmtp(&ff->param.enc_fmtp,
+    status = pjmedia_vid_codec_h264_parse_fmtp(&ff->param->enc_fmtp,
                                                &data->fmtp);
     if (status != PJ_SUCCESS)
         return status;
 
     /* Create packetizer */
-    pktz_cfg.mtu = ff->param.enc_mtu;
+    pktz_cfg.mtu = ff->param->enc_mtu;
     pktz_cfg.unpack_nal_start = 0;
 #if 0
     if (data->fmtp.packetization_mode == 0)
@@ -500,18 +501,18 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
         return status;
 
     /* Apply SDP fmtp to format in codec param */
-    if (!ff->param.ignore_fmtp) {
-        status = pjmedia_vid_codec_h264_apply_fmtp(&ff->param);
+    if (!ff->param->ignore_fmtp) {
+        status = pjmedia_vid_codec_h264_apply_fmtp(ff->param);
         if (status != PJ_SUCCESS)
             return status;
     }
 
-    if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
+    if (ff->param->dir & PJMEDIA_DIR_ENCODING) {
         pjmedia_video_format_detail *vfd;
         AVCodecContext *ctx = ff->enc_ctx;
         const char *profile = NULL;
 
-        vfd = pjmedia_format_get_video_format_detail(&ff->param.enc_fmt, 
+        vfd = pjmedia_format_get_video_format_detail(&ff->param->enc_fmt, 
                                                      PJ_TRUE);
 
         /* Override generic params after applying SDP fmtp */
@@ -550,10 +551,10 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
         ctx->level    = data->fmtp.level;
 
         /* Limit NAL unit size as we prefer single NAL unit packetization */
-        if (!AV_OPT_SET_INT(ctx->priv_data, "slice-max-size", ff->param.enc_mtu))
+        if (!AV_OPT_SET_INT(ctx->priv_data, "slice-max-size", ff->param->enc_mtu))
         {
             PJ_LOG(3, (THIS_FILE, "Failed to set H264 max NAL size to %d",
-                       ff->param.enc_mtu));
+                       ff->param->enc_mtu));
         }
 
         /* Apply intra-refresh */
@@ -573,7 +574,7 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
         }
     }
 
-    if (ff->param.dir & PJMEDIA_DIR_DECODING) {
+    if (ff->param->dir & PJMEDIA_DIR_DECODING) {
         AVCodecContext *ctx = ff->dec_ctx;
 
         /* Apply the "sprop-parameter-sets" fmtp from remote SDP to
@@ -639,23 +640,23 @@ static pj_status_t h263_preopen(ffmpeg_private *ff)
     ff->data = data;
 
     /* Create packetizer */
-    pktz_cfg.mtu = ff->param.enc_mtu;
+    pktz_cfg.mtu = ff->param->enc_mtu;
     pktz_cfg.mode = PJMEDIA_H263_PACKETIZER_MODE_RFC4629;
     status = pjmedia_h263_packetizer_create(ff->pool, &pktz_cfg, &data->pktz);
     if (status != PJ_SUCCESS)
         return status;
 
     /* Apply fmtp settings to codec param */
-    if (!ff->param.ignore_fmtp) {
-        status = pjmedia_vid_codec_h263_apply_fmtp(&ff->param);
+    if (!ff->param->ignore_fmtp) {
+        status = pjmedia_vid_codec_h263_apply_fmtp(ff->param);
     }
 
     /* Override generic params after applying SDP fmtp */
-    if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
+    if (ff->param->dir & PJMEDIA_DIR_ENCODING) {
         pjmedia_video_format_detail *vfd;
         AVCodecContext *ctx = ff->enc_ctx;
 
-        vfd = pjmedia_format_get_video_format_detail(&ff->param.enc_fmt, 
+        vfd = pjmedia_format_get_video_format_detail(&ff->param->enc_fmt, 
                                                      PJ_TRUE);
 
         /* Override generic params after applying SDP fmtp */
@@ -1270,18 +1271,18 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
     pj_status_t status;
 
     /* Get decoded pixel format */
-    status = pjmedia_format_id_to_PixelFormat(ff->param.dec_fmt.id,
+    status = pjmedia_format_id_to_PixelFormat(ff->param->dec_fmt.id,
                                               &pix_fmt);
     if (status != PJ_SUCCESS)
         return status;
     ff->expected_dec_fmt = pix_fmt;
 
     /* Get video format detail for shortcut access to encoded format */
-    vfd = pjmedia_format_get_video_format_detail(&ff->param.enc_fmt, 
+    vfd = pjmedia_format_get_video_format_detail(&ff->param->enc_fmt, 
                                                  PJ_TRUE);
 
     /* Allocate ffmpeg codec context */
-    if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
+    if (ff->param->dir & PJMEDIA_DIR_ENCODING) {
 #if LIBAVCODEC_VER_AT_LEAST(53,20)
         ff->enc_ctx = avcodec_alloc_context3(ff->enc);
 #else
@@ -1290,7 +1291,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
         if (ff->enc_ctx == NULL)
             goto on_error;
     }
-    if (ff->param.dir & PJMEDIA_DIR_DECODING) {
+    if (ff->param->dir & PJMEDIA_DIR_DECODING) {
 #if LIBAVCODEC_VER_AT_LEAST(53,20)
         ff->dec_ctx = avcodec_alloc_context3(ff->dec);
 #else
@@ -1301,7 +1302,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
     }
 
     /* Init generic encoder params */
-    if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
+    if (ff->param->dir & PJMEDIA_DIR_ENCODING) {
         AVCodecContext *ctx = ff->enc_ctx;
 
         ctx->pix_fmt = pix_fmt;
@@ -1327,12 +1328,12 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
     }
 
     /* Init generic decoder params */
-    if (ff->param.dir & PJMEDIA_DIR_DECODING) {
+    if (ff->param->dir & PJMEDIA_DIR_DECODING) {
         AVCodecContext *ctx = ff->dec_ctx;
 
         /* Width/height may be overriden by ffmpeg after first decoding. */
-        ctx->width  = ctx->coded_width  = ff->param.dec_fmt.det.vid.size.w;
-        ctx->height = ctx->coded_height = ff->param.dec_fmt.det.vid.size.h;
+        ctx->width  = ctx->coded_width  = ff->param->dec_fmt.det.vid.size.w;
+        ctx->height = ctx->coded_height = ff->param->dec_fmt.det.vid.size.h;
         ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
         ctx->workaround_bugs = FF_BUG_AUTODETECT;
         ctx->opaque = ff;
@@ -1348,7 +1349,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
     }
 
     /* Open encoder */
-    if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
+    if (ff->param->dir & PJMEDIA_DIR_ENCODING) {
         int err;
 
         pj_mutex_lock(ff_mutex);
@@ -1363,7 +1364,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
     }
 
     /* Open decoder */
-    if (ff->param.dir & PJMEDIA_DIR_DECODING) {
+    if (ff->param->dir & PJMEDIA_DIR_DECODING) {
         int err;
 
         pj_mutex_lock(ff_mutex);
@@ -1415,7 +1416,7 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(codec && attr, PJ_EINVAL);
     ff = (ffmpeg_private*)codec->codec_data;
 
-    pj_memcpy(&ff->param, attr, sizeof(*attr));
+    ff->param = pjmedia_vid_codec_param_clone(ff->pool, attr);
 
     /* Normalize encoding MTU in codec param */
     if (attr->enc_mtu > PJMEDIA_MAX_VID_PAYLOAD_SIZE)
@@ -1428,13 +1429,13 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
         goto on_error;
 
     /* Init format info and apply-param of decoder */
-    ff->dec_vfi = pjmedia_get_video_format_info(NULL, ff->param.dec_fmt.id);
+    ff->dec_vfi = pjmedia_get_video_format_info(NULL, ff->param->dec_fmt.id);
     if (!ff->dec_vfi) {
         status = PJ_EINVAL;
         goto on_error;
     }
     pj_bzero(&ff->dec_vafp, sizeof(ff->dec_vafp));
-    ff->dec_vafp.size = ff->param.dec_fmt.det.vid.size;
+    ff->dec_vafp.size = ff->param->dec_fmt.det.vid.size;
     ff->dec_vafp.buffer = NULL;
     status = (*ff->dec_vfi->apply_fmt)(ff->dec_vfi, &ff->dec_vafp);
     if (status != PJ_SUCCESS) {
@@ -1442,13 +1443,13 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
     }
 
     /* Init format info and apply-param of encoder */
-    ff->enc_vfi = pjmedia_get_video_format_info(NULL, ff->param.dec_fmt.id);
+    ff->enc_vfi = pjmedia_get_video_format_info(NULL, ff->param->dec_fmt.id);
     if (!ff->enc_vfi) {
         status = PJ_EINVAL;
         goto on_error;
     }
     pj_bzero(&ff->enc_vafp, sizeof(ff->enc_vafp));
-    ff->enc_vafp.size = ff->param.enc_fmt.det.vid.size;
+    ff->enc_vafp.size = ff->param->enc_fmt.det.vid.size;
     ff->enc_vafp.buffer = NULL;
     status = (*ff->enc_vfi->apply_fmt)(ff->enc_vfi, &ff->enc_vafp);
     if (status != PJ_SUCCESS) {
@@ -1456,7 +1457,7 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
     }
 
     /* Alloc buffers if needed */
-    ff->whole = (ff->param.packing == PJMEDIA_VID_PACKING_WHOLE);
+    ff->whole = (ff->param->packing == PJMEDIA_VID_PACKING_WHOLE);
     if (!ff->whole) {
         ff->enc_buf_size = (unsigned)ff->enc_vafp.framebytes;
         ff->enc_buf = pj_pool_alloc(ff->pool, ff->enc_buf_size);
@@ -1468,7 +1469,7 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
     /* Update codec attributes, e.g: encoding format may be changed by
      * SDP fmtp negotiation.
      */
-    pj_memcpy(attr, &ff->param, sizeof(*attr));
+    pj_memcpy(attr, ff->param, sizeof(*attr));
 
     return PJ_SUCCESS;
 
@@ -1528,7 +1529,7 @@ static pj_status_t  ffmpeg_codec_get_param(pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(codec && param, PJ_EINVAL);
 
     ff = (ffmpeg_private*)codec->codec_data;
-    pj_memcpy(param, &ff->param, sizeof(*param));
+    pj_memcpy(param, ff->param, sizeof(*param));
 
     return PJ_SUCCESS;
 }
@@ -1790,17 +1791,17 @@ static pj_status_t check_decode_result(pjmedia_vid_codec *codec,
             return status;
 
         /* Update decoder format in param */
-                ff->param.dec_fmt.id = new_fmt_id;
-        ff->param.dec_fmt.det.vid.size.w = ff->dec_ctx->width;
-        ff->param.dec_fmt.det.vid.size.h = ff->dec_ctx->height;
+        ff->param->dec_fmt.id = new_fmt_id;
+        ff->param->dec_fmt.det.vid.size.w = ff->dec_ctx->width;
+        ff->param->dec_fmt.det.vid.size.h = ff->dec_ctx->height;
         ff->expected_dec_fmt = ff->dec_ctx->pix_fmt;
 
         /* Re-init format info and apply-param of decoder */
-        ff->dec_vfi = pjmedia_get_video_format_info(NULL, ff->param.dec_fmt.id);
+        ff->dec_vfi = pjmedia_get_video_format_info(NULL, ff->param->dec_fmt.id);
         if (!ff->dec_vfi)
             return PJ_ENOTSUP;
         pj_bzero(&ff->dec_vafp, sizeof(ff->dec_vafp));
-        ff->dec_vafp.size = ff->param.dec_fmt.det.vid.size;
+        ff->dec_vafp.size = ff->param->dec_fmt.det.vid.size;
         ff->dec_vafp.buffer = NULL;
         status = (*ff->dec_vfi->apply_fmt)(ff->dec_vfi, &ff->dec_vafp);
         if (status != PJ_SUCCESS)
@@ -1818,8 +1819,8 @@ static pj_status_t check_decode_result(pjmedia_vid_codec *codec,
         /* Broadcast format changed event */
         pjmedia_event_init(&event, PJMEDIA_EVENT_FMT_CHANGED, ts, codec);
         event.data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
-        pj_memcpy(&event.data.fmt_changed.new_fmt, &ff->param.dec_fmt,
-                  sizeof(ff->param.dec_fmt));
+        pj_memcpy(&event.data.fmt_changed.new_fmt, &ff->param->dec_fmt,
+                  sizeof(ff->param->dec_fmt));
         pjmedia_event_publish(NULL, codec, &event, 0);
     }
 
