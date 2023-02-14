@@ -142,18 +142,23 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find (unsigned count,
 {
     unsigned i;
     unsigned c_pt = 0xFFFF;
+    unsigned long ul;
 
     PJ_ASSERT_RETURN(count <= PJMEDIA_MAX_SDP_ATTR, NULL);
 
-    if (c_fmt)
-        c_pt = pj_strtoul(c_fmt);
+    if (c_fmt) {
+        if (pj_strtoul3(c_fmt, &ul, 10) != PJ_SUCCESS)
+            return NULL;
+        c_pt = (unsigned)ul;
+    }
 
     for (i=0; i<count; ++i) {
         if (pj_strcmp(&attr_array[i]->name, name) == 0) {
             const pjmedia_sdp_attr *a = attr_array[i];
             if (c_fmt) {
-                unsigned pt = (unsigned) pj_strtoul2(&a->value, NULL, 10);
-                if (pt == c_pt) {
+                pj_str_t endptr;
+                unsigned pt = (unsigned) pj_strtoul2(&a->value, &endptr, 10);
+                if (endptr.ptr != a->value.ptr && pt == c_pt) {
                     return (pjmedia_sdp_attr*)a;
                 }
             } else 
@@ -415,7 +420,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
     PJ_TRY {
 
         /* Get the port */
-        pj_scan_get(&scanner, &cs_token, &token);
+        pj_scan_get(&scanner, &cs_digit, &token);
         rtcp->port = pj_strtoul(&token);
 
         /* Have address? */
@@ -1009,6 +1014,7 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
                          volatile parse_context *ctx)
 {
     pj_str_t str;
+    unsigned long ul;
 
     ctx->last_error = PJMEDIA_SDP_EINORIGIN;
 
@@ -1027,12 +1033,20 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
 
     /* id */
     pj_scan_get_until_ch(scanner, ' ', &str);
-    ses->origin.id = pj_strtoul(&str);
+    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+        on_scanner_error(scanner);
+        return;
+    }
+    ses->origin.id = (pj_uint32_t)ul;
     pj_scan_get_char(scanner);
 
     /* version */
     pj_scan_get_until_ch(scanner, ' ', &str);
-    ses->origin.version = pj_strtoul(&str);
+    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+        on_scanner_error(scanner);
+        return;
+    }
+    ses->origin.version = (pj_uint32_t)ul;
     pj_scan_get_char(scanner);
 
     /* network-type */
@@ -1055,6 +1069,7 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
                        volatile parse_context *ctx)
 {
     pj_str_t str;
+    unsigned long ul;
 
     ctx->last_error = PJMEDIA_SDP_EINTIME;
 
@@ -1069,13 +1084,21 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
 
     /* start time */
     pj_scan_get_until_ch(scanner, ' ', &str);
-    ses->time.start = pj_strtoul(&str);
+    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+        on_scanner_error(scanner);
+        return;
+    }
+    ses->time.start = (pj_uint32_t)ul;
 
     pj_scan_get_char(scanner);
 
     /* stop time */
     pj_scan_get_until_chr(scanner, " \t\r\n", &str);
-    ses->time.stop = pj_strtoul(&str);
+    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+        on_scanner_error(scanner);
+        return;
+    }
+    ses->time.stop = (pj_uint32_t)ul;
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
@@ -1130,6 +1153,7 @@ static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
                                  volatile parse_context *ctx)
 {
     pj_str_t str;
+    unsigned long ul;
 
     ctx->last_error = PJMEDIA_SDP_EINBANDW;
 
@@ -1142,7 +1166,11 @@ static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
 
     /* value */
     pj_scan_get_until_chr(scanner, " \t\r\n", &str);
-    bandw->value = pj_strtoul(&str);
+    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+        on_scanner_error(scanner);
+        return;
+    }
+    bandw->value = (pj_uint32_t)ul;
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
