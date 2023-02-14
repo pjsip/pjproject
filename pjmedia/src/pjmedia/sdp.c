@@ -1167,8 +1167,11 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
     pj_scan_advance_n(scanner, 2, SKIP_WS);
 
     /* type */
-    pj_scan_get_until_ch(scanner, ' ', &med->desc.media);
-    pj_scan_get_char(scanner);
+    pj_scan_get(scanner, &cs_token, &med->desc.media);
+
+    if (pj_scan_get_char(scanner) != ' ') {
+        on_scanner_error(scanner);
+    }
 
     /* port */
     pj_scan_get(scanner, &cs_token, &str);
