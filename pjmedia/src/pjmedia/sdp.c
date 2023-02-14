@@ -422,6 +422,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
         /* Get the port */
         pj_scan_get(&scanner, &cs_digit, &token);
         rtcp->port = pj_strtoul(&token);
+        if (rtcp->port > 0xFFFF)
+            PJ_THROW(PJMEDIA_SDP_EINRTCP);
 
         /* Have address? */
         if (!pj_scan_is_eof(&scanner)) {
@@ -1204,7 +1206,7 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
     /* port */
     pj_scan_get(scanner, &cs_token, &str);
     status = pj_strtoul3(&str, &num, 10);
-    if (status != PJ_SUCCESS || pj_scan_is_eof(scanner)) {
+    if (status != PJ_SUCCESS || pj_scan_is_eof(scanner) || num > 0xFFFF) {
         on_scanner_error(scanner);
         return;
     }
