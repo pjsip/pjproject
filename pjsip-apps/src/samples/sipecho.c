@@ -528,14 +528,25 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         status = pjsip_inv_send_msg(call->inv, tdata);
 
     if (status != PJ_SUCCESS) {
-        if (pjsip_rdata_get_tsx(rdata) == NULL) {
-            /* Respond statelessly when tsx is not created yet */
-            pjsip_endpt_respond_stateless( app.sip_endpt, rdata,
-                                           500, NULL, NULL, NULL);
+        pjsip_transaction *tsx;
+
+        app_perror(THIS_FILE, "Unable to create/send 1xx/200 response", status);
+
+        tsx = pjsip_rdata_get_tsx(rdata);
+        if (tsx == NULL || tsx->state >= PJSIP_TSX_STATE_TERMINATED) {
+            /* Respond statelessly if tsx is stateless or already terminated */
+            status = pjsip_endpt_respond_stateless( app.sip_endpt, rdata,
+                                                    500, NULL, NULL, NULL);
         } else {
             /* Otherwise, respond statefully */
-            pjsip_endpt_respond( app.sip_endpt, &mod_sipecho, rdata,
-                                 500, NULL, NULL, NULL, NULL);
+            status = pjsip_endpt_create_response( app.sip_endpt, rdata,
+                                                  500, NULL, &tdata);
+            if (status == PJ_SUCCESS)
+                status = pjsip_tsx_send_msg(tsx, tdata);
+        }
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to create/send 500 response",
+                       status);
         }
         destroy_call(call);
     } else {
