@@ -43,6 +43,7 @@ Table of contents:
   - [Sample applications](https://docs.pjsip.org/en/latest/pjsua2/samples.html)
 - Specific guides
   - [Audio](https://docs.pjsip.org/en/latest/specific-guides/index.html#audio)
+  - [Audio Troubleshooting](https://docs.pjsip.org/en/latest/specific-guides/index.html#audio-troubleshooting)
   - [Build and integration](https://docs.pjsip.org/en/latest/specific-guides/index.html#build-integration)
   - [Development and programming](https://docs.pjsip.org/en/latest/specific-guides/index.html#development-programming)
   - [Media](https://docs.pjsip.org/en/latest/specific-guides/index.html#media)
