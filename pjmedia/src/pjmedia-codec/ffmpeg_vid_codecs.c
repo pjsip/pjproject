@@ -735,7 +735,7 @@ static void init_codec(const AVCodec *c, pj_bool_t is_encoder,
     ffmpeg_codec_desc *desc;
     pjmedia_format_id fmt_id;
     int codec_info_idx;
-        
+
 #if LIBAVCODEC_VERSION_MAJOR <= 52
 #   define AVMEDIA_TYPE_VIDEO   CODEC_TYPE_VIDEO
 #endif
@@ -789,7 +789,7 @@ static void init_codec(const AVCodec *c, pj_bool_t is_encoder,
                               "Unrecognized ffmpeg pixel format %d", *p));
                 continue;
             }
-            
+
             //raw_fmt[raw_fmt_cnt++] = fmt_id;
             /* Disable some formats due to H.264 error:
              * x264 [error]: baseline profile doesn't support 4:4:4
@@ -839,7 +839,7 @@ static void init_codec(const AVCodec *c, pj_bool_t is_encoder,
         desc->info.dir |= PJMEDIA_DIR_ENCODING;
         desc->enc = c;
     }
-    
+
     /* Get ffmpeg decoder instance */
     if (is_decoder && !desc->dec) {
         desc->info.dir |= PJMEDIA_DIR_DECODING;
@@ -908,7 +908,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
 #endif
 
 #if LIBAVCODEC_VER_AT_LEAST(58,137)
-    
+
     for (i = 0; i < PJ_ARRAY_SIZE(codec_desc); ++i) {
         unsigned codec_id;
 
@@ -1565,7 +1565,7 @@ static pj_status_t  ffmpeg_unpacketize(pjmedia_vid_codec *codec,
         return (*ff->desc->unpacketize)(ff, payload, payload_len,
                                         bits, bits_len, bits_pos);
     }
-    
+
     return PJ_ENOTSUP;
 }
 
@@ -1612,7 +1612,7 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     avframe.pts = av_rescale_q(input->timestamp.u64, src_timebase,
                                ff->enc_ctx->time_base);
     */
-    
+
     for (i[0] = 0; i[0] < ff->enc_vfi->plane_cnt; ++i[0]) {
         avframe.data[i[0]] = p;
         avframe.linesize[i[0]] = ff->enc_vafp.strides[i[0]];
@@ -1685,9 +1685,9 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
 #if LIBAVCODEC_VER_AT_LEAST(54,15)
         has_key_frame = (avpacket.flags & AV_PKT_FLAG_KEY);
 #else
-        has_key_frame = ff->enc_ctx->coded_frame->key_frame;        
+        has_key_frame = ff->enc_ctx->coded_frame->key_frame;
 #endif
-        if (has_key_frame)    
+        if (has_key_frame)
             output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
     }
 
@@ -1965,7 +1965,7 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
             if (avframe.linesize[i]!=vafp->strides[i]) {
                 /* Padding exists, copy line by line */
                 pj_uint8_t *q_end;
-                    
+
                 q_end = q+vafp->plane_bytes[i];
                 while(q < q_end) {
                     pj_memcpy(q, p, vafp->strides[i]);
@@ -1985,7 +1985,7 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
         output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->size = 0;
     }
-    
+
     return PJ_SUCCESS;
 }
 
