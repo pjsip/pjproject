@@ -1419,8 +1419,8 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
     ff->param = pjmedia_vid_codec_param_clone(ff->pool, attr);
 
     /* Normalize encoding MTU in codec param */
-    if (attr->enc_mtu > PJMEDIA_MAX_VID_PAYLOAD_SIZE)
-        attr->enc_mtu = PJMEDIA_MAX_VID_PAYLOAD_SIZE;
+    if (ff->param->enc_mtu > PJMEDIA_MAX_VID_PAYLOAD_SIZE)
+        ff->param->enc_mtu = PJMEDIA_MAX_VID_PAYLOAD_SIZE;
 
     /* Open the codec */
     ff_mutex = ((struct ffmpeg_factory*)codec->factory)->mutex;
