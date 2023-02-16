@@ -19,6 +19,7 @@
 #include <pjsip-ua/sip_inv.h>
 #include <pjsip-ua/sip_100rel.h>
 #include <pjsip-ua/sip_timer.h>
+#include <pjsip/print_util.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_event.h>
@@ -3077,45 +3078,37 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
                 uri = (pjsip_sip_uri *)pjsip_uri_get_uri(req_uri);
                 param = uri->header_param.next;
                 while (param != &uri->header_param) {
-                    const pj_str_t hdr_names[] =
+                    const pjsip_hdr_e hdr_types[] =
                     {
                     /* We should reject the following headers as
                      * they can potentially be malicious or misleading.
                      */
-                    {"Accept",              6}, // PJSIP_H_ACCEPT,
-                    {"Accept-Encoding",    15}, // PJSIP_H_ACCEPT_ENCODING,
-                    {"Accept-Language",    15}, // PJSIP_H_ACCEPT_LANGUAGE,
-                    {"Allow",               5}, // PJSIP_H_ALLOW,
-                    {"Call-ID",             7}, // PJSIP_H_CALL_ID,
-                    {"Contact",             7}, // PJSIP_H_CONTACT,
-                    {"CSeq",                4}, // PJSIP_H_CSEQ,
-                    {"From",                4}, // PJSIP_H_FROM,
-                    {"Organization",       12}, // PJSIP_H_ORGANIZATION,
-                    {"Record-Route",       12}, // PJSIP_H_RECORD_ROUTE,
-                    {"Route",               5}, // PJSIP_H_ROUTE,
-                    {"Supported",           9}, // PJSIP_H_SUPPORTED,
-                    {"To",                  2}, // PJSIP_H_TO,
-                    {"User-Agent",         10}, // PJSIP_H_USER_AGENT,
-                    {"Via",                 3}, // PJSIP_H_VIA,
+                    PJSIP_H_ACCEPT, PJSIP_H_ACCEPT_ENCODING_UNIMP,
+                    PJSIP_H_ACCEPT_LANGUAGE_UNIMP, PJSIP_H_ALLOW,
+                    PJSIP_H_CALL_ID, PJSIP_H_CONTACT, PJSIP_H_CSEQ,
+                    PJSIP_H_FROM, PJSIP_H_ORGANIZATION_UNIMP,
+                    PJSIP_H_RECORD_ROUTE, PJSIP_H_ROUTE,
+                    PJSIP_H_SUPPORTED, PJSIP_H_TO,
+                    PJSIP_H_USER_AGENT_UNIMP, PJSIP_H_VIA,
                     /* We opt to ignore the following headers as
                      * they may contain inaccurate information.
                      */
-                    {"Content-Disposition",19}, // PJSIP_H_CONTENT_DISPOSITION,
-                    {"Content-Encoding",   16}, // PJSIP_H_CONTENT_ENCODING,
-                    {"Content-Language",   16}, // PJSIP_H_CONTENT_LANGUAGE,
-                    {"Content-Length",     14}, // PJSIP_H_CONTENT_LENGTH,
-                    {"Content-Type",       12}, // PJSIP_H_CONTENT_TYPE,
-                    {"Date",                4}, // PJSIP_H_DATE,
-                    {"MIME-Version",       12}, // PJSIP_H_MIME_VERSION,
-                    {"Timestamp",           9}, // PJSIP_H_TIMESTAMP,
+                    PJSIP_H_CONTENT_DISPOSITION_UNIMP,
+                    PJSIP_H_CONTENT_ENCODING_UNIMP,
+                    PJSIP_H_CONTENT_LANGUAGE_UNIMP, PJSIP_H_CONTENT_LENGTH,
+                    PJSIP_H_CONTENT_TYPE, PJSIP_H_DATE_UNIMP,
+                    PJSIP_H_MIME_VERSION_UNIMP, PJSIP_H_TIMESTAMP_UNIMP,
                     };
                     pjsip_generic_string_hdr *hdr;
                     unsigned i;
                     pj_bool_t found = PJ_FALSE;
 
                     /* Check if we should reject/ignore the header. */
-                    for (i = 0; i < sizeof(hdr_names)/sizeof(pj_str_t); i++) {
-                        if (!pj_stricmp(&param->name, &hdr_names[i])) {
+                    for (i = 0; i < sizeof(hdr_types)/sizeof(pjsip_hdr_e); i++)
+                    {
+                        if (!pj_stricmp2(&param->name,
+                                         pjsip_hdr_names[hdr_types[i]].name))
+                        {
                             found = PJ_TRUE;
                             break;
                         }
