@@ -3052,6 +3052,7 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
         {
             pjsip_tx_data *tdata;
             pjsip_via_hdr *via;
+            pjsip_uri *req_uri;
 
             /* Get the original INVITE request. */
             tdata = inv->invite_req;
@@ -3065,6 +3066,110 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
             /* Set target */
             tdata->msg->line.req.uri = (pjsip_uri*)
                pjsip_uri_clone(tdata->pool, inv->dlg->target_set.current->uri);
+
+            req_uri = tdata->msg->line.req.uri;
+            if (PJSIP_URI_SCHEME_IS_SIP(req_uri) ||
+                PJSIP_URI_SCHEME_IS_SIPS(req_uri))
+            {
+                pjsip_sip_uri *uri;
+                pjsip_param *param;
+
+                uri = (pjsip_sip_uri *)pjsip_uri_get_uri(req_uri);
+                param = uri->header_param.next;
+                while (param != &uri->header_param) {
+                    const pj_str_t hdr_names[] =
+                    {
+                    /* We should reject the following headers as
+                     * they can potentially be malicious or misleading.
+                     */
+                    {"Accept",              6}, // PJSIP_H_ACCEPT,
+                    {"Accept-Encoding",    15}, // PJSIP_H_ACCEPT_ENCODING,
+                    {"Accept-Language",    15}, // PJSIP_H_ACCEPT_LANGUAGE,
+                    {"Allow",               5}, // PJSIP_H_ALLOW,
+                    {"Call-ID",             7}, // PJSIP_H_CALL_ID,
+                    {"Contact",             7}, // PJSIP_H_CONTACT,
+                    {"CSeq",                4}, // PJSIP_H_CSEQ,
+                    {"From",                4}, // PJSIP_H_FROM,
+                    {"Organization",       12}, // PJSIP_H_ORGANIZATION,
+                    {"Record-Route",       12}, // PJSIP_H_RECORD_ROUTE,
+                    {"Route",               5}, // PJSIP_H_ROUTE,
+                    {"Supported",           9}, // PJSIP_H_SUPPORTED,
+                    {"To",                  2}, // PJSIP_H_TO,
+                    {"User-Agent",         10}, // PJSIP_H_USER_AGENT,
+                    {"Via",                 3}, // PJSIP_H_VIA,
+                    /* We opt to ignore the following headers as
+                     * they may contain inaccurate information.
+                     */
+                    {"Content-Disposition",19}, // PJSIP_H_CONTENT_DISPOSITION,
+                    {"Content-Encoding",   16}, // PJSIP_H_CONTENT_ENCODING,
+                    {"Content-Language",   16}, // PJSIP_H_CONTENT_LANGUAGE,
+                    {"Content-Length",     14}, // PJSIP_H_CONTENT_LENGTH,
+                    {"Content-Type",       12}, // PJSIP_H_CONTENT_TYPE,
+                    {"Date",                4}, // PJSIP_H_DATE,
+                    {"MIME-Version",       12}, // PJSIP_H_MIME_VERSION,
+                    {"Timestamp",           9}, // PJSIP_H_TIMESTAMP,
+                    };
+                    pjsip_generic_string_hdr *hdr;
+                    unsigned i;
+                    pj_bool_t found = PJ_FALSE;
+
+                    /* Check if we should reject/ignore the header. */
+                    for (i = 0; i < sizeof(hdr_names)/sizeof(pj_str_t); i++) {
+                        if (!pj_stricmp(&param->name, &hdr_names[i])) {
+                            found = PJ_TRUE;
+                            break;
+                        }
+                    }
+                    if (found) {
+                        PJ_LOG(4, (THIS_FILE, "Redirection header %.*s "
+                                   "rejected/ignored",
+                                   (int)param->name.slen, param->name.ptr));
+                        param = param->next;
+                        continue;
+                    }
+
+                    /* If the header already exists, we choose to
+                     * overwrite it.
+                     */
+                    hdr = pjsip_msg_find_hdr_by_name(tdata->msg, &param->name,
+                                                     NULL);
+                    if (hdr) {
+                        pjsip_msg_find_remove_hdr(tdata->msg,
+                                                  PJSIP_H_OTHER, hdr);
+                    }
+                    hdr = pjsip_generic_string_hdr_create(tdata->pool,
+                                                          &param->name,
+                                                          &param->value);
+                    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hdr);
+                    param = param->next;
+                }
+
+                /* Remove method param */
+                if (uri->method_param.slen > 0) {
+                    /* Verify that it is INVITE */
+                    if (pj_stricmp(&uri->method_param,
+                                   &pjsip_get_invite_method()->name))
+                    {
+                        PJ_LOG(3, (THIS_FILE, "Redirection using %.*s "
+                                   "method unsupported, terminating session",
+                                   (int)uri->method_param.slen,
+                                   uri->method_param.ptr));
+
+                        inv_set_cause(inv, cancel_code,
+                                      pjsip_get_status_text(cancel_code));
+                        inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+                        status = PJSIP_EINVALIDMETHOD;
+                        break;
+                    }
+                    pj_bzero(&uri->method_param, sizeof(pj_str_t));
+                }
+
+                /* Remove all header params */
+                if (!pj_list_empty(&uri->header_param)) {
+                    pj_list_init(&uri->header_param);
+                }
+            }
 
             /* Remove branch param in Via header. */
             via = (pjsip_via_hdr*) 
