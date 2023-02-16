@@ -57,7 +57,7 @@ doc:
 
 clean-doc:
 	for dir in pjlib pjlib-util pjnath pjmedia pjsip; do \
-		rm -rf ./$${dir}/docs/html ./$${dir}/docs/xml ./$${dir}/docs/latex ./$${dir}/docs/$${dir}.tag; \
+		rm -rf $${dir}/docs/$${PJ_VERSION}; \
 	done
 
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \

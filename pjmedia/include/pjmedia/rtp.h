@@ -57,8 +57,8 @@ PJ_BEGIN_DECL
  * session.
  *
  * When application wants to send RTP packet, it needs to call 
- * #pjmedia_rtp_encode_rtp() to build the RTP header. Note that this WILL NOT build
- * the complete RTP packet, but instead only the header. Application can
+ * #pjmedia_rtp_encode_rtp() to build the RTP header. Note that this WILL NOT
+ * build the complete RTP packet, but instead only the header. Application can
  * then either concatenate the header with the payload, or send the two
  * fragments (the header and the payload) using scatter-gather transport API
  * (e.g. \a sendv()).
