@@ -3090,14 +3090,19 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
                     PJSIP_H_RECORD_ROUTE, PJSIP_H_ROUTE,
                     PJSIP_H_SUPPORTED, PJSIP_H_TO,
                     PJSIP_H_USER_AGENT_UNIMP, PJSIP_H_VIA,
-                    /* We opt to ignore the following headers as
-                     * they may contain inaccurate information.
+                    /* For future use, we should verify the content
+                     * of the following headers, but these headers
+                     * are currently unimplemented in PJSIP.
                      */
-                    PJSIP_H_CONTENT_DISPOSITION_UNIMP,
-                    PJSIP_H_CONTENT_ENCODING_UNIMP,
-                    PJSIP_H_CONTENT_LANGUAGE_UNIMP, PJSIP_H_CONTENT_LENGTH,
-                    PJSIP_H_CONTENT_TYPE, PJSIP_H_DATE_UNIMP,
-                    PJSIP_H_MIME_VERSION_UNIMP, PJSIP_H_TIMESTAMP_UNIMP,
+                    // PJSIP_H_CONTENT_DISPOSITION_UNIMP,
+                    // PJSIP_H_CONTENT_ENCODING_UNIMP,
+                    // PJSIP_H_CONTENT_LANGUAGE_UNIMP,
+                    // PJSIP_H_DATE_UNIMP, PJSIP_H_MIME_VERSION_UNIMP,
+                    // PJSIP_H_TIMESTAMP_UNIMP,
+                    /* We opt to ignore the following headers as
+                     * they will be automatically populated by PJSIP.
+                     */
+                    PJSIP_H_CONTENT_LENGTH, PJSIP_H_CONTENT_TYPE
                     };
                     pjsip_generic_string_hdr *hdr;
                     unsigned i;
