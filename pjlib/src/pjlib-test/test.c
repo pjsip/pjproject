@@ -74,7 +74,7 @@ int test_inner(void)
         return rc;
     }
 
-    //pj_dump_config();
+    pj_dump_config();
     pj_caching_pool_init( &caching_pool, NULL, 0 );
 
     if (param_ci_mode)
