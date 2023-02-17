@@ -105,10 +105,9 @@ echo
 echo ===============================
 echo Build PJPROJECT
 echo ===============================
-if ! [ -d cov-int ] ; then
-  make dep
-  cov-build --dir cov-int make
-fi
+make dep clean
+rm -rf cov-int
+cov-build --dir cov-int make
 
 
 echo
@@ -116,9 +115,8 @@ echo ===============================
 echo Submit scan
 echo ===============================
 
-if ! [ -f tmp/cov-int.bz2 ] ; then
-  tar caf tmp/cov-int.bz2 cov-int
-fi
+rm -f tmp/cov-int.bz2
+tar caf tmp/cov-int.bz2 cov-int
 
 if [ "$TESTING" == "1" ] ; then
   CURL="echo curl"

@@ -27,7 +27,7 @@ Run the next steps **inside Docker Ubuntu terminal**
    ```
    $ export COV_TOKEN=....
    ```
-6. Run the scan and upload the result (run `run.sh --help` to get some options):
+6. Run the scan and upload the result (run `run.sh -t` to skip uploading, `-h` to get some help):
 
    ```
    $ cd pjproject
