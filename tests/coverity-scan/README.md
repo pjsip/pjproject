@@ -1,0 +1,36 @@
+# Running Coverity Scan Locally
+
+1. Install Docker
+2. Pull and run `ubuntu` image:
+
+   ```
+   $ docker pull ubuntu
+   $ docker run -it ubuntu
+   ```
+
+Run the next steps **inside Docker Ubuntu terminal**
+
+3. Install git:
+
+   ```
+   $ sudo apt-update
+   $ sudo apt-get install git
+   ```
+4. Get PJSIP:
+
+   ```
+   $ cd
+   $ git clone https://github.com/pjsip/pjproject.git
+   ```
+5. Set Coverity Scan token:
+
+   ```
+   $ export COV_TOKEN=....
+   ```
+6. Run the scan and upload the result (run `run.sh --help` to get some options):
+
+   ```
+   $ cd pjproject
+   $ tests/coverity-scan/run.sh
+   ```
+
