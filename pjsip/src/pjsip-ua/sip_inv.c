@@ -3063,7 +3063,7 @@ void pjsip_inv_process_hparam(pjsip_inv_session *sess,
     /* According to RFC 3261 section 19.1.5, we should verify
      * the accuracy of the header fields.
      * Application will need to do its own verification by
-     * overriding the function.
+     * overriding the handler function.
      */
     const pjsip_hdr_e verify_hdrs[] = {
         PJSIP_H_CONTENT_DISPOSITION_UNIMP,
@@ -3094,10 +3094,9 @@ void pjsip_inv_process_hparam(pjsip_inv_session *sess,
     PJ_UNUSED_ARG(verify_hdrs);
 
     /* Check if we should reject/ignore the header. */
-    for (i = 0; i < sizeof(ignored_hdrs)/sizeof(pjsip_hdr_e); i++) {
+    for (i = 0; i < PJ_ARRAY_SIZE(ignored_hdrs); i++) {
         if (!pj_stricmp2(hname, pjsip_hdr_names[ignored_hdrs[i]].name)) {
-            PJ_LOG(4, (THIS_FILE, "Redirection header %.*s "
-                                  "rejected/ignored",
+            PJ_LOG(4, (THIS_FILE, "Redirection header %.*s ignored",
                                   (int)hname->slen,
                                   hname->ptr));
             return;
@@ -3109,7 +3108,7 @@ void pjsip_inv_process_hparam(pjsip_inv_session *sess,
     /* Check if the header exists. */
     if (hdr) {
         /* Yes, now check if we can append the header. */
-        for (i = 0; i < sizeof(append_hdrs)/sizeof(pjsip_hdr_e); i++) {
+        for (i = 0; i < PJ_ARRAY_SIZE(append_hdrs); i++) {
             if (!pj_stricmp2(hname, pjsip_hdr_names[append_hdrs[i]].name)) {
                 pjsip_generic_string_hdr *shdr;
                 pj_str_t old_hval;
@@ -3136,6 +3135,7 @@ void pjsip_inv_process_hparam(pjsip_inv_session *sess,
         pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_OTHER, hdr);
     }
 
+    /* Add the header */
     hdr = (pjsip_hdr *)pjsip_generic_string_hdr_create(tdata->pool, hname,
                                                        hvalue);
     pjsip_msg_add_hdr(tdata->msg, hdr);
@@ -3238,7 +3238,6 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
                 if (!pj_list_empty(&uri->header_param)) {
                     pj_list_init(&uri->header_param);
                 }
-
             }
 
             /* Remove branch param in Via header. */
