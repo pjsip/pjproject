@@ -3113,28 +3113,27 @@ int pjsip_inv_get_hparam_action(pjsip_inv_session *sess, const pj_str_t *hname,
     int ret = REPLACE;
 
     /* Check if we should reject/ignore the header. */
-    for (i = 0; i < sizeof(ignored_hdrs)/sizeof(pjsip_hdr_e); i++)
-    {
+    for (i = 0; i < sizeof(ignored_hdrs)/sizeof(pjsip_hdr_e); i++) {
         if (!pj_stricmp2(hname, pjsip_hdr_names[ignored_hdrs[i]].name))
             return IGNORE;
     }
 
     /* Check if we need to verify the header. */
-    for (i = 0; i < sizeof(verify_hdrs)/sizeof(pjsip_hdr_e); i++)
-    {
+    for (i = 0; i < sizeof(verify_hdrs)/sizeof(pjsip_hdr_e); i++) {
         if (!pj_stricmp2(hname, pjsip_hdr_names[verify_hdrs[i]].name))
             return VERIFY;
     }
 
     /* Check if we can append the header. */
-    for (i = 0; i < sizeof(append_hdrs)/sizeof(pjsip_hdr_e); i++)
-    {
+    for (i = 0; i < sizeof(append_hdrs)/sizeof(pjsip_hdr_e); i++) {
         if (!pj_stricmp2(hname, pjsip_hdr_names[append_hdrs[i]].name)) {
-            ret = APPEND;
-            break;
+            return APPEND;
         }
     }
 
+    /* The following code is just an example for appending values
+     * and will not be executed.
+     */
     if (ret == APPEND && hdr) {
         /* The header exists and we can append it. */
         pjsip_generic_string_hdr *shdr;
