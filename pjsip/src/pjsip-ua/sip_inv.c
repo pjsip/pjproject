@@ -83,25 +83,18 @@ static const pjsip_method pjsip_update_method =
 #define POOL_INIT_SIZE  256
 #define POOL_INC_SIZE   256
 
-/* Default action function to determine whether the header param with
- * name hname and value hvalue should be included when formulating
- * a new request based on the redirected request.
- *
- * Parameter hdr is the header in the original request that has the same
- * hname.
- * Parameter hdr and pool is typically needed only when you want to append
- * the header to existing one.
- */
-int pjsip_inv_get_hparam_action(pjsip_inv_session *sess, const pj_str_t *hname,
-                                const pj_str_t *hvalue, pjsip_hdr *hdr,
-                                pj_pool_t *pool);
+/* Process header parameter in redirection target. */
+void pjsip_inv_process_hparam(pjsip_inv_session *sess, 
+                              const pj_str_t *hname, 
+                              const pj_str_t *hvalue, 
+                              pjsip_tx_data *tdata);
 
-
-/* Application can override this if it wants to implement custom action. */
-int (*pjsip_inv_get_hparam_action_ptr)(pjsip_inv_session *, const pj_str_t *,
-                                       const pj_str_t *, pjsip_hdr *,
-                                       pj_pool_t *) =
-                                       &pjsip_inv_get_hparam_action;
+/* Application can override this if it wants to implement custom handler. */
+void (*pjsip_inv_process_hparam_ptr)(pjsip_inv_session *sess, 
+                                     const pj_str_t *hname, 
+                                     const pj_str_t *hvalue, 
+                                     pjsip_tx_data *tdata) =
+     &pjsip_inv_process_hparam;
 
 /*
  * Static prototypes.
@@ -3039,32 +3032,12 @@ static pj_bool_t inv_uac_recurse(pjsip_inv_session *inv, int code,
 }
 
 
-/* Default action function to determine whether the header param with
- * name hname and value hvalue should be included when formulating
- * a new request based on the redirected request.
- */
-int pjsip_inv_get_hparam_action(pjsip_inv_session *sess, const pj_str_t *hname,
-                                const pj_str_t *hvalue, pjsip_hdr *hdr,
-                                pj_pool_t *pool)
+/* Process header parameter in redirection target. */
+void pjsip_inv_process_hparam(pjsip_inv_session *sess, 
+                              const pj_str_t *hname, 
+                              const pj_str_t *hvalue, 
+                              pjsip_tx_data *tdata)
 {
-    /* Possible return values of the function. */
-    enum {
-        /* Ignore/reject the header with name hname. */
-        IGNORE = 1,
-        /* Verify the header.
-         * Application will need to implement its own verification
-         * if it wishes to include the header.
-         */
-        VERIFY = 2,
-        /* Append the header.
-         * Application will need to implement the appending of the values.
-         */
-        APPEND = 3,
-        /* Replace the existing header, if any.
-         * PJSIP will replace the header after returning from the function.
-         */
-        REPLACE = 4
-    };
     const pjsip_hdr_e ignored_hdrs[] = {
         /* According to RFC 3261 section 19.1.5, we should not honor
          * the following headers as they can potentially be malicious
@@ -3087,10 +3060,12 @@ int pjsip_inv_get_hparam_action(pjsip_inv_session *sess, const pj_str_t *hname,
          */
         PJSIP_H_PROXY_AUTHENTICATE, PJSIP_H_PROXY_AUTHORIZATION
     };
+    /* According to RFC 3261 section 19.1.5, we should verify
+     * the accuracy of the header fields.
+     * Application will need to do its own verification by
+     * overriding the function.
+     */
     const pjsip_hdr_e verify_hdrs[] = {
-        /* According to RFC 3261 section 19.1.5, we should verify
-         * the accuracy of the header fields.
-         */
         PJSIP_H_CONTENT_DISPOSITION_UNIMP,
         PJSIP_H_CONTENT_ENCODING_UNIMP,
         PJSIP_H_CONTENT_LANGUAGE_UNIMP,
@@ -3105,57 +3080,65 @@ int pjsip_inv_get_hparam_action(pjsip_inv_session *sess, const pj_str_t *hname,
     const pjsip_hdr_e append_hdrs[] = {
         /* According to the example in RFC 3261 section 8.1.3.4, for Call-Info,
          * we can append the new value to existing ones.
+         *
+         * Important note: Be careful when adding a new header
+         * to this list as we currently assume that it must be
+         * a generic string header.
          */
         PJSIP_H_CALL_INFO_UNIMP
     };
 
     unsigned i;
-    int ret = REPLACE;
+    pjsip_hdr *hdr;
+
+    PJ_UNUSED_ARG(verify_hdrs);
 
     /* Check if we should reject/ignore the header. */
     for (i = 0; i < sizeof(ignored_hdrs)/sizeof(pjsip_hdr_e); i++) {
-        if (!pj_stricmp2(hname, pjsip_hdr_names[ignored_hdrs[i]].name))
-            return IGNORE;
-    }
-
-    /* Check if we need to verify the header. */
-    for (i = 0; i < sizeof(verify_hdrs)/sizeof(pjsip_hdr_e); i++) {
-        if (!pj_stricmp2(hname, pjsip_hdr_names[verify_hdrs[i]].name))
-            return VERIFY;
-    }
-
-    /* Check if we can append the header. */
-    for (i = 0; i < sizeof(append_hdrs)/sizeof(pjsip_hdr_e); i++) {
-        if (!pj_stricmp2(hname, pjsip_hdr_names[append_hdrs[i]].name)) {
-            return APPEND;
+        if (!pj_stricmp2(hname, pjsip_hdr_names[ignored_hdrs[i]].name)) {
+            PJ_LOG(4, (THIS_FILE, "Redirection header %.*s "
+                                  "rejected/ignored",
+                                  (int)hname->slen,
+                                  hname->ptr));
+            return;
         }
     }
 
-    /* The following code is just an example for appending values
-     * and will not be executed.
-     */
-    if (ret == APPEND && hdr) {
-        /* The header exists and we can append it. */
-        pjsip_generic_string_hdr *shdr;
-        pj_str_t old_hval;
-        
-        shdr = (pjsip_generic_string_hdr *)hdr;
-        old_hval = shdr->hvalue;
+    hdr = pjsip_msg_find_hdr_by_name(tdata->msg, hname, NULL);
 
-        /* Allocate the buffer enough to contain the old hvalue, new one,
-         * and the separator (", ").
-         */
-        pj_bzero(&shdr->hvalue, sizeof(pj_str_t));
-        shdr->hvalue.ptr = (char *) pj_pool_alloc(pool, old_hval.slen +
-                                                  hvalue->slen + 2);
-        pj_strcat(&shdr->hvalue, &old_hval);
-        pj_strcat2(&shdr->hvalue, ", ");
-        pj_strcat(&shdr->hvalue, hvalue);
-
-        return APPEND;
-    }
+    /* Check if the header exists. */
+    if (hdr) {
+        /* Yes, now check if we can append the header. */
+        for (i = 0; i < sizeof(append_hdrs)/sizeof(pjsip_hdr_e); i++) {
+            if (!pj_stricmp2(hname, pjsip_hdr_names[append_hdrs[i]].name)) {
+                pjsip_generic_string_hdr *shdr;
+                pj_str_t old_hval;
     
-    return REPLACE;
+                shdr = (pjsip_generic_string_hdr *)hdr;
+                old_hval = shdr->hvalue;
+
+                /* Allocate the buffer enough to contain the old hvalue, new one,
+                 * and the separator (", ").
+                 */
+                pj_bzero(&shdr->hvalue, sizeof(pj_str_t));
+                shdr->hvalue.ptr = (char *) pj_pool_alloc(tdata->pool,
+                                                          old_hval.slen +
+                                                          hvalue->slen + 2);
+                pj_strcat(&shdr->hvalue, &old_hval);
+                pj_strcat2(&shdr->hvalue, ", ");
+                pj_strcat(&shdr->hvalue, hvalue);
+
+                return;
+            }
+        }
+
+        /* We can't append to the existing header, so remove it. */
+        pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_OTHER, hdr);
+    }
+
+    hdr = (pjsip_hdr *)pjsip_generic_string_hdr_create(tdata->pool, hname,
+                                                       hvalue);
+    pjsip_msg_add_hdr(tdata->msg, hdr);
 }
 
 
@@ -3205,10 +3188,9 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
             pjsip_restore_strict_route_set(tdata);
 
             /* Set target */
-            tdata->msg->line.req.uri = (pjsip_uri*)
+            tdata->msg->line.req.uri = req_uri = (pjsip_uri*)
                pjsip_uri_clone(tdata->pool, inv->dlg->target_set.current->uri);
 
-            req_uri = tdata->msg->line.req.uri;
             if (PJSIP_URI_SCHEME_IS_SIP(req_uri) ||
                 PJSIP_URI_SCHEME_IS_SIPS(req_uri))
             {
@@ -3216,46 +3198,6 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
                 pjsip_param *param;
 
                 uri = (pjsip_sip_uri *)pjsip_uri_get_uri(req_uri);
-                param = uri->header_param.next;
-                /* We need to use the "header" parameters to create header
-                 * field values for the new request, in accordance with
-                 * the guidelines in RFC 3261 section 8.3.4 and 19.1.5
-                 */
-                while (param != &uri->header_param) {
-                    pjsip_generic_string_hdr *hdr;
-                    int ret;
-
-                    hdr = pjsip_msg_find_hdr_by_name(tdata->msg, &param->name,
-                                                     NULL);
-
-                    ret = (*pjsip_inv_get_hparam_action_ptr)(inv, &param->name,
-                                                             &param->value,
-                                                             (pjsip_hdr *)hdr,
-                                                             tdata->pool);
-                    if (ret <= 3) {
-                        if (ret == 1) {
-                            PJ_LOG(4, (THIS_FILE, "Redirection header %.*s "
-                                                  "rejected/ignored",
-                                                  (int)param->name.slen,
-                                                  param->name.ptr));
-                        }
-                        param = param->next;
-                        continue;
-                    }
-
-                    /* If the header already exists, we choose to
-                     * overwrite it.
-                     */
-                    if (hdr) {
-                        pjsip_msg_find_remove_hdr(tdata->msg,
-                                                  PJSIP_H_OTHER, hdr);
-                    }
-                    hdr = pjsip_generic_string_hdr_create(tdata->pool,
-                                                          &param->name,
-                                                          &param->value);
-                    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr *)hdr);
-                    param = param->next;
-                }
 
                 /* According to RFC 3261 section 19.1.5, the method parameter
                  * MUST NOT be placed in the Request-URI
@@ -3283,10 +3225,20 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
                     pj_bzero(&uri->method_param, sizeof(pj_str_t));
                 }
 
+                /* Process the header parameters */
+                param = uri->header_param.next;
+                while (param != &uri->header_param) {
+                    (*pjsip_inv_process_hparam_ptr)(inv, &param->name,
+                                                    &param->value,
+                                                    tdata);
+                    param = param->next;
+                }
+
                 /* Remove all header params */
                 if (!pj_list_empty(&uri->header_param)) {
                     pj_list_init(&uri->header_param);
                 }
+
             }
 
             /* Remove branch param in Via header. */
