@@ -135,8 +135,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_driver_init(unsigned drv_idx,
 
         if (drv->name[0]=='\0') {
             /* Set driver name */
-            pj_ansi_strncpy(drv->name, info.driver, sizeof(drv->name));
-            drv->name[sizeof(drv->name)-1] = '\0';
+            pj_ansi_safe_strncpy(drv->name, info.driver, sizeof(drv->name));
         }
 
         if (drv->play_dev_idx < 0 && info.output_count) {

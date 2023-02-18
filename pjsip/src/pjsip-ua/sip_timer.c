@@ -347,7 +347,7 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
         (inv->timer->refresher == TR_UAS && inv->timer->role == PJSIP_ROLE_UAS);
 
     entry_id = entry->id;
-    pj_ansi_strncpy(obj_name, inv->pool->obj_name, PJ_MAX_OBJ_NAME);
+    pj_ansi_safe_strncpy(obj_name, inv->pool->obj_name, PJ_MAX_OBJ_NAME);
 
     /* Do action based on role(refresher or refreshee). 
      * As refresher:

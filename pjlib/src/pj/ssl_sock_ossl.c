@@ -191,7 +191,7 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 #  ifdef _MSC_VER
 #    define strerror_r(err,buf,len) strerror_s(buf,len,err)
 #  else
-#    define strerror_r(err,buf,len) pj_ansi_strncpy(buf,strerror(err),len)
+#    define strerror_r(err,buf,len) pj_ansi_safe_strncpy(buf,strerror(err),len)
 #  endif
 #endif
 
@@ -441,7 +441,7 @@ static pj_str_t ssl_strerror(pj_status_t status,
         const char *tmp = NULL;
         tmp = ERR_reason_error_string(ssl_err);
         if (tmp) {
-            pj_ansi_strncpy(buf, tmp, bufsize);
+            pj_ansi_safe_strncpy(buf, tmp, bufsize);
             errstr = pj_str(buf);
             return errstr;
         }

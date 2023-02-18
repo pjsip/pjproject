@@ -2774,8 +2774,7 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
         ac = MAX_ARGC - argc;
         get_options(&cval->argv[i], &ac, argvst);
         for (j = 0; j < ac; j++) {
-            pj_ansi_strncpy(pbuf, argvst[j].ptr, argvst[j].slen);
-            pbuf[argvst[j].slen] = '\0';
+            pj_ansi_safe_strncpy(pbuf, argvst[j].ptr, argvst[j].slen);
             argv[argc + j] = pbuf;
             pbuf += argvst[j].slen + 1;
         }

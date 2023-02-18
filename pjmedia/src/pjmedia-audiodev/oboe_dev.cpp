@@ -415,7 +415,7 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
         /* Get name info */
         jstring jstrtmp = (jstring)jni_env->GetObjectField(jdev_info, jobjs.dev_info.f_name);
         const char *strtmp = jni_env->GetStringUTFChars(jstrtmp, NULL);
-        pj_ansi_strncpy(base_adi->name, strtmp, sizeof(base_adi->name));
+        pj_ansi_safe_strncpy(base_adi->name, strtmp, sizeof(base_adi->name));
 
         f->dev_count++;
 

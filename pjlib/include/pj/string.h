@@ -841,6 +841,60 @@ PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
 }
 
 /**
+ * Copy at most n bytes (including the null char) from source to destination.
+ * In any case, the destination string will be null terminated.
+ *
+ * @param dst       The destination string.
+ * @param src       The source string.
+ * @param n         The size of the destination string.
+ *
+ * @return The destination string
+ */
+PJ_INLINE(char*) pj_ansi_safe_strncpy(char *dst, const char *src, pj_size_t n)
+{
+#ifdef __GNUC__
+   /* Silence these warnings:
+    * - __builtin_strncpy specified bound equals destination size
+    * - __builtin_strncpy output may be truncated copying x bytes from a string of length x
+    */
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
+    pj_ansi_strncpy(dst, src, n-1);
+#ifdef __GNUC__
+#  pragma GCC diagnostic pop
+#endif
+    dst[n-1] = '\0';
+    return dst;
+}
+
+/**
+ * Copy src0 to destination string, and then concatenate src1 into destination
+ * string, limiting the total number of bytes written to the destination
+ * string to n including the null character. In any case, the destination
+ * string will be null terminated.
+ *
+ * @param dst       The destination string.
+ * @param src       The source string.
+ * @param n         The size of the destination string.
+ *
+ * @return The destination string
+ */
+PJ_INLINE(char*) pj_ansi_safe_strcpycat(char *dst,
+                                        const char *src0,
+                                        const char *src1,
+                                        pj_size_t n)
+{
+    pj_ansi_safe_strncpy(dst, src0, n);
+    if (src1) {
+        pj_size_t dst_len = pj_ansi_strlen(dst);
+        if (dst_len < n-1)
+            pj_ansi_safe_strncpy(dst+dst_len, src1, n-dst_len);
+    }
+    return dst;
+}
+
+/**
  * @}
  */
 

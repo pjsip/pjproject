@@ -166,8 +166,7 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
             pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name), 
                              name, pool);
         } else {
-            pj_ansi_strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
-            pool->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+            pj_ansi_safe_strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
         }
     } else {
         pool->obj_name[0] = '\0';

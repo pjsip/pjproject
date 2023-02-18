@@ -90,8 +90,7 @@ static gui_menu root_menu = {
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 PJ_INLINE(char *) add_path(const char *path, const char *fname)
 {
-    strncpy(fpath, path, PATH_LENGTH);
-    strncat(fpath, fname, PATH_LENGTH);
+    pj_ansi_safe_strcpycat(fpath, path, fname, PATH_LENGTH);
     return fpath;
 }
 #else
@@ -133,10 +132,7 @@ static void systest_perror(const char *title, pj_status_t status)
     else
         errmsg[0] = '\0';
 
-    strcpy(themsg, title);
-    strncat(themsg, errmsg, sizeof(themsg)-1);
-    themsg[sizeof(themsg)-1] = '\0';
-
+    pj_ansi_safe_strcpycat(themsg, title, errmsg, sizeof(themsg));
     gui_msgbox("Error", themsg, WITH_OK);
 }
 
@@ -639,8 +635,7 @@ static void systest_audio_test(void)
     }
 
     ti->success = PJ_TRUE;
-    pj_ansi_strncpy(ti->reason, textbuf, sizeof(ti->reason));
-    ti->reason[sizeof(ti->reason)-1] = '\0';
+    pj_ansi_safe_strncpy(ti->reason, textbuf, sizeof(ti->reason));
 }
 
 
@@ -915,8 +910,7 @@ on_return:
         key = gui_msgbox(title, msg, WITH_OK);
 
         ti->success = PJ_TRUE;
-        pj_ansi_strncpy(ti->reason, msg, sizeof(ti->reason));
-        ti->reason[sizeof(ti->reason)-1] = '\0';
+        pj_ansi_safe_strncpy(ti->reason, msg, sizeof(ti->reason));
     }
 }
 
@@ -1055,8 +1049,7 @@ on_return:
         pj_ansi_snprintf(msg, sizeof(msg), "Test succeeded.\r\n");
 
         ti->success = PJ_TRUE;
-        pj_ansi_strncpy(ti->reason, msg, sizeof(ti->reason));
-        ti->reason[sizeof(ti->reason)-1] = '\0';
+        pj_ansi_safe_strncpy(ti->reason, msg, sizeof(ti->reason));
     }
 }
 
@@ -1201,8 +1194,7 @@ static void systest_display_settings(void)
     len = strlen(textbuf);
 
     ti->success = PJ_TRUE;
-    pj_ansi_strncpy(ti->reason, textbuf, sizeof(ti->reason));
-    ti->reason[sizeof(ti->reason)-1] = '\0';
+    pj_ansi_safe_strncpy(ti->reason, textbuf, sizeof(ti->reason));
     key = gui_msgbox(title, textbuf, WITH_OK);
     PJ_UNUSED_ARG(key); /* Warning about unused var */
 }

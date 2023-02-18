@@ -725,8 +725,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     if (strchr(thread_name, '%')) {
         pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
-        strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
-        rec->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_safe_strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
     }
 
     /* Set default stack size */
@@ -1352,8 +1351,7 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
     if (strchr(name, '%')) {
         pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
     } else {
-        strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
-        mutex->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_safe_strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
     }
 
     PJ_LOG(6, (mutex->obj_name, "Mutex created"));
@@ -1771,8 +1769,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     if (strchr(name, '%')) {
         pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
     } else {
-        strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
-        sem->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_safe_strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
     }
 
     PJ_LOG(6, (sem->obj_name, "Semaphore created"));

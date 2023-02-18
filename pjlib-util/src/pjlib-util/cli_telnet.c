@@ -1169,8 +1169,8 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
         /* Send data */
         pj_strcat(&send_data, history);
         telnet_sess_send(sess, &send_data);
-        pj_ansi_strncpy((char*)&sess->rcmd->rbuf, history->ptr, history->slen);
-        sess->rcmd->rbuf[history->slen] = 0;
+        pj_ansi_safe_strncpy((char*)&sess->rcmd->rbuf, history->ptr, 
+                              history->slen);
         sess->rcmd->len = (unsigned)history->slen;
         sess->rcmd->cur_pos = sess->rcmd->len;
         return PJ_TRUE;

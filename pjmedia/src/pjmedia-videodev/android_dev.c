@@ -540,12 +540,12 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
                     PJMEDIA_VID_DEV_CAP_ORIENTATION;
 
         /* Set driver & name info */
-        pj_ansi_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
+        pj_ansi_safe_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
         adi->facing = facing;
         if (facing == 0) {
-            pj_ansi_strncpy(vdi->name, "Back camera", sizeof(vdi->name));
+            pj_ansi_safe_strncpy(vdi->name, "Back camera", sizeof(vdi->name));
         } else {
-            pj_ansi_strncpy(vdi->name, "Front camera", sizeof(vdi->name));
+            pj_ansi_safe_strncpy(vdi->name, "Front camera", sizeof(vdi->name));
         }
 
         /* Get supported sizes */
