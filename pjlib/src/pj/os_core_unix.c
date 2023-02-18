@@ -631,7 +631,8 @@ static void set_thread_display_name(const char *name)
     char xname[16];
     // On linux, thread display name length is restricted to 16 (include '\0')
     if (pj_ansi_strlen(name) >= 16) {
-        pj_ansi_snprintf(xname, 16, "%s", name);
+        pj_memcpy(xname, name, 15);
+        xname[15] = '\0';
         name = xname;
     }
 #endif

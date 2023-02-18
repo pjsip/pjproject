@@ -1760,8 +1760,7 @@ PJ_DEF(pj_status_t) pjsua_enum_snd_devs( pjmedia_snd_dev_info info[],
         if (status != PJ_SUCCESS)
             return status;
 
-        strncpy(info[i].name, ai.name, sizeof(info[i].name));
-        info[i].name[sizeof(info[i].name)-1] = '\0';
+        pj_memcpy(info[i].name, ai.name, sizeof(info[i].name));
         info[i].input_count = ai.input_count;
         info[i].output_count = ai.output_count;
         info[i].default_samples_per_sec = ai.default_samples_per_sec;

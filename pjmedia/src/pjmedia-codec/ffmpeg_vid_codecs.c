@@ -60,22 +60,23 @@
 #if LIBAVCODEC_VER_AT_LEAST(53,61)
 #  if LIBAVCODEC_VER_AT_LEAST(54,59)
    /* Not sure when AVCodec::encode is obsoleted/removed. */
-#    define AVCODEC_HAS_ENCODE(c)       (c->encode2)
+#    define AVCODEC_HAS_ENCODE(c)       (c->encode2 != (void*)0)
 #  else
    /* Not sure when AVCodec::encode2 is introduced. It appears in 
     * libavcodec 53.61 where some codecs actually still use AVCodec::encode
     * (e.g: H263, H264).
     */
-#    define AVCODEC_HAS_ENCODE(c)       (c->encode || c->encode2)
+#    define AVCODEC_HAS_ENCODE(c)       (c->encode != (void*)0 || \
+                                         c->encode2 != (void*)0)
 #  endif
 #  define AV_OPT_SET(obj,name,val,opt)  (av_opt_set(obj,name,val,opt)==0)
 #  define AV_OPT_SET_INT(obj,name,val)  (av_opt_set_int(obj,name,val,0)==0)
 #else
-#  define AVCODEC_HAS_ENCODE(c)         (c->encode)
+#  define AVCODEC_HAS_ENCODE(c)         (c->encode != (void*)0)
 #  define AV_OPT_SET(obj,name,val,opt)  (av_set_string3(obj,name,val,opt,NULL)==0)
 #  define AV_OPT_SET_INT(obj,name,val)  (av_set_int(obj,name,val)!=NULL)
 #endif
-#define AVCODEC_HAS_DECODE(c)         (c->decode)
+#define AVCODEC_HAS_DECODE(c)           (c->decode != (void*)0)
 
 /* AVCodec H264 default PT */
 #define AVC_H264_PT                       PJMEDIA_RTP_PT_H264_RSV3
@@ -727,7 +728,7 @@ static int find_codec_idx_by_fmt_id(pjmedia_format_id fmt_id)
     return -1;
 }
 
-static void init_codec(const AVCodec *c, pj_bool_t is_encoder, 
+static void init_codec(AVCodec *c, pj_bool_t is_encoder,
                        pj_bool_t is_decoder)
 {
     pj_status_t status;

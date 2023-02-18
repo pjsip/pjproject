@@ -78,7 +78,7 @@ void pjmedia_ffmpeg_add_ref()
     if (pjmedia_ffmpeg_ref_cnt++ == 0) {
         av_log_set_level(AV_LOG_ERROR);
         av_log_set_callback(&ffmpeg_log_cb);
-#if !LIBAVCODEC_VER_AT_LEAST(58,137)
+#if !LIBAVCODEC_VER_AT_LEAST(58,76)
         av_register_all();
 #endif
     }

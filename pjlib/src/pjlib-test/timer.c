@@ -966,6 +966,9 @@ int timer_test()
     rc = timer_bench_test();
     if (rc != 0)
         return rc;
+#else
+    /* Avoid unused warning */
+    PJ_UNUSED_ARG(timer_bench_test);
 #endif
 
     return 0;
