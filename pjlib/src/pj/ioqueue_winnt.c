@@ -115,6 +115,7 @@ struct pj_ioqueue_key_t
     enum handle_type    hnd_type;
     pj_ioqueue_callback cb;
     pj_bool_t           allow_concurrent;
+    pj_grp_lock_t      *grp_lock;
 
 #if PJ_HAS_TCP
     int                 connecting;
@@ -320,6 +321,27 @@ PJ_DEF(const char*) pj_ioqueue_name(void)
     return "iocp";
 }
 
+PJ_DEF(void) pj_ioqueue_cfg_default(pj_ioqueue_cfg *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS;
+    cfg->default_concurrency = PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY;
+}
+
+PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
+{
+    PJ_ASSERT_RETURN(key, PJ_EINVAL);
+
+    pj_ioqueue_lock_key(key);
+
+    key->connecting = 0;
+
+    pj_ioqueue_unlock_key(key);
+
+    return PJ_SUCCESS;
+
+}
+
 /*
  * pj_ioqueue_create()
  */
@@ -507,12 +529,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_lock( pj_ioqueue_t *ioqueue,
     return PJ_SUCCESS;
 }
 
+
 /*
- * pj_ioqueue_register_sock()
+ * pj_ioqueue_register_sock2()
  */
-PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
                                               pj_ioqueue_t *ioqueue,
                                               pj_sock_t sock,
+                                              pj_grp_lock_t *grp_lock,
                                               void *user_data,
                                               const pj_ioqueue_callback *cb,
                                               pj_ioqueue_key_t **key )
@@ -535,6 +559,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     /* If safe unregistration is used, then get the key record from
      * the free list.
      */
+    pj_assert(!pj_list_empty(&ioqueue->free_list));
     if (pj_list_empty(&ioqueue->free_list)) {
         pj_lock_release(ioqueue->lock);
         return PJ_ETOOMANY;
@@ -550,7 +575,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     rec->closing = 0;
 
 #else
-    rec = pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
+    rec = (pj_ioqueue_key_t *)pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
 #endif
 
     /* Build the key for this socket. */
@@ -586,6 +611,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
         return PJ_RETURN_OS_ERROR(GetLastError());
     }
 
+    /* Group lock */
+    rec->grp_lock = grp_lock;
+    if (rec->grp_lock) {
+        /* IOCP backend doesn't have group lock functionality, so
+         * you should not use it other than for experimental purposes.
+         */
+        PJ_TODO(INTEGRATE_GROUP_LOCK);
+        // pj_grp_lock_add_ref_dbg(rec->grp_lock, "ioqueue", 0);
+    }
+
     *key = rec;
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -595,6 +630,21 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     pj_lock_release(ioqueue->lock);
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * pj_ioqueue_register_sock()
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
+                                              pj_ioqueue_t *ioqueue,
+                                              pj_sock_t sock,
+                                              void *user_data,
+                                              const pj_ioqueue_callback *cb,
+                                              pj_ioqueue_key_t **key )
+{
+    return pj_ioqueue_register_sock2(pool, ioqueue, sock, NULL, user_data, cb,
+                                     key);
 }
 
 
@@ -1238,19 +1288,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     if (sock != INVALID_SOCKET) {
         /* Yes! New socket is available! */
         if (local && addrlen) {
-            int status;
+            int status_;
 
             /* On WinXP or later, use SO_UPDATE_ACCEPT_CONTEXT so that socket 
              * addresses can be obtained with getsockname() and getpeername().
              */
-            status = setsockopt(sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
-                                (char*)&key->hnd, sizeof(SOCKET));
+            status_ = setsockopt(sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
+                                 (char*)&key->hnd, sizeof(SOCKET));
             /* SO_UPDATE_ACCEPT_CONTEXT is for WinXP or later.
              * So ignore the error status.
              */
 
-            status = getsockname(sock, local, addrlen);
-            if (status != 0) {
+            status_ = getsockname(sock, local, addrlen);
+            if (status_ != 0) {
                 DWORD dwError = WSAGetLastError();
                 closesocket(sock);
                 return PJ_RETURN_OS_ERROR(dwError);
@@ -1459,5 +1509,5 @@ PJ_DEF(pj_status_t) pj_ioqueue_unlock_key(pj_ioqueue_key_t *key)
 
 PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
 {
-    return ioqueue ? (pj_oshandle_t)ioqueue->hnd : NULL;
+    return ioqueue ? (pj_oshandle_t)ioqueue->iocp : NULL;
 }
