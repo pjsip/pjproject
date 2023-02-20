@@ -897,6 +897,10 @@ static void call_on_media_update( pjsip_inv_session *inv,
 
     /* Start the UDP media transport */
     status = pjmedia_transport_media_start(g_med_transport[0], 0, 0, 0, 0);
+    if (status != PJ_SUCCESS) {
+        app_perror( THIS_FILE, "Unable to start UDP media transport", status);
+        return;
+    }
 
     /* Get the media port interface of the audio stream. 
      * Media port interface is basicly a struct containing get_frame() and
@@ -905,6 +909,10 @@ static void call_on_media_update( pjsip_inv_session *inv,
      * player/recorder device.
      */
     status = pjmedia_stream_get_port(g_med_stream, &media_port);
+    if (status != PJ_SUCCESS) {
+        app_perror( THIS_FILE, "Unable to create media port interface of the audio stream", status);
+        return;
+    }
 
     /* Create sound port */
     status = pjmedia_snd_port_create(inv->pool,
