@@ -929,7 +929,8 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
     }
     if (ht->cur_size && next_delay) {
         *next_delay = ht->heap[0]->_timer_value;
-        pj_gettickcount(&now);
+        if (count > 0)
+            pj_gettickcount(&now);
         PJ_TIME_VAL_SUB(*next_delay, now);
         if (next_delay->sec < 0 || next_delay->msec < 0)
             next_delay->sec = next_delay->msec = 0;
