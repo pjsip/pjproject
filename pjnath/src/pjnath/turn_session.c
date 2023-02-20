@@ -449,9 +449,18 @@ static void sess_shutdown(pj_turn_session *sess,
  */
 PJ_DEF(pj_status_t) pj_turn_session_shutdown(pj_turn_session *sess)
 {
+    return pj_turn_session_shutdown2(sess, PJ_SUCCESS);
+}
+
+PJ_DEF(pj_status_t) pj_turn_session_shutdown2(pj_turn_session *sess,
+					      pj_status_t last_err)
+{
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
 
     pj_grp_lock_acquire(sess->grp_lock);
+
+    if (last_err != PJ_SUCCESS && sess->last_status == PJ_SUCCESS)
+        sess->last_status = last_err;
 
     sess_shutdown(sess, PJ_SUCCESS);
 
