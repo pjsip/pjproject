@@ -647,7 +647,7 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
     }
 
     if (len < 1 || len >= (int)sizeof(info_buf)) {
-        return (char*)obj_name;
+        return "MSG TOO LONG";
     }
 
     info = (char*) pj_pool_alloc(pool, len+1);

@@ -440,7 +440,8 @@ static pj_status_t ssl_create(dtls_srtp *ds)
         return GET_SSL_STATUS(ds);
     }
 
-    if (valid_profiles_cnt == 0) {      
+    if (valid_profiles_cnt == 0) {
+        SSL_CTX_free(ctx);
         return PJMEDIA_SRTP_DTLS_ENOPROFILE;
     }
 
