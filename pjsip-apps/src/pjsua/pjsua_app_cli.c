@@ -640,11 +640,12 @@ static void get_video_codec_id(pj_cli_dyn_choice_param *param)
                     continue;
 
                 cur_ci = ci[i].codec_id;
+                vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt,
+                                                             PJ_TRUE);
 
             } else {
                 cur_ci = all_codec_id;
             }
-            vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt, PJ_TRUE);
 
             pj_ansi_snprintf(codec_id, sizeof(codec_id),
                              "%.*s", (int)cur_ci.slen,
