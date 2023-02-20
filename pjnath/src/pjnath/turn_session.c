@@ -460,7 +460,7 @@ PJ_DEF(pj_status_t) pj_turn_session_shutdown2(pj_turn_session *sess,
     pj_grp_lock_acquire(sess->grp_lock);
 
     if (last_err != PJ_SUCCESS && sess->last_status == PJ_SUCCESS)
-	sess->last_status = last_err;
+        sess->last_status = last_err;
 
     sess_shutdown(sess, PJ_SUCCESS);
 
