@@ -14,6 +14,11 @@ fi
 if [ "$1" == "-t" ] || [ "$1" == "--test" ]; then
   TESTING=1
   echo Testing mode
+else
+  if [ "$COV_TOKEN" == "" ] ; then
+    echo "Error: COV_TOKEN env var is not set"
+    exit 1
+  fi
 fi
 
 if [ `whoami` == "root" ] ; then
@@ -49,6 +54,22 @@ cat tests/coverity-scan/packages.txt | xargs $SUDO apt-get -y install
 
 echo
 echo ===============================
+echo Download Coverity
+echo ===============================
+pushd tmp
+if ! [ -d cov-analysis-linux64 ] ; then
+  if ! [ -f cov-analysis-linux64.tar.gz ] ; then
+    wget -q https://scan.coverity.com/download/cxx/linux64 --post-data "token=${COV_TOKEN}&project=PJSIP" -O cov-analysis-linux64.tar.gz
+  fi
+  mkdir cov-analysis-linux64
+  tar xzf cov-analysis-linux64.tar.gz --strip 1 -C cov-analysis-linux64
+fi
+cd cov-analysis-linux64/bin
+export PATH=$PATH:`pwd`
+popd
+
+echo
+echo ===============================
 echo Building SILK
 echo ===============================
 pushd tmp
@@ -65,6 +86,7 @@ echo
 echo ===============================
 echo Configure
 echo ===============================
+make distclean
 ./configure --with-silk=$SILK_DIR | tee configure.out
 echo configure output is in configure.out
 
@@ -84,22 +106,6 @@ echo config_site.h:
 echo ----------------------------------------
 cat pjlib/include/pj/config_site.h
 echo
-
-echo
-echo ===============================
-echo Download Coverity
-echo ===============================
-pushd tmp
-if ! [ -f cov-analysis-linux64.tar.gz ] ; then
-  wget -q https://scan.coverity.com/download/cxx/linux64 --post-data "token=${COV_TOKEN}&project=PJSIP" -O cov-analysis-linux64.tar.gz
-fi
-if ! [ -d cov-analysis-linux64 ] ; then
-  mkdir cov-analysis-linux64
-  tar xzf cov-analysis-linux64.tar.gz --strip 1 -C cov-analysis-linux64
-fi
-cd cov-analysis-linux64/bin
-export PATH=$PATH:`pwd`
-popd
 
 echo
 echo ===============================
@@ -125,7 +131,7 @@ else
 fi
 
 $CURL --form token=${COV_TOKEN} --form email=bennylp@pjsip.org --form file=@tmp/cov-int.bz2 \
-      --form version=\"$PJ_VERSION [$GIT_BRANCH]\" --form description=- \
+      --form version=\"$PJ_VERSION@$GIT_BRANCH\" --form description=- \
       https://scan.coverity.com/builds?project=PJSIP
 
 exit 0
