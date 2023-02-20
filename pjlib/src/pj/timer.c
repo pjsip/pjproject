@@ -923,10 +923,13 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
             slot = ht->timer_ids[GET_FIELD(ht->head_list.next, _timer_id)];
 #endif
             min_time_node = ht->heap[slot]->_timer_value;
+            /* Update now */
+            pj_gettickcount(&now);
         }
     }
     if (ht->cur_size && next_delay) {
         *next_delay = ht->heap[0]->_timer_value;
+        pj_gettickcount(&now);
         PJ_TIME_VAL_SUB(*next_delay, now);
         if (next_delay->sec < 0 || next_delay->msec < 0)
             next_delay->sec = next_delay->msec = 0;
