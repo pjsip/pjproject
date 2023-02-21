@@ -1068,7 +1068,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
         rtpmap.pt = m->desc.fmt[0];
         rtpmap.clock_rate = app.audio_codec.clock_rate;
         rtpmap.enc_name = pj_str(app.audio_codec.name);
-        rtpmap.param.slen = 0;
+        pj_bzero(&rtpmap.param, sizeof(pj_str_t));
 
         pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
         m->attr[m->attr_count++] = attr;

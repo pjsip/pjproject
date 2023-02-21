@@ -2556,7 +2556,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
         if (status != PJ_SUCCESS)
             goto on_return;
 
-        pj_ansi_strcpy(hostbuf, addr_string(&pub_addr));
+        pj_ansi_strncpy(hostbuf, addr_string(&pub_addr), sizeof(hostbuf));
         addr_name.host = pj_str(hostbuf);
         addr_name.port = pj_sockaddr_get_port(&pub_addr);
 
@@ -3024,7 +3024,7 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_start(pjsua_transport_id id,
         int af = pjsip_transport_type_get_af(factory->type);
 
         if (cfg->port)
-            pj_sockaddr_set_port(&bind_addr, (pj_uint16_t)cfg->port);
+            pj_sockaddr_init(af, &bind_addr, NULL, (pj_uint16_t)cfg->port);
 
         if (cfg->bound_addr.slen) {
             status = pj_sockaddr_set_str_addr(af, 
@@ -3039,6 +3039,7 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_start(pjsua_transport_id id,
         }
 
         /* Set published name */
+        pj_bzero(&addr_name, sizeof(pjsip_host_port));
         if (cfg->public_addr.slen)
             addr_name.host = cfg->public_addr;
 

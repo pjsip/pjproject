@@ -486,6 +486,9 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
     
     contentType.fromPj(prm.body->content_type);
     body = string((char*)prm.body->data, prm.body->len);
+
+    pj_list_init(&pjMpp.hdr);
+    pjMpp.body = NULL;
 }
 
 pjsip_multipart_part& SipMultipartPart::toPj() const

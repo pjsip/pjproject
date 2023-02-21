@@ -868,6 +868,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play_digits( pjmedia_port *port,
         tones[i].on_msec = digits[i].on_msec;
         tones[i].off_msec = digits[i].off_msec;
         tones[i].volume = digits[i].volume;
+        tones[i].flags = 0;
     }
 
     pj_lock_release(tonegen->lock);

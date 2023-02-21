@@ -714,6 +714,7 @@ void AudDevManager::setCaptureDev(int capture_dev) const PJSUA2_THROW(Error)
 {    
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.capture_dev = capture_dev;
     
@@ -733,6 +734,7 @@ void AudDevManager::setPlaybackDev(int playback_dev) const PJSUA2_THROW(Error)
 {
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.playback_dev = playback_dev;
 
@@ -799,6 +801,7 @@ void AudDevManager::setSndDevMode(unsigned mode) const PJSUA2_THROW(Error)
 {    
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.mode = mode;
     PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );

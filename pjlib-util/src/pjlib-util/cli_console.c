@@ -103,7 +103,7 @@ PJ_DEF(void) pj_cli_console_cfg_default(pj_cli_console_cfg *param)
     pj_assert(param);
 
     param->log_level = PJ_CLI_CONSOLE_LOG_LEVEL;
-    param->prompt_str.slen = 0;
+    pj_bzero(&param->prompt_str, sizeof(pj_str_t));
     param->quit_command.slen = 0;
 }
 
