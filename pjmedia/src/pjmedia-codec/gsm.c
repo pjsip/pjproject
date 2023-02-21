@@ -163,7 +163,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_gsm_init( pjmedia_endpt *endpt )
     gsm_codec_factory.base.factory_data = NULL;
     gsm_codec_factory.endpt = endpt;
 
-    gsm_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "gsm", 4000, 
+    gsm_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "gsm", 1024,
                                                        4000);
     if (!gsm_codec_factory.pool)
         return PJ_ENOMEM;

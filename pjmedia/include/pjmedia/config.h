@@ -47,14 +47,14 @@
  * Initial memory block for media endpoint.
  */
 #ifndef PJMEDIA_POOL_LEN_ENDPT
-#   define PJMEDIA_POOL_LEN_ENDPT               512
+#   define PJMEDIA_POOL_LEN_ENDPT               4096
 #endif
 
 /**
  * Memory increment for media endpoint.
  */
 #ifndef PJMEDIA_POOL_INC_ENDPT
-#   define PJMEDIA_POOL_INC_ENDPT               512
+#   define PJMEDIA_POOL_INC_ENDPT               8192
 #endif
 
 /**

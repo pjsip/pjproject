@@ -175,7 +175,7 @@ pjmedia_vid_dev_factory* pjmedia_cbar_factory(pj_pool_factory *pf)
     struct cbar_factory *f;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "cbar video", 512, 512, NULL);
+    pool = pj_pool_create(pf, "cbar video", 4096, 4096, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct cbar_factory);
     f->pf = pf;
     f->pool = pool;
