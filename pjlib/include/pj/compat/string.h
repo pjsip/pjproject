@@ -68,7 +68,7 @@
 #define pj_ansi_strncmp         strncmp
 #define pj_ansi_strlen          strlen
 #define pj_ansi_strcpy          strcpy
-#define pj_ansi_strncpy         strncpy
+/*#define pj_ansi_strncpy         strncpy */
 #define pj_ansi_strcat          strcat
 #define pj_ansi_strstr          strstr
 #define pj_ansi_strchr          strchr

@@ -2763,6 +2763,7 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
     static char argv_buffer[PJ_CLI_MAX_CMDBUF];
     static char *argv[MAX_ARGC] = {NULL};
     char *pbuf = argv_buffer;
+    char *pend = argv_buffer + PJ_CLI_MAX_CMDBUF;
 
     PJ_LOG(3,(THIS_FILE, "Restarting app.."));
     pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_TRUE);
@@ -2775,7 +2776,10 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
         ac = MAX_ARGC - argc;
         get_options(&cval->argv[i], &ac, argvst);
         for (j = 0; j < ac; j++) {
-            pj_ansi_safe_strncpy(pbuf, argvst[j].ptr, argvst[j].slen);
+            if (pbuf+argvst[j].slen+1 > pend)
+                return PJ_ETOOSMALL;
+            pj_memcpy(pbuf, argvst[j].ptr, argvst[j].slen);
+            pbuf[argvst[j].slen] = '\0';
             argv[argc + j] = pbuf;
             pbuf += argvst[j].slen + 1;
         }

@@ -100,7 +100,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
         if (end > start) {
             if (pool) {
                 token = (char*)pj_pool_alloc(pool, end - start);
-                pj_ansi_safe_strncpy(token, start, end - start);
+                pj_memcpy(token, start, end - start);
             } else {
                 token = start;
             }

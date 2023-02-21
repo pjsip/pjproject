@@ -330,13 +330,13 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
 
     /* Device Name */
     if (deviceId==WAVE_MAPPER) {
-        pj_ansi_safe_strncpy(wdi->info.name, "Wave mapper", 
+        pj_ansi_strncpy(wdi->info.name, "Wave mapper", 
                              sizeof(wdi->info.name));
     } else {
         const pj_char_t *szPname = WIC_WOC(wic, woc, szPname);
         PJ_DECL_ANSI_TEMP_BUF(wTmp, sizeof(wdi->info.name));
         
-        pj_ansi_safe_strncpy(wdi->info.name, 
+        pj_ansi_strncpy(wdi->info.name, 
                 PJ_NATIVE_TO_STRING(szPname, wTmp, PJ_ARRAY_SIZE(wTmp)),
                 sizeof(wdi->info.name));
     }

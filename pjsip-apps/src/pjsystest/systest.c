@@ -635,7 +635,7 @@ static void systest_audio_test(void)
     }
 
     ti->success = PJ_TRUE;
-    pj_ansi_safe_strncpy(ti->reason, textbuf, sizeof(ti->reason));
+    pj_ansi_strncpy(ti->reason, textbuf, sizeof(ti->reason));
 }
 
 
@@ -910,7 +910,7 @@ on_return:
         key = gui_msgbox(title, msg, WITH_OK);
 
         ti->success = PJ_TRUE;
-        pj_ansi_safe_strncpy(ti->reason, msg, sizeof(ti->reason));
+        pj_ansi_strncpy(ti->reason, msg, sizeof(ti->reason));
     }
 }
 
@@ -1049,7 +1049,7 @@ on_return:
         pj_ansi_snprintf(msg, sizeof(msg), "Test succeeded.\r\n");
 
         ti->success = PJ_TRUE;
-        pj_ansi_safe_strncpy(ti->reason, msg, sizeof(ti->reason));
+        pj_ansi_strncpy(ti->reason, msg, sizeof(ti->reason));
     }
 }
 
@@ -1194,7 +1194,7 @@ static void systest_display_settings(void)
     len = strlen(textbuf);
 
     ti->success = PJ_TRUE;
-    pj_ansi_safe_strncpy(ti->reason, textbuf, sizeof(ti->reason));
+    pj_ansi_strncpy(ti->reason, textbuf, sizeof(ti->reason));
     key = gui_msgbox(title, textbuf, WITH_OK);
     PJ_UNUSED_ARG(key); /* Warning about unused var */
 }

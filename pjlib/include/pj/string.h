@@ -850,7 +850,7 @@ PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
  *
  * @return The destination string
  */
-PJ_INLINE(char*) pj_ansi_safe_strncpy(char *dst, const char *src, pj_size_t n)
+PJ_INLINE(char*) pj_ansi_strncpy(char *dst, const char *src, pj_size_t n)
 {
 #ifdef __GNUC__
    /* Silence these warnings:
@@ -866,7 +866,7 @@ PJ_INLINE(char*) pj_ansi_safe_strncpy(char *dst, const char *src, pj_size_t n)
 #    pragma GCC diagnostic ignored "-Wstringop-truncation"
 #  endif
 #endif
-    pj_ansi_strncpy(dst, src, n-1);
+    strncpy(dst, src, n-1);
 #ifdef __GNUC__
 #  pragma GCC diagnostic pop
 #endif
@@ -891,11 +891,11 @@ PJ_INLINE(char*) pj_ansi_safe_strcpycat(char *dst,
                                         const char *src1,
                                         pj_size_t n)
 {
-    pj_ansi_safe_strncpy(dst, src0, n);
+    pj_ansi_strncpy(dst, src0, n);
     if (src1) {
         pj_size_t dst_len = pj_ansi_strlen(dst);
         if (dst_len < n-1)
-            pj_ansi_safe_strncpy(dst+dst_len, src1, n-dst_len);
+            pj_ansi_strncpy(dst+dst_len, src1, n-dst_len);
     }
     return dst;
 }

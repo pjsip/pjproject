@@ -252,7 +252,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_driver_init(unsigned drv_idx,
 
         if (drv->name[0]=='\0') {
             /* Set driver name */
-            pj_ansi_safe_strncpy(drv->name, info.driver, sizeof(drv->name));
+            pj_ansi_strncpy(drv->name, info.driver, sizeof(drv->name));
         }
 
         if (drv->rend_dev_idx < 0 && (info.dir & PJMEDIA_DIR_RENDER)) {

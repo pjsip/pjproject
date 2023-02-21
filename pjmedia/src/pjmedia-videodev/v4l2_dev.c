@@ -353,10 +353,10 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
             continue;
         }
 
-        pj_ansi_safe_strncpy(pdi->dev_name, dev_name, sizeof(pdi->dev_name));
-        pj_ansi_safe_strncpy(pdi->info.name, (char*)pdi->v4l2_cap.card,
+        pj_ansi_strncpy(pdi->dev_name, dev_name, sizeof(pdi->dev_name));
+        pj_ansi_strncpy(pdi->info.name, (char*)pdi->v4l2_cap.card,
                              sizeof(pdi->info.name));
-        pj_ansi_safe_strncpy(pdi->info.driver, DRIVER_NAME, 
+        pj_ansi_strncpy(pdi->info.driver, DRIVER_NAME, 
                              sizeof(pdi->info.driver));
         pdi->info.dir = PJMEDIA_DIR_CAPTURE;
         pdi->info.has_callback = PJ_FALSE;
@@ -616,7 +616,7 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
     pj_memcpy(&stream->param, param, sizeof(*param));
     stream->pool = pool;
     pj_memcpy(&stream->vid_cb, cb, sizeof(*cb));
-    pj_ansi_safe_strncpy(stream->name, vdi->info.name, sizeof(stream->name));
+    pj_ansi_strncpy(stream->name, vdi->info.name, sizeof(stream->name));
     stream->user_data = user_data;
     stream->fd = INVALID_FD;
 

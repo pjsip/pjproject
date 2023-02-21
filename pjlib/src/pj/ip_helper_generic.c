@@ -306,7 +306,7 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
         struct sockaddr *ad;
         int rc;
 
-        pj_ansi_safe_strncpy(ifreq.ifr_name, if_list[i].if_name, IFNAMSIZ);
+        pj_ansi_strncpy(ifreq.ifr_name, if_list[i].if_name, IFNAMSIZ);
 
         TRACE_((THIS_FILE, " checking interface %s", ifreq.ifr_name));
 
