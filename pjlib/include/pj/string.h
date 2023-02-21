@@ -858,7 +858,11 @@ PJ_INLINE(char*) pj_ansi_safe_strncpy(char *dst, const char *src, pj_size_t n)
     * - __builtin_strncpy output may be truncated copying x bytes from a string of length x
     */
 #  pragma GCC diagnostic push
-#  if !defined(__has_warning) || __has_warning("-Wstringop-truncation")
+#  if defined(__has_warning)
+#    if __has_warning("-Wstringop-truncation")
+#      pragma GCC diagnostic ignored "-Wstringop-truncation"
+#    endif
+#  else
 #    pragma GCC diagnostic ignored "-Wstringop-truncation"
 #  endif
 #endif
