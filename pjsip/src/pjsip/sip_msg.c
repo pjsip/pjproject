@@ -771,13 +771,13 @@ PJ_DEF(pjsip_generic_string_hdr*) pjsip_generic_string_hdr_init(pj_pool_t *pool,
     if (hnames) {
         pj_strdup(pool, &dup_hname, hnames);
     } else {
-        dup_hname.slen = 0;
+        pj_bzero(&dup_hname, sizeof(pj_str_t));
     }
 
     if (hvalue) {
         pj_strdup(pool, &dup_hval, hvalue);
     } else {
-        dup_hval.slen = 0;
+        pj_bzero(&dup_hval, sizeof(pj_str_t));
     }
 
     pjsip_generic_string_hdr_init2(hdr, &dup_hname, &dup_hval);

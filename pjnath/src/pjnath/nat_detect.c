@@ -213,8 +213,9 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
 {
     pj_sockaddr srv;
 
-    if (server)
-        pj_sockaddr_cp(&srv, server);
+    PJ_ASSERT_RETURN(server, PJ_EINVAL);
+
+    pj_sockaddr_cp(&srv, server);
 
     return pj_stun_detect_nat_type2(&srv, stun_cfg, user_data, cb);
 }

@@ -1803,6 +1803,7 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
     unsigned msec;
 
     /* Start telnet daemon */
+    fe->asock = NULL;
     status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock);
 
     if (status != PJ_SUCCESS)

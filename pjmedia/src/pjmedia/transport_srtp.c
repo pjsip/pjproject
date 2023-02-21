@@ -739,6 +739,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
             int cs_idx = get_crypto_idx(&opt->crypto[i].name);
             pj_str_t tmp_key = opt->crypto[i].key;
 
+            if (cs_idx == -1) continue;
+
             /* re-set crypto */
             srtp->setting.crypto[i].name = pj_str(crypto_suites[cs_idx].name);
             /* cut key length */

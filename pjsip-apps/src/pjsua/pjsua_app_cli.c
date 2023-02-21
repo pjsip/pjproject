@@ -979,6 +979,8 @@ static pj_status_t cmd_add_buddy(pj_cli_cmd_val *cval)
             pj_ansi_snprintf(out_str, sizeof(out_str),
                               "New buddy '%s' added at index %d\n",
                               cval->argv[1].ptr, buddy_id+1);
+        } else {
+            pj_ansi_snprintf(out_str, sizeof(out_str), "Add buddy failed\n");
         }
     }
     pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
