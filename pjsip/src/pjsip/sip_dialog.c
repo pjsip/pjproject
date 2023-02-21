@@ -1944,8 +1944,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
      */
     if ((dlg->state == PJSIP_DIALOG_STATE_NULL &&
          pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
-         (res_code > 100 && res_code < 300) &&
-         rdata->msg_info.to->tag.slen)
+         (res_code > 100 && res_code < 300))
          ||
         (dlg->role==PJSIP_ROLE_UAC &&
          !dlg->uac_has_2xx &&
