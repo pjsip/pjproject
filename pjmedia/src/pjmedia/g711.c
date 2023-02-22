@@ -156,7 +156,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g711_init(pjmedia_endpt *endpt)
     pj_list_init(&g711_factory.codec_list);
 
     /* Create pool */
-    g711_factory.pool = pjmedia_endpt_create_pool(endpt, "g711", 1024, 4000);
+    g711_factory.pool = pjmedia_endpt_create_pool(endpt, "g711", 1000, 4000);
     if (!g711_factory.pool)
         return PJ_ENOMEM;
 

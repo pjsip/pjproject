@@ -164,7 +164,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_init(pjmedia_endpt *endpt,
     l16_factory.endpt = endpt;
 
     /* Create pool */
-    l16_factory.pool = pjmedia_endpt_create_pool(endpt, "l16", 1024, 4000);
+    l16_factory.pool = pjmedia_endpt_create_pool(endpt, "l16", 1000, 4000);
     if (!l16_factory.pool)
         return PJ_ENOMEM;
 

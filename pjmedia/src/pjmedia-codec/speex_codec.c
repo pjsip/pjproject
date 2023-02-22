@@ -228,7 +228,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.endpt = endpt;
 
     spx_factory.pool = pjmedia_endpt_create_pool(endpt, "speex", 
-                                                       1024, 4000);
+                                                       1000, 4000);
     if (!spx_factory.pool)
         return PJ_ENOMEM;
 
