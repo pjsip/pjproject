@@ -970,60 +970,13 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
     if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
         /* Copy the event to avoid race condition with put_frame() */
         pj_memcpy(&vp->fmt_event, event, sizeof(*event));
-
     }
-    
+
     /* Republish the event, post the event to the event manager
      * to avoid deadlock if vidport is trying to stop the clock.
      */
     return pjmedia_event_publish(NULL, vp, event,
                                  PJMEDIA_EVENT_PUBLISH_POST_EVENT);
-}
-
-static pj_status_t convert_frame(pjmedia_vid_port *vp,
-                                 pjmedia_frame *src_frame,
-                                 pjmedia_frame *dst_frame)
-{
-    pj_status_t status = PJ_SUCCESS;
-
-    if (vp->conv.conv) {
-        if (!dst_frame->buf || dst_frame->size < vp->conv.conv_buf_size) {
-            dst_frame->buf  = vp->conv.conv_buf;
-            dst_frame->size = vp->conv.conv_buf_size;
-        }
-        dst_frame->type      = src_frame->type;
-        dst_frame->timestamp = src_frame->timestamp;
-        dst_frame->bit_info  = src_frame->bit_info;
-        status = pjmedia_converter_convert(vp->conv.conv,
-                                           src_frame, dst_frame);
-    }
-    
-    return status;
-}
-
-/* Copy frame to buffer. */
-static void copy_frame_to_buffer(pjmedia_vid_port *vp,
-                                 pjmedia_frame *frame)
-{
-    pj_mutex_lock(vp->frm_mutex);
-    pjmedia_frame_copy(vp->frm_buf, frame);
-    pj_mutex_unlock(vp->frm_mutex);
-}
-
-/* Get frame from buffer and convert it if necessary. */
-static pj_status_t get_frame_from_buffer(pjmedia_vid_port *vp,
-                                         pjmedia_frame *frame)
-{
-    pj_status_t status = PJ_SUCCESS;
-
-    pj_mutex_lock(vp->frm_mutex);
-    if (vp->conv.conv)
-        status = convert_frame(vp, vp->frm_buf, frame);
-    else
-        pjmedia_frame_copy(frame, vp->frm_buf);
-    pj_mutex_unlock(vp->frm_mutex);
-    
-    return status;
 }
 
 static pj_status_t handle_format_change(pjmedia_vid_port *vp)
@@ -1149,6 +1102,52 @@ static pj_status_t handle_format_change(pjmedia_vid_port *vp)
     }
 
     return PJ_SUCCESS;
+}
+
+static pj_status_t convert_frame(pjmedia_vid_port *vp,
+                                 pjmedia_frame *src_frame,
+                                 pjmedia_frame *dst_frame)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    if (vp->conv.conv) {
+        if (!dst_frame->buf || dst_frame->size < vp->conv.conv_buf_size) {
+            dst_frame->buf  = vp->conv.conv_buf;
+            dst_frame->size = vp->conv.conv_buf_size;
+        }
+        dst_frame->type      = src_frame->type;
+        dst_frame->timestamp = src_frame->timestamp;
+        dst_frame->bit_info  = src_frame->bit_info;
+        status = pjmedia_converter_convert(vp->conv.conv,
+                                           src_frame, dst_frame);
+    }
+    
+    return status;
+}
+
+/* Copy frame to buffer. */
+static void copy_frame_to_buffer(pjmedia_vid_port *vp,
+                                 pjmedia_frame *frame)
+{
+    pj_mutex_lock(vp->frm_mutex);
+    pjmedia_frame_copy(vp->frm_buf, frame);
+    pj_mutex_unlock(vp->frm_mutex);
+}
+
+/* Get frame from buffer and convert it if necessary. */
+static pj_status_t get_frame_from_buffer(pjmedia_vid_port *vp,
+                                         pjmedia_frame *frame)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    pj_mutex_lock(vp->frm_mutex);
+    if (vp->conv.conv)
+        status = convert_frame(vp, vp->frm_buf, frame);
+    else
+        pjmedia_frame_copy(frame, vp->frm_buf);
+    pj_mutex_unlock(vp->frm_mutex);
+    
+    return status;
 }
 
 static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
