@@ -705,11 +705,14 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
                 }
             }
 
-            status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot, NULL);
-            if (status != PJ_SUCCESS) {
-                PJ_PERROR(4, (THIS_FILE, status,
-                              "Ignored error on connecting video ports "
-                              "on wid=%d", wid));
+            if (!w->is_native) {
+                status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot,
+                                                NULL);
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(4, (THIS_FILE, status,
+                                  "Ignored error on connecting video ports "
+                                  "on wid=%d", wid));
+                }
             }
 
             /* Done */
@@ -1700,7 +1703,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
 
     if (w->is_native) {
         pjmedia_vid_dev_stream *cap_strm;
-        pjmedia_vid_dev_cap cap = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+        pjmedia_vid_dev_cap cap = PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW;
 
         if (!w->vp_cap) {
             status = PJ_EINVAL;
