@@ -669,10 +669,10 @@ PJ_DEF(pj_status_t) pj_upnp_deinit(void)
 
 
 /* Send request to add port mapping. */
-PJ_DECL(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
-                                             const pj_sock_t sock[],
-                                             unsigned ext_port[],
-                                             pj_sockaddr mapped_addr[])
+PJ_DEF(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
+                                            const pj_sock_t sock[],
+                                            unsigned ext_port[],
+                                            pj_sockaddr mapped_addr[])
 {
     unsigned max_wait = 20;
     unsigned i;

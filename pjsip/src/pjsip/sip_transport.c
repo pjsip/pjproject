@@ -1523,7 +1523,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_unregister_tpfactory( pjsip_tpmgr *mgr,
     return PJ_SUCCESS;
 }
 
-PJ_DECL(void) pjsip_tpmgr_fla2_param_default(pjsip_tpmgr_fla2_param *prm)
+PJ_DEF(void) pjsip_tpmgr_fla2_param_default(pjsip_tpmgr_fla2_param *prm)
 {
     pj_bzero(prm, sizeof(*prm));
 }

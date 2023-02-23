@@ -960,10 +960,10 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
     return status;
 }
 
-PJ_DECL(pj_status_t) pj_cli_sess_exec(pj_cli_sess *sess,
-                                      char *cmdline,
-                                      pj_pool_t *pool,
-                                      pj_cli_exec_info *info)
+PJ_DEF(pj_status_t) pj_cli_sess_exec(pj_cli_sess *sess,
+                                     char *cmdline,
+                                     pj_pool_t *pool,
+                                     pj_cli_exec_info *info)
 {
     pj_cli_cmd_val val;
     pj_status_t status;
