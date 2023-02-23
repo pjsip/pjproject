@@ -740,7 +740,7 @@ pjmedia_vid_port_get_clock_src( pjmedia_vid_port *vid_port )
     return &vid_port->clocksrc;
 }
 
-PJ_DECL(pj_status_t)
+PJ_DEF(pj_status_t)
 pjmedia_vid_port_set_clock_src( pjmedia_vid_port *vid_port,
                                 pjmedia_clock_src *clocksrc)
 {

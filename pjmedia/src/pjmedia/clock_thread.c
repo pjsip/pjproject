@@ -43,8 +43,8 @@ PJ_DEF(pj_status_t) pjmedia_clock_src_init( pjmedia_clock_src *clocksrc,
 }
 
 /* API: Update clock source */
-PJ_DECL(pj_status_t) pjmedia_clock_src_update( pjmedia_clock_src *clocksrc,
-                                               const pj_timestamp *timestamp )
+PJ_DEF(pj_status_t) pjmedia_clock_src_update( pjmedia_clock_src *clocksrc,
+                                              const pj_timestamp *timestamp )
 {
     PJ_ASSERT_RETURN(clocksrc, PJ_EINVAL);
 
