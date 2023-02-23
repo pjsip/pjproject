@@ -405,6 +405,7 @@ static pj_status_t android_get_dev_info(pjmedia_aud_dev_factory *f,
     pj_bzero(info, sizeof(*info));
     
     pj_ansi_strcpy(info->name, "Android JNI");
+    pj_ansi_strcpy(info->driver, DRIVER_NAME);
     info->default_samples_per_sec = 8000;
     info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
                  PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE;
