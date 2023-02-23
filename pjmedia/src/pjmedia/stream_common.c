@@ -108,9 +108,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
             }
 
             /* Check if it contains '=' */
-            while (p2 < p_end && *p2 != '=') ++p2;
+            while (p2 < end && *p2 != '=') ++p2;
 
-            if (p2 < p_end) {
+            if (p2 < end) {
                 char *p3;
 
                 pj_assert (*p2 == '=');
