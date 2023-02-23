@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
 
         /* Get token */
         start = p;
-        while (p < p_end && *p != ';' && *p != '=') ++p;
+        while (p < p_end && *p != ';') ++p;
         end = p - 1;
 
         /* Right trim */
@@ -98,20 +98,41 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
 
         /* Store token */
         if (end > start) {
+            char *p2 = start;
+
             if (pool) {
                 token = (char*)pj_pool_alloc(pool, end - start);
                 pj_ansi_strncpy(token, start, end - start);
             } else {
                 token = start;
             }
-            if (*p == '=')
-                /* Got param name */
-                pj_strset(&fmtp->param[fmtp->cnt].name, token, end - start);
-            else
-                /* Got param value */
-                pj_strset(&fmtp->param[fmtp->cnt++].val, token, end - start);
-        } else if (*p != '=') {
-            ++fmtp->cnt;
+
+            /* Check if it contains '=' */
+            while (p2 < p_end && *p2 != '=') ++p2;
+
+            if (p2 < p_end) {
+                char *p3;
+
+                pj_assert (*p2 == '=');
+
+                /* Trim whitespace before '=' */
+                p3 = p2 - 1;
+                while (p3 >= start && (*p3 == ' ' || *p3 == '\t')) --p3;
+
+                /* '=' found, get param name */
+                pj_strset(&fmtp->param[fmtp->cnt].name, token, p3 - start + 1);
+
+                /* Trim whitespace after '=' */
+                p3 = p2 + 1;
+                while (p3 < end && (*p3 == ' ' || *p3 == '\t')) ++p3;
+
+                /* Advance token to first char after '=' */
+                token = token + (p3 - start);
+                start = p3;
+            }
+
+            /* Got param value */
+            pj_strset(&fmtp->param[fmtp->cnt++].val, token, end - start);
         }
 
         /* Next */
