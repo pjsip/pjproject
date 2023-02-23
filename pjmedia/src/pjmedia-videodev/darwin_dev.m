@@ -254,7 +254,7 @@ pjmedia_vid_dev_factory* pjmedia_darwin_factory(pj_pool_factory *pf)
     struct darwin_factory *f;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "darwin video", 512, 512, NULL);
+    pool = pj_pool_create(pf, "darwin video", 8000, 4000, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct darwin_factory);
     f->pf = pf;
     f->pool = pool;

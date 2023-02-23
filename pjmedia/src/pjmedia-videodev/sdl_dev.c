@@ -281,7 +281,7 @@ pjmedia_vid_dev_factory* pjmedia_sdl_factory(pj_pool_factory *pf)
     struct sdl_factory *f;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "sdl video", 1000, 1000, NULL);
+    pool = pj_pool_create(pf, "sdl video", 4000, 4000, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct sdl_factory);
     f->pf = pf;
     f->pool = pool;

@@ -924,7 +924,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Initial memory block for the endpoint.
  */
 #ifndef PJSIP_POOL_LEN_ENDPT
-#   define PJSIP_POOL_LEN_ENDPT         (4000)
+#   define PJSIP_POOL_LEN_ENDPT         (16000)
 #endif
 
 /**
