@@ -4025,8 +4025,27 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
     tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
     pj_assert(tsx_inv_data);
 
+    /* Handle 481/408 response. */
+    if (inv->state != PJSIP_INV_STATE_DISCONNECTED &&
+        tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+        ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST) ||
+         (tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT &&
+          !pjsip_cfg()->endpt.keep_inv_after_tsx_timeout)))
+    {
+        pjsip_tx_data *bye = NULL;
+
+        /* End session */
+        status = pjsip_inv_end_session(inv, tsx->status_code,
+                                       &tsx->status_text, &bye);
+        if (status == PJ_SUCCESS && bye) {
+            status = pjsip_inv_send_msg(inv, bye);
+        }
+
+        handled =  PJ_TRUE;
+    }
+
     /* Handle 401/407 challenge. */
-    if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+    else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
         (tsx->status_code == 401 || tsx->status_code == 407))
     {
         pjsip_tx_data *tdata;
