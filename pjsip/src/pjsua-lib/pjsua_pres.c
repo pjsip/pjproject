@@ -2324,7 +2324,7 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
                    pjsip_rx_data_get_info(rdata)));
 
         pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
-                                      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
+                                      PJSIP_SC_CALL_TSX_DOES_NOT_EXIST, NULL,
                                       NULL, NULL);
 
         return PJ_TRUE;
