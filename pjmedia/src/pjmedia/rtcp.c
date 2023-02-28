@@ -1023,8 +1023,8 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
         dlsr = (pj_uint32_t)(ts.u64 - lsr_time);
         rr->dlsr = pj_htonl(dlsr);
 
-        TRACE_((sess->name,"Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
-                           "(%ds:%03dms)",
+        TRACE_((sess->name,"Tx RTCP RR: lsr=%u, lsr_time=%u, now=%u, dlsr=%u"
+                           "(%us:%03ums)",
                            lsr, 
                            (pj_uint32_t)lsr_time,
                            (pj_uint32_t)ts.u64, 

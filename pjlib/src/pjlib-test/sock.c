@@ -635,8 +635,9 @@ static int udp_test(void)
     }
 
     rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &cs);
-    if (rc != 0)
-        return -110;
+    if (rc != 0) {
+        rc = -110; goto on_error;
+    }
 
     /* Bind server socket. */
     pj_bzero(&dstaddr, sizeof(dstaddr));

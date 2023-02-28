@@ -985,7 +985,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
             if (copied_dir != PJMEDIA_DIR_NONE) {
                 const char *dir_name[] = {NULL, "encoder", "decoder", "codec"};
                 PJ_LOG(5, (THIS_FILE, "The %.*s %s is using base codec (%.*s)",
-                           desc->info.encoding_name.slen,
+                           (int)desc->info.encoding_name.slen,
                            desc->info.encoding_name.ptr,
                            dir_name[copied_dir],
                            base_desc->info.encoding_name.slen,
@@ -1004,12 +1004,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
         /* Print warning about missing encoder/decoder */
         if (!desc->enc) {
             PJ_LOG(4, (THIS_FILE, "Cannot find %.*s encoder in ffmpeg library",
-                       desc->info.encoding_name.slen,
+                       (int)desc->info.encoding_name.slen,
                        desc->info.encoding_name.ptr));
         }
         if (!desc->dec) {
             PJ_LOG(4, (THIS_FILE, "Cannot find %.*s decoder in ffmpeg library",
-                       desc->info.encoding_name.slen,
+                       (int)desc->info.encoding_name.slen,
                        desc->info.encoding_name.ptr));
         }
     }
@@ -1191,6 +1191,10 @@ static pj_status_t ffmpeg_alloc_codec( pjmedia_vid_codec_factory *factory,
 
     /* Create pool for codec instance */
     pool = pj_pool_create(ffmpeg_factory.pf, "ffmpeg codec", 512, 512, NULL);
+    if (!pool) {
+        status = PJ_ENOMEM;
+        goto on_error;
+    }
     codec = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_codec);
     if (!codec) {
         status = PJ_ENOMEM;

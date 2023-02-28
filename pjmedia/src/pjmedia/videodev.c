@@ -411,8 +411,7 @@ pjmedia_vid_dev_get_global_index(const pjmedia_vid_dev_factory *f,
                                  unsigned local_idx,
                                  pjmedia_vid_dev_index *pid)
 {
-    PJ_ASSERT_RETURN(f->sys.drv_idx >= 0 && f->sys.drv_idx < MAX_DRIVERS,
-                     PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(f->sys.drv_idx < MAX_DRIVERS, PJ_EINVALIDOP);
     *pid = local_idx;
     return make_global_index(f->sys.drv_idx, pid);
 }

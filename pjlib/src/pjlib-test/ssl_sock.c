@@ -1207,8 +1207,11 @@ static int server_non_ssl(unsigned ms_timeout)
     PJ_LOG(3, ("", "...Done!"));
 
 on_return:
-    if (asock_serv)
+    if (asock_serv) {
         pj_activesock_close(asock_serv);
+    } else if (sock != PJ_INVALID_SOCKET) {
+        pj_sock_close(sock);
+    }
     if (ssock_cli && !state_cli.err && !state_cli.done)
         pj_ssl_sock_close(ssock_cli);
     if (timer)

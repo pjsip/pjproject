@@ -1180,6 +1180,7 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
         pjmedia_transport_get_info(ds->srtp->member_tp, &info);
         if (pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name)) {
             pjmedia_transport_attach_param ap;
+            pj_status_t status;
 
             pj_bzero(&ap, sizeof(ap));
             ap.user_data = ds->srtp;
@@ -1200,7 +1201,9 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
                                      pj_sockaddr_get_port(&ds->rem_addr)+1);
             }
 
-            pjmedia_transport_attach2(&ds->srtp->base, &ap);
+            status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
+            if (status != PJ_SUCCESS)
+                return status;
 
 #if DTLS_DEBUG
             {

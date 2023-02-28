@@ -480,7 +480,7 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
     } netlink_req;
 
     long pagesize = sysconf(_SC_PAGESIZE);
-    if (!pagesize)
+    if (pagesize <= 0)
         pagesize = 4096; /* Assume pagesize is 4096 if sysconf() failed */
 
     int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
@@ -511,8 +511,10 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
         struct nlmsghdr *nlmsg_ptr = (struct nlmsghdr *) read_buffer;
         int nlmsg_len = read_size;
 
-        if (nlmsg_len < sizeof (struct nlmsghdr))
+        if (nlmsg_len < sizeof (struct nlmsghdr)) {
+            close(fd);
             return PJ_ETOOSMALL;
+        }
 
         if (nlmsg_ptr->nlmsg_type == NLMSG_DONE)
             break;

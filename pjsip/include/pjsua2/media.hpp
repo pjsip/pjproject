@@ -2614,7 +2614,7 @@ public:
     /**
      * Default constructor
      */
-    MediaEvent() : type(PJMEDIA_EVENT_NONE)
+    MediaEvent() : type(PJMEDIA_EVENT_NONE), pjMediaEvent(NULL)
     {}
 
     /**

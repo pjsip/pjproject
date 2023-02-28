@@ -1642,7 +1642,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
-    pjsua_call *call = call_med? call_med->call : NULL;
+    pjsua_call *call = call_med->call;
     char ev_name[5];
     pj_status_t status = PJ_SUCCESS;
 
@@ -1751,18 +1751,12 @@ pj_status_t call_media_on_event(pjmedia_event *event,
         }
 
         pj_mutex_unlock(pjsua_var.timer_mutex);
-        
-        if (call) {
-            if (call->hanging_up)
-                return status;
 
-            eve->call_id = call->index;
-            eve->med_idx = call_med->idx;
-        } else {
-            /* Also deliver non call events such as audio device error */
-            eve->call_id = PJSUA_INVALID_ID;
-            eve->med_idx = 0;
-        }
+        if (call->hanging_up)
+            return status;
+
+        eve->call_id = call->index;
+        eve->med_idx = call_med->idx;
         pj_memcpy(&eve->event, event, sizeof(pjmedia_event));
         pjsua_schedule_timer2(&call_med_event_cb, eve, 1);
     }

@@ -398,7 +398,10 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
     /* Reinit */
     PJ_ASSERT_RETURN(p->path.slen, PJ_EINVAL);
     adi->pool = pj_pool_create(cf->pf, "avidi%p", 512, 512, NULL);
-
+    if (!adi->pool) {
+        status = PJ_ENOMEM;
+        goto on_error;
+    }
 
     /* Open the AVI */
     pj_strdup_with_null(adi->pool, &adi->fpath, &p->path);

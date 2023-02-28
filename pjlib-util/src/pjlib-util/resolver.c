@@ -1905,7 +1905,7 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
         struct nameserver *ns = &resolver->ns[i];
 
         PJ_LOG(3,(resolver->name.ptr,
-                  "   NS %d: %s:%d (state=%s until %ds, rtt=%d ms)",
+                  "   NS %d: %s:%d (state=%s until %ds, rtt=%ld ms)",
                   i,
                   pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
                   pj_sockaddr_get_port(&ns->addr),

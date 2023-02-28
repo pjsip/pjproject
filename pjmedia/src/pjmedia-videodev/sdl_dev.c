@@ -1237,7 +1237,7 @@ static pj_status_t set_cap(void *data)
 
         status = sdl_create_window(strm, PJ_TRUE, sdl_info->sdl_format, hwnd);
         PJ_PERROR(4, (THIS_FILE, status,
-                      "Re-initializing SDL with native window %d",
+                      "Re-initializing SDL with native window %p",
                       hwnd->info.window));
         return status;  
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {

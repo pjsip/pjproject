@@ -556,7 +556,10 @@ static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
     /* Get real capture ID, if set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV */
     if (id == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
         pjmedia_vid_dev_info info;
-        pjmedia_vid_dev_get_info(id, &info);
+        if (pjmedia_vid_dev_get_info(id, &info) != PJ_SUCCESS) {
+            PJSUA_UNLOCK();
+            return wid;
+        }
         id = info.id;
     }
 
@@ -2661,7 +2664,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
          */
         if (param_.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
             pjmedia_vid_dev_info info;
-            pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+            status = pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+            if (status != PJ_SUCCESS)
+                goto on_return;
             pj_assert(info.dir == PJMEDIA_DIR_CAPTURE);
             param_.cap_dev = info.id;
         }

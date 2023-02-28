@@ -372,7 +372,7 @@ static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock,
 
             pj_sockaddr_cp(&peer->mapped_addr, &info.mapped_addr);
             pj_sockaddr_print(&peer->mapped_addr, straddr, sizeof(straddr), 3);
-            PJ_LOG(3,(THIS_FILE, "peer%d: STUN mapped address is %s",
+            PJ_LOG(3,(THIS_FILE, "peer%ld: STUN mapped address is %s",
                       peer-g.peer, straddr));
         }
     }

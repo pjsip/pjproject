@@ -1376,8 +1376,8 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
 
         if (frame->size != vp->src_size) {
             if (frame->size > 0) {
-                PJ_LOG(4, (THIS_FILE, "Unexpected frame size %d, expected %d",
-                                      frame->size, vp->src_size));
+                PJ_LOG(4,(THIS_FILE, "Unexpected frame size %lu, expected %lu",
+                                     frame->size, vp->src_size));
             }
 
             pj_memcpy(&frame_, frame, sizeof(pjmedia_frame));
