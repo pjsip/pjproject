@@ -2318,7 +2318,7 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
     /* Find which account for the incoming request. */
     acc_id = pjsua_acc_find_for_incoming(rdata);
     if (acc_id == PJSUA_INVALID_ID) {
-        const pj_str_t reason = pj_str("Subscription does not exist");
+        const pj_str_t reason = pj_str("No account to handle");
 
         PJ_LOG(2, (THIS_FILE,
                    "Unable to process incoming message %s "
