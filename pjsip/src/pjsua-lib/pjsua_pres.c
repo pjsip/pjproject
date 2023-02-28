@@ -2318,13 +2318,15 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
     /* Find which account for the incoming request. */
     acc_id = pjsua_acc_find_for_incoming(rdata);
     if (acc_id == PJSUA_INVALID_ID) {
+        const pj_str_t reason = pj_str("Subscription does not exist");
+
         PJ_LOG(2, (THIS_FILE,
                    "Unable to process incoming message %s "
                    "due to no available account",
                    pjsip_rx_data_get_info(rdata)));
 
         pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
-                                      PJSIP_SC_CALL_TSX_DOES_NOT_EXIST, NULL,
+                                      PJSIP_SC_CALL_TSX_DOES_NOT_EXIST, &reason,
                                       NULL, NULL);
 
         return PJ_TRUE;
