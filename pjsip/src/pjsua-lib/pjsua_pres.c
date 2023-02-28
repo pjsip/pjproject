@@ -2343,8 +2343,6 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
     if (pjsua_var.ua_cfg.cb.on_mwi_info) {
         pjsua_mwi_info mwi_info;
 
-        acc_id = pjsua_acc_find_for_incoming(rdata);
-
         pj_bzero(&mwi_info, sizeof(mwi_info));
         mwi_info.rdata = rdata;
 
