@@ -2296,6 +2296,7 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t EVENT_HDR  = { "Event", 5 };
     pj_str_t MWI = { "message-summary", 15 };
     pjsip_event_hdr *eh;
+    pjsua_acc_id acc_id;
 
     if (pjsip_method_cmp(&msg->line.req.method, pjsip_get_notify_method())!=0) 
     {
@@ -2314,6 +2315,23 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
         return PJ_FALSE;
     }
 
+    /* Find which account for the incoming request. */
+    acc_id = pjsua_acc_find_for_incoming(rdata);
+    if (acc_id == PJSUA_INVALID_ID) {
+        const pj_str_t reason = pj_str("No account to handle");
+
+        PJ_LOG(2, (THIS_FILE,
+                   "Unable to process incoming message %s "
+                   "due to no available account",
+                   pjsip_rx_data_get_info(rdata)));
+
+        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
+                                      PJSIP_SC_CALL_TSX_DOES_NOT_EXIST, &reason,
+                                      NULL, NULL);
+
+        return PJ_TRUE;
+    }
+
     PJ_LOG(4,(THIS_FILE, "Got unsolicited NOTIFY from %s:%d..",
               rdata->pkt_info.src_name, rdata->pkt_info.src_port));
     pj_log_push_indent();
@@ -2325,10 +2343,7 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
 
     /* Call callback */
     if (pjsua_var.ua_cfg.cb.on_mwi_info) {
-        pjsua_acc_id acc_id;
         pjsua_mwi_info mwi_info;
-
-        acc_id = pjsua_acc_find_for_incoming(rdata);
 
         pj_bzero(&mwi_info, sizeof(mwi_info));
         mwi_info.rdata = rdata;
