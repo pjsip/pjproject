@@ -154,6 +154,15 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
     }
 
     call_med = &call->media[med_idx];
+
+    if (call_med->state == PJSUA_CALL_MEDIA_NONE ||
+        call_med->state == PJSUA_CALL_MEDIA_ERROR ||
+        call_med->dir == PJMEDIA_DIR_NONE)
+    {
+        PJSUA_UNLOCK();
+        return PJ_EINVAL;
+    }
+
     psi->type = call_med->type;
     switch (call_med->type) {
     case PJMEDIA_TYPE_AUDIO:
