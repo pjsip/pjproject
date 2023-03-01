@@ -2410,7 +2410,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 
         /* If transport is found and listener is specified, verify listener */
         else if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
-                 sel->u.listener && tp_ref->factory != sel->u.listener)
+                 sel->u.listener && tp_ref && tp_ref->factory != sel->u.listener)
         {
             tp_ref = NULL;
             /* This will cause a new transport to be created which will be a
