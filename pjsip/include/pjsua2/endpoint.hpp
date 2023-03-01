@@ -700,6 +700,9 @@ struct UaConfig : public PersistentObject
      *
      * If this is enabled, the library will respond 200/OK to the NOTIFY
      * request and forward the request to Endpoint::onMwiInfo() callback.
+     * 
+     * Note: the callback will not be invoked and 481/"No account to handle" response
+     * will be sent if this is enabled but no account is configured.
      *
      * See also AccountMwiConfig.enabled.
      *

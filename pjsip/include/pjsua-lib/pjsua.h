@@ -2213,6 +2213,9 @@ typedef struct pjsua_config
      * If this is enabled, the library will respond 200/OK to the NOTIFY
      * request and forward the request to \a on_mwi_info() callback.
      *
+     * Note: the callback will not be invoked and 481/"No account to handle" response
+     * will be sent if this is enabled but no account is configured.
+     * 
      * See also \a mwi_enabled field #on pjsua_acc_config.
      *
      * Default: PJ_TRUE
