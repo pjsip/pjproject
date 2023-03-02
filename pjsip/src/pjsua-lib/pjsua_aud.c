@@ -155,9 +155,8 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
 
     call_med = &call->media[med_idx];
 
-    if (call_med->state == PJSUA_CALL_MEDIA_NONE ||
-        call_med->state == PJSUA_CALL_MEDIA_ERROR ||
-        call_med->dir == PJMEDIA_DIR_NONE)
+    if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
+        (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream))
     {
         PJSUA_UNLOCK();
         return PJ_EINVAL;
@@ -211,9 +210,8 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
 
     call_med = &call->media[med_idx];
 
-    if (call_med->state == PJSUA_CALL_MEDIA_NONE ||
-        call_med->state == PJSUA_CALL_MEDIA_ERROR ||
-        call_med->dir == PJMEDIA_DIR_NONE)
+    if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
+        (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream))
     {
         PJSUA_UNLOCK();
         return PJ_EINVAL;
