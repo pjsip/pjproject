@@ -789,7 +789,13 @@ static int print_media_desc(const pjmedia_sdp_media *m, char *buf, pj_size_t len
 PJ_DEF(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media,
                                char *buf, pj_size_t size)
 {
-        return print_media_desc(media, buf, size);
+    return print_media_desc(media, buf, size);
+}
+
+PJ_DEF(int) pjmedia_sdp_attr_print(const pjmedia_sdp_attr *attr,
+                               char *buf, pj_size_t size)
+{
+    return print_attr(attr, buf, size);
 }
 
 PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
