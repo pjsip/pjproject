@@ -407,12 +407,20 @@ pjsip_media_type SipMediaType::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipHeader::SipHeader()
+{
+    pj_str_t dummy;
+
+    // Init pjHdr with null string to suppress warning
+    pj_bzero(&dummy, sizeof(dummy));
+    pjsip_generic_string_hdr_init2(&pjHdr, &dummy, &dummy);
+}
+
 void SipHeader::fromPj(const pjsip_hdr *hdr) PJSUA2_THROW(Error)
 {
     char *buf = NULL;
     int len = 0;
     unsigned buf_size = 256>>1;
-    pj_str_t dummy;
 
     /* Print header to a 256 bytes buffer first.
      * If buffer is not sufficient, try 512, 1024, soon
@@ -452,10 +460,6 @@ void SipHeader::fromPj(const pjsip_hdr *hdr) PJSUA2_THROW(Error)
     hName = string(buf, end_name);
     hValue = string(start_val);
     free(buf);
-
-    // Init pjHdr with null string to suppress warning
-    pj_bzero(&dummy, sizeof(dummy));
-    pjsip_generic_string_hdr_init2(&pjHdr, &dummy, &dummy);
 }
 
 pjsip_generic_string_hdr &SipHeader::toPj() const
@@ -489,6 +493,7 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
 
     pj_list_init(&pjMpp.hdr);
     pjMpp.body = NULL;
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
 }
 
 pjsip_multipart_part& SipMultipartPart::toPj() const

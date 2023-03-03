@@ -2256,6 +2256,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
                                       pjmedia_transport_info *info)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
     pj_ice_sess_cand cand;
     pj_sockaddr_t *addr;
     pj_status_t status;
@@ -2278,7 +2279,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
         addr = &cand.addr;
     } else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
         unsigned i, cnt = PJ_ICE_ST_MAX_CAND;
-        pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
         pj_ice_strans_enum_cands(tp_ice->ice_st, 1, &cnt, cands);
         for (i = 0; i < cnt && !addr; ++i) {
             if (pj_sockaddr_has_addr(&cands[i].addr))
@@ -2295,8 +2295,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     if (tp_ice->use_rtcp_mux) {
         pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, addr);
     } else if (tp_ice->comp_cnt > 1) {
-        pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
-
         status = pj_ice_strans_get_def_cand(tp_ice->ice_st, 2, &cand);
         if (status != PJ_SUCCESS)
             return status;

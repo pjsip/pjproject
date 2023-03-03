@@ -627,8 +627,8 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
             eedelay *= 1000;
         }
 
-        TRACE_((sess->name, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
-                           "now=%p, rtt=%p",
+        TRACE_((sess->name, "Rx RTCP RR: lsr=%u, dlsr=%u (%u:%03ums), "
+                           "now=%u, rtt=%u",
                 lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
                 now, (pj_uint32_t)eedelay));
         
@@ -669,7 +669,7 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
 
         } else {
             PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "
-                                   "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
+                                   "lsr=%u, now=%u, dlsr=%u (%u:%03ums), "
                                    "diff=%d",
                                    lsr, now, dlsr, dlsr/65536,
                                    (dlsr%65536)*1000/65536,

@@ -350,12 +350,12 @@ static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock,
     struct peer *peer = (struct peer*) pj_stun_sock_get_user_data(stun_sock);
 
     if (status == PJ_SUCCESS) {
-        PJ_LOG(4,(THIS_FILE, "peer%d: %s success", peer-g.peer,
+        PJ_LOG(4,(THIS_FILE, "peer%ld: %s success", peer-g.peer,
                   pj_stun_sock_op_name(op)));
     } else {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_strerror(status, errmsg, sizeof(errmsg));
-        PJ_LOG(1,(THIS_FILE, "peer%d: %s error: %s", peer-g.peer,
+        PJ_LOG(1,(THIS_FILE, "peer%ld: %s error: %s", peer-g.peer,
                   pj_stun_sock_op_name(op), errmsg));
         return PJ_FALSE;
     }
@@ -392,7 +392,7 @@ static pj_bool_t stun_sock_on_rx_data(pj_stun_sock *stun_sock,
     ((char*)pkt)[pkt_len] = '\0';
 
     pj_sockaddr_print(src_addr, straddr, sizeof(straddr), 3);
-    PJ_LOG(3,(THIS_FILE, "peer%d: received %d bytes data from %s: %s",
+    PJ_LOG(3,(THIS_FILE, "peer%ld: received %d bytes data from %s: %s",
               peer-g.peer, pkt_len, straddr, (char*)pkt));
 
     return PJ_TRUE;

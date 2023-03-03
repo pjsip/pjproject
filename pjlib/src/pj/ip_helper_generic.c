@@ -496,8 +496,10 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
     netlink_req.ifaddrmsg_info.ifa_family = AF_INET6;
 
     int rtn = send(fd, &netlink_req, netlink_req.nlmsg_info.nlmsg_len, 0);
-    if (rtn < 0)
+    if (rtn < 0) {
+        close(fd);
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+    }
 
     char read_buffer[pagesize];
     size_t idx = 0;
@@ -505,8 +507,10 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
     while(1) {
         bzero(read_buffer, pagesize);
         int read_size = recv(fd, read_buffer, pagesize, 0);
-        if (read_size < 0)
+        if (read_size < 0) {
+            close(fd);
             return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        }
 
         struct nlmsghdr *nlmsg_ptr = (struct nlmsghdr *) read_buffer;
         int nlmsg_len = read_size;

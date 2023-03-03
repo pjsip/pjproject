@@ -988,7 +988,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
                            (int)desc->info.encoding_name.slen,
                            desc->info.encoding_name.ptr,
                            dir_name[copied_dir],
-                           base_desc->info.encoding_name.slen,
+                           (int)base_desc->info.encoding_name.slen,
                            base_desc->info.encoding_name.ptr));
             }
         }
