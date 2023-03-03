@@ -1,0 +1,46 @@
+name: Build Android release
+
+on:
+  push:
+    tags:
+     - '*'
+
+env:
+  RELEASE_ARCHIVE_NAME: android-release
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    container: 
+      image: rinekri/pjsip-android-builder:latest  # TODO: replace with intermedia image when it will be uploaded
+      volumes:
+        - ${{ github.workspace }}/input:/home/tools/pjproject 
+        - ${{ github.workspace }}/output:/home/output/pjsip-build-output
+      options: --user root
+    steps:
+      - 
+        name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: input
+      -
+        name: Build library
+        run: |
+          mkdir -p output
+          cd /home
+          ./build
+      - 
+        name: Create asset 
+        run: |
+          tar -czvf "$RELEASE_ARCHIVE_NAME".tar.gz -C output .
+      - 
+        name: Create release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          name: Android release ${{ github.ref_name }}
+          artifacts: ${{ env.RELEASE_ARCHIVE_NAME }}.tar.gz
+          draft: true
+          prerelease: false
