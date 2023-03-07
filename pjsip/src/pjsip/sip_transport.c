@@ -73,12 +73,12 @@ static const char* print_tpsel_info(const pjsip_tpselector *sel)
 
 /* Specify the initial size of the transport manager's pool. */
 #ifndef  TPMGR_POOL_INIT_SIZE
-#   define TPMGR_POOL_INIT_SIZE 64
+#   define TPMGR_POOL_INIT_SIZE 1000
 #endif
 
 /* Specify the increment size of the transport manager's pool. */
 #ifndef TPMGR_POOL_INC_SIZE
-    #define TPMGR_POOL_INC_SIZE 64
+    #define TPMGR_POOL_INC_SIZE 1000
 #endif
 
 /* Specify transport entry allocation count. When registering a new transport,

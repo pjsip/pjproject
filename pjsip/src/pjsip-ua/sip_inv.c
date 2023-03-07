@@ -80,8 +80,8 @@ static const pjsip_method pjsip_update_method =
     { "UPDATE", 6 }
 };
 
-#define POOL_INIT_SIZE  256
-#define POOL_INC_SIZE   256
+#define POOL_INIT_SIZE  1000
+#define POOL_INC_SIZE   1000
 
 /* Process header parameter in redirection target. */
 void pjsip_inv_process_hparam(pjsip_inv_session *sess, 

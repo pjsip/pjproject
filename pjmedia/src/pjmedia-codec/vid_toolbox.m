@@ -358,7 +358,7 @@ static pj_status_t vtool_alloc_codec(pjmedia_vid_codec_factory *factory,
 
     *p_codec = NULL;
 
-    pool = pj_pool_create(vtool_factory.pf, "vtool%p", 512, 512, NULL);
+    pool = pj_pool_create(vtool_factory.pf, "vtool%p", 16000, 4000, NULL);
     if (!pool)
         return PJ_ENOMEM;
 

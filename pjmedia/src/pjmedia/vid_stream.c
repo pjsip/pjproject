@@ -60,11 +60,11 @@
 #endif
 
 #ifndef PJMEDIA_VSTREAM_SIZE
-#   define PJMEDIA_VSTREAM_SIZE 1000
+#   define PJMEDIA_VSTREAM_SIZE 16000
 #endif
 
 #ifndef PJMEDIA_VSTREAM_INC
-#   define PJMEDIA_VSTREAM_INC  1000
+#   define PJMEDIA_VSTREAM_INC  4000
 #endif
 
 /* Due to network MTU limitation, a picture bitstream may be splitted into
