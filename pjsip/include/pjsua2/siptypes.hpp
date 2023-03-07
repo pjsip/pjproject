@@ -308,6 +308,72 @@ public:
 
 
 /**
+ * Socket option parameters, to be specified in TransportConfig.
+ */
+struct SockOptParams : public PersistentObject
+{
+    /**
+     * Socket option type.
+     */
+    struct SockOpt {
+        /**
+         * The level at which the option is defined.
+         */
+        int                 level;
+
+        /**
+         * Option name.
+         */
+        int                 optName;
+
+        /**
+         * Pointer to the buffer in which the option is specified.
+         */
+        void               *optVal;
+
+        /**
+         * Buffer size of the buffer pointed by optVal.
+         */
+        int                 optLen;
+
+        /**
+         * Internal buffer for optval.
+         */
+        string optValBuf_;
+    };
+
+    /**
+     * Array of socket options.
+     */
+    std::vector<SockOpt>    sockOpts;
+
+public:
+    /** Default constructor initialises with default values */
+    SockOptParams();
+
+    /** Convert to pjsip */
+    pj_sockopt_params toPj() const;
+
+    /** Convert from pjsip */
+    void fromPj(const pj_sockopt_params &prm);
+
+    /**
+     * Read this object from a container node.
+     *
+     * @param node              Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node              Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
+};
+
+
+/**
  * Parameters to create a transport instance.
  */
 struct TransportConfig : public PersistentObject
@@ -392,6 +458,13 @@ struct TransportConfig : public PersistentObject
      * Default is QoS not set.
      */
     pj_qos_params       qosParams;
+
+    /**
+     * Set the low level socket options to the transport.
+     *
+     * Default is no socket option set.
+     */
+    SockOptParams       sockOptParams;
 
 public:
     /** Default constructor initialises with default values */

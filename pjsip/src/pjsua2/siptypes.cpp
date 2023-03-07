@@ -280,6 +280,80 @@ void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SockOptParams::SockOptParams()
+{
+}
+
+pj_sockopt_params SockOptParams::toPj() const
+{
+    pj_sockopt_params sop;
+    unsigned i;
+
+    pj_bzero(&sop, sizeof(sop));
+    sop.cnt = this->sockOpts.size();
+    for (i = 0; i < sop.cnt; ++i) {
+        sop.options[i].level = this->sockOpts[i].level;
+        sop.options[i].optname = this->sockOpts[i].optName;
+        sop.options[i].optval = this->sockOpts[i].optVal;
+        sop.options[i].optlen = this->sockOpts[i].optLen;
+    }
+
+    return sop;
+}
+
+void SockOptParams::fromPj(const pj_sockopt_params &prm)
+{
+    unsigned i;
+
+    this->sockOpts.clear();
+    for (i = 0; i < prm.cnt; ++i) {
+        SockOptParams::SockOpt so;
+        so.level = prm.options[i].level;
+        so.optName = prm.options[i].optname;
+        if (prm.options[i].optlen > 0) {
+            string so_val((char*)prm.options[i].optval, prm.options[i].optlen);
+            so.optValBuf_ = so_val;
+            so.optVal = (void*)so.optValBuf_.data();
+            so.optLen = so.optValBuf_.size();
+        } else {
+            so.optVal = NULL;
+            so.optLen = 0;
+        }
+        this->sockOpts.push_back(so);
+    }
+}
+
+void SockOptParams::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
+{
+    ContainerNode array_node = node.readArray("sockOptParams");
+    sockOpts.resize(0);
+    while (array_node.hasUnread()) {
+        ContainerNode so_node = array_node.readContainer("sockOpt");
+        SockOptParams::SockOpt so;
+        so.level = so_node.readInt("level");
+        so.optName = so_node.readInt("optName");
+        so.optValBuf_ = so_node.readString("optVal");
+        so.optLen = so.optValBuf_.size();
+        so.optVal = so.optLen > 0? (void*)so.optValBuf_.data() : NULL;
+        sockOpts.push_back(so);
+    }
+}
+
+void SockOptParams::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
+{
+    ContainerNode array_node = node.writeNewArray("sockOptParams");
+    for (unsigned i=0; i<sockOpts.size(); ++i) {
+        ContainerNode so_node = array_node.writeNewContainer("sockOpt");
+        string so_val((char*)sockOpts[i].optVal,
+                      sockOpts[i].optLen > 0? sockOpts[i].optLen : 0);
+        so_node.writeInt("level", sockOpts[i].level);
+        so_node.writeInt("optName", sockOpts[i].optName);
+        so_node.writeString("optVal", so_val);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 TransportConfig::TransportConfig() : qosType(PJ_QOS_TYPE_BEST_EFFORT)
 {
     pjsua_transport_config tc;
@@ -297,6 +371,7 @@ void TransportConfig::fromPj(const pjsua_transport_config &prm)
     this->tlsConfig.fromPj(prm.tls_setting);
     this->qosType       = prm.qos_type;
     this->qosParams     = prm.qos_params;
+    this->sockOptParams.fromPj(prm.sockopt_params);
 }
 
 pjsua_transport_config TransportConfig::toPj() const
@@ -312,6 +387,7 @@ pjsua_transport_config TransportConfig::toPj() const
     tc.tls_setting      = this->tlsConfig.toPj();
     tc.qos_type         = this->qosType;
     tc.qos_params       = this->qosParams;
+    tc.sockopt_params   = this->sockOptParams.toPj();
 
     return tc;
 }
@@ -327,6 +403,7 @@ void TransportConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T     ( this_node, pj_qos_type, qosType);
     readQosParams       ( this_node, qosParams);
     NODE_READ_OBJ       ( this_node, tlsConfig);
+    NODE_READ_OBJ       ( this_node, sockOptParams);
 }
 
 void TransportConfig::writeObject(ContainerNode &node) const
@@ -341,6 +418,7 @@ void TransportConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T     ( this_node, pj_qos_type, qosType);
     writeQosParams       ( this_node, qosParams);
     NODE_WRITE_OBJ       ( this_node, tlsConfig);
+    NODE_WRITE_OBJ       ( this_node, sockOptParams);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
