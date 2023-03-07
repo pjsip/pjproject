@@ -138,7 +138,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
 {
     pjsua_call *call;
     pjsua_call_media *call_med;
-    pj_status_t status;
+    pj_status_t status = PJ_EINVAL;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
@@ -148,18 +148,15 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
 
     call = &pjsua_var.calls[call_id];
 
-    if (med_idx >= call->med_cnt) {
-        PJSUA_UNLOCK();
-        return PJ_EINVAL;
-    }
+    if (med_idx >= call->med_cnt)
+        goto on_return;
 
     call_med = &call->media[med_idx];
 
     if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
         (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream))
     {
-        PJSUA_UNLOCK();
-        return PJ_EINVAL;
+        goto on_return;
     }
 
     psi->type = call_med->type;
@@ -179,6 +176,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
         break;
     }
 
+on_return:
     PJSUA_UNLOCK();
     return status;
 }
@@ -193,7 +191,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
 {
     pjsua_call *call;
     pjsua_call_media *call_med;
-    pj_status_t status;
+    pj_status_t status = PJ_EINVAL;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
@@ -203,18 +201,15 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
 
     call = &pjsua_var.calls[call_id];
 
-    if (med_idx >= call->med_cnt) {
-        PJSUA_UNLOCK();
-        return PJ_EINVAL;
-    }
+    if (med_idx >= call->med_cnt)
+        goto on_return;
 
     call_med = &call->media[med_idx];
 
     if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
         (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream))
     {
-        PJSUA_UNLOCK();
-        return PJ_EINVAL;
+        goto on_return;
     }
 
     switch (call_med->type) {
@@ -239,6 +234,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
         break;
     }
 
+on_return:
     PJSUA_UNLOCK();
     return status;
 }
