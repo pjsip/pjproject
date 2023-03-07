@@ -549,6 +549,8 @@
  * number of blocks specified before deciding that the pool is full and
  * a new memory block needs to be created.
  *
+ * Set it to 0 to disable the limitation (i.e. it will search all blocks).
+ *
  * Default: 5
  */
 #ifndef PJ_POOL_MAX_SEARCH_BLOCK_COUNT
