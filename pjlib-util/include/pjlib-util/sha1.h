@@ -58,7 +58,7 @@ PJ_DECL(void) pj_sha1_init(pj_sha1_context *ctx);
  */
 PJ_DECL(void) pj_sha1_update(pj_sha1_context *ctx, 
                              const pj_uint8_t *data, 
-                             const pj_size_t nbytes);
+                             pj_size_t nbytes);
 
 /** Finish the message and return the digest. 
  *  @param ctx          SHA1 context.

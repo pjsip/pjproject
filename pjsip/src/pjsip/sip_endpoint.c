@@ -318,7 +318,7 @@ PJ_DEF(const pjsip_hdr*) pjsip_endpt_get_capability( pjsip_endpoint *endpt,
 
     if (htype != PJSIP_H_OTHER) {
         while (hdr != &endpt->cap_hdr) {
-            if (hdr->type == htype)
+            if ((int)hdr->type == htype)
                 return hdr;
             hdr = hdr->next;
         }

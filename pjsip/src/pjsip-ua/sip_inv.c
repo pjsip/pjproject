@@ -363,7 +363,7 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 static void inv_set_cause(pjsip_inv_session *inv, int cause_code,
                           const pj_str_t *cause_text)
 {
-    if ((cause_code > inv->cause) || inv->pending_bye) {
+    if ((cause_code > (int)inv->cause) || inv->pending_bye) {
         inv->cause = (pjsip_status_code) cause_code;
         if (cause_text)
             pj_strdup(inv->pool, &inv->cause_text, cause_text);
@@ -3038,6 +3038,7 @@ void pjsip_inv_process_hparam(pjsip_inv_session *sess,
                               const pj_str_t *hvalue, 
                               pjsip_tx_data *tdata)
 {
+    PJ_UNUSED_ARG(sess);
     const pjsip_hdr_e ignored_hdrs[] = {
         /* According to RFC 3261 section 19.1.5, we should not honor
          * the following headers as they can potentially be malicious

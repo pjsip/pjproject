@@ -827,7 +827,6 @@ static test_desc tests[128] = {
         .cfg.title = "basic tcp (single thread, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 6,
         .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
         .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
         .cfg.sock_type = SOCK_STREAM,
         .cfg.n_threads = 0,
@@ -1223,7 +1222,7 @@ int ioqueue_stress_test(void)
     test_cb.on_accept_complete = on_accept_complete;
     test_cb.on_connect_complete = on_connect_complete;
 
-    for (i=0; i<PJ_ARRAY_SIZE(tests); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(tests); ++i) {
         int r;
 
         test_desc *test = &tests[i];

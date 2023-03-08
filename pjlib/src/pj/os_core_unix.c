@@ -138,8 +138,8 @@ struct pj_event_t
     pthread_cond_t      cond;
 
     pj_bool_t           auto_reset;
-    unsigned            threads_waiting;
-    unsigned            threads_to_release;
+    int                 threads_waiting;
+    int                 threads_to_release;
 };
 #endif  /* PJ_HAS_EVENT_OBJ */
 
@@ -1713,6 +1713,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
 {
 #if PJ_HAS_THREADS
     pj_sem_t *sem;
+    PJ_UNUSED_ARG(max);
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool != NULL && ptr_sem != NULL, PJ_EINVAL);
@@ -1779,6 +1780,10 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     *ptr_sem = sem;
     return PJ_SUCCESS;
 #else
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(name);
+    PJ_UNUSED_ARG(initial);
+    PJ_UNUSED_ARG(max);
     *ptr_sem = (pj_sem_t*)1;
     return PJ_SUCCESS;
 #endif
@@ -2141,6 +2146,7 @@ PJ_DEF(pj_color_t) pj_term_get_color(void)
 PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
                        unsigned flags)
 {
+    PJ_UNUSED_ARG(flags);
     return (*main_func)(argc, argv);
 }
 #endif

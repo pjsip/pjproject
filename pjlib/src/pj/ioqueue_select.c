@@ -205,7 +205,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 {
     pj_ioqueue_t *ioqueue;
     pj_lock_t *lock;
-    unsigned i;
+    pj_size_t i;
     pj_status_t rc;
 
     /* Check that arguments are valid. */

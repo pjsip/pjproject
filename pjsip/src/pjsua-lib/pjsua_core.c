@@ -845,7 +845,7 @@ PJ_DEF(void) pjsua_stop_worker_threads(void)
     pjsua_var.thread_quit_flag = 1;
 
     /* Wait worker threads to quit: */
-    for (i=0; i<(int)pjsua_var.ua_cfg.thread_cnt; ++i) {
+    for (i=0; i<pjsua_var.ua_cfg.thread_cnt; ++i) {
         if (pjsua_var.thread[i]) {
             pj_status_t status;
             status = pj_thread_join(pjsua_var.thread[i]);
@@ -3675,7 +3675,7 @@ static pj_status_t handle_ip_change_on_acc()
             continue;
 
         if (acc->regc) {
-            int j = 0;
+            unsigned j = 0;
             pj_status_t found_restart_tp_fail = PJ_FALSE;
 
             pjsip_regc_get_info(acc->regc, &regc_info);
@@ -3736,7 +3736,7 @@ static pj_status_t handle_ip_change_on_acc()
         pj_ansi_snprintf(acc_id, sizeof(acc_id), "#%d", i);
 
         if (transport) {
-            unsigned j = i + 1;
+            int j = i + 1;
 
             /* Find other account that uses the same transport. */
             for (; j < (int)PJ_ARRAY_SIZE(pjsua_var.acc); ++j) {
@@ -3887,7 +3887,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
         }
 
         /* Move forward if all listener has been restarted. */
-        for (; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
+        for (; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
             if (pjsua_var.tpdata[i].data.ptr != NULL &&
                 pjsua_var.tpdata[i].is_restarting)
             {
@@ -3956,20 +3956,20 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
         /* Restart listener/transport, handle_ip_change_on_acc() will
          * be called after listener restart is completed successfully.
          */
-        for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
+        for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
             if (pjsua_var.tpdata[i].data.ptr != NULL) {
                 pjsua_var.tpdata[i].is_restarting = PJ_TRUE;
                 pjsua_var.tpdata[i].restart_status = PJ_EUNKNOWN;
             }
         }
-        for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
+        for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
             if (pjsua_var.tpdata[i].data.ptr != NULL) {
                 status = restart_listener(i, param->restart_lis_delay);
             }
         }
         PJSUA_UNLOCK();
     } else {
-        for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
+        for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
             if (pjsua_var.tpdata[i].data.ptr != NULL) {
                 pjsua_var.tpdata[i].restart_status = PJ_SUCCESS;
             }
