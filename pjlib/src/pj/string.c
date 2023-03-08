@@ -243,18 +243,28 @@ PJ_DEF(char*) pj_create_random_string(char *str, pj_size_t len)
 
 PJ_DEF(long) pj_strtol(const pj_str_t *str)
 {
+    pj_bool_t is_negative = PJ_FALSE;
+    unsigned long uval;
+    long val;
+
     PJ_CHECK_STACK();
 
     if (str->slen > 0 && (str->ptr[0] == '+' || str->ptr[0] == '-')) {
         pj_str_t s;
-        
         s.ptr = str->ptr + 1;
         s.slen = str->slen - 1;
-        return (str->ptr[0] == '-'? -(long)pj_strtoul(&s) : pj_strtoul(&s));
+        uval = pj_strtoul(&s);
+        is_negative = (str->ptr[0] == '-');
     } else
-        return pj_strtoul(str);
-}
+        uval = pj_strtoul(str);
 
+    if (is_negative)
+        val = uval > PJ_MAXLONG ? PJ_MINLONG : -uval;
+    else
+        val = uval > PJ_MAXLONG ? PJ_MAXLONG : uval;
+
+    return val;
+}
 
 PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
 {
@@ -301,7 +311,7 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
         return PJ_ETOOSMALL;
     }
 
-    *value = is_negative ? (long)-retval : retval;
+    *value = is_negative ? -retval : retval;
 
     return PJ_SUCCESS;
 }
