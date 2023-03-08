@@ -250,6 +250,7 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
             case STATE_SILENCE:
                 TRACE_((THIS_FILE,"Starting talk burst (level=%d threshold=%d)",
                         level, sd->threshold));
+                break;
 
             case STATE_START_SILENCE:
                 sd->state = STATE_VOICED;
