@@ -34,7 +34,7 @@ PJ_DEF(pj_ssize_t) pj_strspn(const pj_str_t *str, const pj_str_t *set_char)
 {
     pj_ssize_t i, j, count = 0;
     for (i = 0; i < str->slen; i++) {
-        if (count != i) 
+        if (count != i)
             break;
 
         for (j = 0; j < set_char->slen; j++) {
@@ -90,7 +90,7 @@ PJ_DEF(pj_ssize_t) pj_strcspn2(const pj_str_t *str, const char *set_char)
 
 PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
                              pj_str_t *tok, pj_size_t start_idx)
-{    
+{
     pj_ssize_t str_idx;
 
     pj_assert(str->slen >= 0);
@@ -100,14 +100,14 @@ PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
     if ((str->slen <= 0) || ((pj_size_t)str->slen < start_idx)) {
         return str->slen;
     }
-    
+
     tok->ptr = str->ptr + start_idx;
     tok->slen = str->slen - start_idx;
 
     str_idx = pj_strspn(tok, delim);
     if (start_idx+str_idx == (pj_size_t)str->slen) {
         return str->slen;
-    }    
+    }
     tok->ptr += str_idx;
     tok->slen -= str_idx;
 
@@ -117,7 +117,7 @@ PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
 
 
 PJ_DEF(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
-                               pj_str_t *tok, pj_size_t start_idx)
+                              pj_str_t *tok, pj_size_t start_idx)
 {
     pj_ssize_t str_idx;
 
@@ -197,9 +197,9 @@ PJ_DEF(pj_str_t*) pj_strltrim( pj_str_t *str )
 {
     char *end = str->ptr + str->slen;
     register char *p = str->ptr;
- 
+
     pj_assert(str->slen >= 0);
- 
+
     while (p < end && pj_isspace(*p))
         ++p;
     str->slen -= (p - str->ptr);
