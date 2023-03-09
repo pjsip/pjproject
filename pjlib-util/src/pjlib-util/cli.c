@@ -389,7 +389,7 @@ PJ_DEF(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
     pj_list_init(cli->root.sub_cmd);
 
     /* Register some standard commands. */
-    for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
+    for (i = 0; i < PJ_ARRAY_SIZE(cmd_xmls); i++) {
         pj_str_t xml = pj_str(cmd_xmls[i]);
 
         if (pj_cli_add_cmd_from_xml(cli, NULL, &xml, 

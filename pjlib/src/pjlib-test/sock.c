@@ -444,8 +444,7 @@ static int simple_sock_test(void)
 
     PJ_LOG(3,("test", "...simple_sock_test()"));
 
-    for (i=0; i<(int)(sizeof(types)/sizeof(types[0])); ++i) {
-        
+    for (i=0; i<(int)PJ_ARRAY_SIZE(types); ++i) {
         rc = pj_sock_socket(pj_AF_INET(), types[i], 0, &sock);
         if (rc != PJ_SUCCESS) {
             app_perror("...error: unable to create socket", rc);

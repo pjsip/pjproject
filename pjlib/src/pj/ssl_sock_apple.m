@@ -1766,8 +1766,8 @@ static void ssl_ciphers_populate(void)
     };
     if (!ssl_cipher_num) {
         unsigned i;
-        
-        ssl_cipher_num = sizeof(ciphers)/sizeof(ciphers[0]);
+
+        ssl_cipher_num = PJ_ARRAY_SIZE(ciphers);
         for (i = 0; i < ssl_cipher_num; i++) {
             ssl_ciphers[i].id = (pj_ssl_cipher)ciphers[i];
             ssl_ciphers[i].name = sslGetCipherSuiteString(ciphers[i]);

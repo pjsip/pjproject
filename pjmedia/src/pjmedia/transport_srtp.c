@@ -588,7 +588,7 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
 static int get_crypto_idx(const pj_str_t* crypto_name)
 {
     int i;
-    int cs_cnt = sizeof(crypto_suites)/sizeof(crypto_suites[0]);
+    int cs_cnt = PJ_ARRAY_SIZE(crypto_suites);
 
     /* treat unspecified crypto_name as crypto 'NULL' */
     if (crypto_name->slen == 0)
@@ -645,7 +645,7 @@ PJ_DEF(pj_status_t) pjmedia_srtp_enum_crypto(unsigned *count,
 
     PJ_ASSERT_RETURN(count && crypto, PJ_EINVAL);
 
-    max = sizeof(crypto_suites) / sizeof(crypto_suites[0]) - 1;
+    max = PJ_ARRAY_SIZE(crypto_suites) - 1;
     if (*count > max)
         *count = max;
 
