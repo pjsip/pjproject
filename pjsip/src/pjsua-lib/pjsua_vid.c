@@ -463,7 +463,7 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
             id[j].codec_id = pj_str(id[j].buf_);
             id[j].priority = (pj_uint8_t) prio[i];
 
-            if (id[j].codec_id.slen < sizeof(id[j].buf_)) {
+            if (id[j].codec_id.slen < (pj_ssize_t)sizeof(id[j].buf_)) {
                 id[j].desc.ptr = id[j].codec_id.ptr + id[j].codec_id.slen + 1;
                 pj_strncpy(&id[j].desc, &info[i].encoding_desc,
                            sizeof(id[j].buf_) - id[j].codec_id.slen - 1);

@@ -267,7 +267,7 @@ static int aviplay(pj_pool_t *pool, const char *fname)
             pjmedia_vid_dev_get_info(param.vidparam.rend_id, &rdr_info);
             for (i=0; i<codec_info->dec_fmt_id_cnt; ++i) {
                 for (k=0; k<rdr_info.fmt_cnt; ++k) {
-                    if (codec_info->dec_fmt_id[i]==(int)rdr_info.fmt[k].id)
+                    if ((int)codec_info->dec_fmt_id[i]==(int)rdr_info.fmt[k].id)
                     {
                         param.vidparam.fmt.id = codec_info->dec_fmt_id[i];
                         i = codec_info->dec_fmt_id_cnt;
