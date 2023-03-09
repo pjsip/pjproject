@@ -77,11 +77,11 @@ static void* main_thread(void *data)
 PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
                        unsigned flags)
 {
-    PJ_UNUSED_ARG(flags);
     pthread_t thread;
     run_app_t param;
     NSAutoreleasePool *pool;
-    
+    PJ_UNUSED_ARG(flags);
+
     pool = [[NSAutoreleasePool alloc] init];
     [NSApplication sharedApplication];
     [DeadThread enterMultiThreadedMode];

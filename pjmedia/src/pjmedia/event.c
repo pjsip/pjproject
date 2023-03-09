@@ -281,7 +281,6 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
                                              void *epub)
 {
     esub *sub;
-    unsigned i = 0;
 
     PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
@@ -303,7 +302,6 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
             return PJ_SUCCESS;
         }
         sub = next;
-        i++;
     }
 
     if (mgr->free_esub_list.next != &mgr->free_esub_list) {
