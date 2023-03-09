@@ -42,7 +42,7 @@
 #define AVISF_DISABLED          0x00000001
 #define AVISF_VIDEO_PALCHANGES  0x00010000
 
-#define AVI_EOF 0xFFEEFFEE
+#define AVI_EOF (int)0xFFEEFFEE
 
 //#define COMPARE_TAG(doc_tag, tag) (doc_tag==*((pj_uint32_t*)avi_tags[tag]))
 #define COMPARE_TAG(doc_tag, tag) \
@@ -228,8 +228,8 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     fport[0]->fsize = pj_file_size(filename);
 
     /* Size must be more than AVI header size */
-    if (fport[0]->fsize <= sizeof(riff_hdr_t) + sizeof(avih_hdr_t) + 
-                           sizeof(strl_hdr_t))
+    if (fport[0]->fsize <= (pj_off_t)(sizeof(riff_hdr_t) + sizeof(avih_hdr_t) +
+                                      sizeof(strl_hdr_t)))
     {
         return PJMEDIA_EINVALIMEDIATYPE;
     }

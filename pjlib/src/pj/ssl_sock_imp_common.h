@@ -212,21 +212,29 @@ static pj_status_t circ_write(circ_buf_t *cb,
 
 inline static pj_bool_t io_empty(pj_ssl_sock_t *ssock, circ_buf_t *cb)
 {
+    PJ_UNUSED_ARG(ssock);
     return circ_empty(cb);
 }
 inline static pj_size_t io_size(pj_ssl_sock_t *ssock, circ_buf_t *cb)
 {
+    PJ_UNUSED_ARG(ssock);
     return circ_size(cb);
 }
-inline static void io_reset(pj_ssl_sock_t *ssock, circ_buf_t *cb) {}
+inline static void io_reset(pj_ssl_sock_t *ssock, circ_buf_t *cb)
+{
+    PJ_UNUSED_ARG(ssock);
+    PJ_UNUSED_ARG(cb);
+}
 inline static void io_read(pj_ssl_sock_t *ssock, circ_buf_t *cb,
                            pj_uint8_t *dst, pj_size_t len)
 {
+    PJ_UNUSED_ARG(ssock);
     return circ_read(cb, dst, len);
 }
 inline static pj_status_t io_write(pj_ssl_sock_t *ssock, circ_buf_t *cb,
                             const pj_uint8_t *src, pj_size_t len)
 {
+    PJ_UNUSED_ARG(ssock);
     return circ_write(cb, src, len);
 }
 

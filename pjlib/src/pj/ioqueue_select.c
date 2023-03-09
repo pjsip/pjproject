@@ -1140,5 +1140,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
 PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
 {
+    PJ_UNUSED_ARG(ioqueue);
     return NULL;
 }

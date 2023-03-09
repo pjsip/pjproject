@@ -354,7 +354,7 @@ static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
 
         /* Fill the nearest width list. */
         if (diff_width1 <= diff_width2) {
-            int k = 0;
+            unsigned k = 0;
             while (((k < PJ_ARRAY_SIZE(nearest_width)) &&
                 (!((vfd->size.w == nearest_width[k].w) &&
                 (vfd->size.h == nearest_width[k].h))))) {
