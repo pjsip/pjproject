@@ -816,7 +816,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                                 PJMEDIA_VID_STREAM_CHECK_RTP_PT);
 #if !PJMEDIA_VID_STREAM_CHECK_RTP_PT
     if (hdr->pt != channel->rtp.out_pt) {
-        seq_st.status.flag.badpt = 1;
+        seq_st.status.flag.badpt = -1;
     }
 #endif
     if (seq_st.status.value) {

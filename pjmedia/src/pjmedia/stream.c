@@ -1962,7 +1962,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     if (!check_pt && hdr->pt != channel->rtp.out_pt &&
         hdr->pt != stream->rx_event_pt)
     {
-        seq_st.status.flag.badpt = 1;
+        seq_st.status.flag.badpt = -1;
     }
 #endif
     if (seq_st.status.value) {
