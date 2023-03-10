@@ -76,7 +76,7 @@ typedef enum conv_func_type
     SCALE_PLANAR
 } conv_func_type;
 
-typedef void* gen_conv_func;
+typedef int (*gen_conv_func)();
 
 typedef int (*conv_pack_to_pack_method)(const uint8* src, int src_stride,
                                         uint8* dst, int dst_stride,

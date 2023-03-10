@@ -104,7 +104,9 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
     pj_status_t err = PJ_SUCCESS;
     esub * sub = mgr->esub_list.next;
     pjmedia_event *ev = &ev_queue->events[ev_queue->head];
+#ifdef EVENT_TRACE
     unsigned i = 0;
+#endif
 
     while (sub != &mgr->esub_list) {
         *next_sub = sub->next;
@@ -138,7 +140,9 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
             }
         }
         sub = *next_sub;
+#ifdef EVENT_TRACE
         i++;
+#endif
     }
     *next_sub = NULL;
 
@@ -281,6 +285,9 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
                                              void *epub)
 {
     esub *sub;
+#ifdef EVENT_TRACE
+    unsigned i = 0;
+#endif
 
     PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
@@ -302,6 +309,9 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
             return PJ_SUCCESS;
         }
         sub = next;
+#ifdef EVENT_TRACE
+        i++;
+#endif
     }
 
     if (mgr->free_esub_list.next != &mgr->free_esub_list) {
