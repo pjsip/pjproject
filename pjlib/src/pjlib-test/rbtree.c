@@ -34,10 +34,8 @@ typedef struct node_key
     char str[STRSIZE];
 } node_key;
 
-static int compare_node(const void *key1, const void *key2)
+static int compare_node(const node_key *k1, const node_key *k2)
 {
-    node_key *k1 = (node_key *)key1;
-    node_key *k2 = (node_key *)key2;
     if (k1->hash == k2->hash) {
         return strcmp(k1->str, k2->str);
     } else {
@@ -64,7 +62,7 @@ static int test(void)
     int i;
     unsigned size;
 
-    pj_rbtree_init(&rb, &compare_node);
+    pj_rbtree_init(&rb, (pj_rbtree_comp*)&compare_node);
     size = MAX_COUNT*(sizeof(*key)+PJ_RBTREE_NODE_SIZE) + 
                            PJ_RBTREE_SIZE + PJ_POOL_SIZE;
     pool = pj_pool_create( mem, "pool", size, 0, NULL);
@@ -113,7 +111,7 @@ static int test(void)
         it = pj_rbtree_first(&rb);
         while (it) {
             if (prev) {
-                if (compare_node(prev->key, it->key)>=0) {
+                if (compare_node((node_key*)prev->key,(node_key*)it->key)>=0) {
                     ++err;
                     PJ_LOG(3, (THIS_FILE, "Error: %s >= %s", 
                                (char*)prev->user_data, (char*)it->user_data));
