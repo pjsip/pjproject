@@ -568,7 +568,7 @@ static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(ci);
     TRACE_((THIS_FILE, "%s:%d: - TRACE", __FUNCTION__, __LINE__));
 
-    pool = pjmedia_endpt_create_pool(f->endpt, "opus", 512, 512);
+    pool = pjmedia_endpt_create_pool(f->endpt, "opus", 4000, 4000);
     if (!pool) return PJ_ENOMEM;
     
     opus_data = PJ_POOL_ZALLOC_T(pool, struct opus_data);
