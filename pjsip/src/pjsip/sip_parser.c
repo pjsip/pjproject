@@ -1905,8 +1905,10 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
                 hdr->expires--;
             if (hdr->expires > PJSIP_MAX_EXPIRES)
                 hdr->expires = PJSIP_MAX_EXPIRES;
-            // if (hdr->expires < PJSIP_MIN_EXPIRES)
-            //     hdr->expires = PJSIP_MIN_EXPIRES;
+#if PJSIP_MIN_EXPIRES > 0
+            if (hdr->expires < PJSIP_MIN_EXPIRES)
+                hdr->expires = PJSIP_MIN_EXPIRES;
+#endif
         } else {
             pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
             p->name = pname;
