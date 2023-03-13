@@ -35,6 +35,10 @@
 #define kMinInputLength 10
 #define kMaxInputLength 1024
 
+/* Defined in sip_parser.c */
+void init_sip_parser(void);
+void deinit_sip_parser(void);
+
 pj_pool_factory *mem;
 
 int uri_parse(uint8_t *data, size_t Size) {
@@ -79,10 +83,13 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     mem = &caching_pool.factory;
 
+    init_sip_parser();
+
     /* Call fuzzer */
     ret = uri_parse(data, Size);
 
     free(data);
+    deinit_sip_parser();
     pj_caching_pool_destroy(&caching_pool);
 
     return ret;

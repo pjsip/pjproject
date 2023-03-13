@@ -86,6 +86,7 @@ void decode_base64_differential(const uint8_t *Data, size_t Size) {
     int  ssl_output_len = MAXSIZE;
 
     b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
 
     bmem = BIO_new_mem_buf(Data, Size);
     bmem = BIO_push(b64, bmem);
@@ -168,7 +169,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     }
 
     encode_base64_differential(Data, Size);
-    //decode_base64_differential((char *)Data, Size);
+    decode_base64_differential(Data, Size);
     md5_differential(Data, Size);
     sha1_differential(Data, Size);
     crc32_differential(Data, Size);
