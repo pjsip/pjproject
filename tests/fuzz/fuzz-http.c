@@ -21,41 +21,27 @@
 
 #include <pjlib.h>
 #include <pjlib-util.h>
+#include "../../pjlib-util/src/pjlib-util/http_client.c"
 
 #define kMinInputLength 10
-#define kMaxInputLength 5120
+#define kMaxInputLength 1024
 
 pj_pool_factory *mem;
 
-int Json_parse(uint8_t *data, size_t Size) {
+int http_parse(uint8_t *data, size_t Size) {
 
+    int ret;
     pj_pool_t *pool;
-    pj_json_elem *elem;
-    pj_json_err_info err;
+    pj_size_t rem;
+    pj_http_resp response;
 
-    char *output;
-    unsigned int output_size;
+    pool = pj_pool_create(mem, "http", 1000, 1000, NULL);
 
-    pool = pj_pool_create(mem, "json", 1000, 1000, NULL);
-
-    elem = pj_json_parse(pool, (char *)data, (unsigned *)&Size, &err);
-    if (!elem) {
-        goto on_error;
-    }
-
-    output_size = Size * 2;
-    output = pj_pool_alloc(pool, output_size);
-
-    if (pj_json_write(elem, output, &output_size)) {
-        goto on_error;
-    }
+    ret = http_response_parse(pool, &response, data, Size, &rem);
 
     pj_pool_release(pool);
-    return 0;
 
-on_error:
-    pj_pool_release(pool);
-    return 1;
+    return ret;
 }
 
 extern int
@@ -82,7 +68,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     mem = &caching_pool.factory;
 
     /* Call fuzzer */
-    ret = Json_parse(data, Size);
+    ret = http_parse(data, Size);
 
     free(data);
     pj_caching_pool_destroy(&caching_pool);

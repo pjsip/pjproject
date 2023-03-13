@@ -23,39 +23,19 @@
 #include <pjlib-util.h>
 
 #define kMinInputLength 10
-#define kMaxInputLength 5120
+#define kMaxInputLength 1024
 
 pj_pool_factory *mem;
 
-int Json_parse(uint8_t *data, size_t Size) {
+int url_parse(uint8_t *data, size_t Size) {
 
-    pj_pool_t *pool;
-    pj_json_elem *elem;
-    pj_json_err_info err;
+    pj_str_t surl;
+    pj_http_url hurl;
 
-    char *output;
-    unsigned int output_size;
+    surl.ptr = (char *)data;
+    surl.slen = Size;
 
-    pool = pj_pool_create(mem, "json", 1000, 1000, NULL);
-
-    elem = pj_json_parse(pool, (char *)data, (unsigned *)&Size, &err);
-    if (!elem) {
-        goto on_error;
-    }
-
-    output_size = Size * 2;
-    output = pj_pool_alloc(pool, output_size);
-
-    if (pj_json_write(elem, output, &output_size)) {
-        goto on_error;
-    }
-
-    pj_pool_release(pool);
-    return 0;
-
-on_error:
-    pj_pool_release(pool);
-    return 1;
+    return pj_http_req_parse_url(&surl, &hurl);
 }
 
 extern int
@@ -82,7 +62,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     mem = &caching_pool.factory;
 
     /* Call fuzzer */
-    ret = Json_parse(data, Size);
+    ret = url_parse(data, Size);
 
     free(data);
     pj_caching_pool_destroy(&caching_pool);

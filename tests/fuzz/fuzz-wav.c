@@ -21,41 +21,31 @@
 
 #include <pjlib.h>
 #include <pjlib-util.h>
+#include <pjmedia/wav_port.h>
 
-#define kMinInputLength 10
+#define kMinInputLength 50
 #define kMaxInputLength 5120
+#define PTIME       20
 
 pj_pool_factory *mem;
 
-int Json_parse(uint8_t *data, size_t Size) {
+int wav_parse(char *filename) {
 
+    pj_status_t status;
     pj_pool_t *pool;
-    pj_json_elem *elem;
-    pj_json_err_info err;
+    pjmedia_port *wav_port = NULL;
 
-    char *output;
-    unsigned int output_size;
+    pool = pj_pool_create(mem, "wav", 1000, 1000, NULL);
 
-    pool = pj_pool_create(mem, "json", 1000, 1000, NULL);
+    status = pjmedia_wav_player_port_create(pool, filename, PTIME, PJMEDIA_FILE_NO_LOOP, 0, &wav_port);
 
-    elem = pj_json_parse(pool, (char *)data, (unsigned *)&Size, &err);
-    if (!elem) {
-        goto on_error;
-    }
-
-    output_size = Size * 2;
-    output = pj_pool_alloc(pool, output_size);
-
-    if (pj_json_write(elem, output, &output_size)) {
-        goto on_error;
+    if (wav_port){
+        pjmedia_port_destroy(wav_port);
     }
 
     pj_pool_release(pool);
-    return 0;
 
-on_error:
-    pj_pool_release(pool);
-    return 1;
+    return status;
 }
 
 extern int
@@ -67,12 +57,18 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     }
 
     int ret = 0;
-    uint8_t *data;
+    char filename[256];
     pj_caching_pool caching_pool;
 
-    /* Add NULL byte */
-    data = (uint8_t *)calloc((Size+1), sizeof(uint8_t));
-    memcpy((void *)data, (void *)Data, Size);
+    sprintf(filename, "/tmp/libfuzzer.%d", getpid());
+    FILE *fp = fopen(filename, "wb");
+
+    if (!fp) {
+        return 1;
+    }
+
+    fwrite(Data, Size, 1, fp);
+    fclose(fp);
 
     /* init Calls */
     pj_init();
@@ -82,10 +78,9 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     mem = &caching_pool.factory;
 
     /* Call fuzzer */
-    ret = Json_parse(data, Size);
+    ret = wav_parse(filename);
 
-    free(data);
     pj_caching_pool_destroy(&caching_pool);
-
+    unlink(filename);
     return ret;
 }

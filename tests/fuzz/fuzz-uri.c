@@ -21,41 +21,39 @@
 
 #include <pjlib.h>
 #include <pjlib-util.h>
+//#include <sip_uri.h>
+
+#include <pjlib.h>
+#include <pjlib-util.h>
+#include <pjsip.h>
+#include <pjsip/sip_types.h>
+
+#include <pjsip.h>
+#include <pjlib.h>
+
 
 #define kMinInputLength 10
-#define kMaxInputLength 5120
+#define kMaxInputLength 1024
 
 pj_pool_factory *mem;
 
-int Json_parse(uint8_t *data, size_t Size) {
+int uri_parse(uint8_t *data, size_t Size) {
 
+    pj_status_t status = 0 ;
     pj_pool_t *pool;
-    pj_json_elem *elem;
-    pj_json_err_info err;
+    pjsip_uri *uri;
 
-    char *output;
-    unsigned int output_size;
+    pool = pj_pool_create(mem, "uri", 1000, 1000, NULL);
 
-    pool = pj_pool_create(mem, "json", 1000, 1000, NULL);
+    uri = pjsip_parse_uri(pool, (char *)data, Size, 0);
 
-    elem = pj_json_parse(pool, (char *)data, (unsigned *)&Size, &err);
-    if (!elem) {
-        goto on_error;
-    }
-
-    output_size = Size * 2;
-    output = pj_pool_alloc(pool, output_size);
-
-    if (pj_json_write(elem, output, &output_size)) {
-        goto on_error;
+    if (!uri) {
+        status = 1;
     }
 
     pj_pool_release(pool);
-    return 0;
 
-on_error:
-    pj_pool_release(pool);
-    return 1;
+    return status;
 }
 
 extern int
@@ -82,7 +80,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     mem = &caching_pool.factory;
 
     /* Call fuzzer */
-    ret = Json_parse(data, Size);
+    ret = uri_parse(data, Size);
 
     free(data);
     pj_caching_pool_destroy(&caching_pool);
