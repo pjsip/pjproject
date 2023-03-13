@@ -1,3 +1,5 @@
+# Read Fuzzing.md located at the root of pjproject dir for build instructions
+
 #Modify this to point to the PJSIP location.
 PJBASE=../../
 
@@ -10,6 +12,10 @@ XML=fuzz-xml
 SDP=fuzz-sdp
 STUN=fuzz-stun
 SIP=fuzz-sip
+RTCP=fuzz-rtcp
+DNS=fuzz-dns
+H264=fuzz-h264
+VPX=fuzz-vpx
 
 EXTFLAGS=-Wall -Werror
 
@@ -21,12 +27,20 @@ $(TARGET):
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SDP).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(STUN).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SIP).c
+	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(RTCP).c
+	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(DNS).c
+	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(H264).c
+	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(VPX).c
 
 	$(CXX) $(PJ_CFLAGS) -o $(JSON) $(JSON).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(XML)  $(XML).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(SDP)  $(SDP).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(STUN) $(STUN).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(SIP)  $(SIP).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
+	$(CXX) $(PJ_CFLAGS) -o $(RTCP) $(RTCP).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
+	$(CXX) $(PJ_CFLAGS) -o $(DNS)  $(DNS).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
+	$(CXX) $(PJ_CFLAGS) -o $(H264) $(H264).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
+	$(CXX) $(PJ_CFLAGS) -o $(VPX)  $(VPX).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 
 clean:
-	rm $(JSON) $(XML) $(SDP) $(STUN) $(SIP) *.o
+	rm $(JSON) $(XML) $(SDP) $(STUN) $(SIP) $(RTCP) $(DNS) $(H264) ($VPX) *.o
