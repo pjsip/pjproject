@@ -21,6 +21,7 @@
 
 #include <pjlib.h>
 
+#include <pjmedia/event.h>
 #include <pjmedia/rtcp.h>
 
 #define kMinInputLength 10
@@ -45,6 +46,8 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
     char *data;
     int ret = 0;
+    pj_caching_pool caching_pool;
+    pj_pool_t *pool;
 
     if (Size < kMinInputLength || Size > kMaxInputLength) {
         return 1;
@@ -52,16 +55,21 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     /* Add null termination for the data */
     data = (char *)calloc((Size+1), sizeof(char));
-    memcpy((void *)data, (void *)data, Size);
+    memcpy((void *)data, (void *)Data, Size);
 
     /* Init */
     pj_init();
+    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
+    pool = pj_pool_create(&caching_pool.factory, "test", 1000, 1000, NULL);
     pj_log_set_level(0);
+
+    pjmedia_event_mgr_create(pool, 0, NULL);
 
     /* Fuzz */
     ret = rtcp_parser(data, Size);
 
     free(data);
+    pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
 
     return ret;
 }

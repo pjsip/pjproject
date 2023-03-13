@@ -65,7 +65,7 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     /* Add null termination for the data */
     data = (uint8_t *)calloc((Size+1), sizeof(uint8_t));
-    memcpy((void *)data, (void *)data, Size);
+    memcpy((void *)data, (void *)Data, Size);
 
     /* Init */
     pj_init();
