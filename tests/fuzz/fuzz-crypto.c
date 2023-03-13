@@ -41,7 +41,7 @@ void encode_base64_differential(const uint8_t *Data, size_t Size) {
     int  pj_output_len = MAXSIZE;
 
     memset(pj_output, 0, MAXSIZE);
-    pj_base64_encode(Data,Size,pj_output,&pj_output_len);
+    pj_base64_encode(Data, Size, pj_output, &pj_output_len);
 
     //OPENSSL
     BIO *bio, *bio_mem;
@@ -60,11 +60,28 @@ void encode_base64_differential(const uint8_t *Data, size_t Size) {
     ssl_output_len = BIO_get_mem_data(bio_mem, &ssl_output);
 
     //Differential
-    int result = memcmp(pj_output,ssl_output,ssl_output_len);
+    int result = memcmp(pj_output, ssl_output, ssl_output_len);
     if(result != 0){
         abort();
     }
     BIO_free_all(bio);
+
+    //PJSIP Decode After encode.
+    pj_str_t pj_input;
+    uint8_t pj_output_dec[MAXSIZE];
+    int     pj_output_dec_len = MAXSIZE;
+
+    pj_input.ptr = pj_output;
+    pj_input.slen = ssl_output_len;
+
+    memset(pj_output_dec, 0, MAXSIZE);
+    pj_base64_decode(&pj_input, pj_output_dec, &pj_output_dec_len);
+
+    //Differential
+    int result_dec = memcmp(pj_output_dec, Data, Size);
+    if(result_dec != 0) {
+        abort();
+    }
 }
 
 void decode_base64_differential(const uint8_t *Data, size_t Size) {
@@ -79,27 +96,6 @@ void decode_base64_differential(const uint8_t *Data, size_t Size) {
 
     memset(pj_output, 0, MAXSIZE);
     pj_base64_decode(&pj_input, pj_output, &pj_output_len);
-
-    //OPENSSl
-    BIO *b64, *bmem;
-    char ssl_output[MAXSIZE];
-    int  ssl_output_len = MAXSIZE;
-
-    b64 = BIO_new(BIO_f_base64());
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-
-    bmem = BIO_new_mem_buf(Data, Size);
-    bmem = BIO_push(b64, bmem);
-
-    ssl_output_len = BIO_read(bmem, ssl_output, ssl_output_len);
-    BIO_free_all(b64);
-
-    //Differential
-    int resultdec = memcmp(pj_output,ssl_output,ssl_output_len);
-
-    if(resultdec != 0) {
-        abort();
-    }
 }
 
 void md5_differential(const uint8_t *Data, size_t Size) {
@@ -114,7 +110,7 @@ void md5_differential(const uint8_t *Data, size_t Size) {
 
     //OPENSSL
     uint8_t ssl_md5_hash[MD5_DIGEST_LENGTH];
-    MD5(Data,Size,ssl_md5_hash);
+    MD5(Data, Size, ssl_md5_hash);
 
     //Differential
     int result = memcmp(pj_md5_hash, ssl_md5_hash, MD5_DIGEST_LENGTH);
