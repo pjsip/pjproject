@@ -318,6 +318,8 @@ static void turn_on_rx_data(pj_turn_sock *relay,
                             const pj_sockaddr_t *peer_addr,
                             unsigned addr_len)
 {
+    PJ_UNUSED_ARG(relay);
+    PJ_UNUSED_ARG(addr_len);
     char addrinfo[80];
 
     pj_sockaddr_print(peer_addr, addrinfo, sizeof(addrinfo), 3);
@@ -386,6 +388,7 @@ static pj_bool_t stun_sock_on_rx_data(pj_stun_sock *stun_sock,
                                       const pj_sockaddr_t *src_addr,
                                       unsigned addr_len)
 {
+    PJ_UNUSED_ARG(addr_len);
     struct peer *peer = (struct peer*) pj_stun_sock_get_user_data(stun_sock);
     char straddr[PJ_INET6_ADDRSTRLEN+10];
 

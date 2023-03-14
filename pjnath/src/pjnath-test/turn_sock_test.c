@@ -249,7 +249,7 @@ static void turn_on_state(pj_turn_sock *turn_sock,
 
     sess->result.state_called |= (1 << new_state);
 
-    if (new_state >= sess->destroy_on_state && !sess->destroy_called) {
+    if ((int)new_state >= sess->destroy_on_state && !sess->destroy_called) {
         sess->destroy_called = PJ_TRUE;
         pj_turn_sock_destroy(turn_sock);
     }
@@ -495,8 +495,8 @@ static int destroy_test(pj_stun_config  *stun_cfg,
                 poll_events(stun_cfg, 1, PJ_FALSE);
 
                 pj_turn_sock_get_info(sess->turn_sock, &info);
-                
-                if (info.state >= target_state) {
+
+                if ((int)info.state >= target_state) {
                     pj_turn_sock_destroy(sess->turn_sock);
                     break;
                 }

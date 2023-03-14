@@ -3519,7 +3519,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     {
         int i;
 
-        for (i = 0; i < sizeof(pjsua_var.tpdata); i++) {
+        for (i = 0; i < (int)sizeof(pjsua_var.tpdata); i++) {
             if (tfla2_prm.ret_tp==(const void *)pjsua_var.tpdata[i].data.tp) {
                 if (pjsua_var.tpdata[i].has_bound_addr) {
                     pj_strdup(pool, &addr->host,
@@ -4248,7 +4248,7 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     if (acc->cfg.ip_change_cfg.hangup_calls ||
         acc->cfg.ip_change_cfg.reinvite_flags)
     {
-        for (i = 0; i < (int)pjsua_var.ua_cfg.max_calls; ++i) {
+        for (i = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
             pjsua_call_info call_info;
 
             if (!pjsua_call_is_active(i) ||

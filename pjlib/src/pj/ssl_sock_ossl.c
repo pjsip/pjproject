@@ -1454,7 +1454,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             int i;
 
             /* Check and load ECC & DSA certificates & private keys */
-            for (i = 0; i < PJ_ARRAY_SIZE(cert_types); ++i) {
+            for (i = 0; i < (int)PJ_ARRAY_SIZE(cert_types); ++i) {
                 int err;
 
                 pj_memcpy(p, cert_types[i], CERT_TYPE_LEN);

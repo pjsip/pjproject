@@ -205,7 +205,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 {
     pj_ioqueue_t *ioqueue;
     pj_lock_t *lock;
-    unsigned i;
+    pj_size_t i;
     pj_status_t rc;
 
     /* Check that arguments are valid. */
@@ -1140,5 +1140,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
 PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
 {
+    PJ_UNUSED_ARG(ioqueue);
     return NULL;
 }

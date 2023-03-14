@@ -1135,7 +1135,6 @@ static void simple_registrar(pjsip_rx_data *rdata)
     pjsip_tx_data *tdata;
     const pjsip_expires_hdr *exp;
     const pjsip_hdr *h;
-    unsigned cnt = 0;
     pjsip_generic_string_hdr *srv;
     pj_status_t status;
 
@@ -1165,7 +1164,6 @@ static void simple_registrar(pjsip_rx_data *rdata)
                                                                 tdata->pool, h);
                 nc->expires = e;
                 pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)nc);
-                ++cnt;
             }
         }
         h = h->next;

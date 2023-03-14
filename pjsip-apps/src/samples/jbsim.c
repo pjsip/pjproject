@@ -978,14 +978,14 @@ static int init_options(int argc, char *argv[])
 
     /* Build format */
     format[0] = '\0';
-    for (c=0; c<PJ_ARRAY_SIZE(long_options)-1; ++c) {
+    for (c=0; c<(int)PJ_ARRAY_SIZE(long_options)-1; ++c) {
         if (long_options[c].has_arg) {
             char cmd[10];
             pj_ansi_snprintf(cmd, sizeof(cmd), "%c:", long_options[c].val);
             pj_ansi_strcat(format, cmd);
         }
     }
-    for (c=0; c<PJ_ARRAY_SIZE(long_options)-1; ++c) {
+    for (c=0; c<(int)PJ_ARRAY_SIZE(long_options)-1; ++c) {
         if (long_options[c].has_arg == 0) {
             char cmd[10];
             pj_ansi_snprintf(cmd, sizeof(cmd), "%c", long_options[c].val);

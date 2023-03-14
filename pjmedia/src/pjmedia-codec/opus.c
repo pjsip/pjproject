@@ -735,7 +735,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     /* Set bitrate */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(auto_bit_rate?
                                                       OPUS_AUTO:
-                                                      attr->info.avg_bps));
+                                                      (int)attr->info.avg_bps));
     /* Set VAD */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_DTX(attr->setting.vad ? 1 : 0));
     /* Set PLC */
@@ -824,7 +824,7 @@ static pj_status_t  codec_modify( pjmedia_codec *codec,
     /* Set bitrate */
     opus_data->cfg.bit_rate = attr->info.avg_bps;
     opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(attr->info.avg_bps?
-                                                      attr->info.avg_bps:
+                                                      (int)attr->info.avg_bps:
                                                       OPUS_AUTO));
     /* Set VAD */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_DTX(attr->setting.vad ? 1 : 0));

@@ -67,13 +67,14 @@ static volatile int quit_flag=0;
  * Each of the thread mainly will just execute the loop which
  * increments a variable.
  */
-static void* thread_proc(pj_uint32_t *pcounter)
+static int thread_proc(void *data)
 {
     /* Test that pj_thread_register() works. */
     pj_thread_desc desc;
     pj_thread_t *this_thread;
     unsigned id;
     pj_status_t rc;
+    pj_uint32_t *pcounter = (pj_uint32_t *)data;
 
     id = *pcounter;
     PJ_UNUSED_ARG(id); /* Warning about unused var if TRACE__ is disabled */
@@ -84,20 +85,20 @@ static void* thread_proc(pj_uint32_t *pcounter)
     rc = pj_thread_register("thread", desc, &this_thread);
     if (rc != PJ_SUCCESS) {
         app_perror("...error in pj_thread_register", rc);
-        return NULL;
+        return rc;
     }
 
     /* Test that pj_thread_this() works */
     this_thread = pj_thread_this();
     if (this_thread == NULL) {
         PJ_LOG(3,(THIS_FILE, "...error: pj_thread_this() returns NULL!"));
-        return NULL;
+        return -1;
     }
 
     /* Test that pj_thread_get_name() works */
     if (pj_thread_get_name(this_thread) == NULL) {
         PJ_LOG(3,(THIS_FILE, "...error: pj_thread_get_name() returns NULL!"));
-        return NULL;
+        return -1;
     }
 
     /* Main loop */
@@ -108,7 +109,7 @@ static void* thread_proc(pj_uint32_t *pcounter)
     }
 
     TRACE__((THIS_FILE, "     thread %d quitting..", id));
-    return NULL;
+    return PJ_SUCCESS;
 }
 
 /*

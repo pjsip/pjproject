@@ -168,7 +168,7 @@ pj_status_t pjmedia_format_id_to_CodecID(pjmedia_format_id fmt_id,
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(ffmpeg_codec_table); ++i) {
         const struct ffmpeg_codec_table_t *t = &ffmpeg_codec_table[i];
-        if (t->id==fmt_id && t->codec_id != AV(PIX_FMT_NONE)) {
+        if (t->id==fmt_id && (int)t->codec_id != AV(PIX_FMT_NONE)) {
             *codec_id = t->codec_id;
             return PJ_SUCCESS;
         }

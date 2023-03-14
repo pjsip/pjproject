@@ -361,7 +361,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
                                        pj_ioqueue_t **p_ioqueue)
 {
     pj_ioqueue_t *ioqueue;
-    unsigned i;
+    pj_size_t i;
     pj_status_t rc;
 
     PJ_UNUSED_ARG(max_fd);

@@ -2289,7 +2289,7 @@ PJ_DEF(const pjsip_hdr*) pjsip_dlg_get_remote_cap_hdr(pjsip_dialog *dlg,
 
     hdr = dlg->rem_cap_hdr.next;
     while (hdr != &dlg->rem_cap_hdr) {
-        if ((htype != PJSIP_H_OTHER && htype == hdr->type) ||
+        if ((htype != PJSIP_H_OTHER && htype == (int)hdr->type) ||
             (htype == PJSIP_H_OTHER && pj_stricmp(&hdr->name, hname) == 0))
         {
             pjsip_dlg_dec_lock(dlg);

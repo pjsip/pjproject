@@ -282,7 +282,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     const unsigned type_mask = PJ_IOQUEUE_EPOLL_EXCLUSIVE |
                                PJ_IOQUEUE_EPOLL_ONESHOT;
     unsigned epoll_support, valid_types;
-    int i;
+    pj_size_t i;
 
     /* Check that arguments are valid. */
     PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && 

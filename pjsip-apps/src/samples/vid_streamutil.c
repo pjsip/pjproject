@@ -238,8 +238,8 @@ static pj_status_t create_stream( pj_pool_t *pool,
     info.type = PJMEDIA_TYPE_VIDEO;
     info.dir = dir;
     info.codec_info = *codec_info;
-    info.tx_pt = (tx_pt == -1)? codec_info->pt : tx_pt;
-    info.rx_pt = (rx_pt == -1)? codec_info->pt : rx_pt;
+    info.tx_pt = (tx_pt == -1)? (pj_uint8_t)codec_info->pt : tx_pt;
+    info.rx_pt = (rx_pt == -1)? (pj_uint8_t)codec_info->pt : rx_pt;
     info.ssrc = pj_rand();
     if (codec_param)
         info.codec_param = codec_param;

@@ -201,7 +201,7 @@ PJ_DEF(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
     if (p_desc==NULL) p_desc = &desc;
 
     for (i=0; i<PJ_ARRAY_SIZE(cap_infos); ++i) {
-        if ((1 << i)==cap)
+        if ((1 << i)==(int)cap)
             break;
     }
 
