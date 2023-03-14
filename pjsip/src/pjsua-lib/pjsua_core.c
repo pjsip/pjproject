@@ -3752,7 +3752,7 @@ static pj_status_t handle_ip_change_on_acc()
 
                 pjsip_regc_get_info(next_acc->regc, &tmp_regc_info);
                 if (transport == tmp_regc_info.transport) {
-                    char tmp_buf[4];
+                    char tmp_buf[32];
 
                     pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), " #%d", j);
                     if (pj_ansi_strlen(acc_id) + pj_ansi_strlen(tmp_buf) <

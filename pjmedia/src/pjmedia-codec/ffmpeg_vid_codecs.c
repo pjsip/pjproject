@@ -679,7 +679,7 @@ static FUNC_PACKETIZE(h263_packetize)
     pj_uint8_t *outbuf = payload;
     pj_size_t out_size = *payload_len;
     status = pjmedia_h263_packetize(data->pktz, bits, bits_len, bits_pos,
-                                    (const pj_uint8_t **)&payload, payload_len);
+                                    &payload, payload_len);
     if (status != PJ_SUCCESS)
         return status;
     if (out_size < *payload_len)
@@ -874,7 +874,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
                                                   pj_pool_factory *pf)
 {
     pj_pool_t *pool;
-    const AVCodec *c;
+    AVCodec *c;
     pj_status_t status;
     unsigned i;
 
