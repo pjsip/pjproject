@@ -126,7 +126,7 @@ static int xml_parse_print_test(const char *doc)
 int xml_test()
 {
     unsigned i;
-    for (i=0; i<sizeof(xml_doc)/sizeof(xml_doc[0]); ++i) {
+    for (i=0; i<PJ_ARRAY_SIZE(xml_doc); ++i) {
         int status;
         if ((status=xml_parse_print_test(xml_doc[i])) != 0)
             return status;

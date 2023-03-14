@@ -632,7 +632,7 @@ static sdl_fmt_info* get_sdl_format_info(pjmedia_format_id id)
 {
     unsigned i;
 
-    for (i = 0; i < sizeof(sdl_fmts)/sizeof(sdl_fmts[0]); i++) {
+    for (i = 0; i < PJ_ARRAY_SIZE(sdl_fmts); i++) {
         if (sdl_fmts[i].fmt_id == id)
             return &sdl_fmts[i];
     }

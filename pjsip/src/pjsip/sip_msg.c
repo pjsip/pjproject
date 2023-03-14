@@ -641,8 +641,7 @@ PJ_DEF(const pj_str_t*) pjsip_get_status_text(int code)
         init_status_phrase();
     }
 
-    return (code>=100 && 
-            code<(int)(sizeof(status_phrase)/sizeof(status_phrase[0]))) ? 
+    return (code>=100 && code<(int)PJ_ARRAY_SIZE(status_phrase)) ?
         &status_phrase[code] : &status_phrase[0];
 }
 

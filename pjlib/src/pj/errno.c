@@ -95,7 +95,7 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
     unsigned i;
 
-    for (i=0; i<sizeof(err_str)/sizeof(err_str[0]); ++i) {
+    for (i=0; i<PJ_ARRAY_SIZE(err_str); ++i) {
         if (err_str[i].code == code) {
             pj_size_t len2 = pj_ansi_strlen(err_str[i].msg);
             if (len2 >= size) len2 = size-1;
