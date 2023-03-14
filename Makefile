@@ -125,10 +125,10 @@ pjsua-test: cmp_wav
 	cd tests/pjsua && python runall.py -t 2
 
 cmp_wav:
-	cd tests/pjsua/tools && make
+	cd tests/pjsua/tools && $(MAKE)
 
 fuzz:
-	cd tests/fuzz && make
+	cd tests/fuzz && $(MAKE)
 
 install:
 	mkdir -p $(DESTDIR)$(libdir)/
