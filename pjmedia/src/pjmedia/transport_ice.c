@@ -2603,6 +2603,8 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
                                             sizeof(addr_text), 3)));
             }
         }
+#else
+        PJ_UNUSED_ARG(rem_switch);
 #endif
 
     } else if (comp_id==2 && tp_ice->rtcp_cb) {

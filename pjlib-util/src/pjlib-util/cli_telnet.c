@@ -935,7 +935,7 @@ static pj_bool_t handle_backspace(cli_telnet_sess *sess, unsigned char *data)
             echo[0] = *data;
             telnet_sess_send2(sess, echo, 5);
         } else {
-            const static unsigned char echo[3] = {0x08, 0x20, 0x08};
+            unsigned char echo[3] = {0x08, 0x20, 0x08};
             telnet_sess_send2(sess, echo, 3);
         }
         return PJ_TRUE;

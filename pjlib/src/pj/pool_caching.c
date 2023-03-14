@@ -282,11 +282,36 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
         PJ_LOG(3,("cachpool", "  Dumping all active pools:"));
         while (pool != (void*)&cp->used_list) {
             pj_size_t pool_capacity = pj_pool_get_capacity(pool);
-            PJ_LOG(3,("cachpool", "   %16s: %8d of %8d (%d%%) used", 
+            pj_pool_block *block = pool->block_list.next;
+            unsigned nblocks = 0;
+
+            while (block != &pool->block_list) {
+#if 0
+                PJ_LOG(6, ("cachpool", "   %16s block %u, size %ld",
+                                       pj_pool_getobjname(pool), nblocks,
+                                       block->end - block->buf + 1));
+#endif
+                nblocks++;
+                block = block->next;
+            }
+
+            PJ_LOG(3,("cachpool", "   %16s: %8d of %8d (%d%%) used, "
+                                  "nblocks: %d",
                                   pj_pool_getobjname(pool), 
                                   pj_pool_get_used_size(pool), 
                                   pool_capacity,
-                                  pj_pool_get_used_size(pool)*100/pool_capacity));
+                                  pj_pool_get_used_size(pool)*100/pool_capacity,
+                                  nblocks));
+
+#if PJ_POOL_MAX_SEARCH_BLOCK_COUNT == 0
+            if (nblocks >= 10) {
+                PJ_LOG(3,("cachpool", "   %16s has too many blocks (%d), "
+                                      "consider increasing its initial and/or "
+                                      "increment size for better performance",
+                                      pj_pool_getobjname(pool), nblocks));
+            }
+#endif
+
             total_used += pj_pool_get_used_size(pool);
             total_capacity += pool_capacity;
             pool = pool->next;

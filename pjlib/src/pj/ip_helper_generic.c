@@ -515,7 +515,7 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
         struct nlmsghdr *nlmsg_ptr = (struct nlmsghdr *) read_buffer;
         int nlmsg_len = read_size;
 
-        if (nlmsg_len < sizeof (struct nlmsghdr)) {
+        if (nlmsg_len < (int)sizeof (struct nlmsghdr)) {
             close(fd);
             return PJ_ETOOSMALL;
         }
@@ -593,7 +593,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
         pj_sockaddr deprecatedAddrs[*p_cnt];
         unsigned deprecatedCount = *p_cnt;
         unsigned cnt = 0;
-        int i;
+        unsigned i;
         pj_status_t status;
 
         status = get_ipv6_deprecated(&deprecatedCount, deprecatedAddrs);
@@ -605,8 +605,8 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
             return status;
 
         for (i = 0; i < *p_cnt; ++i) {
-            int j;
-            
+            unsigned j;
+
             ifs[cnt++] = addrs[i];
 
             if (addrs[i].addr.sa_family != pj_AF_INET6())

@@ -92,7 +92,7 @@ static int simple_sleep_test(void)
 
 static int sleep_duration_test(void)
 {
-    const int MAX_SLIP = param_ci_mode? 200 : 20;
+    const unsigned MAX_SLIP = param_ci_mode? 200 : 20;
     unsigned duration[] = { 2000, 1000, 500, 200, 100 };
     unsigned i;
     unsigned avg_diff, max_diff;

@@ -1937,7 +1937,7 @@ on_return:
         return status;
 
     if (call_cb) {
-        on_data_sent(ice_st, (status == PJ_SUCCESS? data_len: -status));
+        on_data_sent(ice_st, (status == PJ_SUCCESS? (pj_ssize_t)data_len: -status));
     } else {
         check_pending_send(ice_st);
     }

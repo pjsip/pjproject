@@ -1944,8 +1944,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
      */
     if ((dlg->state == PJSIP_DIALOG_STATE_NULL &&
          pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
-         (res_code > 100 && res_code < 300) &&
-         rdata->msg_info.to->tag.slen)
+         (res_code > 100 && res_code < 300))
          ||
         (dlg->role==PJSIP_ROLE_UAC &&
          !dlg->uac_has_2xx &&
@@ -2290,7 +2289,7 @@ PJ_DEF(const pjsip_hdr*) pjsip_dlg_get_remote_cap_hdr(pjsip_dialog *dlg,
 
     hdr = dlg->rem_cap_hdr.next;
     while (hdr != &dlg->rem_cap_hdr) {
-        if ((htype != PJSIP_H_OTHER && htype == hdr->type) ||
+        if ((htype != PJSIP_H_OTHER && htype == (int)hdr->type) ||
             (htype == PJSIP_H_OTHER && pj_stricmp(&hdr->name, hname) == 0))
         {
             pjsip_dlg_dec_lock(dlg);

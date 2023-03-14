@@ -463,6 +463,8 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 #if DBG_UNPACKETIZE
         PJ_LOG(3, ("h264unpack", "Unpacked %d H264 NAL units (len=%d)",
                    cnt, payload_len));
+#else
+        PJ_UNUSED_ARG(cnt);
 #endif
 
     }

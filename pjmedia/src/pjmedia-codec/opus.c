@@ -568,7 +568,7 @@ static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(ci);
     TRACE_((THIS_FILE, "%s:%d: - TRACE", __FUNCTION__, __LINE__));
 
-    pool = pjmedia_endpt_create_pool(f->endpt, "opus", 512, 512);
+    pool = pjmedia_endpt_create_pool(f->endpt, "opus", 4000, 4000);
     if (!pool) return PJ_ENOMEM;
     
     opus_data = PJ_POOL_ZALLOC_T(pool, struct opus_data);
@@ -735,7 +735,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     /* Set bitrate */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(auto_bit_rate?
                                                       OPUS_AUTO:
-                                                      attr->info.avg_bps));
+                                                      (int)attr->info.avg_bps));
     /* Set VAD */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_DTX(attr->setting.vad ? 1 : 0));
     /* Set PLC */
@@ -824,7 +824,7 @@ static pj_status_t  codec_modify( pjmedia_codec *codec,
     /* Set bitrate */
     opus_data->cfg.bit_rate = attr->info.avg_bps;
     opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(attr->info.avg_bps?
-                                                      attr->info.avg_bps:
+                                                      (int)attr->info.avg_bps:
                                                       OPUS_AUTO));
     /* Set VAD */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_DTX(attr->setting.vad ? 1 : 0));

@@ -1785,7 +1785,7 @@ void pjsua_set_media_tp_state(pjsua_call_media *call_med,
     call_med->tp_st = tp_st;
 }
 
-
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 /* This callback is called when SRTP negotiation completes */
 static void on_srtp_nego_complete(pjmedia_transport *tp, 
                                   pj_status_t result)
@@ -1813,7 +1813,7 @@ static void on_srtp_nego_complete(pjmedia_transport *tp,
         }
     }
 }
-
+#endif
 
 /* Callback to resume pjsua_call_media_init() after media transport
  * creation is completed.
@@ -1930,6 +1930,7 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 #else
     call_med->tp_orig = call_med->tp;
     PJ_UNUSED_ARG(security_level);
+    PJ_UNUSED_ARG(acc);
 #endif
 
 

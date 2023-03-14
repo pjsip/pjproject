@@ -4248,7 +4248,7 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     if (acc->cfg.ip_change_cfg.hangup_calls ||
         acc->cfg.ip_change_cfg.reinvite_flags)
     {
-        for (i = 0; i < (int)pjsua_var.ua_cfg.max_calls; ++i) {
+        for (i = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
             pjsua_call_info call_info;
 
             if (!pjsua_call_is_active(i) ||

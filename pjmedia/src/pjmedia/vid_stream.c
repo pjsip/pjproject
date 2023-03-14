@@ -60,11 +60,11 @@
 #endif
 
 #ifndef PJMEDIA_VSTREAM_SIZE
-#   define PJMEDIA_VSTREAM_SIZE 1000
+#   define PJMEDIA_VSTREAM_SIZE 16000
 #endif
 
 #ifndef PJMEDIA_VSTREAM_INC
-#   define PJMEDIA_VSTREAM_INC  1000
+#   define PJMEDIA_VSTREAM_INC  4000
 #endif
 
 /* Due to network MTU limitation, a picture bitstream may be splitted into
@@ -816,7 +816,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                                 PJMEDIA_VID_STREAM_CHECK_RTP_PT);
 #if !PJMEDIA_VID_STREAM_CHECK_RTP_PT
     if (hdr->pt != channel->rtp.out_pt) {
-        seq_st.status.flag.badpt = 1;
+        seq_st.status.flag.badpt = -1;
     }
 #endif
     if (seq_st.status.value) {

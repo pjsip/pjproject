@@ -19,6 +19,7 @@
 #include <pjsip-ua/sip_inv.h>
 #include <pjsip-ua/sip_100rel.h>
 #include <pjsip-ua/sip_timer.h>
+#include <pjsip/print_util.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_event.h>
@@ -79,8 +80,21 @@ static const pjsip_method pjsip_update_method =
     { "UPDATE", 6 }
 };
 
-#define POOL_INIT_SIZE  256
-#define POOL_INC_SIZE   256
+#define POOL_INIT_SIZE  1000
+#define POOL_INC_SIZE   1000
+
+/* Process header parameter in redirection target. */
+void pjsip_inv_process_hparam(pjsip_inv_session *sess, 
+                              const pj_str_t *hname, 
+                              const pj_str_t *hvalue, 
+                              pjsip_tx_data *tdata);
+
+/* Application can override this if it wants to implement custom handler. */
+void (*pjsip_inv_process_hparam_ptr)(pjsip_inv_session *sess, 
+                                     const pj_str_t *hname, 
+                                     const pj_str_t *hvalue, 
+                                     pjsip_tx_data *tdata) =
+     &pjsip_inv_process_hparam;
 
 /*
  * Static prototypes.
@@ -349,7 +363,7 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 static void inv_set_cause(pjsip_inv_session *inv, int cause_code,
                           const pj_str_t *cause_text)
 {
-    if ((cause_code > inv->cause) || inv->pending_bye) {
+    if ((cause_code > (int)inv->cause) || inv->pending_bye) {
         inv->cause = (pjsip_status_code) cause_code;
         if (cause_text)
             pj_strdup(inv->pool, &inv->cause_text, cause_text);
@@ -3018,6 +3032,117 @@ static pj_bool_t inv_uac_recurse(pjsip_inv_session *inv, int code,
 }
 
 
+/* Process header parameter in redirection target. */
+void pjsip_inv_process_hparam(pjsip_inv_session *sess, 
+                              const pj_str_t *hname, 
+                              const pj_str_t *hvalue, 
+                              pjsip_tx_data *tdata)
+{
+    PJ_UNUSED_ARG(sess);
+    const pjsip_hdr_e ignored_hdrs[] = {
+        /* According to RFC 3261 section 19.1.5, we should not honor
+         * the following headers as they can potentially be malicious
+         * or misleading.
+         */
+        PJSIP_H_ACCEPT, PJSIP_H_ACCEPT_ENCODING_UNIMP,
+        PJSIP_H_ACCEPT_LANGUAGE_UNIMP, PJSIP_H_ALLOW,
+        PJSIP_H_CALL_ID, PJSIP_H_CONTACT, PJSIP_H_CSEQ,
+        PJSIP_H_FROM, PJSIP_H_ORGANIZATION_UNIMP,
+        PJSIP_H_RECORD_ROUTE, PJSIP_H_ROUTE,
+        PJSIP_H_SUPPORTED, PJSIP_H_TO,
+        PJSIP_H_USER_AGENT_UNIMP, PJSIP_H_VIA,
+        /* We opt to ignore the following headers as
+         * they will be automatically populated by PJSIP.
+         */
+        PJSIP_H_CONTENT_LENGTH, PJSIP_H_CONTENT_TYPE,
+        /* We will reject these headers as well as they serve
+         * for proxy authentication purposes and should not
+         * be overwritten by user.
+         */
+        PJSIP_H_PROXY_AUTHENTICATE, PJSIP_H_PROXY_AUTHORIZATION
+    };
+    /* According to RFC 3261 section 19.1.5, we should verify
+     * the accuracy of the header fields.
+     * Application will need to do its own verification by
+     * overriding the handler function.
+     */
+    const pjsip_hdr_e verify_hdrs[] = {
+        PJSIP_H_CONTENT_DISPOSITION_UNIMP,
+        PJSIP_H_CONTENT_ENCODING_UNIMP,
+        PJSIP_H_CONTENT_LANGUAGE_UNIMP,
+        PJSIP_H_DATE_UNIMP, PJSIP_H_MIME_VERSION_UNIMP,
+        PJSIP_H_TIMESTAMP_UNIMP
+        /* We move this to the ignored headers above since
+         * PJSIP will automatically populate it with the correct
+         * information.
+         */
+        // PJSIP_H_CONTENT_LENGTH, PJSIP_H_CONTENT_TYPE
+    };
+    const pjsip_hdr_e append_hdrs[] = {
+        /* According to the example in RFC 3261 section 8.1.3.4, for Call-Info,
+         * we can append the new value to existing ones.
+         *
+         * Important note: Be careful when adding a new header
+         * to this list as we currently assume that it must be
+         * a generic string header.
+         */
+        PJSIP_H_CALL_INFO_UNIMP
+    };
+
+    unsigned i;
+    pjsip_hdr *hdr;
+
+    PJ_UNUSED_ARG(verify_hdrs);
+
+    /* Check if we should reject/ignore the header. */
+    for (i = 0; i < PJ_ARRAY_SIZE(ignored_hdrs); i++) {
+        if (!pj_stricmp2(hname, pjsip_hdr_names[ignored_hdrs[i]].name)) {
+            PJ_LOG(4, (THIS_FILE, "Redirection header %.*s ignored",
+                                  (int)hname->slen,
+                                  hname->ptr));
+            return;
+        }
+    }
+
+    hdr = pjsip_msg_find_hdr_by_name(tdata->msg, hname, NULL);
+
+    /* Check if the header exists. */
+    if (hdr) {
+        /* Yes, now check if we can append the header. */
+        for (i = 0; i < PJ_ARRAY_SIZE(append_hdrs); i++) {
+            if (!pj_stricmp2(hname, pjsip_hdr_names[append_hdrs[i]].name)) {
+                pjsip_generic_string_hdr *shdr;
+                pj_str_t old_hval;
+    
+                shdr = (pjsip_generic_string_hdr *)hdr;
+                old_hval = shdr->hvalue;
+
+                /* Allocate the buffer enough to contain the old hvalue, new one,
+                 * and the separator (", ").
+                 */
+                pj_bzero(&shdr->hvalue, sizeof(pj_str_t));
+                shdr->hvalue.ptr = (char *) pj_pool_alloc(tdata->pool,
+                                                          old_hval.slen +
+                                                          hvalue->slen + 2);
+                pj_strcat(&shdr->hvalue, &old_hval);
+                pj_strcat2(&shdr->hvalue, ", ");
+                pj_strcat(&shdr->hvalue, hvalue);
+
+                return;
+            }
+        }
+
+        /* We can't append to the existing header, so remove it. */
+        pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_OTHER, hdr);
+    }
+
+    /* Add the header */
+    hdr = (pjsip_hdr *)pjsip_generic_string_hdr_create(tdata->pool, hname,
+                                                       hvalue);
+    pjsip_msg_add_hdr(tdata->msg, hdr);
+}
+
+
 /* Process redirection/recursion */
 PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
                                                 pjsip_redirect_op op,
@@ -3052,6 +3177,7 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
         {
             pjsip_tx_data *tdata;
             pjsip_via_hdr *via;
+            pjsip_uri *req_uri;
 
             /* Get the original INVITE request. */
             tdata = inv->invite_req;
@@ -3063,8 +3189,57 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
             pjsip_restore_strict_route_set(tdata);
 
             /* Set target */
-            tdata->msg->line.req.uri = (pjsip_uri*)
+            tdata->msg->line.req.uri = req_uri = (pjsip_uri*)
                pjsip_uri_clone(tdata->pool, inv->dlg->target_set.current->uri);
+
+            if (PJSIP_URI_SCHEME_IS_SIP(req_uri) ||
+                PJSIP_URI_SCHEME_IS_SIPS(req_uri))
+            {
+                pjsip_sip_uri *uri;
+                pjsip_param *param;
+
+                uri = (pjsip_sip_uri *)pjsip_uri_get_uri(req_uri);
+
+                /* According to RFC 3261 section 19.1.5, the method parameter
+                 * MUST NOT be placed in the Request-URI
+                 */
+                if (uri->method_param.slen > 0) {
+                    /* If the URI contains a method parameter, its value MUST
+                     * be used as the method of the request.
+                     * We only support if the method is INVITE
+                     */
+                    if (pj_stricmp(&uri->method_param,
+                                   &pjsip_get_invite_method()->name))
+                    {
+                        PJ_LOG(3, (THIS_FILE, "Redirection using %.*s "
+                                   "method unsupported, terminating session",
+                                   (int)uri->method_param.slen,
+                                   uri->method_param.ptr));
+
+                        inv_set_cause(inv, cancel_code,
+                                      pjsip_get_status_text(cancel_code));
+                        inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+                        status = PJSIP_EINVALIDMETHOD;
+                        break;
+                    }
+                    pj_bzero(&uri->method_param, sizeof(pj_str_t));
+                }
+
+                /* Process the header parameters */
+                param = uri->header_param.next;
+                while (param != &uri->header_param) {
+                    (*pjsip_inv_process_hparam_ptr)(inv, &param->name,
+                                                    &param->value,
+                                                    tdata);
+                    param = param->next;
+                }
+
+                /* Remove all header params */
+                if (!pj_list_empty(&uri->header_param)) {
+                    pj_list_init(&uri->header_param);
+                }
+            }
 
             /* Remove branch param in Via header. */
             via = (pjsip_via_hdr*) 
@@ -3851,8 +4026,27 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
     tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
     pj_assert(tsx_inv_data);
 
+    /* Handle 481/408 response. */
+    if (inv->state != PJSIP_INV_STATE_DISCONNECTED &&
+        tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+        ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST) ||
+         (tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT &&
+          !pjsip_cfg()->endpt.keep_inv_after_tsx_timeout)))
+    {
+        pjsip_tx_data *bye = NULL;
+
+        /* End session */
+        status = pjsip_inv_end_session(inv, tsx->status_code,
+                                       &tsx->status_text, &bye);
+        if (status == PJ_SUCCESS && bye) {
+            status = pjsip_inv_send_msg(inv, bye);
+        }
+
+        handled =  PJ_TRUE;
+    }
+
     /* Handle 401/407 challenge. */
-    if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+    else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
         (tsx->status_code == 401 || tsx->status_code == 407))
     {
         pjsip_tx_data *tdata;

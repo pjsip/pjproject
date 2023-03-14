@@ -293,7 +293,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_codec_info( pjmedia_codec_mgr *mgr,
 {
     unsigned i;
 
-    PJ_ASSERT_RETURN(mgr && p_info && pt>=0 && pt < 96, PJ_EINVAL);
+    PJ_ASSERT_RETURN(mgr && p_info && pt < 96, PJ_EINVAL);
 
     pj_mutex_lock(mgr->mutex);
 

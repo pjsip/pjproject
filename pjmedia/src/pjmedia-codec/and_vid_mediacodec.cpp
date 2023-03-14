@@ -419,7 +419,9 @@ static pj_status_t configure_decoder(and_media_codec_data *and_media_data) {
     AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_ENCODER, 0);
     AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_PRIORITY, 0);
 
-    if (and_media_data->prm->dec_fmt.id == PJMEDIA_FORMAT_H264) {
+    if (and_media_codec[and_media_data->codec_idx].fmt_id ==
+        PJMEDIA_FORMAT_H264)
+    {
         h264_codec_data *h264_data = (h264_codec_data *)and_media_data->ex_data;
 
         if (h264_data->dec_sps_len) {

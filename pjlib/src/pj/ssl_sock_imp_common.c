@@ -849,8 +849,8 @@ static pj_bool_t ssock_on_data_sent (pj_ssl_sock_t *ssock,
     pj_ioqueue_op_key_t *app_key = wdata->app_key;
     pj_ssize_t sent_len;
 
-    sent_len = (sent > 0)? wdata->plain_data_len : sent;
-    
+    sent_len = (sent > 0)? (pj_ssize_t)wdata->plain_data_len : sent;
+
     /* Update write buffer state */
     pj_lock_acquire(ssock->write_mutex);
     free_send_data(ssock, wdata);

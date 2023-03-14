@@ -98,10 +98,11 @@ typedef struct vconf_port
     pj_timestamp         ts_next;       /**< Time for next put/get_frame(). */
     void                *get_buf;       /**< Buffer for get_frame().        */
     pj_size_t            get_buf_size;  /**< Buffer size for get_frame().   */
+    pj_size_t            get_frm_size;	/**< Frame size for get_frame().    */
     pj_bool_t            got_frame;     /**< Last get_frame() got frame?    */
     void                *put_buf;       /**< Buffer for put_frame().        */
     pj_size_t            put_buf_size;  /**< Buffer size for put_frame().   */
-
+    pj_size_t            put_frm_size;	/**< Frame size for put_frame().    */
     unsigned             listener_cnt;  /**< Number of listeners.           */
     unsigned            *listener_slots;/**< Array of listeners (for info). */
 
@@ -482,7 +483,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
             goto on_error;
         }
         if (port->put_frame) {
-            cport->put_buf_size = vafp.framebytes;
+            cport->put_buf_size = cport->put_frm_size = vafp.framebytes;
             cport->put_buf = pj_pool_zalloc(cport->pool, cport->put_buf_size);
 
             /* Initialize sink buffer with black color. */
@@ -496,7 +497,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
             }
         }
         if (port->get_frame) {
-            cport->get_buf_size = vafp.framebytes;
+            cport->get_buf_size = cport->get_frm_size = vafp.framebytes;
             cport->get_buf = pj_pool_zalloc(cport->pool, cport->get_buf_size);
 
             /* Initialize source buffer with black color. */
@@ -1107,7 +1108,7 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
                 frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
                 frame.timestamp = *now;
                 frame.buf = src->get_buf;
-                frame.size = src->get_buf_size;
+                frame.size = src->get_frm_size;
                 status = pjmedia_port_get_frame(src->port, &frame);
                 if (status != PJ_SUCCESS) {
                     PJ_PERROR(5, (THIS_FILE, status,
@@ -1115,7 +1116,7 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
                                   src->idx, src->port->info.name.ptr));
                     src->got_frame = PJ_FALSE;
                 } else {
-                    src->got_frame = (frame.size == src->get_buf_size);
+                    src->got_frame = (frame.size == src->get_frm_size);
 
                     /* There is a possibility that the source port's format has
                      * changed, but we haven't received the event yet.
@@ -1163,7 +1164,7 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
         frame.timestamp = *now;
         if (frame_rendered) {
             frame.buf = sink->put_buf;
-            frame.size = sink->put_buf_size;
+            frame.size = sink->put_frm_size;
         }
         status = pjmedia_port_put_frame(sink->port, &frame);
         if (frame_rendered && status != PJ_SUCCESS) {
@@ -1449,19 +1450,19 @@ static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
 
     if (sink->transmitter_cnt == 1 && (!rs || !rs->converter)) {
         /* The only transmitter and no conversion needed */
-        if (src->get_buf_size != sink->put_buf_size)
+        if (src->get_frm_size != sink->put_frm_size)
             return PJMEDIA_EVID_BADFORMAT;
-        pj_memcpy(sink->put_buf, src->get_buf, src->get_buf_size);
+        pj_memcpy(sink->put_buf, src->get_buf, src->get_frm_size);
     } else if (rs && rs->converter) {
         pjmedia_frame src_frame, dst_frame;
         
         pj_bzero(&src_frame, sizeof(src_frame));
         src_frame.buf = src->get_buf;
-        src_frame.size = src->get_buf_size;
+        src_frame.size = src->get_frm_size;
 
         pj_bzero(&dst_frame, sizeof(dst_frame));
         dst_frame.buf = sink->put_buf;
-        dst_frame.size = sink->put_buf_size;
+        dst_frame.size = sink->put_frm_size;
 
         status = pjmedia_converter_convert2(rs->converter,
                                             &src_frame,
@@ -1586,9 +1587,11 @@ static void op_update_port(pjmedia_vid_conf *vid_conf,
             return;
         }
         if (cport->port->put_frame) {
-            if (cport->put_buf_size < vafp.framebytes)
+            if (cport->put_buf_size < vafp.framebytes) {
                 cport->put_buf = pj_pool_zalloc(cport->pool, vafp.framebytes);
-            cport->put_buf_size = vafp.framebytes;
+                cport->put_buf_size = vafp.framebytes;
+            }
+            cport->put_frm_size = vafp.framebytes;
 
             /* Initialize sink buffer with black color. */
             status = pjmedia_video_format_fill_black(&cport->port->info.fmt,
@@ -1601,9 +1604,11 @@ static void op_update_port(pjmedia_vid_conf *vid_conf,
             }
         }
         if (cport->port->get_frame) {
-            if (cport->get_buf_size < vafp.framebytes)
+            if (cport->get_buf_size < vafp.framebytes) {
                 cport->get_buf = pj_pool_zalloc(cport->pool, vafp.framebytes);
-            cport->get_buf_size = vafp.framebytes;
+                cport->get_buf_size = vafp.framebytes;
+            }
+            cport->get_frm_size = vafp.framebytes;
 
             /* When source port is updated, buffer should contain a new image
              * with the correct latest format already, so don't fill black

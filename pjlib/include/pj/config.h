@@ -545,6 +545,20 @@
 
 
 /**
+ * If enabled, when allocating memory, pool will only search for a maximum
+ * number of blocks specified before deciding that the pool is full and
+ * a new memory block needs to be created.
+ *
+ * Set it to 0 to disable the limitation (i.e. it will search all blocks).
+ *
+ * Default: 5
+ */
+#ifndef PJ_POOL_MAX_SEARCH_BLOCK_COUNT
+#   define PJ_POOL_MAX_SEARCH_BLOCK_COUNT 5
+#endif
+
+
+/**
  * Enable timer debugging facility. When this is enabled, application
  * can call pj_timer_heap_dump() to show the contents of the timer
  * along with the source location where the timer entries were scheduled.

@@ -149,7 +149,7 @@ static const char* dump_codec_info(const pjmedia_vid_codec_info *info)
     char *p = str;
 
     /* Raw format ids */
-    for (i=0; (i<info->dec_fmt_id_cnt) && (p-str+5<sizeof(str)); ++i) {
+    for (i=0; (i<info->dec_fmt_id_cnt) && (p-str+5<(int)sizeof(str)); ++i) {
         pj_memcpy(p, &info->dec_fmt_id[i], 4);
         p += 4;
         *p++ = ' ';

@@ -4930,7 +4930,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
             if (call->res_time.sec == 0)
                 pj_gettimeofday(&call->res_time);
             if (e->type == PJSIP_EVENT_TSX_STATE &&
-                e->body.tsx_state.tsx->status_code > call->last_code)
+                e->body.tsx_state.tsx->status_code > (int)call->last_code)
             {
                 call->last_code = (pjsip_status_code)
                                   e->body.tsx_state.tsx->status_code;

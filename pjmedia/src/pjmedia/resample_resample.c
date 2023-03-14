@@ -90,6 +90,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
          *   resample->xoff = large_filter ? 32 : 6;
          */
         resample->xoff = res_GetXOFF(resample->factor, (char)large_filter);
+        if (resample->xoff * 2 >= samples_per_frame)
+            resample->xoff = samples_per_frame / 2 - 1;
     } else {
         resample->xoff = 1;
     }

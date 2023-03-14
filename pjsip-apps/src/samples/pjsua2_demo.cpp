@@ -38,6 +38,7 @@ public:
     MyEndpoint() : Endpoint() {};
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm)
     {
+        PJ_UNUSED_ARG(prm);
         std::cout << "*** Callback onCredAuth called ***" << std::endl;
         /* Return PJ_ENOTSUP to use
          * pjsip_auth_create_aka_response()/<b>libmilenage</b> (default),

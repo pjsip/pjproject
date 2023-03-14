@@ -78,7 +78,7 @@ PJ_BEGIN_DECL
  * @param len       The length of the string buffer.
  */
 #define PJ_CHECK_TRUNC_STR(ret, str, len) \
-    if ((ret) >= (len) || (ret) < 0) pj_ansi_strcpy((str) + (len) - 3, "..")
+    if ((int)(ret) >= (int)(len) || (ret) < 0) pj_ansi_strcpy((str) + (len) - 3, "..")
 
 /**
  * Create string initializer from a normal C string.

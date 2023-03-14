@@ -1507,7 +1507,11 @@ static void str_snprintf(pj_str_t *s, size_t size,
     size -= s->slen;
     retval = pj_ansi_vsnprintf(s->ptr + s->slen, 
                                size, format, arg);
-    s->slen += ((retval < (int)size) ? retval : size - 1);
+    if (retval < 0) {
+        pj_assert(retval >= 0);
+        retval = 0;
+    }
+    s->slen += (((size_t)retval < size) ? (size_t)retval : size - 1);
     va_end(arg);
 }
 

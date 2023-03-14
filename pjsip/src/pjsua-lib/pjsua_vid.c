@@ -463,7 +463,7 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
             id[j].codec_id = pj_str(id[j].buf_);
             id[j].priority = (pj_uint8_t) prio[i];
 
-            if (id[j].codec_id.slen < sizeof(id[j].buf_)) {
+            if (id[j].codec_id.slen < (pj_ssize_t)sizeof(id[j].buf_)) {
                 id[j].desc.ptr = id[j].codec_id.ptr + id[j].codec_id.slen + 1;
                 pj_strncpy(&id[j].desc, &info[i].encoding_desc,
                            sizeof(id[j].buf_) - id[j].codec_id.slen - 1);
@@ -708,11 +708,14 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
                 }
             }
 
-            status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot, NULL);
-            if (status != PJ_SUCCESS) {
-                PJ_PERROR(4, (THIS_FILE, status,
-                              "Ignored error on connecting video ports "
-                              "on wid=%d", wid));
+            if (!w->is_native) {
+                status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot,
+                                                NULL);
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(4, (THIS_FILE, status,
+                                  "Ignored error on connecting video ports "
+                                  "on wid=%d", wid));
+                }
             }
 
             /* Done */
@@ -1706,7 +1709,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
 
     if (w->is_native) {
         pjmedia_vid_dev_stream *cap_strm;
-        pjmedia_vid_dev_cap cap = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+        pjmedia_vid_dev_cap cap = PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW;
 
         if (!w->vp_cap) {
             status = PJ_EINVAL;
