@@ -96,7 +96,7 @@ static int sdp_conform_test(pj_pool_factory *pf)
     int i, len;
     char buf[1500];
 
-    for (i=0; i<sizeof(sdp)/sizeof(sdp[0]); ++i) {
+    for (i=0; i<PJ_ARRAY_SIZE(sdp); ++i) {
         pool = pj_pool_create(pf, "sdp", 4096, 0, NULL);
         ses = pjsdp_parse(sdp[i], strlen(sdp[i]), pool);
         len = pjsdp_print(ses, buf, sizeof(buf)); 

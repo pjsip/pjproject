@@ -1602,7 +1602,6 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 
     } else {
         int st_code;
-        char contact[120];
         pj_str_t hname = { "Contact", 7 };
         pj_str_t hvalue;
         pjsip_generic_string_hdr hcontact;
@@ -1621,7 +1620,7 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
                 return PJ_SUCCESS;
             }
 
-            hvalue = pj_str(contact);
+            hvalue = cval->argv[2];
             pjsip_generic_string_hdr_init2(&hcontact, &hname, &hvalue);
 
             pj_list_push_back(&msg_data.hdr_list, &hcontact);

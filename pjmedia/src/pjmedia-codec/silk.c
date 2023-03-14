@@ -307,8 +307,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_set_config(
     unsigned i;
 
     /* Look up in factory modes table */
-    for (i = 0; i < sizeof(silk_factory.silk_param)/
-                    sizeof(silk_factory.silk_param[0]); ++i)
+    for (i = 0; i < PJ_ARRAY_SIZE(silk_factory.silk_param); ++i)
     {
         if (silk_factory.silk_param[i].clock_rate == clock_rate) {
             int quality = PJMEDIA_CODEC_SILK_DEFAULT_QUALITY;

@@ -328,11 +328,10 @@ static void enum_dev_cap(IBaseFilter *filter,
                         if (FAILED (hr))
                             continue;
 
-                        nformat = (dshow_fmt? 1:
-                                   sizeof(dshow_fmts)/sizeof(dshow_fmts[0]));
+                        nformat = (dshow_fmt ? 1 : PJ_ARRAY_SIZE(dshow_fmts));
                         for (j = 0; j < nformat; j++) {
                             const GUID *dshow_format = dshow_fmt;
-                            
+
                             if (!dshow_format)
                                 dshow_format = dshow_fmts[j].dshow_format;
                             if (UuidCompare(&mediatype->subtype, 
@@ -414,7 +413,7 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
         df->dev_pool = NULL;
     }
 
-    for (c = 0; c < sizeof(dshow_fmts) / sizeof(dshow_fmts[0]); c++) {
+    for (c = 0; c < PJ_ARRAY_SIZE(dshow_fmts); c++) {
         dshow_fmts[c].enabled = PJ_FALSE;
     }
     
@@ -669,7 +668,7 @@ static dshow_fmt_info* get_dshow_format_info(pjmedia_format_id id)
 {
     unsigned i;
 
-    for (i = 0; i < sizeof(dshow_fmts)/sizeof(dshow_fmts[0]); i++) {
+    for (i = 0; i < PJ_ARRAY_SIZE(dshow_fmts); i++) {
         if (dshow_fmts[i].pjmedia_format == id && dshow_fmts[i].enabled)
             return &dshow_fmts[i];
     }
