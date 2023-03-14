@@ -536,7 +536,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
             eattr = (pj_stun_errcode_attr*)
                     pj_stun_msg_find_attr(response, PJ_STUN_ATTR_ERROR_CODE, 0);
 
-            if (eattr != NULL)
+            if (eattr != NULL && eattr->err_code)
                 err_code = eattr->err_code;
             else
                 err_code = PJ_STUN_SC_SERVER_ERROR;

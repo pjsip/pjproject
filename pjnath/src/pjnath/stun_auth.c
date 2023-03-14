@@ -350,6 +350,10 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
             pj_stun_create_key(pool, &p_info->auth_key, 
                                (arealm?&arealm->value:NULL), &auser->value, 
                                data_type, &password);
+            if (!p_info->auth_key.ptr) {
+                pj_assert(!"Null key");
+                return PJ_EBUG;
+            }
         } else {
             err_code = PJ_STUN_SC_UNAUTHORIZED;
             goto on_auth_failed;
