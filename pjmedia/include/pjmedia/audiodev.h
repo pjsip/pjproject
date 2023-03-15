@@ -296,6 +296,11 @@ typedef struct pjmedia_aud_dev_info
      */
     char name[PJMEDIA_AUD_DEV_INFO_NAME_LEN];
 
+    /*
+     * The device id
+     */
+    char id[192];
+
     /** 
      * Maximum number of input channels supported by this device. If the
      * value is zero, the device does not support input operation (i.e.
