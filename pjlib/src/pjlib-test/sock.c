@@ -512,8 +512,10 @@ static int send_recv_test(int sock_type,
             return -151;
         if (pj_sockaddr_cmp(&addr, srcaddr) != 0) {
             char srcaddr_str[32], addr_str[32];
-            strcpy(srcaddr_str, pj_inet_ntoa(srcaddr->sin_addr));
-            strcpy(addr_str, pj_inet_ntoa(addr.sin_addr));
+            pj_ansi_strncpy(srcaddr_str, pj_inet_ntoa(srcaddr->sin_addr), 
+                            sizeof(srcaddr_str));
+            pj_ansi_strncpy(addr_str, pj_inet_ntoa(addr.sin_addr),
+                            sizeof(addr_str));
             PJ_LOG(3,("test", "...error: src address mismatch (original=%s, "
                               "recvfrom addr=%s)", 
                               srcaddr_str, addr_str));

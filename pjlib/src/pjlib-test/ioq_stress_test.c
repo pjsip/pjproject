@@ -728,8 +728,10 @@ static int perform_test(test_desc *test)
 on_return:
     if (test->state.ioq)
         pj_ioqueue_destroy(test->state.ioq);
-    pj_grp_lock_dec_ref(test->state.grp_lock);
-    test->state.grp_lock = NULL;
+    if (test->state.grp_lock) {
+        pj_grp_lock_dec_ref(test->state.grp_lock);
+        test->state.grp_lock = NULL;
+    }
     if (test->state.pool)
         pj_pool_release(test->state.pool);
 

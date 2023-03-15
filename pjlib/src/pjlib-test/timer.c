@@ -436,6 +436,7 @@ static int poll_worker(void *arg)
     return 0;
 }
 
+#if ST_CANCEL_THREAD_COUNT
 /* Cancel worker thread function. */
 static int cancel_worker(void *arg)
 {
@@ -466,6 +467,7 @@ static int cancel_worker(void *arg)
 
     return 0;
 }
+#endif
 
 static int timer_stress_test(void)
 {
@@ -627,11 +629,11 @@ static int timer_stress_test(void)
     }
 
     /* Start cancel worker threads */
-    if (ST_CANCEL_THREAD_COUNT) {
-        cancel_threads = (pj_thread_t**)
-                          pj_pool_calloc(pool, ST_CANCEL_THREAD_COUNT,
-                                         sizeof(pj_thread_t*));
-    }
+#if ST_CANCEL_THREAD_COUNT
+    cancel_threads = (pj_thread_t**)
+                        pj_pool_calloc(pool, ST_CANCEL_THREAD_COUNT,
+                                        sizeof(pj_thread_t*));
+
     for (i=0; i<ST_CANCEL_THREAD_COUNT; ++i) {
         status = pj_thread_create( pool, "cancel", &cancel_worker, &tparam,
                                    0, 0, &cancel_threads[i]);
@@ -641,6 +643,7 @@ static int timer_stress_test(void)
             goto on_return;
         }
     }
+#endif
 
 #if SIMULATE_CRASH
     tmp_pool = pj_pool_create( mem, NULL, 4096, 128, NULL);
@@ -668,7 +671,7 @@ on_return:
     tparam.stopping = PJ_TRUE;
     
     for (i=0; i<ST_STRESS_THREAD_COUNT; ++i) {
-        if (!stress_threads[i])
+        if (!stress_threads || !stress_threads[i])
             continue;
         pj_thread_join(stress_threads[i]);
         pj_thread_destroy(stress_threads[i]);

@@ -151,14 +151,17 @@ pj_status_t pj_log_init(void)
     if (thread_suspended_tls_id == -1) {
         pj_status_t status;
         status = pj_thread_local_alloc(&thread_suspended_tls_id);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            thread_suspended_tls_id = -1;
             return status;
+        }
 
 #  if PJ_LOG_ENABLE_INDENT
         status = pj_thread_local_alloc(&thread_indent_tls_id);
         if (status != PJ_SUCCESS) {
             pj_thread_local_free(thread_suspended_tls_id);
             thread_suspended_tls_id = -1;
+            thread_indent_tls_id = -1;
             return status;
         }
 #  endif

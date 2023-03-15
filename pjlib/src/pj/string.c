@@ -275,11 +275,10 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
 
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
-
     if (!str || !value) {
         return PJ_EINVAL;
     }
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
 
     s = *str;
     pj_strltrim(&s);
@@ -380,12 +379,11 @@ PJ_DEF(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
 
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
-
     if (!str || !value) {
         return PJ_EINVAL;
     }
-
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
+    
     s = *str;
     pj_strltrim(&s);
 

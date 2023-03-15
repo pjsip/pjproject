@@ -918,6 +918,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
  */
 PJ_DEF(pj_status_t) pj_thread_local_alloc(long *index)
 {
+    DWORD tls_index;
     PJ_ASSERT_RETURN(index != NULL, PJ_EINVAL);
 
     //Can't check stack because this function is called in the
@@ -925,15 +926,17 @@ PJ_DEF(pj_status_t) pj_thread_local_alloc(long *index)
     //PJ_CHECK_STACK();
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-    *index = TlsAllocRT();
+    tls_index = TlsAllocRT();
 #else
-    *index = TlsAlloc();
+    tls_index = TlsAlloc();
 #endif
 
-    if (*index == TLS_OUT_OF_INDEXES)
+    if (tls_index == TLS_OUT_OF_INDEXES)
         return PJ_RETURN_OS_ERROR(GetLastError());
-    else
+    else {
+        *index = (long)tls_index;
         return PJ_SUCCESS;
+    }
 }
 
 /*
