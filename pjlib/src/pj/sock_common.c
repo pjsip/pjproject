@@ -1068,6 +1068,16 @@ PJ_DEF(pj_status_t) pj_getipinterface(int af,
         return PJ_ENOTFOUND;
     }
 
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+    /* Check that the address is not a link-local address */
+    if (af == pj_AF_INET6() &&
+        IN6_IS_ADDR_LINKLOCAL(&itf_addr->ipv6.sin6_addr))
+    {
+        TRACE_((THIS_FILE, "Interface address is a link-local address"));
+        return PJ_ENOTFOUND;
+    }
+#endif
+
     if (p_dst_addr)
         *p_dst_addr = dst_addr;
 
