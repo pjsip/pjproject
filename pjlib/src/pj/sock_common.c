@@ -1069,11 +1069,16 @@ PJ_DEF(pj_status_t) pj_getipinterface(int af,
     }
 
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
-    /* Check that the address is not a link-local address */
+    /* Check if the local address is link-local but the destination
+     * is not link-local.
+     */
     if (af == pj_AF_INET6() &&
-        IN6_IS_ADDR_LINKLOCAL(&itf_addr->ipv6.sin6_addr))
+        IN6_IS_ADDR_LINKLOCAL(&itf_addr->ipv6.sin6_addr) &&
+        (!IN6_IS_ADDR_LINKLOCAL(&dst_addr.ipv6.sin6_addr)))
     {
-        TRACE_((THIS_FILE, "Interface address is a link-local address"));
+        TRACE_((THIS_FILE, "Local interface address is link-local and "
+                           "the destination host is external"));
+
         return PJ_ENOTFOUND;
     }
 #endif
