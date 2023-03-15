@@ -546,8 +546,12 @@ public:
      */
     CallInfo() : id(PJSUA_INVALID_ID),
                  role(PJSIP_ROLE_UAC),
+                 accId(PJSUA_INVALID_ID),
                  state(PJSIP_INV_STATE_NULL),
-                 lastStatusCode(PJSIP_SC_NULL)
+                 lastStatusCode(PJSIP_SC_NULL),
+                 remOfferer(false),
+                 remAudioCount(0),
+                 remVideoCount(0)
     {}
 
     /**
@@ -658,9 +662,22 @@ public:
     /**
      * Default constructor
      */
-    StreamInfo() : type(PJMEDIA_TYPE_NONE),
-                   proto(PJMEDIA_TP_PROTO_NONE),
-                   dir(PJMEDIA_DIR_NONE)
+    StreamInfo() 
+    : type(PJMEDIA_TYPE_NONE),
+      proto(PJMEDIA_TP_PROTO_NONE),
+      dir(PJMEDIA_DIR_NONE),
+      txPt(0),
+      rxPt(0),
+      codecClockRate(0),
+      jbInit(-1),
+      jbMinPre(-1),
+      jbMaxPre(-1),
+      jbMax(-1),
+      jbDiscardAlgo(PJMEDIA_JB_DISCARD_NONE),
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+      useKa(false),
+#endif
+      rtcpSdesByeDisabled(false)
     {}
 
     /**

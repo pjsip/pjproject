@@ -850,7 +850,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 
                 if (j==alloc->perm_cnt) {
                     PJ_LOG(5,("", "SendIndication to %s is rejected (no permission)", 
-                                  peer_info, client_info, alloc->perm_cnt));
+                                  peer_info));
                 } else {
                     PJ_LOG(5,(THIS_FILE, "Relaying %d bytes data from client %s to peer %s, "
                                          "perm_cnt=%d", 

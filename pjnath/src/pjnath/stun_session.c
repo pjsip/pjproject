@@ -316,6 +316,7 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
         status = pj_stun_msg_add_string_attr(pool, msg,
                                             PJ_STUN_ATTR_NONCE,
                                             &nonce);
+        PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
     }
 
     /* Add MESSAGE-INTEGRITY attribute */

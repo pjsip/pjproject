@@ -738,7 +738,7 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
     PJ_ASSERT_RETURN(sess->state>PJ_TURN_STATE_NULL && 
                      sess->state<=PJ_TURN_STATE_RESOLVED, 
                      PJ_EINVALIDOP);
-    PJ_ASSERT_RETURN(param->peer_conn_type == PJ_TURN_TP_UDP ||
+    PJ_ASSERT_RETURN(!param || param->peer_conn_type == PJ_TURN_TP_UDP ||
                      param->peer_conn_type == PJ_TURN_TP_TCP,
                      PJ_EINVAL);
 

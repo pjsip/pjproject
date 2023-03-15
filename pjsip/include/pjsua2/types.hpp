@@ -252,6 +252,9 @@ struct TimeVal
     long msec;
     
 public:
+    TimeVal() : sec(0), msec(0)
+    {}
+    
     /**
      * Convert from pjsip
      */
