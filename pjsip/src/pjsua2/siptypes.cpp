@@ -473,6 +473,13 @@ pjsip_generic_string_hdr &SipHeader::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipMultipartPart::SipMultipartPart()
+{
+    pj_bzero(&pjMpp, sizeof(pjMpp));
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
+    pj_list_init(&pjMpp.hdr);
+}
+
 void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
                               PJSUA2_THROW(Error)
 {

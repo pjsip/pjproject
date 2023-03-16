@@ -852,17 +852,17 @@ PJ_DEF(pj_bool_t) pjmedia_vid_port_is_running(pjmedia_vid_port *vp)
 
 PJ_DEF(pj_status_t) pjmedia_vid_port_stop(pjmedia_vid_port *vp)
 {
-    pj_status_t status;
+    pj_status_t status0=PJ_SUCCESS, status;
 
     PJ_ASSERT_RETURN(vp, PJ_EINVAL);
 
     if (vp->clock) {
-        status = pjmedia_clock_stop(vp->clock);
+        status0 = pjmedia_clock_stop(vp->clock);
     }
 
     status = pjmedia_vid_dev_stream_stop(vp->strm);
 
-    return status;
+    return status ? status : status0;
 }
 
 static void vid_port_destroy(pjmedia_vid_port *vp)

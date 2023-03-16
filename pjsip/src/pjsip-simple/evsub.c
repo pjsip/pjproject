@@ -322,7 +322,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt)
     mod_evsub.allow_events_hdr = pjsip_allow_events_hdr_create(mod_evsub.pool);
 
     /* Register SIP-event specific headers parser: */
-    pjsip_evsub_init_parser();
+    status = pjsip_evsub_init_parser();
+    if (status  != PJ_SUCCESS)
+        goto on_error;
 
     /* Register new methods SUBSCRIBE and NOTIFY in Allow-ed header */
     pjsip_endpt_add_capability(endpt, &mod_evsub.mod, PJSIP_H_ALLOW, NULL,

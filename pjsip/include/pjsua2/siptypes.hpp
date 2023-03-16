@@ -810,6 +810,8 @@ struct SipMultipartPart
     string              body;
 
 public:
+    SipMultipartPart();
+    
     /**
      * Initiaize from PJSIP's pjsip_multipart_part.
      */

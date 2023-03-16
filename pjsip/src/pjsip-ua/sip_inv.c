@@ -2349,7 +2349,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         }
 
         if (status != PJ_SUCCESS) {
-            PJ_PERROR(4,(THIS_FILE, status, "Error processing SDP offer in %",
+            PJ_PERROR(4,(THIS_FILE, status, "Error processing SDP offer in %s",
                       pjsip_rx_data_get_info(rdata)));
             return PJMEDIA_SDP_EINSDP;
         }
@@ -3706,7 +3706,8 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
         /* Can only do this to send response to original INVITE
          * request.
          */
-        PJ_ASSERT_RETURN((cseq=(pjsip_cseq_hdr*)pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL))!=NULL
+        cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
+        PJ_ASSERT_RETURN(cseq != NULL
                           && (cseq->cseq == inv->invite_tsx->cseq),
                          PJ_EINVALIDOP);
 
@@ -3955,7 +3956,7 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
         status = pjsip_dlg_create_response(inv->dlg, rdata, 
                                            PJSIP_SC_INTERNAL_SERVER_ERROR,
                                            NULL, &tdata);
-
+    
         val = (pj_rand() % 10);
         ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
         pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);

@@ -1153,9 +1153,9 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
 on_error:
     PJ_LOG(1,(THIS_FILE, "...ERROR: %s", 
               pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf))));
-    if (ssock > 0)
+    if (ssock >= 0)
         pj_sock_close(ssock);
-    if (csock > 0)
+    if (csock >= 0)
         pj_sock_close(csock);
     for (i=0; i<inactive_sock_count && inactive_sock && 
               inactive_sock[i]!=PJ_INVALID_SOCKET; ++i) 

@@ -409,14 +409,15 @@ static void menu(void)
 
     if (g.relay) {
         pj_turn_sock_get_info(g.relay, &info);
-        strcpy(client_state, pj_turn_state_name(info.state));
+        pj_ansi_strncpy(client_state, pj_turn_state_name(info.state),
+                        sizeof(client_state));
         if (info.state >= PJ_TURN_STATE_READY)
             pj_sockaddr_print(&info.relay_addr, relay_addr, sizeof(relay_addr), 3);
         else
             strcpy(relay_addr, "0.0.0.0:0");
     } else {
-        strcpy(client_state, "NULL");
-        strcpy(relay_addr, "0.0.0.0:0");
+        pj_ansi_strncpy(client_state, "NULL", sizeof(client_state));
+        pj_ansi_strncpy(relay_addr, "0.0.0.0:0", sizeof(relay_addr));
     }
 
     pj_sockaddr_print(&g.peer[0].mapped_addr, peer0_addr, sizeof(peer0_addr), 3);

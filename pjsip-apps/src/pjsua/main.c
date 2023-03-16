@@ -123,8 +123,6 @@ static void setup_signal_handler(void) {}
 
 int main_func(int argc, char *argv[])
 {
-    pj_status_t status = PJ_TRUE;
-
     pj_bzero(&cfg, sizeof(cfg));
     cfg.on_started = &on_app_started;
     cfg.on_stopped = &on_app_stopped;
@@ -135,9 +133,8 @@ int main_func(int argc, char *argv[])
     setup_socket_signal();
 
     while (running) {        
-        status = pjsua_app_init(&cfg);
-        if (status == PJ_SUCCESS) {
-            status = pjsua_app_run(PJ_TRUE);
+        if (pjsua_app_init(&cfg) == PJ_SUCCESS) {
+            pjsua_app_run(PJ_TRUE);
         } else {
             running = PJ_FALSE;
         }
