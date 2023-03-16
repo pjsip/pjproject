@@ -70,6 +70,8 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     free(data);
     pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
+    pj_pool_release(pool);
+    pj_caching_pool_destroy(&caching_pool);
 
     return ret;
 }

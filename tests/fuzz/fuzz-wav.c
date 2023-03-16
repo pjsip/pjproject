@@ -60,7 +60,8 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     char filename[256];
     pj_caching_pool caching_pool;
 
-    sprintf(filename, "/tmp/libfuzzer.%d", getpid());
+    snprintf(filename, sizeof(filename), "/tmp/libfuzzer.%d",
+	     getpid());
     FILE *fp = fopen(filename, "wb");
 
     if (!fp) {
