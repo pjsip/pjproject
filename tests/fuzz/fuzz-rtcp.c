@@ -35,6 +35,8 @@ int rtcp_parser(char *data, size_t size)
     pjmedia_rtcp_session session;
 
     pjmedia_rtcp_session_setting_default(&setting);
+    setting.clock_rate = 8000;
+    setting.samples_per_frame = 160;
     pjmedia_rtcp_init2(&session, &setting);
 
     pjmedia_rtcp_rx_rtcp(&session, data, size);
