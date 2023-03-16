@@ -109,7 +109,7 @@ void md5_differential(const uint8_t *Data, size_t Size) {
     pj_md5_final(&ctx, pj_md5_hash);
 
     //OPENSSL
-    uint8_t ssl_md5_hash[MD5_DIGEST_LENGTH];
+    uint8_t ssl_md5_hash[MD5_DIGEST_LENGTH] = '\0';
     MD5(Data, Size, ssl_md5_hash);
 
     //Differential
