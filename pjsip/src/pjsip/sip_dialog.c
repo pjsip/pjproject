@@ -1920,7 +1920,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     pjsip_dlg_inc_lock(dlg);
 
     /* Check that rdata already has dialog in mod_data. */
-    pj_assert(pjsip_rdata_get_dlg(rdata) == dlg);
+    //pj_assert(pjsip_rdata_get_dlg(rdata) == dlg);
 
     /* Keep the response's status code */
     res_code = rdata->msg_info.msg->line.status.code;
