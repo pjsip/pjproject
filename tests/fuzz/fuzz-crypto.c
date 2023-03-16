@@ -109,7 +109,7 @@ void md5_differential(const uint8_t *Data, size_t Size) {
     pj_md5_final(&ctx, pj_md5_hash);
 
     //OPENSSL
-    uint8_t ssl_md5_hash[MD5_DIGEST_LENGTH] = {'\0'};
+    uint8_t ssl_md5_hash[MD5_DIGEST_LENGTH] = {};
     MD5(Data, Size, ssl_md5_hash);
 
     //Differential
@@ -130,8 +130,12 @@ void sha1_differential(const uint8_t *Data, size_t Size) {
     pj_sha1_final(&pj_sha,pj_sha_hash);
 
     //OPENSSL
-    uint8_t ssl_sha_hash[SHA_DIGEST_LENGTH];
-    SHA1(Data,Size,ssl_sha_hash);
+    uint8_t ssl_sha_hash[SHA_DIGEST_LENGTH] = {};
+
+    SHA_CTX ctx;
+    SHA1_Init(&ctx);
+    SHA1_Update(&ctx,Data,Size);
+    SHA1_Final(ssl_sha_hash, &ctx);
 
     //Differential
     int result = memcmp(pj_sha_hash, ssl_sha_hash, SHA_DIGEST_LENGTH);
