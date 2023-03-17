@@ -5117,6 +5117,7 @@ pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
         pjsip_dlg_inc_lock(forked_dlg);
 
         /* Respond with ACK first */
+        pjsip_rdata_set_dlg(res, forked_dlg);
         pjsip_dlg_on_rx_response(forked_dlg, res);
 
         /* Disconnect the call */

@@ -615,6 +615,23 @@ PJ_DECL(pj_grp_lock_t *) pjsip_dlg_get_lock( pjsip_dialog *dlg );
 
 
 /**
+ * Set the dialog instance in the incoming rdata.
+ *
+ * Note that if an incoming message matches an existing dialog, the user
+ * agent will put the matching dialog instance in the rdata, so typically
+ * application does not need to call this function directly.
+ * In other words, this function is only useful if application needs to
+ * associate the incoming rdata with the dialog instance before the user
+ * agent sets it (such as in the context of module that runs in priority
+ * number lower than PJSIP_MOD_PRIORITY_UA_PROXY_LAYER).
+ *
+ * @param rdata             Incoming message buffer.
+ * @param dlg               The dialog.
+ */
+PJ_DECL(void) pjsip_rdata_set_dlg( pjsip_rx_data *rdata, pjsip_dialog *dlg);
+
+
+/**
  * Get the dialog instance in the incoming rdata. If an incoming message 
  * matches an existing dialog, the user agent must have put the matching 
  * dialog instance in the rdata, or otherwise this function will return 

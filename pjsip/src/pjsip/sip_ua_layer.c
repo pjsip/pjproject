@@ -448,6 +448,11 @@ PJ_DEF(pj_status_t) pjsip_ua_unregister_dlg( pjsip_user_agent *ua,
 }
 
 
+PJ_DEF(void) pjsip_rdata_set_dlg( pjsip_rx_data *rdata, pjsip_dialog *dlg)
+{
+    rdata->endpt_info.mod_data[mod_ua.mod.id] = dlg;
+}
+
 PJ_DEF(pjsip_dialog*) pjsip_rdata_get_dlg( pjsip_rx_data *rdata )
 {
     return (pjsip_dialog*) rdata->endpt_info.mod_data[mod_ua.mod.id];
