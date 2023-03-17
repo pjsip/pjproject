@@ -1363,6 +1363,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
         }
 
     } else {
+        dlg->ack_sent = PJ_TRUE;
+
         /* Set transport selector */
         pjsip_tx_data_set_transport(tdata, &dlg->tp_sel);
 
@@ -2079,7 +2081,8 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
         pj_status_t status;
 
         if (rdata->msg_info.cseq->method.id==PJSIP_INVITE_METHOD &&
-            rdata->msg_info.msg->line.status.code/100 == 2)
+            rdata->msg_info.msg->line.status.code/100 == 2 &&
+            !dlg->ack_sent)
         {
             pjsip_tx_data *ack;
 
