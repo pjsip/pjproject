@@ -123,6 +123,8 @@ void JsonDocument::loadFile(const string &filename) PJSUA2_THROW(Error)
         PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
 
     pj_ssize_t size = (pj_ssize_t)pj_file_size(filename.c_str());
+    if (size <= 0)
+        PJSUA2_RAISE_ERROR(PJ_ETOOSMALL);
     pj_status_t status;
 
     char *buffer = (char*)pj_pool_alloc(pool, size+1);

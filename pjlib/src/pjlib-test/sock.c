@@ -160,6 +160,11 @@ static int format_test(void)
 
 #endif  /* PJ_HAS_IPV6 */
 
+#ifdef NDEBUG
+    /* This should not crash */
+    pj_sockaddr_in_init(NULL, 0, 1000);
+#endif
+
     /* Test that pj_sockaddr_in_init() initialize the whole structure, 
      * including sin_zero_pad.
      */

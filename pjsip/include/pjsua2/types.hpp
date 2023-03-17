@@ -205,6 +205,14 @@ struct Error
             PJSUA2_CHECK_RAISE_ERROR2(the_status, #expr); \
         } while (0)
 
+/** Run the statement and catch and ignore Error exception */
+#define PJSUA2_CATCH_IGNORE(stmt)   \
+        try { \
+            stmt; \
+        } catch (Error &err) { \
+            PJ_UNUSED_ARG(err); \
+        }
+
 //////////////////////////////////////////////////////////////////////////////
 /**
  * Version information.

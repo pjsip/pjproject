@@ -407,7 +407,7 @@ protected:
      * Descendant should only call this method if it has registered the media
      * with the previous call to registerMediaPort().
      */
-    void unregisterMediaPort();
+    void unregisterMediaPort() PJSUA2_THROW(Error);
 
 private:
     /* Memory pool for deprecated registerMediaPort() */
@@ -1553,7 +1553,7 @@ public:
      * Close the audio device and unregister the audio device port from the
      * conference bridge.
      */
-    void close();
+    void close() PJSUA2_THROW(Error);
 
     /**
      * Is the extra audio device opened?

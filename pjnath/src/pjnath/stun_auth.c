@@ -327,6 +327,8 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
             pj_stun_create_key(pool, &p_info->auth_key, &p_info->realm,
                                &auser->value, cred->data.static_cred.data_type,
                                &cred->data.static_cred.data);
+            /* Unlikely to happen but this makes static analyzers happy */
+            PJ_ASSERT_RETURN(p_info->auth_key.ptr, PJ_EBUG);
         } else {
             /* Username mismatch */
             /* According to rfc3489bis-10 Sec 10.1.2/10.2.2, we should 
@@ -350,10 +352,8 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
             pj_stun_create_key(pool, &p_info->auth_key, 
                                (arealm?&arealm->value:NULL), &auser->value, 
                                data_type, &password);
-            if (!p_info->auth_key.ptr) {
-                pj_assert(!"Null key");
-                return PJ_EBUG;
-            }
+            /* Unlikely to happen but this makes static analyzers happy */
+            PJ_ASSERT_RETURN(p_info->auth_key.ptr, PJ_EBUG);
         } else {
             err_code = PJ_STUN_SC_UNAUTHORIZED;
             goto on_auth_failed;

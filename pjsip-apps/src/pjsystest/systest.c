@@ -147,7 +147,7 @@ test_item_t *systest_alloc_test_item(const char *title)
 
     ti = &test_items[test_item_count++];
     pj_bzero(ti, sizeof(*ti));
-    pj_ansi_strcpy(ti->title, title);
+    pj_ansi_strncpy(ti->title, title, sizeof(ti->title));
 
     return ti;
 }
@@ -236,7 +236,7 @@ static void systest_play_tone(void)
     key = gui_msgbox(title,
                      "Ringback tone should be playing now in the "
                      "speaker. Press OK to stop. ", WITH_OK);
-
+    PJ_UNUSED_ARG(key);
     status = PJ_SUCCESS;
 
 on_return:
@@ -323,6 +323,7 @@ static void systest_play_wav(unsigned path_cnt, const char *paths[])
     key = gui_msgbox(title,
                      "WAV file should be playing now in the "
                      "speaker. Press OK to stop. ", WITH_OK);
+    PJ_UNUSED_ARG(key);
 
     status = PJ_SUCCESS;
 
@@ -429,6 +430,7 @@ static void systest_rec_audio(void)
                      "the speaker device, in a loop. Listen for "
                      "any audio impairments. Press OK to stop.",
                      WITH_OK);
+    PJ_UNUSED_ARG(key);
 
 on_return:
     if (rec_slot != PJSUA_INVALID_ID)
@@ -661,6 +663,11 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 
     samples_per_frame = PJMEDIA_PIA_SPF(&wav->info);
     clock_rate = PJMEDIA_PIA_SRATE(&wav->info);
+    PJ_ASSERT_ON_FAIL(samples_per_frame && clock_rate,
+                      {
+                        systest_perror("Invalid WAV file", PJ_SUCCESS);
+                        return -1;
+                      });
     frm.buf = pj_pool_alloc(pool, samples_per_frame * 2);
     frm.size = samples_per_frame * 2;
     len = pjmedia_wav_player_get_len(wav);

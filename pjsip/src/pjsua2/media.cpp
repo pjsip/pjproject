@@ -126,7 +126,6 @@ AudioMediaTransmitParam::AudioMediaTransmitParam()
 AudioMedia::AudioMedia() 
 : Media(PJMEDIA_TYPE_AUDIO), id(PJSUA_INVALID_ID), mediaPool(NULL)
 {
-
 }
 
 void AudioMedia::registerMediaPort(MediaPort port) PJSUA2_THROW(Error)
@@ -174,7 +173,7 @@ void AudioMedia::registerMediaPort2(MediaPort port, pj_pool_t *pool)
     Endpoint::instance().mediaAdd(*this);
 }
 
-void AudioMedia::unregisterMediaPort()
+void AudioMedia::unregisterMediaPort() PJSUA2_THROW(Error)
 {
     if (id != PJSUA_INVALID_ID) {
         pjsua_conf_remove_port(id);
@@ -275,7 +274,7 @@ AudioMediaPlayer::AudioMediaPlayer()
 AudioMediaPlayer::~AudioMediaPlayer()
 {
     if (playerId != PJSUA_INVALID_ID) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_player_destroy(playerId);
     }
 }
@@ -418,7 +417,7 @@ AudioMediaRecorder::AudioMediaRecorder()
 AudioMediaRecorder::~AudioMediaRecorder()
 {
     if (recorderId != PJSUA_INVALID_ID) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_recorder_destroy(recorderId);
     }
 }
@@ -466,7 +465,7 @@ ToneGenerator::ToneGenerator()
 ToneGenerator::~ToneGenerator()
 {
     if (tonegen) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjmedia_port_destroy(tonegen);
         tonegen = NULL;
     }
@@ -666,7 +665,7 @@ DevAudioMedia::~DevAudioMedia()
 {
     /* Avoid removing this port (conf port id=0) from conference */
     this->id = PJSUA_INVALID_ID;
-    unregisterMediaPort();
+    PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1107,7 +1106,7 @@ ExtraAudioDevice::ExtraAudioDevice (int playdev, int recdev) :
 
 ExtraAudioDevice::~ExtraAudioDevice()
 {
-    close();
+    PJSUA2_CATCH_IGNORE( close() );
 }
 
 void ExtraAudioDevice::open()
@@ -1155,7 +1154,7 @@ bool ExtraAudioDevice::isOpened()
     return (id != PJSUA_INVALID_ID);
 }
 
-void ExtraAudioDevice::close()
+void ExtraAudioDevice::close() PJSUA2_THROW(Error)
 {
     /* Unregister from the conference bridge */
     id = PJSUA_INVALID_ID;
