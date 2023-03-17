@@ -20,9 +20,9 @@
 #include <stdlib.h>
 
 #include <pjlib.h>
-
 #include <pjmedia-codec/h264_packetizer.h>
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 #define kMinInputLength 10
 #define kMaxInputLength 5120
 
@@ -31,10 +31,9 @@ pj_pool_factory *mem;
 int h264_unpacketizer(const uint8_t *data, size_t size,
                       uint8_t *output, size_t output_size)
 {
-
     int ret = 0;
-	pj_pool_t *pool;
-	pj_status_t status;
+    pj_pool_t *pool;
+    pj_status_t status;
     pjmedia_h264_packetizer_cfg cfg;
     pjmedia_h264_packetizer *pktz;
     unsigned bits_pos = 0;
@@ -92,3 +91,11 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     return ret;
 }
+#else
+extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
+{
+    PJ_UNUSED_ARG(Data);
+    PJ_UNUSED_ARG(Size);
+    return 0;
+}
+#endif
