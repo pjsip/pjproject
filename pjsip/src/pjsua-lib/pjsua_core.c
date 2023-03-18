@@ -44,6 +44,7 @@ PJ_DEF(void) pjsua_perror( const char *sender, const char *title,
                            pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
+    pj_bzero(errmsg, sizeof(errmsg));
 
     pj_strerror(status, errmsg, sizeof(errmsg));
     PJ_LOG(1,(sender, "%s: %s [status=%d]", title, errmsg, status));
