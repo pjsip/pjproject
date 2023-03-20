@@ -2258,6 +2258,8 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_ice_sess_cand cand;
     pj_sockaddr_t *addr;
+    unsigned cnt = PJ_ICE_ST_MAX_CAND;
+    pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
     pj_status_t status;
 
     pj_bzero(&info->sock_info, sizeof(info->sock_info));
@@ -2277,8 +2279,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     if (pj_sockaddr_has_addr(&cand.addr)) {
         addr = &cand.addr;
     } else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
-        unsigned i, cnt = PJ_ICE_ST_MAX_CAND;
-        pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
+        unsigned i;
         pj_ice_strans_enum_cands(tp_ice->ice_st, 1, &cnt, cands);
         for (i = 0; i < cnt && !addr; ++i) {
             if (pj_sockaddr_has_addr(&cands[i].addr))
@@ -2308,8 +2309,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
         if (pj_sockaddr_has_addr(&cand.addr)) {
             addr = &cand.addr;
         } else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
-            unsigned i, cnt = PJ_ICE_ST_MAX_CAND;
-            pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
+            unsigned i;
             pj_ice_strans_enum_cands(tp_ice->ice_st, 2, &cnt, cands);
             for (i = 0; i < cnt && !addr; ++i) {
                 if (pj_sockaddr_has_addr(&cands[i].addr))
