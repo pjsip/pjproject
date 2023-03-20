@@ -668,10 +668,10 @@
  * Libraries sometimes needs to make copy of an address to stack buffer;
  * the value here affects the stack usage.
  *
- * Default: 128
+ * Default: 253
  */
 #ifndef PJ_MAX_HOSTNAME
-#  define PJ_MAX_HOSTNAME           (128)
+#  define PJ_MAX_HOSTNAME           (253)
 #endif
 
 /**
