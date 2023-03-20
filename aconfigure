@@ -4858,7 +4858,7 @@ if test "$LIBEXT" = ""; then LIBEXT='a'; fi
 
 if test "$LIBEXT2" = ""; then LIBEXT2=""; fi
 
-if test "$CC_OUT" = ""; then CC_OUT="-o "; fi
+if test "$CC_OUT" = ""; then CC_OUT="-c -o "; fi
 
 if test "$CC_INC" = ""; then CC_INC="-I"; fi
 

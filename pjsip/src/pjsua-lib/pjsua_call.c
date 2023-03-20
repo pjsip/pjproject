@@ -5106,7 +5106,7 @@ pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
         res->msg_info.msg->line.status.code/100 == 2)
     {
         pjsip_dialog *forked_dlg;
-        pjsip_tx_data *bye;
+        pjsip_tx_data *bye, *ack;
         pj_status_t status;
 
         /* Create forked dialog */
@@ -5115,6 +5115,12 @@ pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
             return NULL;
 
         pjsip_dlg_inc_lock(forked_dlg);
+
+        /* Respond with ACK first */
+        status = pjsip_dlg_create_request(forked_dlg, &pjsip_ack_method,
+                                          res->msg_info.cseq->cseq, &ack);
+        if (status == PJ_SUCCESS)
+            pjsip_dlg_send_request(forked_dlg, ack, -1, NULL);
 
         /* Disconnect the call */
         status = pjsip_dlg_create_request(forked_dlg, pjsip_get_bye_method(),

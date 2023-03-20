@@ -20,59 +20,57 @@
 #include <stdlib.h>
 
 #include <pjlib.h>
-
-#include <pjmedia/event.h>
-#include <pjmedia/rtcp.h>
+#include <pjlib-util.h>
+#include "../../pjlib-util/src/pjlib-util/http_client.c"
 
 #define kMinInputLength 10
-#define kMaxInputLength 5120
+#define kMaxInputLength 1024
 
-int rtcp_parser(char *data, size_t size)
-{
+pj_pool_factory *mem;
 
-    int ret = 0;
-    pjmedia_rtcp_session_setting setting;
-    pjmedia_rtcp_session session;
+int http_parse(uint8_t *data, size_t Size) {
 
-    pjmedia_rtcp_session_setting_default(&setting);
-    setting.clock_rate = 8000;
-    setting.samples_per_frame = 160;
-    pjmedia_rtcp_init2(&session, &setting);
+    int ret;
+    pj_pool_t *pool;
+    pj_size_t rem;
+    pj_http_resp response;
 
-    pjmedia_rtcp_rx_rtcp(&session, data, size);
+    pool = pj_pool_create(mem, "http", 1000, 1000, NULL);
+
+    ret = http_response_parse(pool, &response, data, Size, &rem);
+
+    pj_pool_release(pool);
 
     return ret;
 }
 
-extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
+extern int
+LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
-    char *data;
-    int ret = 0;
-    pj_caching_pool caching_pool;
-    pj_pool_t *pool;
 
     if (Size < kMinInputLength || Size > kMaxInputLength) {
         return 1;
     }
 
-    /* Add null termination for the data */
-    data = (char *)calloc((Size+1), sizeof(char));
+    int ret = 0;
+    uint8_t *data;
+    pj_caching_pool caching_pool;
+
+    /* Add NULL byte */
+    data = (uint8_t *)calloc((Size+1), sizeof(uint8_t));
     memcpy((void *)data, (void *)Data, Size);
 
-    /* Init */
+    /* init Calls */
     pj_init();
-    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
-    pool = pj_pool_create(&caching_pool.factory, "test", 1000, 1000, NULL);
+    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0);
     pj_log_set_level(0);
 
-    pjmedia_event_mgr_create(pool, 0, NULL);
+    mem = &caching_pool.factory;
 
-    /* Fuzz */
-    ret = rtcp_parser(data, Size);
+    /* Call fuzzer */
+    ret = http_parse(data, Size);
 
     free(data);
-    pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
-    pj_pool_release(pool);
     pj_caching_pool_destroy(&caching_pool);
 
     return ret;

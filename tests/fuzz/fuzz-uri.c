@@ -20,59 +20,76 @@
 #include <stdlib.h>
 
 #include <pjlib.h>
+#include <pjlib-util.h>
+//#include <sip_uri.h>
 
-#include <pjmedia/event.h>
-#include <pjmedia/rtcp.h>
+#include <pjlib.h>
+#include <pjlib-util.h>
+#include <pjsip.h>
+#include <pjsip/sip_types.h>
+
+#include <pjsip.h>
+#include <pjlib.h>
+
 
 #define kMinInputLength 10
-#define kMaxInputLength 5120
+#define kMaxInputLength 1024
 
-int rtcp_parser(char *data, size_t size)
-{
+/* Defined in sip_parser.c */
+void init_sip_parser(void);
+void deinit_sip_parser(void);
 
-    int ret = 0;
-    pjmedia_rtcp_session_setting setting;
-    pjmedia_rtcp_session session;
+pj_pool_factory *mem;
 
-    pjmedia_rtcp_session_setting_default(&setting);
-    setting.clock_rate = 8000;
-    setting.samples_per_frame = 160;
-    pjmedia_rtcp_init2(&session, &setting);
+int uri_parse(uint8_t *data, size_t Size) {
 
-    pjmedia_rtcp_rx_rtcp(&session, data, size);
+    pj_status_t status = 0 ;
+    pj_pool_t *pool;
+    pjsip_uri *uri;
 
-    return ret;
+    pool = pj_pool_create(mem, "uri", 1000, 1000, NULL);
+
+    uri = pjsip_parse_uri(pool, (char *)data, Size, 0);
+
+    if (!uri) {
+        status = 1;
+    }
+
+    pj_pool_release(pool);
+
+    return status;
 }
 
-extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
+extern int
+LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
-    char *data;
-    int ret = 0;
-    pj_caching_pool caching_pool;
-    pj_pool_t *pool;
 
     if (Size < kMinInputLength || Size > kMaxInputLength) {
         return 1;
     }
 
-    /* Add null termination for the data */
-    data = (char *)calloc((Size+1), sizeof(char));
+    int ret = 0;
+    uint8_t *data;
+    pj_caching_pool caching_pool;
+
+    /* Add NULL byte */
+    data = (uint8_t *)calloc((Size+1), sizeof(uint8_t));
     memcpy((void *)data, (void *)Data, Size);
 
-    /* Init */
+    /* init Calls */
     pj_init();
-    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
-    pool = pj_pool_create(&caching_pool.factory, "test", 1000, 1000, NULL);
+    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0);
     pj_log_set_level(0);
 
-    pjmedia_event_mgr_create(pool, 0, NULL);
+    mem = &caching_pool.factory;
 
-    /* Fuzz */
-    ret = rtcp_parser(data, Size);
+    init_sip_parser();
+
+    /* Call fuzzer */
+    ret = uri_parse(data, Size);
 
     free(data);
-    pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
-    pj_pool_release(pool);
+    deinit_sip_parser();
     pj_caching_pool_destroy(&caching_pool);
 
     return ret;

@@ -97,6 +97,9 @@
     ]]>
   </send>
 
+  <!-- Receive ACK -->
+  <recv request="ACK" optional="false">
+  </recv>
 
   <!-- Receive BYE (for leg 2) -->
   <recv request="BYE" optional="false">
@@ -113,11 +116,6 @@
       [last_CSeq:]
     ]]>
   </send>
-
-
-  <!-- Receive ACK -->
-  <recv request="ACK" optional="false">
-  </recv>
 
 
   <!-- definition of the response time repartition table (unit is ms)   -->
