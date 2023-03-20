@@ -250,6 +250,14 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
         ssock->timer.id = TIMER_NONE;
     }
 
+    pj_lock_acquire(ssock->write_mutex);
+    if (ssock->hs_status != PJ_EUNKNOWN) {
+        pj_lock_release(ssock->write_mutex);
+        return (ssock->hs_status == PJ_SUCCESS)? PJ_TRUE: PJ_FALSE;
+    }
+    ssock->hs_status = status;
+    pj_lock_release(ssock->write_mutex);
+
     /* Update certificates info on successful handshake */
     if (status == PJ_SUCCESS)
         ssl_update_certs_info(ssock);
@@ -1413,6 +1421,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     ssock->ssl_state = SSL_STATE_NULL;
     ssock->circ_buf_input.owner = ssock;
     ssock->circ_buf_output.owner = ssock;
+    ssock->hs_status = PJ_EUNKNOWN;
     pj_list_init(&ssock->write_pending);
     pj_list_init(&ssock->write_pending_empty);
     pj_list_init(&ssock->send_pending);
