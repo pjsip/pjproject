@@ -1151,8 +1151,8 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     return rc;
 
 on_error:
-    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", 
-              pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf))));
+    pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf));
+    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", errbuf));
     if (ssock >= 0)
         pj_sock_close(ssock);
     if (csock >= 0)

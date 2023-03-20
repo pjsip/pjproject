@@ -1905,7 +1905,7 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
         struct nameserver *ns = &resolver->ns[i];
 
         PJ_LOG(3,(resolver->name.ptr,
-                  "   NS %d: %s:%d (state=%s until %ds, rtt=%ld ms)",
+                  "   NS %d: %s:%d (state=%s until %lds, rtt=%ld ms)",
                   i,
                   pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
                   pj_sockaddr_get_port(&ns->addr),
@@ -1945,11 +1945,11 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
             it = pj_hash_next(resolver->hquerybyid, it);
         }
     }
-    PJ_LOG(3,(resolver->name.ptr, "  Nb. of pending query free nodes: %u",
+    PJ_LOG(3,(resolver->name.ptr, "  Nb. of pending query free nodes: %lu",
               pj_list_size(&resolver->query_free_nodes)));
-    PJ_LOG(3,(resolver->name.ptr, "  Nb. of timer entries: %u",
+    PJ_LOG(3,(resolver->name.ptr, "  Nb. of timer entries: %lu",
               pj_timer_heap_count(resolver->timer)));
-    PJ_LOG(3,(resolver->name.ptr, "  Pool capacity: %d, used size: %d",
+    PJ_LOG(3,(resolver->name.ptr, "  Pool capacity: %lu, used size: %lu",
               pj_pool_get_capacity(resolver->pool),
               pj_pool_get_used_size(resolver->pool)));
 

@@ -640,7 +640,7 @@ static void on_timer(pj_timer_heap_t *th, struct pj_timer_entry *te)
 
     switch (timer_id) {
     case TIMER_HANDSHAKE_TIMEOUT:
-        PJ_LOG(1,(ssock->pool->obj_name, "SSL timeout after %d.%ds",
+        PJ_LOG(1,(ssock->pool->obj_name, "SSL timeout after %ld.%lds",
                   ssock->param.timeout.sec, ssock->param.timeout.msec));
 
         on_handshake_complete(ssock, PJ_ETIMEDOUT);

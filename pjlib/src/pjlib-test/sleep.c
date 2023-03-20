@@ -202,7 +202,7 @@ static int sleep_duration_test(void)
             PJ_TIME_VAL_SUB(t2, t1);
             PJ_LOG(3,(THIS_FILE, 
                       "...info: gettimeofday() reported duration is "
-                      "%d msec",
+                      "%ld msec",
                       PJ_TIME_VAL_MSEC(t2)));
         }
     }

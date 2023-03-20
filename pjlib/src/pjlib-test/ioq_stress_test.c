@@ -162,9 +162,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                            });
 
         if (bytes_read != -12345 && bytes_read <= 0 && !IGNORE_ERROR(-bytes_read)) {
-            TRACE((THIS_FILE, "op_key:%p: stopping due to read=%d",
+            TRACE((THIS_FILE, "op_key:%p: stopping due to read=%ld",
                                op_key, bytes_read));
-            PJ_PERROR(1,(THIS_FILE, (pj_status_t)-bytes_read, "%d is", -bytes_read));
+            PJ_PERROR(1,(THIS_FILE, (pj_status_t)-bytes_read, "%ld is", -bytes_read));
             okud->server.status = (bytes_read == 0)? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
                                   (pj_status_t)-bytes_read;
             break;
@@ -182,7 +182,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                 for (p=start; p!=end; ++p) {
                     counter = test->state.cnt[SERVER]++;
                     if (*p != counter && test->cfg.sock_type==pj_SOCK_STREAM()) {
-                        PJ_LOG(3,(THIS_FILE, "  Error: TCP RX sequence mismatch at idx=%d. Expecting %d, got %d",
+                        PJ_LOG(3,(THIS_FILE, "  Error: TCP RX sequence mismatch at idx=%ld. Expecting %d, got %d",
                                   p-start, counter, *p));
                         test->state.retcode = 412;
                         okud->server.status = PJ_EBUG;
@@ -196,7 +196,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              * order? (tested on Linux epoll). Or could there be
                              * bug somewhere?
                              */
-                            PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch at idx=%d. Expecting %d, got %d",
+                            PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch at idx=%ld. Expecting %d, got %d",
                                       p-start, counter, *p));
                             //test->state.retcode = 413;
                             //okud->server.status = PJ_EBUG;
@@ -256,7 +256,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
                        });
 
     if (bytes_sent != -12345 && bytes_sent <= 0 && !IGNORE_ERROR(-bytes_sent)) {
-        TRACE((THIS_FILE, "op_key:%p: stopping due to sent=%d",
+        TRACE((THIS_FILE, "op_key:%p: stopping due to sent=%ld",
                            op_key, bytes_sent));
         okud->client.status = (bytes_sent == 0)? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
                               (pj_status_t)-bytes_sent;

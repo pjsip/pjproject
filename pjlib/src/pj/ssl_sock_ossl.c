@@ -345,7 +345,7 @@ static void SSLLogErrors(char * action, int ret, int ssl_err, int len,
         break;
     }
     default:
-        PJ_LOG(2,("SSL", "%lu [%s] (%s) ret: %d len: %d",
+        PJ_LOG(2,("SSL", "%d [%s] (%s) ret: %d len: %d",
                   ssl_err, ssl_err_str, action, ret, len));
         break;
     }
@@ -678,7 +678,7 @@ static pj_status_t init_openssl(void)
 
     openssl_init_count = 1;
 
-    PJ_LOG(4, (THIS_FILE, "OpenSSL version : %x", OPENSSL_VERSION_NUMBER));
+    PJ_LOG(4, (THIS_FILE, "OpenSSL version : %ld", OPENSSL_VERSION_NUMBER));
     /* Register error subsystem */
     status = pj_register_strerror(PJ_SSL_ERRNO_START, 
                                   PJ_SSL_ERRNO_SPACE_SIZE, 
@@ -2365,13 +2365,13 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
             PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
-                       "timeout=%d",
+                       "timeout=%ld",
                        SSL_session_reused(ossock->ossl_ssl),
                        SSL_SESSION_is_resumable(sess),
                        SSL_SESSION_get_timeout(sess)));
 #else
             PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
-                       "timeout=%d",
+                       "timeout=%ld",
                        SSL_session_reused(ossock->ossl_ssl),
                        -1,
                        SSL_SESSION_get_timeout(sess)));

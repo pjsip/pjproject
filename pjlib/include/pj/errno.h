@@ -497,7 +497,8 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_1(arg)    pj_perror_1 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_1(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...);
+                              const char *title_fmt, ...)
+                              PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_1(arg)
 #endif
@@ -512,7 +513,8 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_2(arg)    pj_perror_2 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_2(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...);
+                              const char *title_fmt, ...)
+                              PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_2(arg)
 #endif
@@ -527,7 +529,8 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_3(arg)    pj_perror_3 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_3(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...);
+                              const char *title_fmt, ...)
+                              PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_3(arg)
 #endif
@@ -542,7 +545,8 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_4(arg)    pj_perror_4 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_4(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...);
+                              const char *title_fmt, ...)
+                              PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_4(arg)
 #endif
@@ -557,7 +561,8 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_5(arg)    pj_perror_5 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_5(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...);
+                              const char *title_fmt, ...)
+                              PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_5(arg)
 #endif
@@ -572,7 +577,8 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_6(arg)    pj_perror_6 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_6(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...);
+                              const char *title_fmt, ...)
+                              PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_6(arg)
 #endif

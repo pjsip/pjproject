@@ -279,7 +279,7 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
     pj_lock_acquire(cp->lock);
 
     PJ_LOG(3,("cachpool", " Dumping caching pool:"));
-    PJ_LOG(3,("cachpool", "   Capacity=%u, max_capacity=%u, used_cnt=%u", \
+    PJ_LOG(3,("cachpool", "   Capacity=%lu, max_capacity=%lu, used_cnt=%lu", \
                              cp->capacity, cp->max_capacity, cp->used_count));
     if (detail) {
         pj_pool_t *pool = (pj_pool_t*) cp->used_list.next;
@@ -300,7 +300,7 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
                 block = block->next;
             }
 
-            PJ_LOG(3,("cachpool", "   %16s: %8d of %8d (%d%%) used, "
+            PJ_LOG(3,("cachpool", "   %16s: %8lu of %8lu (%lu%%) used, "
                                   "nblocks: %d",
                                   pj_pool_getobjname(pool), 
                                   pj_pool_get_used_size(pool), 
@@ -322,7 +322,7 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
             pool = pool->next;
         }
         if (total_capacity) {
-            PJ_LOG(3,("cachpool", "  Total %9d of %9d (%d %%) used!",
+            PJ_LOG(3,("cachpool", "  Total %9lu of %9lu (%lu %%) used!",
                                   total_used, total_capacity,
                                   total_used * 100 / total_capacity));
         }

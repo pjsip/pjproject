@@ -296,7 +296,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 
     pj_sock_close(sock_data.csock);
 
-    PJ_LOG(3,(THIS_FILE, "....%s: done (%d KB/s)",
+    PJ_LOG(3,(THIS_FILE, "....%s: done (%ld KB/s)",
               title, sock_data.received * 1000 / MSEC / 1000));
     return 0;
 }
