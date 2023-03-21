@@ -659,6 +659,18 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request3( pjsip_rx_data *rdata,
                                                 pjsip_endpoint *endpt,
                                                 pjsip_tx_data **tdata);
 
+/**
+ * Verify incoming non-INVITE request.
+ * Patched to make sure all requests gets checked against Require header.
+ * The same check is done for INVITE requests.
+ */
+PJ_DEF(pj_status_t)
+pjsip_non_inv_verify_request(pjsip_rx_data* rdata,
+                             pj_pool_t* tmp_pool,
+                             unsigned* options,
+                             pjsip_dialog* dlg,
+                             pjsip_endpoint* endpt,
+                             pjsip_tx_data** p_tdata);
 
 /**
  * Create UAS invite session for the specified dialog in dlg. Application 

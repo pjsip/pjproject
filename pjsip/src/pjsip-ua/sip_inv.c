@@ -693,6 +693,10 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
     pjsip_dialog *dlg;
     pjsip_inv_session *inv;
     pjsip_msg *msg = rdata->msg_info.msg;
+    pjsip_rx_data *rdata;
+    pjsip_endpoint *endpt;
+    pjsip_tx_data *response = NULL;
+    pj_status_t status;
 
     dlg = pjsip_rdata_get_dlg(rdata);
 
@@ -704,6 +708,31 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
     inv = pjsip_dlg_get_inv_session(dlg);
     if (inv == NULL)
         return PJ_FALSE;
+
+    /*
+     * For all incoming non-INVITE requests we should check if the Require headers
+     * are supported. For INVITE methods this check is performed later.
+     */
+    if (e->type == PJSIP_EVENT_TSX_STATE &&
+        e->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
+        (tsx->method.id != PJSIP_INVITE_METHOD)) {
+        rdata = e->body.tsx_state.src.rdata;
+        if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG) {
+            endpt = dlg->endpt;
+            status = pjsip_non_inv_verify_request(
+                rdata, rdata->tp_info.pool, &inv->options, dlg, endpt, &response);
+            if (status != PJ_SUCCESS) {
+            // Failed to verify
+            if (response) {
+                pjsip_response_addr res_addr;
+
+                pjsip_get_response_addr(response->pool, rdata, &res_addr);
+                pjsip_endpt_send_response(endpt, &res_addr, response, NULL, NULL);
+            }
+            return;
+            }
+        }
+    }
 
     /* This MAY be retransmission of 2xx response to INVITE. 
      * If it is, we need to send ACK.
