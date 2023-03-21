@@ -643,6 +643,15 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
         return PJ_FALSE;
     }
 
+    /* OPTIONS messages are handled in a different module. We accept
+     * all OPTIONS messages, no matter if they have incorrect To/From tags
+     * or an incorrect Call-ID. This is to ensure compabitility with
+     * ANATEL certficitation tests.
+     */
+    if (rdata->msg_info.msg->line.req.method.id == PJSIP_OPTIONS_METHOD)
+        return PJ_FALSE;
+
+
     /* Incoming REGISTER may have tags in it */
     if (rdata->msg_info.msg->line.req.method.id == PJSIP_REGISTER_METHOD)
         return PJ_FALSE;
