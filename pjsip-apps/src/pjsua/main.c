@@ -28,7 +28,7 @@ static pjsua_app_cfg_t      cfg;
 /* Called when CLI (re)started */
 void on_app_started(pj_status_t status, const char *msg)
 {
-    pj_perror(3, THIS_FILE, status, (msg)?msg:"");
+    pj_perror(3, THIS_FILE, status, "%s", (msg)?msg:"");
 }
 
 void on_app_stopped(pj_bool_t restart, int argc, char** argv)

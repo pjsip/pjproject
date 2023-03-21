@@ -468,7 +468,7 @@ static void timer_cb(pj_timer_heap_t *th, pj_timer_entry *e)
 static void show_err(pj_turn_sock *turn_sock, const char *title,
                      pj_status_t status)
 {
-    PJ_PERROR(4,(turn_sock->obj_name, status, title));
+    PJ_PERROR(4,(turn_sock->obj_name, status, "%s", title));
 }
 
 /* On error, terminate session */

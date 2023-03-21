@@ -1081,7 +1081,7 @@ PJ_DEF(const char*) pj_ice_strans_state_name(pj_ice_strans_state state)
 static void sess_fail(pj_ice_strans *ice_st, pj_ice_strans_op op,
                       const char *title, pj_status_t status)
 {
-    PJ_PERROR(4,(ice_st->obj_name, status, title));
+    PJ_PERROR(4,(ice_st->obj_name, status, "%s", title));
 
     pj_log_push_indent();
 
