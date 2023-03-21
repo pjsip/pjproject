@@ -120,7 +120,7 @@ PJ_DEF(pj_status_t) pjrpid_add_element(pjpidf_pres *pres,
 
         nd_tuple = find_node(pres, "tuple");
         nd_note = nd_tuple? find_node(nd_tuple, "note"):NULL;
-        if (!nd_note) {
+        if (nd_tuple && !nd_note) {
             nd_note = pj_xml_node_new(pool, &NOTE);
             pj_strdup(pool, &nd_note->content, &elem->note);
             pj_xml_add_node(nd_tuple, nd_note);
