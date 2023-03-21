@@ -407,7 +407,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_remove_ice_cb( pjmedia_transport *tp,
     pj_grp_lock_acquire(grp_lock);
 
     for (il=tp_ice->listener.next; il!=&tp_ice->listener; il=il->next) {
-        if (pj_memcmp(&il->cb, cb, sizeof(cb))==0 && il->user_data==user_data)
+        if (pj_memcmp(&il->cb, cb, sizeof(*cb))==0 && il->user_data==user_data)
             break;
     }
     if (il != &tp_ice->listener) {
@@ -1295,7 +1295,7 @@ static pj_status_t parse_cand(const char *obj_name,
 
     } else {
         PJ_LOG(5,(obj_name, "Invalid ICE candidate type %.*s in candidate", 
-                  token.slen, token.ptr));
+                  (int)token.slen, token.ptr));
         goto on_return;
     }
 
