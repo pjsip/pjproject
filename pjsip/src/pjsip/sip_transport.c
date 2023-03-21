@@ -2143,10 +2143,15 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
         /* For request: */
         if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG) {
-            /* always add received parameter to the via. */
-            pj_strdup2(rdata->tp_info.pool, 
-                       &rdata->msg_info.via->recvd_param, 
-                       rdata->pkt_info.src_name);
+            /* always add received parameter to the via if "sent_by" differs from
+             * actual received IP */
+            if (pj_strcmp2(&rdata->msg_info.via->sent_by, rdata->pkt_info.src_name)) {
+                pj_strdup2(rdata->tp_info.pool,
+                           &rdata->msg_info.via->recvd_param,
+                           rdata->pkt_info.src_name);
+            } else {
+                rdata->msg_info.via->recvd_param.slen = 0;
+            }
 
             /* RFC 3581:
              * If message contains "rport" param, put the received port there.

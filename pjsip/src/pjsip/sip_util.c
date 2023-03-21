@@ -1611,11 +1611,6 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
     PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
                      PJ_EINVAL);
 
-    /* All requests must have "received" parameter.
-     * This must always be done in transport layer.
-     */
-    pj_assert(rdata->msg_info.via->recvd_param.slen != 0);
-
     /* Do the calculation based on RFC 3261 Section 18.2.2 and RFC 3581 */
 
     if (PJSIP_TRANSPORT_IS_RELIABLE(src_transport)) {
@@ -1637,8 +1632,8 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->addr_len = rdata->pkt_info.src_addr_len;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
-                   &rdata->msg_info.via->recvd_param);
+        pj_strdup2( pool, &res_addr->dst_host.addr.host,
+                   &rdata->pkt_info.via->src_name);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
             res_addr->dst_host.addr.port = 
@@ -1675,8 +1670,8 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->addr_len = rdata->pkt_info.src_addr_len;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
-                   &rdata->msg_info.via->recvd_param);
+        pj_strdup2( pool, &res_addr->dst_host.addr.host,
+                   &rdata->pkt_info.via->src_name);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
             res_addr->dst_host.addr.port = 
@@ -1688,7 +1683,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
         pj_strdup( pool, &res_addr->dst_host.addr.host, 
-                   &rdata->msg_info.via->recvd_param);
+                   &rdata->pkt_info.via->src_name);
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
             res_addr->dst_host.addr.port = 
