@@ -199,7 +199,8 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
  * @see PJ_PERROR()
  */
 PJ_DECL(void) pj_perror(int log_level, const char *sender, pj_status_t status,
-                        const char *title_fmt, ...);
+                        const char *title_fmt, ...)
+                        PJ_PRINT_FUNC_DECOR(4);
 
 
 /**
