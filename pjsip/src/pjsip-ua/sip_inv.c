@@ -3957,9 +3957,11 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
                                            PJSIP_SC_INTERNAL_SERVER_ERROR,
                                            NULL, &tdata);
     
-        val = (pj_rand() % 10);
-        ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
-        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);
+        if (status == PJ_SUCCESS) {
+            val = (pj_rand() % 10);
+            ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);
+        }
 
     } else {
         /* We receive new offer from remote */
