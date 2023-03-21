@@ -2293,7 +2293,8 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 
     /* Get RTCP default address */
     if (tp_ice->use_rtcp_mux) {
-        pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, addr);
+        pj_sockaddr_cp(&info->sock_info.rtcp_addr_name,
+                       &info->sock_info.rtp_addr_name);
     } else if (tp_ice->comp_cnt > 1) {
         status = pj_ice_strans_get_def_cand(tp_ice->ice_st, 2, &cand);
         if (status != PJ_SUCCESS)
