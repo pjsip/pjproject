@@ -386,7 +386,7 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
             pjsip_dlg_dec_lock(inv->dlg);
 
             PJ_LOG(3, (obj_name,
-                       "Reschedule refresh request after %d seconds as "
+                       "Reschedule refresh request after %ld seconds as "
                        "there is another SDP negotiation in progress",
                        delay.sec));
             return;
@@ -423,7 +423,7 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
         pj_gettimeofday(&now);
         PJ_LOG(4, (obj_name,
-                   "Refreshing session after %ds (expiration period=%ds)",
+                   "Refreshing session after %lds (expiration period=%ds)",
                    (now.sec-inv->timer->last_refresh.sec),
                    inv->timer->setting.sess_expires));
     } else {
@@ -441,7 +441,7 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
         pj_gettimeofday(&now);
         PJ_LOG(3, (obj_name,
-                   "No session %s received after %ds "
+                   "No session %s received after %lds "
                    "(expiration period=%ds), stopping session now!",
                    (as_refresher?"refresh response":"refresh"),
                    (now.sec-inv->timer->last_refresh.sec),
@@ -1005,7 +1005,7 @@ PJ_DEF(pj_status_t)  pjsip_timer_handle_refresh_error(
 
             PJ_LOG(3, (inv->pool->obj_name, 
                         "Receive error %d for refresh request %.*s/cseq=%d",
-                        st_code, event->body.tsx_state.tsx->method.name.slen,
+                        st_code, (int)event->body.tsx_state.tsx->method.name.slen,
                         event->body.tsx_state.tsx->method.name.ptr,
                         event->body.tsx_state.tsx->cseq));
 
@@ -1014,7 +1014,7 @@ PJ_DEF(pj_status_t)  pjsip_timer_handle_refresh_error(
                 pj_time_val delay = {PJSIP_SESS_TIMER_RETRY_DELAY, 0};
 
                 PJ_LOG(3, (inv->pool->obj_name, "Scheduling to retry refresh "
-                           "request after %d second(s)", delay.sec));
+                           "request after %ld second(s)", delay.sec));
 
                 inv->timer->timer.id = 1;
                 pjsip_endpt_schedule_timer(inv->dlg->endpt,

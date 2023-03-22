@@ -2020,7 +2020,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
             err =pj_strerror((pj_status_t)-sent, errmsg, sizeof(errmsg));
 
             PJ_LOG(3,(tsx->obj_name,
-                      "Failed to send %s! err=%d (%s)",
+                      "Failed to send %s! err=%ld (%s)",
                       pjsip_tx_data_get_info(send_state->tdata), -sent,
                       errmsg));
 

@@ -1899,7 +1899,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
      */
     //pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
     if (pj_atomic_get(mgr->tdata_counter) != 0) {
-        PJ_LOG(3,(THIS_FILE, "Warning: %d transmit buffer(s) not freed!",
+        PJ_LOG(3,(THIS_FILE, "Warning: %ld transmit buffer(s) not freed!",
                   pj_atomic_get(mgr->tdata_counter)));
     }
 #endif
@@ -2089,7 +2089,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
              */
             if (tmp.slen) {
                 PJ_LOG(1, (THIS_FILE, 
-                      "Error processing %d bytes packet from %s %s:%d %.*s:\n"
+                      "Error processing %ld bytes packet from %s %s:%d %.*s:\n"
                       "%.*s\n"
                       "-- end of packet.",
                       msg_fragment_size,
@@ -2523,7 +2523,7 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
     pj_lock_acquire(mgr->lock);
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
-    PJ_LOG(3,(THIS_FILE, " Outstanding transmit buffers: %d",
+    PJ_LOG(3,(THIS_FILE, " Outstanding transmit buffers: %ld",
               pj_atomic_get(mgr->tdata_counter)));
 #endif
 
@@ -2551,7 +2551,7 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
                 do {
                     pjsip_transport *tp_ref = tp_iter->tp;
 
-                    PJ_LOG(3, (THIS_FILE, "  %s %s%s%s%s(refcnt=%d%s)",
+                    PJ_LOG(3, (THIS_FILE, "  %s %s%s%s%s(refcnt=%ld%s)",
                                tp_ref->obj_name,
                                tp_ref->info,
                                (tp_ref->factory)?" listener[":"",

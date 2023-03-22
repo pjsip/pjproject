@@ -1133,7 +1133,7 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 
     PJ_LOG(4,(listener->factory.obj_name, 
               "TCP listener %s: got incoming TCP connection "
-              "from %s, sock=%d",
+              "from %s, sock=%ld",
               pj_addr_str_print(&listener->factory.addr_name.host, 
                                 listener->factory.addr_name.port, addr_buf, 
                                 sizeof(addr_buf), 1),
@@ -1238,7 +1238,7 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
     if (bytes_sent <= 0) {
         pj_status_t status;
 
-        PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%d", 
+        PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld", 
                   bytes_sent));
 
         status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
@@ -1343,7 +1343,7 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
             /* Shutdown transport on closure/errors */
             if (size <= 0) {
 
-                PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%d", 
+                PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld", 
                           size));
 
                 if (status == PJ_SUCCESS) 

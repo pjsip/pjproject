@@ -480,7 +480,7 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
      *  transport layer. So don't try to access tp_info when the module
      *  has lower priority than transport layer.
      */
-    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:\n"
+    PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s %s:\n"
                          "%.*s\n"
                          "--end msg--",
                          (tdata->buf.cur - tdata->buf.start),
@@ -3858,7 +3858,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
     }
 
     PJ_PERROR(3,(THIS_FILE, status, "Listener %.*s restart",
-                 tp_info.info.slen, tp_info.info.ptr));
+                 (int)tp_info.info.slen, tp_info.info.ptr));
 
     if (status != PJ_SUCCESS && (restart_lis_delay > 0)) {
         /* Try restarting again, with delay. */
@@ -3867,7 +3867,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
                               restart_lis_delay);
 
         PJ_LOG(3,(THIS_FILE, "Retry listener %.*s restart in %d ms",
-                  tp_info.info.slen, tp_info.info.ptr, restart_lis_delay));
+                  (int)tp_info.info.slen, tp_info.info.ptr, restart_lis_delay));
 
         status = PJ_SUCCESS;
     } else {

@@ -878,7 +878,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     avg_detect = 1000000 / avg_detect;
 
     PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB detected in %d.%03ds (avg=%d msg detection/sec)", 
+              "    %u.%u MB detected in %ld.%03lds (avg=%d msg detection/sec)", 
               (unsigned)(var.detect_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_detect));
@@ -894,7 +894,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     avg_parse = 1000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB parsed in %d.%03ds (avg=%d msg parsing/sec)", 
+              "    %u.%u MB parsed in %ld.%03lds (avg=%d msg parsing/sec)", 
               (unsigned)(var.parse_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_parse));
@@ -910,7 +910,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     avg_print = 1000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB printed in %d.%03ds (avg=%d msg print/sec)", 
+              "    %u.%u MB printed in %ld.%03lds (avg=%d msg print/sec)", 
               (unsigned)(var.print_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_print));

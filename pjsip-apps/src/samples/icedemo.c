@@ -226,7 +226,7 @@ static void cb_on_rx_data(pj_ice_strans *ice_st,
     // Don't do this! It will ruin the packet buffer in case TCP is used!
     //((char*)pkt)[size] = '\0';
 
-    PJ_LOG(3,(THIS_FILE, "Component %d: received %d bytes data from %s: \"%.*s\"",
+    PJ_LOG(3,(THIS_FILE, "Component %d: received %ld bytes data from %s: \"%.*s\"",
               comp_id, size,
               pj_sockaddr_print(src_addr, ipstr, sizeof(ipstr), 3),
               (unsigned)size,

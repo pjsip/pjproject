@@ -529,7 +529,7 @@ static void set_timer( pjsip_evsub *sub, int timer_id,
                             pjsip_endpt_get_timer_heap(sub->endpt),
                             &sub->timer, &timeout, timer_id, sub->grp_lock);
 
-        PJ_LOG(5,(sub->obj_name, "Timer %s scheduled in %d seconds", 
+        PJ_LOG(5,(sub->obj_name, "Timer %s scheduled in %ld seconds", 
                   timer_names[sub->timer.id], timeout.sec));
     }
 }

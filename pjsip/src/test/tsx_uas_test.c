@@ -1300,7 +1300,7 @@ static int perform_test( char *target_uri, char *from_uri,
 
     /* Check tdata reference counter. */
     if (pj_atomic_get(tdata->ref_cnt) != 1) {
-        PJ_LOG(3,(THIS_FILE, "   Error: tdata reference counter is %d",
+        PJ_LOG(3,(THIS_FILE, "   Error: tdata reference counter is %ld",
                       pj_atomic_get(tdata->ref_cnt)));
         pjsip_tx_data_dec_ref(tdata);
         return -50;

@@ -787,7 +787,7 @@ static void parse_rtcp_bye(pjmedia_rtcp_session *sess,
 
     /* Just print RTCP BYE log */
     PJ_LOG(5, (sess->name, "Received RTCP BYE, reason: %.*s",
-               reason.slen, reason.ptr));
+               (int)reason.slen, reason.ptr));
 }
 
 

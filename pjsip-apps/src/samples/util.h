@@ -174,7 +174,7 @@ void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
         p = p->next;
     }
 
-    PJ_LOG(3, (app_name, "Total pool memory allocated=%d KB, used=%d KB",
+    PJ_LOG(3, (app_name, "Total pool memory allocated=%lu KB, used=%lu KB",
                total_alloc / 1000,
                total_used / 1000));
 #endif

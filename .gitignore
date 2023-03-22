@@ -2,6 +2,7 @@ pjlib/include/pj/config_site.h
 lib/
 bin/
 output/
+tmp/
 
 # VS stuff
 *.ncb
@@ -80,3 +81,7 @@ tests/fuzz/*.o
 */docs/xml/
 */docs/latex/
 */docs/*.tag
+
+# Coverity scan stuff
+cov-int/
+getversion.mak

@@ -795,7 +795,7 @@ static void call_on_state_changed( pjsip_inv_session *inv,
         t = call->connect_time;
         PJ_TIME_VAL_SUB(t, call->start_time);
 
-        PJ_LOG(3,(THIS_FILE, "Call #%d connected in %d ms", call->index,
+        PJ_LOG(3,(THIS_FILE, "Call #%d connected in %ld ms", call->index,
                   PJ_TIME_VAL_MSEC(t)));
 
         if (app.duration != 0) {
@@ -1977,7 +1977,7 @@ static pj_status_t logger_on_tx_msg(pjsip_tx_data *tdata)
      *  has lower priority than transport layer.
      */
 
-    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%d:\n"
+    PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s:%d:\n"
                          "%s\n"
                          "--end msg--",
                          (tdata->buf.cur - tdata->buf.start),

@@ -1375,7 +1375,7 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
                   "%.*s/%.*s",
                   tdata->obj_name,
                   (int)realm->slen, realm->ptr,
-                  hchal->scheme.slen, hchal->scheme.ptr));
+                  (int)hchal->scheme.slen, hchal->scheme.ptr));
         return PJSIP_ENOCREDENTIAL;
     }
 

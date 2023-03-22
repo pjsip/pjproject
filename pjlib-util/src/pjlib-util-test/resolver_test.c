@@ -368,7 +368,7 @@ static int server_thread(void *p)
             continue;
         }
 
-        PJ_LOG(5,(THIS_FILE, "Server %d processing packet", srv - &g_server[0]));
+        PJ_LOG(5,(THIS_FILE, "Server %ld processing packet", srv - &g_server[0]));
         srv->pkt_count++;
 
         rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);

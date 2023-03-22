@@ -180,7 +180,7 @@ static void tls_perror(const char *sender, const char *title,
                        pj_status_t status, pj_str_t *remote_name)
 {
     PJ_PERROR(3,(sender, status, "%s: [code=%d]%s%.*s", title, status,
-        remote_name ? " peer: " : "", remote_name ? remote_name->slen : 0,
+        remote_name ? " peer: " : "", remote_name ? (int)remote_name->slen : 0,
         remote_name ? remote_name->ptr : ""));
 }
 
@@ -1350,7 +1350,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
         if (new_ssock && accept_status == PJ_SUCCESS) {
             /* Close the SSL socket if the accept op is successful */
             PJ_LOG(4,(THIS_FILE,
-                      "Incoming TLS connection from %s (sock=%d) is discarded "
+                      "Incoming TLS connection from %s (sock=%p) is discarded "
                       "because listener is already destroyed",
                       pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
                       new_ssock));
@@ -1400,7 +1400,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
 
     PJ_LOG(4,(listener->factory.obj_name, 
               "TLS listener %s: got incoming TLS connection "
-              "from %s, sock=%d",
+              "from %s, sock=%p",
               pj_addr_str_print(&listener->factory.addr_name.host, 
                                 listener->factory.addr_name.port, addr_buf, 
                                 sizeof(addr_buf), 1),
@@ -1571,7 +1571,7 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
     if (bytes_sent <= 0) {
         pj_status_t status;
 
-        PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%d", 
+        PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%ld", 
                   bytes_sent));
 
         status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
@@ -1710,7 +1710,7 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
             /* Shutdown transport on closure/errors */
             if (size <= 0) {
 
-                PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%d", 
+                PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%ld", 
                           size));
 
                 if (status == PJ_SUCCESS) 

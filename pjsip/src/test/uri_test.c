@@ -998,7 +998,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_parse = 1000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE,
-              "    %u.%u MB of urls parsed in %d.%03ds (avg=%d urls/sec)",
+              "    %u.%u MB of urls parsed in %ld.%03lds (avg=%d urls/sec)",
               (unsigned)(var.parse_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_parse));
@@ -1017,7 +1017,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_print = 1000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE,
-              "    %u.%u MB of urls printed in %d.%03ds (avg=%d urls/sec)",
+              "    %u.%u MB of urls printed in %ld.%03lds (avg=%d urls/sec)",
               (unsigned)(var.print_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_print));
@@ -1036,7 +1036,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_cmp = 1000000 / avg_cmp;
 
     PJ_LOG(3,(THIS_FILE,
-              "    %u.%u MB of urls compared in %d.%03ds (avg=%d urls/sec)",
+              "    %u.%u MB of urls compared in %ld.%03lds (avg=%d urls/sec)",
               (unsigned)(var.cmp_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_cmp));

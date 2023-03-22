@@ -1026,7 +1026,7 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
             char peer_addr[80];
             pj_sockaddr_print(src_addr, peer_addr, sizeof(peer_addr), 3);
             PJ_LOG(4,(alloc->obj_name, "Client %s: discarded data from %s "
-                      "because it's too long (%d bytes)",
+                      "because it's too long (%ld bytes)",
                       alloc->info, peer_addr, len));
             return;
         }

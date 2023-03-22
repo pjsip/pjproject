@@ -625,7 +625,7 @@ static pj_status_t logger_on_tx_msg(pjsip_tx_data *tdata)
      *  has lower priority than transport layer.
      */
 
-    PJ_LOG(3,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
+    PJ_LOG(3,(THIS_FILE, "TX %ld bytes %s to %s %s:%d:\n"
                          "%.*s\n"
                          "--end msg--",
                          (tdata->buf.cur - tdata->buf.start),
@@ -900,7 +900,7 @@ static void destroy_app()
     if (app.pool) {
         pj_pool_release(app.pool);
         app.pool = NULL;
-        PJ_LOG(3,(THIS_FILE, "Peak memory size: %uMB",
+        PJ_LOG(3,(THIS_FILE, "Peak memory size: %luMB",
                              app.cp.peak_used_size / 1000000));
         pj_caching_pool_destroy(&app.cp);
     }

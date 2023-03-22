@@ -1675,7 +1675,7 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
             }
         }
 
-        LOG5((ice->obj_name, "Check %d is successful%s",
+        LOG5((ice->obj_name, "Check %ld is successful%s",
              GET_CHECK_ID(&ice->clist, check),
              (check->nominated ? " and nominated" : "")));
 

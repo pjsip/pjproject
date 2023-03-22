@@ -240,7 +240,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
     }
     if (pj_stricmp2(&token, "inline")) {
         PJ_LOG(4,(THIS_FILE, "Attribute crypto key method '%.*s' "
-                  "not supported!", token.slen, token.ptr));
+                  "not supported!", (int)token.slen, token.ptr));
         return PJMEDIA_SDP_EINATTR;
     }
 

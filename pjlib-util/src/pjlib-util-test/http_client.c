@@ -153,7 +153,7 @@ static void on_data_read(pj_http_req *hreq, void *data, pj_size_t size)
     PJ_UNUSED_ARG(hreq);
     PJ_UNUSED_ARG(data);
 
-    PJ_LOG(5, (THIS_FILE, "\nData received: %d bytes", size));
+    PJ_LOG(5, (THIS_FILE, "\nData received: %ld bytes", size));
     if (size > 0) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)size, (char *)data);
@@ -180,7 +180,7 @@ static void on_send_data(pj_http_req *hreq,
     *data = sdata;
     *size = sendsz;
 
-    PJ_LOG(5, (THIS_FILE, "\nSending data progress: %d out of %d bytes", 
+    PJ_LOG(5, (THIS_FILE, "\nSending data progress: %ld out of %ld bytes", 
            send_size, total_size));
 }
 
@@ -200,7 +200,7 @@ static void on_complete(pj_http_req *hreq, pj_status_t status,
         PJ_LOG(3, (THIS_FILE, "Error %d", status));
         return;
     }
-    PJ_LOG(5, (THIS_FILE, "\nData completed: %d bytes", resp->size));
+    PJ_LOG(5, (THIS_FILE, "\nData completed: %ld bytes", resp->size));
     if (resp->size > 0 && resp->data) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)resp->size, (char *)resp->data);

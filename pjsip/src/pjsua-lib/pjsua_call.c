@@ -1088,7 +1088,7 @@ static pj_status_t process_incoming_call_replace(pjsua_call *call,
             pj_str_t *text = &replaced_call->last_text;
 
             PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with %d/%.*s",
-                                 call->index, code, text->slen, text->ptr));
+                                 call->index, code, (int)text->slen, text->ptr));
 
             /* Answer the new call with last response in the replaced call */
             status = pjsip_inv_answer(call->inv, code, text, NULL, &tdata);

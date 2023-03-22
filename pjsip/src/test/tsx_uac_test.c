@@ -609,7 +609,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
             msg->line.req.method.id != PJSIP_OPTIONS_METHOD)
         {
             PJ_LOG(3,(THIS_FILE, "    error: received unexpected method %.*s",
-                          msg->line.req.method.name.slen,
+                          (int)msg->line.req.method.name.slen,
                           msg->line.req.method.name.ptr));
             test_complete = -600;
             return PJ_TRUE;
@@ -1069,7 +1069,7 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
 
     /* Check tdata reference counter. */
     if (pj_atomic_get(tdata->ref_cnt) != 1) {
-        PJ_LOG(3,(THIS_FILE, "   Error: tdata reference counter is %d",
+        PJ_LOG(3,(THIS_FILE, "   Error: tdata reference counter is %ld",
                       pj_atomic_get(tdata->ref_cnt)));
         pjsip_tx_data_dec_ref(tdata);
         return -150;

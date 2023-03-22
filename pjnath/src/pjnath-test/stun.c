@@ -615,7 +615,7 @@ static int fingerprint_test_vector()
         char print[1500];
         pj_str_t key;
 
-        PJ_LOG(3,(THIS_FILE, "    Running test %d/%d", i, 
+        PJ_LOG(3,(THIS_FILE, "    Running test %d/%lu", i, 
                   PJ_ARRAY_SIZE(test_vectors)));
 
         v = &test_vectors[i];

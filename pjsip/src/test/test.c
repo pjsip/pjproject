@@ -353,7 +353,7 @@ int test_main(char *testlist)
         return rc;
     }
 
-    PJ_LOG(3,(THIS_FILE,""));
+    PJ_LOG(3,(THIS_FILE," "));
 
     /* Init logger module. */
     init_msg_logger();
@@ -495,13 +495,13 @@ on_return:
     pj_log_set_level(4);
 
     /* Dumping memory pool usage */
-    PJ_LOG(3,(THIS_FILE, "Peak memory size=%u MB",
+    PJ_LOG(3,(THIS_FILE, "Peak memory size=%lu MB",
                          caching_pool.peak_used_size / 1000000));
 
     pjsip_endpt_destroy(endpt);
     pj_caching_pool_destroy(&caching_pool);
 
-    PJ_LOG(3,(THIS_FILE, ""));
+    PJ_LOG(3,(THIS_FILE, " "));
  
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
     PJ_LOG(3,(THIS_FILE, "Stack max usage: %u, deepest: %s:%u", 

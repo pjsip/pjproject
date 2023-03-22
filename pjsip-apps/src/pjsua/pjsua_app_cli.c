@@ -2542,9 +2542,9 @@ static pj_status_t cmd_vid_conf_list()
                             (int)info.name.slen, info.name.ptr,
                             22-(int)info.name.slen, "                   ",
                             s,
-                            20-pj_ansi_strlen(s), "                    ",
+                            20-(int)pj_ansi_strlen(s), "                    ",
                             tr_list,
-                            12-pj_ansi_strlen(tr_list), "            ",
+                            12-(int)pj_ansi_strlen(tr_list), "            ",
                             li_list));
     }
     return PJ_SUCCESS;

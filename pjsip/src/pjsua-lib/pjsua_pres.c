@@ -1085,7 +1085,7 @@ PJ_DEF(pj_status_t) pjsua_pres_notify( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
 
     PJ_LOG(4,(THIS_FILE, "Acc %d: sending NOTIFY for srv_pres=0x%p..",
-              acc_id, (int)(pj_ssize_t)srv_pres));
+              acc_id, srv_pres));
     pj_log_push_indent();
 
     PJSUA_LOCK();

@@ -753,7 +753,7 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     }
 
     PJ_LOG (5,(THIS_FILE, "Opened device alsa(%s) for playing, sample rate=%d"
-               ", ch=%d, bits=%d, period size=%d frames, latency=%d ms",
+               ", ch=%d, bits=%d, period size=%ld frames, latency=%d ms",
                stream->af->devs[param->play_id].name,
                rate, param->channel_count,
                param->bits_per_sample, stream->pb_frames,
@@ -891,7 +891,7 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     }
 
     PJ_LOG (5,(THIS_FILE, "Opened device alsa(%s) for capture, sample rate=%d"
-               ", ch=%d, bits=%d, period size=%d frames, latency=%d ms",
+               ", ch=%d, bits=%d, period size=%ld frames, latency=%d ms",
                stream->af->devs[param->rec_id].name,
                rate, param->channel_count,
                param->bits_per_sample, stream->ca_frames,
