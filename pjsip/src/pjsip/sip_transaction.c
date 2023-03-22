@@ -3093,10 +3093,14 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
         tsx_cancel_timer( tsx, &tsx->timeout_timer );
         unlock_timer(tsx);
 
-        /* For INVITE, the state moves to Terminated state (because ACK is
-         * handled in TU). For non-INVITE, state moves to Completed.
+        /* For INVITE and BYE, the state moves to Terminated state.
+         * For INVITE it is because ACK is handled in TU.
+         * For BYE it is because ACK should not be sent as response on 200 OK.
+         * For other methods, state moves to Completed.
          */
-        if (tsx->method.id == PJSIP_INVITE_METHOD) {
+        if (tsx->method.id == PJSIP_INVITE_METHOD ||
+            tsx->method.id == PJSIP_BYE_METHOD)
+        {
             tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
                            PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata, 0 );
             //return PJSIP_ETSXDESTROYED;
