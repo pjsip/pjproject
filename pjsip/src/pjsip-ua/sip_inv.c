@@ -5052,6 +5052,42 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
             pj_assert(!"Unexpected INVITE tsx state");
             break;
         }
+    } else if (tsx->method.id == PJSIP_INVITE_METHOD &&
+               tsx->role == PJSIP_ROLE_UAS &&
+               tsx->state == PJSIP_TSX_STATE_TRYING)
+    {
+        /* Handle incoming second INVITE. See RFC 3261 section 14.2. */
+        pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+        pjsip_tx_data *tdata;
+        pj_status_t status;
+        int code;
+        const pj_str_t *reason;
+
+        if (inv->invite_tsx->role == PJSIP_ROLE_UAC)
+            code = PJSIP_SC_REQUEST_PENDING;
+        else
+            code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+
+        reason = pjsip_get_status_text(code);
+
+        /* Can not receive second INVITE while another one is pending. */
+        status = pjsip_dlg_create_response( inv->dlg, rdata, code,
+                                            reason, &tdata);
+        if (status != PJ_SUCCESS)
+            return;
+
+        if (code == PJSIP_SC_INTERNAL_SERVER_ERROR) {
+            /* MUST include Retry-After header with random value
+             * between 0-10.
+             */
+            pjsip_retry_after_hdr *ra_hdr;
+            int val = (pj_rand() % 10);
+
+            ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);
+        }
+
+        pjsip_dlg_send_response( inv->dlg, tsx, tdata);
 
     } else if (inv->role == PJSIP_ROLE_UAS &&
                tsx->role == PJSIP_ROLE_UAS &&
