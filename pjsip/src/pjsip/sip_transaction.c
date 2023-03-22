@@ -2665,11 +2665,6 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
             }
 
         } else {
-            /* Cancel retransmit timer (for non-INVITE transaction, the
-             * retransmit timer will be rescheduled at T2.
-             */
-            tsx_cancel_timer(tsx, &tsx->retransmit_timer);
-
             /* For provisional response, only cancel retransmit when this
              * is an INVITE transaction. For non-INVITE, section 17.1.2.1
              * of RFC 3261 says that:
@@ -2678,6 +2673,8 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
              */
             if (tsx->method.id == PJSIP_INVITE_METHOD) {
 
+                tsx_cancel_timer(tsx, &tsx->retransmit_timer);
+
                 /* Cancel timeout timer */
                 lock_timer(tsx);
                 tsx_cancel_timer(tsx, &tsx->timeout_timer);
@@ -2685,6 +2682,7 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 
             } else {
                 if (!tsx->is_reliable) {
+                    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
                     tsx_schedule_timer(tsx, &tsx->retransmit_timer,
                                        &t2_timer_val, RETRANSMIT_TIMER);
                 }
