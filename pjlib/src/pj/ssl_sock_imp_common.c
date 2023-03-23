@@ -745,17 +745,12 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
 
             status_ = ssl_read(ssock, data_, &size_);
 
-            if (size_ > 0 || status_ != PJ_SUCCESS) {
+            if (size_ > 0) {
                 if (ssock->param.cb.on_data_read) {
                     pj_bool_t ret;
                     pj_size_t remainder_ = 0;
 
-                    if (size_ > 0)
-                        buf->len += size_;
-                
-                    if (status_ != PJ_SUCCESS) {
-                        ssock->ssl_state = SSL_STATE_ERROR;
-                    }
+                    buf->len += size_;
 
                     ret = (*ssock->param.cb.on_data_read)(ssock, buf->data,
                                                           buf->len, status,
@@ -775,7 +770,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                  * been signalled to the application along with any remaining
                  * buffer. So, let's just reset SSL socket now.
                  */
-                if (status_ != PJ_SUCCESS) {
+                if (status != PJ_SUCCESS) {
                     ssl_reset_sock_state(ssock);
                     return PJ_FALSE;
                 }
