@@ -85,7 +85,8 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
         PJ_UNUSED_ARG(ca_err);
         // TODO: create more helpful error messages
         errstr.ptr = buf;
-        pj_strcpy2(&errstr, "Core audio error");
+        pj_str_t msg = pj_str("Core audio error");
+        pj_strncpy_with_null(&errstr, &msg, bufsize);
         return errstr;
     } else
 #endif
