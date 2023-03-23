@@ -1331,7 +1331,7 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
 #if PJ_TIMER_DEBUG
     pj_timer_heap_dump(endpt->timer_heap);
 #else
-    PJ_LOG(3,(THIS_FILE, " Timer heap has %u entries", 
+    PJ_LOG(3,(THIS_FILE, " Timer heap has %lu entries",
                         pj_timer_heap_count(endpt->timer_heap)));
 #endif
 

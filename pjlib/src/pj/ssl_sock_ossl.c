@@ -2366,13 +2366,13 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
             PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
                        "timeout=%ld",
-                       SSL_session_reused(ossock->ossl_ssl),
+                       (int)SSL_session_reused(ossock->ossl_ssl),
                        SSL_SESSION_is_resumable(sess),
                        SSL_SESSION_get_timeout(sess)));
 #else
             PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
                        "timeout=%ld",
-                       SSL_session_reused(ossock->ossl_ssl),
+                       (int)SSL_session_reused(ossock->ossl_ssl),
                        -1,
                        SSL_SESSION_get_timeout(sess)));
 #endif
