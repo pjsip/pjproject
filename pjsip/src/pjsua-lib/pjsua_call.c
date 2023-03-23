@@ -1132,7 +1132,7 @@ static void process_pending_call_answer(pjsua_call *call)
     struct call_answer *answer, *next;
 
     /* No initial answer yet, this function should be called again later */
-    if (!call->inv->last_answer)
+    if (call->inv && !call->inv->last_answer)
         return;
 
     answer = call->async_call.call_var.inc_call.answers.next;
@@ -1254,8 +1254,6 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
         } else {
             m = pjmedia_sdp_media_clone_deactivate(pool, rem_sdp->media[i]);
         }
-        if (status != PJ_SUCCESS)
-            return status;
 
         /* Add connection line, if none */
         if (m->conn == NULL && sdp->conn == NULL) {
@@ -1915,7 +1913,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                 pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
             }
                 
-            if (call->inv && call->inv->dlg) {
+            if (call->inv->dlg) {
                 pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
             }
             pjsip_dlg_dec_lock(dlg);
@@ -1961,7 +1959,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                                       NULL);
                 }               
 
-                if (call->inv && call->inv->dlg) {
+                if (call->inv->dlg) {
                     pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
                 }
                 pjsip_dlg_dec_lock(dlg);
@@ -1975,7 +1973,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
             
             pjsip_dlg_inc_lock(dlg);
             pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
-            if (call->inv && call->inv->dlg) {
+            if (call->inv->dlg) {
                 pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
             }
             pjsip_dlg_dec_lock(dlg);
@@ -3653,7 +3651,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
     return status;
 
 on_error:
-    if (dest_dlg) pjsip_dlg_dec_lock(dest_dlg);
+    pjsip_dlg_dec_lock(dest_dlg);
     pj_log_pop_indent();
     return status;
 }
@@ -6259,7 +6257,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
             if (im_data) {
                 pj_str_t im_body = im_data->body;
-                if (im_body.slen==0) {
+                if (im_body.slen==0 && tsx->last_tx) {
                     pjsip_msg_body *body = tsx->last_tx->msg->body;
                     pj_strset(&im_body, body->data, body->len);
                 }
