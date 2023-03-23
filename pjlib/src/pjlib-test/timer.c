@@ -334,7 +334,7 @@ static int stress_worker(void *arg)
         idx = pj_rand() % ST_ENTRY_COUNT;
         prev_status = pj_atomic_get(tparam->status[idx]);
         if (task == SCHEDULING) {
-            if (prev_status != 0) continue;
+            //if (prev_status != 0) continue;
             status = st_schedule_entry(tparam->timer, &tparam->entries[idx]);
             if (prev_status == 0 && status != PJ_SUCCESS) {
                 /* To make sure the flag has been set. */

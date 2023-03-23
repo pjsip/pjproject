@@ -794,14 +794,16 @@ PJ_DEF(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
         ixmlDocument_free(action);
         if (response) ixmlDocument_free(response);
         
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
         pj_sockaddr_cp(&mapped_addr[i], &bound_addr);
         status = pj_sockaddr_set_str_addr(bound_addr.addr.sa_family,
                                           &mapped_addr[i], &igd->public_ip);
-        pj_sockaddr_set_port(&mapped_addr[i],
-                             (pj_uint16_t)(ext_port? ext_port[i]: int_port));
-
         if (status != PJ_SUCCESS)
             goto on_error;
+        pj_sockaddr_set_port(&mapped_addr[i],
+                             (pj_uint16_t)(ext_port? ext_port[i]: int_port));
 
         PJ_LOG(4, (THIS_FILE, "Successfully add port mapping to IGD %s: "
                               "%s:%s -> %s:%s", igd->dev_id.ptr,

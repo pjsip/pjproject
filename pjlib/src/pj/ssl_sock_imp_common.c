@@ -736,7 +736,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
     }
 
     /* See if there is any decrypted data for the application */
-    if (ssock->read_started) {
+    if (data && ssock->read_started) {
         do {
             read_data_t *buf = *(OFFSET_OF_READ_DATA_PTR(ssock, data));
             void *data_ = (pj_int8_t*)buf->data + buf->len;
@@ -745,7 +745,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
 
             status_ = ssl_read(ssock, data_, &size_);
 
-            if (size_ > 0 || status != PJ_SUCCESS) {
+            if (size_ > 0 || status_ != PJ_SUCCESS) {
                 if (ssock->param.cb.on_data_read) {
                     pj_bool_t ret;
                     pj_size_t remainder_ = 0;
@@ -753,7 +753,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                     if (size_ > 0)
                         buf->len += size_;
                 
-                    if (status != PJ_SUCCESS) {
+                    if (status_ != PJ_SUCCESS) {
                         ssock->ssl_state = SSL_STATE_ERROR;
                     }
 
@@ -775,7 +775,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                  * been signalled to the application along with any remaining
                  * buffer. So, let's just reset SSL socket now.
                  */
-                if (status != PJ_SUCCESS) {
+                if (status_ != PJ_SUCCESS) {
                     ssl_reset_sock_state(ssock);
                     return PJ_FALSE;
                 }
