@@ -117,7 +117,8 @@ PJ_DECL(pj_status_t) pjsip_multipart_add_part(pj_pool_t *pool,
  * @param mp            The multipart bodies.
  *
  * @return              The first part, or NULL if the multipart
- *                      bodies currently doesn't hold any elements.
+ *                      bodies currently doesn't hold any elements
+ *                      or mp doesn't point to multipart bodies.
  */
 PJ_DECL(pjsip_multipart_part*)
 pjsip_multipart_get_first_part(const pjsip_msg_body *mp);
