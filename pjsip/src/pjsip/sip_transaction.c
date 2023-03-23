@@ -3220,6 +3220,21 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
             status = tsx_send_msg( tsx, ack_tdata);
             if (status != PJ_SUCCESS)
                 return status;
+
+        } else if ((tsx->method.id == PJSIP_BYE_METHOD) &&
+                   (tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
+                    tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST))
+        {
+            /* RFC 3261 15.1.1:
+             * If the response for the BYE is a 481 (Call/Transaction Does
+             * Not Exist) or a 408 (Request Timeout) or no response at all
+             * is received for the BYE (that is, a timeout is returned by
+             * the client transaction), the UAC MUST consider the
+             * session and the dialog terminated.
+             */
+            tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
+                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata, 0 );
+            return PJ_SUCCESS;
         }
 
         /* Inform TU. */
