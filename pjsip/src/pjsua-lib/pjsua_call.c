@@ -601,11 +601,9 @@ on_error:
         (*pjsua_var.ua_cfg.cb.on_call_state)(call_id, &user_event);
     }
 
-    if (dlg) {
-        /* This may destroy the dialog */
-        pjsip_dlg_dec_lock(dlg);
-        call->async_call.dlg = NULL;
-    }
+    /* This may destroy the dialog */
+    pjsip_dlg_dec_lock(dlg);
+    call->async_call.dlg = NULL;
 
     if (inv != NULL) {
         pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
@@ -697,10 +695,11 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     /* If call is established or media channel hasn't been initialized,
      * reinit media channel.
      */
-    if ((call->inv && call->inv->state == PJSIP_INV_STATE_CONNECTING &&
-         call->med_cnt == 0) ||
-        (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) ||
-        (call->opt.flag & PJSUA_CALL_REINIT_MEDIA))
+    if (call-> inv &&
+        ((call->inv->state == PJSIP_INV_STATE_CONNECTING &&
+          call->med_cnt == 0) ||
+         (call->inv->state == PJSIP_INV_STATE_CONFIRMED) ||
+         (call->opt.flag & PJSUA_CALL_REINIT_MEDIA)))
     {
         pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
         pj_status_t status;

@@ -2479,7 +2479,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         call->med_ch_cb = cb;
     }
 
-    if (rem_sdp) {
+    if (rem_sdp && call->inv) {
         call->async_call.rem_sdp =
             pjmedia_sdp_session_clone(call->inv->pool_prov, rem_sdp);
     } else {
