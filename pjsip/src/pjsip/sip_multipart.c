@@ -341,10 +341,12 @@ pjsip_multipart_get_first_part(const pjsip_msg_body *mp)
     struct multipart_data *m_data;
 
     /* Must specify mandatory params */
-    PJ_ASSERT_RETURN(mp, NULL);
+    if (!mp)
+        return NULL;
 
     /* mp must really point to an actual multipart msg body */
-    PJ_ASSERT_RETURN(mp->print_body==&multipart_print_body, NULL);
+    if (mp->print_body!=&multipart_print_body)
+        return NULL;
 
     m_data = (struct multipart_data*)mp->data;
     if (pj_list_empty(&m_data->part_head))
