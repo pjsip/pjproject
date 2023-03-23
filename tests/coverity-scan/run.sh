@@ -96,8 +96,24 @@ pushd pjlib/include/pj
 cp -f config_site_test.h config_site.h
 cat << EOF >> config_site.h
 
-#define PJMEDIA_HAS_VIDEO 1
+/* Enable additional features (by tests/coverity-scan/run.sh) */
+#define PJ_HAS_IPV6                  1
+#define PJ_HAS_SSL_SOCK              1
+#define PJ_TIMER_DEBUG               0
 #define PJ_TODO(x)
+
+#define PJMEDIA_HAS_VIDEO            1
+#define PJMEDIA_RTCP_STAT_HAS_IPDV   1
+#define PJMEDIA_HAS_RTCP_XR          1
+#define PJMEDIA_STREAM_ENABLE_XR     1
+#define PJMEDIA_SRTP_HAS_DTLS        1
+#define PJMEDIA_SRTP_HAS_AES_CM_192  1
+#define PJMEDIA_SRTP_HAS_AES_GCM_256 1
+#define PJMEDIA_SRTP_HAS_AES_GCM_128 1
+#define PJMEDIA_STREAM_ENABLE_KA     2
+
+#define PJSIP_CHECK_VIA_SENT_BY      1
+
 EOF
 popd
 

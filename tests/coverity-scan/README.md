@@ -22,12 +22,22 @@ Run the next steps **inside Docker Ubuntu terminal**
    $ cd
    $ git clone https://github.com/pjsip/pjproject.git
    ```
-5. Set Coverity Scan token:
+5. (For now) Switch to `coverity01` branch:
+
+   ```
+   $ git checkout coverity01
+   ```
+6. Get latest version
+
+   ```
+   $ git pull
+   ```
+7. Set Coverity Scan token (from [this page](https://scan.coverity.com/projects/pjsip?tab=project_settings)):
 
    ```
    $ export COV_TOKEN=....
    ```
-6. Run the scan and upload the result (run `run.sh -t` to skip uploading, `-h` to get some help):
+8. Run the scan and upload the result (run `run.sh -t` to skip uploading, `-h` to get some help):
 
    ```
    $ cd pjproject
