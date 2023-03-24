@@ -329,7 +329,8 @@ PJ_DEF(pj_status_t) pjsip_transport_register_type( unsigned tp_flag,
     }
 
     transport_names[i].port = (pj_uint16_t)def_port;
-    pj_ansi_strcpy(transport_names[i].name_buf, tp_name);
+    pj_ansi_strxcpy(transport_names[i].name_buf, tp_name,
+                    sizeof(transport_names[i].name_buf));
     transport_names[i].name = pj_str(transport_names[i].name_buf);
     transport_names[i].flag = tp_flag;
 
@@ -754,7 +755,7 @@ PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
     if (rdata->msg_info.info)
         return rdata->msg_info.info;
 
-    pj_ansi_strcpy(obj_name, "rdata");
+    pj_ansi_strxcpy(obj_name, "rdata", sizeof(obj_name));
     pj_ansi_snprintf(obj_name+5, sizeof(obj_name)-5, "%p", rdata);
 
     rdata->msg_info.info = get_msg_info(rdata->tp_info.pool, obj_name,

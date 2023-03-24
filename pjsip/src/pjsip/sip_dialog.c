@@ -408,8 +408,9 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
                           dlg->local.info->uri, tmp.ptr, TMP_LEN);
     if (len < 1) {
-        pj_ansi_strcpy(tmp.ptr, "<-error: uri too long->");
-        tmp.slen = pj_ansi_strlen(tmp.ptr);
+        tmp.slen=pj_ansi_strxcpy(tmp.ptr, "<-error: uri too long->", TMP_LEN);
+        if (tmp.slen < 0)
+            tmp.slen = pj_ansi_strlen(tmp.ptr);
     } else
         tmp.slen = len;
 
@@ -459,8 +460,9 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
                           dlg->remote.info->uri, tmp.ptr, TMP_LEN);
     if (len < 1) {
-        pj_ansi_strcpy(tmp.ptr, "<-error: uri too long->");
-        tmp.slen = pj_ansi_strlen(tmp.ptr);
+        tmp.slen=pj_ansi_strxcpy(tmp.ptr, "<-error: uri too long->", TMP_LEN);
+        if (tmp.slen<0)
+            tmp.slen = pj_ansi_strlen(tmp.ptr);
     } else
         tmp.slen = len;
 

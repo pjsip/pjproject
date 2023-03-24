@@ -281,8 +281,8 @@ static void reset_dev_info(struct avi_dev_info *adi)
     pj_bzero(adi, sizeof(*adi));
 
     /* Fill up with *dummy" device info */
-    pj_ansi_strncpy(adi->info.name, "AVI Player", sizeof(adi->info.name));
-    pj_ansi_strncpy(adi->info.driver, DRIVER_NAME, 
+    pj_ansi_strxcpy(adi->info.name, "AVI Player", sizeof(adi->info.name));
+    pj_ansi_strxcpy(adi->info.driver, DRIVER_NAME, 
                          sizeof(adi->info.driver));
     adi->info.dir = PJMEDIA_DIR_CAPTURE;
     adi->info.has_callback = PJ_FALSE;
@@ -488,9 +488,9 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
     }
 
     /* Init device info */
-    pj_ansi_strncpy(adi->info.name, adi->title.ptr, 
+    pj_ansi_strxcpy(adi->info.name, adi->title.ptr, 
                          sizeof(adi->info.name));
-    pj_ansi_strncpy(adi->info.driver, DRIVER_NAME, 
+    pj_ansi_strxcpy(adi->info.driver, DRIVER_NAME, 
                          sizeof(adi->info.driver));
     adi->info.dir = PJMEDIA_DIR_CAPTURE;
     adi->info.has_callback = PJ_FALSE;

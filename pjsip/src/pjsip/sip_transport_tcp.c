@@ -399,9 +399,11 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     pj_memcpy(&listener->sockopt_params, &cfg->sockopt_params,
               sizeof(cfg->sockopt_params));
 
-    pj_ansi_strcpy(listener->factory.obj_name, "tcptp");
+    pj_ansi_strxcpy(listener->factory.obj_name, "tcptp", 
+                    sizeof(listener->factory.obj_name));
     if (listener->factory.type==PJSIP_TRANSPORT_TCP6)
-        pj_ansi_strcat(listener->factory.obj_name, "6");
+        pj_ansi_strxcat(listener->factory.obj_name, "6",
+                        sizeof(listener->factory.obj_name));
 
     status = pj_lock_create_recursive_mutex(pool, listener->factory.obj_name,
                                             &listener->factory.lock);

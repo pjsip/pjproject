@@ -285,7 +285,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     tp_ice->pool = pool;
     tp_ice->options = options;
     tp_ice->comp_cnt = comp_cnt;
-    pj_ansi_strcpy(tp_ice->base.name, pool->obj_name);
+    pj_ansi_strxcpy(tp_ice->base.name, pool->obj_name, 
+                    sizeof(tp_ice->base.name));
     tp_ice->base.op = &transport_ice_op;
     tp_ice->base.type = PJMEDIA_TRANSPORT_TYPE_ICE;
     tp_ice->base.user_data = user_data;

@@ -1269,7 +1269,7 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
     if (len < (int)sizeof(newformat)-30) {
         pj_str_t errstr;
 
-        pj_ansi_strcpy(newformat, format);
+        pj_ansi_strxcpy(newformat, format, sizeof(newformat));
         pj_ansi_snprintf(newformat+len, sizeof(newformat)-len-1,
                          ": [err %d] ", error_code);
         len += pj_ansi_strlen(newformat+len);

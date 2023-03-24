@@ -574,9 +574,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                 pjsip_transport_get_flag_from_type(listener->factory.type);
     listener->endpt = endpt;
 
-    pj_ansi_strcpy(listener->factory.obj_name, "tlstp");
+    pj_ansi_strxcpy(listener->factory.obj_name, "tlstp",
+                    sizeof(listener->factory.obj_name));
     if (is_ipv6)
-        pj_ansi_strcat(listener->factory.obj_name, "6");
+        pj_ansi_strxcat(listener->factory.obj_name, "6",
+                        sizeof(listener->factory.obj_name));
 
     if (opt)
         pjsip_tls_setting_copy(pool, &listener->tls_setting, opt);

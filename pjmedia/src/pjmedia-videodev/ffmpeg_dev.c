@@ -467,7 +467,7 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
 
             info = &ff->dev_info[ff->dev_count++];
             pj_bzero(info, sizeof(*info));
-            pj_ansi_strncpy(info->base.name, "default", 
+            pj_ansi_strxcpy(info->base.name, "default", 
                                  sizeof(info->base.name));
             pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
                              "ffmpeg %s", p->name);

@@ -258,7 +258,7 @@ static pj_status_t add_dev (struct alsa_factory *af, const char *dev_name)
     pj_bzero(adi, sizeof(*adi));
 
     /* Set device name */
-    pj_ansi_strncpy(adi->name, dev_name, sizeof(adi->name));
+    pj_ansi_strxcpy(adi->name, dev_name, sizeof(adi->name));
 
     /* Check the number of playback channels */
     adi->output_count = (pb_result>=0) ? 1 : 0;
@@ -270,7 +270,7 @@ static pj_status_t add_dev (struct alsa_factory *af, const char *dev_name)
     adi->default_samples_per_sec = 8000;
 
     /* Driver name */
-    strcpy(adi->driver, "ALSA");
+    pj_ansi_strxcpy(adi->driver, "ALSA", sizeof(adi->driver));
 
     ++af->dev_cnt;
 
@@ -311,14 +311,14 @@ static void get_mixer_name(struct alsa_factory *af)
         {
             if (snd_mixer_selem_has_playback_volume(elem))
             {
-                pj_ansi_strncpy(af->pb_mixer_name, elemname,
+                pj_ansi_strxcpy(af->pb_mixer_name, elemname,
                                      sizeof(af->pb_mixer_name));
                 TRACE_((THIS_FILE, "Playback mixer name: %s",
                         af->pb_mixer_name));
             }
             if (snd_mixer_selem_has_capture_volume(elem))
             {
-                pj_ansi_strncpy(af->cap_mixer_name, elemname,
+                pj_ansi_strxcpy(af->cap_mixer_name, elemname,
                                      sizeof(af->cap_mixer_name));
                 TRACE_((THIS_FILE, "Capture mixer name: %s",
                         af->cap_mixer_name));

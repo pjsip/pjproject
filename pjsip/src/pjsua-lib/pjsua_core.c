@@ -2556,7 +2556,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
         if (status != PJ_SUCCESS)
             goto on_return;
 
-        pj_ansi_strncpy(hostbuf, addr_string(&pub_addr), sizeof(hostbuf));
+        pj_ansi_strxcpy(hostbuf, addr_string(&pub_addr), sizeof(hostbuf));
         addr_name.host = pj_str(hostbuf);
         addr_name.port = pj_sockaddr_get_port(&pub_addr);
 
@@ -3306,7 +3306,7 @@ PJ_DEF(pj_status_t) pjsua_verify_url(const char *c_url)
     if (!pool) return PJ_ENOMEM;
 
     url = (char*) pj_pool_alloc(pool, len+1);
-    pj_ansi_strcpy(url, c_url);
+    pj_ansi_strxcpy(url, c_url, len+1);
 
     p = pjsip_parse_uri(pool, url, len, 0);
 
@@ -3330,7 +3330,7 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     if (!pool) return PJ_ENOMEM;
 
     url = (char*) pj_pool_alloc(pool, len+1);
-    pj_ansi_strcpy(url, c_url);
+    pj_ansi_strxcpy(url, c_url, len+1);
 
     p = pjsip_parse_uri(pool, url, len, 0);
     if (!p || (pj_stricmp2(pjsip_uri_get_scheme(p), "sip") != 0 &&
@@ -3758,7 +3758,7 @@ static pj_status_t handle_ip_change_on_acc()
                     if (pj_ansi_strlen(acc_id) + pj_ansi_strlen(tmp_buf) <
                         sizeof(acc_id))
                     {
-                        pj_ansi_strcat(acc_id, tmp_buf);
+                        pj_ansi_strxcat(acc_id, tmp_buf, sizeof(acc_id));
                     }
 
                     shut_acc_ids[shut_acc_cnt++] = j;

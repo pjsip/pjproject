@@ -467,7 +467,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
         for (j=0; j<info.listener_cnt; ++j) {
             char s[10];
             pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
         }
 
         len = pj_ansi_snprintf(desc,
@@ -1255,7 +1255,7 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
         for (j=0; j<info.listener_cnt; ++j) {
             char s[10];
             pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
         }
         pj_ansi_snprintf(out_str,
                sizeof(out_str),
@@ -2524,14 +2524,14 @@ static pj_status_t cmd_vid_conf_list()
             pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
                              info.listeners[j],
                              (j==info.listener_cnt-1)?"":",");
-            pj_ansi_strcat(li_list, str_info);
+            pj_ansi_strxcat(li_list, str_info, sizeof(li_list));
         }
         tr_list[0] = '\0';
         for (j=0; j<info.transmitter_cnt; ++j) {
             char str_info[10];
             pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s", info.transmitters[j],
                              (j==info.transmitter_cnt-1)?"":",");
-            pj_ansi_strcat(tr_list, str_info);
+            pj_ansi_strxcat(tr_list, str_info, sizeof(tr_list));
         }
         pjmedia_fourcc_name(info.format.id, s);
         s[4] = ' ';

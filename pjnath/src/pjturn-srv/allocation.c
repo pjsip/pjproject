@@ -326,8 +326,9 @@ PJ_DEF(pj_status_t) pj_turn_allocation_create(pj_turn_transport *transport,
     alloc->ch_table = pj_hash_create(pool, PEER_TABLE_SIZE);
 
     /* Print info */
-    pj_ansi_strcpy(alloc->info,
-                   pj_turn_tp_type_name(transport->listener->tp_type));
+    pj_ansi_strxcpy(alloc->info,
+                    pj_turn_tp_type_name(transport->listener->tp_type),
+                    sizeof(alloc->info));
     alloc->info[3] = ':';
     pj_sockaddr_print(src_addr, alloc->info+4, sizeof(alloc->info)-4, 3);
 

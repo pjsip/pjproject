@@ -78,7 +78,7 @@ PJ_BEGIN_DECL
  * @param len       The length of the string buffer.
  */
 #define PJ_CHECK_TRUNC_STR(ret, str, len) \
-    if ((int)(ret) >= (int)(len) || (ret) < 0) pj_ansi_strcpy((str) + (len) - 3, "..")
+    if ((int)(ret) >= (int)(len) || (ret) < 0) pj_ansi_strxcpy((str) + (len) - 3, "..", 3)
 
 /**
  * Create string initializer from a normal C string.
@@ -841,64 +841,56 @@ PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
 }
 
 /**
- * Copy at most n bytes (including the null char) from source to destination.
- * In any case, the destination string will be null terminated.
+ * Copy the string, or as much of it as fits, into the dest buffer.
+ * Regardless of whether all characters were copied, the destination
+ * buffer will be null terminated, unless dst_size is zero which in
+ * this case nothing will be written to dst and the function will
+ * return -PJ_ETOOBIG.
  *
  * @param dst       The destination string.
  * @param src       The source string.
- * @param n         The size of the destination string.
+ * @param dst_size  The size of the destination string.
  *
- * @return The destination string
+ * @return The number of characters copied (not including the trailing NUL) or
+ *         -PJ_ETOOBIG if the destination buffer wasn't big enough,
+ *         -PJ_EINVAL if the dst or src is NULL.
  */
-PJ_INLINE(char*) pj_ansi_strncpy(char *dst, const char *src, pj_size_t n)
-{
-#ifdef __GNUC__
-   /* Silence these warnings:
-    * - __builtin_strncpy specified bound equals destination size
-    * - __builtin_strncpy output may be truncated copying x bytes from a string of length x
-    */
-#  pragma GCC diagnostic push
-#  if defined(__has_warning)
-#    if __has_warning("-Wstringop-truncation")
-#      pragma GCC diagnostic ignored "-Wstringop-truncation"
-#    endif
-#  else
-#    pragma GCC diagnostic ignored "-Wstringop-truncation"
-#  endif
-#endif
-    strncpy(dst, src, n-1);
-#ifdef __GNUC__
-#  pragma GCC diagnostic pop
-#endif
-    dst[n-1] = '\0';
-    return dst;
-}
+PJ_DECL(int) pj_ansi_strxcpy(char *dst, const char *src, pj_size_t dst_size);
+
 
 /**
- * Copy src0 to destination string, and then concatenate src1 into destination
- * string, limiting the total number of bytes written to the destination
- * string to n including the null character. In any case, the destination
- * string will be null terminated.
+ * Same as pj_ansi_strxcpy() but takes pj_str_t as the source.
+ * If src contains null character, copying will stop at the first null
+ * character in src.
  *
  * @param dst       The destination string.
  * @param src       The source string.
- * @param n         The size of the destination string.
+ * @param dst_size  The size of the destination string.
  *
- * @return The destination string
+ * @return The number of characters copied (not including the trailing NUL) or
+ *         -PJ_ETOOBIG if the destination buffer wasn't big enough,
+ *         -PJ_EINVAL if the dst or src is NULL.
  */
-PJ_INLINE(char*) pj_ansi_safe_strcpycat(char *dst,
-                                        const char *src0,
-                                        const char *src1,
-                                        pj_size_t n)
-{
-    pj_ansi_strncpy(dst, src0, n);
-    if (src1) {
-        pj_size_t dst_len = pj_ansi_strlen(dst);
-        if (dst_len < n-1)
-            pj_ansi_strncpy(dst+dst_len, src1, n-dst_len);
-    }
-    return dst;
-}
+PJ_DECL(int) pj_ansi_strxcpy2(char *dst, const pj_str_t *src, 
+                              pj_size_t dst_size);
+
+
+/**
+ * Concatenate src, or as much of it as fits, into the dest buffer.
+ * Regardless of whether all characters were copied, the destination
+ * buffer will be null terminated, unless dst_size is zero which in
+ * this case nothing will be written to dst and the function will
+ * return -PJ_ETOOBIG.
+ *
+ * @param dst       The destination string.
+ * @param src       The source string.
+ * @param dst_size  The size of the destination string.
+ *
+ * @return Final length of dst string (not including the trailing NUL) or
+ *         -PJ_ETOOBIG if the destination buffer wasn't big enough,
+ *         -PJ_EINVAL if the dst or src is NULL.
+ */
+PJ_DECL(int) pj_ansi_strxcat(char *dst, const char *src, pj_size_t dst_size);
 
 /**
  * @}

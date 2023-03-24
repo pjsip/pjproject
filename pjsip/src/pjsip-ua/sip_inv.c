@@ -3282,7 +3282,8 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
                 len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
                                       dlg->remote.info->uri, tmp, TMP_LEN);
                 if (len < 1) {
-                    pj_ansi_strcpy(tmp, "<-error: uri too long->");
+                    pj_ansi_strxcpy(tmp, "<-error: uri too long->", 
+                                    sizeof(tmp));
                     len = (int)pj_ansi_strlen(tmp);
                 }
                 pj_strdup2_with_null(dlg->pool, &dlg->remote.info_str, tmp);

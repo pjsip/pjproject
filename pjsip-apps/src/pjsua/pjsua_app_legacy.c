@@ -639,7 +639,7 @@ static void vid_handle_menu(char *menuin)
                         pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
                                          info.listeners[j],
                                          (j==info.listener_cnt-1)?"":",");
-                        pj_ansi_strcat(li_list, str_info);
+                        pj_ansi_strxcat(li_list, str_info, sizeof(li_list));
                     }
                     tr_list[0] = '\0';
                     for (j=0; j<info.transmitter_cnt; ++j) {
@@ -647,7 +647,7 @@ static void vid_handle_menu(char *menuin)
                         pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
                                          info.transmitters[j],
                                          (j==info.transmitter_cnt-1)?"":",");
-                        pj_ansi_strcat(tr_list, str_info);
+                        pj_ansi_strxcat(tr_list, str_info, sizeof(tr_list));
                     }
                     pjmedia_fourcc_name(info.format.id, s);
                     s[4] = ' ';
@@ -1613,7 +1613,7 @@ static void ui_conf_list()
         for (j=0; j<info.listener_cnt; ++j) {
             char s[10];
             pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
         }
         printf("Port #%02d[%2dKHz/%dms/%d] %20.*s  transmitting to: %s\n",
                info.slot_id,

@@ -818,7 +818,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     pj_assert(i < PJ_ARRAY_SIZE(ice->tp_data) &&
               ice->tp_data[i].transport_id == transport_id);
 
-    pj_ansi_strncpy(ice->tmp.txt, pj_sockaddr_print(&lcand->addr, address,
+    pj_ansi_strxcpy(ice->tmp.txt, pj_sockaddr_print(&lcand->addr, address,
                                                     sizeof(address), 2),
                     sizeof(ice->tmp.txt));
     LOG4((ice->obj_name, 

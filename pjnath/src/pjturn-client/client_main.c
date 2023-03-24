@@ -409,15 +409,15 @@ static void menu(void)
 
     if (g.relay) {
         pj_turn_sock_get_info(g.relay, &info);
-        pj_ansi_strncpy(client_state, pj_turn_state_name(info.state),
+        pj_ansi_strxcpy(client_state, pj_turn_state_name(info.state),
                         sizeof(client_state));
         if (info.state >= PJ_TURN_STATE_READY)
             pj_sockaddr_print(&info.relay_addr, relay_addr, sizeof(relay_addr), 3);
         else
-            strcpy(relay_addr, "0.0.0.0:0");
+            pj_ansi_strxcpy(relay_addr, "0.0.0.0:0", sizeof(relay_addr));
     } else {
-        pj_ansi_strncpy(client_state, "NULL", sizeof(client_state));
-        pj_ansi_strncpy(relay_addr, "0.0.0.0:0", sizeof(relay_addr));
+        pj_ansi_strxcpy(client_state, "NULL", sizeof(client_state));
+        pj_ansi_strxcpy(relay_addr, "0.0.0.0:0", sizeof(relay_addr));
     }
 
     pj_sockaddr_print(&g.peer[0].mapped_addr, peer0_addr, sizeof(peer0_addr), 3);
@@ -476,7 +476,7 @@ static void console_main(void)
             else
                 peer = &g.peer[1];
 
-            strcpy(input, "Hello from client");
+            pj_ansi_strxcpy(input, "Hello from client", sizeof(input));
             status = pj_turn_sock_sendto(g.relay, (const pj_uint8_t*)input, 
                                         strlen(input)+1, 
                                         &peer->mapped_addr, 

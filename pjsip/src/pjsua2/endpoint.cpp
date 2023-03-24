@@ -1633,7 +1633,7 @@ pjsip_redirect_op Endpoint::on_call_redirected(pjsua_call_id call_id,
     int len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, target, uristr,
                               sizeof(uristr));
     if (len < 1) {
-        pj_ansi_strcpy(uristr, "--URI too long--");
+        pj_ansi_strxcpy(uristr, "--URI too long--", sizeof(uristr));
     }
     prm.targetUri = string(uristr);
     if (e)

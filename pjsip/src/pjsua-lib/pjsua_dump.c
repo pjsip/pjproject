@@ -47,11 +47,12 @@ static unsigned dump_media_stat(const char *indent,
     int len;
 
     if (stat->rx.update_cnt == 0)
-        strcpy(last_update, "never");
+        pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
     else {
         pj_gettimeofday(&now);
         PJ_TIME_VAL_SUB(now, stat->rx.update);
-        sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+        pj_ansi_snprintf(last_update, sizeof(last_update), 
+                "%02ldh:%02ldm:%02ld.%03lds ago",
                 now.sec / 3600,
                 (now.sec % 3600) / 60,
                 now.sec % 60,
@@ -134,11 +135,12 @@ static unsigned dump_media_stat(const char *indent,
     p += len;
 
     if (stat->tx.update_cnt == 0)
-        strcpy(last_update, "never");
+        pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
     else {
         pj_gettimeofday(&now);
         PJ_TIME_VAL_SUB(now, stat->tx.update);
-        sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+        pj_ansi_snprintf(last_update, sizeof(last_update), 
+                "%02ldh:%02ldm:%02ld.%03lds ago",
                 now.sec / 3600,
                 (now.sec % 3600) / 60,
                 now.sec % 60,
@@ -440,11 +442,11 @@ static void dump_media_session(const char *indent,
                             if (pj_sockaddr_has_addr(&ii->comp[jj].lcand_addr))
                                 pj_sockaddr_print(&ii->comp[jj].lcand_addr, addr1, sizeof(addr1), 3);
                             else
-                                strcpy(addr1, "0.0.0.0:0");
+                                pj_ansi_strxcpy(addr1, "0.0.0.0:0", sizeof(addr1));
                             if (pj_sockaddr_has_addr(&ii->comp[jj].rcand_addr))
                                 pj_sockaddr_print(&ii->comp[jj].rcand_addr, addr2, sizeof(addr2), 3);
                             else
-                                strcpy(addr2, "0.0.0.0:0");
+                                pj_ansi_strxcpy(addr2, "0.0.0.0:0", sizeof(addr2));
                             len = pj_ansi_snprintf(p, end-p,
                                                    "   %s     [%d]: L:%s (%c) --> R:%s (%c)\n",
                                                    indent, jj,
@@ -561,11 +563,12 @@ static void dump_media_session(const char *indent,
                 sprintf(toh, "(report not available)");
 
             if (xr_stat.rx.stat_sum.update.sec == 0)
-                strcpy(last_update, "never");
+                pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
             else {
                 pj_gettimeofday(&now);
                 PJ_TIME_VAL_SUB(now, xr_stat.rx.stat_sum.update);
-                sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+                pj_ansi_snprintf(last_update, sizeof(last_update),
+                        "%02ldh:%02ldm:%02ld.%03lds ago",
                         now.sec / 3600,
                         (now.sec % 3600) / 60,
                         now.sec % 60,
@@ -626,11 +629,12 @@ static void dump_media_session(const char *indent,
                 sprintf(toh,    "(report not available)");
 
             if (xr_stat.tx.stat_sum.update.sec == 0)
-                strcpy(last_update, "never");
+                pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
             else {
                 pj_gettimeofday(&now);
                 PJ_TIME_VAL_SUB(now, xr_stat.tx.stat_sum.update);
-                sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+                pj_ansi_snprintf(last_update, sizeof(last_update),
+                        "%02ldh:%02ldm:%02ld.%03lds ago",
                         now.sec / 3600,
                         (now.sec % 3600) / 60,
                         now.sec % 60,
@@ -698,11 +702,12 @@ static void dump_media_session(const char *indent,
             sprintf(jbr, "%d", xr_stat.rx.voip_mtc.rx_config & 0x0F);
 
             if (xr_stat.rx.voip_mtc.update.sec == 0)
-                strcpy(last_update, "never");
+                pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
             else {
                 pj_gettimeofday(&now);
                 PJ_TIME_VAL_SUB(now, xr_stat.rx.voip_mtc.update);
-                sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+                pj_ansi_snprintf(last_update, sizeof(last_update),
+                        "%02ldh:%02ldm:%02ld.%03lds ago",
                         now.sec / 3600,
                         (now.sec % 3600) / 60,
                         now.sec % 60,
@@ -798,11 +803,12 @@ static void dump_media_session(const char *indent,
             sprintf(jbr, "%d", xr_stat.tx.voip_mtc.rx_config & 0x0F);
 
             if (xr_stat.tx.voip_mtc.update.sec == 0)
-                strcpy(last_update, "never");
+                pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
             else {
                 pj_gettimeofday(&now);
                 PJ_TIME_VAL_SUB(now, xr_stat.tx.voip_mtc.update);
-                sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+                pj_ansi_snprintf(last_update, sizeof(last_update),
+                        "%02ldh:%02ldm:%02ld.%03lds ago",
                         now.sec / 3600,
                         (now.sec % 3600) / 60,
                         now.sec % 60,
@@ -916,7 +922,7 @@ void print_call(const char *title,
     dlg = (inv? inv->dlg: call->async_call.dlg);
     len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
     if (len < 0)
-        pj_ansi_strcpy(userinfo, "<--uri too long-->");
+        pj_ansi_strxcpy(userinfo, "<--uri too long-->", sizeof(userinfo));
     else
         userinfo[len] = '\0';
 
@@ -927,7 +933,7 @@ void print_call(const char *title,
                                                 inv->state),
                            userinfo);
     if (len < 1 || len >= (int)size) {
-        pj_ansi_strcpy(buf, "<--uri too long-->");
+        pj_ansi_strxcpy(buf, "<--uri too long-->", size);
         len = 18;
     } else
         buf[len] = '\0';
