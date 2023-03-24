@@ -119,7 +119,7 @@ static int double_terminate(void)
     tsx = pjsip_tsx_layer_find_tsx(&tsx_key, PJ_TRUE);
     if (tsx) {
         /* Terminate transaction again. */
-        pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+        status = pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
         if (status != PJ_SUCCESS) {
             app_perror("   error: unable to terminate transaction", status);
             return -40;

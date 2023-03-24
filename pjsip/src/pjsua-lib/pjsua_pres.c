@@ -1880,7 +1880,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
         /* This should destroy the dialog since there's no session
          * referencing it
          */
-        if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
+        pjsip_dlg_dec_lock(buddy->dlg);
         if (tmp_pool) pj_pool_release(tmp_pool);
         pj_log_pop_indent();
         return;
@@ -1916,10 +1916,8 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     status = pjsip_pres_initiate(buddy->sub, PJSIP_EXPIRES_NOT_SPECIFIED,
                                  &tdata);
     if (status != PJ_SUCCESS) {
-        if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
-        if (buddy->sub) {
-            pjsip_pres_terminate(buddy->sub, PJ_FALSE);
-        }
+        pjsip_dlg_dec_lock(buddy->dlg);
+        pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         buddy->sub = NULL;
         pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE", 
                      status);
@@ -2220,7 +2218,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
                                   PJSIP_EVSUB_NO_EVENT_ID, &acc->mwi_sub);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error creating MWI subscription", status);
-        if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
+        pjsip_dlg_dec_lock(acc->mwi_dlg);
         goto on_return;
     }
 
@@ -2252,10 +2250,8 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 
     status = pjsip_mwi_initiate(acc->mwi_sub, acc->cfg.mwi_expires, &tdata);
     if (status != PJ_SUCCESS) {
-        if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
-        if (acc->mwi_sub) {
-            pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
-        }
+        pjsip_dlg_dec_lock(acc->mwi_dlg);
+        pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
         acc->mwi_sub = NULL;
         acc->mwi_dlg = NULL;
         pjsua_perror(THIS_FILE, "Unable to create initial MWI SUBSCRIBE", 

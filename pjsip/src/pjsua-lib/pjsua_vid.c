@@ -1778,8 +1778,13 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_show( pjsua_vid_win_id wid,
     }
 
     /* Make sure that renderer gets started before shown up */
-    if (show && !pjmedia_vid_port_is_running(w->vp_rend))
+    if (show && w->vp_rend && !pjmedia_vid_port_is_running(w->vp_rend)) {
         status = pjmedia_vid_port_start(w->vp_rend);
+        if (status != PJ_SUCCESS) {
+            PJSUA_UNLOCK();
+            return status;
+        }
+    }
 
     hide = !show;
     status = pjmedia_vid_dev_stream_set_cap(s,

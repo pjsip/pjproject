@@ -2141,17 +2141,22 @@ static void close_snd_dev(void)
         pjmedia_aud_dev_info cap_info, play_info;
         pjmedia_aud_stream *strm;
         pjmedia_aud_param param;
+        pj_status_t status;
 
         strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
-        pjmedia_aud_stream_get_param(strm, &param);
+        status = pjmedia_aud_stream_get_param(strm, &param);
 
-        if (param.rec_id == PJSUA_SND_NO_DEV ||
+        if (status != PJ_SUCCESS ||
+            param.rec_id == PJSUA_SND_NO_DEV ||
             pjmedia_aud_dev_get_info(param.rec_id, &cap_info) != PJ_SUCCESS)
         {
             cap_info.name[0] = '\0';
         }
-        if (pjmedia_aud_dev_get_info(param.play_id, &play_info) != PJ_SUCCESS)
+        if (status != PJ_SUCCESS ||
+            pjmedia_aud_dev_get_info(param.play_id, &play_info) != PJ_SUCCESS)
+        {
             play_info.name[0] = '\0';
+        }
 
         PJ_LOG(4,(THIS_FILE, "Closing %s sound playback device and "
                              "%s sound capture device",

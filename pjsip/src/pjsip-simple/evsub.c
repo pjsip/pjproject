@@ -2199,7 +2199,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
                                                        sub->expires));
 
             /* Send */
-            status = pjsip_dlg_send_response(sub->dlg, tsx, tdata);
+            pjsip_dlg_send_response(sub->dlg, tsx, tdata);
         }
 
         /* Update state or revert state */

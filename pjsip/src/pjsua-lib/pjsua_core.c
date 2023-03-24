@@ -765,8 +765,12 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
     }
 
     /* Enable SIP message logging */
-    if (pjsua_var.log_cfg.msg_logging)
-        pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_msg_logger);
+    if (pjsua_var.log_cfg.msg_logging) {
+        status = pjsip_endpt_register_module(pjsua_var.endpt,
+                                             &pjsua_msg_logger);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     return PJ_SUCCESS;
 }
@@ -1257,7 +1261,9 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         goto on_error;
 
     /* Register OPTIONS handler */
-    pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_options_handler);
+    status = pjsip_endpt_register_module(pjsua_var.endpt,
+                                         &pjsua_options_handler);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Add OPTIONS in Allow header */
     pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_ALLOW,
@@ -2369,8 +2375,12 @@ static pj_status_t create_sip_udp_sock(int af,
                                 2, THIS_FILE, "SIP UDP socket");
 
     /* Apply sockopt, if specified */
-    if (cfg->sockopt_params.cnt)
+    if (cfg->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &cfg->sockopt_params);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "setsockopt) error", status);
+        }
+    }
 
     /* Bind socket */
     status = pj_sock_bind(sock, &bind_addr, pj_sockaddr_get_len(&bind_addr));

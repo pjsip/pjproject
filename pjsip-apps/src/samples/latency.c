@@ -127,7 +127,8 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav)
         start_pos += PJMEDIA_PIA_SRATE(&wav->info);
     }
 
-    printf("Latency average = %u\n", lat_sum / lat_cnt);
+    if (lat_cnt)
+        printf("Latency average = %u\n", lat_sum / lat_cnt);
     printf("Latency minimum = %u\n", lat_min);
     printf("Latency maximum = %u\n", lat_max);
     printf("Number of data  = %u\n", lat_cnt);

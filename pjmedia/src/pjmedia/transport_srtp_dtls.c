@@ -1285,19 +1285,12 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
         /* Check for a=fingerprint in remote SDP. */
         switch (ds->srtp->setting.use) {
             case PJMEDIA_SRTP_DISABLED:
-                if (attr_fp) {
-                    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
-                    goto on_return;
-                }
+                status = PJMEDIA_SRTP_ESDPINTRANSPORT;
+                goto on_return;
                 break;
             case PJMEDIA_SRTP_OPTIONAL:
                 break;
             case PJMEDIA_SRTP_MANDATORY:
-                if (!attr_fp) {
-                    /* Should never reach here, this is already checked */
-                    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
-                    goto on_return;
-                }
                 break;
         }
     }
@@ -1373,7 +1366,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
                     (ds->setup==DTLS_SETUP_ACTIVE? &ID_ACTIVE:&ID_PASSIVE));
         pjmedia_sdp_media_add_attr(m_loc, a);
 
-        if (last_setup != DTLS_SETUP_UNKNOWN && sdp_remote) {
+        if (last_setup != DTLS_SETUP_UNKNOWN) {
             pj_sockaddr rem_rtp;
             pj_sockaddr rem_rtcp;
             pj_bool_t use_rtcp_mux;

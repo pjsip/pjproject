@@ -1018,9 +1018,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                 "outgoing SIP TCP socket");
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
-
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     /* Bind to listener's address and any port */
     pj_bzero(&local_addr, sizeof(local_addr));
@@ -1149,8 +1153,13 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
                                 "incoming SIP TCP socket");
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     /* tcp_create() expect pj_sockaddr, so copy src_addr to temporary var,
      * just in case.
@@ -1693,8 +1702,13 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
     }
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     status = pj_sock_bind(sock, listener_addr, addr_len);
     if (status != PJ_SUCCESS)

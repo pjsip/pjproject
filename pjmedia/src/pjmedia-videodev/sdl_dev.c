@@ -1485,10 +1485,10 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
         jq->is_full = PJ_TRUE;
         PJ_LOG(4, (THIS_FILE, "SDL job queue is full, increasing "
                               "the queue size."));
+        pj_mutex_unlock(jq->mutex);
         pj_sem_post(jq->sem);
         /* Wait until our posted job is completed. */
         pj_sem_wait(jq->job_sem[tail]);
-        pj_mutex_unlock(jq->mutex);
     } else {
         pj_mutex_unlock(jq->mutex);
         pj_sem_post(jq->sem);

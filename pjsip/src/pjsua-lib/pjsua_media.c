@@ -903,7 +903,7 @@ static void on_ice_complete(pjmedia_transport *tp,
         } else {
             call_med->state = PJSUA_CALL_MEDIA_ERROR;
             call_med->dir = PJMEDIA_DIR_NONE;
-            if (call && !call->hanging_up &&
+            if (!call->hanging_up &&
                 pjsua_var.ua_cfg.cb.on_call_media_state)
             {
                 /* Defer the callback to a timer */
@@ -1804,7 +1804,7 @@ static void on_srtp_nego_complete(pjmedia_transport *tp,
     if (result != PJ_SUCCESS) {
         call_med->state = PJSUA_CALL_MEDIA_ERROR;
         call_med->dir = PJMEDIA_DIR_NONE;
-        if (call && !call->hanging_up &&
+        if (!call->hanging_up &&
             pjsua_var.ua_cfg.cb.on_call_media_state)
         {
             /* Defer the callback to a timer */
@@ -1947,9 +1947,6 @@ on_return:
             pjmedia_transport_close(call_med->tp);
             call_med->tp = NULL;
         }
-
-        if (err_code == 0)
-            err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
 
         if (sip_err_code)
             *sip_err_code = err_code;
@@ -2482,7 +2479,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         call->med_ch_cb = cb;
     }
 
-    if (rem_sdp) {
+    if (rem_sdp && call->inv) {
         call->async_call.rem_sdp =
             pjmedia_sdp_session_clone(call->inv->pool_prov, rem_sdp);
     } else {
@@ -3185,6 +3182,7 @@ static void log_call_dump(int call_id)
     pj_status_t status;
 
     pool = pjsua_pool_create("tmp", 1024, 1024);
+    if (!pool) return;
     buf = pj_pool_alloc(pool, sizeof(char) * BUF_LEN);
 
     status = pjsua_call_dump(call_id, PJ_TRUE, buf, BUF_LEN, "  ");
@@ -3215,8 +3213,7 @@ static void log_call_dump(int call_id)
     pj_log_set_decor(log_decor);
 
 on_return:
-    if (pool)
-        pj_pool_release(pool);
+    pj_pool_release(pool);
 }
 
 

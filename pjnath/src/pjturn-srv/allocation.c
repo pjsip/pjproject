@@ -707,7 +707,14 @@ static pj_status_t create_relay(pj_turn_srv *srv,
     }
     if (!pj_sockaddr_has_addr(&relay->hkey.addr)) {
         pj_sockaddr tmp_addr;
-        pj_gethostip(af, &tmp_addr);
+        status = pj_gethostip(af, &tmp_addr);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(4,(THIS_FILE, "pj_gethostip() failed: err %d",
+                      status));
+            pj_sock_close(relay->tp.sock);
+            relay->tp.sock = PJ_INVALID_SOCKET;
+            return status;
+        }
         pj_sockaddr_copy_addr(&relay->hkey.addr, &tmp_addr);
     }
 
