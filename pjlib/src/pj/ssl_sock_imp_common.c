@@ -770,10 +770,13 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                  * been signalled to the application along with any remaining
                  * buffer. So, let's just reset SSL socket now.
                  */
+                /*
+                // This has been handled in on_error
                 if (status != PJ_SUCCESS) {
                     ssl_reset_sock_state(ssock);
                     return PJ_FALSE;
                 }
+                */
 
             } else if (status_ == PJ_SUCCESS) {
                 break;

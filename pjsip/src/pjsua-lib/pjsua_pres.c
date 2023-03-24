@@ -1930,10 +1930,8 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 
     status = pjsip_pres_send_request(buddy->sub, tdata);
     if (status != PJ_SUCCESS) {
-        if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
-        if (buddy->sub) {
-            pjsip_pres_terminate(buddy->sub, PJ_FALSE);
-        }
+        pjsip_dlg_dec_lock(buddy->dlg);
+        pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         buddy->sub = NULL;
         pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
                      status);
@@ -2263,10 +2261,8 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 
     status = pjsip_pres_send_request(acc->mwi_sub, tdata);
     if (status != PJ_SUCCESS) {
-        if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
-        if (acc->mwi_sub) {
-            pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
-        }
+        pjsip_dlg_dec_lock(acc->mwi_dlg);
+        pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
         acc->mwi_sub = NULL;
         acc->mwi_dlg = NULL;
         pjsua_perror(THIS_FILE, "Unable to send initial MWI SUBSCRIBE", 
