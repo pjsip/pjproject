@@ -809,6 +809,23 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_fmt_match( pj_pool_t *pool,
                                                 pjmedia_sdp_media *answer,
                                                 unsigned a_fmt_idx,
                                                 unsigned option);
+/**
+ * This will validate the payload type in the SDP session. This is required by
+ * clients that required one payload type assigned to specific codec in the nego.
+ * This method will check and potentially altered the SDP if it find the payload 
+ * type used by other codec.
+ * 
+ * Note: this method will return PJ_SUCCESS when PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
+ * is set to 0.
+ *
+ * @param neg           The SDP negotiator instance.
+ * @param local         The local SDP session.
+ * 
+ * @return              PJ_SUCCESS when the SDP session is valid.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_neg_validate_pt(pjmedia_sdp_neg* neg,
+                                                 pjmedia_sdp_session* sdp_sess);
+
 
 
 PJ_END_DECL

@@ -810,6 +810,17 @@
 #   define PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT          1
 #endif
 
+/**
+ * This specifies if the SDP negotiator should maintain the session payload type used 
+ * to ensure that the session use unique payload type 
+ * (e.g: same pt is not used by different codec).
+ *
+ * Default is 0 (no)
+ */
+#ifndef PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
+#   define PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT          0
+#endif
+
 
 /**
  * This specifies if the SDP negotiator should compare its content before 
