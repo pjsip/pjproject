@@ -28,8 +28,6 @@
 	<string>MainWindow</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>Camera permission required</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Mic permission required</string>
 	<key>UIBackgroundModes</key>
