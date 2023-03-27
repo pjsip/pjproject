@@ -4114,7 +4114,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                     dir = "unknown";
                     break;
                 }
-                len = pj_ansi_sprintf( info+info_len,
+                len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                        ", stream #%d: %.*s (%s)", mi,
                                        (int)si->fmt.encoding_name.slen,
                                        si->fmt.encoding_name.ptr,
@@ -4322,7 +4322,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                     dir = "unknown";
                     break;
                 }
-                len = pj_ansi_sprintf( info+info_len,
+                len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                        ", stream #%d: %.*s (%s)", mi,
                                        (int)si->codec_info.encoding_name.slen,
                                        si->codec_info.encoding_name.ptr,

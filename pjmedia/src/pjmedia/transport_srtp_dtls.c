@@ -333,7 +333,7 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
 {
     unsigned int len, st_out_len, i;
     unsigned char tmp[EVP_MAX_MD_SIZE];
-    char *p;
+    char *p, *end=buf+*buf_len;
 
     if (!X509_digest(cert, (is_sha256?EVP_sha256():EVP_sha1()), tmp, &len))
         return PJ_EUNKNOWN;
@@ -344,9 +344,10 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
 
     /* Format fingerprint to "SHA-256 XX:XX:XX..." */
     p = buf;
-    p += pj_ansi_sprintf(p, "SHA-%s %.2X", (is_sha256?"256":"1"), tmp[0]);
+    p += pj_ansi_snprintf(p, end-p, "SHA-%s %.2X", 
+                          (is_sha256?"256":"1"), tmp[0]);
     for (i=1; i<len; ++i)
-        p += pj_ansi_sprintf(p, ":%.2X", tmp[i]);
+        p += pj_ansi_snprintf(p, end-p, ":%.2X", tmp[i]);
 
     *buf_len = st_out_len;
 

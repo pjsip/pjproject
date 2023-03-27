@@ -1288,7 +1288,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
                 return -1;
 
             /*
-            printed = sprintf(buf, ";q=%u.%03u",
+            printed = pj_ansi_snprintf(buf, size, ";q=%u.%03u",
                                    hdr->q1000/1000, hdr->q1000 % 1000);
              */
             pj_memcpy(buf, ";q=", 3);
@@ -2161,11 +2161,13 @@ PJ_DEF(pjsip_warning_hdr*) pjsip_warning_hdr_create(  pj_pool_t *pool,
 {
     const pj_str_t str_warning = { "Warning", 7 };
     pj_str_t hvalue;
+    unsigned buflen = 10 + /* code */
+                      host->slen + 2 +   /* host */
+                      text->slen + 2;   /* text */
 
-    hvalue.ptr = (char*) pj_pool_alloc(pool, 10 +               /* code */
-                                             host->slen + 2 +   /* host */
-                                             text->slen + 2);   /* text */
-    hvalue.slen = pj_ansi_sprintf(hvalue.ptr, "%u %.*s \"%.*s\"",
+    hvalue.ptr = (char*) pj_pool_alloc(pool, buflen);
+    hvalue.slen = pj_ansi_snprintf(hvalue.ptr, buflen,
+                                   "%u %.*s \"%.*s\"",
                                   code, (int)host->slen, host->ptr,
                                   (int)text->slen, text->ptr);
 

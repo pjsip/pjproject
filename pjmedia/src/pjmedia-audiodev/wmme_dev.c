@@ -342,7 +342,7 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
     }
 
     wdi->info.default_samples_per_sec = 16000;
-    strcpy(wdi->info.driver, "WMME");
+    pj_ansi_strxcpy(wdi->info.driver, "WMME", sizeof(wdi->info.driver));
 
     if (wic) {
         wdi->info.input_count = wic->wChannels;

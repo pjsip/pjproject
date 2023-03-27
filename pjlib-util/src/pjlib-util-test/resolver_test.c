@@ -1797,7 +1797,7 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
             res->ans[i].rdata.srv.port = (pj_uint16_t)(PORT3+i);
 
             target = (char*)pj_pool_alloc(pool, 16);
-            sprintf(target, "sip%02d." DOMAIN3, i);
+            pj_ansi_snprintf(target, 16, "sip%02d." DOMAIN3, i);
             res->ans[i].rdata.srv.target = pj_str(target);
         }
 

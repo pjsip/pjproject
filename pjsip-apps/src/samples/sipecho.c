@@ -495,7 +495,8 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         return PJ_TRUE;
     }
     pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
-    pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>", hostip, sip_port);
+    pj_ansi_snprintf(temp, sizeof(temp), "<sip:sipecho@%s:%d>",
+                     hostip, sip_port);
     local_uri = pj_str(temp);
 
     status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
@@ -641,7 +642,7 @@ int main(int argc, char *argv[])
         CHECK( pj_gethostip(sip_af, &hostaddr) );
         pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
-        pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>",
+        pj_ansi_snprintf(temp, sizeof(temp), "<sip:sipecho@%s:%d>",
                         hostip, sip_port);
         local_uri = pj_str(temp);
 

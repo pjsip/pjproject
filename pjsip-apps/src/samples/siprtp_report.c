@@ -129,8 +129,8 @@ static void print_call(int call_index)
         audio->si.fmt.encoding_name.ptr,
         audio->clock_rate,
         audio->samples_per_frame * 1000 / audio->clock_rate,
-        good_number(bps, audio->bytes_per_frame * audio->clock_rate / audio->samples_per_frame),
-        good_number(ipbps, (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame)));
+        good_number(bps, sizeof(bps), audio->bytes_per_frame * audio->clock_rate / audio->samples_per_frame),
+        good_number(ipbps, sizeof(ipbps), (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame)));
 
     if (audio->rtcp.stat.rx.update_cnt == 0)
         pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
@@ -153,9 +153,9 @@ static void print_call(int call_index)
            "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
            "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s",
            last_update,
-           good_number(packets, audio->rtcp.stat.rx.pkt),
-           good_number(bytes, audio->rtcp.stat.rx.bytes),
-           good_number(ipbytes, audio->rtcp.stat.rx.bytes + audio->rtcp.stat.rx.pkt * 32),
+           good_number(packets, sizeof(packets), audio->rtcp.stat.rx.pkt),
+           good_number(bytes, sizeof(bytes), audio->rtcp.stat.rx.bytes),
+           good_number(ipbytes, sizeof(ipbytes), audio->rtcp.stat.rx.bytes + audio->rtcp.stat.rx.pkt * 32),
            "",
            audio->rtcp.stat.rx.loss,
            audio->rtcp.stat.rx.loss * 100.0 / (audio->rtcp.stat.rx.pkt + audio->rtcp.stat.rx.loss),
@@ -198,9 +198,9 @@ static void print_call(int call_index)
            "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
            "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s",
            last_update,
-           good_number(packets, audio->rtcp.stat.tx.pkt),
-           good_number(bytes, audio->rtcp.stat.tx.bytes),
-           good_number(ipbytes, audio->rtcp.stat.tx.bytes + audio->rtcp.stat.tx.pkt * 32),
+           good_number(packets, sizeof(packets), audio->rtcp.stat.tx.pkt),
+           good_number(bytes, sizeof(bytes), audio->rtcp.stat.tx.bytes),
+           good_number(ipbytes, sizeof(ipbytes), audio->rtcp.stat.tx.bytes + audio->rtcp.stat.tx.pkt * 32),
            "",
            audio->rtcp.stat.tx.loss,
            audio->rtcp.stat.tx.loss * 100.0 / (audio->rtcp.stat.tx.pkt + audio->rtcp.stat.tx.loss),

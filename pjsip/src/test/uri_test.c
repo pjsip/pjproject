@@ -1090,7 +1090,8 @@ int uri_test(void)
 
     PJ_LOG(3,("", "  Maximum URI parse/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>parsed</B> with "
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Number of SIP/TEL URIs that can be <B>parsed</B> with "
                           "<tt>pjsip_parse_uri()</tt> per second "
                           "(tested with %d URI set, with average length of "
                           "%d chars)",
@@ -1110,7 +1111,8 @@ int uri_test(void)
 
     PJ_LOG(3,("", "  Maximum URI print/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>printed</B> with "
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Number of SIP/TEL URIs that can be <B>printed</B> with "
                           "<tt>pjsip_uri_print()</tt> per second "
                           "(tested with %d URI set, with average length of "
                           "%d chars)",
@@ -1124,7 +1126,8 @@ int uri_test(void)
 
     PJ_LOG(3,("", "  Maximum URI comparison/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>compared</B> with "
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Number of SIP/TEL URIs that can be <B>compared</B> with "
                           "<tt>pjsip_uri_cmp()</tt> per second "
                           "(tested with %d URI set, with average length of "
                           "%d chars)",

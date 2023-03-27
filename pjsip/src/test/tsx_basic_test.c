@@ -139,9 +139,11 @@ int tsx_basic_test(struct tsx_test_param *param)
 {
     int status;
 
-    pj_ansi_sprintf(TARGET_URI, "sip:bob@127.0.0.1:%d;transport=%s", 
+    pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI),
+                    "sip:bob@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
-    pj_ansi_sprintf(FROM_URI, "sip:alice@127.0.0.1:%d;transport=%s", 
+    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI),
+                    "sip:alice@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
 
     status = tsx_layer_test();

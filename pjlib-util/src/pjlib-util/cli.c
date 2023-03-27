@@ -501,7 +501,7 @@ static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli,
 
     if (group) {
         char cmd_str[MAX_CMD_ID_LENGTH];
-        pj_ansi_sprintf(cmd_str, "%d", group->id);
+        pj_ansi_snprintf(cmd_str, sizeof(cmd_str), "%d", group->id);
         pj_strcat2(&cmd_val, cmd_str);  
     }
     pj_strcat(&cmd_val, cmd);
@@ -522,7 +522,7 @@ static void add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group,
 
     if (group) {
         char cmd_str[MAX_CMD_ID_LENGTH];
-        pj_ansi_sprintf(cmd_str, "%d", group->id);
+        pj_ansi_snprintf(cmd_str, sizeof(cmd_str),  "%d", group->id);
         pj_strcat2(&cmd_val, cmd_str);  
     }
     pj_strcat(&cmd_val, cmd_name);

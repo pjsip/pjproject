@@ -45,18 +45,20 @@ static char *sha1_test_results[] = {
 
 
 static void digest_to_hex(const pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE], 
-                          char *output)
+                          char *output, int output_size)
 {
     int i,j;
     char *c = output;
     
-    for (i = 0; i < PJ_SHA1_DIGEST_SIZE/4; i++) {
-        for (j = 0; j < 4; j++) {
-            sprintf(c,"%02X", digest[i*4+j] & 0xFF);
+    for (i = 0; i < PJ_SHA1_DIGEST_SIZE/4 && output_size >= 2; i++) {
+        for (j = 0; j < 4 && output_size >= 3; j++) {
+            pj_ansi_snprintf(c, output_size, "%02X", digest[i*4+j] & 0xFF);
             c += 2;
+            output_size -= 2;
         }
-        sprintf(c, " ");
+        pj_ansi_snprintf(c, output_size, " ");
         c += 1;
+        output_size -= 1;
     }
     *(c - 1) = '\0';
 }
@@ -78,7 +80,7 @@ static int sha1_test1(void)
         pj_sha1_update(&context, (pj_uint8_t*)sha1_test_data[k], 
                        pj_ansi_strlen(sha1_test_data[k]));
         pj_sha1_final(&context, digest);
-        digest_to_hex(digest, output);
+        digest_to_hex(digest, output, sizeof(output));
 
         if (pj_ansi_strcmp(output, sha1_test_results[k])) {
             PJ_LOG(3, (THIS_FILE, "    incorrect hash result on k=%d", k));
@@ -91,7 +93,7 @@ static int sha1_test1(void)
     for (k = 0; k < MILLION; k++)
         pj_sha1_update(&context, (pj_uint8_t*)"a", 1);
     pj_sha1_final(&context, digest);
-    digest_to_hex(digest, output);
+    digest_to_hex(digest, output, sizeof(output));
     if (strcmp(output, sha1_test_results[2])) {
         PJ_LOG(3, (THIS_FILE, "    incorrect hash result!"));
         return -20;
@@ -105,7 +107,7 @@ static int sha1_test1(void)
     pj_sha1_init(&context);
     pj_sha1_update(&context, block, MILLION);
     pj_sha1_final(&context, digest);
-    digest_to_hex(digest, output);
+    digest_to_hex(digest, output, sizeof(output));
     if (strcmp(output, sha1_test_results[2])) {
         pj_pool_release(pool);
         PJ_LOG(3, (THIS_FILE, "    incorrect hash result for block update!"));
@@ -182,7 +184,7 @@ static int sha1_test2(void)
 
         pj_sha1_final(&sha, digest);
 
-        digest_to_hex(digest, char_digest);
+        digest_to_hex(digest, char_digest, sizeof(char_digest));
         if (pj_ansi_strcmp(char_digest, resultarray[i])) {
             PJ_LOG(3, (THIS_FILE, "    digest mismatch in test %d", i));
             return -40;

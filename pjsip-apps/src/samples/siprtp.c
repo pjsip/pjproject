@@ -985,7 +985,8 @@ static pj_status_t init_options(int argc, char *argv[])
         app.uri_to_call = pj_str(argv[pj_optind]);
 
     /* Build local URI and contact */
-    pj_ansi_sprintf( local_uri, "sip:%s:%d", app.local_addr.ptr, app.sip_port);
+    pj_ansi_snprintf(local_uri, sizeof(local_uri),
+                     "sip:%s:%d", app.local_addr.ptr, app.sip_port);
     app.local_uri = pj_str(local_uri);
     app.local_contact = app.local_uri;
 
@@ -1063,7 +1064,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
         pjmedia_sdp_rtpmap rtpmap;
         char ptstr[10];
 
-        sprintf(ptstr, "%d", app.audio_codec.pt);
+        snprintf(ptstr, sizeof(ptstr), "%d", app.audio_codec.pt);
         pj_strdup2(pool, &m->desc.fmt[0], ptstr);
         rtpmap.pt = m->desc.fmt[0];
         rtpmap.clock_rate = app.audio_codec.clock_rate;
@@ -1537,16 +1538,16 @@ static void call_get_duration(int call_index, pj_time_val *dur)
 }
 
 
-static const char *good_number(char *buf, pj_int32_t val)
+static const char *good_number(char *buf, unsigned buf_size, pj_int32_t val)
 {
     if (val < 1000) {
-        pj_ansi_sprintf(buf, "%d", val);
+        pj_ansi_snprintf(buf, buf_size, "%d", val);
     } else if (val < 1000000) {
-        pj_ansi_sprintf(buf, "%d.%02dK", 
+        pj_ansi_snprintf(buf, buf_size, "%d.%02dK", 
                         val / 1000,
                         (val % 1000) / 100);
     } else {
-        pj_ansi_sprintf(buf, "%d.%02dM", 
+        pj_ansi_snprintf(buf, buf_size, "%d.%02dM", 
                         val / 1000000,
                         (val % 1000000) / 10000);
     }
@@ -1745,14 +1746,14 @@ static void print_avg_stat(void)
 
            /* rx */
 
-           good_number(srx_min, min_stat.rx.pkt),
-           good_number(srx_avg, avg_stat.rx.pkt),
-           good_number(srx_max, max_stat.rx.pkt),
+           good_number(srx_min, sizeof(srx_min), min_stat.rx.pkt),
+           good_number(srx_avg, sizeof(srx_avg), avg_stat.rx.pkt),
+           good_number(srx_max, sizeof(srx_max), max_stat.rx.pkt),
            "packets",
 
-           good_number(brx_min, min_stat.rx.bytes),
-           good_number(brx_avg, avg_stat.rx.bytes),
-           good_number(brx_max, max_stat.rx.bytes),
+           good_number(brx_min, sizeof(brx_min), min_stat.rx.bytes),
+           good_number(brx_avg, sizeof(brx_avg), avg_stat.rx.bytes),
+           good_number(brx_max, sizeof(brx_max), max_stat.rx.bytes),
            "bytes",
 
            min_stat.rx.loss, avg_stat.rx.loss, max_stat.rx.loss,
@@ -1777,14 +1778,14 @@ static void print_avg_stat(void)
         
            /* tx */
 
-           good_number(stx_min, min_stat.tx.pkt),
-           good_number(stx_avg, avg_stat.tx.pkt),
-           good_number(stx_max, max_stat.tx.pkt),
+           good_number(stx_min, sizeof(stx_min), min_stat.tx.pkt),
+           good_number(stx_avg, sizeof(stx_avg), avg_stat.tx.pkt),
+           good_number(stx_max, sizeof(stx_max), max_stat.tx.pkt),
            "packets",
 
-           good_number(btx_min, min_stat.tx.bytes),
-           good_number(btx_avg, avg_stat.tx.bytes),
-           good_number(btx_max, max_stat.tx.bytes),
+           good_number(btx_min, sizeof(btx_min), min_stat.tx.bytes),
+           good_number(btx_avg, sizeof(btx_avg), avg_stat.tx.bytes),
+           good_number(btx_max, sizeof(btx_max), max_stat.tx.bytes),
            "bytes",
 
            min_stat.tx.loss, avg_stat.tx.loss, max_stat.tx.loss,

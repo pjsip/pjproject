@@ -747,7 +747,8 @@ static void tx_tick(const pj_time_val *t)
 
         pj_time_val_normalize(&strm->state.tx.next_schedule);
 
-        sprintf(log_msg, "** Packet #%u tick is at %d.%03d, %d ms jitter applied **", 
+        snprintf(log_msg, sizeof(log_msg),
+                "** Packet #%u tick is at %d.%03d, %d ms jitter applied **", 
                 strm->state.tx.total_tx+1,
                 (int)strm->state.tx.next_schedule.sec, (int)strm->state.tx.next_schedule.msec,
                 jitter);

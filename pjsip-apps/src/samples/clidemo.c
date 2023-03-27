@@ -250,7 +250,7 @@ pj_status_t app_main(pj_cli_t *c)
         if (status != PJ_SUCCESS)
             break;
 
-        //pj_ansi_strcpy(cmdline, "sayhello {Teluu Inc.}");     
+        //pj_ansi_strxcpy(cmdline, "sayhello {Teluu Inc.}", sizeof(cmdline));
         if (status == PJ_CLI_EEXIT) {
             /* exit is called */
             break;

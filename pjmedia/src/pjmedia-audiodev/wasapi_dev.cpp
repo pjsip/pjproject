@@ -785,8 +785,8 @@ static pj_status_t wasapi_add_dev(struct wasapi_factory *wf)
     pj_bzero(adi, sizeof(*adi));
 
     /* Set device name */
-    strcpy(adi->name, "default");
-    strcpy(adi->driver, "wasapi");
+    pj_ansi_strxcpy(adi->name, "default", sizeof(adi->name));
+    pj_ansi_strxcpy(adi->driver, "wasapi", sizeof(adi->driver));
 
     /* Get default capture device */
 #if defined(USE_ASYNC_ACTIVATE)

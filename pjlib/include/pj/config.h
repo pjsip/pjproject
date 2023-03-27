@@ -973,6 +973,14 @@
 #endif
 
 /**
+ * Prohibit the use of sprintf() and pj_ansi_sprintf(),
+ * use pj_ansi_snprintf() instead.
+ */
+#ifndef PJ_BAN_SPRINTF
+#   define PJ_BAN_SPRINTF           PJ_BAN_UNSAFE_STR_FUNCS
+#endif
+
+/**
  * Prohibit the use of vsprintf() and pj_ansi_vsprintf(),
  * use pj_ansi_vsnprintf() instead.
  */

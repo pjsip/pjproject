@@ -170,7 +170,8 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
 #ifdef TRACE_
     {
         char msg[120];
-        pj_ansi_sprintf(msg, "Mem %X (%d+%d bytes) allocated by %s:%d\r\n",
+        pj_ansi_snprintf(msg, sizeof(msg),
+                        "Mem %X (%d+%d bytes) allocated by %s:%d\r\n",
                         mem, sz, sizeof(struct pj_pool_mem), 
                         file, line);
         TRACE_(msg);

@@ -527,7 +527,8 @@ static void console_main(void)
                 break;
             }
             peer = &g.peer[input[0]-'0'];
-            sprintf(input, "Hello from peer%d", input[0]-'0');
+            pj_ansi_snprintf(input, sizeof(input),
+                            "Hello from peer%d", input[0]-'0');
             pj_stun_sock_sendto(peer->stun_sock, NULL, input, strlen(input)+1, 0,
                                 &g.relay_addr, pj_sockaddr_get_len(&g.relay_addr));
             break;

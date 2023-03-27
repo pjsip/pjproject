@@ -1667,13 +1667,15 @@ static void ui_adjust_volume()
 {
     char buf[128];
     char text[128];
-    sprintf(buf, "Adjust mic level: [%4.1fx] ", app_config.mic_level);
+    snprintf(buf, sizeof(buf), "Adjust mic level: [%4.1fx] ",
+             app_config.mic_level);
     if (simple_input(buf,text,sizeof(text))) {
         char *err;
         app_config.mic_level = (float)strtod(text, &err);
         pjsua_conf_adjust_rx_level(0, app_config.mic_level);
     }
-    sprintf(buf, "Adjust speaker level: [%4.1fx] ", app_config.speaker_level);
+    snprintf(buf, sizeof(buf), "Adjust speaker level: [%4.1fx] ",
+             app_config.speaker_level);
     if (simple_input(buf,text,sizeof(text))) {
         char *err;
         app_config.speaker_level = (float)strtod(text, &err);

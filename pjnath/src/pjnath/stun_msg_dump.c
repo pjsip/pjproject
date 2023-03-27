@@ -32,21 +32,22 @@
 static int print_binary(char *buffer, unsigned length,
                         const pj_uint8_t *data, unsigned data_len)
 {
+    char *end = buffer+length;
     unsigned i;
 
     if (length < data_len * 2 + 8)
         return -1;
 
-    pj_ansi_sprintf(buffer, ", data=");
+    pj_ansi_snprintf(buffer, end-buffer, ", data=");
     buffer += 7;
 
     for (i=0; i<data_len; ++i) {
-        pj_ansi_sprintf(buffer, "%02x", (*data) & 0xFF);
+        pj_ansi_snprintf(buffer, end-buffer, "%02x", (*data) & 0xFF);
         buffer += 2;
         data++;
     }
 
-    pj_ansi_sprintf(buffer, "\n");
+    pj_ansi_snprintf(buffer, end-buffer, "\n");
     buffer++;
 
     return data_len * 2 + 8;

@@ -459,7 +459,7 @@ int main(int argc, char *argv[])
         }
         pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
-        pj_ansi_sprintf(temp, "<sip:simpleuac@%s:%d>", 
+        pj_ansi_snprintf(temp, sizeof(temp), "<sip:simpleuac@%s:%d>", 
                         hostip, SIP_PORT);
         local_uri = pj_str(temp);
 
@@ -743,7 +743,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     }
     pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
-    pj_ansi_sprintf(temp, "<sip:simpleuas@%s:%d>", 
+    pj_ansi_snprintf(temp, sizeof(temp), "<sip:simpleuas@%s:%d>", 
                     hostip, SIP_PORT);
     local_uri = pj_str(temp);
 

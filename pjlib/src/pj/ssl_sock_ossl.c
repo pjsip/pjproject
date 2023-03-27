@@ -2381,14 +2381,14 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
             len *= 2;
             if (len >= BUF_SIZE) len = BUF_SIZE;
             for (i = 0; i < len; i+=2)
-                pj_ansi_sprintf(buf+i, "%02X", sid[i/2]);
+                pj_ansi_snprintf(buf+i, len-i, "%02X", sid[i/2]);
             buf[len] = '\0';
             PJ_LOG(5, (THIS_FILE, "Session id: %s", buf));
 
             sctx = SSL_SESSION_get0_id_context(sess, &len);
             if (len >= BUF_SIZE) len = BUF_SIZE;
             for (i = 0; i < len; i++)
-                pj_ansi_sprintf(buf + i, "%d", sctx[i]);
+                pj_ansi_snprintf(buf + i, len-i, "%d", sctx[i]);
             buf[len] = '\0';
             PJ_LOG(5, (THIS_FILE, "Session id context: %s", buf));
         }

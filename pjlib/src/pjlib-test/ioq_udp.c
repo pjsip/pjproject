@@ -452,7 +452,7 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
     addr.sin_addr = pj_inet_addr2("127.0.0.1");
 
     /* Init buffer to send */
-    pj_ansi_strcpy(sendbuf, "Hello0123");
+    pj_ansi_strxcpy(sendbuf, "Hello0123", sizeof(sendbuf));
 
     /* Send one packet. */
     bytes = sizeof(sendbuf);

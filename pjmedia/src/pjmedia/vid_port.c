@@ -935,7 +935,7 @@ static void save_rgb_frame(int width, int height, const pjmedia_frame *frm)
         return;
 
     // Open file
-    sprintf(szFilename, "frame%02d.ppm", counter++);
+    pj_ansi_snprintf(szFilename, sizeof(szFilename), "frame%02d.ppm", counter++);
     pFile=fopen(szFilename, "wb");
     if(pFile==NULL)
       return;

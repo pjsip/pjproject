@@ -1021,7 +1021,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
         status = pj_base64_encode((pj_uint8_t*)tx->key.ptr, (int)tx->key.slen,
                                   b64, &b64_len);
         if (status != PJ_SUCCESS)
-            b64_len = pj_ansi_sprintf(b64, "--key too long--");
+            b64_len = pj_ansi_snprintf(b64, sizeof(b64), "--key too long--");
         else
             b64[b64_len] = '\0';
 
@@ -1038,7 +1038,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
         status = pj_base64_encode((pj_uint8_t*)rx->key.ptr, (int)rx->key.slen,
                                   b64, &b64_len);
         if (status != PJ_SUCCESS)
-            b64_len = pj_ansi_sprintf(b64, "--key too long--");
+            b64_len = pj_ansi_snprintf(b64, sizeof(b64), "--key too long--");
         else
             b64[b64_len] = '\0';
 
