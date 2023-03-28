@@ -1,0 +1,20 @@
+# Note: this only runs on master
+
+name: coverity-scan-daily
+
+on:
+  schedule:
+    - cron: '0 12 * * *'   # Daily at 12:00 UTC
+
+jobs:
+  ubuntu-default-full-bundle:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: master
+    - name: Run all
+      run: |
+        tests/coverity-scan/run.sh
+      env:
+        COV_TOKEN: ${{ secrets.PJSIP_COVERITY_SCAN_TOKEN }}

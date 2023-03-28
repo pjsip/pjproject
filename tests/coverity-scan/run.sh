@@ -41,6 +41,7 @@ include version.mak
 all:
 	@echo \$(PJ_VERSION)
 EOF
+export MQUIET='--quiet'
 export PJ_VERSION=`make -f getversion.mak`
 export GIT_BRANCH=`git branch --show-current`
 echo PJSIP version $PJ_VERSION on $GIT_BRANCH
@@ -78,7 +79,7 @@ if ! [ -f silk-src-1.0.9.zip ] ; then
 fi
 unzip -o -qq silk-src-1.0.9.zip
 cd silk-1.0.9/sources/SILK_SDK_SRC_FLP_v1.0.9
-make -s
+make $MQUIET
 export SILK_DIR=`pwd`
 popd
 
@@ -86,7 +87,7 @@ echo
 echo ===============================
 echo Configure
 echo ===============================
-make distclean
+make $MQUIET distclean
 ./configure --with-silk=$SILK_DIR | tee configure.out
 echo configure output is in configure.out
 
@@ -127,9 +128,10 @@ echo
 echo ===============================
 echo Build PJPROJECT
 echo ===============================
-make dep clean
+echo make dep clean..
+make $MQUIET dep clean
 rm -rf cov-int
-cov-build --dir cov-int make
+cov-build --dir cov-int make $MQUIET
 
 
 echo
@@ -141,12 +143,15 @@ rm -f tmp/cov-int.bz2
 tar caf tmp/cov-int.bz2 cov-int
 
 if [ "$TESTING" == "1" ] ; then
+  echo Testing mode, showing curl command:
   CURL="echo curl"
+  SAFE_COV_TOKEN='****'
 else
   CURL="curl"
+  SAFE_COV_TOKEN=$COV_TOKEN
 fi
 
-$CURL --form token=${COV_TOKEN} --form email=bennylp@pjsip.org --form file=@tmp/cov-int.bz2 \
+$CURL --form token=${SAFE_COV_TOKEN} --form email=bennylp@pjsip.org --form file=@tmp/cov-int.bz2 \
       --form version=\"$PJ_VERSION@$GIT_BRANCH\" --form description=- \
       https://scan.coverity.com/builds?project=PJSIP
 
@@ -154,5 +159,5 @@ exit 0
 
 
 echo swig bindings
-cd pjsip-apps/src/swig && make
+cd pjsip-apps/src/swig && make $MQUIET
 

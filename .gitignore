@@ -85,3 +85,4 @@ tests/fuzz/*.o
 # Coverity scan stuff
 cov-int/
 getversion.mak
+configure.out
