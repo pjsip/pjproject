@@ -145,7 +145,7 @@ tar caf tmp/cov-int.bz2 cov-int
 if [ "$TESTING" == "1" ] ; then
   echo Testing mode, showing curl command:
   CURL="echo curl"
-  SAFE_COV_TOKEN='****'
+  SAFE_COV_TOKEN=`echo $COV_TOKEN | sed 's/[a-zA-Z]/*/g'`
 else
   CURL="curl"
   SAFE_COV_TOKEN=$COV_TOKEN

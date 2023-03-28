@@ -11,6 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: run.sh
-        run: tests/coverity-scan/run.sh
+        run: tests/coverity-scan/run.sh -t
         env:
           COV_TOKEN: ${{ secrets.PJSIP_COVERITY_SCAN_TOKEN }}
