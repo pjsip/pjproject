@@ -51,7 +51,7 @@ echo ===============================
 echo Installing packages
 echo ===============================
 $SUDO apt update -y
-cat tests/coverity-scan/packages.txt | xargs $SUDO apt-get -y install
+cat tests/coverity-scan/packages.txt | xargs $SUDO apt-get -y -qq install
 
 echo
 echo ===============================
@@ -75,7 +75,7 @@ echo Building SILK
 echo ===============================
 pushd tmp
 if ! [ -f silk-src-1.0.9.zip ] ; then
-  wget https://github.com/pjsip/third_party_libs/raw/main/silk-src-1.0.9.zip
+  wget -q https://github.com/pjsip/third_party_libs/raw/main/silk-src-1.0.9.zip
 fi
 unzip -o -qq silk-src-1.0.9.zip
 cd silk-1.0.9/sources/SILK_SDK_SRC_FLP_v1.0.9
@@ -87,7 +87,6 @@ echo
 echo ===============================
 echo Configure
 echo ===============================
-make $MQUIET distclean
 ./configure --with-silk=$SILK_DIR | tee configure.out
 echo configure output is in configure.out
 
