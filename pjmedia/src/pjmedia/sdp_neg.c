@@ -1671,6 +1671,13 @@ static void update_session_pt_map(const pjmedia_sdp_session* sess,
             codec.slen = attr->value.slen - pt_len;
 
             if (pt_exists(med_pt_map, pt, &codec) != 3) {
+                /* If the same PT and codec combination found, don't update the map.
+                 * It is possible remote send:
+                 * - new PT and codec map
+                 * - already assigned PT used by different codec
+                 * - different/new PT used by the same codec
+                 * Later when we send new offer, we can find the PT based on the codec.
+                 */
                 med_pt_map->map[med_pt_map->map_cnt].pt = pt;
                 pj_strdup(neg->pool,
                           &med_pt_map->map[med_pt_map->map_cnt++].codec,
