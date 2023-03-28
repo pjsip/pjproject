@@ -1,6 +1,6 @@
-# Note: this only runs on master
+# Scheduled scan, only runs on master
 
-name: coverity-scan-daily
+name: "Coverity Scan (Daily)"
 
 on:
   schedule:
@@ -10,11 +10,10 @@ jobs:
   ubuntu-default-full-bundle:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        ref: master
-    - name: Run all
-      run: |
-        tests/coverity-scan/run.sh
-      env:
-        COV_TOKEN: ${{ secrets.PJSIP_COVERITY_SCAN_TOKEN }}
+      - uses: actions/checkout@v3
+        with:
+          ref: master
+      - name: run.sh
+        run: tests/coverity-scan/run.sh
+        env:
+          COV_TOKEN: ${{ secrets.PJSIP_COVERITY_SCAN_TOKEN }}
