@@ -821,7 +821,9 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_fmt_match( pj_pool_t *pool,
  * @param neg           The SDP negotiator instance.
  * @param local         The local SDP session.
  * 
- * @return              PJ_SUCCESS when the SDP session is valid.
+ * @return              PJ_SUCCESS when the SDP session is valid. However, if there is a
+ *                      conflict with the payload type, the function will return an error
+ *                      to indicate the failure to modify it.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_neg_validate_pt(pjmedia_sdp_neg* neg,
                                                  pjmedia_sdp_session* sdp_sess);

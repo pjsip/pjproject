@@ -815,10 +815,10 @@
  * to ensure that the session use unique payload type 
  * (e.g: same pt is not used by different codec).
  *
- * Default is 0 (no)
+ * Default is 1 (yes)
  */
 #ifndef PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
-#   define PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT          0
+#   define PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT          1
 #endif
 
 
