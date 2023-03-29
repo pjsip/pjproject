@@ -666,6 +666,15 @@ static void crc32_final(pj_crc32_context *ctx, pj_uint32_t *digest)
     *digest = pj_crc32_final(ctx);
 }
 
+/* pj_md5_update() has len argument in unsigned, while other xxx_update
+ * are in pj_size_t, hence the wrapper
+ */
+static void md5_update_wrapper(pj_md5_context *ctx, 
+                               unsigned char const *buf, pj_size_t len)
+{
+    pj_md5_update(ctx, buf, len);
+}
+
 int encryption_benchmark()
 {
     pj_pool_t *pool;
@@ -680,7 +689,7 @@ int encryption_benchmark()
     {
         const char *name;
         void (*init_context)(void*);
-        void (*update)(void*, const pj_uint8_t*, unsigned);
+        void (*update)(void*, const pj_uint8_t*, pj_size_t);
         void (*final)(void*, void*);
         pj_uint32_t t;
     } algorithms[] = 
@@ -688,19 +697,19 @@ int encryption_benchmark()
         {
             "MD5  ",
             (void (*)(void*))&pj_md5_init,
-            (void (*)(void*, const pj_uint8_t*, unsigned))&pj_md5_update,
+            (void (*)(void*, const pj_uint8_t*, pj_size_t))&md5_update_wrapper,
             (void (*)(void*, void*))&pj_md5_final
         },
         {
             "SHA1 ",
             (void (*)(void*))&pj_sha1_init,
-            (void (*)(void*, const pj_uint8_t*, unsigned))&pj_sha1_update,
+            (void (*)(void*, const pj_uint8_t*, pj_size_t))&pj_sha1_update,
             (void (*)(void*, void*))&pj_sha1_final
         },
         {
             "CRC32",
             (void (*)(void*))&pj_crc32_init,
-            (void (*)(void*, const pj_uint8_t*, unsigned))&crc32_update,
+            (void (*)(void*, const pj_uint8_t*, pj_size_t))&crc32_update,
             (void (*)(void*, void*))&crc32_final
         }
     };

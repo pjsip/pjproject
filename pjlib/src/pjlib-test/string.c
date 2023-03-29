@@ -529,7 +529,7 @@ static int verify_strxcat(const char *cdst, const char *src, int dst_size,
     int i, ret;
 
     PJ_ASSERT_RETURN(src && strlen(cdst) <= 4, -730);
-    PJ_ASSERT_RETURN(strlen(cdst) < dst_size ||
+    PJ_ASSERT_RETURN((int)strlen(cdst) < dst_size ||
                      (strlen(cdst)==0 && dst_size==0), -731);
 
     for (int ig=0; ig<sizeof(GUARDS); ++ig) {

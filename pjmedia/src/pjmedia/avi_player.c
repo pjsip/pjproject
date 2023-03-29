@@ -183,8 +183,9 @@ static pj_status_t file_read3(pj_oshandle_t fd, void *data, pj_ssize_t size,
     /* Normalize AVI header fields values from little-endian to host
      * byte order.
      */
-    if (bits > 0)
+    if (bits > 0) {
         data_to_host(data, bits, size_read);
+    }
 
     if (size_read != size_to_read) {
         if (psz_read)
@@ -303,14 +304,15 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             goto on_error;
 
         /* Normalize the endian */
-        if (elem == sizeof(strf_video_hdr_t))
+        if (elem == sizeof(strf_video_hdr_t)) {
             data_to_host2(&avi_hdr.strf_hdr[i],
                           PJ_ARRAY_SIZE(strf_video_hdr_sizes),
                           strf_video_hdr_sizes);
-        else if (elem == sizeof(strf_audio_hdr_t))
+        } else if (elem == sizeof(strf_audio_hdr_t)) {
             data_to_host2(&avi_hdr.strf_hdr[i],
                           PJ_ARRAY_SIZE(strf_audio_hdr_sizes),
                           strf_audio_hdr_sizes);
+        }
 
         /* Skip the remainder of the header */
         size_to_read = avi_hdr.strl_hdr[i].list_sz - (sizeof(strl_hdr_t) -

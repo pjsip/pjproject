@@ -440,8 +440,9 @@ PJ_DEF(void) pjsip_tpselector_add_ref(pjsip_tpselector *sel)
 {
     if (sel->type == PJSIP_TPSELECTOR_TRANSPORT && sel->u.transport != NULL)
         pjsip_transport_add_ref(sel->u.transport);
-    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL)
+    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL) {
         ; /* Hmm.. looks like we don't have reference counter for listener */
+    }
 }
 
 
@@ -452,8 +453,9 @@ PJ_DEF(void) pjsip_tpselector_dec_ref(pjsip_tpselector *sel)
 {
     if (sel->type == PJSIP_TPSELECTOR_TRANSPORT && sel->u.transport != NULL)
         pjsip_transport_dec_ref(sel->u.transport);
-    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL)
+    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL) {
         ; /* Hmm.. looks like we don't have reference counter for listener */
+    }
 }
 
 

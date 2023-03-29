@@ -449,7 +449,7 @@ static pj_status_t alsa_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 {
     struct alsa_factory *af = (struct alsa_factory*)f;
 
-    PJ_ASSERT_RETURN(index>=0 && index<af->dev_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(index<af->dev_cnt, PJ_EINVAL);
 
     pj_memcpy(info, &af->devs[index], sizeof(*info));
     info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
@@ -468,7 +468,7 @@ static pj_status_t alsa_factory_default_param(pjmedia_aud_dev_factory *f,
     struct alsa_factory *af = (struct alsa_factory*)f;
     pjmedia_aud_dev_info *adi;
 
-    PJ_ASSERT_RETURN(index>=0 && index<af->dev_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(index<af->dev_cnt, PJ_EINVAL);
 
     adi = &af->devs[index];
 
