@@ -244,7 +244,7 @@ static void v4l2_get_supported_size(int fd,
     if (fmt_map == NULL)
         return;
 
-    for (;i<PJ_ARRAY_SIZE(v4l_sizes) &&
+    for (;i<(int)PJ_ARRAY_SIZE(v4l_sizes) &&
           info->fmt_cnt<PJMEDIA_VID_DEV_INFO_FMT_CNT;
          i++)
     {
@@ -322,7 +322,7 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 
         PJ_LOG(5,(THIS_FILE, "Found capture device %s", pdi->v4l2_cap.card));
         PJ_LOG(5,(THIS_FILE, "  Enumerating formats:"));
-        for (j=0; fmt_cnt<PJ_ARRAY_SIZE(fmt_cap); ++j) {
+        for (j=0; fmt_cnt<(int)PJ_ARRAY_SIZE(fmt_cap); ++j) {
             struct v4l2_fmtdesc fdesc;
             unsigned k;
 
@@ -597,7 +597,7 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
                      param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      param->dir == PJMEDIA_DIR_CAPTURE,
                      PJ_EINVAL);
-    PJ_ASSERT_RETURN(param->cap_id >= 0 && param->cap_id < cf->dev_count,
+    PJ_ASSERT_RETURN(param->cap_id >= 0 && param->cap_id < (int)cf->dev_count,
                      PJMEDIA_EVID_INVDEV);
 
     fmt_info = pjmedia_get_video_format_info(NULL, param->fmt.id);

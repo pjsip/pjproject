@@ -193,7 +193,7 @@ static void alsa_error_handler (const char *file,
     }
 
     va_start (arg, fmt);
-    if (index < sizeof(err_msg)-1) {
+    if (index < (int)sizeof(err_msg)-1) {
         len = vsnprintf( err_msg+index, sizeof(err_msg)-index, fmt, arg);
         if (len < 1 || len >= (int)sizeof(err_msg)-index)
             len = sizeof(err_msg)-index-1;
@@ -201,7 +201,7 @@ static void alsa_error_handler (const char *file,
         err_msg[index] = '\0';
     }
     va_end(arg);
-    if (err && index < sizeof(err_msg)-1) {
+    if (err && index < (int)sizeof(err_msg)-1) {
         len = snprintf( err_msg+index, sizeof(err_msg)-index, ": %s",
                         snd_strerror(err));
         if (len < 1 || len >= (int)sizeof(err_msg)-index)
@@ -635,7 +635,7 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     snd_pcm_uframes_t tmp_buf_size;
     snd_pcm_uframes_t tmp_period_size;
 
-    if (param->play_id < 0 || param->play_id >= stream->af->dev_cnt)
+    if (param->play_id < 0 || param->play_id >= (int)stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
     /* Open PCM for playback */
@@ -773,7 +773,7 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     snd_pcm_uframes_t tmp_buf_size;
     snd_pcm_uframes_t tmp_period_size;
 
-    if (param->rec_id < 0 || param->rec_id >= stream->af->dev_cnt)
+    if (param->rec_id < 0 || param->rec_id >= (int)stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
     /* Open PCM for capture */

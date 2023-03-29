@@ -578,7 +578,7 @@ static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
     rx = &ds->rx_crypto;
     pj_bzero(tx, sizeof(*tx));
     pj_bzero(rx, sizeof(*rx));
-    for (i=0; i<PJ_ARRAY_SIZE(ossl_profiles); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(ossl_profiles); ++i) {
         if (pj_ansi_stricmp(profile->name, ossl_profiles[i])==0) {
             pj_strset2(&tx->name, pj_profiles[i]);
             pj_strset2(&rx->name, pj_profiles[i]);

@@ -296,11 +296,11 @@ static int verify_strxcpy(const char *src, int dst_size, int exp_ret,
 {
     char dst[6];
     const char GUARDS[2] = {'@', '\0'};
-    int i, ret;
+    int i, ig, ret;
 
     PJ_ASSERT_RETURN(src && dst_size <= 5, -700);
 
-    for (int ig=0; ig<sizeof(GUARDS); ++ig) {
+    for (ig=0; ig<(int)sizeof(GUARDS); ++ig) {
         char GUARD = GUARDS[ig];
 
         memset(dst, GUARD, sizeof(dst));
@@ -400,11 +400,11 @@ static int verify_strxcpy2(const pj_str_t *src, int dst_size, int exp_ret,
 {
     char dst[6];
     const char GUARDS[2] = {'@', '\0'};
-    int i, ret;
+    int i, ret, ig;
 
     PJ_ASSERT_RETURN(src && dst_size <= 5, -720);
 
-    for (int ig=0; ig<sizeof(GUARDS); ++ig) {
+    for (ig=0; ig<(int)sizeof(GUARDS); ++ig) {
         char GUARD = GUARDS[ig];
 
         memset(dst, GUARD, sizeof(dst));
@@ -432,7 +432,7 @@ static int verify_strxcpy2(const pj_str_t *src, int dst_size, int exp_ret,
         }
 
         /* verify not writing pass buffer */
-        for (i=dst_size; i<sizeof(dst); ++i) {
+        for (i=dst_size; i<(int)sizeof(dst); ++i) {
             if (dst[i] != GUARD) {
                 PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: "
                             "overflow at %d (chr %d)",
@@ -526,19 +526,19 @@ static int verify_strxcat(const char *cdst, const char *src, int dst_size,
 {
     char dst[6];
     const char GUARDS[2] = {'@', '\0'};
-    int i, ret;
+    int i, ret, ig;
 
     PJ_ASSERT_RETURN(src && strlen(cdst) <= 4, -730);
     PJ_ASSERT_RETURN((int)strlen(cdst) < dst_size ||
                      (strlen(cdst)==0 && dst_size==0), -731);
 
-    for (int ig=0; ig<sizeof(GUARDS); ++ig) {
+    for (ig=0; ig<(int)sizeof(GUARDS); ++ig) {
         char GUARD = GUARDS[ig];
         
         memset(dst, GUARD, sizeof(dst));
         if (dst_size) {
             ret = pj_ansi_strxcpy(dst, cdst, dst_size);
-            PJ_ASSERT_RETURN(ret==strlen(cdst), -732);
+            PJ_ASSERT_RETURN(ret==(int)strlen(cdst), -732);
         }
 
         ret = pj_ansi_strxcat(dst, src, dst_size);
