@@ -355,9 +355,9 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 
         pj_ansi_strxcpy(pdi->dev_name, dev_name, sizeof(pdi->dev_name));
         pj_ansi_strxcpy(pdi->info.name, (char*)pdi->v4l2_cap.card,
-                             sizeof(pdi->info.name));
+                        sizeof(pdi->info.name));
         pj_ansi_strxcpy(pdi->info.driver, DRIVER_NAME, 
-                             sizeof(pdi->info.driver));
+                        sizeof(pdi->info.driver));
         pdi->info.dir = PJMEDIA_DIR_CAPTURE;
         pdi->info.has_callback = PJ_FALSE;
         pdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;

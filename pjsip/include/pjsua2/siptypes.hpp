@@ -594,7 +594,9 @@ struct TsxStateEventSrc
     pj_status_t     status;         /**< Transport error status.    */
     GenericData     data;           /**< Generic data.              */
 
-    TsxStateEventSrc() : timer(NULL), status(), data(NULL) {}
+    TsxStateEventSrc()
+    : timer(NULL), status(PJ_SUCCESS), data(NULL)
+    {}
 };
 
 /**

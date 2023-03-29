@@ -222,7 +222,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
         /* Store canonical name (possibly truncating the name) */
         if (res->ai_canonname) {
             pj_ansi_strxcpy(ai[i].ai_canonname, res->ai_canonname,
-                                 sizeof(ai[i].ai_canonname));
+                            sizeof(ai[i].ai_canonname));
         } else {
             pj_ansi_strxcpy(ai[i].ai_canonname, nodecopy,
                             sizeof(ai[i].ai_canonname));
@@ -305,7 +305,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
         for (i=0; he.h_addr_list[i] && *count<max_count; ++i) {
             pj_ansi_strxcpy(ai[*count].ai_canonname, he.h_name,
-                                 sizeof(ai[*count].ai_canonname));
+                            sizeof(ai[*count].ai_canonname));
 
             ai[*count].ai_addr.ipv4.sin_family = PJ_AF_INET;
             pj_memcpy(&ai[*count].ai_addr.ipv4.sin_addr,

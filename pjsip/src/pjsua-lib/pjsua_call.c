@@ -695,7 +695,7 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     /* If call is established or media channel hasn't been initialized,
      * reinit media channel.
      */
-    if (call-> inv &&
+    if (call->inv &&
         ((call->inv->state == PJSIP_INV_STATE_CONNECTING &&
           call->med_cnt == 0) ||
          (call->inv->state == PJSIP_INV_STATE_CONFIRMED) ||

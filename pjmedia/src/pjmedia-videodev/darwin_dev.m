@@ -362,10 +362,10 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
             qdi = &qf->dev_info[qf->dev_count++];
             pj_bzero(qdi, sizeof(*qdi));
             pj_ansi_strxcpy(qdi->info.name, 
-                                 [device.localizedName UTF8String],
-                                 sizeof(qdi->info.name));
+                            [device.localizedName UTF8String],
+                            sizeof(qdi->info.name));
             pj_ansi_strxcpy(qdi->info.driver, "AVF", 
-                                 sizeof(qdi->info.driver));
+                            sizeof(qdi->info.driver));
             qdi->info.dir = PJMEDIA_DIR_CAPTURE;
             qdi->info.has_callback = PJ_FALSE;
 #if TARGET_OS_IPHONE

@@ -494,21 +494,21 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
     ddi = &sf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strxcpy(ddi->info.name, "SDL renderer", 
-                         sizeof(ddi->info.name));
+                    sizeof(ddi->info.name));
     ddi->info.fmt_cnt = PJ_ARRAY_SIZE(sdl_fmts);
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     ddi = &sf->dev_info[OPENGL_DEV_IDX];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strxcpy(ddi->info.name, "SDL openGL renderer", 
-                         sizeof(ddi->info.name));
+                    sizeof(ddi->info.name));
     ddi->info.fmt_cnt = 1;
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
     for (i = 0; i < sf->dev_count; i++) {
         ddi = &sf->dev_info[i];
         pj_ansi_strxcpy(ddi->info.driver, "SDL", 
-                             sizeof(ddi->info.driver));
+                        sizeof(ddi->info.driver));
         ddi->info.dir = PJMEDIA_DIR_RENDER;
         ddi->info.has_callback = PJ_FALSE;
         ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT |

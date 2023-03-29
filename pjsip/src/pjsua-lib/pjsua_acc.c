@@ -3519,7 +3519,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     {
         int i;
 
-        for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); i++) {
+        for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); i++) {
             if (tfla2_prm.ret_tp==(const void *)pjsua_var.tpdata[i].data.tp) {
                 if (pjsua_var.tpdata[i].has_bound_addr) {
                     pj_strdup(pool, &addr->host,

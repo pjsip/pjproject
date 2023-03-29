@@ -295,37 +295,42 @@ static int verify_strxcpy(const char *src, int dst_size, int exp_ret,
                           const char *exp_dst)
 {
     char dst[6];
-    char GUARD = '@';
+    const char GUARDS[2] = {'@', '\0'};
     int i, ret;
 
     PJ_ASSERT_RETURN(src && dst_size <= 5, -700);
 
-    memset(dst, GUARD, sizeof(dst));
+    for (int ig=0; ig<sizeof(GUARDS); ++ig) {
+        char GUARD = GUARDS[ig];
 
-    ret = pj_ansi_strxcpy(dst, src, dst_size);
+        memset(dst, GUARD, sizeof(dst));
 
-    /* verify return value */
-    if (ret != exp_ret) {
-        PJ_LOG(3,("", "  strxcpy \"%s\", dst_size=%d: ret %d != %d",
-                  src, dst_size, ret, exp_ret));
-        return -704;
-    }
+        ret = pj_ansi_strxcpy(dst, src, dst_size);
 
-    /* expected dst content */
-    if (exp_dst) {
-        if (strcmp(dst, exp_dst)) {
-            PJ_LOG(3,("", "  strxcpy \"%s\", dst_size=%d: dst content mismatch: \"%s\"!=\"%s\"",  
-                          src, dst_size, dst, exp_dst));
-            return -708;
+        /* verify return value */
+        if (ret != exp_ret) {
+            PJ_LOG(3,("", "  strxcpy \"%s\", dst_size=%d: ret %d != %d",
+                    src, dst_size, ret, exp_ret));
+            return -704;
         }
-    }
 
-    /* verify not writing pass buffer */
-    for (i=exp_dst?strlen(exp_dst)+1:0; i<sizeof(dst); ++i) {
-        if (dst[i] != GUARD) {
-            PJ_LOG(3,("", "  strxcpy \"%s\", dst_size=%d: overflow at %d",
-                          src, dst_size, i));
-            return -710;
+        /* expected dst content */
+        if (exp_dst) {
+            if (strcmp(dst, exp_dst)) {
+                PJ_LOG(3,("", "  strxcpy \"%s\", dst_size=%d: "
+                              "dst content mismatch: \"%s\"!=\"%s\"",  
+                              src, dst_size, dst, exp_dst));
+                return -708;
+            }
+        }
+
+        /* verify not writing pass buffer */
+        for (i=exp_dst?strlen(exp_dst)+1:0; i<(int)sizeof(dst); ++i) {
+            if (dst[i] != GUARD) {
+                PJ_LOG(3,("", "  strxcpy \"%s\", dst_size=%d: overflow at %d",
+                              src, dst_size, i));
+                return -710;
+            }
         }
     }
 
@@ -394,41 +399,47 @@ static int verify_strxcpy2(const pj_str_t *src, int dst_size, int exp_ret,
                            const char *exp_dst)
 {
     char dst[6];
-    char GUARD = '@';
+    const char GUARDS[2] = {'@', '\0'};
     int i, ret;
 
     PJ_ASSERT_RETURN(src && dst_size <= 5, -720);
 
-    memset(dst, GUARD, sizeof(dst));
+    for (int ig=0; ig<sizeof(GUARDS); ++ig) {
+        char GUARD = GUARDS[ig];
 
-    ret = pj_ansi_strxcpy2(dst, src, dst_size);
+        memset(dst, GUARD, sizeof(dst));
 
-    /* verify return value */
-    if (ret != exp_ret) {
-        PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: ret %d!=%d",
-                 (int)src->slen, src->ptr, src->slen, dst_size, ret, exp_ret));
-        return -724;
-    }
+        ret = pj_ansi_strxcpy2(dst, src, dst_size);
 
-    /* expected dst content */
-    if (exp_dst) {
-        if (strcmp(dst, exp_dst)) {
+        /* verify return value */
+        if (ret != exp_ret) {
             PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: "
-                          "dst content mismatch: \"%s\"!=\"%s\"",  
-                          (int)src->slen, src->ptr, src->slen, dst_size, dst,
-                          exp_dst));
-            return -726;
+                          "ret %d!=%d",
+                          (int)src->slen, src->ptr, src->slen, dst_size,
+                          ret, exp_ret));
+            return -724;
         }
-    }
 
-    /* verify not writing pass buffer */
-    for (i=dst_size; i<sizeof(dst); ++i) {
-        if (dst[i] != GUARD) {
-            PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: "
-                          "overflow at %d (chr %d)",
-                          (int)src->slen, src->ptr, src->slen, dst_size, i,
-                          (char)(dst[i] & 0xFF)));
-            return -728;
+        /* expected dst content */
+        if (exp_dst) {
+            if (strcmp(dst, exp_dst)) {
+                PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: "
+                            "dst content mismatch: \"%s\"!=\"%s\"",  
+                            (int)src->slen, src->ptr, src->slen, dst_size, dst,
+                            exp_dst));
+                return -726;
+            }
+        }
+
+        /* verify not writing pass buffer */
+        for (i=dst_size; i<sizeof(dst); ++i) {
+            if (dst[i] != GUARD) {
+                PJ_LOG(3,("", "  strxcpy2 \"%.*s\" slen=%ld, dst_size=%d: "
+                            "overflow at %d (chr %d)",
+                            (int)src->slen, src->ptr, src->slen, dst_size, i,
+                            (char)(dst[i] & 0xFF)));
+                return -728;
+            }
         }
     }
 
@@ -514,45 +525,49 @@ static int verify_strxcat(const char *cdst, const char *src, int dst_size,
                           int exp_ret, const char *exp_dst)
 {
     char dst[6];
-    char GUARD = '@';
+    const char GUARDS[2] = {'@', '\0'};
     int i, ret;
 
     PJ_ASSERT_RETURN(src && strlen(cdst) <= 4, -730);
     PJ_ASSERT_RETURN(strlen(cdst) < dst_size ||
                      (strlen(cdst)==0 && dst_size==0), -731);
 
-    memset(dst, GUARD, sizeof(dst));
-    if (dst_size) {
-        ret = pj_ansi_strxcpy(dst, cdst, dst_size);
-        PJ_ASSERT_RETURN(ret==strlen(cdst), -732);
-    }
-
-    ret = pj_ansi_strxcat(dst, src, dst_size);
-
-    /* verify return value */
-    if (ret != exp_ret) {
-        PJ_LOG(3,("", "  strxcat \"%s\", \"%s\", dst_size=%d: ret %d!=%d",
-                  cdst, src, dst_size, ret, exp_ret));
-        return -734;
-    }
-
-    /* expected dst content */
-    if (exp_dst) {
-        if (strcmp(dst, exp_dst)) {
-            PJ_LOG(3,("", "  strxcat \"%s\", \"%s\", dst_size=%d: "
-                          "dst content mismatch: \"%s\"!=\"%s\"",  
-                          cdst, src, dst_size, dst, exp_dst));
-            return -736;
+    for (int ig=0; ig<sizeof(GUARDS); ++ig) {
+        char GUARD = GUARDS[ig];
+        
+        memset(dst, GUARD, sizeof(dst));
+        if (dst_size) {
+            ret = pj_ansi_strxcpy(dst, cdst, dst_size);
+            PJ_ASSERT_RETURN(ret==strlen(cdst), -732);
         }
-    }
 
-    /* verify not writing past buffer */
-    for (i=exp_dst?strlen(exp_dst)+1:0; i<sizeof(dst); ++i) {
-        if (dst[i] != GUARD) {
-            PJ_LOG(3,("", "  strxcat \"%s\", \"%s\", dst_size=%d: "
-                          "overflow at %d",
-                          cdst, src, dst_size, i));
-            return -738;
+        ret = pj_ansi_strxcat(dst, src, dst_size);
+
+        /* verify return value */
+        if (ret != exp_ret) {
+            PJ_LOG(3,("", "  strxcat \"%s\", \"%s\", dst_size=%d: ret %d!=%d",
+                    cdst, src, dst_size, ret, exp_ret));
+            return -734;
+        }
+
+        /* expected dst content */
+        if (exp_dst) {
+            if (strcmp(dst, exp_dst)) {
+                PJ_LOG(3,("", "  strxcat \"%s\", \"%s\", dst_size=%d: "
+                            "dst content mismatch: \"%s\"!=\"%s\"",  
+                            cdst, src, dst_size, dst, exp_dst));
+                return -736;
+            }
+        }
+
+        /* verify not writing past buffer */
+        for (i=exp_dst?strlen(exp_dst)+1:0; i<(int)sizeof(dst); ++i) {
+            if (dst[i] != GUARD) {
+                PJ_LOG(3,("", "  strxcat \"%s\", \"%s\", dst_size=%d: "
+                            "overflow at %d",
+                            cdst, src, dst_size, i));
+                return -738;
+            }
         }
     }
 

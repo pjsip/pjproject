@@ -849,7 +849,7 @@ PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
  *
  * @param dst       The destination string.
  * @param src       The source string.
- * @param dst_size  The size of the destination string.
+ * @param dst_size  The full size of the destination string buffer.
  *
  * @return The number of characters copied (not including the trailing NUL) or
  *         -PJ_ETOOBIG if the destination buffer wasn't big enough,
@@ -865,7 +865,7 @@ PJ_DECL(int) pj_ansi_strxcpy(char *dst, const char *src, pj_size_t dst_size);
  *
  * @param dst       The destination string.
  * @param src       The source string.
- * @param dst_size  The size of the destination string.
+ * @param dst_size  The full size of the destination string buffer.
  *
  * @return The number of characters copied (not including the trailing NUL) or
  *         -PJ_ETOOBIG if the destination buffer wasn't big enough,
@@ -884,7 +884,7 @@ PJ_DECL(int) pj_ansi_strxcpy2(char *dst, const pj_str_t *src,
  *
  * @param dst       The destination string.
  * @param src       The source string.
- * @param dst_size  The size of the destination string.
+ * @param dst_size  The full size of the destination string buffer.
  *
  * @return Final length of dst string (not including the trailing NUL) or
  *         -PJ_ETOOBIG if the destination buffer wasn't big enough,

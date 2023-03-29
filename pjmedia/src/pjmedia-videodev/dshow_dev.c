@@ -505,9 +505,9 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
     ddi = &df->dev_info[df->dev_count++];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strxcpy(ddi->info.name,  "Video Mixing Renderer",
-                        sizeof(ddi->info.name));
+                    sizeof(ddi->info.name));
     pj_ansi_strxcpy(ddi->info.driver, "dshow", 
-                         sizeof(ddi->info.driver));
+                    sizeof(ddi->info.driver));
     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
     ddi->info.dir = PJMEDIA_DIR_RENDER;
     ddi->info.has_callback = PJ_FALSE;

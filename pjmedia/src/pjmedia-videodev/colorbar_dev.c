@@ -202,9 +202,9 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     ddi = &cf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strxcpy(ddi->info.name, "Colorbar generator",
-                         sizeof(ddi->info.name));
+                    sizeof(ddi->info.name));
     pj_ansi_strxcpy(ddi->info.driver, "Colorbar", 
-                         sizeof(ddi->info.driver));
+                    sizeof(ddi->info.driver));
     ddi->info.dir = PJMEDIA_DIR_CAPTURE;
     ddi->info.has_callback = PJ_FALSE;
 
@@ -221,9 +221,9 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     ddi = &cf->dev_info[1];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strxcpy(ddi->info.name, "Colorbar-active",
-                         sizeof(ddi->info.name));
+                    sizeof(ddi->info.name));
     pj_ansi_strxcpy(ddi->info.driver, "Colorbar", 
-                         sizeof(ddi->info.driver));
+                    sizeof(ddi->info.driver));
     ddi->info.dir = PJMEDIA_DIR_CAPTURE;
     ddi->info.has_callback = PJ_TRUE;
 
