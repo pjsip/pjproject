@@ -54,7 +54,8 @@ static void print_call(int call_index)
 
         PJ_TIME_VAL_SUB(now, call->connect_time);
 
-        sprintf(duration, " [duration: %02ld:%02ld:%02ld.%03ld]",
+        pj_ansi_snprintf(duration, sizeof(duration),
+                " [duration: %02ld:%02ld:%02ld.%03ld]",
                 now.sec / 3600,
                 (now.sec % 3600) / 60,
                 (now.sec % 60),
@@ -77,7 +78,7 @@ static void print_call(int call_index)
     /* Call identification */
     len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
     if (len < 0)
-        pj_ansi_strcpy(userinfo, "<--uri too long-->");
+        pj_ansi_strxcpy(userinfo, "<--uri too long-->", sizeof(userinfo));
     else
         userinfo[len] = '\0';
 
@@ -100,7 +101,9 @@ static void print_call(int call_index)
         if (call->response_time.sec) {
             t = call->response_time;
             PJ_TIME_VAL_SUB(t, call->start_time);
-            sprintf(pdd, "got 1st response in %ld ms", PJ_TIME_VAL_MSEC(t));
+            pj_ansi_snprintf(pdd, sizeof(pdd),
+                             "got 1st response in %ld ms", 
+                             PJ_TIME_VAL_MSEC(t));
         } else {
             pdd[0] = '\0';
         }
@@ -108,7 +111,8 @@ static void print_call(int call_index)
         if (call->connect_time.sec) {
             t = call->connect_time;
             PJ_TIME_VAL_SUB(t, call->start_time);
-            sprintf(connectdelay, ", connected after: %ld ms", 
+            pj_ansi_snprintf(connectdelay, sizeof(connectdelay),
+                    ", connected after: %ld ms", 
                     PJ_TIME_VAL_MSEC(t));
         } else {
             connectdelay[0] = '\0';
@@ -125,15 +129,16 @@ static void print_call(int call_index)
         audio->si.fmt.encoding_name.ptr,
         audio->clock_rate,
         audio->samples_per_frame * 1000 / audio->clock_rate,
-        good_number(bps, audio->bytes_per_frame * audio->clock_rate / audio->samples_per_frame),
-        good_number(ipbps, (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame)));
+        good_number(bps, sizeof(bps), audio->bytes_per_frame * audio->clock_rate / audio->samples_per_frame),
+        good_number(ipbps, sizeof(ipbps), (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame)));
 
     if (audio->rtcp.stat.rx.update_cnt == 0)
-        strcpy(last_update, "never");
+        pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
     else {
         pj_gettimeofday(&now);
         PJ_TIME_VAL_SUB(now, audio->rtcp.stat.rx.update);
-        sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+        pj_ansi_snprintf(last_update, sizeof(last_update),
+                "%02ldh:%02ldm:%02ld.%03lds ago",
                 now.sec / 3600,
                 (now.sec % 3600) / 60,
                 now.sec % 60,
@@ -148,9 +153,9 @@ static void print_call(int call_index)
            "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
            "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s",
            last_update,
-           good_number(packets, audio->rtcp.stat.rx.pkt),
-           good_number(bytes, audio->rtcp.stat.rx.bytes),
-           good_number(ipbytes, audio->rtcp.stat.rx.bytes + audio->rtcp.stat.rx.pkt * 32),
+           good_number(packets, sizeof(packets), audio->rtcp.stat.rx.pkt),
+           good_number(bytes, sizeof(bytes), audio->rtcp.stat.rx.bytes),
+           good_number(ipbytes, sizeof(ipbytes), audio->rtcp.stat.rx.bytes + audio->rtcp.stat.rx.pkt * 32),
            "",
            audio->rtcp.stat.rx.loss,
            audio->rtcp.stat.rx.loss * 100.0 / (audio->rtcp.stat.rx.pkt + audio->rtcp.stat.rx.loss),
@@ -173,11 +178,12 @@ static void print_call(int call_index)
 
 
     if (audio->rtcp.stat.tx.update_cnt == 0)
-        strcpy(last_update, "never");
+        pj_ansi_strxcpy(last_update, "never", sizeof(last_update));
     else {
         pj_gettimeofday(&now);
         PJ_TIME_VAL_SUB(now, audio->rtcp.stat.tx.update);
-        sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+        pj_ansi_snprintf(last_update, sizeof(last_update),
+                "%02ldh:%02ldm:%02ld.%03lds ago",
                 now.sec / 3600,
                 (now.sec % 3600) / 60,
                 now.sec % 60,
@@ -192,9 +198,9 @@ static void print_call(int call_index)
            "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
            "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s",
            last_update,
-           good_number(packets, audio->rtcp.stat.tx.pkt),
-           good_number(bytes, audio->rtcp.stat.tx.bytes),
-           good_number(ipbytes, audio->rtcp.stat.tx.bytes + audio->rtcp.stat.tx.pkt * 32),
+           good_number(packets, sizeof(packets), audio->rtcp.stat.tx.pkt),
+           good_number(bytes, sizeof(bytes), audio->rtcp.stat.tx.bytes),
+           good_number(ipbytes, sizeof(ipbytes), audio->rtcp.stat.tx.bytes + audio->rtcp.stat.tx.pkt * 32),
            "",
            audio->rtcp.stat.tx.loss,
            audio->rtcp.stat.tx.loss * 100.0 / (audio->rtcp.stat.tx.pkt + audio->rtcp.stat.tx.loss),

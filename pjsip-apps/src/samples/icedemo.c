@@ -226,7 +226,7 @@ static void cb_on_rx_data(pj_ice_strans *ice_st,
     // Don't do this! It will ruin the packet buffer in case TCP is used!
     //((char*)pkt)[size] = '\0';
 
-    PJ_LOG(3,(THIS_FILE, "Component %d: received %d bytes data from %s: \"%.*s\"",
+    PJ_LOG(3,(THIS_FILE, "Component %d: received %ld bytes data from %s: \"%.*s\"",
               comp_id, size,
               pj_sockaddr_print(src_addr, ipstr, sizeof(ipstr), 3),
               (unsigned)size,
@@ -778,16 +778,18 @@ static void icedemo_input_remote(void)
                     goto on_error;
                 }
 
-                strcpy(comp0_addr, ip);
+                pj_ansi_strxcpy(comp0_addr, ip, sizeof(comp0_addr));
             }
             break;
         case 'a':
             {
                 char *attr = strtok(line+2, ": \t\r\n");
                 if (strcmp(attr, "ice-ufrag")==0) {
-                    strcpy(icedemo.rem.ufrag, attr+strlen(attr)+1);
+                    pj_ansi_strxcpy(icedemo.rem.ufrag, attr+strlen(attr)+1,
+                                    sizeof(icedemo.rem.ufrag));
                 } else if (strcmp(attr, "ice-pwd")==0) {
-                    strcpy(icedemo.rem.pwd, attr+strlen(attr)+1);
+                    pj_ansi_strxcpy(icedemo.rem.pwd, attr+strlen(attr)+1,
+                                    sizeof(icedemo.rem.pwd));
                 } else if (strcmp(attr, "rtcp")==0) {
                     char *val = attr+strlen(attr)+1;
                     int af, cnt;

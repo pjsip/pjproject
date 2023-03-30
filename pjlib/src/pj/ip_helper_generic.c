@@ -306,7 +306,7 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
         struct sockaddr *ad;
         int rc;
 
-        strncpy(ifreq.ifr_name, if_list[i].if_name, IFNAMSIZ);
+        pj_ansi_strxcpy(ifreq.ifr_name, if_list[i].if_name, IFNAMSIZ);
 
         TRACE_((THIS_FILE, " checking interface %s", ifreq.ifr_name));
 
@@ -480,7 +480,7 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
     } netlink_req;
 
     long pagesize = sysconf(_SC_PAGESIZE);
-    if (!pagesize)
+    if (pagesize <= 0)
         pagesize = 4096; /* Assume pagesize is 4096 if sysconf() failed */
 
     int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
@@ -496,8 +496,10 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
     netlink_req.ifaddrmsg_info.ifa_family = AF_INET6;
 
     int rtn = send(fd, &netlink_req, netlink_req.nlmsg_info.nlmsg_len, 0);
-    if (rtn < 0)
+    if (rtn < 0) {
+        close(fd);
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+    }
 
     char read_buffer[pagesize];
     size_t idx = 0;
@@ -505,14 +507,18 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
     while(1) {
         bzero(read_buffer, pagesize);
         int read_size = recv(fd, read_buffer, pagesize, 0);
-        if (read_size < 0)
+        if (read_size < 0) {
+            close(fd);
             return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+        }
 
         struct nlmsghdr *nlmsg_ptr = (struct nlmsghdr *) read_buffer;
         int nlmsg_len = read_size;
 
-        if (nlmsg_len < (int)sizeof(struct nlmsghdr))
+        if (nlmsg_len < (int)sizeof (struct nlmsghdr)) {
+            close(fd);
             return PJ_ETOOSMALL;
+        }
 
         if (nlmsg_ptr->nlmsg_type == NLMSG_DONE)
             break;

@@ -1370,7 +1370,7 @@ on_return:
                               PJMEDIA_EVENT_PUBLISH_DEFAULT);
 
         PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
-                  "input nframes=%d, concatenated size=%d bytes",
+                  "input nframes=%ld, concatenated size=%d bytes",
                   count, whole_len));
 
         output->type = PJMEDIA_FRAME_TYPE_NONE;

@@ -4,6 +4,7 @@
 [![CI Windows](https://github.com/pjsip/pjproject/actions/workflows/ci-win.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/ci-win.yml)
 <BR>
 [![OSS-Fuzz](https://oss-fuzz-build-logs.storage.googleapis.com/badges/pjsip.png)](https://oss-fuzz-build-logs.storage.googleapis.com/index.html#pjsip)
+[![Coverity-Scan](https://scan.coverity.com/projects/905/badge.svg)](https://scan.coverity.com/projects/pjsip)
 [![CodeQL](https://github.com/pjsip/pjproject/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/pjsip/pjproject/actions/workflows/codeql-analysis.yml)
 [![docs.pjsip.org](https://readthedocs.org/projects/pjsip/badge/?version=latest)](https://docs.pjsip.org/en/latest/)
 

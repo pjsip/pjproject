@@ -852,17 +852,17 @@ PJ_DEF(pj_bool_t) pjmedia_vid_port_is_running(pjmedia_vid_port *vp)
 
 PJ_DEF(pj_status_t) pjmedia_vid_port_stop(pjmedia_vid_port *vp)
 {
-    pj_status_t status;
+    pj_status_t status0=PJ_SUCCESS, status;
 
     PJ_ASSERT_RETURN(vp, PJ_EINVAL);
 
     if (vp->clock) {
-        status = pjmedia_clock_stop(vp->clock);
+        status0 = pjmedia_clock_stop(vp->clock);
     }
 
     status = pjmedia_vid_dev_stream_stop(vp->strm);
 
-    return status;
+    return status ? status : status0;
 }
 
 static void vid_port_destroy(pjmedia_vid_port *vp)
@@ -935,7 +935,7 @@ static void save_rgb_frame(int width, int height, const pjmedia_frame *frm)
         return;
 
     // Open file
-    sprintf(szFilename, "frame%02d.ppm", counter++);
+    pj_ansi_snprintf(szFilename, sizeof(szFilename), "frame%02d.ppm", counter++);
     pFile=fopen(szFilename, "wb");
     if(pFile==NULL)
       return;
@@ -1393,8 +1393,8 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
 
         if (frame->size != vp->src_size) {
             if (frame->size > 0) {
-                PJ_LOG(4, (THIS_FILE, "Unexpected frame size %d, expected %d",
-                                      frame->size, vp->src_size));
+                PJ_LOG(4,(THIS_FILE, "Unexpected frame size %lu, expected %lu",
+                                     frame->size, vp->src_size));
             }
 
             pj_memcpy(&frame_, frame, sizeof(pjmedia_frame));

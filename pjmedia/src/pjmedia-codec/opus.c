@@ -909,7 +909,7 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
                                            ((unsigned char*)pkt) + out_pos,
                                            sizeof(tmp_buf));
         if (size < 0) {
-            PJ_LOG(5, (THIS_FILE, "Parse failed! (pkt_size=%d, err=%d)",
+            PJ_LOG(5, (THIS_FILE, "Parse failed! (pkt_size=%lu, err=%d)",
                        pkt_size, size));
             pj_mutex_unlock (opus_data->mutex);
             return PJMEDIA_CODEC_EFAILED;

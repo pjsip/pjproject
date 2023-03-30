@@ -1081,7 +1081,7 @@ PJ_DEF(const char*) pj_ice_strans_state_name(pj_ice_strans_state state)
 static void sess_fail(pj_ice_strans *ice_st, pj_ice_strans_op op,
                       const char *title, pj_status_t status)
 {
-    PJ_PERROR(4,(ice_st->obj_name, status, title));
+    PJ_PERROR(4,(ice_st->obj_name, status, "%s", title));
 
     pj_log_push_indent();
 
@@ -1572,8 +1572,6 @@ static pj_status_t setup_turn_perm( pj_ice_strans *ice_st)
             /* Gather remote addresses for this component */
             rem_cand_cnt = ice_st->ice->rcand_cnt;
             rem_cand = ice_st->ice->rcand;
-            if (status != PJ_SUCCESS)
-                continue;
 
             for (j=0; j<rem_cand_cnt && count<PJ_ARRAY_SIZE(addrs); ++j) {
                 if (rem_cand[j].comp_id==i+1 &&

@@ -1142,6 +1142,7 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
      */
     pj_str_t user_pass;
     pj_http_header_elmt *phdr;
+    pj_status_t status;
     int len;
 
     /* Use send buffer to store userid ":" password */
@@ -1164,8 +1165,10 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
 
     pj_strcpy2(&phdr->value, "Basic ");
     len -= (int)phdr->value.slen;
-    pj_base64_encode((pj_uint8_t*)user_pass.ptr, (int)user_pass.slen,
-                     phdr->value.ptr + phdr->value.slen, &len);
+    status = pj_base64_encode((pj_uint8_t*)user_pass.ptr, (int)user_pass.slen,
+                              phdr->value.ptr + phdr->value.slen, &len);
+    if (status != PJ_SUCCESS)
+        return status;
     phdr->value.slen += len;
 
     return PJ_SUCCESS;

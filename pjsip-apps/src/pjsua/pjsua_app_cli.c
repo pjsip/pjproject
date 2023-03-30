@@ -467,7 +467,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
         for (j=0; j<info.listener_cnt; ++j) {
             char s[10];
             pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
         }
 
         len = pj_ansi_snprintf(desc,
@@ -640,11 +640,12 @@ static void get_video_codec_id(pj_cli_dyn_choice_param *param)
                     continue;
 
                 cur_ci = ci[i].codec_id;
+                vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt,
+                                                             PJ_TRUE);
 
             } else {
                 cur_ci = all_codec_id;
             }
-            vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt, PJ_TRUE);
 
             pj_ansi_snprintf(codec_id, sizeof(codec_id),
                              "%.*s", (int)cur_ci.slen,
@@ -978,6 +979,8 @@ static pj_status_t cmd_add_buddy(pj_cli_cmd_val *cval)
             pj_ansi_snprintf(out_str, sizeof(out_str),
                               "New buddy '%s' added at index %d\n",
                               cval->argv[1].ptr, buddy_id+1);
+        } else {
+            pj_ansi_snprintf(out_str, sizeof(out_str), "Add buddy failed\n");
         }
     }
     pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
@@ -1252,7 +1255,7 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
         for (j=0; j<info.listener_cnt; ++j) {
             char s[10];
             pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
         }
         pj_ansi_snprintf(out_str,
                sizeof(out_str),
@@ -2521,14 +2524,14 @@ static pj_status_t cmd_vid_conf_list()
             pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
                              info.listeners[j],
                              (j==info.listener_cnt-1)?"":",");
-            pj_ansi_strcat(li_list, str_info);
+            pj_ansi_strxcat(li_list, str_info, sizeof(li_list));
         }
         tr_list[0] = '\0';
         for (j=0; j<info.transmitter_cnt; ++j) {
             char str_info[10];
             pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s", info.transmitters[j],
                              (j==info.transmitter_cnt-1)?"":",");
-            pj_ansi_strcat(tr_list, str_info);
+            pj_ansi_strxcat(tr_list, str_info, sizeof(tr_list));
         }
         pjmedia_fourcc_name(info.format.id, s);
         s[4] = ' ';
@@ -2539,9 +2542,9 @@ static pj_status_t cmd_vid_conf_list()
                             (int)info.name.slen, info.name.ptr,
                             22-(int)info.name.slen, "                   ",
                             s,
-                            20-pj_ansi_strlen(s), "                    ",
+                            20-(int)pj_ansi_strlen(s), "                    ",
                             tr_list,
-                            12-pj_ansi_strlen(tr_list), "            ",
+                            12-(int)pj_ansi_strlen(tr_list), "            ",
                             li_list));
     }
     return PJ_SUCCESS;
@@ -2761,6 +2764,7 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
     static char argv_buffer[PJ_CLI_MAX_CMDBUF];
     static char *argv[MAX_ARGC] = {NULL};
     char *pbuf = argv_buffer;
+    char *pend = argv_buffer + PJ_CLI_MAX_CMDBUF;
 
     PJ_LOG(3,(THIS_FILE, "Restarting app.."));
     pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_TRUE);
@@ -2773,7 +2777,9 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
         ac = MAX_ARGC - argc;
         get_options(&cval->argv[i], &ac, argvst);
         for (j = 0; j < ac; j++) {
-            pj_ansi_strncpy(pbuf, argvst[j].ptr, argvst[j].slen);
+            if (pbuf+argvst[j].slen+1 > pend)
+                return PJ_ETOOSMALL;
+            pj_memcpy(pbuf, argvst[j].ptr, argvst[j].slen);
             pbuf[argvst[j].slen] = '\0';
             argv[argc + j] = pbuf;
             pbuf += argvst[j].slen + 1;

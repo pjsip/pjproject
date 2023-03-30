@@ -160,6 +160,11 @@ static int format_test(void)
 
 #endif  /* PJ_HAS_IPV6 */
 
+#ifdef NDEBUG
+    /* This should not crash */
+    pj_sockaddr_in_init(NULL, 0, 1000);
+#endif
+
     /* Test that pj_sockaddr_in_init() initialize the whole structure, 
      * including sin_zero_pad.
      */
@@ -512,8 +517,10 @@ static int send_recv_test(int sock_type,
             return -151;
         if (pj_sockaddr_cmp(&addr, srcaddr) != 0) {
             char srcaddr_str[32], addr_str[32];
-            strcpy(srcaddr_str, pj_inet_ntoa(srcaddr->sin_addr));
-            strcpy(addr_str, pj_inet_ntoa(addr.sin_addr));
+            pj_ansi_strxcpy(srcaddr_str, pj_inet_ntoa(srcaddr->sin_addr), 
+                            sizeof(srcaddr_str));
+            pj_ansi_strxcpy(addr_str, pj_inet_ntoa(addr.sin_addr),
+                            sizeof(addr_str));
             PJ_LOG(3,("test", "...error: src address mismatch (original=%s, "
                               "recvfrom addr=%s)", 
                               srcaddr_str, addr_str));
@@ -534,13 +541,13 @@ static int send_recv_test(int sock_type,
                 rc = -155; goto on_error;
             }
             if (received <= 0) {
-                PJ_LOG(3,("", "...error: socket has closed! (received=%d)",
+                PJ_LOG(3,("", "...error: socket has closed! (received=%ld)",
                           received));
                 rc = -156; goto on_error;
             }
             if (received != DATA_LEN-total_received) {
                 if (sock_type != pj_SOCK_STREAM()) {
-                    PJ_LOG(3,("", "...error: expecting %u bytes, got %u bytes",
+                    PJ_LOG(3,("", "...error: expecting %lu bytes, got %lu bytes",
                               DATA_LEN-total_received, received));
                     rc = -157; goto on_error;
                 }
@@ -592,13 +599,13 @@ static int send_recv_test(int sock_type,
             rc = -170; goto on_error;
         }
         if (received <= 0) {
-            PJ_LOG(3,("", "...error: socket has closed! (received=%d)",
+            PJ_LOG(3,("", "...error: socket has closed! (received=%ld)",
                       received));
             rc = -173; goto on_error;
         }
         if (received != BIG_DATA_LEN-total_received) {
             if (sock_type != pj_SOCK_STREAM()) {
-                PJ_LOG(3,("", "...error: expecting %u bytes, got %u bytes",
+                PJ_LOG(3,("", "...error: expecting %lu bytes, got %lu bytes",
                           BIG_DATA_LEN-total_received, received));
                 rc = -176; goto on_error;
             }
@@ -634,8 +641,9 @@ static int udp_test(void)
     }
 
     rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &cs);
-    if (rc != 0)
-        return -110;
+    if (rc != 0) {
+        rc = -110; goto on_error;
+    }
 
     /* Bind server socket. */
     pj_bzero(&dstaddr, sizeof(dstaddr));

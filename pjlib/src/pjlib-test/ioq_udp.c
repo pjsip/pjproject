@@ -452,7 +452,7 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
     addr.sin_addr = pj_inet_addr2("127.0.0.1");
 
     /* Init buffer to send */
-    pj_ansi_strcpy(sendbuf, "Hello0123");
+    pj_ansi_strxcpy(sendbuf, "Hello0123", sizeof(sendbuf));
 
     /* Send one packet. */
     bytes = sizeof(sendbuf);
@@ -1151,11 +1151,11 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     return rc;
 
 on_error:
-    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", 
-              pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf))));
-    if (ssock)
+    pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf));
+    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", errbuf));
+    if (ssock >= 0)
         pj_sock_close(ssock);
-    if (csock)
+    if (csock >= 0)
         pj_sock_close(csock);
     for (i=0; i<inactive_sock_count && inactive_sock && 
               inactive_sock[i]!=PJ_INVALID_SOCKET; ++i) 

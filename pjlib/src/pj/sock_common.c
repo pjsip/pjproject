@@ -205,7 +205,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
                                          const pj_str_t *str_addr,
                                          pj_uint16_t port)
 {
-    PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+    PJ_ASSERT_RETURN(addr, PJ_EINVAL);
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;

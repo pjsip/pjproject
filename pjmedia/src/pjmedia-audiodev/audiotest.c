@@ -161,7 +161,13 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
 
     test_data.pool = pj_pool_create(pjmedia_aud_subsys_get_pool_factory(),
                                     "audtest", 1000, 1000, NULL);
-    pj_mutex_create_simple(test_data.pool, "sndtest", &test_data.mutex); 
+    status = pj_mutex_create_simple(test_data.pool, "sndtest", 
+                                    &test_data.mutex); 
+    if (status != PJ_SUCCESS) {
+        app_perror("Error creating mutex", status);
+        pj_pool_release(test_data.pool);
+        return status;
+    }
 
     /*
      * Open device.

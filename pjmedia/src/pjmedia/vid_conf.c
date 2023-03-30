@@ -278,7 +278,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_create(
                                            sizeof(vconf_port*));
     if (!vid_conf->ports) {
         PJ_PERROR(1, (THIS_FILE, PJ_ENOMEM, "Create failed in alloc ports"));
-        pjmedia_vid_conf_destroy(vid_conf);
+        pj_pool_safe_release(&vid_conf->pool);
         return PJ_ENOMEM;
     }
 

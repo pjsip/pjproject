@@ -493,22 +493,22 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
 
     ddi = &sf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
-    strncpy(ddi->info.name, "SDL renderer", sizeof(ddi->info.name));
-    ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
+    pj_ansi_strxcpy(ddi->info.name, "SDL renderer", 
+                    sizeof(ddi->info.name));
     ddi->info.fmt_cnt = PJ_ARRAY_SIZE(sdl_fmts);
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     ddi = &sf->dev_info[OPENGL_DEV_IDX];
     pj_bzero(ddi, sizeof(*ddi));
-    strncpy(ddi->info.name, "SDL openGL renderer", sizeof(ddi->info.name));
-    ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
+    pj_ansi_strxcpy(ddi->info.name, "SDL openGL renderer", 
+                    sizeof(ddi->info.name));
     ddi->info.fmt_cnt = 1;
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
     for (i = 0; i < sf->dev_count; i++) {
         ddi = &sf->dev_info[i];
-        strncpy(ddi->info.driver, "SDL", sizeof(ddi->info.driver));
-        ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+        pj_ansi_strxcpy(ddi->info.driver, "SDL", 
+                        sizeof(ddi->info.driver));
         ddi->info.dir = PJMEDIA_DIR_RENDER;
         ddi->info.has_callback = PJ_FALSE;
         ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT |
@@ -1237,7 +1237,7 @@ static pj_status_t set_cap(void *data)
 
         status = sdl_create_window(strm, PJ_TRUE, sdl_info->sdl_format, hwnd);
         PJ_PERROR(4, (THIS_FILE, status,
-                      "Re-initializing SDL with native window %d",
+                      "Re-initializing SDL with native window %p",
                       hwnd->info.window));
         return status;  
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
@@ -1485,10 +1485,10 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
         jq->is_full = PJ_TRUE;
         PJ_LOG(4, (THIS_FILE, "SDL job queue is full, increasing "
                               "the queue size."));
+        pj_mutex_unlock(jq->mutex);
         pj_sem_post(jq->sem);
         /* Wait until our posted job is completed. */
         pj_sem_wait(jq->job_sem[tail]);
-        pj_mutex_unlock(jq->mutex);
     } else {
         pj_mutex_unlock(jq->mutex);
         pj_sem_post(jq->sem);

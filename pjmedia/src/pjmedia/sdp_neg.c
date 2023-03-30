@@ -113,7 +113,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
     *p_neg = NULL;
 
     /* Validate local offer. */
-    PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(local))==PJ_SUCCESS, status);
+    status = pjmedia_sdp_validate(local);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
 
     /* Create and initialize negotiator. */
     neg = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_neg);
@@ -165,8 +166,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
     neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
 
     if (initial) {
-        PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(initial))==PJ_SUCCESS, 
-                         status);
+        status = pjmedia_sdp_validate(initial);
+        PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
 
         neg->initial_sdp = pjmedia_sdp_session_clone(pool, initial);
         neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, initial);
@@ -1468,7 +1469,8 @@ static pj_status_t create_answer( pj_pool_t *pool,
     /* Validate remote offer. 
      * This should have been validated before.
      */
-    PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(offer))==PJ_SUCCESS, status);
+    status = pjmedia_sdp_validate(offer);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
 
     /* Create initial answer by duplicating initial SDP,
      * but clear all media lines. The media lines will be filled up later.

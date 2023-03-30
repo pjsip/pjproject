@@ -181,7 +181,7 @@ static int stun_destroy_test_session(struct stun_test_session *test_sess)
     /* Create all clients first */
     for (i=0; i<MAX_SOCK_CLIENTS; ++i) {
         char name[10];
-        sprintf(name, "stun%02d", i);
+        pj_ansi_snprintf(name, sizeof(name), "stun%02d", i);
         status = pj_stun_sock_create(&test_sess->stun_cfg, name, pj_AF_INET(),
                                      &stun_cb, NULL, test_sess,
                                      &stun_sock[i]);

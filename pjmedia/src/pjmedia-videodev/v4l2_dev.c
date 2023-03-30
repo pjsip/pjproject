@@ -244,7 +244,7 @@ static void v4l2_get_supported_size(int fd,
     if (fmt_map == NULL)
         return;
 
-    for (;i<PJ_ARRAY_SIZE(v4l_sizes) &&
+    for (;i<(int)PJ_ARRAY_SIZE(v4l_sizes) &&
           info->fmt_cnt<PJMEDIA_VID_DEV_INFO_FMT_CNT;
          i++)
     {
@@ -322,7 +322,7 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 
         PJ_LOG(5,(THIS_FILE, "Found capture device %s", pdi->v4l2_cap.card));
         PJ_LOG(5,(THIS_FILE, "  Enumerating formats:"));
-        for (j=0; fmt_cnt<PJ_ARRAY_SIZE(fmt_cap); ++j) {
+        for (j=0; fmt_cnt<(int)PJ_ARRAY_SIZE(fmt_cap); ++j) {
             struct v4l2_fmtdesc fdesc;
             unsigned k;
 
@@ -353,13 +353,11 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
             continue;
         }
 
-        strncpy(pdi->dev_name, dev_name, sizeof(pdi->dev_name));
-        pdi->dev_name[sizeof(pdi->dev_name)-1] = '\0';
-        strncpy(pdi->info.name, (char*)pdi->v4l2_cap.card,
-                sizeof(pdi->info.name));
-        pdi->info.name[sizeof(pdi->info.name)-1] = '\0';
-        strncpy(pdi->info.driver, DRIVER_NAME, sizeof(pdi->info.driver));
-        pdi->info.driver[sizeof(pdi->info.driver)-1] = '\0';
+        pj_ansi_strxcpy(pdi->dev_name, dev_name, sizeof(pdi->dev_name));
+        pj_ansi_strxcpy(pdi->info.name, (char*)pdi->v4l2_cap.card,
+                        sizeof(pdi->info.name));
+        pj_ansi_strxcpy(pdi->info.driver, DRIVER_NAME, 
+                        sizeof(pdi->info.driver));
         pdi->info.dir = PJMEDIA_DIR_CAPTURE;
         pdi->info.has_callback = PJ_FALSE;
         pdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
@@ -599,7 +597,7 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
                      param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      param->dir == PJMEDIA_DIR_CAPTURE,
                      PJ_EINVAL);
-    PJ_ASSERT_RETURN(param->cap_id >= 0 && param->cap_id < cf->dev_count,
+    PJ_ASSERT_RETURN(param->cap_id >= 0 && param->cap_id < (int)cf->dev_count,
                      PJMEDIA_EVID_INVDEV);
 
     fmt_info = pjmedia_get_video_format_info(NULL, param->fmt.id);
@@ -618,8 +616,7 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
     pj_memcpy(&stream->param, param, sizeof(*param));
     stream->pool = pool;
     pj_memcpy(&stream->vid_cb, cb, sizeof(*cb));
-    strncpy(stream->name, vdi->info.name, sizeof(stream->name));
-    stream->name[sizeof(stream->name)-1] = '\0';
+    pj_ansi_strxcpy(stream->name, vdi->info.name, sizeof(stream->name));
     stream->user_data = user_data;
     stream->fd = INVALID_FD;
 

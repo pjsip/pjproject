@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/pool.h>
+#include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/string.h>
 #include <pj/assert.h>
@@ -55,6 +56,7 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
 {
     int i;
     pj_pool_t *pool;
+    pj_status_t status;
 
     PJ_CHECK_STACK();
 
@@ -77,7 +79,10 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
     cp->factory.on_block_free = &cpool_on_block_free;
 
     pool = pj_pool_create_on_buf("cachingpool", cp->pool_buf, sizeof(cp->pool_buf));
-    pj_lock_create_simple_mutex(pool, "cachingpool", &cp->lock);
+    status = pj_lock_create_simple_mutex(pool, "cachingpool", &cp->lock);
+    /* This mostly serves to silent coverity warning about unchecked 
+     * return value. There's not much we can do if it fails. */
+    PJ_ASSERT_ON_FAIL(status==PJ_SUCCESS, return);
 }
 
 PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
@@ -274,7 +279,7 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
     pj_lock_acquire(cp->lock);
 
     PJ_LOG(3,("cachpool", " Dumping caching pool:"));
-    PJ_LOG(3,("cachpool", "   Capacity=%u, max_capacity=%u, used_cnt=%u", \
+    PJ_LOG(3,("cachpool", "   Capacity=%lu, max_capacity=%lu, used_cnt=%lu", \
                              cp->capacity, cp->max_capacity, cp->used_count));
     if (detail) {
         pj_pool_t *pool = (pj_pool_t*) cp->used_list.next;
@@ -295,7 +300,7 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
                 block = block->next;
             }
 
-            PJ_LOG(3,("cachpool", "   %16s: %8d of %8d (%d%%) used, "
+            PJ_LOG(3,("cachpool", "   %16s: %8lu of %8lu (%lu%%) used, "
                                   "nblocks: %d",
                                   pj_pool_getobjname(pool), 
                                   pj_pool_get_used_size(pool), 
@@ -317,7 +322,7 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
             pool = pool->next;
         }
         if (total_capacity) {
-            PJ_LOG(3,("cachpool", "  Total %9d of %9d (%d %%) used!",
+            PJ_LOG(3,("cachpool", "  Total %9lu of %9lu (%lu %%) used!",
                                   total_used, total_capacity,
                                   total_used * 100 / total_capacity));
         }

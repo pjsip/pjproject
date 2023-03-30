@@ -105,7 +105,7 @@ int dummy_function()
 {
     pj_caching_pool cp;
  
-    sprintf(NULL, "%d", 0);
+    snprintf(NULL, 0, "%d", 0);
     rand();
     
 #ifdef HAS_PJLIB

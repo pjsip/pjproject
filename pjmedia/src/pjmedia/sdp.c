@@ -1511,7 +1511,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 
         session = NULL;
 
-        pj_assert(ctx.last_error != PJ_SUCCESS);
+        // pj_assert(ctx.last_error != PJ_SUCCESS);
     }
     PJ_END;
 

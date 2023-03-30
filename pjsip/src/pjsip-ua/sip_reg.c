@@ -372,7 +372,7 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
                                           PJSIP_PARSE_URI_AS_NAMEADDR);
     if (!regc->from_hdr->uri) {
         PJ_LOG(4,(THIS_FILE, "regc: invalid source URI %.*s", 
-                  from_url->slen, from_url->ptr));
+                  (int)from_url->slen, from_url->ptr));
         return PJSIP_EINVALIDURI;
     }
 
@@ -382,7 +382,8 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
     regc->to_hdr->uri = pjsip_parse_uri(regc->pool, tmp.ptr, tmp.slen, 
                                         PJSIP_PARSE_URI_AS_NAMEADDR);
     if (!regc->to_hdr->uri) {
-        PJ_LOG(4,(THIS_FILE, "regc: invalid target URI %.*s", to_url->slen, to_url->ptr));
+        PJ_LOG(4,(THIS_FILE, "regc: invalid target URI %.*s",
+                  (int)to_url->slen, to_url->ptr));
         return PJSIP_EINVALIDURI;
     }
 

@@ -130,8 +130,8 @@ static int file_test_internal(void)
         read = 1;
         status = pj_file_read(fd, &readbuf[size], &read);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(3,("", "...error reading file after %d bytes (error follows)", 
-                      size));
+            PJ_LOG(3,("", "...error reading file after %ld bytes "
+                          "(error follows)", size));
             app_perror("...error", status);
             return -110;
         }
