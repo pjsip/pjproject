@@ -197,27 +197,30 @@ static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
                                           const char *str)
 {
     pj_str_t reason;
+
+    PJ_ASSERT_RETURN(tdata && str, PJ_EINVAL);
     pj_cstr(&reason, str);
+
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
 
         /* Add Reason header in request messages */
         pjsip_hdr *hdr;
         const pj_str_t hname = { "Reason", 6 };
         pj_str_t hvalue;
+        unsigned hval_len;
 
         PJ_ASSERT_RETURN(code < 1000, PJ_EINVAL);
 
-        hvalue.ptr = (char*)pj_pool_alloc(tdata->pool,
-                                          3 +              /* "SIP" */
-                                          11 +             /* " ;cause=code */
-                                          reason.slen+10); /* " ;text=".." */
-
+        hval_len =  3 +                 /* 'SIP' */
+                    11 +                /* ' ;cause=3-digit-code' */
+                    reason.slen + 10;   /* ' ;text=".."' */
+        hvalue.ptr = (char*)pj_pool_alloc(tdata->pool, hval_len);
         if (!hvalue.ptr)
             return PJ_ENOMEM;
 
-        hvalue.slen = pj_ansi_sprintf(hvalue.ptr,
-                                      "SIP ;cause=%u ;text=\"%.*s\"",
-                                      code, (int)reason.slen, reason.ptr);
+        hvalue.slen = pj_ansi_snprintf(hvalue.ptr, hval_len,
+                                       "SIP ;cause=%u ;text=\"%.*s\"",
+                                       code, (int)reason.slen, reason.ptr);
         hdr = (pjsip_hdr*)
                pjsip_generic_string_hdr_create(tdata->pool, &hname, &hvalue);
         if (hdr)
@@ -231,16 +234,15 @@ static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
         pjsip_warning_hdr *hdr;
         pjsip_dialog *dlg = pjsip_tdata_get_dlg(tdata);
 
+        // Let's always use warning code = 390 for now.
+        unsigned warn_code = 390;
+        // PJ_ASSERT_RETURN(!code || (code >= 300 && code < 400), PJ_EINVAL);
+        // if (code != 0) warn_code = code;
+
         PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
 
-        // Let's always use code 390 for now.
-        //PJ_ASSERT_RETURN(code >= 300 && code < 400, PJ_EINVAL);
-        code = 390;
-
-        hdr = pjsip_warning_hdr_create(tdata->pool,
-                                       code? code : 390,
-                                       pjsip_endpt_name(dlg->endpt),
-                                       &reason);
+        hdr = pjsip_warning_hdr_create(tdata->pool, warn_code,
+                                       pjsip_endpt_name(dlg->endpt), &reason);
         if (hdr)
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hdr);
         else
