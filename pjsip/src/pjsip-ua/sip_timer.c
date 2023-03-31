@@ -429,6 +429,7 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
     } else {
         
         pj_time_val now;
+        pj_str_t reason = pj_str("No session refresh received.");
 
         if (as_refresher)
             inv->timer->expire_timer.id = 0;
@@ -437,7 +438,7 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
         /* Terminate the session */
         status = pjsip_inv_end_session(inv, PJSIP_SC_REQUEST_TIMEOUT, 
-                                       NULL, &tdata);
+                                       &reason, &tdata);
 
         pj_gettimeofday(&now);
         PJ_LOG(3, (obj_name,
