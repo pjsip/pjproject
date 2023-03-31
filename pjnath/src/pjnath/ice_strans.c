@@ -851,7 +851,10 @@ static pj_status_t alloc_send_buf(pj_ice_strans *ice_st, unsigned buf_size)
         }
         ice_st->buf_idx = ice_st->empty_idx = 0;
     }
-    
+    else {
+        return PJ_ETOOSMALL;
+    }
+
     return PJ_SUCCESS;
 }
 

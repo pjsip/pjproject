@@ -773,11 +773,11 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                          "codec decode() error"));
 
                 if (use_dec_buf) {
-                    pjmedia_zero_samples(p_out_samp + samples_count,
-                                         samples_per_frame);
-                } else {
                     pjmedia_zero_samples(stream->dec_buf,
                                          stream->dec_buf_count);
+                } else {
+                    pjmedia_zero_samples(p_out_samp + samples_count,
+                                         samples_per_frame);
                 }
             } else if (use_dec_buf) {
                 stream->dec_buf_count = (unsigned)frame_out.size /

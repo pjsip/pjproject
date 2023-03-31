@@ -2295,7 +2295,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
         sdp->media[med_idx] = sdp_m;
 
-        if (call_med->dir == PJMEDIA_DIR_NONE) {
+        if (call_med->dir == PJMEDIA_DIR_NONE && call_med->tp) {
             /* Update SDP media line by media transport */
             status = pjmedia_transport_encode_sdp(call_med->tp, pool,
                                                   sdp, NULL, call_med->idx);

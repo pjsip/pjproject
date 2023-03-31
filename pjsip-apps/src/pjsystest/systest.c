@@ -902,6 +902,8 @@ on_return:
         char msg[200];
         pj_size_t msglen;
 
+        if (lat_cnt == 0)
+            lat_cnt = 1;
         pj_ansi_snprintf(msg, sizeof(msg),
                          "The sound device latency:\r\n"
                          " Min=%u, Max=%u, Avg=%u\r\n",

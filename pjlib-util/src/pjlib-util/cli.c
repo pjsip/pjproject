@@ -851,7 +851,7 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
     pj_str_t str;
     pj_size_t len;    
     pj_cli_cmd_spec *cmd;
-    pj_cli_cmd_spec *next_cmd;
+    pj_cli_cmd_spec *next_cmd = NULL;
     pj_status_t status = PJ_SUCCESS;
     pj_cli_parse_mode parse_mode = PARSE_NONE;    
 
@@ -1072,7 +1072,7 @@ static pj_status_t get_comp_match_cmds(const pj_cli_t *cli,
                                        pj_cli_exec_info *info)
 {
     pj_cli_cmd_spec *cmd;    
-    PJ_ASSERT_RETURN(cli && group && cmd_val && pool && info, PJ_EINVAL);   
+    PJ_ASSERT_RETURN(cli && group && cmd_val && pool && info && p_cmd, PJ_EINVAL);
 
     cmd = get_cmd_name(cli, group, cmd_val);
 

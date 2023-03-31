@@ -948,7 +948,7 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 
     stream->frame = frame;
     job_queue_post_job(stream->sf->jq, put_frame, strm, 0, &status);
-    
+
     return status;
 }
 
@@ -1161,6 +1161,8 @@ static pj_status_t set_cap(void *data)
     struct sdl_stream *strm = scap->strm;
     pjmedia_vid_dev_cap cap = scap->cap;
     const void *pval = scap->pval.cpval;
+
+    PJ_ASSERT_RETURN(data && strm, PJ_EINVAL);
 
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
         /**
@@ -1460,12 +1462,15 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
     job jb;
     int tail;
 
-    if (jq->is_quitting)
-        return PJ_EBUSY;
+    if (jq->is_quitting) {
+        jb.retval = PJ_EBUSY;
+        goto on_return;
+    }
 
     jb.func = func;
     jb.data = data;
     jb.flags = flags;
+    jb.retval = PJ_SUCCESS;
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
     PJ_UNUSED_ARG(tail);
@@ -1497,9 +1502,11 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
     }
 #endif /* PJ_DARWINOS */
 
-    *retval = jb.retval;
+on_return:
+    if (retval)
+        *retval = jb.retval;
 
-    return PJ_SUCCESS;
+    return jb.retval;
 }
 
 static pj_status_t job_queue_destroy(job_queue *jq)

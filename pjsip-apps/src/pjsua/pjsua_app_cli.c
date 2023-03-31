@@ -2758,6 +2758,7 @@ static pj_status_t get_options(pj_str_t *options, unsigned *argc,
 
 static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
 {
+    pj_status_t status;
     enum { MAX_ARGC = 64 };
     int i;
     unsigned argc = 1;
@@ -2775,7 +2776,11 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
         unsigned j, ac;
 
         ac = MAX_ARGC - argc;
-        get_options(&cval->argv[i], &ac, argvst);
+        status = get_options(&cval->argv[i], &ac, argvst);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Error get options", status);
+            return status;
+        }
         for (j = 0; j < ac; j++) {
             if (pbuf+argvst[j].slen+1 > pend)
                 return PJ_ETOOSMALL;

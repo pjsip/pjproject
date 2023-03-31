@@ -3467,6 +3467,10 @@ static void check_srtp_roc(pjsua_call *call,
             new_rem_addr = &new_si_->info.vid.rem_addr;
         }
 #endif
+        else {
+            /* Just return for other media type */
+            return;
+        }
 
         /* Local IP address changes */
         if (pj_sockaddr_cmp(prev_local_addr, new_local_addr))
@@ -3612,6 +3616,8 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
         }
 
         /* Compare codec param */
+        if (new_cp == NULL)
+            return PJ_FALSE;
         if (old_cp->setting.frm_per_pkt != new_cp->setting.frm_per_pkt ||
             old_cp->setting.vad != new_cp->setting.vad ||
             old_cp->setting.cng != new_cp->setting.cng ||

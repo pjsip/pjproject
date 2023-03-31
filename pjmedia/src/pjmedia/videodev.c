@@ -218,6 +218,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_driver_init(unsigned drv_idx,
         }
     } else {
         f = drv->f;
+        if (!f)
+            return PJ_EINVALIDOP;
     }
 
     /* Get number of devices */

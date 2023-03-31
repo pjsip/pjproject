@@ -306,6 +306,8 @@ parse_msg:
             }
             goto on_return;
         }
+        status = -11;
+        goto on_return;
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
@@ -316,6 +318,10 @@ parse_msg:
 
     /* Create reference message. */
     ref_msg = entry->creator(pool);
+    if (ref_msg == NULL) {
+        status = -12;
+        goto on_return;
+    }
 
     /* Create buffer for comparison. */
     str1.ptr = (char*)pj_pool_alloc(pool, BUFLEN);
@@ -399,7 +405,7 @@ parse_msg:
     }
 
     /* Compare body? */
-    if (parsed_msg->body==NULL && ref_msg->body==NULL)
+    if (parsed_msg->body==NULL || ref_msg->body==NULL)
         goto print_msg;
 
     /* Compare msg body length. */

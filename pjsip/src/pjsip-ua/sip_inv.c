@@ -3709,7 +3709,7 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
          */
         cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
         PJ_ASSERT_RETURN(cseq != NULL
-                          && (cseq->cseq == inv->invite_tsx->cseq),
+                          && (inv->invite_tsx && cseq->cseq == inv->invite_tsx->cseq),
                          PJ_EINVALIDOP);
 
         if (inv->options & PJSIP_INV_REQUIRE_100REL) {

@@ -1142,10 +1142,8 @@ static void boost_priority(void)
     if (rc != 0) {
         app_perror( THIS_FILE, "sched_setscheduler error",
                     PJ_RETURN_OS_ERROR(rc));
+        return;
     }
-
-    PJ_LOG(4, (THIS_FILE, "New process policy=%d, priority=%d",
-              policy, tp.sched_priority));
 
     /*
      * Adjust thread scheduling algorithm and priority

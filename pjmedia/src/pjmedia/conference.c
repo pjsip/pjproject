@@ -551,6 +551,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     const pj_str_t name = { "Conf", 4 };
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(samples_per_frame > 0, PJ_EINVAL);
     /* Can only accept 16bits per sample, for now.. */
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
 
