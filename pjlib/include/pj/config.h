@@ -668,10 +668,13 @@
  * Libraries sometimes needs to make copy of an address to stack buffer;
  * the value here affects the stack usage.
  *
- * Default: 253
+ * Note that the length here should include the NULL character. In other
+ * words, a hostname is invalid if length of hostname >=  PJ_MAX_HOSTNAME.
+ *
+ * Default: 254
  */
 #ifndef PJ_MAX_HOSTNAME
-#  define PJ_MAX_HOSTNAME           (253)
+#  define PJ_MAX_HOSTNAME           (254)
 #endif
 
 /**

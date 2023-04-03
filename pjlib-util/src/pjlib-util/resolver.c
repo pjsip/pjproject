@@ -803,7 +803,7 @@ static void init_res_key(struct res_key *key, int type, const pj_str_t *name)
     key->qtype = (pj_uint16_t)type;
 
     len = name->slen;
-    if (len > PJ_MAX_HOSTNAME) len = PJ_MAX_HOSTNAME;
+    if (len >= PJ_MAX_HOSTNAME) len = PJ_MAX_HOSTNAME - 1;
 
     /* Copy key, in lowercase */
     for (i=0; i<len; ++i) {
