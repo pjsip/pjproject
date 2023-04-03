@@ -3616,8 +3616,7 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
         }
 
         /* Compare codec param */
-        if (new_cp == NULL)
-            return PJ_FALSE;
+        PJ_ASSERT_RETURN(new_cp, PJ_FALSE);
         if (old_cp->setting.frm_per_pkt != new_cp->setting.frm_per_pkt ||
             old_cp->setting.vad != new_cp->setting.vad ||
             old_cp->setting.cng != new_cp->setting.cng ||
