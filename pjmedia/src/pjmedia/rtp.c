@@ -202,12 +202,12 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
     }
 
     /* Check that offset is not greater than packet size */
-    if (offset >= pkt_len) {
+    if (offset > pkt_len) {
         return PJMEDIA_RTP_EINLEN;
     }
 
     /* Find and set payload. */
-    *payload = ((pj_uint8_t*)pkt) + offset;
+    *payload = offset==pkt_len? NULL : ((pj_uint8_t*)pkt) + offset;
     *payloadlen = pkt_len - offset;
  
     /* Remove payload padding if any */

@@ -318,7 +318,7 @@ static void vid_handle_menu(char *menuin)
         argv[argc] = strtok(NULL, " \t\r\n");
     }
 
-    if (argc <= 1 || strcmp(argv[1], "help")==0) {
+    if (argc == 1 || strcmp(argv[1], "help")==0) {
         vid_show_help();
     } else if (argc == 2 && (strcmp(argv[1], "enable")==0 ||
                              strcmp(argv[1], "disable")==0))
