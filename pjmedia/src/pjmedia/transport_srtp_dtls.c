@@ -255,7 +255,7 @@ static pj_status_t dtls_create(transport_srtp *srtp,
     ds = PJ_POOL_ZALLOC_T(pool, dtls_srtp);
     ds->pool = pool;
 
-    pj_ansi_strncpy(ds->base.name, pool->obj_name, PJ_MAX_OBJ_NAME);
+    pj_ansi_strxcpy(ds->base.name, pool->obj_name, PJ_MAX_OBJ_NAME);
     ds->base.type = (pjmedia_transport_type)PJMEDIA_SRTP_KEYING_DTLS_SRTP;
     ds->base.op = &dtls_op;
     ds->base.user_data = srtp;
@@ -333,7 +333,7 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
 {
     unsigned int len, st_out_len, i;
     unsigned char tmp[EVP_MAX_MD_SIZE];
-    char *p;
+    char *p, *end=buf+*buf_len;
 
     if (!X509_digest(cert, (is_sha256?EVP_sha256():EVP_sha1()), tmp, &len))
         return PJ_EUNKNOWN;
@@ -344,9 +344,10 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
 
     /* Format fingerprint to "SHA-256 XX:XX:XX..." */
     p = buf;
-    p += pj_ansi_sprintf(p, "SHA-%s %.2X", (is_sha256?"256":"1"), tmp[0]);
+    p += pj_ansi_snprintf(p, end-p, "SHA-%s %.2X", 
+                          (is_sha256?"256":"1"), tmp[0]);
     for (i=1; i<len; ++i)
-        p += pj_ansi_sprintf(p, ":%.2X", tmp[i]);
+        p += pj_ansi_snprintf(p, end-p, ":%.2X", tmp[i]);
 
     *buf_len = st_out_len;
 
@@ -440,7 +441,8 @@ static pj_status_t ssl_create(dtls_srtp *ds)
         return GET_SSL_STATUS(ds);
     }
 
-    if (valid_profiles_cnt == 0) {      
+    if (valid_profiles_cnt == 0) {
+        SSL_CTX_free(ctx);
         return PJMEDIA_SRTP_DTLS_ENOPROFILE;
     }
 
@@ -576,7 +578,7 @@ static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
     rx = &ds->rx_crypto;
     pj_bzero(tx, sizeof(*tx));
     pj_bzero(rx, sizeof(*rx));
-    for (i=0; i<PJ_ARRAY_SIZE(ossl_profiles); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(ossl_profiles); ++i) {
         if (pj_ansi_stricmp(profile->name, ossl_profiles[i])==0) {
             pj_strset2(&tx->name, pj_profiles[i]);
             pj_strset2(&rx->name, pj_profiles[i]);
@@ -1179,6 +1181,7 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
         pjmedia_transport_get_info(ds->srtp->member_tp, &info);
         if (pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name)) {
             pjmedia_transport_attach_param ap;
+            pj_status_t status;
 
             pj_bzero(&ap, sizeof(ap));
             ap.user_data = ds->srtp;
@@ -1199,7 +1202,9 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
                                      pj_sockaddr_get_port(&ds->rem_addr)+1);
             }
 
-            pjmedia_transport_attach2(&ds->srtp->base, &ap);
+            status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
+            if (status != PJ_SUCCESS)
+                return status;
 
 #if DTLS_DEBUG
             {
@@ -1281,19 +1286,12 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
         /* Check for a=fingerprint in remote SDP. */
         switch (ds->srtp->setting.use) {
             case PJMEDIA_SRTP_DISABLED:
-                if (attr_fp) {
-                    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
-                    goto on_return;
-                }
+                status = PJMEDIA_SRTP_ESDPINTRANSPORT;
+                goto on_return;
                 break;
             case PJMEDIA_SRTP_OPTIONAL:
                 break;
             case PJMEDIA_SRTP_MANDATORY:
-                if (!attr_fp) {
-                    /* Should never reach here, this is already checked */
-                    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
-                    goto on_return;
-                }
                 break;
         }
     }
@@ -1369,7 +1367,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
                     (ds->setup==DTLS_SETUP_ACTIVE? &ID_ACTIVE:&ID_PASSIVE));
         pjmedia_sdp_media_add_attr(m_loc, a);
 
-        if (last_setup != DTLS_SETUP_UNKNOWN && sdp_remote) {
+        if (last_setup != DTLS_SETUP_UNKNOWN) {
             pj_sockaddr rem_rtp;
             pj_sockaddr rem_rtcp;
             pj_bool_t use_rtcp_mux;

@@ -289,8 +289,8 @@ static pj_status_t set_cert(darwinssl_sock_t *dssock, pj_ssl_cert_t *cert)
             pj_bzero(&key_params, sizeof(key_params));
             key_params.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
             key_params.passphrase = password;
-    
-            for (i = 0; i < PJ_ARRAY_SIZE(ext_format); i++) {
+
+            for (i = 0; i < (CFIndex)PJ_ARRAY_SIZE(ext_format); i++) {
                 items = NULL;
                 err = SecItemImport(cert_data, NULL, &ext_format[i],
                                     &ext_type, 0, &key_params, NULL, &items);
@@ -472,12 +472,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     if (ssock->param.ciphers_num > 0) {
         int i, n = ssock->param.ciphers_num;
         SSLCipherSuite ciphers[MAX_CIPHERS];
-        
-        if (n > PJ_ARRAY_SIZE(ciphers))
-            n = PJ_ARRAY_SIZE(ciphers);
+
+        if (n > (int)PJ_ARRAY_SIZE(ciphers))
+            n = (int)PJ_ARRAY_SIZE(ciphers);
         for (i = 0; i < n; i++)
             ciphers[i] = (SSLCipherSuite)ssock->param.ciphers[i];
-    
+
         err = SSLSetEnabledCiphers(ssl_ctx, ciphers, n);
         if (err != noErr)
             return pj_status_from_err(dssock, "SetEnabledCiphers", err);
@@ -835,7 +835,7 @@ static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
     int i, n;
 
     *cn = NULL;
-    for(i = 0; i < sizeof(keys)/sizeof(keys[0]);  i++) {
+    for(i = 0; i < (int)PJ_ARRAY_SIZE(keys);  i++) {
         for (n = 0 ; n < CFArrayGetCount(array); n++) {
             CFDictionaryRef dict;
             CFTypeRef dictkey;
@@ -1281,6 +1281,7 @@ static pj_status_t verify_cert(darwinssl_sock_t * dssock, pj_ssl_cert_t *cert)
               dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
               ^(SecTrustRef trust, SecTrustResultType trust_result)
               {
+                   PJ_UNUSED_ARG(trust);
                    /* Unfortunately SecTrustEvaluate() cannot seem to get us
                     * more specific verification result like the original
                     * error status returned directly by SSLHandshake()
@@ -1413,10 +1414,10 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
     *nwritten = (int)processed;
     if (err != noErr) {
         return pj_status_from_err(dssock, "SSLWrite", err);
-    } else if (processed < size) {
+    } else if ((pj_ssize_t)processed < size) {
         return PJ_ENOMEM;
     }
-    
+
     return PJ_SUCCESS;
 }
 
@@ -1429,7 +1430,7 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
     if (err != noErr) {
         return pj_status_from_err(dssock, "SSLReHandshake", err);
     }
-    
+
     return PJ_SUCCESS;
 }
 

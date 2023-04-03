@@ -866,5 +866,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unlock_key(pj_ioqueue_key_t *key)
 
 PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
 {
+    PJ_UNUSED_ARG(ioqueue);
     return NULL;
 }

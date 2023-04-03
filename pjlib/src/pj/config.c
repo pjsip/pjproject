@@ -84,5 +84,7 @@ PJ_DEF(void) pj_dump_config(void)
     PJ_LOG(3, (id, " PJ_OS_HAS_CHECK_STACK     : %d", PJ_OS_HAS_CHECK_STACK));
     PJ_LOG(3, (id, " PJ_HAS_HIGH_RES_TIMER     : %d", PJ_HAS_HIGH_RES_TIMER));
     PJ_LOG(3, (id, " PJ_HAS_IPV6               : %d", PJ_HAS_IPV6));
+    PJ_LOG(3, (id, " PJ_HAS_SSL_SOCK           : %d", PJ_HAS_SSL_SOCK));
+    PJ_LOG(3, (id, " PJ_SSL_SOCK_IMP           : %d", PJ_SSL_SOCK_IMP));
 }
 

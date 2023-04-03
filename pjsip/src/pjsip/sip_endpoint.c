@@ -318,7 +318,7 @@ PJ_DEF(const pjsip_hdr*) pjsip_endpt_get_capability( pjsip_endpoint *endpt,
 
     if (htype != PJSIP_H_OTHER) {
         while (hdr != &endpt->cap_hdr) {
-            if (hdr->type == htype)
+            if ((int)hdr->type == htype)
                 return hdr;
             hdr = hdr->next;
         }
@@ -1269,7 +1269,7 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
     if (len < (int)sizeof(newformat)-30) {
         pj_str_t errstr;
 
-        pj_ansi_strcpy(newformat, format);
+        pj_ansi_strxcpy(newformat, format, sizeof(newformat));
         pj_ansi_snprintf(newformat+len, sizeof(newformat)-len-1,
                          ": [err %d] ", error_code);
         len += pj_ansi_strlen(newformat+len);
@@ -1312,7 +1312,7 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     pj_pool_factory_dump(endpt->pf, detail);
 
     /* Pool health. */
-    PJ_LOG(3, (THIS_FILE," Endpoint pool capacity=%u, used_size=%u",
+    PJ_LOG(3, (THIS_FILE," Endpoint pool capacity=%lu, used_size=%lu",
                pj_pool_get_capacity(endpt->pool),
                pj_pool_get_used_size(endpt->pool)));
 
@@ -1331,7 +1331,7 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
 #if PJ_TIMER_DEBUG
     pj_timer_heap_dump(endpt->timer_heap);
 #else
-    PJ_LOG(3,(THIS_FILE, " Timer heap has %u entries", 
+    PJ_LOG(3,(THIS_FILE, " Timer heap has %lu entries",
                         pj_timer_heap_count(endpt->timer_heap)));
 #endif
 

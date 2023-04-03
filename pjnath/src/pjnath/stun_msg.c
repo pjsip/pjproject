@@ -2547,7 +2547,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     if (pdu_len > 0) {
         /* Stray trailing bytes */
         PJ_LOG(4,(THIS_FILE, 
-                  "Error decoding STUN message: unparsed trailing %d bytes",
+                  "Error decoding STUN message: unparsed trailing %ld bytes",
                   pdu_len));
         return PJNATH_EINSTUNMSGLEN;
     }
@@ -2564,22 +2564,22 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 static char *print_binary(const pj_uint8_t *data, unsigned data_len)
 {
     static char static_buffer[1024];
-    char *buffer = static_buffer;
+    char *buffer = static_buffer, end=static_buffer+sizeof(static_buffer);
     unsigned length=sizeof(static_buffer), i;
 
     if (length < data_len * 2 + 8)
         return "";
 
-    pj_ansi_sprintf(buffer, ", data=");
+    pj_ansi_snprintf(buffer, end-buffer, ", data=");
     buffer += 7;
 
     for (i=0; i<data_len; ++i) {
-        pj_ansi_sprintf(buffer, "%02x", (*data) & 0xFF);
+        pj_ansi_snprintf(buffer, end-buffer, "%02x", (*data) & 0xFF);
         buffer += 2;
         data++;
     }
 
-    pj_ansi_sprintf(buffer, "\n");
+    pj_ansi_snprintf(buffer, end-buffer, "\n");
     buffer++;
 
     return static_buffer;

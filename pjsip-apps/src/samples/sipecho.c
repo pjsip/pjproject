@@ -125,7 +125,7 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
     if (!app.enable_msg_logging)
         return PJ_SUCCESS;
 
-    PJ_LOG(3,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
+    PJ_LOG(3,(THIS_FILE, "TX %ld bytes %s to %s %s:%d:\n"
                          "%.*s\n"
                          "--end msg--",
                          (tdata->buf.cur - tdata->buf.start),
@@ -372,7 +372,8 @@ static pjmedia_sdp_session *create_answer(int call_num, pj_pool_t *pool,
         PJ_LOG(3,(THIS_FILE, "  Media %d, %.*s: %s <--> %.*s:%d",
                   mi, (int)m->desc.media.slen, m->desc.media.ptr,
                   (our_dir ? our_dir : "sendrecv"),
-                  (int)c->addr.slen, c->addr.ptr, m->desc.port));
+                  (c? (int)c->addr.slen : 6), (c? c->addr.ptr : "(none)"),
+                  m->desc.port));
     }
 
     return answer;
@@ -387,12 +388,12 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 
     PJ_UNUSED_ARG(e);
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
-        PJ_LOG(3,(THIS_FILE, "Call %d: DISCONNECTED [reason=%d (%s)]",
+        PJ_LOG(3,(THIS_FILE, "Call %ld: DISCONNECTED [reason=%d (%s)]",
                   call - app.call, inv->cause,
                   pjsip_get_status_text(inv->cause)->ptr));
         destroy_call(call);
     } else {
-        PJ_LOG(3,(THIS_FILE, "Call %d: state changed to %s",
+        PJ_LOG(3,(THIS_FILE, "Call %ld: state changed to %s",
                   call - app.call, pjsip_inv_state_name(inv->state)));
     }
 }
@@ -469,6 +470,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         pjsip_endpt_respond_stateless( app.sip_endpt, rdata,
                                        400, &reason,
                                        NULL, NULL);
+        return PJ_TRUE;
     }
 
     for (i=0; i<MAX_CALLS; ++i) {
@@ -493,7 +495,8 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         return PJ_TRUE;
     }
     pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
-    pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>", hostip, sip_port);
+    pj_ansi_snprintf(temp, sizeof(temp), "<sip:sipecho@%s:%d>",
+                     hostip, sip_port);
     local_uri = pj_str(temp);
 
     status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
@@ -527,8 +530,26 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         status = pjsip_inv_send_msg(call->inv, tdata);
 
     if (status != PJ_SUCCESS) {
-        pjsip_endpt_respond_stateless( app.sip_endpt, rdata,
-                                       500, NULL, NULL, NULL);
+        pjsip_transaction *tsx;
+
+        app_perror(THIS_FILE, "Unable to create/send 1xx/200 response", status);
+
+        tsx = pjsip_rdata_get_tsx(rdata);
+        if (tsx == NULL || tsx->state >= PJSIP_TSX_STATE_TERMINATED) {
+            /* Respond statelessly if tsx is stateless or already terminated */
+            status = pjsip_endpt_respond_stateless( app.sip_endpt, rdata,
+                                                    500, NULL, NULL, NULL);
+        } else {
+            /* Otherwise, respond statefully */
+            status = pjsip_endpt_create_response( app.sip_endpt, rdata,
+                                                  500, NULL, &tdata);
+            if (status == PJ_SUCCESS)
+                status = pjsip_tsx_send_msg(tsx, tdata);
+        }
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to create/send 500 response",
+                       status);
+        }
         destroy_call(call);
     } else {
         call->inv->mod_data[mod_sipecho.id] = call;
@@ -621,7 +642,7 @@ int main(int argc, char *argv[])
         CHECK( pj_gethostip(sip_af, &hostaddr) );
         pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
-        pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>",
+        pj_ansi_snprintf(temp, sizeof(temp), "<sip:sipecho@%s:%d>",
                         hostip, sip_port);
         local_uri = pj_str(temp);
 

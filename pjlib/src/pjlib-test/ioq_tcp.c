@@ -959,7 +959,7 @@ int tcp_ioqueue_test()
     pj_bool_t concurs[] = { PJ_TRUE, PJ_FALSE };
     int i, rc;
 
-    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);
@@ -973,7 +973,7 @@ int tcp_ioqueue_test()
             return rc;
     }
 
-    for (i=0; i<PJ_ARRAY_SIZE(concurs); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(concurs); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);

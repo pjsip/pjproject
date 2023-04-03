@@ -213,8 +213,9 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
 {
     pj_sockaddr srv;
 
-    if (server)
-        pj_sockaddr_cp(&srv, server);
+    PJ_ASSERT_RETURN(server, PJ_EINVAL);
+
+    pj_sockaddr_cp(&srv, server);
 
     return pj_stun_detect_nat_type2(&srv, stun_cfg, user_data, cb);
 }
@@ -535,7 +536,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
             eattr = (pj_stun_errcode_attr*)
                     pj_stun_msg_find_attr(response, PJ_STUN_ATTR_ERROR_CODE, 0);
 
-            if (eattr != NULL)
+            if (eattr != NULL && eattr->err_code)
                 err_code = eattr->err_code;
             else
                 err_code = PJ_STUN_SC_SERVER_ERROR;

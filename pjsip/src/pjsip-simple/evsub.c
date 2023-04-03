@@ -322,7 +322,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt)
     mod_evsub.allow_events_hdr = pjsip_allow_events_hdr_create(mod_evsub.pool);
 
     /* Register SIP-event specific headers parser: */
-    pjsip_evsub_init_parser();
+    status = pjsip_evsub_init_parser();
+    if (status  != PJ_SUCCESS)
+        goto on_error;
 
     /* Register new methods SUBSCRIBE and NOTIFY in Allow-ed header */
     pjsip_endpt_add_capability(endpt, &mod_evsub.mod, PJSIP_H_ALLOW, NULL,
@@ -527,7 +529,7 @@ static void set_timer( pjsip_evsub *sub, int timer_id,
                             pjsip_endpt_get_timer_heap(sub->endpt),
                             &sub->timer, &timeout, timer_id, sub->grp_lock);
 
-        PJ_LOG(5,(sub->obj_name, "Timer %s scheduled in %d seconds", 
+        PJ_LOG(5,(sub->obj_name, "Timer %s scheduled in %ld seconds", 
                   timer_names[sub->timer.id], timeout.sec));
     }
 }
@@ -2197,7 +2199,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
                                                        sub->expires));
 
             /* Send */
-            status = pjsip_dlg_send_response(sub->dlg, tsx, tdata);
+            pjsip_dlg_send_response(sub->dlg, tsx, tdata);
         }
 
         /* Update state or revert state */
@@ -2223,9 +2225,12 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
         /* Send the pending NOTIFY sent by app from inside
          * on_rx_refresh() callback.
          */
-        pj_assert(sub->pending_notify);
-        status = pjsip_evsub_send_request(sub, sub->pending_notify);
-        sub->pending_notify = NULL;
+        //pj_assert(sub->pending_notify);
+        /* Make sure that pending_notify is set. */
+        if (sub->pending_notify) {
+            status = pjsip_evsub_send_request(sub, sub->pending_notify);
+            sub->pending_notify = NULL;
+        }
 
     } else if (pjsip_method_cmp(&tsx->method, &pjsip_notify_method)==0) {
 

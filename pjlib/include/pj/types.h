@@ -285,6 +285,17 @@ typedef int pj_exception_id_t;
  */
 #define PJ_MAX_OBJ_NAME 32
 
+/** 
+ * We need to tell the compiler that the function takes printf style
+ * arguments, so the compiler can check the code more carefully and
+ * generate the appropriate warnings, if necessary.
+ */
+#if defined(__GNUC__) || defined(__clang__)
+#  define PJ_PRINT_FUNC_DECOR(idx) __attribute__((format (printf, idx, idx+1)))
+#else
+#  define PJ_PRINT_FUNC_DECOR()
+#endif
+
 /* ************************************************************************* */
 /*
  * General.

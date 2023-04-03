@@ -368,7 +368,7 @@ static int server_thread(void *p)
             continue;
         }
 
-        PJ_LOG(5,(THIS_FILE, "Server %d processing packet", srv - &g_server[0]));
+        PJ_LOG(5,(THIS_FILE, "Server %ld processing packet", srv - &g_server[0]));
         srv->pkt_count++;
 
         rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
@@ -1797,7 +1797,7 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
             res->ans[i].rdata.srv.port = (pj_uint16_t)(PORT3+i);
 
             target = (char*)pj_pool_alloc(pool, 16);
-            sprintf(target, "sip%02d." DOMAIN3, i);
+            pj_ansi_snprintf(target, 16, "sip%02d." DOMAIN3, i);
             res->ans[i].rdata.srv.target = pj_str(target);
         }
 

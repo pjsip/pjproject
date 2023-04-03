@@ -407,6 +407,15 @@ pjsip_media_type SipMediaType::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipHeader::SipHeader()
+{
+    pj_str_t dummy;
+
+    // Init pjHdr with null string to suppress warning
+    pj_bzero(&dummy, sizeof(dummy));
+    pjsip_generic_string_hdr_init2(&pjHdr, &dummy, &dummy);
+}
+
 void SipHeader::fromPj(const pjsip_hdr *hdr) PJSUA2_THROW(Error)
 {
     char *buf = NULL;
@@ -464,6 +473,13 @@ pjsip_generic_string_hdr &SipHeader::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipMultipartPart::SipMultipartPart()
+{
+    pj_bzero(&pjMpp, sizeof(pjMpp));
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
+    pj_list_init(&pjMpp.hdr);
+}
+
 void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
                               PJSUA2_THROW(Error)
 {
@@ -481,6 +497,10 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
     
     contentType.fromPj(prm.body->content_type);
     body = string((char*)prm.body->data, prm.body->len);
+
+    pj_list_init(&pjMpp.hdr);
+    pjMpp.body = NULL;
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
 }
 
 pjsip_multipart_part& SipMultipartPart::toPj() const

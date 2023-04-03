@@ -68,7 +68,7 @@ static int capacity_test(void)
     freesize = GET_FREE(pool);
 
     if (pj_pool_alloc(pool, freesize) == NULL) {
-        PJ_LOG(3,("test", "...error: wrong freesize %u reported",
+        PJ_LOG(3,("test", "...error: wrong freesize %lu reported",
                           freesize));
         pj_pool_release(pool);
         return -210;
@@ -175,7 +175,7 @@ static int drain_test(pj_size_t size, pj_size_t increment)
     void *p;
     int status = 0;
     
-    PJ_LOG(3,("test", "...drain_test(%d,%d)", size, increment));
+    PJ_LOG(3,("test", "...drain_test(%lu,%lu)", size, increment));
 
     if (!pool)
         return -10;
@@ -207,7 +207,7 @@ static int drain_test(pj_size_t size, pj_size_t increment)
 
     /* Check that capacity is zero. */
     if (GET_FREE(pool) != 0) {
-        PJ_LOG(3,("test", "....error: returned free=%u (expecting 0)",
+        PJ_LOG(3,("test", "....error: returned free=%lu (expecting 0)",
                   GET_FREE(pool)));
         status=-30; goto on_error;
     }

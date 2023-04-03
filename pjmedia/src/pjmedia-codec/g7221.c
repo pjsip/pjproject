@@ -391,14 +391,19 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
         if (codec_factory.modes[i].sample_rate == sample_rate &&
             codec_factory.modes[i].bitrate == bitrate)
         {
+            pj_status_t status;
+
             codec_factory.modes[i].enabled = enabled;
 
             /* Re-register G722.1 codec factory to update codec list */
-            pjmedia_codec_mgr_unregister_factory(codec_mgr,
-                                                 &codec_factory.base);
-            pjmedia_codec_mgr_register_factory(codec_mgr,
-                                               &codec_factory.base);
-            return PJ_SUCCESS;
+            status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
+                                                          &codec_factory.base);
+            if (status != PJ_SUCCESS)
+                return status;
+
+            status = pjmedia_codec_mgr_register_factory(codec_mgr,
+                                                        &codec_factory.base);
+            return status;
         }
     }
 
@@ -418,19 +423,24 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
     {
         if (!codec_factory.modes[i].enabled)
         {
+            pj_status_t status;
             codec_mode *mode = &codec_factory.modes[i];
+
             mode->enabled = PJ_TRUE;
             mode->sample_rate = sample_rate;
             mode->bitrate = bitrate;
             pj_utoa(mode->bitrate, mode->bitrate_str);
 
             /* Re-register G722.1 codec factory to update codec list */
-            pjmedia_codec_mgr_unregister_factory(codec_mgr,
-                                                 &codec_factory.base);
-            pjmedia_codec_mgr_register_factory(codec_mgr,
-                                               &codec_factory.base);
+            status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
+                                                          &codec_factory.base);
+            if (status != PJ_SUCCESS)
+                return status;
 
-            return PJ_SUCCESS;
+            status = pjmedia_codec_mgr_register_factory(codec_mgr,
+                                                        &codec_factory.base);
+
+            return status;
         }
     }
     

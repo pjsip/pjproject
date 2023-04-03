@@ -318,12 +318,14 @@ static void turn_on_rx_data(pj_turn_sock *relay,
                             const pj_sockaddr_t *peer_addr,
                             unsigned addr_len)
 {
+    PJ_UNUSED_ARG(relay);
+    PJ_UNUSED_ARG(addr_len);
     char addrinfo[80];
 
     pj_sockaddr_print(peer_addr, addrinfo, sizeof(addrinfo), 3);
 
     PJ_LOG(3,(THIS_FILE, "Client received %d bytes data from %s: %.*s",
-              pkt_len, addrinfo, pkt_len, pkt));
+              pkt_len, addrinfo, pkt_len, (char*)pkt));
 }
 
 
@@ -350,12 +352,12 @@ static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock,
     struct peer *peer = (struct peer*) pj_stun_sock_get_user_data(stun_sock);
 
     if (status == PJ_SUCCESS) {
-        PJ_LOG(4,(THIS_FILE, "peer%d: %s success", peer-g.peer,
+        PJ_LOG(4,(THIS_FILE, "peer%ld: %s success", peer-g.peer,
                   pj_stun_sock_op_name(op)));
     } else {
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_strerror(status, errmsg, sizeof(errmsg));
-        PJ_LOG(1,(THIS_FILE, "peer%d: %s error: %s", peer-g.peer,
+        PJ_LOG(1,(THIS_FILE, "peer%ld: %s error: %s", peer-g.peer,
                   pj_stun_sock_op_name(op), errmsg));
         return PJ_FALSE;
     }
@@ -372,7 +374,7 @@ static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock,
 
             pj_sockaddr_cp(&peer->mapped_addr, &info.mapped_addr);
             pj_sockaddr_print(&peer->mapped_addr, straddr, sizeof(straddr), 3);
-            PJ_LOG(3,(THIS_FILE, "peer%d: STUN mapped address is %s",
+            PJ_LOG(3,(THIS_FILE, "peer%ld: STUN mapped address is %s",
                       peer-g.peer, straddr));
         }
     }
@@ -386,13 +388,14 @@ static pj_bool_t stun_sock_on_rx_data(pj_stun_sock *stun_sock,
                                       const pj_sockaddr_t *src_addr,
                                       unsigned addr_len)
 {
+    PJ_UNUSED_ARG(addr_len);
     struct peer *peer = (struct peer*) pj_stun_sock_get_user_data(stun_sock);
     char straddr[PJ_INET6_ADDRSTRLEN+10];
 
     ((char*)pkt)[pkt_len] = '\0';
 
     pj_sockaddr_print(src_addr, straddr, sizeof(straddr), 3);
-    PJ_LOG(3,(THIS_FILE, "peer%d: received %d bytes data from %s: %s",
+    PJ_LOG(3,(THIS_FILE, "peer%ld: received %d bytes data from %s: %s",
               peer-g.peer, pkt_len, straddr, (char*)pkt));
 
     return PJ_TRUE;
@@ -406,14 +409,15 @@ static void menu(void)
 
     if (g.relay) {
         pj_turn_sock_get_info(g.relay, &info);
-        strcpy(client_state, pj_turn_state_name(info.state));
+        pj_ansi_strxcpy(client_state, pj_turn_state_name(info.state),
+                        sizeof(client_state));
         if (info.state >= PJ_TURN_STATE_READY)
             pj_sockaddr_print(&info.relay_addr, relay_addr, sizeof(relay_addr), 3);
         else
-            strcpy(relay_addr, "0.0.0.0:0");
+            pj_ansi_strxcpy(relay_addr, "0.0.0.0:0", sizeof(relay_addr));
     } else {
-        strcpy(client_state, "NULL");
-        strcpy(relay_addr, "0.0.0.0:0");
+        pj_ansi_strxcpy(client_state, "NULL", sizeof(client_state));
+        pj_ansi_strxcpy(relay_addr, "0.0.0.0:0", sizeof(relay_addr));
     }
 
     pj_sockaddr_print(&g.peer[0].mapped_addr, peer0_addr, sizeof(peer0_addr), 3);
@@ -472,7 +476,7 @@ static void console_main(void)
             else
                 peer = &g.peer[1];
 
-            strcpy(input, "Hello from client");
+            pj_ansi_strxcpy(input, "Hello from client", sizeof(input));
             status = pj_turn_sock_sendto(g.relay, (const pj_uint8_t*)input, 
                                         strlen(input)+1, 
                                         &peer->mapped_addr, 
@@ -523,7 +527,8 @@ static void console_main(void)
                 break;
             }
             peer = &g.peer[input[0]-'0'];
-            sprintf(input, "Hello from peer%d", input[0]-'0');
+            pj_ansi_snprintf(input, sizeof(input),
+                            "Hello from peer%d", input[0]-'0');
             pj_stun_sock_sendto(peer->stun_sock, NULL, input, strlen(input)+1, 0,
                                 &g.relay_addr, pj_sockaddr_get_len(&g.relay_addr));
             break;

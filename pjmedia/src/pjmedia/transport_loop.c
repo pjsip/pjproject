@@ -187,14 +187,14 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     if (tp->setting.addr.slen) {
         pj_strdup(pool, &tp->setting.addr, &opt->addr);
     } else {
-        pj_strset2(&tp->setting.addr, (opt->af == pj_AF_INET())?
+        pj_strset2(&tp->setting.addr, (tp->setting.af == pj_AF_INET())?
                                        "127.0.0.1": "::1");
     }
     if (tp->setting.port == 0)
         tp->setting.port = 4000;
 
     /* alloc users array */
-    tp->max_attach_cnt = opt->max_attach_cnt;
+    tp->max_attach_cnt = tp->setting.max_attach_cnt;
     if (tp->max_attach_cnt == 0)
         tp->max_attach_cnt = 1;
     tp->users = (struct tp_user *)pj_pool_calloc(pool, tp->max_attach_cnt, sizeof(struct tp_user));

@@ -296,7 +296,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 
     pj_sock_close(sock_data.csock);
 
-    PJ_LOG(3,(THIS_FILE, "....%s: done (%d KB/s)",
+    PJ_LOG(3,(THIS_FILE, "....%s: done (%ld KB/s)",
               title, sock_data.received * 1000 / MSEC / 1000));
     return 0;
 }
@@ -330,7 +330,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 0/3, unregister in app (%s)", 
                pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
-        pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
+        pj_ansi_snprintf(title, sizeof(title), "repeat %d/%d", i, LOOP);
         rc = perform_unreg_test(ioqueue, test_pool, title, 0);
         if (rc != 0)
             return rc;
@@ -340,7 +340,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 1/3, unregister in app (%s)",
                pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
-        pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
+        pj_ansi_snprintf(title, sizeof(title), "repeat %d/%d", i, LOOP);
         rc = perform_unreg_test(ioqueue, test_pool, title, 1);
         if (rc != 0)
             return rc;
@@ -351,7 +351,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 2/3, unregister in cb (%s)", 
                pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
-        pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
+        pj_ansi_snprintf(title, sizeof(title), "repeat %d/%d", i, LOOP);
         rc = perform_unreg_test(ioqueue, test_pool, title, 0);
         if (rc != 0)
             return rc;
@@ -361,7 +361,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 3/3, unregister in cb (%s)", 
                pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
-        pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
+        pj_ansi_snprintf(title, sizeof(title), "repeat %d/%d", i, LOOP);
         rc = perform_unreg_test(ioqueue, test_pool, title, 1);
         if (rc != 0)
             return rc;

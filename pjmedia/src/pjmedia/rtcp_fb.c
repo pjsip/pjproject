@@ -55,6 +55,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_nack(
     /* Build RTCP-FB NACK header */
     hdr = (pjmedia_rtcp_fb_common*)buf;
     pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->ssrc_src = pj_htonl(session->peer_ssrc);
     hdr->rtcp_common.pt = RTCP_RTPFB;
     hdr->rtcp_common.count = 1; /* FMT = 1 */
     hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
@@ -97,6 +98,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_pli(
     /* Build RTCP-FB PLI header */
     hdr = (pjmedia_rtcp_fb_common*)buf;
     pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->ssrc_src = pj_htonl(session->peer_ssrc);
     hdr->rtcp_common.pt = RTCP_PSFB;
     hdr->rtcp_common.count = 1; /* FMT = 1 */
     hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
@@ -131,6 +133,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
     /* Build RTCP-FB SLI header */
     hdr = (pjmedia_rtcp_fb_common*)buf;
     pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->ssrc_src = pj_htonl(session->peer_ssrc);
     hdr->rtcp_common.pt = RTCP_PSFB;
     hdr->rtcp_common.count = 2; /* FMT = 2 */
     hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
@@ -157,7 +160,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
 
 
 /*
- * Build an RTCP-FB Slice Loss Indication (SLI) packet.
+ * Build an RTCP-FB Reference Picture Selection Indicationn (RPSI) packet.
  */
 PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
                                             pjmedia_rtcp_session *session, 
@@ -180,6 +183,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
     /* Build RTCP-FB RPSI header */
     hdr = (pjmedia_rtcp_fb_common*)buf;
     pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->ssrc_src = pj_htonl(session->peer_ssrc);
     hdr->rtcp_common.pt = RTCP_PSFB;
     hdr->rtcp_common.count = 3; /* FMT = 3 */
     hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));

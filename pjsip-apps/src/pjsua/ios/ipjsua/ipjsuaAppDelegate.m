@@ -354,37 +354,30 @@ void displayWindow(pjsua_vid_win_id wid)
     for (;i < last; ++i) {
         pjsua_vid_win_info wi;
         
-        if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS) {
+        if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS &&
+            wi.hwnd.info.ios.window)
+        {
             dispatch_async(dispatch_get_main_queue(), ^{
                 UIView *parent = app.viewController.view;
                 UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
-            
-                if (view) {
-                    /* Add the video window as subview */
-                    if (![view isDescendantOfView:parent])
-                        [parent addSubview:view];
-                    
-                    if (!wi.is_native) {
-                        /* Resize it to fit width */
-                        view.bounds = CGRectMake(0, 0, parent.bounds.size.width,
-                                                 (parent.bounds.size.height *
-                                                  1.0*parent.bounds.size.width/
-                                                  view.bounds.size.width));
-                        /* Center it horizontally */
-                        view.center = CGPointMake(parent.bounds.size.width/2.0,
-                                              view.bounds.size.height/2.0);
-                    } else {
-                        /* Preview window, move it to the bottom */
-                        view.center = CGPointMake(parent.bounds.size.width/2.0,
-                                                  parent.bounds.size.height-
-                                                  view.bounds.size.height/2.0);
-                    }
+
+                if (![view isDescendantOfView:parent])
+                    [parent addSubview:view];
+
+                if (!wi.is_native) {
+                    /* Video window */
+                    view.contentMode = UIViewContentModeScaleAspectFit;
+                    view.center = parent.center;
+                    view.frame = parent.bounds;
+                } else {
+                    /* Preview window */
+                    view.contentMode = UIViewContentModeBottomLeft;
+                    view.frame = CGRectMake(0, parent.frame.size.height - view.frame.size.height,
+                                            view.frame.size.width, view.frame.size.height);
                 }
             });
         }
     }
-
-    
 #endif
 }
 

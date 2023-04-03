@@ -1,5 +1,10 @@
 name: CI Windows
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened]
 jobs:
   build-windows-default:
     runs-on: windows-latest
@@ -74,7 +79,7 @@ jobs:
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
-        cd pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe
+        cd pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe --ci-mode
         cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe
         cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe
       shell: powershell
@@ -267,7 +272,7 @@ jobs:
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin;$env:SDL_DIR\lib\x86;"
         cd tests/pjsua; python runall.py
-        cd ../../pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe
+        cd ../../pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe --ci-mode
         cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe
         cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe
       shell: powershell

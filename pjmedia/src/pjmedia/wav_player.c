@@ -224,7 +224,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     fport->fsize = pj_file_size(filename);
 
     /* Size must be more than WAVE header size */
-    if (fport->fsize <= sizeof(pjmedia_wave_hdr)) {
+    if (fport->fsize <= (pj_off_t)sizeof(pjmedia_wave_hdr)) {
         return PJMEDIA_ENOTVALIDWAVE;
     }
 

@@ -620,6 +620,12 @@ public:
     /* internal data */
     container_node_op *op;              /**< Method table.      */
     container_node_internal_data data;  /**< Internal data      */
+
+    ContainerNode()
+    : op(NULL)
+    {
+        pj_bzero(&data, sizeof(data));
+    }
 };
 
 

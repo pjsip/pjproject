@@ -205,7 +205,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
                                          const pj_str_t *str_addr,
                                          pj_uint16_t port)
 {
-    PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+    PJ_ASSERT_RETURN(addr, PJ_EINVAL);
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
@@ -1067,6 +1067,21 @@ PJ_DEF(pj_status_t) pj_getipinterface(int af,
     {
         return PJ_ENOTFOUND;
     }
+
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+    /* Check if the local address is link-local but the destination
+     * is not link-local.
+     */
+    if (af == pj_AF_INET6() &&
+        IN6_IS_ADDR_LINKLOCAL(&itf_addr->ipv6.sin6_addr) &&
+        (!IN6_IS_ADDR_LINKLOCAL(&dst_addr.ipv6.sin6_addr)))
+    {
+        TRACE_((THIS_FILE, "Local interface address is link-local and "
+                           "the destination host is external"));
+
+        return PJ_ENOTFOUND;
+    }
+#endif
 
     if (p_dst_addr)
         *p_dst_addr = dst_addr;

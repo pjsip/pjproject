@@ -413,9 +413,13 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
         base_adi->caps = 0;
 
         /* Get name info */
-        jstring jstrtmp = (jstring)jni_env->GetObjectField(jdev_info, jobjs.dev_info.f_name);
+        jstring jstrtmp = (jstring)
+                          jni_env->GetObjectField(jdev_info,
+                                                  jobjs.dev_info.f_name);
         const char *strtmp = jni_env->GetStringUTFChars(jstrtmp, NULL);
-        pj_ansi_strncpy(base_adi->name, strtmp, sizeof(base_adi->name));
+        pj_ansi_strxcpy(base_adi->name, strtmp, sizeof(base_adi->name));
+        pj_ansi_strxcpy(base_adi->driver, DRIVER_NAME,
+                        sizeof(base_adi->driver));
 
         f->dev_count++;
 

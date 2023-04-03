@@ -57,7 +57,7 @@ doc:
 
 clean-doc:
 	for dir in pjlib pjlib-util pjnath pjmedia pjsip; do \
-		rm -rf ./$${dir}/docs/html ./$${dir}/docs/xml ./$${dir}/docs/latex ./$${dir}/docs/$${dir}.tag; \
+		rm -rf $${dir}/docs/$${PJ_VERSION}; \
 	done
 
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
@@ -106,6 +106,9 @@ selftest: pjlib-test pjlib-util-test pjnath-test pjmedia-test pjsip-test pjsua-t
 pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
 	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME)
 
+pjlib-test-ci: pjlib/bin/pjlib-test-$(TARGET_NAME)
+	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME) --ci-mode
+
 pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
 	cd pjlib-util/build && ../bin/pjlib-util-test-$(TARGET_NAME)
 
@@ -122,10 +125,10 @@ pjsua-test: cmp_wav
 	cd tests/pjsua && python runall.py -t 2
 
 cmp_wav:
-	cd tests/pjsua/tools && make
+	$(MAKE) -C tests/pjsua/tools
 
 fuzz:
-	cd tests/fuzz && make
+	$(MAKE) -C tests/fuzz
 
 install:
 	mkdir -p $(DESTDIR)$(libdir)/

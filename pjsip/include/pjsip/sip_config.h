@@ -924,7 +924,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Initial memory block for the endpoint.
  */
 #ifndef PJSIP_POOL_LEN_ENDPT
-#   define PJSIP_POOL_LEN_ENDPT         (4000)
+#   define PJSIP_POOL_LEN_ENDPT         (16000)
 #endif
 
 /**
@@ -1098,9 +1098,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #define PJSIP_MAX_HNAME_LEN             64
 
 /** Dialog's pool setting. */
-#define PJSIP_POOL_LEN_DIALOG           1200
+#define PJSIP_POOL_LEN_DIALOG           4000
 /** Dialog's pool setting. */
-#define PJSIP_POOL_INC_DIALOG           512
+#define PJSIP_POOL_INC_DIALOG           4000
 
 /** Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES          72

@@ -2119,7 +2119,7 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     tp_sel.u.transport = acc->ka_transport;
 
     PJ_LOG(5,(THIS_FILE, 
-              "Sending %d bytes keep-alive packet for acc %d to %s",
+              "Sending %ld bytes keep-alive packet for acc %d to %s",
               acc->cfg.ka_data.slen, acc->index,
               pj_sockaddr_print(&acc->ka_target, addrtxt, sizeof(addrtxt),3)));
 
@@ -2264,7 +2264,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
             pj_addr_str_print(&input_str, param->rdata->pkt_info.src_port, 
                               addr, sizeof(addr), 1);
             PJ_LOG(4,(THIS_FILE, "Keep-alive timer started for acc %d, "
-                                 "destination:%s, interval:%ds",
+                                 "destination:%s, interval:%lds",
                                  acc->index, addr, delay.sec));
         } else {
             acc->ka_timer.id = PJ_FALSE;
@@ -2553,7 +2553,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                 pj_status_t status;
                 /* Send re-register. */
                 PJ_LOG(3, (THIS_FILE, "%.*s: send registration triggered by IP"
-                           " change", pjsua_var.acc[acc->index].cfg.id.slen,
+                           " change", (int)pjsua_var.acc[acc->index].cfg.id.slen,
                            pjsua_var.acc[acc->index].cfg.id.ptr));
 
                 status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
@@ -3498,7 +3498,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     {
         int i;
 
-        for (i = 0; i < sizeof(pjsua_var.tpdata); i++) {
+        for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); i++) {
             if (tfla2_prm.ret_tp==(const void *)pjsua_var.tpdata[i].data.tp) {
                 if (pjsua_var.tpdata[i].has_bound_addr) {
                     pj_strdup(pool, &addr->host,
@@ -4076,7 +4076,7 @@ static void schedule_reregistration(pjsua_acc *acc)
     pj_time_val_normalize(&delay);
 
     PJ_LOG(4,(THIS_FILE,
-              "Scheduling re-registration retry for acc %d in %u seconds..",
+              "Scheduling re-registration retry for acc %d in %lu seconds..",
               acc->index, delay.sec));
 
     acc->auto_rereg.timer.id = PJ_TRUE;
@@ -4188,7 +4188,7 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT;
 
     PJ_LOG(3, (THIS_FILE, "%.*s: send %sregistration triggered "
-               "by IP change", acc->cfg.id.slen,
+               "by IP change", (int)acc->cfg.id.slen,
                acc->cfg.id.ptr, (need_unreg ? "un-" : "")));
 
     status = pjsua_acc_set_registration(acc->index, !need_unreg);
@@ -4246,7 +4246,7 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     if (acc->cfg.ip_change_cfg.hangup_calls ||
         acc->cfg.ip_change_cfg.reinvite_flags)
     {
-        for (i = 0; i < (int)pjsua_var.ua_cfg.max_calls; ++i) {
+        for (i = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
             pjsua_call_info call_info;
 
             if (!pjsua_call_is_active(i) ||
@@ -4351,7 +4351,7 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
                            "with flags 0x%x triggered "
                            "by IP change (IP change flag: 0x%x)",
                            i,
-                           call_info.remote_info.slen,
+                           (int)call_info.remote_info.slen,
                            call_info.remote_info.ptr,
                            (use_update? "UPDATE" : "re-INVITE"),
                            call_info.setting.flag,

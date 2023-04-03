@@ -1,5 +1,10 @@
 name: CI Linux
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened]
 jobs:
   build-ubuntu-default:
   # checking pure lib source distribution with plain configure & make
@@ -32,7 +37,7 @@ jobs:
       with:
         python-version: 2.7
     - name: unit tests
-      run: make pjlib-test pjlib-util-test pjmedia-test pjsua-test
+      run: make pjlib-test-ci pjlib-util-test pjmedia-test pjsua-test
 
   ubuntu-default-full-bundle-2:
   # full bundle 2: running pjnath test
@@ -122,7 +127,7 @@ jobs:
       with:
         python-version: 2.7
     - name: unit tests
-      run: make pjlib-test pjlib-util-test pjmedia-test pjsua-test
+      run: make pjlib-test-ci pjlib-util-test pjmedia-test pjsua-test
 
   ubuntu-video-openh264-2:
   # video 2: running pjnath test

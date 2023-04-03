@@ -1,5 +1,10 @@
 name: CI Mac
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened]
 jobs:
   build-mac-default:
   # checking pure lib source distribution with plain configure & make
@@ -34,7 +39,7 @@ jobs:
       with:
         python-version: 2.7
     - name: unit tests
-      run: make pjlib-test pjmedia-test pjlib-util-test pjsua-test
+      run: make pjlib-test-ci pjmedia-test pjlib-util-test pjsua-test
 
   mac-default-full-bundle-2:
   # full bundle 2: running pjnath test
@@ -126,7 +131,7 @@ jobs:
       with:
         python-version: 2.7
     - name: unit tests
-      run: make pjlib-test pjmedia-test pjlib-util-test pjsua-test
+      run: make pjlib-test-ci pjmedia-test pjlib-util-test pjsua-test
 
   mac-video-openh264-2:
   # video 2: running pjnath test

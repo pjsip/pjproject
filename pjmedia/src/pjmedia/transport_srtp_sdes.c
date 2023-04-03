@@ -79,7 +79,7 @@ static pj_status_t sdes_create(transport_srtp *srtp,
     pjmedia_transport *sdes;
 
     sdes = PJ_POOL_ZALLOC_T(srtp->pool, pjmedia_transport);
-    pj_ansi_strncpy(sdes->name, srtp->pool->obj_name, PJ_MAX_OBJ_NAME);
+    pj_ansi_strxcpy(sdes->name, srtp->pool->obj_name, PJ_MAX_OBJ_NAME);
     pj_memcpy(sdes->name, "sdes", 4);
     sdes->type = (pjmedia_transport_type)PJMEDIA_SRTP_KEYING_SDES;
     sdes->op = &sdes_op;
@@ -240,7 +240,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
     }
     if (pj_stricmp2(&token, "inline")) {
         PJ_LOG(4,(THIS_FILE, "Attribute crypto key method '%.*s' "
-                  "not supported!", token.slen, token.ptr));
+                  "not supported!", (int)token.slen, token.ptr));
         return PJMEDIA_SDP_EINATTR;
     }
 

@@ -215,7 +215,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     *p_port = &fport->base;
 
     PJ_LOG(4,(THIS_FILE, 
-              "File writer '%.*s' created: samp.rate=%d, bufsize=%uKB",
+              "File writer '%.*s' created: samp.rate=%d, bufsize=%luKB",
               (int)fport->base.info.name.slen,
               fport->base.info.name.ptr,
               PJMEDIA_PIA_SRATE(&fport->base.info),

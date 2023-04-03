@@ -84,14 +84,17 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
 /*
  * Allocate memory chunk for user from available blocks.
  * This will iterate through block list to find space to allocate the chunk.
- * If no space is available in all the blocks, a new block might be created
- * (depending on whether the pool is allowed to resize).
+ * If no space is available in all the blocks (or
+ * PJ_POOL_MAX_SEARCH_BLOCK_COUNT blocks if the config is > 0),
+ * a new block might be created (depending on whether the pool is allowed
+ * to resize).
  */
 PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
 {
     pj_pool_block *block = pool->block_list.next;
     void *p;
     pj_size_t block_size;
+    unsigned i = 0;
 
     PJ_CHECK_STACK();
 
@@ -99,6 +102,14 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
         p = pj_pool_alloc_from_block(block, size);
         if (p != NULL)
             return p;
+
+#if PJ_POOL_MAX_SEARCH_BLOCK_COUNT > 0
+        if (i >= PJ_POOL_MAX_SEARCH_BLOCK_COUNT) {
+            break;
+        }
+#endif
+
+        i++;
         block = block->next;
     }
     /* No available space in all blocks. */
@@ -166,8 +177,7 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
             pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name), 
                              name, pool);
         } else {
-            pj_ansi_strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
-            pool->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+            pj_ansi_strxcpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
         }
     } else {
         pool->obj_name[0] = '\0';

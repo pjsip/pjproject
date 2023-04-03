@@ -149,7 +149,7 @@ $(OBJDIR)/$(app).ko: $(OBJDIR)/$(app).o | $(OBJDIRS)
 	@echo all: >> $(OBJDIR)/Makefile
 	@echo -e "\tmake -C $(KERNEL_DIR) M=`pwd`/$(OBJDIR) modules $(KERNEL_ARCH)" >> $(OBJDIR)/Makefile
 	@echo Invoking kbuild...
-	make -C $(OBJDIR)
+	$(MAKE) -C $(OBJDIR)
 
 ../lib/$(app).ko: $(LIB) $(OBJDIR)/$(app).ko
 	cp $(OBJDIR)/$(app).ko ../lib
