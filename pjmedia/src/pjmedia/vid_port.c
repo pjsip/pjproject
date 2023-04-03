@@ -1147,7 +1147,7 @@ static pj_status_t get_frame_from_buffer(pjmedia_vid_port *vp,
     pj_mutex_lock(vp->frm_mutex);
     if (vp->conv.conv)
         status = convert_frame(vp, vp->frm_buf, frame);
-    else if (frame->buf)
+    else
         pjmedia_frame_copy(frame, vp->frm_buf);
     pj_mutex_unlock(vp->frm_mutex);
     
