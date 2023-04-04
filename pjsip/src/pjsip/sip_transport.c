@@ -2092,7 +2092,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
              */
             if (tmp.slen) {
                 PJ_LOG(4, (THIS_FILE, 
-                      "Error processing %ld bytes packet from %s %s:%d %.*s:\n"
+                      "Dropping %ld bytes packet from %s %s:%d %.*s:\n"
                       "%.*s\n"
                       "-- end of packet.",
                       msg_fragment_size,
