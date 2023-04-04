@@ -904,7 +904,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     ice_st->num_buf = cfg->num_send_buf;
     status = alloc_send_buf(ice_st, cfg->send_buf_size);
     if (status != PJ_SUCCESS) {
-        destroy_ice_st(ice_st);
+        pj_grp_lock_destroy(ice_st->grp_lock);
+        pj_pool_release(pool);
         pj_log_pop_indent();
         return status;
     }
@@ -1016,6 +1017,7 @@ static void destroy_ice_st(pj_ice_strans *ice_st)
 
     if (ice_st->destroy_req) {
         pj_grp_lock_release(ice_st->grp_lock);
+        pj_log_pop_indent();
         return;
     }
 
