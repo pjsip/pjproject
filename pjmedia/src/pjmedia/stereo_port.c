@@ -186,7 +186,7 @@ static pj_status_t stereo_get_frame(pjmedia_port *this_port,
         frame->type = tmp_frame.type;
         frame->timestamp = tmp_frame.timestamp;
         frame->size = tmp_frame.size;
-        if (tmp_frame.size && tmp_frame.buf && tmp_frame.buf == sport->get_buf)
+        if (tmp_frame.size && tmp_frame.buf == sport->get_buf)
             pj_memcpy(frame->buf, tmp_frame.buf, tmp_frame.size);
         return PJ_SUCCESS;
     }
