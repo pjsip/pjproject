@@ -4184,6 +4184,8 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     pj_status_t status;
     pj_bool_t need_unreg = ((acc->cfg.contact_rewrite_method &
                              PJSUA_CONTACT_REWRITE_UNREGISTER) != 0);
+    pj_bool_t no_unreg = ((acc->cfg.contact_rewrite_method &
+                           PJSUA_CONTACT_REWRITE_NO_UNREG) != 0);
 
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT;
 
@@ -4196,15 +4198,24 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
         && (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT))
     {
         if (status == PJSIP_EBUSY) {
+            PJ_LOG(4, (THIS_FILE, "%.*s: Retrying %sregistration triggered "
+                                  "by IP change", (int)acc->cfg.id.slen,
+                                  acc->cfg.id.ptr,
+                                  (need_unreg ? "un-" : "")));
+
             /* Retry the (un)registration. */
             if (acc->regc) {
+                pj_str_t old_reg_contact = acc->reg_contact;
                 status = PJ_SUCCESS;
                 destroy_regc(acc, PJ_TRUE);
                 update_keep_alive(acc, PJ_FALSE, NULL);
 
-                if (need_unreg)
-                    status = pjsua_regc_init(acc->index);
-                
+                status = pjsua_regc_init(acc->index);
+                if (need_unreg || no_unreg)
+                    pjsip_regc_update_contact(acc->regc, 1, &old_reg_contact);
+                if (no_unreg)
+                    pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
+
                 if (status == PJ_SUCCESS) {
                     status = pjsua_acc_set_registration(acc->index, !need_unreg);
                     if (status == PJ_SUCCESS) {
