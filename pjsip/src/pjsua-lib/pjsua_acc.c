@@ -218,6 +218,29 @@ static void init_outbound_setting(pjsua_acc *acc)
 }
 
 /*
+ * Destroy account's registration and deinit.
+ */
+static pj_status_t destroy_regc(pjsua_acc *acc, pj_bool_t force)
+{
+    if (acc->regc) {
+        pj_status_t status = pjsip_regc_destroy2(acc->regc, force);
+        if (status != PJ_SUCCESS && !force) {
+            /* If regc destroy failed and not forced, we should not
+             * deinit and return here.
+             */
+            return status;
+        }
+    }
+    acc->regc = NULL;
+    acc->contact.slen = 0;
+    acc->reg_mapped_addr.slen = 0;
+    acc->rfc5626_status = OUTBOUND_UNKNOWN;
+    acc->rfc5626_flowtmr = 0;
+
+    return PJ_SUCCESS;
+}
+
+/*
  * Initialize a new account (after configuration is set).
  */
 static pj_status_t initialize_acc(unsigned acc_id)
@@ -668,10 +691,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     /* Delete registration */
     if (acc->regc != NULL) {
         pjsua_acc_set_registration(acc_id, PJ_FALSE);
-        if (acc->regc) {
-            pjsip_regc_destroy(acc->regc);
-        }
-        acc->regc = NULL;
+        destroy_regc(acc, PJ_TRUE);
     }
 
     /* Terminate mwi subscription */
@@ -691,9 +711,6 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 
     /* Invalidate */
     acc->valid = PJ_FALSE;
-    acc->contact.slen = 0;
-    acc->reg_mapped_addr.slen = 0;
-    acc->rfc5626_status = OUTBOUND_UNKNOWN;
     pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
     acc->via_tp = NULL;
     acc->next_rtp_port = 0;
@@ -1438,13 +1455,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
                 status = PJ_SUCCESS;
             }
         }
-        if (acc->regc != NULL) {
-            pjsip_regc_destroy(acc->regc);
-            acc->regc = NULL;
-            acc->contact.slen = 0;
-            acc->reg_mapped_addr.slen = 0;
-            acc->rfc5626_status = OUTBOUND_UNKNOWN;
-        }
+        destroy_regc(acc, PJ_TRUE);
         
         if (!cfg->reg_uri.slen) {
             /* Reg URI still needed, delay unset after sending unregister. */
@@ -1887,11 +1898,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER) {
         /* Unregister current contact */
         pjsua_acc_set_registration(acc->index, PJ_FALSE);
-        if (acc->regc != NULL) {
-            pjsip_regc_destroy(acc->regc);
-            acc->regc = NULL;
-            acc->contact.slen = 0;
-        }
+        destroy_regc(acc, PJ_TRUE);
     }
 
     /*
@@ -2392,14 +2399,8 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
          * process. Therefore, we must not forcefully try to destroy
          * the registration here.
          */
-        status = pjsip_regc_destroy2(acc->regc, PJ_FALSE);
+        status = destroy_regc(acc, PJ_FALSE);
         if (status == PJ_SUCCESS) {
-            acc->regc = NULL;
-            acc->contact.slen = 0;
-            acc->reg_mapped_addr.slen = 0;
-            acc->rfc5626_status = OUTBOUND_UNKNOWN;
-            acc->rfc5626_flowtmr = 0;
-        
             /* Stop keep-alive timer if any. */
             update_keep_alive(acc, PJ_FALSE, NULL);
         } else {
@@ -2413,16 +2414,10 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%.*s)", 
                    param->code, 
                    (int)param->reason.slen, param->reason.ptr));
-        pjsip_regc_destroy(acc->regc);
-        acc->regc = NULL;
-        acc->contact.slen = 0;
-        acc->reg_mapped_addr.slen = 0;
-        acc->rfc5626_status = OUTBOUND_UNKNOWN;
-        acc->rfc5626_flowtmr = 0;
+        destroy_regc(acc, PJ_TRUE);
 
         /* Stop keep-alive timer if any. */
         update_keep_alive(acc, PJ_FALSE, NULL);
-
     } else if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
 
         /* Update auto registration flag */
@@ -2430,13 +2425,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         acc->auto_rereg.attempt_cnt = 0;
 
         if (param->expiration < 1) {
-            pjsip_regc_destroy(acc->regc);
-            acc->regc = NULL;
-            acc->contact.slen = 0;
-            acc->reg_mapped_addr.slen = 0;
-            acc->rfc5626_status = OUTBOUND_UNKNOWN;
-            acc->rfc5626_flowtmr = 0;
-
+            destroy_regc(acc, PJ_TRUE);
             /* Reset pointer to registration transport */
             //acc->auto_rereg.reg_tp = NULL;
 
@@ -2615,13 +2604,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
     }
 
     /* Destroy existing session, if any */
-    if (acc->regc) {
-        pjsip_regc_destroy(acc->regc);
-        acc->regc = NULL;
-        acc->contact.slen = 0;
-        acc->reg_mapped_addr.slen = 0;
-        acc->rfc5626_status = OUTBOUND_UNKNOWN;
-    }
+    destroy_regc(acc, PJ_TRUE);
 
     /* initialize SIP registration if registrar is configured */
 
@@ -2645,7 +2628,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
             pjsua_perror(THIS_FILE, "Unable to generate suitable Contact header"
                                     " for registration", 
                          status);
-            pjsip_regc_destroy(acc->regc);
+            destroy_regc(acc, PJ_TRUE);
             pj_pool_release(pool);
             acc->regc = NULL;
             return status;
@@ -2665,12 +2648,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
         pjsua_perror(THIS_FILE, 
                      "Client registration initialization error", 
                      status);
-        pjsip_regc_destroy(acc->regc);
+        destroy_regc(acc, PJ_TRUE);
         pj_pool_release(pool);
-        acc->regc = NULL;
-        acc->contact.slen = 0;
-        acc->reg_mapped_addr.slen = 0;
-        acc->rfc5626_status = OUTBOUND_UNKNOWN;
 
         return status;
     }
@@ -4205,6 +4184,8 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     pj_status_t status;
     pj_bool_t need_unreg = ((acc->cfg.contact_rewrite_method &
                              PJSUA_CONTACT_REWRITE_UNREGISTER) != 0);
+    pj_bool_t no_unreg = ((acc->cfg.contact_rewrite_method &
+                           PJSUA_CONTACT_REWRITE_NO_UNREG) != 0);
 
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT;
 
@@ -4213,23 +4194,51 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
                acc->cfg.id.ptr, (need_unreg ? "un-" : "")));
 
     status = pjsua_acc_set_registration(acc->index, !need_unreg);
-
-    if ((status != PJ_SUCCESS) && (pjsua_var.ua_cfg.cb.on_ip_change_progress)
+    if ((status != PJ_SUCCESS)
         && (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT))
     {
-        /* If update contact fails, notification might already been triggered
-         * from registration callback.
-         */
-        pjsua_ip_change_op_info info;
+        if (status == PJSIP_EBUSY) {
+            PJ_LOG(4, (THIS_FILE, "%.*s: Retrying %sregistration triggered "
+                                  "by IP change", (int)acc->cfg.id.slen,
+                                  acc->cfg.id.ptr,
+                                  (need_unreg ? "un-" : "")));
 
-        pj_bzero(&info, sizeof(info));
-        info.acc_update_contact.acc_id = acc->index;
-        info.acc_update_contact.is_register = !need_unreg;
+            /* Retry the (un)registration. */
+            if (acc->regc) {
+                pj_str_t old_reg_contact = acc->reg_contact;
+                status = PJ_SUCCESS;
+                destroy_regc(acc, PJ_TRUE);
+                update_keep_alive(acc, PJ_FALSE, NULL);
 
-        pjsua_var.ua_cfg.cb.on_ip_change_progress(acc->ip_change_op,
-                                                  status,
-                                                  &info);
+                status = pjsua_regc_init(acc->index);
+                if (need_unreg || no_unreg)
+                    pjsip_regc_update_contact(acc->regc, 1, &old_reg_contact);
+                if (no_unreg)
+                    pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
 
+                if (status == PJ_SUCCESS) {
+                    status = pjsua_acc_set_registration(acc->index, !need_unreg);
+                    if (status == PJ_SUCCESS) {
+                        return status;
+                    }
+                }
+            }
+        }
+
+        if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+            /* If update contact fails, notification might already been
+             * triggered from registration callback.
+             */
+            pjsua_ip_change_op_info info;
+
+            pj_bzero(&info, sizeof(info));
+            info.acc_update_contact.acc_id = acc->index;
+            info.acc_update_contact.is_register = !need_unreg;
+
+            pjsua_var.ua_cfg.cb.on_ip_change_progress(acc->ip_change_op,
+                                                      status,
+                                                      &info);
+        }
         pjsua_acc_end_ip_change(acc);
     }
     return status;
