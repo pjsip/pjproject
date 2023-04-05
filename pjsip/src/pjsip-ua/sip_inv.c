@@ -5625,6 +5625,11 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                     const pjsip_hdr *accept;
                     const char *reason = "SDP negotiation failed";
 
+                    if (status == PJMEDIA_SDP_EINSDP)
+                        reason = "Bad SDP";
+                    else if (status == PJMEDIA_SDPNEG_EINSTATE)
+                        reason = "No SDP answer";
+
                     /* The incoming SDP is unacceptable. If the SDP negotiator
                      * state has just been changed, i.e: DONE -> REMOTE_OFFER,
                      * revert it back.
@@ -5643,11 +5648,6 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                         return;
 
                     /* Add Warning header */
-                    if (status == PJMEDIA_SDP_EINSDP)
-                        reason = "Bad SDP";
-                    else if (status == PJMEDIA_SDPNEG_EINSTATE)
-                        reason = "No SDP answer";
-
                     add_reason_warning_hdr(tdata, 0, reason);
 
                     accept = pjsip_endpt_get_capability(dlg->endpt, 
