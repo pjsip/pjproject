@@ -1703,7 +1703,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                                  sizeof(resolver->tmp_pool));
 
     /* Parse DNS response */
-    // status = -1;
     dns_pkt = NULL;
     PJ_TRY {
         status = pj_dns_parse_packet(pool, rx_pkt, 
@@ -1835,14 +1834,14 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
 
     /* Make sure there are answers in the packet */
     PJ_ASSERT_RETURN((pkt->hdr.anscount && pkt->ans) ||
-                      (pkt->hdr.qdcount && pkt->q),
+                      (pkt->hdr.qdcount && pkt->q && !pkt->hdr.anscount),
                      PJLIB_UTIL_EDNSNOANSWERREC);
 
     pj_grp_lock_acquire(resolver->grp_lock);
 
     /* Build resource key for looking up hash tables */
     pj_bzero(&key, sizeof(struct res_key));
-    if (pkt->hdr.anscount && pkt->ans) {
+    if (pkt->hdr.anscount) {
         /* Make sure name is not too long. */
         PJ_ASSERT_RETURN(pkt->ans[0].name.slen < PJ_MAX_HOSTNAME, 
                          PJ_ENAMETOOLONG);

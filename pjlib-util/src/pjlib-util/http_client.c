@@ -1459,14 +1459,12 @@ static void restart_req_with_auth(pj_http_req *hreq)
 
     /* If credential specifies specific scheme, make sure they match */
     if (cred->scheme.slen && pj_stricmp(&chal->scheme, &cred->scheme)) {
-        // status = PJ_ENOTSUP;
         TRACE_((THIS_FILE, "Error: auth schemes mismatch"));
         goto on_error;
     }
 
     /* If credential specifies specific realm, make sure they match */
     if (cred->realm.slen && pj_stricmp(&chal->realm, &cred->realm)) {
-        // status = PJ_ENOTSUP;
         TRACE_((THIS_FILE, "Error: auth realms mismatch"));
         goto on_error;
     }
