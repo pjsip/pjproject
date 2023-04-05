@@ -668,8 +668,9 @@
  * Libraries sometimes needs to make copy of an address to stack buffer;
  * the value here affects the stack usage.
  *
- * Note that the length here should include the NULL character. In other
- * words, a hostname is invalid if length of hostname >=  PJ_MAX_HOSTNAME.
+ * Note that the length here should include the NULL termination. In other
+ * words, the maximum hostname length is PJ_MAX_HOSTNAME with the NULL
+ * termination and PJ_MAX_HOSTNAME-1 without the NULL termination.
  *
  * Default: 254
  */
