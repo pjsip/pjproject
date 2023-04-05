@@ -29,8 +29,9 @@
 
 struct tsx_data
 {
-    void *token;
-    void (*cb)(void*, pjsip_event*);
+    pj_int32_t  timeout;
+    void       *token;
+    void       (*cb)(void*, pjsip_event*);
 };
 
 static void mod_util_on_tsx_state(pjsip_transaction*, pjsip_event*);
@@ -58,18 +59,28 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 {
     struct tsx_data *tsx_data;
 
-    /* Check if the module has been unregistered (see ticket #1535) and also
-     * verify the event type.
-     */
+    /* Check if the module has been unregistered (see ticket #1535) */
     if (mod_stateful_util.id < 0 || event->type != PJSIP_EVENT_TSX_STATE)
         return;
+
+    /* Verify event type */
+    if (event->type != PJSIP_EVENT_TSX_STATE &&
+        event->type != PJSIP_EVENT_TIMER)
+    {
+        return;
+    }
 
     tsx_data = (struct tsx_data*) tsx->mod_data[mod_stateful_util.id];
     if (tsx_data == NULL)
         return;
 
-    if (tsx->status_code < 200)
+    if (event->type == PJSIP_EVENT_TSX_STATE && tsx->status_code < 200) {
+        /* Ignore provisional response */
         return;
+    } else if (event->type == PJSIP_EVENT_TIMER && tsx_data->timeout != 0) {
+        /* Ignore timeout timer if user doesn't wish to receive it */
+        return;
+    }
 
     /* Call the callback, if any, and prevent the callback to be called again
      * by clearing the transaction's module_data.
@@ -97,8 +108,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
     /* Check that transaction layer module is registered to endpoint */
     PJ_ASSERT_RETURN(mod_stateful_util.id != -1, PJ_EINVALIDOP);
 
-    PJ_UNUSED_ARG(timeout);
-
     status = pjsip_tsx_create_uac(&mod_stateful_util, tdata, &tsx);
     if (status != PJ_SUCCESS) {
         pjsip_tx_data_dec_ref(tdata);
@@ -109,6 +118,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 
     tsx_data = PJ_POOL_ALLOC_T(tsx->pool, struct tsx_data);
     tsx_data->token = token;
+    tsx_data->timeout = timeout;
     tsx_data->cb = cb;
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
