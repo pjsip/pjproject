@@ -1321,6 +1321,9 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
     if (hdr != &tdata->msg->hdr) {
         pj_bool_t stale;
 
+        /* Check sent_auth != NULL */
+        PJ_ASSERT_RETURN(sent_auth, PJ_EBUG);
+
         /* Detect "stale" state */
         stale = hchal->challenge.digest.stale;
         if (!stale) {

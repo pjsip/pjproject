@@ -284,6 +284,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
 
     TRACE_((THIS_FILE, "    starting test.."));
 
+    pj_bzero(&ioqueue_callback, sizeof(ioqueue_callback));
     ioqueue_callback.on_read_complete = &on_read_complete;
     ioqueue_callback.on_write_complete = &on_write_complete;
 

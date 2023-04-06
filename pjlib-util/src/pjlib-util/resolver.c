@@ -1136,8 +1136,8 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
         rec->alias.ptr = &rec->buf_[bufstart];
         rec->alias.slen = alias.slen;
 
-        bufstart += alias.slen;
-        bufleft -= alias.slen;
+        // bufstart += alias.slen;
+        // bufleft -= alias.slen;
     }
 
     /* Get the IP addresses. */
@@ -1254,8 +1254,8 @@ PJ_DEF(pj_status_t) pj_dns_parse_addr_response(
         rec->alias.ptr = &rec->buf_[bufstart];
         rec->alias.slen = alias.slen;
 
-        bufstart += alias.slen;
-        bufleft -= alias.slen;
+        // bufstart += alias.slen;
+        // bufleft -= alias.slen;
     }
 
     /* Get the IP addresses. */
@@ -1703,7 +1703,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                                  sizeof(resolver->tmp_pool));
 
     /* Parse DNS response */
-    status = -1;
     dns_pkt = NULL;
     PJ_TRY {
         status = pj_dns_parse_packet(pool, rx_pkt, 
@@ -1835,7 +1834,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
 
     /* Make sure there are answers in the packet */
     PJ_ASSERT_RETURN((pkt->hdr.anscount && pkt->ans) ||
-                      (pkt->hdr.qdcount && pkt->q),
+                      (pkt->hdr.qdcount && pkt->q && !pkt->hdr.anscount),
                      PJLIB_UTIL_EDNSNOANSWERREC);
 
     pj_grp_lock_acquire(resolver->grp_lock);

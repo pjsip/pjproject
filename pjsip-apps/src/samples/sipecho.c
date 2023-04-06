@@ -625,7 +625,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    if ((status=init_stack()) != PJ_SUCCESS)
+    status = init_stack();
+    if (status != PJ_SUCCESS)
         goto on_error;
 
     /* If URL is specified, then make call immediately. */

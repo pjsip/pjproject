@@ -421,6 +421,9 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
     unsigned start;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(p_cnt && *p_cnt > 0 && ifs, PJ_EINVAL);
+    pj_bzero(ifs, sizeof(ifs[0]) * (*p_cnt));
+
     start = 0;
     if (af==PJ_AF_INET6 || af==PJ_AF_UNSPEC) {
         unsigned max = *p_cnt;

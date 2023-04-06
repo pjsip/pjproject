@@ -192,6 +192,10 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
     pjmedia_video_apply_fmt_param vafp;
 
     status = get_vfi(&vp->conv.conv_param.src, NULL, &vafp);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(4, (THIS_FILE, status, "Error get video format info"));
+        return status;
+    }
     vp->src_size = vafp.framebytes;
 
     if (vp->conv.conv) {

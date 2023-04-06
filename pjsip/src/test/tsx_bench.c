@@ -53,7 +53,7 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
                                               NULL);
 
     /* Create transaction array */
-    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
+    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pjsip_transaction*));
 
     pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;
@@ -152,7 +152,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
 
     /* Create transaction array */
-    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
+    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pjsip_transaction*));
 
     pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;

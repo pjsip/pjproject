@@ -267,6 +267,7 @@ static void strtoi_validate(const pj_str_t *str, int min_val,
 
     if (!str || !value) {
         on_str_parse_error(str, PJ_EINVAL);
+        return;
     }
     status = pj_strtol2(str, &retval);
     if (status != PJ_EINVAL) {
@@ -2423,7 +2424,7 @@ PJ_DEF(pj_status_t) pjsip_parse_headers( pj_pool_t *pool, char *input,
                                          unsigned options)
 {
     enum { STOP_ON_ERROR = 1 };
-    pj_str_t hname;
+    pj_str_t hname = {0, 0};
     pj_scanner scanner;
     pjsip_parse_ctx ctx;
 
