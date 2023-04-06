@@ -293,7 +293,7 @@ typedef int pj_exception_id_t;
 #if defined(__GNUC__) || defined(__clang__)
 #  define PJ_PRINT_FUNC_DECOR(idx) __attribute__((format (printf, idx, idx+1)))
 #else
-#  define PJ_PRINT_FUNC_DECOR()
+#  define PJ_PRINT_FUNC_DECOR(idx)
 #endif
 
 /* ************************************************************************* */
