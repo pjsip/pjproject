@@ -138,7 +138,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
 {
     pjsua_call *call;
     pjsua_call_media *call_med;
-    pj_status_t status;
+    pj_status_t status = PJ_EINVAL;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
@@ -148,12 +148,17 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
 
     call = &pjsua_var.calls[call_id];
 
-    if (med_idx >= call->med_cnt) {
-        PJSUA_UNLOCK();
-        return PJ_EINVAL;
-    }
+    if (med_idx >= call->med_cnt)
+        goto on_return;
 
     call_med = &call->media[med_idx];
+
+    if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
+        (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream))
+    {
+        goto on_return;
+    }
+
     psi->type = call_med->type;
     switch (call_med->type) {
     case PJMEDIA_TYPE_AUDIO:
@@ -171,6 +176,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
         break;
     }
 
+on_return:
     PJSUA_UNLOCK();
     return status;
 }
@@ -185,7 +191,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
 {
     pjsua_call *call;
     pjsua_call_media *call_med;
-    pj_status_t status;
+    pj_status_t status = PJ_EINVAL;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
@@ -195,12 +201,17 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
 
     call = &pjsua_var.calls[call_id];
 
-    if (med_idx >= call->med_cnt) {
-        PJSUA_UNLOCK();
-        return PJ_EINVAL;
-    }
+    if (med_idx >= call->med_cnt)
+        goto on_return;
 
     call_med = &call->media[med_idx];
+
+    if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
+        (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream))
+    {
+        goto on_return;
+    }
+
     switch (call_med->type) {
     case PJMEDIA_TYPE_AUDIO:
         status = pjmedia_stream_get_stat(call_med->strm.a.stream,
@@ -223,6 +234,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
         break;
     }
 
+on_return:
     PJSUA_UNLOCK();
     return status;
 }
@@ -546,7 +558,11 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
     pjmedia_rtcp_stat stat;
 
     if (strm) {
-        pjmedia_stream_get_info(strm, &call_med->prev_aud_si);
+        pjmedia_stream_info prev_aud_si;
+
+        pjmedia_stream_get_info(strm, &prev_aud_si);
+        call_med->prev_local_addr = prev_aud_si.local_addr;
+        call_med->prev_rem_addr = prev_aud_si.rem_addr;
 
         /* Unsubscribe from stream events */
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
@@ -1756,8 +1772,7 @@ PJ_DEF(pj_status_t) pjsua_enum_snd_devs( pjmedia_snd_dev_info info[],
         if (status != PJ_SUCCESS)
             return status;
 
-        strncpy(info[i].name, ai.name, sizeof(info[i].name));
-        info[i].name[sizeof(info[i].name)-1] = '\0';
+        pj_ansi_strxcpy(info[i].name, ai.name, sizeof(info[i].name));
         info[i].input_count = ai.input_count;
         info[i].output_count = ai.output_count;
         info[i].default_samples_per_sec = ai.default_samples_per_sec;
@@ -2126,17 +2141,22 @@ static void close_snd_dev(void)
         pjmedia_aud_dev_info cap_info, play_info;
         pjmedia_aud_stream *strm;
         pjmedia_aud_param param;
+        pj_status_t status;
 
         strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
-        pjmedia_aud_stream_get_param(strm, &param);
+        status = pjmedia_aud_stream_get_param(strm, &param);
 
-        if (param.rec_id == PJSUA_SND_NO_DEV ||
+        if (status != PJ_SUCCESS ||
+            param.rec_id == PJSUA_SND_NO_DEV ||
             pjmedia_aud_dev_get_info(param.rec_id, &cap_info) != PJ_SUCCESS)
         {
             cap_info.name[0] = '\0';
         }
-        if (pjmedia_aud_dev_get_info(param.play_id, &play_info) != PJ_SUCCESS)
+        if (status != PJ_SUCCESS ||
+            pjmedia_aud_dev_get_info(param.play_id, &play_info) != PJ_SUCCESS)
+        {
             play_info.name[0] = '\0';
+        }
 
         PJ_LOG(4,(THIS_FILE, "Closing %s sound playback device and "
                              "%s sound capture device",

@@ -64,11 +64,11 @@
 #endif
 
 #ifndef PJMEDIA_STREAM_SIZE
-#   define PJMEDIA_STREAM_SIZE  1000
+#   define PJMEDIA_STREAM_SIZE  4000
 #endif
 
 #ifndef PJMEDIA_STREAM_INC
-#   define PJMEDIA_STREAM_INC   1000
+#   define PJMEDIA_STREAM_INC   4000
 #endif
 
 /* Number of DTMF E bit transmissions */
@@ -773,15 +773,15 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                          "codec decode() error"));
 
                 if (use_dec_buf) {
-                    pjmedia_zero_samples(p_out_samp + samples_count,
-                                         samples_per_frame);
-                } else {
                     pjmedia_zero_samples(stream->dec_buf,
                                          stream->dec_buf_count);
+                } else {
+                    pjmedia_zero_samples(p_out_samp + samples_count,
+                                         samples_per_frame);
                 }
             } else if (use_dec_buf) {
                 stream->dec_buf_count = (unsigned)frame_out.size /
-                                                                        sizeof(pj_int16_t);
+                                        sizeof(pj_int16_t);
             }
 
             if (stream->jb_last_frm != frame_type) {
@@ -789,7 +789,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                 PJ_LOG(5,(stream->port.info.name.ptr,
                           "Jitter buffer starts returning normal frames "
                           "(after %d empty/lost)",
-                          stream->jb_last_frm_cnt, stream->jb_last_frm));
+                          stream->jb_last_frm_cnt));
 
                 stream->jb_last_frm = frame_type;
                 stream->jb_last_frm_cnt = 1;
@@ -894,7 +894,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
                 PJ_LOG(5,(stream->port.info.name.ptr,
                           "Jitter buffer starts returning normal frames "
                           "(after %d empty/lost)",
-                          stream->jb_last_frm_cnt, stream->jb_last_frm));
+                          stream->jb_last_frm_cnt));
 
                 stream->jb_last_frm = frame_type;
                 stream->jb_last_frm_cnt = 1;
@@ -1962,7 +1962,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     if (!check_pt && hdr->pt != channel->rtp.out_pt &&
         hdr->pt != stream->rx_event_pt)
     {
-        seq_st.status.flag.badpt = 1;
+        seq_st.status.flag.badpt = -1;
     }
 #endif
     if (seq_st.status.value) {
@@ -2532,8 +2532,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         /* Allocate decoding buffer as Opus can send a packet duration of
          * up to 120 ms.
          */
-        stream->dec_buf_size = stream->codec_param.info.clock_rate * 120 /
-                               1000;
+        stream->dec_buf_size = stream->codec_param.info.clock_rate * 120 / 1000;
         stream->dec_buf = (pj_int16_t*)pj_pool_alloc(pool,
                                                      stream->dec_buf_size *
                                                      sizeof(pj_int16_t));
@@ -2696,7 +2695,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         jb_max_pre = info->jb_max_pre / stream->codec_param.info.frm_ptime;
     else
         //jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
-        jb_max_pre = jb_max * 4 / 5;
+        jb_max_pre = PJ_MAX(1, jb_max * 4 / 5);
 
     if (info->jb_init >= stream->codec_param.info.frm_ptime)
         jb_init = info->jb_init / stream->codec_param.info.frm_ptime;
@@ -2980,7 +2979,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     /* If we're in the middle of transmitting DTMF digit, send one last
      * RFC 2833 RTP packet with 'End' flag set.
      */
-    if (stream->tx_dtmf_count && stream->tx_dtmf_buf[0].duration != 0) {
+    if (stream->tx_dtmf_count && stream->tx_dtmf_buf[0].duration != 0 &&
+        stream->transport) 
+    {
         pjmedia_frame frame_out;
         pjmedia_channel *channel = stream->enc;
         int first=0, last=0;

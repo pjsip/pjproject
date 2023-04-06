@@ -174,12 +174,13 @@ static pj_status_t tls_status_from_err(pj_ssl_sock_t *ssock, int err)
 static pj_str_t tls_strerror(pj_status_t status,
                              char *buf, pj_size_t bufsize)
 {
+    PJ_UNUSED_ARG(status);
     pj_str_t errstr;
     const char *tmp = gnutls_strerror(tls_last_error);
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
     if (tmp) {
-        pj_ansi_strncpy(buf, tmp, bufsize);
+        pj_ansi_strxcpy(buf, tmp, bufsize);
         errstr = pj_str(buf);
         return errstr;
     }
@@ -444,7 +445,7 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
     pj_strcat2(&priority, "%LATEST_RECORD_VERSION");
 
     pj_strcat(&cipher_list, &priority);
-    for (i = 0; i < ssock->param.ciphers_num; i++) {
+    for (i = 0; i < (int)ssock->param.ciphers_num; i++) {
         for (j = 0; ; j++) {
             pj_ssl_cipher c;
             const char *suite;
@@ -505,7 +506,7 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
 
     /* Server will be the one deciding which crypto to use */
     if (ssock->is_server) {
-        if (cipher_list.slen + server.slen + 1 > sizeof(buf))
+        if (cipher_list.slen + server.slen + 1 > (pj_ssize_t)sizeof(buf))
             return PJ_ETOOMANY;
         else
             pj_strcat(&cipher_list, &server);

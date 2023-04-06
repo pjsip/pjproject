@@ -273,6 +273,7 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
     sess->ka_interval = PJ_TURN_KEEP_ALIVE_SEC;
     sess->user_data = user_data;
     sess->next_ch = PJ_TURN_CHANNEL_MIN;
+    pj_turn_alloc_param_default(&sess->alloc_param);
 
     /* Copy STUN session */
     pj_memcpy(&sess->stun_cfg, cfg, sizeof(pj_stun_config));
@@ -449,9 +450,18 @@ static void sess_shutdown(pj_turn_session *sess,
  */
 PJ_DEF(pj_status_t) pj_turn_session_shutdown(pj_turn_session *sess)
 {
+    return pj_turn_session_shutdown2(sess, PJ_SUCCESS);
+}
+
+PJ_DEF(pj_status_t) pj_turn_session_shutdown2(pj_turn_session *sess,
+					      pj_status_t last_err)
+{
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
 
     pj_grp_lock_acquire(sess->grp_lock);
+
+    if (last_err != PJ_SUCCESS && sess->last_status == PJ_SUCCESS)
+        sess->last_status = last_err;
 
     sess_shutdown(sess, PJ_SUCCESS);
 
@@ -729,7 +739,7 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
     PJ_ASSERT_RETURN(sess->state>PJ_TURN_STATE_NULL && 
                      sess->state<=PJ_TURN_STATE_RESOLVED, 
                      PJ_EINVALIDOP);
-    PJ_ASSERT_RETURN(param->peer_conn_type == PJ_TURN_TP_UDP ||
+    PJ_ASSERT_RETURN(!param || param->peer_conn_type == PJ_TURN_TP_UDP ||
                      param->peer_conn_type == PJ_TURN_TP_TCP,
                      PJ_EINVAL);
 
@@ -768,8 +778,8 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 
     /* MUST include REQUESTED-TRANSPORT attribute */
     pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-                              PJ_STUN_ATTR_REQ_TRANSPORT, 
-                              PJ_STUN_SET_RT_PROTO(param->peer_conn_type));
+        PJ_STUN_ATTR_REQ_TRANSPORT,
+        PJ_STUN_SET_RT_PROTO(sess->alloc_param.peer_conn_type));
 
     /* Include BANDWIDTH if requested */
     if (sess->alloc_param.bandwidth > 0) {

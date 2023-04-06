@@ -543,8 +543,8 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
             pj_bzero(&key_params, sizeof(key_params));
             key_params.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
             key_params.passphrase = password;
-    
-            for (i = 0; i < PJ_ARRAY_SIZE(ext_format); i++) {
+
+            for (i = 0; i < (CFIndex)PJ_ARRAY_SIZE(ext_format); i++) {
                 items = NULL;
                 err = SecItemImport(cert_data, NULL, &ext_format[i],
                                     &ext_type, 0, &key_params, NULL, &items);
@@ -735,6 +735,7 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
                                 pj_ssize_t *size,
                                 unsigned flags)
 {
+    PJ_UNUSED_ARG(flags);
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
     dispatch_data_t content;
 
@@ -832,6 +833,8 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
                     ^(dispatch_data_t region, size_t offset,
                       const void *buffer, size_t inSize)
                 {
+                    PJ_UNUSED_ARG(region);
+                    PJ_UNUSED_ARG(offset);
                     /* This block can be invoked multiple times,
                      * each for every contiguous memory region in the content.
                      */
@@ -1013,6 +1016,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
             ^(sec_protocol_metadata_t metadata,
               sec_protocol_challenge_complete_t complete)
         {
+            PJ_UNUSED_ARG(metadata);
             complete(assock->identity);
         }, assock->queue);
         
@@ -1388,7 +1392,7 @@ static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
 static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
 {
     applessl_sock_t *assock;
-    
+
     /* Create event manager */
     if (event_manager_create() != PJ_SUCCESS)
         return NULL;
@@ -1401,7 +1405,7 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
         ssl_destroy(&assock->base);
         return NULL;
     }
-        
+
     return (pj_ssl_sock_t *)assock;
 }
 
@@ -1410,6 +1414,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     /* Nothing to do here. SSL has been configured before connection
      * is started.
      */
+    PJ_UNUSED_ARG(ssock);
     return PJ_SUCCESS;
 }
 
@@ -1761,8 +1766,8 @@ static void ssl_ciphers_populate(void)
     };
     if (!ssl_cipher_num) {
         unsigned i;
-        
-        ssl_cipher_num = sizeof(ciphers)/sizeof(ciphers[0]);
+
+        ssl_cipher_num = PJ_ARRAY_SIZE(ciphers);
         for (i = 0; i < ssl_cipher_num; i++) {
             ssl_ciphers[i].id = (pj_ssl_cipher)ciphers[i];
             ssl_ciphers[i].name = sslGetCipherSuiteString(ciphers[i]);
@@ -1791,7 +1796,7 @@ static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
     int i, n;
 
     *cn = NULL;
-    for(i = 0; i < sizeof(keys)/sizeof(keys[0]);  i++) {
+    for(i = 0; i < (int)PJ_ARRAY_SIZE(keys); i++) {
         for (n = 0 ; n < CFArrayGetCount(array); n++) {
             CFDictionaryRef dict;
             CFTypeRef dictkey;
@@ -2152,7 +2157,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
     /* Nothing to do here, just return EPENDING. Handshake has
      * automatically been performed when starting a connection.
      */
-
+    PJ_UNUSED_ARG(ssock);
     return PJ_EPENDING;
 }
 
@@ -2169,7 +2174,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
     }
 
     circ_buf_size = circ_size(&ssock->circ_buf_input);
-    read_size = PJ_MIN(circ_buf_size, *size);
+    read_size = PJ_MIN(circ_buf_size, (pj_size_t)*size);
 
     circ_read(&ssock->circ_buf_input, data, read_size);
 

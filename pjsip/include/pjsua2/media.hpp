@@ -407,7 +407,7 @@ protected:
      * Descendant should only call this method if it has registered the media
      * with the previous call to registerMediaPort().
      */
-    void unregisterMediaPort();
+    void unregisterMediaPort() PJSUA2_THROW(Error);
 
 private:
     /* Memory pool for deprecated registerMediaPort() */
@@ -456,7 +456,11 @@ public:
     /**
      * Default constructor
      */
-    AudioMediaPlayerInfo() : formatId(PJMEDIA_FORMAT_L16)
+    AudioMediaPlayerInfo() 
+    : formatId(PJMEDIA_FORMAT_L16),
+      payloadBitsPerSample(0),
+      sizeBytes(0),
+      sizeSamples(0)
     {}
 };
 
@@ -1549,7 +1553,7 @@ public:
      * Close the audio device and unregister the audio device port from the
      * conference bridge.
      */
-    void close();
+    void close() PJSUA2_THROW(Error);
 
     /**
      * Is the extra audio device opened?
@@ -2056,7 +2060,7 @@ public:
     /**
      * Default constructor
      */
-    VideoDevInfo() : id(-1), dir(PJMEDIA_DIR_NONE)
+    VideoDevInfo() : id(-1), dir(PJMEDIA_DIR_NONE), caps(0)
     {}
 
     /**
@@ -2441,7 +2445,17 @@ public:
     /**
      * Default constructor
      */
-    CodecParamInfo() : fmtId(PJMEDIA_FORMAT_L16)
+    CodecParamInfo() 
+    : clockRate(0),
+      channelCnt(0),
+      avgBps(0),
+      maxBps(0),
+      maxRxFrameSize(0),
+      frameLen(0),
+      encFrameLen(0),
+      pcmBitsPerSample(0),
+      pt(0),
+      fmtId(PJMEDIA_FORMAT_L16)
     {}
 };
 
@@ -2533,7 +2547,9 @@ public:
      * Default constructor
      */
     VidCodecParam() : dir(PJMEDIA_DIR_NONE),
-                      packing(PJMEDIA_VID_PACKING_UNKNOWN)
+                      packing(PJMEDIA_VID_PACKING_UNKNOWN),
+                      encMtu(0),
+                      ignoreFmtp(false)
     {}
 
     void fromPj(const pjmedia_vid_codec_param &param);
@@ -2614,7 +2630,7 @@ public:
     /**
      * Default constructor
      */
-    MediaEvent() : type(PJMEDIA_EVENT_NONE)
+    MediaEvent() : type(PJMEDIA_EVENT_NONE), pjMediaEvent(NULL)
     {}
 
     /**

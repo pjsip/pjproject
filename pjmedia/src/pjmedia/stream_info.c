@@ -545,6 +545,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
             if (rtcp.addr.slen) {
                 status = pj_sockaddr_init(rem_af, &si->rem_rtcp, &rtcp.addr,
                                           (pj_uint16_t)rtcp.port);
+                if (status != PJ_SUCCESS)
+                    return PJMEDIA_EINVALIDIP;
             } else {
                 pj_sockaddr_init(rem_af, &si->rem_rtcp, NULL,
                                  (pj_uint16_t)rtcp.port);

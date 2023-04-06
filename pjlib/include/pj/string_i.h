@@ -50,7 +50,7 @@ PJ_IDEF(pj_str_t*) pj_strdup_with_null( pj_pool_t *pool,
                                         pj_str_t *dst,
                                         const pj_str_t *src)
 {
-    pj_size_t src_slen = src->slen;
+    pj_ssize_t src_slen = src->slen;
 
     pj_assert(src->slen >= 0);
 

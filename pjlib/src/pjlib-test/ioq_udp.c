@@ -141,6 +141,8 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     pj_str_t temp;
     pj_bool_t send_pending, recv_pending;
     pj_status_t rc;
+    pj_str_t ioque_name;
+    pj_str_t ioqueue_type;
 
     pj_set_os_error(PJ_SUCCESS);
 
@@ -177,6 +179,19 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     rc = pj_ioqueue_create2(pool, PJ_IOQUEUE_MAX_HANDLES, cfg, &ioque);
     if (rc != PJ_SUCCESS) {
         status=-20; goto on_error;
+    }
+
+    ioque_name = pj_str((char*)pj_ioqueue_name());
+    if (pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "epoll"), 5) == 0 ||
+        pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "kqueue"), 6) == 0 ||
+        pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "iocp"), 4) == 0) {
+      if (pj_ioqueue_get_os_handle(ioque) == NULL) {
+        PJ_LOG(1,(
+          THIS_FILE,
+          "...pj_ioqueue_os_handle() unexpectedly returned NULL"
+        ));
+        status=-21; goto on_error;
+      }
     }
 
     // Register server and client socket.
@@ -437,7 +452,7 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
     addr.sin_addr = pj_inet_addr2("127.0.0.1");
 
     /* Init buffer to send */
-    pj_ansi_strcpy(sendbuf, "Hello0123");
+    pj_ansi_strxcpy(sendbuf, "Hello0123", sizeof(sendbuf));
 
     /* Send one packet. */
     bytes = sizeof(sendbuf);
@@ -1136,11 +1151,11 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     return rc;
 
 on_error:
-    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", 
-              pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf))));
-    if (ssock)
+    pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf));
+    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", errbuf));
+    if (ssock >= 0)
         pj_sock_close(ssock);
-    if (csock)
+    if (csock >= 0)
         pj_sock_close(csock);
     for (i=0; i<inactive_sock_count && inactive_sock && 
               inactive_sock[i]!=PJ_INVALID_SOCKET; ++i) 
@@ -1228,7 +1243,7 @@ int udp_ioqueue_test()
     pj_bool_t concurs[] = { PJ_TRUE, PJ_FALSE };
     int i, rc, err = 0;
 
-    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);
@@ -1242,7 +1257,7 @@ int udp_ioqueue_test()
             err = rc;
     }
 
-    for (i=0; i<PJ_ARRAY_SIZE(concurs); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(concurs); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);
@@ -1257,7 +1272,7 @@ int udp_ioqueue_test()
     }
 
 #if PJ_HAS_THREADS
-    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);

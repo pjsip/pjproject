@@ -316,7 +316,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
             PJ_LOG(5,(THIS_FILE,
                       "DNS resolver not available, target '%.*s:%d' type=%s "
                       "will be resolved with getaddrinfo()",
-                      target->addr.host.slen,
+                      (int)target->addr.host.slen,
                       target->addr.host.ptr,
                       target->addr.port,
                       pjsip_transport_get_type_name(target->type)));

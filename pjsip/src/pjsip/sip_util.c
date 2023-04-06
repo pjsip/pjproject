@@ -1868,6 +1868,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
     pj_status_t status;
     pjsip_response_addr res_addr;
     pjsip_tx_data *tdata;
+    pjsip_transaction *tsx;
 
     /* Verify arguments. */
     PJ_ASSERT_RETURN(endpt && rdata, PJ_EINVAL);
@@ -1875,10 +1876,13 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
                      PJSIP_ENOTREQUESTMSG);
 
     /* Check that no UAS transaction has been created for this request. 
-     * If UAS transaction has been created for this request, application
-     * MUST send the response statefully using that transaction.
+     * If UAS transaction has been created for this request and its state
+     * is not TERMINATED/DESTROYED, application MUST send the response
+     * statefully using that transaction.
      */
-    PJ_ASSERT_RETURN(pjsip_rdata_get_tsx(rdata)==NULL, PJ_EINVALIDOP);
+    tsx = pjsip_rdata_get_tsx(rdata);
+    if (tsx && tsx->state < PJSIP_TSX_STATE_TERMINATED)
+        return PJ_EINVALIDOP;
 
     /* Create response message */
     status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text, 

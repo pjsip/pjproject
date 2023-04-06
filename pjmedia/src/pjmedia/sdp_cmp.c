@@ -201,6 +201,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_media_cmp( const pjmedia_sdp_media *sd1,
         if (!sd2->conn)
             return PJMEDIA_SDP_EMEDIANOTEQUAL;
         status = compare_conn(sd1->conn, sd2->conn);
+        if (status != PJ_SUCCESS)
+            return status;
     } else {
         if (sd2->conn)
             return PJMEDIA_SDP_EMEDIANOTEQUAL;

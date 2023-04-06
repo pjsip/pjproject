@@ -201,7 +201,7 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
             /* Since this is UDP, the whole buffer is the message. */
             rdata->pkt_info.len = 0;
 
-        } else if (bytes_read <= MIN_SIZE) {
+        } else if (bytes_read >= 0 && bytes_read <= MIN_SIZE) {
 
             /* TODO: */
 

@@ -341,7 +341,9 @@ public:
      */
     AccountCallConfig() : holdType(PJSUA_CALL_HOLD_TYPE_DEFAULT),
                           prackUse(PJSUA_100REL_NOT_USED),
-                          timerUse(PJSUA_SIP_TIMER_OPTIONAL)
+                          timerUse(PJSUA_SIP_TIMER_OPTIONAL),
+                          timerMinSESec(90),
+                          timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}
 
     /**
@@ -620,9 +622,15 @@ struct AccountNatConfig : public PersistentObject
      * This will also update the public name of UDP transport if STUN is
      * configured.
      *
+     * Possible values:
+     * * 0 (disabled).
+     * * 1 (enabled). Update except if both Contact and server's IP address
+     * are public but response contains private IP.
+     * * 2 (enabled). Update without exception.
+     *
      * See also contactRewriteMethod field.
      *
-     * Default: 1 (PJ_TRUE / yes)
+     * Default: 1
      */
     int                 contactRewriteUse;
 
@@ -742,7 +750,9 @@ public:
       iceWaitNominationTimeoutMsec(ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT),
       iceNoRtcp(false),
       iceAlwaysUpdate(true),
+      turnEnabled(false),
       turnConnType(PJ_TURN_TP_UDP),
+      turnPasswordType(0),
       contactRewriteUse(PJ_TRUE),
       contactRewriteMethod(PJSUA_CONTACT_REWRITE_METHOD),
       contactUseSrcPort(PJ_TRUE),
@@ -1029,6 +1039,7 @@ struct AccountMediaConfig : public PersistentObject
 
     /**
      * Enable RTP and RTCP multiplexing.
+     * Default: false
      */
     bool                rtcpMuxEnabled;
 
@@ -1066,8 +1077,16 @@ public:
     /**
      * Default constructor
      */
-    AccountMediaConfig() : srtpUse(PJSUA_DEFAULT_USE_SRTP),
-                           ipv6Use(PJSUA_IPV6_DISABLED)
+    AccountMediaConfig() 
+    : lockCodecEnabled(true),
+      streamKaEnabled(false),
+      srtpUse(PJSUA_DEFAULT_USE_SRTP),
+      srtpSecureSignaling(PJSUA_DEFAULT_SRTP_SECURE_SIGNALING),
+      ipv6Use(PJSUA_IPV6_DISABLED),
+      rtcpMuxEnabled(false),
+      rtcpXrEnabled(PJMEDIA_STREAM_ENABLE_XR),
+      useLoopMedTp(false),
+      enableLoopback(false)
     {}
 
     /**
@@ -1179,8 +1198,16 @@ public:
     /**
      * Default constructor
      */
-    AccountVideoConfig() :
-                    rateControlMethod(PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING)
+    AccountVideoConfig() 
+    : autoShowIncoming(false),
+      autoTransmitOutgoing(false),
+      windowFlags(0),
+      defaultCaptureDevice(PJMEDIA_VID_DEFAULT_CAPTURE_DEV),
+      defaultRenderDevice(PJMEDIA_VID_DEFAULT_RENDER_DEV),
+      rateControlMethod(PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING),
+      rateControlBandwidth(0),
+      startKeyframeCount(PJMEDIA_VID_STREAM_START_KEYFRAME_CNT),
+      startKeyframeInterval(PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC)
     {}
 
     /**
@@ -1439,7 +1466,14 @@ public:
     /**
      * Default constructor
      */
-    AccountInfo() : regStatus(PJSIP_SC_NULL)
+    AccountInfo() : id(PJSUA_INVALID_ID), 
+                    isDefault(false),
+                    regIsConfigured(false),
+                    regIsActive(false),
+                    regExpiresSec(0),
+                    regStatus(PJSIP_SC_NULL),
+                    regLastErr(-1),
+                    onlineStatus(false)
     {}
 
     /** Import from pjsip data */

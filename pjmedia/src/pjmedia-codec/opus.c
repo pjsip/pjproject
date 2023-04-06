@@ -568,7 +568,7 @@ static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(ci);
     TRACE_((THIS_FILE, "%s:%d: - TRACE", __FUNCTION__, __LINE__));
 
-    pool = pjmedia_endpt_create_pool(f->endpt, "opus", 512, 512);
+    pool = pjmedia_endpt_create_pool(f->endpt, "opus", 4000, 4000);
     if (!pool) return PJ_ENOMEM;
     
     opus_data = PJ_POOL_ZALLOC_T(pool, struct opus_data);
@@ -724,7 +724,8 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
                             attr->info.channel_cnt,
                             OPUS_APPLICATION_VOIP);
     if (err != OPUS_OK) {
-        PJ_LOG(2, (THIS_FILE, "Unable to create encoder"));
+        PJ_LOG(2, (THIS_FILE, "Unable to create encoder: %s %d",
+                   opus_strerror(err), err));
         pj_mutex_unlock (opus_data->mutex);
         return PJMEDIA_CODEC_EFAILED;
     }
@@ -734,7 +735,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     /* Set bitrate */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(auto_bit_rate?
                                                       OPUS_AUTO:
-                                                      attr->info.avg_bps));
+                                                      (int)attr->info.avg_bps));
     /* Set VAD */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_DTX(attr->setting.vad ? 1 : 0));
     /* Set PLC */
@@ -754,10 +755,11 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     opus_encoder_ctl(opus_data->enc,
                      OPUS_SET_VBR(opus_data->cfg.cbr ? 0 : 1));
 
-    PJ_LOG(4, (THIS_FILE, "Initialize Opus encoder, sample rate: %d, "
+    PJ_LOG(4, (THIS_FILE, "Initialize Opus encoder, sample rate: %d, ch: %d, "
                           "avg bitrate: %d%s, vad: %d, plc: %d, pkt loss: %d, "
                           "complexity: %d, constant bit rate: %d",
                           opus_data->cfg.sample_rate,
+                          opus_data->cfg.channel_cnt,
                           (auto_bit_rate? 0: attr->info.avg_bps),
                           (auto_bit_rate? "(auto)": ""),
                           attr->setting.vad?1:0,
@@ -771,7 +773,8 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
                              opus_data->cfg.sample_rate,
                              attr->info.channel_cnt);
     if (err != OPUS_OK) {
-        PJ_LOG(2, (THIS_FILE, "Unable to initialize decoder"));
+        PJ_LOG(2, (THIS_FILE, "Unable to initialize decoder: %s %d",
+                   opus_strerror(err), err));
         pj_mutex_unlock (opus_data->mutex);
         return PJMEDIA_CODEC_EFAILED;
     }
@@ -821,7 +824,7 @@ static pj_status_t  codec_modify( pjmedia_codec *codec,
     /* Set bitrate */
     opus_data->cfg.bit_rate = attr->info.avg_bps;
     opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(attr->info.avg_bps?
-                                                      attr->info.avg_bps:
+                                                      (int)attr->info.avg_bps:
                                                       OPUS_AUTO));
     /* Set VAD */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_DTX(attr->setting.vad ? 1 : 0));
@@ -843,10 +846,11 @@ static pj_status_t  codec_modify( pjmedia_codec *codec,
     opus_encoder_ctl(opus_data->enc,
                      OPUS_SET_VBR(attr->setting.cbr ? 0 : 1));
 
-    PJ_LOG(4, (THIS_FILE, "Modifying Opus encoder, sample rate: %d, "
+    PJ_LOG(4, (THIS_FILE, "Modifying Opus encoder, sample rate: %d, ch: %d, "
                           "avg bitrate: %d%s, vad: %d, plc: %d, pkt loss: %d, "
                           "complexity: %d, constant bit rate: %d",
                           attr->info.clock_rate,
+                          attr->info.channel_cnt,
                           (attr->info.avg_bps? attr->info.avg_bps: 0),
                           (attr->info.avg_bps? "": "(auto)"),
                           attr->setting.vad?1:0,
@@ -905,7 +909,7 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
                                            ((unsigned char*)pkt) + out_pos,
                                            sizeof(tmp_buf));
         if (size < 0) {
-            PJ_LOG(5, (THIS_FILE, "Parse failed! (pkt_size=%d, err=%d)",
+            PJ_LOG(5, (THIS_FILE, "Parse failed! (pkt_size=%lu, err=%d)",
                        pkt_size, size));
             pj_mutex_unlock (opus_data->mutex);
             return PJMEDIA_CODEC_EFAILED;

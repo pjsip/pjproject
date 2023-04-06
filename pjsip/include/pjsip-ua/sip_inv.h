@@ -232,6 +232,7 @@ typedef struct pjsip_inv_callback
     /**
      * This callback is called after SDP offer/answer session has completed.
      * The status argument specifies the status of the offer/answer, 
+     * i.e. whether the SDP answer is valid or the negotiation result
      * as returned by pjmedia_sdp_neg_negotiate().
      * 
      * This callback is optional (from the point of view of the framework), 

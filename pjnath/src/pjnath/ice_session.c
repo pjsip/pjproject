@@ -818,8 +818,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     pj_assert(i < PJ_ARRAY_SIZE(ice->tp_data) &&
               ice->tp_data[i].transport_id == transport_id);
 
-    pj_ansi_strcpy(ice->tmp.txt, pj_sockaddr_print(&lcand->addr, address,
-                                                   sizeof(address), 2));
+    pj_ansi_strxcpy(ice->tmp.txt, pj_sockaddr_print(&lcand->addr, address,
+                                                    sizeof(address), 2),
+                    sizeof(ice->tmp.txt));
     LOG4((ice->obj_name, 
          "Candidate %d added: comp_id=%d, type=%s, foundation=%.*s, "
          "addr=%s:%d, base=%s:%d, prio=0x%x (%u)",
@@ -1674,7 +1675,7 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
             }
         }
 
-        LOG5((ice->obj_name, "Check %d is successful%s",
+        LOG5((ice->obj_name, "Check %ld is successful%s",
              GET_CHECK_ID(&ice->clist, check),
              (check->nominated ? " and nominated" : "")));
 

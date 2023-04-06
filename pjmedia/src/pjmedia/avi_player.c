@@ -42,7 +42,7 @@
 #define AVISF_DISABLED          0x00000001
 #define AVISF_VIDEO_PALCHANGES  0x00010000
 
-#define AVI_EOF 0xFFEEFFEE
+#define AVI_EOF (int)0xFFEEFFEE
 
 //#define COMPARE_TAG(doc_tag, tag) (doc_tag==*((pj_uint32_t*)avi_tags[tag]))
 #define COMPARE_TAG(doc_tag, tag) \
@@ -183,8 +183,9 @@ static pj_status_t file_read3(pj_oshandle_t fd, void *data, pj_ssize_t size,
     /* Normalize AVI header fields values from little-endian to host
      * byte order.
      */
-    if (bits > 0)
+    if (bits > 0) {
         data_to_host(data, bits, size_read);
+    }
 
     if (size_read != size_to_read) {
         if (psz_read)
@@ -228,8 +229,8 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     fport[0]->fsize = pj_file_size(filename);
 
     /* Size must be more than AVI header size */
-    if (fport[0]->fsize <= sizeof(riff_hdr_t) + sizeof(avih_hdr_t) + 
-                           sizeof(strl_hdr_t))
+    if (fport[0]->fsize <= (pj_off_t)(sizeof(riff_hdr_t) + sizeof(avih_hdr_t) +
+                                      sizeof(strl_hdr_t)))
     {
         return PJMEDIA_EINVALIMEDIATYPE;
     }
@@ -303,16 +304,15 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             goto on_error;
 
         /* Normalize the endian */
-        if (elem == sizeof(strf_video_hdr_t))
+        if (elem == sizeof(strf_video_hdr_t)) {
             data_to_host2(&avi_hdr.strf_hdr[i],
-                          sizeof(strf_video_hdr_sizes)/
-                          sizeof(strf_video_hdr_sizes[0]),
+                          PJ_ARRAY_SIZE(strf_video_hdr_sizes),
                           strf_video_hdr_sizes);
-        else if (elem == sizeof(strf_audio_hdr_t))
+        } else if (elem == sizeof(strf_audio_hdr_t)) {
             data_to_host2(&avi_hdr.strf_hdr[i],
-                          sizeof(strf_audio_hdr_sizes)/
-                          sizeof(strf_audio_hdr_sizes[0]),
+                          PJ_ARRAY_SIZE(strf_audio_hdr_sizes),
                           strf_audio_hdr_sizes);
+        }
 
         /* Skip the remainder of the header */
         size_to_read = avi_hdr.strl_hdr[i].list_sz - (sizeof(strl_hdr_t) -
@@ -395,7 +395,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             }
 
             fmt_id = avi_hdr.strl_hdr[i].codec;
-            for (j = sizeof(avi_fmts)/sizeof(avi_fmts[0])-1; j >= 0; j--) {
+            for (j = (int)PJ_ARRAY_SIZE(avi_fmts)-1; j >= 0; j--) {
                 /* Check supported video formats here */
                 if (fmt_id == avi_fmts[j].fmt_id) {
                     if (avi_fmts[j].eff_fmt_id)

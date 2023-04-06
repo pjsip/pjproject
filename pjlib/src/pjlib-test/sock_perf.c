@@ -100,13 +100,13 @@ static int sock_producer_consumer(int sock_type,
                 return -70;
             }
             if (part_received <= 0) {
-                PJ_LOG(3,("", "...error: socket has closed (part_received=%d)!",
+                PJ_LOG(3,("", "...error: socket has closed (part_received=%ld)!",
                           part_received));
                 return -73;
             }
             if ((pj_size_t)part_received != buf_size-received) {
                 if (sock_type != pj_SOCK_STREAM()) {
-                    PJ_LOG(3,("", "...error: expecting %u bytes, got %u bytes",
+                    PJ_LOG(3,("", "...error: expecting %lu bytes, got %lu bytes",
                               buf_size-received, part_received));
                     return -76;
                 }

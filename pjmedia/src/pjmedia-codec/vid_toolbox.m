@@ -354,7 +354,7 @@ static pj_status_t vtool_alloc_codec(pjmedia_vid_codec_factory *factory,
 
     *p_codec = NULL;
 
-    pool = pj_pool_create(vtool_factory.pf, "vtool%p", 512, 512, NULL);
+    pool = pj_pool_create(vtool_factory.pf, "vtool%p", 16000, 4000, NULL);
     if (!pool)
         return PJ_ENOMEM;
 
@@ -1366,7 +1366,7 @@ on_return:
                               PJMEDIA_EVENT_PUBLISH_DEFAULT);
 
         PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
-                  "input nframes=%d, concatenated size=%d bytes",
+                  "input nframes=%ld, concatenated size=%d bytes",
                   count, whole_len));
 
         output->type = PJMEDIA_FRAME_TYPE_NONE;

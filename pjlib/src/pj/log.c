@@ -151,14 +151,17 @@ pj_status_t pj_log_init(void)
     if (thread_suspended_tls_id == -1) {
         pj_status_t status;
         status = pj_thread_local_alloc(&thread_suspended_tls_id);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            thread_suspended_tls_id = -1;
             return status;
+        }
 
 #  if PJ_LOG_ENABLE_INDENT
         status = pj_thread_local_alloc(&thread_indent_tls_id);
         if (status != PJ_SUCCESS) {
             pj_thread_local_free(thread_suspended_tls_id);
             thread_suspended_tls_id = -1;
+            thread_indent_tls_id = -1;
             return status;
         }
 #  endif
@@ -275,16 +278,17 @@ PJ_DEF(pj_log_func*) pj_log_get_log_func(void)
  */
 static void suspend_logging(int *saved_level)
 {
-        /* Save the level regardless, just in case PJLIB is shutdown
-         * between suspend and resume.
-         */
-        *saved_level = pj_log_max_level;
+    /* Save the level regardless, just in case PJLIB is shutdown
+     * between suspend and resume.
+     */
+    *saved_level = pj_log_max_level;
 
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
+        static pj_ssize_t suspend_log = PJ_TRUE;
         pj_thread_local_set(thread_suspended_tls_id, 
-                            (void*)(pj_ssize_t)PJ_TRUE);
+                            (void*)&suspend_log);
     } 
     else
 #endif
@@ -299,8 +303,9 @@ static void resume_logging(int *saved_level)
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
-        pj_thread_local_set(thread_suspended_tls_id,
-                            (void*)(pj_size_t)PJ_FALSE);
+        static pj_ssize_t suspend_log = PJ_FALSE;
+        pj_thread_local_set(thread_suspended_tls_id, 
+                            (void*)&suspend_log);
     }
     else
 #endif
@@ -319,7 +324,9 @@ static pj_bool_t is_logging_suspended(void)
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
-        return pj_thread_local_get(thread_suspended_tls_id) != NULL;
+        pj_ssize_t *ils;
+        ils = (pj_ssize_t *)pj_thread_local_get(thread_suspended_tls_id);
+        return (ils? (*ils == PJ_TRUE): PJ_FALSE);
     }
     else
 #endif
@@ -361,13 +368,13 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     if (log_decor & PJ_LOG_HAS_LEVEL_TEXT) {
         static const char *ltexts[] = { "FATAL:", "ERROR:", " WARN:", 
                               " INFO:", "DEBUG:", "TRACE:", "DETRC:"};
-        pj_ansi_strcpy(pre, ltexts[level]);
+        pj_ansi_strxcpy(pre, ltexts[level], PJ_LOG_MAX_SIZE);
         pre += 6;
     }
     if (log_decor & PJ_LOG_HAS_DAY_NAME) {
         static const char *wdays[] = { "Sun", "Mon", "Tue", "Wed",
                                        "Thu", "Fri", "Sat"};
-        pj_ansi_strcpy(pre, wdays[ptime.wday]);
+        pj_ansi_strxcpy(pre, wdays[ptime.wday], PJ_LOG_MAX_SIZE-6);
         pre += 3;
     }
     if (log_decor & PJ_LOG_HAS_YEAR) {

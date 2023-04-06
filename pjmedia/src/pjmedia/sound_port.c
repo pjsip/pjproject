@@ -173,13 +173,18 @@ static pj_status_t play_cb_ext(void *user_data, pjmedia_frame *frame)
 {
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port = snd_port->port;
+    pj_status_t status;
 
     if (port == NULL) {
         frame->type = PJMEDIA_FRAME_TYPE_NONE;
         return PJ_SUCCESS;
     }
 
-    pjmedia_port_get_frame(port, frame);
+    status = pjmedia_port_get_frame(port, frame);
+    if (status != PJ_SUCCESS) {
+        frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+        pj_bzero(frame->buf, frame->size);
+    }
 
     /* Invoke preview callback */
     if (snd_port->on_play_frame)

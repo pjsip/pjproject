@@ -504,7 +504,7 @@ static pj_status_t write_children(const pj_json_list *list,
                 child = child->next;
             }
         } else {
-            if (st->indent < sizeof(st->indent_buf)) {
+            if (st->indent < (int)sizeof(st->indent_buf)) {
                 st->indent += PJ_JSON_INDENT_SIZE;
                 indent_added = PJ_TRUE;
             }
@@ -577,7 +577,7 @@ static pj_status_t elem_write(const pj_json_elem *elem,
                 len = pj_ansi_snprintf(num_buf, sizeof(num_buf), "%f",
                                        elem->value.num);
 
-            if (len < 0 || len >= sizeof(num_buf))
+            if (len < 0 || len >= (int)sizeof(num_buf))
                 return PJ_ETOOBIG;
             CHECK( st->writer( num_buf, len, st->user_data) );
         }

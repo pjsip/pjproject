@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
         processed += frame.size;
     }
 
-    PJ_LOG(3,(THIS_FILE, "Done. Output duration: %d.%03d",
+    PJ_LOG(3,(THIS_FILE, "Done. Output duration: %ld.%03ld",
               (processed >> 2)/clock_rate,
               ((processed >> 2)*1000/clock_rate) % 1000));
 

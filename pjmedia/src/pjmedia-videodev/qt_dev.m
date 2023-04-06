@@ -253,7 +253,7 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
             [[dev uniqueID] getCString:qdi->dev_id
                             maxLength:sizeof(qdi->dev_id)
                             encoding:[NSString defaultCStringEncoding]];
-            strcpy(qdi->info.driver, "QT");         
+            pj_ansi_strxcpy(qdi->info.driver, "QT", sizeof(qdi->info.driver));
             qdi->info.dir = PJMEDIA_DIR_CAPTURE;
             qdi->info.has_callback = PJ_TRUE;
             

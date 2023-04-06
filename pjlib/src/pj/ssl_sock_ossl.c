@@ -191,7 +191,7 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 #  ifdef _MSC_VER
 #    define strerror_r(err,buf,len) strerror_s(buf,len,err)
 #  else
-#    define strerror_r(err,buf,len) pj_ansi_strncpy(buf,strerror(err),len)
+#    define strerror_r(err,buf,len) pj_ansi_strxcpy(buf,strerror(err),len)
 #  endif
 #endif
 
@@ -345,7 +345,7 @@ static void SSLLogErrors(char * action, int ret, int ssl_err, int len,
         break;
     }
     default:
-        PJ_LOG(2,("SSL", "%lu [%s] (%s) ret: %d len: %d",
+        PJ_LOG(2,("SSL", "%d [%s] (%s) ret: %d len: %d",
                   ssl_err, ssl_err_str, action, ret, len));
         break;
     }
@@ -441,7 +441,7 @@ static pj_str_t ssl_strerror(pj_status_t status,
         const char *tmp = NULL;
         tmp = ERR_reason_error_string(ssl_err);
         if (tmp) {
-            pj_ansi_strncpy(buf, tmp, bufsize);
+            pj_ansi_strxcpy(buf, tmp, bufsize);
             errstr = pj_str(buf);
             return errstr;
         }
@@ -678,7 +678,7 @@ static pj_status_t init_openssl(void)
 
     openssl_init_count = 1;
 
-    PJ_LOG(4, (THIS_FILE, "OpenSSL version : %x", OPENSSL_VERSION_NUMBER));
+    PJ_LOG(4, (THIS_FILE, "OpenSSL version : %ld", OPENSSL_VERSION_NUMBER));
     /* Register error subsystem */
     status = pj_register_strerror(PJ_SSL_ERRNO_START, 
                                   PJ_SSL_ERRNO_SPACE_SIZE, 
@@ -1454,7 +1454,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             int i;
 
             /* Check and load ECC & DSA certificates & private keys */
-            for (i = 0; i < PJ_ARRAY_SIZE(cert_types); ++i) {
+            for (i = 0; i < (int)PJ_ARRAY_SIZE(cert_types); ++i) {
                 int err;
 
                 pj_memcpy(p, cert_types[i], CERT_TYPE_LEN);
@@ -2365,14 +2365,14 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
             PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
-                       "timeout=%d",
-                       SSL_session_reused(ossock->ossl_ssl),
+                       "timeout=%ld",
+                       (int)SSL_session_reused(ossock->ossl_ssl),
                        SSL_SESSION_is_resumable(sess),
                        SSL_SESSION_get_timeout(sess)));
 #else
             PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
-                       "timeout=%d",
-                       SSL_session_reused(ossock->ossl_ssl),
+                       "timeout=%ld",
+                       (int)SSL_session_reused(ossock->ossl_ssl),
                        -1,
                        SSL_SESSION_get_timeout(sess)));
 #endif
@@ -2381,14 +2381,14 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
             len *= 2;
             if (len >= BUF_SIZE) len = BUF_SIZE;
             for (i = 0; i < len; i+=2)
-                pj_ansi_sprintf(buf+i, "%02X", sid[i/2]);
+                pj_ansi_snprintf(buf+i, sizeof(buf)-i, "%02X", sid[i/2]);
             buf[len] = '\0';
             PJ_LOG(5, (THIS_FILE, "Session id: %s", buf));
 
             sctx = SSL_SESSION_get0_id_context(sess, &len);
             if (len >= BUF_SIZE) len = BUF_SIZE;
             for (i = 0; i < len; i++)
-                pj_ansi_sprintf(buf + i, "%d", sctx[i]);
+                pj_ansi_snprintf(buf + i, sizeof(buf)-i, "%d", sctx[i]);
             buf[len] = '\0';
             PJ_LOG(5, (THIS_FILE, "Session id context: %s", buf));
         }

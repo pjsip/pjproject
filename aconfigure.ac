@@ -56,7 +56,7 @@ if test "$LIBEXT" = ""; then LIBEXT='a'; fi
 AC_SUBST(LIBEXT)
 if test "$LIBEXT2" = ""; then LIBEXT2=""; fi
 AC_SUBST(LIBEXT2)
-if test "$CC_OUT" = ""; then CC_OUT="-o "; fi
+if test "$CC_OUT" = ""; then CC_OUT="-c -o "; fi
 AC_SUBST(CC_OUT)
 if test "$CC_INC" = ""; then CC_INC="-I"; fi
 AC_SUBST(CC_INC)

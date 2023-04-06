@@ -119,7 +119,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     pj_ioqueue_t *ioqueue;
     pj_status_t rc;
     pj_lock_t *lock;
-    int i;
+    pj_size_t i;
 
     /* Check that arguments are valid. */
     PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && max_fd > 0,
@@ -703,4 +703,9 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
             event_cnt, processed_cnt));
 
     return processed_cnt;
+}
+
+PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
+{
+    return ioqueue ? (pj_oshandle_t)&ioqueue->kfd : NULL;
 }

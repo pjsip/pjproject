@@ -1100,7 +1100,8 @@ int regc_test(void)
 
                     t->client_cfg.destroy_on_cb = z;
 
-                    sprintf(new_title, "%s [check=%d, xuid=%d, destroy=%d]", 
+                    pj_ansi_snprintf(new_title, sizeof(new_title),
+                            "%s [check=%d, xuid=%d, destroy=%d]", 
                             t->title, pjsip_cfg()->regc.check_contact,
                             pjsip_cfg()->regc.add_xuid_param, z);
                     rc = do_test(new_title, &t->server_cfg, &t->client_cfg, 

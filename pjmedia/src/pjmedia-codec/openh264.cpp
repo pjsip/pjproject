@@ -1150,7 +1150,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
         output->timestamp = packets[0].timestamp;
 
         PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
-                  "input nframes=%d, concatenated size=%d bytes, ret=%d",
+                  "input nframes=%lu, concatenated size=%d bytes, ret=%d",
                   count, whole_len, ret));
     }
 

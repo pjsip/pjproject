@@ -79,12 +79,12 @@ struct pjsua_call_media
                                          bit 0/LSB : sequence flag
                                          bit 1     : timestamp flag         */
 
-    pjmedia_type                prev_type;     /**< Previous media type     */
-    pjmedia_stream_info         prev_aud_si;   /**< Prev audio stream info  */
-    pjmedia_vid_stream_info     prev_vid_si;   /**< Prev video stream info  */
-    pj_bool_t                   prev_srtp_use; /**< Prev SRTP use           */
-    pjmedia_srtp_info           prev_srtp_info;/**< Prev SRTP transport info*/
-    pj_bool_t                   prev_ice_use;  /**< Prev ICE use            */
+    pjmedia_type         prev_type;            /**< Previous media type     */
+    pj_sockaddr          prev_local_addr;      /**< Prev media local address*/
+    pj_sockaddr          prev_rem_addr;        /**< Prev media remote addr  */
+    pj_bool_t            prev_srtp_use;        /**< Prev SRTP use           */
+    pjmedia_srtp_info    prev_srtp_info;       /**< Prev SRTP transport info*/
+    pj_bool_t            prev_ice_use;         /**< Prev ICE use            */
     pjmedia_ice_transport_info  prev_ice_info; /**< Prev ICE transport info */
 
     pjmedia_transport   *tp;        /**< Current media transport (can be 0) */
@@ -924,7 +924,7 @@ pj_status_t acquire_call(const char *title,
                          pjsua_call_id call_id,
                          pjsua_call **p_call,
                          pjsip_dialog **p_dlg);
-const char *good_number(char *buf, pj_int32_t val);
+const char *good_number(char *buf, unsigned buf_size, pj_int32_t val);
 void print_call(const char *title,
                 int call_id,
                 char *buf, pj_size_t size);

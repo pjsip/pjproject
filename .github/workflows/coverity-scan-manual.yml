@@ -1,0 +1,16 @@
+# This allows running coverity scan at any time and on any branch. Invoke this
+# action manually from https://github.com/pjsip/pjproject/actions
+
+name: "Coverity Scan (Manual)"
+
+on: [workflow_dispatch]
+
+jobs:
+  ubuntu-full-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: run.sh
+        run: tests/coverity-scan/run.sh
+        env:
+          COV_TOKEN: ${{ secrets.PJSIP_COVERITY_SCAN_TOKEN }}

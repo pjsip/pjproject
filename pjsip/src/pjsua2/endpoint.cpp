@@ -43,8 +43,12 @@ Endpoint *Endpoint::instance_;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-TlsInfo::TlsInfo() : cipher(PJ_TLS_UNKNOWN_CIPHER),
-                     empty(true)
+TlsInfo::TlsInfo() 
+: established(false),
+  protocol(0),
+  cipher(PJ_TLS_UNKNOWN_CIPHER),
+  verifyStatus(0),
+  empty(true)
 {
 }
 
@@ -97,7 +101,9 @@ void TlsInfo::fromPj(const pjsip_tls_state_info &info)
 }
 
 SslCertInfo::SslCertInfo()
-        : empty(true)
+: version(0xFF),
+  validityGmt(false),
+  empty(true)
 {
 }
 
@@ -791,7 +797,7 @@ void Endpoint::on_transport_state( pjsip_transport *tp,
     prm.lastError = info ? info->status : PJ_SUCCESS;
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
-    if (!pj_ansi_stricmp(tp->type_name, "tls") && info->ext_info &&
+    if (!pj_ansi_stricmp(tp->type_name, "tls") && info && info->ext_info &&
         (state == PJSIP_TP_STATE_CONNECTED || 
          ((pjsip_tls_state_info*)info->ext_info)->
                                  ssl_sock_info->verify_status != PJ_SUCCESS))
@@ -1627,7 +1633,7 @@ pjsip_redirect_op Endpoint::on_call_redirected(pjsua_call_id call_id,
     int len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, target, uristr,
                               sizeof(uristr));
     if (len < 1) {
-        pj_ansi_strcpy(uristr, "--URI too long--");
+        pj_ansi_strxcpy(uristr, "--URI too long--", sizeof(uristr));
     }
     prm.targetUri = string(uristr);
     if (e)

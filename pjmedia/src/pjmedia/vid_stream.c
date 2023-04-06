@@ -60,11 +60,11 @@
 #endif
 
 #ifndef PJMEDIA_VSTREAM_SIZE
-#   define PJMEDIA_VSTREAM_SIZE 1000
+#   define PJMEDIA_VSTREAM_SIZE 16000
 #endif
 
 #ifndef PJMEDIA_VSTREAM_INC
-#   define PJMEDIA_VSTREAM_INC  1000
+#   define PJMEDIA_VSTREAM_INC  4000
 #endif
 
 /* Due to network MTU limitation, a picture bitstream may be splitted into
@@ -816,7 +816,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                                 PJMEDIA_VID_STREAM_CHECK_RTP_PT);
 #if !PJMEDIA_VID_STREAM_CHECK_RTP_PT
     if (hdr->pt != channel->rtp.out_pt) {
-        seq_st.status.flag.badpt = 1;
+        seq_st.status.flag.badpt = -1;
     }
 #endif
     if (seq_st.status.value) {
@@ -1720,7 +1720,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
                pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
                pjmedia_fourcc_name(pi->fmt.id, fourcc_name),
                (dir==PJMEDIA_DIR_ENCODING?"->":"<-"),
-               info->codec_info.encoding_name.slen,
+               (int)info->codec_info.encoding_name.slen,
                info->codec_info.encoding_name.ptr,
                pi->fmt.det.vid.fps.num, pi->fmt.det.vid.fps.denum,
                pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum));
@@ -1953,7 +1953,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     if (info->jb_max_pre >= frm_ptime)
         jb_max_pre  = info->jb_max_pre * chunks_per_frm / frm_ptime;
     else
-        jb_max_pre  = jb_max * 4 / 5;
+        jb_max_pre  = PJ_MAX(1, jb_max * 4 / 5);
 
     /* JB init prefetch, default 0 */
     if (info->jb_init >= frm_ptime)

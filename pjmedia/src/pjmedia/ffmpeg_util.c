@@ -78,7 +78,7 @@ void pjmedia_ffmpeg_add_ref()
     if (pjmedia_ffmpeg_ref_cnt++ == 0) {
         av_log_set_level(AV_LOG_ERROR);
         av_log_set_callback(&ffmpeg_log_cb);
-#if !LIBAVCODEC_VER_AT_LEAST(58,137)
+#if !LIBAVCODEC_VER_AT_LEAST(58,76)
         av_register_all();
 #endif
     }
@@ -168,7 +168,7 @@ pj_status_t pjmedia_format_id_to_CodecID(pjmedia_format_id fmt_id,
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(ffmpeg_codec_table); ++i) {
         const struct ffmpeg_codec_table_t *t = &ffmpeg_codec_table[i];
-        if (t->id==fmt_id && t->codec_id != AV(PIX_FMT_NONE)) {
+        if (t->id==fmt_id && (int)t->codec_id != AV(PIX_FMT_NONE)) {
             *codec_id = t->codec_id;
             return PJ_SUCCESS;
         }

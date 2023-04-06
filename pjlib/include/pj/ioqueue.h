@@ -932,6 +932,20 @@ PJ_DECL(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
 
 
 /**
+ * Get the underlying OS handle associated with an ioqueue instance.
+ *
+ * @param ioqueue        The ioqueue instance.
+ *
+ * @return          The OS handle associated with the instance.
+ *                  For epoll/kqueue this will be a pointer to the file
+ *                  descriptor. For all other platforms, this will be a pointer
+ *                  to a platform-specific handle.
+ *                  If no handle is available, NULL will be returned.
+ */
+PJ_DECL(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue );
+
+
+/**
  * @}
  */
 

@@ -1,6 +1,5 @@
 /* 
- * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
- * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2023 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,69 +18,74 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #include <pjlib.h>
 #include <pjlib-util.h>
-
-#include <pjlib-util/json.h>
-#include <pj/log.h>
-#include <pj/string.h>
 
 #define kMinInputLength 10
 #define kMaxInputLength 5120
 
 pj_pool_factory *mem;
 
-int Json_parse(char *DataFx,size_t Size){
-    
-    int ret = 0;
+int Json_parse(uint8_t *data, size_t Size) {
+
     pj_pool_t *pool;
     pj_json_elem *elem;
     pj_json_err_info err;
 
+    char *output;
+    unsigned int output_size;
+
     pool = pj_pool_create(mem, "json", 1000, 1000, NULL);
 
-    elem = pj_json_parse(pool, DataFx,(unsigned *)&Size, &err);
+    elem = pj_json_parse(pool, (char *)data, (unsigned *)&Size, &err);
+    if (!elem) {
+        goto on_error;
+    }
 
-    if (!elem)
-        ret = 1;
+    output_size = Size * 2;
+    output = pj_pool_alloc(pool, output_size);
+
+    if (pj_json_write(elem, output, &output_size)) {
+        goto on_error;
+    }
 
     pj_pool_release(pool);
+    return 0;
 
-    return ret;
+on_error:
+    pj_pool_release(pool);
+    return 1;
 }
 
 extern int
 LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
-{/*pjproject/pjlib-util/src/pjlib-util-test/json_test.c*/
+{
 
-    if (Size < kMinInputLength || Size > kMaxInputLength){
+    if (Size < kMinInputLength || Size > kMaxInputLength) {
         return 1;
     }
 
-/*Add Extra byte */
-    char *DataFx;
-    DataFx = (char *)calloc((Size+1),sizeof(char));
-    memcpy((void *)DataFx,(void *)Data,Size);
-
-/*init*/
     int ret = 0;
+    uint8_t *data;
     pj_caching_pool caching_pool;
-    mem = &caching_pool.factory;
 
+    /* Add NULL byte */
+    data = (uint8_t *)calloc((Size+1), sizeof(uint8_t));
+    memcpy((void *)data, (void *)Data, Size);
+
+    /* init Calls */
+    pj_init();
+    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0);
     pj_log_set_level(0);
 
-    ret = pj_init();
-    ret = pjlib_util_init();
+    mem = &caching_pool.factory;
 
-    pj_dump_config();
-    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0);
+    /* Call fuzzer */
+    ret = Json_parse(data, Size);
 
-/*Calls*/
-    ret = Json_parse(DataFx,Size);
-
-    free(DataFx);
+    free(data);
+    pj_caching_pool_destroy(&caching_pool);
 
     return ret;
 }

@@ -97,6 +97,7 @@ struct pjmedia_vid_port
 
     pjmedia_clock           *clock;
     pjmedia_clock_src        clocksrc;
+    pjmedia_event            fmt_event;
 
     struct sync_clock_src_t
     {
@@ -191,6 +192,10 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
     pjmedia_video_apply_fmt_param vafp;
 
     status = get_vfi(&vp->conv.conv_param.src, NULL, &vafp);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(4, (THIS_FILE, status, "Error get video format info"));
+        return status;
+    }
     vp->src_size = vafp.framebytes;
 
     if (vp->conv.conv) {
@@ -353,7 +358,7 @@ static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
 
         /* Fill the nearest width list. */
         if (diff_width1 <= diff_width2) {
-            int k = 0;
+            unsigned k = 0;
             while (((k < PJ_ARRAY_SIZE(nearest_width)) &&
                 (!((vfd->size.w == nearest_width[k].w) &&
                 (vfd->size.h == nearest_width[k].h))))) {
@@ -740,7 +745,7 @@ pjmedia_vid_port_get_clock_src( pjmedia_vid_port *vid_port )
     return &vid_port->clocksrc;
 }
 
-PJ_DECL(pj_status_t)
+PJ_DEF(pj_status_t)
 pjmedia_vid_port_set_clock_src( pjmedia_vid_port *vid_port,
                                 pjmedia_clock_src *clocksrc)
 {
@@ -851,17 +856,17 @@ PJ_DEF(pj_bool_t) pjmedia_vid_port_is_running(pjmedia_vid_port *vp)
 
 PJ_DEF(pj_status_t) pjmedia_vid_port_stop(pjmedia_vid_port *vp)
 {
-    pj_status_t status;
+    pj_status_t status0=PJ_SUCCESS, status;
 
     PJ_ASSERT_RETURN(vp, PJ_EINVAL);
 
     if (vp->clock) {
-        status = pjmedia_clock_stop(vp->clock);
+        status0 = pjmedia_clock_stop(vp->clock);
     }
 
     status = pjmedia_vid_dev_stream_stop(vp->strm);
 
-    return status;
+    return status ? status : status0;
 }
 
 static void vid_port_destroy(pjmedia_vid_port *vp)
@@ -934,7 +939,7 @@ static void save_rgb_frame(int width, int height, const pjmedia_frame *frm)
         return;
 
     // Open file
-    sprintf(szFilename, "frame%02d.ppm", counter++);
+    pj_ansi_snprintf(szFilename, sizeof(szFilename), "frame%02d.ppm", counter++);
     pFile=fopen(szFilename, "wb");
     if(pFile==NULL)
       return;
@@ -967,6 +972,20 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
 
     if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
+        /* Copy the event to avoid race condition with put_frame() */
+        pj_memcpy(&vp->fmt_event, event, sizeof(*event));
+    }
+
+    /* Republish the event, post the event to the event manager
+     * to avoid deadlock if vidport is trying to stop the clock.
+     */
+    return pjmedia_event_publish(NULL, vp, event,
+                                 PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+}
+
+static pj_status_t handle_format_change(pjmedia_vid_port *vp)
+{
+    if (vp->fmt_event.type != PJMEDIA_EVENT_NONE) {
         const pjmedia_video_format_detail *vfd;
         const pjmedia_video_format_detail *vfd_cur;
         pjmedia_vid_dev_param vid_param;
@@ -981,7 +1000,7 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
 
         /* Retrieve the new video format detail */
         vfd = pjmedia_format_get_video_format_detail(
-                  &event->data.fmt_changed.new_fmt, PJ_TRUE);
+                  &vp->fmt_event.data.fmt_changed.new_fmt, PJ_TRUE);
         if (!vfd || !vfd->fps.num || !vfd->fps.denum)
             return PJMEDIA_EVID_BADFORMAT;
 
@@ -1003,7 +1022,7 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
                 clock_param.clock_rate = vid_param.clock_rate;
                 pjmedia_clock_modify(vp->clock, &clock_param);
 
-                return pjmedia_event_publish(NULL, vp, event,
+                return pjmedia_event_publish(NULL, vp, &vp->fmt_event,
                                              PJMEDIA_EVENT_PUBLISH_POST_EVENT);
             }
         }
@@ -1019,10 +1038,10 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
         
         /* Change the destination format to the new format */
         pjmedia_format_copy(&vp->conv.conv_param.src,
-                            &event->data.fmt_changed.new_fmt);
+                            &vp->fmt_event.data.fmt_changed.new_fmt);
         /* Only copy the size here */
         vp->conv.conv_param.dst.det.vid.size =
-            event->data.fmt_changed.new_fmt.det.vid.size;
+            vp->fmt_event.data.fmt_changed.new_fmt.det.vid.size;
 
         status = create_converter(vp);
         if (status != PJ_SUCCESS) {
@@ -1080,15 +1099,13 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
         /* Update passive port info from the video stream */
         if (vp->role == ROLE_PASSIVE) {
             pjmedia_format_copy(&vp->pasv_port->base.info.fmt,
-                                &event->data.fmt_changed.new_fmt);
+                                &vp->fmt_event.data.fmt_changed.new_fmt);
         }
+
+        pj_bzero(&vp->fmt_event, sizeof(pjmedia_event));
     }
-    
-    /* Republish the event, post the event to the event manager
-     * to avoid deadlock if vidport is trying to stop the clock.
-     */
-    return pjmedia_event_publish(NULL, vp, event,
-                                 PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+
+    return PJ_SUCCESS;
 }
 
 static pj_status_t convert_frame(pjmedia_vid_port *vp,
@@ -1228,7 +1245,9 @@ static pj_status_t vidstream_render_cb(pjmedia_vid_dev_stream *stream,
 {
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
     pj_status_t status = PJ_SUCCESS;
-    
+
+    handle_format_change(vp);
+
     pj_bzero(frame, sizeof(pjmedia_frame));
     if (vp->role==ROLE_ACTIVE) {
         unsigned frame_ts = vp->clocksrc.clock_rate / 1000 *
@@ -1367,6 +1386,8 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
     if (vp->pasv_port->is_destroying)
         return PJ_EGONE;
 
+    handle_format_change(vp);
+
     if (vp->stream_role==ROLE_PASSIVE) {
         /* We are passive and the stream is passive.
          * The encoding counterpart is in vid_pasv_port_get_frame().
@@ -1376,8 +1397,8 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
 
         if (frame->size != vp->src_size) {
             if (frame->size > 0) {
-                PJ_LOG(4, (THIS_FILE, "Unexpected frame size %d, expected %d",
-                                      frame->size, vp->src_size));
+                PJ_LOG(4,(THIS_FILE, "Unexpected frame size %lu, expected %lu",
+                                     frame->size, vp->src_size));
             }
 
             pj_memcpy(&frame_, frame, sizeof(pjmedia_frame));
