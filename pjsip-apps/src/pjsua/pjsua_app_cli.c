@@ -292,7 +292,7 @@ static void get_input_url(char *buf,
                           pj_cli_cmd_val *cval,
                           struct input_result *result)
 {
-    static const pj_str_t err_invalid_input = {"Invalid input\n", 15};
+    const pj_str_t err_invalid_input = pj_str("Invalid input\n");
     result->nb_result = PJSUA_APP_NO_NB;
     result->uri_result = NULL;
 
@@ -876,7 +876,7 @@ static pj_status_t cmd_show_account(pj_cli_cmd_val *cval)
     pjsua_acc_id acc_ids[16];
     unsigned count = PJ_ARRAY_SIZE(acc_ids);
     int i;
-    static const pj_str_t header = {"Account list:\n", 15};
+    const pj_str_t header = pj_str("Account list:\n");
 
     pjsua_enum_accs(acc_ids, &count);
 
@@ -1023,8 +1023,8 @@ static pj_status_t cmd_send_im(pj_cli_cmd_val *cval)
     if (result.nb_result != PJSUA_APP_NO_NB) {
 
         if (result.nb_result == -1) {
-            static const pj_str_t err_msg = {"you can't send broadcast im "
-                                             "like that!\n", 40 };
+            const pj_str_t err_msg = pj_str("you can't send broadcast "
+                                            "im like that!\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;
         } else if (result.nb_result == 0) {
@@ -1074,18 +1074,18 @@ static pj_status_t cmd_subs_pres(pj_cli_cmd_val *cval, pj_bool_t subscribe)
             for (i=0; i<count; ++i)
                 pjsua_buddy_subscribe_pres(i, subscribe);
         } else if (result.nb_result == 0) {
-            static const pj_str_t err_msg = {"Sorry, can only subscribe to "
-                                             "buddy's presence, not from "
-                                             "existing call\n", 71};
+            const pj_str_t err_msg = pj_str("Sorry, can only subscribe"
+                                            " to buddy's presence, not"
+                                            " from existing call\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
         } else {
             pjsua_buddy_subscribe_pres(result.nb_result-1, subscribe);
         }
 
     } else if (result.uri_result) {
-        static const pj_str_t err_msg = {"Sorry, can only subscribe to "
-                                         "buddy's presence, not arbitrary "
-                                         "URL (for now)\n", 76};
+        const pj_str_t err_msg = pj_str("Sorry, can only subscribe to "
+                                        "buddy's presence, not "
+                                        "arbitrary URL (for now)\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     }
     return PJ_SUCCESS;
@@ -1163,7 +1163,7 @@ static pj_status_t cmd_show_buddy(pj_cli_cmd_val *cval)
     pjsua_buddy_id ids[64];
     int i;
     unsigned count = PJ_ARRAY_SIZE(ids);
-    static const pj_str_t header = {"Buddy list:\n", 13};
+    const pj_str_t header = pj_str("Buddy list:\n");
     char out_str[64];
 
     pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
@@ -1236,7 +1236,7 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
 {
     unsigned i, count;
     pjsua_conf_port_id id[PJSUA_MAX_CONF_PORTS];
-    static const pj_str_t header = {"Conference ports:\n", 19};
+    const pj_str_t header = pj_str("Conference ports:\n");
 
     pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
 
@@ -1285,10 +1285,10 @@ static pj_status_t cmd_media_connect(pj_cli_cmd_val *cval, pj_bool_t connect)
                                        (int)pj_strtol(&cval->argv[2]));
 
     if (status == PJ_SUCCESS) {
-        static const pj_str_t success_msg = {"Success\n", 9};
+        const pj_str_t success_msg = pj_str("Success\n");
         pj_cli_sess_write_msg(cval->sess, success_msg.ptr, success_msg.slen);
     } else {
-        static const pj_str_t err_msg = {"ERROR!!\n", 9};
+        const pj_str_t err_msg = pj_str("ERROR!!\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     }
     return status;
@@ -1513,8 +1513,8 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
     if (result.nb_result != PJSUA_APP_NO_NB) {
         pjsua_buddy_info binfo;
         if (result.nb_result == -1 || result.nb_result == 0) {
-            static const pj_str_t err_msg =
-                    {"You can't do that with make call!\n", 35};
+            const pj_str_t err_msg =
+                           pj_str("You can't do that with make call!\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;
         }
@@ -1558,8 +1558,8 @@ static pj_status_t cmd_make_multi_call(pj_cli_cmd_val *cval)
     if (result.nb_result != PJSUA_APP_NO_NB) {
         pjsua_buddy_info binfo;
         if (result.nb_result == -1 || result.nb_result == 0) {
-            static const pj_str_t err_msg =
-                            {"You can't do that with make call!\n", 35};
+            const pj_str_t err_msg =
+                           pj_str("You can't do that with make call!\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;
         }
@@ -1597,7 +1597,7 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
         call_info.role != PJSIP_ROLE_UAS ||
         call_info.state >= PJSIP_INV_STATE_CONNECTING)
     {
-        static const pj_str_t err_msg = {"No pending incoming call\n", 26};
+        const pj_str_t err_msg = pj_str("No pending incoming call\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 
     } else {
@@ -1614,8 +1614,8 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 
         if (st_code/100 == 3) {
             if (cval->argc < 3) {
-                static const pj_str_t err_msg = {"Enter URL to be put "
-                                                 "in Contact\n",  32};
+                const pj_str_t err_msg = pj_str("Enter URL to be put "
+                                                "in Contact\n");
                 pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
                 return PJ_SUCCESS;
             }
@@ -1632,8 +1632,7 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
         * keyboard input.
         */
         if (current_call == PJSUA_INVALID_ID) {
-            static const pj_str_t err_msg = {"Call has been disconnected\n",
-                                             28};
+            const pj_str_t err_msg = pj_str("Call has been disconnected\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
         }
 
@@ -1646,7 +1645,7 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 static pj_status_t cmd_hangup_call(pj_cli_cmd_val *cval, pj_bool_t all)
 {
     if (current_call == PJSUA_INVALID_ID) {
-        static const pj_str_t err_msg = {"No current call\n", 17};
+        const pj_str_t err_msg = pj_str("No current call\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     } else {
         if (all)
@@ -1768,8 +1767,8 @@ static pj_status_t cmd_transfer_call(pj_cli_cmd_val *cval)
         }
         if (result.nb_result != PJSUA_APP_NO_NB) {
             if (result.nb_result == -1 || result.nb_result == 0) {
-                static const pj_str_t err_msg = {"You can't do that with "
-                                                 "transfer call!\n", 39};
+                const pj_str_t err_msg = pj_str("You can't do that with "
+                                                "transfer call!\n");
 
                 pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             } else {
@@ -1800,14 +1799,14 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
         pjsua_call_id ids[PJSUA_MAX_CALLS];
         pjsua_msg_data msg_data_;
         unsigned count;
-        static const pj_str_t err_invalid_num =
-                                    {"Invalid destination call number\n", 32 };
+        const pj_str_t err_invalid_num =
+                       pj_str("Invalid destination call number\n");
         count = PJ_ARRAY_SIZE(ids);
         pjsua_enum_calls(ids, &count);
 
         if (count <= 1) {
-            static const pj_str_t err_no_other_call =
-                                    {"There are no other calls\n", 25};
+            const pj_str_t err_no_other_call =
+                           pj_str("There are no other calls\n");
 
             pj_cli_sess_write_msg(cval->sess, err_no_other_call.ptr,
                                   err_no_other_call.slen);
@@ -1913,8 +1912,7 @@ static pj_status_t cmd_dtmf_2833(pj_cli_cmd_val *cval)
         pj_status_t status;
 
         if (call != current_call) {
-            static const pj_str_t err_msg = {"Call has been disconnected\n",
-                                             28};
+            const pj_str_t err_msg = pj_str("Call has been disconnected\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;;
         }
@@ -1923,8 +1921,8 @@ static pj_status_t cmd_dtmf_2833(pj_cli_cmd_val *cval)
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to send DTMF", status);
         } else {
-            static const pj_str_t msg = {"DTMF digits enqueued "
-                                         "for transmission\n", 39};
+            const pj_str_t msg = pj_str("DTMF digits enqueued "
+                                        "for transmission\n");
             pj_cli_sess_write_msg(cval->sess, msg.ptr, msg.slen);
         }
     }
@@ -1945,8 +1943,7 @@ static pj_status_t cmd_call_info(pj_cli_cmd_val *cval)
         pj_status_t status;
 
         if (call != current_call) {
-            static const pj_str_t err_msg = {"Call has been disconnected\n",
-                                             28};
+            const pj_str_t err_msg = pj_str("Call has been disconnected\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;;
         }
@@ -1990,16 +1987,16 @@ static pj_status_t cmd_call_quality()
 static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
 {
     if (pjsua_acc_get_count() == 0) {
-        static const pj_str_t err_msg = {"Sorry, need at least one "
-                                         "account configured\n", 45};
+        const pj_str_t err_msg = pj_str("Sorry, need at least one "
+                                        "account configured\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     } else {
         char *uri;
         char dest[64] = {0};
         pj_str_t tmp = pj_str(dest);
         struct input_result result;
-        static const pj_str_t header = {"Send arbitrary request to "
-                                        "remote host\n", 39};
+        const pj_str_t header = pj_str("Send arbitrary request to "
+                                       "remote host\n");
 
         pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
 
@@ -2009,15 +2006,13 @@ static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
         get_input_url(tmp.ptr, tmp.slen, cval, &result);
         if (result.nb_result != PJSUA_APP_NO_NB) {
             if (result.nb_result == -1) {
-                static const pj_str_t err_msg = {"Sorry you can't do that!\n",
-                                                 26};
+                const pj_str_t err_msg = pj_str("Sorry you can't do that!\n");
                 pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
                 return PJ_SUCCESS;
             } else if (result.nb_result == 0) {
                 uri = NULL;
                 if (current_call == PJSUA_INVALID_ID) {
-                    static const pj_str_t err_msg = {"No current call\n",
-                                                     17};
+                    const pj_str_t err_msg = pj_str("No current call\n");
                     pj_cli_sess_write_msg(cval->sess, err_msg.ptr,
                                           err_msg.slen);
 
