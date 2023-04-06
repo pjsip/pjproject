@@ -668,10 +668,14 @@
  * Libraries sometimes needs to make copy of an address to stack buffer;
  * the value here affects the stack usage.
  *
- * Default: 253
+ * Note that the length here should include the NULL termination. In other
+ * words, the maximum hostname length is PJ_MAX_HOSTNAME with the NULL
+ * termination and PJ_MAX_HOSTNAME-1 without the NULL termination.
+ *
+ * Default: 254
  */
 #ifndef PJ_MAX_HOSTNAME
-#  define PJ_MAX_HOSTNAME           (253)
+#  define PJ_MAX_HOSTNAME           (254)
 #endif
 
 /**

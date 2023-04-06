@@ -233,7 +233,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
             continue;
         }
 
-        if (rr->rdata.srv.target.slen > PJ_MAX_HOSTNAME) {
+        if (rr->rdata.srv.target.slen >= PJ_MAX_HOSTNAME) {
             PJ_LOG(4,(query_job->objname, "Hostname is too long!"));
             continue;
         }
