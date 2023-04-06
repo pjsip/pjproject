@@ -680,7 +680,13 @@ AudDevManager::~AudDevManager()
 {
     // At this point, devMedia should have been cleaned up by Endpoint,
     // as AudDevManager destructor is called after Endpoint destructor.
-    //delete devMedia;
+#if DEPRECATED_FOR_TICKET_2232
+    // Starting from ticket #2232, Endpoint no longer cleans up media.
+    if (devMedia) {
+        delete devMedia;
+        devMedia = NULL;
+    }
+#endif
     
     clearAudioDevList();
 }
