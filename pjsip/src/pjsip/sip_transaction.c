@@ -2044,9 +2044,14 @@ static void send_msg_callback( pjsip_send_state *send_state,
             if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
-                tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-                               PJSIP_EVENT_TRANSPORT_ERROR,
-                               send_state->tdata, 0);
+                pj_time_val delay = {0, 0};
+
+                /* Post the event for later processing, to avoid deadlock. */
+                lock_timer(tsx);
+                tsx_cancel_timer(tsx, &tsx->timeout_timer);
+                tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
+                                   TRANSPORT_ERR_TIMER);
+                unlock_timer(tsx);
             } 
             /* Don't forget to destroy if we have pending destroy flag
              * (https://github.com/pjsip/pjproject/issues/906)
