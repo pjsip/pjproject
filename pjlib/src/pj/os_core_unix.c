@@ -315,7 +315,7 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
  * A cool solution would be to port (if possible) the code from the
  * android os regarding set_sched groups.
  */
-#if PJ_ANDROID
+#if defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD != 0
 
 #include <jni.h>
 #include <sys/resource.h>
