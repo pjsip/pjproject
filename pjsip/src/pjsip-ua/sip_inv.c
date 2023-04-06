@@ -3922,6 +3922,9 @@ static void inv_respond_incoming_bye( pjsip_inv_session *inv,
     status = pjsip_dlg_send_response(inv->dlg, bye_tsx, tdata);
     if (status != PJ_SUCCESS) return;
 
+    /* End Session Timer */
+    pjsip_timer_end_session(inv);
+
     /* Terminate session: */
 
     if (inv->state != PJSIP_INV_STATE_DISCONNECTED) {
