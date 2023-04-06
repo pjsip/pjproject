@@ -381,8 +381,9 @@ static void clear_all_responses(dlg_data *dd)
 
     tl = dd->uas_state->tx_data_list.next;
     while (tl != &dd->uas_state->tx_data_list) {
+        tx_data_list_t *tl_next = tl->next;
         pjsip_tx_data_dec_ref(tl->tdata);
-        tl = tl->next;
+        tl = tl_next;
     }
     pj_list_init(&dd->uas_state->tx_data_list);
 }
