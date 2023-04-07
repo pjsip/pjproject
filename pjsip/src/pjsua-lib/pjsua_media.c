@@ -3077,15 +3077,6 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
     call->rem_offerer = (rem_sdp != NULL);
 
-    if (call->inv && call->inv->neg) {
-        status = pjmedia_sdp_neg_validate_pt(call->inv->neg, sdp);
-        if (status != PJ_SUCCESS) {
-            if (sip_err_code) 
-                *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
-            goto on_error;
-        }
-    }
-
     /* Notify application */
     if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_sdp_created) {
         (*pjsua_var.ua_cfg.cb.on_call_sdp_created)(call_id, sdp,
