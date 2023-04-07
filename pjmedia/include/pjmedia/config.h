@@ -811,14 +811,17 @@
 #endif
 
 /**
- * This specifies if the SDP negotiator should maintain the session payload type used 
- * to ensure that the session use unique payload type 
- * (e.g: same pt is not used by different codec).
+ * The SDP negotiator will maintain session payload type and codec mapping, to ensure
+ * the session using a unique payload type (e.g: one pt is not used by multiple codecs).
+ * By default, the mapping is for local endpoint. In this case, the local SDP will only
+ * be unique based on the PT and codec used locally. If it is required that the PT is 
+ * unique across the session, enable this to also maintain PT/codec mapping for remote 
+ * endpoint.
  *
- * Default is 1 (yes)
+ * Default is 0 (no)
  */
-#ifndef PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
-#   define PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT          1
+#ifndef PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
+#   define PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP       0
 #endif
 
 

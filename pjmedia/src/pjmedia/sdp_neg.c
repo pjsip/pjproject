@@ -39,7 +39,6 @@ typedef struct pt_map
 
 typedef struct media_pt_map
 {
-    pj_str_t        med_type;
     unsigned        map_cnt;
     pt_map          map[DYNAMIC_PT_SIZE];
 } media_pt_map;
@@ -54,11 +53,9 @@ struct pjmedia_sdp_neg
     pj_bool_t             answer_with_multiple_codecs;
     pj_bool_t             has_remote_answer;
     pj_bool_t             answer_was_remote;
-#if PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
+
     unsigned              med_pt_map_cnt;
     media_pt_map          med_pt_map[PJMEDIA_MAX_SDP_MEDIA];
-    pj_pool_t            *pool;             /**< Long term pool.             */
-#endif
 
     pjmedia_sdp_session *initial_sdp,       /**< Initial local SDP           */
                         *initial_sdp_tmp,   /**< Temporary initial local SDP */
@@ -108,6 +105,9 @@ static pj_status_t custom_fmt_match( pj_pool_t *pool,
                                    unsigned a_fmt_idx,
                                    unsigned option);
 
+static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg, 
+                               pjmedia_sdp_session* sdp_sess);
+
 static const unsigned START_DYNAMIC_PT = 96;
 
 /*
@@ -150,9 +150,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
     neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
     neg->last_sent = neg->initial_sdp;
-#if PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
-    neg->pool = pool;
-#endif
 
     /* Init last_sent's pool to app's pool, will be updated to active
      * SDPs pool after a successful SDP nego.
@@ -211,9 +208,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
      * SDPs pool after a successful SDP nego.
      */
     neg->pool_active = pool;
-#if PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
-    neg->pool = pool;
-#endif
 
     *p_neg = neg;
     return PJ_SUCCESS;
@@ -376,7 +370,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     if (!neg->active_local_sdp) {
         neg->initial_sdp_tmp = NULL;
         neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
-        neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
+        validate_pt(pool, neg, neg->initial_sdp);
+        neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
 
         if (pjmedia_sdp_session_cmp(neg->last_sent, local, 0) != PJ_SUCCESS) {
             ++neg->neg_local_sdp->origin.version;
@@ -467,6 +462,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     if (pjmedia_sdp_session_cmp(neg->last_sent, new_offer, 0) != PJ_SUCCESS) {
         ++new_offer->origin.version;
     }
+    validate_pt(pool, neg, new_offer);
     neg->initial_sdp_tmp = neg->initial_sdp;
     neg->initial_sdp = new_offer;
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, new_offer);
@@ -593,6 +589,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
     neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
     if (local) {
         neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
+        validate_pt(pool, neg, neg->neg_local_sdp);
         if (neg->initial_sdp) {
             /* Retain initial_sdp value. */
             neg->initial_sdp_tmp = neg->initial_sdp;
@@ -1612,43 +1609,40 @@ static unsigned pt_exists(const media_pt_map *sess_med_pt_map, unsigned pt,
     return retval;
 }
 
-#if PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
-
-static media_pt_map* get_media_pt_map(pjmedia_sdp_neg* neg, pj_str_t* med_type)
+static media_pt_map* get_media_pt_map(pjmedia_sdp_neg* neg, unsigned idx)
 {
-    unsigned i = 0;
     unsigned max_cnt = PJ_ARRAY_SIZE(neg->med_pt_map);
-    for (; i < neg->med_pt_map_cnt && i < max_cnt; ++i) {
-        if (pj_strcmp(&neg->med_pt_map[i].med_type, med_type) == 0) {
-            break;
-        }
+    if (idx >= max_cnt) {
+        return NULL;
     }
-    if (i < max_cnt) {
-        if (i == neg->med_pt_map_cnt) {
-            pj_strdup(neg->pool, &neg->med_pt_map[i].med_type, med_type);
-            neg->med_pt_map_cnt++;
-        }
-        return &neg->med_pt_map[i];
-    }
-    return NULL;
+    if (idx == neg->med_pt_map_cnt)
+        neg->med_pt_map[neg->med_pt_map_cnt++].map_cnt = 0;
+
+    return &neg->med_pt_map[idx];
 }
 
-static void update_session_pt_map(const pjmedia_sdp_session* sess,
+/*
+ * Update the session pt map. The number of stream will always corresponds to the 
+ * current session. 
+ */
+static void update_session_pt_map(pj_pool_t *pool, const pjmedia_sdp_session* sess,
                                   pjmedia_sdp_neg* neg)
 {
     unsigned i = 0;
     unsigned max_med_cnt = PJ_ARRAY_SIZE(neg->med_pt_map);
+    unsigned med_cnt = 0;
 
     for (; i < sess->media_count && i < max_med_cnt; ++i) {
         unsigned j = 0;
         pjmedia_sdp_media* sess_media = sess->media[i];
-        media_pt_map* med_pt_map = get_media_pt_map(neg, &sess->media[i]->desc.media);
+        media_pt_map* med_pt_map = get_media_pt_map(neg, i);
 
         if (!med_pt_map) {
             PJ_LOG(4, (THIS_FILE, "Unable to find media pt map for [%.*]", 
                        sess->media[i]->desc.media.slen, sess->media[i]->desc.media.ptr));
-            continue;
+            break;
         }
+        ++med_cnt;
 
         for (; j < sess_media->desc.fmt_count; ++j) {
             /* Get the codec id */
@@ -1679,14 +1673,203 @@ static void update_session_pt_map(const pjmedia_sdp_session* sess,
                  * Later when we send new offer, we can find the PT based on the codec.
                  */
                 med_pt_map->map[med_pt_map->map_cnt].pt = pt;
-                pj_strdup(neg->pool,
-                          &med_pt_map->map[med_pt_map->map_cnt++].codec,
-                          &codec);
+                pj_strdup(pool, &med_pt_map->map[med_pt_map->map_cnt++].codec, &codec);
             }
         }
     }
+    neg->med_pt_map_cnt = med_cnt;
 }
-#endif
+
+/*
+ * The pt map is maintain using temporary/active pool. This is to avoid memory usage
+ * growing undefinitely on the case stream removal/addition. Once stream is removed, the
+ * mapping should be reset (old/unused mapping will not be copied to the new mapping). 
+ * However, we need to reload it to be able to use it long term.
+ */
+static void refresh_pt_map(pj_pool_t *pool, pjmedia_sdp_neg *neg)
+{
+    unsigned i = 0;    
+
+    for (; i < neg->med_pt_map_cnt; ++i) {
+        unsigned j = 0;
+        media_pt_map *pt_map = &neg->med_pt_map[i];
+
+        for (;j<pt_map->map_cnt;++j) {
+            pj_str_t tmp_codec;
+            pj_strdup(pool, &tmp_codec, &pt_map->map[j].codec);
+            pt_map->map[j].codec = tmp_codec;
+        }
+    }
+}
+
+/*
+ * Find a PT assigned to a codec.
+ * Return the PT if the codec already assigned. Otherwise find the available/not used
+ * PT for the codec.
+ */
+static unsigned assign_new_pt(pj_pool_t* pool, media_pt_map* used_pt,
+                              const pj_str_t* codec)
+{
+    unsigned pt_check;
+    unsigned i = 0;
+    unsigned used_pt_num = used_pt->map_cnt;
+    unsigned max_pt_cnt = PJ_ARRAY_SIZE(used_pt->map);
+    const pj_str_t telephone_event = pj_str("telephone-event");
+
+    if (pj_strncmp(codec, &telephone_event, telephone_event.slen) == 0)
+        pt_check = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
+    else
+        pt_check = START_DYNAMIC_PT;
+
+    for (; i < used_pt_num && i < max_pt_cnt; ++i) {
+        if (pj_strcmp(codec, &used_pt->map[i].codec) == 0) {
+            return used_pt->map[i].pt;
+        }
+    }
+    i = 0;
+
+    while ((i < used_pt_num) && (i < max_pt_cnt) && (pt_check <= 127))
+    {
+        if (pt_check == used_pt->map[i].pt) {
+            pt_check++;
+            i = 0;
+        }
+        else {
+            i++;
+        }
+    }
+    if (pt_check > 127 || i == max_pt_cnt) {
+        /* No more available PT */
+        return 0;
+    }
+
+    used_pt->map[used_pt->map_cnt].pt = pt_check;
+    pj_strdup(pool, &used_pt->map[used_pt->map_cnt++].codec, codec);
+
+    return pt_check;
+}
+
+/*
+ * This method will check and potentially altered the SDP if it finds the payload
+ * type used by other codec.
+ */
+static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg, 
+                               pjmedia_sdp_session* sdp_sess)
+{
+    pj_status_t status = PJ_SUCCESS;
+    unsigned i = 0;
+
+    for (; i < sdp_sess->media_count && i < neg->med_pt_map_cnt; ++i) {
+        unsigned j = 0;
+        unsigned attr_cnt = 0;
+        pjmedia_sdp_attr* new_attr_list[PJMEDIA_MAX_SDP_ATTR];
+        pjmedia_sdp_attr* ori_attr_list[PJMEDIA_MAX_SDP_ATTR];
+        pj_str_t ori_fmt[PJMEDIA_MAX_SDP_FMT];
+        pjmedia_sdp_media* sess_media = sdp_sess->media[i];
+        media_pt_map used_pt_map;
+        media_pt_map* med_pt_map = get_media_pt_map(neg, i);
+
+        if (!med_pt_map) {
+            PJ_LOG(4, (THIS_FILE, "PTs will not be validated for this media [%.*]",
+                       sdp_sess->media[i]->desc.media.slen,
+                       sdp_sess->media[i]->desc.media.ptr));
+            continue;
+        }
+
+        pj_memcpy(&used_pt_map, med_pt_map, sizeof(used_pt_map));
+        pj_memcpy(&ori_fmt, sess_media->desc.fmt, sizeof(ori_fmt));
+
+        for (; j < sess_media->desc.fmt_count; ++j) {
+            pjmedia_sdp_attr* attr = NULL;
+            pj_str_t pt_str = sess_media->desc.fmt[j];
+            unsigned pt = pj_strtoul(&pt_str);
+
+            if (pj_strtoul(&sess_media->desc.fmt[j]) < START_DYNAMIC_PT)
+                continue;
+
+            attr = pjmedia_sdp_media_find_attr2(sess_media, "rtpmap", &pt_str);
+            if (attr) {
+                pj_str_t codec;
+                unsigned p_exists;
+                unsigned pt_len = sess_media->desc.fmt[j].slen + 1;
+
+                codec.ptr = attr->value.ptr + pt_len;
+                codec.slen = attr->value.slen - pt_len;
+
+                ori_attr_list[attr_cnt] = attr;
+
+                p_exists = pt_exists(&used_pt_map, pt, &codec);
+                if (p_exists == 1 || p_exists == 2) {
+                    /*
+                    * We need to find/assign a new PT on these cases:
+                    * - The PT is already assigned to a different codec
+                    * - The codec is using a different PT
+                    */
+                    unsigned new_pt;
+                    pj_str_t new_pt_str;
+                    pjmedia_sdp_attr* new_attr;
+
+                    new_pt = assign_new_pt(pool, &used_pt_map, &codec);
+                    if (new_pt == 0) {
+                        /* If there's already a modification, it's possible it is using
+                         * the same pt as this codec or next one. To be safe,
+                         * revert the existing  modification.
+                         */
+                        PJ_LOG(4, (THIS_FILE, "Unable to find a new pt for [%.*s:%d]",
+                                   codec.slen, codec.ptr, pt));
+                        status = PJ_ENOTFOUND;
+                        break;
+                    }
+
+                    new_pt_str.ptr = (char*)pj_pool_zalloc(pool, 4);
+                    new_pt_str.slen = pj_utoa(new_pt, new_pt_str.ptr);
+                    new_attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+                    pj_strdup_with_null(pool, &new_attr->name, &attr->name);
+                    pj_strdup_with_null(pool, &new_attr->value, &attr->value);
+
+                    rewrite_pt(pool, &new_attr->value, &pt_str, &new_pt_str);
+
+                    /* Temporarily remove the attribute in case the new payload
+                     * type is being used by another format in the media.
+                     */
+                    pjmedia_sdp_media_remove_attr(sess_media, attr);
+                    new_attr_list[attr_cnt++] = new_attr;
+
+                    /* Also update payload type in fmtp */
+                    attr = pjmedia_sdp_media_find_attr2(sess_media, "fmtp", &pt_str);
+                    if (attr) {
+                        ori_attr_list[attr_cnt] = attr;
+                        new_attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+                        pj_strdup_with_null(pool, &new_attr->name, &attr->name);
+                        pj_strdup_with_null(pool, &new_attr->value, &attr->value);
+
+                        rewrite_pt(pool, &new_attr->value, &pt_str, &new_pt_str);
+                        /* Temporarily remove the attribute in case the new payload
+                         * type is being used by another format in the media.
+                         */
+                        pjmedia_sdp_media_remove_attr(sess_media, attr);
+                        new_attr_list[attr_cnt++] = new_attr;
+                    }
+                    sess_media->desc.fmt[j] = new_pt_str;
+                }
+            }
+        }
+        /* Return back 'rtpmap' and 'fmtp' attributes */
+        if (status == PJ_SUCCESS) {
+            for (j = 0; j < attr_cnt; ++j)
+                pjmedia_sdp_media_add_attr(sess_media, new_attr_list[j]);
+        } else {
+            /* There's no valid pt anymore, revert the media format modification if any.
+             * Note that succesful modification to previous media format will not be
+             * reverted.
+             */
+            pj_memcpy(sess_media->desc.fmt, &ori_fmt, sizeof(ori_fmt));
+            for (j = 0; j < attr_cnt; ++j)
+                pjmedia_sdp_media_add_attr(sess_media, ori_attr_list[j]);
+        }
+    }
+    return status;
+}
 
 /* Cancel offer */
 PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
@@ -1742,6 +1925,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     /* Must have remote offer. */
     PJ_ASSERT_RETURN(neg->neg_remote_sdp, PJ_EBUG);
 
+    refresh_pt_map(pool, neg);
     if (neg->has_remote_answer) {
         pjmedia_sdp_session *active;
         status = process_answer(pool, neg->neg_local_sdp, neg->neg_remote_sdp,
@@ -1751,13 +1935,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
             neg->active_local_sdp = active;
             neg->active_remote_sdp = neg->neg_remote_sdp;
 
-#if PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
-            update_session_pt_map(neg->last_sent, neg);
-            update_session_pt_map(neg->active_remote_sdp, neg);
-#endif
-
             /* Keep the pool used for allocating the active SDPs */
             neg->pool_active = pool;
+
+            update_session_pt_map(pool, neg->neg_local_sdp, neg);
+#if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
+            update_session_pt_map(pool, neg->active_remote_sdp, neg);
+#endif
         } else {
             /* SDP nego failed, retain the last_sdp. */
             neg->last_sent = pjmedia_sdp_session_clone(neg->pool_active,
@@ -1771,6 +1955,11 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
                                neg->neg_local_sdp, neg->neg_remote_sdp,
                                &answer);
         if (status == PJ_SUCCESS) {
+
+#if !PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT
+            validate_pt(pool, neg, answer);
+#endif
+
             if (neg->last_sent)
                 answer->origin.version = neg->last_sent->origin.version;
 
@@ -1785,16 +1974,16 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
             neg->active_local_sdp = answer;
             neg->active_remote_sdp = neg->neg_remote_sdp;
 
-#if PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
-            update_session_pt_map(neg->active_local_sdp, neg);
-            update_session_pt_map(neg->active_remote_sdp, neg);
-#endif
-
             /* This answer will be sent, so update the last sent SDP */
             neg->last_sent = answer;
 
             /* Keep the pool used for allocating the active SDPs */
             neg->pool_active = pool;
+
+            update_session_pt_map(pool, neg->active_local_sdp, neg);
+#if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
+            update_session_pt_map(pool, neg->active_remote_sdp, neg);
+#endif
         }
     }
 
@@ -1944,169 +2133,4 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_fmt_match(pj_pool_t *pool,
 
     return custom_fmt_match(pool, &o_rtpmap.enc_name,
                             offer, o_fmt_idx, answer, a_fmt_idx, option);
-}
-
-static unsigned assign_new_pt(pj_pool_t *pool, media_pt_map *used_pt, 
-                              const pj_str_t *codec)
-{
-    unsigned pt_check;
-    unsigned i = 0;
-    unsigned used_pt_num = used_pt->map_cnt;
-    unsigned max_pt_cnt = PJ_ARRAY_SIZE(used_pt->map);
-    const pj_str_t telephone_event = pj_str("telephone-event");
-
-    if (pj_strncmp(codec, &telephone_event, telephone_event.slen) == 0)
-        pt_check = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
-    else
-        pt_check = START_DYNAMIC_PT;
-    
-    for (; i < used_pt_num && i < max_pt_cnt; ++i) {
-        if (pj_strcmp(codec, &used_pt->map[i].codec) == 0) {
-            return used_pt->map[i].pt;
-        }
-    }
-    i = 0;
-
-    while ((i < used_pt_num) && (i < max_pt_cnt) && (pt_check <= 127))
-    {
-        if (pt_check == used_pt->map[i].pt) {
-            pt_check++;
-            i = 0;
-        } else {
-            i++;
-        }
-    }
-    if (pt_check > 127 || i == max_pt_cnt) {
-        /* No more available PT */
-        return 0;
-    }
-
-    used_pt->map[used_pt->map_cnt].pt = pt_check;
-    pj_strdup(pool, &used_pt->map[used_pt->map_cnt++].codec, codec);
-
-    return pt_check;
-}
-
-PJ_DEF(pj_status_t) pjmedia_sdp_neg_validate_pt(pjmedia_sdp_neg* neg,
-                                                pjmedia_sdp_session* sdp_sess)
-{
-#if PJMEDIA_SDP_NEG_MAINTAIN_SESSION_PT
-    pj_status_t status = PJ_SUCCESS;
-    unsigned i = 0;
-
-    for (; i < sdp_sess->media_count && i < neg->med_pt_map_cnt; ++i) {
-        unsigned j = 0;
-        unsigned attr_cnt = 0;
-        pjmedia_sdp_attr* new_attr_list[PJMEDIA_MAX_SDP_ATTR];
-        pjmedia_sdp_attr* ori_attr_list[PJMEDIA_MAX_SDP_ATTR];
-        pj_str_t ori_fmt[PJMEDIA_MAX_SDP_FMT];
-        pjmedia_sdp_media* sess_media = sdp_sess->media[i];
-        media_pt_map used_pt_map;
-        media_pt_map* med_pt_map = get_media_pt_map(neg, &sdp_sess->media[i]->desc.media);
-
-        if (!med_pt_map) {
-            PJ_LOG(4, (THIS_FILE, "Unable to find media pt map for [%.*]",
-                       sdp_sess->media[i]->desc.media.slen, 
-                       sdp_sess->media[i]->desc.media.ptr));
-            continue;
-        }
-
-        pj_memcpy(&used_pt_map, med_pt_map, sizeof(used_pt_map));
-        pj_memcpy(&ori_fmt, sess_media->desc.fmt, sizeof(ori_fmt));
-
-        for (; j < sess_media->desc.fmt_count; ++j) {
-            pjmedia_sdp_attr* attr = NULL;
-            pj_str_t pt_str = sess_media->desc.fmt[j];
-            unsigned pt = pj_strtoul(&pt_str);
-
-            if (pj_strtoul(&sess_media->desc.fmt[j]) < START_DYNAMIC_PT)
-                continue;
-
-            attr = pjmedia_sdp_media_find_attr2(sess_media, "rtpmap", &pt_str);
-            if (attr) {
-                pj_str_t codec;
-                unsigned p_exists;
-                unsigned pt_len = sess_media->desc.fmt[j].slen + 1;
-
-                codec.ptr = attr->value.ptr + pt_len;
-                codec.slen = attr->value.slen - pt_len;
-
-                ori_attr_list[attr_cnt] = attr;
-
-                p_exists = pt_exists(&used_pt_map, pt, &codec);
-                if (p_exists == 1 || p_exists == 2) {
-                    /* pt is assigned to another codec, find existing pt used by the
-                     * codec or a new one.
-                     */
-                    unsigned new_pt;
-                    pj_str_t new_pt_str;
-                    pjmedia_sdp_attr *new_attr;
-
-                    new_pt = assign_new_pt(neg->pool_active, &used_pt_map, &codec);
-                    if (new_pt == 0) {
-                        /* If there's already a modification, it's possible it is using
-                         * the same pt as this codec or next one. To be safe, 
-                         * revert the existing  modification.
-                         */
-                        PJ_LOG(4, (THIS_FILE, "Unable to find a new pt for [%.*s:%d]",
-                                   codec.slen, codec.ptr, pt));
-                        status = PJ_ENOTFOUND;
-                        break;
-                    }
-
-                    new_pt_str.ptr = (char*)pj_pool_alloc(neg->pool_active, 3);
-                    new_pt_str.slen = pj_utoa(new_pt, new_pt_str.ptr);
-                    new_attr = PJ_POOL_ALLOC_T(neg->pool_active, pjmedia_sdp_attr);
-                    pj_strdup(neg->pool_active, &new_attr->name, &attr->name);
-                    pj_strdup(neg->pool_active, &new_attr->value, &attr->value);
-
-                    rewrite_pt(neg->pool_active, &new_attr->value, &pt_str, &new_pt_str);
-
-                    /* Temporarily remove the attribute in case the new payload
-                     * type is being used by another format in the media.
-                     */
-                    pjmedia_sdp_media_remove_attr(sess_media, attr);
-                    new_attr_list[attr_cnt++] = new_attr;
-
-                    /* Also update payload type in fmtp */
-                    attr = pjmedia_sdp_media_find_attr2(sess_media, "fmtp", &pt_str);
-                    if (attr) {
-                        ori_attr_list[attr_cnt] = attr;
-                        new_attr = PJ_POOL_ALLOC_T(neg->pool_active, pjmedia_sdp_attr);
-                        pj_strdup(neg->pool_active, &new_attr->name, &attr->name);
-                        pj_strdup(neg->pool_active, &new_attr->value, &attr->value);
-
-                        rewrite_pt(neg->pool_active, &new_attr->value, &pt_str, 
-                                   &new_pt_str);
-                        /* Temporarily remove the attribute in case the new payload
-                         * type is being used by another format in the media.
-                         */
-                        pjmedia_sdp_media_remove_attr(sess_media, attr);
-                        new_attr_list[attr_cnt++] = new_attr;
-                    }
-                    sess_media->desc.fmt[j] = new_pt_str;
-                }
-            }
-        }
-        /* Return back 'rtpmap' and 'fmtp' attributes */
-        if (status == PJ_SUCCESS) {
-            for (j = 0; j < attr_cnt; ++j)
-                pjmedia_sdp_media_add_attr(sess_media, new_attr_list[j]);
-        } else {
-            /* There's no valid pt anymore, revert the media format modification if any.
-             * Note that succesful modification to previous media format will not be 
-             * reverted.
-             */
-            pj_memcpy(sess_media->desc.fmt, &ori_fmt, sizeof(ori_fmt));
-            for (j = 0; j < attr_cnt; ++j)
-                pjmedia_sdp_media_add_attr(sess_media, ori_attr_list[j]);
-        }
-    }
-    return status;
-#else
-    PJ_UNUSED_ARG(neg);
-    PJ_UNUSED_ARG(sdp_sess);
-    return PJ_SUCCESS;
-#endif
-
 }
