@@ -426,9 +426,12 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 {
 #if PJ_HAS_THREADS
 
-#  if PJ_ANDROID
+#  if (PJ_ANDROID && \
+       defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD)
+
     PJ_ASSERT_RETURN(thread==NULL || thread==pj_thread_this(), PJ_EINVAL);
     return set_android_thread_priority(prio);
+
 #  else
 
     struct sched_param param;
@@ -447,7 +450,7 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 
     return PJ_SUCCESS;
 
-#  endif /* PJ_ANDROID */
+#  endif /* PJ_ANDROID && PJ_JNI_HAS_JNI_ONLOAD */
 
 #else
     PJ_UNUSED_ARG(thread);

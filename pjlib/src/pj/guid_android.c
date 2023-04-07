@@ -17,6 +17,9 @@
  */
 /* This original code was kindly contributed by Johan Lantz.
  */
+
+#if defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD != 0
+
 #include <pj/guid.h>
 #include <pj/log.h>
 #include <pj/string.h>
@@ -117,3 +120,10 @@ on_error:
     detach_jvm(attached);
     return NULL;
 }
+
+#else
+
+/* If we don't have JNI, let's fallback to guid_simple */
+#include "guid_simple.c"
+
+#endif /* PJ_JNI_HAS_JNI_ONLOAD */
