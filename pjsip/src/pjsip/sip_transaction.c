@@ -143,6 +143,7 @@ enum
 {
     NO_NOTIFY = 1,
     NO_SCHEDULE_HANDLER = 2,
+    RELEASE_LOCK = 4
 };
 
 /* Prototypes. */
@@ -1330,16 +1331,18 @@ static void tsx_set_state( pjsip_transaction *tsx,
          * 3. tsx_shutdown() hasn't been called.
          * Refer to ticket #2001 (https://github.com/pjsip/pjproject/issues/2001).
          */
-        if (event_src_type == PJSIP_EVENT_TIMER &&
-            (pj_timer_entry *)event_src == &tsx->timeout_timer)
+        if ((flag & RELEASE_LOCK) != 0 ||
+            (event_src_type == PJSIP_EVENT_TIMER &&
+             (pj_timer_entry *)event_src == &tsx->timeout_timer))
         {
             pj_grp_lock_release(tsx->grp_lock);
         }
 
         (*tsx->tsx_user->on_tsx_state)(tsx, &e);
 
-        if (event_src_type == PJSIP_EVENT_TIMER &&
-            (pj_timer_entry *)event_src == &tsx->timeout_timer)
+        if ((flag & RELEASE_LOCK) != 0 ||
+            (event_src_type == PJSIP_EVENT_TIMER &&
+             (pj_timer_entry *)event_src == &tsx->timeout_timer))
         {
             pj_grp_lock_acquire(tsx->grp_lock);
         }
@@ -2044,14 +2047,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
             if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
-                pj_time_val delay = {0, 0};
-
-                /* Post the event for later processing, to avoid deadlock. */
-                lock_timer(tsx);
-                tsx_cancel_timer(tsx, &tsx->timeout_timer);
-                tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
-                                   TRANSPORT_ERR_TIMER);
-                unlock_timer(tsx);
+                /* Set tsx state to TERMINATED, but release the lock
+                 * when invoking the callback, to avoid deadlock.
+                 */
+                tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
+                               PJSIP_EVENT_TRANSPORT_ERROR,
+                               send_state->tdata, RELEASE_LOCK);
             } 
             /* Don't forget to destroy if we have pending destroy flag
              * (https://github.com/pjsip/pjproject/issues/906)
