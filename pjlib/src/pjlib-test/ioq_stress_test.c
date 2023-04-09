@@ -459,7 +459,10 @@ static int worker_thread(void *p)
         }
     }
 
-    /* Flush events. Check if polling is blocked (it should). */
+    /* Flush events. Check if polling is blocked (for ioq select, it should,
+     * but for epoll and kqueue backends, the blocking duration is just minimal
+     * to avoid busy loop).
+     */
     if (test->state.retcode==test->cfg.expected_ret_code) {
         pj_timestamp t0, t1;
         unsigned i, msec, duration;
