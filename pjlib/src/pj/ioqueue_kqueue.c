@@ -588,6 +588,7 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     };
     struct kevent events[MAX_EVENTS];
     struct queue queue[MAX_EVENTS];
+    pj_timestamp t1, t2;
 
     PJ_CHECK_STACK();
 
@@ -598,8 +599,11 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
     TRACE_((THIS_FILE, "start kqueue wait, msec=%d",
             xtimeout.tv_sec * 1000 + xtimeout.tv_nsec / 1000000));
+
+    pj_get_timestamp(&t1);
     count =
         os_kqueue_wait(ioqueue->kfd, NULL, 0, events, MAX_EVENTS, &xtimeout);
+    pj_get_timestamp(&t2);
     if (count == 0) {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
         /* Check the closing keys only when there's no activity and when there
@@ -697,6 +701,19 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
         if (queue[i].key->grp_lock)
             pj_grp_lock_dec_ref_dbg(queue[i].key->grp_lock, "ioqueue", 0);
+    }
+
+    if (!event_cnt) {
+        /* We need to sleep in order to avoid busy polling.
+         * Limit the duration of the sleep, as doing pj_thread_sleep() for
+         * a long time is very inefficient. The main objective here is just
+         * to avoid busy loop.
+         */
+        long msec = xtimeout.tv_sec * 1000 + xtimeout.tv_nsec / 1000000;
+        long delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
+        if (delay > 10) delay = 10;
+        if (delay > 0)
+            pj_thread_sleep(delay);
     }
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d", count,
