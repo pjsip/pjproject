@@ -367,7 +367,7 @@ static void sess_destroy(nat_detect_session *sess)
         pj_ioqueue_unregister(sess->key);
         sess->key = NULL;
         sess->sock = PJ_INVALID_SOCKET;
-    } else if (sess->sock && sess->sock != PJ_INVALID_SOCKET) {
+    } else if (sess->sock != PJ_INVALID_SOCKET) {
         pj_sock_close(sess->sock);
         sess->sock = PJ_INVALID_SOCKET;
     }

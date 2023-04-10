@@ -21,7 +21,7 @@
 PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
                                            pj_qos_params *param)
 {
-    PJ_ASSERT_RETURN(sock>=0 && sock!=PJ_INVALID_SOCKET, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sock!=0 && sock!=PJ_INVALID_SOCKET, PJ_EINVAL);
     
     CPjSocket *pjsock = (CPjSocket*)sock;
     RSocket & rsock = pjsock->Socket();
@@ -61,7 +61,7 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_type(pj_sock_t sock,
 PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
                                            pj_qos_params *p_param)
 {
-    PJ_ASSERT_RETURN(sock>=0 && sock!=PJ_INVALID_SOCKET, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sock!=0 && sock!=PJ_INVALID_SOCKET, PJ_EINVAL);
     
     CPjSocket *pjsock = (CPjSocket*)sock;
     RSocket & rsock = pjsock->Socket();
