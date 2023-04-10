@@ -387,6 +387,28 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
 
 /* **************************************************************************/
 /**
+ * @defgroup PJ_ANDROID_OS Android OS Specific
+ * @ingroup PJ_OS
+ * @{
+ * Functionalities specific to Android OS.
+ *
+ */
+
+/**
+ * Set the Java Virtual Machine environment variable for JNI purposes.
+ * Note that applications typically do not need to call this function unless
+ * PJ_JNI_HAS_JNI_ONLOAD is disabled.
+ *
+ * @param jvm           The Java Virtual Machine environment.
+ */
+PJ_DECL(void) pj_android_jni_set_jvm(void *jvm);
+
+/**
+ * @}
+ */
+
+/* **************************************************************************/
+/**
  * @defgroup PJ_SYMBIAN_OS Symbian OS Specific
  * @ingroup PJ_OS
  * @{

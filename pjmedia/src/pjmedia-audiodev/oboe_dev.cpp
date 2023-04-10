@@ -202,7 +202,7 @@ static struct jni_objs_t
 /* Declare JNI JVM helper from PJLIB OS */
 extern "C" {
     pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env);
-    void pj_jni_dettach_jvm(pj_bool_t attached);
+    void pj_jni_detach_jvm(pj_bool_t attached);
 }
 
 #define GET_CLASS(class_path, class_name, cls) \
@@ -292,7 +292,7 @@ static pj_status_t jni_init_ids()
                    jobjs.activity_thread.m_get_app);
 
 on_return:
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
     return status;
 }
 
@@ -316,7 +316,7 @@ static void jni_deinit_ids()
         jobjs.activity_thread.cls = NULL;
     }
 
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
 }
 
 static jobject get_global_context(JNIEnv *jni_env)
@@ -445,7 +445,7 @@ on_return:
     if (context)
         jni_env->DeleteLocalRef(context);
 
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
     return status;
 }
 

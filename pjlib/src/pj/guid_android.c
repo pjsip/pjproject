@@ -17,9 +17,6 @@
  */
 /* This original code was kindly contributed by Johan Lantz.
  */
-
-#if defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD != 0
-
 #include <pj/guid.h>
 #include <pj/log.h>
 #include <pj/string.h>
@@ -28,26 +25,8 @@
 
 extern JavaVM *pj_jni_jvm;
 
-static pj_bool_t attach_jvm(JNIEnv **jni_env)
-{
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                               JNI_VERSION_1_4) < 0)
-    {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
-        {
-            jni_env = NULL;
-            return PJ_FALSE;
-        }
-        return PJ_TRUE;
-    }
-    
-    return PJ_FALSE;
-}
-
-#define detach_jvm(attached) \
-    if (attached) \
-        (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
-
+pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env);
+void pj_jni_detach_jvm(pj_bool_t attached);
 
 PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=36;
 
@@ -67,7 +46,7 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     const char *native_string;
     pj_str_t native_str;
 
-    pj_bool_t attached = attach_jvm(&jni_env);
+    pj_bool_t attached = pj_jni_attach_jvm(&jni_env);
     if (!jni_env)
         goto on_error;
 
@@ -111,19 +90,12 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     (*jni_env)->DeleteLocalRef(jni_env, javaUuid);
     (*jni_env)->DeleteLocalRef(jni_env, uuid_class);
     (*jni_env)->DeleteLocalRef(jni_env, uuid_string);
-    detach_jvm(attached);
+    pj_jni_detach_jvm(attached);
 
     return str;
 
 on_error:
     PJ_LOG(2, ("guid_android.c", ("Error generating UUID")));
-    detach_jvm(attached);
+    pj_jni_detach_jvm(attached);
     return NULL;
 }
-
-#else
-
-/* If we don't have JNI, let's fallback to guid_simple */
-#include "guid_simple.c"
-
-#endif /* PJ_JNI_HAS_JNI_ONLOAD */
