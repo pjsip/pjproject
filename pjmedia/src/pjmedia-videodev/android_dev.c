@@ -248,10 +248,7 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jlong user_data);
 #endif
 
-
-pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env);
-void pj_jni_detach_jvm(pj_bool_t attached);
-#define jni_get_env(jni_env)     pj_jni_attach_jvm(jni_env)
+#define jni_get_env(jni_env)     pj_jni_attach_jvm((void **)jni_env)
 #define jni_detach_env(attached) pj_jni_detach_jvm(attached)
 
 

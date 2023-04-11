@@ -56,10 +56,6 @@
 #define SIGNATURE1  0xDEAFBEEF
 #define SIGNATURE2  0xDEADC0DE
 
-#ifndef PJ_JNI_HAS_JNI_ONLOAD
-#  define PJ_JNI_HAS_JNI_ONLOAD    PJ_ANDROID
-#endif
-
 #if defined(PJ_ANDROID) && PJ_ANDROID != 0
 
 #include <jni.h>
@@ -330,15 +326,14 @@ PJ_DEF(void) pj_android_jni_set_jvm(void *jvm)
     pj_jni_jvm = (JavaVM *)jvm;
 }
 
-PJ_DEF(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env)
+PJ_DEF(pj_bool_t) pj_jni_attach_jvm(void **jni_env)
 {
     if (!pj_jni_jvm)
         return PJ_FALSE;
 
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                               JNI_VERSION_1_4) < 0)
-    {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
+    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, jni_env, JNI_VERSION_1_4) < 0) {
+        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm,
+                                               (JNIEnv **)jni_env, NULL) < 0)
         {
             jni_env = NULL;
             return PJ_FALSE;
@@ -365,7 +360,7 @@ static pj_status_t set_android_thread_priority(int priority)
     jthrowable exc;
     pj_status_t result = PJ_SUCCESS;
     JNIEnv *jni_env = 0;
-    pj_bool_t attached = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t attached = pj_jni_attach_jvm((void **)&jni_env);
 
     if (!jni_env) return PJ_EINVALIDOP;
 

@@ -19,14 +19,10 @@
  */
 #include <pj/guid.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include <pj/string.h>
 
 #include <jni.h>
-
-extern JavaVM *pj_jni_jvm;
-
-pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env);
-void pj_jni_detach_jvm(pj_bool_t attached);
 
 PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=36;
 
@@ -46,7 +42,7 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     const char *native_string;
     pj_str_t native_str;
 
-    pj_bool_t attached = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t attached = pj_jni_attach_jvm((void **)&jni_env);
     if (!jni_env)
         goto on_error;
 
