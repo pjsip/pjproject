@@ -321,7 +321,7 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 #include <sys/system_properties.h>
 
 /* If you disable PJ_JNI_HAS_JNI_ONLOAD, set the JVM using this function. */
-PJ_DEF(void) pj_android_jni_set_jvm(void *jvm)
+PJ_DEF(void) pj_jni_set_jvm(void *jvm)
 {
     pj_jni_jvm = (JavaVM *)jvm;
 }
