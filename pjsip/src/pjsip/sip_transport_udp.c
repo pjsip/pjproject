@@ -470,7 +470,7 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
         tp->key = NULL;
     } else {
         /* Close socket. */
-        if (tp->sock && tp->sock != PJ_INVALID_SOCKET) {
+        if (tp->sock != PJ_INVALID_SOCKET) {
             pj_sock_close(tp->sock);
             tp->sock = PJ_INVALID_SOCKET;
         }
@@ -1131,7 +1131,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
             tp->key = NULL;
         } else {
             /* Close socket. */
-            if (tp->sock && tp->sock != PJ_INVALID_SOCKET) {
+            if (tp->sock != PJ_INVALID_SOCKET) {
                 pj_sock_close(tp->sock);
                 tp->sock = PJ_INVALID_SOCKET;
             }
@@ -1201,7 +1201,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
             tp->key = NULL;
         } else {
             /* Close socket. */
-            if (tp->sock && tp->sock != PJ_INVALID_SOCKET) {
+            if (tp->sock != PJ_INVALID_SOCKET) {
                 pj_sock_close(tp->sock);
                 tp->sock = PJ_INVALID_SOCKET;
             }
