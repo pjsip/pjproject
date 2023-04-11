@@ -57,6 +57,9 @@ struct pjmedia_sdp_neg
     unsigned              med_pt_map_cnt;
     media_pt_map          med_pt_map[PJMEDIA_MAX_SDP_MEDIA];
 
+    unsigned              codec_list_cnt;
+    pj_str_t              codec_list[DYNAMIC_PT_SIZE];
+
     pjmedia_sdp_session *initial_sdp,       /**< Initial local SDP           */
                         *initial_sdp_tmp,   /**< Temporary initial local SDP */
                         *active_local_sdp,  /**< Currently active local SDP. */
@@ -69,6 +72,7 @@ struct pjmedia_sdp_neg
                                                  using PJSIP module.         */
     pj_pool_t *pool_active;                 /**< Pool used by active SDPs, used
                                                  for retaining last_sent.    */
+    pj_pool_t *pool;                        /**< Long term pool              */
 };
 
 static const char *state_str[] = 
@@ -155,6 +159,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
      * SDPs pool after a successful SDP nego.
      */
     neg->pool_active = pool;
+    neg->pool = pool;
 
     *p_neg = neg;
     return PJ_SUCCESS;
@@ -208,6 +213,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
      * SDPs pool after a successful SDP nego.
      */
     neg->pool_active = pool;
+    neg->pool = pool;
 
     *p_neg = neg;
     return PJ_SUCCESS;
@@ -1584,7 +1590,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
  * 3: pt and codec found
  */
 static unsigned pt_exists(const media_pt_map *sess_med_pt_map, unsigned pt, 
-                          const pj_str_t* codec)
+                          pj_str_t* codec)
 {
     unsigned i = 0;
     unsigned cnt = sess_med_pt_map->map_cnt;
@@ -1597,6 +1603,8 @@ static unsigned pt_exists(const media_pt_map *sess_med_pt_map, unsigned pt,
             tmp_ret |= 1;
         }
         if (pj_strcmp(&sess_med_pt_map->map[i].codec, codec) == 0) {
+            /* Point the codec to the existing codec string. */
+            *codec = sess_med_pt_map->map[i].codec;
             tmp_ret |= 2;
         }
 
@@ -1625,8 +1633,7 @@ static media_pt_map* get_media_pt_map(pjmedia_sdp_neg* neg, unsigned idx)
  * Update the session pt map. The number of stream will always corresponds to the 
  * current session. 
  */
-static void update_session_pt_map(pj_pool_t *pool, const pjmedia_sdp_session* sess,
-                                  pjmedia_sdp_neg* neg)
+static void update_session_pt_map(const pjmedia_sdp_session* sess, pjmedia_sdp_neg* neg)
 {
     unsigned i = 0;
     unsigned max_med_cnt = PJ_ARRAY_SIZE(neg->med_pt_map);
@@ -1650,6 +1657,7 @@ static void update_session_pt_map(pj_pool_t *pool, const pjmedia_sdp_session* se
             pj_str_t codec;
             unsigned pt = pj_strtoul(&sess_media->desc.fmt[j]);
             unsigned pt_len;
+            unsigned p_exists;
 
             if (pt < START_DYNAMIC_PT)
                 continue;
@@ -1664,16 +1672,53 @@ static void update_session_pt_map(pj_pool_t *pool, const pjmedia_sdp_session* se
             codec.ptr = attr->value.ptr + pt_len;
             codec.slen = attr->value.slen - pt_len;
 
-            if (pt_exists(med_pt_map, pt, &codec) != 3) {
+            p_exists = pt_exists(med_pt_map, pt, &codec);
+            if (p_exists != 3) {
+                pj_bool_t add_map = PJ_TRUE;
+
                 /* If the same PT and codec combination found, don't update the map.
                  * It is possible remote send:
                  * - new PT and codec map
                  * - already assigned PT used by different codec
                  * - different/new PT used by the same codec
                  * Later when we send new offer, we can find the PT based on the codec.
-                 */
-                med_pt_map->map[med_pt_map->map_cnt].pt = pt;
-                pj_strdup(pool, &med_pt_map->map[med_pt_map->map_cnt++].codec, &codec);
+                 */                
+                if (p_exists != 2) {
+                    if (neg->codec_list_cnt < PJ_ARRAY_SIZE(neg->codec_list)) {
+                        unsigned k = 0;
+                        pj_bool_t found = PJ_FALSE;
+
+                        /* Find the codec string from the codec list, assign a new one
+                         * if no matching codec is found.
+                         */
+                        for (; k < neg->codec_list_cnt && 
+                               k < PJ_ARRAY_SIZE(neg->codec_list); ++k)
+                        {
+                            if (pj_strcmp(&neg->codec_list[k], &codec) == 0) {
+                                found = PJ_TRUE;
+                                break;
+                            }
+                        }
+                        if (found) {
+                            codec = neg->codec_list[k];
+                        } else {
+                            if (k < PJ_ARRAY_SIZE(neg->codec_list)) {
+                                pj_strdup(neg->pool, 
+                                          &neg->codec_list[neg->codec_list_cnt],
+                                          &codec);
+                                codec = neg->codec_list[neg->codec_list_cnt++];
+                            } else {
+                                add_map = PJ_FALSE;
+                            }
+                        }
+                    } else {
+                        add_map = PJ_FALSE;
+                    }
+                }
+                if (add_map && med_pt_map->map_cnt < PJ_ARRAY_SIZE(med_pt_map->map)) {
+                    med_pt_map->map[med_pt_map->map_cnt].pt = pt;
+                    med_pt_map->map[med_pt_map->map_cnt++].codec = codec;
+                }
             }
         }
     }
@@ -1681,34 +1726,11 @@ static void update_session_pt_map(pj_pool_t *pool, const pjmedia_sdp_session* se
 }
 
 /*
- * The pt map is maintain using temporary/active pool. This is to avoid memory usage
- * growing undefinitely on the case stream removal/addition. Once stream is removed, the
- * mapping should be reset (old/unused mapping will not be copied to the new mapping). 
- * However, we need to reload it to be able to use it long term.
- */
-static void refresh_pt_map(pj_pool_t *pool, pjmedia_sdp_neg *neg)
-{
-    unsigned i = 0;    
-
-    for (; i < neg->med_pt_map_cnt; ++i) {
-        unsigned j = 0;
-        media_pt_map *pt_map = &neg->med_pt_map[i];
-
-        for (;j<pt_map->map_cnt;++j) {
-            pj_str_t tmp_codec;
-            pj_strdup(pool, &tmp_codec, &pt_map->map[j].codec);
-            pt_map->map[j].codec = tmp_codec;
-        }
-    }
-}
-
-/*
  * Find a PT assigned to a codec.
  * Return the PT if the codec already assigned. Otherwise find the available/not used
  * PT for the codec.
  */
-static unsigned assign_new_pt(pj_pool_t* pool, media_pt_map* used_pt,
-                              const pj_str_t* codec)
+static unsigned assign_new_pt(media_pt_map* used_pt, const pj_str_t* codec)
 {
     unsigned pt_check;
     unsigned i = 0;
@@ -1744,7 +1766,7 @@ static unsigned assign_new_pt(pj_pool_t* pool, media_pt_map* used_pt,
     }
 
     used_pt->map[used_pt->map_cnt].pt = pt_check;
-    pj_strdup(pool, &used_pt->map[used_pt->map_cnt++].codec, codec);
+    used_pt->map[used_pt->map_cnt++].codec = *codec;
 
     return pt_check;
 }
@@ -1784,7 +1806,7 @@ static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg,
             pj_str_t pt_str = sess_media->desc.fmt[j];
             unsigned pt = pj_strtoul(&pt_str);
 
-            if (pj_strtoul(&sess_media->desc.fmt[j]) < START_DYNAMIC_PT)
+            if (pt < START_DYNAMIC_PT)
                 continue;
 
             attr = pjmedia_sdp_media_find_attr2(sess_media, "rtpmap", &pt_str);
@@ -1800,16 +1822,15 @@ static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg,
 
                 p_exists = pt_exists(&used_pt_map, pt, &codec);
                 if (p_exists == 1 || p_exists == 2) {
-                    /*
-                    * We need to find/assign a new PT on these cases:
-                    * - The PT is already assigned to a different codec
-                    * - The codec is using a different PT
-                    */
+                    /* We need to find/assign a new PT on these cases:
+                     * - The PT is already assigned to a different codec
+                     * - The codec is using a different PT
+                     */
                     unsigned new_pt;
                     pj_str_t new_pt_str;
                     pjmedia_sdp_attr* new_attr;
 
-                    new_pt = assign_new_pt(pool, &used_pt_map, &codec);
+                    new_pt = assign_new_pt(&used_pt_map, &codec);
                     if (new_pt == 0) {
                         /* If there's already a modification, it's possible it is using
                          * the same pt as this codec or next one. To be safe,
@@ -1925,7 +1946,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     /* Must have remote offer. */
     PJ_ASSERT_RETURN(neg->neg_remote_sdp, PJ_EBUG);
 
-    refresh_pt_map(pool, neg);
     if (neg->has_remote_answer) {
         pjmedia_sdp_session *active;
         status = process_answer(pool, neg->neg_local_sdp, neg->neg_remote_sdp,
@@ -1938,9 +1958,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
             /* Keep the pool used for allocating the active SDPs */
             neg->pool_active = pool;
 
-            update_session_pt_map(pool, neg->neg_local_sdp, neg);
+            update_session_pt_map(neg->neg_local_sdp, neg);
 #if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
-            update_session_pt_map(pool, neg->active_remote_sdp, neg);
+            update_session_pt_map(neg->active_remote_sdp, neg);
 #endif
         } else {
             /* SDP nego failed, retain the last_sdp. */
@@ -1956,9 +1976,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
                                &answer);
         if (status == PJ_SUCCESS) {
 
-#if !PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT
-            validate_pt(pool, neg, answer);
+#if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
+            update_session_pt_map(neg->neg_remote_sdp, neg);
 #endif
+            validate_pt(pool, neg, answer);
 
             if (neg->last_sent)
                 answer->origin.version = neg->last_sent->origin.version;
@@ -1980,10 +2001,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
             /* Keep the pool used for allocating the active SDPs */
             neg->pool_active = pool;
 
-            update_session_pt_map(pool, neg->active_local_sdp, neg);
-#if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
-            update_session_pt_map(pool, neg->active_remote_sdp, neg);
-#endif
+            update_session_pt_map(neg->active_local_sdp, neg);
         }
     }
 
