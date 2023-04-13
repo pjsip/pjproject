@@ -1158,6 +1158,19 @@
 #endif
 
 
+/* Specify if JNI_OnLoad() will be defined in the library. If enabled,
+ * PJSIP will set the Java Virtual Machine (JVM) inside JNI_OnLoad().
+ *
+ * Since there can only be one JNI_OnLoad() in a library loaded from Java,
+ * you can disable this if the implementation is already defined somewhere
+ * else. Then you can set the JVM using the API pj_jni_set_jvm() instead.
+ *
+ * Default: enabled for Android
+ */
+#ifndef PJ_JNI_HAS_JNI_ONLOAD
+#  define PJ_JNI_HAS_JNI_ONLOAD             PJ_ANDROID
+#endif
+
 
 /** @} */
 

@@ -140,10 +140,8 @@ static pjmedia_aud_stream_op android_strm_op =
     &strm_destroy
 };
 
-PJ_DECL(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env);
-PJ_DECL(void) pj_jni_dettach_jvm(pj_bool_t attached);
-#define attach_jvm(jni_env)     pj_jni_attach_jvm(jni_env)
-#define detach_jvm(attached)    pj_jni_dettach_jvm(attached)
+#define attach_jvm(jni_env)     pj_jni_attach_jvm((void **)jni_env)
+#define detach_jvm(attached)    pj_jni_detach_jvm(attached)
 #define THREAD_PRIORITY_AUDIO           -16
 #define THREAD_PRIORITY_URGENT_AUDIO    -19
 

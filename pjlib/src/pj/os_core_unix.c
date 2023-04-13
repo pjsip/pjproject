@@ -56,15 +56,13 @@
 #define SIGNATURE1  0xDEAFBEEF
 #define SIGNATURE2  0xDEADC0DE
 
-#ifndef PJ_JNI_HAS_JNI_ONLOAD
-#  define PJ_JNI_HAS_JNI_ONLOAD    PJ_ANDROID
-#endif
-
-#if defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD != 0
+#if defined(PJ_ANDROID) && PJ_ANDROID != 0
 
 #include <jni.h>
 
 JavaVM *pj_jni_jvm = NULL;
+
+#if defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD != 0
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
 {
@@ -73,8 +71,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
     return JNI_VERSION_1_4;
 }
 
-#endif
+#endif /* PJ_JNI_HAS_JNI_ONLOAD */
 
+#endif /* PJ_ANDROID */
 
 struct pj_thread_t
 {
@@ -315,18 +314,26 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
  * A cool solution would be to port (if possible) the code from the
  * android os regarding set_sched groups.
  */
-#if PJ_ANDROID
+#if defined(PJ_ANDROID) && PJ_ANDROID != 0
 
 #include <jni.h>
 #include <sys/resource.h>
 #include <sys/system_properties.h>
 
-PJ_DEF(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env)
+/* If you disable PJ_JNI_HAS_JNI_ONLOAD, set the JVM using this function. */
+PJ_DEF(void) pj_jni_set_jvm(void *jvm)
 {
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                               JNI_VERSION_1_4) < 0)
-    {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
+    pj_jni_jvm = (JavaVM *)jvm;
+}
+
+PJ_DEF(pj_bool_t) pj_jni_attach_jvm(void **jni_env)
+{
+    if (!pj_jni_jvm)
+        return PJ_FALSE;
+
+    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, jni_env, JNI_VERSION_1_4) < 0) {
+        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm,
+                                               (JNIEnv **)jni_env, NULL) < 0)
         {
             jni_env = NULL;
             return PJ_FALSE;
@@ -337,8 +344,10 @@ PJ_DEF(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env)
     return PJ_FALSE;
 }
 
-PJ_DEF(void) pj_jni_dettach_jvm(pj_bool_t attached)
+PJ_DEF(void) pj_jni_detach_jvm(pj_bool_t attached)
 {
+    if (!pj_jni_jvm) return;
+
     if (attached)
         (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
 }
@@ -351,9 +360,9 @@ static pj_status_t set_android_thread_priority(int priority)
     jthrowable exc;
     pj_status_t result = PJ_SUCCESS;
     JNIEnv *jni_env = 0;
-    pj_bool_t attached = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t attached = pj_jni_attach_jvm((void **)&jni_env);
 
-    PJ_ASSERT_RETURN(jni_env, PJ_FALSE);
+    if (!jni_env) return PJ_EINVALIDOP;
 
     /* Get pointer to the java class */
     process_class = (jclass)(*jni_env)->NewGlobalRef(jni_env,
@@ -390,7 +399,7 @@ static pj_status_t set_android_thread_priority(int priority)
     }
 
 on_return:
-    pj_jni_dettach_jvm(attached);
+    pj_jni_detach_jvm(attached);
     return result;
 }
 
@@ -426,9 +435,11 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 {
 #if PJ_HAS_THREADS
 
-#  if PJ_ANDROID
+#if defined(PJ_ANDROID) && PJ_ANDROID != 0
+
     PJ_ASSERT_RETURN(thread==NULL || thread==pj_thread_this(), PJ_EINVAL);
     return set_android_thread_priority(prio);
+
 #  else
 
     struct sched_param param;
