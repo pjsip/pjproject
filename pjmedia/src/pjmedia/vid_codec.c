@@ -58,6 +58,8 @@ typedef struct pjmedia_vid_codec_desc
 /* The declaration of video codec manager */
 struct pjmedia_vid_codec_mgr
 {
+    pj_pool_t                   *pool;
+
     /** Pool factory instance. */
     pj_pool_factory             *pf;
 
@@ -73,6 +75,7 @@ struct pjmedia_vid_codec_mgr
     /** Array of codec descriptor. */
     pjmedia_vid_codec_desc       codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
+    pj_str_t                     codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
 };
 
 
@@ -129,6 +132,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_create(
     mgr->pf = pool->factory;
     pj_list_init (&mgr->factory_list);
     mgr->codec_cnt = 0;
+    mgr->pool = pool;
 
     /* Create mutex */
     status = pj_mutex_create_recursive(pool, "vid-codec-mgr", &mgr->mutex);
@@ -218,6 +222,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_register_factory(
         pjmedia_vid_codec_info_to_id( &info[i],
                                   mgr->codec_desc[mgr->codec_cnt+i].id,
                                   sizeof(pjmedia_codec_id));
+        pj_strdup2_with_null(mgr->pool, &mgr->codec_list[mgr->codec_cnt+i],
+                             mgr->codec_desc[mgr->codec_cnt + i].id);
     }
 
     /* Update count */
@@ -755,6 +761,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_int8_t) pjmedia_vid_codec_mgr_get_codec_ids(pjmedia_vid_codec_mgr* mgr,
+                                                      pj_int8_t codec_cnt,
+                                                      pj_str_t codec_ids[])
+{
+    if (!mgr) mgr = def_vid_codec_mgr;
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    if (mgr->codec_cnt < codec_cnt)
+        codec_cnt = mgr->codec_cnt;
+
+    pj_memcpy(codec_ids, mgr->codec_list, codec_cnt * sizeof(pj_str_t));
+    return codec_cnt;
+}
 
 /*
  * Dealloc codec.

@@ -52,7 +52,12 @@ pj_bool_t pjmedia_add_rtpmap_for_static_pt =
 pj_bool_t pjmedia_add_bandwidth_tias_in_sdp =
             PJMEDIA_ADD_BANDWIDTH_TIAS_IN_SDP;
 
-
+/* The sorted codec list to store the complete supported codec. */
+static struct codec_ids_list
+{
+    pj_int8_t      codec_cnt;
+    pj_str_t       codec[PJMEDIA_CODEC_MGR_MAX_CODECS*2];
+} codec_ids;
 
 /* Worker thread proc. */
 static int PJ_THREAD_FUNC worker_proc(void*);
@@ -1107,4 +1112,52 @@ PJ_DEF(pj_status_t) pjmedia_endpt_atexit( pjmedia_endpt *endpt,
     pj_leave_critical_section();
 
     return PJ_SUCCESS;
+}
+
+/* Swap two codec id */
+static void swap_codec_id(pj_int8_t i, pj_int8_t j)
+{
+    pj_str_t tmp = codec_ids.codec[i];
+    codec_ids.codec[i] = codec_ids.codec[j];
+    codec_ids.codec[j] = tmp;
+}
+
+static void sort_codec_id()
+{
+    pj_int8_t i;
+
+    for (i = 0; i < codec_ids.codec_cnt; ++i) {
+        pj_int8_t j, max;
+
+        for (max = i, j = i + 1; j < codec_ids.codec_cnt; ++j) {
+            if (pj_stricmp(&codec_ids.codec[j], &codec_ids.codec[max]) < 0)
+                max = j;
+        }
+
+        if (max != i)
+            swap_codec_id(i, max);
+    }
+}
+
+PJ_DEF(void) pjmedia_endpt_update_codec_ids(pj_int8_t codec_cnt,
+                                            pj_str_t codec_list[])
+{    
+    if (codec_cnt + codec_ids.codec_cnt > PJ_ARRAY_SIZE(codec_ids.codec))
+        return;
+
+    pj_memcpy(codec_ids.codec+codec_ids.codec_cnt, codec_list, 
+              sizeof(pj_str_t)*codec_cnt);
+    codec_ids.codec_cnt += codec_cnt;
+
+    /* Sort the array */
+    sort_codec_id();
+}
+
+PJ_DEF(pj_int8_t) pjmedia_endpt_get_codec_ids(pj_int8_t codec_cnt, pj_str_t codec_list[])
+{
+    if (codec_ids.codec_cnt < codec_cnt)
+        codec_cnt = codec_ids.codec_cnt;
+
+    pj_memcpy(codec_list, codec_ids.codec, codec_cnt * sizeof(pj_str_t));
+    return codec_cnt;
 }

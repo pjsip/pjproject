@@ -45,6 +45,9 @@ pj_status_t pjsua_vid_subsys_init(void)
 {
     unsigned i;
     pj_status_t status;
+    pjmedia_vid_codec_mgr* codec_mgr;
+    pj_int8_t codec_cnt;
+    pj_str_t codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
     PJ_LOG(4,(THIS_FILE, "Initializing video subsystem.."));
     pj_log_push_indent();
@@ -122,6 +125,10 @@ pj_status_t pjsua_vid_subsys_init(void)
         goto on_error;
     }
 #endif
+    codec_mgr = pjmedia_vid_codec_mgr_instance();
+    codec_cnt = pjmedia_vid_codec_mgr_get_codec_ids(codec_mgr, PJ_ARRAY_SIZE(codec_list), 
+                                                    codec_list);
+    pjmedia_endpt_update_codec_ids(codec_cnt, codec_list);
 
 #if !defined(PJSUA_DONT_INIT_VID_DEV_SUBSYS) || \
              PJSUA_DONT_INIT_VID_DEV_SUBSYS==0

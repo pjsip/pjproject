@@ -183,6 +183,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
         pjmedia_codec_info_to_id( &info[i],
                                   mgr->codec_desc[mgr->codec_cnt+i].id,
                                   sizeof(pjmedia_codec_id));
+        pj_strdup2_with_null(mgr->pool, &mgr->codec_list[mgr->codec_cnt+i], 
+                             mgr->codec_desc[mgr->codec_cnt + i].id);
     }
 
     /* Update count */

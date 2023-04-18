@@ -722,6 +722,9 @@ typedef struct pjmedia_codec_mgr
     /** Array of codec descriptor. */
     struct pjmedia_codec_desc    codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
+    /** Array of codec id. */
+    pj_str_t                     codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
+
 } pjmedia_codec_mgr;
 
 

@@ -375,6 +375,29 @@ PJ_DECL(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt);
 PJ_DECL(pj_status_t) pjmedia_endpt_atexit(pjmedia_endpt *endpt,
                                           pjmedia_endpt_exit_callback func);
 
+/**
+ * The media endpoint will store the supported codec ids. Each media can update the global
+ * codec id using this method.
+ * 
+ * @param codec_cnt     The media endpoint.
+ * @param codec_list    The input codec list.
+ * 
+ */
+PJ_DECL(void) pjmedia_endpt_update_codec_ids(pj_int8_t codec_cnt,
+                                             pj_str_t codec_list[]);
+
+/**
+ * Get the codec list maintained in the media endpoint. The output codec list will 
+ * be sorted.
+ *
+ * @param codec_cnt     The codec_list capacity.
+ * @param codec_list    The output codec list.
+ *
+ * @return              The content number of codec_list.
+ */
+PJ_DECL(pj_int8_t) pjmedia_endpt_get_codec_ids(pj_int8_t codec_cnt, 
+                                               pj_str_t codec_list[]);
+
 
 
 PJ_END_DECL
