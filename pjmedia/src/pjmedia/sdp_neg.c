@@ -161,6 +161,8 @@ static void get_audio_codec_id(pjmedia_sdp_neg* neg)
     neg->codec_list_cnt += codec_cnt;
 }
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
 static void get_video_codec_id(pjmedia_sdp_neg* neg)
 {
     pjmedia_vid_codec_mgr* mgr = pjmedia_vid_codec_mgr_instance();
@@ -168,6 +170,8 @@ static void get_video_codec_id(pjmedia_sdp_neg* neg)
     neg->codec_list_cnt += (pj_int8_t)pjmedia_vid_codec_mgr_get_codec_ids(mgr, max_cnt, 
                                                    neg->codec_list + neg->codec_list_cnt);
 }
+
+#endif
 
 static void init_codec_map(pj_pool_t *pool, pjmedia_sdp_neg *neg)
 {
@@ -179,7 +183,9 @@ static void init_codec_map(pj_pool_t *pool, pjmedia_sdp_neg *neg)
 
     /* Get the audio/video codec, and sort them. */
     get_audio_codec_id(neg);
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     get_video_codec_id(neg);
+#endif
     sort_codec_id(neg->codec_list, neg->codec_list_cnt);
 
     for (;i<max_med_map;++i) {
