@@ -35,7 +35,6 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
     pjmedia_audio_codec_config default_cfg;
     pj_status_t status = PJ_SUCCESS;
     pjmedia_codec_mgr* codec_mgr;
-    pj_str_t codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
     unsigned i = 0;
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
             PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
@@ -150,11 +149,10 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
         return status;
 #endif
 
-    /* Save the codec id. */
+    /* Find the "telephone-event" clock rates */
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
-    for (; i < codec_mgr->codec_cnt && i < PJ_ARRAY_SIZE(codec_list); ++i) {
-        codec_list[i] = codec_mgr->codec_list[i];
-        
+    for (; i < codec_mgr->codec_cnt && i < PJ_ARRAY_SIZE(codec_mgr->codec_desc); ++i) {
+
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
             PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
 
@@ -185,20 +183,19 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
 #endif
 
     }
-    i = 0;
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
             PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
 
-    for (; i < televent_num && 
-           codec_mgr->codec_cnt+i < PJ_ARRAY_SIZE(codec_mgr->codec_list);++i)
+    for (i = 0; i < televent_num && 
+                codec_mgr->codec_list_cnt < PJ_ARRAY_SIZE(codec_mgr->codec_list);++i)
     {
         char buf[160];
         pj_ansi_snprintf(buf, sizeof(buf), "telephone-event/%d", televent_clockrates[i]);
-        pj_strdup2_with_null(codec_mgr->pool, &codec_list[codec_mgr->codec_cnt+i], buf);
+        pj_strdup2_with_null(codec_mgr->pool, 
+                             &codec_mgr->codec_list[codec_mgr->codec_list_cnt++],
+                             buf);
     }
 #endif
-
-    pjmedia_endpt_update_codec_ids((pj_int8_t)(codec_mgr->codec_cnt+i), codec_list);
 
     return PJ_SUCCESS;
 }

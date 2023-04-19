@@ -871,15 +871,14 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(pjmedia_vid_codec *codec,
  * 
  * @param mgr           The codec manager instance. If NULL, the default codec
  *                      manager instance will be used.
- * @param codec_cnt     On input, the maximum capacity of the codec_ids. On output, the 
- *                      codec_ids content number.
+ * @param codec_cnt     The maximum capacity of the codec_ids.
  * @param codec_ids     The codec id list.
  * 
  * @return              Then codec_ids content number.
  */
-PJ_DECL(pj_int8_t) pjmedia_vid_codec_mgr_get_codec_ids(pjmedia_vid_codec_mgr* mgr,
-                                                       pj_int8_t codec_cnt,
-                                                       pj_str_t codec_ids[]);
+PJ_DECL(int) pjmedia_vid_codec_mgr_get_codec_ids(pjmedia_vid_codec_mgr* mgr,
+                                                 pj_int8_t codec_cnt,
+                                                 pj_str_t codec_ids[]);
 
 
 

@@ -19,6 +19,7 @@
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/codec.h>
+#include <pjmedia/vid_codec.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
@@ -124,14 +125,62 @@ static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg,
 
 #define START_DYNAMIC_PT 96
 
+/* Swap two codec id */
+static void swap_codec_id(pj_str_t codec_list[], pj_int8_t i, pj_int8_t j)
+{
+    pj_str_t tmp = codec_list[i];
+    codec_list[i] = codec_list[j];
+    codec_list[j] = tmp;
+}
+
+static void sort_codec_id(pj_str_t codec_list[], pj_int8_t codec_cnt)
+{
+    pj_int8_t i;
+
+    for (i = 0; i < codec_cnt; ++i) {
+        pj_int8_t j, max;
+
+        for (max = i, j = i + 1; j < codec_cnt; ++j) {
+            if (pj_stricmp(&codec_list[j], &codec_list[max]) > 0)
+                max = j;
+        }
+
+        if (max != i)
+            swap_codec_id(codec_list, i, max);
+    }
+}
+
+static void get_audio_codec_id(pjmedia_sdp_neg* neg)
+{
+    pjmedia_codec_mgr* mgr = pjmedia_codec_mgr_instance();
+    pj_int8_t max_cnt = PJ_ARRAY_SIZE(neg->codec_list) - neg->codec_list_cnt;
+    pj_int8_t codec_cnt = (mgr->codec_list_cnt > max_cnt)?max_cnt: mgr->codec_list_cnt;
+
+    pj_memcpy(neg->codec_list + neg->codec_list_cnt, mgr->codec_list, 
+              sizeof(pj_str_t) * codec_cnt);
+    neg->codec_list_cnt += codec_cnt;
+}
+
+static void get_video_codec_id(pjmedia_sdp_neg* neg)
+{
+    pjmedia_vid_codec_mgr* mgr = pjmedia_vid_codec_mgr_instance();
+    pj_int8_t max_cnt = PJ_ARRAY_SIZE(neg->codec_list) - neg->codec_list_cnt;
+    neg->codec_list_cnt += (pj_int8_t)pjmedia_vid_codec_mgr_get_codec_ids(mgr, max_cnt, 
+                                                   neg->codec_list + neg->codec_list_cnt);
+}
+
 static void init_codec_map(pj_pool_t *pool, pjmedia_sdp_neg *neg)
 {
     unsigned i = 0;    
     unsigned max_med_map = PJ_ARRAY_SIZE(neg->med_pt_map);
 
     neg->pool = pool;
-    neg->codec_list_cnt = pjmedia_endpt_get_codec_ids(PJ_ARRAY_SIZE(neg->codec_list),
-                                                      neg->codec_list);
+    neg->codec_list_cnt = 0;
+
+    /* Get the audio/video codec, and sort them. */
+    get_audio_codec_id(neg);
+    get_video_codec_id(neg);
+    sort_codec_id(neg->codec_list, neg->codec_list_cnt);
 
     for (;i<max_med_map;++i) {
         unsigned j = 0;
@@ -142,17 +191,17 @@ static void init_codec_map(pj_pool_t *pool, pjmedia_sdp_neg *neg)
     }
 }
 
-static pj_int8_t find_codec_idx(const pjmedia_sdp_neg *neg, const pj_str_t *codec,
+static pj_int8_t find_codec_idx(const pj_str_t codec_list[], const pj_str_t *codec,
                                 pj_int8_t start, pj_int8_t end)
 {
     while (start <= end) {
         pj_int8_t mid = start + (end - start) / 2;
 
-        if (pj_strnicmp(codec, &neg->codec_list[mid], codec->slen) == 0) {
+        if (pj_strnicmp(codec, &codec_list[mid], codec->slen) == 0) {
             return mid;
         }
 
-        if (pj_strnicmp(codec, &neg->codec_list[mid], codec->slen) > 0)
+        if (pj_strnicmp(codec, &codec_list[mid], codec->slen) < 0)
             start = mid + 1;
         else
             end = mid - 1;
@@ -1680,7 +1729,8 @@ static void update_session_pt_map(const pjmedia_sdp_session* sess, pjmedia_sdp_n
 
             codec_idx = med_pt_map->map[pt-START_DYNAMIC_PT];
             if (codec_idx == -1) {
-                codec_idx = find_codec_idx(neg, &codec, 0, neg->codec_list_cnt);
+                codec_idx = find_codec_idx(neg->codec_list, &codec, 0, 
+                                           neg->codec_list_cnt);
                 if (codec_idx != -1) {
                     med_pt_map->map[pt - START_DYNAMIC_PT] = codec_idx;
                     med_pt_map->map_cnt++;
@@ -1738,7 +1788,7 @@ static unsigned assign_new_pt(const pjmedia_sdp_neg *neg, media_pt_map* used_pt,
         }
     }
 
-    codec_idx = find_codec_idx(neg, codec, 0, neg->codec_list_cnt);
+    codec_idx = find_codec_idx(neg->codec_list, codec, 0, neg->codec_list_cnt);
     if (codec_idx != -1) {
         used_pt->map[free_slot_idx] = codec_idx;
         return free_slot_idx + START_DYNAMIC_PT;

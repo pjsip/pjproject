@@ -26,6 +26,7 @@
 #define THIS_FILE   "codec.c"
 
 
+static pjmedia_codec_mgr *def_codec_mgr;
 
 /* Definition of default codecs parameters */
 struct pjmedia_codec_default_param
@@ -38,6 +39,48 @@ struct pjmedia_codec_default_param
 /* Sort codecs in codec manager based on priorities */
 static void sort_codecs(pjmedia_codec_mgr *mgr);
 
+/* Swap two codec id */
+static void swap_codec_id(pj_str_t codec_list[], pj_int8_t i, pj_int8_t j)
+{
+    pj_str_t tmp = codec_list[i];
+    codec_list[i] = codec_list[j];
+    codec_list[j] = tmp;
+}
+
+static void sort_codec_id(pj_str_t codec_list[], pj_int8_t codec_cnt)
+{
+    pj_int8_t i;
+
+    for (i = 0; i < codec_cnt; ++i) {
+        pj_int8_t j, max;
+
+        for (max = i, j = i + 1; j < codec_cnt; ++j) {
+            if (pj_stricmp(&codec_list[j], &codec_list[max]) > 0)
+                max = j;
+        }
+
+        if (max != i)
+            swap_codec_id(codec_list, i, max);
+    }
+}
+
+static pj_int8_t find_codec_idx(const pj_str_t codec_list[], const pj_str_t* codec,
+                                pj_int8_t start, pj_int8_t end)
+{
+    while (start <= end) {
+        pj_int8_t mid = start + (end - start) / 2;
+
+        if (pj_strnicmp(codec, &codec_list[mid], codec->slen) == 0) {
+            return mid;
+        }
+
+        if (pj_strnicmp(codec, &codec_list[mid], codec->slen) < 0)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    }
+    return -1;
+}
 
 /*
  * Duplicate codec parameter.
@@ -87,6 +130,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr,
     mgr->pf = pf;
     pj_list_init (&mgr->factory_list);
     mgr->codec_cnt = 0;
+    mgr->codec_list_cnt = 0;
 
     /* Create pool */
     mgr->pool = pj_pool_create(mgr->pf, "codec-mgr", 256, 256, NULL);
@@ -95,6 +139,9 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr,
     status = pj_mutex_create_recursive(mgr->pool, "codec-mgr", &mgr->mutex);
     if (status != PJ_SUCCESS)
         return status;
+
+    if (!def_codec_mgr)
+        def_codec_mgr = mgr;
 
     return PJ_SUCCESS;
 }
@@ -133,12 +180,19 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_destroy (pjmedia_codec_mgr *mgr)
     if (mgr->pool)
         pj_pool_release(mgr->pool);
 
+    if (mgr == def_codec_mgr)
+        def_codec_mgr = NULL;
+
     /* Just for safety, set codec manager states to zero */
     pj_bzero(mgr, sizeof(pjmedia_codec_mgr));
 
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pjmedia_codec_mgr*) pjmedia_codec_mgr_instance(void)
+{
+    return def_codec_mgr;
+}
 
 /*
  * Register a codec factory.
@@ -183,8 +237,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
         pjmedia_codec_info_to_id( &info[i],
                                   mgr->codec_desc[mgr->codec_cnt+i].id,
                                   sizeof(pjmedia_codec_id));
-        pj_strdup2_with_null(mgr->pool, &mgr->codec_list[mgr->codec_cnt+i], 
-                             mgr->codec_desc[mgr->codec_cnt + i].id);
+        if (mgr->codec_list_cnt < PJ_ARRAY_SIZE(mgr->codec_list)) {
+            pj_strdup2_with_null(mgr->pool, &mgr->codec_list[mgr->codec_list_cnt++],
+                                 mgr->codec_desc[mgr->codec_cnt + i].id);
+        }
     }
 
     /* Update count */
@@ -192,6 +248,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
 
     /* Re-sort codec based on priorities */
     sort_codecs(mgr);
+
+    sort_codec_id(mgr->codec_list, mgr->codec_list_cnt);
 
     /* Add factory to the list */
     pj_list_push_back(&mgr->factory_list, factory);
@@ -210,6 +268,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
                                 pjmedia_codec_factory *factory)
 {
     unsigned i;
+    pj_int8_t num_remove= 0;
+
     PJ_ASSERT_RETURN(mgr && factory, PJ_EINVAL);
 
     pj_mutex_lock(mgr->mutex);
@@ -230,10 +290,21 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
     for (i=0; i<mgr->codec_cnt; ) {
 
         if (mgr->codec_desc[i].factory == factory) {
+            pj_int8_t codec_idx;
+            pj_str_t codec_str = pj_str(mgr->codec_desc[i].id);
+
             /* Release pool of codec default param */
             if (mgr->codec_desc[i].param) {
                 pj_assert(mgr->codec_desc[i].param->pool);
                 pj_pool_release(mgr->codec_desc[i].param->pool);
+            }
+
+            /* Update the codec list */
+            codec_idx = find_codec_idx(mgr->codec_list, &codec_str, 0,
+                                       mgr->codec_list_cnt);
+            if (codec_idx != -1) {
+                mgr->codec_list[codec_idx].slen = 0;
+                num_remove++;
             }
 
             /* Remove the codec from array of codec descriptions */
@@ -245,6 +316,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
             ++i;
         }
     }
+    sort_codec_id(mgr->codec_list, mgr->codec_list_cnt);
+    mgr->codec_list_cnt -= num_remove;
 
     pj_mutex_unlock(mgr->mutex);
 

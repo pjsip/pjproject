@@ -722,6 +722,9 @@ typedef struct pjmedia_codec_mgr
     /** Array of codec descriptor. */
     struct pjmedia_codec_desc    codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
+    /** Number of codec id. */
+    pj_int8_t                    codec_list_cnt;
+
     /** Array of codec id. */
     pj_str_t                     codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
@@ -751,6 +754,14 @@ PJ_DECL(pj_status_t) pjmedia_codec_mgr_init(pjmedia_codec_mgr *mgr,
  * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_mgr_destroy(pjmedia_codec_mgr *mgr);
+
+
+/**
+ * Get the default codec manager instance.
+ *
+ * @return          The default codec manager instance or NULL if none.
+ */
+PJ_DECL(pjmedia_codec_mgr*) pjmedia_codec_mgr_instance(void);
 
 
 /** 
