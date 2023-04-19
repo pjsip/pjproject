@@ -763,7 +763,11 @@ void Endpoint::on_timer(pj_timer_heap_t *timer_heap,
     if (ut->signature != TIMER_SIGNATURE)
         return;
 
+    /* Best effort to handle race condition with utilTimerCancel() */
+    ut->signature = 0xFFFFFFFE;
+
     ep.onTimer(ut->prm);
+    delete ut;
 }
 
 void Endpoint::on_nat_detect(const pj_stun_nat_detect_result *res)
