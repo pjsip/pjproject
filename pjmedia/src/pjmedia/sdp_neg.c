@@ -133,6 +133,9 @@ static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg,
 static void get_audio_codec_id(pjmedia_sdp_neg* neg)
 {
     pjmedia_codec_mgr* mgr = pjmedia_codec_mgr_instance();
+    if (mgr == NULL) {
+        return;
+    }
     pj_int8_t max_cnt = PJ_ARRAY_SIZE(neg->audio_codec_list);
     pj_int8_t codec_cnt = (mgr->codec_list_cnt > max_cnt)?max_cnt: mgr->codec_list_cnt;
 
@@ -145,6 +148,9 @@ static void get_audio_codec_id(pjmedia_sdp_neg* neg)
 static void get_video_codec_id(pjmedia_sdp_neg* neg)
 {
     pjmedia_vid_codec_mgr* mgr = pjmedia_vid_codec_mgr_instance();
+    if (mgr == NULL) {
+        return;
+    }
     pj_int8_t max_cnt = PJ_ARRAY_SIZE(neg->video_codec_list);
     neg->video_codec_list_cnt = 
             (pj_int8_t)pjmedia_vid_codec_mgr_get_codec_ids(mgr, max_cnt, 
