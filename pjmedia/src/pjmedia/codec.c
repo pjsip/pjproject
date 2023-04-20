@@ -64,6 +64,48 @@ static void sort_codec_id(pj_str_t codec_list[], pj_int8_t codec_cnt)
     }
 }
 
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+            PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+
+static void update_tel_event_clockrates(pjmedia_codec_mgr *codec_mgr, unsigned clock_rate)
+{
+    pj_bool_t add_tel_event = PJ_FALSE;
+
+    /* Find the "telephone-event" clock rates */
+#if PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES
+    unsigned i = 0;
+    for (; i < codec_mgr->televent_num; ++i) {
+        if (codec_mgr->televent_clockrates[i] == clock_rate)
+        {
+            return;
+        }
+    }
+    if (i == codec_mgr->televent_num &&
+        codec_mgr->televent_num < PJ_ARRAY_SIZE(codec_mgr->televent_clockrates))
+    {
+        add_tel_event = PJ_TRUE;
+    }
+#else
+    if (codec_mgr->televent_num == 0) {
+        add_tel_event = PJ_TRUE;
+        clock_rate = 8000;
+    }
+#endif
+    if (add_tel_event) {
+        char buf[160];
+        /* List this clockrate for tel-event generation */
+        codec_mgr->televent_clockrates[codec_mgr->televent_num++] = clock_rate;
+
+        /* Add to codec_list */
+        pj_ansi_snprintf(buf, sizeof(buf), "telephone-event/%d", clock_rate);
+        pj_strdup2_with_null(codec_mgr->pool,
+                             &codec_mgr->codec_list[codec_mgr->codec_list_cnt++],
+                             buf);
+    }
+}
+
+#endif
+
 static pj_int8_t find_codec_idx(const pj_str_t codec_list[], const pj_str_t* codec,
                                 pj_int8_t start, pj_int8_t end)
 {
@@ -241,6 +283,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
             pj_strdup2_with_null(mgr->pool, &mgr->codec_list[mgr->codec_list_cnt++],
                                  mgr->codec_desc[mgr->codec_cnt + i].id);
         }
+
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+            PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+        update_tel_event_clockrates(mgr, 
+                                    mgr->codec_desc[mgr->codec_cnt + i].info.clock_rate);
+#endif
+
     }
 
     /* Update count */

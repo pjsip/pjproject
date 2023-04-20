@@ -68,8 +68,13 @@ struct pjmedia_sdp_neg
     pj_int8_t             med_pt_map_cnt;
     media_pt_map          med_pt_map[PJMEDIA_MAX_SDP_MEDIA];
 
-    pj_int8_t             codec_list_cnt;
-    pj_str_t              codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS*2];
+    pj_int8_t             audio_codec_list_cnt;
+    pj_str_t              audio_codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    pj_int8_t             video_codec_list_cnt;
+    pj_str_t              video_codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
+#endif
 
     pjmedia_sdp_session *initial_sdp,       /**< Initial local SDP           */
                         *initial_sdp_tmp,   /**< Temporary initial local SDP */
@@ -125,40 +130,14 @@ static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg,
 
 #define START_DYNAMIC_PT 96
 
-/* Swap two codec id */
-static void swap_codec_id(pj_str_t codec_list[], pj_int8_t i, pj_int8_t j)
-{
-    pj_str_t tmp = codec_list[i];
-    codec_list[i] = codec_list[j];
-    codec_list[j] = tmp;
-}
-
-static void sort_codec_id(pj_str_t codec_list[], pj_int8_t codec_cnt)
-{
-    pj_int8_t i;
-
-    for (i = 0; i < codec_cnt; ++i) {
-        pj_int8_t j, max;
-
-        for (max = i, j = i + 1; j < codec_cnt; ++j) {
-            if (pj_stricmp(&codec_list[j], &codec_list[max]) > 0)
-                max = j;
-        }
-
-        if (max != i)
-            swap_codec_id(codec_list, i, max);
-    }
-}
-
 static void get_audio_codec_id(pjmedia_sdp_neg* neg)
 {
     pjmedia_codec_mgr* mgr = pjmedia_codec_mgr_instance();
-    pj_int8_t max_cnt = PJ_ARRAY_SIZE(neg->codec_list) - neg->codec_list_cnt;
+    pj_int8_t max_cnt = PJ_ARRAY_SIZE(neg->audio_codec_list);
     pj_int8_t codec_cnt = (mgr->codec_list_cnt > max_cnt)?max_cnt: mgr->codec_list_cnt;
 
-    pj_memcpy(neg->codec_list + neg->codec_list_cnt, mgr->codec_list, 
-              sizeof(pj_str_t) * codec_cnt);
-    neg->codec_list_cnt += codec_cnt;
+    pj_memcpy(neg->audio_codec_list, mgr->codec_list, sizeof(pj_str_t) * codec_cnt);
+    neg->audio_codec_list_cnt = codec_cnt;
 }
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
@@ -166,12 +145,28 @@ static void get_audio_codec_id(pjmedia_sdp_neg* neg)
 static void get_video_codec_id(pjmedia_sdp_neg* neg)
 {
     pjmedia_vid_codec_mgr* mgr = pjmedia_vid_codec_mgr_instance();
-    pj_int8_t max_cnt = PJ_ARRAY_SIZE(neg->codec_list) - neg->codec_list_cnt;
-    neg->codec_list_cnt += (pj_int8_t)pjmedia_vid_codec_mgr_get_codec_ids(mgr, max_cnt, 
-                                                   neg->codec_list + neg->codec_list_cnt);
+    pj_int8_t max_cnt = PJ_ARRAY_SIZE(neg->video_codec_list);
+    neg->video_codec_list_cnt = 
+            (pj_int8_t)pjmedia_vid_codec_mgr_get_codec_ids(mgr, max_cnt, 
+                                                           neg->video_codec_list);
 }
 
 #endif
+
+/* Check if codec exists in audio/video codec list. A stream might change the media type,
+ * so, we need to check if the codec exists in the audio/codec list.
+ */
+static pj_bool_t codec_exists(const pjmedia_sdp_neg* neg, const pj_str_t* codec, 
+                              pj_int8_t idx) 
+{
+    pj_bool_t exists = PJ_FALSE;
+    exists = (pj_strnicmp(codec, &neg->audio_codec_list[idx], codec->slen) == 0);
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    if (!exists)
+        exists = (pj_strnicmp(codec, &neg->video_codec_list[idx], codec->slen) == 0);
+#endif
+    return exists;
+}
 
 static void init_codec_map(pj_pool_t *pool, pjmedia_sdp_neg *neg)
 {
@@ -179,14 +174,14 @@ static void init_codec_map(pj_pool_t *pool, pjmedia_sdp_neg *neg)
     unsigned max_med_map = PJ_ARRAY_SIZE(neg->med_pt_map);
 
     neg->pool = pool;
-    neg->codec_list_cnt = 0;
 
     /* Get the audio/video codec, and sort them. */
+    neg->audio_codec_list_cnt = 0;
     get_audio_codec_id(neg);
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    neg->video_codec_list_cnt = 0;
     get_video_codec_id(neg);
 #endif
-    sort_codec_id(neg->codec_list, neg->codec_list_cnt);
 
     for (;i<max_med_map;++i) {
         unsigned j = 0;
@@ -1735,8 +1730,18 @@ static void update_session_pt_map(const pjmedia_sdp_session* sess, pjmedia_sdp_n
 
             codec_idx = med_pt_map->map[pt-START_DYNAMIC_PT];
             if (codec_idx == -1) {
-                codec_idx = find_codec_idx(neg->codec_list, &codec, 0, 
-                                           neg->codec_list_cnt);
+                pj_str_t audio_str = pj_str("audio");
+                pj_bool_t is_audio = (pj_strcmp(&sess_media->desc.media, &audio_str)==0);
+                if (is_audio) {
+                    codec_idx = find_codec_idx(neg->audio_codec_list, &codec, 0, 
+                                               neg->audio_codec_list_cnt);
+                } 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+                else {
+                    codec_idx = find_codec_idx(neg->video_codec_list, &codec, 0,
+                                               neg->video_codec_list_cnt);
+                }
+#endif
                 if (codec_idx != -1) {
                     med_pt_map->map[pt - START_DYNAMIC_PT] = codec_idx;
                     med_pt_map->map_cnt++;
@@ -1761,14 +1766,14 @@ static void update_session_pt_map(const pjmedia_sdp_session* sess, pjmedia_sdp_n
  * PT for the codec.
  */
 static unsigned assign_new_pt(const pjmedia_sdp_neg *neg, media_pt_map* used_pt, 
-                              const pj_str_t* codec)
+                              const pj_str_t* codec, pj_bool_t is_audio)
 {
     pj_int8_t id_check = 0;    
     pj_int8_t max_pt_cnt = PJ_ARRAY_SIZE(used_pt->map);
     const pj_str_t telephone_event = pj_str("telephone-event");
     pj_int8_t used_slot = 0;
     pj_int8_t free_slot_idx = -1;
-    pj_int8_t codec_idx;
+    pj_int8_t codec_idx = -1;
 
     if (pj_strncmp(codec, &telephone_event, telephone_event.slen) == 0)
         id_check = PJMEDIA_RTP_PT_TELEPHONE_EVENTS - START_DYNAMIC_PT;
@@ -1777,7 +1782,7 @@ static unsigned assign_new_pt(const pjmedia_sdp_neg *neg, media_pt_map* used_pt,
         codec_idx = used_pt->map[id_check];
         if (codec_idx != -1) {
             ++used_slot;
-            if (pj_strnicmp(codec, &neg->codec_list[codec_idx], codec->slen) == 0) {
+            if (codec_exists(neg, codec, codec_idx)) {
                 return id_check + START_DYNAMIC_PT;
             }
         } else {
@@ -1794,7 +1799,16 @@ static unsigned assign_new_pt(const pjmedia_sdp_neg *neg, media_pt_map* used_pt,
         }
     }
 
-    codec_idx = find_codec_idx(neg->codec_list, codec, 0, neg->codec_list_cnt);
+    if (is_audio) {
+        codec_idx = find_codec_idx(neg->audio_codec_list, codec, 0, 
+                                   neg->audio_codec_list_cnt);
+    }
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    else {
+        codec_idx = find_codec_idx(neg->video_codec_list, codec, 0,
+                                   neg->video_codec_list_cnt);
+    }
+#endif
     if (codec_idx != -1) {
         used_pt->map[free_slot_idx] = codec_idx;
         return free_slot_idx + START_DYNAMIC_PT;
@@ -1854,8 +1868,7 @@ static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg,
 
                 codec_idx = med_pt_map->map[pt - START_DYNAMIC_PT];
                 if (codec_idx == -1 ||
-                    (codec_idx != -1 && 
-                    pj_strnicmp(&codec, &neg->codec_list[codec_idx], codec.slen) != 0)) 
+                    (codec_idx != -1 && !codec_exists(neg, &codec, codec_idx))) 
                 {
                     /* We need to find/assign a new PT on these cases:
                      * - The PT is already assigned to a different codec
@@ -1864,8 +1877,10 @@ static pj_status_t validate_pt(pj_pool_t *pool, pjmedia_sdp_neg* neg,
                     unsigned new_pt;
                     pj_str_t new_pt_str;
                     pjmedia_sdp_attr* new_attr;
+                    pj_str_t audio_str = pj_str("audio");
 
-                    new_pt = assign_new_pt(neg, &used_pt_map, &codec);
+                    new_pt = assign_new_pt(neg, &used_pt_map, &codec, 
+                                     (pj_strcmp(&sess_media->desc.media, &audio_str)==0));
                     if (new_pt == 0) {
                         /* If there's already a modification, it's possible it is using
                          * the same pt as this codec or next one. To be safe,

@@ -728,6 +728,16 @@ typedef struct pjmedia_codec_mgr
     /** Array of codec id. */
     pj_str_t                     codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+            PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+    /** Number of televent clockrates. */
+    unsigned televent_num;
+
+    /** Array of televent clockrates. */
+    unsigned televent_clockrates[8];
+#endif
+
+
 } pjmedia_codec_mgr;
 
 
