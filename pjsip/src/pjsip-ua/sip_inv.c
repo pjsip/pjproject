@@ -138,7 +138,7 @@ static int print_sdp(pjsip_msg_body *body, char *buf, pj_size_t len);
  */
 static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
                                           unsigned code,
-                                          const char *str);
+                                          const pj_str_t *reason);
 
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
@@ -194,12 +194,9 @@ struct tsx_inv_data
  */
 static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
                                           unsigned code,
-                                          const char *str)
+                                          const pj_str_t *reason)
 {
-    pj_str_t reason;
-
-    PJ_ASSERT_RETURN(tdata && str, PJ_EINVAL);
-    pj_cstr(&reason, str);
+    PJ_ASSERT_RETURN(tdata && reason, PJ_EINVAL);
 
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
 
@@ -213,14 +210,14 @@ static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
 
         hval_len =  3 +                 /* 'SIP' */
                     11 +                /* ' ;cause=3-digit-code' */
-                    reason.slen + 10;   /* ' ;text=".."' */
+                    reason->slen + 10;   /* ' ;text=".."' */
         hvalue.ptr = (char*)pj_pool_alloc(tdata->pool, hval_len);
         if (!hvalue.ptr)
             return PJ_ENOMEM;
 
         hvalue.slen = pj_ansi_snprintf(hvalue.ptr, hval_len,
                                        "SIP ;cause=%u ;text=\"%.*s\"",
-                                       code, (int)reason.slen, reason.ptr);
+                                       code, (int)reason->slen, reason->ptr);
         hdr = (pjsip_hdr*)
                pjsip_generic_string_hdr_create(tdata->pool, &hname, &hvalue);
         if (hdr)
@@ -242,7 +239,7 @@ static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
         PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
 
         hdr = pjsip_warning_hdr_create(tdata->pool, warn_code,
-                                       pjsip_endpt_name(dlg->endpt), &reason);
+                                       pjsip_endpt_name(dlg->endpt), reason);
         if (hdr)
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hdr);
         else
@@ -2897,7 +2894,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
             }
 
             if (st_text && st_text->slen)
-                add_reason_warning_hdr(tdata, st_code, st_text->ptr);
+                add_reason_warning_hdr(tdata, st_code, st_text);
 
             /* Set timeout for the INVITE transaction, in case UAS is not
              * able to respond the INVITE with 487 final response. The 
@@ -2928,8 +2925,8 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
         /* For established dialog, send BYE */
         status = pjsip_dlg_create_request(inv->dlg, pjsip_get_bye_method(), 
                                           -1, &tdata);
-        if (st_text && st_text->slen)
-            add_reason_warning_hdr(tdata, st_code, st_text->ptr);
+        if (status == PJ_SUCCESS && st_text && st_text->slen)
+            add_reason_warning_hdr(tdata, st_code, st_text);
         break;
 
     case PJSIP_INV_STATE_DISCONNECTED:
@@ -5626,12 +5623,12 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                 if (reject_message) {
                     /* Not Acceptable */
                     const pjsip_hdr *accept;
-                    const char *reason = "SDP negotiation failed";
+                    pj_str_t reason = pj_str("SDP negotiation failed");
 
                     if (status == PJMEDIA_SDP_EINSDP)
-                        reason = "Bad SDP";
+                        reason = pj_str("Bad SDP");
                     else if (status == PJMEDIA_SDPNEG_EINSTATE)
-                        reason = "No SDP answer";
+                        reason = pj_str("No SDP answer");
 
                     /* The incoming SDP is unacceptable. If the SDP negotiator
                      * state has just been changed, i.e: DONE -> REMOTE_OFFER,
@@ -5651,7 +5648,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                         return;
 
                     /* Add Warning header */
-                    add_reason_warning_hdr(tdata, 0, reason);
+                    add_reason_warning_hdr(tdata, 0, &reason);
 
                     accept = pjsip_endpt_get_capability(dlg->endpt, 
                                                         PJSIP_H_ACCEPT,
