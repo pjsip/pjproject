@@ -9,6 +9,7 @@ on:
 
 jobs:
   ubuntu-full-bundle:
+    if: github.repository == 'pjsip/pjproject'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
