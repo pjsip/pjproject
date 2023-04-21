@@ -1881,7 +1881,7 @@ public:
 
     /**
      * Notify application when an audio media session is about to be created
-     * (as opposed to onCallSdpCreated(), which is called *after* the session
+     * (as opposed to onStreamCreated(), which is called *after* the session
      * has been created). The application may change
      * some stream info parameter values, i.e: jbInit, jbMinPre, jbMaxPre,
      * jbMax, useKa, rtcpSdesByeDisabled, jbDiscardAlgo (audio),
