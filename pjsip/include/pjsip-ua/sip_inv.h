@@ -539,7 +539,9 @@ PJ_DECL(void) pjsip_inv_usage_dump(void);
  * @param dlg           The dialog which will be used by this invite session.
  * @param local_sdp     If application has determined its media capability, 
  *                      it can specify the SDP here. Otherwise it can leave 
- *                      this to NULL, to let remote UAS specifies an offer.
+ *                      this to NULL, if app wishes to specify the SDP at
+ *                      a later time using the API pjsip_inv_set_local_sdp(),
+ *                      or if it wants to let remote UAS specify an offer.
  * @param options       The options argument is bitmask combination of SIP 
  *                      features in pjsip_inv_option enumeration.
  * @param p_inv         On successful return, the invite session will be put 
