@@ -739,6 +739,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
             int cs_idx = get_crypto_idx(&opt->crypto[i].name);
             pj_str_t tmp_key = opt->crypto[i].key;
 
+            if (cs_idx == -1) continue;
+
             /* re-set crypto */
             srtp->setting.crypto[i].name = pj_str(crypto_suites[cs_idx].name);
             /* cut key length */
@@ -1019,7 +1021,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
         status = pj_base64_encode((pj_uint8_t*)tx->key.ptr, (int)tx->key.slen,
                                   b64, &b64_len);
         if (status != PJ_SUCCESS)
-            b64_len = pj_ansi_sprintf(b64, "--key too long--");
+            b64_len = pj_ansi_snprintf(b64, sizeof(b64), "--key too long--");
         else
             b64[b64_len] = '\0';
 
@@ -1036,7 +1038,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
         status = pj_base64_encode((pj_uint8_t*)rx->key.ptr, (int)rx->key.slen,
                                   b64, &b64_len);
         if (status != PJ_SUCCESS)
-            b64_len = pj_ansi_sprintf(b64, "--key too long--");
+            b64_len = pj_ansi_snprintf(b64, sizeof(b64), "--key too long--");
         else
             b64[b64_len] = '\0';
 
@@ -1578,7 +1580,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 
     if (err != srtp_err_status_ok) {
         PJ_LOG(5,(srtp->pool->obj_name,
-                  "Failed to unprotect SRTP, pkt size=%d, err=%s",
+                  "Failed to unprotect SRTP, pkt size=%ld, err=%s",
                   size, get_libsrtp_errstr(err)));
     } else {
         cb = srtp->rtp_cb;
@@ -1635,7 +1637,7 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     err = srtp_unprotect_rtcp(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
     if (err != srtp_err_status_ok) {
         PJ_LOG(5,(srtp->pool->obj_name,
-                  "Failed to unprotect SRTCP, pkt size=%d, err=%s",
+                  "Failed to unprotect SRTCP, pkt size=%ld, err=%s",
                   size, get_libsrtp_errstr(err)));
     } else {
         cb = srtp->rtcp_cb;

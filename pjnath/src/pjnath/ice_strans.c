@@ -904,7 +904,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     ice_st->num_buf = cfg->num_send_buf;
     status = alloc_send_buf(ice_st, cfg->send_buf_size);
     if (status != PJ_SUCCESS) {
-        destroy_ice_st(ice_st);
+        pj_grp_lock_destroy(ice_st->grp_lock);
+        pj_pool_release(pool);
         pj_log_pop_indent();
         return status;
     }
@@ -1016,6 +1017,7 @@ static void destroy_ice_st(pj_ice_strans *ice_st)
 
     if (ice_st->destroy_req) {
         pj_grp_lock_release(ice_st->grp_lock);
+        pj_log_pop_indent();
         return;
     }
 
@@ -1081,7 +1083,7 @@ PJ_DEF(const char*) pj_ice_strans_state_name(pj_ice_strans_state state)
 static void sess_fail(pj_ice_strans *ice_st, pj_ice_strans_op op,
                       const char *title, pj_status_t status)
 {
-    PJ_PERROR(4,(ice_st->obj_name, status, title));
+    PJ_PERROR(4,(ice_st->obj_name, status, "%s", title));
 
     pj_log_push_indent();
 
@@ -1572,8 +1574,6 @@ static pj_status_t setup_turn_perm( pj_ice_strans *ice_st)
             /* Gather remote addresses for this component */
             rem_cand_cnt = ice_st->ice->rcand_cnt;
             rem_cand = ice_st->ice->rcand;
-            if (status != PJ_SUCCESS)
-                continue;
 
             for (j=0; j<rem_cand_cnt && count<PJ_ARRAY_SIZE(addrs); ++j) {
                 if (rem_cand[j].comp_id==i+1 &&

@@ -594,7 +594,9 @@ struct TsxStateEventSrc
     pj_status_t     status;         /**< Transport error status.    */
     GenericData     data;           /**< Generic data.              */
 
-    TsxStateEventSrc() : status() {}
+    TsxStateEventSrc()
+    : timer(NULL), status(PJ_SUCCESS), data(NULL)
+    {}
 };
 
 /**
@@ -766,6 +768,11 @@ struct SipHeader
 
 public:
     /**
+     * Default constructor.
+     */
+    SipHeader();
+
+    /**
      * Initiaize from PJSIP header.
      */
     void fromPj(const pjsip_hdr *) PJSUA2_THROW(Error);
@@ -805,6 +812,8 @@ struct SipMultipartPart
     string              body;
 
 public:
+    SipMultipartPart();
+    
     /**
      * Initiaize from PJSIP's pjsip_multipart_part.
      */

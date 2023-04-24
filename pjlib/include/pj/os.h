@@ -387,6 +387,49 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
 
 /* **************************************************************************/
 /**
+ * @defgroup PJ_JNI Java Native Interface specific
+ * @ingroup PJ_OS
+ * @{
+ * Functionalities specific to JNI.
+ * Currently only implemented on Android OS, but may be extended to other
+ * platforms in the future.
+ *
+ */
+
+/**
+ * Set the Java Virtual Machine environment variable.
+ * Note that applications typically do not need to call this function unless
+ * PJ_JNI_HAS_JNI_ONLOAD is disabled.
+ *
+ * @param jvm           The Java Virtual Machine environment.
+ */
+PJ_DECL(void) pj_jni_set_jvm(void *jvm);
+
+/**
+ * Attach the current thread to a Java Virtual Machine.
+ *
+ * @param jni_env       Output parameter to store the JNI interface pointer.
+ *
+ * @return              PJ_TRUE if the attachment is successful,
+ *                      PJ_FALSE if otherwise.
+ */
+PJ_DECL(pj_bool_t) pj_jni_attach_jvm(void **jni_env);
+
+/**
+ * Detach the current thread from a Java Virtual Machine.
+ *
+ * @param attached      Specify whether the current thread is attached
+ *                      to a JVM.
+ */
+PJ_DECL(void) pj_jni_detach_jvm(pj_bool_t attached);
+
+
+/**
+ * @}
+ */
+
+/* **************************************************************************/
+/**
  * @defgroup PJ_SYMBIAN_OS Symbian OS Specific
  * @ingroup PJ_OS
  * @{

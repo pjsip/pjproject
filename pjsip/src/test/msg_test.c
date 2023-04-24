@@ -306,6 +306,8 @@ parse_msg:
             }
             goto on_return;
         }
+        status = -11;
+        goto on_return;
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
@@ -316,6 +318,10 @@ parse_msg:
 
     /* Create reference message. */
     ref_msg = entry->creator(pool);
+    if (ref_msg == NULL) {
+        status = -12;
+        goto on_return;
+    }
 
     /* Create buffer for comparison. */
     str1.ptr = (char*)pj_pool_alloc(pool, BUFLEN);
@@ -399,7 +405,7 @@ parse_msg:
     }
 
     /* Compare body? */
-    if (parsed_msg->body==NULL && ref_msg->body==NULL)
+    if (parsed_msg->body==NULL || ref_msg->body==NULL)
         goto print_msg;
 
     /* Compare msg body length. */
@@ -878,7 +884,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     avg_detect = 1000000 / avg_detect;
 
     PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB detected in %d.%03ds (avg=%d msg detection/sec)", 
+              "    %u.%u MB detected in %ld.%03lds (avg=%d msg detection/sec)", 
               (unsigned)(var.detect_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_detect));
@@ -894,7 +900,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     avg_parse = 1000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB parsed in %d.%03ds (avg=%d msg parsing/sec)", 
+              "    %u.%u MB parsed in %ld.%03lds (avg=%d msg parsing/sec)", 
               (unsigned)(var.parse_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_parse));
@@ -910,7 +916,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     avg_print = 1000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE, 
-              "    %u.%u MB printed in %d.%03ds (avg=%d msg print/sec)", 
+              "    %u.%u MB printed in %ld.%03lds (avg=%d msg print/sec)", 
               (unsigned)(var.print_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_print));
@@ -1906,7 +1912,7 @@ static int hdr_test(void)
         len = strlen(test->hcontent);
 #if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
         PJ_ASSERT_RETURN(len < sizeof(hcontent), PJSIP_EMSGTOOLONG);
-        strcpy(hcontent, test->hcontent);
+        pj_ansi_strxcpy(hcontent, test->hcontent, sizeof(hcontent));
 #else
         hcontent = test->hcontent;
 #endif
@@ -1937,7 +1943,7 @@ static int hdr_test(void)
             len = strlen(test->hcontent);
 #if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
             PJ_ASSERT_RETURN(len < sizeof(hcontent), PJSIP_EMSGTOOLONG);
-            strcpy(hcontent, test->hcontent);
+            pj_ansi_strxcpy(hcontent, test->hcontent, sizeof(hcontent));
 #else
             hcontent = test->hcontent;
 #endif
@@ -2027,7 +2033,8 @@ int msg_test(void)
 
     PJ_LOG(3,("", "  Maximum message detection/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP messages "
+    pj_ansi_snprintf(desc, sizeof(desc),
+                          "Number of SIP messages "
                           "can be pre-parse by <tt>pjsip_find_msg()</tt> "
                           "per second (tested with %d message sets with "
                           "average message length of "
@@ -2040,7 +2047,8 @@ int msg_test(void)
 
     PJ_LOG(3,("", "  Maximum message parsing/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP messages "
+    pj_ansi_snprintf(desc, sizeof(desc),
+                          "Number of SIP messages "
                           "can be <b>parsed</b> by <tt>pjsip_parse_msg()</tt> "
                           "per second (tested with %d message sets with "
                           "average message length of "
@@ -2060,7 +2068,8 @@ int msg_test(void)
 
     PJ_LOG(3,("", "  Maximum message print/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP messages "
+    pj_ansi_snprintf(desc, sizeof(desc),
+                          "Number of SIP messages "
                           "can be <b>printed</b> by <tt>pjsip_msg_print()</tt>"
                           " per second (tested with %d message sets with "
                           "average message length of "

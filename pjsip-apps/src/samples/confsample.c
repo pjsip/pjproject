@@ -227,7 +227,8 @@ int main(int argc, char *argv[])
                         );
         if (status != PJ_SUCCESS) {
             char title[80];
-            pj_ansi_sprintf(title, "Unable to use %s", argv[i+pj_optind]);
+            pj_ansi_snprintf(title, sizeof(title), "Unable to use %s",
+                             argv[i+pj_optind]);
             app_perror(THIS_FILE, title, status);
             usage();
             return 1;
@@ -492,8 +493,9 @@ static void conf_list(pjmedia_conf *conf, int detail)
         txlist[0] = '\0';
         for (j=0; j<port_info->listener_cnt; ++j) {
             char s[10];
-            pj_ansi_sprintf(s, "#%d ", port_info->listener_slots[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_snprintf(s, sizeof(s), "#%d ", 
+                             port_info->listener_slots[j]);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
 
         }
 

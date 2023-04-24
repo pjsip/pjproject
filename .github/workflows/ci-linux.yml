@@ -1,5 +1,10 @@
 name: CI Linux
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened]
 jobs:
   build-ubuntu-default:
   # checking pure lib source distribution with plain configure & make

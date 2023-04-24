@@ -53,7 +53,7 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
                                               NULL);
 
     /* Create transaction array */
-    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
+    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pjsip_transaction*));
 
     pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;
@@ -152,7 +152,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
 
     /* Create transaction array */
-    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
+    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pjsip_transaction*));
 
     pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;
@@ -164,7 +164,8 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     for (i=0; i<working_set; ++i) {
         via->branch_param.ptr = branch_buf;
         via->branch_param.slen = PJSIP_RFC3261_BRANCH_LEN + 
-                                    pj_ansi_sprintf(branch_buf+PJSIP_RFC3261_BRANCH_LEN,
+                                    pj_ansi_snprintf(branch_buf+PJSIP_RFC3261_BRANCH_LEN,
+                                                     sizeof(branch_buf)-PJSIP_RFC3261_BRANCH_LEN,
                                                     "-%d", i);
         status = pjsip_tsx_create_uas(&mod_tsx_user, &rdata, &tsx[i]);
         if (status != PJ_SUCCESS)
@@ -232,7 +233,8 @@ int tsx_bench(void)
 
     
     /* Report time */
-    pj_ansi_sprintf(desc, "Time to create %d UAC transactions, in miliseconds",
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Time to create %d UAC transactions, in miliseconds",
                           WORKING_SET);
     report_ival("create-uac-time", (unsigned)(min.u64 * 1000 / freq.u64), "msec", desc);
 
@@ -241,7 +243,8 @@ int tsx_bench(void)
     speed = (unsigned)(freq.u64 * WORKING_SET / min.u64);
     PJ_LOG(3,(THIS_FILE, "    UAC created at %d tsx/sec", speed));
 
-    pj_ansi_sprintf(desc, "Number of UAC transactions that potentially can be created per second "
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Number of UAC transactions that potentially can be created per second "
                           "with <tt>pjsip_tsx_create_uac()</tt>, based on the time "
                           "to create %d simultaneous transactions above.",
                           WORKING_SET);
@@ -272,7 +275,8 @@ int tsx_bench(void)
 
     
     /* Report time */
-    pj_ansi_sprintf(desc, "Time to create %d UAS transactions, in miliseconds",
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Time to create %d UAS transactions, in miliseconds",
                           WORKING_SET);
     report_ival("create-uas-time", (unsigned)(min.u64 * 1000 / freq.u64), "msec", desc);
 
@@ -281,7 +285,8 @@ int tsx_bench(void)
     speed = (unsigned)(freq.u64 * WORKING_SET / min.u64);
     PJ_LOG(3,(THIS_FILE, "    UAS created at %d tsx/sec", speed));
 
-    pj_ansi_sprintf(desc, "Number of UAS transactions that potentially can be created per second "
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Number of UAS transactions that potentially can be created per second "
                           "with <tt>pjsip_tsx_create_uas()</tt>, based on the time "
                           "to create %d simultaneous transactions above.",
                           WORKING_SET);

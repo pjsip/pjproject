@@ -193,7 +193,7 @@ static void alsa_error_handler (const char *file,
     }
 
     va_start (arg, fmt);
-    if (index < sizeof(err_msg)-1) {
+    if (index < (int)sizeof(err_msg)-1) {
         len = vsnprintf( err_msg+index, sizeof(err_msg)-index, fmt, arg);
         if (len < 1 || len >= (int)sizeof(err_msg)-index)
             len = sizeof(err_msg)-index-1;
@@ -201,7 +201,7 @@ static void alsa_error_handler (const char *file,
         err_msg[index] = '\0';
     }
     va_end(arg);
-    if (err && index < sizeof(err_msg)-1) {
+    if (err && index < (int)sizeof(err_msg)-1) {
         len = snprintf( err_msg+index, sizeof(err_msg)-index, ": %s",
                         snd_strerror(err));
         if (len < 1 || len >= (int)sizeof(err_msg)-index)
@@ -258,7 +258,7 @@ static pj_status_t add_dev (struct alsa_factory *af, const char *dev_name)
     pj_bzero(adi, sizeof(*adi));
 
     /* Set device name */
-    strncpy(adi->name, dev_name, sizeof(adi->name));
+    pj_ansi_strxcpy(adi->name, dev_name, sizeof(adi->name));
 
     /* Check the number of playback channels */
     adi->output_count = (pb_result>=0) ? 1 : 0;
@@ -270,7 +270,7 @@ static pj_status_t add_dev (struct alsa_factory *af, const char *dev_name)
     adi->default_samples_per_sec = 8000;
 
     /* Driver name */
-    strcpy(adi->driver, "ALSA");
+    pj_ansi_strxcpy(adi->driver, "ALSA", sizeof(adi->driver));
 
     ++af->dev_cnt;
 
@@ -311,17 +311,15 @@ static void get_mixer_name(struct alsa_factory *af)
         {
             if (snd_mixer_selem_has_playback_volume(elem))
             {
-                pj_ansi_strncpy(af->pb_mixer_name, elemname,
-                                sizeof(af->pb_mixer_name));
-                af->pb_mixer_name[sizeof(af->pb_mixer_name)-1] = 0;
+                pj_ansi_strxcpy(af->pb_mixer_name, elemname,
+                                     sizeof(af->pb_mixer_name));
                 TRACE_((THIS_FILE, "Playback mixer name: %s",
                         af->pb_mixer_name));
             }
             if (snd_mixer_selem_has_capture_volume(elem))
             {
-                pj_ansi_strncpy(af->cap_mixer_name, elemname,
-                                sizeof(af->cap_mixer_name));
-                af->cap_mixer_name[sizeof(af->cap_mixer_name)-1] = 0;
+                pj_ansi_strxcpy(af->cap_mixer_name, elemname,
+                                     sizeof(af->cap_mixer_name));
                 TRACE_((THIS_FILE, "Capture mixer name: %s",
                         af->cap_mixer_name));
             }
@@ -451,7 +449,7 @@ static pj_status_t alsa_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 {
     struct alsa_factory *af = (struct alsa_factory*)f;
 
-    PJ_ASSERT_RETURN(index>=0 && index<af->dev_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(index<af->dev_cnt, PJ_EINVAL);
 
     pj_memcpy(info, &af->devs[index], sizeof(*info));
     info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
@@ -470,7 +468,7 @@ static pj_status_t alsa_factory_default_param(pjmedia_aud_dev_factory *f,
     struct alsa_factory *af = (struct alsa_factory*)f;
     pjmedia_aud_dev_info *adi;
 
-    PJ_ASSERT_RETURN(index>=0 && index<af->dev_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(index<af->dev_cnt, PJ_EINVAL);
 
     adi = &af->devs[index];
 
@@ -637,7 +635,7 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     snd_pcm_uframes_t tmp_buf_size;
     snd_pcm_uframes_t tmp_period_size;
 
-    if (param->play_id < 0 || param->play_id >= stream->af->dev_cnt)
+    if (param->play_id < 0 || param->play_id >= (int)stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
     /* Open PCM for playback */
@@ -755,7 +753,7 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     }
 
     PJ_LOG (5,(THIS_FILE, "Opened device alsa(%s) for playing, sample rate=%d"
-               ", ch=%d, bits=%d, period size=%d frames, latency=%d ms",
+               ", ch=%d, bits=%d, period size=%ld frames, latency=%d ms",
                stream->af->devs[param->play_id].name,
                rate, param->channel_count,
                param->bits_per_sample, stream->pb_frames,
@@ -775,7 +773,7 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     snd_pcm_uframes_t tmp_buf_size;
     snd_pcm_uframes_t tmp_period_size;
 
-    if (param->rec_id < 0 || param->rec_id >= stream->af->dev_cnt)
+    if (param->rec_id < 0 || param->rec_id >= (int)stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
     /* Open PCM for capture */
@@ -893,7 +891,7 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     }
 
     PJ_LOG (5,(THIS_FILE, "Opened device alsa(%s) for capture, sample rate=%d"
-               ", ch=%d, bits=%d, period size=%d frames, latency=%d ms",
+               ", ch=%d, bits=%d, period size=%ld frames, latency=%d ms",
                stream->af->devs[param->rec_id].name,
                rate, param->channel_count,
                param->bits_per_sample, stream->ca_frames,

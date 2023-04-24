@@ -126,7 +126,6 @@ AudioMediaTransmitParam::AudioMediaTransmitParam()
 AudioMedia::AudioMedia() 
 : Media(PJMEDIA_TYPE_AUDIO), id(PJSUA_INVALID_ID), mediaPool(NULL)
 {
-
 }
 
 void AudioMedia::registerMediaPort(MediaPort port) PJSUA2_THROW(Error)
@@ -174,7 +173,7 @@ void AudioMedia::registerMediaPort2(MediaPort port, pj_pool_t *pool)
     Endpoint::instance().mediaAdd(*this);
 }
 
-void AudioMedia::unregisterMediaPort()
+void AudioMedia::unregisterMediaPort() PJSUA2_THROW(Error)
 {
     if (id != PJSUA_INVALID_ID) {
         pjsua_conf_remove_port(id);
@@ -275,7 +274,7 @@ AudioMediaPlayer::AudioMediaPlayer()
 AudioMediaPlayer::~AudioMediaPlayer()
 {
     if (playerId != PJSUA_INVALID_ID) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_player_destroy(playerId);
     }
 }
@@ -418,7 +417,7 @@ AudioMediaRecorder::AudioMediaRecorder()
 AudioMediaRecorder::~AudioMediaRecorder()
 {
     if (recorderId != PJSUA_INVALID_ID) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_recorder_destroy(recorderId);
     }
 }
@@ -466,7 +465,7 @@ ToneGenerator::ToneGenerator()
 ToneGenerator::~ToneGenerator()
 {
     if (tonegen) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjmedia_port_destroy(tonegen);
         tonegen = NULL;
     }
@@ -666,7 +665,7 @@ DevAudioMedia::~DevAudioMedia()
 {
     /* Avoid removing this port (conf port id=0) from conference */
     this->id = PJSUA_INVALID_ID;
-    unregisterMediaPort();
+    PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -681,7 +680,13 @@ AudDevManager::~AudDevManager()
 {
     // At this point, devMedia should have been cleaned up by Endpoint,
     // as AudDevManager destructor is called after Endpoint destructor.
-    //delete devMedia;
+#if DEPRECATED_FOR_TICKET_2232
+    // Starting from ticket #2232, Endpoint no longer cleans up media.
+    if (devMedia) {
+        delete devMedia;
+        devMedia = NULL;
+    }
+#endif
     
     clearAudioDevList();
 }
@@ -714,6 +719,7 @@ void AudDevManager::setCaptureDev(int capture_dev) const PJSUA2_THROW(Error)
 {    
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.capture_dev = capture_dev;
     
@@ -733,6 +739,7 @@ void AudDevManager::setPlaybackDev(int playback_dev) const PJSUA2_THROW(Error)
 {
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.playback_dev = playback_dev;
 
@@ -799,6 +806,7 @@ void AudDevManager::setSndDevMode(unsigned mode) const PJSUA2_THROW(Error)
 {    
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.mode = mode;
     PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );
@@ -1104,7 +1112,7 @@ ExtraAudioDevice::ExtraAudioDevice (int playdev, int recdev) :
 
 ExtraAudioDevice::~ExtraAudioDevice()
 {
-    close();
+    PJSUA2_CATCH_IGNORE( close() );
 }
 
 void ExtraAudioDevice::open()
@@ -1152,7 +1160,7 @@ bool ExtraAudioDevice::isOpened()
     return (id != PJSUA_INVALID_ID);
 }
 
-void ExtraAudioDevice::close()
+void ExtraAudioDevice::close() PJSUA2_THROW(Error)
 {
     /* Unregister from the conference bridge */
     id = PJSUA_INVALID_ID;

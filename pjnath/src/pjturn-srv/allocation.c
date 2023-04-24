@@ -326,8 +326,9 @@ PJ_DEF(pj_status_t) pj_turn_allocation_create(pj_turn_transport *transport,
     alloc->ch_table = pj_hash_create(pool, PEER_TABLE_SIZE);
 
     /* Print info */
-    pj_ansi_strcpy(alloc->info,
-                   pj_turn_tp_type_name(transport->listener->tp_type));
+    pj_ansi_strxcpy(alloc->info,
+                    pj_turn_tp_type_name(transport->listener->tp_type),
+                    sizeof(alloc->info));
     alloc->info[3] = ':';
     pj_sockaddr_print(src_addr, alloc->info+4, sizeof(alloc->info)-4, 3);
 
@@ -706,7 +707,14 @@ static pj_status_t create_relay(pj_turn_srv *srv,
     }
     if (!pj_sockaddr_has_addr(&relay->hkey.addr)) {
         pj_sockaddr tmp_addr;
-        pj_gethostip(af, &tmp_addr);
+        status = pj_gethostip(af, &tmp_addr);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(4,(THIS_FILE, "pj_gethostip() failed: err %d",
+                      status));
+            pj_sock_close(relay->tp.sock);
+            relay->tp.sock = PJ_INVALID_SOCKET;
+            return status;
+        }
         pj_sockaddr_copy_addr(&relay->hkey.addr, &tmp_addr);
     }
 
@@ -1026,7 +1034,7 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
             char peer_addr[80];
             pj_sockaddr_print(src_addr, peer_addr, sizeof(peer_addr), 3);
             PJ_LOG(4,(alloc->obj_name, "Client %s: discarded data from %s "
-                      "because it's too long (%d bytes)",
+                      "because it's too long (%ld bytes)",
                       alloc->info, peer_addr, len));
             return;
         }

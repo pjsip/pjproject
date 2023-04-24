@@ -556,7 +556,10 @@ static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
     /* Get real capture ID, if set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV */
     if (id == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
         pjmedia_vid_dev_info info;
-        pjmedia_vid_dev_get_info(id, &info);
+        if (pjmedia_vid_dev_get_info(id, &info) != PJ_SUCCESS) {
+            PJSUA_UNLOCK();
+            return wid;
+        }
         id = info.id;
     }
 
@@ -1775,8 +1778,13 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_show( pjsua_vid_win_id wid,
     }
 
     /* Make sure that renderer gets started before shown up */
-    if (show && !pjmedia_vid_port_is_running(w->vp_rend))
+    if (show && w->vp_rend && !pjmedia_vid_port_is_running(w->vp_rend)) {
         status = pjmedia_vid_port_start(w->vp_rend);
+        if (status != PJ_SUCCESS) {
+            PJSUA_UNLOCK();
+            return status;
+        }
+    }
 
     hide = !show;
     status = pjmedia_vid_dev_stream_set_cap(s,
@@ -2287,7 +2295,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
         sdp->media[med_idx] = sdp_m;
 
-        if (call_med->dir == PJMEDIA_DIR_NONE) {
+        if (call_med->dir == PJMEDIA_DIR_NONE && call_med->tp) {
             /* Update SDP media line by media transport */
             status = pjmedia_transport_encode_sdp(call_med->tp, pool,
                                                   sdp, NULL, call_med->idx);
@@ -2664,7 +2672,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
          */
         if (param_.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
             pjmedia_vid_dev_info info;
-            pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+            status = pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+            if (status != PJ_SUCCESS)
+                goto on_return;
             pj_assert(info.dir == PJMEDIA_DIR_CAPTURE);
             param_.cap_dev = info.id;
         }

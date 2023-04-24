@@ -65,7 +65,7 @@ static void print_menu(const char *indent, char *menu_id, gui_menu *menu)
     for (i=0; i<menu->submenu_cnt; ++i) {
         char child_id[10];
 
-        pj_ansi_sprintf(child_id, "%s%u", menu_id, i);
+        pj_ansi_snprintf(child_id, sizeof(child_id), "%s%u", menu_id, i);
 
         if (!menu->submenus[i])
             puts("");
@@ -85,7 +85,7 @@ pj_status_t gui_start(gui_menu *menu)
         puts("---------");
         for (i=0; i<menu->submenu_cnt; ++i) {
             char menu_id[11];
-            pj_ansi_sprintf(menu_id, "%u", i);
+            pj_ansi_snprintf(menu_id, sizeof(menu_id), "%u", i);
             print_menu("", menu_id, menu->submenus[i]);
         }
         puts("");

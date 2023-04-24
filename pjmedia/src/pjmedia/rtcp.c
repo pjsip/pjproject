@@ -627,8 +627,8 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
             eedelay *= 1000;
         }
 
-        TRACE_((sess->name, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
-                           "now=%p, rtt=%p",
+        TRACE_((sess->name, "Rx RTCP RR: lsr=%u, dlsr=%u (%u:%03ums), "
+                           "now=%u, rtt=%u",
                 lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
                 now, (pj_uint32_t)eedelay));
         
@@ -669,7 +669,7 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
 
         } else {
             PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "
-                                   "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
+                                   "lsr=%u, now=%u, dlsr=%u (%u:%03ums), "
                                    "diff=%d",
                                    lsr, now, dlsr, dlsr/65536,
                                    (dlsr%65536)*1000/65536,
@@ -787,7 +787,7 @@ static void parse_rtcp_bye(pjmedia_rtcp_session *sess,
 
     /* Just print RTCP BYE log */
     PJ_LOG(5, (sess->name, "Received RTCP BYE, reason: %.*s",
-               reason.slen, reason.ptr));
+               (int)reason.slen, reason.ptr));
 }
 
 
@@ -1023,8 +1023,8 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
         dlsr = (pj_uint32_t)(ts.u64 - lsr_time);
         rr->dlsr = pj_htonl(dlsr);
 
-        TRACE_((sess->name,"Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
-                           "(%ds:%03dms)",
+        TRACE_((sess->name,"Tx RTCP RR: lsr=%u, lsr_time=%u, now=%u, dlsr=%u"
+                           "(%us:%03ums)",
                            lsr, 
                            (pj_uint32_t)lsr_time,
                            (pj_uint32_t)ts.u64, 

@@ -903,7 +903,7 @@ static void on_ice_complete(pjmedia_transport *tp,
         } else {
             call_med->state = PJSUA_CALL_MEDIA_ERROR;
             call_med->dir = PJMEDIA_DIR_NONE;
-            if (call && !call->hanging_up &&
+            if (!call->hanging_up &&
                 pjsua_var.ua_cfg.cb.on_call_media_state)
             {
                 /* Defer the callback to a timer */
@@ -1642,7 +1642,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
-    pjsua_call *call = call_med? call_med->call : NULL;
+    pjsua_call *call = call_med->call;
     char ev_name[5];
     pj_status_t status = PJ_SUCCESS;
 
@@ -1751,18 +1751,12 @@ pj_status_t call_media_on_event(pjmedia_event *event,
         }
 
         pj_mutex_unlock(pjsua_var.timer_mutex);
-        
-        if (call) {
-            if (call->hanging_up)
-                return status;
 
-            eve->call_id = call->index;
-            eve->med_idx = call_med->idx;
-        } else {
-            /* Also deliver non call events such as audio device error */
-            eve->call_id = PJSUA_INVALID_ID;
-            eve->med_idx = 0;
-        }
+        if (call->hanging_up)
+            return status;
+
+        eve->call_id = call->index;
+        eve->med_idx = call_med->idx;
         pj_memcpy(&eve->event, event, sizeof(pjmedia_event));
         pjsua_schedule_timer2(&call_med_event_cb, eve, 1);
     }
@@ -1810,7 +1804,7 @@ static void on_srtp_nego_complete(pjmedia_transport *tp,
     if (result != PJ_SUCCESS) {
         call_med->state = PJSUA_CALL_MEDIA_ERROR;
         call_med->dir = PJMEDIA_DIR_NONE;
-        if (call && !call->hanging_up &&
+        if (!call->hanging_up &&
             pjsua_var.ua_cfg.cb.on_call_media_state)
         {
             /* Defer the callback to a timer */
@@ -1953,9 +1947,6 @@ on_return:
             pjmedia_transport_close(call_med->tp);
             call_med->tp = NULL;
         }
-
-        if (err_code == 0)
-            err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
 
         if (sip_err_code)
             *sip_err_code = err_code;
@@ -2488,7 +2479,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         call->med_ch_cb = cb;
     }
 
-    if (rem_sdp) {
+    if (rem_sdp && call->inv) {
         call->async_call.rem_sdp =
             pjmedia_sdp_session_clone(call->inv->pool_prov, rem_sdp);
     } else {
@@ -3191,6 +3182,7 @@ static void log_call_dump(int call_id)
     pj_status_t status;
 
     pool = pjsua_pool_create("tmp", 1024, 1024);
+    if (!pool) return;
     buf = pj_pool_alloc(pool, sizeof(char) * BUF_LEN);
 
     status = pjsua_call_dump(call_id, PJ_TRUE, buf, BUF_LEN, "  ");
@@ -3221,8 +3213,7 @@ static void log_call_dump(int call_id)
     pj_log_set_decor(log_decor);
 
 on_return:
-    if (pool)
-        pj_pool_release(pool);
+    pj_pool_release(pool);
 }
 
 
@@ -3476,6 +3467,10 @@ static void check_srtp_roc(pjsua_call *call,
             new_rem_addr = &new_si_->info.vid.rem_addr;
         }
 #endif
+        else {
+            /* Just return for other media type */
+            return;
+        }
 
         /* Local IP address changes */
         if (pj_sockaddr_cmp(prev_local_addr, new_local_addr))
@@ -3621,6 +3616,7 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
         }
 
         /* Compare codec param */
+        PJ_ASSERT_RETURN(new_cp, PJ_FALSE);
         if (old_cp->setting.frm_per_pkt != new_cp->setting.frm_per_pkt ||
             old_cp->setting.vad != new_cp->setting.vad ||
             old_cp->setting.cng != new_cp->setting.cng ||
@@ -4123,7 +4119,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                     dir = "unknown";
                     break;
                 }
-                len = pj_ansi_sprintf( info+info_len,
+                len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                        ", stream #%d: %.*s (%s)", mi,
                                        (int)si->fmt.encoding_name.slen,
                                        si->fmt.encoding_name.ptr,
@@ -4220,9 +4216,18 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                 }
             }
 
-            /* Check if this media is changed */
             stream_info.type = PJMEDIA_TYPE_VIDEO;
             stream_info.info.vid = the_si;
+
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+            /* Check if we need to reset or maintain SRTP ROC */
+            check_srtp_roc(call, mi, &stream_info,
+                           local_sdp->media[mi], remote_sdp->media[mi]);
+#endif
+#endif
+
+            /* Check if this media is changed */
             if (is_media_changed(call, mi, &stream_info)) {
                 media_changed = PJ_TRUE;
                 /* Stop the media */
@@ -4331,7 +4336,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                     dir = "unknown";
                     break;
                 }
-                len = pj_ansi_sprintf( info+info_len,
+                len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                        ", stream #%d: %.*s (%s)", mi,
                                        (int)si->codec_info.encoding_name.slen,
                                        si->codec_info.encoding_name.ptr,

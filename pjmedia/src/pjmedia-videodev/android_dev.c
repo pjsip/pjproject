@@ -248,30 +248,8 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jlong user_data);
 #endif
 
-
-static pj_bool_t jni_get_env(JNIEnv **jni_env)
-{
-    pj_bool_t with_attach = PJ_FALSE;
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                              JNI_VERSION_1_4) < 0)
-    {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
-        {
-            *jni_env = NULL;
-        } else {
-            with_attach = PJ_TRUE;
-        }
-    }
-    
-    return with_attach;
-}
-
-
-static void jni_detach_env(pj_bool_t need_detach)
-{
-    if (need_detach)
-        (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
-}
+#define jni_get_env(jni_env)     pj_jni_attach_jvm((void **)jni_env)
+#define jni_detach_env(attached) pj_jni_detach_jvm(attached)
 
 
 /* Get Java object IDs (via FindClass, GetMethodID, GetFieldID, etc).
@@ -540,12 +518,12 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
                     PJMEDIA_VID_DEV_CAP_ORIENTATION;
 
         /* Set driver & name info */
-        pj_ansi_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
+        pj_ansi_strxcpy(vdi->driver, "Android", sizeof(vdi->driver));
         adi->facing = facing;
         if (facing == 0) {
-            pj_ansi_strncpy(vdi->name, "Back camera", sizeof(vdi->name));
+            pj_ansi_strxcpy(vdi->name, "Back camera", sizeof(vdi->name));
         } else {
-            pj_ansi_strncpy(vdi->name, "Front camera", sizeof(vdi->name));
+            pj_ansi_strxcpy(vdi->name, "Front camera", sizeof(vdi->name));
         }
 
         /* Get supported sizes */

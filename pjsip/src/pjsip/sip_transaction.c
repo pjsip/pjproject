@@ -143,6 +143,7 @@ enum
 {
     NO_NOTIFY = 1,
     NO_SCHEDULE_HANDLER = 2,
+    RELEASE_LOCK = 4
 };
 
 /* Prototypes. */
@@ -1330,16 +1331,18 @@ static void tsx_set_state( pjsip_transaction *tsx,
          * 3. tsx_shutdown() hasn't been called.
          * Refer to ticket #2001 (https://github.com/pjsip/pjproject/issues/2001).
          */
-        if (event_src_type == PJSIP_EVENT_TIMER &&
-            (pj_timer_entry *)event_src == &tsx->timeout_timer)
+        if ((flag & RELEASE_LOCK) != 0 ||
+            (event_src_type == PJSIP_EVENT_TIMER &&
+             (pj_timer_entry *)event_src == &tsx->timeout_timer))
         {
             pj_grp_lock_release(tsx->grp_lock);
         }
 
         (*tsx->tsx_user->on_tsx_state)(tsx, &e);
 
-        if (event_src_type == PJSIP_EVENT_TIMER &&
-            (pj_timer_entry *)event_src == &tsx->timeout_timer)
+        if ((flag & RELEASE_LOCK) != 0 ||
+            (event_src_type == PJSIP_EVENT_TIMER &&
+             (pj_timer_entry *)event_src == &tsx->timeout_timer))
         {
             pj_grp_lock_acquire(tsx->grp_lock);
         }
@@ -2020,7 +2023,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
             err =pj_strerror((pj_status_t)-sent, errmsg, sizeof(errmsg));
 
             PJ_LOG(3,(tsx->obj_name,
-                      "Failed to send %s! err=%d (%s)",
+                      "Failed to send %s! err=%ld (%s)",
                       pjsip_tx_data_get_info(send_state->tdata), -sent,
                       errmsg));
 
@@ -2044,9 +2047,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
             if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
-                tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                /* Set tsx state to TERMINATED, but release the lock
+                 * when invoking the callback, to avoid deadlock.
+                 */
+                tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
                                PJSIP_EVENT_TRANSPORT_ERROR,
-                               send_state->tdata, 0);
+                               send_state->tdata, RELEASE_LOCK);
             } 
             /* Don't forget to destroy if we have pending destroy flag
              * (https://github.com/pjsip/pjproject/issues/906)

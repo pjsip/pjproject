@@ -74,7 +74,7 @@ int test_inner(void)
         return rc;
     }
 
-    //pj_dump_config();
+    pj_dump_config();
     pj_caching_pool_init( &caching_pool, NULL, 0 );
 
     if (param_ci_mode)
@@ -212,7 +212,7 @@ on_return:
 
     pj_caching_pool_destroy( &caching_pool );
 
-    PJ_LOG(3,("test", ""));
+    PJ_LOG(3,("test", " "));
 
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
     PJ_LOG(3,("test", "Stack max usage: %u, deepest: %s:%u",

@@ -233,7 +233,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
             continue;
         }
 
-        if (rr->rdata.srv.target.slen > PJ_MAX_HOSTNAME) {
+        if (rr->rdata.srv.target.slen >= PJ_MAX_HOSTNAME) {
             PJ_LOG(4,(query_job->objname, "Hostname is too long!"));
             continue;
         }
@@ -456,7 +456,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
             pj_sockaddr_print(&query_job->srv[i].addr[0],
                          addr, sizeof(addr), 2);
         } else
-            pj_ansi_strcpy(addr, "-");
+            pj_ansi_strxcpy(addr, "-", sizeof(addr));
 
         PJ_LOG(5,(query_job->objname, 
                   " %d: SRV %d %d %d %.*s (%s)",

@@ -352,8 +352,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
         status = pjmedia_sdp_attr_get_rtcp(attr, &rtcp);
         if (status == PJ_SUCCESS) {
             if (rtcp.addr.slen) {
-                status = pj_sockaddr_init(rem_af, &si->rem_rtcp, &rtcp.addr,
-                                          (pj_uint16_t)rtcp.port);
+                pj_sockaddr_init(rem_af, &si->rem_rtcp, &rtcp.addr,
+                                 (pj_uint16_t)rtcp.port);
             } else {
                 pj_sockaddr_init(rem_af, &si->rem_rtcp, NULL,
                                  (pj_uint16_t)rtcp.port);

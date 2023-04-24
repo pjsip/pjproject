@@ -998,7 +998,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_parse = 1000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE,
-              "    %u.%u MB of urls parsed in %d.%03ds (avg=%d urls/sec)",
+              "    %u.%u MB of urls parsed in %ld.%03lds (avg=%d urls/sec)",
               (unsigned)(var.parse_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_parse));
@@ -1017,7 +1017,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_print = 1000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE,
-              "    %u.%u MB of urls printed in %d.%03ds (avg=%d urls/sec)",
+              "    %u.%u MB of urls printed in %ld.%03lds (avg=%d urls/sec)",
               (unsigned)(var.print_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_print));
@@ -1036,7 +1036,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_cmp = 1000000 / avg_cmp;
 
     PJ_LOG(3,(THIS_FILE,
-              "    %u.%u MB of urls compared in %d.%03ds (avg=%d urls/sec)",
+              "    %u.%u MB of urls compared in %ld.%03lds (avg=%d urls/sec)",
               (unsigned)(var.cmp_len/1000000), (unsigned)kbytes,
               elapsed.sec, elapsed.msec,
               (unsigned)avg_cmp));
@@ -1090,7 +1090,8 @@ int uri_test(void)
 
     PJ_LOG(3,("", "  Maximum URI parse/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>parsed</B> with "
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Number of SIP/TEL URIs that can be <B>parsed</B> with "
                           "<tt>pjsip_parse_uri()</tt> per second "
                           "(tested with %d URI set, with average length of "
                           "%d chars)",
@@ -1110,7 +1111,8 @@ int uri_test(void)
 
     PJ_LOG(3,("", "  Maximum URI print/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>printed</B> with "
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Number of SIP/TEL URIs that can be <B>printed</B> with "
                           "<tt>pjsip_uri_print()</tt> per second "
                           "(tested with %d URI set, with average length of "
                           "%d chars)",
@@ -1124,7 +1126,8 @@ int uri_test(void)
 
     PJ_LOG(3,("", "  Maximum URI comparison/sec=%u", max));
 
-    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>compared</B> with "
+    pj_ansi_snprintf(desc, sizeof(desc), 
+                          "Number of SIP/TEL URIs that can be <B>compared</B> with "
                           "<tt>pjsip_uri_cmp()</tt> per second "
                           "(tested with %d URI set, with average length of "
                           "%d chars)",

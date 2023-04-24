@@ -363,7 +363,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
      */
     if (sizeof(fd_set) < FD_SETSIZE && sock >= FD_SETSIZE) {
         PJ_LOG(4, ("pjlib", "Failed to register socket to ioqueue because "
-                            "socket fd is too big (fd=%d/FD_SETSIZE=%d)",
+                            "socket fd is too big (fd=%ld/FD_SETSIZE=%d)",
                             sock, FD_SETSIZE));
         return PJ_ETOOBIG;
     }
