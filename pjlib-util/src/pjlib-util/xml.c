@@ -358,6 +358,15 @@ PJ_DEF(void) pj_xml_add_attr( pj_xml_node *node, pj_xml_attr *attr )
     pj_list_push_back(&node->attr_head, attr);
 }
 
+static int node_name_cmp(pj_str_t *node_name, pj_str_t *name)
+{
+    pj_str_t node;
+
+    node.ptr = node_name->ptr + (node_name->slen - name->slen);
+    node.slen = name->slen;
+    return pj_stricmp(&node, name);
+}
+
 PJ_DEF(pj_xml_node*) pj_xml_find_node(const pj_xml_node *parent, 
                                       const pj_str_t *name)
 {
@@ -366,7 +375,7 @@ PJ_DEF(pj_xml_node*) pj_xml_find_node(const pj_xml_node *parent,
     PJ_CHECK_STACK();
 
     while (node != (void*)&parent->node_head) {
-        if (pj_stricmp(&node->name, name) == 0)
+        if (node_name_cmp(&node->name, name) == 0)
             return (pj_xml_node*)node;
         node = node->next;
     }
@@ -382,7 +391,7 @@ PJ_DEF(pj_xml_node*) pj_xml_find_node_rec(const pj_xml_node *parent,
 
     while (node != (void*)&parent->node_head) {
         pj_xml_node *found;
-        if (pj_stricmp(&node->name, name) == 0)
+        if (node_name_cmp(&node->name, name) == 0)
             return (pj_xml_node*)node;
         found = pj_xml_find_node_rec(node, name);
         if (found)
@@ -400,7 +409,7 @@ PJ_DEF(pj_xml_node*) pj_xml_find_next_node( const pj_xml_node *parent,
 
     node = node->next;
     while (node != (void*)&parent->node_head) {
-        if (pj_stricmp(&node->name, name) == 0)
+        if (node_name_cmp(&node->name, name) == 0)
             return (pj_xml_node*)node;
         node = node->next;
     }
@@ -442,7 +451,7 @@ PJ_DEF(pj_xml_node*) pj_xml_find( const pj_xml_node *parent,
 
     while (node != (const pj_xml_node*) &parent->node_head) {
         if (name) {
-            if (pj_stricmp(&node->name, name)!=0) {
+            if (node_name_cmp(&node->name, name)!=0) {
                 node = node->next;
                 continue;
             }
@@ -474,7 +483,7 @@ PJ_DEF(pj_xml_node*) pj_xml_find_rec( const pj_xml_node *parent,
         pj_xml_node *found;
 
         if (name) {
-            if (pj_stricmp(&node->name, name)==0) {
+            if (node_name_cmp(&node->name, name)==0) {
                 if (match) {
                     if (match(node, data))
                         return (pj_xml_node*)node;
