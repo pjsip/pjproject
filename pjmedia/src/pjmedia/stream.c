@@ -1083,6 +1083,12 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
     int len, max_len;
     pj_status_t status;
 
+    /* We need to prevent data race since there is only a single instance
+     * of rtcp packet buffer. Let's just use the JB mutex for this instead
+     * of creating a separate lock.
+     */
+    pj_mutex_lock(stream->jb_mutex);
+
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
 
@@ -1201,6 +1207,8 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
             stream->rtcp_tx_err_cnt = 0;
         }
     }
+
+    pj_mutex_unlock(stream->jb_mutex);
 
     return status;
 }
