@@ -383,6 +383,8 @@ struct pjmedia_sdp_conn
     pj_str_t    net_type;       /**< Network type ("IN").               */
     pj_str_t    addr_type;      /**< Address type ("IP4", "IP6").       */
     pj_str_t    addr;           /**< The address.                       */
+    pj_uint8_t  ttl;            /**< Multicast address TTL              */
+    pj_uint8_t  no_addr;        /**< Multicast number of addresses      */
 };
 
 

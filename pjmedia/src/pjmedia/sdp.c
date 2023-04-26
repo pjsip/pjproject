@@ -1151,7 +1151,28 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
 
     /* address. */
     pj_scan_get_until_chr(scanner, "/ \t\r\n", &conn->addr);
-    PJ_TODO(PARSE_SDP_CONN_ADDRESS_SUBFIELDS);
+    /* Parse multicast details, if any. */
+    if (*scanner->curptr == '/') {
+        pj_str_t str;
+        unsigned long ul;
+
+        pj_scan_get_until_chr(scanner, "/ \t\r\n", &str);
+        if (*scanner->curptr == '/') {
+            if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
+                on_scanner_error(scanner);
+                return;
+            }
+
+            conn->ttl = (pj_uint8_t)ul;
+        }        
+
+        if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
+            on_scanner_error(scanner);
+            return;
+        }
+        conn->no_addr = (pj_uint8_t)ul;
+
+    }
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
