@@ -1503,23 +1503,22 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     if (is_shutdown)
         return PJ_TRUE;
 
+    /* Start keep-alive timer */
+    if (pjsip_cfg()->tls.keep_alive_interval) {
+        pj_time_val delay = {0};
+        delay.sec = pjsip_cfg()->tls.keep_alive_interval;
+        pjsip_endpt_schedule_timer(listener->endpt,
+                                   &tls->ka_timer,
+                                   &delay);
+        tls->ka_timer.id = PJ_TRUE;
+        pj_gettimeofday(&tls->last_activity);
+    }
 
     status = tls_start_read(tls);
     if (status != PJ_SUCCESS) {
         PJ_LOG(3,(tls->base.obj_name, "New transport cancelled"));
         tls_init_shutdown(tls, status);
         tls_destroy(&tls->base, status);
-    } else {
-        /* Start keep-alive timer */
-        if (pjsip_cfg()->tls.keep_alive_interval) {
-            pj_time_val delay = {0};        
-            delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-            pjsip_endpt_schedule_timer(listener->endpt, 
-                                       &tls->ka_timer, 
-                                       &delay);
-            tls->ka_timer.id = PJ_TRUE;
-            pj_gettimeofday(&tls->last_activity);
-        }
     }
 
     return PJ_TRUE;
