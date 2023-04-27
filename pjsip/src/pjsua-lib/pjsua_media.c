@@ -3017,9 +3017,9 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     if (acc->cfg.enable_rtcp_xr) {
         pjmedia_sdp_attr *a;
         const char *STR_RTCP_XR = "rtcp-xr";
-        const pj_str_t value =
-            pj_str("pkt-loss-rle pkt-dup-rle pkt-rcpt-times rcvr-rtt "
-                   "stat-summary voip-metrics");
+        /* Currently we don't support pkt-loss-rle pkt-dup-rle pkt-rcpt-times
+         */
+        const pj_str_t value = pj_str("rcvr-rtt stat-summary voip-metrics");
 
         a = pjmedia_sdp_attr_create(pool, STR_RTCP_XR, &value);
         pjmedia_sdp_attr_add(&sdp->attr_count, sdp->attr, a);
