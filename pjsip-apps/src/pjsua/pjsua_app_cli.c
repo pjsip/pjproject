@@ -1498,6 +1498,7 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
     char dest[64] = {0};
     char out_str[128];
     pj_str_t tmp = pj_str(dest);
+    pj_bool_t loop = PJ_FALSE;
 
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));
 
@@ -1510,26 +1511,38 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 
     /* input destination. */
     get_input_url(tmp.ptr, tmp.slen, cval, &result);
-    if (result.nb_result != PJSUA_APP_NO_NB) {
-        pjsua_buddy_info binfo;
-        if (result.nb_result == -1 || result.nb_result == 0) {
-            const pj_str_t err_msg =
-                           pj_str("You can't do that with make call!\n");
-            pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
-            return PJ_SUCCESS;
-        }
-        pjsua_buddy_get_info(result.nb_result-1, &binfo);
-        pj_strncpy(&tmp, &binfo.uri, sizeof(dest));
-    } else if (result.uri_result) {
-        tmp = pj_str(result.uri_result);
-    } else {
-        tmp.slen = 0;
-    }
+    do {
+        if (result.nb_result != PJSUA_APP_NO_NB) {
+            pjsua_buddy_info binfo;
 
-    pjsua_msg_data_init(&msg_data);
-    TEST_MULTIPART(&msg_data);
-    pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
-                         &msg_data, &current_call);
+            if (result.nb_result == -1) {
+                loop = PJ_TRUE;
+                result.nb_result = 1;
+            }
+            if (result.nb_result > pjsua_get_buddy_count()) break;
+
+            if (result.nb_result == 0) {
+                const pj_str_t err_msg =
+                               pj_str("You can't do that with make call!\n");
+                pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
+                return PJ_SUCCESS;
+            }
+            pjsua_buddy_get_info(result.nb_result-1, &binfo);
+            pj_strncpy(&tmp, &binfo.uri, sizeof(dest));
+        } else if (result.uri_result) {
+            tmp = pj_str(result.uri_result);
+        } else {
+            tmp.slen = 0;
+        }
+
+        pjsua_msg_data_init(&msg_data);
+        TEST_MULTIPART(&msg_data);
+        pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
+                             &msg_data, &current_call);
+
+        result.nb_result++;
+    } while (loop);
+
     return PJ_SUCCESS;
 }
 
@@ -2808,7 +2821,6 @@ static pj_status_t add_call_command(pj_cli_t *c)
         "    <ARG name='number_of_calls' type='int' desc='Number of calls'/>"
         "    <ARG name='buddy_id' type='choice' id='9901' validate='0' "
         "     desc='Buddy Id'>"
-        "      <CHOICE value='-1' desc='All buddies'/>"
         "      <CHOICE value='0' desc='Current dialog'/>"
         "    </ARG>"
         "  </CMD>"
@@ -2828,7 +2840,6 @@ static pj_status_t add_call_command(pj_cli_t *c)
         "  <CMD name='transfer' id='1011' sc='x' desc='Transfer call'>"
         "    <ARG name='buddy_id' type='choice' id='9901' validate='0' "
         "     desc='Buddy Id'>"
-        "      <CHOICE value='-1' desc='All buddies'/>"
         "      <CHOICE value='0' desc='Current dialog'/>"
         "    </ARG>"
         "  </CMD>"
@@ -2857,7 +2868,6 @@ static pj_status_t add_call_command(pj_cli_t *c)
         "    <ARG name='request_method' type='string' desc='Request method'/>"
         "    <ARG name='buddy_id' type='choice' id='9901' validate='0' "
         "     desc='Buddy Id'>"
-        "      <CHOICE value='-1' desc='All buddies'/>"
         "      <CHOICE value='0' desc='Current dialog'/>"
         "    </ARG>"
         "  </CMD>"
@@ -2884,7 +2894,6 @@ static pj_status_t add_presence_command(pj_cli_t *c)
         "  <CMD name='send_im' id='2003' sc='i' desc='Send IM'>"
         "    <ARG name='buddy_id' type='choice' id='9901' validate='0' "
         "     desc='Buddy Id'>"
-        "      <CHOICE value='-1' desc='All buddies'/>"
         "      <CHOICE value='0' desc='Current dialog'/>"
         "    </ARG>"
         "    <ARG name='message_content' type='string' desc='Message Content'/>"
