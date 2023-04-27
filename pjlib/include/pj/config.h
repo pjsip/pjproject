@@ -30,6 +30,8 @@
  */
 #if defined(_MSC_VER)
 #  include <pj/compat/cc_msvc.h>
+#elif defined(__clang__)
+#  include <pj/compat/cc_clang.h>
 #elif defined(__GNUC__)
 #  include <pj/compat/cc_gcc.h>
 #elif defined(__CW32__)
