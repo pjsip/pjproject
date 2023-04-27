@@ -1993,6 +1993,7 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
         output->size = 0;
     }
 
+    av_frame_unref(&avframe);
     return PJ_SUCCESS;
 }
 
