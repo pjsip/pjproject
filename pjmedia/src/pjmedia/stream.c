@@ -2746,10 +2746,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
         /* Special case for G.722 */
+        /* Update: We don't need to do this as this causes miscalculation
+         * inside RTCP.
+         */
+        /*
         if (info->fmt.pt == PJMEDIA_RTP_PT_G722) {
             rtcp_setting.clock_rate = 8000;
             rtcp_setting.samples_per_frame = 160;
         }
+        */
 #endif
 
         pjmedia_rtcp_init2(&stream->rtcp, &rtcp_setting);
