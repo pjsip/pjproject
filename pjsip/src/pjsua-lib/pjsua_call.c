@@ -2663,7 +2663,8 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
-    if (!call->inv->invite_tsx ||
+    if (call->inv->role == PJSIP_ROLE_UAC ||
+        !call->inv->invite_tsx ||
         call->inv->invite_tsx->state >= PJSIP_TSX_STATE_COMPLETED)
     {
         PJ_LOG(3,(THIS_FILE, "Unable to answer call (no incoming INVITE or "
