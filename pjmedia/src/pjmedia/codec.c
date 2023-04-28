@@ -282,7 +282,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
         if (info[i].pt >= PJMEDIA_RTP_PT_DYNAMIC) {
             pj_str_t codec_id = pj_str(mgr->codec_desc[mgr->codec_cnt+i].id);
             if (mgr->dyn_codecs_cnt >= PJ_ARRAY_SIZE(mgr->dyn_codecs)) {
-                PJ_LOG(3, ("", ("Dynamic codecs array full")));
+                PJ_LOG(3, (THIS_FILE, ("Dynamic codecs array full")));
                 continue;
             }
 
@@ -793,7 +793,10 @@ pj_status_t pjmedia_codec_mgr_get_dyn_codecs(pjmedia_codec_mgr* mgr,
                                              pj_str_t dyn_codecs[])
 {
     if (!mgr) mgr = def_codec_mgr;
-    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+    if (!mgr) {
+        *count = 0;
+        return PJ_EINVAL;;
+    }
 
     pj_mutex_lock(mgr->mutex);
 

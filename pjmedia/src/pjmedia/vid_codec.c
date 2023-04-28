@@ -816,7 +816,10 @@ pj_status_t pjmedia_vid_codec_mgr_get_dyn_codecs(pjmedia_vid_codec_mgr* mgr,
                                                  pj_str_t dyn_codecs[])
 {
     if (!mgr) mgr = def_vid_codec_mgr;
-    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+    if (!mgr) {
+        *count = 0;
+        return PJ_EINVAL;;
+    }
 
     pj_mutex_lock(mgr->mutex);
 
