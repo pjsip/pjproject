@@ -870,6 +870,8 @@ pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata)
     pj_uint32_t hval = 0;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG, NULL);
+
     /* If the request has no tag in the To header field, the UAS core MUST
      * check the request against ongoing transactions.
      */
