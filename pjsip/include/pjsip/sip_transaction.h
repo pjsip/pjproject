@@ -98,13 +98,10 @@ struct pjsip_transaction
     pjsip_method                method;         /**< The method.            */
     pj_int32_t                  cseq;           /**< The CSeq               */
     pj_str_t                    transaction_key;/**< Hash table key.        */
+    pj_str_t                    transaction_key2;/**< Hash table key (2).   */
     pj_uint32_t                 hashed_key;     /**< Key's hashed value.    */
+    pj_uint32_t                 hashed_key2;    /**< Key's hashed value (2).*/
     pj_str_t                    branch;         /**< The branch Id.         */
-#if defined(PJSIP_TSX_DETECT_MERGED_REQUESTS) && \
-    PJSIP_TSX_DETECT_MERGED_REQUESTS != 0
-    pj_str_t                    from_tag;       /**< The From tag.          */
-    pj_str_t                    call_id ;       /**< The Call ID.           */
-#endif
 
     /*
      * State and status.
@@ -301,6 +298,22 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uas2(pjsip_module *tsx_user,
                                            pjsip_rx_data *rdata,
                                            pj_grp_lock_t *grp_lock,
                                            pjsip_transaction **p_tsx );
+
+/**
+ * Detect merged requests according to RFC 3261 section 8.2.2.2:
+ * If the request has no tag in the To header field, the function will
+ * check the request against ongoing transactions.  If the From tag,
+ * Call-ID, and CSeq exactly match those associated with an ongoing
+ * transaction, but the request does not match that transaction based
+ * on the matching rules described in section 17.2.3, the function
+ * will return that transaction.
+ *
+ * @param rdata     The received incoming request.
+ *
+ * @return          The matching transaction, if any, or NULL.
+ */
+PJ_DECL(pjsip_transaction *)
+pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata);
 
 /**
  * Lock/bind transaction to a specific transport/listener. This is optional,

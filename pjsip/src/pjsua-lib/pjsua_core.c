@@ -660,6 +660,38 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_bool_t processed = PJ_FALSE;
 
+    if (pjsip_tsx_detect_merged_requests(rdata)) {
+        pjsip_transaction *new_tsx;
+        pjsip_tx_data *tdata;
+        pj_status_t status;
+
+        PJ_LOG(4, (THIS_FILE, "Merged request detected"));
+
+        /* Create new tsx and answer with 482 (Loop Detected) */
+        status = pjsip_tsx_create_uas(&pjsua_var.mod, rdata,
+                                      &new_tsx);
+        if (status != PJ_SUCCESS)
+            return PJ_TRUE;
+
+        new_tsx->mod_data[pjsua_var.mod.id] = &pjsua_var.mod;
+
+        pjsip_tsx_recv_msg(new_tsx, rdata);
+
+        status = pjsip_endpt_create_response(pjsua_var.endpt, rdata,
+                                             PJSIP_SC_LOOP_DETECTED,
+                                             NULL, &tdata);
+        if (status == PJ_SUCCESS) {
+            status = pjsip_tsx_send_msg(new_tsx, tdata);
+            if (status != PJ_SUCCESS)
+                pjsip_tx_data_dec_ref(tdata);
+        }
+
+        /* Terminate the transaction. */
+        pjsip_tsx_terminate(new_tsx, PJSIP_SC_LOOP_DETECTED);
+
+        return PJ_TRUE;
+    }
+
     PJSUA_LOCK();
 
     if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) {
