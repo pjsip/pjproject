@@ -722,19 +722,19 @@ typedef struct pjmedia_codec_mgr
     /** Array of codec descriptor. */
     struct pjmedia_codec_desc    codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
-    /** Number of codec id. */
-    pj_int8_t                    codec_list_cnt;
+    /** Number of codecs with dynamic PT. */
+    unsigned                     dyn_codecs_cnt;
 
-    /** Array of codec id. */
-    pj_str_t                     codec_list[PJMEDIA_CODEC_MGR_MAX_CODECS];
+    /** Array of codec identifiers with dynamic PT. */
+    pj_str_t                     dyn_codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
             PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
     /** Number of televent clockrates. */
-    unsigned televent_num;
+    unsigned                     televent_num;
 
     /** Array of televent clockrates. */
-    unsigned televent_clockrates[8];
+    unsigned                     televent_clockrates[8];
 #endif
 
 
@@ -764,14 +764,6 @@ PJ_DECL(pj_status_t) pjmedia_codec_mgr_init(pjmedia_codec_mgr *mgr,
  * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_mgr_destroy(pjmedia_codec_mgr *mgr);
-
-
-/**
- * Get the default codec manager instance.
- *
- * @return          The default codec manager instance or NULL if none.
- */
-PJ_DECL(pjmedia_codec_mgr*) pjmedia_codec_mgr_instance(void);
 
 
 /** 
@@ -1153,8 +1145,35 @@ PJ_INLINE(pj_status_t) pjmedia_codec_recover( pjmedia_codec *codec,
  * @}
  */
 
+/*
+ * Internal functions.
+ */
 
+/**
+ * Internal: Get the array of codec identifiers that have dynamic PT.
+ * Note that the array also includes telephone events.
+ */
+pj_status_t pjmedia_codec_mgr_get_dyn_codecs(pjmedia_codec_mgr* mgr,
+                                             pj_int8_t *count,
+                                             pj_str_t dyn_codecs[]);
 
+/* Internal: Find a certain codec string in the dynamic codecs array.
+ * Return the index of the array if the string is found and set
+ * *found == PJ_TRUE. If the string is not found, returns -1 if found
+ * is specified, otherwise returns the index in the array where
+ * the particular string could be inserted so that the array remains
+ * sorted, and set *found == PJ_FALSE.
+ */
+int pjmedia_codec_mgr_find_codec(const pj_str_t dyn_codecs[],
+                                 unsigned count,
+                                 const pj_str_t *codec,
+                                 pj_bool_t *found);
+
+/* Internal: Insert a codec ID string into the dynamic codecs array and keep
+ * the array sorted.
+ */
+void pjmedia_codec_mgr_insert_codec(pj_pool_t *pool, pj_str_t dyn_codecs[],
+                                    unsigned *count, const pj_str_t *codec);
 
 PJ_END_DECL
 

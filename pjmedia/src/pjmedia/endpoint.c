@@ -53,6 +53,7 @@ pj_bool_t pjmedia_add_bandwidth_tias_in_sdp =
             PJMEDIA_ADD_BANDWIDTH_TIAS_IN_SDP;
 
 
+
 /* Worker thread proc. */
 static int PJ_THREAD_FUNC worker_proc(void*);
 
@@ -1107,4 +1108,3 @@ PJ_DEF(pj_status_t) pjmedia_endpt_atexit( pjmedia_endpt *endpt,
 
     return PJ_SUCCESS;
 }
-

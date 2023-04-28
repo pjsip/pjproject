@@ -811,12 +811,14 @@
 #endif
 
 /**
- * The SDP negotiator will maintain session payload type and codec mapping, to ensure
- * the session using a unique payload type (e.g: one pt is not used by multiple codecs).
- * By default, the mapping is for local endpoint. In this case, the local SDP will only
- * be unique based on the PT and codec used locally. If it is required that the PT is 
- * unique across the session, enable this to also maintain PT/codec mapping for remote 
- * endpoint.
+ * The SDP negotiator will maintain that the mapping from a particular
+ * dynamic payload type number to a particular codec does not change,
+ * as mandated by RFC 3264 section 8.3.2.
+ * By default, the mapping is maintained for local endpoint only, i.e.
+ * it only takes into account local offer and local answer.
+ * Enable this if application wishes to maintain PT->codec mapping for
+ * remote endpoint as well, i.e. to update the mapping based on remote
+ * offer and answer too.
  *
  * Default is 0 (no)
  */

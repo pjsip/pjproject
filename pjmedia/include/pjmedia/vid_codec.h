@@ -866,21 +866,6 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(pjmedia_vid_codec *codec,
         return PJ_ENOTSUP;
 }
 
-/**
- * Get the video codec id list.
- * 
- * @param mgr           The codec manager instance. If NULL, the default codec
- *                      manager instance will be used.
- * @param codec_cnt     The maximum capacity of the codec_ids.
- * @param codec_ids     The codec id list.
- * 
- * @return              Then codec_ids content number.
- */
-PJ_DECL(int) pjmedia_vid_codec_mgr_get_codec_ids(pjmedia_vid_codec_mgr* mgr,
-                                                 pj_int8_t codec_cnt,
-                                                 pj_str_t codec_ids[]);
-
-
 
 /**
  * @}
@@ -892,6 +877,16 @@ PJ_DECL(int) pjmedia_vid_codec_mgr_get_codec_ids(pjmedia_vid_codec_mgr* mgr,
  */
 
 
+/*
+ * Internal functions.
+ */
+
+/**
+ * Internal: Get the array of codec identifiers that have dynamic PT.
+ */
+pj_status_t pjmedia_vid_codec_mgr_get_dyn_codecs(pjmedia_vid_codec_mgr* mgr,
+                                                 pj_int8_t *count,
+                                                 pj_str_t dyn_codecs[]);
 
 
 PJ_END_DECL
