@@ -71,7 +71,7 @@ typedef enum pjsip_tsx_state_e
     PJSIP_TSX_STATE_MAX         /**< Number of states.                      */
 } pjsip_tsx_state_e;
 
-
+#define PJSIP_TSX_DETECT_MERGED_REQUESTS 100
 /**
  * This structure describes SIP transaction object. The transaction object
  * is used to handle both UAS and UAC transaction.
@@ -100,6 +100,11 @@ struct pjsip_transaction
     pj_str_t                    transaction_key;/**< Hash table key.        */
     pj_uint32_t                 hashed_key;     /**< Key's hashed value.    */
     pj_str_t                    branch;         /**< The branch Id.         */
+#if defined(PJSIP_TSX_DETECT_MERGED_REQUESTS) && \
+    PJSIP_TSX_DETECT_MERGED_REQUESTS != 0
+    pj_str_t                    from_tag;       /**< The From tag.          */
+    pj_str_t                    call_id ;       /**< The Call ID.           */
+#endif
 
     /*
      * State and status.

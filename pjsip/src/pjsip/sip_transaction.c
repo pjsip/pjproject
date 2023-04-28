@@ -830,6 +830,78 @@ static pj_status_t mod_tsx_layer_unload(void)
 }
 
 
+static pj_bool_t detect_merged_requests(pjsip_transaction *tsx,
+                                        pjsip_rx_data *rdata)
+{
+    pj_hash_iterator_t it_buf, *it;
+    unsigned count = pj_hash_count(mod_tsx_layer.htable);
+
+    if (count > PJSIP_TSX_DETECT_MERGED_REQUESTS) {
+        /* Checking against all ongoing transactions is very inefficient
+         * if we have a large number of tsx, so let's just skip it.
+         */
+        return PJ_FALSE;
+    }
+
+    it = pj_hash_first(mod_tsx_layer.htable, &it_buf);
+    for (; it; it = pj_hash_next(mod_tsx_layer.htable, it)) {
+        pj_status_t status;
+        pjsip_transaction *new_tsx;
+        pjsip_tx_data *tdata;
+
+        tsx = (pjsip_transaction *)pj_hash_this(mod_tsx_layer.htable, it);
+
+        /* Check if the From tag, Call-ID, and CSeq match. */
+        if (tsx->role != PJSIP_ROLE_UAS ||
+            rdata->msg_info.msg->line.req.method.id != tsx->method.id ||
+            rdata->msg_info.cseq->cseq != tsx->cseq ||
+            pj_strcmp(&rdata->msg_info.from->tag, &tsx->from_tag) ||
+            pj_strcmp(&rdata->msg_info.cid->id, &tsx->call_id))
+        {
+            continue;
+        }
+
+        /* Create new tsx and answer with 482 (Loop Detected) */
+        status = pjsip_tsx_create_uas(&mod_tsx_layer.mod, rdata,
+                                      &new_tsx);
+        if (status != PJ_SUCCESS) {
+            pj_mutex_unlock( mod_tsx_layer.mutex );
+            return PJ_TRUE;
+        }
+
+        new_tsx->mod_data[mod_tsx_layer.mod.id] = new_tsx;
+
+        /* Prevent the transaction to get deleted before we have chance to 
+         * lock it in pjsip_tsx_recv_msg().
+         */
+        pj_grp_lock_add_ref(new_tsx->grp_lock);
+
+        /* Unlock hash table. */
+        pj_mutex_unlock( mod_tsx_layer.mutex );
+
+        pjsip_tsx_recv_msg(new_tsx, rdata);
+
+        pj_grp_lock_dec_ref(new_tsx->grp_lock);
+
+        status = pjsip_endpt_create_response(new_tsx->endpt,
+                     rdata, PJSIP_SC_LOOP_DETECTED, NULL, &tdata);
+        if (status == PJ_SUCCESS) {
+            status = pjsip_tsx_send_msg(new_tsx, tdata);
+            if (status != PJ_SUCCESS)
+                pjsip_tx_data_dec_ref(tdata);
+        }
+
+        if (status != PJ_SUCCESS) {
+            /* Failed to send response, just terminate the tsx. */
+            pjsip_tsx_terminate(new_tsx, PJSIP_SC_LOOP_DETECTED);
+        }
+
+        return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
+
 /* This module callback is called when endpoint has received an
  * incoming request message.
  */
@@ -856,12 +928,39 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
 
 
     if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+
+        if (!tsx && rdata->msg_info.to->tag.slen == 0) {
+            /* RFC 3261 section 8.2.2.2: If the request has no tag in
+             * the To header field, the UAS core MUST check the request
+             * against ongoing transactions.
+             */
+            if (detect_merged_requests(tsx, rdata)) {
+                return PJ_TRUE;
+            }
+        }
+
         /* Transaction not found.
          * Reject the request so that endpoint passes the request to
          * upper layer modules.
          */
         pj_mutex_unlock( mod_tsx_layer.mutex);
         return PJ_FALSE;
+    } else if (tsx && tsx->method.id == PJSIP_INVITE_METHOD &&
+               rdata->msg_info.msg->line.req.method.id == PJSIP_ACK_METHOD &&
+               tsx->mod_data[mod_tsx_layer.mod.id] == tsx)
+    {
+        /* Handle ACK for merged INVITE requests. */
+        if (rdata->msg_info.cseq->cseq == tsx->cseq &&
+            tsx->state <= PJSIP_TSX_STATE_COMPLETED)
+        {
+            /* We should have sent 482 in detect_merged_requests(). */
+            pj_assert(tsx->status_code >= 200);
+            /* Terminate transaction. */
+            pjsip_tsx_terminate(tsx, tsx->status_code);
+        }
+
+        pj_mutex_unlock(mod_tsx_layer.mutex);
+        return PJ_TRUE;
     }
 
     /* Prevent the transaction to get deleted before we have chance to lock it
@@ -1639,6 +1738,14 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas2(pjsip_module *tsx_user,
     branch = &rdata->msg_info.via->branch_param;
     pj_strdup(tsx->pool, &tsx->branch, branch);
 
+#if defined(PJSIP_TSX_DETECT_MERGED_REQUESTS) && \
+    PJSIP_TSX_DETECT_MERGED_REQUESTS != 0
+
+    /* Duplicate From tag and Call ID. */
+    pj_strdup(tsx->pool, &tsx->from_tag, &rdata->msg_info.from->tag);
+    pj_strdup(tsx->pool, &tsx->call_id, &rdata->msg_info.cid->id);
+#endif
+
     PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
                tsx->transaction_key.ptr));
 
@@ -1890,7 +1997,7 @@ PJ_DEF(void) pjsip_tsx_recv_msg( pjsip_transaction *tsx,
 {
     pjsip_event event;
 
-    PJ_LOG(5,(tsx->obj_name, "Incoming %s in state %s", 
+    PJ_LOG(4,(tsx->obj_name, "Incoming %s in state %s", 
               pjsip_rx_data_get_info(rdata), state_str[tsx->state]));
     pj_log_push_indent();
 
