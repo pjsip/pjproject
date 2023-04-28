@@ -830,6 +830,7 @@ static pj_status_t mod_tsx_layer_unload(void)
 }
 
 
+/* Detect merged requests as per RFC 3261 section 8.2.2.2. */
 static pj_bool_t detect_merged_requests(pjsip_transaction *tsx,
                                         pjsip_rx_data *rdata)
 {
@@ -837,8 +838,10 @@ static pj_bool_t detect_merged_requests(pjsip_transaction *tsx,
     unsigned count = pj_hash_count(mod_tsx_layer.htable);
 
     if (count > PJSIP_TSX_DETECT_MERGED_REQUESTS) {
-        /* Checking against all ongoing transactions is very inefficient
-         * if we have a large number of tsx, so let's just skip it.
+        /* Checking by iterating through all ongoing transactions is very
+         * inefficient since it will take O(n), as compared to O(1) if
+         * we use hash table. So if we have a large number of tsx,
+         * let's just skip it.
          */
         return PJ_FALSE;
     }
@@ -871,7 +874,7 @@ static pj_bool_t detect_merged_requests(pjsip_transaction *tsx,
 
         new_tsx->mod_data[mod_tsx_layer.mod.id] = new_tsx;
 
-        /* Prevent the transaction to get deleted before we have chance to 
+        /* Prevent the transaction to get deleted before we have chance to
          * lock it in pjsip_tsx_recv_msg().
          */
         pj_grp_lock_add_ref(new_tsx->grp_lock);
@@ -1997,7 +2000,7 @@ PJ_DEF(void) pjsip_tsx_recv_msg( pjsip_transaction *tsx,
 {
     pjsip_event event;
 
-    PJ_LOG(4,(tsx->obj_name, "Incoming %s in state %s", 
+    PJ_LOG(5,(tsx->obj_name, "Incoming %s in state %s", 
               pjsip_rx_data_get_info(rdata), state_str[tsx->state]));
     pj_log_push_indent();
 

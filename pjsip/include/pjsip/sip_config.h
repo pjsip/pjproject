@@ -1069,6 +1069,23 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 /**
+ * Setting to determine if we need to detect merged requests, as
+ * recommended by RFC 3261 section 8.2.2.2.
+ * Since the merged requests detection requires checking against all
+ * ongoing transactions, which can be inefficient, this setting will
+ * determine if we should skip the detection process if the current
+ * number of ongoing transactions is greater than the value specified.
+ *
+ * Setting it to 0 will disable the feature.
+ *
+ * Default: 20 (we detect merged requests only if the number of
+ *              transactions is at most 20)
+ */
+#ifndef PJSIP_TSX_DETECT_MERGED_REQUESTS
+#   define PJSIP_TSX_DETECT_MERGED_REQUESTS 20
+#endif
+
+/**
  * Setting to determine if certain SIP UAS transaction, such as
  * INVITE UAS tsx that hasn't been confirmed, is allowed to continue
  * upon transport error. If disabled, the transaction will always be
