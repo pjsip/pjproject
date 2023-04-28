@@ -3609,7 +3609,7 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
             old_ci->channel_cnt != new_ci->channel_cnt ||
             old_si->rx_pt != new_si->rx_pt ||
             old_si->tx_pt != new_si->tx_pt ||
-            old_si->rx_event_pt != new_si->tx_event_pt ||
+            old_si->rx_event_pt != new_si->rx_event_pt ||
             old_si->tx_event_pt != new_si->tx_event_pt)
         {
             return PJ_TRUE;
