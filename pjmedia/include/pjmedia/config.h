@@ -456,7 +456,7 @@
  * units (the default value of PJMEDIA_DTMF_DURATION) is equivalent to 200 ms. 
  */
 #ifndef PJMEDIA_DTMF_DURATION_MSEC              
-#  define PJMEDIA_DTMF_DURATION_MSEC            0
+#  define PJMEDIA_DTMF_DURATION_MSEC            200
 #endif
 
 
