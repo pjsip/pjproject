@@ -1726,9 +1726,11 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
         if (med_type == PJMEDIA_TYPE_AUDIO) {
             dyn_codecs = neg->aud_dyn_codecs;
             count = neg->aud_dyn_codecs_cnt;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
         } else if (med_type == PJMEDIA_TYPE_VIDEO) {
             dyn_codecs = neg->vid_dyn_codecs;
             count = neg->vid_dyn_codecs_cnt;
+#endif
         } else {
             continue;
         }
