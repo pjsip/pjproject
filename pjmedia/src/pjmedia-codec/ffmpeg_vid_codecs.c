@@ -1855,7 +1855,7 @@ static pj_status_t ffmpeg_frame_unref(AVFrame *frame)
 #ifdef PJMEDIA_USE_OLD_FFMPEG
     (void)frame;
 #else
-    av_frame_unref(&frame);
+    av_frame_unref(frame);
 #endif
 }
 
