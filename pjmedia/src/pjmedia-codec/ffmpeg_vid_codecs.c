@@ -1848,6 +1848,18 @@ static pj_status_t check_decode_result(pjmedia_vid_codec *codec,
 }
 
 /*
+ * Unreference AVFrame.
+ */
+static pj_status_t ffmpeg_frame_unref(AVFrame *frame)
+{
+#ifdef PJMEDIA_USE_OLD_FFMPEG
+    (void)frame;
+#else
+    av_frame_unref(&frame);
+#endif
+}
+
+/*
  * Decode frame.
  */
 static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
@@ -1957,12 +1969,16 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
          */
         status = check_decode_result(codec, &input->timestamp,
                                      avframe.key_frame);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            ffmpeg_frame_unref(&avframe);
             return status;
+        }
 
         /* Check provided buffer size */
-        if (vafp->framebytes > output_buf_len)
+        if (vafp->framebytes > output_buf_len) {
+            ffmpeg_frame_unref(&avframe);
             return PJ_ETOOSMALL;
+        }
 
         /* Get the decoded data */
         for (i = 0; i < ff->dec_vfi->plane_cnt; ++i) {
@@ -1988,12 +2004,12 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
 
         output->type = PJMEDIA_FRAME_TYPE_VIDEO;
         output->size = vafp->framebytes;
+        ffmpeg_frame_unref(&avframe);
     } else {
         output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->size = 0;
     }
 
-    av_frame_unref(&avframe);
     return PJ_SUCCESS;
 }
 
