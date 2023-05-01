@@ -1181,32 +1181,34 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     status = tcp_create( listener, NULL, sock, PJ_TRUE,
                          &tmp_dst_addr, &tmp_src_addr, &tcp);
     if (status == PJ_SUCCESS) {
+        /* Notify application of transport state accepted */
+        state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
+        if (state_cb) {
+            pjsip_transport_state_info state_info;
+
+            pj_bzero(&state_info, sizeof(state_info));
+            (*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
+        }
+
+        if (tcp->base.is_shutdown || tcp->base.is_destroying) {
+            return PJ_TRUE;
+        }
+
+        /* Start keep-alive timer */
+        if (pjsip_cfg()->tcp.keep_alive_interval) {
+            pj_time_val delay = { 0 };
+            delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
+            pjsip_endpt_schedule_timer(listener->endpt,
+                                       &tcp->ka_timer,
+                                       &delay);
+            tcp->ka_timer.id = PJ_TRUE;
+            pj_gettimeofday(&tcp->last_activity);
+        }
+
         status = tcp_start_read(tcp);
         if (status != PJ_SUCCESS) {
             PJ_LOG(3,(tcp->base.obj_name, "New transport cancelled"));
             tcp_destroy(&tcp->base, status);
-        } else {
-            if (tcp->base.is_shutdown || tcp->base.is_destroying) {
-                return PJ_TRUE;
-            }
-            /* Start keep-alive timer */
-            if (pjsip_cfg()->tcp.keep_alive_interval) {
-                pj_time_val delay = { 0 };
-                delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
-                pjsip_endpt_schedule_timer(listener->endpt, 
-                                           &tcp->ka_timer, 
-                                           &delay);
-                tcp->ka_timer.id = PJ_TRUE;
-                pj_gettimeofday(&tcp->last_activity);
-            }
-            /* Notify application of transport state accepted */
-            state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
-            if (state_cb) {
-                pjsip_transport_state_info state_info;
-
-                pj_bzero(&state_info, sizeof(state_info));
-                (*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
-            }
         }
     }
 
