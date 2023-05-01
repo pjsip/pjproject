@@ -2191,7 +2191,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &stream->rtcp);
 
     /* Send RTCP BYE (also SDES) */
-    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && stream->grp_lock && !stream->rtcp_sdes_bye_disabled) {
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
     }
 
