@@ -385,7 +385,11 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
                     ++query_job->host_resolved;
 
                 ++query_job->srv[j].addr_cnt;
-                break;
+                
+                /* Continue the loop as other SRV entries may contain
+                 * the same host.
+                 */
+                // break;
             }
         }
 
