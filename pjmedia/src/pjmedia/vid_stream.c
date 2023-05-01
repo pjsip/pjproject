@@ -584,6 +584,8 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     int len, max_len;
     pj_status_t status;
 
+    pj_grp_lock_acquire( stream->grp_lock );
+
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
 
@@ -664,6 +666,9 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
             stream->rtcp_tx_err_cnt = 0;
         }
     }
+
+    pj_grp_lock_release( stream->grp_lock );
+
     return status;
 }
 
