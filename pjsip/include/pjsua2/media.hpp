@@ -1938,9 +1938,9 @@ struct VideoPreviewOpParam {
     unsigned                windowFlags;
 
     /**
-     * Media format. If left unitialized, this parameter will not be used.
+     * Media format video. If left unitialized, this parameter will not be used.
      */
-    MediaFormat             format;
+    MediaFormatVideo        format;
 
     /**
      * Optional output window to be used to display the video preview.
