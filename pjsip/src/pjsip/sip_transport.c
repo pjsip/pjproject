@@ -1697,6 +1697,11 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
         prm->tp_sel->u.transport)
     {
         const pjsip_transport *tp = prm->tp_sel->u.transport;
+        /* If transport selector is specified, we can use the transport's
+         * address instead of using the address obtained from
+         * get_net_interface().
+         */
+        /*
         if (prm->local_if) {
             status = get_net_interface((pjsip_transport_type_e)tp->key.type,
                                        &prm->dst_host, &tmp_str);
@@ -1705,7 +1710,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
             pj_strdup(pool, &prm->ret_addr, &tmp_str);
             prm->ret_port = pj_sockaddr_get_port(&tp->local_addr);
             prm->ret_tp = tp;
-        } else {
+        } else */
+        {
             pj_strdup(pool, &prm->ret_addr, &tp->local_name.host);
             prm->ret_port = (pj_uint16_t)tp->local_name.port;
         }
@@ -1714,13 +1720,19 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
     } else if (prm->tp_sel && prm->tp_sel->type == PJSIP_TPSELECTOR_LISTENER &&
                prm->tp_sel->u.listener)
     {
+        /* If transport selector is specified, we can use the listener's
+         * address instead of using the address obtained from
+         * get_net_interface().
+         */
+        /*
         if (prm->local_if) {
             status = get_net_interface(prm->tp_sel->u.listener->type,
                                        &prm->dst_host, &tmp_str);
             if (status != PJ_SUCCESS)
                 goto on_return;
             pj_strdup(pool, &prm->ret_addr, &tmp_str);
-        } else {
+        } else */
+        {
             pj_strdup(pool, &prm->ret_addr,
                       &prm->tp_sel->u.listener->addr_name.host);
         }
