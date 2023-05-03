@@ -31,7 +31,7 @@
 
 @implementation ipjsuaAppDelegate
 
-#define THIS_FILE	"ipjsuaAppDelegate.m"
+#define THIS_FILE       "ipjsuaAppDelegate.m"
 
 #define KEEP_ALIVE_INTERVAL 600
 
@@ -98,11 +98,11 @@ static void pjsuaOnStartedCb(pj_status_t status, const char* msg)
     char errmsg[PJ_ERR_MSG_SIZE];
     
     if (status != PJ_SUCCESS && (!msg || !*msg)) {
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(3,(THIS_FILE, "Error: %s", errmsg));
-	msg = errmsg;
+        pj_strerror(status, errmsg, sizeof(errmsg));
+        PJ_LOG(3,(THIS_FILE, "Error: %s", errmsg));
+        msg = errmsg;
     } else {
-	PJ_LOG(3,(THIS_FILE, "Started: %s", msg));
+        PJ_LOG(3,(THIS_FILE, "Started: %s", msg));
     }
 
     displayMsg(msg);
@@ -114,12 +114,12 @@ static void pjsuaOnStoppedCb(pj_bool_t restart,
     PJ_LOG(3,("ipjsua", "CLI %s request", (restart? "restart" : "shutdown")));
     if (restart) {
         displayMsg("Restarting..");
-	pj_thread_sleep(100);
+        pj_thread_sleep(100);
         app_cfg.argc = argc;
         app_cfg.argv = argv;
     } else {
         displayMsg("Shutting down..");
-	pj_thread_sleep(100);
+        pj_thread_sleep(100);
         isShuttingDown = true;
     }
 }
@@ -141,11 +141,11 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     
     pj_bzero(&app_cfg, sizeof(app_cfg));
     if (restartArgc) {
-	app_cfg.argc = restartArgc;
-	app_cfg.argv = restartArgv;
+        app_cfg.argc = restartArgc;
+        app_cfg.argv = restartArgv;
     } else {
-	app_cfg.argc = argc;
-	app_cfg.argv = (char**)argv;
+        app_cfg.argc = argc;
+        app_cfg.argv = (char**)argv;
     }
     app_cfg.on_started = &pjsuaOnStartedCb;
     app_cfg.on_stopped = &pjsuaOnStoppedCb;
@@ -272,7 +272,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     int i;
     
     if (!pj_thread_is_registered()) {
-	pj_thread_register("ipjsua", a_thread_desc, &a_thread);
+        pj_thread_register("ipjsua", a_thread_desc, &a_thread);
     }
     
     /* Since iOS requires that the minimum keep alive interval is 600s,
@@ -295,7 +295,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 #if 0
     /* setKeepAliveTimeout is deprecated. Use PushKit instead. */
     [application setKeepAliveTimeout:KEEP_ALIVE_INTERVAL handler: ^{
-	[self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
+        [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
     }];
 #endif
 }
@@ -318,23 +318,28 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 
 pj_bool_t showNotification(pjsua_call_id call_id)
 {
+    /* This is deprecated. Use VoIP Push Notifications with PushKit
+     * framework instead.
+     */
+#if 0
     // Create a new notification
     UILocalNotification* alert = [[UILocalNotification alloc] init];
     if (alert)
     {
-	alert.repeatInterval = 0;
-	alert.alertBody = @"Incoming call received...";
+        alert.repeatInterval = 0;
+        alert.alertBody = @"Incoming call received...";
         /* This action just brings the app to the FG, it doesn't
          * automatically answer the call (unless you specify the
          * --auto-answer option).
          */
-	alert.alertAction = @"Activate app";
-	
+        alert.alertAction = @"Activate app";
+        
         dispatch_async(dispatch_get_main_queue(),
                        ^{[[UIApplication sharedApplication]
                           presentLocalNotificationNow:alert];});
     }
-    
+#endif
+
     return PJ_FALSE;
 }
 
@@ -347,39 +352,32 @@ void displayWindow(pjsua_vid_win_id wid)
     last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid+1;
 
     for (;i < last; ++i) {
-	pjsua_vid_win_info wi;
+        pjsua_vid_win_info wi;
         
-        if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS) {
+        if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS &&
+            wi.hwnd.info.ios.window)
+        {
             dispatch_async(dispatch_get_main_queue(), ^{
                 UIView *parent = app.viewController.view;
                 UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
-            
-                if (view) {
-                    /* Add the video window as subview */
-                    if (![view isDescendantOfView:parent])
-                        [parent addSubview:view];
-                    
-                    if (!wi.is_native) {
-                        /* Resize it to fit width */
-                        view.bounds = CGRectMake(0, 0, parent.bounds.size.width,
-                                                 (parent.bounds.size.height *
-                                                  1.0*parent.bounds.size.width/
-                                                  view.bounds.size.width));
-                        /* Center it horizontally */
-                        view.center = CGPointMake(parent.bounds.size.width/2.0,
-                                              view.bounds.size.height/2.0);
-                    } else {
-                        /* Preview window, move it to the bottom */
-                        view.center = CGPointMake(parent.bounds.size.width/2.0,
-                                                  parent.bounds.size.height-
-                                                  view.bounds.size.height/2.0);
-                    }
+
+                if (![view isDescendantOfView:parent])
+                    [parent addSubview:view];
+
+                if (!wi.is_native) {
+                    /* Video window */
+                    view.contentMode = UIViewContentModeScaleAspectFit;
+                    view.center = parent.center;
+                    view.frame = parent.bounds;
+                } else {
+                    /* Preview window */
+                    view.contentMode = UIViewContentModeBottomLeft;
+                    view.frame = CGRectMake(0, parent.frame.size.height - view.frame.size.height,
+                                            view.frame.size.width, view.frame.size.height);
                 }
             });
         }
     }
-
-    
 #endif
 }
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -38,7 +37,7 @@
  * @addtogroup PJSIP_BASE
  */
 
-/* @defgroup PJSIP_TYPES Basic Data Types
+/** @defgroup PJSIP_TYPES Basic Data Types
  * @ingroup PJSIP_BASE
  * @brief Basic data types.
  * @{
@@ -188,13 +187,13 @@ typedef struct pjsip_dialog pjsip_dialog;
  */
 typedef enum pjsip_role_e
 {
-    PJSIP_ROLE_UAC,	/**< Role is UAC. */
-    PJSIP_ROLE_UAS,	/**< Role is UAS. */
+    PJSIP_ROLE_UAC,     /**< Role is UAC. */
+    PJSIP_ROLE_UAS,     /**< Role is UAS. */
 
     /* Alias: */
 
-    PJSIP_UAC_ROLE = PJSIP_ROLE_UAC,	/**< Role is UAC. */
-    PJSIP_UAS_ROLE = PJSIP_ROLE_UAS	/**< Role is UAS. */
+    PJSIP_UAC_ROLE = PJSIP_ROLE_UAC,    /**< Role is UAC. */
+    PJSIP_UAS_ROLE = PJSIP_ROLE_UAS     /**< Role is UAS. */
 
 } pjsip_role_e;
 
@@ -223,8 +222,8 @@ typedef struct pjsip_buffer
  */
 typedef struct pjsip_host_port
 {
-    pj_str_t host;	/**< Host part or IP address. */
-    int	     port;	/**< Port number. */
+    pj_str_t host;      /**< Host part or IP address. */
+    int      port;      /**< Port number. */
 } pjsip_host_port;
 
 /**
@@ -232,9 +231,9 @@ typedef struct pjsip_host_port
  */
 typedef struct pjsip_host_info
 {
-    unsigned		    flag;   /**< Flags of pjsip_transport_flags_e. */
+    unsigned                flag;   /**< Flags of pjsip_transport_flags_e. */
     pjsip_transport_type_e  type;   /**< Transport type. */
-    pjsip_host_port	    addr;   /**< Address information. */
+    pjsip_host_port         addr;   /**< Address information. */
 } pjsip_host_info;
 
 
@@ -262,5 +261,5 @@ PJ_DECL(pj_status_t) pjsip_exception_to_status(int exception_id);
  * @}
  */
 
-#endif	/* __PJSIP_SIP_TYPES_H__ */
+#endif  /* __PJSIP_SIP_TYPES_H__ */
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -20,6 +19,7 @@
 #include <pj/file_io.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/limits.h>
 #include <stdio.h>
 #include <errno.h>
 
@@ -124,6 +124,12 @@ PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
 {
     int mode;
 
+    if ((sizeof(pj_off_t) > sizeof(long)) &&
+        (offset > PJ_MAXLONG || offset < PJ_MINLONG)) 
+    {
+        return PJ_ENOTSUP;
+    }
+
     switch (whence) {
     case PJ_SEEK_SET:
         mode = SEEK_SET; break;
@@ -163,7 +169,7 @@ PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
 
     rc = fflush((FILE*)fd);
     if (rc == EOF) {
-	return PJ_RETURN_OS_ERROR(errno);
+        return PJ_RETURN_OS_ERROR(errno);
     }
 
     return PJ_SUCCESS;

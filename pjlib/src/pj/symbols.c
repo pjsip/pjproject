@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,7 +34,7 @@ PJ_EXPORT_SYMBOL(pj_array_find)
  * config.h
  */
 PJ_EXPORT_SYMBOL(pj_dump_config)
-	
+        
 /*
  * errno.h
  */
@@ -206,7 +205,7 @@ PJ_EXPORT_SYMBOL(pj_elapsed_nanosec)
 PJ_EXPORT_SYMBOL(pj_elapsed_cycle)
 #endif
 
-	
+        
 /*
  * pool.h
  */
@@ -328,6 +327,9 @@ PJ_EXPORT_SYMBOL(pj_create_random_string)
 PJ_EXPORT_SYMBOL(pj_strtoul)
 PJ_EXPORT_SYMBOL(pj_utoa)
 PJ_EXPORT_SYMBOL(pj_utoa_pad)
+PJ_EXPORT_SYMBOL(pj_ansi_strxcpy)
+PJ_EXPORT_SYMBOL(pj_ansi_strxcpy2)
+PJ_EXPORT_SYMBOL(pj_ansi_strxcat)
 
 /*
  * timer.h

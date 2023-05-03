@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,7 +35,7 @@
      (defined(PJ_WIN64) && PJ_WIN64 != 0)) && \
      defined(PJ_DEBUG) && PJ_DEBUG!=0 && !PJ_NATIVE_STRING_IS_UNICODE
 #   include <windows.h>
-#   define TRACE_(msg)	OutputDebugString(msg)
+#   define TRACE_(msg)  OutputDebugString(msg)
 #endif
 
 /* Uncomment this to enable TRACE_ */
@@ -44,7 +43,7 @@
 
 
 
-int PJ_NO_MEMORY_EXCEPTION;
+PJ_DEF_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 
 
 PJ_DEF(int) pj_NO_MEMORY_EXCEPTION()
@@ -54,11 +53,11 @@ PJ_DEF(int) pj_NO_MEMORY_EXCEPTION()
 
 /* Create pool */
 PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
-				       void *factory,
-				       const char *name,
-				       pj_size_t initial_size,
-				       pj_size_t increment_size,
-				       pj_pool_callback *callback)
+                                       void *factory,
+                                       const char *name,
+                                       pj_size_t initial_size,
+                                       pj_size_t increment_size,
+                                       pj_pool_callback *callback)
 {
     pj_pool_t *pool;
 
@@ -70,13 +69,12 @@ PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
 
     pool = malloc(sizeof(struct pj_pool_t));
     if (!pool)
-	return NULL;
+        return NULL;
 
     if (name) {
-	pj_ansi_strncpy(pool->obj_name, name, sizeof(pool->obj_name));
-	pool->obj_name[sizeof(pool->obj_name)-1] = '\0';
+        pj_ansi_strxcpy(pool->obj_name, name, sizeof(pool->obj_name));
     } else {
-	strcpy(pool->obj_name, "altpool");
+        pj_ansi_strxcpy(pool->obj_name, "altpool", sizeof(pool->obj_name));
     }
 
     pool->factory = NULL;
@@ -95,6 +93,24 @@ PJ_DEF(void) pj_pool_release_imp(pj_pool_t *pool)
     free(pool);
 }
 
+/* Safe release pool */
+PJ_DEF(void) pj_pool_safe_release_imp( pj_pool_t **ppool )
+{
+    pj_pool_t *pool = *ppool;
+    *ppool = NULL;
+    if (pool)
+        pj_pool_release(pool);
+}
+
+/* Secure release pool */
+PJ_DEF(void) pj_pool_secure_release_imp( pj_pool_t **ppool )
+{
+    /* Secure release is not implemented, so we just call
+     * safe release.
+     */
+    pj_pool_safe_release_imp(ppool);
+}
+
 /* Get pool name */
 PJ_DEF(const char*) pj_pool_getobjname_imp(pj_pool_t *pool)
 {
@@ -109,9 +125,9 @@ PJ_DEF(void) pj_pool_reset_imp(pj_pool_t *pool)
 
     mem = pool->first_mem;
     while (mem) {
-	struct pj_pool_mem *next = mem->next;
-	free(mem);
-	mem = next;
+        struct pj_pool_mem *next = mem->next;
+        free(mem);
+        mem = next;
     }
 
     pool->first_mem = NULL;
@@ -134,7 +150,7 @@ PJ_DEF(pj_size_t) pj_pool_get_used_size_imp(pj_pool_t *pool)
 
 /* Allocate memory from the pool */
 PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line, 
-				 pj_pool_t *pool, pj_size_t sz)
+                                 pj_pool_t *pool, pj_size_t sz)
 {
     struct pj_pool_mem *mem;
 
@@ -143,9 +159,9 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
 
     mem = malloc(sz + sizeof(struct pj_pool_mem));
     if (!mem) {
-	if (pool->cb)
-	    (*pool->cb)(pool, sz);
-	return NULL;
+        if (pool->cb)
+            (*pool->cb)(pool, sz);
+        return NULL;
     }
 
     mem->next = pool->first_mem;
@@ -153,11 +169,12 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
 
 #ifdef TRACE_
     {
-	char msg[120];
-	pj_ansi_sprintf(msg, "Mem %X (%d+%d bytes) allocated by %s:%d\r\n",
-			mem, sz, sizeof(struct pj_pool_mem), 
-			file, line);
-	TRACE_(msg);
+        char msg[120];
+        pj_ansi_snprintf(msg, sizeof(msg),
+                        "Mem %X (%d+%d bytes) allocated by %s:%d\r\n",
+                        mem, sz, sizeof(struct pj_pool_mem), 
+                        file, line);
+        TRACE_(msg);
     }
 #endif
 
@@ -166,14 +183,14 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
 
 /* Allocate memory from the pool and zero the memory */
 PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line, 
-				  pj_pool_t *pool, unsigned cnt, 
-				  unsigned elemsz)
+                                  pj_pool_t *pool, unsigned cnt, 
+                                  unsigned elemsz)
 {
     void *mem;
 
     mem = pj_pool_alloc_imp(file, line, pool, cnt*elemsz);
     if (!mem)
-	return NULL;
+        return NULL;
 
     pj_bzero(mem, cnt*elemsz);
     return mem;
@@ -181,11 +198,11 @@ PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
 
 /* Allocate memory from the pool and zero the memory */
 PJ_DEF(void*) pj_pool_zalloc_imp( const char *file, int line, 
-				  pj_pool_t *pool, pj_size_t sz)
+                                  pj_pool_t *pool, pj_size_t sz)
 {
     return pj_pool_calloc_imp(file, line, pool, 1, sz); 
 }
 
 
 
-#endif	/* PJ_HAS_POOL_ALT_API */
+#endif  /* PJ_HAS_POOL_ALT_API */

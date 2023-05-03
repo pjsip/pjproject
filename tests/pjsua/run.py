@@ -1,4 +1,3 @@
-# $Id$
 import sys
 import imp
 import re
@@ -71,7 +70,13 @@ if G_EXE == "":
                 "pjsua-i386-Win32-vc8-Debug-Static.exe",
                 "pjsua-i386-Win32-vc8-Release.exe",
                 "pjsua-i386-Win32-vc8-Release-Dynamic.exe",
-                "pjsua-i386-Win32-vc8-Release-Static.exe"
+                "pjsua-i386-Win32-vc8-Release-Static.exe",
+                "pjsua-i386-Win32-vc14-Debug.exe",
+                "pjsua-i386-Win32-vc14-Debug-Dynamic.exe",
+                "pjsua-i386-Win32-vc14-Debug-Static.exe",
+                "pjsua-i386-Win32-vc14-Release.exe",
+                "pjsua-i386-Win32-vc14-Release-Dynamic.exe",
+                "pjsua-i386-Win32-vc14-Release-Static.exe"                
                 ]
         e_ts = 0
         for e in EXECUTABLES:
@@ -243,6 +248,10 @@ class Expect(threading.Thread):
                     time.sleep(0.01)
         return None
                             
+    def get_config(self, key_config):
+        self.send("dd")
+        line = self.expect(key_config);
+        return line
 
     def sync_stdout(self):
         if not self.use_telnet:

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -50,8 +49,10 @@ pj_status_t app_socket(int family, int type, int proto, int port,
     addr.sin_family = (pj_uint16_t)family;
     addr.sin_port = (short)(port!=-1 ? pj_htons((pj_uint16_t)port) : 0);
     rc = pj_sock_bind(sock, &addr, sizeof(addr));
-    if (rc != PJ_SUCCESS)
+    if (rc != PJ_SUCCESS) {
+        pj_sock_close(sock);
         return rc;
+    }
     
 #if PJ_HAS_TCP
     if (type == pj_SOCK_STREAM()) {
@@ -68,73 +69,16 @@ pj_status_t app_socket(int family, int type, int proto, int port,
 pj_status_t app_socketpair(int family, int type, int protocol,
                            pj_sock_t *serverfd, pj_sock_t *clientfd)
 {
-    int i;
-    static unsigned short port = 11000;
-    pj_sockaddr_in addr;
-    pj_str_t s;
-    pj_status_t rc = 0;
-    pj_sock_t sock[2];
+    pj_status_t status;
+    pj_sock_t sv[2];
 
-    /* Create both sockets. */
-    for (i=0; i<2; ++i) {
-        rc = pj_sock_socket(family, type, protocol, &sock[i]);
-        if (rc != PJ_SUCCESS) {
-            if (i==1)
-                pj_sock_close(sock[0]);
-            return rc;
-        }
+    status = pj_sock_socketpair(family, type, protocol, sv);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1, (THIS_FILE, status, "socketpair error"));
+        return status;
     }
 
-    /* Retry bind */
-    pj_bzero(&addr, sizeof(addr));
-    addr.sin_family = pj_AF_INET();
-    for (i=0; i<5; ++i) {
-        addr.sin_port = pj_htons(port++);
-        rc = pj_sock_bind(sock[SERVER], &addr, sizeof(addr));
-        if (rc == PJ_SUCCESS)
-            break;
-    }
-
-    if (rc != PJ_SUCCESS)
-        goto on_error;
-
-    /* For TCP, listen the socket. */
-#if PJ_HAS_TCP
-    if (type == pj_SOCK_STREAM()) {
-        rc = pj_sock_listen(sock[SERVER], PJ_SOMAXCONN);
-        if (rc != PJ_SUCCESS)
-            goto on_error;
-    }
-#endif
-
-    /* Connect client socket. */
-    addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
-    rc = pj_sock_connect(sock[CLIENT], &addr, sizeof(addr));
-    if (rc != PJ_SUCCESS)
-        goto on_error;
-
-    /* For TCP, must accept(), and get the new socket. */
-#if PJ_HAS_TCP
-    if (type == pj_SOCK_STREAM()) {
-        pj_sock_t newserver;
-
-        rc = pj_sock_accept(sock[SERVER], &newserver, NULL, NULL);
-        if (rc != PJ_SUCCESS)
-            goto on_error;
-
-        /* Replace server socket with new socket. */
-        pj_sock_close(sock[SERVER]);
-        sock[SERVER] = newserver;
-    }
-#endif
-
-    *serverfd = sock[SERVER];
-    *clientfd = sock[CLIENT];
-
-    return rc;
-
-on_error:
-    for (i=0; i<2; ++i)
-        pj_sock_close(sock[i]);
-    return rc;
+    *serverfd = sv[0];
+    *clientfd = sv[1];
+    return PJ_SUCCESS;
 }

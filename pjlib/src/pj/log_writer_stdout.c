@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -47,11 +46,11 @@ PJ_DEF(void) pj_log_write(int level, const char *buffer, int len)
 
     /* Copy to terminal/file. */
     if (pj_log_get_decor() & PJ_LOG_HAS_COLOR) {
-	term_set_color(level);
-	printf("%s", buffer);
-	term_restore_color();
+        term_set_color(level);
+        printf("%s", buffer);
+        term_restore_color();
     } else {
-	printf("%s", buffer);
+        printf("%s", buffer);
     }
 }
 

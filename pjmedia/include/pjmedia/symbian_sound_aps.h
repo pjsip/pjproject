@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -33,16 +32,16 @@ PJ_BEGIN_DECL
 /**
  * Set audio routing for APS sound device.
  *
- * @param stream	The sound device stream, the stream should be started 
- *			before calling this function.
- * @param route		Audio routing to be set.
+ * @param stream        The sound device stream, the stream should be started 
+ *                      before calling this function.
+ * @param route         Audio routing to be set.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_snd_aps_set_route( pjmedia_snd_stream *stream,
-						pjmedia_snd_route route);
+                                                pjmedia_snd_route route);
 
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_SYMBIAN_SOUND_APS_H__ */
+#endif  /* __PJMEDIA_SYMBIAN_SOUND_APS_H__ */

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -35,13 +34,13 @@ PJ_DEF(pj_ssize_t) pj_strspn(const pj_str_t *str, const pj_str_t *set_char)
 {
     pj_ssize_t i, j, count = 0;
     for (i = 0; i < str->slen; i++) {
-	if (count != i) 
-	    break;
+        if (count != i)
+            break;
 
-	for (j = 0; j < set_char->slen; j++) {
-	    if (str->ptr[i] == set_char->ptr[j])
-		count++;
-	}
+        for (j = 0; j < set_char->slen; j++) {
+            if (str->ptr[i] == set_char->ptr[j])
+                count++;
+        }
     }
     return count;
 }
@@ -51,13 +50,13 @@ PJ_DEF(pj_ssize_t) pj_strspn2(const pj_str_t *str, const char *set_char)
 {
     pj_ssize_t i, j, count = 0;
     for (i = 0; i < str->slen; i++) {
-	if (count != i)
-	    break;
+        if (count != i)
+            break;
 
-	for (j = 0; set_char[j] != 0; j++) {
-	    if (str->ptr[i] == set_char[j])
-		count++;
-	}
+        for (j = 0; set_char[j] != 0; j++) {
+            if (str->ptr[i] == set_char[j])
+                count++;
+        }
     }
     return count;
 }
@@ -67,10 +66,10 @@ PJ_DEF(pj_ssize_t) pj_strcspn(const pj_str_t *str, const pj_str_t *set_char)
 {
     pj_ssize_t i, j;
     for (i = 0; i < str->slen; i++) {
-	for (j = 0; j < set_char->slen; j++) {
-	    if (str->ptr[i] == set_char->ptr[j])
-		return i;
-	}
+        for (j = 0; j < set_char->slen; j++) {
+            if (str->ptr[i] == set_char->ptr[j])
+                return i;
+        }
     }
     return i;
 }
@@ -80,18 +79,18 @@ PJ_DEF(pj_ssize_t) pj_strcspn2(const pj_str_t *str, const char *set_char)
 {
     pj_ssize_t i, j;
     for (i = 0; i < str->slen; i++) {
-	for (j = 0; set_char[j] != 0; j++) {
-	    if (str->ptr[i] == set_char[j])
-		return i;
-	}
+        for (j = 0; set_char[j] != 0; j++) {
+            if (str->ptr[i] == set_char[j])
+                return i;
+        }
     }
     return i;
 }
 
 
 PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
-			     pj_str_t *tok, pj_size_t start_idx)
-{    
+                             pj_str_t *tok, pj_size_t start_idx)
+{
     pj_ssize_t str_idx;
 
     pj_assert(str->slen >= 0);
@@ -99,16 +98,16 @@ PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
 
     tok->slen = 0;
     if ((str->slen <= 0) || ((pj_size_t)str->slen < start_idx)) {
-	return str->slen;
+        return str->slen;
     }
-    
+
     tok->ptr = str->ptr + start_idx;
     tok->slen = str->slen - start_idx;
 
     str_idx = pj_strspn(tok, delim);
     if (start_idx+str_idx == (pj_size_t)str->slen) {
-	return str->slen;
-    }    
+        return str->slen;
+    }
     tok->ptr += str_idx;
     tok->slen -= str_idx;
 
@@ -118,7 +117,7 @@ PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
 
 
 PJ_DEF(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
-			       pj_str_t *tok, pj_size_t start_idx)
+                              pj_str_t *tok, pj_size_t start_idx)
 {
     pj_ssize_t str_idx;
 
@@ -126,7 +125,7 @@ PJ_DEF(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
 
     tok->slen = 0;
     if ((str->slen <= 0) || ((pj_size_t)str->slen < start_idx)) {
-	return str->slen;
+        return str->slen;
     }
 
     tok->ptr = str->ptr + start_idx;
@@ -134,7 +133,7 @@ PJ_DEF(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
 
     str_idx = pj_strspn2(tok, delim);
     if (start_idx + str_idx == (pj_size_t)str->slen) {
-	return str->slen;
+        return str->slen;
     }
     tok->ptr += str_idx;
     tok->slen -= str_idx;
@@ -152,18 +151,18 @@ PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 
     /* Check if the string is empty */
     if (str->slen <= 0)
-    	return NULL;
+        return NULL;
 
     /* Special case when substr is empty */
     if (substr->slen <= 0) {
-	return (char*)str->ptr;
+        return (char*)str->ptr;
     }
 
     s = str->ptr;
     ends = str->ptr + str->slen - substr->slen;
     for (; s<=ends; ++s) {
-	if (pj_ansi_strncmp(s, substr->ptr, substr->slen)==0)
-	    return (char*)s;
+        if (pj_ansi_strncmp(s, substr->ptr, substr->slen)==0)
+            return (char*)s;
     }
     return NULL;
 }
@@ -177,18 +176,18 @@ PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
 
     /* Check if the string is empty */
     if (str->slen <= 0)
-    	return NULL;
+        return NULL;
 
     /* Special case when substr is empty */
     if (substr->slen == 0) {
-	return (char*)str->ptr;
+        return (char*)str->ptr;
     }
 
     s = str->ptr;
     ends = str->ptr + str->slen - substr->slen;
     for (; s<=ends; ++s) {
-	if (pj_ansi_strnicmp(s, substr->ptr, substr->slen)==0)
-	    return (char*)s;
+        if (pj_ansi_strnicmp(s, substr->ptr, substr->slen)==0)
+            return (char*)s;
     }
     return NULL;
 }
@@ -198,11 +197,11 @@ PJ_DEF(pj_str_t*) pj_strltrim( pj_str_t *str )
 {
     char *end = str->ptr + str->slen;
     register char *p = str->ptr;
- 
+
     pj_assert(str->slen >= 0);
- 
+
     while (p < end && pj_isspace(*p))
-	++p;
+        ++p;
     str->slen -= (p - str->ptr);
     str->ptr = p;
     return str;
@@ -229,33 +228,43 @@ PJ_DEF(char*) pj_create_random_string(char *str, pj_size_t len)
     PJ_CHECK_STACK();
 
     for (i=0; i<len/8; ++i) {
-	pj_uint32_t val = pj_rand();
-	pj_val_to_hex_digit( (val & 0xFF000000) >> 24, p+0 );
-	pj_val_to_hex_digit( (val & 0x00FF0000) >> 16, p+2 );
-	pj_val_to_hex_digit( (val & 0x0000FF00) >>  8, p+4 );
-	pj_val_to_hex_digit( (val & 0x000000FF) >>  0, p+6 );
-	p += 8;
+        pj_uint32_t val = pj_rand();
+        pj_val_to_hex_digit( (val & 0xFF000000) >> 24, p+0 );
+        pj_val_to_hex_digit( (val & 0x00FF0000) >> 16, p+2 );
+        pj_val_to_hex_digit( (val & 0x0000FF00) >>  8, p+4 );
+        pj_val_to_hex_digit( (val & 0x000000FF) >>  0, p+6 );
+        p += 8;
     }
     for (i=i * 8; i<len; ++i) {
-	*p++ = pj_hex_digits[ pj_rand() & 0x0F ];
+        *p++ = pj_hex_digits[ pj_rand() & 0x0F ];
     }
     return str;
 }
 
 PJ_DEF(long) pj_strtol(const pj_str_t *str)
 {
+    pj_bool_t is_negative = PJ_FALSE;
+    unsigned long uval;
+    long val;
+
     PJ_CHECK_STACK();
 
     if (str->slen > 0 && (str->ptr[0] == '+' || str->ptr[0] == '-')) {
         pj_str_t s;
-        
         s.ptr = str->ptr + 1;
         s.slen = str->slen - 1;
-        return (str->ptr[0] == '-'? -(long)pj_strtoul(&s) : pj_strtoul(&s));
+        uval = pj_strtoul(&s);
+        is_negative = (str->ptr[0] == '-');
     } else
-        return pj_strtoul(str);
-}
+        uval = pj_strtoul(str);
 
+    if (is_negative)
+        val = uval > PJ_MAXLONG ? PJ_MINLONG : -uval;
+    else
+        val = uval > PJ_MAXLONG ? PJ_MAXLONG : uval;
+
+    return val;
+}
 
 PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
 {
@@ -266,11 +275,10 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
 
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
-
     if (!str || !value) {
         return PJ_EINVAL;
     }
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
 
     s = *str;
     pj_strltrim(&s);
@@ -302,7 +310,7 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
         return PJ_ETOOSMALL;
     }
 
-    *value = is_negative ? -(long)retval : retval;
+    *value = is_negative ? -retval : retval;
 
     return PJ_SUCCESS;
 }
@@ -318,15 +326,15 @@ PJ_DEF(unsigned long) pj_strtoul(const pj_str_t *str)
 
     value = 0;
     for (i=0; i<(unsigned)str->slen; ++i) {
-	if (!pj_isdigit(str->ptr[i]))
-	    break;
-	value = value * 10 + (str->ptr[i] - '0');
+        if (!pj_isdigit(str->ptr[i]))
+            break;
+        value = value * 10 + (str->ptr[i] - '0');
     }
     return value;
 }
 
 PJ_DEF(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
-				  unsigned base)
+                                  unsigned base)
 {
     unsigned long value;
     unsigned i;
@@ -337,95 +345,94 @@ PJ_DEF(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
 
     value = 0;
     if (base <= 10) {
-	for (i=0; i<(unsigned)str->slen; ++i) {
-	    unsigned c = (str->ptr[i] - '0');
-	    if (c >= base)
-		break;
-	    value = value * base + c;
-	}
+        for (i=0; i<(unsigned)str->slen; ++i) {
+            unsigned c = (str->ptr[i] - '0');
+            if (c >= base)
+                break;
+            value = value * base + c;
+        }
     } else if (base == 16) {
-	for (i=0; i<(unsigned)str->slen; ++i) {
-	    if (!pj_isxdigit(str->ptr[i]))
-		break;
-	    value = value * 16 + pj_hex_digit_to_val(str->ptr[i]);
-	}
+        for (i=0; i<(unsigned)str->slen; ++i) {
+            if (!pj_isxdigit(str->ptr[i]))
+                break;
+            value = value * 16 + pj_hex_digit_to_val(str->ptr[i]);
+        }
     } else {
-	pj_assert(!"Unsupported base");
-	i = 0;
-	value = 0xFFFFFFFFUL;
+        pj_assert(!"Unsupported base");
+        i = 0;
+        value = 0xFFFFFFFFUL;
     }
 
     if (endptr) {
-	endptr->ptr = str->ptr + i;
-	endptr->slen = (str->slen < 0)? 0: (str->slen - i);
+        endptr->ptr = str->ptr + i;
+        endptr->slen = (str->slen < 0)? 0: (str->slen - i);
     }
 
     return value;
 }
 
 PJ_DEF(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
-				unsigned base)
+                                unsigned base)
 {
     pj_str_t s;
     unsigned i;
 
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
-
     if (!str || !value) {
         return PJ_EINVAL;
     }
-
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
+    
     s = *str;
     pj_strltrim(&s);
 
     if (s.slen == 0 || s.ptr[0] < '0' ||
-	(base <= 10 && (unsigned)s.ptr[0] > ('0' - 1) + base) ||
-	(base == 16 && !pj_isxdigit(s.ptr[0])))
+        (base <= 10 && (unsigned)s.ptr[0] > ('0' - 1) + base) ||
+        (base == 16 && !pj_isxdigit(s.ptr[0])))
     {
         return PJ_EINVAL;
     }
 
     *value = 0;
     if (base <= 10) {
-	for (i=0; i<(unsigned)s.slen; ++i) {
-	    unsigned c = s.ptr[i] - '0';
-	    if (s.ptr[i] < '0' || (unsigned)s.ptr[i] > ('0' - 1) + base) {
-		break;
-	    }
-	    if (*value > PJ_MAXULONG / base) {
-		*value = PJ_MAXULONG;
-		return PJ_ETOOBIG;
-	    }
+        for (i=0; i<(unsigned)s.slen; ++i) {
+            unsigned c = s.ptr[i] - '0';
+            if (s.ptr[i] < '0' || (unsigned)s.ptr[i] > ('0' - 1) + base) {
+                break;
+            }
+            if (*value > PJ_MAXULONG / base) {
+                *value = PJ_MAXULONG;
+                return PJ_ETOOBIG;
+            }
 
-	    *value *= base;
-	    if ((PJ_MAXULONG - *value) < c) {
-		*value = PJ_MAXULONG;
-		return PJ_ETOOBIG;
-	    }
-	    *value += c;
-	}
+            *value *= base;
+            if ((PJ_MAXULONG - *value) < c) {
+                *value = PJ_MAXULONG;
+                return PJ_ETOOBIG;
+            }
+            *value += c;
+        }
     } else if (base == 16) {
-	for (i=0; i<(unsigned)s.slen; ++i) {
-	    unsigned c = pj_hex_digit_to_val(s.ptr[i]);
-	    if (!pj_isxdigit(s.ptr[i]))
-		break;
+        for (i=0; i<(unsigned)s.slen; ++i) {
+            unsigned c = pj_hex_digit_to_val(s.ptr[i]);
+            if (!pj_isxdigit(s.ptr[i]))
+                break;
 
-	    if (*value > PJ_MAXULONG / base) {
-		*value = PJ_MAXULONG;
-		return PJ_ETOOBIG;
-	    }
-	    *value *= base;
-	    if ((PJ_MAXULONG - *value) < c) {
-		*value = PJ_MAXULONG;
-		return PJ_ETOOBIG;
-	    }
-	    *value += c;
-	}
+            if (*value > PJ_MAXULONG / base) {
+                *value = PJ_MAXULONG;
+                return PJ_ETOOBIG;
+            }
+            *value *= base;
+            if ((PJ_MAXULONG - *value) < c) {
+                *value = PJ_MAXULONG;
+                return PJ_ETOOBIG;
+            }
+            *value += c;
+        }
     } else {
-	pj_assert(!"Unsupported base");
-	return PJ_EINVAL;
+        pj_assert(!"Unsupported base");
+        return PJ_EINVAL;
     }
     return PJ_SUCCESS;
 }
@@ -439,33 +446,33 @@ PJ_DEF(float) pj_strtof(const pj_str_t *str)
     pj_assert(str->slen >= 0);
 
     if (str->slen <= 0)
-	return 0;
+        return 0;
 
     pdot = (char*)pj_memchr(str->ptr, '.', str->slen);
     part.ptr = str->ptr;
     part.slen = pdot ? pdot - str->ptr : str->slen;
 
     if (part.slen)
-	val = (float)pj_strtol(&part);
+        val = (float)pj_strtol(&part);
     else
-	val = 0;
+        val = 0;
 
     if (pdot) {
-	part.ptr = pdot + 1;
-	part.slen = (str->ptr + str->slen - pdot - 1);
-	if (part.slen) {
-	    pj_str_t endptr;
-	    float fpart, fdiv;
-	    int i;
-	    fpart = (float)pj_strtoul2(&part, &endptr, 10);
-	    fdiv = 1.0;
-	    for (i=0; i<(part.slen - endptr.slen); ++i)
-		    fdiv = fdiv * 10;
-	    if (val >= 0)
-		val += (fpart / fdiv);
-	    else
-		val -= (fpart / fdiv);
-	}
+        part.ptr = pdot + 1;
+        part.slen = (str->ptr + str->slen - pdot - 1);
+        if (part.slen) {
+            pj_str_t endptr;
+            float fpart, fdiv;
+            int i;
+            fpart = (float)pj_strtoul2(&part, &endptr, 10);
+            fdiv = 1.0;
+            for (i=0; i<(part.slen - endptr.slen); ++i)
+                    fdiv = fdiv * 10;
+            if (val >= 0)
+                val += (fpart / fdiv);
+            else
+                val -= (fpart / fdiv);
+        }
     }
     return val;
 }
@@ -491,8 +498,8 @@ PJ_DEF(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad)
 
     len = (int)(p-buf);
     while (len < min_dig) {
-	*p++ = (char)pad;
-	++len;
+        *p++ = (char)pad;
+        ++len;
     }
     *p-- = '\0';
 
@@ -505,4 +512,72 @@ PJ_DEF(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad)
     } while (buf < p);
 
     return len;
+}
+
+PJ_DEF(int) pj_ansi_strxcpy(char *dst, const char *src,
+                            pj_size_t dst_size)
+{
+    char *odst = dst;
+
+    PJ_ASSERT_RETURN(dst && src, -PJ_EINVAL);
+
+    if (dst_size==0)
+        return -PJ_ETOOBIG;
+
+    while (--dst_size && (*dst=*src) != 0) {
+        ++dst;
+        ++src;
+    }
+
+    if (!*dst && !*src) {
+        return dst-odst;
+    } else {
+        *dst = '\0';
+        return *src? -PJ_ETOOBIG : dst-odst;
+    }
+}
+
+PJ_DEF(int) pj_ansi_strxcpy2(char *dst, const pj_str_t *src,
+                             pj_size_t dst_size)
+{
+    char *odst = dst;
+    const char *ssrc, *esrc;
+
+    PJ_ASSERT_RETURN(dst && src && src->slen >= 0, -PJ_EINVAL);
+    if (dst_size==0)
+        return -PJ_ETOOBIG;
+
+    ssrc = src->ptr;
+    esrc = ssrc + src->slen;
+
+    while (ssrc < esrc && --dst_size && (*dst = *ssrc)!= 0) {
+        dst++;
+        ssrc++;
+    }
+
+    *dst = '\0';
+    if (ssrc==esrc || !*ssrc) {
+         return dst-odst;
+    } else {
+        return -PJ_ETOOBIG;
+    }
+}
+
+PJ_DEF(int) pj_ansi_strxcat(char *dst, const char *src, pj_size_t dst_size)
+{
+    pj_size_t dst_len;
+
+    PJ_ASSERT_RETURN(dst && src, -PJ_EINVAL);
+
+    if (dst_size==0)
+        return -PJ_ETOOBIG;
+
+    dst_len = pj_ansi_strlen(dst);
+    if (dst_len < dst_size) {
+        int rc = pj_ansi_strxcpy(dst+dst_len, src, dst_size-dst_len);
+        if (rc < 0)
+            return rc;
+        return dst_len + rc;
+    } else
+        return -PJ_ETOOBIG;
 }

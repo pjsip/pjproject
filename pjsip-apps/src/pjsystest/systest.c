@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,9 +22,9 @@
 
 unsigned    test_item_count;
 test_item_t test_items[SYSTEST_MAX_TEST];
-char	    doc_path[PATH_LENGTH] = {0};
-char	    res_path[PATH_LENGTH] = {0};
-char	    fpath[PATH_LENGTH];
+char        doc_path[PATH_LENGTH] = {0};
+char        res_path[PATH_LENGTH] = {0};
+char        fpath[PATH_LENGTH];
 
 #define USER_ERROR  "User used said not okay"
 
@@ -60,16 +59,16 @@ static gui_menu menu_tests = {
     "Tests", NULL,
     10,
     {
-	&menu_wizard,
-	&menu_audtest,
-	&menu_playtn,
-	&menu_playwv1,
-	&menu_playwv2,
-	&menu_recaud,
-	&menu_calclat,
-	&menu_sndaec,
-	NULL,
-	&menu_exit
+        &menu_wizard,
+        &menu_audtest,
+        &menu_playtn,
+        &menu_playwv1,
+        &menu_playwv2,
+        &menu_recaud,
+        &menu_calclat,
+        &menu_sndaec,
+        NULL,
+        &menu_exit
     }
 };
 
@@ -77,8 +76,8 @@ static gui_menu menu_options = {
     "Options", NULL,
     2,
     {
-	&menu_listdev,
-	&menu_getsets,
+        &menu_listdev,
+        &menu_getsets,
     }
 };
 
@@ -91,8 +90,8 @@ static gui_menu root_menu = {
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 PJ_INLINE(char *) add_path(const char *path, const char *fname)
 {
-    strncpy(fpath, path, PATH_LENGTH);
-    strncat(fpath, fname, PATH_LENGTH);
+    pj_ansi_strxcpy(fpath, path, PATH_LENGTH);
+    pj_ansi_strxcat(fpath, fname, PATH_LENGTH);
     return fpath;
 }
 #else
@@ -111,8 +110,8 @@ static void exit_app(void)
 
 typedef struct systest_t
 {
-    pjsua_config	    ua_cfg;
-    pjsua_media_config	    media_cfg;
+    pjsua_config            ua_cfg;
+    pjsua_media_config      media_cfg;
     pjmedia_aud_dev_index   rec_id;
     pjmedia_aud_dev_index   play_id;
 } systest_t;
@@ -130,14 +129,13 @@ static void systest_perror(const char *title, pj_status_t status)
     char themsg[PJ_ERR_MSG_SIZE + 100];
 
     if (status != PJ_SUCCESS)
-	pj_strerror(status, errmsg, sizeof(errmsg));
+        pj_strerror(status, errmsg, sizeof(errmsg));
     else
-	errmsg[0] = '\0';
+        pj_ansi_strxcpy(errmsg, "No error", sizeof(errmsg));
 
-    strcpy(themsg, title);
-    strncat(themsg, errmsg, sizeof(themsg)-1);
-    themsg[sizeof(themsg)-1] = '\0';
-
+    pj_ansi_strxcpy(themsg, title, sizeof(themsg));
+    pj_ansi_strxcat(themsg, ": ", sizeof(themsg));
+    pj_ansi_strxcat(themsg, errmsg, sizeof(themsg));
     gui_msgbox("Error", themsg, WITH_OK);
 }
 
@@ -146,13 +144,13 @@ test_item_t *systest_alloc_test_item(const char *title)
     test_item_t *ti;
 
     if (test_item_count == SYSTEST_MAX_TEST) {
-	gui_msgbox("Error", "You have done too many tests", WITH_OK);
-	return NULL;
+        gui_msgbox("Error", "You have done too many tests", WITH_OK);
+        return NULL;
     }
 
     ti = &test_items[test_item_count++];
     pj_bzero(ti, sizeof(*ti));
-    pj_ansi_strcpy(ti->title, title);
+    pj_ansi_strxcpy(ti->title, title, sizeof(ti->title));
 
     return ti;
 }
@@ -163,12 +161,12 @@ test_item_t *systest_alloc_test_item(const char *title)
 static void systest_play_tone(void)
 {
     /* Ringtones  */
-    #define RINGBACK_FREQ1	    440	    /* 400 */
-    #define RINGBACK_FREQ2	    480	    /* 450 */
-    #define RINGBACK_ON		    3000    /* 400 */
-    #define RINGBACK_OFF	    4000    /* 200 */
-    #define RINGBACK_CNT	    1	    /* 2   */
-    #define RINGBACK_INTERVAL	    4000    /* 2000 */
+    #define RINGBACK_FREQ1          440     /* 400 */
+    #define RINGBACK_FREQ2          480     /* 450 */
+    #define RINGBACK_ON             3000    /* 400 */
+    #define RINGBACK_OFF            4000    /* 200 */
+    #define RINGBACK_CNT            1       /* 2   */
+    #define RINGBACK_INTERVAL       4000    /* 2000 */
 
     unsigned i, samples_per_frame;
     pjmedia_tone_desc tone[RINGBACK_CNT];
@@ -183,85 +181,85 @@ static void systest_play_tone(void)
 
     ti = systest_alloc_test_item(title);
     if (!ti)
-	return;
+        return;
 
     key = gui_msgbox(title,
-		     "This test will play simple ringback tone to "
-		     "the speaker. Please listen carefully for audio "
-		     "impairments such as stutter. You may need "
-		     "to let this test running for a while to "
-		     "make sure that everything is okay. Press "
-		     "OK to start, CANCEL to skip",
-		     WITH_OKCANCEL);
+                     "This test will play simple ringback tone to "
+                     "the speaker. Please listen carefully for audio "
+                     "impairments such as stutter. You may need "
+                     "to let this test running for a while to "
+                     "make sure that everything is okay. Press "
+                     "OK to start, CANCEL to skip",
+                     WITH_OKCANCEL);
     if (key != KEY_OK) {
-	ti->skipped = PJ_TRUE;
-	return;
+        ti->skipped = PJ_TRUE;
+        return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
     pool = pjsua_pool_create("ringback", 512, 512);
     samples_per_frame = systest.media_cfg.audio_frame_ptime *
-			systest.media_cfg.clock_rate *
-			systest.media_cfg.channel_count / 1000;
+                        systest.media_cfg.clock_rate *
+                        systest.media_cfg.channel_count / 1000;
 
     /* Ringback tone (call is ringing) */
     name = pj_str("ringback");
     status = pjmedia_tonegen_create2(pool, &name,
-				     systest.media_cfg.clock_rate,
-				     systest.media_cfg.channel_count,
-				     samples_per_frame,
-				     16, PJMEDIA_TONEGEN_LOOP,
-				     &ringback_port);
+                                     systest.media_cfg.clock_rate,
+                                     systest.media_cfg.channel_count,
+                                     samples_per_frame,
+                                     16, PJMEDIA_TONEGEN_LOOP,
+                                     &ringback_port);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     pj_bzero(&tone, sizeof(tone));
     for (i=0; i<RINGBACK_CNT; ++i) {
-	tone[i].freq1 = RINGBACK_FREQ1;
-	tone[i].freq2 = RINGBACK_FREQ2;
-	tone[i].on_msec = RINGBACK_ON;
-	tone[i].off_msec = RINGBACK_OFF;
+        tone[i].freq1 = RINGBACK_FREQ1;
+        tone[i].freq2 = RINGBACK_FREQ2;
+        tone[i].on_msec = RINGBACK_ON;
+        tone[i].off_msec = RINGBACK_OFF;
     }
     tone[RINGBACK_CNT-1].off_msec = RINGBACK_INTERVAL;
 
     status = pjmedia_tonegen_play(ringback_port, RINGBACK_CNT, tone,
-				  PJMEDIA_TONEGEN_LOOP);
+                                  PJMEDIA_TONEGEN_LOOP);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     status = pjsua_conf_add_port(pool, ringback_port, &ringback_slot);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     status = pjsua_conf_connect(ringback_slot, 0);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     key = gui_msgbox(title,
-		     "Ringback tone should be playing now in the "
-		     "speaker. Press OK to stop. ", WITH_OK);
-
+                     "Ringback tone should be playing now in the "
+                     "speaker. Press OK to stop. ", WITH_OK);
+    PJ_UNUSED_ARG(key);
     status = PJ_SUCCESS;
 
 on_return:
     if (ringback_slot != -1)
-	pjsua_conf_remove_port(ringback_slot);
+        pjsua_conf_remove_port(ringback_slot);
     if (ringback_port)
-	pjmedia_port_destroy(ringback_port);
+        pjmedia_port_destroy(ringback_port);
     if (pool)
-	pj_pool_release(pool);
+        pj_pool_release(pool);
 
     if (status != PJ_SUCCESS) {
-	systest_perror("Sorry we encounter error when initializing "
-		       "the tone generator: ", status);
-	ti->success = PJ_FALSE;
-	pj_strerror(status, ti->reason, sizeof(ti->reason));
+        systest_perror("Sorry we encounter error when initializing "
+                       "the tone generator", status);
+        ti->success = PJ_FALSE;
+        pj_strerror(status, ti->reason, sizeof(ti->reason));
     } else {
-	key = gui_msgbox(title, "Is the audio okay?", WITH_YESNO);
-	ti->success = (key == KEY_YES);
-	if (!ti->success)
-	    pj_ansi_strcpy(ti->reason, USER_ERROR);
+        key = gui_msgbox(title, "Is the audio okay?", WITH_YESNO);
+        ti->success = (key == KEY_YES);
+        if (!ti->success)
+            pj_ansi_strxcpy(ti->reason, USER_ERROR, sizeof(ti->reason));
     }
     return;
 }
@@ -270,16 +268,16 @@ on_return:
  * the file.
  */
 static pj_status_t create_player(unsigned path_cnt, const char *paths[],
-				 pjsua_player_id *p_id)
+                                 pjsua_player_id *p_id)
 {
     pj_str_t name;
     pj_status_t status = PJ_ENOTFOUND;
     unsigned i;
 
     for (i=0; i<path_cnt; ++i) {
-	status = pjsua_player_create(pj_cstr(&name, paths[i]), 0, p_id);
-	if (status == PJ_SUCCESS)
-	    return PJ_SUCCESS;
+        status = pjsua_player_create(pj_cstr(&name, paths[i]), 0, p_id);
+        if (status == PJ_SUCCESS)
+            return PJ_SUCCESS;
     }
     return status;
 }
@@ -297,21 +295,21 @@ static void systest_play_wav(unsigned path_cnt, const char *paths[])
 
     ti = systest_alloc_test_item(title);
     if (!ti)
-	return;
+        return;
 
     pj_ansi_snprintf(textbuf, sizeof(textbuf),
-		     "This test will play %s file to "
-		     "the speaker. Please listen carefully for audio "
-		     "impairments such as stutter. Let this test run "
-		     "for a while to make sure that everything is okay."
-		     " Press OK to start, CANCEL to skip",
-		     paths[0]);
+                     "This test will play %s file to "
+                     "the speaker. Please listen carefully for audio "
+                     "impairments such as stutter. Let this test run "
+                     "for a while to make sure that everything is okay."
+                     " Press OK to start, CANCEL to skip",
+                     paths[0]);
 
     key = gui_msgbox(title, textbuf,
-		     WITH_OKCANCEL);
+                     WITH_OKCANCEL);
     if (key != KEY_OK) {
-	ti->skipped = PJ_TRUE;
-	return;
+        ti->skipped = PJ_TRUE;
+        return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
@@ -319,31 +317,32 @@ static void systest_play_wav(unsigned path_cnt, const char *paths[])
     /* WAV port */
     status = create_player(path_cnt, paths, &play_id);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id), 0);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     key = gui_msgbox(title,
-		     "WAV file should be playing now in the "
-		     "speaker. Press OK to stop. ", WITH_OK);
+                     "WAV file should be playing now in the "
+                     "speaker. Press OK to stop. ", WITH_OK);
+    PJ_UNUSED_ARG(key);
 
     status = PJ_SUCCESS;
 
 on_return:
     if (play_id != -1)
-	pjsua_player_destroy(play_id);
+        pjsua_player_destroy(play_id);
 
     if (status != PJ_SUCCESS) {
-	systest_perror("Sorry we've encountered error", status);
-	ti->success = PJ_FALSE;
-	pj_strerror(status, ti->reason, sizeof(ti->reason));
+        systest_perror("Sorry we've encountered error", status);
+        ti->success = PJ_FALSE;
+        pj_strerror(status, ti->reason, sizeof(ti->reason));
     } else {
-	key = gui_msgbox(title, "Is the audio okay?", WITH_YESNO);
-	ti->success = (key == KEY_YES);
-	if (!ti->success)
-	    pj_ansi_strcpy(ti->reason, USER_ERROR);
+        key = gui_msgbox(title, "Is the audio okay?", WITH_YESNO);
+        ti->success = (key == KEY_YES);
+        if (!ti->success)
+            pj_ansi_strxcpy(ti->reason, USER_ERROR, sizeof(ti->reason));
     }
     return;
 }
@@ -351,14 +350,14 @@ on_return:
 static void systest_play_wav1(void)
 {
     const char *paths[] = { add_path(res_path, WAV_PLAYBACK_PATH),
-			    ALT_PATH1 WAV_PLAYBACK_PATH };
+                            ALT_PATH1 WAV_PLAYBACK_PATH };
     systest_play_wav(PJ_ARRAY_SIZE(paths), paths);
 }
 
 static void systest_play_wav2(void)
 {
     const char *paths[] = { add_path(res_path, WAV_TOCK8_PATH),
-			    ALT_PATH1 WAV_TOCK8_PATH};
+                            ALT_PATH1 WAV_TOCK8_PATH};
     systest_play_wav(PJ_ARRAY_SIZE(paths), paths);
 }
 
@@ -381,17 +380,17 @@ static void systest_rec_audio(void)
 
     ti = systest_alloc_test_item(title);
     if (!ti)
-	return;
+        return;
 
     key = gui_msgbox(title,
-		     "This test will allow you to record audio "
-		     "from the microphone, and playback the "
-		     "audio to the speaker. Press OK to start recording, "
-		     "CANCEL to skip.",
-		     WITH_OKCANCEL);
+                     "This test will allow you to record audio "
+                     "from the microphone, and playback the "
+                     "audio to the speaker. Press OK to start recording, "
+                     "CANCEL to skip.",
+                     WITH_OKCANCEL);
     if (key != KEY_OK) {
-	ti->skipped = PJ_TRUE;
-	return;
+        ti->skipped = PJ_TRUE;
+        return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
@@ -400,18 +399,18 @@ static void systest_rec_audio(void)
 
     status = pjsua_recorder_create(&filename, 0, NULL, -1, 0, &rec_id);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     rec_slot = pjsua_recorder_get_conf_port(rec_id);
 
     status = pjsua_conf_connect(0, rec_slot);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     key = gui_msgbox(title,
-		     "Recording is in progress now, please say "
-		     "something in the microphone. Press OK "
-		     "to stop recording", WITH_OK);
+                     "Recording is in progress now, please say "
+                     "something in the microphone. Press OK "
+                     "to stop recording", WITH_OK);
 
     pjsua_conf_disconnect(0, rec_slot);
     rec_slot = PJSUA_INVALID_ID;
@@ -420,50 +419,51 @@ static void systest_rec_audio(void)
 
     status = pjsua_player_create(&filename, 0, &play_id);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     play_slot = pjsua_player_get_conf_port(play_id);
 
     status = pjsua_conf_connect(play_slot, 0);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     key = gui_msgbox(title,
-		     "Recording has been stopped. "
-		     "The recorded audio is being played now to "
-		     "the speaker device, in a loop. Listen for "
-		     "any audio impairments. Press OK to stop.",
-		     WITH_OK);
+                     "Recording has been stopped. "
+                     "The recorded audio is being played now to "
+                     "the speaker device, in a loop. Listen for "
+                     "any audio impairments. Press OK to stop.",
+                     WITH_OK);
+    PJ_UNUSED_ARG(key);
 
 on_return:
     if (rec_slot != PJSUA_INVALID_ID)
-	pjsua_conf_disconnect(0, rec_slot);
+        pjsua_conf_disconnect(0, rec_slot);
     if (rec_id != PJSUA_INVALID_ID)
-	pjsua_recorder_destroy(rec_id);
+        pjsua_recorder_destroy(rec_id);
     if (play_slot != PJSUA_INVALID_ID)
-	pjsua_conf_disconnect(play_slot, 0);
+        pjsua_conf_disconnect(play_slot, 0);
     if (play_id != PJSUA_INVALID_ID)
-	pjsua_player_destroy(play_id);
+        pjsua_player_destroy(play_id);
     if (pool)
-	pj_pool_release(pool);
+        pj_pool_release(pool);
 
     if (status != PJ_SUCCESS) {
-	systest_perror("Sorry we encountered an error: ", status);
-	ti->success = PJ_FALSE;
-	pj_strerror(status, ti->reason, sizeof(ti->reason));
+        systest_perror("Sorry we encountered an error", status);
+        ti->success = PJ_FALSE;
+        pj_strerror(status, ti->reason, sizeof(ti->reason));
     } else {
-	key = gui_msgbox(title, "Is the audio okay?", WITH_YESNO);
-	ti->success = (key == KEY_YES);
-	if (!ti->success) {
-	    pj_ansi_snprintf(textbuf, sizeof(textbuf),
-			     "You will probably need to copy the recorded "
-			     "WAV file %s to a desktop computer and analyze "
-			     "it, to find out whether it's a recording "
-			     "or playback problem.",
-			     WAV_REC_OUT_PATH);
-	    gui_msgbox(title, textbuf, WITH_OK);
-	    pj_ansi_strcpy(ti->reason, USER_ERROR);
-	}
+        key = gui_msgbox(title, "Is the audio okay?", WITH_YESNO);
+        ti->success = (key == KEY_YES);
+        if (!ti->success) {
+            pj_ansi_snprintf(textbuf, sizeof(textbuf),
+                             "You will probably need to copy the recorded "
+                             "WAV file %s to a desktop computer and analyze "
+                             "it, to find out whether it's a recording "
+                             "or playback problem.",
+                             WAV_REC_OUT_PATH);
+            gui_msgbox(title, textbuf, WITH_OK);
+            pj_ansi_strxcpy(ti->reason, USER_ERROR, sizeof(ti->reason));
+        }
     }
 }
 
@@ -474,7 +474,7 @@ on_return:
 static void systest_audio_test(void)
 {
     enum {
-	GOOD_MAX_INTERVAL = 5,
+        GOOD_MAX_INTERVAL = 5,
     };
     const pjmedia_dir dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
     pjmedia_aud_param param;
@@ -490,18 +490,18 @@ static void systest_audio_test(void)
 
     ti = systest_alloc_test_item(title);
     if (!ti)
-	return;
+        return;
 
     key = gui_msgbox(title,
-		     "This will run an automated test for about "
-		     "ten seconds or so, and display some "
-		     "statistics about your sound device. "
-		     "Please don't do anything until the test completes. "
-		     "Press OK to start, or CANCEL to skip this test.",
-		     WITH_OKCANCEL);
+                     "This will run an automated test for about "
+                     "ten seconds or so, and display some "
+                     "statistics about your sound device. "
+                     "Please don't do anything until the test completes. "
+                     "Press OK to start, or CANCEL to skip this test.",
+                     WITH_OKCANCEL);
     if (key != KEY_OK) {
-	ti->skipped = PJ_TRUE;
-	return;
+        ti->skipped = PJ_TRUE;
+        return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
@@ -512,12 +512,12 @@ static void systest_audio_test(void)
     /* Setup parameters */
     status = pjmedia_aud_dev_default_param(systest.play_id, &param);
     if (status != PJ_SUCCESS) {
-	systest_perror("Sorry we had error in pjmedia_aud_dev_default_param()", status);
-	pjsua_set_snd_dev(systest.rec_id, systest.play_id);
-	ti->success = PJ_FALSE;
-	pj_strerror(status, ti->reason, sizeof(ti->reason));
-	ti->reason[sizeof(ti->reason)-1] = '\0';
-	return;
+        systest_perror("Sorry we had error in pjmedia_aud_dev_default_param()", status);
+        pjsua_set_snd_dev(systest.rec_id, systest.play_id);
+        ti->success = PJ_FALSE;
+        pj_strerror(status, ti->reason, sizeof(ti->reason));
+        ti->reason[sizeof(ti->reason)-1] = '\0';
+        return;
     }
 
     param.dir = dir;
@@ -526,122 +526,122 @@ static void systest_audio_test(void)
     param.clock_rate = systest.media_cfg.snd_clock_rate;
     param.channel_count = systest.media_cfg.channel_count;
     param.samples_per_frame = param.clock_rate * param.channel_count *
-			      systest.media_cfg.audio_frame_ptime / 1000;
+                              systest.media_cfg.audio_frame_ptime / 1000;
 
     /* Latency settings */
     param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
-		    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
+                    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
     param.input_latency_ms = systest.media_cfg.snd_rec_latency;
     param.output_latency_ms = systest.media_cfg.snd_play_latency;
 
     /* Run the test */
     status = pjmedia_aud_test(&param, &result);
     if (status != PJ_SUCCESS) {
-	systest_perror("Sorry we encountered error with the test", status);
-	pjsua_set_snd_dev(systest.rec_id, systest.play_id);
-	ti->success = PJ_FALSE;
-	pj_strerror(status, ti->reason, sizeof(ti->reason));
-	ti->reason[sizeof(ti->reason)-1] = '\0';
-	return;
+        systest_perror("Sorry we encountered error with the test", status);
+        pjsua_set_snd_dev(systest.rec_id, systest.play_id);
+        ti->success = PJ_FALSE;
+        pj_strerror(status, ti->reason, sizeof(ti->reason));
+        ti->reason[sizeof(ti->reason)-1] = '\0';
+        return;
     }
 
     /* Restore pjsua sound device */
     pjsua_set_snd_dev(systest.rec_id, systest.play_id);
 
     /* Analyze the result! */
-    strcpy(textbuf, "Here are the audio statistics:\r\n");
+    pj_ansi_strxcpy(textbuf, "Here are the audio statistics:\r\n", 
+                    sizeof(textbuf));
     textbufpos = strlen(textbuf);
 
     if (result.rec.frame_cnt==0) {
-	problems[problem_count++] =
-	    "No audio frames were captured from the microphone. "
-	    "This means the audio device is not working properly.";
+        problems[problem_count++] =
+            "No audio frames were captured from the microphone. "
+            "This means the audio device is not working properly.";
     } else {
-	pj_ansi_snprintf(textbuf+textbufpos,
-			 sizeof(textbuf)-textbufpos,
-			 "Rec : interval (min/max/avg/dev)=\r\n"
-			 "         %u/%u/%u/%u (ms)\r\n"
-			 "      max burst=%u\r\n",
-			 result.rec.min_interval,
-			 result.rec.max_interval,
-			 result.rec.avg_interval,
-			 result.rec.dev_interval,
-			 result.rec.max_burst);
-	textbufpos = strlen(textbuf);
+        pj_ansi_snprintf(textbuf+textbufpos,
+                         sizeof(textbuf)-textbufpos,
+                         "Rec : interval (min/max/avg/dev)=\r\n"
+                         "         %u/%u/%u/%u (ms)\r\n"
+                         "      max burst=%u\r\n",
+                         result.rec.min_interval,
+                         result.rec.max_interval,
+                         result.rec.avg_interval,
+                         result.rec.dev_interval,
+                         result.rec.max_burst);
+        textbufpos = strlen(textbuf);
 
-	if (result.rec.max_burst > GOOD_MAX_INTERVAL) {
-	    problems[problem_count++] =
-		"Recording max burst is quite high";
-	}
+        if (result.rec.max_burst > GOOD_MAX_INTERVAL) {
+            problems[problem_count++] =
+                "Recording max burst is quite high";
+        }
     }
 
     if (result.play.frame_cnt==0) {
-	problems[problem_count++] =
-	    "No audio frames were played to the speaker. "
-	    "This means the audio device is not working properly.";
+        problems[problem_count++] =
+            "No audio frames were played to the speaker. "
+            "This means the audio device is not working properly.";
     } else {
-	pj_ansi_snprintf(textbuf+textbufpos,
-			 sizeof(textbuf)-textbufpos,
-			 "Play: interval (min/max/avg/dev)=\r\n"
-			 "         %u/%u/%u/%u (ms)\r\n"
-			 "      burst=%u\r\n",
-			 result.play.min_interval,
-			 result.play.max_interval,
-			 result.play.avg_interval,
-			 result.play.dev_interval,
-			 result.play.max_burst);
-	textbufpos = strlen(textbuf);
+        pj_ansi_snprintf(textbuf+textbufpos,
+                         sizeof(textbuf)-textbufpos,
+                         "Play: interval (min/max/avg/dev)=\r\n"
+                         "         %u/%u/%u/%u (ms)\r\n"
+                         "      burst=%u\r\n",
+                         result.play.min_interval,
+                         result.play.max_interval,
+                         result.play.avg_interval,
+                         result.play.dev_interval,
+                         result.play.max_burst);
+        textbufpos = strlen(textbuf);
 
-	if (result.play.max_burst > GOOD_MAX_INTERVAL) {
-	    problems[problem_count++] =
-		"Playback max burst is quite high";
-	}
+        if (result.play.max_burst > GOOD_MAX_INTERVAL) {
+            problems[problem_count++] =
+                "Playback max burst is quite high";
+        }
     }
 
     if (result.rec_drift_per_sec) {
-	const char *which = result.rec_drift_per_sec>=0 ? "faster" : "slower";
-	unsigned drift = result.rec_drift_per_sec>=0 ?
-			    result.rec_drift_per_sec :
-			    -result.rec_drift_per_sec;
+        const char *which = result.rec_drift_per_sec>=0 ? "faster" : "slower";
+        unsigned drift = result.rec_drift_per_sec>=0 ?
+                            result.rec_drift_per_sec :
+                            -result.rec_drift_per_sec;
 
-	pj_ansi_snprintf(drifttext, sizeof(drifttext),
-			"Clock drifts detected. Capture "
-			"is %d samples/sec %s "
-			"than the playback device",
-			drift, which);
-	problems[problem_count++] = drifttext;
+        pj_ansi_snprintf(drifttext, sizeof(drifttext),
+                        "Clock drifts detected. Capture "
+                        "is %d samples/sec %s "
+                        "than the playback device",
+                        drift, which);
+        problems[problem_count++] = drifttext;
     }
 
     if (problem_count == 0) {
-	pj_ansi_snprintf(textbuf+textbufpos,
-			 sizeof(textbuf)-textbufpos,
-			 "\r\nThe sound device seems to be okay!");
-	textbufpos = strlen(textbuf);
+        pj_ansi_snprintf(textbuf+textbufpos,
+                         sizeof(textbuf)-textbufpos,
+                         "\r\nThe sound device seems to be okay!");
+        textbufpos = strlen(textbuf);
 
-	key = gui_msgbox("Audio Device Test", textbuf, WITH_OK);
+        key = gui_msgbox("Audio Device Test", textbuf, WITH_OK);
     } else {
-	unsigned i;
+        unsigned i;
 
-	pj_ansi_snprintf(textbuf+textbufpos,
-			 sizeof(textbuf)-textbufpos,
-			 "There could be %d problem(s) with the "
-			 "sound device:\r\n",
-			 problem_count);
-	textbufpos = strlen(textbuf);
+        pj_ansi_snprintf(textbuf+textbufpos,
+                         sizeof(textbuf)-textbufpos,
+                         "There could be %d problem(s) with the "
+                         "sound device:\r\n",
+                         problem_count);
+        textbufpos = strlen(textbuf);
 
-	for (i=0; i<problem_count; ++i) {
-	    pj_ansi_snprintf(textbuf+textbufpos,
-			     sizeof(textbuf)-textbufpos,
-			     " %d: %s\r\n", i+1, problems[i]);
-	    textbufpos = strlen(textbuf);
-	}
+        for (i=0; i<problem_count; ++i) {
+            pj_ansi_snprintf(textbuf+textbufpos,
+                             sizeof(textbuf)-textbufpos,
+                             " %d: %s\r\n", i+1, problems[i]);
+            textbufpos = strlen(textbuf);
+        }
 
-	key = gui_msgbox(title, textbuf, WITH_OK);
+        key = gui_msgbox(title, textbuf, WITH_OK);
     }
 
     ti->success = PJ_TRUE;
-    pj_ansi_strncpy(ti->reason, textbuf, sizeof(ti->reason));
-    ti->reason[sizeof(ti->reason)-1] = '\0';
+    pj_ansi_strxcpy(ti->reason, textbuf, sizeof(ti->reason));
 }
 
 
@@ -649,8 +649,8 @@ static void systest_audio_test(void)
  * sound latency test
  */
 static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
-			     unsigned *lat_sum, unsigned *lat_cnt,
-			     unsigned *lat_min, unsigned *lat_max)
+                             unsigned *lat_sum, unsigned *lat_cnt,
+                             unsigned *lat_min, unsigned *lat_max)
 {
     pjmedia_frame frm;
     short *buf;
@@ -667,6 +667,11 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 
     samples_per_frame = PJMEDIA_PIA_SPF(&wav->info);
     clock_rate = PJMEDIA_PIA_SRATE(&wav->info);
+    PJ_ASSERT_ON_FAIL(samples_per_frame && clock_rate,
+                      {
+                        systest_perror("Invalid WAV file", PJ_SUCCESS);
+                        return -1;
+                      });
     frm.buf = pj_pool_alloc(pool, samples_per_frame * 2);
     frm.size = samples_per_frame * 2;
     len = pjmedia_wav_player_get_len(wav);
@@ -675,17 +680,17 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
     /* Read the whole file */
     read = 0;
     while (read < len/2) {
-	status = pjmedia_port_get_frame(wav, &frm);
-	if (status != PJ_SUCCESS)
-	    break;
+        status = pjmedia_port_get_frame(wav, &frm);
+        if (status != PJ_SUCCESS)
+            break;
 
-	pjmedia_copy_samples(buf+read, (short*)frm.buf, samples_per_frame);
-	read += samples_per_frame;
+        pjmedia_copy_samples(buf+read, (short*)frm.buf, samples_per_frame);
+        read += samples_per_frame;
     }
 
     if (read < 2 * clock_rate) {
-	systest_perror("The WAV file is too short", PJ_SUCCESS);
-	return -1;
+        systest_perror("The WAV file is too short", PJ_SUCCESS);
+        return -1;
     }
 
     /* Zero the first 500ms to remove loud click noises
@@ -697,56 +702,56 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
     start_pos = 0;
     first = PJ_TRUE;
     while (start_pos < len/2 - clock_rate) {
-	int max_signal = 0;
-	unsigned max_signal_pos = start_pos;
-	unsigned max_echo_pos = 0;
-	unsigned pos;
-	unsigned lat;
+        int max_signal = 0;
+        unsigned max_signal_pos = start_pos;
+        unsigned max_echo_pos = 0;
+        unsigned pos;
+        unsigned lat;
 
-	/* Get the largest signal in the next 0.7s */
-	for (i=start_pos; i<start_pos + clock_rate * 700 / 1000; ++i) {
-	    if (abs(buf[i]) > max_signal) {
-		max_signal = abs(buf[i]);
-		max_signal_pos = i;
-	    }
-	}
+        /* Get the largest signal in the next 0.7s */
+        for (i=start_pos; i<start_pos + clock_rate * 700 / 1000; ++i) {
+            if (abs(buf[i]) > max_signal) {
+                max_signal = abs(buf[i]);
+                max_signal_pos = i;
+            }
+        }
 
-	/* Advance 10ms from max_signal_pos */
-	pos = max_signal_pos + 10 * clock_rate / 1000;
+        /* Advance 10ms from max_signal_pos */
+        pos = max_signal_pos + 10 * clock_rate / 1000;
 
-	/* Get the largest signal in the next 800ms */
-	max_signal = 0;
-	max_echo_pos = pos;
-	for (i=pos; i<pos+clock_rate * 8 / 10; ++i) {
-	    if (abs(buf[i]) > max_signal) {
-		max_signal = abs(buf[i]);
-		max_echo_pos = i;
-	    }
-	}
+        /* Get the largest signal in the next 800ms */
+        max_signal = 0;
+        max_echo_pos = pos;
+        for (i=pos; i<pos+clock_rate * 8 / 10; ++i) {
+            if (abs(buf[i]) > max_signal) {
+                max_signal = abs(buf[i]);
+                max_echo_pos = i;
+            }
+        }
 
-	lat = (max_echo_pos - max_signal_pos) * 1000 / clock_rate;
+        lat = (max_echo_pos - max_signal_pos) * 1000 / clock_rate;
 
 #if 0
-	PJ_LOG(4,(THIS_FILE, "Signal at %dms, echo at %d ms, latency %d ms",
-		  max_signal_pos * 1000 / clock_rate,
-		  max_echo_pos * 1000 / clock_rate,
-		  lat));
+        PJ_LOG(4,(THIS_FILE, "Signal at %dms, echo at %d ms, latency %d ms",
+                  max_signal_pos * 1000 / clock_rate,
+                  max_echo_pos * 1000 / clock_rate,
+                  lat));
 #endif
 
-	*lat_sum += lat;
-	(*lat_cnt)++;
-	if (lat < *lat_min)
-	    *lat_min = lat;
-	if (lat > *lat_max)
-	    *lat_max = lat;
+        *lat_sum += lat;
+        (*lat_cnt)++;
+        if (lat < *lat_min)
+            *lat_min = lat;
+        if (lat > *lat_max)
+            *lat_max = lat;
 
-	/* Advance next loop */
-	if (first) {
-	    start_pos = max_signal_pos + clock_rate * 9 / 10;
-	    first = PJ_FALSE;
-	} else {
-	    start_pos += clock_rate;
-	}
+        /* Advance next loop */
+        if (first) {
+            start_pos = max_signal_pos + clock_rate * 9 / 10;
+            first = PJ_FALSE;
+        } else {
+            start_pos += clock_rate;
+        }
     }
 
     return 0;
@@ -771,43 +776,43 @@ static void systest_latency_test(void)
 
     ti = systest_alloc_test_item(title);
     if (!ti)
-	return;
+        return;
 
     key = gui_msgbox(title,
-		     "This test will try to find the audio device's "
-		     "latency. We will play a special WAV file to the "
-		     "speaker for ten seconds, then at the end "
-		     "calculate the latency. Please don't do anything "
-		     "until the test is done.", WITH_OKCANCEL);
+                     "This test will try to find the audio device's "
+                     "latency. We will play a special WAV file to the "
+                     "speaker for ten seconds, then at the end "
+                     "calculate the latency. Please don't do anything "
+                     "until the test is done.", WITH_OKCANCEL);
     if (key != KEY_OK) {
-	ti->skipped = PJ_TRUE;
-	return;
+        ti->skipped = PJ_TRUE;
+        return;
     }
     key = gui_msgbox(title,
-		     "For this test to work, we must be able to capture "
-		     "the audio played in the speaker (the echo), and only"
-		     " that audio (i.e. you must be in relatively quiet "
-		     "place to run this test). "
-		     "Press OK to start, or CANCEL to skip.",
-		     WITH_OKCANCEL);
+                     "For this test to work, we must be able to capture "
+                     "the audio played in the speaker (the echo), and only"
+                     " that audio (i.e. you must be in relatively quiet "
+                     "place to run this test). "
+                     "Press OK to start, or CANCEL to skip.",
+                     WITH_OKCANCEL);
     if (key != KEY_OK) {
-	ti->skipped = PJ_TRUE;
-	return;
+        ti->skipped = PJ_TRUE;
+        return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
     status = create_player(PJ_ARRAY_SIZE(ref_wav_paths), ref_wav_paths,
-			   &play_id);
+                           &play_id);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     play_slot = pjsua_player_get_conf_port(play_id);
 
     rec_wav_file = pj_str(add_path(doc_path, WAV_LATENCY_OUT_PATH));
     status = pjsua_recorder_create(&rec_wav_file, 0, NULL, -1, 0, &rec_id);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     rec_slot = pjsua_recorder_get_conf_port(rec_id);
 
@@ -836,88 +841,89 @@ static void systest_latency_test(void)
 
     /* Confirm that echo is heard */
     gui_msgbox(title,
-	       "Test is done. Now we need to confirm that we indeed "
-	       "captured the echo. We will play the captured audio "
-	       "and please confirm that you can hear the 'tock' echo.",
-	       WITH_OK);
+               "Test is done. Now we need to confirm that we indeed "
+               "captured the echo. We will play the captured audio "
+               "and please confirm that you can hear the 'tock' echo.",
+               WITH_OK);
 
     status = pjsua_player_create(&rec_wav_file, 0, &play_id);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     play_slot = pjsua_player_get_conf_port(play_id);
 
     status = pjsua_conf_connect(play_slot, 0);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     key = gui_msgbox(title,
-		     "The captured audio is being played back now. "
-		     "Can you hear the 'tock' echo?",
-		     WITH_YESNO);
+                     "The captured audio is being played back now. "
+                     "Can you hear the 'tock' echo?",
+                     WITH_YESNO);
 
     pjsua_player_destroy(play_id);
     play_id = PJSUA_INVALID_ID;
 
     if (key != KEY_YES)
-	goto on_return;
+        goto on_return;
 
     /* Now analyze the latency */
     pool = pjsua_pool_create("latency", 512, 512);
 
     status = pjmedia_wav_player_port_create(pool, rec_wav_file.ptr, 0, 0, 0, &wav_port);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     status = calculate_latency(pool, wav_port, &lat_sum, &lat_cnt,
-			       &lat_min, &lat_max);
+                               &lat_min, &lat_max);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
 on_return:
     if (wav_port)
-	pjmedia_port_destroy(wav_port);
+        pjmedia_port_destroy(wav_port);
     if (pool)
-	pj_pool_release(pool);
+        pj_pool_release(pool);
     if (play_id != PJSUA_INVALID_ID)
-	pjsua_player_destroy(play_id);
+        pjsua_player_destroy(play_id);
     if (rec_id != PJSUA_INVALID_ID)
-	pjsua_recorder_destroy(rec_id);
+        pjsua_recorder_destroy(rec_id);
 
     if (status != PJ_SUCCESS) {
-	systest_perror("Sorry we encountered an error: ", status);
-	ti->success = PJ_FALSE;
-	pj_strerror(status, ti->reason, sizeof(ti->reason));
+        systest_perror("Sorry we encountered an error", status);
+        ti->success = PJ_FALSE;
+        pj_strerror(status, ti->reason, sizeof(ti->reason));
     } else if (key != KEY_YES) {
-	ti->success = PJ_FALSE;
-	if (!ti->success) {
-	    pj_ansi_strcpy(ti->reason, USER_ERROR);
-	}
+        ti->success = PJ_FALSE;
+        if (!ti->success) {
+            pj_ansi_strxcpy(ti->reason, USER_ERROR, sizeof(ti->reason));
+        }
     } else {
-	char msg[200];
-	pj_size_t msglen;
+        char msg[200];
+        pj_size_t msglen;
 
-	pj_ansi_snprintf(msg, sizeof(msg),
-			 "The sound device latency:\r\n"
-			 " Min=%u, Max=%u, Avg=%u\r\n",
-			 lat_min, lat_max, lat_sum/lat_cnt);
-	msglen = strlen(msg);
+        if (lat_cnt == 0)
+            lat_cnt = 1;
+        pj_ansi_snprintf(msg, sizeof(msg),
+                         "The sound device latency:\r\n"
+                         " Min=%u, Max=%u, Avg=%u\r\n",
+                         lat_min, lat_max, lat_sum/lat_cnt);
+        msglen = strlen(msg);
 
-	if (lat_sum/lat_cnt > 500) {
-	    pj_ansi_snprintf(msg+msglen, sizeof(msg)-msglen,
-			     "The latency is huge!\r\n");
-	    msglen = strlen(msg);
-	} else if (lat_sum/lat_cnt > 200) {
-	    pj_ansi_snprintf(msg+msglen, sizeof(msg)-msglen,
-			     "The latency is quite high\r\n");
-	    msglen = strlen(msg);
-	}
+        if (lat_sum/lat_cnt > 500) {
+            pj_ansi_snprintf(msg+msglen, sizeof(msg)-msglen,
+                             "The latency is huge!\r\n");
+            msglen = strlen(msg);
+        } else if (lat_sum/lat_cnt > 200) {
+            pj_ansi_snprintf(msg+msglen, sizeof(msg)-msglen,
+                             "The latency is quite high\r\n");
+            msglen = strlen(msg);
+        }
 
-	key = gui_msgbox(title, msg, WITH_OK);
+        key = gui_msgbox(title, msg, WITH_OK);
 
-	ti->success = PJ_TRUE;
-	pj_ansi_strncpy(ti->reason, msg, sizeof(ti->reason));
-	ti->reason[sizeof(ti->reason)-1] = '\0';
+        ti->success = PJ_TRUE;
+        pj_ansi_strxcpy(ti->reason, msg, sizeof(ti->reason));
     }
 }
 
@@ -925,7 +931,7 @@ on_return:
 static void systest_aec_test(void)
 {
     const char *ref_wav_paths[] = { add_path(res_path, WAV_PLAYBACK_PATH),
-				    ALT_PATH1 WAV_PLAYBACK_PATH };
+                                    ALT_PATH1 WAV_PLAYBACK_PATH };
     pjsua_player_id player_id = PJSUA_INVALID_ID;
     pjsua_recorder_id writer_id = PJSUA_INVALID_ID;
     enum gui_key key;
@@ -937,48 +943,48 @@ static void systest_aec_test(void)
 
     ti = systest_alloc_test_item(title);
     if (!ti)
-	return;
+        return;
 
     key = gui_msgbox(title,
-		     "This test will try to find whether the AEC/AES "
-		     "works good on this system. Test will play a file "
-		     "while recording from mic. The recording will be "
-		     "played back later so you can check if echo is there. "
-		     "Press OK to start.",
-		     WITH_OKCANCEL);
+                     "This test will try to find whether the AEC/AES "
+                     "works good on this system. Test will play a file "
+                     "while recording from mic. The recording will be "
+                     "played back later so you can check if echo is there. "
+                     "Press OK to start.",
+                     WITH_OKCANCEL);
     if (key != KEY_OK) {
-	ti->skipped = PJ_TRUE;
-	return;
+        ti->skipped = PJ_TRUE;
+        return;
     }
 
     /* Save current EC tail */
     status = pjsua_get_ec_tail(&last_ec_tail);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /* Set EC tail setting to default */
     status = pjsua_set_ec(PJSUA_DEFAULT_EC_TAIL_LEN, 0);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /*
      * Create player and recorder
      */
     status = create_player(PJ_ARRAY_SIZE(ref_wav_paths), ref_wav_paths,
-			   &player_id);
+                           &player_id);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status, "Error opening WAV file %s",
-		     WAV_PLAYBACK_PATH));
-	goto on_return;
+        PJ_PERROR(1,(THIS_FILE, status, "Error opening WAV file %s",
+                     WAV_PLAYBACK_PATH));
+        goto on_return;
     }
 
     status = pjsua_recorder_create(
                  pj_cstr(&tmp, add_path(doc_path, AEC_REC_PATH)), 0, 0, -1,
                  0, &writer_id);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status, "Error writing WAV file %s",
-		     AEC_REC_PATH));
-	goto on_return;
+        PJ_PERROR(1,(THIS_FILE, status, "Error writing WAV file %s",
+                     AEC_REC_PATH));
+        goto on_return;
     }
 
     /*
@@ -990,7 +996,7 @@ static void systest_aec_test(void)
 
     /* Wait user signal */
     gui_msgbox(title, "AEC/AES test is running. Press OK to stop this test.",
-	       WITH_OK);
+               WITH_OK);
 
     /*
      * Stop and close playback and recorder
@@ -1009,55 +1015,54 @@ static void systest_aec_test(void)
                  pj_cstr(&tmp, add_path(doc_path, AEC_REC_PATH)),
                  0, &player_id);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status, "Error opening WAV file %s", AEC_REC_PATH));
-	goto on_return;
+        PJ_PERROR(1,(THIS_FILE, status, "Error opening WAV file %s", AEC_REC_PATH));
+        goto on_return;
     }
     pjsua_conf_connect(pjsua_player_get_conf_port(player_id), 0);
 
     /* Wait user signal */
     gui_msgbox(title, "We are now playing the captured audio from the mic. "
-		      "Check if echo (of the audio played back previously) is "
-		      "present in the audio. The recording is stored in "
-		      AEC_REC_PATH " for offline analysis. "
-		      "Press OK to stop.",
-		      WITH_OK);
+                      "Check if echo (of the audio played back previously) is "
+                      "present in the audio. The recording is stored in "
+                      AEC_REC_PATH " for offline analysis. "
+                      "Press OK to stop.",
+                      WITH_OK);
 
     pjsua_conf_disconnect(pjsua_player_get_conf_port(player_id), 0);
 
     key = gui_msgbox(title,
-		     "Did you notice any echo in the recording?",
-		     WITH_YESNO);
+                     "Did you notice any echo in the recording?",
+                     WITH_YESNO);
 
 
 on_return:
     if (player_id != PJSUA_INVALID_ID)
-	pjsua_player_destroy(player_id);
+        pjsua_player_destroy(player_id);
     if (writer_id != PJSUA_INVALID_ID)
-	pjsua_recorder_destroy(writer_id);
+        pjsua_recorder_destroy(writer_id);
 
     /* Wait until sound device closed before restoring back EC tail setting */
     while (pjsua_snd_is_active())
-	pj_thread_sleep(10);
+        pj_thread_sleep(10);
     pjsua_set_ec(last_ec_tail, 0);
 
 
     if (status != PJ_SUCCESS) {
-	systest_perror("Sorry we encountered an error: ", status);
-	ti->success = PJ_FALSE;
-	pj_strerror(status, ti->reason, sizeof(ti->reason));
+        systest_perror("Sorry we encountered an error", status);
+        ti->success = PJ_FALSE;
+        pj_strerror(status, ti->reason, sizeof(ti->reason));
     } else if (key == KEY_YES) {
-	ti->success = PJ_FALSE;
-	if (!ti->success) {
-	    pj_ansi_strcpy(ti->reason, USER_ERROR);
-	}
+        ti->success = PJ_FALSE;
+        if (!ti->success) {
+            pj_ansi_strxcpy(ti->reason, USER_ERROR, sizeof(ti->reason));
+        }
     } else {
-	char msg[200];
+        char msg[200];
 
-	pj_ansi_snprintf(msg, sizeof(msg), "Test succeeded.\r\n");
+        pj_ansi_snprintf(msg, sizeof(msg), "Test succeeded.\r\n");
 
-	ti->success = PJ_TRUE;
-	pj_ansi_strncpy(ti->reason, msg, sizeof(ti->reason));
-	ti->reason[sizeof(ti->reason)-1] = '\0';
+        ti->success = PJ_TRUE;
+        pj_ansi_strxcpy(ti->reason, msg, sizeof(ti->reason));
     }
 }
 
@@ -1076,39 +1081,39 @@ static void systest_list_audio_devs()
 
     ti = systest_alloc_test_item(title);
     if (!ti)
-	return;
+        return;
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
     dev_count = pjmedia_aud_dev_count();
     if (dev_count == 0) {
-	key = gui_msgbox(title,
-			 "No audio devices are found", WITH_OK);
-	ti->success = PJ_FALSE;
-	pj_ansi_strcpy(ti->reason, "No device found");
-	return;
+        key = gui_msgbox(title,
+                         "No audio devices are found", WITH_OK);
+        ti->success = PJ_FALSE;
+        pj_ansi_strxcpy(ti->reason, "No device found", sizeof(ti->reason));
+        return;
     }
 
     pj_ansi_snprintf(ti->reason+len, sizeof(ti->reason)-len,
-		     "Found %u devices\r\n", dev_count);
+                     "Found %u devices\r\n", dev_count);
     len = strlen(ti->reason);
 
     for (i=0; i<dev_count; ++i) {
-	pjmedia_aud_dev_info info;
+        pjmedia_aud_dev_info info;
 
-	status = pjmedia_aud_dev_get_info(i, &info);
-	if (status != PJ_SUCCESS) {
-	    systest_perror("Error retrieving device info: ", status);
-	    ti->success = PJ_FALSE;
-	    pj_strerror(status, ti->reason, sizeof(ti->reason));
-	    return;
-	}
+        status = pjmedia_aud_dev_get_info(i, &info);
+        if (status != PJ_SUCCESS) {
+            systest_perror("Error retrieving device info", status);
+            ti->success = PJ_FALSE;
+            pj_strerror(status, ti->reason, sizeof(ti->reason));
+            return;
+        }
 
-	pj_ansi_snprintf(ti->reason+len, sizeof(ti->reason)-len,
-			 " %2d: %s [%s] (%d/%d)\r\n",
-		          i, info.driver, info.name,
-			  info.input_count, info.output_count);
-	len = strlen(ti->reason);
+        pj_ansi_snprintf(ti->reason+len, sizeof(ti->reason)-len,
+                         " %2d: %s [%s] (%d/%d)\r\n",
+                          i, info.driver, info.name,
+                          info.input_count, info.output_count);
+        len = strlen(ti->reason);
     }
 
     ti->reason[len] = '\0';
@@ -1129,81 +1134,80 @@ static void systest_display_settings(void)
 
     ti = systest_alloc_test_item(title);
     if (!ti)
-	return;
+        return;
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Version: %s\r\n",
-		     pj_get_version());
+                     pj_get_version());
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Test clock rate: %d\r\n",
-		     systest.media_cfg.clock_rate);
+                     systest.media_cfg.clock_rate);
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Device clock rate: %d\r\n",
-		     systest.media_cfg.snd_clock_rate);
+                     systest.media_cfg.snd_clock_rate);
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Aud frame ptime: %d\r\n",
-		     systest.media_cfg.audio_frame_ptime);
+                     systest.media_cfg.audio_frame_ptime);
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Channel count: %d\r\n",
-		     systest.media_cfg.channel_count);
+                     systest.media_cfg.channel_count);
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Audio switching: %s\r\n",
-	    (PJMEDIA_CONF_USE_SWITCH_BOARD ? "Switchboard" : "Conf bridge"));
+            (PJMEDIA_CONF_USE_SWITCH_BOARD ? "Switchboard" : "Conf bridge"));
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Snd buff count: %d\r\n",
-		     PJMEDIA_SOUND_BUFFER_COUNT);
+                     PJMEDIA_SOUND_BUFFER_COUNT);
     len = strlen(textbuf);
 
     /* Capture device */
     status = pjmedia_aud_dev_get_info(systest.rec_id, &di);
     if (status != PJ_SUCCESS) {
-	systest_perror("Error querying device info", status);
-	ti->success = PJ_FALSE;
-	pj_strerror(status, ti->reason, sizeof(ti->reason));
-	return;
+        systest_perror("Error querying device info", status);
+        ti->success = PJ_FALSE;
+        pj_strerror(status, ti->reason, sizeof(ti->reason));
+        return;
     }
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len,
-		     "Rec dev : %d (%s) [%s]\r\n",
-		     systest.rec_id,
-		     di.name,
-		     di.driver);
+                     "Rec dev : %d (%s) [%s]\r\n",
+                     systest.rec_id,
+                     di.name,
+                     di.driver);
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len,
-		     "Rec  buf : %d msec\r\n",
-		     systest.media_cfg.snd_rec_latency);
+                     "Rec  buf : %d msec\r\n",
+                     systest.media_cfg.snd_rec_latency);
     len = strlen(textbuf);
 
     /* Playback device */
     status = pjmedia_aud_dev_get_info(systest.play_id, &di);
     if (status != PJ_SUCCESS) {
-	systest_perror("Error querying device info", status);
-	return;
+        systest_perror("Error querying device info", status);
+        return;
     }
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len,
-		     "Play dev: %d (%s) [%s]\r\n",
-		     systest.play_id,
-		     di.name,
-		     di.driver);
+                     "Play dev: %d (%s) [%s]\r\n",
+                     systest.play_id,
+                     di.name,
+                     di.driver);
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len,
-		     "Play buf: %d msec\r\n",
-		     systest.media_cfg.snd_play_latency);
+                     "Play buf: %d msec\r\n",
+                     systest.media_cfg.snd_play_latency);
     len = strlen(textbuf);
 
     ti->success = PJ_TRUE;
-    pj_ansi_strncpy(ti->reason, textbuf, sizeof(ti->reason));
-    ti->reason[sizeof(ti->reason)-1] = '\0';
+    pj_ansi_strxcpy(ti->reason, textbuf, sizeof(ti->reason));
     key = gui_msgbox(title, textbuf, WITH_OK);
     PJ_UNUSED_ARG(key); /* Warning about unused var */
 }
@@ -1217,8 +1221,8 @@ int systest_init(void)
 
     status = pjsua_create();
     if (status != PJ_SUCCESS) {
-	systest_perror("Sorry we've had error in pjsua_create(): ", status);
-	return status;
+        systest_perror("Sorry we've had error in pjsua_create()", status);
+        return status;
     }
 
     pjsua_logging_config_default(&log_cfg);
@@ -1229,7 +1233,7 @@ int systest_init(void)
     systest.media_cfg.clock_rate = TEST_CLOCK_RATE;
     systest.media_cfg.snd_clock_rate = DEV_CLOCK_RATE;
     if (OVERRIDE_AUD_FRAME_PTIME)
-	systest.media_cfg.audio_frame_ptime = OVERRIDE_AUD_FRAME_PTIME;
+        systest.media_cfg.audio_frame_ptime = OVERRIDE_AUD_FRAME_PTIME;
     systest.media_cfg.channel_count = CHANNEL_COUNT;
     systest.rec_id = REC_DEV_ID;
     systest.play_id = PLAY_DEV_ID;
@@ -1246,21 +1250,21 @@ int systest_init(void)
 
     status = pjsua_init(&systest.ua_cfg, &log_cfg, &systest.media_cfg);
     if (status != PJ_SUCCESS) {
-	pjsua_destroy();
-	systest_perror("Sorry we've had error in pjsua_init(): ", status);
-	return status;
+        pjsua_destroy();
+        systest_perror("Sorry we've had error in pjsua_init()", status);
+        return status;
     }
 
     status = pjsua_start();
     if (status != PJ_SUCCESS) {
-	pjsua_destroy();
-	systest_perror("Sorry we've had error in pjsua_start(): ", status);
-	return status;
+        pjsua_destroy();
+        systest_perror("Sorry we've had error in pjsua_start()", status);
+        return status;
     }
 
     status = gui_init(&root_menu);
     if (status != 0)
-	goto on_return;
+        goto on_return;
 
     return 0;
 
@@ -1310,11 +1314,11 @@ void systest_save_result(const char *filename)
 
     status = pj_file_open(NULL, filename, PJ_O_WRONLY | PJ_O_APPEND, &fd);
     if (status != PJ_SUCCESS) {
-	pj_ansi_snprintf(textbuf, sizeof(textbuf),
-			 "Error opening file %s",
-			 filename);
-	systest_perror(textbuf, status);
-	return;
+        pj_ansi_snprintf(textbuf, sizeof(textbuf),
+                         "Error opening file %s",
+                         filename);
+        systest_perror(textbuf, status);
+        return;
     }
 
     text = "\r\n\r\nPJSYSTEST Report\r\n";
@@ -1324,46 +1328,46 @@ void systest_save_result(const char *filename)
     /* Put timestamp */
     pj_gettimeofday(&tv);
     if (pj_time_decode(&tv, &pt) == PJ_SUCCESS) {
-	pj_ansi_snprintf(textbuf, sizeof(textbuf),
-			 "Time: %04d/%02d/%02d %02d:%02d:%02d\r\n",
-			 pt.year, pt.mon+1, pt.day,
-			 pt.hour, pt.min, pt.sec);
-	size = strlen(textbuf);
-	pj_file_write(fd, textbuf, &size);
+        pj_ansi_snprintf(textbuf, sizeof(textbuf),
+                         "Time: %04d/%02d/%02d %02d:%02d:%02d\r\n",
+                         pt.year, pt.mon+1, pt.day,
+                         pt.hour, pt.min, pt.sec);
+        size = strlen(textbuf);
+        pj_file_write(fd, textbuf, &size);
     }
 
     pj_ansi_snprintf(textbuf, sizeof(textbuf),
-		     "Tests invoked: %u\r\n"
-		     "-----------------------------------------------\r\n",
-		     test_item_count);
+                     "Tests invoked: %u\r\n"
+                     "-----------------------------------------------\r\n",
+                     test_item_count);
     size = strlen(textbuf);
     pj_file_write(fd, textbuf, &size);
 
     for (i=0; i<test_item_count; ++i) {
         int len;
-	test_item_t *ti = &test_items[i];
+        test_item_t *ti = &test_items[i];
 
-	len = pj_ansi_snprintf(textbuf, sizeof(textbuf),
-			 "\r\nTEST %d: %s %s\r\n",
-			 i, ti->title,
-			 (ti->skipped? "Skipped" : (ti->success ? "Success" : "Failed")));
-	PJ_CHECK_TRUNC_STR(len, textbuf, sizeof(textbuf));
-	size = strlen(textbuf);
-	pj_file_write(fd, textbuf, &size);
+        len = pj_ansi_snprintf(textbuf, sizeof(textbuf),
+                         "\r\nTEST %d: %s %s\r\n",
+                         i, ti->title,
+                         (ti->skipped? "Skipped" : (ti->success ? "Success" : "Failed")));
+        PJ_CHECK_TRUNC_STR(len, textbuf, sizeof(textbuf));
+        size = strlen(textbuf);
+        pj_file_write(fd, textbuf, &size);
 
-	size = strlen(ti->reason);
-	pj_file_write(fd, ti->reason, &size);
+        size = strlen(ti->reason);
+        pj_file_write(fd, ti->reason, &size);
 
-	size = 2;
-	pj_file_write(fd, "\r\n", &size);
+        size = 2;
+        pj_file_write(fd, "\r\n", &size);
     }
 
 
     pj_file_close(fd);
 
     pj_ansi_snprintf(textbuf, sizeof(textbuf),
-		     "Test result successfully appended to file %s",
-		     filename);
+                     "Test result successfully appended to file %s",
+                     filename);
     gui_msgbox("Test result saved", textbuf, WITH_OK);
 }
 

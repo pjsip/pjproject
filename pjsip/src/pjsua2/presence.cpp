@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -23,7 +22,7 @@
 using namespace pj;
 using namespace std;
 
-#define THIS_FILE		"presence.cpp"
+#define THIS_FILE               "presence.cpp"
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -56,27 +55,27 @@ void BuddyConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 
 void BuddyInfo::fromPj(const pjsua_buddy_info &pbi)
 {
-    uri 		= pj2Str(pbi.uri);
-    contact 		= pj2Str(pbi.contact);
-    presMonitorEnabled 	= PJ2BOOL(pbi.monitor_pres);
-    subState 		= pbi.sub_state;
-    subStateName 	= string(pbi.sub_state_name);
-    subTermCode 	= (pjsip_status_code)pbi.sub_term_code;
-    subTermReason 	= pj2Str(pbi.sub_term_reason);
+    uri                 = pj2Str(pbi.uri);
+    contact             = pj2Str(pbi.contact);
+    presMonitorEnabled  = PJ2BOOL(pbi.monitor_pres);
+    subState            = pbi.sub_state;
+    subStateName        = string(pbi.sub_state_name);
+    subTermCode         = (pjsip_status_code)pbi.sub_term_code;
+    subTermReason       = pj2Str(pbi.sub_term_reason);
     
     /* Presence status */
-    presStatus.status	= pbi.status;
+    presStatus.status   = pbi.status;
     presStatus.statusText = pj2Str(pbi.status_text);
     presStatus.activity = pbi.rpid.activity;
-    presStatus.note	= pj2Str(pbi.rpid.note);
-    presStatus.rpidId	= pj2Str(pbi.rpid.id);
+    presStatus.note     = pj2Str(pbi.rpid.note);
+    presStatus.rpidId   = pj2Str(pbi.rpid.id);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 typedef struct BuddyUserData
 {
-    Buddy	*self;
-    Account	*acc;
+    Buddy       *self;
+    Account     *acc;
 } BuddyUserData;
 
 /*
@@ -104,19 +103,19 @@ Buddy *Buddy::getOriginalInstance()
 Buddy::~Buddy()
 {
     if (isValid() && getOriginalInstance()==this) {
-	Account *acc = NULL;
-	BuddyUserData *bud = (BuddyUserData*)pjsua_buddy_get_user_data(id);
-	if (bud) {
-	    acc = bud->acc;
-	    delete bud;
-	}
+        Account *acc = NULL;
+        BuddyUserData *bud = (BuddyUserData*)pjsua_buddy_get_user_data(id);
+        if (bud) {
+            acc = bud->acc;
+            delete bud;
+        }
 
-	pjsua_buddy_set_user_data(id, NULL);
-	pjsua_buddy_del(id);
+        pjsua_buddy_set_user_data(id, NULL);
+        pjsua_buddy_del(id);
 
-	/* Remove from account buddy list */
-	if (acc)
-	    acc->removeBuddy(this);
+        /* Remove from account buddy list */
+        if (acc)
+            acc->removeBuddy(this);
     }
 }
     
@@ -124,13 +123,13 @@ Buddy::~Buddy()
  * Create buddy and register the buddy to PJSUA-LIB.
  */
 void Buddy::create(Account &account, const BuddyConfig &cfg)
-		   PJSUA2_THROW(Error)
+                   PJSUA2_THROW(Error)
 {
     pjsua_buddy_config pj_cfg;
     pjsua_buddy_config_default(&pj_cfg);
     
     if (!account.isValid())
-	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "Buddy::create()", "Invalid account");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "Buddy::create()", "Invalid account");
     
     BuddyUserData *bud = new BuddyUserData();
     bud->self = this;
@@ -191,15 +190,15 @@ void Buddy::updatePresence(void) PJSUA2_THROW(Error)
  * Send instant messaging outside dialog.
  */
 void Buddy::sendInstantMessage(const SendInstantMessageParam &prm)
-			       PJSUA2_THROW(Error)
+                               PJSUA2_THROW(Error)
 {
     BuddyInfo bi = getInfo();
     BuddyUserData *bud = (BuddyUserData*)pjsua_buddy_get_user_data(id);
     Account *acc = bud? bud->acc : NULL;
 
     if (!bud || !acc || !acc->isValid()) {
-	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "sendInstantMessage()",
-			    "Invalid Buddy");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "sendInstantMessage()",
+                            "Invalid Buddy");
     }
 
     pj_str_t to = str2Pj(bi.contact.empty()? bi.uri : bi.contact);
@@ -210,7 +209,7 @@ void Buddy::sendInstantMessage(const SendInstantMessageParam &prm)
     prm.txOption.toPj(msg_data);
     
     PJSUA2_CHECK_EXPR( pjsua_im_send(acc->getId(), &to, &mime_type, &content,
-				     &msg_data, user_data) );
+                                     &msg_data, user_data) );
 }
 
 /*
@@ -224,8 +223,8 @@ void Buddy::sendTypingIndication(const SendTypingIndicationParam &prm)
     Account *acc = bud? bud->acc : NULL;
 
     if (!bud || !acc || !acc->isValid()) {
-	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "sendInstantMessage()",
-			    "Invalid Buddy");
+        PJSUA2_RAISE_ERROR3(PJ_EINVAL, "sendInstantMessage()",
+                            "Invalid Buddy");
     }
 
     pj_str_t to = str2Pj(bi.contact.empty()? bi.uri : bi.contact);
@@ -233,6 +232,6 @@ void Buddy::sendTypingIndication(const SendTypingIndicationParam &prm)
     prm.txOption.toPj(msg_data);
     
     PJSUA2_CHECK_EXPR( pjsua_im_typing(acc->getId(), &to, prm.isTyping,
-				       &msg_data) );
+                                       &msg_data) );
 }
 

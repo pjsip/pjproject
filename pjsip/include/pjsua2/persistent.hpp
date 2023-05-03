@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -66,14 +65,14 @@ public:
     /**
      * Read this object from a container node.
      *
-     * @param node		Container to read values from.
+     * @param node              Container to read values from.
      */
     virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error) = 0;
 
     /**
      * Write this object to a container node.
      *
-     * @param node		Container to write values to.
+     * @param node              Container to write values to.
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error) = 0;
 };
@@ -108,38 +107,38 @@ public:
     /**
      * Load this document from a file.
      *
-     * @param filename	The file name.
+     * @param filename  The file name.
      */
-    virtual void   	loadFile(const string &filename)
-				 PJSUA2_THROW(Error) = 0;
+    virtual void        loadFile(const string &filename)
+                                 PJSUA2_THROW(Error) = 0;
 
     /**
      * Load this document from string.
      *
-     * @param input	The string.
+     * @param input     The string.
      */
-    virtual void   	loadString(const string &input)
-				   PJSUA2_THROW(Error) = 0;
+    virtual void        loadString(const string &input)
+                                   PJSUA2_THROW(Error) = 0;
 
     /**
      * Write this document to a file.
      *
-     * @param filename	The file name.
+     * @param filename  The file name.
      */
-    virtual void   	saveFile(const string &filename)
-				 PJSUA2_THROW(Error) = 0;
+    virtual void        saveFile(const string &filename)
+                                 PJSUA2_THROW(Error) = 0;
 
     /**
      * Write this document to string.
      *
-     * @return		The string document.
+     * @return          The string document.
      */
-    virtual string 	saveString() PJSUA2_THROW(Error) = 0;
+    virtual string      saveString() PJSUA2_THROW(Error) = 0;
 
     /**
      * Get the root container node for this document
      *
-     * @return		The root node.
+     * @return          The root node.
      */
     virtual ContainerNode & getRootContainer() const = 0;
 
@@ -153,201 +152,201 @@ public:
      * Determine if there is unread element. If yes, then app can use one of
      * the readXxx() functions to read it.
      *
-     * @return		True if there is.
+     * @return          True if there is.
      */
-    bool		hasUnread() const;
+    bool                hasUnread() const;
 
     /**
      * Get the name of the next unread element. It will throw Error if there
      * is no more element to read.
      *
-     * @return		The name of the next element .
+     * @return          The name of the next element .
      */
-    string		unreadName() const PJSUA2_THROW(Error);
+    string              unreadName() const PJSUA2_THROW(Error);
 
     /**
      * Read an integer value from the document and return the value.
      * This will throw Error if the current element is not a number.
      * The read position will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    int			readInt(const string &name="") const
-				PJSUA2_THROW(Error);
+    int                 readInt(const string &name="") const
+                                PJSUA2_THROW(Error);
 
     /**
      * Read a float value from the document and return the value.
      * This will throw Error if the current element is not a number.
      * The read position will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    float		readNumber(const string &name="") const
-				   PJSUA2_THROW(Error);
+    float               readNumber(const string &name="") const
+                                   PJSUA2_THROW(Error);
 
     /**
      * Read a boolean value from the container and return the value.
      * This will throw Error if the current element is not a boolean.
      * The read position will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    bool		readBool(const string &name="") const
-				 PJSUA2_THROW(Error);
+    bool                readBool(const string &name="") const
+                                 PJSUA2_THROW(Error);
 
     /**
      * Read a string value from the container and return the value.
      * This will throw Error if the current element is not a string.
      * The read position will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    string		readString(const string &name="") const
-				   PJSUA2_THROW(Error);
+    string              readString(const string &name="") const
+                                   PJSUA2_THROW(Error);
 
     /**
      * Read a string array from the container. This will throw Error
      * if the current element is not a string array. The read position
      * will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    StringVector	readStringVector(const string &name="") const
-					 PJSUA2_THROW(Error);
+    StringVector        readStringVector(const string &name="") const
+                                         PJSUA2_THROW(Error);
 
     /**
      * Read the specified object from the container. This is equal to
      * calling PersistentObject.readObject(ContainerNode);
      *
-     * @param obj	The object to read.
+     * @param obj       The object to read.
      */
-    void		readObject(PersistentObject &obj) const
-				   PJSUA2_THROW(Error);
+    void                readObject(PersistentObject &obj) const
+                                   PJSUA2_THROW(Error);
 
     /**
      * Read a container from the container. This will throw Error if the
      * current element is not an object. The read position will be advanced
      * to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		Container object.
+     * @return          Container object.
      */
-    ContainerNode	readContainer(const string &name="") const
-				      PJSUA2_THROW(Error);
+    ContainerNode       readContainer(const string &name="") const
+                                      PJSUA2_THROW(Error);
 
     /**
      * Read array container from the container. This will throw Error if the
      * current element is not an array. The read position will be advanced
      * to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		Container object.
+     * @return          Container object.
      */
-    ContainerNode	readArray(const string &name="") const
-				  PJSUA2_THROW(Error);
+    ContainerNode       readArray(const string &name="") const
+                                  PJSUA2_THROW(Error);
 
     /**
      * Write a number value to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param num	The value to be written.
+     * @param name      The name for the value in the container.
+     * @param num       The value to be written.
      */
-    void		writeNumber(const string &name,
-        		            float num) PJSUA2_THROW(Error);
+    void                writeNumber(const string &name,
+                                    float num) PJSUA2_THROW(Error);
 
     /**
      * Write a number value to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param num	The value to be written.
+     * @param name      The name for the value in the container.
+     * @param num       The value to be written.
      */
-    void		writeInt(const string &name,
-        		         int num) PJSUA2_THROW(Error);
+    void                writeInt(const string &name,
+                                 int num) PJSUA2_THROW(Error);
 
     /**
      * Write a boolean value to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param value	The value to be written.
+     * @param name      The name for the value in the container.
+     * @param value     The value to be written.
      */
-    void		writeBool(const string &name,
-        		          bool value) PJSUA2_THROW(Error);
+    void                writeBool(const string &name,
+                                  bool value) PJSUA2_THROW(Error);
 
     /**
      * Write a string value to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param value	The value to be written.
+     * @param name      The name for the value in the container.
+     * @param value     The value to be written.
      */
-    void		writeString(const string &name,
-        		            const string &value) PJSUA2_THROW(Error);
+    void                writeString(const string &name,
+                                    const string &value) PJSUA2_THROW(Error);
 
     /**
      * Write string vector to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param arr	The vector to be written.
+     * @param name      The name for the value in the container.
+     * @param arr       The vector to be written.
      */
-    void		writeStringVector(const string &name,
-        		                  const StringVector &arr)
-					  PJSUA2_THROW(Error);
+    void                writeStringVector(const string &name,
+                                          const StringVector &arr)
+                                          PJSUA2_THROW(Error);
 
     /**
      * Write an object to the container. This is equal to calling
      * PersistentObject.writeObject(ContainerNode);
      *
-     * @param obj	The object to be written
+     * @param obj       The object to be written
      */
-    void		writeObject(const PersistentObject &obj)
-				    PJSUA2_THROW(Error);
+    void                writeObject(const PersistentObject &obj)
+                                    PJSUA2_THROW(Error);
 
     /**
      * Create and write an empty Object node that can be used as parent
      * for subsequent write operations.
      *
-     * @param name	The name for the new container in the container.
+     * @param name      The name for the new container in the container.
      *
-     * @return		A sub-container.
+     * @return          A sub-container.
      */
-    ContainerNode 	writeNewContainer(const string &name)
-					  PJSUA2_THROW(Error);
+    ContainerNode       writeNewContainer(const string &name)
+                                          PJSUA2_THROW(Error);
 
     /**
      * Create and write an empty array node that can be used as parent
      * for subsequent write operations.
      *
-     * @param name	The name for the array.
+     * @param name      The name for the array.
      *
-     * @return		A sub-container.
+     * @return          A sub-container.
      */
-    ContainerNode 	writeNewArray(const string &name)
-				      PJSUA2_THROW(Error);
+    ContainerNode       writeNewArray(const string &name)
+                                      PJSUA2_THROW(Error);
 };
 
 
@@ -363,9 +362,9 @@ struct container_node_op;
  */
 struct container_node_internal_data
 {
-    void	*doc;		/**< The document.	*/
-    void	*data1;		/**< Internal data 1	*/
-    void	*data2;		/**< Internal data 2	*/
+    void        *doc;           /**< The document.      */
+    void        *data1;         /**< Internal data 1    */
+    void        *data2;         /**< Internal data 2    */
 };
 
 /**
@@ -380,22 +379,22 @@ struct container_node_internal_data
  * write data to it using the various write methods. Alternatively, it
  * may be more convenient to use the provided macros below to read and write
  * the data, because these macros set the name automatically:
- *	- NODE_READ_BOOL(node,item)
- *	- NODE_READ_UNSIGNED(node,item)
- *	- NODE_READ_INT(node,item)
- *	- NODE_READ_FLOAT(node,item)
- *	- NODE_READ_NUM_T(node,type,item)
- *	- NODE_READ_STRING(node,item)
- *	- NODE_READ_STRINGV(node,item)
- *	- NODE_READ_OBJ(node,item)
- *	- NODE_WRITE_BOOL(node,item)
- *	- NODE_WRITE_UNSIGNED(node,item)
- *	- NODE_WRITE_INT(node,item)
- *	- NODE_WRITE_FLOAT(node,item)
- *	- NODE_WRITE_NUM_T(node,type,item)
- *	- NODE_WRITE_STRING(node,item)
- *	- NODE_WRITE_STRINGV(node,item)
- *	- NODE_WRITE_OBJ(node,item)
+ *      - NODE_READ_BOOL(node,item)
+ *      - NODE_READ_UNSIGNED(node,item)
+ *      - NODE_READ_INT(node,item)
+ *      - NODE_READ_FLOAT(node,item)
+ *      - NODE_READ_NUM_T(node,type,item)
+ *      - NODE_READ_STRING(node,item)
+ *      - NODE_READ_STRINGV(node,item)
+ *      - NODE_READ_OBJ(node,item)
+ *      - NODE_WRITE_BOOL(node,item)
+ *      - NODE_WRITE_UNSIGNED(node,item)
+ *      - NODE_WRITE_INT(node,item)
+ *      - NODE_WRITE_FLOAT(node,item)
+ *      - NODE_WRITE_NUM_T(node,type,item)
+ *      - NODE_WRITE_STRING(node,item)
+ *      - NODE_WRITE_STRINGV(node,item)
+ *      - NODE_WRITE_OBJ(node,item)
  *
  * Implementation notes:
  *
@@ -426,201 +425,207 @@ public:
      * Determine if there is unread element. If yes, then app can use one of
      * the readXxx() functions to read it.
      */
-    bool		hasUnread() const;
+    bool                hasUnread() const;
 
     /**
      * Get the name of the next unread element.
      */
-    string		unreadName() const PJSUA2_THROW(Error);
+    string              unreadName() const PJSUA2_THROW(Error);
 
     /**
      * Read an integer value from the document and return the value.
      * This will throw Error if the current element is not a number.
      * The read position will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    int			readInt(const string &name="") const
-				PJSUA2_THROW(Error);
+    int                 readInt(const string &name="") const
+                                PJSUA2_THROW(Error);
 
     /**
      * Read a number value from the document and return the value.
      * This will throw Error if the current element is not a number.
      * The read position will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    float		readNumber(const string &name="") const
-				   PJSUA2_THROW(Error);
+    float               readNumber(const string &name="") const
+                                   PJSUA2_THROW(Error);
 
     /**
      * Read a boolean value from the container and return the value.
      * This will throw Error if the current element is not a boolean.
      * The read position will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    bool		readBool(const string &name="") const
-				 PJSUA2_THROW(Error);
+    bool                readBool(const string &name="") const
+                                 PJSUA2_THROW(Error);
 
     /**
      * Read a string value from the container and return the value.
      * This will throw Error if the current element is not a string.
      * The read position will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    string		readString(const string &name="") const
-				   PJSUA2_THROW(Error);
+    string              readString(const string &name="") const
+                                   PJSUA2_THROW(Error);
 
     /**
      * Read a string array from the container. This will throw Error
      * if the current element is not a string array. The read position
      * will be advanced to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		The value.
+     * @return          The value.
      */
-    StringVector	readStringVector(const string &name="") const
-					 PJSUA2_THROW(Error);
+    StringVector        readStringVector(const string &name="") const
+                                         PJSUA2_THROW(Error);
 
     /**
      * Read the specified object from the container. This is equal to
      * calling PersistentObject.readObject(ContainerNode);
      *
-     * @param obj	The object to read.
+     * @param obj       The object to read.
      */
-    void		readObject(PersistentObject &obj) const
-				   PJSUA2_THROW(Error);
+    void                readObject(PersistentObject &obj) const
+                                   PJSUA2_THROW(Error);
 
     /**
      * Read a container from the container. This will throw Error if the
      * current element is not a container. The read position will be advanced
      * to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		Container object.
+     * @return          Container object.
      */
-    ContainerNode	readContainer(const string &name="") const
-				      PJSUA2_THROW(Error);
+    ContainerNode       readContainer(const string &name="") const
+                                      PJSUA2_THROW(Error);
 
     /**
      * Read array container from the container. This will throw Error if the
      * current element is not an array. The read position will be advanced
      * to the next element.
      *
-     * @param name	If specified, then the function will check if the
-     * 			name of the next element matches the specified
-     * 			name and throw Error if it doesn't match.
+     * @param name      If specified, then the function will check if the
+     *                  name of the next element matches the specified
+     *                  name and throw Error if it doesn't match.
      *
-     * @return		Container object.
+     * @return          Container object.
      */
-    ContainerNode	readArray(const string &name="") const
-				  PJSUA2_THROW(Error);
+    ContainerNode       readArray(const string &name="") const
+                                  PJSUA2_THROW(Error);
 
     /**
      * Write a number value to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param num	The value to be written.
+     * @param name      The name for the value in the container.
+     * @param num       The value to be written.
      */
-    void		writeNumber(const string &name,
-        		            float num) PJSUA2_THROW(Error);
+    void                writeNumber(const string &name,
+                                    float num) PJSUA2_THROW(Error);
 
     /**
      * Write a number value to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param num	The value to be written.
+     * @param name      The name for the value in the container.
+     * @param num       The value to be written.
      */
-    void		writeInt(const string &name,
-        		         int num) PJSUA2_THROW(Error);
+    void                writeInt(const string &name,
+                                 int num) PJSUA2_THROW(Error);
 
     /**
      * Write a boolean value to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param value	The value to be written.
+     * @param name      The name for the value in the container.
+     * @param value     The value to be written.
      */
-    void		writeBool(const string &name,
-        		          bool value) PJSUA2_THROW(Error);
+    void                writeBool(const string &name,
+                                  bool value) PJSUA2_THROW(Error);
 
     /**
      * Write a string value to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param value	The value to be written.
+     * @param name      The name for the value in the container.
+     * @param value     The value to be written.
      */
-    void		writeString(const string &name,
-        		            const string &value) PJSUA2_THROW(Error);
+    void                writeString(const string &name,
+                                    const string &value) PJSUA2_THROW(Error);
 
     /**
      * Write string vector to the container.
      *
-     * @param name	The name for the value in the container.
-     * @param arr	The vector to be written.
+     * @param name      The name for the value in the container.
+     * @param arr       The vector to be written.
      */
-    void		writeStringVector(const string &name,
-        		                  const StringVector &arr)
-					  PJSUA2_THROW(Error);
+    void                writeStringVector(const string &name,
+                                          const StringVector &arr)
+                                          PJSUA2_THROW(Error);
 
     /**
      * Write an object to the container. This is equal to calling
      * PersistentObject.writeObject(ContainerNode);
      *
-     * @param obj	The object to be written
+     * @param obj       The object to be written
      */
-    void		writeObject(const PersistentObject &obj)
-				    PJSUA2_THROW(Error);
+    void                writeObject(const PersistentObject &obj)
+                                    PJSUA2_THROW(Error);
 
     /**
      * Create and write an empty Object node that can be used as parent
      * for subsequent write operations.
      *
-     * @param name	The name for the new container in the container.
+     * @param name      The name for the new container in the container.
      *
-     * @return		A sub-container.
+     * @return          A sub-container.
      */
-    ContainerNode 	writeNewContainer(const string &name)
-					  PJSUA2_THROW(Error);
+    ContainerNode       writeNewContainer(const string &name)
+                                          PJSUA2_THROW(Error);
 
     /**
      * Create and write an empty array node that can be used as parent
      * for subsequent write operations.
      *
-     * @param name	The name for the array.
+     * @param name      The name for the array.
      *
-     * @return		A sub-container.
+     * @return          A sub-container.
      */
-    ContainerNode 	writeNewArray(const string &name)
-				      PJSUA2_THROW(Error);
+    ContainerNode       writeNewArray(const string &name)
+                                      PJSUA2_THROW(Error);
 
 public:
     /* internal data */
-    container_node_op *op;		/**< Method table.	*/
-    container_node_internal_data data;	/**< Internal data	*/
+    container_node_op *op;              /**< Method table.      */
+    container_node_internal_data data;  /**< Internal data      */
+
+    ContainerNode()
+    : op(NULL)
+    {
+        pj_bzero(&data, sizeof(data));
+    }
 };
 
 
@@ -631,71 +636,71 @@ public:
 //! @cond Doxygen_Suppress
 struct container_node_op
 {
-    bool		(*hasUnread)(const ContainerNode*);
-    string		(*unreadName)(const ContainerNode*)
-				      PJSUA2_THROW(Error);
-    float		(*readNumber)(const ContainerNode*,
-				      const string&)
-				      PJSUA2_THROW(Error);
-    bool		(*readBool)(const ContainerNode*,
-				    const string&)
-				    PJSUA2_THROW(Error);
-    string		(*readString)(const ContainerNode*,
-				      const string&)
-				      PJSUA2_THROW(Error);
-    StringVector	(*readStringVector)(const ContainerNode*,
-					    const string&)
-					    PJSUA2_THROW(Error);
-    ContainerNode	(*readContainer)(const ContainerNode*,
-					 const string &)
-					 PJSUA2_THROW(Error);
-    ContainerNode	(*readArray)(const ContainerNode*,
-				     const string &)
-				     PJSUA2_THROW(Error);
-    void		(*writeNumber)(ContainerNode*,
-				       const string &name,
-        		               float num)
-        		               PJSUA2_THROW(Error);
-    void		(*writeBool)(ContainerNode*,
-				     const string &name,
-        			     bool value)
-        			     PJSUA2_THROW(Error);
-    void		(*writeString)(ContainerNode*,
-				       const string &name,
-        			       const string &value)
-        			       PJSUA2_THROW(Error);
-    void		(*writeStringVector)(ContainerNode*,
-					     const string &name,
-        				     const StringVector &value)
-					     PJSUA2_THROW(Error);
-    ContainerNode 	(*writeNewContainer)(ContainerNode*,
-					     const string &name)
-					     PJSUA2_THROW(Error);
-    ContainerNode 	(*writeNewArray)(ContainerNode*,
-				         const string &name)
-					 PJSUA2_THROW(Error);
+    bool                (*hasUnread)(const ContainerNode*);
+    string              (*unreadName)(const ContainerNode*)
+                                      PJSUA2_THROW(Error);
+    float               (*readNumber)(const ContainerNode*,
+                                      const string&)
+                                      PJSUA2_THROW(Error);
+    bool                (*readBool)(const ContainerNode*,
+                                    const string&)
+                                    PJSUA2_THROW(Error);
+    string              (*readString)(const ContainerNode*,
+                                      const string&)
+                                      PJSUA2_THROW(Error);
+    StringVector        (*readStringVector)(const ContainerNode*,
+                                            const string&)
+                                            PJSUA2_THROW(Error);
+    ContainerNode       (*readContainer)(const ContainerNode*,
+                                         const string &)
+                                         PJSUA2_THROW(Error);
+    ContainerNode       (*readArray)(const ContainerNode*,
+                                     const string &)
+                                     PJSUA2_THROW(Error);
+    void                (*writeNumber)(ContainerNode*,
+                                       const string &name,
+                                       float num)
+                                       PJSUA2_THROW(Error);
+    void                (*writeBool)(ContainerNode*,
+                                     const string &name,
+                                     bool value)
+                                     PJSUA2_THROW(Error);
+    void                (*writeString)(ContainerNode*,
+                                       const string &name,
+                                       const string &value)
+                                       PJSUA2_THROW(Error);
+    void                (*writeStringVector)(ContainerNode*,
+                                             const string &name,
+                                             const StringVector &value)
+                                             PJSUA2_THROW(Error);
+    ContainerNode       (*writeNewContainer)(ContainerNode*,
+                                             const string &name)
+                                             PJSUA2_THROW(Error);
+    ContainerNode       (*writeNewArray)(ContainerNode*,
+                                         const string &name)
+                                         PJSUA2_THROW(Error);
 };
 
 /*
  * Convenient macros.
  */
-#define NODE_READ_BOOL(node,item)	item = node.readBool(#item)
-#define NODE_READ_UNSIGNED(node,item)	item = (unsigned)node.readNumber(#item)
-#define NODE_READ_INT(node,item)	item = (int) node.readNumber(#item)
-#define NODE_READ_FLOAT(node,item)	item = node.readNumber(#item)
-#define NODE_READ_NUM_T(node,T,item)	item = (T)(int)node.readNumber(#item)
-#define NODE_READ_STRING(node,item)	item = node.readString(#item)
-#define NODE_READ_STRINGV(node,item)	item = node.readStringVector(#item)
-#define NODE_READ_OBJ(node,item)	node.readObject(item)
+#define NODE_READ_BOOL(node,item)       item = node.readBool(#item)
+#define NODE_READ_UNSIGNED(node,item)   item = (unsigned)node.readNumber(#item)
+#define NODE_READ_INT(node,item)        item = (int) node.readNumber(#item)
+#define NODE_READ_FLOAT(node,item)      item = node.readNumber(#item)
+#define NODE_READ_NUM_T(node,T,item)    item = (T)(int)node.readNumber(#item)
+#define NODE_READ_STRING(node,item)     item = node.readString(#item)
+#define NODE_READ_STRINGV(node,item)    item = node.readStringVector(#item)
+#define NODE_READ_OBJ(node,item)        node.readObject(item)
 
-#define NODE_WRITE_BOOL(node,item)	node.writeBool(#item, item)
-#define NODE_WRITE_UNSIGNED(node,item)	node.writeNumber(#item, (float)item)
-#define NODE_WRITE_INT(node,item)	node.writeNumber(#item, (float)item)
-#define NODE_WRITE_NUM_T(node,T,item)	node.writeNumber(#item, (float)item)
-#define NODE_WRITE_FLOAT(node,item)	node.writeNumber(#item, item)
-#define NODE_WRITE_STRING(node,item)	node.writeString(#item, item)
-#define NODE_WRITE_STRINGV(node,item)	node.writeStringVector(#item, item)
-#define NODE_WRITE_OBJ(node,item)	node.writeObject(item)
+#define NODE_WRITE_BOOL(node,item)      node.writeBool(#item, item)
+#define NODE_WRITE_UNSIGNED(node,item)  node.writeNumber(#item, (float)item)
+#define NODE_WRITE_INT(node,item)       node.writeNumber(#item, (float)item)
+#define NODE_WRITE_NUM_T(node,T,item)   node.writeNumber(#item, (float)item)
+#define NODE_WRITE_FLOAT(node,item)     node.writeNumber(#item, item)
+#define NODE_WRITE_STRING(node,item)    node.writeString(#item, item)
+#define NODE_WRITE_STRINGV(node,item)   node.writeStringVector(#item, item)
+#define NODE_WRITE_OBJ(node,item)       node.writeObject(item)
 
 //! @endcond
 
@@ -707,4 +712,4 @@ struct container_node_op
 
 
 
-#endif	/* __PJSUA2_PERSISTENT_HPP__ */
+#endif  /* __PJSUA2_PERSISTENT_HPP__ */

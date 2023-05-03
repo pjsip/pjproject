@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2010 Teluu Inc. (http://www.teluu.com)
  *
@@ -27,7 +26,7 @@
 #include <pjlib-util/errno.h>
 #include <pjlib.h>
 
-#define THIS_FILE	"clidemo.c"
+#define THIS_FILE       "clidemo.c"
 
 /* Set this to 1 if you want to let the system assign a port
  * for the CLI telnet daemon.
@@ -92,11 +91,11 @@ static pj_status_t quit_app(pj_cli_cmd_val *cval)
 static void get_codec_list(pj_cli_dyn_choice_param *param)
 {
     if (param->arg_id == 3) {
-	param->cnt = 2;
-	pj_strdup2(param->pool, &param->choice[0].value, "iLbc");
-	pj_strdup2(param->pool, &param->choice[0].desc, "iLbc Codec");
-	pj_strdup2(param->pool, &param->choice[1].value, "g729");
-	pj_strdup2(param->pool, &param->choice[1].desc, "g729 Codec");
+        param->cnt = 2;
+        pj_strdup2(param->pool, &param->choice[0].value, "iLbc");
+        pj_strdup2(param->pool, &param->choice[0].desc, "iLbc Codec");
+        pj_strdup2(param->pool, &param->choice[1].value, "g729");
+        pj_strdup2(param->pool, &param->choice[1].desc, "g729 Codec");
     }
 }
 
@@ -128,10 +127,10 @@ static struct cmd_xml_t cmd_xmls[] = {
      "</CMD>",
      NULL},
     {"<CMD name='disable_codec' id='8' desc='Disable codec'>"
-     "	<ARG name='codec_list' type='choice' id='38' desc='Codec list'>"
-     "	    <CHOICE value='g711' desc='G711 Codec'/>"
-     "	    <CHOICE value='g722' desc='G722 Codec'/>"
-     "	</ARG>"
+     "  <ARG name='codec_list' type='choice' id='38' desc='Codec list'>"
+     "      <CHOICE value='g711' desc='G711 Codec'/>"
+     "      <CHOICE value='g722' desc='G722 Codec'/>"
+     "  </ARG>"
      "</CMD>",
      NULL},
     {"<CMD name='quit_app' id='999' sc='qa' desc='Quit the application'>"
@@ -152,7 +151,7 @@ int main()
     pj_cli_telnet_cfg tcfg;
     pj_str_t xml;
     pj_status_t status;
-    int i;        
+    unsigned i;
 
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
@@ -168,21 +167,21 @@ int main()
 
     status = pj_cli_create(&cli_cfg, &cli);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /*
      * Register some commands.
      */
-    for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
-        xml = pj_str(cmd_xmls[i].xml);	
+    for (i = 0; i < PJ_ARRAY_SIZE(cmd_xmls); i++) {
+        xml = pj_str(cmd_xmls[i].xml);
         status = pj_cli_add_cmd_from_xml(cli, NULL, &xml, 
-					 cmd_xmls[i].handler, NULL,
-					 get_codec_list);
+                                         cmd_xmls[i].handler, NULL,
+                                         get_codec_list);
         if (status != PJ_SUCCESS) {
-	    PJ_PERROR(1,(THIS_FILE, status,
-			 "Failed adding command from XML #%d", i));
-	    goto on_return;
-	}
+            PJ_PERROR(1,(THIS_FILE, status,
+                         "Failed adding command from XML #%d", i));
+            goto on_return;
+        }
     }
 
     /*
@@ -198,7 +197,7 @@ int main()
     tcfg.prompt_str = pj_str("CoolWater% ");
     status = pj_cli_telnet_create(cli, &tcfg, NULL);
     if (status != PJ_SUCCESS)
-	goto on_return;
+        goto on_return;
 
     /*
      * Run the system specific main loop.
@@ -237,7 +236,7 @@ pj_status_t app_main(pj_cli_t *c)
      */
     status = pj_cli_console_create(c, &console_cfg, &sess, NULL);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     pj_log_set_log_func(&log_writer);
 
@@ -245,20 +244,20 @@ pj_status_t app_main(pj_cli_t *c)
      * Main loop.
      */
     for (;;) {
-	char cmdline[PJ_CLI_MAX_CMDBUF];
+        char cmdline[PJ_CLI_MAX_CMDBUF];
 
         status = pj_cli_console_process(sess, &cmdline[0], sizeof(cmdline));
-	if (status != PJ_SUCCESS)
-	    break;
+        if (status != PJ_SUCCESS)
+            break;
 
-	//pj_ansi_strcpy(cmdline, "sayhello {Teluu Inc.}");	
-	if (status == PJ_CLI_EEXIT) {
-	    /* exit is called */
-	    break;
-	} else if (status != PJ_SUCCESS) {
-	    /* Something wrong with the cmdline */
-	    PJ_PERROR(1,(THIS_FILE, status, "Exec error"));
-	}
+        //pj_ansi_strxcpy(cmdline, "sayhello {Teluu Inc.}", sizeof(cmdline));
+        if (status == PJ_CLI_EEXIT) {
+            /* exit is called */
+            break;
+        } else if (status != PJ_SUCCESS) {
+            /* Something wrong with the cmdline */
+            PJ_PERROR(1,(THIS_FILE, status, "Exec error"));
+        }
     }
 
     return PJ_SUCCESS;

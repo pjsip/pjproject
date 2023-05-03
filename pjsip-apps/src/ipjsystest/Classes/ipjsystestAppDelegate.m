@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -31,7 +30,7 @@
 - (void)applicationDidFinishLaunching:(UIApplication *)application {    
     
     // Override point for customization after app launch
-    [window addSubview:[navigationController view]];
+    [window setRootViewController:navigationController];
     [window makeKeyAndVisible];
 }
 

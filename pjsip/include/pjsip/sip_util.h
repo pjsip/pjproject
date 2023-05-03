@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -55,10 +54,10 @@ PJ_BEGIN_DECL
 typedef struct pjsip_target
 {
     PJ_DECL_LIST_MEMBER(struct pjsip_target);/**< Standard list element */
-    pjsip_uri	       *uri;	/**< The target URI		    */
-    int			q1000;	/**< q-value multiplied by 1000	    */
-    pjsip_status_code	code;	/**< Last status code received	    */
-    pj_str_t		reason;	/**< Last reason phrase received    */
+    pjsip_uri          *uri;    /**< The target URI                 */
+    int                 q1000;  /**< q-value multiplied by 1000     */
+    pjsip_status_code   code;   /**< Last status code received      */
+    pj_str_t            reason; /**< Last reason phrase received    */
 } pjsip_target;
 
 
@@ -68,8 +67,8 @@ typedef struct pjsip_target
  */
 typedef struct pjsip_target_set
 {
-    pjsip_target     head;	    /**< Target linked-list head    */
-    pjsip_target    *current;	    /**< Current target.	    */
+    pjsip_target     head;          /**< Target linked-list head    */
+    pjsip_target    *current;       /**< Current target.            */
 } pjsip_target_set;
 
 
@@ -117,7 +116,7 @@ typedef enum pjsip_redirect_op
  * Initialize target set. This will empty the list of targets in the
  * target set.
  *
- * @param tset	    The target set.
+ * @param tset      The target set.
  */
 PJ_INLINE(void) pjsip_target_set_init(pjsip_target_set *tset)
 {
@@ -136,40 +135,40 @@ PJ_INLINE(void) pjsip_target_set_init(pjsip_target_set *tset)
  * The first URI added to the target set will also be made current target
  * by this function.
  *
- * @param tset	    The target set.
- * @param pool	    The memory pool to be used to duplicate the URI.
- * @param uri	    The URI to be checked and added.
- * @param q1000	    The q-value multiplied by 1000.
+ * @param tset      The target set.
+ * @param pool      The memory pool to be used to duplicate the URI.
+ * @param uri       The URI to be checked and added.
+ * @param q1000     The q-value multiplied by 1000.
  *
- * @return	    PJ_SUCCESS if the URI was added to the target set,
- *		    or PJ_EEXISTS if the URI already exists in the target
- *		    set, or other error codes.
+ * @return          PJ_SUCCESS if the URI was added to the target set,
+ *                  or PJ_EEXISTS if the URI already exists in the target
+ *                  set, or other error codes.
  */
 PJ_DECL(pj_status_t) pjsip_target_set_add_uri(pjsip_target_set *tset,
-					      pj_pool_t *pool,
-					      const pjsip_uri *uri,
-					      int q1000);
+                                              pj_pool_t *pool,
+                                              const pjsip_uri *uri,
+                                              int q1000);
 
 /**
  * Extract URI's in the Contact headers of the specified (response) message
  * and add them to the target set. This function will also check if the 
  * URI's already exist in the target set before adding them to the list.
  *
- * @param tset	    The target set.
- * @param pool	    The memory pool to be used to duplicate the URI's.
- * @param msg	    SIP message from which the Contact headers will be
- *		    scanned and the URI's to be extracted, checked, and
- *		    added to the target set.
+ * @param tset      The target set.
+ * @param pool      The memory pool to be used to duplicate the URI's.
+ * @param msg       SIP message from which the Contact headers will be
+ *                  scanned and the URI's to be extracted, checked, and
+ *                  added to the target set.
  *
- * @return	    PJ_SUCCESS if at least one URI was added to the 
- *		    target set, or PJ_EEXISTS if all URI's in the message 
- *		    already exists in the target set or if the message
- *		    doesn't contain usable Contact headers, or other error
- *		    codes.
+ * @return          PJ_SUCCESS if at least one URI was added to the 
+ *                  target set, or PJ_EEXISTS if all URI's in the message 
+ *                  already exists in the target set or if the message
+ *                  doesn't contain usable Contact headers, or other error
+ *                  codes.
  */
 PJ_DECL(pj_status_t) pjsip_target_set_add_from_msg(pjsip_target_set *tset,
-						   pj_pool_t *pool,
-						   const pjsip_msg *msg);
+                                                   pj_pool_t *pool,
+                                                   const pjsip_msg *msg);
 
 /**
  * Get the next target to be retried. This function will scan the target set
@@ -178,11 +177,11 @@ PJ_DECL(pj_status_t) pjsip_target_set_add_from_msg(pjsip_target_set *tset,
  * if there is one target with 2xx or 6xx code or if all targets have been
  * tried.
  *
- * @param tset	    The target set.
+ * @param tset      The target set.
  *
- * @return	    The next target to be tried, or NULL if all targets have
- *		    been tried or at least one target returns 2xx or 6xx
- *		    response.
+ * @return          The next target to be tried, or NULL if all targets have
+ *                  been tried or at least one target returns 2xx or 6xx
+ *                  response.
  */
 PJ_DECL(pjsip_target*) 
 pjsip_target_set_get_next(const pjsip_target_set *tset);
@@ -193,30 +192,30 @@ pjsip_target_set_get_next(const pjsip_target_set *tset);
  * current target may be used by application to keep track on which target
  * is currently being operated on.
  *
- * @param tset	    The target set.
+ * @param tset      The target set.
  * @param target    The target to be set as current target.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_target_set_set_current(pjsip_target_set *tset,
-						  pjsip_target *target);
+                                                  pjsip_target *target);
 
 
 /**
  * Set the status code and reason phrase of the specified target.
  *
  * @param target    The target.
- * @param pool	    The memory pool to be used to duplicate the reason phrase.
- * @param status_code	    The SIP status code to be set to the target.
+ * @param pool      The memory pool to be used to duplicate the reason phrase.
+ * @param status_code       The SIP status code to be set to the target.
  * @param reason    The reason phrase  to be set to the target.
  *
- * @return	    PJ_SUCCESS on successful operation or the appropriate
- *		    error code.
+ * @return          PJ_SUCCESS on successful operation or the appropriate
+ *                  error code.
  */
 PJ_DECL(pj_status_t) pjsip_target_assign_status(pjsip_target *target,
-					        pj_pool_t *pool,
-					        int status_code,
-					        const pj_str_t *reason);
+                                                pj_pool_t *pool,
+                                                int status_code,
+                                                const pj_str_t *reason);
 
 /**
  * @}
@@ -245,37 +244,37 @@ PJ_DECL(pj_status_t) pjsip_target_assign_status(pjsip_target *target,
  *
  * Once a transmit data is created, the reference counter is initialized to 1.
  *
- * @param endpt	    Endpoint instance.
+ * @param endpt     Endpoint instance.
  * @param method    SIP Method.
  * @param target    Target URI.
- * @param from	    URL to put in From header.
- * @param to	    URL to put in To header.
+ * @param from      URL to put in From header.
+ * @param to        URL to put in To header.
  * @param contact   Contact to be put as Contact header value, hence
- *		    the format must follow RFC 3261 Section 20.10:
- *		    When the header field value contains a display 
- *		    name, the URI including all URI parameters is 
- *		    enclosed in "<" and ">".  If no "<" and ">" are 
- *		    present, all parameters after the URI are header
- *		    parameters, not URI parameters.  The display name 
- *		    can be tokens, or a quoted string, if a larger 
- *		    character set is desired.
+ *                  the format must follow RFC 3261 Section 20.10:
+ *                  When the header field value contains a display 
+ *                  name, the URI including all URI parameters is 
+ *                  enclosed in "<" and ">".  If no "<" and ">" are 
+ *                  present, all parameters after the URI are header
+ *                  parameters, not URI parameters.  The display name 
+ *                  can be tokens, or a quoted string, if a larger 
+ *                  character set is desired.
  * @param call_id   Optional Call-ID (put NULL to generate unique Call-ID).
- * @param cseq	    Optional CSeq (put -1 to generate random CSeq).
- * @param text	    Optional text body (put NULL to omit body).
+ * @param cseq      Optional CSeq (put -1 to generate random CSeq).
+ * @param text      Optional text body (put NULL to omit body).
  * @param p_tdata   Pointer to receive the transmit data.
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_create_request( pjsip_endpoint *endpt, 
-						 const pjsip_method *method,
-						 const pj_str_t *target,
-						 const pj_str_t *from,
-						 const pj_str_t *to, 
-						 const pj_str_t *contact,
-						 const pj_str_t *call_id,
-						 int cseq, 
-						 const pj_str_t *text,
-						 pjsip_tx_data **p_tdata);
+                                                 const pjsip_method *method,
+                                                 const pj_str_t *target,
+                                                 const pj_str_t *from,
+                                                 const pj_str_t *to, 
+                                                 const pj_str_t *contact,
+                                                 const pj_str_t *call_id,
+                                                 int cseq, 
+                                                 const pj_str_t *text,
+                                                 pjsip_tx_data **p_tdata);
 
 /**
  * Create an independent request message from the specified headers. This
@@ -292,51 +291,51 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_request( pjsip_endpoint *endpt,
  *
  * Once a transmit data is created, the reference counter is initialized to 1.
  *
- * @param endpt	    Endpoint instance.
+ * @param endpt     Endpoint instance.
  * @param method    SIP Method.
  * @param target    Target URI.
- * @param from	    From header.
- * @param to	    To header.
+ * @param from      From header.
+ * @param to        To header.
  * @param contact   Contact header.
  * @param call_id   Optional Call-ID (put NULL to generate unique Call-ID).
- * @param cseq	    Optional CSeq (put -1 to generate random CSeq).
- * @param text	    Optional text body (put NULL to omit body).
+ * @param cseq      Optional CSeq (put -1 to generate random CSeq).
+ * @param text      Optional text body (put NULL to omit body).
  * @param p_tdata   Pointer to receive the transmit data.
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t)
 pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
-				     const pjsip_method *method,
-				     const pjsip_uri *target,
-				     const pjsip_from_hdr *from,
-				     const pjsip_to_hdr *to,
-				     const pjsip_contact_hdr *contact,
-				     const pjsip_cid_hdr *call_id,
-				     int cseq,
-				     const pj_str_t *text,
-				     pjsip_tx_data **p_tdata);
+                                     const pjsip_method *method,
+                                     const pjsip_uri *target,
+                                     const pjsip_from_hdr *from,
+                                     const pjsip_to_hdr *to,
+                                     const pjsip_contact_hdr *contact,
+                                     const pjsip_cid_hdr *call_id,
+                                     int cseq,
+                                     const pj_str_t *text,
+                                     pjsip_tx_data **p_tdata);
 
 /**
  * Construct a minimal response message for the received request. This function
  * will construct all the Via, Record-Route, Call-ID, From, To, CSeq, and 
  * Call-ID headers from the request.
  *
- * Note: the txdata reference counter is set to ZERO!.
+ * Once a transmit data is created, the reference counter is initialized to 1.
  *
- * @param endpt	    The endpoint.
- * @param rdata	    The request receive data.
+ * @param endpt     The endpoint.
+ * @param rdata     The request receive data.
  * @param st_code   Status code to be put in the response.
  * @param st_text   Optional status text, or NULL to get the default text.
  * @param p_tdata   Pointer to receive the transmit data.
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
-						  const pjsip_rx_data *rdata,
-						  int st_code,
-						  const pj_str_t *st_text,
-						  pjsip_tx_data **p_tdata);
+                                                  const pjsip_rx_data *rdata,
+                                                  int st_code,
+                                                  const pj_str_t *st_text,
+                                                  pjsip_tx_data **p_tdata);
 
 /**
  * Construct a full ACK request for the received non-2xx final response.
@@ -344,48 +343,52 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
  * an ACK request to 3xx-6xx final response.
  * The generation of ACK message for 2xx final response is different than
  * this one.
- * 
- * @param endpt	    The endpoint.
- * @param tdata	    This contains the original INVITE request
- * @param rdata	    The final response.
- * @param ack	    The ACK request created.
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * Once a transmit data is created, the reference counter is initialized to 1.
+ * 
+ * @param endpt     The endpoint.
+ * @param tdata     This contains the original INVITE request
+ * @param rdata     The final response.
+ * @param ack       The ACK request created.
+ *
+ * @return          PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
-					     const pjsip_tx_data *tdata,
-					     const pjsip_rx_data *rdata,
-					     pjsip_tx_data **ack);
+                                             const pjsip_tx_data *tdata,
+                                             const pjsip_rx_data *rdata,
+                                             pjsip_tx_data **ack);
 
 
 /**
  * Construct CANCEL request for the previously sent request.
  *
- * @param endpt	    The endpoint.
- * @param tdata	    The transmit buffer for the request being cancelled.
+ * Once a transmit data is created, the reference counter is initialized to 1.
+ *
+ * @param endpt     The endpoint.
+ * @param tdata     The transmit buffer for the request being cancelled.
  * @param p_tdata   Pointer to receive the transmit data.
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
-						const pjsip_tx_data *tdata,
-						pjsip_tx_data **p_tdata);
+                                                const pjsip_tx_data *tdata,
+                                                pjsip_tx_data **p_tdata);
 
 /**
  * Get destination address and port and transport type information for the
  * specified URI.
  *
- * @param target_uri	The destination URI.
- * @param request_uri	Optional request URI to be considered. May be NULL.
- * @param pool		Pool to allocate memory from.
- * @param dest_info	To be filled with destination info.
+ * @param target_uri    The destination URI.
+ * @param request_uri   Optional request URI to be considered. May be NULL.
+ * @param pool          Pool to allocate memory from.
+ * @param dest_info     To be filled with destination info.
  *
- * @return		PJ_SUCCESS or the appropriate error code.
+ * @return              PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
-				 	 const pjsip_uri *request_uri,
-				 	 pj_pool_t *pool,
-				 	 pjsip_host_info *dest_info);
+                                         const pjsip_uri *request_uri,
+                                         pj_pool_t *pool,
+                                         pjsip_host_info *dest_info);
 
 /**
  * Find which destination to be used to send the request message, based
@@ -399,19 +402,19 @@ PJ_DECL(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
  * longer the case now, and this process is done in separate function
  * (see #pjsip_process_route_set()).
  *
- * @param tdata	    The transmit data containing the request message.
+ * @param tdata     The transmit data containing the request message.
  * @param dest_info On return, it contains information about destination
- *		    host to contact, along with the preferable transport
- *		    type, if any. Caller will then normally proceed with
- *		    resolving this host with server resolution procedure
- *		    described in RFC 3263.
+ *                  host to contact, along with the preferable transport
+ *                  type, if any. Caller will then normally proceed with
+ *                  resolving this host with server resolution procedure
+ *                  described in RFC 3263.
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, or the appropriate error code.
  *
  * @see pjsip_process_route_set
  */
 PJ_DECL(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
-					    pjsip_host_info *dest_info );
+                                            pjsip_host_info *dest_info );
 
 
 /**
@@ -426,19 +429,19 @@ PJ_DECL(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
  * case, the target URI will be put as the request URI of the request and
  * current request URI will be put as the last entry of the Route headers.
  *
- * @param tdata	    The transmit data containing the request message.
+ * @param tdata     The transmit data containing the request message.
  * @param dest_info On return, it contains information about destination
- *		    host to contact, along with the preferable transport
- *		    type, if any. Caller will then normally proceed with
- *		    resolving this host with server resolution procedure
- *		    described in RFC 3263.
+ *                  host to contact, along with the preferable transport
+ *                  type, if any. Caller will then normally proceed with
+ *                  resolving this host with server resolution procedure
+ *                  described in RFC 3263.
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, or the appropriate error code.
  *
  * @see pjsip_get_request_addr
  */
 PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
-					     pjsip_host_info *dest_info );
+                                             pjsip_host_info *dest_info );
 
 
 /**
@@ -450,7 +453,7 @@ PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
  * This function should only used internally by PJSIP client authentication
  * module.
  *
- * @param tdata	    Transmit data containing request message.
+ * @param tdata     Transmit data containing request message.
  */
 PJ_DECL(void) pjsip_restore_strict_route_set(pjsip_tx_data *tdata);
 
@@ -481,8 +484,8 @@ typedef struct pjsip_send_state
      *  #pjsip_endpt_send_request_stateless() was called.
      */
     void (*app_cb)(struct pjsip_send_state*,
-		   pj_ssize_t sent,
-		   pj_bool_t *cont);
+                   pj_ssize_t sent,
+                   pj_bool_t *cont);
 } pjsip_send_state;
 
 
@@ -491,13 +494,13 @@ typedef struct pjsip_send_state
  * #pjsip_endpt_send_request_stateless(), #pjsip_endpt_send_response(), or
  * #pjsip_endpt_send_response2().
  *
- * @param st	    Structure to keep transmission state.
- * @param sent	    Number of bytes sent.
- * @param cont	    When current transmission fails, specify whether
- *		    the function should fallback to next destination.
+ * @param st        Structure to keep transmission state.
+ * @param sent      Number of bytes sent.
+ * @param cont      When current transmission fails, specify whether
+ *                  the function should fallback to next destination.
  */
 typedef void (*pjsip_send_callback)(pjsip_send_state *st, pj_ssize_t sent,
-				    pj_bool_t *cont);
+                                    pj_bool_t *cont);
 
 /**
  * Send outgoing request statelessly The function will take care of which 
@@ -507,58 +510,58 @@ typedef void (*pjsip_send_callback)(pjsip_send_state *st, pj_ssize_t sent,
  * This function is different than #pjsip_transport_send() in that this 
  * function adds/modify the Via header as necessary.
  *
- * @param endpt	    The endpoint instance.
- * @param tdata	    The transmit data to be sent.
- * @param token	    Arbitrary token to be given back on the callback.
- * @param cb	    Optional callback to notify transmission status (also
- *		    gives chance for application to discontinue retrying
- *		    sending to alternate address).
+ * @param endpt     The endpoint instance.
+ * @param tdata     The transmit data to be sent.
+ * @param token     Arbitrary token to be given back on the callback.
+ * @param cb        Optional callback to notify transmission status (also
+ *                  gives chance for application to discontinue retrying
+ *                  sending to alternate address).
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) 
 pjsip_endpt_send_request_stateless( pjsip_endpoint *endpt,
-				    pjsip_tx_data *tdata,
-				    void *token,
-				    pjsip_send_callback cb);
+                                    pjsip_tx_data *tdata,
+                                    void *token,
+                                    pjsip_send_callback cb);
 
 /**
  * This is a low-level function to send raw data to a destination.
  *
  * See also #pjsip_endpt_send_raw_to_uri().
  *
- * @param endpt	    The SIP endpoint instance.
+ * @param endpt     The SIP endpoint instance.
  * @param tp_type   Transport type.
- * @param sel	    Optional pointer to transport selector instance if
- *		    application wants to use a specific transport instance
- *		    rather then letting transport manager finds the suitable
- *		    transport..
+ * @param sel       Optional pointer to transport selector instance if
+ *                  application wants to use a specific transport instance
+ *                  rather then letting transport manager finds the suitable
+ *                  transport..
  * @param raw_data  The data to be sent.
  * @param data_len  The length of the data.
- * @param addr	    Destination address.
+ * @param addr      Destination address.
  * @param addr_len  Length of destination address.
- * @param token	    Arbitrary token to be returned back to callback.
- * @param cb	    Optional callback to be called to notify caller about
- *		    the completion status of the pending send operation.
+ * @param token     Arbitrary token to be returned back to callback.
+ * @param cb        Optional callback to be called to notify caller about
+ *                  the completion status of the pending send operation.
  *
- * @return	    If the message has been sent successfully, this function
- *		    will return PJ_SUCCESS and the callback will not be 
- *		    called. If message cannot be sent immediately, this
- *		    function will return PJ_EPENDING, and application will
- *		    be notified later about the completion via the callback.
- *		    Any statuses other than PJ_SUCCESS or PJ_EPENDING
- *		    indicates immediate failure, and in this case the 
- *		    callback will not be called.
+ * @return          If the message has been sent successfully, this function
+ *                  will return PJ_SUCCESS and the callback will not be 
+ *                  called. If message cannot be sent immediately, this
+ *                  function will return PJ_EPENDING, and application will
+ *                  be notified later about the completion via the callback.
+ *                  Any statuses other than PJ_SUCCESS or PJ_EPENDING
+ *                  indicates immediate failure, and in this case the 
+ *                  callback will not be called.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_send_raw(pjsip_endpoint *endpt,
-					  pjsip_transport_type_e tp_type,
-					  const pjsip_tpselector *sel,
-					  const void *raw_data,
-					  pj_size_t data_len,
-					  const pj_sockaddr_t *addr,
-					  int addr_len,
-					  void *token,
-					  pjsip_tp_send_callback cb);
+                                          pjsip_transport_type_e tp_type,
+                                          const pjsip_tpselector *sel,
+                                          const void *raw_data,
+                                          pj_size_t data_len,
+                                          const pj_sockaddr_t *addr,
+                                          int addr_len,
+                                          void *token,
+                                          pjsip_tp_send_callback cb);
 
 /**
  * Send raw data to the specified destination URI. The actual destination
@@ -567,34 +570,34 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_raw(pjsip_endpoint *endpt,
  *
  * See also #pjsip_endpt_send_raw().
  *
- * @param endpt	    The SIP endpoint instance.
+ * @param endpt     The SIP endpoint instance.
  * @param dst_uri   Destination address URI.
- * @param sel	    Optional pointer to transport selector instance if
- *		    application wants to use a specific transport instance
- *		    rather then letting transport manager finds the suitable
- *		    transport..
+ * @param sel       Optional pointer to transport selector instance if
+ *                  application wants to use a specific transport instance
+ *                  rather then letting transport manager finds the suitable
+ *                  transport..
  * @param raw_data  The data to be sent.
  * @param data_len  The length of the data.
- * @param token	    Arbitrary token to be returned back to callback.
- * @param cb	    Optional callback to be called to notify caller about
- *		    the completion status of the pending send operation.
+ * @param token     Arbitrary token to be returned back to callback.
+ * @param cb        Optional callback to be called to notify caller about
+ *                  the completion status of the pending send operation.
  *
- * @return	    If the message has been sent successfully, this function
- *		    will return PJ_SUCCESS and the callback will not be 
- *		    called. If message cannot be sent immediately, this
- *		    function will return PJ_EPENDING, and application will
- *		    be notified later about the completion via the callback.
- *		    Any statuses other than PJ_SUCCESS or PJ_EPENDING
- *		    indicates immediate failure, and in this case the 
- *		    callback will not be called.
+ * @return          If the message has been sent successfully, this function
+ *                  will return PJ_SUCCESS and the callback will not be 
+ *                  called. If message cannot be sent immediately, this
+ *                  function will return PJ_EPENDING, and application will
+ *                  be notified later about the completion via the callback.
+ *                  Any statuses other than PJ_SUCCESS or PJ_EPENDING
+ *                  indicates immediate failure, and in this case the 
+ *                  callback will not be called.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
-						 const pj_str_t *dst_uri,
-						 const pjsip_tpselector *sel,
-						 const void *raw_data,
-						 pj_size_t data_len,
-						 void *token,
-						 pjsip_tp_send_callback cb);
+                                                 const pj_str_t *dst_uri,
+                                                 const pjsip_tpselector *sel,
+                                                 const void *raw_data,
+                                                 pj_size_t data_len,
+                                                 void *token,
+                                                 pjsip_tp_send_callback cb);
 
 /**
  * This structure describes destination information to send response.
@@ -612,10 +615,10 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
  */
 typedef struct pjsip_response_addr
 {
-    pjsip_transport *transport;	/**< Immediate transport to be used. */
-    pj_sockaddr	     addr;	/**< Immediate address to send to.   */
-    int		     addr_len;	/**< Address length.		     */
-    pjsip_host_info  dst_host;	/**< Destination host to contact.    */
+    pjsip_transport *transport; /**< Immediate transport to be used. */
+    pj_sockaddr      addr;      /**< Immediate address to send to.   */
+    int              addr_len;  /**< Address length.                 */
+    pjsip_host_info  dst_host;  /**< Destination host to contact.    */
 } pjsip_response_addr;
 
 /**
@@ -627,16 +630,16 @@ typedef struct pjsip_response_addr
  * The information about destination to send the response will be returned
  * in res_addr argument. Please see #pjsip_response_addr for more info.
  *
- * @param pool	    The pool.
- * @param rdata	    The incoming request received by the server.
+ * @param pool      The pool.
+ * @param rdata     The incoming request received by the server.
  * @param res_addr  On return, it will be initialized with information about
- *		    destination address and transport to send the response.
+ *                  destination address and transport to send the response.
  *
- * @return	    zero (PJ_OK) if successfull.
+ * @return          zero (PJ_OK) if successfull.
  */
 PJ_DECL(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
-					     pjsip_rx_data *rdata,
-					     pjsip_response_addr *res_addr);
+                                             pjsip_rx_data *rdata,
+                                             pjsip_response_addr *res_addr);
 
 /**
  * Send response in tdata statelessly. The function will take care of which 
@@ -651,72 +654,72 @@ PJ_DECL(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
  * The behavior of this function complies with section 18.2.2 of RFC 3261
  * and RFC 3581.
  *
- * @param endpt	    The endpoint instance.
+ * @param endpt     The endpoint instance.
  * @param res_addr  The information about the address and transport to send
- *		    the response to. Application can get this information
- *		    by calling #pjsip_get_response_addr().
- * @param tdata	    The response message to be sent.
- * @param token	    Token to be passed back when the callback is called.
- * @param cb	    Optional callback to notify the transmission status
- *		    to application, and to inform whether next address or
- *		    transport will be tried.
+ *                  the response to. Application can get this information
+ *                  by calling #pjsip_get_response_addr().
+ * @param tdata     The response message to be sent.
+ * @param token     Token to be passed back when the callback is called.
+ * @param cb        Optional callback to notify the transmission status
+ *                  to application, and to inform whether next address or
+ *                  transport will be tried.
  * 
- * @return	    PJ_SUCCESS if response has been successfully created and
- *		    sent to transport layer, or a non-zero error code. 
- *		    However, even when it returns PJ_SUCCESS, there is no 
- *		    guarantee that the response has been successfully sent.
+ * @return          PJ_SUCCESS if response has been successfully created and
+ *                  sent to transport layer, or a non-zero error code. 
+ *                  However, even when it returns PJ_SUCCESS, there is no 
+ *                  guarantee that the response has been successfully sent.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
-					        pjsip_response_addr *res_addr,
-					        pjsip_tx_data *tdata,
-						void *token,
-						pjsip_send_callback cb);
+                                                pjsip_response_addr *res_addr,
+                                                pjsip_tx_data *tdata,
+                                                void *token,
+                                                pjsip_send_callback cb);
 
 /**
  * This is a convenient function which wraps #pjsip_get_response_addr() and
  * #pjsip_endpt_send_response() in a single function.
  *
- * @param endpt	    The endpoint instance.
- * @param rdata	    The original request to be responded.
- * @param tdata	    The response message to be sent.
- * @param token	    Token to be passed back when the callback is called.
- * @param cb	    Optional callback to notify the transmission status
- *		    to application, and to inform whether next address or
- *		    transport will be tried.
+ * @param endpt     The endpoint instance.
+ * @param rdata     The original request to be responded.
+ * @param tdata     The response message to be sent.
+ * @param token     Token to be passed back when the callback is called.
+ * @param cb        Optional callback to notify the transmission status
+ *                  to application, and to inform whether next address or
+ *                  transport will be tried.
  * 
- * @return	    PJ_SUCCESS if response has been successfully created and
- *		    sent to transport layer, or a non-zero error code. 
- *		    However, even when it returns PJ_SUCCESS, there is no 
- *		    guarantee that the response has been successfully sent.
+ * @return          PJ_SUCCESS if response has been successfully created and
+ *                  sent to transport layer, or a non-zero error code. 
+ *                  However, even when it returns PJ_SUCCESS, there is no 
+ *                  guarantee that the response has been successfully sent.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_send_response2(pjsip_endpoint *endpt,
-					        pjsip_rx_data *rdata,
-					        pjsip_tx_data *tdata,
-						void *token,
-						pjsip_send_callback cb);
+                                                pjsip_rx_data *rdata,
+                                                pjsip_tx_data *tdata,
+                                                void *token,
+                                                pjsip_send_callback cb);
 
 /**
  * This composite function sends response message statelessly to an incoming
  * request message. Internally it calls #pjsip_endpt_create_response() and
  * #pjsip_endpt_send_response().
  *
- * @param endpt	    The endpoint instance.
- * @param rdata	    The incoming request message.
+ * @param endpt     The endpoint instance.
+ * @param rdata     The incoming request message.
  * @param st_code   Status code of the response.
  * @param st_text   Optional status text of the response.
  * @param hdr_list  Optional header list to be added to the response.
- * @param body	    Optional message body to be added to the response.
+ * @param body      Optional message body to be added to the response.
  *
- * @return	    PJ_SUCCESS if response message has successfully been
- *		    sent.
+ * @return          PJ_SUCCESS if response message has successfully been
+ *                  sent.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_respond_stateless(pjsip_endpoint *endpt,
-						   pjsip_rx_data *rdata,
-						   int st_code,
-						   const pj_str_t *st_text,
-						   const pjsip_hdr *hdr_list,
-						   const pjsip_msg_body *body);
-						    
+                                                   pjsip_rx_data *rdata,
+                                                   int st_code,
+                                                   const pj_str_t *st_text,
+                                                   const pjsip_hdr *hdr_list,
+                                                   const pjsip_msg_body *body);
+                                                    
 /**
  * @}
  */
@@ -732,33 +735,33 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond_stateless(pjsip_endpoint *endpt,
  * This composite function creates and sends response statefully for the
  * incoming request.
  *
- * @param endpt	    The endpoint instance.
+ * @param endpt     The endpoint instance.
  * @param tsx_user  The module to be registered as transaction user.
- * @param rdata	    The incoming request message.
+ * @param rdata     The incoming request message.
  * @param st_code   Status code of the response.
  * @param st_text   Optional status text of the response.
  * @param hdr_list  Optional header list to be added to the response.
- * @param body	    Optional message body to be added to the response.
- * @param p_tsx	    Optional pointer to receive the transaction which was
- *		    created to send the response.
+ * @param body      Optional message body to be added to the response.
+ * @param p_tsx     Optional pointer to receive the transaction which was
+ *                  created to send the response.
  *
- * @return	    PJ_SUCCESS if response message has successfully been
- *		    created.
+ * @return          PJ_SUCCESS if response message has successfully been
+ *                  created.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_respond( pjsip_endpoint *endpt,
-					  pjsip_module *tsx_user,
-					  pjsip_rx_data *rdata,
-					  int st_code,
-					  const pj_str_t *st_text,
-					  const pjsip_hdr *hdr_list,
-					  const pjsip_msg_body *body,
-					  pjsip_transaction **p_tsx );
+                                          pjsip_module *tsx_user,
+                                          pjsip_rx_data *rdata,
+                                          int st_code,
+                                          const pj_str_t *st_text,
+                                          const pjsip_hdr *hdr_list,
+                                          const pjsip_msg_body *body,
+                                          pjsip_transaction **p_tsx );
 
 /**
  * Type of callback to be specified in #pjsip_endpt_send_request().
  *
- * @param token	    The token that was given in #pjsip_endpt_send_request()
- * @param e	    Completion event.
+ * @param token     The token that was given in #pjsip_endpt_send_request()
+ * @param e         Completion event.
  */
 typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
 
@@ -768,27 +771,27 @@ typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
  * requests outside a dialog. To send a request within a dialog, application
  * should use #pjsip_dlg_send_request instead.
  *
- * @param endpt	    The endpoint instance.
- * @param tdata	    The transmit data to be sent.
+ * @param endpt     The endpoint instance.
+ * @param tdata     The transmit data to be sent.
  * @param timeout   Optional timeout for final response to be received, or -1 
- *		    if the transaction should not have a timeout restriction.
- *		    The value is in miliseconds. Note that this is not 
- *		    implemented yet, so application needs to use its own timer 
- *		    to handle timeout.
- * @param token	    Optional token to be associated with the transaction, and 
- *		    to be passed to the callback.
- * @param cb	    Optional callback to be called when the transaction has
- *		    received a final response. The callback will be called with
- *		    the previously registered token and the event that triggers
- *		    the completion of the transaction.
+ *                  if the transaction should not have a timeout restriction.
+ *                  The value is in miliseconds. Note that this is not 
+ *                  implemented yet, so application needs to use its own timer 
+ *                  to handle timeout.
+ * @param token     Optional token to be associated with the transaction, and 
+ *                  to be passed to the callback.
+ * @param cb        Optional callback to be called when the transaction has
+ *                  received a final response. The callback will be called with
+ *                  the previously registered token and the event that triggers
+ *                  the completion of the transaction.
  *
- * @return	    PJ_SUCCESS, or the appropriate error code.
+ * @return          PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
-					       pjsip_tx_data *tdata,
-					       pj_int32_t timeout,
-					       void *token,
-					       pjsip_endpt_send_callback cb);
+                                               pjsip_tx_data *tdata,
+                                               pj_int32_t timeout,
+                                               void *token,
+                                               pjsip_endpt_send_callback cb);
 
 /**
  * @}
@@ -808,29 +811,29 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
  * the Via header. If it is NULL, then a unique branch parameter will be used.
  *
  * Note: this function DOES NOT perform Route information preprocessing as
- *	  described in RFC 3261 Section 16.4. Application must take care of
- *	  removing/updating the Route headers according of the rules as
- *	  described in that section.
+ *        described in RFC 3261 Section 16.4. Application must take care of
+ *        removing/updating the Route headers according of the rules as
+ *        described in that section.
  *
- * @param endpt	    The endpoint instance.
- * @param rdata	    The incoming request message.
- * @param uri	    The URI where the request will be forwarded to.
+ * @param endpt     The endpoint instance.
+ * @param rdata     The incoming request message.
+ * @param uri       The URI where the request will be forwarded to.
  * @param branch    Optional branch parameter. Application may specify its
- *		    own branch, for example if it wishes to perform loop
- *		    detection. If the branch parameter is not specified,
- *		    this function will generate its own by calling 
- *		    #pjsip_calculate_branch_id() function.
+ *                  own branch, for example if it wishes to perform loop
+ *                  detection. If the branch parameter is not specified,
+ *                  this function will generate its own by calling 
+ *                  #pjsip_calculate_branch_id() function.
  * @param options   Optional option flags when duplicating the message.
- * @param tdata	    The result.
+ * @param tdata     The result.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
-						    pjsip_rx_data *rdata, 
-						    const pjsip_uri *uri,
-						    const pj_str_t *branch,
-						    unsigned options,
-						    pjsip_tx_data **tdata);
+                                                    pjsip_rx_data *rdata, 
+                                                    const pjsip_uri *uri,
+                                                    const pj_str_t *branch,
+                                                    unsigned options,
+                                                    pjsip_tx_data **tdata);
 
 
 
@@ -842,17 +845,17 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
  * full/deep clone of the response, unless other copy mechanism is used in 
  * the options.
  *
- * @param endpt	    The endpoint instance.
- * @param rdata	    The incoming response message.
+ * @param endpt     The endpoint instance.
+ * @param rdata     The incoming response message.
  * @param options   Optional option flags when duplicate the message.
- * @param tdata	    The result
+ * @param tdata     The result
  *
- * @return	    PJ_SUCCESS on success.
+ * @return          PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
-						      pjsip_rx_data *rdata, 
-						      unsigned options,
-						      pjsip_tx_data **tdata);
+                                                      pjsip_rx_data *rdata, 
+                                                      unsigned options,
+                                                      pjsip_tx_data **tdata);
 
 
 
@@ -868,9 +871,9 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
  *
  * Note that the returned string was allocated from rdata's pool.
  *
- * @param rdata	    The incoming request message.
+ * @param rdata     The incoming request message.
  *
- * @return	    Unique branch-ID string.
+ * @return          Unique branch-ID string.
  */
 PJ_DECL(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata );
 
@@ -881,5 +884,5 @@ PJ_DECL(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata );
 
 PJ_END_DECL
 
-#endif	/* __PJSIP_SIP_MISC_H__ */
+#endif  /* __PJSIP_SIP_MISC_H__ */
 

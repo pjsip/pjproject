@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -56,7 +55,7 @@
 static volatile int quit_flag=0;
 
 #if 0
-#   define TRACE__(args)	PJ_LOG(3,args)
+#   define TRACE__(args)        PJ_LOG(3,args)
 #else
 #   define TRACE__(args)
 #endif
@@ -68,13 +67,14 @@ static volatile int quit_flag=0;
  * Each of the thread mainly will just execute the loop which
  * increments a variable.
  */
-static void* thread_proc(pj_uint32_t *pcounter)
+static int thread_proc(void *data)
 {
     /* Test that pj_thread_register() works. */
     pj_thread_desc desc;
     pj_thread_t *this_thread;
     unsigned id;
     pj_status_t rc;
+    pj_uint32_t *pcounter = (pj_uint32_t *)data;
 
     id = *pcounter;
     PJ_UNUSED_ARG(id); /* Warning about unused var if TRACE__ is disabled */
@@ -85,31 +85,31 @@ static void* thread_proc(pj_uint32_t *pcounter)
     rc = pj_thread_register("thread", desc, &this_thread);
     if (rc != PJ_SUCCESS) {
         app_perror("...error in pj_thread_register", rc);
-        return NULL;
+        return rc;
     }
 
     /* Test that pj_thread_this() works */
     this_thread = pj_thread_this();
     if (this_thread == NULL) {
         PJ_LOG(3,(THIS_FILE, "...error: pj_thread_this() returns NULL!"));
-        return NULL;
+        return -1;
     }
 
     /* Test that pj_thread_get_name() works */
     if (pj_thread_get_name(this_thread) == NULL) {
         PJ_LOG(3,(THIS_FILE, "...error: pj_thread_get_name() returns NULL!"));
-        return NULL;
+        return -1;
     }
 
     /* Main loop */
     for (;!quit_flag;) {
-	(*pcounter)++;
+        (*pcounter)++;
         //Must sleep if platform doesn't do time-slicing.
-	//pj_thread_sleep(0);
+        //pj_thread_sleep(0);
     }
 
     TRACE__((THIS_FILE, "     thread %d quitting..", id));
-    return NULL;
+    return PJ_SUCCESS;
 }
 
 /*
@@ -126,20 +126,20 @@ static int simple_thread(const char *title, unsigned flags)
 
     pool = pj_pool_create(mem, NULL, 4000, 4000, NULL);
     if (!pool)
-	return -1000;
+        return -1000;
 
     quit_flag = 0;
 
     TRACE__((THIS_FILE, "    Creating thread 0.."));
     rc = pj_thread_create(pool, "thread", (pj_thread_proc*)&thread_proc,
-			  &counter,
-			  PJ_THREAD_DEFAULT_STACK_SIZE,
-			  flags,
-			  &thread);
+                          &counter,
+                          PJ_THREAD_DEFAULT_STACK_SIZE,
+                          flags,
+                          &thread);
 
     if (rc != PJ_SUCCESS) {
-	app_perror("...error: unable to create thread", rc);
-	return -1010;
+        app_perror("...error: unable to create thread", rc);
+        return -1010;
     }
 
     TRACE__((THIS_FILE, "    Main thread waiting.."));
@@ -148,17 +148,17 @@ static int simple_thread(const char *title, unsigned flags)
 
     if (flags & PJ_THREAD_SUSPENDED) {
 
-	/* Check that counter is still zero */
-	if (counter != 0) {
-	    PJ_LOG(3,(THIS_FILE, "...error: thread is not suspended"));
-	    return -1015;
-	}
+        /* Check that counter is still zero */
+        if (counter != 0) {
+            PJ_LOG(3,(THIS_FILE, "...error: thread is not suspended"));
+            return -1015;
+        }
 
-	rc = pj_thread_resume(thread);
-	if (rc != PJ_SUCCESS) {
-	    app_perror("...error: resume thread error", rc);
-	    return -1020;
-	}
+        rc = pj_thread_resume(thread);
+        if (rc != PJ_SUCCESS) {
+            app_perror("...error: resume thread error", rc);
+            return -1020;
+        }
     }
 
     PJ_LOG(3,(THIS_FILE, "..waiting for thread to quit.."));
@@ -171,8 +171,8 @@ static int simple_thread(const char *title, unsigned flags)
     pj_pool_release(pool);
 
     if (counter == 0) {
-	PJ_LOG(3,(THIS_FILE, "...error: thread is not running"));
-	return -1025;
+        PJ_LOG(3,(THIS_FILE, "...error: thread is not running"));
+        return -1025;
     }
 
     PJ_LOG(3,(THIS_FILE, "...%s success", title));
@@ -204,7 +204,7 @@ static int timeslice_test(void)
     for (i=0; i<NUM_THREADS; ++i) {
         counter[i] = i;
         rc = pj_thread_create(pool, "thread", (pj_thread_proc*)&thread_proc,
-			      &counter[i],
+                              &counter[i],
                               PJ_THREAD_DEFAULT_STACK_SIZE,
                               PJ_THREAD_SUSPENDED,
                               &thread[i]);
@@ -225,14 +225,14 @@ static int timeslice_test(void)
     for (i=0; i<NUM_THREADS; ++i) {
         if (counter[i] > i) {
             PJ_LOG(3,(THIS_FILE, "....ERROR! Thread %d-th is not suspended!",
-		      i));
+                      i));
             return -30;
         }
     }
 
     /* Now resume all threads. */
     for (i=0; i<NUM_THREADS; ++i) {
-	TRACE__((THIS_FILE, "    Resuming thread %d [%p]..", i, thread[i]));
+        TRACE__((THIS_FILE, "    Resuming thread %d [%p]..", i, thread[i]));
         rc = pj_thread_resume(thread[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...ERROR in pj_thread_resume()", rc);
@@ -253,14 +253,14 @@ static int timeslice_test(void)
 
     /* Wait until all threads quit, then destroy. */
     for (i=0; i<NUM_THREADS; ++i) {
-	TRACE__((THIS_FILE, "    Main thread joining thread %d [%p]..",
-			    i, thread[i]));
+        TRACE__((THIS_FILE, "    Main thread joining thread %d [%p]..",
+                            i, thread[i]));
         rc = pj_thread_join(thread[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...ERROR in pj_thread_join()", rc);
             return -50;
         }
-	TRACE__((THIS_FILE, "    Destroying thread %d [%p]..", i, thread[i]));
+        TRACE__((THIS_FILE, "    Destroying thread %d [%p]..", i, thread[i]));
         rc = pj_thread_destroy(thread[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...ERROR in pj_thread_destroy()", rc);
@@ -293,9 +293,9 @@ static int timeslice_test(void)
     diff = (highest-lowest)*100 / ((highest+lowest)/2);
     if ( diff >= 50) {
         PJ_LOG(3,(THIS_FILE,
-		  "...ERROR: thread didn't have equal timeslice!"));
+                  "...ERROR: thread didn't have equal timeslice!"));
         PJ_LOG(3,(THIS_FILE,
-		  ".....lowest counter=%u, highest counter=%u, diff=%u%%",
+                  ".....lowest counter=%u, highest counter=%u, diff=%u%%",
                   lowest, highest, diff));
         return -80;
     } else {
@@ -314,15 +314,15 @@ int thread_test(void)
 
     rc = simple_thread("simple thread test", 0);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
     rc = simple_thread("suspended thread test", PJ_THREAD_SUSPENDED);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
     rc = timeslice_test();
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
     return rc;
 }
@@ -332,6 +332,6 @@ int thread_test(void)
  * when this test is disabled.
  */
 int dummy_thread_test;
-#endif	/* INCLUDE_THREAD_TEST */
+#endif  /* INCLUDE_THREAD_TEST */
 
 

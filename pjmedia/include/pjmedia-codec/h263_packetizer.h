@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -65,7 +64,7 @@ typedef struct pjmedia_h263_packetizer_cfg
      * Maximum payload length.
      * Default: PJMEDIA_MAX_MTU
      */
-    int	mtu;
+    int mtu;
 
     /**
      * Packetization mode.
@@ -79,17 +78,17 @@ typedef struct pjmedia_h263_packetizer_cfg
 /**
  * Create H.263 packetizer.
  *
- * @param pool		The memory pool.
- * @param cfg		Packetizer settings, if NULL, default setting
- *			will be used.
- * @param p_pktz	Pointer to receive the packetizer.
+ * @param pool          The memory pool.
+ * @param cfg           Packetizer settings, if NULL, default setting
+ *                      will be used.
+ * @param p_pktz        Pointer to receive the packetizer.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_h263_packetizer_create(
-				    pj_pool_t *pool,
-				    const pjmedia_h263_packetizer_cfg *cfg,
-				    pjmedia_h263_packetizer **p_pktz);
+                                    pj_pool_t *pool,
+                                    const pjmedia_h263_packetizer_cfg *cfg,
+                                    pjmedia_h263_packetizer **p_pktz);
 
 
 /**
@@ -97,20 +96,20 @@ PJ_DECL(pj_status_t) pjmedia_h263_packetizer_create(
  * function will apply in-place processing, so the bitstream may be modified
  * during the packetization.
  *
- * @param pktz		The packetizer.
- * @param bits		The picture bitstream to be packetized.
- * @param bits_len	The length of the bitstream.
- * @param bits_pos	The bitstream offset to be packetized.
- * @param payload	The output payload.
- * @param payload_len	The output payload length.
+ * @param pktz          The packetizer.
+ * @param bits          The picture bitstream to be packetized.
+ * @param bits_len      The length of the bitstream.
+ * @param bits_pos      The bitstream offset to be packetized.
+ * @param payload       The output payload.
+ * @param payload_len   The output payload length.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
-					    pj_uint8_t *bits,
+                                            pj_uint8_t *bits,
                                             pj_size_t bits_len,
                                             unsigned *bits_pos,
-                                            const pj_uint8_t **payload,
+                                            pj_uint8_t **payload,
                                             pj_size_t *payload_len);
 
 
@@ -120,27 +119,27 @@ PJ_DECL(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
  * payload pointer set to NULL, as the packetizer need to update its internal
  * state.
  *
- * @param pktz		The packetizer.
- * @param payload	The payload to be unpacketized.
- * @param payload_len	The payload length.
- * @param bits		The bitstream buffer.
- * @param bits_size	The bitstream buffer size.
- * @param bits_pos	The bitstream offset to put the unpacketized payload
- *			in the bitstream, upon return, this will be updated
- *			to the latest offset as a result of the unpacketized
- *			payload.
+ * @param pktz          The packetizer.
+ * @param payload       The payload to be unpacketized.
+ * @param payload_len   The payload length.
+ * @param bits          The bitstream buffer.
+ * @param bits_size     The bitstream buffer size.
+ * @param bits_pos      The bitstream offset to put the unpacketized payload
+ *                      in the bitstream, upon return, this will be updated
+ *                      to the latest offset as a result of the unpacketized
+ *                      payload.
  *
- * @return		PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_h263_unpacketize(pjmedia_h263_packetizer *pktz,
-					      const pj_uint8_t *payload,
+                                              const pj_uint8_t *payload,
                                               pj_size_t payload_len,
                                               pj_uint8_t *bits,
                                               pj_size_t bits_size,
-					      unsigned *bits_pos);
+                                              unsigned *bits_pos);
 
 
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_H263_PACKETIZER_H__ */
+#endif  /* __PJMEDIA_H263_PACKETIZER_H__ */

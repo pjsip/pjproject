@@ -1,4 +1,3 @@
-# $Id$
 #
 from socket import *
 import re
@@ -306,9 +305,11 @@ class RecvfromTransaction:
 	body = None
 	# Pattern to be expected on pjsua when receiving the response
 	expect = ""
+	# Required config
+	pj_config = ""
 	
 	def __init__(self, title, resp_code, check_cseq=True,
-			include=[], exclude=[], cmds=[], resp_hdr=[], resp_body=None, expect=""):
+			include=[], exclude=[], cmds=[], resp_hdr=[], resp_body=None, expect="", pj_config=""):
 		self.title = title
 		self.cmds = cmds
 		self.include = include
@@ -317,6 +318,7 @@ class RecvfromTransaction:
 		self.resp_hdr = resp_hdr
 		self.body = resp_body
 		self.expect = expect
+		self.pj_config=pj_config
 			
 
 class RecvfromCfg:
@@ -328,15 +330,18 @@ class RecvfromCfg:
 	transaction = None
 	# Use TCP?
 	tcp = False
+	# Required config
+	pj_config = ""
 
 	# Note:
 	#  Any "$PORT" string in the pjsua_args will be replaced
 	#  by server port
-	def __init__(self, name, pjsua_args, transaction, tcp=False):
+	def __init__(self, name, pjsua_args, transaction, tcp=False, pj_config=""):
 		self.name = name
 		self.inst_param = cfg.InstanceParam("pjsua", pjsua_args)
 		self.transaction = transaction
 		self.tcp=tcp
+		self.pj_config=pj_config
 
 
 

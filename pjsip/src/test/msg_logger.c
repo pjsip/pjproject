@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -28,16 +27,16 @@ static pj_bool_t msg_log_enabled;
 static pj_bool_t on_rx_msg(pjsip_rx_data *rdata)
 {
     if (msg_log_enabled) {
-	PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s:%s:%d:\n"
-			     "%.*s\n"
-			     "--end msg--",
-			     rdata->msg_info.len,
-			     pjsip_rx_data_get_info(rdata),
-			     rdata->tp_info.transport->type_name,
-			     rdata->pkt_info.src_name,
-			     rdata->pkt_info.src_port,
-			     rdata->msg_info.len,
-			     rdata->msg_info.msg_buf));
+        PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s:%s:%d:\n"
+                             "%.*s\n"
+                             "--end msg--",
+                             rdata->msg_info.len,
+                             pjsip_rx_data_get_info(rdata),
+                             rdata->tp_info.transport->type_name,
+                             rdata->pkt_info.src_name,
+                             rdata->pkt_info.src_port,
+                             rdata->msg_info.len,
+                             rdata->msg_info.msg_buf));
     }
 
     return PJ_FALSE;
@@ -46,16 +45,16 @@ static pj_bool_t on_rx_msg(pjsip_rx_data *rdata)
 static pj_status_t on_tx_msg(pjsip_tx_data *tdata)
 {
     if (msg_log_enabled) {
-	PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%s:%d:\n"
-			     "%.*s\n"
-			     "--end msg--",
-			     (tdata->buf.cur - tdata->buf.start),
-			     pjsip_tx_data_get_info(tdata),
-			     tdata->tp_info.transport->type_name,
-			     tdata->tp_info.dst_name,
-			     tdata->tp_info.dst_port,
-			     (tdata->buf.cur - tdata->buf.start),
-			     tdata->buf.start));
+        PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s:%s:%d:\n"
+                             "%.*s\n"
+                             "--end msg--",
+                             (tdata->buf.cur - tdata->buf.start),
+                             pjsip_tx_data_get_info(tdata),
+                             tdata->tp_info.transport->type_name,
+                             tdata->tp_info.dst_name,
+                             tdata->tp_info.dst_port,
+                             (int)(tdata->buf.cur - tdata->buf.start),
+                             tdata->buf.start));
     }
     return PJ_SUCCESS;
 }
@@ -64,19 +63,19 @@ static pj_status_t on_tx_msg(pjsip_tx_data *tdata)
 /* Message logger module. */
 static pjsip_module mod_msg_logger = 
 {
-    NULL, NULL,				/* prev and next	*/
-    { "mod-msg-logger", 14},		/* Name.		*/
-    -1,					/* Id			*/
-    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority		*/
-    NULL,				/* load()		*/
-    NULL,				/* start()		*/
-    NULL,				/* stop()		*/
-    NULL,				/* unload()		*/
-    &on_rx_msg,				/* on_rx_request()	*/
-    &on_rx_msg,				/* on_rx_response()	*/
-    &on_tx_msg,				/* on_tx_request()	*/
-    &on_tx_msg,				/* on_tx_response()	*/
-    NULL,				/* on_tsx_state()	*/
+    NULL, NULL,                         /* prev and next        */
+    { "mod-msg-logger", 14},            /* Name.                */
+    -1,                                 /* Id                   */
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority            */
+    NULL,                               /* load()               */
+    NULL,                               /* start()              */
+    NULL,                               /* stop()               */
+    NULL,                               /* unload()             */
+    &on_rx_msg,                         /* on_rx_request()      */
+    &on_rx_msg,                         /* on_rx_response()     */
+    &on_tx_msg,                         /* on_tx_request()      */
+    &on_tx_msg,                         /* on_tx_response()     */
+    NULL,                               /* on_tsx_state()       */
 };
 
 int init_msg_logger(void)
@@ -84,12 +83,12 @@ int init_msg_logger(void)
     pj_status_t status;
 
     if (mod_msg_logger.id != -1)
-	return 0;
+        return 0;
 
     status = pjsip_endpt_register_module(endpt, &mod_msg_logger);
     if (status != PJ_SUCCESS) {
-	app_perror("  error registering module", status);
-	return -10;
+        app_perror("  error registering module", status);
+        return -10;
     }
 
     return 0;

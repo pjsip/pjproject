@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -22,7 +21,7 @@
 #include <pj/compat/socket.h>
 
 void app_perror_dbg(const char *msg, pj_status_t rc,
-		    const char *file, int line)
+                    const char *file, int line)
 {
     char errbuf[256];
 
@@ -30,7 +29,7 @@ void app_perror_dbg(const char *msg, pj_status_t rc,
 
     pj_strerror(rc, errbuf, sizeof(errbuf));
     PJ_LOG(1,("test", "%s:%d: %s: [pj_status_t=%d] %s", file, line, msg,
-	      rc, errbuf));
+              rc, errbuf));
 }
 
 /* Set socket to nonblocking. */
@@ -56,15 +55,15 @@ pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg)
 
     status = pj_ioqueue_create(pool, 64, &ioqueue);
     if (status != PJ_SUCCESS) {
-	app_perror("   pj_ioqueue_create()", status);
-	return status;
+        app_perror("   pj_ioqueue_create()", status);
+        return status;
     }
 
     status = pj_timer_heap_create(pool, 256, &timer_heap);
     if (status != PJ_SUCCESS) {
-	app_perror("   pj_timer_heap_create()", status);
-	pj_ioqueue_destroy(ioqueue);
-	return status;
+        app_perror("   pj_timer_heap_create()", status);
+        pj_ioqueue_destroy(ioqueue);
+        return status;
     }
 
     pj_lock_create_recursive_mutex(pool, NULL, &lock);
@@ -78,17 +77,17 @@ pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg)
 void destroy_stun_config(pj_stun_config *stun_cfg)
 {
     if (stun_cfg->timer_heap) {
-	pj_timer_heap_destroy(stun_cfg->timer_heap);
-	stun_cfg->timer_heap = NULL;
+        pj_timer_heap_destroy(stun_cfg->timer_heap);
+        stun_cfg->timer_heap = NULL;
     }
     if (stun_cfg->ioqueue) {
-	pj_ioqueue_destroy(stun_cfg->ioqueue);
-	stun_cfg->ioqueue = NULL;
+        pj_ioqueue_destroy(stun_cfg->ioqueue);
+        stun_cfg->ioqueue = NULL;
     }
 }
 
 void poll_events(pj_stun_config *stun_cfg, unsigned msec,
-		 pj_bool_t first_event_only)
+                 pj_bool_t first_event_only)
 {
     pj_time_val stop_time;
     int count = 0;
@@ -99,24 +98,24 @@ void poll_events(pj_stun_config *stun_cfg, unsigned msec,
 
     /* Process all events for the specified duration. */
     for (;;) {
-	pj_time_val timeout = {0, 1}, now;
-	int c;
+        pj_time_val timeout = {0, 1}, now;
+        int c;
 
-	c = pj_timer_heap_poll( stun_cfg->timer_heap, NULL );
-	if (c > 0)
-	    count += c;
+        c = pj_timer_heap_poll( stun_cfg->timer_heap, NULL );
+        if (c > 0)
+            count += c;
 
-	//timeout.sec = timeout.msec = 0;
-	c = pj_ioqueue_poll( stun_cfg->ioqueue, &timeout);
-	if (c > 0)
-	    count += c;
+        //timeout.sec = timeout.msec = 0;
+        c = pj_ioqueue_poll( stun_cfg->ioqueue, &timeout);
+        if (c > 0)
+            count += c;
 
-	pj_gettimeofday(&now);
-	if (PJ_TIME_VAL_GTE(now, stop_time))
-	    break;
+        pj_gettimeofday(&now);
+        if (PJ_TIME_VAL_GTE(now, stop_time))
+            break;
 
-	if (first_event_only && count >= 0)
-	    break;
+        if (first_event_only && count >= 0)
+            break;
     }
 }
 
@@ -131,7 +130,7 @@ void capture_pjlib_state(pj_stun_config *cfg, struct pjlib_state *st)
 }
 
 int check_pjlib_state(pj_stun_config *cfg,
-		      const struct pjlib_state *initial_st)
+                      const struct pjlib_state *initial_st)
 {
     struct pjlib_state current_state;
     int rc = 0;
@@ -139,39 +138,39 @@ int check_pjlib_state(pj_stun_config *cfg,
     capture_pjlib_state(cfg, &current_state);
 
     if (current_state.timer_cnt > initial_st->timer_cnt) {
-	PJ_LOG(3,("", "    error: possibly leaking timer"));
-	rc |= ERR_TIMER_LEAK;
+        PJ_LOG(3,("", "    error: possibly leaking timer"));
+        rc |= ERR_TIMER_LEAK;
 
 #if PJ_TIMER_DEBUG
-	pj_timer_heap_dump(cfg->timer_heap);
+        pj_timer_heap_dump(cfg->timer_heap);
 #endif
     }
 
     if (current_state.pool_used_cnt > initial_st->pool_used_cnt) {
-	PJ_LOG(3,("", "    error: possibly leaking memory"));
-	PJ_LOG(3,("", "    dumping memory pool:"));
-	pj_pool_factory_dump(mem, PJ_TRUE);
-	rc |= ERR_MEMORY_LEAK;
+        PJ_LOG(3,("", "    error: possibly leaking memory"));
+        PJ_LOG(3,("", "    dumping memory pool:"));
+        pj_pool_factory_dump(mem, PJ_TRUE);
+        rc |= ERR_MEMORY_LEAK;
     }
 
     return rc;
 }
 
 
-#define DO_TEST(test)	do { \
-			    PJ_LOG(3, ("test", "Running %s...", #test));  \
-			    rc = test; \
-			    PJ_LOG(3, ("test",  \
-				       "%s(%d)",  \
-				       (char*)(rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+#define DO_TEST(test)   do { \
+                            PJ_LOG(3, ("test", "Running %s...", #test));  \
+                            rc = test; \
+                            PJ_LOG(3, ("test",  \
+                                       "%s(%d)",  \
+                                       (char*)(rc ? "..ERROR" : "..success"), rc)); \
+                            if (rc!=0) goto on_return; \
+                        } while (0)
 
 
 pj_pool_factory *mem;
 
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | PJ_LOG_HAS_SENDER |
-		      PJ_LOG_HAS_MICRO_SEC;
+                      PJ_LOG_HAS_MICRO_SEC;
 
 pj_log_func *orig_log_func;
 FILE *log_file;
@@ -179,10 +178,10 @@ FILE *log_file;
 static void test_log_func(int level, const char *data, int len)
 {
     if (log_file) {
-	fwrite(data, len, 1, log_file);
+        fwrite(data, len, 1, log_file);
     }
     if (level <= 3)
-	orig_log_func(level, data, len);
+        orig_log_func(level, data, len);
 }
 
 static int test_inner(void)
@@ -205,8 +204,8 @@ static int test_inner(void)
 
     rc = pj_init();
     if (rc != 0) {
-	app_perror("pj_init() error!!", rc);
-	return rc;
+        app_perror("pj_init() error!!", rc);
+        goto on_return;
     }
 
     pj_dump_config();
@@ -242,7 +241,7 @@ static int test_inner(void)
 
 on_return:
     if (log_file)
-	fclose(log_file);
+        fclose(log_file);
     return rc;
 }
 

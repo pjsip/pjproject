@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -21,10 +20,10 @@
 #include <pjlib.h>
 
 
-#define MAX_REALM	80
-#define MAX_USERNAME	32
-#define MAX_PASSWORD	32
-#define MAX_NONCE	32
+#define MAX_REALM       80
+#define MAX_USERNAME    32
+#define MAX_PASSWORD    32
+#define MAX_NONCE       32
 
 static char g_realm[MAX_REALM];
 
@@ -39,9 +38,9 @@ static struct cred_t
     { "701", "701" }
 };
 
-#define THIS_FILE	"auth.c"
-#define THE_NONCE	"pjnath"
-#define LOG(expr)	PJ_LOG(3,expr)
+#define THIS_FILE       "auth.c"
+#define THE_NONCE       "pjnath"
+#define LOG(expr)       PJ_LOG(3,expr)
 
 
 /*
@@ -50,7 +49,7 @@ static struct cred_t
 PJ_DEF(pj_status_t) pj_turn_auth_init(const char *realm)
 {
     PJ_ASSERT_RETURN(pj_ansi_strlen(realm) < MAX_REALM, PJ_ENAMETOOLONG);
-    pj_ansi_strcpy(g_realm, realm);
+    pj_ansi_strxcpy(g_realm, realm, sizeof(g_realm));
     return PJ_SUCCESS;
 }
 
@@ -68,9 +67,9 @@ PJ_DEF(void) pj_turn_auth_dinit(void)
  * server needs to challenge the request with 401 response.
  */
 PJ_DEF(pj_status_t) pj_turn_get_auth(void *user_data,
-				     pj_pool_t *pool,
-				     pj_str_t *realm,
-				     pj_str_t *nonce)
+                                     pj_pool_t *pool,
+                                     pj_str_t *realm,
+                                     pj_str_t *nonce)
 {
     PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(pool);
@@ -86,12 +85,12 @@ PJ_DEF(pj_status_t) pj_turn_get_auth(void *user_data,
  * This function is also used to check whether the username is valid.
  */
 PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
-					 void *user_data, 
-					 const pj_str_t *realm,
-					 const pj_str_t *username,
-					 pj_pool_t *pool,
-					 pj_stun_passwd_type *data_type,
-					 pj_str_t *data)
+                                         void *user_data, 
+                                         const pj_str_t *realm,
+                                         const pj_str_t *username,
+                                         pj_pool_t *pool,
+                                         pj_stun_passwd_type *data_type,
+                                         pj_str_t *data)
 {
     unsigned i;
 
@@ -100,21 +99,21 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
     PJ_UNUSED_ARG(pool);
 
     if (pj_stricmp2(realm, g_realm)) {
-	LOG((THIS_FILE, "auth error: invalid realm '%.*s'", 
-			(int)realm->slen, realm->ptr));
-	return PJ_EINVAL;
+        LOG((THIS_FILE, "auth error: invalid realm '%.*s'", 
+                        (int)realm->slen, realm->ptr));
+        return PJ_EINVAL;
     }
 
     for (i=0; i<PJ_ARRAY_SIZE(g_cred); ++i) {
-	if (pj_stricmp2(username, g_cred[i].username) == 0) {
-	    *data_type = PJ_STUN_PASSWD_PLAIN;
-	    *data = pj_str(g_cred[i].passwd);
-	    return PJ_SUCCESS;
-	}
+        if (pj_stricmp2(username, g_cred[i].username) == 0) {
+            *data_type = PJ_STUN_PASSWD_PLAIN;
+            *data = pj_str(g_cred[i].passwd);
+            return PJ_SUCCESS;
+        }
     }
 
     LOG((THIS_FILE, "auth error: user '%.*s' not found", 
-		    (int)username->slen, username->ptr));
+                    (int)username->slen, username->ptr));
     return PJ_ENOTFOUND;
 }
 
@@ -124,10 +123,10 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
  * PJ_FALSE, 438 (Stale Nonce) response will be created.
  */
 PJ_DEF(pj_bool_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
-				       void *user_data,
-				       const pj_str_t *realm,
-				       const pj_str_t *username,
-				       const pj_str_t *nonce)
+                                       void *user_data,
+                                       const pj_str_t *realm,
+                                       const pj_str_t *username,
+                                       const pj_str_t *nonce)
 {
     PJ_UNUSED_ARG(msg);
     PJ_UNUSED_ARG(user_data);
@@ -135,9 +134,9 @@ PJ_DEF(pj_bool_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
     PJ_UNUSED_ARG(username);
 
     if (pj_stricmp2(nonce, THE_NONCE)) {
-	LOG((THIS_FILE, "auth error: invalid nonce '%.*s'", 
-			(int)nonce->slen, nonce->ptr));
-	return PJ_FALSE;
+        LOG((THIS_FILE, "auth error: invalid nonce '%.*s'", 
+                        (int)nonce->slen, nonce->ptr));
+        return PJ_FALSE;
     }
 
     return PJ_TRUE;

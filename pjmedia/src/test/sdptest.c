@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -69,10 +68,10 @@ static int sdp_perform_test(pj_pool_factory *pf)
     inputlen = strlen(sdp[0]);
     pj_gettimeofday(&start);
     for (i=0; i<LOOP; ++i) {
-	ses = pjsdp_parse(sdp[0], inputlen, pool);
-	len = pjsdp_print(ses, buf, sizeof(buf));
-	buf[len] = '\0';
-	pj_pool_reset(pool);
+        ses = pjsdp_parse(sdp[0], inputlen, pool);
+        len = pjsdp_print(ses, buf, sizeof(buf));
+        buf[len] = '\0';
+        pj_pool_reset(pool);
     }
     pj_gettimeofday(&end);
 
@@ -97,13 +96,13 @@ static int sdp_conform_test(pj_pool_factory *pf)
     int i, len;
     char buf[1500];
 
-    for (i=0; i<sizeof(sdp)/sizeof(sdp[0]); ++i) {
-	pool = pj_pool_create(pf, "sdp", 4096, 0, NULL);
-	ses = pjsdp_parse(sdp[i], strlen(sdp[i]), pool);
-	len = pjsdp_print(ses, buf, sizeof(buf)); 
-	buf[len] = '\0';
-	printf("%s\n", buf);
-	pj_pool_release(pool);
+    for (i=0; i<PJ_ARRAY_SIZE(sdp); ++i) {
+        pool = pj_pool_create(pf, "sdp", 4096, 0, NULL);
+        ses = pjsdp_parse(sdp[i], strlen(sdp[i]), pool);
+        len = pjsdp_print(ses, buf, sizeof(buf)); 
+        buf[len] = '\0';
+        printf("%s\n", buf);
+        pj_pool_release(pool);
     }
 
     return 0;
@@ -112,10 +111,10 @@ static int sdp_conform_test(pj_pool_factory *pf)
 pj_status_t sdp_test(pj_pool_factory *pf)
 {
     if (sdp_conform_test(pf) != 0)
-	return -2;
+        return -2;
 
     if (sdp_perform_test(pf) != 0)
-	return -3;
+        return -3;
 
     return 0;
 }

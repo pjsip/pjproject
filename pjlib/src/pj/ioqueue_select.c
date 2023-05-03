@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -81,15 +80,15 @@
  */
 /*
 #if defined(PJ_DEBUG) && PJ_DEBUG != 0
-#  define VALIDATE_FD_SET		1
+#  define VALIDATE_FD_SET               1
 #else
-#  define VALIDATE_FD_SET		0
+#  define VALIDATE_FD_SET               0
 #endif
 */
 #define VALIDATE_FD_SET     0
 
 #if 0
-#  define TRACE__(args)	PJ_LOG(3,args)
+#  define TRACE__(args) PJ_LOG(3,args)
 #else
 #  define TRACE__(args)
 #endif
@@ -109,25 +108,25 @@ struct pj_ioqueue_t
 {
     DECLARE_COMMON_IOQUEUE
 
-    unsigned		max, count;	/* Max and current key count	    */
-    int			nfds;		/* The largest fd value (for select)*/
-    pj_ioqueue_key_t	active_list;	/* List of active keys.		    */
-    pj_fd_set_t		rfdset;
-    pj_fd_set_t		wfdset;
+    unsigned            max, count;     /* Max and current key count        */
+    int                 nfds;           /* The largest fd value (for select)*/
+    pj_ioqueue_key_t    active_list;    /* List of active keys.             */
+    pj_fd_set_t         rfdset;
+    pj_fd_set_t         wfdset;
 #if PJ_HAS_TCP
-    pj_fd_set_t		xfdset;
+    pj_fd_set_t         xfdset;
 #endif
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-    pj_mutex_t	       *ref_cnt_mutex;
-    pj_ioqueue_key_t	closing_list;
-    pj_ioqueue_key_t	free_list;
+    pj_mutex_t         *ref_cnt_mutex;
+    pj_ioqueue_key_t    closing_list;
+    pj_ioqueue_key_t    free_list;
 #endif
 };
 
 /* Proto */
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+            PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h);
 #endif
 
@@ -166,9 +165,9 @@ static void rescan_fdset(pj_ioqueue_t *ioqueue)
     int max = 0;
 
     while (key != &ioqueue->active_list) {
-	if (key->fd > max)
-	    max = key->fd;
-	key = key->next;
+        if (key->fd > max)
+            max = key->fd;
+        key = key->next;
     }
 
     ioqueue->nfds = max;
@@ -186,13 +185,27 @@ static void rescan_fdset(pj_ioqueue_t *ioqueue)
  *
  * Create select ioqueue.
  */
-PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
                                        pj_size_t max_fd,
+                                       pj_ioqueue_t **p_ioqueue)
+{
+    return pj_ioqueue_create2(pool, max_fd, NULL, p_ioqueue);
+}
+
+
+/*
+ * pj_ioqueue_create2()
+ *
+ * Create select ioqueue.
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
+                                       pj_size_t max_fd,
+                                       const pj_ioqueue_cfg *cfg,
                                        pj_ioqueue_t **p_ioqueue)
 {
     pj_ioqueue_t *ioqueue;
     pj_lock_t *lock;
-    unsigned i;
+    pj_size_t i;
     pj_status_t rc;
 
     /* Check that arguments are valid. */
@@ -208,6 +221,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     ioqueue = PJ_POOL_ALLOC_T(pool, pj_ioqueue_t);
     ioqueue_init(ioqueue);
 
+    if (cfg)
+        pj_memcpy(&ioqueue->cfg, cfg, sizeof(*cfg));
+    else
+        pj_ioqueue_cfg_default(&ioqueue->cfg);
     ioqueue->max = (unsigned)max_fd;
     ioqueue->count = 0;
     PJ_FD_ZERO(&ioqueue->rfdset);
@@ -230,7 +247,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
      */
     rc = pj_mutex_create_simple(pool, NULL, &ioqueue->ref_cnt_mutex);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
 
     /* Init key list */
@@ -240,29 +257,29 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
     /* Pre-create all keys according to max_fd */
     for (i=0; i<max_fd; ++i) {
-	pj_ioqueue_key_t *key;
+        pj_ioqueue_key_t *key;
 
-	key = PJ_POOL_ALLOC_T(pool, pj_ioqueue_key_t);
-	key->ref_count = 0;
-	rc = pj_lock_create_recursive_mutex(pool, NULL, &key->lock);
-	if (rc != PJ_SUCCESS) {
-	    key = ioqueue->free_list.next;
-	    while (key != &ioqueue->free_list) {
-		pj_lock_destroy(key->lock);
-		key = key->next;
-	    }
-	    pj_mutex_destroy(ioqueue->ref_cnt_mutex);
-	    return rc;
-	}
+        key = PJ_POOL_ALLOC_T(pool, pj_ioqueue_key_t);
+        key->ref_count = 0;
+        rc = pj_lock_create_recursive_mutex(pool, NULL, &key->lock);
+        if (rc != PJ_SUCCESS) {
+            key = ioqueue->free_list.next;
+            while (key != &ioqueue->free_list) {
+                pj_lock_destroy(key->lock);
+                key = key->next;
+            }
+            pj_mutex_destroy(ioqueue->ref_cnt_mutex);
+            return rc;
+        }
 
-	pj_list_push_back(&ioqueue->free_list, key);
+        pj_list_push_back(&ioqueue->free_list, key);
     }
 #endif
 
     /* Create and init ioqueue mutex */
     rc = pj_lock_create_simple_mutex(pool, "ioq%p", &lock);
     if (rc != PJ_SUCCESS)
-	return rc;
+        return rc;
 
     rc = pj_ioqueue_set_lock(ioqueue, lock, PJ_TRUE);
     if (rc != PJ_SUCCESS)
@@ -291,20 +308,20 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
     /* Destroy reference counters */
     key = ioqueue->active_list.next;
     while (key != &ioqueue->active_list) {
-	pj_lock_destroy(key->lock);
-	key = key->next;
+        pj_lock_destroy(key->lock);
+        key = key->next;
     }
 
     key = ioqueue->closing_list.next;
     while (key != &ioqueue->closing_list) {
-	pj_lock_destroy(key->lock);
-	key = key->next;
+        pj_lock_destroy(key->lock);
+        key = key->next;
     }
 
     key = ioqueue->free_list.next;
     while (key != &ioqueue->free_list) {
-	pj_lock_destroy(key->lock);
-	key = key->next;
+        pj_lock_destroy(key->lock);
+        key = key->next;
     }
 
     pj_mutex_destroy(ioqueue->ref_cnt_mutex);
@@ -320,11 +337,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
  * Register socket handle to ioqueue.
  */
 PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
-					      pj_ioqueue_t *ioqueue,
-					      pj_sock_t sock,
-					      pj_grp_lock_t *grp_lock,
-					      void *user_data,
-					      const pj_ioqueue_callback *cb,
+                                              pj_ioqueue_t *ioqueue,
+                                              pj_sock_t sock,
+                                              pj_grp_lock_t *grp_lock,
+                                              void *user_data,
+                                              const pj_ioqueue_callback *cb,
                                               pj_ioqueue_key_t **p_key)
 {
     pj_ioqueue_key_t *key = NULL;
@@ -345,17 +362,17 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
      * an fd that is higher than FD_SETSIZE.
      */
     if (sizeof(fd_set) < FD_SETSIZE && sock >= FD_SETSIZE) {
-	PJ_LOG(4, ("pjlib", "Failed to register socket to ioqueue because "
-		   	    "socket fd is too big (fd=%d/FD_SETSIZE=%d)",
-		   	    sock, FD_SETSIZE));
-    	return PJ_ETOOBIG;
+        PJ_LOG(4, ("pjlib", "Failed to register socket to ioqueue because "
+                            "socket fd is too big (fd=%ld/FD_SETSIZE=%d)",
+                            sock, FD_SETSIZE));
+        return PJ_ETOOBIG;
     }
 
     pj_lock_acquire(ioqueue->lock);
 
     if (ioqueue->count >= ioqueue->max) {
         rc = PJ_ETOOMANY;
-	goto on_return;
+        goto on_return;
     }
 
     /* If safe unregistration (PJ_IOQUEUE_HAS_SAFE_UNREG) is used, get
@@ -368,8 +385,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     pj_assert(!pj_list_empty(&ioqueue->free_list));
     if (pj_list_empty(&ioqueue->free_list)) {
-	rc = PJ_ETOOMANY;
-	goto on_return;
+        rc = PJ_ETOOMANY;
+        goto on_return;
     }
 
     key = ioqueue->free_list.next;
@@ -380,8 +397,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     rc = ioqueue_init_key(pool, ioqueue, key, sock, grp_lock, user_data, cb);
     if (rc != PJ_SUCCESS) {
-	key = NULL;
-	goto on_return;
+        key = NULL;
+        goto on_return;
     }
 
     /* Set socket to nonblocking. */
@@ -394,7 +411,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     if (ioctl(sock, FIONBIO, &value)) {
 #endif
         rc = pj_get_netos_error();
-	goto on_return;
+        goto on_return;
     }
 
 
@@ -408,8 +425,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 on_return:
     /* On error, socket may be left in non-blocking mode. */
     if (rc != PJ_SUCCESS) {
-	if (key && key->grp_lock)
-	    pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
+        if (key && key->grp_lock)
+            pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
     }
     *p_key = key;
     pj_lock_release(ioqueue->lock);
@@ -418,11 +435,11 @@ on_return:
 }
 
 PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
-					      pj_ioqueue_t *ioqueue,
-					      pj_sock_t sock,
-					      void *user_data,
-					      const pj_ioqueue_callback *cb,
-					      pj_ioqueue_key_t **p_key)
+                                              pj_ioqueue_t *ioqueue,
+                                              pj_sock_t sock,
+                                              void *user_data,
+                                              const pj_ioqueue_callback *cb,
+                                              pj_ioqueue_key_t **p_key)
 {
     return pj_ioqueue_register_sock2(pool, ioqueue, sock, NULL, user_data,
                                      cb, p_key);
@@ -449,15 +466,15 @@ static void decrement_counter(pj_ioqueue_key_t *key)
     --key->ref_count;
     if (key->ref_count == 0) {
 
-	pj_assert(key->closing == 1);
-	pj_gettickcount(&key->free_time);
-	key->free_time.msec += PJ_IOQUEUE_KEY_FREE_DELAY;
-	pj_time_val_normalize(&key->free_time);
+        pj_assert(key->closing == 1);
+        pj_gettickcount(&key->free_time);
+        key->free_time.msec += PJ_IOQUEUE_KEY_FREE_DELAY;
+        pj_time_val_normalize(&key->free_time);
 
-	pj_list_erase(key);
-	pj_list_push_back(&key->ioqueue->closing_list, key);
-	/* Rescan fdset to get max descriptor */
-	rescan_fdset(key->ioqueue);
+        pj_list_erase(key);
+        pj_list_push_back(&key->ioqueue->closing_list, key);
+        /* Rescan fdset to get max descriptor */
+        rescan_fdset(key->ioqueue);
     }
     pj_mutex_unlock(key->ioqueue->ref_cnt_mutex);
     pj_lock_release(key->ioqueue->lock);
@@ -486,8 +503,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     /* Best effort to avoid double key-unregistration */
     if (IS_CLOSING(key)) {
-	pj_ioqueue_unlock_key(key);
-	return PJ_SUCCESS;
+        pj_ioqueue_unlock_key(key);
+        return PJ_SUCCESS;
     }
 
     /* Also lock ioqueue */
@@ -495,13 +512,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     /* Avoid "negative" ioqueue count */
     if (ioqueue->count > 0) {
-	--ioqueue->count;
+        --ioqueue->count;
     } else {
-	/* If this happens, very likely there is double unregistration
-	 * of a key.
-	 */
-	pj_assert(!"Bad ioqueue count in key unregistration!");
-	PJ_LOG(1,(THIS_FILE, "Bad ioqueue count in key unregistration!"));
+        /* If this happens, very likely there is double unregistration
+         * of a key.
+         */
+        pj_assert(!"Bad ioqueue count in key unregistration!");
+        PJ_LOG(1,(THIS_FILE, "Bad ioqueue count in key unregistration!"));
     }
 
 #if !PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -511,10 +528,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     /* Remove socket from sets and close socket. */
     if (key->fd != PJ_INVALID_SOCKET) {
-	PJ_FD_CLR(key->fd, &ioqueue->rfdset);
-	PJ_FD_CLR(key->fd, &ioqueue->wfdset);
+        PJ_FD_CLR(key->fd, &ioqueue->rfdset);
+        PJ_FD_CLR(key->fd, &ioqueue->wfdset);
 #if PJ_HAS_TCP
-	PJ_FD_CLR(key->fd, &ioqueue->xfdset);
+        PJ_FD_CLR(key->fd, &ioqueue->xfdset);
 #endif
 
         pj_sock_close(key->fd);
@@ -541,30 +558,30 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     /* Done. */
     if (key->grp_lock) {
-	/* just dec_ref and unlock. we will set grp_lock to NULL
-	 * elsewhere */
-	pj_grp_lock_t *grp_lock = key->grp_lock;
-	// Don't set grp_lock to NULL otherwise the other thread
-	// will crash. Just leave it as dangling pointer, but this
-	// should be safe
-	//key->grp_lock = NULL;
-	pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
-	pj_grp_lock_release(grp_lock);
+        /* just dec_ref and unlock. we will set grp_lock to NULL
+         * elsewhere */
+        pj_grp_lock_t *grp_lock = key->grp_lock;
+        // Don't set grp_lock to NULL otherwise the other thread
+        // will crash. Just leave it as dangling pointer, but this
+        // should be safe
+        //key->grp_lock = NULL;
+        pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
+        pj_grp_lock_release(grp_lock);
     } else {
-	pj_ioqueue_unlock_key(key);
+        pj_ioqueue_unlock_key(key);
     }
 #else
     if (key->grp_lock) {
-	/* set grp_lock to NULL and unlock */
-	pj_grp_lock_t *grp_lock = key->grp_lock;
-	// Don't set grp_lock to NULL otherwise the other thread
-	// will crash. Just leave it as dangling pointer, but this
-	// should be safe
-	//key->grp_lock = NULL;
-	pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
-	pj_grp_lock_release(grp_lock);
+        /* set grp_lock to NULL and unlock */
+        pj_grp_lock_t *grp_lock = key->grp_lock;
+        // Don't set grp_lock to NULL otherwise the other thread
+        // will crash. Just leave it as dangling pointer, but this
+        // should be safe
+        //key->grp_lock = NULL;
+        pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
+        pj_grp_lock_release(grp_lock);
     } else {
-	pj_ioqueue_unlock_key(key);
+        pj_ioqueue_unlock_key(key);
     }
 
     pj_lock_destroy(key->lock);
@@ -579,9 +596,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
  */
 #if VALIDATE_FD_SET
 static void validate_sets(const pj_ioqueue_t *ioqueue,
-			  const pj_fd_set_t *rfdset,
-			  const pj_fd_set_t *wfdset,
-			  const pj_fd_set_t *xfdset)
+                          const pj_fd_set_t *rfdset,
+                          const pj_fd_set_t *wfdset,
+                          const pj_fd_set_t *xfdset)
 {
     pj_ioqueue_key_t *key;
 
@@ -595,42 +612,42 @@ static void validate_sets(const pj_ioqueue_t *ioqueue,
 
     key = ioqueue->active_list.next;
     while (key != &ioqueue->active_list) {
-	if (!pj_list_empty(&key->read_list)
+        if (!pj_list_empty(&key->read_list)
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
-	    || !pj_list_empty(&key->accept_list)
+            || !pj_list_empty(&key->accept_list)
 #endif
-	    ) 
-	{
-	    pj_assert(PJ_FD_ISSET(key->fd, rfdset));
-	} 
-	else {
-	    pj_assert(PJ_FD_ISSET(key->fd, rfdset) == 0);
-	}
-	if (!pj_list_empty(&key->write_list)
+            ) 
+        {
+            pj_assert(PJ_FD_ISSET(key->fd, rfdset));
+        } 
+        else {
+            pj_assert(PJ_FD_ISSET(key->fd, rfdset) == 0);
+        }
+        if (!pj_list_empty(&key->write_list)
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
-	    || key->connecting
+            || key->connecting
 #endif
-	   )
-	{
-	    pj_assert(PJ_FD_ISSET(key->fd, wfdset));
-	}
-	else {
-	    pj_assert(PJ_FD_ISSET(key->fd, wfdset) == 0);
-	}
+           )
+        {
+            pj_assert(PJ_FD_ISSET(key->fd, wfdset));
+        }
+        else {
+            pj_assert(PJ_FD_ISSET(key->fd, wfdset) == 0);
+        }
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
-	if (key->connecting)
-	{
-	    pj_assert(PJ_FD_ISSET(key->fd, xfdset));
-	}
-	else {
-	    pj_assert(PJ_FD_ISSET(key->fd, xfdset) == 0);
-	}
+        if (key->connecting)
+        {
+            pj_assert(PJ_FD_ISSET(key->fd, xfdset));
+        }
+        else {
+            pj_assert(PJ_FD_ISSET(key->fd, xfdset) == 0);
+        }
 #endif /* PJ_HAS_TCP */
 
-	key = key->next;
+        key = key->next;
     }
 }
-#endif	/* VALIDATE_FD_SET */
+#endif  /* VALIDATE_FD_SET */
 
 
 /* ioqueue_remove_from_set()
@@ -639,21 +656,26 @@ static void validate_sets(const pj_ioqueue_t *ioqueue,
  * set for the specified event.
  */
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
+                                     pj_ioqueue_key_t *key,
+                                     enum ioqueue_event_type event_type )
+{
+    ioqueue_remove_from_set2(ioqueue, key, event_type);
+}
+
+static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
                                      pj_ioqueue_key_t *key, 
-                                     enum ioqueue_event_type event_type)
+                                     unsigned event_types)
 {
     pj_lock_acquire(ioqueue->lock);
 
-    if (event_type == READABLE_EVENT)
+    if (event_types & READABLE_EVENT)
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->rfdset);
-    else if (event_type == WRITEABLE_EVENT)
+    if (event_types & WRITEABLE_EVENT)
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->wfdset);
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
-    else if (event_type == EXCEPTION_EVENT)
+    if (event_types & EXCEPTION_EVENT)
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->xfdset);
 #endif
-    else
-        pj_assert(0);
 
     pj_lock_release(ioqueue->lock);
 }
@@ -668,18 +690,23 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type )
 {
+    ioqueue_add_to_set2(ioqueue, key, event_type);
+}
+
+static void ioqueue_add_to_set2(pj_ioqueue_t *ioqueue,
+                                pj_ioqueue_key_t *key,
+                                unsigned event_types )
+{
     pj_lock_acquire(ioqueue->lock);
 
-    if (event_type == READABLE_EVENT)
+    if (event_types & READABLE_EVENT)
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->rfdset);
-    else if (event_type == WRITEABLE_EVENT)
+    if (event_types & WRITEABLE_EVENT)
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->wfdset);
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
-    else if (event_type == EXCEPTION_EVENT)
+    if (event_types & EXCEPTION_EVENT)
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->xfdset);
 #endif
-    else
-        pj_assert(0);
 
     pj_lock_release(ioqueue->lock);
 }
@@ -694,19 +721,19 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
     pj_gettickcount(&now);
     h = ioqueue->closing_list.next;
     while (h != &ioqueue->closing_list) {
-	pj_ioqueue_key_t *next = h->next;
+        pj_ioqueue_key_t *next = h->next;
 
-	pj_assert(h->closing != 0);
+        pj_assert(h->closing != 0);
 
-	if (PJ_TIME_VAL_GTE(now, h->free_time)) {
-	    pj_list_erase(h);
-	    // Don't set grp_lock to NULL otherwise the other thread
-	    // will crash. Just leave it as dangling pointer, but this
-	    // should be safe
-	    //h->grp_lock = NULL;
-	    pj_list_push_back(&ioqueue->free_list, h);
-	}
-	h = next;
+        if (PJ_TIME_VAL_GTE(now, h->free_time)) {
+            pj_list_erase(h);
+            // Don't set grp_lock to NULL otherwise the other thread
+            // will crash. Just leave it as dangling pointer, but this
+            // should be safe
+            //h->grp_lock = NULL;
+            pj_list_push_back(&ioqueue->free_list, h);
+        }
+        h = next;
     }
 }
 #endif
@@ -716,8 +743,8 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
 static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
 {
     enum flags {
-	HAS_PEER_ADDR = 1,
-	HAS_QOS = 2
+        HAS_PEER_ADDR = 1,
+        HAS_QOS = 2
     };
     pj_sock_t old_sock, new_sock = PJ_INVALID_SOCKET;
     pj_sockaddr local_addr, rem_addr;
@@ -726,7 +753,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
     unsigned i, fds_cnt, flags=0;
     pj_qos_params qos_params;
     unsigned msec;
-    pj_status_t status;
+    pj_status_t status = PJ_EUNKNOWN;
 
     pj_lock_acquire(h->ioqueue->lock);
 
@@ -758,7 +785,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
             status = pj_sock_getsockname(old_sock, &local_addr, &addr_len);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(5,(THIS_FILE, status, "Error get socket name"));
-            	continue;
+                continue;
             }
         
             addr_len = sizeof(rem_addr);
@@ -766,28 +793,28 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(5,(THIS_FILE, status, "Error get peer name"));
             } else {
-            	flags |= HAS_PEER_ADDR;
+                flags |= HAS_PEER_ADDR;
             }
 
             status = pj_sock_get_qos_params(old_sock, &qos_params);
             if (status == PJ_STATUS_FROM_OS(EBADF) ||
                 status == PJ_STATUS_FROM_OS(EINVAL))
             {
-            	PJ_PERROR(5,(THIS_FILE, status, "Error get qos param"));
-            	continue;
+                PJ_PERROR(5,(THIS_FILE, status, "Error get qos param"));
+                continue;
             }
         
             if (status != PJ_SUCCESS) {
-            	PJ_PERROR(5,(THIS_FILE, status, "Error get qos param"));
+                PJ_PERROR(5,(THIS_FILE, status, "Error get qos param"));
             } else {
-            	flags |= HAS_QOS;
+                flags |= HAS_QOS;
             }
 
             /* We're done with the old socket, close it otherwise we'll get
              * error in bind()
              */
             status = pj_sock_close(old_sock);
-       	    if (status != PJ_SUCCESS) {
+            if (status != PJ_SUCCESS) {
                 PJ_PERROR(5,(THIS_FILE, status, "Error closing socket"));
             }
             
@@ -858,17 +885,17 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
     if (ioctl(new_sock, FIONBIO, &val)) {
 #endif
         status = pj_get_netos_error();
-	goto on_error;
+        goto on_error;
     }
 
     /* Replace the occurrence of old socket with new socket in the
      * fd sets.
      */
     for (i=0; i<fds_cnt; ++i) {
-	if (PJ_FD_ISSET(h->fd, fds[i])) {
-	    PJ_FD_CLR(h->fd, fds[i]);
-	    PJ_FD_SET(new_sock, fds[i]);
-	}
+        if (PJ_FD_ISSET(h->fd, fds[i])) {
+            PJ_FD_CLR(h->fd, fds[i]);
+            PJ_FD_SET(new_sock, fds[i]);
+        }
     }
 
     /* And finally replace the fd in the key */
@@ -882,15 +909,15 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
 
 on_error:
     if (new_sock != PJ_INVALID_SOCKET)
-	pj_sock_close(new_sock);
+        pj_sock_close(new_sock);
     if (old_sock != PJ_INVALID_SOCKET)
-    	pj_sock_close(old_sock);
+        pj_sock_close(old_sock);
 
     /* Clear the occurrence of old socket in the fd sets. */
     for (i=0; i<fds_cnt; ++i) {
-	if (PJ_FD_ISSET(h->fd, fds[i])) {
-	    PJ_FD_CLR(h->fd, fds[i]);
-	}
+        if (PJ_FD_ISSET(h->fd, fds[i])) {
+            PJ_FD_CLR(h->fd, fds[i]);
+        }
     }
 
     h->fd = PJ_INVALID_SOCKET;
@@ -927,7 +954,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     enum { MAX_EVENTS = PJ_IOQUEUE_MAX_CAND_EVENTS };
     struct event
     {
-        pj_ioqueue_key_t	*key;
+        pj_ioqueue_key_t        *key;
         enum ioqueue_event_type  event_type;
     } event[MAX_EVENTS];
 
@@ -950,13 +977,13 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
         && PJ_FD_COUNT(&ioqueue->xfdset)==0
 #endif
-	)
+        )
     {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	scan_closing_keys(ioqueue);
+        scan_closing_keys(ioqueue);
 #endif
-	pj_lock_release(ioqueue->lock);
-	TRACE__((THIS_FILE, "     poll: no fd is set"));
+        pj_lock_release(ioqueue->lock);
+        TRACE__((THIS_FILE, "     poll: no fd is set"));
         if (timeout)
             pj_thread_sleep(PJ_TIME_VAL_MSEC(*timeout));
         return 0;
@@ -986,20 +1013,20 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 #endif
 
     count = pj_sock_select(nfds+1, &rfdset, &wfdset, &xfdset, 
-			   timeout);
+                           timeout);
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     /* Ignore Invalid Handle Exception raised by select().*/
     }
     __except (GetExceptionCode() == STATUS_INVALID_HANDLE ?
-	      EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH) {
+              EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH) {
     }
 #endif    
     
     if (count == 0)
-	return 0;
+        return 0;
     else if (count < 0)
-	return -pj_get_netos_error();
+        return -pj_get_netos_error();
 
     /* Scan descriptor sets for event and add the events in the event
      * array to be processed later in this function. We do this so that
@@ -1013,17 +1040,17 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      * coming with accept().
      */
     for (h = ioqueue->active_list.next;
-	 h != &ioqueue->active_list && event_cnt < MAX_EVENTS;
-	 h = h->next)
+         h != &ioqueue->active_list && event_cnt < MAX_EVENTS;
+         h = h->next)
     {
-	if (h->fd == PJ_INVALID_SOCKET)
-	    continue;
+        if (h->fd == PJ_INVALID_SOCKET)
+            continue;
 
-	if ( (key_has_pending_write(h) || key_has_pending_connect(h))
-	     && PJ_FD_ISSET(h->fd, &wfdset) && !IS_CLOSING(h))
+        if ( (key_has_pending_write(h) || key_has_pending_connect(h))
+             && PJ_FD_ISSET(h->fd, &wfdset) && !IS_CLOSING(h))
         {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
+            increment_counter(h);
 #endif
             event[event_cnt].key = h;
             event[event_cnt].event_type = WRITEABLE_EVENT;
@@ -1031,24 +1058,24 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         }
 
         /* Scan for readable socket. */
-	if ((key_has_pending_read(h) || key_has_pending_accept(h))
+        if ((key_has_pending_read(h) || key_has_pending_accept(h))
             && PJ_FD_ISSET(h->fd, &rfdset) && !IS_CLOSING(h) &&
-	    event_cnt < MAX_EVENTS)
+            event_cnt < MAX_EVENTS)
         {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
+            increment_counter(h);
 #endif
             event[event_cnt].key = h;
             event[event_cnt].event_type = READABLE_EVENT;
             ++event_cnt;
-	}
+        }
 
 #if PJ_HAS_TCP
         if (key_has_pending_connect(h) && PJ_FD_ISSET(h->fd, &xfdset) &&
-	    !IS_CLOSING(h) && event_cnt < MAX_EVENTS)
-	{
+            !IS_CLOSING(h) && event_cnt < MAX_EVENTS)
+        {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
+            increment_counter(h);
 #endif
             event[event_cnt].key = h;
             event[event_cnt].event_type = EXCEPTION_EVENT;
@@ -1058,8 +1085,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     }
 
     for (i=0; i<event_cnt; ++i) {
-	if (event[i].key->grp_lock)
-	    pj_grp_lock_add_ref_dbg(event[i].key->grp_lock, "ioqueue", 0);
+        if (event[i].key->grp_lock)
+            pj_grp_lock_add_ref_dbg(event[i].key->grp_lock, "ioqueue", 0);
     }
 
     PJ_RACE_ME(5);
@@ -1075,39 +1102,44 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      */
     for (i=0; i<event_cnt; ++i) {
 
-	/* Just do not exceed PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL */
-	if (processed_cnt < PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL) {
-	    switch (event[i].event_type) {
-	    case READABLE_EVENT:
-		if (ioqueue_dispatch_read_event(ioqueue, event[i].key))
-		    ++processed_cnt;
-		break;
-	    case WRITEABLE_EVENT:
-		if (ioqueue_dispatch_write_event(ioqueue, event[i].key))
-		    ++processed_cnt;
-		break;
-	    case EXCEPTION_EVENT:
-		if (ioqueue_dispatch_exception_event(ioqueue, event[i].key))
-		    ++processed_cnt;
-		break;
-	    case NO_EVENT:
-		pj_assert(!"Invalid event!");
-		break;
-	    }
-	}
+        /* Just do not exceed PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL */
+        if (processed_cnt < PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL) {
+            switch (event[i].event_type) {
+            case READABLE_EVENT:
+                if (ioqueue_dispatch_read_event(ioqueue, event[i].key))
+                    ++processed_cnt;
+                break;
+            case WRITEABLE_EVENT:
+                if (ioqueue_dispatch_write_event(ioqueue, event[i].key))
+                    ++processed_cnt;
+                break;
+            case EXCEPTION_EVENT:
+                if (ioqueue_dispatch_exception_event(ioqueue, event[i].key))
+                    ++processed_cnt;
+                break;
+            case NO_EVENT:
+                pj_assert(!"Invalid event!");
+                break;
+            }
+        }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	decrement_counter(event[i].key);
+        decrement_counter(event[i].key);
 #endif
 
-	if (event[i].key->grp_lock)
-	    pj_grp_lock_dec_ref_dbg(event[i].key->grp_lock,
-	                            "ioqueue", 0);
+        if (event[i].key->grp_lock)
+            pj_grp_lock_dec_ref_dbg(event[i].key->grp_lock,
+                                    "ioqueue", 0);
     }
 
     TRACE__((THIS_FILE, "     poll: count=%d events=%d processed=%d",
-	     count, event_cnt, processed_cnt));
+             count, event_cnt, processed_cnt));
 
     return processed_cnt;
 }
 
+PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
+{
+    PJ_UNUSED_ARG(ioqueue);
+    return NULL;
+}

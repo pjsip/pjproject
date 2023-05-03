@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Modified 2/07
  * By Benny Prijono <benny@prijono.org>
@@ -20,10 +19,10 @@ Still 100% Public Domain
 
 Corrected a problem which generated improper hash values on 16 bit machines
 Routine SHA1Update changed from
-	void SHA1Update(SHA1_CTX* context, unsigned char* data, unsigned int
+        void SHA1Update(SHA1_CTX* context, unsigned char* data, unsigned int
 len)
 to
-	void SHA1Update(SHA1_CTX* context, unsigned char* data, unsigned
+        void SHA1Update(SHA1_CTX* context, unsigned char* data, unsigned
 long len)
 
 The 'len' parameter was declared an int which works fine on 32 bit machines.
@@ -204,20 +203,20 @@ PJ_DEF(void) pj_sha1_init(pj_sha1_context* context)
 
 /* Run your data through this. */
 PJ_DEF(void) pj_sha1_update(pj_sha1_context* context, 
-			    const pj_uint8_t* data, const pj_size_t len)
+                            const pj_uint8_t* data, pj_size_t len)
 {
     pj_size_t i, j;
 
     j = (context->count[0] >> 3) & 63;
     if ((context->count[0] += (pj_uint32_t)len << 3) < (len << 3)) 
-	context->count[1]++;
+        context->count[1]++;
     context->count[1] += ((pj_uint32_t)len >> 29);
     if ((j + len) > 63) {
         pj_memcpy(&context->buffer[j], data, (i = 64-j));
         SHA1_Transform(context->state, context->buffer);
         for ( ; i + 63 < len; i += 64) {
-	    pj_uint8_t tmp[64];
-	    pj_memcpy(tmp, data + i, 64);
+            pj_uint8_t tmp[64];
+            pj_memcpy(tmp, data + i, 64);
             SHA1_Transform(context->state, tmp);
         }
         j = 0;
@@ -230,7 +229,7 @@ PJ_DEF(void) pj_sha1_update(pj_sha1_context* context,
 
 /* Add padding and return the message digest. */
 PJ_DEF(void) pj_sha1_final(pj_sha1_context* context, 
-			   pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE])
+                           pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE])
 {
     pj_uint32_t i;
     pj_uint8_t  finalcount[8];
@@ -254,7 +253,7 @@ PJ_DEF(void) pj_sha1_final(pj_sha1_context* context,
     pj_memset(context->buffer, 0, 64);
     pj_memset(context->state, 0, 20);
     pj_memset(context->count, 0, 8);
-    pj_memset(finalcount, 0, 8);	/* SWR */
+    pj_memset(finalcount, 0, 8);        /* SWR */
 
 #ifdef SHA1HANDSOFF  /* make SHA1Transform overwrite its own static vars */
     SHA1_Transform(context->state, context->buffer);

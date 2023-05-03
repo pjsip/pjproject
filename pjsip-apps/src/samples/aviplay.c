@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2010-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -34,7 +33,7 @@
  * Video and Sound Devices
  *
  * This is a very simple example to use the @ref PJMEDIA_FILE_PLAY,
- * @ref PJMED_SND_PORT, and @ref PJMEDIA_VID_PORT. In this example, we
+ * @ref PJMED_SND_PORT, and @ref PJMEDIA_VIDEO_PORT. In this example, we
  * open the file, video, and sound devices, then connect the file to both
  * video and sound devices to play the contents of the file.
  *
@@ -64,17 +63,17 @@
 #define THIS_FILE   "aviplay.c"
 
 static const char *desc = 
-" FILE		    						    \n"
-"		    						    \n"
-"  aviplay.c	    						    \n"
-"		    						    \n"
-" PURPOSE	    						    \n"
-"		    						    \n"
-"  Demonstrate how to play a AVI file.				    \n"
-"		    						    \n"
-" USAGE		    						    \n"
-"		    						    \n"
-"  aviplay FILE.AVI						    \n";
+" FILE                                                              \n"
+"                                                                   \n"
+"  aviplay.c                                                        \n"
+"                                                                   \n"
+" PURPOSE                                                           \n"
+"                                                                   \n"
+"  Demonstrate how to play a AVI file.                              \n"
+"                                                                   \n"
+" USAGE                                                             \n"
+"                                                                   \n"
+"  aviplay FILE.AVI                                                 \n";
 
 struct codec_fmt {
     pj_uint32_t         pjmedia_id;
@@ -141,7 +140,7 @@ static pj_status_t avi_event_cb(pjmedia_event *event,
 }
 
 static pj_status_t codec_get_frame(pjmedia_port *port,
-			           pjmedia_frame *frame)
+                                   pjmedia_frame *frame)
 {
     codec_port_data_t *port_data = (codec_port_data_t*)port->port_data.pdata;
     pjmedia_vid_codec *codec = port_data->codec;
@@ -153,18 +152,18 @@ static pj_status_t codec_get_frame(pjmedia_port *port,
     
     if (port_data->conv) {
         pj_size_t frame_size = frame->size;
-	
+        
         status = pjmedia_port_get_frame(port_data->src_port, frame);
         if (status != PJ_SUCCESS) goto on_error;
-	
+        
         status = pjmedia_vid_codec_decode(codec, 1, frame,
                                           (unsigned)frame->size, &enc_frame);
         if (status != PJ_SUCCESS) goto on_error;
-	
+        
         frame->size = frame_size;
         status = pjmedia_converter_convert(port_data->conv, &enc_frame, frame);
         if (status != PJ_SUCCESS) goto on_error;
-	
+        
         return PJ_SUCCESS;
     }
     
@@ -195,15 +194,12 @@ static int aviplay(pj_pool_t *pool, const char *fname)
     pjmedia_avi_stream *vid_stream, *aud_stream;
     pjmedia_port *vid_port = NULL, *aud_port = NULL;
     pjmedia_vid_codec *codec=NULL;
+    codec_port_data_t codec_port_data;
     avi_port_t avi_port;
     
     pj_bzero(&avi_port, sizeof(avi_port));
     
-    status = pjmedia_avi_player_create_streams(pool, fname, 0, &avi_streams);
-    if (status != PJ_SUCCESS) {
-	PJ_PERROR(2,("", status, "    Error playing %s", fname));
-	rc = 210; goto on_return;
-    }
+    CHECK( pjmedia_avi_player_create_streams(pool, fname, 0, &avi_streams) );
     
     vid_stream = pjmedia_avi_streams_get_stream_by_media(avi_streams,
                                                          0,
@@ -212,14 +208,11 @@ static int aviplay(pj_pool_t *pool, const char *fname)
     
     if (vid_port) {
         pjmedia_vid_port_param_default(&param);
-	
-        status = pjmedia_vid_dev_default_param(pool,
+        
+        CHECK(   pjmedia_vid_dev_default_param(pool,
                                                PJMEDIA_VID_DEFAULT_RENDER_DEV,
-                                               &param.vidparam);
-        if (status != PJ_SUCCESS) {
-    	    rc = 220; goto on_return;
-        }
-	
+                                               &param.vidparam) );
+        
         /* Create renderer, set it to active  */
         param.active = PJ_TRUE;
         param.vidparam.dir = PJMEDIA_DIR_RENDER;
@@ -231,7 +224,7 @@ static int aviplay(pj_pool_t *pool, const char *fname)
                                   vid_port->info.fmt.id,
                                   vfd->size.w, vfd->size.h,
                                   vfd->fps.num, vfd->fps.denum);
-	
+        
         vfi = pjmedia_get_video_format_info(
                   pjmedia_video_format_mgr_instance(),
                   vid_port->info.fmt.id);
@@ -246,12 +239,11 @@ static int aviplay(pj_pool_t *pool, const char *fname)
             pj_size_t enc_buf_size = 0;
             pjmedia_vid_dev_info rdr_info;
             pjmedia_port codec_port;
-            codec_port_data_t codec_port_data;
             pjmedia_vid_codec_param codec_param;
             struct codec_fmt *codecp = NULL;
-	    
+
             /* Lookup codec */
-            for (i = 0; i < sizeof(codec_fmts)/sizeof(codec_fmts[0]); i++) {
+            for (i = 0; i < PJ_ARRAY_SIZE(codec_fmts); i++) {
                 if (vid_port->info.fmt.id == codec_fmts[i].pjmedia_id) {
                     codecp = &codec_fmts[i];
                     break;
@@ -261,26 +253,21 @@ static int aviplay(pj_pool_t *pool, const char *fname)
                 rc = 242; goto on_return;
             }
             pj_cstr(&codec_id_st, codecp->codec_id);
-            status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL,
+            CHECK(   pjmedia_vid_codec_mgr_find_codecs_by_id(NULL,
                                                              &codec_id_st, 
                                                              &info_cnt, 
                                                              &codec_info,
-                                                             NULL);
-            if (status != PJ_SUCCESS) {
-                rc = 245; goto on_return;
-            }
-            status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
-                                                             &codec_param);
-            if (status != PJ_SUCCESS) {
-                rc = 246; goto on_return;
-            }
-	    
+                                                             NULL) );
+
+            CHECK( pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
+                                                           &codec_param) );
+            
             pjmedia_format_copy(&codec_param.enc_fmt, &param.vidparam.fmt);
 
             pjmedia_vid_dev_get_info(param.vidparam.rend_id, &rdr_info);
             for (i=0; i<codec_info->dec_fmt_id_cnt; ++i) {
                 for (k=0; k<rdr_info.fmt_cnt; ++k) {
-                    if (codec_info->dec_fmt_id[i]==(int)rdr_info.fmt[k].id)
+                    if ((int)codec_info->dec_fmt_id[i]==(int)rdr_info.fmt[k].id)
                     {
                         param.vidparam.fmt.id = codec_info->dec_fmt_id[i];
                         i = codec_info->dec_fmt_id_cnt;
@@ -288,88 +275,70 @@ static int aviplay(pj_pool_t *pool, const char *fname)
                     }
                 }
             }
-	    
+            
             /* Open codec */
-            status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info,
-                                                       &codec);
-            if (status != PJ_SUCCESS) {
-                rc = 250; goto on_return;
-            }
-	    
-            status = pjmedia_vid_codec_init(codec, pool);
-            if (status != PJ_SUCCESS) {
-                rc = 251; goto on_return;
-            }
-	    
+            CHECK( pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info,
+                                                     &codec));
+            
+            CHECK( pjmedia_vid_codec_init(codec, pool) );
+            
             pjmedia_format_copy(&codec_param.dec_fmt, &param.vidparam.fmt);
             codec_param.dir = PJMEDIA_DIR_DECODING;
             codec_param.packing = PJMEDIA_VID_PACKING_WHOLE;
-            status = pjmedia_vid_codec_open(codec, &codec_param);
-            if (status != PJ_SUCCESS) {
-                rc = 252; goto on_return;
-            }
-	    
+            CHECK( pjmedia_vid_codec_open(codec, &codec_param) );
+            
             /* Alloc encoding buffer */
             enc_buf_size =  codec_param.dec_fmt.det.vid.size.w *
-	    codec_param.dec_fmt.det.vid.size.h * 4
-	    + 16; /*< padding, just in case */
-            enc_buf = pj_pool_alloc(pool,enc_buf_size);
-	    
+            codec_param.dec_fmt.det.vid.size.h * 4;
+            enc_buf = pj_pool_alloc(pool, enc_buf_size +
+                                    128 /*< padding, required for vid codecs
+                                            such as ffmpeg. Must be >=
+                                            AV_INPUT_BUFFER_PADDING_SIZE.
+                                            And must not be included in
+                                            the enc_buf_size calculation
+                                            above. */);
+            
             /* Init codec port */
             pj_bzero(&codec_port, sizeof(codec_port));
-            status = pjmedia_port_info_init2(&codec_port.info, &port_name,
+            CHECK( pjmedia_port_info_init2(&codec_port.info, &port_name,
                                              0x1234,
                                              PJMEDIA_DIR_ENCODING, 
-                                             &codec_param.dec_fmt);
-            if (status != PJ_SUCCESS) {
-                rc = 260; goto on_return;
-            }
+                                             &codec_param.dec_fmt) );
+
             pj_bzero(&codec_port_data, sizeof(codec_port_data));
             codec_port_data.codec = codec;
             codec_port_data.src_port = vid_port;
             codec_port_data.enc_buf = enc_buf;
             codec_port_data.enc_buf_size = enc_buf_size;
-	    
+            
             codec_port.get_frame = &codec_get_frame;
             codec_port.port_data.pdata = &codec_port_data;
-	    
+            
             /* Check whether we need to convert the decoded frame */
             if (codecp->need_conversion) {
                 pjmedia_conversion_param conv_param;
-		
+                
                 pjmedia_format_copy(&conv_param.src, &param.vidparam.fmt);
                 pjmedia_format_copy(&conv_param.dst, &param.vidparam.fmt);
                 conv_param.dst.id = codecp->dst_fmt;
                 param.vidparam.fmt.id = conv_param.dst.id;
-		
-                status = pjmedia_converter_create(NULL, pool, &conv_param,
-                                                  &codec_port_data.conv);
-                if (status != PJ_SUCCESS) {
-                    rc = 270; goto on_return;
-                }
+                
+                CHECK( pjmedia_converter_create(NULL, pool, &conv_param,
+                                                &codec_port_data.conv));
             }
-	    
-            status = pjmedia_vid_port_create(pool, &param, &renderer);
-            if (status != PJ_SUCCESS) {
-                rc = 230; goto on_return;
-            }
-	    
-            status = pjmedia_vid_port_connect(renderer, &codec_port,
-                                              PJ_FALSE);
+            
+            CHECK( pjmedia_vid_port_create(pool, &param, &renderer) );
+            
+            CHECK( pjmedia_vid_port_connect(renderer, &codec_port,
+                                            PJ_FALSE) );
         } else {
-            status = pjmedia_vid_port_create(pool, &param, &renderer);
-            if (status != PJ_SUCCESS) {
-                rc = 230; goto on_return;
-            }
-	    
+            CHECK( pjmedia_vid_port_create(pool, &param, &renderer) );
+            
             /* Connect avi port to renderer */
-            status = pjmedia_vid_port_connect(renderer, vid_port,
-                                              PJ_FALSE);
+            CHECK( pjmedia_vid_port_connect(renderer, vid_port,
+                                            PJ_FALSE) );
         }
-	
-        if (status != PJ_SUCCESS) {
-            rc = 240; goto on_return;
-        }
+        
     }
     
     aud_stream = pjmedia_avi_streams_get_stream_by_media(avi_streams,
@@ -379,32 +348,26 @@ static int aviplay(pj_pool_t *pool, const char *fname)
     
     if (aud_port) {
         /* Create sound player port. */
-        status = pjmedia_snd_port_create_player( 
-		 pool,				    /* pool		    */
-		 -1,				    /* use default dev.	    */
-		 PJMEDIA_PIA_SRATE(&aud_port->info),/* clock rate.	    */
-		 PJMEDIA_PIA_CCNT(&aud_port->info), /* # of channels.	    */
-		 PJMEDIA_PIA_SPF(&aud_port->info),  /* samples per frame.   */
-		 PJMEDIA_PIA_BITS(&aud_port->info), /* bits per sample.	    */
-		 0,				    /* options		    */
-		 &snd_port			    /* returned port	    */
-		 );
-        if (status != PJ_SUCCESS) {
-            rc = 310; goto on_return;
-        }
-	
+        CHECK( pjmedia_snd_port_create_player(
+                 pool,                              /* pool                 */
+                 -1,                                /* use default dev.     */
+                 PJMEDIA_PIA_SRATE(&aud_port->info),/* clock rate.          */
+                 PJMEDIA_PIA_CCNT(&aud_port->info), /* # of channels.       */
+                 PJMEDIA_PIA_SPF(&aud_port->info),  /* samples per frame.   */
+                 PJMEDIA_PIA_BITS(&aud_port->info), /* bits per sample.     */
+                 0,                                 /* options              */
+                 &snd_port                          /* returned port        */
+                 ));
+        
         /* Connect file port to the sound player.
          * Stream playing will commence immediately.
          */
-        status = pjmedia_snd_port_connect(snd_port, aud_port);
-        if (status != PJ_SUCCESS) {
-            rc = 330; goto on_return;
-        }
+        CHECK( pjmedia_snd_port_connect(snd_port, aud_port) );
     }
     
     if (vid_port) {
         pjmedia_vid_dev_cb cb;
-	
+        
         pj_bzero(&cb, sizeof(cb));
         avi_port.snd_port = snd_port;
         avi_port.vid_port = renderer;
@@ -423,18 +386,16 @@ static int aviplay(pj_pool_t *pool, const char *fname)
                     snd_port, PJMEDIA_DIR_PLAYBACK));
         }
                                               
-	
+        
         /* Start video streaming.. */
-        status = pjmedia_vid_port_start(renderer);
-        if (status != PJ_SUCCESS) {
-            rc = 270; goto on_return;
-        }
+        CHECK( pjmedia_vid_port_start(renderer) );
     }
     
     while (!avi_port.is_quitting) {
         pj_thread_sleep(100);
     }
 
+on_error:
 on_return:
     if (snd_port) {
         pjmedia_snd_port_disconnect(snd_port);
@@ -483,9 +444,9 @@ static int main_func(int argc, char *argv[])
     pj_status_t status = PJ_SUCCESS;
     
     if (argc != 2) {
-    	puts("Error: filename required");
-	puts(desc);
-	return 110;
+        puts("Error: filename required");
+        puts(desc);
+        return 110;
     }
 
 #ifndef _MSC_VER
@@ -501,12 +462,12 @@ static int main_func(int argc, char *argv[])
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
     /* Create memory pool for our file player */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "AVI",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "AVI",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
     pjmedia_converter_mgr_create(pool, NULL);
@@ -516,29 +477,29 @@ static int main_func(int argc, char *argv[])
     status = pjmedia_vid_dev_subsys_init(&cp.factory);
     if (status != PJ_SUCCESS) {
         app_perror(THIS_FILE, "Video init failed", status);
-	rc = 130;
+        rc = 130;
         goto on_return;
     }
     
     status = pjmedia_aud_subsys_init(&cp.factory);
     if (status != PJ_SUCCESS) {
-	rc = 140;
+        rc = 140;
         goto on_return;
     }
     
 #if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
     status = pjmedia_codec_openh264_vid_init(NULL, &cp.factory);
     if (status != PJ_SUCCESS) {
-	rc = 150;
-	goto on_return;
+        rc = 150;
+        goto on_return;
     }
 #endif
 
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
     status = pjmedia_codec_ffmpeg_vid_init(NULL, &cp.factory);
     if (status != PJ_SUCCESS) {
-	rc = 160;
-	goto on_return;    
+        rc = 160;
+        goto on_return;    
     }
 #endif
 

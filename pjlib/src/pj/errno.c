@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -30,20 +29,20 @@
 PJ_BEGIN_DECL
 
     PJ_DECL(int) platform_strerror(pj_os_err_type code, 
-                              	   char *buf, pj_size_t bufsize );
+                                   char *buf, pj_size_t bufsize );
 PJ_END_DECL
 
 #ifndef PJLIB_MAX_ERR_MSG_HANDLER
-#	define PJLIB_MAX_ERR_MSG_HANDLER   10
+#       define PJLIB_MAX_ERR_MSG_HANDLER   10
 #endif
 
 /* Error message handler. */
 static unsigned err_msg_hnd_cnt;
 static struct err_msg_hnd
 {
-    pj_status_t	    begin;
-    pj_status_t	    end;
-    pj_str_t	  (*strerror)(pj_status_t, char*, pj_size_t);
+    pj_status_t     begin;
+    pj_status_t     end;
+    pj_str_t      (*strerror)(pj_status_t, char*, pj_size_t);
 
 } err_msg_hnd[PJLIB_MAX_ERR_MSG_HANDLER];
 
@@ -67,21 +66,21 @@ static const struct
     PJ_BUILD_ERR(PJ_ETIMEDOUT,     "Operation timed out" ),
     PJ_BUILD_ERR(PJ_ETOOMANY,      "Too many objects of the specified type"),
     PJ_BUILD_ERR(PJ_EBUSY,         "Object is busy"),
-    PJ_BUILD_ERR(PJ_ENOTSUP,	   "Option/operation is not supported"),
-    PJ_BUILD_ERR(PJ_EINVALIDOP,	   "Invalid operation"),
+    PJ_BUILD_ERR(PJ_ENOTSUP,       "Option/operation is not supported"),
+    PJ_BUILD_ERR(PJ_EINVALIDOP,    "Invalid operation"),
     PJ_BUILD_ERR(PJ_ECANCELLED,    "Operation cancelled"),
     PJ_BUILD_ERR(PJ_EEXISTS,       "Object already exists" ),
-    PJ_BUILD_ERR(PJ_EEOF,	   "End of file" ),
-    PJ_BUILD_ERR(PJ_ETOOBIG,	   "Size is too big"),
-    PJ_BUILD_ERR(PJ_ERESOLVE,	   "gethostbyname() has returned error"),
-    PJ_BUILD_ERR(PJ_ETOOSMALL,	   "Size is too short"),
-    PJ_BUILD_ERR(PJ_EIGNORED,	   "Ignored"),
+    PJ_BUILD_ERR(PJ_EEOF,          "End of file" ),
+    PJ_BUILD_ERR(PJ_ETOOBIG,       "Size is too big"),
+    PJ_BUILD_ERR(PJ_ERESOLVE,      "gethostbyname() has returned error"),
+    PJ_BUILD_ERR(PJ_ETOOSMALL,     "Size is too short"),
+    PJ_BUILD_ERR(PJ_EIGNORED,      "Ignored"),
     PJ_BUILD_ERR(PJ_EIPV6NOTSUP,   "IPv6 is not supported"),
-    PJ_BUILD_ERR(PJ_EAFNOTSUP,	   "Unsupported address family"),
-    PJ_BUILD_ERR(PJ_EGONE,	   "Object no longer exists"),
+    PJ_BUILD_ERR(PJ_EAFNOTSUP,     "Unsupported address family"),
+    PJ_BUILD_ERR(PJ_EGONE,         "Object no longer exists"),
     PJ_BUILD_ERR(PJ_ESOCKETSTOP,   "Socket is in bad state")
 };
-#endif	/* PJ_HAS_ERROR_STRING */
+#endif  /* PJ_HAS_ERROR_STRING */
 
 
 /*
@@ -96,7 +95,7 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
     unsigned i;
 
-    for (i=0; i<sizeof(err_str)/sizeof(err_str[0]); ++i) {
+    for (i=0; i<PJ_ARRAY_SIZE(err_str); ++i) {
         if (err_str[i].code == code) {
             pj_size_t len2 = pj_ansi_strlen(err_str[i].msg);
             if (len2 >= size) len2 = size-1;
@@ -109,16 +108,16 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 
     len = pj_ansi_snprintf( buf, size, "Unknown pjlib error %d", code);
     if (len < 1 || len >= (int)size)
-	len = (int)(size - 1);
+        len = (int)(size - 1);
     return len;
 }
 
-#define IN_RANGE(val,start,end)	    ((val)>=(start) && (val)<(end))
+#define IN_RANGE(val,start,end)     ((val)>=(start) && (val)<(end))
 
 /* Register strerror handle. */
 PJ_DEF(pj_status_t) pj_register_strerror( pj_status_t start,
-					  pj_status_t space,
-					  pj_error_callback f)
+                                          pj_status_t space,
+                                          pj_error_callback f)
 {
     unsigned i;
 
@@ -127,26 +126,26 @@ PJ_DEF(pj_status_t) pj_register_strerror( pj_status_t start,
 
     /* Check if there aren't too many handlers registered. */
     PJ_ASSERT_RETURN(err_msg_hnd_cnt < PJ_ARRAY_SIZE(err_msg_hnd),
-		     PJ_ETOOMANY);
+                     PJ_ETOOMANY);
 
     /* Start error must be greater than PJ_ERRNO_START_USER */
     PJ_ASSERT_RETURN(start >= PJ_ERRNO_START_USER, PJ_EEXISTS);
 
     /* Check that no existing handler has covered the specified range. */
     for (i=0; i<err_msg_hnd_cnt; ++i) {
-	if (IN_RANGE(start, err_msg_hnd[i].begin, err_msg_hnd[i].end) ||
-	    IN_RANGE(start+space-1, err_msg_hnd[i].begin, err_msg_hnd[i].end))
-	{
-	    if (err_msg_hnd[i].begin == start && 
-		err_msg_hnd[i].end == (start+space) &&
-		err_msg_hnd[i].strerror == f)
-	    {
-		/* The same range and handler has already been registered */
-		return PJ_SUCCESS;
-	    }
+        if (IN_RANGE(start, err_msg_hnd[i].begin, err_msg_hnd[i].end) ||
+            IN_RANGE(start+space-1, err_msg_hnd[i].begin, err_msg_hnd[i].end))
+        {
+            if (err_msg_hnd[i].begin == start && 
+                err_msg_hnd[i].end == (start+space) &&
+                err_msg_hnd[i].strerror == f)
+            {
+                /* The same range and handler has already been registered */
+                return PJ_SUCCESS;
+            }
 
-	    return PJ_EEXISTS;
-	}
+            return PJ_EEXISTS;
+        }
     }
 
     /* Register the handler. */
@@ -171,7 +170,7 @@ void pj_errno_clear_handlers(void)
  * pj_strerror()
  */
 PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode, 
-			      char *buf, pj_size_t bufsize )
+                              char *buf, pj_size_t bufsize )
 {
     int len = -1;
     pj_str_t errstr;
@@ -179,7 +178,7 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
     pj_assert(buf && bufsize);
 
     if (statcode == PJ_SUCCESS) {
-	len = pj_ansi_snprintf( buf, bufsize, "Success");
+        len = pj_ansi_snprintf( buf, bufsize, "Success");
 
     } else if (statcode < PJ_ERRNO_START + PJ_ERRNO_SPACE_SIZE) {
         len = pj_ansi_snprintf( buf, bufsize, "Unknown error %d", statcode);
@@ -191,22 +190,22 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
         len = platform_strerror(PJ_STATUS_TO_OS(statcode), buf, bufsize);
 
     } else {
-	unsigned i;
+        unsigned i;
 
-	/* Find user handler to get the error message. */
-	for (i=0; i<err_msg_hnd_cnt; ++i) {
-	    if (IN_RANGE(statcode, err_msg_hnd[i].begin, err_msg_hnd[i].end)) {
-		return (*err_msg_hnd[i].strerror)(statcode, buf, bufsize);
-	    }
-	}
+        /* Find user handler to get the error message. */
+        for (i=0; i<err_msg_hnd_cnt; ++i) {
+            if (IN_RANGE(statcode, err_msg_hnd[i].begin, err_msg_hnd[i].end)) {
+                return (*err_msg_hnd[i].strerror)(statcode, buf, bufsize);
+            }
+        }
 
-	/* Handler not found! */
-	len = pj_ansi_snprintf( buf, bufsize, "Unknown error %d", statcode);
+        /* Handler not found! */
+        len = pj_ansi_snprintf( buf, bufsize, "Unknown error %d", statcode);
     }
 
     if (len < 1 || len >= (int)bufsize) {
-	len = (int)(bufsize - 1);
-	buf[len] = '\0';
+        len = (int)(bufsize - 1);
+        buf[len] = '\0';
     }
 
     errstr.ptr = buf;
@@ -225,8 +224,8 @@ static void invoke_log(const char *sender, int level, const char *format, ...)
 }
 
 static void pj_perror_imp(int log_level, const char *sender, 
-			  pj_status_t status,
-		          const char *title_fmt, va_list marker)
+                          pj_status_t status,
+                          const char *title_fmt, va_list marker)
 {
     char titlebuf[PJ_PERROR_TITLE_BUF_SIZE];
     char errmsg[PJ_ERR_MSG_SIZE];
@@ -235,7 +234,7 @@ static void pj_perror_imp(int log_level, const char *sender,
     /* Build the title */
     len = pj_ansi_vsnprintf(titlebuf, sizeof(titlebuf), title_fmt, marker);
     if (len < 0 || len >= (int)sizeof(titlebuf))
-	pj_ansi_strcpy(titlebuf, "Error");
+        pj_ansi_strxcpy(titlebuf, "Error", sizeof(titlebuf));
 
     /* Get the error */
     pj_strerror(status, errmsg, sizeof(errmsg));
@@ -245,7 +244,7 @@ static void pj_perror_imp(int log_level, const char *sender,
 }
 
 PJ_DEF(void) pj_perror(int log_level, const char *sender, pj_status_t status,
-		       const char *title_fmt, ...)
+                       const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -254,7 +253,7 @@ PJ_DEF(void) pj_perror(int log_level, const char *sender, pj_status_t status,
 }
 
 PJ_DEF(void) pj_perror_1(const char *sender, pj_status_t status,
-			 const char *title_fmt, ...)
+                         const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -264,15 +263,15 @@ PJ_DEF(void) pj_perror_1(const char *sender, pj_status_t status,
 
 #else /* #if PJ_LOG_MAX_LEVEL >= 1 */
 PJ_DEF(void) pj_perror(int log_level, const char *sender, pj_status_t status,
-		       const char *title_fmt, ...)
+                       const char *title_fmt, ...)
 {
 }
-#endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */
+#endif  /* #if PJ_LOG_MAX_LEVEL >= 1 */
 
 
 #if PJ_LOG_MAX_LEVEL >= 2
 PJ_DEF(void) pj_perror_2(const char *sender, pj_status_t status,
-			 const char *title_fmt, ...)
+                         const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -283,7 +282,7 @@ PJ_DEF(void) pj_perror_2(const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 3
 PJ_DEF(void) pj_perror_3(const char *sender, pj_status_t status,
-			 const char *title_fmt, ...)
+                         const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -294,7 +293,7 @@ PJ_DEF(void) pj_perror_3(const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 4
 PJ_DEF(void) pj_perror_4(const char *sender, pj_status_t status,
-			 const char *title_fmt, ...)
+                         const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -305,7 +304,7 @@ PJ_DEF(void) pj_perror_4(const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 5
 PJ_DEF(void) pj_perror_5(const char *sender, pj_status_t status,
-			 const char *title_fmt, ...)
+                         const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -316,7 +315,7 @@ PJ_DEF(void) pj_perror_5(const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 6
 PJ_DEF(void) pj_perror_6(const char *sender, pj_status_t status,
-			 const char *title_fmt, ...)
+                         const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);

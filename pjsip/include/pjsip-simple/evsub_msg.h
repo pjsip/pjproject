@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,7 +35,7 @@ PJ_BEGIN_DECL
 
 
 /** Max events in Allow-Events header. */
-#define PJSIP_MAX_ALLOW_EVENTS	16
+#define PJSIP_MAX_ALLOW_EVENTS  16
 
 /**
  * This structure describes Event header.
@@ -46,17 +45,17 @@ typedef struct pjsip_event_hdr
     /** Standard header fields. */
     PJSIP_DECL_HDR_MEMBER(struct pjsip_event_hdr);
 
-    pj_str_t	    event_type;	    /**< Event name. */
-    pj_str_t	    id_param;	    /**< Optional event ID parameter. */
-    pjsip_param	    other_param;    /**< Other parameter. */
+    pj_str_t        event_type;     /**< Event name. */
+    pj_str_t        id_param;       /**< Optional event ID parameter. */
+    pjsip_param     other_param;    /**< Other parameter. */
 } pjsip_event_hdr;
 
 /**
  * Create an Event header.
  *
- * @param pool	    The pool.
+ * @param pool      The pool.
  *
- * @return	    New Event header instance.
+ * @return          New Event header instance.
  */
 PJ_DECL(pjsip_event_hdr*) pjsip_event_hdr_create(pj_pool_t *pool);
 
@@ -70,9 +69,9 @@ typedef pjsip_generic_array_hdr pjsip_allow_events_hdr;
 /**
  * Create a new Allow-Events header.
  *
- * @param pool	    The pool.
+ * @param pool      The pool.
  *
- * @return	    Allow-Events header.
+ * @return          Allow-Events header.
  */
 PJ_DECL(pjsip_allow_events_hdr*) 
 pjsip_allow_events_hdr_create(pj_pool_t *pool);
@@ -86,27 +85,27 @@ typedef struct pjsip_sub_state_hdr
     /** Standard header fields. */
     PJSIP_DECL_HDR_MEMBER(struct pjsip_sub_state_hdr);
 
-    pj_str_t	    sub_state;		/**< Subscription state. */
-    pj_str_t	    reason_param;	/**< Optional termination reason. */
-    unsigned	    expires_param;	/**< Expires param, or
-    					     PJSIP_EXPIRES_NOT_SPECIFIED. */
-    int		    retry_after;	/**< Retry after param, or -1. */
-    pjsip_param	    other_param;	/**< Other parameters. */
+    pj_str_t        sub_state;          /**< Subscription state. */
+    pj_str_t        reason_param;       /**< Optional termination reason. */
+    unsigned        expires_param;      /**< Expires param, or
+                                             PJSIP_EXPIRES_NOT_SPECIFIED. */
+    int             retry_after;        /**< Retry after param, or -1. */
+    pjsip_param     other_param;        /**< Other parameters. */
 } pjsip_sub_state_hdr;
 
 /**
  * Create new Subscription-State header.
  *
- * @param pool	    The pool.
+ * @param pool      The pool.
  *
- * @return	    Subscription-State header.
+ * @return          Subscription-State header.
  */
 PJ_DECL(pjsip_sub_state_hdr*) pjsip_sub_state_hdr_create(pj_pool_t *pool);
 
 /**
  * Initialize parser for event notify module.
  */
-PJ_DECL(void) pjsip_evsub_init_parser(void);
+PJ_DECL(pj_status_t) pjsip_evsub_init_parser(void);
 
 
 PJ_END_DECL
@@ -116,5 +115,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJSIP_SIMPLE_EVENT_NOTIFY_MSG_H__ */
+#endif  /* __PJSIP_SIMPLE_EVENT_NOTIFY_MSG_H__ */
 

@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "org.pjsip.pjsua2.app_kotlin"
-        minSdkVersion 16
+        minSdkVersion 23
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"

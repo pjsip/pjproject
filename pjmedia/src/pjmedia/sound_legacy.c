@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -34,18 +33,18 @@
 static struct legacy_subsys
 {
     pjmedia_snd_dev_info     info[4];
-    unsigned		     info_counter;
-    unsigned		     user_rec_latency;
-    unsigned		     user_play_latency;
+    unsigned                 info_counter;
+    unsigned                 user_rec_latency;
+    unsigned                 user_play_latency;
 } g_sys;
 
 struct pjmedia_snd_stream
 {
-    pj_pool_t		*pool;
-    pjmedia_aud_stream	*aud_strm;
-    pjmedia_snd_rec_cb	 user_rec_cb;
+    pj_pool_t           *pool;
+    pjmedia_aud_stream  *aud_strm;
+    pjmedia_snd_rec_cb   user_rec_cb;
     pjmedia_snd_play_cb  user_play_cb;
-    void		*user_user_data;
+    void                *user_user_data;
 };
 
 
@@ -57,11 +56,10 @@ PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
     g_sys.info_counter = (g_sys.info_counter+1) % PJ_ARRAY_SIZE(g_sys.info);
 
     if (pjmedia_aud_dev_get_info(index, &di) != PJ_SUCCESS)
-	return NULL;
+        return NULL;
 
     pj_bzero(oi, sizeof(*oi));
-    pj_ansi_strncpy(oi->name, di.name, sizeof(oi->name));
-    oi->name[sizeof(oi->name)-1] = '\0';
+    pj_ansi_strxcpy(oi->name, di.name, sizeof(oi->name));
     oi->input_count = di.input_count;
     oi->output_count = di.output_count;
     oi->default_samples_per_sec = di.default_samples_per_sec;
@@ -71,38 +69,38 @@ PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
 
 
 static pj_status_t snd_play_cb(void *user_data,
-			       pjmedia_frame *frame)
+                               pjmedia_frame *frame)
 {
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*)user_data;
 
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     return strm->user_play_cb(strm->user_user_data, 
-			      frame->timestamp.u32.lo,
-			      frame->buf,
-			      (unsigned)frame->size);
+                              frame->timestamp.u32.lo,
+                              frame->buf,
+                              (unsigned)frame->size);
 }
 
 static pj_status_t snd_rec_cb(void *user_data,
-			      pjmedia_frame *frame)
+                              pjmedia_frame *frame)
 {
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*)user_data;
     return strm->user_rec_cb(strm->user_user_data, 
-			     frame->timestamp.u32.lo,
-			     frame->buf,
-			     (unsigned)frame->size);
+                             frame->timestamp.u32.lo,
+                             frame->buf,
+                             (unsigned)frame->size);
 }
 
 static pj_status_t open_stream( pjmedia_dir dir,
-			        int rec_id,
-				int play_id,
-				unsigned clock_rate,
-				unsigned channel_count,
-				unsigned samples_per_frame,
-				unsigned bits_per_sample,
-				pjmedia_snd_rec_cb rec_cb,
-				pjmedia_snd_play_cb play_cb,
-				void *user_data,
-				pjmedia_snd_stream **p_snd_strm)
+                                int rec_id,
+                                int play_id,
+                                unsigned clock_rate,
+                                unsigned channel_count,
+                                unsigned samples_per_frame,
+                                unsigned bits_per_sample,
+                                pjmedia_snd_rec_cb rec_cb,
+                                pjmedia_snd_play_cb play_cb,
+                                void *user_data,
+                                pjmedia_snd_stream **p_snd_strm)
 {
     pj_pool_t *pool;
     pjmedia_snd_stream *snd_strm;
@@ -111,18 +109,18 @@ static pj_status_t open_stream( pjmedia_dir dir,
 
     /* Normalize rec_id & play_id */
     if (dir & PJMEDIA_DIR_CAPTURE && rec_id < 0)
-	rec_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+        rec_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
     if (dir & PJMEDIA_DIR_PLAYBACK && play_id < 0)
-	play_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+        play_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
     /* Initialize parameters */
     if (dir & PJMEDIA_DIR_CAPTURE) {
-	status = pjmedia_aud_dev_default_param(rec_id, &param);
+        status = pjmedia_aud_dev_default_param(rec_id, &param);
     } else {
-	status = pjmedia_aud_dev_default_param(play_id, &param);
+        status = pjmedia_aud_dev_default_param(play_id, &param);
     }
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     param.dir = dir;
     param.rec_id = rec_id;
@@ -134,17 +132,17 @@ static pj_status_t open_stream( pjmedia_dir dir,
 
     /* Latencies setting */
     if ((dir & PJMEDIA_DIR_CAPTURE) && g_sys.user_rec_latency) {
-	param.flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
-	param.input_latency_ms = g_sys.user_rec_latency;
+        param.flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
+        param.input_latency_ms = g_sys.user_rec_latency;
     }
     if ((dir & PJMEDIA_DIR_PLAYBACK) && g_sys.user_play_latency) {
-	param.flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
-	param.output_latency_ms = g_sys.user_play_latency;
+        param.flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
+        param.output_latency_ms = g_sys.user_play_latency;
     }
 
     /* Create sound wrapper */
     pool = pj_pool_create(pjmedia_get_aud_subsys()->pf,
-			  "legacy-snd", 512, 512, NULL);
+                          "legacy-snd", 512, 512, NULL);
     snd_strm = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
     snd_strm->pool = pool;
     snd_strm->user_rec_cb = rec_cb;
@@ -153,11 +151,11 @@ static pj_status_t open_stream( pjmedia_dir dir,
 
     /* Create the stream */
     status = pjmedia_aud_stream_create(&param, &snd_rec_cb, 
-				       &snd_play_cb, snd_strm,
-				       &snd_strm->aud_strm);
+                                       &snd_play_cb, snd_strm,
+                                       &snd_strm->aud_strm);
     if (status != PJ_SUCCESS) {
-	pj_pool_release(pool);
-	return status;
+        pj_pool_release(pool);
+        return status;
     }
 
     *p_snd_strm = snd_strm;
@@ -165,50 +163,50 @@ static pj_status_t open_stream( pjmedia_dir dir,
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned bits_per_sample,
-					  pjmedia_snd_rec_cb rec_cb,
-					  void *user_data,
-					  pjmedia_snd_stream **p_snd_strm)
+                                          unsigned clock_rate,
+                                          unsigned channel_count,
+                                          unsigned samples_per_frame,
+                                          unsigned bits_per_sample,
+                                          pjmedia_snd_rec_cb rec_cb,
+                                          void *user_data,
+                                          pjmedia_snd_stream **p_snd_strm)
 {
     return open_stream(PJMEDIA_DIR_CAPTURE, index, PJMEDIA_AUD_INVALID_DEV,
-		       clock_rate, channel_count, samples_per_frame,
-		       bits_per_sample, rec_cb, NULL,
-		       user_data, p_snd_strm);
+                       clock_rate, channel_count, samples_per_frame,
+                       bits_per_sample, rec_cb, NULL,
+                       user_data, p_snd_strm);
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
-					unsigned clock_rate,
-					unsigned channel_count,
-					unsigned samples_per_frame,
-					unsigned bits_per_sample,
-					pjmedia_snd_play_cb play_cb,
-					void *user_data,
-					pjmedia_snd_stream **p_snd_strm )
+                                        unsigned clock_rate,
+                                        unsigned channel_count,
+                                        unsigned samples_per_frame,
+                                        unsigned bits_per_sample,
+                                        pjmedia_snd_play_cb play_cb,
+                                        void *user_data,
+                                        pjmedia_snd_stream **p_snd_strm )
 {
     return open_stream(PJMEDIA_DIR_PLAYBACK, PJMEDIA_AUD_INVALID_DEV, index, 
-		       clock_rate, channel_count, samples_per_frame,
-		       bits_per_sample, NULL, play_cb,
-		       user_data, p_snd_strm);
+                       clock_rate, channel_count, samples_per_frame,
+                       bits_per_sample, NULL, play_cb,
+                       user_data, p_snd_strm);
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
-				      int play_id,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned bits_per_sample,
-				      pjmedia_snd_rec_cb rec_cb,
-				      pjmedia_snd_play_cb play_cb,
-				      void *user_data,
-				      pjmedia_snd_stream **p_snd_strm)
+                                      int play_id,
+                                      unsigned clock_rate,
+                                      unsigned channel_count,
+                                      unsigned samples_per_frame,
+                                      unsigned bits_per_sample,
+                                      pjmedia_snd_rec_cb rec_cb,
+                                      pjmedia_snd_play_cb play_cb,
+                                      void *user_data,
+                                      pjmedia_snd_stream **p_snd_strm)
 {
     return open_stream(PJMEDIA_DIR_CAPTURE_PLAYBACK, rec_id, play_id,
-		       clock_rate, channel_count, samples_per_frame,
-		       bits_per_sample, rec_cb, play_cb, 
-		       user_data, p_snd_strm);
+                       clock_rate, channel_count, samples_per_frame,
+                       bits_per_sample, rec_cb, play_cb, 
+                       user_data, p_snd_strm);
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
@@ -222,14 +220,14 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
-						pjmedia_snd_stream_info *pi)
+                                                pjmedia_snd_stream_info *pi)
 {
     pjmedia_aud_param param;
     pj_status_t status;
 
     status = pjmedia_aud_stream_get_param(strm->aud_strm, &param);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     pj_bzero(pi, sizeof(*pi));
     pi->dir = param.dir;
@@ -241,10 +239,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
     pi->bits_per_sample = param.bits_per_sample;
 
     if (param.flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY) {
-	pi->rec_latency = param.input_latency_ms;
+        pi->rec_latency = param.input_latency_ms;
     }
     if (param.flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY) {
-	pi->play_latency = param.output_latency_ms;
+        pi->play_latency = param.output_latency_ms;
     }
 
     return PJ_SUCCESS;
@@ -257,19 +255,19 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 
     status = pjmedia_aud_stream_destroy(stream->aud_strm);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     pj_pool_release(stream->pool);
     return PJ_SUCCESS;
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
-					    unsigned output_latency)
+                                            unsigned output_latency)
 {
     g_sys.user_rec_latency = input_latency;
     g_sys.user_play_latency = output_latency;
     return PJ_SUCCESS;
 }
 
-#endif	/* PJMEDIA_HAS_LEGACY_SOUND_API */
+#endif  /* PJMEDIA_HAS_LEGACY_SOUND_API */
 

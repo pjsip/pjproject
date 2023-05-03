@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -36,35 +35,35 @@
 
 struct pjmedia_resample
 {
-    double	 factor;	/* Conversion factor = rate_out / rate_in.  */
-    pj_bool_t	 large_filter;	/* Large filter?			    */
-    pj_bool_t	 high_quality;	/* Not fast?				    */
-    unsigned	 xoff;		/* History and lookahead size, in samples   */
-    unsigned	 frame_size;	/* Samples per frame.			    */
-    unsigned	 channel_cnt;	/* Channel count.			    */
+    double       factor;        /* Conversion factor = rate_out / rate_in.  */
+    pj_bool_t    large_filter;  /* Large filter?                            */
+    pj_bool_t    high_quality;  /* Not fast?                                */
+    unsigned     xoff;          /* History and lookahead size, in samples   */
+    unsigned     frame_size;    /* Samples per frame.                       */
+    unsigned     channel_cnt;   /* Channel count.                           */
 
     /* Buffer for monochannel */
-    pj_int16_t	*buffer;	/* Input buffer.			    */
+    pj_int16_t  *buffer;        /* Input buffer.                            */
 
     /* Buffer for multichannel */
-    pj_int16_t **in_buffer;	/* Array of input buffer for each channel.  */
-    pj_int16_t  *tmp_buffer;	/* Temporary output buffer for processing.  */
+    pj_int16_t **in_buffer;     /* Array of input buffer for each channel.  */
+    pj_int16_t  *tmp_buffer;    /* Temporary output buffer for processing.  */
 };
 
 
 PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
-					     pj_bool_t high_quality,
-					     pj_bool_t large_filter,
-					     unsigned channel_count,
-					     unsigned rate_in,
-					     unsigned rate_out,
-					     unsigned samples_per_frame,
-					     pjmedia_resample **p_resample)
+                                             pj_bool_t high_quality,
+                                             pj_bool_t large_filter,
+                                             unsigned channel_count,
+                                             unsigned rate_in,
+                                             unsigned rate_out,
+                                             unsigned samples_per_frame,
+                                             pjmedia_resample **p_resample)
 {
     pjmedia_resample *resample;
 
     PJ_ASSERT_RETURN(pool && p_resample && rate_in &&
-		     rate_out && samples_per_frame, PJ_EINVAL);
+                     rate_out && samples_per_frame, PJ_EINVAL);
 
     resample = PJ_POOL_ZALLOC_T(pool, pjmedia_resample);
     PJ_ASSERT_RETURN(resample, PJ_ENOMEM);
@@ -74,9 +73,9 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
      * to yield the same quality.
      */
     if (rate_out < rate_in) {
-	//no this is not a good idea. It sounds pretty good with speech,
-	//but very poor with background noise etc.
-	//high_quality = 0;
+        //no this is not a good idea. It sounds pretty good with speech,
+        //but very poor with background noise etc.
+        //high_quality = 0;
     }
 
     resample->factor = rate_out * 1.0 / rate_in;
@@ -86,63 +85,65 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     resample->frame_size = samples_per_frame;
 
     if (high_quality) {
-	/* This is a bug in xoff calculation, thanks Stephane Lussier
-	 * of Macadamian dot com.
-	 *   resample->xoff = large_filter ? 32 : 6;
-	 */
-	resample->xoff = res_GetXOFF(resample->factor, (char)large_filter);
+        /* This is a bug in xoff calculation, thanks Stephane Lussier
+         * of Macadamian dot com.
+         *   resample->xoff = large_filter ? 32 : 6;
+         */
+        resample->xoff = res_GetXOFF(resample->factor, (char)large_filter);
+        if (resample->xoff * 2 >= samples_per_frame)
+            resample->xoff = samples_per_frame / 2 - 1;
     } else {
-	resample->xoff = 1;
+        resample->xoff = 1;
     }
 
     if (channel_count == 1) {
-	unsigned size;
+        unsigned size;
 
-	/* Allocate input buffer */
-	size = (samples_per_frame + 2*resample->xoff) * sizeof(pj_int16_t);
-	resample->buffer = (pj_int16_t*) pj_pool_alloc(pool, size);
-	PJ_ASSERT_RETURN(resample->buffer, PJ_ENOMEM);
+        /* Allocate input buffer */
+        size = (samples_per_frame + 2*resample->xoff) * sizeof(pj_int16_t);
+        resample->buffer = (pj_int16_t*) pj_pool_alloc(pool, size);
+        PJ_ASSERT_RETURN(resample->buffer, PJ_ENOMEM);
 
-	pjmedia_zero_samples(resample->buffer, resample->xoff*2);
+        pjmedia_zero_samples(resample->buffer, resample->xoff*2);
 
     } else if (channel_count > 1) {
-	unsigned i, size;
+        unsigned i, size;
 
-	/* Allocate input buffer table */
-	size = channel_count * sizeof(pj_int16_t*);
-	resample->in_buffer = (pj_int16_t**)pj_pool_alloc(pool, size);
+        /* Allocate input buffer table */
+        size = channel_count * sizeof(pj_int16_t*);
+        resample->in_buffer = (pj_int16_t**)pj_pool_alloc(pool, size);
 
-	/* Allocate input buffer */
-	size = (samples_per_frame/channel_count + 2*resample->xoff) * 
-	       sizeof(pj_int16_t);
-	for (i = 0; i < channel_count; ++i) {
-	    resample->in_buffer[i] = (pj_int16_t*)pj_pool_alloc(pool, size);
-	    PJ_ASSERT_RETURN(resample->in_buffer, PJ_ENOMEM);
-	    pjmedia_zero_samples(resample->in_buffer[i], resample->xoff*2);
-	}
+        /* Allocate input buffer */
+        size = (samples_per_frame/channel_count + 2*resample->xoff) * 
+               sizeof(pj_int16_t);
+        for (i = 0; i < channel_count; ++i) {
+            resample->in_buffer[i] = (pj_int16_t*)pj_pool_alloc(pool, size);
+            PJ_ASSERT_RETURN(resample->in_buffer, PJ_ENOMEM);
+            pjmedia_zero_samples(resample->in_buffer[i], resample->xoff*2);
+        }
 
-	/* Allocate temporary output buffer */
-	size = (unsigned) (resample->frame_size * sizeof(pj_int16_t) * 
-			   resample->factor / channel_count + 0.5);
-	resample->tmp_buffer = (pj_int16_t*) pj_pool_alloc(pool, size);
-	PJ_ASSERT_RETURN(resample->tmp_buffer, PJ_ENOMEM);
+        /* Allocate temporary output buffer */
+        size = (unsigned) (resample->frame_size * sizeof(pj_int16_t) * 
+                           resample->factor / channel_count + 0.5);
+        resample->tmp_buffer = (pj_int16_t*) pj_pool_alloc(pool, size);
+        PJ_ASSERT_RETURN(resample->tmp_buffer, PJ_ENOMEM);
     }
 
     *p_resample = resample;
 
     PJ_LOG(5,(THIS_FILE, "resample created: %s qualiy, %s filter, in/out "
-			  "rate=%d/%d", 
-			  (high_quality?"high":"low"),
-			  (large_filter?"large":"small"),
-			  rate_in, rate_out));
+                          "rate=%d/%d", 
+                          (high_quality?"high":"low"),
+                          (large_filter?"large":"small"),
+                          rate_in, rate_out));
     return PJ_SUCCESS;
 }
 
 
 
 PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
-				   const pj_int16_t *input,
-				   pj_int16_t *output )
+                                   const pj_int16_t *input,
+                                   pj_int16_t *output )
 {
     PJ_ASSERT_ON_FAIL(resample, return);
 
@@ -175,8 +176,8 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *     | 0000 | 0000 |  frame0...   |
      *     +------+------+--------------+
      *     ^      ^      ^              ^
-	 *     0    xoff  2*xoff       size+2*xoff 
-	 *
+         *     0    xoff  2*xoff       size+2*xoff 
+         *
      * (Note again: resample algorithm is called at resample->buffer+xoff)
      *
      * At the end of the run, 2*xoff samples from the end of 
@@ -203,7 +204,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *     | frm0 | frm0 |  frame1...   |
      *     +------+------+--------------+
      *     ^      ^      ^              ^
-	 *     0    xoff  2*xoff       size+2*xoff 
+         *     0    xoff  2*xoff       size+2*xoff 
      *
      * As you can see from above diagram, the resampling algorithm is
      * actually called from the last xoff part of previous frame (frm0).
@@ -213,74 +214,74 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *
      */
     if (resample->channel_cnt == 1) {
-	pj_int16_t *dst_buf;
-	const pj_int16_t *src_buf;
+        pj_int16_t *dst_buf;
+        const pj_int16_t *src_buf;
 
-	/* Prepare input frame */
-	dst_buf = resample->buffer + resample->xoff*2;
-	pjmedia_copy_samples(dst_buf, input, resample->frame_size);
+        /* Prepare input frame */
+        dst_buf = resample->buffer + resample->xoff*2;
+        pjmedia_copy_samples(dst_buf, input, resample->frame_size);
 
-	/* Resample */
-	if (resample->high_quality) {
-	    res_Resample(resample->buffer + resample->xoff, output,
-			 resample->factor, (pj_uint16_t)resample->frame_size,
-			 (char)resample->large_filter, (char)PJ_TRUE);
-	} else {
-	    res_SrcLinear(resample->buffer + resample->xoff, output, 
-			  resample->factor, (pj_uint16_t)resample->frame_size);
-	}
+        /* Resample */
+        if (resample->high_quality) {
+            res_Resample(resample->buffer + resample->xoff, output,
+                         resample->factor, (pj_uint16_t)resample->frame_size,
+                         (char)resample->large_filter, (char)PJ_TRUE);
+        } else {
+            res_SrcLinear(resample->buffer + resample->xoff, output, 
+                          resample->factor, (pj_uint16_t)resample->frame_size);
+        }
 
-	/* Update history */
-	dst_buf = resample->buffer;
-	src_buf = input + resample->frame_size - resample->xoff*2;
-	pjmedia_copy_samples(dst_buf, src_buf, resample->xoff * 2);
+        /* Update history */
+        dst_buf = resample->buffer;
+        src_buf = input + resample->frame_size - resample->xoff*2;
+        pjmedia_copy_samples(dst_buf, src_buf, resample->xoff * 2);
 
     } else { /* Multichannel */
-	unsigned i, j;
+        unsigned i, j;
 
-	for (i = 0; i < resample->channel_cnt; ++i) {
-	    pj_int16_t *dst_buf;
-	    const pj_int16_t *src_buf;
-	    unsigned mono_frm_sz_in;
-	    unsigned mono_frm_sz_out;
-    	
-	    mono_frm_sz_in  = resample->frame_size / resample->channel_cnt;
-	    mono_frm_sz_out = (unsigned)(mono_frm_sz_in * resample->factor + 0.5);
+        for (i = 0; i < resample->channel_cnt; ++i) {
+            pj_int16_t *dst_buf;
+            const pj_int16_t *src_buf;
+            unsigned mono_frm_sz_in;
+            unsigned mono_frm_sz_out;
+        
+            mono_frm_sz_in  = resample->frame_size / resample->channel_cnt;
+            mono_frm_sz_out = (unsigned)(mono_frm_sz_in * resample->factor + 0.5);
 
-	    /* Deinterleave input */
-	    dst_buf = resample->in_buffer[i] + resample->xoff*2;
-	    src_buf = input + i;
-	    for (j = 0; j < mono_frm_sz_in; ++j) {
-		*dst_buf++ = *src_buf;
-		src_buf += resample->channel_cnt;
-	    }
+            /* Deinterleave input */
+            dst_buf = resample->in_buffer[i] + resample->xoff*2;
+            src_buf = input + i;
+            for (j = 0; j < mono_frm_sz_in; ++j) {
+                *dst_buf++ = *src_buf;
+                src_buf += resample->channel_cnt;
+            }
 
-	    /* Resample this channel */
-	    if (resample->high_quality) {
-		res_Resample(resample->in_buffer[i] + resample->xoff,
-			     resample->tmp_buffer, resample->factor,
-			     (pj_uint16_t)mono_frm_sz_in,
-			     (char)resample->large_filter, (char)PJ_TRUE);
-	    } else {
-		res_SrcLinear( resample->in_buffer[i],
-			       resample->tmp_buffer, 
-			       resample->factor, 
-			       (pj_uint16_t)mono_frm_sz_in);
-	    }
+            /* Resample this channel */
+            if (resample->high_quality) {
+                res_Resample(resample->in_buffer[i] + resample->xoff,
+                             resample->tmp_buffer, resample->factor,
+                             (pj_uint16_t)mono_frm_sz_in,
+                             (char)resample->large_filter, (char)PJ_TRUE);
+            } else {
+                res_SrcLinear( resample->in_buffer[i],
+                               resample->tmp_buffer, 
+                               resample->factor, 
+                               (pj_uint16_t)mono_frm_sz_in);
+            }
 
-	    /* Update history */
-	    dst_buf = resample->in_buffer[i];
-	    src_buf = resample->in_buffer[i] + mono_frm_sz_in;
-	    pjmedia_copy_samples(dst_buf, src_buf, resample->xoff * 2);
+            /* Update history */
+            dst_buf = resample->in_buffer[i];
+            src_buf = resample->in_buffer[i] + mono_frm_sz_in;
+            pjmedia_copy_samples(dst_buf, src_buf, resample->xoff * 2);
 
-	    /* Reinterleave output */
-	    dst_buf = output + i;
-	    src_buf = resample->tmp_buffer;
-	    for (j = 0; j < mono_frm_sz_out; ++j) {
-		*dst_buf = *src_buf++;
-		dst_buf += resample->channel_cnt;
-	    }
-	}
+            /* Reinterleave output */
+            dst_buf = output + i;
+            src_buf = resample->tmp_buffer;
+            for (j = 0; j < mono_frm_sz_out; ++j) {
+                *dst_buf = *src_buf++;
+                dst_buf += resample->channel_cnt;
+            }
+        }
     }
 }
 
@@ -302,13 +303,13 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
  * This is the configuration when sample rate conversion is disabled.
  */
 PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
-					     pj_bool_t high_quality,
-					     pj_bool_t large_filter,
-					     unsigned channel_count,
-					     unsigned rate_in,
-					     unsigned rate_out,
-					     unsigned samples_per_frame,
-					     pjmedia_resample **p_resample) 
+                                             pj_bool_t high_quality,
+                                             pj_bool_t large_filter,
+                                             unsigned channel_count,
+                                             unsigned rate_in,
+                                             unsigned rate_out,
+                                             unsigned samples_per_frame,
+                                             pjmedia_resample **p_resample) 
 {
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(high_quality);
@@ -323,8 +324,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 }
 
 PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
-				   const pj_int16_t *input,
-				   pj_int16_t *output ) 
+                                   const pj_int16_t *input,
+                                   pj_int16_t *output ) 
 {
     PJ_UNUSED_ARG(resample);
     PJ_UNUSED_ARG(input);
@@ -342,5 +343,5 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
     PJ_UNUSED_ARG(resample);
 }
 
-#endif	/* PJMEDIA_RESAMPLE_IMP */
+#endif  /* PJMEDIA_RESAMPLE_IMP */
 

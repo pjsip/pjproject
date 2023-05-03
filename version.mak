@@ -1,6 +1,6 @@
 # Don't change the "export PJ_VERSION_xxx" style, they are parsed by setup.py
 export PJ_VERSION_MAJOR  := 2
-export PJ_VERSION_MINOR  := 11
+export PJ_VERSION_MINOR  := 13
 export PJ_VERSION_REV    :=
 export PJ_VERSION_SUFFIX := -dev
 

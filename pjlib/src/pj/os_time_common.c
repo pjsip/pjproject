@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -72,9 +71,6 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
     return PJ_SUCCESS;
 }
 
-#endif /* !PJ_WIN32 */
-
-
 static int get_tz_offset_secs()
 {
     time_t epoch_plus_11h = 60 * 60 * 11;
@@ -111,4 +107,4 @@ PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv)
     return PJ_SUCCESS;
 }
 
-
+#endif /* !PJ_WIN32 */

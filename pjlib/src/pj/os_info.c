@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -32,7 +31,7 @@
 /* For uname() */
 #   include <sys/utsname.h>
 #   include <stdlib.h>
-#   define PJ_HAS_UNAME		1
+#   define PJ_HAS_UNAME         1
 #endif
 
 #if defined(PJ_HAS_LIMITS_H) && PJ_HAS_LIMITS_H != 0
@@ -52,7 +51,7 @@
 #endif
 
 #ifndef PJ_SYS_INFO_BUFFER_SIZE
-#   define PJ_SYS_INFO_BUFFER_SIZE	64
+#   define PJ_SYS_INFO_BUFFER_SIZE      64
 #endif
 
 
@@ -71,27 +70,27 @@
 #endif
 
 
-static char *ver_info(pj_uint32_t ver, char *buf)
+static char *ver_info(pj_uint32_t ver, char *buf, unsigned buf_size)
 {
-    pj_size_t len;
-
     if (ver == 0) {
-	*buf = '\0';
-	return buf;
+        *buf = '\0';
+        return buf;
     }
 
-    sprintf(buf, "-%u.%u",
-	    (ver & 0xFF000000) >> 24,
-	    (ver & 0x00FF0000) >> 16);
-    len = strlen(buf);
+    pj_ansi_snprintf(buf, buf_size, "-%u.%u",
+            (ver & 0xFF000000) >> 24,
+            (ver & 0x00FF0000) >> 16);
 
     if (ver & 0xFFFF) {
-	sprintf(buf+len, ".%u", (ver & 0xFF00) >> 8);
-	len = strlen(buf);
+        char tmp[20];
 
-	if (ver & 0x00FF) {
-	    sprintf(buf+len, ".%u", (ver & 0xFF));
-	}
+        pj_ansi_snprintf(tmp, sizeof(tmp), ".%u", (ver & 0xFF00) >> 8);
+        pj_ansi_strxcat(buf, tmp, buf_size);
+
+        if (ver & 0x00FF) {
+            pj_ansi_snprintf(tmp, sizeof(tmp), ".%u", (ver & 0xFF));
+            pj_ansi_strxcat(buf, tmp, buf_size);
+        }
     }
 
     return buf;
@@ -106,22 +105,22 @@ static pj_uint32_t parse_version(char *str)
     pj_str_t token, delim;
     
     while (*str && !pj_isdigit(*str))
-	str++;
+        str++;
 
     maxtok = 4;
     delim = pj_str(".-");
     for (found_idx = pj_strtok(&in_str, &delim, &token, 0), i=0; 
-	 found_idx != in_str.slen && i < maxtok;
-	 ++i, found_idx = pj_strtok(&in_str, &delim, &token, 
-	                            found_idx + token.slen))
+         found_idx != in_str.slen && i < maxtok;
+         ++i, found_idx = pj_strtok(&in_str, &delim, &token, 
+                                    found_idx + token.slen))
     {
-	int n;
+        int n;
 
-	if (!pj_isdigit(*token.ptr))
-	    break;
-	
-	n = atoi(token.ptr);
-	version |= (n << ((3-i)*8));
+        if (!pj_isdigit(*token.ptr))
+            break;
+        
+        n = atoi(token.ptr);
+        version |= (n << ((3-i)*8));
     }
     
     return version;
@@ -135,141 +134,141 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     pj_size_t left = PJ_SYS_INFO_BUFFER_SIZE, len;
 
     if (si_initialized)
-	return &si;
+        return &si;
 
     si.machine.ptr = si.os_name.ptr = si.sdk_name.ptr = si.info.ptr = "";
 
-#define ALLOC_CP_STR(str,field)	\
-	do { \
-	    len = pj_ansi_strlen(str); \
-	    if (len && left >= len+1) { \
-		si.field.ptr = si_buffer + PJ_SYS_INFO_BUFFER_SIZE - left; \
-		si.field.slen = len; \
-		pj_memcpy(si.field.ptr, str, len+1); \
-		left -= (len+1); \
-	    } \
-	} while (0)
+#define ALLOC_CP_STR(str,field) \
+        do { \
+            len = pj_ansi_strlen(str); \
+            if (len && left >= len+1) { \
+                si.field.ptr = si_buffer + PJ_SYS_INFO_BUFFER_SIZE - left; \
+                si.field.slen = len; \
+                pj_memcpy(si.field.ptr, str, len+1); \
+                left -= (len+1); \
+            } \
+        } while (0)
 
     /*
      * Machine and OS info.
      */
 #if defined(PJ_HAS_UNAME) && PJ_HAS_UNAME
     #if defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE && \
-	(!defined TARGET_IPHONE_SIMULATOR || TARGET_IPHONE_SIMULATOR == 0)
+        (!defined TARGET_IPHONE_SIMULATOR || TARGET_IPHONE_SIMULATOR == 0)
     {
-	pj_str_t buf = {si_buffer + PJ_SYS_INFO_BUFFER_SIZE - left, left};
-	pj_str_t machine = {"arm-", 4};
-	pj_str_t sdk_name = {"iOS-SDK", 7};
+        pj_str_t buf = {si_buffer + PJ_SYS_INFO_BUFFER_SIZE - left, left};
+        pj_str_t machine = {"arm-", 4};
+        pj_str_t sdk_name = {"iOS-SDK", 7};
         size_t size = PJ_SYS_INFO_BUFFER_SIZE - machine.slen;
-	char tmp[PJ_SYS_INFO_BUFFER_SIZE];
+        char tmp[PJ_SYS_INFO_BUFFER_SIZE];
         int name[] = {CTL_HW,HW_MACHINE};
 
-	pj_iphone_os_get_sys_info(&si, &buf);
-	left -= si.os_name.slen + 1;
+        pj_iphone_os_get_sys_info(&si, &buf);
+        left -= si.os_name.slen + 1;
 
-	si.os_ver = parse_version(si.machine.ptr);
+        si.os_ver = parse_version(si.machine.ptr);
 
-	pj_memcpy(tmp, machine.ptr, machine.slen);
+        pj_memcpy(tmp, machine.ptr, machine.slen);
         sysctl(name, 2, tmp+machine.slen, &size, NULL, 0);
         ALLOC_CP_STR(tmp, machine);
-	si.sdk_name = sdk_name;
+        si.sdk_name = sdk_name;
 
-	#ifdef PJ_SDK_NAME
-	pj_memcpy(tmp, PJ_SDK_NAME, pj_ansi_strlen(PJ_SDK_NAME) + 1);
-	si.sdk_ver = parse_version(tmp);
-	#endif
+        #ifdef PJ_SDK_NAME
+        pj_memcpy(tmp, PJ_SDK_NAME, pj_ansi_strlen(PJ_SDK_NAME) + 1);
+        si.sdk_ver = parse_version(tmp);
+        #endif
     }
     #else    
     {
-	struct utsname u;
+        struct utsname u;
 
-	/* Successful uname() returns zero on Linux and positive value
-	 * on OpenSolaris.
-	 */
-	if (uname(&u) == -1)
-	    goto get_sdk_info;
+        /* Successful uname() returns zero on Linux and positive value
+         * on OpenSolaris.
+         */
+        if (uname(&u) == -1)
+            goto get_sdk_info;
 
-	ALLOC_CP_STR(u.machine, machine);
-	ALLOC_CP_STR(u.sysname, os_name);
-	
-	si.os_ver = parse_version(u.release);
+        ALLOC_CP_STR(u.machine, machine);
+        ALLOC_CP_STR(u.sysname, os_name);
+        
+        si.os_ver = parse_version(u.release);
     }
     #endif
 #elif defined(_MSC_VER)
     {
     #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-	si.os_name = pj_str("winphone");
+        si.os_name = pj_str("winphone");
     #else
-	OSVERSIONINFO ovi;
+        OSVERSIONINFO ovi;
 
-	ovi.dwOSVersionInfoSize = sizeof(ovi);
+        ovi.dwOSVersionInfoSize = sizeof(ovi);
 
-	if (GetVersionEx(&ovi) == FALSE)
-	    goto get_sdk_info;
+        if (GetVersionEx(&ovi) == FALSE)
+            goto get_sdk_info;
 
-	si.os_ver = (ovi.dwMajorVersion << 24) |
-		    (ovi.dwMinorVersion << 16);
-	#if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
-	    si.os_name = pj_str("wince");
-	#else
-	    si.os_name = pj_str("win32");
-	#endif
+        si.os_ver = (ovi.dwMajorVersion << 24) |
+                    (ovi.dwMinorVersion << 16);
+        #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
+            si.os_name = pj_str("wince");
+        #else
+            si.os_name = pj_str("win32");
+        #endif
     #endif
     }
 
     {
-	SYSTEM_INFO wsi;
+        SYSTEM_INFO wsi;
 
     #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-	GetNativeSystemInfo(&wsi);
+        GetNativeSystemInfo(&wsi);
     #else
-	GetSystemInfo(&wsi);
+        GetSystemInfo(&wsi);
     #endif
-	
-	switch (wsi.wProcessorArchitecture) {
-	#if (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE) || \
-	    (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8)
-	case PROCESSOR_ARCHITECTURE_ARM:
-	    si.machine = pj_str("arm");
-	    break;
-	case PROCESSOR_ARCHITECTURE_SHX:
-	    si.machine = pj_str("shx");
-	    break;
-	#else
-	case PROCESSOR_ARCHITECTURE_AMD64:
-	    si.machine = pj_str("x86_64");
-	    break;
-	case PROCESSOR_ARCHITECTURE_IA64:
-	    si.machine = pj_str("ia64");
-	    break;
-	case PROCESSOR_ARCHITECTURE_INTEL:
-	    si.machine = pj_str("i386");
-	    break;
-	#endif	/* PJ_WIN32_WINCE */
-	}
+        
+        switch (wsi.wProcessorArchitecture) {
+        #if (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE) || \
+            (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8)
+        case PROCESSOR_ARCHITECTURE_ARM:
+            si.machine = pj_str("arm");
+            break;
+        case PROCESSOR_ARCHITECTURE_SHX:
+            si.machine = pj_str("shx");
+            break;
+        #else
+        case PROCESSOR_ARCHITECTURE_AMD64:
+            si.machine = pj_str("x86_64");
+            break;
+        case PROCESSOR_ARCHITECTURE_IA64:
+            si.machine = pj_str("ia64");
+            break;
+        case PROCESSOR_ARCHITECTURE_INTEL:
+            si.machine = pj_str("i386");
+            break;
+        #endif  /* PJ_WIN32_WINCE */
+        }
     #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-	/* Avoid compile warning. */
-	goto get_sdk_info;
+        /* Avoid compile warning. */
+        goto get_sdk_info;
     #endif
     }
 #elif defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
     {
-	pj_symbianos_get_model_info(si_buffer, sizeof(si_buffer));
-	ALLOC_CP_STR(si_buffer, machine);
-	
-	char *p = si_buffer + sizeof(si_buffer) - left;
-	unsigned plen;
-	plen = pj_symbianos_get_platform_info(p, left);
-	if (plen) {
-	    /* Output format will be "Series60vX.X" */
-	    si.os_name = pj_str("S60");
-	    si.os_ver  = parse_version(p+9);
-	} else {
-	    si.os_name = pj_str("Unknown");
-	}
-	
-	/* Avoid compile warning on Symbian. */
-	goto get_sdk_info;
+        pj_symbianos_get_model_info(si_buffer, sizeof(si_buffer));
+        ALLOC_CP_STR(si_buffer, machine);
+        
+        char *p = si_buffer + sizeof(si_buffer) - left;
+        unsigned plen;
+        plen = pj_symbianos_get_platform_info(p, left);
+        if (plen) {
+            /* Output format will be "Series60vX.X" */
+            si.os_name = pj_str("S60");
+            si.os_ver  = parse_version(p+9);
+        } else {
+            si.os_name = pj_str("Unknown");
+        }
+        
+        /* Avoid compile warning on Symbian. */
+        goto get_sdk_info;
     }
 #endif
 
@@ -280,15 +279,15 @@ get_sdk_info:
 
 #if defined(__GLIBC__)
     si.sdk_ver = (__GLIBC__ << 24) |
-		 (__GLIBC_MINOR__ << 16);
+                 (__GLIBC_MINOR__ << 16);
     si.sdk_name = pj_str("glibc");
 #elif defined(__GNU_LIBRARY__)
     si.sdk_ver = (__GNU_LIBRARY__ << 24) |
-	         (__GNU_LIBRARY_MINOR__ << 16);
+                 (__GNU_LIBRARY_MINOR__ << 16);
     si.sdk_name = pj_str("libc");
 #elif defined(__UCLIBC__)
     si.sdk_ver = (__UCLIBC_MAJOR__ << 24) |
-    	         (__UCLIBC_MINOR__ << 16);
+                 (__UCLIBC_MINOR__ << 16);
     si.sdk_name = pj_str("uclibc");
 #elif defined(_WIN32_WCE) && _WIN32_WCE
     /* Old window mobile declares _WIN32_WCE as decimal (e.g. 300, 420, etc.),
@@ -296,13 +295,13 @@ get_sdk_info:
      * http://social.msdn.microsoft.com/forums/en-US/vssmartdevicesnative/thread/8a97c59f-5a1c-4bc6-99e6-427f065ff439/
      */
     #if _WIN32_WCE <= 500
-	si.sdk_ver = ( (_WIN32_WCE / 100) << 24) |
-		     ( ((_WIN32_WCE % 100) / 10) << 16) |
-		     ( (_WIN32_WCE % 10) << 8);
+        si.sdk_ver = ( (_WIN32_WCE / 100) << 24) |
+                     ( ((_WIN32_WCE % 100) / 10) << 16) |
+                     ( (_WIN32_WCE % 10) << 8);
     #else
-	si.sdk_ver = ( ((_WIN32_WCE & 0xFF00) >> 8) << 24) |
-		     ( ((_WIN32_WCE & 0x00F0) >> 4) << 16) |
-		     ( ((_WIN32_WCE & 0x000F) >> 0) << 8);
+        si.sdk_ver = ( ((_WIN32_WCE & 0xFF00) >> 8) << 24) |
+                     ( ((_WIN32_WCE & 0x00F0) >> 4) << 16) |
+                     ( ((_WIN32_WCE & 0x000F) >> 0) << 8);
     #endif
     si.sdk_name = pj_str("cesdk");
 #elif defined(_MSC_VER)
@@ -313,8 +312,8 @@ get_sdk_info:
      * The Visual C++ 2005 compiler version is 1400.
      */
     si.sdk_ver = ((_MSC_VER / 100) << 24) |
-    	         (((_MSC_VER % 100) / 10) << 16) |
-    	         ((_MSC_VER % 10) << 8);
+                 (((_MSC_VER % 100) / 10) << 16) |
+                 ((_MSC_VER % 10) << 8);
     si.sdk_name = pj_str("msvc");
 #elif defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
     pj_symbianos_get_sdk_info(&si.sdk_name, &si.sdk_ver);
@@ -324,22 +323,22 @@ get_sdk_info:
      * Build the info string.
      */
     {
-	char tmp[PJ_SYS_INFO_BUFFER_SIZE];
-	char os_ver[20], sdk_ver[20];
-	int cnt;
+        char tmp[PJ_SYS_INFO_BUFFER_SIZE];
+        char os_ver[20], sdk_ver[20];
+        int cnt;
 
-	cnt = pj_ansi_snprintf(tmp, sizeof(tmp),
-			       "%s%s%s%s%s%s%s",
-			       si.os_name.ptr,
-			       ver_info(si.os_ver, os_ver),
-			       (si.machine.slen ? "/" : ""),
-			       si.machine.ptr,
-			       (si.sdk_name.slen ? "/" : ""),
-			       si.sdk_name.ptr,
-			       ver_info(si.sdk_ver, sdk_ver));
-	if (cnt > 0 && cnt < (int)sizeof(tmp)) {
-	    ALLOC_CP_STR(tmp, info);
-	}
+        cnt = pj_ansi_snprintf(tmp, sizeof(tmp),
+                               "%s%s%s%s%s%s%s",
+                               si.os_name.ptr,
+                               ver_info(si.os_ver, os_ver, sizeof(os_ver)),
+                               (si.machine.slen ? "/" : ""),
+                               si.machine.ptr,
+                               (si.sdk_name.slen ? "/" : ""),
+                               si.sdk_name.ptr,
+                               ver_info(si.sdk_ver, sdk_ver, sizeof(sdk_ver)));
+        if (cnt > 0 && cnt < (int)sizeof(tmp)) {
+            ALLOC_CP_STR(tmp, info);
+        }
     }
 
     si_initialized = PJ_TRUE;

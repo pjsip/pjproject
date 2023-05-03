@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -20,12 +19,12 @@
 
 #include "pjsua_app_common.h"
 
-#define THIS_FILE	"pjsua_app_common.c"
+#define THIS_FILE       "pjsua_app_common.c"
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-#   define SOME_BUF_SIZE	(1024 * 10)
+#   define SOME_BUF_SIZE        (1024 * 10)
 #else
-#   define SOME_BUF_SIZE	(1024 * 3)
+#   define SOME_BUF_SIZE        (1024 * 3)
 #endif
 
 #ifdef USE_GUI
@@ -35,12 +34,12 @@ void displayWindow(pjsua_vid_win_id wid);
 static char some_buf[SOME_BUF_SIZE];
 
 /** Variable definition **/
-int		    stdout_refresh = -1;
-pj_bool_t	    stdout_refresh_quit = PJ_FALSE;
-pjsua_call_id	    current_call = PJSUA_INVALID_ID;
+int                 stdout_refresh = -1;
+pj_bool_t           stdout_refresh_quit = PJ_FALSE;
+pjsua_call_id       current_call = PJSUA_INVALID_ID;
 pjsua_app_config    app_config;
 pjsua_call_setting  call_opt;
-pjsua_msg_data	    msg_data;
+pjsua_msg_data      msg_data;
 
 int my_atoi(const char *cs)
 {
@@ -55,13 +54,13 @@ int my_atoi2(const pj_str_t *str)
     pj_str_t s = *str;
 
     if (cs[0] == '-') {
-	s.ptr++; s.slen--;
-	return 0 - (int)pj_strtoul(&s);
+        s.ptr++; s.slen--;
+        return 0 - (int)pj_strtoul(&s);
     } else if (cs[0] == '+') {
-	s.ptr++; s.slen--;
-	return (int)pj_strtoul(&s);
+        s.ptr++; s.slen--;
+        return (int)pj_strtoul(&s);
     } else {
-	return (int)pj_strtoul(&s);
+        return (int)pj_strtoul(&s);
     }
 }
 
@@ -75,17 +74,17 @@ pj_bool_t find_next_call(void)
 
     max = pjsua_call_get_max_count();
     for (i=current_call+1; i<max; ++i) {
-	if (pjsua_call_is_active(i)) {
-	    current_call = i;
-	    return PJ_TRUE;
-	}
+        if (pjsua_call_is_active(i)) {
+            current_call = i;
+            return PJ_TRUE;
+        }
     }
 
     for (i=0; i<current_call; ++i) {
-	if (pjsua_call_is_active(i)) {
-	    current_call = i;
-	    return PJ_TRUE;
-	}
+        if (pjsua_call_is_active(i)) {
+            current_call = i;
+            return PJ_TRUE;
+        }
     }
 
     current_call = PJSUA_INVALID_ID;
@@ -98,17 +97,17 @@ pj_bool_t find_prev_call(void)
 
     max = pjsua_call_get_max_count();
     for (i=current_call-1; i>=0; --i) {
-	if (pjsua_call_is_active(i)) {
-	    current_call = i;
-	    return PJ_TRUE;
-	}
+        if (pjsua_call_is_active(i)) {
+            current_call = i;
+            return PJ_TRUE;
+        }
     }
 
     for (i=max-1; i>current_call; --i) {
-	if (pjsua_call_is_active(i)) {
-	    current_call = i;
-	    return PJ_TRUE;
-	}
+        if (pjsua_call_is_active(i)) {
+            current_call = i;
+            return PJ_TRUE;
+        }
     }
 
     current_call = PJSUA_INVALID_ID;
@@ -135,8 +134,8 @@ void send_request(char *cstr_method, const pj_str_t *dst_uri)
 
     status = pjsip_endpt_send_request(endpt, tdata, -1, NULL, NULL);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to send request", status);
-	return;
+        pjsua_perror(THIS_FILE, "Unable to send request", status);
+        return;
     }
 }
 
@@ -163,16 +162,16 @@ void log_call_dump(int call_id)
     part_idx = 0;
     part_len = PJ_LOG_MAX_SIZE-80;
     while (part_idx < call_dump_len) {
-	char p_orig, *p;
+        char p_orig, *p;
 
-	p = &some_buf[part_idx];
-	if (part_idx + part_len > call_dump_len)
-	    part_len = call_dump_len - part_idx;
-	p_orig = p[part_len];
-	p[part_len] = '\0';
-	PJ_LOG(3,(THIS_FILE, "%s", p));
-	p[part_len] = p_orig;
-	part_idx += part_len;
+        p = &some_buf[part_idx];
+        if (part_idx + part_len > call_dump_len)
+            part_len = call_dump_len - part_idx;
+        p_orig = p[part_len];
+        p[part_len] = '\0';
+        PJ_LOG(3,(THIS_FILE, "%s", p));
+        p[part_len] = p_orig;
+        part_idx += part_len;
     }
     pj_log_set_decor(log_decor);
 }
@@ -191,10 +190,10 @@ void app_config_init_video(pjsua_acc_config *acc_cfg)
     acc_cfg->vid_rend_dev = app_config.vid.vrender_dev;
 
     if (app_config.avi_auto_play &&
-	app_config.avi_def_idx != PJSUA_INVALID_ID &&
-	app_config.avi[app_config.avi_def_idx].dev_id != PJMEDIA_VID_INVALID_DEV)
+        app_config.avi_def_idx != PJSUA_INVALID_ID &&
+        app_config.avi[app_config.avi_def_idx].dev_id != PJMEDIA_VID_INVALID_DEV)
     {
-	acc_cfg->vid_cap_dev = app_config.avi[app_config.avi_def_idx].dev_id;
+        acc_cfg->vid_cap_dev = app_config.avi[app_config.avi_def_idx].dev_id;
     }
 }
 #else
@@ -214,15 +213,15 @@ void app_config_init_video(pjsua_acc_config *acc_cfg)
       static pjsip_multipart_part *alt_part;
 
       if (!alt_part) {
-	  pj_str_t type, subtype, content;
+          pj_str_t type, subtype, content;
 
-	  alt_part = pjsip_multipart_create_part(app_config.pool);
+          alt_part = pjsip_multipart_create_part(app_config.pool);
 
-	  type = pj_str("text");
-	  subtype = pj_str("plain");
-	  content = pj_str("Sample text body of a multipart bodies");
-	  alt_part->body = pjsip_msg_body_create(app_config.pool, &type,
-						 &subtype, &content);
+          type = pj_str("text");
+          subtype = pj_str("plain");
+          content = pj_str("Sample text body of a multipart bodies");
+          alt_part->body = pjsip_msg_body_create(app_config.pool, &type,
+                                                 &subtype, &content);
       }
 
       msg_data->multipart_ctype.type = pj_str("multipart");
@@ -246,22 +245,22 @@ void arrange_window(pjsua_vid_win_id wid)
     last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid;
 
     for (i=0; i<last; ++i) {
-	pjsua_vid_win_info wi;
-	pj_status_t status;
+        pjsua_vid_win_info wi;
+        pj_status_t status;
 
-	status = pjsua_vid_win_get_info(i, &wi);
-	if (status != PJ_SUCCESS)
-	    continue;
+        status = pjsua_vid_win_get_info(i, &wi);
+        if (status != PJ_SUCCESS)
+            continue;
 
-	if (wid == PJSUA_INVALID_ID)
-	    pjsua_vid_win_set_pos(i, &pos);
+        if (wid == PJSUA_INVALID_ID)
+            pjsua_vid_win_set_pos(i, &pos);
 
-	if (wi.show)
-	    pos.y += wi.size.h;
+        if (wi.show)
+            pos.y += wi.size.h;
     }
 
     if (wid != PJSUA_INVALID_ID)
-	pjsua_vid_win_set_pos(wid, &pos);
+        pjsua_vid_win_set_pos(wid, &pos);
 
 #ifdef USE_GUI
     displayWindow(wid);
@@ -283,56 +282,56 @@ void vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, const char *title)
     int st_len;
 
     if (vdi->dir == PJMEDIA_DIR_CAPTURE_RENDER) {
-	dirname = "capture, render";
+        dirname = "capture, render";
     } else if (vdi->dir == PJMEDIA_DIR_CAPTURE) {
-	dirname = "capture";
+        dirname = "capture";
     } else {
-	dirname = "render";
+        dirname = "render";
     }
 
 
     capnames[0] = '\0';
     st_len = 0;
     for (i=0; i<sizeof(int)*8 && (1 << i) < PJMEDIA_VID_DEV_CAP_MAX; ++i) {
-	if (vdi->caps & (1 << i)) {
-	    const char *capname = pjmedia_vid_dev_cap_name(1 << i, NULL);
-	    if (capname) {
-		int tmp_len = (int)strlen(capname);
-		if ((int)sizeof(capnames) - st_len <= tmp_len)
-		    break;
+        if (vdi->caps & (1 << i)) {
+            const char *capname = pjmedia_vid_dev_cap_name(1 << i, NULL);
+            if (capname) {
+                int tmp_len = (int)strlen(capname);
+                if ((int)sizeof(capnames) - st_len <= tmp_len)
+                    break;
 
-		st_len += (tmp_len + 2);
-		if (*capnames)
-		    strcat(capnames, ", ");
-		strcat(capnames, capname);
-	    }
-	}
+                st_len += (tmp_len + 2);
+                if (*capnames)
+                    pj_ansi_strxcat(capnames, ", ", sizeof(capnames));
+                pj_ansi_strxcat(capnames, capname, sizeof(capnames));
+            }
+        }
     }
 
     formats[0] = '\0';
     st_len = 0;
     for (i=0; i<vdi->fmt_cnt; ++i) {
-	const pjmedia_video_format_info *vfi =
-		pjmedia_get_video_format_info(NULL, vdi->fmt[i].id);
-	if (vfi) {
-	    int tmp_len = (int)strlen(vfi->name);
-	    if ((int)sizeof(formats) - st_len <= tmp_len) {
-		st_len = -1;
-		break;
-	    }
+        const pjmedia_video_format_info *vfi =
+                pjmedia_get_video_format_info(NULL, vdi->fmt[i].id);
+        if (vfi) {
+            int tmp_len = (int)strlen(vfi->name);
+            if ((int)sizeof(formats) - st_len <= tmp_len) {
+                st_len = -1;
+                break;
+            }
 
-	    st_len += (tmp_len + 2);
-	    if (*formats)
-		strcat(formats, ", ");
-	    strcat(formats, vfi->name);
-	}
+            st_len += (tmp_len + 2);
+            if (*formats)
+                pj_ansi_strxcat(formats, ", ", sizeof(formats));
+            pj_ansi_strxcat(formats, vfi->name, sizeof(formats));
+        }
     }
 
     PJ_LOG(3,(THIS_FILE, "%3d %s [%s][%s] %s", id, vdi->name, vdi->driver,
-	      dirname, title));
+              dirname, title));
     PJ_LOG(3,(THIS_FILE, "    Supported capabilities: %s", capnames));
     PJ_LOG(3,(THIS_FILE, "    Supported formats: %s%s", formats,
-			      (st_len<0? " ..." : "")));
+                              (st_len<0? " ..." : "")));
 }
 
 void vid_list_devs(void)
@@ -344,42 +343,42 @@ void vid_list_devs(void)
     PJ_LOG(3,(THIS_FILE, "Video device list:"));
     count = pjsua_vid_dev_count();
     if (count == 0) {
-	PJ_LOG(3,(THIS_FILE, " - no device detected -"));
-	return;
+        PJ_LOG(3,(THIS_FILE, " - no device detected -"));
+        return;
     } else {
-	PJ_LOG(3,(THIS_FILE, "%d device(s) detected:", count));
+        PJ_LOG(3,(THIS_FILE, "%d device(s) detected:", count));
     }
 
     status = pjsua_vid_dev_get_info(PJMEDIA_VID_DEFAULT_RENDER_DEV, &vdi);
     if (status == PJ_SUCCESS)
-	vid_print_dev(PJMEDIA_VID_DEFAULT_RENDER_DEV, &vdi,
-	              "(default renderer device)");
+        vid_print_dev(PJMEDIA_VID_DEFAULT_RENDER_DEV, &vdi,
+                      "(default renderer device)");
 
     status = pjsua_vid_dev_get_info(PJMEDIA_VID_DEFAULT_CAPTURE_DEV, &vdi);
     if (status == PJ_SUCCESS)
-	vid_print_dev(PJMEDIA_VID_DEFAULT_CAPTURE_DEV, &vdi,
-	              "(default capture device)");
+        vid_print_dev(PJMEDIA_VID_DEFAULT_CAPTURE_DEV, &vdi,
+                      "(default capture device)");
 
     for (i=0; i<count; ++i) {
-	status = pjsua_vid_dev_get_info(i, &vdi);
-	if (status == PJ_SUCCESS)
-	    vid_print_dev(i, &vdi, "");
+        status = pjsua_vid_dev_get_info(i, &vdi);
+        if (status == PJ_SUCCESS)
+            vid_print_dev(i, &vdi, "");
     }
 }
 
 void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg)
 {
     PJ_LOG(3,(THIS_FILE,
-	      "Account %d:\n"
-	      "  RX auto show:     %d\n"
-	      "  TX auto transmit: %d\n"
-	      "  Capture dev:      %d\n"
-	      "  Render dev:       %d",
-	      acc_id,
-	      acc_cfg->vid_in_auto_show,
-	      acc_cfg->vid_out_auto_transmit,
-	      acc_cfg->vid_cap_dev,
-	      acc_cfg->vid_rend_dev));
+              "Account %d:\n"
+              "  RX auto show:     %d\n"
+              "  TX auto transmit: %d\n"
+              "  Capture dev:      %d\n"
+              "  Render dev:       %d",
+              acc_id,
+              acc_cfg->vid_in_auto_show,
+              acc_cfg->vid_out_auto_transmit,
+              acc_cfg->vid_cap_dev,
+              acc_cfg->vid_rend_dev));
 }
 
 

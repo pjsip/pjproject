@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -48,21 +47,21 @@ PJ_BEGIN_DECL
  * Default is PJSIP_TLSV1_METHOD
  */
 #ifndef PJSIP_SSL_DEFAULT_METHOD
-#   define PJSIP_SSL_DEFAULT_METHOD	PJSIP_TLSV1_METHOD
+#   define PJSIP_SSL_DEFAULT_METHOD     PJSIP_TLSV1_METHOD
 #endif
 
 
 /** SSL protocol method constants. */
 typedef enum pjsip_ssl_method
 {
-    PJSIP_SSL_UNSPECIFIED_METHOD = 0,	/**< Default protocol method.	*/    
-    PJSIP_SSLV2_METHOD		 = 20,	/**< Use SSLv2 method.		*/
-    PJSIP_SSLV3_METHOD		 = 30,	/**< Use SSLv3 method.		*/
-    PJSIP_TLSV1_METHOD		 = 31,	/**< Use TLSv1 method.		*/
-    PJSIP_TLSV1_1_METHOD	 = 32,	/**< Use TLSv1_1 method.	*/
-    PJSIP_TLSV1_2_METHOD	 = 33,	/**< Use TLSv1_2 method.	*/
-    PJSIP_TLSV1_3_METHOD	 = 34,	/**< Use TLSv1_3 method.	*/
-    PJSIP_SSLV23_METHOD		 = 23,	/**< Use SSLv23 method.		*/
+    PJSIP_SSL_UNSPECIFIED_METHOD = 0,   /**< Default protocol method.   */    
+    PJSIP_SSLV2_METHOD           = 20,  /**< Use SSLv2 method.          */
+    PJSIP_SSLV3_METHOD           = 30,  /**< Use SSLv3 method.          */
+    PJSIP_TLSV1_METHOD           = 31,  /**< Use TLSv1 method.          */
+    PJSIP_TLSV1_1_METHOD         = 32,  /**< Use TLSv1_1 method.        */
+    PJSIP_TLSV1_2_METHOD         = 33,  /**< Use TLSv1_2 method.        */
+    PJSIP_TLSV1_3_METHOD         = 34,  /**< Use TLSv1_3 method.        */
+    PJSIP_SSLV23_METHOD          = 23,  /**< Use SSLv23 method.         */
 } pjsip_ssl_method;
 
 /**
@@ -71,13 +70,13 @@ typedef enum pjsip_ssl_method
  */
 #ifndef PJSIP_SSL_DEFAULT_PROTO
 #   define PJSIP_SSL_DEFAULT_PROTO  (PJ_SSL_SOCK_PROTO_TLS1 | \
-				     PJ_SSL_SOCK_PROTO_TLS1_1 | \
-				     PJ_SSL_SOCK_PROTO_TLS1_2)
+                                     PJ_SSL_SOCK_PROTO_TLS1_1 | \
+                                     PJ_SSL_SOCK_PROTO_TLS1_2)
 #endif
 
 
 /**
- * This structure describe the parameter passed from #on_accept_fail_cb().
+ * This structure describe the parameter passed from on_accept_fail_cb().
  */
 typedef struct pjsip_tls_on_accept_fail_param {
     /**
@@ -105,6 +104,38 @@ typedef struct pjsip_tls_on_accept_fail_param {
 
 
 /**
+ * This structure describe the parameter passed from on_verify_cb().
+ */
+typedef struct pjsip_tls_on_verify_param {
+    /**
+     * Describes local address.
+     */
+    const pj_sockaddr_t *local_addr;
+
+    /**
+     * Describes remote address.
+     */
+    const pj_sockaddr_t *remote_addr;
+
+    /**
+     * Describes transport direction.
+     */
+    pjsip_transport_dir tp_dir;
+
+    /**
+     * Describes active local certificate info.
+     */
+    pj_ssl_cert_info *local_cert_info;
+   
+    /**
+     * Describes active remote certificate info.
+     */
+    pj_ssl_cert_info *remote_cert_info;
+
+} pjsip_tls_on_verify_param;
+
+
+/**
  * TLS transport settings.
  */
 typedef struct pjsip_tls_setting
@@ -112,24 +143,24 @@ typedef struct pjsip_tls_setting
     /**
      * Certificate of Authority (CA) list file.
      */
-    pj_str_t	ca_list_file;
+    pj_str_t    ca_list_file;
 
     /**
      * Certificate of Authority (CA) list directory path.
      */
-    pj_str_t	ca_list_path;
+    pj_str_t    ca_list_path;
 
     /**
      * Public endpoint certificate file, which will be used as client-
      * side  certificate for outgoing TLS connection, and server-side
      * certificate for incoming TLS connection.
      */
-    pj_str_t	cert_file;
+    pj_str_t    cert_file;
 
     /**
      * Optional private key of the endpoint certificate to be used.
      */
-    pj_str_t	privkey_file;
+    pj_str_t    privkey_file;
 
     /**
      * Certificate of Authority (CA) buffer. If ca_list_file, ca_list_path,
@@ -155,7 +186,7 @@ typedef struct pjsip_tls_setting
     /**
      * Password to open private key.
      */
-    pj_str_t	password;
+    pj_str_t    password;
 
     /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field
@@ -165,7 +196,7 @@ typedef struct pjsip_tls_setting
      * Default is PJSIP_SSL_UNSPECIFIED_METHOD (0), which in turn will
      * use PJSIP_SSL_DEFAULT_METHOD, which default value is PJSIP_TLSV1_METHOD.
      */
-    pjsip_ssl_method	method;
+    pjsip_ssl_method    method;
 
     /**
      * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable 
@@ -174,7 +205,7 @@ typedef struct pjsip_tls_setting
      *
      * Default is PJSIP_SSL_DEFAULT_PROTO.
      */
-    pj_uint32_t	proto;
+    pj_uint32_t proto;
 
     /**
      * Number of ciphers contained in the specified cipher preference. 
@@ -214,7 +245,7 @@ typedef struct pjsip_tls_setting
      * Algorithms are: "MD5", "SHA1", "SHA224", "SHA256", "SHA384", "SHA512"
      * Example: "ECDSA+SHA256:RSA+SHA256"
      */
-    pj_str_t	sigalgs;
+    pj_str_t    sigalgs;
 
     /**
      * Reseed random number generator.
@@ -225,7 +256,7 @@ typedef struct pjsip_tls_setting
      *
      * Default value is PJ_SSL_ENTROPY_NONE.
     */
-    pj_ssl_entropy_t	entropy_type;
+    pj_ssl_entropy_t    entropy_type;
 
     /**
      * When using a file/socket for entropy #PJ_SSL_ENTROPY_EGD or
@@ -234,7 +265,7 @@ typedef struct pjsip_tls_setting
      *
      * Default value is an empty string.
      */
-    pj_str_t		entropy_path;
+    pj_str_t            entropy_path;
 
     /**
      * Specifies TLS transport behavior on the server TLS certificate 
@@ -252,7 +283,7 @@ typedef struct pjsip_tls_setting
      *
      * Default value is PJ_FALSE.
      */
-    pj_bool_t	verify_server;
+    pj_bool_t   verify_server;
 
     /**
      * Specifies TLS transport behavior on the client TLS certificate 
@@ -270,7 +301,7 @@ typedef struct pjsip_tls_setting
      *
      * Default value is PJ_FALSE.
      */
-    pj_bool_t	verify_client;
+    pj_bool_t   verify_client;
 
     /**
      * When acting as server (incoming TLS connections), reject inocming
@@ -279,14 +310,14 @@ typedef struct pjsip_tls_setting
      * This setting corresponds to SSL_VERIFY_FAIL_IF_NO_PEER_CERT flag.
      * Default value is PJ_FALSE.
      */
-    pj_bool_t	require_client_cert;
+    pj_bool_t   require_client_cert;
 
     /**
      * TLS negotiation timeout to be applied for both outgoing and
      * incoming connection. If both sec and msec member is set to zero,
      * the SSL negotiation doesn't have a timeout.
      */
-    pj_time_val	timeout;
+    pj_time_val timeout;
 
     /**
      * Should SO_REUSEADDR be used for the listener socket.
@@ -344,6 +375,19 @@ typedef struct pjsip_tls_setting
      */
     void(*on_accept_fail_cb)(const pjsip_tls_on_accept_fail_param *param);
 
+    /**
+     * Callback to be called to verify a new connection.  Currently it's only 
+     * implemented for OpenSSL backend.
+     *
+     * @param param         The parameter to the callback.
+     * 
+     * @return              Return PJ_TRUE if succesfully verified. 
+     *                      If verification failed, connection will be dropped
+     *                      immediately.
+     *
+     */
+    pj_bool_t(*on_verify_cb)(const pjsip_tls_on_verify_param *param);
+
 } pjsip_tls_setting;
 
 
@@ -357,7 +401,7 @@ typedef struct pjsip_tls_state_info
     /**
      * SSL socket info.
      */
-    pj_ssl_sock_info	*ssl_sock_info;
+    pj_ssl_sock_info    *ssl_sock_info;
 
 } pjsip_tls_state_info;
 
@@ -381,13 +425,13 @@ PJ_INLINE(void) pjsip_tls_setting_default(pjsip_tls_setting *tls_opt)
 /**
  * Copy TLS setting.
  *
- * @param pool	    The pool to duplicate strings etc.
- * @param dst	    Destination structure.
- * @param src	    Source structure.
+ * @param pool      The pool to duplicate strings etc.
+ * @param dst       Destination structure.
+ * @param src       Source structure.
  */
 PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
-				       pjsip_tls_setting *dst,
-				       const pjsip_tls_setting *src)
+                                       pjsip_tls_setting *dst,
+                                       const pjsip_tls_setting *src)
 {
     pj_memcpy(dst, src, sizeof(*dst));
     pj_strdup_with_null(pool, &dst->ca_list_file, &src->ca_list_file);
@@ -403,19 +447,19 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup(pool, &dst->privkey_buf, &src->privkey_buf);
 
     if (src->ciphers_num) {
-	unsigned i;
-	dst->ciphers = (pj_ssl_cipher*) pj_pool_calloc(pool, src->ciphers_num,
-						       sizeof(pj_ssl_cipher));
-	for (i=0; i<src->ciphers_num; ++i)
-	    dst->ciphers[i] = src->ciphers[i];
+        unsigned i;
+        dst->ciphers = (pj_ssl_cipher*) pj_pool_calloc(pool, src->ciphers_num,
+                                                       sizeof(pj_ssl_cipher));
+        for (i=0; i<src->ciphers_num; ++i)
+            dst->ciphers[i] = src->ciphers[i];
     }
 
     if (src->curves_num) {
-	unsigned i;
-	dst->curves = (pj_ssl_curve*) pj_pool_calloc(pool, src->curves_num,
-						     sizeof(pj_ssl_curve));
-	for (i=0; i<src->curves_num; ++i)
-	    dst->curves[i] = src->curves[i];
+        unsigned i;
+        dst->curves = (pj_ssl_curve*) pj_pool_calloc(pool, src->curves_num,
+                                                     sizeof(pj_ssl_curve));
+        for (i=0; i<src->curves_num; ++i)
+            dst->curves[i] = src->curves[i];
     }
 }
 
@@ -423,7 +467,7 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
 /**
  * Wipe out certificates and keys in the TLS setting buffer.
  *
- * @param opt	    TLS setting.
+ * @param opt       TLS setting.
  */
 PJ_DECL(void) pjsip_tls_setting_wipe_keys(pjsip_tls_setting *opt);
 
@@ -436,37 +480,37 @@ PJ_DECL(void) pjsip_tls_setting_wipe_keys(pjsip_tls_setting *opt);
  *
  * See also #pjsip_tls_transport_start2() which supports IPv6.
  *
- * @param endpt		The SIP endpoint.
- * @param opt		Optional TLS settings.
- * @param local		Optional local address to bind, or specify the
- *			address to bind the server socket to. Both IP 
- *			interface address and port fields are optional.
- *			If IP interface address is not specified, socket
- *			will be bound to PJ_INADDR_ANY. If port is not
- *			specified, socket will be bound to any port
- *			selected by the operating system.
- * @param a_name	Optional published address, which is the address to be
- *			advertised as the address of this SIP transport. 
- *			If this argument is NULL, then the bound address
- *			will be used as the published address.
- * @param async_cnt	Number of simultaneous asynchronous accept()
- *			operations to be supported. It is recommended that
- *			the number here corresponds to the number of
- *			processors in the system (or the number of SIP
- *			worker threads).
- * @param p_factory	Optional pointer to receive the instance of the
- *			SIP TLS transport factory just created.
+ * @param endpt         The SIP endpoint.
+ * @param opt           Optional TLS settings.
+ * @param local         Optional local address to bind, or specify the
+ *                      address to bind the server socket to. Both IP 
+ *                      interface address and port fields are optional.
+ *                      If IP interface address is not specified, socket
+ *                      will be bound to PJ_INADDR_ANY. If port is not
+ *                      specified, socket will be bound to any port
+ *                      selected by the operating system.
+ * @param a_name        Optional published address, which is the address to be
+ *                      advertised as the address of this SIP transport. 
+ *                      If this argument is NULL, then the bound address
+ *                      will be used as the published address.
+ * @param async_cnt     Number of simultaneous asynchronous accept()
+ *                      operations to be supported. It is recommended that
+ *                      the number here corresponds to the number of
+ *                      processors in the system (or the number of SIP
+ *                      worker threads).
+ * @param p_factory     Optional pointer to receive the instance of the
+ *                      SIP TLS transport factory just created.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tls_transport_start(pjsip_endpoint *endpt,
-					       const pjsip_tls_setting *opt,
-					       const pj_sockaddr_in *local,
-					       const pjsip_host_port *a_name,
-					       unsigned async_cnt,
-					       pjsip_tpfactory **p_factory);
+                                               const pjsip_tls_setting *opt,
+                                               const pj_sockaddr_in *local,
+                                               const pjsip_host_port *a_name,
+                                               unsigned async_cnt,
+                                               pjsip_tpfactory **p_factory);
 
 /**
  * Variant of #pjsip_tls_transport_start() that supports IPv6. To instantiate
@@ -474,88 +518,88 @@ PJ_DECL(pj_status_t) pjsip_tls_transport_start(pjsip_endpoint *endpt,
  * (the host and port part may be left unspecified if not desired, i.e. by
  * filling them with zeroes).
  *
- * @param endpt		The SIP endpoint.
- * @param opt		Optional TLS settings.
- * @param local		Optional local address to bind, or specify the
- *			address to bind the server socket to. Both IP
- *			interface address and port fields are optional.
- *			If IP interface address is not specified, socket
- *			will be bound to any address. If port is not
- *			specified, socket will be bound to any port
- *			selected by the operating system.
- * @param a_name	Optional published address, which is the address to be
- *			advertised as the address of this SIP transport.
- *			If this argument is NULL, then the bound address
- *			will be used as the published address.
- * @param async_cnt	Number of simultaneous asynchronous accept()
- *			operations to be supported. It is recommended that
- *			the number here corresponds to the number of
- *			processors in the system (or the number of SIP
- *			worker threads).
- * @param p_factory	Optional pointer to receive the instance of the
- *			SIP TLS transport factory just created.
+ * @param endpt         The SIP endpoint.
+ * @param opt           Optional TLS settings.
+ * @param local         Optional local address to bind, or specify the
+ *                      address to bind the server socket to. Both IP
+ *                      interface address and port fields are optional.
+ *                      If IP interface address is not specified, socket
+ *                      will be bound to any address. If port is not
+ *                      specified, socket will be bound to any port
+ *                      selected by the operating system.
+ * @param a_name        Optional published address, which is the address to be
+ *                      advertised as the address of this SIP transport.
+ *                      If this argument is NULL, then the bound address
+ *                      will be used as the published address.
+ * @param async_cnt     Number of simultaneous asynchronous accept()
+ *                      operations to be supported. It is recommended that
+ *                      the number here corresponds to the number of
+ *                      processors in the system (or the number of SIP
+ *                      worker threads).
+ * @param p_factory     Optional pointer to receive the instance of the
+ *                      SIP TLS transport factory just created.
  *
- * @return		PJ_SUCCESS when the transport has been successfully
- *			started and registered to transport manager, or
- *			the appropriate error code.
+ * @return              PJ_SUCCESS when the transport has been successfully
+ *                      started and registered to transport manager, or
+ *                      the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tls_transport_start2(pjsip_endpoint *endpt,
-						const pjsip_tls_setting *opt,
-						const pj_sockaddr *local,
-						const pjsip_host_port *a_name,
-						unsigned async_cnt,
-						pjsip_tpfactory **p_factory);
+                                                const pjsip_tls_setting *opt,
+                                                const pj_sockaddr *local,
+                                                const pjsip_host_port *a_name,
+                                                unsigned async_cnt,
+                                                pjsip_tpfactory **p_factory);
 
 /**
  * Start the TLS listener, if the listener is not started yet. This is useful
  * to start the listener manually, if listener was not started when
  * PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER is set to 0.
  *
- * @param factory	The SIP TLS transport factory.
+ * @param factory       The SIP TLS transport factory.
  *
- * @param local		The address where the listener should be bound to.
- *			Both IP interface address and port fields are optional.
- *			If IP interface address is not specified, socket
- *			will be bound to PJ_INADDR_ANY. If port is not
- *			specified, socket will be bound to any port
- *			selected by the operating system.
+ * @param local         The address where the listener should be bound to.
+ *                      Both IP interface address and port fields are optional.
+ *                      If IP interface address is not specified, socket
+ *                      will be bound to PJ_INADDR_ANY. If port is not
+ *                      specified, socket will be bound to any port
+ *                      selected by the operating system.
  *
- * @param a_name	The published address for the listener.
- *			If this argument is NULL, then the bound address will
- *			be used as the published address.
+ * @param a_name        The published address for the listener.
+ *                      If this argument is NULL, then the bound address will
+ *                      be used as the published address.
  *
- * @return		PJ_SUCCESS when the listener has been successfully
- *			started.
+ * @return              PJ_SUCCESS when the listener has been successfully
+ *                      started.
  */
 PJ_DECL(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
-						const pj_sockaddr *local,
-						const pjsip_host_port *a_name);
+                                                const pj_sockaddr *local,
+                                                const pjsip_host_port *a_name);
 
 
 /**
  * Restart the TLS listener. This will close the listener socket and recreate
  * the socket based on the config used when starting the transport.
  *
- * @param factory	The SIP TLS transport factory.
+ * @param factory       The SIP TLS transport factory.
  *
- * @param local		The address where the listener should be bound to.
- *			Both IP interface address and port fields are optional.
- *			If IP interface address is not specified, socket
- *			will be bound to PJ_INADDR_ANY. If port is not
- *			specified, socket will be bound to any port
- *			selected by the operating system.
+ * @param local         The address where the listener should be bound to.
+ *                      Both IP interface address and port fields are optional.
+ *                      If IP interface address is not specified, socket
+ *                      will be bound to PJ_INADDR_ANY. If port is not
+ *                      specified, socket will be bound to any port
+ *                      selected by the operating system.
  *
- * @param a_name	The published address for the listener.
- *			If this argument is NULL, then the bound address will
- *			be used as the published address.
+ * @param a_name        The published address for the listener.
+ *                      If this argument is NULL, then the bound address will
+ *                      be used as the published address.
  *
- * @return		PJ_SUCCESS when the listener has been successfully
- *			restarted.
+ * @return              PJ_SUCCESS when the listener has been successfully
+ *                      restarted.
  *
  */
 PJ_DECL(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
-						const pj_sockaddr *local,
-						const pjsip_host_port *a_name);
+                                                const pj_sockaddr *local,
+                                                const pjsip_host_port *a_name);
 
 PJ_END_DECL
 
@@ -563,4 +607,4 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJSIP_TRANSPORT_TLS_H__ */
+#endif  /* __PJSIP_TRANSPORT_TLS_H__ */

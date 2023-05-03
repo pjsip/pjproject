@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -51,28 +50,28 @@ typedef struct pjmedia_ice_cb
     /**
      * This callback will be called when ICE negotiation completes.
      *
-     * @param tp	PJMEDIA ICE transport.
-     * @param op	The operation
-     * @param status	Operation status.
+     * @param tp        PJMEDIA ICE transport.
+     * @param op        The operation
+     * @param status    Operation status.
      */
     void    (*on_ice_complete)(pjmedia_transport *tp,
-			       pj_ice_strans_op op,
-			       pj_status_t status);
+                               pj_ice_strans_op op,
+                               pj_status_t status);
 
     /**
      * This callback will be called when ICE negotiation completes, with
      * application user data. Note that if both callbacks are implemented,
      * only this callback will be invoked.
      *
-     * @param tp	PJMEDIA ICE transport.
-     * @param op	The operation
-     * @param status	Operation status.
-     * @param user_data	User data for this callback.
+     * @param tp        PJMEDIA ICE transport.
+     * @param op        The operation
+     * @param status    Operation status.
+     * @param user_data User data for this callback.
      */
     void    (*on_ice_complete2)(pjmedia_transport *tp,
-			        pj_ice_strans_op op,
-			        pj_status_t status,
-				void *user_data);
+                                pj_ice_strans_op op,
+                                pj_status_t status,
+                                void *user_data);
 
     /**
      * Callback to report a new ICE local candidate, e.g: after successful
@@ -84,14 +83,14 @@ typedef struct pjmedia_ice_cb
      * Trickle ICE can use this callback to convey the new candidate
      * to remote agent and monitor end-of-candidate indication.
      *
-     * @param tp	PJMEDIA ICE transport.
-     * @param cand	The new local candidate, can be NULL when the last
-     *			local candidate initialization failed/timeout.
-     * @param last	PJ_TRUE if this is the last of local candidate.
+     * @param tp        PJMEDIA ICE transport.
+     * @param cand      The new local candidate, can be NULL when the last
+     *                  local candidate initialization failed/timeout.
+     * @param last      PJ_TRUE if this is the last of local candidate.
      */
     void    (*on_new_candidate)(pjmedia_transport *tp,
-				const pj_ice_sess_cand *cand,
-				pj_bool_t last);
+                                const pj_ice_sess_cand *cand,
+                                pj_bool_t last);
 
 } pjmedia_ice_cb;
 
@@ -118,6 +117,9 @@ typedef struct pjmedia_ice_transport_info
      */
     pj_ice_sess_role role;
 
+    pj_str_t    loc_ufrag;
+    pj_str_t    rem_ufrag;
+
     /**
      * Number of components in the component array. Before ICE negotiation
      * is complete, the number represents the number of components of the
@@ -133,25 +135,25 @@ typedef struct pjmedia_ice_transport_info
      */
     struct
     {
-	/**
-	 * Local candidate type.
-	 */
-	pj_ice_cand_type    lcand_type;
+        /**
+         * Local candidate type.
+         */
+        pj_ice_cand_type    lcand_type;
 
-	/**
-	 * The local address.
-	 */
-	pj_sockaddr	    lcand_addr;
+        /**
+         * The local address.
+         */
+        pj_sockaddr         lcand_addr;
 
-	/**
-	 * Remote candidate type.
-	 */
-	pj_ice_cand_type    rcand_type;
+        /**
+         * Remote candidate type.
+         */
+        pj_ice_cand_type    rcand_type;
 
-	/**
-	 * Remote address.
-	 */
-	pj_sockaddr	    rcand_addr;
+        /**
+         * Remote address.
+         */
+        pj_sockaddr         rcand_addr;
 
     } comp[2];
 
@@ -202,76 +204,76 @@ enum pjmedia_transport_ice_options
  * Other than this, application should use the \ref PJMEDIA_TRANSPORT API
  * to manipulate this media transport.
  *
- * @param endpt		The media endpoint.
- * @param name		Optional name to identify this ICE media transport
- *			for logging purposes.
- * @param comp_cnt	Number of components to be created.
- * @param cfg		Pointer to configuration settings.
- * @param cb		Optional structure containing ICE specific callbacks.
- * @param p_tp		Pointer to receive the media transport instance.
+ * @param endpt         The media endpoint.
+ * @param name          Optional name to identify this ICE media transport
+ *                      for logging purposes.
+ * @param comp_cnt      Number of components to be created.
+ * @param cfg           Pointer to configuration settings.
+ * @param cb            Optional structure containing ICE specific callbacks.
+ * @param p_tp          Pointer to receive the media transport instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
-					const char *name,
-					unsigned comp_cnt,
-					const pj_ice_strans_cfg *cfg,
-					const pjmedia_ice_cb *cb,
-					pjmedia_transport **p_tp);
+                                        const char *name,
+                                        unsigned comp_cnt,
+                                        const pj_ice_strans_cfg *cfg,
+                                        const pjmedia_ice_cb *cb,
+                                        pjmedia_transport **p_tp);
 
 
 /**
  * The same as #pjmedia_ice_create() with additional \a options param.
  *
- * @param endpt		The media endpoint.
- * @param name		Optional name to identify this ICE media transport
- *			for logging purposes.
- * @param comp_cnt	Number of components to be created.
- * @param cfg		Pointer to configuration settings.
- * @param cb		Optional structure containing ICE specific callbacks.
- * @param options	Options, see #pjmedia_transport_ice_options.
- * @param p_tp		Pointer to receive the media transport instance.
+ * @param endpt         The media endpoint.
+ * @param name          Optional name to identify this ICE media transport
+ *                      for logging purposes.
+ * @param comp_cnt      Number of components to be created.
+ * @param cfg           Pointer to configuration settings.
+ * @param cb            Optional structure containing ICE specific callbacks.
+ * @param options       Options, see #pjmedia_transport_ice_options.
+ * @param p_tp          Pointer to receive the media transport instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_create2(pjmedia_endpt *endpt,
-					 const char *name,
-					 unsigned comp_cnt,
-					 const pj_ice_strans_cfg *cfg,
-					 const pjmedia_ice_cb *cb,
-					 unsigned options,
-					 pjmedia_transport **p_tp);
+                                         const char *name,
+                                         unsigned comp_cnt,
+                                         const pj_ice_strans_cfg *cfg,
+                                         const pjmedia_ice_cb *cb,
+                                         unsigned options,
+                                         pjmedia_transport **p_tp);
 
 /**
  * The same as #pjmedia_ice_create2() with additional \a user_data param.
  *
- * @param endpt		The media endpoint.
- * @param name		Optional name to identify this ICE media transport
- *			for logging purposes.
- * @param comp_cnt	Number of components to be created.
- * @param cfg		Pointer to configuration settings.
- * @param cb		Optional structure containing ICE specific callbacks.
- * @param options	Options, see #pjmedia_transport_ice_options.
- * @param user_data	User data to be attached to the transport.
- * @param p_tp		Pointer to receive the media transport instance.
+ * @param endpt         The media endpoint.
+ * @param name          Optional name to identify this ICE media transport
+ *                      for logging purposes.
+ * @param comp_cnt      Number of components to be created.
+ * @param cfg           Pointer to configuration settings.
+ * @param cb            Optional structure containing ICE specific callbacks.
+ * @param options       Options, see #pjmedia_transport_ice_options.
+ * @param user_data     User data to be attached to the transport.
+ * @param p_tp          Pointer to receive the media transport instance.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
-					 const char *name,
-					 unsigned comp_cnt,
-					 const pj_ice_strans_cfg *cfg,
-					 const pjmedia_ice_cb *cb,
-					 unsigned options,
-					 void *user_data,
-					 pjmedia_transport **p_tp);
+                                         const char *name,
+                                         unsigned comp_cnt,
+                                         const pj_ice_strans_cfg *cfg,
+                                         const pjmedia_ice_cb *cb,
+                                         unsigned options,
+                                         void *user_data,
+                                         pjmedia_transport **p_tp);
 
 /**
  * Get the group lock for the ICE media transport.
  *
- * @param tp	        The ICE media transport.
+ * @param tp            The ICE media transport.
  *
- * @return		The group lock.
+ * @return              The group lock.
  */
 PJ_DECL(pj_grp_lock_t *) pjmedia_ice_get_grp_lock(pjmedia_transport *tp);
 
@@ -280,32 +282,32 @@ PJ_DECL(pj_grp_lock_t *) pjmedia_ice_get_grp_lock(pjmedia_transport *tp);
  * Add application to receive ICE notifications from the specified ICE media
  * transport.
  *
- * @param tp	        The ICE media transport.
- * @param cb	        The ICE specific callbacks.
+ * @param tp            The ICE media transport.
+ * @param cb            The ICE specific callbacks.
  * @param user_data     Optional application user data.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_add_ice_cb(pjmedia_transport *tp,
-					    const pjmedia_ice_cb *cb,
-					    void *user_data);
+                                            const pjmedia_ice_cb *cb,
+                                            void *user_data);
 
 
 /**
  * Remove application to stop receiving ICE notifications from the specified
  * ICE media transport.
  *
- * @param tp	        The ICE media transport.
- * @param cb	        The ICE specific callbacks.
+ * @param tp            The ICE media transport.
+ * @param cb            The ICE specific callbacks.
  * @param user_data     Optional application user data. The same user data
- *			passed to pjmedia_ice_add_ice_cb(), this is for
- *			validation purpose.
+ *                      passed to pjmedia_ice_add_ice_cb(), this is for
+ *                      validation purpose.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
-					       const pjmedia_ice_cb *cb,
-					       void *user_data);
+                                               const pjmedia_ice_cb *cb,
+                                               void *user_data);
 
 
 /**
@@ -313,13 +315,13 @@ PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
  * will check trickle indication in the media level first, if not found, it
  * will check in the session level.
  *
- * @param sdp		The SDP.
- * @param med_idx	The media index to be checked.
+ * @param sdp           The SDP.
+ * @param med_idx       The media index to be checked.
  *
- * @return		PJ_TRUE if trickle ICE indication is found.
+ * @return              PJ_TRUE if trickle ICE indication is found.
  */
 PJ_DECL(pj_bool_t) pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session *sdp,
-					       unsigned med_idx);
+                                               unsigned med_idx);
 
 
 /**
@@ -336,51 +338,51 @@ PJ_DECL(pj_bool_t) pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session *sdp,
  *
  * This function is only applicable when trickle ICE is not disabled.
  *
- * @param tp		The ICE media transport.
- * @param rem_ufrag	Remote ufrag, as seen in the SDP received from
- *			the remote agent.
- * @param rem_passwd	Remote password, as seen in the SDP received from
- *			the remote agent.
- * @param rcand_cnt	Number of new remote candidates in the array.
- * @param rcand		New remote candidates array.
- * @param rcand_end	Set to PJ_TRUE if remote has signalled
- *			end-of-candidate.
+ * @param tp            The ICE media transport.
+ * @param rem_ufrag     Remote ufrag, as seen in the SDP received from
+ *                      the remote agent.
+ * @param rem_passwd    Remote password, as seen in the SDP received from
+ *                      the remote agent.
+ * @param rcand_cnt     Number of new remote candidates in the array.
+ * @param rcand         New remote candidates array.
+ * @param rcand_end     Set to PJ_TRUE if remote has signalled
+ *                      end-of-candidate.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_trickle_update(
-					    pjmedia_transport *tp,
-					    const pj_str_t *rem_ufrag,
-					    const pj_str_t *rem_passwd,
-					    unsigned rcand_cnt,
-					    const pj_ice_sess_cand rcand[],
-					    pj_bool_t rcand_end);
+                                            pjmedia_transport *tp,
+                                            const pj_str_t *rem_ufrag,
+                                            const pj_str_t *rem_passwd,
+                                            unsigned rcand_cnt,
+                                            const pj_ice_sess_cand rcand[],
+                                            pj_bool_t rcand_end);
 
 
 /**
  * Decode trickle ICE info from the specified SDP.
  *
- * @param sdp		The SDP containing trickle ICE info.
- * @param media_index	The media index.
- * @param mid		Output, media ID.
- * @param ufrag		Output, ufrag.
- * @param passwd	Output, password.
- * @param cand_cnt	On input, maximum number of candidate array.
- *			On output, the number of candidates.
- * @param cand		Output, the candidates.
- * @param end_of_cand	Output, end of candidate indication.
+ * @param sdp           The SDP containing trickle ICE info.
+ * @param media_index   The media index.
+ * @param mid           Output, media ID.
+ * @param ufrag         Output, ufrag.
+ * @param passwd        Output, password.
+ * @param cand_cnt      On input, maximum number of candidate array.
+ *                      On output, the number of candidates.
+ * @param cand          Output, the candidates.
+ * @param end_of_cand   Output, end of candidate indication.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_trickle_decode_sdp(
-					    const pjmedia_sdp_session *sdp,
-					    unsigned media_index,
-					    pj_str_t *mid,
-					    pj_str_t *ufrag,
-					    pj_str_t *passwd,
-					    unsigned *cand_cnt,
-					    pj_ice_sess_cand cand[],
-					    pj_bool_t *end_of_cand);
+                                            const pjmedia_sdp_session *sdp,
+                                            unsigned media_index,
+                                            pj_str_t *mid,
+                                            pj_str_t *ufrag,
+                                            pj_str_t *passwd,
+                                            unsigned *cand_cnt,
+                                            pj_ice_sess_cand cand[],
+                                            pj_bool_t *end_of_cand);
 
 
 /**
@@ -392,35 +394,35 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_decode_sdp(
  * - ICE candidates, "a=candidate".
  * - End of candidate indication, "a=end-of-candidates".
  *
- * @param sdp_pool	The memory pool for generating SDP attributes.
- * @param sdp		The SDP to be updated.
- * @param mid		The media ID.
- * @param ufrag		The ufrag, optional.
- * @param passwd	The password, optional.
- * @param cand_cnt	The number of local candidates, can be zero.
- * @param cand		The local candidates.
- * @param end_of_cand	End of candidate indication.
+ * @param sdp_pool      The memory pool for generating SDP attributes.
+ * @param sdp           The SDP to be updated.
+ * @param mid           The media ID.
+ * @param ufrag         The ufrag, optional.
+ * @param passwd        The password, optional.
+ * @param cand_cnt      The number of local candidates, can be zero.
+ * @param cand          The local candidates.
+ * @param end_of_cand   End of candidate indication.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_trickle_encode_sdp(
-					    pj_pool_t *sdp_pool,
-					    pjmedia_sdp_session *sdp,
-					    const pj_str_t *mid,
-					    const pj_str_t *ufrag,
-					    const pj_str_t *passwd,
-					    unsigned cand_cnt,
-					    const pj_ice_sess_cand cand[],
-					    pj_bool_t end_of_cand);
+                                            pj_pool_t *sdp_pool,
+                                            pjmedia_sdp_session *sdp,
+                                            const pj_str_t *mid,
+                                            const pj_str_t *ufrag,
+                                            const pj_str_t *passwd,
+                                            unsigned cand_cnt,
+                                            const pj_ice_sess_cand cand[],
+                                            pj_bool_t end_of_cand);
 
 
 /**
  * Check if trickling ICE has found any new local candidates since the last
  * conveyance (via pjmedia_ice_trickle_send_local_cand()).
  *
- * @param tp		The ICE media transport.
+ * @param tp            The ICE media transport.
  *
- * @return		PJ_TRUE if new local canditates are available.
+ * @return              PJ_TRUE if new local canditates are available.
  */
 PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp);
 
@@ -428,19 +430,19 @@ PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp);
 /**
  * Convey all local candidates via the specified SDP.
  *
- * @param tp		The ICE media transport.
- * @param sdp_pool	The memory pool for generating SDP attributes.
- * @param sdp		The SDP.
+ * @param tp            The ICE media transport.
+ * @param sdp_pool      The memory pool for generating SDP attributes.
+ * @param sdp           The SDP.
  * @param p_end_of_cand Optional, pointer to receive the indication that
- *			candidate gathering has been completed.
+ *                      candidate gathering has been completed.
  *
- * @return		PJ_SUCCESS, or the appropriate error code.
+ * @return              PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_trickle_send_local_cand(
-					    pjmedia_transport *tp,
-					    pj_pool_t *sdp_pool,
-					    pjmedia_sdp_session *sdp,
-					    pj_bool_t *p_end_of_cand);
+                                            pjmedia_transport *tp,
+                                            pj_pool_t *sdp_pool,
+                                            pjmedia_sdp_session *sdp,
+                                            pj_bool_t *p_end_of_cand);
 
 
 PJ_END_DECL
@@ -451,6 +453,6 @@ PJ_END_DECL
  */
 
 
-#endif	/* __PJMEDIA_TRANSPORT_ICE_H__ */
+#endif  /* __PJMEDIA_TRANSPORT_ICE_H__ */
 
 

@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2018-2018 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2014-2017 Savoir-faire Linux.
@@ -73,7 +72,7 @@
 
 /* Secure socket structure definition. */
 typedef struct gnutls_sock_t {
-    pj_ssl_sock_t  	  base;
+    pj_ssl_sock_t         base;
 
     gnutls_session_t      session;
     gnutls_certificate_credentials_t xcred;
@@ -175,12 +174,13 @@ static pj_status_t tls_status_from_err(pj_ssl_sock_t *ssock, int err)
 static pj_str_t tls_strerror(pj_status_t status,
                              char *buf, pj_size_t bufsize)
 {
+    PJ_UNUSED_ARG(status);
     pj_str_t errstr;
     const char *tmp = gnutls_strerror(tls_last_error);
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
     if (tmp) {
-        pj_ansi_strncpy(buf, tmp, bufsize);
+        pj_ansi_strxcpy(buf, tmp, bufsize);
         errstr = pj_str(buf);
         return errstr;
     }
@@ -329,7 +329,7 @@ static int tls_cert_verify_cb(gnutls_session_t session)
             goto out;
         }
         ret = gnutls_x509_crt_check_hostname(cert,
-        				     ssock->param.server_name.ptr);
+                                             ssock->param.server_name.ptr);
         if (ret < 0)
             goto out;
 
@@ -445,7 +445,7 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
     pj_strcat2(&priority, "%LATEST_RECORD_VERSION");
 
     pj_strcat(&cipher_list, &priority);
-    for (i = 0; i < ssock->param.ciphers_num; i++) {
+    for (i = 0; i < (int)ssock->param.ciphers_num; i++) {
         for (j = 0; ; j++) {
             pj_ssl_cipher c;
             const char *suite;
@@ -506,7 +506,7 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
 
     /* Server will be the one deciding which crypto to use */
     if (ssock->is_server) {
-        if (cipher_list.slen + server.slen + 1 > sizeof(buf))
+        if (cipher_list.slen + server.slen + 1 > (pj_ssize_t)sizeof(buf))
             return PJ_ETOOMANY;
         else
             pj_strcat(&cipher_list, &server);
@@ -567,8 +567,8 @@ static pj_status_t tls_trust_set(pj_ssl_sock_t *ssock)
 #endif
 
 static int gnutls_certificate_set_x509_trust_dir(
-		gnutls_certificate_credentials_t cred,
-		const char *dirname, unsigned type)
+                gnutls_certificate_credentials_t cred,
+                const char *dirname, unsigned type)
 {
     DIR *dirp;
     struct dirent *d;
@@ -595,7 +595,7 @@ static int gnutls_certificate_set_x509_trust_dir(
             ) {
 #endif
                 snprintf(path, sizeof(path), "%s/%s",
-                     	 dirname, d->d_name);
+                         dirname, d->d_name);
 
                 ret = gnutls_certificate_set_x509_trust_file(cred, path, type);
                 if (ret >= 0)
@@ -690,7 +690,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                                                          GNUTLS_X509_FMT_PEM);
             if (ret < 0)
                 ret = gnutls_certificate_set_x509_trust_file(
-                		gssock->xcred,
+                                gssock->xcred,
                                 cert->CA_file.ptr,
                                 GNUTLS_X509_FMT_DER);
             if (ret < 0)
@@ -702,7 +702,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                                                          GNUTLS_X509_FMT_PEM);
             if (ret < 0)
                 ret = gnutls_certificate_set_x509_trust_dir(
-                		gssock->xcred,
+                                gssock->xcred,
                                 cert->CA_path.ptr,
                                 GNUTLS_X509_FMT_DER);
             if (ret < 0)
@@ -741,7 +741,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                                                         GNUTLS_X509_FMT_PEM);
             if (ret < 0)
                 ret = gnutls_certificate_set_x509_trust_mem(
-                		gssock->xcred, &ca, GNUTLS_X509_FMT_DER);
+                                gssock->xcred, &ca, GNUTLS_X509_FMT_DER);
             if (ret < 0)
                 goto out;
         }
@@ -898,7 +898,7 @@ static void tls_cert_get_cn(const pj_str_t *gen_name, pj_str_t *cn)
  * this function will check if the contents need updating by inspecting the
  * issuer and the serial number. */
 static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
-			      gnutls_x509_crt_t cert)
+                              gnutls_x509_crt_t cert)
 {
     pj_bool_t update_needed;
     char buf[512] = { 0 };
@@ -961,7 +961,7 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
         }
 
         ci->subj_alt_name.entry = pj_pool_calloc(pool, seq,
-                                	sizeof(*ci->subj_alt_name.entry));
+                                        sizeof(*ci->subj_alt_name.entry));
         if (!ci->subj_alt_name.entry) {
             tls_last_error = GNUTLS_E_MEMORY_ERROR;
             return;
@@ -971,7 +971,7 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
         for (i = 0; i < seq; i++) {
             len = sizeof(out) - 1;
             ret = gnutls_x509_crt_get_subject_alt_name(cert, i, out,
-            					       &len, NULL);
+                                                       &len, NULL);
 
             switch (ret) {
             case GNUTLS_SAN_IPADDRESS:
@@ -997,7 +997,7 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
             if (len && type != PJ_SSL_CERT_NAME_UNKNOWN) {
                 ci->subj_alt_name.entry[ci->subj_alt_name.cnt].type = type;
                 pj_strdup2(pool,
-                	&ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
+                        &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
                         type == PJ_SSL_CERT_NAME_IP ? buf : out);
                 ci->subj_alt_name.cnt++;
             }
@@ -1008,16 +1008,16 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 }
 
 static void tls_cert_get_chain_raw(pj_pool_t *pool, pj_ssl_cert_info *ci,
-				   const gnutls_datum_t *certs,
-				   size_t certs_num)
+                                   const gnutls_datum_t *certs,
+                                   size_t certs_num)
 {
     size_t i=0;
     ci->raw_chain.cert_raw = pj_pool_calloc(pool, certs_num,
-    					sizeof(*ci->raw_chain.cert_raw));
+                                        sizeof(*ci->raw_chain.cert_raw));
     ci->raw_chain.cnt = certs_num;
     for (i=0; i < certs_num; ++i) {
         const pj_str_t crt_raw = {(char*)certs[i].data,
-        			  (pj_ssize_t)certs[i].size};
+                                  (pj_ssize_t)certs[i].size};
         pj_strdup(pool, ci->raw_chain.cert_raw+i, &crt_raw);
     }
 }
@@ -1080,7 +1080,7 @@ us_out:
     tls_cert_get_info(ssock->pool, &ssock->remote_cert_info, cert);
     pj_pool_reset(ssock->info_pool);
     tls_cert_get_chain_raw(ssock->info_pool, &ssock->remote_cert_info, certs,
-    			   certslen);
+                           certslen);
 
 peer_out:
     tls_last_error = ret;
@@ -1164,12 +1164,12 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
         /* Nothing more to read */
         return PJ_SUCCESS;
     } else if (decrypted_size == GNUTLS_E_REHANDSHAKE) {
-    	return PJ_EEOF;
+        return PJ_EEOF;
     } else if (decrypted_size == GNUTLS_E_AGAIN ||
                decrypted_size == GNUTLS_E_INTERRUPTED ||
                !gnutls_error_is_fatal(decrypted_size))
     {
-    	/* non-fatal error, let's just continue */
+        /* non-fatal error, let's just continue */
         return PJ_SUCCESS;
     } else {
         return PJ_ECANCELLED;
@@ -1182,7 +1182,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
  * sending data should be delayed until re-negotiation is completed.
  */
 static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
-			     pj_ssize_t size, int *nwritten)
+                             pj_ssize_t size, int *nwritten)
 {
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
     int nwritten_;
@@ -1196,7 +1196,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
     while (total_written < size) {
         /* Try encrypting using GnuTLS */
         nwritten_ = gnutls_record_send(gssock->session,
-        			      ((read_data_t *)data) + total_written,
+                                      ((read_data_t *)data) + total_written,
                                       size - total_written);
 
         if (nwritten_ > 0) {

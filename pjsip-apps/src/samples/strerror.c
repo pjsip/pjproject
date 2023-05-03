@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,8 +45,8 @@ int main(int argc, char *argv[])
     pj_status_t code;
 
     if (argc != 2) {
-	puts("Usage: strerror ERRNUM");
-	return 1;
+        puts("Usage: strerror ERRNUM");
+        return 1;
     }
 
     pj_log_set_level(3);

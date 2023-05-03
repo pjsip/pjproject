@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -33,7 +32,7 @@ static void init_signals()
     sigaction(SIGALRM, &act, NULL);
 }
 
-#elif PJ_LINUX || PJ_DARWINOS
+#elif (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0
 
 #include <execinfo.h>
 #include <signal.h>
@@ -51,7 +50,7 @@ static void print_stack(int sig)
     exit(1);
 }
 
-static void init_signals()
+static void init_signals(void)
 {
     signal(SIGSEGV, &print_stack);
     signal(SIGABRT, &print_stack);
@@ -68,21 +67,34 @@ static void init_signals()
 int main(int argc, char *argv[])
 {
     int rc;
-
-    PJ_UNUSED_ARG(argc);
-    PJ_UNUSED_ARG(argv);
+    int interractive = 0;
+    int no_trap = 0;
 
     boost();
-    init_signals();
+
+    while (argc > 1) {
+        char *arg = argv[--argc];
+
+        if (*arg=='-' && *(arg+1)=='i') {
+            interractive = 1;
+
+        } else if (*arg=='-' && *(arg+1)=='n') {
+            no_trap = 1;
+        }
+    }
+
+    if (!no_trap) {
+        init_signals();
+    }
 
     rc = test_main();
 
-    if (argc==2 && pj_ansi_strcmp(argv[1], "-i")==0) {
-	char s[10];
-
-	puts("Press ENTER to quit");
-	if (fgets(s, sizeof(s), stdin) == NULL)
-	    return rc;
+    if (interractive) {
+        char s[10];
+        puts("");
+        puts("Press <ENTER> to exit");
+        if (!fgets(s, sizeof(s), stdin))
+            return rc;
     }
 
     return rc;

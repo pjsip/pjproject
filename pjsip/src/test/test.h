@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -25,7 +24,7 @@
 extern pjsip_endpoint *endpt;
 extern pj_caching_pool caching_pool;
 
-#define TEST_UDP_PORT	    15060
+#define TEST_UDP_PORT       15060
 #define TEST_UDP_PORT_STR   "15060"
 
 /**
@@ -33,45 +32,45 @@ extern pj_caching_pool caching_pool;
  * Default: 2MB
  */
 #ifndef PJSIP_TEST_MEM_SIZE
-#  define PJSIP_TEST_MEM_SIZE	    (2*1024*1024)
+#  define PJSIP_TEST_MEM_SIZE       (2*1024*1024)
 #endif
 
-#define INCLUDE_MESSAGING_GROUP	    1
-#define INCLUDE_TRANSPORT_GROUP	    1
-#define INCLUDE_TSX_GROUP	    1
-#define INCLUDE_INV_GROUP	    1
-#define INCLUDE_REGC_GROUP	    1
+#define INCLUDE_MESSAGING_GROUP     1
+#define INCLUDE_TRANSPORT_GROUP     1
+#define INCLUDE_TSX_GROUP           1
+#define INCLUDE_INV_GROUP           1
+#define INCLUDE_REGC_GROUP          1
 
-#define INCLUDE_BENCHMARKS	    1
+#define INCLUDE_BENCHMARKS          1
 
 /*
  * Include tests that normally would fail under certain gcc
  * optimization levels.
  */
 #ifndef INCLUDE_GCC_TEST
-#   define INCLUDE_GCC_TEST	    0
+#   define INCLUDE_GCC_TEST         0
 #endif
 
 
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
-#   define WITH_BENCHMARK	    0
+#   define WITH_BENCHMARK           0
 #else
-#   define WITH_BENCHMARK	    1
+#   define WITH_BENCHMARK           1
 #endif
 
-#define INCLUDE_URI_TEST	INCLUDE_MESSAGING_GROUP
-#define INCLUDE_MSG_TEST	INCLUDE_MESSAGING_GROUP
-#define INCLUDE_MULTIPART_TEST	INCLUDE_MESSAGING_GROUP
-#define INCLUDE_TXDATA_TEST	INCLUDE_MESSAGING_GROUP
-#define INCLUDE_TSX_BENCH	(INCLUDE_MESSAGING_GROUP && WITH_BENCHMARK)
-#define INCLUDE_UDP_TEST	INCLUDE_TRANSPORT_GROUP
-#define INCLUDE_LOOP_TEST	INCLUDE_TRANSPORT_GROUP
-#define INCLUDE_TCP_TEST	INCLUDE_TRANSPORT_GROUP
-#define INCLUDE_RESOLVE_TEST	INCLUDE_TRANSPORT_GROUP
-#define INCLUDE_TSX_TEST	INCLUDE_TSX_GROUP
+#define INCLUDE_URI_TEST        INCLUDE_MESSAGING_GROUP
+#define INCLUDE_MSG_TEST        INCLUDE_MESSAGING_GROUP
+#define INCLUDE_MULTIPART_TEST  INCLUDE_MESSAGING_GROUP
+#define INCLUDE_TXDATA_TEST     INCLUDE_MESSAGING_GROUP
+#define INCLUDE_TSX_BENCH       (INCLUDE_MESSAGING_GROUP && WITH_BENCHMARK)
+#define INCLUDE_UDP_TEST        INCLUDE_TRANSPORT_GROUP
+#define INCLUDE_LOOP_TEST       INCLUDE_TRANSPORT_GROUP
+#define INCLUDE_TCP_TEST        INCLUDE_TRANSPORT_GROUP
+#define INCLUDE_RESOLVE_TEST    INCLUDE_TRANSPORT_GROUP
+#define INCLUDE_TSX_TEST        INCLUDE_TSX_GROUP
 #define INCLUDE_TSX_DESTROY_TEST INCLUDE_TSX_GROUP
-#define INCLUDE_INV_OA_TEST	INCLUDE_INV_GROUP
-#define INCLUDE_REGC_TEST	INCLUDE_REGC_GROUP
+#define INCLUDE_INV_OA_TEST     INCLUDE_INV_GROUP
+#define INCLUDE_REGC_TEST       INCLUDE_REGC_GROUP
 
 
 /* The tests */
@@ -102,22 +101,23 @@ int tsx_uas_test(struct tsx_test_param *param);
 /* Transport test helpers (transport_test.c). */
 int generic_transport_test(pjsip_transport *tp);
 int transport_send_recv_test( pjsip_transport_type_e tp_type,
-			      pjsip_transport *ref_tp,
-			      char *target_url,
-			      int *p_usec_rtt);
+                              pjsip_transport *ref_tp,
+                              char *target_url,
+                              int *p_usec_rtt);
 int transport_rt_test( pjsip_transport_type_e tp_type,
-		       pjsip_transport *ref_tp,
-		       char *target_url,
-		       int *pkt_lost);
+                       pjsip_transport *ref_tp,
+                       char *target_url,
+                       int *pkt_lost);
 int transport_load_test(char *target_url);
 
 /* Invite session */
 int inv_offer_answer_test(void);
 
 /* Test main entry */
-int  test_main(void);
+int  test_main(char *testlist);
 
 /* Test utilities. */
+void list_tests(void);
 void app_perror(const char *msg, pj_status_t status);
 int  init_msg_logger(void);
 int  msg_logger_set_enabled(pj_bool_t enabled);
@@ -131,4 +131,4 @@ void report_sval(const char *name, const char* value, const char *valname, const
 /* Settings. */
 extern int log_level;
 
-#endif	/* __TEST_H__ */
+#endif  /* __TEST_H__ */

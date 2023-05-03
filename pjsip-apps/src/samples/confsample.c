@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -19,10 +18,10 @@
  */
 
 #include <pjmedia.h>
-#include <pjlib-util.h>	/* pj_getopt */
+#include <pjlib-util.h> /* pj_getopt */
 #include <pjlib.h>
 
-#include <stdlib.h>	/* atoi() */
+#include <stdlib.h>     /* atoi() */
 #include <stdio.h>
 
 #include "util.h"
@@ -48,30 +47,30 @@
 
 
 static const char *desc = 
- " FILE:								    \n"
- "									    \n"
- "  confsample.c							    \n"
- "									    \n"
- " PURPOSE:								    \n"
- "									    \n"
- "  Demonstrate how to use conference bridge.				    \n"
- "									    \n"
- " USAGE:								    \n"
- "									    \n"
- "  confsample [options] [file1.wav] [file2.wav] ...			    \n"
- "									    \n"
- " options:								    \n"
+ " FILE:                                                                    \n"
+ "                                                                          \n"
+ "  confsample.c                                                            \n"
+ "                                                                          \n"
+ " PURPOSE:                                                                 \n"
+ "                                                                          \n"
+ "  Demonstrate how to use conference bridge.                               \n"
+ "                                                                          \n"
+ " USAGE:                                                                   \n"
+ "                                                                          \n"
+ "  confsample [options] [file1.wav] [file2.wav] ...                        \n"
+ "                                                                          \n"
+ " options:                                                                 \n"
  SND_USAGE
- "									    \n"
+ "                                                                          \n"
  "  fileN.wav are optional WAV files to be connected to the conference      \n"
  "  bridge. The WAV files MUST have single channel (mono) and 16 bit PCM    \n"
- "  samples. It can have arbitrary sampling rate.			    \n"
- "									    \n"
- " DESCRIPTION:								    \n"
- "									    \n"
+ "  samples. It can have arbitrary sampling rate.                           \n"
+ "                                                                          \n"
+ " DESCRIPTION:                                                             \n"
+ "                                                                          \n"
  "  Here we create a conference bridge, with at least one port (port zero   \n"
- "  is always created for the sound device).				    \n"
- "									    \n"
+ "  is always created for the sound device).                                \n"
+ "                                                                          \n"
  "  If WAV files are specified, the WAV file player ports will be connected \n"
  "  to slot starting from number one in the bridge. The WAV files can have  \n"
  "  arbitrary sampling rate; the bridge will convert it to its clock rate.  \n"
@@ -106,16 +105,16 @@ static pj_bool_t input(const char *title, char *buf, pj_size_t len)
 
     printf("%s (empty to cancel): ", title); fflush(stdout);
     if (fgets(buf, (int)len, stdin) == NULL)
-	return PJ_FALSE;
+        return PJ_FALSE;
 
     /* Remove trailing newlines. */
     for (p=buf; ; ++p) {
-	if (*p=='\r' || *p=='\n') *p='\0';
-	else if (!*p) break;
+        if (*p=='\r' || *p=='\n') *p='\0';
+        else if (!*p) break;
     }
 
     if (!*buf)
-	return PJ_FALSE;
+        return PJ_FALSE;
     
     return PJ_TRUE;
 }
@@ -138,7 +137,7 @@ int main(int argc, char *argv[])
     pjmedia_conf *conf;
 
     int i, port_count, file_count;
-    pjmedia_port **file_port;	/* Array of file ports */
+    pjmedia_port **file_port;   /* Array of file ports */
     pjmedia_port *rec_port = NULL;  /* Wav writer port */
 
     char tmp[10];
@@ -151,10 +150,10 @@ int main(int argc, char *argv[])
 
     /* Get command line options. */
     if (get_snd_options(THIS_FILE, argc, argv, &dev_id, &clock_rate,
-			&channel_count, &samples_per_frame, &bits_per_sample))
+                        &channel_count, &samples_per_frame, &bits_per_sample))
     {
-	usage();
-	return 1;
+        usage();
+        return 1;
     }
 
     /* Must create a pool factory before we can allocate any memory. */
@@ -168,12 +167,12 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool to allocate memory */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "wav",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "wav",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
 
     file_count = argc - pj_optind;
@@ -183,29 +182,29 @@ int main(int argc, char *argv[])
      * With default options (zero), the bridge will create an instance of
      * sound capture and playback device and connect them to slot zero.
      */
-    status = pjmedia_conf_create( pool,	    /* pool to use	    */
-				  port_count,/* number of ports	    */
-				  clock_rate,
-				  channel_count,
-				  samples_per_frame,
-				  bits_per_sample,
-				  0,	    /* options		    */
-				  &conf	    /* result		    */
-				  );
+    status = pjmedia_conf_create( pool,     /* pool to use          */
+                                  port_count,/* number of ports     */
+                                  clock_rate,
+                                  channel_count,
+                                  samples_per_frame,
+                                  bits_per_sample,
+                                  0,        /* options              */
+                                  &conf     /* result               */
+                                  );
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to create conference bridge", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to create conference bridge", status);
+        return 1;
     }
 
 #if RECORDER
     status = pjmedia_wav_writer_port_create(  pool, "confrecord.wav",
-					      clock_rate, channel_count,
-					      samples_per_frame, 
-					      bits_per_sample, 0, 0, 
-					      &rec_port);
+                                              clock_rate, channel_count,
+                                              samples_per_frame, 
+                                              bits_per_sample, 0, 0, 
+                                              &rec_port);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to create WAV writer", status);
-	return 1;
+        app_perror(THIS_FILE, "Unable to create WAV writer", status);
+        return 1;
     }
 
     pjmedia_conf_add_port(conf, pool, rec_port, NULL, NULL);
@@ -217,34 +216,35 @@ int main(int argc, char *argv[])
 
     for (i=0; i<file_count; ++i) {
 
-	/* Load the WAV file to file port. */
-	status = pjmedia_wav_player_port_create( 
-			pool,		    /* pool.	    */
-			argv[i+pj_optind],  /* filename	    */
-			0,		    /* use default ptime */
-			0,		    /* flags	    */
-			0,		    /* buf size	    */
-			&file_port[i]	    /* result	    */
-			);
-	if (status != PJ_SUCCESS) {
-	    char title[80];
-	    pj_ansi_sprintf(title, "Unable to use %s", argv[i+pj_optind]);
-	    app_perror(THIS_FILE, title, status);
-	    usage();
-	    return 1;
-	}
+        /* Load the WAV file to file port. */
+        status = pjmedia_wav_player_port_create( 
+                        pool,               /* pool.        */
+                        argv[i+pj_optind],  /* filename     */
+                        0,                  /* use default ptime */
+                        0,                  /* flags        */
+                        0,                  /* buf size     */
+                        &file_port[i]       /* result       */
+                        );
+        if (status != PJ_SUCCESS) {
+            char title[80];
+            pj_ansi_snprintf(title, sizeof(title), "Unable to use %s",
+                             argv[i+pj_optind]);
+            app_perror(THIS_FILE, title, status);
+            usage();
+            return 1;
+        }
 
-	/* Add the file port to conference bridge */
-	status = pjmedia_conf_add_port( conf,		/* The bridge	    */
-					pool,		/* pool		    */
-					file_port[i],	/* port to connect  */
-					NULL,		/* Use port's name  */
-					NULL		/* ptr for slot #   */
-					);
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to add conference port", status);
-	    return 1;
-	}
+        /* Add the file port to conference bridge */
+        status = pjmedia_conf_add_port( conf,           /* The bridge       */
+                                        pool,           /* pool             */
+                                        file_port[i],   /* port to connect  */
+                                        NULL,           /* Use port's name  */
+                                        NULL            /* ptr for slot #   */
+                                        );
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to add conference port", status);
+            return 1;
+        }
     }
 
 
@@ -266,173 +266,173 @@ int main(int argc, char *argv[])
      * UI Menu: 
      */
     for (;;) {
-	char tmp1[10];
-	char tmp2[10];
-	char *err;
-	int src, dst, level, dur;
+        char tmp1[10];
+        char tmp2[10];
+        char *err;
+        int src, dst, level, dur;
 
-	puts("");
-	conf_list(conf, 0);
-	puts("");
-	puts("Menu:");
-	puts("  s    Show ports details");
-	puts("  c    Connect one port to another");
-	puts("  d    Disconnect port connection");
-	puts("  t    Adjust signal level transmitted (tx) to a port");
-	puts("  r    Adjust signal level received (rx) from a port");
-	puts("  v    Display VU meter for a particular port");
-	puts("  q    Quit");
-	puts("");
-	
-	printf("Enter selection: "); fflush(stdout);
+        puts("");
+        conf_list(conf, 0);
+        puts("");
+        puts("Menu:");
+        puts("  s    Show ports details");
+        puts("  c    Connect one port to another");
+        puts("  d    Disconnect port connection");
+        puts("  t    Adjust signal level transmitted (tx) to a port");
+        puts("  r    Adjust signal level received (rx) from a port");
+        puts("  v    Display VU meter for a particular port");
+        puts("  q    Quit");
+        puts("");
+        
+        printf("Enter selection: "); fflush(stdout);
 
-	if (fgets(tmp, sizeof(tmp), stdin) == NULL)
-	    break;
+        if (fgets(tmp, sizeof(tmp), stdin) == NULL)
+            break;
 
-	switch (tmp[0]) {
-	case 's':
-	    puts("");
-	    conf_list(conf, 1);
-	    break;
+        switch (tmp[0]) {
+        case 's':
+            puts("");
+            conf_list(conf, 1);
+            break;
 
-	case 'c':
-	    puts("");
-	    puts("Connect source port to destination port");
-	    if (!input("Enter source port number", tmp1, sizeof(tmp1)) )
-		continue;
-	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src >= port_count) {
-		puts("Invalid slot number");
-		continue;
-	    }
+        case 'c':
+            puts("");
+            puts("Connect source port to destination port");
+            if (!input("Enter source port number", tmp1, sizeof(tmp1)) )
+                continue;
+            src = strtol(tmp1, &err, 10);
+            if (*err || src < 0 || src >= port_count) {
+                puts("Invalid slot number");
+                continue;
+            }
 
-	    if (!input("Enter destination port number", tmp2, sizeof(tmp2)) )
-		continue;
-	    dst = strtol(tmp2, &err, 10);
-	    if (*err || dst < 0 || dst >= port_count) {
-		puts("Invalid slot number");
-		continue;
-	    }
+            if (!input("Enter destination port number", tmp2, sizeof(tmp2)) )
+                continue;
+            dst = strtol(tmp2, &err, 10);
+            if (*err || dst < 0 || dst >= port_count) {
+                puts("Invalid slot number");
+                continue;
+            }
 
-	    status = pjmedia_conf_connect_port(conf, src, dst, 0);
-	    if (status != PJ_SUCCESS)
-		app_perror(THIS_FILE, "Error connecting port", status);
-	    
-	    break;
+            status = pjmedia_conf_connect_port(conf, src, dst, 0);
+            if (status != PJ_SUCCESS)
+                app_perror(THIS_FILE, "Error connecting port", status);
+            
+            break;
 
-	case 'd':
-	    puts("");
-	    puts("Disconnect port connection");
-	    if (!input("Enter source port number", tmp1, sizeof(tmp1)) )
-		continue;
-	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src >= port_count) {
-		puts("Invalid slot number");
-		continue;
-	    }
+        case 'd':
+            puts("");
+            puts("Disconnect port connection");
+            if (!input("Enter source port number", tmp1, sizeof(tmp1)) )
+                continue;
+            src = strtol(tmp1, &err, 10);
+            if (*err || src < 0 || src >= port_count) {
+                puts("Invalid slot number");
+                continue;
+            }
 
-	    if (!input("Enter destination port number", tmp2, sizeof(tmp2)) )
-		continue;
-	    dst = strtol(tmp2, &err, 10);
-	    if (*err || dst < 0 || dst >= port_count) {
-		puts("Invalid slot number");
-		continue;
-	    }
+            if (!input("Enter destination port number", tmp2, sizeof(tmp2)) )
+                continue;
+            dst = strtol(tmp2, &err, 10);
+            if (*err || dst < 0 || dst >= port_count) {
+                puts("Invalid slot number");
+                continue;
+            }
 
-	    status = pjmedia_conf_disconnect_port(conf, src, dst);
-	    if (status != PJ_SUCCESS)
-		app_perror(THIS_FILE, "Error connecting port", status);
-	    
+            status = pjmedia_conf_disconnect_port(conf, src, dst);
+            if (status != PJ_SUCCESS)
+                app_perror(THIS_FILE, "Error connecting port", status);
+            
 
-	    break;
+            break;
 
-	case 't':
-	    puts("");
-	    puts("Adjust transmit level of a port");
-	    if (!input("Enter port number", tmp1, sizeof(tmp1)) )
-		continue;
-	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src >= port_count) {
-		puts("Invalid slot number");
-		continue;
-	    }
+        case 't':
+            puts("");
+            puts("Adjust transmit level of a port");
+            if (!input("Enter port number", tmp1, sizeof(tmp1)) )
+                continue;
+            src = strtol(tmp1, &err, 10);
+            if (*err || src < 0 || src >= port_count) {
+                puts("Invalid slot number");
+                continue;
+            }
 
-	    if (!input("Enter level (-128 to >127, 0 for normal)", 
-			      tmp2, sizeof(tmp2)) )
-		continue;
-	    level = strtol(tmp2, &err, 10);
-	    if (*err || level < -128) {
-		puts("Invalid level");
-		continue;
-	    }
+            if (!input("Enter level (-128 to >127, 0 for normal)", 
+                              tmp2, sizeof(tmp2)) )
+                continue;
+            level = strtol(tmp2, &err, 10);
+            if (*err || level < -128) {
+                puts("Invalid level");
+                continue;
+            }
 
-	    status = pjmedia_conf_adjust_tx_level( conf, src, level);
-	    if (status != PJ_SUCCESS)
-		app_perror(THIS_FILE, "Error adjusting level", status);
-	    break;
+            status = pjmedia_conf_adjust_tx_level( conf, src, level);
+            if (status != PJ_SUCCESS)
+                app_perror(THIS_FILE, "Error adjusting level", status);
+            break;
 
 
-	case 'r':
-	    puts("");
-	    puts("Adjust receive level of a port");
-	    if (!input("Enter port number", tmp1, sizeof(tmp1)) )
-		continue;
-	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src >= port_count) {
-		puts("Invalid slot number");
-		continue;
-	    }
+        case 'r':
+            puts("");
+            puts("Adjust receive level of a port");
+            if (!input("Enter port number", tmp1, sizeof(tmp1)) )
+                continue;
+            src = strtol(tmp1, &err, 10);
+            if (*err || src < 0 || src >= port_count) {
+                puts("Invalid slot number");
+                continue;
+            }
 
-	    if (!input("Enter level (-128 to >127, 0 for normal)", 
-			      tmp2, sizeof(tmp2)) )
-		continue;
-	    level = strtol(tmp2, &err, 10);
-	    if (*err || level < -128) {
-		puts("Invalid level");
-		continue;
-	    }
+            if (!input("Enter level (-128 to >127, 0 for normal)", 
+                              tmp2, sizeof(tmp2)) )
+                continue;
+            level = strtol(tmp2, &err, 10);
+            if (*err || level < -128) {
+                puts("Invalid level");
+                continue;
+            }
 
-	    status = pjmedia_conf_adjust_rx_level( conf, src, level);
-	    if (status != PJ_SUCCESS)
-		app_perror(THIS_FILE, "Error adjusting level", status);
-	    break;
+            status = pjmedia_conf_adjust_rx_level( conf, src, level);
+            if (status != PJ_SUCCESS)
+                app_perror(THIS_FILE, "Error adjusting level", status);
+            break;
 
-	case 'v':
-	    puts("");
-	    puts("Display VU meter");
-	    if (!input("Enter port number to monitor", tmp1, sizeof(tmp1)) )
-		continue;
-	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src >= port_count) {
-		puts("Invalid slot number");
-		continue;
-	    }
+        case 'v':
+            puts("");
+            puts("Display VU meter");
+            if (!input("Enter port number to monitor", tmp1, sizeof(tmp1)) )
+                continue;
+            src = strtol(tmp1, &err, 10);
+            if (*err || src < 0 || src >= port_count) {
+                puts("Invalid slot number");
+                continue;
+            }
 
-	    if (!input("Enter r for rx level or t for tx level", tmp2, sizeof(tmp2)))
-		continue;
-	    if (tmp2[0] != 'r' && tmp2[0] != 't') {
-		puts("Invalid option");
-		continue;
-	    }
+            if (!input("Enter r for rx level or t for tx level", tmp2, sizeof(tmp2)))
+                continue;
+            if (tmp2[0] != 'r' && tmp2[0] != 't') {
+                puts("Invalid option");
+                continue;
+            }
 
-	    if (!input("Duration to monitor (in seconds)", tmp1, sizeof(tmp1)) )
-		continue;
-	    dur = strtol(tmp1, &err, 10);
-	    if (*err) {
-		puts("Invalid duration number");
-		continue;
-	    }
+            if (!input("Duration to monitor (in seconds)", tmp1, sizeof(tmp1)) )
+                continue;
+            dur = strtol(tmp1, &err, 10);
+            if (*err) {
+                puts("Invalid duration number");
+                continue;
+            }
 
-	    monitor_level(conf, src, tmp2[0], dur);
-	    break;
+            monitor_level(conf, src, tmp2[0], dur);
+            break;
 
-	case 'q':
-	    goto on_quit;
+        case 'q':
+            goto on_quit;
 
-	default:
-	    printf("Invalid input character '%c'\n", tmp[0]);
-	    break;
-	}
+        default:
+            printf("Invalid input character '%c'\n", tmp[0]);
+            break;
+        }
     }
 
 on_quit:
@@ -446,13 +446,13 @@ on_quit:
 
     /* Destroy file ports */
     for (i=0; i<file_count; ++i) {
-	status = pjmedia_port_destroy( file_port[i]);
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+        status = pjmedia_port_destroy( file_port[i]);
+        PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }
 
     /* Destroy recorder port */
     if (rec_port)
-	pjmedia_port_destroy(rec_port);
+        pjmedia_port_destroy(rec_port);
 
     /* Release application pool */
     pj_pool_release( pool );
@@ -486,55 +486,56 @@ static void conf_list(pjmedia_conf *conf, int detail)
     pjmedia_conf_get_ports_info(conf, &count, info);
 
     for (i=0; i<count; ++i) {
-	char txlist[4*MAX_PORTS];
-	unsigned j;
-	pjmedia_conf_port_info *port_info = &info[i];	
-	
-	txlist[0] = '\0';
-	for (j=0; j<port_info->listener_cnt; ++j) {
-	    char s[10];
-	    pj_ansi_sprintf(s, "#%d ", port_info->listener_slots[j]);
-	    pj_ansi_strcat(txlist, s);
+        char txlist[4*MAX_PORTS];
+        unsigned j;
+        pjmedia_conf_port_info *port_info = &info[i];   
+        
+        txlist[0] = '\0';
+        for (j=0; j<port_info->listener_cnt; ++j) {
+            char s[10];
+            pj_ansi_snprintf(s, sizeof(s), "#%d ", 
+                             port_info->listener_slots[j]);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
 
-	}
+        }
 
-	if (txlist[0] == '\0') {
-	    txlist[0] = '-';
-	    txlist[1] = '\0';
-	}
+        if (txlist[0] == '\0') {
+            txlist[0] = '-';
+            txlist[1] = '\0';
+        }
 
-	if (!detail) {
-	    printf("Port #%02d %-25.*s  transmitting to: %s\n", 
-		   port_info->slot, 
-		   (int)port_info->name.slen, 
-		   port_info->name.ptr,
-		   txlist);
-	} else {
-	    unsigned tx_level, rx_level;
+        if (!detail) {
+            printf("Port #%02d %-25.*s  transmitting to: %s\n", 
+                   port_info->slot, 
+                   (int)port_info->name.slen, 
+                   port_info->name.ptr,
+                   txlist);
+        } else {
+            unsigned tx_level, rx_level;
 
-	    pjmedia_conf_get_signal_level(conf, port_info->slot,
-					  &tx_level, &rx_level);
+            pjmedia_conf_get_signal_level(conf, port_info->slot,
+                                          &tx_level, &rx_level);
 
-	    printf("Port #%02d:\n"
-		   "  Name                    : %.*s\n"
-		   "  Sampling rate           : %d Hz\n"
-		   "  Samples per frame       : %d\n"
-		   "  Frame time              : %d ms\n"
-		   "  Signal level adjustment : tx=%d, rx=%d\n"
-		   "  Current signal level    : tx=%u, rx=%u\n"
-		   "  Transmitting to ports   : %s\n\n",
-		   port_info->slot,
-		   (int)port_info->name.slen,
-		   port_info->name.ptr,
-		   port_info->clock_rate,
-		   port_info->samples_per_frame,
-		   port_info->samples_per_frame*1000/port_info->clock_rate,
-		   port_info->tx_adj_level,
-		   port_info->rx_adj_level,
-		   tx_level,
-		   rx_level,
-		   txlist);
-	}
+            printf("Port #%02d:\n"
+                   "  Name                    : %.*s\n"
+                   "  Sampling rate           : %d Hz\n"
+                   "  Samples per frame       : %d\n"
+                   "  Frame time              : %d ms\n"
+                   "  Signal level adjustment : tx=%d, rx=%d\n"
+                   "  Current signal level    : tx=%u, rx=%u\n"
+                   "  Transmitting to ports   : %s\n\n",
+                   port_info->slot,
+                   (int)port_info->name.slen,
+                   port_info->name.ptr,
+                   port_info->clock_rate,
+                   port_info->samples_per_frame,
+                   port_info->samples_per_frame*1000/port_info->clock_rate,
+                   port_info->tx_adj_level,
+                   port_info->rx_adj_level,
+                   tx_level,
+                   rx_level,
+                   txlist);
+        }
 
     }
     puts("");
@@ -554,7 +555,7 @@ static void monitor_level(pjmedia_conf *conf, int slot, int dir, int dur)
 
     puts("");
     printf("Displaying VU meter for port %d for about %d seconds\n",
-	   slot, dur);
+           slot, dur);
 
     total_count = dur * 1000 / SLEEP;
 
@@ -562,46 +563,46 @@ static void monitor_level(pjmedia_conf *conf, int slot, int dir, int dur)
     samp_cnt = 0;
 
     for (i=0; i<total_count; ++i) {
-	unsigned tx_level, rx_level;
-	int j, length;
-	char meter[21];
+        unsigned tx_level, rx_level;
+        int j, length;
+        char meter[21];
 
-	/* Poll the volume every 20 msec */
-	status = pjmedia_conf_get_signal_level(conf, slot, 
-					       &tx_level, &rx_level);
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to read level", status);
-	    return;
-	}
+        /* Poll the volume every 20 msec */
+        status = pjmedia_conf_get_signal_level(conf, slot, 
+                                               &tx_level, &rx_level);
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Unable to read level", status);
+            return;
+        }
 
-	level += (dir=='r' ? rx_level : tx_level);
-	++samp_cnt;
+        level += (dir=='r' ? rx_level : tx_level);
+        ++samp_cnt;
 
-	/* Accumulate until we have enough samples */
-	if (samp_cnt < SAMP_CNT) {
-	    pj_thread_sleep(SLEEP);
-	    continue;
-	}
+        /* Accumulate until we have enough samples */
+        if (samp_cnt < SAMP_CNT) {
+            pj_thread_sleep(SLEEP);
+            continue;
+        }
 
-	/* Get average */
-	level = level / samp_cnt;
+        /* Get average */
+        level = level / samp_cnt;
 
-	/* Draw bar */
-	length = 20 * level / 255;
-	for (j=0; j<length; ++j)
-	    meter[j] = '#';
-	for (; j<20; ++j)
-	    meter[j] = ' ';
-	meter[20] = '\0';
+        /* Draw bar */
+        length = 20 * level / 255;
+        for (j=0; j<length; ++j)
+            meter[j] = '#';
+        for (; j<20; ++j)
+            meter[j] = ' ';
+        meter[20] = '\0';
 
-	printf("Port #%02d %cx level: [%s] %d  \r",
-	       slot, dir, meter, level);
+        printf("Port #%02d %cx level: [%s] %d  \r",
+               slot, dir, meter, level);
 
-	/* Next.. */
-	samp_cnt = 0;
-	level = 0;
+        /* Next.. */
+        samp_cnt = 0;
+        level = 0;
 
-	pj_thread_sleep(SLEEP);
+        pj_thread_sleep(SLEEP);
     }
 
     puts("");

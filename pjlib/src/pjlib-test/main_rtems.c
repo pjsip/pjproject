@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -51,18 +50,18 @@ extern int param_echo_port;
 #define CONFIGURE_POSIX_INIT_THREAD_TABLE
 
 
-#define CONFIGURE_MAXIMUM_POSIX_MUTEXES	    rtems_resource_unlimited(16)
+#define CONFIGURE_MAXIMUM_POSIX_MUTEXES     rtems_resource_unlimited(16)
 #define CONFIGURE_MAXIMUM_POSIX_CONDITION_VARIABLES rtems_resource_unlimited(5)
 #define CONFIGURE_MAXIMUM_POSIX_SEMAPHORES  rtems_resource_unlimited(16)
-#define CONFIGURE_MAXIMUM_POSIX_TIMERS	    rtems_resource_unlimited(5)
-#define CONFIGURE_MAXIMUM_POSIX_THREADS	    rtems_resource_unlimited(16)
-#define CONFIGURE_MAXIMUM_POSIX_KEYS	    rtems_resource_unlimited(16)
+#define CONFIGURE_MAXIMUM_POSIX_TIMERS      rtems_resource_unlimited(5)
+#define CONFIGURE_MAXIMUM_POSIX_THREADS     rtems_resource_unlimited(16)
+#define CONFIGURE_MAXIMUM_POSIX_KEYS        rtems_resource_unlimited(16)
 
-#define CONFIGURE_POSIX_INIT_THREAD_STACK_SIZE	4096
+#define CONFIGURE_POSIX_INIT_THREAD_STACK_SIZE  4096
 
 /* Make sure that stack size is at least 4096 */
-#define SZ					(4096-RTEMS_MINIMUM_STACK_SIZE)
-#define CONFIGURE_EXTRA_TASK_STACKS		((SZ)<0 ? 0 : (SZ))
+#define SZ                                      (4096-RTEMS_MINIMUM_STACK_SIZE)
+#define CONFIGURE_EXTRA_TASK_STACKS             ((SZ)<0 ? 0 : (SZ))
 
 #define CONFIGURE_INIT
 #define STACK_CHECKER_ON
@@ -98,22 +97,22 @@ static void my_perror(pj_status_t status, const char *title)
 }
 
 #define TEST(expr)    { int rc;\
-		        /*PJ_LOG(3,(THIS_FILE,"%s", #expr));*/ \
-			/*sleep(1);*/ \
-		        rc=expr; \
-		        if (rc) my_perror(PJ_STATUS_FROM_OS(rc),#expr); }
+                        /*PJ_LOG(3,(THIS_FILE,"%s", #expr));*/ \
+                        /*sleep(1);*/ \
+                        rc=expr; \
+                        if (rc) my_perror(PJ_STATUS_FROM_OS(rc),#expr); }
 
 
 
 //rtems_task Init(rtems_task_argument Argument)
 void *POSIX_Init(void *argument)
 {
-    pthread_attr_t	threadAttr;
-    pthread_t     	theThread;
-    struct sched_param	sched_param;
-    size_t		stack_size;
-    int           	result;
-    char		data[1000];
+    pthread_attr_t      threadAttr;
+    pthread_t           theThread;
+    struct sched_param  sched_param;
+    size_t              stack_size;
+    int                 result;
+    char                data[1000];
     
 
     memset(data, 1, sizeof(data));
@@ -123,8 +122,8 @@ void *POSIX_Init(void *argument)
 
     if (RTEMS_SUCCESSFUL != rtems_clock_set(&fakeTime))
     {
-	assert(0);
-    }	
+        assert(0);
+    }   
 
     /* Bring up the network stack so we can run the socket tests. */
     initialize_network();
@@ -159,15 +158,15 @@ void *POSIX_Init(void *argument)
      */
     TEST( pthread_attr_getstacksize(&threadAttr, &stack_size));
     if (stack_size < 8192)
-	TEST( pthread_attr_setstacksize(&threadAttr, 8192));
+        TEST( pthread_attr_setstacksize(&threadAttr, 8192));
 
 
     /* Create the thread for application */
     result = pthread_create(&theThread, &threadAttr, &pjlib_test_main, NULL);
     if (result != 0) {
-	my_perror(PJ_STATUS_FROM_OS(result), 
-		  "Error creating pjlib_test_main thread");
-	assert(!"Error creating main thread");
+        my_perror(PJ_STATUS_FROM_OS(result), 
+                  "Error creating pjlib_test_main thread");
+        assert(!"Error creating main thread");
     } 
 
     return NULL;
@@ -224,9 +223,9 @@ send_udp(const char *target)
     struct sockaddr_in addr;
 
     PJ_LOG(3,("main_rtems.c", "IP addr=%s/%s, gw=%s",
-		DEFAULT_IP_ADDRESS_STRING,
-		DEFAULT_NETMASK_STRING,
-		DEFAULT_GATEWAY_STRING));
+                DEFAULT_IP_ADDRESS_STRING,
+                DEFAULT_NETMASK_STRING,
+                DEFAULT_GATEWAY_STRING));
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     assert(sock > 0);
@@ -241,11 +240,11 @@ send_udp(const char *target)
     addr.sin_port = htons(4444);
 
     while(1) {
-	const char *data = "hello";
+        const char *data = "hello";
 
-	rc = sendto(sock, data, 5, 0, (struct sockaddr*)&addr, sizeof(addr));
-	PJ_LOG(3,("main_rtems.c", "pinging %s..(rc=%d)", target, rc));
-    	sleep(1);
+        rc = sendto(sock, data, 5, 0, (struct sockaddr*)&addr, sizeof(addr));
+        PJ_LOG(3,("main_rtems.c", "pinging %s..(rc=%d)", target, rc));
+        sleep(1);
     }
 }
 
@@ -258,8 +257,8 @@ static void test_sock(void)
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
-	printf("socket() error\n");
-	goto end;
+        printf("socket() error\n");
+        goto end;
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -269,9 +268,9 @@ static void test_sock(void)
 
     rc = bind(sock, (struct sockaddr*)&addr, sizeof(addr));
     if (rc != 0) {
-	printf("bind() error %d\n", rc);
-	close(sock);
-	goto end;
+        printf("bind() error %d\n", rc);
+        close(sock);
+        goto end;
     }
 
     puts("Bind socket success");
@@ -300,9 +299,9 @@ initialize_network()
     result = write(fd, "hosts,bind\n", 11);
     result = close(fd);
     fd = open("/etc/hosts", O_RDWR | O_CREAT, 0744);
-    result = write(fd, "127.0.0.1	localhost\n", 41);
+    result = write(fd, "127.0.0.1       localhost\n", 26);
     result = write(fd, ip_address_string, strlen(ip_address_string));
-    result = write(fd, "	pjsip-test\n", 32); 
+    result = write(fd, "        pjsip-test\n", 19); 
     result = close(fd);
 
     netdriver_config.ip_address = ip_address_string;
@@ -310,12 +309,12 @@ initialize_network()
     rtems_bsdnet_config.gateway = gateway_string;
 
     if (0 != rtems_bsdnet_initialize_network())
-	PJ_LOG(3,(THIS_FILE, "Error: Unable to initialize network stack!"));
+        PJ_LOG(3,(THIS_FILE, "Error: Unable to initialize network stack!"));
     else
-	PJ_LOG(3,(THIS_FILE, "IP addr=%s/%s, gw=%s", 
-			      ip_address_string,
-			      netmask_string,
-			      gateway_string));
+        PJ_LOG(3,(THIS_FILE, "IP addr=%s/%s, gw=%s", 
+                              ip_address_string,
+                              netmask_string,
+                              gateway_string));
 
     //rtems_rdbg_initialize();
     //enterRdbg();

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -107,15 +106,15 @@ static int xml_parse_print_test(const char *doc)
     pj_strdup2(pool, &msg, doc);
     root = pj_xml_parse(pool, msg.ptr, msg.slen);
     if (!root) {
-	PJ_LOG(1, (THIS_FILE, "  Error: unable to parse XML"));
-	return -10;
+        PJ_LOG(1, (THIS_FILE, "  Error: unable to parse XML"));
+        return -10;
     }
 
     output = (char*)pj_pool_zalloc(pool, msg.slen + 512);
     output_len = pj_xml_print(root, output, msg.slen+512, PJ_TRUE);
     if (output_len < 1) {
-	PJ_LOG(1, (THIS_FILE, "  Error: buffer too small to print XML file"));
-	return -20;
+        PJ_LOG(1, (THIS_FILE, "  Error: buffer too small to print XML file"));
+        return -20;
     }
     output[output_len] = '\0';
 
@@ -127,10 +126,10 @@ static int xml_parse_print_test(const char *doc)
 int xml_test()
 {
     unsigned i;
-    for (i=0; i<sizeof(xml_doc)/sizeof(xml_doc[0]); ++i) {
-	int status;
-	if ((status=xml_parse_print_test(xml_doc[i])) != 0)
-	    return status;
+    for (i=0; i<PJ_ARRAY_SIZE(xml_doc); ++i) {
+        int status;
+        if ((status=xml_parse_print_test(xml_doc[i])) != 0)
+            return status;
     }
     return 0;
 }
@@ -140,6 +139,6 @@ int xml_test()
  * when this test is disabled. 
  */
 int dummy_xml_test;
-#endif	/* INCLUDE_XML_TEST */
+#endif  /* INCLUDE_XML_TEST */
 
 

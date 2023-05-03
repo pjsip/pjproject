@@ -6,10 +6,8 @@ android {
     compileSdkVersion 29
 
     defaultConfig {
-        minSdkVersion 11
+        minSdkVersion 23
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
 
 
         ndk {
@@ -37,3 +35,4 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 }
+

@@ -43,10 +43,12 @@ ifneq ($(findstring windows_os,@ac_pjmedia_video@),)
 DIRS += baseclasses
 endif
 
+ifneq (@ac_no_srtp@,1)
 ifneq (@ac_external_srtp@,0)
 # External SRTP
 else
 DIRS += srtp
+endif
 
 ifeq (@ac_ssl_has_aes_gcm@,0)
 CIPHERS_SRC = crypto/cipher/aes.o crypto/cipher/aes_icm.o       \
@@ -139,7 +141,7 @@ ifneq ($(findstring sse2,@ac_webrtc_aec3_instset@),)
 	modules/audio_processing/aec3/fft_data_avx2.o \
 	modules/audio_processing/aec3/matched_filter_avx2.o \
 	modules/audio_processing/aec3/vector_math_avx2.o \
-	modules/audio_processing/agc2/rnn_vad/vector_math_avx2.o
+	modules/audio_processing/agc2/rnn_vad/rnn_vector_math_avx2.o
     WEBRTC_AEC3_OTHER_CFLAGS += -mfma
 else ifneq ($(findstring neon,@ac_webrtc_aec3_instset@),)
     export WEBRTC_AEC3_SRC = \

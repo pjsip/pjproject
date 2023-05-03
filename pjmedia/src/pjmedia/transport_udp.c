@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -29,7 +28,7 @@
 #include <pj/string.h>
 
 /* Maximum size of incoming RTP packet */
-#define RTP_LEN	    PJMEDIA_MAX_MRU
+#define RTP_LEN     PJMEDIA_MAX_MRU
 
 /* Maximum size of incoming RTCP packet */
 #define RTCP_LEN    600
@@ -47,58 +46,58 @@
 /* Pending write buffer */
 typedef struct pending_write
 {
-    char		buffer[PJMEDIA_MAX_MTU];
-    pj_ioqueue_op_key_t	op_key;
-    pj_bool_t		is_pending;
+    char                buffer[PJMEDIA_MAX_MTU];
+    pj_ioqueue_op_key_t op_key;
+    pj_bool_t           is_pending;
 } pending_write;
 
 
 struct transport_udp
 {
-    pjmedia_transport	base;		/**< Base transport.		    */
+    pjmedia_transport   base;           /**< Base transport.                */
 
-    pj_pool_t	       *pool;		/**< Memory pool		    */
-    unsigned		options;	/**< Transport options.		    */
-    unsigned		media_options;	/**< Transport media options.	    */
-    void	       *user_data;	/**< Only valid when attached	    */
-    //pj_bool_t		attached;	/**< Has attachment?		    */
-    pj_bool_t		started;	/**< Has started?		    */
-    pj_sockaddr		rem_rtp_addr;	/**< Remote RTP address		    */
-    pj_sockaddr		rem_rtcp_addr;	/**< Remote RTCP address	    */
-    int			addr_len;	/**< Length of addresses.	    */
-    void  (*rtp_cb)(	void*,		/**< To report incoming RTP.	    */
-			void*,
-			pj_ssize_t);
+    pj_pool_t          *pool;           /**< Memory pool                    */
+    unsigned            options;        /**< Transport options.             */
+    unsigned            media_options;  /**< Transport media options.       */
+    void               *user_data;      /**< Only valid when attached       */
+    //pj_bool_t         attached;       /**< Has attachment?                */
+    pj_bool_t           started;        /**< Has started?                   */
+    pj_sockaddr         rem_rtp_addr;   /**< Remote RTP address             */
+    pj_sockaddr         rem_rtcp_addr;  /**< Remote RTCP address            */
+    int                 addr_len;       /**< Length of addresses.           */
+    void  (*rtp_cb)(    void*,          /**< To report incoming RTP.        */
+                        void*,
+                        pj_ssize_t);
     void  (*rtp_cb2)(pjmedia_tp_cb_param*); /**< To report incoming RTP.    */
-    void  (*rtcp_cb)(	void*,		/**< To report incoming RTCP.	    */
-			void*,
-			pj_ssize_t);
+    void  (*rtcp_cb)(   void*,          /**< To report incoming RTCP.       */
+                        void*,
+                        pj_ssize_t);
 
-    unsigned		tx_drop_pct;	/**< Percent of tx pkts to drop.    */
-    unsigned		rx_drop_pct;	/**< Percent of rx pkts to drop.    */
-    pj_ioqueue_t	*ioqueue;	/**< Ioqueue instance.		    */
+    unsigned            tx_drop_pct;    /**< Percent of tx pkts to drop.    */
+    unsigned            rx_drop_pct;    /**< Percent of rx pkts to drop.    */
+    pj_ioqueue_t        *ioqueue;       /**< Ioqueue instance.              */
 
-    pj_sock_t	        rtp_sock;	/**< RTP socket			    */
-    pj_sockaddr		rtp_addr_name;	/**< Published RTP address.	    */
-    pj_ioqueue_key_t   *rtp_key;	/**< RTP socket key in ioqueue	    */
-    pj_ioqueue_op_key_t	rtp_read_op;	/**< Pending read operation	    */
-    unsigned		rtp_write_op_id;/**< Next write_op to use	    */
-    pending_write	rtp_pending_write[MAX_PENDING];  /**< Pending write */
-    pj_sockaddr		rtp_src_addr;	/**< Actual packet src addr.	    */
-    int			rtp_addrlen;	/**< Address length.		    */
-    char		rtp_pkt[RTP_LEN];/**< Incoming RTP packet buffer    */
+    pj_sock_t           rtp_sock;       /**< RTP socket                     */
+    pj_sockaddr         rtp_addr_name;  /**< Published RTP address.         */
+    pj_ioqueue_key_t   *rtp_key;        /**< RTP socket key in ioqueue      */
+    pj_ioqueue_op_key_t rtp_read_op;    /**< Pending read operation         */
+    unsigned            rtp_write_op_id;/**< Next write_op to use           */
+    pending_write       rtp_pending_write[MAX_PENDING];  /**< Pending write */
+    pj_sockaddr         rtp_src_addr;   /**< Actual packet src addr.        */
+    int                 rtp_addrlen;    /**< Address length.                */
+    char                rtp_pkt[RTP_LEN];/**< Incoming RTP packet buffer    */
 
-    pj_bool_t		enable_rtcp_mux;/**< Enable RTP & RTCP multiplexing?*/
-    pj_bool_t		use_rtcp_mux;	/**< Use RTP & RTCP multiplexing?   */
-    pj_sock_t		rtcp_sock;	/**< RTCP socket		    */
-    pj_sockaddr		rtcp_addr_name;	/**< Published RTCP address.	    */
-    pj_sockaddr		rtcp_src_addr;	/**< Actual source RTCP address.    */
-    unsigned		rtcp_src_cnt;	/**< How many pkt from this addr.   */
-    int			rtcp_addr_len;	/**< Length of RTCP src address.    */
-    pj_ioqueue_key_t   *rtcp_key;	/**< RTCP socket key in ioqueue	    */
-    pj_ioqueue_op_key_t rtcp_read_op;	/**< Pending read operation	    */
-    pj_ioqueue_op_key_t rtcp_write_op;	/**< Pending write operation	    */
-    char		rtcp_pkt[RTCP_LEN];/**< Incoming RTCP packet buffer */
+    pj_bool_t           enable_rtcp_mux;/**< Enable RTP & RTCP multiplexing?*/
+    pj_bool_t           use_rtcp_mux;   /**< Use RTP & RTCP multiplexing?   */
+    pj_sock_t           rtcp_sock;      /**< RTCP socket                    */
+    pj_sockaddr         rtcp_addr_name; /**< Published RTCP address.        */
+    pj_sockaddr         rtcp_src_addr;  /**< Actual source RTCP address.    */
+    unsigned            rtcp_src_cnt;   /**< How many pkt from this addr.   */
+    int                 rtcp_addr_len;  /**< Length of RTCP src address.    */
+    pj_ioqueue_key_t   *rtcp_key;       /**< RTCP socket key in ioqueue     */
+    pj_ioqueue_op_key_t rtcp_read_op;   /**< Pending read operation         */
+    pj_ioqueue_op_key_t rtcp_write_op;  /**< Pending write operation        */
+    char                rtcp_pkt[RTCP_LEN];/**< Incoming RTCP packet buffer */
 };
 
 
@@ -107,8 +106,8 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
                        pj_ioqueue_op_key_t *op_key, 
                        pj_ssize_t bytes_read);
 static void on_rtp_data_sent(pj_ioqueue_key_t *key, 
-                       	     pj_ioqueue_op_key_t *op_key, 
-                       	     pj_ssize_t bytes_sent);
+                             pj_ioqueue_op_key_t *op_key, 
+                             pj_ssize_t bytes_sent);
 static void on_rx_rtcp(pj_ioqueue_key_t *key, 
                        pj_ioqueue_op_key_t *op_key, 
                        pj_ssize_t bytes_read);
@@ -117,56 +116,56 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
  * These are media transport operations.
  */
 static pj_status_t transport_get_info (pjmedia_transport *tp,
-				       pjmedia_transport_info *info);
+                                       pjmedia_transport_info *info);
 static pj_status_t transport_attach   (pjmedia_transport *tp,
-				       void *user_data,
-				       const pj_sockaddr_t *rem_addr,
-				       const pj_sockaddr_t *rem_rtcp,
-				       unsigned addr_len,
-				       void (*rtp_cb)(void*,
-						      void*,
-						      pj_ssize_t),
-				       void (*rtcp_cb)(void*,
-						       void*,
-						       pj_ssize_t));
+                                       void *user_data,
+                                       const pj_sockaddr_t *rem_addr,
+                                       const pj_sockaddr_t *rem_rtcp,
+                                       unsigned addr_len,
+                                       void (*rtp_cb)(void*,
+                                                      void*,
+                                                      pj_ssize_t),
+                                       void (*rtcp_cb)(void*,
+                                                       void*,
+                                                       pj_ssize_t));
 static pj_status_t transport_attach2  (pjmedia_transport *tp,
-				       pjmedia_transport_attach_param
-				           *att_param);
-static void	   transport_detach   (pjmedia_transport *tp,
-				       void *strm);
+                                       pjmedia_transport_attach_param
+                                           *att_param);
+static void        transport_detach   (pjmedia_transport *tp,
+                                       void *strm);
 static pj_status_t transport_send_rtp( pjmedia_transport *tp,
-				       const void *pkt,
-				       pj_size_t size);
+                                       const void *pkt,
+                                       pj_size_t size);
 static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
-				       const void *pkt,
-				       pj_size_t size);
+                                       const void *pkt,
+                                       pj_size_t size);
 static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
-				       const pj_sockaddr_t *addr,
-				       unsigned addr_len,
-				       const void *pkt,
-				       pj_size_t size);
+                                       const pj_sockaddr_t *addr,
+                                       unsigned addr_len,
+                                       const void *pkt,
+                                       pj_size_t size);
 static pj_status_t transport_media_create(pjmedia_transport *tp,
-				       pj_pool_t *pool,
-				       unsigned options,
-				       const pjmedia_sdp_session *sdp_remote,
-				       unsigned media_index);
+                                       pj_pool_t *pool,
+                                       unsigned options,
+                                       const pjmedia_sdp_session *sdp_remote,
+                                       unsigned media_index);
 static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
-				        pj_pool_t *pool,
-				        pjmedia_sdp_session *sdp_local,
-				        const pjmedia_sdp_session *rem_sdp,
-				        unsigned media_index);
+                                        pj_pool_t *pool,
+                                        pjmedia_sdp_session *sdp_local,
+                                        const pjmedia_sdp_session *rem_sdp,
+                                        unsigned media_index);
 static pj_status_t transport_media_start (pjmedia_transport *tp,
-				       pj_pool_t *pool,
-				       const pjmedia_sdp_session *sdp_local,
-				       const pjmedia_sdp_session *sdp_remote,
-				       unsigned media_index);
+                                       pj_pool_t *pool,
+                                       const pjmedia_sdp_session *sdp_local,
+                                       const pjmedia_sdp_session *sdp_remote,
+                                       unsigned media_index);
 static pj_status_t transport_media_stop(pjmedia_transport *tp);
 static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
-				       pjmedia_dir dir,
-				       unsigned pct_lost);
+                                       pjmedia_dir dir,
+                                       unsigned pct_lost);
 static pj_status_t transport_destroy  (pjmedia_transport *tp);
 static pj_status_t transport_restart  (pj_bool_t is_rtp, 
-				       struct transport_udp *udp);
+                                       struct transport_udp *udp);
 
 static pjmedia_transport_op transport_udp_op = 
 {
@@ -185,45 +184,45 @@ static pjmedia_transport_op transport_udp_op =
     &transport_attach2
 };
 
-static const pj_str_t STR_RTCP_MUX	= { "rtcp-mux", 8 };
+static const pj_str_t STR_RTCP_MUX      = { "rtcp-mux", 8 };
 
 /**
  * Create UDP stream transport.
  */
 PJ_DEF(pj_status_t) pjmedia_transport_udp_create( pjmedia_endpt *endpt,
-						  const char *name,
-						  int port,
-						  unsigned options,
-						  pjmedia_transport **p_tp)
+                                                  const char *name,
+                                                  int port,
+                                                  unsigned options,
+                                                  pjmedia_transport **p_tp)
 {
     return pjmedia_transport_udp_create2(endpt, name, NULL, port, options, 
-					p_tp);
+                                        p_tp);
 }
 
 /**
  * Create UDP stream transport.
  */
 PJ_DEF(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
-						  const char *name,
-						  const pj_str_t *addr,
-						  int port,
-						  unsigned options,
-						  pjmedia_transport **p_tp)
+                                                  const char *name,
+                                                  const pj_str_t *addr,
+                                                  int port,
+                                                  unsigned options,
+                                                  pjmedia_transport **p_tp)
 {
     return pjmedia_transport_udp_create3(endpt, pj_AF_INET(), name,
-					 addr, port, options, p_tp);
+                                         addr, port, options, p_tp);
 }
 
 /**
  * Create UDP stream transport.
  */
 PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
-						  int af,
-						  const char *name,
-						  const pj_str_t *addr,
-						  int port,
-						  unsigned options,
-						  pjmedia_transport **p_tp)
+                                                  int af,
+                                                  const char *name,
+                                                  const pj_str_t *addr,
+                                                  int port,
+                                                  unsigned options,
+                                                  pjmedia_transport **p_tp)
 {
     pjmedia_sock_info si;
     pj_status_t status;
@@ -239,34 +238,34 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
     /* Create RTP socket */
     status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &si.rtp_sock);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Bind RTP socket */
     status = pj_sockaddr_init(af, &si.rtp_addr_name, addr, (pj_uint16_t)port);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     status = pj_sock_bind(si.rtp_sock, &si.rtp_addr_name, 
-			  pj_sockaddr_get_len(&si.rtp_addr_name));
+                          pj_sockaddr_get_len(&si.rtp_addr_name));
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
 
     /* Create RTCP socket */
     status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &si.rtcp_sock);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Bind RTCP socket */
     status = pj_sockaddr_init(af, &si.rtcp_addr_name, addr, 
-			      (pj_uint16_t)(port+1));
+                              (pj_uint16_t)(port+1));
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     status = pj_sock_bind(si.rtcp_sock, &si.rtcp_addr_name,
-			  pj_sockaddr_get_len(&si.rtcp_addr_name));
+                          pj_sockaddr_get_len(&si.rtcp_addr_name));
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     
     /* Create UDP transport by attaching socket info */
@@ -275,9 +274,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
 
 on_error:
     if (si.rtp_sock != PJ_INVALID_SOCKET)
-	pj_sock_close(si.rtp_sock);
+        pj_sock_close(si.rtp_sock);
     if (si.rtcp_sock != PJ_INVALID_SOCKET)
-	pj_sock_close(si.rtcp_sock);
+        pj_sock_close(si.rtcp_sock);
     return status;
 }
 
@@ -286,10 +285,10 @@ on_error:
  * Create UDP stream transport from existing socket info.
  */
 PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
-						  const char *name,
-						  const pjmedia_sock_info *si,
-						  unsigned options,
-						  pjmedia_transport **p_tp)
+                                                  const char *name,
+                                                  const pjmedia_sock_info *si,
+                                                  unsigned options,
+                                                  pjmedia_transport **p_tp)
 {
     struct transport_udp *tp;
     pj_pool_t *pool;
@@ -305,12 +304,12 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     ioqueue = pjmedia_endpt_get_ioqueue(endpt);
 
     if (name==NULL)
-	name = "udp%p";
+        name = "udp%p";
 
     /* Create transport structure */
     pool = pjmedia_endpt_create_pool(endpt, name, 512, 512);
     if (!pool)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
     tp = PJ_POOL_ZALLOC_T(pool, struct transport_udp);
     tp->pool = pool;
@@ -327,22 +326,22 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
     /* If address is 0.0.0.0, use host's IP address */
     if (!pj_sockaddr_has_addr(&tp->rtp_addr_name)) {
-	pj_sockaddr hostip;
+        pj_sockaddr hostip;
 
-	status = pj_gethostip(tp->rtp_addr_name.addr.sa_family, &hostip);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+        status = pj_gethostip(tp->rtp_addr_name.addr.sa_family, &hostip);
+        if (status != PJ_SUCCESS)
+            goto on_error;
 
-	pj_memcpy(pj_sockaddr_get_addr(&tp->rtp_addr_name), 
-		  pj_sockaddr_get_addr(&hostip),
-		  pj_sockaddr_get_addr_len(&hostip));
+        pj_memcpy(pj_sockaddr_get_addr(&tp->rtp_addr_name), 
+                  pj_sockaddr_get_addr(&hostip),
+                  pj_sockaddr_get_addr_len(&hostip));
     }
 
     /* Same with RTCP */
     if (!pj_sockaddr_has_addr(&tp->rtcp_addr_name)) {
-	pj_memcpy(pj_sockaddr_get_addr(&tp->rtcp_addr_name),
-		  pj_sockaddr_get_addr(&tp->rtp_addr_name),
-		  pj_sockaddr_get_addr_len(&tp->rtp_addr_name));
+        pj_memcpy(pj_sockaddr_get_addr(&tp->rtcp_addr_name),
+                  pj_sockaddr_get_addr(&tp->rtp_addr_name),
+                  pj_sockaddr_get_addr_len(&tp->rtp_addr_name));
     }
 
     /* Setup RTP socket with the ioqueue */
@@ -351,33 +350,33 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     rtp_cb.on_write_complete = &on_rtp_data_sent;
 
     status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtp_sock, tp,
-				      &rtp_cb, &tp->rtp_key);
+                                      &rtp_cb, &tp->rtp_key);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
     
     /* Disallow concurrency so that detach() and destroy() are
      * synchronized with the callback.
      */
     status = pj_ioqueue_set_concurrency(tp->rtp_key, PJ_FALSE);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
 #if 0 // See #2097: move read op kick-off to media_start()
     pj_ioqueue_op_key_init(&tp->rtp_read_op, sizeof(tp->rtp_read_op));
     for (i=0; i<PJ_ARRAY_SIZE(tp->rtp_pending_write); ++i) {
         tp->rtp_pending_write[i].is_pending = PJ_FALSE;
-	pj_ioqueue_op_key_init(&tp->rtp_pending_write[i].op_key, 
-			       sizeof(tp->rtp_pending_write[i].op_key));
+        pj_ioqueue_op_key_init(&tp->rtp_pending_write[i].op_key, 
+                               sizeof(tp->rtp_pending_write[i].op_key));
     }
 
     /* Kick of pending RTP read from the ioqueue */
     tp->rtp_addrlen = sizeof(tp->rtp_src_addr);
     size = sizeof(tp->rtp_pkt);
     status = pj_ioqueue_recvfrom(tp->rtp_key, &tp->rtp_read_op,
-			         tp->rtp_pkt, &size, PJ_IOQUEUE_ALWAYS_ASYNC,
-				 &tp->rtp_src_addr, &tp->rtp_addrlen);
+                                 tp->rtp_pkt, &size, PJ_IOQUEUE_ALWAYS_ASYNC,
+                                 &tp->rtp_src_addr, &tp->rtp_addrlen);
     if (status != PJ_EPENDING)
-	goto on_error;
+        goto on_error;
 #endif
 
 
@@ -386,13 +385,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     rtcp_cb.on_read_complete = &on_rx_rtcp;
 
     status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtcp_sock, tp,
-				      &rtcp_cb, &tp->rtcp_key);
+                                      &rtcp_cb, &tp->rtcp_key);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     status = pj_ioqueue_set_concurrency(tp->rtcp_key, PJ_FALSE);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
 #if 0 // See #2097: move read op kick-off to media_start()
     pj_ioqueue_op_key_init(&tp->rtcp_read_op, sizeof(tp->rtcp_read_op));
@@ -402,11 +401,11 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     size = sizeof(tp->rtcp_pkt);
     tp->rtcp_addr_len = sizeof(tp->rtcp_src_addr);
     status = pj_ioqueue_recvfrom( tp->rtcp_key, &tp->rtcp_read_op,
-				  tp->rtcp_pkt, &size, PJ_IOQUEUE_ALWAYS_ASYNC,
-				  &tp->rtcp_src_addr, &tp->rtcp_addr_len);
+                                  tp->rtcp_pkt, &size, PJ_IOQUEUE_ALWAYS_ASYNC,
+                                  &tp->rtcp_src_addr, &tp->rtcp_addr_len);
     if (status != PJ_EPENDING)
-	goto on_error;
-#endif	
+        goto on_error;
+#endif  
 
     tp->ioqueue = ioqueue;
 
@@ -436,24 +435,24 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     
 
     if (udp->rtp_key) {
-	/* This will block the execution if callback is still
-	 * being called.
-	 */
-	pj_ioqueue_unregister(udp->rtp_key);
-	udp->rtp_key = NULL;
-	udp->rtp_sock = PJ_INVALID_SOCKET;
+        /* This will block the execution if callback is still
+         * being called.
+         */
+        pj_ioqueue_unregister(udp->rtp_key);
+        udp->rtp_key = NULL;
+        udp->rtp_sock = PJ_INVALID_SOCKET;
     } else if (udp->rtp_sock != PJ_INVALID_SOCKET) {
-	pj_sock_close(udp->rtp_sock);
-	udp->rtp_sock = PJ_INVALID_SOCKET;
+        pj_sock_close(udp->rtp_sock);
+        udp->rtp_sock = PJ_INVALID_SOCKET;
     }
 
     if (udp->rtcp_key) {
-	pj_ioqueue_unregister(udp->rtcp_key);
-	udp->rtcp_key = NULL;
-	udp->rtcp_sock = PJ_INVALID_SOCKET;
+        pj_ioqueue_unregister(udp->rtcp_key);
+        udp->rtcp_key = NULL;
+        udp->rtcp_sock = PJ_INVALID_SOCKET;
     } else if (udp->rtcp_sock != PJ_INVALID_SOCKET) {
-	pj_sock_close(udp->rtcp_sock);
-	udp->rtcp_sock = PJ_INVALID_SOCKET;
+        pj_sock_close(udp->rtcp_sock);
+        udp->rtcp_sock = PJ_INVALID_SOCKET;
     }
 
     PJ_LOG(4,(udp->base.name, "UDP media transport destroyed"));
@@ -464,7 +463,7 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 
 /* Call RTP cb. */
 static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read, 
-			pj_bool_t *rem_switch)
+                        pj_bool_t *rem_switch)
 {
     void (*cb)(void*,void*,pj_ssize_t);
     void (*cb2)(pjmedia_tp_cb_param*);
@@ -475,18 +474,18 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
     user_data = udp->user_data;
 
     if (cb2) {
-	pjmedia_tp_cb_param param;
+        pjmedia_tp_cb_param param;
 
-	param.user_data = user_data;
-	param.pkt = udp->rtp_pkt;
-	param.size = bytes_read;
-	param.src_addr = &udp->rtp_src_addr;
-	param.rem_switch = PJ_FALSE;
-	(*cb2)(&param);
-	if (rem_switch)
-	    *rem_switch = param.rem_switch;
+        param.user_data = user_data;
+        param.pkt = udp->rtp_pkt;
+        param.size = bytes_read;
+        param.src_addr = &udp->rtp_src_addr;
+        param.rem_switch = PJ_FALSE;
+        (*cb2)(&param);
+        if (rem_switch)
+            *rem_switch = param.rem_switch;
     } else if (cb) {
-	(*cb)(user_data, udp->rtp_pkt, bytes_read);
+        (*cb)(user_data, udp->rtp_pkt, bytes_read);
     }
 }
 
@@ -500,13 +499,13 @@ static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read)
     user_data = udp->user_data;
 
     if (cb)
-	(*cb)(user_data, udp->rtcp_pkt, bytes_read);
+        (*cb)(user_data, udp->rtcp_pkt, bytes_read);
 }
 
 /* Notification from ioqueue about incoming RTP packet */
 static void on_rx_rtp(pj_ioqueue_key_t *key,
-		      pj_ioqueue_op_key_t *op_key,
-		      pj_ssize_t bytes_read)
+                      pj_ioqueue_op_key_t *op_key,
+                      pj_ssize_t bytes_read)
 {
     struct transport_udp *udp;
     pj_status_t status;
@@ -520,126 +519,126 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
     if (-bytes_read == PJ_ECANCELLED) {
-	TRACE_((udp->base.name, "on_rx_rtp(): got PJ_ECANCELLED"));
-	return;
+        TRACE_((udp->base.name, "on_rx_rtp(): got PJ_ECANCELLED"));
+        return;
     }
 
     if (-bytes_read == PJ_ESOCKETSTOP) {
-	TRACE_((udp->base.name, "on_rx_rtp(): got PJ_ESOCKETSTOP"));
+        TRACE_((udp->base.name, "on_rx_rtp(): got PJ_ESOCKETSTOP"));
 
-	/* Try to recover by restarting the transport. */
-	status = transport_restart(PJ_TRUE, udp);
-	if (status != PJ_SUCCESS) {
-	    bytes_read = -PJ_ESOCKETSTOP;
-	    call_rtp_cb(udp, bytes_read, NULL);
-	}
-	return;
+        /* Try to recover by restarting the transport. */
+        status = transport_restart(PJ_TRUE, udp);
+        if (status != PJ_SUCCESS) {
+            bytes_read = -PJ_ESOCKETSTOP;
+            call_rtp_cb(udp, bytes_read, NULL);
+        }
+        return;
     }
 
     do {
-	pj_bool_t discard = PJ_FALSE;
+        pj_bool_t discard = PJ_FALSE;
 
-	/* Simulate packet lost on RX direction */
-	if (udp->rx_drop_pct) {
-	    if ((pj_rand() % 100) <= (int)udp->rx_drop_pct) {
-		PJ_LOG(5,(udp->base.name, 
-			  "RX RTP packet dropped because of pkt lost "
-			  "simulation"));
-		discard = PJ_TRUE;
-	    }
-	}
+        /* Simulate packet lost on RX direction */
+        if (udp->rx_drop_pct) {
+            if ((pj_rand() % 100) <= (int)udp->rx_drop_pct) {
+                PJ_LOG(5,(udp->base.name, 
+                          "RX RTP packet dropped because of pkt lost "
+                          "simulation"));
+                discard = PJ_TRUE;
+            }
+        }
 
-	//if (!discard && udp->attached && cb)
-	if (!discard && 
-	    (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))) 
-	{
-	    call_rtp_cb(udp, bytes_read, &rem_switch);
-	}
+        //if (!discard && udp->attached && cb)
+        if (!discard && 
+            (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))) 
+        {
+            call_rtp_cb(udp, bytes_read, &rem_switch);
+        }
 
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
-	if (rem_switch &&
-	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0)
-	{
-	    char addr_text[PJ_INET6_ADDRSTRLEN+10];
+        if (rem_switch &&
+            (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0)
+        {
+            char addr_text[PJ_INET6_ADDRSTRLEN+10];
 
-	    /* Set remote RTP address to source address */
-	    pj_sockaddr_cp(&udp->rem_rtp_addr, &udp->rtp_src_addr);
+            /* Set remote RTP address to source address */
+            pj_sockaddr_cp(&udp->rem_rtp_addr, &udp->rtp_src_addr);
 
-	    PJ_LOG(4,(udp->base.name,
-		      "Remote RTP address switched to %s",
-		      pj_sockaddr_print(&udp->rtp_src_addr, addr_text,
-					sizeof(addr_text), 3)));
+            PJ_LOG(4,(udp->base.name,
+                      "Remote RTP address switched to %s",
+                      pj_sockaddr_print(&udp->rtp_src_addr, addr_text,
+                                        sizeof(addr_text), 3)));
 
-	    if (udp->use_rtcp_mux) {
-	    	pj_sockaddr_cp(&udp->rem_rtcp_addr, &udp->rem_rtp_addr);
-	    	pj_sockaddr_cp(&udp->rtcp_src_addr, &udp->rem_rtcp_addr);
-	    } else if (!pj_sockaddr_has_addr(&udp->rtcp_src_addr)) {
-	        /* Also update remote RTCP address if actual RTCP source
-	         * address is not heard yet.
-	         */
-		pj_uint16_t port;
+            if (udp->use_rtcp_mux) {
+                pj_sockaddr_cp(&udp->rem_rtcp_addr, &udp->rem_rtp_addr);
+                pj_sockaddr_cp(&udp->rtcp_src_addr, &udp->rem_rtcp_addr);
+            } else if (!pj_sockaddr_has_addr(&udp->rtcp_src_addr)) {
+                /* Also update remote RTCP address if actual RTCP source
+                 * address is not heard yet.
+                 */
+                pj_uint16_t port;
 
-		pj_sockaddr_cp(&udp->rem_rtcp_addr, &udp->rem_rtp_addr);
-		port = (pj_uint16_t)
-		       (pj_sockaddr_get_port(&udp->rem_rtp_addr)+1);
-		pj_sockaddr_set_port(&udp->rem_rtcp_addr, port);
+                pj_sockaddr_cp(&udp->rem_rtcp_addr, &udp->rem_rtp_addr);
+                port = (pj_uint16_t)
+                       (pj_sockaddr_get_port(&udp->rem_rtp_addr)+1);
+                pj_sockaddr_set_port(&udp->rem_rtcp_addr, port);
 
-		pj_sockaddr_cp(&udp->rtcp_src_addr, &udp->rem_rtcp_addr);
+                pj_sockaddr_cp(&udp->rtcp_src_addr, &udp->rem_rtcp_addr);
 
-		PJ_LOG(4,(udp->base.name,
-			  "Remote RTCP address switched to predicted"
-			  " address %s",
-			  pj_sockaddr_print(&udp->rtcp_src_addr, addr_text,
-					    sizeof(addr_text), 3)));
-	    }
-	}
+                PJ_LOG(4,(udp->base.name,
+                          "Remote RTCP address switched to predicted"
+                          " address %s",
+                          pj_sockaddr_print(&udp->rtcp_src_addr, addr_text,
+                                            sizeof(addr_text), 3)));
+            }
+        }
 #endif
 
-	bytes_read = sizeof(udp->rtp_pkt);
-	udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
-	status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
-					udp->rtp_pkt, &bytes_read, 0,
-					&udp->rtp_src_addr,
-					&udp->rtp_addrlen);
+        bytes_read = sizeof(udp->rtp_pkt);
+        udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
+        status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
+                                        udp->rtp_pkt, &bytes_read, 0,
+                                        &udp->rtp_src_addr,
+                                        &udp->rtp_addrlen);
 
-	if (status != PJ_EPENDING && status != PJ_SUCCESS) {	    
-	    if (transport_restarted && last_err == status) {
-		/* Still the same error after restart */
-		bytes_read = -PJ_ESOCKETSTOP;
-		call_rtp_cb(udp, bytes_read, NULL);
-		break;
-	    } else if (PJMEDIA_IGNORE_RECV_ERR_CNT) {
-		if (last_err == status) {
-		    ++num_err;
-		} else {
-		    num_err = 1;
-		    last_err = status;
-		}
+        if (status != PJ_EPENDING && status != PJ_SUCCESS) {        
+            if (transport_restarted && last_err == status) {
+                /* Still the same error after restart */
+                bytes_read = -PJ_ESOCKETSTOP;
+                call_rtp_cb(udp, bytes_read, NULL);
+                break;
+            } else if (PJMEDIA_IGNORE_RECV_ERR_CNT) {
+                if (last_err == status) {
+                    ++num_err;
+                } else {
+                    num_err = 1;
+                    last_err = status;
+                }
 
-		if (status == PJ_ESOCKETSTOP ||
-		    num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
-		{
-		    status = transport_restart(PJ_TRUE, udp);		    
-		    if (status != PJ_SUCCESS) {
-			bytes_read = -PJ_ESOCKETSTOP;
-			call_rtp_cb(udp, bytes_read, NULL);
-			break;
-		    }
-		    transport_restarted = PJ_TRUE;
-		    num_err = 0;
-		}
-	    }
-	    bytes_read = -status;
-	    TRACE_((udp->base.name, "on_rx_rtp(): recvfrom error=%d", status));
-	}
+                if (status == PJ_ESOCKETSTOP ||
+                    num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
+                {
+                    status = transport_restart(PJ_TRUE, udp);               
+                    if (status != PJ_SUCCESS) {
+                        bytes_read = -PJ_ESOCKETSTOP;
+                        call_rtp_cb(udp, bytes_read, NULL);
+                        break;
+                    }
+                    transport_restarted = PJ_TRUE;
+                    num_err = 0;
+                }
+            }
+            bytes_read = -status;
+            TRACE_((udp->base.name, "on_rx_rtp(): recvfrom error=%d", status));
+        }
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
-	     udp->started);
+             udp->started);
 }
 
 static void on_rtp_data_sent(pj_ioqueue_key_t *key, 
-                      	     pj_ioqueue_op_key_t *op_key, 
-                      	     pj_ssize_t bytes_sent)
+                             pj_ioqueue_op_key_t *op_key, 
+                             pj_ssize_t bytes_sent)
 {
     struct transport_udp *udp;
     unsigned i;
@@ -649,10 +648,10 @@ static void on_rtp_data_sent(pj_ioqueue_key_t *key,
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
     for (i = 0; i < PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
-	if (&udp->rtp_pending_write[i].op_key == op_key) {
-	    udp->rtp_pending_write[i].is_pending = PJ_FALSE;
-	    break;
-	}
+        if (&udp->rtp_pending_write[i].op_key == op_key) {
+            udp->rtp_pending_write[i].is_pending = PJ_FALSE;
+            break;
+        }
     }
 }
 
@@ -672,101 +671,101 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
     if (-bytes_read == PJ_ECANCELLED) {
-	TRACE_((udp->base.name, "on_rx_rtcp(): got PJ_ECANCELLED"));
-	return;
+        TRACE_((udp->base.name, "on_rx_rtcp(): got PJ_ECANCELLED"));
+        return;
     }
 
     if (-bytes_read == PJ_ESOCKETSTOP) {
-	TRACE_((udp->base.name, "on_rx_rtcp(): got PJ_ESOCKETSTOP"));
+        TRACE_((udp->base.name, "on_rx_rtcp(): got PJ_ESOCKETSTOP"));
 
-	/* Try to recover by restarting the transport. */
-	status = transport_restart(PJ_FALSE, udp);
-	if (status != PJ_SUCCESS) {
-	    bytes_read = -PJ_ESOCKETSTOP;
-	    call_rtcp_cb(udp, bytes_read);
-	}
-	return;
+        /* Try to recover by restarting the transport. */
+        status = transport_restart(PJ_FALSE, udp);
+        if (status != PJ_SUCCESS) {
+            bytes_read = -PJ_ESOCKETSTOP;
+            call_rtcp_cb(udp, bytes_read);
+        }
+        return;
     }
 
     do {
-	call_rtcp_cb(udp, bytes_read);
+        call_rtcp_cb(udp, bytes_read);
 
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
-	/* Check if RTCP source address is the same as the configured
-	 * remote address, and switch the address when they are
-	 * different.
-	 */
-	if (bytes_read>0 &&
-	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0)
-	{
-	    if (pj_sockaddr_cmp(&udp->rem_rtcp_addr, &udp->rtcp_src_addr) == 0) {
-		/* Still receiving from rem_rtcp_addr, don't switch */
-		udp->rtcp_src_cnt = 0;
-	    } else {
-		++udp->rtcp_src_cnt;
+        /* Check if RTCP source address is the same as the configured
+         * remote address, and switch the address when they are
+         * different.
+         */
+        if (bytes_read>0 &&
+            (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0)
+        {
+            if (pj_sockaddr_cmp(&udp->rem_rtcp_addr, &udp->rtcp_src_addr) == 0) {
+                /* Still receiving from rem_rtcp_addr, don't switch */
+                udp->rtcp_src_cnt = 0;
+            } else {
+                ++udp->rtcp_src_cnt;
 
-		if (udp->rtcp_src_cnt >= PJMEDIA_RTCP_NAT_PROBATION_CNT	) {
-		    char addr_text[PJ_INET6_ADDRSTRLEN+10];
+                if (udp->rtcp_src_cnt >= PJMEDIA_RTCP_NAT_PROBATION_CNT ) {
+                    char addr_text[PJ_INET6_ADDRSTRLEN+10];
 
-		    udp->rtcp_src_cnt = 0;
-		    pj_memcpy(&udp->rem_rtcp_addr, &udp->rtcp_src_addr,
-			      sizeof(pj_sockaddr));
+                    udp->rtcp_src_cnt = 0;
+                    pj_memcpy(&udp->rem_rtcp_addr, &udp->rtcp_src_addr,
+                              sizeof(pj_sockaddr));
 
-		    PJ_LOG(4,(udp->base.name,
-			      "Remote RTCP address switched to %s",
-			      pj_sockaddr_print(&udp->rtcp_src_addr, addr_text,
-						sizeof(addr_text), 3)));
-		}
-	    }
-	}
+                    PJ_LOG(4,(udp->base.name,
+                              "Remote RTCP address switched to %s",
+                              pj_sockaddr_print(&udp->rtcp_src_addr, addr_text,
+                                                sizeof(addr_text), 3)));
+                }
+            }
+        }
 #endif
 
-	bytes_read = sizeof(udp->rtcp_pkt);
-	udp->rtcp_addr_len = sizeof(udp->rtcp_src_addr);
-	status = pj_ioqueue_recvfrom(udp->rtcp_key, &udp->rtcp_read_op,
-				     udp->rtcp_pkt, &bytes_read, 0,
-				     &udp->rtcp_src_addr, 
-				     &udp->rtcp_addr_len);
+        bytes_read = sizeof(udp->rtcp_pkt);
+        udp->rtcp_addr_len = sizeof(udp->rtcp_src_addr);
+        status = pj_ioqueue_recvfrom(udp->rtcp_key, &udp->rtcp_read_op,
+                                     udp->rtcp_pkt, &bytes_read, 0,
+                                     &udp->rtcp_src_addr, 
+                                     &udp->rtcp_addr_len);
 
-	if (status != PJ_EPENDING && status != PJ_SUCCESS) {
-	    if (transport_restarted && last_err == status) {
-		/* Still the same error after restart */
-		bytes_read = -PJ_ESOCKETSTOP;
-		call_rtcp_cb(udp, bytes_read);
-		break;
-	    } else if (PJMEDIA_IGNORE_RECV_ERR_CNT) {
-		if (last_err == status) {
-		    ++num_err;
-		} else {
-		    num_err = 1;
-		    last_err = status;
-		}
+        if (status != PJ_EPENDING && status != PJ_SUCCESS) {
+            if (transport_restarted && last_err == status) {
+                /* Still the same error after restart */
+                bytes_read = -PJ_ESOCKETSTOP;
+                call_rtcp_cb(udp, bytes_read);
+                break;
+            } else if (PJMEDIA_IGNORE_RECV_ERR_CNT) {
+                if (last_err == status) {
+                    ++num_err;
+                } else {
+                    num_err = 1;
+                    last_err = status;
+                }
 
-		if (status == PJ_ESOCKETSTOP ||
-		    num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
-		{
-		    status = transport_restart(PJ_FALSE, udp);		    
-		    if (status != PJ_SUCCESS) {
-			bytes_read = -PJ_ESOCKETSTOP;
-			call_rtcp_cb(udp, bytes_read);
-			break;
-		    }
-		    transport_restarted = PJ_TRUE;
-		    num_err = 0;
-		}
-	    }
-	    bytes_read = -status;
-	    TRACE_((udp->base.name, "on_rx_rtcp(): recvfrom error=%d", status));
-	}	
+                if (status == PJ_ESOCKETSTOP ||
+                    num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
+                {
+                    status = transport_restart(PJ_FALSE, udp);              
+                    if (status != PJ_SUCCESS) {
+                        bytes_read = -PJ_ESOCKETSTOP;
+                        call_rtcp_cb(udp, bytes_read);
+                        break;
+                    }
+                    transport_restarted = PJ_TRUE;
+                    num_err = 0;
+                }
+            }
+            bytes_read = -status;
+            TRACE_((udp->base.name, "on_rx_rtcp(): recvfrom error=%d", status));
+        }       
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
-	     udp->started);
+             udp->started);
 }
 
 
 /* Called to get the transport info */
 static pj_status_t transport_get_info(pjmedia_transport *tp,
-				      pjmedia_transport_info *info)
+                                      pjmedia_transport_info *info)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
     PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
@@ -775,8 +774,8 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     info->sock_info.rtp_addr_name = udp->rtp_addr_name;
     info->sock_info.rtcp_sock = udp->rtcp_sock;
     info->sock_info.rtcp_addr_name = (udp->use_rtcp_mux?
-    				      udp->rtp_addr_name:
-    				      udp->rtcp_addr_name);
+                                      udp->rtp_addr_name:
+                                      udp->rtcp_addr_name);
 
     /* Get remote address originating RTP & RTCP. */
     info->src_rtp_name  = udp->rtp_src_addr;
@@ -784,29 +783,29 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 
     /* Add empty specific info */
     if (info->specific_info_cnt < PJ_ARRAY_SIZE(info->spc_info)) {
-	pjmedia_transport_specific_info *tsi;
+        pjmedia_transport_specific_info *tsi;
 
-	tsi = &info->spc_info[info->specific_info_cnt++];
-	tsi->type = PJMEDIA_TRANSPORT_TYPE_UDP;
-	tsi->cbsize = 0;
+        tsi = &info->spc_info[info->specific_info_cnt++];
+        tsi->type = PJMEDIA_TRANSPORT_TYPE_UDP;
+        tsi->cbsize = 0;
     }
 
     return PJ_SUCCESS;
 }
 
 
-static pj_status_t tp_attach  	      (pjmedia_transport *tp,
-				       void *user_data,
-				       const pj_sockaddr_t *rem_addr,
-				       const pj_sockaddr_t *rem_rtcp,
-				       unsigned addr_len,
-				       void (*rtp_cb)(void*,
-						      void*,
-						      pj_ssize_t),
-				       void (*rtp_cb2)(pjmedia_tp_cb_param*),
-				       void (*rtcp_cb)(void*,
-						       void*,
-						       pj_ssize_t))
+static pj_status_t tp_attach          (pjmedia_transport *tp,
+                                       void *user_data,
+                                       const pj_sockaddr_t *rem_addr,
+                                       const pj_sockaddr_t *rem_rtcp,
+                                       unsigned addr_len,
+                                       void (*rtp_cb)(void*,
+                                                      void*,
+                                                      pj_ssize_t),
+                                       void (*rtp_cb2)(pjmedia_tp_cb_param*),
+                                       void (*rtcp_cb)(void*,
+                                                       void*,
+                                                       pj_ssize_t))
 {
     struct transport_udp *udp = (struct transport_udp*) tp;
     const pj_sockaddr *rtcp_addr;
@@ -822,7 +821,7 @@ static pj_status_t tp_attach  	      (pjmedia_transport *tp,
 
     /* Check again if we are multiplexing RTP & RTCP. */
     udp->use_rtcp_mux = (pj_sockaddr_has_addr(rem_addr) &&
-			 pj_sockaddr_cmp(rem_addr, rem_rtcp) == 0);
+                         pj_sockaddr_cmp(rem_addr, rem_rtcp) == 0);
 
     TRACE_((udp->base.name, "attach(): before locking keys"));
 
@@ -841,10 +840,10 @@ static pj_status_t tp_attach  	      (pjmedia_transport *tp,
 
     /* Synthesize address, if necessary. */
     status = pj_sockaddr_synthesize(sock_addr.addr.sa_family,
-    				    &remote_addr, rem_addr);
+                                    &remote_addr, rem_addr);
     if (status != PJ_SUCCESS) {
-    	pj_perror(3, tp->name, status, "Failed to synthesize the correct"
-    				       "IP address for RTP");
+        pj_perror(3, tp->name, status, "Failed to synthesize the correct"
+                                       "IP address for RTP");
     }
     rem_addr_len = pj_sockaddr_get_len(&remote_addr);
 
@@ -855,20 +854,20 @@ static pj_status_t tp_attach  	      (pjmedia_transport *tp,
     rtcp_addr = (const pj_sockaddr*) rem_rtcp;
     if (rtcp_addr && pj_sockaddr_has_addr(rtcp_addr)) {
         status = pj_sockaddr_synthesize(sock_addr.addr.sa_family,
-        		       		&remote_rtcp, rem_rtcp);
+                                        &remote_rtcp, rem_rtcp);
         if (status != PJ_SUCCESS) {
-    	    pj_perror(3, tp->name, status, "Failed to synthesize the correct"
-    				       	   "IP address for RTCP");
+            pj_perror(3, tp->name, status, "Failed to synthesize the correct"
+                                           "IP address for RTCP");
         }
-	pj_memcpy(&udp->rem_rtcp_addr, &remote_rtcp, rem_addr_len);
+        pj_memcpy(&udp->rem_rtcp_addr, &remote_rtcp, rem_addr_len);
 
     } else {
-	unsigned rtcp_port;
+        unsigned rtcp_port;
 
-	/* Otherwise guess the RTCP address from the RTP address */
-	pj_memcpy(&udp->rem_rtcp_addr, &udp->rem_rtp_addr, rem_addr_len);
-	rtcp_port = pj_sockaddr_get_port(&udp->rem_rtp_addr) + 1;
-	pj_sockaddr_set_port(&udp->rem_rtcp_addr, (pj_uint16_t)rtcp_port);
+        /* Otherwise guess the RTCP address from the RTP address */
+        pj_memcpy(&udp->rem_rtcp_addr, &udp->rem_rtp_addr, rem_addr_len);
+        rtcp_port = pj_sockaddr_get_port(&udp->rem_rtp_addr) + 1;
+        pj_sockaddr_set_port(&udp->rem_rtcp_addr, (pj_uint16_t)rtcp_port);
     }
 
     /* Save the callbacks */
@@ -891,42 +890,42 @@ static pj_status_t tp_attach  	      (pjmedia_transport *tp,
     /* Set buffer size for RTP socket */
 #if PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE
     {
-	unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
-	
-	status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(),
-					  PJ_TRUE, &sobuf_size);
-	if (status != PJ_SUCCESS) {
-	    pj_perror(3, tp->name, status, "Failed setting SO_RCVBUF");
-	} else {
-	    if (sobuf_size < PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE) {
-		PJ_LOG(4, (tp->name, 
-			   "Warning! Cannot set SO_RCVBUF as configured, "
-			   "now=%d, configured=%d",
-			   sobuf_size, PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE));
-	    } else {
-		PJ_LOG(5, (tp->name, "SO_RCVBUF set to %d", sobuf_size));
-	    }
-	}
+        unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
+        
+        status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(),
+                                          PJ_TRUE, &sobuf_size);
+        if (status != PJ_SUCCESS) {
+            pj_perror(3, tp->name, status, "Failed setting SO_RCVBUF");
+        } else {
+            if (sobuf_size < PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE) {
+                PJ_LOG(4, (tp->name, 
+                           "Warning! Cannot set SO_RCVBUF as configured, "
+                           "now=%d, configured=%d",
+                           sobuf_size, PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE));
+            } else {
+                PJ_LOG(5, (tp->name, "SO_RCVBUF set to %d", sobuf_size));
+            }
+        }
     }
 #endif
 #if PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE
     {
-	unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
+        unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
 
-	status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(),
-					  PJ_TRUE, &sobuf_size);
-	if (status != PJ_SUCCESS) {
-	    pj_perror(3, tp->name, status, "Failed setting SO_SNDBUF");
-	} else {
-	    if (sobuf_size < PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE) {
-		PJ_LOG(4, (tp->name, 
-			   "Warning! Cannot set SO_SNDBUF as configured, "
-			   "now=%d, configured=%d",
-			   sobuf_size, PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE));
-	    } else {
-		PJ_LOG(5, (tp->name, "SO_SNDBUF set to %d", sobuf_size));
-	    }
-	}
+        status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(),
+                                          PJ_TRUE, &sobuf_size);
+        if (status != PJ_SUCCESS) {
+            pj_perror(3, tp->name, status, "Failed setting SO_SNDBUF");
+        } else {
+            if (sobuf_size < PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE) {
+                PJ_LOG(4, (tp->name, 
+                           "Warning! Cannot set SO_SNDBUF as configured, "
+                           "now=%d, configured=%d",
+                           sobuf_size, PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE));
+            } else {
+                PJ_LOG(5, (tp->name, "SO_SNDBUF set to %d", sobuf_size));
+            }
+        }
     }
 #endif
 
@@ -942,37 +941,37 @@ static pj_status_t tp_attach  	      (pjmedia_transport *tp,
 
 /* Called by application to initialize the transport */
 static pj_status_t transport_attach(   pjmedia_transport *tp,
-				       void *user_data,
-				       const pj_sockaddr_t *rem_addr,
-				       const pj_sockaddr_t *rem_rtcp,
-				       unsigned addr_len,
-				       void (*rtp_cb)(void*,
-						      void*,
-						      pj_ssize_t),
-				       void (*rtcp_cb)(void*,
-						       void*,
-						       pj_ssize_t))
+                                       void *user_data,
+                                       const pj_sockaddr_t *rem_addr,
+                                       const pj_sockaddr_t *rem_rtcp,
+                                       unsigned addr_len,
+                                       void (*rtp_cb)(void*,
+                                                      void*,
+                                                      pj_ssize_t),
+                                       void (*rtcp_cb)(void*,
+                                                       void*,
+                                                       pj_ssize_t))
 {
     return tp_attach(tp, user_data, rem_addr, rem_rtcp, addr_len,
-    		     rtp_cb, NULL, rtcp_cb);
+                     rtp_cb, NULL, rtcp_cb);
 }
 
 
 static pj_status_t transport_attach2(pjmedia_transport *tp,
-				     pjmedia_transport_attach_param *att_param)
+                                     pjmedia_transport_attach_param *att_param)
 {
     return tp_attach(tp, att_param->user_data, 
-			    (pj_sockaddr_t*)&att_param->rem_addr, 
-			    (pj_sockaddr_t*)&att_param->rem_rtcp, 
-			    att_param->addr_len, att_param->rtp_cb,
-			    att_param->rtp_cb2, 
-			    att_param->rtcp_cb);
+                            (pj_sockaddr_t*)&att_param->rem_addr, 
+                            (pj_sockaddr_t*)&att_param->rem_rtcp, 
+                            att_param->addr_len, att_param->rtp_cb,
+                            att_param->rtp_cb2, 
+                            att_param->rtcp_cb);
 }
 
 
 /* Called by application when it no longer needs the transport */
 static void transport_detach( pjmedia_transport *tp,
-			      void *user_data)
+                              void *user_data)
 {
     struct transport_udp *udp = (struct transport_udp*) tp;
 
@@ -980,52 +979,52 @@ static void transport_detach( pjmedia_transport *tp,
 
     //if (udp->attached) {
     if (1) {
-	/* Lock the ioqueue keys to make sure that callbacks are
-	 * not executed. See ticket #460 for details.
-	 */
+        /* Lock the ioqueue keys to make sure that callbacks are
+         * not executed. See ticket #460 for details.
+         */
 
-	TRACE_((udp->base.name, "detach(): before locking keys"));
+        TRACE_((udp->base.name, "detach(): before locking keys"));
 
-	pj_ioqueue_lock_key(udp->rtp_key);
-	pj_ioqueue_lock_key(udp->rtcp_key);
+        pj_ioqueue_lock_key(udp->rtp_key);
+        pj_ioqueue_lock_key(udp->rtcp_key);
 
-	TRACE_((udp->base.name, "detach(): inside locked keys"));
+        TRACE_((udp->base.name, "detach(): inside locked keys"));
 
-	/* User data is unreferenced on Release build */
-	PJ_UNUSED_ARG(user_data);
+        /* User data is unreferenced on Release build */
+        PJ_UNUSED_ARG(user_data);
 
-	/* As additional checking, check if the same user data is specified */
-	pj_assert(!udp->user_data || user_data == udp->user_data);
+        /* As additional checking, check if the same user data is specified */
+        pj_assert(!udp->user_data || user_data == udp->user_data);
 
-	/* First, mark transport as unattached */
-	//udp->attached = PJ_FALSE;
+        /* First, mark transport as unattached */
+        //udp->attached = PJ_FALSE;
 
-	/* Clear up application infos from transport */
-	udp->rtp_cb = NULL;
-	udp->rtp_cb2 = NULL;
-	udp->rtcp_cb = NULL;
-	udp->user_data = NULL;
+        /* Clear up application infos from transport */
+        udp->rtp_cb = NULL;
+        udp->rtp_cb2 = NULL;
+        udp->rtcp_cb = NULL;
+        udp->user_data = NULL;
 
-	/* Cancel any outstanding operations */
-	pj_ioqueue_clear_key(udp->rtp_key);
-	pj_ioqueue_clear_key(udp->rtcp_key);
+        /* Cancel any outstanding operations */
+        pj_ioqueue_clear_key(udp->rtp_key);
+        pj_ioqueue_clear_key(udp->rtcp_key);
 
-	/* Set key status to 'stopped' as keys have been cleared */
-	udp->started = PJ_FALSE;
+        /* Set key status to 'stopped' as keys have been cleared */
+        udp->started = PJ_FALSE;
 
-	/* Unlock keys */
-	pj_ioqueue_unlock_key(udp->rtcp_key);
-	pj_ioqueue_unlock_key(udp->rtp_key);
+        /* Unlock keys */
+        pj_ioqueue_unlock_key(udp->rtcp_key);
+        pj_ioqueue_unlock_key(udp->rtp_key);
 
-	PJ_LOG(4,(udp->base.name, "UDP media transport detached"));
+        PJ_LOG(4,(udp->base.name, "UDP media transport detached"));
     }
 }
 
 
 /* Called by application to send RTP packet */
 static pj_status_t transport_send_rtp( pjmedia_transport *tp,
-				       const void *pkt,
-				       pj_size_t size)
+                                       const void *pkt,
+                                       pj_size_t size)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
     pj_ssize_t sent;
@@ -1040,26 +1039,26 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     PJ_ASSERT_RETURN(size <= PJMEDIA_MAX_MTU, PJ_ETOOBIG);
 
     if (!udp->started) {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     /* Simulate packet lost on TX direction */
     if (udp->tx_drop_pct) {
-	if ((pj_rand() % 100) <= (int)udp->tx_drop_pct) {
-	    PJ_LOG(5,(udp->base.name, 
-		      "TX RTP packet dropped because of pkt lost "
-		      "simulation"));
-	    return PJ_SUCCESS;
-	}
+        if ((pj_rand() % 100) <= (int)udp->tx_drop_pct) {
+            PJ_LOG(5,(udp->base.name, 
+                      "TX RTP packet dropped because of pkt lost "
+                      "simulation"));
+            return PJ_SUCCESS;
+        }
     }
 
 
     id = udp->rtp_write_op_id;
     pw = &udp->rtp_pending_write[id];
     if (pw->is_pending) {
-    	/* There is still currently pending operation for this buffer. */
-	PJ_LOG(4,(udp->base.name, "Too many pending write operations"));
-    	return PJ_EBUSY;
+        /* There is still currently pending operation for this buffer. */
+        PJ_LOG(4,(udp->base.name, "Too many pending write operations"));
+        return PJ_EBUSY;
     }
     pw->is_pending = PJ_TRUE;
 
@@ -1071,29 +1070,29 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 
     sent = size;
     status = pj_ioqueue_sendto( udp->rtp_key, 
-				&udp->rtp_pending_write[id].op_key,
-				pw->buffer, &sent, 0,
-				&udp->rem_rtp_addr, 
-				udp->addr_len);
+                                &udp->rtp_pending_write[id].op_key,
+                                pw->buffer, &sent, 0,
+                                &udp->rem_rtp_addr, 
+                                udp->addr_len);
 
     if (status != PJ_EPENDING) {
-    	/* Send operation has completed immediately. Clear the flag. */
-    	pw->is_pending = PJ_FALSE;
+        /* Send operation has completed immediately. Clear the flag. */
+        pw->is_pending = PJ_FALSE;
     }
 
     udp->rtp_write_op_id = (udp->rtp_write_op_id + 1) %
-			   PJ_ARRAY_SIZE(udp->rtp_pending_write);
+                           PJ_ARRAY_SIZE(udp->rtp_pending_write);
 
     if (status==PJ_SUCCESS || status==PJ_EPENDING)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     return status;
 }
 
 /* Called by application to send RTCP packet */
 static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
-				       const void *pkt,
-				       pj_size_t size)
+                                       const void *pkt,
+                                       pj_size_t size)
 {
     return transport_send_rtcp2(tp, NULL, 0, pkt, size);
 }
@@ -1101,10 +1100,10 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 
 /* Called by application to send RTCP packet */
 static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
-					const pj_sockaddr_t *addr,
-					unsigned addr_len,
-				        const void *pkt,
-				        pj_size_t size)
+                                        const pj_sockaddr_t *addr,
+                                        unsigned addr_len,
+                                        const void *pkt,
+                                        pj_size_t size)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
     pj_ssize_t sent;
@@ -1113,31 +1112,31 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     //PJ_ASSERT_RETURN(udp->attached, PJ_EINVALIDOP);
 
     if (!udp->started) {
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     if (addr == NULL) {
-	addr = &udp->rem_rtcp_addr;
-	addr_len = udp->addr_len;
+        addr = &udp->rem_rtcp_addr;
+        addr_len = udp->addr_len;
     }
 
     sent = size;
     status = pj_ioqueue_sendto( (udp->use_rtcp_mux? udp->rtp_key:
-    				 udp->rtcp_key), &udp->rtcp_write_op,
-				pkt, &sent, 0, addr, addr_len);
+                                 udp->rtcp_key), &udp->rtcp_write_op,
+                                pkt, &sent, 0, addr, addr_len);
 
     if (status==PJ_SUCCESS || status==PJ_EPENDING)
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
 
     return status;
 }
 
 
 static pj_status_t transport_media_create(pjmedia_transport *tp,
-				  pj_pool_t *pool,
-				  unsigned options,
-				  const pjmedia_sdp_session *sdp_remote,
-				  unsigned media_index)
+                                  pj_pool_t *pool,
+                                  unsigned options,
+                                  const pjmedia_sdp_session *sdp_remote,
+                                  unsigned media_index)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
 
@@ -1154,34 +1153,34 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 }
 
 static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
-				        pj_pool_t *pool,
-				        pjmedia_sdp_session *sdp_local,
-				        const pjmedia_sdp_session *rem_sdp,
-				        unsigned media_index)
+                                        pj_pool_t *pool,
+                                        pjmedia_sdp_session *sdp_local,
+                                        const pjmedia_sdp_session *rem_sdp,
+                                        unsigned media_index)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
 
     /* Validate media transport */
     /* By now, this transport only support RTP/AVP transport */
     if ((udp->media_options & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
-	pjmedia_sdp_media *m_rem, *m_loc;
-	pj_uint32_t tp_proto_loc, tp_proto_rem;
+        pjmedia_sdp_media *m_rem, *m_loc;
+        pj_uint32_t tp_proto_loc, tp_proto_rem;
 
-	m_rem = rem_sdp? rem_sdp->media[media_index] : NULL;
-	m_loc = sdp_local->media[media_index];
+        m_rem = rem_sdp? rem_sdp->media[media_index] : NULL;
+        m_loc = sdp_local->media[media_index];
 
-	tp_proto_loc = pjmedia_sdp_transport_get_proto(&m_loc->desc.transport);
-	tp_proto_rem = m_rem? 
-		pjmedia_sdp_transport_get_proto(&m_rem->desc.transport) : 0;
-	PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_loc, PJMEDIA_TP_PROFILE_RTCP_FB);
-	PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_rem, PJMEDIA_TP_PROFILE_RTCP_FB);
+        tp_proto_loc = pjmedia_sdp_transport_get_proto(&m_loc->desc.transport);
+        tp_proto_rem = m_rem? 
+                pjmedia_sdp_transport_get_proto(&m_rem->desc.transport) : 0;
+        PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_loc, PJMEDIA_TP_PROFILE_RTCP_FB);
+        PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_rem, PJMEDIA_TP_PROFILE_RTCP_FB);
 
-	if ((tp_proto_loc != PJMEDIA_TP_PROTO_RTP_AVP) ||
-	    (m_rem && tp_proto_rem != PJMEDIA_TP_PROTO_RTP_AVP))
-	{
-	    pjmedia_sdp_media_deactivate(pool, m_loc);
-	    return PJMEDIA_SDP_EINPROTO;
-	}
+        if ((tp_proto_loc != PJMEDIA_TP_PROTO_RTP_AVP) ||
+            (m_rem && tp_proto_rem != PJMEDIA_TP_PROTO_RTP_AVP))
+        {
+            pjmedia_sdp_media_deactivate(pool, m_loc);
+            return PJMEDIA_SDP_EINPROTO;
+        }
     }
     
     if (udp->enable_rtcp_mux) {
@@ -1189,17 +1188,17 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
         pjmedia_sdp_attr *attr;
         pj_bool_t add_rtcp_mux = PJ_TRUE;
 
-	udp->use_rtcp_mux = PJ_FALSE;
+        udp->use_rtcp_mux = PJ_FALSE;
 
-	/* Check if remote wants RTCP mux */
-	if (rem_sdp) {
-	    pjmedia_sdp_media *rem_m = rem_sdp->media[media_index];
-	    
-	    attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
-				         &STR_RTCP_MUX, NULL);
-	    udp->use_rtcp_mux = (attr? PJ_TRUE: PJ_FALSE);
-	    add_rtcp_mux = udp->use_rtcp_mux;
-	}
+        /* Check if remote wants RTCP mux */
+        if (rem_sdp) {
+            pjmedia_sdp_media *rem_m = rem_sdp->media[media_index];
+            
+            attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+                                         &STR_RTCP_MUX, NULL);
+            udp->use_rtcp_mux = (attr? PJ_TRUE: PJ_FALSE);
+            add_rtcp_mux = udp->use_rtcp_mux;
+        }
 
         /* Remove RTCP attribute because for subsequent offers/answers,
          * the address (obtained from transport_get_info() ) may be
@@ -1208,23 +1207,23 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
          * if remote rejects it.
          */
         pjmedia_sdp_attr_remove_all(&m->attr_count, m->attr, "rtcp");
-	
-	if (!udp->use_rtcp_mux) {
-	   /* Add RTCP attribute if the remote doesn't offer or
-	    * rejects it.
-	    */
-	    attr = pjmedia_sdp_attr_create_rtcp(pool,
-					        &udp->rtcp_addr_name);	
-	    if (attr)
-	        pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
-	}
+        
+        if (!udp->use_rtcp_mux) {
+           /* Add RTCP attribute if the remote doesn't offer or
+            * rejects it.
+            */
+            attr = pjmedia_sdp_attr_create_rtcp(pool,
+                                                &udp->rtcp_addr_name);  
+            if (attr)
+                pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+        }
 
-	/* Add a=rtcp-mux attribute. */
-	if (add_rtcp_mux) {
-	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-    	    attr->name = STR_RTCP_MUX;
-    	    m->attr[m->attr_count++] = attr;
-	}
+        /* Add a=rtcp-mux attribute. */
+        if (add_rtcp_mux) {
+            attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+            attr->name = STR_RTCP_MUX;
+            m->attr[m->attr_count++] = attr;
+        }
     }
 
     return PJ_SUCCESS;
@@ -1232,10 +1231,10 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
 
 static pj_status_t transport_media_start(pjmedia_transport *tp,
-				  pj_pool_t *pool,
-				  const pjmedia_sdp_session *sdp_local,
-				  const pjmedia_sdp_session *sdp_remote,
-				  unsigned media_index)
+                                  pj_pool_t *pool,
+                                  const pjmedia_sdp_session *sdp_local,
+                                  const pjmedia_sdp_session *sdp_remote,
+                                  unsigned media_index)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
     pj_ssize_t size;
@@ -1251,14 +1250,14 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 
     /* Just return success if there is already pending read */
     if (udp->started) {
-	PJ_LOG(5,(udp->base.name, "UDP media transport already started"));
-	return PJ_SUCCESS;
+        PJ_LOG(5,(udp->base.name, "UDP media transport already started"));
+        return PJ_SUCCESS;
     }
 
     pj_ioqueue_op_key_init(&udp->rtp_read_op, sizeof(udp->rtp_read_op));
     for (i=0; i<PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
-	pj_ioqueue_op_key_init(&udp->rtp_pending_write[i].op_key, 
-			       sizeof(udp->rtp_pending_write[i].op_key));
+        pj_ioqueue_op_key_init(&udp->rtp_pending_write[i].op_key, 
+                               sizeof(udp->rtp_pending_write[i].op_key));
     }
 
     pj_ioqueue_op_key_init(&udp->rtcp_read_op, sizeof(udp->rtcp_read_op));
@@ -1270,12 +1269,12 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
     size = sizeof(udp->rtp_pkt);
     status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
-			         udp->rtp_pkt, &size, PJ_IOQUEUE_ALWAYS_ASYNC,
-				 &udp->rtp_src_addr, &udp->rtp_addrlen);
+                                 udp->rtp_pkt, &size, PJ_IOQUEUE_ALWAYS_ASYNC,
+                                 &udp->rtp_src_addr, &udp->rtp_addrlen);
     if (status != PJ_EPENDING) {
-	PJ_PERROR(3, (udp->base.name, status,
-		      "media_start(): recvfrom RTP failed"));
-	return status;
+        PJ_PERROR(3, (udp->base.name, status,
+                      "media_start(): recvfrom RTP failed"));
+        return status;
     }
 
     TRACE_((udp->base.name, "media_start(): before recvfrom RTCP"));
@@ -1284,14 +1283,14 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     udp->rtcp_addr_len = sizeof(udp->rtcp_src_addr);
     size = sizeof(udp->rtcp_pkt);
     status = pj_ioqueue_recvfrom(udp->rtcp_key, &udp->rtcp_read_op,
-				 udp->rtcp_pkt, &size,
-				 PJ_IOQUEUE_ALWAYS_ASYNC,
-				 &udp->rtcp_src_addr, &udp->rtcp_addr_len);
+                                 udp->rtcp_pkt, &size,
+                                 PJ_IOQUEUE_ALWAYS_ASYNC,
+                                 &udp->rtcp_src_addr, &udp->rtcp_addr_len);
     if (status != PJ_EPENDING) {
-	PJ_PERROR(3, (udp->base.name, status,
-		      "media_start(): recvfrom RTCP failed"));
-	pj_ioqueue_clear_key(udp->rtp_key);
-	return status;
+        PJ_PERROR(3, (udp->base.name, status,
+                      "media_start(): recvfrom RTCP failed"));
+        pj_ioqueue_clear_key(udp->rtp_key);
+        return status;
     }
 
     udp->started = PJ_TRUE;
@@ -1309,8 +1308,8 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
 
     /* Just return success if there is no pending read */
     if (!udp->started) {
-	PJ_LOG(5, (udp->base.name, "UDP media transport already stopped"));
-	return PJ_SUCCESS;
+        PJ_LOG(5, (udp->base.name, "UDP media transport already stopped"));
+        return PJ_SUCCESS;
     }
 
     pj_ioqueue_clear_key(udp->rtp_key);
@@ -1324,25 +1323,28 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
 }
 
 static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
-					   pjmedia_dir dir,
-					   unsigned pct_lost)
+                                           pjmedia_dir dir,
+                                           unsigned pct_lost)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
 
     PJ_ASSERT_RETURN(tp && pct_lost <= 100, PJ_EINVAL);
 
     if (dir & PJMEDIA_DIR_ENCODING)
-	udp->tx_drop_pct = pct_lost;
+        udp->tx_drop_pct = pct_lost;
     
     if (dir & PJMEDIA_DIR_DECODING)
-	udp->rx_drop_pct = pct_lost;
+        udp->rx_drop_pct = pct_lost;
 
     return PJ_SUCCESS;
 }
 
 static pj_status_t transport_restart(pj_bool_t is_rtp, 
-				     struct transport_udp *udp)
+                                     struct transport_udp *udp)
 {
+    PJ_UNUSED_ARG(udp);
+    PJ_UNUSED_ARG(is_rtp);
+
     return PJ_ENOTSUP;
 
 /* This code is disabled for the following reason (see also #2881):
@@ -1367,22 +1369,22 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     pj_ssize_t size;
 
     PJ_LOG(4, (udp->base.name, "Restarting %s transport", 
-	      (is_rtp)?"RTP":"RTCP"));
+              (is_rtp)?"RTP":"RTCP"));
 
     udp->started = PJ_FALSE;
     /* Destroy existing socket, if any. */    
     if (key) {
-	/* This will block the execution if callback is still
-	 * being called.
-	 */
-	pj_ioqueue_unregister(key);
-	if (is_rtp) {
-	    udp->rtp_key = NULL;
-	} else {
-	    udp->rtcp_key = NULL;
-	}
+        /* This will block the execution if callback is still
+         * being called.
+         */
+        pj_ioqueue_unregister(key);
+        if (is_rtp) {
+            udp->rtp_key = NULL;
+        } else {
+            udp->rtcp_key = NULL;
+        }
     } else if (*sock != PJ_INVALID_SOCKET) {
-	pj_sock_close(*sock);
+        pj_sock_close(*sock);
     }
     *sock = PJ_INVALID_SOCKET;   
 
@@ -1391,76 +1393,76 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, sock);
 
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     addr = (is_rtp) ? &udp->rtp_addr_name : &udp->rtcp_addr_name;
     status = pj_sock_bind(*sock, addr, pj_sockaddr_get_len(addr));
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Set buffer size for RTP socket */
 #if PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE
     if (is_rtp) {
-	unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
+        unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
 
-	pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(), 
-				 PJ_TRUE, &sobuf_size);
+        pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(), 
+                                 PJ_TRUE, &sobuf_size);
     }
 #endif
 #if PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE
     if (is_rtp) {
-	unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
+        unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
 
-	pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(), 
-				 PJ_TRUE, &sobuf_size);
+        pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(), 
+                                 PJ_TRUE, &sobuf_size);
     }
 #endif
     pj_bzero(&cb, sizeof(cb));
     if (is_rtp) {
-	cb.on_read_complete = &on_rx_rtp;
-	cb.on_write_complete = &on_rtp_data_sent;
+        cb.on_read_complete = &on_rx_rtp;
+        cb.on_write_complete = &on_rtp_data_sent;
     } else {
-	cb.on_read_complete = &on_rx_rtcp;
+        cb.on_read_complete = &on_rx_rtcp;
     }
 
     if (is_rtp) {
-	status = pj_ioqueue_register_sock(udp->pool, udp->ioqueue, *sock, udp,
-					  &cb, &udp->rtp_key);
+        status = pj_ioqueue_register_sock(udp->pool, udp->ioqueue, *sock, udp,
+                                          &cb, &udp->rtp_key);
     } else {
-	status = pj_ioqueue_register_sock(udp->pool, udp->ioqueue, *sock, udp,
-					  &cb, &udp->rtcp_key);    
+        status = pj_ioqueue_register_sock(udp->pool, udp->ioqueue, *sock, udp,
+                                          &cb, &udp->rtcp_key);    
     }
 
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     if (is_rtp) {
-	size = sizeof(udp->rtp_pkt);
-	status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
-				     udp->rtp_pkt, &size, 
-				     PJ_IOQUEUE_ALWAYS_ASYNC,
-				     &udp->rtp_src_addr, &udp->rtp_addrlen);
+        size = sizeof(udp->rtp_pkt);
+        status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
+                                     udp->rtp_pkt, &size, 
+                                     PJ_IOQUEUE_ALWAYS_ASYNC,
+                                     &udp->rtp_src_addr, &udp->rtp_addrlen);
     } else {
-	size = sizeof(udp->rtcp_pkt);
-	status = pj_ioqueue_recvfrom(udp->rtcp_key, &udp->rtcp_read_op,
-				     udp->rtcp_pkt, &size, 
-				     PJ_IOQUEUE_ALWAYS_ASYNC,
-				     &udp->rtcp_src_addr, &udp->rtcp_addr_len);
+        size = sizeof(udp->rtcp_pkt);
+        status = pj_ioqueue_recvfrom(udp->rtcp_key, &udp->rtcp_read_op,
+                                     udp->rtcp_pkt, &size, 
+                                     PJ_IOQUEUE_ALWAYS_ASYNC,
+                                     &udp->rtcp_src_addr, &udp->rtcp_addr_len);
     }
     if (status != PJ_EPENDING)
-	goto on_error;
+        goto on_error;
 
     udp->started = PJ_TRUE;
     PJ_LOG(4, (udp->base.name, "Success restarting %s transport", 
-	      (is_rtp)?"RTP":"RTCP"));
+              (is_rtp)?"RTP":"RTCP"));
     return PJ_SUCCESS;
 on_error:
     if (*sock != PJ_INVALID_SOCKET) {
-	pj_sock_close(*sock);
-	*sock = PJ_INVALID_SOCKET;
+        pj_sock_close(*sock);
+        *sock = PJ_INVALID_SOCKET;
     }
     PJ_PERROR(1, (udp->base.name, status, 
-		 "Error restarting %s transport", (is_rtp)?"RTP":"RTCP"));
+                 "Error restarting %s transport", (is_rtp)?"RTP":"RTCP"));
     return status;
 
 #endif

@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -27,6 +26,7 @@
 extern int param_echo_sock_type;
 extern const char *param_echo_server;
 extern int param_echo_port;
+extern pj_bool_t param_ci_mode;
 
 
 //#if defined(PJ_WIN32) && PJ_WIN32!=0
@@ -54,7 +54,7 @@ static void init_signals()
     sigaction(SIGALRM, &act, NULL);
 }
 
-#elif PJ_LINUX || PJ_DARWINOS
+#elif (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0
 
 #include <execinfo.h>
 #include <signal.h>
@@ -72,7 +72,7 @@ static void print_stack(int sig)
     exit(1);
 }
 
-static void init_signals()
+static void init_signals(void)
 {
     signal(SIGSEGV, &print_stack);
     signal(SIGABRT, &print_stack);
@@ -84,48 +84,60 @@ static void init_signals()
 
 int main(int argc, char *argv[])
 {
-    int rc;
+    int iarg=1, rc;
     int interractive = 0;
+    int no_trap = 0;
 
     boost();
-    init_signals();
 
-    while (argc > 1) {
-        char *arg = argv[--argc];
+    while (iarg < argc) {
+        char *arg = argv[iarg++];
 
-	if (*arg=='-' && *(arg+1)=='i') {
-	    interractive = 1;
+        if (*arg=='-' && *(arg+1)=='i') {
+            interractive = 1;
 
-	} else if (*arg=='-' && *(arg+1)=='p') {
-            pj_str_t port = pj_str(argv[--argc]);
+        } else if (*arg=='-' && *(arg+1)=='n') {
+            no_trap = 1;
+        } else if (*arg=='-' && *(arg+1)=='p') {
+            pj_str_t port = pj_str(argv[iarg++]);
 
             param_echo_port = pj_strtoul(&port);
 
         } else if (*arg=='-' && *(arg+1)=='s') {
-            param_echo_server = argv[--argc];
+            param_echo_server = argv[iarg++];
 
         } else if (*arg=='-' && *(arg+1)=='t') {
-            pj_str_t type = pj_str(argv[--argc]);
+            pj_str_t type = pj_str(argv[iarg++]);
             
             if (pj_stricmp2(&type, "tcp")==0)
                 param_echo_sock_type = pj_SOCK_STREAM();
             else if (pj_stricmp2(&type, "udp")==0)
                 param_echo_sock_type = pj_SOCK_DGRAM();
             else {
-                PJ_LOG(3,("", "error: unknown socket type %s", type.ptr));
+                printf("Error: unknown socket type %s\n", type.ptr);
                 return 1;
             }
+        } else if (strcmp(arg, "--ci-mode")==0) {
+            param_ci_mode = PJ_TRUE;
+
+        } else {
+            printf("Error in argument \"%s\"\n", arg);
+            return 1;
         }
+    }
+
+    if (!no_trap) {
+        init_signals();
     }
 
     rc = test_main();
 
     if (interractive) {
-	char s[10];
-	puts("");
-	puts("Press <ENTER> to exit");
-	if (!fgets(s, sizeof(s), stdin))
-	    return rc;
+        char s[10];
+        puts("");
+        puts("Press <ENTER> to exit");
+        if (!fgets(s, sizeof(s), stdin))
+            return rc;
     }
 
     return rc;

@@ -33,6 +33,9 @@ SWIG_FLAGS += -w312 $(USE_THREADS)
 
 all: $(PYTHON_SO)
 
+wheel: pjsua2_wrap.cpp setup.py $(GCC_EXE)
+	$(PYTHON_EXE) setup.py bdist_wheel $(PYTHON_SETUP_FLAGS)
+
 $(PYTHON_SO): pjsua2_wrap.cpp setup.py $(GCC_EXE)
 	$(PYTHON_EXE) setup.py build $(PYTHON_SETUP_FLAGS)
 
@@ -53,4 +56,3 @@ install:
 uninstall:
 	rm -f $(PYTHON_PKG_DIR)/pjsua2*
 	rm -f $(PYTHON_PKG_DIR)/_pjsua2*
-

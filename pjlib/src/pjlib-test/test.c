@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -19,18 +18,28 @@
  */
 #include "test.h"
 #include <pjlib.h>
+
 #ifdef _MSC_VER
 #  pragma warning(disable:4127)
+
+  /* Disable ioqueue stress test on MSVC2005, due to compile errors on
+   * structure field assignments.
+   */
+#  if _MSC_VER <= 1400
+#    undef INCLUDE_IOQUEUE_STRESS_TEST
+#    define INCLUDE_IOQUEUE_STRESS_TEST 0
+#  endif
+
 #endif
 
-#define DO_TEST(test)	do { \
-			    PJ_LOG(3, ("test", "Running %s...", #test));  \
-			    rc = test; \
-			    PJ_LOG(3, ("test",  \
-				       "%s(%d)",  \
-				       (rc ? "..ERROR" : "..success"), rc)); \
-			    if (rc!=0) goto on_return; \
-			} while (0)
+#define DO_TEST(test)   do { \
+                            PJ_LOG(3, ("test", "Running %s...", #test));  \
+                            rc = test; \
+                            PJ_LOG(3, ("test",  \
+                                       "%s(%d)",  \
+                                       (rc ? "..ERROR" : "..success"), rc)); \
+                            if (rc!=0) goto on_return; \
+                        } while (0)
 
 
 pj_pool_factory *mem;
@@ -39,7 +48,8 @@ int param_echo_sock_type;
 const char *param_echo_server = ECHO_SERVER_ADDRESS;
 int param_echo_port = ECHO_SERVER_START_PORT;
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
+                      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
+pj_bool_t param_ci_mode = PJ_FALSE;  /* GH CI mode: more lenient tests */
 
 int null_func()
 {
@@ -60,12 +70,15 @@ int test_inner(void)
 
     rc = pj_init();
     if (rc != 0) {
-	app_perror("pj_init() error!!", rc);
-	return rc;
+        app_perror("pj_init() error!!", rc);
+        return rc;
     }
 
-    //pj_dump_config();
+    pj_dump_config();
     pj_caching_pool_init( &caching_pool, NULL, 0 );
+
+    if (param_ci_mode)
+        PJ_LOG(3,("test", "Using ci-mode"));
 
 #if INCLUDE_ERRNO_TEST
     DO_TEST( errno_test() );
@@ -155,12 +168,16 @@ int test_inner(void)
     DO_TEST( tcp_ioqueue_test() );
 #endif
 
-#if INCLUDE_IOQUEUE_PERF_TEST
-    DO_TEST( ioqueue_perf_test() );
-#endif
-
 #if INCLUDE_IOQUEUE_UNREG_TEST
     DO_TEST( udp_ioqueue_unreg_test() );
+#endif
+
+#if INCLUDE_IOQUEUE_STRESS_TEST
+    DO_TEST( ioqueue_stress_test() );
+#endif
+
+#if INCLUDE_IOQUEUE_PERF_TEST
+    DO_TEST( ioqueue_perf_test() );
 #endif
 
 #if INCLUDE_ACTIVESOCK_TEST
@@ -195,20 +212,20 @@ on_return:
 
     pj_caching_pool_destroy( &caching_pool );
 
-    PJ_LOG(3,("test", ""));
+    PJ_LOG(3,("test", " "));
 
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
     PJ_LOG(3,("test", "Stack max usage: %u, deepest: %s:%u",
-	              pj_thread_get_stack_max_usage(pj_thread_this()),
-		      filename, line));
+                      pj_thread_get_stack_max_usage(pj_thread_this()),
+                      filename, line));
     if (rc == 0)
-	PJ_LOG(3,("test", "Looks like everything is okay!.."));
+        PJ_LOG(3,("test", "Looks like everything is okay!.."));
     else
-	PJ_LOG(3,("test", "Test completed with error(s)"));
+        PJ_LOG(3,("test", "Test completed with error(s)"));
 
     pj_shutdown();
 
-    return 0;
+    return rc;
 }
 
 #include <pj/sock.h>

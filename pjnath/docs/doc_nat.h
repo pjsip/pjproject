@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -54,7 +53,7 @@ the security policy of an organization, while NAT is a connectivity solution
 to allow multiple hosts to use a single public IP address. Understandably
 both functionalities are difficult to separate at times, since many 
 (typically consumer) products claims to do both with the same device and
-simply label the device a “NAT box”. But we do want to make this distinction
+simply label the device a "NAT box". But we do want to make this distinction
 rather clear, as PJNATH is a NAT traversal helper and not a firewall bypass
 solution (yet).
 

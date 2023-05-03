@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -23,9 +22,9 @@
 #include <pjlib.h>
 #include <pjlib-util.h>
 
-#define THIS_FILE	"auddemo.c"
-#define MAX_DEVICES	64
-#define WAV_FILE	"auddemo.wav"
+#define THIS_FILE       "auddemo.c"
+#define MAX_DEVICES     64
+#define WAV_FILE        "auddemo.wav"
 
 
 static unsigned dev_count;
@@ -36,9 +35,9 @@ static void app_perror(const char *title, pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
-    pj_strerror(status, errmsg, sizeof(errmsg));	
+    pj_strerror(status, errmsg, sizeof(errmsg));        
     printf( "%s: %s (err=%d)\n",
-	    title, errmsg, status);
+            title, errmsg, status);
 }
 
 static void list_devices(void)
@@ -48,21 +47,21 @@ static void list_devices(void)
     
     dev_count = pjmedia_aud_dev_count();
     if (dev_count == 0) {
-	PJ_LOG(3,(THIS_FILE, "No devices found"));
-	return;
+        PJ_LOG(3,(THIS_FILE, "No devices found"));
+        return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Found %d devices:", dev_count));
 
     for (i=0; i<dev_count; ++i) {
-	pjmedia_aud_dev_info info;
+        pjmedia_aud_dev_info info;
 
-	status = pjmedia_aud_dev_get_info(i, &info);
-	if (status != PJ_SUCCESS)
-	    continue;
+        status = pjmedia_aud_dev_get_info(i, &info);
+        if (status != PJ_SUCCESS)
+            continue;
 
-	PJ_LOG(3,(THIS_FILE," %2d: %s [%s] (%d/%d)",
-	          i, info.driver, info.name, info.input_count, info.output_count));
+        PJ_LOG(3,(THIS_FILE," %2d: %s [%s] (%d/%d)",
+                  i, info.driver, info.name, info.input_count, info.output_count));
     }
 }
 
@@ -74,13 +73,13 @@ static const char *decode_caps(unsigned caps)
     text[0] = '\0';
 
     for (i=0; i<31; ++i) {
-	if ((1 << i) & caps) {
-	    const char *capname;
-	    capname = pjmedia_aud_dev_cap_name((pjmedia_aud_dev_cap)(1 << i), 
-					       NULL);
-	    strcat(text, capname);
-	    strcat(text, " ");
-	}
+        if ((1 << i) & caps) {
+            const char *capname;
+            capname = pjmedia_aud_dev_cap_name((pjmedia_aud_dev_cap)(1 << i), 
+                                               NULL);
+            pj_ansi_strxcat(text, capname, sizeof(text));
+            pj_ansi_strxcat(text, " ", sizeof(text));
+        }
     }
 
     return text;
@@ -94,14 +93,14 @@ static void show_dev_info(unsigned index)
     pj_status_t status;
 
     if (index >= dev_count) {
-	PJ_LOG(1,(THIS_FILE, "Error: invalid index %u", index));
-	return;
+        PJ_LOG(1,(THIS_FILE, "Error: invalid index %u", index));
+        return;
     }
 
     status = pjmedia_aud_dev_get_info(index, &info);
     if (status != PJ_SUCCESS) {
-	app_perror("pjmedia_aud_dev_get_info() error", status);
-	return;
+        app_perror("pjmedia_aud_dev_get_info() error", status);
+        return;
     }
 
     PJ_LOG(3, (THIS_FILE, "Device at index %u:", index));
@@ -116,38 +115,39 @@ static void show_dev_info(unsigned index)
 
     formats[0] = '\0';
     if (info.caps & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT) {
-	unsigned i;
+        unsigned i;
 
-	for (i=0; i<info.ext_fmt_cnt; ++i) {
-	    char bitrate[32];
+        for (i=0; i<info.ext_fmt_cnt; ++i) {
+            char bitrate[32];
 
-	    switch (info.ext_fmt[i].id) {
-	    case PJMEDIA_FORMAT_L16:
-		strcat(formats, "L16/");
-		break;
-	    case PJMEDIA_FORMAT_PCMA:
-		strcat(formats, "PCMA/");
-		break;
-	    case PJMEDIA_FORMAT_PCMU:
-		strcat(formats, "PCMU/");
-		break;
-	    case PJMEDIA_FORMAT_AMR:
-		strcat(formats, "AMR/");
-		break;
-	    case PJMEDIA_FORMAT_G729:
-		strcat(formats, "G729/");
-		break;
-	    case PJMEDIA_FORMAT_ILBC:
-		strcat(formats, "ILBC/");
-		break;
-	    default:
-		strcat(formats, "unknown/");
-		break;
-	    }
-	    sprintf(bitrate, "%u", info.ext_fmt[i].det.aud.avg_bps);
-	    strcat(formats, bitrate);
-	    strcat(formats, " ");
-	}
+            switch (info.ext_fmt[i].id) {
+            case PJMEDIA_FORMAT_L16:
+                pj_ansi_strxcat(formats, "L16/", sizeof(formats));
+                break;
+            case PJMEDIA_FORMAT_PCMA:
+                pj_ansi_strxcat(formats, "PCMA/", sizeof(formats));
+                break;
+            case PJMEDIA_FORMAT_PCMU:
+                pj_ansi_strxcat(formats, "PCMU/", sizeof(formats));
+                break;
+            case PJMEDIA_FORMAT_AMR:
+                pj_ansi_strxcat(formats, "AMR/", sizeof(formats));
+                break;
+            case PJMEDIA_FORMAT_G729:
+                pj_ansi_strxcat(formats, "G729/", sizeof(formats));
+                break;
+            case PJMEDIA_FORMAT_ILBC:
+                pj_ansi_strxcat(formats, "ILBC/", sizeof(formats));
+                break;
+            default:
+                pj_ansi_strxcat(formats, "unknown/", sizeof(formats));
+                break;
+            }
+            pj_ansi_snprintf(bitrate, sizeof(bitrate), "%u",
+                             info.ext_fmt[i].det.aud.avg_bps);
+            pj_ansi_strxcat(formats, bitrate, sizeof(formats));
+            pj_ansi_strxcat(formats, " ", sizeof(formats));
+        }
     }
     PJ_LOG(3, (THIS_FILE, H": %s", "Extended formats", formats));
 
@@ -155,22 +155,22 @@ static void show_dev_info(unsigned index)
 }
 
 static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id, 
-			unsigned clock_rate, unsigned ptime, 
-			unsigned chnum)
+                        unsigned clock_rate, unsigned ptime, 
+                        unsigned chnum)
 {
     pjmedia_aud_param param;
     pjmedia_aud_test_results result;
     pj_status_t status;
 
     if (dir & PJMEDIA_DIR_CAPTURE) {
-	status = pjmedia_aud_dev_default_param(rec_id, &param);
+        status = pjmedia_aud_dev_default_param(rec_id, &param);
     } else {
-	status = pjmedia_aud_dev_default_param(play_id, &param);
+        status = pjmedia_aud_dev_default_param(play_id, &param);
     }
 
     if (status != PJ_SUCCESS) {
-	app_perror("pjmedia_aud_dev_default_param()", status);
-	return;
+        app_perror("pjmedia_aud_dev_default_param()", status);
+        return;
     }
 
     param.dir = dir;
@@ -182,7 +182,7 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
 
     /* Latency settings */
     param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
-		    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
+                    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
     param.input_latency_ms = capture_lat;
     param.output_latency_ms = playback_lat;
 
@@ -190,54 +190,54 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
 
     status = pjmedia_aud_test(&param, &result);
     if (status != PJ_SUCCESS) {
-	app_perror("Test has completed with error", status);
-	return;
+        app_perror("Test has completed with error", status);
+        return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Done. Result:"));
 
     if (dir & PJMEDIA_DIR_CAPTURE) {
-	if (result.rec.frame_cnt==0) {
-	    PJ_LOG(1,(THIS_FILE, "Error: no frames captured!"));
-	} else {
-	    PJ_LOG(3,(THIS_FILE, "  %-20s: interval (min/max/avg/dev)=%u/%u/%u/%u, burst=%u",
-		      "Recording result",
-		      result.rec.min_interval,
-		      result.rec.max_interval,
-		      result.rec.avg_interval,
-		      result.rec.dev_interval,
-		      result.rec.max_burst));
-	}
+        if (result.rec.frame_cnt==0) {
+            PJ_LOG(1,(THIS_FILE, "Error: no frames captured!"));
+        } else {
+            PJ_LOG(3,(THIS_FILE, "  %-20s: interval (min/max/avg/dev)=%u/%u/%u/%u, burst=%u",
+                      "Recording result",
+                      result.rec.min_interval,
+                      result.rec.max_interval,
+                      result.rec.avg_interval,
+                      result.rec.dev_interval,
+                      result.rec.max_burst));
+        }
     }
 
     if (dir & PJMEDIA_DIR_PLAYBACK) {
-	if (result.play.frame_cnt==0) {
-	    PJ_LOG(1,(THIS_FILE, "Error: no playback!"));
-	} else {
-	    PJ_LOG(3,(THIS_FILE, "  %-20s: interval (min/max/avg/dev)=%u/%u/%u/%u, burst=%u",
-		      "Playback result",
-		      result.play.min_interval,
-		      result.play.max_interval,
-		      result.play.avg_interval,
-		      result.play.dev_interval,
-		      result.play.max_burst));
-	}
+        if (result.play.frame_cnt==0) {
+            PJ_LOG(1,(THIS_FILE, "Error: no playback!"));
+        } else {
+            PJ_LOG(3,(THIS_FILE, "  %-20s: interval (min/max/avg/dev)=%u/%u/%u/%u, burst=%u",
+                      "Playback result",
+                      result.play.min_interval,
+                      result.play.max_interval,
+                      result.play.avg_interval,
+                      result.play.dev_interval,
+                      result.play.max_burst));
+        }
     }
 
     if (dir==PJMEDIA_DIR_CAPTURE_PLAYBACK) {
-	if (result.rec_drift_per_sec == 0) {
-	    PJ_LOG(3,(THIS_FILE, " No clock drift detected"));
-	} else {
-	    const char *which = result.rec_drift_per_sec>=0 ? "faster" : "slower";
-	    unsigned drift = result.rec_drift_per_sec>=0 ? 
-				result.rec_drift_per_sec :
-				-result.rec_drift_per_sec;
+        if (result.rec_drift_per_sec == 0) {
+            PJ_LOG(3,(THIS_FILE, " No clock drift detected"));
+        } else {
+            const char *which = result.rec_drift_per_sec>=0 ? "faster" : "slower";
+            unsigned drift = result.rec_drift_per_sec>=0 ? 
+                                result.rec_drift_per_sec :
+                                -result.rec_drift_per_sec;
 
-	    PJ_LOG(3,(THIS_FILE, " Clock drifts detected. Capture device "
-				 "is running %d samples per second %s "
-				 "than the playback device",
-				 drift, which));
-	}
+            PJ_LOG(3,(THIS_FILE, " Clock drifts detected. Capture device "
+                                 "is running %d samples per second %s "
+                                 "than the playback device",
+                                 drift, which));
+        }
     }
 }
 
@@ -257,22 +257,22 @@ static void record(unsigned rec_index, const char *filename)
     pj_status_t status;
 
     if (filename == NULL)
-	filename = WAV_FILE;
+        filename = WAV_FILE;
 
     pool = pj_pool_create(pjmedia_aud_subsys_get_pool_factory(), "wav",
-			  1000, 1000, NULL);
+                          1000, 1000, NULL);
 
     status = pjmedia_wav_writer_port_create(pool, filename, 16000, 
-					    1, 320, 16, 0, 0, &wav);
+                                            1, 320, 16, 0, 0, &wav);
     if (status != PJ_SUCCESS) {
-	app_perror("Error creating WAV file", status);
-	goto on_return;
+        app_perror("Error creating WAV file", status);
+        goto on_return;
     }
 
     status = pjmedia_aud_dev_default_param(rec_index, &param);
     if (status != PJ_SUCCESS) {
-	app_perror("pjmedia_aud_dev_default_param()", status);
-	goto on_return;
+        app_perror("pjmedia_aud_dev_default_param()", status);
+        goto on_return;
     }
 
     param.dir = PJMEDIA_DIR_CAPTURE;
@@ -282,16 +282,16 @@ static void record(unsigned rec_index, const char *filename)
     param.bits_per_sample = PJMEDIA_PIA_BITS(&wav->info);
 
     status = pjmedia_aud_stream_create(&param, &wav_rec_cb, NULL, wav,
-				       &strm);
+                                       &strm);
     if (status != PJ_SUCCESS) {
-	app_perror("Error opening the sound device", status);
-	goto on_return;
+        app_perror("Error opening the sound device", status);
+        goto on_return;
     }
 
     status = pjmedia_aud_stream_start(strm);
     if (status != PJ_SUCCESS) {
-	app_perror("Error starting the sound device", status);
-	goto on_return;
+        app_perror("Error starting the sound device", status);
+        goto on_return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Recording started, press ENTER to stop"));
@@ -300,13 +300,13 @@ static void record(unsigned rec_index, const char *filename)
 
 on_return:
     if (strm) {
-	pjmedia_aud_stream_stop(strm);
-	pjmedia_aud_stream_destroy(strm);
+        pjmedia_aud_stream_stop(strm);
+        pjmedia_aud_stream_destroy(strm);
     }
     if (wav)
-	pjmedia_port_destroy(wav);
+        pjmedia_port_destroy(wav);
     if (pool)
-	pj_pool_release(pool);
+        pj_pool_release(pool);
 }
 
 
@@ -326,21 +326,21 @@ static void play_file(unsigned play_index, const char *filename)
     pj_status_t status;
 
     if (filename == NULL)
-	filename = WAV_FILE;
+        filename = WAV_FILE;
 
     pool = pj_pool_create(pjmedia_aud_subsys_get_pool_factory(), "wav",
-			  1000, 1000, NULL);
+                          1000, 1000, NULL);
 
     status = pjmedia_wav_player_port_create(pool, filename, 20, 0, 0, &wav);
     if (status != PJ_SUCCESS) {
-	app_perror("Error opening WAV file", status);
-	goto on_return;
+        app_perror("Error opening WAV file", status);
+        goto on_return;
     }
 
     status = pjmedia_aud_dev_default_param(play_index, &param);
     if (status != PJ_SUCCESS) {
-	app_perror("pjmedia_aud_dev_default_param()", status);
-	goto on_return;
+        app_perror("pjmedia_aud_dev_default_param()", status);
+        goto on_return;
     }
 
     param.dir = PJMEDIA_DIR_PLAYBACK;
@@ -350,16 +350,16 @@ static void play_file(unsigned play_index, const char *filename)
     param.bits_per_sample = PJMEDIA_PIA_BITS(&wav->info);
 
     status = pjmedia_aud_stream_create(&param, NULL, &wav_play_cb, wav,
-				       &strm);
+                                       &strm);
     if (status != PJ_SUCCESS) {
-	app_perror("Error opening the sound device", status);
-	goto on_return;
+        app_perror("Error opening the sound device", status);
+        goto on_return;
     }
 
     status = pjmedia_aud_stream_start(strm);
     if (status != PJ_SUCCESS) {
-	app_perror("Error starting the sound device", status);
-	goto on_return;
+        app_perror("Error starting the sound device", status);
+        goto on_return;
     }
 
     PJ_LOG(3,(THIS_FILE, "Playback started, press ENTER to stop"));
@@ -368,13 +368,13 @@ static void play_file(unsigned play_index, const char *filename)
 
 on_return:
     if (strm) {
-	pjmedia_aud_stream_stop(strm);
-	pjmedia_aud_stream_destroy(strm);
+        pjmedia_aud_stream_stop(strm);
+        pjmedia_aud_stream_destroy(strm);
     }
     if (wav)
-	pjmedia_port_destroy(wav);
+        pjmedia_port_destroy(wav);
     if (pool)
-	pj_pool_release(pool);
+        pj_pool_release(pool);
 }
 
 
@@ -422,158 +422,158 @@ int main()
 
     status = pjmedia_aud_subsys_init(&cp.factory);
     if (status != PJ_SUCCESS) {
-	app_perror("pjmedia_aud_subsys_init()", status);
-	pj_caching_pool_destroy(&cp);
-	pj_shutdown();
-	return 1;
+        app_perror("pjmedia_aud_subsys_init()", status);
+        pj_caching_pool_destroy(&cp);
+        pj_shutdown();
+        return 1;
     }
 
     list_devices();
 
     while (!done) {
-	char line[80];
+        char line[80];
 
-	print_menu();
+        print_menu();
 
-	if (fgets(line, sizeof(line), stdin)==NULL)
-	    break;
+        if (fgets(line, sizeof(line), stdin)==NULL)
+            break;
 
-	switch (line[0]) {
-	case 'l':
-	    list_devices();
-	    break;
+        switch (line[0]) {
+        case 'l':
+            list_devices();
+            break;
 
-	case 'R':
-	    pjmedia_aud_dev_refresh();
-	    puts("Audio device list refreshed.");
-	    break;
+        case 'R':
+            pjmedia_aud_dev_refresh();
+            puts("Audio device list refreshed.");
+            break;
 
-	case 'i':
-	    {
-		unsigned dev_index;
-		if (sscanf(line+2, "%u", &dev_index) != 1) {
-		    puts("error: device ID required");
-		    break;
-		}
-		show_dev_info(dev_index);
-	    }
-	    break;
+        case 'i':
+            {
+                unsigned dev_index;
+                if (sscanf(line+2, "%u", &dev_index) != 1) {
+                    puts("error: device ID required");
+                    break;
+                }
+                show_dev_info(dev_index);
+            }
+            break;
 
-	case 't':
-	    {
-		pjmedia_dir dir;
-		int rec_id, play_id;
-		unsigned clock_rate, ptime, chnum;
-		int cnt;
+        case 't':
+            {
+                pjmedia_dir dir;
+                int rec_id, play_id;
+                unsigned clock_rate, ptime, chnum;
+                int cnt;
 
-		cnt = sscanf(line+2, "%d %d %u %u %u", &rec_id, &play_id, 
-			     &clock_rate, &ptime, &chnum);
-		if (cnt < 4) {
-		    puts("error: not enough parameters");
-		    break;
-		}
-		if (clock_rate < 8000 || clock_rate > 128000) {
-		    puts("error: invalid clock rate");
-		    break;
-		}
-		if (ptime < 10 || ptime > 500) {
-		    puts("error: invalid ptime");
-		    break;
-		}
-		if (cnt==5) {
-		    if (chnum < 1 || chnum > 4) {
-			puts("error: invalid number of channels");
-			break;
-		    }
-		} else {
-		    chnum = 1;
-		}
+                cnt = sscanf(line+2, "%d %d %u %u %u", &rec_id, &play_id, 
+                             &clock_rate, &ptime, &chnum);
+                if (cnt < 4) {
+                    puts("error: not enough parameters");
+                    break;
+                }
+                if (clock_rate < 8000 || clock_rate > 128000) {
+                    puts("error: invalid clock rate");
+                    break;
+                }
+                if (ptime < 10 || ptime > 500) {
+                    puts("error: invalid ptime");
+                    break;
+                }
+                if (cnt==5) {
+                    if (chnum < 1 || chnum > 4) {
+                        puts("error: invalid number of channels");
+                        break;
+                    }
+                } else {
+                    chnum = 1;
+                }
 
-		if (rec_id >= 0 && rec_id < (int)dev_count) {
-		    if (play_id >= 0 && play_id < (int)dev_count)
-			dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
-		    else
-			dir = PJMEDIA_DIR_CAPTURE;
-		} else if (play_id >= 0 && play_id < (int)dev_count) {
-		    dir = PJMEDIA_DIR_PLAYBACK;
-		} else {
-		    puts("error: at least one valid device index required");
-		    break;
-		}
+                if (rec_id >= 0 && rec_id < (int)dev_count) {
+                    if (play_id >= 0 && play_id < (int)dev_count)
+                        dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+                    else
+                        dir = PJMEDIA_DIR_CAPTURE;
+                } else if (play_id >= 0 && play_id < (int)dev_count) {
+                    dir = PJMEDIA_DIR_PLAYBACK;
+                } else {
+                    puts("error: at least one valid device index required");
+                    break;
+                }
 
-		test_device(dir, rec_id, play_id, clock_rate, ptime, chnum);
-		
-	    }
-	    break;
+                test_device(dir, rec_id, play_id, clock_rate, ptime, chnum);
+                
+            }
+            break;
 
-	case 'r':
-	    /* record */
-	    {
-		int index;
-		char filename[80];
-		int count;
+        case 'r':
+            /* record */
+            {
+                int index;
+                char filename[80];
+                int count;
 
-		count = sscanf(line+2, "%d %s", &index, filename);
-		if (count==1)
-		    record(index, NULL);
-		else if (count==2)
-		    record(index, filename);
-		else
-		    puts("error: invalid command syntax");
-	    }
-	    break;
+                count = sscanf(line+2, "%d %s", &index, filename);
+                if (count==1)
+                    record(index, NULL);
+                else if (count==2)
+                    record(index, filename);
+                else
+                    puts("error: invalid command syntax");
+            }
+            break;
 
-	case 'p':
-	    /* playback */
-	    {
-		int index;
-		char filename[80];
-		int count;
+        case 'p':
+            /* playback */
+            {
+                int index;
+                char filename[80];
+                int count;
 
-		count = sscanf(line+2, "%d %s", &index, filename);
-		if (count==1)
-		    play_file(index, NULL);
-		else if (count==2)
-		    play_file(index, filename);
-		else
-		    puts("error: invalid command syntax");
-	    }
-	    break;
+                count = sscanf(line+2, "%d %s", &index, filename);
+                if (count==1)
+                    play_file(index, NULL);
+                else if (count==2)
+                    play_file(index, filename);
+                else
+                    puts("error: invalid command syntax");
+            }
+            break;
 
-	case 'd':
-	    /* latencies */
-	    {
-		int rec_lat, play_lat;
+        case 'd':
+            /* latencies */
+            {
+                int rec_lat, play_lat;
 
-		if (sscanf(line+2, "%d %d", &rec_lat, &play_lat) == 2) {
-		    capture_lat = (unsigned) 
-			 (rec_lat>=0? rec_lat:PJMEDIA_SND_DEFAULT_REC_LATENCY);
-		    playback_lat = (unsigned)
-			 (play_lat >= 0? play_lat : PJMEDIA_SND_DEFAULT_PLAY_LATENCY);
-		    printf("Recording latency=%ums, playback latency=%ums",
-			   capture_lat, playback_lat);
-		} else {
-		    printf("Current latencies: record=%ums, playback=%ums",
-			   capture_lat, playback_lat);
-		}
-		puts("");
-	    }
-	    break;
+                if (sscanf(line+2, "%d %d", &rec_lat, &play_lat) == 2) {
+                    capture_lat = (unsigned) 
+                         (rec_lat>=0? rec_lat:PJMEDIA_SND_DEFAULT_REC_LATENCY);
+                    playback_lat = (unsigned)
+                         (play_lat >= 0? play_lat : PJMEDIA_SND_DEFAULT_PLAY_LATENCY);
+                    printf("Recording latency=%ums, playback latency=%ums",
+                           capture_lat, playback_lat);
+                } else {
+                    printf("Current latencies: record=%ums, playback=%ums",
+                           capture_lat, playback_lat);
+                }
+                puts("");
+            }
+            break;
 
-	case 'v':
-	    if (pj_log_get_level() <= 3) {
-		pj_log_set_level(5);
-		puts("Logging set to detail");
-	    } else {
-		pj_log_set_level(3);
-		puts("Logging set to quiet");
-	    }
-	    break;
+        case 'v':
+            if (pj_log_get_level() <= 3) {
+                pj_log_set_level(5);
+                puts("Logging set to detail");
+            } else {
+                pj_log_set_level(3);
+                puts("Logging set to quiet");
+            }
+            break;
 
-	case 'q':
-	    done = PJ_TRUE;
-	    break;
-	}
+        case 'q':
+            done = PJ_TRUE;
+            break;
+        }
     }
 
     pj_caching_pool_destroy(&cp);

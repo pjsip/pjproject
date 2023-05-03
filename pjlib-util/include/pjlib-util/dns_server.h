@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -46,32 +45,32 @@ typedef struct pj_dns_server pj_dns_server;
 /**
  * Create the DNS server instance. The instance will run immediately.
  *
- * @param pf	    The pool factory to create memory pools.
+ * @param pf        The pool factory to create memory pools.
  * @param ioqueue   Ioqueue instance where the server socket will be
- *		    registered to.
- * @param af	    Address family of the server socket (valid values
- *		    are pj_AF_INET() for IPv4 and pj_AF_INET6() for IPv6).
- * @param port	    The UDP port to listen.
- * @param flags	    Flags, currently must be zero.
- * @param p_srv	    Pointer to receive the DNS server instance.
+ *                  registered to.
+ * @param af        Address family of the server socket (valid values
+ *                  are pj_AF_INET() for IPv4 and pj_AF_INET6() for IPv6).
+ * @param port      The UDP port to listen.
+ * @param flags     Flags, currently must be zero.
+ * @param p_srv     Pointer to receive the DNS server instance.
  *
- * @return	    PJ_SUCCESS if server has been created successfully,
- *		    otherwise the function will return the appropriate
- *		    error code.
+ * @return          PJ_SUCCESS if server has been created successfully,
+ *                  otherwise the function will return the appropriate
+ *                  error code.
  */
 PJ_DECL(pj_status_t) pj_dns_server_create(pj_pool_factory *pf,
-				          pj_ioqueue_t *ioqueue,
-					  int af,
-					  unsigned port,
-					  unsigned flags,
-				          pj_dns_server **p_srv);
+                                          pj_ioqueue_t *ioqueue,
+                                          int af,
+                                          unsigned port,
+                                          unsigned flags,
+                                          pj_dns_server **p_srv);
 
 /**
  * Destroy DNS server instance.
  *
- * @param srv	    The DNS server instance.
+ * @param srv       The DNS server instance.
  *
- * @return	    PJ_SUCCESS on success or the appropriate error code.
+ * @return          PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_dns_server_destroy(pj_dns_server *srv);
 
@@ -79,30 +78,30 @@ PJ_DECL(pj_status_t) pj_dns_server_destroy(pj_dns_server *srv);
 /**
  * Add generic resource record entries to the server.
  *
- * @param srv	    The DNS server instance.
- * @param count	    Number of records to be added.
- * @param rr	    Array of records to be added.
+ * @param srv       The DNS server instance.
+ * @param count     Number of records to be added.
+ * @param rr        Array of records to be added.
  *
- * @return	    PJ_SUCCESS on success or the appropriate error code.
+ * @return          PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_dns_server_add_rec(pj_dns_server *srv,
-					   unsigned count,
-					   const pj_dns_parsed_rr rr[]);
+                                           unsigned count,
+                                           const pj_dns_parsed_rr rr[]);
 
 /**
  * Remove the specified record from the server.
  *
- * @param srv	    The DNS server instance.
+ * @param srv       The DNS server instance.
  * @param dns_class The resource's DNS class. Valid value is PJ_DNS_CLASS_IN.
- * @param type	    The resource type.
- * @param name	    The resource name to be removed.
+ * @param type      The resource type.
+ * @param name      The resource name to be removed.
  *
- * @return	    PJ_SUCCESS on success or the appropriate error code.
+ * @return          PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_dns_server_del_rec(pj_dns_server *srv,
-					   int dns_class,
-					   pj_dns_type type,
-					   const pj_str_t *name);
+                                           int dns_class,
+                                           pj_dns_type type,
+                                           const pj_str_t *name);
 
 
 
@@ -113,5 +112,5 @@ PJ_DECL(pj_status_t) pj_dns_server_del_rec(pj_dns_server *srv,
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_DNS_SERVER_H__ */
+#endif  /* __PJLIB_UTIL_DNS_SERVER_H__ */
 

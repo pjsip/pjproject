@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -40,44 +39,44 @@
 
 /* Prototypes for Speex factory */
 static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory, 
-				   const pjmedia_codec_info *id );
+                                   const pjmedia_codec_info *id );
 static pj_status_t spx_default_attr( pjmedia_codec_factory *factory, 
-				     const pjmedia_codec_info *id, 
-				     pjmedia_codec_param *attr );
+                                     const pjmedia_codec_info *id, 
+                                     pjmedia_codec_param *attr );
 static pj_status_t spx_enum_codecs( pjmedia_codec_factory *factory, 
-				    unsigned *count, 
-				    pjmedia_codec_info codecs[]);
+                                    unsigned *count, 
+                                    pjmedia_codec_info codecs[]);
 static pj_status_t spx_alloc_codec( pjmedia_codec_factory *factory, 
-				    const pjmedia_codec_info *id, 
-				    pjmedia_codec **p_codec);
+                                    const pjmedia_codec_info *id, 
+                                    pjmedia_codec **p_codec);
 static pj_status_t spx_dealloc_codec( pjmedia_codec_factory *factory, 
-				      pjmedia_codec *codec );
+                                      pjmedia_codec *codec );
 
 /* Prototypes for Speex implementation. */
 static pj_status_t  spx_codec_init( pjmedia_codec *codec, 
-				    pj_pool_t *pool );
+                                    pj_pool_t *pool );
 static pj_status_t  spx_codec_open( pjmedia_codec *codec, 
-				    pjmedia_codec_param *attr );
+                                    pjmedia_codec_param *attr );
 static pj_status_t  spx_codec_close( pjmedia_codec *codec );
 static pj_status_t  spx_codec_modify(pjmedia_codec *codec, 
-				     const pjmedia_codec_param *attr );
+                                     const pjmedia_codec_param *attr );
 static pj_status_t  spx_codec_parse( pjmedia_codec *codec,
-				     void *pkt,
-				     pj_size_t pkt_size,
-				     const pj_timestamp *ts,
-				     unsigned *frame_cnt,
-				     pjmedia_frame frames[]);
+                                     void *pkt,
+                                     pj_size_t pkt_size,
+                                     const pj_timestamp *ts,
+                                     unsigned *frame_cnt,
+                                     pjmedia_frame frames[]);
 static pj_status_t  spx_codec_encode( pjmedia_codec *codec, 
-				      const struct pjmedia_frame *input,
-				      unsigned output_buf_len, 
-				      struct pjmedia_frame *output);
+                                      const struct pjmedia_frame *input,
+                                      unsigned output_buf_len, 
+                                      struct pjmedia_frame *output);
 static pj_status_t  spx_codec_decode( pjmedia_codec *codec, 
-				      const struct pjmedia_frame *input,
-				      unsigned output_buf_len, 
-				      struct pjmedia_frame *output);
+                                      const struct pjmedia_frame *input,
+                                      unsigned output_buf_len, 
+                                      struct pjmedia_frame *output);
 static pj_status_t  spx_codec_recover(pjmedia_codec *codec, 
-				      unsigned output_buf_len, 
-				      struct pjmedia_frame *output);
+                                      unsigned output_buf_len, 
+                                      struct pjmedia_frame *output);
 
 /* Definition for Speex codec operations. */
 static pjmedia_codec_op spx_op = 
@@ -106,47 +105,47 @@ static pjmedia_codec_factory_op spx_factory_op =
 /* Index to Speex parameter. */
 enum
 {
-    PARAM_NB,	/* Index for narrowband parameter.	*/
-    PARAM_WB,	/* Index for wideband parameter.	*/
-    PARAM_UWB,	/* Index for ultra-wideband parameter	*/
+    PARAM_NB,   /* Index for narrowband parameter.      */
+    PARAM_WB,   /* Index for wideband parameter.        */
+    PARAM_UWB,  /* Index for ultra-wideband parameter   */
 };
 
 /* Speex default parameter */
 struct speex_param
 {
-    int		     enabled;		/* Is this mode enabled?	    */
-    const SpeexMode *mode;		/* Speex mode.			    */
-    int		     pt;		/* Payload type.		    */
-    unsigned	     clock_rate;	/* Default sampling rate to be used.*/
-    int		     quality;		/* Default encoder quality.	    */
-    int		     complexity;	/* Default encoder complexity.	    */
-    int		     samples_per_frame;	/* Samples per frame.		    */
-    int		     framesize;		/* Frame size for current mode.	    */
-    int		     bitrate;		/* Bit rate for current mode.	    */
-    int		     max_bitrate;	/* Max bit rate for current mode.   */
+    int              enabled;           /* Is this mode enabled?            */
+    const SpeexMode *mode;              /* Speex mode.                      */
+    int              pt;                /* Payload type.                    */
+    unsigned         clock_rate;        /* Default sampling rate to be used.*/
+    int              quality;           /* Default encoder quality.         */
+    int              complexity;        /* Default encoder complexity.      */
+    int              samples_per_frame; /* Samples per frame.               */
+    int              framesize;         /* Frame size for current mode.     */
+    int              bitrate;           /* Bit rate for current mode.       */
+    int              max_bitrate;       /* Max bit rate for current mode.   */
 };
 
 /* Speex factory */
 static struct spx_factory
 {
     pjmedia_codec_factory    base;
-    pjmedia_endpt	    *endpt;
-    pj_pool_t		    *pool;
-    pj_mutex_t		    *mutex;
-    pjmedia_codec	     codec_list;
-    struct speex_param	     speex_param[3];
+    pjmedia_endpt           *endpt;
+    pj_pool_t               *pool;
+    pj_mutex_t              *mutex;
+    pjmedia_codec            codec_list;
+    struct speex_param       speex_param[3];
 
 } spx_factory;
 
 /* Speex codec private data. */
 struct spx_private
 {
-    int			 param_id;	    /**< Index to speex param.	*/
+    int                  param_id;          /**< Index to speex param.  */
 
-    void		*enc;		    /**< Encoder state.		*/
-    SpeexBits		 enc_bits;	    /**< Encoder bits.		*/
-    void		*dec;		    /**< Decoder state.		*/
-    SpeexBits		 dec_bits;	    /**< Decoder bits.		*/
+    void                *enc;               /**< Encoder state.         */
+    SpeexBits            enc_bits;          /**< Encoder bits.          */
+    void                *dec;               /**< Decoder state.         */
+    SpeexBits            dec_bits;          /**< Decoder bits.          */
 };
 
 
@@ -161,11 +160,11 @@ static pj_status_t get_speex_info( struct speex_param *p )
     /* Create temporary encoder */
     state = speex_encoder_init(p->mode);
     if (!state)
-	return PJMEDIA_CODEC_EFAILED;
+        return PJMEDIA_CODEC_EFAILED;
 
     /* Set the quality */
     if (p->quality != -1)
-	speex_encoder_ctl(state, SPEEX_SET_QUALITY, &p->quality);
+        speex_encoder_ctl(state, SPEEX_SET_QUALITY, &p->quality);
 
     /* Sampling rate. */
     speex_encoder_ctl(state, SPEEX_SET_SAMPLING_RATE, &p->clock_rate);
@@ -176,7 +175,7 @@ static pj_status_t get_speex_info( struct speex_param *p )
 
     /* Complexity. */
     if (p->complexity != -1)
-	speex_encoder_ctl(state, SPEEX_SET_COMPLEXITY, &p->complexity);
+        speex_encoder_ctl(state, SPEEX_SET_COMPLEXITY, &p->complexity);
 
     /* Now get the frame size */
     speex_encoder_ctl(state, SPEEX_GET_FRAME_SIZE, &p->samples_per_frame);
@@ -202,17 +201,17 @@ static pj_status_t get_speex_info( struct speex_param *p )
  * Initialize and register Speex codec factory to pjmedia endpoint.
  */
 PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
-					      unsigned options,
-					      int quality,
-					      int complexity )
+                                              unsigned options,
+                                              int quality,
+                                              int complexity )
 {
     pjmedia_codec_mgr *codec_mgr;
     unsigned i;
     pj_status_t status;
 
     if (spx_factory.pool != NULL) {
-	/* Already initialized. */
-	return PJ_SUCCESS;
+        /* Already initialized. */
+        return PJ_SUCCESS;
     }
 
     /* Get defaults */
@@ -229,21 +228,21 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.endpt = endpt;
 
     spx_factory.pool = pjmedia_endpt_create_pool(endpt, "speex", 
-						       4000, 4000);
+                                                       1000, 4000);
     if (!spx_factory.pool)
-	return PJ_ENOMEM;
+        return PJ_ENOMEM;
 
     pj_list_init(&spx_factory.codec_list);
 
     /* Create mutex. */
     status = pj_mutex_create_simple(spx_factory.pool, "speex", 
-				    &spx_factory.mutex);
+                                    &spx_factory.mutex);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Initialize default Speex parameter. */
     spx_factory.speex_param[PARAM_NB].enabled = 
-	((options & PJMEDIA_SPEEX_NO_NB) == 0);
+        ((options & PJMEDIA_SPEEX_NO_NB) == 0);
     spx_factory.speex_param[PARAM_NB].pt = PJMEDIA_RTP_PT_SPEEX_NB;
     spx_factory.speex_param[PARAM_NB].mode = speex_lib_get_mode(SPEEX_MODEID_NB);
     spx_factory.speex_param[PARAM_NB].clock_rate = 8000;
@@ -251,7 +250,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.speex_param[PARAM_NB].complexity = complexity;
 
     spx_factory.speex_param[PARAM_WB].enabled = 
-	((options & PJMEDIA_SPEEX_NO_WB) == 0);
+        ((options & PJMEDIA_SPEEX_NO_WB) == 0);
     spx_factory.speex_param[PARAM_WB].pt = PJMEDIA_RTP_PT_SPEEX_WB;
     spx_factory.speex_param[PARAM_WB].mode = speex_lib_get_mode(SPEEX_MODEID_WB);
     spx_factory.speex_param[PARAM_WB].clock_rate = 16000;
@@ -259,7 +258,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.speex_param[PARAM_WB].complexity = complexity;
 
     spx_factory.speex_param[PARAM_UWB].enabled = 
-	((options & PJMEDIA_SPEEX_NO_UWB) == 0);
+        ((options & PJMEDIA_SPEEX_NO_UWB) == 0);
     spx_factory.speex_param[PARAM_UWB].pt = PJMEDIA_RTP_PT_SPEEX_UWB;
     spx_factory.speex_param[PARAM_UWB].mode = speex_lib_get_mode(SPEEX_MODEID_UWB);
     spx_factory.speex_param[PARAM_UWB].clock_rate = 32000;
@@ -268,27 +267,28 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
 
     /* Somehow quality <=4 is broken in linux. */
     if (quality <= 4 && quality >= 0) {
-	PJ_LOG(5,(THIS_FILE, "Adjusting quality to 5 for uwb"));
-	spx_factory.speex_param[PARAM_UWB].quality = 5;
+        PJ_LOG(5,(THIS_FILE, "Adjusting quality to 5 for uwb"));
+        spx_factory.speex_param[PARAM_UWB].quality = 5;
     }
 
     /* Get codec framesize and avg bitrate for each mode. */
     for (i=0; i<PJ_ARRAY_SIZE(spx_factory.speex_param); ++i) {
-	status = get_speex_info(&spx_factory.speex_param[i]);
+        status = get_speex_info(&spx_factory.speex_param[i]);
+        PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, goto on_error);
     }
 
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
     if (!codec_mgr) {
-	status = PJ_EINVALIDOP;
-	goto on_error;
+        status = PJ_EINVALIDOP;
+        goto on_error;
     }
 
     /* Register codec factory to endpoint. */
     status = pjmedia_codec_mgr_register_factory(codec_mgr, 
-						&spx_factory.base);
+                                                &spx_factory.base);
     if (status != PJ_SUCCESS)
-	goto on_error;
+        goto on_error;
 
     /* Done. */
     return PJ_SUCCESS;
@@ -312,8 +312,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init_default(pjmedia_endpt *endpt)
  * Change the settings of Speex codec.
  */
 PJ_DEF(pj_status_t) pjmedia_codec_speex_set_param(unsigned clock_rate,
-						  int quality,
-						  int complexity)
+                                                  int quality,
+                                                  int complexity)
 {
     unsigned i;
 
@@ -327,22 +327,22 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_set_param(unsigned clock_rate,
 
     /* Apply the settings */
     for (i=0; i<PJ_ARRAY_SIZE(spx_factory.speex_param); ++i) {
-	if (spx_factory.speex_param[i].clock_rate == clock_rate) {
-	    pj_status_t status;
+        if (spx_factory.speex_param[i].clock_rate == clock_rate) {
+            pj_status_t status;
 
-	    spx_factory.speex_param[i].quality = quality;
-	    spx_factory.speex_param[i].complexity = complexity;
+            spx_factory.speex_param[i].quality = quality;
+            spx_factory.speex_param[i].complexity = complexity;
 
-	    /* Somehow quality<=4 is broken in linux. */
-	    if (i == PARAM_UWB && quality <= 4 && quality >= 0) {
-		PJ_LOG(5,(THIS_FILE, "Adjusting quality to 5 for uwb"));
-		spx_factory.speex_param[PARAM_UWB].quality = 5;
-	    }
+            /* Somehow quality<=4 is broken in linux. */
+            if (i == PARAM_UWB && quality <= 4 && quality >= 0) {
+                PJ_LOG(5,(THIS_FILE, "Adjusting quality to 5 for uwb"));
+                spx_factory.speex_param[PARAM_UWB].quality = 5;
+            }
 
-	    status = get_speex_info(&spx_factory.speex_param[i]);
+            status = get_speex_info(&spx_factory.speex_param[i]);
 
-	    return status;
-	}
+            return status;
+        }
     }
 
     return PJ_EINVAL;
@@ -358,8 +358,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_deinit(void)
     pj_status_t status;
 
     if (spx_factory.pool == NULL) {
-	/* Already deinitialized */
-	return PJ_SUCCESS;
+        /* Already deinitialized */
+        return PJ_SUCCESS;
     }
 
     pj_mutex_lock(spx_factory.mutex);
@@ -369,22 +369,23 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_deinit(void)
        we ever allocate a codec! A better behavior maybe is to 
        deallocate all codecs in the list.
     if (!pj_list_empty(&spx_factory.codec_list)) {
-	pj_mutex_unlock(spx_factory.mutex);
-	return PJ_EBUSY;
+        pj_mutex_unlock(spx_factory.mutex);
+        return PJ_EBUSY;
     }
     */
 
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(spx_factory.endpt);
     if (!codec_mgr) {
-	pj_pool_release(spx_factory.pool);
-	spx_factory.pool = NULL;
-	return PJ_EINVALIDOP;
+        pj_pool_release(spx_factory.pool);
+        spx_factory.pool = NULL;
+        pj_mutex_unlock(spx_factory.mutex);
+        return PJ_EINVALIDOP;
     }
 
     /* Unregister Speex codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
-						  &spx_factory.base);
+                                                  &spx_factory.base);
     
     /* Destroy mutex. */
     pj_mutex_unlock(spx_factory.mutex);
@@ -402,7 +403,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_deinit(void)
  * Check if factory can allocate the specified codec. 
  */
 static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory, 
-				   const pjmedia_codec_info *info )
+                                   const pjmedia_codec_info *info )
 {
     const pj_str_t speex_tag = { "speex", 5};
     unsigned i;
@@ -411,18 +412,18 @@ static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory,
 
     /* Type MUST be audio. */
     if (info->type != PJMEDIA_TYPE_AUDIO)
-	return PJMEDIA_CODEC_EUNSUP;
+        return PJMEDIA_CODEC_EUNSUP;
 
     /* Check encoding name. */
     if (pj_stricmp(&info->encoding_name, &speex_tag) != 0)
-	return PJMEDIA_CODEC_EUNSUP;
+        return PJMEDIA_CODEC_EUNSUP;
 
     /* Check clock-rate */
     for (i=0; i<PJ_ARRAY_SIZE(spx_factory.speex_param); ++i) {
-	if (info->clock_rate == spx_factory.speex_param[i].clock_rate) {
-	    /* Okay, let's Speex! */
-	    return PJ_SUCCESS;
-	}
+        if (info->clock_rate == spx_factory.speex_param[i].clock_rate) {
+            /* Okay, let's Speex! */
+            return PJ_SUCCESS;
+        }
     }
 
     
@@ -434,8 +435,8 @@ static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory,
  * Generate default attribute.
  */
 static pj_status_t spx_default_attr (pjmedia_codec_factory *factory, 
-				      const pjmedia_codec_info *id, 
-				      pjmedia_codec_param *attr )
+                                      const pjmedia_codec_info *id, 
+                                      pjmedia_codec_param *attr )
 {
 
     PJ_ASSERT_RETURN(factory==&spx_factory.base, PJ_EINVAL);
@@ -445,20 +446,20 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
     attr->info.channel_cnt = 1;
 
     if (id->clock_rate <= 8000) {
-	attr->info.clock_rate = spx_factory.speex_param[PARAM_NB].clock_rate;
-	attr->info.avg_bps = spx_factory.speex_param[PARAM_NB].bitrate;
-	attr->info.max_bps = spx_factory.speex_param[PARAM_NB].max_bitrate;
+        attr->info.clock_rate = spx_factory.speex_param[PARAM_NB].clock_rate;
+        attr->info.avg_bps = spx_factory.speex_param[PARAM_NB].bitrate;
+        attr->info.max_bps = spx_factory.speex_param[PARAM_NB].max_bitrate;
 
     } else if (id->clock_rate <= 16000) {
-	attr->info.clock_rate = spx_factory.speex_param[PARAM_WB].clock_rate;
-	attr->info.avg_bps = spx_factory.speex_param[PARAM_WB].bitrate;
-	attr->info.max_bps = spx_factory.speex_param[PARAM_WB].max_bitrate;
+        attr->info.clock_rate = spx_factory.speex_param[PARAM_WB].clock_rate;
+        attr->info.avg_bps = spx_factory.speex_param[PARAM_WB].bitrate;
+        attr->info.max_bps = spx_factory.speex_param[PARAM_WB].max_bitrate;
 
     } else {
-	/* Wow.. somebody is doing ultra-wideband. Cool...! */
-	attr->info.clock_rate = spx_factory.speex_param[PARAM_UWB].clock_rate;
-	attr->info.avg_bps = spx_factory.speex_param[PARAM_UWB].bitrate;
-	attr->info.max_bps = spx_factory.speex_param[PARAM_UWB].max_bitrate;
+        /* Wow.. somebody is doing ultra-wideband. Cool...! */
+        attr->info.clock_rate = spx_factory.speex_param[PARAM_UWB].clock_rate;
+        attr->info.avg_bps = spx_factory.speex_param[PARAM_UWB].bitrate;
+        attr->info.max_bps = spx_factory.speex_param[PARAM_UWB].max_bitrate;
     }
 
     attr->info.pcm_bits_per_sample = 16;
@@ -480,8 +481,8 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
  * Enum codecs supported by this factory (i.e. only Speex!).
  */
 static pj_status_t spx_enum_codecs(pjmedia_codec_factory *factory, 
-				    unsigned *count, 
-				    pjmedia_codec_info codecs[])
+                                    unsigned *count, 
+                                    pjmedia_codec_info codecs[])
 {
     unsigned max;
     int i;  /* Must be signed */
@@ -494,21 +495,21 @@ static pj_status_t spx_enum_codecs(pjmedia_codec_factory *factory,
 
     /*
      * We return three codecs here, and in this order:
-     *	- ultra-wideband, wideband, and narrowband.
+     *  - ultra-wideband, wideband, and narrowband.
      */
     for (i=PJ_ARRAY_SIZE(spx_factory.speex_param)-1; i>=0 && *count<max; --i) {
 
-	if (!spx_factory.speex_param[i].enabled)
-	    continue;
+        if (!spx_factory.speex_param[i].enabled)
+            continue;
 
-	pj_bzero(&codecs[*count], sizeof(pjmedia_codec_info));
-	codecs[*count].encoding_name = pj_str("speex");
-	codecs[*count].pt = spx_factory.speex_param[i].pt;
-	codecs[*count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[*count].clock_rate = spx_factory.speex_param[i].clock_rate;
-	codecs[*count].channel_cnt = 1;
+        pj_bzero(&codecs[*count], sizeof(pjmedia_codec_info));
+        codecs[*count].encoding_name = pj_str("speex");
+        codecs[*count].pt = spx_factory.speex_param[i].pt;
+        codecs[*count].type = PJMEDIA_TYPE_AUDIO;
+        codecs[*count].clock_rate = spx_factory.speex_param[i].clock_rate;
+        codecs[*count].channel_cnt = 1;
 
-	++*count;
+        ++*count;
     }
 
     return PJ_SUCCESS;
@@ -518,8 +519,8 @@ static pj_status_t spx_enum_codecs(pjmedia_codec_factory *factory,
  * Allocate a new Speex codec instance.
  */
 static pj_status_t spx_alloc_codec( pjmedia_codec_factory *factory, 
-				    const pjmedia_codec_info *id,
-				    pjmedia_codec **p_codec)
+                                    const pjmedia_codec_info *id,
+                                    pjmedia_codec **p_codec)
 {
     pjmedia_codec *codec;
     struct spx_private *spx;
@@ -532,15 +533,15 @@ static pj_status_t spx_alloc_codec( pjmedia_codec_factory *factory,
 
     /* Get free nodes, if any. */
     if (!pj_list_empty(&spx_factory.codec_list)) {
-	codec = spx_factory.codec_list.next;
-	pj_list_erase(codec);
+        codec = spx_factory.codec_list.next;
+        pj_list_erase(codec);
     } else {
-	codec = PJ_POOL_ZALLOC_T(spx_factory.pool, pjmedia_codec);
-	PJ_ASSERT_RETURN(codec != NULL, PJ_ENOMEM);
-	codec->op = &spx_op;
-	codec->factory = factory;
-	codec->codec_data = pj_pool_alloc(spx_factory.pool,
-					  sizeof(struct spx_private));
+        codec = PJ_POOL_ZALLOC_T(spx_factory.pool, pjmedia_codec);
+        PJ_ASSERT_RETURN(codec != NULL, PJ_ENOMEM);
+        codec->op = &spx_op;
+        codec->factory = factory;
+        codec->codec_data = pj_pool_alloc(spx_factory.pool,
+                                          sizeof(struct spx_private));
     }
 
     pj_mutex_unlock(spx_factory.mutex);
@@ -550,11 +551,11 @@ static pj_status_t spx_alloc_codec( pjmedia_codec_factory *factory,
     spx->dec = NULL;
 
     if (id->clock_rate <= 8000)
-	spx->param_id = PARAM_NB;
+        spx->param_id = PARAM_NB;
     else if (id->clock_rate <= 16000)
-	spx->param_id = PARAM_WB;
+        spx->param_id = PARAM_WB;
     else
-	spx->param_id = PARAM_UWB;
+        spx->param_id = PARAM_UWB;
 
     *p_codec = codec;
     return PJ_SUCCESS;
@@ -564,7 +565,7 @@ static pj_status_t spx_alloc_codec( pjmedia_codec_factory *factory,
  * Free codec.
  */
 static pj_status_t spx_dealloc_codec( pjmedia_codec_factory *factory, 
-				      pjmedia_codec *codec )
+                                      pjmedia_codec *codec )
 {
     struct spx_private *spx;
 
@@ -574,7 +575,7 @@ static pj_status_t spx_dealloc_codec( pjmedia_codec_factory *factory,
     /* Close codec, if it's not closed. */
     spx = (struct spx_private*) codec->codec_data;
     if (spx->enc != NULL || spx->dec != NULL) {
-	spx_codec_close(codec);
+        spx_codec_close(codec);
     }
 
     /* Put in the free list. */
@@ -589,7 +590,7 @@ static pj_status_t spx_dealloc_codec( pjmedia_codec_factory *factory,
  * Init codec.
  */
 static pj_status_t spx_codec_init( pjmedia_codec *codec, 
-				   pj_pool_t *pool )
+                                   pj_pool_t *pool )
 {
     PJ_UNUSED_ARG(codec);
     PJ_UNUSED_ARG(pool);
@@ -600,7 +601,7 @@ static pj_status_t spx_codec_init( pjmedia_codec *codec,
  * Open codec.
  */
 static pj_status_t spx_codec_open( pjmedia_codec *codec, 
-				   pjmedia_codec_param *attr )
+                                   pjmedia_codec_param *attr )
 {
     struct spx_private *spx;
     int id, tmp;
@@ -613,19 +614,19 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
      */
     spx->enc = speex_encoder_init(spx_factory.speex_param[id].mode);
     if (!spx->enc)
-	return PJMEDIA_CODEC_EFAILED;
+        return PJMEDIA_CODEC_EFAILED;
     speex_bits_init(&spx->enc_bits);
 
     /* Set the quality*/
     if (spx_factory.speex_param[id].quality != -1) {
-	speex_encoder_ctl(spx->enc, SPEEX_SET_QUALITY, 
-			  &spx_factory.speex_param[id].quality);
+        speex_encoder_ctl(spx->enc, SPEEX_SET_QUALITY, 
+                          &spx_factory.speex_param[id].quality);
     }
 
     /* Sampling rate. */
     tmp = attr->info.clock_rate;
     speex_encoder_ctl(spx->enc, SPEEX_SET_SAMPLING_RATE, 
-		      &spx_factory.speex_param[id].clock_rate);
+                      &spx_factory.speex_param[id].clock_rate);
 
     /* VAD */
     tmp = (attr->setting.vad != 0);
@@ -634,8 +635,8 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
 
     /* Complexity */
     if (spx_factory.speex_param[id].complexity != -1) {
-	speex_encoder_ctl(spx->enc, SPEEX_SET_COMPLEXITY, 
-			  &spx_factory.speex_param[id].complexity);
+        speex_encoder_ctl(spx->enc, SPEEX_SET_COMPLEXITY, 
+                          &spx_factory.speex_param[id].complexity);
     }
 
     /* 
@@ -643,14 +644,14 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
      */
     spx->dec = speex_decoder_init(spx_factory.speex_param[id].mode);
     if (!spx->dec) {
-	spx_codec_close(codec);
-	return PJMEDIA_CODEC_EFAILED;
+        spx_codec_close(codec);
+        return PJMEDIA_CODEC_EFAILED;
     }
     speex_bits_init(&spx->dec_bits);
 
     /* Sampling rate. */
     speex_decoder_ctl(spx->dec, SPEEX_SET_SAMPLING_RATE, 
-		      &spx_factory.speex_param[id].clock_rate);
+                      &spx_factory.speex_param[id].clock_rate);
 
     /* PENH */
     tmp = attr->setting.penh;
@@ -670,16 +671,16 @@ static pj_status_t spx_codec_close( pjmedia_codec *codec )
 
     /* Destroy encoder*/
     if (spx->enc) {
-	speex_encoder_destroy( spx->enc );
-	spx->enc = NULL;
-	speex_bits_destroy( &spx->enc_bits );
+        speex_encoder_destroy( spx->enc );
+        spx->enc = NULL;
+        speex_bits_destroy( &spx->enc_bits );
     }
 
     /* Destroy decoder */
     if (spx->dec) {
-	speex_decoder_destroy( spx->dec);
-	spx->dec = NULL;
-	speex_bits_destroy( &spx->dec_bits );
+        speex_decoder_destroy( spx->dec);
+        spx->dec = NULL;
+        speex_bits_destroy( &spx->dec_bits );
     }
 
     return PJ_SUCCESS;
@@ -690,7 +691,7 @@ static pj_status_t spx_codec_close( pjmedia_codec *codec )
  * Modify codec settings.
  */
 static pj_status_t  spx_codec_modify(pjmedia_codec *codec, 
-				     const pjmedia_codec_param *attr )
+                                     const pjmedia_codec_param *attr )
 {
     struct spx_private *spx;
     int tmp;
@@ -710,7 +711,7 @@ static pj_status_t  spx_codec_modify(pjmedia_codec *codec,
 }
 
 #if 0
-#  define TRACE__(args)	    PJ_LOG(5,args)
+#  define TRACE__(args)     PJ_LOG(5,args)
 #else
 #  define TRACE__(args)
 #endif
@@ -738,85 +739,85 @@ static int speex_get_next_frame(SpeexBits *bits)
     unsigned nb_count = 0;
 
     while (speex_bits_remaining(bits) >= 5) {
-	unsigned wb_count = 0;
-	unsigned bit_ptr = bits->bitPtr;
-	unsigned char_ptr = bits->charPtr;
+        unsigned wb_count = 0;
+        unsigned bit_ptr = bits->bitPtr;
+        unsigned char_ptr = bits->charPtr;
 
-	/* WB frame */
-	while ((speex_bits_remaining(bits) >= 4)
-	    && speex_bits_unpack_unsigned(bits, 1))
-	{
-	    int advance;
+        /* WB frame */
+        while ((speex_bits_remaining(bits) >= 4)
+            && speex_bits_unpack_unsigned(bits, 1))
+        {
+            int advance;
 
-	    submode = speex_bits_unpack_unsigned(bits, 3);
-	    advance = wb_skip_table[submode];
-	    if (advance < 0) {
-		TRACE__((THIS_FUNC, "Invalid mode encountered. "
-			 "The stream is corrupted."));
-		return -1;
-	    } 
-	    TRACE__((THIS_FUNC, "WB layer skipped: %d bits", advance));
-	    advance -= (SB_SUBMODE_BITS+1);
-	    speex_bits_advance(bits, advance);
+            submode = speex_bits_unpack_unsigned(bits, 3);
+            advance = wb_skip_table[submode];
+            if (advance < 0) {
+                TRACE__((THIS_FUNC, "Invalid mode encountered. "
+                         "The stream is corrupted."));
+                return -1;
+            } 
+            TRACE__((THIS_FUNC, "WB layer skipped: %d bits", advance));
+            advance -= (SB_SUBMODE_BITS+1);
+            speex_bits_advance(bits, advance);
 
-	    bit_ptr = bits->bitPtr;
-	    char_ptr = bits->charPtr;
+            bit_ptr = bits->bitPtr;
+            char_ptr = bits->charPtr;
 
-	    /* Consecutive subband frames may not exceed 2 frames */
-	    if (++wb_count > 2)
-		return -1;
-	}
+            /* Consecutive subband frames may not exceed 2 frames */
+            if (++wb_count > 2)
+                return -1;
+        }
 
-	/* End of bits, return the frame */
-	if (speex_bits_remaining(bits) < 4) {
-	    TRACE__((THIS_FUNC, "End of stream"));
-	    return 0;
-	}
+        /* End of bits, return the frame */
+        if (speex_bits_remaining(bits) < 4) {
+            TRACE__((THIS_FUNC, "End of stream"));
+            return 0;
+        }
 
-	/* Stop iteration, return the frame */
-	if (nb_count > 0) {
-	    bits->bitPtr = bit_ptr;
-	    bits->charPtr = char_ptr;
-	    return 0;
-	}
+        /* Stop iteration, return the frame */
+        if (nb_count > 0) {
+            bits->bitPtr = bit_ptr;
+            bits->charPtr = char_ptr;
+            return 0;
+        }
 
-	/* Get control bits */
-	submode = speex_bits_unpack_unsigned(bits, 4);
-	TRACE__((THIS_FUNC, "Control bits: %d at %d", 
-		 submode, bits->charPtr*8+bits->bitPtr));
+        /* Get control bits */
+        submode = speex_bits_unpack_unsigned(bits, 4);
+        TRACE__((THIS_FUNC, "Control bits: %d at %d", 
+                 submode, bits->charPtr*8+bits->bitPtr));
 
-	if (submode == 15) {
-	    TRACE__((THIS_FUNC, "Found submode: terminator"));
-	    return -1;
-	} else if (submode == 14) {
-	    /* in-band signal; next 4 bits contain signal id */
-	    submode = speex_bits_unpack_unsigned(bits, 4);
-	    TRACE__((THIS_FUNC, "Found submode: in-band %d bits", 
-		     inband_skip_table[submode]));
-	    speex_bits_advance(bits, inband_skip_table[submode]);
-	} else if (submode == 13) {
-	    /* user in-band; next 5 bits contain msg len */
-	    submode = speex_bits_unpack_unsigned(bits, 5);
-	    TRACE__((THIS_FUNC, "Found submode: user-band %d bytes", submode));
-	    speex_bits_advance(bits, submode * 8);
-	} else if (submode > 8) {
-	    TRACE__((THIS_FUNC, "Unknown sub-mode %d", submode));
-	    return -1;
-	} else {
-	    /* NB frame */
-	    int advance = submode;
-	    speex_mode_query(&speex_nb_mode, SPEEX_SUBMODE_BITS_PER_FRAME, &advance);
-	    if (advance < 0) {
-		TRACE__((THIS_FUNC, "Invalid mode encountered. "
-			 "The stream is corrupted."));
-		return -1;
-	    }
-	    TRACE__((THIS_FUNC, "Submode %d: %d bits", submode, advance));
-	    advance -= (NB_SUBMODE_BITS+1);
-	    speex_bits_advance(bits, advance);
+        if (submode == 15) {
+            TRACE__((THIS_FUNC, "Found submode: terminator"));
+            return -1;
+        } else if (submode == 14) {
+            /* in-band signal; next 4 bits contain signal id */
+            submode = speex_bits_unpack_unsigned(bits, 4);
+            TRACE__((THIS_FUNC, "Found submode: in-band %d bits", 
+                     inband_skip_table[submode]));
+            speex_bits_advance(bits, inband_skip_table[submode]);
+        } else if (submode == 13) {
+            /* user in-band; next 5 bits contain msg len */
+            submode = speex_bits_unpack_unsigned(bits, 5);
+            TRACE__((THIS_FUNC, "Found submode: user-band %d bytes", submode));
+            speex_bits_advance(bits, submode * 8);
+        } else if (submode > 8) {
+            TRACE__((THIS_FUNC, "Unknown sub-mode %d", submode));
+            return -1;
+        } else {
+            /* NB frame */
+            int advance = submode;
+            speex_mode_query(&speex_nb_mode, SPEEX_SUBMODE_BITS_PER_FRAME, &advance);
+            if (advance < 0) {
+                TRACE__((THIS_FUNC, "Invalid mode encountered. "
+                         "The stream is corrupted."));
+                return -1;
+            }
+            TRACE__((THIS_FUNC, "Submode %d: %d bits", submode, advance));
+            advance -= (NB_SUBMODE_BITS+1);
+            speex_bits_advance(bits, advance);
 
-	    ++nb_count;
-	}
+            ++nb_count;
+        }
     }
 
     return 0;
@@ -827,11 +828,11 @@ static int speex_get_next_frame(SpeexBits *bits)
  * Get frames in the packet.
  */
 static pj_status_t  spx_codec_parse( pjmedia_codec *codec,
-				     void *pkt,
-				     pj_size_t pkt_size,
-				     const pj_timestamp *ts,
-				     unsigned *frame_cnt,
-				     pjmedia_frame frames[])
+                                     void *pkt,
+                                     pj_size_t pkt_size,
+                                     const pj_timestamp *ts,
+                                     unsigned *frame_cnt,
+                                     pjmedia_frame frames[])
 {
     struct spx_private *spx = (struct spx_private*) codec->codec_data;
     unsigned samples_per_frame;
@@ -845,22 +846,22 @@ static pj_status_t  spx_codec_parse( pjmedia_codec *codec,
     speex_bits_read_from(&spx->dec_bits, (char*)pkt, (int)pkt_size);
 
     while (speex_get_next_frame(&spx->dec_bits) == 0 && 
-	   spx->dec_bits.charPtr != char_ptr)
+           spx->dec_bits.charPtr != char_ptr)
     {
-	frames[count].buf = (char*)pkt + char_ptr;
-	/* Bit info contains start bit offset of the frame */
-	frames[count].bit_info = bit_ptr;
-	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frames[count].timestamp.u64 = ts->u64 +
-				      (pj_uint64_t)count * samples_per_frame;
-	frames[count].size = spx->dec_bits.charPtr - char_ptr;
-	if (spx->dec_bits.bitPtr)
-	    ++frames[count].size;
+        frames[count].buf = (char*)pkt + char_ptr;
+        /* Bit info contains start bit offset of the frame */
+        frames[count].bit_info = bit_ptr;
+        frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
+        frames[count].timestamp.u64 = ts->u64 +
+                                      (pj_uint64_t)count * samples_per_frame;
+        frames[count].size = spx->dec_bits.charPtr - char_ptr;
+        if (spx->dec_bits.bitPtr)
+            ++frames[count].size;
 
-	bit_ptr = spx->dec_bits.bitPtr;
-	char_ptr = spx->dec_bits.charPtr;
+        bit_ptr = spx->dec_bits.bitPtr;
+        char_ptr = spx->dec_bits.charPtr;
 
-	++count;
+        ++count;
     }
 
     *frame_cnt = count;
@@ -872,9 +873,9 @@ static pj_status_t  spx_codec_parse( pjmedia_codec *codec,
  * Encode frames.
  */
 static pj_status_t spx_codec_encode( pjmedia_codec *codec, 
-				     const struct pjmedia_frame *input,
-				     unsigned output_buf_len, 
-				     struct pjmedia_frame *output)
+                                     const struct pjmedia_frame *input,
+                                     unsigned output_buf_len, 
+                                     struct pjmedia_frame *output)
 {
     struct spx_private *spx;
     unsigned samples_per_frame;
@@ -885,36 +886,36 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
     spx = (struct spx_private*) codec->codec_data;
 
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	output->size = 0;
-	output->buf = NULL;
-	output->timestamp = input->timestamp;
-	output->type = input->type;
-	return PJ_SUCCESS;
+        output->size = 0;
+        output->buf = NULL;
+        output->timestamp = input->timestamp;
+        output->type = input->type;
+        return PJ_SUCCESS;
     }
 
     nsamples = input->size >> 1;
     samples_per_frame=spx_factory.speex_param[spx->param_id].samples_per_frame;
 
     PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0, 
-		     PJMEDIA_CODEC_EPCMFRMINLEN);
+                     PJMEDIA_CODEC_EPCMFRMINLEN);
 
     /* Flush all the bits in the struct so we can encode a new frame */
     speex_bits_reset(&spx->enc_bits);
 
     /* Encode the frames */
     while (nsamples >= samples_per_frame) {
-	tx += speex_encode_int(spx->enc, pcm_in, &spx->enc_bits);
-	pcm_in += samples_per_frame;
-	nsamples -= samples_per_frame;
+        tx += speex_encode_int(spx->enc, pcm_in, &spx->enc_bits);
+        pcm_in += samples_per_frame;
+        nsamples -= samples_per_frame;
     }
 
     /* Check if we need not to transmit the frame (DTX) */
     if (tx == 0) {
-	output->buf = NULL;
-	output->size = 0;
-	output->timestamp.u64 = input->timestamp.u64;
-	output->type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_SUCCESS;
+        output->buf = NULL;
+        output->size = 0;
+        output->timestamp.u64 = input->timestamp.u64;
+        output->type = PJMEDIA_FRAME_TYPE_NONE;
+        return PJ_SUCCESS;
     }
 
     /* Check size. */
@@ -922,7 +923,7 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
 
     /* Copy the bits to an array of char that can be written */
     output->size = speex_bits_write(&spx->enc_bits, 
-				    (char*)output->buf, output_buf_len);
+                                    (char*)output->buf, output_buf_len);
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;
 
@@ -933,9 +934,9 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
  * Decode frame.
  */
 static pj_status_t spx_codec_decode( pjmedia_codec *codec, 
-				     const struct pjmedia_frame *input,
-				     unsigned output_buf_len, 
-				     struct pjmedia_frame *output)
+                                     const struct pjmedia_frame *input,
+                                     unsigned output_buf_len, 
+                                     struct pjmedia_frame *output)
 {
     struct spx_private *spx;
     unsigned samples_per_frame;
@@ -944,14 +945,14 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
     samples_per_frame=spx_factory.speex_param[spx->param_id].samples_per_frame;
 
     PJ_ASSERT_RETURN(output_buf_len >= samples_per_frame << 1,
-		     PJMEDIA_CODEC_EPCMTOOSHORT);
+                     PJMEDIA_CODEC_EPCMTOOSHORT);
 
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
-	output->size = samples_per_frame << 1;
-	output->timestamp.u64 = input->timestamp.u64;
-	output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-	return PJ_SUCCESS;
+        pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
+        output->size = samples_per_frame << 1;
+        output->timestamp.u64 = input->timestamp.u64;
+        output->type = PJMEDIA_FRAME_TYPE_AUDIO;
+        return PJ_SUCCESS;
     }
 
     /* Copy the data into the bit-stream struct */
@@ -974,8 +975,8 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
  * Recover lost frame.
  */
 static pj_status_t  spx_codec_recover(pjmedia_codec *codec, 
-				      unsigned output_buf_len, 
-				      struct pjmedia_frame *output)
+                                      unsigned output_buf_len, 
+                                      struct pjmedia_frame *output)
 {
     struct spx_private *spx;
     unsigned count;
@@ -997,4 +998,4 @@ static pj_status_t  spx_codec_recover(pjmedia_codec *codec,
 }
 
 
-#endif	/* PJMEDIA_HAS_SPEEX_CODEC */
+#endif  /* PJMEDIA_HAS_SPEEX_CODEC */

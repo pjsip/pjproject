@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -112,57 +111,57 @@ PJ_BEGIN_DECL
 /**
  * Length of Authentication Key (AK) in bytes.
  */
-#define PJSIP_AKA_AKLEN		6
+#define PJSIP_AKA_AKLEN         6
 
 /**
  * Length of Authentication Management Field (AMF) in bytes.
  */
-#define PJSIP_AKA_AMFLEN	2
+#define PJSIP_AKA_AMFLEN        2
 
 /**
  * Length of AUTN in bytes.
  */
-#define PJSIP_AKA_AUTNLEN	16
+#define PJSIP_AKA_AUTNLEN       16
 
 /**
  * Length of Confidentiality Key (CK) in bytes.
  */
-#define PJSIP_AKA_CKLEN		16
+#define PJSIP_AKA_CKLEN         16
 
 /**
  * Length of Integrity Key (AK) in bytes.
  */
-#define PJSIP_AKA_IKLEN		16
+#define PJSIP_AKA_IKLEN         16
 
 /**
  * Length of permanent/subscriber Key (K) in bytes.
  */
-#define PJSIP_AKA_KLEN		16
+#define PJSIP_AKA_KLEN          16
 
 /**
  * Length of AKA authentication code in bytes.
  */
-#define PJSIP_AKA_MACLEN	8
+#define PJSIP_AKA_MACLEN        8
 
 /**
  * Length of operator key in bytes.
  */
-#define PJSIP_AKA_OPLEN		16
+#define PJSIP_AKA_OPLEN         16
 
 /**
  * Length of random challenge (RAND) in bytes.
  */
-#define PJSIP_AKA_RANDLEN	16
+#define PJSIP_AKA_RANDLEN       16
 
 /**
  * Length of response digest in bytes.
  */
-#define PJSIP_AKA_RESLEN	8
+#define PJSIP_AKA_RESLEN        8
 
 /**
  * Length of sequence number (SQN) in bytes.
  */
-#define PJSIP_AKA_SQNLEN	6
+#define PJSIP_AKA_SQNLEN        6
 
 /**
  * This function creates MD5, AKAv1-MD5, or AKAv2-MD5 response for
@@ -177,27 +176,27 @@ PJ_BEGIN_DECL
  * the credential, and fills up other AKA specific information in
  * the credential.
  *
- * @param pool	    Pool to allocate memory.
- * @param chal	    The authentication challenge sent by server in 401
- *		    or 401 response, as either Proxy-Authenticate or
- *		    WWW-Authenticate header.
- * @param cred	    The credential to be used.
+ * @param pool      Pool to allocate memory.
+ * @param chal      The authentication challenge sent by server in 401
+ *                  or 401 response, as either Proxy-Authenticate or
+ *                  WWW-Authenticate header.
+ * @param cred      The credential to be used.
  * @param method    The request method.
- * @param auth	    The digest credential where the digest response
- *		    will be placed to. Upon calling this function, the
- *		    nonce, nc, cnonce, qop, uri, and realm fields of
- *		    this structure must have been set by caller. Upon
- *		    return, the \a response field will be initialized
- *		    by this function.
+ * @param auth      The digest credential where the digest response
+ *                  will be placed to. Upon calling this function, the
+ *                  nonce, nc, cnonce, qop, uri, and realm fields of
+ *                  this structure must have been set by caller. Upon
+ *                  return, the \a response field will be initialized
+ *                  by this function.
  *
- * @return	    PJ_SUCCESS if response has been created successfully.
+ * @return          PJ_SUCCESS if response has been created successfully.
  */
 PJ_DECL(pj_status_t) pjsip_auth_create_aka_response(
-					     pj_pool_t *pool,
-					     const pjsip_digest_challenge*chal,
-					     const pjsip_cred_info *cred,
-					     const pj_str_t *method,
-					     pjsip_digest_credential *auth);
+                                             pj_pool_t *pool,
+                                             const pjsip_digest_challenge*chal,
+                                             const pjsip_cred_info *cred,
+                                             const pj_str_t *method,
+                                             pjsip_digest_credential *auth);
 
 
 /**
@@ -209,5 +208,5 @@ PJ_DECL(pj_status_t) pjsip_auth_create_aka_response(
 PJ_END_DECL
 
 
-#endif	/* __PJSIP_AUTH_SIP_AUTH_AKA_H__ */
+#endif  /* __PJSIP_AUTH_SIP_AUTH_AKA_H__ */
 

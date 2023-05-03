@@ -1,8 +1,7 @@
-# $Id$
 import inc_sip as sip
 import inc_sdp as sdp
 
-# Ticket http://trac.pjsip.org/repos/ticket/718
+# Ticket https://github.com/pjsip/pjproject/issues/718
 # RTC doesn't put rport in Via, and it is reported to have caused segfault.
 #
 complete_msg = \

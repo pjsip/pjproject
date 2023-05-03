@@ -1,4 +1,3 @@
-# $Id$
 #
 # pjsua Python GUI Demo
 #
@@ -110,8 +109,7 @@ class SettingDialog(tk.Toplevel):
         # Prepare the variables to set/receive values from GUI
         self.cfgUri = tk.StringVar()
         self.cfgUri.set( self.cfg.uri )
-        self.cfgSubscribe = tk.IntVar()
-        self.cfgSubscribe.set(self.cfg.subscribe)
+        self.cfgSubscribe = tk.BooleanVar(value = self.cfg.subscribe)
 
         # Build the tab page
         frm = ttk.Frame(self.frm)

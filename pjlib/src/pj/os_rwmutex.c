@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -49,7 +48,7 @@ struct pj_rwmutex_t
  *
  */
 PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
-				      pj_rwmutex_t **p_mutex)
+                                      pj_rwmutex_t **p_mutex)
 {
     pj_status_t status;
     pj_rwmutex_t *rwmutex;
@@ -61,12 +60,12 @@ PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
 
     status = pj_mutex_create_simple(pool, name, &rwmutex ->read_lock);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     status = pj_sem_create(pool, name, 1, 1, &rwmutex->write_lock);
     if (status != PJ_SUCCESS) {
-	pj_mutex_destroy(rwmutex->read_lock);
-	return status;
+        pj_mutex_destroy(rwmutex->read_lock);
+        return status;
     }
 
     rwmutex->reader_count = 0;
@@ -86,8 +85,8 @@ PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
 
     status = pj_mutex_lock(mutex->read_lock);
     if (status != PJ_SUCCESS) {
-	pj_assert(!"This pretty much is unexpected");
-	return status;
+        pj_assert(!"This pretty much is unexpected");
+        return status;
     }
 
     mutex->reader_count++;
@@ -95,7 +94,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
     pj_assert(mutex->reader_count < 0x7FFFFFF0L);
 
     if (mutex->reader_count == 1)
-	pj_sem_wait(mutex->write_lock);
+        pj_sem_wait(mutex->write_lock);
 
     status = pj_mutex_unlock(mutex->read_lock);
     return status;
@@ -123,15 +122,15 @@ PJ_DEF(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex)
 
     status = pj_mutex_lock(mutex->read_lock);
     if (status != PJ_SUCCESS) {
-	pj_assert(!"This pretty much is unexpected");
-	return status;
+        pj_assert(!"This pretty much is unexpected");
+        return status;
     }
 
     pj_assert(mutex->reader_count >= 1);
 
     --mutex->reader_count;
     if (mutex->reader_count == 0)
-	pj_sem_post(mutex->write_lock);
+        pj_sem_post(mutex->write_lock);
 
     status = pj_mutex_unlock(mutex->read_lock);
     return status;

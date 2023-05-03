@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -39,7 +38,7 @@
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 
-#include <stdlib.h>	/* atoi() */
+#include <stdlib.h>     /* atoi() */
 #include <stdio.h>
 
 #include "util.h"
@@ -49,8 +48,8 @@ static const char *desc =
  " vid_streamutil                                                       \n"
  "\n"
  " PURPOSE:                                                             \n"
- "  Demonstrate how to use pjmedia video stream component to		\n"
- "  transmit/receive RTP packets to/from video device/file.		\n"
+ "  Demonstrate how to use pjmedia video stream component to            \n"
+ "  transmit/receive RTP packets to/from video device/file.             \n"
  "\n"
  "\n"
  " USAGE:                                                               \n"
@@ -90,7 +89,7 @@ static const char *desc =
  "\n"
 ;
 
-#define THIS_FILE	"vid_streamutil.c"
+#define THIS_FILE       "vid_streamutil.c"
 
 
 /* If set, local renderer will be created to play original file */
@@ -100,8 +99,8 @@ static const char *desc =
 /* Default width and height for the renderer, better be set to maximum
  * acceptable size.
  */
-#define DEF_RENDERER_WIDTH		    640
-#define DEF_RENDERER_HEIGHT		    480
+#define DEF_RENDERER_WIDTH                  640
+#define DEF_RENDERER_HEIGHT                 480
 
 
 /* Hexa string to octet array */
@@ -109,12 +108,12 @@ int my_hex_string_to_octet_string(char *raw, char *hex, int len)
 {
     int i;
     for (i = 0; i < len; i+=2) {
-	int tmp;
-	if (i+1 >= len || !pj_isxdigit(hex[i]) || !pj_isxdigit(hex[i+1]))
-	    return i;
-	tmp  = pj_hex_digit_to_val((unsigned char)hex[i]) << 4;
-	tmp |= pj_hex_digit_to_val((unsigned char)hex[i+1]);
-	raw[i/2] = (char)(tmp & 0xFF);
+        int tmp;
+        if (i+1 >= len || !pj_isxdigit(hex[i]) || !pj_isxdigit(hex[i+1]))
+            return i;
+        tmp  = pj_hex_digit_to_val((unsigned char)hex[i]) << 4;
+        tmp |= pj_hex_digit_to_val((unsigned char)hex[i+1]);
+        raw[i/2] = (char)(tmp & 0xFF);
     }
     return len;
 }
@@ -128,6 +127,7 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
 
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(status);
+        PJ_UNUSED_ARG(pf);
 
 #if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
     status = pjmedia_codec_openh264_vid_init(NULL, pf);
@@ -178,8 +178,8 @@ static void deinit_codecs()
 }
 
 static pj_status_t create_file_player( pj_pool_t *pool,
-				       const char *file_name,
-				       pjmedia_port **p_play_port)
+                                       const char *file_name,
+                                       pjmedia_port **p_play_port)
 {
     pjmedia_avi_streams *avi_streams;
     pjmedia_avi_stream *vid_stream;
@@ -188,13 +188,13 @@ static pj_status_t create_file_player( pj_pool_t *pool,
 
     status = pjmedia_avi_player_create_streams(pool, file_name, 0, &avi_streams);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
     vid_stream = pjmedia_avi_streams_get_stream_by_media(avi_streams,
                                                          0,
                                                          PJMEDIA_TYPE_VIDEO);
     if (!vid_stream)
-	return PJ_ENOTFOUND;
+        return PJ_ENOTFOUND;
 
     play_port = pjmedia_avi_stream_get_port(vid_stream);
     pj_assert(play_port);
@@ -208,21 +208,21 @@ static pj_status_t create_file_player( pj_pool_t *pool,
  * Create stream based on the codec, dir, remote address, etc. 
  */
 static pj_status_t create_stream( pj_pool_t *pool,
-				  pjmedia_endpt *med_endpt,
-				  const pjmedia_vid_codec_info *codec_info,
+                                  pjmedia_endpt *med_endpt,
+                                  const pjmedia_vid_codec_info *codec_info,
                                   pjmedia_vid_codec_param *codec_param,
-				  pjmedia_dir dir,
-				  pj_int8_t rx_pt,
-				  pj_int8_t tx_pt,
-				  pj_uint16_t local_port,
-				  const pj_sockaddr_in *rem_addr,
+                                  pjmedia_dir dir,
+                                  pj_int8_t rx_pt,
+                                  pj_int8_t tx_pt,
+                                  pj_uint16_t local_port,
+                                  const pj_sockaddr_in *rem_addr,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-				  pj_bool_t use_srtp,
-				  const pj_str_t *crypto_suite,
-				  const pj_str_t *srtp_tx_key,
-				  const pj_str_t *srtp_rx_key,
+                                  pj_bool_t use_srtp,
+                                  const pj_str_t *crypto_suite,
+                                  const pj_str_t *srtp_tx_key,
+                                  const pj_str_t *srtp_rx_key,
 #endif
-				  pjmedia_vid_stream **p_stream )
+                                  pjmedia_vid_stream **p_stream )
 {
     pjmedia_vid_stream_info info;
     pjmedia_transport *transport = NULL;
@@ -238,8 +238,8 @@ static pj_status_t create_stream( pj_pool_t *pool,
     info.type = PJMEDIA_TYPE_VIDEO;
     info.dir = dir;
     info.codec_info = *codec_info;
-    info.tx_pt = (tx_pt == -1)? codec_info->pt : tx_pt;
-    info.rx_pt = (rx_pt == -1)? codec_info->pt : rx_pt;
+    info.tx_pt = (tx_pt == -1)? (pj_uint8_t)codec_info->pt : tx_pt;
+    info.rx_pt = (rx_pt == -1)? (pj_uint8_t)codec_info->pt : rx_pt;
     info.ssrc = pj_rand();
     if (codec_param)
         info.codec_param = codec_param;
@@ -251,39 +251,39 @@ static pj_status_t create_stream( pj_pool_t *pool,
      * (otherwise stream will assert).
      */
     if (info.rem_addr.addr.sa_family == 0) {
-	const pj_str_t addr = pj_str("127.0.0.1");
-	pj_sockaddr_in_init(&info.rem_addr.ipv4, &addr, 0);
+        const pj_str_t addr = pj_str("127.0.0.1");
+        pj_sockaddr_in_init(&info.rem_addr.ipv4, &addr, 0);
     }
 
     /* Create media transport */
     status = pjmedia_transport_udp_create(med_endpt, NULL, local_port,
-					  0, &transport);
+                                          0, &transport);
     if (status != PJ_SUCCESS)
-	return status;
+        return status;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* Check if SRTP enabled */
     if (use_srtp) {
-	pjmedia_srtp_crypto tx_plc, rx_plc;
+        pjmedia_srtp_crypto tx_plc, rx_plc;
 
-	status = pjmedia_transport_srtp_create(med_endpt, transport, 
-					       NULL, &srtp_tp);
-	if (status != PJ_SUCCESS)
-	    return status;
+        status = pjmedia_transport_srtp_create(med_endpt, transport, 
+                                               NULL, &srtp_tp);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	pj_bzero(&tx_plc, sizeof(pjmedia_srtp_crypto));
-	pj_bzero(&rx_plc, sizeof(pjmedia_srtp_crypto));
+        pj_bzero(&tx_plc, sizeof(pjmedia_srtp_crypto));
+        pj_bzero(&rx_plc, sizeof(pjmedia_srtp_crypto));
 
-	tx_plc.key = *srtp_tx_key;
-	tx_plc.name = *crypto_suite;
-	rx_plc.key = *srtp_rx_key;
-	rx_plc.name = *crypto_suite;
-	
-	status = pjmedia_transport_srtp_start(srtp_tp, &tx_plc, &rx_plc);
-	if (status != PJ_SUCCESS)
-	    return status;
+        tx_plc.key = *srtp_tx_key;
+        tx_plc.name = *crypto_suite;
+        rx_plc.key = *srtp_rx_key;
+        rx_plc.name = *crypto_suite;
+        
+        status = pjmedia_transport_srtp_start(srtp_tp, &tx_plc, &rx_plc);
+        if (status != PJ_SUCCESS)
+            return status;
 
-	transport = srtp_tp;
+        transport = srtp_tp;
     }
 #endif
 
@@ -292,13 +292,13 @@ static pj_status_t create_stream( pj_pool_t *pool,
      */
 
     status = pjmedia_vid_stream_create( med_endpt, pool, &info, 
-					transport, 
-					NULL, p_stream);
+                                        transport, 
+                                        NULL, p_stream);
 
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Error creating stream", status);
-	pjmedia_transport_close(transport);
-	return status;
+        app_perror(THIS_FILE, "Error creating stream", status);
+        pjmedia_transport_close(transport);
+        return status;
     }
 
     /* Start media transport */
@@ -337,22 +337,22 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
 
     /* Decode frame, if needed */
     if (play_file->decoder) {
-	pjmedia_vid_codec *decoder = play_file->decoder;
+        pjmedia_vid_codec *decoder = play_file->decoder;
 
-	write_frame.buf = play_file->dec_buf;
-	write_frame.size = play_file->dec_buf_size;
-	status = pjmedia_vid_codec_decode(decoder, 1, &read_frame,
-	                                  (unsigned)write_frame.size, 
-					  &write_frame);
-	if (status != PJ_SUCCESS)
-	    return;
+        write_frame.buf = play_file->dec_buf;
+        write_frame.size = play_file->dec_buf_size;
+        status = pjmedia_vid_codec_decode(decoder, 1, &read_frame,
+                                          (unsigned)write_frame.size, 
+                                          &write_frame);
+        if (status != PJ_SUCCESS)
+            return;
     } else {
-	write_frame = read_frame;
+        write_frame = read_frame;
     }
 
     /* Display frame locally */
     if (play_file->renderer)
-	pjmedia_port_put_frame(play_file->renderer, &write_frame);
+        pjmedia_port_put_frame(play_file->renderer, &write_frame);
 
     /* Send frame */
     pjmedia_port_put_frame(play_file->stream_port, &write_frame);
@@ -370,7 +370,7 @@ static void usage()
 /*
  * main()
  */
-int main(int argc, char *argv[])
+static int main_func(int argc, char *argv[])
 {
     pj_caching_pool cp;
     pjmedia_endpt *med_endpt;
@@ -391,7 +391,7 @@ int main(int argc, char *argv[])
     pj_str_t  srtp_tx_key = {NULL, 0};
     pj_str_t  srtp_rx_key = {NULL, 0};
     pj_str_t  srtp_crypto_suite = {NULL, 0};
-    int	tmp_key_len;
+    int tmp_key_len;
 #endif
 
     /* Default values */
@@ -410,44 +410,44 @@ int main(int argc, char *argv[])
     pjmedia_clock *play_clock = NULL;
 
     enum {
-	OPT_CODEC	= 'c',
-	OPT_LOCAL_PORT	= 'p',
-	OPT_REMOTE	= 'r',
-	OPT_PLAY_FILE	= 'f',
-	OPT_SEND_RECV	= 'b',
-	OPT_SEND_ONLY	= 's',
-	OPT_RECV_ONLY	= 'i',
-	OPT_SEND_WIDTH	= 'W',
-	OPT_SEND_HEIGHT	= 'H',
-	OPT_RECV_PT	= 't',
-	OPT_SEND_PT	= 'T',
+        OPT_CODEC       = 'c',
+        OPT_LOCAL_PORT  = 'p',
+        OPT_REMOTE      = 'r',
+        OPT_PLAY_FILE   = 'f',
+        OPT_SEND_RECV   = 'b',
+        OPT_SEND_ONLY   = 's',
+        OPT_RECV_ONLY   = 'i',
+        OPT_SEND_WIDTH  = 'W',
+        OPT_SEND_HEIGHT = 'H',
+        OPT_RECV_PT     = 't',
+        OPT_SEND_PT     = 'T',
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-	OPT_USE_SRTP	= 'S',
+        OPT_USE_SRTP    = 'S',
 #endif
-	OPT_SRTP_TX_KEY	= 'x',
-	OPT_SRTP_RX_KEY	= 'y',
-	OPT_HELP	= 'h',
+        OPT_SRTP_TX_KEY = 'x',
+        OPT_SRTP_RX_KEY = 'y',
+        OPT_HELP        = 'h',
     };
 
     struct pj_getopt_option long_options[] = {
-	{ "codec",	    1, 0, OPT_CODEC },
-	{ "local-port",	    1, 0, OPT_LOCAL_PORT },
-	{ "remote",	    1, 0, OPT_REMOTE },
-	{ "play-file",	    1, 0, OPT_PLAY_FILE },
-	{ "send-recv",      0, 0, OPT_SEND_RECV },
-	{ "send-only",      0, 0, OPT_SEND_ONLY },
-	{ "recv-only",      0, 0, OPT_RECV_ONLY },
-	{ "send-width",     1, 0, OPT_SEND_WIDTH },
-	{ "send-height",    1, 0, OPT_SEND_HEIGHT },
-	{ "recv-pt",        1, 0, OPT_RECV_PT },
-	{ "send-pt",        1, 0, OPT_SEND_PT },
+        { "codec",          1, 0, OPT_CODEC },
+        { "local-port",     1, 0, OPT_LOCAL_PORT },
+        { "remote",         1, 0, OPT_REMOTE },
+        { "play-file",      1, 0, OPT_PLAY_FILE },
+        { "send-recv",      0, 0, OPT_SEND_RECV },
+        { "send-only",      0, 0, OPT_SEND_ONLY },
+        { "recv-only",      0, 0, OPT_RECV_ONLY },
+        { "send-width",     1, 0, OPT_SEND_WIDTH },
+        { "send-height",    1, 0, OPT_SEND_HEIGHT },
+        { "recv-pt",        1, 0, OPT_RECV_PT },
+        { "send-pt",        1, 0, OPT_SEND_PT },
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-	{ "use-srtp",	    2, 0, OPT_USE_SRTP },
-	{ "srtp-tx-key",    1, 0, OPT_SRTP_TX_KEY },
-	{ "srtp-rx-key",    1, 0, OPT_SRTP_RX_KEY },
+        { "use-srtp",       2, 0, OPT_USE_SRTP },
+        { "srtp-tx-key",    1, 0, OPT_SRTP_TX_KEY },
+        { "srtp-rx-key",    1, 0, OPT_SRTP_RX_KEY },
 #endif
-	{ "help",	    0, 0, OPT_HELP },
-	{ NULL, 0, 0, 0 },
+        { "help",           0, 0, OPT_HELP },
+        { NULL, 0, 0, 0 },
     };
 
     int c;
@@ -466,120 +466,120 @@ int main(int argc, char *argv[])
     pj_optind = 0;
     while((c=pj_getopt_long(argc,argv, "h", long_options, &option_index))!=-1)
     {
-	switch (c) {
-	case OPT_CODEC:
-	    codec_id = pj_optarg;
-	    break;
+        switch (c) {
+        case OPT_CODEC:
+            codec_id = pj_optarg;
+            break;
 
-	case OPT_LOCAL_PORT:
-	    local_port = (pj_uint16_t) atoi(pj_optarg);
-	    if (local_port < 1) {
-		printf("Error: invalid local port %s\n", pj_optarg);
-		return 1;
-	    }
-	    break;
+        case OPT_LOCAL_PORT:
+            local_port = (pj_uint16_t) atoi(pj_optarg);
+            if (local_port < 1) {
+                printf("Error: invalid local port %s\n", pj_optarg);
+                return 1;
+            }
+            break;
 
-	case OPT_REMOTE:
-	    {
-		pj_str_t ip = pj_str(strtok(pj_optarg, ":"));
-		pj_uint16_t port = (pj_uint16_t) atoi(strtok(NULL, ":"));
+        case OPT_REMOTE:
+            {
+                pj_str_t ip = pj_str(strtok(pj_optarg, ":"));
+                pj_uint16_t port = (pj_uint16_t) atoi(strtok(NULL, ":"));
 
-		status = pj_sockaddr_in_init(&remote_addr, &ip, port);
-		if (status != PJ_SUCCESS) {
-		    app_perror(THIS_FILE, "Invalid remote address", status);
-		    return 1;
-		}
-	    }
-	    break;
+                status = pj_sockaddr_in_init(&remote_addr, &ip, port);
+                if (status != PJ_SUCCESS) {
+                    app_perror(THIS_FILE, "Invalid remote address", status);
+                    return 1;
+                }
+            }
+            break;
 
-	case OPT_PLAY_FILE:
-	    play_file.file_name = pj_optarg;
-	    break;
+        case OPT_PLAY_FILE:
+            play_file.file_name = pj_optarg;
+            break;
 
-	case OPT_SEND_RECV:
-	    dir = PJMEDIA_DIR_ENCODING_DECODING;
-	    break;
+        case OPT_SEND_RECV:
+            dir = PJMEDIA_DIR_ENCODING_DECODING;
+            break;
 
-	case OPT_SEND_ONLY:
-	    dir = PJMEDIA_DIR_ENCODING;
-	    break;
+        case OPT_SEND_ONLY:
+            dir = PJMEDIA_DIR_ENCODING;
+            break;
 
-	case OPT_RECV_ONLY:
-	    dir = PJMEDIA_DIR_DECODING;
-	    break;
+        case OPT_RECV_ONLY:
+            dir = PJMEDIA_DIR_DECODING;
+            break;
 
-	case OPT_SEND_WIDTH:
-	    tx_size.w = (unsigned)atoi(pj_optarg);
-	    break;
+        case OPT_SEND_WIDTH:
+            tx_size.w = (unsigned)atoi(pj_optarg);
+            break;
 
-	case OPT_SEND_HEIGHT:
-	    tx_size.h = (unsigned)atoi(pj_optarg);
-	    break;
+        case OPT_SEND_HEIGHT:
+            tx_size.h = (unsigned)atoi(pj_optarg);
+            break;
 
-	case OPT_RECV_PT:
-	    rx_pt = (pj_int8_t)atoi(pj_optarg);
-	    break;
+        case OPT_RECV_PT:
+            rx_pt = (pj_int8_t)atoi(pj_optarg);
+            break;
 
-	case OPT_SEND_PT:
-	    tx_pt = (pj_int8_t)atoi(pj_optarg);
-	    break;
+        case OPT_SEND_PT:
+            tx_pt = (pj_int8_t)atoi(pj_optarg);
+            break;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-	case OPT_USE_SRTP:
-	    use_srtp = PJ_TRUE;
-	    if (pj_optarg) {
-		pj_strset(&srtp_crypto_suite, pj_optarg, strlen(pj_optarg));
-	    } else {
-		srtp_crypto_suite = pj_str("AES_CM_128_HMAC_SHA1_80");
-	    }
-	    break;
+        case OPT_USE_SRTP:
+            use_srtp = PJ_TRUE;
+            if (pj_optarg) {
+                pj_strset(&srtp_crypto_suite, pj_optarg, strlen(pj_optarg));
+            } else {
+                srtp_crypto_suite = pj_str("AES_CM_128_HMAC_SHA1_80");
+            }
+            break;
 
-	case OPT_SRTP_TX_KEY:
-	    tmp_key_len = my_hex_string_to_octet_string(tmp_tx_key, pj_optarg, 
-						        (int)strlen(pj_optarg));
-	    pj_strset(&srtp_tx_key, tmp_tx_key, tmp_key_len/2);
-	    break;
+        case OPT_SRTP_TX_KEY:
+            tmp_key_len = my_hex_string_to_octet_string(tmp_tx_key, pj_optarg, 
+                                                        (int)strlen(pj_optarg));
+            pj_strset(&srtp_tx_key, tmp_tx_key, tmp_key_len/2);
+            break;
 
-	case OPT_SRTP_RX_KEY:
-	    tmp_key_len = my_hex_string_to_octet_string(tmp_rx_key, pj_optarg,
-						        (int)strlen(pj_optarg));
-	    pj_strset(&srtp_rx_key, tmp_rx_key, tmp_key_len/2);
-	    break;
+        case OPT_SRTP_RX_KEY:
+            tmp_key_len = my_hex_string_to_octet_string(tmp_rx_key, pj_optarg,
+                                                        (int)strlen(pj_optarg));
+            pj_strset(&srtp_rx_key, tmp_rx_key, tmp_key_len/2);
+            break;
 #endif
 
-	case OPT_HELP:
-	    usage();
-	    return 1;
+        case OPT_HELP:
+            usage();
+            return 1;
 
-	default:
-	    printf("Invalid options %s\n", argv[pj_optind]);
-	    return 1;
-	}
+        default:
+            printf("Invalid options %s\n", argv[pj_optind]);
+            return 1;
+        }
 
     }
 
 
     /* Verify arguments. */
     if (dir & PJMEDIA_DIR_ENCODING) {
-	if (remote_addr.sin_addr.s_addr == 0) {
-	    printf("Error: remote address must be set\n");
-	    return 1;
-	}
+        if (remote_addr.sin_addr.s_addr == 0) {
+            printf("Error: remote address must be set\n");
+            return 1;
+        }
     }
 
     if (play_file.file_name != NULL && dir != PJMEDIA_DIR_ENCODING) {
-	printf("Direction is set to --send-only because of --play-file\n");
-	dir = PJMEDIA_DIR_ENCODING;
+        printf("Direction is set to --send-only because of --play-file\n");
+        dir = PJMEDIA_DIR_ENCODING;
     }
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* SRTP validation */
     if (use_srtp) {
-	if (!srtp_tx_key.slen || !srtp_rx_key.slen)
-	{
-	    printf("Error: Key for each SRTP stream direction must be set\n");
-	    return 1;
-	}
+        if (!srtp_tx_key.slen || !srtp_rx_key.slen)
+        {
+            printf("Error: Key for each SRTP stream direction must be set\n");
+            return 1;
+        }
     }
 #endif
 
@@ -594,12 +594,12 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Create memory pool for application purpose */
-    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "app",	    /* pool name.	    */
-			   4000,	    /* init size	    */
-			   4000,	    /* increment size	    */
-			   NULL		    /* callback on error    */
-			   );
+    pool = pj_pool_create( &cp.factory,     /* pool factory         */
+                           "app",           /* pool name.           */
+                           4000,            /* init size            */
+                           4000,            /* increment size       */
+                           NULL             /* callback on error    */
+                           );
 
     /* Init video format manager */
     pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
@@ -623,28 +623,28 @@ int main(int argc, char *argv[])
 
     /* Find which codec to use. */
     if (codec_id) {
-	unsigned count = 1;
-	pj_str_t str_codec_id = pj_str(codec_id);
+        unsigned count = 1;
+        pj_str_t str_codec_id = pj_str(codec_id);
 
         status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL,
-						         &str_codec_id, &count,
-						         &codec_info, NULL);
-	if (status != PJ_SUCCESS) {
-	    printf("Error: unable to find codec %s\n", codec_id);
-	    return 1;
-	}
+                                                         &str_codec_id, &count,
+                                                         &codec_info, NULL);
+        if (status != PJ_SUCCESS) {
+            printf("Error: unable to find codec %s\n", codec_id);
+            return 1;
+        }
     } else {
         static pjmedia_vid_codec_info info[1];
         unsigned count = PJ_ARRAY_SIZE(info);
 
-	/* Default to first codec */
-	pjmedia_vid_codec_mgr_enum_codecs(NULL, &count, info, NULL);
+        /* Default to first codec */
+        pjmedia_vid_codec_mgr_enum_codecs(NULL, &count, info, NULL);
         codec_info = &info[0];
     }
 
     /* Get codec default param for info */
     status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info, 
-				                     &codec_param);
+                                                     &codec_param);
     pj_assert(status == PJ_SUCCESS);
     
     /* Set outgoing video size */
@@ -654,95 +654,95 @@ int main(int argc, char *argv[])
 #if DEF_RENDERER_WIDTH && DEF_RENDERER_HEIGHT
     /* Set incoming video size */
     if (DEF_RENDERER_WIDTH > codec_param.dec_fmt.det.vid.size.w)
-	codec_param.dec_fmt.det.vid.size.w = DEF_RENDERER_WIDTH;
+        codec_param.dec_fmt.det.vid.size.w = DEF_RENDERER_WIDTH;
     if (DEF_RENDERER_HEIGHT > codec_param.dec_fmt.det.vid.size.h)
-	codec_param.dec_fmt.det.vid.size.h = DEF_RENDERER_HEIGHT;
+        codec_param.dec_fmt.det.vid.size.h = DEF_RENDERER_HEIGHT;
 #endif
 
     if (play_file.file_name) {
-	pjmedia_video_format_detail *file_vfd;
+        pjmedia_video_format_detail *file_vfd;
         pjmedia_clock_param clock_param;
         char fmt_name[5];
 
-	/* Create file player */
-	status = create_file_player(pool, play_file.file_name, &play_port);
-	if (status != PJ_SUCCESS)
-	    goto on_exit;
+        /* Create file player */
+        status = create_file_player(pool, play_file.file_name, &play_port);
+        if (status != PJ_SUCCESS)
+            goto on_exit;
 
-	/* Collect format info */
-	file_vfd = pjmedia_format_get_video_format_detail(&play_port->info.fmt,
-							  PJ_TRUE);
-	PJ_LOG(2, (THIS_FILE, "Reading video stream %dx%d %s @%.2ffps",
-		   file_vfd->size.w, file_vfd->size.h,
-		   pjmedia_fourcc_name(play_port->info.fmt.id, fmt_name),
-		   (1.0*file_vfd->fps.num/file_vfd->fps.denum)));
+        /* Collect format info */
+        file_vfd = pjmedia_format_get_video_format_detail(&play_port->info.fmt,
+                                                          PJ_TRUE);
+        PJ_LOG(2, (THIS_FILE, "Reading video stream %dx%d %s @%.2ffps",
+                   file_vfd->size.w, file_vfd->size.h,
+                   pjmedia_fourcc_name(play_port->info.fmt.id, fmt_name),
+                   (1.0*file_vfd->fps.num/file_vfd->fps.denum)));
 
-	/* Allocate file read buffer */
-	play_file.read_buf_size = PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE;
-	play_file.read_buf = pj_pool_zalloc(pool, play_file.read_buf_size);
+        /* Allocate file read buffer */
+        play_file.read_buf_size = PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE;
+        play_file.read_buf = pj_pool_zalloc(pool, play_file.read_buf_size);
 
-	/* Create decoder, if the file and the stream uses different codec */
-	if (codec_info->fmt_id != (pjmedia_format_id)play_port->info.fmt.id) {
-	    const pjmedia_video_format_info *dec_vfi;
-	    pjmedia_video_apply_fmt_param dec_vafp = {0};
-	    const pjmedia_vid_codec_info *codec_info2;
-	    pjmedia_vid_codec_param codec_param2;
+        /* Create decoder, if the file and the stream uses different codec */
+        if (codec_info->fmt_id != (pjmedia_format_id)play_port->info.fmt.id) {
+            const pjmedia_video_format_info *dec_vfi;
+            pjmedia_video_apply_fmt_param dec_vafp = {0};
+            const pjmedia_vid_codec_info *codec_info2;
+            pjmedia_vid_codec_param codec_param2;
 
-	    /* Find decoder */
-	    status = pjmedia_vid_codec_mgr_get_codec_info2(NULL,
-							   play_port->info.fmt.id,
-							   &codec_info2);
-	    if (status != PJ_SUCCESS)
-		goto on_exit;
+            /* Find decoder */
+            status = pjmedia_vid_codec_mgr_get_codec_info2(NULL,
+                                                           play_port->info.fmt.id,
+                                                           &codec_info2);
+            if (status != PJ_SUCCESS)
+                goto on_exit;
 
-	    /* Init decoder */
-	    status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info2,
-						       &play_decoder);
-	    if (status != PJ_SUCCESS)
-		goto on_exit;
+            /* Init decoder */
+            status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info2,
+                                                       &play_decoder);
+            if (status != PJ_SUCCESS)
+                goto on_exit;
 
-	    status = play_decoder->op->init(play_decoder, pool);
-	    if (status != PJ_SUCCESS)
-		goto on_exit;
+            status = play_decoder->op->init(play_decoder, pool);
+            if (status != PJ_SUCCESS)
+                goto on_exit;
 
-	    /* Open decoder */
-	    status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info2,
-							     &codec_param2);
-	    if (status != PJ_SUCCESS)
-		goto on_exit;
+            /* Open decoder */
+            status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info2,
+                                                             &codec_param2);
+            if (status != PJ_SUCCESS)
+                goto on_exit;
 
-	    codec_param2.dir = PJMEDIA_DIR_DECODING;
-	    status = play_decoder->op->open(play_decoder, &codec_param2);
-	    if (status != PJ_SUCCESS)
-		goto on_exit;
+            codec_param2.dir = PJMEDIA_DIR_DECODING;
+            status = play_decoder->op->open(play_decoder, &codec_param2);
+            if (status != PJ_SUCCESS)
+                goto on_exit;
 
-	    /* Get decoder format info and apply param */
-	    dec_vfi = pjmedia_get_video_format_info(NULL,
-						    codec_info2->dec_fmt_id[0]);
-	    if (!dec_vfi || !dec_vfi->apply_fmt) {
-		status = PJ_ENOTSUP;
-		goto on_exit;
-	    }
-	    dec_vafp.size = file_vfd->size;
-	    (*dec_vfi->apply_fmt)(dec_vfi, &dec_vafp);
+            /* Get decoder format info and apply param */
+            dec_vfi = pjmedia_get_video_format_info(NULL,
+                                                    codec_info2->dec_fmt_id[0]);
+            if (!dec_vfi || !dec_vfi->apply_fmt) {
+                status = PJ_ENOTSUP;
+                goto on_exit;
+            }
+            dec_vafp.size = file_vfd->size;
+            (*dec_vfi->apply_fmt)(dec_vfi, &dec_vafp);
 
-	    /* Allocate buffer to receive decoder output */
-	    play_file.dec_buf_size = dec_vafp.framebytes;
-	    play_file.dec_buf = pj_pool_zalloc(pool, play_file.dec_buf_size);
-	}
+            /* Allocate buffer to receive decoder output */
+            play_file.dec_buf_size = dec_vafp.framebytes;
+            play_file.dec_buf = pj_pool_zalloc(pool, play_file.dec_buf_size);
+        }
 
-	/* Create player clock */
+        /* Create player clock */
         clock_param.usec_interval = PJMEDIA_PTIME(&file_vfd->fps);
         clock_param.clock_rate = codec_info->clock_rate;
-	status = pjmedia_clock_create2(pool, &clock_param,
-				       PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
-				       &clock_cb, &play_file, &play_clock);
-	if (status != PJ_SUCCESS)
-	    goto on_exit;
+        status = pjmedia_clock_create2(pool, &clock_param,
+                                       PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
+                                       &clock_cb, &play_file, &play_clock);
+        if (status != PJ_SUCCESS)
+            goto on_exit;
 
-	/* Override stream codec param for encoding direction */
-	codec_param.enc_fmt.det.vid.size = file_vfd->size;
-	codec_param.enc_fmt.det.vid.fps  = file_vfd->fps;
+        /* Override stream codec param for encoding direction */
+        codec_param.enc_fmt.det.vid.size = file_vfd->size;
+        codec_param.enc_fmt.det.vid.fps  = file_vfd->fps;
 
     } else {
         pjmedia_vid_port_param_default(&vpp);
@@ -750,44 +750,44 @@ int main(int argc, char *argv[])
         /* Set as active for all video devices */
         vpp.active = PJ_TRUE;
 
-	/* Create video device port. */
+        /* Create video device port. */
         if (dir & PJMEDIA_DIR_ENCODING) {
             /* Create capture */
             status = pjmedia_vid_dev_default_param(
-					pool,
-					PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
-					&vpp.vidparam);
+                                        pool,
+                                        PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
+                                        &vpp.vidparam);
             if (status != PJ_SUCCESS)
-	        goto on_exit;
+                goto on_exit;
 
             pjmedia_format_copy(&vpp.vidparam.fmt, &codec_param.enc_fmt);
-	    vpp.vidparam.fmt.id = codec_param.dec_fmt.id;
+            vpp.vidparam.fmt.id = codec_param.dec_fmt.id;
             vpp.vidparam.dir = PJMEDIA_DIR_CAPTURE;
             
             status = pjmedia_vid_port_create(pool, &vpp, &capture);
             if (status != PJ_SUCCESS)
-	        goto on_exit;
+                goto on_exit;
         }
-	
+        
         if (dir & PJMEDIA_DIR_DECODING) {
             /* Create renderer */
             status = pjmedia_vid_dev_default_param(
-					pool,
-					PJMEDIA_VID_DEFAULT_RENDER_DEV,
-					&vpp.vidparam);
+                                        pool,
+                                        PJMEDIA_VID_DEFAULT_RENDER_DEV,
+                                        &vpp.vidparam);
             if (status != PJ_SUCCESS)
-	        goto on_exit;
+                goto on_exit;
 
             pjmedia_format_copy(&vpp.vidparam.fmt, &codec_param.dec_fmt);
             vpp.vidparam.dir = PJMEDIA_DIR_RENDER;
             vpp.vidparam.disp_size = vpp.vidparam.fmt.det.vid.size;
-	    vpp.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
-	    vpp.vidparam.window_flags = PJMEDIA_VID_DEV_WND_BORDER |
-					PJMEDIA_VID_DEV_WND_RESIZABLE;
+            vpp.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+            vpp.vidparam.window_flags = PJMEDIA_VID_DEV_WND_BORDER |
+                                        PJMEDIA_VID_DEV_WND_RESIZABLE;
 
             status = pjmedia_vid_port_create(pool, &vpp, &renderer);
             if (status != PJ_SUCCESS)
-	        goto on_exit;
+                goto on_exit;
         }
     }
 
@@ -798,20 +798,20 @@ int main(int argc, char *argv[])
     status = create_stream(pool, med_endpt, codec_info, &codec_param,
                            dir, rx_pt, tx_pt, local_port, &remote_addr, 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-			   use_srtp, &srtp_crypto_suite, 
-			   &srtp_tx_key, &srtp_rx_key,
+                           use_srtp, &srtp_crypto_suite, 
+                           &srtp_tx_key, &srtp_rx_key,
 #endif
-			   &stream);
+                           &stream);
     if (status != PJ_SUCCESS)
-	goto on_exit;
+        goto on_exit;
 
     /* Get the port interface of the stream */
     status = pjmedia_vid_stream_get_port(stream, PJMEDIA_DIR_ENCODING,
-				         &enc_port);
+                                         &enc_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     status = pjmedia_vid_stream_get_port(stream, PJMEDIA_DIR_DECODING,
-				         &dec_port);
+                                         &dec_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Start streaming */
@@ -823,7 +823,7 @@ int main(int argc, char *argv[])
     if (renderer) {
         status = pjmedia_vid_port_connect(renderer, dec_port, PJ_FALSE);
         if (status != PJ_SUCCESS)
-	    goto on_exit;
+            goto on_exit;
         status = pjmedia_vid_port_start(renderer);
         if (status != PJ_SUCCESS)
             goto on_exit;
@@ -833,7 +833,7 @@ int main(int argc, char *argv[])
     if (capture) {
         status = pjmedia_vid_port_connect(capture, enc_port, PJ_FALSE);
         if (status != PJ_SUCCESS)
-	    goto on_exit;
+            goto on_exit;
         status = pjmedia_vid_port_start(capture);
         if (status != PJ_SUCCESS)
             goto on_exit;
@@ -847,86 +847,86 @@ int main(int argc, char *argv[])
         pjmedia_vid_port_param_default(&vpp);
         vpp.active = PJ_FALSE;
         status = pjmedia_vid_dev_default_param(
-				pool,
-				PJMEDIA_VID_DEFAULT_RENDER_DEV,
-				&vpp.vidparam);
+                                pool,
+                                PJMEDIA_VID_DEFAULT_RENDER_DEV,
+                                &vpp.vidparam);
         if (status != PJ_SUCCESS)
-	    goto on_exit;
+            goto on_exit;
 
         vpp.vidparam.dir = PJMEDIA_DIR_RENDER;
         pjmedia_format_copy(&vpp.vidparam.fmt, &codec_param.dec_fmt);
-	vpp.vidparam.fmt.det.vid.size = play_port->info.fmt.det.vid.size;
-	vpp.vidparam.fmt.det.vid.fps = play_port->info.fmt.det.vid.fps;
+        vpp.vidparam.fmt.det.vid.size = play_port->info.fmt.det.vid.size;
+        vpp.vidparam.fmt.det.vid.fps = play_port->info.fmt.det.vid.fps;
         vpp.vidparam.disp_size = vpp.vidparam.fmt.det.vid.size;
-	vpp.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
-	vpp.vidparam.window_flags = PJMEDIA_VID_DEV_WND_BORDER |
-				    PJMEDIA_VID_DEV_WND_RESIZABLE;
+        vpp.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+        vpp.vidparam.window_flags = PJMEDIA_VID_DEV_WND_BORDER |
+                                    PJMEDIA_VID_DEV_WND_RESIZABLE;
 
-	status = pjmedia_vid_port_create(pool, &vpp, &renderer);
+        status = pjmedia_vid_port_create(pool, &vpp, &renderer);
         if (status != PJ_SUCCESS)
-	    goto on_exit;
+            goto on_exit;
         status = pjmedia_vid_port_start(renderer);
         if (status != PJ_SUCCESS)
             goto on_exit;
 #endif
 
-	/* Init play file data */
-	play_file.play_port = play_port;
-	play_file.stream_port = enc_port;
-	play_file.decoder = play_decoder;
-	if (renderer) {
-	    play_file.renderer = pjmedia_vid_port_get_passive_port(renderer);
-	}
+        /* Init play file data */
+        play_file.play_port = play_port;
+        play_file.stream_port = enc_port;
+        play_file.decoder = play_decoder;
+        if (renderer) {
+            play_file.renderer = pjmedia_vid_port_get_passive_port(renderer);
+        }
 
-	status = pjmedia_clock_start(play_clock);
-	if (status != PJ_SUCCESS)
-	    goto on_exit;
+        status = pjmedia_clock_start(play_clock);
+        if (status != PJ_SUCCESS)
+            goto on_exit;
     }
 
     /* Done */
 
     if (dir == PJMEDIA_DIR_DECODING)
-	printf("Stream is active, dir is recv-only, local port is %d\n",
-	       local_port);
+        printf("Stream is active, dir is recv-only, local port is %d\n",
+               local_port);
     else if (dir == PJMEDIA_DIR_ENCODING)
-	printf("Stream is active, dir is send-only, sending to %s:%d\n",
+        printf("Stream is active, dir is send-only, sending to %s:%d\n",
                pj_inet_ntop2(pj_AF_INET(), &remote_addr.sin_addr, addr,
-        		     sizeof(addr)),
-	       pj_ntohs(remote_addr.sin_port));
+                             sizeof(addr)),
+               pj_ntohs(remote_addr.sin_port));
     else
-	printf("Stream is active, send/recv, local port is %d, "
-	       "sending to %s:%d\n",
-	       local_port,
-	       pj_inet_ntop2(pj_AF_INET(), &remote_addr.sin_addr, addr,
-        		     sizeof(addr)),
-	       pj_ntohs(remote_addr.sin_port));
+        printf("Stream is active, send/recv, local port is %d, "
+               "sending to %s:%d\n",
+               local_port,
+               pj_inet_ntop2(pj_AF_INET(), &remote_addr.sin_addr, addr,
+                             sizeof(addr)),
+               pj_ntohs(remote_addr.sin_port));
 
     if (dir & PJMEDIA_DIR_ENCODING)
-	PJ_LOG(2, (THIS_FILE, "Sending %dx%d %.*s @%.2ffps",
-		   codec_param.enc_fmt.det.vid.size.w,
-		   codec_param.enc_fmt.det.vid.size.h,
-		   codec_info->encoding_name.slen,
-		   codec_info->encoding_name.ptr,
-		   (1.0*codec_param.enc_fmt.det.vid.fps.num/
-		    codec_param.enc_fmt.det.vid.fps.denum)));
+        PJ_LOG(2, (THIS_FILE, "Sending %dx%d %.*s @%.2ffps",
+                   codec_param.enc_fmt.det.vid.size.w,
+                   codec_param.enc_fmt.det.vid.size.h,
+                   (int)codec_info->encoding_name.slen,
+                   codec_info->encoding_name.ptr,
+                   (1.0*codec_param.enc_fmt.det.vid.fps.num/
+                    codec_param.enc_fmt.det.vid.fps.denum)));
 
     for (;;) {
-	char tmp[10];
+        char tmp[10];
 
-	puts("");
-	puts("Commands:");
-	puts("  q     Quit");
-	puts("");
+        puts("");
+        puts("Commands:");
+        puts("  q     Quit");
+        puts("");
 
-	printf("Command: "); fflush(stdout);
+        printf("Command: "); fflush(stdout);
 
-	if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
-	    puts("EOF while reading stdin, will quit now..");
-	    break;
-	}
+        if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
+            puts("EOF while reading stdin, will quit now..");
+            break;
+        }
 
-	if (tmp[0] == 'q')
-	    break;
+        if (tmp[0] == 'q')
+            break;
 
     }
 
@@ -943,35 +943,35 @@ on_exit:
 
     /* Stop and destroy file clock */
     if (play_clock) {
-	pjmedia_clock_stop(play_clock);
-	pjmedia_clock_destroy(play_clock);
+        pjmedia_clock_stop(play_clock);
+        pjmedia_clock_destroy(play_clock);
     }
 
     /* Destroy file reader/player */
     if (play_port)
-	pjmedia_port_destroy(play_port);
+        pjmedia_port_destroy(play_port);
 
     /* Destroy file decoder */
     if (play_decoder) {
-	play_decoder->op->close(play_decoder);
-	pjmedia_vid_codec_mgr_dealloc_codec(NULL, play_decoder);
+        play_decoder->op->close(play_decoder);
+        pjmedia_vid_codec_mgr_dealloc_codec(NULL, play_decoder);
     }
 
     /* Destroy video devices */
     if (capture)
-	pjmedia_vid_port_destroy(capture);
+        pjmedia_vid_port_destroy(capture);
     if (renderer)
-	pjmedia_vid_port_destroy(renderer);
+        pjmedia_vid_port_destroy(renderer);
 
     /* Destroy stream */
     if (stream) {
-	pjmedia_transport *tp;
+        pjmedia_transport *tp;
 
-	tp = pjmedia_vid_stream_get_transport(stream);
-	pjmedia_vid_stream_destroy(stream);
-	
-	pjmedia_transport_media_stop(tp);
-	pjmedia_transport_close(tp);
+        tp = pjmedia_vid_stream_get_transport(stream);
+        pjmedia_vid_stream_destroy(stream);
+        
+        pjmedia_transport_media_stop(tp);
+        pjmedia_transport_close(tp);
     }
 
     /* Deinit codecs */
@@ -998,6 +998,11 @@ on_exit:
     return (status == PJ_SUCCESS) ? 0 : 1;
 }
 
+
+int main(int argc, char *argv[])
+{
+    return pj_run_app(&main_func, argc, argv, 0);
+}
 
 #else
 
