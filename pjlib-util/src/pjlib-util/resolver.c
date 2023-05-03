@@ -542,7 +542,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(resolver && count && servers, PJ_EINVAL);
-    PJ_ASSERT_RETURN(count < PJ_DNS_RESOLVER_MAX_NS, PJ_EINVAL);
+    PJ_ASSERT_RETURN(count <= PJ_DNS_RESOLVER_MAX_NS, PJ_EINVAL);
 
     pj_grp_lock_acquire(resolver->grp_lock);
 
