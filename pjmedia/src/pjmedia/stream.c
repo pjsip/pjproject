@@ -2976,7 +2976,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     /* Send RTCP BYE (also SDES & XR) */
-    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && stream->jb_mutex && !stream->rtcp_sdes_bye_disabled) {
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, stream->rtcp.xr_enabled, PJ_FALSE);
 #else
@@ -2988,7 +2988,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
      * RFC 2833 RTP packet with 'End' flag set.
      */
     if (stream->tx_dtmf_count && stream->tx_dtmf_buf[0].duration != 0 &&
-        stream->transport) 
+        stream->transport && stream->jb_mutex)
     {
         pjmedia_frame frame_out;
         pjmedia_channel *channel = stream->enc;
