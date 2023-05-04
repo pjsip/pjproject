@@ -248,30 +248,8 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jlong user_data);
 #endif
 
-
-static pj_bool_t jni_get_env(JNIEnv **jni_env)
-{
-    pj_bool_t with_attach = PJ_FALSE;
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                              JNI_VERSION_1_4) < 0)
-    {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
-        {
-            *jni_env = NULL;
-        } else {
-            with_attach = PJ_TRUE;
-        }
-    }
-    
-    return with_attach;
-}
-
-
-static void jni_detach_env(pj_bool_t need_detach)
-{
-    if (need_detach)
-        (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
-}
+#define jni_get_env(jni_env)     pj_jni_attach_jvm((void **)jni_env)
+#define jni_detach_env(attached) pj_jni_detach_jvm(attached)
 
 
 /* Get Java object IDs (via FindClass, GetMethodID, GetFieldID, etc).
@@ -540,12 +518,12 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
                     PJMEDIA_VID_DEV_CAP_ORIENTATION;
 
         /* Set driver & name info */
-        pj_ansi_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
+        pj_ansi_strxcpy(vdi->driver, "Android", sizeof(vdi->driver));
         adi->facing = facing;
         if (facing == 0) {
-            pj_ansi_strncpy(vdi->name, "Back camera", sizeof(vdi->name));
+            pj_ansi_strxcpy(vdi->name, "Back camera", sizeof(vdi->name));
         } else {
-            pj_ansi_strncpy(vdi->name, "Front camera", sizeof(vdi->name));
+            pj_ansi_strxcpy(vdi->name, "Front camera", sizeof(vdi->name));
         }
 
         /* Get supported sizes */
@@ -1251,9 +1229,12 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
         }
     }
 
-    /* The buffer may be originally NV21, i.e: V/U is interleaved */
-    else if (p1-p2==1 && pixStride0==1 &&  pixStride1==2 && pixStride2==2)
+    /* The buffer may be originally NV21/NV12, i.e: VU/UV is interleaved */
+    else if ((p1-p2==1 || p2-p1==1) &&
+             pixStride0==1 &&  pixStride1==2 && pixStride2==2)
     {
+        pj_bool_t nv21 = p1 > p2;
+
         /* Strip out Y padding */
         if (rowStride0 > strm->cam_size.w) {
             strip_padding(Y, p0, strm->cam_size.w, strm->cam_size.h,
@@ -1262,18 +1243,29 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 
         /* Get U & V, and strip if needed */
         {
-            pj_uint8_t *src = p2;
             pj_uint8_t *dst_u = U;
             pj_uint8_t *dst_v = strm->convert_buf;
             int diff = rowStride1 - strm->cam_size.w;
-            int i;
-            for (i = 0; i < strm->cam_size.h/2; ++i) {
-                int j;
-                for (j = 0; j < strm->cam_size.w/2; ++j) {
-                    *dst_v++ = *src++;
-                    *dst_u++ = *src++;
+            int i, j;
+
+            if (nv21) {
+                pj_uint8_t *src = p2;
+                for (i = 0; i < strm->cam_size.h/2; ++i) {
+                    for (j = 0; j < strm->cam_size.w/2; ++j) {
+                        *dst_v++ = *src++;
+                        *dst_u++ = *src++;
+                    }
+                    src += diff; /* stripping any padding */
                 }
-                src += diff; /* stripping any padding */
+            } else {
+                pj_uint8_t *src = p1;
+                for (i = 0; i < strm->cam_size.h/2; ++i) {
+                    for (j = 0; j < strm->cam_size.w/2; ++j) {
+                        *dst_u++ = *src++;
+                        *dst_v++ = *src++;
+                    }
+                    src += diff; /* stripping any padding */
+                }
             }
             pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
         }

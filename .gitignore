@@ -2,6 +2,7 @@ pjlib/include/pj/config_site.h
 lib/
 bin/
 output/
+tmp/
 
 # VS stuff
 *.ncb
@@ -68,6 +69,10 @@ tests/pjsua/wavs/tmp*.wav
 tests/pjsua/tools/cmp_wav
 tests/pjsua/tools/cmp_wav.dSYM
 tests/pjsua/logs
+tests/fuzz/*
+!tests/fuzz/**/
+!tests/fuzz/*.*
+tests/fuzz/*.o
 # benchmark output
 *bench*.htm
 
@@ -76,3 +81,8 @@ tests/pjsua/logs
 */docs/xml/
 */docs/latex/
 */docs/*.tag
+
+# Coverity scan stuff
+cov-int/
+getversion.mak
+configure.out

@@ -30,6 +30,8 @@
  */
 #if defined(_MSC_VER)
 #  include <pj/compat/cc_msvc.h>
+#elif defined(__clang__)
+#  include <pj/compat/cc_clang.h>
 #elif defined(__GNUC__)
 #  include <pj/compat/cc_gcc.h>
 #elif defined(__CW32__)
@@ -545,6 +547,20 @@
 
 
 /**
+ * If enabled, when allocating memory, pool will only search for a maximum
+ * number of blocks specified before deciding that the pool is full and
+ * a new memory block needs to be created.
+ *
+ * Set it to 0 to disable the limitation (i.e. it will search all blocks).
+ *
+ * Default: 5
+ */
+#ifndef PJ_POOL_MAX_SEARCH_BLOCK_COUNT
+#   define PJ_POOL_MAX_SEARCH_BLOCK_COUNT 5
+#endif
+
+
+/**
  * Enable timer debugging facility. When this is enabled, application
  * can call pj_timer_heap_dump() to show the contents of the timer
  * along with the source location where the timer entries were scheduled.
@@ -654,10 +670,14 @@
  * Libraries sometimes needs to make copy of an address to stack buffer;
  * the value here affects the stack usage.
  *
- * Default: 128
+ * Note that the length here should include the NULL termination. In other
+ * words, the maximum hostname length is PJ_MAX_HOSTNAME with the NULL
+ * termination and PJ_MAX_HOSTNAME-1 without the NULL termination.
+ *
+ * Default: 254
  */
 #ifndef PJ_MAX_HOSTNAME
-#  define PJ_MAX_HOSTNAME           (128)
+#  define PJ_MAX_HOSTNAME           (254)
 #endif
 
 /**
@@ -926,6 +946,54 @@
 #   define PJ_HAS_STRICMP_ALNUM     0
 #endif
 
+/**
+ * Prohibit the use of unsafe string functions such as strcpy(), strncpy(),
+ * strcat(), and vsprintf().
+ */
+#ifndef PJ_BAN_UNSAFE_STR_FUNCS
+#   define PJ_BAN_UNSAFE_STR_FUNCS  0
+#endif
+
+/**
+ * Prohibit the use of strcpy() and pj_ansi_strcpy(), use pj_ansi_strxcpy()
+ * instead.
+ */
+#ifndef PJ_BAN_STRCPY
+#   define PJ_BAN_STRCPY            PJ_BAN_UNSAFE_STR_FUNCS
+#endif
+
+/**
+ * Prohibit the use of strncpy() and pj_ansi_strncpy(), use pj_ansi_strxcpy()
+ * instead.
+ */
+#ifndef PJ_BAN_STRNCPY
+#   define PJ_BAN_STRNCPY           PJ_BAN_UNSAFE_STR_FUNCS
+#endif
+
+/**
+ * Prohibit the use of strcat() and pj_ansi_strcat(), use pj_ansi_strxcat()
+ * instead.
+ */
+#ifndef PJ_BAN_STRCAT
+#   define PJ_BAN_STRCAT            PJ_BAN_UNSAFE_STR_FUNCS
+#endif
+
+/**
+ * Prohibit the use of sprintf() and pj_ansi_sprintf(),
+ * use pj_ansi_snprintf() instead.
+ */
+#ifndef PJ_BAN_SPRINTF
+#   define PJ_BAN_SPRINTF           PJ_BAN_UNSAFE_STR_FUNCS
+#endif
+
+/**
+ * Prohibit the use of vsprintf() and pj_ansi_vsprintf(),
+ * use pj_ansi_vsnprintf() instead.
+ */
+#ifndef PJ_BAN_VSPRINTF
+#   define PJ_BAN_VSPRINTF          PJ_BAN_UNSAFE_STR_FUNCS
+#endif
+
 /*
  * Warn about obsolete macros.
  *
@@ -994,14 +1062,20 @@
  * Secure socket implementation.
  * Select one of these implementations in PJ_SSL_SOCK_IMP.
  */
-#define PJ_SSL_SOCK_IMP_NONE        0   /**< Disable SSL socket.    */
-#define PJ_SSL_SOCK_IMP_OPENSSL     1   /**< Using OpenSSL.         */
-#define PJ_SSL_SOCK_IMP_GNUTLS      2   /**< Using GnuTLS.          */
-#define PJ_SSL_SOCK_IMP_DARWIN      3   /**< Using Apple's Secure
-                                             Transport (deprecated in
-                                             MacOS 10.15 & iOS 13.0)*/
-#define PJ_SSL_SOCK_IMP_APPLE       4   /**< Using Apple's Network 
-                                             framework.             */
+/** Disable SSL socket */
+#define PJ_SSL_SOCK_IMP_NONE        0
+
+/** Using OpenSSL */
+#define PJ_SSL_SOCK_IMP_OPENSSL     1
+
+/**< Using GnuTLS */
+#define PJ_SSL_SOCK_IMP_GNUTLS      2
+
+/** Using Apple's Secure Transport (deprecated in MacOS 10.15 & iOS 13.0) */
+#define PJ_SSL_SOCK_IMP_DARWIN      3
+
+/** Using Apple's Network framework */
+#define PJ_SSL_SOCK_IMP_APPLE       4
 
 /**
  * Select which SSL socket implementation to use. Currently pjlib supports
@@ -1085,6 +1159,19 @@
 #   define PJ_MAX_SOCKOPT_PARAMS            4
 #endif
 
+
+/* Specify if JNI_OnLoad() will be defined in the library. If enabled,
+ * PJSIP will set the Java Virtual Machine (JVM) inside JNI_OnLoad().
+ *
+ * Since there can only be one JNI_OnLoad() in a library loaded from Java,
+ * you can disable this if the implementation is already defined somewhere
+ * else. Then you can set the JVM using the API pj_jni_set_jvm() instead.
+ *
+ * Default: enabled for Android
+ */
+#ifndef PJ_JNI_HAS_JNI_ONLOAD
+#  define PJ_JNI_HAS_JNI_ONLOAD             PJ_ANDROID
+#endif
 
 
 /** @} */

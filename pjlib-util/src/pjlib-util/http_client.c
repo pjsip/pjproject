@@ -298,6 +298,8 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
 
     TRACE_((THIS_FILE, "\nData received: %d bytes", size));
 
+    if (data == NULL)
+        return PJ_FALSE;
     if (hreq->state == ABORTING || hreq->state == IDLE)
         return PJ_FALSE;
 
@@ -324,7 +326,7 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
                 return PJ_FALSE;
             }
             /* Keep the data if we do not get the whole response header */
-            *remainder = size;
+            if (remainder) *remainder = size;
         } else {
             hreq->state = READING_DATA;
             if (st != PJ_SUCCESS) {
@@ -1142,6 +1144,7 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
      */
     pj_str_t user_pass;
     pj_http_header_elmt *phdr;
+    pj_status_t status;
     int len;
 
     /* Use send buffer to store userid ":" password */
@@ -1164,8 +1167,10 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
 
     pj_strcpy2(&phdr->value, "Basic ");
     len -= (int)phdr->value.slen;
-    pj_base64_encode((pj_uint8_t*)user_pass.ptr, (int)user_pass.slen,
-                     phdr->value.ptr + phdr->value.slen, &len);
+    status = pj_base64_encode((pj_uint8_t*)user_pass.ptr, (int)user_pass.slen,
+                              phdr->value.ptr + phdr->value.slen, &len);
+    if (status != PJ_SUCCESS)
+        return status;
     phdr->value.slen += len;
 
     return PJ_SUCCESS;
@@ -1454,14 +1459,12 @@ static void restart_req_with_auth(pj_http_req *hreq)
 
     /* If credential specifies specific scheme, make sure they match */
     if (cred->scheme.slen && pj_stricmp(&chal->scheme, &cred->scheme)) {
-        status = PJ_ENOTSUP;
         TRACE_((THIS_FILE, "Error: auth schemes mismatch"));
         goto on_error;
     }
 
     /* If credential specifies specific realm, make sure they match */
     if (cred->realm.slen && pj_stricmp(&chal->realm, &cred->realm)) {
-        status = PJ_ENOTSUP;
         TRACE_((THIS_FILE, "Error: auth realms mismatch"));
         goto on_error;
     }
@@ -1507,7 +1510,11 @@ static void str_snprintf(pj_str_t *s, size_t size,
     size -= s->slen;
     retval = pj_ansi_vsnprintf(s->ptr + s->slen, 
                                size, format, arg);
-    s->slen += ((retval < (int)size) ? retval : size - 1);
+    if (retval < 0) {
+        pj_assert(retval >= 0);
+        retval = 0;
+    }
+    s->slen += (((size_t)retval < size) ? (size_t)retval : size - 1);
     va_end(arg);
 }
 

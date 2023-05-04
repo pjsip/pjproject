@@ -635,11 +635,13 @@ static int perform_test2(const char *title,
                                  (caller_cfg->client_flag &
                                  (CLIENT_IPV4+CLIENT_IPV6)));
 
-    sprintf(add_title1, "%s%s%s", (server_flag & SERVER_IPV4)?"IPv4":"", 
+    pj_ansi_snprintf(add_title1, sizeof(add_title1), "%s%s%s",
+            (server_flag & SERVER_IPV4)?"IPv4":"", 
             ((server_flag & SERVER_IPV4)&&(server_flag & SERVER_IPV6))?"+":"",
             (server_flag & SERVER_IPV6)?"IPv6":"");
     
-    sprintf(add_title2, "%s", client_mix_test?"Mix test":"");
+    pj_ansi_snprintf(add_title2, sizeof(add_title2), "%s",
+                     client_mix_test?"Mix test":"");
 
     PJ_LOG(3,(THIS_FILE, INDENT "%s (%s) %s", title, add_title1, add_title2));
 
@@ -1157,7 +1159,7 @@ int ice_test(void)
                     for (k2=1; k2<=2; ++k2) {
                         char title[120];
 
-                        sprintf(title,
+                        pj_ansi_snprintf(title, sizeof(title),
                                 "%s/%s, %dms answer delay, %d vs %d components",
                                 pj_ice_sess_role_name(role[j].ua1),
                                 pj_ice_sess_role_name(role[j].ua2),

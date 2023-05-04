@@ -1,0 +1,192 @@
+name: CI Linux
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  build-ubuntu-default:
+  # checking pure lib source distribution with plain configure & make
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
+
+  ubuntu-default-full-bundle-1:
+  # full bundle: enable all codecs + AEC + DTLS
+  # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+    - name: configure
+      run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
+    - name: make
+      run: make
+    - name: swig bindings
+      run: cd pjsip-apps/src/swig && make
+    - name: set up Python 2.7 for pjsua test
+      uses: actions/setup-python@v2
+      with:
+        python-version: 2.7
+    - name: unit tests
+      run: make pjlib-test-ci pjlib-util-test pjmedia-test pjsua-test
+
+  ubuntu-default-full-bundle-2:
+  # full bundle 2: running pjnath test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y libopencore-amrnb-dev
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+    - name: configure
+      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
+    - name: make
+      run: make
+    - name: unit tests
+      run: make pjnath-test
+
+  ubuntu-default-full-bundle-3:
+  # full bundle 3: running pjsip test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y libopencore-amrnb-dev
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+    - name: configure
+      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
+    - name: make
+      run: make
+    - name: unit tests
+      run: make pjsip-test
+
+  build-ubuntu-no-tls:
+  # no TLS
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y swig
+    - name: configure
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --disable-ssl
+    - name: make
+      run: make
+    - name: swig bindings
+      run: cd pjsip-apps/src/swig && make
+
+  # build-ubuntu-openssl
+  # TLS: with OpenSSL (same as build-ubuntu-default)
+
+  build-ubuntu-gnu-tls:
+  # TLS: with GnuTLS
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y --fix-missing swig libgnutls28-dev
+    - name: configure
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/
+    - name: make
+      run: make
+    - name: swig bindings
+      run: cd pjsip-apps/src/swig && make
+
+  ubuntu-video-openh264-1:
+  # video: video enabled with vpx and openh264
+  # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y swig nasm sip-tester libvpx-dev libopencore-amrnb-dev
+    - name: get openh264
+      run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+    - name: build openh264
+      run: cd openh264 && make && sudo make install && sudo ldconfig
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+    - name: configure
+      run: CFLAGS="-g -fPIC -DHAS_VID_CODEC_TEST=0" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
+    - name: make
+      run: make
+    - name: swig bindings
+      run: cd pjsip-apps/src/swig && make
+    - name: set up Python 2.7 for pjsua test
+      uses: actions/setup-python@v2
+      with:
+        python-version: 2.7
+    - name: unit tests
+      run: make pjlib-test-ci pjlib-util-test pjmedia-test pjsua-test
+
+  ubuntu-video-openh264-2:
+  # video 2: running pjnath test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev
+    - name: get openh264
+      run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+    - name: build openh264
+      run: cd openh264 && make && sudo make install && sudo ldconfig
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+    - name: configure
+      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
+    - name: make
+      run: make
+    - name: unit tests
+      run: make pjnath-test
+
+  ubuntu-video-openh264-3:
+  # video: 3: running pjsip test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev
+    - name: get openh264
+      run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+    - name: build openh264
+      run: cd openh264 && make && sudo make install && sudo ldconfig
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+    - name: configure
+      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
+    - name: make
+      run: make
+    - name: unit tests
+      run: make pjsip-test
+
+  build-ubuntu-video-ffmpeg:
+  # video enabled with vpx and ffmpeg and x264
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y swig nasm libx264-dev libvpx-dev
+    - name: get ffmpeg
+      run: git clone --single-branch --branch release/4.2 https://github.com/FFmpeg/FFmpeg.git
+    - name: configure ffmpeg
+      run: cd FFmpeg && ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
+    - name: build ffmpeg
+      run: cd FFmpeg && make -j10 && sudo make install
+    - name: config site
+      run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n" > pjlib/include/pj/config_site.h
+    - name: configure
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure
+    - name: make
+      run: make
+    - name: swig bindings
+      run: cd pjsip-apps/src/swig && make

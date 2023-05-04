@@ -601,11 +601,9 @@ on_error:
         (*pjsua_var.ua_cfg.cb.on_call_state)(call_id, &user_event);
     }
 
-    if (dlg) {
-        /* This may destroy the dialog */
-        pjsip_dlg_dec_lock(dlg);
-        call->async_call.dlg = NULL;
-    }
+    /* This may destroy the dialog */
+    pjsip_dlg_dec_lock(dlg);
+    call->async_call.dlg = NULL;
 
     if (inv != NULL) {
         pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
@@ -697,10 +695,11 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     /* If call is established or media channel hasn't been initialized,
      * reinit media channel.
      */
-    if ((call->inv && call->inv->state == PJSIP_INV_STATE_CONNECTING &&
-         call->med_cnt == 0) ||
-        (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) ||
-        (call->opt.flag & PJSUA_CALL_REINIT_MEDIA))
+    if (call->inv &&
+        ((call->inv->state == PJSIP_INV_STATE_CONNECTING &&
+          call->med_cnt == 0) ||
+         (call->inv->state == PJSIP_INV_STATE_CONFIRMED) ||
+         (call->opt.flag & PJSUA_CALL_REINIT_MEDIA)))
     {
         pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
         pj_status_t status;
@@ -948,7 +947,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
     /* Create outgoing dialog: */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(),
-                                   &acc->cfg.id, &contact,
+                                   (msg_data && msg_data->local_uri.slen?
+                                    &msg_data->local_uri: &acc->cfg.id),
+                                   &contact,
                                    dest_uri,
                                    (msg_data && msg_data->target_uri.slen?
                                     &msg_data->target_uri: dest_uri),
@@ -1086,7 +1087,7 @@ static pj_status_t process_incoming_call_replace(pjsua_call *call,
             pj_str_t *text = &replaced_call->last_text;
 
             PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with %d/%.*s",
-                                 call->index, code, text->slen, text->ptr));
+                                 call->index, code, (int)text->slen, text->ptr));
 
             /* Answer the new call with last response in the replaced call */
             status = pjsip_inv_answer(call->inv, code, text, NULL, &tdata);
@@ -1130,7 +1131,7 @@ static void process_pending_call_answer(pjsua_call *call)
     struct call_answer *answer, *next;
 
     /* No initial answer yet, this function should be called again later */
-    if (!call->inv->last_answer)
+    if (call->inv && !call->inv->last_answer)
         return;
 
     answer = call->async_call.call_var.inc_call.answers.next;
@@ -1252,8 +1253,6 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
         } else {
             m = pjmedia_sdp_media_clone_deactivate(pool, rem_sdp->media[i]);
         }
-        if (status != PJ_SUCCESS)
-            return status;
 
         /* Add connection line, if none */
         if (m->conn == NULL && sdp->conn == NULL) {
@@ -1411,7 +1410,8 @@ on_return:
             pj_status_t status_ = PJ_SUCCESS;
 
             if (response == NULL) {
-                status_ = pjsip_inv_end_session(call->inv, err_code, NULL,
+                pj_str_t reason = pj_str("Failed creating media transport");
+                status_ = pjsip_inv_end_session(call->inv, err_code, &reason,
                                                 &response);
             }
 
@@ -1913,7 +1913,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                 pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
             }
                 
-            if (call->inv && call->inv->dlg) {
+            if (call->inv->dlg) {
                 pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
             }
             pjsip_dlg_dec_lock(dlg);
@@ -1959,7 +1959,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                                       NULL);
                 }               
 
-                if (call->inv && call->inv->dlg) {
+                if (call->inv->dlg) {
                     pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
                 }
                 pjsip_dlg_dec_lock(dlg);
@@ -1973,7 +1973,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
             
             pjsip_dlg_inc_lock(dlg);
             pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
-            if (call->inv && call->inv->dlg) {
+            if (call->inv->dlg) {
                 pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
             }
             pjsip_dlg_dec_lock(dlg);
@@ -2597,11 +2597,12 @@ on_return:
         if (call->inv->state > PJSIP_INV_STATE_NULL) {
             pjsip_tx_data *tdata;
             pj_status_t status_;
+            pj_str_t reason = pj_str("Failed creating media transport");
 
             if (sip_err_code == 0)
                 sip_err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
 
-            status_ = pjsip_inv_end_session(call->inv, sip_err_code, NULL,
+            status_ = pjsip_inv_end_session(call->inv, sip_err_code, &reason,
                                             &tdata);
             if (status_ == PJ_SUCCESS && tdata)
                 status_ = pjsip_inv_send_msg(call->inv, tdata);
@@ -2662,7 +2663,8 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
-    if (!call->inv->invite_tsx ||
+    if (call->inv->role == PJSIP_ROLE_UAC ||
+        !call->inv->invite_tsx ||
         call->inv->invite_tsx->state >= PJSIP_TSX_STATE_COMPLETED)
     {
         PJ_LOG(3,(THIS_FILE, "Unable to answer call (no incoming INVITE or "
@@ -3651,7 +3653,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
     return status;
 
 on_error:
-    if (dest_dlg) pjsip_dlg_dec_lock(dest_dlg);
+    pjsip_dlg_dec_lock(dest_dlg);
     pj_log_pop_indent();
     return status;
 }
@@ -4928,7 +4930,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
             if (call->res_time.sec == 0)
                 pj_gettimeofday(&call->res_time);
             if (e->type == PJSIP_EVENT_TSX_STATE &&
-                e->body.tsx_state.tsx->status_code > call->last_code)
+                e->body.tsx_state.tsx->status_code > (int)call->last_code)
             {
                 call->last_code = (pjsip_status_code)
                                   e->body.tsx_state.tsx->status_code;
@@ -5104,7 +5106,7 @@ pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
         res->msg_info.msg->line.status.code/100 == 2)
     {
         pjsip_dialog *forked_dlg;
-        pjsip_tx_data *bye;
+        pjsip_tx_data *bye, *ack;
         pj_status_t status;
 
         /* Create forked dialog */
@@ -5113,6 +5115,12 @@ pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
             return NULL;
 
         pjsip_dlg_inc_lock(forked_dlg);
+
+        /* Respond with ACK first */
+        status = pjsip_dlg_create_request(forked_dlg, &pjsip_ack_method,
+                                          res->msg_info.cseq->cseq, &ack);
+        if (status == PJ_SUCCESS)
+            pjsip_dlg_send_request(forked_dlg, ack, -1, NULL);
 
         /* Disconnect the call */
         status = pjsip_dlg_create_request(forked_dlg, pjsip_get_bye_method(),
@@ -5138,12 +5146,13 @@ pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
  * Disconnect call upon error.
  */
 static void call_disconnect( pjsip_inv_session *inv,
-                             int code )
+                             int code,
+                             const pj_str_t *reason)
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
 
-    status = pjsip_inv_end_session(inv, code, NULL, &tdata);
+    status = pjsip_inv_end_session(inv, code, reason, &tdata);
     if (status != PJ_SUCCESS || !tdata)
         return;
 
@@ -5216,7 +5225,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
             inv->state != PJSIP_INV_STATE_CONFIRMED) ||
             (inv->state == PJSIP_INV_STATE_EARLY && call->med_cnt == 0))
         {
-            call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+            pj_str_t reason = pj_str("SDP negotiation failed");
+            call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE, &reason);
         }
 
         goto on_return;
@@ -5277,9 +5287,11 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
     /* Disconnect call after failure in media channel update */
     if (status != PJ_SUCCESS) {
+        pj_str_t reason = pj_str("Unable to create media session");
+
         pjsua_perror(THIS_FILE, "Unable to create media session",
                      status);
-        call_disconnect(inv, PJSIP_SC_NOT_ACCEPTABLE_HERE);
+        call_disconnect(inv, PJSIP_SC_NOT_ACCEPTABLE_HERE, &reason);
         /* No need to deinitialize; media will be shutdown when call
          * state is disconnected anyway.
          */
@@ -6251,7 +6263,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
             if (im_data) {
                 pj_str_t im_body = im_data->body;
-                if (im_body.slen==0) {
+                if (im_body.slen==0 && tsx->last_tx) {
                     pjsip_msg_body *body = tsx->last_tx->msg->body;
                     pj_strset(&im_body, body->data, body->len);
                 }
@@ -6299,10 +6311,11 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
              * we then send BYE.
              */
             if (call->hanging_up) {
+                pj_str_t reason = pj_str("Cancelling call");
                 PJ_LOG(3,(THIS_FILE, "Unsuccessful in cancelling the original "
                           "INVITE for call %d due to %d response, sending BYE "
                           "instead", call->index, tsx->status_code));
-                call_disconnect(call->inv, PJSIP_SC_OK);
+                call_disconnect(call->inv, PJSIP_SC_OK, &reason);
             }
         } else {
             /* Monitor the status of call hold/unhold request */

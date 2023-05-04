@@ -111,9 +111,9 @@ typedef struct pjsip_cfg_t
         pj_bool_t disable_tcp_switch;
 
         /**
-         * Disable automatic switching to TLS if target-URI does not use
-         * "sips" scheme nor TLS transport, even when request-URI uses
-         * "sips" scheme.
+         * Disable automatic switching to secure transport (such as TLS)
+         * if target-URI does not use "sips" scheme nor secure transport,
+         * even when request-URI uses "sips" scheme.
          *
          * Default is PJSIP_DONT_SWITCH_TO_TLS.
          */
@@ -397,9 +397,13 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * As specified RFC 3261 section 8.1.2, when request-URI uses "sips" scheme,
  * TLS must always be used regardless of the target-URI scheme or transport
  * type.
+ * Update: Newer RFCs, such as RFC 5630 and 7118, expands this by allowing
+ * the use of other transports as long as the SIP resource designated by
+ * the target SIPS URI is contacted securely.
  *
- * This option will specify whether the behavior of automatic switching to TLS
- * should be disabled, i.e: regard the target-URI scheme or transport type.
+ * This option will specify whether the behavior of automatic switching to secure
+ * transport (such as TLS) should be disabled, i.e: regard the target-URI scheme
+ * or transport type.
  *
  * This option can also be controlled at run-time by the \a disable_tls_switch
  * setting in pjsip_cfg_t.
@@ -920,7 +924,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Initial memory block for the endpoint.
  */
 #ifndef PJSIP_POOL_LEN_ENDPT
-#   define PJSIP_POOL_LEN_ENDPT         (4000)
+#   define PJSIP_POOL_LEN_ENDPT         (16000)
 #endif
 
 /**
@@ -1094,9 +1098,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #define PJSIP_MAX_HNAME_LEN             64
 
 /** Dialog's pool setting. */
-#define PJSIP_POOL_LEN_DIALOG           1200
+#define PJSIP_POOL_LEN_DIALOG           4000
 /** Dialog's pool setting. */
-#define PJSIP_POOL_INC_DIALOG           512
+#define PJSIP_POOL_INC_DIALOG           4000
 
 /** Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES          72

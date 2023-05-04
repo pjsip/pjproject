@@ -199,12 +199,6 @@ static struct jni_objs_t
 } jobjs;
 
 
-/* Declare JNI JVM helper from PJLIB OS */
-extern "C" {
-    pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env);
-    void pj_jni_dettach_jvm(pj_bool_t attached);
-}
-
 #define GET_CLASS(class_path, class_name, cls) \
     cls = jni_env->FindClass(class_path); \
     if (cls == NULL || jni_env->ExceptionCheck()) { \
@@ -258,7 +252,7 @@ static pj_status_t jni_init_ids()
 {
     JNIEnv *jni_env;
     pj_status_t status = PJ_SUCCESS;
-    pj_bool_t with_attach = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     /* PjAudioDevInfo class info */
     GET_CLASS(PJ_AUDDEV_INFO_CLASS_PATH, "PjAudioDevInfo", jobjs.dev_info.cls);
@@ -292,7 +286,7 @@ static pj_status_t jni_init_ids()
                    jobjs.activity_thread.m_get_app);
 
 on_return:
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
     return status;
 }
 
@@ -304,7 +298,7 @@ on_return:
 static void jni_deinit_ids()
 {
     JNIEnv *jni_env;
-    pj_bool_t with_attach = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     if (jobjs.dev_info.cls) {
         jni_env->DeleteGlobalRef(jobjs.dev_info.cls);
@@ -316,7 +310,7 @@ static void jni_deinit_ids()
         jobjs.activity_thread.cls = NULL;
     }
 
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
 }
 
 static jobject get_global_context(JNIEnv *jni_env)
@@ -364,7 +358,7 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
     f->dev_count = 0;
     pj_pool_reset(f->dev_pool);
 
-    with_attach = pj_jni_attach_jvm(&jni_env);
+    with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     jobject context = get_global_context(jni_env);
     if (context == NULL) {
@@ -413,9 +407,13 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
         base_adi->caps = 0;
 
         /* Get name info */
-        jstring jstrtmp = (jstring)jni_env->GetObjectField(jdev_info, jobjs.dev_info.f_name);
+        jstring jstrtmp = (jstring)
+                          jni_env->GetObjectField(jdev_info,
+                                                  jobjs.dev_info.f_name);
         const char *strtmp = jni_env->GetStringUTFChars(jstrtmp, NULL);
-        pj_ansi_strncpy(base_adi->name, strtmp, sizeof(base_adi->name));
+        pj_ansi_strxcpy(base_adi->name, strtmp, sizeof(base_adi->name));
+        pj_ansi_strxcpy(base_adi->driver, DRIVER_NAME,
+                        sizeof(base_adi->driver));
 
         f->dev_count++;
 
@@ -441,7 +439,7 @@ on_return:
     if (context)
         jni_env->DeleteLocalRef(context);
 
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
     return status;
 }
 

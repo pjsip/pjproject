@@ -306,12 +306,14 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
         wf->dev_info[i].deviceId = i;
                 bdIMADpj_getDeviceCapabilities(BD_IMAD_CAPTURE_DEVICES,&wf->dev_info[i].info.caps);
         wf->dev_info[i].info.default_samples_per_sec = BD_IMAD_DEFAULT_FREQ;
-        strcpy(wf->dev_info[i].info.driver, "BD_IMAD");
+        pj_ansi_strxcpy(wf->dev_info[i].info.driver, "BD_IMAD",
+                        sizeof(wf->dev_info[i].info.driver));
         wf->dev_info[i].info.ext_fmt_cnt = 0;
         wf->dev_info[i].info.input_count = BD_IMAD_MAX_CHANNELS;
         wf->dev_info[i].info.output_count = 0;
-        strcpy(wf->dev_info[i].info.name, 
-               BD_IMAD_PJ_WCHARtoCHAR(captureDevName[i]));
+        pj_ansi_strxcpy(wf->dev_info[i].info.name, 
+                        BD_IMAD_PJ_WCHARtoCHAR(captureDevName[i]),
+                        sizeof(wf->dev_info[i].info.name));
         wf->dev_info[i].info.routes = 0;
     }
 
@@ -321,13 +323,15 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
                 bdIMADpj_getDeviceCapabilities(BD_IMAD_PLAYBACK_DEVICES,&wf->dev_info[captureDeviceCount+i].info.caps);
         wf->dev_info[captureDeviceCount+i].info.default_samples_per_sec = 
                                 BD_IMAD_DEFAULT_FREQ;
-        strcpy(wf->dev_info[captureDeviceCount+i].info.driver, "BD_IMAD");
+        pj_ansi_strxcpy(wf->dev_info[captureDeviceCount+i].info.driver, "BD_IMAD",
+                        sizeof(wf->dev_info[captureDeviceCount+i].info.driver));
         wf->dev_info[captureDeviceCount+i].info.ext_fmt_cnt = 0;
         wf->dev_info[captureDeviceCount+i].info.input_count = 0;
         wf->dev_info[captureDeviceCount+i].info.output_count = 
                                 BD_IMAD_MAX_CHANNELS;
-        strcpy(wf->dev_info[captureDeviceCount+i].info.name, 
-               BD_IMAD_PJ_WCHARtoCHAR(playbackDevName[i]));
+        pj_ansi_strxcpy(wf->dev_info[captureDeviceCount+i].info.name, 
+                        BD_IMAD_PJ_WCHARtoCHAR(playbackDevName[i]),
+                        sizeof(wf->dev_info[captureDeviceCount+i].info.name));
         wf->dev_info[captureDeviceCount+i].info.routes = 0;
     }
 

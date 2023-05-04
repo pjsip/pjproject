@@ -722,6 +722,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
 void AccountConfig::fromPj(const pjsua_acc_config &prm,
                            const pjsua_media_config *mcfg)
 {
+    pjsua_media_config default_mcfg;
     const pjsip_hdr *hdr;
     unsigned i;
 
@@ -825,7 +826,6 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         natConfig.iceNoRtcp     = PJ2BOOL(prm.ice_cfg.ice_no_rtcp);
         natConfig.iceAlwaysUpdate = PJ2BOOL(prm.ice_cfg.ice_always_update);
     } else {
-        pjsua_media_config default_mcfg;
         if (!mcfg) {
             pjsua_media_config_default(&default_mcfg);
             mcfg = &default_mcfg;
@@ -852,7 +852,6 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         natConfig.turnPassword  =
                 pj2Str(prm.turn_cfg.turn_auth_cred.data.static_cred.data);
     } else {
-        pjsua_media_config default_mcfg;
         if (!mcfg) {
             pjsua_media_config_default(&default_mcfg);
             mcfg = &default_mcfg;

@@ -140,10 +140,8 @@ static pjmedia_aud_stream_op android_strm_op =
     &strm_destroy
 };
 
-PJ_DECL(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env);
-PJ_DECL(void) pj_jni_dettach_jvm(pj_bool_t attached);
-#define attach_jvm(jni_env)     pj_jni_attach_jvm(jni_env)
-#define detach_jvm(attached)    pj_jni_dettach_jvm(attached)
+#define attach_jvm(jni_env)     pj_jni_attach_jvm((void **)jni_env)
+#define detach_jvm(attached)    pj_jni_detach_jvm(attached)
 #define THREAD_PRIORITY_AUDIO           -16
 #define THREAD_PRIORITY_URGENT_AUDIO    -19
 
@@ -404,7 +402,8 @@ static pj_status_t android_get_dev_info(pjmedia_aud_dev_factory *f,
     
     pj_bzero(info, sizeof(*info));
     
-    pj_ansi_strcpy(info->name, "Android JNI");
+    pj_ansi_strxcpy(info->name, "Android JNI", sizeof(info->name));
+    pj_ansi_strxcpy(info->driver, DRIVER_NAME, sizeof(info->driver));
     info->default_samples_per_sec = 8000;
     info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
                  PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE;

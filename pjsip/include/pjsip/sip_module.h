@@ -148,7 +148,7 @@ struct pjsip_module
      * @param tdata     The outgoing request message.
      *
      * @return          Module should return PJ_SUCCESS in all cases. 
-     *                  If non-zero (or PJ_FALSE) is returned, the message 
+     *                  If non-zero is returned, the message 
      *                  will not be sent.
      */
     pj_status_t (*on_tx_request)(pjsip_tx_data *tdata);
@@ -160,7 +160,7 @@ struct pjsip_module
      * @param tdata     The outgoing response message.
      *
      * @return          Module should return PJ_SUCCESS in all cases. 
-     *                  If non-zero (or PJ_FALSE) is returned, the message 
+     *                  If non-zero is returned, the message 
      *                  will not be sent.
      */
     pj_status_t (*on_tx_response)(pjsip_tx_data *tdata);

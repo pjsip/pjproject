@@ -750,8 +750,8 @@ PJ_DEF(int) pj_stun_set_padding_char(int chr)
 
 static pj_uint16_t GETVAL16H(const pj_uint8_t *buf, unsigned pos)
 {
-    return (pj_uint16_t) ((buf[pos + 0] << 8) | \
-                          (buf[pos + 1] << 0));
+    return (pj_uint16_t) (((pj_uint16_t)buf[pos + 0] << 8) | \
+                          ((pj_uint16_t)buf[pos + 1] << 0));
 }
 
 /*unused PJ_INLINE(pj_uint16_t) GETVAL16N(const pj_uint8_t *buf, unsigned pos)
@@ -767,10 +767,10 @@ static void PUTVAL16H(pj_uint8_t *buf, unsigned pos, pj_uint16_t hval)
 
 PJ_INLINE(pj_uint32_t) GETVAL32H(const pj_uint8_t *buf, unsigned pos)
 {
-    return (pj_uint32_t) ((buf[pos + 0] << 24UL) | \
-                          (buf[pos + 1] << 16UL) | \
-                          (buf[pos + 2] <<  8UL) | \
-                          (buf[pos + 3] <<  0UL));
+    return (pj_uint32_t) (((pj_uint32_t)buf[pos + 0] << 24UL) | \
+                          ((pj_uint32_t)buf[pos + 1] << 16UL) | \
+                          ((pj_uint32_t)buf[pos + 2] <<  8UL) | \
+                          ((pj_uint32_t)buf[pos + 3] <<  0UL));
 }
 
 /*unused PJ_INLINE(pj_uint32_t) GETVAL32N(const pj_uint8_t *buf, unsigned pos)
@@ -1438,11 +1438,11 @@ static pj_status_t decode_uint_attr(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_uint_attr);
     GETATTRHDR(buf, &attr->hdr);
 
-    attr->value = GETVAL32H(buf, 4);
-
     /* Check that the attribute length is valid */
     if (attr->hdr.length != 4)
         return PJNATH_ESTUNINATTRLEN;
+
+    attr->value = GETVAL32H(buf, 4);
 
     /* Done */
     *p_attr = attr;
@@ -1757,14 +1757,15 @@ static pj_status_t decode_errcode_attr(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_errcode_attr);
     GETATTRHDR(buf, &attr->hdr);
 
+    /* Check that the attribute length is valid */
+    if (attr->hdr.length < 4)
+        return PJNATH_ESTUNINATTRLEN;
+
     attr->err_code = buf[6] * 100 + buf[7];
 
     /* Get pointer to the string in the message */
     value.ptr = ((char*)buf + ATTR_HDR_LEN + 4);
     value.slen = attr->hdr.length - 4;
-    /* Make sure the length is never negative */
-    if (value.slen < 0)
-        value.slen = 0;
 
     /* Copy the string to the attribute */
     pj_strdup(pool, &attr->reason, &value);
@@ -2546,7 +2547,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     if (pdu_len > 0) {
         /* Stray trailing bytes */
         PJ_LOG(4,(THIS_FILE, 
-                  "Error decoding STUN message: unparsed trailing %d bytes",
+                  "Error decoding STUN message: unparsed trailing %ld bytes",
                   pdu_len));
         return PJNATH_EINSTUNMSGLEN;
     }
@@ -2563,22 +2564,22 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 static char *print_binary(const pj_uint8_t *data, unsigned data_len)
 {
     static char static_buffer[1024];
-    char *buffer = static_buffer;
+    char *buffer = static_buffer, end=static_buffer+sizeof(static_buffer);
     unsigned length=sizeof(static_buffer), i;
 
     if (length < data_len * 2 + 8)
         return "";
 
-    pj_ansi_sprintf(buffer, ", data=");
+    pj_ansi_snprintf(buffer, end-buffer, ", data=");
     buffer += 7;
 
     for (i=0; i<data_len; ++i) {
-        pj_ansi_sprintf(buffer, "%02x", (*data) & 0xFF);
+        pj_ansi_snprintf(buffer, end-buffer, "%02x", (*data) & 0xFF);
         buffer += 2;
         data++;
     }
 
-    pj_ansi_sprintf(buffer, "\n");
+    pj_ansi_snprintf(buffer, end-buffer, "\n");
     buffer++;
 
     return static_buffer;

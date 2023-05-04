@@ -104,7 +104,7 @@ static int datagram_loop_test()
 
     /* Check reference counter. */
     if (pj_atomic_get(loop->ref_cnt) != ref_cnt) {
-        PJ_LOG(3,(THIS_FILE, "   error: ref counter is not %d (%d)", 
+        PJ_LOG(3,(THIS_FILE, "   error: ref counter is not %ld (%ld)", 
                              ref_cnt, pj_atomic_get(loop->ref_cnt)));
         return -51;
     }

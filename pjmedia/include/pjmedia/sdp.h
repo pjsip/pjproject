@@ -383,6 +383,8 @@ struct pjmedia_sdp_conn
     pj_str_t    net_type;       /**< Network type ("IN").               */
     pj_str_t    addr_type;      /**< Address type ("IP4", "IP6").       */
     pj_str_t    addr;           /**< The address.                       */
+    pj_uint8_t  ttl;            /**< Multicast address TTL              */
+    pj_uint8_t  no_addr;        /**< Multicast number of addresses      */
 };
 
 
@@ -491,7 +493,7 @@ typedef struct pjmedia_sdp_media pjmedia_sdp_media;
  * @param buf       The buffer.
  * @param size      The buffer length.
  *
- * @return          the length printed, or -1 if the buffer is too
+ * @return          The length printed, or -1 if the buffer is too
  *                  short.
  */
 PJ_DECL(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media, char *buf, pj_size_t size);
@@ -507,6 +509,18 @@ PJ_DECL(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media, char *buf, 
 PJ_DECL(pjmedia_sdp_media*) 
 pjmedia_sdp_media_clone( pj_pool_t *pool, 
                          const pjmedia_sdp_media *rhs);
+
+/**
+ * Print attribute to a buffer.
+ *
+ * @param attr      The attribute.
+ * @param buf       The buffer.
+ * @param size      The buffer length.
+ *
+ * @return          The length printed, or -1 if the buffer is too
+ *                  short.
+ */
+PJ_DECL(int) pjmedia_sdp_attr_print(const pjmedia_sdp_attr *attr, char *buf, pj_size_t size);
 
 /**
  * Find the first occurence of the specified attribute name in the media 

@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
                    strcmp(*opt_arg, "--log-level") == 0) 
         {
             ++opt_arg;
-            if (!opt_arg) {
+            if (!*opt_arg) {
                 usage();
                 return 1;
             }
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
             strcmp(*opt_arg, "--system") == 0)
         {
             ++opt_arg;
-            if (!opt_arg) {
+            if (!*opt_arg) {
                 usage();
                 return 1;
             }
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
             strcmp(*opt_arg, "--tests") == 0)
         {
             ++opt_arg;
-            if (!opt_arg) {
+            if (!*opt_arg) {
                 usage();
                 return 1;
             }

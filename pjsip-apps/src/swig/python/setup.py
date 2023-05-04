@@ -29,7 +29,12 @@ pj_version_minor=""
 pj_version_rev=""
 pj_version_suffix=""
 write=sys.stdout.write
-f = open('../../../../version.mak', 'r')
+
+# This is needed for building wheels, because pip moves files to a temporary folder
+path_version_relative = '../../../../version.mak'
+path_version_by_env = os.path.join(os.environ.get("PJDIR", ""), "version.mak")
+path_version = path_version_relative if os.path.exists(path_version_relative) else path_version_by_env
+f = open(path_version, 'r')
 for line in f:
     tokens=""
     if line.find("export PJ_VERSION_MAJOR") != -1:
@@ -109,5 +114,3 @@ setup(name="pjsua2",
                     ],
       py_modules=["pjsua2"]
      )
-
-

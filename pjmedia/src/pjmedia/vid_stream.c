@@ -60,11 +60,11 @@
 #endif
 
 #ifndef PJMEDIA_VSTREAM_SIZE
-#   define PJMEDIA_VSTREAM_SIZE 1000
+#   define PJMEDIA_VSTREAM_SIZE 16000
 #endif
 
 #ifndef PJMEDIA_VSTREAM_INC
-#   define PJMEDIA_VSTREAM_INC  1000
+#   define PJMEDIA_VSTREAM_INC  4000
 #endif
 
 /* Due to network MTU limitation, a picture bitstream may be splitted into
@@ -584,6 +584,8 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     int len, max_len;
     pj_status_t status;
 
+    pj_grp_lock_acquire( stream->grp_lock );
+
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
 
@@ -664,6 +666,9 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
             stream->rtcp_tx_err_cnt = 0;
         }
     }
+
+    pj_grp_lock_release( stream->grp_lock );
+
     return status;
 }
 
@@ -816,7 +821,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                                 PJMEDIA_VID_STREAM_CHECK_RTP_PT);
 #if !PJMEDIA_VID_STREAM_CHECK_RTP_PT
     if (hdr->pt != channel->rtp.out_pt) {
-        seq_st.status.flag.badpt = 1;
+        seq_st.status.flag.badpt = -1;
     }
 #endif
     if (seq_st.status.value) {
@@ -1720,7 +1725,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
                pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
                pjmedia_fourcc_name(pi->fmt.id, fourcc_name),
                (dir==PJMEDIA_DIR_ENCODING?"->":"<-"),
-               info->codec_info.encoding_name.slen,
+               (int)info->codec_info.encoding_name.slen,
                info->codec_info.encoding_name.ptr,
                pi->fmt.det.vid.fps.num, pi->fmt.det.vid.fps.denum,
                pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum));
@@ -1953,7 +1958,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     if (info->jb_max_pre >= frm_ptime)
         jb_max_pre  = info->jb_max_pre * chunks_per_frm / frm_ptime;
     else
-        jb_max_pre  = jb_max * 4 / 5;
+        jb_max_pre  = PJ_MAX(1, jb_max * 4 / 5);
 
     /* JB init prefetch, default 0 */
     if (info->jb_init >= frm_ptime)
@@ -2186,7 +2191,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &stream->rtcp);
 
     /* Send RTCP BYE (also SDES) */
-    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && stream->grp_lock && !stream->rtcp_sdes_bye_disabled) {
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
     }
 

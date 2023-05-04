@@ -2213,6 +2213,9 @@ typedef struct pjsua_config
      * If this is enabled, the library will respond 200/OK to the NOTIFY
      * request and forward the request to \a on_mwi_info() callback.
      *
+     * Note: the callback will not be invoked and 481/"No account to handle" response
+     * will be sent if this is enabled but no account is configured.
+     * 
      * See also \a mwi_enabled field #on pjsua_acc_config.
      *
      * Default: PJ_TRUE
@@ -2401,6 +2404,13 @@ struct pjsua_msg_data
      * pjsua_call_set_hold(), and pjsua_call_update().
      */
     pj_str_t    target_uri;
+
+    /**
+     * Optional local URI (i.e. From header). If NULL, the account ID
+     * \a pjsua_acc_config.id is used for the From header. This field is
+     * currently used only by pjsua_call_make_call() and pjsua_im_send().
+     */
+    pj_str_t    local_uri;
 
     /**
      * Additional message headers as linked list. Application can add
@@ -3967,11 +3977,17 @@ typedef struct pjsua_acc_config
      * unregister current Contact, update the Contact with transport address
      * learned from Via header, and register a new Contact to the registrar.
      * This will also update the public name of UDP transport if STUN is
-     * configured. 
+     * configured.
      *
+     * Possible values:
+     * * 0 (disabled).
+     * * 1 (enabled). Update except if both Contact and server's IP address
+     * are public but response contains private IP.
+     * * 2 (enabled). Update without exception.
+     * 
      * See also contact_rewrite_method field.
      *
-     * Default: 1 (yes)
+     * Default: 1
      */
     pj_bool_t allow_contact_rewrite;
 

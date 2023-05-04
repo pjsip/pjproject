@@ -463,7 +463,7 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
             id[j].codec_id = pj_str(id[j].buf_);
             id[j].priority = (pj_uint8_t) prio[i];
 
-            if (id[j].codec_id.slen < sizeof(id[j].buf_)) {
+            if (id[j].codec_id.slen < (pj_ssize_t)sizeof(id[j].buf_)) {
                 id[j].desc.ptr = id[j].codec_id.ptr + id[j].codec_id.slen + 1;
                 pj_strncpy(&id[j].desc, &info[i].encoding_desc,
                            sizeof(id[j].buf_) - id[j].codec_id.slen - 1);
@@ -556,7 +556,10 @@ static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
     /* Get real capture ID, if set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV */
     if (id == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
         pjmedia_vid_dev_info info;
-        pjmedia_vid_dev_get_info(id, &info);
+        if (pjmedia_vid_dev_get_info(id, &info) != PJ_SUCCESS) {
+            PJSUA_UNLOCK();
+            return wid;
+        }
         id = info.id;
     }
 
@@ -705,11 +708,14 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
                 }
             }
 
-            status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot, NULL);
-            if (status != PJ_SUCCESS) {
-                PJ_PERROR(4, (THIS_FILE, status,
-                              "Ignored error on connecting video ports "
-                              "on wid=%d", wid));
+            if (!w->is_native) {
+                status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot,
+                                                NULL);
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(4, (THIS_FILE, status,
+                                  "Ignored error on connecting video ports "
+                                  "on wid=%d", wid));
+                }
             }
 
             /* Done */
@@ -1325,6 +1331,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 {
     pjmedia_vid_stream *strm = call_med->strm.v.stream;
     pjmedia_rtcp_stat stat;
+    pjmedia_vid_stream_info prev_vid_si;
     unsigned num_locks = 0;
 
     pj_assert(call_med->type == PJMEDIA_TYPE_VIDEO);
@@ -1335,7 +1342,9 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     PJ_LOG(4,(THIS_FILE, "Stopping video stream.."));
     pj_log_push_indent();
     
-    pjmedia_vid_stream_get_info(strm, &call_med->prev_vid_si);
+    pjmedia_vid_stream_get_info(strm, &prev_vid_si);
+    call_med->prev_local_addr = prev_vid_si.local_addr;
+    call_med->prev_rem_addr = prev_vid_si.rem_addr;
 
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
@@ -1700,7 +1709,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
 
     if (w->is_native) {
         pjmedia_vid_dev_stream *cap_strm;
-        pjmedia_vid_dev_cap cap = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+        pjmedia_vid_dev_cap cap = PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW;
 
         if (!w->vp_cap) {
             status = PJ_EINVAL;
@@ -1769,8 +1778,13 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_show( pjsua_vid_win_id wid,
     }
 
     /* Make sure that renderer gets started before shown up */
-    if (show && !pjmedia_vid_port_is_running(w->vp_rend))
+    if (show && w->vp_rend && !pjmedia_vid_port_is_running(w->vp_rend)) {
         status = pjmedia_vid_port_start(w->vp_rend);
+        if (status != PJ_SUCCESS) {
+            PJSUA_UNLOCK();
+            return status;
+        }
+    }
 
     hide = !show;
     status = pjmedia_vid_dev_stream_set_cap(s,
@@ -2281,7 +2295,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
         sdp->media[med_idx] = sdp_m;
 
-        if (call_med->dir == PJMEDIA_DIR_NONE) {
+        if (call_med->dir == PJMEDIA_DIR_NONE && call_med->tp) {
             /* Update SDP media line by media transport */
             status = pjmedia_transport_encode_sdp(call_med->tp, pool,
                                                   sdp, NULL, call_med->idx);
@@ -2658,7 +2672,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
          */
         if (param_.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
             pjmedia_vid_dev_info info;
-            pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+            status = pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+            if (status != PJ_SUCCESS)
+                goto on_return;
             pj_assert(info.dir == PJMEDIA_DIR_CAPTURE);
             param_.cap_dev = info.id;
         }

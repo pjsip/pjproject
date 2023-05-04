@@ -810,7 +810,8 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
      */
     pj_bzero(dest_info, sizeof(*dest_info));
 
-    /* When request URI uses sips scheme, TLS must always be used regardless
+    /* When request URI uses sips scheme, secure transport
+     * (the default is TLS) must always be used regardless
      * of the target scheme or transport type (see ticket #1740).
      */
     if (PJSIP_URI_SCHEME_IS_SIPS(target_uri) || 
@@ -819,14 +820,13 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
     {
         pjsip_uri *uri = (pjsip_uri*) target_uri;
         const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-        unsigned flag;
+        unsigned flag, tp_flag;
 
         if (!PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
-            PJ_LOG(4,(THIS_FILE, "Automatic switch to TLS transport as "
+            PJ_LOG(4,(THIS_FILE, "Automatic switch to secure transport as "
                                  "request-URI uses ""sips"" scheme."));
         }
 
-        dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
         if (url->maddr_param.slen)
             pj_strdup(pool, &dest_info->addr.host, &url->maddr_param);
         else
@@ -834,18 +834,27 @@ PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
         dest_info->addr.port = url->port;
         dest_info->type = 
             pjsip_transport_get_type_from_name(&url->transport_param);
+
         /* Double-check that the transport parameter match.
          * Sample case:     sips:host;transport=tcp
          * See https://github.com/pjsip/pjproject/issues/1319
          */
         flag = pjsip_transport_get_flag_from_type(dest_info->type);
-        if ((flag & dest_info->flag) != dest_info->flag) {
+        tp_flag = PJSIP_TRANSPORT_SECURE;
+        /* There doesn't seem to be any requirement for SIPS to use
+         * reliable transport, so we disable this.
+         */
+        // tp_flag |= PJSIP_TRANSPORT_RELIABLE;
+        if ((flag & tp_flag) != tp_flag) {
             pjsip_transport_type_e t;
 
-            t = pjsip_transport_get_type_from_flag(dest_info->flag);
+            t = pjsip_transport_get_type_from_flag(tp_flag);
             if (t != PJSIP_TRANSPORT_UNSPECIFIED)
                 dest_info->type = t;
         }
+
+        dest_info->flag =
+            pjsip_transport_get_flag_from_type(dest_info->type);
 
     } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
         pjsip_uri *uri = (pjsip_uri*) target_uri;
@@ -1859,6 +1868,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
     pj_status_t status;
     pjsip_response_addr res_addr;
     pjsip_tx_data *tdata;
+    pjsip_transaction *tsx;
 
     /* Verify arguments. */
     PJ_ASSERT_RETURN(endpt && rdata, PJ_EINVAL);
@@ -1866,10 +1876,13 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
                      PJSIP_ENOTREQUESTMSG);
 
     /* Check that no UAS transaction has been created for this request. 
-     * If UAS transaction has been created for this request, application
-     * MUST send the response statefully using that transaction.
+     * If UAS transaction has been created for this request and its state
+     * is not TERMINATED/DESTROYED, application MUST send the response
+     * statefully using that transaction.
      */
-    PJ_ASSERT_RETURN(pjsip_rdata_get_tsx(rdata)==NULL, PJ_EINVALIDOP);
+    tsx = pjsip_rdata_get_tsx(rdata);
+    if (tsx && tsx->state < PJSIP_TSX_STATE_TERMINATED)
+        return PJ_EINVALIDOP;
 
     /* Create response message */
     status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text, 

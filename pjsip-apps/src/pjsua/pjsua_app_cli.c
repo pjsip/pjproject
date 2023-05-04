@@ -163,7 +163,7 @@ void displayLog(const char *msg, int len);
 pj_status_t cli_setup_command(pj_cli_t *cli);
 void cli_destroy(void);
 
-PJ_DEF(void) cli_get_info(char *info, pj_size_t size)
+void cli_get_info(char *info, pj_size_t size)
 {
     pj_cli_telnet_info telnet_info;
     pj_cli_telnet_get_info(telnet_front_end, &telnet_info);
@@ -292,7 +292,7 @@ static void get_input_url(char *buf,
                           pj_cli_cmd_val *cval,
                           struct input_result *result)
 {
-    static const pj_str_t err_invalid_input = {"Invalid input\n", 15};
+    const pj_str_t err_invalid_input = pj_str("Invalid input\n");
     result->nb_result = PJSUA_APP_NO_NB;
     result->uri_result = NULL;
 
@@ -467,7 +467,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
         for (j=0; j<info.listener_cnt; ++j) {
             char s[10];
             pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
         }
 
         len = pj_ansi_snprintf(desc,
@@ -640,11 +640,12 @@ static void get_video_codec_id(pj_cli_dyn_choice_param *param)
                     continue;
 
                 cur_ci = ci[i].codec_id;
+                vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt,
+                                                             PJ_TRUE);
 
             } else {
                 cur_ci = all_codec_id;
             }
-            vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt, PJ_TRUE);
 
             pj_ansi_snprintf(codec_id, sizeof(codec_id),
                              "%.*s", (int)cur_ci.slen,
@@ -875,7 +876,7 @@ static pj_status_t cmd_show_account(pj_cli_cmd_val *cval)
     pjsua_acc_id acc_ids[16];
     unsigned count = PJ_ARRAY_SIZE(acc_ids);
     int i;
-    static const pj_str_t header = {"Account list:\n", 15};
+    const pj_str_t header = pj_str("Account list:\n");
 
     pjsua_enum_accs(acc_ids, &count);
 
@@ -978,6 +979,8 @@ static pj_status_t cmd_add_buddy(pj_cli_cmd_val *cval)
             pj_ansi_snprintf(out_str, sizeof(out_str),
                               "New buddy '%s' added at index %d\n",
                               cval->argv[1].ptr, buddy_id+1);
+        } else {
+            pj_ansi_snprintf(out_str, sizeof(out_str), "Add buddy failed\n");
         }
     }
     pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
@@ -1020,8 +1023,8 @@ static pj_status_t cmd_send_im(pj_cli_cmd_val *cval)
     if (result.nb_result != PJSUA_APP_NO_NB) {
 
         if (result.nb_result == -1) {
-            static const pj_str_t err_msg = {"you can't send broadcast im "
-                                             "like that!\n", 40 };
+            const pj_str_t err_msg = pj_str("you can't send broadcast "
+                                            "im like that!\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;
         } else if (result.nb_result == 0) {
@@ -1071,18 +1074,18 @@ static pj_status_t cmd_subs_pres(pj_cli_cmd_val *cval, pj_bool_t subscribe)
             for (i=0; i<count; ++i)
                 pjsua_buddy_subscribe_pres(i, subscribe);
         } else if (result.nb_result == 0) {
-            static const pj_str_t err_msg = {"Sorry, can only subscribe to "
-                                             "buddy's presence, not from "
-                                             "existing call\n", 71};
+            const pj_str_t err_msg = pj_str("Sorry, can only subscribe"
+                                            " to buddy's presence, not"
+                                            " from existing call\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
         } else {
             pjsua_buddy_subscribe_pres(result.nb_result-1, subscribe);
         }
 
     } else if (result.uri_result) {
-        static const pj_str_t err_msg = {"Sorry, can only subscribe to "
-                                         "buddy's presence, not arbitrary "
-                                         "URL (for now)\n", 76};
+        const pj_str_t err_msg = pj_str("Sorry, can only subscribe to "
+                                        "buddy's presence, not "
+                                        "arbitrary URL (for now)\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     }
     return PJ_SUCCESS;
@@ -1160,7 +1163,7 @@ static pj_status_t cmd_show_buddy(pj_cli_cmd_val *cval)
     pjsua_buddy_id ids[64];
     int i;
     unsigned count = PJ_ARRAY_SIZE(ids);
-    static const pj_str_t header = {"Buddy list:\n", 13};
+    const pj_str_t header = pj_str("Buddy list:\n");
     char out_str[64];
 
     pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
@@ -1233,7 +1236,7 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
 {
     unsigned i, count;
     pjsua_conf_port_id id[PJSUA_MAX_CONF_PORTS];
-    static const pj_str_t header = {"Conference ports:\n", 19};
+    const pj_str_t header = pj_str("Conference ports:\n");
 
     pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
 
@@ -1252,7 +1255,7 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
         for (j=0; j<info.listener_cnt; ++j) {
             char s[10];
             pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
         }
         pj_ansi_snprintf(out_str,
                sizeof(out_str),
@@ -1282,10 +1285,10 @@ static pj_status_t cmd_media_connect(pj_cli_cmd_val *cval, pj_bool_t connect)
                                        (int)pj_strtol(&cval->argv[2]));
 
     if (status == PJ_SUCCESS) {
-        static const pj_str_t success_msg = {"Success\n", 9};
+        const pj_str_t success_msg = pj_str("Success\n");
         pj_cli_sess_write_msg(cval->sess, success_msg.ptr, success_msg.slen);
     } else {
-        static const pj_str_t err_msg = {"ERROR!!\n", 9};
+        const pj_str_t err_msg = pj_str("ERROR!!\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     }
     return status;
@@ -1510,8 +1513,8 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
     if (result.nb_result != PJSUA_APP_NO_NB) {
         pjsua_buddy_info binfo;
         if (result.nb_result == -1 || result.nb_result == 0) {
-            static const pj_str_t err_msg =
-                    {"You can't do that with make call!\n", 35};
+            const pj_str_t err_msg =
+                           pj_str("You can't do that with make call!\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;
         }
@@ -1555,8 +1558,8 @@ static pj_status_t cmd_make_multi_call(pj_cli_cmd_val *cval)
     if (result.nb_result != PJSUA_APP_NO_NB) {
         pjsua_buddy_info binfo;
         if (result.nb_result == -1 || result.nb_result == 0) {
-            static const pj_str_t err_msg =
-                            {"You can't do that with make call!\n", 35};
+            const pj_str_t err_msg =
+                           pj_str("You can't do that with make call!\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;
         }
@@ -1594,12 +1597,11 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
         call_info.role != PJSIP_ROLE_UAS ||
         call_info.state >= PJSIP_INV_STATE_CONNECTING)
     {
-        static const pj_str_t err_msg = {"No pending incoming call\n", 26};
+        const pj_str_t err_msg = pj_str("No pending incoming call\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 
     } else {
         int st_code;
-        char contact[120];
         pj_str_t hname = { "Contact", 7 };
         pj_str_t hvalue;
         pjsip_generic_string_hdr hcontact;
@@ -1612,13 +1614,13 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 
         if (st_code/100 == 3) {
             if (cval->argc < 3) {
-                static const pj_str_t err_msg = {"Enter URL to be put "
-                                                 "in Contact\n",  32};
+                const pj_str_t err_msg = pj_str("Enter URL to be put "
+                                                "in Contact\n");
                 pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
                 return PJ_SUCCESS;
             }
 
-            hvalue = pj_str(contact);
+            hvalue = cval->argv[2];
             pjsip_generic_string_hdr_init2(&hcontact, &hname, &hvalue);
 
             pj_list_push_back(&msg_data.hdr_list, &hcontact);
@@ -1630,8 +1632,7 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
         * keyboard input.
         */
         if (current_call == PJSUA_INVALID_ID) {
-            static const pj_str_t err_msg = {"Call has been disconnected\n",
-                                             28};
+            const pj_str_t err_msg = pj_str("Call has been disconnected\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
         }
 
@@ -1644,7 +1645,7 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 static pj_status_t cmd_hangup_call(pj_cli_cmd_val *cval, pj_bool_t all)
 {
     if (current_call == PJSUA_INVALID_ID) {
-        static const pj_str_t err_msg = {"No current call\n", 17};
+        const pj_str_t err_msg = pj_str("No current call\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     } else {
         if (all)
@@ -1766,8 +1767,8 @@ static pj_status_t cmd_transfer_call(pj_cli_cmd_val *cval)
         }
         if (result.nb_result != PJSUA_APP_NO_NB) {
             if (result.nb_result == -1 || result.nb_result == 0) {
-                static const pj_str_t err_msg = {"You can't do that with "
-                                                 "transfer call!\n", 39};
+                const pj_str_t err_msg = pj_str("You can't do that with "
+                                                "transfer call!\n");
 
                 pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             } else {
@@ -1798,14 +1799,14 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
         pjsua_call_id ids[PJSUA_MAX_CALLS];
         pjsua_msg_data msg_data_;
         unsigned count;
-        static const pj_str_t err_invalid_num =
-                                    {"Invalid destination call number\n", 32 };
+        const pj_str_t err_invalid_num =
+                       pj_str("Invalid destination call number\n");
         count = PJ_ARRAY_SIZE(ids);
         pjsua_enum_calls(ids, &count);
 
         if (count <= 1) {
-            static const pj_str_t err_no_other_call =
-                                    {"There are no other calls\n", 25};
+            const pj_str_t err_no_other_call =
+                           pj_str("There are no other calls\n");
 
             pj_cli_sess_write_msg(cval->sess, err_no_other_call.ptr,
                                   err_no_other_call.slen);
@@ -1911,8 +1912,7 @@ static pj_status_t cmd_dtmf_2833(pj_cli_cmd_val *cval)
         pj_status_t status;
 
         if (call != current_call) {
-            static const pj_str_t err_msg = {"Call has been disconnected\n",
-                                             28};
+            const pj_str_t err_msg = pj_str("Call has been disconnected\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;;
         }
@@ -1921,8 +1921,8 @@ static pj_status_t cmd_dtmf_2833(pj_cli_cmd_val *cval)
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to send DTMF", status);
         } else {
-            static const pj_str_t msg = {"DTMF digits enqueued "
-                                         "for transmission\n", 39};
+            const pj_str_t msg = pj_str("DTMF digits enqueued "
+                                        "for transmission\n");
             pj_cli_sess_write_msg(cval->sess, msg.ptr, msg.slen);
         }
     }
@@ -1943,8 +1943,7 @@ static pj_status_t cmd_call_info(pj_cli_cmd_val *cval)
         pj_status_t status;
 
         if (call != current_call) {
-            static const pj_str_t err_msg = {"Call has been disconnected\n",
-                                             28};
+            const pj_str_t err_msg = pj_str("Call has been disconnected\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
             return PJ_SUCCESS;;
         }
@@ -1988,16 +1987,16 @@ static pj_status_t cmd_call_quality()
 static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
 {
     if (pjsua_acc_get_count() == 0) {
-        static const pj_str_t err_msg = {"Sorry, need at least one "
-                                         "account configured\n", 45};
+        const pj_str_t err_msg = pj_str("Sorry, need at least one "
+                                        "account configured\n");
         pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     } else {
         char *uri;
         char dest[64] = {0};
         pj_str_t tmp = pj_str(dest);
         struct input_result result;
-        static const pj_str_t header = {"Send arbitrary request to "
-                                        "remote host\n", 39};
+        const pj_str_t header = pj_str("Send arbitrary request to "
+                                       "remote host\n");
 
         pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
 
@@ -2007,15 +2006,13 @@ static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
         get_input_url(tmp.ptr, tmp.slen, cval, &result);
         if (result.nb_result != PJSUA_APP_NO_NB) {
             if (result.nb_result == -1) {
-                static const pj_str_t err_msg = {"Sorry you can't do that!\n",
-                                                 26};
+                const pj_str_t err_msg = pj_str("Sorry you can't do that!\n");
                 pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
                 return PJ_SUCCESS;
             } else if (result.nb_result == 0) {
                 uri = NULL;
                 if (current_call == PJSUA_INVALID_ID) {
-                    static const pj_str_t err_msg = {"No current call\n",
-                                                     17};
+                    const pj_str_t err_msg = pj_str("No current call\n");
                     pj_cli_sess_write_msg(cval->sess, err_msg.ptr,
                                           err_msg.slen);
 
@@ -2522,14 +2519,14 @@ static pj_status_t cmd_vid_conf_list()
             pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
                              info.listeners[j],
                              (j==info.listener_cnt-1)?"":",");
-            pj_ansi_strcat(li_list, str_info);
+            pj_ansi_strxcat(li_list, str_info, sizeof(li_list));
         }
         tr_list[0] = '\0';
         for (j=0; j<info.transmitter_cnt; ++j) {
             char str_info[10];
             pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s", info.transmitters[j],
                              (j==info.transmitter_cnt-1)?"":",");
-            pj_ansi_strcat(tr_list, str_info);
+            pj_ansi_strxcat(tr_list, str_info, sizeof(tr_list));
         }
         pjmedia_fourcc_name(info.format.id, s);
         s[4] = ' ';
@@ -2540,9 +2537,9 @@ static pj_status_t cmd_vid_conf_list()
                             (int)info.name.slen, info.name.ptr,
                             22-(int)info.name.slen, "                   ",
                             s,
-                            20-pj_ansi_strlen(s), "                    ",
+                            20-(int)pj_ansi_strlen(s), "                    ",
                             tr_list,
-                            12-pj_ansi_strlen(tr_list), "            ",
+                            12-(int)pj_ansi_strlen(tr_list), "            ",
                             li_list));
     }
     return PJ_SUCCESS;
@@ -2756,12 +2753,14 @@ static pj_status_t get_options(pj_str_t *options, unsigned *argc,
 
 static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
 {
+    pj_status_t status;
     enum { MAX_ARGC = 64 };
     int i;
     unsigned argc = 1;
     static char argv_buffer[PJ_CLI_MAX_CMDBUF];
     static char *argv[MAX_ARGC] = {NULL};
     char *pbuf = argv_buffer;
+    char *pend = argv_buffer + PJ_CLI_MAX_CMDBUF;
 
     PJ_LOG(3,(THIS_FILE, "Restarting app.."));
     pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_TRUE);
@@ -2772,9 +2771,15 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
         unsigned j, ac;
 
         ac = MAX_ARGC - argc;
-        get_options(&cval->argv[i], &ac, argvst);
+        status = get_options(&cval->argv[i], &ac, argvst);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Error get options", status);
+            return status;
+        }
         for (j = 0; j < ac; j++) {
-            pj_ansi_strncpy(pbuf, argvst[j].ptr, argvst[j].slen);
+            if (pbuf+argvst[j].slen+1 > pend)
+                return PJ_ETOOSMALL;
+            pj_memcpy(pbuf, argvst[j].ptr, argvst[j].slen);
             pbuf[argvst[j].slen] = '\0';
             argv[argc + j] = pbuf;
             pbuf += argvst[j].slen + 1;

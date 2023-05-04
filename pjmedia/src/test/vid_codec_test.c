@@ -149,7 +149,7 @@ static const char* dump_codec_info(const pjmedia_vid_codec_info *info)
     char *p = str;
 
     /* Raw format ids */
-    for (i=0; (i<info->dec_fmt_id_cnt) && (p-str+5<sizeof(str)); ++i) {
+    for (i=0; (i<info->dec_fmt_id_cnt) && (p-str+5<(int)sizeof(str)); ++i) {
         pj_memcpy(p, &info->dec_fmt_id[i], 4);
         p += 4;
         *p++ = ' ';
@@ -173,7 +173,7 @@ static int enum_codecs()
 
     for (i = 0; i < cnt; ++i) {
         PJ_LOG(3, (THIS_FILE, "  %-16.*s %c%c %s",
-                   info[i].encoding_name.slen, info[i].encoding_name.ptr,
+                   (int)info[i].encoding_name.slen, info[i].encoding_name.ptr,
                    (info[i].dir & PJMEDIA_DIR_ENCODING? 'E' : ' '),
                    (info[i].dir & PJMEDIA_DIR_DECODING? 'D' : ' '),
                    dump_codec_info(&info[i])));
@@ -395,7 +395,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 
     PJ_LOG(3, (THIS_FILE, "    starting codec test: %s<->%.*s %dx%d",
         pjmedia_fourcc_name(codec_param.dec_fmt.id, codec_name),
-        codec_info->encoding_name.slen,
+        (int)codec_info->encoding_name.slen,
         codec_info->encoding_name.ptr,
         codec_param.dec_fmt.det.vid.size.w,
         codec_param.dec_fmt.det.vid.size.h

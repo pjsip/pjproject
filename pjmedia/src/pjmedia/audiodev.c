@@ -135,8 +135,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_driver_init(unsigned drv_idx,
 
         if (drv->name[0]=='\0') {
             /* Set driver name */
-            pj_ansi_strncpy(drv->name, info.driver, sizeof(drv->name));
-            drv->name[sizeof(drv->name)-1] = '\0';
+            pj_ansi_strxcpy(drv->name, info.driver, sizeof(drv->name));
         }
 
         if (drv->play_dev_idx < 0 && info.output_count) {
@@ -201,7 +200,7 @@ PJ_DEF(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
     if (p_desc==NULL) p_desc = &desc;
 
     for (i=0; i<PJ_ARRAY_SIZE(cap_infos); ++i) {
-        if ((1 << i)==cap)
+        if ((1 << i)==(int)cap)
             break;
     }
 

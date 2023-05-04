@@ -67,7 +67,8 @@ PJ_BEGIN_DECL
  *
  * @subsection codec_inst Codec Instance
  *
- * Application allocates codec instance by calling #pjmedia_codec_mgr_alloc_codec().
+ * Application allocates codec instance by calling
+ * #pjmedia_codec_mgr_alloc_codec().
  * One codec instance (#pjmedia_codec) can be used for simultaneous encoding
  * and decoding.
  *

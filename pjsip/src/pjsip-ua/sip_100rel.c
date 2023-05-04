@@ -381,8 +381,9 @@ static void clear_all_responses(dlg_data *dd)
 
     tl = dd->uas_state->tx_data_list.next;
     while (tl != &dd->uas_state->tx_data_list) {
+        tx_data_list_t *tl_next = tl->next;
         pjsip_tx_data_dec_ref(tl->tdata);
-        tl = tl->next;
+        tl = tl_next;
     }
     pj_list_init(&dd->uas_state->tx_data_list);
 }
@@ -481,12 +482,6 @@ PJ_DEF(pj_status_t) pjsip_100rel_on_rx_prack( pjsip_inv_session *inv,
             status = pjsip_dlg_send_response(inv->dlg, tsx, tdata);
         }
         return PJSIP_ENOTINITIALIZED;
-    }
-
-    /* Always reply with 200/OK for PRACK */
-    status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
-    if (status == PJ_SUCCESS) {
-        status = pjsip_dlg_send_response(inv->dlg, tsx, tdata);
     }
 
     /* Ignore if we don't have pending transmission */
@@ -862,7 +857,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
             status = PJ_SUCCESS;
             
             PJ_LOG(4,(dd->inv->dlg->obj_name, 
-                      "Reliable %d response enqueued (%d pending)", 
+                      "Reliable %d response enqueued (%ld pending)", 
                       code, pj_list_size(&dd->uas_state->tx_data_list)));
             
         } else {

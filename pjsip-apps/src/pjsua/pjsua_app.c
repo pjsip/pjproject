@@ -599,7 +599,7 @@ static pjsip_redirect_op call_on_redirected(pjsua_call_id call_id,
         len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, target, uristr, 
                               sizeof(uristr));
         if (len < 1) {
-            pj_ansi_strcpy(uristr, "--URI too long--");
+            pj_ansi_strxcpy(uristr, "--URI too long--", sizeof(uristr));
         }
 
         PJ_LOG(3,(THIS_FILE, "Call %d is being redirected to %.*s. "
@@ -1135,7 +1135,6 @@ static void simple_registrar(pjsip_rx_data *rdata)
     pjsip_tx_data *tdata;
     const pjsip_expires_hdr *exp;
     const pjsip_hdr *h;
-    unsigned cnt = 0;
     pjsip_generic_string_hdr *srv;
     pj_status_t status;
 
@@ -1165,7 +1164,6 @@ static void simple_registrar(pjsip_rx_data *rdata)
                                                                 tdata->pool, h);
                 nc->expires = e;
                 pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)nc);
-                ++cnt;
             }
         }
         h = h->next;
@@ -1974,8 +1972,10 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
 
     /* Start console refresh thread */
     if (stdout_refresh > 0) {
-        pj_thread_create(app_config.pool, "stdout", &stdout_refresh_proc,
-                         NULL, 0, 0, &stdout_refresh_thread);
+        status = pj_thread_create(app_config.pool, "stdout", 
+                                  &stdout_refresh_proc,
+                                  NULL, 0, 0, &stdout_refresh_thread);
+        PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
     }
 
     status = pjsua_start();

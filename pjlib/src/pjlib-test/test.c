@@ -49,6 +49,7 @@ const char *param_echo_server = ECHO_SERVER_ADDRESS;
 int param_echo_port = ECHO_SERVER_START_PORT;
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
                       PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
+pj_bool_t param_ci_mode = PJ_FALSE;  /* GH CI mode: more lenient tests */
 
 int null_func()
 {
@@ -73,8 +74,11 @@ int test_inner(void)
         return rc;
     }
 
-    //pj_dump_config();
+    pj_dump_config();
     pj_caching_pool_init( &caching_pool, NULL, 0 );
+
+    if (param_ci_mode)
+        PJ_LOG(3,("test", "Using ci-mode"));
 
 #if INCLUDE_ERRNO_TEST
     DO_TEST( errno_test() );
@@ -208,7 +212,7 @@ on_return:
 
     pj_caching_pool_destroy( &caching_pool );
 
-    PJ_LOG(3,("test", ""));
+    PJ_LOG(3,("test", " "));
 
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
     PJ_LOG(3,("test", "Stack max usage: %u, deepest: %s:%u",
@@ -221,7 +225,7 @@ on_return:
 
     pj_shutdown();
 
-    return 0;
+    return rc;
 }
 
 #include <pj/sock.h>

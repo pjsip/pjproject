@@ -250,9 +250,9 @@ PJ_DEF(void) pjsip_dump_config(void)
                pjsip_cfg()->regc.check_contact));
     PJ_LOG(3, (id, " pjsip_cfg()->regc.add_xuid_param                   : %d", 
                pjsip_cfg()->regc.add_xuid_param));
-    PJ_LOG(3, (id, " pjsip_cfg()->tcp.keep_alive_interval               : %d", 
+    PJ_LOG(3, (id, " pjsip_cfg()->tcp.keep_alive_interval               : %ld", 
                pjsip_cfg()->tcp.keep_alive_interval));
-    PJ_LOG(3, (id, " pjsip_cfg()->tls.keep_alive_interval               : %d", 
+    PJ_LOG(3, (id, " pjsip_cfg()->tls.keep_alive_interval               : %ld", 
                pjsip_cfg()->tls.keep_alive_interval));
 }
 

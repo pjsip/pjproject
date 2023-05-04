@@ -282,7 +282,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     const unsigned type_mask = PJ_IOQUEUE_EPOLL_EXCLUSIVE |
                                PJ_IOQUEUE_EPOLL_ONESHOT;
     unsigned epoll_support, valid_types;
-    int i;
+    pj_size_t i;
 
     /* Check that arguments are valid. */
     PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && 
@@ -1078,3 +1078,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     return processed_cnt;
 }
 
+PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
+{
+    return ioqueue ? (pj_oshandle_t)&ioqueue->epfd : NULL;
+}
