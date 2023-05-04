@@ -1398,17 +1398,17 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
+    /* Close member if configured */
+    if (srtp->setting.close_member_tp && srtp->member_tp) {
+        pjmedia_transport_close(srtp->member_tp);
+    }
+
     /* Close all keying. Note that any keying should not be destroyed before
      * SRTP transport is destroyed as re-INVITE may initiate new keying method
      * without destroying SRTP transport.
      */
     for (i=0; i < srtp->all_keying_cnt; i++)
         pjmedia_transport_close(srtp->all_keying[i]);
-
-    /* Close member if configured */
-    if (srtp->setting.close_member_tp && srtp->member_tp) {
-        pjmedia_transport_close(srtp->member_tp);
-    }
 
     status = pjmedia_transport_srtp_stop(tp);
 
