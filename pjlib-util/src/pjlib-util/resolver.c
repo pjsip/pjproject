@@ -546,9 +546,6 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
 
     pj_grp_lock_acquire(resolver->grp_lock);
 
-    if (count > PJ_DNS_RESOLVER_MAX_NS)
-        count = PJ_DNS_RESOLVER_MAX_NS;
-
     resolver->ns_count = 0;
     pj_bzero(resolver->ns, sizeof(resolver->ns));
 
