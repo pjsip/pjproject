@@ -558,7 +558,9 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
     } else {
         PJ_LOG(1, (THIS_FILE, " failed to copy id to buffer"));
     }
-    CFRelease(uid);
+    if(uid != NULL) {
+        CFRelease(uid);
+    }
     
     /* Get device name */
     addr.mSelector = kAudioDevicePropertyDeviceName;
@@ -2022,7 +2024,9 @@ static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
             *(pjmedia_aud_dev_route*)pval = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
         }
 
-        CFRelease(route);
+    if(route != NULL) {
+	    CFRelease(route);
+    }
 
         return PJ_SUCCESS;
 #endif
