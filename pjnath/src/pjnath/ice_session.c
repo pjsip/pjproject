@@ -2338,7 +2338,8 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     timer_data *td;
     pj_ice_sess *ice;
     pj_ice_sess_checklist *clist;
-    unsigned i, start_count=0;
+    pj_ice_sess_check *check = NULL;
+    unsigned i, check_idx = 0;
     pj_status_t status;
 
     td = (struct timer_data*) te->user_data;
@@ -2361,53 +2362,75 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     LOG5((ice->obj_name, "Starting checklist periodic check"));
     pj_log_push_indent();
 
-    /* Send STUN Binding request for check with highest priority on
-     * Waiting state.
+    /* Find a pair to check (using STUN Binding request).
+     * - If we are nominating in regular nomination, only check the valid pair
+     *   of each component.
+     * - Otherwise, check any first/highest-prio pair in Waiting, or Frozen
+     *   if no pair is in Waiting.
      */
-    for (i=0; i<clist->count; ++i) {
-        pj_ice_sess_check *check = &clist->checks[i];
-
-        if (check->state == PJ_ICE_SESS_CHECK_STATE_WAITING) {
-            status = perform_check(ice, clist, i, ice->is_nominating);
-            if (status != PJ_SUCCESS) {
-                check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
-                                status);
-                on_check_complete(ice, check);
-            }
-
-            ++start_count;
-            break;
-        }
-    }
-
-    /* If we don't have anything in Waiting state, perform check to
-     * highest priority pair that is in Frozen state.
-     */
-    if (start_count==0) {
-        for (i=0; i<clist->count; ++i) {
-            pj_ice_sess_check *check = &clist->checks[i];
-
-            if (check->state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
-                status = perform_check(ice, clist, i, ice->is_nominating);
-                if (status != PJ_SUCCESS) {
-                    check_set_state(ice, check,
-                                    PJ_ICE_SESS_CHECK_STATE_FAILED, status);
-                    on_check_complete(ice, check);
+    if (ice->is_nominating && !ice->opt.aggressive) {
+        /* ICE is nominating in regular nomination, find any first valid pair,
+         * the pair should already be in Waiting state.
+         */
+        for (i=0; i<ice->comp_cnt && !check; ++i) {
+            unsigned j;
+            const pj_ice_sess_check *vc = ice->comp[i].valid_check;
+            for (j=0; j<ice->clist.count; ++j) {
+                pj_ice_sess_check *c = &ice->clist.checks[j];
+                if (c->state == PJ_ICE_SESS_CHECK_STATE_WAITING &&
+                    c->lcand->transport_id == vc->lcand->transport_id &&
+                    c->rcand == vc->rcand)
+                {
+                    check = c;
+                    check_idx = j;
+                    break;
                 }
+            }
+        }
 
-                ++start_count;
+    } else {
+        /* Not nominating or in aggressive-nomination mode */
+
+        /* Find any pair with highest priority on Waiting state. */
+        for (i=0; i<clist->count; ++i) {
+            pj_ice_sess_check *c = &clist->checks[i];
+            if (c->state == PJ_ICE_SESS_CHECK_STATE_WAITING) {
+                check = c;
+                check_idx = i;
                 break;
             }
         }
+
+        /* If we don't have anything in Waiting state, find any pair with
+         * highest priority in Frozen state.
+         */
+        if (!check) {
+            for (i=0; i<clist->count; ++i) {
+                pj_ice_sess_check *c = &clist->checks[i];
+                if (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
+                    check = c;
+                    check_idx = i;
+                    break;
+                }
+            }
+        }
     }
 
-    /* Schedule next check for next candidate pair, unless there is no
-     * suitable candidate pair (all pairs have been checked or empty
-     * checklist).
+    /* Perform check & schedule next check for next candidate pair,
+     * unless there is no suitable candidate pair (all pairs have been checked
+     * or empty checklist).
      */
-    if (start_count!=0) {
+    if (check) {
         pj_time_val timeout = {0, PJ_ICE_TA_VAL};
 
+        status = perform_check(ice, clist, check_idx, ice->is_nominating);
+        if (status != PJ_SUCCESS) {
+            check_set_state(ice, check,
+                            PJ_ICE_SESS_CHECK_STATE_FAILED, status);
+            on_check_complete(ice, check);
+        }
+
+        /* Schedule next check */
         pj_time_val_normalize(&timeout);
         pj_timer_heap_schedule_w_grp_lock(th, te, &timeout, PJ_TRUE,
                                           ice->grp_lock);
@@ -2465,6 +2488,9 @@ static void start_nominated_check(pj_ice_sess *ice)
                 break;
             }
         }
+
+        /* Make sure the valid pair is found the checklist */
+        pj_assert(j < ice->clist.count);
     }
 
     /* And (re)start the periodic check */
