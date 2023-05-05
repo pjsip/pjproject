@@ -1398,10 +1398,11 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    /* Close member if configured */
-    if (srtp->setting.close_member_tp && srtp->member_tp) {
-        pjmedia_transport_close(srtp->member_tp);
-    }
+    /* Since we are about to destroy our keying transports, stop member
+     * transport first to make sure it no longer process any data and
+     * potentially pass it to the keying transports.
+     */
+    pjmedia_transport_media_stop(srtp->member_tp);
 
     /* Close all keying. Note that any keying should not be destroyed before
      * SRTP transport is destroyed as re-INVITE may initiate new keying method
@@ -1409,6 +1410,11 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
      */
     for (i=0; i < srtp->all_keying_cnt; i++)
         pjmedia_transport_close(srtp->all_keying[i]);
+
+    /* Close member if configured */
+    if (srtp->setting.close_member_tp && srtp->member_tp) {
+        pjmedia_transport_close(srtp->member_tp);
+    }
 
     status = pjmedia_transport_srtp_stop(tp);
 
@@ -1932,16 +1938,16 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
 
     srtp->started = PJ_FALSE;
 
+    /* Invoke media_stop() of all keying methods */
+    for (i=0; i < srtp->keying_cnt; ++i) {
+        pjmedia_transport_media_stop(srtp->keying[i]);
+    }
+
     /* Invoke media_stop() of member tp */
     status = pjmedia_transport_media_stop(srtp->member_tp);
     if (status != PJ_SUCCESS)
         PJ_PERROR(4, (srtp->pool->obj_name, status,
                       "SRTP failed stop underlying media transport."));
-
-    /* Invoke media_stop() of all keying methods */
-    for (i=0; i < srtp->keying_cnt; ++i) {
-        pjmedia_transport_media_stop(srtp->keying[i]);
-    }
 
     /* Finally, stop SRTP */
     return pjmedia_transport_srtp_stop(tp);
