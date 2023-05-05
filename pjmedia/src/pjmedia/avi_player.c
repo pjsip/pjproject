@@ -236,7 +236,8 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     }
 
     /* Open file. */
-    status = pj_file_open(pool, filename, PJ_O_RDONLY, &fport[0]->fd);
+    status = pj_file_open(pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC,
+                          &fport[0]->fd);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -441,7 +442,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             }
 
             /* Open file. */
-            status = pj_file_open(pool, filename, PJ_O_RDONLY,
+            status = pj_file_open(pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC,
                                   &fport[nstr]->fd);
             if (status != PJ_SUCCESS)
                 goto on_error;

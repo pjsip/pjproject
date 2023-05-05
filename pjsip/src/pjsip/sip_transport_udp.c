@@ -533,7 +533,7 @@ static pj_status_t create_socket(int af, const pj_sockaddr_t *local_a,
     pj_sockaddr_in6 tmp_addr6;
     pj_status_t status;
 
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS)
         return status;
 

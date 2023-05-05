@@ -319,7 +319,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
         }
 
         /* Create RTP socket. */
-        status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock[0]);
+        status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sock[0]);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "socket() error", status);
             return status;
@@ -362,7 +362,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
         }
 
         /* Create RTCP socket. */
-        status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock[1]);
+        status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sock[1]);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "socket() error", status);
             pj_sock_close(sock[0]);

@@ -745,7 +745,7 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
 
     /* If output log file is desired, create the file: */
     if (pjsua_var.log_cfg.log_filename.slen) {
-        unsigned flags = PJ_O_WRONLY;
+        unsigned flags = PJ_O_WRONLY | PJ_O_CLOEXEC;
         flags |= pjsua_var.log_cfg.log_file_flags;
         status = pj_file_open(pjsua_var.pool, 
                               pjsua_var.log_cfg.log_filename.ptr,
@@ -2363,7 +2363,7 @@ static pj_status_t create_sip_udp_sock(int af,
     }
 
     /* Create socket */
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "socket() error", status);
         return status;

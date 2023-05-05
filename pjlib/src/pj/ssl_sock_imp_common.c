@@ -20,6 +20,7 @@
 #include <pj/errno.h>
 #include <pj/log.h>
 #include <pj/math.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 
@@ -929,6 +930,10 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     PJ_UNUSED_ARG(newconn);
 #endif
 
+    /* Set close-on-exec flag */
+    if (ssock_parent->newsock_param.sock_cloexec)
+        pj_set_cloexec_flag((int)newsock);
+
     if (accept_status != PJ_SUCCESS) {
         if (ssock_parent->param.cb.on_accept_complete2) {
             (*ssock_parent->param.cb.on_accept_complete2)(ssock_parent, NULL,
@@ -1396,7 +1401,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     pj_pool_t *info_pool;
 
     PJ_ASSERT_RETURN(pool && param && p_ssock, PJ_EINVAL);
-    PJ_ASSERT_RETURN(param->sock_type == pj_SOCK_STREAM(), PJ_ENOTSUP);
+    PJ_ASSERT_RETURN((param->sock_type & 0xF) == pj_SOCK_STREAM(), PJ_ENOTSUP);
 
     info_pool = pj_pool_create(pool->factory, "ssl_chain%p", 512, 512, NULL);
     pool = pj_pool_create(pool->factory, "ssl%p", 512, 512, NULL);
@@ -1921,6 +1926,8 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
         goto on_error;
 #else
     /* Create socket */
+    if (ssock->param.sock_cloexec)
+        ssock->param.sock_type |= pj_SOCK_CLOEXEC();
     status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0, 
                             &ssock->sock);
     if (status != PJ_SUCCESS)
@@ -2052,6 +2059,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect2(
                      PJ_EINVAL);
 
     /* Create socket */
+    if (ssock->param.sock_cloexec)
+        ssock->param.sock_type |= pj_SOCK_CLOEXEC();
     status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0, 
                             &ssock->sock);
     if (status != PJ_SUCCESS)

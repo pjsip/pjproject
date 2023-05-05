@@ -115,7 +115,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
      * We need the read mode because we'll modify the WAVE header once
      * the recording has completed.
      */
-    status = pj_file_open(pool, filename, PJ_O_WRONLY, &fport->fd);
+    status = pj_file_open(pool, filename, PJ_O_WRONLY | PJ_O_CLOEXEC,
+                          &fport->fd);
     if (status != PJ_SUCCESS)
         return status;
 
