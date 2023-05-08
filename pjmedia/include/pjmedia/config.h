@@ -810,6 +810,22 @@
 #   define PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT          1
 #endif
 
+/**
+ * The SDP negotiator will maintain that the mapping from a particular
+ * dynamic payload type number to a particular codec does not change,
+ * as mandated by RFC 3264 section 8.3.2.
+ * By default, the mapping is maintained for local endpoint only, i.e.
+ * it only takes into account local offer and local answer.
+ * Enable this if application wishes to maintain PT->codec mapping for
+ * remote endpoint as well, i.e. to update the mapping based on remote
+ * offer and answer too.
+ *
+ * Default is 0 (no)
+ */
+#ifndef PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
+#   define PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP       0
+#endif
+
 
 /**
  * This specifies if the SDP negotiator should compare its content before 

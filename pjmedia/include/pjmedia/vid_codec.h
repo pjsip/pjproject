@@ -877,6 +877,16 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(pjmedia_vid_codec *codec,
  */
 
 
+/*
+ * Internal functions.
+ */
+
+/**
+ * Internal: Get the array of codec identifiers that have dynamic PT.
+ */
+pj_status_t pjmedia_vid_codec_mgr_get_dyn_codecs(pjmedia_vid_codec_mgr* mgr,
+                                                 pj_int8_t *count,
+                                                 pj_str_t dyn_codecs[]);
 
 
 PJ_END_DECL

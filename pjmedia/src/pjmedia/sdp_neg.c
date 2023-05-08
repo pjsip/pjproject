@@ -18,12 +18,27 @@
  */
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/sdp.h>
+#include <pjmedia/codec.h>
+#include <pjmedia/vid_codec.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/ctype.h>
 #include <pj/array.h>
+#include <pj/log.h>
+
+#define THIS_FILE           "sdp_neg.c"
+
+#define START_DYNAMIC_PT    PJMEDIA_RTP_PT_DYNAMIC
+#define DYNAMIC_PT_SIZE     127 - START_DYNAMIC_PT + 1
+#define UNKNOWN_CODEC       99
+
+/* Array for mapping PT number to codec ID. */
+typedef pj_int8_t pt_to_codec_map[DYNAMIC_PT_SIZE];
+
+/* Array for mapping codec ID to PT number. */
+typedef pj_int8_t codec_to_pt_map[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
 /**
  * This structure describes SDP media negotiator.
@@ -35,6 +50,16 @@ struct pjmedia_sdp_neg
     pj_bool_t             answer_with_multiple_codecs;
     pj_bool_t             has_remote_answer;
     pj_bool_t             answer_was_remote;
+
+    pt_to_codec_map       pt_to_codec[PJMEDIA_MAX_SDP_MEDIA];
+    codec_to_pt_map       codec_to_pt[PJMEDIA_MAX_SDP_MEDIA];
+
+    pj_int8_t             aud_dyn_codecs_cnt;
+    pj_str_t              aud_dyn_codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    pj_int8_t             vid_dyn_codecs_cnt;
+    pj_str_t              vid_dyn_codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
+#endif
 
     pjmedia_sdp_session *initial_sdp,       /**< Initial local SDP           */
                         *initial_sdp_tmp,   /**< Temporary initial local SDP */
@@ -84,6 +109,30 @@ static pj_status_t custom_fmt_match( pj_pool_t *pool,
                                    unsigned a_fmt_idx,
                                    unsigned option);
 
+static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
+                                            pjmedia_sdp_neg* neg,
+                                            pjmedia_sdp_session* sdp_sess,
+                                            pj_bool_t is_offer,
+                                            pj_bool_t update_only);
+
+/* Init PT number mapping variables. */
+static void init_mapping(pjmedia_sdp_neg *neg)
+{
+    /* Get the audio & video codecs with dynamic PT */
+    neg->aud_dyn_codecs_cnt = PJ_ARRAY_SIZE(neg->aud_dyn_codecs);
+    pjmedia_codec_mgr_get_dyn_codecs(NULL, &neg->aud_dyn_codecs_cnt,
+                                     neg->aud_dyn_codecs);
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    neg->vid_dyn_codecs_cnt = PJ_ARRAY_SIZE(neg->vid_dyn_codecs);
+    pjmedia_vid_codec_mgr_get_dyn_codecs(NULL, &neg->vid_dyn_codecs_cnt,
+                                         neg->vid_dyn_codecs);
+#endif
+
+    pj_memset(neg->pt_to_codec, -1, PJ_ARRAY_SIZE(neg->pt_to_codec) *
+              PJ_ARRAY_SIZE(neg->pt_to_codec[0]));
+    pj_bzero(neg->codec_to_pt, PJ_ARRAY_SIZE(neg->codec_to_pt) *
+             PJ_ARRAY_SIZE(neg->codec_to_pt[0]));
+}
 
 /*
  * Get string representation of negotiator state.
@@ -131,6 +180,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
      * SDPs pool after a successful SDP nego.
      */
     neg->pool_active = pool;
+
+    /* Init PT number mapping variables. */
+    init_mapping(neg);
 
     *p_neg = neg;
     return PJ_SUCCESS;
@@ -184,6 +236,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
      * SDPs pool after a successful SDP nego.
      */
     neg->pool_active = pool;
+
+    /* Init PT number mapping variables. */
+    init_mapping(neg);
 
     *p_neg = neg;
     return PJ_SUCCESS;
@@ -346,9 +401,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     if (!neg->active_local_sdp) {
         neg->initial_sdp_tmp = NULL;
         neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
-        neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
 
-        if (pjmedia_sdp_session_cmp(neg->last_sent, local, 0) != PJ_SUCCESS) {
+        /* Assign PT numbers for our offer and update the mapping. */
+        assign_pt_and_update_map(pool, neg, neg->initial_sdp,
+                                 PJ_TRUE, PJ_FALSE);
+        neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
+
+        if (pjmedia_sdp_session_cmp(neg->last_sent, neg->neg_local_sdp, 0) !=
+            PJ_SUCCESS)
+        {
             ++neg->neg_local_sdp->origin.version;
         }
         neg->last_sent = neg->neg_local_sdp;
@@ -433,6 +494,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
 
     /* New_offer fixed */
     new_offer->origin.version = old_offer->origin.version;
+
+    /* Assign PT numbers for our offer and update the mapping. */
+    assign_pt_and_update_map(pool, neg, new_offer, PJ_TRUE, PJ_FALSE);
 
     if (pjmedia_sdp_session_cmp(neg->last_sent, new_offer, 0) != PJ_SUCCESS) {
         ++new_offer->origin.version;
@@ -1041,6 +1105,26 @@ PJ_INLINE(void) rewrite_pt(pj_pool_t *pool, pj_str_t *attr_val,
     pj_memcpy(attr_val->ptr, new_pt->ptr, new_pt->slen);
 }
 
+/* Internal function to rewrite the format string in SDP attribute rtpmap
+ * and fmtp.
+ */
+PJ_INLINE(void) rewrite_pt2(pj_pool_t *pool, pj_str_t *attr_val,
+                            unsigned pt, unsigned new_pt)
+{
+    pj_str_t new_pt_str, old_pt_str = {0};
+    char buf[4];
+
+    /* Rewrite the PT with the new one. */
+    pj_utoa(new_pt, buf);
+    new_pt_str = pj_str(buf);
+
+    /* This is intentional, rewrite_pt() doesn't need the string content,
+     * only the length.
+     */
+    old_pt_str.slen = pt >= 100? 3: 2;
+    rewrite_pt(pool, attr_val, &old_pt_str, &new_pt_str);
+}
+
 
 /* Internal function to apply symmetric PT for the local answer. */
 static void apply_answer_symmetric_pt(pj_pool_t *pool,
@@ -1547,6 +1631,293 @@ static pj_status_t create_answer( pj_pool_t *pool,
     return has_active ? PJ_SUCCESS : status;
 }
 
+/* Find an unused PT number to be assigned to a codec. */
+static int find_new_pt(const pt_to_codec_map *pt_to_codec,
+                       const pj_bool_t used[],
+                       const pj_str_t *codec,
+                       pj_int8_t codec_idx)
+{
+    int idx, start = 0, result = -1;
+    const pj_str_t telephone_event = pj_str("telephone-event");
+
+    /* If the codec is a telephone-event, start searching from
+     * PJMEDIA_RTP_PT_TELEPHONE_EVENTS.
+     */
+    if (pj_strnicmp(codec, &telephone_event, telephone_event.slen) == 0)
+        start = PJMEDIA_RTP_PT_TELEPHONE_EVENTS - START_DYNAMIC_PT;
+
+    /* Find an unused PT number.
+     * First priority, find PT number that has been mapped to that codec.
+     * Second priority, find PT number that has never been mapped.
+     * Last resort, any number that's unused.
+     */
+    for (idx = start; idx < DYNAMIC_PT_SIZE; idx++) {
+        if (used[idx]) continue;
+        if ((*pt_to_codec)[idx] == codec_idx) {
+            return START_DYNAMIC_PT + idx;
+        } else if ((*pt_to_codec)[idx] == -1 &&
+                   (result == -1 || (*pt_to_codec)[result] != -1))
+        {
+            result = idx;
+        } else if (result == -1) {
+            result = idx;
+        }
+    }
+
+    /* Not found, start from the beginning. */
+    for (idx = 0; idx < start; idx++) {
+        if (used[idx]) continue;
+        if ((*pt_to_codec)[idx] == codec_idx) {
+            return START_DYNAMIC_PT + idx;
+        } else if ((*pt_to_codec)[idx] == -1 &&
+                   (result == -1 || (*pt_to_codec)[result] != -1))
+        {
+            result = idx;
+        } else if (result == -1) {
+            result = idx;
+        }
+    }
+
+    /* Since SDP has been validated and the number of codecs with dynamic
+     * PTs won't exceed the available slots, this should never happen.
+     */
+    pj_assert(result != -1);
+
+    if ((*pt_to_codec)[result] != -1) {
+        PJ_LOG(3, (THIS_FILE, "Unable to assign PT number for codec %.*s "
+                               "that conforms to PT mapping requirement, "
+                               "will use PT no %d", (int)codec->slen,
+                               codec->ptr, START_DYNAMIC_PT + result));
+    }
+
+    return START_DYNAMIC_PT + result;
+}
+
+/*
+ * This method will assign PT numbers for the codecs based on the mapping
+ * that we have recorded, and update the mapping.
+ */
+static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
+                                            pjmedia_sdp_neg *neg,
+                                            pjmedia_sdp_session *sess,
+                                            pj_bool_t is_offer,
+                                            pj_bool_t update_only)
+{
+    unsigned i, j;
+
+    for (i = 0; i < sess->media_count; ++i) {
+        pjmedia_type med_type;
+        unsigned count;
+        pj_str_t *dyn_codecs;
+        pj_bool_t pt_used[DYNAMIC_PT_SIZE];
+        pj_int8_t pt_change[DYNAMIC_PT_SIZE];
+        pjmedia_sdp_media *sdp_m = sess->media[i];
+
+        if (sdp_m->desc.port == 0) {
+            /* Reset the mapping. */
+            pj_memset(neg->pt_to_codec[i], -1,
+                      PJ_ARRAY_SIZE(neg->pt_to_codec[i]));
+            pj_bzero(neg->codec_to_pt[i], PJ_ARRAY_SIZE(neg->codec_to_pt[i]));
+            continue;
+        }
+
+        /* Get the codec string list based on media type */
+        med_type = pjmedia_get_type(&sdp_m->desc.media);
+        if (med_type == PJMEDIA_TYPE_AUDIO) {
+            dyn_codecs = neg->aud_dyn_codecs;
+            count = neg->aud_dyn_codecs_cnt;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+        } else if (med_type == PJMEDIA_TYPE_VIDEO) {
+            dyn_codecs = neg->vid_dyn_codecs;
+            count = neg->vid_dyn_codecs_cnt;
+#endif
+        } else {
+            continue;
+        }
+
+        /* Initialize arrays to keep track of:
+         * - which PT numbers have been used, to avoid duplicates
+         * - the change of PT numbers
+         */
+        pj_bzero(pt_used, PJ_ARRAY_SIZE(pt_used) * sizeof(pj_bool_t));
+        pj_bzero(pt_change, PJ_ARRAY_SIZE(pt_change));
+
+        for (j = 0; j < sdp_m->attr_count; ++j) {
+            const pjmedia_sdp_attr *attr;
+            pjmedia_sdp_rtpmap rtpmap;
+            unsigned pt;
+            pjmedia_codec_id codec_id;
+            pj_str_t codec;
+            pj_int8_t codec_idx;
+            pj_int8_t pt_to_codec;
+            pj_int8_t codec_to_pt = 0;
+            pj_int8_t new_pt = 0;
+            pj_bool_t need_new_pt = PJ_FALSE;
+
+            attr = sdp_m->attr[j];
+            if (pj_strcmp2(&attr->name, "rtpmap") != 0)
+                continue;
+            if (pjmedia_sdp_attr_get_rtpmap(attr, &rtpmap) != PJ_SUCCESS)
+                continue;
+
+            /* We only need to handle mapping for dynamic PT */
+            pt = pj_strtoul(&rtpmap.pt);
+            if (pt < START_DYNAMIC_PT)
+                continue;
+
+            if (med_type == PJMEDIA_TYPE_AUDIO) {
+                pjmedia_codec_info info;
+
+                /* Build codec format info */
+                info.encoding_name = rtpmap.enc_name;
+                info.clock_rate = rtpmap.clock_rate;
+                if (rtpmap.param.slen) {
+                    info.channel_cnt = (unsigned) pj_strtoul(&rtpmap.param);
+                } else {
+                    info.channel_cnt = 1;
+                }
+
+                /* Normalize codec info to get codec id. */
+                pjmedia_codec_info_to_id(&info, codec_id, sizeof(codec_id));
+                codec = pj_str(codec_id);
+            } else {
+                /* For video, we just use the encoding name */
+                codec = rtpmap.enc_name;
+            }
+
+            codec_idx = pjmedia_codec_mgr_find_codec(dyn_codecs, count,
+                                                     &codec, NULL);
+            if (codec_idx < 0) {
+                /* This typically happens when remote offers unknown
+                 * codec.
+                 */
+                codec_idx = UNKNOWN_CODEC;
+            }
+
+            if (update_only) {
+                /* Update the mapping. */
+                neg->pt_to_codec[i][pt - START_DYNAMIC_PT] = codec_idx;
+                if (codec_idx != UNKNOWN_CODEC)
+                    neg->codec_to_pt[i][codec_idx] = pt;
+                continue;
+            }
+
+            pt_to_codec = neg->pt_to_codec[i][pt - START_DYNAMIC_PT];
+            if (codec_idx != UNKNOWN_CODEC)
+                codec_to_pt = neg->codec_to_pt[i][codec_idx];
+
+            /* If the PT number has been mapped to another codec,
+             * we need to find another PT number, as per the RFC 3264
+             * section 8.3.2:
+             * the mapping from a particular dynamic payload type number
+             * to a particular codec within that media stream MUST NOT change
+             * for the duration of a session.
+             */
+            if (pt_to_codec != -1 && pt_to_codec != codec_idx)
+                need_new_pt = PJ_TRUE;
+
+            /* We also need to find a new PT number if this number has
+             * been assigned to another codec.
+             */
+            if (pt_used[pt - START_DYNAMIC_PT])
+                need_new_pt = PJ_TRUE;
+
+            /* If the codec has previously been mapped to a PT number,
+             * we use that number, provided that:
+             * - that PT number is unused
+             * - this is not an answer with symmetric PT (answer with
+             *   symmetric PT has been matched to the offer so we'd better
+             *   leave it unchanged)
+             */
+            if (codec_to_pt != 0 &&
+                !pt_used[codec_to_pt - START_DYNAMIC_PT] &&
+                (need_new_pt || is_offer ||
+                 !PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT))
+            {
+                new_pt = codec_to_pt;
+            }
+
+            /* We need a new PT number and haven't got one,
+             * find the first unused one.
+             */
+            if (need_new_pt && new_pt == 0) {
+                new_pt = find_new_pt(&neg->pt_to_codec[i], pt_used,
+                                     &codec, codec_idx);
+            }
+
+            if (new_pt != 0 && new_pt != pt) {
+                rewrite_pt2(neg->pool_active, (pj_str_t *)&attr->value,
+                            pt, new_pt);
+            } else {
+                new_pt = pt;
+            }
+
+            /* Mark the PT number as used and keep track of the change
+             * from old to new PT number.
+             */
+            pt_used[new_pt - START_DYNAMIC_PT] = PJ_TRUE;
+            pt_change[pt - START_DYNAMIC_PT] = new_pt;
+
+            /* Update the mapping. */
+            neg->pt_to_codec[i][new_pt - START_DYNAMIC_PT] = codec_idx;
+            if (codec_idx != UNKNOWN_CODEC)
+                neg->codec_to_pt[i][codec_idx] = new_pt;
+        }
+
+        /* We don't need to modify SDP if we only want to update
+         * the mapping.
+         */
+        if (update_only) continue;
+
+        /* Modify fmtp */
+        for (j = 0; j < sdp_m->attr_count; ++j) {
+            const pjmedia_sdp_attr *attr;
+            pjmedia_sdp_fmtp fmtp;
+            unsigned pt, new_pt = 0;
+
+            attr = sdp_m->attr[j];
+            if (pj_strcmp2(&attr->name, "fmtp") != 0)
+                continue;
+            if (pjmedia_sdp_attr_get_fmtp(attr, &fmtp) != PJ_SUCCESS)
+                continue;
+
+            /* We only need to handle mapping for dynamic PT */
+            pt = pj_strtoul(&fmtp.fmt);
+            if (pt < START_DYNAMIC_PT)
+                continue;
+
+            new_pt = pt_change[pt - START_DYNAMIC_PT];
+            /* No PT change */
+            if (new_pt == 0 || new_pt == pt)
+                continue;
+
+            rewrite_pt2(neg->pool_active, (pj_str_t *)&attr->value,
+                        pt, new_pt);
+        }
+
+        /* Modify format list */
+        for (j = 0; j < sdp_m->desc.fmt_count; ++j) {
+            unsigned pt, new_pt = 0;
+
+            pt = pj_strtoul(&sdp_m->desc.fmt[j]);
+            if (pt < START_DYNAMIC_PT)
+                 continue;
+
+            new_pt = pt_change[pt - START_DYNAMIC_PT];
+            /* No PT change */
+            if (new_pt == 0 || new_pt == pt)
+                continue;
+
+            rewrite_pt2(neg->pool_active, &sdp_m->desc.fmt[j],
+                        pt, new_pt);
+        }
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+
 /* Cancel offer */
 PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
 {
@@ -1601,6 +1972,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     /* Must have remote offer. */
     PJ_ASSERT_RETURN(neg->neg_remote_sdp, PJ_EBUG);
 
+#if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
+    /* Update PT mapping based on remote SDP as well. */
+    assign_pt_and_update_map(pool, neg, neg->neg_remote_sdp,
+                             !neg->has_remote_answer, PJ_TRUE);
+#endif
+
     if (neg->has_remote_answer) {
         pjmedia_sdp_session *active;
         status = process_answer(pool, neg->neg_local_sdp, neg->neg_remote_sdp,
@@ -1625,6 +2002,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
                                neg->neg_local_sdp, neg->neg_remote_sdp,
                                &answer);
         if (status == PJ_SUCCESS) {
+            /* Assign PT numbers for our answer and update the mapping. */
+            assign_pt_and_update_map(pool, neg, answer, PJ_FALSE, PJ_FALSE);
+
             if (neg->last_sent)
                 answer->origin.version = neg->last_sent->origin.version;
 
