@@ -3013,6 +3013,19 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
         sdp->bandw[sdp->bandw_count++] = b;
     }
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    if (acc->cfg.enable_rtcp_xr) {
+        pjmedia_sdp_attr *a;
+        const char *STR_RTCP_XR = "rtcp-xr";
+        /* Currently we don't support pkt-loss-rle pkt-dup-rle pkt-rcpt-times
+         */
+        const pj_str_t value = pj_str("rcvr-rtt stat-summary voip-metrics");
+
+        a = pjmedia_sdp_attr_create(pool, STR_RTCP_XR, &value);
+        pjmedia_sdp_attr_add(&sdp->attr_count, sdp->attr, a);
+    }
+#endif
+
 #if DISABLED_FOR_TICKET_1185 && defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* Check if SRTP is in optional mode and configured to use duplicated
      * media, i.e: secured and unsecured version, in the SDP offer.
