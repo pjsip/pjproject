@@ -1271,6 +1271,8 @@ static pj_status_t socketpair_imp(int family,
 #if !defined(SOCK_CLOEXEC)
     if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())
         type &= ~pj_SOCK_CLOEXEC();
+#else
+    PJ_UNUSED_ARG(type0);
 #endif
 
     /* listen */

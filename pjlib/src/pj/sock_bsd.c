@@ -564,6 +564,8 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 #if !defined(SOCK_CLOEXEC)
     if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())
         type &= ~pj_SOCK_CLOEXEC();
+#else
+    PJ_UNUSED_ARG(type0);
 #endif
 
     *sock = socket(af, type, proto);
