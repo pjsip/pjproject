@@ -879,6 +879,20 @@ void Call::vidSetStream(pjsua_call_vid_strm_op op,
 #endif
 }
 
+void Call::vidStreamModifyCodecParam(int med_idx, const VidCodecParam &param)
+                                     PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pjmedia_vid_codec_param prm = param.toPj();
+    PJSUA2_CHECK_EXPR( pjsua_call_vid_stream_modify_codec_param(id, med_idx,
+                                                                &prm) );
+#else
+    PJ_UNUSED_ARG(med_idx);
+    PJ_UNUSED_ARG(param);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
 void Call::audStreamModifyCodecParam(int med_idx, const CodecParam &param)
                                      PJSUA2_THROW(Error)
 {

@@ -573,6 +573,11 @@ static OSStatus create_encoder(vtool_codec_data *vtool_data)
 
     VTCompressionSessionPrepareToEncodeFrames(vtool_data->enc);
 
+    PJ_LOG(4, (THIS_FILE, "Video Toolbox encoder bitrate initialized to "
+                          "%d avg bps and %d max bps",
+                          param->enc_fmt.det.vid.avg_bps,
+                          param->enc_fmt.det.vid.max_bps));
+
     return ret;
 }
 
@@ -737,10 +742,36 @@ static pj_status_t vtool_codec_close(pjmedia_vid_codec *codec)
 static pj_status_t vtool_codec_modify(pjmedia_vid_codec *codec,
                                       const pjmedia_vid_codec_param *param)
 {
+    struct vtool_codec_data *vtool_data;
+    OSStatus ret;
+
     PJ_ASSERT_RETURN(codec && param, PJ_EINVAL);
-    PJ_UNUSED_ARG(codec);
-    PJ_UNUSED_ARG(param);
-    return PJ_EINVALIDOP;
+
+    vtool_data = (vtool_codec_data*) codec->codec_data;
+
+    SET_PROPERTY(vtool_data->enc,
+                 kVTCompressionPropertyKey_AverageBitRate,
+                 (__bridge CFTypeRef)@(param->enc_fmt.det.vid.avg_bps));
+    if (ret != noErr)
+        return PJMEDIA_CODEC_EUNSUP;
+
+    vtool_data->prm->enc_fmt.det.vid.avg_bps = param->enc_fmt.det.vid.avg_bps;
+
+    SET_PROPERTY(vtool_data->enc,
+                 kVTCompressionPropertyKey_DataRateLimits,
+                 ((__bridge CFArrayRef) // [Bytes, second]
+                 @[@(param->enc_fmt.det.vid.max_bps >> 3), @(1)]));
+    if (ret == noErr) {
+        vtool_data->prm->enc_fmt.det.vid.max_bps =
+            param->enc_fmt.det.vid.max_bps;
+
+        PJ_LOG(4, (THIS_FILE, "Video Toolbox encoder bitrate is modified to "
+                              "%d avg bps and %d max bps",
+                              param->enc_fmt.det.vid.avg_bps,
+                              param->enc_fmt.det.vid.max_bps));
+    }
+
+    return PJ_SUCCESS;
 }
 
 static pj_status_t vtool_codec_get_param(pjmedia_vid_codec *codec,
@@ -1127,7 +1158,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
     const int code_size = PJ_ARRAY_SIZE(start_code);
     pj_bool_t has_frame = PJ_FALSE;
     unsigned buf_pos, whole_len = 0;
-    unsigned i, frm_cnt;
+    unsigned i;
     pj_status_t status = PJ_SUCCESS;
     pj_bool_t decode_whole = DECODE_WHOLE;
     OSStatus ret;
@@ -1198,7 +1229,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
      * Step 2: parse the individual NAL and give to decoder
      */
     buf_pos = 0;
-    for ( frm_cnt=0; ; ++frm_cnt) {
+    while (1) {
         uint32_t frm_size, nalu_type, data_length;
         unsigned char *start;
 

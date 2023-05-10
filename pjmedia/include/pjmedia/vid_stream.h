@@ -391,6 +391,24 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream);
 
 
 /**
+ * Modify the video stream's codec parameter after the codec is opened.
+ * Note that not all codec backends support modifying parameters during
+ * runtime and only certain parameters can be changed.
+ *
+ * Currently, only Video Toolbox and OpenH264 backends support runtime
+ * adjustment of encoding bitrate (avg_bps and max_bps).
+ *
+ * @param stream        The video stream.
+ * @param param         The new codec parameter.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_vid_stream_modify_codec_param(pjmedia_vid_stream *stream,
+                                      const pjmedia_vid_codec_param *param);
+
+
+/**
  * Query if the stream is started on the specified direction.
  *
  * @param stream        The video stream.
