@@ -261,14 +261,21 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
         if (status != PJ_SUCCESS) {
             /* Handshake failed in accepting, destroy our self silently. */
 
-            char buf[PJ_INET6_ADDRSTRLEN+10];
+            char buf1[PJ_INET6_ADDRSTRLEN+10];
+            char buf2[PJ_INET6_ADDRSTRLEN+10];
 
-            if (pj_sockaddr_has_addr(&ssock->rem_addr)) {
-                PJ_PERROR(3,(ssock->pool->obj_name, status,
-                          "Handshake failed in accepting %s",
-                          pj_sockaddr_print(&ssock->rem_addr, buf,
-                                            sizeof(buf), 3)));
-            }
+            if (pj_sockaddr_has_addr(&ssock->local_addr))
+                pj_sockaddr_print(&ssock->local_addr, buf1, sizeof(buf1), 3);
+            else
+                pj_ansi_snprintf(buf1, sizeof(buf1), "(unknown)");
+
+            if (pj_sockaddr_has_addr(&ssock->rem_addr))
+                pj_sockaddr_print(&ssock->rem_addr, buf2, sizeof(buf2), 3);
+            else
+                pj_ansi_snprintf(buf2, sizeof(buf2), "(unknown)");
+
+            PJ_PERROR(3,(ssock->pool->obj_name, status,
+                      "Handshake failed on %s in accepting %s", buf1, buf2));
 
             if (ssock->param.cb.on_accept_complete2) {
                 (*ssock->param.cb.on_accept_complete2) 
@@ -357,6 +364,23 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
          * reconnect in the callback.
          */
         if (status != PJ_SUCCESS) {
+            char buf1[PJ_INET6_ADDRSTRLEN+10];
+            char buf2[PJ_INET6_ADDRSTRLEN+10];
+
+            if (pj_sockaddr_has_addr(&ssock->local_addr))
+                pj_sockaddr_print(&ssock->local_addr, buf1, sizeof(buf1), 3);
+            else
+                pj_ansi_snprintf(buf1, sizeof(buf1), "(unknown)");
+
+            if (pj_sockaddr_has_addr(&ssock->rem_addr))
+                pj_sockaddr_print(&ssock->rem_addr, buf2, sizeof(buf2), 3);
+            else
+                pj_ansi_snprintf(buf2, sizeof(buf2), "(unknown)");
+
+            PJ_PERROR(3,(ssock->pool->obj_name, status,
+                      "Handshake failed on %s in connecting to %s",
+                      buf1, buf2));
+
             /* Server disconnected us, possibly due to SSL nego failure */
             ssl_reset_sock_state(ssock);
         }
