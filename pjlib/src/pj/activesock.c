@@ -502,6 +502,13 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
             if (asock->read_type == TYPE_RECV && asock->cb.on_data_read) {
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 PJ_SUCCESS, &remainder);
+                PJ_ASSERT_ON_FAIL(
+                    !asock->stream_oriented || remainder <= r->size, {
+                        PJ_LOG(2, ("",
+                                   "App bug! Invalid remainder length from "
+                                   "activesock on_data_read()."));
+                        remainder = 0;
+                    });
             } else if (asock->read_type == TYPE_RECV_FROM && 
                        asock->cb.on_data_recvfrom) 
             {
@@ -571,6 +578,13 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
                 //                              r->size, status, &remainder);
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 status, &remainder);
+                PJ_ASSERT_ON_FAIL(
+                    !asock->stream_oriented || remainder <= r->size, {
+                        PJ_LOG(2, ("",
+                                   "App bug! Invalid remainder length from "
+                                   "activesock on_data_read()."));
+                        remainder = 0;
+                    });
 
             } else if (asock->read_type == TYPE_RECV_FROM && 
                        asock->cb.on_data_recvfrom) 
@@ -605,16 +619,6 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
             } else {
                 r->size = 0;
             }
-        }
-
-        /* Check remaining buffer size to avoid buffer overflow.
-         * For tcp, if app error set the 'remainder' (r->size) > max_size,
-         * it will lead to buffer overflow error when call pj_ioqueue_recv().
-         */
-        if (asock->stream_oriented && r->size > r->max_size) {
-            PJ_LOG(1, ("", "Buffer remaining size is too big! %lu > %u",
-                       r->size, r->max_size));
-            PJ_ASSERT_ON_FAIL(r->size <= r->max_size, r->size = 0);
         }
 
         /* Read next data. We limit ourselves to processing max_loop immediate
