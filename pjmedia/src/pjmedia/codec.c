@@ -85,8 +85,8 @@ void pjmedia_codec_mgr_insert_codec(pj_pool_t *pool, pj_str_t dyn_codecs[],
     }
 }
 
-#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
-            PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+#if PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0 || \
+    PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP != 0
 
 static void add_tel_event_clockrate(pjmedia_codec_mgr *mgr,
                                      unsigned clock_rate)
@@ -98,7 +98,8 @@ static void add_tel_event_clockrate(pjmedia_codec_mgr *mgr,
     if (mgr->dyn_codecs_cnt >= PJ_ARRAY_SIZE(mgr->dyn_codecs))
         return;
 
-#if !PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES
+#if !PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES &&  \
+    PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP == 0
     if (mgr->televent_num != 0)
         return;
 
@@ -183,6 +184,19 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr,
     status = pj_mutex_create_recursive(mgr->pool, "codec-mgr", &mgr->mutex);
     if (status != PJ_SUCCESS)
         return status;
+
+#if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP != 0
+    {
+        /* If we need to keep track of remote PT, we have to add all telephone
+         * events which can potentially be offered by remote.
+         */
+        add_tel_event_clockrate(mgr, 8000);
+        add_tel_event_clockrate(mgr, 16000);
+        add_tel_event_clockrate(mgr, 32000);
+        add_tel_event_clockrate(mgr, 44100);
+        add_tel_event_clockrate(mgr, 48000);
+    }
+#endif
 
     if (!def_codec_mgr)
         def_codec_mgr = mgr;
@@ -288,12 +302,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
 
             pjmedia_codec_mgr_insert_codec(mgr->pool, mgr->dyn_codecs,
                                            &mgr->dyn_codecs_cnt, &codec_id);
-#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
-            PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
-            add_tel_event_clockrate(mgr, info[i].clock_rate);
-#endif
         }
 
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+            PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+        /* Add telephone event */
+        add_tel_event_clockrate(mgr, info[i].clock_rate);
+#endif
     }
 
     /* Update count */
