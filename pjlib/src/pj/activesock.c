@@ -607,6 +607,16 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
             }
         }
 
+        /* Check remaining buffer size to avoid buffer overflow.
+         * For tcp, if app error set the 'remainder' (r->size) > max_size,
+         * it will lead to buffer overflow error when call pj_ioqueue_recv().
+         */
+        if (asock->stream_oriented && r->size > r->max_size) {
+            PJ_LOG(1, ("", "Buffer remaining size is too big! %lu > %u",
+                       r->size, r->max_size));
+            PJ_ASSERT_ON_FAIL(r->size <= r->max_size, r->size = 0);
+        }
+
         /* Read next data. We limit ourselves to processing max_loop immediate
          * data, so when the loop counter has exceeded this value, force the
          * read()/recvfrom() to return pending operation to allow the program
