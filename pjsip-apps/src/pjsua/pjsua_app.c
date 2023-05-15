@@ -1417,7 +1417,7 @@ static pj_status_t app_init(void)
         pj_pool_release(tmp_pool);
         return status;
     }
-
+    
     /* Initialize our module to handle otherwise unhandled request */
     status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
                                          &mod_default_handler);
