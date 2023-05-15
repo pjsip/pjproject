@@ -1320,10 +1320,9 @@ void VideoPreviewOpParam::fromPj(const pjsua_vid_preview_param &prm)
     this->rendId                    = prm.rend_id;
     this->show                      = PJ2BOOL(prm.show);
     this->windowFlags               = prm.wnd_flags;
-    this->format.id                 = prm.format.id;
-    this->format.type               = prm.format.type;
     this->window.type               = prm.wnd.type;
     this->window.handle.window      = prm.wnd.info.window;
+    this->format.fromPj(prm.format);
 #else
     PJ_UNUSED_ARG(prm);
 #endif
@@ -1337,10 +1336,9 @@ pjsua_vid_preview_param VideoPreviewOpParam::toPj() const
     param.rend_id           = this->rendId;
     param.show              = this->show;
     param.wnd_flags         = this->windowFlags;
-    param.format.id         = this->format.id;
-    param.format.type       = this->format.type;
     param.wnd.type          = this->window.type;
     param.wnd.info.window   = this->window.handle.window;
+    param.format            = this->format.toPj();
 #endif
     return param;
 }

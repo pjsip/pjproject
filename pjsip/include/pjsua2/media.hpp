@@ -1938,9 +1938,14 @@ struct VideoPreviewOpParam {
     unsigned                windowFlags;
 
     /**
-     * Media format. If left unitialized, this parameter will not be used.
+     * Media format video. If left uninitialized, this parameter will not be used and 
+     * the capture device will be opened using PJMEDIA wrapper default format, 
+     * e.g: 
+     * - Android : PJMEDIA_FORMAT_I420 using the first supported size and 15fps
+     * - iOS : PJMEDIA_FORMAT_BGRA using size 352x288 and 15fps
+     * Note that when the preview is already opened, this setting will be ignored.
      */
-    MediaFormat             format;
+    MediaFormatVideo        format;
 
     /**
      * Optional output window to be used to display the video preview.
