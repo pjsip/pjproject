@@ -660,6 +660,17 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_bool_t processed = PJ_FALSE;
 
+    if (pjsip_tsx_detect_merged_requests(rdata)) {
+        PJ_LOG(4, (THIS_FILE, "Merged request detected"));
+
+        /* Respond with 482 (Loop Detected) */
+        pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+                            PJSIP_SC_LOOP_DETECTED, NULL,
+                            NULL, NULL, NULL);
+
+        return PJ_TRUE;
+    }
+
     PJSUA_LOCK();
 
     if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) {
