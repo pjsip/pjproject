@@ -108,6 +108,19 @@ typedef pj_int64_t pj_off_t;
 typedef pj_ssize_t pj_off_t;
 #endif
 
+/**
+ * Generic unsigned integer types.
+ *
+ * This is a 64 bit unsigned integer if the system support it, otherwise
+ * this is a 32 bit unsigned integer.
+ */
+#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+typedef pj_uint64_t pj_uint_t;
+#else
+typedef pj_uint32_t pj_uint_t;
+#endif
+
+
 /* ************************************************************************* */
 /*
  * Data structure types.

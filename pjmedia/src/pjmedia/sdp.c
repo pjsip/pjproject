@@ -912,10 +912,10 @@ static int print_session(const pjmedia_sdp_session *ses,
     pj_memcpy(p, ses->origin.user.ptr, ses->origin.user.slen);
     p += ses->origin.user.slen;
     *p++ = ' ';
-    printed = pj_utoa(ses->origin.id, p);
+    printed = pj_utoa2(ses->origin.id, p);
     p += printed;
     *p++ = ' ';
-    printed = pj_utoa(ses->origin.version, p);
+    printed = pj_utoa2(ses->origin.version, p);
     p += printed;
     *p++ = ' ';
     pj_memcpy(p, ses->origin.net_type.ptr, ses->origin.net_type.slen);
@@ -964,10 +964,10 @@ static int print_session(const pjmedia_sdp_session *ses,
     }
     *p++ = 't';
     *p++ = '=';
-    printed = pj_utoa(ses->time.start, p);
+    printed = pj_utoa2(ses->time.start, p);
     p += printed;
     *p++ = ' ';
-    printed = pj_utoa(ses->time.stop, p);
+    printed = pj_utoa2(ses->time.stop, p);
     p += printed;
     *p++ = '\r';
     *p++ = '\n';
@@ -1022,7 +1022,7 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
                          volatile parse_context *ctx)
 {
     pj_str_t str;
-    unsigned long ul;
+    pj_uint_t ui;
 
     ctx->last_error = PJMEDIA_SDP_EINORIGIN;
 
@@ -1041,20 +1041,20 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
 
     /* id */
     pj_scan_get_until_ch(scanner, ' ', &str);
-    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+    if (pj_strtoul4(&str, &ui, 10) != PJ_SUCCESS){
         on_scanner_error(scanner);
         return;
     }
-    ses->origin.id = (pj_uint32_t)ul;
+    ses->origin.id = (pj_uint_t)ui;
     pj_scan_get_char(scanner);
 
     /* version */
     pj_scan_get_until_ch(scanner, ' ', &str);
-    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+    if (pj_strtoul4(&str, &ui, 10) != PJ_SUCCESS){
         on_scanner_error(scanner);
         return;
     }
-    ses->origin.version = (pj_uint32_t)ul;
+    ses->origin.version = (pj_uint_t)ui;
     pj_scan_get_char(scanner);
 
     /* network-type */
@@ -1077,7 +1077,7 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
                        volatile parse_context *ctx)
 {
     pj_str_t str;
-    unsigned long ul;
+    pj_uint_t ui;
 
     ctx->last_error = PJMEDIA_SDP_EINTIME;
 
@@ -1092,21 +1092,21 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
 
     /* start time */
     pj_scan_get_until_ch(scanner, ' ', &str);
-    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+    if (pj_strtoul4(&str, &ui, 10) != PJ_SUCCESS){
         on_scanner_error(scanner);
         return;
     }
-    ses->time.start = (pj_uint32_t)ul;
+    ses->time.start = (pj_uint_t)ui;
 
     pj_scan_get_char(scanner);
 
     /* stop time */
     pj_scan_get_until_chr(scanner, " \t\r\n", &str);
-    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS){
+    if (pj_strtoul4(&str, &ui, 10) != PJ_SUCCESS){
         on_scanner_error(scanner);
         return;
     }
-    ses->time.stop = (pj_uint32_t)ul;
+    ses->time.stop = (pj_uint_t)ui;
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
