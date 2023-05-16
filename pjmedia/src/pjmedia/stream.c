@@ -2098,9 +2098,9 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
             pjmedia_rtcp_session_setting_default(&setting);
             setting.dec_samples_per_frame =
                 PJMEDIA_SPF(stream->codec_param.info.clock_rate,
-                            stream->dec_ptime,
-                            stream->codec_param.info.channel_cnt) /
-                stream->dec_ptime_denum;
+                            stream->dec_ptime * 1000 /
+                            stream->dec_ptime_denum,
+                            stream->codec_param.info.channel_cnt);
             pjmedia_rtcp_update(&stream->rtcp, &setting);
 
             PJ_LOG(4, (stream->port.info.name.ptr, "codec decode "
