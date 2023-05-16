@@ -723,7 +723,7 @@ PJ_DECL(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
  * been processed.
  *
  * @param str       The input string.
- * @param value     Pointer to a unsigned integer to receive the value.
+ * @param value     Pointer to an unsigned integer to receive the value.
  *                  The value will be a 64 bit unsigned integer if the system
  *                  supports it, otherwise a 32 bit unsigned integer.
  * @param base      Number base to use.
