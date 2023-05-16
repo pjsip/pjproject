@@ -863,7 +863,7 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
     struct accept_op *accept_op = (struct accept_op*) op_key;
 
     PJ_UNUSED_ARG(new_sock);
-printf("here\n");
+
     /* Ignore if we've been shutdown */
     if (asock->shutdown)
         return;
