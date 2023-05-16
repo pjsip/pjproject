@@ -1619,3 +1619,12 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     PJ_UNUSED_ARG(flags);
     return (*main_func)(argc, argv);
 }
+
+/*
+ * Set file descriptor close-on-exec flag
+ */
+PJ_DEF(pj_status_t) pj_set_cloexec_flag(int fd)
+{
+    PJ_UNUSED_ARG(fd);
+    return PJ_ENOTSUP;
+}

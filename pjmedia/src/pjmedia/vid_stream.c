@@ -2364,6 +2364,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream)
 
 
 /*
+ * Modify codec parameter.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_vid_stream_modify_codec_param(pjmedia_vid_stream *stream,
+                                      const pjmedia_vid_codec_param *param)
+{
+    PJ_ASSERT_RETURN(stream && param, PJ_EINVAL);
+
+    return pjmedia_vid_codec_modify(stream->codec, param);
+}
+
+
+/*
  * Check status.
  */
 PJ_DEF(pj_bool_t) pjmedia_vid_stream_is_running(pjmedia_vid_stream *stream,

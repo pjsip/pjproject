@@ -1775,6 +1775,22 @@ public:
                       const CallVidSetStreamParam &param) PJSUA2_THROW(Error);
 
     /**
+     * Modify the video stream's codec parameter after the codec is opened.
+     * Note that not all codec backends support modifying parameters during
+     * runtime and only certain parameters can be changed.
+     *
+     * Currently, only Video Toolbox and OpenH264 backends support runtime
+     * adjustment of encoding bitrate (avg_bps and max_bps).
+     *
+     * @param med_idx       Video stream index.
+     * @param param         The new codec parameter.
+     *
+     * @return              PJ_SUCCESS on success.
+     */
+    void vidStreamModifyCodecParam(int med_idx, const VidCodecParam &param)
+                                   PJSUA2_THROW(Error);
+
+    /**
      * Modify the audio stream's codec parameter after the codec is opened.
      * Note that not all codec parameters can be modified during run-time.
      * Currently, only Opus codec supports changing key codec parameters

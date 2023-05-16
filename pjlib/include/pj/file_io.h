@@ -61,7 +61,8 @@ enum pj_file_access
     PJ_O_WRONLY     = 0x1102,   /**< Open file for writing.             */
     PJ_O_RDWR       = 0x1103,   /**< Open file for reading and writing. 
                                      File will be truncated.            */
-    PJ_O_APPEND     = 0x1108    /**< Append to existing file.           */
+    PJ_O_APPEND     = 0x1108,   /**< Append to existing file.           */
+    PJ_O_CLOEXEC    = 0x1104,   /**< Enable unix close-on-exec flag.    */
 };
 
 /**

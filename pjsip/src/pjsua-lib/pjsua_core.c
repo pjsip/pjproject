@@ -660,6 +660,17 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_bool_t processed = PJ_FALSE;
 
+    if (pjsip_tsx_detect_merged_requests(rdata)) {
+        PJ_LOG(4, (THIS_FILE, "Merged request detected"));
+
+        /* Respond with 482 (Loop Detected) */
+        pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+                            PJSIP_SC_LOOP_DETECTED, NULL,
+                            NULL, NULL, NULL);
+
+        return PJ_TRUE;
+    }
+
     PJSUA_LOCK();
 
     if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) {
@@ -745,7 +756,7 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
 
     /* If output log file is desired, create the file: */
     if (pjsua_var.log_cfg.log_filename.slen) {
-        unsigned flags = PJ_O_WRONLY;
+        unsigned flags = PJ_O_WRONLY | PJ_O_CLOEXEC;
         flags |= pjsua_var.log_cfg.log_file_flags;
         status = pj_file_open(pjsua_var.pool, 
                               pjsua_var.log_cfg.log_filename.ptr,
@@ -2363,7 +2374,7 @@ static pj_status_t create_sip_udp_sock(int af,
     }
 
     /* Create socket */
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "socket() error", status);
         return status;

@@ -268,7 +268,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     }
 
     /* Open file. */
-    status = pj_file_open( pool, filename, PJ_O_RDONLY, &fport->fd);
+    status = pj_file_open(pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC,
+                          &fport->fd);
     if (status != PJ_SUCCESS)
         return status;
 

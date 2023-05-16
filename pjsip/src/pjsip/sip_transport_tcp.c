@@ -1006,7 +1006,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     listener = (struct tcp_listener*)factory;
 
     /* Create socket */
-    status = pj_sock_socket(rem_addr->addr.sa_family, pj_SOCK_STREAM(),
+    status = pj_sock_socket(rem_addr->addr.sa_family,
+                            pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(),
                             0, &sock);
     if (status != PJ_SUCCESS)
         return status;
@@ -1145,6 +1146,9 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
                                 sizeof(addr_buf), 1),
               pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
               sock));
+
+    /* Set close-on-exec flag */
+    pj_set_cloexec_flag((int)sock);
 
     /* Apply QoS, if specified */
     status = pj_sock_apply_qos2(sock, listener->qos_type, 
@@ -1682,7 +1686,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
     af = pjsip_transport_type_get_af(listener->factory.type);
 
     /* Create socket */
-    status = pj_sock_socket(af, pj_SOCK_STREAM(), 0, &sock);
+    status = pj_sock_socket(af, pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 

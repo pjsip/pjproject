@@ -808,6 +808,11 @@ private:
 struct AudioDevInfo
 {
     /**
+     * The device ID
+     */
+    pjmedia_aud_dev_index id;
+
+    /**
      * The device name
      */
     string name;
@@ -1938,9 +1943,14 @@ struct VideoPreviewOpParam {
     unsigned                windowFlags;
 
     /**
-     * Media format. If left unitialized, this parameter will not be used.
+     * Media format video. If left uninitialized, this parameter will not be used and 
+     * the capture device will be opened using PJMEDIA wrapper default format, 
+     * e.g: 
+     * - Android : PJMEDIA_FORMAT_I420 using the first supported size and 15fps
+     * - iOS : PJMEDIA_FORMAT_BGRA using size 352x288 and 15fps
+     * Note that when the preview is already opened, this setting will be ignored.
      */
-    MediaFormat             format;
+    MediaFormatVideo        format;
 
     /**
      * Optional output window to be used to display the video preview.
@@ -2434,8 +2444,12 @@ struct CodecParamInfo
     unsigned    maxBps;                 /**< Maximum bandwidth in bits/sec  */
     unsigned    maxRxFrameSize;         /**< Maximum frame size             */
     unsigned    frameLen;               /**< Decoder frame ptime in msec.   */
+    unsigned    frameLenDenum;          /**< Decoder frame ptime denum, or
+                                             zero if ptime is integer.      */
     unsigned    encFrameLen;            /**< Encoder ptime, or zero if it's
                                              equal to decoder ptime.        */
+    unsigned    encFrameLenDenum;       /**< Encoder ptime denum, or zero
+                                             if ptime is integer.           */
     unsigned    pcmBitsPerSample;       /**< Bits/sample in the PCM side    */
     unsigned    pt;                     /**< Payload type.                  */
     pjmedia_format_id fmtId;            /**< Source format, it's format of
@@ -2452,7 +2466,9 @@ public:
       maxBps(0),
       maxRxFrameSize(0),
       frameLen(0),
+      frameLenDenum(0),
       encFrameLen(0),
+      encFrameLenDenum(0),
       pcmBitsPerSample(0),
       pt(0),
       fmtId(PJMEDIA_FORMAT_L16)
@@ -2506,6 +2522,7 @@ struct CodecOpusConfig
     unsigned   sample_rate; /**< Sample rate in Hz.                     */
     unsigned   channel_cnt; /**< Number of channels.                    */
     unsigned   frm_ptime;   /**< Frame time in msec.                    */
+    unsigned   frm_ptime_denum;/**< Frame time denumerator.             */
     unsigned   bit_rate;    /**< Encoder bit rate in bps.               */
     unsigned   packet_loss; /**< Encoder's expected packet loss pct.    */
     unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/

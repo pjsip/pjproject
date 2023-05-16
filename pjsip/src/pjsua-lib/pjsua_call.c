@@ -1048,8 +1048,11 @@ static void update_remote_nat_type(pjsua_call *call,
     const pjmedia_sdp_attr *xnat;
 
     xnat = pjmedia_sdp_attr_find2(sdp->attr_count, sdp->attr, "X-nat", NULL);
-    if (xnat) {
-        call->rem_nat_type = (pj_stun_nat_type) (xnat->value.ptr[0] - '0');
+    if (xnat && xnat->value.slen > 0) {
+        int type = xnat->value.ptr[0] - '0';
+        if (type < 0 || type > PJ_STUN_NAT_TYPE_PORT_RESTRICTED)
+            type = PJ_STUN_NAT_TYPE_UNKNOWN;
+        call->rem_nat_type = (pj_stun_nat_type) type;
     } else {
         call->rem_nat_type = PJ_STUN_NAT_TYPE_UNKNOWN;
     }

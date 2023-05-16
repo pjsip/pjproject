@@ -624,6 +624,7 @@ void ToneGenerator::setDigitMap(const ToneDigitMapVector &digit_map)
 ///////////////////////////////////////////////////////////////////////////////
 void AudioDevInfo::fromPj(const pjmedia_aud_dev_info &dev_info)
 {
+    id = dev_info.id;
     name = dev_info.name;
     inputCount = dev_info.input_count;
     outputCount = dev_info.output_count;
@@ -1320,10 +1321,9 @@ void VideoPreviewOpParam::fromPj(const pjsua_vid_preview_param &prm)
     this->rendId                    = prm.rend_id;
     this->show                      = PJ2BOOL(prm.show);
     this->windowFlags               = prm.wnd_flags;
-    this->format.id                 = prm.format.id;
-    this->format.type               = prm.format.type;
     this->window.type               = prm.wnd.type;
     this->window.handle.window      = prm.wnd.info.window;
+    this->format.fromPj(prm.format);
 #else
     PJ_UNUSED_ARG(prm);
 #endif
@@ -1337,10 +1337,9 @@ pjsua_vid_preview_param VideoPreviewOpParam::toPj() const
     param.rend_id           = this->rendId;
     param.show              = this->show;
     param.wnd_flags         = this->windowFlags;
-    param.format.id         = this->format.id;
-    param.format.type       = this->format.type;
     param.wnd.type          = this->window.type;
     param.wnd.info.window   = this->window.handle.window;
+    param.format            = this->format.toPj();
 #endif
     return param;
 }
@@ -1831,7 +1830,9 @@ void CodecParam::fromPj(const pjmedia_codec_param &param)
     info.maxBps = param.info.max_bps;
     info.maxRxFrameSize = param.info.max_rx_frame_size;
     info.frameLen = param.info.frm_ptime;
+    info.frameLenDenum = param.info.frm_ptime_denum;
     info.encFrameLen = param.info.enc_ptime;
+    info.encFrameLenDenum = param.info.enc_ptime_denum;
     info.pcmBitsPerSample = param.info.pcm_bits_per_sample;
     info.pt = param.info.pt;
     info.fmtId = param.info.fmt_id;
@@ -1861,7 +1862,9 @@ pjmedia_codec_param CodecParam::toPj() const
     param.info.max_bps= (pj_uint32_t)info.maxBps;
     param.info.max_rx_frame_size = info.maxRxFrameSize;
     param.info.frm_ptime = (pj_uint16_t)info.frameLen;
+    param.info.frm_ptime_denum = (pj_uint16_t)info.frameLenDenum;
     param.info.enc_ptime = (pj_uint16_t)info.encFrameLen;
+    param.info.enc_ptime_denum = (pj_uint16_t)info.encFrameLenDenum;
     param.info.pcm_bits_per_sample = (pj_uint8_t)info.pcmBitsPerSample;
     param.info.pt = (pj_uint8_t)info.pt;
     param.info.fmt_id = info.fmtId;
@@ -1888,6 +1891,7 @@ pjmedia_codec_opus_config CodecOpusConfig::toPj() const
     config.sample_rate = sample_rate;
     config.channel_cnt = channel_cnt;
     config.frm_ptime = frm_ptime;
+    config.frm_ptime_denum = frm_ptime_denum;
     config.bit_rate = bit_rate;
     config.packet_loss = packet_loss;
     config.complexity = complexity;
@@ -1901,6 +1905,7 @@ void CodecOpusConfig::fromPj(const pjmedia_codec_opus_config &config)
     sample_rate = config.sample_rate;
     channel_cnt = config.channel_cnt;
     frm_ptime = config.frm_ptime;
+    frm_ptime_denum = config.frm_ptime_denum;
     bit_rate = config.bit_rate;
     packet_loss = config.packet_loss;
     complexity = config.complexity;

@@ -188,7 +188,7 @@ PJ_DEF(pj_status_t) webrtc_aec3_cancel_echo(void *state,
     PJ_ASSERT_RETURN(echo && rec_frm && play_frm, PJ_EINVAL);
 
     for (i = 0; i < echo->samples_per_frame;
-         i += echo->frame_length)
+         i += (echo->frame_length * echo->channel_count))
     {
         StreamConfig scfg(echo->clock_rate, echo->channel_count);
 
