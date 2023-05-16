@@ -174,7 +174,8 @@ static pj_status_t get_local_interface(const pj_sockaddr *server,
     int addr_len;
     pj_status_t status;
 
-    status = pj_sock_socket(server->addr.sa_family, pj_SOCK_DGRAM(),
+    status = pj_sock_socket(server->addr.sa_family,
+                            pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(),
                             0, &sock);
     if (status != PJ_SUCCESS)
         return status;
@@ -274,7 +275,7 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
      * Initialize socket.
      */
     af = server->addr.sa_family;
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sess->sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sess->sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 

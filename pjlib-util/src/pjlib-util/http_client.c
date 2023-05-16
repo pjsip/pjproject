@@ -1042,7 +1042,8 @@ static pj_status_t start_http_req(pj_http_req *http_req,
         http_req->resolved = PJ_TRUE;
     }
 
-    status = pj_sock_socket(http_req->param.addr_family, pj_SOCK_STREAM(), 
+    status = pj_sock_socket(http_req->param.addr_family,
+                            pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(),
                             0, &sock);
     if (status != PJ_SUCCESS)
         goto on_return; // error creating socket

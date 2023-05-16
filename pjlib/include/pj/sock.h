@@ -140,6 +140,9 @@ extern const pj_uint16_t PJ_SOCK_RAW;
 /** Reliably-delivered messages.  @see pj_SOCK_RDM() */
 extern const pj_uint16_t PJ_SOCK_RDM;
 
+/** The close-on-exec flag. @see pj_SOCK_CLOEXEC() */
+extern const int PJ_SOCK_CLOEXEC;
+
 
 /*
  * Accessor functions for various constants. These functions are provided
@@ -155,6 +158,8 @@ extern const pj_uint16_t PJ_SOCK_RDM;
     PJ_DECL(int) pj_SOCK_RAW(void);
     /** Get #PJ_SOCK_RDM constant */
     PJ_DECL(int) pj_SOCK_RDM(void);
+    /** Get #PJ_SOCK_CLOEXEC constant */
+    PJ_DECL(int) pj_SOCK_CLOEXEC(void);
 #else
     /** Get #PJ_SOCK_STREAM constant */
 #   define pj_SOCK_STREAM() PJ_SOCK_STREAM
@@ -164,6 +169,8 @@ extern const pj_uint16_t PJ_SOCK_RDM;
 #   define pj_SOCK_RAW()    PJ_SOCK_RAW
     /** Get #PJ_SOCK_RDM constant */
 #   define pj_SOCK_RDM()    PJ_SOCK_RDM
+    /** Get #PJ_SOCK_CLOEXEC constant */
+#   define pj_SOCK_CLOEXEC() PJ_SOCK_CLOEXEC
 #endif
 
 

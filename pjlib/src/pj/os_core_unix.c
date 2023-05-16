@@ -51,6 +51,10 @@
 #endif
 #include <pj/config.h>
 
+#if defined(PJ_HAS_FCNTL_H) && PJ_HAS_FCNTL_H != 0
+#  include <fcntl.h>
+#endif
+
 #define THIS_FILE   "os_core_unix.c"
 
 #define SIGNATURE1  0xDEAFBEEF
@@ -2161,3 +2165,17 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     return (*main_func)(argc, argv);
 }
 #endif
+
+/*
+ * Set file descriptor close-on-exec flag
+ */
+PJ_DEF(pj_status_t) pj_set_cloexec_flag(int fd)
+{
+#if defined(FD_CLOEXEC)
+    int flags = fcntl(fd, F_GETFD);
+    if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1) {
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+    }
+#endif
+    return PJ_SUCCESS;
+}

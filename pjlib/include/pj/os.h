@@ -1519,6 +1519,17 @@ PJ_DECL(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
 pj_status_t pj_thread_init(void);
 
 
+/* **************************************************************************/
+/**
+ * Set file descriptor close-on-exec flag
+ *
+ * @param fd    The file descriptor
+ * @return      on success, PJ_SUCCESS
+ *
+ */
+PJ_DECL(pj_status_t) pj_set_cloexec_flag(int fd);
+
+
 PJ_END_DECL
 
 #endif  /* __PJ_OS_H__ */

@@ -1229,6 +1229,7 @@ static void turn_on_state(pj_turn_session *sess,
             sock_type = pj_SOCK_DGRAM();
         else
             sock_type = pj_SOCK_STREAM();
+        sock_type |= pj_SOCK_CLOEXEC();
 
         cfg_bind_addr = &turn_sock->setting.bound_addr;
         max_bind_retry = MAX_BIND_RETRY;
@@ -1672,7 +1673,7 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
     new_conn->state = DATACONN_STATE_INITSOCK;
 
     /* Init socket */
-    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM(), 0, &sock);
+    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS)
         goto on_return;
 
@@ -1906,7 +1907,7 @@ static void turn_on_connect_complete(pj_turn_session *sess,
     new_conn->state = DATACONN_STATE_INITSOCK;
 
     /* Init socket */
-    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM(), 0, &sock);
+    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS)
         goto on_return;
 

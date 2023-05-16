@@ -196,6 +196,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
         return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
 
+    /* set close-on-exec flag */
+    pj_set_cloexec_flag(ioqueue->kfd);
+
     PJ_LOG(4,
            ("pjlib", "%s I/O Queue created (%p)", pj_ioqueue_name(), ioqueue));
 
