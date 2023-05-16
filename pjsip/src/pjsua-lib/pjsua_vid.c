@@ -1539,8 +1539,11 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
 
     rend_id = prm->rend_id;
 
-    if (prm->format.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO)
+    if (prm->format.type == PJMEDIA_TYPE_VIDEO &&
+        prm->format.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO)
+    {
         fmt = &prm->format;
+    }
     status = create_vid_win(PJSUA_WND_TYPE_PREVIEW, fmt, rend_id, id,
                             prm->show, prm->wnd_flags,
                             (prm->wnd.info.window? &prm->wnd: NULL), &wid);
