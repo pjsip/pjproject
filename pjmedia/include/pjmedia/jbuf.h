@@ -170,13 +170,27 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
 /**
  * Set the jitter buffer's frame duration.
  *
- * @param jb            The jitter buffer
- * @param ptime         Frame duration.
+ * @param jb            The jitter buffer.
+ * @param ptime         Frame ptime.
  *
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_jbuf_set_ptime( pjmedia_jbuf *jb,
                                              unsigned ptime);
+
+
+/**
+ * Set the jitter buffer's frame duration.
+ *
+ * @param jb            The jitter buffer.
+ * @param ptime         Frame ptime.
+ * @param ptime_denum   Frame ptime denumerator.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_set_ptime2(pjmedia_jbuf *jb,
+                                             unsigned ptime,
+                                             unsigned ptime_denum);
 
 
 /**

@@ -2444,8 +2444,12 @@ struct CodecParamInfo
     unsigned    maxBps;                 /**< Maximum bandwidth in bits/sec  */
     unsigned    maxRxFrameSize;         /**< Maximum frame size             */
     unsigned    frameLen;               /**< Decoder frame ptime in msec.   */
+    unsigned    frameLenDenum;          /**< Decoder frame ptime denum, or
+                                             zero if ptime is integer.      */
     unsigned    encFrameLen;            /**< Encoder ptime, or zero if it's
                                              equal to decoder ptime.        */
+    unsigned    encFrameLenDenum;       /**< Encoder ptime denum, or zero
+                                             if ptime is integer.           */
     unsigned    pcmBitsPerSample;       /**< Bits/sample in the PCM side    */
     unsigned    pt;                     /**< Payload type.                  */
     pjmedia_format_id fmtId;            /**< Source format, it's format of
@@ -2462,7 +2466,9 @@ public:
       maxBps(0),
       maxRxFrameSize(0),
       frameLen(0),
+      frameLenDenum(0),
       encFrameLen(0),
+      encFrameLenDenum(0),
       pcmBitsPerSample(0),
       pt(0),
       fmtId(PJMEDIA_FORMAT_L16)
@@ -2516,6 +2522,7 @@ struct CodecOpusConfig
     unsigned   sample_rate; /**< Sample rate in Hz.                     */
     unsigned   channel_cnt; /**< Number of channels.                    */
     unsigned   frm_ptime;   /**< Frame time in msec.                    */
+    unsigned   frm_ptime_denum;/**< Frame time denumerator.             */
     unsigned   bit_rate;    /**< Encoder bit rate in bps.               */
     unsigned   packet_loss; /**< Encoder's expected packet loss pct.    */
     unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/

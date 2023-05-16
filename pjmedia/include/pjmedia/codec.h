@@ -270,6 +270,9 @@ typedef struct pjmedia_codec_param
     /**
      * The "info" part of codec param describes the capability of the codec,
      * and is recommended not to be modified unless necessary.
+     * Note that application must be ready to handle cases when ptime
+     * denumerators are zero, since most codecs that only support integer
+     * ptime will leave these fields untouched.
      */
     struct {
        unsigned    clock_rate;          /**< Sampling rate in Hz            */
@@ -278,8 +281,12 @@ typedef struct pjmedia_codec_param
        pj_uint32_t max_bps;             /**< Maximum bandwidth in bits/sec  */
        unsigned    max_rx_frame_size;   /**< Maximum frame size             */
        pj_uint16_t frm_ptime;           /**< Decoder frame ptime in msec.   */
+       pj_uint8_t  frm_ptime_denum;     /**< Decoder frame ptime denum, or
+                                             zero if ptime is integer.      */
        pj_uint16_t enc_ptime;           /**< Encoder ptime, or zero if it's
                                              equal to decoder ptime.        */
+       pj_uint8_t  enc_ptime_denum;     /**< Encoder frame ptime denum, or
+                                             zero if ptime is integer.      */
        pj_uint8_t  pcm_bits_per_sample; /**< Bits/sample in the PCM side    */
        pj_uint8_t  pt;                  /**< Payload type.                  */
        pjmedia_format_id fmt_id;        /**< Source format, it's format of
@@ -355,8 +362,8 @@ typedef struct pjmedia_codec_op
     /** 
      * Open the codec and initialize with the specified parameter.
      * Upon successful initialization, the codec may modify the parameter
-     * and fills in the unspecified values (such as enc_ptime, when
-     * encoder ptime is different than decoder ptime).
+     * and fills in the unspecified values (such as enc_ptime/enc_ptime_denum,
+     * when encoder ptime is different than decoder ptime).
      *
      * Application should call #pjmedia_codec_open() instead of 
      * calling this function directly.
@@ -404,7 +411,7 @@ typedef struct pjmedia_codec_op
      * Instruct the codec to inspect the specified payload/packet and
      * split the packet into individual base frames. Each output frames will
      * have ptime that is equal to basic frame ptime (i.e. the value of
-     * info.frm_ptime in #pjmedia_codec_param).
+     * info.frm_ptime/info.frm_ptime_denum in #pjmedia_codec_param).
      *
      * Application should call #pjmedia_codec_parse() instead of 
      * calling this function directly.
@@ -431,7 +438,8 @@ typedef struct pjmedia_codec_op
     /** 
      * Instruct the codec to encode the specified input frame. The input
      * PCM samples MUST have ptime that is multiplication of base frame
-     * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+     * ptime (i.e. the value of info.frm_ptime/info.frm_ptime_denum in
+     * #pjmedia_codec_param).
      *
      * Application should call #pjmedia_codec_encode() instead of 
      * calling this function directly.
@@ -451,7 +459,8 @@ typedef struct pjmedia_codec_op
     /** 
      * Instruct the codec to decode the specified input frame. The input
      * frame MUST have ptime that is exactly equal to base frame
-     * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+     * ptime (i.e. the value of info.frm_ptime/info.frm_ptime_denum in
+     * #pjmedia_codec_param).
      * Application can achieve this by parsing the packet into base
      * frames before decoding each frame.
      *
@@ -1037,7 +1046,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_modify(pjmedia_codec *codec,
  * Instruct the codec to inspect the specified payload/packet and
  * split the packet into individual base frames. Each output frames will
  * have ptime that is equal to basic frame ptime (i.e. the value of
- * info.frm_ptime in #pjmedia_codec_param).
+ * info.frm_ptime/info.frm_ptime_denum in #pjmedia_codec_param).
  *
  * @param codec     The codec instance
  * @param pkt       The input packet.
@@ -1066,7 +1075,8 @@ PJ_INLINE(pj_status_t) pjmedia_codec_parse( pjmedia_codec *codec,
 /** 
  * Instruct the codec to encode the specified input frame. The input
  * PCM samples MUST have ptime that is multiplication of base frame
- * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+ * ptime (i.e. the value of info.frm_ptime/info.frm_ptime_denum in
+ * #pjmedia_codec_param).
  *
  * @param codec         The codec instance.
  * @param input         The input frame.
@@ -1088,7 +1098,8 @@ PJ_INLINE(pj_status_t) pjmedia_codec_encode(
 /** 
  * Instruct the codec to decode the specified input frame. The input
  * frame MUST have ptime that is exactly equal to base frame
- * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+ * ptime (i.e. the value of info.frm_ptime/info.frm_ptime_denum in
+ * #pjmedia_codec_param).
  * Application can achieve this by parsing the packet into base
  * frames before decoding each frame.
  *
