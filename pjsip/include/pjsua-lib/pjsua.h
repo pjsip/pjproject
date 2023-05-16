@@ -6146,6 +6146,27 @@ PJ_DECL(pj_status_t) pjsua_call_set_vid_strm (
                                 pjsua_call_vid_strm_op op,
                                 const pjsua_call_vid_strm_op_param *param);
 
+
+/**
+ * Modify the video stream's codec parameter after the codec is opened.
+ * Note that not all codec backends support modifying parameters during
+ * runtime and only certain parameters can be changed.
+ *
+ * Currently, only Video Toolbox and OpenH264 backends support runtime
+ * adjustment of encoding bitrate (avg_bps and max_bps).
+ *
+ * @param call_id       Call identification.
+ * @param med_idx       Video stream index.
+ * @param param         The new codec parameter.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjsua_call_vid_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+                                         const pjmedia_vid_codec_param *param);
+
+
 /**
  * Modify the audio stream's codec parameter after the codec is opened.
  * Note that not all codec parameters can be modified during run-time.

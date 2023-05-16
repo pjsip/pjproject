@@ -2719,6 +2719,43 @@ on_return:
 
 
 /*
+ * Modify video stream's codec parameters.
+ */
+PJ_DEF(pj_status_t)
+pjsua_call_vid_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+                                         const pjmedia_vid_codec_param *param)
+{
+    pjsua_call *call;
+    pjsua_call_media *call_med;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls &&
+                     med_idx>=0 &&
+                     med_idx<(int)pjsua_var.calls[call_id].med_cnt && param,
+                     PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    /* Verify media index */
+    call = &pjsua_var.calls[call_id];
+
+    /* Verify if the media is audio */
+    call_med = &call->media[med_idx];
+    if (call_med->type != PJMEDIA_TYPE_VIDEO || !call_med->strm.v.stream) {
+        PJSUA_UNLOCK();
+        return PJ_EINVALIDOP;
+    }
+
+    status = pjmedia_vid_stream_modify_codec_param(call_med->strm.v.stream,
+                                                   param);
+
+    PJSUA_UNLOCK();
+    return status;
+}
+
+
+/*
  * Get the media stream index of the default video stream in the call.
  */
 PJ_DEF(int) pjsua_call_get_vid_stream_idx(pjsua_call_id call_id)
