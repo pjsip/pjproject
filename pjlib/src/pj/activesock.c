@@ -507,6 +507,13 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
             if (asock->read_type == TYPE_RECV && asock->cb.on_data_read) {
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 PJ_SUCCESS, &remainder);
+                PJ_ASSERT_ON_FAIL(
+                    !asock->stream_oriented || remainder <= r->size, {
+                        PJ_LOG(2, ("",
+                                   "App bug! Invalid remainder length from "
+                                   "activesock on_data_read()."));
+                        remainder = 0;
+                    });
             } else if (asock->read_type == TYPE_RECV_FROM && 
                        asock->cb.on_data_recvfrom) 
             {
@@ -576,6 +583,13 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
                 //                              r->size, status, &remainder);
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 status, &remainder);
+                PJ_ASSERT_ON_FAIL(
+                    !asock->stream_oriented || remainder <= r->size, {
+                        PJ_LOG(2, ("",
+                                   "App bug! Invalid remainder length from "
+                                   "activesock on_data_read()."));
+                        remainder = 0;
+                    });
 
             } else if (asock->read_type == TYPE_RECV_FROM && 
                        asock->cb.on_data_recvfrom) 
