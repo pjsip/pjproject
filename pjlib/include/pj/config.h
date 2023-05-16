@@ -681,13 +681,13 @@
 #endif
 
 /**
- * Maximum consecutive identical error for accept() operation before
+ * Maximum consecutive errors for accept() operation before
  * activesock stops calling the next ioqueue accept.
  *
- * Default: 50
+ * Default: 100
  */
 #ifndef PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR
-#   define PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR 50
+#   define PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR 100
 #endif
 
 /**

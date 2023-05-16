@@ -863,27 +863,31 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
     struct accept_op *accept_op = (struct accept_op*) op_key;
 
     PJ_UNUSED_ARG(new_sock);
-
+printf("here\n");
     /* Ignore if we've been shutdown */
     if (asock->shutdown)
         return;
 
     do {
-        if (status == asock->last_err && status != PJ_SUCCESS) {
+        if (/*status == asock->last_err && */status != PJ_SUCCESS) {
             asock->err_counter++;
-            if (asock->err_counter >= PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR) {
-                PJ_LOG(3, ("", "Received %d consecutive errors: %d for the accept()"
-                               " operation, stopping further ioqueue accepts.",
-                               asock->err_counter, asock->last_err));
+            asock->last_err = status;
+            if (asock->err_counter >=
+                PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR)
+            {
+                PJ_LOG(3, ("", "Received %d consecutive errors: %d for the "
+                               "accept() operation, stopping further ioqueue "
+                               "accepts.", asock->err_counter,
+                               asock->last_err));
                 
-                if ((status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) && 
+                if (/*(status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) && */
                     (asock->cb.on_accept_complete2)) 
                 {
                     (*asock->cb.on_accept_complete2)(asock, 
                                                      accept_op->new_sock,
                                                      &accept_op->rem_addr,
                                                      accept_op->rem_addr_len,
-                                                     PJ_ESOCKETSTOP);
+                                                     status);
                 }
                 return;
             }
