@@ -292,6 +292,11 @@ typedef enum pjmedia_aud_dev_route
 typedef struct pjmedia_aud_dev_info
 {
     /** 
+     * The device ID
+     */
+    pjmedia_aud_dev_index id;
+
+    /** 
      * The device name 
      */
     char name[PJMEDIA_AUD_DEV_INFO_NAME_LEN];

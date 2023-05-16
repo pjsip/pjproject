@@ -808,6 +808,11 @@ private:
 struct AudioDevInfo
 {
     /**
+     * The device ID
+     */
+    pjmedia_aud_dev_index id;
+
+    /**
      * The device name
      */
     string name;
