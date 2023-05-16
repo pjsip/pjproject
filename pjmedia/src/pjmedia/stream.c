@@ -2072,6 +2072,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
         {
             unsigned dec_ptime, dec_ptime_denum = 1;
             pj_uint16_t old_ptime, old_ptime_denum;
+            pjmedia_rtcp_session_setting setting;
 
             old_ptime = stream->dec_ptime;
             old_ptime_denum = stream->dec_ptime_denum;
@@ -2093,6 +2094,14 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
             stream->dec_ptime_denum = (pj_uint8_t)dec_ptime_denum;
             pjmedia_jbuf_set_ptime2(stream->jb, stream->dec_ptime,
                                     stream->dec_ptime_denum);
+
+            pjmedia_rtcp_session_setting_default(&setting);
+            setting.dec_samples_per_frame =
+                PJMEDIA_SPF(stream->codec_param.info.clock_rate,
+                            stream->dec_ptime * 1000 /
+                            stream->dec_ptime_denum,
+                            stream->codec_param.info.channel_cnt);
+            pjmedia_rtcp_update(&stream->rtcp, &setting);
 
             PJ_LOG(4, (stream->port.info.name.ptr, "codec decode "
                        "ptime change detected: %d/%d -> %d/%d",
@@ -2823,7 +2832,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         /* Special case for G.722 */
         if (info->fmt.pt == PJMEDIA_RTP_PT_G722) {
             rtcp_setting.clock_rate = 8000;
-            rtcp_setting.samples_per_frame = 160;
+            rtcp_setting.samples_per_frame = 160 *
+                stream->codec_param.setting.frm_per_pkt;
         }
 #endif
 

@@ -227,6 +227,9 @@ PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
     /* Set clock rate */
     sess->clock_rate = settings->clock_rate;
     sess->pkt_size = settings->samples_per_frame;
+    sess->dec_pkt_size = settings->dec_samples_per_frame?
+                         settings->dec_samples_per_frame:
+                         settings->samples_per_frame;
 
     /* Init common RTCP SR header */
     sr_pkt->common.version = 2;
@@ -257,6 +260,29 @@ PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
     pjmedia_rtcp_init_stat(&sess->stat);
 
     /* RR will be initialized on receipt of the first RTP packet. */
+}
+
+
+/*
+ * Update RTCP session.
+ */
+PJ_DEF(void) pjmedia_rtcp_update(pjmedia_rtcp_session *sess,
+                                 const pjmedia_rtcp_session_setting *settings)
+{
+    if (settings->name)
+        sess->name = settings->name;
+    if (settings->clock_rate)
+        sess->clock_rate = settings->clock_rate;
+    if (settings->samples_per_frame)
+        sess->pkt_size = settings->samples_per_frame;
+    if (settings->dec_samples_per_frame)
+        sess->dec_pkt_size = settings->dec_samples_per_frame;
+    if (sess->rtp_ts_base)
+        sess->rtp_ts_base = settings->rtp_ts_base;
+    if (settings->ssrc) {
+        sess->rtcp_rr_pkt.common.ssrc = pj_htonl(settings->ssrc);
+        sess->rtcp_fb_com.rtcp_common.ssrc = pj_htonl(settings->ssrc);
+    }
 }
 
 
@@ -351,7 +377,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
         unsigned count = seq_st.diff - 1;
         unsigned period;
 
-        period = count * sess->pkt_size * 1000 / sess->clock_rate;
+        period = count * sess->dec_pkt_size * 1000 / sess->clock_rate;
         period *= 1000;
 
         /* Update packet lost. 

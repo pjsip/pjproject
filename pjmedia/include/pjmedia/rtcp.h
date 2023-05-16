@@ -250,6 +250,7 @@ typedef struct pjmedia_rtcp_session
 
     unsigned                clock_rate; /**< Clock rate of the stream       */
     unsigned                pkt_size;   /**< Avg pkt size, in samples.      */
+    unsigned                dec_pkt_size;/**< Decoding pkt size, in samples.*/
     pj_uint32_t             received;   /**< # pkt received                 */
     pj_uint32_t             exp_prior;  /**< # pkt expected at last interval*/
     pj_uint32_t             rx_prior;   /**< # pkt received at last interval*/
@@ -289,6 +290,7 @@ typedef struct pjmedia_rtcp_session_setting
     char            *name;              /**< RTCP session name.         */
     unsigned         clock_rate;        /**< Sequence.                  */
     unsigned         samples_per_frame; /**< Timestamp.                 */
+    unsigned         dec_samples_per_frame; /**< Timestamp.             */
     pj_uint32_t      ssrc;              /**< Sender SSRC.               */
     pj_uint32_t      rtp_ts_base;       /**< Base RTP timestamp.        */
 } pjmedia_rtcp_session_setting;
@@ -336,6 +338,19 @@ PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session,
  */
 PJ_DECL(void) pjmedia_rtcp_init2(pjmedia_rtcp_session *session,
                                  const pjmedia_rtcp_session_setting *settings);
+
+
+/**
+ * Update RTCP session with the new settings. Note that any setting field
+ * that has a value of zero will not be updated.
+ *
+ * @param session           The session
+ * @param settings          The new RTCP session settings.
+ *                          Set a field to zero to leave it unchanged.
+ */
+PJ_DECL(void)
+pjmedia_rtcp_update(pjmedia_rtcp_session *session,
+                    const pjmedia_rtcp_session_setting *settings);
 
 
 /**
