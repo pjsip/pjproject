@@ -285,7 +285,7 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     MediaFrame frame_;
 
     frame_.size = frame->size;
-    mport->getFrame(frame_);
+    mport->onFrameRequested(frame_);
     frame->type = frame_.type;
     frame->size = PJ_MIN(frame_.buf.size(), frame_.size);
     pj_memcpy(frame->buf, frame_.buf.c_str(), frame->size);
@@ -301,7 +301,7 @@ static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
     frame_.type = frame->type;
     frame_.buf.assign((char *)frame->buf, frame->size);
     frame_.size = frame->size;
-    mport->putFrame(frame_);
+    mport->onFrameReceived(frame_);
 
     return PJ_SUCCESS;
 }

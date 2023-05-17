@@ -52,14 +52,14 @@ class MyAccount;
 
 class MyAudioMediaPort: public AudioMediaPort
 {
-    virtual void getFrame(MediaFrame &frame)
+    virtual void onFrameRequested(MediaFrame &frame)
     {
         // Give the input frame here
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
         // frame.buf.assign('c', frame.size);
     }
 
-    virtual void putFrame(MediaFrame &frame)
+    virtual void onFrameReceived(MediaFrame &frame)
     {
         // Process the incoming frame here
     }

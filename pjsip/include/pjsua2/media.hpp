@@ -479,7 +479,7 @@ public:
      *
      * @param frame       The frame.
      */
-    virtual void getFrame(MediaFrame &frame)
+    virtual void onFrameRequested(MediaFrame &frame)
     { PJ_UNUSED_ARG(frame); }
 
     /**
@@ -487,7 +487,7 @@ public:
      *
      * @param frame       The frame.
      */
-    virtual void putFrame(MediaFrame &frame)
+    virtual void onFrameReceived(MediaFrame &frame)
     { PJ_UNUSED_ARG(frame); }
 
 private:
