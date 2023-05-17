@@ -437,6 +437,72 @@ PJ_DEF(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_strtoul4(const pj_str_t *str, pj_uint_t *value,
+                                unsigned base)
+{
+    pj_str_t s;
+    unsigned i;
+
+    PJ_CHECK_STACK();
+
+    if (!str || !value) {
+        return PJ_EINVAL;
+    }
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
+
+    s = *str;
+    pj_strltrim(&s);
+
+    if (s.slen == 0 || s.ptr[0] < '0' ||
+        (base <= 10 && (unsigned)s.ptr[0] > ('0' - 1) + base) ||
+        (base == 16 && !pj_isxdigit(s.ptr[0])))
+    {
+        return PJ_EINVAL;
+    }
+
+    *value = 0;
+    if (base <= 10) {
+        for (i=0; i<(unsigned)s.slen; ++i) {
+            unsigned c = s.ptr[i] - '0';
+            if (s.ptr[i] < '0' || (unsigned)s.ptr[i] > ('0' - 1) + base) {
+                break;
+            }
+            if (*value > PJ_MAXUINT / base) {
+                *value = PJ_MAXUINT;
+                return PJ_ETOOBIG;
+            }
+
+            *value *= base;
+            if ((PJ_MAXUINT - *value) < c) {
+                *value = PJ_MAXUINT;
+                return PJ_ETOOBIG;
+            }
+            *value += c;
+        }
+    } else if (base == 16) {
+        for (i=0; i<(unsigned)s.slen; ++i) {
+            unsigned c = pj_hex_digit_to_val(s.ptr[i]);
+            if (!pj_isxdigit(s.ptr[i]))
+                break;
+
+            if (*value > PJ_MAXUINT / base) {
+                *value = PJ_MAXUINT;
+                return PJ_ETOOBIG;
+            }
+            *value *= base;
+            if ((PJ_MAXUINT - *value) < c) {
+                *value = PJ_MAXUINT;
+                return PJ_ETOOBIG;
+            }
+            *value += c;
+        }
+    } else {
+        pj_assert(!"Unsupported base");
+        return PJ_EINVAL;
+    }
+    return PJ_SUCCESS;
+}
+
 PJ_DEF(float) pj_strtof(const pj_str_t *str)
 {
     pj_str_t part;
@@ -492,6 +558,43 @@ PJ_DEF(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad)
     p = buf;
     do {
         unsigned long digval = (unsigned long) (val % 10);
+        val /= 10;
+        *p++ = (char) (digval + '0');
+    } while (val > 0);
+
+    len = (int)(p-buf);
+    while (len < min_dig) {
+        *p++ = (char)pad;
+        ++len;
+    }
+    *p-- = '\0';
+
+    do {
+        char temp = *p;
+        *p = *buf;
+        *buf = temp;
+        --p;
+        ++buf;
+    } while (buf < p);
+
+    return len;
+}
+
+PJ_DEF(int) pj_utoa2(pj_uint_t val, char *buf)
+{
+    return pj_utoa_pad2(val, buf, 0, 0);
+}
+
+PJ_DEF(int) pj_utoa_pad2(pj_uint_t val, char *buf, int min_dig, int pad)
+{
+    char *p;
+    int len;
+
+    PJ_CHECK_STACK();
+
+    p = buf;
+    do {
+        pj_uint_t digval = (pj_uint_t) (val % 10);
         val /= 10;
         *p++ = (char) (digval + '0');
     } while (val > 0);

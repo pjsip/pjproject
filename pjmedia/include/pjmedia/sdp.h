@@ -681,8 +681,8 @@ struct pjmedia_sdp_session
     struct
     {
         pj_str_t    user;           /**< User                           */
-        pj_uint32_t id;             /**< Session ID                     */
-        pj_uint32_t version;        /**< Session version                */
+        pj_uint_t   id;             /**< Session ID                     */
+        pj_uint_t   version;        /**< Session version                */
         pj_str_t    net_type;       /**< Network type ("IN")            */
         pj_str_t    addr_type;      /**< Address type ("IP4", "IP6")    */
         pj_str_t    addr;           /**< The address.                   */
@@ -697,8 +697,8 @@ struct pjmedia_sdp_session
     /** Session time (t= line)  */
     struct
     {
-        pj_uint32_t start;          /**< Start time.                    */
-        pj_uint32_t stop;           /**< Stop time.                     */
+        pj_uint_t start;            /**< Start time.                    */
+        pj_uint_t stop;             /**< Stop time.                     */
     } time;
 
     unsigned           attr_count;              /**< Number of attributes.  */

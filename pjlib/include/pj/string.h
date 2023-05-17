@@ -718,6 +718,31 @@ PJ_DECL(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
                                  unsigned base);
 
 /**
+ * Convert string to generic unsigned integer. The conversion will stop as
+ * soon as non-digit character is found or all the characters have
+ * been processed.
+ *
+ * @param str       The input string.
+ * @param value     Pointer to an unsigned integer to receive the value.
+ *                  The value will be a 64 bit unsigned integer if the system
+ *                  supports it, otherwise a 32 bit unsigned integer.
+ * @param base      Number base to use.
+ *
+ * @return PJ_SUCCESS if successful.  Otherwise:
+ *         PJ_ETOOBIG if the value was an impossibly long positive number.
+ *         In this case, *value will be set to ULLONG_MAX (for 64 bit) or
+ *         ULONG_MAX (for 32 bit).
+ *         \n
+ *         PJ_EINVAL if the input string was NULL, the value pointer was NULL
+ *         or the input string could not be parsed at all such as starting
+ *         with a character outside the base character range.  In this case,
+ *         *value will be left untouched.
+ */
+PJ_DECL(pj_status_t) pj_strtoul4(const pj_str_t *str, pj_uint_t *value,
+                                 unsigned base);
+
+
+/**
  * Convert string to float.
  *
  * @param str   the string.
@@ -738,6 +763,20 @@ PJ_DECL(float) pj_strtof(const pj_str_t *str);
 PJ_DECL(int) pj_utoa(unsigned long val, char *buf);
 
 /**
+ * Utility to convert generic unsigned integer to string. Note that the
+ * string will be NULL terminated.
+ *
+ * This function will take 64 bit unsigned integer if the system has one,
+ * otherwise it takes 32 bit unsigned integer.
+ *
+ * @param val       the unsigned integer value.
+ * @param buf       the buffer
+ *
+ * @return the number of characters written
+ */
+PJ_DECL(int) pj_utoa2(pj_uint_t val, char *buf);
+
+/**
  * Convert unsigned integer to string with minimum digits. Note that the
  * string will be NULL terminated.
  *
@@ -751,6 +790,24 @@ PJ_DECL(int) pj_utoa(unsigned long val, char *buf);
  * @return the number of characters written.
  */
 PJ_DECL(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad);
+
+/**
+ * Convert generic unsigned integer to string with minimum digits. Note that
+ * the string will be NULL terminated.
+ *
+ * This function will take 64 bit unsigned integer if the system has one,
+ * otherwise it takes 32 bit unsigned integer.
+ *
+ * @param val       The unsigned integer value.
+ * @param buf       The buffer.
+ * @param min_dig   Minimum digits to be printed, or zero to specify no
+ *                  minimum digit.
+ * @param pad       The padding character to be put in front of the string
+ *                  when the digits is less than minimum.
+ *
+ * @return the number of characters written.
+ */
+PJ_DECL(int) pj_utoa_pad2( pj_uint_t val, char *buf, int min_dig, int pad);
 
 
 /**
