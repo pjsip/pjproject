@@ -50,17 +50,35 @@ public:
 
 class MyAccount;
 
+class MyAudioMediaPort: public AudioMediaPort
+{
+    virtual void getFrame(MediaFrame &frame)
+    {
+        // Give the input frame here
+        frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+        // frame.buf.assign('c', frame.size);
+    }
+
+    virtual void putFrame(MediaFrame &frame)
+    {
+        // Process the incoming frame here
+    }
+};
+
+
 class MyCall : public Call
 {
 private:
     MyAccount *myAcc;
     AudioMediaPlayer *wav_player;
+    AudioMediaPort *med_port;
 
 public:
     MyCall(Account &acc, int call_id = PJSUA_INVALID_ID)
     : Call(acc, call_id)
     {
         wav_player = NULL;
+        med_port = NULL;
         myAcc = (MyAccount *)&acc;
     }
     
@@ -68,6 +86,8 @@ public:
     {
         if (wav_player)
             delete wav_player;
+        if (med_port)
+            delete med_port;
     }
     
     virtual void onCallState(OnCallStateParam &prm);
@@ -180,6 +200,23 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
     if (wav_player)
         wav_player->startTransmit(aud_med);
 
+    if (!med_port) {
+        med_port = new MyAudioMediaPort();
+
+        MediaFormatAudio fmt;
+        fmt.type = PJMEDIA_TYPE_AUDIO;
+        fmt.clockRate = 16000;
+        fmt.channelCount = 1;
+        fmt.bitsPerSample = 16;
+        fmt.frameTimeUsec = 20000;
+
+        med_port->createPort("med_port", fmt);
+
+        // Connect the media port to the call audio media in both directions
+        med_port->startTransmit(aud_med);
+        aud_med.startTransmit(*med_port);
+    }
+
     // And this will connect the call audio media to the sound device/speaker
     aud_med.startTransmit(play_dev_med);
 }
@@ -195,7 +232,6 @@ void MyCall::onCallReplaceRequest(OnCallReplaceRequestParam &prm)
     /* Create new Call for call replace */
     prm.newCall = new MyCall(*myAcc);
 }
-
 
 #if USE_TEST == 1
 static void mainProg1(MyEndpoint &ep)

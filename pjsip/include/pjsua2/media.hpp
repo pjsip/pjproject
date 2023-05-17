@@ -427,6 +427,75 @@ typedef std::vector<AudioMedia*> AudioMediaVector;
 typedef std::vector<AudioMedia> AudioMediaVector2;
 
 /**
+ * This structure describes a media frame.
+ */
+struct MediaFrame
+{
+    pjmedia_frame_type   type;      /**< Frame type.                        */
+    string               buf;       /**< Frame buffer content.              */
+    unsigned             size;      /**< Frame size in bytes.               */
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFrame()
+    : type(PJMEDIA_FRAME_TYPE_NONE),
+      size(0)
+    {}
+};
+
+/**
+ * Audio Media Port.
+ */
+class AudioMediaPort : public AudioMedia
+{
+public:
+    /**
+     * Constructor.
+     */
+    AudioMediaPort();
+
+    /**
+     * Destructor. This will unregister the audio media port from the
+     * conference bridge.
+     */
+    virtual ~AudioMediaPort();
+
+    /**
+     * Create an audio media port and register it to the conference bridge.
+     *
+     * @param name      The port name.
+     * @param fmt       The audio format.
+     */
+    void createPort(const string &name, MediaFormatAudio &fmt)
+                    PJSUA2_THROW(Error);
+
+    /*
+     * Callbacks
+     */
+    /**
+     * Get a frame from the port.
+     *
+     * @param frame       The frame.
+     */
+    virtual void getFrame(MediaFrame &frame)
+    { PJ_UNUSED_ARG(frame); }
+
+    /**
+     * Put a frame to the port.
+     *
+     * @param frame       The frame.
+     */
+    virtual void putFrame(MediaFrame &frame)
+    { PJ_UNUSED_ARG(frame); }
+
+private:
+    pj_pool_t *pool;
+    pjmedia_port port;
+};
+
+/**
  * This structure contains additional info about AudioMediaPlayer.
  */
 struct AudioMediaPlayerInfo

@@ -104,6 +104,7 @@ using namespace pj;
 %feature("director") Buddy;
 %feature("director") FindBuddyMatch;
 %feature("director") AudioMediaPlayer;
+%feature("director") AudioMediaPort;
 
 //
 // STL stuff.

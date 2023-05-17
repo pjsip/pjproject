@@ -427,6 +427,14 @@ typedef enum pjmedia_orient
   PJMEDIA_ORIENT_ROTATE_270DEG
 } pjmedia_orient;
 
+typedef enum pjmedia_frame_type
+{
+    PJMEDIA_FRAME_TYPE_NONE,
+    PJMEDIA_FRAME_TYPE_AUDIO,
+    PJMEDIA_FRAME_TYPE_EXTENDED,
+    PJMEDIA_FRAME_TYPE_VIDEO
+} pjmedia_frame_type;
+
 typedef enum pjmedia_format_id
 {
   PJMEDIA_FORMAT_L16 = 0,
