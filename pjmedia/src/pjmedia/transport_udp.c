@@ -31,7 +31,11 @@
 #define RTP_LEN     PJMEDIA_MAX_MRU
 
 /* Maximum size of incoming RTCP packet */
-#define RTCP_LEN    600
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#   define RTCP_LEN    PJMEDIA_MAX_MRU
+#else
+#   define RTCP_LEN    600
+#endif
 
 /* Maximum pending write operations */
 #define MAX_PENDING 4
