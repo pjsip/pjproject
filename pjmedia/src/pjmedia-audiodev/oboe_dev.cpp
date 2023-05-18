@@ -26,6 +26,7 @@
 #include <pj/os.h>
 #include <pjmedia/circbuf.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_OBOE) &&  PJMEDIA_AUDIO_DEV_HAS_OBOE != 0
 
@@ -872,13 +873,33 @@ public:
 
         /* Make sure stop request has not been made */
         if (!thread_quit) {
+            pj_status_t status;
+
             PJ_LOG(3,(THIS_FILE,
                       "Oboe stream %s error (%d/%s), "
                       "trying to restart stream..",
                       dir_st, result, oboe::convertToText(result)));
 
             Stop();
-            Start();
+            status = Start();
+
+            if (status != PJ_SUCCESS) {
+                pjmedia_event e;
+
+                PJ_PERROR(3,(THIS_FILE, status, "Oboe stream restart failed"));
+
+                /* Broadcast Oboe error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, &ts,
+                                   &stream->base);
+                e.data.aud_dev_err.dir = dir;
+                e.data.aud_dev_err.status = status;
+                e.data.aud_dev_err.id = (dir == PJMEDIA_DIR_PLAYBACK)?
+                                        stream->param.play_id :
+                                        stream->param.rec_id;
+
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                      PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
         }
 
         pj_mutex_unlock(mutex);
