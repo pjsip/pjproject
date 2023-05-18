@@ -475,7 +475,10 @@ public:
      * Callbacks
      */
     /**
-     * Get a frame from the port.
+     * This callback is called to request a frame from this port. On input,
+     * frame.size indicates the capacity of the frame buffer and frame.buf
+     * will initially be an empty string. Application can then set the frame
+     * type, fill the string buffer, and set the string's length.
      *
      * @param frame       The frame.
      */
@@ -483,7 +486,10 @@ public:
     { PJ_UNUSED_ARG(frame); }
 
     /**
-     * Put a frame to the port.
+     * This callback is called when this port receives a frame. The frame
+     * content will be provided in frame.buf, and the frame size can be
+     * found in either frame.size or the string buffer's length (both
+     * have the same value).
      *
      * @param frame       The frame.
      */
