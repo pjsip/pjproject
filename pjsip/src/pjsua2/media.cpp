@@ -288,7 +288,7 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     mport->onFrameRequested(frame_);
     frame->type = frame_.type;
     frame->size = PJ_MIN(frame_.buf.size(), frame_.size);
-    pj_memcpy(frame->buf, frame_.buf.c_str(), frame->size);
+    frame_.buf.copy((char *)frame->buf, frame->size);
 
     return PJ_SUCCESS;
 }
