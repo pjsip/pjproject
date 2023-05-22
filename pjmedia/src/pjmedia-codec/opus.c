@@ -1256,10 +1256,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_opus_get_stat( pjmedia_codec *codec, pjmedia_c
 {
     /* Step 1. Check arguments */
     if ((codec == NULL) || (pstat == NULL)) {
+        PJ_LOG(3, (THIS_FILE, "Argument error: codec = %p stat = %p", codec, pstat));
         return PJ_EINVAL;
     }
     /* Step 2. Check codec = OPUS codec */
     if (codec->op != &opus_op) {
+        PJ_LOG(3, (THIS_FILE, "Wrong codec: codec_op = %p opus_op = %p!", codec->op, &opus_op));
         return PJ_EINVAL;
     }
     /* Step 3. Populate metrics */
