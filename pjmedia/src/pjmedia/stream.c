@@ -512,8 +512,20 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 #endif  /* defined(PJMEDIA_STREAM_ENABLE_KA) */
 
 PJ_DEF(pj_status_t) pjmedia_stream_get_codec(const pjmedia_stream *stream, pjmedia_codec **codec) {
-    PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
-    PJ_ASSERT_RETURN(stream->codec != NULL, PJ_EINVAL);
+    /* Step 1. Check arguments */
+    if (stream == NULL) {
+        PJ_LOG(3, (THIS_FILE, "No stream!"));
+        return PJ_EINVAL;
+    }
+    if (codec == NULL) {
+        PJ_LOG(3, (THIS_FILE, "No codec ptr!"));
+        return PJ_EINVAL;
+    }
+    /* Step 2. Check state */
+    if (stream->codec == NULL) {
+        PJ_LOG(3, (THIS_FILE, "No codec at PJ stream struct!"));
+        return PJ_EINVAL;
+    }
     *codec = stream->codec;
     return PJ_SUCCESS;
 }
