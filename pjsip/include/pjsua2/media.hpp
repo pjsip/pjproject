@@ -432,7 +432,7 @@ typedef std::vector<AudioMedia> AudioMediaVector2;
 struct MediaFrame
 {
     pjmedia_frame_type   type;      /**< Frame type.                        */
-    string               buf;       /**< Frame buffer content.              */
+    ByteVector           buf;       /**< Frame buffer content.              */
     unsigned             size;      /**< Frame size in bytes.               */
 
 public:

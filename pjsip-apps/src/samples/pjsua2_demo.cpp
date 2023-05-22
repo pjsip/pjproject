@@ -56,7 +56,7 @@ class MyAudioMediaPort: public AudioMediaPort
     {
         // Give the input frame here
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-        // frame.buf.assign('c', frame.size);
+        // frame.buf.assign(frame.size, 'c');
     }
 
     virtual void onFrameReceived(MediaFrame &frame)
