@@ -1254,10 +1254,15 @@ PJ_DEF(pj_status_t) pjmedia_codec_opus_reset_stat( pjmedia_codec_opus_stat *stat
  */
 PJ_DEF(pj_status_t) pjmedia_codec_opus_get_stat( pjmedia_codec *codec, pjmedia_codec_opus_stat *pstat )
 {
-    PJ_ASSERT_RETURN(codec && pstat, PJ_EINVAL);
+    /* Step 1. Check arguments */
+    if ((codec == NULL) || (pstat == NULL)) {
+        return PJ_EINVAL;
+    }
+    /* Step 2. Check codec = OPUS codec */
     if (codec->op != &opus_op) {
         return PJ_EINVAL;
     }
+    /* Step 3. Populate metrics */
     struct opus_data *opus_data = (struct opus_data *)codec->codec_data;
     pj_mutex_lock (opus_data->mutex);
     pj_memcpy(pstat, &opus_data->stat, sizeof(struct pjmedia_codec_opus_stat));
