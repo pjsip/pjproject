@@ -265,6 +265,78 @@ AudioMedia* AudioMedia::typecastFromMedia(Media *media)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+AudioMediaPort::AudioMediaPort()
+: pool(NULL)
+{
+}
+
+AudioMediaPort::~AudioMediaPort()
+{
+    if (pool) {
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
+        pj_pool_release(pool);
+        pool = NULL;
+    }
+}
+
+static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
+{
+    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    MediaFrame frame_;
+
+    frame_.size = frame->size;
+    mport->onFrameRequested(frame_);
+    frame->type = frame_.type;
+    frame->size = PJ_MIN(frame_.buf.size(), frame_.size);
+    pj_memcpy(frame->buf, frame_.buf.data(), frame->size);
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
+{
+    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    MediaFrame frame_;
+
+    frame_.type = frame->type;
+    frame_.buf.assign((char *)frame->buf, ((char *)frame->buf) + frame->size);
+    frame_.size = frame->size;
+    mport->onFrameReceived(frame_);
+
+    return PJ_SUCCESS;
+}
+
+void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
+                                PJSUA2_THROW(Error)
+{
+    pj_str_t name_;
+    pjmedia_format fmt_;
+
+    if (pool) {
+        PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
+
+    pool = pjsua_pool_create( "amport%p", 512, 512);
+    if (!pool) {
+        PJSUA2_RAISE_ERROR(PJ_ENOMEM);
+    }
+
+    /* Init port. */
+    pj_strdup2_with_null(pool, &name_, name.c_str());
+    fmt_ = fmt.toPj();
+    pjmedia_port_info_init2(&port.info, &name_,
+                            PJMEDIA_SIG_CLASS_APP ('A', 'M', 'P'),
+                            PJMEDIA_DIR_ENCODING_DECODING, &fmt_);
+
+    port.port_data.pdata = this;
+    port.put_frame = &put_frame;
+    port.get_frame = &get_frame;
+
+    registerMediaPort2(&port, pool);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 AudioMediaPlayer::AudioMediaPlayer()
 : playerId(PJSUA_INVALID_ID)
 {

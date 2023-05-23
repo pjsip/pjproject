@@ -1,6 +1,8 @@
 import pjsua2 as pj
 import sys
 import time
+from collections import deque
+import struct
 
 write=sys.stdout.write
 
@@ -72,6 +74,41 @@ class MyLogWriter(pj.LogWriter):
     def write(self, entry):
         write("This is Python:" + entry.msg + "\r\n")
 
+class AMP(pj.AudioMediaPort):
+    frames = deque()
+
+    def onFrameRequested(self, frame):
+        if len(self.frames):
+            # Get a frame from the queue and pass it to PJSIP
+            frame_ = self.frames.popleft()
+            frame.type = pj.PJMEDIA_TYPE_AUDIO
+            frame.buf = frame_
+
+    def onFrameReceived(self, frame):
+        frame_ = pj.ByteVector()
+        for i in range(frame.buf.size()):
+            if (i % 2 == 1):
+                # Convert it to signed 16-bit integer
+                x = frame.buf[i] << 8 | frame.buf[i-1]
+                x = struct.unpack('<h', struct.pack('<H', x))[0]
+
+                # Amplify the signal by 50% and clip it
+                x = int(x * 1.5)
+                if (x > 32767):
+                    x = 32767
+                else:
+                    if (x < -32768):
+                        x = -32768
+
+                # Convert it to unsigned 16-bit integer
+                x = struct.unpack('<H', struct.pack('<h', x))[0]
+
+                # Put it back in the vector in little endian order
+                frame_.append(x & 0xff)
+                frame_.append((x & 0xff00) >> 8)
+
+        self.frames.append(frame_)
+
 #
 # Testing log writer callback
 #
@@ -100,6 +137,21 @@ def ua_run_ua_test():
     ep.libInit(ep_cfg)
     ep.libStart()
 
+    # Sample custom audio media port
+    # Note: threading must be enabled
+    amp = AMP()
+    fmt = pj.MediaFormatAudio()
+    fmt.type = pj.PJMEDIA_TYPE_AUDIO
+    fmt.clockRate = 16000
+    fmt.channelCount = 1
+    fmt.bitsPerSample = 16
+    fmt.frameTimeUsec = 20000
+    amp.createPort("amp", fmt)
+    ep.audDevManager().getCaptureDevMedia().startTransmit(amp)
+    amp.startTransmit(ep.audDevManager().getPlaybackDevMedia())
+
+    time.sleep(3)
+    del amp
     write("************* Endpoint started ok, now shutting down... *************" + "\r\n")
     ep.libDestroy()
 

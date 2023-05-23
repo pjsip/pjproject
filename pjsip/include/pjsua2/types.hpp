@@ -52,6 +52,9 @@ typedef std::vector<std::string> StringVector;
 /** Array of integers */
 typedef std::vector<int> IntVector;
 
+/** Array of bytes */
+typedef std::vector<unsigned char> ByteVector;
+
 /** Map string to string */
 typedef std::map<std::string, std::string> StringToStringMap;
 

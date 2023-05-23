@@ -427,6 +427,81 @@ typedef std::vector<AudioMedia*> AudioMediaVector;
 typedef std::vector<AudioMedia> AudioMediaVector2;
 
 /**
+ * This structure describes a media frame.
+ */
+struct MediaFrame
+{
+    pjmedia_frame_type   type;      /**< Frame type.                        */
+    ByteVector           buf;       /**< Frame buffer content.              */
+    unsigned             size;      /**< Frame size in bytes.               */
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFrame()
+    : type(PJMEDIA_FRAME_TYPE_NONE),
+      size(0)
+    {}
+};
+
+/**
+ * Audio Media Port.
+ */
+class AudioMediaPort : public AudioMedia
+{
+public:
+    /**
+     * Constructor.
+     */
+    AudioMediaPort();
+
+    /**
+     * Destructor. This will unregister the audio media port from the
+     * conference bridge.
+     */
+    virtual ~AudioMediaPort();
+
+    /**
+     * Create an audio media port and register it to the conference bridge.
+     *
+     * @param name      The port name.
+     * @param fmt       The audio format.
+     */
+    void createPort(const string &name, MediaFormatAudio &fmt)
+                    PJSUA2_THROW(Error);
+
+    /*
+     * Callbacks
+     */
+    /**
+     * This callback is called to request a frame from this port. On input,
+     * frame.size indicates the capacity of the frame buffer and frame.buf
+     * will initially be an empty vector. Application can then set the frame
+     * type and fill the vector.
+     *
+     * @param frame       The frame.
+     */
+    virtual void onFrameRequested(MediaFrame &frame)
+    { PJ_UNUSED_ARG(frame); }
+
+    /**
+     * This callback is called when this port receives a frame. The frame
+     * content will be provided in frame.buf vector, and the frame size
+     * can be found in either frame.size or the vector's size (both
+     * have the same value).
+     *
+     * @param frame       The frame.
+     */
+    virtual void onFrameReceived(MediaFrame &frame)
+    { PJ_UNUSED_ARG(frame); }
+
+private:
+    pj_pool_t *pool;
+    pjmedia_port port;
+};
+
+/**
  * This structure contains additional info about AudioMediaPlayer.
  */
 struct AudioMediaPlayerInfo

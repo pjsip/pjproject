@@ -104,6 +104,7 @@ using namespace pj;
 %feature("director") Buddy;
 %feature("director") FindBuddyMatch;
 %feature("director") AudioMediaPlayer;
+%feature("director") AudioMediaPort;
 
 //
 // STL stuff.
@@ -117,6 +118,7 @@ using namespace pj;
 
 %template(StringVector)			std::vector<std::string>;
 %template(IntVector) 			std::vector<int>;
+%template(ByteVector) 			std::vector<unsigned char>;
 %template(StringToStringMap) 			std::map<string, string>;
 
 //
