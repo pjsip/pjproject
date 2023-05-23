@@ -511,7 +511,7 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 }
 #endif  /* defined(PJMEDIA_STREAM_ENABLE_KA) */
 
-PJ_DEF(pj_status_t) pjmedia_stream_get_codec(const pjmedia_stream *stream, pjmedia_codec **codec) {
+PJ_DEF(pj_status_t) pjmedia_stream_get_codec(pjmedia_stream *stream, pjmedia_codec **codec) {
     /* Step 1. Check arguments */
     if (stream == NULL) {
         PJ_LOG(3, (THIS_FILE, "No stream!"));
