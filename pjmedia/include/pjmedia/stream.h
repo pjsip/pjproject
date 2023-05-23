@@ -544,6 +544,18 @@ pjmedia_stream_get_rtp_session_info(pjmedia_stream *stream,
 
 
 /**
+ * Get the RTP session codec
+ *
+ * @param stream        The media stream.
+ *
+ * @param codec         The RTP stream codec.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_get_codec(pjmedia_stream *stream, pjmedia_codec **codec);
+
+/**
  * @}
  */
 
