@@ -88,6 +88,14 @@ struct MediaFormatAudio : public MediaFormat
      * Export to pjmedia_format.
      */
     pjmedia_format toPj() const;
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFormatAudio() : clockRate(0), channelCount(0), frameTimeUsec(0),
+                         bitsPerSample(0), avgBps(0), maxBps(0)
+    {}
 };
 
 /**
