@@ -255,6 +255,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock);
 static void ssl_destroy(pj_ssl_sock_t *ssock);
 /* Reset SSL socket state */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock);
+static void ssl_reset_sock_state_with_error(pj_ssl_sock_t* ssock, pj_bool_t check_error);
 
 /* Ciphers and certs */
 static void ssl_ciphers_populate();

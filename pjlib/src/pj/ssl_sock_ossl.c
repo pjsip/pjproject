@@ -1695,7 +1695,12 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 /* Reset SSL socket state */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    ssl_reset_sock_state_with_error(ssock, PJ_TRUE);
+}
+
+static void ssl_reset_sock_state_with_error(pj_ssl_sock_t* ssock, pj_bool_t check_error)
+{
+    ossl_sock_t* ossock = (ossl_sock_t*)ssock;
 
     /* Detach from SSL instance */
     if (ossock->ossl_ssl) {
@@ -1706,12 +1711,21 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
      * Avoid calling SSL_shutdown() if handshake wasn't completed.
      * OpenSSL 1.0.2f complains if SSL_shutdown() is called during an
      * SSL handshake, while previous versions always return 0.
+     * Don't send notify when the last error is SSL_ERROR_SYSCALL or SSL_ERROR_SSL.
      */
     if (ossock->ossl_ssl && SSL_in_init(ossock->ossl_ssl) == 0) {
-        int ret = SSL_shutdown(ossock->ossl_ssl);
-        if (ret == 0) {
-            /* Flush data to send close notify. */
-            flush_circ_buf_output(ssock, &ssock->shutdown_op_key, 0, 0);
+        pj_bool_t send_notify = PJ_TRUE;
+        if (check_error && (ssock->last_err == SSL_ERROR_SYSCALL ||
+            ssock->last_err == SSL_ERROR_SSL))
+        {
+            send_notify = PJ_FALSE;
+        }
+        if (send_notify) {
+            int ret = SSL_shutdown(ossock->ossl_ssl);
+            if (ret == 0) {
+                /* Flush data to send close notify. */
+                flush_circ_buf_output(ssock, &ssock->shutdown_op_key, 0, 0);
+            }
         }
     }
 

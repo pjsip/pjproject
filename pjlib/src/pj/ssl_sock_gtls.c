@@ -827,6 +827,13 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 /* Reset socket state. */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
+    ssl_reset_sock_state_with_error(ssock, PJ_TRUE);
+}
+
+static void ssl_reset_sock_state_with_error(pj_ssl_sock_t* ssock, pj_bool_t check_error)
+{
+    PJ_UNUSED_ARG(check_error);
+
     pj_lock_acquire(ssock->circ_buf_output_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
     pj_lock_release(ssock->circ_buf_output_mutex);

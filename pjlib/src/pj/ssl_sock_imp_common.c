@@ -383,7 +383,7 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
                       buf1, buf2));
 
             /* Server disconnected us, possibly due to SSL nego failure */
-            ssl_reset_sock_state(ssock);
+            ssl_reset_sock_state_with_error(ssock, (status!= PJ_ETIMEDOUT));
         }
         if (ssock->param.cb.on_connect_complete) {
             pj_bool_t ret;
