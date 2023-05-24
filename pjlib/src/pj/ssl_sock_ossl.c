@@ -1695,7 +1695,15 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 /* Reset SSL socket state */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
+    int post_unlock_flush_circ_buf = 0;
+
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+
+    /* Must lock around SSL calls, particularly SSL_shutdown
+     * as it can modify the write BIOs and destructively
+     * interfere with any ssl_write() calls in progress
+     * above in a multithreaded environment */
+    pj_lock_acquire(ssock->write_mutex);
 
     /* Detach from SSL instance */
     if (ossock->ossl_ssl) {
@@ -1710,14 +1718,20 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
     if (ossock->ossl_ssl && SSL_in_init(ossock->ossl_ssl) == 0) {
         int ret = SSL_shutdown(ossock->ossl_ssl);
         if (ret == 0) {
-            /* Flush data to send close notify. */
-            flush_circ_buf_output(ssock, &ssock->shutdown_op_key, 0, 0);
+            /* SSL_shutdown will potentially trigger a bunch of
+             * data to dump to the socket */
+            post_unlock_flush_circ_buf = 1;
         }
     }
 
-    pj_lock_acquire(ssock->write_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
+
     pj_lock_release(ssock->write_mutex);
+
+    if (post_unlock_flush_circ_buf) {
+        /* Flush data to send close notify. */
+        flush_circ_buf_output(ssock, &ssock->shutdown_op_key, 0, 0);
+    }
 
     ssl_close_sockets(ssock);
 
@@ -2413,7 +2427,6 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
      */
     pj_lock_acquire(ssock->write_mutex);
     *size = size_ = SSL_read(ossock->ossl_ssl, data, size_);
-    pj_lock_release(ssock->write_mutex);
 
     if (size_ <= 0) {
         pj_status_t status;
@@ -2436,14 +2449,24 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
                 /* Reset SSL socket state, then return PJ_FALSE */
                 status = STATUS_FROM_SSL_ERR2("Read", ssock, size_,
                                               err, len);
+                pj_lock_release(ssock->write_mutex);
+                /* Unfortunately we can't hold the lock here to reset all the state.
+                  * We probably should though.
+                  *
+                  * TODO: if we get an SSL_ERROR_SSL or SSL_ERROR_SYSCALL, we need to not perform
+                  *       an SSL_shutdown in ssl_reset_sock_state according to openssl docs (due to some CVE or other)
+                  */
                 ssl_reset_sock_state(ssock);
                 return status;
             }
         }
         
+        pj_lock_release(ssock->write_mutex);
         /* Need renegotiation */
         return PJ_EEOF;
     }
+
+    pj_lock_release(ssock->write_mutex);
 
     return PJ_SUCCESS;
 }
