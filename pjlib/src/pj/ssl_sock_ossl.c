@@ -2452,9 +2452,6 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
                 pj_lock_release(ssock->write_mutex);
                 /* Unfortunately we can't hold the lock here to reset all the state.
                   * We probably should though.
-                  *
-                  * TODO: if we get an SSL_ERROR_SSL or SSL_ERROR_SYSCALL, we need to not perform
-                  *       an SSL_shutdown in ssl_reset_sock_state according to openssl docs (due to some CVE or other)
                   */
                 ssl_reset_sock_state(ssock);
                 return status;
