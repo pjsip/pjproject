@@ -322,6 +322,7 @@ void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
     }
 
     /* Init port. */
+    pj_bzero(&port, sizeof(port));
     pj_strdup2_with_null(pool, &name_, name.c_str());
     fmt_ = fmt.toPj();
     pjmedia_port_info_init2(&port.info, &name_,

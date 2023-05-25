@@ -1316,7 +1316,8 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
         PJ_LOG(1,(THIS_FILE, "Unrecognized image format from Android camera2, "
                              "please report the following plane format:"));
         PJ_LOG(1,(THIS_FILE, " Planes (buf/len/row_stride/pix_stride):"
-                             " p0=%p/%d/%d/%d p1=%p/%d/%d/%d p2=%p/%d/%d/%d",
+                             " p0=%p/%ld/%d/%d p1=%p/%ld/%d/%d "
+                             "p2=%p/%ld/%d/%d",
                              p0, p0_len, rowStride0, pixStride0,
                              p1, p1_len, rowStride1, pixStride1,
                              p2, p2_len, rowStride2, pixStride2));

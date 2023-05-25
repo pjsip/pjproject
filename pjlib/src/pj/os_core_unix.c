@@ -641,7 +641,7 @@ pj_status_t pj_thread_init(void)
  */
 static void set_thread_display_name(const char *name)
 {
-#if (defined(PJ_LINUX) && PJ_LINUX != 0) ||                                    \
+#if (defined(PJ_LINUX) && PJ_LINUX != 0) || \
     (defined(PJ_ANDROID) && PJ_ANDROID != 0)
     char xname[16];
     // On linux, thread display name length is restricted to 16 (include '\0')
@@ -661,7 +661,7 @@ static void set_thread_display_name(const char *name)
 #elif defined(PJ_HAS_PTHREAD_SET_NAME_NP) && PJ_HAS_PTHREAD_SET_NAME_NP != 0
     pthread_set_name_np(pthread_self(), name);
 #else
-#   warning "OS not support set thread display name"
+// #   warning "OS does not support set thread display name"
     PJ_UNUSED_ARG(name);
 #endif
 }
