@@ -25,11 +25,13 @@ NAMESPACE=$(PROJ_NAME).pjsua2
 ARCH=$(TARGET_ARCH)
 
 ifeq ($(OS),android)
-    LIBPJSUA2_DIR=$(PROJ_NAME)/Droid/lib/$(ARCH)
+    LIBPJSUA2_DIR=$(PROJ_NAME)/$(PROJ_NAME).Android/lib/$(ARCH)
     LIBPJSUA2=$(LIBPJSUA2_DIR)/libpjsua2.so
+    SUP_CLASS_DIR=$(PROJ_NAME)/$(PROJ_NAME).Android/org/pjsip
 else
     ifeq ($(OS),ios)
-        LIBPJSUA2_DIR=$(PROJ_NAME)/iOS/lib/$(ARCH)
+        LIBPJSUA2_DIR=$(PROJ_NAME)/$(PROJ_NAME).iOS/lib/$(ARCH)
+        SWIG_FLAGS += -dllimport "__Internal"
     else
         LIBPJSUA2_DIR=$(PROJ_NAME)/lib
     endif
@@ -54,6 +56,14 @@ ifeq ($(OS),android)
 else
 	$(AR) $(LIBPJSUA2) $(AR_FLAGS) $(OUT_DIR)/pjsua2_wrap.o $(PJ_LIBXX_FILES)
 endif
+ifneq (,$(findstring PJMEDIA_VIDEO_DEV_HAS_ANDROID=1,$(ANDROID_CFLAGS)))
+	@echo "Copying Android camera helper components..."
+	cp $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java $(SUP_CLASS_DIR)/
+endif
+ifneq (,$(findstring PJMEDIA_AUDIO_DEV_HAS_OBOE=1,$(OBOE_CFLAGS)))
+	@echo "Copying Android Oboe audio device helper components..."
+	cp $(PJDIR)/pjmedia/src/pjmedia-audiodev/android/PjAudioDevInfo.java $(SUP_CLASS_DIR)/
+endif
 
 $(OUT_DIR)/pjsua2_wrap.o: $(OUT_DIR)/pjsua2_wrap.cpp
 	$(PJ_CXX) -c $(OUT_DIR)/pjsua2_wrap.cpp -o $(OUT_DIR)/pjsua2_wrap.o \
@@ -62,7 +72,7 @@ $(OUT_DIR)/pjsua2_wrap.o: $(OUT_DIR)/pjsua2_wrap.cpp
 $(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i Makefile $(SRCS)
 	mkdir -p $(OUT_DIR)
 	swig $(SWIG_FLAGS) -namespace $(NAMESPACE) -csharp -o $(OUT_DIR)/pjsua2_wrap.cpp ../pjsua2.i
-	
+
 sample: sample.cs
 	@echo "Copying sample code..."
 	cp sample.cs $(PROJ_NAME)/$(PROJ_NAME)
@@ -70,6 +80,7 @@ sample: sample.cs
 clean distclean realclean:
 	rm -rf ./$(OUT_DIR)/*
 	rm -rf ./$(LIBPJSUA2_DIR)/*
+	rm -rf ./$(SUP_CLASS_DIR)/*.java
 
 install:
 
