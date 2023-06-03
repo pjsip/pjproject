@@ -683,6 +683,7 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
         generated += dist;
 
         if (generated >= needed) {
+            PJ_UNUSED_ARG(rep);
             TRACE_((THIS_FILE, "WSOLA frame expanded after %d iterations", 
                     rep));
             break;
@@ -734,6 +735,7 @@ static unsigned compress(pjmedia_wsola *wsola, pj_int16_t *buf, unsigned count,
         samples_del += dist;
 
         if (samples_del >= del_cnt) {
+            PJ_UNUSED_ARG(rep);
             TRACE_((THIS_FILE, 
                     "Erased %d of %d requested after %d iteration(s)",
                     samples_del, del_cnt, rep));
