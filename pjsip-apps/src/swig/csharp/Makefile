@@ -49,6 +49,7 @@ all: $(LIBPJSUA2) sample
 $(LIBPJSUA2): $(OUT_DIR)/pjsua2_wrap.o
 	mkdir -p $(LIBPJSUA2_DIR)
 ifeq ($(OS),android)
+	mkdir -p $(SUP_CLASS_DIR)
 	$(PJ_CXX) -shared -o $(LIBPJSUA2) $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_CFLAGS) $(MY_LDFLAGS)
 	# copy libc++_shared.so manually
