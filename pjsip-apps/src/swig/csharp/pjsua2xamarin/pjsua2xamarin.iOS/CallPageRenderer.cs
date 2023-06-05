@@ -74,7 +74,7 @@ namespace pjsua2xamarin.iOS
                     });
                 } else {
                     incomingVideoView.Hidden = true;
-				}
+                }
             } catch (Exception ex) {
                 System.Diagnostics.Debug.WriteLine($"ERROR: {ex.Message}");
             }
@@ -239,10 +239,10 @@ namespace pjsua2xamarin.iOS
                     try {
                         Device.BeginInvokeOnMainThread(() => {
                             incomingVideoView.AddSubview(inView);
-							inView.ContentMode = UIViewContentMode.ScaleAspectFit;
-							inView.Center = incomingVideoView.Center;
-							inView.Frame = incomingVideoView.Bounds;
-						});
+                            inView.ContentMode = UIViewContentMode.ScaleAspectFit;
+                            inView.Center = incomingVideoView.Center;
+                            inView.Frame = incomingVideoView.Bounds;
+                        });
                     } catch (Exception ex) {
                         System.Diagnostics.Debug.WriteLine(@"ERROR: ",
                                                            ex.Message);

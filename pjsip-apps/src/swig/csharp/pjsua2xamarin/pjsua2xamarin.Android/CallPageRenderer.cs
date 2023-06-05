@@ -41,8 +41,8 @@ namespace pjsua2xamarin.Droid
                 if (callPage == null)
                     return;
 
-				lastCallInfo = info as CallInfo;
-				if (lastCallInfo.state == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
+                lastCallInfo = info as CallInfo;
+                if (lastCallInfo.state == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
                     Device.BeginInvokeOnMainThread(() => {
                         callPage.Navigation.PopAsync();
                     });
@@ -64,8 +64,8 @@ namespace pjsua2xamarin.Droid
 
         ~CallPageRenderer() {
             MessagingCenter.Unsubscribe<BuddyPage, CallInfo>(this, "UpdateCallState");
-			MessagingCenter.Unsubscribe<BuddyPage, CallInfo>(this, "UpdateMediaCallState");
-		}
+            MessagingCenter.Unsubscribe<BuddyPage, CallInfo>(this, "UpdateMediaCallState");
+        }
 
         protected override void OnLayout(bool changed, int l, int t, int r, int b)
         {
@@ -90,9 +90,9 @@ namespace pjsua2xamarin.Droid
                 SetupUserInterface();
                 SetupEventHandlers();
                 AddView(view);
-				callPage = (CallPage)Element;
-				System.Diagnostics.Debug.WriteLine(@"Call page done initialize");
-				if (MyApp.currentCall != null) {
+                callPage = (CallPage)Element;
+                System.Diagnostics.Debug.WriteLine(@"Call page done initialize");
+                if (MyApp.currentCall != null) {
                     try {
                         lastCallInfo = MyApp.currentCall.getInfo();
                     } catch (Exception ex) {
@@ -160,25 +160,25 @@ namespace pjsua2xamarin.Droid
 
         private void updateVideoWindow(bool show)
         {
-			if (MyApp.currentCall != null &&
-				MyApp.currentCall.vidWin != null &&
-				MyApp.currentCall.vidPrev != null)
+            if (MyApp.currentCall != null &&
+                MyApp.currentCall.vidWin != null &&
+                MyApp.currentCall.vidPrev != null)
             {
-				long windHandle = 0;
-				VideoWindowHandle vidWH = new VideoWindowHandle();
-				if (show) {
-					IntPtr winPtr = ANativeWindow_fromSurface(JNIEnv.Handle,
+                long windHandle = 0;
+                VideoWindowHandle vidWH = new VideoWindowHandle();
+                if (show) {
+                    IntPtr winPtr = ANativeWindow_fromSurface(JNIEnv.Handle,
                                            incomingView.Holder.Surface.Handle);
-					windHandle = winPtr.ToInt64();
-				}
-				vidWH.handle.setWindow(windHandle);
-				try {
-					MyApp.currentCall.vidWin.setWindow(vidWH);
-				} catch (Exception ex) {
-					System.Diagnostics.Debug.WriteLine(@"ERROR: ", ex.Message);
-				}
-			}
-		}
+                    windHandle = winPtr.ToInt64();
+                }
+                vidWH.handle.setWindow(windHandle);
+                try {
+                    MyApp.currentCall.vidWin.setWindow(vidWH);
+                } catch (Exception ex) {
+                    System.Diagnostics.Debug.WriteLine(@"ERROR: ", ex.Message);
+                }
+            }
+        }
 
         private void updateCallState(CallInfo ci)
         {
