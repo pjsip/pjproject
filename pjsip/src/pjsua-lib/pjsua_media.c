@@ -246,6 +246,41 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
     return PJ_SUCCESS;
 }
 
+static int get_media_ip_version(pjsua_call_media *call_med)
+{
+    pjmedia_sdp_session *rem_sdp = call_med->call->async_call.rem_sdp;
+    pjsua_ipv6_use ipv6_use;
+
+    ipv6_use = pjsua_var.acc[call_med->call->acc_id].cfg.ipv6_media_use;
+
+    if (rem_sdp) {
+        /* Match the default address family according to the offer */
+        const pj_str_t ID_IP6 = { "IP6", 3};
+        const pjmedia_sdp_media *m;
+        const pjmedia_sdp_conn *c;
+
+        m = rem_sdp->media[call_med->idx];
+        c = m->conn? m->conn : rem_sdp->conn;
+
+        if (pj_stricmp(&c->addr_type, &ID_IP6) == 0 &&
+            ipv6_use != PJSUA_IPV6_DISABLED)
+        {
+            /* Use IPv6. */
+            return 6;
+        }
+    } else {
+        if (ipv6_use == PJSUA_IPV6_ENABLED_PREFER_IPV6 ||
+            ipv6_use == PJSUA_IPV6_ENABLED_USE_IPV6_ONLY)
+        {
+            /* Use IPv6. */
+            return 6;
+        }
+    }
+
+    /* Use IPv4. */
+    return 4;
+}
+
 /*
  * Create RTP and RTCP socket pair, and possibly resolve their public
  * address via STUN/UPnP.
@@ -267,7 +302,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
     pj_sock_t sock[2];
 
-    use_ipv6 = (acc->cfg.ipv6_media_use != PJSUA_IPV6_DISABLED);
+    use_ipv6 = (get_media_ip_version(call_med) == 6);
     use_nat64 = (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
     af = (use_ipv6 || use_nat64) ? pj_AF_INET6() : pj_AF_INET();
 
@@ -718,7 +753,7 @@ static pj_status_t create_loop_media_transport(
     int af;
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
 
-    use_ipv6 = (acc->cfg.ipv6_media_use != PJSUA_IPV6_DISABLED);
+    use_ipv6 = (get_media_ip_version(call_med) == 6);
     use_nat64 = (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
     af = (use_ipv6 || use_nat64) ? pj_AF_INET6() : pj_AF_INET();
 
@@ -1001,7 +1036,7 @@ static pj_status_t create_ice_media_transport(
     pjmedia_sdp_session *rem_sdp;
 
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
-    use_ipv6 = (acc_cfg->ipv6_media_use != PJSUA_IPV6_DISABLED);
+    use_ipv6 = (get_media_ip_version(call_med) == 6);
     use_nat64 = (acc_cfg->nat64_opt != PJSUA_NAT64_DISABLED);
 
     /* Make sure STUN server resolution has completed */
@@ -1028,24 +1063,12 @@ static pj_status_t create_ice_media_transport(
     ice_cfg.resolver = pjsua_var.resolver;
     
     ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
-    rem_sdp = call_med->call->async_call.rem_sdp;
-
-    if (rem_sdp) {
-        /* Match the default address family according to the offer */
-        const pj_str_t ID_IP6 = { "IP6", 3};
-        const pjmedia_sdp_media *m;
-        const pjmedia_sdp_conn *c;
-
-        m = rem_sdp->media[call_med->idx];
-        c = m->conn? m->conn : rem_sdp->conn;
-
-        if (pj_stricmp(&c->addr_type, &ID_IP6) == 0)
-            ice_cfg.af = pj_AF_INET6();
-    } else if (use_ipv6 || use_nat64) {
+    if (use_ipv6 || use_nat64) {
         ice_cfg.af = pj_AF_INET6();
     }
 
     /* Should not wait for ICE STUN/TURN ready when trickle ICE is enabled */
+    rem_sdp = call_med->call->async_call.rem_sdp;
     if (ice_cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
         (call_med->call->inv == NULL || 
          call_med->call->inv->state < PJSIP_INV_STATE_CONFIRMED))

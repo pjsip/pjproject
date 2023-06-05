@@ -373,6 +373,9 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->register_on_acc_add = PJ_TRUE;
     cfg->mwi_expires = PJSIP_MWI_DEFAULT_EXPIRES;
 
+    cfg->ipv6_sip_use = PJSUA_IPV6_ENABLED_NO_PREFERENCE;
+    cfg->ipv6_media_use = PJSUA_IPV6_ENABLED_PREFER_IPV4;
+
     cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
     cfg->ip_change_cfg.shutdown_tp = PJ_TRUE;
     cfg->ip_change_cfg.hangup_calls = PJ_FALSE;
@@ -3210,30 +3213,36 @@ void pjsua_parse_media_type( pj_pool_t *pool,
 
 
 /*
- * Internal function to init transport selector from transport id.
+ * Internal function to init transport selector based on account's config.
  */
-void pjsua_init_tpselector(pjsua_transport_id tp_id,
+void pjsua_init_tpselector(pjsua_acc_id acc_id,
                            pjsip_tpselector *sel)
 {
-    pjsua_transport_data *tpdata;
-    unsigned flag;
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
     pj_bzero(sel, sizeof(*sel));
-    if (tp_id == PJSUA_INVALID_ID)
-        return;
 
-    PJ_ASSERT_RETURN(tp_id >= 0 && 
-                     tp_id < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata), );
-    tpdata = &pjsua_var.tpdata[tp_id];
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+        pjsua_transport_data *tpdata;
+        unsigned flag;
 
-    flag = pjsip_transport_get_flag_from_type(tpdata->type);
+        PJ_ASSERT_RETURN(acc->cfg.transport_id >= 0 && 
+                         acc->cfg.transport_id <
+                         (int)PJ_ARRAY_SIZE(pjsua_var.tpdata), );
+        tpdata = &pjsua_var.tpdata[acc->cfg.transport_id];
 
-    if (flag & PJSIP_TRANSPORT_DATAGRAM) {
-        sel->type = PJSIP_TPSELECTOR_TRANSPORT;
-        sel->u.transport = tpdata->data.tp;
-    } else {
-        sel->type = PJSIP_TPSELECTOR_LISTENER;
-        sel->u.listener = tpdata->data.factory;
+        flag = pjsip_transport_get_flag_from_type(tpdata->type);
+
+        if (flag & PJSIP_TRANSPORT_DATAGRAM) {
+            sel->type = PJSIP_TPSELECTOR_TRANSPORT;
+            sel->u.transport = tpdata->data.tp;
+        } else {
+            sel->type = PJSIP_TPSELECTOR_LISTENER;
+            sel->u.listener = tpdata->data.factory;
+        }
+    } else if (acc->cfg.ipv6_sip_use == PJSUA_IPV6_ENABLED_NO_PREFERENCE) {
+        sel->type = PJSIP_TPSELECTOR_CONFIG;
+        sel->config = (pjsip_tpselector_config)acc->cfg.ipv6_sip_use;
     }
 }
 

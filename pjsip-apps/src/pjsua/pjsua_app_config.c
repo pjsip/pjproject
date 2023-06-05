@@ -91,7 +91,7 @@ static void usage(void)
     puts  ("");
     puts  ("Transport Options:");
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
-    puts  ("  --ipv6              Use IPv6 instead for SIP and media.");
+    puts  ("  --ipv6              Create SIP IPv6 transports.");
 #endif
     puts  ("  --set-qos           Enable QoS tagging for SIP and media.");
     puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");

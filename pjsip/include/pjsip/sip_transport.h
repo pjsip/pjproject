@@ -203,7 +203,24 @@ typedef enum pjsip_tpselector_type
     /** Use the specific listener to send request. */
     PJSIP_TPSELECTOR_LISTENER,
 
+    /** Use the specific listener to send request. */
+    PJSIP_TPSELECTOR_CONFIG,
+
 } pjsip_tpselector_type;
+
+typedef enum pjsip_tpselector_config
+{
+    PJSIP_TPSELECTOR_USE_IPV4_ONLY,
+
+    PJSIP_TPSELECTOR_NO_PREFERENCE,
+
+    PJSIP_TPSELECTOR_PREFER_IPV4,
+
+    PJSIP_TPSELECTOR_PREFER_IPV6,
+
+    PJSIP_TPSELECTOR_USE_IPV6_ONLY
+
+} pjsip_tpselector_config;
 
 
 /**
@@ -232,6 +249,8 @@ typedef struct pjsip_tpselector
 {
     /** The type of data in the union */
     pjsip_tpselector_type   type;
+
+    pjsip_tpselector_config config;
 
     /**
      * Whether to disable reuse of an existing connection.

@@ -542,6 +542,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     pjsua_im_data *im_data;
     pjsua_acc *acc;
     pj_bool_t content_in_msg_data;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -568,15 +569,9 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
         return status;
     }
 
-    /* If account is locked to specific transport, then set transport to
-     * the request.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_tx_data_set_transport(tdata, &tp_sel);
-    }
+    /* Set transmit data's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_tx_data_set_transport(tdata, &tp_sel);
 
     /* Add accept header. */
     pjsip_msg_add_hdr( tdata->msg, 
@@ -674,6 +669,7 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     pjsua_im_data *im_data;
     pjsip_tx_data *tdata;
     pjsua_acc *acc;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -690,16 +686,9 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
         return status;
     }
 
-
-    /* If account is locked to specific transport, then set transport to
-     * the request.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_tx_data_set_transport(tdata, &tp_sel);
-    }
+    /* Set transmit data's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_tx_data_set_transport(tdata, &tp_sel);
 
     /* Add accept header. */
     pjsip_msg_add_hdr( tdata->msg, 

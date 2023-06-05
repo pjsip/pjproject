@@ -24,6 +24,7 @@
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_errno.h>
+#include <pj/array.h>
 #include <pj/log.h>
 #include <pj/string.h>
 #include <pj/guid.h>
@@ -1306,6 +1307,26 @@ static void stateless_send_transport_cb( void *token,
 
 }
 
+/* Resort addresses based on preferred address family.
+ * Note that the order of addresses within the same address family will
+ * be preserved.
+ */
+static void resort_address(pjsip_server_addresses *addr, int af)
+{
+    unsigned i = 0, j = 0;
+
+    while (j < addr->count) {
+        if (addr->entry[j].addr.addr.sa_family == af) {
+            pjsip_server_address_record temp;
+
+            pj_memcpy(&temp, &addr->entry[j], sizeof(temp));
+            pj_array_insert(addr->entry, sizeof(addr->entry[0]), j, i, &addr->entry[j]);
+            i++;
+        }
+        j++;
+    }
+}
+
 /* Resolver callback for sending stateless request. */
 static void 
 stateless_send_resolver_callback( pj_status_t status,
@@ -1380,6 +1401,13 @@ stateless_send_resolver_callback( pj_status_t status,
             }
             tdata->dest_info.addr.count = count * 2;
         }
+    }
+
+    if (tdata->tp_sel.type == PJSIP_TPSELECTOR_CONFIG) {
+        if (tdata->tp_sel.config == PJSIP_TPSELECTOR_PREFER_IPV4)
+            resort_address(&tdata->dest_info.addr, pj_AF_INET());
+        else if (tdata->tp_sel.config == PJSIP_TPSELECTOR_PREFER_IPV6)
+            resort_address(&tdata->dest_info.addr, pj_AF_INET6());
     }
 
     /* Process the addresses. */
