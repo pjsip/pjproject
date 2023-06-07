@@ -20,7 +20,6 @@ namespace pjsua2xamarin
     {
         public VideoWindow vidWin;
         public VideoPreview vidPrev;
-        private ExtraAudioDevice audMedia; 
 
         public MyCall(MyAccount acc, int call_id) : base(acc, call_id)
         {
@@ -36,9 +35,6 @@ namespace pjsua2xamarin
                     pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
                 {
                     MyApp.ep.utilLogWrite(3, "MyCall", this.dump(true, ""));
-                    if (audMedia != null && audMedia.isOpened()) {
-                        audMedia.close();
-                    }
                 }
             } catch (Exception ex) {
                 Console.WriteLine("Error : " + ex.Message);
@@ -71,15 +67,10 @@ namespace pjsua2xamarin
                 {
                     // connect ports
                     try {
-                        if (audMedia == null) {
-                            audMedia = new ExtraAudioDevice(-1, -1);
-                        }
-                        audMedia.open();
-                        AudioMedia am = getAudioMedia(i);
-                        if (audMedia.isOpened()) {
-                            audMedia.startTransmit(am);
-                            am.startTransmit(audMedia);
-                        }
+                            AudDevManager audMgr = MyApp.ep.audDevManager();
+                            AudioMedia am = getAudioMedia(i);
+                            audMgr.getCaptureDevMedia().startTransmit(am);
+                            am.startTransmit(audMgr.getPlaybackDevMedia());
                     } catch (Exception e) {
                         Console.WriteLine("Failed connecting media ports" +
                                           e.Message);
@@ -378,7 +369,6 @@ namespace pjsua2xamarin
             } catch (Exception e) {
                 Console.WriteLine(e.Message);
             }
-            ep.audDevManager().setNullDev();
         }
 
         public void deinit()

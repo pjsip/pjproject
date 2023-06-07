@@ -101,5 +101,11 @@
     <AndroidNativeLibrary Include="lib\arm64-v8a\libpjsua2.so" />
     <AndroidNativeLibrary Include="lib\arm64-v8a\libc++_shared.so" />
   </ItemGroup>
+  <ItemGroup>
+    <AndroidJavaSource Include="org\pjsip\PjCamera.java" />
+    <AndroidJavaSource Include="org\pjsip\PjCamera2.java" />
+    <AndroidJavaSource Include="org\pjsip\PjCameraInfo.java" />
+    <AndroidJavaSource Include="org\pjsip\PjCameraInfo2.java" />
+  </ItemGroup>
  <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
 </Project>
