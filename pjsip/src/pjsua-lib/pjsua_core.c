@@ -3240,9 +3240,9 @@ void pjsua_init_tpselector(pjsua_acc_id acc_id,
             sel->type = PJSIP_TPSELECTOR_LISTENER;
             sel->u.listener = tpdata->data.factory;
         }
-    } else if (acc->cfg.ipv6_sip_use == PJSUA_IPV6_ENABLED_NO_PREFERENCE) {
-        sel->type = PJSIP_TPSELECTOR_CONFIG;
-        sel->config = (pjsip_tpselector_config)acc->cfg.ipv6_sip_use;
+    } else if (acc->cfg.ipv6_sip_use != PJSUA_IPV6_ENABLED_NO_PREFERENCE) {
+        sel->type = PJSIP_TPSELECTOR_IP_VER;
+        sel->u.ip_ver = (pjsip_tpselector_ip_ver)acc->cfg.ipv6_sip_use;
     }
 }
 

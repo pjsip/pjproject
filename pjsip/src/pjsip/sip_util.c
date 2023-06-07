@@ -1403,10 +1403,10 @@ stateless_send_resolver_callback( pj_status_t status,
         }
     }
 
-    if (tdata->tp_sel.type == PJSIP_TPSELECTOR_CONFIG) {
-        if (tdata->tp_sel.config == PJSIP_TPSELECTOR_PREFER_IPV4)
+    if (tdata->tp_sel.type == PJSIP_TPSELECTOR_IP_VER) {
+        if (tdata->tp_sel.u.ip_ver == PJSIP_TPSELECTOR_PREFER_IPV4)
             resort_address(&tdata->dest_info.addr, pj_AF_INET());
-        else if (tdata->tp_sel.config == PJSIP_TPSELECTOR_PREFER_IPV6)
+        else if (tdata->tp_sel.u.ip_ver == PJSIP_TPSELECTOR_PREFER_IPV6)
             resort_address(&tdata->dest_info.addr, pj_AF_INET6());
     }
 

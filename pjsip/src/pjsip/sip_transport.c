@@ -2331,10 +2331,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                 TRACE_((THIS_FILE, "Listener type in tpsel not matched"));
                 return PJSIP_ETPNOTSUITABLE;
             }
-        } else if (sel && sel->type == PJSIP_TPSELECTOR_CONFIG) {
-            if ((sel->config == PJSIP_TPSELECTOR_USE_IPV4_ONLY &&
+        } else if (sel && sel->type == PJSIP_TPSELECTOR_IP_VER) {
+            if ((sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV4_ONLY &&
                  pjsip_transport_type_get_af(type) != pj_AF_INET()) ||
-                (sel->config == PJSIP_TPSELECTOR_USE_IPV6_ONLY &&
+                (sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV6_ONLY &&
                  pjsip_transport_type_get_af(type) != pj_AF_INET6()))
             {
                 TRACE_((THIS_FILE, "Address type in tpsel not matched"));
