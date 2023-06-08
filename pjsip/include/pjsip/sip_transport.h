@@ -262,10 +262,10 @@ typedef struct pjsip_tpselector
 
     /** Union representing the transport/listener criteria to be used. */
     union {
-        pjsip_transport *transport;
-        pjsip_tpfactory *listener;
-        void            *ptr;
-        pjsip_tpselector_ip_ver ip_ver;
+        pjsip_transport         *transport;
+        pjsip_tpfactory         *listener;
+        pjsip_tpselector_ip_ver  ip_ver;
+        void                    *ptr;
     } u;
 
 } pjsip_tpselector;

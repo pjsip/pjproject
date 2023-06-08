@@ -816,7 +816,11 @@ typedef enum pjsua_sip_timer_use
 typedef enum pjsua_ipv6_use
 {
   PJSUA_IPV6_DISABLED,
-  PJSUA_IPV6_ENABLED
+  PJSUA_IPV6_ENABLED = 1,
+  PJSUA_IPV6_ENABLED_NO_PREFERENCE = 1,
+  PJSUA_IPV6_ENABLED_PREFER_IPV4,
+  PJSUA_IPV6_ENABLED_PREFER_IPV6,
+  PJSUA_IPV6_ENABLED_USE_IPV6_ONLY
 } pjsua_ipv6_use;
 
 typedef enum pjsua_nat64_opt
