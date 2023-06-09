@@ -2593,6 +2593,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 {
     pjsua_acc *acc;
     pj_pool_t *pool;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
@@ -2656,16 +2657,9 @@ static pj_status_t pjsua_regc_init(int acc_id)
 
     pjsip_regc_set_reg_tsx_cb(acc->regc, regc_tsx_cb);
 
-    /* If account is locked to specific transport, then set transport to
-     * the client registration.
-     */
-    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
-        pjsip_regc_set_transport(acc->regc, &tp_sel);
-    }
-
+    /* Set client registration's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_regc_set_transport(acc->regc, &tp_sel);
 
     /* Set credentials
      */
@@ -2759,7 +2753,37 @@ pj_bool_t pjsua_sip_acc_is_using_ipv6(pjsua_acc_id acc_id)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
-    return (acc->tp_type & PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_IPV6;
+    return ((acc->tp_type & PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_IPV6 ||
+            pjsua_var.acc[acc_id].cfg.ipv6_sip_use ==
+            PJSUA_IPV6_ENABLED_USE_IPV6_ONLY);
+}
+
+static int sip_acc_get_pref_ip_ver(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    if ((acc->tp_type & PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_IPV6 ||
+        pjsua_var.acc[acc_id].cfg.ipv6_sip_use ==
+        PJSUA_IPV6_ENABLED_PREFER_IPV6 ||
+        pjsua_var.acc[acc_id].cfg.ipv6_sip_use ==
+        PJSUA_IPV6_ENABLED_USE_IPV6_ONLY)
+    {
+        return 6;
+    } else if (acc->tp_type != PJSIP_TRANSPORT_UNSPECIFIED ||
+               pjsua_var.acc[acc_id].cfg.ipv6_sip_use ==
+               PJSUA_IPV6_ENABLED_PREFER_IPV4 ||
+               pjsua_var.acc[acc_id].cfg.ipv6_sip_use ==
+               PJSUA_IPV6_DISABLED)
+    {
+        return 4;
+    } else {
+        /* No preference.
+         * (acc->tp_type == PJSIP_TRANSPORT_UNSPECIFIED &&
+         *  pjsua_var.acc[acc_id].cfg.ipv6_sip_use ==
+         *  PJSUA_IPV6_ENABLED_NO_PREFERENCE)
+         */
+        return 0;
+    }
 }
 
 pj_bool_t pjsua_sip_acc_is_using_stun(pjsua_acc_id acc_id)
@@ -3295,6 +3319,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
     pjsip_tx_data *tdata;
     pjsua_acc *acc;
     pjsip_route_hdr *r;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(method && target && p_tdata, PJ_EINVAL);
@@ -3318,15 +3343,9 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
         r = r->next;
     }
 
-    /* If account is locked to specific transport, then set that transport to
-     * the transmit data.
-     */
-    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_tx_data_set_transport(tdata, &tp_sel);
-    }
+    /* Set transmit data's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_tx_data_set_transport(tdata, &tp_sel);
 
     /* If via_addr is set, use this address for the Via header. */
     if (pjsua_var.acc[acc_id].cfg.allow_via_rewrite &&
@@ -3390,6 +3409,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     pj_status_t status;
     pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
     unsigned flag;
+    int sip_pref_ip;
     pjsip_tpselector tp_sel;
     pjsip_tpmgr *tpmgr;
     pjsip_tpmgr_fla2_param tfla2_prm;
@@ -3444,14 +3464,14 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     /* If destination URI specifies IPv6 or account is configured to use IPv6,
      * then set transport type to use IPv6 as well.
      */
-    if (pj_strchr(&sip_uri->host, ':') || pjsua_sip_acc_is_using_ipv6(acc_id))
-        tp_type = (pjsip_transport_type_e)(((int)tp_type) |
-                  PJSIP_TRANSPORT_IPV6);
+    sip_pref_ip = sip_acc_get_pref_ip_ver(acc_id);
+    if (pj_strchr(&sip_uri->host, ':') || sip_pref_ip == 6)
+        tp_type |= PJSIP_TRANSPORT_IPV6;
 
     flag = pjsip_transport_get_flag_from_type(tp_type);
 
     /* Init transport selector. */
-    pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+    pjsua_init_tpselector(acc_id, &tp_sel);
 
     /* Get local address suitable to send request from */
     pjsip_tpmgr_fla2_param_default(&tfla2_prm);
@@ -3515,22 +3535,29 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     if (acc->cfg.contact_use_src_port) {
         pjsip_host_info dinfo;
         pjsip_transport *tp = NULL;
-        pj_addrinfo ai;
-        pj_bool_t log_written = PJ_FALSE;
+        int af;
+        pj_addrinfo ai[2];
+        unsigned ai_cnt = 0;
+        int ip_addr_ver;
+        unsigned i;
+        pjsip_tx_data tdata;
+        pj_uint16_t port;
 
-        status = pjsip_get_dest_info((pjsip_uri*)sip_uri, NULL,
+        status = pjsip_get_dest_info((pjsip_uri *)sip_uri, NULL,
                                      pool, &dinfo);
-
-        if (status==PJ_SUCCESS && (dinfo.flag & PJSIP_TRANSPORT_RELIABLE)==0) {
-            /* Not TCP or TLS. No need to do this */
-            status = PJ_EINVALIDOP;
-            log_written = PJ_TRUE;
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (THIS_FILE, status, "Unable to use source local "
+                          "TCP/TLS socket address for Contact"));
+            goto on_return;
         }
 
-        if (status==PJ_SUCCESS &&
-            get_ip_addr_ver(&dinfo.addr.host)==0 &&
-            pjsua_var.ua_cfg.nameserver_count)
-        {
+        if ((dinfo.flag & PJSIP_TRANSPORT_RELIABLE) ==0 ) {
+            /* Not TCP or TLS. No need to do this */
+            goto on_return;
+        }
+
+        ip_addr_ver = get_ip_addr_ver(&dinfo.addr.host);
+        if (ip_addr_ver == 0 && pjsua_var.ua_cfg.nameserver_count) {
             /* If nameserver is configured, PJSIP will resolve destinations
              * by their DNS SRV record first. On the other hand, we will
              * resolve destination with DNS A record via pj_getaddrinfo().
@@ -3540,58 +3567,96 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
              */
             PJ_LOG(4,(THIS_FILE, "Warning: cannot use source TCP/TLS socket"
                       " address for Contact when nameserver is configured."));
-            status = PJ_ENOTSUP;
-            log_written = PJ_TRUE;
+            goto on_return;
         }
 
-        if (status == PJ_SUCCESS) {
-            unsigned cnt=1;
-            int af = pj_AF_UNSPEC();
+        if (ip_addr_ver == 6 || sip_pref_ip == 6) {
+            /* Get IPv6 address if dest host is IPv6 or we prefer IPv6. */
+            af = pj_AF_INET6();
+        } else if (ip_addr_ver == 4 || sip_pref_ip == 4) {
+            /* Get IPv4 address if dest host is IPv4 or we prefer IPv4. */
+            af = pj_AF_INET();
+        } else {
+            /* (ip_addr_ver == 0 && sip_pref_ip == 0)
+             * Destination host is not an IP address, and account config
+             * indicates no IP version preference, so we'll just use
+             * the first address returned by the OS.
+             */
+            af = pj_AF_UNSPEC();
+        }
 
-            if (pjsua_sip_acc_is_using_ipv6(acc_id) ||
-                (dinfo.type & PJSIP_TRANSPORT_IPV6))
-            {
-                af = pj_AF_INET6();
+        ai_cnt = 1;
+        pj_getaddrinfo(af, &dinfo.addr.host, &ai_cnt, &ai[0]);
+
+        /* Get fallback address, only if the host is not IP address and
+         * account is not bound to a certain transport.
+         */
+        if (ip_addr_ver == 0 && acc->tp_type == PJSIP_TRANSPORT_UNSPECIFIED) {
+            unsigned cnt = 1;
+
+            /* If first address is IPv4, fallback to IPv6, and vice versa. */
+            if (ai_cnt) {
+                af = (ai[0].ai_addr.addr.sa_family == pj_AF_INET())?
+                     pj_AF_INET6(): pj_AF_INET();
+            } else {
+                af = (af == pj_AF_INET())? pj_AF_INET6(): pj_AF_INET();
             }
-            status = pj_getaddrinfo(af, &dinfo.addr.host, &cnt, &ai);
-            if (cnt == 0) {
-                status = PJ_ENOTSUP;
-            } else if ((dinfo.type & PJSIP_TRANSPORT_IPV6)==0 &&
-                        ai.ai_addr.addr.sa_family == pj_AF_INET6())
+            /* Check if the fallback addr is allowed. */
+            if ((af == pj_AF_INET() &&
+                 acc->cfg.ipv6_sip_use != PJSUA_IPV6_ENABLED_USE_IPV6_ONLY) ||
+                (af == pj_AF_INET6() &&
+                 acc->cfg.ipv6_sip_use != PJSUA_IPV6_DISABLED))
             {
-                /* Destination is a hostname and account is not bound to IPv6,
-                 * but hostname resolution reveals that it has IPv6 address,
-                 * so let's use IPv6 transport type.
-                 */
+                pj_getaddrinfo(af, &dinfo.addr.host, &cnt, &ai[ai_cnt]);
+                ai_cnt += cnt;
+            }
+        }
+
+        if (ai_cnt == 0) {
+            PJ_LOG(4, (THIS_FILE, "Unable to resolve host to "
+                       "generate Contact address"));
+            goto on_return;
+        }
+
+        /* Create a dummy tdata to inform remote host name to transport */
+        pj_bzero(&tdata, sizeof(tdata));
+        pj_strdup(pool, &tdata.dest_info.name, &dinfo.addr.host);
+        port = (pj_uint16_t)dinfo.addr.port;
+        if (port == 0) {
+            port = (dinfo.flag & PJSIP_TRANSPORT_SECURE) ? 5061 : 5060;
+        }
+
+        /* Try to acquire transport, fallback if fails. */
+        for (i = 0; i < ai_cnt; i++) {
+            int addr_len = pj_sockaddr_get_len(&ai[i].ai_addr);
+
+            if (ai[i].ai_addr.addr.sa_family == pj_AF_INET6()) {
                 dinfo.type |= PJSIP_TRANSPORT_IPV6;
                 tp_type |= PJSIP_TRANSPORT_IPV6;
+            } else {
+                dinfo.type &= ~PJSIP_TRANSPORT_IPV6;
+                tp_type &= ~PJSIP_TRANSPORT_IPV6;
             }
-        }
 
-        if (status == PJ_SUCCESS) {
-            pjsip_tx_data tdata;
-            int addr_len = pj_sockaddr_get_len(&ai.ai_addr);
-            pj_uint16_t port = (pj_uint16_t)dinfo.addr.port;
-
-            /* Create a dummy tdata to inform remote host name to transport */
-            pj_bzero(&tdata, sizeof(tdata));
-            pj_strdup(pool, &tdata.dest_info.name, &dinfo.addr.host);
-
-            if (port==0) {
-                port = (dinfo.flag & PJSIP_TRANSPORT_SECURE) ? 5061 : 5060;
-            }
-            pj_sockaddr_set_port(&ai.ai_addr, port);
+            pj_sockaddr_set_port(&ai[i].ai_addr, port);
             status = pjsip_endpt_acquire_transport2(pjsua_var.endpt,
                                                     dinfo.type,
-                                                    &ai.ai_addr,
+                                                    &ai[i].ai_addr,
                                                     addr_len,
                                                     &tp_sel,
                                                     &tdata, &tp);
+            if (status == PJ_SUCCESS)
+                break;
         }
 
-        if (status == PJ_SUCCESS && (tp->local_name.port == 0 ||
-                                     tp->local_name.host.slen==0 ||
-                                     *tp->local_name.host.ptr=='0'))
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(4,(THIS_FILE, "Unable to acquire transport for "
+                      "Contact address"));
+            goto on_return;
+        }
+
+        if (tp->local_name.port == 0 || tp->local_name.host.slen==0 ||
+            *tp->local_name.host.ptr=='0')
         {
             /* Trap zero port or "0.0.0.0" address. */
             /* The TCP/TLS transport is still connecting and unfortunately
@@ -3599,11 +3664,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
              */
             PJ_LOG(4,(THIS_FILE, "Unable to get transport local port "
                       "for Contact address (OS doesn't support)"));
-            status = PJ_ENOTSUP;
-            log_written = PJ_TRUE;
-        }
-
-        if (status == PJ_SUCCESS) {
+        } else {
             /* Got the local transport address, don't update if
              * we are on NAT64 and already obtained the address
              * from STUN above.
@@ -3613,22 +3674,14 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
             addr->port = tp->local_name.port;
         }
 
-        if (tp) {
-            /* Here the transport's ref counter WILL reach zero. But the
-             * transport will NOT get destroyed because it should have an
-             * idle timer.
-             */
-            pjsip_transport_dec_ref(tp);
-            tp = NULL;
-        }
-
-        if (status != PJ_SUCCESS && !log_written) {
-            PJ_PERROR(4,(THIS_FILE, status, "Unable to use source local "
-                         "TCP socket address for Contact"));
-        }
-        status = PJ_SUCCESS;
+        /* Here the transport's ref counter WILL reach zero. But the
+         * transport will NOT get destroyed because it should have an
+         * idle timer.
+         */
+        pjsip_transport_dec_ref(tp);
     }
 
+on_return:
     if (p_tp_type)
         *p_tp_type = tp_type;
 
@@ -3832,6 +3885,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
         pjsua_sip_acc_is_using_ipv6(acc_id) ||
         (rdata->tp_info.transport->key.type & PJSIP_TRANSPORT_IPV6))
     {
+        if (acc->cfg.ipv6_sip_use == PJSUA_IPV6_DISABLED)
+            return PJSIP_EUNSUPTRANSPORT;
         tp_type = (pjsip_transport_type_e)
                   (((int)tp_type) | PJSIP_TRANSPORT_IPV6);
     }
@@ -3840,7 +3895,10 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
 
     /* Init transport selector. */
-    pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+    pj_bzero(&tp_sel, sizeof(tp_sel));
+    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+        pjsua_init_tpselector(acc_id, &tp_sel);
+    }
 
     /* Get local address suitable to send request from */
     pjsip_tpmgr_fla2_param_default(&tfla2_prm);
@@ -3928,7 +3986,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
             /* Update client registration's transport. */
             pjsip_tpselector tp_sel;
 
-            pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+            pjsua_init_tpselector(acc_id, &tp_sel);
             pjsip_regc_set_transport(acc->regc, &tp_sel);
         }
     } else {

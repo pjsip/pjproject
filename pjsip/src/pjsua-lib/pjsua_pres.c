@@ -810,6 +810,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t reason;
     pjsip_expires_hdr *expires_hdr;
     pjsua_msg_data msg_data;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     if (pjsip_method_cmp(req_method, pjsip_get_subscribe_method()) != 0)
@@ -943,15 +944,9 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Subscription has been created, decrement & release dlg lock */
     pjsip_dlg_dec_lock(dlg);
 
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_dlg_set_transport(dlg, &tp_sel);
-    }
+    /* Set dialog's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_dlg_set_transport(dlg, &tp_sel);
 
     /* Attach our data to the subscription: */
     uapres = PJ_POOL_ALLOC_T(dlg->pool, pjsua_srv_pres);
@@ -1795,6 +1790,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     pjsua_acc *acc;
     pj_str_t contact;
     pjsip_tx_data *tdata;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     /* Event subscription callback. */
@@ -1886,15 +1882,9 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
         return;
     }
 
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_dlg_set_transport(buddy->dlg, &tp_sel);
-    }
+    /* Set dialog's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_dlg_set_transport(buddy->dlg, &tp_sel);
 
     /* Set route-set */
     if (!pj_list_empty(&acc->route_set)) {
@@ -2111,6 +2101,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
     pj_pool_t *tmp_pool = NULL;
     pj_str_t contact;
     pjsip_tx_data *tdata;
+    pjsip_tpselector tp_sel;
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc)
@@ -2220,15 +2211,9 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
         goto on_return;
     }
 
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_dlg_set_transport(acc->mwi_dlg, &tp_sel);
-    }
+    /* Set dialog's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_dlg_set_transport(acc->mwi_dlg, &tp_sel);
 
     /* Set route-set */
     if (!pj_list_empty(&acc->route_set)) {

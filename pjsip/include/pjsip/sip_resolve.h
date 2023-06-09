@@ -171,6 +171,25 @@ PJ_BEGIN_DECL
  *  - RFC 3263: Locating SIP Servers
  */
 
+/** Address records. */
+typedef struct pjsip_server_address_record
+{
+    /** Preferable transport to be used to contact this address. */
+    pjsip_transport_type_e  type;
+
+    /** Server priority (the lower the higher the priority). */
+    unsigned                priority;
+
+    /** Server weight (the higher the more load it can handle). */
+    unsigned                weight;
+
+    /** The server's address. */
+    pj_sockaddr             addr;
+
+    /** Address length. */
+    int                     addr_len;
+} pjsip_server_address_record;
+
 /**
  * The server addresses returned by the resolver.
  */
@@ -180,24 +199,7 @@ typedef struct pjsip_server_addresses
     unsigned    count;
 
     /** Address records. */
-    struct
-    {
-        /** Preferable transport to be used to contact this address. */
-        pjsip_transport_type_e  type;
-
-        /** Server priority (the lower the higher the priority). */
-        unsigned                priority;
-
-        /** Server weight (the higher the more load it can handle). */
-        unsigned                weight;
-
-        /** The server's address. */
-        pj_sockaddr             addr;
-
-        /** Address length. */
-        int                     addr_len;
-
-    } entry[PJSIP_MAX_RESOLVED_ADDRESSES];
+    pjsip_server_address_record entry[PJSIP_MAX_RESOLVED_ADDRESSES];
 
 } pjsip_server_addresses;
 

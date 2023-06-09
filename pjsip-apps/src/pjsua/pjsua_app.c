@@ -1713,7 +1713,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -1778,7 +1778,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -1846,7 +1846,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 

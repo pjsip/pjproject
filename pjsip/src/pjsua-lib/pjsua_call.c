@@ -439,6 +439,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     unsigned options = 0;
     pjsip_tx_data *tdata;
     pj_bool_t cb_called = PJ_FALSE;
+    pjsip_tpselector tp_sel;
     pj_status_t status = (info? info->status: PJ_SUCCESS);
 
     PJSUA_LOCK();
@@ -524,15 +525,9 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     dlg->mod_data[pjsua_var.mod.id] = call;
     inv->mod_data[pjsua_var.mod.id] = call;
 
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_dlg_set_transport(dlg, &tp_sel);
-    }
+    /* Set dialog's transport based on acc's config. */
+    pjsua_init_tpselector(call->acc_id, &tp_sel);
+    pjsip_dlg_set_transport(dlg, &tp_sel);
 
     /* Set dialog Route-Set: */
     if (!pj_list_empty(&acc->route_set))
@@ -814,7 +809,7 @@ void call_update_contact(pjsua_call *call, pj_str_t **new_contact)
     /* When contact is changed, the account transport may have been
      * changed too, so let's update the dialog's transport too.
      */
-    pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+    pjsua_init_tpselector(call->acc_id, &tp_sel);
     pjsip_dlg_set_transport(call->inv->dlg, &tp_sel);
 }
 
@@ -1479,6 +1474,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     int sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
     pjmedia_sdp_session *offer=NULL;
     pj_bool_t should_dec_dlg = PJ_FALSE;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     /* Don't want to handle anything but INVITE */
@@ -1872,15 +1868,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         goto on_return;
     }
 
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
-        pjsip_dlg_set_transport(dlg, &tp_sel);
-    }
+    /* Set dialog's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_dlg_set_transport(dlg, &tp_sel);
 
     /* Create and attach pjsua_var data to the dialog */
     call->inv = inv;

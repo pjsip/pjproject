@@ -277,6 +277,15 @@ struct AccountSipConfig : public PersistentObject
      */
     TransportId         transportId;
 
+    /**
+     * Specify whether IPv6 should be used for SIP signalling.
+     *
+     * Default: PJSUA_IPV6_ENABLED_NO_PREFERENCE
+     * (IP version used will be based on the address resolution
+     * returned by OS/resolver)
+     */
+    pjsua_ipv6_use      ipv6Use;
+
 public:
     /**
      * Read this object from a container node.
@@ -1033,7 +1042,11 @@ struct AccountMediaConfig : public PersistentObject
     SrtpOpt             srtpOpt;
 
     /**
-     * Specify whether IPv6 should be used on media. Default is not used.
+     * Specify whether IPv6 should be used on media.
+     *
+     * Default: PJSUA_IPV6_ENABLED_PREFER_IPV4
+     * (Dual stack media, capable to use IPv4/IPv6.
+     * Outgoing offer will prefer to use IPv4)
      */
     pjsua_ipv6_use      ipv6Use;
 
@@ -1082,7 +1095,7 @@ public:
       streamKaEnabled(false),
       srtpUse(PJSUA_DEFAULT_USE_SRTP),
       srtpSecureSignaling(PJSUA_DEFAULT_SRTP_SECURE_SIGNALING),
-      ipv6Use(PJSUA_IPV6_DISABLED),
+      ipv6Use(PJSUA_IPV6_ENABLED_PREFER_IPV4),
       rtcpMuxEnabled(false),
       rtcpXrEnabled(PJMEDIA_STREAM_ENABLE_XR),
       useLoopMedTp(false),

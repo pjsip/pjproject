@@ -620,6 +620,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.auth_pref.initial_auth  = sipConfig.authInitialEmpty;
     ret.auth_pref.algorithm     = str2Pj(sipConfig.authInitialAlgorithm);
     ret.transport_id            = sipConfig.transportId;
+    ret.ipv6_sip_use            = sipConfig.ipv6Use;
 
     // AccountCallConfig
     ret.call_hold_type          = callConfig.holdType;
@@ -781,6 +782,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     sipConfig.authInitialEmpty  = PJ2BOOL(prm.auth_pref.initial_auth);
     sipConfig.authInitialAlgorithm = pj2Str(prm.auth_pref.algorithm);
     sipConfig.transportId       = prm.transport_id;
+    sipConfig.ipv6Use           = prm.ipv6_sip_use;
 
     // AccountCallConfig
     callConfig.holdType         = prm.call_hold_type;
