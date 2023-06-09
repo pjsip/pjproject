@@ -171,7 +171,7 @@ PJ_BEGIN_DECL
  *  - RFC 3263: Locating SIP Servers
  */
 
-    /** Address records. */
+/** Address records. */
 typedef struct pjsip_server_address_record
 {
     /** Preferable transport to be used to contact this address. */
