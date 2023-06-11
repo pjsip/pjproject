@@ -228,6 +228,7 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
     pidf_tuple = pjpidf_pres_get_first_tuple(pidf);
     while (pidf_tuple && pres_status->info_cnt < PJSIP_PRES_STATUS_MAX_INFO) {
         pjpidf_status *pidf_status;
+		pjpidf_e_activities *pidf_e_activities;
 
         pres_status->info[pres_status->info_cnt].tuple_node = 
             pj_xml_clone(pool, pidf_tuple);
@@ -242,8 +243,16 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
 
         pidf_status = pjpidf_tuple_get_status(pidf_tuple);
         if (pidf_status) {
-            pres_status->info[pres_status->info_cnt].basic_open = 
+				pres_status->info[pres_status->info_cnt].basic_open = 
                 pjpidf_status_is_basic_open(pidf_status);
+                pidf_e_activities = pjpidf_tuple_get_e_activities(pidf_status);
+                if (pidf_e_activities) {
+                    pres_status->info[pres_status->info_cnt].is_on_the_phone =
+                        pjpidf_status_is_on_the_phone(pidf_e_activities);
+                }
+                else {
+                    pres_status->info[pres_status->info_cnt].is_on_the_phone = PJ_FALSE;
+                }
         } else {
             pres_status->info[pres_status->info_cnt].basic_open = PJ_FALSE;
         }

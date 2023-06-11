@@ -22,6 +22,12 @@
 #include <pj/assert.h>
 
 
+#include <pj/log.h>
+#include <pj/os.h>
+#include <pj/guid.h>
+
+#define THIS_FILE   "pidf.c"
+
 struct pjpidf_op_desc pjpidf_op = 
 {
     {
@@ -40,6 +46,7 @@ struct pjpidf_op_desc pjpidf_op =
         &pjpidf_tuple_get_id,
         &pjpidf_tuple_set_id,
         &pjpidf_tuple_get_status,
+        &pjpidf_tuple_get_e_activities,
         &pjpidf_tuple_get_contact,
         &pjpidf_tuple_set_contact,
         &pjpidf_tuple_set_contact_prio,
@@ -54,6 +61,7 @@ struct pjpidf_op_desc pjpidf_op =
     {
         &pjpidf_status_construct,
         &pjpidf_status_is_basic_open,
+        &pjpidf_status_is_on_the_phone,
         &pjpidf_status_set_basic_open
     }
 };
@@ -68,6 +76,8 @@ static pj_str_t CONTACT = { "contact", 7 };
 static pj_str_t PRIORITY = { "priority", 8 };
 static pj_str_t TIMESTAMP = { "timestamp", 9 };
 static pj_str_t BASIC = { "basic", 5 };
+static pj_str_t E_ACTIVITIES = { "e:activities", 12 };
+static pj_str_t E_ON_THE_PHONE = { "e:on-the-phone", 14 };
 static pj_str_t OPEN = { "open", 4 };
 static pj_str_t CLOSED = { "closed", 6 };
 static pj_str_t EMPTY_STRING = { NULL, 0 };
@@ -169,13 +179,18 @@ PJ_DEF(void) pjpidf_tuple_construct(pj_pool_t *pool, pjpidf_tuple *t,
 {
     pj_xml_attr *attr;
     pjpidf_status *st;
+	pjpidf_e_activities *e_activ;
 
     xml_init_node(pool, t, &TUPLE, NULL);
     attr = xml_create_attr(pool, &ID, id);
     pj_xml_add_attr(t, attr);
     st = PJ_POOL_ALLOC_T(pool, pjpidf_status);
     pjpidf_status_construct(pool, st);
-    pj_xml_add_node(t, st);
+    pj_xml_add_node(t, e_activ);
+	
+    e_activ = PJ_POOL_ALLOC_T(pool, pjpidf_e_activities);
+    pjpidf_status_construct(pool, e_activ);
+    pj_xml_add_node(t, e_activ);
 }
 
 PJ_DEF(const pj_str_t*) pjpidf_tuple_get_id(const pjpidf_tuple *t)
@@ -326,6 +341,19 @@ PJ_DEF(pj_bool_t) pjpidf_status_is_basic_open(const pjpidf_status *st)
     if (!node)
         return PJ_FALSE;
     return pj_stricmp(&node->content, &OPEN)==0;
+}
+PJ_DEF(pjpidf_e_activities*) pjpidf_tuple_get_e_activities(const pjpidf_status *st)
+{
+    pjpidf_e_activities *e_activ = (pjpidf_e_activities*)pj_xml_find_node((pj_xml_node*)st, &E_ACTIVITIES);
+    pj_assert(e_activ);
+    return e_activ;
+}
+PJ_DEF(pj_bool_t) pjpidf_status_is_on_the_phone(const pjpidf_e_activities *e_activ)
+{
+    pj_xml_node *node = pj_xml_find_node((pj_xml_node*)e_activ, &E_ON_THE_PHONE);
+    if (!node)
+        return PJ_FALSE;
+    return PJ_TRUE;
 }
 
 PJ_DEF(void) pjpidf_status_set_basic_open(pjpidf_status *st, pj_bool_t open)
