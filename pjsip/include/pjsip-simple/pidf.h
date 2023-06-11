@@ -41,12 +41,14 @@ PJ_BEGIN_DECL
 typedef struct pj_xml_node pjpidf_pres;
 typedef struct pj_xml_node pjpidf_tuple;
 typedef struct pj_xml_node pjpidf_status;
+typedef struct pj_xml_node pjpidf_e_activities;
 typedef struct pj_xml_node pjpidf_note;
 
 typedef struct pjpidf_status_op
 {
     void            (*construct)(pj_pool_t*, pjpidf_status*);
     pj_bool_t       (*is_basic_open)(const pjpidf_status*);
+    pj_bool_t       (*is_on_the_phone)(const pjpidf_e_activities*);
     void            (*set_basic_open)(pjpidf_status*, pj_bool_t);
 } pjpidf_status_op;
 
@@ -58,6 +60,7 @@ typedef struct pjpidf_tuple_op
     void            (*set_id)(pj_pool_t*, pjpidf_tuple *, const pj_str_t*);
 
     pjpidf_status*  (*get_status)(pjpidf_tuple* );
+	pjpidf_e_activities*  (*get_e_activities)(pjpidf_status* );
 
     const pj_str_t* (*get_contact)(const pjpidf_tuple*);
     void            (*set_contact)(pj_pool_t*, pjpidf_tuple*, const pj_str_t*);
@@ -138,6 +141,7 @@ PJ_DECL(void)            pjpidf_tuple_set_id(pj_pool_t *pool, pjpidf_tuple *t,
                                              const pj_str_t *id);
 
 PJ_DECL(pjpidf_status*)  pjpidf_tuple_get_status(pjpidf_tuple *t);
+PJ_DECL(pjpidf_e_activities*)  pjpidf_tuple_get_e_activities(pjpidf_status *t);
 
 PJ_DECL(const pj_str_t*) pjpidf_tuple_get_contact(const pjpidf_tuple *t);
 PJ_DECL(void)            pjpidf_tuple_set_contact(pj_pool_t *pool, pjpidf_tuple *t, 
@@ -163,6 +167,7 @@ PJ_DECL(void)            pjpidf_tuple_set_timestamp_np( pj_pool_t*, pjpidf_tuple
  *****************************************************************************/
 PJ_DECL(void)            pjpidf_status_construct(pj_pool_t*, pjpidf_status*);
 PJ_DECL(pj_bool_t)       pjpidf_status_is_basic_open(const pjpidf_status*);
+PJ_DECL(pj_bool_t)       pjpidf_status_is_on_the_phone(const pjpidf_e_activities*);
 PJ_DECL(void)            pjpidf_status_set_basic_open(pjpidf_status*, pj_bool_t);
 
 

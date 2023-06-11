@@ -84,6 +84,7 @@ struct pjsip_pres_status
     struct {
 
         pj_bool_t       basic_open;     /**< Basic status/availability.     */
+        pj_bool_t       is_on_the_phone;/**< Is busy or Not.     */
         pjrpid_element  rpid;           /**< Optional RPID info.            */
 
         pj_str_t        id;             /**< Tuple id.                      */
