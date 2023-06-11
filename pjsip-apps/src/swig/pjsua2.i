@@ -220,3 +220,8 @@ using namespace pj;
 #endif
 
 %include "pjsua2/endpoint.hpp"
+%inline %{
+pj_ssize_t new_pj_ssize_t(int s) {
+   return (pj_ssize_t) s;
+}
+%}
