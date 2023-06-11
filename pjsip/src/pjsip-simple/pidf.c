@@ -186,7 +186,7 @@ PJ_DEF(void) pjpidf_tuple_construct(pj_pool_t *pool, pjpidf_tuple *t,
     pj_xml_add_attr(t, attr);
     st = PJ_POOL_ALLOC_T(pool, pjpidf_status);
     pjpidf_status_construct(pool, st);
-    pj_xml_add_node(t, e_activ);
+    pj_xml_add_node(t, st);
 	
     e_activ = PJ_POOL_ALLOC_T(pool, pjpidf_e_activities);
     pjpidf_status_construct(pool, e_activ);

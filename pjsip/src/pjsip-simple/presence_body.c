@@ -243,7 +243,7 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
 
         pidf_status = pjpidf_tuple_get_status(pidf_tuple);
         if (pidf_status) {
-				pres_status->info[pres_status->info_cnt].basic_open = 
+                pres_status->info[pres_status->info_cnt].basic_open = 
                 pjpidf_status_is_basic_open(pidf_status);
                 pidf_e_activities = pjpidf_tuple_get_e_activities(pidf_status);
                 if (pidf_e_activities) {
