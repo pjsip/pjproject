@@ -2213,9 +2213,6 @@ typedef struct pjsua_config
      * If this is enabled, the library will respond 200/OK to the NOTIFY
      * request and forward the request to \a on_mwi_info() callback.
      *
-     * Note: the callback will not be invoked and 481/"No account to handle" response
-     * will be sent if this is enabled but no account is configured.
-     * 
      * See also \a mwi_enabled field #on pjsua_acc_config.
      *
      * Default: PJ_TRUE
@@ -2404,13 +2401,6 @@ struct pjsua_msg_data
      * pjsua_call_set_hold(), and pjsua_call_update().
      */
     pj_str_t    target_uri;
-
-    /**
-     * Optional local URI (i.e. From header). If NULL, the account ID
-     * \a pjsua_acc_config.id is used for the From header. This field is
-     * currently used only by pjsua_call_make_call() and pjsua_im_send().
-     */
-    pj_str_t    local_uri;
 
     /**
      * Additional message headers as linked list. Application can add
@@ -3677,8 +3667,6 @@ typedef struct pjsua_turn_config
 
 /**
  * Specify how IPv6 transport should be used in account config.
- * IP version preference only applies for outgoing direction, for incoming
- * direction, we will check the corresponding message/offer and match it.
  */
 typedef enum pjsua_ipv6_use
 {
@@ -3690,23 +3678,7 @@ typedef enum pjsua_ipv6_use
     /**
      * IPv6 is enabled.
      */
-    PJSUA_IPV6_ENABLED = 1,
-    PJSUA_IPV6_ENABLED_NO_PREFERENCE = 1,
-
-    /**
-     * IPv6 is enabled, but IPv4 is preferable.
-     */
-    PJSUA_IPV6_ENABLED_PREFER_IPV4,
-
-    /**
-     * IPv6 is enabled and preferable.
-     */
-    PJSUA_IPV6_ENABLED_PREFER_IPV6,
-
-    /**
-     * Only IPv6 is enabled, IPv4 will not be used.
-     */
-    PJSUA_IPV6_ENABLED_USE_IPV6_ONLY
+    PJSUA_IPV6_ENABLED
 
 } pjsua_ipv6_use;
 
@@ -3995,17 +3967,11 @@ typedef struct pjsua_acc_config
      * unregister current Contact, update the Contact with transport address
      * learned from Via header, and register a new Contact to the registrar.
      * This will also update the public name of UDP transport if STUN is
-     * configured.
+     * configured. 
      *
-     * Possible values:
-     * * 0 (disabled).
-     * * 1 (enabled). Update except if both Contact and server's IP address
-     * are public but response contains private IP.
-     * * 2 (enabled). Update without exception.
-     * 
      * See also contact_rewrite_method field.
      *
-     * Default: 1
+     * Default: 1 (yes)
      */
     pj_bool_t allow_contact_rewrite;
 
@@ -4196,20 +4162,7 @@ typedef struct pjsua_acc_config
     pjsua_nat64_opt             nat64_opt;
 
     /**
-     * Specify whether IPv6 should be used for SIP signalling.
-     *
-     * Default: PJSUA_IPV6_ENABLED_NO_PREFERENCE
-     * (IP version used will be based on the address resolution
-     * returned by OS/resolver)
-     */
-    pjsua_ipv6_use              ipv6_sip_use;
-
-    /**
      * Specify whether IPv6 should be used on media.
-     *
-     * Default: PJSUA_IPV6_ENABLED_PREFER_IPV4
-     * (Dual stack media, capable to use IPv4/IPv6.
-     * Outgoing offer will prefer to use IPv4)
      */
     pjsua_ipv6_use              ipv6_media_use;
 
@@ -6177,27 +6130,6 @@ PJ_DECL(pj_status_t) pjsua_call_set_vid_strm (
                                 pjsua_call_vid_strm_op op,
                                 const pjsua_call_vid_strm_op_param *param);
 
-
-/**
- * Modify the video stream's codec parameter after the codec is opened.
- * Note that not all codec backends support modifying parameters during
- * runtime and only certain parameters can be changed.
- *
- * Currently, only Video Toolbox and OpenH264 backends support runtime
- * adjustment of encoding bitrate (avg_bps and max_bps).
- *
- * @param call_id       Call identification.
- * @param med_idx       Video stream index.
- * @param param         The new codec parameter.
- *
- * @return              PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t)
-pjsua_call_vid_stream_modify_codec_param(pjsua_call_id call_id,
-                                         int med_idx,
-                                         const pjmedia_vid_codec_param *param);
-
-
 /**
  * Modify the audio stream's codec parameter after the codec is opened.
  * Note that not all codec parameters can be modified during run-time.
@@ -6344,6 +6276,11 @@ typedef enum pjsua_buddy_status
      * Buddy is known to be online.
      */
     PJSUA_BUDDY_STATUS_ONLINE,
+
+    /**
+     * Buddy is known to be busy.
+     */
+    PJSUA_BUDDY_STATUS_BUSY,
 
     /**
      * Buddy is offline.
