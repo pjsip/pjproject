@@ -47,6 +47,7 @@ struct pj_stun_client_tsx
     pj_timer_heap_t     *timer_heap;
 
     pj_timer_entry       destroy_timer;
+    pj_bool_t            is_destroying;
 
     void                *last_pkt;
     unsigned             last_pkt_size;
@@ -109,7 +110,12 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_schedule_destroy(
     PJ_ASSERT_RETURN(tsx && delay, PJ_EINVAL);
     PJ_ASSERT_RETURN(tsx->cb.on_destroy, PJ_EINVAL);
 
+    if (tsx->is_destroying)
+        return PJ_SUCCESS;
+
     pj_grp_lock_acquire(tsx->grp_lock);
+
+    tsx->is_destroying = PJ_TRUE;
 
     /* Cancel previously registered timer */
     pj_timer_heap_cancel_if_active(tsx->timer_heap, &tsx->destroy_timer,
@@ -291,6 +297,11 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 
     pj_grp_lock_acquire(tsx->grp_lock);
 
+    if (tsx->is_destroying) {
+        pj_grp_lock_release(tsx->grp_lock);
+        return PJ_SUCCESS;
+    }
+
     /* Encode message */
     tsx->last_pkt = pkt;
     tsx->last_pkt_size = pkt_len;
@@ -353,6 +364,11 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
     PJ_UNUSED_ARG(timer_heap);
     pj_grp_lock_acquire(tsx->grp_lock);
 
+    if (tsx->is_destroying) {
+        pj_grp_lock_release(tsx->grp_lock);
+        return;
+    }
+
     if (tsx->transmit_count >= PJ_STUN_MAX_TRANSMIT_COUNT) {
         /* tsx may be destroyed when calling the callback below */
         pj_grp_lock_t *grp_lock = tsx->grp_lock;
@@ -398,6 +414,9 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx,
     if (tsx->destroy_timer.id != 0) {
         return PJ_SUCCESS;
     }
+
+    if (tsx->is_destroying)
+        return PJ_SUCCESS;
 
     if (mod_count) {
         pj_timer_heap_cancel_if_active(tsx->timer_heap, &tsx->retransmit_timer,
