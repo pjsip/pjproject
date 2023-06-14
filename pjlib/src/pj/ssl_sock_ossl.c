@@ -100,6 +100,17 @@
 
 #   include <openssl/obj_mac.h>
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L || \
+    (defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L)
+#  define X509_get_notBefore(x)     X509_getm_notBefore(x)
+#  define X509_get_notAfter(x)      X509_getm_notAfter(x)
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L || \
+    (defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x30000000L)
+#  define SSL_get_peer_certificate(x)     SSL_get1_peer_certificate(x)
+#endif
+
 static const unsigned nid_cid_map[] = {
     NID_sect163k1,              /* sect163k1 (1) */
     NID_sect163r1,              /* sect163r1 (2) */

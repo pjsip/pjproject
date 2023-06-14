@@ -1,10 +1,9 @@
 /*
- * aes_gcm_ossl.c
+ * aes_gcm_mbedtls.c
  *
  * AES Galois Counter Mode
  *
- * John A. Foley
- * Cisco Systems, Inc.
+ * YongCheng Yang
  *
  */
 
@@ -47,8 +46,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
-#include <openssl/evp.h>
+#include <mbedtls/gcm.h>
 #include "aes_gcm.h"
 #include "alloc.h"
 #include "err.h" /* for srtp_debug */
@@ -57,17 +55,41 @@
 #include "cipher_test_cases.h"
 
 srtp_debug_module_t srtp_mod_aes_gcm = {
-    0,        /* debugging is off by default */
-    "aes gcm" /* printable module name       */
+    0,                /* debugging is off by default */
+    "aes gcm mbedtls" /* printable module name       */
 };
+
+/**
+ * SRTP IV Formation for AES-GCM
+ * https://tools.ietf.org/html/rfc7714#section-8.1
+ *   0  0  0  0  0  0  0  0  0  0  1  1
+ *   0  1  2  3  4  5  6  7  8  9  0  1
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |00|00| SSRC      | ROC       | SEQ |---+
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+   |
+ *  |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+   |
+ *  | Encryption Salt                   |->(+)
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+   |
+ *                                          |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+   |
+ *  | Initialization Vector             |<--+
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+
+ *
+ * SRTCP IV Formation for AES-GCM
+ * https://tools.ietf.org/html/rfc7714#section-9.1
+ *
+ */
 
 /*
  * For now we only support 8 and 16 octet tags.  The spec allows for
  * optional 12 byte tag, which may be supported in the future.
  */
+#define GCM_IV_LEN 12
 #define GCM_AUTH_TAG_LEN 16
 #define GCM_AUTH_TAG_LEN_8 8
 
+#define FUNC_ENTRY() debug_print(srtp_mod_aes_gcm, "%s entry", __func__);
 /*
  * This function allocates a new instance of this crypto engine.
  * The key_len parameter should be one of 28 or 44 for
@@ -75,10 +97,11 @@ srtp_debug_module_t srtp_mod_aes_gcm = {
  * key length includes the 14 byte salt value that is used when
  * initializing the KDF.
  */
-static srtp_err_status_t srtp_aes_gcm_openssl_alloc(srtp_cipher_t **c,
+static srtp_err_status_t srtp_aes_gcm_mbedtls_alloc(srtp_cipher_t **c,
                                                     int key_len,
                                                     int tlen)
 {
+    FUNC_ENTRY();
     srtp_aes_gcm_ctx_t *gcm;
 
     debug_print(srtp_mod_aes_gcm, "allocating cipher with key length %d",
@@ -110,13 +133,15 @@ static srtp_err_status_t srtp_aes_gcm_openssl_alloc(srtp_cipher_t **c,
         return (srtp_err_status_alloc_fail);
     }
 
-    gcm->ctx = EVP_CIPHER_CTX_new();
+    gcm->ctx =
+        (mbedtls_gcm_context *)srtp_crypto_alloc(sizeof(mbedtls_gcm_context));
     if (gcm->ctx == NULL) {
         srtp_crypto_free(gcm);
         srtp_crypto_free(*c);
         *c = NULL;
         return srtp_err_status_alloc_fail;
     }
+    mbedtls_gcm_init(gcm->ctx);
 
     /* set pointers */
     (*c)->state = gcm;
@@ -146,13 +171,14 @@ static srtp_err_status_t srtp_aes_gcm_openssl_alloc(srtp_cipher_t **c,
 /*
  * This function deallocates a GCM session
  */
-static srtp_err_status_t srtp_aes_gcm_openssl_dealloc(srtp_cipher_t *c)
+static srtp_err_status_t srtp_aes_gcm_mbedtls_dealloc(srtp_cipher_t *c)
 {
     srtp_aes_gcm_ctx_t *ctx;
-
+    FUNC_ENTRY();
     ctx = (srtp_aes_gcm_ctx_t *)c->state;
     if (ctx) {
-        EVP_CIPHER_CTX_free(ctx->ctx);
+        mbedtls_gcm_free(ctx->ctx);
+        srtp_crypto_free(ctx->ctx);
         /* zeroize the key material */
         octet_string_set_to_zero(ctx, sizeof(srtp_aes_gcm_ctx_t));
         srtp_crypto_free(ctx);
@@ -164,53 +190,44 @@ static srtp_err_status_t srtp_aes_gcm_openssl_dealloc(srtp_cipher_t *c)
     return (srtp_err_status_ok);
 }
 
-/*
- * aes_gcm_openssl_context_init(...) initializes the aes_gcm_context
- * using the value in key[].
- *
- * the key is the secret key
- */
-static srtp_err_status_t srtp_aes_gcm_openssl_context_init(void *cv,
+static srtp_err_status_t srtp_aes_gcm_mbedtls_context_init(void *cv,
                                                            const uint8_t *key)
 {
+    FUNC_ENTRY();
     srtp_aes_gcm_ctx_t *c = (srtp_aes_gcm_ctx_t *)cv;
-    const EVP_CIPHER *evp;
-
+    uint32_t key_len_in_bits;
+    int errCode = 0;
     c->dir = srtp_direction_any;
+    c->aad_size = 0;
 
     debug_print(srtp_mod_aes_gcm, "key:  %s",
                 srtp_octet_string_hex_string(key, c->key_size));
-
+    key_len_in_bits = (c->key_size << 3);
     switch (c->key_size) {
     case SRTP_AES_256_KEY_LEN:
-        evp = EVP_aes_256_gcm();
-        break;
     case SRTP_AES_128_KEY_LEN:
-        evp = EVP_aes_128_gcm();
         break;
     default:
         return (srtp_err_status_bad_param);
         break;
     }
 
-    EVP_CIPHER_CTX_reset(c->ctx);
-
-    if (!EVP_CipherInit_ex(c->ctx, evp, NULL, key, NULL, 0)) {
-        return (srtp_err_status_init_fail);
+    errCode = mbedtls_gcm_setkey(c->ctx, MBEDTLS_CIPHER_ID_AES,
+                                 (const unsigned char *)key, key_len_in_bits);
+    if (errCode != 0) {
+        debug_print(srtp_mod_aes_gcm, "mbedtls error code:  %d", errCode);
+        return srtp_err_status_init_fail;
     }
 
     return (srtp_err_status_ok);
 }
 
-/*
- * aes_gcm_openssl_set_iv(c, iv) sets the counter value to the exor of iv with
- * the offset
- */
-static srtp_err_status_t srtp_aes_gcm_openssl_set_iv(
+static srtp_err_status_t srtp_aes_gcm_mbedtls_set_iv(
     void *cv,
     uint8_t *iv,
     srtp_cipher_direction_t direction)
 {
+    FUNC_ENTRY();
     srtp_aes_gcm_ctx_t *c = (srtp_aes_gcm_ctx_t *)cv;
 
     if (direction != srtp_direction_encrypt &&
@@ -220,17 +237,9 @@ static srtp_err_status_t srtp_aes_gcm_openssl_set_iv(
     c->dir = direction;
 
     debug_print(srtp_mod_aes_gcm, "setting iv: %s",
-                srtp_octet_string_hex_string(iv, 12));
-
-    if (!EVP_CIPHER_CTX_ctrl(c->ctx, EVP_CTRL_GCM_SET_IVLEN, 12, 0)) {
-        return (srtp_err_status_init_fail);
-    }
-
-    if (!EVP_CipherInit_ex(c->ctx, NULL, NULL, NULL, iv,
-                           (c->dir == srtp_direction_encrypt ? 1 : 0))) {
-        return (srtp_err_status_init_fail);
-    }
-
+                srtp_octet_string_hex_string(iv, GCM_IV_LEN));
+    c->iv_len = GCM_IV_LEN;
+    memcpy(c->iv, iv, c->iv_len);
     return (srtp_err_status_ok);
 }
 
@@ -242,45 +251,24 @@ static srtp_err_status_t srtp_aes_gcm_openssl_set_iv(
  *	aad	Additional data to process for AEAD cipher suites
  *	aad_len	length of aad buffer
  */
-static srtp_err_status_t srtp_aes_gcm_openssl_set_aad(void *cv,
+static srtp_err_status_t srtp_aes_gcm_mbedtls_set_aad(void *cv,
                                                       const uint8_t *aad,
                                                       uint32_t aad_len)
 {
+    FUNC_ENTRY();
     srtp_aes_gcm_ctx_t *c = (srtp_aes_gcm_ctx_t *)cv;
-    int rv;
 
     debug_print(srtp_mod_aes_gcm, "setting AAD: %s",
                 srtp_octet_string_hex_string(aad, aad_len));
 
-    /*
-     * EVP_CTRL_GCM_SET_TAG can only be used when decrypting
-     */
-    if (c->dir == srtp_direction_decrypt) {
-        /*
-         * Set dummy tag, OpenSSL requires the Tag to be set before
-         * processing AAD
-         */
-
-        /*
-         * OpenSSL never write to address pointed by the last parameter of
-         * EVP_CIPHER_CTX_ctrl while EVP_CTRL_GCM_SET_TAG (in reality,
-         * OpenSSL copy its content to the context), so we can make
-         * aad read-only in this function and all its wrappers.
-         */
-        unsigned char dummy_tag[GCM_AUTH_TAG_LEN];
-        memset(dummy_tag, 0x0, GCM_AUTH_TAG_LEN);
-        if (!EVP_CIPHER_CTX_ctrl(c->ctx, EVP_CTRL_GCM_SET_TAG, c->tag_len,
-                                 &dummy_tag)) {
-            return (srtp_err_status_algo_fail);
-        }
+    if (aad_len + c->aad_size > MAX_AD_SIZE) {
+        return srtp_err_status_bad_param;
     }
 
-    rv = EVP_Cipher(c->ctx, NULL, aad, aad_len);
-    if (rv < 0 || (uint32_t)rv != aad_len) {
-        return (srtp_err_status_algo_fail);
-    } else {
-        return (srtp_err_status_ok);
-    }
+    memcpy(c->aad + c->aad_size, aad, aad_len);
+    c->aad_size += aad_len;
+
+    return (srtp_err_status_ok);
 }
 
 /*
@@ -291,19 +279,27 @@ static srtp_err_status_t srtp_aes_gcm_openssl_set_aad(void *cv,
  *	buf	data to encrypt
  *	enc_len	length of encrypt buffer
  */
-static srtp_err_status_t srtp_aes_gcm_openssl_encrypt(void *cv,
+static srtp_err_status_t srtp_aes_gcm_mbedtls_encrypt(void *cv,
                                                       unsigned char *buf,
                                                       unsigned int *enc_len)
 {
+    FUNC_ENTRY();
     srtp_aes_gcm_ctx_t *c = (srtp_aes_gcm_ctx_t *)cv;
+    int errCode = 0;
+
     if (c->dir != srtp_direction_encrypt && c->dir != srtp_direction_decrypt) {
         return (srtp_err_status_bad_param);
     }
 
-    /*
-     * Encrypt the data
-     */
-    EVP_Cipher(c->ctx, buf, buf, *enc_len);
+    errCode = mbedtls_gcm_crypt_and_tag(c->ctx, MBEDTLS_GCM_ENCRYPT, *enc_len,
+                                        c->iv, c->iv_len, c->aad, c->aad_size,
+                                        buf, buf, c->tag_len, c->tag);
+
+    c->aad_size = 0;
+    if (errCode != 0) {
+        debug_print(srtp_mod_aes_gcm, "mbedtls error code:  %d", errCode);
+        return srtp_err_status_bad_param;
+    }
 
     return (srtp_err_status_ok);
 }
@@ -319,28 +315,15 @@ static srtp_err_status_t srtp_aes_gcm_openssl_encrypt(void *cv,
  *	buf	data to encrypt
  *	len	length of encrypt buffer
  */
-static srtp_err_status_t srtp_aes_gcm_openssl_get_tag(void *cv,
+static srtp_err_status_t srtp_aes_gcm_mbedtls_get_tag(void *cv,
                                                       uint8_t *buf,
                                                       uint32_t *len)
 {
+    FUNC_ENTRY();
     srtp_aes_gcm_ctx_t *c = (srtp_aes_gcm_ctx_t *)cv;
-    /*
-     * Calculate the tag
-     */
-    EVP_Cipher(c->ctx, NULL, NULL, 0);
-
-    /*
-     * Retreive the tag
-     */
-    if (!EVP_CIPHER_CTX_ctrl(c->ctx, EVP_CTRL_GCM_GET_TAG, c->tag_len, buf)) {
-        return (srtp_err_status_algo_fail);
-    }
-
-    /*
-     * Increase encryption length by desired tag size
-     */
+    debug_print(srtp_mod_aes_gcm, "appended tag size:  %d", c->tag_len);
     *len = c->tag_len;
-
+    memcpy(buf, c->tag, c->tag_len);
     return (srtp_err_status_ok);
 }
 
@@ -352,28 +335,26 @@ static srtp_err_status_t srtp_aes_gcm_openssl_get_tag(void *cv,
  *	buf	data to encrypt
  *	enc_len	length of encrypt buffer
  */
-static srtp_err_status_t srtp_aes_gcm_openssl_decrypt(void *cv,
+static srtp_err_status_t srtp_aes_gcm_mbedtls_decrypt(void *cv,
                                                       unsigned char *buf,
                                                       unsigned int *enc_len)
 {
+    FUNC_ENTRY();
     srtp_aes_gcm_ctx_t *c = (srtp_aes_gcm_ctx_t *)cv;
+    int errCode = 0;
+
     if (c->dir != srtp_direction_encrypt && c->dir != srtp_direction_decrypt) {
         return (srtp_err_status_bad_param);
     }
 
-    /*
-     * Set the tag before decrypting
-     */
-    if (!EVP_CIPHER_CTX_ctrl(c->ctx, EVP_CTRL_GCM_SET_TAG, c->tag_len,
-                             buf + (*enc_len - c->tag_len))) {
-        return (srtp_err_status_auth_fail);
-    }
-    EVP_Cipher(c->ctx, buf, buf, *enc_len - c->tag_len);
+    debug_print(srtp_mod_aes_gcm, "AAD: %s",
+                srtp_octet_string_hex_string(c->aad, c->aad_size));
 
-    /*
-     * Check the tag
-     */
-    if (EVP_Cipher(c->ctx, NULL, NULL, 0)) {
+    errCode = mbedtls_gcm_auth_decrypt(
+        c->ctx, (*enc_len - c->tag_len), c->iv, c->iv_len, c->aad, c->aad_size,
+        buf + (*enc_len - c->tag_len), c->tag_len, buf, buf);
+    c->aad_size = 0;
+    if (errCode != 0) {
         return (srtp_err_status_auth_fail);
     }
 
@@ -389,24 +370,24 @@ static srtp_err_status_t srtp_aes_gcm_openssl_decrypt(void *cv,
 /*
  * Name of this crypto engine
  */
-static const char srtp_aes_gcm_128_openssl_description[] =
-    "AES-128 GCM using openssl";
-static const char srtp_aes_gcm_256_openssl_description[] =
-    "AES-256 GCM using openssl";
+static const char srtp_aes_gcm_128_mbedtls_description[] =
+    "AES-128 GCM using mbedtls";
+static const char srtp_aes_gcm_256_mbedtls_description[] =
+    "AES-256 GCM using mbedtls";
 
 /*
  * This is the vector function table for this crypto engine.
  */
 const srtp_cipher_type_t srtp_aes_gcm_128 = {
-    srtp_aes_gcm_openssl_alloc,
-    srtp_aes_gcm_openssl_dealloc,
-    srtp_aes_gcm_openssl_context_init,
-    srtp_aes_gcm_openssl_set_aad,
-    srtp_aes_gcm_openssl_encrypt,
-    srtp_aes_gcm_openssl_decrypt,
-    srtp_aes_gcm_openssl_set_iv,
-    srtp_aes_gcm_openssl_get_tag,
-    srtp_aes_gcm_128_openssl_description,
+    srtp_aes_gcm_mbedtls_alloc,
+    srtp_aes_gcm_mbedtls_dealloc,
+    srtp_aes_gcm_mbedtls_context_init,
+    srtp_aes_gcm_mbedtls_set_aad,
+    srtp_aes_gcm_mbedtls_encrypt,
+    srtp_aes_gcm_mbedtls_decrypt,
+    srtp_aes_gcm_mbedtls_set_iv,
+    srtp_aes_gcm_mbedtls_get_tag,
+    srtp_aes_gcm_128_mbedtls_description,
     &srtp_aes_gcm_128_test_case_0,
     SRTP_AES_GCM_128
 };
@@ -415,15 +396,15 @@ const srtp_cipher_type_t srtp_aes_gcm_128 = {
  * This is the vector function table for this crypto engine.
  */
 const srtp_cipher_type_t srtp_aes_gcm_256 = {
-    srtp_aes_gcm_openssl_alloc,
-    srtp_aes_gcm_openssl_dealloc,
-    srtp_aes_gcm_openssl_context_init,
-    srtp_aes_gcm_openssl_set_aad,
-    srtp_aes_gcm_openssl_encrypt,
-    srtp_aes_gcm_openssl_decrypt,
-    srtp_aes_gcm_openssl_set_iv,
-    srtp_aes_gcm_openssl_get_tag,
-    srtp_aes_gcm_256_openssl_description,
+    srtp_aes_gcm_mbedtls_alloc,
+    srtp_aes_gcm_mbedtls_dealloc,
+    srtp_aes_gcm_mbedtls_context_init,
+    srtp_aes_gcm_mbedtls_set_aad,
+    srtp_aes_gcm_mbedtls_encrypt,
+    srtp_aes_gcm_mbedtls_decrypt,
+    srtp_aes_gcm_mbedtls_set_iv,
+    srtp_aes_gcm_mbedtls_get_tag,
+    srtp_aes_gcm_256_mbedtls_description,
     &srtp_aes_gcm_256_test_case_0,
     SRTP_AES_GCM_256
 };
