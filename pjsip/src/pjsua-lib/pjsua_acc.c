@@ -3511,7 +3511,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
         }
     } else
     /* For UDP transport, check if we need to overwrite the address
-     * with its bound address.
+     * with its configured bound/public address.
      */
     if ((flag & PJSIP_TRANSPORT_DATAGRAM) && tfla2_prm.local_if &&
         tfla2_prm.ret_tp)
@@ -3520,7 +3520,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 
         for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); i++) {
             if (tfla2_prm.ret_tp==(const void *)pjsua_var.tpdata[i].data.tp) {
-                if (pjsua_var.tpdata[i].has_bound_addr) {
+                if (pjsua_var.tpdata[i].has_cfg_addr) {
                     pj_strdup(pool, &addr->host,
                               &pjsua_var.tpdata[i].data.tp->local_name.host);
                     addr->port = (pj_uint16_t)

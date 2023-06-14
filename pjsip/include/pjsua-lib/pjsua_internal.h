@@ -354,7 +354,7 @@ typedef struct pjsua_transport_data
 
     pj_bool_t                is_restarting;
     pj_status_t              restart_status;
-    pj_bool_t                has_bound_addr;
+    pj_bool_t                has_cfg_addr;
 } pjsua_transport_data;
 
 
