@@ -274,14 +274,20 @@ static pj_status_t update_factory_addr(struct tcp_listener *listener,
         pj_sockaddr tmp;
         int af = pjsip_transport_type_get_af(listener->factory.type);
 
-        /* Verify that address given in a_name (if any) is valid */
-        status = pj_sockaddr_init(af, &tmp, &addr_name->host,
-                                  (pj_uint16_t)addr_name->port);
-        if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
-            (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+        tmp.addr.sa_family = (pj_uint16_t)af;
+
+        /* Validate IP address only */
+        if (pj_inet_pton(af, &addr_name->host, pj_sockaddr_get_addr(&tmp)) == PJ_SUCCESS)
         {
-            /* Invalid address */
-            return PJ_EINVAL;
+            /* Verify that address given in a_name (if any) is valid */
+            status = pj_sockaddr_init(af, &tmp, &addr_name->host,
+                                      (pj_uint16_t)addr_name->port);
+            if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+                (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+            {
+                /* Invalid address */
+                return PJ_EINVAL;
+            }
         }
 
         /* Copy the address */
