@@ -67,9 +67,7 @@
 #include <winsock2.h>
 #endif
 
-#ifdef _MSC_VER
 #include <inttypes.h>
-#endif
 
 /* the debug module for srtp */
 srtp_debug_module_t mod_srtp = {
