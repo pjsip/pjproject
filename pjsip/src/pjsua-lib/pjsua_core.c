@@ -2600,8 +2600,8 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
         pjsua_var.tpdata[id].local_name = tp->local_name;
         pjsua_var.tpdata[id].data.tp = tp;
         pj_sockaddr_cp(&pjsua_var.tpdata[id].pub_addr, &pub_addr);
-        if (cfg->bound_addr.slen)
-            pjsua_var.tpdata[id].has_bound_addr = PJ_TRUE;
+        if (cfg->bound_addr.slen || cfg->public_addr.slen)
+            pjsua_var.tpdata[id].has_cfg_addr = PJ_TRUE;
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
 
