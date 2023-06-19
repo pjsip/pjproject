@@ -100,15 +100,12 @@
 
 #   include <openssl/obj_mac.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L || \
-    (defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L)
-#  define X509_get_notBefore(x)     X509_getm_notBefore(x)
-#  define X509_get_notAfter(x)      X509_getm_notAfter(x)
-#endif
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#  if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x30000000L || \
+      defined(OPENSSL_NO_DEPRECATED)
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L || \
-    (defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x30000000L)
-#  define SSL_get_peer_certificate(x)     SSL_get1_peer_certificate(x)
+#    define SSL_get_peer_certificate(x)     SSL_get1_peer_certificate(x)
+#  endif
 #endif
 
 static const unsigned nid_cid_map[] = {
@@ -174,7 +171,9 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 #  define OPENSSL_NO_SSL2           /* seems to be removed in 1.1.0 */
 #  define M_ASN1_STRING_data(x)     ASN1_STRING_get0_data(x)
 #  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
-#  if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L
+#  if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L || \
+      defined(OPENSSL_NO_DEPRECATED)
+
 #     define X509_get_notBefore(x)  X509_get0_notBefore(x)
 #     define X509_get_notAfter(x)   X509_get0_notAfter(x)
 #  endif
