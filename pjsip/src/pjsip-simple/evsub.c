@@ -975,12 +975,21 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
     pjsip_method_copy(sub->pool, &sub->method, 
                       &rdata->msg_info.msg->line.req.method);
 
-    /* Update expiration time according to client request: */
-
+    /* Set expiration time based on client request (in Expires header),
+     * or package default expiration time.
+     */
     expires_hdr = (pjsip_expires_hdr*)
         pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_EXPIRES, NULL);
     if (expires_hdr) {
-        sub->expires->ivalue = expires_hdr->ivalue;
+        struct evpkg *evpkg;
+
+        evpkg = find_pkg(&event_hdr->event_type);
+        if (evpkg) {
+            if (expires_hdr->ivalue < evpkg->pkg_expires)
+                sub->expires->ivalue = expires_hdr->ivalue;
+            else
+                sub->expires->ivalue = evpkg->pkg_expires;
+        }
     }
 
     /* Update time. */
