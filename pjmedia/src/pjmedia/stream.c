@@ -2240,21 +2240,36 @@ on_return:
     if (stream->rtcp.received >= 10 && seq_st.diff > 1 &&
         stream->send_rtcp_fb_nack && pj_ntohs(hdr->seq) >= seq_st.diff)
     {
-        int i;
-        pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
-        stream->rtcp_fb_nack.pid = pj_ntohs(hdr->seq) - seq_st.diff + 1;
-        for (i = 0; i < (seq_st.diff - 1); ++i) {
-            stream->rtcp_fb_nack.blp <<= 1;
-            stream->rtcp_fb_nack.blp |= 1;
-        }
+        pj_uint16_t nlost, lost_seq;
+        unsigned rtcp_sent = 0;
 
-        /* Send it immediately */
-        status = send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_TRUE);
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(4,(stream->port.info.name.ptr, status,
-                      "Error sending RTCP FB generic NACK"));
-        } else {
-            stream->initial_rr = PJ_TRUE;
+        /* Send one or more NACK packets */
+        nlost = seq_st.diff - 1;
+        lost_seq = pj_ntohs(hdr->seq) - nlost;
+        while (nlost && rtcp_sent < 10) {
+            int i;
+            pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
+            stream->rtcp_fb_nack.pid = lost_seq;
+            nlost--;
+            for (i = 0; nlost && i < 16; ++i) {
+                stream->rtcp_fb_nack.blp <<= 1;
+                stream->rtcp_fb_nack.blp |= 1;
+                nlost--;
+            }
+
+            /* Send it immediately */
+            status = send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_TRUE);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(4,(stream->port.info.name.ptr, status,
+                          "Error sending RTCP FB generic NACK"));
+            } else {
+                stream->initial_rr = PJ_TRUE;
+                rtcp_sent++;
+            }
+
+            /* Prepare for next NACK packet */
+            if (nlost)
+                lost_seq += 17;
         }
     }
 
