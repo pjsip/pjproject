@@ -100,14 +100,6 @@
 
 #   include <openssl/obj_mac.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-#  if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x30000000L || \
-      defined(OPENSSL_NO_DEPRECATED)
-
-#    define SSL_get_peer_certificate(x)     SSL_get1_peer_certificate(x)
-#  endif
-#endif
-
 static const unsigned nid_cid_map[] = {
     NID_sect163k1,              /* sect163k1 (1) */
     NID_sect163r1,              /* sect163r1 (2) */
@@ -176,13 +168,22 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 
 #     define X509_get_notBefore(x)  X509_get0_notBefore(x)
 #     define X509_get_notAfter(x)   X509_get0_notAfter(x)
+
+#    if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#      if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x30000000L || \
+          defined(OPENSSL_NO_DEPRECATED)
+
+#         define SSL_get_peer_certificate(x)     SSL_get1_peer_certificate(x)
+
+#      endif
+#    endif
+
 #  endif
 #elif !USING_LIBRESSL
 #  define SSL_CIPHER_get_id(c)      (c)->id
 #  define SSL_set_session(ssl, s)   (ssl)->session = (s)
 #  define X509_STORE_CTX_get0_cert(ctx) ((ctx)->cert)
 #endif
-
 
 #ifdef _MSC_VER
 #  if OPENSSL_VERSION_NUMBER >= 0x10100000L

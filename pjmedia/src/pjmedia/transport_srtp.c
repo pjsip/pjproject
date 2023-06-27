@@ -98,6 +98,8 @@
 #endif
 
 #else                                   /* Bundled SRTP */
+
+#  include <srtp_config.h>
 #  include <srtp.h>
 #  include <crypto_kernel.h>
 

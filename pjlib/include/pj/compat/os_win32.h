@@ -36,6 +36,7 @@
 #define PJ_HAS_ASSERT_H             1
 #define PJ_HAS_CTYPE_H              1
 #define PJ_HAS_ERRNO_H              0   /* Must be zero, otherwise errno_test() fails. */
+#define PJ_HAS_INTTYPES_H           1
 #define PJ_HAS_LINUX_SOCKET_H       0
 #define PJ_HAS_MALLOC_H             1
 #define PJ_HAS_NETDB_H              0

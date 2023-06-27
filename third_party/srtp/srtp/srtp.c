@@ -67,8 +67,6 @@
 #include <winsock2.h>
 #endif
 
-#include <inttypes.h>
-
 /* the debug module for srtp */
 srtp_debug_module_t mod_srtp = {
     0,     /* debugging is off by default */
