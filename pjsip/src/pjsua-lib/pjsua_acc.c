@@ -3586,7 +3586,9 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
         }
 
         ai_cnt = 1;
-        pj_getaddrinfo(af, &dinfo.addr.host, &ai_cnt, &ai[0]);
+        status = pj_getaddrinfo(af, &dinfo.addr.host, &ai_cnt, &ai[0]);
+        if (status != PJ_SUCCESS)
+            ai_cnt = 0;
 
         /* Get fallback address, only if the host is not IP address and
          * account is not bound to a certain transport.
@@ -3607,7 +3609,9 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
                 (af == pj_AF_INET6() &&
                  acc->cfg.ipv6_sip_use != PJSUA_IPV6_DISABLED))
             {
-                pj_getaddrinfo(af, &dinfo.addr.host, &cnt, &ai[ai_cnt]);
+                status = pj_getaddrinfo(af, &dinfo.addr.host, &cnt, &ai[ai_cnt]);
+                if (status != PJ_SUCCESS)
+                    cnt = 0;
                 ai_cnt += cnt;
             }
         }
