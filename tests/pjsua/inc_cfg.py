@@ -148,7 +148,7 @@ class TestParam:
 
 ###################################
 # TestError exception
-class TestError:
+class TestError(Exception):
 	desc = ""
 	def __init__(self, desc):
 		self.desc = desc

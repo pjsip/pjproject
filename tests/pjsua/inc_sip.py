@@ -1,4 +1,5 @@
 #
+from __future__ import print_function
 from socket import *
 import re
 import random
@@ -88,7 +89,7 @@ class Dialog:
 
 	def trace(self, txt):
 		if self.trace_enabled:
-			print str(time.strftime("%H:%M:%S ")) + txt
+			print(str(time.strftime("%H:%M:%S ")) + txt)
 
 	def update_fields(self, msg):
 		if self.tcp:
@@ -167,17 +168,17 @@ class Dialog:
 			readset = select([self.sock], [], [], 1)
 			if len(readset[0]) < 1 or not self.sock in readset[0]:
 				if len(readset[0]) < 1:
-					print "select() timeout (will wait for " + str(int(endtime - time.time())) + "more secs)"
+					print("select() timeout (will wait for " + str(int(endtime - time.time())) + "more secs)")
 				elif not self.sock in readset[0]:
-					print "select() alien socket"
+					print("select() alien socket")
 				else:
-					print "select other error"
+					print("select other error")
 				continue
 			try:
 				msg, src_addr = self.sock.recvfrom(4096)
 				break
 			except:
-				print "recv() exception: ", sys.exc_info()[0]
+				print("recv() exception: ", sys.exc_info()[0])
 				continue
 
 		if msg=="":
@@ -263,7 +264,7 @@ class SendtoCfg:
 		     resp_inc=[], resp_exc=[], use_tcp=False,
 		     extra_headers="", body="", complete_msg="",
 		     enable_buffer = False):
-	 	self.complete_msg = complete_msg
+		self.complete_msg = complete_msg
 		self.sdp = sdp
 		self.resp_code = resp_code
 		self.resp_include = resp_inc

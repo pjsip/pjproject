@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import imp
 import re
@@ -35,25 +36,25 @@ Sample:
 # Parse arguments
 try:
     opts, args = getopt.getopt(sys.argv[1:], "hne:", ["help", "null-audio", "exe="])
-except getopt.GetoptError, err:
-    print str(err)
-    print usage
+except getopt.GetoptError as err:
+    print(str(err))
+    print(usage)
     sys.exit(2)
 for o, a in opts:
     if o in ("-h", "--help"):
-        print usage
+        print(usage)
         sys.exit()
     elif o in ("-n", "--null-audio"):
         inc.HAS_SND_DEV = 0
     elif o in ("-e", "--exe"):
         G_EXE = a
     else:
-        print "Unknown options"
+        print("Unknown options")
         sys.exit(2)
 
 if len(args) != 2:
-    print "Invalid arguments"
-    print usage
+    print("Invalid arguments")
+    print(usage)
     sys.exit(2)
 
 # Set global ARGS to be used by modules
@@ -88,7 +89,7 @@ if G_EXE == "":
                     e_ts = st.st_mtime
 
         if G_EXE=="":
-            print "Unable to find valid pjsua. Please build pjsip first"
+            print("Unable to find valid pjsua. Please build pjsip first")
             sys.exit(1)
 
         G_INUNIX = False
@@ -99,11 +100,11 @@ if G_EXE == "":
             if not line:
                 break
             if line.find("TARGET_NAME")!=-1:
-                print line
+                print(line)
                 G_EXE="../../pjsip-apps/bin/pjsua-" + line.split(":= ")[1]
                 break
         if G_EXE=="":
-            print "Unable to find ../../../build.mak. Please build pjsip first"
+            print("Unable to find ../../../build.mak. Please build pjsip first")
             sys.exit(1)
         G_INUNIX = True
 else:
@@ -166,7 +167,7 @@ class Expect(threading.Thread):
                     
                 #Print the line if echo is ON
                 if self.echo:
-                    print self.name + ": " + line.rstrip()
+                    print(self.name + ": " + line.rstrip())
 
                 self.lock.acquire()
                 self.output += line
@@ -186,7 +187,7 @@ class Expect(threading.Thread):
                     
                 #Print the line if echo is ON
                 if self.echo:
-                    print self.name + ": " + line.rstrip()
+                    print(self.name + ": " + line.rstrip())
 
                 self.lock.acquire()
                 self.output += line
@@ -271,12 +272,12 @@ class Expect(threading.Thread):
         if self.trace_enabled:
             now = time.time()
             fmt = self.name + ": " + "================== " + s + " ==================" + " [at t=%(time)03d]"
-            print fmt % {'time':int(now - self.t0)}
+            print(fmt % {'time':int(now - self.t0)})
 
 #########################
 # Error handling
 def handle_error(errmsg, t, close_processes = True):
-    print "====== Caught error: " + errmsg + " ======"
+    print("====== Caught error: " + errmsg + " ======")
     if (close_processes):
         time.sleep(1)
         for p in t.process:
@@ -304,7 +305,7 @@ def handle_error(errmsg, t, close_processes = True):
             else:
                 p.wait()
 
-    print "Test completed with error: " + errmsg
+    print("Test completed with error: " + errmsg)
     sys.exit(1)
 
 
@@ -319,20 +320,20 @@ random.seed()
 
 # Validate
 if script.test == None:
-    print "Error: no test defined"
+    print("Error: no test defined")
     sys.exit(1)
 
 if script.test.skip:
-    print "Test " + script.test.title + " is skipped"
+    print("Test " + script.test.title + " is skipped")
     sys.exit(0)
 
 if len(script.test.inst_params) == 0:
-    print "Error: test doesn't contain pjsua run descriptions"
+    print("Error: test doesn't contain pjsua run descriptions")
     sys.exit(1)
 
 # Instantiate pjsuas
-print "====== Running " + script.test.title + " ======"
-print "Using " + G_EXE + " as pjsua executable"
+print("====== Running " + script.test.title + " ======")
+print("Using " + G_EXE + " as pjsua executable")
 
 for inst_param in script.test.inst_params:
     retry = 0
@@ -344,7 +345,7 @@ for inst_param in script.test.inst_params:
             # Create pjsua's Expect instance from the param
             p = Expect(inst_param)
             p.start()
-        except inc.TestError, e:
+        except inc.TestError as e:
             handle_error(e.desc, script.test)
 
         # wait process ready
@@ -389,14 +390,14 @@ for p in script.test.process:
             p.send("echo 1")
             p.expect("echo 1")
 
-    except inc.TestError, e:
+    except inc.TestError as e:
         handle_error(e.desc, script.test)
 
 # Run the test function
 if script.test.test_func != None:
     try:
         script.test.test_func(script.test)
-    except inc.TestError, e:
+    except inc.TestError as e:
         handle_error(e.desc, script.test)
     except:
         handle_error("Unknown error: " + str(traceback.format_exc()), script.test)
@@ -424,10 +425,10 @@ for p in script.test.process:
 if script.test.post_func != None:
     try:
         script.test.post_func(script.test)
-    except inc.TestError, e:
+    except inc.TestError as e:
         handle_error(e.desc, script.test, False)
 
 # Done
-print "Test " + script.test.title + " completed successfully"
+print("Test " + script.test.title + " completed successfully")
 sys.exit(0)
 

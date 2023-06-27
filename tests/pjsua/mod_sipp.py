@@ -17,7 +17,7 @@
 ##   - $SIPP_URI            : SIPp SIP URI
 ##   - $PJSUA_PORT[N]            : binding port of PJSUA instance #N
 ##   - $PJSUA_URI[N]            : SIP URI of PJSUA instance #N
-
+from __future__ import print_function
 import ctypes
 import time
 import imp
@@ -120,7 +120,7 @@ def start_sipp():
 
     # run SIPp
     fullcmd = os.path.normpath(SIPP_PATH) + " " + sipp_param
-    print "Running SIPP: " + fullcmd
+    print("Running SIPP: " + fullcmd)
     if SIPP_BG_MODE:
         sipp_proc = subprocess.Popen(fullcmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=G_INUNIX, universal_newlines=False)
     else:
@@ -169,7 +169,7 @@ def wait_sipp(sipp):
         return sipp.returncode
 
     else:
-        print "Waiting SIPp (PID=" + str(sipp) + ") to exit.."
+        print("Waiting SIPp (PID=" + str(sipp) + ") to exit..")
         wait_cnt = 0
         while True:
             try:
@@ -186,7 +186,7 @@ def wait_sipp(sipp):
                     return ret_code
             except os.error:
                 if wait_cnt <= 5:
-                    print "Retry ("+str(wait_cnt)+") waiting SIPp.."
+                    print("Retry ("+str(wait_cnt)+") waiting SIPp..")
                 else:
                     return -99
 
@@ -214,7 +214,7 @@ def exec_pjsua_expects(t, sipp):
                     ua[ua_idx].expect(expect_st, raise_on_error = True)
             if send_cmd != "":
                 ua[ua_idx].send(send_cmd)
-        except TestError, e:
+        except TestError as e:
             ua_err_st = e.desc
             break;
         except:

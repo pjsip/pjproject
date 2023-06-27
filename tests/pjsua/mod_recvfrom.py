@@ -1,3 +1,4 @@
+from __future__ import print_function
 import imp
 import sys
 import inc_sip as sip
@@ -18,7 +19,7 @@ def test_func(test):
              tcp=cfg_file.recvfrom_cfg.tcp)
 
     config = pjsua.get_config(cfg_file.recvfrom_cfg.pj_config)
-    print "Config : " + config
+    print("Config : " + config)
 
     last_cseq = 0
     last_method = ""
@@ -28,7 +29,7 @@ def test_func(test):
         if t.pj_config != "":
             r = re.compile(t.pj_config, re.I)
             if r.search(config) == None:
-                print "Configuration : " + t.pj_config + " not found, skipping"
+                print("Configuration : " + t.pj_config + " not found, skipping")
                 continue
 
         # Print transaction title
