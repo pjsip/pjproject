@@ -95,7 +95,7 @@ def post_func(t):
 
     # Evaluate the similarity value
     sim_val = mo_sim_val.group(1)
-    if (sim_val >= COMPARE_THRESHOLD):
+    if ((int)sim_val >= COMPARE_THRESHOLD):
         endpt.trace("WAV similarity = " + sim_val)
     else:
         raise TestError("WAV degraded heavily, similarity = " + sim_val)

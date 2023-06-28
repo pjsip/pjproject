@@ -157,7 +157,7 @@ class Dialog:
 		if not dst_addr:
 			dst_addr = (self.dst_addr, self.dst_port)
 		self.trace("============== TX MSG to " + str(dst_addr) + " ============= \n" + msg)
-		self.sock.sendto(bytes(msg,'ascii'), 0, dst_addr)
+		self.sock.sendto(bytes(msg,'utf-8'), 0, dst_addr)
 
 	def wait_msg_from(self, timeout):
 		endtime = time.time() + timeout
@@ -180,7 +180,7 @@ class Dialog:
 				print("recv() exception: ", sys.exc_info()[0])
 				continue
 		
-		msg = str(msg, 'ascii')
+		msg = str(msg, 'utf-8')
 		if msg=="":
 			return "", None
 		if self.last_request=="INVITE" and self.rem_tag=="":
