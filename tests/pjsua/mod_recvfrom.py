@@ -1,4 +1,3 @@
-from __future__ import print_function
 import imp
 import sys
 import inc_sip as sip

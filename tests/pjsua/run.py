@@ -1,4 +1,3 @@
-from __future__ import print_function
 import sys
 import imp
 import re
@@ -161,16 +160,17 @@ class Expect(threading.Thread):
 
             self.running = True
             while self.proc.poll() is None:
-                line = self.telnet.read_until('\n', 60)
-                if line == "" or const.DESTROYED in line:
+                line = self.telnet.read_until(b'\n', 60)
+                linestr = str(line, 'ascii')
+                if linestr == "" or const.DESTROYED in linestr:
                     break;
                     
                 #Print the line if echo is ON
                 if self.echo:
-                    print(self.name + ": " + line.rstrip())
+                    print(self.name + ": " + linestr.rstrip())
 
                 self.lock.acquire()
-                self.output += line
+                self.output += linestr
                 self.lock.release()
             self.running = False
         else:
@@ -197,7 +197,7 @@ class Expect(threading.Thread):
     def send(self, cmd):
         self.trace("send " + cmd)
         if self.use_telnet:
-            self.telnet.write(cmd + '\r\n')
+            self.telnet.write(bytes(cmd + '\r\n', 'ascii'))  
         else:
             self.proc.stdin.writelines(cmd + "\n")
             self.proc.stdin.flush()

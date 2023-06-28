@@ -17,7 +17,6 @@
 ##   - $SIPP_URI            : SIPp SIP URI
 ##   - $PJSUA_PORT[N]            : binding port of PJSUA instance #N
 ##   - $PJSUA_URI[N]            : SIP URI of PJSUA instance #N
-from __future__ import print_function
 import ctypes
 import time
 import imp
