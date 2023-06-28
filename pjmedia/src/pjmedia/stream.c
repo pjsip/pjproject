@@ -1401,6 +1401,14 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
         /* Update RTCP stats with last RTP timestamp. */
         stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(channel->rtp.out_hdr.ts);
 
+        /* Check if now is the time to transmit RTCP SR/RR report.
+         * We only do this when the decoder is paused,
+         * because otherwise check_tx_rtcp() will be handled by on_rx_rtp().
+         */
+        if (stream->dec->paused) {
+            check_tx_rtcp(stream, pj_ntohl(channel->rtp.out_hdr.ts));
+        }
+
         return PJ_SUCCESS;
     }
 
