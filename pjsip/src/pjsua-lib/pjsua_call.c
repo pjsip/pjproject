@@ -5034,15 +5034,21 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
         PJSUA_UNLOCK();
     }
 
-    /* Ticket #1627: Invoke on_call_tsx_state() when call is disconnected. */
+    /* Ticket #1627: Invoke on_call_tsx_state() when call is disconnected.
+     *
+     * Update: No longer necessary. Since #2600 (immediate hangup), call is
+     * disconnected before BYE is sent.
+     */
+    /*
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
         e->type == PJSIP_EVENT_TSX_STATE &&
-        !call->hanging_up && call->inv &&
+        call->inv &&
         pjsua_var.ua_cfg.cb.on_call_tsx_state)
     {
         (*pjsua_var.ua_cfg.cb.on_call_tsx_state)(call->index,
                                                  e->body.tsx_state.tsx, e);
     }
+    */
 
     if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_state)
         (*pjsua_var.ua_cfg.cb.on_call_state)(call->index, e);
@@ -6189,7 +6195,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
     }
 
     /* Notify application callback first */
-    if (pjsua_var.ua_cfg.cb.on_call_tsx_state) {
+    if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_tsx_state) {
         (*pjsua_var.ua_cfg.cb.on_call_tsx_state)(call->index, tsx, e);
     }
 
