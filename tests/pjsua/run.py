@@ -1,5 +1,4 @@
 import sys
-import imp
 import re
 import os
 import subprocess
@@ -12,6 +11,7 @@ import getopt
 
 import inc_cfg as inc
 import inc_const as const
+import inc_util as util
 
 # Vars
 G_EXE = ""        # pjsua executable path
@@ -313,7 +313,7 @@ def handle_error(errmsg, t, close_processes = True):
 # MAIN    
 
 # Import the test script
-script = imp.load_source("script", inc.ARGS[0])  
+script = util.load_module_from_file("script", inc.ARGS[0])
 
 # Init random seed
 random.seed()
