@@ -1537,6 +1537,13 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 
         pjsua_msg_data_init(&msg_data);
         TEST_MULTIPART(&msg_data);
+
+        for (int i=0; i<app_config.inv_hdr_cnt; ++i) {
+            pjsip_generic_string_hdr *hdr;
+            hdr = pjsip_generic_string_hdr_create(app_config.pool, &app_config.inv_hname_cfg[i],  &app_config.inv_hvalue_cfg[i]);
+            pj_list_push_back(&msg_data.hdr_list, hdr);
+        }
+
         pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
                              &msg_data, &current_call);
 
@@ -1647,6 +1654,12 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
         if (current_call == PJSUA_INVALID_ID) {
             const pj_str_t err_msg = pj_str("Call has been disconnected\n");
             pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
+        }
+
+        for (int i=0; i<app_config.res_hdr_cnt; ++i) {
+            pjsip_generic_string_hdr *hdr;
+            hdr = pjsip_generic_string_hdr_create(app_config.pool, &app_config.res_hname_cfg[i],  &app_config.res_hvalue_cfg[i]);
+            pj_list_push_back(&msg_data.hdr_list, hdr);
         }
 
         pjsua_call_answer2(current_call, &call_opt, st_code, NULL, &msg_data);

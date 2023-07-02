@@ -732,6 +732,13 @@ static void ui_make_new_call()
 
         pjsua_msg_data_init(&msg_data_);
         TEST_MULTIPART(&msg_data_);
+
+        for (int i=0; i<app_config.inv_hdr_cnt; ++i) {
+            pjsip_generic_string_hdr *hdr;
+            hdr = pjsip_generic_string_hdr_create(app_config.pool, &app_config.inv_hname_cfg[i],  &app_config.inv_hvalue_cfg[i]);
+            pj_list_push_back(&msg_data_.hdr_list, hdr);
+        }
+
         pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
                              &msg_data_, &current_call);
 
@@ -912,6 +919,12 @@ static void ui_answer_call()
             puts("Call has been disconnected");
             fflush(stdout);
             return;
+        }
+
+        for (int i=0; i<app_config.res_hdr_cnt; ++i) {
+            pjsip_generic_string_hdr *hdr;
+            hdr = pjsip_generic_string_hdr_create(app_config.pool, &app_config.res_hname_cfg[i],  &app_config.res_hvalue_cfg[i]);
+            pj_list_push_back(&msg_data_.hdr_list, hdr);
         }
 
         pjsua_call_answer2(current_call, &call_opt, st_code, NULL, &msg_data_);

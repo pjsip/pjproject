@@ -215,6 +215,10 @@ static void usage(void)
     puts  ("Buddy List (can be more than one):");
     puts  ("  --add-buddy url     Add the specified URL to the buddy list.");
     puts  ("");
+    puts  ("Custom Headers (can be more than one):");
+    puts  ("  --add-invite-header header:value     Add custom invite header");
+    puts  ("  --add-response-header header:value     Add custom response header");
+    puts  ("");
     puts  ("User Agent options:");
     puts  ("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
     puts  ("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
@@ -369,7 +373,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
-           OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
+           OPT_ADD_BUDDY, OPT_ADD_INVITE_HEADER, OPT_ADD_RESPONSE_HEADER, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
            OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
            OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
            OPT_USE_ICE, OPT_ICE_REGULAR, OPT_ICE_TRICKLE,
@@ -451,6 +455,8 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "stun-srv",   1, 0, OPT_STUN_SRV},
         { "upnp",       2, 0, OPT_UPNP},
         { "add-buddy",  1, 0, OPT_ADD_BUDDY},
+        { "add-invite-header",  1, 0, OPT_ADD_INVITE_HEADER},
+        { "add-response-header",  1, 0, OPT_ADD_RESPONSE_HEADER},
         { "offer-x-ms-msg",0,0,OPT_OFFER_X_MS_MSG},
         { "no-presence", 0, 0, OPT_NO_PRESENCE},
         { "auto-answer",1, 0, OPT_AUTO_ANSWER},
@@ -962,6 +968,66 @@ static pj_status_t parse_args(int argc, char *argv[],
             }
             cfg->buddy_cfg[cfg->buddy_cnt].uri = pj_str(pj_optarg);
             cfg->buddy_cnt++;
+            break;
+
+        case OPT_ADD_INVITE_HEADER: /* Add custom invite header. */
+            if (cfg->inv_hdr_cnt == PJ_ARRAY_SIZE(cfg->inv_hname_cfg)) {
+                PJ_LOG(1,(THIS_FILE,
+                          "Error: too many headers in invite header list."));
+                return PJ_ETOOMANY;
+            }
+            pj_str_t inv_hname = pj_str(pj_optarg);
+            pj_str_t inv_hvalue;
+            char *inv_pcol;
+
+            inv_pcol = (char*)pj_memchr(inv_hname.ptr, ':', inv_hname.slen);
+            inv_hvalue.ptr = inv_hname.ptr;
+            inv_hvalue.slen = inv_pcol ? inv_pcol - inv_hname.ptr : inv_hname.slen;
+
+            if (inv_pcol) {
+                inv_hvalue.ptr = inv_pcol + 1;
+                inv_hvalue.slen = (inv_hname.ptr + inv_hname.slen - inv_pcol - 1);
+                inv_hname.slen -= inv_hvalue.slen + 1;
+                inv_hname.ptr[inv_hname.slen] = '\0';
+            } else {
+                PJ_LOG(1,(THIS_FILE,
+                          "Error: failed to parse header."));
+                return -1;
+            }
+
+            cfg->inv_hname_cfg[cfg->inv_hdr_cnt] = inv_hname;
+            cfg->inv_hvalue_cfg[cfg->inv_hdr_cnt] = inv_hvalue;
+            cfg->inv_hdr_cnt++;
+            break;
+
+        case OPT_ADD_RESPONSE_HEADER: /* Add custom response header. */
+            if (cfg->res_hdr_cnt == PJ_ARRAY_SIZE(cfg->res_hname_cfg)) {
+                PJ_LOG(1,(THIS_FILE,
+                          "Error: too many headers in header list."));
+                return PJ_ETOOMANY;
+            }
+            pj_str_t res_hname = pj_str(pj_optarg);
+            pj_str_t res_hvalue;
+            char *res_pcol;
+
+            res_pcol = (char*)pj_memchr(res_hname.ptr, ':', res_hname.slen);
+            res_hvalue.ptr = res_hname.ptr;
+            res_hvalue.slen = res_pcol ? res_pcol - res_hname.ptr : res_hname.slen;
+
+            if (res_pcol) {
+                res_hvalue.ptr = res_pcol + 1;
+                res_hvalue.slen = (res_hname.ptr + res_hname.slen - res_pcol - 1);
+                res_hname.slen -= res_hvalue.slen + 1;
+                res_hname.ptr[res_hname.slen] = '\0';
+            } else {
+                PJ_LOG(1,(THIS_FILE,
+                          "Error: failed to parse header."));
+                return -1;
+            }
+
+            cfg->res_hname_cfg[cfg->res_hdr_cnt] = res_hname;
+            cfg->res_hvalue_cfg[cfg->res_hdr_cnt] = res_hvalue;
+            cfg->res_hdr_cnt++;
             break;
 
         case OPT_AUTO_PLAY:

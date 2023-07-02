@@ -297,9 +297,12 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                              pjsip_rx_data *rdata)
 {
     pjsua_call_info call_info;
+    pjsua_msg_data msg_data;
 
     PJ_UNUSED_ARG(acc_id);
     PJ_UNUSED_ARG(rdata);
+
+    pjsua_msg_data_init(&msg_data);
 
     pjsua_call_get_info(call_id, &call_info);
 
@@ -321,8 +324,14 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
         opt.aud_cnt = app_config.aud_cnt;
         opt.vid_cnt = app_config.vid.vid_cnt;
 
+        for (int i=0; i<app_config.res_hdr_cnt; ++i) {
+            pjsip_generic_string_hdr *hdr;
+            hdr = pjsip_generic_string_hdr_create(app_config.pool, &app_config.res_hname_cfg[i],  &app_config.res_hvalue_cfg[i]);
+            pj_list_push_back(&msg_data.hdr_list, hdr);
+        }
+
         pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
-                           NULL);
+                           &msg_data);
     }
     
     if (app_config.auto_answer < 200) {
