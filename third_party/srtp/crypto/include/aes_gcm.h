@@ -1,14 +1,15 @@
 /*
- * null-auth.h
+ * aes_gcm.h
  *
- * David A. McGrew
+ * Header for AES Galois Counter Mode.
+ *
+ * John A. Foley
  * Cisco Systems, Inc.
  *
  */
-
 /*
  *
- * Copyright (c) 2001-2017, Cisco Systems, Inc.
+ * Copyright (c) 2013-2017, Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,21 +43,68 @@
  *
  */
 
-#ifndef NULL_AUTH_H
-#define NULL_AUTH_H
+#ifndef AES_GCM_H
+#define AES_GCM_H
 
-#include "auth.h"
+#include "cipher.h"
+#include "srtp.h"
+#include "datatypes.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifdef OPENSSL
+
+#include <openssl/evp.h>
+#include <openssl/aes.h>
 
 typedef struct {
-    char foo;
-} srtp_null_auth_ctx_t;
+    int key_size;
+    int tag_len;
+    EVP_CIPHER_CTX *ctx;
+    srtp_cipher_direction_t dir;
+} srtp_aes_gcm_ctx_t;
 
-#ifdef __cplusplus
-}
-#endif
+#endif /* OPENSSL */
 
-#endif /* NULL_AUTH_H */
+#ifdef MBEDTLS
+#define MAX_AD_SIZE 2048
+#include <mbedtls/aes.h>
+#include <mbedtls/gcm.h>
+
+typedef struct {
+    int key_size;
+    int tag_len;
+    int aad_size;
+    int iv_len;
+    uint8_t iv[12];
+    uint8_t tag[16];
+    uint8_t aad[MAX_AD_SIZE];
+    mbedtls_gcm_context *ctx;
+    srtp_cipher_direction_t dir;
+} srtp_aes_gcm_ctx_t;
+
+#endif /* MBEDTLS */
+
+#ifdef NSS
+
+#define NSS_PKCS11_2_0_COMPAT 1
+
+#include <nss.h>
+#include <pk11pub.h>
+
+#define MAX_AD_SIZE 2048
+
+typedef struct {
+    int key_size;
+    int tag_size;
+    srtp_cipher_direction_t dir;
+    NSSInitContext *nss;
+    PK11SymKey *key;
+    uint8_t iv[12];
+    uint8_t aad[MAX_AD_SIZE];
+    int aad_size;
+    CK_GCM_PARAMS params;
+    uint8_t tag[16];
+} srtp_aes_gcm_ctx_t;
+
+#endif /* NSS */
+
+#endif /* AES_GCM_H */

@@ -5951,6 +5951,13 @@ then :
 
 fi
 
+ac_fn_c_check_header_compile "$LINENO" "inttypes.h" "ac_cv_header_inttypes_h" "$ac_includes_default"
+if test "x$ac_cv_header_inttypes_h" = xyes
+then :
+  printf "%s\n" "#define PJ_HAS_INTTYPES_H 1" >>confdefs.h
+
+fi
+
 ac_fn_c_check_header_compile "$LINENO" "sys/ioctl.h" "ac_cv_header_sys_ioctl_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_ioctl_h" = xyes
 then :
@@ -9214,6 +9221,47 @@ printf "%s\n" "$ac_cv_lib_crypto_ERR_load_BIO_strings" >&6; }
 if test "x$ac_cv_lib_crypto_ERR_load_BIO_strings" = xyes
 then :
   libcrypto_present=1 && LIBS="-lcrypto $LIBS"
+else $as_nop
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ERR_get_error in -lcrypto" >&5
+printf %s "checking for ERR_get_error in -lcrypto... " >&6; }
+if test ${ac_cv_lib_crypto_ERR_get_error+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcrypto  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+char ERR_get_error ();
+int
+main (void)
+{
+return ERR_get_error ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_crypto_ERR_get_error=yes
+else $as_nop
+  ac_cv_lib_crypto_ERR_get_error=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_ERR_get_error" >&5
+printf "%s\n" "$ac_cv_lib_crypto_ERR_get_error" >&6; }
+if test "x$ac_cv_lib_crypto_ERR_get_error" = xyes
+then :
+  libcrypto_present=1 && LIBS="-lcrypto $LIBS"
+fi
+
 fi
 
 		    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSL_CTX_new in -lssl" >&5

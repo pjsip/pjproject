@@ -1,15 +1,6 @@
 /*
- * aes_gcm_ossl.h
  *
- * Header for AES Galois Counter Mode.
- *
- * John A. Foley
- * Cisco Systems, Inc.
- *
- */
-/*
- *
- * Copyright (c) 2013-2017, Cisco Systems, Inc.
+ * Copyright(c) 2001-2017 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,21 +34,29 @@
  *
  */
 
-#ifndef AES_GCM_OSSL_H
-#define AES_GCM_OSSL_H
+#ifndef SRTP_CIHPER_PRIV_H
+#define SRTP_CIHPER_PRIV_H
 
 #include "cipher.h"
-#include "srtp.h"
-#include "datatypes.h"
-#include <openssl/evp.h>
-#include <openssl/aes.h>
 
-typedef struct {
-    int key_size;
-    int tag_len;
-    EVP_CIPHER_CTX* ctx;
-    srtp_cipher_direction_t dir;
-} srtp_aes_gcm_ctx_t;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif /* AES_GCM_OSSL_H */
+/*
+ * A trivial platform independent random source.
+ * For use in test only.
+ */
+void srtp_cipher_rand_for_tests(void *dest, uint32_t len);
 
+/*
+ * A trivial platform independent 32 bit random number.
+ * For use in test only.
+ */
+uint32_t srtp_cipher_rand_u32_for_tests(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* SRTP_CIPHER_PRIV_H */

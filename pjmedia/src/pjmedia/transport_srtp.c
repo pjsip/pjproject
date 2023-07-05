@@ -98,8 +98,14 @@
 #endif
 
 #else                                   /* Bundled SRTP */
+
+#  include <srtp_config.h>
 #  include <srtp.h>
 #  include <crypto_kernel.h>
+
+#define srtp_aes_gcm_256_openssl        srtp_aes_gcm_256
+#define srtp_aes_gcm_128_openssl        srtp_aes_gcm_128
+
 #endif
 
 #define THIS_FILE   "transport_srtp.c"
