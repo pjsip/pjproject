@@ -92,12 +92,12 @@ typedef struct pjsua_app_config
     pjsua_buddy_config      buddy_cfg[PJSUA_MAX_BUDDIES];
 
     unsigned                inv_hdr_cnt;
-    pj_str_t                inv_hname_cfg[16];
-    pj_str_t                inv_hvalue_cfg[16];
+    pj_str_t                inv_hname_cfg[PJSUA_MAX_CUSTOM_HEADERS];
+    pj_str_t                inv_hvalue_cfg[PJSUA_MAX_CUSTOM_HEADERS];
 
     unsigned                res_hdr_cnt;
-    pj_str_t                res_hname_cfg[16];
-    pj_str_t                res_hvalue_cfg[16];
+    pj_str_t                res_hname_cfg[PJSUA_MAX_CUSTOM_HEADERS];
+    pj_str_t                res_hvalue_cfg[PJSUA_MAX_CUSTOM_HEADERS];
 
     app_call_data           call_data[PJSUA_MAX_CALLS];
 

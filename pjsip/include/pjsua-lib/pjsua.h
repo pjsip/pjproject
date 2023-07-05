@@ -6286,6 +6286,12 @@ pjsua_call_get_med_transport_info(pjsua_call_id call_id,
 #   define PJSUA_MAX_BUDDIES        256
 #endif
 
+/**
+ * Max custom headers.
+ */
+#ifndef PJSUA_MAX_CUSTOM_HEADERS
+#   define PJSUA_MAX_CUSTOM_HEADERS 16
+#endif
 
 /**
  * This specifies how long the library should wait before retrying failed
