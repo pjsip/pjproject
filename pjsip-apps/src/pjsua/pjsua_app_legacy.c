@@ -735,7 +735,9 @@ static void ui_make_new_call()
 
         for (int i=0; i<app_config.inv_hdr_cnt; ++i) {
             pjsip_generic_string_hdr *hdr;
-            hdr = pjsip_generic_string_hdr_create(app_config.pool, &app_config.inv_hname_cfg[i],  &app_config.inv_hvalue_cfg[i]);
+            hdr = pjsip_generic_string_hdr_create(app_config.pool,
+                                                &app_config.inv_hname_cfg[i],
+                                                &app_config.inv_hvalue_cfg[i]);
             pj_list_push_back(&msg_data_.hdr_list, hdr);
         }
 
@@ -923,7 +925,9 @@ static void ui_answer_call()
 
         for (int i=0; i<app_config.res_hdr_cnt; ++i) {
             pjsip_generic_string_hdr *hdr;
-            hdr = pjsip_generic_string_hdr_create(app_config.pool, &app_config.res_hname_cfg[i],  &app_config.res_hvalue_cfg[i]);
+            hdr = pjsip_generic_string_hdr_create(app_config.pool,
+                                                &app_config.res_hname_cfg[i],
+                                                &app_config.res_hvalue_cfg[i]);
             pj_list_push_back(&msg_data_.hdr_list, hdr);
         }
 

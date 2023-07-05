@@ -373,7 +373,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
-           OPT_ADD_BUDDY, OPT_ADD_INVITE_HEADER, OPT_ADD_RESPONSE_HEADER, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
+           OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
+           OPT_ADD_INVITE_HEADER, OPT_ADD_RESPONSE_HEADER,
            OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
            OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
            OPT_USE_ICE, OPT_ICE_REGULAR, OPT_ICE_TRICKLE,
@@ -982,7 +983,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 
             inv_pcol = (char*)pj_memchr(inv_hname.ptr, ':', inv_hname.slen);
             inv_hvalue.ptr = inv_hname.ptr;
-            inv_hvalue.slen = inv_pcol ? inv_pcol - inv_hname.ptr : inv_hname.slen;
+            inv_hvalue.slen = inv_pcol ? 
+                                inv_pcol - inv_hname.ptr : 
+                                inv_hname.slen;
 
             if (inv_pcol) {
                 inv_hvalue.ptr = inv_pcol + 1;
@@ -1012,7 +1015,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 
             res_pcol = (char*)pj_memchr(res_hname.ptr, ':', res_hname.slen);
             res_hvalue.ptr = res_hname.ptr;
-            res_hvalue.slen = res_pcol ? res_pcol - res_hname.ptr : res_hname.slen;
+            res_hvalue.slen = res_pcol ? 
+                                res_pcol - res_hname.ptr : 
+                                res_hname.slen;
 
             if (res_pcol) {
                 res_hvalue.ptr = res_pcol + 1;

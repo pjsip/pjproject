@@ -326,7 +326,9 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
         for (int i=0; i<app_config.res_hdr_cnt; ++i) {
             pjsip_generic_string_hdr *hdr;
-            hdr = pjsip_generic_string_hdr_create(app_config.pool, &app_config.res_hname_cfg[i],  &app_config.res_hvalue_cfg[i]);
+            hdr = pjsip_generic_string_hdr_create(app_config.pool,
+                                                &app_config.res_hname_cfg[i],
+                                                &app_config.res_hvalue_cfg[i]);
             pj_list_push_back(&msg_data.hdr_list, hdr);
         }
 
