@@ -1714,13 +1714,20 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
      * Avoid calling SSL_shutdown() if handshake wasn't completed.
      * OpenSSL 1.0.2f complains if SSL_shutdown() is called during an
      * SSL handshake, while previous versions always return 0.
+     * Call SSL_shutdown() when there is a timeout handshake failure or
+     * the last error is not SSL_ERROR_SYSCALL and not SSL_ERROR_SSL.
      */
     if (ossock->ossl_ssl && SSL_in_init(ossock->ossl_ssl) == 0) {
-        int ret = SSL_shutdown(ossock->ossl_ssl);
-        if (ret == 0) {
-            /* SSL_shutdown will potentially trigger a bunch of
-             * data to dump to the socket */
-            post_unlock_flush_circ_buf = 1;
+        if (ssock->handshake_status == PJ_ETIMEDOUT ||
+            (ssock->last_err != SSL_ERROR_SYSCALL &&
+             ssock->last_err != SSL_ERROR_SSL))
+        {
+            int ret = SSL_shutdown(ossock->ossl_ssl);
+            if (ret == 0) {
+                /* SSL_shutdown will potentially trigger a bunch of
+                 * data to dump to the socket */
+                post_unlock_flush_circ_buf = 1;
+            }
         }
     }
 
