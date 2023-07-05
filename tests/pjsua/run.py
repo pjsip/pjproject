@@ -161,13 +161,16 @@ class Expect(threading.Thread):
             self.running = True
             while self.proc.poll() is None:
                 line = self.telnet.read_until(b'\n', 60)
-                linestr = str(line, 'ascii')
+                linestr = line.decode('utf-8')
                 if linestr == "" or const.DESTROYED in linestr:
                     break;
                     
                 #Print the line if echo is ON
                 if self.echo:
-                    print(self.name + ": " + linestr.rstrip())
+                    try:
+                        print(self.name + ": " + linestr.rstrip())
+                    except UnicodeEncodeError:
+                        print((self.name + ": " + linestr.rstrip()).encode('utf-8'))
 
                 self.lock.acquire()
                 self.output += linestr
@@ -197,7 +200,7 @@ class Expect(threading.Thread):
     def send(self, cmd):
         self.trace("send " + cmd)
         if self.use_telnet:
-            self.telnet.write(bytes(cmd + '\r\n', 'ascii'))  
+            self.telnet.write((cmd + '\r\n').encode('utf-8'))
         else:
             self.proc.stdin.writelines(cmd + "\n")
             self.proc.stdin.flush()
@@ -272,7 +275,10 @@ class Expect(threading.Thread):
         if self.trace_enabled:
             now = time.time()
             fmt = self.name + ": " + "================== " + s + " ==================" + " [at t=%(time)03d]"
-            print(fmt % {'time':int(now - self.t0)})
+            try:
+                print(fmt % {'time':int(now - self.t0)})
+            except UnicodeEncodeError:
+                print((fmt % {'time':int(now - self.t0)}).encode('utf-8'))
 
 #########################
 # Error handling

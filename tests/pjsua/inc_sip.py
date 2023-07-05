@@ -88,7 +88,10 @@ class Dialog:
 
 	def trace(self, txt):
 		if self.trace_enabled:
-			print(str(time.strftime("%H:%M:%S ")) + txt)
+			try:
+				print(str(time.strftime("%H:%M:%S ")) + txt)
+			except UnicodeEncodeError:
+				print((str(time.strftime("%H:%M:%S ")) + txt).encode('utf-8'))
 
 	def update_fields(self, msg):
 		if self.tcp:
@@ -157,7 +160,7 @@ class Dialog:
 		if not dst_addr:
 			dst_addr = (self.dst_addr, self.dst_port)
 		self.trace("============== TX MSG to " + str(dst_addr) + " ============= \n" + msg)
-		self.sock.sendto(bytes(msg,'utf-8'), 0, dst_addr)
+		self.sock.sendto(msg.encode('utf-8'), 0, dst_addr)
 
 	def wait_msg_from(self, timeout):
 		endtime = time.time() + timeout
@@ -180,17 +183,17 @@ class Dialog:
 				print("recv() exception: ", sys.exc_info()[0])
 				continue
 		
-		msg = str(msg, 'utf-8')
-		if msg=="":
+		msgstr = msg.decode('utf-8')
+		if msgstr=="":
 			return "", None
 		if self.last_request=="INVITE" and self.rem_tag=="":
-			self.rem_tag = get_tag(msg, "To")
+			self.rem_tag = get_tag(msgstr, "To")
 			self.rem_tag = self.rem_tag.rstrip("\r\n;")
 			if self.rem_tag != "":
 				self.rem_tag = ";tag=" + self.rem_tag
 			self.trace("=== rem_tag:" + self.rem_tag)
-		self.trace("=========== RX MSG from " + str(src_addr) +  " ===========\n" + msg)
-		return (msg, src_addr)
+		self.trace("=========== RX MSG from " + str(src_addr) +  " ===========\n" + msgstr)
+		return (msgstr, src_addr)
 	
 	def wait_msg(self, timeout):
 		return self.wait_msg_from(timeout)[0]
