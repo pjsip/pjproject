@@ -244,6 +244,7 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock, 
                                        pj_status_t status)
 {
+    ssock->handshake_status = status;
     /* Cancel handshake timer */
     if (ssock->timer.id == TIMER_HANDSHAKE_TIMEOUT) {
         pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);
