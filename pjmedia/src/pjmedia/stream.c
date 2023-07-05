@@ -2248,16 +2248,22 @@ on_return:
     if (stream->rtcp.received >= 10 && seq_st.diff > 1 &&
         stream->send_rtcp_fb_nack && pj_ntohs(hdr->seq) >= seq_st.diff)
     {
-        int i;
+        pj_uint16_t nlost, first_seq;
+
+        /* Report only one NACK (last 17 losts) */
+        nlost = PJ_MIN(seq_st.diff - 1, 17);
+        first_seq = pj_ntohs(hdr->seq) - nlost;
+
         pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
-        stream->rtcp_fb_nack.pid = pj_ntohs(hdr->seq) - seq_st.diff + 1;
-        for (i = 0; i < (seq_st.diff - 1); ++i) {
+        stream->rtcp_fb_nack.pid = first_seq;
+        while (--nlost) {
             stream->rtcp_fb_nack.blp <<= 1;
             stream->rtcp_fb_nack.blp |= 1;
         }
 
         /* Send it immediately */
-        status = send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_TRUE);
+        status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled,
+                           PJ_FALSE, PJ_FALSE, PJ_TRUE);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(stream->port.info.name.ptr, status,
                       "Error sending RTCP FB generic NACK"));
