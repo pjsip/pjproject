@@ -491,6 +491,7 @@ PJ_DECL(void) pjsip_tls_setting_wipe_keys(pjsip_tls_setting *opt);
  *                      selected by the operating system.
  * @param a_name        Optional published address, which is the address to be
  *                      advertised as the address of this SIP transport. 
+ *                      It can be set using IP address or hostname.
  *                      If this argument is NULL, then the bound address
  *                      will be used as the published address.
  * @param async_cnt     Number of simultaneous asynchronous accept()
@@ -529,6 +530,7 @@ PJ_DECL(pj_status_t) pjsip_tls_transport_start(pjsip_endpoint *endpt,
  *                      selected by the operating system.
  * @param a_name        Optional published address, which is the address to be
  *                      advertised as the address of this SIP transport.
+ *                      It can be set using IP address or hostname.
  *                      If this argument is NULL, then the bound address
  *                      will be used as the published address.
  * @param async_cnt     Number of simultaneous asynchronous accept()
@@ -565,6 +567,7 @@ PJ_DECL(pj_status_t) pjsip_tls_transport_start2(pjsip_endpoint *endpt,
  *                      selected by the operating system.
  *
  * @param a_name        The published address for the listener.
+ *                      It can be set using IP address or hostname.
  *                      If this argument is NULL, then the bound address will
  *                      be used as the published address.
  *
@@ -590,6 +593,7 @@ PJ_DECL(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
  *                      selected by the operating system.
  *
  * @param a_name        The published address for the listener.
+ *                      It can be set using IP address or hostname.
  *                      If this argument is NULL, then the bound address will
  *                      be used as the published address.
  *
