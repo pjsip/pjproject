@@ -820,6 +820,7 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
     pjsip_dialog *dlg;
     pjsip_inv_session *inv;
+    pj_bool_t cb_called = PJ_FALSE;
 
     dlg = pjsip_tsx_get_dlg(tsx);
     if (dlg == NULL)
@@ -828,6 +829,17 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     inv = pjsip_dlg_get_inv_session(dlg);
     if (inv == NULL)
         return;
+
+    /* Call on_tsx_state_changed() upon receipt of request (tsx state is
+     * PJSIP_TSX_STATE_TRYING). We need to do this before calling the state
+     * handler since the handler will send response and change the tsx state.
+     */
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify &&
+        e->body.tsx_state.tsx->state == PJSIP_TSX_STATE_TRYING)
+    {
+        cb_called = PJ_TRUE;
+        (*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
+    }
 
     /* Call state handler for the invite session. */
     (*inv_state_handler[inv->state])(inv, e);
@@ -845,13 +857,8 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
         }
     }
 
-    /* Call on_tsx_state. CANCEL request is a special case and has been
-     * reported earlier in inv_respond_incoming_cancel()
-     */
-    if (mod_inv.cb.on_tsx_state_changed && inv->notify &&
-        !(tsx->method.id==PJSIP_CANCEL_METHOD &&
-          e->body.tsx_state.type==PJSIP_EVENT_RX_MSG))
-    {
+    /* Call on_tsx_state. */
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify && !cb_called) {
         (*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
     }
 
@@ -3839,9 +3846,11 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
      * may not see the CANCEL request at all because by the time the CANCEL
      * request is reported, call has been disconnected and further events
      * from the INVITE session has been suppressed.
+     *
+     * Update: we have called this in mod_inv_on_tsx_state()
      */
-    if (mod_inv.cb.on_tsx_state_changed && inv->notify)
-        (*mod_inv.cb.on_tsx_state_changed)(inv, cancel_tsx, e);
+    // if (mod_inv.cb.on_tsx_state_changed && inv->notify)
+    //    (*mod_inv.cb.on_tsx_state_changed)(inv, cancel_tsx, e);
 
     /* See if we have matching INVITE server transaction: */
 
