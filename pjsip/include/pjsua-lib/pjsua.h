@@ -3097,6 +3097,9 @@ typedef struct pjsua_transport_config
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qos_param fields since this is more portable.
      *
+     * For TLS transport, this field will be ignored, the QoS traffic type
+     * can be set via tls_setting.
+     *
      * Default is QoS not set.
      */
     pj_qos_type         qos_type;
@@ -3106,12 +3109,18 @@ typedef struct pjsua_transport_config
      * level operation than setting the \a qos_type field and may not be
      * supported on all platforms.
      *
+     * For TLS transport, this field will be ignored, the low level QoS
+     * parameters can be set via tls_setting.
+     *
      * Default is QoS not set.
      */
     pj_qos_params       qos_params;
 
     /**
      * Specify options to be set on the transport. 
+     *
+     * For TLS transport, this field will be ignored, the socket options
+     * can be set via tls_setting.
      *
      * By default there is no options.
      * 
