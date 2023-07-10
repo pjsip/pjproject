@@ -1621,6 +1621,7 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         param.local_cert_info = info.local_cert_info;
         param.remote_cert_info = info.remote_cert_info;
         param.tp_dir = is_server?PJSIP_TP_DIR_INCOMING:PJSIP_TP_DIR_OUTGOING;
+        param.ssl_sock_info = &info;
         
         return (*verify_cb)(&param);
     }

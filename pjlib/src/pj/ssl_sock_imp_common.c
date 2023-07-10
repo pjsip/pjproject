@@ -1574,10 +1574,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
     
     if (info->established) {
         info->cipher = ssl_get_cipher(ssock);
-
-        /* Verification status */
-        info->verify_status = ssock->verify_status;
     }
+
+    /* Verification status */
+    info->verify_status = ssock->verify_status;
 
     /* Last known SSL error code */
     info->last_native_err = ssock->last_err;

@@ -132,6 +132,11 @@ typedef struct pjsip_tls_on_verify_param {
      */
     pj_ssl_cert_info *remote_cert_info;
 
+    /**
+     * SSL socket info.
+     */
+    pj_ssl_sock_info *ssl_sock_info;
+
 } pjsip_tls_on_verify_param;
 
 

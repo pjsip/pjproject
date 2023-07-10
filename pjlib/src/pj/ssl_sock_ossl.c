@@ -946,15 +946,6 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
         goto on_return;
     }
 
-    if (ssock->param.cb.on_verify_cb) {
-        update_certs_info(ssock, x509_ctx, &ssock->local_cert_info, 
-                          &ssock->remote_cert_info, PJ_TRUE);
-        preverify_ok = (*ssock->param.cb.on_verify_cb)(ssock, 
-                                                       ssock->is_server);
-
-        goto on_return;
-    }
-
     /* Store verification status */
     err = X509_STORE_CTX_get_error(x509_ctx);
     switch (err) {
@@ -1025,11 +1016,18 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
         break;
     }
 
-    /* When verification is not requested just return ok here, however
-     * application can still get the verification status.
+    /* When verification is not requested just return ok here.
+     * Otherwise, invoke app's verification callback, if configured.
+     * Anyway, application can still get the verification status.
      */
-    if (PJ_FALSE == ssock->param.verify_peer)
+    if (PJ_FALSE == ssock->param.verify_peer) {
         preverify_ok = 1;
+    } else if (ssock->param.cb.on_verify_cb) {
+        update_certs_info(ssock, x509_ctx, &ssock->local_cert_info,
+                          &ssock->remote_cert_info, PJ_TRUE);
+        preverify_ok = (*ssock->param.cb.on_verify_cb)(ssock,
+                                                       ssock->is_server);
+    }
 
 on_return:
     return preverify_ok;
