@@ -288,7 +288,16 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     mport->onFrameRequested(frame_);
     frame->type = frame_.type;
     frame->size = PJ_MIN(frame_.buf.size(), frame_.size);
+
+#if ((defined(_MSVC_LANG) && _MSVC_LANG <= 199711L) || __cplusplus <= 199711L)
+    /* C++98 does not have Vector::data() */
+    if (frame->size > 0)
+        pj_memcpy(frame->buf, &frame_.buf[0], frame->size);
+#else
+    /* Newer than C++98 */
     pj_memcpy(frame->buf, frame_.buf.data(), frame->size);
+#endif
+
 
     return PJ_SUCCESS;
 }

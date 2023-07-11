@@ -3173,17 +3173,19 @@ static srtp_err_status_t update_template_streams(srtp_t session,
     }
 
     /* process streams */
-    struct update_template_stream_data data = { srtp_err_status_ok, session,
-                                                new_stream_template,
-                                                new_stream_list };
-    srtp_stream_list_for_each(session->stream_list, update_template_stream_cb,
-                              &data);
-    if (data.status) {
-        /* free new allocations */
-        srtp_remove_and_dealloc_streams(new_stream_list, new_stream_template);
-        srtp_stream_list_dealloc(new_stream_list);
-        srtp_stream_dealloc(new_stream_template, NULL);
-        return data.status;
+    {
+        struct update_template_stream_data data = { srtp_err_status_ok, session,
+                                                    new_stream_template,
+                                                    new_stream_list };
+        srtp_stream_list_for_each(session->stream_list, update_template_stream_cb,
+                                  &data);
+        if (data.status) {
+            /* free new allocations */
+            srtp_remove_and_dealloc_streams(new_stream_list, new_stream_template);
+            srtp_stream_list_dealloc(new_stream_list);
+            srtp_stream_dealloc(new_stream_template, NULL);
+            return data.status;
+        }
     }
 
     /* dealloc old list / template */
