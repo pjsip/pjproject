@@ -308,8 +308,9 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
     pj_ssl_sock_param_default(ssock_param);
     ssock_param->sock_af = af;
     ssock_param->cb.on_accept_complete2 = &on_accept_complete2;
-    if (listener->tls_setting.on_verify_cb)
-        ssock_param->cb.on_verify_cb = &on_verify_cb;
+    // Don't need to set the callback as verify_peer is set to PJ_FALSE below
+    //if (listener->tls_setting.on_verify_cb)
+    //    ssock_param->cb.on_verify_cb = &on_verify_cb;
 
     ssock_param->async_cnt = listener->async_cnt;
     ssock_param->ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
@@ -1199,8 +1200,10 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.cb.on_connect_complete = &on_connect_complete;
     ssock_param.cb.on_data_read = &on_data_read;
     ssock_param.cb.on_data_sent = &on_data_sent;
-    if (listener->tls_setting.on_verify_cb)
-        ssock_param.cb.on_verify_cb = &on_verify_cb;
+    // Don't need to set the callback as verify_peer is set to PJ_FALSE below
+    //if (listener->tls_setting.on_verify_cb)
+    //    ssock_param.cb.on_verify_cb = &on_verify_cb;
+
     ssock_param.async_cnt = 1;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
     ssock_param.timer_heap = pjsip_endpt_get_timer_heap(listener->endpt);
@@ -1347,7 +1350,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     pj_sockaddr tmp_src_addr;
     pj_bool_t is_shutdown;
     pj_status_t status;
-    char addr_buf[PJ_INET6_ADDRSTRLEN+10];        
+    char addr_buf[PJ_INET6_ADDRSTRLEN+10];
+    pj_bool_t verify_ok;
 
     PJ_UNUSED_ARG(src_addr_len);
 
@@ -1471,7 +1475,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     /* If there is verification error and verification is mandatory, shutdown
      * and destroy the transport.
      */
-    if (ssl_info.verify_status && listener->tls_setting.verify_client) {
+    verify_ok = on_verify_cb(ssock, PJ_FALSE);
+    if (!verify_ok) {
         if (tls->close_reason == PJ_SUCCESS) 
             tls->close_reason = PJSIP_TLS_ECERTVERIF;
         pjsip_transport_shutdown(&tls->base);
@@ -1490,8 +1495,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
         state_info.ext_info = &tls_info;
 
         /* Set transport state based on verification status */
-        if (ssl_info.verify_status && listener->tls_setting.verify_client)
-        {
+        if (!verify_ok) {
             tp_state = PJSIP_TP_STATE_DISCONNECTED;
             state_info.status = PJSIP_TLS_ECERTVERIF;
         } else {
@@ -1596,25 +1600,36 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
 {
     pj_bool_t(*verify_cb)(const pjsip_tls_on_verify_param * param) = NULL;
+    pj_ssl_sock_info info;
+    pj_bool_t verify_peer;
 
     if (is_server) {
         struct tls_listener* tls;
 
         tls = (struct tls_listener*)pj_ssl_sock_get_user_data(ssock);
         verify_cb = tls->tls_setting.on_verify_cb;
+        verify_peer = tls->tls_setting.verify_client;
     } else {
         struct tls_transport* tls;
 
         tls = (struct tls_transport*)pj_ssl_sock_get_user_data(ssock);
         verify_cb = tls->on_verify_cb;
+        verify_peer = tls->verify_server;
     }
 
+    /* Just return PJ_TRUE if verification not required */
+    if (!verify_peer)
+        return PJ_TRUE;
+
+    /* Perform verification.
+     * Invoke app verify callback if callback is configured.
+     * Otherwise, just use SSL socket's verification result.
+     */
+    pj_ssl_sock_get_info(ssock, &info);
     if (verify_cb) {
         pjsip_tls_on_verify_param param;
-        pj_ssl_sock_info info;
 
         pj_bzero(&param, sizeof(param));
-        pj_ssl_sock_get_info(ssock, &info);
 
         param.local_addr = &info.local_addr;
         param.remote_addr = &info.remote_addr;
@@ -1625,7 +1640,7 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         
         return (*verify_cb)(&param);
     }
-    return PJ_TRUE;
+    return (info.verify_status == PJ_SSL_CERT_ESUCCESS);
 }
 
 
@@ -1840,6 +1855,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     pj_bool_t is_shutdown;
     char local_addr_buf[PJ_INET6_ADDRSTRLEN+10];
     char remote_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+    pj_bool_t verify_ok;
 
     tls = (struct tls_transport*) pj_ssl_sock_get_user_data(ssock);
 
@@ -1963,7 +1979,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     /* If there is verification error and verification is mandatory, shutdown
      * and destroy the transport.
      */
-    if (ssl_info.verify_status && tls->verify_server) {
+    verify_ok = on_verify_cb(ssock, PJ_FALSE);
+    if (!verify_ok) {
         if (tls->close_reason == PJ_SUCCESS) 
             tls->close_reason = PJSIP_TLS_ECERTVERIF;
         pjsip_transport_shutdown(&tls->base);
@@ -1983,8 +2000,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
         tls_info.ssl_sock_info = &ssl_info;
 
         /* Set transport state based on verification status */
-        if (ssl_info.verify_status && tls->verify_server)
-        {
+        if (!verify_ok) {
             tp_state = PJSIP_TP_STATE_DISCONNECTED;
             state_info.status = PJSIP_TLS_ECERTVERIF;
         } else {

@@ -682,6 +682,10 @@ typedef struct pj_ssl_sock_cb
      * Certification info can be obtained from #pj_ssl_sock_info. Currently
      * it's only implemented for OpenSSL backend.
      *
+     * Note that this callback will not be called if peer certificate
+     * verification is disabled (i.e: pj_ssl_sock_param.verify_peer is
+     * set to PJ_FALSE).
+     *
      * @param ssock     The secure socket.
      * @param is_server PJ_TRUE to indicate an incoming connection.
      *

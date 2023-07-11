@@ -384,6 +384,10 @@ typedef struct pjsip_tls_setting
      * Callback to be called to verify a new connection.  Currently it's only 
      * implemented for OpenSSL backend.
      *
+     * Note that this callback will not be called if peer certificate
+     * verification is disabled (i.e: pjsip_tls_setting.verify_client/
+     * verify_server is set to PJ_FALSE).
+     *
      * @param param         The parameter to the callback.
      * 
      * @return              Return PJ_TRUE if succesfully verified. 
