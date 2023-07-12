@@ -682,6 +682,10 @@ typedef struct pj_ssl_sock_cb
      * Certification info can be obtained from #pj_ssl_sock_info. Currently
      * it's only implemented for OpenSSL backend.
      *
+     * If this is set, the callback will always be invoked, even when peer
+     * verification is disabled (pj_ssl_sock_param.verify_peer set to
+     * PJ_FALSE).
+     *
      * @param ssock     The secure socket.
      * @param is_server PJ_TRUE to indicate an incoming connection.
      *
@@ -808,6 +812,12 @@ typedef struct pj_ssl_sock_info
      * Group lock assigned to the ioqueue key.
      */
     pj_grp_lock_t *grp_lock;
+
+    /**
+     * Native TLS/SSL instance of the backend. Currently only available for
+     * OpenSSL backend (this will contain the OpenSSL "SSL" instance).
+     */
+    void *native_ssl;
 
 } pj_ssl_sock_info;
 

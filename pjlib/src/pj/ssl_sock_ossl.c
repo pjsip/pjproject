@@ -36,7 +36,7 @@
 #if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 
-#include "ssl_sock_imp_common.c"
+#include "ssl_sock_imp_common.h"
 
 #define THIS_FILE               "ssl_sock_ossl.c"
 
@@ -229,6 +229,10 @@ typedef struct ossl_sock_t
     BIO                  *ossl_rbio;
     BIO                  *ossl_wbio;
 } ossl_sock_t;
+
+
+#include "ssl_sock_imp_common.c"
+
 
 /**
  * Mapping from OpenSSL error codes to pjlib error space.
@@ -946,15 +950,6 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
         goto on_return;
     }
 
-    if (ssock->param.cb.on_verify_cb) {
-        update_certs_info(ssock, x509_ctx, &ssock->local_cert_info, 
-                          &ssock->remote_cert_info, PJ_TRUE);
-        preverify_ok = (*ssock->param.cb.on_verify_cb)(ssock, 
-                                                       ssock->is_server);
-
-        goto on_return;
-    }
-
     /* Store verification status */
     err = X509_STORE_CTX_get_error(x509_ctx);
     switch (err) {
@@ -1023,6 +1018,16 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
     default:
         ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
         break;
+    }
+
+    /* Invoke app's verification callback */
+    if (ssock->param.cb.on_verify_cb) {
+        update_certs_info(ssock, x509_ctx, &ssock->local_cert_info,
+                          &ssock->remote_cert_info, PJ_TRUE);
+        preverify_ok = (*ssock->param.cb.on_verify_cb)(ssock,
+                                                       ssock->is_server);
+
+        goto on_return;
     }
 
     /* When verification is not requested just return ok here, however

@@ -132,6 +132,11 @@ typedef struct pjsip_tls_on_verify_param {
      */
     pj_ssl_cert_info *remote_cert_info;
 
+    /**
+     * The SSL socket instance.
+     */
+    pj_ssl_sock_t *ssock;
+
 } pjsip_tls_on_verify_param;
 
 
@@ -378,6 +383,10 @@ typedef struct pjsip_tls_setting
     /**
      * Callback to be called to verify a new connection.  Currently it's only 
      * implemented for OpenSSL backend.
+     *
+     * If this is set, the callback will always be invoked, even when peer
+     * verification is disabled (pjsip_tls_setting.verify_server/verify_client
+     * set to PJ_FALSE).
      *
      * @param param         The parameter to the callback.
      * 
