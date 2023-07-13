@@ -132,6 +132,7 @@ static pj_time_val td_timer_val = { PJSIP_TD_TIMEOUT/1000,
                                     PJSIP_TD_TIMEOUT%1000 };
 static pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
                                          (64*PJSIP_T1_TIMEOUT)%1000 };
+static int max_retrans_count = -1;
 
 #define TIMER_INACTIVE          0
 #define RETRANSMIT_TIMER        1
@@ -479,6 +480,13 @@ PJ_DEF(void) pjsip_tsx_initialize_timer_values(void)
     timeout_timer_val = td_timer_val;
 }
 
+
+PJ_DEF(void) pjsip_tsx_set_max_retransmit_count(int max)
+{
+    max_retrans_count = max;
+}
+
+
 /*****************************************************************************
  **
  ** Transaction layer module
@@ -498,6 +506,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
 
     /* Initialize timer values */
     pjsip_tsx_initialize_timer_values();
+
+    /* Reset max retrans count (for library restart scenario) */
+    max_retrans_count = -1;
 
     /*
      * Initialize transaction layer structure.
@@ -2561,6 +2572,26 @@ static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched)
     }
 
     PJ_ASSERT_RETURN(tsx->last_tx!=NULL, PJ_EBUG);
+
+    /* If max retransmission count is reached, put it as timeout */
+    if (max_retrans_count >= 0 &&
+        tsx->retransmit_count >= max_retrans_count &&
+        tsx->last_tx->msg->type == PJSIP_REQUEST_MSG)
+    {
+        pj_time_val timeout = { 0, 0 };
+
+        PJ_LOG(3,(tsx->obj_name,
+                  "Stop retransmiting %s, max retrans %d reached, "
+                  "tsx set as timeout",
+                  pjsip_tx_data_get_info(tsx->last_tx),
+                  tsx->retransmit_count));
+
+        lock_timer(tsx);
+        tsx_cancel_timer( tsx, &tsx->timeout_timer );
+        tsx_schedule_timer(tsx, &tsx->timeout_timer, &timeout, TIMEOUT_TIMER);
+        unlock_timer(tsx);
+        return PJ_SUCCESS;
+    }
 
     PJ_LOG(5,(tsx->obj_name, "Retransmiting %s, count=%d, restart?=%d", 
               pjsip_tx_data_get_info(tsx->last_tx), 
