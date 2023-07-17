@@ -2103,15 +2103,17 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
              * which were sent to keep NAT bindings.
              */
             if (tmp.slen) {
-                PJ_LOG(4, (THIS_FILE, 
-                      "Dropping %ld bytes packet from %s %s:%d %.*s:\n"
-                      "%.*s\n"
-                      "-- end of packet.",
+                PJ_LOG(2, (THIS_FILE,
+                      "Dropping %d bytes packet from %s %s:%d %.*s\n",
                       msg_fragment_size,
                       rdata->tp_info.transport->type_name,
-                      rdata->pkt_info.src_name, 
+                      rdata->pkt_info.src_name,
                       rdata->pkt_info.src_port,
-                      (int)tmp.slen, tmp.ptr,
+                      (int)tmp.slen, tmp.ptr));
+                PJ_LOG(4, (THIS_FILE,
+                      "Dropped packet:"
+                      "%.*s\n"
+                      "-- end of packet.",
                       (int)msg_fragment_size,
                       rdata->msg_info.msg_buf));
             }
