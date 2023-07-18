@@ -2361,6 +2361,10 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 
     /* Perform SSL handshake */
     pj_lock_acquire(ssock->write_mutex);
+
+    /* Clear the error queue prior to any I/O functions, as per openssl docs */
+    ERR_clear_error();
+
     err = SSL_do_handshake(ossock->ossl_ssl);
     pj_lock_release(ssock->write_mutex);
 
@@ -2444,6 +2448,10 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
      * is on progress, so let's protect it with write mutex.
      */
     pj_lock_acquire(ssock->write_mutex);
+
+    /* Clear the error queue prior to any I/O functions, as per openssl docs */
+    ERR_clear_error();
+
     *size = size_ = SSL_read(ossock->ossl_ssl, data, size_);
 
     if (size_ <= 0) {
@@ -2494,6 +2502,9 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
     pj_status_t status = PJ_SUCCESS;
 
+    /* Clear the error queue prior to any I/O functions, as per openssl docs */
+    ERR_clear_error();
+
     *nwritten = SSL_write(ossock->ossl_ssl, data, (int)size);
     if (*nwritten <= 0) {
         /* SSL failed to process the data, it may just that re-negotiation
@@ -2527,6 +2538,9 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 
     if (SSL_renegotiate_pending(ossock->ossl_ssl))
         return PJ_EPENDING;
+
+    /* Clear the error queue prior to any I/O functions, as per openssl docs */
+    ERR_clear_error();
 
     ret = SSL_renegotiate(ossock->ossl_ssl);
     if (ret <= 0) {
