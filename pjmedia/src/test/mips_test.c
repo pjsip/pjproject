@@ -1022,7 +1022,7 @@ static pj_status_t wsola_plc_get_frame(struct pjmedia_port *this_port,
     pj_status_t status;
 
 
-    if ((pj_rand() % 100) > wp->loss_pct) {
+    if ((pj_rand() % 100) >= wp->loss_pct) {
         status = pjmedia_port_get_frame(wp->gen_port, frame);
         pj_assert(status == PJ_SUCCESS);
 
