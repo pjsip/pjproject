@@ -2961,8 +2961,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                              call_id, mi));
             }
 
-            /* Add any other RTCP-FB setting configured in account setting */
-            if (acc->cfg.rtcp_fb_cfg.cap_count) {
+            /* For offer, add any other RTCP-FB setting configured in account
+             * setting.
+             */
+            if (!rem_sdp && acc->cfg.rtcp_fb_cfg.cap_count) {
                 pj_bool_t tmp = rtcp_cfg.dont_use_avpf;
                 rtcp_cfg = acc->cfg.rtcp_fb_cfg;
                 rtcp_cfg.dont_use_avpf = tmp;
