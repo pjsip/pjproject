@@ -672,7 +672,7 @@ class SIPUri:
             output = output + self.user + "@"
         output = output + self.host
         if self.port:
-            output = output + ":" + output(self.port)
+            output = output + ":" + str(self.port)
         if self.transport:
             output = output + ";transport=" + self.transport
         return output
