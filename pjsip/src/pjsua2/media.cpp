@@ -20,6 +20,9 @@
 #include <pjsua2/media.hpp>
 #include <pjsua2/types.hpp>
 #include <pjsua2/endpoint.hpp>
+extern "C" {
+#include <pjmedia/mp3_writer.h>
+}
 #include "util.hpp"
 
 using namespace pj;
@@ -416,8 +419,11 @@ AudioMediaRecorder::AudioMediaRecorder()
 AudioMediaRecorder::~AudioMediaRecorder()
 {
     if (recorderId != PJSUA_INVALID_ID) {
-	unregisterMediaPort();
-	pjsua_recorder_destroy(recorderId);
+	    unregisterMediaPort();
+	    pjsua_recorder_destroy(recorderId);
+        if (type == MP3) {
+            mp3_transcode(wavFile.c_str(), mp3File.c_str());
+        }
     }
 }
 
@@ -432,8 +438,21 @@ void AudioMediaRecorder::createRecorder(const string &file_name,
     if (recorderId != PJSUA_INVALID_ID) {
 	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
     }
+    
 
-    pj_str_t pj_name = str2Pj(file_name);
+    if (file_name.compare(file_name.size() - 4, 4, ".mp3") == 0) {
+        type = MP3;
+        mp3File = file_name;
+        wavFile = file_name;
+        wavFile.replace(wavFile.size() - 4, 4, ".wav");
+    }
+    else if (file_name.compare(file_name.size() - 4, 4, ".wav") == 0) {
+        wavFile = file_name;
+        mp3File = "";
+        type = WAV;
+    }
+    
+    pj_str_t pj_name = str2Pj(wavFile);
 
     PJSUA2_CHECK_EXPR( pjsua_recorder_create(&pj_name,
 					     enc_type,
