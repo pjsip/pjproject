@@ -620,6 +620,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.auth_pref.initial_auth  = sipConfig.authInitialEmpty;
     ret.auth_pref.algorithm     = str2Pj(sipConfig.authInitialAlgorithm);
     ret.transport_id            = sipConfig.transportId;
+    ret.ipv6_sip_use            = sipConfig.ipv6Use;
 
     // AccountCallConfig
     ret.call_hold_type          = callConfig.holdType;
@@ -722,6 +723,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
 void AccountConfig::fromPj(const pjsua_acc_config &prm,
                            const pjsua_media_config *mcfg)
 {
+    pjsua_media_config default_mcfg;
     const pjsip_hdr *hdr;
     unsigned i;
 
@@ -780,6 +782,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     sipConfig.authInitialEmpty  = PJ2BOOL(prm.auth_pref.initial_auth);
     sipConfig.authInitialAlgorithm = pj2Str(prm.auth_pref.algorithm);
     sipConfig.transportId       = prm.transport_id;
+    sipConfig.ipv6Use           = prm.ipv6_sip_use;
 
     // AccountCallConfig
     callConfig.holdType         = prm.call_hold_type;
@@ -825,7 +828,6 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         natConfig.iceNoRtcp     = PJ2BOOL(prm.ice_cfg.ice_no_rtcp);
         natConfig.iceAlwaysUpdate = PJ2BOOL(prm.ice_cfg.ice_always_update);
     } else {
-        pjsua_media_config default_mcfg;
         if (!mcfg) {
             pjsua_media_config_default(&default_mcfg);
             mcfg = &default_mcfg;
@@ -852,7 +854,6 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         natConfig.turnPassword  =
                 pj2Str(prm.turn_cfg.turn_auth_cred.data.static_cred.data);
     } else {
-        pjsua_media_config default_mcfg;
         if (!mcfg) {
             pjsua_media_config_default(&default_mcfg);
             mcfg = &default_mcfg;

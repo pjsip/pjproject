@@ -74,6 +74,7 @@ static struct mod_tsx_layer
     pjsip_endpoint      *endpt;
     pj_mutex_t          *mutex;
     pj_hash_table_t     *htable;
+    pj_hash_table_t     *htable2;
 } mod_tsx_layer = 
 {   {
         NULL, NULL,                     /* List's prev and next.    */
@@ -131,6 +132,7 @@ static pj_time_val td_timer_val = { PJSIP_TD_TIMEOUT/1000,
                                     PJSIP_TD_TIMEOUT%1000 };
 static pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
                                          (64*PJSIP_T1_TIMEOUT)%1000 };
+static int max_retrans_count = -1;
 
 #define TIMER_INACTIVE          0
 #define RETRANSMIT_TIMER        1
@@ -143,6 +145,7 @@ enum
 {
     NO_NOTIFY = 1,
     NO_SCHEDULE_HANDLER = 2,
+    RELEASE_LOCK = 4
 };
 
 /* Prototypes. */
@@ -271,7 +274,8 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
                                         pj_str_t *str,
                                         pjsip_role_e role,
                                         const pjsip_method *method,
-                                        const pjsip_rx_data *rdata )
+                                        const pjsip_rx_data *rdata,
+                                        pj_bool_t include_via )
 {
 #define SEPARATOR   '$'
     char *key, *p;
@@ -292,9 +296,11 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
                    11 +                     /* CSeq number */
                    rdata->msg_info.from->tag.slen +   /* From tag. */
                    rdata->msg_info.cid->id.slen +    /* Call-ID */
-                   host->slen +             /* Via host. */
-                   11 +                     /* Via port. */
                    16;                      /* Separator+Allowance. */
+    if (include_via) {
+        len_required += host->slen +        /* Via host. */
+                        11;                 /* Via port. */
+    }
     key = p = (char*) pj_pool_alloc(pool, len_required);
 
     /* Add role. */
@@ -331,14 +337,16 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
      * only used to match request retransmission, and we expect that the 
      * request retransmissions will contain the same port.
      */
-    pj_memcpy(p, host->ptr, host->slen);
-    p += host->slen;
-    *p++ = ':';
+    if (include_via) {
+        pj_memcpy(p, host->ptr, host->slen);
+        p += host->slen;
+        *p++ = ':';
 
-    len = pj_utoa(rdata->msg_info.via->sent_by.port, p);
-    p += len;
-    *p++ = SEPARATOR;
-    
+        len = pj_utoa(rdata->msg_info.via->sent_by.port, p);
+        p += len;
+        *p++ = SEPARATOR;
+    }
+
     *p++ = '\0';
 
     /* Done. */
@@ -416,7 +424,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
          * transaction key was created by the same function, so it will 
          * match the message.
          */
-        return create_tsx_key_2543( pool, key, role, method, rdata );
+        return create_tsx_key_2543( pool, key, role, method, rdata, PJ_TRUE );
     }
 }
 
@@ -472,6 +480,13 @@ PJ_DEF(void) pjsip_tsx_initialize_timer_values(void)
     timeout_timer_val = td_timer_val;
 }
 
+
+PJ_DEF(void) pjsip_tsx_set_max_retransmit_count(int max)
+{
+    max_retrans_count = max;
+}
+
+
 /*****************************************************************************
  **
  ** Transaction layer module
@@ -492,6 +507,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
     /* Initialize timer values */
     pjsip_tsx_initialize_timer_values();
 
+    /* Reset max retrans count (for library restart scenario) */
+    max_retrans_count = -1;
+
     /*
      * Initialize transaction layer structure.
      */
@@ -511,7 +529,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
 
     /* Create hash table. */
     mod_tsx_layer.htable = pj_hash_create( pool, pjsip_cfg()->tsx.max_count );
-    if (!mod_tsx_layer.htable) {
+    mod_tsx_layer.htable2 = pj_hash_create(pool, pjsip_cfg()->tsx.max_count);
+    if (!mod_tsx_layer.htable || !mod_tsx_layer.htable2) {
         pjsip_endpt_release_pool(endpt, pool);
         return PJ_ENOMEM;
     }
@@ -600,16 +619,30 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
                 tsx, tsx->hashed_key, tsx->transaction_key.slen,
                 tsx->transaction_key.ptr));
 
-    /* Register the transaction to the hash table. */
+    /* Register the transaction to the hash tables. We register the tsx
+     * to the secondary hash table only if it's UAS, for the purpose of
+     * detecting merged requests.
+     */
 #ifdef PRECALC_HASH
     pj_hash_set_lower( tsx->pool, mod_tsx_layer.htable,
                        tsx->transaction_key.ptr,
                        (unsigned)tsx->transaction_key.slen, 
                        tsx->hashed_key, tsx);
+    if (tsx->role == PJSIP_ROLE_UAS) {
+        pj_hash_set_lower( tsx->pool, mod_tsx_layer.htable2,
+                           tsx->transaction_key2.ptr,
+                           (unsigned)tsx->transaction_key2.slen,
+                           tsx->hashed_key2, tsx);
+    }
 #else
     pj_hash_set_lower( tsx->pool, mod_tsx_layer.htable,
                        tsx->transaction_key.ptr,
                        tsx->transaction_key.slen, 0, tsx);
+    if (tsx->role == PJSIP_ROLE_UAS) {
+        pj_hash_set_lower( tsx->pool, mod_tsx_layer.htable2,
+                           tsx->transaction_key2.ptr,
+                           tsx->transaction_key2.slen, 0, tsx);
+    }
 #endif
 
     /* Unlock mutex. */
@@ -639,14 +672,25 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
     /* Lock hash table mutex. */
     pj_mutex_lock(mod_tsx_layer.mutex);
 
-    /* Register the transaction to the hash table. */
+    /* Unregister the transaction from the hash tables. */
 #ifdef PRECALC_HASH
     pj_hash_set_lower( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-                       (unsigned)tsx->transaction_key.slen, tsx->hashed_key, 
+                       (unsigned)tsx->transaction_key.slen, tsx->hashed_key,
                        NULL);
+    if (tsx->role == PJSIP_ROLE_UAS) {
+        pj_hash_set_lower(NULL, mod_tsx_layer.htable2,
+                          tsx->transaction_key2.ptr,
+                          (unsigned)tsx->transaction_key2.slen,
+                          tsx->hashed_key2, NULL);
+    }
 #else
     pj_hash_set_lower( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
                        tsx->transaction_key.slen, 0, NULL);
+    if (tsx->role == PJSIP_ROLE_UAS) {
+        pj_hash_set_lower(NULL, mod_tsx_layer.htable2,
+                          tsx->transaction_key2.ptr,
+                          tsx->transaction_key2.slen, 0, NULL);
+    }
 #endif
 
     TSX_TRACE_((THIS_FILE, 
@@ -828,6 +872,52 @@ static pj_status_t mod_tsx_layer_unload(void)
     return PJ_SUCCESS;
 }
 
+
+/* Detect merged requests as per RFC 3261 section 8.2.2.2. */
+PJ_DEF(pjsip_transaction *)
+pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata)
+{
+    pj_str_t key, key2;
+    pj_uint32_t hval = 0;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG, NULL);
+
+    /* If the request has no tag in the To header field, the UAS core MUST
+     * check the request against ongoing transactions.
+     */
+    if (rdata->msg_info.to->tag.slen != 0)
+        return NULL;
+
+    status = pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_ROLE_UAS,
+                                  &rdata->msg_info.cseq->method, rdata);
+    if (status != PJ_SUCCESS)
+        return NULL;
+
+    /* This request must not match any transaction in our primary hash
+     * table.
+     */
+    if (pj_hash_get_lower(mod_tsx_layer.htable, key.ptr, (unsigned)key.slen,
+                          &hval) != NULL)
+    {
+        return NULL;
+    }
+
+    /* Now check it against our secondary hash table, based on a key that
+     * consists of From tag, CSeq, and Call-ID.
+     */
+    status = create_tsx_key_2543(rdata->tp_info.pool, &key2, PJSIP_ROLE_UAS,
+                                 &rdata->msg_info.cseq->method, rdata,
+                                 PJ_FALSE);
+    if (status != PJ_SUCCESS)
+        return NULL;
+
+    hval = 0;
+    return (pjsip_transaction *) pj_hash_get_lower(mod_tsx_layer.htable2,
+                                                   key2.ptr,
+                                                   (unsigned)key2.slen,
+                                                   &hval);
+}
 
 /* This module callback is called when endpoint has received an
  * incoming request message.
@@ -1330,16 +1420,18 @@ static void tsx_set_state( pjsip_transaction *tsx,
          * 3. tsx_shutdown() hasn't been called.
          * Refer to ticket #2001 (https://github.com/pjsip/pjproject/issues/2001).
          */
-        if (event_src_type == PJSIP_EVENT_TIMER &&
-            (pj_timer_entry *)event_src == &tsx->timeout_timer)
+        if ((flag & RELEASE_LOCK) != 0 ||
+            (event_src_type == PJSIP_EVENT_TIMER &&
+             (pj_timer_entry *)event_src == &tsx->timeout_timer))
         {
             pj_grp_lock_release(tsx->grp_lock);
         }
 
         (*tsx->tsx_user->on_tsx_state)(tsx, &e);
 
-        if (event_src_type == PJSIP_EVENT_TIMER &&
-            (pj_timer_entry *)event_src == &tsx->timeout_timer)
+        if ((flag & RELEASE_LOCK) != 0 ||
+            (event_src_type == PJSIP_EVENT_TIMER &&
+             (pj_timer_entry *)event_src == &tsx->timeout_timer))
         {
             pj_grp_lock_acquire(tsx->grp_lock);
         }
@@ -1627,9 +1719,22 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas2(pjsip_module *tsx_user,
         return status;
     }
 
+    /* Create transaction key to detect merged requests, with the key
+     * consisting of From tag, CSeq, and Call-ID.
+     */
+    status = create_tsx_key_2543(tsx->pool, &tsx->transaction_key2,
+                                 PJSIP_ROLE_UAS, &tsx->method, rdata,
+                                 PJ_FALSE );
+    if (status != PJ_SUCCESS) {
+        pj_grp_lock_release(tsx->grp_lock);
+        tsx_shutdown(tsx);
+        return status;
+    }
+
     /* Calculate hashed key value. */
 #ifdef PRECALC_HASH
     tsx->hashed_key = pj_hash_calc_tolower(0, NULL, &tsx->transaction_key);
+    tsx->hashed_key2 = pj_hash_calc_tolower(0, NULL, &tsx->transaction_key2);
 #endif
 
     /* Duplicate branch parameter for transaction. */
@@ -2020,7 +2125,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
             err =pj_strerror((pj_status_t)-sent, errmsg, sizeof(errmsg));
 
             PJ_LOG(3,(tsx->obj_name,
-                      "Failed to send %s! err=%d (%s)",
+                      "Failed to send %s! err=%ld (%s)",
                       pjsip_tx_data_get_info(send_state->tdata), -sent,
                       errmsg));
 
@@ -2044,9 +2149,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
             if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
-                tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                /* Set tsx state to TERMINATED, but release the lock
+                 * when invoking the callback, to avoid deadlock.
+                 */
+                tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
                                PJSIP_EVENT_TRANSPORT_ERROR,
-                               send_state->tdata, 0);
+                               send_state->tdata, RELEASE_LOCK);
             } 
             /* Don't forget to destroy if we have pending destroy flag
              * (https://github.com/pjsip/pjproject/issues/906)
@@ -2464,6 +2572,26 @@ static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched)
     }
 
     PJ_ASSERT_RETURN(tsx->last_tx!=NULL, PJ_EBUG);
+
+    /* If max retransmission count is reached, put it as timeout */
+    if (max_retrans_count >= 0 &&
+        tsx->retransmit_count >= max_retrans_count &&
+        tsx->last_tx->msg->type == PJSIP_REQUEST_MSG)
+    {
+        pj_time_val timeout = { 0, 0 };
+
+        PJ_LOG(3,(tsx->obj_name,
+                  "Stop retransmiting %s, max retrans %d reached, "
+                  "tsx set as timeout",
+                  pjsip_tx_data_get_info(tsx->last_tx),
+                  tsx->retransmit_count));
+
+        lock_timer(tsx);
+        tsx_cancel_timer( tsx, &tsx->timeout_timer );
+        tsx_schedule_timer(tsx, &tsx->timeout_timer, &timeout, TIMEOUT_TIMER);
+        unlock_timer(tsx);
+        return PJ_SUCCESS;
+    }
 
     PJ_LOG(5,(tsx->obj_name, "Retransmiting %s, count=%d, restart?=%d", 
               pjsip_tx_data_get_info(tsx->last_tx), 
@@ -3220,6 +3348,21 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
             status = tsx_send_msg( tsx, ack_tdata);
             if (status != PJ_SUCCESS)
                 return status;
+
+        } else if ((tsx->method.id == PJSIP_BYE_METHOD) &&
+                   (tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
+                    tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST))
+        {
+            /* RFC 3261 15.1.1:
+             * If the response for the BYE is a 481 (Call/Transaction Does
+             * Not Exist) or a 408 (Request Timeout) or no response at all
+             * is received for the BYE (that is, a timeout is returned by
+             * the client transaction), the UAC MUST consider the
+             * session and the dialog terminated.
+             */
+            tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
+                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata, 0 );
+            return PJ_SUCCESS;
         }
 
         /* Inform TU. */

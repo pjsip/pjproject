@@ -78,7 +78,7 @@ PJ_BEGIN_DECL
  * @param len       The length of the string buffer.
  */
 #define PJ_CHECK_TRUNC_STR(ret, str, len) \
-    if ((int)(ret) >= (int)(len) || (ret) < 0) pj_ansi_strcpy((str) + (len) - 3, "..")
+    if ((int)(ret) >= (int)(len) || (ret) < 0) pj_ansi_strxcpy((str) + (len) - 3, "..", 3)
 
 /**
  * Create string initializer from a normal C string.
@@ -718,6 +718,31 @@ PJ_DECL(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
                                  unsigned base);
 
 /**
+ * Convert string to generic unsigned integer. The conversion will stop as
+ * soon as non-digit character is found or all the characters have
+ * been processed.
+ *
+ * @param str       The input string.
+ * @param value     Pointer to an unsigned integer to receive the value.
+ *                  The value will be a 64 bit unsigned integer if the system
+ *                  supports it, otherwise a 32 bit unsigned integer.
+ * @param base      Number base to use.
+ *
+ * @return PJ_SUCCESS if successful.  Otherwise:
+ *         PJ_ETOOBIG if the value was an impossibly long positive number.
+ *         In this case, *value will be set to ULLONG_MAX (for 64 bit) or
+ *         ULONG_MAX (for 32 bit).
+ *         \n
+ *         PJ_EINVAL if the input string was NULL, the value pointer was NULL
+ *         or the input string could not be parsed at all such as starting
+ *         with a character outside the base character range.  In this case,
+ *         *value will be left untouched.
+ */
+PJ_DECL(pj_status_t) pj_strtoul4(const pj_str_t *str, pj_uint_t *value,
+                                 unsigned base);
+
+
+/**
  * Convert string to float.
  *
  * @param str   the string.
@@ -738,6 +763,20 @@ PJ_DECL(float) pj_strtof(const pj_str_t *str);
 PJ_DECL(int) pj_utoa(unsigned long val, char *buf);
 
 /**
+ * Utility to convert generic unsigned integer to string. Note that the
+ * string will be NULL terminated.
+ *
+ * This function will take 64 bit unsigned integer if the system has one,
+ * otherwise it takes 32 bit unsigned integer.
+ *
+ * @param val       the unsigned integer value.
+ * @param buf       the buffer
+ *
+ * @return the number of characters written
+ */
+PJ_DECL(int) pj_utoa2(pj_uint_t val, char *buf);
+
+/**
  * Convert unsigned integer to string with minimum digits. Note that the
  * string will be NULL terminated.
  *
@@ -751,6 +790,24 @@ PJ_DECL(int) pj_utoa(unsigned long val, char *buf);
  * @return the number of characters written.
  */
 PJ_DECL(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad);
+
+/**
+ * Convert generic unsigned integer to string with minimum digits. Note that
+ * the string will be NULL terminated.
+ *
+ * This function will take 64 bit unsigned integer if the system has one,
+ * otherwise it takes 32 bit unsigned integer.
+ *
+ * @param val       The unsigned integer value.
+ * @param buf       The buffer.
+ * @param min_dig   Minimum digits to be printed, or zero to specify no
+ *                  minimum digit.
+ * @param pad       The padding character to be put in front of the string
+ *                  when the digits is less than minimum.
+ *
+ * @return the number of characters written.
+ */
+PJ_DECL(int) pj_utoa_pad2( pj_uint_t val, char *buf, int min_dig, int pad);
 
 
 /**
@@ -839,6 +896,58 @@ PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
 {
     return (void*)memchr((void*)buf, c, size);
 }
+
+/**
+ * Copy the string, or as much of it as fits, into the dest buffer.
+ * Regardless of whether all characters were copied, the destination
+ * buffer will be null terminated, unless dst_size is zero which in
+ * this case nothing will be written to dst and the function will
+ * return -PJ_ETOOBIG.
+ *
+ * @param dst       The destination string.
+ * @param src       The source string.
+ * @param dst_size  The full size of the destination string buffer.
+ *
+ * @return The number of characters copied (not including the trailing NUL) or
+ *         -PJ_ETOOBIG if the destination buffer wasn't big enough,
+ *         -PJ_EINVAL if the dst or src is NULL.
+ */
+PJ_DECL(int) pj_ansi_strxcpy(char *dst, const char *src, pj_size_t dst_size);
+
+
+/**
+ * Same as pj_ansi_strxcpy() but takes pj_str_t as the source.
+ * If src contains null character, copying will stop at the first null
+ * character in src.
+ *
+ * @param dst       The destination string.
+ * @param src       The source string.
+ * @param dst_size  The full size of the destination string buffer.
+ *
+ * @return The number of characters copied (not including the trailing NUL) or
+ *         -PJ_ETOOBIG if the destination buffer wasn't big enough,
+ *         -PJ_EINVAL if the dst or src is NULL.
+ */
+PJ_DECL(int) pj_ansi_strxcpy2(char *dst, const pj_str_t *src, 
+                              pj_size_t dst_size);
+
+
+/**
+ * Concatenate src, or as much of it as fits, into the dest buffer.
+ * Regardless of whether all characters were copied, the destination
+ * buffer will be null terminated, unless dst_size is zero which in
+ * this case nothing will be written to dst and the function will
+ * return -PJ_ETOOBIG.
+ *
+ * @param dst       The destination string.
+ * @param src       The source string.
+ * @param dst_size  The full size of the destination string buffer.
+ *
+ * @return Final length of dst string (not including the trailing NUL) or
+ *         -PJ_ETOOBIG if the destination buffer wasn't big enough,
+ *         -PJ_EINVAL if the dst or src is NULL.
+ */
+PJ_DECL(int) pj_ansi_strxcat(char *dst, const char *src, pj_size_t dst_size);
 
 /**
  * @}

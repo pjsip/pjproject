@@ -133,6 +133,13 @@ static pj_bool_t inv_check_secure_dlg(pjsip_inv_session *inv,
 
 static int print_sdp(pjsip_msg_body *body, char *buf, pj_size_t len);
 
+/* Add Reason header to request (rfc3326) or Warning header to error response
+ * (rfc3261 20.43).
+ */
+static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
+                                          unsigned code,
+                                          const pj_str_t *reason);
+
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
     &inv_on_state_null,
@@ -180,6 +187,68 @@ struct tsx_inv_data
     pj_bool_t            done_early_rel;/* Early med was realiable?         */
     pj_bool_t            has_sdp;   /* Message with SDP?                    */
 };
+
+
+/* Add Reason header to request (rfc3326) or Warning header to error response
+ * (rfc3261 20.43).
+ */
+static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
+                                          unsigned code,
+                                          const pj_str_t *reason)
+{
+    PJ_ASSERT_RETURN(tdata && reason, PJ_EINVAL);
+
+    if (tdata->msg->type == PJSIP_REQUEST_MSG) {
+
+        /* Add Reason header in request messages */
+        pjsip_hdr *hdr;
+        const pj_str_t hname = { "Reason", 6 };
+        pj_str_t hvalue;
+        unsigned hval_len;
+
+        PJ_ASSERT_RETURN(code < 1000, PJ_EINVAL);
+
+        hval_len =  3 +                 /* 'SIP' */
+                    11 +                /* ' ;cause=3-digit-code' */
+                    reason->slen + 10;   /* ' ;text=".."' */
+        hvalue.ptr = (char*)pj_pool_alloc(tdata->pool, hval_len);
+        if (!hvalue.ptr)
+            return PJ_ENOMEM;
+
+        hvalue.slen = pj_ansi_snprintf(hvalue.ptr, hval_len,
+                                       "SIP ;cause=%u ;text=\"%.*s\"",
+                                       code, (int)reason->slen, reason->ptr);
+        hdr = (pjsip_hdr*)
+               pjsip_generic_string_hdr_create(tdata->pool, &hname, &hvalue);
+        if (hdr)
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hdr);
+        else
+            return PJ_ENOMEM;
+
+    } else {
+
+        /* Add Warning header in response messages */
+        pjsip_warning_hdr *hdr;
+        pjsip_dialog *dlg = pjsip_tdata_get_dlg(tdata);
+
+        // Let's always use warning code = 390 for now.
+        unsigned warn_code = 390;
+        // PJ_ASSERT_RETURN(!code || (code >= 300 && code < 400), PJ_EINVAL);
+        // if (code != 0) warn_code = code;
+
+        PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
+
+        hdr = pjsip_warning_hdr_create(tdata->pool, warn_code,
+                                       pjsip_endpt_name(dlg->endpt), reason);
+        if (hdr)
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hdr);
+        else
+            return PJ_ENOMEM;
+    }
+
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Module load()
@@ -305,18 +374,23 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
                                                 PJMEDIA_SDP_NEG_STATE_DONE))
         {
             pjsip_tx_data *bye;
+            pj_str_t reason = pj_str("SDP offer/answer incomplete");
 
             PJ_LOG(4,(inv->obj_name, "SDP offer/answer incomplete, ending the "
                       "session"));
 
             status = pjsip_inv_end_session(inv, PJSIP_SC_NOT_ACCEPTABLE, 
-                                           NULL, &bye);
+                                           &reason, &bye);
             if (status == PJ_SUCCESS && bye)
                 status = pjsip_inv_send_msg(inv, bye);
 
             return;
         }
     }
+
+    PJ_LOG(5, (inv->obj_name, "State changed from %s to %s, event=%s",
+               inv_state_names[inv->state], inv_state_names[state],
+               pjsip_event_str(e->type)));
 
     /* Set state. */
     inv->state = state;
@@ -671,8 +745,9 @@ static pj_status_t handle_timer_response(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS && end_sess_on_failure) {
         pjsip_tx_data *tdata;
         pj_status_t status2;
+        pj_str_t reason = pj_str("Failed processing session timer response");
 
-        status2 = pjsip_inv_end_session(inv, st_code, NULL, &tdata);
+        status2 = pjsip_inv_end_session(inv, st_code, &reason, &tdata);
         if (tdata && status2 == PJ_SUCCESS)
             pjsip_inv_send_msg(inv, tdata);
     }
@@ -745,6 +820,7 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
     pjsip_dialog *dlg;
     pjsip_inv_session *inv;
+    pj_bool_t cb_called = PJ_FALSE;
 
     dlg = pjsip_tsx_get_dlg(tsx);
     if (dlg == NULL)
@@ -753,6 +829,17 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     inv = pjsip_dlg_get_inv_session(dlg);
     if (inv == NULL)
         return;
+
+    /* Call on_tsx_state_changed() upon receipt of request (tsx state is
+     * PJSIP_TSX_STATE_TRYING). We need to do this before calling the state
+     * handler since the handler will send response and change the tsx state.
+     */
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify &&
+        e->body.tsx_state.tsx->state == PJSIP_TSX_STATE_TRYING)
+    {
+        cb_called = PJ_TRUE;
+        (*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
+    }
 
     /* Call state handler for the invite session. */
     (*inv_state_handler[inv->state])(inv, e);
@@ -770,13 +857,8 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
         }
     }
 
-    /* Call on_tsx_state. CANCEL request is a special case and has been
-     * reported earlier in inv_respond_incoming_cancel()
-     */
-    if (mod_inv.cb.on_tsx_state_changed && inv->notify &&
-        !(tsx->method.id==PJSIP_CANCEL_METHOD &&
-          e->body.tsx_state.type==PJSIP_EVENT_RX_MSG))
-    {
+    /* Call on_tsx_state. */
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify && !cb_called) {
         (*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
     }
 
@@ -2349,7 +2431,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         }
 
         if (status != PJ_SUCCESS) {
-            PJ_PERROR(4,(THIS_FILE, status, "Error processing SDP offer in %",
+            PJ_PERROR(4,(THIS_FILE, status, "Error processing SDP offer in %s",
                       pjsip_rx_data_get_info(rdata)));
             return PJMEDIA_SDP_EINSDP;
         }
@@ -2380,7 +2462,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                           "because on_rx_reinvite() is implemented"));
                 return PJ_SUCCESS;
             }
-            return PJ_EINVALIDOP;
+            return PJMEDIA_SDPNEG_EINSTATE;
         }
 
     } else if (pjmedia_sdp_neg_get_state(inv->neg) == 
@@ -2818,6 +2900,9 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
                 return status;
             }
 
+            if (st_text && st_text->slen)
+                add_reason_warning_hdr(tdata, st_code, st_text);
+
             /* Set timeout for the INVITE transaction, in case UAS is not
              * able to respond the INVITE with 487 final response. The 
              * timeout value is 64*T1.
@@ -2847,6 +2932,8 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
         /* For established dialog, send BYE */
         status = pjsip_dlg_create_request(inv->dlg, pjsip_get_bye_method(), 
                                           -1, &tdata);
+        if (status == PJ_SUCCESS && st_text && st_text->slen)
+            add_reason_warning_hdr(tdata, st_code, st_text);
         break;
 
     case PJSIP_INV_STATE_DISCONNECTED:
@@ -3038,7 +3125,6 @@ void pjsip_inv_process_hparam(pjsip_inv_session *sess,
                               const pj_str_t *hvalue, 
                               pjsip_tx_data *tdata)
 {
-    PJ_UNUSED_ARG(sess);
     const pjsip_hdr_e ignored_hdrs[] = {
         /* According to RFC 3261 section 19.1.5, we should not honor
          * the following headers as they can potentially be malicious
@@ -3092,6 +3178,7 @@ void pjsip_inv_process_hparam(pjsip_inv_session *sess,
     unsigned i;
     pjsip_hdr *hdr;
 
+    PJ_UNUSED_ARG(sess);
     PJ_UNUSED_ARG(verify_hdrs);
 
     /* Check if we should reject/ignore the header. */
@@ -3282,7 +3369,8 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
                 len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
                                       dlg->remote.info->uri, tmp, TMP_LEN);
                 if (len < 1) {
-                    pj_ansi_strcpy(tmp, "<-error: uri too long->");
+                    pj_ansi_strxcpy(tmp, "<-error: uri too long->", 
+                                    sizeof(tmp));
                     len = (int)pj_ansi_strlen(tmp);
                 }
                 pj_strdup2_with_null(dlg->pool, &dlg->remote.info_str, tmp);
@@ -3706,8 +3794,9 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
         /* Can only do this to send response to original INVITE
          * request.
          */
-        PJ_ASSERT_RETURN((cseq=(pjsip_cseq_hdr*)pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL))!=NULL
-                          && (cseq->cseq == inv->invite_tsx->cseq),
+        cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
+        PJ_ASSERT_RETURN(cseq != NULL
+                          && (inv->invite_tsx && cseq->cseq == inv->invite_tsx->cseq),
                          PJ_EINVALIDOP);
 
         if (inv->options & PJSIP_INV_REQUIRE_100REL) {
@@ -3757,9 +3846,11 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
      * may not see the CANCEL request at all because by the time the CANCEL
      * request is reported, call has been disconnected and further events
      * from the INVITE session has been suppressed.
+     *
+     * Update: we have called this in mod_inv_on_tsx_state()
      */
-    if (mod_inv.cb.on_tsx_state_changed && inv->notify)
-        (*mod_inv.cb.on_tsx_state_changed)(inv, cancel_tsx, e);
+    // if (mod_inv.cb.on_tsx_state_changed && inv->notify)
+    //    (*mod_inv.cb.on_tsx_state_changed)(inv, cancel_tsx, e);
 
     /* See if we have matching INVITE server transaction: */
 
@@ -3836,6 +3927,9 @@ static void inv_respond_incoming_bye( pjsip_inv_session *inv,
 
     status = pjsip_dlg_send_response(inv->dlg, bye_tsx, tdata);
     if (status != PJ_SUCCESS) return;
+
+    /* End Session Timer */
+    pjsip_timer_end_session(inv);
 
     /* Terminate session: */
 
@@ -3955,10 +4049,12 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
         status = pjsip_dlg_create_response(inv->dlg, rdata, 
                                            PJSIP_SC_INTERNAL_SERVER_ERROR,
                                            NULL, &tdata);
-
-        val = (pj_rand() % 10);
-        ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
-        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);
+    
+        if (status == PJ_SUCCESS) {
+            val = (pj_rand() % 10);
+            ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);
+        }
 
     } else {
         /* We receive new offer from remote */
@@ -4364,7 +4460,7 @@ static pj_bool_t inv_check_secure_dlg(pjsip_inv_session *inv,
                           "Secure dialog requires SIPS scheme in Contact and "
                           "Record-Route headers, ending the session"));
 
-                status = pjsip_inv_end_session(inv, 480, NULL, &bye);
+                status = pjsip_inv_end_session(inv, 480, &warn_text, &bye);
                 if (status == PJ_SUCCESS && bye) {
                     pjsip_warning_hdr *w;
                     w = pjsip_warning_hdr_create(bye->pool, 381,
@@ -5052,6 +5148,42 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
             pj_assert(!"Unexpected INVITE tsx state");
             break;
         }
+    } else if (tsx->method.id == PJSIP_INVITE_METHOD &&
+               tsx->role == PJSIP_ROLE_UAS &&
+               tsx->state == PJSIP_TSX_STATE_TRYING)
+    {
+        /* Handle incoming second INVITE. See RFC 3261 section 14.2. */
+        pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+        pjsip_tx_data *tdata;
+        pj_status_t status;
+        int code;
+        const pj_str_t *reason;
+
+        if (inv->invite_tsx->role == PJSIP_ROLE_UAC)
+            code = PJSIP_SC_REQUEST_PENDING;
+        else
+            code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+
+        reason = pjsip_get_status_text(code);
+
+        /* Can not receive second INVITE while another one is pending. */
+        status = pjsip_dlg_create_response( inv->dlg, rdata, code,
+                                            reason, &tdata);
+        if (status != PJ_SUCCESS)
+            return;
+
+        if (code == PJSIP_SC_INTERNAL_SERVER_ERROR) {
+            /* MUST include Retry-After header with random value
+             * between 0-10.
+             */
+            pjsip_retry_after_hdr *ra_hdr;
+            int val = (pj_rand() % 10);
+
+            ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);
+        }
+
+        pjsip_dlg_send_response( inv->dlg, tsx, tdata);
 
     } else if (inv->role == PJSIP_ROLE_UAS &&
                tsx->role == PJSIP_ROLE_UAS &&
@@ -5479,7 +5611,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                     (pjmedia_sdp_neg_get_state(inv->neg) !=
                         PJMEDIA_SDP_NEG_STATE_WAIT_NEGO))
                 {
-                    status = PJ_EINVALIDOP;
+                    status = PJMEDIA_SDPNEG_EINSTATE;
                 }
             }
 
@@ -5500,6 +5632,12 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                 if (reject_message) {
                     /* Not Acceptable */
                     const pjsip_hdr *accept;
+                    pj_str_t reason = pj_str("SDP negotiation failed");
+
+                    if (status == PJMEDIA_SDP_EINSDP)
+                        reason = pj_str("Bad SDP");
+                    else if (status == PJMEDIA_SDPNEG_EINSTATE)
+                        reason = pj_str("No SDP answer");
 
                     /* The incoming SDP is unacceptable. If the SDP negotiator
                      * state has just been changed, i.e: DONE -> REMOTE_OFFER,
@@ -5518,6 +5656,8 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                     if (status != PJ_SUCCESS)
                         return;
 
+                    /* Add Warning header */
+                    add_reason_warning_hdr(tdata, 0, &reason);
 
                     accept = pjsip_endpt_get_capability(dlg->endpt, 
                                                         PJSIP_H_ACCEPT,

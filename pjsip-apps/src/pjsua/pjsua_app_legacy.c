@@ -75,7 +75,7 @@ static void print_buddy_list()
  * Input URL.
  */
 static void ui_input_url(const char *title, char *buf, pj_size_t len,
-                         input_result *result)
+                         input_result *result, pj_bool_t allow_all)
 {
     result->nb_result = PJSUA_APP_NO_NB;
     result->uri_result = NULL;
@@ -83,12 +83,17 @@ static void ui_input_url(const char *title, char *buf, pj_size_t len,
     print_buddy_list();
 
     printf("Choices:\n"
-           "   0         For current dialog.\n"
-           "  -1         All %d buddies in buddy list\n"
-           "  [1 -%2d]    Select from buddy list\n"
-           "  URL        An URL\n"
-           "  <Enter>    Empty input (or 'q') to cancel\n"
-           , pjsua_get_buddy_count(), pjsua_get_buddy_count());
+           "   0         For current dialog.\n");
+    if (pjsua_get_buddy_count() > 0) {
+        if (allow_all) {
+            printf("  -1         All %d buddies in buddy list\n",
+                   pjsua_get_buddy_count());
+        }
+        printf("  [1 -%2d]    Select from buddy list\n",
+               pjsua_get_buddy_count());
+    }
+    printf("  URL        An URL\n"
+           "  <Enter>    Empty input (or 'q') to cancel\n");
     printf("%s: ", title);
 
     fflush(stdout);
@@ -639,7 +644,7 @@ static void vid_handle_menu(char *menuin)
                         pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
                                          info.listeners[j],
                                          (j==info.listener_cnt-1)?"":",");
-                        pj_ansi_strcat(li_list, str_info);
+                        pj_ansi_strxcat(li_list, str_info, sizeof(li_list));
                     }
                     tr_list[0] = '\0';
                     for (j=0; j<info.transmitter_cnt; ++j) {
@@ -647,7 +652,7 @@ static void vid_handle_menu(char *menuin)
                         pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
                                          info.transmitters[j],
                                          (j==info.transmitter_cnt-1)?"":",");
-                        pj_ansi_strcat(tr_list, str_info);
+                        pj_ansi_strxcat(tr_list, str_info, sizeof(tr_list));
                     }
                     pjmedia_fourcc_name(info.format.id, s);
                     s[4] = ' ';
@@ -696,32 +701,42 @@ static void ui_make_new_call()
     pjsua_msg_data msg_data_;
     input_result result;
     pj_str_t tmp;
+    pj_bool_t loop = PJ_FALSE;
 
     printf("(You currently have %d calls)\n", pjsua_call_get_count());
 
-    ui_input_url("Make call", buf, sizeof(buf), &result);
-    if (result.nb_result != PJSUA_APP_NO_NB) {
+    ui_input_url("Make call", buf, sizeof(buf), &result, PJ_TRUE);
+    do {
+        if (result.nb_result != PJSUA_APP_NO_NB) {
+            if (result.nb_result == -1) {
+                loop = PJ_TRUE;
+                result.nb_result = 1;
+            }
+            if (result.nb_result > pjsua_get_buddy_count()) break;
 
-        if (result.nb_result == -1 || result.nb_result == 0) {
-            puts("You can't do that with make call!");
-            return;
+            if (result.nb_result == 0) {
+                puts("You can't do that with make call!");
+                return;
+            } else {
+                pjsua_buddy_info binfo;
+                pjsua_buddy_get_info(result.nb_result-1, &binfo);
+                tmp.ptr = buf;
+                pj_strncpy(&tmp, &binfo.uri, sizeof(buf));
+            }
+
+        } else if (result.uri_result) {
+            tmp = pj_str(result.uri_result);
         } else {
-            pjsua_buddy_info binfo;
-            pjsua_buddy_get_info(result.nb_result-1, &binfo);
-            tmp.ptr = buf;
-            pj_strncpy(&tmp, &binfo.uri, sizeof(buf));
+            tmp.slen = 0;
         }
 
-    } else if (result.uri_result) {
-        tmp = pj_str(result.uri_result);
-    } else {
-        tmp.slen = 0;
-    }
+        pjsua_msg_data_init(&msg_data_);
+        TEST_MULTIPART(&msg_data_);
+        pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
+                             &msg_data_, &current_call);
 
-    pjsua_msg_data_init(&msg_data_);
-    TEST_MULTIPART(&msg_data_);
-    pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
-                         &msg_data_, &current_call);
+        result.nb_result++;
+    } while (loop);
 }
 
 static void ui_make_multi_call()
@@ -742,7 +757,7 @@ static void ui_make_multi_call()
     if (count < 1)
         return;
 
-    ui_input_url("Make call", buf, sizeof(buf), &result);
+    ui_input_url("Make call", buf, sizeof(buf), &result, PJ_FALSE);
     if (result.nb_result != PJSUA_APP_NO_NB) {
         pjsua_buddy_info binfo;
         if (result.nb_result == -1 || result.nb_result == 0) {
@@ -784,7 +799,7 @@ static void ui_send_instant_message()
     pj_str_t tmp;
 
     /* Input destination. */
-    ui_input_url("Send IM to", buf, sizeof(buf), &result);
+    ui_input_url("Send IM to", buf, sizeof(buf), &result, PJ_FALSE);
     if (result.nb_result != PJSUA_APP_NO_NB) {
 
         if (result.nb_result == -1) {
@@ -1172,7 +1187,7 @@ static void ui_call_transfer(pj_bool_t no_refersub)
         printf("Transferring current call [%d] %.*s\n", current_call,
                (int)ci.remote_info.slen, ci.remote_info.ptr);
 
-        ui_input_url("Transfer to URL", buf, sizeof(buf), &result);
+        ui_input_url("Transfer to URL", buf, sizeof(buf), &result, PJ_FALSE);
 
         /* Check if call is still there. */
 
@@ -1379,7 +1394,7 @@ static void ui_send_arbitrary_request()
 
     /* Input destination URI */
     uri = NULL;
-    ui_input_url("Destination URI", buf, sizeof(buf), &result);
+    ui_input_url("Destination URI", buf, sizeof(buf), &result, PJ_FALSE);
     if (result.nb_result != PJSUA_APP_NO_NB) {
 
         if (result.nb_result == -1) {
@@ -1460,7 +1475,8 @@ static void ui_subscribe(char menuin[])
     char buf[128];
     input_result result;
 
-    ui_input_url("(un)Subscribe presence of", buf, sizeof(buf), &result);
+    ui_input_url("(un)Subscribe presence of", buf, sizeof(buf), &result,
+                 PJ_TRUE);
     if (result.nb_result != PJSUA_APP_NO_NB) {
         if (result.nb_result == -1) {
             int i, count;
@@ -1613,7 +1629,7 @@ static void ui_conf_list()
         for (j=0; j<info.listener_cnt; ++j) {
             char s[10];
             pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
-            pj_ansi_strcat(txlist, s);
+            pj_ansi_strxcat(txlist, s, sizeof(txlist));
         }
         printf("Port #%02d[%2dKHz/%dms/%d] %20.*s  transmitting to: %s\n",
                info.slot_id,
@@ -1667,13 +1683,15 @@ static void ui_adjust_volume()
 {
     char buf[128];
     char text[128];
-    sprintf(buf, "Adjust mic level: [%4.1fx] ", app_config.mic_level);
+    snprintf(buf, sizeof(buf), "Adjust mic level: [%4.1fx] ",
+             app_config.mic_level);
     if (simple_input(buf,text,sizeof(text))) {
         char *err;
         app_config.mic_level = (float)strtod(text, &err);
         pjsua_conf_adjust_rx_level(0, app_config.mic_level);
     }
-    sprintf(buf, "Adjust speaker level: [%4.1fx] ", app_config.speaker_level);
+    snprintf(buf, sizeof(buf), "Adjust speaker level: [%4.1fx] ",
+             app_config.speaker_level);
     if (simple_input(buf,text,sizeof(text))) {
         char *err;
         app_config.speaker_level = (float)strtod(text, &err);

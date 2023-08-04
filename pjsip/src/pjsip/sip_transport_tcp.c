@@ -274,14 +274,20 @@ static pj_status_t update_factory_addr(struct tcp_listener *listener,
         pj_sockaddr tmp;
         int af = pjsip_transport_type_get_af(listener->factory.type);
 
-        /* Verify that address given in a_name (if any) is valid */
-        status = pj_sockaddr_init(af, &tmp, &addr_name->host,
-                                  (pj_uint16_t)addr_name->port);
-        if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
-            (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+        tmp.addr.sa_family = (pj_uint16_t)af;
+
+        /* Validate IP address only */
+        if (pj_inet_pton(af, &addr_name->host, pj_sockaddr_get_addr(&tmp)) == PJ_SUCCESS)
         {
-            /* Invalid address */
-            return PJ_EINVAL;
+            /* Verify that address given in a_name (if any) is valid */
+            status = pj_sockaddr_init(af, &tmp, &addr_name->host,
+                                      (pj_uint16_t)addr_name->port);
+            if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+                (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+            {
+                /* Invalid address */
+                return PJ_EINVAL;
+            }
         }
 
         /* Copy the address */
@@ -399,9 +405,11 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     pj_memcpy(&listener->sockopt_params, &cfg->sockopt_params,
               sizeof(cfg->sockopt_params));
 
-    pj_ansi_strcpy(listener->factory.obj_name, "tcptp");
+    pj_ansi_strxcpy(listener->factory.obj_name, "tcptp", 
+                    sizeof(listener->factory.obj_name));
     if (listener->factory.type==PJSIP_TRANSPORT_TCP6)
-        pj_ansi_strcat(listener->factory.obj_name, "6");
+        pj_ansi_strxcat(listener->factory.obj_name, "6",
+                        sizeof(listener->factory.obj_name));
 
     status = pj_lock_create_recursive_mutex(pool, listener->factory.obj_name,
                                             &listener->factory.lock);
@@ -1004,7 +1012,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     listener = (struct tcp_listener*)factory;
 
     /* Create socket */
-    status = pj_sock_socket(rem_addr->addr.sa_family, pj_SOCK_STREAM(),
+    status = pj_sock_socket(rem_addr->addr.sa_family,
+                            pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(),
                             0, &sock);
     if (status != PJ_SUCCESS)
         return status;
@@ -1016,9 +1025,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                 "outgoing SIP TCP socket");
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
-
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     /* Bind to listener's address and any port */
     pj_bzero(&local_addr, sizeof(local_addr));
@@ -1133,12 +1146,15 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 
     PJ_LOG(4,(listener->factory.obj_name, 
               "TCP listener %s: got incoming TCP connection "
-              "from %s, sock=%d",
+              "from %s, sock=%ld",
               pj_addr_str_print(&listener->factory.addr_name.host, 
                                 listener->factory.addr_name.port, addr_buf, 
                                 sizeof(addr_buf), 1),
               pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
               sock));
+
+    /* Set close-on-exec flag */
+    pj_set_cloexec_flag((int)sock);
 
     /* Apply QoS, if specified */
     status = pj_sock_apply_qos2(sock, listener->qos_type, 
@@ -1147,8 +1163,13 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
                                 "incoming SIP TCP socket");
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     /* tcp_create() expect pj_sockaddr, so copy src_addr to temporary var,
      * just in case.
@@ -1170,32 +1191,34 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     status = tcp_create( listener, NULL, sock, PJ_TRUE,
                          &tmp_dst_addr, &tmp_src_addr, &tcp);
     if (status == PJ_SUCCESS) {
+        /* Notify application of transport state accepted */
+        state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
+        if (state_cb) {
+            pjsip_transport_state_info state_info;
+
+            pj_bzero(&state_info, sizeof(state_info));
+            (*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
+        }
+
+        if (tcp->base.is_shutdown || tcp->base.is_destroying) {
+            return PJ_TRUE;
+        }
+
+        /* Start keep-alive timer */
+        if (pjsip_cfg()->tcp.keep_alive_interval) {
+            pj_time_val delay = { 0 };
+            delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
+            pjsip_endpt_schedule_timer(listener->endpt,
+                                       &tcp->ka_timer,
+                                       &delay);
+            tcp->ka_timer.id = PJ_TRUE;
+            pj_gettimeofday(&tcp->last_activity);
+        }
+
         status = tcp_start_read(tcp);
         if (status != PJ_SUCCESS) {
             PJ_LOG(3,(tcp->base.obj_name, "New transport cancelled"));
             tcp_destroy(&tcp->base, status);
-        } else {
-            if (tcp->base.is_shutdown || tcp->base.is_destroying) {
-                return PJ_TRUE;
-            }
-            /* Start keep-alive timer */
-            if (pjsip_cfg()->tcp.keep_alive_interval) {
-                pj_time_val delay = { 0 };
-                delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
-                pjsip_endpt_schedule_timer(listener->endpt, 
-                                           &tcp->ka_timer, 
-                                           &delay);
-                tcp->ka_timer.id = PJ_TRUE;
-                pj_gettimeofday(&tcp->last_activity);
-            }
-            /* Notify application of transport state accepted */
-            state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
-            if (state_cb) {
-                pjsip_transport_state_info state_info;
-
-                pj_bzero(&state_info, sizeof(state_info));
-                (*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
-            }
         }
     }
 
@@ -1238,7 +1261,7 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
     if (bytes_sent <= 0) {
         pj_status_t status;
 
-        PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%d", 
+        PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld", 
                   bytes_sent));
 
         status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
@@ -1343,7 +1366,7 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
             /* Shutdown transport on closure/errors */
             if (size <= 0) {
 
-                PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%d", 
+                PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld", 
                           size));
 
                 if (status == PJ_SUCCESS) 
@@ -1669,7 +1692,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
     af = pjsip_transport_type_get_af(listener->factory.type);
 
     /* Create socket */
-    status = pj_sock_socket(af, pj_SOCK_STREAM(), 0, &sock);
+    status = pj_sock_socket(af, pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -1691,8 +1714,13 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
     }
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     status = pj_sock_bind(sock, listener_addr, addr_len);
     if (status != PJ_SUCCESS)

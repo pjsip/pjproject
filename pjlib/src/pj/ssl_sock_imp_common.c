@@ -20,6 +20,7 @@
 #include <pj/errno.h>
 #include <pj/log.h>
 #include <pj/math.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 
@@ -244,6 +245,7 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock, 
                                        pj_status_t status)
 {
+    ssock->handshake_status = status;
     /* Cancel handshake timer */
     if (ssock->timer.id == TIMER_HANDSHAKE_TIMEOUT) {
         pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);
@@ -269,14 +271,21 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
         if (status != PJ_SUCCESS) {
             /* Handshake failed in accepting, destroy our self silently. */
 
-            char buf[PJ_INET6_ADDRSTRLEN+10];
+            char buf1[PJ_INET6_ADDRSTRLEN+10];
+            char buf2[PJ_INET6_ADDRSTRLEN+10];
 
-            if (pj_sockaddr_has_addr(&ssock->rem_addr)) {
-                PJ_PERROR(3,(ssock->pool->obj_name, status,
-                          "Handshake failed in accepting %s",
-                          pj_sockaddr_print(&ssock->rem_addr, buf,
-                                            sizeof(buf), 3)));
-            }
+            if (pj_sockaddr_has_addr(&ssock->local_addr))
+                pj_sockaddr_print(&ssock->local_addr, buf1, sizeof(buf1), 3);
+            else
+                pj_ansi_snprintf(buf1, sizeof(buf1), "(unknown)");
+
+            if (pj_sockaddr_has_addr(&ssock->rem_addr))
+                pj_sockaddr_print(&ssock->rem_addr, buf2, sizeof(buf2), 3);
+            else
+                pj_ansi_snprintf(buf2, sizeof(buf2), "(unknown)");
+
+            PJ_PERROR(3,(ssock->pool->obj_name, status,
+                      "Handshake failed on %s in accepting %s", buf1, buf2));
 
             if (ssock->param.cb.on_accept_complete2) {
                 (*ssock->param.cb.on_accept_complete2) 
@@ -365,6 +374,23 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
          * reconnect in the callback.
          */
         if (status != PJ_SUCCESS) {
+            char buf1[PJ_INET6_ADDRSTRLEN+10];
+            char buf2[PJ_INET6_ADDRSTRLEN+10];
+
+            if (pj_sockaddr_has_addr(&ssock->local_addr))
+                pj_sockaddr_print(&ssock->local_addr, buf1, sizeof(buf1), 3);
+            else
+                pj_ansi_snprintf(buf1, sizeof(buf1), "(unknown)");
+
+            if (pj_sockaddr_has_addr(&ssock->rem_addr))
+                pj_sockaddr_print(&ssock->rem_addr, buf2, sizeof(buf2), 3);
+            else
+                pj_ansi_snprintf(buf2, sizeof(buf2), "(unknown)");
+
+            PJ_PERROR(3,(ssock->pool->obj_name, status,
+                      "Handshake failed on %s in connecting to %s",
+                      buf1, buf2));
+
             /* Server disconnected us, possibly due to SSL nego failure */
             ssl_reset_sock_state(ssock);
         }
@@ -648,7 +674,7 @@ static void on_timer(pj_timer_heap_t *th, struct pj_timer_entry *te)
 
     switch (timer_id) {
     case TIMER_HANDSHAKE_TIMEOUT:
-        PJ_LOG(1,(ssock->pool->obj_name, "SSL timeout after %d.%ds",
+        PJ_LOG(1,(ssock->pool->obj_name, "SSL timeout after %ld.%lds",
                   ssock->param.timeout.sec, ssock->param.timeout.msec));
 
         on_handshake_complete(ssock, PJ_ETIMEDOUT);
@@ -744,7 +770,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
     }
 
     /* See if there is any decrypted data for the application */
-    if (ssock->read_started) {
+    if (data && ssock->read_started) {
         do {
             read_data_t *buf = *(OFFSET_OF_READ_DATA_PTR(ssock, data));
             void *data_ = (pj_int8_t*)buf->data + buf->len;
@@ -753,17 +779,12 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
 
             status_ = ssl_read(ssock, data_, &size_);
 
-            if (size_ > 0 || status != PJ_SUCCESS) {
+            if (size_ > 0) {
                 if (ssock->param.cb.on_data_read) {
                     pj_bool_t ret;
                     pj_size_t remainder_ = 0;
 
-                    if (size_ > 0)
-                        buf->len += size_;
-                
-                    if (status != PJ_SUCCESS) {
-                        ssock->ssl_state = SSL_STATE_ERROR;
-                    }
+                    buf->len += size_;
 
                     ret = (*ssock->param.cb.on_data_read)(ssock, buf->data,
                                                           buf->len, status,
@@ -783,10 +804,13 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                  * been signalled to the application along with any remaining
                  * buffer. So, let's just reset SSL socket now.
                  */
+                /*
+                // This has been handled in on_error
                 if (status != PJ_SUCCESS) {
                     ssl_reset_sock_state(ssock);
                     return PJ_FALSE;
                 }
+                */
 
             } else if (status_ == PJ_SUCCESS) {
                 break;
@@ -938,6 +962,10 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
 #ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
     PJ_UNUSED_ARG(newconn);
 #endif
+
+    /* Set close-on-exec flag */
+    if (ssock_parent->newsock_param.sock_cloexec)
+        pj_set_cloexec_flag((int)newsock);
 
     if (accept_status != PJ_SUCCESS) {
         if (ssock_parent->param.cb.on_accept_complete2) {
@@ -1406,7 +1434,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     pj_pool_t *info_pool;
 
     PJ_ASSERT_RETURN(pool && param && p_ssock, PJ_EINVAL);
-    PJ_ASSERT_RETURN(param->sock_type == pj_SOCK_STREAM(), PJ_ENOTSUP);
+    PJ_ASSERT_RETURN((param->sock_type & 0xF) == pj_SOCK_STREAM(), PJ_ENOTSUP);
 
     info_pool = pj_pool_create(pool->factory, "ssl_chain%p", 512, 512, NULL);
     pool = pj_pool_create(pool->factory, "ssl%p", 512, 512, NULL);
@@ -1932,6 +1960,8 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
         goto on_error;
 #else
     /* Create socket */
+    if (ssock->param.sock_cloexec)
+        ssock->param.sock_type |= pj_SOCK_CLOEXEC();
     status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0, 
                             &ssock->sock);
     if (status != PJ_SUCCESS)
@@ -2063,6 +2093,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect2(
                      PJ_EINVAL);
 
     /* Create socket */
+    if (ssock->param.sock_cloexec)
+        ssock->param.sock_type |= pj_SOCK_CLOEXEC();
     status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0, 
                             &ssock->sock);
     if (status != PJ_SUCCESS)

@@ -686,7 +686,8 @@ PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
                                      const char *sender,
                                      pj_status_t error_code,
                                      const char *format,
-                                     ... );
+                                     ... )
+                                     PJ_PRINT_FUNC_DECOR(4);
 
 /** Internal */
 #define PJSIP_ENDPT_LOG_ERROR(expr)   \

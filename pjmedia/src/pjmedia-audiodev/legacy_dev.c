@@ -174,12 +174,11 @@ static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
         return PJMEDIA_EAUD_INVDEV;
 
     pj_bzero(info, sizeof(*info));
-    pj_ansi_strncpy(info->name, si->name, sizeof(info->name));
-    info->name[sizeof(info->name)-1] = '\0';
+    pj_ansi_strxcpy(info->name, si->name, sizeof(info->name));
     info->input_count = si->input_count;
     info->output_count = si->output_count;
     info->default_samples_per_sec = si->default_samples_per_sec;
-    pj_ansi_strcpy(info->driver, "legacy");
+    pj_ansi_strxcpy(info->driver, "legacy", sizeof(info->driver));
     info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
                  PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
 

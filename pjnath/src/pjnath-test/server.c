@@ -850,7 +850,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 
                 if (j==alloc->perm_cnt) {
                     PJ_LOG(5,("", "SendIndication to %s is rejected (no permission)", 
-                                  peer_info, client_info, alloc->perm_cnt));
+                                  peer_info));
                 } else {
                     PJ_LOG(5,(THIS_FILE, "Relaying %d bytes data from client %s to peer %s, "
                                          "perm_cnt=%d", 
@@ -1047,7 +1047,7 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
         }
     }
     if (i==alloc->perm_cnt) {
-        PJ_LOG(5,("", "Client %s received %d bytes unauthorized data from peer %s", 
+        PJ_LOG(5,("", "Client %s received %ld bytes unauthorized data from peer %s", 
                       client_info, size, peer_info));
         if (alloc->perm_cnt == 0)
             PJ_LOG(5,("", "Client %s has no permission", client_info));
@@ -1073,7 +1073,7 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
 
     /* Send */
     sent = size;
-    PJ_LOG(5,("", "Forwarding %d bytes data from peer %s to client %s", 
+    PJ_LOG(5,("", "Forwarding %ld bytes data from peer %s to client %s", 
                    sent, peer_info, client_info));
 
     pj_activesock_sendto(alloc->test_srv->turn_sock, &alloc->send_key, buffer,

@@ -498,11 +498,11 @@ static pj_status_t respond_digest( pj_pool_t *pool,
          pj_stricmp(&chal->algorithm, &pjsip_AKAv1_MD5_STR)==0))
     {
         PJ_LOG(4,(THIS_FILE, "Digest algorithm is \"%.*s\"",
-                  chal->algorithm.slen, chal->algorithm.ptr));
+                  (int)chal->algorithm.slen, chal->algorithm.ptr));
     }
     else {
         PJ_LOG(4,(THIS_FILE, "Unsupported digest algorithm \"%.*s\"",
-                  chal->algorithm.slen, chal->algorithm.ptr));
+                  (int)chal->algorithm.slen, chal->algorithm.ptr));
         return PJSIP_EINVALIDALGORITHM;
     }
 
@@ -581,7 +581,7 @@ static pj_status_t respond_digest( pj_pool_t *pool,
     } else {
         /* Server requires quality protection that we don't support. */
         PJ_LOG(4,(THIS_FILE, "Unsupported qop offer %.*s",
-                  chal->qop.slen, chal->qop.ptr));
+                  (int)chal->qop.slen, chal->qop.ptr));
         return PJSIP_EINVALIDQOP;
     }
 
@@ -1321,6 +1321,9 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
     if (hdr != &tdata->msg->hdr) {
         pj_bool_t stale;
 
+        /* Check sent_auth != NULL */
+        PJ_ASSERT_RETURN(sent_auth, PJ_EBUG);
+
         /* Detect "stale" state */
         stale = hchal->challenge.digest.stale;
         if (!stale) {
@@ -1338,9 +1341,9 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
              */
             PJ_LOG(4, (THIS_FILE, "Authorization failed for %.*s@%.*s: "
                        "server rejected with stale=false",
-                       sent_auth->credential.digest.username.slen,
+                       (int)sent_auth->credential.digest.username.slen,
                        sent_auth->credential.digest.username.ptr,
-                       sent_auth->credential.digest.realm.slen,
+                       (int)sent_auth->credential.digest.realm.slen,
                        sent_auth->credential.digest.realm.ptr));
             return PJSIP_EFAILEDCREDENTIAL;
         }
@@ -1352,9 +1355,9 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
              */
             PJ_LOG(4, (THIS_FILE, "Authorization failed for %.*s@%.*s: "
                        "maximum number of stale retries exceeded",
-                       sent_auth->credential.digest.username.slen,
+                       (int)sent_auth->credential.digest.username.slen,
                        sent_auth->credential.digest.username.ptr,
-                       sent_auth->credential.digest.realm.slen,
+                       (int)sent_auth->credential.digest.realm.slen,
                        sent_auth->credential.digest.realm.ptr));
             return PJSIP_EAUTHSTALECOUNT;
         }
@@ -1371,10 +1374,11 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
     if (!cred) {
         const pj_str_t *realm = &hchal->challenge.common.realm;
         PJ_LOG(4,(THIS_FILE,
-                  "Unable to set auth for %s: can not find credential for %.*s/%.*s",
+                  "Unable to set auth for %s: can not find credential for "
+                  "%.*s/%.*s",
                   tdata->obj_name,
-                  realm->slen, realm->ptr,
-                  hchal->scheme.slen, hchal->scheme.ptr));
+                  (int)realm->slen, realm->ptr,
+                  (int)hchal->scheme.slen, hchal->scheme.ptr));
         return PJSIP_ENOCREDENTIAL;
     }
 

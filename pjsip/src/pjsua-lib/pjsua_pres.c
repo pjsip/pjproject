@@ -810,6 +810,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t reason;
     pjsip_expires_hdr *expires_hdr;
     pjsua_msg_data msg_data;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     if (pjsip_method_cmp(req_method, pjsip_get_subscribe_method()) != 0)
@@ -943,15 +944,9 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Subscription has been created, decrement & release dlg lock */
     pjsip_dlg_dec_lock(dlg);
 
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_dlg_set_transport(dlg, &tp_sel);
-    }
+    /* Set dialog's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_dlg_set_transport(dlg, &tp_sel);
 
     /* Attach our data to the subscription: */
     uapres = PJ_POOL_ALLOC_T(dlg->pool, pjsua_srv_pres);
@@ -962,7 +957,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     status = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, dlg->remote.info->uri,
                              uapres->remote, PJSIP_MAX_URL_SIZE);
     if (status < 1)
-        pj_ansi_strcpy(uapres->remote, "<-- url is too long-->");
+        pj_ansi_strxcpy(uapres->remote, "<-- url is too long-->",
+                        PJSIP_MAX_URL_SIZE);
     else
         uapres->remote[status] = '\0';
 
@@ -1085,7 +1081,7 @@ PJ_DEF(pj_status_t) pjsua_pres_notify( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
 
     PJ_LOG(4,(THIS_FILE, "Acc %d: sending NOTIFY for srv_pres=0x%p..",
-              acc_id, (int)(pj_ssize_t)srv_pres));
+              acc_id, srv_pres));
     pj_log_push_indent();
 
     PJSUA_LOCK();
@@ -1794,6 +1790,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     pjsua_acc *acc;
     pj_str_t contact;
     pjsip_tx_data *tdata;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     /* Event subscription callback. */
@@ -1879,21 +1876,15 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
         /* This should destroy the dialog since there's no session
          * referencing it
          */
-        if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
+        pjsip_dlg_dec_lock(buddy->dlg);
         if (tmp_pool) pj_pool_release(tmp_pool);
         pj_log_pop_indent();
         return;
     }
 
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_dlg_set_transport(buddy->dlg, &tp_sel);
-    }
+    /* Set dialog's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_dlg_set_transport(buddy->dlg, &tp_sel);
 
     /* Set route-set */
     if (!pj_list_empty(&acc->route_set)) {
@@ -1915,10 +1906,8 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     status = pjsip_pres_initiate(buddy->sub, PJSIP_EXPIRES_NOT_SPECIFIED,
                                  &tdata);
     if (status != PJ_SUCCESS) {
-        if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
-        if (buddy->sub) {
-            pjsip_pres_terminate(buddy->sub, PJ_FALSE);
-        }
+        pjsip_dlg_dec_lock(buddy->dlg);
+        pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         buddy->sub = NULL;
         pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE", 
                      status);
@@ -1931,10 +1920,8 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 
     status = pjsip_pres_send_request(buddy->sub, tdata);
     if (status != PJ_SUCCESS) {
-        if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
-        if (buddy->sub) {
-            pjsip_pres_terminate(buddy->sub, PJ_FALSE);
-        }
+        pjsip_dlg_dec_lock(buddy->dlg);
+        pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         buddy->sub = NULL;
         pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
                      status);
@@ -2114,6 +2101,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
     pj_pool_t *tmp_pool = NULL;
     pj_str_t contact;
     pjsip_tx_data *tdata;
+    pjsip_tpselector tp_sel;
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc)
@@ -2219,19 +2207,13 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
                                   PJSIP_EVSUB_NO_EVENT_ID, &acc->mwi_sub);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error creating MWI subscription", status);
-        if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
+        pjsip_dlg_dec_lock(acc->mwi_dlg);
         goto on_return;
     }
 
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-        pjsip_tpselector tp_sel;
-
-        pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-        pjsip_dlg_set_transport(acc->mwi_dlg, &tp_sel);
-    }
+    /* Set dialog's transport based on acc's config. */
+    pjsua_init_tpselector(acc_id, &tp_sel);
+    pjsip_dlg_set_transport(acc->mwi_dlg, &tp_sel);
 
     /* Set route-set */
     if (!pj_list_empty(&acc->route_set)) {
@@ -2251,10 +2233,8 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 
     status = pjsip_mwi_initiate(acc->mwi_sub, acc->cfg.mwi_expires, &tdata);
     if (status != PJ_SUCCESS) {
-        if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
-        if (acc->mwi_sub) {
-            pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
-        }
+        pjsip_dlg_dec_lock(acc->mwi_dlg);
+        pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
         acc->mwi_sub = NULL;
         acc->mwi_dlg = NULL;
         pjsua_perror(THIS_FILE, "Unable to create initial MWI SUBSCRIBE", 
@@ -2266,10 +2246,8 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 
     status = pjsip_pres_send_request(acc->mwi_sub, tdata);
     if (status != PJ_SUCCESS) {
-        if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
-        if (acc->mwi_sub) {
-            pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
-        }
+        pjsip_dlg_dec_lock(acc->mwi_dlg);
+        pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
         acc->mwi_sub = NULL;
         acc->mwi_dlg = NULL;
         pjsua_perror(THIS_FILE, "Unable to send initial MWI SUBSCRIBE", 

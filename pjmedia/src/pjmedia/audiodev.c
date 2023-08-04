@@ -135,8 +135,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_driver_init(unsigned drv_idx,
 
         if (drv->name[0]=='\0') {
             /* Set driver name */
-            pj_ansi_strncpy(drv->name, info.driver, sizeof(drv->name));
-            drv->name[sizeof(drv->name)-1] = '\0';
+            pj_ansi_strxcpy(drv->name, info.driver, sizeof(drv->name));
         }
 
         if (drv->play_dev_idx < 0 && info.output_count) {
@@ -427,6 +426,10 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_index id,
     status = lookup_dev(id, &f, &index);
     if (status != PJ_SUCCESS)
         return status;
+
+    /* Make sure device ID is the real ID (not PJMEDIA_AUD_DEFAULT_*_DEV) */
+    info->id = index;
+    make_global_index(f->sys.drv_idx, &info->id);
 
     return f->op->get_dev_info(f, index, info);
 }

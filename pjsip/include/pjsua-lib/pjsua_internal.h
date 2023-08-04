@@ -354,7 +354,7 @@ typedef struct pjsua_transport_data
 
     pj_bool_t                is_restarting;
     pj_status_t              restart_status;
-    pj_bool_t                has_bound_addr;
+    pj_bool_t                has_cfg_addr;
 } pjsua_transport_data;
 
 
@@ -924,7 +924,7 @@ pj_status_t acquire_call(const char *title,
                          pjsua_call_id call_id,
                          pjsua_call **p_call,
                          pjsip_dialog **p_dlg);
-const char *good_number(char *buf, pj_int32_t val);
+const char *good_number(char *buf, unsigned buf_size, pj_int32_t val);
 void print_call(const char *title,
                 int call_id,
                 char *buf, pj_size_t size);

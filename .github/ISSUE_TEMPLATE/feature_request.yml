@@ -1,0 +1,28 @@
+name: Feature request
+description: Submit a feature request
+labels: 'type: enhancement'
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for submitting a feature request to us.
+        
+        **IMPORTANT**: Please note that this form is **strictly** for feature request submission, and as such, any questions or inquiries that are not related to feature requests will be closed. We apologize for any inconvenience this may cause and appreciate your understanding in keeping our Github issues focused and efficient.
+  - type: textarea
+    id: feature-req
+    attributes:
+      label: Describe the feature
+      description: A clear and concise description of what feature you wish for.
+    validations:
+      required: true
+  - type: textarea
+    id: alt-solution
+    attributes:
+      label: Describe alternatives you've considered
+      description: A clear and concise description of any alternative solutions or features you've 
+considered.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context or screenshots about the feature request here.

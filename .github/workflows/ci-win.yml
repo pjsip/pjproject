@@ -1,5 +1,10 @@
 name: CI Windows
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened]
 jobs:
   build-windows-default:
     runs-on: windows-latest
@@ -123,10 +128,10 @@ jobs:
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
-    - name: set up Python 2.7 for pjsua test
-      uses: actions/setup-python@v2
+    - name: set up Python 3.10 for pjsua test
+      uses: actions/setup-python@v4
       with:
-        python-version: 2.7
+        python-version: '3.10'
     - name: unit tests
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
@@ -257,10 +262,10 @@ jobs:
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
-    - name: set up Python 2.7 for pjsua test
-      uses: actions/setup-python@v2
+    - name: set up Python 3.10 for pjsua test
+      uses: actions/setup-python@v4
       with:
-        python-version: 2.7
+        python-version: '3.10'
     - name: unit tests
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt

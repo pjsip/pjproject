@@ -26,6 +26,7 @@
 #include <pj/os.h>
 #include <pjmedia/circbuf.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_OBOE) &&  PJMEDIA_AUDIO_DEV_HAS_OBOE != 0
 
@@ -199,12 +200,6 @@ static struct jni_objs_t
 } jobjs;
 
 
-/* Declare JNI JVM helper from PJLIB OS */
-extern "C" {
-    pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env);
-    void pj_jni_dettach_jvm(pj_bool_t attached);
-}
-
 #define GET_CLASS(class_path, class_name, cls) \
     cls = jni_env->FindClass(class_path); \
     if (cls == NULL || jni_env->ExceptionCheck()) { \
@@ -258,7 +253,7 @@ static pj_status_t jni_init_ids()
 {
     JNIEnv *jni_env;
     pj_status_t status = PJ_SUCCESS;
-    pj_bool_t with_attach = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     /* PjAudioDevInfo class info */
     GET_CLASS(PJ_AUDDEV_INFO_CLASS_PATH, "PjAudioDevInfo", jobjs.dev_info.cls);
@@ -292,7 +287,7 @@ static pj_status_t jni_init_ids()
                    jobjs.activity_thread.m_get_app);
 
 on_return:
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
     return status;
 }
 
@@ -304,7 +299,7 @@ on_return:
 static void jni_deinit_ids()
 {
     JNIEnv *jni_env;
-    pj_bool_t with_attach = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     if (jobjs.dev_info.cls) {
         jni_env->DeleteGlobalRef(jobjs.dev_info.cls);
@@ -316,7 +311,7 @@ static void jni_deinit_ids()
         jobjs.activity_thread.cls = NULL;
     }
 
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
 }
 
 static jobject get_global_context(JNIEnv *jni_env)
@@ -364,7 +359,7 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
     f->dev_count = 0;
     pj_pool_reset(f->dev_pool);
 
-    with_attach = pj_jni_attach_jvm(&jni_env);
+    with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     jobject context = get_global_context(jni_env);
     if (context == NULL) {
@@ -417,8 +412,8 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
                           jni_env->GetObjectField(jdev_info,
                                                   jobjs.dev_info.f_name);
         const char *strtmp = jni_env->GetStringUTFChars(jstrtmp, NULL);
-        pj_ansi_strncpy(base_adi->name, strtmp, sizeof(base_adi->name));
-        pj_ansi_strncpy(base_adi->driver, DRIVER_NAME,
+        pj_ansi_strxcpy(base_adi->name, strtmp, sizeof(base_adi->name));
+        pj_ansi_strxcpy(base_adi->driver, DRIVER_NAME,
                         sizeof(base_adi->driver));
 
         f->dev_count++;
@@ -445,7 +440,7 @@ on_return:
     if (context)
         jni_env->DeleteLocalRef(context);
 
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
     return status;
 }
 
@@ -878,13 +873,33 @@ public:
 
         /* Make sure stop request has not been made */
         if (!thread_quit) {
+            pj_status_t status;
+
             PJ_LOG(3,(THIS_FILE,
                       "Oboe stream %s error (%d/%s), "
                       "trying to restart stream..",
                       dir_st, result, oboe::convertToText(result)));
 
             Stop();
-            Start();
+            status = Start();
+
+            if (status != PJ_SUCCESS) {
+                pjmedia_event e;
+
+                PJ_PERROR(3,(THIS_FILE, status, "Oboe stream restart failed"));
+
+                /* Broadcast Oboe error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, &ts,
+                                   &stream->base);
+                e.data.aud_dev_err.dir = dir;
+                e.data.aud_dev_err.status = status;
+                e.data.aud_dev_err.id = (dir == PJMEDIA_DIR_PLAYBACK)?
+                                        stream->param.play_id :
+                                        stream->param.rec_id;
+
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                      PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
         }
 
         pj_mutex_unlock(mutex);

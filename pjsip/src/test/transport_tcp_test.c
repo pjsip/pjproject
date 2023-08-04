@@ -172,7 +172,7 @@ int transport_tcp_test(void)
     status = pj_sockaddr_in_init(&rem_addr, &tpfactory[0]->addr_name.host,
                                  (pj_uint16_t)tpfactory[0]->addr_name.port);
 
-    pj_ansi_sprintf(url, "sip:alice@%s:%d;transport=tcp",
+    pj_ansi_snprintf(url, sizeof(url), "sip:alice@%s:%d;transport=tcp",
                     pj_inet_ntop2(pj_AF_INET(), &rem_addr.sin_addr, addr,
                                   sizeof(addr)),
                     pj_ntohs(rem_addr.sin_port));

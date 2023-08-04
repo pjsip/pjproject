@@ -180,7 +180,7 @@ static pj_str_t tls_strerror(pj_status_t status,
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
     if (tmp) {
-        pj_ansi_strncpy(buf, tmp, bufsize);
+        pj_ansi_strxcpy(buf, tmp, bufsize);
         errstr = pj_str(buf);
         return errstr;
     }

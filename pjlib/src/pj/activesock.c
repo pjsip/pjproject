@@ -127,6 +127,7 @@ PJ_DEF(void) pj_activesock_cfg_default(pj_activesock_cfg *cfg)
     cfg->async_cnt = 1;
     cfg->concurrency = -1;
     cfg->whole_data = PJ_TRUE;
+    cfg->sock_cloexec = PJ_TRUE;
 }
 
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
@@ -196,14 +197,14 @@ PJ_DEF(pj_status_t) pj_activesock_create( pj_pool_t *pool,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && ioqueue && cb && p_asock, PJ_EINVAL);
-    PJ_ASSERT_RETURN(sock!=0 && sock!=PJ_INVALID_SOCKET, PJ_EINVAL);
-    PJ_ASSERT_RETURN(sock_type==pj_SOCK_STREAM() ||
-                     sock_type==pj_SOCK_DGRAM(), PJ_EINVAL);
+    PJ_ASSERT_RETURN(sock>=0 && sock!=PJ_INVALID_SOCKET, PJ_EINVAL);
+    PJ_ASSERT_RETURN((sock_type & 0xF)==pj_SOCK_STREAM() ||
+                     (sock_type & 0xF)==pj_SOCK_DGRAM(), PJ_EINVAL);
     PJ_ASSERT_RETURN(!opt || opt->async_cnt >= 1, PJ_EINVAL);
 
     asock = PJ_POOL_ZALLOC_T(pool, pj_activesock_t);
     asock->ioqueue = ioqueue;
-    asock->stream_oriented = (sock_type == pj_SOCK_STREAM());
+    asock->stream_oriented = ((sock_type & 0xF) == pj_SOCK_STREAM());
     asock->async_count = (opt? opt->async_cnt : 1);
     asock->whole_data = (opt? opt->whole_data : 1);
     asock->max_loop = PJ_ACTIVESOCK_MAX_LOOP;
@@ -256,13 +257,17 @@ PJ_DEF(pj_status_t) pj_activesock_create_udp( pj_pool_t *pool,
     pj_sock_t sock_fd;
     pj_sockaddr default_addr;
     pj_status_t status;
+    int sock_type = pj_SOCK_DGRAM();
+
+    if (opt && opt->sock_cloexec)
+        sock_type |= pj_SOCK_CLOEXEC();
 
     if (addr == NULL) {
         pj_sockaddr_init(pj_AF_INET(), &default_addr, NULL, 0);
         addr = &default_addr;
     }
 
-    status = pj_sock_socket(addr->addr.sa_family, pj_SOCK_DGRAM(), 0, 
+    status = pj_sock_socket(addr->addr.sa_family, sock_type, 0, 
                             &sock_fd);
     if (status != PJ_SUCCESS) {
         return status;
@@ -274,7 +279,7 @@ PJ_DEF(pj_status_t) pj_activesock_create_udp( pj_pool_t *pool,
         return status;
     }
 
-    status = pj_activesock_create(pool, sock_fd, pj_SOCK_DGRAM(), opt,
+    status = pj_activesock_create(pool, sock_fd, sock_type, opt,
                                   ioqueue, cb, user_data, p_asock);
     if (status != PJ_SUCCESS) {
         pj_sock_close(sock_fd);
@@ -502,6 +507,13 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
             if (asock->read_type == TYPE_RECV && asock->cb.on_data_read) {
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 PJ_SUCCESS, &remainder);
+                PJ_ASSERT_ON_FAIL(
+                    !asock->stream_oriented || remainder <= r->size, {
+                        PJ_LOG(2, ("",
+                                   "App bug! Invalid remainder length from "
+                                   "activesock on_data_read()."));
+                        remainder = 0;
+                    });
             } else if (asock->read_type == TYPE_RECV_FROM && 
                        asock->cb.on_data_recvfrom) 
             {
@@ -571,6 +583,13 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
                 //                              r->size, status, &remainder);
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 status, &remainder);
+                PJ_ASSERT_ON_FAIL(
+                    !asock->stream_oriented || remainder <= r->size, {
+                        PJ_LOG(2, ("",
+                                   "App bug! Invalid remainder length from "
+                                   "activesock on_data_read()."));
+                        remainder = 0;
+                    });
 
             } else if (asock->read_type == TYPE_RECV_FROM && 
                        asock->cb.on_data_recvfrom) 

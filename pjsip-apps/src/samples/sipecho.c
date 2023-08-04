@@ -125,7 +125,7 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
     if (!app.enable_msg_logging)
         return PJ_SUCCESS;
 
-    PJ_LOG(3,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
+    PJ_LOG(3,(THIS_FILE, "TX %ld bytes %s to %s %s:%d:\n"
                          "%.*s\n"
                          "--end msg--",
                          (tdata->buf.cur - tdata->buf.start),
@@ -388,12 +388,12 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 
     PJ_UNUSED_ARG(e);
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
-        PJ_LOG(3,(THIS_FILE, "Call %d: DISCONNECTED [reason=%d (%s)]",
+        PJ_LOG(3,(THIS_FILE, "Call %ld: DISCONNECTED [reason=%d (%s)]",
                   call - app.call, inv->cause,
                   pjsip_get_status_text(inv->cause)->ptr));
         destroy_call(call);
     } else {
-        PJ_LOG(3,(THIS_FILE, "Call %d: state changed to %s",
+        PJ_LOG(3,(THIS_FILE, "Call %ld: state changed to %s",
                   call - app.call, pjsip_inv_state_name(inv->state)));
     }
 }
@@ -495,7 +495,8 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
         return PJ_TRUE;
     }
     pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
-    pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>", hostip, sip_port);
+    pj_ansi_snprintf(temp, sizeof(temp), "<sip:sipecho@%s:%d>",
+                     hostip, sip_port);
     local_uri = pj_str(temp);
 
     status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
@@ -624,7 +625,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    if ((status=init_stack()) != PJ_SUCCESS)
+    status = init_stack();
+    if (status != PJ_SUCCESS)
         goto on_error;
 
     /* If URL is specified, then make call immediately. */
@@ -641,7 +643,7 @@ int main(int argc, char *argv[])
         CHECK( pj_gethostip(sip_af, &hostaddr) );
         pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
-        pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>",
+        pj_ansi_snprintf(temp, sizeof(temp), "<sip:sipecho@%s:%d>",
                         hostip, sip_port);
         local_uri = pj_str(temp);
 

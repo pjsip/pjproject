@@ -275,11 +275,10 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
 
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
-
     if (!str || !value) {
         return PJ_EINVAL;
     }
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
 
     s = *str;
     pj_strltrim(&s);
@@ -380,12 +379,11 @@ PJ_DEF(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
 
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
-
     if (!str || !value) {
         return PJ_EINVAL;
     }
-
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
+    
     s = *str;
     pj_strltrim(&s);
 
@@ -428,6 +426,72 @@ PJ_DEF(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
             *value *= base;
             if ((PJ_MAXULONG - *value) < c) {
                 *value = PJ_MAXULONG;
+                return PJ_ETOOBIG;
+            }
+            *value += c;
+        }
+    } else {
+        pj_assert(!"Unsupported base");
+        return PJ_EINVAL;
+    }
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pj_strtoul4(const pj_str_t *str, pj_uint_t *value,
+                                unsigned base)
+{
+    pj_str_t s;
+    unsigned i;
+
+    PJ_CHECK_STACK();
+
+    if (!str || !value) {
+        return PJ_EINVAL;
+    }
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
+
+    s = *str;
+    pj_strltrim(&s);
+
+    if (s.slen == 0 || s.ptr[0] < '0' ||
+        (base <= 10 && (unsigned)s.ptr[0] > ('0' - 1) + base) ||
+        (base == 16 && !pj_isxdigit(s.ptr[0])))
+    {
+        return PJ_EINVAL;
+    }
+
+    *value = 0;
+    if (base <= 10) {
+        for (i=0; i<(unsigned)s.slen; ++i) {
+            unsigned c = s.ptr[i] - '0';
+            if (s.ptr[i] < '0' || (unsigned)s.ptr[i] > ('0' - 1) + base) {
+                break;
+            }
+            if (*value > PJ_MAXUINT / base) {
+                *value = PJ_MAXUINT;
+                return PJ_ETOOBIG;
+            }
+
+            *value *= base;
+            if ((PJ_MAXUINT - *value) < c) {
+                *value = PJ_MAXUINT;
+                return PJ_ETOOBIG;
+            }
+            *value += c;
+        }
+    } else if (base == 16) {
+        for (i=0; i<(unsigned)s.slen; ++i) {
+            unsigned c = pj_hex_digit_to_val(s.ptr[i]);
+            if (!pj_isxdigit(s.ptr[i]))
+                break;
+
+            if (*value > PJ_MAXUINT / base) {
+                *value = PJ_MAXUINT;
+                return PJ_ETOOBIG;
+            }
+            *value *= base;
+            if ((PJ_MAXUINT - *value) < c) {
+                *value = PJ_MAXUINT;
                 return PJ_ETOOBIG;
             }
             *value += c;
@@ -514,4 +578,109 @@ PJ_DEF(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad)
     } while (buf < p);
 
     return len;
+}
+
+PJ_DEF(int) pj_utoa2(pj_uint_t val, char *buf)
+{
+    return pj_utoa_pad2(val, buf, 0, 0);
+}
+
+PJ_DEF(int) pj_utoa_pad2(pj_uint_t val, char *buf, int min_dig, int pad)
+{
+    char *p;
+    int len;
+
+    PJ_CHECK_STACK();
+
+    p = buf;
+    do {
+        pj_uint_t digval = (pj_uint_t) (val % 10);
+        val /= 10;
+        *p++ = (char) (digval + '0');
+    } while (val > 0);
+
+    len = (int)(p-buf);
+    while (len < min_dig) {
+        *p++ = (char)pad;
+        ++len;
+    }
+    *p-- = '\0';
+
+    do {
+        char temp = *p;
+        *p = *buf;
+        *buf = temp;
+        --p;
+        ++buf;
+    } while (buf < p);
+
+    return len;
+}
+
+PJ_DEF(int) pj_ansi_strxcpy(char *dst, const char *src,
+                            pj_size_t dst_size)
+{
+    char *odst = dst;
+
+    PJ_ASSERT_RETURN(dst && src, -PJ_EINVAL);
+
+    if (dst_size==0)
+        return -PJ_ETOOBIG;
+
+    while (--dst_size && (*dst=*src) != 0) {
+        ++dst;
+        ++src;
+    }
+
+    if (!*dst && !*src) {
+        return dst-odst;
+    } else {
+        *dst = '\0';
+        return *src? -PJ_ETOOBIG : dst-odst;
+    }
+}
+
+PJ_DEF(int) pj_ansi_strxcpy2(char *dst, const pj_str_t *src,
+                             pj_size_t dst_size)
+{
+    char *odst = dst;
+    const char *ssrc, *esrc;
+
+    PJ_ASSERT_RETURN(dst && src && src->slen >= 0, -PJ_EINVAL);
+    if (dst_size==0)
+        return -PJ_ETOOBIG;
+
+    ssrc = src->ptr;
+    esrc = ssrc + src->slen;
+
+    while (ssrc < esrc && --dst_size && (*dst = *ssrc)!= 0) {
+        dst++;
+        ssrc++;
+    }
+
+    *dst = '\0';
+    if (ssrc==esrc || !*ssrc) {
+         return dst-odst;
+    } else {
+        return -PJ_ETOOBIG;
+    }
+}
+
+PJ_DEF(int) pj_ansi_strxcat(char *dst, const char *src, pj_size_t dst_size)
+{
+    pj_size_t dst_len;
+
+    PJ_ASSERT_RETURN(dst && src, -PJ_EINVAL);
+
+    if (dst_size==0)
+        return -PJ_ETOOBIG;
+
+    dst_len = pj_ansi_strlen(dst);
+    if (dst_len < dst_size) {
+        int rc = pj_ansi_strxcpy(dst+dst_len, src, dst_size-dst_len);
+        if (rc < 0)
+            return rc;
+        return dst_len + rc;
+    } else
+        return -PJ_ETOOBIG;
 }

@@ -475,9 +475,8 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
                         CoTaskMemFree(wszDisplayName);
                     }
 
-                    strncpy(ddi->info.driver, "dshow", 
-                            sizeof(ddi->info.driver));
-                    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+                    pj_ansi_strxcpy(ddi->info.driver, "dshow", 
+                                         sizeof(ddi->info.driver));
                     ddi->info.dir = PJMEDIA_DIR_CAPTURE;
                     ddi->info.has_callback = PJ_TRUE;
 
@@ -505,10 +504,10 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
 #if HAS_VMR
     ddi = &df->dev_info[df->dev_count++];
     pj_bzero(ddi, sizeof(*ddi));
-    pj_ansi_strncpy(ddi->info.name,  "Video Mixing Renderer",
+    pj_ansi_strxcpy(ddi->info.name,  "Video Mixing Renderer",
                     sizeof(ddi->info.name));
-    ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
-    pj_ansi_strncpy(ddi->info.driver, "dshow", sizeof(ddi->info.driver));
+    pj_ansi_strxcpy(ddi->info.driver, "dshow", 
+                    sizeof(ddi->info.driver));
     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
     ddi->info.dir = PJMEDIA_DIR_RENDER;
     ddi->info.has_callback = PJ_FALSE;

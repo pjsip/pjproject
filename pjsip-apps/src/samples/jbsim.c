@@ -216,23 +216,29 @@ static void write_log(struct log_entry *entry, pj_bool_t to_stdout)
     }
 
     if (entry->jb_state) {
-        sprintf(s_jbprefetch, "%d", entry->jb_state->prefetch);
-        sprintf(s_jbsize, "%d", entry->jb_state->size);
-        sprintf(s_jbdiscard, "%d", entry->jb_state->discard);
-        sprintf(s_jbempty, "%d", entry->jb_state->empty);
+        pj_ansi_snprintf(s_jbprefetch, sizeof(s_jbprefetch),
+                         "%d", entry->jb_state->prefetch);
+        pj_ansi_snprintf(s_jbsize, sizeof(s_jbsize),
+                         "%d", entry->jb_state->size);
+        pj_ansi_snprintf(s_jbdiscard, sizeof(s_jbdiscard),
+                         "%d", entry->jb_state->discard);
+        pj_ansi_snprintf(s_jbempty, sizeof(s_jbempty),
+                         "%d", entry->jb_state->empty);
     } else {
-        strcpy(s_jbprefetch, "");
-        strcpy(s_jbsize, "");
-        strcpy(s_jbdiscard, "");
-        strcpy(s_jbempty, "");
+        s_jbprefetch[0] = '\0';
+        s_jbsize[0] = '\0';
+        s_jbdiscard[0] = '\0';
+        s_jbempty[0] = '\0';
     }
 
     if (entry->stat) {
-        sprintf(s_rxpkt, "%d", entry->stat->rx.pkt);
-        sprintf(s_losspkt, "%d", entry->stat->rx.loss);
+        pj_ansi_snprintf(s_rxpkt, sizeof(s_rxpkt),
+                         "%d", entry->stat->rx.pkt);
+        pj_ansi_snprintf(s_losspkt, sizeof(s_losspkt),
+                         "%d", entry->stat->rx.loss);
     } else {
-        strcpy(s_rxpkt, "");
-        strcpy(s_losspkt, "");
+        s_rxpkt[0] = '\0';
+        s_losspkt[0] = '\0';
     }
 
     if (entry->log == NULL)
@@ -694,7 +700,8 @@ static void tx_tick(const pj_time_val *t)
             entry.log = log_msg;
 
             if (jstate.discard > last_discard)
-                strcat(log_msg, "** Note: packet was discarded by jitter buffer **");
+                pj_ansi_strxcat(log_msg, "** Note: packet was discarded by jitter buffer **",
+                                sizeof(log_msg));
 
             strm->state.tx.cur_lost_burst = 0;
         }
@@ -740,7 +747,8 @@ static void tx_tick(const pj_time_val *t)
 
         pj_time_val_normalize(&strm->state.tx.next_schedule);
 
-        sprintf(log_msg, "** Packet #%u tick is at %d.%03d, %d ms jitter applied **", 
+        snprintf(log_msg, sizeof(log_msg),
+                "** Packet #%u tick is at %d.%03d, %d ms jitter applied **", 
                 strm->state.tx.total_tx+1,
                 (int)strm->state.tx.next_schedule.sec, (int)strm->state.tx.next_schedule.msec,
                 jitter);
@@ -806,9 +814,10 @@ static void rx_tick(const pj_time_val *t)
             entry.log = msg;
 
             if (jstate.empty > last_empty)
-                strcat(msg, "** JBUF was empty **");
+                pj_ansi_strxcat(msg, "** JBUF was empty **", sizeof(msg));
             if (!has_frame)
-                strcat(msg, "** NULL frame was returned **");
+                pj_ansi_strxcat(msg, "** NULL frame was returned **",
+                                sizeof(msg));
 
             write_log(&entry, PJ_TRUE);
 
@@ -982,14 +991,14 @@ static int init_options(int argc, char *argv[])
         if (long_options[c].has_arg) {
             char cmd[10];
             pj_ansi_snprintf(cmd, sizeof(cmd), "%c:", long_options[c].val);
-            pj_ansi_strcat(format, cmd);
+            pj_ansi_strxcat(format, cmd, sizeof(format));
         }
     }
     for (c=0; c<(int)PJ_ARRAY_SIZE(long_options)-1; ++c) {
         if (long_options[c].has_arg == 0) {
             char cmd[10];
             pj_ansi_snprintf(cmd, sizeof(cmd), "%c", long_options[c].val);
-            pj_ansi_strcat(format, cmd);
+            pj_ansi_strxcat(format, cmd, sizeof(format));
         }
     }
 

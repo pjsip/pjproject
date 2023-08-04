@@ -246,6 +246,41 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
     return PJ_SUCCESS;
 }
 
+static int get_media_ip_version(pjsua_call_media *call_med)
+{
+    pjmedia_sdp_session *rem_sdp = call_med->call->async_call.rem_sdp;
+    pjsua_ipv6_use ipv6_use;
+
+    ipv6_use = pjsua_var.acc[call_med->call->acc_id].cfg.ipv6_media_use;
+
+    if (rem_sdp) {
+        /* Match the default address family according to the offer */
+        const pj_str_t ID_IP6 = { "IP6", 3};
+        const pjmedia_sdp_media *m;
+        const pjmedia_sdp_conn *c;
+
+        m = rem_sdp->media[call_med->idx];
+        c = m->conn? m->conn : rem_sdp->conn;
+
+        if (pj_stricmp(&c->addr_type, &ID_IP6) == 0 &&
+            ipv6_use != PJSUA_IPV6_DISABLED)
+        {
+            /* Use IPv6. */
+            return 6;
+        }
+    } else {
+        if (ipv6_use == PJSUA_IPV6_ENABLED_PREFER_IPV6 ||
+            ipv6_use == PJSUA_IPV6_ENABLED_USE_IPV6_ONLY)
+        {
+            /* Use IPv6. */
+            return 6;
+        }
+    }
+
+    /* Use IPv4. */
+    return 4;
+}
+
 /*
  * Create RTP and RTCP socket pair, and possibly resolve their public
  * address via STUN/UPnP.
@@ -267,7 +302,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
     pj_sock_t sock[2];
 
-    use_ipv6 = (acc->cfg.ipv6_media_use != PJSUA_IPV6_DISABLED);
+    use_ipv6 = (get_media_ip_version(call_med) == 6);
     use_nat64 = (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
     af = (use_ipv6 || use_nat64) ? pj_AF_INET6() : pj_AF_INET();
 
@@ -319,7 +354,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
         }
 
         /* Create RTP socket. */
-        status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock[0]);
+        status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sock[0]);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "socket() error", status);
             return status;
@@ -362,7 +397,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
         }
 
         /* Create RTCP socket. */
-        status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock[1]);
+        status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sock[1]);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "socket() error", status);
             pj_sock_close(sock[0]);
@@ -718,7 +753,7 @@ static pj_status_t create_loop_media_transport(
     int af;
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
 
-    use_ipv6 = (acc->cfg.ipv6_media_use != PJSUA_IPV6_DISABLED);
+    use_ipv6 = (get_media_ip_version(call_med) == 6);
     use_nat64 = (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
     af = (use_ipv6 || use_nat64) ? pj_AF_INET6() : pj_AF_INET();
 
@@ -903,7 +938,7 @@ static void on_ice_complete(pjmedia_transport *tp,
         } else {
             call_med->state = PJSUA_CALL_MEDIA_ERROR;
             call_med->dir = PJMEDIA_DIR_NONE;
-            if (call && !call->hanging_up &&
+            if (!call->hanging_up &&
                 pjsua_var.ua_cfg.cb.on_call_media_state)
             {
                 /* Defer the callback to a timer */
@@ -1001,7 +1036,7 @@ static pj_status_t create_ice_media_transport(
     pjmedia_sdp_session *rem_sdp;
 
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
-    use_ipv6 = (acc_cfg->ipv6_media_use != PJSUA_IPV6_DISABLED);
+    use_ipv6 = (get_media_ip_version(call_med) == 6);
     use_nat64 = (acc_cfg->nat64_opt != PJSUA_NAT64_DISABLED);
 
     /* Make sure STUN server resolution has completed */
@@ -1028,24 +1063,12 @@ static pj_status_t create_ice_media_transport(
     ice_cfg.resolver = pjsua_var.resolver;
     
     ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
-    rem_sdp = call_med->call->async_call.rem_sdp;
-
-    if (rem_sdp) {
-        /* Match the default address family according to the offer */
-        const pj_str_t ID_IP6 = { "IP6", 3};
-        const pjmedia_sdp_media *m;
-        const pjmedia_sdp_conn *c;
-
-        m = rem_sdp->media[call_med->idx];
-        c = m->conn? m->conn : rem_sdp->conn;
-
-        if (pj_stricmp(&c->addr_type, &ID_IP6) == 0)
-            ice_cfg.af = pj_AF_INET6();
-    } else if (use_ipv6 || use_nat64) {
+    if (use_ipv6 || use_nat64) {
         ice_cfg.af = pj_AF_INET6();
     }
 
     /* Should not wait for ICE STUN/TURN ready when trickle ICE is enabled */
+    rem_sdp = call_med->call->async_call.rem_sdp;
     if (ice_cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
         (call_med->call->inv == NULL || 
          call_med->call->inv->state < PJSIP_INV_STATE_CONFIRMED))
@@ -1642,7 +1665,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
-    pjsua_call *call = call_med? call_med->call : NULL;
+    pjsua_call *call = call_med->call;
     char ev_name[5];
     pj_status_t status = PJ_SUCCESS;
 
@@ -1751,18 +1774,12 @@ pj_status_t call_media_on_event(pjmedia_event *event,
         }
 
         pj_mutex_unlock(pjsua_var.timer_mutex);
-        
-        if (call) {
-            if (call->hanging_up)
-                return status;
 
-            eve->call_id = call->index;
-            eve->med_idx = call_med->idx;
-        } else {
-            /* Also deliver non call events such as audio device error */
-            eve->call_id = PJSUA_INVALID_ID;
-            eve->med_idx = 0;
-        }
+        if (call->hanging_up)
+            return status;
+
+        eve->call_id = call->index;
+        eve->med_idx = call_med->idx;
         pj_memcpy(&eve->event, event, sizeof(pjmedia_event));
         pjsua_schedule_timer2(&call_med_event_cb, eve, 1);
     }
@@ -1810,7 +1827,7 @@ static void on_srtp_nego_complete(pjmedia_transport *tp,
     if (result != PJ_SUCCESS) {
         call_med->state = PJSUA_CALL_MEDIA_ERROR;
         call_med->dir = PJMEDIA_DIR_NONE;
-        if (call && !call->hanging_up &&
+        if (!call->hanging_up &&
             pjsua_var.ua_cfg.cb.on_call_media_state)
         {
             /* Defer the callback to a timer */
@@ -1953,9 +1970,6 @@ on_return:
             pjmedia_transport_close(call_med->tp);
             call_med->tp = NULL;
         }
-
-        if (err_code == 0)
-            err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
 
         if (sip_err_code)
             *sip_err_code = err_code;
@@ -2488,7 +2502,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         call->med_ch_cb = cb;
     }
 
-    if (rem_sdp) {
+    if (rem_sdp && call->inv) {
         call->async_call.rem_sdp =
             pjmedia_sdp_session_clone(call->inv->pool_prov, rem_sdp);
     } else {
@@ -2947,8 +2961,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                              call_id, mi));
             }
 
-            /* Add any other RTCP-FB setting configured in account setting */
-            if (acc->cfg.rtcp_fb_cfg.cap_count) {
+            /* For offer, add any other RTCP-FB setting configured in account
+             * setting.
+             */
+            if (!rem_sdp && acc->cfg.rtcp_fb_cfg.cap_count) {
                 pj_bool_t tmp = rtcp_cfg.dont_use_avpf;
                 rtcp_cfg = acc->cfg.rtcp_fb_cfg;
                 rtcp_cfg.dont_use_avpf = tmp;
@@ -3021,6 +3037,19 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
         b->value = bandw / 1000;
         sdp->bandw[sdp->bandw_count++] = b;
     }
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    if (acc->cfg.enable_rtcp_xr) {
+        pjmedia_sdp_attr *a;
+        const char *STR_RTCP_XR = "rtcp-xr";
+        /* Currently we don't support pkt-loss-rle pkt-dup-rle pkt-rcpt-times
+         */
+        const pj_str_t value = pj_str("rcvr-rtt stat-summary voip-metrics");
+
+        a = pjmedia_sdp_attr_create(pool, STR_RTCP_XR, &value);
+        pjmedia_sdp_attr_add(&sdp->attr_count, sdp->attr, a);
+    }
+#endif
 
 #if DISABLED_FOR_TICKET_1185 && defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* Check if SRTP is in optional mode and configured to use duplicated
@@ -3191,6 +3220,7 @@ static void log_call_dump(int call_id)
     pj_status_t status;
 
     pool = pjsua_pool_create("tmp", 1024, 1024);
+    if (!pool) return;
     buf = pj_pool_alloc(pool, sizeof(char) * BUF_LEN);
 
     status = pjsua_call_dump(call_id, PJ_TRUE, buf, BUF_LEN, "  ");
@@ -3221,8 +3251,7 @@ static void log_call_dump(int call_id)
     pj_log_set_decor(log_decor);
 
 on_return:
-    if (pool)
-        pj_pool_release(pool);
+    pj_pool_release(pool);
 }
 
 
@@ -3476,6 +3505,10 @@ static void check_srtp_roc(pjsua_call *call,
             new_rem_addr = &new_si_->info.vid.rem_addr;
         }
 #endif
+        else {
+            /* Just return for other media type */
+            return;
+        }
 
         /* Local IP address changes */
         if (pj_sockaddr_cmp(prev_local_addr, new_local_addr))
@@ -3614,13 +3647,14 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
             old_ci->channel_cnt != new_ci->channel_cnt ||
             old_si->rx_pt != new_si->rx_pt ||
             old_si->tx_pt != new_si->tx_pt ||
-            old_si->rx_event_pt != new_si->tx_event_pt ||
+            old_si->rx_event_pt != new_si->rx_event_pt ||
             old_si->tx_event_pt != new_si->tx_event_pt)
         {
             return PJ_TRUE;
         }
 
         /* Compare codec param */
+        PJ_ASSERT_RETURN(new_cp, PJ_FALSE);
         if (old_cp->setting.frm_per_pkt != new_cp->setting.frm_per_pkt ||
             old_cp->setting.vad != new_cp->setting.vad ||
             old_cp->setting.cng != new_cp->setting.cng ||
@@ -4123,7 +4157,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                     dir = "unknown";
                     break;
                 }
-                len = pj_ansi_sprintf( info+info_len,
+                len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                        ", stream #%d: %.*s (%s)", mi,
                                        (int)si->fmt.encoding_name.slen,
                                        si->fmt.encoding_name.ptr,
@@ -4220,9 +4254,18 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                 }
             }
 
-            /* Check if this media is changed */
             stream_info.type = PJMEDIA_TYPE_VIDEO;
             stream_info.info.vid = the_si;
+
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+            /* Check if we need to reset or maintain SRTP ROC */
+            check_srtp_roc(call, mi, &stream_info,
+                           local_sdp->media[mi], remote_sdp->media[mi]);
+#endif
+#endif
+
+            /* Check if this media is changed */
             if (is_media_changed(call, mi, &stream_info)) {
                 media_changed = PJ_TRUE;
                 /* Stop the media */
@@ -4331,7 +4374,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                     dir = "unknown";
                     break;
                 }
-                len = pj_ansi_sprintf( info+info_len,
+                len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                        ", stream #%d: %.*s (%s)", mi,
                                        (int)si->codec_info.encoding_name.slen,
                                        si->codec_info.encoding_name.ptr,

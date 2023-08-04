@@ -27,7 +27,7 @@
 #define PJ_OS_NAME                  "win32"
 
 #define WIN32_LEAN_AND_MEAN
-#define PJ_WIN32_WINNT              0x0400
+#define PJ_WIN32_WINNT              0x0501
 #ifndef _WIN32_WINNT
 #  define _WIN32_WINNT              PJ_WIN32_WINNT
 #endif
@@ -36,6 +36,7 @@
 #define PJ_HAS_ASSERT_H             1
 #define PJ_HAS_CTYPE_H              1
 #define PJ_HAS_ERRNO_H              0   /* Must be zero, otherwise errno_test() fails. */
+#define PJ_HAS_INTTYPES_H           1
 #define PJ_HAS_LINUX_SOCKET_H       0
 #define PJ_HAS_MALLOC_H             1
 #define PJ_HAS_NETDB_H              0

@@ -51,20 +51,22 @@
 #endif
 #include <pj/config.h>
 
+#if defined(PJ_HAS_FCNTL_H) && PJ_HAS_FCNTL_H != 0
+#  include <fcntl.h>
+#endif
+
 #define THIS_FILE   "os_core_unix.c"
 
 #define SIGNATURE1  0xDEAFBEEF
 #define SIGNATURE2  0xDEADC0DE
 
-#ifndef PJ_JNI_HAS_JNI_ONLOAD
-#  define PJ_JNI_HAS_JNI_ONLOAD    PJ_ANDROID
-#endif
-
-#if defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD != 0
+#if defined(PJ_ANDROID) && PJ_ANDROID != 0
 
 #include <jni.h>
 
 JavaVM *pj_jni_jvm = NULL;
+
+#if defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD != 0
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
 {
@@ -73,8 +75,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
     return JNI_VERSION_1_4;
 }
 
-#endif
+#endif /* PJ_JNI_HAS_JNI_ONLOAD */
 
+#endif /* PJ_ANDROID */
 
 struct pj_thread_t
 {
@@ -315,18 +318,26 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
  * A cool solution would be to port (if possible) the code from the
  * android os regarding set_sched groups.
  */
-#if PJ_ANDROID
+#if defined(PJ_ANDROID) && PJ_ANDROID != 0
 
 #include <jni.h>
 #include <sys/resource.h>
 #include <sys/system_properties.h>
 
-PJ_DEF(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env)
+/* If you disable PJ_JNI_HAS_JNI_ONLOAD, set the JVM using this function. */
+PJ_DEF(void) pj_jni_set_jvm(void *jvm)
 {
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                               JNI_VERSION_1_4) < 0)
-    {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
+    pj_jni_jvm = (JavaVM *)jvm;
+}
+
+PJ_DEF(pj_bool_t) pj_jni_attach_jvm(void **jni_env)
+{
+    if (!pj_jni_jvm)
+        return PJ_FALSE;
+
+    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, jni_env, JNI_VERSION_1_4) < 0) {
+        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm,
+                                               (JNIEnv **)jni_env, NULL) < 0)
         {
             jni_env = NULL;
             return PJ_FALSE;
@@ -337,8 +348,10 @@ PJ_DEF(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env)
     return PJ_FALSE;
 }
 
-PJ_DEF(void) pj_jni_dettach_jvm(pj_bool_t attached)
+PJ_DEF(void) pj_jni_detach_jvm(pj_bool_t attached)
 {
+    if (!pj_jni_jvm) return;
+
     if (attached)
         (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
 }
@@ -351,9 +364,9 @@ static pj_status_t set_android_thread_priority(int priority)
     jthrowable exc;
     pj_status_t result = PJ_SUCCESS;
     JNIEnv *jni_env = 0;
-    pj_bool_t attached = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t attached = pj_jni_attach_jvm((void **)&jni_env);
 
-    PJ_ASSERT_RETURN(jni_env, PJ_FALSE);
+    if (!jni_env) return PJ_EINVALIDOP;
 
     /* Get pointer to the java class */
     process_class = (jclass)(*jni_env)->NewGlobalRef(jni_env,
@@ -390,7 +403,7 @@ static pj_status_t set_android_thread_priority(int priority)
     }
 
 on_return:
-    pj_jni_dettach_jvm(attached);
+    pj_jni_detach_jvm(attached);
     return result;
 }
 
@@ -426,9 +439,11 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 {
 #if PJ_HAS_THREADS
 
-#  if PJ_ANDROID
+#if defined(PJ_ANDROID) && PJ_ANDROID != 0
+
     PJ_ASSERT_RETURN(thread==NULL || thread==pj_thread_this(), PJ_EINVAL);
     return set_android_thread_priority(prio);
+
 #  else
 
     struct sched_param param;
@@ -626,12 +641,13 @@ pj_status_t pj_thread_init(void)
  */
 static void set_thread_display_name(const char *name)
 {
-#if (defined(PJ_LINUX) && PJ_LINUX != 0) ||                                    \
+#if (defined(PJ_LINUX) && PJ_LINUX != 0) || \
     (defined(PJ_ANDROID) && PJ_ANDROID != 0)
     char xname[16];
     // On linux, thread display name length is restricted to 16 (include '\0')
     if (pj_ansi_strlen(name) >= 16) {
-        pj_ansi_snprintf(xname, 16, "%s", name);
+        pj_memcpy(xname, name, 15);
+        xname[15] = '\0';
         name = xname;
     }
 #endif
@@ -645,7 +661,7 @@ static void set_thread_display_name(const char *name)
 #elif defined(PJ_HAS_PTHREAD_SET_NAME_NP) && PJ_HAS_PTHREAD_SET_NAME_NP != 0
     pthread_set_name_np(pthread_self(), name);
 #else
-#   warning "OS not support set thread display name"
+// #   warning "OS does not support set thread display name"
     PJ_UNUSED_ARG(name);
 #endif
 }
@@ -724,8 +740,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     if (strchr(thread_name, '%')) {
         pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
-        strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
-        rec->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strxcpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
     }
 
     /* Set default stack size */
@@ -1351,8 +1366,7 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
     if (strchr(name, '%')) {
         pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
     } else {
-        strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
-        mutex->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strxcpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
     }
 
     PJ_LOG(6, (mutex->obj_name, "Mutex created"));
@@ -1436,7 +1450,8 @@ PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
 #if PJ_DEBUG
     if (status == PJ_SUCCESS) {
         mutex->owner = pj_thread_this();
-        pj_ansi_strcpy(mutex->owner_name, mutex->owner->obj_name);
+        pj_ansi_strxcpy(mutex->owner_name, mutex->owner->obj_name,
+                        sizeof(mutex->owner_name));
         ++mutex->nesting_level;
     }
 
@@ -1519,7 +1534,8 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
     if (status==0) {
 #if PJ_DEBUG
         mutex->owner = pj_thread_this();
-        pj_ansi_strcpy(mutex->owner_name, mutex->owner->obj_name);
+        pj_ansi_strxcpy(mutex->owner_name, mutex->owner->obj_name,
+                        sizeof(mutex->owner_name));
         ++mutex->nesting_level;
 
         PJ_LOG(6,(mutex->obj_name, "Mutex acquired by thread %s (level=%d)",
@@ -1771,8 +1787,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     if (strchr(name, '%')) {
         pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
     } else {
-        strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
-        sem->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strxcpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
     }
 
     PJ_LOG(6, (sem->obj_name, "Semaphore created"));
@@ -2082,45 +2097,45 @@ PJ_DEF(pj_status_t) pj_term_set_color(pj_color_t color)
     if (color & PJ_TERM_COLOR_BRIGHT) {
         color ^= PJ_TERM_COLOR_BRIGHT;
     } else {
-        strcpy(ansi_color, "\033[00;3");
+        pj_ansi_strxcpy(ansi_color, "\033[00;3", sizeof(ansi_color));
     }
 
     switch (color) {
     case 0:
         /* black color */
-        strcat(ansi_color, "0m");
+        pj_ansi_strxcat(ansi_color, "0m", sizeof(ansi_color));
         break;
     case PJ_TERM_COLOR_R:
         /* red color */
-        strcat(ansi_color, "1m");
+        pj_ansi_strxcat(ansi_color, "1m", sizeof(ansi_color));
         break;
     case PJ_TERM_COLOR_G:
         /* green color */
-        strcat(ansi_color, "2m");
+        pj_ansi_strxcat(ansi_color, "2m", sizeof(ansi_color));
         break;
     case PJ_TERM_COLOR_B:
         /* blue color */
-        strcat(ansi_color, "4m");
+        pj_ansi_strxcat(ansi_color, "4m", sizeof(ansi_color));
         break;
     case PJ_TERM_COLOR_R | PJ_TERM_COLOR_G:
         /* yellow color */
-        strcat(ansi_color, "3m");
+        pj_ansi_strxcat(ansi_color, "3m", sizeof(ansi_color));
         break;
     case PJ_TERM_COLOR_R | PJ_TERM_COLOR_B:
         /* magenta color */
-        strcat(ansi_color, "5m");
+        pj_ansi_strxcat(ansi_color, "5m", sizeof(ansi_color));
         break;
     case PJ_TERM_COLOR_G | PJ_TERM_COLOR_B:
         /* cyan color */
-        strcat(ansi_color, "6m");
+        pj_ansi_strxcat(ansi_color, "6m", sizeof(ansi_color));
         break;
     case PJ_TERM_COLOR_R | PJ_TERM_COLOR_G | PJ_TERM_COLOR_B:
         /* white color */
-        strcat(ansi_color, "7m");
+        pj_ansi_strxcat(ansi_color, "7m", sizeof(ansi_color));
         break;
     default:
         /* default console color */
-        strcpy(ansi_color, "\033[00m");
+        pj_ansi_strxcpy(ansi_color, "\033[00m", sizeof(ansi_color));
         break;
     }
 
@@ -2150,3 +2165,17 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     return (*main_func)(argc, argv);
 }
 #endif
+
+/*
+ * Set file descriptor close-on-exec flag
+ */
+PJ_DEF(pj_status_t) pj_set_cloexec_flag(int fd)
+{
+#if defined(FD_CLOEXEC)
+    int flags = fcntl(fd, F_GETFD);
+    if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1) {
+        return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+    }
+#endif
+    return PJ_SUCCESS;
+}

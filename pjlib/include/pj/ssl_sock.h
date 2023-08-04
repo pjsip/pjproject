@@ -1082,6 +1082,13 @@ typedef struct pj_ssl_sock_param
      */
     pj_bool_t sockopt_ignore_error;
 
+    /**
+     * Specify if should set close-on-exec flag for socket.
+     *
+     * Default: PJ_TRUE
+    */
+    pj_bool_t sock_cloexec;
+
 } pj_ssl_sock_param;
 
 

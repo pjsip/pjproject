@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/vid_codec.h>
+#include <pjmedia/codec.h>
 #include <pjmedia/errno.h>
 #include <pj/array.h>
 #include <pj/assert.h>
@@ -58,6 +59,8 @@ typedef struct pjmedia_vid_codec_desc
 /* The declaration of video codec manager */
 struct pjmedia_vid_codec_mgr
 {
+    pj_pool_t                   *pool;
+
     /** Pool factory instance. */
     pj_pool_factory             *pf;
 
@@ -73,6 +76,11 @@ struct pjmedia_vid_codec_mgr
     /** Array of codec descriptor. */
     pjmedia_vid_codec_desc       codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
+    /** Number of codecs with dynamic PT. */
+    unsigned                     dyn_codecs_cnt;
+
+    /** Array of codec identifiers with dynamic PT. */
+    pj_str_t                     dyn_codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
 };
 
 
@@ -129,6 +137,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_create(
     mgr->pf = pool->factory;
     pj_list_init (&mgr->factory_list);
     mgr->codec_cnt = 0;
+    mgr->pool = pool;
+    mgr->dyn_codecs_cnt = 0;
 
     /* Create mutex */
     status = pj_mutex_create_recursive(pool, "vid-codec-mgr", &mgr->mutex);
@@ -218,6 +228,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_register_factory(
         pjmedia_vid_codec_info_to_id( &info[i],
                                   mgr->codec_desc[mgr->codec_cnt+i].id,
                                   sizeof(pjmedia_codec_id));
+
+        /* Add it to dyn_codecs array if the codec has dynamic PT */
+        if (info[i].pt >= PJMEDIA_RTP_PT_DYNAMIC) {
+            if (mgr->dyn_codecs_cnt >= PJ_ARRAY_SIZE(mgr->dyn_codecs)) {
+                PJ_LOG(3, ("", ("Dynamic codecs array full")));
+                continue;
+            }
+
+            pjmedia_codec_mgr_insert_codec(mgr->pool, mgr->dyn_codecs,
+                                           &mgr->dyn_codecs_cnt,
+                                           &info[i].encoding_name);
+        }
     }
 
     /* Update count */
@@ -270,6 +292,22 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_unregister_factory(
             pj_array_erase(mgr->codec_desc, sizeof(mgr->codec_desc[0]), 
                            mgr->codec_cnt, i);
             --mgr->codec_cnt;
+
+            /* Remove it from the dynamic codecs array */
+            if (mgr->codec_desc[i].info.pt >= PJMEDIA_RTP_PT_DYNAMIC) {
+                pj_int8_t codec_idx;
+                pj_bool_t found;
+                pj_str_t codec_str = pj_str(mgr->codec_desc[i].id);
+
+                codec_idx = pjmedia_codec_mgr_find_codec(mgr->dyn_codecs,
+                                                         mgr->dyn_codecs_cnt,
+                                                         &codec_str,
+                                                         &found);
+                if (found) {
+                    pj_array_erase(mgr->dyn_codecs, sizeof(pj_str_t),
+                                   mgr->dyn_codecs_cnt--, codec_idx);
+                }
+            }
 
         } else {
             ++i;
@@ -769,6 +807,30 @@ pjmedia_vid_codec_mgr_dealloc_codec(pjmedia_vid_codec_mgr *mgr,
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
     return (*codec->factory->op->dealloc_codec)(codec->factory, codec);
+}
+
+
+/* Internal: Get array of codec IDs with dynamic PT. */
+pj_status_t pjmedia_vid_codec_mgr_get_dyn_codecs(pjmedia_vid_codec_mgr* mgr,
+                                                 pj_int8_t *count,
+                                                 pj_str_t dyn_codecs[])
+{
+    if (!mgr) mgr = def_vid_codec_mgr;
+    if (!mgr) {
+        *count = 0;
+        return PJ_EINVAL;;
+    }
+
+    pj_mutex_lock(mgr->mutex);
+
+    if (mgr->dyn_codecs_cnt < *count)
+        *count = mgr->dyn_codecs_cnt;
+
+    pj_memcpy(dyn_codecs, mgr->dyn_codecs, *count * sizeof(pj_str_t));
+
+    pj_mutex_unlock(mgr->mutex);
+
+    return PJ_SUCCESS;
 }
 
 

@@ -266,7 +266,8 @@ pjsua_call_setting CallSetting::toPj() const
 
 
 CallMediaInfo::CallMediaInfo()
-: type(PJMEDIA_TYPE_NONE),
+: index(0xFF),
+  type(PJMEDIA_TYPE_NONE),
   dir(PJMEDIA_DIR_NONE),
   status(PJSUA_CALL_MEDIA_NONE),
   audioConfSlot(PJSUA_INVALID_ID),
@@ -388,11 +389,8 @@ void StreamStat::fromPj(const pjsua_stream_stat &prm)
 
 struct call_param
 {
-    pjsua_msg_data      msg_data;
     pjsua_msg_data     *p_msg_data;
-    pjsua_call_setting  opt;
     pjsua_call_setting *p_opt;
-    pj_str_t            reason;
     pj_str_t           *p_reason;
     pjmedia_sdp_session *sdp;
 
@@ -404,10 +402,17 @@ public:
     call_param(const SipTxOption &tx_option, const CallSetting &setting,
                const string &reason_str, pj_pool_t *pool = NULL,
                const string &sdp_str = "");
+
+private:
+    /* internal storages */
+    pjsua_msg_data      msg_data;
+    pjsua_call_setting  opt;
+    pj_str_t            reason;
 };
 
 call_param::call_param(const SipTxOption &tx_option)
 {
+    pjsua_msg_data_init(&msg_data);
     if (tx_option.isEmpty()) {
         p_msg_data = NULL;
     } else {
@@ -869,6 +874,20 @@ void Call::vidSetStream(pjsua_call_vid_strm_op op,
     PJSUA2_CHECK_EXPR( pjsua_call_set_vid_strm(id, op, &prm) );
 #else
     PJ_UNUSED_ARG(op);
+    PJ_UNUSED_ARG(param);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+void Call::vidStreamModifyCodecParam(int med_idx, const VidCodecParam &param)
+                                     PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pjmedia_vid_codec_param prm = param.toPj();
+    PJSUA2_CHECK_EXPR( pjsua_call_vid_stream_modify_codec_param(id, med_idx,
+                                                                &prm) );
+#else
+    PJ_UNUSED_ARG(med_idx);
     PJ_UNUSED_ARG(param);
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
 #endif

@@ -43,6 +43,11 @@
 #   define HAVE_ARPA_INET_H 1
 #endif
 
+/* Define to 1 if you have the <inttypes.h> header file. */
+#if defined(PJ_HAS_INTTYPES_H) && PJ_HAS_INTTYPES_H!=0
+#   define HAVE_INTTYPES_H 1
+#endif
+
 /* Define to 1 if you have the <byteswap.h> header file. */
 /* #undef HAVE_BYTESWAP_H */
 

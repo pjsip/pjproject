@@ -3097,6 +3097,9 @@ typedef struct pjsua_transport_config
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qos_param fields since this is more portable.
      *
+     * For TLS transport, this field will be ignored, the QoS traffic type
+     * can be set via tls_setting.
+     *
      * Default is QoS not set.
      */
     pj_qos_type         qos_type;
@@ -3106,12 +3109,18 @@ typedef struct pjsua_transport_config
      * level operation than setting the \a qos_type field and may not be
      * supported on all platforms.
      *
+     * For TLS transport, this field will be ignored, the low level QoS
+     * parameters can be set via tls_setting.
+     *
      * Default is QoS not set.
      */
     pj_qos_params       qos_params;
 
     /**
      * Specify options to be set on the transport. 
+     *
+     * For TLS transport, this field will be ignored, the socket options
+     * can be set via tls_setting.
      *
      * By default there is no options.
      * 
@@ -3677,6 +3686,8 @@ typedef struct pjsua_turn_config
 
 /**
  * Specify how IPv6 transport should be used in account config.
+ * IP version preference only applies for outgoing direction, for incoming
+ * direction, we will check the corresponding message/offer and match it.
  */
 typedef enum pjsua_ipv6_use
 {
@@ -3688,7 +3699,23 @@ typedef enum pjsua_ipv6_use
     /**
      * IPv6 is enabled.
      */
-    PJSUA_IPV6_ENABLED
+    PJSUA_IPV6_ENABLED = 1,
+    PJSUA_IPV6_ENABLED_NO_PREFERENCE = 1,
+
+    /**
+     * IPv6 is enabled, but IPv4 is preferable.
+     */
+    PJSUA_IPV6_ENABLED_PREFER_IPV4,
+
+    /**
+     * IPv6 is enabled and preferable.
+     */
+    PJSUA_IPV6_ENABLED_PREFER_IPV6,
+
+    /**
+     * Only IPv6 is enabled, IPv4 will not be used.
+     */
+    PJSUA_IPV6_ENABLED_USE_IPV6_ONLY
 
 } pjsua_ipv6_use;
 
@@ -4178,7 +4205,20 @@ typedef struct pjsua_acc_config
     pjsua_nat64_opt             nat64_opt;
 
     /**
+     * Specify whether IPv6 should be used for SIP signalling.
+     *
+     * Default: PJSUA_IPV6_ENABLED_NO_PREFERENCE
+     * (IP version used will be based on the address resolution
+     * returned by OS/resolver)
+     */
+    pjsua_ipv6_use              ipv6_sip_use;
+
+    /**
      * Specify whether IPv6 should be used on media.
+     *
+     * Default: PJSUA_IPV6_ENABLED_PREFER_IPV4
+     * (Dual stack media, capable to use IPv4/IPv6.
+     * Outgoing offer will prefer to use IPv4)
      */
     pjsua_ipv6_use              ipv6_media_use;
 
@@ -6145,6 +6185,27 @@ PJ_DECL(pj_status_t) pjsua_call_set_vid_strm (
                                 pjsua_call_id call_id,
                                 pjsua_call_vid_strm_op op,
                                 const pjsua_call_vid_strm_op_param *param);
+
+
+/**
+ * Modify the video stream's codec parameter after the codec is opened.
+ * Note that not all codec backends support modifying parameters during
+ * runtime and only certain parameters can be changed.
+ *
+ * Currently, only Video Toolbox and OpenH264 backends support runtime
+ * adjustment of encoding bitrate (avg_bps and max_bps).
+ *
+ * @param call_id       Call identification.
+ * @param med_idx       Video stream index.
+ * @param param         The new codec parameter.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjsua_call_vid_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+                                         const pjmedia_vid_codec_param *param);
+
 
 /**
  * Modify the audio stream's codec parameter after the codec is opened.

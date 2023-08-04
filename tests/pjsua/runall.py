@@ -93,30 +93,30 @@ sys.argv.pop(0)
 while len(sys.argv):
     if sys.argv[0]=='/h' or sys.argv[0]=='-h' or sys.argv[0]=='--help' or sys.argv[0]=='/help':
         sys.argv.pop(0)
-        print "Usage:"
-        print "  runall.py [OPTIONS] [run.py-OPTIONS]"
-        print "OPTIONS:"
-        print "  --list"
-        print "    List the tests"
-        print "  --list-xml"
-        print "    List the tests as XML format suitable for ccdash"
-        print "  --resume,-r RESUME"
-        print "    RESUME is string/substring to specify where to resume tests."
-        print "    If this argument is omited, tests will start from the beginning."
-        print "  --disable,-d TEST_NAME"
-        print "    Disable a specific test that contains the specified TEST_NAME."
-        print "  --retry,-t RETRY_NUM"
-        print "    Retry a specific test RETRY_NUM times before marking it as failed."
-        print "    Default is 0 (no retry)."
-        print "  --shell,-s SHELL"
-        print "    Run the tests with the specified SHELL cmd. This can also be"
-        print "    used to run the test with ccdash. Example:"
-        print "    --shell '/bin/sh -c'"
-        print "  --no-log"
-        print "    Do not generate log files. By default log files will be generated"
-        print "    and put in 'logs' dir."
-        print ""
-        print "  run.py-OPTIONS are applicable here"
+        print("Usage:")
+        print("  runall.py [OPTIONS] [run.py-OPTIONS]")
+        print("OPTIONS:")
+        print("  --list")
+        print("    List the tests")
+        print("  --list-xml")
+        print("    List the tests as XML format suitable for ccdash")
+        print("  --resume,-r RESUME")
+        print("    RESUME is string/substring to specify where to resume tests.")
+        print("    If this argument is omited, tests will start from the beginning.")
+        print("  --disable,-d TEST_NAME")
+        print("    Disable a specific test that contains the specified TEST_NAME.")
+        print("  --retry,-t RETRY_NUM")
+        print("    Retry a specific test RETRY_NUM times before marking it as failed.")
+        print("    Default is 0 (no retry).")
+        print("  --shell,-s SHELL")
+        print("    Run the tests with the specified SHELL cmd. This can also be")
+        print("    used to run the test with ccdash. Example:")
+        print("    --shell '/bin/sh -c'")
+        print("  --no-log")
+        print("    Do not generate log files. By default log files will be generated")
+        print("    and put in 'logs' dir.")
+        print("")
+        print("  run.py-OPTIONS are applicable here")
         sys.exit(0)
     elif sys.argv[0] == '-r' or sys.argv[0] == '--resume':
         if len(sys.argv) > 1:
@@ -139,7 +139,7 @@ while len(sys.argv):
     elif sys.argv[0] == '--list':
         sys.argv.pop(0)
         for t in tests:
-              print t
+              print(t)
         sys.exit(0)
     elif sys.argv[0] == '--list-xml':
         sys.argv.pop(0)
@@ -151,7 +151,7 @@ while len(sys.argv):
             if len(sys.argv):
                 c = " ".join(sys.argv) + " "
             tcmd = PYTHON + ' run.py ' + c + t
-            print '\t\t<Test name="%s" cmd="%s" wdir="tests/pjsua" />' % (tname, tcmd)
+            print('\t\t<Test name="%s" cmd="%s" wdir="tests/pjsua" />' % (tname, tcmd))
         sys.exit(0)
     elif sys.argv[0] == '-s' or sys.argv[0] == '--shell':
         if len(sys.argv) > 1:
@@ -194,7 +194,7 @@ for pat in excluded_tests:
 total_cnt = len(tests)
 for t in tests:
     if resume_script!="" and t.find(resume_script)==-1:
-        print "Skipping " + t +".."
+        print("Skipping " + t +"..")
         total_cnt = total_cnt - 1
         continue
     resume_script=""
@@ -218,23 +218,23 @@ for t in tests:
         t1 = time.time()
         if ret != 0:
             dur = int(t1 - t0)
-            print " failed!! [" + str(dur) + "s]"
+            print(" failed!! [" + str(dur) + "s]")
             if (i < retry_num + 1):
                 continue
             if with_log:
-                lines = open(logname, "r").readlines()
-                print ''.join(lines)
-                print "Log file: '" + logname + "'."
+                lines = open(logname, "r", encoding='utf-8').readlines()
+                print(''.join(lines))
+                print("Log file: '" + logname + "'.")
             fails_cnt += 1
         else:
             dur = int(t1 - t0)
-            print " ok [" + str(dur) + "s]"
+            print(" ok [" + str(dur) + "s]")
             break
     tests_cnt += 1
 
 if fails_cnt == 0:
-    print "All " + str(tests_cnt) + " tests completed successfully"
+    print("All " + str(tests_cnt) + " tests completed successfully")
 else:
-    print str(tests_cnt) + " tests completed, " +  str(fails_cnt) + " test(s) failed"
+    print(str(tests_cnt) + " tests completed, " +  str(fails_cnt) + " test(s) failed")
 
 sys.exit(fails_cnt)

@@ -302,8 +302,8 @@ void vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, const char *title)
 
                 st_len += (tmp_len + 2);
                 if (*capnames)
-                    strcat(capnames, ", ");
-                strcat(capnames, capname);
+                    pj_ansi_strxcat(capnames, ", ", sizeof(capnames));
+                pj_ansi_strxcat(capnames, capname, sizeof(capnames));
             }
         }
     }
@@ -322,8 +322,8 @@ void vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, const char *title)
 
             st_len += (tmp_len + 2);
             if (*formats)
-                strcat(formats, ", ");
-            strcat(formats, vfi->name);
+                pj_ansi_strxcat(formats, ", ", sizeof(formats));
+            pj_ansi_strxcat(formats, vfi->name, sizeof(formats));
         }
     }
 

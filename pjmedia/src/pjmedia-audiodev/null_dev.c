@@ -142,8 +142,8 @@ static pj_status_t null_factory_init(pjmedia_aud_dev_factory *f)
                                   sizeof(struct null_audio_dev_info));
     ndi = &nf->dev_info[0];
     pj_bzero(ndi, sizeof(*ndi));
-    strcpy(ndi->info.name, "null device");
-    strcpy(ndi->info.driver, "null");
+    pj_ansi_strxcpy(ndi->info.name, "null device", sizeof(ndi->info.name));
+    pj_ansi_strxcpy(ndi->info.driver, "null", sizeof(ndi->info.driver));
     ndi->info.input_count = 1;
     ndi->info.output_count = 1;
     ndi->info.default_samples_per_sec = 16000;

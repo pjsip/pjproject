@@ -584,6 +584,8 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     int len, max_len;
     pj_status_t status;
 
+    pj_grp_lock_acquire( stream->grp_lock );
+
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
 
@@ -664,6 +666,9 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
             stream->rtcp_tx_err_cnt = 0;
         }
     }
+
+    pj_grp_lock_release( stream->grp_lock );
+
     return status;
 }
 
@@ -1720,7 +1725,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
                pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
                pjmedia_fourcc_name(pi->fmt.id, fourcc_name),
                (dir==PJMEDIA_DIR_ENCODING?"->":"<-"),
-               info->codec_info.encoding_name.slen,
+               (int)info->codec_info.encoding_name.slen,
                info->codec_info.encoding_name.ptr,
                pi->fmt.det.vid.fps.num, pi->fmt.det.vid.fps.denum,
                pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum));
@@ -2186,7 +2191,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &stream->rtcp);
 
     /* Send RTCP BYE (also SDES) */
-    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && stream->grp_lock && !stream->rtcp_sdes_bye_disabled) {
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
     }
 
@@ -2355,6 +2360,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream)
     }
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Modify codec parameter.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_vid_stream_modify_codec_param(pjmedia_vid_stream *stream,
+                                      const pjmedia_vid_codec_param *param)
+{
+    PJ_ASSERT_RETURN(stream && param, PJ_EINVAL);
+
+    return pjmedia_vid_codec_modify(stream->codec, param);
 }
 
 

@@ -472,7 +472,8 @@ static pj_status_t silk_enum_codecs(pjmedia_codec_factory *factory,
     max = *count;
     *count = 0;
 
-    for (i = 0; i<PJ_ARRAY_SIZE(silk_factory.silk_param) && *count<max; ++i)
+    for (i = 0; i<(int)PJ_ARRAY_SIZE(silk_factory.silk_param) && *count<max;
+         ++i)
     {
         silk_param *sp = &silk_factory.silk_param[i];
 

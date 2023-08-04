@@ -274,6 +274,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     /* Get codec framesize and avg bitrate for each mode. */
     for (i=0; i<PJ_ARRAY_SIZE(spx_factory.speex_param); ++i) {
         status = get_speex_info(&spx_factory.speex_param[i]);
+        PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, goto on_error);
     }
 
     /* Get the codec manager. */

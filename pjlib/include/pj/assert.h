@@ -70,10 +70,10 @@
  */
 //#if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK != 0
 #define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    \
-            do { \
+            { \
                 pj_assert(expr); \
                 if (!(expr)) exec_on_fail; \
-            } while (0)
+            }
 //#else
 //#   define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    pj_assert(expr)
 //#endif

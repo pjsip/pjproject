@@ -298,6 +298,8 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
 
     TRACE_((THIS_FILE, "\nData received: %d bytes", size));
 
+    if (data == NULL)
+        return PJ_FALSE;
     if (hreq->state == ABORTING || hreq->state == IDLE)
         return PJ_FALSE;
 
@@ -324,7 +326,7 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
                 return PJ_FALSE;
             }
             /* Keep the data if we do not get the whole response header */
-            *remainder = size;
+            if (remainder) *remainder = size;
         } else {
             hreq->state = READING_DATA;
             if (st != PJ_SUCCESS) {
@@ -1040,7 +1042,8 @@ static pj_status_t start_http_req(pj_http_req *http_req,
         http_req->resolved = PJ_TRUE;
     }
 
-    status = pj_sock_socket(http_req->param.addr_family, pj_SOCK_STREAM(), 
+    status = pj_sock_socket(http_req->param.addr_family,
+                            pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(),
                             0, &sock);
     if (status != PJ_SUCCESS)
         goto on_return; // error creating socket
@@ -1142,6 +1145,7 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
      */
     pj_str_t user_pass;
     pj_http_header_elmt *phdr;
+    pj_status_t status;
     int len;
 
     /* Use send buffer to store userid ":" password */
@@ -1164,8 +1168,10 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
 
     pj_strcpy2(&phdr->value, "Basic ");
     len -= (int)phdr->value.slen;
-    pj_base64_encode((pj_uint8_t*)user_pass.ptr, (int)user_pass.slen,
-                     phdr->value.ptr + phdr->value.slen, &len);
+    status = pj_base64_encode((pj_uint8_t*)user_pass.ptr, (int)user_pass.slen,
+                              phdr->value.ptr + phdr->value.slen, &len);
+    if (status != PJ_SUCCESS)
+        return status;
     phdr->value.slen += len;
 
     return PJ_SUCCESS;
@@ -1454,14 +1460,12 @@ static void restart_req_with_auth(pj_http_req *hreq)
 
     /* If credential specifies specific scheme, make sure they match */
     if (cred->scheme.slen && pj_stricmp(&chal->scheme, &cred->scheme)) {
-        status = PJ_ENOTSUP;
         TRACE_((THIS_FILE, "Error: auth schemes mismatch"));
         goto on_error;
     }
 
     /* If credential specifies specific realm, make sure they match */
     if (cred->realm.slen && pj_stricmp(&chal->realm, &cred->realm)) {
-        status = PJ_ENOTSUP;
         TRACE_((THIS_FILE, "Error: auth realms mismatch"));
         goto on_error;
     }

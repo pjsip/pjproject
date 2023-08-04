@@ -108,6 +108,19 @@ typedef pj_int64_t pj_off_t;
 typedef pj_ssize_t pj_off_t;
 #endif
 
+/**
+ * Generic unsigned integer types.
+ *
+ * This is a 64 bit unsigned integer if the system support it, otherwise
+ * this is a 32 bit unsigned integer.
+ */
+#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+typedef pj_uint64_t pj_uint_t;
+#else
+typedef pj_uint32_t pj_uint_t;
+#endif
+
+
 /* ************************************************************************* */
 /*
  * Data structure types.
@@ -284,6 +297,17 @@ typedef int pj_exception_id_t;
  * Length of object names.
  */
 #define PJ_MAX_OBJ_NAME 32
+
+/** 
+ * We need to tell the compiler that the function takes printf style
+ * arguments, so the compiler can check the code more carefully and
+ * generate the appropriate warnings, if necessary.
+ */
+#if defined(__GNUC__) || defined(__clang__)
+#  define PJ_PRINT_FUNC_DECOR(idx) __attribute__((format (printf, idx, idx+1)))
+#else
+#  define PJ_PRINT_FUNC_DECOR(idx)
+#endif
 
 /* ************************************************************************* */
 /*

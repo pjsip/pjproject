@@ -31,7 +31,11 @@
 #define RTP_LEN     PJMEDIA_MAX_MRU
 
 /* Maximum size of incoming RTCP packet */
-#define RTCP_LEN    600
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#   define RTCP_LEN    PJMEDIA_MAX_MRU
+#else
+#   define RTCP_LEN    600
+#endif
 
 /* Maximum pending write operations */
 #define MAX_PENDING 4
@@ -236,7 +240,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
     si.rtp_sock = si.rtcp_sock = PJ_INVALID_SOCKET;
 
     /* Create RTP socket */
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &si.rtp_sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &si.rtp_sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -252,7 +256,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
 
 
     /* Create RTCP socket */
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &si.rtcp_sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &si.rtcp_sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 

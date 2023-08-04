@@ -113,6 +113,7 @@ struct pj_ssl_sock_t
     pj_ioqueue_op_key_t   shutdown_op_key;
     pj_timer_entry        timer;
     pj_status_t           verify_status;
+    pj_status_t           handshake_status;
 
     pj_bool_t             is_closing;
     unsigned long         last_err;

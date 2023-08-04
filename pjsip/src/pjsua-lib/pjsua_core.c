@@ -373,6 +373,9 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->register_on_acc_add = PJ_TRUE;
     cfg->mwi_expires = PJSIP_MWI_DEFAULT_EXPIRES;
 
+    cfg->ipv6_sip_use = PJSUA_IPV6_ENABLED_NO_PREFERENCE;
+    cfg->ipv6_media_use = PJSUA_IPV6_ENABLED_PREFER_IPV4;
+
     cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
     cfg->ip_change_cfg.shutdown_tp = PJ_TRUE;
     cfg->ip_change_cfg.hangup_calls = PJ_FALSE;
@@ -480,7 +483,7 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
      *  transport layer. So don't try to access tp_info when the module
      *  has lower priority than transport layer.
      */
-    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:\n"
+    PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s %s:\n"
                          "%.*s\n"
                          "--end msg--",
                          (tdata->buf.cur - tdata->buf.start),
@@ -660,6 +663,17 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_bool_t processed = PJ_FALSE;
 
+    if (pjsip_tsx_detect_merged_requests(rdata)) {
+        PJ_LOG(4, (THIS_FILE, "Merged request detected"));
+
+        /* Respond with 482 (Loop Detected) */
+        pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+                            PJSIP_SC_LOOP_DETECTED, NULL,
+                            NULL, NULL, NULL);
+
+        return PJ_TRUE;
+    }
+
     PJSUA_LOCK();
 
     if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) {
@@ -745,7 +759,7 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
 
     /* If output log file is desired, create the file: */
     if (pjsua_var.log_cfg.log_filename.slen) {
-        unsigned flags = PJ_O_WRONLY;
+        unsigned flags = PJ_O_WRONLY | PJ_O_CLOEXEC;
         flags |= pjsua_var.log_cfg.log_file_flags;
         status = pj_file_open(pjsua_var.pool, 
                               pjsua_var.log_cfg.log_filename.ptr,
@@ -765,8 +779,12 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
     }
 
     /* Enable SIP message logging */
-    if (pjsua_var.log_cfg.msg_logging)
-        pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_msg_logger);
+    if (pjsua_var.log_cfg.msg_logging) {
+        status = pjsip_endpt_register_module(pjsua_var.endpt,
+                                             &pjsua_msg_logger);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     return PJ_SUCCESS;
 }
@@ -1257,7 +1275,9 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         goto on_error;
 
     /* Register OPTIONS handler */
-    pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_options_handler);
+    status = pjsip_endpt_register_module(pjsua_var.endpt,
+                                         &pjsua_options_handler);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Add OPTIONS in Allow header */
     pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_ALLOW,
@@ -2357,7 +2377,7 @@ static pj_status_t create_sip_udp_sock(int af,
     }
 
     /* Create socket */
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "socket() error", status);
         return status;
@@ -2369,8 +2389,12 @@ static pj_status_t create_sip_udp_sock(int af,
                                 2, THIS_FILE, "SIP UDP socket");
 
     /* Apply sockopt, if specified */
-    if (cfg->sockopt_params.cnt)
+    if (cfg->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &cfg->sockopt_params);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "setsockopt) error", status);
+        }
+    }
 
     /* Bind socket */
     status = pj_sock_bind(sock, &bind_addr, pj_sockaddr_get_len(&bind_addr));
@@ -2556,7 +2580,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
         if (status != PJ_SUCCESS)
             goto on_return;
 
-        pj_ansi_strcpy(hostbuf, addr_string(&pub_addr));
+        pj_ansi_strxcpy(hostbuf, addr_string(&pub_addr), sizeof(hostbuf));
         addr_name.host = pj_str(hostbuf);
         addr_name.port = pj_sockaddr_get_port(&pub_addr);
 
@@ -2576,8 +2600,8 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
         pjsua_var.tpdata[id].local_name = tp->local_name;
         pjsua_var.tpdata[id].data.tp = tp;
         pj_sockaddr_cp(&pjsua_var.tpdata[id].pub_addr, &pub_addr);
-        if (cfg->bound_addr.slen)
-            pjsua_var.tpdata[id].has_bound_addr = PJ_TRUE;
+        if (cfg->bound_addr.slen || cfg->public_addr.slen)
+            pjsua_var.tpdata[id].has_cfg_addr = PJ_TRUE;
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
 
@@ -3024,7 +3048,7 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_start(pjsua_transport_id id,
         int af = pjsip_transport_type_get_af(factory->type);
 
         if (cfg->port)
-            pj_sockaddr_set_port(&bind_addr, (pj_uint16_t)cfg->port);
+            pj_sockaddr_init(af, &bind_addr, NULL, (pj_uint16_t)cfg->port);
 
         if (cfg->bound_addr.slen) {
             status = pj_sockaddr_set_str_addr(af, 
@@ -3039,6 +3063,7 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_start(pjsua_transport_id id,
         }
 
         /* Set published name */
+        pj_bzero(&addr_name, sizeof(pjsip_host_port));
         if (cfg->public_addr.slen)
             addr_name.host = cfg->public_addr;
 
@@ -3188,30 +3213,36 @@ void pjsua_parse_media_type( pj_pool_t *pool,
 
 
 /*
- * Internal function to init transport selector from transport id.
+ * Internal function to init transport selector based on account's config.
  */
-void pjsua_init_tpselector(pjsua_transport_id tp_id,
+void pjsua_init_tpselector(pjsua_acc_id acc_id,
                            pjsip_tpselector *sel)
 {
-    pjsua_transport_data *tpdata;
-    unsigned flag;
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
     pj_bzero(sel, sizeof(*sel));
-    if (tp_id == PJSUA_INVALID_ID)
-        return;
 
-    PJ_ASSERT_RETURN(tp_id >= 0 && 
-                     tp_id < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata), );
-    tpdata = &pjsua_var.tpdata[tp_id];
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+        pjsua_transport_data *tpdata;
+        unsigned flag;
 
-    flag = pjsip_transport_get_flag_from_type(tpdata->type);
+        PJ_ASSERT_RETURN(acc->cfg.transport_id >= 0 && 
+                         acc->cfg.transport_id <
+                         (int)PJ_ARRAY_SIZE(pjsua_var.tpdata), );
+        tpdata = &pjsua_var.tpdata[acc->cfg.transport_id];
 
-    if (flag & PJSIP_TRANSPORT_DATAGRAM) {
-        sel->type = PJSIP_TPSELECTOR_TRANSPORT;
-        sel->u.transport = tpdata->data.tp;
-    } else {
-        sel->type = PJSIP_TPSELECTOR_LISTENER;
-        sel->u.listener = tpdata->data.factory;
+        flag = pjsip_transport_get_flag_from_type(tpdata->type);
+
+        if (flag & PJSIP_TRANSPORT_DATAGRAM) {
+            sel->type = PJSIP_TPSELECTOR_TRANSPORT;
+            sel->u.transport = tpdata->data.tp;
+        } else {
+            sel->type = PJSIP_TPSELECTOR_LISTENER;
+            sel->u.listener = tpdata->data.factory;
+        }
+    } else if (acc->cfg.ipv6_sip_use != PJSUA_IPV6_ENABLED_NO_PREFERENCE) {
+        sel->type = PJSIP_TPSELECTOR_IP_VER;
+        sel->u.ip_ver = (pjsip_tpselector_ip_ver)acc->cfg.ipv6_sip_use;
     }
 }
 
@@ -3305,7 +3336,7 @@ PJ_DEF(pj_status_t) pjsua_verify_url(const char *c_url)
     if (!pool) return PJ_ENOMEM;
 
     url = (char*) pj_pool_alloc(pool, len+1);
-    pj_ansi_strcpy(url, c_url);
+    pj_ansi_strxcpy(url, c_url, len+1);
 
     p = pjsip_parse_uri(pool, url, len, 0);
 
@@ -3329,7 +3360,7 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     if (!pool) return PJ_ENOMEM;
 
     url = (char*) pj_pool_alloc(pool, len+1);
-    pj_ansi_strcpy(url, c_url);
+    pj_ansi_strxcpy(url, c_url, len+1);
 
     p = pjsip_parse_uri(pool, url, len, 0);
     if (!p || (pj_stricmp2(pjsip_uri_get_scheme(p), "sip") != 0 &&
@@ -3751,13 +3782,13 @@ static pj_status_t handle_ip_change_on_acc()
 
                 pjsip_regc_get_info(next_acc->regc, &tmp_regc_info);
                 if (transport == tmp_regc_info.transport) {
-                    char tmp_buf[4];
+                    char tmp_buf[32];
 
                     pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), " #%d", j);
                     if (pj_ansi_strlen(acc_id) + pj_ansi_strlen(tmp_buf) <
                         sizeof(acc_id))
                     {
-                        pj_ansi_strcat(acc_id, tmp_buf);
+                        pj_ansi_strxcat(acc_id, tmp_buf, sizeof(acc_id));
                     }
 
                     shut_acc_ids[shut_acc_cnt++] = j;
@@ -3857,7 +3888,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
     }
 
     PJ_PERROR(3,(THIS_FILE, status, "Listener %.*s restart",
-                 tp_info.info.slen, tp_info.info.ptr));
+                 (int)tp_info.info.slen, tp_info.info.ptr));
 
     if (status != PJ_SUCCESS && (restart_lis_delay > 0)) {
         /* Try restarting again, with delay. */
@@ -3866,7 +3897,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
                               restart_lis_delay);
 
         PJ_LOG(3,(THIS_FILE, "Retry listener %.*s restart in %d ms",
-                  tp_info.info.slen, tp_info.info.ptr, restart_lis_delay));
+                  (int)tp_info.info.slen, tp_info.info.ptr, restart_lis_delay));
 
         status = PJ_SUCCESS;
     } else {

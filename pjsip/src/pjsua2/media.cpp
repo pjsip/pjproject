@@ -126,7 +126,6 @@ AudioMediaTransmitParam::AudioMediaTransmitParam()
 AudioMedia::AudioMedia() 
 : Media(PJMEDIA_TYPE_AUDIO), id(PJSUA_INVALID_ID), mediaPool(NULL)
 {
-
 }
 
 void AudioMedia::registerMediaPort(MediaPort port) PJSUA2_THROW(Error)
@@ -174,7 +173,7 @@ void AudioMedia::registerMediaPort2(MediaPort port, pj_pool_t *pool)
     Endpoint::instance().mediaAdd(*this);
 }
 
-void AudioMedia::unregisterMediaPort()
+void AudioMedia::unregisterMediaPort() PJSUA2_THROW(Error)
 {
     if (id != PJSUA_INVALID_ID) {
         pjsua_conf_remove_port(id);
@@ -266,6 +265,88 @@ AudioMedia* AudioMedia::typecastFromMedia(Media *media)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+AudioMediaPort::AudioMediaPort()
+: pool(NULL)
+{
+}
+
+AudioMediaPort::~AudioMediaPort()
+{
+    if (pool) {
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
+        pj_pool_release(pool);
+        pool = NULL;
+    }
+}
+
+static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
+{
+    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    MediaFrame frame_;
+
+    frame_.size = frame->size;
+    mport->onFrameRequested(frame_);
+    frame->type = frame_.type;
+    frame->size = PJ_MIN(frame_.buf.size(), frame_.size);
+
+#if ((defined(_MSVC_LANG) && _MSVC_LANG <= 199711L) || __cplusplus <= 199711L)
+    /* C++98 does not have Vector::data() */
+    if (frame->size > 0)
+        pj_memcpy(frame->buf, &frame_.buf[0], frame->size);
+#else
+    /* Newer than C++98 */
+    pj_memcpy(frame->buf, frame_.buf.data(), frame->size);
+#endif
+
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
+{
+    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    MediaFrame frame_;
+
+    frame_.type = frame->type;
+    frame_.buf.assign((char *)frame->buf, ((char *)frame->buf) + frame->size);
+    frame_.size = frame->size;
+    mport->onFrameReceived(frame_);
+
+    return PJ_SUCCESS;
+}
+
+void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
+                                PJSUA2_THROW(Error)
+{
+    pj_str_t name_;
+    pjmedia_format fmt_;
+
+    if (pool) {
+        PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
+
+    pool = pjsua_pool_create( "amport%p", 512, 512);
+    if (!pool) {
+        PJSUA2_RAISE_ERROR(PJ_ENOMEM);
+    }
+
+    /* Init port. */
+    pj_bzero(&port, sizeof(port));
+    pj_strdup2_with_null(pool, &name_, name.c_str());
+    fmt_ = fmt.toPj();
+    pjmedia_port_info_init2(&port.info, &name_,
+                            PJMEDIA_SIG_CLASS_APP ('A', 'M', 'P'),
+                            PJMEDIA_DIR_ENCODING_DECODING, &fmt_);
+
+    port.port_data.pdata = this;
+    port.put_frame = &put_frame;
+    port.get_frame = &get_frame;
+
+    registerMediaPort2(&port, pool);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 AudioMediaPlayer::AudioMediaPlayer()
 : playerId(PJSUA_INVALID_ID)
 {
@@ -275,7 +356,7 @@ AudioMediaPlayer::AudioMediaPlayer()
 AudioMediaPlayer::~AudioMediaPlayer()
 {
     if (playerId != PJSUA_INVALID_ID) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_player_destroy(playerId);
     }
 }
@@ -418,7 +499,7 @@ AudioMediaRecorder::AudioMediaRecorder()
 AudioMediaRecorder::~AudioMediaRecorder()
 {
     if (recorderId != PJSUA_INVALID_ID) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_recorder_destroy(recorderId);
     }
 }
@@ -466,7 +547,7 @@ ToneGenerator::ToneGenerator()
 ToneGenerator::~ToneGenerator()
 {
     if (tonegen) {
-        unregisterMediaPort();
+        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjmedia_port_destroy(tonegen);
         tonegen = NULL;
     }
@@ -625,6 +706,7 @@ void ToneGenerator::setDigitMap(const ToneDigitMapVector &digit_map)
 ///////////////////////////////////////////////////////////////////////////////
 void AudioDevInfo::fromPj(const pjmedia_aud_dev_info &dev_info)
 {
+    id = dev_info.id;
     name = dev_info.name;
     inputCount = dev_info.input_count;
     outputCount = dev_info.output_count;
@@ -666,7 +748,7 @@ DevAudioMedia::~DevAudioMedia()
 {
     /* Avoid removing this port (conf port id=0) from conference */
     this->id = PJSUA_INVALID_ID;
-    unregisterMediaPort();
+    PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -681,7 +763,13 @@ AudDevManager::~AudDevManager()
 {
     // At this point, devMedia should have been cleaned up by Endpoint,
     // as AudDevManager destructor is called after Endpoint destructor.
-    //delete devMedia;
+#if DEPRECATED_FOR_TICKET_2232
+    // Starting from ticket #2232, Endpoint no longer cleans up media.
+    if (devMedia) {
+        delete devMedia;
+        devMedia = NULL;
+    }
+#endif
     
     clearAudioDevList();
 }
@@ -714,6 +802,7 @@ void AudDevManager::setCaptureDev(int capture_dev) const PJSUA2_THROW(Error)
 {    
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.capture_dev = capture_dev;
     
@@ -733,6 +822,7 @@ void AudDevManager::setPlaybackDev(int playback_dev) const PJSUA2_THROW(Error)
 {
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.playback_dev = playback_dev;
 
@@ -799,6 +889,7 @@ void AudDevManager::setSndDevMode(unsigned mode) const PJSUA2_THROW(Error)
 {    
     pjsua_snd_dev_param param;
 
+    pjsua_snd_dev_param_default(&param);
     PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.mode = mode;
     PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );
@@ -1104,7 +1195,7 @@ ExtraAudioDevice::ExtraAudioDevice (int playdev, int recdev) :
 
 ExtraAudioDevice::~ExtraAudioDevice()
 {
-    close();
+    PJSUA2_CATCH_IGNORE( close() );
 }
 
 void ExtraAudioDevice::open()
@@ -1152,7 +1243,7 @@ bool ExtraAudioDevice::isOpened()
     return (id != PJSUA_INVALID_ID);
 }
 
-void ExtraAudioDevice::close()
+void ExtraAudioDevice::close() PJSUA2_THROW(Error)
 {
     /* Unregister from the conference bridge */
     id = PJSUA_INVALID_ID;
@@ -1312,10 +1403,9 @@ void VideoPreviewOpParam::fromPj(const pjsua_vid_preview_param &prm)
     this->rendId                    = prm.rend_id;
     this->show                      = PJ2BOOL(prm.show);
     this->windowFlags               = prm.wnd_flags;
-    this->format.id                 = prm.format.id;
-    this->format.type               = prm.format.type;
     this->window.type               = prm.wnd.type;
     this->window.handle.window      = prm.wnd.info.window;
+    this->format.fromPj(prm.format);
 #else
     PJ_UNUSED_ARG(prm);
 #endif
@@ -1329,10 +1419,9 @@ pjsua_vid_preview_param VideoPreviewOpParam::toPj() const
     param.rend_id           = this->rendId;
     param.show              = this->show;
     param.wnd_flags         = this->windowFlags;
-    param.format.id         = this->format.id;
-    param.format.type       = this->format.type;
     param.wnd.type          = this->window.type;
     param.wnd.info.window   = this->window.handle.window;
+    param.format            = this->format.toPj();
 #endif
     return param;
 }
@@ -1823,7 +1912,9 @@ void CodecParam::fromPj(const pjmedia_codec_param &param)
     info.maxBps = param.info.max_bps;
     info.maxRxFrameSize = param.info.max_rx_frame_size;
     info.frameLen = param.info.frm_ptime;
+    info.frameLenDenum = param.info.frm_ptime_denum;
     info.encFrameLen = param.info.enc_ptime;
+    info.encFrameLenDenum = param.info.enc_ptime_denum;
     info.pcmBitsPerSample = param.info.pcm_bits_per_sample;
     info.pt = param.info.pt;
     info.fmtId = param.info.fmt_id;
@@ -1853,7 +1944,9 @@ pjmedia_codec_param CodecParam::toPj() const
     param.info.max_bps= (pj_uint32_t)info.maxBps;
     param.info.max_rx_frame_size = info.maxRxFrameSize;
     param.info.frm_ptime = (pj_uint16_t)info.frameLen;
+    param.info.frm_ptime_denum = (pj_uint16_t)info.frameLenDenum;
     param.info.enc_ptime = (pj_uint16_t)info.encFrameLen;
+    param.info.enc_ptime_denum = (pj_uint16_t)info.encFrameLenDenum;
     param.info.pcm_bits_per_sample = (pj_uint8_t)info.pcmBitsPerSample;
     param.info.pt = (pj_uint8_t)info.pt;
     param.info.fmt_id = info.fmtId;
@@ -1880,6 +1973,7 @@ pjmedia_codec_opus_config CodecOpusConfig::toPj() const
     config.sample_rate = sample_rate;
     config.channel_cnt = channel_cnt;
     config.frm_ptime = frm_ptime;
+    config.frm_ptime_denum = frm_ptime_denum;
     config.bit_rate = bit_rate;
     config.packet_loss = packet_loss;
     config.complexity = complexity;
@@ -1893,6 +1987,7 @@ void CodecOpusConfig::fromPj(const pjmedia_codec_opus_config &config)
     sample_rate = config.sample_rate;
     channel_cnt = config.channel_cnt;
     frm_ptime = config.frm_ptime;
+    frm_ptime_denum = config.frm_ptime_denum;
     bit_rate = config.bit_rate;
     packet_loss = config.packet_loss;
     complexity = config.complexity;

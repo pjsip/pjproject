@@ -380,6 +380,9 @@ struct TransportConfig : public PersistentObject
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qosParam fields since this is more portable.
      *
+     * For TLS transport, this field will be ignored, the QoS traffic type
+     * can be set via tlsConfig.
+     *
      * Default is QoS not set.
      */
     pj_qos_type         qosType;
@@ -388,6 +391,9 @@ struct TransportConfig : public PersistentObject
      * Set the low level QoS parameters to the transport. This is a lower
      * level operation than setting the \a qosType field and may not be
      * supported on all platforms.
+     *
+     * For TLS transport, this field will be ignored, the low level QoS
+     * parameters can be set via tlsConfig.
      *
      * Default is QoS not set.
      */
@@ -594,7 +600,9 @@ struct TsxStateEventSrc
     pj_status_t     status;         /**< Transport error status.    */
     GenericData     data;           /**< Generic data.              */
 
-    TsxStateEventSrc() : status() {}
+    TsxStateEventSrc()
+    : timer(NULL), status(PJ_SUCCESS), data(NULL)
+    {}
 };
 
 /**
@@ -766,6 +774,11 @@ struct SipHeader
 
 public:
     /**
+     * Default constructor.
+     */
+    SipHeader();
+
+    /**
      * Initiaize from PJSIP header.
      */
     void fromPj(const pjsip_hdr *) PJSUA2_THROW(Error);
@@ -805,6 +818,8 @@ struct SipMultipartPart
     string              body;
 
 public:
+    SipMultipartPart();
+    
     /**
      * Initiaize from PJSIP's pjsip_multipart_part.
      */

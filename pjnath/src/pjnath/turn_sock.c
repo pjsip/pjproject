@@ -328,7 +328,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
     }
 
     /* Session lock */
-    if (setting && setting->grp_lock) {
+    if (setting->grp_lock) {
         turn_sock->grp_lock = setting->grp_lock;
     } else {
         status = pj_grp_lock_create(pool, NULL, &turn_sock->grp_lock);
@@ -468,7 +468,7 @@ static void timer_cb(pj_timer_heap_t *th, pj_timer_entry *e)
 static void show_err(pj_turn_sock *turn_sock, const char *title,
                      pj_status_t status)
 {
-    PJ_PERROR(4,(turn_sock->obj_name, status, title));
+    PJ_PERROR(4,(turn_sock->obj_name, status, "%s", title));
 }
 
 /* On error, terminate session */
@@ -769,6 +769,11 @@ static pj_bool_t on_connect_complete(pj_turn_sock *turn_sock,
         status = pj_ssl_sock_start_read(turn_sock->ssl_sock, turn_sock->pool,
                                         turn_sock->setting.max_pkt_size, 0);
 #endif
+    if (status != PJ_SUCCESS) {
+        sess_fail(turn_sock, "Error in start_read", status);
+        pj_grp_lock_release(turn_sock->grp_lock);
+        return PJ_FALSE;
+    }
 
     /* Init send_key */
     pj_ioqueue_op_key_init(&turn_sock->send_key, sizeof(turn_sock->send_key));
@@ -1224,6 +1229,7 @@ static void turn_on_state(pj_turn_session *sess,
             sock_type = pj_SOCK_DGRAM();
         else
             sock_type = pj_SOCK_STREAM();
+        sock_type |= pj_SOCK_CLOEXEC();
 
         cfg_bind_addr = &turn_sock->setting.bound_addr;
         max_bind_retry = MAX_BIND_RETRY;
@@ -1609,17 +1615,17 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
     pj_status_t status;
     unsigned i;
 
+    if (turn_sock == NULL) {
+        /* We've been destroyed */
+        return;
+    }
+
     PJ_ASSERT_ON_FAIL(turn_sock->conn_type == PJ_TURN_TP_TCP &&
                       turn_sock->alloc_param.peer_conn_type == PJ_TURN_TP_TCP,
                       return);
 
     PJ_LOG(5,(turn_sock->pool->obj_name, "Connection attempt from peer %s",
               pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3)));
-
-    if (turn_sock == NULL) {
-        /* We've been destroyed */
-        return;
-    }
 
     pj_grp_lock_acquire(turn_sock->grp_lock);
 
@@ -1667,7 +1673,7 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
     new_conn->state = DATACONN_STATE_INITSOCK;
 
     /* Init socket */
-    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM(), 0, &sock);
+    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS)
         goto on_return;
 
@@ -1901,7 +1907,7 @@ static void turn_on_connect_complete(pj_turn_session *sess,
     new_conn->state = DATACONN_STATE_INITSOCK;
 
     /* Init socket */
-    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM(), 0, &sock);
+    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS)
         goto on_return;
 

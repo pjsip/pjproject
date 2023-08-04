@@ -176,6 +176,44 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
 }
 
 
+/* Read the WAVE file until we find chunk with certain ID */
+static pj_status_t read_wav_until(struct file_reader_port *fport,
+                                  pj_uint32_t id,
+                                  pjmedia_wave_subchunk *chunk)
+{
+    for (;;) {
+        pjmedia_wave_subchunk subchunk;
+        pj_ssize_t size_read = 8;
+        pj_off_t size_to_read;
+        pj_status_t status;
+
+        status = pj_file_read(fport->fd, &subchunk, &size_read);
+        if (status != PJ_SUCCESS || size_read != 8)
+            return PJMEDIA_EWAVETOOSHORT;
+
+        *chunk = subchunk;
+
+        /* Normalize endianness */
+        PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&subchunk);
+
+        /* Break if this is chunk that contains the desired ID */
+        if (subchunk.id == id) {
+            break;
+        }
+
+        /* Otherwise skip the chunk contents */
+        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len,
+                                         return PJMEDIA_ENOTVALIDWAVE;);
+        size_to_read = subchunk.len;
+
+        status = pj_file_setpos(fport->fd, size_to_read, PJ_SEEK_CUR);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Create WAVE player port.
  */
@@ -194,6 +232,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     pj_off_t pos;
     pj_str_t name;
     unsigned samples_per_frame;
+    pjmedia_wave_subchunk chunk;
     pj_status_t status = PJ_SUCCESS;
 
 
@@ -229,12 +268,13 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     }
 
     /* Open file. */
-    status = pj_file_open( pool, filename, PJ_O_RDONLY, &fport->fd);
+    status = pj_file_open(pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC,
+                          &fport->fd);
     if (status != PJ_SUCCESS)
         return status;
 
-    /* Read the file header plus fmt header only. */
-    size_to_read = size_read = sizeof(wave_hdr) - 8;
+    /* Read the RIFF file header only. */
+    size_to_read = size_read = sizeof(wave_hdr.riff_hdr);
     status = pj_file_read( fport->fd, &wave_hdr, &size_read);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
@@ -252,17 +292,34 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     
     /* Validate WAVE file. */
     if (wave_hdr.riff_hdr.riff != PJMEDIA_RIFF_TAG ||
-        wave_hdr.riff_hdr.wave != PJMEDIA_WAVE_TAG ||
-        wave_hdr.fmt_hdr.fmt != PJMEDIA_FMT_TAG)
+        wave_hdr.riff_hdr.wave != PJMEDIA_WAVE_TAG)
     {
         pj_file_close(fport->fd);
         TRACE_((THIS_FILE, 
-                "actual value|expected riff=%x|%x, wave=%x|%x fmt=%x|%x",
+                "actual value|expected riff=%x|%x, wave=%x|%x",
                 wave_hdr.riff_hdr.riff, PJMEDIA_RIFF_TAG,
-                wave_hdr.riff_hdr.wave, PJMEDIA_WAVE_TAG,
-                wave_hdr.fmt_hdr.fmt, PJMEDIA_FMT_TAG));
+                wave_hdr.riff_hdr.wave, PJMEDIA_WAVE_TAG));
         return PJMEDIA_ENOTVALIDWAVE;
     }
+
+    /* Read the WAVE file until we find 'fmt ' chunk. */
+    status = read_wav_until(fport, PJMEDIA_FMT_TAG, &chunk);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+        return status;
+    }
+
+    pj_memcpy(&wave_hdr.fmt_hdr, &chunk, sizeof(chunk));
+
+    /* Read the rest of `fmt ` chunk. */
+    size_read = sizeof(wave_hdr.fmt_hdr) - sizeof(chunk);
+    status = pj_file_read(fport->fd, &wave_hdr.fmt_hdr.fmt_tag, &size_read);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+        return status;
+    }
+
+    pjmedia_wave_hdr_file_to_host(&wave_hdr);
 
     /* Validate format and its attributes (i.e: bits per sample, block align) */
     switch (wave_hdr.fmt_hdr.fmt_tag) {
@@ -307,37 +364,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
         }
     }
 
-    /* Repeat reading the WAVE file until we have 'data' chunk */
-    for (;;) {
-        pjmedia_wave_subchunk subchunk;
-        size_read = 8;
-        status = pj_file_read(fport->fd, &subchunk, &size_read);
-        if (status != PJ_SUCCESS || size_read != 8) {
-            pj_file_close(fport->fd);
-            return PJMEDIA_EWAVETOOSHORT;
-        }
-
-        /* Normalize endianness */
-        PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&subchunk);
-
-        /* Break if this is "data" chunk */
-        if (subchunk.id == PJMEDIA_DATA_TAG) {
-            wave_hdr.data_hdr.data = PJMEDIA_DATA_TAG;
-            wave_hdr.data_hdr.len = subchunk.len;
-            break;
-        }
-
-        /* Otherwise skip the chunk contents */
-        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len, 
-                      pj_file_close(fport->fd); return PJMEDIA_ENOTVALIDWAVE;);
-        size_to_read = subchunk.len;
-
-        status = pj_file_setpos(fport->fd, size_to_read, PJ_SEEK_CUR);
-        if (status != PJ_SUCCESS) {
-            pj_file_close(fport->fd);
-            return status;
-        }
+    /* Read the WAVE file until we find 'data ' chunk */
+    status = read_wav_until(fport, PJMEDIA_DATA_TAG, &chunk);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+        return status;
     }
+
+    PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&chunk);
+    pj_memcpy(&wave_hdr.data_hdr, &chunk, sizeof(chunk));
 
     /* Current file position now points to start of data */
     status = pj_file_getpos(fport->fd, &pos);
@@ -393,7 +428,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* samples_per_frame must be smaller than bufsize (because get_frame()
      * doesn't handle this case).
      */
-    if (samples_per_frame * fport->bytes_per_sample >= fport->bufsize) {
+    if (samples_per_frame * fport->bytes_per_sample > fport->bufsize) {
         pj_file_close(fport->fd);
         return PJ_EINVAL;
     }

@@ -468,7 +468,7 @@ static int txdata_test_uri_params(void)
     }
     msgbuf[len] = '\0';
 
-    PJ_LOG(5,(THIS_FILE, "%d bytes request created:--begin-msg--\n"
+    PJ_LOG(5,(THIS_FILE, "%ld bytes request created:--begin-msg--\n"
                          "%s\n"
                          "--end-msg--", len, msgbuf));
 

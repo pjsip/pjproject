@@ -1,11 +1,11 @@
 import time
-import imp
 import sys
 import inc_const as const
+import inc_util as util
 from inc_cfg import *
 
 # Load configuration
-cfg_file = imp.load_source("cfg_file", ARGS[1])
+cfg_file = util.load_module_from_file("cfg_file", ARGS[1])
 
 
 # Test body function

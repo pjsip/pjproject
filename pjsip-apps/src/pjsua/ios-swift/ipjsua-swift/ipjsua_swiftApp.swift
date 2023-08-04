@@ -22,14 +22,17 @@
 
 import SwiftUI
 
-class VidInfo: ObservableObject {
+class PjsipVars: ObservableObject {
+    @Published var calling = false
+    var dest: String = "sip:test@sip.pjsip.org"
+    var call_id: pjsua_call_id = PJSUA_INVALID_ID.rawValue
     /* Video window */
     @Published var vid_win:UIView? = nil
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     static let Shared = AppDelegate()
-    var vinfo = VidInfo()
+    var pjsip_vars = PjsipVars()
 }
 
 @main
@@ -66,11 +69,11 @@ struct ipjsua_swiftApp: App {
                                         &tcp_cfg, &transport_id);
 
         /* Init account config */
-        let id = strdup("Test<sip:test@pjsip.org>");
+        let id = strdup("Test<sip:test@sip.pjsip.org>");
         let username = strdup("test");
         let passwd = strdup("pwd");
         let realm = strdup("*");
-        let registrar = strdup("sip:pjsip.org");
+        let registrar = strdup("sip:sip.pjsip.org");
         let proxy = strdup("sip:sip.pjsip.org;transport=tcp");
 
         var acc_cfg = pjsua_acc_config();
@@ -100,19 +103,22 @@ struct ipjsua_swiftApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(AppDelegate.Shared.vinfo)
+                .environmentObject(AppDelegate.Shared.pjsip_vars)
                 .preferredColorScheme(.light)
         }
     }
 }
 
-private func on_call_state(call_id: pjsua_call_id, e: UnsafeMutablePointer<pjsip_event>?) {
+private func on_call_state(call_id: pjsua_call_id,
+                           e: UnsafeMutablePointer<pjsip_event>?)
+{
     var ci = pjsua_call_info();
     pjsua_call_get_info(call_id, &ci);
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
         /* UIView update must be done in the main thread */
         DispatchQueue.main.sync {
-            AppDelegate.Shared.vinfo.vid_win = nil;
+            AppDelegate.Shared.pjsip_vars.vid_win = nil;
+            AppDelegate.Shared.pjsip_vars.calling = false;
         }
     }
 }
@@ -124,13 +130,13 @@ private func tupleToArray<Tuple, Value>(tuple: Tuple) -> [Value] {
     }
 }
 
-private func on_call_media_state(call_id: pjsua_call_id) {
+private func on_call_media_state(call_id: pjsua_call_id)
+{
     var ci = pjsua_call_info();
     pjsua_call_get_info(call_id, &ci);
+    let media: [pjsua_call_media_info] = tupleToArray(tuple: ci.media);
 
     for mi in 0...ci.media_cnt {
-        let media: [pjsua_call_media_info] = tupleToArray(tuple: ci.media);
-
         if (media[Int(mi)].status == PJSUA_CALL_MEDIA_ACTIVE ||
             media[Int(mi)].status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
         {
@@ -153,7 +159,7 @@ private func on_call_media_state(call_id: pjsua_call_id) {
 
                     /* UIView update must be done in the main thread */
                     DispatchQueue.main.sync {
-                        AppDelegate.Shared.vinfo.vid_win = vid_win;
+                        AppDelegate.Shared.pjsip_vars.vid_win = vid_win;
                     }
                 }
                 break;

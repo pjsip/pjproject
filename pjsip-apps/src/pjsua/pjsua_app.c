@@ -599,7 +599,7 @@ static pjsip_redirect_op call_on_redirected(pjsua_call_id call_id,
         len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, target, uristr, 
                               sizeof(uristr));
         if (len < 1) {
-            pj_ansi_strcpy(uristr, "--URI too long--");
+            pj_ansi_strxcpy(uristr, "--URI too long--", sizeof(uristr));
         }
 
         PJ_LOG(3,(THIS_FILE, "Call %d is being redirected to %.*s. "
@@ -1713,7 +1713,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -1778,7 +1778,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -1846,7 +1846,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -1972,8 +1972,10 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
 
     /* Start console refresh thread */
     if (stdout_refresh > 0) {
-        pj_thread_create(app_config.pool, "stdout", &stdout_refresh_proc,
-                         NULL, 0, 0, &stdout_refresh_thread);
+        status = pj_thread_create(app_config.pool, "stdout", 
+                                  &stdout_refresh_proc,
+                                  NULL, 0, 0, &stdout_refresh_thread);
+        PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
     }
 
     status = pjsua_start();

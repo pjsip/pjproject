@@ -329,7 +329,8 @@ PJ_DEF(pj_status_t) pjsip_transport_register_type( unsigned tp_flag,
     }
 
     transport_names[i].port = (pj_uint16_t)def_port;
-    pj_ansi_strcpy(transport_names[i].name_buf, tp_name);
+    pj_ansi_strxcpy(transport_names[i].name_buf, tp_name,
+                    sizeof(transport_names[i].name_buf));
     transport_names[i].name = pj_str(transport_names[i].name_buf);
     transport_names[i].flag = tp_flag;
 
@@ -439,8 +440,9 @@ PJ_DEF(void) pjsip_tpselector_add_ref(pjsip_tpselector *sel)
 {
     if (sel->type == PJSIP_TPSELECTOR_TRANSPORT && sel->u.transport != NULL)
         pjsip_transport_add_ref(sel->u.transport);
-    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL)
+    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL) {
         ; /* Hmm.. looks like we don't have reference counter for listener */
+    }
 }
 
 
@@ -451,8 +453,9 @@ PJ_DEF(void) pjsip_tpselector_dec_ref(pjsip_tpselector *sel)
 {
     if (sel->type == PJSIP_TPSELECTOR_TRANSPORT && sel->u.transport != NULL)
         pjsip_transport_dec_ref(sel->u.transport);
-    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL)
+    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL) {
         ; /* Hmm.. looks like we don't have reference counter for listener */
+    }
 }
 
 
@@ -647,7 +650,7 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
     }
 
     if (len < 1 || len >= (int)sizeof(info_buf)) {
-        return (char*)obj_name;
+        return "MSG TOO LONG";
     }
 
     info = (char*) pj_pool_alloc(pool, len+1);
@@ -754,7 +757,7 @@ PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
     if (rdata->msg_info.info)
         return rdata->msg_info.info;
 
-    pj_ansi_strcpy(obj_name, "rdata");
+    pj_ansi_strxcpy(obj_name, "rdata", sizeof(obj_name));
     pj_ansi_snprintf(obj_name+5, sizeof(obj_name)-5, "%p", rdata);
 
     rdata->msg_info.info = get_msg_info(rdata->tp_info.pool, obj_name,
@@ -1694,6 +1697,11 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
         prm->tp_sel->u.transport)
     {
         const pjsip_transport *tp = prm->tp_sel->u.transport;
+        /* If transport selector is specified, we can use the transport's
+         * address instead of using the address obtained from
+         * get_net_interface().
+         */
+        /*
         if (prm->local_if) {
             status = get_net_interface((pjsip_transport_type_e)tp->key.type,
                                        &prm->dst_host, &tmp_str);
@@ -1702,7 +1710,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
             pj_strdup(pool, &prm->ret_addr, &tmp_str);
             prm->ret_port = pj_sockaddr_get_port(&tp->local_addr);
             prm->ret_tp = tp;
-        } else {
+        } else */
+        {
             pj_strdup(pool, &prm->ret_addr, &tp->local_name.host);
             prm->ret_port = (pj_uint16_t)tp->local_name.port;
         }
@@ -1711,13 +1720,19 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
     } else if (prm->tp_sel && prm->tp_sel->type == PJSIP_TPSELECTOR_LISTENER &&
                prm->tp_sel->u.listener)
     {
+        /* If transport selector is specified, we can use the listener's
+         * address instead of using the address obtained from
+         * get_net_interface().
+         */
+        /*
         if (prm->local_if) {
             status = get_net_interface(prm->tp_sel->u.listener->type,
                                        &prm->dst_host, &tmp_str);
             if (status != PJ_SUCCESS)
                 goto on_return;
             pj_strdup(pool, &prm->ret_addr, &tmp_str);
-        } else {
+        } else */
+        {
             pj_strdup(pool, &prm->ret_addr,
                       &prm->tp_sel->u.listener->addr_name.host);
         }
@@ -1899,7 +1914,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
      */
     //pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
     if (pj_atomic_get(mgr->tdata_counter) != 0) {
-        PJ_LOG(3,(THIS_FILE, "Warning: %d transmit buffer(s) not freed!",
+        PJ_LOG(3,(THIS_FILE, "Warning: %ld transmit buffer(s) not freed!",
                   pj_atomic_get(mgr->tdata_counter)));
     }
 #endif
@@ -2088,15 +2103,17 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
              * which were sent to keep NAT bindings.
              */
             if (tmp.slen) {
-                PJ_LOG(1, (THIS_FILE, 
-                      "Error processing %d bytes packet from %s %s:%d %.*s:\n"
-                      "%.*s\n"
-                      "-- end of packet.",
+                PJ_LOG(2, (THIS_FILE,
+                      "Dropping %d bytes packet from %s %s:%d %.*s\n",
                       msg_fragment_size,
                       rdata->tp_info.transport->type_name,
-                      rdata->pkt_info.src_name, 
+                      rdata->pkt_info.src_name,
                       rdata->pkt_info.src_port,
-                      (int)tmp.slen, tmp.ptr,
+                      (int)tmp.slen, tmp.ptr));
+                PJ_LOG(4, (THIS_FILE,
+                      "Dropped packet:"
+                      "%.*s\n"
+                      "-- end of packet.",
                       (int)msg_fragment_size,
                       rdata->msg_info.msg_buf));
             }
@@ -2316,6 +2333,15 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                 TRACE_((THIS_FILE, "Listener type in tpsel not matched"));
                 return PJSIP_ETPNOTSUITABLE;
             }
+        } else if (sel && sel->type == PJSIP_TPSELECTOR_IP_VER) {
+            if ((sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV4_ONLY &&
+                 pjsip_transport_type_get_af(type) != pj_AF_INET()) ||
+                (sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV6_ONLY &&
+                 pjsip_transport_type_get_af(type) != pj_AF_INET6()))
+            {
+                TRACE_((THIS_FILE, "Address type in tpsel not matched"));
+                return PJSIP_ETPNOTSUITABLE;
+            }
         }
 
         if (!sel || sel->disable_connection_reuse == PJ_FALSE) {
@@ -2523,7 +2549,7 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
     pj_lock_acquire(mgr->lock);
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
-    PJ_LOG(3,(THIS_FILE, " Outstanding transmit buffers: %d",
+    PJ_LOG(3,(THIS_FILE, " Outstanding transmit buffers: %ld",
               pj_atomic_get(mgr->tdata_counter)));
 #endif
 
@@ -2551,7 +2577,7 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
                 do {
                     pjsip_transport *tp_ref = tp_iter->tp;
 
-                    PJ_LOG(3, (THIS_FILE, "  %s %s%s%s%s(refcnt=%d%s)",
+                    PJ_LOG(3, (THIS_FILE, "  %s %s%s%s%s(refcnt=%ld%s)",
                                tp_ref->obj_name,
                                tp_ref->info,
                                (tp_ref->factory)?" listener[":"",

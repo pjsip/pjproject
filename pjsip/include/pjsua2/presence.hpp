@@ -172,8 +172,10 @@ public:
     /**
      * Default constructor
      */
-    BuddyInfo() : subState(PJSIP_EVSUB_STATE_UNKNOWN),
-                  subTermCode(PJSIP_SC_NULL)
+    BuddyInfo() 
+    : presMonitorEnabled(true),
+      subState(PJSIP_EVSUB_STATE_UNKNOWN),
+      subTermCode(PJSIP_SC_NULL)
     {}
                     
 

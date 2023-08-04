@@ -98,7 +98,11 @@ struct pjsip_transaction
     pjsip_method                method;         /**< The method.            */
     pj_int32_t                  cseq;           /**< The CSeq               */
     pj_str_t                    transaction_key;/**< Hash table key.        */
+    pj_str_t                    transaction_key2;/**< Hash table key (2)   
+                                                     for merged requests
+                                                     tsx lookup.            */
     pj_uint32_t                 hashed_key;     /**< Key's hashed value.    */
+    pj_uint32_t                 hashed_key2;    /**< Key's hashed value (2).*/
     pj_str_t                    branch;         /**< The branch Id.         */
 
     /*
@@ -298,6 +302,22 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uas2(pjsip_module *tsx_user,
                                            pjsip_transaction **p_tsx );
 
 /**
+ * Detect merged requests according to RFC 3261 section 8.2.2.2:
+ * If the request has no tag in the To header field, the function will
+ * check the request against ongoing transactions.  If the From tag,
+ * Call-ID, and CSeq exactly match those associated with an ongoing
+ * transaction, but the request does not match that transaction based
+ * on the matching rules described in section 17.2.3, the function
+ * will return that transaction.
+ *
+ * @param rdata     The received incoming request.
+ *
+ * @return          The matching transaction, if any, or NULL.
+ */
+PJ_DECL(pjsip_transaction *)
+pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata);
+
+/**
  * Lock/bind transaction to a specific transport/listener. This is optional,
  * as normally transport will be selected automatically based on the 
  * destination of the message upon resolver completion.
@@ -434,22 +454,48 @@ PJ_DECL(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx);
 PJ_DECL(pj_status_t) pjsip_tsx_set_timeout(pjsip_transaction *tsx,
                                            unsigned millisec);
 
+
 /**
  * Change timer values used by transaction layer. Currently scheduled
  * timers will not be changed. Any value set to 0 will be left
  * unchanged.
  *
- * @param t1 - Transaction T1 timeout, in msec
- * @param t2 - Transaction T2 timeout, in msec
- * @param t4 - Transaction completed timer for non-INVITE, in msec
- * @param td - Transaction completed timer for INVITE, in msec
+ * @param t1        Transaction T1 timeout, in msec
+ * @param t2        Transaction T2 timeout, in msec
+ * @param t4        Transaction completed timer for non-INVITE, in msec
+ * @param td        Transaction completed timer for INVITE, in msec
  */
-PJ_DECL(void) pjsip_tsx_set_timers(unsigned t1, unsigned t2, unsigned t4, unsigned td);
+PJ_DECL(void) pjsip_tsx_set_timers(unsigned t1, unsigned t2, unsigned t4,
+                                   unsigned td);
+
 
 /**
  * (Re)Initializes timer values from pjsip_cfg().
  */
 PJ_DECL(void) pjsip_tsx_initialize_timer_values(void);
+
+
+/**
+ * Set maximum retransmission count in transaction layer for outgoing
+ * requests. When retransmission counter reaches the specified number,
+ * the transaction will be considered timeout. This will affect any
+ * ongoing transactions immediately.
+ *
+ * By default (or when this is set to -1), retransmission number will
+ * not cause a transaction to be timeout, only the timer settings will
+ * cause transaction timeout. Also, this will not override the timer
+ * settings, i.e: if the timeout timer occurs before the maximum
+ * retransmission is reached, the transaction will still gets timeout.
+ *
+ * When this is set to zero or possitive number P, a transaction timeout
+ * will occur right before the retransmission number (P+1). For example,
+ * if this is set to 1 there will be two transmissions: the initial
+ * transmission and one retransmission, before the transaction gets timeout.
+ *
+ * @param max       Maximum retransmission count.
+ */
+PJ_DECL(void) pjsip_tsx_set_max_retransmit_count(int max);
+
 
 /**
  * Get the transaction instance in the incoming message. If the message

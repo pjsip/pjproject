@@ -905,7 +905,7 @@ static int main_func(int argc, char *argv[])
         PJ_LOG(2, (THIS_FILE, "Sending %dx%d %.*s @%.2ffps",
                    codec_param.enc_fmt.det.vid.size.w,
                    codec_param.enc_fmt.det.vid.size.h,
-                   codec_info->encoding_name.slen,
+                   (int)codec_info->encoding_name.slen,
                    codec_info->encoding_name.ptr,
                    (1.0*codec_param.enc_fmt.det.vid.fps.num/
                     codec_param.enc_fmt.det.vid.fps.denum)));
