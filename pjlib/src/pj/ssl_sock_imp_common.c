@@ -245,7 +245,14 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock, 
                                        pj_status_t status)
 {
+    pj_lock_acquire(ssock->write_mutex);
+    if (ssock->handshake_status != PJ_EUNKNOWN) {
+        pj_lock_release(ssock->write_mutex);
+        return (ssock->handshake_status == PJ_SUCCESS)? PJ_TRUE: PJ_FALSE;
+    }
     ssock->handshake_status = status;
+    pj_lock_release(ssock->write_mutex);
+
     /* Cancel handshake timer */
     if (ssock->timer.id == TIMER_HANDSHAKE_TIMEOUT) {
         pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);
@@ -1441,6 +1448,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     ssock->ssl_state = SSL_STATE_NULL;
     ssock->circ_buf_input.owner = ssock;
     ssock->circ_buf_output.owner = ssock;
+    ssock->handshake_status = PJ_EUNKNOWN;
     pj_list_init(&ssock->write_pending);
     pj_list_init(&ssock->write_pending_empty);
     pj_list_init(&ssock->send_pending);
