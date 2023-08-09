@@ -369,8 +369,9 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
         return;
     }
 
-    /* Only mark "good" packets */
-    ++sess->received;
+    /* Only mark "good" packets. Do this after we're no longer in probation. */
+    if (!seq_st.status.flag.probation)
+        ++sess->received;
 
     /* Calculate packet lost and loss periods.
      * We should not calculate packet lost here and do it when we're sending

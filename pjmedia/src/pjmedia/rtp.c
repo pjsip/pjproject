@@ -315,6 +315,7 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
     
     /* Init status */
     st.status.value = 0;
+    st.status.flag.probation = 0;
     st.diff = 0;
 
     /*
@@ -331,7 +332,8 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
             sess->probation--;
             sess->max_seq = seq;
             if (sess->probation == 0) {
-                st.status.flag.probation = 0;
+                /* Init base seq, as per the RFC 3550. */
+                sess->base_seq = seq;
             }
         } else {
 
