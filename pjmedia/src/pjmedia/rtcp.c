@@ -372,7 +372,11 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
     /* Only mark "good" packets */
     ++sess->received;
 
-    /* Calculate loss periods. */
+    /* Calculate packet lost and loss periods.
+     * We should not calculate packet lost here and do it when we're sending
+     * outbound RTCP RR.
+     */
+    /*
     if (seq_st.diff > 1) {
         unsigned count = seq_st.diff - 1;
         unsigned period;
@@ -380,16 +384,16 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
         period = count * sess->dec_pkt_size * 1000 / sess->clock_rate;
         period *= 1000;
 
-        /* Update packet lost. 
-         * The packet lost number will also be updated when we're sending
-         * outbound RTCP RR.
-         */
+        // Update packet lost. 
+        // The packet lost number will also be updated when we're sending
+        // outbound RTCP RR.
         sess->stat.rx.loss += (seq_st.diff - 1);
         TRACE_((sess->name, "%d packet(s) lost", seq_st.diff - 1));
 
-        /* Update loss period stat */
+        // Update loss period stat
         pj_math_stat_update(&sess->stat.rx.loss_period, period);
     }
+    */
 
 
     /*
@@ -991,12 +995,22 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     /* Total lost. */
     expected = pj_ntohl(rr->last_seq) - sess->seq_ctrl.base_seq;
 
-    /* This is bug: total lost already calculated on each incoming RTP!
-    if (expected >= sess->received)
-        sess->stat.rx.loss = expected - sess->received;
-    else
+    /* Calculate packet lost */
+    if (expected > sess->received) {
+        unsigned count = expected - sess->received;
+        unsigned period;
+
+        period = count * sess->dec_pkt_size * 1000 / sess->clock_rate;
+        period *= 1000;
+
+        sess->stat.rx.loss = count;
+        TRACE_((sess->name, "%d packet(s) lost", count));
+
+        /* Update loss period stat */
+        pj_math_stat_update(&sess->stat.rx.loss_period, period);
+    } else {
         sess->stat.rx.loss = 0;
-    */
+    }
 
     rr->total_lost_2 = (sess->stat.rx.loss >> 16) & 0xFF;
     rr->total_lost_1 = (sess->stat.rx.loss >> 8) & 0xFF;
