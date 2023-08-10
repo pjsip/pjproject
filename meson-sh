@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# *** Before use scenario please ensure that your enviroenment prepared ***
+#
+# Debian: $ sudo apt-get install python3 python3-pip ninja-build
+#         $ sudo python3 -m pip install -U meson
+
+BUILD_DIR=builddir
+
+# Step 1. Create build rules
+meson setup ${BUILD_DIR}
+
+# Step 2. Compile binary and library
+meson compile -C ${BUILD_DIR}
+
+# Step 3. Start unittest
+meson test -C ${BUILD_DIR}
