@@ -459,6 +459,16 @@
 #  define PJMEDIA_DTMF_DURATION_MSEC            200
 #endif
 
+/**
+ * The payload type number of the DTMF/telephone-event is set dynamically out-of-band. 
+ * In case that remote endpoint doesn't specify the the payload type number 
+ * in the SDP, the incoming DTMF might be ignored (bad RTP PT number). Set this as the 
+ * default payload type number for incoming DTMF/telephone-event if no payload type number
+ * is specified on the SDP.
+ */
+#ifndef PJMEDIA_DTMF_TEL_EVENT_RX_PT
+#  define PJMEDIA_DTMF_TEL_EVENT_RX_PT         -1
+#endif
 
 /**
  * Number of RTP packets received from different source IP address from the
