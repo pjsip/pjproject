@@ -304,7 +304,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 
 
     /* Get incomming payload type for telephone-events */
-    si->rx_event_pt = PJMEDIA_DTMF_TEL_EVENT_RX_PT;
+    si->rx_event_pt = -1;
     for (i=0; i<local_m->attr_count; ++i) {
         pjmedia_sdp_rtpmap r;
 

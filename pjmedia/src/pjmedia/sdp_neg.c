@@ -853,6 +853,14 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
     } else {
         /* Offer format priority based on answer format index/priority */
         unsigned offer_fmt_prior[PJMEDIA_MAX_SDP_FMT];
+#if defined(PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT) && \
+            PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT != 0
+
+        pj_bool_t has_tel_event = PJ_FALSE;
+        pjmedia_sdp_attr *tel_event_rtpmap = NULL, *tel_event_fmtp = NULL;
+        pj_str_t *tel_event_fmt = NULL;
+
+#endif
 
         /* Remove all format in the offer that has no matching answer */
         for (i=0; i<offer->desc.fmt_count;) {
@@ -908,6 +916,13 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                                                  offer, i, answer, j, 0) ==
                                 PJ_SUCCESS)
                             {
+#if defined(PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT) && \
+            PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT != 0
+
+                                if (pj_strcmp2(&or_.enc_name, "telephone-event") == 0) {
+                                    has_tel_event = PJ_TRUE;
+                                }
+#endif
                                 /* Match! */
                                 break;
                             }
@@ -921,16 +936,45 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                  * Remove it from our offer.
                  */
                 pjmedia_sdp_attr *a;
+#if defined(PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT) && \
+            PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT != 0
+
+                pj_bool_t is_tel_event = PJ_FALSE;
+
+#endif
 
                 /* Remove rtpmap associated with this format */
                 a = pjmedia_sdp_media_find_attr2(offer, "rtpmap", fmt);
-                if (a)
+                if (a) {
+
+#if defined(PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT) && \
+            PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT != 0
+
+                    pjmedia_sdp_rtpmap r;
+                    if (pjmedia_sdp_attr_get_rtpmap(a, &r) == PJ_SUCCESS) {
+                        if (pj_strcmp2(&r.enc_name, "telephone-event") == 0) {
+                            is_tel_event = PJ_TRUE;
+                            tel_event_rtpmap = a;
+                            tel_event_fmt = &offer->desc.fmt[i];
+                        }
+                    }
+
+#endif
                     pjmedia_sdp_media_remove_attr(offer, a);
+                }
 
                 /* Remove fmtp associated with this format */
                 a = pjmedia_sdp_media_find_attr2(offer, "fmtp", fmt);
-                if (a)
+                if (a) {
+#if defined(PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT) && \
+            PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT != 0
+
+                    if (is_tel_event)
+                        tel_event_fmtp = a;
+
+#endif
                     pjmedia_sdp_media_remove_attr(offer, a);
+                }
 
                 /* Remove this format from offer's array */
                 pj_array_erase(offer->desc.fmt, sizeof(offer->desc.fmt[0]),
@@ -947,6 +991,26 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
             /* No common codec in the answer! */
             return PJMEDIA_SDPNEG_EANSNOMEDIA;
         }
+
+#if defined(PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT) && \
+            PJMEDIA_SDP_NEG_USE_OFFER_TEL_EVENT != 0
+
+        if (!has_tel_event) {
+            /* There's no matching telephone-event, restore the last PT number/fmt from 
+             * local offer.
+             */
+            if (tel_event_rtpmap && tel_event_fmtp) {
+                pj_array_insert(offer->desc.fmt, sizeof(offer->desc.fmt[0]), 
+                                offer->desc.fmt_count, offer->desc.fmt_count, 
+                                tel_event_fmt);
+                ++offer->desc.fmt_count;
+                pjmedia_sdp_media_add_attr(offer, tel_event_rtpmap);
+                pjmedia_sdp_media_add_attr(offer, tel_event_fmtp);
+                offer_fmt_prior[i] = i;
+            }
+        }
+
+#endif
 
         /* Post process:
          * - Resort offer formats so the order match to the answer.
