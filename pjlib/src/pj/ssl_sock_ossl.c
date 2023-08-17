@@ -95,6 +95,11 @@
 #      define USING_BORINGSSL 0
 #endif
 
+/* Specify whether renegotiation is disable. */
+#ifndef SSL_DISABLE_RENEGOTIATION
+#       define SSL_DISABLE_RENEGOTIATION 0
+#endif
+
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
         && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 
@@ -1232,6 +1237,14 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                                   "context. Session reuse will not work."));
         }
     }
+
+#if SSL_DISABLE_RENEGOTIATION
+
+#ifdef SSL_OP_NO_RENEGOTIATION
+    ssl_opt |= SSL_OP_NO_RENEGOTIATION;
+#endif
+
+#endif
 
     if (ssl_opt)
         SSL_CTX_set_options(ctx, ssl_opt);
