@@ -4,6 +4,10 @@
 #
 # Debian: $ sudo apt-get install python3 python3-pip ninja-build
 #         $ sudo python3 -m pip install -U meson
+#
+# MacOS:  % brew install cmake
+#         % brew install pkg-config
+#         % brew install openssl
 
 BUILD_DIR=builddir
 

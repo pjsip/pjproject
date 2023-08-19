@@ -1,12 +1,5 @@
 project('pjproject', ['c', 'cpp'], version: '2.13.1')
 
-# -- Build and check --
-#
-# $ meson setup builddir
-# $ meson compile -C builddir
-# $ cd builddir & meson test
-#
-
 # TODO - config.status: creating pjlib/include/pj/compat/os_auto.h
 # TODO - config.status: creating pjlib/include/pj/compat/m_auto.h
 # TODO - config.status: creating pjmedia/include/pjmedia/config_auto.h
@@ -14,8 +7,7 @@ project('pjproject', ['c', 'cpp'], version: '2.13.1')
 # TODO - config.status: creating pjsip/include/pjsip/sip_autoconf.h
 
 #run_command('/usr/bin/touch', 'pjlib/include/pj/config_site.h', check : true)
-conf_data = configuration_data({
-})
+conf_data = configuration_data()
 configure_file(output : 'config_site.h',
                install       : true,
                install_dir   : 'pjlib/include/pj',
@@ -66,13 +58,25 @@ uuid_dep = dependency('uuid')
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : true)
 
-srtp2_dep = dependency('libsrtp2', required : true)
-add_global_arguments('-DPJMEDIA_HAS_SRTP=1', language : ['c', 'cpp'])
-add_global_arguments('-DPJMEDIA_EXTERNAL_SRTP=2', language : ['c', 'cpp'])
+#if srtp == 'system'
+  srtp2_dep = dependency('libsrtp2', required : true)
+  add_global_arguments('-DPJMEDIA_HAS_SRTP=1', language : ['c', 'cpp'])
+  add_global_arguments('-DPJMEDIA_EXTERNAL_SRTP=2', language : ['c', 'cpp'])
+#elsif srtp == 'external'
+  # TODO - add cisco external position...
+#else
+  # TODO - last chance use boundle srtp version... 
+#end
 
-speex_dep = dependency('speex', required : true)
-add_global_arguments('-DPJMEDIA_HAS_SPEEX_AEC=0', language : ['c', 'cpp'])
-add_global_arguments('-DPJMEDIA_HAS_SPEEX_CODEC=0', language : ['c', 'cpp'])
+#if speex == 'system'
+  speex_dep = dependency('speex', required : true)
+  add_global_arguments('-DPJMEDIA_HAS_SPEEX_AEC=0', language : ['c', 'cpp'])
+  add_global_arguments('-DPJMEDIA_HAS_SPEEX_CODEC=0', language : ['c', 'cpp'])
+#elsif speex == 'external'
+  # TODO - use https://gitlab.xiph.org/xiph/speex/-/blob/master/meson.build
+#else
+  # TODO - last chance use boundle speex version...
+#end
 
 add_global_arguments('-DPJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_LIBRESAMPLE', language : ['c', 'cpp'])
 
