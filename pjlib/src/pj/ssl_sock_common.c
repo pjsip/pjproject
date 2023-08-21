@@ -48,6 +48,7 @@ PJ_DEF(void) pj_ssl_sock_param_default(pj_ssl_sock_param *param)
 
     param->sockopt_ignore_error = PJ_TRUE;
     param->sock_cloexec = PJ_TRUE;
+    param->enable_renegotiation = PJ_TRUE;
 
     /* Security config */
     param->proto = PJ_SSL_SOCK_PROTO_DEFAULT;
