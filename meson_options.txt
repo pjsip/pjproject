@@ -1,0 +1,2 @@
+option('srtp', type : 'combo', choices : ['system', 'external', 'bundled'], value : 'system')
+option('speex', type : 'combo', choices : ['system', 'external', 'bundled'], value : 'system')

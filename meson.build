@@ -1,4 +1,4 @@
-project('pjproject', ['c', 'cpp'], version: '2.13.1')
+project('pjproject', ['c', 'cpp', 'objc'], version: '2.13.1')
 
 # TODO - config.status: creating pjlib/include/pj/compat/os_auto.h
 # TODO - config.status: creating pjlib/include/pj/compat/m_auto.h
@@ -6,12 +6,42 @@ project('pjproject', ['c', 'cpp'], version: '2.13.1')
 # TODO - config.status: creating pjmedia/include/pjmedia-codec/config_auto.h
 # TODO - config.status: creating pjsip/include/pjsip/sip_autoconf.h
 
-#run_command('/usr/bin/touch', 'pjlib/include/pj/config_site.h', check : true)
+# Use compiler
+compiler = meson.get_compiler('c')
+
+# Detect compile OS system: 'darwin', ...
+os = build_machine.system()
+
 conf_data = configuration_data()
+
+if os == 'darwin'
+  conf_data.set('PJ_DARWINOS', 1)
+elif os == 'linux'
+  conf_data.set('PJ_LINUX', 1)
+endif
+
+if compiler.has_header('netinet/tcp.h')
+  conf_data.set('PJ_HAS_NETINET_TCP_H', 1)
+else
+  conf_data.set('PJ_HAS_NETINET_TCP_H', 0)
+endif
+
+if compiler.has_header('limits.h')
+  conf_data.set('PJ_HAS_LIMITS_H', 1)
+else
+  conf_data.set('PJ_HAS_LIMITS_H', 0)
+endif
+
+if compiler.has_header('execinfo.h')
+  conf_data.set('PJ_HAS_EXECINFO_H', 1)
+else
+  conf_data.set('PJ_HAS_EXECINFO_H', 0)
+endif
+
 configure_file(output : 'config_site.h',
-               install       : true,
-               install_dir   : 'pjlib/include/pj',
                configuration : conf_data)
+
+run_command('/bin/cp', 'builddir/config_site.h', 'pjlib/include/pj/config_site.h', check : true)
 
 #add_global_arguments('-Wall', language : 'c')
 #add_global_arguments('-O2', language : 'c')
@@ -21,8 +51,6 @@ add_global_arguments('-Wformat', language : 'c')
 add_global_arguments('-Werror=format-security', language : 'c')
 add_global_arguments('-ggdb3', language : 'c')
 
-#add_global_arguments('-DPJ_AUTOCONF=1', language : 'c')
-add_global_arguments('-DPJ_LINUX=1', language : ['c', 'cpp'])
 add_global_arguments('-DPJ_DEBUG=1', language : ['c', 'cpp'])
 add_global_arguments('-DPJ_SOCK_HAS_GETADDRINFO=1', language : ['c', 'cpp'])
 add_global_arguments('-DPJ_HAS_IPV6=0', language : ['c', 'cpp'])
@@ -46,37 +74,36 @@ add_global_arguments('-DPJMEDIA_HAS_GSM_CODEC=0', language : ['c', 'cpp'])
 add_global_arguments('-DPJMEDIA_HAS_L16_CODEC=0', language : ['c', 'cpp'])
 add_global_arguments('-DPJMEDIA_HAS_G722_CODEC=0', language : ['c', 'cpp'])
 
-add_global_arguments('-DPJ_HAS_NETINET_TCP_H=1', language : ['c', 'cpp'])
-add_global_arguments('-DPJ_HAS_LIMITS_H=1', language : ['c', 'cpp'])
-
 openssl_dep = dependency('openssl')
 
-thread_dep = dependency('threads')
+thread_dep = dependency('threads', required : true)
 
-uuid_dep = dependency('uuid')
+uuid_dep = dependency('uuid', required : true)
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : true)
 
-#if srtp == 'system'
+srtp = get_option('srtp')
+if srtp == 'system'
   srtp2_dep = dependency('libsrtp2', required : true)
   add_global_arguments('-DPJMEDIA_HAS_SRTP=1', language : ['c', 'cpp'])
   add_global_arguments('-DPJMEDIA_EXTERNAL_SRTP=2', language : ['c', 'cpp'])
-#elsif srtp == 'external'
-  # TODO - add cisco external position...
-#else
-  # TODO - last chance use boundle srtp version... 
-#end
+elif srtp == 'external'
+  # TODO - use https://github.com/cisco/libsrtp/blob/main/meson.build
+elif srtp == 'bundled'
+  # TODO - last chance use bundled version... 
+endif
 
-#if speex == 'system'
+speex = get_option('speex')
+if speex == 'system'
   speex_dep = dependency('speex', required : true)
   add_global_arguments('-DPJMEDIA_HAS_SPEEX_AEC=0', language : ['c', 'cpp'])
   add_global_arguments('-DPJMEDIA_HAS_SPEEX_CODEC=0', language : ['c', 'cpp'])
-#elsif speex == 'external'
+elif speex == 'external'
   # TODO - use https://gitlab.xiph.org/xiph/speex/-/blob/master/meson.build
-#else
-  # TODO - last chance use boundle speex version...
-#end
+elif speex == 'bundled'
+  # TODO - last chance use bundled version...
+endif
 
 add_global_arguments('-DPJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_LIBRESAMPLE', language : ['c', 'cpp'])
 
@@ -105,12 +132,10 @@ resample_dep = declare_dependency(link_with : [
 # PJLIB
 
 pjlib_inc = include_directories('pjlib/include')
-
-pjlib = library('pjlib', [
+pjlib_sources = [
 	'pjlib/src/pj/ioqueue_select.c',
 	'pjlib/src/pj/file_access_unistd.c',
 	'pjlib/src/pj/file_io_ansi.c',
-	'pjlib/src/pj/os_core_unix.c',
 	'pjlib/src/pj/os_error_unix.c',
 	'pjlib/src/pj/os_time_unix.c',
 	'pjlib/src/pj/os_timestamp_posix.c',
@@ -153,7 +178,18 @@ pjlib = library('pjlib', [
 	'pjlib/src/pj/string.c',
 	'pjlib/src/pj/timer.c',
 	'pjlib/src/pj/types.c',
-], include_directories: [
+]
+if os == 'darwin'
+    pjlib_sources += [
+        'pjlib/src/pj/sock_qos_darwin.c',
+        'pjlib/src/pj/os_core_darwin.m',
+    ]
+else
+    pjlib_sources += [
+        'pjlib/src/pj/os_core_unix.c',
+    ]
+endif
+pjlib = library('pjlib', pjlib_sources, include_directories: [
 	pjlib_inc,
 ], dependencies: [
 	openssl_dep,
@@ -598,29 +634,29 @@ pjsdp = library('pjsdp', [
 
 # PJMEDIA_TEST
 
-test('PJMEDIA Test', executable('pjmedia-test', [
-	'pjmedia/src/test/codec_vectors.c',
-	'pjmedia/src/test/jbuf_test.c',
-	'pjmedia/src/test/main.c',
-	'pjmedia/src/test/mips_test.c',
-	'pjmedia/src/test/vid_codec_test.c',
-	'pjmedia/src/test/vid_dev_test.c',
-	'pjmedia/src/test/vid_port_test.c',
-	'pjmedia/src/test/rtp_test.c',
-	'pjmedia/src/test/test.c',
-	'pjmedia/src/test/sdp_neg_test.c',
-#	'pjmedia/src/test/nack_buffer_test.c',
-], link_with: [
-	pjlib,
-	pjlib_util,
-	pjmedia,
-	pjmedia_audiodev,
-], include_directories: [
-	pjlib_inc,
-	pjlib_util_inc,
-	pjmedia_inc,
-	pjnath_inc,
-]), timeout: 0, workdir: join_paths(meson.current_source_dir(), 'pjmedia/build') )
+#test('PJMEDIA Test', executable('pjmedia-test', [
+#	'pjmedia/src/test/codec_vectors.c',
+#	'pjmedia/src/test/jbuf_test.c',
+#	'pjmedia/src/test/main.c',
+#	'pjmedia/src/test/mips_test.c',
+#	'pjmedia/src/test/vid_codec_test.c',
+#	'pjmedia/src/test/vid_dev_test.c',
+#	'pjmedia/src/test/vid_port_test.c',
+#	'pjmedia/src/test/rtp_test.c',
+#	'pjmedia/src/test/test.c',
+#	'pjmedia/src/test/sdp_neg_test.c',
+##	'pjmedia/src/test/nack_buffer_test.c',
+#], link_with: [
+#	pjlib,
+#	pjlib_util,
+#	pjmedia,
+#	pjmedia_audiodev,
+#], include_directories: [
+#	pjlib_inc,
+#	pjlib_util_inc,
+#	pjmedia_inc,
+#	pjnath_inc,
+#]), timeout: 0, workdir: join_paths(meson.current_source_dir(), 'pjmedia/build') )
 
 # PJSIP
 

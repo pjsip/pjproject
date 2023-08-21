@@ -8,6 +8,9 @@
 # MacOS:  % brew install cmake
 #         % brew install pkg-config
 #         % brew install openssl
+#         % brew install srtp
+#         % brew install speex
+#         % brew install ninja
 
 BUILD_DIR=builddir
 
