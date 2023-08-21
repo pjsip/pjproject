@@ -52,6 +52,10 @@ add_global_arguments('-Werror=format-security', language : 'c')
 add_global_arguments('-ggdb3', language : 'c')
 
 add_global_arguments('-DPJ_DEBUG=1', language : ['c', 'cpp'])
+
+add_global_arguments('-DPJ_IS_BIG_ENDIAN=0', language : ['c', 'cpp', 'objc'])
+add_global_arguments('-DPJ_IS_LITTLE_ENDIAN=1', language : ['c', 'cpp', 'objc'])
+
 add_global_arguments('-DPJ_SOCK_HAS_GETADDRINFO=1', language : ['c', 'cpp'])
 add_global_arguments('-DPJ_HAS_IPV6=0', language : ['c', 'cpp'])
 add_global_arguments('-DPJ_SOCK_HAS_INET_PTON=0', language : ['c', 'cpp'])
@@ -73,6 +77,8 @@ add_global_arguments('-DPJMEDIA_HAS_ILBC_CODEC=0', language : ['c', 'cpp'])
 add_global_arguments('-DPJMEDIA_HAS_GSM_CODEC=0', language : ['c', 'cpp'])
 add_global_arguments('-DPJMEDIA_HAS_L16_CODEC=0', language : ['c', 'cpp'])
 add_global_arguments('-DPJMEDIA_HAS_G722_CODEC=0', language : ['c', 'cpp'])
+
+system_dep = []
 
 openssl_dep = dependency('openssl')
 
@@ -132,7 +138,8 @@ resample_dep = declare_dependency(link_with : [
 # PJLIB
 
 pjlib_inc = include_directories('pjlib/include')
-pjlib_sources = [
+if os == 'linux'
+    pjlib_sources = [
 	'pjlib/src/pj/ioqueue_select.c',
 	'pjlib/src/pj/file_access_unistd.c',
 	'pjlib/src/pj/file_io_ansi.c',
@@ -178,20 +185,68 @@ pjlib_sources = [
 	'pjlib/src/pj/string.c',
 	'pjlib/src/pj/timer.c',
 	'pjlib/src/pj/types.c',
-]
-if os == 'darwin'
-    pjlib_sources += [
-        'pjlib/src/pj/sock_qos_darwin.c',
-        'pjlib/src/pj/os_core_darwin.m',
+	'pjlib/src/pj/os_core_unix.c',
     ]
-else
-    pjlib_sources += [
-        'pjlib/src/pj/os_core_unix.c',
+elif os == 'darwin'
+    pjlib_sources = [
+	'pjlib/src/pj/ioqueue_select.c',
+	'pjlib/src/pj/file_access_unistd.c',
+	'pjlib/src/pj/file_io_ansi.c',
+	'pjlib/src/pj/os_core_unix.c',
+	'pjlib/src/pj/os_error_unix.c',
+	'pjlib/src/pj/os_time_unix.c',
+	'pjlib/src/pj/os_timestamp_posix.c',
+	'pjlib/src/pj/os_core_darwin.m',
+	'pjlib/src/pj/sock_qos_darwin.c',
+	'pjlib/src/pj/sock_qos_bsd.c',
+	'pjlib/src/pj/ssl_sock_apple.m',
+	'pjlib/src/pj/guid_darwin.c',
+	'pjlib/src/pj/addr_resolv_sock.c',
+	'pjlib/src/pj/log_writer_stdout.c',
+	'pjlib/src/pj/os_timestamp_common.c',
+	'pjlib/src/pj/pool_policy_malloc.c',
+	'pjlib/src/pj/sock_bsd.c',
+	'pjlib/src/pj/sock_select.c',
+	'pjlib/src/pj/activesock.c',
+	'pjlib/src/pj/array.c',
+	'pjlib/src/pj/config.c',
+	'pjlib/src/pj/ctype.c',
+	'pjlib/src/pj/errno.c',
+	'pjlib/src/pj/except.c',
+	'pjlib/src/pj/fifobuf.c',
+	'pjlib/src/pj/guid.c',
+	'pjlib/src/pj/hash.c',
+	'pjlib/src/pj/ip_helper_generic.c',
+	'pjlib/src/pj/list.c',
+	'pjlib/src/pj/lock.c',
+	'pjlib/src/pj/log.c',
+	'pjlib/src/pj/os_time_common.c',
+	'pjlib/src/pj/os_info.c',
+	'pjlib/src/pj/pool.c',
+	'pjlib/src/pj/pool_buf.c',
+	'pjlib/src/pj/pool_caching.c',
+	'pjlib/src/pj/pool_dbg.c',
+	'pjlib/src/pj/rand.c',
+	'pjlib/src/pj/rbtree.c',
+	'pjlib/src/pj/sock_common.c',
+	'pjlib/src/pj/sock_qos_common.c',
+	'pjlib/src/pj/ssl_sock_common.c',
+	'pjlib/src/pj/ssl_sock_ossl.c',
+	'pjlib/src/pj/ssl_sock_gtls.c',
+	'pjlib/src/pj/ssl_sock_dump.c',
+	'pjlib/src/pj/ssl_sock_darwin.c',
+	'pjlib/src/pj/string.c',
+	'pjlib/src/pj/timer.c',
+	'pjlib/src/pj/types.c',
     ]
+    system_dep += dependency('CoreFoundation')
+    system_dep += dependency('AppKit')
+    
 endif
 pjlib = library('pjlib', pjlib_sources, include_directories: [
 	pjlib_inc,
 ], dependencies: [
+	system_dep,
 	openssl_dep,
 	thread_dep,
 	uuid_dep,
