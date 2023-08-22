@@ -1582,16 +1582,25 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
     
     if (info->established) {
         info->cipher = ssl_get_cipher(ssock);
-
-        /* Verification status */
-        info->verify_status = ssock->verify_status;
     }
+
+    /* Verification status */
+    info->verify_status = ssock->verify_status;
 
     /* Last known SSL error code */
     info->last_native_err = ssock->last_err;
 
     /* Group lock */
     info->grp_lock = ssock->param.grp_lock;
+
+    /* Native SSL object */
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    {
+        ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+        info->native_ssl = ossock->ossl_ssl;
+    }
+#endif
 
     return PJ_SUCCESS;
 }
