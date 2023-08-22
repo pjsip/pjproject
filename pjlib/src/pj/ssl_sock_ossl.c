@@ -95,11 +95,6 @@
 #      define USING_BORINGSSL 0
 #endif
 
-/* Specify whether renegotiation is disable. */
-#ifndef SSL_DISABLE_RENEGOTIATION
-#       define SSL_DISABLE_RENEGOTIATION 0
-#endif
-
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
         && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 
