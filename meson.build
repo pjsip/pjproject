@@ -1,16 +1,16 @@
 project('pjproject', ['c', 'cpp', 'objc'], version: '2.13.1')
 
+# [+] - config.status: creating pjlib/include/pj/compat/os_auto.h
+# [+] - config.status: creating pjlib/include/pj/compat/m_auto.h
+# [+] - config.status: creating pjmedia/include/pjmedia/config_auto.h
+# [+] - config.status: creating pjmedia/include/pjmedia-codec/config_auto.h
+# [+] - config.status: creating pjsip/include/pjsip/sip_autoconf.h
+
 # Use compiler
 compiler = meson.get_compiler('c')
 
 # Detect compile OS system: 'darwin', ...
 os = build_machine.system()
-
-# [+] - config.status: creating pjlib/include/pj/compat/os_auto.h
-# [+] - config.status: creating pjlib/include/pj/compat/m_auto.h
-# [_] - config.status: creating pjmedia/include/pjmedia/config_auto.h
-# [-] - config.status: creating pjmedia/include/pjmedia-codec/config_auto.h
-# [-] - config.status: creating pjsip/include/pjsip/sip_autoconf.h
 
 # pjlib - os_auto.h
 os_auto = configuration_data()
@@ -45,7 +45,7 @@ os_auto.set('PJ_HAS_NETINET_IP_H', 1)
 if compiler.has_header('netinet/tcp.h')
   os_auto.set('PJ_HAS_NETINET_TCP_H', 1)
 endif
-if compiler.has_header('net_if.h')
+if compiler.has_header('net/if.h')
   os_auto.set('PJ_HAS_NET_IF_H', 1)
 endif
 os_auto.set('PJ_HAS_IFADDRS_H', 1)
