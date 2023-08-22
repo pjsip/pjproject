@@ -1,60 +1,180 @@
 project('pjproject', ['c', 'cpp', 'objc'], version: '2.13.1')
 
-# TODO - config.status: creating pjlib/include/pj/compat/os_auto.h
-# TODO - config.status: creating pjlib/include/pj/compat/m_auto.h
-# TODO - config.status: creating pjmedia/include/pjmedia/config_auto.h
-# TODO - config.status: creating pjmedia/include/pjmedia-codec/config_auto.h
-# TODO - config.status: creating pjsip/include/pjsip/sip_autoconf.h
-
 # Use compiler
 compiler = meson.get_compiler('c')
 
 # Detect compile OS system: 'darwin', ...
 os = build_machine.system()
 
+# [-] - config.status: creating pjlib/include/pj/compat/os_auto.h
+# [+] - config.status: creating pjlib/include/pj/compat/m_auto.h
+# [-] - config.status: creating pjmedia/include/pjmedia/config_auto.h
+# [-] - config.status: creating pjmedia/include/pjmedia-codec/config_auto.h
+# [-] - config.status: creating pjsip/include/pjsip/sip_autoconf.h
+
+# os_auto.h
+os_auto = configuration_data()
+os_auto.set_quoted('PJ_OS_NAME', os)
+if os == 'darwin'
+    os_auto.set('PJ_DARWINOS', 1)
+elif os == 'linux'
+    os_auto.set('PJ_LINUX', 1)
+endif
+if compiler.has_header('arpa/inet.h')
+    os_auto.set('PJ_HAS_ARPA_INET_H', 1)
+endif
+if compiler.has_header('assert.h')
+  os_auto.set('PJ_HAS_ASSERT_H', 1)
+endif
+os_auto.set('PJ_HAS_CTYPE_H', 1)
+if compiler.has_header('errno.h')
+    os_auto.set('PJ_HAS_ERRNO_H', 1)
+endif
+os_auto.set('PJ_HAS_FCNTL_H', 1)
+if compiler.has_header('limits.h')
+  os_auto.set('PJ_HAS_LIMITS_H', 1)
+endif
+#undef PJ_HAS_LINUX_SOCKET_H */
+if compiler.has_header('malloc.h')
+  os_auto.set('PJ_HAS_MALLOC_H', 1)
+endif
+os_auto.set('PJ_HAS_NETDB_H', 1)
+os_auto.set('PJ_HAS_NETINET_IN_SYSTM_H', 1)
+os_auto.set('PJ_HAS_NETINET_IN_H', 1)
+os_auto.set('PJ_HAS_NETINET_IP_H', 1)
+if compiler.has_header('netinet/tcp.h')
+  os_auto.set('PJ_HAS_NETINET_TCP_H', 1)
+endif
+if compiler.has_header('net_if.h')
+  os_auto.set('PJ_HAS_NET_IF_H', 1)
+endif
+os_auto.set('PJ_HAS_IFADDRS_H', 1)
+os_auto.set('PJ_HAS_INTTYPES_H', 1)
+if compiler.has_header('semaphore.h')
+  os_auto.set('PJ_HAS_SEMAPHORE_H', 1)
+  os_auto.set('PJ_HAS_SEMAPHORE', 1) # TODO - on win32 always is on...
+endif
+if compiler.has_header('setjmp.h')
+  os_auto.set('PJ_HAS_SETJMP_H', 1)
+endif
+if compiler.has_header('stdarg.h')
+  os_auto.set('PJ_HAS_STDARG_H', 1)
+endif
+if compiler.has_header('stddef.h')
+  os_auto.set('PJ_HAS_STDDEF_H', 1)
+endif
+if compiler.has_header('stdio.h')
+  os_auto.set('PJ_HAS_STDIO_H', 1)
+endif
+if compiler.has_header('stdint.h')
+  os_auto.set('PJ_HAS_STDINT_H', 1)
+endif
+if compiler.has_header('stdlib.h')
+  os_auto.set('PJ_HAS_STDLIB_H', 1)
+endif
+if compiler.has_header('string.h')
+  os_auto.set('PJ_HAS_STRING_H', 1)
+endif
+if compiler.has_header('sys/ioctl.h')
+  os_auto.set('PJ_HAS_SYS_IOCTL_H', 1)
+endif
+if compiler.has_header('sys/select.h')
+  os_auto.set('PJ_HAS_SYS_SELECT_H', 1)
+endif
+if compiler.has_header('sys/socket.h')
+  os_auto.set('PJ_HAS_SYS_SOCKET_H', 1)
+endif
+if compiler.has_header('sys/time.h')
+  os_auto.set('PJ_HAS_SYS_TIME_H', 1)
+endif
+if compiler.has_header('sys/timeb.h')
+  os_auto.set('PJ_HAS_SYS_TIMEB_H', 1)
+endif
+#define PJ_HAS_SYS_TYPES_H 1
+#define PJ_HAS_SYS_FILIO_H 1
+#define PJ_HAS_SYS_SOCKIO_H 1
+#define PJ_HAS_SYS_UTSNAME_H 1
+if compiler.has_header('time.h')
+  os_auto.set('PJ_HAS_TIME_H', 1)
+endif
+if compiler.has_header('unistd.h')
+  os_auto.set('PJ_HAS_UNISTD_H', 1)
+endif
+if compiler.has_header('execinfo.h')
+  os_auto.set('PJ_HAS_EXECINFO_H', 1)
+endif
+#undef PJ_HAS_MSWSOCK_H */
+#undef PJ_HAS_WINSOCK_H */
+#undef PJ_HAS_WINSOCK2_H */
+#undef PJ_HAS_WS2TCPIP_H */
+#define PJ_SOCK_HAS_IPV6_V6ONLY 1
+#define PJ_SOCK_HAS_INET_ATON 1
+#define PJ_SOCK_HAS_INET_PTON 1
+#define PJ_SOCK_HAS_INET_NTOP 1
+#define PJ_SOCK_HAS_GETADDRINFO 1
+#define PJ_SOCK_HAS_SOCKETPAIR 1
+#undef PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE */
+#undef PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE */
+#define PJ_SOCKADDR_HAS_LEN 1
+os_auto.set('PJ_HAS_SOCKLEN_T', 1)
+#define PJ_SELECT_NEEDS_NFDS 0
+#undef PJ_HAS_LINUX_EPOLL */
+os_auto.set('PJ_HAS_ERRNO_VAR', 1)
+os_auto.set('PJ_HAS_SO_ERROR', 1)
+os_auto.set('PJ_BLOCKING_ERROR_VAL', 'EAGAIN')
+os_auto.set('PJ_BLOCKING_CONNECT_ERROR_VAL', 'EINPROGRESS')
+os_auto.set('PJ_HAS_THREADS', 1)
+os_auto.set('PJ_HAS_HIGH_RES_TIMER', 1)
+#define PJ_HAS_MALLOC 1
+#   define PJ_OS_HAS_CHECK_STACK    0
+#define PJ_HAS_LOCALTIME_R 1
+#define PJ_NATIVE_STRING_IS_UNICODE 0
+#define PJ_POOL_ALIGNMENT 8
+os_auto.set('PJ_ATOMIC_VALUE_TYPE', 'long')
+if os == 'darwin'
+  os_auto.set('PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION', 1)
+  os_auto.set('PJ_SOCKADDR_USE_GETADDRINFO', 1)
+endif
+os_auto.set('PJ_EMULATE_RWMUTEX', 0)
+os_auto.set('PJ_THREAD_SET_STACK_SIZE', 0)
+os_auto.set('PJ_THREAD_ALLOCATE_STACK', 0)
+os_auto.set('PJ_HAS_SSL_SOCK', 1)
+os_auto.set('PJ_SSL_SOCK_IMP', 'PJ_SSL_SOCK_IMP_OPENSSL')
+#undef PJ_HAS_PTHREAD_NP_H */
+#define PJ_HAS_PTHREAD_SETNAME_NP 1
+#undef PJ_HAS_PTHREAD_SET_NAME_NP */
+#
+configure_file(output : 'os_auto.h', configuration : os_auto)
+run_command('/bin/cp', 'builddir/os_auto.h', 'pjlib/include/pj/compat/os_auto.h', check : true)
+
+# m_auto.h
+m_auto = configuration_data()
+m_auto.set_quoted('PJ_M_NAME', 'custom')
+m_auto.set('PJ_HAS_FLOATING_POINT', 1)
+m_auto.set('PJ_IS_BIG_ENDIAN', 0)
+m_auto.set('PJ_IS_LITTLE_ENDIAN', 1)
+m_auto.set('PJ_HAS_PENTIUM', 0) # TODO - ask developer about remove parameter...
+configure_file(output : 'm_auto.h', configuration : m_auto)
+run_command('/bin/cp', 'builddir/m_auto.h', 'pjlib/include/pj/compat/m_auto.h', check : true)
+
+# config-site.h
 conf_data = configuration_data()
 
-if os == 'darwin'
-  conf_data.set('PJ_DARWINOS', 1)
-elif os == 'linux'
-  conf_data.set('PJ_LINUX', 1)
-endif
 
-if compiler.has_header('netinet/tcp.h')
-  conf_data.set('PJ_HAS_NETINET_TCP_H', 1)
-else
-  conf_data.set('PJ_HAS_NETINET_TCP_H', 0)
-endif
 
-if compiler.has_header('limits.h')
-  conf_data.set('PJ_HAS_LIMITS_H', 1)
-else
-  conf_data.set('PJ_HAS_LIMITS_H', 0)
-endif
 
-if compiler.has_header('execinfo.h')
-  conf_data.set('PJ_HAS_EXECINFO_H', 1)
-else
-  conf_data.set('PJ_HAS_EXECINFO_H', 0)
-endif
 
 configure_file(output : 'config_site.h',
                configuration : conf_data)
 
 run_command('/bin/cp', 'builddir/config_site.h', 'pjlib/include/pj/config_site.h', check : true)
 
-#add_global_arguments('-Wall', language : 'c')
-#add_global_arguments('-O2', language : 'c')
-#add_global_arguments('-g', language : 'c')
 add_global_arguments('-fstack-protector-strong', language : 'c')
 add_global_arguments('-Wformat', language : 'c')
 add_global_arguments('-Werror=format-security', language : 'c')
 add_global_arguments('-ggdb3', language : 'c')
 
-add_global_arguments('-DPJ_DEBUG=1', language : ['c', 'cpp'])
-
-add_global_arguments('-DPJ_IS_BIG_ENDIAN=0', language : ['c', 'cpp', 'objc'])
-add_global_arguments('-DPJ_IS_LITTLE_ENDIAN=1', language : ['c', 'cpp', 'objc'])
+add_global_arguments('-DPJ_AUTOCONF=1', language : ['c', 'cpp', 'objc'])
 
 add_global_arguments('-DPJ_SOCK_HAS_GETADDRINFO=1', language : ['c', 'cpp'])
 add_global_arguments('-DPJ_HAS_IPV6=0', language : ['c', 'cpp'])
@@ -253,7 +373,8 @@ pjlib = library('pjlib', pjlib_sources, include_directories: [
 	m_dep,
 ])
 
-test('PJLIB Test', executable('pjlib-test', [
+if os == 'linux'
+    pjlib_test_sources = [
 	'pjlib/src/pjlib-test/main.c',
 	'pjlib/src/pjlib-test/activesock.c',
 	'pjlib/src/pjlib-test/atomic.c',
@@ -288,11 +409,54 @@ test('PJLIB Test', executable('pjlib-test', [
 	'pjlib/src/pjlib-test/udp_echo_srv_sync.c',
 	'pjlib/src/pjlib-test/udp_echo_srv_ioqueue.c',
 	'pjlib/src/pjlib-test/util.c',
-], include_directories: [
+    ]
+elif os == 'darwin'
+    pjlib_test_sources = [
+	'pjlib/src/pjlib-test/main.c',
+	'pjlib/src/pjlib-test/activesock.c',
+	'pjlib/src/pjlib-test/atomic.c',
+	'pjlib/src/pjlib-test/echo_clt.c',
+	'pjlib/src/pjlib-test/errno.c',
+	'pjlib/src/pjlib-test/exception.c',
+	'pjlib/src/pjlib-test/fifobuf.c',
+	'pjlib/src/pjlib-test/file.c',
+	'pjlib/src/pjlib-test/hash_test.c',
+	'pjlib/src/pjlib-test/ioq_perf.c',
+	'pjlib/src/pjlib-test/ioq_udp.c',
+	'pjlib/src/pjlib-test/ioq_stress_test.c',
+	'pjlib/src/pjlib-test/ioq_unreg.c',
+	'pjlib/src/pjlib-test/ioq_tcp.c',
+	'pjlib/src/pjlib-test/list.c',
+	'pjlib/src/pjlib-test/mutex.c',
+	'pjlib/src/pjlib-test/os.c',
+	'pjlib/src/pjlib-test/pool.c',
+	'pjlib/src/pjlib-test/pool_perf.c',
+	'pjlib/src/pjlib-test/rand.c',
+	'pjlib/src/pjlib-test/rbtree.c',
+	'pjlib/src/pjlib-test/select.c',
+	'pjlib/src/pjlib-test/sleep.c',
+	'pjlib/src/pjlib-test/sock.c',
+	'pjlib/src/pjlib-test/sock_perf.c',
+	'pjlib/src/pjlib-test/ssl_sock.c',
+	'pjlib/src/pjlib-test/string.c',
+	'pjlib/src/pjlib-test/test.c',
+	'pjlib/src/pjlib-test/thread.c',
+	'pjlib/src/pjlib-test/timer.c',
+	'pjlib/src/pjlib-test/timestamp.c',
+	'pjlib/src/pjlib-test/udp_echo_srv_sync.c',
+	'pjlib/src/pjlib-test/udp_echo_srv_ioqueue.c',
+	'pjlib/src/pjlib-test/util.c',
+    ]
+endif
+test('PJLIB Test', executable('pjlib-test', pjlib_test_sources,
+    include_directories: [
 	pjlib_inc,
-], link_with: [
+    ], link_with: [
 	pjlib,
-]), timeout: 0, workdir: join_paths(meson.current_source_dir(), 'pjmedia/build') )
+    ]),
+    timeout: 0,
+    workdir: join_paths(meson.current_source_dir(), 'pjmedia/build')
+)
 
 # PJLIB_UTIL
 
@@ -590,6 +754,7 @@ pjmedia = library('pjmedia', [
 	pjlib_util,
 	pjnath,
 ], dependencies: [
+	openssl_dep,
 	srtp2_dep,
 	speex_dep,
 	resample_dep,
@@ -750,6 +915,8 @@ pjsip = library('pjsip', [
 	pjlib_inc,
 	pjlib_util_inc,
 	pjsip_inc,
+], dependencies: [
+	openssl_dep,
 ])
 
 # PJSIP_SIMPLE
