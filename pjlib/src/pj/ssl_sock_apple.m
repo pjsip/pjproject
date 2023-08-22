@@ -576,6 +576,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
                                                 kSecImportItemIdentity);
+                identity = CFRetain(identity);
                 break;
             }
 #if !TARGET_OS_IPHONE
