@@ -6,13 +6,13 @@ compiler = meson.get_compiler('c')
 # Detect compile OS system: 'darwin', ...
 os = build_machine.system()
 
-# [-] - config.status: creating pjlib/include/pj/compat/os_auto.h
+# [+] - config.status: creating pjlib/include/pj/compat/os_auto.h
 # [+] - config.status: creating pjlib/include/pj/compat/m_auto.h
-# [-] - config.status: creating pjmedia/include/pjmedia/config_auto.h
+# [_] - config.status: creating pjmedia/include/pjmedia/config_auto.h
 # [-] - config.status: creating pjmedia/include/pjmedia-codec/config_auto.h
 # [-] - config.status: creating pjsip/include/pjsip/sip_autoconf.h
 
-# os_auto.h
+# pjlib - os_auto.h
 os_auto = configuration_data()
 os_auto.set_quoted('PJ_OS_NAME', os)
 if os == 'darwin'
@@ -147,7 +147,7 @@ os_auto.set('PJ_SSL_SOCK_IMP', 'PJ_SSL_SOCK_IMP_OPENSSL')
 configure_file(output : 'os_auto.h', configuration : os_auto)
 run_command('/bin/cp', 'builddir/os_auto.h', 'pjlib/include/pj/compat/os_auto.h', check : true)
 
-# m_auto.h
+# pjlib - m_auto.h
 m_auto = configuration_data()
 m_auto.set_quoted('PJ_M_NAME', 'custom')
 m_auto.set('PJ_HAS_FLOATING_POINT', 1)
@@ -157,17 +157,25 @@ m_auto.set('PJ_HAS_PENTIUM', 0) # TODO - ask developer about remove parameter...
 configure_file(output : 'm_auto.h', configuration : m_auto)
 run_command('/bin/cp', 'builddir/m_auto.h', 'pjlib/include/pj/compat/m_auto.h', check : true)
 
-# config-site.h
-conf_data = configuration_data()
+# pjmedia - config_auto.h
 
+config_auto = configuration_data()
+configure_file(output : 'pjmedia_config_auto.h', configuration : config_auto)
+run_command('/bin/cp', 'builddir/pjmedia_config_auto.h', 'pjmedia/include/pjmedia/config_auto.h', check : true)
 
+# pjmedia-codec - config_auto.h
 
+config_auto2 = configuration_data()
+configure_file(output : 'pjmedia_codec_config_auto2.h', configuration : config_auto2)
+run_command('/bin/cp', 'builddir/pjmedia_codec_config_auto2.h', 'pjmedia/include/pjmedia-codec/config_auto.h', check : true)
 
+# pjsip - sip_autoconf.h
 
-configure_file(output : 'config_site.h',
-               configuration : conf_data)
+sip_autoconf = configuration_data()
+configure_file(output : 'pjsip_sip_autoconf.h', configuration : sip_autoconf)
+run_command('/bin/cp', 'builddir/pjsip_sip_autoconf.h', 'pjsip/include/pjsip/sip_autoconf.h', check : true)
 
-run_command('/bin/cp', 'builddir/config_site.h', 'pjlib/include/pj/config_site.h', check : true)
+#
 
 add_global_arguments('-fstack-protector-strong', language : 'c')
 add_global_arguments('-Wformat', language : 'c')
