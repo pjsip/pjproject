@@ -338,6 +338,9 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
 
     ssock_param->sockopt_ignore_error =
                                     listener->tls_setting.sockopt_ignore_error;
+
+    ssock_param->enable_renegotiation =
+                                    listener->tls_setting.enable_renegotiation;
     /* Copy the sockopt */
     pj_memcpy(&ssock_param->sockopt_params,
               &listener->tls_setting.sockopt_params,
@@ -1227,6 +1230,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     ssock_param.sockopt_ignore_error = 
                                      listener->tls_setting.sockopt_ignore_error;
+
+    ssock_param.enable_renegotiation = listener->tls_setting.enable_renegotiation;
     /* Copy the sockopt */
     pj_memcpy(&ssock_param.sockopt_params, 
               &listener->tls_setting.sockopt_params,

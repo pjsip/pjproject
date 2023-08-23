@@ -281,6 +281,13 @@ struct TlsConfig : public PersistentObject
      */
     bool                qosIgnoreError;
 
+    /**
+     * Specify if renegotiation is enabled for TLSv1.2 or earlier.
+     *
+     * Default: PJ_TRUE
+     */
+    bool                enableRenegotiation;
+
 public:
     /** Default constructor initialises with default values */
     TlsConfig();

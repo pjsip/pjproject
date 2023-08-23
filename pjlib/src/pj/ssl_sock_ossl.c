@@ -1238,6 +1238,12 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
         }
     }
 
+#ifdef SSL_OP_NO_RENEGOTIATION
+    if (!ssock->param.enable_renegotiation) {
+        ssl_opt |= SSL_OP_NO_RENEGOTIATION;
+    }
+#endif
+
     if (ssl_opt)
         SSL_CTX_set_options(ctx, ssl_opt);
 

@@ -374,6 +374,13 @@ typedef struct pjsip_tls_setting
     pj_bool_t sockopt_ignore_error;
 
     /**
+     * Specify if renegotiation is enabled for TLSv1.2 or earlier.
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t enable_renegotiation;
+
+    /**
      * Callback to be called when a accept operation of the TLS listener fails.
      *
      * @param param         The parameter to the callback.
@@ -428,6 +435,7 @@ PJ_INLINE(void) pjsip_tls_setting_default(pjsip_tls_setting *tls_opt)
     tls_opt->qos_ignore_error = PJ_TRUE;
     tls_opt->sockopt_ignore_error = PJ_TRUE;
     tls_opt->proto = PJSIP_SSL_DEFAULT_PROTO;
+    tls_opt->enable_renegotiation = PJ_TRUE;
 }
 
 

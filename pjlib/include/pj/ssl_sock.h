@@ -1099,6 +1099,13 @@ typedef struct pj_ssl_sock_param
     */
     pj_bool_t sock_cloexec;
 
+    /**
+     * Specify if renegotiation is enabled for TLSv1.2 or earlier.
+     * 
+     * Default: PJ_TRUE
+     */
+    pj_bool_t enable_renegotiation;
+
 } pj_ssl_sock_param;
 
 
