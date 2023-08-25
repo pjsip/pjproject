@@ -77,8 +77,8 @@ void ConfPortInfo::fromPj(const pjsua_conf_port_info &port_info)
     portId = port_info.slot_id;
     name = pj2Str(port_info.name);
     format.fromPj(port_info.format);
-    txLevelAdj = port_info.tx_level_adj;
-    rxLevelAdj = port_info.rx_level_adj;
+    txLevelAdj = port_info.rx_level_adj;
+    rxLevelAdj = port_info.tx_level_adj;
 
     /*
     format.id = PJMEDIA_FORMAT_PCM;
