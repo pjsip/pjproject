@@ -49,9 +49,9 @@ PJ_BEGIN_DECL
  *
  * For some examples on how to use the socket API, please see:
  *
- *  - \ref page_pjlib_sock_test
- *  - \ref page_pjlib_select_test
- *  - \ref page_pjlib_sock_perf_test
+ *  - Socket test: \src{pjlib/src/pjlib-test/sock.c}
+ *  - Socket Select() test: \src{pjlib/src/pjlib-test/select.c}
+ *  - Socket Performance test: \src{pjlib/src/pjlib-test/sock_perf.c}
  */
 
 

@@ -136,8 +136,8 @@ PJ_DECL(const pj_sys_info*) pj_get_sys_info(void);
  * \section pj_thread_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_thread_test
- *  - \ref page_pjlib_sleep_test
+ *  - Thread test: \src{pjlib/src/pjlib-test/thread.c}
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
  *
  */
 
@@ -1103,7 +1103,7 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
  * \section pj_time_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_sleep_test
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
  */
 
 /**
@@ -1206,8 +1206,8 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
  * \section pj_timestamp_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_sleep_test
- *  - \ref page_pjlib_timestamp_test
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
+ *  - Timestamp test: \src{pjlib/src/pjlib-test/timestamp.c}
  */
 
 /*

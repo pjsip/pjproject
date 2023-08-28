@@ -42,7 +42,7 @@ PJ_BEGIN_DECL
  *
  * For some examples on how to use the select API, please see:
  *
- *  - \ref page_pjlib_select_test
+ *  - Socket Select() test: \src{pjlib/src/pjlib-test/select.c}
  */
 
 /**
