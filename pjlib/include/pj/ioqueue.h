@@ -186,9 +186,9 @@ PJ_BEGIN_DECL
  *
  * For some examples on how to use the I/O Queue, please see:
  *
- *  - \ref page_pjlib_ioqueue_tcp_test
- *  - \ref page_pjlib_ioqueue_udp_test
- *  - \ref page_pjlib_ioqueue_perf_test
+ *  - I/O Queue TCP test: \src{pjlib/src/pjlib-test/ioq_tcp.c}
+ *  - I/O Queue UDP test: \src{pjlib/src/pjlib-test/ioq_udp.c}
+ *  - I/O Queue Performance test: \src{pjlib/src/pjlib-test/ioq_perf.c}
  */
 
 
