@@ -735,7 +735,7 @@ class DevAudioMedia : public AudioMedia
 {
 public:
     DevAudioMedia();
-    ~DevAudioMedia();
+    virtual ~DevAudioMedia();
 };
 
 DevAudioMedia::DevAudioMedia()

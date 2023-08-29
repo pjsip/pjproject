@@ -27,6 +27,7 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    namespace 'org.pjsip.pjsua2.app_kotlin'
 }
 
 dependencies {

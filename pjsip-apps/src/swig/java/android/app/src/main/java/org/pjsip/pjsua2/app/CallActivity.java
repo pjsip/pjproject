@@ -28,6 +28,8 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.app.Activity;
 import android.content.Context;
@@ -35,69 +37,67 @@ import android.content.res.Configuration;
 
 import org.pjsip.pjsua2.*;
 
-class VideoPreviewHandler implements SurfaceHolder.Callback
-{   
-    public boolean videoPreviewActive = false;
-        
-    public void updateVideoPreview(SurfaceHolder holder) 
-    {
-        if (MainActivity.currentCall != null &&
-            MainActivity.currentCall.vidWin != null &&
-            MainActivity.currentCall.vidPrev != null)
-        {       
-            if (videoPreviewActive) {
-                VideoWindowHandle vidWH = new VideoWindowHandle();
-                vidWH.getHandle().setWindow(holder.getSurface());
-                VideoPreviewOpParam vidPrevParam = new VideoPreviewOpParam();
-                vidPrevParam.setWindow(vidWH);          
-                try {
-                    MainActivity.currentCall.vidPrev.start(vidPrevParam);
-                } catch (Exception e) {
-                    System.out.println(e);
-                }
-            } else {
-                try {
-                    MainActivity.currentCall.vidPrev.stop();
-                } catch (Exception e) {
-                    System.out.println(e);
-                }       
-            }
-        }
-    }    
-    
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
-    {
-        updateVideoPreview(holder);
+
+class VideoSurfaceHandler implements SurfaceHolder.Callback {
+    private SurfaceHolder holder;
+    private VideoWindow videoWindow = null;
+    private boolean active = false;
+
+    public VideoSurfaceHandler(SurfaceHolder holder_) {
+        holder = holder_;
     }
 
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) 
-    {
-        
+    public void setVideoWindow(VideoWindow vw) {
+        videoWindow = vw;
+        active = true;
+        setSurfaceHolder(holder);
     }
 
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) 
-    {
+    public void resetVideoWindow() {
+        active = false;
+        videoWindow = null;
+    }
+
+    private void setSurfaceHolder(SurfaceHolder holder) {
+        if (!active) return;
+
         try {
-            MainActivity.currentCall.vidPrev.stop();
+            VideoWindowHandle wh = new VideoWindowHandle();
+            wh.getHandle().setWindow(holder != null? holder.getSurface() : null);
+            videoWindow.setWindow(wh);
         } catch (Exception e) {
             System.out.println(e);
         }
-    }    
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
+    {
+        setSurfaceHolder(holder);
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) { }
+
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder)
+    {
+        setSurfaceHolder(null);
+    }
 }
 
+
 public class CallActivity extends Activity
-                          implements Handler.Callback, SurfaceHolder.Callback
+                          implements Handler.Callback
 {
 
     public static Handler handler_;
-    private static VideoPreviewHandler previewHandler = 
-                                                      new VideoPreviewHandler();
-
     private final Handler handler = new Handler(this);
     private static CallInfo lastCallInfo;
+
+    private VideoSurfaceHandler localVideoHandler;
+    private VideoSurfaceHandler remoteVideoHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -105,22 +105,21 @@ public class CallActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_call);
 
-        SurfaceView surfaceInVideo = (SurfaceView)
-                                  findViewById(R.id.surfaceIncomingVideo);
-        SurfaceView surfacePreview = (SurfaceView)
-                                  findViewById(R.id.surfacePreviewCapture);     
-        Button buttonShowPreview = (Button) 
-                                  findViewById(R.id.buttonShowPreview); 
-        
+        SurfaceView surfaceInVideo = findViewById(R.id.surfaceIncomingVideo);
+        SurfaceView surfacePreview = findViewById(R.id.surfacePreviewCapture);
+
+        /* Avoid visible black boxes (blank video views) initially */
         if (MainActivity.currentCall == null ||
             MainActivity.currentCall.vidWin == null)
         {
-            surfaceInVideo.setVisibility(View.GONE);        
-            buttonShowPreview.setVisibility(View.GONE);
+            surfaceInVideo.setVisibility(View.GONE);
+            surfacePreview.setVisibility(View.GONE);
         }
-        setupVideoPreview(surfacePreview, buttonShowPreview);
-        surfaceInVideo.getHolder().addCallback(this);
-        surfacePreview.getHolder().addCallback(previewHandler);
+
+        localVideoHandler = new VideoSurfaceHandler(surfacePreview.getHolder());
+        remoteVideoHandler = new VideoSurfaceHandler(surfaceInVideo.getHolder());
+        surfaceInVideo.getHolder().addCallback(remoteVideoHandler);
+        surfacePreview.getHolder().addCallback(localVideoHandler);
 
         handler_ = handler;
         if (MainActivity.currentCall != null) {
@@ -176,7 +175,7 @@ public class CallActivity extends Activity
                 System.out.println(e);
             }
         }
-    }    
+    }
 
     @Override
     protected void onDestroy()
@@ -185,42 +184,73 @@ public class CallActivity extends Activity
         handler_ = null;
     }
     
-    private void updateVideoWindow(boolean show)
-    { 
-        if (MainActivity.currentCall != null &&
-            MainActivity.currentCall.vidWin != null &&
-            MainActivity.currentCall.vidPrev != null)
-        {
-            SurfaceView surfaceInVideo = (SurfaceView) 
-                                  findViewById(R.id.surfaceIncomingVideo);
-            
-            VideoWindowHandle vidWH = new VideoWindowHandle();      
-            if (show) {
-                vidWH.getHandle().setWindow(
-                                       surfaceInVideo.getHolder().getSurface());
-            } else {
-                vidWH.getHandle().setWindow(null);
+    private void setupIncomingVideoLayout()
+    {
+        try {
+            StreamInfo si = MainActivity.currentCall.getStreamInfo(MainActivity.currentCall.vidGetStreamIdx());
+            int w = (int)si.getVidCodecParam().getDecFmt().getWidth();
+            int h = (int)si.getVidCodecParam().getDecFmt().getHeight();
+
+            /* Adjust width to match the parent layout */
+            RelativeLayout videoLayout = findViewById(R.id.bottom_layout);
+            h = (int)((double)videoLayout.getMeasuredWidth() / w * h);
+            w = videoLayout.getMeasuredWidth();
+
+            /* Also adjust height to match the parent layout */
+            if (h > videoLayout.getMeasuredHeight()) {
+                w = (int)((double)videoLayout.getMeasuredHeight() / h * w);
+                h = videoLayout.getMeasuredHeight();
             }
-            try {
-                MainActivity.currentCall.vidWin.setWindow(vidWH);
-            } catch (Exception e) {
-                System.out.println(e);
-            }       
+            System.out.println("Remote video size=" + w + "x" + h);
+
+            /* Resize the remote video surface */
+            SurfaceView svRemoteVideo = findViewById(R.id.surfaceIncomingVideo);
+            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(w, h);
+            params.leftMargin = (w == videoLayout.getMeasuredWidth())? 0 : (videoLayout.getMeasuredWidth()-w)/2;
+            params.topMargin = 0;
+            svRemoteVideo.setLayoutParams(params);
+            svRemoteVideo.setVisibility(View.VISIBLE);
+
+            /* Put local preview always on top */
+            if (MainActivity.currentCall.vidPrevStarted) {
+                SurfaceView surfacePreview = findViewById(R.id.surfacePreviewCapture);
+                surfacePreview.setVisibility(View.VISIBLE);
+            }
+        } catch (Exception e) {
+            System.out.println(e);
         }
     }
-     
-    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
-    {
-        updateVideoWindow(true);
-    }
 
-    public void surfaceCreated(SurfaceHolder holder)
+    public void setupVideoPreviewLayout()
     {
-    }
+        /* Resize the preview video surface */
+        try {
+            int w, h;
+            SurfaceView surfacePreview = findViewById(R.id.surfacePreviewCapture);
+            VideoWindowInfo vwi = MainActivity.currentCall.vidPrev.getVideoWindow().getInfo();
+            w = (int) vwi.getSize().getW();
+            h = (int) vwi.getSize().getH();
 
-    public void surfaceDestroyed(SurfaceHolder holder)
-    {
-        updateVideoWindow(false);
+            /* Adjust width to match the parent layout */
+            RelativeLayout videoLayout = findViewById(R.id.bottom_layout);
+            h = (int) ((double) videoLayout.getMeasuredWidth() / 2 / w * h);
+            w = videoLayout.getMeasuredWidth() / 2;
+
+            /* Also adjust height to match the parent layout */
+            if (h > videoLayout.getMeasuredHeight() / 2) {
+                w = (int) ((double) videoLayout.getMeasuredHeight() / 2 / h * w);
+                h = videoLayout.getMeasuredHeight() / 2;
+            }
+            System.out.println("Preview video size=" + w + "x" + h);
+
+            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(w, h);
+            params.leftMargin = videoLayout.getMeasuredWidth() - w;
+            params.topMargin = videoLayout.getMeasuredHeight() - h;
+            surfacePreview.setLayoutParams(params);
+            surfacePreview.setVisibility(View.VISIBLE);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
     }
 
     public void acceptCall(View view)
@@ -238,6 +268,9 @@ public class CallActivity extends Activity
 
     public void hangupCall(View view)
     {
+        localVideoHandler.resetVideoWindow();
+        remoteVideoHandler.resetVideoWindow();
+
         handler_ = null;
         finish();
 
@@ -252,45 +285,6 @@ public class CallActivity extends Activity
         }
     }
     
-    public void setupVideoPreview(SurfaceView surfacePreview, 
-                                  Button buttonShowPreview)
-    {
-        surfacePreview.setVisibility(previewHandler.videoPreviewActive?
-                                     View.VISIBLE:View.GONE);
-        
-        buttonShowPreview.setText(previewHandler.videoPreviewActive?
-                                  getString(R.string.hide_preview):
-                                  getString(R.string.show_preview));            
-    }
-    
-    public void showPreview(View view)
-    {
-        SurfaceView surfacePreview = (SurfaceView)
-                                  findViewById(R.id.surfacePreviewCapture);     
-
-        Button buttonShowPreview = (Button) 
-                                  findViewById(R.id.buttonShowPreview);
-        
-        
-        previewHandler.videoPreviewActive = !previewHandler.videoPreviewActive;
-        
-        setupVideoPreview(surfacePreview, buttonShowPreview);
-        
-        previewHandler.updateVideoPreview(surfacePreview.getHolder());
-    }
-
-    private void setupVideoSurface()
-    {
-        SurfaceView surfaceInVideo = (SurfaceView)
-                                  findViewById(R.id.surfaceIncomingVideo);
-        SurfaceView surfacePreview = (SurfaceView)
-                                  findViewById(R.id.surfacePreviewCapture);
-        Button buttonShowPreview = (Button)
-                                  findViewById(R.id.buttonShowPreview); 
-        surfaceInVideo.setVisibility(View.VISIBLE);
-        buttonShowPreview.setVisibility(View.VISIBLE);
-        surfacePreview.setVisibility(View.GONE);        
-    }
 
     @Override
     public boolean handleMessage(Message m)
@@ -298,6 +292,11 @@ public class CallActivity extends Activity
         if (m.what == MainActivity.MSG_TYPE.CALL_STATE) {
 
             lastCallInfo = (CallInfo) m.obj;
+            if (lastCallInfo.getState()==pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
+                localVideoHandler.resetVideoWindow();
+                remoteVideoHandler.resetVideoWindow();
+            }
+
             updateCallState(lastCallInfo);
 
         } else if (m.what == MainActivity.MSG_TYPE.CALL_MEDIA_STATE) {
@@ -307,8 +306,32 @@ public class CallActivity extends Activity
                  * device orientation.
                  */
                 onConfigurationChanged(getResources().getConfiguration());
-                /* If there's incoming video, display it. */
-                setupVideoSurface();
+
+            }
+
+            if (MainActivity.currentCall.vidPrev != null) {
+                localVideoHandler.setVideoWindow(MainActivity.currentCall.vidPrev.getVideoWindow());
+                setupVideoPreviewLayout();
+            }
+
+        } else if (m.what == MainActivity.MSG_TYPE.CALL_MEDIA_EVENT) {
+            OnCallMediaEventParam prm = (OnCallMediaEventParam)m.obj;
+
+            if (prm.getEv().getType() == pjmedia_event_type.PJMEDIA_EVENT_FMT_CHANGED &&
+                prm.getMedIdx() == MainActivity.currentCall.vidGetStreamIdx() &&
+                MainActivity.currentCall.vidWin != null)
+            {
+                CallMediaInfo cmi;
+                try {
+                    CallInfo ci = MainActivity.currentCall.getInfo();
+                    cmi = ci.getMedia().get((int)prm.getMedIdx());
+                } catch (Exception e) {
+                    System.out.println(e);
+                    return false;
+                }
+
+                remoteVideoHandler.setVideoWindow(cmi.getVideoWindow());
+                setupIncomingVideoLayout();
             }
 
         } else {
