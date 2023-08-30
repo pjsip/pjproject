@@ -276,7 +276,7 @@ PJ_BEGIN_DECL
  * \section PJ_POOL_EXAMPLES_SEC Examples
  *
  * For some sample codes on how to use the pool, please see:
- *  - @ref page_pjlib_pool_test
+ *  - Pool test: \src{pjlib/src/pjlib-test/pool.c}
  *
  * @{
  */

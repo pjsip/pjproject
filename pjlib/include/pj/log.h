@@ -59,7 +59,7 @@ PJ_BEGIN_DECL
  * \section pj_log_quick_sample_sec Examples
  *
  * For examples, see:
- *  - @ref page_pjlib_samples_log_c.
+ *  - Simple Log sample: \src{pjlib/src/pjlib-samples/log.c}
  *
  */
 

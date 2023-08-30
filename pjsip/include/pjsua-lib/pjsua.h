@@ -90,11 +90,11 @@ PJ_BEGIN_DECL
  *
  * Few samples are provided:
  *
-  - @ref page_pjsip_sample_simple_pjsuaua_c \n
+  - Simple pjsua app: \src{pjsip-apps/src/samples/simple_pjsua.c} \n
     Very simple SIP User Agent with registration, call, and media, using
     PJSUA-API, all in under 200 lines of code.
 
-  - @ref page_pjsip_samples_pjsua \n
+  - Pjsua app: \srcdir{pjsip-apps/src/pjsua/} \n
     This is the reference implementation for PJSIP and PJMEDIA.
     PJSUA is a console based application, designed to be simple enough
     to be readble, but powerful enough to demonstrate all features
