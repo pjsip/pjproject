@@ -23,7 +23,7 @@ import java.lang.ref.WeakReference
 const val ACC_ID_URI    = "sip:localhost"
 
 // Peer to call
-const val CALL_DST_URI  = "sip:192.168.1.9"
+const val CALL_DST_URI  = "sip:192.168.1.9:6000"
 
 // Camera ID used for video call.
 // Use VidDevManager::enumDev2() to get available cameras & IDs.
@@ -239,7 +239,7 @@ class MainActivity : AppCompatActivity(), android.os.Handler.Callback {
         svRemoteVideo.holder.addCallback(g.remoteVideoHandler)
 
         /* Setup UI handler */
-        g.uiHandler = Handler(this)
+        g.uiHandler = Handler(this.mainLooper, this)
 
         /* Setup Start button */
         val buttonStart = findViewById<Button>(R.id.button_start)

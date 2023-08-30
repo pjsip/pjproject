@@ -1,4 +1,3 @@
-/* $Id: MainActivity.java 5022 2015-03-25 03:41:21Z nanang $ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *

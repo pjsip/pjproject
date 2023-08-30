@@ -1,4 +1,3 @@
-/* $Id: CallActivity.java 5138 2015-07-30 06:23:35Z ming $ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *

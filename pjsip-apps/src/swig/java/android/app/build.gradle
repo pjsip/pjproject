@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
+    compileSdk 33
 
     defaultConfig {
         applicationId "org.pjsip.pjsua2.app"
         minSdkVersion 23
-        targetSdkVersion 29
+        targetSdkVersion 33
     }
 
     buildTypes {
