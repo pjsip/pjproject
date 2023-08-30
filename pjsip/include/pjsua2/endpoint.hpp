@@ -1901,8 +1901,8 @@ public:
 private:
     static Endpoint             *instance_;     // static instance
     LogWriter                   *writer;        // Custom writer, if any
-    AudDevManager                audioDevMgr;
-    VidDevManager                videoDevMgr;
+    AudDevManager               *audioDevMgr;
+    VidDevManager               *videoDevMgr;
 #if !DEPRECATED_FOR_TICKET_2232
     CodecInfoVector              codecInfoList;
     CodecInfoVector              videoCodecInfoList;

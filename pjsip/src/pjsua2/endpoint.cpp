@@ -594,6 +594,9 @@ mainThread(NULL), pendingJobSize(0)
         PJSUA2_RAISE_ERROR(PJ_EEXISTS);
     }
 
+    audioDevMgr = new AudDevManager();
+    videoDevMgr = new VidDevManager();
+
     instance_ = this;
 }
 
@@ -616,6 +619,9 @@ Endpoint::~Endpoint()
     clearCodecInfoList(codecInfoList);
     clearCodecInfoList(videoCodecInfoList);
 #endif
+
+    delete audioDevMgr;
+    delete videoDevMgr;
 
     try {
         libDestroy();
@@ -2411,12 +2417,12 @@ bool Endpoint::mediaExists(const AudioMedia &media) const
 
 AudDevManager &Endpoint::audDevManager()
 {
-    return audioDevMgr;
+    return *audioDevMgr;
 }
 
 VidDevManager &Endpoint::vidDevManager()
 {
-    return videoDevMgr;
+    return *videoDevMgr;
 }
 
 /*
