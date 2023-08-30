@@ -408,9 +408,6 @@ class MyApp extends pjsua2 {
             System.out.println(e);
         }
 
-        // TCP & TLS transports with default SIP ports
-        // sometimes not working fine on Android somehow.
-        /*
         try {
             ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TCP,
                                sipTpConfig);
@@ -425,7 +422,6 @@ class MyApp extends pjsua2 {
         } catch (Exception e) {
             System.out.println(e);
         }
-        */
 
         /* Set SIP port back to default for JSON saved config */
         sipTpConfig.setPort(SIP_PORT);
