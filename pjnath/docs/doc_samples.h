@@ -25,21 +25,21 @@ below were taken on a Windows machine, but the library is very portable and
 it is known to run on platforms such as Linux, MacOS X, Windows Mobile,
 Symbian, and so on.
 
-  - ICE demo sample: \src{pjsip-apps/src/samples/icedemo.c}. \n
+  - ICE demo sample: \src{pjsip-apps/src/samples/icedemo.c} <br />\n
     This sample demonstrates how to use \ref PJNATH_ICE_STREAM_TRANSPORT
     <b>without</b> using signaling protocol such as <b>SIP</b>. It provides 
     interactive user interface to create and manage the ICE sessions as well
     as to exchange SDP with another ICE demo instance.\n\n
-    \image html ice_demo.jpg "ice_demo on WinXP"
+    <img src="https://raw.githubusercontent.com/pjsip/pjproject/master/pjnath/docs/ice_demo.jpg" alt="ice_demo on WinXP" />
 
-  - TURN client sample: \srcdir{pjnath/src/pjturn-client/}. \n
+  - TURN client sample: \srcdir{pjnath/src/pjturn-client/} <br />\n
     This sample demonstrates how to use \ref PJNATH_TURN_SOCK
     and also \ref PJNATH_STUN_SOCK. It provides interactive 
     user interface to manage allocation, permissions, and
     channel bindings.\n\n
-    \image html pjturn_client.jpg "pjturn_client on WinXP"
+    <img src="https://raw.githubusercontent.com/pjsip/pjproject/master/pjnath/docs/pjturn_client.jpg" alt="pjturn_client on WinXP" />
 
-  - TURN server sample: \srcdir{pjnath/src/pjturn-srv/}. \n
+  - TURN server sample: \srcdir{pjnath/src/pjturn-srv/} <br />\n
     This is a simple sample TURN server application, which
     we mainly use for testing (as back then there is no TURN
     server available).\n
