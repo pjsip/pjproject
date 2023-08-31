@@ -369,26 +369,36 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
         return;
     }
 
-    /* Only mark "good" packets */
-    ++sess->received;
+    /* Only mark "good" packets. Do this after we're no longer in probation. */
+    if (!seq_st.status.flag.probation)
+        ++sess->received;
 
-    /* Calculate loss periods. */
-    if (seq_st.diff > 1) {
-        unsigned count = seq_st.diff - 1;
-        unsigned period;
+    /* Calculate packet lost and loss periods. */
+    if (!seq_st.status.flag.probation && !seq_st.status.flag.outorder) {
+        unsigned count = 0, loss = 0;
+        pj_uint32_t last_seq, expected;
 
-        period = count * sess->dec_pkt_size * 1000 / sess->clock_rate;
-        period *= 1000;
+        last_seq = sess->seq_ctrl.max_seq +
+                   (sess->seq_ctrl.cycles & 0xFFFF0000L);
+        expected = last_seq - sess->seq_ctrl.base_seq;
 
-        /* Update packet lost. 
-         * The packet lost number will also be updated when we're sending
-         * outbound RTCP RR.
-         */
-        sess->stat.rx.loss += (seq_st.diff - 1);
-        TRACE_((sess->name, "%d packet(s) lost", seq_st.diff - 1));
+        if (expected > sess->received)
+            loss = expected - sess->received;
+
+        if (loss > sess->stat.rx.loss)
+            count = loss - sess->stat.rx.loss;
+
+        sess->stat.rx.loss = loss;
 
         /* Update loss period stat */
-        pj_math_stat_update(&sess->stat.rx.loss_period, period);
+        if (count > 0) {
+            unsigned period;
+
+            TRACE_((sess->name, "%d packet(s) lost", count));
+            period = count * sess->dec_pkt_size * 1000 / sess->clock_rate;
+            period *= 1000;
+            pj_math_stat_update(&sess->stat.rx.loss_period, period);
+        }
     }
 
 
