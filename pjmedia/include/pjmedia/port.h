@@ -80,7 +80,7 @@
   of one WAV file to another. In this case, application would create and
   arrange media ports connection as follows:
 
-  <img src="https://raw.githubusercontent.com/pjsip/pjproject/master/pjmedia/docs/sample-manual-resampling.jpg" />
+  \img{pjmedia/docs/sample-manual-resampling.jpg}
 
   Application would setup the media ports using the following pseudo-
   code:

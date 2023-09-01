@@ -30,14 +30,14 @@ Symbian, and so on.
     <b>without</b> using signaling protocol such as <b>SIP</b>. It provides 
     interactive user interface to create and manage the ICE sessions as well
     as to exchange SDP with another ICE demo instance.\n\n
-    <img src="https://raw.githubusercontent.com/pjsip/pjproject/master/pjnath/docs/ice_demo.jpg" alt="ice_demo on WinXP" />
+    \img{pjnath/docs/ice_demo.jpg,ice_demo on WinXP}
 
   - TURN client sample: \srcdir{pjnath/src/pjturn-client/} <br />\n
     This sample demonstrates how to use \ref PJNATH_TURN_SOCK
     and also \ref PJNATH_STUN_SOCK. It provides interactive 
     user interface to manage allocation, permissions, and
     channel bindings.\n\n
-    <img src="https://raw.githubusercontent.com/pjsip/pjproject/master/pjnath/docs/pjturn_client.jpg" alt="pjturn_client on WinXP" />
+    \img{pjnath/docs/pjturn_client.jpg,pjturn_client on WinXP}
 
   - TURN server sample: \srcdir{pjnath/src/pjturn-srv/} <br />\n
     This is a simple sample TURN server application, which

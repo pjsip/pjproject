@@ -44,7 +44,7 @@
  * media transport during stream creation), and the interconnection can be 
  * depicted from the diagram below:
  *
-   <img src="https://raw.githubusercontent.com/pjsip/pjproject/master/pjmedia/docs/media-transport.PNG" />
+   \img{pjmedia/docs/media-transport.PNG}
 
  * I think the diagram above is self-explanatory.
  *
@@ -53,7 +53,7 @@
  * sending/receiving RTP/RTCP packets. When SRTP is used, the interconnection
  * between stream and transport is like the diagram below:
  *
-   <img src="https://raw.githubusercontent.com/pjsip/pjproject/master/pjmedia/docs/media-srtp-transport.PNG" />
+   \img{pjmedia/docs/media-srtp-transport.PNG}
 
  * So to stream, the SRTP transport behaves as if it is a media transport 
  * (because it is a media transport), and to the media transport it behaves
