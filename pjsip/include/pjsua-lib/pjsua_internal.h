@@ -739,6 +739,11 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
  */
 pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
 
+/**
+ * Handle rejected incoming call.
+ */
+void pjsua_call_on_rejected_incoming_call(pjsip_tx_data* tdata);
+
 /*
  * Media channel.
  */

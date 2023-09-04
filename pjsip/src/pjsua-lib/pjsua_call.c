@@ -2129,6 +2129,60 @@ on_return:
 }
 
 
+void pjsua_call_on_rejected_incoming_call(pjsip_tx_data *tdata)
+{
+    pjsip_msg *msg = tdata->msg;
+    pjsip_cseq_hdr *cseq;
+    int status;
+
+    if (msg->type != PJSIP_RESPONSE_MSG)
+        return;
+
+    status = msg->line.status.code / 100;
+    if (status == 1 || status == 2)
+        return;
+
+    cseq = PJSIP_MSG_CSEQ_HDR(msg);
+    if (!cseq)
+        return;
+
+    if (cseq->method.id != PJSIP_INVITE_METHOD)
+        return;
+
+    if (pjsua_var.ua_cfg.cb.on_rejected_incoming_call) {
+        pjsip_from_hdr *from_hdr;
+        pjsip_to_hdr *to_hdr;
+        pjsip_sip_uri *uri;
+        pjsua_on_rejected_incoming_call_param param;
+
+        pj_bzero(&param, sizeof(pjsua_on_rejected_incoming_call_param));
+        param.tdata = tdata;
+        param.code = msg->line.status.code;
+
+        from_hdr = PJSIP_MSG_FROM_HDR(tdata->msg);
+        if (from_hdr) {
+            param.remote_info.ptr = param.buf_.remote_info;
+            uri = (pjsip_sip_uri*)pjsip_uri_get_uri(from_hdr->uri);
+            param.remote_info.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+                                                     uri,
+                                                     param.buf_.remote_info,
+                                                     sizeof(param.buf_.remote_info));
+        }
+
+        to_hdr = PJSIP_MSG_TO_HDR(tdata->msg);
+        if (to_hdr) {
+            param.local_info.ptr = param.buf_.local_info;
+            uri = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+            param.local_info.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+                                                     uri,
+                                                     param.buf_.local_info,
+                                                     sizeof(param.buf_.local_info));
+        }
+
+        pjsua_var.ua_cfg.cb.on_rejected_incoming_call(&param);
+    }
+}
+
 
 /*
  * Check if the specified call has active INVITE session and the INVITE

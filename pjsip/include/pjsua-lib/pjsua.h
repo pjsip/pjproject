@@ -1081,6 +1081,50 @@ typedef struct pjsua_call_setting
 
 
 /**
+ * This will contain the information of the callback \a on_rejected_incoming_call.
+ */
+typedef struct pjsua_on_rejected_incoming_call_param {
+    /** 
+     * Local URI 
+     */
+    pj_str_t        local_info;
+
+    /** 
+     * Remote URI 
+     */
+    pj_str_t        remote_info;
+
+    /** 
+     * Rejection code 
+     */
+    int             code;
+
+    /** 
+     * Original rejection message 
+     */
+    pjsip_tx_data  *tdata;
+    
+    /** 
+     * Internal.
+     */
+    struct {
+        char    local_info[PJSIP_MAX_URL_SIZE];
+        char    remote_info[PJSIP_MAX_URL_SIZE];
+    } buf_;
+
+} pjsua_on_rejected_incoming_call_param;
+
+/**
+  * Type of callback to be called when incoming call is rejected.
+  *
+  * @param param      The rejected call information.
+  *
+  */
+typedef void (*pjsua_on_rejected_incoming_call_cb)(
+                                      const pjsua_on_rejected_incoming_call_param *param);
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL,
  * although definitely application would want to implement some of
@@ -1966,6 +2010,20 @@ typedef struct pjsua_callback
      * @param event     The media event.
      */
     void (*on_media_event)(pjmedia_event *event);
+
+    /**
+     * This callback is called when an incoming call is rejected.
+     * In addition to being declined explicitly using the #pjsua_call_answer() method,
+     * the library may also automatically reject the incoming call due 
+     * to different scenarios:
+     * - when an incoming INVITE is received with, for instance, a message 
+     *   containing invalid SDP.
+     * - when issues occur during the #pjsua_call_answer() process, 
+     *   such as a failure to initialize call media.
+     * 
+     * See also #pjsua_on_rejected_incoming_call_cb.
+     */
+    pjsua_on_rejected_incoming_call_cb on_rejected_incoming_call;
 
 } pjsua_callback;
 

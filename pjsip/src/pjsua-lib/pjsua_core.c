@@ -704,6 +704,18 @@ static pj_bool_t mod_pjsua_on_rx_response(pjsip_rx_data *rdata)
     return PJ_FALSE;
 }
 
+static pj_bool_t mod_pjsua_on_tx_response(pjsip_tx_data *tdata)
+{
+    PJSUA_LOCK();
+    
+    if (tdata->msg->type == PJSIP_RESPONSE_MSG) {
+        pjsua_call_on_rejected_incoming_call(tdata);
+    }
+
+    PJSUA_UNLOCK();
+    return PJ_FALSE;
+}
+
 
 /*****************************************************************************
  * Logging.
@@ -1152,7 +1164,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         &mod_pjsua_on_rx_request,   /* on_rx_request()                  */
         &mod_pjsua_on_rx_response,  /* on_rx_response()                 */
         NULL,                       /* on_tx_request.                   */
-        NULL,                       /* on_tx_response()                 */
+        &mod_pjsua_on_tx_response,  /* on_tx_response()                 */
         NULL,                       /* on_tsx_state()                   */
         };
 
