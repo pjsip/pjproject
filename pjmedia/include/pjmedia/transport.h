@@ -49,7 +49,7 @@
  * The connection between \ref PJMED_STRM and media transport is shown in
  * the diagram below:
 
-   \image html media-transport.PNG
+   \img{pjmedia/docs/media-transport.PNG}
 
 
  * \section PJMEDIA_TRANSPORT_H_USING Basic Media Transport Usage

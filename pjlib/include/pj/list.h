@@ -47,8 +47,8 @@ PJ_BEGIN_DECL
  * \section pj_list_example_sec Examples
  *
  * See below for examples on how to manipulate linked list:
- *  - @ref page_pjlib_samples_list_c
- *  - @ref page_pjlib_list_test
+ *  - List sample: \src{pjlib/src/pjlib-samples/list.c}
+ *  - List test: \src{pjlib/src/pjlib-test/list.c}
  */
 
 

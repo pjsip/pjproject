@@ -65,7 +65,7 @@ PJ_BEGIN_DECL
  * \section pj_pstr_examples_sec Examples
  *
  * For some examples, please see:
- *  - @ref page_pjlib_string_test
+ *  - String test: \src{pjlib/src/pjlib-test/string.c}
  */
 
 /**

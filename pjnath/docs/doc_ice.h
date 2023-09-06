@@ -94,7 +94,7 @@ provides the best example on how to do this.
 
 \section ice_samples_sec Samples
 
-The \ref ice_demo_sample sample demonstrates how to use 
+The ICE demo sample \src{pjsip-apps/src/samples/icedemo.c} demonstrates how to use 
 \ref PJNATH_ICE_STREAM_TRANSPORT <b>without</b> using signaling 
 protocol such as <b>SIP</b>. It provides  interactive user interface
 to create and manage the ICE sessions as well as to exchange SDP 

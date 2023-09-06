@@ -608,7 +608,7 @@ PJ_DECL(void*) pj_thread_local_get(long index);
  * \section pj_atomic_examples_sec Examples
  *
  * For some example codes, please see:
- *  - @ref page_pjlib_atomic_test
+ *  - Atomic Variable test: \src{pjlib/src/pjlib-test/atomic.c}
  */
 
 
