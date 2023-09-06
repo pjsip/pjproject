@@ -110,6 +110,11 @@ struct pjsip_regc
      * it open.
      */
     pjsip_transport             *last_transport;
+
+    /* Transport being used by pending transaction, for informational purpose,
+     * we don't keep this transport.
+     */
+    pjsip_transport             *info_transport;
 };
 
 
@@ -218,7 +223,8 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
     info->is_busy = (pj_atomic_get(regc->busy_ctr) || regc->has_tsx);
     info->auto_reg = regc->auto_reg;
     info->interval = regc->expires;
-    info->transport = regc->last_transport;
+    info->transport = regc->has_tsx? regc->info_transport :
+                                     regc->last_transport;
     
     if (regc->has_tsx)
         info->next_reg = 0;
@@ -1513,19 +1519,27 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     }
 
     /* Get last transport used and add reference to it */
-    if (tdata->tp_info.transport != regc->last_transport &&
-        status==PJ_SUCCESS)
-    {
-        if (regc->last_transport) {
-            pjsip_transport_dec_ref(regc->last_transport);
-            regc->last_transport = NULL;
-        }
+    //if (tdata->tp_info.transport != regc->last_transport &&
+    //    status==PJ_SUCCESS)
+    //{
+    //    if (regc->last_transport) {
+    //        pjsip_transport_dec_ref(regc->last_transport);
+    //        regc->last_transport = NULL;
+    //    }
 
-        if (tdata->tp_info.transport) {
-            regc->last_transport = tdata->tp_info.transport;
-            pjsip_transport_add_ref(regc->last_transport);
-        }
-    }
+    //    if (tdata->tp_info.transport) {
+    //        regc->last_transport = tdata->tp_info.transport;
+    //        pjsip_transport_add_ref(regc->last_transport);
+    //    }
+    //}
+    // Update: don't add_ref() or use the transport info from tdata other than
+    // for informational purpose (e.g: comparing the pointers to check
+    // if a disconnected transport is the registration transport), see
+    // pjsip_tx_data.tp_info docs about its valid period.
+    // Note that the send operation may be async and transport may
+    // have been destroyed here.
+    regc->info_transport = status==PJ_SUCCESS? tdata->tp_info.transport :
+                                               NULL;
 
     /* Release tdata */
     pjsip_tx_data_dec_ref(tdata);
