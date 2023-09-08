@@ -178,6 +178,9 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     /* Call getaddrinfo() */
     pj_bzero(&hint, sizeof(hint));
     hint.ai_family = af;
+    if (af == PJ_AF_INET6) {
+        hint.ai_flags = AI_V4MAPPED | AI_ALL;
+    }
     /* Zero value of ai_socktype means the implementation shall attempt
      * to resolve the service name for all supported socket types */
     hint.ai_socktype = 0;
