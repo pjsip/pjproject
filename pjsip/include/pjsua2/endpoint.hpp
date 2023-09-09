@@ -437,6 +437,37 @@ struct OnMediaEventParam
 };
 
 /**
+ * Parameter of Endpoint::onRejectedIncomingCall() callback.
+ */
+struct OnRejectedIncomingCallParam
+{
+    /**
+     * Local URI.
+     */
+    std::string     localInfo;
+
+    /**
+     * Remote URI.
+     */
+    std::string     remoteInfo;
+
+    /**
+     * Rejection code.
+     */
+    int             code;
+
+    /**
+     * Original INVITE message.
+     */
+    SipRxData       rdata;
+
+    /**
+     * The rejection message.
+     */
+    SipTxData       tdata;
+};
+
+/**
  * This structure describes authentication challenge used in Proxy-Authenticate
  * or WWW-Authenticate for digest authentication scheme.
  */
@@ -1898,6 +1929,14 @@ public:
      */
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm);
 
+    /**
+     * Callback when an incoming call is rejected.
+     *
+     * @param prm       Callback parameters.
+     */
+    virtual void onRejectedIncomingCall(OnRejectedIncomingCallParam& prm)
+    { PJ_UNUSED_ARG(prm); }
+
 private:
     static Endpoint             *instance_;     // static instance
     LogWriter                   *writer;        // Custom writer, if any
@@ -2078,6 +2117,10 @@ private:
                                              const pjsip_cred_info *cred,
                                              const pj_str_t *method,
                                              pjsip_digest_credential *auth);
+
+    static void on_rejected_incoming_call(
+                                      const pjsua_on_rejected_incoming_call_param *param);
+
     friend class Account;
 
 

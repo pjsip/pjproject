@@ -1085,24 +1085,29 @@ typedef struct pjsua_call_setting
  */
 typedef struct pjsua_on_rejected_incoming_call_param {
     /** 
-     * Local URI 
+     * Local URI.
      */
     pj_str_t        local_info;
 
     /** 
-     * Remote URI 
+     * Remote URI.
      */
     pj_str_t        remote_info;
 
     /** 
-     * Rejection code 
+     * Rejection code.
      */
     int             code;
 
-    /** 
-     * Original rejection message 
+    /**
+     * Original INVITE message.
      */
-    pjsip_tx_data  *tdata;
+    pjsip_rx_data *rdata;
+
+    /** 
+     * The rejection message.
+     */
+    pjsip_tx_data *tdata;
     
     /** 
      * Internal.

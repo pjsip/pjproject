@@ -858,7 +858,7 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     }
 
     pjsua_call *call = &pjsua_var.calls[call_id];
-    if (!call->incoming_data) {
+    if (call->incoming_call_cb_called) {
         /* This happens when the incoming call callback has been called from 
          * inside the on_create_media_transport() callback. So we simply 
          * return here to avoid calling the callback twice. 
@@ -874,8 +874,7 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     acc->onIncomingCall(prm);
 
     /* Free cloned rdata. */
-    pjsip_rx_data_free_cloned(call->incoming_data);
-    call->incoming_data = NULL;
+    call->incoming_call_cb_called = PJ_TRUE;
 
     /* disconnect if callback doesn't handle the call */
     pjsua_call_info ci;
@@ -1752,12 +1751,12 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
     Call *call = Call::lookup(call_id);
     if (!call) {
         pjsua_call *in_call = &pjsua_var.calls[call_id];
-        if (in_call->incoming_data) {
+        if (!in_call->incoming_call_cb_called) {
             /* This can happen when there is an incoming call but the
              * on_incoming_call() callback hasn't been called. So we need to 
              * call the callback here.
              */
-            on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data);
+            on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data->rdata);
 
             /* New call should already be created by app. */
             call = Call::lookup(call_id);
@@ -1794,12 +1793,12 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
     Call *call = Call::lookup(call_id);
     if (!call) {
         pjsua_call *in_call = &pjsua_var.calls[call_id];
-        if (in_call->incoming_data) {
+        if (!in_call->incoming_call_cb_called) {
             /* This can happen when there is an incoming call but the
              * on_incoming_call() callback hasn't been called. So we need to 
              * call the callback here.
              */
-            on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data);
+            on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data->rdata);
 
             /* New call should already be created by app. */
             call = Call::lookup(call_id);
@@ -1962,6 +1961,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_create_media_transport = &Endpoint::on_create_media_transport;
     ua_cfg.cb.on_stun_resolution_complete = 
         &Endpoint::stun_resolve_cb;
+    ua_cfg.cb.on_rejected_incoming_call = &Endpoint::on_rejected_incoming_call;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );
@@ -2686,4 +2686,20 @@ pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
     }
 #endif
     return status;
+}
+
+void Endpoint::on_rejected_incoming_call(
+                                       const pjsua_on_rejected_incoming_call_param *param)
+{
+    OnRejectedIncomingCallParam prm;
+    prm.localInfo = pj2Str(param->local_info);
+    prm.remoteInfo = pj2Str(param->remote_info);
+    prm.code = param->code;
+    prm.rdata.fromPj(*param->rdata);
+    prm.tdata.fromPj(*param->tdata);
+
+    Endpoint::instance().onRejectedIncomingCall(prm);
+
+    PJ_LOG(1, (THIS_FILE,
+        "Rejected Call From: %.*s code: %d", param->local_info.slen, param->local_info.ptr, param->code));
 }
