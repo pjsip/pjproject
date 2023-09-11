@@ -1,5 +1,7 @@
 #!/bin/sh
-./aconfigure "$@"
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+"${script_dir}/aconfigure" "$@"
 
 # Note:
 # if you're looking for the old configure script, it has been renamed
