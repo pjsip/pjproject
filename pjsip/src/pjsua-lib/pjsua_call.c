@@ -158,8 +158,10 @@ static void reset_call(pjsua_call_id id)
     unsigned i;
 
     if (call->incoming_data) {
-        pjsip_rx_data_free_cloned(call->incoming_data->rdata);
-        call->incoming_data->rdata = NULL;
+        if (call->incoming_data->rdata) {
+            pjsip_rx_data_free_cloned(call->incoming_data->rdata);
+            call->incoming_data->rdata = NULL;
+        }
         call->incoming_data->hash_key = 0;
     }    
     pj_bzero(call, sizeof(*call));
@@ -2200,6 +2202,7 @@ void pjsua_call_on_rejected_incoming_call(pjsip_tx_data *tdata)
                                                                     NULL);
         tmp_rdata.msg_info.from = PJSIP_MSG_FROM_HDR(msg);
         tmp_rdata.msg_info.cseq = cseq;
+        tmp_rdata.msg_info.cid = PJSIP_MSG_CID_HDR(msg);
 
         status = pjsip_tsx_create_key(tdata->pool, &key, PJSIP_ROLE_UAS, &cseq->method, 
                                       &tmp_rdata);
@@ -2269,8 +2272,10 @@ void pjsua_call_on_rejected_incoming_call(pjsip_tx_data *tdata)
 
 on_return:
     if (inv_rdata) {
-        pjsip_rx_data_free_cloned(inv_rdata->rdata);
-        inv_rdata->rdata = NULL;
+        if (inv_rdata->rdata) {
+            pjsip_rx_data_free_cloned(inv_rdata->rdata);
+            inv_rdata->rdata = NULL;
+        }
         inv_rdata->hash_key = 0;
         if (call && call->incoming_data) {
             call->incoming_data = NULL;
