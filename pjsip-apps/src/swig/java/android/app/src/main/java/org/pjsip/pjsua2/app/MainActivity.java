@@ -1,4 +1,3 @@
-/* $Id: MainActivity.java 5022 2015-03-25 03:41:21Z nanang $ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -18,18 +17,21 @@
  */
 package org.pjsip.pjsua2.app;
 
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
 import android.hardware.camera2.CameraManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -40,15 +42,23 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.support.v4.app.ActivityCompat;
+
+import org.pjsip.PjCameraInfo2;
+import org.pjsip.pjsua2.AccountConfig;
+import org.pjsip.pjsua2.AuthCredInfo;
+import org.pjsip.pjsua2.AuthCredInfoVector;
+import org.pjsip.pjsua2.BuddyConfig;
+import org.pjsip.pjsua2.CallInfo;
+import org.pjsip.pjsua2.CallOpParam;
+import org.pjsip.pjsua2.OnCallMediaEventParam;
+import org.pjsip.pjsua2.StringVector;
+import org.pjsip.pjsua2.pjsip_inv_state;
+import org.pjsip.pjsua2.pjsip_status_code;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.pjsip.PjCameraInfo2;
-import org.pjsip.pjsua2.*;
 
 public class MainActivity extends Activity
                           implements Handler.Callback, MyAppObserver
@@ -75,6 +85,7 @@ public class MainActivity extends Activity
         public final static int BUDDY_STATE = 4;
         public final static int CALL_MEDIA_STATE = 5;
         public final static int CHANGE_NETWORK = 6;
+        public final static int CALL_MEDIA_EVENT = 7;
     }
 
     private class MyBroadcastReceiver extends BroadcastReceiver {
@@ -124,11 +135,22 @@ public class MainActivity extends Activity
         startActivity(intent);
     }
 
+    private void checkPermissions() {
+        String permissions[] = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.ACCESS_NETWORK_STATE
+        };
+        ActivityCompat.requestPermissions(MainActivity.this, permissions, 0);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        checkPermissions();
 
         CameraManager cm = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
         PjCameraInfo2.SetCameraManager(cm);
@@ -299,17 +321,15 @@ public class MainActivity extends Activity
 
             /* Incoming call */
             final MyCall call = (MyCall) m.obj;
-            CallOpParam prm = new CallOpParam();
+            CallOpParam prm = new CallOpParam(true);
 
             /* Only one call at anytime */
             if (currentCall != null) {
-                /*
                 prm.setStatusCode(pjsip_status_code.PJSIP_SC_BUSY_HERE);
                 try {
-                call.hangup(prm);
+                    call.hangup(prm);
                 } catch (Exception e) {}
-                */
-                // TODO: set status code
+
                 call.delete();
                 return true;
             }
@@ -638,6 +658,16 @@ public class MainActivity extends Activity
     {
         Message m = Message.obtain(handler, MSG_TYPE.CHANGE_NETWORK, null);
         m.sendToTarget();
+    }
+
+    public void notifyCallMediaEvent(MyCall call, OnCallMediaEventParam prm)
+    {
+        /* Forward the message to CallActivity */
+        if (CallActivity.handler_ != null) {
+            Message m = Message.obtain(CallActivity.handler_,
+                MSG_TYPE.CALL_MEDIA_EVENT, prm);
+            m.sendToTarget();
+        }
     }
 
     /* === end of MyAppObserver ==== */
